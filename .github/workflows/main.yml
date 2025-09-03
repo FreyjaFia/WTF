@@ -24,7 +24,7 @@ jobs:
 
       # 3. Restore & Build
       - name: Restore and Build
-        run: dotnet build **/*.sln --configuration Release
+        run: dotnet build --configuration Release
 
       # 4. Publish UI
       - name: Publish UI
