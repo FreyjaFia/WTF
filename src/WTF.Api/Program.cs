@@ -18,7 +18,7 @@ builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(GetLo
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowUI", policy =>
-        policy.WithOrigins("https://localhost:7081")
+        policy.AllowAnyOrigin()
               .AllowAnyHeader()
               .AllowAnyMethod());
 });
@@ -50,6 +50,7 @@ app.UseRateLimiter();
 
 app.UseHttpsRedirection();
 
+app.MapGet("/", () => "Welcome to the WTFAPI!");
 app.MapLoyalty();
 
 app.Run();
