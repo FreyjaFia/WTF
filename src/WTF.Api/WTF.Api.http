@@ -1,0 +1,6 @@
+@WTF.Api_HostAddress = https://localhost:7033
+
+GET {{WTF.Api_HostAddress}}/api/loyalty/35ECF808-049E-4A0C-A9FD-26CB33140EB8
+Accept: application/json
+
+###

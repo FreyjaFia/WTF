@@ -1,0 +1,16 @@
+.rewards-title {
+    text-align: center;
+    font-family: "Noto Serif Display", serif;
+}
+
+.loyalty-card-container p {
+    margin-bottom: 0;
+    font-family: "Poppins", sans-serif;
+}
+
+.loyalty-card {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+}
