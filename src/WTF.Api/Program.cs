@@ -50,7 +50,7 @@ app.UseRateLimiter();
 
 app.UseHttpsRedirection();
 
-app.MapGet("/", () => "Welcome to the WTFAPI!");
+app.MapGet("/", () => "Welcome to the WTF API!");
 app.MapLoyalty();
 
 app.Run();
