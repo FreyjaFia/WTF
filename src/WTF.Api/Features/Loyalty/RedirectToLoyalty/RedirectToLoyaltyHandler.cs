@@ -1,24 +1,23 @@
 ﻿using MediatR;
 using Microsoft.EntityFrameworkCore;
-using WTF.Contracts;
 using WTF.Domain.Data;
+using WTF.Contracts.Loyalty.RedirectToLoyalty;
 
-namespace WTF.Api.Features.Loyalty.RedirectToLoyalty
+namespace WTF.Api.Features.Loyalty.RedirectToLoyalty;
+
+public class RedirectToLoyaltyHandler(WTFDbContext db)
+    : IRequestHandler<RedirectToLoyaltyQuery, RedirectToLoyaltyDto>
 {
-    public class RedirectToLoyaltyHandler(WTFDbContext db) : IRequestHandler<RedirectToLoyaltyQuery, RedirectToLoyaltyDto>
+    public async Task<RedirectToLoyaltyDto> Handle(RedirectToLoyaltyQuery request,
+        CancellationToken cancellationToken)
     {
-        private readonly WTFDbContext _db = db;
+        var link = await db.ShortLinks.FirstOrDefaultAsync(x => x.Token == request.Token, cancellationToken);
 
-        public async Task<RedirectToLoyaltyDto> Handle(RedirectToLoyaltyQuery request, CancellationToken cancellationToken)
+        if (link == null || (link.ExpiresAt.HasValue && link.ExpiresAt < DateTime.UtcNow))
         {
-            var link = await _db.ShortLinks.FirstOrDefaultAsync(x => x.Token == request.Token, cancellationToken);
-
-            if (link == null || (link.ExpiresAt.HasValue && link.ExpiresAt < DateTime.UtcNow))
-            {
-                return new RedirectToLoyaltyDto(null);
-            }
-
-            return new RedirectToLoyaltyDto(link.TargetId);
+            return new RedirectToLoyaltyDto(null);
         }
+
+        return new RedirectToLoyaltyDto(link.TargetId);
     }
 }

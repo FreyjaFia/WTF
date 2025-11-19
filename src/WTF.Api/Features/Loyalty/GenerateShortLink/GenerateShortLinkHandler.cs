@@ -1,37 +1,36 @@
 ﻿using MediatR;
-using WTF.Contracts;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
+using WTF.Contracts.Loyalty.GenerateShortLink;
 
-namespace WTF.Api.Features.Loyalty.GenerateShortLink
+namespace WTF.Api.Features.Loyalty.GenerateShortLink;
+
+public class GenerateShortLinkHandler(WTFDbContext db)
+    : IRequestHandler<GenerateShortLinkCommand, GenerateShortLinkDto>
 {
-    public class GenerateShortLinkHandler(WTFDbContext db) : IRequestHandler<GenerateShortLinkCommand, ShortLinkDto>
+    public async Task<GenerateShortLinkDto> Handle(GenerateShortLinkCommand request,
+        CancellationToken cancellationToken)
     {
-        private readonly WTFDbContext _db = db;
+        var token = GenerateToken(8);
 
-        public async Task<ShortLinkDto> Handle(GenerateShortLinkCommand request, CancellationToken cancellationToken)
+        var link = new ShortLink
         {
-            var token = GenerateToken(8);
+            Token = token,
+            TargetType = "Loyalty",
+            TargetId = request.CustomerId
+        };
 
-            var link = new ShortLink
-            {
-                Token = token,
-                TargetType = "Loyalty",
-                TargetId = request.CustomerId
-            };
+        db.ShortLinks.Add(link);
+        await db.SaveChangesAsync(cancellationToken);
 
-            _db.ShortLinks.Add(link);
-            await _db.SaveChangesAsync(cancellationToken);
+        return new GenerateShortLinkDto(token);
+    }
 
-            return new ShortLinkDto(token);
-        }
+    private static string GenerateToken(int length)
+    {
+        var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        var rng = new Random();
 
-        private static string GenerateToken(int length)
-        {
-            var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-            var rng = new Random();
-
-            return new string([.. Enumerable.Repeat(chars, length).Select(s => s[rng.Next(s.Length)])]);
-        }
+        return new string([.. Enumerable.Repeat(chars, length).Select(s => s[rng.Next(s.Length)])]);
     }
 }

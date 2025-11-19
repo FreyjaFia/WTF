@@ -22,6 +22,8 @@ public partial class WTFDbContext : DbContext
 
     public virtual DbSet<ShortLink> ShortLinks { get; set; }
 
+    public virtual DbSet<User> Users { get; set; }
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         => optionsBuilder.UseSqlServer("Name=ConnectionStrings:WtfDb");
 
@@ -60,6 +62,25 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.TargetUrl).IsUnicode(false);
             entity.Property(e => e.Token)
                 .HasMaxLength(20)
+                .IsUnicode(false);
+        });
+
+        modelBuilder.Entity<User>(entity =>
+        {
+            entity.HasNoKey();
+
+            entity.Property(e => e.FirstName)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
+            entity.Property(e => e.LastName)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.Password)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.Username)
+                .HasMaxLength(50)
                 .IsUnicode(false);
         });
 

@@ -2,18 +2,24 @@
 
 namespace WTF.UI.Pages
 {
-    public partial class Home : ComponentBase
+    public partial class Redirect : ComponentBase, IAsyncDisposable
     {
         [Inject] private NavigationManager NavManager { get; set; } = default!;
         protected int Countdown => _countdown;
 
         private int _countdown = 5;
         private Timer? _timer;
+        private bool _isDisposed;
 
         protected override void OnInitialized()
         {
             _timer = new Timer(async _ =>
             {
+                if (_isDisposed)
+                {
+                    return;
+                }
+
                 if (_countdown > 1)
                 {
                     _countdown--;
@@ -21,13 +27,24 @@ namespace WTF.UI.Pages
                 }
                 else
                 {
-                    _timer?.Dispose();
                     await InvokeAsync(() =>
-                        NavManager.NavigateTo("https://www.facebook.com/waketastefocuscoffeetogo", forceLoad: true));
+                    {
+                        _isDisposed = true;
+                        _timer?.Dispose();
+                        NavManager.NavigateTo("https://www.facebook.com/waketastefocuscoffeetogo", forceLoad: true);
+                    });
                 }
             }, null, 1000, 1000);
         }
 
-        public void Dispose() => _timer?.Dispose();
+        async ValueTask IAsyncDisposable.DisposeAsync()
+        {
+            _isDisposed = true;
+            if (_timer is not null)
+            {
+                await _timer.DisposeAsync();
+                _timer = null;
+            }
+        }
     }
 }

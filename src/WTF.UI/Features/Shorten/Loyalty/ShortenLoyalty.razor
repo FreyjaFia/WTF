@@ -1,0 +1,45 @@
+﻿@page "/lp"
+@page "/lp/{Token?}"
+@layout NullLayout
+
+@if (ShortenLoyaltyDto is not null) {
+    <h2 class="rewards-title mb-4">Your Loyalty Rewards</h2>
+
+    <div class="loyalty-card-container">
+        @if (IsLoading)
+        {
+            <p class="loading">Loading your points...</p>
+        }
+        else if (ShortenLoyaltyDto is not null)
+        {
+            <div class="points-info mb-4">
+                <p class="welcome">👋 Hey <strong>@ShortenLoyaltyDto.FullName</strong>!</p>
+
+                <p class="current-points">
+                    ⭐ Points towards next reward: 
+                    <span class="points">@RemainingPoints</span>/9
+                </p>
+
+                @if (FreeCoffee > 0)
+                {
+                    <p class="progress-msg success">
+                        🎉 You’ve unlocked <strong>@FreeCoffee free coffee(s)</strong>!  
+                        Keep it up — only <strong>@NextCoffee</strong> more point(s) for your next one ☕
+                    </p>
+                }
+                else
+                {
+                    <p class="progress-msg">
+                        🚀 Just <strong>@NextCoffee</strong> more point(s) and your free coffee is yours! ☕
+                    </p>
+                }
+            </div>
+
+            <img src="@GetCardImage()" alt="Loyalty Card" class="loyalty-card" />
+        }
+        else
+        {
+            <p class="no-points">No loyalty points found.</p>
+        } 
+    </div>
+}
