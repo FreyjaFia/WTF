@@ -3,13 +3,14 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using WTF.Contracts.Auth.Login;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Auth.Login;
 
-public class LoginHandler(WTFDbContext db, IConfiguration config) : IRequestHandler<LoginCommand, LoginResponse>
+public class LoginHandler(WTFDbContext db, IConfiguration config) : IRequestHandler<LoginCommand, LoginDto>
 {
-    public Task<LoginResponse> Handle(LoginCommand request, CancellationToken cancellationToken)
+    public Task<LoginDto> Handle(LoginCommand request, CancellationToken cancellationToken)
     {
         var isValidUser = db.Users.Any(u => u.Username == request.Username && u.Password == request.Password);
 
@@ -35,7 +36,7 @@ public class LoginHandler(WTFDbContext db, IConfiguration config) : IRequestHand
             signingCredentials: credentials
         );
 
-        return Task.FromResult(new LoginResponse(
+        return Task.FromResult(new LoginDto(
             new JwtSecurityTokenHandler().WriteToken(token)
         ));
     }

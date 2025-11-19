@@ -8,6 +8,21 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Features\Auth\Models\**" />
+    <Compile Remove="Features\Shorten\Loyalty\Models\**" />
+    <Compile Remove="Pages\Shorten\**" />
+    <Content Remove="Features\Auth\Models\**" />
+    <Content Remove="Features\Shorten\Loyalty\Models\**" />
+    <Content Remove="Pages\Shorten\**" />
+    <EmbeddedResource Remove="Features\Auth\Models\**" />
+    <EmbeddedResource Remove="Features\Shorten\Loyalty\Models\**" />
+    <EmbeddedResource Remove="Pages\Shorten\**" />
+    <None Remove="Features\Auth\Models\**" />
+    <None Remove="Features\Shorten\Loyalty\Models\**" />
+    <None Remove="Pages\Shorten\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Blazored.LocalStorage" Version="4.5.0" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="9.0.8" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="9.0.8" PrivateAssets="all" />
@@ -64,12 +79,6 @@
     <Content Update="wwwroot\assets\images\logo.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Features\Auth\Models\" />
-    <Folder Include="Features\Shorten\Loyalty\Models\" />
-    <Folder Include="Pages\Shorten\" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,3 +1,4 @@
+using Blazored.LocalStorage;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using WTF.Contracts.Auth.Login;
@@ -9,10 +10,32 @@ public partial class Login : ComponentBase
 {
     [Inject] private IAuthService AuthService { get; set; } = default!;
     [Inject] private NavigationManager NavManager { get; set; } = default!;
+    [Inject] private ILocalStorageService LocalStorageService { get; set; } = default!;
 
     protected LoginRequestDto? LoginViewModel = new();
     protected bool IsLoading { get; set; }
     protected string ErrorMessage { get; set; } = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Check if user already has a valid token
+        var token = await LocalStorageService.GetItemAsStringAsync("accessToken");
+        
+        if (!string.IsNullOrWhiteSpace(token))
+        {
+            // Validate the existing token
+            var isValid = await AuthService.ValidateTokenAsync();
+            
+            if (isValid)
+            {
+                Console.WriteLine("User already logged in - redirecting to dashboard");
+                NavManager.NavigateTo("/dashboard");
+                return;
+            }
+        }
+
+        await base.OnInitializedAsync();
+    }
 
     private async Task HandleLogin(EditContext context)
     {

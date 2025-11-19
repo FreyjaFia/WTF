@@ -7,7 +7,7 @@ namespace WTF.UI.Features.Shorten.Loyalty
     public partial class ShortenLoyalty : ComponentBase
     {
         [Parameter] public string? Token { get; set; }
-        [Inject] private ILoyaltyService LoyaltyService { get; set; } = default!;
+        [Inject] private IShortenService ShortenService { get; set; } = default!;
         [Inject] private NavigationManager NavManager { get; set; } = default!;
 
         protected ShortenLoyaltyDto? ShortenLoyaltyDto;
@@ -43,7 +43,7 @@ namespace WTF.UI.Features.Shorten.Loyalty
 
             try
             {
-                ShortenLoyaltyDto = await LoyaltyService.GetLoyaltyByTokenAsync(Token);
+                ShortenLoyaltyDto = await ShortenService.GetLoyaltyByTokenAsync(Token);
 
                 if (ShortenLoyaltyDto == null)
                 {

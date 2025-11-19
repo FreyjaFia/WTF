@@ -6,14 +6,14 @@ using WTF.Contracts.Loyalty.ShortenLoyalty;
 
 namespace WTF.UI.Features.Shorten.Services;
 
-public interface ILoyaltyService
+public interface IShortenService
 {
     Task<ShortenLoyaltyDto?> GetLoyaltyByTokenAsync(string token);
     Task<GetLoyaltyPointsDto?> GetLoyaltyPointsAsync(Guid customerId);
     Task<GenerateShortLinkDto?> GenerateShortLinkAsync(Guid customerId);
 }
 
-public class LoyaltyService(HttpClient httpClient) : ILoyaltyService
+public class ShortenService(HttpClient httpClient) : IShortenService
 {
     public async Task<ShortenLoyaltyDto?> GetLoyaltyByTokenAsync(string token)
     {

@@ -74,6 +74,7 @@ app.UseAuthorization();
 
 app.MapGet("/", () => "Welcome to the WTF API!");
 app.MapAuth()
-    .MapLoyalty();
+    .MapLoyalty()
+    .MapTest();
 
 app.Run();

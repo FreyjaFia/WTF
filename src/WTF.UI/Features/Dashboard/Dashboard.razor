@@ -1,4 +1,88 @@
 @page "/dashboard"
-@layout NullLayout
+@layout MainLayout
 
-<h3>Dashboard</h3>
+<div class="container mt-4">
+    <h3>Dashboard - Token Authentication Test</h3>
+
+    <div class="card mt-4">
+        <div class="card-body">
+            <h5 class="card-title">Access Token Status</h5>
+            @if (!string.IsNullOrEmpty(AccessToken))
+            {
+                <div class="alert alert-success">
+                    <strong>Token Found!</strong><br/>
+                    <small class="text-muted">Token: @AccessToken?.Substring(0, Math.Min(50, AccessToken.Length))...</small>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-warning">
+                    <strong>No Token Found</strong> - Please log in first.
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Protected Endpoint Test</h5>
+                </div>
+                <div class="card-body">
+                    <p>This endpoint requires authentication</p>
+                    <button class="btn btn-primary" @onclick="TestProtectedEndpoint" disabled="@IsLoading">
+                        @if (IsLoading)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        Test Protected Endpoint
+                    </button>
+
+                    @if (ProtectedTestResult != null)
+                    {
+                        <div class="alert alert-success mt-3">
+                            <strong>? Success!</strong><br/>
+                            <strong>Message:</strong> @ProtectedTestResult.Message<br/>
+                            <strong>Timestamp:</strong> @ProtectedTestResult.Timestamp.ToString("yyyy-MM-dd HH:mm:ss")
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">Public Endpoint Test</h5>
+                </div>
+                <div class="card-body">
+                    <p>This endpoint does not require authentication</p>
+                    <button class="btn btn-secondary" @onclick="TestPublicEndpoint" disabled="@IsLoading">
+                        @if (IsLoading)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        Test Public Endpoint
+                    </button>
+
+                    @if (PublicTestResult != null)
+                    {
+                        <div class="alert alert-info mt-3">
+                            <strong>? Success!</strong><br/>
+                            <strong>Message:</strong> @PublicTestResult.Message<br/>
+                            <strong>Timestamp:</strong> @PublicTestResult.Timestamp.ToString("yyyy-MM-dd HH:mm:ss")
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <div class="alert alert-danger mt-4">
+            <strong>? Error:</strong> @ErrorMessage
+        </div>
+    }
+</div>

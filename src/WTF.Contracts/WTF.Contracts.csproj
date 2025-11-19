@@ -7,12 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Features\Auth\Login\" />
-    <Folder Include="Features\Loyalty\GenerateShortLink\" />
-    <Folder Include="Features\Loyalty\GetLoyaltyPoints\" />
-    <Folder Include="Features\Loyalty\RedirectToLoyalty\" />
-    <Folder Include="Features\Loyalty\ShortenLoyalty\" />
-    <Folder Include="Loyalty\Requests\" />
+    <Compile Remove="Features\**" />
+    <Compile Remove="Loyalty\Requests\**" />
+    <EmbeddedResource Remove="Features\**" />
+    <EmbeddedResource Remove="Loyalty\Requests\**" />
+    <None Remove="Features\**" />
+    <None Remove="Loyalty\Requests\**" />
   </ItemGroup>
 
   <ItemGroup>
