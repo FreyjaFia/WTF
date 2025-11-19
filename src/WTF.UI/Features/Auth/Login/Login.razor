@@ -1,0 +1,50 @@
+@page "/login"
+@layout EmptyLayout
+
+<div id="login-container" class="d-flex justify-content-center align-items-center flex-column">
+    <div id="login-card" class="card shadow-lg">
+        <div class="brand-header">
+            <img src="assets/images/logo-new.jpg" alt="Wake. Taste. Focus" class="brand-logo" />
+            <h1 class="brand-name">Wake. Taste. Focus</h1>
+            <p class="brand-subtitle">by Faith</p>
+            <div class="admin-badge">ADMIN PORTAL</div>
+        </div>
+
+        <div class="card-body">
+            @if (!string.IsNullOrEmpty(ErrorMessage))
+            {
+                <div class="alert alert-danger" role="alert">
+                    @ErrorMessage
+                </div>
+            }
+
+            <EditForm Model="@LoginViewModel" OnValidSubmit="@HandleLogin">
+                <DataAnnotationsValidator/>
+
+                <div class="mb-3">
+                    <label for="username" class="form-label">Username</label>
+                    <InputText id="username" class="form-control" @bind-Value="LoginViewModel.Username" disabled="@IsLoading"/>
+                    <ValidationMessage For="@(() => LoginViewModel.Username)" class="text-danger small mt-1"/>
+                </div>
+
+                <div class="mb-3">
+                    <label for="password" class="form-label">Password</label>
+                    <InputText id="password" type="password" class="form-control" @bind-Value="LoginViewModel.Password" disabled="@IsLoading"/>
+                    <ValidationMessage For="@(() => LoginViewModel.Password)" class="text-danger small mt-1"/>
+                </div>
+
+                <button type="submit" class="btn btn-dark w-100" disabled="@IsLoading">
+                    @if (IsLoading)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        <span>Logging in...</span>
+                    }
+                    else
+                    {
+                        <span>Login</span>
+                    }
+                </button>
+            </EditForm>
+        </div>
+    </div>
+</div>

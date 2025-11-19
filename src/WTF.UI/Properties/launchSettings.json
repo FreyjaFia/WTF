@@ -9,7 +9,8 @@
       "applicationUrl": "http://localhost:5176",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
-      }
+      },
+      "launchUrl": "login"
     },
     "https": {
       "commandName": "Project",
@@ -19,7 +20,8 @@
       "applicationUrl": "https://localhost:7081;http://localhost:5176",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
-      }
+      },
+      "launchUrl": "login"
     }
   }
 }

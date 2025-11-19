@@ -6,4 +6,17 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Folder Include="Features\Auth\Login\" />
+    <Folder Include="Features\Loyalty\GenerateShortLink\" />
+    <Folder Include="Features\Loyalty\GetLoyaltyPoints\" />
+    <Folder Include="Features\Loyalty\RedirectToLoyalty\" />
+    <Folder Include="Features\Loyalty\ShortenLoyalty\" />
+    <Folder Include="Loyalty\Requests\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MediatR" Version="13.1.0" />
+  </ItemGroup>
+
 </Project>

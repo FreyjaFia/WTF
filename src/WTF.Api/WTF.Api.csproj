@@ -7,17 +7,35 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="MediatR" Version="13.0.0" />
+    <PackageReference Include="MediatR" Version="13.1.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.9" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.8" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.8">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.14.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\WTF.Contracts\WTF.Contracts.csproj" />
     <ProjectReference Include="..\WTF.Domain\WTF.Domain.csproj" />
+    <ProjectReference Include="..\WTF.Contracts\WTF.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Features\Auth\Refresh\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Remove="Features\Auth\Refresh\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Remove="Features\Auth\Refresh\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="Features\Auth\Refresh\**" />
   </ItemGroup>
 
 </Project>

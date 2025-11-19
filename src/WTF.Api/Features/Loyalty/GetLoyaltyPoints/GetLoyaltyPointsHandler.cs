@@ -1,27 +1,27 @@
 ﻿using MediatR;
 using Microsoft.EntityFrameworkCore;
-using WTF.Contracts;
+using WTF.Contracts.Loyalty.GetLoyaltyPoints;
 using WTF.Domain.Data;
 
-namespace WTF.Api.Features.Loyalty.GetLoyaltyPoints
+namespace WTF.Api.Features.Loyalty.GetLoyaltyPoints;
+
+public class GetLoyaltyPointsHandler(WTFDbContext db)
+    : IRequestHandler<GetLoyaltyPointsQuery, GetLoyaltyPointsDto?>
 {
-    public class GetLoyaltyPointsHandler(WTFDbContext db) : IRequestHandler<GetLoyaltyPointsQuery, LoyaltyPointsDto?>
+    public async Task<GetLoyaltyPointsDto?> Handle(GetLoyaltyPointsQuery request,
+        CancellationToken cancellationToken)
     {
-        private readonly WTFDbContext _db = db;
+        var entity = await db.LoyaltyPoints
+            .Include(x => x.Customer)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.CustomerId == request.CustomerId, cancellationToken);
 
-        public async Task<LoyaltyPointsDto?> Handle(GetLoyaltyPointsQuery request, CancellationToken cancellationToken)
+        if (entity is null)
         {
-            var entity = await _db.LoyaltyPoints
-                .Include(x => x.Customer)
-                .AsNoTracking()
-                .FirstOrDefaultAsync(x => x.CustomerId == request.CustomerId, cancellationToken);
-
-            if (entity is null)
-            {
-                return null;
-            }
-
-            return new LoyaltyPointsDto(request.CustomerId, entity.Points, entity.Customer.FirstName, entity.Customer.LastName);
+            return null;
         }
+
+        return new GetLoyaltyPointsDto(request.CustomerId, entity.Points, entity.Customer.FirstName,
+            entity.Customer.LastName);
     }
 }
