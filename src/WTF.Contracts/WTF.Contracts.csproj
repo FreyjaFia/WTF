@@ -7,15 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Features\**" />
-    <Compile Remove="Loyalty\Requests\**" />
-    <EmbeddedResource Remove="Features\**" />
-    <EmbeddedResource Remove="Loyalty\Requests\**" />
-    <None Remove="Features\**" />
-    <None Remove="Loyalty\Requests\**" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="MediatR" Version="13.1.0" />
   </ItemGroup>
 
