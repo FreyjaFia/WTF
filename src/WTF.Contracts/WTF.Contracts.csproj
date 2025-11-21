@@ -1,19 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
-
-  <ItemGroup>
-    <Compile Remove="Features\**" />
-    <Compile Remove="Loyalty\Requests\**" />
-    <EmbeddedResource Remove="Features\**" />
-    <EmbeddedResource Remove="Loyalty\Requests\**" />
-    <None Remove="Features\**" />
-    <None Remove="Loyalty\Requests\**" />
-  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="MediatR" Version="13.1.0" />

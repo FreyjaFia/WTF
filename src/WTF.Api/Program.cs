@@ -1,10 +1,9 @@
-using System.Text;
-using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using System.Threading.RateLimiting;
 using WTF.Api.Endpoints;
-using WTF.Api.Features.Loyalty.GetLoyaltyPoints;
 using WTF.Domain.Data;
 
 var builder = WebApplication.CreateBuilder(args);

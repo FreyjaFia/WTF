@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.14.36414.22
+# Visual Studio Version 18
+VisualStudioVersion = 18.0.11217.181 d18.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
 EndProject
@@ -17,6 +17,13 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WTF.UI", "src\WTF.UI\WTF.UI.csproj", "{885BD7EE-DB7D-4FC6-9E50-C1BFDE0ABB87}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WTF.Contracts", "src\WTF.Contracts\WTF.Contracts.csproj", "{2E017E31-B9C9-431F-900D-CD935736A1FA}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".github", ".github", "{46AE856E-FFF9-4B20-9FDB-09D34691A83D}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{D666F66A-660E-48E2-A754-D53FFBD08DD6}"
+	ProjectSection(SolutionItems) = preProject
+		.github\workflows\main.yml = .github\workflows\main.yml
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -85,6 +92,7 @@ Global
 		{1B0C04F7-B3B6-440F-BA0E-BDE636EFB7C0} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{885BD7EE-DB7D-4FC6-9E50-C1BFDE0ABB87} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{2E017E31-B9C9-431F-900D-CD935736A1FA} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{D666F66A-660E-48E2-A754-D53FFBD08DD6} = {46AE856E-FFF9-4B20-9FDB-09D34691A83D}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D803CBB5-6E7F-4C7F-94E2-2154D33CC4F8}

@@ -1,32 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <ServiceWorkerAssetsManifest>service-worker-assets.js</ServiceWorkerAssetsManifest>
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Features\Auth\Models\**" />
-    <Compile Remove="Features\Shorten\Loyalty\Models\**" />
-    <Compile Remove="Pages\Shorten\**" />
-    <Content Remove="Features\Auth\Models\**" />
-    <Content Remove="Features\Shorten\Loyalty\Models\**" />
-    <Content Remove="Pages\Shorten\**" />
-    <EmbeddedResource Remove="Features\Auth\Models\**" />
-    <EmbeddedResource Remove="Features\Shorten\Loyalty\Models\**" />
-    <EmbeddedResource Remove="Pages\Shorten\**" />
-    <None Remove="Features\Auth\Models\**" />
-    <None Remove="Features\Shorten\Loyalty\Models\**" />
-    <None Remove="Pages\Shorten\**" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Blazored.LocalStorage" Version="4.5.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="9.0.8" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="9.0.8" PrivateAssets="all" />
-    <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.9" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.0" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.0" />
   </ItemGroup>
 
   <ItemGroup>
