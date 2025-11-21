@@ -1,4 +1,4 @@
-name: Build and Deploy .NET 9 API + UI
+name: Build and Deploy .NET 10 API + UI
 
 on:
   push:
@@ -16,11 +16,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 2. Setup .NET 9 SDK
-      - name: Setup .NET 9
+      # 2. Setup .NET 10 SDK
+      - name: Setup .NET 10
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.x'
+          dotnet-version: '10.x'
 
       # 3. Restore & Build
       - name: Restore and Build
