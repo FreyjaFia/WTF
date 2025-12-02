@@ -17,6 +17,8 @@ builder.Services.AddDbContext<WTFDbContext>(options =>
 
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
 
+builder.Services.AddHttpContextAccessor();
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -74,6 +76,7 @@ app.UseAuthorization();
 app.MapGet("/", () => "Welcome to the WTF API!");
 app.MapAuth()
     .MapLoyalty()
+    .MapProducts()
     .MapTest();
 
 app.Run();

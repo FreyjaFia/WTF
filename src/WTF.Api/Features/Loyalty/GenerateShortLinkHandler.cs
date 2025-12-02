@@ -3,7 +3,7 @@ using WTF.Domain.Data;
 using WTF.Domain.Entities;
 using WTF.Contracts.Loyalty.GenerateShortLink;
 
-namespace WTF.Api.Features.Loyalty.GenerateShortLink;
+namespace WTF.Api.Features.Loyalty;
 
 public class GenerateShortLinkHandler(WTFDbContext db)
     : IRequestHandler<GenerateShortLinkCommand, GenerateShortLinkDto>

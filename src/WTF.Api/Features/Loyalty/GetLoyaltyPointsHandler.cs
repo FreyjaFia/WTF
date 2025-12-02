@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using WTF.Contracts.Loyalty.GetLoyaltyPoints;
 using WTF.Domain.Data;
 
-namespace WTF.Api.Features.Loyalty.GetLoyaltyPoints;
+namespace WTF.Api.Features.Loyalty;
 
 public class GetLoyaltyPointsHandler(WTFDbContext db)
     : IRequestHandler<GetLoyaltyPointsQuery, GetLoyaltyPointsDto?>
