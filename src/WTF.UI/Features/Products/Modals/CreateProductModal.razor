@@ -1,0 +1,68 @@
+﻿@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Forms
+@using WTF.Contracts.Products
+@using WTF.Contracts.Products.Enums
+
+<div class="modal-header">
+    <h2>Create Product</h2>
+    <button class="btn-close" @onclick="OnCancel">✕</button>
+</div>
+<div class="modal-body">
+    <EditForm Model="@ProductForm" OnValidSubmit="OnValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary class="validation-summary" />
+        <div class="form-group">
+            <label>Product Name *</label>
+            <InputText class="form-control" @bind-Value="ProductForm.Name" placeholder="e.g., Spanish Latte" />
+            <ValidationMessage For="@(() => ProductForm.Name)" />
+        </div>
+        <div class="form-group">
+            <label>Price (₱) *</label>
+            <InputNumber class="form-control" @bind-Value="ProductForm.Price" placeholder="0.00" />
+            <ValidationMessage For="@(() => ProductForm.Price)" />
+        </div>
+        <div class="form-group">
+            <label>Type *</label>
+            <InputSelect class="form-select" @bind-Value="ProductForm.Type">
+                <option value="@ProductTypeEnum.Drink">Drink</option>
+                <option value="@ProductTypeEnum.Food">Food</option>
+                <option value="@ProductTypeEnum.Dessert">Dessert</option>
+                <option value="@ProductTypeEnum.Other">Other</option>
+            </InputSelect>
+            <ValidationMessage For="@(() => ProductForm.Type)" />
+        </div>
+        <div class="form-group">
+            <label class="checkbox-label">
+                <InputCheckbox @bind-Value="ProductForm.IsAddOn" />
+                <span>This is an add-on product</span>
+            </label>
+        </div>
+        <div class="form-group">
+            <label class="checkbox-label">
+                <InputCheckbox @bind-Value="ProductForm.IsActive" />
+                <span>Active</span>
+            </label>
+        </div>
+        <div class="modal-actions">
+            <button type="submit" class="btn btn-primary" disabled="@IsSaving">
+                @if (IsSaving)
+                {
+                    <span class="spinner-small"></span>
+                }
+                Create Product
+            </button>
+            <button type="button" class="btn btn-secondary" @onclick="OnCancel" disabled="@IsSaving">
+                Cancel
+            </button>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    [Parameter] public ProductRequestDto ProductForm { get; set; } = new();
+    [Parameter] public bool IsSaving { get; set; }
+    [Parameter] public EventCallback OnValidSubmit { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+}
+

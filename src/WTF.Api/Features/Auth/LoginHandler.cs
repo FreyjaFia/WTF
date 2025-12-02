@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -6,21 +7,23 @@ using System.Text;
 using WTF.Contracts.Auth.Login;
 using WTF.Domain.Data;
 
-namespace WTF.Api.Features.Auth.Login;
+namespace WTF.Api.Features.Auth;
 
 public class LoginHandler(WTFDbContext db, IConfiguration config) : IRequestHandler<LoginCommand, LoginDto>
 {
-    public Task<LoginDto> Handle(LoginCommand request, CancellationToken cancellationToken)
+    public async Task<LoginDto> Handle(LoginCommand request, CancellationToken cancellationToken)
     {
-        var isValidUser = db.Users.Any(u => u.Username == request.Username && u.Password == request.Password);
+        var user = await db.Users
+            .FirstOrDefaultAsync(u => u.Username == request.Username && u.Password == request.Password, cancellationToken);
 
-        if (!isValidUser)
+        if (user == null)
         {
             return null;
         }
 
         var claims = new[]
         {
+            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim(ClaimTypes.Name, request.Username),
             new Claim(ClaimTypes.Role, "User")
         };
@@ -36,8 +39,8 @@ public class LoginHandler(WTFDbContext db, IConfiguration config) : IRequestHand
             signingCredentials: credentials
         );
 
-        return Task.FromResult(new LoginDto(
+        return new LoginDto(
             new JwtSecurityTokenHandler().WriteToken(token)
-        ));
+        );
     }
 }

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using WTF.UI;
 using WTF.UI.Core.Handlers;
 using WTF.UI.Features.Auth.Services;
+using WTF.UI.Features.Products.Services;
 using WTF.UI.Features.Shorten.Services;
 using WTF.UI.Features.Test.Services;
 using WTF.UI.Settings;
@@ -26,6 +27,7 @@ builder.Services.AddBlazoredLocalStorage();
 builder.Services.AddScoped<TokenAuthMessageHandler>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IShortenService, ShortenService>();
+builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<ITestService, TestService>();
 
 builder.Services.AddHttpClient("Api", client => { client.BaseAddress = new Uri(wtfSettings!.BaseUrl); })

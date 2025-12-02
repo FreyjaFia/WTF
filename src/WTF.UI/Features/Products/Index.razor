@@ -1,0 +1,178 @@
+﻿@page "/products"
+@layout MainLayout
+@using WTF.Contracts.Products.Enums
+@using WTF.UI.Features.Products.Modals
+
+<div class="products-container">
+    <div class="products-header">
+        <h1>Product Management</h1>
+        <button class="btn btn-primary" @onclick="ShowCreateModal">
+            <span class="icon">+</span> Add New Product
+        </button>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters-card">
+        <div class="filter-row">
+            <div class="filter-group">
+                <label>Search</label>
+                <input type="text" class="form-control" placeholder="Search by name..." @bind="searchTerm" @bind:event="oninput" />
+            </div>
+            <div class="filter-group">
+                <label>Type</label>
+                <select class="form-select" @bind="selectedType">
+                    <option value="">All Types</option>
+                    <option value="0">Drink</option>
+                    <option value="1">Food</option>
+                    <option value="2">Dessert</option>
+                    <option value="3">Other</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Category</label>
+                <select class="form-select" @bind="selectedIsAddOn">
+                    <option value="">All Categories</option>
+                    <option value="false">Main Products</option>
+                    <option value="true">Add-ons</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Status</label>
+                <select class="form-select" @bind="selectedIsActive">
+                    <option value="true">Active Only</option>
+                    <option value="">All</option>
+                    <option value="false">Inactive Only</option>
+                </select>
+            </div>
+            <div class="filter-group filter-actions">
+                <button class="btn btn-secondary" @onclick="ApplyFilters">Apply Filters</button>
+                <button class="btn btn-outline" @onclick="ResetFilters">Reset</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Products Table -->
+    @if (isLoading)
+    {
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p>Loading products...</p>
+        </div>
+    }
+    else if (productList == null || !productList.Products.Any())
+    {
+        <div class="empty-state">
+            <p>No products found.</p>
+            <button class="btn btn-primary" @onclick="ShowCreateModal">Add Your First Product</button>
+        </div>
+    }
+    else
+    {
+        <div class="table-container">
+            <table class="products-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Price</th>
+                        <th>Type</th>
+                        <th>Category</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var product in productList.Products)
+                    {
+                        <tr class="@(product.IsActive ? "" : "inactive-row")">
+                            <td class="product-name">@product.Name</td>
+                            <td class="product-price text-right">@product.FormattedPrice</td>
+                            <td>
+                                <span class="badge badge-@product.Type.ToString().ToLower()">
+                                    @product.DisplayType
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge badge-category">
+                                    @product.ProductCategory
+                                </span>
+                            </td>
+                            <td>
+                                <span class="status-badge @(product.IsActive ? "active" : "inactive")">
+                                    @(product.IsActive ? "Active" : "Inactive")
+                                </span>
+                            </td>
+                            <td class="actions-cell">
+                                <button class="btn-icon btn-edit" @onclick="() => ShowEditModal(product)" title="Edit">
+                                    Edit
+                                </button>
+                                <button class="btn-icon btn-delete" @onclick="() => ShowDeleteConfirmation(product)" title="Delete">
+                                    Delete
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination-container">
+            <div class="pagination-info">
+                Showing @((productList.Page - 1) * productList.PageSize + 1) to @Math.Min(productList.Page * productList.PageSize, productList.TotalCount) of @productList.TotalCount products
+            </div>
+            <div class="pagination-controls">
+                <button class="btn-page" @onclick="PreviousPage" disabled="@(!productList.HasPrevious)">
+                    Previous
+                </button>
+                <span class="page-indicator">Page @productList.Page of @productList.TotalPages</span>
+                <button class="btn-page" @onclick="NextPage" disabled="@(!productList.HasNext)">
+                    Next
+                </button>
+            </div>
+        </div>
+    }
+
+    <!-- Error Message -->
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-error">
+            @errorMessage
+        </div>
+    }
+
+    <!-- Success Message -->
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success">
+            @successMessage
+        </div>
+    }
+</div>
+
+<!-- Modals (outside container for proper z-index) -->
+@if (showModal && editingProduct == null)
+{
+    <div class="modal-overlay" @onclick="CloseModal">
+        <div class="modal-content" @onclick:stopPropagation="true">
+            <CreateProductModal ProductForm="productForm" IsSaving="isSaving" OnValidSubmit="SaveProduct" OnCancel="CloseModal" />
+        </div>
+    </div>
+}
+
+@if (showModal && editingProduct != null)
+{
+    <div class="modal-overlay" @onclick="CloseModal">
+        <div class="modal-content" @onclick:stopPropagation="true">
+            <EditProductModal ProductForm="productForm" IsSaving="isSaving" OnValidSubmit="SaveProduct" OnCancel="CloseModal" />
+        </div>
+    </div>
+}
+
+@if (showDeleteConfirm)
+{
+    <div class="modal-overlay" @onclick="CloseDeleteConfirmation">
+        <div class="modal-content modal-small" @onclick:stopPropagation="true">
+            <DeleteProductModal Product="deletingProduct" IsDeleting="isDeleting" ErrorMessage="@errorMessage" OnConfirm="ConfirmDelete" OnCancel="CloseDeleteConfirmation" />
+        </div>
+    </div>
+}

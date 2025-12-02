@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using WTF.Domain.Data;
 using WTF.Contracts.Loyalty.RedirectToLoyalty;
 
-namespace WTF.Api.Features.Loyalty.RedirectToLoyalty;
+namespace WTF.Api.Features.Loyalty;
 
 public class RedirectToLoyaltyHandler(WTFDbContext db)
     : IRequestHandler<RedirectToLoyaltyQuery, RedirectToLoyaltyDto>
