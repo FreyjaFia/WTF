@@ -1,4 +1,4 @@
-@page "/login"
+﻿@page "/login"
 @layout EmptyLayout
 
 <div id="login-container" class="d-flex justify-content-center align-items-center flex-column">
@@ -19,18 +19,18 @@
             }
 
             <EditForm Model="@LoginRequestDto" OnValidSubmit="@HandleLogin">
-                <DataAnnotationsValidator/>
+                <DataAnnotationsValidator />
 
                 <div class="mb-3">
                     <label for="username" class="form-label">Username</label>
-                    <InputText id="username" class="form-control" @bind-Value="LoginRequestDto.Username" disabled="@IsLoading"/>
-                    <ValidationMessage For="@(() => LoginRequestDto.Username)" class="text-danger small mt-1"/>
+                    <InputText id="username" class="form-control" @bind-Value="LoginRequestDto.Username" disabled="@IsLoading" />
+                    <ValidationMessage For="@(() => LoginRequestDto.Username)" class="text-danger small mt-1" />
                 </div>
 
                 <div class="mb-3">
                     <label for="password" class="form-label">Password</label>
-                    <InputText id="password" type="password" class="form-control" @bind-Value="LoginRequestDto.Password" disabled="@IsLoading"/>
-                    <ValidationMessage For="@(() => LoginRequestDto.Password)" class="text-danger small mt-1"/>
+                    <InputText id="password" type="password" class="form-control" @bind-Value="LoginRequestDto.Password" disabled="@IsLoading" />
+                    <ValidationMessage For="@(() => LoginRequestDto.Password)" class="text-danger small mt-1" />
                 </div>
 
                 <button type="submit" class="btn btn-dark w-100" disabled="@IsLoading">

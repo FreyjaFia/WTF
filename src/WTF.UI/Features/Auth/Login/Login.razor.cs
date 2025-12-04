@@ -12,7 +12,7 @@ public partial class Login : ComponentBase
     [Inject] private NavigationManager NavManager { get; set; } = default!;
     [Inject] private ILocalStorageService LocalStorageService { get; set; } = default!;
 
-    protected LoginRequestDto? LoginViewModel = new();
+    protected LoginRequestDto? LoginRequestDto = new();
     protected bool IsLoading { get; set; }
     protected string ErrorMessage { get; set; } = string.Empty;
 
@@ -50,7 +50,7 @@ public partial class Login : ComponentBase
 
         try
         {
-            var success = await AuthService.LoginAsync(LoginViewModel!.Username, LoginViewModel.Password);
+            var success = await AuthService.LoginAsync(LoginRequestDto!.Username, LoginRequestDto.Password);
             
             if (success)
             {

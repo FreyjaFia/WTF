@@ -34,9 +34,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nuget-
 
-      # 4. Restore & Build
-      - name: Restore and Build
-        run: dotnet build --configuration Release
+      # 4. Restore & Build only UI and API
+      - name: Restore and Build UI and API
+        run: |
+          dotnet build src/WTF.UI/WTF.UI.csproj --configuration Release
+          dotnet build src/WTF.Api/WTF.Api.csproj --configuration Release
 
       # 5. Publish UI (only on push to main)
       - name: Publish UI
