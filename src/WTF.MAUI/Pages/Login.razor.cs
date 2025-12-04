@@ -3,32 +3,25 @@ using Microsoft.AspNetCore.Components.Forms;
 using WTF.Contracts.Auth.Login;
 using WTF.MAUI.Services;
 
-namespace WTF.MAUI.Components.Pages
+namespace WTF.MAUI.Pages
 {
     public partial class Login : ComponentBase
     {
         [Inject] private IAuthService AuthService { get; set; } = default!;
-        [Inject] private ITokenService TokenService { get; set; } = default!;
         [Inject] private NavigationManager NavManager { get; set; } = default!;
 
         protected LoginRequestDto LoginRequestDto = new();
         protected bool IsLoading { get; set; }
         protected string ErrorMessage { get; set; } = string.Empty;
 
-
         protected override async Task OnInitializedAsync()
         {
-            var token = await TokenService.GetAccessTokenAsync();
+            var isLoggedIn = await AuthService.IsLoggedInAsync();
 
-            if (!string.IsNullOrWhiteSpace(token))
+            if (isLoggedIn)
             {
-                var isValid = await AuthService.ValidateTokenAsync();
-
-                if (isValid)
-                {
-                    NavManager.NavigateTo("/counter");
-                    return;
-                }
+                NavManager.NavigateTo("/");
+                return;
             }
 
             await base.OnInitializedAsync();

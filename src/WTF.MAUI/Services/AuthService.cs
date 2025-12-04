@@ -1,4 +1,5 @@
-﻿using System.Net.Http.Json;
+﻿using Microsoft.AspNetCore.Components;
+using System.Net.Http.Json;
 using WTF.Contracts.Auth.Login;
 
 namespace WTF.MAUI.Services
@@ -7,10 +8,12 @@ namespace WTF.MAUI.Services
     {
         Task<bool> LoginAsync(string username, string password);
         Task<bool> ValidateTokenAsync();
+        Task<bool> IsLoggedInAsync();
+        Task RequireLoginAsync();
         void Logout();
     }
 
-    public class AuthService(HttpClient httpClient, ITokenService tokenService) : IAuthService
+    public class AuthService(HttpClient httpClient, NavigationManager navManager, ITokenService tokenService) : IAuthService
     {
         public async Task<bool> LoginAsync(string username, string password)
         {
@@ -53,9 +56,31 @@ namespace WTF.MAUI.Services
             }
         }
 
+        public async Task<bool> IsLoggedInAsync()
+        {
+            var isLoggedIn = false;
+            var token = await tokenService.GetAccessTokenAsync();
+
+            if (!string.IsNullOrWhiteSpace(token))
+            {
+                isLoggedIn = await ValidateTokenAsync();
+            }
+
+            return isLoggedIn;
+        }
+
         public void Logout()
         {
             tokenService.RemoveAccessToken();
+        }
+
+        public async Task RequireLoginAsync()
+        {
+            if (!await IsLoggedInAsync())
+            {
+                navManager.NavigateTo("/login");
+                return;
+            }
         }
     }
 }
