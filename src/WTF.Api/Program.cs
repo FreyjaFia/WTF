@@ -69,7 +69,12 @@ if (app.Environment.IsDevelopment())
 app.UseCors("AllowUI");
 app.UseRateLimiter();
 
-app.UseHttpsRedirection();
+// Only use HTTPS redirection in production (not in development for mobile apps)
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
+
 app.UseAuthentication();
 app.UseAuthorization();
 
