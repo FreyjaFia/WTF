@@ -4,6 +4,8 @@ using System.Reflection;
 using WTF.MAUI.Infrastructure.Handlers;
 using WTF.MAUI.Services;
 using WTF.MAUI.Settings;
+using WTF.MAUI.ViewModels;
+using WTF.MAUI.Views;
 
 namespace WTF.MAUI
 {
@@ -20,18 +22,17 @@ namespace WTF.MAUI
                     fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
                 });
 
-            var assembly = Assembly.GetExecutingAssembly();
-            using var stream = assembly.GetManifestResourceStream("WTF.MAUI.appsettings.json");
-
-            var config = new ConfigurationBuilder()
-                .AddJsonStream(stream!)
-                .Build();
-
-            builder.Configuration.AddConfiguration(config);
-
 #if DEBUG
             builder.Logging.AddDebug();
 #endif
+
+            var assembly = Assembly.GetExecutingAssembly();
+            using var stream = assembly.GetManifestResourceStream("WTF.MAUI.appsettings.json");
+
+            if (stream != null)
+            {
+                builder.Configuration.AddJsonStream(stream);
+            }
 
             var wtfSettings = builder.Configuration
                 .GetSection("WtfSettings")
@@ -39,11 +40,27 @@ namespace WTF.MAUI
 
             builder.Services.AddSingleton(wtfSettings!);
 
+            // Register Services
             builder.Services.AddScoped<IAuthService, AuthService>();
             builder.Services.AddScoped<ITokenService, TokenService>();
+            builder.Services.AddScoped<IOrderService, OrderService>();
 
-            builder.Services.AddHttpClient("Api", client => { client.BaseAddress = new Uri(wtfSettings!.BaseUrl); })
-                .AddHttpMessageHandler<AuthTokenHandler>();
+            // Register ViewModels
+            builder.Services.AddTransient<LoginViewModel>();
+            builder.Services.AddTransient<OrderViewModel>();
+
+            // Register Pages
+            builder.Services.AddTransient<LoginPage>();
+            builder.Services.AddTransient<OrderPage>();
+
+            // Register HTTP Client with Auth Handler
+            builder.Services.AddTransient<AuthTokenHandler>();
+
+            builder.Services.AddHttpClient("Api", client =>
+            {
+                client.BaseAddress = new Uri(wtfSettings!.BaseUrl);
+            })
+            .AddHttpMessageHandler<AuthTokenHandler>();
 
             builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().CreateClient("Api"));
 

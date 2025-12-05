@@ -4,11 +4,28 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:local="clr-namespace:WTF.MAUI"
+    xmlns:views="clr-namespace:WTF.MAUI.Views"
     Title="WTF.MAUI">
 
+    <!-- Login Page (No Tab Bar) -->
     <ShellContent
-        Title="Home"
-        ContentTemplate="{DataTemplate local:MainPage}"
-        Route="MainPage" />
+        Title="Login"
+        ContentTemplate="{DataTemplate views:LoginPage}"
+        Route="LoginPage" />
+
+    <!-- Main App with Tab Bar -->
+    <TabBar Route="MainTabs">
+        <ShellContent
+            Title="Home"
+            ContentTemplate="{DataTemplate local:MainPage}"
+            Route="MainPage"
+            Icon="{FontImage Glyph='🏠', Size=20}" />
+
+        <ShellContent
+            Title="Orders"
+            ContentTemplate="{DataTemplate views:OrderPage}"
+            Route="OrderPage"
+            Icon="{FontImage Glyph='📋', Size=20}" />
+    </TabBar>
 
 </Shell>
