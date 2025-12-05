@@ -4,7 +4,7 @@ namespace WTF.Contracts.Orders;
 
 public record OrderDto(
     Guid Id,
-    string OrderNumber,
+    int OrderNumber,
     DateTime CreatedAt,
     Guid CreatedBy,
     DateTime? UpdatedAt,

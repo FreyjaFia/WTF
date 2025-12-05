@@ -4,15 +4,13 @@ using WTF.MAUI.Services;
 
 namespace WTF.MAUI.ViewModels
 {
-    public partial class LoginViewModel : ObservableObject
+    public partial class LoginViewModel(IAuthService authService) : ObservableObject
     {
-        private readonly IAuthService _authService;
+        [ObservableProperty]
+        private string _username;
 
         [ObservableProperty]
-        private string _username = string.Empty;
-
-        [ObservableProperty]
-        private string _password = string.Empty;
+        private string _password;
 
         [ObservableProperty]
         private bool _isLoading;
@@ -23,15 +21,13 @@ namespace WTF.MAUI.ViewModels
         [ObservableProperty]
         private bool _rememberMe;
 
-        public LoginViewModel(IAuthService authService)
-        {
-            _authService = authService;
-        }
-
         [RelayCommand]
         private async Task LoginAsync()
         {
-            if (IsLoading) return;
+            if (IsLoading)
+            {
+                return;
+            }
 
             // Validate inputs
             if (string.IsNullOrWhiteSpace(Username))
@@ -51,7 +47,7 @@ namespace WTF.MAUI.ViewModels
 
             try
             {
-                var success = await _authService.LoginAsync(Username, Password);
+                var success = await authService.LoginAsync(Username, Password);
 
                 if (success)
                 {
@@ -78,7 +74,7 @@ namespace WTF.MAUI.ViewModels
         {
             try
             {
-                var isLoggedIn = await _authService.IsLoggedInAsync();
+                var isLoggedIn = await authService.IsLoggedInAsync();
 
                 if (isLoggedIn)
                 {

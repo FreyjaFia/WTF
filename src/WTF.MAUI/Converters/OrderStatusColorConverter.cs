@@ -13,9 +13,8 @@ namespace WTF.MAUI.Converters
                 return status switch
                 {
                     OrderStatusEnum.Pending => Color.FromArgb("#FFA726"),
-                    OrderStatusEnum.Preparing => Color.FromArgb("#42A5F5"),
-                    OrderStatusEnum.Ready => Color.FromArgb("#66BB6A"),
-                    OrderStatusEnum.Completed => Color.FromArgb("#26A69A"),
+                    OrderStatusEnum.ForDelivery => Color.FromArgb("#26A69A"),
+                    OrderStatusEnum.Done => Color.FromArgb("#66BB6A"),
                     OrderStatusEnum.Cancelled => Color.FromArgb("#EF5350"),
                     _ => Color.FromArgb("#9E9E9E")
                 };

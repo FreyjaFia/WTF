@@ -8,10 +8,8 @@ using WTF.MAUI.Services;
 
 namespace WTF.MAUI.ViewModels
 {
-    public partial class OrderViewModel : ObservableObject
+    public partial class OrderViewModel(IOrderService orderService) : ObservableObject
     {
-        private readonly IOrderService _orderService;
-
         [ObservableProperty]
         private ObservableCollection<OrderDto> _orders = new();
 
@@ -19,7 +17,7 @@ namespace WTF.MAUI.ViewModels
         private bool _isLoading;
 
         [ObservableProperty]
-        private bool _isRefreshing;
+        private bool _isRefreshing = false;
 
         [ObservableProperty]
         private string? _errorMessage;
@@ -36,17 +34,54 @@ namespace WTF.MAUI.ViewModels
         [ObservableProperty]
         private int _pageSize = 10;
 
-        public OrderViewModel(IOrderService orderService)
-        {
-            _orderService = orderService;
-        }
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(HasSearchText))]
+        private string _searchText = string.Empty;
+
+        public bool HasSearchText => !string.IsNullOrWhiteSpace(SearchText);
+
+        private bool _isRefreshingInternal = false;
+        private CancellationTokenSource? _searchCancellationTokenSource;
 
         [RelayCommand]
         private async Task LoadOrdersAsync()
         {
-            if (IsLoading) return;
+            if (IsLoading || IsRefreshing)
+            {
+                return;
+            }
 
             IsLoading = true;
+
+            await FetchOrdersAsync();
+
+            IsLoading = false;
+        }
+
+        [RelayCommand]
+        private async Task RefreshOrdersAsync()
+        {
+            if (IsRefreshing || IsLoading)
+            {
+                return;
+            }
+
+            try
+            {
+                _isRefreshingInternal = true;
+                IsRefreshing = true;
+                CurrentPage = 1;
+                await FetchOrdersAsync();
+            }
+            finally
+            {
+                _isRefreshingInternal = false;
+                IsRefreshing = false;
+            }
+        }
+
+        private async Task FetchOrdersAsync()
+        {
             ErrorMessage = null;
             SuccessMessage = null;
 
@@ -58,12 +93,18 @@ namespace WTF.MAUI.ViewModels
                     Status: (int)SelectedStatus
                 );
 
-                var orders = await _orderService.GetOrdersAsync(query);
+                var orders = await orderService.GetOrdersAsync(query);
 
                 if (orders != null)
                 {
+                    // Filter orders locally based on search text
+                    var filteredOrders = (string.IsNullOrWhiteSpace(SearchText)
+                        ? orders
+                        : orders.Where(o => o.OrderNumber.ToString().Contains(SearchText, StringComparison.OrdinalIgnoreCase))
+                               .ToList()).OrderBy(o => o.OrderNumber);
+
                     Orders.Clear();
-                    foreach (var order in orders)
+                    foreach (var order in filteredOrders)
                     {
                         Orders.Add(order);
                     }
@@ -77,30 +118,6 @@ namespace WTF.MAUI.ViewModels
             {
                 ErrorMessage = $"Error: {ex.Message}";
             }
-            finally
-            {
-                IsLoading = false;
-            }
-        }
-
-        [RelayCommand]
-        private async Task RefreshOrdersAsync()
-        {
-            if (IsRefreshing) return;
-
-            IsRefreshing = true;
-            ErrorMessage = null;
-            SuccessMessage = null;
-
-            try
-            {
-                CurrentPage = 1;
-                await LoadOrdersAsync();
-            }
-            finally
-            {
-                IsRefreshing = false;
-            }
         }
 
         [RelayCommand]
@@ -112,9 +129,21 @@ namespace WTF.MAUI.ViewModels
         }
 
         [RelayCommand]
+        private void ClearSearch()
+        {
+            SearchText = string.Empty;
+
+            OnPropertyChanged(nameof(SearchText));
+            OnPropertyChanged(nameof(HasSearchText));
+        }
+
+        [RelayCommand]
         private async Task ViewOrderDetailsAsync(OrderDto order)
         {
-            if (order == null) return;
+            if (order == null)
+            {
+                return;
+            }
 
             try
             {
@@ -131,16 +160,19 @@ namespace WTF.MAUI.ViewModels
         {
             try
             {
-                var result = await Shell.Current.DisplayAlert(
+                var result = await Shell.Current.DisplayAlertAsync(
                     "Confirm Delete",
                     "Are you sure you want to delete this order?",
                     "Yes",
                     "No");
 
-                if (!result) return;
+                if (!result)
+                {
+                    return;
+                }
 
                 IsLoading = true;
-                var success = await _orderService.DeleteOrderAsync(orderId);
+                var success = await orderService.DeleteOrderAsync(orderId);
 
                 if (success)
                 {
@@ -165,6 +197,41 @@ namespace WTF.MAUI.ViewModels
         public async Task InitializeAsync()
         {
             await LoadOrdersAsync();
+        }
+
+        partial void OnIsRefreshingChanged(bool value)
+        {
+            if (value && !_isRefreshingInternal)
+            {
+                IsRefreshing = false;
+            }
+        }
+
+        partial void OnSearchTextChanged(string value)
+        {
+            // Cancel previous search operation
+            _searchCancellationTokenSource?.Cancel();
+            _searchCancellationTokenSource = new CancellationTokenSource();
+
+            // Debounce the search - wait 300ms after user stops typing
+            Task.Run(async () =>
+            {
+                try
+                {
+                    await Task.Delay(300, _searchCancellationTokenSource.Token);
+
+                    // Trigger search after delay
+                    await MainThread.InvokeOnMainThreadAsync(async () =>
+                    {
+                        CurrentPage = 1;
+                        await LoadOrdersAsync();
+                    });
+                }
+                catch (TaskCanceledException)
+                {
+                    // Search was cancelled, ignore
+                }
+            });
         }
     }
 }

@@ -73,9 +73,7 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("(getutcdate())")
                 .HasColumnType("datetime");
-            entity.Property(e => e.OrderNumber)
-                .HasMaxLength(30)
-                .IsUnicode(false);
+            entity.Property(e => e.OrderNumber).HasDefaultValueSql("(NEXT VALUE FOR [dbo].[OrderNumberSeq])", "DF_Orders_OrderNumber_DEFAULT");
             entity.Property(e => e.UpdatedAt).HasColumnType("datetime");
 
             entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.OrderCreatedByNavigations)
@@ -196,6 +194,7 @@ public partial class WTFDbContext : DbContext
                 .HasMaxLength(50)
                 .IsUnicode(false);
         });
+        modelBuilder.HasSequence("OrderNumberSeq").StartsAt(5L);
 
         OnModelCreatingPartial(modelBuilder);
     }

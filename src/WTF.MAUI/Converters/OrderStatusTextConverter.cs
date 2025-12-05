@@ -12,6 +12,7 @@ namespace WTF.MAUI.Converters
                 var status = (OrderStatusEnum)statusInt;
                 return status.ToString();
             }
+
             return "Unknown";
         }
 

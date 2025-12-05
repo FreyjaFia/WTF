@@ -50,6 +50,7 @@
             <Border Padding="24"
                     StrokeShape="RoundRectangle 16"
                     BackgroundColor="#F9F8F4"
+                    Stroke="Transparent"
                     Shadow="{Shadow Brush=Black, Offset='0,4', Radius=8, Opacity=0.3}">
                 
                 <VerticalStackLayout Spacing="20">

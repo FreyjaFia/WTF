@@ -23,7 +23,6 @@ public class CreateOrderHandler(WTFDbContext db, IHttpContextAccessor httpContex
 
         var order = new Order
         {
-            OrderNumber = Guid.NewGuid().ToString()[..8],
             CreatedAt = DateTime.UtcNow,
             CreatedBy = userId,
             CustomerId = request.CustomerId,

@@ -7,7 +7,7 @@ public partial class Order
 {
     public Guid Id { get; set; }
 
-    public string OrderNumber { get; set; } = null!;
+    public int OrderNumber { get; set; }
 
     public Guid? CustomerId { get; set; }
 
