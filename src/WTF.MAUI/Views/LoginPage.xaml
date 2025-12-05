@@ -16,11 +16,10 @@
             <!-- Logo/Brand Section -->
             <VerticalStackLayout Spacing="8" 
                                 Margin="0,0,0,32">
-                <!-- You can add an image here if you have a logo -->
-                <!-- <Image Source="logo.png" 
-                       HeightRequest="80"
-                       WidthRequest="80"
-                       HorizontalOptions="Center" /> -->
+                <Image Source="logo_new.png" 
+                       HeightRequest="150"
+                       WidthRequest="150"
+                       HorizontalOptions="Center" /> 
                 
                 <Label Text="Wake. Taste. Focus"
                        FontSize="28"
