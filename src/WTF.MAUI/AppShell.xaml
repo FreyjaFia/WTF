@@ -5,7 +5,11 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:local="clr-namespace:WTF.MAUI"
     xmlns:views="clr-namespace:WTF.MAUI.Views"
-    Title="WTF.MAUI">
+    Title="WTF.MAUI"
+    Shell.TabBarBackgroundColor="Transparent"
+    Shell.TabBarForegroundColor="#1F1F1F"
+    Shell.TabBarTitleColor="#1F1F1F"
+    Shell.TabBarUnselectedColor="#707070">
 
     <!-- Loading Page (First page shown) -->
     <ShellContent
@@ -24,14 +28,23 @@
         <ShellContent
             Title="Home"
             ContentTemplate="{DataTemplate local:MainPage}"
-            Route="MainPage"
-            Icon="{FontImage Glyph='🏠', Size=20}" />
+            Route="MainPage">
+            <ShellContent.Icon>
+                <FontImageSource Glyph="&#xE88A;" 
+                         FontFamily="MaterialIconsOutlined" 
+                         Size="24" />
+            </ShellContent.Icon>
+        </ShellContent>
 
         <ShellContent
             Title="Orders"
             ContentTemplate="{DataTemplate views:OrderPage}"
-            Route="OrderPage"
-            Icon="{FontImage Glyph='📋', Size=20}" />
+            Route="OrderPage">
+            <ShellContent.Icon>
+                <FontImageSource Glyph="&#xE8CC;" 
+                         FontFamily="MaterialIconsOutlined" 
+                         Size="24" />
+            </ShellContent.Icon>
+        </ShellContent>
     </TabBar>
-
 </Shell>

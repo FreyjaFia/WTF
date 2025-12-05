@@ -14,15 +14,16 @@
         <!-- Header with Status Filters -->
         <VerticalStackLayout Grid.Row="0" Spacing="12" Margin="0,0,0,16">
             
-            <!-- Search Box -->
+            <!-- Search Box with Add Button -->
             <Border StrokeShape="RoundRectangle 8"
                     Stroke="Transparent"
                     BackgroundColor="#FFFFFF"
                     Padding="4,0">
-                <Grid ColumnDefinitions="Auto,*,Auto">
+                <Grid ColumnDefinitions="Auto,*,Auto,Auto">
                     <!-- Search Icon -->
                     <Label Grid.Column="0"
-                           Text="🔍"
+                           Text="&#xe8b6;"
+                           FontFamily="MaterialIconsOutlined"
                            FontSize="20"
                            VerticalOptions="Center"
                            Margin="8,0" />
@@ -38,13 +39,29 @@
                     
                     <!-- Clear Button (when text exists) -->
                     <Button Grid.Column="2"
-                            Text="✕"
+                            Text="&#xe5cd;"
+                            FontFamily="MaterialIconsOutlined"
                             BackgroundColor="Transparent"
                             TextColor="#666"
                             FontSize="16"
                             Padding="8"
                             Command="{Binding ClearSearchCommand}"
                             IsVisible="{Binding SearchText, Converter={StaticResource IsNotNullConverter}}" />
+
+                    <!-- Add Order Button -->
+                    <Button Grid.Column="3"
+                            Command="{Binding AddOrderCommand}"
+                            BackgroundColor="Teal"
+                            TextColor="White"
+                            WidthRequest="40"
+                            HeightRequest="40"
+                            CornerRadius="20"
+                            FontSize="16"
+                            Text="+"
+                            Margin="8,0,8,0"
+                            VerticalOptions="Center"
+                            HorizontalOptions="End"
+                            ZIndex="10" />
                 </Grid>
             </Border>
             

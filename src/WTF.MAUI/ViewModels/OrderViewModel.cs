@@ -206,6 +206,13 @@ namespace WTF.MAUI.ViewModels
             }
         }
 
+        [RelayCommand]
+        private async Task AddOrderAsync()
+        {
+            // TODO: Navigate to AddOrderPage or show a modal/dialog for adding an order
+            await Shell.Current.DisplayAlertAsync("Add Order", "Add order action triggered!", "OK");
+        }
+
         public async Task InitializeAsync()
         {
             await LoadOrdersAsync();

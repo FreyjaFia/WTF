@@ -16,8 +16,6 @@ namespace WTF.MAUI.Views
         protected override void OnAppearing()
         {
             base.OnAppearing();
-            // No longer auto-checking login status here
-            // LoadingPage handles this now
         }
     }
 }

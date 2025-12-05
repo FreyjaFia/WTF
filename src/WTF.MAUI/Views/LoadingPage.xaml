@@ -5,31 +5,41 @@
              Shell.NavBarIsVisible="False"
              BackgroundColor="#FCF8F1">
 
-    <Grid>
-        <VerticalStackLayout VerticalOptions="Center"
-                            HorizontalOptions="Center"
-                            Spacing="24">
-            
-            <!-- Your Logo -->
-            <Image Source="logo_new.png"
-                   HeightRequest="200"
-                   WidthRequest="200"
-                   HorizontalOptions="Center" />
+  <Grid>
+    <VerticalStackLayout VerticalOptions="Center"
+                        HorizontalOptions="Center"
+                        Spacing="24">
 
-            <!-- Subtle loading indicator -->
-            <ActivityIndicator IsRunning="True"
-                              Color="#1F1F1F"
-                              WidthRequest="32"
-                              HeightRequest="32"
-                              HorizontalOptions="Center" />
-        </VerticalStackLayout>
+      <!-- Your Logo -->
+      <Image Source="logo_new.png"
+             HeightRequest="200"
+             WidthRequest="200"
+             HorizontalOptions="Center" />
 
-        <!-- Footer -->
-        <Label Text="© 2025 Wake.Taste.Focus by Faith"
-               FontSize="12"
-               TextColor="#999"
-               HorizontalOptions="Center"
-               VerticalOptions="End"
-               Margin="0,0,0,32" />
-    </Grid>
+      <!-- Subtle loading indicator -->
+      <ActivityIndicator IsRunning="True"
+                        Color="#1F1F1F"
+                        WidthRequest="32"
+                        HeightRequest="32"
+                        HorizontalOptions="Center" />
+    </VerticalStackLayout>
+
+    <!-- Footer -->
+    <HorizontalStackLayout
+             HorizontalOptions="Center"
+             VerticalOptions="End" 
+             Margin="0,0,0,32" 
+             Spacing="6">
+      <!-- Material Icon -->
+      <Label Text="&#xE90C;"
+         FontSize="12"
+         FontFamily="MaterialIconsOutlined"
+         TextColor="#999" />
+
+      <!-- Text -->
+      <Label Text="2025 Wake.Taste.Focus by Faith"
+         FontSize="12"
+         TextColor="#999" />
+    </HorizontalStackLayout>
+  </Grid>
 </ContentPage>
