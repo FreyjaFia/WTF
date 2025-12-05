@@ -9,9 +9,7 @@
              BackgroundColor="#FCF8F1">
 
     <ScrollView>
-        <VerticalStackLayout Padding="32" 
-                            Spacing="24"
-                            VerticalOptions="Center">
+        <VerticalStackLayout Padding="32">
 
             <!-- Logo/Brand Section -->
             <VerticalStackLayout Spacing="8" 
@@ -21,18 +19,7 @@
                        WidthRequest="150"
                        HorizontalOptions="Center" /> 
                 
-                <Label Text="Wake. Taste. Focus"
-                       FontSize="28"
-                       FontAttributes="Bold"
-                       HorizontalOptions="Center"
-                       TextColor="#1F1F1F" />
-                
-                <Label Text="by Faith"
-                       FontSize="16"
-                       HorizontalOptions="Center"
-                       TextColor="#666" />
-                
-                <Border Padding="8,4"
+                <Border Padding="16,8"
                         StrokeShape="RoundRectangle 12"
                         BackgroundColor="#1F1F1F"
                         Stroke="Transparent"
@@ -73,7 +60,7 @@
                                FontSize="14"
                                FontAttributes="Bold"
                                TextColor="#1F1F1F" />
-                        <Border Padding="0"
+                        <Border Padding="10,0,0,0"
                                 StrokeShape="RoundRectangle 8"
                                 Stroke="#1F1F1F"
                                 StrokeThickness="1"
@@ -95,7 +82,7 @@
                                FontSize="14"
                                FontAttributes="Bold"
                                TextColor="#1F1F1F" />
-                        <Border Padding="0"
+                        <Border Padding="10,0,0,0"
                                 StrokeShape="RoundRectangle 8"
                                 Stroke="#1F1F1F"
                                 StrokeThickness="1"
@@ -114,45 +101,59 @@
                     </VerticalStackLayout>
 
                     <!-- Remember Me -->
-                    <HorizontalStackLayout Spacing="8">
+                    <HorizontalStackLayout>
                         <CheckBox IsChecked="{Binding RememberMe}"
                                  Color="#1F1F1F" />
                         <Label Text="Remember me"
                                FontSize="14"
                                TextColor="#1F1F1F"
-                               VerticalOptions="Center" />
+                               VerticalOptions="Center">
+                            <Label.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding ToggleRememberMeCommand}" />
+                            </Label.GestureRecognizers>
+                        </Label>
                     </HorizontalStackLayout>
 
-                    <!-- Login Button -->
-                    <Button Text="Login"
-                            Command="{Binding LoginCommand}"
-                            IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBoolConverter}}"
-                            BackgroundColor="#2563eb"
-                            TextColor="White"
-                            FontSize="16"
-                            FontAttributes="Bold"
-                            CornerRadius="8"
-                            HeightRequest="50"
-                            Margin="0,8,0,0">
-                        <Button.Triggers>
-                            <DataTrigger TargetType="Button"
-                                        Binding="{Binding IsLoading}"
-                                        Value="True">
-                                <Setter Property="Text" Value="Logging in..." />
-                            </DataTrigger>
-                        </Button.Triggers>
-                    </Button>
-
-                    <!-- Loading Indicator -->
-                    <ActivityIndicator IsRunning="{Binding IsLoading}"
-                                      IsVisible="{Binding IsLoading}"
-                                      Color="#1F1F1F"
-                                      HorizontalOptions="Center" />
+                    <!-- Login Button with Integrated Loading -->
+                    <Grid HeightRequest="50" Margin="0,8,0,0">
+                        <Button Command="{Binding LoginCommand}"
+                                IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBoolConverter}}"
+                                BackgroundColor="#1F1F1F"
+                                TextColor="White"
+                                FontSize="16"
+                                FontAttributes="Bold"
+                                CornerRadius="8">
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button"
+                                            Binding="{Binding IsLoading}"
+                                            Value="True">
+                                    <Setter Property="Opacity" Value="0.7" />
+                                    <Setter Property="Text" Value="" />
+                                </DataTrigger>
+                                <DataTrigger TargetType="Button"
+                                            Binding="{Binding IsLoading}"
+                                            Value="False">
+                                    <Setter Property="Opacity" Value="1.0" />
+                                    <Setter Property="Text" Value="Login" />
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+                        
+                        <!-- Loading Indicator Overlay -->
+                        <ActivityIndicator IsRunning="{Binding IsLoading}"
+                                          IsVisible="{Binding IsLoading}"
+                                          Color="White"
+                                          WidthRequest="24"
+                                          HeightRequest="24"
+                                          HorizontalOptions="Center"
+                                          VerticalOptions="Center"
+                                          InputTransparent="True" />
+                    </Grid>
                 </VerticalStackLayout>
             </Border>
 
             <!-- Footer -->
-            <Label Text="© 2024 Wake. Taste. Focus. All rights reserved."
+            <Label Text="© 2025 Wake.Taste.Focus by Faith All rights reserved."
                    FontSize="12"
                    TextColor="#999"
                    HorizontalOptions="Center"

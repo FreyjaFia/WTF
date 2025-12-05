@@ -41,8 +41,8 @@ namespace WTF.MAUI
             builder.Services.AddSingleton(wtfSettings!);
 
             // Register Services
+            builder.Services.AddSingleton<ITokenService, TokenService>();
             builder.Services.AddScoped<IAuthService, AuthService>();
-            builder.Services.AddScoped<ITokenService, TokenService>();
             builder.Services.AddScoped<IOrderService, OrderService>();
 
             // Register ViewModels
@@ -50,6 +50,7 @@ namespace WTF.MAUI
             builder.Services.AddTransient<OrderViewModel>();
 
             // Register Pages
+            builder.Services.AddTransient<LoadingPage>();
             builder.Services.AddTransient<LoginPage>();
             builder.Services.AddTransient<OrderPage>();
 

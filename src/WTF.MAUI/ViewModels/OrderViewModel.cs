@@ -26,13 +26,13 @@ namespace WTF.MAUI.ViewModels
         private string? _successMessage;
 
         [ObservableProperty]
-        private OrderStatusEnum _selectedStatus = OrderStatusEnum.Pending;
+        private OrderStatusEnum _selectedStatus = OrderStatusEnum.All;
 
         [ObservableProperty]
         private int _currentPage = 1;
 
         [ObservableProperty]
-        private int _pageSize = 10;
+        private int _pageSize = 100;
 
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(HasSearchText))]
@@ -87,24 +87,36 @@ namespace WTF.MAUI.ViewModels
 
             try
             {
+                // When searching, use All status to search across all statuses
+                // When NOT searching, use the selected status filter
+                var statusToFetch = !string.IsNullOrWhiteSpace(SearchText) 
+                    ? OrderStatusEnum.All 
+                    : SelectedStatus;
+
                 var query = new GetOrdersQuery(
                     Page: CurrentPage,
                     PageSize: PageSize,
-                    Status: (int)SelectedStatus
+                    Status: (int)statusToFetch
                 );
 
                 var orders = await orderService.GetOrdersAsync(query);
 
                 if (orders != null)
                 {
-                    // Filter orders locally based on search text
-                    var filteredOrders = (string.IsNullOrWhiteSpace(SearchText)
-                        ? orders
-                        : orders.Where(o => o.OrderNumber.ToString().Contains(SearchText, StringComparison.OrdinalIgnoreCase))
-                               .ToList()).OrderBy(o => o.OrderNumber);
+                    var filteredOrders = orders.AsEnumerable();
+
+                    // Apply search filter if text exists
+                    if (!string.IsNullOrWhiteSpace(SearchText))
+                    {
+                        filteredOrders = filteredOrders.Where(o =>
+                            o.OrderNumber.ToString().Contains(SearchText, StringComparison.OrdinalIgnoreCase));
+                    }
+
+                    // Order by most recent first
+                    var orderedOrders = filteredOrders.OrderByDescending(o => o.OrderNumber);
 
                     Orders.Clear();
-                    foreach (var order in filteredOrders)
+                    foreach (var order in orderedOrders)
                     {
                         Orders.Add(order);
                     }

@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.RegularExpressions;
 using WTF.Contracts.Orders.Enums;
 
 namespace WTF.MAUI.Converters
@@ -10,7 +11,11 @@ namespace WTF.MAUI.Converters
             if (value is int statusInt)
             {
                 var status = (OrderStatusEnum)statusInt;
-                return status.ToString();
+                var statusText = status.ToString();
+                
+                // Add spaces before capital letters (except the first one)
+                // ForDelivery -> For Delivery
+                return Regex.Replace(statusText, "(?<!^)([A-Z])", " $1");
             }
 
             return "Unknown";

@@ -5,7 +5,7 @@ namespace WTF.MAUI.Services
 {
     public interface IAuthService
     {
-        Task<bool> LoginAsync(string username, string password);
+        Task<bool> LoginAsync(string username, string password, bool rememberMe);
         Task<bool> ValidateTokenAsync();
         Task<bool> IsLoggedInAsync();
         Task RequireLoginAsync();
@@ -14,7 +14,7 @@ namespace WTF.MAUI.Services
 
     public class AuthService(HttpClient httpClient, ITokenService tokenService) : IAuthService
     {
-        public async Task<bool> LoginAsync(string username, string password)
+        public async Task<bool> LoginAsync(string username, string password, bool rememberMe)
         {
             var response = await httpClient.PostAsJsonAsync("/api/auth/login", new { username, password });
 
@@ -24,7 +24,7 @@ namespace WTF.MAUI.Services
 
                 if (token?.AccessToken != null)
                 {
-                    await tokenService.SetAccessTokenAsync(token.AccessToken);
+                    await tokenService.SetAccessTokenAsync(token.AccessToken, rememberMe);
                     return true;
                 }
             }
@@ -77,7 +77,7 @@ namespace WTF.MAUI.Services
         {
             if (!await IsLoggedInAsync())
             {
-                await Shell.Current.GoToAsync("//login");
+                await Shell.Current.GoToAsync("//LoginPage");
                 return;
             }
         }

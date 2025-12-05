@@ -52,13 +52,23 @@
             <ScrollView Orientation="Horizontal" 
                         HorizontalScrollBarVisibility="Never">
                 <HorizontalStackLayout Spacing="8">
+                    <Button Text="All" 
+                            BackgroundColor="#607D8B"
+                            TextColor="White"
+                            CornerRadius="20"
+                            Padding="16,8"
+                            Command="{Binding FilterByStatusCommand}"
+                            CommandParameter="{x:Static enums:OrderStatusEnum.All}"
+                            Opacity="{Binding SelectedStatus, Converter={StaticResource StatusButtonOpacityConverter}, ConverterParameter='All'}" />
+                    
                     <Button Text="Pending" 
                             BackgroundColor="#FFA726"
                             TextColor="White"
                             CornerRadius="20"
                             Padding="16,8"
                             Command="{Binding FilterByStatusCommand}"
-                            CommandParameter="{x:Static enums:OrderStatusEnum.Pending}" />
+                            CommandParameter="{x:Static enums:OrderStatusEnum.Pending}"
+                            Opacity="{Binding SelectedStatus, Converter={StaticResource StatusButtonOpacityConverter}, ConverterParameter={x:Static enums:OrderStatusEnum.Pending}}" />
 
                     <Button Text="For Delivery" 
                             BackgroundColor="#26A69A"
@@ -66,7 +76,8 @@
                             CornerRadius="20"
                             Padding="16,8"
                             Command="{Binding FilterByStatusCommand}"
-                            CommandParameter="{x:Static enums:OrderStatusEnum.ForDelivery}" />
+                            CommandParameter="{x:Static enums:OrderStatusEnum.ForDelivery}"
+                            Opacity="{Binding SelectedStatus, Converter={StaticResource StatusButtonOpacityConverter}, ConverterParameter={x:Static enums:OrderStatusEnum.ForDelivery}}" />
 
                     <Button Text="Done" 
                             BackgroundColor="#66BB6A"
@@ -74,15 +85,17 @@
                             CornerRadius="20"
                             Padding="16,8"
                             Command="{Binding FilterByStatusCommand}"
-                            CommandParameter="{x:Static enums:OrderStatusEnum.Done}" />
-
+                            CommandParameter="{x:Static enums:OrderStatusEnum.Done}"
+                            Opacity="{Binding SelectedStatus, Converter={StaticResource StatusButtonOpacityConverter}, ConverterParameter={x:Static enums:OrderStatusEnum.Done}}" />
+                    
                     <Button Text="Cancelled" 
                             BackgroundColor="#EF5350"
                             TextColor="White"
                             CornerRadius="20"
                             Padding="16,8"
                             Command="{Binding FilterByStatusCommand}"
-                            CommandParameter="{x:Static enums:OrderStatusEnum.Cancelled}" />
+                            CommandParameter="{x:Static enums:OrderStatusEnum.Cancelled}"
+                            Opacity="{Binding SelectedStatus, Converter={StaticResource StatusButtonOpacityConverter}, ConverterParameter={x:Static enums:OrderStatusEnum.Cancelled}}" />
                 </HorizontalStackLayout>
             </ScrollView>
 
@@ -155,7 +168,6 @@
                                         Padding="16"
                                         StrokeShape="RoundRectangle 12"
                                         BackgroundColor="#F9F8F4"
-                                        Stroke="Transparent"
                                         Shadow="{Shadow Brush=Black, Offset='0,4', Radius=8, Opacity=0.3}">
                                     <Border.GestureRecognizers>
                                         <TapGestureRecognizer 

@@ -7,6 +7,12 @@
     xmlns:views="clr-namespace:WTF.MAUI.Views"
     Title="WTF.MAUI">
 
+    <!-- Loading Page (First page shown) -->
+    <ShellContent
+        Title="Loading"
+        ContentTemplate="{DataTemplate views:LoadingPage}"
+        Route="LoadingPage" />
+
     <!-- Login Page (No Tab Bar) -->
     <ShellContent
         Title="Login"

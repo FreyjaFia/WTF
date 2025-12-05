@@ -16,6 +16,7 @@
             <converters:InverseBoolConverter x:Key="InverseBoolConverter" />
             <converters:OrderStatusColorConverter x:Key="OrderStatusColorConverter" />
             <converters:OrderStatusTextConverter x:Key="OrderStatusTextConverter" />
+            <converters:StatusButtonOpacityConverter x:Key="StatusButtonOpacityConverter" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

@@ -7,10 +7,10 @@ namespace WTF.MAUI.ViewModels
     public partial class LoginViewModel(IAuthService authService) : ObservableObject
     {
         [ObservableProperty]
-        private string _username;
+        private string _username = string.Empty;
 
         [ObservableProperty]
-        private string _password;
+        private string _password = string.Empty;
 
         [ObservableProperty]
         private bool _isLoading;
@@ -47,7 +47,7 @@ namespace WTF.MAUI.ViewModels
 
             try
             {
-                var success = await authService.LoginAsync(Username, Password);
+                var success = await authService.LoginAsync(Username, Password, RememberMe);
 
                 if (success)
                 {
@@ -70,22 +70,10 @@ namespace WTF.MAUI.ViewModels
             }
         }
 
-        public async Task CheckLoginStatusAsync()
+        [RelayCommand]
+        private void ToggleRememberMe()
         {
-            try
-            {
-                var isLoggedIn = await authService.IsLoggedInAsync();
-
-                if (isLoggedIn)
-                {
-                    // Already logged in, navigate to main page
-                    await Shell.Current.GoToAsync("//OrderPage");
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Check login status error: {ex.Message}");
-            }
+            RememberMe = !RememberMe;
         }
     }
 }

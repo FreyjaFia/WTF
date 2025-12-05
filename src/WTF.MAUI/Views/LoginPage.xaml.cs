@@ -13,10 +13,11 @@ namespace WTF.MAUI.Views
             BindingContext = _viewModel;
         }
 
-        protected override async void OnAppearing()
+        protected override void OnAppearing()
         {
             base.OnAppearing();
-            await _viewModel.CheckLoginStatusAsync();
+            // No longer auto-checking login status here
+            // LoadingPage handles this now
         }
     }
 }

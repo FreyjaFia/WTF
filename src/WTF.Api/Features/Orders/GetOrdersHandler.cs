@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Contracts.OrderItems;
 using WTF.Contracts.Orders;
+using WTF.Contracts.Orders.Enums;
 using WTF.Contracts.Orders.Queries;
 using WTF.Domain.Data;
 
@@ -18,7 +19,11 @@ public class GetOrdersHandler(WTFDbContext db) : IRequestHandler<GetOrdersQuery,
             query = query.Where(o => o.CustomerId == request.CustomerId.Value);
         }
 
-        query = query.Where(o => o.Status.Id == request.Status);
+        // Only filter by status if not "All" (-1)
+        if (request.Status != (int)OrderStatusEnum.All)
+        {
+            query = query.Where(o => o.Status.Id == request.Status);
+        }
 
         var orders = await query
             .OrderByDescending(o => o.CreatedAt)
