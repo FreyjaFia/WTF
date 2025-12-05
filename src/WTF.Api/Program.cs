@@ -82,6 +82,7 @@ app.MapGet("/", () => "Welcome to the WTF API!");
 app.MapAuth()
     .MapLoyalty()
     .MapProducts()
+    .MapOrders()
     .MapTest();
 
 app.Run();

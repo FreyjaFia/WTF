@@ -3,19 +3,15 @@ using System.Collections.Generic;
 
 namespace WTF.Domain.Entities;
 
-public partial class Product
+public partial class Order
 {
     public Guid Id { get; set; }
 
-    public string Name { get; set; } = null!;
+    public string OrderNumber { get; set; } = null!;
 
-    public decimal Price { get; set; }
+    public Guid? CustomerId { get; set; }
 
-    public int TypeId { get; set; }
-
-    public bool IsAddOn { get; set; }
-
-    public bool IsActive { get; set; }
+    public int StatusId { get; set; }
 
     public DateTime CreatedAt { get; set; }
 
@@ -27,9 +23,11 @@ public partial class Product
 
     public virtual User CreatedByNavigation { get; set; } = null!;
 
+    public virtual User? Customer { get; set; }
+
     public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
 
-    public virtual ProductType Type { get; set; } = null!;
+    public virtual Status Status { get; set; } = null!;
 
     public virtual User? UpdatedByNavigation { get; set; }
 }

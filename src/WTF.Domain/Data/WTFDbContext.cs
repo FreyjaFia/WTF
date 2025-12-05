@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using WTF.Domain.Entities;
@@ -20,11 +20,17 @@ public partial class WTFDbContext : DbContext
 
     public virtual DbSet<LoyaltyPoint> LoyaltyPoints { get; set; }
 
+    public virtual DbSet<Order> Orders { get; set; }
+
+    public virtual DbSet<OrderItem> OrderItems { get; set; }
+
     public virtual DbSet<Product> Products { get; set; }
 
     public virtual DbSet<ProductType> ProductTypes { get; set; }
 
     public virtual DbSet<ShortLink> ShortLinks { get; set; }
+
+    public virtual DbSet<Status> Statuses { get; set; }
 
     public virtual DbSet<User> Users { get; set; }
 
@@ -35,7 +41,7 @@ public partial class WTFDbContext : DbContext
     {
         modelBuilder.Entity<Customer>(entity =>
         {
-            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_Customers_Id");
             entity.Property(e => e.Address).IsUnicode(false);
             entity.Property(e => e.FirstName)
                 .HasMaxLength(50)
@@ -47,12 +53,67 @@ public partial class WTFDbContext : DbContext
 
         modelBuilder.Entity<LoyaltyPoint>(entity =>
         {
-            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_LoyaltyPoints_Id");
 
             entity.HasOne(d => d.Customer).WithMany(p => p.LoyaltyPoints)
                 .HasForeignKey(d => d.CustomerId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_LoyaltyPoints_Customers");
+        });
+
+        modelBuilder.Entity<Order>(entity =>
+        {
+            entity.HasIndex(e => e.CustomerId, "IX_Orders_CustomerId");
+
+            entity.HasIndex(e => e.StatusId, "IX_Orders_StatusId");
+
+            entity.HasIndex(e => e.OrderNumber, "UQ_Orders_OrderNumber").IsUnique();
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("(getutcdate())")
+                .HasColumnType("datetime");
+            entity.Property(e => e.OrderNumber)
+                .HasMaxLength(30)
+                .IsUnicode(false);
+            entity.Property(e => e.UpdatedAt).HasColumnType("datetime");
+
+            entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.OrderCreatedByNavigations)
+                .HasForeignKey(d => d.CreatedBy)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Orders_CreatedBy");
+
+            entity.HasOne(d => d.Customer).WithMany(p => p.OrderCustomers)
+                .HasForeignKey(d => d.CustomerId)
+                .HasConstraintName("FK_Orders_Customer");
+
+            entity.HasOne(d => d.Status).WithMany(p => p.Orders)
+                .HasForeignKey(d => d.StatusId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Orders_Status");
+
+            entity.HasOne(d => d.UpdatedByNavigation).WithMany(p => p.OrderUpdatedByNavigations)
+                .HasForeignKey(d => d.UpdatedBy)
+                .HasConstraintName("FK_Orders_UpdatedBy");
+        });
+
+        modelBuilder.Entity<OrderItem>(entity =>
+        {
+            entity.HasIndex(e => e.OrderId, "IX_OrderItems_OrderId");
+
+            entity.HasIndex(e => e.ProductId, "IX_OrderItems_ProductId");
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
+            entity.Property(e => e.Quantity).HasDefaultValue(1);
+
+            entity.HasOne(d => d.Order).WithMany(p => p.OrderItems)
+                .HasForeignKey(d => d.OrderId)
+                .HasConstraintName("FK_OrderItems_Order");
+
+            entity.HasOne(d => d.Product).WithMany(p => p.OrderItems)
+                .HasForeignKey(d => d.ProductId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_OrderItems_Product");
         });
 
         modelBuilder.Entity<Product>(entity =>
@@ -101,7 +162,7 @@ public partial class WTFDbContext : DbContext
         {
             entity.HasIndex(e => e.Token, "IX_ShortLinks").IsUnique();
 
-            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_ShortLinks_Id");
             entity.Property(e => e.TargetType)
                 .HasMaxLength(50)
                 .IsUnicode(false);
@@ -111,9 +172,17 @@ public partial class WTFDbContext : DbContext
                 .IsUnicode(false);
         });
 
+        modelBuilder.Entity<Status>(entity =>
+        {
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.Name)
+                .HasMaxLength(30)
+                .IsUnicode(false);
+        });
+
         modelBuilder.Entity<User>(entity =>
         {
-            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_Users_Id");
             entity.Property(e => e.FirstName)
                 .HasMaxLength(50)
                 .IsUnicode(false);
@@ -133,4 +202,3 @@ public partial class WTFDbContext : DbContext
 
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
 }
-
