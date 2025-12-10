@@ -8,7 +8,6 @@ public partial class AppShell : Shell
     {
         InitializeComponent();
 
-        // Register detail routes here
-        Routing.RegisterRoute("OrderFormPage", typeof(OrderFormPage));
+        // OrderFormPage is now loaded via ContainerViewModel - no Shell routing needed
     }
 }

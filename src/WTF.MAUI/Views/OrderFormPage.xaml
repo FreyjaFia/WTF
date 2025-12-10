@@ -3,16 +3,13 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:WTF.MAUI.ViewModels"
              xmlns:enums="clr-namespace:WTF.Contracts.Products.Enums;assembly=WTF.Contracts"
-             xmlns:views="clr-namespace:WTF.MAUI.Views"
              x:Class="WTF.MAUI.Views.OrderFormPage"
              x:DataType="vm:OrderFormViewModel"
              Title="Order Form"
              Shell.NavBarIsVisible="False"
              BackgroundColor="#FCF8F1">
 
-    <views:SidebarLayout>
-        <views:SidebarLayout.PageContent>
-            <Grid RowDefinitions="Auto,*" ColumnDefinitions="2.5*,*" BackgroundColor="#FCF8F1">
+    <Grid RowDefinitions="Auto,*" ColumnDefinitions="2.5*,*" BackgroundColor="#FCF8F1">
 
                 <!-- LEFT SIDE: Products Section -->
                 <Grid Grid.Row="0" Grid.RowSpan="2" Grid.Column="0" 
@@ -183,24 +180,23 @@
                                                 BackgroundColor="White"
                                                 Stroke="#F0F0F0"
                                                 StrokeThickness="1"
-                                                Padding="12"
-                                                HeightRequest="240">
+                                                Padding="12">
                                             <Border.GestureRecognizers>
                                                 <TapGestureRecognizer 
                                                     Command="{Binding Source={RelativeSource AncestorType={x:Type vm:OrderFormViewModel}}, Path=AddToCartCommand}"
                                                     CommandParameter="{Binding .}" />
                                             </Border.GestureRecognizers>
 
-                                            <Grid RowDefinitions="2*,Auto,Auto,Auto" RowSpacing="8">
+                                            <Grid RowDefinitions="140,Auto,*,Auto" RowSpacing="8">
                                                 <!-- Product Image -->
                                                 <Border Grid.Row="0"
                                                         StrokeShape="RoundRectangle 8"
                                                         BackgroundColor="#F9F8F4"
-                                                        VerticalOptions="Fill">
+                                                        HeightRequest="140">
                                                     <Grid>
                                                         <!-- Show actual image if available -->
                                                         <Image Source="{Binding ImageUrl, Converter={StaticResource ProductImageUrlConverter}}"
-                                                               Aspect="AspectFit"
+                                                               Aspect="AspectFill"
                                                                Margin="8"
                                                                IsVisible="{Binding ImageUrl, Converter={StaticResource IsNotNullConverter}}" />
 
@@ -226,21 +222,22 @@
                                                        FontSize="14"
                                                        FontAttributes="Bold"
                                                        TextColor="#1F1F1F"
-                                                       LineBreakMode="TailTruncation"
+                                                       LineBreakMode="WordWrap"
                                                        MaxLines="2" />
 
-                                                <!-- Product Type -->
-                                                <Label Grid.Row="2"
-                                                       Text="{Binding DisplayType}"
-                                                       FontSize="12"
-                                                       TextColor="#999" />
+                                                <!-- Spacer (takes remaining space) -->
+                                                <BoxView Grid.Row="2" Color="Transparent" />
 
-                                                <!-- Product Price -->
-                                                <Label Grid.Row="3"
-                                                       Text="{Binding FormattedPrice}"
-                                                       FontSize="16"
-                                                       FontAttributes="Bold"
-                                                       TextColor="#1F1F1F" />
+                                                <!-- Bottom Info: Type and Price -->
+                                                <VerticalStackLayout Grid.Row="3" Spacing="4">
+                                                    <Label Text="{Binding DisplayType}"
+                                                           FontSize="12"
+                                                           TextColor="#999" />
+                                                    <Label Text="{Binding FormattedPrice}"
+                                                           FontSize="16"
+                                                           FontAttributes="Bold"
+                                                           TextColor="#1F1F1F" />
+                                                </VerticalStackLayout>
                                             </Grid>
                                         </Border>
                                     </DataTemplate>
@@ -568,6 +565,4 @@
                     </Border>
                 </Grid>
             </Grid>
-        </views:SidebarLayout.PageContent>
-    </views:SidebarLayout>
-</ContentPage>
+        </ContentPage>

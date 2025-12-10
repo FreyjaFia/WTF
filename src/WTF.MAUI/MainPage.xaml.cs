@@ -7,35 +7,29 @@ namespace WTF.MAUI;
 public partial class MainPage : ContentPage, IInitializablePage
 {
     private readonly IAuthService _authService;
-    private readonly SidebarViewModel _sidebarViewModel;
+    private readonly ContainerViewModel _containerViewModel;
     int count = 0;
 
-    public MainPage(IAuthService authService, SidebarViewModel sidebarViewModel)
+    public MainPage(IAuthService authService, ContainerViewModel containerViewModel)
     {
         _authService = authService;
-        _sidebarViewModel = sidebarViewModel;
+        _containerViewModel = containerViewModel;
         
         InitializeComponent();
-        
-        // Set sidebar binding context
-        if (Content is SidebarLayout sidebar)
-        {
-            sidebar.BindingContext = _sidebarViewModel;
-        }
     }
 
     protected override void OnAppearing()
     {
         base.OnAppearing();
         
-        // Update sidebar current page
-        _sidebarViewModel.CurrentPage = "MainPage";
+        // Update container current page
+        _containerViewModel.CurrentPage = "MainPage";
     }
 
     public void InitializePage()
     {
         // Call the same logic as OnAppearing
-        _sidebarViewModel.CurrentPage = "MainPage";
+        _containerViewModel.CurrentPage = "MainPage";
     }
 
     private void OnCounterClicked(object sender, EventArgs e)

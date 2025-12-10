@@ -4,34 +4,34 @@ namespace WTF.MAUI.Views;
 
 public partial class ContainerPage : ContentPage
 {
-    private readonly SidebarViewModel _sidebarViewModel;
+    private readonly ContainerViewModel _containerViewModel;
 
-    public ContainerPage(SidebarViewModel sidebarViewModel)
+    public ContainerPage(ContainerViewModel containerViewModel)
     {
         InitializeComponent();
-        _sidebarViewModel = sidebarViewModel;
+        _containerViewModel = containerViewModel;
         
-        BindingContext = _sidebarViewModel;
+        BindingContext = _containerViewModel;
         
         // Initialize with home page
-        _sidebarViewModel.InitializeWithHomePage();
+        _containerViewModel.InitializeWithHomePage();
         
         // Subscribe to page changes
-        _sidebarViewModel.PropertyChanged += OnSidebarViewModelPropertyChanged;
+        _containerViewModel.PropertyChanged += OnContainerViewModelPropertyChanged;
     }
 
-    private void OnSidebarViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    private void OnContainerViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(SidebarViewModel.CurrentPageContent) && _sidebarViewModel.CurrentPageContent != null)
+        if (e.PropertyName == nameof(ContainerViewModel.CurrentPageContent) && _containerViewModel.CurrentPageContent != null)
         {
             // Swap the content instantly without any animation
-            MainContentPresenter.Content = _sidebarViewModel.CurrentPageContent;
+            MainContentPresenter.Content = _containerViewModel.CurrentPageContent;
         }
     }
 
     protected override void OnDisappearing()
     {
         base.OnDisappearing();
-        _sidebarViewModel.PropertyChanged -= OnSidebarViewModelPropertyChanged;
+        _containerViewModel.PropertyChanged -= OnContainerViewModelPropertyChanged;
     }
 }

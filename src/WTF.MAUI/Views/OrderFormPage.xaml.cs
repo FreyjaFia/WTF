@@ -3,37 +3,25 @@ using WTF.MAUI.ViewModels;
 namespace WTF.MAUI.Views;
 
 [QueryProperty(nameof(OrderId), "orderId")]
-public partial class OrderFormPage : ContentPage
+public partial class OrderFormPage : ContentPage, IInitializablePage
 {
     private readonly OrderFormViewModel _viewModel;
-    private readonly SidebarViewModel _sidebarViewModel;
+    private readonly ContainerViewModel _containerViewModel;
+    private Guid? _orderIdToLoad;
 
     public string? OrderId { get; set; }
 
-    public OrderFormPage(OrderFormViewModel viewModel, SidebarViewModel sidebarViewModel)
+    public OrderFormPage(OrderFormViewModel viewModel, ContainerViewModel containerViewModel)
     {
         InitializeComponent();
         _viewModel = viewModel;
-        _sidebarViewModel = sidebarViewModel;
-        
-        // Set sidebar binding context first
-        if (Content is SidebarLayout sidebar)
-        {
-            sidebar.BindingContext = _sidebarViewModel;
-            // Set the page content's binding context to OrderFormViewModel
-            if (sidebar.PageContent != null)
-            {
-                sidebar.PageContent.BindingContext = _viewModel;
-            }
-        }
+        _containerViewModel = containerViewModel;
+        BindingContext = _viewModel;
     }
 
     protected override async void OnNavigatedTo(NavigatedToEventArgs args)
     {
         base.OnNavigatedTo(args);
-
-        // Update sidebar current page
-        _sidebarViewModel.CurrentPage = "OrderPage";
 
         Guid? orderId = null;
         if (!string.IsNullOrEmpty(OrderId) && Guid.TryParse(OrderId, out var parsedOrderId))
@@ -42,5 +30,13 @@ public partial class OrderFormPage : ContentPage
         }
 
         await _viewModel.InitializeAsync(orderId);
+    }
+
+    public async void InitializePage()
+    {
+        // Update container current page
+        _containerViewModel.CurrentPage = "OrderFormPage";
+        
+        // Initialize is handled by LoadPageContentWithParameter in ContainerViewModel
     }
 }

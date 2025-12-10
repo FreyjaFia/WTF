@@ -1,12 +1,11 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Microsoft.Maui.Controls;
 using WTF.MAUI.Services;
 using WTF.MAUI.Views;
 
 namespace WTF.MAUI.ViewModels;
 
-public partial class SidebarViewModel : ObservableObject
+public partial class ContainerViewModel : ObservableObject
 {
     #region Fields
 
@@ -17,7 +16,7 @@ public partial class SidebarViewModel : ObservableObject
 
     #region Constructor
 
-    public SidebarViewModel(IAuthService authService, IServiceProvider serviceProvider)
+    public ContainerViewModel(IAuthService authService, IServiceProvider serviceProvider)
     {
         _authService = authService;
         _serviceProvider = serviceProvider;
@@ -41,7 +40,7 @@ public partial class SidebarViewModel : ObservableObject
     #region Computed Properties
 
     public double SidebarWidth => IsSidebarExtended ? 200 : 64;
-    public string SidebarToggleIcon => IsSidebarExtended ? "\ueac3" : "\ueac9"; // Material icons: keyboard_double_arrow_left / keyboard_double_arrow_right
+    public string SidebarToggleIcon => IsSidebarExtended ? "\ueac3" : "\ueac9";
 
     #endregion
 
@@ -53,6 +52,12 @@ public partial class SidebarViewModel : ObservableObject
     }
 
     public bool IsPageActive(string pageName) => CurrentPage == pageName;
+
+    public void NavigateToOrderForm(Guid? orderId = null)
+    {
+        CurrentPage = "OrderPage";
+        LoadPageContentWithParameter<OrderFormPage>(orderId);
+    }
 
     #endregion
 
@@ -94,7 +99,6 @@ public partial class SidebarViewModel : ObservableObject
     private async Task Logout()
     {
         _authService.Logout();
-
         await _authService.RequireLoginAsync();
     }
 
@@ -112,33 +116,16 @@ public partial class SidebarViewModel : ObservableObject
                 return;
             }
 
-            // Ensure the page's content is initialized by accessing it
+            // Get the page content directly (no more SidebarLayout wrapper!)
             var content = page.Content;
 
-            // Wait a moment for XAML to fully load
             Task.Run(async () =>
             {
-                await Task.Delay(50); // Small delay to ensure XAML is parsed
+                await Task.Delay(50);
 
                 await MainThread.InvokeOnMainThreadAsync(() =>
                 {
-                    if (page.Content is SidebarLayout sidebarLayout)
-                    {
-                        // Get the PageContent property value
-                        if (sidebarLayout.PageContent != null)
-                        {
-                            CurrentPageContent = sidebarLayout.PageContent;
-                        }
-                        else
-                        {
-                            // Fallback: try to get from the ContentPresenter
-                            var presenter = sidebarLayout.FindByName<ContentPresenter>("MainContentPresenter");
-                            if (presenter?.Content != null)
-                            {
-                                CurrentPageContent = presenter.Content;
-                            }
-                        }
-                    }
+                    CurrentPageContent = content;
 
                     // Call initialization logic if implemented
                     if (page is IInitializablePage initializable)
@@ -151,6 +138,45 @@ public partial class SidebarViewModel : ObservableObject
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Error loading page content: {ex.Message}");
+        }
+    }
+
+    private void LoadPageContentWithParameter<T>(Guid? orderId) where T : ContentPage
+    {
+        try
+        {
+            var page = _serviceProvider.GetService(typeof(T)) as ContentPage;
+            if (page == null)
+            {
+                return;
+            }
+
+            // Get the page content directly
+            var content = page.Content;
+
+            Task.Run(async () =>
+            {
+                await Task.Delay(50);
+
+                await MainThread.InvokeOnMainThreadAsync(async () =>
+                {
+                    CurrentPageContent = content;
+
+                    // Initialize OrderFormPage with orderId
+                    if (page is OrderFormPage orderFormPage)
+                    {
+                        var viewModel = orderFormPage.BindingContext as OrderFormViewModel;
+                        if (viewModel != null)
+                        {
+                            await viewModel.InitializeAsync(orderId);
+                        }
+                    }
+                });
+            });
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error loading page content with parameter: {ex.Message}");
         }
     }
 

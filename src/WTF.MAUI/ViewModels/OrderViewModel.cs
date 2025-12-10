@@ -14,6 +14,7 @@ public partial class OrderViewModel : ObservableObject
     #region Fields
 
     private readonly IOrderService _orderService;
+    private readonly ContainerViewModel _containerViewModel;
     private bool _isRefreshingInternal = false;
     private CancellationTokenSource? _searchCancellationTokenSource;
 
@@ -21,9 +22,10 @@ public partial class OrderViewModel : ObservableObject
 
     #region Constructor
 
-    public OrderViewModel(IOrderService orderService)
+    public OrderViewModel(IOrderService orderService, ContainerViewModel containerViewModel)
     {
         _orderService = orderService;
+        _containerViewModel = containerViewModel;
     }
 
     #endregion
@@ -129,11 +131,11 @@ public partial class OrderViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task AddOrderAsync()
+    private void AddOrder()
     {
         try
         {
-            await Shell.Current.GoToAsync(nameof(OrderFormPage));
+            _containerViewModel.NavigateToOrderForm(null);
         }
         catch (Exception ex)
         {
@@ -142,7 +144,7 @@ public partial class OrderViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task ViewOrderDetailsAsync(OrderDto order)
+    private void ViewOrderDetails(OrderDto order)
     {
         if (order == null)
         {
@@ -151,7 +153,7 @@ public partial class OrderViewModel : ObservableObject
 
         try
         {
-            await Shell.Current.GoToAsync($"{nameof(OrderFormPage)}?orderId={order.Id}");
+            _containerViewModel.NavigateToOrderForm(order.Id);
         }
         catch (Exception ex)
         {

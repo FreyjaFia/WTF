@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:WTF.MAUI.ViewModels"
              x:Class="WTF.MAUI.Views.ContainerPage"
-             x:DataType="vm:SidebarViewModel"
+             x:DataType="vm:ContainerViewModel"
              Shell.NavBarIsVisible="False"
              BackgroundColor="#FCF8F1">
     
@@ -13,8 +13,7 @@
               BackgroundColor="#FCF8F1"
               Padding="8,16"
               WidthRequest="{Binding SidebarWidth}"
-              RowDefinitions="Auto,*,Auto,Auto"
-              VerticalOptions="FillAndExpand">
+              RowDefinitions="Auto,*,Auto,Auto">
             
             <!-- Top: Nav buttons -->
             <VerticalStackLayout Grid.Row="0" Spacing="0">

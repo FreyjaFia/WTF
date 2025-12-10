@@ -3,289 +3,284 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:WTF.MAUI.ViewModels"
              xmlns:enums="clr-namespace:WTF.Contracts.Orders.Enums;assembly=WTF.Contracts"
-             xmlns:views="clr-namespace:WTF.MAUI.Views"
              x:Class="WTF.MAUI.Views.OrderPage"
              x:DataType="vm:OrderViewModel"
              Title="Orders"
              Shell.NavBarIsVisible="False"
              BackgroundColor="#FCF8F1">
 
-    <views:SidebarLayout>
-        <views:SidebarLayout.PageContent>
-            <Grid RowDefinitions="Auto,*" 
-                  Padding="16"
-                  BackgroundColor="#FCF8F1">
+    <Grid RowDefinitions="Auto,*" 
+          Padding="16"
+          BackgroundColor="#FCF8F1">
 
-                <!-- Header with Status Filters -->
-                <VerticalStackLayout Grid.Row="0" Spacing="12" Margin="0,0,0,16">
+        <!-- Header with Status Filters -->
+        <VerticalStackLayout Grid.Row="0" Spacing="12" Margin="0,0,0,16">
 
-                    <!-- Search Box with Add Button -->
-                    <Grid ColumnDefinitions="Auto,*,Auto,Auto">
-                        <!-- Search Icon -->
-                        <Label Grid.Column="0"
-                               Text="&#xe8b6;"
-                               FontFamily="MaterialIconsOutlined"
-                               FontSize="20"
-                               VerticalOptions="Center"
-                               Margin="8,0" />
+            <!-- Search Box with Add Button -->
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                <!-- Search Icon -->
+                <Label Grid.Column="0"
+                       Text="&#xe8b6;"
+                       FontFamily="MaterialIconsOutlined"
+                       FontSize="20"
+                       VerticalOptions="Center"
+                       Margin="8,0" />
 
-                        <!-- Search Entry -->
-                        <Entry Grid.Column="1"
-                               Text="{Binding SearchText}"
-                               Placeholder="Search by order number..."
-                               BackgroundColor="Transparent"
-                               TextColor="#1F1F1F"
-                               PlaceholderColor="#999"
-                               VerticalOptions="Center" />
+                <!-- Search Entry -->
+                <Entry Grid.Column="1"
+                       Text="{Binding SearchText}"
+                       Placeholder="Search by order number..."
+                       BackgroundColor="Transparent"
+                       TextColor="#1F1F1F"
+                       PlaceholderColor="#999"
+                       VerticalOptions="Center" />
 
-                        <!-- Clear Button (when text exists) -->
-                        <Button Grid.Column="2"
-                                Text="&#xe5cd;"
-                                FontFamily="MaterialIconsOutlined"
-                                BackgroundColor="Transparent"
-                                TextColor="#666"
-                                FontSize="16"
-                                Padding="8"
-                                Command="{Binding ClearSearchCommand}"
-                                IsVisible="{Binding SearchText, Converter={StaticResource IsNotNullConverter}}" />
+                <!-- Clear Button (when text exists) -->
+                <Button Grid.Column="2"
+                        Text="&#xe5cd;"
+                        FontFamily="MaterialIconsOutlined"
+                        BackgroundColor="Transparent"
+                        TextColor="#666"
+                        FontSize="16"
+                        Padding="8"
+                        Command="{Binding ClearSearchCommand}"
+                        IsVisible="{Binding SearchText, Converter={StaticResource IsNotNullConverter}}" />
 
-                        <!-- Add Order Button -->
-                        <Button Grid.Column="3"
-                                Command="{Binding AddOrderCommand}"
-                                BackgroundColor="Teal"
-                                TextColor="White"
-                                WidthRequest="40"
-                                HeightRequest="40"
-                                CornerRadius="20"
-                                FontSize="16"
-                                Text="&#xe145;"
-                                FontFamily="MaterialIconsOutlined"
-                                VerticalOptions="Center"
-                                HorizontalOptions="End" />
-                    </Grid>
+                <!-- Add Order Button -->
+                <Button Grid.Column="3"
+                        Command="{Binding AddOrderCommand}"
+                        BackgroundColor="Teal"
+                        TextColor="White"
+                        WidthRequest="40"
+                        HeightRequest="40"
+                        CornerRadius="20"
+                        FontSize="16"
+                        Text="&#xe145;"
+                        FontFamily="MaterialIconsOutlined"
+                        VerticalOptions="Center"
+                        HorizontalOptions="End" />
+            </Grid>
 
-                    <!-- Status Filter Buttons -->
-                    <ScrollView Orientation="Horizontal" 
-                                HorizontalScrollBarVisibility="Never">
-                        <HorizontalStackLayout Spacing="8">
-                            <Button Text="All" 
-                                    BackgroundColor="#607D8B"
-                                    TextColor="White"
-                                    CornerRadius="20"
-                                    Padding="16,8"
-                                    Command="{Binding FilterByStatusCommand}"
-                                    CommandParameter="{x:Static enums:OrderStatusEnum.All}"
-                                    Opacity="{Binding SelectedStatus, Converter={StaticResource StatusButtonOpacityConverter}, ConverterParameter='All'}" />
+            <!-- Status Filter Buttons -->
+            <ScrollView Orientation="Horizontal" 
+                        HorizontalScrollBarVisibility="Never">
+                <HorizontalStackLayout Spacing="8">
+                    <Button Text="All" 
+                            BackgroundColor="#607D8B"
+                            TextColor="White"
+                            CornerRadius="20"
+                            Padding="16,8"
+                            Command="{Binding FilterByStatusCommand}"
+                            CommandParameter="{x:Static enums:OrderStatusEnum.All}"
+                            Opacity="{Binding SelectedStatus, Converter={StaticResource StatusButtonOpacityConverter}, ConverterParameter='All'}" />
 
-                            <Button Text="Pending" 
-                                    BackgroundColor="#FFA726"
-                                    TextColor="White"
-                                    CornerRadius="20"
-                                    Padding="16,8"
-                                    Command="{Binding FilterByStatusCommand}"
-                                    CommandParameter="{x:Static enums:OrderStatusEnum.Pending}"
-                                    Opacity="{Binding SelectedStatus, Converter={StaticResource StatusButtonOpacityConverter}, ConverterParameter={x:Static enums:OrderStatusEnum.Pending}}" />
+                    <Button Text="Pending" 
+                            BackgroundColor="#FFA726"
+                            TextColor="White"
+                            CornerRadius="20"
+                            Padding="16,8"
+                            Command="{Binding FilterByStatusCommand}"
+                            CommandParameter="{x:Static enums:OrderStatusEnum.Pending}"
+                            Opacity="{Binding SelectedStatus, Converter={StaticResource StatusButtonOpacityConverter}, ConverterParameter={x:Static enums:OrderStatusEnum.Pending}}" />
 
-                            <Button Text="For Delivery" 
-                                    BackgroundColor="#26A69A"
-                                    TextColor="White"
-                                    CornerRadius="20"
-                                    Padding="16,8"
-                                    Command="{Binding FilterByStatusCommand}"
-                                    CommandParameter="{x:Static enums:OrderStatusEnum.ForDelivery}"
-                                    Opacity="{Binding SelectedStatus, Converter={StaticResource StatusButtonOpacityConverter}, ConverterParameter={x:Static enums:OrderStatusEnum.ForDelivery}}" />
+                    <Button Text="For Delivery" 
+                            BackgroundColor="#26A69A"
+                            TextColor="White"
+                            CornerRadius="20"
+                            Padding="16,8"
+                            Command="{Binding FilterByStatusCommand}"
+                            CommandParameter="{x:Static enums:OrderStatusEnum.ForDelivery}"
+                            Opacity="{Binding SelectedStatus, Converter={StaticResource StatusButtonOpacityConverter}, ConverterParameter={x:Static enums:OrderStatusEnum.ForDelivery}}" />
 
-                            <Button Text="Done" 
-                                    BackgroundColor="#66BB6A"
-                                    TextColor="White"
-                                    CornerRadius="20"
-                                    Padding="16,8"
-                                    Command="{Binding FilterByStatusCommand}"
-                                    CommandParameter="{x:Static enums:OrderStatusEnum.Done}"
-                                    Opacity="{Binding SelectedStatus, Converter={StaticResource StatusButtonOpacityConverter}, ConverterParameter={x:Static enums:OrderStatusEnum.Done}}" />
+                    <Button Text="Done" 
+                            BackgroundColor="#66BB6A"
+                            TextColor="White"
+                            CornerRadius="20"
+                            Padding="16,8"
+                            Command="{Binding FilterByStatusCommand}"
+                            CommandParameter="{x:Static enums:OrderStatusEnum.Done}"
+                            Opacity="{Binding SelectedStatus, Converter={StaticResource StatusButtonOpacityConverter}, ConverterParameter={x:Static enums:OrderStatusEnum.Done}}" />
 
-                            <Button Text="Cancelled" 
-                                    BackgroundColor="#EF5350"
-                                    TextColor="White"
-                                    CornerRadius="20"
-                                    Padding="16,8"
-                                    Command="{Binding FilterByStatusCommand}"
-                                    CommandParameter="{x:Static enums:OrderStatusEnum.Cancelled}"
-                                    Opacity="{Binding SelectedStatus, Converter={StaticResource StatusButtonOpacityConverter}, ConverterParameter={x:Static enums:OrderStatusEnum.Cancelled}}" />
-                        </HorizontalStackLayout>
-                    </ScrollView>
+                    <Button Text="Cancelled" 
+                            BackgroundColor="#EF5350"
+                            TextColor="White"
+                            CornerRadius="20"
+                            Padding="16,8"
+                            Command="{Binding FilterByStatusCommand}"
+                            CommandParameter="{x:Static enums:OrderStatusEnum.Cancelled}"
+                            Opacity="{Binding SelectedStatus, Converter={StaticResource StatusButtonOpacityConverter}, ConverterParameter={x:Static enums:OrderStatusEnum.Cancelled}}" />
+                </HorizontalStackLayout>
+            </ScrollView>
 
-                    <!-- Error/Success Messages -->
-                    <Border IsVisible="{Binding ErrorMessage, Converter={StaticResource IsNotNullConverter}}"
-                            BackgroundColor="#FFEBEE"
-                            Stroke="#C62828"
-                            StrokeThickness="2"
-                            StrokeShape="RoundRectangle 8"
-                            Padding="12">
-                        <Label Text="{Binding ErrorMessage}" 
-                               TextColor="#C62828"
-                               FontSize="14" />
-                    </Border>
+            <!-- Error/Success Messages -->
+            <Border IsVisible="{Binding ErrorMessage, Converter={StaticResource IsNotNullConverter}}"
+                    BackgroundColor="#FFEBEE"
+                    Stroke="#C62828"
+                    StrokeThickness="2"
+                    StrokeShape="RoundRectangle 8"
+                    Padding="12">
+                <Label Text="{Binding ErrorMessage}" 
+                       TextColor="#C62828"
+                       FontSize="14" />
+            </Border>
 
-                    <Border IsVisible="{Binding SuccessMessage, Converter={StaticResource IsNotNullConverter}}"
-                            BackgroundColor="#C8E6C9"
-                            Stroke="#2E7D32"
-                            StrokeThickness="2"
-                            StrokeShape="RoundRectangle 8"
-                            Padding="12">
-                        <Label Text="{Binding SuccessMessage}" 
-                               TextColor="#2E7D32"
-                               FontSize="14" />
-                    </Border>
-                </VerticalStackLayout>
+            <Border IsVisible="{Binding SuccessMessage, Converter={StaticResource IsNotNullConverter}}"
+                    BackgroundColor="#C8E6C9"
+                    Stroke="#2E7D32"
+                    StrokeThickness="2"
+                    StrokeShape="RoundRectangle 8"
+                    Padding="12">
+                <Label Text="{Binding SuccessMessage}" 
+                       TextColor="#2E7D32"
+                       FontSize="14" />
+            </Border>
+        </VerticalStackLayout>
 
-                <!-- Orders List -->
-                <RefreshView Grid.Row="1"
-                             IsRefreshing="{Binding IsRefreshing, Mode=TwoWay}"
-                             Command="{Binding RefreshOrdersCommand}"
-                             RefreshColor="#1F1F1F"
-                             IsVisible="{Binding IsLoading, Converter={StaticResource InverseBoolConverter}}">
-                    <Grid>
-                        <!-- Collection View -->
-                        <CollectionView ItemsSource="{Binding Orders}">
-                            <CollectionView.EmptyView>
-                                <ContentView>
-                                    <VerticalStackLayout HorizontalOptions="Center" 
-                                                       VerticalOptions="Center"
-                                                       Spacing="16"
-                                                       Padding="32">
-                                        <Label Text="📋" 
-                                               FontSize="48"
-                                               HorizontalOptions="Center" />
-                                        <Label Text="No orders found" 
-                                               FontSize="18"
-                                               TextColor="#666"
-                                               HorizontalOptions="Center" />
-                                        <Label Text="Try selecting a different status filter" 
-                                               FontSize="14"
-                                               TextColor="#999"
-                                               HorizontalOptions="Center" />
-                                    </VerticalStackLayout>
-                                </ContentView>
-                            </CollectionView.EmptyView>
-                            <CollectionView.ItemTemplate>
-                                <DataTemplate x:DataType="{x:Null}">
-                                    <SwipeView>
-                                        <SwipeView.RightItems>
-                                            <SwipeItems>
-                                                <SwipeItem Text="Delete"
-                                                           BackgroundColor="#EF5350"
-                                                           Command="{Binding Source={RelativeSource AncestorType={x:Type vm:OrderViewModel}}, Path=DeleteOrderCommand}"
-                                                           CommandParameter="{Binding Id}" />
-                                            </SwipeItems>
-                                        </SwipeView.RightItems>
-
-                                        <Border Margin="0,0,0,12"
-                                                Padding="16"
-                                                StrokeShape="RoundRectangle 12"
-                                                BackgroundColor="#F9F8F4"
-                                                Shadow="{Shadow Brush=Black, Offset='0,4', Radius=8, Opacity=0.3}">
-                                            <Border.GestureRecognizers>
-                                                <TapGestureRecognizer 
-                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:OrderViewModel}}, Path=ViewOrderDetailsCommand}"
-                                                    CommandParameter="{Binding .}" />
-                                            </Border.GestureRecognizers>
-
-                                            <Grid RowDefinitions="Auto,Auto,Auto" 
-                                                  ColumnDefinitions="*,Auto"
-                                                  RowSpacing="8">
-
-                                                <!-- Order Number -->
-                                                <Label Grid.Row="0" Grid.Column="0"
-                                                   Text="{Binding OrderNumber, StringFormat='#{0}'}"
-                                                   FontSize="18"
-                                                   FontAttributes="Bold"
-                                                   TextColor="#1F1F1F" />
-
-                                                <!-- Status Badge -->
-                                                <Border Grid.Row="0" Grid.Column="1"
-                                                    Padding="12,4"
-                                                    StrokeShape="RoundRectangle 16"
-                                                    Stroke="Transparent"
-                                                    BackgroundColor="{Binding Status, Converter={StaticResource OrderStatusColorConverter}}">
-                                                    <Label Text="{Binding Status, Converter={StaticResource OrderStatusTextConverter}}"
-                                                       TextColor="White"
-                                                       FontSize="12"
-                                                       FontAttributes="Bold" />
-                                                </Border>
-
-                                                <!-- Created Date -->
-                                                <Label Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
-                                                   Text="{Binding CreatedAt, StringFormat='{0:MMM dd, yyyy hh:mm tt}'}"
-                                                   FontSize="12"
-                                                   TextColor="#666" />
-
-                                                <!-- Items Count -->
-                                                <Label Grid.Row="2" Grid.Column="0"
-                                                   FontSize="14"
-                                                   TextColor="#1F1F1F">
-                                                    <Label.FormattedText>
-                                                        <FormattedString>
-                                                            <Span Text="Items: " />
-                                                            <Span Text="{Binding Items.Count}" FontAttributes="Bold" />
-                                                        </FormattedString>
-                                                    </Label.FormattedText>
-                                                </Label>
-
-                                                <!-- Arrow Icon -->
-                                                <Grid Grid.Row="2" Grid.Column="1">
-                                                    <Label Text="›"
-                                                       FontSize="24"
-                                                       TextColor="#666"
-                                                       VerticalOptions="Center"
-                                                       HorizontalOptions="End" />
-                                                </Grid>
-                                            </Grid>
-                                        </Border>
-                                    </SwipeView>
-                                </DataTemplate>
-                            </CollectionView.ItemTemplate>
-                        </CollectionView>
-
-                        <!-- Refreshing Overlay -->
-                        <Border IsVisible="{Binding IsRefreshing}"
-                                BackgroundColor="#80FFFFFF"
-                                VerticalOptions="Fill"
-                                HorizontalOptions="Fill"
-                                InputTransparent="True">
-                            <VerticalStackLayout VerticalOptions="Center"
-                                                HorizontalOptions="Center"
-                                                Spacing="12">
-                                <ActivityIndicator IsRunning="{Binding IsRefreshing}"
-                                                  Color="#1F1F1F"
-                                                  WidthRequest="32"
-                                                  HeightRequest="32" />
-                                <Label Text="Refreshing..."
+        <!-- Orders List -->
+        <RefreshView Grid.Row="1"
+                     IsRefreshing="{Binding IsRefreshing, Mode=TwoWay}"
+                     Command="{Binding RefreshOrdersCommand}"
+                     RefreshColor="#1F1F1F"
+                     IsVisible="{Binding IsLoading, Converter={StaticResource InverseBoolConverter}}">
+            <Grid>
+                <!-- Collection View -->
+                <CollectionView ItemsSource="{Binding Orders}">
+                    <CollectionView.EmptyView>
+                        <ContentView>
+                            <VerticalStackLayout HorizontalOptions="Center" 
+                                               VerticalOptions="Center"
+                                               Spacing="16"
+                                               Padding="32">
+                                <Label Text="📋" 
+                                       FontSize="48"
+                                       HorizontalOptions="Center" />
+                                <Label Text="No orders found" 
+                                       FontSize="18"
+                                       TextColor="#666"
+                                       HorizontalOptions="Center" />
+                                <Label Text="Try selecting a different status filter" 
                                        FontSize="14"
-                                       FontAttributes="Bold"
-                                       TextColor="#1F1F1F"
+                                       TextColor="#999"
                                        HorizontalOptions="Center" />
                             </VerticalStackLayout>
-                        </Border>
-                    </Grid>
-                </RefreshView>
+                        </ContentView>
+                    </CollectionView.EmptyView>
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="{x:Null}">
+                            <SwipeView>
+                                <SwipeView.RightItems>
+                                    <SwipeItems>
+                                        <SwipeItem Text="Delete"
+                                                   BackgroundColor="#EF5350"
+                                                   Command="{Binding Source={RelativeSource AncestorType={x:Type vm:OrderViewModel}}, Path=DeleteOrderCommand}"
+                                                   CommandParameter="{Binding Id}" />
+                                    </SwipeItems>
+                                </SwipeView.RightItems>
 
-                <!-- Loading Indicator -->
-                <VerticalStackLayout Grid.Row="1"
-                                    IsVisible="{Binding IsLoading}"
-                                    VerticalOptions="Center"
-                                    HorizontalOptions="Center"
-                                    Spacing="16">
-                    <ActivityIndicator IsRunning="{Binding IsLoading}"
-                                      Color="#1F1F1F"
-                                      WidthRequest="40"
-                                      HeightRequest="40" />
-                    <Label Text="Loading orders..."
-                           FontSize="16"
-                           TextColor="#666"
-                           HorizontalOptions="Center" />
-                </VerticalStackLayout>
+                                <Border Margin="0,0,0,12"
+                                        Padding="16"
+                                        StrokeShape="RoundRectangle 12"
+                                        BackgroundColor="#F9F8F4"
+                                        Shadow="{Shadow Brush=Black, Offset='0,4', Radius=8, Opacity=0.3}">
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer 
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:OrderViewModel}}, Path=ViewOrderDetailsCommand}"
+                                            CommandParameter="{Binding .}" />
+                                    </Border.GestureRecognizers>
+
+                                    <Grid RowDefinitions="Auto,Auto,Auto" 
+                                          ColumnDefinitions="*,Auto"
+                                          RowSpacing="8">
+
+                                        <!-- Order Number -->
+                                        <Label Grid.Row="0" Grid.Column="0"
+                                           Text="{Binding OrderNumber, StringFormat='#{0}'}"
+                                           FontSize="18"
+                                           FontAttributes="Bold"
+                                           TextColor="#1F1F1F" />
+
+                                        <!-- Status Badge -->
+                                        <Border Grid.Row="0" Grid.Column="1"
+                                            Padding="12,4"
+                                            StrokeShape="RoundRectangle 16"
+                                            Stroke="Transparent"
+                                            BackgroundColor="{Binding Status, Converter={StaticResource OrderStatusColorConverter}}">
+                                            <Label Text="{Binding Status, Converter={StaticResource OrderStatusTextConverter}}"
+                                               TextColor="White"
+                                               FontSize="12"
+                                               FontAttributes="Bold" />
+                                        </Border>
+
+                                        <!-- Created Date -->
+                                        <Label Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                                           Text="{Binding CreatedAt, StringFormat='{0:MMM dd, yyyy hh:mm tt}'}"
+                                           FontSize="12"
+                                           TextColor="#666" />
+
+                                        <!-- Items Count -->
+                                        <Label Grid.Row="2" Grid.Column="0"
+                                           FontSize="14"
+                                           TextColor="#1F1F1F">
+                                            <Label.FormattedText>
+                                                <FormattedString>
+                                                    <Span Text="Items: " />
+                                                    <Span Text="{Binding Items.Count}" FontAttributes="Bold" />
+                                                </FormattedString>
+                                            </Label.FormattedText>
+                                        </Label>
+
+                                        <!-- Arrow Icon -->
+                                        <Grid Grid.Row="2" Grid.Column="1">
+                                            <Label Text="›"
+                                               FontSize="24"
+                                               TextColor="#666"
+                                               VerticalOptions="Center"
+                                               HorizontalOptions="End" />
+                                        </Grid>
+                                    </Grid>
+                                </Border>
+                            </SwipeView>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+
+                <!-- Refreshing Overlay -->
+                <Border IsVisible="{Binding IsRefreshing}"
+                        BackgroundColor="#80FFFFFF"
+                        VerticalOptions="Fill"
+                        HorizontalOptions="Fill"
+                        InputTransparent="True">
+                    <VerticalStackLayout VerticalOptions="Center"
+                                        HorizontalOptions="Center"
+                                        Spacing="12">
+                        <ActivityIndicator IsRunning="{Binding IsRefreshing}"
+                                          Color="#1F1F1F"
+                                          WidthRequest="32"
+                                          HeightRequest="32" />
+                        <Label Text="Refreshing..."
+                               FontSize="14"
+                               FontAttributes="Bold"
+                               TextColor="#1F1F1F"
+                               HorizontalOptions="Center" />
+                    </VerticalStackLayout>
+                </Border>
             </Grid>
-        </views:SidebarLayout.PageContent>
-    </views:SidebarLayout>
+        </RefreshView>
+
+        <!-- Loading Indicator -->
+        <VerticalStackLayout Grid.Row="1"
+                            IsVisible="{Binding IsLoading}"
+                            VerticalOptions="Center"
+                            HorizontalOptions="Center"
+                            Spacing="16">
+            <ActivityIndicator IsRunning="{Binding IsLoading}"
+                              Color="#1F1F1F"
+                              WidthRequest="40"
+                              HeightRequest="40" />
+            <Label Text="Loading orders..."
+                   FontSize="16"
+                   TextColor="#666"
+                   HorizontalOptions="Center" />
+        </VerticalStackLayout>
+    </Grid>
 </ContentPage>
