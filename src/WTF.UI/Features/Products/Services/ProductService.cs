@@ -23,16 +23,24 @@ public class ProductService(HttpClient httpClient) : IProductService
             var queryString = $"?Page={query.Page}&PageSize={query.PageSize}";
             
             if (!string.IsNullOrWhiteSpace(query.SearchTerm))
+            {
                 queryString += $"&SearchTerm={Uri.EscapeDataString(query.SearchTerm)}";
+            }
             
             if (query.Type.HasValue)
+            {
                 queryString += $"&Type={query.Type.Value}";
+            }
             
             if (query.IsAddOn.HasValue)
+            {
                 queryString += $"&IsAddOn={query.IsAddOn.Value}";
+            }
             
             if (query.IsActive.HasValue)
+            {
                 queryString += $"&IsActive={query.IsActive.Value}";
+            }
 
             return await httpClient.GetFromJsonAsync<ProductListDto>($"api/products{queryString}");
         }

@@ -1,23 +1,63 @@
 ﻿using WTF.MAUI.Services;
+using WTF.MAUI.ViewModels;
+using WTF.MAUI.Views;
 
-namespace WTF.MAUI
+namespace WTF.MAUI;
+
+public partial class MainPage : ContentPage, IInitializablePage
 {
-    public partial class MainPage : ContentPage
+    private readonly IAuthService _authService;
+    private readonly SidebarViewModel _sidebarViewModel;
+    int count = 0;
+
+    public MainPage(IAuthService authService, SidebarViewModel sidebarViewModel)
     {
-        private readonly IAuthService _authService;
-
-        public MainPage(IAuthService authService)
+        _authService = authService;
+        _sidebarViewModel = sidebarViewModel;
+        
+        InitializeComponent();
+        
+        // Set sidebar binding context
+        if (Content is SidebarLayout sidebar)
         {
-            _authService = authService;
+            sidebar.BindingContext = _sidebarViewModel;
+        }
+    }
 
-            InitializeComponent();
+    protected override void OnAppearing()
+    {
+        base.OnAppearing();
+        
+        // Update sidebar current page
+        _sidebarViewModel.CurrentPage = "MainPage";
+    }
+
+    public void InitializePage()
+    {
+        // Call the same logic as OnAppearing
+        _sidebarViewModel.CurrentPage = "MainPage";
+    }
+
+    private void OnCounterClicked(object sender, EventArgs e)
+    {
+        count++;
+
+        if (count == 1)
+        {
+            CounterBtn.Text = $"Clicked {count} time";
+        }
+        else
+        {
+            CounterBtn.Text = $"Clicked {count} times";
         }
 
-        private async void OnLogoutClicked(object sender, EventArgs e)
-        {
-            _authService.Logout();
+        SemanticScreenReader.Announce(CounterBtn.Text);
+    }
 
-            await _authService.RequireLoginAsync();
-        }
+    private async void OnLogoutClicked(object sender, EventArgs e)
+    {
+        _authService.Logout();
+
+        await _authService.RequireLoginAsync();
     }
 }

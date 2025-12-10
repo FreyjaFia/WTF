@@ -1,25 +1,24 @@
 using System.Globalization;
 
-namespace WTF.MAUI.Converters
-{
-    public class InverseBoolConverter : IValueConverter
-    {
-        public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-        {
-            if (value is bool boolValue)
-            {
-                return !boolValue;
-            }
-            return true;
-        }
+namespace WTF.MAUI.Converters;
 
-        public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+public class InverseBoolConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is bool boolValue)
         {
-            if (value is bool boolValue)
-            {
-                return !boolValue;
-            }
-            return false;
+            return !boolValue;
         }
+        return true;
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is bool boolValue)
+        {
+            return !boolValue;
+        }
+        return false;
     }
 }

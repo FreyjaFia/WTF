@@ -2,78 +2,100 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using WTF.MAUI.Services;
 
-namespace WTF.MAUI.ViewModels
+namespace WTF.MAUI.ViewModels;
+
+public partial class LoginViewModel : ObservableObject
 {
-    public partial class LoginViewModel(IAuthService authService) : ObservableObject
+    #region Fields
+
+    private readonly IAuthService _authService;
+
+    #endregion
+
+    #region Constructor
+
+    public LoginViewModel(IAuthService authService)
     {
-        [ObservableProperty]
-        private string _username = string.Empty;
+        _authService = authService;
+    }
 
-        [ObservableProperty]
-        private string _password = string.Empty;
+    #endregion
 
-        [ObservableProperty]
-        private bool _isLoading;
+    #region Observable Properties
 
-        [ObservableProperty]
-        private string? _errorMessage;
+    [ObservableProperty]
+    private string username = string.Empty;
 
-        [ObservableProperty]
-        private bool _rememberMe;
+    [ObservableProperty]
+    private string password = string.Empty;
 
-        [RelayCommand]
-        private async Task LoginAsync()
+    [ObservableProperty]
+    private bool isLoading;
+
+    [ObservableProperty]
+    private string? errorMessage;
+
+    [ObservableProperty]
+    private bool rememberMe;
+
+    #endregion
+
+    #region Commands
+
+    [RelayCommand]
+    private async Task LoginAsync()
+    {
+        if (IsLoading)
         {
-            if (IsLoading)
-            {
-                return;
-            }
-
-            // Validate inputs
-            if (string.IsNullOrWhiteSpace(Username))
-            {
-                ErrorMessage = "Username is required";
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(Password))
-            {
-                ErrorMessage = "Password is required";
-                return;
-            }
-
-            IsLoading = true;
-            ErrorMessage = null;
-
-            try
-            {
-                var success = await authService.LoginAsync(Username, Password, RememberMe);
-
-                if (success)
-                {
-                    // Navigate to main page after successful login
-                    await Shell.Current.GoToAsync("//OrderPage");
-                }
-                else
-                {
-                    ErrorMessage = "Invalid username or password.";
-                }
-            }
-            catch (Exception ex)
-            {
-                ErrorMessage = "An error occurred. Please try again.";
-                System.Diagnostics.Debug.WriteLine($"Login error: {ex.Message}");
-            }
-            finally
-            {
-                IsLoading = false;
-            }
+            return;
         }
 
-        [RelayCommand]
-        private void ToggleRememberMe()
+        // Validate inputs
+        if (string.IsNullOrWhiteSpace(Username))
         {
-            RememberMe = !RememberMe;
+            ErrorMessage = "Username is required";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(Password))
+        {
+            ErrorMessage = "Password is required";
+            return;
+        }
+
+        IsLoading = true;
+        ErrorMessage = null;
+
+        try
+        {
+            var success = await _authService.LoginAsync(Username, Password, RememberMe);
+
+            if (success)
+            {
+                // Navigate to ContainerPage after successful login
+                await Shell.Current.GoToAsync("//ContainerPage", false);
+            }
+            else
+            {
+                ErrorMessage = "Invalid username or password.";
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = "An error occurred. Please try again.";
+            System.Diagnostics.Debug.WriteLine($"Login error: {ex.Message}");
+        }
+        finally
+        {
+            IsLoading = false;
         }
     }
+
+    [RelayCommand]
+    private void ToggleRememberMe()
+    {
+        RememberMe = !RememberMe;
+    }
+
+    #endregion
 }

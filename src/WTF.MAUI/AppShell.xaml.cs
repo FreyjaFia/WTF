@@ -1,10 +1,14 @@
-﻿namespace WTF.MAUI
+﻿using WTF.MAUI.Views;
+
+namespace WTF.MAUI;
+
+public partial class AppShell : Shell
 {
-    public partial class AppShell : Shell
+    public AppShell()
     {
-        public AppShell()
-        {
-            InitializeComponent();
-        }
+        InitializeComponent();
+
+        // Register detail routes here
+        Routing.RegisterRoute("OrderFormPage", typeof(OrderFormPage));
     }
 }

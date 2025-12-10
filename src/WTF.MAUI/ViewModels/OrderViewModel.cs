@@ -1,256 +1,284 @@
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using System.Collections.ObjectModel;
 using WTF.Contracts.Orders;
 using WTF.Contracts.Orders.Enums;
 using WTF.Contracts.Orders.Queries;
 using WTF.MAUI.Services;
+using WTF.MAUI.Views;
 
-namespace WTF.MAUI.ViewModels
+namespace WTF.MAUI.ViewModels;
+
+public partial class OrderViewModel : ObservableObject
 {
-    public partial class OrderViewModel(IOrderService orderService) : ObservableObject
+    #region Fields
+
+    private readonly IOrderService _orderService;
+    private bool _isRefreshingInternal = false;
+    private CancellationTokenSource? _searchCancellationTokenSource;
+
+    #endregion
+
+    #region Constructor
+
+    public OrderViewModel(IOrderService orderService)
     {
-        [ObservableProperty]
-        private ObservableCollection<OrderDto> _orders = new();
+        _orderService = orderService;
+    }
 
-        [ObservableProperty]
-        private bool _isLoading;
+    #endregion
 
-        [ObservableProperty]
-        private bool _isRefreshing = false;
+    #region Observable Properties
 
-        [ObservableProperty]
-        private string? _errorMessage;
+    [ObservableProperty]
+    private ObservableCollection<OrderDto> orders = new();
 
-        [ObservableProperty]
-        private string? _successMessage;
+    [ObservableProperty]
+    private bool isLoading;
 
-        [ObservableProperty]
-        private OrderStatusEnum _selectedStatus = OrderStatusEnum.All;
+    [ObservableProperty]
+    private bool isRefreshing;
 
-        [ObservableProperty]
-        private int _currentPage = 1;
+    [ObservableProperty]
+    private string? errorMessage;
 
-        [ObservableProperty]
-        private int _pageSize = 100;
+    [ObservableProperty]
+    private string? successMessage;
 
-        [ObservableProperty]
-        [NotifyPropertyChangedFor(nameof(HasSearchText))]
-        private string _searchText = string.Empty;
+    [ObservableProperty]
+    private OrderStatusEnum selectedStatus = OrderStatusEnum.All;
 
-        public bool HasSearchText => !string.IsNullOrWhiteSpace(SearchText);
+    [ObservableProperty]
+    private int currentPage = 1;
 
-        private bool _isRefreshingInternal = false;
-        private CancellationTokenSource? _searchCancellationTokenSource;
+    [ObservableProperty]
+    private int pageSize = 100;
 
-        [RelayCommand]
-        private async Task LoadOrdersAsync()
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSearchText))]
+    private string searchText = string.Empty;
+
+    #endregion
+
+    #region Computed Properties
+
+    public bool HasSearchText => !string.IsNullOrWhiteSpace(SearchText);
+
+    #endregion
+
+    #region Public Methods
+
+    public async Task InitializeAsync()
+    {
+        await LoadOrdersAsync();
+    }
+
+    #endregion
+
+    #region Commands
+
+    [RelayCommand]
+    private async Task LoadOrdersAsync()
+    {
+        if (IsLoading || IsRefreshing)
         {
-            if (IsLoading || IsRefreshing)
+            return;
+        }
+
+        IsLoading = true;
+        await FetchOrdersAsync();
+        IsLoading = false;
+    }
+
+    [RelayCommand]
+    private async Task RefreshOrdersAsync()
+    {
+        if (IsRefreshing || IsLoading)
+        {
+            return;
+        }
+
+        try
+        {
+            _isRefreshingInternal = true;
+            IsRefreshing = true;
+            CurrentPage = 1;
+            await FetchOrdersAsync();
+        }
+        finally
+        {
+            _isRefreshingInternal = false;
+            IsRefreshing = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task FilterByStatusAsync(OrderStatusEnum status)
+    {
+        SelectedStatus = status;
+        CurrentPage = 1;
+        await LoadOrdersAsync();
+    }
+
+    [RelayCommand]
+    private void ClearSearch()
+    {
+        SearchText = string.Empty;
+        OnPropertyChanged(nameof(SearchText));
+        OnPropertyChanged(nameof(HasSearchText));
+    }
+
+    [RelayCommand]
+    private async Task AddOrderAsync()
+    {
+        // TODO: Navigate to AddOrderPage or show a modal/dialog for adding an order
+        await Shell.Current.DisplayAlertAsync("Add Order", "Add order action triggered!", "OK");
+    }
+
+    [RelayCommand]
+    private async Task ViewOrderDetailsAsync(OrderDto order)
+    {
+        if (order == null)
+        {
+            return;
+        }
+
+        try
+        {
+            await Shell.Current.GoToAsync($"{nameof(OrderFormPage)}?orderId={order.Id}");
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error navigating to order details: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
+    private async Task DeleteOrderAsync(Guid orderId)
+    {
+        try
+        {
+            var result = await Shell.Current.DisplayAlertAsync(
+                "Confirm Delete",
+                "Are you sure you want to delete this order?",
+                "Yes",
+                "No");
+
+            if (!result)
             {
                 return;
             }
 
             IsLoading = true;
+            var success = await _orderService.DeleteOrderAsync(orderId);
 
-            await FetchOrdersAsync();
-
+            if (success)
+            {
+                SuccessMessage = "Order deleted successfully!";
+                await LoadOrdersAsync();
+            }
+            else
+            {
+                ErrorMessage = "Failed to delete order. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error deleting order: {ex.Message}";
+        }
+        finally
+        {
             IsLoading = false;
         }
+    }
 
-        [RelayCommand]
-        private async Task RefreshOrdersAsync()
+    #endregion
+
+    #region Private Helper Methods
+
+    private async Task FetchOrdersAsync()
+    {
+        ErrorMessage = null;
+        SuccessMessage = null;
+
+        try
         {
-            if (IsRefreshing || IsLoading)
+            var statusToFetch = !string.IsNullOrWhiteSpace(SearchText)
+                ? OrderStatusEnum.All
+                : SelectedStatus;
+
+            var query = new GetOrdersQuery(
+                Page: CurrentPage,
+                PageSize: PageSize,
+                Status: (int)statusToFetch
+            );
+
+            var orders = await _orderService.GetOrdersAsync(query);
+
+            if (orders != null)
             {
-                return;
-            }
+                var filteredOrders = orders.AsEnumerable();
 
-            try
-            {
-                _isRefreshingInternal = true;
-                IsRefreshing = true;
-                CurrentPage = 1;
-                await FetchOrdersAsync();
-            }
-            finally
-            {
-                _isRefreshingInternal = false;
-                IsRefreshing = false;
-            }
-        }
-
-        private async Task FetchOrdersAsync()
-        {
-            ErrorMessage = null;
-            SuccessMessage = null;
-
-            try
-            {
-                // When searching, use All status to search across all statuses
-                // When NOT searching, use the selected status filter
-                var statusToFetch = !string.IsNullOrWhiteSpace(SearchText) 
-                    ? OrderStatusEnum.All 
-                    : SelectedStatus;
-
-                var query = new GetOrdersQuery(
-                    Page: CurrentPage,
-                    PageSize: PageSize,
-                    Status: (int)statusToFetch
-                );
-
-                var orders = await orderService.GetOrdersAsync(query);
-
-                if (orders != null)
+                if (!string.IsNullOrWhiteSpace(SearchText))
                 {
-                    var filteredOrders = orders.AsEnumerable();
-
-                    // Apply search filter if text exists
-                    if (!string.IsNullOrWhiteSpace(SearchText))
-                    {
-                        filteredOrders = filteredOrders.Where(o =>
-                            o.OrderNumber.ToString().Contains(SearchText, StringComparison.OrdinalIgnoreCase));
-                    }
-
-                    // Order by most recent first
-                    var orderedOrders = filteredOrders.OrderByDescending(o => o.OrderNumber);
-
-                    Orders.Clear();
-                    foreach (var order in orderedOrders)
-                    {
-                        Orders.Add(order);
-                    }
-                }
-                else
-                {
-                    ErrorMessage = "Failed to load orders. Please try again.";
-                }
-            }
-            catch (Exception ex)
-            {
-                ErrorMessage = $"Error: {ex.Message}";
-            }
-        }
-
-        [RelayCommand]
-        private async Task FilterByStatusAsync(OrderStatusEnum status)
-        {
-            SelectedStatus = status;
-            CurrentPage = 1;
-            await LoadOrdersAsync();
-        }
-
-        [RelayCommand]
-        private void ClearSearch()
-        {
-            SearchText = string.Empty;
-
-            OnPropertyChanged(nameof(SearchText));
-            OnPropertyChanged(nameof(HasSearchText));
-        }
-
-        [RelayCommand]
-        private async Task ViewOrderDetailsAsync(OrderDto order)
-        {
-            if (order == null)
-            {
-                return;
-            }
-
-            try
-            {
-                await Shell.Current.GoToAsync($"//orderdetails?orderId={order.Id}");
-            }
-            catch (Exception ex)
-            {
-                ErrorMessage = $"Error navigating to order details: {ex.Message}";
-            }
-        }
-
-        [RelayCommand]
-        private async Task DeleteOrderAsync(Guid orderId)
-        {
-            try
-            {
-                var result = await Shell.Current.DisplayAlertAsync(
-                    "Confirm Delete",
-                    "Are you sure you want to delete this order?",
-                    "Yes",
-                    "No");
-
-                if (!result)
-                {
-                    return;
+                    filteredOrders = filteredOrders.Where(o =>
+                        o.OrderNumber.ToString().Contains(SearchText, StringComparison.OrdinalIgnoreCase));
                 }
 
-                IsLoading = true;
-                var success = await orderService.DeleteOrderAsync(orderId);
+                var orderedOrders = filteredOrders.OrderByDescending(o => o.OrderNumber);
 
-                if (success)
+                Orders.Clear();
+                foreach (var order in orderedOrders)
                 {
-                    SuccessMessage = "Order deleted successfully!";
-                    await LoadOrdersAsync();
-                }
-                else
-                {
-                    ErrorMessage = "Failed to delete order. Please try again.";
+                    Orders.Add(order);
                 }
             }
-            catch (Exception ex)
+            else
             {
-                ErrorMessage = $"Error deleting order: {ex.Message}";
-            }
-            finally
-            {
-                IsLoading = false;
+                ErrorMessage = "Failed to load orders. Please try again.";
             }
         }
-
-        [RelayCommand]
-        private async Task AddOrderAsync()
+        catch (Exception ex)
         {
-            // TODO: Navigate to AddOrderPage or show a modal/dialog for adding an order
-            await Shell.Current.DisplayAlertAsync("Add Order", "Add order action triggered!", "OK");
-        }
-
-        public async Task InitializeAsync()
-        {
-            await LoadOrdersAsync();
-        }
-
-        partial void OnIsRefreshingChanged(bool value)
-        {
-            if (value && !_isRefreshingInternal)
-            {
-                IsRefreshing = false;
-            }
-        }
-
-        partial void OnSearchTextChanged(string value)
-        {
-            // Cancel previous search operation
-            _searchCancellationTokenSource?.Cancel();
-            _searchCancellationTokenSource = new CancellationTokenSource();
-
-            // Debounce the search - wait 300ms after user stops typing
-            Task.Run(async () =>
-            {
-                try
-                {
-                    await Task.Delay(300, _searchCancellationTokenSource.Token);
-
-                    // Trigger search after delay
-                    await MainThread.InvokeOnMainThreadAsync(async () =>
-                    {
-                        CurrentPage = 1;
-                        await LoadOrdersAsync();
-                    });
-                }
-                catch (TaskCanceledException)
-                {
-                    // Search was cancelled, ignore
-                }
-            });
+            ErrorMessage = $"Error: {ex.Message}";
         }
     }
+
+    #endregion
+
+    #region Partial Methods (Property Change Handlers)
+
+    partial void OnIsRefreshingChanged(bool value)
+    {
+        if (value && !_isRefreshingInternal)
+        {
+            IsRefreshing = false;
+        }
+    }
+
+    partial void OnSearchTextChanged(string value)
+    {
+        _searchCancellationTokenSource?.Cancel();
+        _searchCancellationTokenSource = new CancellationTokenSource();
+
+        Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(300, _searchCancellationTokenSource.Token);
+
+                await MainThread.InvokeOnMainThreadAsync(async () =>
+                {
+                    CurrentPage = 1;
+                    await LoadOrdersAsync();
+                });
+            }
+            catch (TaskCanceledException)
+            {
+                // Search was cancelled, ignore
+            }
+        });
+    }
+
+    #endregion
 }

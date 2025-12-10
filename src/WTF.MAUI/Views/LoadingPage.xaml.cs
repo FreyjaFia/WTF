@@ -1,36 +1,54 @@
 using WTF.MAUI.Services;
 
-namespace WTF.MAUI.Views
+namespace WTF.MAUI.Views;
+
+public partial class LoadingPage : ContentPage
 {
-    public partial class LoadingPage : ContentPage
+    private readonly IAuthService _authService;
+
+    public LoadingPage(IAuthService authService)
     {
-        private readonly IAuthService _authService;
+        InitializeComponent();
+        _authService = authService;
+    }
 
-        public LoadingPage(IAuthService authService)
+    protected override async void OnAppearing()
+    {
+        base.OnAppearing();
+
+        // Small delay for smooth transition (like Facebook)
+        await Task.Delay(500);
+
+        try
         {
-            InitializeComponent();
-            _authService = authService;
-        }
-
-        protected override async void OnAppearing()
-        {
-            base.OnAppearing();
-
-            // Small delay for smooth transition (like Facebook)
-            await Task.Delay(500);
-
             // Check if user is already logged in
             var isLoggedIn = await _authService.IsLoggedInAsync();
 
             if (isLoggedIn)
             {
-                // Auto-login: Navigate to main app
-                await Shell.Current.GoToAsync("//OrderPage");
+                // Auto-login: Navigate to ContainerPage (which shows home by default)
+                await Shell.Current.GoToAsync("//ContainerPage", false);
             }
             else
             {
                 // Not logged in: Navigate to login page
-                await Shell.Current.GoToAsync("//LoginPage");
+                await Shell.Current.GoToAsync("//LoginPage", false);
+            }
+        }
+        catch (Exception ex)
+        {
+            // Log the error for debugging
+            System.Diagnostics.Debug.WriteLine($"Navigation error in LoadingPage: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+
+            // Fallback to login on error
+            try
+            {
+                await Shell.Current.GoToAsync("//LoginPage", false);
+            }
+            catch (Exception fallbackEx)
+            {
+                System.Diagnostics.Debug.WriteLine($"Fallback navigation also failed: {fallbackEx.Message}");
             }
         }
     }

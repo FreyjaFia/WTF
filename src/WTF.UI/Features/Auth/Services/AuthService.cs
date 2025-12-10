@@ -1,7 +1,6 @@
 using Blazored.LocalStorage;
 using System.Net.Http.Json;
 using WTF.Contracts.Auth.Login;
-using WTF.Contracts.Auth.Validate;
 
 namespace WTF.UI.Features.Auth.Services;
 
@@ -34,7 +33,7 @@ public class AuthService(HttpClient httpClient, ILocalStorageService localStorag
         try
         {
             var response = await httpClient.GetAsync("/api/auth/validate");
-            
+
             if (response.IsSuccessStatusCode)
             {
                 return true;
