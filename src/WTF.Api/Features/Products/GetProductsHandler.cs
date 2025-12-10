@@ -11,7 +11,10 @@ public class GetProductsHandler(WTFDbContext db) : IRequestHandler<GetProductsQu
 {
     public async Task<ProductListDto> Handle(GetProductsQuery request, CancellationToken cancellationToken)
     {
-        var query = db.Products.AsQueryable();
+        var query = db.Products
+            .Include(p => p.ProductImage)
+                .ThenInclude(pi => pi!.Image)
+            .AsQueryable();
 
         // Apply filters
         if (!string.IsNullOrWhiteSpace(request.SearchTerm))
@@ -52,7 +55,10 @@ public class GetProductsHandler(WTFDbContext db) : IRequestHandler<GetProductsQu
                 p.CreatedAt,
                 p.CreatedBy,
                 p.UpdatedAt,
-                p.UpdatedBy
+                p.UpdatedBy,
+                p.ProductImage != null && p.ProductImage.Image != null
+                    ? p.ProductImage.Image.ImageUrl
+                    : null
             ))
             .ToListAsync(cancellationToken);
 

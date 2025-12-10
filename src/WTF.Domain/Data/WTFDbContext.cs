@@ -18,6 +18,8 @@ public partial class WTFDbContext : DbContext
 
     public virtual DbSet<Customer> Customers { get; set; }
 
+    public virtual DbSet<Image> Images { get; set; }
+
     public virtual DbSet<LoyaltyPoint> LoyaltyPoints { get; set; }
 
     public virtual DbSet<Order> Orders { get; set; }
@@ -25,6 +27,8 @@ public partial class WTFDbContext : DbContext
     public virtual DbSet<OrderItem> OrderItems { get; set; }
 
     public virtual DbSet<Product> Products { get; set; }
+
+    public virtual DbSet<ProductImage> ProductImages { get; set; }
 
     public virtual DbSet<ProductType> ProductTypes { get; set; }
 
@@ -49,6 +53,13 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.LastName)
                 .HasMaxLength(50)
                 .IsUnicode(false);
+        });
+
+        modelBuilder.Entity<Image>(entity =>
+        {
+            entity.Property(e => e.ImageId).HasDefaultValueSql("(newid())");
+            entity.Property(e => e.ImageUrl).HasMaxLength(512);
+            entity.Property(e => e.UploadedAt).HasDefaultValueSql("(sysdatetime())");
         });
 
         modelBuilder.Entity<LoyaltyPoint>(entity =>
@@ -146,6 +157,25 @@ public partial class WTFDbContext : DbContext
             entity.HasOne(d => d.UpdatedByNavigation).WithMany(p => p.ProductUpdatedByNavigations)
                 .HasForeignKey(d => d.UpdatedBy)
                 .HasConstraintName("FK_Products_UpdatedBy");
+        });
+
+        modelBuilder.Entity<ProductImage>(entity =>
+        {
+            entity.HasKey(e => new { e.ProductId, e.ImageId });
+
+            entity.HasIndex(e => e.ImageId, "UQ_ProductImages_ImageId").IsUnique();
+
+            entity.HasIndex(e => e.ProductId, "UQ_ProductImages_ProductId").IsUnique();
+
+            entity.HasOne(d => d.Image).WithOne(p => p.ProductImage)
+                .HasForeignKey<ProductImage>(d => d.ImageId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ProductImages_Images");
+
+            entity.HasOne(d => d.Product).WithOne(p => p.ProductImage)
+                .HasForeignKey<ProductImage>(d => d.ProductId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ProductImages_Products");
         });
 
         modelBuilder.Entity<ProductType>(entity =>

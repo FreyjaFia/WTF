@@ -6,46 +6,41 @@ namespace WTF.MAUI.Views;
 public partial class OrderFormPage : ContentPage
 {
     private readonly OrderFormViewModel _viewModel;
-    private bool _isExpanded = false;
+    private readonly SidebarViewModel _sidebarViewModel;
 
     public string? OrderId { get; set; }
 
-    public OrderFormPage(OrderFormViewModel viewModel)
+    public OrderFormPage(OrderFormViewModel viewModel, SidebarViewModel sidebarViewModel)
     {
         InitializeComponent();
         _viewModel = viewModel;
-        BindingContext = _viewModel;
-
-        // Tap anywhere on footer bar to toggle sheet
-        var tapGesture = new TapGestureRecognizer();
-        tapGesture.Tapped += (s, e) => ToggleBottomSheet();
-        // Attach to footer bar
-        FooterBar.GestureRecognizers.Add(tapGesture);
+        _sidebarViewModel = sidebarViewModel;
+        
+        // Set sidebar binding context first
+        if (Content is SidebarLayout sidebar)
+        {
+            sidebar.BindingContext = _sidebarViewModel;
+            // Set the page content's binding context to OrderFormViewModel
+            if (sidebar.PageContent != null)
+            {
+                sidebar.PageContent.BindingContext = _viewModel;
+            }
+        }
     }
 
     protected override async void OnNavigatedTo(NavigatedToEventArgs args)
     {
         base.OnNavigatedTo(args);
 
-        if (!string.IsNullOrEmpty(OrderId) && Guid.TryParse(OrderId, out var orderId))
-        {
-            await _viewModel.LoadOrderAsync(orderId);
-        }
-    }
+        // Update sidebar current page
+        _sidebarViewModel.CurrentPage = "OrderPage";
 
-    private async void ToggleBottomSheet()
-    {
-        if (_isExpanded)
+        Guid? orderId = null;
+        if (!string.IsNullOrEmpty(OrderId) && Guid.TryParse(OrderId, out var parsedOrderId))
         {
-            // Collapse
-            await BottomSheet.TranslateTo(0, 300, 250, Easing.CubicOut);
-            _isExpanded = false;
+            orderId = parsedOrderId;
         }
-        else
-        {
-            // Expand
-            await BottomSheet.TranslateTo(0, 0, 250, Easing.CubicOut);
-            _isExpanded = true;
-        }
+
+        await _viewModel.InitializeAsync(orderId);
     }
 }

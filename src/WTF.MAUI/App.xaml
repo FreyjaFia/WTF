@@ -1,5 +1,4 @@
-﻿<?xml version = "1.0" encoding = "UTF-8" ?>
-<Application xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+﻿<Application xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:local="clr-namespace:WTF.MAUI"
              xmlns:converters="clr-namespace:WTF.MAUI.Converters"
@@ -12,12 +11,19 @@
             </ResourceDictionary.MergedDictionaries>
             
             <!-- Value Converters -->
-            <converters:IsNotNullConverter x:Key="IsNotNullConverter" />
+            <converters:BoolToIntConverter x:Key="BoolToIntConverter" />
+            <converters:CheckoutButtonTextConverter x:Key="CheckoutButtonTextConverter" />
             <converters:InverseBoolConverter x:Key="InverseBoolConverter" />
+            <converters:IsNotNullConverter x:Key="IsNotNullConverter" />
             <converters:OrderStatusColorConverter x:Key="OrderStatusColorConverter" />
             <converters:OrderStatusTextConverter x:Key="OrderStatusTextConverter" />
+            <converters:PageTitleConverter x:Key="PageTitleConverter" />
+            <converters:ProductImageUrlConverter x:Key="ProductImageUrlConverter" />
+            <converters:ProductTypeButtonBackgroundConverter x:Key="ProductTypeButtonBackgroundConverter" />
+            <converters:ProductTypeButtonTextColorConverter x:Key="ProductTypeButtonTextColorConverter" />
+            <converters:ProductTypeColorConverter x:Key="ProductTypeColorConverter" />
+            <converters:ProductTypeIconConverter x:Key="ProductTypeIconConverter" />
             <converters:StatusButtonOpacityConverter x:Key="StatusButtonOpacityConverter" />
-            <converters:BoolToIntConverter x:Key="BoolToIntConverter" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Reflection;
+using WTF.MAUI.Converters;
 using WTF.MAUI.Infrastructure.Handlers;
 using WTF.MAUI.Services;
 using WTF.MAUI.Settings;
@@ -41,10 +42,14 @@ public static class MauiProgram
 
         builder.Services.AddSingleton(wtfSettings!);
 
+        // Initialize converters with settings
+        ProductImageUrlConverter.Initialize(wtfSettings!);
+
         // Register Services
         builder.Services.AddSingleton<ITokenService, TokenService>();
         builder.Services.AddSingleton<IAuthService, AuthService>();
         builder.Services.AddScoped<IOrderService, OrderService>();
+        builder.Services.AddScoped<IProductService, ProductService>();
 
         // Register ViewModels
         builder.Services.AddTransient<LoginViewModel>();

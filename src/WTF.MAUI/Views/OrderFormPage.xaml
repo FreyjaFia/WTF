@@ -1,63 +1,573 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:WTF.MAUI.ViewModels"
+             xmlns:enums="clr-namespace:WTF.Contracts.Products.Enums;assembly=WTF.Contracts"
+             xmlns:views="clr-namespace:WTF.MAUI.Views"
              x:Class="WTF.MAUI.Views.OrderFormPage"
-             Title="Order Details"
-             Shell.NavBarIsVisible="False">
+             x:DataType="vm:OrderFormViewModel"
+             Title="Order Form"
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="#FCF8F1">
 
-  <!-- Root Grid -->
-  <Grid>
-    <!-- Main layout grid (products + footer) -->
-    <Grid RowDefinitions="*,Auto">
-      <!-- Products Grid -->
-      <CollectionView Grid.Row="0">
-        <CollectionView.ItemsLayout>
-          <GridItemsLayout Orientation="Vertical" Span="2" />
-        </CollectionView.ItemsLayout>
-        <CollectionView.ItemTemplate>
-          <DataTemplate>
-            <Frame Padding="10" Margin="5" BorderColor="LightGray">
-              <StackLayout>
-                <Label Text="Product Name" FontAttributes="Bold" />
-                <Label Text="₱100.00" TextColor="Green" />
-              </StackLayout>
-            </Frame>
-          </DataTemplate>
-        </CollectionView.ItemTemplate>
-        <CollectionView.ItemsSource>
-          <x:Array Type="{x:Type x:String}">
-            <x:String>Product A</x:String>
-            <x:String>Product B</x:String>
-            <x:String>Product C</x:String>
-            <x:String>Product D</x:String>
-          </x:Array>
-        </CollectionView.ItemsSource>
-      </CollectionView>
+    <views:SidebarLayout>
+        <views:SidebarLayout.PageContent>
+            <Grid RowDefinitions="Auto,*" ColumnDefinitions="2.5*,*" BackgroundColor="#FCF8F1">
 
-      <!-- Footer Bar (info only) -->
-      <Grid x:Name="FooterBar" Grid.Row="1" BackgroundColor="#1F1F1F" Padding="10">
-        <Label Text="Total: ₱250.00"
-               TextColor="White"
-               FontSize="18"
-               HorizontalOptions="Center" />
-      </Grid>
-    </Grid>
+                <!-- LEFT SIDE: Products Section -->
+                <Grid Grid.Row="0" Grid.RowSpan="2" Grid.Column="0" 
+                      RowDefinitions="Auto,Auto,Auto,*"
+                      Padding="20,16">
 
-    <!-- Expandable Bottom Sheet (overlay) -->
-    <Grid x:Name="BottomSheet"
-          BackgroundColor="White"
-          VerticalOptions="End"
-          HeightRequest="300"
-          TranslationY="300">
-      <!-- start hidden -->
-      <StackLayout Padding="20">
-        <Label Text="Order Summary" FontAttributes="Bold" FontSize="20" />
-        <Label Text="Product A x2 - ₱200.00" />
-        <Label Text="Product B x1 - ₱50.00" />
-        <Button Text="Checkout"
-                BackgroundColor="Green"
-                TextColor="White" />
-      </StackLayout>
-    </Grid>
-  </Grid>
+                    <!-- Header -->
+                    <Grid Grid.Row="0" ColumnDefinitions="Auto,*" Margin="0,0,0,20">
+                        <Button Grid.Column="0"
+                                Text="&#xe5c4;"
+                                FontFamily="MaterialIconsOutlined"
+                                BackgroundColor="Transparent"
+                                TextColor="#1F1F1F"
+                                FontSize="24"
+                                Padding="0"
+                                Command="{Binding CancelCommand}"
+                                HorizontalOptions="Start" />
+
+                        <Label Grid.Column="1"
+                               Text="{Binding OrderTitle}"
+                               FontSize="22"
+                               FontAttributes="Bold"
+                               TextColor="#1F1F1F"
+                               VerticalOptions="Center"
+                               Margin="12,0,0,0" />
+                    </Grid>
+
+                    <!-- Search Bar -->
+                    <Border Grid.Row="1" 
+                            Stroke="#E0E0E0"
+                            StrokeThickness="1"
+                            StrokeShape="RoundRectangle 8"
+                            BackgroundColor="White"
+                            Margin="0,0,0,16"
+                            HeightRequest="44">
+                        <Grid ColumnDefinitions="Auto,*,Auto" Padding="12,0">
+                            <Label Grid.Column="0"
+                                   Text="&#xe8b6;"
+                                   FontFamily="MaterialIconsOutlined"
+                                   FontSize="18"
+                                   TextColor="#999"
+                                   VerticalOptions="Center" />
+
+                            <Entry Grid.Column="1"
+                                   Text="{Binding SearchText}"
+                                   Placeholder="Search products..."
+                                   BackgroundColor="Transparent"
+                                   TextColor="#1F1F1F"
+                                   PlaceholderColor="#999"
+                                   VerticalOptions="Center"
+                                   Margin="8,0" />
+
+                            <Button Grid.Column="2"
+                                    Text="&#xe5cd;"
+                                    FontFamily="MaterialIconsOutlined"
+                                    BackgroundColor="Transparent"
+                                    TextColor="#999"
+                                    FontSize="18"
+                                    Padding="0"
+                                    Command="{Binding ClearSearchCommand}"
+                                    IsVisible="{Binding SearchText, Converter={StaticResource IsNotNullConverter}}" />
+                        </Grid>
+                    </Border>
+
+                    <!-- Product Type Filters -->
+                    <ScrollView Grid.Row="2" 
+                                Orientation="Horizontal"
+                                HorizontalScrollBarVisibility="Never"
+                                Margin="0,0,0,16"
+                                HeightRequest="40">
+                        <HorizontalStackLayout Spacing="8">
+                            <Button Text="All"
+                                    BackgroundColor="{Binding SelectedProductType, Converter={StaticResource ProductTypeButtonBackgroundConverter}, ConverterParameter='All'}"
+                                    TextColor="{Binding SelectedProductType, Converter={StaticResource ProductTypeButtonTextColorConverter}, ConverterParameter='All'}"
+                                    FontSize="13"
+                                    CornerRadius="20"
+                                    Padding="16,8"
+                                    HeightRequest="36"
+                                    Command="{Binding FilterByProductTypeCommand}"
+                                    CommandParameter="{x:Null}" />
+
+                            <Button Text="Drinks"
+                                    BackgroundColor="{Binding SelectedProductType, Converter={StaticResource ProductTypeButtonBackgroundConverter}, ConverterParameter={x:Static enums:ProductTypeEnum.Drink}}"
+                                    TextColor="{Binding SelectedProductType, Converter={StaticResource ProductTypeButtonTextColorConverter}, ConverterParameter={x:Static enums:ProductTypeEnum.Drink}}"
+                                    FontSize="13"
+                                    CornerRadius="20"
+                                    Padding="16,8"
+                                    HeightRequest="36"
+                                    Command="{Binding FilterByProductTypeCommand}"
+                                    CommandParameter="{x:Static enums:ProductTypeEnum.Drink}" />
+
+                            <Button Text="Food"
+                                    BackgroundColor="{Binding SelectedProductType, Converter={StaticResource ProductTypeButtonBackgroundConverter}, ConverterParameter={x:Static enums:ProductTypeEnum.Food}}"
+                                    TextColor="{Binding SelectedProductType, Converter={StaticResource ProductTypeButtonTextColorConverter}, ConverterParameter={x:Static enums:ProductTypeEnum.Food}}"
+                                    FontSize="13"
+                                    CornerRadius="20"
+                                    Padding="16,8"
+                                    HeightRequest="36"
+                                    Command="{Binding FilterByProductTypeCommand}"
+                                    CommandParameter="{x:Static enums:ProductTypeEnum.Food}" />
+
+                            <Button Text="Dessert"
+                                    BackgroundColor="{Binding SelectedProductType, Converter={StaticResource ProductTypeButtonBackgroundConverter}, ConverterParameter={x:Static enums:ProductTypeEnum.Dessert}}"
+                                    TextColor="{Binding SelectedProductType, Converter={StaticResource ProductTypeButtonTextColorConverter}, ConverterParameter={x:Static enums:ProductTypeEnum.Dessert}}"
+                                    FontSize="13"
+                                    CornerRadius="20"
+                                    Padding="16,8"
+                                    HeightRequest="36"
+                                    Command="{Binding FilterByProductTypeCommand}"
+                                    CommandParameter="{x:Static enums:ProductTypeEnum.Dessert}" />
+
+                            <Button Text="Other"
+                                    BackgroundColor="{Binding SelectedProductType, Converter={StaticResource ProductTypeButtonBackgroundConverter}, ConverterParameter={x:Static enums:ProductTypeEnum.Other}}"
+                                    TextColor="{Binding SelectedProductType, Converter={StaticResource ProductTypeButtonTextColorConverter}, ConverterParameter={x:Static enums:ProductTypeEnum.Other}}"
+                                    FontSize="13"
+                                    CornerRadius="20"
+                                    Padding="16,8"
+                                    HeightRequest="36"
+                                    Command="{Binding FilterByProductTypeCommand}"
+                                    CommandParameter="{x:Static enums:ProductTypeEnum.Other}" />
+                        </HorizontalStackLayout>
+                    </ScrollView>
+
+                    <!-- Products Grid -->
+                    <ScrollView Grid.Row="3">
+                        <Grid>
+                            <!-- Loading Indicator -->
+                            <VerticalStackLayout IsVisible="{Binding IsLoading}"
+                                                VerticalOptions="Center"
+                                                HorizontalOptions="Center"
+                                                Spacing="12">
+                                <ActivityIndicator IsRunning="{Binding IsLoading}"
+                                                  Color="#1F1F1F"
+                                                  WidthRequest="32"
+                                                  HeightRequest="32" />
+                                <Label Text="Loading..."
+                                       FontSize="14"
+                                       TextColor="#999" />
+                            </VerticalStackLayout>
+
+                            <!-- Products Collection -->
+                            <CollectionView ItemsSource="{Binding Products}"
+                                           IsVisible="{Binding IsLoading, Converter={StaticResource InverseBoolConverter}}">
+                                <CollectionView.ItemsLayout>
+                                    <GridItemsLayout Orientation="Vertical" 
+                                                   Span="3"
+                                                   HorizontalItemSpacing="16"
+                                                   VerticalItemSpacing="16" />
+                                </CollectionView.ItemsLayout>
+
+                                <CollectionView.EmptyView>
+                                    <VerticalStackLayout HorizontalOptions="Center"
+                                                       VerticalOptions="Center"
+                                                       Spacing="12">
+                                        <Label Text="&#xe8b6;"
+                                               FontFamily="MaterialIconsOutlined"
+                                               FontSize="48"
+                                               TextColor="#E0E0E0" />
+                                        <Label Text="No products found"
+                                               FontSize="14"
+                                               TextColor="#999" />
+                                    </VerticalStackLayout>
+                                </CollectionView.EmptyView>
+
+                                <CollectionView.ItemTemplate>
+                                    <DataTemplate x:DataType="{x:Null}">
+                                        <Border StrokeShape="RoundRectangle 12"
+                                                BackgroundColor="White"
+                                                Stroke="#F0F0F0"
+                                                StrokeThickness="1"
+                                                Padding="12"
+                                                HeightRequest="240">
+                                            <Border.GestureRecognizers>
+                                                <TapGestureRecognizer 
+                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:OrderFormViewModel}}, Path=AddToCartCommand}"
+                                                    CommandParameter="{Binding .}" />
+                                            </Border.GestureRecognizers>
+
+                                            <Grid RowDefinitions="2*,Auto,Auto,Auto" RowSpacing="8">
+                                                <!-- Product Image -->
+                                                <Border Grid.Row="0"
+                                                        StrokeShape="RoundRectangle 8"
+                                                        BackgroundColor="#F9F8F4"
+                                                        VerticalOptions="Fill">
+                                                    <Grid>
+                                                        <!-- Show actual image if available -->
+                                                        <Image Source="{Binding ImageUrl, Converter={StaticResource ProductImageUrlConverter}}"
+                                                               Aspect="AspectFit"
+                                                               Margin="8"
+                                                               IsVisible="{Binding ImageUrl, Converter={StaticResource IsNotNullConverter}}" />
+
+                                                        <!-- Show icon if no image -->
+                                                        <Label Text="{Binding Type, Converter={StaticResource ProductTypeIconConverter}}"
+                                                               FontFamily="MaterialIconsOutlined"
+                                                               FontSize="48"
+                                                               HorizontalOptions="Center"
+                                                               VerticalOptions="Center"
+                                                               TextColor="#999">
+                                                            <Label.Triggers>
+                                                                <DataTrigger TargetType="Label" Binding="{Binding ImageUrl, Converter={StaticResource IsNotNullConverter}}" Value="True">
+                                                                    <Setter Property="IsVisible" Value="False" />
+                                                                </DataTrigger>
+                                                            </Label.Triggers>
+                                                        </Label>
+                                                    </Grid>
+                                                </Border>
+
+                                                <!-- Product Name -->
+                                                <Label Grid.Row="1"
+                                                       Text="{Binding Name}"
+                                                       FontSize="14"
+                                                       FontAttributes="Bold"
+                                                       TextColor="#1F1F1F"
+                                                       LineBreakMode="TailTruncation"
+                                                       MaxLines="2" />
+
+                                                <!-- Product Type -->
+                                                <Label Grid.Row="2"
+                                                       Text="{Binding DisplayType}"
+                                                       FontSize="12"
+                                                       TextColor="#999" />
+
+                                                <!-- Product Price -->
+                                                <Label Grid.Row="3"
+                                                       Text="{Binding FormattedPrice}"
+                                                       FontSize="16"
+                                                       FontAttributes="Bold"
+                                                       TextColor="#1F1F1F" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </CollectionView.ItemTemplate>
+                            </CollectionView>
+                        </Grid>
+                    </ScrollView>
+                </Grid>
+
+                <!-- RIGHT SIDE: Cart Section -->
+                <Grid Grid.Row="0" Grid.RowSpan="2" Grid.Column="1">
+                    <!-- Left Border Line -->
+                    <BoxView Color="#E0E0E0"
+                             WidthRequest="1"
+                             HorizontalOptions="Start"
+                             VerticalOptions="Fill" />
+
+                    <!-- Cart Content -->
+                    <Border BackgroundColor="White"
+                            Stroke="Transparent">
+                        <Grid RowDefinitions="Auto,*,Auto,Auto">
+                            <!-- Cart Header -->
+                            <Border Grid.Row="0"
+                                BackgroundColor="#F9F8F4"
+                                Padding="16,12">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <Label Grid.Column="0"
+                                       Text="Order Summary"
+                                       FontSize="16"
+                                       FontAttributes="Bold"
+                                       TextColor="#1F1F1F"
+                                       VerticalOptions="Center" />
+
+                                    <Border Grid.Column="1"
+                                        StrokeShape="RoundRectangle 12"
+                                        BackgroundColor="#1F1F1F"
+                                        Padding="8,4"
+                                        IsVisible="{Binding HasCartItems}">
+                                        <Label Text="{Binding CartItemsCount}"
+                                           TextColor="White"
+                                           FontSize="12"
+                                           FontAttributes="Bold" />
+                                    </Border>
+                                </Grid>
+                            </Border>
+
+                            <!-- Cart Items -->
+                            <ScrollView Grid.Row="1" Padding="16,12">
+                                <Grid>
+                                    <!-- Empty Cart Message -->
+                                    <VerticalStackLayout IsVisible="{Binding HasCartItems, Converter={StaticResource InverseBoolConverter}}"
+                                                   VerticalOptions="Center"
+                                                   Spacing="12"
+                                                   Padding="20">
+                                        <Label Text="&#xe8cc;"
+                                           FontFamily="MaterialIconsOutlined"
+                                           FontSize="48"
+                                           HorizontalOptions="Center"
+                                           TextColor="#E0E0E0" />
+                                        <Label Text="Cart is empty"
+                                           FontSize="14"
+                                           TextColor="#999"
+                                           HorizontalOptions="Center" />
+                                    </VerticalStackLayout>
+
+                                    <!-- Cart Items List -->
+                                    <CollectionView ItemsSource="{Binding CartItems}"
+                                               IsVisible="{Binding HasCartItems}">
+                                        <CollectionView.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:CartItemViewModel">
+                                                <Border Margin="0,0,0,12"
+                                                    Padding="12"
+                                                    StrokeShape="RoundRectangle 8"
+                                                    BackgroundColor="#F9F8F4"
+                                                    Stroke="Transparent">
+                                                    <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="70,*" RowSpacing="0" ColumnSpacing="12">
+
+                                                        <!-- Product Image - Spans 2 rows -->
+                                                        <Border Grid.Row="0" Grid.RowSpan="2" Grid.Column="0"
+                                                            StrokeShape="RoundRectangle 8"
+                                                            BackgroundColor="White"
+                                                            WidthRequest="70"
+                                                            HeightRequest="70"
+                                                            VerticalOptions="Start">
+                                                            <Grid>
+                                                                <!-- Show actual image if available -->
+                                                                <Image Source="{Binding Product.ImageUrl, Converter={StaticResource ProductImageUrlConverter}}"
+                                                                   Aspect="Fill"
+                                                                   Margin="4"
+                                                                   IsVisible="{Binding Product.ImageUrl, Converter={StaticResource IsNotNullConverter}}" />
+
+                                                                <!-- Show icon if no image -->
+                                                                <Label Text="{Binding Product.Type, Converter={StaticResource ProductTypeIconConverter}}"
+                                                                   FontFamily="MaterialIconsOutlined"
+                                                                   FontSize="32"
+                                                                   HorizontalOptions="Center"
+                                                                   VerticalOptions="Center"
+                                                                   TextColor="#999">
+                                                                    <Label.Triggers>
+                                                                        <DataTrigger TargetType="Label" Binding="{Binding Product.ImageUrl, Converter={StaticResource IsNotNullConverter}}" Value="True">
+                                                                            <Setter Property="IsVisible" Value="False" />
+                                                                        </DataTrigger>
+                                                                    </Label.Triggers>
+                                                                </Label>
+                                                            </Grid>
+                                                        </Border>
+
+                                                        <!-- Product Name -->
+                                                        <Label Grid.Row="0" Grid.Column="1"
+                                                           Text="{Binding Product.Name}"
+                                                           FontSize="13"
+                                                           FontAttributes="Bold"
+                                                           TextColor="#1F1F1F"
+                                                           LineBreakMode="WordWrap"
+                                                           MaxLines="2"
+                                                           Margin="0,0,0,8" />
+
+                                                        <!-- Price and Quantity Controls - Same Row -->
+                                                        <Grid Grid.Row="1" Grid.Column="1" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" VerticalOptions="Center">
+                                                            <!-- Price -->
+                                                            <Label Grid.Column="0"
+                                                               Text="{Binding Subtotal, StringFormat='₱{0:N2}'}"
+                                                               FontSize="13"
+                                                               FontAttributes="Bold"
+                                                               TextColor="#1F1F1F"
+                                                               VerticalOptions="Center" />
+
+                                                            <!-- Spacer -->
+                                                            <BoxView Grid.Column="1" BackgroundColor="Transparent" />
+
+                                                            <!-- Quantity Controls -->
+                                                            <HorizontalStackLayout Grid.Column="2" Spacing="4">
+                                                                <Border StrokeShape="RoundRectangle 4"
+                                                                    BackgroundColor="White"
+                                                                    Stroke="#E0E0E0"
+                                                                    StrokeThickness="1"
+                                                                    WidthRequest="24"
+                                                                    HeightRequest="24"
+                                                                    Padding="0">
+                                                                    <Border.GestureRecognizers>
+                                                                        <TapGestureRecognizer 
+                                                                        Command="{Binding DecreaseQuantityCommand}" />
+                                                                    </Border.GestureRecognizers>
+                                                                    <Label Text="−"
+                                                                       FontSize="14"
+                                                                       TextColor="#1F1F1F"
+                                                                       HorizontalOptions="Center"
+                                                                       VerticalOptions="Center" />
+                                                                </Border>
+
+                                                                <Label Text="{Binding Quantity}"
+                                                                   FontSize="12"
+                                                                   FontAttributes="Bold"
+                                                                   TextColor="#1F1F1F"
+                                                                   VerticalOptions="Center"
+                                                                   WidthRequest="16"
+                                                                   HorizontalTextAlignment="Center" />
+
+                                                                <Border StrokeShape="RoundRectangle 4"
+                                                                    BackgroundColor="#1F1F1F"
+                                                                    Stroke="Transparent"
+                                                                    WidthRequest="24"
+                                                                    HeightRequest="24"
+                                                                    Padding="0">
+                                                                    <Border.GestureRecognizers>
+                                                                        <TapGestureRecognizer 
+                                                                        Command="{Binding IncreaseQuantityCommand}" />
+                                                                    </Border.GestureRecognizers>
+                                                                    <Label Text="+"
+                                                                       FontSize="14"
+                                                                       TextColor="White"
+                                                                       HorizontalOptions="Center"
+                                                                       VerticalOptions="Center" />
+                                                                </Border>
+                                                            </HorizontalStackLayout>
+                                                        </Grid>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </CollectionView.ItemTemplate>
+                                    </CollectionView>
+                                </Grid>
+                            </ScrollView>
+
+                            <!-- Totals Section -->
+                            <Border Grid.Row="2"
+                                Padding="16"
+                                BackgroundColor="#F9F8F4"
+                                Stroke="Transparent"
+                                IsVisible="{Binding HasCartItems}">
+                                <VerticalStackLayout Spacing="8">
+                                    <!-- Subtotal -->
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <Label Grid.Column="0"
+                                           Text="Subtotal"
+                                           FontSize="13"
+                                           TextColor="#666" />
+                                        <Label Grid.Column="1"
+                                           Text="{Binding Subtotal, StringFormat='₱{0:N2}'}"
+                                           FontSize="13"
+                                           TextColor="#1F1F1F" />
+                                    </Grid>
+
+                                    <!-- Total -->
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <Label Grid.Column="0"
+                                           Text="Total"
+                                           FontSize="16"
+                                           FontAttributes="Bold"
+                                           TextColor="#1F1F1F" />
+                                        <Label Grid.Column="1"
+                                           Text="{Binding Total, StringFormat='₱{0:N2}'}"
+                                           FontSize="18"
+                                           FontAttributes="Bold"
+                                           TextColor="#1F1F1F" />
+                                    </Grid>
+                                </VerticalStackLayout>
+                            </Border>
+
+                            <!-- Action Buttons -->
+                            <Grid Grid.Row="3" 
+                              Padding="16"
+                              RowDefinitions="Auto,Auto"
+                              RowSpacing="8">
+
+                                <!-- Checkout Button -->
+                                <Button Grid.Row="0"
+                                    Text="{Binding IsEditMode, Converter={StaticResource CheckoutButtonTextConverter}}"
+                                    FontSize="14"
+                                    FontAttributes="Bold"
+                                    BackgroundColor="#1F1F1F"
+                                    TextColor="White"
+                                    CornerRadius="8"
+                                    HeightRequest="44"
+                                    Command="{Binding CheckoutCommand}"
+                                    IsEnabled="{Binding CanEditOrder}" />
+
+                                <!-- Clear All Button -->
+                                <Button Grid.Row="1"
+                                    Text="Clear All"
+                                    FontSize="13"
+                                    BackgroundColor="Transparent"
+                                    TextColor="#C62828"
+                                    CornerRadius="8"
+                                    HeightRequest="36"
+                                    BorderColor="#C62828"
+                                    BorderWidth="1"
+                                    Command="{Binding ClearCartCommand}"
+                                    IsVisible="{Binding HasCartItems}"
+                                    IsEnabled="{Binding CanEditOrder}" />
+                            </Grid>
+
+                            <!-- Processing Overlay -->
+                            <Border Grid.Row="0" Grid.RowSpan="4"
+                                IsVisible="{Binding IsProcessing}"
+                                BackgroundColor="#F0FFFFFF">
+                                <VerticalStackLayout VerticalOptions="Center"
+                                                HorizontalOptions="Center"
+                                                Spacing="12">
+                                    <ActivityIndicator IsRunning="{Binding IsProcessing}"
+                                                  Color="#1F1F1F"
+                                                  WidthRequest="32"
+                                                  HeightRequest="32" />
+                                    <Label Text="Processing..."
+                                       FontSize="14"
+                                       TextColor="#1F1F1F" />
+                                </VerticalStackLayout>
+                            </Border>
+                        </Grid>
+                    </Border>
+
+                    <!-- Error/Success Messages -->
+                    <Border Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
+                        IsVisible="{Binding ErrorMessage, Converter={StaticResource IsNotNullConverter}}"
+                        BackgroundColor="#FFEBEE"
+                        Stroke="#C62828"
+                        StrokeThickness="1"
+                        StrokeShape="RoundRectangle 8"
+                        Padding="12"
+                        Margin="20,16"
+                        VerticalOptions="Start"
+                        ZIndex="100">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Grid.Column="0"
+                               Text="{Binding ErrorMessage}"
+                               TextColor="#C62828"
+                               FontSize="13"
+                               VerticalOptions="Center" />
+                            <Button Grid.Column="1"
+                                Text="&#xe5cd;"
+                                FontFamily="MaterialIconsOutlined"
+                                FontSize="18"
+                                BackgroundColor="Transparent"
+                                TextColor="#C62828"
+                                Padding="4"
+                                Command="{Binding ClearErrorCommand}" />
+                        </Grid>
+                    </Border>
+
+                    <Border Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
+                        IsVisible="{Binding SuccessMessage, Converter={StaticResource IsNotNullConverter}}"
+                        BackgroundColor="#C8E6C9"
+                        Stroke="#2E7D32"
+                        StrokeThickness="1"
+                        StrokeShape="RoundRectangle 8"
+                        Padding="12"
+                        Margin="20,16"
+                        VerticalOptions="Start"
+                        ZIndex="100">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Grid.Column="0"
+                               Text="{Binding SuccessMessage}"
+                               TextColor="#2E7D32"
+                               FontSize="13"
+                               VerticalOptions="Center" />
+                            <Button Grid.Column="1"
+                                Text="&#xe5cd;"
+                                FontFamily="MaterialIconsOutlined"
+                                FontSize="18"
+                                BackgroundColor="Transparent"
+                                TextColor="#2E7D32"
+                                Padding="4"
+                                Command="{Binding ClearSuccessCommand}" />
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Grid>
+        </views:SidebarLayout.PageContent>
+    </views:SidebarLayout>
 </ContentPage>

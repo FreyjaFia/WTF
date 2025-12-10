@@ -12,6 +12,8 @@ public class GetProductByIdHandler(WTFDbContext db) : IRequestHandler<GetProduct
     public async Task<ProductDto?> Handle(GetProductByIdQuery request, CancellationToken cancellationToken)
     {
         var product = await db.Products
+            .Include(p => p.ProductImage)
+                .ThenInclude(pi => pi!.Image)
             .AsNoTracking()
             .FirstOrDefaultAsync(p => p.Id == request.Id, cancellationToken);
 
@@ -24,13 +26,16 @@ public class GetProductByIdHandler(WTFDbContext db) : IRequestHandler<GetProduct
             product.Id,
             product.Name,
             product.Price,
-            (ContractEnum)product.TypeId, // Convert int to contract enum
+            (ContractEnum)product.TypeId,
             product.IsAddOn,
             product.IsActive,
             product.CreatedAt,
             product.CreatedBy,
             product.UpdatedAt,
-            product.UpdatedBy
+            product.UpdatedBy,
+            product.ProductImage != null && product.ProductImage.Image != null
+                ? product.ProductImage.Image.ImageUrl
+                : null
         );
     }
 }
