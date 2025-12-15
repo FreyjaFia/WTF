@@ -1,4 +1,5 @@
 using WTF.Contracts.OrderItems;
+using WTF.Contracts.Orders.Enums;
 
 namespace WTF.Contracts.Orders;
 
@@ -11,5 +12,5 @@ public record OrderDto(
     Guid? UpdatedBy,
     List<OrderItemDto> Items,
     Guid? CustomerId,
-    int Status
+    OrderStatusEnum Status
 );

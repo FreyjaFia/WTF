@@ -40,7 +40,7 @@ public class GetOrdersHandler(WTFDbContext db) : IRequestHandler<GetOrdersQuery,
             o.UpdatedBy,
             o.OrderItems.Select(oi => new OrderItemDto(oi.Id, oi.ProductId, oi.Quantity)).ToList(),
             o.CustomerId,
-            o.Status.Id
+            (OrderStatusEnum)o.Status.Id
         )).ToList();
     }
 }

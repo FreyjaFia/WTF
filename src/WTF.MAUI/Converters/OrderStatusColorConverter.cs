@@ -7,19 +7,19 @@ namespace WTF.MAUI.Converters
     {
         public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
-            if (value is int statusInt)
+            if (value is not OrderStatusEnum status)
             {
-                var status = (OrderStatusEnum)statusInt;
-                return status switch
-                {
-                    OrderStatusEnum.Pending => Color.FromArgb("#FFA726"),
-                    OrderStatusEnum.ForDelivery => Color.FromArgb("#26A69A"),
-                    OrderStatusEnum.Done => Color.FromArgb("#66BB6A"),
-                    OrderStatusEnum.Cancelled => Color.FromArgb("#EF5350"),
-                    _ => Color.FromArgb("#9E9E9E")
-                };
+                return Color.FromArgb("#9E9E9E");
             }
-            return Color.FromArgb("#9E9E9E");
+
+            return status switch
+            {
+                OrderStatusEnum.Pending => Color.FromArgb("#FFA726"),
+                OrderStatusEnum.ForDelivery => Color.FromArgb("#26A69A"),
+                OrderStatusEnum.Done => Color.FromArgb("#66BB6A"),
+                OrderStatusEnum.Cancelled => Color.FromArgb("#EF5350"),
+                _ => Color.FromArgb("#9E9E9E"),
+            };
         }
 
         public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)

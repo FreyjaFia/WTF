@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using WTF.Contracts.OrderItems;
 using WTF.Contracts.Orders;
 using WTF.Contracts.Orders.Commands;
+using WTF.Contracts.Orders.Enums;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 
@@ -20,7 +21,7 @@ public class UpdateOrderHandler(WTFDbContext db) : IRequestHandler<UpdateOrderCo
             return null;
         }
 
-        var status = await db.Statuses.FirstOrDefaultAsync(s => s.Id == request.Status, cancellationToken);
+        var status = await db.Statuses.FirstOrDefaultAsync(s => s.Id == (int)request.Status, cancellationToken);
         if (status is null)
         {
             throw new Exception("Invalid status");
@@ -60,7 +61,7 @@ public class UpdateOrderHandler(WTFDbContext db) : IRequestHandler<UpdateOrderCo
             order.UpdatedBy,
             items,
             order.CustomerId,
-            status.Id
+            (OrderStatusEnum)status.Id
         );
     }
 }

@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using WTF.Contracts.OrderItems;
 using WTF.Contracts.Orders;
 using WTF.Contracts.Orders.Commands;
+using WTF.Contracts.Orders.Enums;
 using WTF.Contracts.Products;
 using WTF.Contracts.Products.Enums;
 using WTF.Contracts.Products.Queries;
@@ -52,6 +53,11 @@ public partial class OrderFormViewModel : ObservableObject
     private ObservableCollection<CartItemViewModel> cartItems = new();
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsEditMode))]
+    [NotifyPropertyChangedFor(nameof(CanEditOrder))]
+    [NotifyPropertyChangedFor(nameof(OrderTitle))]
+    [NotifyPropertyChangedFor(nameof(ShowCartActions))]
+    [NotifyPropertyChangedFor(nameof(ShowClearAllButton))]
     private OrderDto? existingOrder;
 
     [ObservableProperty]
@@ -92,13 +98,23 @@ public partial class OrderFormViewModel : ObservableObject
 
     public bool IsEditMode => ExistingOrder != null;
 
-    public bool HasSearchText => !string.IsNullOrWhiteSpace(SearchText);
-
-    public bool CanEditOrder => !IsEditMode || (ExistingOrder != null && ExistingOrder.Status == 1);
+    public bool CanEditOrder => !IsEditMode || (ExistingOrder != null && ExistingOrder.Status == OrderStatusEnum.Pending);
 
     public string OrderTitle => IsEditMode && ExistingOrder != null 
         ? $"Order #{ExistingOrder.OrderNumber}" 
         : "New Order";
+
+    // New: control visibility of Checkout and Clear All buttons
+    public bool ShowCartActions => !(ExistingOrder != null && (
+        ExistingOrder.Status == OrderStatusEnum.Done ||
+        ExistingOrder.Status == OrderStatusEnum.Cancelled ||
+        ExistingOrder.Status == OrderStatusEnum.ForDelivery));
+
+    // New: Clear All button should only show when there are items and cart actions are allowed
+    public bool ShowClearAllButton => HasCartItems && ShowCartActions;
+
+    // Missing computed property referenced by attribute
+    public bool HasSearchText => !string.IsNullOrWhiteSpace(SearchText);
 
     #endregion
 
@@ -124,6 +140,7 @@ public partial class OrderFormViewModel : ObservableObject
         OnPropertyChanged(nameof(Subtotal));
         OnPropertyChanged(nameof(Total));
         OnPropertyChanged(nameof(HasCartItems));
+        OnPropertyChanged(nameof(ShowClearAllButton));
     }
 
     #endregion
@@ -183,6 +200,8 @@ public partial class OrderFormViewModel : ObservableObject
                 await PopulateCartFromOrder(order);
                 OnPropertyChanged(nameof(CanEditOrder));
                 OnPropertyChanged(nameof(OrderTitle));
+                OnPropertyChanged(nameof(ShowCartActions));
+                OnPropertyChanged(nameof(ShowClearAllButton));
                 
                 if (!CanEditOrder)
                 {
@@ -321,8 +340,10 @@ public partial class OrderFormViewModel : ObservableObject
                 if (result != null)
                 {
                     ShowTemporarySuccess("Order updated successfully!");
+
                     await Task.Delay(1500);
-                    await Shell.Current.GoToAsync("..");
+
+                    _containerViewModel.NavigateToOrdersPage();
                 }
                 else
                 {
@@ -334,7 +355,7 @@ public partial class OrderFormViewModel : ObservableObject
                 var createCommand = new CreateOrderCommand
                 {
                     CustomerId = null,
-                    Status = 1,
+                    Status = OrderStatusEnum.Pending,
                     Items = orderItems
                 };
 
@@ -343,8 +364,10 @@ public partial class OrderFormViewModel : ObservableObject
                 if (result != null)
                 {
                     ShowTemporarySuccess($"Order #{result.OrderNumber} created successfully!");
+
                     await Task.Delay(1500);
-                    await Shell.Current.GoToAsync("..");
+
+                    _containerViewModel.NavigateToOrdersPage();
                 }
                 else
                 {

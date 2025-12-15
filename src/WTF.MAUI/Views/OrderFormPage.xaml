@@ -474,7 +474,8 @@
                                     CornerRadius="8"
                                     HeightRequest="44"
                                     Command="{Binding CheckoutCommand}"
-                                    IsEnabled="{Binding CanEditOrder}" />
+                                    IsEnabled="{Binding CanEditOrder}"
+                                    IsVisible="{Binding ShowCartActions}" />
 
                                 <!-- Clear All Button -->
                                 <Button Grid.Row="1"
@@ -487,7 +488,7 @@
                                     BorderColor="#C62828"
                                     BorderWidth="1"
                                     Command="{Binding ClearCartCommand}"
-                                    IsVisible="{Binding HasCartItems}"
+                                    IsVisible="{Binding ShowClearAllButton}"
                                     IsEnabled="{Binding CanEditOrder}" />
                             </Grid>
 

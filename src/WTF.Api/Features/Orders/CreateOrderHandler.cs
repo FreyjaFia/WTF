@@ -4,6 +4,7 @@ using WTF.Api.Common.Extensions;
 using WTF.Contracts.OrderItems;
 using WTF.Contracts.Orders;
 using WTF.Contracts.Orders.Commands;
+using WTF.Contracts.Orders.Enums;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 
@@ -14,7 +15,7 @@ public class CreateOrderHandler(WTFDbContext db, IHttpContextAccessor httpContex
     public async Task<OrderDto> Handle(CreateOrderCommand request, CancellationToken cancellationToken)
     {
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
-        var status = await db.Statuses.FirstOrDefaultAsync(s => s.Id == request.Status, cancellationToken);
+        var status = await db.Statuses.FirstOrDefaultAsync(s => s.Id == (int)request.Status, cancellationToken);
 
         if (status is null)
         {
@@ -58,7 +59,7 @@ public class CreateOrderHandler(WTFDbContext db, IHttpContextAccessor httpContex
             order.UpdatedBy,
             items,
             order.CustomerId,
-            status.Id
+            (OrderStatusEnum)status.Id
         );
     }
 }

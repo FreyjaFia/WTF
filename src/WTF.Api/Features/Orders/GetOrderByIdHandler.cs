@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using WTF.Contracts.OrderItems;
 using WTF.Contracts.Orders;
 using WTF.Contracts.Orders.Queries;
+using WTF.Contracts.Orders.Enums;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Orders;
@@ -32,7 +33,7 @@ public class GetOrderByIdHandler(WTFDbContext db) : IRequestHandler<GetOrderById
             order.UpdatedBy,
             items,
             order.CustomerId,
-            order.Status.Id
+            (OrderStatusEnum)order.Status.Id
         );
     }
 }
