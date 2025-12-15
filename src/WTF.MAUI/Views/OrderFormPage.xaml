@@ -79,15 +79,16 @@
                                 Orientation="Horizontal"
                                 HorizontalScrollBarVisibility="Never"
                                 Margin="0,0,0,16"
-                                HeightRequest="40">
-                        <HorizontalStackLayout Spacing="8">
+                                HeightRequest="50">
+                        <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
                             <Button Text="All"
                                     BackgroundColor="{Binding SelectedProductType, Converter={StaticResource ProductTypeButtonBackgroundConverter}, ConverterParameter='All'}"
                                     TextColor="{Binding SelectedProductType, Converter={StaticResource ProductTypeButtonTextColorConverter}, ConverterParameter='All'}"
                                     FontSize="13"
-                                    CornerRadius="20"
+                                    CornerRadius="25"
                                     Padding="16,8"
                                     HeightRequest="36"
+                                    MinimumWidthRequest="80"
                                     Command="{Binding FilterByProductTypeCommand}"
                                     CommandParameter="{x:Null}" />
 
@@ -95,9 +96,10 @@
                                     BackgroundColor="{Binding SelectedProductType, Converter={StaticResource ProductTypeButtonBackgroundConverter}, ConverterParameter={x:Static enums:ProductTypeEnum.Drink}}"
                                     TextColor="{Binding SelectedProductType, Converter={StaticResource ProductTypeButtonTextColorConverter}, ConverterParameter={x:Static enums:ProductTypeEnum.Drink}}"
                                     FontSize="13"
-                                    CornerRadius="20"
+                                    CornerRadius="25"
                                     Padding="16,8"
                                     HeightRequest="36"
+                                    MinimumWidthRequest="80"
                                     Command="{Binding FilterByProductTypeCommand}"
                                     CommandParameter="{x:Static enums:ProductTypeEnum.Drink}" />
 
@@ -105,9 +107,10 @@
                                     BackgroundColor="{Binding SelectedProductType, Converter={StaticResource ProductTypeButtonBackgroundConverter}, ConverterParameter={x:Static enums:ProductTypeEnum.Food}}"
                                     TextColor="{Binding SelectedProductType, Converter={StaticResource ProductTypeButtonTextColorConverter}, ConverterParameter={x:Static enums:ProductTypeEnum.Food}}"
                                     FontSize="13"
-                                    CornerRadius="20"
+                                    CornerRadius="25"
                                     Padding="16,8"
                                     HeightRequest="36"
+                                    MinimumWidthRequest="80"
                                     Command="{Binding FilterByProductTypeCommand}"
                                     CommandParameter="{x:Static enums:ProductTypeEnum.Food}" />
 
@@ -115,9 +118,10 @@
                                     BackgroundColor="{Binding SelectedProductType, Converter={StaticResource ProductTypeButtonBackgroundConverter}, ConverterParameter={x:Static enums:ProductTypeEnum.Dessert}}"
                                     TextColor="{Binding SelectedProductType, Converter={StaticResource ProductTypeButtonTextColorConverter}, ConverterParameter={x:Static enums:ProductTypeEnum.Dessert}}"
                                     FontSize="13"
-                                    CornerRadius="20"
+                                    CornerRadius="25"
                                     Padding="16,8"
                                     HeightRequest="36"
+                                    MinimumWidthRequest="80"
                                     Command="{Binding FilterByProductTypeCommand}"
                                     CommandParameter="{x:Static enums:ProductTypeEnum.Dessert}" />
 
@@ -125,9 +129,10 @@
                                     BackgroundColor="{Binding SelectedProductType, Converter={StaticResource ProductTypeButtonBackgroundConverter}, ConverterParameter={x:Static enums:ProductTypeEnum.Other}}"
                                     TextColor="{Binding SelectedProductType, Converter={StaticResource ProductTypeButtonTextColorConverter}, ConverterParameter={x:Static enums:ProductTypeEnum.Other}}"
                                     FontSize="13"
-                                    CornerRadius="20"
+                                    CornerRadius="25"
                                     Padding="16,8"
                                     HeightRequest="36"
+                                    MinimumWidthRequest="80"
                                     Command="{Binding FilterByProductTypeCommand}"
                                     CommandParameter="{x:Static enums:ProductTypeEnum.Other}" />
                         </HorizontalStackLayout>
@@ -187,7 +192,7 @@
                                                     CommandParameter="{Binding .}" />
                                             </Border.GestureRecognizers>
 
-                                            <Grid RowDefinitions="140,Auto,*,Auto" RowSpacing="8">
+                                            <Grid RowDefinitions="140,Auto,*,Auto" RowSpacing="8" BackgroundColor="White">
                                                 <!-- Product Image -->
                                                 <Border Grid.Row="0"
                                                         StrokeShape="RoundRectangle 8"
@@ -225,8 +230,7 @@
                                                        LineBreakMode="WordWrap"
                                                        MaxLines="2" />
 
-                                                <!-- Spacer (takes remaining space) -->
-                                                <BoxView Grid.Row="2" Color="Transparent" />
+                                                <!-- Row 2 spacer - empty, inherits white background from Grid -->
 
                                                 <!-- Bottom Info: Type and Price -->
                                                 <VerticalStackLayout Grid.Row="3" Spacing="4">
@@ -364,9 +368,6 @@
                                                                FontAttributes="Bold"
                                                                TextColor="#1F1F1F"
                                                                VerticalOptions="Center" />
-
-                                                            <!-- Spacer -->
-                                                            <BoxView Grid.Column="1" BackgroundColor="Transparent" />
 
                                                             <!-- Quantity Controls -->
                                                             <HorizontalStackLayout Grid.Column="2" Spacing="4">

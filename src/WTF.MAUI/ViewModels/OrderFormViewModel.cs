@@ -17,6 +17,7 @@ public partial class OrderFormViewModel : ObservableObject
 
     private readonly IProductService _productService;
     private readonly IOrderService _orderService;
+    private readonly ContainerViewModel _containerViewModel;
     private List<ProductDto> _allProducts = new();
     private CancellationTokenSource? _searchCancellationTokenSource;
     private CancellationTokenSource? _messageCancellationTokenSource;
@@ -25,10 +26,11 @@ public partial class OrderFormViewModel : ObservableObject
 
     #region Constructor
 
-    public OrderFormViewModel(IProductService productService, IOrderService orderService)
+    public OrderFormViewModel(IProductService productService, IOrderService orderService, ContainerViewModel containerViewModel)
     {
         _productService = productService;
         _orderService = orderService;
+        _containerViewModel = containerViewModel;
         
         PropertyChanged += (s, e) =>
         {
@@ -104,6 +106,9 @@ public partial class OrderFormViewModel : ObservableObject
 
     public async Task InitializeAsync(Guid? orderId = null)
     {
+        // Update container current page
+        _containerViewModel.CurrentPage = "OrderPage";
+        
         OrderId = orderId;
         await LoadProductsAsync();
 
@@ -254,10 +259,18 @@ public partial class OrderFormViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void FilterByProductType(ProductTypeEnum? productType)
+    private async Task FilterByProductType(ProductTypeEnum? productType)
     {
+        IsLoading = true;
+
         SelectedProductType = productType;
+
+        // Yield so UI can update and show loading indicator
+        await Task.Yield();
+
         ApplyFilters();
+
+        IsLoading = false;
     }
 
     [RelayCommand]
@@ -366,7 +379,16 @@ public partial class OrderFormViewModel : ObservableObject
             }
         }
 
-        await Shell.Current.GoToAsync("..");
+        // Use container view model navigation to go back to orders page
+        try
+        {
+            _containerViewModel.NavigateToOrdersPage();
+        }
+        catch (Exception)
+        {
+            // Fallback to Shell navigation if container navigation fails
+            await Shell.Current.GoToAsync("..");
+        }
     }
 
     [RelayCommand]

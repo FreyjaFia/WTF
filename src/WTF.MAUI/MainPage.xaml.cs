@@ -4,7 +4,7 @@ using WTF.MAUI.Views;
 
 namespace WTF.MAUI;
 
-public partial class MainPage : ContentPage, IInitializablePage
+public partial class MainPage : ContentPage
 {
     private readonly IAuthService _authService;
     private readonly ContainerViewModel _containerViewModel;
@@ -16,20 +16,6 @@ public partial class MainPage : ContentPage, IInitializablePage
         _containerViewModel = containerViewModel;
         
         InitializeComponent();
-    }
-
-    protected override void OnAppearing()
-    {
-        base.OnAppearing();
-        
-        // Update container current page
-        _containerViewModel.CurrentPage = "MainPage";
-    }
-
-    public void InitializePage()
-    {
-        // Call the same logic as OnAppearing
-        _containerViewModel.CurrentPage = "MainPage";
     }
 
     private void OnCounterClicked(object sender, EventArgs e)

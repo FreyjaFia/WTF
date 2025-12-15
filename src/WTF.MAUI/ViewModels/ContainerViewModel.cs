@@ -53,10 +53,16 @@ public partial class ContainerViewModel : ObservableObject
 
     public bool IsPageActive(string pageName) => CurrentPage == pageName;
 
-    public void NavigateToOrderForm(Guid? orderId = null)
+    public void NavigateToOrderFormPage(Guid? orderId = null)
     {
         CurrentPage = "OrderPage";
-        LoadPageContentWithParameter<OrderFormPage>(orderId);
+        LoadPageContent<OrderFormPage>(orderId);
+    }
+
+    public void NavigateToOrdersPage()
+    {
+        CurrentPage = "OrderPage";
+        LoadPageContent<OrderPage>();
     }
 
     #endregion
@@ -106,46 +112,13 @@ public partial class ContainerViewModel : ObservableObject
 
     #region Private Helper Methods
 
-    private void LoadPageContent<T>() where T : ContentPage
+    private void LoadPageContent<T>(Guid? parameter = null) where T : ContentPage
     {
         try
         {
-            var page = _serviceProvider.GetService(typeof(T)) as ContentPage;
-            if (page == null)
-            {
-                return;
-            }
-
-            // Get the page content directly (no more SidebarLayout wrapper!)
-            var content = page.Content;
-
-            Task.Run(async () =>
-            {
-                await Task.Delay(50);
-
-                await MainThread.InvokeOnMainThreadAsync(() =>
-                {
-                    CurrentPageContent = content;
-
-                    // Call initialization logic if implemented
-                    if (page is IInitializablePage initializable)
-                    {
-                        initializable.InitializePage();
-                    }
-                });
-            });
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"Error loading page content: {ex.Message}");
-        }
-    }
-
-    private void LoadPageContentWithParameter<T>(Guid? orderId) where T : ContentPage
-    {
-        try
-        {
-            var page = _serviceProvider.GetService(typeof(T)) as ContentPage;
+            // Create a new page instance instead of reusing an existing one to avoid moving the
+            // same VisualElement between parents which can produce unexpected visual artifacts.
+            var page = ActivatorUtilities.CreateInstance(_serviceProvider, typeof(T)) as ContentPage;
             if (page == null)
             {
                 return;
@@ -154,29 +127,54 @@ public partial class ContainerViewModel : ObservableObject
             // Get the page content directly
             var content = page.Content;
 
-            Task.Run(async () =>
-            {
-                await Task.Delay(50);
+            // Set content immediately on UI thread
+            CurrentPageContent = content;
 
-                await MainThread.InvokeOnMainThreadAsync(async () =>
-                {
-                    CurrentPageContent = content;
-
-                    // Initialize OrderFormPage with orderId
-                    if (page is OrderFormPage orderFormPage)
-                    {
-                        var viewModel = orderFormPage.BindingContext as OrderFormViewModel;
-                        if (viewModel != null)
-                        {
-                            await viewModel.InitializeAsync(orderId);
-                        }
-                    }
-                });
-            });
+            // Initialize page asynchronously (fire-and-forget is safe here)
+            _ = InitializePageAsync(page, parameter);
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error loading page content with parameter: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"Error loading page content: {ex.Message}");
+        }
+    }
+
+    private async Task InitializePageAsync(ContentPage page, Guid? parameter)
+    {
+        try
+        {
+            // Small delay to let UI settle and render the page first
+            await Task.Delay(50);
+
+            // Initialize ViewModels on main thread
+            // HttpClient calls will naturally run on background threads
+            if (page is OrderFormPage orderFormPage)
+            {
+                // OrderFormPage: Initialize with parameter (null for new order, Guid for edit)
+                var viewModel = orderFormPage.BindingContext as OrderFormViewModel;
+                if (viewModel != null)
+                {
+                    await viewModel.InitializeAsync(parameter);
+                }
+            }
+            else if (page is OrderPage orderPage)
+            {
+                // OrderPage: Initialize without parameters
+                var viewModel = orderPage.BindingContext as OrderViewModel;
+                if (viewModel != null)
+                {
+                    await viewModel.InitializeAsync();
+                }
+            }
+            else if (page is MainPage mainPage)
+            {
+                // MainPage: Just update current page
+                CurrentPage = "MainPage";
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error initializing page: {ex.Message}");
         }
     }
 

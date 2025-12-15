@@ -103,7 +103,7 @@
             </VerticalStackLayout>
             
             <!-- Spacer -->
-            <BoxView Grid.Row="1" Color="Transparent" BackgroundColor="Transparent" />
+            <BoxView Grid.Row="1"  BackgroundColor="Transparent" />
             
             <!-- Bottom: Logout Button -->
             <Grid Grid.Row="2" HeightRequest="48" Margin="0,4" ColumnDefinitions="*,Auto">

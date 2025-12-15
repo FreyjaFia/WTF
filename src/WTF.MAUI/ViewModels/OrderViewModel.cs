@@ -72,6 +72,10 @@ public partial class OrderViewModel : ObservableObject
 
     public async Task InitializeAsync()
     {
+        // Update container current page
+        _containerViewModel.CurrentPage = "OrderPage";
+
+        // Load orders
         await LoadOrdersAsync();
     }
 
@@ -135,7 +139,7 @@ public partial class OrderViewModel : ObservableObject
     {
         try
         {
-            _containerViewModel.NavigateToOrderForm(null);
+            _containerViewModel.NavigateToOrderFormPage(null);
         }
         catch (Exception ex)
         {
@@ -153,7 +157,7 @@ public partial class OrderViewModel : ObservableObject
 
         try
         {
-            _containerViewModel.NavigateToOrderForm(order.Id);
+            _containerViewModel.NavigateToOrderFormPage(order.Id);
         }
         catch (Exception ex)
         {
