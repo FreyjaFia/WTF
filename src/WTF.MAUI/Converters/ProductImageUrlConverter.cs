@@ -2,6 +2,7 @@ using System.Globalization;
 using WTF.Contracts.Products;
 using WTF.Contracts.Products.Enums;
 using WTF.MAUI.Settings;
+using Microsoft.Maui.Controls;
 
 namespace WTF.MAUI.Converters;
 
@@ -18,20 +19,34 @@ public class ProductImageUrlConverter : IValueConverter
     {
         if (value is not string imageUrl || _settings == null)
         {
-            return GetPlaceholderIcon(ProductTypeEnum.Drink);
+            // No image -> return null so the Label fallback is shown via IsNotNullConverter bindings
+            return null;
         }
 
-        // If image URL is provided, combine with base URL
-        if (!string.IsNullOrWhiteSpace(imageUrl))
+        if (string.IsNullOrWhiteSpace(imageUrl))
+        {
+            return null;
+        }
+
+        try
         {
             // Remove any leading slash from ImageUrl to avoid double slashes
             var cleanImageUrl = imageUrl.TrimStart('/');
             var baseUrl = _settings.BaseUrl.TrimEnd('/');
-            return $"{baseUrl}/{cleanImageUrl}";
-        }
+            var fullUrl = new Uri($"{baseUrl}/{cleanImageUrl}");
 
-        // Return default placeholder icon
-        return GetPlaceholderIcon(ProductTypeEnum.Drink);
+            // Use UriImageSource with caching enabled
+            return new UriImageSource
+            {
+                Uri = fullUrl,
+                CachingEnabled = true,
+                CacheValidity = TimeSpan.FromDays(7)
+            };
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)

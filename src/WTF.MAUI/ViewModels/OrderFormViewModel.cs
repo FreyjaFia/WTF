@@ -64,6 +64,7 @@ public partial class OrderFormViewModel : ObservableObject
     private Guid? orderId;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanCheckout))]
     private bool isLoading;
 
     [ObservableProperty]
@@ -116,6 +117,8 @@ public partial class OrderFormViewModel : ObservableObject
     // Missing computed property referenced by attribute
     public bool HasSearchText => !string.IsNullOrWhiteSpace(SearchText);
 
+    public bool CanCheckout => CanEditOrder && !IsLoading && HasCartItems;
+
     #endregion
 
     #region Public Methods
@@ -141,6 +144,8 @@ public partial class OrderFormViewModel : ObservableObject
         OnPropertyChanged(nameof(Total));
         OnPropertyChanged(nameof(HasCartItems));
         OnPropertyChanged(nameof(ShowClearAllButton));
+        // Ensure UI updates any bindings depending on CanCheckout
+        OnPropertyChanged(nameof(CanCheckout));
     }
 
     #endregion
