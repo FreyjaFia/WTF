@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="WTF.MAUI.Views.LoadingPage"
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="#FCF8F1">
+
+  <Grid>
+    <VerticalStackLayout VerticalOptions="Center"
+                        HorizontalOptions="Center"
+                        Spacing="24">
+
+      <!-- Your Logo -->
+      <Image Source="logo_new.png"
+             HeightRequest="200"
+             WidthRequest="200"
+             HorizontalOptions="Center" />
+
+      <!-- Subtle loading indicator -->
+      <ActivityIndicator IsRunning="True"
+                        Color="#1F1F1F"
+                        WidthRequest="32"
+                        HeightRequest="32"
+                        HorizontalOptions="Center" />
+    </VerticalStackLayout>
+
+    <!-- Footer -->
+    <HorizontalStackLayout
+             HorizontalOptions="Center"
+             VerticalOptions="End" 
+             Margin="0,0,0,32" 
+             Spacing="6">
+      <!-- Material Icon -->
+      <Label Text="&#xE90C;"
+         FontSize="12"
+         FontFamily="MaterialIconsOutlined"
+         TextColor="#999" />
+
+      <!-- Text -->
+      <Label Text="2025 Wake.Taste.Focus by Faith"
+         FontSize="12"
+         TextColor="#999" />
+    </HorizontalStackLayout>
+  </Grid>
+</ContentPage>

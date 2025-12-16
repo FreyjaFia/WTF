@@ -27,6 +27,10 @@ public partial class Product
 
     public virtual User CreatedByNavigation { get; set; } = null!;
 
+    public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
+
+    public virtual ProductImage? ProductImage { get; set; }
+
     public virtual ProductType Type { get; set; } = null!;
 
     public virtual User? UpdatedByNavigation { get; set; }

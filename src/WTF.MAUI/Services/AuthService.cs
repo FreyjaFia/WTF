@@ -1,86 +1,84 @@
-﻿using Microsoft.AspNetCore.Components;
-using System.Net.Http.Json;
+﻿using System.Net.Http.Json;
 using WTF.Contracts.Auth.Login;
 
-namespace WTF.MAUI.Services
+namespace WTF.MAUI.Services;
+
+public interface IAuthService
 {
-    public interface IAuthService
+    Task<bool> LoginAsync(string username, string password, bool rememberMe);
+    Task<bool> ValidateTokenAsync();
+    Task<bool> IsLoggedInAsync();
+    Task RequireLoginAsync();
+    void Logout();
+}
+
+public class AuthService(HttpClient httpClient, ITokenService tokenService) : IAuthService
+{
+    public async Task<bool> LoginAsync(string username, string password, bool rememberMe)
     {
-        Task<bool> LoginAsync(string username, string password);
-        Task<bool> ValidateTokenAsync();
-        Task<bool> IsLoggedInAsync();
-        Task RequireLoginAsync();
-        void Logout();
+        var response = await httpClient.PostAsJsonAsync("/api/auth/login", new { username, password });
+
+        if (response.IsSuccessStatusCode)
+        {
+            var token = await response.Content.ReadFromJsonAsync<LoginDto>();
+
+            if (token?.AccessToken != null)
+            {
+                await tokenService.SetAccessTokenAsync(token.AccessToken, rememberMe);
+                return true;
+            }
+        }
+
+        return false;
     }
 
-    public class AuthService(HttpClient httpClient, NavigationManager navManager, ITokenService tokenService) : IAuthService
+    public async Task<bool> ValidateTokenAsync()
     {
-        public async Task<bool> LoginAsync(string username, string password)
+        try
         {
-            var response = await httpClient.PostAsJsonAsync("/api/auth/login", new { username, password });
+            var response = await httpClient.GetAsync("/api/auth/validate");
 
             if (response.IsSuccessStatusCode)
             {
-                var token = await response.Content.ReadFromJsonAsync<LoginDto>();
-
-                if (token?.AccessToken != null)
-                {
-                    await tokenService.SetAccessTokenAsync(token.AccessToken);
-                    return true;
-                }
+                return true;
             }
 
+            // Token is invalid, clear it
+            tokenService.RemoveAccessToken();
             return false;
         }
-
-        public async Task<bool> ValidateTokenAsync()
+        catch
         {
-            try
-            {
-                var response = await httpClient.GetAsync("/api/auth/validate");
-
-                if (response.IsSuccessStatusCode)
-                {
-                    return true;
-                }
-
-                // Token is invalid, clear it
-                tokenService.RemoveAccessToken();
-                return false;
-            }
-            catch
-            {
-                // If validation fails, clear the token
-                tokenService.RemoveAccessToken();
-                return false;
-            }
-        }
-
-        public async Task<bool> IsLoggedInAsync()
-        {
-            var isLoggedIn = false;
-            var token = await tokenService.GetAccessTokenAsync();
-
-            if (!string.IsNullOrWhiteSpace(token))
-            {
-                isLoggedIn = await ValidateTokenAsync();
-            }
-
-            return isLoggedIn;
-        }
-
-        public void Logout()
-        {
+            // If validation fails, clear the token
             tokenService.RemoveAccessToken();
+            return false;
+        }
+    }
+
+    public async Task<bool> IsLoggedInAsync()
+    {
+        var isLoggedIn = false;
+        var token = await tokenService.GetAccessTokenAsync();
+
+        if (!string.IsNullOrWhiteSpace(token))
+        {
+            isLoggedIn = await ValidateTokenAsync();
         }
 
-        public async Task RequireLoginAsync()
+        return isLoggedIn;
+    }
+
+    public void Logout()
+    {
+        tokenService.RemoveAccessToken();
+    }
+
+    public async Task RequireLoginAsync()
+    {
+        if (!await IsLoggedInAsync())
         {
-            if (!await IsLoggedInAsync())
-            {
-                navManager.NavigateTo("/login");
-                return;
-            }
+            await Shell.Current.GoToAsync("//LoginPage");
+            return;
         }
     }
 }

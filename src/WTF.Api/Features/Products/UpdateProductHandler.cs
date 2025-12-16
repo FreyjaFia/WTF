@@ -13,6 +13,8 @@ public class UpdateProductHandler(WTFDbContext db, IHttpContextAccessor httpCont
     public async Task<ProductDto?> Handle(UpdateProductCommand request, CancellationToken cancellationToken)
     {
         var product = await db.Products
+            .Include(p => p.ProductImage)
+                .ThenInclude(pi => pi!.Image)
             .FirstOrDefaultAsync(p => p.Id == request.Id, cancellationToken);
 
         if (product == null)
@@ -42,7 +44,10 @@ public class UpdateProductHandler(WTFDbContext db, IHttpContextAccessor httpCont
             product.CreatedAt,
             product.CreatedBy,
             product.UpdatedAt,
-            product.UpdatedBy
+            product.UpdatedBy,
+            product.ProductImage != null && product.ProductImage.Image != null
+                ? product.ProductImage.Image.ImageUrl
+                : null // Return single ImageUrl string or null
         );
     }
 }

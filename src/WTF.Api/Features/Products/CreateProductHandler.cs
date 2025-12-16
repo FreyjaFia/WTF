@@ -38,7 +38,8 @@ public class CreateProductHandler(WTFDbContext db, IHttpContextAccessor httpCont
             product.CreatedAt,
             product.CreatedBy,
             product.UpdatedAt,
-            product.UpdatedBy
+            product.UpdatedBy,
+            null // Set ImageUrl to null
         );
     }
 }

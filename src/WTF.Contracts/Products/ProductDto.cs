@@ -12,7 +12,8 @@ public record ProductDto(
     DateTime CreatedAt,
     Guid CreatedBy,
     DateTime? UpdatedAt,
-    Guid? UpdatedBy
+    Guid? UpdatedBy,
+    string? ImageUrl
 )
 {
     public string DisplayType => Type.ToString();

@@ -1,62 +1,81 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using System.Reflection;
+using WTF.MAUI.Converters;
 using WTF.MAUI.Infrastructure.Handlers;
 using WTF.MAUI.Services;
 using WTF.MAUI.Settings;
+using WTF.MAUI.ViewModels;
+using WTF.MAUI.Views;
 
-namespace WTF.MAUI
+namespace WTF.MAUI;
+
+public static class MauiProgram
 {
-    public static class MauiProgram
+    public static MauiApp CreateMauiApp()
     {
-        public static MauiApp CreateMauiApp()
-        {
-            var builder = MauiApp.CreateBuilder();
-            builder
-                .UseMauiApp<App>()
-                .ConfigureFonts(fonts =>
-                {
-                    fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
-                });
-
-            builder.Services.AddMauiBlazorWebView();
+        var builder = MauiApp.CreateBuilder();
+        builder
+            .UseMauiApp<App>()
+            .ConfigureFonts(fonts =>
+            {
+                fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
+                fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
+                fonts.AddFont("MaterialSymbolsOutlined-Regular.ttf", "MaterialIconsOutlined");
+            });
 
 #if DEBUG
-            builder.Services.AddBlazorWebViewDeveloperTools();
-            builder.Logging.AddDebug();
+        builder.Logging.AddDebug();
 #endif
 
-            var assembly = typeof(MauiProgram).Assembly;
-            using var stream = assembly.GetManifestResourceStream("WTF.MAUI.appsettings.json");
-            if (stream != null)
-            {
-                builder.Configuration.AddJsonStream(stream);
-            }
+        var assembly = Assembly.GetExecutingAssembly();
+        using var stream = assembly.GetManifestResourceStream("WTF.MAUI.appsettings.json");
 
-#if !DEBUG
-            var envStream = assembly.GetManifestResourceStream($"WTF.MAUI.appsettings.{builder.Environment.EnvironmentName}.json");
-            if (envStream != null)
-            {
-                builder.Configuration.AddJsonStream(envStream);
-            }
-#endif
-
-            var wtfSettings = builder.Configuration
-                .GetSection("WtfSettings")
-                .Get<WtfSettings>();
-
-            builder.Services.AddSingleton(wtfSettings!);
-
-            builder.Services.AddTransient<AuthTokenHandler>();
-
-            builder.Services.AddScoped<IAuthService, AuthService>();
-            builder.Services.AddScoped<ITokenService, TokenService>();
-
-            builder.Services.AddHttpClient("Api", client => { client.BaseAddress = new Uri(wtfSettings!.BaseUrl); })
-                .AddHttpMessageHandler<AuthTokenHandler>();
-
-            builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().CreateClient("Api"));
-
-            return builder.Build();
+        if (stream != null)
+        {
+            builder.Configuration.AddJsonStream(stream);
         }
+
+        var wtfSettings = builder.Configuration
+            .GetSection("WtfSettings")
+            .Get<WtfSettings>();
+
+        builder.Services.AddSingleton(wtfSettings!);
+
+        // Initialize converters with settings
+        ProductImageUrlConverter.Initialize(wtfSettings!);
+
+        // Register Services
+        builder.Services.AddSingleton<ITokenService, TokenService>();
+        builder.Services.AddSingleton<IAuthService, AuthService>();
+        builder.Services.AddScoped<IOrderService, OrderService>();
+        builder.Services.AddScoped<IProductService, ProductService>();
+
+        // Register ViewModels
+        builder.Services.AddTransient<LoginViewModel>();
+        builder.Services.AddTransient<OrderViewModel>();
+        builder.Services.AddTransient<OrderFormViewModel>();
+        builder.Services.AddSingleton<ContainerViewModel>();
+
+        // Register Pages - Use Singleton for container and content pages
+        builder.Services.AddTransient<LoadingPage>();
+        builder.Services.AddTransient<LoginPage>();
+        builder.Services.AddSingleton<ContainerPage>();
+        builder.Services.AddSingleton<MainPage>();
+        builder.Services.AddSingleton<OrderPage>();
+        builder.Services.AddTransient<OrderFormPage>();
+
+        // Register HTTP Client with Auth Handler
+        builder.Services.AddTransient<AuthTokenHandler>();
+
+        builder.Services.AddHttpClient("Api", client =>
+        {
+            client.BaseAddress = new Uri(wtfSettings!.BaseUrl);
+        })
+        .AddHttpMessageHandler<AuthTokenHandler>();
+
+        builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().CreateClient("Api"));
+
+        return builder.Build();
     }
 }

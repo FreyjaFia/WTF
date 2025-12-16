@@ -15,6 +15,12 @@ public partial class User
 
     public string LastName { get; set; } = null!;
 
+    public virtual ICollection<Order> OrderCreatedByNavigations { get; set; } = new List<Order>();
+
+    public virtual ICollection<Order> OrderCustomers { get; set; } = new List<Order>();
+
+    public virtual ICollection<Order> OrderUpdatedByNavigations { get; set; } = new List<Order>();
+
     public virtual ICollection<Product> ProductCreatedByNavigations { get; set; } = new List<Product>();
 
     public virtual ICollection<Product> ProductUpdatedByNavigations { get; set; } = new List<Product>();

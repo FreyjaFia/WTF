@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell
+    x:Class="WTF.MAUI.AppShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:local="clr-namespace:WTF.MAUI"
+    xmlns:views="clr-namespace:WTF.MAUI.Views"
+    Title="WTF.MAUI"
+    Shell.TabBarIsVisible="False"
+    Shell.FlyoutBehavior="Disabled"
+    BackgroundColor="#FCF8F1">
+
+    <!-- Detail routes are registered in AppShell.xaml.cs -->
+    <!-- See AppShell.xaml.cs for Routing.RegisterRoute calls -->
+    
+    <!-- Loading Page (First page shown) -->
+    <ShellContent
+        Title="Loading"
+        ContentTemplate="{DataTemplate views:LoadingPage}"
+        Route="LoadingPage" />
+
+    <!-- Login Page (No Tab Bar) -->
+    <ShellContent
+        Title="Login"
+        ContentTemplate="{DataTemplate views:LoginPage}"
+        Route="LoginPage" />
+
+    <!-- Main Container with Sidebar (replaces MainPage and OrderPage routes) -->
+    <ShellContent
+        Title="Home"
+        ContentTemplate="{DataTemplate views:ContainerPage}"
+        Route="ContainerPage" />
+</Shell>

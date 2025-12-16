@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Threading.RateLimiting;
@@ -69,6 +70,14 @@ if (app.Environment.IsDevelopment())
 app.UseCors("AllowUI");
 app.UseRateLimiter();
 
+// Serve static files from wwwroot
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(
+        Path.Combine(builder.Environment.ContentRootPath, "wwwroot")),
+    RequestPath = ""
+});
+
 // Only use HTTPS redirection in production (not in development for mobile apps)
 if (!app.Environment.IsDevelopment())
 {
@@ -82,6 +91,7 @@ app.MapGet("/", () => "Welcome to the WTF API!");
 app.MapAuth()
     .MapLoyalty()
     .MapProducts()
+    .MapOrders()
     .MapTest();
 
 app.Run();

@@ -1,10 +1,43 @@
-﻿namespace WTF.MAUI
+﻿using WTF.MAUI.Services;
+using WTF.MAUI.ViewModels;
+using WTF.MAUI.Views;
+
+namespace WTF.MAUI;
+
+public partial class MainPage : ContentPage
 {
-    public partial class MainPage : ContentPage
+    private readonly IAuthService _authService;
+    private readonly ContainerViewModel _containerViewModel;
+    int count = 0;
+
+    public MainPage(IAuthService authService, ContainerViewModel containerViewModel)
     {
-        public MainPage()
+        _authService = authService;
+        _containerViewModel = containerViewModel;
+        
+        InitializeComponent();
+    }
+
+    private void OnCounterClicked(object sender, EventArgs e)
+    {
+        count++;
+
+        if (count == 1)
         {
-            InitializeComponent();
+            CounterBtn.Text = $"Clicked {count} time";
         }
+        else
+        {
+            CounterBtn.Text = $"Clicked {count} times";
+        }
+
+        SemanticScreenReader.Announce(CounterBtn.Text);
+    }
+
+    private async void OnLogoutClicked(object sender, EventArgs e)
+    {
+        _authService.Logout();
+
+        await _authService.RequireLoginAsync();
     }
 }

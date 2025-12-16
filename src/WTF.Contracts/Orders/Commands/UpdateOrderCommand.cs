@@ -1,0 +1,21 @@
+using MediatR;
+using System.ComponentModel.DataAnnotations;
+using WTF.Contracts.OrderItems;
+using WTF.Contracts.Orders.Enums;
+
+namespace WTF.Contracts.Orders.Commands;
+
+public record UpdateOrderCommand : IRequest<OrderDto?>
+{
+    [Required]
+    public Guid Id { get; init; }
+
+    [Required]
+    public Guid? CustomerId { get; init; }
+
+    [Required]
+    public List<OrderItemDto> Items { get; init; } = [];
+
+    [Required]
+    public OrderStatusEnum Status { get; init; }
+}

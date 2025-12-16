@@ -1,8 +1,7 @@
 ﻿using Microsoft.AspNetCore.Components;
 
-namespace WTF.UI.Pages
+namespace WTF.UI.Pages;
+
+public partial class NotFound404 : ComponentBase
 {
-    public partial class NotFound404 : ComponentBase
-    {
-    }
 }
