@@ -8,6 +8,7 @@ using WTF.Contracts.Orders.Enums;
 using WTF.Contracts.Products;
 using WTF.Contracts.Products.Enums;
 using WTF.Contracts.Products.Queries;
+using WTF.MAUI.Navigation;
 using WTF.MAUI.Services;
 
 namespace WTF.MAUI.ViewModels;
@@ -18,7 +19,6 @@ public partial class OrderFormViewModel : ObservableObject
 
     private readonly IProductService _productService;
     private readonly IOrderService _orderService;
-    private readonly ContainerViewModel _containerViewModel;
     private List<ProductDto> _allProducts = new();
     private CancellationTokenSource? _searchCancellationTokenSource;
     private CancellationTokenSource? _messageCancellationTokenSource;
@@ -27,11 +27,10 @@ public partial class OrderFormViewModel : ObservableObject
 
     #region Constructor
 
-    public OrderFormViewModel(IProductService productService, IOrderService orderService, ContainerViewModel containerViewModel)
+    public OrderFormViewModel(IProductService productService, IOrderService orderService)
     {
         _productService = productService;
         _orderService = orderService;
-        _containerViewModel = containerViewModel;
         
         PropertyChanged += (s, e) =>
         {
@@ -105,16 +104,13 @@ public partial class OrderFormViewModel : ObservableObject
         ? $"Order #{ExistingOrder.OrderNumber}" 
         : "New Order";
 
-    // New: control visibility of Checkout and Clear All buttons
     public bool ShowCartActions => !(ExistingOrder != null && (
         ExistingOrder.Status == OrderStatusEnum.Done ||
         ExistingOrder.Status == OrderStatusEnum.Cancelled ||
         ExistingOrder.Status == OrderStatusEnum.ForDelivery));
 
-    // New: Clear All button should only show when there are items and cart actions are allowed
     public bool ShowClearAllButton => HasCartItems && ShowCartActions;
 
-    // Missing computed property referenced by attribute
     public bool HasSearchText => !string.IsNullOrWhiteSpace(SearchText);
 
     public bool CanCheckout => CanEditOrder && !IsLoading && HasCartItems;
@@ -123,17 +119,18 @@ public partial class OrderFormViewModel : ObservableObject
 
     #region Public Methods
 
-    public async Task InitializeAsync(Guid? orderId = null)
+    public void SetOrderId(Guid? orderId)
     {
-        // Update container current page
-        _containerViewModel.CurrentPage = "OrderPage";
-        
         OrderId = orderId;
+    }
+
+    public async Task InitializeAsync()
+    {
         await LoadProductsAsync();
 
-        if (orderId.HasValue)
+        if (OrderId.HasValue)
         {
-            await LoadOrderAsync(orderId.Value);
+            await LoadOrderAsync(OrderId.Value);
         }
     }
 
@@ -144,7 +141,6 @@ public partial class OrderFormViewModel : ObservableObject
         OnPropertyChanged(nameof(Total));
         OnPropertyChanged(nameof(HasCartItems));
         OnPropertyChanged(nameof(ShowClearAllButton));
-        // Ensure UI updates any bindings depending on CanCheckout
         OnPropertyChanged(nameof(CanCheckout));
     }
 
@@ -289,7 +285,6 @@ public partial class OrderFormViewModel : ObservableObject
 
         SelectedProductType = productType;
 
-        // Yield so UI can update and show loading indicator
         await Task.Yield();
 
         ApplyFilters();
@@ -348,7 +343,7 @@ public partial class OrderFormViewModel : ObservableObject
 
                     await Task.Delay(1500);
 
-                    _containerViewModel.NavigateToOrdersPage();
+                    await Shell.Current.GoToAsync($"//{Routes.Orders}");
                 }
                 else
                 {
@@ -372,7 +367,7 @@ public partial class OrderFormViewModel : ObservableObject
 
                     await Task.Delay(1500);
 
-                    _containerViewModel.NavigateToOrdersPage();
+                    await Shell.Current.GoToAsync($"//{Routes.Orders}");
                 }
                 else
                 {
@@ -407,16 +402,7 @@ public partial class OrderFormViewModel : ObservableObject
             }
         }
 
-        // Use container view model navigation to go back to orders page
-        try
-        {
-            _containerViewModel.NavigateToOrdersPage();
-        }
-        catch (Exception)
-        {
-            // Fallback to Shell navigation if container navigation fails
-            await Shell.Current.GoToAsync("..");
-        }
+        await Shell.Current.GoToAsync($"//{Routes.Orders}");
     }
 
     [RelayCommand]

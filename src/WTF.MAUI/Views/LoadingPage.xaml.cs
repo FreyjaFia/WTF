@@ -1,15 +1,16 @@
 using WTF.MAUI.Services;
+using WTF.MAUI.Navigation;
 
 namespace WTF.MAUI.Views;
 
 public partial class LoadingPage : ContentPage
 {
-    private readonly IAuthService _authService;
+    private readonly IAuthService _auth_service;
 
     public LoadingPage(IAuthService authService)
     {
         InitializeComponent();
-        _authService = authService;
+        _auth_service = authService;
     }
 
     protected override async void OnAppearing()
@@ -22,17 +23,17 @@ public partial class LoadingPage : ContentPage
         try
         {
             // Check if user is already logged in
-            var isLoggedIn = await _authService.IsLoggedInAsync();
+            var isLoggedIn = await _auth_service.IsLoggedInAsync();
 
             if (isLoggedIn)
             {
-                // Auto-login: Navigate to ContainerPage (which shows home by default)
-                await Shell.Current.GoToAsync("//ContainerPage", false);
+                // Auto-login: Navigate to main app (new-order tab)
+                await Shell.Current.GoToAsync($"//{Routes.NewOrder}", false);
             }
             else
             {
                 // Not logged in: Navigate to login page
-                await Shell.Current.GoToAsync("//LoginPage", false);
+                await Shell.Current.GoToAsync($"//{Routes.Login}", false);
             }
         }
         catch (Exception ex)
@@ -44,7 +45,7 @@ public partial class LoadingPage : ContentPage
             // Fallback to login on error
             try
             {
-                await Shell.Current.GoToAsync("//LoginPage", false);
+                await Shell.Current.GoToAsync($"//{Routes.Login}", false);
             }
             catch (Exception fallbackEx)
             {
