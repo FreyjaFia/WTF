@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
 using WTF.Contracts.Products;
@@ -34,6 +35,12 @@ public class UpdateProductHandler(WTFDbContext db, IHttpContextAccessor httpCont
 
         await db.SaveChangesAsync(cancellationToken);
 
+        var imageUrl = product.ProductImage != null && product.ProductImage.Image != null
+            ? product.ProductImage.Image.ImageUrl
+            : null;
+
+        imageUrl = UrlExtensions.ToAbsoluteUrl(httpContextAccessor, imageUrl);
+
         return new ProductDto(
             product.Id,
             product.Name,
@@ -45,9 +52,7 @@ public class UpdateProductHandler(WTFDbContext db, IHttpContextAccessor httpCont
             product.CreatedBy,
             product.UpdatedAt,
             product.UpdatedBy,
-            product.ProductImage != null && product.ProductImage.Image != null
-                ? product.ProductImage.Image.ImageUrl
-                : null // Return single ImageUrl string or null
+            imageUrl
         );
     }
 }

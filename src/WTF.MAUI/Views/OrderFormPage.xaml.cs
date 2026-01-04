@@ -31,4 +31,10 @@ public partial class OrderFormPage : ContentPage, IQueryAttributable
         base.OnAppearing();
         await _viewModel.InitializeAsync();
     }
+
+    protected override void OnDisappearing()
+    {
+        base.OnDisappearing();
+        _viewModel.CancelInitialization();
+    }
 }

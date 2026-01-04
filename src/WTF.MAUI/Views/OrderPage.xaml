@@ -5,9 +5,21 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:enums="clr-namespace:WTF.Contracts.Orders.Enums;assembly=WTF.Contracts"
     xmlns:vm="clr-namespace:WTF.MAUI.ViewModels"
-    Title="Orders"
     x:DataType="vm:OrderViewModel"
     BackgroundColor="#FCF8F1">
+
+    <Shell.TitleView>
+        <Grid ColumnDefinitions="Auto,*" HeightRequest="44">
+            <Label
+                Grid.Column="1"
+                Margin="0"
+                FontAttributes="Bold"
+                FontSize="22"
+                Text="Orders"
+                TextColor="#1F1F1F"
+                VerticalOptions="Center" />
+        </Grid>
+    </Shell.TitleView>
 
     <Grid
         Padding="16,0"

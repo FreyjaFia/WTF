@@ -34,27 +34,6 @@
             Padding="20,16"
             RowDefinitions="Auto,Auto,Auto,*">
 
-            <!--  Header  -->
-            <!--<Grid Grid.Row="0" ColumnDefinitions="Auto,*" Margin="0,0,0,20">
-                        <Button Grid.Column="0"
-                                Text="&#xe5c4;"
-                                FontFamily="MaterialIconsOutlined"
-                                BackgroundColor="Transparent"
-                                TextColor="#1F1F1F"
-                                FontSize="24"
-                                Padding="0"
-                                Command="{Binding CancelCommand}"
-                                HorizontalOptions="Start" />
-
-                        <Label Grid.Column="1"
-                               Text="{Binding OrderTitle}"
-                               FontSize="22"
-                               FontAttributes="Bold"
-                               TextColor="#1F1F1F"
-                               VerticalOptions="Center"
-                               Margin="12,0,0,0" />
-                    </Grid>-->
-
             <!--  Search Bar  -->
             <Border
                 Grid.Row="1"
@@ -172,12 +151,12 @@
                     <!--  Loading Indicator  -->
                     <VerticalStackLayout
                         HorizontalOptions="Center"
-                        IsVisible="{Binding IsLoading}"
+                        IsVisible="{Binding IsProductListLoading}"
                         Spacing="12"
                         VerticalOptions="Center">
                         <ActivityIndicator
                             HeightRequest="32"
-                            IsRunning="{Binding IsLoading}"
+                            IsRunning="{Binding IsProductListLoading}"
                             WidthRequest="32"
                             Color="#1F1F1F" />
                         <Label
@@ -187,7 +166,7 @@
                     </VerticalStackLayout>
 
                     <!--  Products Collection  -->
-                    <CollectionView IsVisible="{Binding IsLoading, Converter={StaticResource InverseBoolConverter}}" ItemsSource="{Binding Products}">
+                    <CollectionView IsVisible="{Binding IsProductListLoading, Converter={StaticResource InverseBoolConverter}}" ItemsSource="{Binding ProductViewModels}">
                         <CollectionView.ItemsLayout>
                             <GridItemsLayout
                                 HorizontalItemSpacing="16"
@@ -214,7 +193,7 @@
                         </CollectionView.EmptyView>
 
                         <CollectionView.ItemTemplate>
-                            <DataTemplate x:DataType="{x:Null}">
+                            <DataTemplate x:DataType="vm:ProductItemViewModel">
                                 <Border
                                     Padding="12"
                                     BackgroundColor="White"
@@ -227,66 +206,66 @@
 
                                     <Grid
                                         BackgroundColor="White"
-                                        RowDefinitions="140,Auto,*,Auto"
+                                        RowDefinitions="120,Auto,Auto,*,Auto"
                                         RowSpacing="8">
                                         <!--  Product Image  -->
                                         <Border
                                             Grid.Row="0"
                                             BackgroundColor="#F9F8F4"
-                                            HeightRequest="140"
+                                            HeightRequest="120"
                                             StrokeShape="RoundRectangle 8">
                                             <Grid>
-                                                <!--  Show actual image if available  -->
-                                                <Image
-                                                    Margin="8"
-                                                    Aspect="AspectFill"
-                                                    IsVisible="{Binding ImageUrl, Converter={StaticResource IsNotNullConverter}}"
-                                                    Source="{Binding ImageUrl, Converter={StaticResource ProductImageUrlConverter}}" />
+                                                <Image Aspect="AspectFit" IsVisible="{Binding HasImage}">
+                                                    <Image.Source>
+                                                        <UriImageSource
+                                                            CacheValidity="7"
+                                                            CachingEnabled="True"
+                                                            Uri="{Binding ImageUrl}" />
+                                                    </Image.Source>
+                                                </Image>
 
-                                                <!--  Show icon if no image  -->
                                                 <Label
                                                     FontFamily="MaterialIconsOutlined"
                                                     FontSize="48"
                                                     HorizontalOptions="Center"
-                                                    Text="{Binding Type, Converter={StaticResource ProductTypeIconConverter}}"
-                                                    TextColor="#999"
-                                                    VerticalOptions="Center">
-                                                    <Label.Triggers>
-                                                        <DataTrigger
-                                                            Binding="{Binding ImageUrl, Converter={StaticResource IsNotNullConverter}}"
-                                                            TargetType="Label"
-                                                            Value="True">
-                                                            <Setter Property="IsVisible" Value="False" />
-                                                        </DataTrigger>
-                                                    </Label.Triggers>
-                                                </Label>
+                                                    IsVisible="{Binding HasImage, Converter={StaticResource InverseBoolConverter}}"
+                                                    Text="{Binding TypeIcon}"
+                                                    TextColor="#E0E0E0"
+                                                    VerticalOptions="Center" />
                                             </Grid>
                                         </Border>
 
                                         <!--  Product Name  -->
                                         <Label
                                             Grid.Row="1"
+                                            Margin="0,4,0,0"
                                             FontAttributes="Bold"
                                             FontSize="14"
                                             LineBreakMode="WordWrap"
                                             MaxLines="2"
                                             Text="{Binding Name}"
-                                            TextColor="#1F1F1F" />
+                                            TextColor="#1F1F1F"
+                                            VerticalOptions="Start" />
 
-                                        <!--  Row 2 spacer - empty, inherits white background from Grid  -->
+                                        <!--  Product Type  -->
+                                        <Label
+                                            Grid.Row="2"
+                                            FontSize="12"
+                                            Text="{Binding DisplayType}"
+                                            TextColor="#999"
+                                            VerticalOptions="Start" />
 
-                                        <!--  Bottom Info: Type and Price  -->
-                                        <VerticalStackLayout Grid.Row="3" Spacing="4">
-                                            <Label
-                                                FontSize="12"
-                                                Text="{Binding DisplayType}"
-                                                TextColor="#999" />
-                                            <Label
-                                                FontAttributes="Bold"
-                                                FontSize="16"
-                                                Text="{Binding FormattedPrice}"
-                                                TextColor="#1F1F1F" />
-                                        </VerticalStackLayout>
+                                        <!--  Spacer - Row 3 with * takes up remaining space  -->
+
+                                        <!--  Price - Always at bottom  -->
+                                        <Label
+                                            Grid.Row="4"
+                                            Margin="0,2,0,0"
+                                            FontAttributes="Bold"
+                                            FontSize="16"
+                                            Text="{Binding FormattedPrice}"
+                                            TextColor="#1F1F1F"
+                                            VerticalOptions="End" />
                                     </Grid>
                                 </Border>
                             </DataTemplate>
@@ -393,8 +372,14 @@
                                                         <Image
                                                             Margin="4"
                                                             Aspect="Fill"
-                                                            IsVisible="{Binding Product.ImageUrl, Converter={StaticResource IsNotNullConverter}}"
-                                                            Source="{Binding Product.ImageUrl, Converter={StaticResource ProductImageUrlConverter}}" />
+                                                            IsVisible="{Binding HasImage}">
+                                                            <Image.Source>
+                                                                <UriImageSource
+                                                                    CacheValidity="7"
+                                                                    CachingEnabled="True"
+                                                                    Uri="{Binding ImageUrl}" />
+                                                            </Image.Source>
+                                                        </Image>
 
                                                         <!--  Show icon if no image  -->
                                                         <Label
