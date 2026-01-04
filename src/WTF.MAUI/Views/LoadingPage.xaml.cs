@@ -5,12 +5,12 @@ namespace WTF.MAUI.Views;
 
 public partial class LoadingPage : ContentPage
 {
-    private readonly IAuthService _auth_service;
+    private readonly IAuthService _authService;
 
     public LoadingPage(IAuthService authService)
     {
         InitializeComponent();
-        _auth_service = authService;
+        _authService = authService;
     }
 
     protected override async void OnAppearing()
@@ -23,7 +23,7 @@ public partial class LoadingPage : ContentPage
         try
         {
             // Check if user is already logged in
-            var isLoggedIn = await _auth_service.IsLoggedInAsync();
+            var isLoggedIn = await _authService.IsLoggedInAsync();
 
             if (isLoggedIn)
             {
