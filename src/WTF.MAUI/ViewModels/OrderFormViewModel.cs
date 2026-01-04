@@ -1,6 +1,6 @@
-using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using System.Collections.ObjectModel;
 using WTF.Contracts.OrderItems;
 using WTF.Contracts.Orders;
 using WTF.Contracts.Orders.Commands;
@@ -8,6 +8,7 @@ using WTF.Contracts.Orders.Enums;
 using WTF.Contracts.Products;
 using WTF.Contracts.Products.Enums;
 using WTF.Contracts.Products.Queries;
+using WTF.MAUI.Navigation;
 using WTF.MAUI.Services;
 
 namespace WTF.MAUI.ViewModels;
@@ -18,21 +19,20 @@ public partial class OrderFormViewModel : ObservableObject
 
     private readonly IProductService _productService;
     private readonly IOrderService _orderService;
-    private readonly ContainerViewModel _containerViewModel;
     private List<ProductDto> _allProducts = new();
     private CancellationTokenSource? _searchCancellationTokenSource;
     private CancellationTokenSource? _messageCancellationTokenSource;
+    private CancellationTokenSource? _initCancellationTokenSource;
 
     #endregion
 
     #region Constructor
 
-    public OrderFormViewModel(IProductService productService, IOrderService orderService, ContainerViewModel containerViewModel)
+    public OrderFormViewModel(IProductService productService, IOrderService orderService)
     {
         _productService = productService;
         _orderService = orderService;
-        _containerViewModel = containerViewModel;
-        
+
         PropertyChanged += (s, e) =>
         {
             if (e.PropertyName == nameof(SearchText))
@@ -48,6 +48,15 @@ public partial class OrderFormViewModel : ObservableObject
 
     [ObservableProperty]
     private ObservableCollection<ProductDto> products = new();
+
+    // ProductViewModels is maintained manually to avoid relying on source-generator timing during build
+    private ObservableCollection<ProductItemViewModel> _productViewModels = new();
+
+    public ObservableCollection<ProductItemViewModel> ProductViewModels
+    {
+        get => _productViewModels;
+        set => SetProperty(ref _productViewModels, value);
+    }
 
     [ObservableProperty]
     private ObservableCollection<CartItemViewModel> cartItems = new();
@@ -68,6 +77,9 @@ public partial class OrderFormViewModel : ObservableObject
     private bool isLoading;
 
     [ObservableProperty]
+    private bool isProductListLoading;
+
+    [ObservableProperty]
     private bool isProcessing;
 
     [ObservableProperty]
@@ -78,7 +90,7 @@ public partial class OrderFormViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasSearchText))]
-    private string _searchText = string.Empty;
+    private string searchText = string.Empty;
 
     [ObservableProperty]
     private ProductTypeEnum? selectedProductType;
@@ -101,20 +113,15 @@ public partial class OrderFormViewModel : ObservableObject
 
     public bool CanEditOrder => !IsEditMode || (ExistingOrder != null && ExistingOrder.Status == OrderStatusEnum.Pending);
 
-    public string OrderTitle => IsEditMode && ExistingOrder != null 
-        ? $"Order #{ExistingOrder.OrderNumber}" 
-        : "New Order";
+    public string OrderTitle => IsEditMode && ExistingOrder != null ? $"Order #{ExistingOrder.OrderNumber}" : "New Order";
 
-    // New: control visibility of Checkout and Clear All buttons
     public bool ShowCartActions => !(ExistingOrder != null && (
         ExistingOrder.Status == OrderStatusEnum.Done ||
         ExistingOrder.Status == OrderStatusEnum.Cancelled ||
         ExistingOrder.Status == OrderStatusEnum.ForDelivery));
 
-    // New: Clear All button should only show when there are items and cart actions are allowed
     public bool ShowClearAllButton => HasCartItems && ShowCartActions;
 
-    // Missing computed property referenced by attribute
     public bool HasSearchText => !string.IsNullOrWhiteSpace(SearchText);
 
     public bool CanCheckout => CanEditOrder && !IsLoading && HasCartItems;
@@ -123,17 +130,29 @@ public partial class OrderFormViewModel : ObservableObject
 
     #region Public Methods
 
-    public async Task InitializeAsync(Guid? orderId = null)
+    public void SetOrderId(Guid? orderId)
     {
-        // Update container current page
-        _containerViewModel.CurrentPage = "OrderPage";
-        
         OrderId = orderId;
-        await LoadProductsAsync();
+    }
 
-        if (orderId.HasValue)
+    public async Task InitializeAsync()
+    {
+        _initCancellationTokenSource?.Cancel();
+        _initCancellationTokenSource = new CancellationTokenSource();
+        var token = _initCancellationTokenSource.Token;
+
+        try
         {
-            await LoadOrderAsync(orderId.Value);
+            await LoadProductsInternalAsync(token);
+
+            if (OrderId.HasValue)
+            {
+                await LoadOrderInternalAsync(OrderId.Value, token);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected when navigating away
         }
     }
 
@@ -144,8 +163,14 @@ public partial class OrderFormViewModel : ObservableObject
         OnPropertyChanged(nameof(Total));
         OnPropertyChanged(nameof(HasCartItems));
         OnPropertyChanged(nameof(ShowClearAllButton));
-        // Ensure UI updates any bindings depending on CanCheckout
         OnPropertyChanged(nameof(CanCheckout));
+    }
+
+    public void CancelInitialization()
+    {
+        _initCancellationTokenSource?.Cancel();
+        _searchCancellationTokenSource?.Cancel();
+        _messageCancellationTokenSource?.Cancel();
     }
 
     #endregion
@@ -155,88 +180,24 @@ public partial class OrderFormViewModel : ObservableObject
     [RelayCommand]
     private async Task LoadProductsAsync()
     {
-        IsLoading = true;
-        ErrorMessage = null;
-
-        try
-        {
-            var query = new GetProductsQuery
-            {
-                Page = 1,
-                PageSize = 1000,
-                IsActive = true
-            };
-
-            var result = await _productService.GetProductsAsync(query);
-
-            if (result?.Products != null)
-            {
-                _allProducts = result.Products;
-                ApplyFilters();
-            }
-            else
-            {
-                ShowTemporaryError("Failed to load products. Please try again.");
-            }
-        }
-        catch (Exception ex)
-        {
-            ShowTemporaryError($"Error loading products: {ex.Message}");
-        }
-        finally
-        {
-            IsLoading = false;
-        }
+        await LoadProductsInternalAsync(CancellationToken.None);
     }
 
     [RelayCommand]
     private async Task LoadOrderAsync(Guid orderId)
     {
-        IsLoading = true;
-        ErrorMessage = null;
-
-        try
-        {
-            var order = await _orderService.GetOrderByIdAsync(orderId);
-
-            if (order != null)
-            {
-                ExistingOrder = order;
-                await PopulateCartFromOrder(order);
-                OnPropertyChanged(nameof(CanEditOrder));
-                OnPropertyChanged(nameof(OrderTitle));
-                OnPropertyChanged(nameof(ShowCartActions));
-                OnPropertyChanged(nameof(ShowClearAllButton));
-                
-                if (!CanEditOrder)
-                {
-                    ShowTemporaryError("This order cannot be edited because it's not in pending status.");
-                }
-            }
-            else
-            {
-                ShowTemporaryError("Order not found.");
-            }
-        }
-        catch (Exception ex)
-        {
-            ShowTemporaryError($"Error loading order: {ex.Message}");
-        }
-        finally
-        {
-            IsLoading = false;
-        }
+        await LoadOrderInternalAsync(orderId, CancellationToken.None);
     }
 
     [RelayCommand]
-    private void AddToCart(ProductDto product)
+    private void AddToCart(ProductItemViewModel productItem)
     {
-        if (product == null || !CanEditOrder)
+        if (productItem == null || !CanEditOrder)
         {
             return;
         }
 
-        var existingItem = CartItems.FirstOrDefault(c => c.Product.Id == product.Id);
+        var existingItem = CartItems.FirstOrDefault(c => c.Product.Id == productItem.Id);
 
         if (existingItem != null)
         {
@@ -244,7 +205,7 @@ public partial class OrderFormViewModel : ObservableObject
         }
         else
         {
-            var newCartItem = new CartItemViewModel(product, this);
+            var newCartItem = new CartItemViewModel(productItem.Product, this);
             CartItems.Add(newCartItem);
         }
 
@@ -283,18 +244,10 @@ public partial class OrderFormViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task FilterByProductType(ProductTypeEnum? productType)
+    private void FilterByProductType(ProductTypeEnum? productType)
     {
-        IsLoading = true;
-
         SelectedProductType = productType;
-
-        // Yield so UI can update and show loading indicator
-        await Task.Yield();
-
         ApplyFilters();
-
-        IsLoading = false;
     }
 
     [RelayCommand]
@@ -345,10 +298,8 @@ public partial class OrderFormViewModel : ObservableObject
                 if (result != null)
                 {
                     ShowTemporarySuccess("Order updated successfully!");
-
                     await Task.Delay(1500);
-
-                    _containerViewModel.NavigateToOrdersPage();
+                    await Shell.Current.GoToAsync($"//{Routes.Orders}");
                 }
                 else
                 {
@@ -369,10 +320,8 @@ public partial class OrderFormViewModel : ObservableObject
                 if (result != null)
                 {
                     ShowTemporarySuccess($"Order #{result.OrderNumber} created successfully!");
-
                     await Task.Delay(1500);
-
-                    _containerViewModel.NavigateToOrdersPage();
+                    await Shell.Current.GoToAsync($"//{Routes.Orders}");
                 }
                 else
                 {
@@ -407,16 +356,7 @@ public partial class OrderFormViewModel : ObservableObject
             }
         }
 
-        // Use container view model navigation to go back to orders page
-        try
-        {
-            _containerViewModel.NavigateToOrdersPage();
-        }
-        catch (Exception)
-        {
-            // Fallback to Shell navigation if container navigation fails
-            await Shell.Current.GoToAsync("..");
-        }
+        await Shell.Current.GoToAsync($"//{Routes.Orders}");
     }
 
     [RelayCommand]
@@ -437,14 +377,146 @@ public partial class OrderFormViewModel : ObservableObject
 
     #region Private Helper Methods
 
+    private async Task LoadProductsInternalAsync(CancellationToken token)
+    {
+        await MainThread.InvokeOnMainThreadAsync(() =>
+        {
+            IsProductListLoading = true;
+            ErrorMessage = null;
+        });
+
+        try
+        {
+            var query = new GetProductsQuery
+            {
+                Page = 1,
+                PageSize = 1000,
+                IsActive = true
+            };
+
+            var result = await _productService.GetProductsAsync(query);
+
+            if (token.IsCancellationRequested)
+            {
+                return;
+            }
+
+            if (result?.Products != null && result.Products.Any())
+            {
+                _allProducts = result.Products;
+                ApplyFilters();
+            }
+            else
+            {
+                await MainThread.InvokeOnMainThreadAsync(() =>
+                {
+                    _allProducts = new List<ProductDto>();
+                    ProductViewModels = new ObservableCollection<ProductItemViewModel>();
+                    Products = new ObservableCollection<ProductDto>();
+                    ShowTemporaryError("No products found. Please add products first.");
+                });
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            await MainThread.InvokeOnMainThreadAsync(() =>
+            {
+                _allProducts = new List<ProductDto>();
+                ProductViewModels = new ObservableCollection<ProductItemViewModel>();
+                Products = new ObservableCollection<ProductDto>();
+                ShowTemporaryError($"Error loading products: {ex.Message}");
+            });
+        }
+        finally
+        {
+            await MainThread.InvokeOnMainThreadAsync(() =>
+            {
+                IsProductListLoading = false;
+            });
+        }
+    }
+
+    private async Task LoadOrderInternalAsync(Guid orderId, CancellationToken token)
+    {
+        await MainThread.InvokeOnMainThreadAsync(() =>
+        {
+            IsLoading = true;
+            ErrorMessage = null;
+        });
+
+        try
+        {
+            var order = await Task.Run(() => _orderService.GetOrderByIdAsync(orderId), token)
+                                   .ConfigureAwait(false);
+
+            if (token.IsCancellationRequested)
+            {
+                return;
+            }
+
+            if (order != null)
+            {
+                await MainThread.InvokeOnMainThreadAsync(async () =>
+                {
+                    ExistingOrder = order;
+                    await PopulateCartFromOrder(order);
+                    OnPropertyChanged(nameof(CanEditOrder));
+                    OnPropertyChanged(nameof(OrderTitle));
+                    OnPropertyChanged(nameof(ShowCartActions));
+                    OnPropertyChanged(nameof(ShowClearAllButton));
+
+                    if (!CanEditOrder)
+                    {
+                        ShowTemporaryError("This order cannot be edited because it's not in pending status.");
+                    }
+                });
+            }
+            else
+            {
+                await MainThread.InvokeOnMainThreadAsync(() =>
+                {
+                    ShowTemporaryError("Order not found.");
+                });
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            await MainThread.InvokeOnMainThreadAsync(() =>
+            {
+                ShowTemporaryError($"Error loading order: {ex.Message}");
+            });
+        }
+        finally
+        {
+            await MainThread.InvokeOnMainThreadAsync(() => IsLoading = false);
+        }
+    }
+
     private void ApplyFilters()
     {
+        if (_allProducts == null || !_allProducts.Any())
+        {
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                Products = new ObservableCollection<ProductDto>();
+                ProductViewModels = new ObservableCollection<ProductItemViewModel>();
+            });
+            return;
+        }
+
         var filtered = _allProducts.AsEnumerable();
 
         if (!string.IsNullOrWhiteSpace(SearchText))
         {
-            filtered = filtered.Where(p =>
-                p.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase));
+            filtered = filtered.Where(p => p.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase));
         }
 
         if (SelectedProductType.HasValue)
@@ -452,11 +524,14 @@ public partial class OrderFormViewModel : ObservableObject
             filtered = filtered.Where(p => p.Type == SelectedProductType.Value);
         }
 
-        Products.Clear();
-        foreach (var product in filtered)
+        var finalList = filtered.ToList();
+        var vmList = finalList.Select(p => new ProductItemViewModel(p)).ToList();
+
+        MainThread.BeginInvokeOnMainThread(() =>
         {
-            Products.Add(product);
-        }
+            Products = new ObservableCollection<ProductDto>(finalList);
+            ProductViewModels = new ObservableCollection<ProductItemViewModel>(vmList);
+        });
     }
 
     private async Task PopulateCartFromOrder(OrderDto order)
@@ -466,6 +541,7 @@ public partial class OrderFormViewModel : ObservableObject
         foreach (var item in order.Items)
         {
             var product = await _productService.GetProductByIdAsync(item.ProductId);
+
             if (product != null)
             {
                 var cartItem = new CartItemViewModel(product, this);
@@ -481,17 +557,18 @@ public partial class OrderFormViewModel : ObservableObject
     {
         _searchCancellationTokenSource?.Cancel();
         _searchCancellationTokenSource = new CancellationTokenSource();
+        var token = _searchCancellationTokenSource.Token;
 
         Task.Run(async () =>
         {
             try
             {
-                await Task.Delay(300, _searchCancellationTokenSource.Token);
+                await Task.Delay(300, token);
 
-                await MainThread.InvokeOnMainThreadAsync(() =>
+                if (!token.IsCancellationRequested)
                 {
                     ApplyFilters();
-                });
+                }
             }
             catch (TaskCanceledException)
             {
@@ -516,18 +593,22 @@ public partial class OrderFormViewModel : ObservableObject
     {
         _messageCancellationTokenSource?.Cancel();
         _messageCancellationTokenSource = new CancellationTokenSource();
+        var token = _messageCancellationTokenSource.Token;
 
         Task.Run(async () =>
         {
             try
             {
-                await Task.Delay(3000, _messageCancellationTokenSource.Token);
+                await Task.Delay(3000, token);
 
-                await MainThread.InvokeOnMainThreadAsync(() =>
+                if (!token.IsCancellationRequested)
                 {
-                    ErrorMessage = null;
-                    SuccessMessage = null;
-                });
+                    await MainThread.InvokeOnMainThreadAsync(() =>
+                    {
+                        ErrorMessage = null;
+                        SuccessMessage = null;
+                    });
+                }
             }
             catch (TaskCanceledException)
             {

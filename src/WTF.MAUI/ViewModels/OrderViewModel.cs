@@ -4,8 +4,8 @@ using CommunityToolkit.Mvvm.Input;
 using WTF.Contracts.Orders;
 using WTF.Contracts.Orders.Enums;
 using WTF.Contracts.Orders.Queries;
+using WTF.MAUI.Navigation;
 using WTF.MAUI.Services;
-using WTF.MAUI.Views;
 
 namespace WTF.MAUI.ViewModels;
 
@@ -14,7 +14,6 @@ public partial class OrderViewModel : ObservableObject
     #region Fields
 
     private readonly IOrderService _orderService;
-    private readonly ContainerViewModel _containerViewModel;
     private bool _isRefreshingInternal = false;
     private CancellationTokenSource? _searchCancellationTokenSource;
 
@@ -22,10 +21,9 @@ public partial class OrderViewModel : ObservableObject
 
     #region Constructor
 
-    public OrderViewModel(IOrderService orderService, ContainerViewModel containerViewModel)
+    public OrderViewModel(IOrderService orderService)
     {
         _orderService = orderService;
-        _containerViewModel = containerViewModel;
     }
 
     #endregion
@@ -72,9 +70,6 @@ public partial class OrderViewModel : ObservableObject
 
     public async Task InitializeAsync()
     {
-        // Update container current page
-        _containerViewModel.CurrentPage = "OrderPage";
-
         // Load orders
         await LoadOrdersAsync();
     }
@@ -135,20 +130,7 @@ public partial class OrderViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void AddOrder()
-    {
-        try
-        {
-            _containerViewModel.NavigateToOrderFormPage(null);
-        }
-        catch (Exception ex)
-        {
-            ErrorMessage = $"Error navigating to order form: {ex.Message}";
-        }
-    }
-
-    [RelayCommand]
-    private void ViewOrderDetails(OrderDto order)
+    private async Task ViewOrderDetailsAsync(OrderDto order)
     {
         if (order == null)
         {
@@ -157,7 +139,11 @@ public partial class OrderViewModel : ObservableObject
 
         try
         {
-            _containerViewModel.NavigateToOrderFormPage(order.Id);
+            var navigationParameter = new Dictionary<string, object>
+            {
+                { "OrderId", order.Id }
+            };
+            await Shell.Current.GoToAsync(Routes.EditOrder, navigationParameter);
         }
         catch (Exception ex)
         {

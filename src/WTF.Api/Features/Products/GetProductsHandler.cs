@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using WTF.Api.Common.Extensions;
 using WTF.Contracts.Products;
 using WTF.Contracts.Products.Queries;
 using WTF.Domain.Data;
@@ -7,7 +8,7 @@ using ContractEnum = WTF.Contracts.Products.Enums.ProductTypeEnum;
 
 namespace WTF.Api.Features.Products;
 
-public class GetProductsHandler(WTFDbContext db) : IRequestHandler<GetProductsQuery, ProductListDto>
+public class GetProductsHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor) : IRequestHandler<GetProductsQuery, ProductListDto>
 {
     public async Task<ProductListDto> Handle(GetProductsQuery request, CancellationToken cancellationToken)
     {
@@ -40,7 +41,7 @@ public class GetProductsHandler(WTFDbContext db) : IRequestHandler<GetProductsQu
         // Get total count before pagination
         var totalCount = await query.CountAsync(cancellationToken);
 
-        // Apply pagination
+        // Apply pagination and project to DTOs (relative image URLs)
         var products = await query
             .OrderBy(p => p.Name)
             .Skip((request.Page - 1) * request.PageSize)
@@ -61,6 +62,12 @@ public class GetProductsHandler(WTFDbContext db) : IRequestHandler<GetProductsQu
                     : null
             ))
             .ToListAsync(cancellationToken);
+
+        // Build absolute URLs if possible using helper
+        for (var i = 0; i < products.Count; i++)
+        {
+            products[i] = products[i] with { ImageUrl = UrlExtensions.ToAbsoluteUrl(httpContextAccessor, products[i].ImageUrl) };
+        }
 
         return new ProductListDto(
             products,

@@ -19,6 +19,9 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WTF.Contracts", "src\WTF.Contracts\WTF.Contracts.csproj", "{2E017E31-B9C9-431F-900D-CD935736A1FA}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".github", ".github", "{46AE856E-FFF9-4B20-9FDB-09D34691A83D}"
+	ProjectSection(SolutionItems) = preProject
+		.github\copilot-instructions.md = .github\copilot-instructions.md
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{D666F66A-660E-48E2-A754-D53FFBD08DD6}"
 	ProjectSection(SolutionItems) = preProject

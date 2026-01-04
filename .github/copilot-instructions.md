@@ -119,6 +119,9 @@ public partial class OrderViewModel : ObservableObject
 - Commands use `[RelayCommand]` attribute on private methods (generates public commands)
 - Computed properties are regular public properties that depend on observables
 - Partial methods handle property change notifications from source generators
+- **Always use proper new line spacing between members, regions, and logical code blocks for readability.**
+
+**Always apply these code style and ViewModel organization rules when updating existing files, not just when creating new files.**
 
 ## Shared Patterns
 
@@ -133,15 +136,6 @@ public record CreateOrderCommand(...) : IRequest<OrderDto>;
 
 // DTO
 public record OrderDto(Guid Id, int OrderNumber, ...);
-```
-
-### Primary Constructors
-All classes use C# 14 primary constructors:
-```csharp
-public class OrderService(HttpClient httpClient) : IOrderService
-{
-    // No explicit constructor needed - httpClient is available as field
-}
 ```
 
 ### Authentication Flow
@@ -277,6 +271,10 @@ private ObservableCollection<OrderDto> orders = new();
 - Always suffix with `Async`
 - Use `CancellationToken` for long-running operations
 - MAUI: Wrap UI updates in `MainThread.InvokeOnMainThreadAsync()`
+
+- **Always use proper new line spacing between members, regions, and logical code blocks for readability.**
+
+**Always apply these code style and ViewModel organization rules when updating existing files, not just when creating new files.**
 
 ## Common Pitfalls
 

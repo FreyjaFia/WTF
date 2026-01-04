@@ -1,8 +1,6 @@
 using System.Globalization;
-using WTF.Contracts.Products;
 using WTF.Contracts.Products.Enums;
 using WTF.MAUI.Settings;
-using Microsoft.Maui.Controls;
 
 namespace WTF.MAUI.Converters;
 

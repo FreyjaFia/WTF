@@ -2,16 +2,39 @@ using WTF.MAUI.ViewModels;
 
 namespace WTF.MAUI.Views;
 
-public partial class OrderFormPage : ContentPage
+public partial class OrderFormPage : ContentPage, IQueryAttributable
 {
     private readonly OrderFormViewModel _viewModel;
-    private readonly ContainerViewModel _containerViewModel;
 
-    public OrderFormPage(OrderFormViewModel viewModel, ContainerViewModel containerViewModel)
+    public OrderFormPage(OrderFormViewModel viewModel)
     {
         InitializeComponent();
         _viewModel = viewModel;
-        _containerViewModel = containerViewModel;
         BindingContext = _viewModel;
+    }
+
+    public void ApplyQueryAttributes(IDictionary<string, object> query)
+    {
+        // Handle navigation parameters
+        if (query.TryGetValue("OrderId", out var orderIdObj) && orderIdObj is Guid orderId)
+        {
+            _viewModel.SetOrderId(orderId);
+        }
+        else
+        {
+            _viewModel.SetOrderId(null);
+        }
+    }
+
+    protected override async void OnAppearing()
+    {
+        base.OnAppearing();
+        await _viewModel.InitializeAsync();
+    }
+
+    protected override void OnDisappearing()
+    {
+        base.OnDisappearing();
+        _viewModel.CancelInitialization();
     }
 }

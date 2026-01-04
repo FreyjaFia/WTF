@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using WTF.MAUI.Services;
+using WTF.MAUI.Navigation;
 
 namespace WTF.MAUI.ViewModels;
 
@@ -72,8 +73,8 @@ public partial class LoginViewModel : ObservableObject
 
             if (success)
             {
-                // Navigate to ContainerPage after successful login
-                await Shell.Current.GoToAsync("//ContainerPage", false);
+                // Navigate to new-order after successful login
+                await Shell.Current.GoToAsync($"//{Routes.NewOrder}", false);
             }
             else
             {

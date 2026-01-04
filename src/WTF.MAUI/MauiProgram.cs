@@ -55,14 +55,12 @@ public static class MauiProgram
         builder.Services.AddTransient<LoginViewModel>();
         builder.Services.AddTransient<OrderViewModel>();
         builder.Services.AddTransient<OrderFormViewModel>();
-        builder.Services.AddSingleton<ContainerViewModel>();
 
-        // Register Pages - Use Singleton for container and content pages
+        // Register Pages
+        builder.Services.AddSingleton<AppShell>();
         builder.Services.AddTransient<LoadingPage>();
         builder.Services.AddTransient<LoginPage>();
-        builder.Services.AddSingleton<ContainerPage>();
-        builder.Services.AddSingleton<MainPage>();
-        builder.Services.AddSingleton<OrderPage>();
+        builder.Services.AddTransient<OrderPage>();
         builder.Services.AddTransient<OrderFormPage>();
 
         // Register HTTP Client with Auth Handler

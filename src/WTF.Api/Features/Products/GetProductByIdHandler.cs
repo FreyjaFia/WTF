@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using WTF.Api.Common.Extensions;
 using WTF.Contracts.Products;
 using WTF.Contracts.Products.Queries;
 using WTF.Domain.Data;
@@ -7,7 +8,7 @@ using ContractEnum = WTF.Contracts.Products.Enums.ProductTypeEnum;
 
 namespace WTF.Api.Features.Products;
 
-public class GetProductByIdHandler(WTFDbContext db) : IRequestHandler<GetProductByIdQuery, ProductDto?>
+public class GetProductByIdHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor) : IRequestHandler<GetProductByIdQuery, ProductDto?>
 {
     public async Task<ProductDto?> Handle(GetProductByIdQuery request, CancellationToken cancellationToken)
     {
@@ -22,6 +23,12 @@ public class GetProductByIdHandler(WTFDbContext db) : IRequestHandler<GetProduct
             return null;
         }
 
+        var imageUrl = product.ProductImage != null && product.ProductImage.Image != null
+            ? product.ProductImage.Image.ImageUrl
+            : null;
+
+        imageUrl = UrlExtensions.ToAbsoluteUrl(httpContextAccessor, imageUrl);
+
         return new ProductDto(
             product.Id,
             product.Name,
@@ -33,9 +40,7 @@ public class GetProductByIdHandler(WTFDbContext db) : IRequestHandler<GetProduct
             product.CreatedBy,
             product.UpdatedAt,
             product.UpdatedBy,
-            product.ProductImage != null && product.ProductImage.Image != null
-                ? product.ProductImage.Image.ImageUrl
-                : null
+            imageUrl
         );
     }
 }

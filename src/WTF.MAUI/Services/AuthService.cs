@@ -1,5 +1,6 @@
 ﻿using System.Net.Http.Json;
 using WTF.Contracts.Auth.Login;
+using WTF.MAUI.Navigation;
 
 namespace WTF.MAUI.Services;
 
@@ -77,7 +78,7 @@ public class AuthService(HttpClient httpClient, ITokenService tokenService) : IA
     {
         if (!await IsLoggedInAsync())
         {
-            await Shell.Current.GoToAsync("//LoginPage");
+            await Shell.Current.GoToAsync($"//{Routes.Login}");
             return;
         }
     }
