@@ -1,46 +1,51 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
-using WTF.Contracts.Auth.Login;
+using WTF.Api.Services;
+using WTF.Contracts.Auth;
+using WTF.Contracts.Auth.Commands;
 using WTF.Domain.Data;
+using WTF.Domain.Entities;
 
 namespace WTF.Api.Features.Auth;
 
-public class LoginHandler(WTFDbContext db, IConfiguration config) : IRequestHandler<LoginCommand, LoginDto>
+public class LoginHandler(WTFDbContext db, IJwtService jwtService, IConfiguration config) : IRequestHandler<LoginCommand, LoginDto>
 {
     public async Task<LoginDto> Handle(LoginCommand request, CancellationToken cancellationToken)
     {
         var user = await db.Users
-            .FirstOrDefaultAsync(u => u.Username == request.Username && u.Password == request.Password, cancellationToken);
+            .FirstOrDefaultAsync(u => u.Username == request.Username, cancellationToken);
 
         if (user == null)
         {
-            return null;
+            return null!;
         }
 
-        var claims = new[]
+        if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
         {
-            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim(ClaimTypes.Name, request.Username),
-            new Claim(ClaimTypes.Role, "User")
+            return null!;
+        }
+
+        var accessToken = jwtService.GenerateAccessToken(user);
+        var refreshToken = jwtService.GenerateRefreshToken();
+
+        var refreshTokenExpiration = DateTime.UtcNow.AddDays(int.Parse(config["Jwt:RefreshTokenExpirationDays"] ?? "7"));
+
+        var refreshTokenEntity = new RefreshToken
+        {
+            UserId = user.Id,
+            Token = refreshToken,
+            ExpiresAt = refreshTokenExpiration,
+            CreatedAt = DateTime.UtcNow,
+            IsRevoked = false
         };
 
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(config["Jwt:Key"]!));
-        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-        var token = new JwtSecurityToken(
-            issuer: config["Jwt:Issuer"],
-            audience: config["Jwt:Audience"],
-            claims: claims,
-            expires: DateTime.UtcNow.AddHours(1),
-            signingCredentials: credentials
-        );
+        db.RefreshTokens.Add(refreshTokenEntity);
+        await db.SaveChangesAsync(cancellationToken);
 
         return new LoginDto(
-            new JwtSecurityTokenHandler().WriteToken(token)
+            accessToken,
+            refreshToken,
+            DateTime.UtcNow.AddMinutes(int.Parse(config["Jwt:AccessTokenExpirationMinutes"] ?? "60"))
         );
     }
 }
