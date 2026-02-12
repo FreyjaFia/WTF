@@ -11,8 +11,6 @@ public partial class Order
 
     public Guid? CustomerId { get; set; }
 
-    public int StatusId { get; set; }
-
     public DateTime CreatedAt { get; set; }
 
     public Guid CreatedBy { get; set; }
@@ -21,11 +19,23 @@ public partial class Order
 
     public Guid? UpdatedBy { get; set; }
 
+    public decimal? AmountReceived { get; set; }
+
+    public decimal? ChangeAmount { get; set; }
+
+    public decimal? Tips { get; set; }
+
+    public int StatusId { get; set; }
+
+    public int PaymentMethodId { get; set; }
+
     public virtual User CreatedByNavigation { get; set; } = null!;
 
     public virtual User? Customer { get; set; }
 
     public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
+
+    public virtual PaymentMethod PaymentMethod { get; set; } = null!;
 
     public virtual Status Status { get; set; } = null!;
 
