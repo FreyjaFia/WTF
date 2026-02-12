@@ -2,8 +2,8 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Contracts.OrderItems;
 using WTF.Contracts.Orders;
-using WTF.Contracts.Orders.Queries;
 using WTF.Contracts.Orders.Enums;
+using WTF.Contracts.Orders.Queries;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Orders;
@@ -12,7 +12,7 @@ public class GetOrderByIdHandler(WTFDbContext db) : IRequestHandler<GetOrderById
 {
     public async Task<OrderDto?> Handle(GetOrderByIdQuery request, CancellationToken cancellationToken)
     {
-        var order = await db.Orders.Include(o => o.OrderItems).Include(o => o.Status)
+        var order = await db.Orders.Include(o => o.OrderItems)
             .FirstOrDefaultAsync(o => o.Id == request.Id, cancellationToken);
 
         if (order is null)
@@ -33,7 +33,11 @@ public class GetOrderByIdHandler(WTFDbContext db) : IRequestHandler<GetOrderById
             order.UpdatedBy,
             items,
             order.CustomerId,
-            (OrderStatusEnum)order.Status.Id
+            (OrderStatusEnum)order.StatusId,
+            (PaymentMethodEnum)order.PaymentMethodId,
+            order.AmountReceived,
+            order.ChangeAmount,
+            order.Tips
         );
     }
 }

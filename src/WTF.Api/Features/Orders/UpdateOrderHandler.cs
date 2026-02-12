@@ -21,14 +21,12 @@ public class UpdateOrderHandler(WTFDbContext db) : IRequestHandler<UpdateOrderCo
             return null;
         }
 
-        var status = await db.Statuses.FirstOrDefaultAsync(s => s.Id == (int)request.Status, cancellationToken);
-        if (status is null)
-        {
-            throw new Exception("Invalid status");
-        }
-
         order.CustomerId = request.CustomerId;
-        order.StatusId = status.Id;
+        order.StatusId = (int)request.Status;
+        order.PaymentMethodId = (int)request.PaymentMethod;
+        order.AmountReceived = request.AmountReceived;
+        order.ChangeAmount = request.ChangeAmount;
+        order.Tips = request.Tips;
         order.UpdatedAt = DateTime.UtcNow;
 
         // Update items: remove old, add new
@@ -61,7 +59,11 @@ public class UpdateOrderHandler(WTFDbContext db) : IRequestHandler<UpdateOrderCo
             order.UpdatedBy,
             items,
             order.CustomerId,
-            (OrderStatusEnum)status.Id
+            (OrderStatusEnum)order.StatusId,
+            (PaymentMethodEnum)order.PaymentMethodId,
+            order.AmountReceived,
+            order.ChangeAmount,
+            order.Tips
         );
     }
 }

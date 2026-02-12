@@ -12,17 +12,18 @@ public class GetOrdersHandler(WTFDbContext db) : IRequestHandler<GetOrdersQuery,
 {
     public async Task<List<OrderDto>> Handle(GetOrdersQuery request, CancellationToken cancellationToken)
     {
-        var query = db.Orders.Include(o => o.OrderItems).Include(o => o.Status).AsQueryable();
+        var query = db.Orders
+            .Include(o => o.OrderItems)
+            .AsQueryable();
 
         if (request.CustomerId.HasValue)
         {
             query = query.Where(o => o.CustomerId == request.CustomerId.Value);
         }
 
-        // Only filter by status if not "All" (-1)
-        if (request.Status != (int)OrderStatusEnum.All)
+        if (request.Status != OrderStatusEnum.All)
         {
-            query = query.Where(o => o.Status.Id == request.Status);
+            query = query.Where(o => o.StatusId == (int)request.Status);
         }
 
         var orders = await query
@@ -31,16 +32,20 @@ public class GetOrdersHandler(WTFDbContext db) : IRequestHandler<GetOrdersQuery,
             .Take(request.PageSize)
             .ToListAsync(cancellationToken);
 
-        return orders.Select(o => new OrderDto(
+        return [.. orders.Select(o => new OrderDto(
             o.Id,
             o.OrderNumber,
             o.CreatedAt,
             o.CreatedBy,
             o.UpdatedAt,
             o.UpdatedBy,
-            o.OrderItems.Select(oi => new OrderItemDto(oi.Id, oi.ProductId, oi.Quantity)).ToList(),
+            [.. o.OrderItems.Select(oi => new OrderItemDto(oi.Id, oi.ProductId, oi.Quantity))],
             o.CustomerId,
-            (OrderStatusEnum)o.Status.Id
-        )).ToList();
+            (OrderStatusEnum)o.StatusId,
+            (PaymentMethodEnum)o.PaymentMethodId,
+            o.AmountReceived,
+            o.ChangeAmount,
+            o.Tips
+        ))];
     }
 }

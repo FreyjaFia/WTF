@@ -15,19 +15,17 @@ public class CreateOrderHandler(WTFDbContext db, IHttpContextAccessor httpContex
     public async Task<OrderDto> Handle(CreateOrderCommand request, CancellationToken cancellationToken)
     {
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
-        var status = await db.Statuses.FirstOrDefaultAsync(s => s.Id == (int)request.Status, cancellationToken);
-
-        if (status is null)
-        {
-            throw new Exception("Invalid status");
-        }
 
         var order = new Order
         {
             CreatedAt = DateTime.UtcNow,
             CreatedBy = userId,
             CustomerId = request.CustomerId,
-            StatusId = status.Id
+            StatusId = (int)request.Status,
+            PaymentMethodId = (int)request.PaymentMethod,
+            AmountReceived = request.AmountReceived,
+            ChangeAmount = request.ChangeAmount,
+            Tips = request.Tips
         };
 
         db.Orders.Add(order);
@@ -59,7 +57,11 @@ public class CreateOrderHandler(WTFDbContext db, IHttpContextAccessor httpContex
             order.UpdatedBy,
             items,
             order.CustomerId,
-            (OrderStatusEnum)status.Id
+            (OrderStatusEnum)order.StatusId,
+            (PaymentMethodEnum)order.PaymentMethodId,
+            order.AmountReceived,
+            order.ChangeAmount,
+            order.Tips
         );
     }
 }
