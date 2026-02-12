@@ -22,7 +22,7 @@ public class CreateOrderHandler(WTFDbContext db, IHttpContextAccessor httpContex
             CreatedBy = userId,
             CustomerId = request.CustomerId,
             StatusId = (int)request.Status,
-            PaymentMethodId = (int)request.PaymentMethod,
+            PaymentMethodId = request.PaymentMethod.HasValue ? (int)request.PaymentMethod.Value : null,
             AmountReceived = request.AmountReceived,
             ChangeAmount = request.ChangeAmount,
             Tips = request.Tips
@@ -45,8 +45,14 @@ public class CreateOrderHandler(WTFDbContext db, IHttpContextAccessor httpContex
 
         var items = await db.OrderItems
             .Where(oi => oi.OrderId == order.Id)
+            .Include(oi => oi.Product)
             .Select(oi => new OrderItemDto(oi.Id, oi.ProductId, oi.Quantity))
             .ToListAsync(cancellationToken);
+
+        var totalAmount = await db.OrderItems
+            .Where(oi => oi.OrderId == order.Id)
+            .Include(oi => oi.Product)
+            .SumAsync(oi => oi.Product.Price * oi.Quantity, cancellationToken);
 
         return new OrderDto(
             order.Id,
@@ -58,10 +64,11 @@ public class CreateOrderHandler(WTFDbContext db, IHttpContextAccessor httpContex
             items,
             order.CustomerId,
             (OrderStatusEnum)order.StatusId,
-            (PaymentMethodEnum)order.PaymentMethodId,
+            order.PaymentMethodId.HasValue ? (PaymentMethodEnum)order.PaymentMethodId.Value : null,
             order.AmountReceived,
             order.ChangeAmount,
-            order.Tips
+            order.Tips,
+            totalAmount
         );
     }
 }

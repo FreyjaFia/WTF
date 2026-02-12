@@ -14,6 +14,7 @@ public class GetOrdersHandler(WTFDbContext db) : IRequestHandler<GetOrdersQuery,
     {
         var query = db.Orders
             .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.Product)
             .AsQueryable();
 
         if (request.CustomerId.HasValue)
@@ -28,8 +29,6 @@ public class GetOrdersHandler(WTFDbContext db) : IRequestHandler<GetOrdersQuery,
 
         var orders = await query
             .OrderByDescending(o => o.CreatedAt)
-            .Skip((request.Page - 1) * request.PageSize)
-            .Take(request.PageSize)
             .ToListAsync(cancellationToken);
 
         return [.. orders.Select(o => new OrderDto(
@@ -42,10 +41,11 @@ public class GetOrdersHandler(WTFDbContext db) : IRequestHandler<GetOrdersQuery,
             [.. o.OrderItems.Select(oi => new OrderItemDto(oi.Id, oi.ProductId, oi.Quantity))],
             o.CustomerId,
             (OrderStatusEnum)o.StatusId,
-            (PaymentMethodEnum)o.PaymentMethodId,
+            o.PaymentMethodId.HasValue ? (PaymentMethodEnum)o.PaymentMethodId.Value : null,
             o.AmountReceived,
             o.ChangeAmount,
-            o.Tips
+            o.Tips,
+            o.OrderItems.Sum(oi => oi.Product.Price * oi.Quantity)
         ))];
     }
 }

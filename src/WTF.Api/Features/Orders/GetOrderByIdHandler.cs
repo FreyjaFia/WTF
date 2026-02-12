@@ -12,7 +12,9 @@ public class GetOrderByIdHandler(WTFDbContext db) : IRequestHandler<GetOrderById
 {
     public async Task<OrderDto?> Handle(GetOrderByIdQuery request, CancellationToken cancellationToken)
     {
-        var order = await db.Orders.Include(o => o.OrderItems)
+        var order = await db.Orders
+            .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.Product)
             .FirstOrDefaultAsync(o => o.Id == request.Id, cancellationToken);
 
         if (order is null)
@@ -34,10 +36,11 @@ public class GetOrderByIdHandler(WTFDbContext db) : IRequestHandler<GetOrderById
             items,
             order.CustomerId,
             (OrderStatusEnum)order.StatusId,
-            (PaymentMethodEnum)order.PaymentMethodId,
+            order.PaymentMethodId.HasValue ? (PaymentMethodEnum)order.PaymentMethodId.Value : null,
             order.AmountReceived,
             order.ChangeAmount,
-            order.Tips
+            order.Tips,
+            order.OrderItems.Sum(oi => oi.Product.Price * oi.Quantity)
         );
     }
 }

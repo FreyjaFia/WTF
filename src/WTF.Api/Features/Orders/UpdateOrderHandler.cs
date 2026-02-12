@@ -13,7 +13,8 @@ public class UpdateOrderHandler(WTFDbContext db) : IRequestHandler<UpdateOrderCo
 {
     public async Task<OrderDto?> Handle(UpdateOrderCommand request, CancellationToken cancellationToken)
     {
-        var order = await db.Orders.Include(o => o.OrderItems)
+        var order = await db.Orders
+            .Include(o => o.OrderItems)
             .FirstOrDefaultAsync(o => o.Id == request.Id, cancellationToken);
 
         if (order is null)
@@ -23,7 +24,7 @@ public class UpdateOrderHandler(WTFDbContext db) : IRequestHandler<UpdateOrderCo
 
         order.CustomerId = request.CustomerId;
         order.StatusId = (int)request.Status;
-        order.PaymentMethodId = (int)request.PaymentMethod;
+        order.PaymentMethodId = request.PaymentMethod.HasValue ? (int)request.PaymentMethod.Value : null;
         order.AmountReceived = request.AmountReceived;
         order.ChangeAmount = request.ChangeAmount;
         order.Tips = request.Tips;
@@ -47,8 +48,14 @@ public class UpdateOrderHandler(WTFDbContext db) : IRequestHandler<UpdateOrderCo
 
         var items = await db.OrderItems
             .Where(oi => oi.OrderId == order.Id)
+            .Include(oi => oi.Product)
             .Select(oi => new OrderItemDto(oi.Id, oi.ProductId, oi.Quantity))
             .ToListAsync(cancellationToken);
+
+        var totalAmount = await db.OrderItems
+            .Where(oi => oi.OrderId == order.Id)
+            .Include(oi => oi.Product)
+            .SumAsync(oi => oi.Product.Price * oi.Quantity, cancellationToken);
 
         return new OrderDto(
             order.Id,
@@ -60,10 +67,11 @@ public class UpdateOrderHandler(WTFDbContext db) : IRequestHandler<UpdateOrderCo
             items,
             order.CustomerId,
             (OrderStatusEnum)order.StatusId,
-            (PaymentMethodEnum)order.PaymentMethodId,
+            order.PaymentMethodId.HasValue ? (PaymentMethodEnum)order.PaymentMethodId.Value : null,
             order.AmountReceived,
             order.ChangeAmount,
-            order.Tips
+            order.Tips,
+            totalAmount
         );
     }
 }
