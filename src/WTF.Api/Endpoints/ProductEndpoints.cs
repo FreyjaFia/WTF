@@ -9,8 +9,8 @@ public static class ProductEndpoints
 {
     public static IEndpointRouteBuilder MapProducts(this IEndpointRouteBuilder app)
     {
-        var productGroup = app.MapGroup("/api/products")
-            .RequireAuthorization(); // All product endpoints require authentication
+        var productGroup = app.MapGroup("/api/products");
+            //.RequireAuthorization(); // All product endpoints require authentication
 
         // GET /api/products - Get all products (with pagination and filters)
         productGroup.MapGet("/", 

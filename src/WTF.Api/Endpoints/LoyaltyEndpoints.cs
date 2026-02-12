@@ -1,7 +1,6 @@
 ﻿using MediatR;
-using WTF.Contracts.Loyalty.GenerateShortLink;
-using WTF.Contracts.Loyalty.GetLoyaltyPoints;
-using WTF.Contracts.Loyalty.RedirectToLoyalty;
+using WTF.Contracts.Loyalty.Commands;
+using WTF.Contracts.Loyalty.Queries;
 
 namespace WTF.Api.Endpoints;
 

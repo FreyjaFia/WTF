@@ -1,7 +1,7 @@
 using MediatR;
-using Microsoft.AspNetCore.Authorization;
-using WTF.Contracts.Auth.Login;
-using WTF.Contracts.Auth.Validate;
+using WTF.Contracts.Auth;
+using WTF.Contracts.Auth.Commands;
+using WTF.Contracts.Auth.Queries;
 
 namespace WTF.Api.Endpoints;
 
@@ -18,13 +18,44 @@ public static class AuthEndpoints
                 return result is not null ? Results.Ok(result) : Results.Unauthorized();
             });
 
-        authGroup.MapGet("/validate",
-            [Authorize] () =>
+        authGroup.MapPost("/logout", async (RefreshTokenRequestDto request, IMediator mediator) =>
+        {
+            var result = await mediator.Send(new LogoutCommand(request.RefreshToken));
+
+            if (!result)
             {
-                var response = new ValidateTokenDto(true, "Token is valid", DateTime.UtcNow);
-                return Results.Ok(response);
-            })
-            .RequireAuthorization();
+                return Results.BadRequest(new { Message = "Invalid refresh token" });
+            }
+
+            return Results.Ok(new { Message = "Logged out successfully" });
+        });
+
+        authGroup.MapPost("/refresh", async (RefreshTokenRequestDto request, IMediator mediator) =>
+        {
+            var result = await mediator.Send(new RefreshTokenCommand(request.RefreshToken));
+
+            if (result is null)
+            {
+                return Results.Unauthorized();
+            }
+
+            return Results.Ok(result);
+        });
+
+        authGroup.MapPost("/validate", async (HttpRequest httpRequest, IMediator mediator) =>
+        {
+            var authHeader = httpRequest.Headers.Authorization.ToString();
+
+            if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Bearer "))
+            {
+                return Results.BadRequest(new { Message = "Invalid authorization header" });
+            }
+
+            var token = authHeader["Bearer ".Length..].Trim();
+            var result = await mediator.Send(new ValidateTokenQuery(token));
+
+            return Results.Ok(result);
+        });
 
         return app;
     }
