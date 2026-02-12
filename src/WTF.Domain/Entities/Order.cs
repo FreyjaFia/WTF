@@ -27,7 +27,7 @@ public partial class Order
 
     public int StatusId { get; set; }
 
-    public int PaymentMethodId { get; set; }
+    public int? PaymentMethodId { get; set; }
 
     public virtual User CreatedByNavigation { get; set; } = null!;
 
@@ -35,7 +35,7 @@ public partial class Order
 
     public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
 
-    public virtual PaymentMethod PaymentMethod { get; set; } = null!;
+    public virtual PaymentMethod? PaymentMethod { get; set; }
 
     public virtual Status Status { get; set; } = null!;
 

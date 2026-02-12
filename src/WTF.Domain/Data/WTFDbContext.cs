@@ -105,7 +105,6 @@ public partial class WTFDbContext : DbContext
 
             entity.HasOne(d => d.PaymentMethod).WithMany(p => p.Orders)
                 .HasForeignKey(d => d.PaymentMethodId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Orders_PaymentMethods");
 
             entity.HasOne(d => d.Status).WithMany(p => p.Orders)
