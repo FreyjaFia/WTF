@@ -13,8 +13,9 @@ public record OrderDto(
     List<OrderItemDto> Items,
     Guid? CustomerId,
     OrderStatusEnum Status,
-    PaymentMethodEnum PaymentMethod,
+    PaymentMethodEnum? PaymentMethod,
     decimal? AmountReceived,
     decimal? ChangeAmount,
-    decimal? Tips
+    decimal? Tips,
+    decimal TotalAmount
 );

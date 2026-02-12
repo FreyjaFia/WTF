@@ -19,8 +19,7 @@ public record UpdateOrderCommand : IRequest<OrderDto?>
     [Required]
     public OrderStatusEnum Status { get; init; }
 
-    [Required]
-    public PaymentMethodEnum PaymentMethod { get; init; }
+    public PaymentMethodEnum? PaymentMethod { get; init; }
 
     public decimal? AmountReceived { get; init; }
 
