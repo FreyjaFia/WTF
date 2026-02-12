@@ -1,6 +1,5 @@
 using MediatR;
-using WTF.Contracts.Loyalty.RedirectToLoyalty;
 
-namespace WTF.Contracts.Loyalty.RedirectToLoyalty;
+namespace WTF.Contracts.Loyalty.Queries;
 
 public record RedirectToLoyaltyQuery(string Token) : IRequest<RedirectToLoyaltyDto>;

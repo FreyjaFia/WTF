@@ -1,4 +1,4 @@
-namespace WTF.Contracts.Loyalty.ShortenLoyalty;
+namespace WTF.Contracts.Loyalty;
 
 public record ShortenLoyaltyDto(Guid CustomerId, int Points, string FirstName, string LastName)
 {

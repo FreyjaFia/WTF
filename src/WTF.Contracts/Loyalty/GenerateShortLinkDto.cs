@@ -1,3 +1,3 @@
-namespace WTF.Contracts.Loyalty.GenerateShortLink;
+namespace WTF.Contracts.Loyalty;
 
 public record GenerateShortLinkDto(string Token);

@@ -1,4 +1,4 @@
-namespace WTF.Contracts.Loyalty.GetLoyaltyPoints;
+namespace WTF.Contracts.Loyalty;
 
 public record GetLoyaltyPointsDto(Guid CustomerId, int Points, string FirstName, string LastName)
 {

@@ -12,5 +12,9 @@ public record OrderDto(
     Guid? UpdatedBy,
     List<OrderItemDto> Items,
     Guid? CustomerId,
-    OrderStatusEnum Status
+    OrderStatusEnum Status,
+    PaymentMethodEnum PaymentMethod,
+    decimal? AmountReceived,
+    decimal? ChangeAmount,
+    decimal? Tips
 );
