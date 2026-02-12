@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace WTF.Contracts.Auth.Login;
+namespace WTF.Contracts.Auth;
 
 public class LoginRequestDto
 {

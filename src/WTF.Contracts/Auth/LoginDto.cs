@@ -1,3 +1,7 @@
-namespace WTF.Contracts.Auth.Login;
+namespace WTF.Contracts.Auth;
 
-public record LoginDto(string AccessToken);
+public record LoginDto(
+    string AccessToken,
+    string RefreshToken,
+    DateTime ExpiresAt
+);

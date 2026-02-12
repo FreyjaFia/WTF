@@ -1,3 +1,3 @@
-namespace WTF.Contracts.Auth.Validate;
+namespace WTF.Contracts.Auth;
 
-public record ValidateTokenDto(bool IsValid, string Message, DateTime Timestamp);
+public record ValidateTokenDto(bool IsValid);
