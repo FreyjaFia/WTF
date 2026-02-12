@@ -1,7 +1,8 @@
 ﻿using MediatR;
+using WTF.Contracts.Loyalty;
+using WTF.Contracts.Loyalty.Commands;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
-using WTF.Contracts.Loyalty.GenerateShortLink;
 
 namespace WTF.Api.Features.Loyalty;
 

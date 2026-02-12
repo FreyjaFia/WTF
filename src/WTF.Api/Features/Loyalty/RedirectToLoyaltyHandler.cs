@@ -1,7 +1,8 @@
 ﻿using MediatR;
 using Microsoft.EntityFrameworkCore;
+using WTF.Contracts.Loyalty;
+using WTF.Contracts.Loyalty.Queries;
 using WTF.Domain.Data;
-using WTF.Contracts.Loyalty.RedirectToLoyalty;
 
 namespace WTF.Api.Features.Loyalty;
 
