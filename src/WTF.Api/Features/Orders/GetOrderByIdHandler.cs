@@ -23,7 +23,7 @@ public class GetOrderByIdHandler(WTFDbContext db) : IRequestHandler<GetOrderById
         }
 
         var items = order.OrderItems
-            .Select(oi => new OrderItemDto(oi.Id, oi.ProductId, oi.Quantity))
+            .Select(oi => new OrderItemDto(oi.Id, oi.ProductId, oi.Quantity, oi.Price))
             .ToList();
 
         return new OrderDto(
@@ -40,7 +40,7 @@ public class GetOrderByIdHandler(WTFDbContext db) : IRequestHandler<GetOrderById
             order.AmountReceived,
             order.ChangeAmount,
             order.Tips,
-            order.OrderItems.Sum(oi => oi.Product.Price * oi.Quantity)
+            order.OrderItems.Sum(oi => (oi.Price ?? oi.Product.Price) * oi.Quantity)
         );
     }
 }

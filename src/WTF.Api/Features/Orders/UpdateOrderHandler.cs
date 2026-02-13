@@ -15,12 +15,16 @@ public class UpdateOrderHandler(WTFDbContext db) : IRequestHandler<UpdateOrderCo
     {
         var order = await db.Orders
             .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.Product)
             .FirstOrDefaultAsync(o => o.Id == request.Id, cancellationToken);
 
         if (order is null)
         {
             return null;
         }
+
+        var oldStatus = (OrderStatusEnum)order.StatusId;
+        var newStatus = request.Status;
 
         order.CustomerId = request.CustomerId;
         order.StatusId = (int)request.Status;
@@ -30,18 +34,41 @@ public class UpdateOrderHandler(WTFDbContext db) : IRequestHandler<UpdateOrderCo
         order.Tips = request.Tips;
         order.UpdatedAt = DateTime.UtcNow;
 
+        // Capture price snapshot when order changes to Completed or Cancelled
+        if (oldStatus == OrderStatusEnum.Pending && 
+            (newStatus == OrderStatusEnum.Completed || newStatus == OrderStatusEnum.Cancelled))
+        {
+            foreach (var orderItem in order.OrderItems)
+            {
+                orderItem.Price ??= orderItem.Product.Price;
+            }
+        }
+
         // Update items: remove old, add new
         db.OrderItems.RemoveRange(order.OrderItems);
         await db.SaveChangesAsync(cancellationToken);
 
         foreach (var item in request.Items)
         {
-            db.OrderItems.Add(new OrderItem
+            var newItem = new OrderItem
             {
                 OrderId = order.Id,
                 ProductId = item.ProductId,
-                Quantity = item.Quantity
-            });
+                Quantity = item.Quantity,
+                Price = item.Price
+            };
+
+            // If completing order and price not set, capture current product price
+            if (newStatus == OrderStatusEnum.Completed || newStatus == OrderStatusEnum.Cancelled)
+            {
+                if (newItem.Price == null)
+                {
+                    var product = await db.Products.FindAsync([item.ProductId], cancellationToken);
+                    newItem.Price = product?.Price;
+                }
+            }
+
+            db.OrderItems.Add(newItem);
         }
 
         await db.SaveChangesAsync(cancellationToken);
@@ -49,13 +76,13 @@ public class UpdateOrderHandler(WTFDbContext db) : IRequestHandler<UpdateOrderCo
         var items = await db.OrderItems
             .Where(oi => oi.OrderId == order.Id)
             .Include(oi => oi.Product)
-            .Select(oi => new OrderItemDto(oi.Id, oi.ProductId, oi.Quantity))
+            .Select(oi => new OrderItemDto(oi.Id, oi.ProductId, oi.Quantity, oi.Price))
             .ToListAsync(cancellationToken);
 
         var totalAmount = await db.OrderItems
             .Where(oi => oi.OrderId == order.Id)
             .Include(oi => oi.Product)
-            .SumAsync(oi => oi.Product.Price * oi.Quantity, cancellationToken);
+            .SumAsync(oi => (oi.Price ?? oi.Product.Price) * oi.Quantity, cancellationToken);
 
         return new OrderDto(
             order.Id,

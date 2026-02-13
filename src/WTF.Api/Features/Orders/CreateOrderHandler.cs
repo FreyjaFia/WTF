@@ -34,25 +34,38 @@ public class CreateOrderHandler(WTFDbContext db, IHttpContextAccessor httpContex
         // Add order items
         foreach (var item in request.Items)
         {
-            db.OrderItems.Add(new OrderItem
+            var orderItem = new OrderItem
             {
                 OrderId = order.Id,
                 ProductId = item.ProductId,
-                Quantity = item.Quantity
-            });
+                Quantity = item.Quantity,
+                Price = item.Price
+            };
+
+            // If order is Completed or Cancelled, capture price if not already set
+            if (request.Status == OrderStatusEnum.Completed || request.Status == OrderStatusEnum.Cancelled)
+            {
+                if (orderItem.Price == null)
+                {
+                    var product = await db.Products.FindAsync([item.ProductId], cancellationToken);
+                    orderItem.Price = product?.Price;
+                }
+            }
+
+            db.OrderItems.Add(orderItem);
         }
         await db.SaveChangesAsync(cancellationToken);
 
         var items = await db.OrderItems
             .Where(oi => oi.OrderId == order.Id)
             .Include(oi => oi.Product)
-            .Select(oi => new OrderItemDto(oi.Id, oi.ProductId, oi.Quantity))
+            .Select(oi => new OrderItemDto(oi.Id, oi.ProductId, oi.Quantity, oi.Price))
             .ToListAsync(cancellationToken);
 
         var totalAmount = await db.OrderItems
             .Where(oi => oi.OrderId == order.Id)
             .Include(oi => oi.Product)
-            .SumAsync(oi => oi.Product.Price * oi.Quantity, cancellationToken);
+            .SumAsync(oi => (oi.Price ?? oi.Product.Price) * oi.Quantity, cancellationToken);
 
         return new OrderDto(
             order.Id,

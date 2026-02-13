@@ -38,14 +38,14 @@ public class GetOrdersHandler(WTFDbContext db) : IRequestHandler<GetOrdersQuery,
             o.CreatedBy,
             o.UpdatedAt,
             o.UpdatedBy,
-            [.. o.OrderItems.Select(oi => new OrderItemDto(oi.Id, oi.ProductId, oi.Quantity))],
+            [.. o.OrderItems.Select(oi => new OrderItemDto(oi.Id, oi.ProductId, oi.Quantity, oi.Price))],
             o.CustomerId,
             (OrderStatusEnum)o.StatusId,
             o.PaymentMethodId.HasValue ? (PaymentMethodEnum)o.PaymentMethodId.Value : null,
             o.AmountReceived,
             o.ChangeAmount,
             o.Tips,
-            o.OrderItems.Sum(oi => oi.Product.Price * oi.Quantity)
+            o.OrderItems.Sum(oi => (oi.Price ?? oi.Product.Price) * oi.Quantity)
         ))];
     }
 }
