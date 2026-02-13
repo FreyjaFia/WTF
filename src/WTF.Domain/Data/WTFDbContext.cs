@@ -30,9 +30,11 @@ public partial class WTFDbContext : DbContext
 
     public virtual DbSet<Product> Products { get; set; }
 
+    public virtual DbSet<ProductCategory> ProductCategories { get; set; }
+
     public virtual DbSet<ProductImage> ProductImages { get; set; }
 
-    public virtual DbSet<ProductType> ProductTypes { get; set; }
+    public virtual DbSet<ProductPriceHistory> ProductPriceHistories { get; set; }
 
     public virtual DbSet<RefreshToken> RefreshTokens { get; set; }
 
@@ -124,6 +126,7 @@ public partial class WTFDbContext : DbContext
             entity.HasIndex(e => e.ProductId, "IX_OrderItems_ProductId");
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
+            entity.Property(e => e.Price).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.Quantity).HasDefaultValue(1);
 
             entity.HasOne(d => d.Order).WithMany(p => p.OrderItems)
@@ -147,11 +150,11 @@ public partial class WTFDbContext : DbContext
 
         modelBuilder.Entity<Product>(entity =>
         {
+            entity.HasIndex(e => e.CategoryId, "IX_Products_CategoryId");
+
             entity.HasIndex(e => e.CreatedBy, "IX_Products_CreatedBy");
 
             entity.HasIndex(e => e.IsAddOn, "IX_Products_IsAddOn");
-
-            entity.HasIndex(e => e.TypeId, "IX_Products_TypeId");
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
             entity.Property(e => e.CreatedAt)
@@ -164,19 +167,27 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.Price).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.UpdatedAt).HasColumnType("datetime");
 
+            entity.HasOne(d => d.Category).WithMany(p => p.Products)
+                .HasForeignKey(d => d.CategoryId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Products_ProductCategories");
+
             entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.ProductCreatedByNavigations)
                 .HasForeignKey(d => d.CreatedBy)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Products_CreatedBy");
 
-            entity.HasOne(d => d.Type).WithMany(p => p.Products)
-                .HasForeignKey(d => d.TypeId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Products_TypeId");
-
             entity.HasOne(d => d.UpdatedByNavigation).WithMany(p => p.ProductUpdatedByNavigations)
                 .HasForeignKey(d => d.UpdatedBy)
                 .HasConstraintName("FK_Products_UpdatedBy");
+        });
+
+        modelBuilder.Entity<ProductCategory>(entity =>
+        {
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.Name)
+                .HasMaxLength(50)
+                .IsUnicode(false);
         });
 
         modelBuilder.Entity<ProductImage>(entity =>
@@ -198,12 +209,29 @@ public partial class WTFDbContext : DbContext
                 .HasConstraintName("FK_ProductImages_Products");
         });
 
-        modelBuilder.Entity<ProductType>(entity =>
+        modelBuilder.Entity<ProductPriceHistory>(entity =>
         {
-            entity.Property(e => e.Id).ValueGeneratedNever();
-            entity.Property(e => e.Name)
-                .HasMaxLength(50)
-                .IsUnicode(false);
+            entity.ToTable("ProductPriceHistory");
+
+            entity.HasIndex(e => e.ProductId, "IX_ProductPriceHistory_ProductId");
+
+            entity.HasIndex(e => e.UpdatedAt, "IX_ProductPriceHistory_UpdatedAt").IsDescending();
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
+            entity.Property(e => e.NewPrice).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.OldPrice).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.UpdatedAt)
+                .HasDefaultValueSql("(getutcdate())")
+                .HasColumnType("datetime");
+
+            entity.HasOne(d => d.Product).WithMany(p => p.ProductPriceHistories)
+                .HasForeignKey(d => d.ProductId)
+                .HasConstraintName("FK_ProductPriceHistory_Product");
+
+            entity.HasOne(d => d.UpdatedByNavigation).WithMany(p => p.ProductPriceHistories)
+                .HasForeignKey(d => d.UpdatedBy)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ProductPriceHistory_UpdatedBy");
         });
 
         modelBuilder.Entity<RefreshToken>(entity =>

@@ -4,7 +4,7 @@ using WTF.Api.Common.Extensions;
 using WTF.Contracts.Products;
 using WTF.Contracts.Products.Queries;
 using WTF.Domain.Data;
-using ContractEnum = WTF.Contracts.Products.Enums.ProductTypeEnum;
+using ContractEnum = WTF.Contracts.Products.Enums.ProductCategoryEnum;
 
 namespace WTF.Api.Features.Products;
 
@@ -29,18 +29,34 @@ public class GetProductByIdHandler(WTFDbContext db, IHttpContextAccessor httpCon
 
         imageUrl = UrlExtensions.ToAbsoluteUrl(httpContextAccessor, imageUrl);
 
+        var priceHistory = await db.ProductPriceHistories
+            .Include(h => h.UpdatedByNavigation)
+            .Where(h => h.ProductId == request.Id)
+            .OrderByDescending(h => h.UpdatedAt)
+            .Select(h => new ProductPriceHistoryDto(
+                h.Id,
+                h.ProductId,
+                h.OldPrice,
+                h.NewPrice,
+                h.UpdatedAt,
+                h.UpdatedBy,
+                $"{h.UpdatedByNavigation.FirstName} {h.UpdatedByNavigation.LastName}"
+            ))
+            .ToListAsync(cancellationToken);
+
         return new ProductDto(
             product.Id,
             product.Name,
             product.Price,
-            (ContractEnum)product.TypeId,
+            (ContractEnum)product.CategoryId,
             product.IsAddOn,
             product.IsActive,
             product.CreatedAt,
             product.CreatedBy,
             product.UpdatedAt,
             product.UpdatedBy,
-            imageUrl
+            imageUrl,
+            priceHistory
         );
     }
 }
