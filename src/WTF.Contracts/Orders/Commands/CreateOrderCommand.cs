@@ -11,7 +11,7 @@ public record CreateOrderCommand : IRequest<OrderDto>
     public Guid? CustomerId { get; init; }
 
     [Required]
-    public List<OrderItemDto> Items { get; init; } = [];
+    public List<OrderItemRequestDto> Items { get; init; } = [];
 
     [Required]
     public OrderStatusEnum Status { get; init; }
