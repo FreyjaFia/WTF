@@ -6,6 +6,8 @@ namespace WTF.Api.Endpoints;
 
 public static class ProductEndpoints
 {
+    private static readonly string[] imageTypes = [".jpg", ".jpeg", ".png", ".gif", ".webp"];
+
     public static IEndpointRouteBuilder MapProducts(this IEndpointRouteBuilder app)
     {
         var productGroup = app.MapGroup("/api/products")
@@ -76,7 +78,7 @@ public static class ProductEndpoints
                 }
 
                 // Validate file type (only images)
-                var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
+                var allowedExtensions = imageTypes;
                 var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
 
                 if (!allowedExtensions.Contains(extension))
@@ -100,6 +102,27 @@ public static class ProductEndpoints
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             })
             .DisableAntiforgery();
+
+        // GET /api/products/{id}/addons - Get available add-ons for a product
+        productGroup.MapGet("/{id:guid}/addons",
+            async (Guid id, ISender sender) =>
+            {
+                var result = await sender.Send(new GetProductAddOnsQuery(id));
+                return Results.Ok(result);
+            });
+
+        // POST /api/products/{id}/addons - Assign add-ons to a product
+        productGroup.MapPost("/{id:guid}/addons",
+            async (Guid id, AssignProductAddOnsCommand command, ISender sender) =>
+            {
+                if (id != command.ProductId)
+                {
+                    return Results.BadRequest("Product ID mismatch");
+                }
+
+                var result = await sender.Send(command);
+                return result ? Results.Ok() : Results.NotFound();
+            });
 
         return app;
     }
