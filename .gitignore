@@ -361,3 +361,7 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Product images
+src/WTF.Api/wwwroot/images/products/*
+!src/WTF.Api/wwwroot/images/products/.gitkeep
