@@ -32,8 +32,8 @@ public class UploadProductImageHandler(WTFDbContext db, IWebHostEnvironment env,
         var extension = Path.GetExtension(request.FileName);
         var fileName = $"{productNameSlug}_{Guid.NewGuid():N}{extension}";
 
-        // Ensure wwwroot/images directory exists
-        var imagesPath = Path.Combine(env.WebRootPath, "images");
+        // Ensure wwwroot/images/products directory exists
+        var imagesPath = Path.Combine(env.WebRootPath, "images", "products");
         if (!Directory.Exists(imagesPath))
         {
             Directory.CreateDirectory(imagesPath);
@@ -45,7 +45,7 @@ public class UploadProductImageHandler(WTFDbContext db, IWebHostEnvironment env,
         await File.WriteAllBytesAsync(filePath, request.ImageData, cancellationToken);
 
         // Generate relative URL
-        var imageUrl = $"/images/{fileName}";
+        var imageUrl = $"/products/images/{fileName}";
 
         // Delete old image if exists
         if (product.ProductImage != null)
