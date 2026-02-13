@@ -1,6 +1,6 @@
 namespace WTF.Contracts.Products.Enums;
 
-public enum ProductTypeEnum
+public enum ProductCategoryEnum
 {
     Drink = 0,
     Food = 1,

@@ -11,7 +11,7 @@ public partial class Product
 
     public decimal Price { get; set; }
 
-    public int TypeId { get; set; }
+    public int CategoryId { get; set; }
 
     public bool IsAddOn { get; set; }
 
@@ -25,13 +25,15 @@ public partial class Product
 
     public Guid? UpdatedBy { get; set; }
 
+    public virtual ProductCategory Category { get; set; } = null!;
+
     public virtual User CreatedByNavigation { get; set; } = null!;
 
     public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
 
     public virtual ProductImage? ProductImage { get; set; }
 
-    public virtual ProductType Type { get; set; } = null!;
+    public virtual ICollection<ProductPriceHistory> ProductPriceHistories { get; set; } = new List<ProductPriceHistory>();
 
     public virtual User? UpdatedByNavigation { get; set; }
 }

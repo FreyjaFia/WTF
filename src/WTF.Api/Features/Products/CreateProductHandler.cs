@@ -4,7 +4,7 @@ using WTF.Contracts.Products;
 using WTF.Contracts.Products.Commands;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
-using ContractEnum = WTF.Contracts.Products.Enums.ProductTypeEnum;
+using ContractEnum = WTF.Contracts.Products.Enums.ProductCategoryEnum;
 
 namespace WTF.Api.Features.Products;
 
@@ -18,11 +18,11 @@ public class CreateProductHandler(WTFDbContext db, IHttpContextAccessor httpCont
         {
             Name = request.Name,
             Price = request.Price,
-            TypeId = (int)request.Type, // Store as int
+            CategoryId = (int)request.Category,
             IsAddOn = request.IsAddOn,
             IsActive = request.IsActive,
             CreatedAt = DateTime.UtcNow,
-            CreatedBy = userId // TODO: Get from authenticated user context
+            CreatedBy = userId
         };
 
         db.Products.Add(product);
@@ -32,14 +32,15 @@ public class CreateProductHandler(WTFDbContext db, IHttpContextAccessor httpCont
             product.Id,
             product.Name,
             product.Price,
-            (ContractEnum)product.TypeId, // Convert int to contract enum
+            (ContractEnum)product.CategoryId,
             product.IsAddOn,
             product.IsActive,
             product.CreatedAt,
             product.CreatedBy,
             product.UpdatedAt,
             product.UpdatedBy,
-            null // Set ImageUrl to null
+            null,
+            []
         );
     }
 }

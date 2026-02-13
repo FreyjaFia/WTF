@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace WTF.Domain.Entities;
 
-public partial class ProductType
+public partial class ProductCategory
 {
     public int Id { get; set; }
 

@@ -17,8 +17,8 @@ public record UpdateProductCommand : IRequest<ProductDto?>
     [Range(0.01, 999999.99, ErrorMessage = "Price must be between 0.01 and 999,999.99")]
     public decimal Price { get; init; }
 
-    [Required(ErrorMessage = "Product type is required")]
-    public ProductTypeEnum Type { get; init; }
+    [Required(ErrorMessage = "Product category is required")]
+    public ProductCategoryEnum Category { get; init; }
 
     public bool IsAddOn { get; init; }
 

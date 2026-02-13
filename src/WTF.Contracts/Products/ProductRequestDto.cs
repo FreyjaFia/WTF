@@ -11,8 +11,8 @@ public class ProductRequestDto
     [Range(0, double.MaxValue, ErrorMessage = "Price must be non-negative")]
     public decimal Price { get; set; }
 
-    [Required(ErrorMessage = "Product type is required")]
-    public ProductTypeEnum Type { get; set; }
+    [Required(ErrorMessage = "Product category is required")]
+    public ProductCategoryEnum Category { get; set; }
 
     public bool IsAddOn { get; set; }
     public bool IsActive { get; set; }

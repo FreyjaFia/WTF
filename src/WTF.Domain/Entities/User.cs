@@ -23,6 +23,8 @@ public partial class User
 
     public virtual ICollection<Product> ProductCreatedByNavigations { get; set; } = new List<Product>();
 
+    public virtual ICollection<ProductPriceHistory> ProductPriceHistories { get; set; } = new List<ProductPriceHistory>();
+
     public virtual ICollection<Product> ProductUpdatedByNavigations { get; set; } = new List<Product>();
 
     public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
