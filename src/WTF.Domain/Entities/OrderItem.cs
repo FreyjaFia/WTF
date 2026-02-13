@@ -15,7 +15,13 @@ public partial class OrderItem
 
     public decimal? Price { get; set; }
 
+    public Guid? ParentOrderItemId { get; set; }
+
+    public virtual ICollection<OrderItem> InverseParentOrderItem { get; set; } = new List<OrderItem>();
+
     public virtual Order Order { get; set; } = null!;
+
+    public virtual OrderItem? ParentOrderItem { get; set; }
 
     public virtual Product Product { get; set; } = null!;
 }

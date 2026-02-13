@@ -123,6 +123,8 @@ public partial class WTFDbContext : DbContext
         {
             entity.HasIndex(e => e.OrderId, "IX_OrderItems_OrderId");
 
+            entity.HasIndex(e => e.ParentOrderItemId, "IX_OrderItems_ParentOrderItemId");
+
             entity.HasIndex(e => e.ProductId, "IX_OrderItems_ProductId");
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
@@ -132,6 +134,10 @@ public partial class WTFDbContext : DbContext
             entity.HasOne(d => d.Order).WithMany(p => p.OrderItems)
                 .HasForeignKey(d => d.OrderId)
                 .HasConstraintName("FK_OrderItems_Order");
+
+            entity.HasOne(d => d.ParentOrderItem).WithMany(p => p.InverseParentOrderItem)
+                .HasForeignKey(d => d.ParentOrderItemId)
+                .HasConstraintName("FK_OrderItems_ParentOrderItem");
 
             entity.HasOne(d => d.Product).WithMany(p => p.OrderItems)
                 .HasForeignKey(d => d.ProductId)
@@ -180,6 +186,42 @@ public partial class WTFDbContext : DbContext
             entity.HasOne(d => d.UpdatedByNavigation).WithMany(p => p.ProductUpdatedByNavigations)
                 .HasForeignKey(d => d.UpdatedBy)
                 .HasConstraintName("FK_Products_UpdatedBy");
+
+            entity.HasMany(d => d.AddOns).WithMany(p => p.Products)
+                .UsingEntity<Dictionary<string, object>>(
+                    "ProductAddOn",
+                    r => r.HasOne<Product>().WithMany()
+                        .HasForeignKey("AddOnId")
+                        .OnDelete(DeleteBehavior.ClientSetNull)
+                        .HasConstraintName("FK_ProductAddOns_AddOn"),
+                    l => l.HasOne<Product>().WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.ClientSetNull)
+                        .HasConstraintName("FK_ProductAddOns_Product"),
+                    j =>
+                    {
+                        j.HasKey("ProductId", "AddOnId");
+                        j.ToTable("ProductAddOns", tb => tb.HasTrigger("TR_ProductAddOns_ValidateAddOn"));
+                        j.HasIndex(new[] { "AddOnId" }, "IX_ProductAddOns_AddOnId");
+                    });
+
+            entity.HasMany(d => d.Products).WithMany(p => p.AddOns)
+                .UsingEntity<Dictionary<string, object>>(
+                    "ProductAddOn",
+                    r => r.HasOne<Product>().WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.ClientSetNull)
+                        .HasConstraintName("FK_ProductAddOns_Product"),
+                    l => l.HasOne<Product>().WithMany()
+                        .HasForeignKey("AddOnId")
+                        .OnDelete(DeleteBehavior.ClientSetNull)
+                        .HasConstraintName("FK_ProductAddOns_AddOn"),
+                    j =>
+                    {
+                        j.HasKey("ProductId", "AddOnId");
+                        j.ToTable("ProductAddOns", tb => tb.HasTrigger("TR_ProductAddOns_ValidateAddOn"));
+                        j.HasIndex(new[] { "AddOnId" }, "IX_ProductAddOns_AddOnId");
+                    });
         });
 
         modelBuilder.Entity<ProductCategory>(entity =>

@@ -36,4 +36,8 @@ public partial class Product
     public virtual ICollection<ProductPriceHistory> ProductPriceHistories { get; set; } = new List<ProductPriceHistory>();
 
     public virtual User? UpdatedByNavigation { get; set; }
+
+    public virtual ICollection<Product> AddOns { get; set; } = new List<Product>();
+
+    public virtual ICollection<Product> Products { get; set; } = new List<Product>();
 }
