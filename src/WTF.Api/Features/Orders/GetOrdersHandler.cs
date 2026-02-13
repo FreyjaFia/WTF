@@ -13,8 +13,11 @@ public class GetOrdersHandler(WTFDbContext db) : IRequestHandler<GetOrdersQuery,
     public async Task<List<OrderDto>> Handle(GetOrdersQuery request, CancellationToken cancellationToken)
     {
         var query = db.Orders
-            .Include(o => o.OrderItems)
+            .Include(o => o.OrderItems.Where(oi => oi.ParentOrderItemId == null))
                 .ThenInclude(oi => oi.Product)
+            .Include(o => o.OrderItems.Where(oi => oi.ParentOrderItemId == null))
+                .ThenInclude(oi => oi.InverseParentOrderItem)
+                    .ThenInclude(child => child.Product)
             .AsQueryable();
 
         if (request.CustomerId.HasValue)
@@ -38,7 +41,23 @@ public class GetOrdersHandler(WTFDbContext db) : IRequestHandler<GetOrdersQuery,
             o.CreatedBy,
             o.UpdatedAt,
             o.UpdatedBy,
-            [.. o.OrderItems.Select(oi => new OrderItemDto(oi.Id, oi.ProductId, oi.Quantity, oi.Price))],
+            [.. o.OrderItems
+                .Where(oi => oi.ParentOrderItemId == null)
+                .Select(oi => new OrderItemDto(
+                    oi.Id,
+                    oi.ProductId,
+                    oi.Product.Name,
+                    oi.Quantity,
+                    oi.Price,
+                    [.. oi.InverseParentOrderItem.Select(child => new OrderItemDto(
+                        child.Id,
+                        child.ProductId,
+                        child.Product.Name,
+                        child.Quantity,
+                        child.Price,
+                        []
+                    ))]
+                ))],
             o.CustomerId,
             (OrderStatusEnum)o.StatusId,
             o.PaymentMethodId.HasValue ? (PaymentMethodEnum)o.PaymentMethodId.Value : null,

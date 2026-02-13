@@ -13,8 +13,11 @@ public class GetOrderByIdHandler(WTFDbContext db) : IRequestHandler<GetOrderById
     public async Task<OrderDto?> Handle(GetOrderByIdQuery request, CancellationToken cancellationToken)
     {
         var order = await db.Orders
-            .Include(o => o.OrderItems)
+            .Include(o => o.OrderItems.Where(oi => oi.ParentOrderItemId == null))
                 .ThenInclude(oi => oi.Product)
+            .Include(o => o.OrderItems.Where(oi => oi.ParentOrderItemId == null))
+                .ThenInclude(oi => oi.InverseParentOrderItem)
+                    .ThenInclude(child => child.Product)
             .FirstOrDefaultAsync(o => o.Id == request.Id, cancellationToken);
 
         if (order is null)
@@ -23,7 +26,22 @@ public class GetOrderByIdHandler(WTFDbContext db) : IRequestHandler<GetOrderById
         }
 
         var items = order.OrderItems
-            .Select(oi => new OrderItemDto(oi.Id, oi.ProductId, oi.Quantity, oi.Price))
+            .Where(oi => oi.ParentOrderItemId == null)
+            .Select(oi => new OrderItemDto(
+                oi.Id,
+                oi.ProductId,
+                oi.Product.Name,
+                oi.Quantity,
+                oi.Price,
+                oi.InverseParentOrderItem.Select(child => new OrderItemDto(
+                    child.Id,
+                    child.ProductId,
+                    child.Product.Name,
+                    child.Quantity,
+                    child.Price,
+                    new List<OrderItemDto>()
+                )).ToList()
+            ))
             .ToList();
 
         return new OrderDto(

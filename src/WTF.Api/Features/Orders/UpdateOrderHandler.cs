@@ -74,9 +74,25 @@ public class UpdateOrderHandler(WTFDbContext db) : IRequestHandler<UpdateOrderCo
         await db.SaveChangesAsync(cancellationToken);
 
         var items = await db.OrderItems
-            .Where(oi => oi.OrderId == order.Id)
+            .Where(oi => oi.OrderId == order.Id && oi.ParentOrderItemId == null)
             .Include(oi => oi.Product)
-            .Select(oi => new OrderItemDto(oi.Id, oi.ProductId, oi.Quantity, oi.Price))
+            .Include(oi => oi.InverseParentOrderItem)
+                .ThenInclude(child => child.Product)
+            .Select(oi => new OrderItemDto(
+                oi.Id,
+                oi.ProductId,
+                oi.Product.Name,
+                oi.Quantity,
+                oi.Price,
+                oi.InverseParentOrderItem.Select(child => new OrderItemDto(
+                    child.Id,
+                    child.ProductId,
+                    child.Product.Name,
+                    child.Quantity,
+                    child.Price,
+                    new List<OrderItemDto>()
+                )).ToList()
+            ))
             .ToListAsync(cancellationToken);
 
         var totalAmount = await db.OrderItems

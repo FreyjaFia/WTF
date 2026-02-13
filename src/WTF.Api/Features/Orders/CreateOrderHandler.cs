@@ -16,6 +16,15 @@ public class CreateOrderHandler(WTFDbContext db, IHttpContextAccessor httpContex
     {
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
 
+        // Validate no nested add-ons
+        foreach (var item in request.Items)
+        {
+            if (item.AddOns.Any(addOn => addOn.AddOns.Count != 0))
+            {
+                throw new InvalidOperationException("Nested add-ons are not allowed. Add-ons cannot have their own add-ons.");
+            }
+        }
+
         var order = new Order
         {
             CreatedAt = DateTime.UtcNow,
@@ -31,35 +40,86 @@ public class CreateOrderHandler(WTFDbContext db, IHttpContextAccessor httpContex
         db.Orders.Add(order);
         await db.SaveChangesAsync(cancellationToken);
 
-        // Add order items
+        // Add order items with parent-child relationships
         foreach (var item in request.Items)
         {
+            var product = await db.Products.FindAsync([item.ProductId], cancellationToken);
+
+            if (product == null)
+            {
+                throw new InvalidOperationException($"Product with ID {item.ProductId} not found.");
+            }
+
             var orderItem = new OrderItem
             {
                 OrderId = order.Id,
                 ProductId = item.ProductId,
                 Quantity = item.Quantity,
-                Price = item.Price
+                Price = null,
+                ParentOrderItemId = null
             };
 
-            // If order is Completed or Cancelled, capture price if not already set
+            // Capture price if order is Completed or Cancelled
             if (request.Status == OrderStatusEnum.Completed || request.Status == OrderStatusEnum.Cancelled)
             {
-                if (orderItem.Price == null)
-                {
-                    var product = await db.Products.FindAsync([item.ProductId], cancellationToken);
-                    orderItem.Price = product?.Price;
-                }
+                orderItem.Price = product.Price;
             }
 
             db.OrderItems.Add(orderItem);
+            await db.SaveChangesAsync(cancellationToken);
+
+            // Add child items (add-ons)
+            foreach (var addOn in item.AddOns)
+            {
+                var addOnProduct = await db.Products.FindAsync([addOn.ProductId], cancellationToken);
+
+                if (addOnProduct == null)
+                {
+                    throw new InvalidOperationException($"Add-on product with ID {addOn.ProductId} not found.");
+                }
+
+                var addOnOrderItem = new OrderItem
+                {
+                    OrderId = order.Id,
+                    ProductId = addOn.ProductId,
+                    Quantity = addOn.Quantity,
+                    Price = null,
+                    ParentOrderItemId = orderItem.Id
+                };
+
+                // Capture price if order is Completed or Cancelled
+                if (request.Status == OrderStatusEnum.Completed || request.Status == OrderStatusEnum.Cancelled)
+                {
+                    addOnOrderItem.Price = addOnProduct.Price;
+                }
+
+                db.OrderItems.Add(addOnOrderItem);
+            }
         }
+
         await db.SaveChangesAsync(cancellationToken);
 
+        // Get items with hierarchy
         var items = await db.OrderItems
-            .Where(oi => oi.OrderId == order.Id)
+            .Where(oi => oi.OrderId == order.Id && oi.ParentOrderItemId == null)
             .Include(oi => oi.Product)
-            .Select(oi => new OrderItemDto(oi.Id, oi.ProductId, oi.Quantity, oi.Price))
+            .Include(oi => oi.InverseParentOrderItem)
+                .ThenInclude(child => child.Product)
+            .Select(oi => new OrderItemDto(
+                oi.Id,
+                oi.ProductId,
+                oi.Product.Name,
+                oi.Quantity,
+                oi.Price,
+                oi.InverseParentOrderItem.Select(child => new OrderItemDto(
+                    child.Id,
+                    child.ProductId,
+                    child.Product.Name,
+                    child.Quantity,
+                    child.Price,
+                    new List<OrderItemDto>()
+                )).ToList()
+            ))
             .ToListAsync(cancellationToken);
 
         var totalAmount = await db.OrderItems
