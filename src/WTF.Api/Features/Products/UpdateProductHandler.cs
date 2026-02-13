@@ -26,6 +26,20 @@ public class UpdateProductHandler(WTFDbContext db, IHttpContextAccessor httpCont
 
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
 
+        // Validate IsAddOn change: Block changing from false to true if product has been used as parent item
+        if (!product.IsAddOn && request.IsAddOn)
+        {
+            var hasParentOrders = await db.OrderItems
+                .AnyAsync(oi => oi.ProductId == product.Id && oi.ParentOrderItemId == null, cancellationToken);
+
+            if (hasParentOrders)
+            {
+                throw new InvalidOperationException(
+                    "Cannot change product to add-on because it has been ordered as a main product. " +
+                    "Products with order history as main items cannot be converted to add-ons.");
+            }
+        }
+
         if (product.Price != request.Price)
         {
             var historyRecord = new ProductPriceHistory
