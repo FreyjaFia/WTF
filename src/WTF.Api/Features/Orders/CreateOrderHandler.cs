@@ -43,13 +43,7 @@ public class CreateOrderHandler(WTFDbContext db, IHttpContextAccessor httpContex
         // Add order items with parent-child relationships
         foreach (var item in request.Items)
         {
-            var product = await db.Products.FindAsync([item.ProductId], cancellationToken);
-
-            if (product == null)
-            {
-                throw new InvalidOperationException($"Product with ID {item.ProductId} not found.");
-            }
-
+            var product = await db.Products.FindAsync([item.ProductId], cancellationToken) ?? throw new InvalidOperationException($"Product with ID {item.ProductId} not found.");
             var orderItem = new OrderItem
             {
                 OrderId = order.Id,
@@ -71,13 +65,7 @@ public class CreateOrderHandler(WTFDbContext db, IHttpContextAccessor httpContex
             // Add child items (add-ons)
             foreach (var addOn in item.AddOns)
             {
-                var addOnProduct = await db.Products.FindAsync([addOn.ProductId], cancellationToken);
-
-                if (addOnProduct == null)
-                {
-                    throw new InvalidOperationException($"Add-on product with ID {addOn.ProductId} not found.");
-                }
-
+                var addOnProduct = await db.Products.FindAsync([addOn.ProductId], cancellationToken) ?? throw new InvalidOperationException($"Add-on product with ID {addOn.ProductId} not found.");
                 var addOnOrderItem = new OrderItem
                 {
                     OrderId = order.Id,

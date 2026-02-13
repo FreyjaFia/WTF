@@ -8,8 +8,8 @@ public static class OrderEndpoints
 {
     public static IEndpointRouteBuilder MapOrders(this IEndpointRouteBuilder app)
     {
-        var orderGroup = app.MapGroup("/api/orders");
-            //.RequireAuthorization();
+        var orderGroup = app.MapGroup("/api/orders")
+            .RequireAuthorization();
 
         // GET /api/orders - Get all orders
         orderGroup.MapGet("/",
