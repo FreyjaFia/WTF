@@ -124,6 +124,27 @@ public static class ProductEndpoints
                 return result ? Results.Ok() : Results.NotFound();
             });
 
+        // GET /api/products/addons/{addOnId}/products - Get products that use this add-on (reverse lookup)
+        productGroup.MapGet("/addons/{addOnId:guid}/products",
+            async (Guid addOnId, ISender sender) =>
+            {
+                var result = await sender.Send(new GetProductsByAddOnQuery(addOnId));
+                return Results.Ok(result);
+            });
+
+        // POST /api/products/addons/{addOnId}/products - Assign products to an add-on (reverse assignment)
+        productGroup.MapPost("/addons/{addOnId:guid}/products",
+            async (Guid addOnId, AssignAddOnProductsCommand command, ISender sender) =>
+            {
+                if (addOnId != command.AddOnId)
+                {
+                    return Results.BadRequest("Add-on ID mismatch");
+                }
+
+                var result = await sender.Send(command);
+                return result ? Results.Ok() : Results.NotFound();
+            });
+
         return app;
     }
 }
