@@ -45,7 +45,7 @@ public class UploadProductImageHandler(WTFDbContext db, IWebHostEnvironment env,
         await File.WriteAllBytesAsync(filePath, request.ImageData, cancellationToken);
 
         // Generate relative URL
-        var imageUrl = $"/products/images/{fileName}";
+        var imageUrl = $"/images/products/{fileName}";
 
         // Delete old image if exists
         if (product.ProductImage != null)
@@ -101,6 +101,8 @@ public class UploadProductImageHandler(WTFDbContext db, IWebHostEnvironment env,
         return new ProductDto(
             product.Id,
             product.Name,
+            product.Code,
+            product.Description,
             product.Price,
             (ContractEnum)product.CategoryId,
             product.IsAddOn,

@@ -47,6 +47,8 @@ public class GetProductByIdHandler(WTFDbContext db, IHttpContextAccessor httpCon
         return new ProductDto(
             product.Id,
             product.Name,
+            product.Code,
+            product.Description,
             product.Price,
             (ContractEnum)product.CategoryId,
             product.IsAddOn,

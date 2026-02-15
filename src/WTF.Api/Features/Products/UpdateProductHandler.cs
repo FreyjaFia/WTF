@@ -54,6 +54,8 @@ public class UpdateProductHandler(WTFDbContext db, IHttpContextAccessor httpCont
         }
 
         product.Name = request.Name;
+        product.Code = request.Code;
+        product.Description = request.Description;
         product.Price = request.Price;
         product.CategoryId = (int)request.Category;
         product.IsAddOn = request.IsAddOn;
@@ -87,6 +89,8 @@ public class UpdateProductHandler(WTFDbContext db, IHttpContextAccessor httpCont
         return new ProductDto(
             product.Id,
             product.Name,
+            product.Code,
+            product.Description,
             product.Price,
             (ContractEnum)product.CategoryId,
             product.IsAddOn,

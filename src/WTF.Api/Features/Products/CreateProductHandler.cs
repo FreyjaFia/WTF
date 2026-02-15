@@ -17,6 +17,8 @@ public class CreateProductHandler(WTFDbContext db, IHttpContextAccessor httpCont
         var product = new Product
         {
             Name = request.Name,
+            Code = request.Code,
+            Description = request.Description,
             Price = request.Price,
             CategoryId = (int)request.Category,
             IsAddOn = request.IsAddOn,
@@ -31,6 +33,8 @@ public class CreateProductHandler(WTFDbContext db, IHttpContextAccessor httpCont
         return new ProductDto(
             product.Id,
             product.Name,
+            product.Code,
+            product.Description,
             product.Price,
             (ContractEnum)product.CategoryId,
             product.IsAddOn,

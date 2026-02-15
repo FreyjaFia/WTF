@@ -27,6 +27,8 @@ public class GetProductAddOnsHandler(WTFDbContext db, IHttpContextAccessor httpC
             .Select(p => new ProductSimpleDto(
                 p.Id,
                 p.Name,
+                p.Code,
+                p.Description,
                 p.Price,
                 (ContractEnum)p.CategoryId,
                 p.IsActive,
