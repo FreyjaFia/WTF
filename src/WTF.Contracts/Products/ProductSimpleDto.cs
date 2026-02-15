@@ -5,6 +5,8 @@ namespace WTF.Contracts.Products;
 public record ProductSimpleDto(
     Guid Id,
     string Name,
+    string Code,
+    string? Description,
     decimal Price,
     ProductCategoryEnum Category,
     bool IsActive,
