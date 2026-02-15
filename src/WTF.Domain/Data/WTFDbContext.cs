@@ -163,9 +163,11 @@ public partial class WTFDbContext : DbContext
             entity.HasIndex(e => e.IsAddOn, "IX_Products_IsAddOn");
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
+            entity.Property(e => e.Code).HasMaxLength(10);
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("(getutcdate())")
                 .HasColumnType("datetime");
+            entity.Property(e => e.Description).HasMaxLength(500);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.Name)
                 .HasMaxLength(100)

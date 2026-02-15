@@ -25,6 +25,10 @@ public partial class Product
 
     public Guid? UpdatedBy { get; set; }
 
+    public string? Description { get; set; }
+
+    public string Code { get; set; } = null!;
+
     public virtual ProductCategory Category { get; set; } = null!;
 
     public virtual User CreatedByNavigation { get; set; } = null!;
