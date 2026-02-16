@@ -47,12 +47,12 @@ public static class OrderEndpoints
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             });
 
-        // DELETE /api/orders/{id} - Delete order
-        orderGroup.MapDelete("/{id:guid}",
+        // PATCH /api/orders/{id}/void - Void order (Pending -> Cancelled, Completed -> Refunded)
+        orderGroup.MapPatch("/{id:guid}/void",
             async (Guid id, ISender sender) =>
             {
-                var result = await sender.Send(new DeleteOrderCommand(id));
-                return result ? Results.NoContent() : Results.NotFound();
+                var result = await sender.Send(new VoidOrderCommand(id));
+                return result is not null ? Results.Ok(result) : Results.NotFound();
             });
 
         return app;

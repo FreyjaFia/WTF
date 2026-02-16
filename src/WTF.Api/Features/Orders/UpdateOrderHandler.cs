@@ -4,6 +4,7 @@ using WTF.Contracts.OrderItems;
 using WTF.Contracts.Orders;
 using WTF.Contracts.Orders.Commands;
 using WTF.Contracts.Orders.Enums;
+using WTF.Contracts.Products.Enums;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 
@@ -21,6 +22,68 @@ public class UpdateOrderHandler(WTFDbContext db) : IRequestHandler<UpdateOrderCo
         if (order is null)
         {
             return null;
+        }
+
+        // Validate no nested add-ons and add-on type rules
+        foreach (var item in request.Items)
+        {
+            if (item.AddOns.Any(addOn => addOn.AddOns?.Count > 0))
+            {
+                throw new InvalidOperationException("Nested add-ons are not allowed. Add-ons cannot have their own add-ons.");
+            }
+
+            var addOnIds = item.AddOns.Select(addOn => addOn.ProductId).ToList();
+
+            var availableTypes = await db.ProductAddOns
+                .Where(pa => pa.ProductId == item.ProductId)
+                .Select(pa => (AddOnTypeEnum)(pa.AddOnTypeId ?? (int)AddOnTypeEnum.Extra))
+                .Distinct()
+                .ToListAsync(cancellationToken);
+
+            if (addOnIds.Count == 0)
+            {
+                if (availableTypes.Contains(AddOnTypeEnum.Size))
+                {
+                    throw new InvalidOperationException("A size selection is required and must be exactly one.");
+                }
+
+                continue;
+            }
+
+            var productAddOns = await db.ProductAddOns
+                .Where(pa => pa.ProductId == item.ProductId && addOnIds.Contains(pa.AddOnId))
+                .Select(pa => new
+                {
+                    pa.AddOnId,
+                    AddOnType = (AddOnTypeEnum)(pa.AddOnTypeId ?? (int)AddOnTypeEnum.Extra)
+                })
+                .ToListAsync(cancellationToken);
+
+            if (productAddOns.Count != addOnIds.Count)
+            {
+                throw new InvalidOperationException("One or more add-ons are not allowed for this product.");
+            }
+
+            var selectedByType = productAddOns
+                .GroupBy(pa => pa.AddOnType)
+                .ToDictionary(group => group.Key, group => group.Count());
+
+            if (availableTypes.Contains(AddOnTypeEnum.Size))
+            {
+                var sizeCount = selectedByType.TryGetValue(AddOnTypeEnum.Size, out var count)
+                    ? count
+                    : 0;
+
+                if (sizeCount != 1)
+                {
+                    throw new InvalidOperationException("A size selection is required and must be exactly one.");
+                }
+            }
+
+            if (selectedByType.TryGetValue(AddOnTypeEnum.Flavor, out var flavorCount) && flavorCount > 1)
+            {
+                throw new InvalidOperationException("Only one flavor can be selected.");
+            }
         }
 
         var oldStatus = (OrderStatusEnum)order.StatusId;
@@ -50,25 +113,44 @@ public class UpdateOrderHandler(WTFDbContext db) : IRequestHandler<UpdateOrderCo
 
         foreach (var item in request.Items)
         {
+            var product = await db.Products.FindAsync([item.ProductId], cancellationToken) ?? throw new InvalidOperationException($"Product with ID {item.ProductId} not found.");
             var newItem = new OrderItem
             {
                 OrderId = order.Id,
                 ProductId = item.ProductId,
                 Quantity = item.Quantity,
-                Price = item.Price
+                Price = null,
+                ParentOrderItemId = null
             };
 
-            // If completing order and price not set, capture current product price
+            // Capture price snapshot when order is Completed or Cancelled
             if (newStatus == OrderStatusEnum.Completed || newStatus == OrderStatusEnum.Cancelled)
             {
-                if (newItem.Price == null)
-                {
-                    var product = await db.Products.FindAsync([item.ProductId], cancellationToken);
-                    newItem.Price = product?.Price;
-                }
+                newItem.Price = product.Price;
             }
 
             db.OrderItems.Add(newItem);
+            await db.SaveChangesAsync(cancellationToken);
+
+            foreach (var addOn in item.AddOns)
+            {
+                var addOnProduct = await db.Products.FindAsync([addOn.ProductId], cancellationToken) ?? throw new InvalidOperationException($"Add-on product with ID {addOn.ProductId} not found.");
+                var addOnItem = new OrderItem
+                {
+                    OrderId = order.Id,
+                    ProductId = addOn.ProductId,
+                    Quantity = addOn.Quantity,
+                    Price = null,
+                    ParentOrderItemId = newItem.Id
+                };
+
+                if (newStatus == OrderStatusEnum.Completed || newStatus == OrderStatusEnum.Cancelled)
+                {
+                    addOnItem.Price = addOnProduct.Price;
+                }
+
+                db.OrderItems.Add(addOnItem);
+            }
         }
 
         await db.SaveChangesAsync(cancellationToken);
