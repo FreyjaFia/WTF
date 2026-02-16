@@ -104,6 +104,7 @@ app.MapAuth()
     .MapLoyalty()
     .MapProducts()
     .MapOrders()
+    .MapCustomers()
     .MapTest();
 
 app.Run();

@@ -1,0 +1,64 @@
+using MediatR;
+using WTF.Contracts.Customers.Commands;
+using WTF.Contracts.Customers.Queries;
+
+namespace WTF.Api.Endpoints;
+
+public static class CustomerEndpoints
+{
+    public static IEndpointRouteBuilder MapCustomers(this IEndpointRouteBuilder app)
+    {
+        var customerGroup = app.MapGroup("/api/customers")
+            .RequireAuthorization();
+
+        // GET /api/customers - Get all customers (with pagination and search)
+        customerGroup.MapGet("/",
+            async (
+                [AsParameters] GetCustomersQuery query,
+                ISender sender) =>
+            {
+                var result = await sender.Send(query);
+                return Results.Ok(result);
+            });
+
+        // GET /api/customers/{id} - Get customer by ID
+        customerGroup.MapGet("/{id:guid}",
+            async (Guid id, ISender sender) =>
+            {
+                var result = await sender.Send(new GetCustomerByIdQuery(id));
+                return result is not null ? Results.Ok(result) : Results.NotFound();
+            })
+            .WithName("GetCustomerById");
+
+        // POST /api/customers - Create new customer
+        customerGroup.MapPost("/",
+            async (CreateCustomerCommand command, ISender sender) =>
+            {
+                var result = await sender.Send(command);
+                return Results.CreatedAtRoute("GetCustomerById", new { id = result.Id }, result);
+            });
+
+        // PUT /api/customers/{id} - Update customer
+        customerGroup.MapPut("/{id:guid}",
+            async (Guid id, UpdateCustomerCommand command, ISender sender) =>
+            {
+                if (id != command.Id)
+                {
+                    return Results.BadRequest("ID mismatch");
+                }
+
+                var result = await sender.Send(command);
+                return result is not null ? Results.Ok(result) : Results.NotFound();
+            });
+
+        // DELETE /api/customers/{id} - Delete customer
+        customerGroup.MapDelete("/{id:guid}",
+            async (Guid id, ISender sender) =>
+            {
+                var result = await sender.Send(new DeleteCustomerCommand(id));
+                return result ? Results.NoContent() : Results.NotFound();
+            });
+
+        return app;
+    }
+}
