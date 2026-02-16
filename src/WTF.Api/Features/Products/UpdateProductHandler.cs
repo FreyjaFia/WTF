@@ -25,6 +25,18 @@ public class UpdateProductHandler(WTFDbContext db, IHttpContextAccessor httpCont
         }
 
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
+        var normalizedCode = request.Code.Trim().ToUpperInvariant();
+
+        if (product.Code != normalizedCode)
+        {
+            var codeExists = await db.Products
+                .AnyAsync(p => p.Code == normalizedCode && p.Id != request.Id, cancellationToken);
+
+            if (codeExists)
+            {
+                throw new InvalidOperationException("Product code already exists.");
+            }
+        }
 
         // Validate IsAddOn change: Block changing from false to true if product has been used as parent item
         if (!product.IsAddOn && request.IsAddOn)
@@ -54,7 +66,7 @@ public class UpdateProductHandler(WTFDbContext db, IHttpContextAccessor httpCont
         }
 
         product.Name = request.Name;
-        product.Code = request.Code;
+        product.Code = normalizedCode;
         product.Description = request.Description;
         product.Price = request.Price;
         product.CategoryId = (int)request.Category;

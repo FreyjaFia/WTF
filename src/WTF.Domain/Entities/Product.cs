@@ -35,13 +35,13 @@ public partial class Product
 
     public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
 
+    public virtual ICollection<ProductAddOn> ProductAddOnAddOns { get; set; } = new List<ProductAddOn>();
+
+    public virtual ICollection<ProductAddOn> ProductAddOnProducts { get; set; } = new List<ProductAddOn>();
+
     public virtual ProductImage? ProductImage { get; set; }
 
     public virtual ICollection<ProductPriceHistory> ProductPriceHistories { get; set; } = new List<ProductPriceHistory>();
 
     public virtual User? UpdatedByNavigation { get; set; }
-
-    public virtual ICollection<Product> AddOns { get; set; } = new List<Product>();
-
-    public virtual ICollection<Product> Products { get; set; } = new List<Product>();
 }

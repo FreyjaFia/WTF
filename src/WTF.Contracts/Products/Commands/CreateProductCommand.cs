@@ -18,7 +18,7 @@ public record CreateProductCommand : IRequest<ProductDto>
     public string? Description { get; init; }
 
     [Required(ErrorMessage = "Price is required")]
-    [Range(0.01, 999999.99, ErrorMessage = "Price must be between 0.01 and 999,999.99")]
+    [Range(0, 999999.99, ErrorMessage = "Price must be between 0 and 999,999.99")]
     public decimal Price { get; init; }
 
     [Required(ErrorMessage = "Product category is required")]

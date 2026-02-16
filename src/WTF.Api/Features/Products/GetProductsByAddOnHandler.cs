@@ -19,21 +19,19 @@ public class GetProductsByAddOnHandler(WTFDbContext db, IHttpContextAccessor htt
             return [];
         }
 
-        var products = await db.Products
-            .Where(p => p.AddOns.Any(addon => addon.Id == request.AddOnId))
-            .Where(p => p.IsActive)
-            .Include(p => p.ProductImage)
-                .ThenInclude(pi => pi!.Image)
-            .Select(p => new ProductSimpleDto(
-                p.Id,
-                p.Name,
-                p.Code,
-                p.Description,
-                p.Price,
-                (ContractEnum)p.CategoryId,
-                p.IsActive,
-                p.ProductImage != null && p.ProductImage.Image != null
-                    ? UrlExtensions.ToAbsoluteUrl(httpContextAccessor, p.ProductImage.Image.ImageUrl)
+        var products = await db.ProductAddOns
+            .Where(pa => pa.AddOnId == request.AddOnId)
+            .Where(pa => pa.Product.IsActive)
+            .Select(pa => new ProductSimpleDto(
+                pa.Product.Id,
+                pa.Product.Name,
+                pa.Product.Code,
+                pa.Product.Description,
+                pa.Product.Price,
+                (ContractEnum)pa.Product.CategoryId,
+                pa.Product.IsActive,
+                pa.Product.ProductImage != null && pa.Product.ProductImage.Image != null
+                    ? UrlExtensions.ToAbsoluteUrl(httpContextAccessor, pa.Product.ProductImage.Image.ImageUrl)
                     : null
             ))
             .ToListAsync(cancellationToken);

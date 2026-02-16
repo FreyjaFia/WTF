@@ -1,5 +1,6 @@
 using MediatR;
 using System.ComponentModel.DataAnnotations;
+using WTF.Contracts.Products;
 
 namespace WTF.Contracts.Products.Commands;
 
@@ -9,5 +10,5 @@ public record AssignAddOnProductsCommand : IRequest<bool>
     public Guid AddOnId { get; init; }
 
     [Required]
-    public List<Guid> ProductIds { get; init; } = [];
+    public List<AddOnProductAssignmentDto> Products { get; init; } = [];
 }

@@ -29,7 +29,8 @@ public static class ProductEndpoints
             {
                 var result = await sender.Send(new GetProductByIdQuery(id));
                 return result is not null ? Results.Ok(result) : Results.NotFound();
-            });
+            })
+            .WithName("GetProductById");
 
         // POST /api/products - Create new product
         productGroup.MapPost("/",

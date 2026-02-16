@@ -2,7 +2,9 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Contracts.Orders.Enums;
 using WTF.Contracts.Products.Commands;
+using WTF.Contracts.Products.Enums;
 using WTF.Domain.Data;
+using WTF.Domain.Entities;
 
 namespace WTF.Api.Features.Products;
 
@@ -11,7 +13,6 @@ public class AssignAddOnProductsHandler(WTFDbContext db) : IRequestHandler<Assig
     public async Task<bool> Handle(AssignAddOnProductsCommand request, CancellationToken cancellationToken)
     {
         var addOn = await db.Products
-            .Include(p => p.Products)
             .FirstOrDefaultAsync(p => p.Id == request.AddOnId, cancellationToken);
 
         if (addOn == null)
@@ -24,12 +25,24 @@ public class AssignAddOnProductsHandler(WTFDbContext db) : IRequestHandler<Assig
             throw new InvalidOperationException("Cannot assign products to a product that is not an add-on.");
         }
 
+        if (request.Products.Select(p => p.ProductId).Distinct().Count() != request.Products.Count)
+        {
+            throw new InvalidOperationException("Duplicate product IDs are not allowed.");
+        }
+
+        if (request.Products.Any(product => !Enum.IsDefined(product.AddOnType)))
+        {
+            throw new InvalidOperationException("One or more products have an invalid add-on type.");
+        }
+
+        var productIds = request.Products.Select(p => p.ProductId).ToList();
+
         // Validate all product IDs exist and are NOT add-ons
         var products = await db.Products
-            .Where(p => request.ProductIds.Contains(p.Id))
+            .Where(p => productIds.Contains(p.Id))
             .ToListAsync(cancellationToken);
 
-        if (products.Count != request.ProductIds.Count)
+        if (products.Count != productIds.Count)
         {
             throw new InvalidOperationException("One or more product IDs are invalid.");
         }
@@ -42,8 +55,12 @@ public class AssignAddOnProductsHandler(WTFDbContext db) : IRequestHandler<Assig
         }
 
         // Identify products being removed from this add-on
-        var currentProductIds = addOn.Products.Select(p => p.Id).ToList();
-        var removedProductIds = currentProductIds.Except(request.ProductIds).ToList();
+        var currentProductIds = await db.ProductAddOns
+            .Where(pa => pa.AddOnId == request.AddOnId)
+            .Select(pa => pa.ProductId)
+            .ToListAsync(cancellationToken);
+
+        var removedProductIds = currentProductIds.Except(productIds).ToList();
 
         // Update pending orders: decouple this add-on from removed parent products
         if (removedProductIds.Count != 0)
@@ -55,10 +72,6 @@ public class AssignAddOnProductsHandler(WTFDbContext db) : IRequestHandler<Assig
 
             if (pendingOrders.Count != 0)
             {
-                // Find order items that are:
-                // 1. In pending orders
-                // 2. Are this add-on
-                // 3. Linked to one of the removed parent products
                 var affectedItems = await db.OrderItems
                     .Where(oi => pendingOrders.Contains(oi.OrderId)
                         && oi.ProductId == request.AddOnId
@@ -66,7 +79,6 @@ public class AssignAddOnProductsHandler(WTFDbContext db) : IRequestHandler<Assig
                         && removedProductIds.Contains(oi.ParentOrderItem.ProductId))
                     .ToListAsync(cancellationToken);
 
-                // Decouple them: make them standalone items
                 foreach (var item in affectedItems)
                 {
                     item.ParentOrderItemId = null;
@@ -80,13 +92,21 @@ public class AssignAddOnProductsHandler(WTFDbContext db) : IRequestHandler<Assig
         }
 
         // Clear existing product associations
-        addOn.Products.Clear();
+        var existingLinks = await db.ProductAddOns
+            .Where(pa => pa.AddOnId == request.AddOnId)
+            .ToListAsync(cancellationToken);
 
-        // Assign new products
-        foreach (var product in products)
+        db.ProductAddOns.RemoveRange(existingLinks);
+
+        // Assign new products with types
+        var newLinks = request.Products.Select(product => new ProductAddOn
         {
-            addOn.Products.Add(product);
-        }
+            ProductId = product.ProductId,
+            AddOnId = request.AddOnId,
+            AddOnTypeId = (int)product.AddOnType
+        });
+
+        db.ProductAddOns.AddRange(newLinks);
 
         await db.SaveChangesAsync(cancellationToken);
 

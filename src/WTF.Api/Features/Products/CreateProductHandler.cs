@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
 using WTF.Contracts.Products;
 using WTF.Contracts.Products.Commands;
@@ -13,11 +14,20 @@ public class CreateProductHandler(WTFDbContext db, IHttpContextAccessor httpCont
     public async Task<ProductDto> Handle(CreateProductCommand request, CancellationToken cancellationToken)
     {
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
+        var normalizedCode = request.Code.Trim().ToUpperInvariant();
+
+        var codeExists = await db.Products
+            .AnyAsync(p => p.Code == normalizedCode, cancellationToken);
+
+        if (codeExists)
+        {
+            throw new InvalidOperationException("Product code already exists.");
+        }
 
         var product = new Product
         {
             Name = request.Name,
-            Code = request.Code,
+            Code = normalizedCode,
             Description = request.Description,
             Price = request.Price,
             CategoryId = (int)request.Category,
