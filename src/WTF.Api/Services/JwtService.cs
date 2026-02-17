@@ -3,6 +3,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using WTF.Api.Common.Extensions;
 using WTF.Domain.Entities;
 
 namespace WTF.Api.Services
@@ -15,24 +16,33 @@ namespace WTF.Api.Services
         Guid? GetUserIdFromToken(string token);
     }
 
-    public class JwtService(IConfiguration configuration) : IJwtService
+    public class JwtService(IConfiguration configuration, IHttpContextAccessor httpContextAccessor) : IJwtService
     {
         private readonly string _secretKey = configuration["Jwt:SecretKey"] ?? throw new InvalidOperationException("JWT SecretKey not configured");
         private readonly string _issuer = configuration["Jwt:Issuer"] ?? throw new InvalidOperationException("JWT Issuer not configured");
         private readonly string _audience = configuration["Jwt:Audience"] ?? throw new InvalidOperationException("JWT Audience not configured");
         private readonly int _accessTokenExpirationMinutes = int.Parse(configuration["Jwt:AccessTokenExpirationMinutes"] ?? "60");
+        private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
 
         public string GenerateAccessToken(User user)
         {
             var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_secretKey));
             var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
-            var claims = new[]
+            var claims = new List<Claim>
             {
-            new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-            new Claim(JwtRegisteredClaimNames.UniqueName, user.Username),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-        };
+                new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+                new Claim(JwtRegisteredClaimNames.UniqueName, user.Username),
+                new Claim(JwtRegisteredClaimNames.GivenName, user.FirstName ?? string.Empty),
+                new Claim(JwtRegisteredClaimNames.FamilyName, user.LastName ?? string.Empty),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            };
+
+            var imageUrl = UrlExtensions.ToAbsoluteUrl(_httpContextAccessor, user.UserImage?.Image?.ImageUrl);
+            if (!string.IsNullOrWhiteSpace(imageUrl))
+            {
+                claims.Add(new Claim("image_url", imageUrl));
+            }
 
             var token = new JwtSecurityToken(
                 issuer: _issuer,

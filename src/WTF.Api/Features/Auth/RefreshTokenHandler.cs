@@ -14,6 +14,8 @@ public class RefreshTokenHandler(WTFDbContext db, IJwtService jwtService, IConfi
     {
         var refreshToken = await db.RefreshTokens
             .Include(rt => rt.User)
+                .ThenInclude(u => u.UserImage)
+                    .ThenInclude(ui => ui!.Image)
             .FirstOrDefaultAsync(rt => rt.Token == request.RefreshToken, cancellationToken);
 
         if (refreshToken is null || refreshToken.IsRevoked || refreshToken.ExpiresAt < DateTime.UtcNow)

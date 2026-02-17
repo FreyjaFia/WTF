@@ -13,6 +13,8 @@ public class LoginHandler(WTFDbContext db, IJwtService jwtService, IConfiguratio
     public async Task<LoginDto> Handle(LoginCommand request, CancellationToken cancellationToken)
     {
         var user = await db.Users
+            .Include(u => u.UserImage)
+                .ThenInclude(ui => ui!.Image)
             .FirstOrDefaultAsync(u => u.Username == request.Username, cancellationToken);
 
         if (user == null)
