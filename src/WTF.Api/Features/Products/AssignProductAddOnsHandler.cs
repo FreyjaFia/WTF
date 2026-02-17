@@ -2,7 +2,6 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Contracts.Orders.Enums;
 using WTF.Contracts.Products.Commands;
-using WTF.Contracts.Products.Enums;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 

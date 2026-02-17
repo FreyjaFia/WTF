@@ -1,6 +1,5 @@
 using MediatR;
 using System.ComponentModel.DataAnnotations;
-using WTF.Contracts.Products;
 
 namespace WTF.Contracts.Products.Commands;
 

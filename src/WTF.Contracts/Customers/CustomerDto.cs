@@ -5,5 +5,6 @@ public record CustomerDto(
     string FirstName,
     string LastName,
     string? Address,
-    bool IsActive
+    bool IsActive,
+    string? ImageUrl
 );

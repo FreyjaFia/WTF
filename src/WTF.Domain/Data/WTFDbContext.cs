@@ -20,6 +20,8 @@ public partial class WTFDbContext : DbContext
 
     public virtual DbSet<Customer> Customers { get; set; }
 
+    public virtual DbSet<CustomerImage> CustomerImages { get; set; }
+
     public virtual DbSet<Image> Images { get; set; }
 
     public virtual DbSet<LoyaltyPoint> LoyaltyPoints { get; set; }
@@ -48,6 +50,8 @@ public partial class WTFDbContext : DbContext
 
     public virtual DbSet<User> Users { get; set; }
 
+    public virtual DbSet<UserImage> UserImages { get; set; }
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         => optionsBuilder.UseSqlServer("Name=ConnectionStrings:WtfDb");
 
@@ -74,6 +78,25 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.LastName)
                 .HasMaxLength(50)
                 .IsUnicode(false);
+        });
+
+        modelBuilder.Entity<CustomerImage>(entity =>
+        {
+            entity.HasKey(e => new { e.CustomerId, e.ImageId });
+
+            entity.HasIndex(e => e.CustomerId, "UQ_CustomerImages_CustomerId").IsUnique();
+
+            entity.HasIndex(e => e.ImageId, "UQ_CustomerImages_ImageId").IsUnique();
+
+            entity.HasOne(d => d.Customer).WithOne(p => p.CustomerImage)
+                .HasForeignKey<CustomerImage>(d => d.CustomerId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_CustomerImages_Customers");
+
+            entity.HasOne(d => d.Image).WithOne(p => p.CustomerImage)
+                .HasForeignKey<CustomerImage>(d => d.ImageId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_CustomerImages_Images");
         });
 
         modelBuilder.Entity<Image>(entity =>
@@ -325,6 +348,7 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.FirstName)
                 .HasMaxLength(50)
                 .IsUnicode(false);
+            entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_Users_IsActive");
             entity.Property(e => e.LastName)
                 .HasMaxLength(50)
                 .IsUnicode(false);
@@ -332,6 +356,25 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.Username)
                 .HasMaxLength(50)
                 .IsUnicode(false);
+        });
+
+        modelBuilder.Entity<UserImage>(entity =>
+        {
+            entity.HasKey(e => new { e.UserId, e.ImageId }).HasName("PK_UserImage");
+
+            entity.HasIndex(e => e.ImageId, "UQ_UserImage_ImageId").IsUnique();
+
+            entity.HasIndex(e => e.UserId, "UQ_UserImage_UserId").IsUnique();
+
+            entity.HasOne(d => d.Image).WithOne(p => p.UserImage)
+                .HasForeignKey<UserImage>(d => d.ImageId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_UserImage_Images");
+
+            entity.HasOne(d => d.User).WithOne(p => p.UserImage)
+                .HasForeignKey<UserImage>(d => d.UserId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_UserImage_Users");
         });
         modelBuilder.HasSequence("OrderNumberSeq").StartsAt(5L);
 

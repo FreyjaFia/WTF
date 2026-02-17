@@ -2,40 +2,65 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
 using WTF.Contracts.Products;
+using WTF.Contracts.Products.Enums;
 using WTF.Contracts.Products.Queries;
 using WTF.Domain.Data;
-using ContractEnum = WTF.Contracts.Products.Enums.ProductCategoryEnum;
 
 namespace WTF.Api.Features.Products;
 
-public class GetProductsByAddOnHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor) : IRequestHandler<GetProductsByAddOnQuery, List<ProductSimpleDto>>
+public class GetProductsByAddOnHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor) : IRequestHandler<GetProductsByAddOnQuery, List<AddOnGroupDto>>
 {
-    public async Task<List<ProductSimpleDto>> Handle(GetProductsByAddOnQuery request, CancellationToken cancellationToken)
+    public async Task<List<AddOnGroupDto>> Handle(GetProductsByAddOnQuery request, CancellationToken cancellationToken)
     {
-        var addOn = await db.Products.FindAsync([request.AddOnId], cancellationToken);
+        var addOnExists = await db.Products
+            .AnyAsync(p => p.Id == request.AddOnId && p.IsAddOn, cancellationToken);
 
-        if (addOn == null || !addOn.IsAddOn)
+        if (!addOnExists)
         {
             return [];
         }
 
-        var products = await db.ProductAddOns
+        var productLinks = await db.ProductAddOns
             .Where(pa => pa.AddOnId == request.AddOnId)
             .Where(pa => pa.Product.IsActive)
-            .Select(pa => new ProductSimpleDto(
-                pa.Product.Id,
-                pa.Product.Name,
-                pa.Product.Code,
-                pa.Product.Description,
-                pa.Product.Price,
-                (ContractEnum)pa.Product.CategoryId,
-                pa.Product.IsActive,
-                pa.Product.ProductImage != null && pa.Product.ProductImage.Image != null
-                    ? UrlExtensions.ToAbsoluteUrl(httpContextAccessor, pa.Product.ProductImage.Image.ImageUrl)
-                    : null
-            ))
+            .Include(pa => pa.Product)
+                .ThenInclude(p => p.ProductImage)
+                    .ThenInclude(pi => pi!.Image)
+            .Select(pa => new
+            {
+                pa.Product,
+                AddOnType = (AddOnTypeEnum)(pa.AddOnTypeId ?? (int)AddOnTypeEnum.Extra)
+            })
             .ToListAsync(cancellationToken);
 
-        return products;
+        // Group products by the add-on type configured on the ProductAddOn relationship
+        var groups = productLinks
+            .GroupBy(x => x.AddOnType)
+            .Select(group => new AddOnGroupDto(
+                group.Key,
+                group.Key.ToString(),
+                [.. group.Select(item =>
+                {
+                    var product = item.Product;
+                    var imageUrl = product.ProductImage != null && product.ProductImage.Image != null
+                        ? UrlExtensions.ToAbsoluteUrl(httpContextAccessor, product.ProductImage.Image.ImageUrl)
+                        : null;
+
+                    return new ProductSimpleDto(
+                        product.Id,
+                        product.Name,
+                        product.Code,
+                        product.Description,
+                        product.Price,
+                        (ProductCategoryEnum)product.CategoryId,
+                        product.IsActive,
+                        imageUrl
+                    );
+                })]
+            ))
+            .OrderBy(g => g.Type)
+            .ToList();
+
+        return groups;
     }
 }

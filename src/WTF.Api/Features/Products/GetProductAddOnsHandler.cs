@@ -5,7 +5,6 @@ using WTF.Contracts.Products;
 using WTF.Contracts.Products.Enums;
 using WTF.Contracts.Products.Queries;
 using WTF.Domain.Data;
-using ContractEnum = WTF.Contracts.Products.Enums.ProductCategoryEnum;
 
 namespace WTF.Api.Features.Products;
 
@@ -51,7 +50,7 @@ public class GetProductAddOnsHandler(WTFDbContext db, IHttpContextAccessor httpC
                         item.AddOn.Code,
                         item.AddOn.Description,
                         item.AddOn.Price,
-                        (ContractEnum)item.AddOn.CategoryId,
+                        (ProductCategoryEnum)item.AddOn.CategoryId,
                         item.AddOn.IsActive,
                         imageUrl
                     );

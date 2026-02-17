@@ -2,9 +2,9 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
 using WTF.Contracts.Products;
+using WTF.Contracts.Products.Enums;
 using WTF.Contracts.Products.Queries;
 using WTF.Domain.Data;
-using ContractEnum = WTF.Contracts.Products.Enums.ProductCategoryEnum;
 
 namespace WTF.Api.Features.Products;
 
@@ -55,7 +55,7 @@ public class GetProductsHandler(WTFDbContext db, IHttpContextAccessor httpContex
                 p.Code,
                 p.Description,
                 p.Price,
-                (ContractEnum)p.CategoryId,
+                (ProductCategoryEnum)p.CategoryId,
                 p.IsAddOn,
                 p.IsActive,
                 p.CreatedAt,

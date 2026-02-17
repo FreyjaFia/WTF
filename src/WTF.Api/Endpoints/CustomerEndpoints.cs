@@ -59,6 +59,24 @@ public static class CustomerEndpoints
                 return result ? Results.NoContent() : Results.NotFound();
             });
 
+        // POST /api/customers/{id}/image - Upload customer image
+        customerGroup.MapPost("/{id:guid}/image",
+            async (Guid id, HttpRequest request, ISender sender) =>
+            {
+                if (!request.HasFormContentType || !request.Form.Files.Any())
+                {
+                    return Results.BadRequest("No file provided");
+                }
+
+                var file = request.Form.Files[0];
+                using var ms = new MemoryStream();
+                await file.CopyToAsync(ms);
+                var data = ms.ToArray();
+
+                var result = await sender.Send(new UploadCustomerImageCommand(id, data, file.FileName));
+                return result is not null ? Results.Ok(result) : Results.BadRequest();
+            });
+
         return app;
     }
 }

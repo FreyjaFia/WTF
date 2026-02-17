@@ -1,12 +1,11 @@
 using MediatR;
-using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
 using WTF.Contracts.Products;
 using WTF.Contracts.Products.Commands;
+using WTF.Contracts.Products.Enums;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
-using ContractEnum = WTF.Contracts.Products.Enums.ProductCategoryEnum;
 
 namespace WTF.Api.Features.Products;
 
@@ -104,7 +103,7 @@ public class UpdateProductHandler(WTFDbContext db, IHttpContextAccessor httpCont
             product.Code,
             product.Description,
             product.Price,
-            (ContractEnum)product.CategoryId,
+            (ProductCategoryEnum)product.CategoryId,
             product.IsAddOn,
             product.IsActive,
             product.CreatedAt,

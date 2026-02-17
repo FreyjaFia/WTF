@@ -29,7 +29,8 @@ public class UpdateCustomerHandler(WTFDbContext db) : IRequestHandler<UpdateCust
             customer.FirstName,
             customer.LastName,
             customer.Address,
-            customer.IsActive
+            customer.IsActive,
+            null
         );
     }
 }

@@ -11,5 +11,9 @@ public partial class Image
 
     public Guid ImageId { get; set; }
 
+    public virtual CustomerImage? CustomerImage { get; set; }
+
     public virtual ProductImage? ProductImage { get; set; }
+
+    public virtual UserImage? UserImage { get; set; }
 }

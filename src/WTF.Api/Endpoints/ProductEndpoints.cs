@@ -69,41 +69,6 @@ public static class ProductEndpoints
                 return Results.Ok(result);
             });
 
-        // POST /api/products/{id}/upload-image - Upload product image
-        productGroup.MapPost("/{id:guid}/upload-image",
-            async (Guid id, IFormFile file, ISender sender) =>
-            {
-                if (file == null || file.Length == 0)
-                {
-                    return Results.BadRequest("No file uploaded");
-                }
-
-                // Validate file type (only images)
-                var allowedExtensions = imageTypes;
-                var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
-
-                if (!allowedExtensions.Contains(extension))
-                {
-                    return Results.BadRequest("Invalid file type. Only image files are allowed.");
-                }
-
-                // Validate file size (max 5MB)
-                if (file.Length > 5 * 1024 * 1024)
-                {
-                    return Results.BadRequest("File size exceeds 5MB limit.");
-                }
-
-                using var memoryStream = new MemoryStream();
-                await file.CopyToAsync(memoryStream);
-                var imageData = memoryStream.ToArray();
-
-                var command = new UploadProductImageCommand(id, imageData, file.FileName);
-                var result = await sender.Send(command);
-
-                return result is not null ? Results.Ok(result) : Results.NotFound();
-            })
-            .DisableAntiforgery();
-
         // GET /api/products/{id}/addons - Get available add-ons for a product
         productGroup.MapGet("/{id:guid}/addons",
             async (Guid id, ISender sender) =>
@@ -145,6 +110,41 @@ public static class ProductEndpoints
                 var result = await sender.Send(command);
                 return result ? Results.Ok() : Results.NotFound();
             });
+
+        // POST /api/products/{id}/images - Upload product image
+        productGroup.MapPost("/{id:guid}/images",
+            async (Guid id, IFormFile file, ISender sender) =>
+            {
+                if (file == null || file.Length == 0)
+                {
+                    return Results.BadRequest("No file uploaded");
+                }
+
+                // Validate file type (only images)
+                var allowedExtensions = imageTypes;
+                var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+
+                if (!allowedExtensions.Contains(extension))
+                {
+                    return Results.BadRequest("Invalid file type. Only image files are allowed.");
+                }
+
+                // Validate file size (max 5MB)
+                if (file.Length > 5 * 1024 * 1024)
+                {
+                    return Results.BadRequest("File size exceeds 5MB limit.");
+                }
+
+                using var memoryStream = new MemoryStream();
+                await file.CopyToAsync(memoryStream);
+                var imageData = memoryStream.ToArray();
+
+                var command = new UploadProductImageCommand(id, imageData, file.FileName);
+                var result = await sender.Send(command);
+
+                return result is not null ? Results.Ok(result) : Results.NotFound();
+            })
+            .DisableAntiforgery();
 
         return app;
     }

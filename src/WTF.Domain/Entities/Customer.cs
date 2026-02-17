@@ -15,5 +15,7 @@ public partial class Customer
 
     public bool IsActive { get; set; }
 
+    public virtual CustomerImage? CustomerImage { get; set; }
+
     public virtual ICollection<LoyaltyPoint> LoyaltyPoints { get; set; } = new List<LoyaltyPoint>();
 }

@@ -25,7 +25,8 @@ public class CreateCustomerHandler(WTFDbContext db) : IRequestHandler<CreateCust
             customer.FirstName,
             customer.LastName,
             customer.Address,
-            customer.IsActive
+            customer.IsActive,
+            null
         );
     }
 }

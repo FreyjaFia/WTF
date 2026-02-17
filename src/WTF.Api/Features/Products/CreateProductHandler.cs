@@ -5,7 +5,7 @@ using WTF.Contracts.Products;
 using WTF.Contracts.Products.Commands;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
-using ContractEnum = WTF.Contracts.Products.Enums.ProductCategoryEnum;
+using WTF.Contracts.Products.Enums;
 
 namespace WTF.Api.Features.Products;
 
@@ -46,7 +46,7 @@ public class CreateProductHandler(WTFDbContext db, IHttpContextAccessor httpCont
             product.Code,
             product.Description,
             product.Price,
-            (ContractEnum)product.CategoryId,
+            (ProductCategoryEnum)product.CategoryId,
             product.IsAddOn,
             product.IsActive,
             product.CreatedAt,

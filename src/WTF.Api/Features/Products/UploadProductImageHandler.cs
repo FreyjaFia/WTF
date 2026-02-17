@@ -3,9 +3,9 @@ using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
 using WTF.Contracts.Products;
 using WTF.Contracts.Products.Commands;
+using WTF.Contracts.Products.Enums;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
-using ContractEnum = WTF.Contracts.Products.Enums.ProductCategoryEnum;
 
 namespace WTF.Api.Features.Products;
 
@@ -23,13 +23,25 @@ public class UploadProductImageHandler(WTFDbContext db, IWebHostEnvironment env,
             return null;
         }
 
+        // Basic validation: file extension and size
+        var allowed = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+        var extension = Path.GetExtension(request.FileName)?.ToLowerInvariant() ?? string.Empty;
+        if (!allowed.Contains(extension))
+        {
+            return null;
+        }
+
+        if (request.ImageData == null || request.ImageData.Length == 0 || request.ImageData.Length > 5 * 1024 * 1024) // 5MB max
+        {
+            return null;
+        }
+
         // Generate filename from product name (lowercase with underscores)
         var productNameSlug = product.Name
             .ToLowerInvariant()
             .Replace(" ", "_")
             .Replace("-", "_");
 
-        var extension = Path.GetExtension(request.FileName);
         var fileName = $"{productNameSlug}_{Guid.NewGuid():N}{extension}";
 
         // Ensure wwwroot/images/products directory exists
@@ -52,7 +64,7 @@ public class UploadProductImageHandler(WTFDbContext db, IWebHostEnvironment env,
         {
             var oldImageUrl = product.ProductImage.Image.ImageUrl;
             var oldFilePath = Path.Combine(env.WebRootPath, oldImageUrl.TrimStart('/'));
-            
+
             if (File.Exists(oldFilePath))
             {
                 File.Delete(oldFilePath);
@@ -104,7 +116,7 @@ public class UploadProductImageHandler(WTFDbContext db, IWebHostEnvironment env,
             product.Code,
             product.Description,
             product.Price,
-            (ContractEnum)product.CategoryId,
+            (ProductCategoryEnum)product.CategoryId,
             product.IsAddOn,
             product.IsActive,
             product.CreatedAt,
