@@ -362,6 +362,8 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 
-# Product images
-src/WTF.Api/wwwroot/images/products/*
-!src/WTF.Api/wwwroot/images/products/.gitkeep
+# Ignore all images under wwwroot to avoid committing uploaded or generated files
+src/WTF.Api/wwwroot/images/**
+
+# Keep .gitkeep files so empty directories can be preserved in the repo
+!src/WTF.Api/wwwroot/images/**/.gitkeep
