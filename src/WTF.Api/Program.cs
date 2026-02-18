@@ -23,6 +23,15 @@ builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddSingleton<IJwtService, JwtService>();
 
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddScoped<IImageStorage, LocalImageStorage>();
+}
+else
+{
+    builder.Services.AddScoped<IImageStorage, AzureBlobImageStorage>();
+}
+
 var jwtSecretKey = builder.Configuration["Jwt:SecretKey"] ?? throw new InvalidOperationException("JWT SecretKey not configured");
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? throw new InvalidOperationException("JWT Issuer not configured");
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? throw new InvalidOperationException("JWT Audience not configured");
@@ -82,31 +91,21 @@ if (app.Environment.IsDevelopment())
 app.UseCors("AllowUI");
 app.UseRateLimiter();
 
-// Serve static files only when a valid physical root exists.
-var staticRootCandidates = new[]
-{
-    builder.Environment.WebRootPath,
-    Path.Combine(builder.Environment.ContentRootPath, "wwwroot")
-};
+// Configure a stable static root across environments.
+var staticRoot = !string.IsNullOrWhiteSpace(builder.Environment.WebRootPath)
+    ? builder.Environment.WebRootPath!
+    : Path.Combine(builder.Environment.ContentRootPath, "wwwroot");
 
-var staticRoot = staticRootCandidates.FirstOrDefault(path =>
-    !string.IsNullOrWhiteSpace(path) && Directory.Exists(path));
+if (!Directory.Exists(staticRoot))
+{
+    Directory.CreateDirectory(staticRoot);
+}
 
-if (!string.IsNullOrWhiteSpace(staticRoot))
+app.UseStaticFiles(new StaticFileOptions
 {
-    app.UseStaticFiles(new StaticFileOptions
-    {
-        FileProvider = new PhysicalFileProvider(staticRoot),
-        RequestPath = ""
-    });
-}
-else
-{
-    app.Logger.LogInformation(
-        "No static files directory found. Checked '{WebRootPath}' and '{ContentRootPathWwwroot}'.",
-        builder.Environment.WebRootPath,
-        Path.Combine(builder.Environment.ContentRootPath, "wwwroot"));
-}
+    FileProvider = new PhysicalFileProvider(staticRoot),
+    RequestPath = ""
+});
 
 // Only use HTTPS redirection in production (not in development for mobile apps)
 if (!app.Environment.IsDevelopment())
