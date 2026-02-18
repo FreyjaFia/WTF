@@ -23,7 +23,7 @@ public static class ProductEndpoints
                 var result = await sender.Send(query);
                 return Results.Ok(result);
             })
-            .RequireAuthorization(AppPolicies.ManagementRead);
+            .RequireAuthorization(AppPolicies.ProductsRead);
 
         // GET /api/products/{id} - Get product by ID
         productGroup.MapGet("/{id:guid}",
@@ -32,7 +32,7 @@ public static class ProductEndpoints
                 var result = await sender.Send(new GetProductByIdQuery(id));
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.ManagementRead)
+            .RequireAuthorization(AppPolicies.ProductsRead)
             .WithName("GetProductById");
 
         // POST /api/products - Create new product
@@ -74,7 +74,7 @@ public static class ProductEndpoints
                 var result = await sender.Send(new GetProductPriceHistoryQuery(id));
                 return Results.Ok(result);
             })
-            .RequireAuthorization(AppPolicies.ManagementRead);
+            .RequireAuthorization(AppPolicies.ProductsRead);
 
         // GET /api/products/{id}/addons - Get available add-ons for a product
         productGroup.MapGet("/{id:guid}/addons",
@@ -83,7 +83,7 @@ public static class ProductEndpoints
                 var result = await sender.Send(new GetProductAddOnsQuery(id));
                 return Results.Ok(result);
             })
-            .RequireAuthorization(AppPolicies.ManagementRead);
+            .RequireAuthorization(AppPolicies.ProductsRead);
 
         // POST /api/products/{id}/addons - Assign add-ons to a product
         productGroup.MapPost("/{id:guid}/addons",
@@ -106,7 +106,7 @@ public static class ProductEndpoints
                 var result = await sender.Send(new GetProductsByAddOnQuery(addOnId));
                 return Results.Ok(result);
             })
-            .RequireAuthorization(AppPolicies.ManagementRead);
+            .RequireAuthorization(AppPolicies.ProductsRead);
 
         // POST /api/products/addons/{addOnId}/products - Assign products to an add-on (reverse assignment)
         productGroup.MapPost("/addons/{addOnId:guid}/products",

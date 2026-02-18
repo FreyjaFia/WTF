@@ -59,6 +59,8 @@ builder.Services.AddAuthentication(options =>
 });
 
 builder.Services.AddAuthorizationBuilder()
+    .AddPolicy(AppPolicies.ProductsRead, policy =>
+        policy.RequireRole(AppRoles.Admin, AppRoles.AdminViewer, AppRoles.Cashier))
     .AddPolicy(AppPolicies.ManagementRead, policy =>
         policy.RequireRole(AppRoles.Admin, AppRoles.AdminViewer))
     .AddPolicy(AppPolicies.ManagementWrite, policy =>
@@ -68,7 +70,7 @@ builder.Services.AddAuthorizationBuilder()
     .AddPolicy(AppPolicies.OrdersWrite, policy =>
         policy.RequireRole(AppRoles.Admin, AppRoles.Cashier))
     .AddPolicy(AppPolicies.CustomersRead, policy =>
-        policy.RequireRole(AppRoles.Admin, AppRoles.AdminViewer))
+        policy.RequireRole(AppRoles.Admin, AppRoles.AdminViewer, AppRoles.Cashier))
     .AddPolicy(AppPolicies.CustomersWrite, policy =>
         policy.RequireRole(AppRoles.Admin))
     .AddPolicy(AppPolicies.CustomersCreate, policy =>
