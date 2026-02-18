@@ -29,6 +29,8 @@ public partial class Order
 
     public int? PaymentMethodId { get; set; }
 
+    public string? SpecialInstructions { get; set; }
+
     public virtual User CreatedByNavigation { get; set; } = null!;
 
     public virtual User? Customer { get; set; }

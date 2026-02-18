@@ -17,6 +17,8 @@ public partial class OrderItem
 
     public Guid? ParentOrderItemId { get; set; }
 
+    public string? SpecialInstructions { get; set; }
+
     public virtual ICollection<OrderItem> InverseParentOrderItem { get; set; } = new List<OrderItem>();
 
     public virtual Order Order { get; set; } = null!;

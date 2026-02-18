@@ -131,6 +131,9 @@ public partial class WTFDbContext : DbContext
                 .HasDefaultValueSql("(getutcdate())")
                 .HasColumnType("datetime");
             entity.Property(e => e.OrderNumber).HasDefaultValueSql("(NEXT VALUE FOR [dbo].[OrderNumberSeq])", "DF_Orders_OrderNumber_DEFAULT");
+            entity.Property(e => e.SpecialInstructions)
+                .HasMaxLength(100)
+                .IsUnicode(false);
             entity.Property(e => e.Tips).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.UpdatedAt).HasColumnType("datetime");
 
@@ -168,6 +171,9 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
             entity.Property(e => e.Price).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.Quantity).HasDefaultValue(1);
+            entity.Property(e => e.SpecialInstructions)
+                .HasMaxLength(100)
+                .IsUnicode(false);
 
             entity.HasOne(d => d.Order).WithMany(p => p.OrderItems)
                 .HasForeignKey(d => d.OrderId)
