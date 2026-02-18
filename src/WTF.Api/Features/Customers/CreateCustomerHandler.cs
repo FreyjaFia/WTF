@@ -14,7 +14,8 @@ public class CreateCustomerHandler(WTFDbContext db) : IRequestHandler<CreateCust
         {
             FirstName = request.FirstName,
             LastName = request.LastName,
-            Address = request.Address
+            Address = request.Address,
+            IsActive = true
         };
 
         db.Customers.Add(customer);

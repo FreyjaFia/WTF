@@ -33,7 +33,7 @@ public partial class Order
 
     public virtual User CreatedByNavigation { get; set; } = null!;
 
-    public virtual User? Customer { get; set; }
+    public virtual Customer? Customer { get; set; }
 
     public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
 

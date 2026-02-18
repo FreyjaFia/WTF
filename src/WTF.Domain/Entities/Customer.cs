@@ -18,4 +18,6 @@ public partial class Customer
     public virtual CustomerImage? CustomerImage { get; set; }
 
     public virtual ICollection<LoyaltyPoint> LoyaltyPoints { get; set; } = new List<LoyaltyPoint>();
+
+    public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
 }

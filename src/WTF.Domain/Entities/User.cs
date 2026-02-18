@@ -19,8 +19,6 @@ public partial class User
 
     public virtual ICollection<Order> OrderCreatedByNavigations { get; set; } = new List<Order>();
 
-    public virtual ICollection<Order> OrderCustomers { get; set; } = new List<Order>();
-
     public virtual ICollection<Order> OrderUpdatedByNavigations { get; set; } = new List<Order>();
 
     public virtual ICollection<Product> ProductCreatedByNavigations { get; set; } = new List<Product>();

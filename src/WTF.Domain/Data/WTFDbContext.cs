@@ -142,7 +142,7 @@ public partial class WTFDbContext : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Orders_CreatedBy");
 
-            entity.HasOne(d => d.Customer).WithMany(p => p.OrderCustomers)
+            entity.HasOne(d => d.Customer).WithMany(p => p.Orders)
                 .HasForeignKey(d => d.CustomerId)
                 .HasConstraintName("FK_Orders_Customer");
 
