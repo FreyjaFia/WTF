@@ -17,5 +17,6 @@ public record OrderDto(
     decimal? AmountReceived,
     decimal? ChangeAmount,
     decimal? Tips,
+    string? SpecialInstructions,
     decimal TotalAmount
 );

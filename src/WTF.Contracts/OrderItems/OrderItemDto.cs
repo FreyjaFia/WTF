@@ -6,5 +6,6 @@ public record OrderItemDto(
     string ProductName,
     int Quantity,
     decimal? Price,
-    List<OrderItemDto> AddOns
+    List<OrderItemDto> AddOns,
+    string? SpecialInstructions
 );

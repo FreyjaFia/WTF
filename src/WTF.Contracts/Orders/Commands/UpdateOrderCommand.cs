@@ -15,6 +15,7 @@ public record UpdateOrderCommand : IRequest<OrderDto?>
 
     [Required]
     public List<OrderItemRequestDto> Items { get; init; } = [];
+    public string? SpecialInstructions { get; init; }
 
     [Required]
     public OrderStatusEnum Status { get; init; }
