@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
+using WTF.Api.Services;
 using WTF.Contracts.Products;
 using WTF.Contracts.Products.Commands;
 using WTF.Contracts.Products.Enums;
@@ -9,7 +10,7 @@ using WTF.Domain.Entities;
 
 namespace WTF.Api.Features.Products;
 
-public class UploadProductImageHandler(WTFDbContext db, IWebHostEnvironment env, IHttpContextAccessor httpContextAccessor) : IRequestHandler<UploadProductImageCommand, ProductDto?>
+public class UploadProductImageHandler(WTFDbContext db, IImageStorage imageStorage, IHttpContextAccessor httpContextAccessor) : IRequestHandler<UploadProductImageCommand, ProductDto?>
 {
     public async Task<ProductDto?> Handle(UploadProductImageCommand request, CancellationToken cancellationToken)
     {
@@ -44,31 +45,13 @@ public class UploadProductImageHandler(WTFDbContext db, IWebHostEnvironment env,
 
         var fileName = $"{productNameSlug}_{Guid.NewGuid():N}{extension}";
 
-        // Ensure wwwroot/images/products directory exists
-        var imagesPath = Path.Combine(env.WebRootPath, "images", "products");
-        if (!Directory.Exists(imagesPath))
-        {
-            Directory.CreateDirectory(imagesPath);
-        }
-
-        var filePath = Path.Combine(imagesPath, fileName);
-
-        // Save file to disk
-        await File.WriteAllBytesAsync(filePath, request.ImageData, cancellationToken);
-
-        // Generate relative URL
-        var imageUrl = $"/images/products/{fileName}";
+        var imageUrl = await imageStorage.SaveAsync("products", fileName, request.ImageData, cancellationToken);
 
         // Delete old image if exists
         if (product.ProductImage != null)
         {
             var oldImageUrl = product.ProductImage.Image.ImageUrl;
-            var oldFilePath = Path.Combine(env.WebRootPath, oldImageUrl.TrimStart('/'));
-
-            if (File.Exists(oldFilePath))
-            {
-                File.Delete(oldFilePath);
-            }
+            await imageStorage.DeleteAsync(oldImageUrl, cancellationToken);
 
             db.ProductImages.Remove(product.ProductImage);
             db.Images.Remove(product.ProductImage.Image);

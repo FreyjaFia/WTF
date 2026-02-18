@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
+using WTF.Api.Services;
 using WTF.Contracts.Customers;
 using WTF.Contracts.Customers.Commands;
 using WTF.Domain.Data;
@@ -8,7 +9,7 @@ using WTF.Domain.Entities;
 
 namespace WTF.Api.Features.Customers;
 
-public class UploadCustomerImageHandler(WTFDbContext db, IWebHostEnvironment env, IHttpContextAccessor httpContextAccessor) : IRequestHandler<UploadCustomerImageCommand, CustomerDto?>
+public class UploadCustomerImageHandler(WTFDbContext db, IImageStorage imageStorage, IHttpContextAccessor httpContextAccessor) : IRequestHandler<UploadCustomerImageCommand, CustomerDto?>
 {
     public async Task<CustomerDto?> Handle(UploadCustomerImageCommand request, CancellationToken cancellationToken)
     {
@@ -42,26 +43,13 @@ public class UploadCustomerImageHandler(WTFDbContext db, IWebHostEnvironment env
 
         var fileName = $"{nameSlug}_{Guid.NewGuid():N}{extension}";
 
-        var imagesPath = Path.Combine(env.WebRootPath, "images", "customers");
-        if (!Directory.Exists(imagesPath))
-        {
-            Directory.CreateDirectory(imagesPath);
-        }
-
-        var filePath = Path.Combine(imagesPath, fileName);
-        await File.WriteAllBytesAsync(filePath, request.ImageData, cancellationToken);
-
-        var imageUrl = $"/images/customers/{fileName}";
+        var imageUrl = await imageStorage.SaveAsync("customers", fileName, request.ImageData, cancellationToken);
 
         // Delete old image file and db rows if exists
         if (customer.CustomerImage != null)
         {
             var oldImageUrl = customer.CustomerImage.Image.ImageUrl;
-            var oldFilePath = Path.Combine(env.WebRootPath, oldImageUrl.TrimStart('/'));
-            if (File.Exists(oldFilePath))
-            {
-                File.Delete(oldFilePath);
-            }
+            await imageStorage.DeleteAsync(oldImageUrl, cancellationToken);
             db.CustomerImages.Remove(customer.CustomerImage);
             db.Images.Remove(customer.CustomerImage.Image);
         }

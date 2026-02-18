@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
+using WTF.Api.Services;
 using WTF.Contracts.Users;
 using WTF.Contracts.Users.Commands;
 using WTF.Domain.Data;
@@ -8,7 +9,7 @@ using WTF.Domain.Entities;
 
 namespace WTF.Api.Features.Users;
 
-public class UploadUserImageHandler(WTFDbContext db, IWebHostEnvironment env, IHttpContextAccessor httpContextAccessor) : IRequestHandler<UploadUserImageCommand, UserDto?>
+public class UploadUserImageHandler(WTFDbContext db, IImageStorage imageStorage, IHttpContextAccessor httpContextAccessor) : IRequestHandler<UploadUserImageCommand, UserDto?>
 {
     public async Task<UserDto?> Handle(UploadUserImageCommand request, CancellationToken cancellationToken)
     {
@@ -42,26 +43,13 @@ public class UploadUserImageHandler(WTFDbContext db, IWebHostEnvironment env, IH
 
         var fileName = $"{userNameSlug}_{Guid.NewGuid():N}{extension}";
 
-        var imagesPath = Path.Combine(env.WebRootPath, "images", "users");
-        if (!Directory.Exists(imagesPath))
-        {
-            Directory.CreateDirectory(imagesPath);
-        }
-
-        var filePath = Path.Combine(imagesPath, fileName);
-        await File.WriteAllBytesAsync(filePath, request.ImageData, cancellationToken);
-
-        var imageUrl = $"/images/users/{fileName}";
+        var imageUrl = await imageStorage.SaveAsync("users", fileName, request.ImageData, cancellationToken);
 
         // Delete old image if exists
         if (user.UserImage != null)
         {
             var oldImageUrl = user.UserImage.Image.ImageUrl;
-            var oldFilePath = Path.Combine(env.WebRootPath, oldImageUrl.TrimStart('/'));
-            if (File.Exists(oldFilePath))
-            {
-                File.Delete(oldFilePath);
-            }
+            await imageStorage.DeleteAsync(oldImageUrl, cancellationToken);
             db.UserImages.Remove(user.UserImage);
             db.Images.Remove(user.UserImage.Image);
         }
