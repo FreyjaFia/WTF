@@ -1,4 +1,5 @@
 using MediatR;
+using WTF.Contracts.Users.Enums;
 
 namespace WTF.Contracts.Users.Commands;
 
@@ -7,5 +8,6 @@ public record UpdateUserCommand(
     string FirstName,
     string LastName,
     string Username,
-    string? Password
+    string? Password,
+    UserRoleEnum RoleId
 ) : IRequest<UserDto?>;

@@ -1,3 +1,5 @@
+using WTF.Contracts.Users.Enums;
+
 namespace WTF.Contracts.Users;
 
 public record UserDto(
@@ -6,5 +8,6 @@ public record UserDto(
     string LastName,
     string Username,
     bool IsActive,
-    string? ImageUrl
+    string? ImageUrl,
+    UserRoleEnum RoleId
 );
