@@ -4,6 +4,7 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Threading.RateLimiting;
+using WTF.Api.Common.Auth;
 using WTF.Api.Endpoints;
 using WTF.Api.Services;
 using WTF.Domain.Data;
@@ -22,6 +23,7 @@ builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Progr
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddSingleton<IJwtService, JwtService>();
+builder.Services.AddScoped<IUserRoleService, UserRoleService>();
 
 if (builder.Environment.IsDevelopment())
 {
@@ -56,7 +58,21 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy(AppPolicies.ManagementRead, policy =>
+        policy.RequireRole(AppRoles.Admin, AppRoles.AdminViewer))
+    .AddPolicy(AppPolicies.ManagementWrite, policy =>
+        policy.RequireRole(AppRoles.Admin))
+    .AddPolicy(AppPolicies.OrdersRead, policy =>
+        policy.RequireRole(AppRoles.Admin, AppRoles.AdminViewer, AppRoles.Cashier))
+    .AddPolicy(AppPolicies.OrdersWrite, policy =>
+        policy.RequireRole(AppRoles.Admin, AppRoles.Cashier))
+    .AddPolicy(AppPolicies.CustomersRead, policy =>
+        policy.RequireRole(AppRoles.Admin, AppRoles.AdminViewer))
+    .AddPolicy(AppPolicies.CustomersWrite, policy =>
+        policy.RequireRole(AppRoles.Admin))
+    .AddPolicy(AppPolicies.CustomersCreate, policy =>
+        policy.RequireRole(AppRoles.Admin, AppRoles.Cashier));
 
 builder.Services.AddCors(options =>
 {

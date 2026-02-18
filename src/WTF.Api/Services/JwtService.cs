@@ -3,14 +3,13 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
-using WTF.Api.Common.Extensions;
 using WTF.Domain.Entities;
 
 namespace WTF.Api.Services
 {
     public interface IJwtService
     {
-        string GenerateAccessToken(User user);
+        string GenerateAccessToken(User user, string role);
         string GenerateRefreshToken();
         ClaimsPrincipal? ValidateToken(string token);
         Guid? GetUserIdFromToken(string token);
@@ -24,7 +23,7 @@ namespace WTF.Api.Services
         private readonly int _accessTokenExpirationMinutes = int.Parse(configuration["Jwt:AccessTokenExpirationMinutes"] ?? "60");
         private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
 
-        public string GenerateAccessToken(User user)
+        public string GenerateAccessToken(User user, string role)
         {
             var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_secretKey));
             var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
@@ -33,7 +32,9 @@ namespace WTF.Api.Services
             {
                 new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
                 new(JwtRegisteredClaimNames.UniqueName, user.Username),
-                new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+                new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                new(ClaimTypes.Role, role),
+                new("role", role)
             };
 
             var token = new JwtSecurityToken(
