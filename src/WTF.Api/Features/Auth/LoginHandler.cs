@@ -8,7 +8,7 @@ using WTF.Domain.Entities;
 
 namespace WTF.Api.Features.Auth;
 
-public class LoginHandler(WTFDbContext db, IJwtService jwtService, IConfiguration config) : IRequestHandler<LoginCommand, LoginDto>
+public class LoginHandler(WTFDbContext db, IJwtService jwtService, IUserRoleService userRoleService, IConfiguration config) : IRequestHandler<LoginCommand, LoginDto>
 {
     public async Task<LoginDto> Handle(LoginCommand request, CancellationToken cancellationToken)
     {
@@ -27,7 +27,8 @@ public class LoginHandler(WTFDbContext db, IJwtService jwtService, IConfiguratio
             return null!;
         }
 
-        var accessToken = jwtService.GenerateAccessToken(user);
+        var role = await userRoleService.GetRoleNameAsync(user.Id, cancellationToken);
+        var accessToken = jwtService.GenerateAccessToken(user, role);
         var refreshToken = jwtService.GenerateRefreshToken();
 
         var refreshTokenExpiration = DateTime.UtcNow.AddDays(int.Parse(config["Jwt:RefreshTokenExpirationDays"] ?? "7"));

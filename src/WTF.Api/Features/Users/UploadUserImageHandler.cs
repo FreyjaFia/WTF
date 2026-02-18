@@ -4,6 +4,7 @@ using WTF.Api.Common.Extensions;
 using WTF.Api.Services;
 using WTF.Contracts.Users;
 using WTF.Contracts.Users.Commands;
+using WTF.Contracts.Users.Enums;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 
@@ -80,7 +81,8 @@ public class UploadUserImageHandler(WTFDbContext db, IImageStorage imageStorage,
             user.LastName,
             user.Username,
             user.IsActive,
-            absoluteImageUrl
+            absoluteImageUrl,
+            (UserRoleEnum)user.RoleId
         );
     }
 }

@@ -1,6 +1,7 @@
 using MediatR;
 using WTF.Contracts.Users;
 using WTF.Contracts.Users.Commands;
+using WTF.Contracts.Users.Enums;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 
@@ -16,7 +17,8 @@ public class CreateUserHandler(WTFDbContext db) : IRequestHandler<CreateUserComm
             LastName = request.LastName,
             Username = request.Username,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
-            IsActive = true
+            IsActive = true,
+            RoleId = (int)request.RoleId
         };
 
         db.Users.Add(user);
@@ -28,7 +30,8 @@ public class CreateUserHandler(WTFDbContext db) : IRequestHandler<CreateUserComm
             user.LastName,
             user.Username,
             user.IsActive,
-            null
+            null,
+            (UserRoleEnum)user.RoleId
         );
     }
 }

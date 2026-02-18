@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
 using WTF.Contracts.Users;
+using WTF.Contracts.Users.Enums;
 using WTF.Contracts.Users.Queries;
 using WTF.Domain.Data;
 
@@ -29,6 +30,7 @@ public class GetUsersHandler(WTFDbContext db, IHttpContextAccessor httpContextAc
         }
 
         var users = await query
+            .Include(u => u.Role)
             .Include(u => u.UserImage)
                 .ThenInclude(ui => ui.Image)
             .OrderBy(u => u.LastName)
@@ -49,7 +51,8 @@ public class GetUsersHandler(WTFDbContext db, IHttpContextAccessor httpContextAc
                 u.LastName,
                 u.Username,
                 u.IsActive,
-                imageUrl
+                imageUrl,
+                (UserRoleEnum)u.RoleId
             );
         })];
     }

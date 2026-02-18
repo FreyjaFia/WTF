@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Contracts.Users;
 using WTF.Contracts.Users.Commands;
+using WTF.Contracts.Users.Enums;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Users;
@@ -19,6 +20,7 @@ public class UpdateUserHandler(WTFDbContext db) : IRequestHandler<UpdateUserComm
         user.FirstName = request.FirstName;
         user.LastName = request.LastName;
         user.Username = request.Username;
+        user.RoleId = (int)request.RoleId;
 
         if (!string.IsNullOrWhiteSpace(request.Password))
         {
@@ -33,7 +35,8 @@ public class UpdateUserHandler(WTFDbContext db) : IRequestHandler<UpdateUserComm
             user.LastName,
             user.Username,
             user.IsActive,
-            null
+            null,
+            (UserRoleEnum)user.RoleId
         );
     }
 }

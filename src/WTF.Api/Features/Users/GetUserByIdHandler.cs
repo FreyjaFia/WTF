@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
 using WTF.Contracts.Users;
+using WTF.Contracts.Users.Enums;
 using WTF.Contracts.Users.Queries;
 using WTF.Domain.Data;
 
@@ -12,6 +13,7 @@ public class GetUserByIdHandler(WTFDbContext db, IHttpContextAccessor httpContex
     public async Task<UserDto?> Handle(GetUserByIdQuery request, CancellationToken cancellationToken)
     {
         var user = await db.Users
+            .Include(u => u.Role)
             .Include(u => u.UserImage)
                 .ThenInclude(ui => ui.Image)
             .FirstOrDefaultAsync(u => u.Id == request.Id, cancellationToken);
@@ -33,7 +35,8 @@ public class GetUserByIdHandler(WTFDbContext db, IHttpContextAccessor httpContex
             user.LastName,
             user.Username,
             user.IsActive,
-            imageUrl
+            imageUrl,
+            (UserRoleEnum)user.RoleId
         );
     }
 }
