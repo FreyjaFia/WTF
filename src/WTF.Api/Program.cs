@@ -85,8 +85,16 @@ app.UseRateLimiter();
 // Serve static files from wwwroot
 app.UseStaticFiles(new StaticFileOptions
 {
+    // Use the configured WebRootPath when present. In some hosting
+    // environments (Azure App Service) the ContentRootPath already
+    // points to the site wwwroot folder, so combining it with "wwwroot"
+    // results in a doubled path ("...\\wwwroot\\wwwroot") which does
+    // not exist and throws DirectoryNotFoundException. Prefer
+    // WebRootPath and fall back to ContentRootPath+"wwwroot" when needed.
     FileProvider = new PhysicalFileProvider(
-        Path.Combine(builder.Environment.ContentRootPath, "wwwroot")),
+        !string.IsNullOrEmpty(builder.Environment.WebRootPath)
+            ? builder.Environment.WebRootPath
+            : Path.Combine(builder.Environment.ContentRootPath, "wwwroot")),
     RequestPath = ""
 });
 
