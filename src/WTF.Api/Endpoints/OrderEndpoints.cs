@@ -1,4 +1,5 @@
 using MediatR;
+using WTF.Api.Common.Auth;
 using WTF.Contracts.Orders.Commands;
 using WTF.Contracts.Orders.Queries;
 
@@ -17,7 +18,8 @@ public static class OrderEndpoints
             {
                 var result = await sender.Send(query);
                 return Results.Ok(result);
-            });
+            })
+            .RequireAuthorization(AppPolicies.OrdersRead);
 
         // GET /api/orders/{id} - Get order by ID
         orderGroup.MapGet("/{id:guid}",
@@ -25,7 +27,8 @@ public static class OrderEndpoints
             {
                 var result = await sender.Send(new GetOrderByIdQuery(id));
                 return result is not null ? Results.Ok(result) : Results.NotFound();
-            });
+            })
+            .RequireAuthorization(AppPolicies.OrdersRead);
 
         // POST /api/orders - Create new order
         orderGroup.MapPost("/",
@@ -33,7 +36,8 @@ public static class OrderEndpoints
             {
                 var result = await sender.Send(command);
                 return Results.Created($"/api/orders/{result.Id}", result);
-            });
+            })
+            .RequireAuthorization(AppPolicies.OrdersWrite);
 
         // PUT /api/orders/{id} - Update order
         orderGroup.MapPut("/{id:guid}",
@@ -45,7 +49,8 @@ public static class OrderEndpoints
                 }
                 var result = await sender.Send(command);
                 return result is not null ? Results.Ok(result) : Results.NotFound();
-            });
+            })
+            .RequireAuthorization(AppPolicies.OrdersWrite);
 
         // PATCH /api/orders/{id}/void - Void order (Pending -> Cancelled, Completed -> Refunded)
         orderGroup.MapPatch("/{id:guid}/void",
@@ -53,7 +58,8 @@ public static class OrderEndpoints
             {
                 var result = await sender.Send(new VoidOrderCommand(id));
                 return result is not null ? Results.Ok(result) : Results.NotFound();
-            });
+            })
+            .RequireAuthorization(AppPolicies.OrdersWrite);
 
         return app;
     }

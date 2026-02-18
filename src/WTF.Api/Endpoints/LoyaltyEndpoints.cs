@@ -1,4 +1,5 @@
-﻿using MediatR;
+using MediatR;
+using WTF.Api.Common.Auth;
 using WTF.Contracts.Loyalty.Commands;
 using WTF.Contracts.Loyalty.Queries;
 
@@ -16,14 +17,16 @@ public static class LoyaltyEndpoints
             {
                 var result = await sender.Send(new GetLoyaltyPointsQuery(customerId));
                 return result is not null ? Results.Ok(result) : Results.NotFound();
-            });
+            })
+            .RequireAuthorization(AppPolicies.ManagementRead);
 
         loyaltyGroup.MapPost("/generate/{customerId:guid}",
             async (Guid customerId, ISender sender) =>
             {
                 var result = await sender.Send(new GenerateShortLinkCommand(customerId));
                 return Results.Ok(result);
-            });
+            })
+            .RequireAuthorization(AppPolicies.ManagementWrite);
 
         loyaltyGroup.MapGet("/redirect/{token}",
             async (string token, ISender sender) =>

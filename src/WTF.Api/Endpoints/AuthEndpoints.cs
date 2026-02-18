@@ -1,7 +1,9 @@
 using MediatR;
+using WTF.Api.Common.Extensions;
 using WTF.Contracts.Auth;
 using WTF.Contracts.Auth.Commands;
 using WTF.Contracts.Auth.Queries;
+using WTF.Contracts.Users.Commands;
 
 namespace WTF.Api.Endpoints;
 
@@ -76,6 +78,34 @@ public static class AuthEndpoints
             var result = await mediator.Send(new GetMeQuery());
             return result is not null ? Results.Ok(result) : Results.Unauthorized();
         }).RequireAuthorization();
+
+        // PUT /api/auth/me - update current authenticated user profile
+        authGroup.MapPut("/me", async (UpdateMeCommand command, IMediator mediator) =>
+        {
+            var success = await mediator.Send(command);
+            return success ? Results.NoContent() : Results.Unauthorized();
+        }).RequireAuthorization();
+
+        // PUT /api/auth/me/image - update current authenticated user profile image
+        authGroup.MapPut("/me/image", async (HttpRequest request, IMediator mediator) =>
+        {
+            if (!request.HasFormContentType || !request.Form.Files.Any())
+            {
+                return Results.BadRequest("No file provided");
+            }
+
+            var userId = request.HttpContext.User.GetUserId();
+            var file = request.Form.Files[0];
+
+            using var ms = new MemoryStream();
+            await file.CopyToAsync(ms);
+            var data = ms.ToArray();
+
+            var result = await mediator.Send(new UploadUserImageCommand(userId, data, file.FileName));
+            return result is not null ? Results.Ok(result) : Results.BadRequest();
+        })
+        .RequireAuthorization()
+        .DisableAntiforgery();
 
         return app;
     }

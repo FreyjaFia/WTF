@@ -1,4 +1,5 @@
 using MediatR;
+using WTF.Api.Common.Auth;
 using WTF.Contracts.Products.Commands;
 using WTF.Contracts.Products.Queries;
 
@@ -21,7 +22,8 @@ public static class ProductEndpoints
             {
                 var result = await sender.Send(query);
                 return Results.Ok(result);
-            });
+            })
+            .RequireAuthorization(AppPolicies.ManagementRead);
 
         // GET /api/products/{id} - Get product by ID
         productGroup.MapGet("/{id:guid}",
@@ -30,6 +32,7 @@ public static class ProductEndpoints
                 var result = await sender.Send(new GetProductByIdQuery(id));
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             })
+            .RequireAuthorization(AppPolicies.ManagementRead)
             .WithName("GetProductById");
 
         // POST /api/products - Create new product
@@ -38,7 +41,8 @@ public static class ProductEndpoints
             {
                 var result = await sender.Send(command);
                 return Results.CreatedAtRoute("GetProductById", new { id = result.Id }, result);
-            });
+            })
+            .RequireAuthorization(AppPolicies.ManagementWrite);
 
         // PUT /api/products/{id} - Update product
         productGroup.MapPut("/{id:guid}",
@@ -51,7 +55,8 @@ public static class ProductEndpoints
 
                 var result = await sender.Send(command);
                 return result is not null ? Results.Ok(result) : Results.NotFound();
-            });
+            })
+            .RequireAuthorization(AppPolicies.ManagementWrite);
 
         // DELETE /api/products/{id} - Soft delete product
         productGroup.MapDelete("/{id:guid}",
@@ -59,7 +64,8 @@ public static class ProductEndpoints
             {
                 var result = await sender.Send(new DeleteProductCommand(id));
                 return result ? Results.NoContent() : Results.NotFound();
-            });
+            })
+            .RequireAuthorization(AppPolicies.ManagementWrite);
 
         // GET /api/products/{id}/price-history - Get price history for a product
         productGroup.MapGet("/{id:guid}/price-history",
@@ -67,7 +73,8 @@ public static class ProductEndpoints
             {
                 var result = await sender.Send(new GetProductPriceHistoryQuery(id));
                 return Results.Ok(result);
-            });
+            })
+            .RequireAuthorization(AppPolicies.ManagementRead);
 
         // GET /api/products/{id}/addons - Get available add-ons for a product
         productGroup.MapGet("/{id:guid}/addons",
@@ -75,7 +82,8 @@ public static class ProductEndpoints
             {
                 var result = await sender.Send(new GetProductAddOnsQuery(id));
                 return Results.Ok(result);
-            });
+            })
+            .RequireAuthorization(AppPolicies.ManagementRead);
 
         // POST /api/products/{id}/addons - Assign add-ons to a product
         productGroup.MapPost("/{id:guid}/addons",
@@ -88,7 +96,8 @@ public static class ProductEndpoints
 
                 var result = await sender.Send(command);
                 return result ? Results.Ok() : Results.NotFound();
-            });
+            })
+            .RequireAuthorization(AppPolicies.ManagementWrite);
 
         // GET /api/products/addons/{addOnId}/products - Get products that use this add-on (reverse lookup)
         productGroup.MapGet("/addons/{addOnId:guid}/products",
@@ -96,7 +105,8 @@ public static class ProductEndpoints
             {
                 var result = await sender.Send(new GetProductsByAddOnQuery(addOnId));
                 return Results.Ok(result);
-            });
+            })
+            .RequireAuthorization(AppPolicies.ManagementRead);
 
         // POST /api/products/addons/{addOnId}/products - Assign products to an add-on (reverse assignment)
         productGroup.MapPost("/addons/{addOnId:guid}/products",
@@ -109,7 +119,8 @@ public static class ProductEndpoints
 
                 var result = await sender.Send(command);
                 return result ? Results.Ok() : Results.NotFound();
-            });
+            })
+            .RequireAuthorization(AppPolicies.ManagementWrite);
 
         // POST /api/products/{id}/images - Upload product image
         productGroup.MapPost("/{id:guid}/images",
@@ -144,6 +155,7 @@ public static class ProductEndpoints
 
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             })
+            .RequireAuthorization(AppPolicies.ManagementWrite)
             .DisableAntiforgery();
 
         return app;

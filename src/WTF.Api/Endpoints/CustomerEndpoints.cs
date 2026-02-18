@@ -1,4 +1,5 @@
 using MediatR;
+using WTF.Api.Common.Auth;
 using WTF.Contracts.Customers.Commands;
 using WTF.Contracts.Customers.Queries;
 
@@ -19,7 +20,8 @@ public static class CustomerEndpoints
             {
                 var result = await sender.Send(query);
                 return Results.Ok(result);
-            });
+            })
+            .RequireAuthorization(AppPolicies.CustomersRead);
 
         // GET /api/customers/{id} - Get customer by ID
         customerGroup.MapGet("/{id:guid}",
@@ -28,6 +30,7 @@ public static class CustomerEndpoints
                 var result = await sender.Send(new GetCustomerByIdQuery(id));
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             })
+            .RequireAuthorization(AppPolicies.CustomersRead)
             .WithName("GetCustomerById");
 
         // POST /api/customers - Create new customer
@@ -36,7 +39,8 @@ public static class CustomerEndpoints
             {
                 var result = await sender.Send(command);
                 return Results.CreatedAtRoute("GetCustomerById", new { id = result.Id }, result);
-            });
+            })
+            .RequireAuthorization(AppPolicies.CustomersCreate);
 
         // PUT /api/customers/{id} - Update customer
         customerGroup.MapPut("/{id:guid}",
@@ -49,7 +53,8 @@ public static class CustomerEndpoints
 
                 var result = await sender.Send(command);
                 return result is not null ? Results.Ok(result) : Results.NotFound();
-            });
+            })
+            .RequireAuthorization(AppPolicies.CustomersWrite);
 
         // DELETE /api/customers/{id} - Delete customer
         customerGroup.MapDelete("/{id:guid}",
@@ -57,7 +62,8 @@ public static class CustomerEndpoints
             {
                 var result = await sender.Send(new DeleteCustomerCommand(id));
                 return result ? Results.NoContent() : Results.NotFound();
-            });
+            })
+            .RequireAuthorization(AppPolicies.CustomersWrite);
 
         // POST /api/customers/{id}/image - Upload customer image
         customerGroup.MapPost("/{id:guid}/image",
@@ -75,7 +81,8 @@ public static class CustomerEndpoints
 
                 var result = await sender.Send(new UploadCustomerImageCommand(id, data, file.FileName));
                 return result is not null ? Results.Ok(result) : Results.BadRequest();
-            });
+            })
+            .RequireAuthorization(AppPolicies.CustomersWrite);
 
         return app;
     }
