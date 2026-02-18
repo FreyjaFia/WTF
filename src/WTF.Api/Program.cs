@@ -82,21 +82,31 @@ if (app.Environment.IsDevelopment())
 app.UseCors("AllowUI");
 app.UseRateLimiter();
 
-// Serve static files from wwwroot
-app.UseStaticFiles(new StaticFileOptions
+// Serve static files only when a valid physical root exists.
+var staticRootCandidates = new[]
 {
-    // Use the configured WebRootPath when present. In some hosting
-    // environments (Azure App Service) the ContentRootPath already
-    // points to the site wwwroot folder, so combining it with "wwwroot"
-    // results in a doubled path ("...\\wwwroot\\wwwroot") which does
-    // not exist and throws DirectoryNotFoundException. Prefer
-    // WebRootPath and fall back to ContentRootPath+"wwwroot" when needed.
-    FileProvider = new PhysicalFileProvider(
-        !string.IsNullOrEmpty(builder.Environment.WebRootPath)
-            ? builder.Environment.WebRootPath
-            : Path.Combine(builder.Environment.ContentRootPath, "wwwroot")),
-    RequestPath = ""
-});
+    builder.Environment.WebRootPath,
+    Path.Combine(builder.Environment.ContentRootPath, "wwwroot")
+};
+
+var staticRoot = staticRootCandidates.FirstOrDefault(path =>
+    !string.IsNullOrWhiteSpace(path) && Directory.Exists(path));
+
+if (!string.IsNullOrWhiteSpace(staticRoot))
+{
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new PhysicalFileProvider(staticRoot),
+        RequestPath = ""
+    });
+}
+else
+{
+    app.Logger.LogInformation(
+        "No static files directory found. Checked '{WebRootPath}' and '{ContentRootPathWwwroot}'.",
+        builder.Environment.WebRootPath,
+        Path.Combine(builder.Environment.ContentRootPath, "wwwroot"));
+}
 
 // Only use HTTPS redirection in production (not in development for mobile apps)
 if (!app.Environment.IsDevelopment())
