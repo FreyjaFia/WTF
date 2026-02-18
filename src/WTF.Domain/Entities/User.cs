@@ -17,6 +17,8 @@ public partial class User
 
     public bool IsActive { get; set; }
 
+    public int RoleId { get; set; }
+
     public virtual ICollection<Order> OrderCreatedByNavigations { get; set; } = new List<Order>();
 
     public virtual ICollection<Order> OrderUpdatedByNavigations { get; set; } = new List<Order>();
@@ -28,6 +30,8 @@ public partial class User
     public virtual ICollection<Product> ProductUpdatedByNavigations { get; set; } = new List<Product>();
 
     public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
+
+    public virtual UserRole Role { get; set; } = null!;
 
     public virtual UserImage? UserImage { get; set; }
 }

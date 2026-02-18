@@ -52,6 +52,8 @@ public partial class WTFDbContext : DbContext
 
     public virtual DbSet<UserImage> UserImages { get; set; }
 
+    public virtual DbSet<UserRole> UserRoles { get; set; }
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         => optionsBuilder.UseSqlServer("Name=ConnectionStrings:WtfDb");
 
@@ -350,6 +352,8 @@ public partial class WTFDbContext : DbContext
 
         modelBuilder.Entity<User>(entity =>
         {
+            entity.HasIndex(e => e.RoleId, "IX_Users_RoleId");
+
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_Users_Id");
             entity.Property(e => e.FirstName)
                 .HasMaxLength(50)
@@ -362,6 +366,11 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.Username)
                 .HasMaxLength(50)
                 .IsUnicode(false);
+
+            entity.HasOne(d => d.Role).WithMany(p => p.Users)
+                .HasForeignKey(d => d.RoleId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Users_UserRoles");
         });
 
         modelBuilder.Entity<UserImage>(entity =>
@@ -381,6 +390,16 @@ public partial class WTFDbContext : DbContext
                 .HasForeignKey<UserImage>(d => d.UserId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_UserImage_Users");
+        });
+
+        modelBuilder.Entity<UserRole>(entity =>
+        {
+            entity.HasIndex(e => e.Name, "UQ_UserRoles_Name").IsUnique();
+
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.Name)
+                .HasMaxLength(30)
+                .IsUnicode(false);
         });
         modelBuilder.HasSequence("OrderNumberSeq").StartsAt(5L);
 
