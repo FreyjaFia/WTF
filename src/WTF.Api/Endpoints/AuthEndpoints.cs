@@ -57,6 +57,19 @@ public static class AuthEndpoints
             return Results.Ok(result);
         });
 
+        // Change password (requires authentication)
+        authGroup.MapPost("/change-password", async (ChangePasswordCommand command, IMediator mediator) =>
+        {
+            var success = await mediator.Send(command);
+
+            if (!success)
+            {
+                return Results.BadRequest(new { Message = "Current password is invalid or user not found." });
+            }
+
+            return Results.Ok(new { Message = "Password changed successfully." });
+        }).RequireAuthorization();
+
         return app;
     }
 }
