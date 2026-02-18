@@ -90,6 +90,7 @@ public class UpdateOrderHandler(WTFDbContext db) : IRequestHandler<UpdateOrderCo
         var newStatus = request.Status;
 
         order.CustomerId = request.CustomerId;
+        order.SpecialInstructions = request.SpecialInstructions;
         order.StatusId = (int)request.Status;
         order.PaymentMethodId = request.PaymentMethod.HasValue ? (int)request.PaymentMethod.Value : null;
         order.AmountReceived = request.AmountReceived;
@@ -119,6 +120,7 @@ public class UpdateOrderHandler(WTFDbContext db) : IRequestHandler<UpdateOrderCo
                 OrderId = order.Id,
                 ProductId = item.ProductId,
                 Quantity = item.Quantity,
+                SpecialInstructions = item.SpecialInstructions,
                 Price = null,
                 ParentOrderItemId = null
             };
@@ -140,6 +142,7 @@ public class UpdateOrderHandler(WTFDbContext db) : IRequestHandler<UpdateOrderCo
                     OrderId = order.Id,
                     ProductId = addOn.ProductId,
                     Quantity = addOn.Quantity,
+                    SpecialInstructions = addOn.SpecialInstructions,
                     Price = null,
                     ParentOrderItemId = newItem.Id
                 };
@@ -172,8 +175,10 @@ public class UpdateOrderHandler(WTFDbContext db) : IRequestHandler<UpdateOrderCo
                     child.Product.Name,
                     child.Quantity,
                     child.Price,
-                    new List<OrderItemDto>()
-                )).ToList()
+                    new List<OrderItemDto>(),
+                    child.SpecialInstructions
+                )).ToList(),
+                oi.SpecialInstructions
             ))
             .ToListAsync(cancellationToken);
 
@@ -196,6 +201,7 @@ public class UpdateOrderHandler(WTFDbContext db) : IRequestHandler<UpdateOrderCo
             order.AmountReceived,
             order.ChangeAmount,
             order.Tips,
+            order.SpecialInstructions,
             totalAmount
         );
     }

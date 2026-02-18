@@ -55,8 +55,10 @@ public class GetOrdersHandler(WTFDbContext db) : IRequestHandler<GetOrdersQuery,
                         child.Product.Name,
                         child.Quantity,
                         child.Price,
-                        []
-                    ))]
+                        [],
+                        child.SpecialInstructions
+                    ))],
+                    oi.SpecialInstructions
                 ))],
             o.CustomerId,
             (OrderStatusEnum)o.StatusId,
@@ -64,6 +66,7 @@ public class GetOrdersHandler(WTFDbContext db) : IRequestHandler<GetOrdersQuery,
             o.AmountReceived,
             o.ChangeAmount,
             o.Tips,
+            o.SpecialInstructions,
             o.OrderItems.Sum(oi => (oi.Price ?? oi.Product.Price) * oi.Quantity)
         ))];
     }

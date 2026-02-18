@@ -84,6 +84,7 @@ public class CreateOrderHandler(WTFDbContext db, IHttpContextAccessor httpContex
             CreatedAt = DateTime.UtcNow,
             CreatedBy = userId,
             CustomerId = request.CustomerId,
+            SpecialInstructions = request.SpecialInstructions,
             StatusId = (int)request.Status,
             PaymentMethodId = request.PaymentMethod.HasValue ? (int)request.PaymentMethod.Value : null,
             AmountReceived = request.AmountReceived,
@@ -103,6 +104,7 @@ public class CreateOrderHandler(WTFDbContext db, IHttpContextAccessor httpContex
                 OrderId = order.Id,
                 ProductId = item.ProductId,
                 Quantity = item.Quantity,
+                SpecialInstructions = item.SpecialInstructions,
                 Price = null,
                 ParentOrderItemId = null
             };
@@ -125,6 +127,7 @@ public class CreateOrderHandler(WTFDbContext db, IHttpContextAccessor httpContex
                     OrderId = order.Id,
                     ProductId = addOn.ProductId,
                     Quantity = addOn.Quantity,
+                    SpecialInstructions = addOn.SpecialInstructions,
                     Price = null,
                     ParentOrderItemId = orderItem.Id
                 };
@@ -159,8 +162,10 @@ public class CreateOrderHandler(WTFDbContext db, IHttpContextAccessor httpContex
                     child.Product.Name,
                     child.Quantity,
                     child.Price,
-                    new List<OrderItemDto>()
-                )).ToList()
+                    new List<OrderItemDto>(),
+                    child.SpecialInstructions
+                )).ToList(),
+                oi.SpecialInstructions
             ))
             .ToListAsync(cancellationToken);
 
@@ -183,6 +188,7 @@ public class CreateOrderHandler(WTFDbContext db, IHttpContextAccessor httpContex
             order.AmountReceived,
             order.ChangeAmount,
             order.Tips,
+            order.SpecialInstructions,
             totalAmount
         );
     }

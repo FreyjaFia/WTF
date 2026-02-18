@@ -33,14 +33,17 @@ public class GetOrderByIdHandler(WTFDbContext db) : IRequestHandler<GetOrderById
                 oi.Product.Name,
                 oi.Quantity,
                 oi.Price,
-                [.. oi.InverseParentOrderItem.Select(child => new OrderItemDto(
-                    child.Id,
-                    child.ProductId,
-                    child.Product.Name,
-                    child.Quantity,
-                    child.Price,
-                    []
-                ))]
+                [.. oi.InverseParentOrderItem
+                    .Select(child => new OrderItemDto(
+                        child.Id,
+                        child.ProductId,
+                        child.Product.Name,
+                        child.Quantity,
+                        child.Price,
+                        [],
+                        child.SpecialInstructions
+                    ))],
+                oi.SpecialInstructions
             ))
             .ToList();
 
@@ -58,6 +61,7 @@ public class GetOrderByIdHandler(WTFDbContext db) : IRequestHandler<GetOrderById
             order.AmountReceived,
             order.ChangeAmount,
             order.Tips,
+            order.SpecialInstructions,
             order.OrderItems.Sum(oi => (oi.Price ?? oi.Product.Price) * oi.Quantity)
         );
     }

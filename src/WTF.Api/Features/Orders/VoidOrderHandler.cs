@@ -65,8 +65,10 @@ public class VoidOrderHandler(WTFDbContext db, IHttpContextAccessor httpContextA
                     child.Product.Name,
                     child.Quantity,
                     child.Price,
-                    new List<OrderItemDto>()
-                )).ToList()
+                    new List<OrderItemDto>(),
+                    child.SpecialInstructions
+                )).ToList(),
+                oi.SpecialInstructions
             ))
             .ToListAsync(cancellationToken);
 
@@ -89,6 +91,7 @@ public class VoidOrderHandler(WTFDbContext db, IHttpContextAccessor httpContextA
             order.AmountReceived,
             order.ChangeAmount,
             order.Tips,
+            order.SpecialInstructions,
             totalAmount
         );
     }
