@@ -70,6 +70,13 @@ public static class AuthEndpoints
             return Results.Ok(new { Message = "Password changed successfully." });
         }).RequireAuthorization();
 
+        // GET /api/auth/me - return current authenticated user info
+        authGroup.MapGet("/me", async (IMediator mediator) =>
+        {
+            var result = await mediator.Send(new GetMeQuery());
+            return result is not null ? Results.Ok(result) : Results.Unauthorized();
+        }).RequireAuthorization();
+
         return app;
     }
 }

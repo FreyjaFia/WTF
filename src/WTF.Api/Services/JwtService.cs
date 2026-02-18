@@ -31,18 +31,10 @@ namespace WTF.Api.Services
 
             var claims = new List<Claim>
             {
-                new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-                new Claim(JwtRegisteredClaimNames.UniqueName, user.Username),
-                new Claim(JwtRegisteredClaimNames.GivenName, user.FirstName ?? string.Empty),
-                new Claim(JwtRegisteredClaimNames.FamilyName, user.LastName ?? string.Empty),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+                new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+                new(JwtRegisteredClaimNames.UniqueName, user.Username),
+                new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
-
-            var imageUrl = UrlExtensions.ToAbsoluteUrl(_httpContextAccessor, user.UserImage?.Image?.ImageUrl);
-            if (!string.IsNullOrWhiteSpace(imageUrl))
-            {
-                claims.Add(new Claim("image_url", imageUrl));
-            }
 
             var token = new JwtSecurityToken(
                 issuer: _issuer,
