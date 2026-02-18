@@ -364,6 +364,3 @@ FodyWeavers.xsd
 
 # Ignore all images under wwwroot to avoid committing uploaded or generated files
 src/WTF.Api/wwwroot/images/**
-
-# Keep .gitkeep files so empty directories can be preserved in the repo
-!src/WTF.Api/wwwroot/images/**/.gitkeep

@@ -1,5 +1,4 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
+﻿using System.Security.Claims;
 
 namespace WTF.Api.Common.Extensions;
 
@@ -7,7 +6,7 @@ public static class ClaimsPrincipalExtensions
 {
     public static Guid GetUserId(this ClaimsPrincipal principal)
     {
-        var userIdClaim = principal.FindFirst(JwtRegisteredClaimNames.Sub);
+        var userIdClaim = principal.FindFirst(ClaimTypes.NameIdentifier);
 
         if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
         {
