@@ -53,13 +53,20 @@ public class AssignAddOnProductsHandler(WTFDbContext db) : IRequestHandler<Assig
                 $"The following products are add-ons and cannot be assigned: {string.Join(", ", addOnProducts.Select(p => p.Name))}");
         }
 
-        // Identify products being removed from this add-on
-        var currentProductIds = await db.ProductAddOns
+        var requestedTypeByProductId = request.Products
+            .ToDictionary(p => p.ProductId, p => (int)p.AddOnType);
+
+        var existingLinks = await db.ProductAddOns
             .Where(pa => pa.AddOnId == request.AddOnId)
-            .Select(pa => pa.ProductId)
             .ToListAsync(cancellationToken);
 
+        // Identify products being removed from this add-on
+        var currentProductIds = existingLinks
+            .Select(pa => pa.ProductId)
+            .ToList();
+
         var removedProductIds = currentProductIds.Except(productIds).ToList();
+        var addedProductIds = productIds.Except(currentProductIds).ToList();
 
         // Update pending orders: decouple this add-on from removed parent products
         if (removedProductIds.Count != 0)
@@ -90,15 +97,45 @@ public class AssignAddOnProductsHandler(WTFDbContext db) : IRequestHandler<Assig
             }
         }
 
-        // Clear existing product associations
-        var existingLinks = await db.ProductAddOns
-            .Where(pa => pa.AddOnId == request.AddOnId)
-            .ToListAsync(cancellationToken);
+        // Remove override rows for unlinked product-add-on pairs before deleting ProductAddOn rows (FK dependency)
+        if (removedProductIds.Count != 0)
+        {
+            var overridesToRemove = await db.ProductAddOnPriceOverrides
+                .Where(o => o.AddOnId == request.AddOnId && removedProductIds.Contains(o.ProductId))
+                .ToListAsync(cancellationToken);
 
-        db.ProductAddOns.RemoveRange(existingLinks);
+            if (overridesToRemove.Count != 0)
+            {
+                db.ProductAddOnPriceOverrides.RemoveRange(overridesToRemove);
+            }
+        }
 
-        // Assign new products with types
-        var newLinks = request.Products.Select(product => new ProductAddOn
+        // Remove links that are no longer assigned
+        var linksToRemove = existingLinks
+            .Where(link => removedProductIds.Contains(link.ProductId))
+            .ToList();
+        if (linksToRemove.Count != 0)
+        {
+            db.ProductAddOns.RemoveRange(linksToRemove);
+        }
+
+        // Update AddOnType for existing links that remain
+        var linksToUpdate = existingLinks
+            .Where(link => requestedTypeByProductId.ContainsKey(link.ProductId))
+            .ToList();
+        foreach (var link in linksToUpdate)
+        {
+            var requestedTypeId = requestedTypeByProductId[link.ProductId];
+            if (link.AddOnTypeId != requestedTypeId)
+            {
+                link.AddOnTypeId = requestedTypeId;
+            }
+        }
+
+        // Add newly assigned products with types
+        var newLinks = request.Products
+            .Where(product => addedProductIds.Contains(product.ProductId))
+            .Select(product => new ProductAddOn
         {
             ProductId = product.ProductId,
             AddOnId = request.AddOnId,

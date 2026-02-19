@@ -25,11 +25,15 @@ public class GetProductAddOnsHandler(WTFDbContext db, IHttpContextAccessor httpC
             .Include(pa => pa.AddOn)
                 .ThenInclude(p => p.ProductImage)
                     .ThenInclude(pi => pi!.Image)
+            .Include(pa => pa.ProductAddOnPriceOverride)
             .Where(pa => pa.AddOn.IsActive)
             .Select(pa => new
             {
                 AddOnType = (AddOnTypeEnum)(pa.AddOnTypeId ?? (int)AddOnTypeEnum.Extra),
-                pa.AddOn
+                pa.AddOn,
+                EffectivePrice = pa.ProductAddOnPriceOverride != null && pa.ProductAddOnPriceOverride.IsActive
+                    ? pa.ProductAddOnPriceOverride.Price
+                    : pa.AddOn.Price
             })
             .ToListAsync(cancellationToken);
 
@@ -49,7 +53,7 @@ public class GetProductAddOnsHandler(WTFDbContext db, IHttpContextAccessor httpC
                         item.AddOn.Name,
                         item.AddOn.Code,
                         item.AddOn.Description,
-                        item.AddOn.Price,
+                        item.EffectivePrice,
                         (ProductCategoryEnum)item.AddOn.CategoryId,
                         item.AddOn.IsActive,
                         imageUrl
