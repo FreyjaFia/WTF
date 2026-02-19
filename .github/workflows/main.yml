@@ -1,4 +1,4 @@
-name: Build and Deploy .NET 10 API + UI
+name: Build and Deploy .NET 10 API
 
 on:
   push:
@@ -83,7 +83,7 @@ jobs:
   #         output_location: ''
 
   deploy-api:
-    name: Deploy API
+    name: Deploy API to MonsterASP.NET
     runs-on: ubuntu-latest
     needs: build
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -96,10 +96,12 @@ jobs:
           name: drop
           path: ./publish
 
-      # 2. Deploy API to Azure App Service
-      - name: Deploy API to Azure App Service
-        uses: azure/webapps-deploy@v2
+      # 2. Deploy API via FTP to MonsterASP.NET
+      - name: Deploy API via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          app-name: 'wtf-app'
-          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          package: ./publish/api
+          server: ${{ secrets.MONSTERASP_FTP_SERVER }}
+          username: ${{ secrets.MONSTERASP_FTP_USERNAME }}
+          password: ${{ secrets.MONSTERASP_FTP_PASSWORD }}
+          local-dir: ./publish/api/
+          server-dir: /wwwroot/
