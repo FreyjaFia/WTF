@@ -122,6 +122,12 @@ public class CreateOrderHandler(WTFDbContext db, IHttpContextAccessor httpContex
             foreach (var addOn in item.AddOns)
             {
                 var addOnProduct = await db.Products.FindAsync([addOn.ProductId], cancellationToken) ?? throw new InvalidOperationException($"Add-on product with ID {addOn.ProductId} not found.");
+                var addOnOverridePrice = await db.ProductAddOnPriceOverrides
+                    .Where(o => o.ProductId == item.ProductId && o.AddOnId == addOn.ProductId && o.IsActive)
+                    .Select(o => (decimal?)o.Price)
+                    .FirstOrDefaultAsync(cancellationToken);
+                var effectiveAddOnPrice = addOnOverridePrice ?? addOnProduct.Price;
+
                 var addOnOrderItem = new OrderItem
                 {
                     OrderId = order.Id,
@@ -135,7 +141,7 @@ public class CreateOrderHandler(WTFDbContext db, IHttpContextAccessor httpContex
                 // Capture price if order is Completed or Cancelled
                 if (request.Status == OrderStatusEnum.Completed || request.Status == OrderStatusEnum.Cancelled)
                 {
-                    addOnOrderItem.Price = addOnProduct.Price;
+                    addOnOrderItem.Price = effectiveAddOnPrice;
                 }
 
                 db.OrderItems.Add(addOnOrderItem);

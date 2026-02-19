@@ -102,9 +102,35 @@ public class UpdateOrderHandler(WTFDbContext db) : IRequestHandler<UpdateOrderCo
         if (oldStatus == OrderStatusEnum.Pending && 
             (newStatus == OrderStatusEnum.Completed || newStatus == OrderStatusEnum.Cancelled))
         {
+            var parentProductByOrderItemId = order.OrderItems
+                .Where(oi => oi.ParentOrderItemId == null)
+                .ToDictionary(oi => oi.Id, oi => oi.ProductId);
+
             foreach (var orderItem in order.OrderItems)
             {
-                orderItem.Price ??= orderItem.Product.Price;
+                if (orderItem.Price != null)
+                {
+                    continue;
+                }
+
+                if (orderItem.ParentOrderItemId == null)
+                {
+                    orderItem.Price = orderItem.Product.Price;
+                    continue;
+                }
+
+                if (!parentProductByOrderItemId.TryGetValue(orderItem.ParentOrderItemId.Value, out var parentProductId))
+                {
+                    orderItem.Price = orderItem.Product.Price;
+                    continue;
+                }
+
+                var overridePrice = await db.ProductAddOnPriceOverrides
+                    .Where(o => o.ProductId == parentProductId && o.AddOnId == orderItem.ProductId && o.IsActive)
+                    .Select(o => (decimal?)o.Price)
+                    .FirstOrDefaultAsync(cancellationToken);
+
+                orderItem.Price = overridePrice ?? orderItem.Product.Price;
             }
         }
 
@@ -137,6 +163,12 @@ public class UpdateOrderHandler(WTFDbContext db) : IRequestHandler<UpdateOrderCo
             foreach (var addOn in item.AddOns)
             {
                 var addOnProduct = await db.Products.FindAsync([addOn.ProductId], cancellationToken) ?? throw new InvalidOperationException($"Add-on product with ID {addOn.ProductId} not found.");
+                var addOnOverridePrice = await db.ProductAddOnPriceOverrides
+                    .Where(o => o.ProductId == item.ProductId && o.AddOnId == addOn.ProductId && o.IsActive)
+                    .Select(o => (decimal?)o.Price)
+                    .FirstOrDefaultAsync(cancellationToken);
+                var effectiveAddOnPrice = addOnOverridePrice ?? addOnProduct.Price;
+
                 var addOnItem = new OrderItem
                 {
                     OrderId = order.Id,
@@ -147,9 +179,10 @@ public class UpdateOrderHandler(WTFDbContext db) : IRequestHandler<UpdateOrderCo
                     ParentOrderItemId = newItem.Id
                 };
 
+                // Capture price if order is Completed or Cancelled
                 if (newStatus == OrderStatusEnum.Completed || newStatus == OrderStatusEnum.Cancelled)
                 {
-                    addOnItem.Price = addOnProduct.Price;
+                    addOnItem.Price = effectiveAddOnPrice;
                 }
 
                 db.OrderItems.Add(addOnItem);
