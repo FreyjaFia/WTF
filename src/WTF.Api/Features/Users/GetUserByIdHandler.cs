@@ -15,7 +15,7 @@ public class GetUserByIdHandler(WTFDbContext db, IHttpContextAccessor httpContex
         var user = await db.Users
             .Include(u => u.Role)
             .Include(u => u.UserImage)
-                .ThenInclude(ui => ui.Image)
+                .ThenInclude(ui => ui!.Image)
             .FirstOrDefaultAsync(u => u.Id == request.Id, cancellationToken);
 
         if (user == null)

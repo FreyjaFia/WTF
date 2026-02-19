@@ -100,6 +100,15 @@ public static class UserEndpoints
             .RequireAuthorization(AppPolicies.ManagementWrite)
             .DisableAntiforgery();
 
+        // DELETE /api/users/{id}/images - Remove user image
+        userGroup.MapDelete("/{id:guid}/images",
+            async (Guid id, ISender sender) =>
+            {
+                var result = await sender.Send(new RemoveUserImageCommand(id));
+                return result is not null ? Results.Ok(result) : Results.NotFound();
+            })
+            .RequireAuthorization(AppPolicies.ManagementWrite);
+
         return app;
     }
 }

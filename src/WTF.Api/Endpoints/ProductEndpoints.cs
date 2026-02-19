@@ -158,6 +158,15 @@ public static class ProductEndpoints
             .RequireAuthorization(AppPolicies.ManagementWrite)
             .DisableAntiforgery();
 
+        // DELETE /api/products/{id}/images - Remove product image
+        productGroup.MapDelete("/{id:guid}/images",
+            async (Guid id, ISender sender) =>
+            {
+                var result = await sender.Send(new RemoveProductImageCommand(id));
+                return result is not null ? Results.Ok(result) : Results.NotFound();
+            })
+            .RequireAuthorization(AppPolicies.ManagementWrite);
+
         return app;
     }
 }

@@ -84,6 +84,15 @@ public static class CustomerEndpoints
             })
             .RequireAuthorization(AppPolicies.CustomersWrite);
 
+        // DELETE /api/customers/{id}/image - Remove customer image
+        customerGroup.MapDelete("/{id:guid}/image",
+            async (Guid id, ISender sender) =>
+            {
+                var result = await sender.Send(new RemoveCustomerImageCommand(id));
+                return result is not null ? Results.Ok(result) : Results.NotFound();
+            })
+            .RequireAuthorization(AppPolicies.CustomersWrite);
+
         return app;
     }
 }
