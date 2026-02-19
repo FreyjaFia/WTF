@@ -36,6 +36,8 @@ public partial class WTFDbContext : DbContext
 
     public virtual DbSet<ProductAddOn> ProductAddOns { get; set; }
 
+    public virtual DbSet<ProductAddOnPriceOverride> ProductAddOnPriceOverrides { get; set; }
+
     public virtual DbSet<ProductCategory> ProductCategories { get; set; }
 
     public virtual DbSet<ProductImage> ProductImages { get; set; }
@@ -257,6 +259,28 @@ public partial class WTFDbContext : DbContext
                 .HasForeignKey(d => d.ProductId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ProductAddOns_Product");
+        });
+
+        modelBuilder.Entity<ProductAddOnPriceOverride>(entity =>
+        {
+            entity.HasIndex(e => e.AddOnId, "IX_ProductAddOnPriceOverrides_AddOnId");
+
+            entity.HasIndex(e => e.ProductId, "IX_ProductAddOnPriceOverrides_ProductId");
+
+            entity.HasIndex(e => new { e.ProductId, e.AddOnId }, "UX_ProductAddOnPriceOverrides_Product_AddOn").IsUnique();
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_ProductAddOnPriceOverrides_Id");
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("(getutcdate())", "DF_ProductAddOnPriceOverrides_CreatedAt")
+                .HasColumnType("datetime");
+            entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_ProductAddOnPriceOverrides_IsActive");
+            entity.Property(e => e.Price).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.UpdatedAt).HasColumnType("datetime");
+
+            entity.HasOne(d => d.ProductAddOn).WithOne(p => p.ProductAddOnPriceOverride)
+                .HasForeignKey<ProductAddOnPriceOverride>(d => new { d.ProductId, d.AddOnId })
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ProductAddOnPriceOverrides_ProductAddOn");
         });
 
         modelBuilder.Entity<ProductCategory>(entity =>

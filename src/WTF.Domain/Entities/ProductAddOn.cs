@@ -16,4 +16,6 @@ public partial class ProductAddOn
     public virtual AddOnType? AddOnType { get; set; }
 
     public virtual Product Product { get; set; } = null!;
+
+    public virtual ProductAddOnPriceOverride? ProductAddOnPriceOverride { get; set; }
 }
