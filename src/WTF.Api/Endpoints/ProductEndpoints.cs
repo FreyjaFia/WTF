@@ -99,6 +99,52 @@ public static class ProductEndpoints
             })
             .RequireAuthorization(AppPolicies.ManagementWrite);
 
+        // GET /api/products/{id}/addon-price-overrides - Get add-on price overrides for product
+        productGroup.MapGet("/{id:guid}/addon-price-overrides",
+            async (Guid id, ISender sender) =>
+            {
+                var result = await sender.Send(new GetProductAddOnPriceOverridesQuery(id));
+                return Results.Ok(result);
+            })
+            .RequireAuthorization(AppPolicies.ManagementRead);
+
+        // POST /api/products/{id}/addon-price-overrides - Create add-on price override
+        productGroup.MapPost("/{id:guid}/addon-price-overrides",
+            async (Guid id, CreateProductAddOnPriceOverrideCommand command, ISender sender) =>
+            {
+                if (id != command.ProductId)
+                {
+                    return Results.BadRequest("Product ID mismatch");
+                }
+
+                var result = await sender.Send(command);
+                return result is not null ? Results.Ok(result) : Results.NotFound();
+            })
+            .RequireAuthorization(AppPolicies.ManagementWrite);
+
+        // PUT /api/products/{id}/addon-price-overrides/{addOnId} - Update add-on price override
+        productGroup.MapPut("/{id:guid}/addon-price-overrides/{addOnId:guid}",
+            async (Guid id, Guid addOnId, UpdateProductAddOnPriceOverrideCommand command, ISender sender) =>
+            {
+                if (id != command.ProductId || addOnId != command.AddOnId)
+                {
+                    return Results.BadRequest("Product/Add-on ID mismatch");
+                }
+
+                var result = await sender.Send(command);
+                return result is not null ? Results.Ok(result) : Results.NotFound();
+            })
+            .RequireAuthorization(AppPolicies.ManagementWrite);
+
+        // DELETE /api/products/{id}/addon-price-overrides/{addOnId} - Delete add-on price override
+        productGroup.MapDelete("/{id:guid}/addon-price-overrides/{addOnId:guid}",
+            async (Guid id, Guid addOnId, ISender sender) =>
+            {
+                var result = await sender.Send(new DeleteProductAddOnPriceOverrideCommand(id, addOnId));
+                return result ? Results.NoContent() : Results.NotFound();
+            })
+            .RequireAuthorization(AppPolicies.ManagementWrite);
+
         // GET /api/products/addons/{addOnId}/products - Get products that use this add-on (reverse lookup)
         productGroup.MapGet("/addons/{addOnId:guid}/products",
             async (Guid addOnId, ISender sender) =>
