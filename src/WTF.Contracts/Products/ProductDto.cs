@@ -16,7 +16,8 @@ public record ProductDto(
     DateTime? UpdatedAt,
     Guid? UpdatedBy,
     string? ImageUrl,
-    List<ProductPriceHistoryDto> PriceHistory
+    List<ProductPriceHistoryDto> PriceHistory,
+    int AddOnCount = 0
 )
 {
     public string DisplayCategory => Category.ToString();
