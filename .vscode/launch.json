@@ -1,0 +1,33 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "WTF.Api",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build-api",
+      "program": "${workspaceFolder}/src/WTF.Api/bin/Debug/net10.0/WTF.Api.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/src/WTF.Api",
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "wtf-pos (Angular)",
+      "type": "chrome",
+      "request": "launch",
+      "preLaunchTask": "serve-angular",
+      "url": "http://localhost:4200",
+      "webRoot": "${workspaceFolder}/src/wtf-pos/src"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Full Stack (API + Angular)",
+      "configurations": ["WTF.Api", "wtf-pos (Angular)"],
+      "stopAll": true
+    }
+  ]
+}

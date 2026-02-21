@@ -1,0 +1,34 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build-api",
+      "type": "process",
+      "command": "dotnet",
+      "args": ["build", "${workspaceFolder}/src/WTF.Api/WTF.Api.csproj"],
+      "group": "build",
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "serve-angular",
+      "type": "npm",
+      "script": "start",
+      "path": "src/wtf-pos",
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "angular",
+        "pattern": {
+          "regexp": "^$",
+          "file": 1,
+          "location": 2,
+          "message": 3
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".*Angular Live Development Server.*",
+          "endsPattern": ".*Application bundle generation complete.*"
+        }
+      }
+    }
+  ]
+}
