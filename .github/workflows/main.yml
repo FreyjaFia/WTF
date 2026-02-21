@@ -41,7 +41,7 @@ jobs:
       # 5. Publish API (only on push to main)
       - name: Publish API
         if: github.event_name != 'pull_request'
-        run: dotnet publish src/WTF.Api/WTF.Api.csproj -c Release -o ./publish/api
+        run: dotnet publish src/WTF.Api/WTF.Api.csproj -c Release -o ./publish
 
       # 6. Upload artifact (only on push to main)
       - name: Upload Artifact
@@ -119,7 +119,7 @@ jobs:
           server: ${{ secrets.MONSTERASP_FTP_SERVER }}
           username: ${{ secrets.MONSTERASP_FTP_USERNAME }}
           password: ${{ secrets.MONSTERASP_FTP_PASSWORD }}
-          local-dir: ./publish/api/
+          local-dir: ./publish/
           server-dir: /wwwroot/
 
       # 4. Bring app back online
