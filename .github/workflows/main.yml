@@ -105,5 +105,6 @@ jobs:
           password: ${{ secrets.MONSTERASP_FTP_PASSWORD }}
           local-dir: ./publish/api/
           server-dir: /wwwroot/
+          dangerous-clean-slate: true
           state-name: ftp-deploy-sync-state.json
           log-level: verbose
