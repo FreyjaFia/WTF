@@ -26,12 +26,9 @@ When providing assistance, adopt the appropriate professional mindset:
 - Always explain the "why" behind technical decisions
 
 ## Project Overview
-Wake. Taste. Focus (WTF) is a multi-platform application for a coffee shop, built with .NET 10. The solution consists of three main projects sharing a common domain model:
-- **WTF.Api**: ASP.NET Core Web API (backend)
-- **WTF.UI**: Blazor WebAssembly (web frontend)
-- **WTF.MAUI**: .NET MAUI mobile application (cross-platform mobile)
-- **WTF.Contracts**: Shared DTOs, commands, and queries
-- **WTF.Domain**: Shared entity models and EF Core DbContext
+Wake. Taste. Focus (WTF) is a coffee shop application built with .NET 10. The solution consists of two projects:
+- **WTF.Api**: ASP.NET Core Web API (backend) — includes all DTOs, commands, queries, enums, and handlers
+- **WTF.Domain**: Entity models and EF Core DbContext
 
 ## Architecture Patterns
 
@@ -39,8 +36,10 @@ Wake. Taste. Focus (WTF) is a multi-platform application for a coffee shop, buil
 The API uses **Vertical Slice Architecture** with MediatR:
 - Features are organized by domain in `Features/{Domain}/{Handler}.cs`
 - Each handler implements `IRequestHandler<TRequest, TResponse>`
+- Commands/queries are defined as records **above the handler class** in the same file
+- DTOs live in `Features/{Domain}/DTOs/`
+- Enums live in `Features/{Domain}/Enums/`
 - Endpoints are grouped using minimal APIs in `Endpoints/{Domain}Endpoints.cs`
-- Example: `Features/Orders/GetOrdersHandler.cs` handles `GetOrdersQuery` from `Contracts/Orders/Queries/`
 
 **Key conventions:**
 ```csharp
@@ -55,119 +54,28 @@ public static IEndpointRouteBuilder MapOrders(this IEndpointRouteBuilder app)
 }
 ```
 
-### Frontend - Blazor (WTF.UI)
-- **Feature-based folder structure**: `Features/{Domain}/{ComponentName}.razor`
-- Services per feature: `Features/{Domain}/Services/{Service}.cs`
-- Uses Blazored.LocalStorage for token persistence
-- Primary constructor pattern for services: `public class ProductService(HttpClient httpClient)`
-
-**Token authentication:**
-- `TokenAuthMessageHandler` auto-injects JWT from LocalStorage on all API calls
-- Token stored as `"accessToken"` key in LocalStorage
-
-### Frontend - MAUI (WTF.MAUI)
-- **MVVM pattern** using CommunityToolkit.Mvvm
-- ViewModels use `[ObservableProperty]` and `[RelayCommand]` source generators
-- Pages: `Views/{PageName}.xaml` + `Views/{PageName}.xaml.cs`
-- ViewModels: `ViewModels/{PageName}ViewModel.cs`
-
-**Custom navigation:**
-- Uses `SidebarLayout` with `SidebarViewModel` for dynamic page loading
-- Content pages loaded into `SidebarLayout.PageContent` via service provider
-- Pages must be registered in `MauiProgram.cs` with correct lifetime (Singleton for container/content, Transient for forms)
-
-**Token authentication:**
-- `TokenService` manages tokens with SecureStorage (remember me) or in-memory (session only)
-- `AuthTokenHandler` auto-injects JWT on HTTP requests
-
-**ViewModel Organization:**
-ViewModels follow a strict region-based organization pattern:
-```csharp
-public partial class OrderViewModel : ObservableObject
-{
-    #region Fields
-    private readonly IOrderService _orderService;
-    private bool _isRefreshingInternal = false;
-    private CancellationTokenSource? _searchCancellationTokenSource;
-    #endregion
-
-    #region Constructor
-    public OrderViewModel(IOrderService orderService)
-    {
-        _orderService = orderService;
-    }
-    #endregion
-
-    #region Observable Properties
-    [ObservableProperty]
-    private ObservableCollection<OrderDto> orders = new();
-
-    [ObservableProperty]
-    private bool isLoading;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasOrders))]
-    private string searchText = string.Empty;
-    #endregion
-
-    #region Computed Properties
-    public bool HasOrders => Orders.Any();
-    #endregion
-
-    #region Public Methods
-    public async Task InitializeAsync() { }
-    #endregion
-
-    #region Commands
-    [RelayCommand]
-    private async Task LoadOrdersAsync() { }
-
-    [RelayCommand]
-    private async Task RefreshOrdersAsync() { }
-    #endregion
-
-    #region Private Helper Methods
-    private async Task FetchOrdersAsync() { }
-    #endregion
-
-    #region Partial Methods (Property Change Handlers)
-    partial void OnSearchTextChanged(string value) { }
-    partial void OnIsRefreshingChanged(bool value) { }
-    #endregion
-}
-```
-
-**Key rules:**
-- Order: Fields ? Constructor ? Observable Properties ? Computed Properties ? Public Methods ? Commands ? Private Helper Methods ? Partial Methods
-- Use `#region` for all sections
-- Observable properties use `[ObservableProperty]` attribute on private fields (generates public properties)
-- Commands use `[RelayCommand]` attribute on private methods (generates public commands)
-- Computed properties are regular public properties that depend on observables
-- Partial methods handle property change notifications from source generators
-- **Always use proper new line spacing between members, regions, and logical code blocks for readability.**
-
-**Always apply these code style and ViewModel organization rules when updating existing files, not just when creating new files.**
-
 ## Shared Patterns
 
 ### CQRS with MediatR
-All request/response objects are **records** in `WTF.Contracts`:
+Commands and queries are **records** defined above the handler class in the same file. DTOs are separate files in `Features/{Domain}/DTOs/`:
 ```csharp
-// Query
-public record GetOrdersQuery(int Page, int PageSize, int Status) : IRequest<List<OrderDto>>;
-
-// Command
-public record CreateOrderCommand(...) : IRequest<OrderDto>;
-
-// DTO
+// In Features/Orders/DTOs/OrderDto.cs
+namespace WTF.Api.Features.Orders.DTOs;
 public record OrderDto(Guid Id, int OrderNumber, ...);
+
+// In Features/Orders/GetOrdersHandler.cs
+namespace WTF.Api.Features.Orders;
+public record GetOrdersQuery(OrderStatusEnum Status, Guid? CustomerId) : IRequest<List<OrderDto>>;
+public class GetOrdersHandler(WTFDbContext db) : IRequestHandler<GetOrdersQuery, List<OrderDto>>
+{
+    // ...
+}
 ```
 
 ### Authentication Flow
 1. Login POST to `/api/auth/login` returns JWT in `LoginDto`
-2. Frontend stores token (LocalStorage for Blazor, SecureStorage/memory for MAUI)
-3. Message handlers (`TokenAuthMessageHandler`/`AuthTokenHandler`) inject token in Authorization header
-4. API validates JWT via ASP.NET Core JWT Bearer middleware
+2. Frontend stores token and injects it in Authorization header on API calls
+3. API validates JWT via ASP.NET Core JWT Bearer middleware
 
 ## Database & Entity Framework
 - **SQL Server** with EF Core scaffolded DbContext (`WTF.Domain/Data/WTFDbContext.cs`)
@@ -187,39 +95,14 @@ dotnet run
 # API runs on http://localhost:5000 (dev), https in production
 ```
 
-**Blazor UI:**
-```bash
-cd src/WTF.UI
-dotnet run
-# WebAssembly app served at http://localhost:5001
-```
-
-**MAUI:**
-```bash
-cd src/WTF.MAUI
-dotnet build -t:Run -f net10.0-android  # For Android
-dotnet build -t:Run -f net10.0-windows  # For Windows
-```
-
 ### Adding New Features
 
 **API Endpoint:**
-1. Create request/response DTOs in `WTF.Contracts/{Domain}/`
-2. Create handler in `WTF.Api/Features/{Domain}/{Action}Handler.cs`
-3. Map endpoint in `WTF.Api/Endpoints/{Domain}Endpoints.cs`
-4. Register endpoint group in `Program.cs`: `app.Map{Domain}()`
-
-**MAUI Page:**
-1. Create XAML page in `Views/{PageName}.xaml`
-2. Create ViewModel in `ViewModels/{PageName}ViewModel.cs` with `ObservableObject` base
-3. Register both in `MauiProgram.cs` (lifetime matters!)
-4. For SidebarLayout integration, implement `IInitializablePage` if needed
-
-**Blazor Component:**
-1. Create `.razor` file in `Features/{Domain}/{ComponentName}.razor`
-2. Create code-behind `.razor.cs` with `partial class`
-3. Register service in `Program.cs` if needed
-4. Inject dependencies via `[Inject]` attribute
+1. Create response DTOs in `WTF.Api/Features/{Domain}/DTOs/`
+2. Create enums (if needed) in `WTF.Api/Features/{Domain}/Enums/`
+3. Create handler in `WTF.Api/Features/{Domain}/{Action}Handler.cs` with command/query record above the handler class
+4. Map endpoint in `WTF.Api/Endpoints/{Domain}Endpoints.cs`
+5. Register endpoint group in `Program.cs`: `app.Map{Domain}()`
 
 ## Code Style
 
@@ -228,8 +111,6 @@ dotnet build -t:Run -f net10.0-windows  # For Windows
 - Commands end with `Command` (e.g., `CreateOrderCommand`)
 - Queries end with `Query` (e.g., `GetOrdersQuery`)
 - Handlers end with `Handler` (e.g., `CreateOrderHandler`)
-- ViewModels end with `ViewModel` (e.g., `OrderViewModel`)
-
 ### Using Directives (Imports)
 - **Always organize** using directives alphabetically (like Visual Studio's Ctrl+K, Ctrl+E)
 - **Remove unused** using directives before committing
@@ -238,20 +119,17 @@ dotnet build -t:Run -f net10.0-windows  # For Windows
 
 ```csharp
 // Good - organized alphabetically (single list, no grouping)
-using Blazored.LocalStorage;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using System.Collections.ObjectModel;
-using System.Net.Http.Json;
-using WTF.Contracts.Orders;
-using WTF.Contracts.Orders.Enums;
-using WTF.Contracts.Orders.Queries;
-using WTF.MAUI.Services;
-using WTF.MAUI.Views;
+using MediatR;
+using Microsoft.EntityFrameworkCore;
+using WTF.Api.Features.Orders.DTOs;
+using WTF.Api.Features.Orders.Enums;
+using WTF.Domain.Data;
 
-namespace WTF.MAUI.ViewModels;
+namespace WTF.Api.Features.Orders;
 
-public partial class OrderViewModel : ObservableObject
+public record GetOrdersQuery(OrderStatusEnum Status, Guid? CustomerId) : IRequest<List<OrderDto>>;
+
+public class GetOrdersHandler(WTFDbContext db) : IRequestHandler<GetOrdersQuery, List<OrderDto>>
 {
     // ...
 }
@@ -281,41 +159,77 @@ else
 if (order == null) return;  // ? Don't do this
 ```
 
-### Observable Properties (MAUI)
-Use source generators, not manual implementation:
-```csharp
-[ObservableProperty]
-private bool isLoading;  // Generates public IsLoading property
+### Access Modifiers
+- **Always explicitly declare** access modifiers on all variables, fields, properties, and methods (`private`, `public`, `protected`, `internal`)
+- **Always use `readonly`** on fields that are only assigned in the constructor or declaration
+- Never rely on implicit access modifiers — be explicit even when the default would be the same
 
-[ObservableProperty]
-[NotifyPropertyChangedFor(nameof(HasOrders))]  // Trigger computed property
-private ObservableCollection<OrderDto> orders = new();
+**Member ordering within a class (group by modifier/purpose):**
+1. Constants (`private const`, `public const`)
+2. Static fields and properties
+3. Private readonly fields
+4. Private fields
+5. Public properties
+6. Constructor(s)
+7. Public methods
+8. Private helper methods
+
+```csharp
+// Good - explicit modifiers, grouped by purpose
+public class OrderService
+{
+    private const int MaxRetries = 3;
+
+    private readonly WTFDbContext _db;
+    private readonly ILogger<OrderService> _logger;
+
+    private bool _isProcessing;
+
+    public OrderService(WTFDbContext db, ILogger<OrderService> logger)
+    {
+        _db = db;
+        _logger = logger;
+    }
+
+    public async Task<OrderDto> CreateOrderAsync(CreateOrderCommand command)
+    {
+        // ...
+    }
+
+    private void ValidateItems(List<OrderItemRequestDto> items)
+    {
+        // ...
+    }
+}
+
+// Bad - missing modifiers
+class OrderService  // ? Missing public
+{
+    WTFDbContext _db;  // ? Missing private readonly
+    void Process() { }  // ? Missing access modifier
+}
 ```
 
 ### Async Methods
 - Always suffix with `Async`
 - Use `CancellationToken` for long-running operations
-- MAUI: Wrap UI updates in `MainThread.InvokeOnMainThreadAsync()`
 
 - **Always use proper new line spacing between members, regions, and logical code blocks for readability.**
 
-**Always apply these code style and ViewModel organization rules when updating existing files, not just when creating new files.**
-
 ## Common Pitfalls
 
-1. **MAUI Page Lifetimes**: Container/content pages must be Singleton to prevent recreation on navigation
-2. **HTTPS in Development**: API disables HTTPS redirect in dev for mobile app compatibility (see `Program.cs`)
-3. **Enum Handling**: Contract enums (e.g., `OrderStatusEnum`) map to int in database (e.g., `StatusId`)
-4. **User Context**: Get authenticated user ID via `HttpContext.User.GetUserId()` extension method
-5. **Rate Limiting**: Loyalty endpoints use fixed window rate limiter (5 requests per 10 seconds)
-6. **Unused Imports**: Always clean up unused using directives to keep code maintainable
-7. **Missing Braces**: Always use braces for control flow statements to prevent bugs during refactoring
-8. **Import Organization**: Sort ALL imports alphabetically as a single list (no grouping by namespace type)
+1. **HTTPS in Development**: API disables HTTPS redirect in dev for mobile app compatibility (see `Program.cs`)
+2. **Enum Handling**: Feature enums (e.g., `OrderStatusEnum`) map to int in database (e.g., `StatusId`)
+3. **User Context**: Get authenticated user ID via `HttpContext.User.GetUserId()` extension method
+4. **Rate Limiting**: Loyalty endpoints use fixed window rate limiter (5 requests per 10 seconds)
+5. **Unused Imports**: Always clean up unused using directives to keep code maintainable
+6. **Missing Braces**: Always use braces for control flow statements to prevent bugs during refactoring
+7. **Import Organization**: Sort ALL imports alphabetically as a single list (no grouping by namespace type)
 
 ## Configuration
 
 ### appsettings.json Structure
-All projects expect `WtfSettings` section:
+The API expects a `WtfSettings` section:
 ```json
 {
   "WtfSettings": {
@@ -332,27 +246,16 @@ All projects expect `WtfSettings` section:
 }
 ```
 
-### MAUI Embedded appsettings
-The `appsettings.json` in MAUI is an embedded resource loaded via `GetManifestResourceStream("WTF.MAUI.appsettings.json")`.
-
 ## Testing & Debugging
 
 ### API Test Endpoints
 Use `/api/test/protected` (requires auth) and `/api/test/public` to verify JWT flow.
 
-### MAUI Debugging
-- Use `System.Diagnostics.Debug.WriteLine()` for logging
-- Check Visual Studio Output window (Debug pane)
-- LoadingPage shown during auth validation in `App.xaml.cs`
-
 ## Technologies & Dependencies
 - **.NET 10** (all projects target `net10.0`)
 - **EF Core** with SQL Server
 - **MediatR** for CQRS
-- **CommunityToolkit.Mvvm** for MAUI MVVM
-- **Blazored.LocalStorage** for Blazor token storage
 - **JWT Bearer** authentication
-- **Material Symbols Outlined** font for MAUI icons
 
 ## Git Commit Guidelines
 
@@ -453,6 +356,24 @@ Refactor handlers
 Add new endpoint.
 
 ```
+### Grouping Commits by Changes
+
+**Always group related changes into a single commit.** Do not mix unrelated changes in the same commit.
+
+- **One concern per commit** — a bug fix, a feature, a refactor, or a style change should each be its own commit
+- **Group files that change together** — if updating a handler also requires updating its endpoint, commit them together
+- **Separate cleanup from features** — don't sneak formatting or import cleanup into a feature commit; make a separate commit
+- **Commit in logical order** — if feature B depends on feature A, commit A first
+
+```
+# Good - grouped by concern
+git commit -m "Add CreateProduct endpoint and handler"
+git commit -m "Clean up unused imports in Product handlers"
+
+# Bad - unrelated changes mixed together
+git commit -m "Add CreateProduct endpoint and fix login bug"
+```
+
 ### When to Write Detailed Commit Bodies
 
 Write a detailed body when:
