@@ -134,7 +134,7 @@ if (!app.Environment.IsDevelopment())
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapGet("/", () => "Welcome to the WTF API!");
+app.MapGet("/api", () => "Welcome to the WTF API!");
 app.MapAuth()
     .MapLoyalty()
     .MapProducts()
@@ -142,5 +142,8 @@ app.MapAuth()
     .MapCustomers()
     .MapUsers()
     .MapTest();
+
+// SPA fallback: serve index.html for non-API, non-file routes
+app.MapFallbackToFile("index.html");
 
 app.Run();
