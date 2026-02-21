@@ -47,6 +47,16 @@ public class UpdateOrderHandler(WTFDbContext db) : IRequestHandler<UpdateOrderCo
                     throw new InvalidOperationException("A size selection is required and must be exactly one.");
                 }
 
+                if (availableTypes.Contains(AddOnTypeEnum.Flavor))
+                {
+                    throw new InvalidOperationException("A flavor selection is required and must be exactly one.");
+                }
+
+                if (availableTypes.Contains(AddOnTypeEnum.Sauce))
+                {
+                    throw new InvalidOperationException("A sauce selection is required and must be exactly one.");
+                }
+
                 continue;
             }
 
@@ -80,9 +90,28 @@ public class UpdateOrderHandler(WTFDbContext db) : IRequestHandler<UpdateOrderCo
                 }
             }
 
-            if (selectedByType.TryGetValue(AddOnTypeEnum.Flavor, out var flavorCount) && flavorCount > 1)
+            if (availableTypes.Contains(AddOnTypeEnum.Flavor))
             {
-                throw new InvalidOperationException("Only one flavor can be selected.");
+                var flavorCount = selectedByType.TryGetValue(AddOnTypeEnum.Flavor, out var fCount)
+                    ? fCount
+                    : 0;
+
+                if (flavorCount != 1)
+                {
+                    throw new InvalidOperationException("A flavor selection is required and must be exactly one.");
+                }
+            }
+
+            if (availableTypes.Contains(AddOnTypeEnum.Sauce))
+            {
+                var sauceCount = selectedByType.TryGetValue(AddOnTypeEnum.Sauce, out var sCount)
+                    ? sCount
+                    : 0;
+
+                if (sauceCount != 1)
+                {
+                    throw new InvalidOperationException("A sauce selection is required and must be exactly one.");
+                }
             }
         }
 
