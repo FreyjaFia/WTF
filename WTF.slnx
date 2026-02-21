@@ -10,12 +10,7 @@
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/WTF.Api/WTF.Api.csproj" />
-    <Project Path="src/WTF.Contracts/WTF.Contracts.csproj" />
     <Project Path="src/WTF.Domain/WTF.Domain.csproj" />
-    <Project Path="src/WTF.MAUI/WTF.MAUI.csproj">
-      <Deploy Solution="Debug|Any CPU" />
-    </Project>
-    <Project Path="src/WTF.UI/WTF.UI.csproj" />
   </Folder>
   <Folder Name="/tools/">
     <File Path="tools/dbsync.bat" />
