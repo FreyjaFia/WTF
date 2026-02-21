@@ -101,9 +101,14 @@ jobs:
           path: ./publish
 
       # 2. Take app offline to release IIS file locks
+      - name: Checkout app_offline.htm
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: app_offline.htm
+          sparse-checkout-cone-mode: false
+
       - name: Take app offline
         run: |
-          echo '<!DOCTYPE html><html><head><title>Maintenance</title></head><body><h1>Updating...</h1></body></html>' > app_offline.htm
           curl -T ./app_offline.htm "ftp://${{ secrets.MONSTERASP_FTP_SERVER }}/wwwroot/app_offline.htm" --user "${{ secrets.MONSTERASP_FTP_USERNAME }}:${{ secrets.MONSTERASP_FTP_PASSWORD }}"
           sleep 10
 
@@ -116,6 +121,11 @@ jobs:
           password: ${{ secrets.MONSTERASP_FTP_PASSWORD }}
           local-dir: ./publish/api/
           server-dir: /wwwroot/
+
+      # 4. Bring app back online
+      - name: Remove app_offline.htm
+        run: |
+          curl "ftp://${{ secrets.MONSTERASP_FTP_SERVER }}/wwwroot/" --user "${{ secrets.MONSTERASP_FTP_USERNAME }}:${{ secrets.MONSTERASP_FTP_PASSWORD }}" -Q "DELE /wwwroot/app_offline.htm"
 
   deploy-frontend:
     name: Deploy Frontend to MonsterASP.NET
