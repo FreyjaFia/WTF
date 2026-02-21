@@ -1,5 +1,6 @@
 ﻿import { Routes } from '@angular/router';
 import { authGuard } from '@core/guards/auth.guard';
+import { loginGuard } from '@core/guards/login.guard';
 import { roleGuard } from '@core/guards/role.guard';
 import { unsavedChangesGuard } from '@core/guards/unsaved-changes.guard';
 import { Login } from '@features/login/login';
@@ -31,6 +32,7 @@ export const routes: Routes = [
   {
     path: 'login',
     component: Login,
+    canActivate: [loginGuard],
   },
   {
     path: '',
