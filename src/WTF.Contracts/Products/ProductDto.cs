@@ -17,10 +17,13 @@ public record ProductDto(
     Guid? UpdatedBy,
     string? ImageUrl,
     List<ProductPriceHistoryDto> PriceHistory,
-    int AddOnCount = 0
+    int AddOnCount = 0,
+    decimal? OverridePrice = null
 )
 {
+    public decimal EffectivePrice => OverridePrice ?? Price;
     public string DisplayCategory => Category.ToString();
-    public string FormattedPrice => $"₱{Price:N2}";
+    public string FormattedPrice => $"₱{EffectivePrice:N2}";
+    public bool HasOverridePrice => OverridePrice.HasValue;
     public string ProductCategory => IsAddOn ? "Add-on" : "Main Product";
 }

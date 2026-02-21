@@ -46,15 +46,21 @@ public class GetProductsByAddOnHandler(WTFDbContext db, IHttpContextAccessor htt
                         ? UrlExtensions.ToAbsoluteUrl(httpContextAccessor, product.ProductImage.Image.ImageUrl)
                         : null;
 
-                    return new ProductSimpleDto(
+                    return new ProductDto(
                         product.Id,
                         product.Name,
                         product.Code,
                         product.Description,
                         product.Price,
                         (ProductCategoryEnum)product.CategoryId,
+                        product.IsAddOn,
                         product.IsActive,
-                        imageUrl
+                        product.CreatedAt,
+                        product.CreatedBy,
+                        product.UpdatedAt,
+                        product.UpdatedBy,
+                        imageUrl,
+                        []
                     );
                 })]
             ))
