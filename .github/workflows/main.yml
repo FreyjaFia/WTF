@@ -93,26 +93,27 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
-      # 1. Download artifact
-      - name: Download Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: api-drop
-          path: ./publish
-
-      # 2. Take app offline to release IIS file locks
+      # 1. Checkout app_offline.htm from repo
       - name: Checkout app_offline.htm
         uses: actions/checkout@v4
         with:
           sparse-checkout: app_offline.htm
           sparse-checkout-cone-mode: false
 
+      # 2. Take app offline to release IIS file locks
       - name: Take app offline
         run: |
           curl -T ./app_offline.htm "ftp://${{ secrets.MONSTERASP_FTP_SERVER }}/wwwroot/app_offline.htm" --user "${{ secrets.MONSTERASP_FTP_USERNAME }}:${{ secrets.MONSTERASP_FTP_PASSWORD }}"
           sleep 10
 
-      # 3. Deploy API via FTP to MonsterASP.NET
+      # 3. Download artifact
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: api-drop
+          path: ./publish
+
+      # 4. Deploy API via FTP to MonsterASP.NET
       - name: Deploy API via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
@@ -122,7 +123,7 @@ jobs:
           local-dir: ./publish/
           server-dir: /wwwroot/
 
-      # 4. Bring app back online
+      # 5. Bring app back online
       - name: Remove app_offline.htm
         run: |
           curl "ftp://${{ secrets.MONSTERASP_FTP_SERVER }}/wwwroot/" --user "${{ secrets.MONSTERASP_FTP_USERNAME }}:${{ secrets.MONSTERASP_FTP_PASSWORD }}" -Q "DELE /wwwroot/app_offline.htm"
