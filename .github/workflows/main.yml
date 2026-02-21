@@ -96,7 +96,14 @@ jobs:
           name: drop
           path: ./publish
 
-      # 2. Deploy API via FTP to MonsterASP.NET
+      # 2. Take app offline to release IIS file locks
+      - name: Take app offline
+        run: |
+          echo '<!DOCTYPE html><html><head><title>Maintenance</title></head><body><h1>Updating...</h1></body></html>' > app_offline.htm
+          curl -T ./app_offline.htm "ftp://${{ secrets.MONSTERASP_FTP_SERVER }}/wwwroot/app_offline.htm" --user "${{ secrets.MONSTERASP_FTP_USERNAME }}:${{ secrets.MONSTERASP_FTP_PASSWORD }}"
+          sleep 10
+
+      # 3. Deploy API via FTP to MonsterASP.NET
       - name: Deploy API via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
