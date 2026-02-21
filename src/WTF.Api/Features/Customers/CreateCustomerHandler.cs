@@ -1,10 +1,11 @@
 using MediatR;
-using WTF.Contracts.Customers;
-using WTF.Contracts.Customers.Commands;
+using WTF.Api.Features.Customers.DTOs;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 
 namespace WTF.Api.Features.Customers;
+
+public record CreateCustomerCommand(string FirstName, string LastName, string? Address) : IRequest<CustomerDto>;
 
 public class CreateCustomerHandler(WTFDbContext db) : IRequestHandler<CreateCustomerCommand, CustomerDto>
 {

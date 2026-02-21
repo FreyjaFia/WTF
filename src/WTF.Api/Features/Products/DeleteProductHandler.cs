@@ -1,10 +1,11 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
-using WTF.Contracts.Products.Commands;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Products;
+
+public record DeleteProductCommand(Guid Id) : IRequest<bool>;
 
 public class DeleteProductHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor) : IRequestHandler<DeleteProductCommand, bool>
 {

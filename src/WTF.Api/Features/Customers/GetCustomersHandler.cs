@@ -1,11 +1,16 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
-using WTF.Contracts.Customers;
-using WTF.Contracts.Customers.Queries;
+using WTF.Api.Features.Customers.DTOs;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Customers;
+
+public record GetCustomersQuery : IRequest<List<CustomerDto>>
+{
+    public string? SearchTerm { get; init; }
+    public bool? IsActive { get; init; } = true;
+}
 
 public class GetCustomersHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor) : IRequestHandler<GetCustomersQuery, List<CustomerDto>>
 {

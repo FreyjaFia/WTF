@@ -1,12 +1,12 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using WTF.Contracts.OrderItems;
-using WTF.Contracts.Orders;
-using WTF.Contracts.Orders.Enums;
-using WTF.Contracts.Orders.Queries;
+using WTF.Api.Features.Orders.DTOs;
+using WTF.Api.Features.Orders.Enums;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Orders;
+
+public record GetOrdersQuery(OrderStatusEnum Status = OrderStatusEnum.All, Guid? CustomerId = null) : IRequest<List<OrderDto>>;
 
 public class GetOrdersHandler(WTFDbContext db) : IRequestHandler<GetOrdersQuery, List<OrderDto>>
 {

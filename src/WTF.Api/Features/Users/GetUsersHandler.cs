@@ -1,12 +1,17 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
-using WTF.Contracts.Users;
-using WTF.Contracts.Users.Enums;
-using WTF.Contracts.Users.Queries;
+using WTF.Api.Features.Users.DTOs;
+using WTF.Api.Features.Users.Enums;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Users;
+
+public record GetUsersQuery : IRequest<List<UserDto>>
+{
+    public bool? IsActive { get; init; } = true;
+    public string? SearchTerm { get; init; }
+}
 
 public class GetUsersHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor) : IRequestHandler<GetUsersQuery, List<UserDto>>
 {

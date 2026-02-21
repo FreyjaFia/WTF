@@ -1,10 +1,11 @@
 ﻿using MediatR;
 using Microsoft.EntityFrameworkCore;
-using WTF.Contracts.Loyalty;
-using WTF.Contracts.Loyalty.Queries;
+using WTF.Api.Features.Loyalty.DTOs;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Loyalty;
+
+public record RedirectToLoyaltyQuery(string Token) : IRequest<RedirectToLoyaltyDto>;
 
 public class RedirectToLoyaltyHandler(WTFDbContext db)
     : IRequestHandler<RedirectToLoyaltyQuery, RedirectToLoyaltyDto>

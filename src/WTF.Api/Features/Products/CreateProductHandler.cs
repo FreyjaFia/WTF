@@ -1,13 +1,38 @@
+using System.ComponentModel.DataAnnotations;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
-using WTF.Contracts.Products;
-using WTF.Contracts.Products.Commands;
+using WTF.Api.Features.Products.DTOs;
+using WTF.Api.Features.Products.Enums;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
-using WTF.Contracts.Products.Enums;
 
 namespace WTF.Api.Features.Products;
+
+public record CreateProductCommand : IRequest<ProductDto>
+{
+    [Required(ErrorMessage = "Product name is required")]
+    [StringLength(100, ErrorMessage = "Name cannot exceed 100 characters")]
+    public string Name { get; init; } = string.Empty;
+
+    [Required(ErrorMessage = "Product code is required")]
+    [StringLength(10, ErrorMessage = "Code cannot exceed 10 characters")]
+    public string Code { get; init; } = string.Empty;
+
+    [StringLength(500, ErrorMessage = "Description cannot exceed 500 characters")]
+    public string? Description { get; init; }
+
+    [Required(ErrorMessage = "Price is required")]
+    [Range(0, 999999.99, ErrorMessage = "Price must be between 0 and 999,999.99")]
+    public decimal Price { get; init; }
+
+    [Required(ErrorMessage = "Product category is required")]
+    public ProductCategoryEnum Category { get; init; }
+
+    public bool IsAddOn { get; init; }
+
+    public bool IsActive { get; init; } = true;
+}
 
 public class CreateProductHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor) : IRequestHandler<CreateProductCommand, ProductDto>
 {

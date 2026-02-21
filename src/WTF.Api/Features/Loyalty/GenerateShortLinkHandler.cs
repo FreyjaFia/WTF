@@ -1,10 +1,11 @@
 ﻿using MediatR;
-using WTF.Contracts.Loyalty;
-using WTF.Contracts.Loyalty.Commands;
+using WTF.Api.Features.Loyalty.DTOs;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 
 namespace WTF.Api.Features.Loyalty;
+
+public record GenerateShortLinkCommand(Guid CustomerId) : IRequest<GenerateShortLinkDto>;
 
 public class GenerateShortLinkHandler(WTFDbContext db)
     : IRequestHandler<GenerateShortLinkCommand, GenerateShortLinkDto>

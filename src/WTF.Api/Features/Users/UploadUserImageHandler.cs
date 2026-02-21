@@ -1,14 +1,15 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
+using WTF.Api.Features.Users.DTOs;
+using WTF.Api.Features.Users.Enums;
 using WTF.Api.Services;
-using WTF.Contracts.Users;
-using WTF.Contracts.Users.Commands;
-using WTF.Contracts.Users.Enums;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 
 namespace WTF.Api.Features.Users;
+
+public record UploadUserImageCommand(Guid UserId, byte[] ImageData, string FileName) : IRequest<UserDto?>;
 
 public class UploadUserImageHandler(WTFDbContext db, IImageStorage imageStorage, IHttpContextAccessor httpContextAccessor) : IRequestHandler<UploadUserImageCommand, UserDto?>
 {

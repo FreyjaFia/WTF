@@ -1,11 +1,19 @@
+using System.ComponentModel.DataAnnotations;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using WTF.Contracts.Orders.Enums;
-using WTF.Contracts.Products.Commands;
+using WTF.Api.Features.Orders.Enums;
+using WTF.Api.Features.Products.DTOs;
+using WTF.Api.Features.Products.Enums;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 
 namespace WTF.Api.Features.Products;
+
+public record AssignProductAddOnsCommand : IRequest<bool>
+{
+    [Required] public Guid ProductId { get; init; }
+    [Required] public List<ProductAddOnAssignmentDto> AddOns { get; init; } = [];
+}
 
 public class AssignProductAddOnsHandler(WTFDbContext db) : IRequestHandler<AssignProductAddOnsCommand, bool>
 {

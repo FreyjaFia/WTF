@@ -1,11 +1,12 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
-using WTF.Contracts.Auth;
-using WTF.Contracts.Auth.Queries;
+using WTF.Api.Features.Auth.DTOs;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Auth;
+
+public record GetMeQuery() : IRequest<MeDto?>;
 
 public class GetMeHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor) : IRequestHandler<GetMeQuery, MeDto?>
 {

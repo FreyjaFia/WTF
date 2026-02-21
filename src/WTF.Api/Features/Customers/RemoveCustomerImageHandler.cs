@@ -1,11 +1,12 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using WTF.Api.Features.Customers.DTOs;
 using WTF.Api.Services;
-using WTF.Contracts.Customers;
-using WTF.Contracts.Customers.Commands;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Customers;
+
+public record RemoveCustomerImageCommand(Guid CustomerId) : IRequest<CustomerDto?>;
 
 public class RemoveCustomerImageHandler(WTFDbContext db, IImageStorage imageStorage) : IRequestHandler<RemoveCustomerImageCommand, CustomerDto?>
 {

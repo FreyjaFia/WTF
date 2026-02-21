@@ -1,12 +1,19 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
-using WTF.Contracts.Products;
-using WTF.Contracts.Products.Enums;
-using WTF.Contracts.Products.Queries;
+using WTF.Api.Features.Products.DTOs;
+using WTF.Api.Features.Products.Enums;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Products;
+
+public record GetProductsQuery : IRequest<List<ProductDto>>
+{
+    public string? SearchTerm { get; init; }
+    public ProductCategoryEnum? Category { get; init; }
+    public bool? IsAddOn { get; init; }
+    public bool? IsActive { get; init; } = true;
+}
 
 public class GetProductsHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor) : IRequestHandler<GetProductsQuery, List<ProductDto>>
 {

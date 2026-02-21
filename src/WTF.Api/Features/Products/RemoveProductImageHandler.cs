@@ -1,12 +1,13 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using WTF.Contracts.Products;
-using WTF.Contracts.Products.Commands;
-using WTF.Contracts.Products.Enums;
-using WTF.Domain.Data;
+using WTF.Api.Features.Products.DTOs;
+using WTF.Api.Features.Products.Enums;
 using WTF.Api.Services;
+using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Products;
+
+public record RemoveProductImageCommand(Guid ProductId) : IRequest<ProductDto?>;
 
 public class RemoveProductImageHandler(WTFDbContext db, IImageStorage imageStorage) : IRequestHandler<RemoveProductImageCommand, ProductDto?>
 {

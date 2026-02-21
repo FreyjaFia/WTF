@@ -1,12 +1,13 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
-using WTF.Contracts.Products;
-using WTF.Contracts.Products.Enums;
-using WTF.Contracts.Products.Queries;
+using WTF.Api.Features.Products.DTOs;
+using WTF.Api.Features.Products.Enums;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Products;
+
+public record GetProductsByAddOnQuery(Guid AddOnId) : IRequest<List<AddOnGroupDto>>;
 
 public class GetProductsByAddOnHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor) : IRequestHandler<GetProductsByAddOnQuery, List<AddOnGroupDto>>
 {

@@ -1,10 +1,11 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
-using WTF.Contracts.Auth.Commands;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Auth;
+
+public record UpdateMeCommand(string Password) : IRequest<bool>;
 
 public class UpdateMeHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor) : IRequestHandler<UpdateMeCommand, bool>
 {

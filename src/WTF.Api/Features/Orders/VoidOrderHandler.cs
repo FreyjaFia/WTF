@@ -1,13 +1,13 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
-using WTF.Contracts.OrderItems;
-using WTF.Contracts.Orders;
-using WTF.Contracts.Orders.Commands;
-using WTF.Contracts.Orders.Enums;
+using WTF.Api.Features.Orders.DTOs;
+using WTF.Api.Features.Orders.Enums;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Orders;
+
+public record VoidOrderCommand(Guid Id) : IRequest<OrderDto?>;
 
 public class VoidOrderHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor) : IRequestHandler<VoidOrderCommand, OrderDto?>
 {

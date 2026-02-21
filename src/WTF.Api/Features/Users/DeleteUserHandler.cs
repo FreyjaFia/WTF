@@ -1,9 +1,10 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using WTF.Contracts.Users.Commands;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Users;
+
+public record DeleteUserCommand(Guid Id) : IRequest<bool>;
 
 public class DeleteUserHandler(WTFDbContext db) : IRequestHandler<DeleteUserCommand, bool>
 {

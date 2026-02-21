@@ -1,9 +1,10 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using WTF.Contracts.Products.Commands;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Products;
+
+public record DeleteProductAddOnPriceOverrideCommand(Guid ProductId, Guid AddOnId) : IRequest<bool>;
 
 public class DeleteProductAddOnPriceOverrideHandler(WTFDbContext db) : IRequestHandler<DeleteProductAddOnPriceOverrideCommand, bool>
 {

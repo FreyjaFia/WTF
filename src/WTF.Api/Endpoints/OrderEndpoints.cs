@@ -1,7 +1,6 @@
 using MediatR;
 using WTF.Api.Common.Auth;
-using WTF.Contracts.Orders.Commands;
-using WTF.Contracts.Orders.Queries;
+using WTF.Api.Features.Orders;
 
 namespace WTF.Api.Endpoints;
 

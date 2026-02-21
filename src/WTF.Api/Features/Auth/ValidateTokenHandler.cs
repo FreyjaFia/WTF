@@ -1,12 +1,13 @@
-﻿using MediatR;
+﻿using System.IdentityModel.Tokens.Jwt;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
-using System.IdentityModel.Tokens.Jwt;
+using WTF.Api.Features.Auth.DTOs;
 using WTF.Api.Services;
-using WTF.Contracts.Auth;
-using WTF.Contracts.Auth.Queries;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Auth;
+
+public record ValidateTokenQuery(string Token) : IRequest<ValidateTokenDto>;
 
 public class ValidateTokenHandler(WTFDbContext db, IJwtService jwtService) : IRequestHandler<ValidateTokenQuery, ValidateTokenDto>
 {

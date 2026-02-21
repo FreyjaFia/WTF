@@ -1,9 +1,10 @@
 ﻿using MediatR;
 using Microsoft.EntityFrameworkCore;
-using WTF.Contracts.Auth.Commands;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Auth;
+
+public record LogoutCommand(string RefreshToken) : IRequest<bool>;
 
 public class LogoutHandler(WTFDbContext db) : IRequestHandler<LogoutCommand, bool>
 {

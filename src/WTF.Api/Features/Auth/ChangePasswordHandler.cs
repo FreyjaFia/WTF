@@ -1,10 +1,16 @@
+using System.ComponentModel.DataAnnotations;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
-using WTF.Contracts.Auth.Commands;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Auth;
+
+public record ChangePasswordCommand : IRequest<bool>
+{
+    [Required] public string CurrentPassword { get; init; } = string.Empty;
+    [Required][MinLength(8)] public string NewPassword { get; init; } = string.Empty;
+}
 
 public class ChangePasswordHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor) : IRequestHandler<ChangePasswordCommand, bool>
 {

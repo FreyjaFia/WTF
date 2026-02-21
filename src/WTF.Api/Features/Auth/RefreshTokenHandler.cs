@@ -1,12 +1,13 @@
 ﻿using MediatR;
 using Microsoft.EntityFrameworkCore;
+using WTF.Api.Features.Auth.DTOs;
 using WTF.Api.Services;
-using WTF.Contracts.Auth;
-using WTF.Contracts.Auth.Commands;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 
 namespace WTF.Api.Features.Auth;
+
+public record RefreshTokenCommand(string RefreshToken) : IRequest<LoginDto?>;
 
 public class RefreshTokenHandler(WTFDbContext db, IJwtService jwtService, IUserRoleService userRoleService, IConfiguration configuration) : IRequestHandler<RefreshTokenCommand, LoginDto?>
 {

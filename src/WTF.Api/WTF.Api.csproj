@@ -22,7 +22,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\WTF.Domain\WTF.Domain.csproj" />
-    <ProjectReference Include="..\WTF.Contracts\WTF.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>

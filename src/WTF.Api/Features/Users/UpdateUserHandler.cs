@@ -1,11 +1,12 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using WTF.Contracts.Users;
-using WTF.Contracts.Users.Commands;
-using WTF.Contracts.Users.Enums;
+using WTF.Api.Features.Users.DTOs;
+using WTF.Api.Features.Users.Enums;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Users;
+
+public record UpdateUserCommand(Guid Id, string FirstName, string LastName, string Username, string? Password, UserRoleEnum RoleId) : IRequest<UserDto?>;
 
 public class UpdateUserHandler(WTFDbContext db) : IRequestHandler<UpdateUserCommand, UserDto?>
 {

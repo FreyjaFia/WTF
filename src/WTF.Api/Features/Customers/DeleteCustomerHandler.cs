@@ -1,9 +1,10 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using WTF.Contracts.Customers.Commands;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Customers;
+
+public record DeleteCustomerCommand(Guid Id) : IRequest<bool>;
 
 public class DeleteCustomerHandler(WTFDbContext db) : IRequestHandler<DeleteCustomerCommand, bool>
 {

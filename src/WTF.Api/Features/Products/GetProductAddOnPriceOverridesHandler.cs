@@ -1,10 +1,11 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using WTF.Contracts.Products;
-using WTF.Contracts.Products.Queries;
+using WTF.Api.Features.Products.DTOs;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Products;
+
+public record GetProductAddOnPriceOverridesQuery(Guid ProductId) : IRequest<List<ProductAddOnPriceOverrideDto>>;
 
 public class GetProductAddOnPriceOverridesHandler(WTFDbContext db) : IRequestHandler<GetProductAddOnPriceOverridesQuery, List<ProductAddOnPriceOverrideDto>>
 {

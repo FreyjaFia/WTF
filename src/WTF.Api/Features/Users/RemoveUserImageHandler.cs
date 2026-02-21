@@ -1,12 +1,13 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using WTF.Api.Features.Users.DTOs;
+using WTF.Api.Features.Users.Enums;
 using WTF.Api.Services;
-using WTF.Contracts.Users;
-using WTF.Contracts.Users.Commands;
-using WTF.Contracts.Users.Enums;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Users;
+
+public record RemoveUserImageCommand(Guid UserId) : IRequest<UserDto?>;
 
 public class RemoveUserImageHandler(WTFDbContext db, IImageStorage imageStorage) : IRequestHandler<RemoveUserImageCommand, UserDto?>
 {

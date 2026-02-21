@@ -1,11 +1,12 @@
 using MediatR;
-using WTF.Contracts.Users;
-using WTF.Contracts.Users.Commands;
-using WTF.Contracts.Users.Enums;
+using WTF.Api.Features.Users.DTOs;
+using WTF.Api.Features.Users.Enums;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 
 namespace WTF.Api.Features.Users;
+
+public record CreateUserCommand(string FirstName, string LastName, string Username, string Password, UserRoleEnum RoleId) : IRequest<UserDto>;
 
 public class CreateUserHandler(WTFDbContext db) : IRequestHandler<CreateUserCommand, UserDto>
 {

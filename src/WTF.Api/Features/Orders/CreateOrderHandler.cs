@@ -1,15 +1,35 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
 using WTF.Api.Common.Extensions;
-using WTF.Contracts.OrderItems;
-using WTF.Contracts.Orders;
-using WTF.Contracts.Orders.Commands;
-using WTF.Contracts.Orders.Enums;
-using WTF.Contracts.Products.Enums;
+using WTF.Api.Features.Orders.DTOs;
+using WTF.Api.Features.Orders.Enums;
+using WTF.Api.Features.Products.Enums;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 
 namespace WTF.Api.Features.Orders;
+
+public record CreateOrderCommand : IRequest<OrderDto>
+{
+    [Required]
+    public Guid? CustomerId { get; init; }
+
+    [Required]
+    public List<OrderItemRequestDto> Items { get; init; } = [];
+    public string? SpecialInstructions { get; init; }
+
+    [Required]
+    public OrderStatusEnum Status { get; init; }
+
+    public PaymentMethodEnum? PaymentMethod { get; init; }
+
+    public decimal? AmountReceived { get; init; }
+
+    public decimal? ChangeAmount { get; init; }
+
+    public decimal? Tips { get; init; }
+}
 
 public class CreateOrderHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor) : IRequestHandler<CreateOrderCommand, OrderDto>
 {

@@ -1,10 +1,11 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using WTF.Contracts.Products;
-using WTF.Contracts.Products.Queries;
+using WTF.Api.Features.Products.DTOs;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Products;
+
+public record GetProductPriceHistoryQuery(Guid ProductId) : IRequest<List<ProductPriceHistoryDto>>;
 
 public class GetProductPriceHistoryHandler(WTFDbContext db) : IRequestHandler<GetProductPriceHistoryQuery, List<ProductPriceHistoryDto>>
 {

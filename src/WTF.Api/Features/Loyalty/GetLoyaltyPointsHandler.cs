@@ -1,10 +1,11 @@
 ﻿using MediatR;
 using Microsoft.EntityFrameworkCore;
-using WTF.Contracts.Loyalty;
-using WTF.Contracts.Loyalty.Queries;
+using WTF.Api.Features.Loyalty.DTOs;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Loyalty;
+
+public record GetLoyaltyPointsQuery(Guid CustomerId) : IRequest<GetLoyaltyPointsDto>;
 
 public class GetLoyaltyPointsHandler(WTFDbContext db)
     : IRequestHandler<GetLoyaltyPointsQuery, GetLoyaltyPointsDto?>

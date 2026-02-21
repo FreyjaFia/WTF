@@ -1,11 +1,12 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
-using WTF.Contracts.Customers;
-using WTF.Contracts.Customers.Queries;
+using WTF.Api.Features.Customers.DTOs;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Customers;
+
+public record GetCustomerByIdQuery(Guid Id) : IRequest<CustomerDto?>;
 
 public class GetCustomerByIdHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor) : IRequestHandler<GetCustomerByIdQuery, CustomerDto?>
 {

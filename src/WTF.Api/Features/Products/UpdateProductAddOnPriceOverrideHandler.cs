@@ -1,11 +1,19 @@
+using System.ComponentModel.DataAnnotations;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
-using WTF.Contracts.Products;
-using WTF.Contracts.Products.Commands;
+using WTF.Api.Features.Products.DTOs;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Products;
+
+public record UpdateProductAddOnPriceOverrideCommand : IRequest<ProductAddOnPriceOverrideDto?>
+{
+    [Required] public Guid ProductId { get; init; }
+    [Required] public Guid AddOnId { get; init; }
+    [Range(0, double.MaxValue)] public decimal Price { get; init; }
+    public bool IsActive { get; init; } = true;
+}
 
 public class UpdateProductAddOnPriceOverrideHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor) : IRequestHandler<UpdateProductAddOnPriceOverrideCommand, ProductAddOnPriceOverrideDto?>
 {

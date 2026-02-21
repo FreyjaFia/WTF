@@ -1,10 +1,11 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using WTF.Contracts.Customers;
-using WTF.Contracts.Customers.Commands;
+using WTF.Api.Features.Customers.DTOs;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Customers;
+
+public record UpdateCustomerCommand(Guid Id, string FirstName, string LastName, string? Address) : IRequest<CustomerDto?>;
 
 public class UpdateCustomerHandler(WTFDbContext db) : IRequestHandler<UpdateCustomerCommand, CustomerDto?>
 {
