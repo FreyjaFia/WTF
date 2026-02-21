@@ -26,13 +26,32 @@ When providing assistance, adopt the appropriate professional mindset:
 - Always explain the "why" behind technical decisions
 
 ## Project Overview
-Wake. Taste. Focus (WTF) is a coffee shop application built with .NET 10. The solution consists of two projects:
-- **WTF.Api**: ASP.NET Core Web API (backend) — includes all DTOs, commands, queries, enums, and handlers
-- **WTF.Domain**: Entity models and EF Core DbContext
+
+Wake. Taste. Focus (WTF) is a coffee shop application. The monorepo contains:
+- **WTF.Api** (`src/WTF.Api/`): ASP.NET Core Web API (backend) — includes all DTOs, commands, queries, enums, and handlers
+- **WTF.Domain** (`src/WTF.Domain/`): Entity models and EF Core DbContext
+- **wtf-pos** (`src/wtf-pos/`): Angular 19 POS frontend — customer-facing point-of-sale application
+
+## Technologies & Dependencies
+
+### Backend
+- **.NET 10** (all projects target `net10.0`)
+- **EF Core** with SQL Server
+- **MediatR** for CQRS
+- **JWT Bearer** authentication
+
+### Frontend
+- **Angular 19** with standalone components
+- **Tailwind CSS** + **DaisyUI** for styling
+- **RxJS** for reactive patterns
+- **TypeScript** with strict mode
+
+---
+
+# Backend (WTF.Api + WTF.Domain)
 
 ## Architecture Patterns
 
-### Backend (WTF.Api)
 The API uses **Vertical Slice Architecture** with MediatR:
 - Features are organized by domain in `Features/{Domain}/{Handler}.cs`
 - Each handler implements `IRequestHandler<TRequest, TResponse>`
@@ -53,8 +72,6 @@ public static IEndpointRouteBuilder MapOrders(this IEndpointRouteBuilder app)
     orderGroup.MapGet("/", async ([AsParameters] GetOrdersQuery query, ISender sender) => {...});
 }
 ```
-
-## Shared Patterns
 
 ### CQRS with MediatR
 Commands and queries are **records** defined above the handler class in the same file. DTOs are separate files in `Features/{Domain}/DTOs/`:
@@ -85,32 +102,28 @@ public class GetOrdersHandler(WTFDbContext db) : IRequestHandler<GetOrdersQuery,
 
 **Important:** DbContext is scaffolded from existing database. Do not modify `OnModelCreating` manually except in partial method `OnModelCreatingPartial`.
 
-## Development Workflows
-
-### Running the Projects
-**API:**
+## Running the API
 ```bash
 cd src/WTF.Api
 dotnet run
 # API runs on http://localhost:5000 (dev), https in production
 ```
 
-### Adding New Features
-
-**API Endpoint:**
+## Adding New API Features
 1. Create response DTOs in `WTF.Api/Features/{Domain}/DTOs/`
 2. Create enums (if needed) in `WTF.Api/Features/{Domain}/Enums/`
 3. Create handler in `WTF.Api/Features/{Domain}/{Action}Handler.cs` with command/query record above the handler class
 4. Map endpoint in `WTF.Api/Endpoints/{Domain}Endpoints.cs`
 5. Register endpoint group in `Program.cs`: `app.Map{Domain}()`
 
-## Code Style
+## C# Code Style
 
 ### Naming Conventions
 - DTOs end with `Dto` suffix (e.g., `OrderDto`, `ProductDto`)
 - Commands end with `Command` (e.g., `CreateOrderCommand`)
 - Queries end with `Query` (e.g., `GetOrdersQuery`)
 - Handlers end with `Handler` (e.g., `CreateOrderHandler`)
+
 ### Using Directives (Imports)
 - **Always organize** using directives alphabetically (like Visual Studio's Ctrl+K, Ctrl+E)
 - **Remove unused** using directives before committing
@@ -156,7 +169,7 @@ else
 }
 
 // Bad - avoid single-line without braces
-if (order == null) return;  // ? Don't do this
+if (order == null) return;  // ❌ Don't do this
 ```
 
 ### Access Modifiers
@@ -203,33 +216,21 @@ public class OrderService
 }
 
 // Bad - missing modifiers
-class OrderService  // ? Missing public
+class OrderService  // ❌ Missing public
 {
-    WTFDbContext _db;  // ? Missing private readonly
-    void Process() { }  // ? Missing access modifier
+    WTFDbContext _db;  // ❌ Missing private readonly
+    void Process() { }  // ❌ Missing access modifier
 }
 ```
 
 ### Async Methods
 - Always suffix with `Async`
 - Use `CancellationToken` for long-running operations
-
 - **Always use proper new line spacing between members, regions, and logical code blocks for readability.**
 
-## Common Pitfalls
-
-1. **HTTPS in Development**: API disables HTTPS redirect in dev for mobile app compatibility (see `Program.cs`)
-2. **Enum Handling**: Feature enums (e.g., `OrderStatusEnum`) map to int in database (e.g., `StatusId`)
-3. **User Context**: Get authenticated user ID via `HttpContext.User.GetUserId()` extension method
-4. **Rate Limiting**: Loyalty endpoints use fixed window rate limiter (5 requests per 10 seconds)
-5. **Unused Imports**: Always clean up unused using directives to keep code maintainable
-6. **Missing Braces**: Always use braces for control flow statements to prevent bugs during refactoring
-7. **Import Organization**: Sort ALL imports alphabetically as a single list (no grouping by namespace type)
-
-## Configuration
+## API Configuration
 
 ### appsettings.json Structure
-The API expects a `WtfSettings` section:
 ```json
 {
   "WtfSettings": {
@@ -246,16 +247,207 @@ The API expects a `WtfSettings` section:
 }
 ```
 
+## Common API Pitfalls
+1. **HTTPS in Development**: API disables HTTPS redirect in dev for mobile app compatibility (see `Program.cs`)
+2. **Enum Handling**: Feature enums (e.g., `OrderStatusEnum`) map to int in database (e.g., `StatusId`)
+3. **User Context**: Get authenticated user ID via `HttpContext.User.GetUserId()` extension method
+4. **Rate Limiting**: Loyalty endpoints use fixed window rate limiter (5 requests per 10 seconds)
+5. **Unused Imports**: Always clean up unused using directives to keep code maintainable
+6. **Missing Braces**: Always use braces for control flow statements to prevent bugs during refactoring
+7. **Import Organization**: Sort ALL imports alphabetically as a single list (no grouping by namespace type)
+
 ## Testing & Debugging
 
 ### API Test Endpoints
 Use `/api/test/protected` (requires auth) and `/api/test/public` to verify JWT flow.
 
-## Technologies & Dependencies
-- **.NET 10** (all projects target `net10.0`)
-- **EF Core** with SQL Server
-- **MediatR** for CQRS
-- **JWT Bearer** authentication
+---
+
+# Frontend (wtf-pos)
+
+## Architecture
+
+The Angular frontend follows a **feature-based architecture** with clear separation of concerns:
+
+```
+src/app/
+├── core/                      # App-wide singleton services and infrastructure
+│   ├── guards/                # Route guards (auth, role, unsaved-changes)
+│   ├── interceptors/          # HTTP interceptors (auth, utc-date)
+│   └── services/              # App-wide API/data services
+│
+├── shared/                    # Reusable UI components and models
+│   ├── components/            # Shared components (alert, avatar, badge, etc.)
+│   └── models/                # Shared data models/interfaces
+│
+└── features/                  # Feature modules
+    ├── login/
+    ├── management/            # Customers, Products, Users CRUD
+    └── orders/                # Order editor, checkout, order list
+```
+
+### Module Guidelines
+
+**Core Module (`core/`):**
+- Singleton services used app-wide (auth, API services, guards, interceptors)
+- If a service is used in 2+ feature modules, put it in `core/services/`
+- Never import feature-specific code into core
+
+**Shared Module (`shared/`):**
+- Reusable UI components, directives, and pipes
+- Shared data models and interfaces (DTOs, enums, types)
+- No services should be in shared (use `core/services/` instead)
+- Can be imported by any feature module
+
+**Features (`features/`):**
+- Self-contained feature modules
+- Features can import from core and shared
+- Features should not import from other features
+
+## Running the Frontend
+```bash
+cd src/wtf-pos
+npm install
+npx ng serve
+# Runs on http://localhost:4200
+```
+
+## TypeScript Code Style
+
+### Naming
+- **Hyphens in file names:** `user-profile.ts`, `user-profile.spec.ts`
+- **Match file names to identifiers:** File names reflect the main class/concept inside
+- **Component files:** Same base name for TypeScript, template, and style files
+
+### Imports
+- **Always use path aliases** instead of deep relative paths:
+
+| Alias              | Maps to              |
+| ------------------ | -------------------- |
+| `@app/*`           | `app/*`              |
+| `@core/*`          | `app/core/*`         |
+| `@features/*`      | `app/features/*`     |
+| `@shared/*`        | `app/shared/*`       |
+| `@environments/*`  | `environments/*`     |
+
+```typescript
+// ✓ Correct — path aliases
+import { AuthService } from '@core/services';
+import { Product } from '@shared/models';
+import { environment } from '@environments/environment.development';
+
+// ✗ Incorrect — deep relative paths
+import { AuthService } from '../../../core/services/auth.service';
+```
+
+### Access Modifiers & Return Types
+- **Always use explicit modifiers:** Every variable and method must have `private`, `protected`, `public`, or `readonly`
+- **Always specify return types on methods:** `void`, `string`, `Observable<Product[]>`, etc.
+- **Use `protected` for template-bound members**
+- **Use `private` for internal logic**
+- **Use `public` sparingly** — only for component public API
+
+### Class Member Ordering
+1. Injected dependencies (`private readonly` / `protected readonly` via `inject()`)
+2. Inputs, outputs, and queries (`readonly input()`, `readonly output()`, `readonly viewChild()`)
+3. Public properties
+4. Protected properties (template-bound signals, computed, form groups, etc.)
+5. Private properties
+6. Lifecycle methods (`ngOnInit`, `ngOnChanges`, `ngOnDestroy`, etc.)
+7. Public methods
+8. Protected methods (template event handlers)
+9. Private helper methods
+
+```typescript
+@Component({ ... })
+export class ProductEditorComponent implements OnInit, OnDestroy {
+  // 1. Injected dependencies
+  private readonly productService = inject(ProductService);
+  private readonly router = inject(Router);
+
+  // 2. Inputs, outputs, queries
+  public readonly productId = input.required<number>();
+  public readonly saved = output<Product>();
+
+  // 3-5. Properties grouped by modifier
+  protected readonly isLoading = signal(false);
+  private previousValues: Partial<Product> | null = null;
+
+  // 6. Lifecycle methods
+  public ngOnInit(): void {
+    this.loadProduct();
+  }
+
+  // 8. Protected methods (template handlers)
+  protected submitForm(): void {
+    this.productService.update(this.form.value);
+  }
+
+  // 9. Private helper methods
+  private loadProduct(): void {
+    this.isLoading.set(true);
+    // ...
+  }
+}
+```
+
+### Control Flow
+- **Always use braces** for `if`, `else`, `for`, `while`, and `do-while` statements, even for single-line bodies
+- **Logical grouping:** Add blank lines to separate logical sections within methods
+
+### Dependency Injection
+- **Prefer `inject()` over constructor injection**
+
+### Forms
+- **Always use Reactive Forms** with `FormControl`, `FormGroup`, and `FormBuilder`
+- Apply validators to form controls for client-side validation
+- Use `debounceTime()` on `valueChanges` for search/filter inputs
+
+### Components & Directives
+- Use application-specific prefixes for selectors
+- Keep components focused on UI; refactor logic to other files if not UI-related
+- Avoid complex logic in templates; use computed properties in TypeScript
+- Use `protected` for members only used in templates
+- Mark Angular-initialized properties (`input`, `output`, `viewChild`) as `readonly`
+- Prefer `[class]`/`[style]` bindings over `NgClass`/`NgStyle`
+- Name handlers for what they do, not the event (e.g., `saveUserData()` not `handleClick()`)
+- Implement TypeScript interfaces for lifecycle hooks (e.g., `OnInit`)
+
+### Environment Configuration
+- `src/environments/environment.development.ts` for development
+- `src/environments/environment.ts` for production
+- Angular handles file replacement during builds
+
+```typescript
+export const environment = {
+  production: false,
+  apiUrl: 'http://localhost:5282/api',
+};
+```
+
+## Styling
+- **Prefer Tailwind CSS & DaisyUI** for styles
+- Minimal component-scoped CSS — only when utilities can't express the design
+- Use `tailwind.config.js` and DaisyUI themes for colors, spacing, typography
+- Responsive prefixes (`sm:`, `md:`, `lg:`) over hand-written media queries
+- Accessibility: visible focus styles, contrast compliance
+
+## Frontend Error Checking
+
+**MANDATORY for every request:**
+
+1. **Build the project** after making changes:
+   ```bash
+   npx ng build --configuration=development
+   ```
+2. **Check for lint errors** — fix all before completing work
+3. **Verify template compilation** — all Angular template syntax is valid
+4. **Test import paths** — all `import` statements resolve, no circular dependencies
+5. **Manual code review** — unused variables, unreachable code, error handling
+
+---
+
+# Shared Guidelines
 
 ## Git Commit Guidelines
 
@@ -331,31 +523,32 @@ readability while leveraging modern C# 12 features.
 ```
 ### Bad Examples
 
-? **Too vague:**
+❌ **Too vague:**
 ```
 Update files
 
 ```
-? **Not imperative mood:**
+❌ **Not imperative mood:**
 ```
 Fixed the bug in handler
 
 ```
-? **Subject too long:**
+❌ **Subject too long:**
 ```
 Add new feature that allows users to create and edit merchants with validation
 
 ```
-? **No body for complex changes:**
+❌ **No body for complex changes:**
 ```
 Refactor handlers
 
 ```
-? **Subject ends with period:**
+❌ **Subject ends with period:**
 ```
 Add new endpoint.
 
 ```
+
 ### Grouping Commits by Changes
 
 **Always group related changes into a single commit.** Do not mix unrelated changes in the same commit.
@@ -364,6 +557,7 @@ Add new endpoint.
 - **Group files that change together** — if updating a handler also requires updating its endpoint, commit them together
 - **Separate cleanup from features** — don't sneak formatting or import cleanup into a feature commit; make a separate commit
 - **Commit in logical order** — if feature B depends on feature A, commit A first
+- **Group by change type, not by file** — if multiple files receive the same kind of change, batch them into a single commit
 
 ```
 # Good - grouped by concern

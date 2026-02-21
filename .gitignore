@@ -367,3 +367,24 @@ FodyWeavers.xsd
 
 # Ignore all images under wwwroot to avoid committing uploaded or generated files
 src/WTF.Api/wwwroot/images/**
+
+# Angular / Node.js (wtf-pos)
+dist/
+tmp/
+out-tsc/
+bazel-out/
+.angular/
+npm-debug.log
+yarn-error.log
+testem.log
+__screenshots__/
+*.launch
+.project
+.classpath
+.c9/
+.settings/
+*.sublime-workspace
+
+# System files
+.DS_Store
+Thumbs.db
