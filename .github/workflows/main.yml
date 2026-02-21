@@ -116,7 +116,6 @@ jobs:
           password: ${{ secrets.MONSTERASP_FTP_PASSWORD }}
           local-dir: ./publish/api/
           server-dir: /wwwroot/
-          dangerous-clean-slate: true
 
   deploy-frontend:
     name: Deploy Frontend to MonsterASP.NET
