@@ -1,0 +1,361 @@
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { Injectable, inject } from '@angular/core';
+import { environment } from '@environments/environment.development';
+import { LoginDto, MeDto } from '@shared/models';
+import { BehaviorSubject, Observable, Subject, throwError } from 'rxjs';
+import { catchError, map, tap } from 'rxjs/operators';
+
+@Injectable({ providedIn: 'root' })
+export class AuthService {
+  private readonly http = inject(HttpClient);
+  private readonly baseUrl = `${environment.apiUrl}/auth`;
+  private _isLoggedIn = new BehaviorSubject<boolean>(!!localStorage.getItem('token'));
+  private readonly rolesSubject = new BehaviorSubject<string[]>([]);
+  private readonly meRefreshSubject = new Subject<void>();
+  public readonly isLoggedIn$ = this._isLoggedIn.asObservable();
+  public readonly roles$ = this.rolesSubject.asObservable();
+  public readonly meRefresh$ = this.meRefreshSubject.asObservable();
+
+  constructor() {
+    this.syncRolesFromToken();
+  }
+
+  public login(username: string, password: string): Observable<boolean> {
+    if (!username || !password) {
+      return throwError(() => new Error('Username and password are required'));
+    }
+
+    return this.http.post<LoginDto>(`${this.baseUrl}/login`, { username, password }).pipe(
+      tap((res) => {
+        if (res?.accessToken) {
+          localStorage.setItem('token', res.accessToken);
+
+          if (res?.refreshToken) {
+            localStorage.setItem('refreshToken', res.refreshToken);
+          }
+
+          this._isLoggedIn.next(true);
+          this.syncRolesFromToken();
+        }
+      }),
+      map((res) => {
+        const hasToken = !!res?.accessToken;
+
+        if (!hasToken) {
+          console.warn('Login response missing accessToken:', res);
+        }
+
+        return hasToken;
+      }),
+      catchError((error: HttpErrorResponse) => {
+        console.error('Login error:', error);
+        console.error('Error status:', error.status);
+        console.error('Error message:', error.message);
+
+        let errorMessage = 'Login failed. Please try again.';
+
+        if (error.status === 401 || error.status === 400) {
+          errorMessage = 'Invalid username or password.';
+        } else if (error.status === 0) {
+          errorMessage = 'Unable to connect to server. Please check your connection.';
+        } else if (error.status >= 500) {
+          errorMessage = 'Server error. Please try again later.';
+        } else if (error.error?.message) {
+          errorMessage = error.error.message;
+        }
+
+        return throwError(() => new Error(errorMessage));
+      }),
+    );
+  }
+
+  public getMe(): Observable<MeDto> {
+    return this.http.get<MeDto>(`${this.baseUrl}/me`).pipe(
+      catchError((error: HttpErrorResponse) => {
+        console.error('Get me error:', error);
+
+        const errorMessage =
+          error.status === 401
+            ? 'Unauthorized.'
+            : error.status === 0
+              ? 'Unable to connect to server. Please check your connection.'
+              : 'Failed to fetch user profile.';
+
+        return throwError(() => new Error(errorMessage));
+      }),
+    );
+  }
+
+  public updateMe(password: string): Observable<void> {
+    return this.http.put<void>(`${this.baseUrl}/me`, { password }).pipe(
+      catchError((error: HttpErrorResponse) => {
+        console.error('Update me error:', error);
+
+        let errorMessage = 'Failed to update profile.';
+
+        if (error.status === 401) {
+          errorMessage = 'Unauthorized.';
+        } else if (error.status === 400) {
+          errorMessage = 'Invalid password.';
+        } else if (error.status === 0) {
+          errorMessage = 'Unable to connect to server. Please check your connection.';
+        }
+
+        return throwError(() => new Error(errorMessage));
+      }),
+    );
+  }
+
+  public uploadMeImage(file: File): Observable<{ imageUrl?: string | null }> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    return this.http.put<{ imageUrl?: string | null }>(`${this.baseUrl}/me/image`, formData).pipe(
+      catchError((error: HttpErrorResponse) => {
+        console.error('Upload profile image error:', error);
+
+        let errorMessage = 'Failed to upload image. Please try again later.';
+
+        if (error.status === 400) {
+          errorMessage = 'Invalid file. Please check file type and size.';
+        } else if (error.status === 401) {
+          errorMessage = 'Unauthorized.';
+        } else if (error.status === 0) {
+          errorMessage = 'Unable to connect to server. Please check your connection.';
+        }
+
+        return throwError(() => new Error(errorMessage));
+      }),
+    );
+  }
+
+  public notifyMeUpdated(): void {
+    this.meRefreshSubject.next();
+  }
+
+  public logout(): void {
+    localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
+    this._isLoggedIn.next(false);
+    this.rolesSubject.next([]);
+  }
+
+  public getToken(): string | null {
+    return localStorage.getItem('token');
+  }
+
+  public getRefreshToken(): string | null {
+    return localStorage.getItem('refreshToken');
+  }
+
+  /**
+   * Determines if the token is expired or about to expire (within 5 minutes)
+   */
+  public isTokenExpired(): boolean {
+    const token = this.getToken();
+
+    if (!token) {
+      return true;
+    }
+
+    try {
+      const decoded = this.decodeToken(token);
+
+      if (!decoded || !decoded['exp'] || typeof decoded['exp'] !== 'number') {
+        return true;
+      }
+
+      const exp = decoded['exp'] as number;
+
+      // Current time in seconds
+      const currentTime = Math.floor(Date.now() / 1000);
+      // Refresh token 5 minutes before expiration
+      const expirationThreshold = exp - 5 * 60;
+
+      return currentTime >= expirationThreshold;
+    } catch {
+      console.error('Error decoding token');
+      return true;
+    }
+  }
+
+  /**
+   * Validates the current token
+   * @returns true if token is valid and not expired
+   */
+  public isTokenValid(): boolean {
+    const token = this.getToken();
+
+    if (!token) {
+      return false;
+    }
+
+    try {
+      const decoded = this.decodeToken(token);
+
+      if (!decoded || !decoded['exp'] || typeof decoded['exp'] !== 'number') {
+        return false;
+      }
+
+      const exp = decoded['exp'] as number;
+      const currentTime = Math.floor(Date.now() / 1000);
+      return currentTime < exp;
+    } catch {
+      console.error('Error validating token');
+      return false;
+    }
+  }
+
+  /**
+   * Refreshes the access token using the refresh token
+   */
+  public refreshToken(): Observable<boolean> {
+    const refreshToken = this.getRefreshToken();
+
+    if (!refreshToken) {
+      return throwError(() => new Error('No refresh token available'));
+    }
+
+    return this.http
+      .post<{
+        accessToken: string;
+        refreshToken?: string;
+      }>(`${this.baseUrl}/refresh`, { refreshToken })
+      .pipe(
+        tap((res) => {
+          if (res?.accessToken) {
+            localStorage.setItem('token', res.accessToken);
+
+            if (res?.refreshToken) {
+              localStorage.setItem('refreshToken', res.refreshToken);
+            }
+
+            this._isLoggedIn.next(true);
+            this.syncRolesFromToken();
+          }
+        }),
+        map((res) => !!res?.accessToken),
+        catchError((error: HttpErrorResponse) => {
+          console.error('Token refresh error:', error);
+          // If refresh fails, logout the user
+          this.logout();
+          return throwError(() => new Error('Token refresh failed'));
+        }),
+      );
+  }
+
+  /**
+   * Decodes a JWT token and returns its payload
+   */
+  private decodeToken(token: string): Record<string, unknown> | null {
+    try {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(
+        atob(base64)
+          .split('')
+          .map((c) => {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+          })
+          .join(''),
+      );
+
+      return JSON.parse(jsonPayload);
+    } catch {
+      return null;
+    }
+  }
+
+  public isAuthenticated(): boolean {
+    return this._isLoggedIn.value || !!this.getToken();
+  }
+
+  public canReadCustomers(): boolean {
+    return this.hasAnyRole(['Admin', 'AdminViewer']);
+  }
+
+  public canWriteCustomers(): boolean {
+    return this.hasAnyRole(['Admin']);
+  }
+
+  public canAccessManagement(): boolean {
+    return this.hasAnyRole(['Admin', 'AdminViewer']);
+  }
+
+  public canWriteManagement(): boolean {
+    return this.hasAnyRole(['Admin']);
+  }
+
+  public canCreateCustomerInOrder(isEditMode: boolean): boolean {
+    if (this.hasAnyRole(['Admin'])) {
+      return true;
+    }
+
+    return !isEditMode && this.hasAnyRole(['Cashier']);
+  }
+
+  public canManageOrders(): boolean {
+    return this.hasAnyRole(['Admin', 'Cashier']);
+  }
+
+  public getCurrentRoleLabel(): string {
+    const roles = this.rolesSubject.value.map((role) => role.toLowerCase());
+
+    if (roles.includes('admin')) {
+      return 'Admin';
+    }
+    if (roles.includes('adminviewer') || roles.includes('admin viewer')) {
+      return 'Admin Viewer';
+    }
+    if (roles.includes('cashier')) {
+      return 'Cashier';
+    }
+
+    return 'Unknown';
+  }
+
+  public hasAnyRole(requiredRoles: string[]): boolean {
+    const roleSet = new Set(this.rolesSubject.value.map((role) => role.toLowerCase()));
+    return requiredRoles.some((role) => roleSet.has(role.toLowerCase()));
+  }
+
+  private syncRolesFromToken(): void {
+    const token = this.getToken();
+    if (!token) {
+      this.rolesSubject.next([]);
+      return;
+    }
+
+    const decoded = this.decodeToken(token);
+    const roles = this.extractRoles(decoded);
+    this.rolesSubject.next(roles);
+  }
+
+  private extractRoles(decoded: Record<string, unknown> | null): string[] {
+    if (!decoded) {
+      return [];
+    }
+
+    const rawRoleClaims: unknown[] = [];
+    const roleClaimKeys = [
+      'role',
+      'roles',
+      'http://schemas.microsoft.com/ws/2008/06/identity/claims/role',
+    ];
+
+    for (const key of roleClaimKeys) {
+      const value = decoded[key];
+      if (Array.isArray(value)) {
+        rawRoleClaims.push(...value);
+      } else if (value !== undefined && value !== null) {
+        rawRoleClaims.push(value);
+      }
+    }
+
+    const normalized = rawRoleClaims
+      .map((role) => (typeof role === 'string' ? role.trim() : ''))
+      .filter((role) => !!role);
+
+    return Array.from(new Set(normalized));
+  }
+}

@@ -1,0 +1,452 @@
+﻿<div class="flex h-full flex-col ps-6">
+  <!-- Sticky Header -->
+  <div
+    class="sticky top-0 z-10 mb-6 flex shrink-0 items-center justify-between bg-white/95 backdrop-blur-sm"
+  >
+    <!-- Left: Title and Navigation -->
+    <div class="flex min-w-0 items-center gap-4">
+      <button
+        class="tooltip tooltip-bottom cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
+        type="button"
+        (click)="goBack()"
+        aria-label="Go back"
+        data-tip="Back"
+      >
+        <app-icon name="icon-back" [class]="'h-5 w-5 text-gray-600'" />
+      </button>
+      <div class="min-w-0">
+        <h1 class="truncate text-2xl font-bold text-gray-900">
+          {{ isProfileMode() ? 'My Profile' : isEditMode() ? 'Edit User' : 'New User' }}
+        </h1>
+      </div>
+    </div>
+
+    <!-- Right: Action Buttons -->
+    <div class="flex shrink-0 gap-2">
+      <button type="button" class="cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-100 disabled:opacity-50 active:scale-95" (click)="goBack()" [disabled]="isSaving()">
+        Cancel
+      </button>
+      <button
+        type="submit"
+        form="userForm"
+        class="btn btn-sm gap-2 rounded-lg border-0 bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none"
+        [disabled]="userForm.invalid || isSaving()"
+      >
+        @if (isSaving()) {
+          <span class="loading loading-spinner loading-sm"></span>
+        }
+        {{
+          isSaving()
+            ? (isProfileMode()
+              ? 'Saving Profile...'
+              : (isEditMode() ? 'Updating User...' : 'Creating User...'))
+            : (isProfileMode() ? 'Save Profile' : (isEditMode() ? 'Update' : 'Create') + ' User')
+        }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  @if (isLoading()) {
+    <div class="flex justify-center py-8">
+      <span class="loading loading-spinner loading-lg"></span>
+    </div>
+  }
+
+  <!-- Form -->
+  @if (!isLoading()) {
+    <div class="flex-1 overflow-y-auto pr-2 pb-4">
+      <form id="userForm" [formGroup]="userForm" (ngSubmit)="saveUser()">
+        <div class="grid grid-cols-1 gap-6" [class.lg:grid-cols-3]="isProfileMode()">
+          <!-- Left Column: Core Details -->
+          <div class="space-y-6" [class.lg:col-span-2]="isProfileMode()">
+            <!-- Main Form Card -->
+            <div class="card rounded-xl bg-white shadow-lg">
+              <div class="card-body space-y-5">
+                <!-- First Name -->
+                <div>
+                  <label class="mb-2 block text-sm font-semibold text-gray-900" for="firstName">
+                    First Name <span class="text-error">*</span>
+                  </label>
+                  <label
+                    class="input flex w-full items-center gap-2 border-transparent transition-all"
+                    [class.bg-gray-100]="isProfileMode()"
+                    [class.bg-gray-50]="!isProfileMode()"
+                    [class.cursor-not-allowed]="isProfileMode()"
+                    [class.focus-within:border-[#047857]]="!isProfileMode()"
+                    [class.focus-within:bg-white]="!isProfileMode()"
+                    [class.focus-within:ring-1]="!isProfileMode()"
+                    [class.focus-within:ring-[#047857]/20]="!isProfileMode()"
+                    [class.input-error]="hasError('firstName')"
+                  >
+                    @if (isProfileMode()) {
+                      <app-icon name="icon-lock" [class]="'h-4 w-4 text-gray-400'" />
+                    }
+                    <input
+                      id="firstName"
+                      type="text"
+                      formControlName="firstName"
+                      [readonly]="isProfileMode()"
+                      [attr.tabindex]="isProfileMode() ? -1 : null"
+                      placeholder="Enter first name"
+                      class="grow bg-transparent outline-none"
+                      [class.text-gray-500]="isProfileMode()"
+                      [class.cursor-not-allowed]="isProfileMode()"
+                      [class.select-none]="isProfileMode()"
+                      (mousedown)="isProfileMode() ? $event.preventDefault() : null"
+                    />
+                  </label>
+                  @if (getErrorMessage('firstName')) {
+                    <p class="text-error mt-2 text-sm">{{ getErrorMessage('firstName') }}</p>
+                  }
+                </div>
+
+                <!-- Last Name -->
+                <div>
+                  <label class="mb-2 block text-sm font-semibold text-gray-900" for="lastName">
+                    Last Name <span class="text-error">*</span>
+                  </label>
+                  <label
+                    class="input flex w-full items-center gap-2 border-transparent transition-all"
+                    [class.bg-gray-100]="isProfileMode()"
+                    [class.bg-gray-50]="!isProfileMode()"
+                    [class.cursor-not-allowed]="isProfileMode()"
+                    [class.focus-within:border-[#047857]]="!isProfileMode()"
+                    [class.focus-within:bg-white]="!isProfileMode()"
+                    [class.focus-within:ring-1]="!isProfileMode()"
+                    [class.focus-within:ring-[#047857]/20]="!isProfileMode()"
+                    [class.input-error]="hasError('lastName')"
+                  >
+                    @if (isProfileMode()) {
+                      <app-icon name="icon-lock" [class]="'h-4 w-4 text-gray-400'" />
+                    }
+                    <input
+                      id="lastName"
+                      type="text"
+                      formControlName="lastName"
+                      [readonly]="isProfileMode()"
+                      [attr.tabindex]="isProfileMode() ? -1 : null"
+                      placeholder="Enter last name"
+                      class="grow bg-transparent outline-none"
+                      [class.text-gray-500]="isProfileMode()"
+                      [class.cursor-not-allowed]="isProfileMode()"
+                      [class.select-none]="isProfileMode()"
+                      (mousedown)="isProfileMode() ? $event.preventDefault() : null"
+                    />
+                  </label>
+                  @if (getErrorMessage('lastName')) {
+                    <p class="text-error mt-2 text-sm">{{ getErrorMessage('lastName') }}</p>
+                  }
+                </div>
+
+                <!-- Username -->
+                <div>
+                  <label class="mb-2 block text-sm font-semibold text-gray-900" for="username">
+                    Username <span class="text-error">*</span>
+                  </label>
+                  <label
+                    class="input flex w-full items-center gap-2 border-transparent transition-all"
+                    [class.bg-gray-100]="isProfileMode()"
+                    [class.bg-gray-50]="!isProfileMode()"
+                    [class.cursor-not-allowed]="isProfileMode()"
+                    [class.focus-within:border-[#047857]]="!isProfileMode()"
+                    [class.focus-within:bg-white]="!isProfileMode()"
+                    [class.focus-within:ring-1]="!isProfileMode()"
+                    [class.focus-within:ring-[#047857]/20]="!isProfileMode()"
+                    [class.input-error]="hasError('username')"
+                  >
+                    @if (isProfileMode()) {
+                      <app-icon name="icon-lock" [class]="'h-4 w-4 text-gray-400'" />
+                    }
+                    <input
+                      id="username"
+                      type="text"
+                      formControlName="username"
+                      [readonly]="isProfileMode()"
+                      [attr.tabindex]="isProfileMode() ? -1 : null"
+                      placeholder="Enter username"
+                      class="grow bg-transparent outline-none"
+                      [class.text-gray-500]="isProfileMode()"
+                      [class.cursor-not-allowed]="isProfileMode()"
+                      [class.select-none]="isProfileMode()"
+                      (mousedown)="isProfileMode() ? $event.preventDefault() : null"
+                    />
+                  </label>
+                  @if (getErrorMessage('username')) {
+                    <p class="text-error mt-2 text-sm">{{ getErrorMessage('username') }}</p>
+                  }
+                </div>
+
+                @if (!isProfileMode()) {
+                  <div>
+                    <label class="mb-2 block text-sm font-semibold text-gray-900" for="roleId">
+                      Role <span class="text-error">*</span>
+                    </label>
+                    <select
+                      id="roleId"
+                      formControlName="roleId"
+                      class="select w-full border-transparent bg-gray-50 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                      [class.select-error]="hasError('roleId')"
+                    >
+                      <option [ngValue]="null">Select role</option>
+                      @for (role of userRoleOptions; track role.value) {
+                        <option [ngValue]="role.value">{{ role.label }}</option>
+                      }
+                    </select>
+                    @if (getErrorMessage('roleId')) {
+                      <p class="text-error mt-2 text-sm">{{ getErrorMessage('roleId') }}</p>
+                    }
+                  </div>
+                } @else {
+                  <div>
+                    <label class="mb-2 block text-sm font-semibold text-gray-900" for="roleId">
+                      Role <span class="text-error">*</span>
+                    </label>
+                    <label
+                      class="input flex w-full cursor-not-allowed items-center gap-2 border-transparent bg-gray-100 transition-all"
+                    >
+                      <app-icon name="icon-lock" [class]="'h-4 w-4 text-gray-400'" />
+                      <input
+                        type="text"
+                        [value]="currentUserRoleLabel"
+                        readonly
+                        tabindex="-1"
+                        class="grow cursor-not-allowed bg-transparent text-gray-500 outline-none select-none"
+                        (mousedown)="$event.preventDefault()"
+                      />
+                    </label>
+                  </div>
+                }
+
+                <!-- Password -->
+                <div>
+                  <label class="mb-2 block text-sm font-semibold text-gray-900" for="password">
+                    Password
+                    <span class="text-xs text-gray-400">{{
+                      isEditMode() ? '(leave blank to keep current)' : '*'
+                    }}</span>
+                  </label>
+                  <div class="relative">
+                    <input
+                      id="password"
+                      [type]="showPassword() ? 'text' : 'password'"
+                      formControlName="password"
+                      placeholder="Enter password"
+                      class="input w-full border-transparent bg-gray-50 pr-16 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                      [class.input-error]="hasError('password')"
+                    />
+                    <button
+                      type="button"
+                      class="absolute inset-y-0 right-2 my-auto h-8 rounded-md px-2 text-xs font-medium text-gray-600 hover:bg-gray-100"
+                      (click)="togglePasswordVisibility()"
+                      [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
+                    >
+                      {{ showPassword() ? 'Hide' : 'Show' }}
+                    </button>
+                  </div>
+                  @if (getErrorMessage('password')) {
+                    <p class="text-error mt-2 text-sm">{{ getErrorMessage('password') }}</p>
+                  }
+                </div>
+
+                <!-- Re-enter Password -->
+                <div>
+                  <label
+                    class="mb-2 block text-sm font-semibold text-gray-900"
+                    for="confirmPassword"
+                  >
+                    Re-enter Password
+                    <span class="text-xs text-gray-400">{{
+                      isEditMode() ? '(required if password is changed)' : '*'
+                    }}</span>
+                  </label>
+                  <div class="relative">
+                    <input
+                      id="confirmPassword"
+                      [type]="showConfirmPassword() ? 'text' : 'password'"
+                      formControlName="confirmPassword"
+                      placeholder="Re-enter password"
+                      class="input w-full border-transparent bg-gray-50 pr-16 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                      [class.input-error]="
+                        hasError('confirmPassword') ||
+                        !!userForm.errors?.['passwordMismatch'] ||
+                        !!userForm.errors?.['confirmPasswordRequired']
+                      "
+                    />
+                    <button
+                      type="button"
+                      class="absolute inset-y-0 right-2 my-auto h-8 rounded-md px-2 text-xs font-medium text-gray-600 hover:bg-gray-100"
+                      (click)="toggleConfirmPasswordVisibility()"
+                      [attr.aria-label]="
+                        showConfirmPassword() ? 'Hide confirm password' : 'Show confirm password'
+                      "
+                    >
+                      {{ showConfirmPassword() ? 'Hide' : 'Show' }}
+                    </button>
+                  </div>
+                  @if (getErrorMessage('confirmPassword')) {
+                    <p class="text-error mt-2 text-sm">{{ getErrorMessage('confirmPassword') }}</p>
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Right Column: Sidebar -->
+          @if (isProfileMode()) {
+            <div class="space-y-6">
+              <!-- User Image Card -->
+              <div class="card rounded-xl bg-white shadow-lg">
+                <div class="card-body">
+                  <div class="mb-2">
+                    <span class="text-sm font-semibold text-gray-900">User Image</span>
+                  </div>
+
+                  <!-- Current Image -->
+                  @if (!imagePreview()) {
+                    @if (currentImageUrl()) {
+                      <div class="mb-4 flex justify-center">
+                        <div class="flex flex-col items-center gap-2">
+                          <img
+                            [src]="currentImageUrl()"
+                            alt="Current user image"
+                            class="h-48 w-48 rounded-xl object-cover shadow-lg"
+                          />
+                          <button
+                            type="button"
+                            class="btn btn-xs btn-outline btn-error"
+                            (click)="removeCurrentImage()"
+                            [disabled]="isDeletingImage() || isUploading()"
+                          >
+                            @if (isDeletingImage()) {
+                              <span class="loading loading-spinner loading-xs"></span>
+                            }
+                            {{ isDeletingImage() ? 'Removing image...' : 'Remove current image' }}
+                          </button>
+                        </div>
+                      </div>
+                    } @else {
+                      <div class="mb-4 flex justify-center">
+                        <app-avatar [label]="userFullNameLabel()" [size]="150" />
+                      </div>
+                    }
+                  }
+
+                  <!-- Image Preview -->
+                  @if (imagePreview()) {
+                    <div class="mb-4 flex justify-center">
+                      <div class="relative inline-block">
+                        <img
+                          [src]="imagePreview()"
+                          alt="Image preview"
+                          class="h-48 w-48 rounded-xl object-cover shadow-lg"
+                        />
+                        <button
+                          type="button"
+                          class="tooltip tooltip-bottom btn btn-circle btn-sm btn-neutral absolute -top-2 -right-2"
+                          (click)="removeImage()"
+                          data-tip="Remove image"
+                        >
+                          <app-icon name="icon-close" [class]="'h-4 w-4'"></app-icon>
+                        </button>
+                      </div>
+                    </div>
+                  }
+
+                  <!-- Dropzone File Input -->
+                  <label
+                    for="userImage"
+                    class="group flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 p-6 transition-all hover:border-[#047857]/40 hover:bg-[#047857]/5"
+                    [class.pointer-events-none]="isUploading()"
+                    [class.opacity-50]="isUploading()"
+                    [class.border-[#047857]]="isDragging()"
+                    [class.bg-[#047857]/5]="isDragging()"
+                    (dragover)="onDragOver($event)"
+                    (dragleave)="onDragLeave($event)"
+                    (drop)="onFileDrop($event)"
+                  >
+                    <app-icon
+                      name="icon-upload"
+                      [class]="'h-8 w-8 text-gray-400 transition-colors group-hover:text-[#047857]'"
+                    />
+                    <p class="mt-2 text-sm font-medium text-gray-600 group-hover:text-[#047857]">
+                      Click or drag & drop to upload
+                    </p>
+                    <p class="mt-1 text-xs text-gray-400">JPG, PNG, GIF, or WebP · Max 5 MB</p>
+                  </label>
+                  <input
+                    id="userImage"
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                    class="hidden"
+                    (change)="onFileSelected($event)"
+                    [disabled]="isUploading()"
+                  />
+
+                  @if (isUploading()) {
+                    <div class="mt-3 flex items-center gap-2">
+                      <span class="loading loading-spinner loading-sm"></span>
+                      <span class="text-sm text-gray-700">Uploading image...</span>
+                    </div>
+                  }
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      </form>
+    </div>
+  }
+
+  <!-- Discard Changes Modal -->
+  @if (showDiscardModal()) {
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="discard-title"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md transition-opacity duration-200"
+      (click)="cancelDiscard()"
+      (keydown.escape)="cancelDiscard()"
+      tabindex="0"
+    >
+      <div
+        role="document"
+        class="mx-4 w-full max-w-sm animate-[modal-pop_0.2s_ease-out] rounded-2xl bg-white p-6 shadow-2xl"
+        (click)="$event.stopPropagation()"
+        (keydown)="$event.stopPropagation()"
+      >
+        <!-- Double-Ring Warning Icon -->
+        <div class="mx-auto w-fit rounded-full bg-amber-50/60 p-3">
+          <div class="rounded-full bg-amber-50 p-3">
+            <app-icon name="icon-back" [class]="'h-6 w-6 text-amber-600'" />
+          </div>
+        </div>
+
+        <!-- Title & Body -->
+        <h3 id="discard-title" class="mt-4 text-center text-lg font-semibold text-gray-900">
+          Discard Changes?
+        </h3>
+        <p class="mt-2 text-center text-sm leading-relaxed text-gray-500">
+          You have unsaved changes that will be lost if you leave this page.
+        </p>
+
+        <!-- Actions -->
+        <div class="mt-6 flex items-center justify-end gap-3">
+          <button
+            type="button"
+            class="cursor-pointer px-4 py-2 text-sm font-medium text-red-500 transition-colors hover:text-red-700"
+            (click)="confirmDiscard()"
+          >
+            Discard
+          </button>
+          <button
+            type="button"
+            class="cursor-pointer rounded-xl bg-[#047857] px-6 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#065f46] hover:shadow-md active:scale-[0.97]"
+            (click)="cancelDiscard()"
+          >
+            Keep Editing
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

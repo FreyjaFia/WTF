@@ -1,0 +1,223 @@
+﻿<div class="flex h-full flex-col">
+  <!-- Header: Title on Left, Tools on Right -->
+  <div class="mb-6 flex shrink-0 items-center justify-between">
+    <!-- Left: Title -->
+    <h1 class="text-2xl font-bold text-gray-900">Orders</h1>
+
+    <!-- Right: Search, Filter, and Refresh (Grouped as Unified Toolbar) -->
+    <div class="flex items-center gap-3">
+      <!-- Search Input (Ghost Style, Fixed Width) -->
+      <label
+        class="flex w-72 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200"
+      >
+        <app-icon
+          name="icon-search"
+          [class]="'h-5 w-5 shrink-0 opacity-40'"
+          [fill]="'currentColor'"
+        />
+        <input
+          type="search"
+          class="grow bg-transparent text-sm placeholder-gray-500 focus:caret-[#047857] focus:outline-none"
+          placeholder="Search by order #"
+          [formControl]="filterForm.controls.searchTerm"
+        />
+      </label>
+
+      <!-- Status Filter Dropdown (Right-Aligned) -->
+      <div class="dropdown dropdown-end">
+        <app-filter-dropdown
+          [title]="'Status'"
+          [icon]="'icon-status'"
+          [options]="filterOptions()"
+          [selectedIds]="selectedStatuses()"
+          [showSelectedState]="true"
+          (filterChange)="onStatusFilterChange($event)"
+          (filterReset)="onStatusFilterReset()"
+        />
+      </div>
+
+      <!-- Refresh Button (Ghost Button Style with Tooltip) -->
+      <button
+        class="tooltip tooltip-bottom pointer-events-auto z-30 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
+        [class.opacity-70]="isRefreshing()"
+        type="button"
+        (click)="refresh()"
+        [disabled]="isRefreshing()"
+        aria-label="Refresh orders"
+        data-tip="Refresh"
+      >
+        @if (isRefreshing()) {
+          <app-icon
+            name="icon-refresh"
+            [class]="'h-5 w-5 animate-spin text-gray-600'"
+            [fill]="'currentColor'"
+          />
+        } @else {
+          <app-icon
+            name="icon-refresh"
+            [class]="'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'"
+            [fill]="'currentColor'"
+          />
+        }
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  @if (isLoading()) {
+    <div class="flex justify-center py-8">
+      <span class="loading loading-spinner loading-lg"></span>
+    </div>
+  }
+
+  <!-- Orders List -->
+  @if (!isLoading()) {
+    @if (orders().length === 0) {
+      <div class="rounded-lg bg-white p-8 text-center shadow-lg">
+        <app-icon name="icon-cart" [class]="'mx-auto mb-3 h-12 w-12 text-gray-400'" />
+        <p class="text-lg font-semibold text-gray-700">No orders found</p>
+        <p class="text-sm text-gray-500">Try adjusting your filters</p>
+      </div>
+    } @else {
+      <div class="min-h-0 flex-1 overflow-y-auto pr-2 pb-4">
+        <div class="space-y-3">
+          <!-- Column Headers (Sticky) -->
+          <div class="sticky top-0 z-10 mb-2 grid grid-cols-12 gap-4 rounded-lg bg-white px-4 py-3">
+            <div
+              class="col-span-2 flex cursor-pointer items-center gap-1 text-xs font-semibold tracking-wider uppercase transition-colors"
+              [class.text-gray-600]="!isSortActive('orderNumber')"
+              [class.hover:text-gray-900]="!isSortActive('orderNumber')"
+              [class.text-[#047857]]="isSortActive('orderNumber')"
+              role="button"
+              tabindex="0"
+              (click)="toggleSort('orderNumber')"
+              (keydown.enter)="toggleSort('orderNumber')"
+              (keydown.space)="toggleSort('orderNumber')"
+            >
+              Order
+              <span
+                class="text-xs transition-opacity"
+                [class.opacity-0]="!isSortActive('orderNumber')"
+                [class.opacity-100]="isSortActive('orderNumber')"
+              >
+                {{ sortDirection() === 'asc' ? '↑' : '↓' }}
+              </span>
+            </div>
+
+            <div
+              class="col-span-2 flex cursor-pointer items-center gap-1 text-xs font-semibold tracking-wider uppercase transition-colors"
+              [class.text-gray-600]="!isSortActive('date')"
+              [class.hover:text-gray-900]="!isSortActive('date')"
+              [class.text-[#047857]]="isSortActive('date')"
+              role="button"
+              tabindex="0"
+              (click)="toggleSort('date')"
+              (keydown.enter)="toggleSort('date')"
+              (keydown.space)="toggleSort('date')"
+            >
+              Date
+              <span
+                class="text-xs transition-opacity"
+                [class.opacity-0]="!isSortActive('date')"
+                [class.opacity-100]="isSortActive('date')"
+              >
+                {{ sortDirection() === 'asc' ? '↑' : '↓' }}
+              </span>
+            </div>
+
+            <div
+              class="col-span-2 text-center text-xs font-semibold tracking-wider text-gray-600 uppercase"
+            >
+              Status
+            </div>
+
+            <div
+              class="col-span-2 text-right text-xs font-semibold tracking-wider text-gray-600 uppercase"
+            >
+              Items
+            </div>
+
+            <div
+              class="col-span-3 flex cursor-pointer items-center justify-end gap-1 text-right text-xs font-semibold tracking-wider uppercase transition-colors"
+              [class.text-gray-600]="!isSortActive('totalAmount')"
+              [class.hover:text-gray-900]="!isSortActive('totalAmount')"
+              [class.text-[#047857]]="isSortActive('totalAmount')"
+              role="button"
+              tabindex="0"
+              (click)="toggleSort('totalAmount')"
+              (keydown.enter)="toggleSort('totalAmount')"
+              (keydown.space)="toggleSort('totalAmount')"
+            >
+              Total
+              <span
+                class="text-xs transition-opacity"
+                [class.opacity-0]="!isSortActive('totalAmount')"
+                [class.opacity-100]="isSortActive('totalAmount')"
+              >
+                {{ sortDirection() === 'asc' ? '↑' : '↓' }}
+              </span>
+            </div>
+
+            <div class="col-span-1"></div>
+          </div>
+
+          <!-- Order Groups by Date -->
+          @for (group of groupedOrders(); track group.label) {
+            <div>
+              <!-- Date Separator -->
+              <div class="mb-2 flex items-center gap-3 px-4 py-2">
+                <div class="h-px flex-1 bg-gray-200"></div>
+                <div class="text-xs font-semibold tracking-wide text-gray-500 uppercase">
+                  {{ group.label }}
+                </div>
+                <div class="h-px flex-1 bg-gray-200"></div>
+              </div>
+
+              <!-- Order Cards for this day -->
+              @for (order of group.orders; track order.id) {
+                <div
+                  class="grid cursor-pointer grid-cols-12 items-center gap-4 rounded-xl bg-white px-4 py-4 shadow-lg transition-shadow duration-200 hover:shadow-xl"
+                  role="button"
+                  tabindex="0"
+                  (click)="editOrder(order)"
+                  (keydown.enter)="editOrder(order)"
+                  (keydown.space)="editOrder(order)"
+                >
+                  <div class="col-span-2">
+                    <div class="font-semibold text-gray-900">#{{ order.orderNumber }}</div>
+                  </div>
+                  <div class="col-span-2">
+                    <div class="text-sm text-gray-700">
+                      {{ getOrderDate(order) | date: 'd MMM y, h:mm a' }}
+                    </div>
+                  </div>
+                  <div class="col-span-2 flex justify-center">
+                    <app-badge [variant]="getStatusVariant(order.status)">
+                      {{ getStatusLabel(order.status) }}
+                    </app-badge>
+                  </div>
+                  <div class="col-span-2 text-right">
+                    <div class="text-sm text-gray-600">{{ getItemsText(order) }}</div>
+                  </div>
+                  <div class="col-span-3 text-right">
+                    <div class="text-lg font-semibold text-black">
+                      <span class="text-base opacity-70">₱</span
+                      >{{ order.totalAmount | number: '1.2-2' }}
+                    </div>
+                  </div>
+                  <div class="col-span-1 flex justify-end">
+                    <app-icon
+                      name="icon-forward"
+                      [class]="'h-5 w-5 text-gray-400 transition-colors group-hover:text-gray-600'"
+                      [fill]="'currentColor'"
+                    />
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    }
+  }
+</div>

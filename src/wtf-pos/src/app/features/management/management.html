@@ -1,0 +1,102 @@
+<div class="flex h-full w-full rounded-t-2xl bg-white">
+  <!-- Sidebar Navigation -->
+  <div
+    class="flex shrink-0 flex-col border-r border-gray-200 bg-white transition-all duration-300 ease-in-out"
+    [class.w-64]="!isSidebarCollapsed()"
+    [class.w-20]="isSidebarCollapsed()"
+  >
+    <div
+      class="mb-6 flex items-center pr-4"
+      [class.justify-between]="!isSidebarCollapsed()"
+      [class.justify-center]="isSidebarCollapsed()"
+    >
+      @if (!isSidebarCollapsed()) {
+        <h2 class="text-2xl font-bold whitespace-nowrap text-gray-900">Management</h2>
+      }
+      <button
+        type="button"
+        class="tooltip z-50 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
+        [class.tooltip-right]="isSidebarCollapsed()"
+        [class.tooltip-bottom]="!isSidebarCollapsed()"
+        (click)="toggleSidebar()"
+        [attr.aria-label]="isSidebarCollapsed() ? 'Expand sidebar' : 'Collapse sidebar'"
+        [attr.data-tip]="isSidebarCollapsed() ? 'Expand' : 'Collapse'"
+      >
+        <app-icon
+          [name]="isSidebarCollapsed() ? 'icon-chevrons-right' : 'icon-chevrons-left'"
+          [class]="'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'"
+          [fill]="'currentColor'"
+        ></app-icon>
+      </button>
+    </div>
+
+    <nav class="space-y-2">
+      <a
+        routerLink="products"
+        routerLinkActive="bg-green-50"
+        [routerLinkActiveOptions]="{ exact: false }"
+        class="tooltip mr-4 flex items-center rounded-lg px-4 py-3 whitespace-nowrap text-gray-700 transition-all duration-300 ease-in-out hover:bg-gray-50"
+        [class.justify-center]="isSidebarCollapsed()"
+        [class.gap-3]="!isSidebarCollapsed()"
+        [class.tooltip-right]="isSidebarCollapsed()"
+        [class.tooltip-bottom]="!isSidebarCollapsed()"
+        [class.z-50]="isSidebarCollapsed()"
+        [attr.data-tip]="'Products'"
+        [class.text-[#047857]]="isActive('products')"
+        [class.bg-green-50]="isActive('products')"
+      >
+        <app-icon name="icon-cart" [class]="'h-5 w-5 shrink-0'"></app-icon>
+        @if (!isSidebarCollapsed()) {
+          <span class="font-medium">Products</span>
+        }
+      </a>
+
+      @if (canReadCustomers()) {
+        <a
+          routerLink="customers"
+          routerLinkActive="bg-green-50"
+          [routerLinkActiveOptions]="{ exact: false }"
+          class="tooltip mr-4 flex items-center rounded-lg px-4 py-3 whitespace-nowrap text-gray-700 transition-all duration-300 ease-in-out hover:bg-gray-50"
+          [class.justify-center]="isSidebarCollapsed()"
+          [class.gap-3]="!isSidebarCollapsed()"
+          [class.tooltip-right]="isSidebarCollapsed()"
+          [class.tooltip-bottom]="!isSidebarCollapsed()"
+          [class.z-50]="isSidebarCollapsed()"
+          [attr.data-tip]="'Customers'"
+          [class.text-[#047857]]="isActive('customers')"
+          [class.bg-green-50]="isActive('customers')"
+        >
+          <app-icon name="icon-people" [class]="'h-5 w-5 shrink-0'"></app-icon>
+          @if (!isSidebarCollapsed()) {
+            <span class="font-medium">Customers</span>
+          }
+        </a>
+      }
+
+      <a
+        routerLink="users"
+        routerLinkActive="bg-green-50"
+        [routerLinkActiveOptions]="{ exact: false }"
+        class="tooltip mr-4 flex items-center rounded-lg px-4 py-3 whitespace-nowrap text-gray-700 transition-all duration-300 ease-in-out hover:bg-gray-50"
+        [class.justify-center]="isSidebarCollapsed()"
+        [class.gap-3]="!isSidebarCollapsed()"
+        [class.tooltip-right]="isSidebarCollapsed()"
+        [class.tooltip-bottom]="!isSidebarCollapsed()"
+        [class.z-50]="isSidebarCollapsed()"
+        [attr.data-tip]="'Users'"
+        [class.text-[#047857]]="isActive('users')"
+        [class.bg-green-50]="isActive('users')"
+      >
+        <app-icon name="icon-user" [class]="'h-5 w-5 shrink-0'"></app-icon>
+        @if (!isSidebarCollapsed()) {
+          <span class="font-medium">Users</span>
+        }
+      </a>
+    </nav>
+  </div>
+
+  <!-- Content Area -->
+  <div class="flex h-full min-h-0 flex-1 flex-col">
+    <router-outlet />
+  </div>
+</div>

@@ -1,0 +1,184 @@
+﻿<div class="flex h-full flex-col ps-6">
+  <!-- Sticky Header: Back + Title on Left, Actions on Right -->
+  <div class="mb-6 flex shrink-0 items-center justify-between">
+    <div class="flex min-w-0 items-center gap-4">
+      <a
+        class="tooltip tooltip-bottom cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
+        [routerLink]="['/management/customers']"
+        aria-label="Go back"
+        data-tip="Back"
+      >
+        <app-icon name="icon-back" [class]="'h-5 w-5 text-gray-600'" />
+      </a>
+      @if (customer()) {
+        <div class="min-w-0">
+          <div class="flex items-center gap-3">
+            <h1 class="truncate text-2xl font-bold text-gray-900">
+              {{ customer()!.firstName }} {{ customer()!.lastName }}
+            </h1>
+            @if (customer()!.isActive) {
+              <app-badge variant="success">Active</app-badge>
+            } @else {
+              <app-badge variant="error">Inactive</app-badge>
+            }
+          </div>
+        </div>
+      }
+    </div>
+
+    @if (customer() && canWriteManagement()) {
+      <div class="flex shrink-0 gap-2">
+        <a
+          class="btn btn-sm gap-2 rounded-lg border-0 bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg"
+          [routerLink]="['/management/customers/edit', customer()!.id]"
+        >
+          <app-icon name="icon-edit" [class]="'h-4 w-4'" />
+          Edit
+        </a>
+        <button
+          class="inline-flex items-center gap-2 cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium text-red-500 transition-all hover:bg-red-50 hover:text-red-600 active:scale-95"
+          (click)="deleteCustomer()"
+        >
+          <app-icon name="icon-delete" [class]="'h-4 w-4'" />
+          Delete
+        </button>
+      </div>
+    }
+  </div>
+
+  <!-- Loading State -->
+  @if (isLoading()) {
+    <div class="flex justify-center py-8">
+      <span class="loading loading-spinner loading-lg"></span>
+    </div>
+  }
+
+  <!-- Master Card -->
+  @if (!isLoading() && customer()) {
+    <div class="flex-1 overflow-y-auto pr-2 pb-4">
+      <div class="card rounded-xl bg-white shadow-lg">
+        <div class="card-body p-0">
+          <div class="grid grid-cols-1 lg:grid-cols-5">
+            <!-- Left Column: Avatar -->
+            <div class="border-b border-gray-100 p-6 lg:col-span-2 lg:border-r lg:border-b-0">
+              <div class="mb-6 flex justify-center">
+                <div class="flex h-52 w-52 items-center justify-center rounded-full bg-gray-50/60">
+                  <app-avatar
+                    [label]="`${customer()!.firstName || ''} ${customer()!.lastName || ''}`"
+                    [size]="208"
+                    [imageUrl]="customer()!.imageUrl"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Column: Customer Data -->
+            <div class="space-y-6 p-6 lg:sticky lg:top-0 lg:col-span-3 lg:self-start">
+              <!-- Basic Info -->
+              <div>
+                <p class="mb-4 text-xs font-semibold tracking-wider text-gray-400 uppercase">
+                  Details
+                </p>
+                <div class="grid grid-cols-2 gap-x-6 gap-y-4 md:grid-cols-3">
+                  <div>
+                    <p class="mb-1 text-xs font-medium text-gray-400">First Name</p>
+                    <p class="text-sm font-bold text-gray-800">
+                      {{ customer()!.firstName }}
+                    </p>
+                  </div>
+                  <div>
+                    <p class="mb-1 text-xs font-medium text-gray-400">Last Name</p>
+                    <p class="text-sm font-bold text-gray-800">
+                      {{ customer()!.lastName }}
+                    </p>
+                  </div>
+                  <div>
+                    <p class="mb-1 text-xs font-medium text-gray-400">Status</p>
+                    @if (customer()!.isActive) {
+                      <app-badge variant="success">Active</app-badge>
+                    } @else {
+                      <app-badge variant="error">Inactive</app-badge>
+                    }
+                  </div>
+                </div>
+              </div>
+
+              <!-- Address -->
+              @if (customer()!.address) {
+                <div class="border-t border-gray-100 pt-5">
+                  <p class="mb-3 text-xs font-semibold tracking-wider text-gray-400 uppercase">
+                    Address
+                  </p>
+                  <p class="max-w-[65ch] text-sm leading-relaxed text-gray-600">
+                    {{ customer()!.address }}
+                  </p>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+</div>
+
+<!-- Delete Confirmation Modal -->
+@if (showDeleteModal() && canWriteManagement()) {
+  <div
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="delete-title"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md transition-opacity duration-200"
+    (click)="cancelDelete()"
+    (keydown.escape)="cancelDelete()"
+    tabindex="0"
+  >
+    <div
+      role="document"
+      class="mx-4 w-full max-w-sm animate-[modal-pop_0.2s_ease-out] rounded-2xl bg-white p-6 shadow-2xl"
+      (click)="$event.stopPropagation()"
+      (keydown)="$event.stopPropagation()"
+    >
+      <!-- Double-Ring Warning Icon -->
+      <div class="mx-auto w-fit rounded-full bg-red-50/60 p-3">
+        <div class="rounded-full bg-red-50 p-3">
+          <app-icon name="icon-delete" [class]="'h-6 w-6 text-red-600'" />
+        </div>
+      </div>
+
+      <!-- Title & Body -->
+      <h3 id="delete-title" class="mt-4 text-center text-lg font-semibold text-gray-900">
+        Delete Customer?
+      </h3>
+      <p class="mt-2 text-center text-sm leading-relaxed text-gray-500">
+        This will permanently remove
+        <span class="font-medium text-gray-700">
+          {{ customer()!.firstName }} {{ customer()!.lastName }} </span
+        >. This action cannot be undone.
+      </p>
+
+      <!-- Actions -->
+      <div class="mt-6 flex items-center justify-end gap-3">
+        <button
+          type="button"
+          class="cursor-pointer px-4 py-2 text-sm font-medium text-gray-500 transition-colors hover:text-gray-700"
+          (click)="cancelDelete()"
+          [disabled]="isDeleting()"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="cursor-pointer rounded-xl bg-red-600 px-6 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-red-700 hover:shadow-md active:scale-[0.97]"
+          (click)="confirmDelete()"
+          [disabled]="isDeleting()"
+        >
+          @if (isDeleting()) {
+            <span class="loading loading-spinner loading-xs mr-2"></span>
+          }
+          {{ isDeleting() ? 'Deleting Customer...' : 'Delete Customer' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

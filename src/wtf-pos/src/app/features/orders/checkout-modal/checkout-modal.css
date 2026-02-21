@@ -1,0 +1,4 @@
+﻿/* Smooth width transition for modal-box */
+.modal-box {
+  transition: max-width 0.3s ease-out;
+}

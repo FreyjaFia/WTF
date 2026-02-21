@@ -1,0 +1,71 @@
+﻿<div class="dropdown dropdown-end">
+  <button
+    class="btn btn-sm cursor-pointer gap-2 whitespace-nowrap shadow-sm"
+    [class.border-gray-300]="!isActive()"
+    [class.bg-white]="!isActive()"
+    [class.hover:bg-gray-50]="!isActive()"
+    [class.border-[#047857]/30]="isActive()"
+    [class.bg-[#047857]/10]="isActive()"
+    [class.text-[#065f46]]="isActive()"
+    [attr.title]="isActive() ? selectedSummary() : null"
+    aria-label="Filter"
+  >
+    <app-icon
+      [name]="icon()"
+      [class]="isActive() ? 'h-5 w-5 text-[#047857]' : 'h-5 w-5 text-gray-700'"
+      [fill]="'currentColor'"
+    />
+    <span class="font-semibold">{{ title() }}</span>
+    @if (isActive()) {
+      <span class="sr-only">Selected: {{ selectedSummary() }}</span>
+      <span
+        class="inline-flex min-w-5 items-center justify-center rounded-full bg-[#047857] px-1.5 text-[10px] font-semibold text-white"
+      >
+        {{ selectedCount() }}
+      </span>
+    }
+  </button>
+  <ul
+    class="dropdown-content menu rounded-box z-50 w-56 border border-gray-200 bg-white p-2 shadow-lg"
+  >
+    <li class="menu-title">
+      <span class="font-semibold text-gray-700">{{ title() }} Filters</span>
+    </li>
+    @for (option of options(); track option.id) {
+      <li>
+        <label
+          class="flex cursor-pointer items-center gap-2 rounded-lg p-2 hover:bg-gray-50"
+          (click)="stopPropagation($event)"
+          (keydown.space)="stopPropagation($event)"
+          (keydown.enter)="stopPropagation($event)"
+          tabindex="0"
+          role="button"
+        >
+          <input
+            type="checkbox"
+            class="checkbox checkbox-sm"
+            [checked]="selectedIds().includes(option.id)"
+            (change)="toggleFilter(option.id)"
+          />
+          <span class="flex-1 font-medium">{{ option.label }}</span>
+          @if (option.count !== undefined) {
+            <span
+              class="inline-flex min-w-6 items-center justify-center rounded-full bg-gray-100 px-2 text-xs font-semibold text-gray-600"
+            >
+              {{ option.count }}
+            </span>
+          }
+        </label>
+      </li>
+    }
+    <li>
+      <button
+        type="button"
+        (click)="resetFilters()"
+        class="rounded-lg py-2 text-center text-sm text-gray-600 hover:bg-gray-50"
+      >
+        Reset Filters
+      </button>
+    </li>
+  </ul>
+</div>

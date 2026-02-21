@@ -1,0 +1,19 @@
+﻿/* Add-ons Swapper Component Styles */
+
+:host ::ng-deep {
+  .sortable-ghost {
+    opacity: 0.5;
+    background-color: rgba(4, 120, 87, 0.08);
+    border-color: rgba(4, 120, 87, 0.3);
+  }
+
+  .sortable-drag {
+    opacity: 1;
+    background-color: rgba(4, 120, 87, 0.12);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+}
+
+ul[data-id] {
+  list-style: none;
+}

@@ -1,0 +1,278 @@
+﻿<div class="flex h-full flex-col ps-6">
+  <!-- Sticky Header -->
+  <div
+    class="sticky top-0 z-10 mb-6 flex shrink-0 items-center justify-between bg-white/95 backdrop-blur-sm"
+  >
+    <!-- Left: Title and Navigation -->
+    <div class="flex min-w-0 items-center gap-4">
+      <button
+        class="tooltip tooltip-bottom cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
+        type="button"
+        (click)="goBack()"
+        aria-label="Go back"
+        data-tip="Back"
+      >
+        <app-icon name="icon-back" [class]="'h-5 w-5 text-gray-600'" />
+      </button>
+      <div class="min-w-0">
+        <h1 class="truncate text-2xl font-bold text-gray-900">
+          {{ isEditMode() ? 'Edit Customer' : 'New Customer' }}
+        </h1>
+      </div>
+    </div>
+
+    <!-- Right: Action Buttons -->
+    <div class="flex shrink-0 gap-2">
+      <button type="button" class="cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-100 disabled:opacity-50 active:scale-95" (click)="goBack()" [disabled]="isSaving()">
+        Cancel
+      </button>
+      <button
+        type="submit"
+        form="customerForm"
+        class="btn btn-sm gap-2 rounded-lg border-0 bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none"
+        [disabled]="customerForm.invalid || isSaving()"
+      >
+        @if (isSaving()) {
+          <span class="loading loading-spinner loading-sm"></span>
+        }
+        {{
+          isSaving()
+            ? (isEditMode() ? 'Updating Customer...' : 'Creating Customer...')
+            : (isEditMode() ? 'Update' : 'Create') + ' Customer'
+        }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  @if (isLoading()) {
+    <div class="flex justify-center py-8">
+      <span class="loading loading-spinner loading-lg"></span>
+    </div>
+  }
+
+  <!-- Form -->
+  @if (!isLoading()) {
+    <div class="flex-1 overflow-y-auto pr-2 pb-4">
+      <form id="customerForm" [formGroup]="customerForm" (ngSubmit)="saveCustomer()">
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <!-- Left Column: Core Details -->
+          <div class="space-y-6 lg:col-span-2">
+            <!-- Main Form Card -->
+            <div class="card rounded-xl bg-white shadow-lg">
+              <div class="card-body space-y-5">
+                <!-- First Name -->
+                <div>
+                  <label class="mb-2 block text-sm font-semibold text-gray-900" for="firstName">
+                    First Name <span class="text-error">*</span>
+                  </label>
+                  <input
+                    id="firstName"
+                    type="text"
+                    formControlName="firstName"
+                    placeholder="Enter first name"
+                    class="input w-full border-transparent bg-gray-50 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                    [class.input-error]="hasError('firstName')"
+                  />
+                  @if (getErrorMessage('firstName')) {
+                    <p class="text-error mt-2 text-sm">{{ getErrorMessage('firstName') }}</p>
+                  }
+                </div>
+
+                <!-- Last Name -->
+                <div>
+                  <label class="mb-2 block text-sm font-semibold text-gray-900" for="lastName">
+                    Last Name <span class="text-error">*</span>
+                  </label>
+                  <input
+                    id="lastName"
+                    type="text"
+                    formControlName="lastName"
+                    placeholder="Enter last name"
+                    class="input w-full border-transparent bg-gray-50 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                    [class.input-error]="hasError('lastName')"
+                  />
+                  @if (getErrorMessage('lastName')) {
+                    <p class="text-error mt-2 text-sm">{{ getErrorMessage('lastName') }}</p>
+                  }
+                </div>
+
+                <!-- Address -->
+                <div>
+                  <div class="mb-2 flex items-baseline justify-between">
+                    <label class="block text-sm font-semibold text-gray-900" for="customerAddress">
+                      Address
+                    </label>
+                    <span class="text-xs text-gray-500">
+                      {{ customerForm.controls.address.value.length }}/500
+                    </span>
+                  </div>
+                  <textarea
+                    id="customerAddress"
+                    formControlName="address"
+                    placeholder="Enter customer address"
+                    rows="3"
+                    maxlength="500"
+                    class="textarea w-full border-transparent bg-gray-50 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                  ></textarea>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Right Column: Sidebar -->
+          <div class="space-y-6">
+            <!-- Customer Image Card -->
+            <div class="card rounded-xl bg-white shadow-lg">
+              <div class="card-body">
+                <div class="mb-2">
+                  <span class="text-sm font-semibold text-gray-900">Customer Image</span>
+                </div>
+
+                <!-- Current Image -->
+                @if (!imagePreview()) {
+                  @if (currentImageUrl()) {
+                    <div class="mb-4 flex justify-center">
+                      <div class="flex flex-col items-center gap-2">
+                        <img
+                          [src]="currentImageUrl()"
+                          alt="Current customer image"
+                          class="h-48 w-48 rounded-xl object-cover shadow-lg"
+                        />
+                        <button
+                          type="button"
+                          class="btn btn-xs btn-outline btn-error"
+                          (click)="removeCurrentImage()"
+                          [disabled]="isDeletingImage() || isUploading()"
+                        >
+                          @if (isDeletingImage()) {
+                            <span class="loading loading-spinner loading-xs"></span>
+                          }
+                          {{ isDeletingImage() ? 'Removing image...' : 'Remove current image' }}
+                        </button>
+                      </div>
+                    </div>
+                  } @else {
+                    <div class="mb-4 flex justify-center">
+                      <app-avatar [label]="customerFullName()" [size]="150" />
+                    </div>
+                  }
+                }
+
+                <!-- Image Preview -->
+                @if (imagePreview()) {
+                  <div class="mb-4 flex justify-center">
+                    <div class="relative inline-block">
+                      <img
+                        [src]="imagePreview()"
+                        alt="Image preview"
+                        class="h-48 w-48 rounded-xl object-cover shadow-lg"
+                      />
+                      <button
+                        type="button"
+                        class="tooltip tooltip-bottom btn btn-circle btn-sm btn-neutral absolute -top-2 -right-2"
+                        (click)="removeImage()"
+                        data-tip="Remove image"
+                      >
+                        <app-icon name="icon-close" [class]="'h-4 w-4'"></app-icon>
+                      </button>
+                    </div>
+                  </div>
+                }
+
+                <!-- Dropzone File Input -->
+                <label
+                  for="customerImage"
+                  class="group flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 p-6 transition-all hover:border-[#047857]/40 hover:bg-[#047857]/5"
+                  [class.pointer-events-none]="isUploading()"
+                  [class.opacity-50]="isUploading()"
+                  [class.border-[#047857]]="isDragging()"
+                  [class.bg-[#047857]/5]="isDragging()"
+                  (dragover)="onDragOver($event)"
+                  (dragleave)="onDragLeave($event)"
+                  (drop)="onFileDrop($event)"
+                >
+                  <app-icon
+                    name="icon-upload"
+                    [class]="'h-8 w-8 text-gray-400 transition-colors group-hover:text-[#047857]'"
+                  />
+                  <p class="mt-2 text-sm font-medium text-gray-600 group-hover:text-[#047857]">
+                    Click or drag & drop to upload
+                  </p>
+                  <p class="mt-1 text-xs text-gray-400">JPG, PNG, GIF, or WebP · Max 5 MB</p>
+                </label>
+                <input
+                  id="customerImage"
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                  class="hidden"
+                  (change)="onFileSelected($event)"
+                  [disabled]="isUploading()"
+                />
+
+                @if (isUploading()) {
+                  <div class="mt-3 flex items-center gap-2">
+                    <span class="loading loading-spinner loading-sm"></span>
+                    <span class="text-sm text-gray-700">Uploading image...</span>
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+  }
+</div>
+
+<!-- Discard Changes Modal -->
+@if (showDiscardModal()) {
+  <div
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="discard-title"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md transition-opacity duration-200"
+    (click)="cancelDiscard()"
+    (keydown.escape)="cancelDiscard()"
+    tabindex="0"
+  >
+    <div
+      role="document"
+      class="mx-4 w-full max-w-sm animate-[modal-pop_0.2s_ease-out] rounded-2xl bg-white p-6 shadow-2xl"
+      (click)="$event.stopPropagation()"
+      (keydown)="$event.stopPropagation()"
+    >
+      <!-- Double-Ring Warning Icon -->
+      <div class="mx-auto w-fit rounded-full bg-amber-50/60 p-3">
+        <div class="rounded-full bg-amber-50 p-3">
+          <app-icon name="icon-back" [class]="'h-6 w-6 text-amber-600'" />
+        </div>
+      </div>
+
+      <!-- Title & Body -->
+      <h3 id="discard-title" class="mt-4 text-center text-lg font-semibold text-gray-900">
+        Discard Changes?
+      </h3>
+      <p class="mt-2 text-center text-sm leading-relaxed text-gray-500">
+        You have unsaved changes that will be lost if you leave this page.
+      </p>
+
+      <!-- Actions -->
+      <div class="mt-6 flex items-center justify-end gap-3">
+        <button
+          type="button"
+          class="cursor-pointer px-4 py-2 text-sm font-medium text-red-500 transition-colors hover:text-red-700"
+          (click)="confirmDiscard()"
+        >
+          Discard
+        </button>
+        <button
+          type="button"
+          class="cursor-pointer rounded-xl bg-[#047857] px-6 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#065f46] hover:shadow-md active:scale-[0.97]"
+          (click)="cancelDiscard()"
+        >
+          Keep Editing
+        </button>
+      </div>
+    </div>
+  </div>
+}

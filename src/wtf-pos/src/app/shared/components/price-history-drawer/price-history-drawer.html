@@ -1,0 +1,88 @@
+﻿<!-- Backdrop -->
+@if (isOpen()) {
+  <div
+    class="fixed inset-0 z-40 bg-black/30 backdrop-blur-md transition-opacity"
+    (click)="closeDrawer()"
+    (keydown.escape)="closeDrawer()"
+    tabindex="0"
+    role="button"
+    aria-label="Close drawer"
+  ></div>
+}
+
+<!-- Drawer Panel -->
+@if (hasBeenOpened()) {
+  <div
+    class="fixed top-0 right-0 z-50 flex h-full w-full max-w-md flex-col bg-white shadow-xl transition-transform duration-300 ease-in-out"
+    [class.translate-x-0]="isOpen()"
+    [class.translate-x-full]="!isOpen()"
+  >
+    <!-- Header -->
+    <div
+      class="from-base-100 to-base-100 flex items-center justify-between border-b border-gray-200 bg-linear-to-r px-6 py-5"
+    >
+      <div class="flex items-center gap-3">
+        <div class="rounded-lg bg-gray-100 p-2">
+          <app-icon
+            name="icon-history"
+            fill="none"
+            [class]="'h-5 w-5 stroke-current text-gray-700'"
+          />
+        </div>
+        <div>
+          <h2 class="text-base-content text-lg font-bold">Price History</h2>
+          <p class="text-base-content/50 text-xs">Track price changes over time</p>
+        </div>
+      </div>
+      <button
+        type="button"
+        class="cursor-pointer rounded-full p-1.5 transition-all hover:bg-gray-100 active:scale-95"
+        (click)="closeDrawer()"
+      >
+        <app-icon name="icon-close" [class]="'h-5 w-5'" />
+      </button>
+    </div>
+
+    <!-- Content -->
+    <div class="flex-1 overflow-y-auto p-6">
+      @if (priceHistory().length > 0) {
+        <div class="space-y-3">
+          @for (entry of priceHistory(); track entry.id) {
+            <div class="rounded-lg border border-gray-100 bg-gray-50 p-4">
+              <div class="mb-1 flex items-center justify-between">
+                <span class="text-base-content/60 text-xs">
+                  {{ entry.updatedAt | date: 'd MMM y, h:mm a' }}
+                </span>
+                <span class="text-xs font-medium">
+                  @if (entry.updatedByName) {
+                    {{ entry.updatedByName }}
+                  } @else {
+                    <span class="text-base-content/60">System</span>
+                  }
+                </span>
+              </div>
+              <div class="flex items-center gap-2">
+                @if (entry.oldPrice !== null && entry.oldPrice !== undefined) {
+                  <span class="text-base-content/50 text-sm line-through">
+                    ₱{{ entry.oldPrice | number: '1.2-2' }}
+                  </span>
+                  <app-icon name="icon-forward" [class]="'text-base-content/40 h-3 w-3'" />
+                }
+                <span class="text-sm font-semibold"> ₱{{ entry.newPrice | number: '1.2-2' }} </span>
+              </div>
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="flex flex-col items-center justify-center py-12 text-center">
+          <app-icon
+            name="icon-history"
+            fill="none"
+            [class]="'text-base-content/30 h-12 w-12 stroke-current'"
+          />
+          <p class="text-base-content/50 mt-3 text-sm">No price changes recorded yet.</p>
+        </div>
+      }
+    </div>
+  </div>
+}

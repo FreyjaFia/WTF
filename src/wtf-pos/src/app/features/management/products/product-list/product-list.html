@@ -1,0 +1,347 @@
+﻿<div class="flex h-full flex-col ps-6">
+  <!-- Header: Title on Left, Tools on Right -->
+  <div class="mb-6 flex shrink-0 items-center justify-between">
+    <!-- Left: Title -->
+    <h1 class="text-2xl font-bold text-gray-900">Products</h1>
+
+    <!-- Right: Search, Filters, Refresh, and Add Button (Grouped as Unified Toolbar) -->
+    <div class="flex items-center gap-3">
+      <!-- Search Input (Ghost Style, Fixed Width) -->
+      <label
+        class="flex w-72 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200"
+      >
+        <app-icon
+          name="icon-search"
+          [class]="'h-5 w-5 shrink-0 opacity-40'"
+          [fill]="'currentColor'"
+        />
+        <input
+          type="search"
+          class="grow bg-transparent text-sm placeholder-gray-500 focus:caret-[#047857] focus:outline-none"
+          placeholder="Search by product name"
+          [formControl]="filterForm.controls.searchTerm"
+        />
+      </label>
+
+      <!-- Category Filter Dropdown -->
+      <div class="dropdown dropdown-end">
+        <app-filter-dropdown
+          [title]="'Category'"
+          [icon]="'icon-category'"
+          [options]="typeOptions()"
+          [selectedIds]="selectedTypes()"
+          [showSelectedState]="true"
+          (filterChange)="onTypeFilterChange($event)"
+          (filterReset)="onTypeFilterReset()"
+        />
+      </div>
+
+      <!-- Status Filter Dropdown -->
+      <div class="dropdown dropdown-end">
+        <app-filter-dropdown
+          [title]="'Status'"
+          [icon]="'icon-status'"
+          [options]="statusOptions()"
+          [selectedIds]="selectedStatuses()"
+          [showSelectedState]="true"
+          (filterChange)="onStatusFilterChange($event)"
+          (filterReset)="onStatusFilterReset()"
+        />
+      </div>
+
+      <!-- Refresh Button (Ghost Button Style with Tooltip) -->
+      <button
+        class="tooltip tooltip-bottom pointer-events-auto z-30 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
+        [class.opacity-70]="isRefreshing()"
+        type="button"
+        (click)="refresh()"
+        [disabled]="isRefreshing()"
+        aria-label="Refresh products"
+        data-tip="Refresh"
+      >
+        @if (isRefreshing()) {
+          <app-icon
+            name="icon-refresh"
+            [class]="'h-5 w-5 animate-spin text-gray-600'"
+            [fill]="'currentColor'"
+          />
+        } @else {
+          <app-icon
+            name="icon-refresh"
+            [class]="'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'"
+            [fill]="'currentColor'"
+          />
+        }
+      </button>
+
+      <!-- Add Product Button (Forest Green) -->
+      @if (canWriteManagement()) {
+        <a
+          class="btn btn-sm rounded-lg border-0 bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg"
+          [routerLink]="['/management/products/new']"
+        >
+          <app-icon name="icon-plus" [class]="'h-4 w-4'" />
+          Add Product
+        </a>
+      }
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  @if (isLoading()) {
+    <div class="flex justify-center py-8">
+      <span class="loading loading-spinner loading-lg"></span>
+    </div>
+  }
+
+  <!-- Products Table -->
+  @if (!isLoading()) {
+    @if (products().length === 0) {
+      <div class="rounded-lg bg-white p-8 text-center shadow-lg">
+        <div class="mb-3 flex justify-center">
+          <app-icon name="icon-cart" [class]="'h-12 w-12 opacity-60'" />
+        </div>
+        <p class="text-lg font-semibold text-gray-700">No products found</p>
+        <p class="text-sm text-gray-500">Try adjusting your filters or add a new product</p>
+      </div>
+    } @else {
+      <div class="min-h-0 flex-1 overflow-y-auto pr-2 pb-4">
+        <div class="space-y-3">
+          <!-- Column Headers (Sticky) -->
+          <div class="sticky top-0 z-10 mb-2 grid grid-cols-12 gap-4 rounded-lg bg-white px-4 py-3">
+            <button
+              class="col-span-5 flex cursor-pointer items-center gap-1 text-start text-xs font-semibold tracking-wider uppercase transition-colors"
+              [class.text-gray-600]="sortColumn() !== 'name'"
+              [class.hover:text-gray-900]="sortColumn() !== 'name'"
+              [class.text-[#047857]]="sortColumn() === 'name'"
+              role="button"
+              tabindex="0"
+              (click)="toggleSort('name')"
+              (keydown.enter)="toggleSort('name')"
+              (keydown.space)="toggleSort('name')"
+              aria-label="Sort by product name"
+            >
+              Name
+              <span
+                class="text-xs transition-opacity"
+                [class.opacity-0]="sortColumn() !== 'name'"
+                [class.opacity-100]="sortColumn() === 'name'"
+              >
+                {{ sortDirection() === 'asc' ? '↑' : '↓' }}
+              </span>
+            </button>
+
+            <div
+              class="col-span-2 text-center text-xs font-semibold tracking-wider text-gray-600 uppercase"
+            >
+              Status
+            </div>
+
+            <div
+              class="col-span-2 text-center text-xs font-semibold tracking-wider text-gray-600 uppercase"
+            >
+              Category
+            </div>
+
+            <button
+              class="col-span-2 flex cursor-pointer items-center justify-end gap-1 text-right text-xs font-semibold tracking-wider uppercase transition-colors"
+              [class.text-gray-600]="sortColumn() !== 'price'"
+              [class.hover:text-gray-900]="sortColumn() !== 'price'"
+              [class.text-[#047857]]="sortColumn() === 'price'"
+              role="button"
+              tabindex="0"
+              (click)="toggleSort('price')"
+              (keydown.enter)="toggleSort('price')"
+              (keydown.space)="toggleSort('price')"
+            >
+              Price
+              <span
+                class="text-xs transition-opacity"
+                [class.opacity-0]="sortColumn() !== 'price'"
+                [class.opacity-100]="sortColumn() === 'price'"
+              >
+                {{ sortDirection() === 'asc' ? '↑' : '↓' }}
+              </span>
+            </button>
+
+            <div class="col-span-1"></div>
+          </div>
+
+          @if (sortedProducts().length > 0) {
+            @for (product of sortedProducts(); track product.id) {
+              <div
+                class="relative grid grid-cols-12 items-center gap-4 rounded-xl bg-white px-4 py-4 shadow-lg transition-shadow duration-200 hover:z-10 hover:shadow-xl focus-within:z-30"
+              >
+                <a
+                  class="col-span-11 grid grid-cols-11 items-center gap-4 self-stretch cursor-pointer no-underline focus:outline-none"
+                  [routerLink]="['/management/products/details', product.id]"
+                  [attr.aria-label]="'View details for ' + product.name"
+                >
+                  <!-- Image and Name -->
+                  <div class="col-span-5 flex items-center gap-4">
+                    <div class="w-14 shrink-0">
+                      @if (product.imageUrl) {
+                        <div class="flex h-14 w-14 items-center justify-center">
+                          <img
+                            [src]="product.imageUrl"
+                            [alt]="product.name"
+                            class="h-14 w-14 object-contain"
+                          />
+                        </div>
+                      } @else {
+                        <app-avatar [label]="product.name" [class]="'h-14 w-14'" />
+                      }
+                    </div>
+
+                    <div class="min-w-0">
+                      <h3 class="font-semibold text-gray-900">{{ product.name }}</h3>
+                      <p class="font-mono text-xs text-gray-400">{{ product.code }}</p>
+                    </div>
+                  </div>
+
+                  <!-- Status -->
+                  <div class="col-span-2 flex justify-center">
+                    @if (product.isActive) {
+                      <app-badge variant="success">Active</app-badge>
+                    } @else {
+                      <app-badge variant="error">Inactive</app-badge>
+                    }
+                  </div>
+
+                  <!-- Category -->
+                  <div class="col-span-2 text-center">
+                    <div class="text-sm text-gray-700">
+                      {{ getProductCategoryName(product.category) }}
+                    </div>
+                    <div class="text-xs text-gray-400">
+                      {{ getAssociationLabel(product) }}
+                    </div>
+                  </div>
+
+                  <!-- Price -->
+                  <div class="col-span-2 text-right">
+                    <div class="text-lg font-semibold text-black">
+                      <span class="text-base opacity-70">₱</span>{{ product.price.toFixed(2) }}
+                    </div>
+                  </div>
+                </a>
+
+                <!-- Actions -->
+                <div
+                  class="relative col-span-1 flex justify-end"
+                  (click)="$event.stopPropagation()"
+                  (keydown)="$event.stopPropagation()"
+                  role="presentation"
+                >
+                  @if (canWriteManagement()) {
+                    <div class="dropdown dropdown-end">
+                    <button
+                      type="button"
+                      class="cursor-pointer rounded-lg p-1.5 transition-all hover:bg-gray-100 active:scale-95"
+                      tabindex="0"
+                      aria-label="Product actions"
+                    >
+                      <app-icon
+                        name="icon-ellipsis-vertical"
+                        [class]="'h-5 w-5 text-gray-600'"
+                        [fill]="'currentColor'"
+                      />
+                    </button>
+                    <ul
+                      tabindex="0"
+                      class="dropdown-content menu bg-base-100 rounded-box z-50 w-52 p-2 shadow"
+                    >
+                      <li>
+                        <a
+                          [routerLink]="['/management/products/edit', product.id]"
+                          (click)="$event.stopPropagation()"
+                          class="flex items-center gap-2 text-gray-700 hover:bg-gray-100"
+                        >
+                          <app-icon name="icon-edit" [class]="'h-4 w-4 text-gray-600'" />
+                          Edit
+                        </a>
+                      </li>
+                      <li>
+                        <button
+                          type="button"
+                          (click)="deleteProduct(product); $event.stopPropagation()"
+                          (keydown.enter)="deleteProduct(product); $event.stopPropagation()"
+                          (keydown.space)="deleteProduct(product); $event.stopPropagation()"
+                          class="flex items-center gap-2 text-red-600 hover:bg-red-50"
+                        >
+                          <app-icon name="icon-delete" [class]="'h-4 w-4 text-red-600'" />
+                          Delete
+                        </button>
+                      </li>
+                    </ul>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+          }
+        </div>
+      </div>
+    }
+  }
+</div>
+
+<!-- Delete Confirmation Modal -->
+@if (showDeleteModal() && productToDelete() && canWriteManagement()) {
+  <div
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="delete-title"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md transition-opacity duration-200"
+    (click)="cancelDelete()"
+    (keydown.escape)="cancelDelete()"
+    tabindex="0"
+  >
+    <div
+      role="document"
+      class="mx-4 w-full max-w-sm animate-[modal-pop_0.2s_ease-out] rounded-2xl bg-white p-6 shadow-2xl"
+      (click)="$event.stopPropagation()"
+      (keydown)="$event.stopPropagation()"
+    >
+      <!-- Double-Ring Warning Icon -->
+      <div class="mx-auto w-fit rounded-full bg-red-50/60 p-3">
+        <div class="rounded-full bg-red-50 p-3">
+          <app-icon name="icon-delete" [class]="'h-6 w-6 text-red-600'" />
+        </div>
+      </div>
+
+      <!-- Title & Body -->
+      <h3 id="delete-title" class="mt-4 text-center text-lg font-semibold text-gray-900">
+        Delete Product?
+      </h3>
+      <p class="mt-2 text-center text-sm leading-relaxed text-gray-500">
+        This will permanently remove
+        <span class="font-medium text-gray-700">{{ productToDelete()!.name }}</span
+        >. This action cannot be undone.
+      </p>
+
+      <!-- Actions -->
+      <div class="mt-6 flex items-center justify-end gap-3">
+        <button
+          type="button"
+          class="cursor-pointer px-4 py-2 text-sm font-medium text-gray-500 transition-colors hover:text-gray-700"
+          (click)="cancelDelete()"
+          [disabled]="isDeleting()"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="cursor-pointer rounded-xl bg-red-600 px-6 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-red-700 hover:shadow-md active:scale-[0.97]"
+          (click)="confirmDelete()"
+          [disabled]="isDeleting()"
+        >
+          @if (isDeleting()) {
+            <span class="loading loading-spinner loading-xs mr-2"></span>
+          }
+          {{ isDeleting() ? 'Deleting Product...' : 'Delete Product' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

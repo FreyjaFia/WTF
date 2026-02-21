@@ -1,0 +1,183 @@
+﻿<dialog id="addons-swapper-modal" class="modal">
+  <div class="modal-box w-full max-w-4xl rounded-2xl shadow-2xl">
+    <h3 class="text-lg font-bold text-gray-900">Manage Product Add-ons</h3>
+    <p class="mb-5 text-sm text-gray-400">
+      Drag and drop add-ons between the lists to assign or remove them.
+    </p>
+
+    <!-- Loading State -->
+    @if (isLoading()) {
+      <div class="flex items-center justify-center py-8">
+        <span class="loading loading-spinner loading-lg"></span>
+      </div>
+    } @else {
+      <!-- Drag and Drop Lists -->
+      <div class="mb-6 grid grid-cols-2 gap-5">
+        <!-- Available Add-ons -->
+        <div class="flex flex-col">
+          <h4 class="mb-2 text-xs font-semibold tracking-wider text-gray-400 uppercase">
+            Available Add-ons
+          </h4>
+          <!-- Search Filter -->
+          <div class="relative mb-3">
+            <app-icon
+              name="icon-search"
+              fill="none"
+              [class]="'absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 stroke-current text-gray-400'"
+            />
+            <input
+              type="text"
+              placeholder="Search add-ons..."
+              class="input input-sm w-full rounded-xl border-transparent bg-gray-50 pl-9 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+              [value]="searchTerm()"
+              (input)="onSearchInput($event)"
+            />
+          </div>
+          <ul
+            #availableList
+            class="flex h-96 flex-col space-y-1 overflow-x-hidden overflow-y-auto rounded-xl border border-gray-200 bg-gray-50/50 p-3"
+          >
+            @for (addon of filteredAvailableAddOns(); track addon.id) {
+              <li
+                [attr.data-id]="addon.id"
+                class="flex cursor-grab items-center gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm font-medium text-gray-800 transition-shadow hover:shadow-sm active:cursor-grabbing active:shadow-md"
+              >
+                <app-icon
+                  name="icon-grip"
+                  [class]="'h-5 w-5 shrink-0 text-gray-300 hover:text-gray-500'"
+                />
+                <!-- Thumbnail -->
+                <div class="shrink-0">
+                  @if (addon.imageUrl) {
+                    <img
+                      [src]="addon.imageUrl"
+                      [alt]="addon.name"
+                      class="h-8 w-8 rounded-full object-cover"
+                    />
+                  } @else {
+                    <div class="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100">
+                      <app-avatar [label]="addon.name" [size]="32" />
+                    </div>
+                  }
+                </div>
+                <div class="min-w-0 flex-1">
+                  <span class="block break-words">{{ addon.name }}</span>
+                  <span class="font-mono text-[10px] text-gray-400">{{ addon.code }}</span>
+                </div>
+                <span class="ml-auto shrink-0 text-xs text-gray-500">
+                  ₱{{ addon.price | number: '1.2-2' }}
+                </span>
+              </li>
+            }
+            @if (filteredAvailableAddOns().length === 0 && searchTerm()) {
+              <div class="flex flex-col items-center justify-center py-8 text-gray-400">
+                <p class="text-sm">No matches for "{{ searchTerm() }}"</p>
+              </div>
+            } @else if (availableAddOns().length === 0) {
+              <div class="flex flex-col items-center justify-center gap-1 py-8 text-gray-400">
+                @if (assignedAddOns().length > 0) {
+                  <p class="text-sm">All add-ons are assigned</p>
+                } @else {
+                  <p class="text-sm">No add-ons available</p>
+                  <p class="text-xs">Create add-on products in Management first.</p>
+                }
+              </div>
+            }
+          </ul>
+        </div>
+
+        <!-- Assigned Add-ons -->
+        <div class="flex flex-col">
+          <div class="mb-2 flex items-baseline justify-between">
+            <h4 class="text-xs font-semibold tracking-wider text-gray-400 uppercase">
+              Assigned Add-ons
+            </h4>
+            @if (assignedAddOns().length > 0) {
+              <span class="text-xs text-gray-400">
+                {{ assignedAddOns().length }}
+                {{ assignedAddOns().length === 1 ? 'add-on' : 'add-ons' }}
+              </span>
+            }
+          </div>
+          <div class="mb-3 h-8"></div>
+          <ul
+            #assignedList
+            class="flex h-96 flex-col space-y-1 overflow-x-hidden overflow-y-auto rounded-xl border border-gray-200 bg-gray-50/50 p-3"
+          >
+            @for (addon of assignedAddOns(); track addon.id) {
+              <li
+                [attr.data-id]="addon.id"
+                class="flex cursor-grab items-center gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm font-medium text-gray-800 transition-shadow hover:shadow-sm active:cursor-grabbing active:shadow-md"
+              >
+                <app-icon
+                  name="icon-grip"
+                  [class]="'h-5 w-5 shrink-0 text-gray-300 hover:text-gray-500'"
+                />
+                <!-- Thumbnail -->
+                <div class="shrink-0">
+                  @if (addon.imageUrl) {
+                    <img
+                      [src]="addon.imageUrl"
+                      [alt]="addon.name"
+                      class="h-8 w-8 rounded-full object-cover"
+                    />
+                  } @else {
+                    <div class="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100">
+                      <app-avatar [label]="addon.name" [size]="32" />
+                    </div>
+                  }
+                </div>
+                <div class="min-w-0 flex-1">
+                  <span class="block break-words">{{ addon.name }}</span>
+                  <span class="font-mono text-[10px] text-gray-400">{{ addon.code }}</span>
+                </div>
+                <!-- Type Selector -->
+                <select
+                  class="select select-xs w-24 shrink-0 rounded-lg border-gray-200 bg-gray-50 text-xs font-medium focus:border-[#047857] focus:ring-1 focus:ring-[#047857]/20"
+                  [value]="addon.type"
+                  (change)="changeAddOnType(addon.id, $event)"
+                  (mousedown)="$event.stopPropagation()"
+                  (touchstart)="$event.stopPropagation()"
+                >
+                  @for (opt of addOnTypeOptions; track opt.value) {
+                    <option [value]="opt.value" [selected]="opt.value === addon.type">
+                      {{ opt.label }}
+                    </option>
+                  }
+                </select>
+                <span class="shrink-0 text-xs text-gray-500">
+                  ₱{{ addon.price | number: '1.2-2' }}
+                </span>
+              </li>
+            }
+            @if (assignedAddOns().length === 0) {
+              <div class="flex items-center justify-center py-8 text-gray-400">
+                <p class="text-sm">Drag add-ons here</p>
+              </div>
+            }
+          </ul>
+        </div>
+      </div>
+    }
+
+    <!-- Modal Actions -->
+    <div class="modal-action">
+      <button class="cursor-pointer rounded-lg px-4 py-2 font-medium text-gray-600 transition-all hover:bg-gray-100 active:scale-95" (click)="closeModal()" type="button">Cancel</button>
+      <button
+        class="btn gap-2 rounded-lg border-0 bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg"
+        [disabled]="isLoading() || isSaving()"
+        (click)="saveAddOns()"
+        type="button"
+      >
+        @if (isSaving()) {
+          <span class="loading loading-spinner loading-sm"></span>
+        }
+        {{ isSaving() ? 'Saving Add-ons...' : 'Save Add-ons' }}
+      </button>
+    </div>
+  </div>
+
+  <form method="dialog" class="modal-backdrop bg-black/30 backdrop-blur-md">
+    <button type="button">close</button>
+  </form>
+</dialog>

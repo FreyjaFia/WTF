@@ -1,0 +1,771 @@
+﻿<div class="flex h-full flex-col ps-6">
+  <!-- Sticky Header -->
+  <div
+    class="sticky top-0 z-10 mb-6 flex shrink-0 items-center justify-between bg-white/95 backdrop-blur-sm"
+  >
+    <!-- Left: Title and Navigation -->
+    <div class="flex min-w-0 items-center gap-4">
+      <button
+        class="tooltip tooltip-bottom cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
+        type="button"
+        (click)="goBack()"
+        aria-label="Go back"
+        data-tip="Back"
+      >
+        <app-icon name="icon-back" [class]="'h-5 w-5 text-gray-600'" />
+      </button>
+      <div class="min-w-0">
+        <h1 class="truncate text-2xl font-bold text-gray-900">
+          {{ isEditMode() ? 'Edit Product' : 'New Product' }}
+        </h1>
+        @if (isEditMode() && lastUpdatedAt()) {
+          <p class="mt-1 text-sm text-gray-500">
+            Updated {{ lastUpdatedAt() | date: 'd MMM y, h:mm a' }}
+            @if (productId) {
+              ·
+              <button
+                type="button"
+                class="cursor-pointer font-medium text-[#047857] hover:text-[#065f46]"
+                (click)="openPriceHistory()"
+              >
+                Price History
+              </button>
+            }
+          </p>
+        }
+      </div>
+    </div>
+
+    <!-- Right: Action Buttons -->
+    <div class="flex shrink-0 gap-2">
+      <button type="button" class="cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-100 disabled:opacity-50 active:scale-95" (click)="goBack()" [disabled]="isSaving()">
+        Cancel
+      </button>
+      <button
+        type="submit"
+        form="productForm"
+        class="btn btn-sm gap-2 rounded-lg border-0 bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none"
+        [disabled]="productForm.invalid || isSaving()"
+      >
+        @if (isSaving()) {
+          <span class="loading loading-spinner loading-sm"></span>
+        }
+        {{
+          isSaving()
+            ? (isEditMode() ? 'Updating Product...' : 'Creating Product...')
+            : (isEditMode() ? 'Update' : 'Create') + ' Product'
+        }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  @if (isLoading()) {
+    <div class="flex justify-center py-8">
+      <span class="loading loading-spinner loading-lg"></span>
+    </div>
+  }
+
+  <!-- Form -->
+  @if (!isLoading()) {
+    <div class="flex-1 overflow-y-auto pr-2 pb-4">
+      <form id="productForm" [formGroup]="productForm" (ngSubmit)="saveProduct()">
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <!-- Left Column: Core Details -->
+          <div class="space-y-6 lg:col-span-2">
+            <!-- Main Form Card -->
+            <div class="card rounded-xl bg-white shadow-lg">
+              <div class="card-body space-y-5">
+                <!-- Name -->
+                <div>
+                  <label class="mb-2 block text-sm font-semibold text-gray-900" for="productName">
+                    Product Name <span class="text-error">*</span>
+                  </label>
+                  <input
+                    id="productName"
+                    type="text"
+                    formControlName="name"
+                    placeholder="Enter product name"
+                    class="input w-full border-transparent bg-gray-50 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                    [class.input-error]="hasError('name')"
+                  />
+                  @if (getErrorMessage('name')) {
+                    <p class="text-error mt-2 text-sm">{{ getErrorMessage('name') }}</p>
+                  }
+                </div>
+
+                <!-- Code -->
+                <div>
+                  <label class="mb-2 block text-sm font-semibold text-gray-900" for="productCode">
+                    Product Code <span class="text-error">*</span>
+                  </label>
+                  <label
+                    class="input flex w-full items-center gap-2 border-transparent transition-all"
+                    [class.bg-gray-100]="isEditMode()"
+                    [class.bg-gray-50]="!isEditMode()"
+                    [class.cursor-not-allowed]="isEditMode()"
+                    [class.focus-within:border-[#047857]]="!isEditMode()"
+                    [class.focus-within:bg-white]="!isEditMode()"
+                    [class.focus-within:ring-1]="!isEditMode()"
+                    [class.focus-within:ring-[#047857]/20]="!isEditMode()"
+                    [class.input-error]="hasError('code')"
+                  >
+                    @if (isEditMode()) {
+                      <app-icon name="icon-lock" [class]="'h-4 w-4 text-gray-400'" />
+                    }
+                    <input
+                      id="productCode"
+                      type="text"
+                      formControlName="code"
+                      [readonly]="isEditMode()"
+                      [attr.tabindex]="isEditMode() ? -1 : null"
+                      placeholder="Enter code (uppercase only)"
+                      maxlength="10"
+                      class="grow bg-transparent uppercase outline-none"
+                      [class.cursor-not-allowed]="isEditMode()"
+                      [class.select-none]="isEditMode()"
+                      (mousedown)="isEditMode() ? $event.preventDefault() : null"
+                      (input)="onCodeInput($event)"
+                    />
+                  </label>
+                  @if (isEditMode()) {
+                    <p class="mt-2 text-xs text-gray-500">Code cannot be changed after creation</p>
+                  } @else {
+                    <p class="mt-2 text-xs text-gray-600">
+                      Max 10 characters, uppercase letters and numbers only
+                    </p>
+                  }
+                  @if (getErrorMessage('code')) {
+                    <p class="text-error mt-2 text-sm">{{ getErrorMessage('code') }}</p>
+                  }
+                </div>
+
+                <!-- Category -->
+                <div>
+                  <label
+                    class="mb-2 block text-sm font-semibold text-gray-900"
+                    for="productCategory"
+                  >
+                    Category <span class="text-error">*</span>
+                  </label>
+                  <select
+                    id="productCategory"
+                    formControlName="category"
+                    class="select w-full border-transparent bg-gray-50 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                    [class.select-error]="hasError('category')"
+                  >
+                    <option [ngValue]="ProductCategoryEnum.Drink">Drink</option>
+                    <option [ngValue]="ProductCategoryEnum.Food">Food</option>
+                    <option [ngValue]="ProductCategoryEnum.Dessert">Dessert</option>
+                    <option [ngValue]="ProductCategoryEnum.Other">Other</option>
+                  </select>
+                  @if (productForm.controls.isAddOn.value) {
+                    <p class="mt-2 text-xs text-gray-600">
+                      Add-on products are always categorized as "Other".
+                    </p>
+                  }
+                  @if (getErrorMessage('category')) {
+                    <p class="text-error mt-2 text-sm">{{ getErrorMessage('category') }}</p>
+                  }
+                </div>
+
+                <!-- Description -->
+                <div>
+                  <div class="mb-2 flex items-baseline justify-between">
+                    <label
+                      class="block text-sm font-semibold text-gray-900"
+                      for="productDescription"
+                    >
+                      Description
+                    </label>
+                    <span class="text-xs text-gray-500">
+                      {{ productForm.controls.description.value.length }}/500
+                    </span>
+                  </div>
+                  <textarea
+                    id="productDescription"
+                    formControlName="description"
+                    placeholder="Brief product description"
+                    rows="3"
+                    maxlength="500"
+                    class="textarea w-full border-transparent bg-gray-50 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                  ></textarea>
+                </div>
+
+                <!-- Price -->
+                <div>
+                  <label class="mb-2 block text-sm font-semibold text-gray-900" for="productPrice">
+                    Price <span class="text-error">*</span>
+                  </label>
+                  <label
+                    class="input flex w-full items-center gap-2 border-transparent bg-gray-50 transition-all focus-within:border-[#047857] focus-within:bg-white focus-within:ring-1 focus-within:ring-[#047857]/20"
+                    [class.input-error]="hasError('price')"
+                  >
+                    <span class="font-medium text-gray-500">₱</span>
+                    <input
+                      id="productPrice"
+                      type="number"
+                      formControlName="price"
+                      placeholder="0.00"
+                      step="0.01"
+                      min="0"
+                      max="999999.99"
+                      class="grow bg-transparent outline-none"
+                    />
+                  </label>
+                  @if (getErrorMessage('price')) {
+                    <p class="text-error mt-2 text-sm">{{ getErrorMessage('price') }}</p>
+                  }
+                </div>
+              </div>
+            </div>
+
+            <!-- Management Card -->
+            <div class="card rounded-xl bg-white shadow-lg">
+              <div class="card-body space-y-5">
+                <p class="text-xs font-semibold tracking-wider text-gray-400 uppercase">
+                  Management
+                </p>
+
+                <!-- Toggles Row -->
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <!-- Is Add-on -->
+                  <div
+                    class="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-3"
+                    [class.opacity-50]="isEditMode()"
+                  >
+                    <div>
+                      <span class="text-sm font-medium text-gray-900">Add-on Item</span>
+                      <p class="text-xs text-gray-500">
+                        @if (isEditMode()) {
+                          Cannot change after setup
+                        } @else {
+                          Mark as an add-on product
+                        }
+                      </p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      formControlName="isAddOn"
+                      class="toggle toggle-neutral toggle-sm"
+                    />
+                  </div>
+
+                  <!-- Is Active -->
+                  <div class="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-3">
+                    <div>
+                      <span class="text-sm font-medium text-gray-900">Active</span>
+                      <p class="text-xs text-gray-500">Only active products are visible</p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      formControlName="isActive"
+                      class="toggle toggle-neutral toggle-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Column: Sidebar -->
+          <div class="space-y-6">
+            <!-- Product Image Card -->
+            <div class="card rounded-xl bg-white shadow-lg">
+              <div class="card-body">
+                <div class="mb-2">
+                  <span class="text-sm font-semibold text-gray-900">Product Image</span>
+                </div>
+
+                <!-- Current Image -->
+                @if (!imagePreview()) {
+                  @if (currentImageUrl()) {
+                    <div class="mb-4 flex justify-center">
+                      <div class="flex flex-col items-center gap-2">
+                        <img
+                          [src]="currentImageUrl()"
+                          alt="Current product image"
+                          class="h-48 w-48 rounded-xl object-cover shadow-lg"
+                        />
+                        <button
+                          type="button"
+                          class="btn btn-xs btn-outline btn-error"
+                          (click)="removeCurrentImage()"
+                          [disabled]="isDeletingImage() || isUploading()"
+                        >
+                          @if (isDeletingImage()) {
+                            <span class="loading loading-spinner loading-xs"></span>
+                          }
+                          {{ isDeletingImage() ? 'Removing image...' : 'Remove current image' }}
+                        </button>
+                      </div>
+                    </div>
+                  } @else {
+                    <div class="mb-4 flex justify-center">
+                      <app-avatar [label]="productName()" [size]="150" />
+                    </div>
+                  }
+                }
+
+                <!-- Image Preview -->
+                @if (imagePreview()) {
+                  <div class="mb-4 flex justify-center">
+                    <div class="relative inline-block">
+                      <img
+                        [src]="imagePreview()"
+                        alt="Image preview"
+                        class="h-48 w-48 rounded-xl object-cover shadow-lg"
+                      />
+                      <button
+                        type="button"
+                        class="tooltip tooltip-bottom btn btn-circle btn-sm btn-neutral absolute -top-2 -right-2"
+                        (click)="removeImage()"
+                        data-tip="Remove image"
+                      >
+                        <app-icon name="icon-close" [class]="'h-4 w-4'"></app-icon>
+                      </button>
+                    </div>
+                  </div>
+                }
+
+                <!-- Dropzone File Input -->
+                <label
+                  for="productImage"
+                  class="group flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 p-6 transition-all hover:border-[#047857]/40 hover:bg-[#047857]/5"
+                  [class.pointer-events-none]="isUploading()"
+                  [class.opacity-50]="isUploading()"
+                  [class.border-[#047857]]="isDragging()"
+                  [class.bg-[#047857]/5]="isDragging()"
+                  (dragover)="onDragOver($event)"
+                  (dragleave)="onDragLeave($event)"
+                  (drop)="onFileDrop($event)"
+                >
+                  <app-icon
+                    name="icon-upload"
+                    [class]="'h-8 w-8 text-gray-400 transition-colors group-hover:text-[#047857]'"
+                  />
+                  <p class="mt-2 text-sm font-medium text-gray-600 group-hover:text-[#047857]">
+                    Click or drag & drop to upload
+                  </p>
+                  <p class="mt-1 text-xs text-gray-400">JPG, PNG, GIF, or WebP · Max 5 MB</p>
+                </label>
+                <input
+                  id="productImage"
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                  class="hidden"
+                  (change)="onFileSelected($event)"
+                  [disabled]="isUploading()"
+                />
+
+                @if (isUploading()) {
+                  <div class="mt-3 flex items-center gap-2">
+                    <span class="loading loading-spinner loading-sm"></span>
+                    <span class="text-sm text-gray-700">Uploading image...</span>
+                  </div>
+                }
+              </div>
+            </div>
+
+            <!-- Customization Card (edit mode, non-add-on products) -->
+            @if (isEditMode() && productId && !productForm.controls.isAddOn.value) {
+              <div class="card rounded-xl bg-white shadow-lg">
+                <div class="card-body">
+                  <div class="mb-1 flex flex-wrap items-baseline justify-between gap-1">
+                    <h3 class="text-xs font-semibold tracking-wider text-gray-400 uppercase sm:whitespace-nowrap">
+                      Associated Add-ons
+                    </h3>
+                    @if (totalAssignedAddOnsCount() > 0) {
+                      <span class="text-xs text-gray-400 sm:whitespace-nowrap">
+                        {{ totalAssignedAddOnsCount() }}
+                        {{ totalAssignedAddOnsCount() === 1 ? 'add-on' : 'add-ons' }}
+                      </span>
+                    }
+                  </div>
+
+                  @if (totalAssignedAddOnsCount() > 0) {
+                    <div
+                      class="overflow-hidden transition-[max-height] duration-300 ease-in-out"
+                      [style.max-height]="
+                        showAllAddOns() || totalAssignedAddOnsCount() <= 2 ? '200rem' : '14rem'
+                      "
+                    >
+                      @for (group of sortedAssignedAddOns(); track group.type) {
+                        <div class="mt-3 mb-1 flex items-center gap-2 first:mt-0">
+                          <span
+                            class="text-[10px] font-semibold tracking-wider text-gray-400 uppercase"
+                          >
+                            {{ group.displayName }}
+                          </span>
+                          <span class="text-[10px] text-gray-300">
+                            ({{ group.options.length }})
+                          </span>
+                        </div>
+                        @for (addon of group.options; track addon.id; let odd = $odd) {
+                          <div
+                            class="group/row relative flex items-start gap-3 border-b border-gray-50 px-2 py-2.5 transition-colors last:border-b-0 hover:bg-gray-50"
+                            [class.bg-gray-50/50]="odd"
+                            [class.bg-amber-50/30]="isAddOnOverridden(addon.id)"
+                          >
+                            <!-- Thumbnail -->
+                            <div class="shrink-0">
+                              @if (addon.imageUrl) {
+                                <img
+                                  [src]="addon.imageUrl"
+                                  [alt]="addon.name"
+                                  class="h-8 w-8 rounded-full object-cover"
+                                />
+                              } @else {
+                                <app-avatar [label]="addon.name" [size]="32" />
+                              }
+                            </div>
+                            <!-- Name + Code + Price Override -->
+                            <div class="min-w-0 flex-1">
+                              <div class="flex items-start justify-between gap-2">
+                                <div class="min-w-0">
+                                  <span
+                                    class="block break-words text-sm font-medium text-gray-800"
+                                    [class.line-through]="!addon.isActive"
+                                    [class.text-gray-400]="!addon.isActive"
+                                  >
+                                    {{ addon.name }}
+                                  </span>
+                                  <div class="mt-0.5 flex flex-wrap items-center gap-2">
+                                    <span class="font-mono text-[10px] text-gray-400">
+                                      {{ addon.code }}
+                                    </span>
+                                    @if (isAddOnOverridden(addon.id)) {
+                                      <span
+                                        class="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-amber-700 uppercase"
+                                      >
+                                        Overridden
+                                      </span>
+                                    }
+                                  </div>
+                                </div>
+                                <div class="shrink-0 text-right">
+                                  <span
+                                    class="block text-sm font-semibold text-gray-700"
+                                    [class.text-gray-400]="!addon.isActive"
+                                  >
+                                    ₱{{
+                                      getAddOnEffectivePrice(addon.id, addon.price)
+                                        | number: '1.2-2'
+                                    }}
+                                  </span>
+                                </div>
+                              </div>
+                              <div class="mt-2 flex flex-col items-end gap-1">
+                                <span class="text-[10px] text-gray-400">
+                                  Default: ₱{{
+                                    getAddOnBasePrice(addon.id, addon.price) | number: '1.2-2'
+                                  }}
+                                </span>
+                                <div class="flex flex-wrap items-center justify-end gap-1">
+                                  <label
+                                    class="input input-xs flex h-7 w-24 items-center gap-1 border-gray-200 bg-white"
+                                  >
+                                    <span class="text-[10px] text-gray-500">₱</span>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      step="0.01"
+                                      placeholder="{{
+                                        getAddOnBasePrice(addon.id, addon.price) | number: '1.2-2'
+                                      }}"
+                                      class="w-full bg-transparent text-[10px] outline-none"
+                                      [value]="getAddOnOverrideDraft(addon.id)"
+                                      (input)="onAddOnOverrideInput(addon.id, $event)"
+                                    />
+                                  </label>
+                                  <button
+                                    type="button"
+                                    class="btn btn-xs h-7 min-h-0 rounded-md border-0 bg-[#047857] px-2 text-[10px] text-white hover:bg-[#065f46]"
+                                    [disabled]="isAddOnOverrideSaving(addon.id) || isSaving()"
+                                    (click)="
+                                      saveAddOnPriceOverride(
+                                        addon.id,
+                                        getAddOnBasePrice(addon.id, addon.price)
+                                      )
+                                    "
+                                  >
+                                    @if (isAddOnOverrideSaving(addon.id)) {
+                                      <span class="loading loading-spinner loading-xs"></span>
+                                      Saving...
+                                    } @else {
+                                      {{ hasAddOnPriceOverride(addon.id) ? 'Update' : 'Set' }}
+                                    }
+                                  </button>
+                                  @if (hasAddOnPriceOverride(addon.id)) {
+                                    <button
+                                      type="button"
+                                      class="btn btn-xs h-7 min-h-0 rounded-md border border-gray-200 bg-white px-2 text-[10px] text-gray-600 hover:bg-gray-50"
+                                      [disabled]="isAddOnOverrideSaving(addon.id) || isSaving()"
+                                      (click)="clearAddOnPriceOverride(addon.id)"
+                                    >
+                                      Reset
+                                    </button>
+                                  }
+                                  <button
+                                    type="button"
+                                    class="tooltip tooltip-bottom cursor-pointer rounded-md p-1 text-gray-400 transition-all hover:bg-red-50 hover:text-red-500 active:scale-95"
+                                    (click)="removeAddOn(addon.id)"
+                                    data-tip="Remove"
+                                  >
+                                    <app-icon name="icon-close" [class]="'h-3.5 w-3.5'" />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        }
+                      }
+                    </div>
+
+                    <!-- Show All button -->
+                    @if (totalAssignedAddOnsCount() > 2) {
+                      <button
+                        type="button"
+                        class="mt-3 flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-gray-50 px-4 py-2.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-100"
+                        (click)="showAllAddOns.set(!showAllAddOns())"
+                      >
+                        {{
+                          showAllAddOns()
+                            ? 'Show less'
+                            : 'Show all ' + totalAssignedAddOnsCount() + ' items'
+                        }}
+                        <app-icon
+                          name="icon-forward"
+                          [class]="
+                            'h-4 w-4 transition-transform duration-200 ' +
+                            (showAllAddOns() ? '-rotate-90' : 'rotate-90')
+                          "
+                        />
+                      </button>
+                    }
+                  } @else {
+                    <div class="flex flex-col items-center py-6 text-center">
+                      <p class="text-sm font-medium text-gray-400">No add-ons assigned</p>
+                      <p class="mt-1 text-xs text-gray-300">
+                        Add-ons let customers customize this product
+                      </p>
+                    </div>
+                  }
+
+                  <div class="mt-4">
+                    <button
+                      type="button"
+                      class="btn btn-sm gap-2 rounded-lg border border-[#047857] bg-white text-[#047857] transition-all hover:bg-[#047857]/5"
+                      (click)="openAddOnsManager()"
+                      [disabled]="isSaving()"
+                    >
+                      <app-icon name="icon-sliders" [class]="'h-4 w-4'" />
+                      Manage Add-ons
+                    </button>
+                  </div>
+                </div>
+              </div>
+            }
+
+            <!-- Linked Products Card (edit mode, add-on products) -->
+            @if (isEditMode() && productId && productForm.controls.isAddOn.value) {
+              <div class="card rounded-xl bg-white shadow-lg">
+                <div class="card-body">
+                  <div class="mb-1 flex items-baseline justify-between">
+                    <h3 class="text-xs font-semibold tracking-wider text-gray-400 uppercase">
+                      Linked Products
+                    </h3>
+                    @if (totalLinkedCount() > 0) {
+                      <span class="text-xs text-gray-400">
+                        {{ totalLinkedCount() }}
+                        {{ totalLinkedCount() === 1 ? 'product' : 'products' }}
+                      </span>
+                    }
+                  </div>
+
+                  @if (totalLinkedCount() > 0) {
+                    <div
+                      class="overflow-hidden transition-[max-height] duration-300 ease-in-out"
+                      [style.max-height]="
+                        showAllLinked() || totalLinkedCount() <= 5 ? '200rem' : '14rem'
+                      "
+                    >
+                      @for (group of sortedLinkedProducts(); track group.type) {
+                        <div class="mt-3 mb-1 flex items-center gap-2 first:mt-0">
+                          <span
+                            class="text-[10px] font-semibold tracking-wider text-gray-400 uppercase"
+                          >
+                            {{ group.displayName }}
+                          </span>
+                          <span class="text-[10px] text-gray-300">
+                            ({{ group.options.length }})
+                          </span>
+                        </div>
+                        @for (linked of group.options; track linked.id; let odd = $odd) {
+                          <div
+                            class="group/row flex items-center gap-3 border-b border-gray-50 px-2 py-2.5 transition-colors last:border-b-0 hover:bg-gray-50"
+                            [class.bg-gray-50/50]="odd"
+                          >
+                            <!-- Thumbnail -->
+                            <div class="shrink-0">
+                              @if (linked.imageUrl) {
+                                <img
+                                  [src]="linked.imageUrl"
+                                  [alt]="linked.name"
+                                  class="h-8 w-8 rounded-full object-cover"
+                                />
+                              } @else {
+                                <app-avatar [label]="linked.name" [size]="32" />
+                              }
+                            </div>
+                            <!-- Name + Code + Price -->
+                            <div class="flex flex-1 items-start justify-between gap-2">
+                              <div class="min-w-0 flex-1">
+                                <span
+                                  class="block break-words text-sm font-medium text-gray-800"
+                                  [class.line-through]="!linked.isActive"
+                                  [class.text-gray-400]="!linked.isActive"
+                                >
+                                  {{ linked.name }}
+                                </span>
+                                <span class="mt-0.5 font-mono text-[10px] text-gray-400">
+                                  {{ linked.code }}
+                                </span>
+                              </div>
+                              <span
+                                class="shrink-0 text-sm font-semibold text-gray-700"
+                                [class.text-gray-400]="!linked.isActive"
+                              >
+                                ₱{{ linked.price | number: '1.2-2' }}
+                              </span>
+                            </div>
+                            <!-- Unlink -->
+                            <button
+                              type="button"
+                              class="tooltip tooltip-left shrink-0 cursor-pointer rounded-full p-1 text-gray-400 transition-all hover:bg-red-50 hover:text-red-500"
+                              (click)="removeLinkedProduct(linked.id)"
+                              data-tip="Unlink"
+                            >
+                              <app-icon name="icon-close" [class]="'h-3.5 w-3.5'" />
+                            </button>
+                          </div>
+                        }
+                      }
+                    </div>
+
+                    <!-- Show All button -->
+                    @if (totalLinkedCount() > 5) {
+                      <button
+                        type="button"
+                        class="mt-3 flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-gray-50 px-4 py-2.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-100"
+                        (click)="showAllLinked.set(!showAllLinked())"
+                      >
+                        {{
+                          showAllLinked()
+                            ? 'Show less'
+                            : 'Show all ' + totalLinkedCount() + ' items'
+                        }}
+                        <app-icon
+                          name="icon-forward"
+                          [class]="
+                            'h-4 w-4 transition-transform duration-200 ' +
+                            (showAllLinked() ? '-rotate-90' : 'rotate-90')
+                          "
+                        />
+                      </button>
+                    }
+                  } @else {
+                    <div class="flex flex-col items-center py-6 text-center">
+                      <p class="text-sm font-medium text-gray-400">No linked products</p>
+                      <p class="mt-1 text-xs text-gray-300">
+                        Products using this add-on will appear here
+                      </p>
+                    </div>
+                  }
+
+                  <div class="mt-4">
+                    <button
+                      type="button"
+                      class="btn btn-sm gap-2 rounded-lg border border-[#047857] bg-white text-[#047857] transition-all hover:bg-[#047857]/5"
+                      (click)="openProductsManager()"
+                      [disabled]="isSaving()"
+                    >
+                      <app-icon name="icon-sliders" [class]="'h-4 w-4'" />
+                      Manage Products
+                    </button>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      </form>
+    </div>
+  }
+</div>
+
+<!-- Add-ons Swapper Modal -->
+<app-addons-swapper></app-addons-swapper>
+
+<!-- Products Swapper Modal -->
+<app-products-swapper></app-products-swapper>
+
+<!-- Discard Changes Modal -->
+@if (showDiscardModal()) {
+  <div
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="discard-title"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md transition-opacity duration-200"
+    (click)="cancelDiscard()"
+    (keydown.escape)="cancelDiscard()"
+    tabindex="0"
+  >
+    <div
+      role="document"
+      class="mx-4 w-full max-w-sm animate-[modal-pop_0.2s_ease-out] rounded-2xl bg-white p-6 shadow-2xl"
+      (click)="$event.stopPropagation()"
+      (keydown)="$event.stopPropagation()"
+    >
+      <!-- Double-Ring Warning Icon -->
+      <div class="mx-auto w-fit rounded-full bg-amber-50/60 p-3">
+        <div class="rounded-full bg-amber-50 p-3">
+          <app-icon name="icon-back" [class]="'h-6 w-6 text-amber-600'" />
+        </div>
+      </div>
+
+      <!-- Title & Body -->
+      <h3 id="discard-title" class="mt-4 text-center text-lg font-semibold text-gray-900">
+        Discard Changes?
+      </h3>
+      <p class="mt-2 text-center text-sm leading-relaxed text-gray-500">
+        You have unsaved changes that will be lost if you leave this page.
+      </p>
+
+      <!-- Actions -->
+      <div class="mt-6 flex items-center justify-end gap-3">
+        <button
+          type="button"
+          class="cursor-pointer px-4 py-2 text-sm font-medium text-red-500 transition-colors hover:text-red-700"
+          (click)="confirmDiscard()"
+        >
+          Discard
+        </button>
+        <button
+          type="button"
+          class="cursor-pointer rounded-xl bg-[#047857] px-6 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#065f46] hover:shadow-md active:scale-[0.97]"
+          (click)="cancelDiscard()"
+        >
+          Keep Editing
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Price History Drawer -->
+<app-price-history-drawer
+  [isOpen]="isHistoryOpen()"
+  [priceHistory]="priceHistory()"
+  (closed)="closePriceHistory()"
+/>

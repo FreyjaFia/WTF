@@ -1,0 +1,73 @@
+﻿@if (isLoadingMe()) {
+  <div class="fixed inset-0 z-[100] flex items-center justify-center bg-white/85 backdrop-blur-sm">
+    <div class="flex items-center gap-3 rounded-xl bg-white px-5 py-3 shadow-lg">
+      <span class="loading loading-spinner loading-md text-[#047857]"></span>
+      <span class="text-sm font-medium text-gray-700">Loading profile...</span>
+    </div>
+  </div>
+}
+<div class="navbar shrink-0 border-b border-gray-200 bg-white px-6 shadow-md">
+  <div class="flex-1">
+    <a class="flex items-center gap-2 text-2xl font-bold tracking-tight">
+      <span class="text-neutral">WTF</span>
+      <span class="text-xs font-normal tracking-wider text-gray-500 uppercase">POS</span>
+    </a>
+  </div>
+  <div class="flex items-center gap-4">
+    <div class="text-right">
+      <div class="text-sm font-semibold text-gray-800">{{ userFullName }}</div>
+      <div class="text-xs text-gray-500">{{ userRoleLabel }}</div>
+      <div class="flex items-center justify-end gap-2 text-xs text-gray-500">
+        <span>{{ now() | date: 'EEE, MMM d, y • h:mm:ss a' }}</span>
+        <span class="inline-flex items-center gap-1.5">
+          <span [class.text-emerald-700]="isOnline()" [class.text-amber-700]="!isOnline()">{{
+            isOnline() ? 'Online' : 'Offline'
+          }}</span>
+        </span>
+      </div>
+    </div>
+
+    <div class="dropdown dropdown-end z-50">
+      <div tabindex="0" role="button" class="cursor-pointer rounded-full p-0.5 transition-all hover:bg-gray-100 active:scale-95 avatar">
+        <div class="w-10 rounded-full">
+          @if (imageUrl) {
+            <img alt="User avatar" [src]="imageUrl" />
+          } @else {
+            <app-avatar [label]="userFullName" [size]="36"></app-avatar>
+          }
+        </div>
+      </div>
+      <ul
+        tabindex="-1"
+        class="menu menu-sm dropdown-content bg-base-100 rounded-box right-0 z-1 mt-3 w-52 p-2 shadow"
+      >
+        <li>
+          <a
+            role="button"
+            tabindex="0"
+            (click)="goToMyProfile($event)"
+            (keydown.enter)="goToMyProfile($event)"
+            (keydown.space)="goToMyProfile($event)"
+          >
+            My Profile
+          </a>
+        </li>
+        <li class="pointer-events-none my-1 px-2" aria-hidden="true">
+          <hr class="border-gray-200" />
+        </li>
+        <li>
+          <a
+            role="button"
+            tabindex="0"
+            (click)="logout()"
+            (keydown.enter)="logout()"
+            (keydown.space)="logout()"
+          >
+            Logout
+          </a>
+        </li>
+      </ul>
+    </div>
+  </div>
+</div>
+

@@ -1,0 +1,343 @@
+﻿<div class="flex h-full flex-col ps-6">
+  <!-- Header: Title on Left, Tools on Right -->
+  <div class="mb-6 flex shrink-0 items-center justify-between">
+    <!-- Left: Title -->
+    <h1 class="text-2xl font-bold text-gray-900">Users</h1>
+
+    <!-- Right: Search, Filters, Refresh, and Add Button -->
+    <div class="flex items-center gap-3">
+      <!-- Search Input -->
+      <label
+        class="flex w-72 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200"
+      >
+        <app-icon
+          name="icon-search"
+          [class]="'h-5 w-5 shrink-0 opacity-40'"
+          [fill]="'currentColor'"
+        />
+        <input
+          type="search"
+          class="grow bg-transparent text-sm placeholder-gray-500 focus:caret-[#047857] focus:outline-none"
+          placeholder="Search by name"
+          [formControl]="filterForm.controls.searchTerm"
+        />
+      </label>
+
+      <!-- Role Filter Dropdown -->
+      <div class="dropdown dropdown-end">
+        <app-filter-dropdown
+          [title]="'Role'"
+          [icon]="'icon-user'"
+          [options]="roleOptions()"
+          [selectedIds]="selectedRoles()"
+          [showSelectedState]="true"
+          (filterChange)="onRoleFilterChange($event)"
+          (filterReset)="onRoleFilterReset()"
+        />
+      </div>
+
+      <!-- Status Filter Dropdown -->
+      <div class="dropdown dropdown-end">
+        <app-filter-dropdown
+          [title]="'Status'"
+          [icon]="'icon-status'"
+          [options]="statusOptions()"
+          [selectedIds]="selectedStatuses()"
+          [showSelectedState]="true"
+          (filterChange)="onStatusFilterChange($event)"
+          (filterReset)="onStatusFilterReset()"
+        />
+      </div>
+
+      <!-- Refresh Button -->
+      <button
+        class="tooltip tooltip-bottom pointer-events-auto z-30 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
+        [class.opacity-70]="isRefreshing()"
+        type="button"
+        (click)="refresh()"
+        [disabled]="isRefreshing()"
+        aria-label="Refresh users"
+        data-tip="Refresh"
+      >
+        @if (isRefreshing()) {
+          <app-icon
+            name="icon-refresh"
+            [class]="'h-5 w-5 animate-spin text-gray-600'"
+            [fill]="'currentColor'"
+          />
+        } @else {
+          <app-icon
+            name="icon-refresh"
+            [class]="'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'"
+            [fill]="'currentColor'"
+          />
+        }
+      </button>
+
+      <!-- Add User Button -->
+      @if (canWriteManagement()) {
+        <a
+          class="btn btn-sm rounded-lg border-0 bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg"
+          [routerLink]="['/management/users/new']"
+        >
+          <app-icon name="icon-plus" [class]="'h-4 w-4'" />
+          Add User
+        </a>
+      }
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  @if (isLoading()) {
+    <div class="flex justify-center py-8">
+      <span class="loading loading-spinner loading-lg"></span>
+    </div>
+  }
+
+  <!-- Users Table -->
+  @if (!isLoading()) {
+    @if (users().length === 0) {
+      <div class="rounded-lg bg-white p-8 text-center shadow-lg">
+        <div class="mb-3 flex justify-center">
+          <app-icon name="icon-user" [class]="'h-12 w-12 opacity-60'" />
+        </div>
+        <p class="text-lg font-semibold text-gray-700">No users found</p>
+        <p class="text-sm text-gray-500">Try adjusting your filters or add a new user</p>
+      </div>
+    } @else {
+      <div class="min-h-0 flex-1 overflow-y-auto pr-2 pb-4">
+        <div class="space-y-3">
+          <!-- Column Headers (Sticky) -->
+          <div class="sticky top-0 z-10 mb-2 grid grid-cols-12 gap-4 rounded-lg bg-white px-4 py-3">
+            <button
+              class="col-span-4 flex cursor-pointer items-center gap-1 text-start text-xs font-semibold tracking-wider uppercase transition-colors"
+              [class.text-gray-600]="sortColumn() !== 'name'"
+              [class.hover:text-gray-900]="sortColumn() !== 'name'"
+              [class.text-[#047857]]="sortColumn() === 'name'"
+              role="button"
+              tabindex="0"
+              (click)="toggleSort('name')"
+              (keydown.enter)="toggleSort('name')"
+              (keydown.space)="toggleSort('name')"
+              aria-label="Sort by user name"
+            >
+              Name
+              <span
+                class="text-xs transition-opacity"
+                [class.opacity-0]="sortColumn() !== 'name'"
+                [class.opacity-100]="sortColumn() === 'name'"
+              >
+                {{ sortDirection() === 'asc' ? '↑' : '↓' }}
+              </span>
+            </button>
+
+            <div
+              class="col-span-2 text-center text-xs font-semibold tracking-wider text-gray-600 uppercase"
+            >
+              Status
+            </div>
+
+            <button
+              class="col-span-3 flex cursor-pointer items-center justify-center gap-1 text-center text-xs font-semibold tracking-wider uppercase transition-colors"
+              [class.text-gray-600]="sortColumn() !== 'role'"
+              [class.hover:text-gray-900]="sortColumn() !== 'role'"
+              [class.text-[#047857]]="sortColumn() === 'role'"
+              role="button"
+              tabindex="0"
+              (click)="toggleSort('role')"
+              (keydown.enter)="toggleSort('role')"
+              (keydown.space)="toggleSort('role')"
+              aria-label="Sort by role"
+            >
+              Role
+              <span
+                class="text-xs transition-opacity"
+                [class.opacity-0]="sortColumn() !== 'role'"
+                [class.opacity-100]="sortColumn() === 'role'"
+              >
+                {{ sortDirection() === 'asc' ? '↑' : '↓' }}
+              </span>
+            </button>
+
+            <div
+              class="col-span-2 text-center text-xs font-semibold tracking-wider text-gray-600 uppercase"
+            >
+              Username
+            </div>
+
+            <div class="col-span-1"></div>
+          </div>
+
+          @if (sortedUsers().length > 0) {
+            @for (user of sortedUsers(); track user.id) {
+              <div
+                class="relative grid grid-cols-12 items-center gap-4 rounded-xl bg-white px-4 py-4 shadow-lg transition-shadow duration-200 hover:z-10 hover:shadow-xl focus-within:z-30"
+              >
+                <a
+                  class="col-span-11 grid grid-cols-11 items-center gap-4 self-stretch cursor-pointer no-underline focus:outline-none"
+                  [routerLink]="['/management/users/details', user.id]"
+                  [attr.aria-label]="'View details for ' + user.firstName + ' ' + user.lastName"
+                >
+                  <!-- Avatar and Name -->
+                  <div class="col-span-4 flex items-center gap-4">
+                    <div class="w-14 shrink-0">
+                      <div class="flex h-14 w-14 items-center justify-center">
+                        @if (user.imageUrl) {
+                          <img
+                            [src]="user.imageUrl"
+                            alt="User image"
+                            class="h-14 w-14 rounded-full object-cover"
+                          />
+                        } @else {
+                          <app-avatar
+                            [label]="`${user.firstName || ''} ${user.lastName || ''}`"
+                            [size]="36"
+                          />
+                        }
+                      </div>
+                    </div>
+
+                    <div class="min-w-0">
+                      <h3 class="font-semibold text-gray-900">
+                        {{ user.firstName }} {{ user.lastName }}
+                      </h3>
+                    </div>
+                  </div>
+
+                  <!-- Status -->
+                  <div class="col-span-2 flex justify-center">
+                    @if (user.isActive) {
+                      <app-badge variant="success">Active</app-badge>
+                    } @else {
+                      <app-badge variant="error">Inactive</app-badge>
+                    }
+                  </div>
+
+                  <!-- Role -->
+                  <div class="col-span-3">
+                    <div class="truncate text-center text-sm text-gray-700">
+                      {{ getRoleLabel(user) }}
+                    </div>
+                  </div>
+                  <!-- Username -->
+                  <div class="col-span-2">
+                    <div class="truncate text-center text-sm text-gray-700">
+                      {{ user.username }}
+                    </div>
+                  </div>
+                </a>
+
+                <!-- Actions -->
+                <div class="col-span-1 flex justify-end" role="presentation">
+                  @if (canWriteManagement()) {
+                    <div class="dropdown dropdown-end">
+                      <button
+                        type="button"
+                        class="cursor-pointer rounded-lg p-1.5 transition-all hover:bg-gray-100 active:scale-95"
+                        tabindex="0"
+                        aria-label="User actions"
+                      >
+                        <app-icon
+                          name="icon-ellipsis-vertical"
+                          [class]="'h-5 w-5 text-gray-600'"
+                          [fill]="'currentColor'"
+                        />
+                      </button>
+                      <ul
+                        tabindex="0"
+                        class="dropdown-content menu bg-base-100 rounded-box z-50 w-52 p-2 shadow"
+                      >
+                        <li>
+                          <a
+                            [routerLink]="['/management/users/edit', user.id]"
+                            class="flex items-center gap-2 text-gray-700 hover:bg-gray-100"
+                          >
+                            <app-icon name="icon-edit" [class]="'h-4 w-4 text-gray-600'" />
+                            Edit
+                          </a>
+                        </li>
+                        <li>
+                          <button
+                            type="button"
+                            (click)="deleteUser(user)"
+                            (keydown.enter)="deleteUser(user)"
+                            (keydown.space)="deleteUser(user)"
+                            class="flex items-center gap-2 text-red-600 hover:bg-red-50"
+                          >
+                            <app-icon name="icon-delete" [class]="'h-4 w-4 text-red-600'" />
+                            Delete
+                          </button>
+                        </li>
+                      </ul>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+          }
+        </div>
+      </div>
+    }
+  }
+</div>
+
+<!-- Delete Confirmation Modal -->
+@if (showDeleteModal() && userToDelete() && canWriteManagement()) {
+  <div
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="delete-title"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md transition-opacity duration-200"
+    (click)="cancelDelete()"
+    (keydown.escape)="cancelDelete()"
+    tabindex="0"
+  >
+    <div
+      role="document"
+      class="mx-4 w-full max-w-sm animate-[modal-pop_0.2s_ease-out] rounded-2xl bg-white p-6 shadow-2xl"
+      (click)="$event.stopPropagation()"
+      (keydown)="$event.stopPropagation()"
+    >
+      <!-- Double-Ring Warning Icon -->
+      <div class="mx-auto w-fit rounded-full bg-red-50/60 p-3">
+        <div class="rounded-full bg-red-50 p-3">
+          <app-icon name="icon-delete" [class]="'h-6 w-6 text-red-600'" />
+        </div>
+      </div>
+
+      <!-- Title & Body -->
+      <h3 id="delete-title" class="mt-4 text-center text-lg font-semibold text-gray-900">
+        Delete User?
+      </h3>
+      <p class="mt-2 text-center text-sm leading-relaxed text-gray-500">
+        This will permanently remove
+        <span class="font-medium text-gray-700">
+          {{ userToDelete()!.firstName }} {{ userToDelete()!.lastName }} </span
+        >. This action cannot be undone.
+      </p>
+
+      <!-- Actions -->
+      <div class="mt-6 flex items-center justify-end gap-3">
+        <button
+          type="button"
+          class="cursor-pointer px-4 py-2 text-sm font-medium text-gray-500 transition-colors hover:text-gray-700"
+          (click)="cancelDelete()"
+          [disabled]="isDeleting()"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="cursor-pointer rounded-xl bg-red-600 px-6 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-red-700 hover:shadow-md active:scale-[0.97]"
+          (click)="confirmDelete()"
+          [disabled]="isDeleting()"
+        >
+          @if (isDeleting()) {
+            <span class="loading loading-spinner loading-xs mr-2"></span>
+          }
+          {{ isDeleting() ? 'Deleting User...' : 'Delete User' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
