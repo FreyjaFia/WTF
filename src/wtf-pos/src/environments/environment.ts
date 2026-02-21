@@ -1,4 +1,4 @@
 export const environment = {
   production: true,
-  apiUrl: 'http://wtfbyfaith-api.runasp.net/api',
+  apiUrl: 'http://wtfbyfaith.runasp.net/api',
 };
