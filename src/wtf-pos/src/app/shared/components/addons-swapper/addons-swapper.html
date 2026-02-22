@@ -1,5 +1,5 @@
 ﻿<dialog id="addons-swapper-modal" class="modal">
-  <div class="modal-box w-full max-w-4xl rounded-2xl shadow-2xl max-sm:flex max-sm:h-full max-sm:max-h-full max-sm:w-full max-sm:max-w-full max-sm:flex-col max-sm:rounded-none">
+  <div class="modal-box flex max-h-[85vh] w-full max-w-[min(32rem,calc(100vw-2rem))] flex-col rounded-2xl shadow-2xl sm:max-h-[calc(100vh-3rem)] sm:max-w-4xl">
     <h3 class="text-lg font-bold text-gray-900">Manage Product Add-ons</h3>
     <p class="mb-5 text-sm text-gray-400">
       Drag and drop add-ons between the lists to assign or remove them.
@@ -34,16 +34,16 @@
           </div>
           <ul
             #availableList
-            class="flex min-h-0 flex-1 flex-col space-y-1 overflow-x-hidden overflow-y-auto rounded-xl border border-gray-200 bg-gray-50/50 p-3 sm:h-96 sm:flex-none"
+            class="flex min-h-0 flex-1 flex-col space-y-1 overflow-x-hidden overflow-y-auto rounded-xl border border-gray-200 bg-gray-50/50 p-3"
           >
             @for (addon of filteredAvailableAddOns(); track addon.id) {
               <li
                 [attr.data-id]="addon.id"
-                class="flex cursor-grab items-center gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm font-medium text-gray-800 transition-shadow hover:shadow-sm active:cursor-grabbing active:shadow-md"
+                class="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm font-medium text-gray-800 transition-shadow hover:shadow-sm"
               >
                 <app-icon
                   name="icon-grip"
-                  [class]="'h-5 w-5 shrink-0 text-gray-300 hover:text-gray-500'"
+                  [class]="'drag-handle h-5 w-5 shrink-0 cursor-grab touch-none text-gray-300 hover:text-gray-500 active:cursor-grabbing'"
                 />
                 <!-- Thumbnail -->
                 <div class="shrink-0">
@@ -100,16 +100,16 @@
           <div class="hidden sm:block mb-3 h-8"></div>
           <ul
             #assignedList
-            class="flex min-h-0 flex-1 flex-col space-y-1 overflow-x-hidden overflow-y-auto rounded-xl border border-gray-200 bg-gray-50/50 p-3 sm:h-96 sm:flex-none"
+            class="flex min-h-0 flex-1 flex-col space-y-1 overflow-x-hidden overflow-y-auto rounded-xl border border-gray-200 bg-gray-50/50 p-3"
           >
             @for (addon of assignedAddOns(); track addon.id) {
               <li
                 [attr.data-id]="addon.id"
-                class="flex cursor-grab items-center gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm font-medium text-gray-800 transition-shadow hover:shadow-sm active:cursor-grabbing active:shadow-md"
+                class="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm font-medium text-gray-800 transition-shadow hover:shadow-sm"
               >
                 <app-icon
                   name="icon-grip"
-                  [class]="'h-5 w-5 shrink-0 text-gray-300 hover:text-gray-500'"
+                  [class]="'drag-handle h-5 w-5 shrink-0 cursor-grab touch-none text-gray-300 hover:text-gray-500 active:cursor-grabbing'"
                 />
                 <!-- Thumbnail -->
                 <div class="shrink-0">

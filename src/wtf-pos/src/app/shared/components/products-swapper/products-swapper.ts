@@ -123,6 +123,7 @@ export class ProductsSwapperComponent implements AfterViewInit {
 
       const options = {
         group: 'products-swap',
+        handle: '.drag-handle',
         animation: 150,
         ghostClass: 'opacity-50',
         dragClass: '!rounded-none',

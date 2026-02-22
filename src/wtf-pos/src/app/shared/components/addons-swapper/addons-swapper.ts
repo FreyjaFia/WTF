@@ -110,6 +110,7 @@ export class AddonsSwapperComponent implements AfterViewInit {
 
       const options = {
         group: 'addons-swap',
+        handle: '.drag-handle',
         animation: 150,
         ghostClass: 'opacity-50',
         dragClass: '!rounded-none',
