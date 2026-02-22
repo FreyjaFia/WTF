@@ -73,6 +73,10 @@
 
   <!-- Orders List -->
   @if (!isLoading()) {
+    <app-pull-to-refresh
+      [refreshing]="isRefreshing()"
+      (refreshTriggered)="refresh()"
+    >
     @if (orders().length === 0) {
       <div class="rounded-lg bg-white p-8 text-center shadow-lg">
         <app-icon name="icon-cart" [class]="'mx-auto mb-3 h-12 w-12 text-gray-400'" />
@@ -80,10 +84,6 @@
         <p class="text-sm text-gray-500">Try adjusting your filters</p>
       </div>
     } @else {
-      <app-pull-to-refresh
-        [refreshing]="isRefreshing()"
-        (refreshTriggered)="refresh()"
-      >
         <div class="space-y-2 pb-4 md:space-y-3">
           <!-- Column Headers (Sticky) -->
           <div
@@ -264,7 +264,7 @@
             </div>
           }
         </div>
-      </app-pull-to-refresh>
     }
+    </app-pull-to-refresh>
   }
 </div>

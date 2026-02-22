@@ -51,6 +51,29 @@
               (filterChange)="onProductCategoryFilterChange($event)"
               (filterReset)="onProductCategoryFilterReset()"
             />
+            <button
+              class="tooltip tooltip-bottom pointer-events-auto z-30 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
+              [class.opacity-70]="isRefreshing()"
+              type="button"
+              (click)="refreshProducts()"
+              [disabled]="isRefreshing()"
+              aria-label="Refresh products"
+              data-tip="Refresh"
+            >
+              @if (isRefreshing()) {
+                <app-icon
+                  name="icon-refresh"
+                  [class]="'h-5 w-5 animate-spin text-gray-600'"
+                  [fill]="'currentColor'"
+                />
+              } @else {
+                <app-icon
+                  name="icon-refresh"
+                  [class]="'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'"
+                  [fill]="'currentColor'"
+                />
+              }
+            </button>
           </div>
         </div>
       </div>
@@ -62,6 +85,11 @@
         </div>
       }
       @if (!isLoading()) {
+        <app-pull-to-refresh
+          class="flex-1 overflow-hidden"
+          [refreshing]="isRefreshing()"
+          (refreshTriggered)="refreshProducts()"
+        >
         @if (products().length === 0) {
           <div class="flex flex-1 flex-col items-center justify-center text-center opacity-60">
             <app-icon name="icon-search" [class]="'mb-3 h-12 w-12'" />
@@ -70,11 +98,6 @@
           </div>
         }
         @if (products().length > 0) {
-          <app-pull-to-refresh
-            class="flex-1 overflow-hidden"
-            [refreshing]="isRefreshing()"
-            (refreshTriggered)="refreshProducts()"
-          >
             <div
               class="grid grid-cols-1 gap-4 pb-4 sm:grid-cols-2 lg:grid-cols-3"
               [class.pb-18]="cart().length > 0"
@@ -112,8 +135,8 @@
                 </div>
               }
             </div>
-          </app-pull-to-refresh>
         }
+        </app-pull-to-refresh>
       }
     }
 

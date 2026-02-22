@@ -93,6 +93,10 @@
 
   <!-- Users Table -->
   @if (!isLoading()) {
+    <app-pull-to-refresh
+      [refreshing]="isRefreshing()"
+      (refreshTriggered)="refresh()"
+    >
     @if (users().length === 0) {
       <div class="rounded-lg bg-white p-8 text-center shadow-lg">
         <div class="mb-3 flex justify-center">
@@ -102,10 +106,6 @@
         <p class="text-sm text-gray-500">Try adjusting your filters or add a new user</p>
       </div>
     } @else {
-      <app-pull-to-refresh
-        [refreshing]="isRefreshing()"
-        (refreshTriggered)="refresh()"
-      >
         <div class="space-y-2 md:space-y-3">
           <!-- Column Headers (Sticky) -->
           <div class="sticky top-0 z-10 mb-2 hidden grid-cols-12 gap-4 rounded-lg bg-white px-4 py-3 md:grid">
@@ -285,8 +285,8 @@
             }
           }
         </div>
-      </app-pull-to-refresh>
     }
+    </app-pull-to-refresh>
   }
 </div>
 
