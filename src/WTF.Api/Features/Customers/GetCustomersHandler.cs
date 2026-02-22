@@ -56,6 +56,10 @@ public class GetCustomersHandler(WTFDbContext db, IHttpContextAccessor httpConte
                 c.LastName,
                 c.Address,
                 c.IsActive,
+                c.CreatedAt,
+                c.CreatedBy,
+                c.UpdatedAt,
+                c.UpdatedBy,
                 imageUrl
             );
         })];

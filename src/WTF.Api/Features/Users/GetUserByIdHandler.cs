@@ -36,6 +36,10 @@ public class GetUserByIdHandler(WTFDbContext db, IHttpContextAccessor httpContex
             user.LastName,
             user.Username,
             user.IsActive,
+            user.CreatedAt,
+            user.CreatedBy,
+            user.UpdatedAt,
+            user.UpdatedBy,
             imageUrl,
             (UserRoleEnum)user.RoleId
         );

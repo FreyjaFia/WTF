@@ -15,9 +15,21 @@ public partial class Customer
 
     public bool IsActive { get; set; }
 
+    public DateTime CreatedAt { get; set; }
+
+    public Guid CreatedBy { get; set; }
+
+    public DateTime? UpdatedAt { get; set; }
+
+    public Guid? UpdatedBy { get; set; }
+
+    public virtual User CreatedByNavigation { get; set; } = null!;
+
     public virtual CustomerImage? CustomerImage { get; set; }
 
     public virtual ICollection<LoyaltyPoint> LoyaltyPoints { get; set; } = new List<LoyaltyPoint>();
 
     public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
+
+    public virtual User? UpdatedByNavigation { get; set; }
 }

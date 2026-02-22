@@ -34,6 +34,10 @@ public class GetCustomerByIdHandler(WTFDbContext db, IHttpContextAccessor httpCo
             customer.LastName,
             customer.Address,
             customer.IsActive,
+            customer.CreatedAt,
+            customer.CreatedBy,
+            customer.UpdatedAt,
+            customer.UpdatedBy,
             imageUrl
         );
     }

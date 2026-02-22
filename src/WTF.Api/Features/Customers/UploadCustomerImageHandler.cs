@@ -80,6 +80,10 @@ public class UploadCustomerImageHandler(WTFDbContext db, IImageStorage imageStor
             customer.LastName,
             customer.Address,
             customer.IsActive,
+            customer.CreatedAt,
+            customer.CreatedBy,
+            customer.UpdatedAt,
+            customer.UpdatedBy,
             absoluteImageUrl
         );
     }

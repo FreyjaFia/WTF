@@ -37,7 +37,7 @@ public class GetUsersHandler(WTFDbContext db, IHttpContextAccessor httpContextAc
         var users = await query
             .Include(u => u.Role)
             .Include(u => u.UserImage)
-                .ThenInclude(ui => ui.Image)
+                .ThenInclude(ui => ui!.Image)
             .OrderBy(u => u.LastName)
             .ThenBy(u => u.FirstName)
             .ToListAsync(cancellationToken);
@@ -56,6 +56,10 @@ public class GetUsersHandler(WTFDbContext db, IHttpContextAccessor httpContextAc
                 u.LastName,
                 u.Username,
                 u.IsActive,
+                u.CreatedAt,
+                u.CreatedBy,
+                u.UpdatedAt,
+                u.UpdatedBy,
                 imageUrl,
                 (UserRoleEnum)u.RoleId
             );

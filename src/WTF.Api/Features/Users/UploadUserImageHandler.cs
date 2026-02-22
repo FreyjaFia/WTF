@@ -82,6 +82,10 @@ public class UploadUserImageHandler(WTFDbContext db, IImageStorage imageStorage,
             user.LastName,
             user.Username,
             user.IsActive,
+            user.CreatedAt,
+            user.CreatedBy,
+            user.UpdatedAt,
+            user.UpdatedBy,
             absoluteImageUrl,
             (UserRoleEnum)user.RoleId
         );

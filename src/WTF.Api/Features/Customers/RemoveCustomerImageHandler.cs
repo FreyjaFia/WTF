@@ -38,6 +38,10 @@ public class RemoveCustomerImageHandler(WTFDbContext db, IImageStorage imageStor
             customer.LastName,
             customer.Address,
             customer.IsActive,
+            customer.CreatedAt,
+            customer.CreatedBy,
+            customer.UpdatedAt,
+            customer.UpdatedBy,
             null
         );
     }

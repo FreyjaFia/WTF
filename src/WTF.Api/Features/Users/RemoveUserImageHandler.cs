@@ -39,6 +39,10 @@ public class RemoveUserImageHandler(WTFDbContext db, IImageStorage imageStorage)
             user.LastName,
             user.Username,
             user.IsActive,
+            user.CreatedAt,
+            user.CreatedBy,
+            user.UpdatedAt,
+            user.UpdatedBy,
             null,
             (UserRoleEnum)user.RoleId
         );

@@ -1,4 +1,5 @@
 using MediatR;
+using WTF.Api.Common.Extensions;
 using WTF.Api.Features.Users.DTOs;
 using WTF.Api.Features.Users.Enums;
 using WTF.Domain.Data;
@@ -8,10 +9,12 @@ namespace WTF.Api.Features.Users;
 
 public record CreateUserCommand(string FirstName, string LastName, string Username, string Password, UserRoleEnum RoleId) : IRequest<UserDto>;
 
-public class CreateUserHandler(WTFDbContext db) : IRequestHandler<CreateUserCommand, UserDto>
+public class CreateUserHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor) : IRequestHandler<CreateUserCommand, UserDto>
 {
     public async Task<UserDto> Handle(CreateUserCommand request, CancellationToken cancellationToken)
     {
+        var userId = httpContextAccessor.HttpContext!.User.GetUserId();
+
         var user = new User
         {
             FirstName = request.FirstName,
@@ -19,7 +22,9 @@ public class CreateUserHandler(WTFDbContext db) : IRequestHandler<CreateUserComm
             Username = request.Username,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
             IsActive = true,
-            RoleId = (int)request.RoleId
+            RoleId = (int)request.RoleId,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = userId
         };
 
         db.Users.Add(user);
@@ -31,6 +36,10 @@ public class CreateUserHandler(WTFDbContext db) : IRequestHandler<CreateUserComm
             user.LastName,
             user.Username,
             user.IsActive,
+            user.CreatedAt,
+            user.CreatedBy,
+            user.UpdatedAt,
+            user.UpdatedBy,
             null,
             (UserRoleEnum)user.RoleId
         );

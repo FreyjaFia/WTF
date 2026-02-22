@@ -73,8 +73,13 @@ public partial class WTFDbContext : DbContext
 
         modelBuilder.Entity<Customer>(entity =>
         {
+            entity.HasIndex(e => e.CreatedBy, "IX_Customers_CreatedBy");
+
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_Customers_Id");
             entity.Property(e => e.Address).IsUnicode(false);
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("(getutcdate())", "DF_Customers_CreatedAt")
+                .HasColumnType("datetime");
             entity.Property(e => e.FirstName)
                 .HasMaxLength(50)
                 .IsUnicode(false);
@@ -82,6 +87,16 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.LastName)
                 .HasMaxLength(50)
                 .IsUnicode(false);
+            entity.Property(e => e.UpdatedAt).HasColumnType("datetime");
+
+            entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.CustomerCreatedByNavigations)
+                .HasForeignKey(d => d.CreatedBy)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Customers_CreatedBy");
+
+            entity.HasOne(d => d.UpdatedByNavigation).WithMany(p => p.CustomerUpdatedByNavigations)
+                .HasForeignKey(d => d.UpdatedBy)
+                .HasConstraintName("FK_Customers_UpdatedBy");
         });
 
         modelBuilder.Entity<CustomerImage>(entity =>
@@ -376,9 +391,14 @@ public partial class WTFDbContext : DbContext
 
         modelBuilder.Entity<User>(entity =>
         {
+            entity.HasIndex(e => e.CreatedBy, "IX_Users_CreatedBy");
+
             entity.HasIndex(e => e.RoleId, "IX_Users_RoleId");
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_Users_Id");
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("(getutcdate())", "DF_Users_CreatedAt")
+                .HasColumnType("datetime");
             entity.Property(e => e.FirstName)
                 .HasMaxLength(50)
                 .IsUnicode(false);
@@ -387,14 +407,24 @@ public partial class WTFDbContext : DbContext
                 .HasMaxLength(50)
                 .IsUnicode(false);
             entity.Property(e => e.PasswordHash).IsUnicode(false);
+            entity.Property(e => e.UpdatedAt).HasColumnType("datetime");
             entity.Property(e => e.Username)
                 .HasMaxLength(50)
                 .IsUnicode(false);
+
+            entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.InverseCreatedByNavigation)
+                .HasForeignKey(d => d.CreatedBy)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Users_CreatedBy");
 
             entity.HasOne(d => d.Role).WithMany(p => p.Users)
                 .HasForeignKey(d => d.RoleId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Users_UserRoles");
+
+            entity.HasOne(d => d.UpdatedByNavigation).WithMany(p => p.InverseUpdatedByNavigation)
+                .HasForeignKey(d => d.UpdatedBy)
+                .HasConstraintName("FK_Users_UpdatedBy");
         });
 
         modelBuilder.Entity<UserImage>(entity =>
