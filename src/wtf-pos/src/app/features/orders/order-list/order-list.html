@@ -80,8 +80,11 @@
         <p class="text-sm text-gray-500">Try adjusting your filters</p>
       </div>
     } @else {
-      <div class="min-h-0 flex-1 overflow-y-auto pb-4 pr-2">
-        <div class="space-y-2 md:space-y-3">
+      <app-pull-to-refresh
+        [refreshing]="isRefreshing()"
+        (refreshTriggered)="refresh()"
+      >
+        <div class="space-y-2 pb-4 md:space-y-3">
           <!-- Column Headers (Sticky) -->
           <div
             class="sticky top-0 z-10 mb-2 hidden grid-cols-12 gap-4 rounded-lg bg-white px-4 py-3 md:grid"
@@ -261,7 +264,7 @@
             </div>
           }
         </div>
-      </div>
+      </app-pull-to-refresh>
     }
   }
 </div>

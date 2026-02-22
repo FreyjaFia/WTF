@@ -3,7 +3,13 @@ import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AlertService, ListStateService, OrderService } from '@core/services';
-import { BadgeComponent, FilterDropdown, Icon, PullToRefreshComponent, type FilterOption } from '@shared/components';
+import {
+  BadgeComponent,
+  FilterDropdown,
+  Icon,
+  PullToRefreshComponent,
+  type FilterOption,
+} from '@shared/components';
 import { OrderDto, OrderStatusEnum } from '@shared/models';
 import { debounceTime } from 'rxjs';
 
@@ -23,7 +29,15 @@ interface OrderGroup {
 
 @Component({
   selector: 'app-order-list',
-  imports: [CommonModule, DatePipe, ReactiveFormsModule, Icon, FilterDropdown, BadgeComponent, PullToRefreshComponent],
+  imports: [
+    CommonModule,
+    DatePipe,
+    ReactiveFormsModule,
+    Icon,
+    FilterDropdown,
+    BadgeComponent,
+    PullToRefreshComponent,
+  ],
   templateUrl: './order-list.html',
 })
 export class OrderList implements OnInit {
@@ -162,7 +176,9 @@ export class OrderList implements OnInit {
     this.saveState();
   }
 
-  protected getStatusVariant(status: OrderStatusEnum): 'success' | 'error' | 'warning' | 'info' | 'default' {
+  protected getStatusVariant(
+    status: OrderStatusEnum,
+  ): 'success' | 'error' | 'warning' | 'info' | 'default' {
     switch (status) {
       case OrderStatusEnum.Pending:
         return 'warning';
@@ -316,4 +332,3 @@ export class OrderList implements OnInit {
     });
   }
 }
-
