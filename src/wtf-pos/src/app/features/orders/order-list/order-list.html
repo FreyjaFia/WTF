@@ -1,14 +1,16 @@
 ﻿<div class="flex h-full flex-col">
   <!-- Header: Title on Left, Tools on Right -->
-  <div class="mb-6 flex shrink-0 items-center justify-between">
+  <div
+    class="mb-4 flex shrink-0 flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between"
+  >
     <!-- Left: Title -->
-    <h1 class="text-2xl font-bold text-gray-900">Orders</h1>
+    <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Orders</h1>
 
-    <!-- Right: Search, Filter, and Refresh (Grouped as Unified Toolbar) -->
-    <div class="flex items-center gap-3">
-      <!-- Search Input (Ghost Style, Fixed Width) -->
+    <!-- Right: Toolbar -->
+    <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:gap-3">
+      <!-- Row 1 (mobile): Search -->
       <label
-        class="flex w-72 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200"
+        class="flex w-full items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200 sm:w-72"
       >
         <app-icon
           name="icon-search"
@@ -23,43 +25,42 @@
         />
       </label>
 
-      <!-- Status Filter Dropdown (Right-Aligned) -->
-      <div class="dropdown dropdown-end">
+      <!-- Row 2 (mobile): Filter + Refresh -->
+      <div class="flex items-center justify-end gap-2">
         <app-filter-dropdown
           [title]="'Status'"
           [icon]="'icon-status'"
           [options]="filterOptions()"
           [selectedIds]="selectedStatuses()"
           [showSelectedState]="true"
+          [align]="'end'"
           (filterChange)="onStatusFilterChange($event)"
           (filterReset)="onStatusFilterReset()"
         />
+        <button
+          class="tooltip tooltip-bottom pointer-events-auto z-30 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
+          [class.opacity-70]="isRefreshing()"
+          type="button"
+          (click)="refresh()"
+          [disabled]="isRefreshing()"
+          aria-label="Refresh orders"
+          data-tip="Refresh"
+        >
+          @if (isRefreshing()) {
+            <app-icon
+              name="icon-refresh"
+              [class]="'h-5 w-5 animate-spin text-gray-600'"
+              [fill]="'currentColor'"
+            />
+          } @else {
+            <app-icon
+              name="icon-refresh"
+              [class]="'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'"
+              [fill]="'currentColor'"
+            />
+          }
+        </button>
       </div>
-
-      <!-- Refresh Button (Ghost Button Style with Tooltip) -->
-      <button
-        class="tooltip tooltip-bottom pointer-events-auto z-30 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
-        [class.opacity-70]="isRefreshing()"
-        type="button"
-        (click)="refresh()"
-        [disabled]="isRefreshing()"
-        aria-label="Refresh orders"
-        data-tip="Refresh"
-      >
-        @if (isRefreshing()) {
-          <app-icon
-            name="icon-refresh"
-            [class]="'h-5 w-5 animate-spin text-gray-600'"
-            [fill]="'currentColor'"
-          />
-        } @else {
-          <app-icon
-            name="icon-refresh"
-            [class]="'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'"
-            [fill]="'currentColor'"
-          />
-        }
-      </button>
     </div>
   </div>
 
@@ -79,10 +80,12 @@
         <p class="text-sm text-gray-500">Try adjusting your filters</p>
       </div>
     } @else {
-      <div class="min-h-0 flex-1 overflow-y-auto pr-2 pb-4">
-        <div class="space-y-3">
+      <div class="min-h-0 flex-1 overflow-y-auto pb-4 pr-2">
+        <div class="space-y-2 md:space-y-3">
           <!-- Column Headers (Sticky) -->
-          <div class="sticky top-0 z-10 mb-2 grid grid-cols-12 gap-4 rounded-lg bg-white px-4 py-3">
+          <div
+            class="sticky top-0 z-10 mb-2 hidden grid-cols-12 gap-4 rounded-lg bg-white px-4 py-3 md:grid"
+          >
             <div
               class="col-span-2 flex cursor-pointer items-center gap-1 text-xs font-semibold tracking-wider uppercase transition-colors"
               [class.text-gray-600]="!isSortActive('orderNumber')"
@@ -176,36 +179,77 @@
               <!-- Order Cards for this day -->
               @for (order of group.orders; track order.id) {
                 <div
-                  class="grid cursor-pointer grid-cols-12 items-center gap-4 rounded-xl bg-white px-4 py-4 shadow-lg transition-shadow duration-200 hover:shadow-xl"
+                  class="flex cursor-pointer items-center gap-3 rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm transition-shadow duration-200 hover:shadow-md md:grid md:grid-cols-12 md:gap-4 md:border-0 md:py-4 md:shadow-lg md:hover:shadow-xl"
                   role="button"
                   tabindex="0"
                   (click)="editOrder(order)"
                   (keydown.enter)="editOrder(order)"
                   (keydown.space)="editOrder(order)"
                 >
-                  <div class="col-span-2">
-                    <div class="font-semibold text-gray-900">#{{ order.orderNumber }}</div>
-                  </div>
-                  <div class="col-span-2">
-                    <div class="text-sm text-gray-700">
-                      {{ getOrderDate(order) | date: 'd MMM y, h:mm a' }}
+                  <!-- Main Content -->
+                  <div
+                    class="flex min-w-0 flex-1 flex-col gap-1 md:col-span-11 md:grid md:grid-cols-11 md:gap-4"
+                  >
+                    <!-- Mobile: Row 1 — Order # -->
+                    <div class="md:hidden">
+                      <span class="font-semibold text-gray-900">#{{ order.orderNumber }}</span>
+                    </div>
+
+                    <!-- Mobile: Row 2 — Status Badge -->
+                    <div class="md:hidden">
+                      <app-badge [variant]="getStatusVariant(order.status)">
+                        {{ getStatusLabel(order.status) }}
+                      </app-badge>
+                    </div>
+
+                    <!-- Mobile: Row 3 — Time • Items -->
+                    <div class="flex items-center gap-2 md:hidden">
+                      <span class="text-xs text-slate-500">
+                        {{ getOrderDate(order) | date: 'h:mm a' }}
+                      </span>
+                      <span class="text-xs text-slate-500">·</span>
+                      <span class="text-xs text-slate-500">{{ getItemsText(order) }}</span>
+                    </div>
+
+                    <!-- Desktop: Order # -->
+                    <div class="hidden md:col-span-2 md:block">
+                      <div class="font-semibold text-gray-900">#{{ order.orderNumber }}</div>
+                    </div>
+
+                    <!-- Desktop: Date -->
+                    <div class="hidden md:col-span-2 md:block">
+                      <div class="text-sm text-gray-700">
+                        {{ getOrderDate(order) | date: 'd MMM y, h:mm a' }}
+                      </div>
+                    </div>
+
+                    <!-- Desktop: Status -->
+                    <div class="hidden md:col-span-2 md:flex md:justify-center">
+                      <app-badge [variant]="getStatusVariant(order.status)">
+                        {{ getStatusLabel(order.status) }}
+                      </app-badge>
+                    </div>
+
+                    <!-- Desktop: Items -->
+                    <div class="hidden md:col-span-2 md:block md:text-right">
+                      <div class="text-sm text-gray-600">{{ getItemsText(order) }}</div>
+                    </div>
+
+                    <!-- Desktop: Total -->
+                    <div class="hidden md:col-span-3 md:block md:text-right">
+                      <div class="text-lg font-semibold text-black">
+                        <span class="text-base opacity-70">₱</span
+                        >{{ order.totalAmount | number: '1.2-2' }}
+                      </div>
                     </div>
                   </div>
-                  <div class="col-span-2 flex justify-center">
-                    <app-badge [variant]="getStatusVariant(order.status)">
-                      {{ getStatusLabel(order.status) }}
-                    </app-badge>
-                  </div>
-                  <div class="col-span-2 text-right">
-                    <div class="text-sm text-gray-600">{{ getItemsText(order) }}</div>
-                  </div>
-                  <div class="col-span-3 text-right">
-                    <div class="text-lg font-semibold text-black">
-                      <span class="text-base opacity-70">₱</span
+
+                  <!-- Price + Forward Arrow -->
+                  <div class="flex shrink-0 items-center gap-2 md:col-span-1 md:flex md:justify-end">
+                    <span class="text-base font-semibold text-black md:hidden">
+                      <span class="text-sm opacity-70">₱</span
                       >{{ order.totalAmount | number: '1.2-2' }}
-                    </div>
-                  </div>
-                  <div class="col-span-1 flex justify-end">
+                    </span>
                     <app-icon
                       name="icon-forward"
                       [class]="'h-5 w-5 text-gray-400 transition-colors group-hover:text-gray-600'"
