@@ -1,14 +1,14 @@
-﻿<div class="flex h-full flex-col ps-6">
+﻿<div class="flex h-full flex-col md:ps-6">
   <!-- Header: Title on Left, Tools on Right -->
-  <div class="mb-6 flex shrink-0 items-center justify-between">
+  <div class="mb-4 flex shrink-0 flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
     <!-- Left: Title -->
-    <h1 class="text-2xl font-bold text-gray-900">Users</h1>
+    <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Users</h1>
 
-    <!-- Right: Search, Filters, Refresh, and Add Button -->
-    <div class="flex items-center gap-3">
-      <!-- Search Input -->
+    <!-- Right: Toolbar -->
+    <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:gap-3">
+      <!-- Row 1 (mobile): Search -->
       <label
-        class="flex w-72 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200"
+        class="flex w-full items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200 sm:w-72"
       >
         <app-icon
           name="icon-search"
@@ -23,8 +23,8 @@
         />
       </label>
 
-      <!-- Role Filter Dropdown -->
-      <div class="dropdown dropdown-end">
+      <!-- Row 2 (mobile): Filters -->
+      <div class="flex items-center justify-end gap-2">
         <app-filter-dropdown
           [title]="'Role'"
           [icon]="'icon-user'"
@@ -34,56 +34,53 @@
           (filterChange)="onRoleFilterChange($event)"
           (filterReset)="onRoleFilterReset()"
         />
-      </div>
-
-      <!-- Status Filter Dropdown -->
-      <div class="dropdown dropdown-end">
         <app-filter-dropdown
           [title]="'Status'"
           [icon]="'icon-status'"
           [options]="statusOptions()"
           [selectedIds]="selectedStatuses()"
           [showSelectedState]="true"
+          [align]="'end'"
           (filterChange)="onStatusFilterChange($event)"
           (filterReset)="onStatusFilterReset()"
         />
       </div>
 
-      <!-- Refresh Button -->
-      <button
-        class="tooltip tooltip-bottom pointer-events-auto z-30 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
-        [class.opacity-70]="isRefreshing()"
-        type="button"
-        (click)="refresh()"
-        [disabled]="isRefreshing()"
-        aria-label="Refresh users"
-        data-tip="Refresh"
-      >
-        @if (isRefreshing()) {
-          <app-icon
-            name="icon-refresh"
-            [class]="'h-5 w-5 animate-spin text-gray-600'"
-            [fill]="'currentColor'"
-          />
-        } @else {
-          <app-icon
-            name="icon-refresh"
-            [class]="'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'"
-            [fill]="'currentColor'"
-          />
-        }
-      </button>
-
-      <!-- Add User Button -->
-      @if (canWriteManagement()) {
-        <a
-          class="btn btn-sm rounded-lg border-0 bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg"
-          [routerLink]="['/management/users/new']"
+      <!-- Row 3 (mobile): Actions -->
+      <div class="flex items-center justify-end gap-2">
+        <button
+          class="tooltip tooltip-bottom pointer-events-auto z-30 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
+          [class.opacity-70]="isRefreshing()"
+          type="button"
+          (click)="refresh()"
+          [disabled]="isRefreshing()"
+          aria-label="Refresh users"
+          data-tip="Refresh"
         >
-          <app-icon name="icon-plus" [class]="'h-4 w-4'" />
-          Add User
-        </a>
-      }
+          @if (isRefreshing()) {
+            <app-icon
+              name="icon-refresh"
+              [class]="'h-5 w-5 animate-spin text-gray-600'"
+              [fill]="'currentColor'"
+            />
+          } @else {
+            <app-icon
+              name="icon-refresh"
+              [class]="'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'"
+              [fill]="'currentColor'"
+            />
+          }
+        </button>
+        @if (canWriteManagement()) {
+          <a
+            class="btn btn-sm rounded-lg border-0 bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg"
+            [routerLink]="['/management/users/new']"
+          >
+            <app-icon name="icon-plus" [class]="'h-4 w-4'" />
+            Add User
+          </a>
+        }
+      </div>
     </div>
   </div>
 
@@ -105,10 +102,10 @@
         <p class="text-sm text-gray-500">Try adjusting your filters or add a new user</p>
       </div>
     } @else {
-      <div class="min-h-0 flex-1 overflow-y-auto pr-2 pb-4">
-        <div class="space-y-3">
+      <div class="min-h-0 flex-1 overflow-y-auto pb-4 pr-2">
+        <div class="space-y-2 md:space-y-3">
           <!-- Column Headers (Sticky) -->
-          <div class="sticky top-0 z-10 mb-2 grid grid-cols-12 gap-4 rounded-lg bg-white px-4 py-3">
+          <div class="sticky top-0 z-10 mb-2 hidden grid-cols-12 gap-4 rounded-lg bg-white px-4 py-3 md:grid">
             <button
               class="col-span-4 flex cursor-pointer items-center gap-1 text-start text-xs font-semibold tracking-wider uppercase transition-colors"
               [class.text-gray-600]="sortColumn() !== 'name'"
@@ -171,22 +168,22 @@
           @if (sortedUsers().length > 0) {
             @for (user of sortedUsers(); track user.id) {
               <div
-                class="relative grid grid-cols-12 items-center gap-4 rounded-xl bg-white px-4 py-4 shadow-lg transition-shadow duration-200 hover:z-10 hover:shadow-xl focus-within:z-30"
+                class="relative flex items-center gap-3 rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm transition-shadow duration-200 hover:z-10 hover:shadow-md focus-within:z-30 md:border-0 md:shadow-lg md:hover:shadow-xl md:grid md:grid-cols-12 md:gap-4 md:px-4 md:py-4"
               >
                 <a
-                  class="col-span-11 grid grid-cols-11 items-center gap-4 self-stretch cursor-pointer no-underline focus:outline-none"
+                  class="flex min-w-0 flex-1 items-center gap-3 self-stretch cursor-pointer no-underline focus:outline-none md:col-span-11 md:grid md:grid-cols-11 md:gap-4"
                   [routerLink]="['/management/users/details', user.id]"
                   [attr.aria-label]="'View details for ' + user.firstName + ' ' + user.lastName"
                 >
                   <!-- Avatar and Name -->
-                  <div class="col-span-4 flex items-center gap-4">
-                    <div class="w-14 shrink-0">
-                      <div class="flex h-14 w-14 items-center justify-center">
+                  <div class="flex min-w-0 flex-1 items-center gap-3 md:col-span-4 md:flex-none md:gap-4">
+                    <div class="w-10 shrink-0 md:w-14">
+                      <div class="flex h-10 w-10 items-center justify-center md:h-14 md:w-14">
                         @if (user.imageUrl) {
                           <img
                             [src]="user.imageUrl"
                             alt="User image"
-                            class="h-14 w-14 rounded-full object-cover"
+                            class="h-10 w-10 rounded-full object-cover md:h-14 md:w-14"
                           />
                         } @else {
                           <app-avatar
@@ -198,14 +195,23 @@
                     </div>
 
                     <div class="min-w-0">
-                      <h3 class="font-semibold text-gray-900">
+                      <h3 class="text-sm font-semibold text-gray-900 md:text-base">
                         {{ user.firstName }} {{ user.lastName }}
                       </h3>
+                      <!-- Mobile: inline role + status -->
+                      <div class="mt-1 flex flex-wrap items-center gap-2 md:hidden">
+                        <span class="text-xs text-gray-500">{{ getRoleLabel(user) }}</span>
+                        @if (user.isActive) {
+                          <app-badge variant="success">Active</app-badge>
+                        } @else {
+                          <app-badge variant="error">Inactive</app-badge>
+                        }
+                      </div>
                     </div>
                   </div>
 
-                  <!-- Status -->
-                  <div class="col-span-2 flex justify-center">
+                  <!-- Status (desktop only) -->
+                  <div class="hidden md:col-span-2 md:flex md:justify-center">
                     @if (user.isActive) {
                       <app-badge variant="success">Active</app-badge>
                     } @else {
@@ -213,14 +219,14 @@
                     }
                   </div>
 
-                  <!-- Role -->
-                  <div class="col-span-3">
+                  <!-- Role (desktop only) -->
+                  <div class="hidden md:col-span-3 md:block">
                     <div class="truncate text-center text-sm text-gray-700">
                       {{ getRoleLabel(user) }}
                     </div>
                   </div>
-                  <!-- Username -->
-                  <div class="col-span-2">
+                  <!-- Username (desktop only) -->
+                  <div class="hidden md:col-span-2 md:block">
                     <div class="truncate text-center text-sm text-gray-700">
                       {{ user.username }}
                     </div>
@@ -228,7 +234,7 @@
                 </a>
 
                 <!-- Actions -->
-                <div class="col-span-1 flex justify-end" role="presentation">
+                <div class="shrink-0 md:col-span-1 md:flex md:justify-end" role="presentation">
                   @if (canWriteManagement()) {
                     <div class="dropdown dropdown-end">
                       <button

@@ -1,9 +1,9 @@
-﻿<div class="flex h-full flex-col ps-6">
-  <!-- Sticky Header: Back + Title on Left, Actions on Right -->
-  <div class="mb-6 flex shrink-0 items-center justify-between">
-    <div class="flex min-w-0 items-center gap-4">
+﻿<div class="flex h-full flex-col md:ps-6">
+  <!-- Header -->
+  <div class="mb-4 flex shrink-0 flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
+    <div class="flex min-w-0 items-start gap-4">
       <a
-        class="tooltip tooltip-bottom cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
+        class="tooltip tooltip-bottom mt-1 shrink-0 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
         [routerLink]="['/management/products']"
         aria-label="Go back"
         data-tip="Back"
@@ -12,8 +12,8 @@
       </a>
       @if (product()) {
         <div class="min-w-0">
-          <div class="flex items-center gap-3">
-            <h1 class="truncate text-2xl font-bold text-gray-900">{{ product()!.name }}</h1>
+          <h1 class="text-2xl font-bold break-words text-gray-900">{{ product()!.name }}</h1>
+          <div class="mt-1 flex flex-wrap items-center gap-2">
             @if (product()!.isActive) {
               <app-badge variant="success">Active</app-badge>
             } @else {
@@ -36,7 +36,7 @@
     </div>
 
     @if (product() && canWriteManagement()) {
-      <div class="flex shrink-0 gap-2">
+      <div class="flex shrink-0 justify-end gap-2">
         <a
           class="btn btn-sm gap-2 rounded-lg border-0 bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg"
           [routerLink]="['/management/products/edit', product()!.id]"
@@ -68,10 +68,11 @@
       <div class="card rounded-xl bg-white shadow-lg">
         <div class="card-body p-0">
           <div class="grid grid-cols-1 lg:grid-cols-5">
-            <!-- Left Column: Image + Linked Items -->
-            <div class="border-b border-gray-100 p-6 lg:col-span-2 lg:border-r lg:border-b-0">
-              <!-- Hero Product Image -->
-              <div class="mb-6 flex justify-center">
+            <!-- Image -->
+            <div
+              class="order-1 border-b border-gray-100 p-6 lg:col-span-2 lg:border-r lg:border-b-0"
+            >
+              <div class="flex justify-center">
                 @if (product()!.imageUrl) {
                   <img
                     [src]="product()!.imageUrl"
@@ -82,9 +83,77 @@
                   <app-avatar [label]="product()!.name" [size]="150" />
                 }
               </div>
+            </div>
 
-              <!-- Linked Items Section -->
+            <!-- Pricing + Details -->
+            <div
+              class="order-2 space-y-6 p-6 lg:col-span-3 lg:row-span-2 lg:sticky lg:top-0 lg:self-start"
+            >
+              <!-- Price (Hero) -->
+              <div>
+                <p class="mb-2 text-xs font-semibold tracking-wider text-gray-400 uppercase">
+                  Pricing
+                </p>
+                <p class="text-5xl font-black tracking-tight text-[#047857]">
+                  <span class="text-3xl font-extrabold">₱</span
+                  >{{ product()!.price | number: '1.2-2' }}
+                </p>
+              </div>
+
+              <!-- Basic Info -->
               <div class="border-t border-gray-100 pt-5">
+                <p class="mb-4 text-xs font-semibold tracking-wider text-gray-400 uppercase">
+                  Details
+                </p>
+                <div class="grid grid-cols-2 gap-x-6 gap-y-4 md:grid-cols-3">
+                  <div>
+                    <p class="mb-1 text-xs font-medium text-gray-400">Code</p>
+                    <p class="font-mono text-sm font-bold text-gray-800">
+                      {{ product()!.code }}
+                    </p>
+                  </div>
+                  <div>
+                    <p class="mb-1 text-xs font-medium text-gray-400">Category</p>
+                    <app-badge variant="default">{{
+                      getProductCategoryName(product()!.category)
+                    }}</app-badge>
+                  </div>
+                  <div>
+                    <p class="mb-1 text-xs font-medium text-gray-400">Status</p>
+                    @if (product()!.isActive) {
+                      <app-badge variant="success">Active</app-badge>
+                    } @else {
+                      <app-badge variant="error">Inactive</app-badge>
+                    }
+                  </div>
+                  <div>
+                    <p class="mb-1 text-xs font-medium text-gray-400">Type</p>
+                    @if (product()!.isAddOn) {
+                      <app-badge variant="info">Add-on</app-badge>
+                    } @else {
+                      <app-badge variant="default">Standard</app-badge>
+                    }
+                  </div>
+                </div>
+              </div>
+
+              <!-- Description -->
+              @if (product()!.description) {
+                <div class="border-t border-gray-100 pt-5">
+                  <p class="mb-3 text-xs font-semibold tracking-wider text-gray-400 uppercase">
+                    Description
+                  </p>
+                  <p class="max-w-[65ch] text-sm leading-relaxed text-gray-600">
+                    {{ product()!.description }}
+                  </p>
+                </div>
+              }
+            </div>
+
+            <!-- Linked Items / Add-ons -->
+            <div
+              class="order-3 border-t border-gray-100 p-6 lg:col-span-2 lg:border-r lg:border-t-0"
+            >
                 @if (product()!.isAddOn) {
                   <!-- This product IS an add-on: show parent products -->
                   <div class="mb-3 flex items-baseline justify-between">
@@ -316,70 +385,6 @@
                     </div>
                   }
                 }
-              </div>
-            </div>
-
-            <!-- Right Column: Product Data (Sticky) -->
-            <div class="space-y-6 p-6 lg:sticky lg:top-0 lg:col-span-3 lg:self-start">
-              <!-- Price (Hero) -->
-              <div>
-                <p class="mb-2 text-xs font-semibold tracking-wider text-gray-400 uppercase">
-                  Pricing
-                </p>
-                <p class="text-5xl font-black tracking-tight text-[#047857]">
-                  <span class="text-3xl font-extrabold">₱</span
-                  >{{ product()!.price | number: '1.2-2' }}
-                </p>
-              </div>
-
-              <!-- Basic Info -->
-              <div class="border-t border-gray-100 pt-5">
-                <p class="mb-4 text-xs font-semibold tracking-wider text-gray-400 uppercase">
-                  Details
-                </p>
-                <div class="grid grid-cols-2 gap-x-6 gap-y-4 md:grid-cols-3">
-                  <div>
-                    <p class="mb-1 text-xs font-medium text-gray-400">Code</p>
-                    <p class="font-mono text-sm font-bold text-gray-800">
-                      {{ product()!.code }}
-                    </p>
-                  </div>
-                  <div>
-                    <p class="mb-1 text-xs font-medium text-gray-400">Category</p>
-                    <app-badge variant="default">{{
-                      getProductCategoryName(product()!.category)
-                    }}</app-badge>
-                  </div>
-                  <div>
-                    <p class="mb-1 text-xs font-medium text-gray-400">Status</p>
-                    @if (product()!.isActive) {
-                      <app-badge variant="success">Active</app-badge>
-                    } @else {
-                      <app-badge variant="error">Inactive</app-badge>
-                    }
-                  </div>
-                  <div>
-                    <p class="mb-1 text-xs font-medium text-gray-400">Type</p>
-                    @if (product()!.isAddOn) {
-                      <app-badge variant="info">Add-on</app-badge>
-                    } @else {
-                      <app-badge variant="default">Standard</app-badge>
-                    }
-                  </div>
-                </div>
-              </div>
-
-              <!-- Description -->
-              @if (product()!.description) {
-                <div class="border-t border-gray-100 pt-5">
-                  <p class="mb-3 text-xs font-semibold tracking-wider text-gray-400 uppercase">
-                    Description
-                  </p>
-                  <p class="max-w-[65ch] text-sm leading-relaxed text-gray-600">
-                    {{ product()!.description }}
-                  </p>
-                </div>
-              }
             </div>
           </div>
         </div>

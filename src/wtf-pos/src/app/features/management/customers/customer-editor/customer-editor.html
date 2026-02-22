@@ -1,12 +1,12 @@
-﻿<div class="flex h-full flex-col ps-6">
+﻿<div class="flex h-full flex-col md:ps-6">
   <!-- Sticky Header -->
   <div
-    class="sticky top-0 z-10 mb-6 flex shrink-0 items-center justify-between bg-white/95 backdrop-blur-sm"
+    class="sticky top-0 z-10 mb-4 flex shrink-0 flex-col gap-3 bg-white/95 backdrop-blur-sm sm:mb-6 sm:flex-row sm:items-center sm:justify-between"
   >
     <!-- Left: Title and Navigation -->
-    <div class="flex min-w-0 items-center gap-4">
+    <div class="flex min-w-0 items-start gap-4">
       <button
-        class="tooltip tooltip-bottom cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
+        class="tooltip tooltip-bottom mt-1 shrink-0 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
         type="button"
         (click)="goBack()"
         aria-label="Go back"
@@ -15,14 +15,19 @@
         <app-icon name="icon-back" [class]="'h-5 w-5 text-gray-600'" />
       </button>
       <div class="min-w-0">
-        <h1 class="truncate text-2xl font-bold text-gray-900">
-          {{ isEditMode() ? 'Edit Customer' : 'New Customer' }}
+        <h1 class="text-2xl font-bold break-words text-gray-900">
+          {{ isEditMode() ? customerFullName() || 'Edit Customer' : 'New Customer' }}
         </h1>
+        @if (isEditMode() && lastUpdatedAt()) {
+          <p class="mt-1 text-sm text-gray-500">
+            Updated {{ lastUpdatedAt() | date: 'd MMM y, h:mm a' }}
+          </p>
+        }
       </div>
     </div>
 
     <!-- Right: Action Buttons -->
-    <div class="flex shrink-0 gap-2">
+    <div class="flex shrink-0 justify-end gap-2">
       <button type="button" class="cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-100 disabled:opacity-50 active:scale-95" (click)="goBack()" [disabled]="isSaving()">
         Cancel
       </button>
@@ -57,7 +62,7 @@
       <form id="customerForm" [formGroup]="customerForm" (ngSubmit)="saveCustomer()">
         <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <!-- Left Column: Core Details -->
-          <div class="space-y-6 lg:col-span-2">
+          <div class="order-last space-y-6 lg:order-none lg:col-span-2">
             <!-- Main Form Card -->
             <div class="card rounded-xl bg-white shadow-lg">
               <div class="card-body space-y-5">
@@ -120,7 +125,7 @@
             </div>
           </div>
           <!-- Right Column: Sidebar -->
-          <div class="space-y-6">
+          <div class="order-first space-y-6 lg:order-none">
             <!-- Customer Image Card -->
             <div class="card rounded-xl bg-white shadow-lg">
               <div class="card-body">

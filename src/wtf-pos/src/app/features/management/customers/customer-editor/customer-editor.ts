@@ -24,6 +24,7 @@ export class CustomerEditorComponent implements OnInit {
   protected readonly isLoading = signal(false);
   protected readonly isSaving = signal(false);
   protected readonly customerFullName = signal('');
+  protected readonly lastUpdatedAt = signal<string | null>(null);
 
   // Image upload signals
   protected readonly isUploading = signal(false);
@@ -196,6 +197,7 @@ export class CustomerEditorComponent implements OnInit {
           address: customer.address || '',
         });
         this.currentImageUrl.set(customer.imageUrl || null);
+        this.lastUpdatedAt.set(customer.updatedAt || customer.createdAt);
         this.isLoading.set(false);
       },
       error: (err) => {

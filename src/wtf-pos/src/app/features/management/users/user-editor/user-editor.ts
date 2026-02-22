@@ -38,6 +38,7 @@ export class UserEditorComponent implements OnInit {
   protected readonly showPassword = signal(false);
   protected readonly showConfirmPassword = signal(false);
   protected readonly userFullNameLabel = signal('');
+  protected readonly lastUpdatedAt = signal<string | null>(null);
   protected currentUserRoleLabel = 'Unknown';
   protected readonly userRoleOptions = [
     { label: 'Admin', value: UserRoleEnum.Admin },
@@ -256,8 +257,8 @@ export class UserEditorComponent implements OnInit {
           username: user.username,
           roleId: UserRoleEnum[user.roleId] !== undefined ? user.roleId : null,
         });
-        // Set current image URL for preview, matching product-editor behavior
         this.currentImageUrl.set(user.imageUrl || null);
+        this.lastUpdatedAt.set(user.updatedAt || user.createdAt);
         this.isLoading.set(false);
       },
       error: (err) => {

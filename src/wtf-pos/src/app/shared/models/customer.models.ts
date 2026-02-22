@@ -4,6 +4,10 @@
   lastName: string;
   address?: string | null;
   isActive: boolean;
+  createdAt: string;
+  createdBy: string;
+  updatedAt?: string | null;
+  updatedBy?: string | null;
   imageUrl?: string | null;
 }
 

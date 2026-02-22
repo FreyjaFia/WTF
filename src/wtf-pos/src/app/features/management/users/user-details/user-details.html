@@ -1,9 +1,9 @@
-﻿<div class="flex h-full flex-col ps-6">
-  <!-- Sticky Header: Back + Title on Left, Actions on Right -->
-  <div class="mb-6 flex shrink-0 items-center justify-between">
-    <div class="flex min-w-0 items-center gap-4">
+﻿<div class="flex h-full flex-col md:ps-6">
+  <!-- Header -->
+  <div class="mb-4 flex shrink-0 flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
+    <div class="flex min-w-0 items-start gap-4">
       <a
-        class="tooltip tooltip-bottom cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
+        class="tooltip tooltip-bottom mt-1 shrink-0 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
         [routerLink]="['/management/users']"
         aria-label="Go back"
         data-tip="Back"
@@ -12,22 +12,25 @@
       </a>
       @if (user()) {
         <div class="min-w-0">
-          <div class="flex items-center gap-3">
-            <h1 class="truncate text-2xl font-bold text-gray-900">
-              {{ user()!.firstName }} {{ user()!.lastName }}
-            </h1>
+          <h1 class="text-2xl font-bold break-words text-gray-900">
+            {{ user()!.firstName }} {{ user()!.lastName }}
+          </h1>
+          <div class="mt-1 flex flex-wrap items-center gap-2">
             @if (user()!.isActive) {
               <app-badge variant="success">Active</app-badge>
             } @else {
               <app-badge variant="error">Inactive</app-badge>
             }
           </div>
+          <p class="mt-1 text-sm text-gray-500">
+            Updated {{ user()!.updatedAt || user()!.createdAt | date: 'd MMM y, h:mm a' }}
+          </p>
         </div>
       }
     </div>
 
     @if (user() && canWriteManagement()) {
-      <div class="flex shrink-0 gap-2">
+      <div class="flex shrink-0 justify-end gap-2">
         <a
           class="btn btn-sm gap-2 rounded-lg border-0 bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg"
           [routerLink]="['/management/users/edit', user()!.id]"

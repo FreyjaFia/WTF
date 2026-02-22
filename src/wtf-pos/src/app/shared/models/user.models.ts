@@ -11,6 +11,10 @@ export interface UserDto {
   username: string;
   roleId: UserRoleEnum;
   isActive: boolean;
+  createdAt: string;
+  createdBy: string;
+  updatedAt?: string | null;
+  updatedBy?: string | null;
   imageUrl?: string | null;
 }
 
