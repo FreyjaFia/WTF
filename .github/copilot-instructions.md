@@ -577,4 +577,33 @@ Write a detailed body when:
 - The reasoning behind the change is important
 - Future developers might ask "why was this done?"
 
+### Multi-Line Commit Messages (MCP Tools / Programmatic Commits)
+
+When committing via MCP tools (e.g., `mcp_gitkraken_git_add_or_commit`) or any programmatic API, **never use literal `\n` escape sequences** in the message string — they will be committed as-is, producing broken output like:
+
+```
+Fix bug\n\nThis fixes a crash when...
+```
+
+Instead, **write the commit message to a temporary file** and use `git commit -F <file>`:
+
+```powershell
+# 1. Write the message to a temp file (real newlines)
+Set-Content -Path "tools/tmp-msg.txt" -Value @"
+Fix crash on null customer lookup
+
+The getCustomer handler threw when passed a GUID that
+did not exist. Return 404 instead.
+"@
+
+# 2. Stage and commit using the file
+git add src/handler.ts
+git commit -F tools/tmp-msg.txt
+
+# 3. Clean up
+Remove-Item tools/tmp-msg.txt
+```
+
+**Key rule:** If the tool's message parameter does not support real newlines, always fall back to `-F <file>`.
+
 ---
