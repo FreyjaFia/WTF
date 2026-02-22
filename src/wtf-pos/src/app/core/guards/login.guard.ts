@@ -7,7 +7,7 @@ export const loginGuard: CanActivateFn = () => {
   const router = inject(Router);
 
   if (auth.isTokenValid()) {
-    router.navigateByUrl('/orders');
+    router.navigateByUrl('/orders/editor');
     return false;
   }
 
