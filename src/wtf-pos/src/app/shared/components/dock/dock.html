@@ -1,5 +1,5 @@
 ﻿@if (auth.isLoggedIn$ | async) {
-  <div class="dock dock-md relative z-0 shrink-0 justify-between border-t border-gray-100 sm:justify-center">
+  <div class="dock dock-md relative z-0 shrink-0 justify-between border-t border-gray-100 pb-[env(safe-area-inset-bottom)] sm:justify-center">
     <a [routerLink]="['orders/editor']" [routerLinkActive]="'dock-active'">
       <app-icon name="icon-plus" [class]="'size-[1.2em]'" [fill]="'#000000'"></app-icon>
       <span class="dock-label">New Order</span>
