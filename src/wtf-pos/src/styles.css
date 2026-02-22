@@ -6,6 +6,9 @@
 @import 'tailwindcss';
 @plugin 'daisyui';
 
+/* Force light mode regardless of OS preference */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Apply Inter font globally */
 body {
   font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
