@@ -1,4 +1,4 @@
-﻿import { CommonModule } from '@angular/common';
+﻿import { CommonModule, Location } from '@angular/common';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import {
   AbstractControl,
@@ -29,6 +29,7 @@ export class UserEditorComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly alertService = inject(AlertService);
   private readonly authService = inject(AuthService);
+  private readonly location = inject(Location);
 
   // UI state signals
   protected readonly isEditMode = signal(false);
@@ -90,15 +91,6 @@ export class UserEditorComponent implements OnInit {
   protected userId: string | null = null;
 
   public ngOnInit(): void {
-    this.userFullNameLabel.set(
-      `${this.userForm.controls.firstName.value || ''} ${this.userForm.controls.lastName.value || ''}`.trim(),
-    );
-    this.userForm.valueChanges.subscribe(() => {
-      const first = this.userForm.controls.firstName.value || '';
-      const last = this.userForm.controls.lastName.value || '';
-      this.userFullNameLabel.set(`${first} ${last}`.trim());
-    });
-
     const isProfile = this.route.snapshot.data['isProfile'] === true;
     this.isProfileMode.set(isProfile);
 
@@ -257,6 +249,7 @@ export class UserEditorComponent implements OnInit {
           username: user.username,
           roleId: UserRoleEnum[user.roleId] !== undefined ? user.roleId : null,
         });
+        this.userFullNameLabel.set(`${user.firstName} ${user.lastName}`.trim());
         this.currentImageUrl.set(user.imageUrl || null);
         this.lastUpdatedAt.set(user.updatedAt || user.createdAt);
         this.isLoading.set(false);
@@ -435,7 +428,7 @@ export class UserEditorComponent implements OnInit {
 
   protected goBack(): void {
     if (this.isProfileMode()) {
-      this.router.navigate(['/orders/list']);
+      this.location.back();
       return;
     }
 

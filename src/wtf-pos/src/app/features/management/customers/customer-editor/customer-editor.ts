@@ -57,15 +57,6 @@ export class CustomerEditorComponent implements OnInit {
   private skipGuard = false;
 
   public ngOnInit(): void {
-    this.customerFullName.set(
-      `${this.customerForm.controls.firstName.value || ''} ${this.customerForm.controls.lastName.value || ''}`.trim(),
-    );
-    this.customerForm.valueChanges.subscribe(() => {
-      const first = this.customerForm.controls.firstName.value || '';
-      const last = this.customerForm.controls.lastName.value || '';
-      this.customerFullName.set(`${first} ${last}`.trim());
-    });
-
     const id = this.route.snapshot.paramMap.get('id');
 
     if (id) {
@@ -196,6 +187,7 @@ export class CustomerEditorComponent implements OnInit {
           lastName: customer.lastName,
           address: customer.address || '',
         });
+        this.customerFullName.set(`${customer.firstName} ${customer.lastName}`.trim());
         this.currentImageUrl.set(customer.imageUrl || null);
         this.lastUpdatedAt.set(customer.updatedAt || customer.createdAt);
         this.isLoading.set(false);

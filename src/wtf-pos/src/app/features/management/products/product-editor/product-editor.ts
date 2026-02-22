@@ -137,11 +137,6 @@ export class ProductEditorComponent implements OnInit {
   private skipGuard = false;
 
   public ngOnInit(): void {
-    this.productName.set(this.productForm.controls.name.value || '');
-    this.productForm.controls.name.valueChanges.subscribe((value) => {
-      this.productName.set(value || '');
-    });
-
     const id = this.route.snapshot.paramMap.get('id');
 
     if (id) {
@@ -176,6 +171,7 @@ export class ProductEditorComponent implements OnInit {
           isAddOn: product.isAddOn,
           isActive: product.isActive,
         });
+        this.productName.set(product.name);
         this.currentImageUrl.set(product.imageUrl || null);
         this.priceHistory.set(product.priceHistory || []);
         this.lastUpdatedAt.set(product.updatedAt || product.createdAt);
