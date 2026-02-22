@@ -1,4 +1,4 @@
-﻿<div class="flex h-full gap-4">
+﻿<div class="flex h-full md:gap-4">
   <div class="flex flex-1 flex-col">
     @if (isEditMode() && isLoading()) {
       <div class="flex justify-center py-8">
@@ -8,15 +8,17 @@
 
     @if (!isEditMode() || !isLoading()) {
       <!-- Header: Title on Left, Tools on Right -->
-      <div class="mb-6 flex shrink-0 items-center justify-between">
+      <div
+        class="mb-4 flex shrink-0 flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between"
+      >
         <!-- Left: Title -->
-        <h2 class="text-2xl font-bold text-gray-900">Products</h2>
+        <h2 class="text-xl font-bold text-gray-900 sm:text-2xl">Products</h2>
 
-        <!-- Right: Search and Filter (Grouped as Unified Toolbar) -->
-        <div class="flex items-center gap-3">
-          <!-- Search Input (Ghost Style, Fixed Width) -->
+        <!-- Right: Toolbar -->
+        <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:gap-3">
+          <!-- Row 1 (mobile): Search -->
           <label
-            class="flex w-72 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200"
+            class="flex w-full items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200 sm:w-72"
             [class.pointer-events-none]="isReadOnly() || !canManageOrderActions()"
             [class.opacity-50]="isReadOnly() || !canManageOrderActions()"
           >
@@ -33,9 +35,9 @@
             />
           </label>
 
-          <!-- Category Filter Dropdown (Right-Aligned) -->
+          <!-- Row 2 (mobile): Filter -->
           <div
-            class="dropdown dropdown-end"
+            class="flex items-center justify-end gap-2"
             [class.pointer-events-none]="isReadOnly() || !canManageOrderActions()"
             [class.opacity-50]="isReadOnly() || !canManageOrderActions()"
           >
@@ -45,6 +47,7 @@
               [options]="filterOptions()"
               [selectedIds]="selectedProductCategories()"
               [showSelectedState]="true"
+              [align]="'end'"
               (filterChange)="onProductCategoryFilterChange($event)"
               (filterReset)="onProductCategoryFilterReset()"
             />
@@ -67,8 +70,16 @@
           </div>
         }
         @if (products().length > 0) {
-          <div class="flex-1 overflow-y-auto pr-2 pb-4">
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <app-pull-to-refresh
+            class="flex-1 overflow-hidden"
+            [refreshing]="isRefreshing()"
+            (refreshTriggered)="refreshProducts()"
+          >
+            <div
+              class="grid grid-cols-1 gap-4 pb-4 sm:grid-cols-2 lg:grid-cols-3"
+              [class.pb-18]="cart().length > 0"
+              [class.md:pb-4]="cart().length > 0"
+            >
               @for (p of products(); track p.id) {
                 <div
                   class="card flex h-60 flex-col overflow-hidden rounded-xl bg-white shadow-lg transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl"
@@ -91,7 +102,7 @@
                     }
                   </figure>
                   <div class="card-body flex flex-1 flex-col justify-between p-4">
-                    <h2 class="card-title text-base font-semibold text-gray-800">{{ p.name }}</h2>
+                    <h2 class="card-title line-clamp-2 text-base font-semibold text-gray-800">{{ p.name }}</h2>
                     <div class="card-actions mt-auto items-center justify-between">
                       <div class="text-lg font-bold text-black">
                         <span class="text-base opacity-70">₱</span>{{ p.price | number: '1.2-2' }}
@@ -101,18 +112,51 @@
                 </div>
               }
             </div>
-          </div>
+          </app-pull-to-refresh>
         }
       }
+    }
+
+    <!-- Mobile: Floating Cart Button -->
+    @if (cart().length > 0) {
+      <button
+        class="fixed inset-x-4 bottom-[5.5rem] z-30 flex cursor-pointer items-center justify-between rounded-2xl border-0 bg-[#047857] px-5 py-3.5 text-white shadow-xl transition-all active:scale-[0.98] md:hidden"
+        (click)="showMobileCart.set(true)"
+      >
+        <div class="flex items-center gap-3">
+          <div class="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-sm font-bold">
+            {{ itemCount() }}
+          </div>
+          <span class="text-sm font-semibold">View Cart</span>
+        </div>
+        <span class="text-lg font-bold">
+          <span class="text-base opacity-70">₱</span>{{ totalPrice() | number: '1.2-2' }}
+        </span>
+      </button>
     }
   </div>
 
   <aside
-    class="flex min-h-0 w-80 shrink-0 flex-col overflow-hidden rounded-lg border-l-2 border-gray-200 bg-white shadow-[-8px_0_24px_rgba(0,0,0,0.1)]"
+    class="fixed inset-0 z-50 flex translate-y-full flex-col bg-white shadow-2xl transition-transform duration-300 ease-out max-md:[&.cart-open]:translate-y-0 md:relative md:inset-auto md:z-auto md:min-h-0 md:w-80 md:shrink-0 md:!translate-y-0 md:overflow-hidden md:!transition-none md:rounded-lg md:border-l-2 md:border-gray-200 md:shadow-[-8px_0_24px_rgba(0,0,0,0.1)]"
+    [class.cart-open]="showMobileCart()"
+    [style.translate]="isCartDragging() ? '0 ' + cartDragY() + 'px' : null"
+    [style.transition-duration]="isCartDragging() ? '0s' : null"
   >
+    <!-- Drag handle (mobile only) -->
+    <div
+      class="flex shrink-0 cursor-grab touch-none justify-center pt-3 pb-1 active:cursor-grabbing md:hidden"
+      (touchstart)="onCartDragStart($event)"
+      (touchmove)="onCartDragMove($event)"
+      (touchend)="onCartDragEnd()"
+      (touchcancel)="onCartDragEnd()"
+    >
+      <div class="h-1.5 w-10 rounded-full bg-gray-300"></div>
+    </div>
+
     <div class="shrink-0 border-b border-gray-100 p-4">
       <div class="flex items-center justify-between">
         <div>
+          <div>
           @if (isEditMode()) {
             <h3 class="text-lg font-semibold">
               {{ isReadOnly() ? 'Order Details' : 'Edit Order' }}
@@ -133,6 +177,7 @@
           } @else {
             <h3 class="text-lg font-semibold">New Order</h3>
           }
+          </div>
         </div>
         <button
           class="cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium text-error transition-all hover:bg-red-50 active:scale-95"
@@ -428,10 +473,10 @@
       [orderSpecialInstructions]="orderSpecialInstructions()"
       (orderConfirmed)="onOrderConfirmed($event)"
     />
-
-    <app-addon-selector (addToCart)="onAddonSelected($event)" />
   </aside>
 </div>
+
+<app-addon-selector (addToCart)="onAddonSelected($event)" />
 
 <!-- Create Customer Modal -->
 @if (showCreateCustomerModal() && canCreateCustomerInOrder()) {
@@ -592,11 +637,11 @@
   >
     <div
       role="document"
-      class="mx-4 flex max-h-[85vh] w-full max-w-3xl flex-col rounded-2xl bg-white shadow-2xl"
+      class="mx-4 flex max-h-[92vh] w-full max-w-3xl flex-col rounded-2xl bg-white shadow-2xl sm:max-h-[85vh]"
       (click)="$event.stopPropagation()"
       (keydown)="$event.stopPropagation()"
     >
-      <div class="flex items-start justify-between border-b border-gray-100 p-5">
+      <div class="flex items-start justify-between border-b border-gray-100 p-4 sm:p-5">
         <div>
           <h3 id="order-summary-title" class="text-lg font-semibold text-gray-900">
             Order #{{ currentOrder()!.orderNumber }} Summary
@@ -616,7 +661,7 @@
         </button>
       </div>
 
-      <div class="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-y-auto p-5 md:grid-cols-2">
+      <div class="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-y-auto p-4 sm:p-5 md:grid-cols-2">
         <div class="rounded-xl border border-gray-200 bg-gray-50/50 p-4">
           <div class="mb-3 text-xs font-semibold tracking-wide text-gray-500 uppercase">
             Order Summary

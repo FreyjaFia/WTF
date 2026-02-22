@@ -17,6 +17,7 @@ import {
   CustomerDropdown,
   FilterDropdown,
   Icon,
+  PullToRefreshComponent,
 } from '@shared/components';
 import {
   CartAddOnDto,
@@ -47,6 +48,7 @@ import { CheckoutModal } from '../checkout-modal/checkout-modal';
     AddonSelectorComponent,
     AvatarComponent,
     BadgeComponent,
+    PullToRefreshComponent,
   ],
   templateUrl: './order-editor.html',
 })
@@ -77,6 +79,11 @@ export class OrderEditor implements OnInit {
   protected readonly showCreateCustomerModal = signal(false);
   protected readonly isCreatingCustomer = signal(false);
   protected readonly isSavingOrder = signal(false);
+  protected readonly showMobileCart = signal(false);
+  protected readonly cartDragY = signal(0);
+  protected readonly isCartDragging = signal(false);
+  private cartDragStartY = 0;
+  protected readonly isRefreshing = signal(false);
 
   protected readonly createCustomerForm = new FormGroup({
     firstName: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
@@ -239,6 +246,32 @@ export class OrderEditor implements OnInit {
     },
   ]);
 
+  protected onCartDragStart(event: TouchEvent): void {
+    this.cartDragStartY = event.touches[0].clientY;
+    this.cartDragY.set(0);
+    this.isCartDragging.set(true);
+  }
+
+  protected onCartDragMove(event: TouchEvent): void {
+    if (!this.isCartDragging()) {
+      return;
+    }
+    const deltaY = event.touches[0].clientY - this.cartDragStartY;
+    this.cartDragY.set(Math.max(0, deltaY));
+  }
+
+  protected onCartDragEnd(): void {
+    if (!this.isCartDragging()) {
+      return;
+    }
+    const shouldDismiss = this.cartDragY() > 150;
+    this.isCartDragging.set(false);
+    this.cartDragY.set(0);
+    if (shouldDismiss) {
+      this.showMobileCart.set(false);
+    }
+  }
+
   protected onOrderSpecialInstructionsInput(event: Event): void {
     if (!this.canManageOrderActions()) {
       return;
@@ -320,6 +353,31 @@ export class OrderEditor implements OnInit {
       };
     });
     this.cart.set(cartItems);
+  }
+
+  protected refreshProducts(): void {
+    this.isRefreshing.set(true);
+
+    const { searchTerm } = this.filterForm.value;
+
+    this.productService
+      .getProducts({
+        searchTerm: searchTerm || null,
+        category: null,
+        isAddOn: false,
+        isActive: true,
+      })
+      .subscribe({
+        next: (result) => {
+          this.productsCache.set(result);
+          this.applyFiltersToCache();
+          this.isRefreshing.set(false);
+        },
+        error: (err: Error) => {
+          this.alertService.error(err.message || this.alertService.getLoadErrorMessage('products'));
+          this.isRefreshing.set(false);
+        },
+      });
   }
 
   private loadProducts(): void {
