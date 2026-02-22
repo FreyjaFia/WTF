@@ -32,6 +32,21 @@ body {
   padding-bottom: var(--safe-area-bottom, 0px);
 }
 
+/* Android edge-to-edge: fixed full-screen overlays (modals, drawers, cart)
+   sit behind the status bar. Pad them so content doesn't overlap.
+   DaisyUI modals use their own CSS for fixed positioning, not Tailwind classes. */
+:where(.fixed.inset-0),
+:where(.fixed.top-0),
+:where(dialog.modal[open]) {
+  padding-top: var(--safe-area-top, 0px);
+}
+
+/* DaisyUI modal-box: reduce max-height to account for safe-area insets
+   so the box doesn't overflow behind the status/navigation bars. */
+:where(dialog.modal[open]) .modal-box {
+  max-height: calc(100vh - 5em - var(--safe-area-top, 0px));
+}
+
 .hover\:bg-transition:hover {
   transition: background-color 0.2s ease-in-out;
 }
