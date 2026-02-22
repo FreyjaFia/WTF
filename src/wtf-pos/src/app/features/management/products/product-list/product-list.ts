@@ -4,7 +4,7 @@ import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AlertService, AuthService, ListStateService, ProductService } from '@core/services';
 import type { FilterOption } from '@shared/components';
-import { AvatarComponent, BadgeComponent, FilterDropdown, Icon } from '@shared/components';
+import { AvatarComponent, BadgeComponent, FilterDropdown, Icon, PullToRefreshComponent } from '@shared/components';
 import { ProductCategoryEnum, ProductDto } from '@shared/models';
 import { debounceTime } from 'rxjs';
 
@@ -29,6 +29,7 @@ interface ProductListState {
     FilterDropdown,
     BadgeComponent,
     AvatarComponent,
+    PullToRefreshComponent,
   ],
   templateUrl: './product-list.html',
   host: { class: 'flex-1 min-h-0' },

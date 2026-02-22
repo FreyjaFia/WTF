@@ -8,6 +8,7 @@ import {
   BadgeComponent,
   FilterDropdown,
   Icon,
+  PullToRefreshComponent,
   type FilterOption,
 } from '@shared/components';
 import { CustomerDto } from '@shared/models';
@@ -33,6 +34,7 @@ interface CustomerListState {
     FilterDropdown,
     BadgeComponent,
     AvatarComponent,
+    PullToRefreshComponent,
   ],
   templateUrl: './customer-list.html',
   host: { class: 'flex-1 min-h-0' },
