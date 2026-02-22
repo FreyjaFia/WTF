@@ -21,6 +21,15 @@ body {
   font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* Body is the viewport container. Children use h-full to fill it. */
+  height: 100dvh;
+  overflow: hidden;
+
+  /* Android edge-to-edge: --safe-area-top/bottom injected by native Java code.
+     Falls back to 0px on browsers where the variables are not set. */
+  padding-top: var(--safe-area-top, 0px);
+  padding-bottom: var(--safe-area-bottom, 0px);
 }
 
 .hover\:bg-transition:hover {
