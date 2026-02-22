@@ -90,6 +90,7 @@ builder.Services.AddCors(options =>
         {
             policy.WithOrigins(
                     "https://localhost",
+                    "http://localhost",
                     "capacitor://localhost")
                 .AllowAnyHeader()
                 .AllowAnyMethod();
