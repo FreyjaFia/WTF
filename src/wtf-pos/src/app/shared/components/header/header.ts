@@ -3,10 +3,11 @@ import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
 import { AuthService } from '@core/services';
 import { AvatarComponent } from '../avatar/avatar';
+import { Icon } from '../icons/icon/icon';
 
 @Component({
   selector: 'app-header',
-  imports: [CommonModule, AvatarComponent],
+  imports: [CommonModule, AvatarComponent, Icon],
   templateUrl: './header.html',
 })
 export class Header implements OnInit, OnDestroy {
