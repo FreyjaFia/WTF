@@ -96,13 +96,13 @@ export class AlertComponent {
   protected readonly closeClass = computed(() => {
     switch (this.type()) {
       case 'success':
-        return 'text-emerald-400 hover:text-emerald-700 hover:bg-emerald-100';
+        return 'text-emerald-700 hover:bg-emerald-100';
       case 'error':
-        return 'text-red-400 hover:text-red-700 hover:bg-red-100';
+        return 'text-red-700 hover:bg-red-100';
       case 'warning':
-        return 'text-amber-400 hover:text-amber-700 hover:bg-amber-100';
+        return 'text-amber-700 hover:bg-amber-100';
       case 'info':
-        return 'text-blue-400 hover:text-blue-700 hover:bg-blue-100';
+        return 'text-blue-700 hover:bg-blue-100';
     }
   });
 
