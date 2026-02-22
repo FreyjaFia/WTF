@@ -1,5 +1,7 @@
 ﻿<dialog id="products-swapper-modal" class="modal">
-  <div class="modal-box w-full max-w-4xl rounded-2xl shadow-2xl">
+  <div
+    class="modal-box w-full max-w-4xl rounded-2xl shadow-2xl max-sm:flex max-sm:h-full max-sm:max-h-full max-sm:w-full max-sm:max-w-full max-sm:flex-col max-sm:rounded-none"
+  >
     <h3 class="text-lg font-bold text-gray-900">Manage Linked Products</h3>
     <p class="mb-5 text-sm text-gray-400">
       Drag and drop products between the lists to link or unlink them from this add-on.
@@ -12,14 +14,13 @@
       </div>
     } @else {
       <!-- Drag and Drop Lists -->
-      <div class="mb-6 grid grid-cols-2 gap-5">
-        <!-- Available Products -->
-        <div class="flex flex-col">
+      <div class="grid min-h-0 flex-1 grid-cols-1 gap-5 max-sm:grid-rows-[1fr_1fr] sm:grid-cols-2">
+        <div class="flex min-h-0 flex-col">
           <h4 class="mb-2 text-xs font-semibold tracking-wider text-gray-400 uppercase">
             Available Products
           </h4>
           <!-- Search + Category Filters -->
-          <div class="mb-3 grid grid-cols-[1fr_auto] gap-2">
+          <div class="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto]">
             <div class="relative">
               <app-icon
                 name="icon-search"
@@ -35,7 +36,7 @@
               />
             </div>
             <select
-              class="select select-sm w-36 rounded-xl border-gray-200 bg-white text-sm focus:border-[#047857] focus:ring-1 focus:ring-[#047857]/20"
+              class="select select-sm w-full rounded-xl border-gray-200 bg-white text-sm focus:border-[#047857] focus:ring-1 focus:ring-[#047857]/20 sm:w-36"
               [value]="selectedCategory() ?? ''"
               (change)="onCategoryChange($event)"
             >
@@ -49,7 +50,7 @@
           </div>
           <ul
             #availableList
-            class="flex h-96 flex-col space-y-1 overflow-x-hidden overflow-y-auto rounded-xl border border-gray-200 bg-gray-50/50 p-3"
+            class="flex min-h-0 flex-1 flex-col space-y-1 overflow-x-hidden overflow-y-auto rounded-xl border border-gray-200 bg-gray-50/50 p-3 sm:h-96 sm:flex-none"
           >
             @for (product of filteredAvailableProducts(); track product.id) {
               <li
@@ -100,8 +101,7 @@
           </ul>
         </div>
 
-        <!-- Linked Products -->
-        <div class="flex flex-col">
+        <div class="flex min-h-0 flex-col">
           <div class="mb-2 flex items-baseline justify-between">
             <h4 class="text-xs font-semibold tracking-wider text-gray-400 uppercase">
               Linked Products
@@ -113,10 +113,10 @@
               </span>
             }
           </div>
-          <div class="mb-3 h-8"></div>
+          <div class="mb-3 hidden h-8 sm:block"></div>
           <ul
             #assignedList
-            class="flex h-96 flex-col space-y-1 overflow-x-hidden overflow-y-auto rounded-xl border border-gray-200 bg-gray-50/50 p-3"
+            class="flex min-h-0 flex-1 flex-col space-y-1 overflow-x-hidden overflow-y-auto rounded-xl border border-gray-200 bg-gray-50/50 p-3 sm:h-96 sm:flex-none"
           >
             @for (product of linkedProducts(); track product.id) {
               <li
@@ -176,7 +176,13 @@
 
     <!-- Modal Actions -->
     <div class="modal-action">
-      <button class="cursor-pointer rounded-lg px-4 py-2 font-medium text-gray-600 transition-all hover:bg-gray-100 active:scale-95" (click)="closeModal()" type="button">Cancel</button>
+      <button
+        class="cursor-pointer rounded-lg px-4 py-2 font-medium text-gray-600 transition-all hover:bg-gray-100 active:scale-95"
+        (click)="closeModal()"
+        type="button"
+      >
+        Cancel
+      </button>
       <button
         class="btn gap-2 rounded-lg border-0 bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg"
         [disabled]="isLoading() || isSaving()"

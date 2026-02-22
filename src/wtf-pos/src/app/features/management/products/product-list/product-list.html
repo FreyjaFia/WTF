@@ -1,14 +1,16 @@
-﻿<div class="flex h-full flex-col ps-6">
+﻿<div class="flex h-full flex-col md:ps-6">
   <!-- Header: Title on Left, Tools on Right -->
-  <div class="mb-6 flex shrink-0 items-center justify-between">
+  <div
+    class="mb-4 flex shrink-0 flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between"
+  >
     <!-- Left: Title -->
-    <h1 class="text-2xl font-bold text-gray-900">Products</h1>
+    <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Products</h1>
 
-    <!-- Right: Search, Filters, Refresh, and Add Button (Grouped as Unified Toolbar) -->
-    <div class="flex items-center gap-3">
-      <!-- Search Input (Ghost Style, Fixed Width) -->
+    <!-- Right: Toolbar -->
+    <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:gap-3">
+      <!-- Row 1 (mobile): Search -->
       <label
-        class="flex w-72 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200"
+        class="flex w-full items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200 sm:w-72"
       >
         <app-icon
           name="icon-search"
@@ -23,8 +25,8 @@
         />
       </label>
 
-      <!-- Category Filter Dropdown -->
-      <div class="dropdown dropdown-end">
+      <!-- Row 2 (mobile): Filters -->
+      <div class="flex items-center justify-end gap-2">
         <app-filter-dropdown
           [title]="'Category'"
           [icon]="'icon-category'"
@@ -34,56 +36,53 @@
           (filterChange)="onTypeFilterChange($event)"
           (filterReset)="onTypeFilterReset()"
         />
-      </div>
-
-      <!-- Status Filter Dropdown -->
-      <div class="dropdown dropdown-end">
         <app-filter-dropdown
           [title]="'Status'"
           [icon]="'icon-status'"
           [options]="statusOptions()"
           [selectedIds]="selectedStatuses()"
           [showSelectedState]="true"
+          [align]="'end'"
           (filterChange)="onStatusFilterChange($event)"
           (filterReset)="onStatusFilterReset()"
         />
       </div>
 
-      <!-- Refresh Button (Ghost Button Style with Tooltip) -->
-      <button
-        class="tooltip tooltip-bottom pointer-events-auto z-30 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
-        [class.opacity-70]="isRefreshing()"
-        type="button"
-        (click)="refresh()"
-        [disabled]="isRefreshing()"
-        aria-label="Refresh products"
-        data-tip="Refresh"
-      >
-        @if (isRefreshing()) {
-          <app-icon
-            name="icon-refresh"
-            [class]="'h-5 w-5 animate-spin text-gray-600'"
-            [fill]="'currentColor'"
-          />
-        } @else {
-          <app-icon
-            name="icon-refresh"
-            [class]="'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'"
-            [fill]="'currentColor'"
-          />
-        }
-      </button>
-
-      <!-- Add Product Button (Forest Green) -->
-      @if (canWriteManagement()) {
-        <a
-          class="btn btn-sm rounded-lg border-0 bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg"
-          [routerLink]="['/management/products/new']"
+      <!-- Row 3 (mobile): Actions -->
+      <div class="flex items-center justify-end gap-2">
+        <button
+          class="tooltip tooltip-bottom pointer-events-auto z-30 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
+          [class.opacity-70]="isRefreshing()"
+          type="button"
+          (click)="refresh()"
+          [disabled]="isRefreshing()"
+          aria-label="Refresh products"
+          data-tip="Refresh"
         >
-          <app-icon name="icon-plus" [class]="'h-4 w-4'" />
-          Add Product
-        </a>
-      }
+          @if (isRefreshing()) {
+            <app-icon
+              name="icon-refresh"
+              [class]="'h-5 w-5 animate-spin text-gray-600'"
+              [fill]="'currentColor'"
+            />
+          } @else {
+            <app-icon
+              name="icon-refresh"
+              [class]="'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'"
+              [fill]="'currentColor'"
+            />
+          }
+        </button>
+        @if (canWriteManagement()) {
+          <a
+            class="btn btn-sm rounded-lg border-0 bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg"
+            [routerLink]="['/management/products/new']"
+          >
+            <app-icon name="icon-plus" [class]="'h-4 w-4'" />
+            Add Product
+          </a>
+        }
+      </div>
     </div>
   </div>
 
@@ -105,10 +104,12 @@
         <p class="text-sm text-gray-500">Try adjusting your filters or add a new product</p>
       </div>
     } @else {
-      <div class="min-h-0 flex-1 overflow-y-auto pr-2 pb-4">
-        <div class="space-y-3">
+      <div class="min-h-0 flex-1 overflow-y-auto pb-4 pr-2">
+        <div class="space-y-2 md:space-y-3">
           <!-- Column Headers (Sticky) -->
-          <div class="sticky top-0 z-10 mb-2 grid grid-cols-12 gap-4 rounded-lg bg-white px-4 py-3">
+          <div
+            class="sticky top-0 z-10 mb-2 hidden grid-cols-12 gap-4 rounded-lg bg-white px-4 py-3 md:grid"
+          >
             <button
               class="col-span-5 flex cursor-pointer items-center gap-1 text-start text-xs font-semibold tracking-wider uppercase transition-colors"
               [class.text-gray-600]="sortColumn() !== 'name'"
@@ -170,37 +171,52 @@
           @if (sortedProducts().length > 0) {
             @for (product of sortedProducts(); track product.id) {
               <div
-                class="relative grid grid-cols-12 items-center gap-4 rounded-xl bg-white px-4 py-4 shadow-lg transition-shadow duration-200 hover:z-10 hover:shadow-xl focus-within:z-30"
+                class="relative flex items-center gap-3 rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm transition-shadow duration-200 focus-within:z-30 hover:z-10 hover:shadow-md md:grid md:grid-cols-12 md:gap-4 md:border-0 md:px-4 md:py-4 md:shadow-lg md:hover:shadow-xl"
               >
                 <a
-                  class="col-span-11 grid grid-cols-11 items-center gap-4 self-stretch cursor-pointer no-underline focus:outline-none"
+                  class="flex min-w-0 flex-1 cursor-pointer items-center gap-3 self-stretch no-underline focus:outline-none md:col-span-11 md:grid md:grid-cols-11 md:gap-4"
                   [routerLink]="['/management/products/details', product.id]"
                   [attr.aria-label]="'View details for ' + product.name"
                 >
                   <!-- Image and Name -->
-                  <div class="col-span-5 flex items-center gap-4">
-                    <div class="w-14 shrink-0">
+                  <div
+                    class="flex min-w-0 flex-1 items-center gap-3 md:col-span-5 md:flex-none md:gap-4"
+                  >
+                    <div class="w-10 shrink-0 md:w-14">
                       @if (product.imageUrl) {
-                        <div class="flex h-14 w-14 items-center justify-center">
+                        <div class="flex h-10 w-10 items-center justify-center md:h-14 md:w-14">
                           <img
                             [src]="product.imageUrl"
                             [alt]="product.name"
-                            class="h-14 w-14 object-contain"
+                            class="h-10 w-10 object-contain md:h-14 md:w-14"
                           />
                         </div>
                       } @else {
-                        <app-avatar [label]="product.name" [class]="'h-14 w-14'" />
+                        <app-avatar [label]="product.name" [class]="'h-10 w-10 md:h-14 md:w-14'" />
                       }
                     </div>
 
                     <div class="min-w-0">
-                      <h3 class="font-semibold text-gray-900">{{ product.name }}</h3>
+                      <h3 class="text-sm font-semibold text-gray-900 md:text-base">
+                        {{ product.name }}
+                      </h3>
                       <p class="font-mono text-xs text-gray-400">{{ product.code }}</p>
+                      <!-- Mobile: inline price + status -->
+                      <div class="mt-1 flex flex-wrap items-center gap-2 md:hidden">
+                        <span class="text-sm font-semibold text-gray-900"
+                          >₱{{ product.price.toFixed(2) }}</span
+                        >
+                        @if (product.isActive) {
+                          <app-badge variant="success">Active</app-badge>
+                        } @else {
+                          <app-badge variant="error">Inactive</app-badge>
+                        }
+                      </div>
                     </div>
                   </div>
 
-                  <!-- Status -->
-                  <div class="col-span-2 flex justify-center">
+                  <!-- Status (desktop only) -->
+                  <div class="hidden md:col-span-2 md:flex md:justify-center">
                     @if (product.isActive) {
                       <app-badge variant="success">Active</app-badge>
                     } @else {
@@ -208,8 +224,8 @@
                     }
                   </div>
 
-                  <!-- Category -->
-                  <div class="col-span-2 text-center">
+                  <!-- Category (desktop only) -->
+                  <div class="hidden md:col-span-2 md:block md:text-center">
                     <div class="text-sm text-gray-700">
                       {{ getProductCategoryName(product.category) }}
                     </div>
@@ -218,8 +234,8 @@
                     </div>
                   </div>
 
-                  <!-- Price -->
-                  <div class="col-span-2 text-right">
+                  <!-- Price (desktop only) -->
+                  <div class="hidden md:col-span-2 md:block md:text-right">
                     <div class="text-lg font-semibold text-black">
                       <span class="text-base opacity-70">₱</span>{{ product.price.toFixed(2) }}
                     </div>
@@ -228,52 +244,52 @@
 
                 <!-- Actions -->
                 <div
-                  class="relative col-span-1 flex justify-end"
+                  class="relative shrink-0 md:col-span-1 md:flex md:justify-end"
                   (click)="$event.stopPropagation()"
                   (keydown)="$event.stopPropagation()"
                   role="presentation"
                 >
                   @if (canWriteManagement()) {
                     <div class="dropdown dropdown-end">
-                    <button
-                      type="button"
-                      class="cursor-pointer rounded-lg p-1.5 transition-all hover:bg-gray-100 active:scale-95"
-                      tabindex="0"
-                      aria-label="Product actions"
-                    >
-                      <app-icon
-                        name="icon-ellipsis-vertical"
-                        [class]="'h-5 w-5 text-gray-600'"
-                        [fill]="'currentColor'"
-                      />
-                    </button>
-                    <ul
-                      tabindex="0"
-                      class="dropdown-content menu bg-base-100 rounded-box z-50 w-52 p-2 shadow"
-                    >
-                      <li>
-                        <a
-                          [routerLink]="['/management/products/edit', product.id]"
-                          (click)="$event.stopPropagation()"
-                          class="flex items-center gap-2 text-gray-700 hover:bg-gray-100"
-                        >
-                          <app-icon name="icon-edit" [class]="'h-4 w-4 text-gray-600'" />
-                          Edit
-                        </a>
-                      </li>
-                      <li>
-                        <button
-                          type="button"
-                          (click)="deleteProduct(product); $event.stopPropagation()"
-                          (keydown.enter)="deleteProduct(product); $event.stopPropagation()"
-                          (keydown.space)="deleteProduct(product); $event.stopPropagation()"
-                          class="flex items-center gap-2 text-red-600 hover:bg-red-50"
-                        >
-                          <app-icon name="icon-delete" [class]="'h-4 w-4 text-red-600'" />
-                          Delete
-                        </button>
-                      </li>
-                    </ul>
+                      <button
+                        type="button"
+                        class="cursor-pointer rounded-lg p-1.5 transition-all hover:bg-gray-100 active:scale-95"
+                        tabindex="0"
+                        aria-label="Product actions"
+                      >
+                        <app-icon
+                          name="icon-ellipsis-vertical"
+                          [class]="'h-5 w-5 text-gray-600'"
+                          [fill]="'currentColor'"
+                        />
+                      </button>
+                      <ul
+                        tabindex="0"
+                        class="dropdown-content menu bg-base-100 rounded-box z-50 w-52 p-2 shadow"
+                      >
+                        <li>
+                          <a
+                            [routerLink]="['/management/products/edit', product.id]"
+                            (click)="$event.stopPropagation()"
+                            class="flex items-center gap-2 text-gray-700 hover:bg-gray-100"
+                          >
+                            <app-icon name="icon-edit" [class]="'h-4 w-4 text-gray-600'" />
+                            Edit
+                          </a>
+                        </li>
+                        <li>
+                          <button
+                            type="button"
+                            (click)="deleteProduct(product); $event.stopPropagation()"
+                            (keydown.enter)="deleteProduct(product); $event.stopPropagation()"
+                            (keydown.space)="deleteProduct(product); $event.stopPropagation()"
+                            class="flex items-center gap-2 text-red-600 hover:bg-red-50"
+                          >
+                            <app-icon name="icon-delete" [class]="'h-4 w-4 text-red-600'" />
+                            Delete
+                          </button>
+                        </li>
+                      </ul>
                     </div>
                   }
                 </div>

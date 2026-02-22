@@ -6,24 +6,26 @@
     </div>
   </div>
 }
-<div class="navbar shrink-0 border-b border-gray-200 bg-white px-6 shadow-md">
+<div class="navbar shrink-0 border-b border-gray-200 bg-white px-3 shadow-md sm:px-6">
   <div class="flex-1">
     <a class="flex items-center gap-2 text-2xl font-bold tracking-tight">
       <span class="text-neutral">WTF</span>
       <span class="text-xs font-normal tracking-wider text-gray-500 uppercase">POS</span>
     </a>
   </div>
-  <div class="flex items-center gap-4">
+  <div class="flex items-center gap-2 sm:gap-4">
     <div class="text-right">
       <div class="text-sm font-semibold text-gray-800">{{ userFullName }}</div>
-      <div class="text-xs text-gray-500">{{ userRoleLabel }}</div>
       <div class="flex items-center justify-end gap-2 text-xs text-gray-500">
-        <span>{{ now() | date: 'EEE, MMM d, y • h:mm:ss a' }}</span>
+        <span>{{ userRoleLabel }}</span>
         <span class="inline-flex items-center gap-1.5">
           <span [class.text-emerald-700]="isOnline()" [class.text-amber-700]="!isOnline()">{{
             isOnline() ? 'Online' : 'Offline'
           }}</span>
         </span>
+      </div>
+      <div class="text-[10px] text-gray-400 sm:text-xs">
+        {{ now() | date: 'EEE, MMM d, y • h:mm:ss a' }}
       </div>
     </div>
 

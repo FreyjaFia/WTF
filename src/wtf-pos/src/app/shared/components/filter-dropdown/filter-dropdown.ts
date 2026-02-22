@@ -20,6 +20,7 @@ export class FilterDropdown {
   readonly options = input<FilterOption[]>([]);
   readonly selectedIds = input<(string | number)[]>([]);
   readonly showSelectedState = input<boolean>(false);
+  readonly align = input<'start' | 'end'>('start');
 
   readonly filterChange = output<(string | number)[]>();
   readonly filterReset = output<void>();

@@ -1,5 +1,5 @@
 ﻿<dialog id="addons-swapper-modal" class="modal">
-  <div class="modal-box w-full max-w-4xl rounded-2xl shadow-2xl">
+  <div class="modal-box w-full max-w-4xl rounded-2xl shadow-2xl max-sm:flex max-sm:h-full max-sm:max-h-full max-sm:w-full max-sm:max-w-full max-sm:flex-col max-sm:rounded-none">
     <h3 class="text-lg font-bold text-gray-900">Manage Product Add-ons</h3>
     <p class="mb-5 text-sm text-gray-400">
       Drag and drop add-ons between the lists to assign or remove them.
@@ -12,9 +12,8 @@
       </div>
     } @else {
       <!-- Drag and Drop Lists -->
-      <div class="mb-6 grid grid-cols-2 gap-5">
-        <!-- Available Add-ons -->
-        <div class="flex flex-col">
+      <div class="grid min-h-0 flex-1 grid-cols-1 gap-5 sm:grid-cols-2 max-sm:grid-rows-[1fr_1fr]">
+        <div class="flex min-h-0 flex-col">
           <h4 class="mb-2 text-xs font-semibold tracking-wider text-gray-400 uppercase">
             Available Add-ons
           </h4>
@@ -35,7 +34,7 @@
           </div>
           <ul
             #availableList
-            class="flex h-96 flex-col space-y-1 overflow-x-hidden overflow-y-auto rounded-xl border border-gray-200 bg-gray-50/50 p-3"
+            class="flex min-h-0 flex-1 flex-col space-y-1 overflow-x-hidden overflow-y-auto rounded-xl border border-gray-200 bg-gray-50/50 p-3 sm:h-96 sm:flex-none"
           >
             @for (addon of filteredAvailableAddOns(); track addon.id) {
               <li
@@ -86,8 +85,7 @@
           </ul>
         </div>
 
-        <!-- Assigned Add-ons -->
-        <div class="flex flex-col">
+        <div class="flex min-h-0 flex-col">
           <div class="mb-2 flex items-baseline justify-between">
             <h4 class="text-xs font-semibold tracking-wider text-gray-400 uppercase">
               Assigned Add-ons
@@ -99,10 +97,10 @@
               </span>
             }
           </div>
-          <div class="mb-3 h-8"></div>
+          <div class="hidden sm:block mb-3 h-8"></div>
           <ul
             #assignedList
-            class="flex h-96 flex-col space-y-1 overflow-x-hidden overflow-y-auto rounded-xl border border-gray-200 bg-gray-50/50 p-3"
+            class="flex min-h-0 flex-1 flex-col space-y-1 overflow-x-hidden overflow-y-auto rounded-xl border border-gray-200 bg-gray-50/50 p-3 sm:h-96 sm:flex-none"
           >
             @for (addon of assignedAddOns(); track addon.id) {
               <li

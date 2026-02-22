@@ -1,7 +1,43 @@
-<div class="flex h-full w-full rounded-t-2xl bg-white">
-  <!-- Sidebar Navigation -->
+<div class="flex h-full w-full flex-col rounded-t-2xl bg-white lg:flex-row">
+  <!-- Mobile Navigation -->
+  <div class="flex shrink-0 flex-col border-b border-gray-200 bg-white pb-4 lg:hidden">
+    <h2 class="mb-3 text-xl font-bold text-gray-900">Management</h2>
+    <nav class="flex gap-1 overflow-x-auto">
+      <a
+        routerLink="products"
+        routerLinkActive="bg-green-50 text-[#047857]"
+        [routerLinkActiveOptions]="{ exact: false }"
+        class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap text-gray-600 transition-colors hover:bg-gray-50"
+      >
+        <app-icon name="icon-cart" [class]="'h-4 w-4 shrink-0'"></app-icon>
+        Products
+      </a>
+      @if (canReadCustomers()) {
+        <a
+          routerLink="customers"
+          routerLinkActive="bg-green-50 text-[#047857]"
+          [routerLinkActiveOptions]="{ exact: false }"
+          class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap text-gray-600 transition-colors hover:bg-gray-50"
+        >
+          <app-icon name="icon-people" [class]="'h-4 w-4 shrink-0'"></app-icon>
+          Customers
+        </a>
+      }
+      <a
+        routerLink="users"
+        routerLinkActive="bg-green-50 text-[#047857]"
+        [routerLinkActiveOptions]="{ exact: false }"
+        class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap text-gray-600 transition-colors hover:bg-gray-50"
+      >
+        <app-icon name="icon-user" [class]="'h-4 w-4 shrink-0'"></app-icon>
+        Users
+      </a>
+    </nav>
+  </div>
+
+  <!-- Desktop Sidebar Navigation -->
   <div
-    class="flex shrink-0 flex-col border-r border-gray-200 bg-white transition-all duration-300 ease-in-out"
+    class="hidden shrink-0 flex-col border-r border-gray-200 bg-white transition-all duration-300 ease-in-out lg:flex"
     [class.w-64]="!isSidebarCollapsed()"
     [class.w-20]="isSidebarCollapsed()"
   >
@@ -96,7 +132,7 @@
   </div>
 
   <!-- Content Area -->
-  <div class="flex h-full min-h-0 flex-1 flex-col">
+  <div class="flex h-full min-h-0 flex-1 flex-col pt-4 lg:pt-0">
     <router-outlet />
   </div>
 </div>
