@@ -126,26 +126,30 @@
                   }
                 </div>
                 <div class="min-w-0 flex-1">
-                  <span class="block break-words">{{ addon.name }}</span>
-                  <span class="font-mono text-[10px] text-gray-400">{{ addon.code }}</span>
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="truncate">{{ addon.name }}</span>
+                    <span class="shrink-0 text-xs text-gray-500">
+                      ₱{{ addon.price | number: '1.2-2' }}
+                    </span>
+                  </div>
+                  <div class="mt-0.5 flex items-center justify-between gap-2">
+                    <span class="font-mono text-[10px] text-gray-400">{{ addon.code }}</span>
+                    <!-- Type Selector -->
+                    <select
+                      class="select select-xs w-24 shrink-0 rounded-lg border-gray-200 bg-gray-50 text-xs font-medium focus:border-[#047857] focus:ring-1 focus:ring-[#047857]/20"
+                      [value]="addon.type"
+                      (change)="changeAddOnType(addon.id, $event)"
+                      (mousedown)="$event.stopPropagation()"
+                      (touchstart)="$event.stopPropagation()"
+                    >
+                      @for (opt of addOnTypeOptions; track opt.value) {
+                        <option [value]="opt.value" [selected]="opt.value === addon.type">
+                          {{ opt.label }}
+                        </option>
+                      }
+                    </select>
+                  </div>
                 </div>
-                <!-- Type Selector -->
-                <select
-                  class="select select-xs w-24 shrink-0 rounded-lg border-gray-200 bg-gray-50 text-xs font-medium focus:border-[#047857] focus:ring-1 focus:ring-[#047857]/20"
-                  [value]="addon.type"
-                  (change)="changeAddOnType(addon.id, $event)"
-                  (mousedown)="$event.stopPropagation()"
-                  (touchstart)="$event.stopPropagation()"
-                >
-                  @for (opt of addOnTypeOptions; track opt.value) {
-                    <option [value]="opt.value" [selected]="opt.value === addon.type">
-                      {{ opt.label }}
-                    </option>
-                  }
-                </select>
-                <span class="shrink-0 text-xs text-gray-500">
-                  ₱{{ addon.price | number: '1.2-2' }}
-                </span>
               </li>
             }
             @if (assignedAddOns().length === 0) {
