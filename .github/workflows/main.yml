@@ -119,12 +119,12 @@ jobs:
         working-directory: src/wtf-pos
         run: npx cap sync android
 
-      # 6. Setup Java 17 (required by AGP 8.x / Gradle 8.x)
+      # 6. Setup Java 21 (required by Capacitor Android)
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 17
+          java-version: 21
 
       # 7. Setup Gradle cache
       - name: Cache Gradle
