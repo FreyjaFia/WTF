@@ -44,6 +44,8 @@ public partial class WTFDbContext : DbContext
 
     public virtual DbSet<ProductPriceHistory> ProductPriceHistories { get; set; }
 
+    public virtual DbSet<ProductSubCategory> ProductSubCategories { get; set; }
+
     public virtual DbSet<RefreshToken> RefreshTokens { get; set; }
 
     public virtual DbSet<ShortLink> ShortLinks { get; set; }
@@ -248,6 +250,10 @@ public partial class WTFDbContext : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Products_CreatedBy");
 
+            entity.HasOne(d => d.SubCategory).WithMany(p => p.Products)
+                .HasForeignKey(d => d.SubCategoryId)
+                .HasConstraintName("FK_Products_ProductSubCategories");
+
             entity.HasOne(d => d.UpdatedByNavigation).WithMany(p => p.ProductUpdatedByNavigations)
                 .HasForeignKey(d => d.UpdatedBy)
                 .HasConstraintName("FK_Products_UpdatedBy");
@@ -348,6 +354,14 @@ public partial class WTFDbContext : DbContext
                 .HasForeignKey(d => d.UpdatedBy)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ProductPriceHistory_UpdatedBy");
+        });
+
+        modelBuilder.Entity<ProductSubCategory>(entity =>
+        {
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.Name)
+                .HasMaxLength(50)
+                .IsUnicode(false);
         });
 
         modelBuilder.Entity<RefreshToken>(entity =>

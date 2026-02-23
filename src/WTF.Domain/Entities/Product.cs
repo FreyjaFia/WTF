@@ -29,6 +29,8 @@ public partial class Product
 
     public string Code { get; set; } = null!;
 
+    public int? SubCategoryId { get; set; }
+
     public virtual ProductCategory Category { get; set; } = null!;
 
     public virtual User CreatedByNavigation { get; set; } = null!;
@@ -42,6 +44,8 @@ public partial class Product
     public virtual ProductImage? ProductImage { get; set; }
 
     public virtual ICollection<ProductPriceHistory> ProductPriceHistories { get; set; } = new List<ProductPriceHistory>();
+
+    public virtual ProductSubCategory? SubCategory { get; set; }
 
     public virtual User? UpdatedByNavigation { get; set; }
 }
