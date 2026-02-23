@@ -113,6 +113,7 @@ public class GetProductsHandler(WTFDbContext db, IHttpContextAccessor httpContex
                 p.Description,
                 p.Price,
                 (ProductCategoryEnum)p.CategoryId,
+                p.SubCategoryId.HasValue ? (ProductSubCategoryEnum)p.SubCategoryId.Value : null,
                 p.IsAddOn,
                 p.IsActive,
                 p.CreatedAt,

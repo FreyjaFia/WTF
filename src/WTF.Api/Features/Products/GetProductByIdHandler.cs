@@ -52,6 +52,7 @@ public class GetProductByIdHandler(WTFDbContext db, IHttpContextAccessor httpCon
             product.Description,
             product.Price,
             (ProductCategoryEnum)product.CategoryId,
+            product.SubCategoryId.HasValue ? (ProductSubCategoryEnum)product.SubCategoryId.Value : null,
             product.IsAddOn,
             product.IsActive,
             product.CreatedAt,

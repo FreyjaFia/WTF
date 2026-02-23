@@ -32,6 +32,8 @@ public record CreateProductCommand : IRequest<ProductDto>
     public bool IsAddOn { get; init; }
 
     public bool IsActive { get; init; } = true;
+
+    public ProductSubCategoryEnum? SubCategory { get; init; }
 }
 
 public class CreateProductHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor) : IRequestHandler<CreateProductCommand, ProductDto>
@@ -56,6 +58,7 @@ public class CreateProductHandler(WTFDbContext db, IHttpContextAccessor httpCont
             Description = request.Description,
             Price = request.Price,
             CategoryId = (int)request.Category,
+            SubCategoryId = request.SubCategory.HasValue ? (int)request.SubCategory.Value : null,
             IsAddOn = request.IsAddOn,
             IsActive = request.IsActive,
             CreatedAt = DateTime.UtcNow,
@@ -72,6 +75,7 @@ public class CreateProductHandler(WTFDbContext db, IHttpContextAccessor httpCont
             product.Description,
             product.Price,
             (ProductCategoryEnum)product.CategoryId,
+            product.SubCategoryId.HasValue ? (ProductSubCategoryEnum)product.SubCategoryId.Value : null,
             product.IsAddOn,
             product.IsActive,
             product.CreatedAt,

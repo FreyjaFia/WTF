@@ -56,6 +56,7 @@ public class GetProductAddOnsHandler(WTFDbContext db, IHttpContextAccessor httpC
                         item.AddOn.Description,
                         item.AddOn.Price,
                         (ProductCategoryEnum)item.AddOn.CategoryId,
+                        item.AddOn.SubCategoryId.HasValue ? (ProductSubCategoryEnum)item.AddOn.SubCategoryId.Value : null,
                         item.AddOn.IsAddOn,
                         item.AddOn.IsActive,
                         item.AddOn.CreatedAt,
