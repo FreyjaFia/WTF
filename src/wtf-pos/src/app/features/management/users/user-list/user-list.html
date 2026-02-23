@@ -190,7 +190,7 @@
           </div>
 
           @if (sortedUsers().length > 0) {
-            @for (user of sortedUsers(); track user.id) {
+            @for (user of sortedUsers(); track user.id; let isLast = $last) {
               <div
                 class="relative flex items-center gap-3 rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm transition-shadow duration-200 hover:z-10 hover:shadow-md focus-within:z-30 md:border-0 md:shadow-lg md:hover:shadow-xl md:grid md:grid-cols-12 md:gap-4 md:px-4 md:py-4"
               >
@@ -260,7 +260,7 @@
                 <!-- Actions -->
                 <div class="shrink-0 md:col-span-1 md:flex md:justify-end" role="presentation">
                   @if (canWriteManagement()) {
-                    <div class="dropdown dropdown-end">
+                    <div class="dropdown dropdown-end" [class.dropdown-top]="isLast">
                       <button
                         type="button"
                         class="cursor-pointer rounded-lg p-1.5 transition-all hover:bg-gray-100 active:scale-95"

@@ -191,7 +191,7 @@
           </div>
 
           @if (sortedProducts().length > 0) {
-            @for (product of sortedProducts(); track product.id) {
+            @for (product of sortedProducts(); track product.id; let isLast = $last) {
               <div
                 class="relative flex items-center gap-3 rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm transition-shadow duration-200 focus-within:z-30 hover:z-10 hover:shadow-md md:grid md:grid-cols-12 md:gap-4 md:border-0 md:px-4 md:py-4 md:shadow-lg md:hover:shadow-xl"
               >
@@ -272,7 +272,7 @@
                   role="presentation"
                 >
                   @if (canWriteManagement()) {
-                    <div class="dropdown dropdown-end">
+                    <div class="dropdown dropdown-end" [class.dropdown-top]="isLast">
                       <button
                         type="button"
                         class="cursor-pointer rounded-lg p-1.5 transition-all hover:bg-gray-100 active:scale-95"
