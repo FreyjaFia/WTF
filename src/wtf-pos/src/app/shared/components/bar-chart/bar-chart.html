@@ -1,0 +1,51 @@
+<svg [attr.viewBox]="'0 0 ' + width + ' ' + height" class="block h-full w-full" preserveAspectRatio="xMidYMid meet">
+  <!-- Grid lines -->
+  @for (line of gridLines(); track line.y) {
+    <line
+      [attr.x1]="padding.left"
+      [attr.y1]="line.y"
+      [attr.x2]="width - padding.right"
+      [attr.y2]="line.y"
+      stroke="#e5e7eb"
+      stroke-width="0.5"
+      stroke-dasharray="3,3"
+    />
+    <text
+      [attr.x]="padding.left - 6"
+      [attr.y]="line.y + 3"
+      text-anchor="end"
+      class="fill-gray-400"
+      font-size="9"
+    >
+      {{ line.label }}
+    </text>
+  }
+
+  <!-- Bars -->
+  @for (bar of bars(); track bar.label) {
+    <rect
+      [attr.x]="bar.x"
+      [attr.y]="bar.y"
+      [attr.width]="bar.width"
+      [attr.height]="bar.height"
+      [attr.fill]="color()"
+      rx="3"
+      ry="3"
+      class="transition-all duration-200"
+      opacity="0.85"
+    >
+      <title>{{ bar.label }}: ₱{{ bar.value.toFixed(2) }}</title>
+    </rect>
+
+    <!-- X-axis labels -->
+    <text
+      [attr.x]="bar.x + bar.width / 2"
+      [attr.y]="height - 4"
+      text-anchor="middle"
+      class="fill-gray-500"
+      font-size="8"
+    >
+      {{ bar.label }}
+    </text>
+  }
+</svg>

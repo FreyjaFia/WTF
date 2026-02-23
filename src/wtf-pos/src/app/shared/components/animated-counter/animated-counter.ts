@@ -13,18 +13,7 @@ import { CommonModule, DecimalPipe } from '@angular/common';
 @Component({
   selector: 'app-animated-counter',
   imports: [CommonModule, DecimalPipe],
-  template: `
-    <span
-      #counterEl
-      class="inline-block transition-colors duration-700"
-      [class.scale-105]="isHighlighting()"
-      [style.color]="isHighlighting() ? highlightColor() : ''"
-    >
-      @if (prefix()) {
-        <span class="text-base font-semibold" [style.color]="prefixColor()">{{ prefix() }}</span>
-      }{{ displayValue() | number: '1.' + decimals() + '-' + decimals() }}
-    </span>
-  `,
+  templateUrl: './animated-counter.html',
   styles: `
     :host {
       display: inline;

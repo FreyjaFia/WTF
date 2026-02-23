@@ -1,0 +1,23 @@
+<svg viewBox="0 0 200 40" class="block h-full w-full" preserveAspectRatio="none">
+  <defs>
+    <linearGradient [attr.id]="gradientId()" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" [attr.stop-color]="color()" stop-opacity="0.25" />
+      <stop offset="100%" [attr.stop-color]="color()" stop-opacity="0.02" />
+    </linearGradient>
+  </defs>
+
+  @if (areaPath()) {
+    <path [attr.d]="areaPath()" [attr.fill]="'url(#' + gradientId() + ')'" />
+  }
+
+  @if (linePath()) {
+    <path
+      [attr.d]="linePath()"
+      fill="none"
+      [attr.stroke]="color()"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+  }
+</svg>
