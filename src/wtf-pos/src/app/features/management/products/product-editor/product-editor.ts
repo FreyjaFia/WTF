@@ -16,10 +16,12 @@ import {
   AddOnProductAssignmentDto,
   CreateProductAddOnPriceOverrideDto,
   CreateProductDto,
+  PRODUCT_SUB_CATEGORY_LABELS,
   ProductAddOnAssignmentDto,
   ProductAddOnPriceOverrideDto,
   ProductCategoryEnum,
   ProductPriceHistoryDto,
+  ProductSubCategoryEnum,
   UpdateProductAddOnPriceOverrideDto,
   UpdateProductDto,
 } from '@shared/models';
@@ -60,6 +62,8 @@ export class ProductEditorComponent implements OnInit {
   protected readonly isDeletingImage = signal(false);
   protected readonly isDragging = signal(false);
   protected readonly ProductCategoryEnum = ProductCategoryEnum;
+  protected readonly ProductSubCategoryEnum = ProductSubCategoryEnum;
+  protected readonly subCategoryLabels = PRODUCT_SUB_CATEGORY_LABELS;
   protected readonly selectedFile = signal<File | null>(null);
   protected readonly imagePreview = signal<string | null>(null);
   protected readonly currentImageUrl = signal<string | null>(null);
@@ -126,6 +130,7 @@ export class ProductEditorComponent implements OnInit {
       nonNullable: true,
       validators: [Validators.required],
     }),
+    subCategory: new FormControl<ProductSubCategoryEnum | null>(null),
     isAddOn: new FormControl(false, { nonNullable: true }),
     isActive: new FormControl(true, { nonNullable: true }),
   });
@@ -153,8 +158,11 @@ export class ProductEditorComponent implements OnInit {
       if (isAddOn) {
         this.productForm.controls.category.setValue(ProductCategoryEnum.Other);
         this.productForm.controls.category.disable();
+        this.productForm.controls.subCategory.setValue(null);
+        this.productForm.controls.subCategory.disable();
       } else {
         this.productForm.controls.category.enable();
+        this.productForm.controls.subCategory.enable();
       }
     });
   }
@@ -170,6 +178,7 @@ export class ProductEditorComponent implements OnInit {
           description: product.description || '',
           price: product.price,
           category: product.category,
+          subCategory: product.subCategory ?? null,
           isAddOn: product.isAddOn,
           isActive: product.isActive,
         });
@@ -183,6 +192,7 @@ export class ProductEditorComponent implements OnInit {
           this.addOnPriceOverrides.set({});
           this.addOnOverrideDrafts.set({});
           this.productForm.controls.category.disable();
+          this.productForm.controls.subCategory.disable();
           this.loadLinkedProducts(id);
         } else {
           this.loadAssignedAddOns(id);
@@ -209,6 +219,7 @@ export class ProductEditorComponent implements OnInit {
 
     if (formValue.isAddOn) {
       formValue.category = ProductCategoryEnum.Other;
+      formValue.subCategory = null;
     }
 
     if (this.isEditMode() && this.productId) {

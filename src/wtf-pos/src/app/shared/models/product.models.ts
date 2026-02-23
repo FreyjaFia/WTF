@@ -5,6 +5,18 @@
   Other = 4,
 }
 
+export enum ProductSubCategoryEnum {
+  Coffee = 1,
+  NonCoffee = 2,
+  Snacks = 3,
+}
+
+export const PRODUCT_SUB_CATEGORY_LABELS: Record<ProductSubCategoryEnum, string> = {
+  [ProductSubCategoryEnum.Coffee]: 'Coffee',
+  [ProductSubCategoryEnum.NonCoffee]: 'Non-Coffee',
+  [ProductSubCategoryEnum.Snacks]: 'Snacks',
+};
+
 export enum AddOnTypeEnum {
   Size = 1,
   Flavor = 2,
@@ -38,6 +50,7 @@ export interface ProductDto {
   description?: string | null;
   price: number;
   category: ProductCategoryEnum;
+  subCategory?: ProductSubCategoryEnum | null;
   isAddOn: boolean;
   isActive: boolean;
   createdAt: string;
@@ -64,6 +77,7 @@ export interface CreateProductDto {
   description?: string | null;
   price: number;
   category: ProductCategoryEnum;
+  subCategory?: ProductSubCategoryEnum | null;
   isAddOn: boolean;
   isActive: boolean;
 }
@@ -75,6 +89,7 @@ export interface UpdateProductDto {
   description?: string | null;
   price: number;
   category: ProductCategoryEnum;
+  subCategory?: ProductSubCategoryEnum | null;
   isAddOn: boolean;
   isActive: boolean;
 }

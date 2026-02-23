@@ -118,6 +118,14 @@
                       getProductCategoryName(product()!.category)
                     }}</app-badge>
                   </div>
+                  @if (!product()!.isAddOn) {
+                    <div>
+                      <p class="mb-1 text-xs font-medium text-gray-400">Sub Category</p>
+                      <app-badge variant="default">{{
+                        getSubCategoryName(product()!.subCategory)
+                      }}</app-badge>
+                    </div>
+                  }
                   <div>
                     <p class="mb-1 text-xs font-medium text-gray-400">Status</p>
                     @if (product()!.isActive) {

@@ -169,6 +169,28 @@
                   }
                 </div>
 
+                <!-- Sub Category -->
+                @if (!productForm.controls.isAddOn.value) {
+                  <div>
+                    <label
+                      class="mb-2 block text-sm font-semibold text-gray-900"
+                      for="productSubCategory"
+                    >
+                      Sub Category
+                    </label>
+                    <select
+                      id="productSubCategory"
+                      formControlName="subCategory"
+                      class="select w-full border-transparent bg-gray-50 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                    >
+                      <option [ngValue]="null">None</option>
+                      <option [ngValue]="ProductSubCategoryEnum.Coffee">Coffee</option>
+                      <option [ngValue]="ProductSubCategoryEnum.NonCoffee">Non-Coffee</option>
+                      <option [ngValue]="ProductSubCategoryEnum.Snacks">Snacks</option>
+                    </select>
+                  </div>
+                }
+
                 <!-- Description -->
                 <div>
                   <div class="mb-2 flex items-baseline justify-between">

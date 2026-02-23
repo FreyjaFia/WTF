@@ -11,9 +11,11 @@ import {
 import {
   ADD_ON_TYPE_ORDER,
   AddOnGroupDto,
+  PRODUCT_SUB_CATEGORY_LABELS,
   ProductCategoryEnum,
   ProductDto,
   ProductPriceHistoryDto,
+  ProductSubCategoryEnum,
 } from '@shared/models';
 
 @Component({
@@ -198,6 +200,13 @@ export class ProductDetailsComponent implements OnInit {
 
   protected getProductCategoryName(category: ProductCategoryEnum): string {
     return ProductCategoryEnum[category];
+  }
+
+  protected getSubCategoryName(subCategory?: ProductSubCategoryEnum | null): string {
+    if (subCategory == null) {
+      return 'None';
+    }
+    return PRODUCT_SUB_CATEGORY_LABELS[subCategory] ?? 'Unknown';
   }
 
   protected openPriceHistory(): void {
