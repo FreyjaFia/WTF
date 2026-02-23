@@ -45,8 +45,7 @@ export class AddonSelectorComponent {
 
       if (
         (group.type === AddOnTypeEnum.Size ||
-          group.type === AddOnTypeEnum.Flavor ||
-          group.type === AddOnTypeEnum.Sauce) &&
+          group.type === AddOnTypeEnum.Flavor) &&
         activeOptions.length > 0
       ) {
         const totalSelected = selected
@@ -54,13 +53,19 @@ export class AddonSelectorComponent {
           : 0;
 
         if (totalSelected !== 1) {
-          const label =
-            group.type === AddOnTypeEnum.Size
-              ? 'size'
-              : group.type === AddOnTypeEnum.Sauce
-                ? 'sauce'
-                : 'flavor';
+          const label = group.type === AddOnTypeEnum.Size ? 'size' : 'flavor';
           return `Please select a ${label} to continue.`;
+        }
+      }
+
+      // Sauce is optional but limited to 1
+      if (group.type === AddOnTypeEnum.Sauce && activeOptions.length > 0) {
+        const totalSelected = selected
+          ? Array.from(selected.values()).reduce((s, q) => s + q, 0)
+          : 0;
+
+        if (totalSelected > 1) {
+          return 'You can select at most one sauce.';
         }
       }
     }
@@ -140,7 +145,7 @@ export class AddonSelectorComponent {
       case AddOnTypeEnum.Flavor:
         return 'Required · Pick one';
       case AddOnTypeEnum.Sauce:
-        return 'Required · Pick one';
+        return 'Optional · Pick one';
       case AddOnTypeEnum.Topping:
         return 'Optional · Pick many';
       case AddOnTypeEnum.Extra:
@@ -195,7 +200,10 @@ export class AddonSelectorComponent {
       const currentQty = current?.get(option.id) ?? 0;
 
       if (currentQty > 0) {
-        // Size and Flavor cannot be deselected once chosen (required)
+        // Sauce can be deselected (optional); Size and Flavor cannot
+        if (type === AddOnTypeEnum.Sauce) {
+          sel[type] = new Map<string, number>();
+        }
       } else {
         sel[type] = new Map<string, number>([[option.id, 1]]);
       }

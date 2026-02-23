@@ -65,11 +65,6 @@ public class CreateOrderHandler(WTFDbContext db, IHttpContextAccessor httpContex
                     throw new InvalidOperationException("A flavor selection is required and must be exactly one.");
                 }
 
-                if (availableTypes.Contains(AddOnTypeEnum.Sauce))
-                {
-                    throw new InvalidOperationException("A sauce selection is required and must be exactly one.");
-                }
-
                 continue;
             }
 
@@ -121,9 +116,9 @@ public class CreateOrderHandler(WTFDbContext db, IHttpContextAccessor httpContex
                     ? sCount
                     : 0;
 
-                if (sauceCount != 1)
+                if (sauceCount > 1)
                 {
-                    throw new InvalidOperationException("A sauce selection is required and must be exactly one.");
+                    throw new InvalidOperationException("A sauce selection must be at most one.");
                 }
             }
         }
