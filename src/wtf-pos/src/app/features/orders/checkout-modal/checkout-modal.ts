@@ -1,6 +1,7 @@
 ﻿import { CommonModule } from '@angular/common';
-import { Component, ElementRef, computed, input, output, signal, viewChild } from '@angular/core';
+import { Component, ElementRef, computed, inject, input, output, signal, viewChild } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ModalStackService } from '@core/services';
 import { AvatarComponent, Icon } from '@shared/components';
 import { CartAddOnDto, CartItemDto, PaymentMethodEnum } from '@shared/models';
 
@@ -11,7 +12,10 @@ import { CartAddOnDto, CartItemDto, PaymentMethodEnum } from '@shared/models';
   styleUrl: './checkout-modal.css',
 })
 export class CheckoutModal {
+  private readonly modalStack = inject(ModalStackService);
   private readonly checkoutDialog = viewChild.required<ElementRef<HTMLDialogElement>>('checkoutDialog');
+
+  private modalStackId: number | null = null;
 
   readonly cartItems = input<CartItemDto[]>([]);
   readonly totalPrice = input<number>(0);
@@ -102,6 +106,7 @@ export class CheckoutModal {
     // Calculate initial change to show the amount owed
     this.calculateChange();
     this.checkoutDialog().nativeElement.showModal();
+    this.modalStackId = this.modalStack.push(() => this.cancelCheckout());
   }
 
   protected toggleSummary(): void {
@@ -137,6 +142,7 @@ export class CheckoutModal {
     // Close and immediately hide to prevent backdrop/focus artifacts during navigation
     const dialog = this.checkoutDialog().nativeElement;
     dialog.close();
+    this.removeFromStack();
 
     this.orderConfirmed.emit({
       paymentMethod,
@@ -149,6 +155,14 @@ export class CheckoutModal {
 
   protected cancelCheckout(): void {
     this.checkoutDialog().nativeElement.close();
+    this.removeFromStack();
+  }
+
+  private removeFromStack(): void {
+    if (this.modalStackId !== null) {
+      this.modalStack.remove(this.modalStackId);
+      this.modalStackId = null;
+    }
   }
 
   private resetForm(): void {

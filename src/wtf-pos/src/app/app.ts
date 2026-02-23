@@ -4,6 +4,7 @@ import { RouterOutlet } from '@angular/router';
 import { App as CapApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { StatusBar, Style } from '@capacitor/status-bar';
+import { ModalStackService } from '@core/services';
 import { ExitConfirmComponent, GlobalAlertComponent, IconsSprite } from '@shared/components';
 
 import type { PluginListenerHandle } from '@capacitor/core';
@@ -15,6 +16,7 @@ import type { PluginListenerHandle } from '@capacitor/core';
 })
 export class App implements OnInit, OnDestroy {
   private readonly location = inject(Location);
+  private readonly modalStack = inject(ModalStackService);
   private readonly zone = inject(NgZone);
 
   private readonly exitConfirm = viewChild(ExitConfirmComponent);
@@ -34,11 +36,19 @@ export class App implements OnInit, OnDestroy {
 
       this.backButtonListener = await CapApp.addListener('backButton', ({ canGoBack }) => {
         this.zone.run(() => {
+          // 1. If a modal is open, close it
+          if (this.modalStack.pop()) {
+            return;
+          }
+
+          // 2. If there is navigation history, go back
           if (canGoBack) {
             this.location.back();
-          } else {
-            this.exitConfirm()?.open();
+            return;
           }
+
+          // 3. At root — show exit confirmation
+          this.exitConfirm()?.open();
         });
       });
     }

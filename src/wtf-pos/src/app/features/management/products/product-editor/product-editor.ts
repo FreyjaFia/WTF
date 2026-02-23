@@ -2,7 +2,7 @@
 import { Component, computed, inject, OnInit, signal, ViewChild } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { AlertService, ProductService } from '@core/services';
+import { AlertService, ModalStackService, ProductService } from '@core/services';
 import {
   AddonsSwapperComponent,
   AvatarComponent,
@@ -45,6 +45,7 @@ export class ProductEditorComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly alertService = inject(AlertService);
+  private readonly modalStack = inject(ModalStackService);
 
   @ViewChild(AddonsSwapperComponent) private addonsSwapper!: AddonsSwapperComponent;
   @ViewChild(ProductsSwapperComponent) private productsSwapper!: ProductsSwapperComponent;
@@ -135,6 +136,7 @@ export class ProductEditorComponent implements OnInit {
   protected readonly showDiscardModal = signal(false);
   private pendingDeactivateResolve: ((value: boolean) => void) | null = null;
   private skipGuard = false;
+  private modalStackId: number | null = null;
 
   public ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
@@ -408,6 +410,7 @@ export class ProductEditorComponent implements OnInit {
     }
 
     this.showDiscardModal.set(true);
+    this.modalStackId = this.modalStack.push(() => this.cancelDiscard());
 
     return new Promise<boolean>((resolve) => {
       this.pendingDeactivateResolve = resolve;
@@ -415,6 +418,7 @@ export class ProductEditorComponent implements OnInit {
   }
 
   protected confirmDiscard(): void {
+    this.removeFromStack();
     this.showDiscardModal.set(false);
 
     if (this.pendingDeactivateResolve) {
@@ -424,11 +428,19 @@ export class ProductEditorComponent implements OnInit {
   }
 
   protected cancelDiscard(): void {
+    this.removeFromStack();
     this.showDiscardModal.set(false);
 
     if (this.pendingDeactivateResolve) {
       this.pendingDeactivateResolve(false);
       this.pendingDeactivateResolve = null;
+    }
+  }
+
+  private removeFromStack(): void {
+    if (this.modalStackId !== null) {
+      this.modalStack.remove(this.modalStackId);
+      this.modalStackId = null;
     }
   }
 
@@ -596,6 +608,7 @@ export class ProductEditorComponent implements OnInit {
       );
 
       modal.showModal();
+      this.addonsSwapper.registerOnStack();
     }
   }
 
@@ -624,6 +637,7 @@ export class ProductEditorComponent implements OnInit {
       );
 
       modal.showModal();
+      this.productsSwapper.registerOnStack();
     }
   }
 

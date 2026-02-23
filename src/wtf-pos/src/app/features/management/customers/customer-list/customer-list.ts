@@ -2,7 +2,7 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { AlertService, AuthService, CustomerService, ListStateService } from '@core/services';
+import { AlertService, AuthService, CustomerService, ListStateService, ModalStackService } from '@core/services';
 import {
   AvatarComponent,
   BadgeComponent,
@@ -46,6 +46,7 @@ export class CustomerListComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly alertService = inject(AlertService);
   private readonly listState = inject(ListStateService);
+  private readonly modalStack = inject(ModalStackService);
 
   protected readonly customers = signal<CustomerDto[]>([]);
   protected readonly customersCache = signal<CustomerDto[]>([]);
@@ -63,6 +64,7 @@ export class CustomerListComponent implements OnInit {
   protected readonly showDeleteModal = signal(false);
   protected readonly customerToDelete = signal<CustomerDto | null>(null);
   protected readonly isDeleting = signal(false);
+  private modalStackId: number | null = null;
 
   protected readonly statusCounts = computed(() => {
     const cache = this.customersCache();
@@ -184,6 +186,7 @@ export class CustomerListComponent implements OnInit {
     }
     this.customerToDelete.set(customer);
     this.showDeleteModal.set(true);
+    this.modalStackId = this.modalStack.push(() => this.cancelDelete());
   }
 
   protected cancelDelete(): void {
@@ -193,6 +196,7 @@ export class CustomerListComponent implements OnInit {
 
     this.showDeleteModal.set(false);
     this.customerToDelete.set(null);
+    this.removeFromStack();
   }
 
   protected confirmDelete(): void {
@@ -218,6 +222,7 @@ export class CustomerListComponent implements OnInit {
         this.isDeleting.set(false);
         this.showDeleteModal.set(false);
         this.customerToDelete.set(null);
+        this.removeFromStack();
         this.loadCustomers();
       },
       error: (err) => {
@@ -225,6 +230,13 @@ export class CustomerListComponent implements OnInit {
         this.alertService.error(err.message);
       },
     });
+  }
+
+  private removeFromStack(): void {
+    if (this.modalStackId !== null) {
+      this.modalStack.remove(this.modalStackId);
+      this.modalStackId = null;
+    }
   }
 
   protected toggleSort(column: SortColumn): void {

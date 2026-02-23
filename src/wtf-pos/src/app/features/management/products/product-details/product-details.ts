@@ -1,7 +1,7 @@
 ﻿import { CommonModule } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { AlertService, AuthService, ProductService } from '@core/services';
+import { AlertService, AuthService, ModalStackService, ProductService } from '@core/services';
 import {
   AvatarComponent,
   BadgeComponent,
@@ -37,6 +37,7 @@ export class ProductDetailsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly alertService = inject(AlertService);
   private readonly authService = inject(AuthService);
+  private readonly modalStack = inject(ModalStackService);
 
   protected readonly product = signal<ProductDto | null>(null);
   protected readonly addOns = signal<AddOnGroupDto[]>([]);
@@ -48,6 +49,7 @@ export class ProductDetailsComponent implements OnInit {
   protected readonly showAllLinked = signal(false);
   protected readonly showDeleteModal = signal(false);
   protected readonly isDeleting = signal(false);
+  private modalStackId: number | null = null;
 
   protected readonly sortedAddOns = computed(() =>
     [...this.addOns()]
@@ -150,6 +152,7 @@ export class ProductDetailsComponent implements OnInit {
     }
 
     this.showDeleteModal.set(true);
+    this.modalStackId = this.modalStack.push(() => this.cancelDelete());
   }
 
   protected cancelDelete(): void {
@@ -158,6 +161,7 @@ export class ProductDetailsComponent implements OnInit {
     }
 
     this.showDeleteModal.set(false);
+    this.removeFromStack();
   }
 
   protected confirmDelete(): void {
@@ -181,6 +185,7 @@ export class ProductDetailsComponent implements OnInit {
       next: () => {
         this.isDeleting.set(false);
         this.showDeleteModal.set(false);
+        this.removeFromStack();
         this.alertService.successDeleted('Product');
         this.router.navigateByUrl('/management/products');
       },
@@ -201,6 +206,13 @@ export class ProductDetailsComponent implements OnInit {
 
   protected closePriceHistory(): void {
     this.isHistoryOpen.set(false);
+  }
+
+  private removeFromStack(): void {
+    if (this.modalStackId !== null) {
+      this.modalStack.remove(this.modalStackId);
+      this.modalStackId = null;
+    }
   }
 
   protected toggleShowAllAddOns(): void {

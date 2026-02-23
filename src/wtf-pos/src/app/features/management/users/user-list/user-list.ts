@@ -2,7 +2,7 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { AlertService, AuthService, ListStateService, UserService } from '@core/services';
+import { AlertService, AuthService, ListStateService, ModalStackService, UserService } from '@core/services';
 import {
     AvatarComponent,
     BadgeComponent,
@@ -47,6 +47,7 @@ export class UserListComponent implements OnInit {
   private readonly alertService = inject(AlertService);
   private readonly authService = inject(AuthService);
   private readonly listState = inject(ListStateService);
+  private readonly modalStack = inject(ModalStackService);
 
   protected readonly users = signal<UserDto[]>([]);
   protected readonly usersCache = signal<UserDto[]>([]);
@@ -65,6 +66,7 @@ export class UserListComponent implements OnInit {
   protected readonly showDeleteModal = signal(false);
   protected readonly userToDelete = signal<UserDto | null>(null);
   protected readonly isDeleting = signal(false);
+  private modalStackId: number | null = null;
 
   protected readonly statusCounts = computed(() => {
     const cache = this.usersCache();
@@ -215,6 +217,7 @@ export class UserListComponent implements OnInit {
 
     this.userToDelete.set(user);
     this.showDeleteModal.set(true);
+    this.modalStackId = this.modalStack.push(() => this.cancelDelete());
   }
 
   protected cancelDelete(): void {
@@ -224,6 +227,7 @@ export class UserListComponent implements OnInit {
 
     this.showDeleteModal.set(false);
     this.userToDelete.set(null);
+    this.removeFromStack();
   }
 
   protected confirmDelete(): void {
@@ -249,6 +253,7 @@ export class UserListComponent implements OnInit {
         this.isDeleting.set(false);
         this.showDeleteModal.set(false);
         this.userToDelete.set(null);
+        this.removeFromStack();
         this.loadUsers();
       },
       error: (err) => {
@@ -256,6 +261,13 @@ export class UserListComponent implements OnInit {
         this.alertService.error(err.message);
       },
     });
+  }
+
+  private removeFromStack(): void {
+    if (this.modalStackId !== null) {
+      this.modalStack.remove(this.modalStackId);
+      this.modalStackId = null;
+    }
   }
 
   protected toggleSort(column: SortColumn): void {

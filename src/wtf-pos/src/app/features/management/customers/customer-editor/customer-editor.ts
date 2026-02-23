@@ -2,7 +2,7 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { AlertService, CustomerService } from '@core/services';
+import { AlertService, CustomerService, ModalStackService } from '@core/services';
 import { Icon, AvatarComponent } from '@shared/components';
 import { CreateCustomerDto, UpdateCustomerDto } from '@shared/models';
 
@@ -19,6 +19,7 @@ export class CustomerEditorComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly alertService = inject(AlertService);
+  private readonly modalStack = inject(ModalStackService);
 
   protected readonly isEditMode = signal(false);
   protected readonly isLoading = signal(false);
@@ -55,6 +56,7 @@ export class CustomerEditorComponent implements OnInit {
   protected readonly showDiscardModal = signal(false);
   private pendingDeactivateResolve: ((value: boolean) => void) | null = null;
   private skipGuard = false;
+  private modalStackId: number | null = null;
 
   public ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
@@ -294,6 +296,7 @@ export class CustomerEditorComponent implements OnInit {
     }
 
     this.showDiscardModal.set(true);
+    this.modalStackId = this.modalStack.push(() => this.cancelDiscard());
 
     return new Promise<boolean>((resolve) => {
       this.pendingDeactivateResolve = resolve;
@@ -301,6 +304,7 @@ export class CustomerEditorComponent implements OnInit {
   }
 
   protected confirmDiscard(): void {
+    this.removeFromStack();
     this.showDiscardModal.set(false);
 
     if (this.pendingDeactivateResolve) {
@@ -310,6 +314,7 @@ export class CustomerEditorComponent implements OnInit {
   }
 
   protected cancelDiscard(): void {
+    this.removeFromStack();
     this.showDiscardModal.set(false);
 
     if (this.pendingDeactivateResolve) {
@@ -360,6 +365,13 @@ export class CustomerEditorComponent implements OnInit {
   protected hasError(controlName: string): boolean {
     const control = this.customerForm.get(controlName);
     return !!control && control.invalid && control.touched;
+  }
+
+  private removeFromStack(): void {
+    if (this.modalStackId !== null) {
+      this.modalStack.remove(this.modalStackId);
+      this.modalStackId = null;
+    }
   }
 }
 

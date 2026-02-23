@@ -1,7 +1,7 @@
 ﻿import { CommonModule } from '@angular/common';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { AlertService, AuthService, CustomerService } from '@core/services';
+import { AlertService, AuthService, CustomerService, ModalStackService } from '@core/services';
 import { AvatarComponent, BadgeComponent, Icon } from '@shared/components';
 import { CustomerDto } from '@shared/models';
 
@@ -19,11 +19,13 @@ export class CustomerDetailsComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly alertService = inject(AlertService);
+  private readonly modalStack = inject(ModalStackService);
 
   protected readonly customer = signal<CustomerDto | null>(null);
   protected readonly isLoading = signal(false);
   protected readonly showDeleteModal = signal(false);
   protected readonly isDeleting = signal(false);
+  private modalStackId: number | null = null;
 
   public ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
@@ -72,6 +74,7 @@ export class CustomerDetailsComponent implements OnInit {
     }
 
     this.showDeleteModal.set(true);
+    this.modalStackId = this.modalStack.push(() => this.cancelDelete());
   }
 
   protected cancelDelete(): void {
@@ -80,6 +83,7 @@ export class CustomerDetailsComponent implements OnInit {
     }
 
     this.showDeleteModal.set(false);
+    this.removeFromStack();
   }
 
   protected confirmDelete(): void {
@@ -103,6 +107,7 @@ export class CustomerDetailsComponent implements OnInit {
       next: () => {
         this.isDeleting.set(false);
         this.showDeleteModal.set(false);
+        this.removeFromStack();
         this.alertService.successDeleted('Customer');
         this.router.navigateByUrl('/management/customers');
       },
@@ -115,5 +120,12 @@ export class CustomerDetailsComponent implements OnInit {
 
   protected canWriteManagement(): boolean {
     return this.authService.canWriteManagement();
+  }
+
+  private removeFromStack(): void {
+    if (this.modalStackId !== null) {
+      this.modalStack.remove(this.modalStackId);
+      this.modalStackId = null;
+    }
   }
 }

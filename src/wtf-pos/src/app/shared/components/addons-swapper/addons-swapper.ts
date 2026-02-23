@@ -8,7 +8,7 @@ import {
   signal,
   ViewChild,
 } from '@angular/core';
-import { AlertService, ProductService } from '@core/services';
+import { AlertService, ModalStackService, ProductService } from '@core/services';
 import { Icon } from '@shared/components/icons/icon/icon';
 import { AvatarComponent } from '@shared/components/avatar/avatar';
 import { AddOnTypeEnum, ProductDto } from '@shared/models';
@@ -21,8 +21,11 @@ import Sortable from 'sortablejs';
   styleUrls: ['./addons-swapper.css'],
 })
 export class AddonsSwapperComponent implements AfterViewInit {
+  private readonly modalStack = inject(ModalStackService);
   private readonly productService = inject(ProductService);
   private readonly alertService = inject(AlertService);
+
+  private modalStackId: number | null = null;
 
   @ViewChild('availableList') private availableList!: ElementRef;
   @ViewChild('assignedList') private assignedList!: ElementRef;
@@ -191,6 +194,15 @@ export class AddonsSwapperComponent implements AfterViewInit {
     if (modal) {
       modal.close();
     }
+
+    if (this.modalStackId !== null) {
+      this.modalStack.remove(this.modalStackId);
+      this.modalStackId = null;
+    }
+  }
+
+  public registerOnStack(): void {
+    this.modalStackId = this.modalStack.push(() => this.closeModal());
   }
 
   protected onSearchInput(event: Event): void {

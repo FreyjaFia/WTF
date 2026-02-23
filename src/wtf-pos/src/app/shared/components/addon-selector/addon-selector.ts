@@ -1,6 +1,6 @@
 ﻿import { CommonModule } from '@angular/common';
 import { Component, computed, inject, output, signal } from '@angular/core';
-import { ProductService } from '@core/services';
+import { ModalStackService, ProductService } from '@core/services';
 import { AvatarComponent } from '@shared/components/avatar/avatar';
 import { Icon } from '@shared/components/icons/icon/icon';
 import { ADD_ON_TYPE_ORDER, AddOnGroupDto, AddOnTypeEnum, CartAddOnDto, ProductDto } from '@shared/models';
@@ -11,7 +11,10 @@ import { ADD_ON_TYPE_ORDER, AddOnGroupDto, AddOnTypeEnum, CartAddOnDto, ProductD
   templateUrl: './addon-selector.html',
 })
 export class AddonSelectorComponent {
+  private readonly modalStack = inject(ModalStackService);
   private readonly productService = inject(ProductService);
+
+  private modalStackId: number | null = null;
 
   // Special instructions for this item
   protected readonly specialInstructions = signal<string>('');
@@ -103,6 +106,7 @@ export class AddonSelectorComponent {
     this.selections.set({});
     this.specialInstructions.set('');
     this.isOpen.set(true);
+    this.modalStackId = this.modalStack.push(() => this.close());
     this.loadAddOns(product.id);
   }
 
@@ -281,5 +285,10 @@ export class AddonSelectorComponent {
     this.addOnGroups.set([]);
     this.selections.set({});
     this.specialInstructions.set('');
+
+    if (this.modalStackId !== null) {
+      this.modalStack.remove(this.modalStackId);
+      this.modalStackId = null;
+    }
   }
 }

@@ -2,7 +2,7 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { AlertService, AuthService, ListStateService, ProductService } from '@core/services';
+import { AlertService, AuthService, ListStateService, ModalStackService, ProductService } from '@core/services';
 import type { FilterOption } from '@shared/components';
 import { AvatarComponent, BadgeComponent, FilterDropdown, Icon, PullToRefreshComponent } from '@shared/components';
 import { ProductCategoryEnum, ProductDto } from '@shared/models';
@@ -41,6 +41,7 @@ export class ProductListComponent implements OnInit {
   private readonly alertService = inject(AlertService);
   private readonly authService = inject(AuthService);
   private readonly listState = inject(ListStateService);
+  private readonly modalStack = inject(ModalStackService);
 
   protected readonly products = signal<ProductDto[]>([]);
   protected readonly productsCache = signal<ProductDto[]>([]);
@@ -60,6 +61,7 @@ export class ProductListComponent implements OnInit {
   protected readonly showDeleteModal = signal(false);
   protected readonly productToDelete = signal<ProductDto | null>(null);
   protected readonly isDeleting = signal(false);
+  private modalStackId: number | null = null;
 
   protected readonly categoryCounts = computed(() => {
     const cache = this.productsCache();
@@ -213,6 +215,7 @@ export class ProductListComponent implements OnInit {
 
     this.productToDelete.set(product);
     this.showDeleteModal.set(true);
+    this.modalStackId = this.modalStack.push(() => this.cancelDelete());
   }
 
   protected cancelDelete(): void {
@@ -222,6 +225,7 @@ export class ProductListComponent implements OnInit {
 
     this.showDeleteModal.set(false);
     this.productToDelete.set(null);
+    this.removeFromStack();
   }
 
   protected confirmDelete(): void {
@@ -247,6 +251,7 @@ export class ProductListComponent implements OnInit {
         this.isDeleting.set(false);
         this.showDeleteModal.set(false);
         this.productToDelete.set(null);
+        this.removeFromStack();
         this.loadProducts();
       },
       error: (err) => {
@@ -254,6 +259,13 @@ export class ProductListComponent implements OnInit {
         this.alertService.error(err.message);
       },
     });
+  }
+
+  private removeFromStack(): void {
+    if (this.modalStackId !== null) {
+      this.modalStack.remove(this.modalStackId);
+      this.modalStackId = null;
+    }
   }
 
   protected getProductCategoryName(category: ProductCategoryEnum): string {

@@ -8,7 +8,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { AlertService, AuthService, CustomerService, OrderService, ProductService } from '@core/services';
+import { AlertService, AuthService, CustomerService, ModalStackService, OrderService, ProductService } from '@core/services';
 import type { CustomerDropdownOption, FilterOption } from '@shared/components';
 import {
   AddonSelectorComponent,
@@ -62,6 +62,7 @@ export class OrderEditor implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly alertService = inject(AlertService);
+  private readonly modalStack = inject(ModalStackService);
 
   // Order-level special instructions state
   public readonly orderSpecialInstructions = signal('');
@@ -72,6 +73,10 @@ export class OrderEditor implements OnInit {
   private pendingDeactivateResolve: ((value: boolean) => void) | null = null;
   private skipGuard = false;
   private originalCartSnapshot = '';
+  private abandonModalStackId: number | null = null;
+  private cancelOrderModalStackId: number | null = null;
+  private summaryModalStackId: number | null = null;
+  private createCustomerModalStackId: number | null = null;
 
   // Cancel order
   protected readonly showCancelOrderModal = signal(false);
@@ -337,7 +342,7 @@ export class OrderEditor implements OnInit {
           expandedAddOns.push({
             addOnId: ao.productId,
             name: '',
-            price: 0,
+            price: isReadOnly ? (ao.price ?? 0) : 0,
           });
         }
       }
@@ -463,7 +468,9 @@ export class OrderEditor implements OnInit {
       const product = allProducts.find((p) => p.id === cartItem.productId);
       const enrichedAddOns = cartItem.addOns?.map((ao) => {
         const addOnProduct = allProducts.find((p) => p.id === ao.addOnId);
-        return addOnProduct ? { ...ao, name: addOnProduct.name, price: addOnProduct.price } : ao;
+        return addOnProduct
+          ? { ...ao, name: addOnProduct.name, price: this.isReadOnly() ? ao.price : addOnProduct.price }
+          : ao;
       });
 
       return product
@@ -663,10 +670,12 @@ export class OrderEditor implements OnInit {
       return;
     }
     this.showOrderSummaryModal.set(true);
+    this.summaryModalStackId = this.modalStack.push(() => this.closeOrderSummaryModal());
   }
 
   protected closeOrderSummaryModal() {
     this.showOrderSummaryModal.set(false);
+    this.removeStackId('summary');
   }
 
   protected openCreateCustomerModal(): void {
@@ -682,6 +691,7 @@ export class OrderEditor implements OnInit {
     this.createCustomerForm.markAsPristine();
     this.createCustomerForm.markAsUntouched();
     this.showCreateCustomerModal.set(true);
+    this.createCustomerModalStackId = this.modalStack.push(() => this.closeCreateCustomerModal());
   }
 
   protected closeCreateCustomerModal(): void {
@@ -689,6 +699,7 @@ export class OrderEditor implements OnInit {
       return;
     }
     this.showCreateCustomerModal.set(false);
+    this.removeStackId('createCustomer');
   }
 
   protected saveCustomerFromModal(): void {
@@ -717,6 +728,7 @@ export class OrderEditor implements OnInit {
           this.customers.set([...this.customers(), createdCustomer]);
           this.selectedCustomerId.set(createdCustomer.id);
           this.showCreateCustomerModal.set(false);
+          this.removeStackId('createCustomer');
           this.isCreatingCustomer.set(false);
           this.alertService.successCreated('Customer');
         },
@@ -738,6 +750,7 @@ export class OrderEditor implements OnInit {
     }
 
     this.showAbandonModal.set(true);
+    this.abandonModalStackId = this.modalStack.push(() => this.cancelAbandon());
 
     return new Promise<boolean>((resolve) => {
       this.pendingDeactivateResolve = resolve;
@@ -746,6 +759,7 @@ export class OrderEditor implements OnInit {
 
   protected confirmAbandon(): void {
     this.showAbandonModal.set(false);
+    this.removeStackId('abandon');
 
     if (this.pendingDeactivateResolve) {
       this.pendingDeactivateResolve(true);
@@ -755,6 +769,7 @@ export class OrderEditor implements OnInit {
 
   protected cancelAbandon(): void {
     this.showAbandonModal.set(false);
+    this.removeStackId('abandon');
 
     if (this.pendingDeactivateResolve) {
       this.pendingDeactivateResolve(false);
@@ -769,6 +784,7 @@ export class OrderEditor implements OnInit {
     }
 
     this.showCancelOrderModal.set(true);
+    this.cancelOrderModalStackId = this.modalStack.push(() => this.dismissCancelOrder());
   }
 
   protected confirmCancelOrder(): void {
@@ -783,6 +799,7 @@ export class OrderEditor implements OnInit {
     }
 
     this.showCancelOrderModal.set(false);
+    this.removeStackId('cancelOrder');
 
     this.orderService.voidOrder(order.id).subscribe({
       next: () => {
@@ -804,6 +821,17 @@ export class OrderEditor implements OnInit {
 
   protected dismissCancelOrder(): void {
     this.showCancelOrderModal.set(false);
+    this.removeStackId('cancelOrder');
+  }
+
+  private removeStackId(modal: 'abandon' | 'cancelOrder' | 'summary' | 'createCustomer'): void {
+    const key = `${modal}ModalStackId` as const;
+    const id = this[key];
+
+    if (id !== null) {
+      this.modalStack.remove(id);
+      this[key] = null;
+    }
   }
 
   protected checkout(): void {

@@ -9,7 +9,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { AlertService, AuthService, UserService } from '@core/services';
+import { AlertService, AuthService, ModalStackService, UserService } from '@core/services';
 import { AvatarComponent, Icon } from '@shared/components';
 import { CreateUserDto, UpdateUserDto, UserRoleEnum } from '@shared/models';
 import { jwtDecode } from 'jwt-decode';
@@ -30,6 +30,7 @@ export class UserEditorComponent implements OnInit {
   private readonly alertService = inject(AlertService);
   private readonly authService = inject(AuthService);
   private readonly location = inject(Location);
+  private readonly modalStack = inject(ModalStackService);
 
   // UI state signals
   protected readonly isEditMode = signal(false);
@@ -87,6 +88,7 @@ export class UserEditorComponent implements OnInit {
   protected readonly showDiscardModal = signal(false);
   private pendingDeactivateResolve: ((value: boolean) => void) | null = null;
   private skipGuard = false;
+  private modalStackId: number | null = null;
 
   protected userId: string | null = null;
 
@@ -498,12 +500,14 @@ export class UserEditorComponent implements OnInit {
     }
 
     this.showDiscardModal.set(true);
+    this.modalStackId = this.modalStack.push(() => this.cancelDiscard());
     return new Promise((resolve) => {
       this.pendingDeactivateResolve = resolve;
     });
   }
 
   protected cancelDiscard(): void {
+    this.removeFromStack();
     this.showDiscardModal.set(false);
     if (this.pendingDeactivateResolve) {
       this.pendingDeactivateResolve(false);
@@ -512,6 +516,7 @@ export class UserEditorComponent implements OnInit {
   }
 
   protected confirmDiscard(): void {
+    this.removeFromStack();
     this.showDiscardModal.set(false);
 
     if (this.pendingDeactivateResolve) {
@@ -624,6 +629,13 @@ export class UserEditorComponent implements OnInit {
       return null;
     } catch {
       return null;
+    }
+  }
+
+  private removeFromStack(): void {
+    if (this.modalStackId !== null) {
+      this.modalStack.remove(this.modalStackId);
+      this.modalStackId = null;
     }
   }
 }

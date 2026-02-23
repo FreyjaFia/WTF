@@ -1,7 +1,7 @@
 ﻿import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { AlertService, AuthService, UserService } from '@core/services';
+import { AlertService, AuthService, ModalStackService, UserService } from '@core/services';
 import { AvatarComponent, BadgeComponent, Icon } from '@shared/components';
 import { UserDto, UserRoleEnum } from '@shared/models';
 
@@ -19,11 +19,13 @@ export class UserDetailsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly alertService = inject(AlertService);
   private readonly authService = inject(AuthService);
+  private readonly modalStack = inject(ModalStackService);
 
   protected readonly user = signal<UserDto | null>(null);
   protected readonly isLoading = signal(false);
   protected readonly showDeleteModal = signal(false);
   protected readonly isDeleting = signal(false);
+  private modalStackId: number | null = null;
   // For image preview consistency with editor
   protected readonly currentImageUrl = signal<string | null>(null);
 
@@ -77,6 +79,7 @@ export class UserDetailsComponent implements OnInit {
     }
 
     this.showDeleteModal.set(true);
+    this.modalStackId = this.modalStack.push(() => this.cancelDelete());
   }
 
   protected cancelDelete(): void {
@@ -85,6 +88,7 @@ export class UserDetailsComponent implements OnInit {
     }
 
     this.showDeleteModal.set(false);
+    this.removeFromStack();
   }
 
   protected confirmDelete(): void {
@@ -108,6 +112,7 @@ export class UserDetailsComponent implements OnInit {
       next: () => {
         this.isDeleting.set(false);
         this.showDeleteModal.set(false);
+        this.removeFromStack();
         this.alertService.successDeleted('User');
         this.router.navigateByUrl('/management/users');
       },
@@ -128,5 +133,12 @@ export class UserDetailsComponent implements OnInit {
       return 'Unknown';
     }
     return enumName.replace(/([a-z])([A-Z])/g, '$1 $2').trim();
+  }
+
+  private removeFromStack(): void {
+    if (this.modalStackId !== null) {
+      this.modalStack.remove(this.modalStackId);
+      this.modalStackId = null;
+    }
   }
 }
