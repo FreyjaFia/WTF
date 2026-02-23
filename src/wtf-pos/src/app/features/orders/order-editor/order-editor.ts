@@ -9,13 +9,12 @@ import {
 } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AlertService, AuthService, CustomerService, ModalStackService, OrderService, ProductService } from '@core/services';
-import type { CustomerDropdownOption, FilterOption, ReceiptData } from '@shared/components';
+import type { CustomerDropdownOption, ReceiptData } from '@shared/components';
 import {
   AddonSelectorComponent,
   AvatarComponent,
   BadgeComponent,
   CustomerDropdown,
-  FilterDropdown,
   Icon,
   OrderReceiptComponent,
   PullToRefreshComponent,
@@ -32,6 +31,7 @@ import {
   PaymentMethodEnum,
   ProductCategoryEnum,
   ProductDto,
+  ProductSubCategoryEnum,
   UpdateOrderCommand,
 } from '@shared/models';
 import { debounceTime, forkJoin, of, switchMap } from 'rxjs';
@@ -45,7 +45,6 @@ import { CheckoutModal } from '../checkout-modal/checkout-modal';
     FormsModule,
     Icon,
     CheckoutModal,
-    FilterDropdown,
     CustomerDropdown,
     AddonSelectorComponent,
     AvatarComponent,
@@ -105,6 +104,12 @@ export class OrderEditor implements OnInit {
     searchTerm: new FormControl(''),
   });
   protected readonly selectedProductCategories = signal<ProductCategoryEnum[]>([]);
+  protected readonly activeSubCategoryTab = signal<ProductSubCategoryEnum>(ProductSubCategoryEnum.Coffee);
+  protected readonly subCategoryTabs = [
+    { id: ProductSubCategoryEnum.Coffee, label: 'Coffee', icon: 'icon-coffee' },
+    { id: ProductSubCategoryEnum.NonCoffee, label: 'Non-Coffee', icon: 'icon-cold-drink' },
+    { id: ProductSubCategoryEnum.Snacks, label: 'Snacks', icon: 'icon-snacks' },
+  ];
   protected readonly cart = signal<CartItemDto[]>([]);
   protected readonly customers = signal<CustomerDto[]>([]);
   protected readonly products = signal<ProductDto[]>([]);
@@ -277,18 +282,10 @@ export class OrderEditor implements OnInit {
     };
   });
 
-  protected readonly filterOptions = computed<FilterOption[]>(() => [
-    {
-      id: ProductCategoryEnum.Drink,
-      label: 'Drink',
-      count: this.categoryCounts()[ProductCategoryEnum.Drink],
-    },
-    {
-      id: ProductCategoryEnum.Food,
-      label: 'Food',
-      count: this.categoryCounts()[ProductCategoryEnum.Food],
-    },
-  ]);
+  protected selectSubCategoryTab(tab: ProductSubCategoryEnum): void {
+    this.activeSubCategoryTab.set(tab);
+    this.applyFiltersToCache();
+  }
 
   protected onCartDragStart(event: TouchEvent): void {
     this.cartDragStartY = event.touches[0].clientY;
@@ -1021,8 +1018,7 @@ export class OrderEditor implements OnInit {
 
   private applyFiltersToCache(): void {
     const { searchTerm } = this.filterForm.value;
-
-    const allowedCategories = this.selectedProductCategories();
+    const activeTab = this.activeSubCategoryTab();
 
     let items = [...this.productsCache()];
 
@@ -1031,21 +1027,9 @@ export class OrderEditor implements OnInit {
       items = items.filter((p) => p.name.toLowerCase().includes(lowerSearchTerm));
     }
 
-    if (allowedCategories.length > 0) {
-      items = items.filter((p) => allowedCategories.includes(p.category));
-    }
+    items = items.filter((p) => p.subCategory === activeTab);
 
     this.products.set(items);
-  }
-
-  protected onProductCategoryFilterChange(selectedIds: (string | number)[]): void {
-    this.selectedProductCategories.set(selectedIds as ProductCategoryEnum[]);
-    this.applyFiltersToCache();
-  }
-
-  protected onProductCategoryFilterReset(): void {
-    this.selectedProductCategories.set([]);
-    this.applyFiltersToCache();
   }
 
   private groupAddOns(addOns?: CartAddOnDto[]): OrderItemRequestDto[] {

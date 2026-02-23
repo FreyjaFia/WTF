@@ -16,7 +16,7 @@
           <h2 class="shrink-0 text-xl font-bold text-gray-900 sm:text-2xl">Products</h2>
 
           <label
-            class="flex min-w-0 flex-1 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200 sm:max-w-72"
+            class="flex min-w-0 flex-1 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200 sm:max-w-72 md:ml-auto"
             [class.pointer-events-none]="isReadOnly() || !canManageOrderActions()"
             [class.opacity-50]="isReadOnly() || !canManageOrderActions()"
           >
@@ -32,49 +32,76 @@
               [formControl]="filterForm.controls.searchTerm"
             />
           </label>
-        </div>
-
-        <!-- Row 2: Filter + Refresh -->
-        <div class="flex items-center justify-end gap-2">
-          <div
-            class="flex items-center gap-2"
+          <button
+            class="tooltip tooltip-bottom pointer-events-auto z-30 hidden shrink-0 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95 md:flex"
             [class.pointer-events-none]="isReadOnly() || !canManageOrderActions()"
             [class.opacity-50]="isReadOnly() || !canManageOrderActions()"
+            [class.opacity-70]="isRefreshing()"
+            type="button"
+            (click)="refreshProducts()"
+            [disabled]="isRefreshing()"
+            aria-label="Refresh products"
+            data-tip="Refresh"
           >
-            <app-filter-dropdown
-              [title]="'Category'"
-              [icon]="'icon-category'"
-              [options]="filterOptions()"
-              [selectedIds]="selectedProductCategories()"
-              [showSelectedState]="true"
-              [align]="'end'"
-              (filterChange)="onProductCategoryFilterChange($event)"
-              (filterReset)="onProductCategoryFilterReset()"
-            />
-            <button
-              class="tooltip tooltip-bottom pointer-events-auto z-30 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
-              [class.opacity-70]="isRefreshing()"
-              type="button"
-              (click)="refreshProducts()"
-              [disabled]="isRefreshing()"
-              aria-label="Refresh products"
-              data-tip="Refresh"
-            >
-              @if (isRefreshing()) {
-                <app-icon
-                  name="icon-refresh"
-                  [class]="'h-5 w-5 animate-spin text-gray-600'"
-                  [fill]="'currentColor'"
-                />
-              } @else {
-                <app-icon
-                  name="icon-refresh"
-                  [class]="'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'"
-                  [fill]="'currentColor'"
-                />
-              }
-            </button>
+            @if (isRefreshing()) {
+              <app-icon
+                name="icon-refresh"
+                [class]="'h-5 w-5 animate-spin text-gray-600'"
+                [fill]="'currentColor'"
+              />
+            } @else {
+              <app-icon
+                name="icon-refresh"
+                [class]="'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'"
+                [fill]="'currentColor'"
+              />
+            }
+          </button>
+        </div>
+
+        <!-- Row 2: Sub Category Tabs + Refresh (mobile) -->
+        <div
+          class="flex items-center justify-between gap-2"
+          [class.pointer-events-none]="isReadOnly() || !canManageOrderActions()"
+          [class.opacity-50]="isReadOnly() || !canManageOrderActions()"
+        >
+          <div role="tablist" class="tabs tabs-box tabs-sm">
+            @for (tab of subCategoryTabs; track tab.id) {
+              <button
+                type="button"
+                role="tab"
+                class="tab gap-1.5"
+                [class.tab-active]="activeSubCategoryTab() === tab.id"
+                (click)="selectSubCategoryTab(tab.id)"
+              >
+                <app-icon [name]="tab.icon" [class]="'h-4 w-4'" />
+                {{ tab.label }}
+              </button>
+            }
           </div>
+          <button
+            class="tooltip tooltip-bottom pointer-events-auto z-30 shrink-0 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95 md:hidden"
+            [class.opacity-70]="isRefreshing()"
+            type="button"
+            (click)="refreshProducts()"
+            [disabled]="isRefreshing()"
+            aria-label="Refresh products"
+            data-tip="Refresh"
+          >
+            @if (isRefreshing()) {
+              <app-icon
+                name="icon-refresh"
+                [class]="'h-5 w-5 animate-spin text-gray-600'"
+                [fill]="'currentColor'"
+              />
+            } @else {
+              <app-icon
+                name="icon-refresh"
+                [class]="'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'"
+                [fill]="'currentColor'"
+              />
+            }
+          </button>
         </div>
       </div>
 
