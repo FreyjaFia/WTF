@@ -2,12 +2,11 @@
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AlertService, AuthService } from '@core/services';
-import { Icon } from '@shared/components';
 import { finalize, timeout } from 'rxjs/operators';
 
 @Component({
   selector: 'app-login',
-  imports: [ReactiveFormsModule, Icon],
+  imports: [ReactiveFormsModule],
   templateUrl: './login.html',
 })
 export class Login implements OnInit {
@@ -34,7 +33,7 @@ export class Login implements OnInit {
   private checkExistingSession(): void {
     // Check if token is already valid
     if (this.auth.isTokenValid()) {
-      this.router.navigateByUrl('/orders/editor', { replaceUrl: true });
+      this.router.navigateByUrl(this.getPostLoginRoute(), { replaceUrl: true });
       return;
     }
 
@@ -48,8 +47,8 @@ export class Login implements OnInit {
         .subscribe({
           next: (ok) => {
             if (ok) {
-              // Token refreshed successfully, redirect to new order
-              this.router.navigateByUrl('/orders/editor', { replaceUrl: true });
+              // Token refreshed successfully, redirect to home
+              this.router.navigateByUrl(this.getPostLoginRoute(), { replaceUrl: true });
             }
           },
           error: () => {
@@ -73,7 +72,7 @@ export class Login implements OnInit {
       .subscribe({
         next: (ok) => {
           if (ok) {
-            this.router.navigateByUrl('/orders/editor', { replaceUrl: true });
+            this.router.navigateByUrl(this.getPostLoginRoute(), { replaceUrl: true });
           } else {
             this.alertService.error('Login failed. Invalid response from server.');
           }
@@ -90,5 +89,9 @@ export class Login implements OnInit {
 
   protected togglePasswordVisibility(): void {
     this.showPassword = !this.showPassword;
+  }
+
+  private getPostLoginRoute(): string {
+    return this.auth.canAccessManagement() ? '/dashboard' : '/orders/editor';
   }
 }

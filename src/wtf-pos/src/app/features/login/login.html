@@ -52,15 +52,12 @@
         [disabled]="loading || loginForm.invalid"
         class="inline-flex w-full items-center justify-center rounded-lg bg-black py-3 text-sm font-medium text-white transition hover:cursor-pointer hover:bg-gray-800 focus:ring-2 focus:ring-black focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
       >
-        <app-icon
-          name="icon-loading"
-          [hidden]="!loading"
-          [fill]="'none'"
-          [class]="'mr-3 -ml-1 h-5 w-5 animate-spin text-white'"
-        />
-
-        <span [hidden]="loading">Login</span>
-        <span [hidden]="!loading">Logging in...</span>
+        @if (loading) {
+          <span class="loading loading-spinner loading-sm mr-2 text-white"></span>
+          <span>Logging in...</span>
+        } @else {
+          <span>Login</span>
+        }
       </button>
     </form>
   </div>
