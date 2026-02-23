@@ -25,27 +25,60 @@ public class GetOrderByIdHandler(WTFDbContext db) : IRequestHandler<GetOrderById
             return null;
         }
 
-        var items = order.OrderItems
-            .Where(oi => oi.ParentOrderItemId == null)
-            .Select(oi => new OrderItemDto(
-                oi.Id,
-                oi.ProductId,
-                oi.Product.Name,
-                oi.Quantity,
-                oi.Price,
-                [.. oi.InverseParentOrderItem
-                    .Select(child => new OrderItemDto(
-                        child.Id,
-                        child.ProductId,
-                        child.Product.Name,
-                        child.Quantity,
-                        child.Price,
-                        [],
-                        child.SpecialInstructions
-                    ))],
-                oi.SpecialInstructions
-            ))
+        // Build a lookup of override prices so pending orders show the correct effective price
+        var parentItems = order.OrderItems.Where(oi => oi.ParentOrderItemId == null).ToList();
+        var parentProductIds = parentItems.Select(oi => oi.ProductId).Distinct().ToList();
+        var addOnProductIds = parentItems
+            .SelectMany(oi => oi.InverseParentOrderItem)
+            .Select(child => child.ProductId)
+            .Distinct()
             .ToList();
+
+        var overridePrices = new Dictionary<(Guid ProductId, Guid AddOnId), decimal>();
+
+        if (addOnProductIds.Count > 0)
+        {
+            overridePrices = await db.ProductAddOnPriceOverrides
+                .Where(o => parentProductIds.Contains(o.ProductId) && addOnProductIds.Contains(o.AddOnId) && o.IsActive)
+                .ToDictionaryAsync(o => (o.ProductId, o.AddOnId), o => o.Price, cancellationToken);
+        }
+
+        var items = parentItems
+            .Select(oi =>
+            {
+                var addOns = oi.InverseParentOrderItem
+                    .Select(child =>
+                    {
+                        var childEffectivePrice = child.Price
+                            ?? (overridePrices.TryGetValue((oi.ProductId, child.ProductId), out var op) ? op : child.Product.Price);
+
+                        return new OrderItemDto(
+                            child.Id,
+                            child.ProductId,
+                            child.Product.Name,
+                            child.Quantity,
+                            childEffectivePrice,
+                            [],
+                            child.SpecialInstructions
+                        );
+                    })
+                    .ToList();
+
+                return new OrderItemDto(
+                    oi.Id,
+                    oi.ProductId,
+                    oi.Product.Name,
+                    oi.Quantity,
+                    oi.Price ?? oi.Product.Price,
+                    addOns,
+                    oi.SpecialInstructions
+                );
+            })
+            .ToList();
+
+        var totalAmount = items
+            .Sum(item => (item.Price ?? 0) * item.Quantity
+                + item.AddOns.Sum(ao => (ao.Price ?? 0) * ao.Quantity));
 
         return new OrderDto(
             order.Id,
@@ -62,10 +95,7 @@ public class GetOrderByIdHandler(WTFDbContext db) : IRequestHandler<GetOrderById
             order.ChangeAmount,
             order.Tips,
             order.SpecialInstructions,
-            order.OrderItems
-                .Where(oi => oi.ParentOrderItemId == null)
-                .SelectMany(oi => new[] { oi }.Concat(oi.InverseParentOrderItem))
-                .Sum(oi => (oi.Price ?? oi.Product.Price) * oi.Quantity)
+            totalAmount
         );
     }
 }

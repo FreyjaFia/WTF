@@ -328,11 +328,6 @@ export class OrderEditor implements OnInit {
   }
 
   private populateCartFromOrder(order: OrderDto): void {
-    const isReadOnly =
-      order.status === OrderStatusEnum.Completed ||
-      order.status === OrderStatusEnum.Cancelled ||
-      order.status === OrderStatusEnum.Refunded;
-
     const cartItems: CartItemDto[] = order.items.map((item) => {
       // Expand add-ons: each add-on item may have quantity > 1
       const expandedAddOns: CartAddOnDto[] = [];
@@ -342,7 +337,7 @@ export class OrderEditor implements OnInit {
           expandedAddOns.push({
             addOnId: ao.productId,
             name: '',
-            price: isReadOnly ? (ao.price ?? 0) : 0,
+            price: ao.price ?? 0,
           });
         }
       }
@@ -350,7 +345,7 @@ export class OrderEditor implements OnInit {
       return {
         productId: item.productId,
         name: '',
-        price: isReadOnly ? (item.price ?? 0) : 0,
+        price: item.price ?? 0,
         qty: item.quantity,
         imageUrl: '',
         addOns: expandedAddOns.length > 0 ? expandedAddOns : undefined,
@@ -469,7 +464,7 @@ export class OrderEditor implements OnInit {
       const enrichedAddOns = cartItem.addOns?.map((ao) => {
         const addOnProduct = allProducts.find((p) => p.id === ao.addOnId);
         return addOnProduct
-          ? { ...ao, name: addOnProduct.name, price: this.isReadOnly() ? ao.price : addOnProduct.price }
+          ? { ...ao, name: addOnProduct.name }
           : ao;
       });
 
@@ -477,7 +472,6 @@ export class OrderEditor implements OnInit {
         ? {
             ...cartItem,
             name: product.name,
-            price: this.isReadOnly() ? cartItem.price : product.price,
             imageUrl: product.imageUrl,
             addOns: enrichedAddOns,
           }
