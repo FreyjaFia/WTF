@@ -4,10 +4,11 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { ModalStackService } from '@core/services';
 import { AvatarComponent, Icon } from '@shared/components';
 import { CartAddOnDto, CartItemDto, PaymentMethodEnum } from '@shared/models';
+import { SortAddOnsPipe } from '@shared/pipes';
 
 @Component({
   selector: 'app-checkout-modal',
-  imports: [CommonModule, ReactiveFormsModule, Icon, AvatarComponent],
+  imports: [CommonModule, ReactiveFormsModule, Icon, AvatarComponent, SortAddOnsPipe],
   templateUrl: './checkout-modal.html',
   styleUrl: './checkout-modal.css',
 })

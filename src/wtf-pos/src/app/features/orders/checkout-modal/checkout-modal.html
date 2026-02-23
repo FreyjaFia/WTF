@@ -157,7 +157,7 @@
                 <p class="text-xs opacity-70">{{ item.qty }} × ₱{{ item.price.toFixed(2) }}</p>
                 @if (item.addOns?.length) {
                   <div class="mt-1 space-y-0.5">
-                    @for (ao of item.addOns; track ao.addOnId) {
+                    @for (ao of item.addOns | sortAddOns; track ao.addOnId) {
                       <p class="flex items-center gap-1 text-xs text-gray-500">
                         <span class="inline-block h-1 w-1 rounded-full bg-gray-400"></span>
                         {{ ao.name }}

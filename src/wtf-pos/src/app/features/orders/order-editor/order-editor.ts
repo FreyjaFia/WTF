@@ -19,6 +19,7 @@ import {
   Icon,
   PullToRefreshComponent,
 } from '@shared/components';
+import { SortAddOnsPipe } from '@shared/pipes';
 import {
   CartAddOnDto,
   CartItemDto,
@@ -49,6 +50,7 @@ import { CheckoutModal } from '../checkout-modal/checkout-modal';
     AvatarComponent,
     BadgeComponent,
     PullToRefreshComponent,
+    SortAddOnsPipe,
   ],
   templateUrl: './order-editor.html',
 })
