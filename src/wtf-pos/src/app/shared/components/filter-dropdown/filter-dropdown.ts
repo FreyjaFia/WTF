@@ -1,5 +1,5 @@
 ﻿import { CommonModule } from '@angular/common';
-import { Component, input, output } from '@angular/core';
+import { Component, ElementRef, HostListener, inject, input, output } from '@angular/core';
 import { Icon } from '../icons/icon/icon';
 
 export interface FilterOption {
@@ -15,15 +15,27 @@ export interface FilterOption {
   templateUrl: './filter-dropdown.html',
 })
 export class FilterDropdown {
-  readonly title = input<string>('Filter');
-  readonly icon = input<string>('icon-status');
-  readonly options = input<FilterOption[]>([]);
-  readonly selectedIds = input<(string | number)[]>([]);
-  readonly showSelectedState = input<boolean>(false);
-  readonly align = input<'start' | 'end'>('start');
+  private readonly elementRef = inject(ElementRef);
 
-  readonly filterChange = output<(string | number)[]>();
-  readonly filterReset = output<void>();
+  public readonly title = input<string>('Filter');
+  public readonly icon = input<string>('icon-status');
+  public readonly options = input<FilterOption[]>([]);
+  public readonly selectedIds = input<(string | number)[]>([]);
+  public readonly showSelectedState = input<boolean>(false);
+  public readonly align = input<'start' | 'end'>('start');
+
+  public readonly filterChange = output<(string | number)[]>();
+  public readonly filterReset = output<void>();
+
+  @HostListener('document:click', ['$event'])
+  protected onDocumentClick(event: MouseEvent): void {
+    if (!this.elementRef.nativeElement.contains(event.target as Node)) {
+      const details = this.elementRef.nativeElement.querySelector('details');
+      if (details) {
+        details.open = false;
+      }
+    }
+  }
 
   protected toggleFilter(optionId: string | number): void {
     const updated = this.selectedIds().includes(optionId)
