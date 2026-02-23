@@ -6,4 +6,5 @@ export * from './list-state.service';
 export * from './modal-stack.service';
 export * from './order.service';
 export * from './product.service';
+export * from './signalr.service';
 export * from './user.service';

@@ -20,6 +20,7 @@ import { UserListComponent } from '@features/management/users/user-list/user-lis
 import { UsersComponent } from '@features/management/users/users';
 import { OrderEditor } from '@features/orders/order-editor/order-editor';
 import { OrderList } from '@features/orders/order-list/order-list';
+import { Dashboard } from '@features/dashboard/dashboard';
 import { Orders } from '@features/orders/orders';
 import { Layout } from '@shared/components';
 
@@ -48,6 +49,12 @@ export const routes: Routes = [
           { path: 'editor/:id', component: OrderEditor, canDeactivate: [unsavedChangesGuard] },
           { path: 'list', component: OrderList },
         ],
+      },
+      {
+        path: 'dashboard',
+        component: Dashboard,
+        canActivate: [roleGuard],
+        data: { roles: ['Admin', 'AdminViewer'] },
       },
       {
         path: 'my-profile',

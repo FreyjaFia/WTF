@@ -43,6 +43,7 @@
     "@capacitor/app": "^8.0.1",
     "@capacitor/core": "^8.1.0",
     "@capacitor/status-bar": "^8.0.1",
+    "@microsoft/signalr": "^10.0.0",
     "@types/sortablejs": "^1.15.9",
     "jwt-decode": "^4.0.0",
     "rxjs": "~7.8.0",
