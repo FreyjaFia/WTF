@@ -267,7 +267,7 @@ class OrderService  // ❌ Missing public
 ## Testing & Debugging
 
 ### API Test Endpoints
-Use `/api/test/protected` (requires auth) and `/api/test/public` to verify JWT flow.
+Use `/api/ping` for lightweight health checks (no auth required).
 
 ---
 

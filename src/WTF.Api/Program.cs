@@ -182,7 +182,7 @@ app.MapAuth()
     .MapCustomers()
     .MapUsers()
     .MapDashboard()
-    .MapTest();
+    .MapPing();
 
 // SPA fallback: serve index.html for non-API, non-file routes
 app.MapFallbackToFile("index.html");
