@@ -137,17 +137,27 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      # 8. Build debug APK
+      # 8. Decode signing keystore from secret
+      - name: Decode Keystore
+        run: |
+          mkdir -p src/wtf-pos/android/keystore
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > src/wtf-pos/android/keystore/wtf-pos-release.keystore
+
+      # 9. Build release APK
       - name: Build APK
         working-directory: src/wtf-pos/android
-        run: chmod +x ./gradlew && ./gradlew assembleDebug --no-daemon
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: chmod +x ./gradlew && ./gradlew assembleRelease --no-daemon
 
-      # 9. Upload APK artifact
+      # 10. Upload APK artifact
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: android-apk
-          path: src/wtf-pos/android/app/build/outputs/apk/debug/app-debug.apk
+          path: src/wtf-pos/android/app/build/outputs/apk/release/app-release.apk
 
   deploy:
     name: Deploy to MonsterASP.NET

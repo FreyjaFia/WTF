@@ -400,3 +400,7 @@ src/wtf-pos/android/app/build/
 # System files
 .DS_Store
 Thumbs.db
+
+# Signing keystores
+*.keystore
+*.jks
