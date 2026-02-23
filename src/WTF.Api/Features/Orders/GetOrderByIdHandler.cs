@@ -62,7 +62,10 @@ public class GetOrderByIdHandler(WTFDbContext db) : IRequestHandler<GetOrderById
             order.ChangeAmount,
             order.Tips,
             order.SpecialInstructions,
-            order.OrderItems.Sum(oi => (oi.Price ?? oi.Product.Price) * oi.Quantity)
+            order.OrderItems
+                .Where(oi => oi.ParentOrderItemId == null)
+                .SelectMany(oi => new[] { oi }.Concat(oi.InverseParentOrderItem))
+                .Sum(oi => (oi.Price ?? oi.Product.Price) * oi.Quantity)
         );
     }
 }
