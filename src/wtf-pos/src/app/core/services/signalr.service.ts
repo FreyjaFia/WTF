@@ -40,7 +40,6 @@ export class SignalRService implements OnDestroy {
       .start()
       .then(() => {
         this.isConnecting = false;
-        console.info('Dashboard SignalR hub connected.');
       })
       .catch((err) => {
         this.isConnecting = false;
