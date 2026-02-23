@@ -3,14 +3,33 @@
   <div
     class="mb-4 flex shrink-0 flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between"
   >
-    <!-- Left: Title -->
-    <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Orders</h1>
+    <!-- Left: Title + Search (inline on mobile) -->
+    <div class="flex items-center gap-2">
+      <h1 class="shrink-0 text-xl font-bold text-gray-900 sm:text-2xl">Orders</h1>
+
+      <!-- Search (mobile only, inline beside title) -->
+      <label
+        class="flex min-w-0 flex-1 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200 sm:hidden"
+      >
+        <app-icon
+          name="icon-search"
+          [class]="'h-5 w-5 shrink-0 opacity-40'"
+          [fill]="'currentColor'"
+        />
+        <input
+          type="search"
+          class="grow bg-transparent text-sm placeholder-gray-500 focus:caret-[#047857] focus:outline-none"
+          placeholder="Search by order #"
+          [formControl]="filterForm.controls.searchTerm"
+        />
+      </label>
+    </div>
 
     <!-- Right: Toolbar -->
     <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:gap-3">
-      <!-- Row 1 (mobile): Search -->
+      <!-- Search (desktop only) -->
       <label
-        class="flex w-full items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200 sm:w-72"
+        class="hidden items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200 sm:flex sm:w-72"
       >
         <app-icon
           name="icon-search"
@@ -25,7 +44,7 @@
         />
       </label>
 
-      <!-- Row 2 (mobile): Filter + Refresh -->
+      <!-- Filters + Refresh -->
       <div class="flex items-center justify-end gap-2">
         <app-filter-dropdown
           [title]="'Status'"
