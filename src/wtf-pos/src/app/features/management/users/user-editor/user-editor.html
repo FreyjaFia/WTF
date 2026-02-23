@@ -15,7 +15,7 @@
         <app-icon name="icon-back" [class]="'h-5 w-5 text-gray-600'" />
       </button>
       <div class="min-w-0">
-        <h1 class="text-2xl font-bold break-words text-gray-900">
+<h1 class="text-2xl font-bold wrap-break-word text-gray-900">
           {{ isProfileMode() ? 'My Profile' : isEditMode() ? userFullNameLabel() || 'Edit User' : 'New User' }}
         </h1>
         @if (isEditMode() && lastUpdatedAt()) {
@@ -64,7 +64,7 @@
       <form id="userForm" [formGroup]="userForm" (ngSubmit)="saveUser()">
         <div class="grid grid-cols-1 gap-6" [class.lg:grid-cols-3]="isProfileMode()">
           <!-- Left Column: Core Details -->
-          <div class="space-y-6" [class.order-last]="isProfileMode()" [class.lg:order-none]="isProfileMode()" [class.lg:col-span-2]="isProfileMode()">
+          <div class="space-y-6" [class.order-last]="isProfileMode()" [class.lg:order-0]="isProfileMode()" [class.lg:col-span-2]="isProfileMode()">
             <!-- Main Form Card -->
             <div class="card rounded-xl bg-white shadow-lg">
               <div class="card-body space-y-5">
@@ -298,7 +298,7 @@
           </div>
           <!-- Right Column: Sidebar -->
           @if (isProfileMode()) {
-            <div class="order-first space-y-6 lg:order-none">
+            <div class="order-first space-y-6 lg:order-0">
               <!-- User Image Card -->
               <div class="card rounded-xl bg-white shadow-lg">
                 <div class="card-body">

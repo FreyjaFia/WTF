@@ -12,7 +12,7 @@
       </a>
       @if (product()) {
         <div class="min-w-0">
-          <h1 class="text-2xl font-bold break-words text-gray-900">{{ product()!.name }}</h1>
+          <h1 class="text-2xl font-bold wrap-break-word text-gray-900">{{ product()!.name }}</h1>
           <div class="mt-1 flex flex-wrap items-center gap-2">
             @if (product()!.isActive) {
               <app-badge variant="success">Active</app-badge>
@@ -207,7 +207,7 @@
                             <div class="flex flex-1 items-start justify-between gap-2">
                               <div class="min-w-0 flex-1">
                                 <span
-                                  class="block text-sm font-medium break-words text-gray-800"
+                                  class="block text-sm font-medium wrap-break-word text-gray-800"
                                   [class.line-through]="!linked.isActive"
                                   [class.text-gray-400]="!linked.isActive"
                                 >
@@ -311,7 +311,7 @@
                             <div class="flex flex-1 items-start justify-between gap-2">
                               <div class="min-w-0 flex-1">
                                 <span
-                                  class="block text-sm font-medium break-words text-gray-800"
+                                  class="block text-sm font-medium wrap-break-word text-gray-800"
                                   [class.line-through]="!addon.isActive"
                                   [class.text-gray-400]="!addon.isActive"
                                 >

@@ -15,7 +15,7 @@
         <app-icon name="icon-back" [class]="'h-5 w-5 text-gray-600'" />
       </button>
       <div class="min-w-0">
-        <h1 class="text-2xl font-bold break-words text-gray-900">
+<h1 class="text-2xl font-bold wrap-break-word text-gray-900">
           {{ isEditMode() ? customerFullName() || 'Edit Customer' : 'New Customer' }}
         </h1>
         @if (isEditMode() && lastUpdatedAt()) {
@@ -62,7 +62,7 @@
       <form id="customerForm" [formGroup]="customerForm" (ngSubmit)="saveCustomer()">
         <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <!-- Left Column: Core Details -->
-          <div class="order-last space-y-6 lg:order-none lg:col-span-2">
+          <div class="order-last space-y-6 lg:order-0 lg:col-span-2">
             <!-- Main Form Card -->
             <div class="card rounded-xl bg-white shadow-lg">
               <div class="card-body space-y-5">
@@ -125,7 +125,7 @@
             </div>
           </div>
           <!-- Right Column: Sidebar -->
-          <div class="order-first space-y-6 lg:order-none">
+          <div class="order-first space-y-6 lg:order-0">
             <!-- Customer Image Card -->
             <div class="card rounded-xl bg-white shadow-lg">
               <div class="card-body">

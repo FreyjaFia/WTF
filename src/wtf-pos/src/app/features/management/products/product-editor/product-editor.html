@@ -15,7 +15,7 @@
         <app-icon name="icon-back" [class]="'h-5 w-5 text-gray-600'" />
       </button>
       <div class="min-w-0">
-        <h1 class="text-2xl font-bold break-words text-gray-900">
+        <h1 class="text-2xl font-bold wrap-break-word text-gray-900">
           {{ isEditMode() ? productName() || 'Edit Product' : 'New Product' }}
         </h1>
         @if (isEditMode() && lastUpdatedAt()) {
@@ -72,7 +72,7 @@
       <form id="productForm" [formGroup]="productForm" (ngSubmit)="saveProduct()">
         <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <!-- Left Column: Core Details -->
-          <div class="order-2 space-y-6 lg:order-none lg:col-span-2 lg:row-span-2">
+          <div class="order-2 space-y-6 lg:order-0 lg:col-span-2 lg:row-span-2">
             <!-- Main Form Card -->
             <div class="card rounded-xl bg-white shadow-lg">
               <div class="card-body space-y-5">
@@ -269,7 +269,7 @@
           </div>
 
           <!-- Right Column: Sidebar -->
-          <div class="order-1 space-y-6 lg:order-none">
+          <div class="order-1 space-y-6 lg:order-0">
             <!-- Product Image Card -->
             <div class="card rounded-xl bg-white shadow-lg">
               <div class="card-body">
@@ -370,7 +370,7 @@
 
           <!-- Customization Card (edit mode, non-add-on products) -->
           @if (isEditMode() && productId && !productForm.controls.isAddOn.value) {
-            <div class="order-3 card rounded-xl bg-white shadow-lg lg:order-none">
+            <div class="order-3 card rounded-xl bg-white shadow-lg lg:order-0">
               <div class="card-body">
                 <div class="mb-1 flex flex-wrap items-baseline justify-between gap-1">
                   <h3 class="text-xs font-semibold tracking-wider text-gray-400 uppercase sm:whitespace-nowrap">
@@ -425,7 +425,7 @@
                             <div class="flex items-start justify-between gap-2">
                               <div class="min-w-0">
                                 <span
-                                  class="block break-words text-sm font-medium text-gray-800"
+                                  class="block wrap-break-word text-sm font-medium text-gray-800"
                                   [class.line-through]="!addon.isActive"
                                   [class.text-gray-400]="!addon.isActive"
                                 >
@@ -570,7 +570,7 @@
 
           <!-- Linked Products Card (edit mode, add-on products) -->
           @if (isEditMode() && productId && productForm.controls.isAddOn.value) {
-            <div class="order-3 card rounded-xl bg-white shadow-lg lg:order-none">
+            <div class="order-3 card rounded-xl bg-white shadow-lg lg:order-0">
               <div class="card-body">
                 <div class="mb-1 flex items-baseline justify-between">
                   <h3 class="text-xs font-semibold tracking-wider text-gray-400 uppercase">
@@ -623,7 +623,7 @@
                           <div class="flex flex-1 items-start justify-between gap-2">
                             <div class="min-w-0 flex-1">
                               <span
-                                class="block break-words text-sm font-medium text-gray-800"
+                                class="block wrap-break-word text-sm font-medium text-gray-800"
                                 [class.line-through]="!linked.isActive"
                                 [class.text-gray-400]="!linked.isActive"
                               >
