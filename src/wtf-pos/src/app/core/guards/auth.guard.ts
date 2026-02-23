@@ -22,13 +22,13 @@ export const authGuard: CanActivateFn = (_route, _state) => {
       map(() => true),
       catchError(() => {
         // Refresh failed, redirect to login
-        router.navigateByUrl('/login');
+        router.navigateByUrl('/login', { replaceUrl: true });
         return of(false);
       }),
     );
   }
 
   // No valid token and no refresh token, redirect to login
-  router.navigateByUrl('/login');
+  router.navigateByUrl('/login', { replaceUrl: true });
   return false;
 };

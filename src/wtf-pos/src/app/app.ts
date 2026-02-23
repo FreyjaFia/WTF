@@ -1,15 +1,26 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Location } from '@angular/common';
+import { Component, inject, NgZone, OnDestroy, OnInit, signal, viewChild } from '@angular/core';
+import { RouterOutlet } from '@angular/router';
+import { App as CapApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { StatusBar, Style } from '@capacitor/status-bar';
-import { RouterOutlet } from '@angular/router';
-import { GlobalAlertComponent, IconsSprite } from '@shared/components';
+import { ExitConfirmComponent, GlobalAlertComponent, IconsSprite } from '@shared/components';
+
+import type { PluginListenerHandle } from '@capacitor/core';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, IconsSprite, GlobalAlertComponent],
+  imports: [RouterOutlet, IconsSprite, GlobalAlertComponent, ExitConfirmComponent],
   templateUrl: './app.html',
 })
-export class App implements OnInit {
+export class App implements OnInit, OnDestroy {
+  private readonly location = inject(Location);
+  private readonly zone = inject(NgZone);
+
+  private readonly exitConfirm = viewChild(ExitConfirmComponent);
+
+  private backButtonListener: PluginListenerHandle | null = null;
+
   protected readonly title = signal('wtf-pos');
 
   public async ngOnInit(): Promise<void> {
@@ -20,6 +31,24 @@ export class App implements OnInit {
       } catch (e) {
         console.error('StatusBar plugin error', e);
       }
+
+      this.backButtonListener = await CapApp.addListener('backButton', ({ canGoBack }) => {
+        this.zone.run(() => {
+          if (canGoBack) {
+            this.location.back();
+          } else {
+            this.exitConfirm()?.open();
+          }
+        });
+      });
     }
+  }
+
+  public async ngOnDestroy(): Promise<void> {
+    await this.backButtonListener?.remove();
+  }
+
+  protected onExitConfirmed(): void {
+    CapApp.exitApp();
   }
 }

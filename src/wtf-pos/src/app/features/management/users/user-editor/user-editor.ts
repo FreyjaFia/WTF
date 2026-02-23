@@ -99,7 +99,7 @@ export class UserEditorComponent implements OnInit {
 
       if (!currentUserId) {
         this.alertService.error('Unable to load profile. Please sign in again.');
-        this.router.navigateByUrl('/login');
+        this.router.navigateByUrl('/login', { replaceUrl: true });
         return;
       }
 

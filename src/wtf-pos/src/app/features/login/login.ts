@@ -34,7 +34,7 @@ export class Login implements OnInit {
   private checkExistingSession(): void {
     // Check if token is already valid
     if (this.auth.isTokenValid()) {
-      this.router.navigateByUrl('/orders/editor');
+      this.router.navigateByUrl('/orders/editor', { replaceUrl: true });
       return;
     }
 
@@ -49,7 +49,7 @@ export class Login implements OnInit {
           next: (ok) => {
             if (ok) {
               // Token refreshed successfully, redirect to new order
-              this.router.navigateByUrl('/orders/editor');
+              this.router.navigateByUrl('/orders/editor', { replaceUrl: true });
             }
           },
           error: () => {
@@ -73,7 +73,7 @@ export class Login implements OnInit {
       .subscribe({
         next: (ok) => {
           if (ok) {
-            this.router.navigateByUrl('/orders/editor');
+            this.router.navigateByUrl('/orders/editor', { replaceUrl: true });
           } else {
             this.alertService.error('Login failed. Invalid response from server.');
           }

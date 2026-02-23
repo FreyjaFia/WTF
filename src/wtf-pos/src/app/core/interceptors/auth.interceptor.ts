@@ -56,7 +56,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
           catchError(() => {
             // If refresh fails, logout and navigate to login
             auth.logout();
-            router.navigateByUrl('/login');
+            router.navigateByUrl('/login', { replaceUrl: true });
             return throwError(() => error);
           }),
         );
