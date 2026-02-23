@@ -1,10 +1,12 @@
 using MediatR;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Features.Products.Enums;
+using WTF.Api.Hubs;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 
@@ -31,7 +33,7 @@ public record CreateOrderCommand : IRequest<OrderDto>
     public decimal? Tips { get; init; }
 }
 
-public class CreateOrderHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor) : IRequestHandler<CreateOrderCommand, OrderDto>
+public class CreateOrderHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor, IHubContext<DashboardHub> dashboardHub) : IRequestHandler<CreateOrderCommand, OrderDto>
 {
     public async Task<OrderDto> Handle(CreateOrderCommand request, CancellationToken cancellationToken)
     {
@@ -223,6 +225,9 @@ public class CreateOrderHandler(WTFDbContext db, IHttpContextAccessor httpContex
             .Where(oi => oi.OrderId == order.Id)
             .Include(oi => oi.Product)
             .SumAsync(oi => (oi.Price ?? oi.Product.Price) * oi.Quantity, cancellationToken);
+
+        await dashboardHub.Clients.Group(HubNames.Groups.DashboardViewers)
+            .SendAsync(HubNames.Events.DashboardUpdated, cancellationToken);
 
         return new OrderDto(
             order.Id,

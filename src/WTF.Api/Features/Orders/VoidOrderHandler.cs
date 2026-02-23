@@ -1,15 +1,17 @@
 using MediatR;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
+using WTF.Api.Hubs;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Orders;
 
 public record VoidOrderCommand(Guid Id) : IRequest<OrderDto?>;
 
-public class VoidOrderHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor) : IRequestHandler<VoidOrderCommand, OrderDto?>
+public class VoidOrderHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor, IHubContext<DashboardHub> dashboardHub) : IRequestHandler<VoidOrderCommand, OrderDto?>
 {
     public async Task<OrderDto?> Handle(VoidOrderCommand request, CancellationToken cancellationToken)
     {
@@ -32,10 +34,36 @@ public class VoidOrderHandler(WTFDbContext db, IHttpContextAccessor httpContextA
 
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
 
-        // Capture price snapshot
+        // Capture price snapshot (resolve add-on overrides)
+        var parentProductByOrderItemId = order.OrderItems
+            .Where(oi => oi.ParentOrderItemId == null)
+            .ToDictionary(oi => oi.Id, oi => oi.ProductId);
+
         foreach (var orderItem in order.OrderItems)
         {
-            orderItem.Price ??= orderItem.Product.Price;
+            if (orderItem.Price != null)
+            {
+                continue;
+            }
+
+            if (orderItem.ParentOrderItemId == null)
+            {
+                orderItem.Price = orderItem.Product.Price;
+                continue;
+            }
+
+            if (!parentProductByOrderItemId.TryGetValue(orderItem.ParentOrderItemId.Value, out var parentProductId))
+            {
+                orderItem.Price = orderItem.Product.Price;
+                continue;
+            }
+
+            var overridePrice = await db.ProductAddOnPriceOverrides
+                .Where(o => o.ProductId == parentProductId && o.AddOnId == orderItem.ProductId && o.IsActive)
+                .Select(o => (decimal?)o.Price)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            orderItem.Price = overridePrice ?? orderItem.Product.Price;
         }
 
         // Pending -> Cancelled, Completed -> Refunded
@@ -76,6 +104,9 @@ public class VoidOrderHandler(WTFDbContext db, IHttpContextAccessor httpContextA
             .Where(oi => oi.OrderId == order.Id)
             .Include(oi => oi.Product)
             .SumAsync(oi => (oi.Price ?? oi.Product.Price) * oi.Quantity, cancellationToken);
+
+        await dashboardHub.Clients.Group(HubNames.Groups.DashboardViewers)
+            .SendAsync(HubNames.Events.DashboardUpdated, cancellationToken);
 
         return new OrderDto(
             order.Id,

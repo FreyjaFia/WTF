@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.RateLimiting;
 using WTF.Api.Common.Auth;
 using WTF.Api.Endpoints;
+using WTF.Api.Hubs;
 using WTF.Api.Services;
 using WTF.Domain.Data;
 
@@ -19,6 +20,8 @@ builder.Services.AddDbContext<WTFDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("WtfDb")));
 
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
+
+builder.Services.AddSignalR();
 
 builder.Services.AddHttpContextAccessor();
 
@@ -56,6 +59,23 @@ builder.Services.AddAuthentication(options =>
         ValidateLifetime = true,
         ClockSkew = TimeSpan.Zero
     };
+
+    // Allow SignalR clients to send the JWT via query string
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+
+            if (!string.IsNullOrEmpty(accessToken) &&
+                context.HttpContext.Request.Path.StartsWithSegments("/hubs"))
+            {
+                context.Token = accessToken;
+            }
+
+            return Task.CompletedTask;
+        }
+    };
 });
 
 builder.Services.AddAuthorizationBuilder()
@@ -74,7 +94,9 @@ builder.Services.AddAuthorizationBuilder()
     .AddPolicy(AppPolicies.CustomersWrite, policy =>
         policy.RequireRole(AppRoles.Admin))
     .AddPolicy(AppPolicies.CustomersCreate, policy =>
-        policy.RequireRole(AppRoles.Admin, AppRoles.Cashier));
+        policy.RequireRole(AppRoles.Admin, AppRoles.Cashier))
+    .AddPolicy(AppPolicies.DashboardRead, policy =>
+        policy.RequireRole(AppRoles.Admin, AppRoles.AdminViewer));
 
 builder.Services.AddCors(options =>
 {
@@ -82,9 +104,10 @@ builder.Services.AddCors(options =>
     {
         if (builder.Environment.IsDevelopment())
         {
-            policy.AllowAnyOrigin()
+            policy.SetIsOriginAllowed(_ => true)
                 .AllowAnyHeader()
-                .AllowAnyMethod();
+                .AllowAnyMethod()
+                .AllowCredentials();
         }
         else
         {
@@ -93,7 +116,8 @@ builder.Services.AddCors(options =>
                     "http://localhost",
                     "capacitor://localhost")
                 .AllowAnyHeader()
-                .AllowAnyMethod();
+                .AllowAnyMethod()
+                .AllowCredentials();
         }
     });
 });
@@ -148,6 +172,8 @@ if (!app.Environment.IsDevelopment())
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.MapHub<DashboardHub>("/hubs/dashboard");
+
 app.MapGet("/api", () => "Welcome to the WTF API!");
 app.MapAuth()
     .MapLoyalty()
@@ -155,6 +181,7 @@ app.MapAuth()
     .MapOrders()
     .MapCustomers()
     .MapUsers()
+    .MapDashboard()
     .MapTest();
 
 // SPA fallback: serve index.html for non-API, non-file routes
