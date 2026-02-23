@@ -13,8 +13,9 @@ import {
   Icon,
   SparklineComponent,
 } from '@shared/components';
-import { DashboardDto } from '@shared/models';
+import { type DashboardDto, type DateRangeSelection } from '@shared/models';
 import { Subscription, interval } from 'rxjs';
+import { DateRangePickerComponent } from './date-range-picker/date-range-picker';
 
 const TIME_AGO_INTERVAL_MS = 30_000;
 
@@ -28,7 +29,7 @@ const GREETINGS = [
 
 @Component({
   selector: 'app-dashboard',
-  imports: [CommonModule, DecimalPipe, RouterLink, Icon, BadgeComponent, SparklineComponent, AreaChartComponent, DonutChartComponent, AnimatedCounterComponent],
+  imports: [CommonModule, DecimalPipe, RouterLink, Icon, BadgeComponent, SparklineComponent, AreaChartComponent, DonutChartComponent, AnimatedCounterComponent, DateRangePickerComponent],
   templateUrl: './dashboard.html',
 })
 export class Dashboard implements OnInit, OnDestroy {
@@ -42,18 +43,49 @@ export class Dashboard implements OnInit, OnDestroy {
   protected readonly isLoading = signal(true);
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly orderTimeAgos = signal<Record<string, string>>({});
+  protected readonly currentRange = signal<DateRangeSelection>({ preset: 'today' });
 
   protected readonly greeting = GREETINGS[Math.floor(Math.random() * GREETINGS.length)];
 
-  protected readonly revenueSparkline = computed(() =>
-    this.dashboard()?.hourlyRevenue?.map((h) => h.revenue) ?? [],
+  protected readonly comparisonLabel = computed(() =>
+    this.dashboard()?.comparisonLabel ?? 'vs Yesterday',
   );
 
-  protected readonly ordersSparkline = computed(() =>
-    this.dashboard()?.hourlyRevenue?.map((h) => h.orders) ?? [],
+  protected readonly isMultiDay = computed(() =>
+    (this.dashboard()?.dailyRevenue?.length ?? 0) > 0,
   );
+
+  protected readonly chartTitle = computed(() =>
+    this.isMultiDay() ? 'Sales by Day' : 'Sales by Hour',
+  );
+
+  protected readonly revenueSparkline = computed(() => {
+    const daily = this.dashboard()?.dailyRevenue;
+
+    if (daily && daily.length > 0) {
+      return daily.map((d) => d.revenue);
+    }
+
+    return this.dashboard()?.hourlyRevenue?.map((h) => h.revenue) ?? [];
+  });
+
+  protected readonly ordersSparkline = computed(() => {
+    const daily = this.dashboard()?.dailyRevenue;
+
+    if (daily && daily.length > 0) {
+      return daily.map((d) => d.orders);
+    }
+
+    return this.dashboard()?.hourlyRevenue?.map((h) => h.orders) ?? [];
+  });
 
   protected readonly avgOrderSparkline = computed(() => {
+    const daily = this.dashboard()?.dailyRevenue;
+
+    if (daily && daily.length > 0) {
+      return daily.map((d) => (d.orders > 0 ? d.revenue / d.orders : 0));
+    }
+
     const data = this.dashboard()?.hourlyRevenue;
 
     if (!data) {
@@ -63,9 +95,15 @@ export class Dashboard implements OnInit, OnDestroy {
     return data.map((h) => (h.orders > 0 ? h.revenue / h.orders : 0));
   });
 
-  protected readonly tipsSparkline = computed(() =>
-    this.dashboard()?.hourlyRevenue?.map((h) => h.tips) ?? [],
-  );
+  protected readonly tipsSparkline = computed(() => {
+    const daily = this.dashboard()?.dailyRevenue;
+
+    if (daily && daily.length > 0) {
+      return daily.map((d) => d.tips);
+    }
+
+    return this.dashboard()?.hourlyRevenue?.map((h) => h.tips) ?? [];
+  });
 
   protected readonly revenueChangePercent = computed(() =>
     this.calcChangePercent(
@@ -95,6 +133,19 @@ export class Dashboard implements OnInit, OnDestroy {
   );
 
   protected readonly salesByHour = computed<AreaChartPoint[]>(() => {
+    const daily = this.dashboard()?.dailyRevenue;
+
+    if (daily && daily.length > 0) {
+      return daily.map((d) => {
+        const date = new Date(d.date);
+        const isLongRange = daily.length > 10;
+        const label = isLongRange
+          ? date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+          : date.toLocaleDateString('en-US', { weekday: 'short' });
+        return { label, value: d.revenue };
+      });
+    }
+
     const data = this.dashboard()?.hourlyRevenue;
 
     if (!data) {
@@ -169,6 +220,11 @@ export class Dashboard implements OnInit, OnDestroy {
     this.loadDashboard();
   }
 
+  protected onDateRangeChanged(range: DateRangeSelection): void {
+    this.currentRange.set(range);
+    this.loadDashboard();
+  }
+
   protected getStatusVariant(statusId: number): BadgeVariant {
     switch (statusId) {
       case 1:
@@ -230,7 +286,7 @@ export class Dashboard implements OnInit, OnDestroy {
     this.isLoading.set(true);
     this.errorMessage.set(null);
 
-    this.dashboardService.getDashboard().subscribe({
+    this.dashboardService.getDashboard(this.currentRange()).subscribe({
       next: (data) => {
         this.dashboard.set(data);
         this.isLoading.set(false);
@@ -244,7 +300,7 @@ export class Dashboard implements OnInit, OnDestroy {
   }
 
   private silentRefresh(): void {
-    this.dashboardService.getDashboard().subscribe({
+    this.dashboardService.getDashboard(this.currentRange()).subscribe({
       next: (data) => {
         this.dashboard.set(data);
         this.errorMessage.set(null);

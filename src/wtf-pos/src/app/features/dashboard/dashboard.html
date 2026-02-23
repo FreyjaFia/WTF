@@ -1,15 +1,16 @@
 <div class="flex h-full flex-col">
   <!-- Header -->
   <div
-    class="mb-4 flex shrink-0 flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between"
+    class="mb-4 flex shrink-0 items-center justify-between gap-3 sm:mb-6"
   >
-    <div class="flex items-center justify-between gap-2">
-      <h1
-        class="text-xl font-extrabold tracking-tight text-gray-900 sm:text-2xl"
-        style="font-family: 'Plus Jakarta Sans', sans-serif"
-      >
-        {{ greeting }}
-      </h1>
+    <h1
+      class="text-xl font-extrabold tracking-tight text-gray-900 sm:text-2xl"
+      style="font-family: 'Plus Jakarta Sans', sans-serif"
+    >
+      {{ greeting }}
+    </h1>
+    <div class="flex items-center gap-1.5">
+      <app-date-range-picker (rangeChanged)="onDateRangeChanged($event)" />
       <button
         class="tooltip tooltip-bottom pointer-events-auto z-30 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
         [class.opacity-70]="isLoading()"
@@ -87,7 +88,7 @@
               [class.text-emerald-600]="revenueChangePercent() >= 0"
               [class.text-red-500]="revenueChangePercent() < 0"
             >
-              {{ revenueChangePercent() >= 0 ? '+' : '' }}{{ revenueChangePercent() }}% vs Yesterday
+              {{ revenueChangePercent() >= 0 ? '+' : '' }}{{ revenueChangePercent() }}% {{ comparisonLabel() }}
             </span>
           </div>
           <div class="mt-1 h-8">
@@ -129,7 +130,7 @@
               [class.text-emerald-600]="ordersChangePercent() >= 0"
               [class.text-red-500]="ordersChangePercent() < 0"
             >
-              {{ ordersChangePercent() >= 0 ? '+' : '' }}{{ ordersChangePercent() }}% vs Yesterday
+              {{ ordersChangePercent() >= 0 ? '+' : '' }}{{ ordersChangePercent() }}% {{ comparisonLabel() }}
             </span>
           </div>
           <div class="mt-1 h-8">
@@ -174,7 +175,7 @@
               [class.text-emerald-600]="avgOrderChangeDelta() >= 0"
               [class.text-red-500]="avgOrderChangeDelta() < 0"
             >
-              {{ avgOrderChangeDelta() >= 0 ? '+₱' : '-₱' }}{{ (avgOrderChangeDelta() < 0 ? -avgOrderChangeDelta() : avgOrderChangeDelta()) | number: '1.2-2' }} vs Yesterday
+              {{ avgOrderChangeDelta() >= 0 ? '+₱' : '-₱' }}{{ (avgOrderChangeDelta() < 0 ? -avgOrderChangeDelta() : avgOrderChangeDelta()) | number: '1.2-2' }} {{ comparisonLabel() }}
             </span>
           </div>
           <div class="mt-1 h-8">
@@ -219,7 +220,7 @@
               [class.text-emerald-600]="tipsChangePercent() >= 0"
               [class.text-red-500]="tipsChangePercent() < 0"
             >
-              {{ tipsChangePercent() >= 0 ? '+' : '' }}{{ tipsChangePercent() }}% vs Yesterday
+              {{ tipsChangePercent() >= 0 ? '+' : '' }}{{ tipsChangePercent() }}% {{ comparisonLabel() }}
             </span>
           </div>
           <div class="mt-1 h-8">
@@ -302,7 +303,7 @@
         <!-- Sales by Hour -->
         <div class="rounded-2xl bg-white px-4 py-3 shadow-md ring-1 ring-black/5 md:px-5 md:py-4">
           <h2 class="mb-3 text-xs font-semibold tracking-wider text-gray-500 uppercase">
-            Sales by Hour
+            {{ chartTitle() }}
           </h2>
           @if (salesByHour().length === 0) {
             <div class="flex h-36 items-center justify-center">

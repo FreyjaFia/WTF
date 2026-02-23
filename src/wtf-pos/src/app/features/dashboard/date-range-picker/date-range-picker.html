@@ -1,0 +1,82 @@
+<div class="relative">
+  <button
+    type="button"
+    class="btn btn-sm btn-ghost gap-1.5 rounded-lg border border-gray-200 bg-white px-3 shadow-sm hover:bg-gray-50"
+    (click)="toggleDropdown()"
+  >
+    @if (isLive()) {
+      <span class="h-2 w-2 animate-pulse rounded-full bg-emerald-500"></span>
+    }
+    <span class="text-xs font-medium text-gray-700">{{ selectedLabel() }}</span>
+    <app-icon name="icon-chevron-down" [class]="'h-3.5 w-3.5 text-gray-400'" />
+  </button>
+
+  @if (isOpen()) {
+    <div class="absolute right-0 z-50 mt-2 w-56 rounded-xl bg-white p-1.5 shadow-lg ring-1 ring-black/5">
+    @for (preset of presets; track preset.value) {
+      <button
+        class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-gray-50"
+        [class.bg-emerald-50]="selectedPreset() === preset.value"
+        [class.text-emerald-700]="selectedPreset() === preset.value"
+        [class.font-medium]="selectedPreset() === preset.value"
+        [class.text-gray-700]="selectedPreset() !== preset.value"
+        (click)="selectPreset(preset.value)"
+      >
+        {{ preset.label }}
+      </button>
+    }
+
+    <div class="my-1 border-t border-gray-100"></div>
+
+    @if (!showCustomInputs()) {
+      <button
+        class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-gray-50"
+        [class.bg-emerald-50]="selectedPreset() === 'custom'"
+        [class.text-emerald-700]="selectedPreset() === 'custom'"
+        [class.font-medium]="selectedPreset() === 'custom'"
+        [class.text-gray-700]="selectedPreset() !== 'custom'"
+        (click)="openCustomRange()"
+      >
+        <app-icon name="icon-calendar" [class]="'h-3.5 w-3.5'" />
+        Custom Range
+      </button>
+    } @else {
+      <div class="space-y-2 px-2 py-2" role="group" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
+        <div>
+          <label for="date-range-start" class="mb-0.5 block text-[10px] font-medium tracking-wider text-gray-500 uppercase">
+            From
+          </label>
+          <input
+            id="date-range-start"
+            type="date"
+            class="input input-sm input-bordered w-full text-xs"
+            [max]="maxDate"
+            [ngModel]="customStart()"
+            (ngModelChange)="customStart.set($event)"
+          />
+        </div>
+        <div>
+          <label for="date-range-end" class="mb-0.5 block text-[10px] font-medium tracking-wider text-gray-500 uppercase">
+            To
+          </label>
+          <input
+            id="date-range-end"
+            type="date"
+            class="input input-sm input-bordered w-full text-xs"
+            [max]="maxDate"
+            [ngModel]="customEnd()"
+            (ngModelChange)="customEnd.set($event)"
+          />
+        </div>
+        <button
+          class="btn btn-sm w-full border-0 bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
+          [disabled]="!customStart() || !customEnd()"
+          (click)="applyCustomRange()"
+        >
+          Apply
+        </button>
+      </div>
+    }
+    </div>
+  }
+</div>

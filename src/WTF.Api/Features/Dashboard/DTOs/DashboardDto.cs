@@ -6,4 +6,6 @@ public record DashboardDto(
     OrdersByStatusDto OrdersByStatus,
     List<RecentOrderDto> RecentOrders,
     List<HourlyRevenuePointDto> HourlyRevenue,
-    List<PaymentMethodBreakdownDto> PaymentMethods);
+    List<PaymentMethodBreakdownDto> PaymentMethods,
+    string ComparisonLabel,
+    List<DailyRevenuePointDto>? DailyRevenue);

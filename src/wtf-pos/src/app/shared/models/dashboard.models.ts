@@ -1,3 +1,11 @@
+export type DateRangePreset = 'today' | 'yesterday' | 'last7days' | 'last30days' | 'custom';
+
+export interface DateRangeSelection {
+  preset: DateRangePreset;
+  startDate?: string;
+  endDate?: string;
+}
+
 export interface DashboardDto {
   today: DailySummaryDto;
   topSellingProducts: TopSellingProductDto[];
@@ -5,6 +13,8 @@ export interface DashboardDto {
   recentOrders: RecentOrderDto[];
   hourlyRevenue: HourlyRevenuePointDto[];
   paymentMethods: PaymentMethodBreakdownDto[];
+  comparisonLabel: string;
+  dailyRevenue: DailyRevenuePointDto[] | null;
 }
 
 export interface DailySummaryDto {
@@ -54,4 +64,11 @@ export interface PaymentMethodBreakdownDto {
   name: string;
   count: number;
   total: number;
+}
+
+export interface DailyRevenuePointDto {
+  date: string;
+  revenue: number;
+  orders: number;
+  tips: number;
 }

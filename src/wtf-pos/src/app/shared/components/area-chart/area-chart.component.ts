@@ -63,16 +63,18 @@ export interface AreaChartPoint {
       }
 
       <!-- Data points -->
-      @for (pt of points(); track pt.x) {
-        <circle
-          [attr.cx]="pt.x"
-          [attr.cy]="pt.y"
-          r="3"
-          [attr.fill]="color()"
-          opacity="0.9"
-        >
-          <title>{{ pt.label }}: ₱{{ pt.value.toFixed(2) }}</title>
-        </circle>
+      @if (points().length <= 31) {
+        @for (pt of points(); track pt.x) {
+          <circle
+            [attr.cx]="pt.x"
+            [attr.cy]="pt.y"
+            r="3"
+            [attr.fill]="color()"
+            opacity="0.9"
+          >
+            <title>{{ pt.label }}: ₱{{ pt.value.toFixed(2) }}</title>
+          </circle>
+        }
       }
 
       <!-- X-axis labels -->
@@ -150,10 +152,22 @@ export class AreaChartComponent {
       return [];
     }
 
-    // Show every 2nd or 3rd label depending on count to avoid crowding
-    const step = pts.length > 12 ? 3 : pts.length > 6 ? 2 : 1;
+    const count = pts.length;
+    let step: number;
 
-    return pts.filter((_, i) => i % step === 0 || i === pts.length - 1);
+    if (count > 60) {
+      step = Math.ceil(count / 8);
+    } else if (count > 30) {
+      step = Math.ceil(count / 10);
+    } else if (count > 12) {
+      step = 3;
+    } else if (count > 6) {
+      step = 2;
+    } else {
+      step = 1;
+    }
+
+    return pts.filter((_, i) => i % step === 0 || i === count - 1);
   });
 
   protected readonly gridLines = computed(() => {

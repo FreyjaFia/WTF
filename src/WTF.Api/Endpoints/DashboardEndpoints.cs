@@ -11,11 +11,11 @@ public static class DashboardEndpoints
         var dashboardGroup = app.MapGroup("/api/dashboard")
             .RequireAuthorization();
 
-        // GET /api/dashboard - Get dashboard summary
+        // GET /api/dashboard - Get dashboard summary with optional date range
         dashboardGroup.MapGet("/",
-            async (ISender sender) =>
+            async (string? preset, DateTime? startDate, DateTime? endDate, ISender sender) =>
             {
-                var result = await sender.Send(new GetDashboardQuery());
+                var result = await sender.Send(new GetDashboardQuery(preset, startDate, endDate));
                 return Results.Ok(result);
             })
             .RequireAuthorization(AppPolicies.DashboardRead);

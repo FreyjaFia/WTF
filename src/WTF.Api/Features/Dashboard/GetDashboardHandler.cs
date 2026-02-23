@@ -3,74 +3,170 @@ using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Features.Dashboard.DTOs;
 using WTF.Domain.Data;
+using WTF.Domain.Entities;
 
 namespace WTF.Api.Features.Dashboard;
 
-public record GetDashboardQuery : IRequest<DashboardDto>;
+public record GetDashboardQuery(string? Preset, DateTime? StartDate, DateTime? EndDate) : IRequest<DashboardDto>;
 
 public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor) : IRequestHandler<GetDashboardQuery, DashboardDto>
 {
+    private record DateRangeInfo(
+        DateTime PrimaryStart,
+        DateTime PrimaryEnd,
+        DateTime ComparisonStart,
+        DateTime ComparisonEnd,
+        string ComparisonLabel,
+        bool IsMultiDay);
+
     public async Task<DashboardDto> Handle(GetDashboardQuery request, CancellationToken cancellationToken)
     {
         var nowUtc = DateTime.UtcNow;
+        var range = ComputeDateRange(request, nowUtc);
+
+        var primaryOrders = await QueryOrders(range.PrimaryStart, range.PrimaryEnd, cancellationToken);
+        var comparisonOrders = await QueryOrders(range.ComparisonStart, range.ComparisonEnd, cancellationToken);
+
+        var summary = ComputeSummary(primaryOrders, comparisonOrders);
+        var topProducts = await ComputeTopProducts(primaryOrders, cancellationToken);
+        var ordersByStatus = ComputeOrdersByStatus(primaryOrders);
+
+        var hourlyRevenue = range.IsMultiDay
+            ? []
+            : ComputeHourlyRevenue(primaryOrders, range, nowUtc);
+
+        var dailyRevenue = range.IsMultiDay
+            ? ComputeDailyRevenue(primaryOrders, range)
+            : null;
+
+        var recentOrders = await ComputeRecentOrders(range, cancellationToken);
+        var paymentMethods = ComputePaymentMethods(primaryOrders);
+
+        return new DashboardDto(
+            summary,
+            topProducts,
+            ordersByStatus,
+            recentOrders,
+            hourlyRevenue,
+            paymentMethods,
+            range.ComparisonLabel,
+            dailyRevenue);
+    }
+
+    private static DateRangeInfo ComputeDateRange(GetDashboardQuery request, DateTime nowUtc)
+    {
         var todayUtc = nowUtc.Date;
-        var tomorrowUtc = todayUtc.AddDays(1);
-        var yesterdayUtc = todayUtc.AddDays(-1);
+        var preset = (request.Preset ?? "today").ToLowerInvariant();
 
-        // Time-matched cutoff: same hour boundary yesterday for fair comparison
-        var yesterdayCutoff = yesterdayUtc.AddHours(nowUtc.Hour).AddMinutes(nowUtc.Minute);
+        return preset switch
+        {
+            "yesterday" => new DateRangeInfo(
+                todayUtc.AddDays(-1),
+                todayUtc,
+                todayUtc.AddDays(-2),
+                todayUtc.AddDays(-1),
+                "vs Day Before",
+                false),
 
-        // Today's orders
-        var todayOrders = await db.Orders
+            "last7days" => new DateRangeInfo(
+                todayUtc.AddDays(-6),
+                todayUtc.AddDays(1),
+                todayUtc.AddDays(-13),
+                todayUtc.AddDays(-6),
+                "vs Prev. 7 Days",
+                true),
+
+            "last30days" => new DateRangeInfo(
+                todayUtc.AddDays(-29),
+                todayUtc.AddDays(1),
+                todayUtc.AddDays(-59),
+                todayUtc.AddDays(-29),
+                "vs Prev. 30 Days",
+                true),
+
+            "custom" when request.StartDate.HasValue && request.EndDate.HasValue =>
+                ComputeCustomRange(request.StartDate.Value.Date, request.EndDate.Value.Date),
+
+            // Default: "today"
+            _ => new DateRangeInfo(
+                todayUtc,
+                todayUtc.AddDays(1),
+                todayUtc.AddDays(-1),
+                nowUtc.AddDays(-1),
+                "vs Yesterday",
+                false),
+        };
+    }
+
+    private static DateRangeInfo ComputeCustomRange(DateTime startDate, DateTime endDate)
+    {
+        var primaryStart = startDate;
+        var primaryEnd = endDate.AddDays(1);
+        var rangeDays = (primaryEnd - primaryStart).Days;
+        var isMultiDay = rangeDays > 1;
+
+        var comparisonStart = primaryStart.AddDays(-rangeDays);
+        var comparisonEnd = primaryStart;
+
+        return new DateRangeInfo(
+            primaryStart,
+            primaryEnd,
+            comparisonStart,
+            comparisonEnd,
+            "vs Prev. Period",
+            isMultiDay);
+    }
+
+    private async Task<List<Order>> QueryOrders(DateTime start, DateTime end, CancellationToken cancellationToken)
+    {
+        return await db.Orders
             .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.Product)
             .Include(o => o.PaymentMethod)
-            .Where(o => o.CreatedAt >= todayUtc && o.CreatedAt < tomorrowUtc)
+            .Where(o => o.CreatedAt >= start && o.CreatedAt < end)
             .ToListAsync(cancellationToken);
+    }
 
-        // Yesterday's orders up to the same time of day (for fair comparison)
-        var yesterdayOrders = await db.Orders
-            .Include(o => o.OrderItems)
-                .ThenInclude(oi => oi.Product)
-            .Where(o => o.CreatedAt >= yesterdayUtc && o.CreatedAt <= yesterdayCutoff)
-            .ToListAsync(cancellationToken);
-
-        var totalOrders = todayOrders.Count;
-        var totalRevenue = todayOrders
-            .Where(o => o.StatusId == 2) // Completed
+    private static DailySummaryDto ComputeSummary(List<Order> primaryOrders, List<Order> comparisonOrders)
+    {
+        var totalOrders = primaryOrders.Count;
+        var totalRevenue = primaryOrders
+            .Where(o => o.StatusId == 2)
             .Sum(o => o.OrderItems.Sum(oi => (oi.Price ?? oi.Product.Price) * oi.Quantity));
         var averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
-        var totalTips = todayOrders.Sum(o => o.Tips ?? 0);
-        var totalCustomers = todayOrders
+        var totalTips = primaryOrders.Sum(o => o.Tips ?? 0);
+        var totalCustomers = primaryOrders
             .Where(o => o.CustomerId.HasValue)
             .Select(o => o.CustomerId)
             .Distinct()
             .Count();
 
-        // Yesterday's metrics
-        var yesterdayTotalOrders = yesterdayOrders.Count;
-        var yesterdayTotalRevenue = yesterdayOrders
+        var compTotalOrders = comparisonOrders.Count;
+        var compTotalRevenue = comparisonOrders
             .Where(o => o.StatusId == 2)
             .Sum(o => o.OrderItems.Sum(oi => (oi.Price ?? oi.Product.Price) * oi.Quantity));
-        var yesterdayAvgOrderValue = yesterdayTotalOrders > 0 ? yesterdayTotalRevenue / yesterdayTotalOrders : 0;
-        var yesterdayTotalTips = yesterdayOrders.Sum(o => o.Tips ?? 0);
+        var compAvgOrderValue = compTotalOrders > 0 ? compTotalRevenue / compTotalOrders : 0;
+        var compTotalTips = comparisonOrders.Sum(o => o.Tips ?? 0);
 
-        var dailySummary = new DailySummaryDto(
+        return new DailySummaryDto(
             totalOrders,
             totalRevenue,
             averageOrderValue,
             totalTips,
             totalCustomers,
-            yesterdayTotalOrders,
-            yesterdayTotalRevenue,
-            yesterdayAvgOrderValue,
-            yesterdayTotalTips);
+            compTotalOrders,
+            compTotalRevenue,
+            compAvgOrderValue,
+            compTotalTips);
+    }
 
-        // Top selling products today (by quantity) with image
-        var topProductGroups = todayOrders
-            .Where(o => o.StatusId == 2) // Completed
+    private async Task<List<TopSellingProductDto>> ComputeTopProducts(
+        List<Order> orders, CancellationToken cancellationToken)
+    {
+        var topProductGroups = orders
+            .Where(o => o.StatusId == 2)
             .SelectMany(o => o.OrderItems)
-            .Where(oi => oi.ParentOrderItemId == null) // Exclude add-ons
+            .Where(oi => oi.ParentOrderItemId == null)
             .GroupBy(oi => oi.ProductId)
             .Select(g => new
             {
@@ -90,43 +186,71 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
             .Include(pi => pi.Image)
             .ToDictionaryAsync(pi => pi.ProductId, pi => pi.Image.ImageUrl, cancellationToken);
 
-        var topProducts = topProductGroups.Select(g =>
+        return topProductGroups.Select(g =>
         {
             productImages.TryGetValue(g.ProductId, out var relativeUrl);
             var absoluteUrl = UrlExtensions.ToAbsoluteUrl(httpContextAccessor, relativeUrl);
             return new TopSellingProductDto(g.ProductId, g.ProductName, g.QuantitySold, g.Revenue, absoluteUrl);
         }).ToList();
+    }
 
-        // Orders by status today
-        var ordersByStatus = new OrdersByStatusDto(
-            todayOrders.Count(o => o.StatusId == 1),
-            todayOrders.Count(o => o.StatusId == 2),
-            todayOrders.Count(o => o.StatusId == 3),
-            todayOrders.Count(o => o.StatusId == 4));
+    private static OrdersByStatusDto ComputeOrdersByStatus(List<Order> orders)
+    {
+        return new OrdersByStatusDto(
+            orders.Count(o => o.StatusId == 1),
+            orders.Count(o => o.StatusId == 2),
+            orders.Count(o => o.StatusId == 3),
+            orders.Count(o => o.StatusId == 4));
+    }
 
-        // Hourly metrics (grouped by UTC hour)
-        var currentHour = DateTime.UtcNow.Hour;
-        var hourlyRevenue = Enumerable.Range(0, currentHour + 1)
+    private static List<HourlyRevenuePointDto> ComputeHourlyRevenue(
+        List<Order> orders, DateRangeInfo range, DateTime nowUtc)
+    {
+        // For partial days (e.g. "Today"), only up to current hour; for complete days, all 24 hours
+        var isPartialDay = range.PrimaryEnd > nowUtc;
+        var maxHour = isPartialDay ? nowUtc.Hour : 23;
+
+        return Enumerable.Range(0, maxHour + 1)
             .Select(hour =>
             {
-                var hourOrders = todayOrders
-                    .Where(o => o.CreatedAt.Hour == hour)
-                    .ToList();
+                var hourOrders = orders.Where(o => o.CreatedAt.Hour == hour).ToList();
                 var revenue = hourOrders
                     .Where(o => o.StatusId == 2)
                     .Sum(o => o.OrderItems.Sum(oi => (oi.Price ?? oi.Product.Price) * oi.Quantity));
-                var orders = hourOrders.Count;
+                var orderCount = hourOrders.Count;
                 var tips = hourOrders.Sum(o => o.Tips ?? 0);
-                return new HourlyRevenuePointDto(hour, revenue, orders, tips);
+                return new HourlyRevenuePointDto(hour, revenue, orderCount, tips);
             })
             .ToList();
+    }
 
-        // Recent orders (last 5 today) — loaded into memory for override-aware totals
+    private static List<DailyRevenuePointDto> ComputeDailyRevenue(List<Order> orders, DateRangeInfo range)
+    {
+        var days = (int)(range.PrimaryEnd - range.PrimaryStart).TotalDays;
+
+        return Enumerable.Range(0, days)
+            .Select(offset =>
+            {
+                var date = range.PrimaryStart.AddDays(offset);
+                var dayOrders = orders.Where(o => o.CreatedAt.Date == date).ToList();
+                var revenue = dayOrders
+                    .Where(o => o.StatusId == 2)
+                    .Sum(o => o.OrderItems.Sum(oi => (oi.Price ?? oi.Product.Price) * oi.Quantity));
+                var orderCount = dayOrders.Count;
+                var tips = dayOrders.Sum(o => o.Tips ?? 0);
+                return new DailyRevenuePointDto(date, revenue, orderCount, tips);
+            })
+            .ToList();
+    }
+
+    private async Task<List<RecentOrderDto>> ComputeRecentOrders(
+        DateRangeInfo range, CancellationToken cancellationToken)
+    {
         var recentOrderEntities = await db.Orders
             .Include(o => o.Status)
             .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.Product)
-            .Where(o => o.CreatedAt >= todayUtc && o.CreatedAt < tomorrowUtc)
+            .Where(o => o.CreatedAt >= range.PrimaryStart && o.CreatedAt < range.PrimaryEnd)
             .OrderByDescending(o => o.CreatedAt)
             .Take(5)
             .ToListAsync(cancellationToken);
@@ -148,11 +272,12 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
         if (recentAddOnProductIds.Count > 0)
         {
             recentOverridePrices = await db.ProductAddOnPriceOverrides
-                .Where(o => recentParentProductIds.Contains(o.ProductId) && recentAddOnProductIds.Contains(o.AddOnId) && o.IsActive)
+                .Where(o => recentParentProductIds.Contains(o.ProductId)
+                    && recentAddOnProductIds.Contains(o.AddOnId) && o.IsActive)
                 .ToDictionaryAsync(o => (o.ProductId, o.AddOnId), o => o.Price, cancellationToken);
         }
 
-        var recentOrders = recentOrderEntities.Select(o =>
+        return recentOrderEntities.Select(o =>
         {
             var parentItems = o.OrderItems.Where(oi => oi.ParentOrderItemId == null).ToList();
             var total = parentItems.Sum(oi =>
@@ -163,7 +288,9 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
                     .Sum(child =>
                     {
                         var effectivePrice = child.Price
-                            ?? (recentOverridePrices.TryGetValue((oi.ProductId, child.ProductId), out var op) ? op : child.Product.Price);
+                            ?? (recentOverridePrices.TryGetValue((oi.ProductId, child.ProductId), out var op)
+                                ? op
+                                : child.Product.Price);
                         return effectivePrice * child.Quantity;
                     });
                 return itemPrice + addOnsPrice;
@@ -171,9 +298,11 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
 
             return new RecentOrderDto(o.Id, o.OrderNumber, o.CreatedAt, total, o.StatusId, o.Status.Name);
         }).ToList();
+    }
 
-        // Payment method breakdown (completed orders today)
-        var paymentMethods = todayOrders
+    private static List<PaymentMethodBreakdownDto> ComputePaymentMethods(List<Order> orders)
+    {
+        return orders
             .Where(o => o.StatusId == 2 && o.PaymentMethodId.HasValue)
             .GroupBy(o => o.PaymentMethod!.Name)
             .Select(g => new PaymentMethodBreakdownDto(
@@ -182,7 +311,5 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
                 g.Sum(o => o.OrderItems.Sum(oi => (oi.Price ?? oi.Product.Price) * oi.Quantity))))
             .OrderByDescending(p => p.Total)
             .ToList();
-
-        return new DashboardDto(dailySummary, topProducts, ordersByStatus, recentOrders, hourlyRevenue, paymentMethods);
     }
 }
