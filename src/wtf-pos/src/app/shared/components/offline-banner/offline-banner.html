@@ -1,0 +1,13 @@
+@if (!connectivity.isOnline()) {
+  <div class="flex items-center justify-center gap-2 bg-amber-500 px-4 py-2 text-sm font-medium text-white"
+       style="padding-top: max(0.5rem, var(--safe-area-top, 0px))">
+    <app-icon name="icon-cloud-off" size="16" fill="white" />
+    <span>You're offline — orders will sync when connected</span>
+  </div>
+} @else if (connectivity.showReconnected()) {
+  <div class="flex items-center justify-center gap-2 bg-emerald-500 px-4 py-2 text-sm font-medium text-white"
+       style="padding-top: max(0.5rem, var(--safe-area-top, 0px))">
+    <app-icon name="icon-wifi" size="16" fill="white" />
+    <span>You're back online</span>
+  </div>
+}

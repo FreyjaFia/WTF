@@ -1,5 +1,7 @@
 export * from './alert.service';
 export * from './auth.service';
+export * from './cart-persistence.service';
+export * from './connectivity.service';
 export * from './customer.service';
 export * from './dashboard.service';
 export * from './image-download.service';

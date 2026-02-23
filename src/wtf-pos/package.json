@@ -45,6 +45,7 @@
     "@capacitor/status-bar": "^8.0.1",
     "@microsoft/signalr": "^10.0.0",
     "@types/sortablejs": "^1.15.9",
+    "dexie": "^4.3.0",
     "html-to-image": "^1.11.13",
     "jwt-decode": "^4.0.0",
     "rxjs": "~7.8.0",

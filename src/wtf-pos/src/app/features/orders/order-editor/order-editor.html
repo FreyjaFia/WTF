@@ -918,13 +918,13 @@
 
       <!-- Title & Body -->
       <h3 id="abandon-title" class="mt-4 text-center text-lg font-semibold text-gray-900">
-        Abandon Order?
+        Leave Order?
       </h3>
       <p class="mt-2 text-center text-sm leading-relaxed text-gray-500">
         There are
         <span class="font-medium text-gray-700">{{ itemCount() }}</span>
-        {{ itemCount() === 1 ? 'item' : 'items' }} in the cart. If you leave now, the current order
-        will be cleared.
+        {{ itemCount() === 1 ? 'item' : 'items' }} in the cart. Your order will be saved and
+        restored when you come back.
       </p>
 
       <!-- Actions -->
@@ -934,7 +934,7 @@
           class="cursor-pointer px-4 py-2 text-sm font-medium text-gray-500 transition-colors hover:text-gray-700"
           (click)="confirmAbandon()"
         >
-          Clear &amp; Leave
+          Leave
         </button>
         <button
           type="button"

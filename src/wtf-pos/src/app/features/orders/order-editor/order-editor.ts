@@ -1,5 +1,14 @@
 ﻿import { CommonModule } from '@angular/common';
-import { Component, computed, inject, OnInit, signal, viewChild } from '@angular/core';
+import {
+  ChangeDetectorRef,
+  Component,
+  computed,
+  effect,
+  inject,
+  OnInit,
+  signal,
+  viewChild,
+} from '@angular/core';
 import {
   FormControl,
   FormGroup,
@@ -8,7 +17,15 @@ import {
   Validators,
 } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { AlertService, AuthService, CustomerService, ModalStackService, OrderService, ProductService } from '@core/services';
+import {
+  AlertService,
+  AuthService,
+  CartPersistenceService,
+  CustomerService,
+  ModalStackService,
+  OrderService,
+  ProductService,
+} from '@core/services';
 import type { CustomerDropdownOption, ReceiptData } from '@shared/components';
 import {
   AddonSelectorComponent,
@@ -19,7 +36,6 @@ import {
   OrderReceiptComponent,
   PullToRefreshComponent,
 } from '@shared/components';
-import { SortAddOnsPipe } from '@shared/pipes';
 import {
   CartAddOnDto,
   CartItemDto,
@@ -34,6 +50,7 @@ import {
   ProductSubCategoryEnum,
   UpdateOrderCommand,
 } from '@shared/models';
+import { SortAddOnsPipe } from '@shared/pipes';
 import { debounceTime, forkJoin, of, switchMap } from 'rxjs';
 import { CheckoutModal } from '../checkout-modal/checkout-modal';
 
@@ -67,6 +84,8 @@ export class OrderEditor implements OnInit {
   private readonly router = inject(Router);
   private readonly alertService = inject(AlertService);
   private readonly modalStack = inject(ModalStackService);
+  private readonly cartPersistence = inject(CartPersistenceService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   // Order-level special instructions state
   public readonly orderSpecialInstructions = signal('');
@@ -81,6 +100,24 @@ export class OrderEditor implements OnInit {
   private cancelOrderModalStackId: number | null = null;
   private summaryModalStackId: number | null = null;
   private createCustomerModalStackId: number | null = null;
+  private cartPersistenceReady = false;
+
+  private readonly _ = effect(() => {
+    const items = this.cart();
+    const customerId = this.selectedCustomerId();
+    const instructions = this.orderSpecialInstructions();
+
+    if (!this.cartPersistenceReady || this.isEditMode()) {
+      return;
+    }
+
+    if (items.length === 0) {
+      this.cartPersistence.clear();
+      return;
+    }
+
+    this.cartPersistence.save(items, customerId, instructions);
+  });
 
   // Cancel order
   protected readonly showCancelOrderModal = signal(false);
@@ -104,7 +141,9 @@ export class OrderEditor implements OnInit {
     searchTerm: new FormControl(''),
   });
   protected readonly selectedProductCategories = signal<ProductCategoryEnum[]>([]);
-  protected readonly activeSubCategoryTab = signal<ProductSubCategoryEnum>(ProductSubCategoryEnum.Coffee);
+  protected readonly activeSubCategoryTab = signal<ProductSubCategoryEnum>(
+    ProductSubCategoryEnum.Coffee,
+  );
   protected readonly subCategoryTabs = [
     { id: ProductSubCategoryEnum.Coffee, label: 'Coffee', icon: 'icon-coffee' },
     { id: ProductSubCategoryEnum.NonCoffee, label: 'Non-Coffee', icon: 'icon-cold-drink' },
@@ -330,6 +369,7 @@ export class OrderEditor implements OnInit {
       this.isEditMode.set(true);
       this.loadOrderForEditing(orderId);
     } else {
+      this.restoreSavedCart();
       this.loadProducts();
     }
 
@@ -494,9 +534,7 @@ export class OrderEditor implements OnInit {
       const product = allProducts.find((p) => p.id === cartItem.productId);
       const enrichedAddOns = cartItem.addOns?.map((ao) => {
         const addOnProduct = allProducts.find((p) => p.id === ao.addOnId);
-        return addOnProduct
-          ? { ...ao, name: addOnProduct.name }
-          : ao;
+        return addOnProduct ? { ...ao, name: addOnProduct.name } : ao;
       });
 
       return product
@@ -768,7 +806,9 @@ export class OrderEditor implements OnInit {
         },
         error: (err: Error) => {
           this.isCreatingCustomer.set(false);
-          this.alertService.error(err.message || this.alertService.getCreateErrorMessage('customer'));
+          this.alertService.error(
+            err.message || this.alertService.getCreateErrorMessage('customer'),
+          );
         },
       });
   }
@@ -957,6 +997,7 @@ export class OrderEditor implements OnInit {
       next: () => {
         this.isSavingOrder.set(false);
         this.skipGuard = true;
+        this.cartPersistence.clear();
         this.router.navigate(['/orders/list']);
       },
       error: (err) => {
@@ -1007,12 +1048,27 @@ export class OrderEditor implements OnInit {
       next: () => {
         this.isSavingOrder.set(false);
         this.skipGuard = true;
+        this.cartPersistence.clear();
         this.router.navigate(['/orders/list']);
       },
       error: (err) => {
         this.isSavingOrder.set(false);
         this.alertService.error(err.message || this.alertService.getUpdateErrorMessage('order'));
       },
+    });
+  }
+
+  private restoreSavedCart(): void {
+    this.cartPersistence.load().then((saved) => {
+      if (saved && saved.items.length > 0) {
+        this.cart.set(saved.items);
+        this.selectedCustomerId.set(saved.customerId);
+        this.orderSpecialInstructions.set(saved.specialInstructions);
+      }
+
+      // Enable auto-save only after restore completes to avoid overwriting with empty cart
+      this.cartPersistenceReady = true;
+      this.cdr.detectChanges();
     });
   }
 
