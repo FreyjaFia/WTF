@@ -121,22 +121,56 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
             })
             .ToList();
 
-        // Recent orders (last 5 today)
-        var recentOrders = await db.Orders
+        // Recent orders (last 5 today) — loaded into memory for override-aware totals
+        var recentOrderEntities = await db.Orders
             .Include(o => o.Status)
             .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.Product)
             .Where(o => o.CreatedAt >= todayUtc && o.CreatedAt < tomorrowUtc)
             .OrderByDescending(o => o.CreatedAt)
             .Take(5)
-            .Select(o => new RecentOrderDto(
-                o.Id,
-                o.OrderNumber,
-                o.CreatedAt,
-                o.OrderItems.Sum(oi => (oi.Price ?? oi.Product.Price) * oi.Quantity),
-                o.StatusId,
-                o.Status.Name))
             .ToListAsync(cancellationToken);
+
+        var recentParentProductIds = recentOrderEntities
+            .SelectMany(o => o.OrderItems.Where(oi => oi.ParentOrderItemId == null))
+            .Select(oi => oi.ProductId)
+            .Distinct()
+            .ToList();
+
+        var recentAddOnProductIds = recentOrderEntities
+            .SelectMany(o => o.OrderItems.Where(oi => oi.ParentOrderItemId != null))
+            .Select(oi => oi.ProductId)
+            .Distinct()
+            .ToList();
+
+        var recentOverridePrices = new Dictionary<(Guid ProductId, Guid AddOnId), decimal>();
+
+        if (recentAddOnProductIds.Count > 0)
+        {
+            recentOverridePrices = await db.ProductAddOnPriceOverrides
+                .Where(o => recentParentProductIds.Contains(o.ProductId) && recentAddOnProductIds.Contains(o.AddOnId) && o.IsActive)
+                .ToDictionaryAsync(o => (o.ProductId, o.AddOnId), o => o.Price, cancellationToken);
+        }
+
+        var recentOrders = recentOrderEntities.Select(o =>
+        {
+            var parentItems = o.OrderItems.Where(oi => oi.ParentOrderItemId == null).ToList();
+            var total = parentItems.Sum(oi =>
+            {
+                var itemPrice = (oi.Price ?? oi.Product.Price) * oi.Quantity;
+                var addOnsPrice = o.OrderItems
+                    .Where(child => child.ParentOrderItemId == oi.Id)
+                    .Sum(child =>
+                    {
+                        var effectivePrice = child.Price
+                            ?? (recentOverridePrices.TryGetValue((oi.ProductId, child.ProductId), out var op) ? op : child.Product.Price);
+                        return effectivePrice * child.Quantity;
+                    });
+                return itemPrice + addOnsPrice;
+            });
+
+            return new RecentOrderDto(o.Id, o.OrderNumber, o.CreatedAt, total, o.StatusId, o.Status.Name);
+        }).ToList();
 
         // Payment method breakdown (completed orders today)
         var paymentMethods = todayOrders
