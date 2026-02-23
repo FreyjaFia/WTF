@@ -4,6 +4,7 @@ import {
   ElementRef,
   inject,
   input,
+  OnDestroy,
   OnInit,
   signal,
   viewChild,
@@ -31,7 +32,7 @@ export interface ReceiptData {
   imports: [CommonModule],
   templateUrl: './order-receipt.html',
 })
-export class OrderReceiptComponent implements OnInit {
+export class OrderReceiptComponent implements OnInit, OnDestroy {
   private readonly receiptEl = viewChild.required<ElementRef<HTMLElement>>('receiptEl');
   private readonly imageDownloadService = inject(ImageDownloadService);
   private readonly alertService = inject(AlertService);
@@ -41,17 +42,24 @@ export class OrderReceiptComponent implements OnInit {
   protected readonly isGenerating = signal(false);
   protected readonly logoDataUri = signal('');
 
+  private logoBlobUrl: string | null = null;
+
   public ngOnInit(): void {
-    this.loadLogoAsBase64();
+    this.loadLogo();
   }
 
-  private loadLogoAsBase64(): void {
+  public ngOnDestroy(): void {
+    if (this.logoBlobUrl) {
+      URL.revokeObjectURL(this.logoBlobUrl);
+    }
+  }
+
+  private loadLogo(): void {
     fetch('assets/images/logo_new.png')
       .then((res) => res.blob())
       .then((blob) => {
-        const reader = new FileReader();
-        reader.onloadend = () => this.logoDataUri.set(reader.result as string);
-        reader.readAsDataURL(blob);
+        this.logoBlobUrl = URL.createObjectURL(blob);
+        this.logoDataUri.set(this.logoBlobUrl);
       });
   }
 
