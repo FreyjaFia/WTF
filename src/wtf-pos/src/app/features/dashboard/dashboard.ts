@@ -104,7 +104,7 @@ export class Dashboard implements OnInit, OnDestroy {
     return data
       .filter((h) => h.hour >= 8)
       .map((h) => ({
-        label: h.hour === 0 ? '12a' : h.hour < 12 ? `${h.hour}a` : h.hour === 12 ? '12p' : `${h.hour - 12}p`,
+        label: h.hour === 0 ? '12am' : h.hour < 12 ? `${h.hour}am` : h.hour === 12 ? '12pm' : `${h.hour - 12}pm`,
         value: h.revenue,
       }));
   });
