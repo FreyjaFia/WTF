@@ -1,6 +1,6 @@
 ﻿import { CommonModule } from '@angular/common';
 import { Component, computed, inject, output, signal } from '@angular/core';
-import { ModalStackService, ProductService } from '@core/services';
+import { CatalogCacheService, ModalStackService } from '@core/services';
 import { AvatarComponent } from '@shared/components/avatar/avatar';
 import { Icon } from '@shared/components/icons/icon/icon';
 import { ADD_ON_TYPE_ORDER, AddOnGroupDto, AddOnTypeEnum, CartAddOnDto, ProductDto } from '@shared/models';
@@ -12,7 +12,7 @@ import { ADD_ON_TYPE_ORDER, AddOnGroupDto, AddOnTypeEnum, CartAddOnDto, ProductD
 })
 export class AddonSelectorComponent {
   private readonly modalStack = inject(ModalStackService);
-  private readonly productService = inject(ProductService);
+  private readonly catalogCache = inject(CatalogCacheService);
 
   private modalStackId: number | null = null;
 
@@ -117,25 +117,19 @@ export class AddonSelectorComponent {
 
   private loadAddOns(productId: string): void {
     this.isLoading.set(true);
-    this.productService.getProductAddOns(productId).subscribe({
-      next: (groups) => {
-        // Deduplicate options within each group (display only)
-        const deduped = groups
-          .sort((a, b) => ADD_ON_TYPE_ORDER[a.type] - ADD_ON_TYPE_ORDER[b.type])
-          .map((g) => ({
-          ...g,
-          options: g.options
-            .filter((opt, i, arr) => arr.findIndex((o) => o.id === opt.id) === i)
-            .sort((a, b) => a.name.localeCompare(b.name)),
-        }));
-        this.addOnGroups.set(deduped);
-        this.isLoading.set(false);
-      },
-      error: () => {
-        this.addOnGroups.set([]);
-        this.isLoading.set(false);
-      },
-    });
+
+    const groups = this.catalogCache.getAddOnsForProduct(productId);
+    const deduped = groups
+      .sort((a, b) => ADD_ON_TYPE_ORDER[a.type] - ADD_ON_TYPE_ORDER[b.type])
+      .map((g) => ({
+        ...g,
+        options: g.options
+          .filter((opt, i, arr) => arr.findIndex((o) => o.id === opt.id) === i)
+          .sort((a, b) => a.name.localeCompare(b.name)),
+      }));
+
+    this.addOnGroups.set(deduped);
+    this.isLoading.set(false);
   }
 
   protected getSelectionRule(type: AddOnTypeEnum): string {

@@ -21,6 +21,7 @@ import {
   AlertService,
   AuthService,
   CartPersistenceService,
+  CatalogCacheService,
   CustomerService,
   ModalStackService,
   OrderService,
@@ -84,6 +85,7 @@ export class OrderEditor implements OnInit {
   private readonly router = inject(Router);
   private readonly alertService = inject(AlertService);
   private readonly modalStack = inject(ModalStackService);
+  private readonly catalogCache = inject(CatalogCacheService);
   private readonly cartPersistence = inject(CartPersistenceService);
   private readonly cdr = inject(ChangeDetectorRef);
 
@@ -362,15 +364,15 @@ export class OrderEditor implements OnInit {
   }
 
   public ngOnInit(): void {
-    this.loadCustomers();
-
     const orderId = this.route.snapshot.paramMap.get('id');
     if (orderId) {
       this.isEditMode.set(true);
+      this.loadCustomers();
+      this.catalogCache.load();
       this.loadOrderForEditing(orderId);
     } else {
       this.restoreSavedCart();
-      this.loadProducts();
+      this.loadCatalog();
     }
 
     this.filterForm.valueChanges.pipe(debounceTime(300)).subscribe(() => {
@@ -434,51 +436,26 @@ export class OrderEditor implements OnInit {
   protected refreshProducts(): void {
     this.isRefreshing.set(true);
 
-    const { searchTerm } = this.filterForm.value;
-
-    this.productService
-      .getProducts({
-        searchTerm: searchTerm || null,
-        category: null,
-        isAddOn: false,
-        isActive: true,
-      })
-      .subscribe({
-        next: (result) => {
-          this.productsCache.set(result);
-          this.applyFiltersToCache();
-          this.isRefreshing.set(false);
-        },
-        error: (err: Error) => {
-          this.alertService.error(err.message || this.alertService.getLoadErrorMessage('products'));
-          this.isRefreshing.set(false);
-        },
-      });
+    this.catalogCache.refresh().then(() => {
+      this.productsCache.set(this.catalogCache.products());
+      this.customers.set(this.catalogCache.customers());
+      this.applyFiltersToCache();
+      this.isRefreshing.set(false);
+    });
   }
 
-  private loadProducts(): void {
+  private loadCatalog(): void {
     this.isLoading.set(true);
+    this.isLoadingCustomers.set(true);
 
-    const { searchTerm } = this.filterForm.value;
-
-    this.productService
-      .getProducts({
-        searchTerm: searchTerm || null,
-        category: null,
-        isAddOn: false,
-        isActive: true,
-      })
-      .subscribe({
-        next: (result) => {
-          this.productsCache.set(result);
-          this.applyFiltersToCache();
-          this.isLoading.set(false);
-        },
-        error: (err: Error) => {
-          this.alertService.error(err.message || this.alertService.getLoadErrorMessage('products'));
-          this.isLoading.set(false);
-        },
-      });
+    this.catalogCache.load().then(() => {
+      this.productsCache.set(this.catalogCache.products());
+      this.customers.set(this.catalogCache.customers());
+      this.applyFiltersToCache();
+      this.refreshCartImageUrls();
+      this.isLoading.set(false);
+      this.isLoadingCustomers.set(false);
+    });
   }
 
   private loadCustomers(): void {
@@ -1069,7 +1046,26 @@ export class OrderEditor implements OnInit {
       // Enable auto-save only after restore completes to avoid overwriting with empty cart
       this.cartPersistenceReady = true;
       this.cdr.detectChanges();
+
+      // Re-resolve cart image URLs from catalog cache (blob URLs are session-specific)
+      this.refreshCartImageUrls();
     });
+  }
+
+  private refreshCartImageUrls(): void {
+    const products = this.catalogCache.products();
+
+    if (products.length === 0 || this.cart().length === 0) {
+      return;
+    }
+
+    const productMap = new Map(products.map((p) => [p.id, p]));
+    const updated = this.cart().map((item) => {
+      const product = productMap.get(item.productId);
+      return product ? { ...item, imageUrl: product.imageUrl } : item;
+    });
+
+    this.cart.set(updated);
   }
 
   private applyFiltersToCache(): void {
