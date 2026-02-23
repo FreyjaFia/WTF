@@ -1,0 +1,221 @@
+<div style="position: fixed; left: -9999px; top: 0; z-index: -1; pointer-events: none">
+  <div
+    #receiptEl
+    style="
+      width: 380px;
+      font-family:
+        'Segoe UI',
+        system-ui,
+        -apple-system,
+        sans-serif;
+      background: #ffffff;
+      color: #1f2937;
+      padding: 32px 28px;
+      border-radius: 16px;
+    "
+  >
+    <!-- Brand header -->
+    <div style="text-align: center; margin-bottom: 24px">
+      <img [src]="logoDataUri()" alt="WTF" style="height: 88px; margin: 0 auto; display: block" />
+    </div>
+
+    <!-- Order info -->
+    <div style="font-size: 16px; font-weight: 700; margin-bottom: 8px">
+      @if (data()?.orderNumber) {
+        Order #{{ data()!.orderNumber }}
+      } @else {
+        New Order
+      }
+    </div>
+
+    <div style="font-size: 13px; color: #6b7280; margin-bottom: 4px">
+      {{ data()?.customerName }}
+    </div>
+    <div style="font-size: 12px; color: #9ca3af; margin-bottom: 20px">
+      {{ data()?.date }}
+    </div>
+
+    <!-- Divider -->
+    <div style="border-top: 2px dashed #e5e7eb; margin-bottom: 16px"></div>
+
+    <!-- Items -->
+    @for (item of data()?.items ?? []; track $index; let last = $last) {
+      <div
+        style="margin-bottom: 12px"
+        [style.padding-bottom]="last ? '0' : '12px'"
+        [style.border-bottom]="last ? 'none' : '1px solid #f3f4f6'"
+      >
+        <div style="display: flex; justify-content: space-between; align-items: flex-start">
+          <div style="flex: 1; min-width: 0">
+            <div style="font-size: 14px; font-weight: 600">
+              {{ item.name }}
+            </div>
+            <div style="font-size: 12px; color: #9ca3af; margin-top: 2px">
+              {{ item.qty }} × ₱{{ item.price | number: '1.2-2' }}
+            </div>
+          </div>
+          <div
+            style="
+              font-size: 14px;
+              font-weight: 600;
+              text-align: right;
+              white-space: nowrap;
+              margin-left: 12px;
+            "
+          >
+            ₱{{ getItemTotal(item) | number: '1.2-2' }}
+          </div>
+        </div>
+
+        @if (item.addOns?.length) {
+          <div style="margin-top: 6px; padding-left: 12px">
+            @for (ao of item.addOns; track ao.addOnId) {
+              <div
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  font-size: 12px;
+                  color: #6b7280;
+                  margin-top: 2px;
+                "
+              >
+                <span>+ {{ ao.name }}</span>
+                <span>₱{{ ao.price | number: '1.2-2' }}</span>
+              </div>
+            }
+          </div>
+        }
+
+        @if (item.specialInstructions?.trim()) {
+          <div
+            style="
+              font-size: 11px;
+              color: #9ca3af;
+              font-style: italic;
+              margin-top: 4px;
+              padding-left: 12px;
+            "
+          >
+            {{ item.specialInstructions }}
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Order note -->
+    @if (data()?.specialInstructions?.trim()) {
+      <div style="border-top: 2px dashed #e5e7eb; padding-top: 12px; margin-bottom: 12px">
+        <div
+          style="
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #9ca3af;
+            margin-bottom: 4px;
+          "
+        >
+          Note
+        </div>
+        <div style="font-size: 13px; color: #6b7280; font-style: italic">
+          {{ data()!.specialInstructions }}
+        </div>
+      </div>
+    }
+
+    <!-- Divider -->
+    <div style="border-top: 2px dashed #e5e7eb; margin-top: 4px; margin-bottom: 16px"></div>
+
+    <!-- Payment details (for settled orders) -->
+    @if (hasPaymentInfo()) {
+      <div style="margin-bottom: 12px">
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            color: #6b7280;
+            margin-bottom: 6px;
+          "
+        >
+          <span>Payment</span>
+          <span style="font-weight: 600; color: #1f2937">{{ paymentMethodLabel() }}</span>
+        </div>
+        @if (data()?.amountReceived !== null && data()?.amountReceived !== undefined) {
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              font-size: 13px;
+              color: #6b7280;
+              margin-bottom: 4px;
+            "
+          >
+            <span>Amount Received</span>
+            <span>₱{{ data()!.amountReceived! | number: '1.2-2' }}</span>
+          </div>
+        }
+        @if (data()?.tips) {
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              font-size: 13px;
+              color: #6b7280;
+              margin-bottom: 4px;
+            "
+          >
+            <span>Tips</span>
+            <span>₱{{ data()!.tips! | number: '1.2-2' }}</span>
+          </div>
+        }
+        @if (data()?.changeAmount) {
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              font-size: 13px;
+              color: #6b7280;
+              margin-bottom: 4px;
+            "
+          >
+            <span>Change</span>
+            <span>₱{{ data()!.changeAmount! | number: '1.2-2' }}</span>
+          </div>
+        }
+      </div>
+
+      <div style="border-top: 1px solid #e5e7eb; margin-bottom: 16px"></div>
+    }
+
+    <!-- Total -->
+    <div style="display: flex; justify-content: space-between; align-items: center">
+      <div
+        style="
+          font-size: 14px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          color: #374151;
+        "
+      >
+        Total
+      </div>
+      <div style="font-size: 22px; font-weight: 800; color: #047857">
+        ₱{{ (data()?.totalAmount ?? 0) | number: '1.2-2' }}
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div
+      style="
+        text-align: center;
+        margin-top: 24px;
+        padding-top: 16px;
+        border-top: 2px dashed #e5e7eb;
+      "
+    >
+      <div style="font-size: 11px; color: #9ca3af">Thank you for your order!</div>
+    </div>
+  </div>
+</div>

@@ -9,7 +9,7 @@ import {
 } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AlertService, AuthService, CustomerService, ModalStackService, OrderService, ProductService } from '@core/services';
-import type { CustomerDropdownOption, FilterOption } from '@shared/components';
+import type { CustomerDropdownOption, FilterOption, ReceiptData } from '@shared/components';
 import {
   AddonSelectorComponent,
   AvatarComponent,
@@ -17,6 +17,7 @@ import {
   CustomerDropdown,
   FilterDropdown,
   Icon,
+  OrderReceiptComponent,
   PullToRefreshComponent,
 } from '@shared/components';
 import { SortAddOnsPipe } from '@shared/pipes';
@@ -50,6 +51,7 @@ import { CheckoutModal } from '../checkout-modal/checkout-modal';
     AvatarComponent,
     BadgeComponent,
     PullToRefreshComponent,
+    OrderReceiptComponent,
     SortAddOnsPipe,
   ],
   templateUrl: './order-editor.html',
@@ -57,6 +59,7 @@ import { CheckoutModal } from '../checkout-modal/checkout-modal';
 export class OrderEditor implements OnInit {
   private readonly checkoutModal = viewChild.required(CheckoutModal);
   private readonly addonSelector = viewChild.required(AddonSelectorComponent);
+  private readonly orderReceipt = viewChild.required(OrderReceiptComponent);
   private readonly productService = inject(ProductService);
   private readonly orderService = inject(OrderService);
   private readonly customerService = inject(CustomerService);
@@ -91,6 +94,7 @@ export class OrderEditor implements OnInit {
   protected readonly isCartDragging = signal(false);
   private cartDragStartY = 0;
   protected readonly isRefreshing = signal(false);
+  protected readonly isDownloadingReceipt = signal(false);
 
   protected readonly createCustomerForm = new FormGroup({
     firstName: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
@@ -222,6 +226,39 @@ export class OrderEditor implements OnInit {
       label: this.getCustomerDisplayName(customer),
     })),
   );
+
+  protected readonly receiptData = computed<ReceiptData>(() => {
+    const order = this.currentOrder();
+    return {
+      orderNumber: order?.orderNumber ?? null,
+      customerName: this.selectedCustomerName(),
+      date: order
+        ? new Date(order.updatedAt || order.createdAt).toLocaleString('en-PH', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true,
+          })
+        : new Date().toLocaleString('en-PH', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true,
+          }),
+      status: order?.status ?? OrderStatusEnum.Pending,
+      items: this.cart(),
+      specialInstructions: this.orderSpecialInstructions(),
+      totalAmount: order?.totalAmount ?? this.totalPrice(),
+      paymentMethod: order?.paymentMethod ?? null,
+      amountReceived: order?.amountReceived ?? null,
+      changeAmount: order?.changeAmount ?? null,
+      tips: order?.tips ?? null,
+    };
+  });
 
   protected itemCount = () => this.cart().reduce((s, i) => s + i.qty, 0);
   protected totalPrice = () =>
@@ -667,6 +704,15 @@ export class OrderEditor implements OnInit {
   protected closeOrderSummaryModal() {
     this.showOrderSummaryModal.set(false);
     this.removeStackId('summary');
+  }
+
+  protected async downloadOrderImage(): Promise<void> {
+    this.isDownloadingReceipt.set(true);
+    try {
+      await this.orderReceipt().generate();
+    } finally {
+      this.isDownloadingReceipt.set(false);
+    }
   }
 
   protected openCreateCustomerModal(): void {

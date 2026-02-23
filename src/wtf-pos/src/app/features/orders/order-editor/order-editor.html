@@ -202,13 +202,15 @@
           }
           </div>
         </div>
-        <button
-          class="cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium text-error transition-all hover:bg-red-50 active:scale-95"
-          (click)="clearAll()"
-          [class.hidden]="isReadOnly() || !canManageOrderActions()"
-        >
-          Clear
-        </button>
+        <div class="flex items-center">
+          <button
+            class="cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium text-error transition-all hover:bg-red-50 active:scale-95"
+            (click)="clearAll()"
+            [class.hidden]="isReadOnly() || !canManageOrderActions()"
+          >
+            Clear
+          </button>
+        </div>
       </div>
 
       <div class="mt-3">
@@ -244,7 +246,25 @@
         }
       </div>
 
-      <div class="mt-2 text-sm opacity-70">{{ itemCount() }} items</div>
+      <div class="mt-2 flex items-center justify-between">
+        <div class="text-sm opacity-70">{{ itemCount() }} items</div>
+        @if (cart().length > 0) {
+          <button
+            type="button"
+            class="flex cursor-pointer items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium text-gray-400 transition-all hover:bg-gray-100 hover:text-gray-600 active:scale-95"
+            [disabled]="isDownloadingReceipt()"
+            (click)="downloadOrderImage()"
+            aria-label="Save order as image"
+          >
+            @if (isDownloadingReceipt()) {
+              <span class="loading loading-spinner loading-xs"></span>
+            } @else {
+              <app-icon name="icon-download" [class]="'h-3.5 w-3.5'" [fill]="'currentColor'" />
+            }
+            Save as image
+          </button>
+        }
+      </div>
     </div>
 
     @if (isEditMode() && isLoading()) {
@@ -499,6 +519,7 @@
   </aside>
 </div>
 
+<app-order-receipt [data]="receiptData()" />
 <app-addon-selector (addToCart)="onAddonSelected($event)" />
 
 <!-- Create Customer Modal -->

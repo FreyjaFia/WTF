@@ -16,6 +16,7 @@ export * from './header/header';
 export * from './icons/icon/icon';
 export * from './icons/icons-sprite/icons-sprite';
 export * from './layout/layout';
+export * from './order-receipt/order-receipt';
 export * from './price-history-drawer/price-history-drawer';
 export * from './products-swapper/products-swapper';
 export * from './pull-to-refresh/pull-to-refresh';
