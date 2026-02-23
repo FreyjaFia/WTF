@@ -422,11 +422,6 @@ export class OrderEditor implements OnInit {
     });
   }
 
-  /**
-   * Loads products for edit mode — fetches the product grid and (if needed)
-   * all products to resolve add-on names/prices. Returns an observable so
-   * it can be chained after the order fetch.
-   */
   private loadProductsForEdit() {
     const products$ = this.productService.getProducts({
       searchTerm: null,

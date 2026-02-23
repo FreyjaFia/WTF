@@ -13,7 +13,6 @@ export enum AddOnTypeEnum {
   Sauce = 5,
 }
 
-/** Display order: required types first, then optional */
 export const ADD_ON_TYPE_ORDER: Record<AddOnTypeEnum, number> = {
   [AddOnTypeEnum.Size]: 0,
   [AddOnTypeEnum.Flavor]: 1,

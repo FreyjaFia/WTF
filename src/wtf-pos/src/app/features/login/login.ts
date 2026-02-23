@@ -26,10 +26,6 @@ export class Login implements OnInit {
     this.checkExistingSession();
   }
 
-  /**
-   * Check if user has a valid token or refresh token on page load
-   * If valid, redirect to home. If expired, try to refresh and redirect.
-   */
   private checkExistingSession(): void {
     // Check if token is already valid
     if (this.auth.isTokenValid()) {

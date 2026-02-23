@@ -243,7 +243,6 @@ export class Dashboard implements OnInit, OnDestroy {
     });
   }
 
-  /** Refresh data without showing the loading spinner. */
   private silentRefresh(): void {
     this.dashboardService.getDashboard().subscribe({
       next: (data) => {

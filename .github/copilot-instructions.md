@@ -223,6 +223,14 @@ class OrderService  // ❌ Missing public
 }
 ```
 
+### Comments
+- **Do NOT add summary comments** to methods, properties, classes, constants, or fields
+- No `/// <summary>` XML doc comments
+- No `/** JSDoc-style */` descriptions above members
+- No `// Descriptive sentence` comments above method/property declarations that merely restate what the code does
+- Inline implementation comments (e.g. `// Prevent native scroll while pulling`) are acceptable when they explain *why*, not *what*
+- Let clear naming and code structure be the documentation
+
 ### Async Methods
 - Always suffix with `Async`
 - Use `CancellationToken` for long-running operations
@@ -413,6 +421,13 @@ export class ProductEditorComponent implements OnInit, OnDestroy {
 - Name handlers for what they do, not the event (e.g., `saveUserData()` not `handleClick()`)
 - Implement TypeScript interfaces for lifecycle hooks (e.g., `OnInit`)
 
+### Comments
+- **Do NOT add summary comments** to methods, properties, classes, constants, or fields
+- No `/** JSDoc-style */` descriptions above members
+- No `// Descriptive sentence` comments above method/property declarations that merely restate what the code does
+- Inline implementation comments (e.g. `// Only start pull-to-refresh when scrolled to top`) are acceptable when they explain *why*, not *what*
+- Let clear naming and code structure be the documentation
+
 ### Environment Configuration
 - `src/environments/environment.development.ts` for development
 - `src/environments/environment.ts` for production
@@ -431,6 +446,28 @@ export const environment = {
 - Use `tailwind.config.js` and DaisyUI themes for colors, spacing, typography
 - Responsive prefixes (`sm:`, `md:`, `lg:`) over hand-written media queries
 - Accessibility: visible focus styles, contrast compliance
+- **Prefer standard utility classes over arbitrary values** — use named scale values when Tailwind provides them:
+
+| Avoid (arbitrary) | Prefer (standard) |
+| ------------------ | ----------------- |
+| `bottom-[5.5rem]` | `bottom-22` |
+| `z-[100]` | `z-100` |
+| `h-[18px]` | `h-4.5` |
+| `w-[18px]` | `w-4.5` |
+
+- **Use Tailwind v4 important syntax** — trailing `!` instead of leading `!`:
+
+| Avoid (legacy) | Prefer (v4) |
+| -------------- | ----------- |
+| `md:!translate-y-0` | `md:translate-y-0!` |
+| `md:!transition-none` | `md:transition-none!` |
+
+- **Use current utility names** — Tailwind renames utilities over time; always use the latest:
+
+| Deprecated | Current |
+| ---------- | ------- |
+| `break-words` | `wrap-break-word` |
+| `order-none` | `order-0` |
 
 ## Frontend Error Checking
 

@@ -10,15 +10,6 @@ import {
 } from '@angular/core';
 import { CommonModule, DecimalPipe } from '@angular/common';
 
-/**
- * Animated number counter that rolls to the target value with an easing curve.
- * Highlights briefly on change with a configurable accent color.
- *
- * Usage:
- * ```html
- * <app-animated-counter [value]="totalRevenue()" [prefix]="'₱'" [decimals]="2" />
- * ```
- */
 @Component({
   selector: 'app-animated-counter',
   imports: [CommonModule, DecimalPipe],
@@ -44,22 +35,11 @@ export class AnimatedCounterComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly counterEl = viewChild<ElementRef<HTMLSpanElement>>('counterEl');
 
-  /** The target value to animate towards. */
   public readonly value = input.required<number>();
-
-  /** String to prepend (e.g. ₱, $). */
   public readonly prefix = input<string>('');
-
-  /** Color for the prefix character. */
   public readonly prefixColor = input<string>('');
-
-  /** Number of decimal places. */
   public readonly decimals = input<number>(0);
-
-  /** Duration of the count animation in milliseconds. */
   public readonly duration = input<number>(600);
-
-  /** Flash color on change. */
   public readonly highlightColor = input<string>('#047857');
 
   protected readonly displayValue = signal(0);

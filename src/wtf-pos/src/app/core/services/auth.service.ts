@@ -148,9 +148,6 @@ export class AuthService {
     return localStorage.getItem('refreshToken');
   }
 
-  /**
-   * Determines if the token is expired or about to expire (within 5 minutes)
-   */
   public isTokenExpired(): boolean {
     const token = this.getToken();
 
@@ -179,10 +176,6 @@ export class AuthService {
     }
   }
 
-  /**
-   * Validates the current token
-   * @returns true if token is valid and not expired
-   */
   public isTokenValid(): boolean {
     const token = this.getToken();
 
@@ -206,9 +199,6 @@ export class AuthService {
     }
   }
 
-  /**
-   * Refreshes the access token using the refresh token
-   */
   public refreshToken(): Observable<boolean> {
     const refreshToken = this.getRefreshToken();
 
@@ -244,9 +234,6 @@ export class AuthService {
       );
   }
 
-  /**
-   * Decodes a JWT token and returns its payload
-   */
   private decodeToken(token: string): Record<string, unknown> | null {
     try {
       const base64Url = token.split('.')[1];
