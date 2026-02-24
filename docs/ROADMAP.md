@@ -62,16 +62,28 @@ Enable the POS app to function without a network connection.
 ### Phase 5 — Batch Sync & Advanced Offline ⏳ Pending
 
 - **Batch create order endpoint:** `POST /api/orders/batch` accepting an
-  array of orders, each with a `createdAt` field (UTC). The API processes
-  all orders in a single request/transaction.
+  array of orders. Implemented via `CreateOrderBatchCommand` +
+  `CreateOrderBatchHandler` with a DB transaction for the full batch.
+- **Order timestamp preservation:** `CreateOrderCommand` now accepts
+  `createdAt`; API uses `request.CreatedAt` (UTC) when provided, otherwise
+  falls back to `DateTime.UtcNow`.
 - **Frontend batch sync:** `syncAll()` sends pending orders in batches of
-  5 to the batch endpoint, with the offline `createdAt` timestamp
-  converted to UTC.
+  5 to the batch endpoint (`OrderService.createOrdersBatch()`), with
+  offline `createdAt` converted to UTC.
 - **Retry with exponential backoff** for failed syncs
+  (`MAX_SYNC_ATTEMPTS=3`, `INITIAL_BACKOFF_MS=500`, doubled per retry).
+- **Sync safety while editing offline orders:** auto/manual sync is paused
+  while an offline order is open in the editor, then resumes after leaving
+  the editor.
 - **Stale catalog detection** — detect when product prices have changed
-  since last catalog sync
+  since last catalog sync (tracked via `stalePriceItems` and
+  `hasStalePrices` in `CatalogCacheService`).
 - **Periodic background catalog refresh** when online
+  (`CatalogCacheService` runs background refresh every 15 minutes and
+  on reconnect when catalog is already loaded).
 - **IndexedDB storage management** — clear old cached images
+  (`images` table now stores `cachedAt`; cleanup removes stale entries and
+  trims cache size by oldest-first policy).
 
 ---
 
