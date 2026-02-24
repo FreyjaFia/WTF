@@ -4,6 +4,9 @@ import { db } from './db';
 
 @Injectable({ providedIn: 'root' })
 export class ImageCacheService {
+  private static readonly MAX_IMAGE_AGE_DAYS = 30;
+  private static readonly MAX_IMAGE_COUNT = 2000;
+
   private readonly blobUrlCache = new Map<string, string>();
 
   public async cacheImages(
@@ -41,6 +44,7 @@ export class ImageCacheService {
 
     const downloads = toDownload.map((url) => this.downloadAndStore(url));
     await Promise.allSettled(downloads);
+    await this.cleanupOldCache();
   }
 
   public async cacheUrl(url: string): Promise<void> {
@@ -48,6 +52,7 @@ export class ImageCacheService {
 
     if (!existing) {
       await this.downloadAndStore(url);
+      await this.cleanupOldCache();
     }
   }
 
@@ -128,9 +133,61 @@ export class ImageCacheService {
       }
 
       const blob = await response.blob();
-      await db.images.put({ url, blob });
+      await db.images.put({ url, blob, cachedAt: new Date().toISOString() });
     } catch {
       // Silently skip failed image downloads
+    }
+  }
+
+  public async cleanupOldCache(): Promise<void> {
+    const allImages = await db.images.toArray();
+
+    if (allImages.length === 0) {
+      return;
+    }
+
+    const cutoffMs =
+      Date.now() - ImageCacheService.MAX_IMAGE_AGE_DAYS * 24 * 60 * 60 * 1000;
+    const toRemove = new Set<string>();
+
+    for (const image of allImages) {
+      const cachedAtMs = image.cachedAt ? new Date(image.cachedAt).getTime() : 0;
+
+      if (!cachedAtMs || cachedAtMs < cutoffMs) {
+        toRemove.add(image.url);
+      }
+    }
+
+    const remaining = allImages
+      .filter((image) => !toRemove.has(image.url))
+      .sort((a, b) => {
+        const aTime = a.cachedAt ? new Date(a.cachedAt).getTime() : 0;
+        const bTime = b.cachedAt ? new Date(b.cachedAt).getTime() : 0;
+        return aTime - bTime;
+      });
+
+    const overflow = remaining.length - ImageCacheService.MAX_IMAGE_COUNT;
+
+    if (overflow > 0) {
+      for (let i = 0; i < overflow; i++) {
+        toRemove.add(remaining[i].url);
+      }
+    }
+
+    if (toRemove.size === 0) {
+      return;
+    }
+
+    const urls = [...toRemove];
+    await db.images.bulkDelete(urls);
+
+    for (const url of urls) {
+      const blobUrl = this.blobUrlCache.get(url);
+
+      if (blobUrl) {
+        URL.revokeObjectURL(blobUrl);
+        this.blobUrlCache.delete(url);
+      }
     }
   }
 }

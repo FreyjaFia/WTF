@@ -26,6 +26,7 @@ export interface CachedCatalog {
 export interface CachedImage {
   url: string;
   blob: Blob;
+  cachedAt: string;
 }
 
 export interface PendingOrder {
@@ -68,6 +69,13 @@ export class WtfDatabase extends Dexie {
       carts: '++id',
       catalog: '++id',
       images: 'url',
+      pendingOrders: '++id, localId, status',
+    });
+
+    this.version(5).stores({
+      carts: '++id',
+      catalog: '++id',
+      images: 'url, cachedAt',
       pendingOrders: '++id, localId, status',
     });
   }
