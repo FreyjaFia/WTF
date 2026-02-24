@@ -31,6 +31,8 @@ public record CreateOrderCommand : IRequest<OrderDto>
     public decimal? ChangeAmount { get; init; }
 
     public decimal? Tips { get; init; }
+
+    public DateTime? CreatedAt { get; init; }
 }
 
 public class CreateOrderHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor, IHubContext<DashboardHub> dashboardHub) : IRequestHandler<CreateOrderCommand, OrderDto>
@@ -125,9 +127,11 @@ public class CreateOrderHandler(WTFDbContext db, IHttpContextAccessor httpContex
             }
         }
 
+        var createdAt = request.CreatedAt?.ToUniversalTime() ?? DateTime.UtcNow;
+
         var order = new Order
         {
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = createdAt,
             CreatedBy = userId,
             CustomerId = request.CustomerId,
             SpecialInstructions = request.SpecialInstructions,

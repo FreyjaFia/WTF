@@ -38,6 +38,15 @@ public static class OrderEndpoints
             })
             .RequireAuthorization(AppPolicies.OrdersWrite);
 
+        // POST /api/orders/batch - Create multiple orders in one request
+        orderGroup.MapPost("/batch",
+            async (CreateOrderBatchCommand command, ISender sender) =>
+            {
+                var result = await sender.Send(command);
+                return Results.Ok(result);
+            })
+            .RequireAuthorization(AppPolicies.OrdersWrite);
+
         // PUT /api/orders/{id} - Update order
         orderGroup.MapPut("/{id:guid}",
             async (Guid id, UpdateOrderCommand command, ISender sender) =>

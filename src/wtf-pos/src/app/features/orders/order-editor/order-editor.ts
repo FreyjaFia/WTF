@@ -5,6 +5,7 @@ import {
   computed,
   effect,
   inject,
+  OnDestroy,
   OnInit,
   signal,
   viewChild,
@@ -75,7 +76,7 @@ import { CheckoutModal } from '../checkout-modal/checkout-modal';
   ],
   templateUrl: './order-editor.html',
 })
-export class OrderEditor implements OnInit {
+export class OrderEditor implements OnInit, OnDestroy {
   private readonly checkoutModal = viewChild.required(CheckoutModal);
   private readonly addonSelector = viewChild.required(AddonSelectorComponent);
   private readonly orderReceipt = viewChild.required(OrderReceiptComponent);
@@ -169,6 +170,7 @@ export class OrderEditor implements OnInit {
   protected readonly currentOrder = signal<OrderDto | null>(null);
   protected offlineLocalId: string | null = null;
   private discardOrderModalStackId: number | null = null;
+  private offlineEditSyncLockActive = false;
 
   protected readonly isCompleted = computed(() => {
     const order = this.currentOrder();
@@ -389,6 +391,8 @@ export class OrderEditor implements OnInit {
       this.isEditMode.set(true);
       this.isOfflineEditMode.set(true);
       this.offlineLocalId = offlineLocalId;
+      this.offlineOrder.lockSyncForOfflineEdit(offlineLocalId);
+      this.offlineEditSyncLockActive = true;
       this.loadOfflineOrderForEditing(offlineLocalId);
     } else if (orderId) {
       this.isEditMode.set(true);
@@ -403,6 +407,13 @@ export class OrderEditor implements OnInit {
     this.filterForm.valueChanges.pipe(debounceTime(300)).subscribe(() => {
       this.applyFiltersToCache();
     });
+  }
+
+  public ngOnDestroy(): void {
+    if (this.offlineEditSyncLockActive && this.offlineLocalId) {
+      this.offlineOrder.unlockSyncForOfflineEdit(this.offlineLocalId);
+      this.offlineEditSyncLockActive = false;
+    }
   }
 
   private loadOrderForEditing(orderId: string): void {

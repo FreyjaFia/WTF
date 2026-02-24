@@ -55,6 +55,7 @@ export interface CreateOrderCommand {
   amountReceived?: number | null;
   changeAmount?: number | null;
   tips?: number | null;
+  createdAt?: string | null;
 }
 
 export interface UpdateOrderCommand {
