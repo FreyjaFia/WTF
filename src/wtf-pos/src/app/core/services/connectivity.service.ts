@@ -1,25 +1,66 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable, NgZone, OnDestroy, signal } from '@angular/core';
+import { App as CapApp } from '@capacitor/app';
+import type { PluginListenerHandle } from '@capacitor/core';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 import { environment } from '@environments/environment.development';
+import { catchError, firstValueFrom, map, of, timeout } from 'rxjs';
+
+interface NetworkStatus {
+  connected: boolean;
+}
+
+interface NetworkPlugin {
+  getStatus(): Promise<NetworkStatus>;
+  addListener(
+    eventName: 'networkStatusChange',
+    listenerFunc: (status: NetworkStatus) => void,
+  ): Promise<PluginListenerHandle>;
+}
+
+const Network = registerPlugin<NetworkPlugin>('Network');
+
+export enum ConnectivityState {
+  OFFLINE = 'OFFLINE',
+  SERVER_UNREACHABLE = 'SERVER_UNREACHABLE',
+  ONLINE = 'ONLINE',
+}
 
 @Injectable({ providedIn: 'root' })
 export class ConnectivityService implements OnDestroy {
-  private static readonly MANUAL_PING_THROTTLE_MS = 3000;
+  private static readonly MANUAL_CHECK_THROTTLE_MS = 3000;
+  private static readonly HEALTH_TIMEOUT_MS = 3000;
+  private static readonly OFFLINE_RECHECK_MS = 5000;
 
   private readonly http = inject(HttpClient);
   private readonly zone = inject(NgZone);
 
-  private readonly _isOnline = signal(navigator.onLine);
+  private readonly _state = signal<ConnectivityState>(
+    navigator.onLine ? ConnectivityState.SERVER_UNREACHABLE : ConnectivityState.OFFLINE,
+  );
+  public readonly state = this._state.asReadonly();
+
+  private readonly _isOnline = signal(this._state() === ConnectivityState.ONLINE);
   public readonly isOnline = this._isOnline.asReadonly();
 
   private readonly _showReconnected = signal(false);
   public readonly showReconnected = this._showReconnected.asReadonly();
 
-  private healthCheckInterval: ReturnType<typeof setInterval> | null = null;
+  private readonly _lastSuccessfulApiCheckAt = signal<number | null>(null);
+  public readonly lastSuccessfulApiCheckAt = this._lastSuccessfulApiCheckAt.asReadonly();
+
   private reconnectedTimeout: ReturnType<typeof setTimeout> | null = null;
-  private readonly healthUrl = `${environment.apiUrl}/ping`;
+  private offlineRecheckInterval: ReturnType<typeof setInterval> | null = null;
+  private readonly healthUrl = this.buildHealthUrl();
+  private readonly legacyPingUrl = `${environment.apiUrl}/ping`;
+
   private wasOffline = false;
-  private lastManualPingAt = 0;
+  private lastManualCheckAt = 0;
+  private checkInProgress = false;
+  private appIsActive = true;
+
+  private networkStatusListener: PluginListenerHandle | null = null;
+  private appStateListener: PluginListenerHandle | null = null;
 
   private readonly onlineHandler = (): void => this.zone.run(() => this.onBrowserOnline());
   private readonly offlineHandler = (): void => this.zone.run(() => this.onBrowserOffline());
@@ -27,37 +68,173 @@ export class ConnectivityService implements OnDestroy {
   constructor() {
     window.addEventListener('online', this.onlineHandler);
     window.addEventListener('offline', this.offlineHandler);
-    this.startHealthCheck();
+    void this.initializeListeners();
+    this.syncOfflineRecheckSchedule();
+    this.verifyConnection(true);
   }
 
   public ngOnDestroy(): void {
     window.removeEventListener('online', this.onlineHandler);
     window.removeEventListener('offline', this.offlineHandler);
-    this.stopHealthCheck();
     this.clearReconnectedTimeout();
+    this.clearOfflineRecheckInterval();
+    void this.networkStatusListener?.remove();
+    void this.appStateListener?.remove();
   }
 
   public checkNow(): void {
-    const now = Date.now();
+    this.verifyConnection();
+  }
 
-    if (now - this.lastManualPingAt < ConnectivityService.MANUAL_PING_THROTTLE_MS) {
+  public verifyConnection(force = false): void {
+    if (!force) {
+      const now = Date.now();
+      if (now - this.lastManualCheckAt < ConnectivityService.MANUAL_CHECK_THROTTLE_MS) {
+        return;
+      }
+      this.lastManualCheckAt = now;
+    }
+
+    if (!this.appIsActive || this.checkInProgress) {
       return;
     }
 
-    this.lastManualPingAt = now;
-    this.ping();
+    void this.runConnectivityCheck();
+  }
+
+  public canSendOrders(): boolean {
+    return this._state() === ConnectivityState.ONLINE;
+  }
+
+  private async initializeListeners(): Promise<void> {
+    this.appStateListener = await CapApp.addListener('appStateChange', (state) => {
+      this.zone.run(() => this.onAppStateChanged(state.isActive));
+    });
+
+    if (!Capacitor.isNativePlatform()) {
+      return;
+    }
+
+    try {
+      this.networkStatusListener = await Network.addListener('networkStatusChange', (status) => {
+        this.zone.run(() => this.onNetworkStatusChanged(status.connected));
+      });
+    } catch {
+      // Fallback to browser events only if Network plugin is unavailable.
+    }
+  }
+
+  private onAppStateChanged(isActive: boolean): void {
+    this.appIsActive = isActive;
+    this.syncOfflineRecheckSchedule();
+    if (isActive) {
+      this.verifyConnection(true);
+    }
+  }
+
+  private onNetworkStatusChanged(connected: boolean): void {
+    if (!this.appIsActive) {
+      return;
+    }
+
+    if (!connected) {
+      this.onBrowserOffline();
+      return;
+    }
+
+    this.verifyConnection(true);
   }
 
   private onBrowserOnline(): void {
-    // Browser says we're online, but verify with a real ping
-    this.ping();
+    this.verifyConnection(true);
   }
 
   private onBrowserOffline(): void {
-    this.wasOffline = true;
-    this._showReconnected.set(false);
-    this.clearReconnectedTimeout();
-    this._isOnline.set(false);
+    this.setState(ConnectivityState.OFFLINE);
+  }
+
+  private async runConnectivityCheck(): Promise<void> {
+    this.checkInProgress = true;
+
+    try {
+      const hasInternet = await this.hasInternetConnection();
+      if (!hasInternet) {
+        this.setState(ConnectivityState.OFFLINE);
+        return;
+      }
+
+      const isApiReachable = await this.isApiReachable();
+      if (isApiReachable) {
+        this._lastSuccessfulApiCheckAt.set(Date.now());
+        this.setState(ConnectivityState.ONLINE);
+      } else {
+        this.setState(ConnectivityState.SERVER_UNREACHABLE);
+      }
+    } finally {
+      this.checkInProgress = false;
+    }
+  }
+
+  private async hasInternetConnection(): Promise<boolean> {
+    if (!Capacitor.isNativePlatform()) {
+      return navigator.onLine;
+    }
+
+    try {
+      const status = await Network.getStatus();
+      return status.connected;
+    } catch {
+      return navigator.onLine;
+    }
+  }
+
+  private async isApiReachable(): Promise<boolean> {
+    const healthOk = await firstValueFrom(
+      this.http.get(this.healthUrl, { responseType: 'text' }).pipe(
+        timeout(ConnectivityService.HEALTH_TIMEOUT_MS),
+        map(() => true),
+        catchError(() => of(false)),
+      ),
+    );
+
+    if (healthOk) {
+      return true;
+    }
+
+    // Backward compatibility while backend fully migrates to /health.
+    return await firstValueFrom(
+      this.http.get(this.legacyPingUrl, { responseType: 'text' }).pipe(
+        timeout(ConnectivityService.HEALTH_TIMEOUT_MS),
+        map(() => true),
+        catchError(() => of(false)),
+      ),
+    );
+  }
+
+  private setState(nextState: ConnectivityState): void {
+    const previousState = this._state();
+    const wasOnlineBefore = previousState === ConnectivityState.ONLINE;
+
+    this._state.set(nextState);
+    const isOnlineNow = nextState === ConnectivityState.ONLINE;
+    this._isOnline.set(isOnlineNow);
+    this.syncOfflineRecheckSchedule();
+
+    if (!isOnlineNow) {
+      this.wasOffline = true;
+      this._showReconnected.set(false);
+      this.clearReconnectedTimeout();
+      return;
+    }
+
+    if (!wasOnlineBefore) {
+      this.onReconnected();
+    }
+  }
+
+  private buildHealthUrl(): string {
+    const base = environment.apiUrl.replace(/\/api\/?$/, '');
+    return `${base}/health`;
   }
 
   private onReconnected(): void {
@@ -82,36 +259,25 @@ export class ConnectivityService implements OnDestroy {
     }
   }
 
-  private startHealthCheck(): void {
-    // Ping every 30 seconds to detect silent connectivity loss
-    this.healthCheckInterval = setInterval(() => this.ping(), 30_000);
-
-    // Also do an immediate check on startup
-    this.ping();
-  }
-
-  private stopHealthCheck(): void {
-    if (this.healthCheckInterval !== null) {
-      clearInterval(this.healthCheckInterval);
-      this.healthCheckInterval = null;
+  private syncOfflineRecheckSchedule(): void {
+    if (!this.appIsActive || this._state() === ConnectivityState.ONLINE) {
+      this.clearOfflineRecheckInterval();
+      return;
     }
+
+    if (this.offlineRecheckInterval !== null) {
+      return;
+    }
+
+    this.offlineRecheckInterval = setInterval(() => {
+      this.zone.run(() => this.verifyConnection(true));
+    }, ConnectivityService.OFFLINE_RECHECK_MS);
   }
 
-  private ping(): void {
-    this.http.get(this.healthUrl, { responseType: 'text' }).subscribe({
-      next: () => {
-        const wasOfflineBefore = !this._isOnline();
-        this._isOnline.set(true);
-        if (wasOfflineBefore) {
-          this.onReconnected();
-        }
-      },
-      error: () => {
-        if (this._isOnline()) {
-          this.wasOffline = true;
-        }
-        this._isOnline.set(false);
-      },
-    });
+  private clearOfflineRecheckInterval(): void {
+    if (this.offlineRecheckInterval !== null) {
+      clearInterval(this.offlineRecheckInterval);
+      this.offlineRecheckInterval = null;
+    }
   }
 }
