@@ -1,4 +1,5 @@
 import { Injectable, effect, signal } from '@angular/core';
+import { SuccessMessages } from '@core/messages';
 
 export interface AlertState {
   type: 'success' | 'error' | 'warning' | 'info';
@@ -47,23 +48,23 @@ export class AlertService {
   }
 
   public successCreated(entity: string): void {
-    this.success(`${entity} created successfully.`);
+    this.success(SuccessMessages.Common.Created(entity));
   }
 
   public successUpdated(entity: string): void {
-    this.success(`${entity} updated successfully.`);
+    this.success(SuccessMessages.Common.Updated(entity));
   }
 
   public successDeleted(entity: string): void {
-    this.success(`${entity} deleted successfully.`);
+    this.success(SuccessMessages.Common.Deleted(entity));
   }
 
   public successSaved(entity: string): void {
-    this.success(`${entity} saved successfully.`);
+    this.success(SuccessMessages.Common.Saved(entity));
   }
 
   public successUploaded(entity = 'Image'): void {
-    this.success(`${entity} uploaded successfully.`);
+    this.success(SuccessMessages.Common.Uploaded(entity));
   }
 
   public errorUnauthorized(): void {

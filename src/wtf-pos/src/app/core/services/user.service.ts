@@ -1,7 +1,7 @@
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { ConnectivityService } from '@core/services/connectivity.service';
-import { HttpErrorMessages, ServiceErrorMessages } from '@core/services/http-error-messages';
+import { HttpErrorMessages, ServiceErrorMessages } from '@core/messages';
 import { CreateUserDto, GetUsersQuery, UpdateUserDto, UserDto } from '@shared/models';
 import { environment } from '@environments/environment.development';
 import { Observable, catchError, throwError } from 'rxjs';

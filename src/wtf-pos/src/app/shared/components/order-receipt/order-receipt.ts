@@ -9,6 +9,8 @@ import {
   viewChild,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Capacitor } from '@capacitor/core';
+import { SuccessMessages } from '@core/messages';
 import { AlertService, ImageDownloadService } from '@core/services';
 import { CartAddOnDto, CartItemDto, OrderStatusEnum, PaymentMethodEnum } from '@shared/models';
 
@@ -91,6 +93,11 @@ export class OrderReceiptComponent implements OnInit {
         this.receiptEl().nativeElement,
         fileName,
       );
+      if (Capacitor.getPlatform() === 'android') {
+        this.alertService.success(SuccessMessages.OrderReceipt.ImageSavedToGallery);
+      } else {
+        this.alertService.success(SuccessMessages.OrderReceipt.ImageDownloaded);
+      }
     } catch {
       this.alertService.error('Failed to generate order image.');
     } finally {

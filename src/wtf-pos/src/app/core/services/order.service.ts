@@ -1,7 +1,7 @@
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { ConnectivityService } from '@core/services/connectivity.service';
-import { HttpErrorMessages, ServiceErrorMessages } from '@core/services/http-error-messages';
+import { HttpErrorMessages, ServiceErrorMessages } from '@core/messages';
 import { environment } from '@environments/environment.development';
 import { CreateOrderCommand, OrderDto, OrderStatusEnum, UpdateOrderCommand } from '@shared/models';
 import { Observable, throwError } from 'rxjs';

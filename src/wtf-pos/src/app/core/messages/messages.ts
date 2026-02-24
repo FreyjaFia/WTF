@@ -80,3 +80,17 @@ export const ServiceErrorMessages = {
     DeleteImageFailed: 'Failed to delete image. Please try again later.',
   },
 } as const;
+
+export const SuccessMessages = {
+  Common: {
+    Created: (entity: string) => `${entity} created successfully.`,
+    Updated: (entity: string) => `${entity} updated successfully.`,
+    Deleted: (entity: string) => `${entity} deleted successfully.`,
+    Saved: (entity: string) => `${entity} saved successfully.`,
+    Uploaded: (entity = 'Image') => `${entity} uploaded successfully.`,
+  },
+  OrderReceipt: {
+    ImageSavedToGallery: 'Image saved to gallery.',
+    ImageDownloaded: 'Image downloaded.',
+  },
+} as const;
