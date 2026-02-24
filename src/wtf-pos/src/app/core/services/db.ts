@@ -1,5 +1,10 @@
 import { CartItemDto } from '@shared/models';
-import type { AddOnGroupDto, CustomerDto, ProductDto } from '@shared/models';
+import type {
+  AddOnGroupDto,
+  CreateOrderCommand,
+  CustomerDto,
+  ProductDto,
+} from '@shared/models';
 import Dexie, { type Table } from 'dexie';
 
 export interface PersistedCart {
@@ -23,10 +28,23 @@ export interface CachedImage {
   blob: Blob;
 }
 
+export interface PendingOrder {
+  id?: number;
+  localId: string;
+  command: CreateOrderCommand;
+  cartSnapshot: CartItemDto[];
+  customerName: string | null;
+  createdAt: string;
+  status: 'pending' | 'syncing' | 'failed';
+  errorMessage?: string | null;
+  retryCount: number;
+}
+
 export class WtfDatabase extends Dexie {
   public readonly carts!: Table<PersistedCart, number>;
   public readonly catalog!: Table<CachedCatalog, number>;
   public readonly images!: Table<CachedImage, string>;
+  public readonly pendingOrders!: Table<PendingOrder, number>;
 
   constructor() {
     super('wtf-pos');
@@ -44,6 +62,13 @@ export class WtfDatabase extends Dexie {
       carts: '++id',
       catalog: '++id',
       images: 'url',
+    });
+
+    this.version(4).stores({
+      carts: '++id',
+      catalog: '++id',
+      images: 'url',
+      pendingOrders: '++id, localId, status',
     });
   }
 }

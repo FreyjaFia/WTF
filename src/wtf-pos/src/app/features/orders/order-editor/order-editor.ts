@@ -22,8 +22,10 @@ import {
   AuthService,
   CartPersistenceService,
   CatalogCacheService,
+  ConnectivityService,
   CustomerService,
   ModalStackService,
+  OfflineOrderService,
   OrderService,
   ProductService,
 } from '@core/services';
@@ -87,6 +89,8 @@ export class OrderEditor implements OnInit {
   private readonly modalStack = inject(ModalStackService);
   private readonly catalogCache = inject(CatalogCacheService);
   private readonly cartPersistence = inject(CartPersistenceService);
+  private readonly connectivity = inject(ConnectivityService);
+  private readonly offlineOrder = inject(OfflineOrderService);
   private readonly cdr = inject(ChangeDetectorRef);
 
   // Order-level special instructions state
@@ -970,6 +974,11 @@ export class OrderEditor implements OnInit {
       }),
     };
 
+    if (!this.connectivity.isOnline()) {
+      this.queueOfflineOrder(command);
+      return;
+    }
+
     this.orderService.createOrder(command).subscribe({
       next: () => {
         this.isSavingOrder.set(false);
@@ -982,6 +991,22 @@ export class OrderEditor implements OnInit {
         this.alertService.error(err.message || this.alertService.getCreateErrorMessage('order'));
       },
     });
+  }
+
+  private queueOfflineOrder(command: CreateOrderCommand): void {
+    this.offlineOrder
+      .queue(command, this.cart(), this.selectedCustomerName())
+      .then((localId) => {
+        this.isSavingOrder.set(false);
+        this.skipGuard = true;
+        this.cartPersistence.clear();
+        this.alertService.info(`Order ${localId} saved offline. It will sync when you're back online.`);
+        this.router.navigate(['/orders/list']);
+      })
+      .catch(() => {
+        this.isSavingOrder.set(false);
+        this.alertService.error('Failed to save order offline.');
+      });
   }
 
   private updateExistingOrder(

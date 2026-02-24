@@ -9,6 +9,7 @@ export * from './image-cache.service';
 export * from './image-download.service';
 export * from './list-state.service';
 export * from './modal-stack.service';
+export * from './offline-order.service';
 export * from './order.service';
 export * from './product.service';
 export * from './signalr.service';
