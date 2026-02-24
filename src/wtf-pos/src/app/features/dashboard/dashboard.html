@@ -334,15 +334,7 @@
                   <div
                     class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-50 ring-2 ring-gray-200"
                   >
-                    @if (product.imageUrl) {
-                      <img
-                        [src]="product.imageUrl"
-                        [alt]="product.productName"
-                        class="h-full w-full object-cover"
-                      />
-                    } @else {
-                      <app-icon name="icon-cart" [class]="'h-4 w-4 text-gray-400'" />
-                    }
+                    <app-avatar [label]="product.productName" [size]="40" [imageUrl]="product.imageUrl ?? null" />
                   </div>
 
                   <div class="min-w-0 flex-1">

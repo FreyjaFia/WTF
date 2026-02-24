@@ -6,6 +6,7 @@ import {
   AnimatedCounterComponent,
   AreaChartComponent,
   type AreaChartPoint,
+  AvatarComponent,
   BadgeComponent,
   type BadgeVariant,
   DonutChartComponent,
@@ -29,7 +30,7 @@ const GREETINGS = [
 
 @Component({
   selector: 'app-dashboard',
-  imports: [CommonModule, DecimalPipe, RouterLink, Icon, BadgeComponent, SparklineComponent, AreaChartComponent, DonutChartComponent, AnimatedCounterComponent, DateRangePickerComponent],
+  imports: [CommonModule, DecimalPipe, RouterLink, Icon, BadgeComponent, SparklineComponent, AreaChartComponent, DonutChartComponent, AnimatedCounterComponent, DateRangePickerComponent, AvatarComponent],
   templateUrl: './dashboard.html',
 })
 export class Dashboard implements OnInit, OnDestroy {
