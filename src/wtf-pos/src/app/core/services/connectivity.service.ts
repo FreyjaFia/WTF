@@ -4,6 +4,8 @@ import { environment } from '@environments/environment.development';
 
 @Injectable({ providedIn: 'root' })
 export class ConnectivityService implements OnDestroy {
+  private static readonly MANUAL_PING_THROTTLE_MS = 3000;
+
   private readonly http = inject(HttpClient);
   private readonly zone = inject(NgZone);
 
@@ -17,6 +19,7 @@ export class ConnectivityService implements OnDestroy {
   private reconnectedTimeout: ReturnType<typeof setTimeout> | null = null;
   private readonly healthUrl = `${environment.apiUrl}/ping`;
   private wasOffline = false;
+  private lastManualPingAt = 0;
 
   private readonly onlineHandler = (): void => this.zone.run(() => this.onBrowserOnline());
   private readonly offlineHandler = (): void => this.zone.run(() => this.onBrowserOffline());
@@ -32,6 +35,17 @@ export class ConnectivityService implements OnDestroy {
     window.removeEventListener('offline', this.offlineHandler);
     this.stopHealthCheck();
     this.clearReconnectedTimeout();
+  }
+
+  public checkNow(): void {
+    const now = Date.now();
+
+    if (now - this.lastManualPingAt < ConnectivityService.MANUAL_PING_THROTTLE_MS) {
+      return;
+    }
+
+    this.lastManualPingAt = now;
+    this.ping();
   }
 
   private onBrowserOnline(): void {

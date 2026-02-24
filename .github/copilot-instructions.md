@@ -306,6 +306,9 @@ src/app/
 - Singleton services used app-wide (auth, API services, guards, interceptors)
 - If a service is used in 2+ feature modules, put it in `core/services/`
 - Never import feature-specific code into core
+- Centralize reusable HTTP error messages in
+  `src/wtf-pos/src/app/core/services/http-error-messages.ts`
+  and reference them from services instead of duplicating string literals
 
 **Shared Module (`shared/`):**
 - Reusable UI components, directives, and pipes

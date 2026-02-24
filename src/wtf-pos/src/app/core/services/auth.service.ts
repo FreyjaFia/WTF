@@ -1,5 +1,6 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
+import { HttpErrorMessages, ServiceErrorMessages } from '@core/services/http-error-messages';
 import { environment } from '@environments/environment.development';
 import { LoginDto, MeDto } from '@shared/models';
 import { BehaviorSubject, Observable, Subject, throwError } from 'rxjs';
@@ -8,6 +9,20 @@ import { db } from './db';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
+  private static readonly MSG_REQUIRED_CREDENTIALS = ServiceErrorMessages.Auth.RequiredCredentials;
+  private static readonly MSG_LOGIN_FAILED = ServiceErrorMessages.Auth.LoginFailed;
+  private static readonly MSG_INVALID_CREDENTIALS = ServiceErrorMessages.Auth.InvalidCredentials;
+  private static readonly MSG_SERVER_ERROR = ServiceErrorMessages.Auth.ServerError;
+  private static readonly MSG_UNAUTHORIZED = HttpErrorMessages.Unauthorized;
+  private static readonly MSG_INVALID_PASSWORD = ServiceErrorMessages.Auth.InvalidPassword;
+  private static readonly MSG_FETCH_PROFILE_FAILED = ServiceErrorMessages.Auth.FetchProfileFailed;
+  private static readonly MSG_UPDATE_PROFILE_FAILED = ServiceErrorMessages.Auth.UpdateProfileFailed;
+  private static readonly MSG_UPLOAD_IMAGE_FAILED = ServiceErrorMessages.Auth.UploadImageFailed;
+  private static readonly MSG_INVALID_FILE = HttpErrorMessages.InvalidFile;
+  private static readonly MSG_NO_REFRESH_TOKEN = ServiceErrorMessages.Auth.NoRefreshToken;
+  private static readonly MSG_REFRESH_TOKEN_FAILED = ServiceErrorMessages.Auth.RefreshTokenFailed;
+  private static readonly MSG_NETWORK_UNAVAILABLE = HttpErrorMessages.NetworkUnavailable;
+
   private readonly http = inject(HttpClient);
   private readonly baseUrl = `${environment.apiUrl}/auth`;
   private _isLoggedIn = new BehaviorSubject<boolean>(!!localStorage.getItem('token'));
@@ -23,7 +38,7 @@ export class AuthService {
 
   public login(username: string, password: string): Observable<boolean> {
     if (!username || !password) {
-      return throwError(() => new Error('Username and password are required'));
+      return throwError(() => new Error(AuthService.MSG_REQUIRED_CREDENTIALS));
     }
 
     return this.http.post<LoginDto>(`${this.baseUrl}/login`, { username, password }).pipe(
@@ -53,14 +68,14 @@ export class AuthService {
         console.error('Error status:', error.status);
         console.error('Error message:', error.message);
 
-        let errorMessage = 'Login failed. Please try again.';
+        let errorMessage: string = AuthService.MSG_LOGIN_FAILED;
 
         if (error.status === 401 || error.status === 400) {
-          errorMessage = 'Invalid username or password.';
+          errorMessage = AuthService.MSG_INVALID_CREDENTIALS;
         } else if (error.status === 0) {
-          errorMessage = 'Unable to connect to server. Please check your connection.';
+          errorMessage = AuthService.MSG_NETWORK_UNAVAILABLE;
         } else if (error.status >= 500) {
-          errorMessage = 'Server error. Please try again later.';
+          errorMessage = AuthService.MSG_SERVER_ERROR;
         } else if (error.error?.message) {
           errorMessage = error.error.message;
         }
@@ -77,10 +92,10 @@ export class AuthService {
 
         const errorMessage =
           error.status === 401
-            ? 'Unauthorized.'
+            ? AuthService.MSG_UNAUTHORIZED
             : error.status === 0
-              ? 'Unable to connect to server. Please check your connection.'
-              : 'Failed to fetch user profile.';
+              ? AuthService.MSG_NETWORK_UNAVAILABLE
+              : AuthService.MSG_FETCH_PROFILE_FAILED;
 
         return throwError(() => new Error(errorMessage));
       }),
@@ -92,14 +107,14 @@ export class AuthService {
       catchError((error: HttpErrorResponse) => {
         console.error('Update me error:', error);
 
-        let errorMessage = 'Failed to update profile.';
+        let errorMessage: string = AuthService.MSG_UPDATE_PROFILE_FAILED;
 
         if (error.status === 401) {
-          errorMessage = 'Unauthorized.';
+          errorMessage = AuthService.MSG_UNAUTHORIZED;
         } else if (error.status === 400) {
-          errorMessage = 'Invalid password.';
+          errorMessage = AuthService.MSG_INVALID_PASSWORD;
         } else if (error.status === 0) {
-          errorMessage = 'Unable to connect to server. Please check your connection.';
+          errorMessage = AuthService.MSG_NETWORK_UNAVAILABLE;
         }
 
         return throwError(() => new Error(errorMessage));
@@ -115,14 +130,14 @@ export class AuthService {
       catchError((error: HttpErrorResponse) => {
         console.error('Upload profile image error:', error);
 
-        let errorMessage = 'Failed to upload image. Please try again later.';
+        let errorMessage: string = AuthService.MSG_UPLOAD_IMAGE_FAILED;
 
         if (error.status === 400) {
-          errorMessage = 'Invalid file. Please check file type and size.';
+          errorMessage = AuthService.MSG_INVALID_FILE;
         } else if (error.status === 401) {
-          errorMessage = 'Unauthorized.';
+          errorMessage = AuthService.MSG_UNAUTHORIZED;
         } else if (error.status === 0) {
-          errorMessage = 'Unable to connect to server. Please check your connection.';
+          errorMessage = AuthService.MSG_NETWORK_UNAVAILABLE;
         }
 
         return throwError(() => new Error(errorMessage));
@@ -205,7 +220,7 @@ export class AuthService {
     const refreshToken = this.getRefreshToken();
 
     if (!refreshToken) {
-      return throwError(() => new Error('No refresh token available'));
+      return throwError(() => new Error(AuthService.MSG_NO_REFRESH_TOKEN));
     }
 
     return this.http
@@ -231,7 +246,7 @@ export class AuthService {
           console.error('Token refresh error:', error);
           // If refresh fails, logout the user
           this.logout();
-          return throwError(() => new Error('Token refresh failed'));
+          return throwError(() => new Error(AuthService.MSG_REFRESH_TOKEN_FAILED));
         }),
       );
   }

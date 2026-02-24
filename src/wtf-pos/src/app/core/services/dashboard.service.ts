@@ -1,5 +1,7 @@
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
+import { ConnectivityService } from '@core/services/connectivity.service';
+import { HttpErrorMessages, ServiceErrorMessages } from '@core/services/http-error-messages';
 import { environment } from '@environments/environment.development';
 import { type DashboardDto, type DateRangeSelection } from '@shared/models';
 import { Observable, throwError } from 'rxjs';
@@ -7,7 +9,11 @@ import { catchError } from 'rxjs/operators';
 
 @Injectable({ providedIn: 'root' })
 export class DashboardService {
+  private static readonly MSG_NETWORK_UNAVAILABLE = HttpErrorMessages.NetworkUnavailable;
+  private static readonly MSG_LOAD_DASHBOARD_FAILED = ServiceErrorMessages.Dashboard.LoadDashboardFailed;
+
   private readonly http = inject(HttpClient);
+  private readonly connectivity = inject(ConnectivityService);
   private readonly baseUrl = `${environment.apiUrl}/dashboard`;
 
   public getDashboard(range?: DateRangeSelection): Observable<DashboardDto> {
@@ -25,13 +31,12 @@ export class DashboardService {
     return this.http.get<DashboardDto>(this.baseUrl, { params }).pipe(
       catchError((error: HttpErrorResponse) => {
         console.error('Error fetching dashboard:', error);
+        if (error.status === 0) {
+          this.connectivity.checkNow();
+          return throwError(() => new Error(DashboardService.MSG_NETWORK_UNAVAILABLE));
+        }
 
-        const errorMessage =
-          error.status === 0
-            ? 'Unable to connect to server. Please check your connection.'
-            : 'Failed to load dashboard. Please try again later.';
-
-        return throwError(() => new Error(errorMessage));
+        return throwError(() => new Error(DashboardService.MSG_LOAD_DASHBOARD_FAILED));
       }),
     );
   }

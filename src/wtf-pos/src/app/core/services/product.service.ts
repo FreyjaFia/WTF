@@ -1,5 +1,7 @@
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
+import { ConnectivityService } from '@core/services/connectivity.service';
+import { HttpErrorMessages, ServiceErrorMessages } from '@core/services/http-error-messages';
 import { environment } from '@environments/environment.development';
 import {
   AddOnGroupDto,
@@ -18,7 +20,43 @@ import { catchError } from 'rxjs/operators';
 
 @Injectable({ providedIn: 'root' })
 export class ProductService {
+  private static readonly MSG_NETWORK_UNAVAILABLE = HttpErrorMessages.NetworkUnavailable;
+  private static readonly MSG_INVALID_FILE = HttpErrorMessages.InvalidFile;
+  private static readonly MSG_PRODUCT_NOT_FOUND = ServiceErrorMessages.Product.ProductNotFound;
+  private static readonly MSG_PRODUCT_OR_IMAGE_NOT_FOUND =
+    ServiceErrorMessages.Product.ProductOrImageNotFound;
+  private static readonly MSG_ADD_ON_NOT_FOUND = ServiceErrorMessages.Product.AddOnNotFound;
+  private static readonly MSG_PRODUCT_OR_ADD_ON_NOT_FOUND =
+    ServiceErrorMessages.Product.ProductOrAddOnNotFound;
+  private static readonly MSG_PRICE_OVERRIDE_NOT_FOUND =
+    ServiceErrorMessages.Product.PriceOverrideNotFound;
+  private static readonly MSG_FETCH_PRODUCTS_FAILED = ServiceErrorMessages.Product.FetchProductsFailed;
+  private static readonly MSG_FETCH_PRODUCT_FAILED = ServiceErrorMessages.Product.FetchProductFailed;
+  private static readonly MSG_CREATE_PRODUCT_FAILED = ServiceErrorMessages.Product.CreateProductFailed;
+  private static readonly MSG_UPDATE_PRODUCT_FAILED = ServiceErrorMessages.Product.UpdateProductFailed;
+  private static readonly MSG_DELETE_PRODUCT_FAILED = ServiceErrorMessages.Product.DeleteProductFailed;
+  private static readonly MSG_UPLOAD_IMAGE_FAILED = ServiceErrorMessages.Product.UploadImageFailed;
+  private static readonly MSG_DELETE_IMAGE_FAILED = ServiceErrorMessages.Product.DeleteImageFailed;
+  private static readonly MSG_FETCH_PRODUCT_ADDONS_FAILED =
+    ServiceErrorMessages.Product.FetchProductAddOnsFailed;
+  private static readonly MSG_FETCH_LINKED_PRODUCTS_FAILED =
+    ServiceErrorMessages.Product.FetchLinkedProductsFailed;
+  private static readonly MSG_ASSIGN_ADDONS_FAILED = ServiceErrorMessages.Product.AssignAddOnsFailed;
+  private static readonly MSG_INVALID_ADDONS_REQUEST = ServiceErrorMessages.Product.InvalidAddOnsRequest;
+  private static readonly MSG_ASSIGN_PRODUCTS_FAILED = ServiceErrorMessages.Product.AssignProductsFailed;
+  private static readonly MSG_INVALID_PRODUCTS_REQUEST =
+    ServiceErrorMessages.Product.InvalidProductsRequest;
+  private static readonly MSG_CREATE_PRICE_OVERRIDE_FAILED =
+    ServiceErrorMessages.Product.CreatePriceOverrideFailed;
+  private static readonly MSG_UPDATE_PRICE_OVERRIDE_FAILED =
+    ServiceErrorMessages.Product.UpdatePriceOverrideFailed;
+  private static readonly MSG_DELETE_PRICE_OVERRIDE_FAILED =
+    ServiceErrorMessages.Product.DeletePriceOverrideFailed;
+  private static readonly MSG_INVALID_PRICE_OVERRIDE_REQUEST =
+    ServiceErrorMessages.Product.InvalidPriceOverrideRequest;
+
   private readonly http = inject(HttpClient);
+  private readonly connectivity = inject(ConnectivityService);
   private readonly baseUrl = `${environment.apiUrl}/products`;
 
   public getProducts(query?: {
@@ -51,8 +89,8 @@ export class ProductService {
 
         const errorMessage =
           error.status === 0
-            ? 'Unable to connect to server. Please check your connection.'
-            : 'Failed to fetch products. Please try again later.';
+            ? this.getNetworkErrorMessage()
+            : ProductService.MSG_FETCH_PRODUCTS_FAILED;
 
         return throwError(() => new Error(errorMessage));
       }),
@@ -66,10 +104,10 @@ export class ProductService {
 
         const errorMessage =
           error.status === 404
-            ? 'Product not found.'
+            ? ProductService.MSG_PRODUCT_NOT_FOUND
             : error.status === 0
-              ? 'Unable to connect to server. Please check your connection.'
-              : 'Failed to fetch product. Please try again later.';
+              ? this.getNetworkErrorMessage()
+              : ProductService.MSG_FETCH_PRODUCT_FAILED;
 
         return throwError(() => new Error(errorMessage));
       }),
@@ -83,8 +121,8 @@ export class ProductService {
 
         const errorMessage =
           error.status === 0
-            ? 'Unable to connect to server. Please check your connection.'
-            : 'Failed to create product. Please try again later.';
+            ? this.getNetworkErrorMessage()
+            : ProductService.MSG_CREATE_PRODUCT_FAILED;
 
         return throwError(() => new Error(errorMessage));
       }),
@@ -98,10 +136,10 @@ export class ProductService {
 
         const errorMessage =
           error.status === 404
-            ? 'Product not found.'
+            ? ProductService.MSG_PRODUCT_NOT_FOUND
             : error.status === 0
-              ? 'Unable to connect to server. Please check your connection.'
-              : 'Failed to update product. Please try again later.';
+              ? this.getNetworkErrorMessage()
+              : ProductService.MSG_UPDATE_PRODUCT_FAILED;
 
         return throwError(() => new Error(errorMessage));
       }),
@@ -115,10 +153,10 @@ export class ProductService {
 
         const errorMessage =
           error.status === 404
-            ? 'Product not found.'
+            ? ProductService.MSG_PRODUCT_NOT_FOUND
             : error.status === 0
-              ? 'Unable to connect to server. Please check your connection.'
-              : 'Failed to delete product. Please try again later.';
+              ? this.getNetworkErrorMessage()
+              : ProductService.MSG_DELETE_PRODUCT_FAILED;
 
         return throwError(() => new Error(errorMessage));
       }),
@@ -132,14 +170,14 @@ export class ProductService {
       catchError((error: HttpErrorResponse) => {
         console.error('Error uploading product image:', error);
 
-        let errorMessage = 'Failed to upload image. Please try again later.';
+        let errorMessage: string = ProductService.MSG_UPLOAD_IMAGE_FAILED;
 
         if (error.status === 400) {
-          errorMessage = error.error || 'Invalid file. Please check file type and size.';
+          errorMessage = error.error || ProductService.MSG_INVALID_FILE;
         } else if (error.status === 404) {
-          errorMessage = 'Product not found.';
+          errorMessage = ProductService.MSG_PRODUCT_NOT_FOUND;
         } else if (error.status === 0) {
-          errorMessage = 'Unable to connect to server. Please check your connection.';
+          errorMessage = this.getNetworkErrorMessage();
         }
 
         return throwError(() => new Error(errorMessage));
@@ -152,12 +190,12 @@ export class ProductService {
       catchError((error: HttpErrorResponse) => {
         console.error('Error deleting product image:', error);
 
-        let errorMessage = 'Failed to delete image. Please try again later.';
+        let errorMessage: string = ProductService.MSG_DELETE_IMAGE_FAILED;
 
         if (error.status === 404) {
-          errorMessage = 'Product or image not found.';
+          errorMessage = ProductService.MSG_PRODUCT_OR_IMAGE_NOT_FOUND;
         } else if (error.status === 0) {
-          errorMessage = 'Unable to connect to server. Please check your connection.';
+          errorMessage = this.getNetworkErrorMessage();
         }
 
         return throwError(() => new Error(errorMessage));
@@ -172,10 +210,10 @@ export class ProductService {
 
         const errorMessage =
           error.status === 404
-            ? 'Product not found.'
+            ? ProductService.MSG_PRODUCT_NOT_FOUND
             : error.status === 0
-              ? 'Unable to connect to server. Please check your connection.'
-              : 'Failed to fetch product add-ons. Please try again later.';
+              ? this.getNetworkErrorMessage()
+              : ProductService.MSG_FETCH_PRODUCT_ADDONS_FAILED;
 
         return throwError(() => new Error(errorMessage));
       }),
@@ -189,10 +227,10 @@ export class ProductService {
 
         const errorMessage =
           error.status === 404
-            ? 'Product not found.'
+            ? ProductService.MSG_PRODUCT_NOT_FOUND
             : error.status === 0
-              ? 'Unable to connect to server. Please check your connection.'
-              : 'Failed to fetch linked products. Please try again later.';
+              ? this.getNetworkErrorMessage()
+              : ProductService.MSG_FETCH_LINKED_PRODUCTS_FAILED;
 
         return throwError(() => new Error(errorMessage));
       }),
@@ -204,15 +242,15 @@ export class ProductService {
       catchError((error: HttpErrorResponse) => {
         console.error('Error assigning product add-ons:', error);
 
-        let errorMessage = 'Failed to assign add-ons. Please try again later.';
+        let errorMessage: string = ProductService.MSG_ASSIGN_ADDONS_FAILED;
 
         if (error.status === 400) {
           errorMessage =
-            error.error?.message || 'Invalid request. Please check the selected add-ons.';
+            error.error?.message || ProductService.MSG_INVALID_ADDONS_REQUEST;
         } else if (error.status === 404) {
-          errorMessage = 'Product not found.';
+          errorMessage = ProductService.MSG_PRODUCT_NOT_FOUND;
         } else if (error.status === 0) {
-          errorMessage = 'Unable to connect to server. Please check your connection.';
+          errorMessage = this.getNetworkErrorMessage();
         }
 
         return throwError(() => new Error(errorMessage));
@@ -227,15 +265,15 @@ export class ProductService {
         catchError((error: HttpErrorResponse) => {
           console.error('Error assigning linked products:', error);
 
-          let errorMessage = 'Failed to assign products. Please try again later.';
+          let errorMessage: string = ProductService.MSG_ASSIGN_PRODUCTS_FAILED;
 
           if (error.status === 400) {
             errorMessage =
-              error.error?.message || 'Invalid request. Please check the selected products.';
+              error.error?.message || ProductService.MSG_INVALID_PRODUCTS_REQUEST;
           } else if (error.status === 404) {
-            errorMessage = 'Add-on not found.';
+            errorMessage = ProductService.MSG_ADD_ON_NOT_FOUND;
           } else if (error.status === 0) {
-            errorMessage = 'Unable to connect to server. Please check your connection.';
+            errorMessage = this.getNetworkErrorMessage();
           }
 
           return throwError(() => new Error(errorMessage));
@@ -261,14 +299,14 @@ export class ProductService {
         catchError((error: HttpErrorResponse) => {
           console.error('Error creating add-on price override:', error);
 
-          let errorMessage = 'Failed to create add-on price override. Please try again later.';
+          let errorMessage: string = ProductService.MSG_CREATE_PRICE_OVERRIDE_FAILED;
 
           if (error.status === 400) {
-            errorMessage = error.error?.message || 'Invalid price override request.';
+            errorMessage = error.error?.message || ProductService.MSG_INVALID_PRICE_OVERRIDE_REQUEST;
           } else if (error.status === 404) {
-            errorMessage = 'Product or add-on not found.';
+            errorMessage = ProductService.MSG_PRODUCT_OR_ADD_ON_NOT_FOUND;
           } else if (error.status === 0) {
-            errorMessage = 'Unable to connect to server. Please check your connection.';
+            errorMessage = this.getNetworkErrorMessage();
           }
 
           return throwError(() => new Error(errorMessage));
@@ -288,14 +326,14 @@ export class ProductService {
         catchError((error: HttpErrorResponse) => {
           console.error('Error updating add-on price override:', error);
 
-          let errorMessage = 'Failed to update add-on price override. Please try again later.';
+          let errorMessage: string = ProductService.MSG_UPDATE_PRICE_OVERRIDE_FAILED;
 
           if (error.status === 400) {
-            errorMessage = error.error?.message || 'Invalid price override request.';
+            errorMessage = error.error?.message || ProductService.MSG_INVALID_PRICE_OVERRIDE_REQUEST;
           } else if (error.status === 404) {
-            errorMessage = 'Price override not found.';
+            errorMessage = ProductService.MSG_PRICE_OVERRIDE_NOT_FOUND;
           } else if (error.status === 0) {
-            errorMessage = 'Unable to connect to server. Please check your connection.';
+            errorMessage = this.getNetworkErrorMessage();
           }
 
           return throwError(() => new Error(errorMessage));
@@ -310,16 +348,21 @@ export class ProductService {
         catchError((error: HttpErrorResponse) => {
           console.error('Error deleting add-on price override:', error);
 
-          let errorMessage = 'Failed to delete add-on price override. Please try again later.';
+          let errorMessage: string = ProductService.MSG_DELETE_PRICE_OVERRIDE_FAILED;
 
           if (error.status === 404) {
-            errorMessage = 'Price override not found.';
+            errorMessage = ProductService.MSG_PRICE_OVERRIDE_NOT_FOUND;
           } else if (error.status === 0) {
-            errorMessage = 'Unable to connect to server. Please check your connection.';
+            errorMessage = this.getNetworkErrorMessage();
           }
 
           return throwError(() => new Error(errorMessage));
         }),
       );
+  }
+
+  private getNetworkErrorMessage(): string {
+    this.connectivity.checkNow();
+    return ProductService.MSG_NETWORK_UNAVAILABLE;
   }
 }

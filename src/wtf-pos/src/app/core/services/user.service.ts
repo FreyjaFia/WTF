@@ -1,14 +1,29 @@
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
+import { ConnectivityService } from '@core/services/connectivity.service';
+import { HttpErrorMessages, ServiceErrorMessages } from '@core/services/http-error-messages';
 import { CreateUserDto, GetUsersQuery, UpdateUserDto, UserDto } from '@shared/models';
 import { environment } from '@environments/environment.development';
 import { Observable, catchError, throwError } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class UserService {
+  private static readonly MSG_NETWORK_UNAVAILABLE = HttpErrorMessages.NetworkUnavailable;
+  private static readonly MSG_USER_NOT_FOUND = ServiceErrorMessages.User.UserNotFound;
+  private static readonly MSG_USER_OR_IMAGE_NOT_FOUND = ServiceErrorMessages.User.UserOrImageNotFound;
+  private static readonly MSG_INVALID_FILE = HttpErrorMessages.InvalidFile;
+  private static readonly MSG_FETCH_USERS_FAILED = ServiceErrorMessages.User.FetchUsersFailed;
+  private static readonly MSG_FETCH_USER_FAILED = ServiceErrorMessages.User.FetchUserFailed;
+  private static readonly MSG_CREATE_USER_FAILED = ServiceErrorMessages.User.CreateUserFailed;
+  private static readonly MSG_UPDATE_USER_FAILED = ServiceErrorMessages.User.UpdateUserFailed;
+  private static readonly MSG_DELETE_USER_FAILED = ServiceErrorMessages.User.DeleteUserFailed;
+  private static readonly MSG_UPLOAD_IMAGE_FAILED = ServiceErrorMessages.User.UploadImageFailed;
+  private static readonly MSG_DELETE_IMAGE_FAILED = ServiceErrorMessages.User.DeleteImageFailed;
+
   private readonly baseUrl = `${environment.apiUrl}/users`;
 
   private readonly http = inject(HttpClient);
+  private readonly connectivity = inject(ConnectivityService);
 
   public getUsers(query?: GetUsersQuery): Observable<UserDto[]> {
     let params = new HttpParams();
@@ -24,13 +39,7 @@ export class UserService {
     return this.http.get<UserDto[]>(this.baseUrl, { params }).pipe(
       catchError((error: HttpErrorResponse) => {
         console.error('Error fetching users:', error);
-
-        const errorMessage =
-          error.status === 0
-            ? 'Unable to connect to server. Please check your connection.'
-            : 'Failed to fetch users. Please try again later.';
-
-        return throwError(() => new Error(errorMessage));
+        return throwError(() => new Error(this.getErrorMessage(error, UserService.MSG_FETCH_USERS_FAILED)));
       }),
     );
   }
@@ -39,15 +48,13 @@ export class UserService {
     return this.http.get<UserDto>(`${this.baseUrl}/${id}`).pipe(
       catchError((error: HttpErrorResponse) => {
         console.error('Error fetching user:', error);
-
-        const errorMessage =
-          error.status === 404
-            ? 'User not found.'
-            : error.status === 0
-              ? 'Unable to connect to server. Please check your connection.'
-              : 'Failed to fetch user. Please try again later.';
-
-        return throwError(() => new Error(errorMessage));
+        return throwError(() =>
+          new Error(
+            this.getErrorMessage(error, UserService.MSG_FETCH_USER_FAILED, {
+              notFound: UserService.MSG_USER_NOT_FOUND,
+            }),
+          ),
+        );
       }),
     );
   }
@@ -56,13 +63,7 @@ export class UserService {
     return this.http.post<UserDto>(this.baseUrl, dto).pipe(
       catchError((error: HttpErrorResponse) => {
         console.error('Error creating user:', error);
-
-        const errorMessage =
-          error.status === 0
-            ? 'Unable to connect to server. Please check your connection.'
-            : 'Failed to create user. Please try again later.';
-
-        return throwError(() => new Error(errorMessage));
+        return throwError(() => new Error(this.getErrorMessage(error, UserService.MSG_CREATE_USER_FAILED)));
       }),
     );
   }
@@ -71,15 +72,13 @@ export class UserService {
     return this.http.put<UserDto>(`${this.baseUrl}/${dto.id}`, dto).pipe(
       catchError((error: HttpErrorResponse) => {
         console.error('Error updating user:', error);
-
-        const errorMessage =
-          error.status === 404
-            ? 'User not found.'
-            : error.status === 0
-              ? 'Unable to connect to server. Please check your connection.'
-              : 'Failed to update user. Please try again later.';
-
-        return throwError(() => new Error(errorMessage));
+        return throwError(() =>
+          new Error(
+            this.getErrorMessage(error, UserService.MSG_UPDATE_USER_FAILED, {
+              notFound: UserService.MSG_USER_NOT_FOUND,
+            }),
+          ),
+        );
       }),
     );
   }
@@ -88,15 +87,13 @@ export class UserService {
     return this.http.delete<void>(`${this.baseUrl}/${id}`).pipe(
       catchError((error: HttpErrorResponse) => {
         console.error('Error deleting user:', error);
-
-        const errorMessage =
-          error.status === 404
-            ? 'User not found.'
-            : error.status === 0
-              ? 'Unable to connect to server. Please check your connection.'
-              : 'Failed to delete user. Please try again later.';
-
-        return throwError(() => new Error(errorMessage));
+        return throwError(() =>
+          new Error(
+            this.getErrorMessage(error, UserService.MSG_DELETE_USER_FAILED, {
+              notFound: UserService.MSG_USER_NOT_FOUND,
+            }),
+          ),
+        );
       }),
     );
   }
@@ -109,14 +106,15 @@ export class UserService {
       catchError((error: HttpErrorResponse) => {
         console.error('Error uploading user image:', error);
 
-        let errorMessage = 'Failed to upload image. Please try again later.';
+        let errorMessage: string = UserService.MSG_UPLOAD_IMAGE_FAILED;
 
         if (error.status === 400) {
-          errorMessage = error.error || 'Invalid file. Please check file type and size.';
+          errorMessage = error.error || UserService.MSG_INVALID_FILE;
         } else if (error.status === 404) {
-          errorMessage = 'User not found.';
+          errorMessage = UserService.MSG_USER_NOT_FOUND;
         } else if (error.status === 0) {
-          errorMessage = 'Unable to connect to server. Please check your connection.';
+          this.connectivity.checkNow();
+          errorMessage = UserService.MSG_NETWORK_UNAVAILABLE;
         }
 
         return throwError(() => new Error(errorMessage));
@@ -129,16 +127,34 @@ export class UserService {
       catchError((error: HttpErrorResponse) => {
         console.error('Error deleting user image:', error);
 
-        let errorMessage = 'Failed to delete image. Please try again later.';
+        let errorMessage: string = UserService.MSG_DELETE_IMAGE_FAILED;
 
         if (error.status === 404) {
-          errorMessage = 'User or image not found.';
+          errorMessage = UserService.MSG_USER_OR_IMAGE_NOT_FOUND;
         } else if (error.status === 0) {
-          errorMessage = 'Unable to connect to server. Please check your connection.';
+          this.connectivity.checkNow();
+          errorMessage = UserService.MSG_NETWORK_UNAVAILABLE;
         }
 
         return throwError(() => new Error(errorMessage));
       }),
     );
+  }
+
+  private getErrorMessage(
+    error: HttpErrorResponse,
+    fallback: string,
+    options?: { notFound?: string },
+  ): string {
+    if (error.status === 0) {
+      this.connectivity.checkNow();
+      return UserService.MSG_NETWORK_UNAVAILABLE;
+    }
+
+    if (error.status === 404 && options?.notFound) {
+      return options.notFound;
+    }
+
+    return fallback;
   }
 }
