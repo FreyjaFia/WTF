@@ -2,7 +2,7 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { AlertService, ListStateService, OrderService } from '@core/services';
+import { AlertService, ConnectivityService, ListStateService, OfflineOrderService, OrderService } from '@core/services';
 import {
   BadgeComponent,
   FilterDropdown,
@@ -11,6 +11,7 @@ import {
   type FilterOption,
 } from '@shared/components';
 import { OrderDto, OrderStatusEnum } from '@shared/models';
+import type { CartItemDto } from '@shared/models';
 import { debounceTime } from 'rxjs';
 
 type SortColumn = 'orderNumber' | 'date' | 'totalAmount';
@@ -46,6 +47,9 @@ export class OrderList implements OnInit {
   private readonly router = inject(Router);
   private readonly alertService = inject(AlertService);
   private readonly listState = inject(ListStateService);
+  private readonly connectivity = inject(ConnectivityService);
+  protected readonly offlineOrderService = inject(OfflineOrderService);
+  protected readonly isOnline = this.connectivity.isOnline;
 
   protected readonly filterForm = new FormGroup({
     searchTerm: new FormControl(''),
@@ -56,6 +60,8 @@ export class OrderList implements OnInit {
   protected readonly isLoading = signal(false);
   protected readonly isRefreshing = signal(false);
   protected readonly OrderStatusEnum = OrderStatusEnum;
+  protected readonly pendingOrders = this.offlineOrderService.pendingOrders;
+  protected readonly isSyncingOffline = this.offlineOrderService.isSyncing;
   protected readonly sortColumn = signal<SortColumn | null>(null);
   protected readonly sortDirection = signal<SortDirection>('desc');
   protected readonly selectedStatuses = signal<OrderStatusEnum[]>([]);
@@ -122,6 +128,10 @@ export class OrderList implements OnInit {
   }
 
   protected loadOrders(): void {
+    if (!this.connectivity.isOnline()) {
+      return;
+    }
+
     this.isLoading.set(true);
 
     this.orderService.getOrders().subscribe({
@@ -243,6 +253,22 @@ export class OrderList implements OnInit {
 
   protected editOrder(order: OrderDto): void {
     this.router.navigate(['/orders/editor', order.id]);
+  }
+
+  protected syncPendingOrders(): void {
+    this.offlineOrderService.syncAll();
+  }
+
+  protected getPendingItemCount(cartSnapshot: CartItemDto[]): string {
+    const count = cartSnapshot.reduce((sum, item) => sum + item.qty, 0);
+    return count === 1 ? '1 item' : `${count} items`;
+  }
+
+  protected getPendingTotal(cartSnapshot: CartItemDto[]): number {
+    return cartSnapshot.reduce((sum, item) => {
+      const addOnTotal = (item.addOns ?? []).reduce((s, ao) => s + ao.price, 0);
+      return sum + item.qty * (item.price + addOnTotal);
+    }, 0);
   }
 
   protected isSortActive(column: SortColumn): boolean {
