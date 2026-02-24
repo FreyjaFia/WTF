@@ -163,7 +163,12 @@ export class OrderEditor implements OnInit {
   protected readonly isLoadingCustomers = signal(false);
   protected readonly isLoading = signal(false);
   protected readonly isEditMode = signal(false);
+  protected readonly isOfflineEditMode = signal(false);
+  protected readonly offlineOrderStatus = signal<OrderStatusEnum | null>(null);
+  protected readonly showDiscardOrderModal = signal(false);
   protected readonly currentOrder = signal<OrderDto | null>(null);
+  protected offlineLocalId: string | null = null;
+  private discardOrderModalStackId: number | null = null;
 
   protected readonly isCompleted = computed(() => {
     const order = this.currentOrder();
@@ -180,8 +185,12 @@ export class OrderEditor implements OnInit {
     return order?.status === OrderStatusEnum.Refunded;
   });
 
+  protected readonly isOfflineCompleted = computed(
+    () => this.isOfflineEditMode() && this.offlineOrderStatus() === OrderStatusEnum.Completed,
+  );
+
   protected readonly isReadOnly = computed(
-    () => this.isCompleted() || this.isCancelled() || this.isRefunded(),
+    () => this.isCompleted() || this.isCancelled() || this.isRefunded() || this.isOfflineCompleted(),
   );
   protected readonly showPaymentSummary = computed(() => {
     const order = this.currentOrder();
@@ -234,6 +243,10 @@ export class OrderEditor implements OnInit {
       return false;
     }
 
+    if (this.isOfflineEditMode()) {
+      return !this.isOfflineCompleted();
+    }
+
     if (!this.isEditMode()) {
       return true;
     }
@@ -244,6 +257,10 @@ export class OrderEditor implements OnInit {
   protected readonly canEditCustomerSelection = computed(() => {
     if (!this.canManageOrderActions()) {
       return false;
+    }
+
+    if (this.isOfflineEditMode()) {
+      return !this.isOfflineCompleted();
     }
 
     if (!this.isEditMode()) {
@@ -279,27 +296,24 @@ export class OrderEditor implements OnInit {
 
   protected readonly receiptData = computed<ReceiptData>(() => {
     const order = this.currentOrder();
+    const offlineStatus = this.offlineOrderStatus();
+    const dateOptions: Intl.DateTimeFormatOptions = {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    };
+
     return {
       orderNumber: order?.orderNumber ?? null,
+      orderLabel: this.isOfflineEditMode() ? this.offlineLocalId : null,
       customerName: this.selectedCustomerName(),
       date: order
-        ? new Date(order.updatedAt || order.createdAt).toLocaleString('en-PH', {
-            day: 'numeric',
-            month: 'short',
-            year: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true,
-          })
-        : new Date().toLocaleString('en-PH', {
-            day: 'numeric',
-            month: 'short',
-            year: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true,
-          }),
-      status: order?.status ?? OrderStatusEnum.Pending,
+        ? new Date(order.updatedAt || order.createdAt).toLocaleString('en-PH', dateOptions)
+        : new Date().toLocaleString('en-PH', dateOptions),
+      status: offlineStatus ?? order?.status ?? OrderStatusEnum.Pending,
       items: this.cart(),
       specialInstructions: this.orderSpecialInstructions(),
       totalAmount: order?.totalAmount ?? this.totalPrice(),
@@ -369,7 +383,14 @@ export class OrderEditor implements OnInit {
 
   public ngOnInit(): void {
     const orderId = this.route.snapshot.paramMap.get('id');
-    if (orderId) {
+    const offlineLocalId = this.route.snapshot.queryParamMap.get('offline');
+
+    if (offlineLocalId) {
+      this.isEditMode.set(true);
+      this.isOfflineEditMode.set(true);
+      this.offlineLocalId = offlineLocalId;
+      this.loadOfflineOrderForEditing(offlineLocalId);
+    } else if (orderId) {
       this.isEditMode.set(true);
       this.loadCustomers();
       this.catalogCache.load();
@@ -407,6 +428,26 @@ export class OrderEditor implements OnInit {
           this.isLoading.set(false);
         },
       });
+  }
+
+  private loadOfflineOrderForEditing(localId: string): void {
+    this.isLoading.set(true);
+
+    this.offlineOrder.get(localId).then((pending) => {
+      if (!pending) {
+        this.alertService.error('Offline order not found.');
+        this.isLoading.set(false);
+        this.router.navigate(['/orders/list']);
+        return;
+      }
+
+      this.offlineOrderStatus.set(pending.command.status);
+      this.cart.set([...pending.cartSnapshot]);
+      this.selectedCustomerId.set(pending.command.customerId ?? null);
+      this.orderSpecialInstructions.set(pending.command.specialInstructions ?? '');
+
+      this.loadCatalog();
+    });
   }
 
   private populateCartFromOrder(order: OrderDto): void {
@@ -879,7 +920,32 @@ export class OrderEditor implements OnInit {
     this.removeStackId('cancelOrder');
   }
 
-  private removeStackId(modal: 'abandon' | 'cancelOrder' | 'summary' | 'createCustomer'): void {
+  protected openDiscardOrderModal(): void {
+    this.showDiscardOrderModal.set(true);
+    this.discardOrderModalStackId = this.modalStack.push(() => this.dismissDiscardOrder());
+  }
+
+  protected confirmDiscardOrder(): void {
+    if (!this.offlineLocalId) {
+      return;
+    }
+
+    this.showDiscardOrderModal.set(false);
+    this.removeStackId('discardOrder');
+
+    this.offlineOrder.remove(this.offlineLocalId).then(() => {
+      this.skipGuard = true;
+      this.alertService.success(`Order ${this.offlineLocalId} discarded.`);
+      this.router.navigate(['/orders/list']);
+    });
+  }
+
+  protected dismissDiscardOrder(): void {
+    this.showDiscardOrderModal.set(false);
+    this.removeStackId('discardOrder');
+  }
+
+  private removeStackId(modal: 'abandon' | 'cancelOrder' | 'discardOrder' | 'summary' | 'createCustomer'): void {
     const key = `${modal}ModalStackId` as const;
     const id = this[key];
 
@@ -916,7 +982,9 @@ export class OrderEditor implements OnInit {
       return;
     }
 
-    if (this.isEditMode()) {
+    if (this.isOfflineEditMode()) {
+      this.saveOfflineOrder(OrderStatusEnum.Pending);
+    } else if (this.isEditMode()) {
       this.updateExistingOrder(OrderStatusEnum.Pending);
     } else {
       this.createNewOrder(OrderStatusEnum.Pending);
@@ -934,7 +1002,9 @@ export class OrderEditor implements OnInit {
       return;
     }
 
-    if (this.isEditMode()) {
+    if (this.isOfflineEditMode()) {
+      this.saveOfflineOrder(OrderStatusEnum.Completed, event);
+    } else if (this.isEditMode()) {
       this.updateExistingOrder(OrderStatusEnum.Completed, event);
     } else {
       this.createNewOrder(OrderStatusEnum.Completed, event);
@@ -1006,6 +1076,53 @@ export class OrderEditor implements OnInit {
       .catch(() => {
         this.isSavingOrder.set(false);
         this.alertService.error('Failed to save order offline.');
+      });
+  }
+
+  private saveOfflineOrder(
+    status: OrderStatusEnum,
+    event?: {
+      paymentMethod: PaymentMethodEnum;
+      amountReceived?: number;
+      changeAmount?: number;
+      tips?: number;
+    },
+  ): void {
+    if (!this.offlineLocalId || this.isSavingOrder()) {
+      return;
+    }
+
+    this.isSavingOrder.set(true);
+
+    const command: CreateOrderCommand = {
+      customerId: this.selectedCustomerId(),
+      items: this.cart().map((c) => ({
+        productId: c.productId,
+        quantity: c.qty,
+        addOns: this.groupAddOns(c.addOns),
+        specialInstructions: c.specialInstructions || null,
+      })),
+      specialInstructions: this.orderSpecialInstructions().trim() || null,
+      status,
+      ...(event && {
+        paymentMethod: event.paymentMethod,
+        amountReceived: event.amountReceived ?? null,
+        changeAmount: event.changeAmount ?? null,
+        tips: event.tips ?? null,
+      }),
+    };
+
+    this.offlineOrder
+      .update(this.offlineLocalId, command, this.cart(), this.selectedCustomerName())
+      .then(() => {
+        this.isSavingOrder.set(false);
+        this.skipGuard = true;
+        this.alertService.info(`Order ${this.offlineLocalId} updated offline.`);
+        this.router.navigate(['/orders/list']);
+      })
+      .catch(() => {
+        this.isSavingOrder.set(false);
+        this.alertService.error('Failed to update offline order.');
       });
   }
 

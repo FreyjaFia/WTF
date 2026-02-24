@@ -48,10 +48,15 @@ Enable the POS app to function without a network connection.
 ### Phase 4 — Edit Pending Offline Orders ⏳ Pending
 
 - Tap a pending offline order to reopen it in the order editor
-- Same editing flow as online orders (modify items, customer, etc.)
-- Save changes back to the pending queue
-- Show current order status on pending offline order cards
-- Delete/cancel pending orders from inside the editor
+- Navigate via query param: `/orders/editor?offline=L-001`
+- Same editing flow as online orders (modify items, customer,
+  special instructions)
+- Save changes back to the pending queue via `OfflineOrderService.update()`
+- Completed offline orders open as read-only (Back + Discard only)
+- Show current order status badge on pending offline order cards
+- Discard pending orders from inside the editor (confirmation modal)
+- Save-as-image receipt works for offline orders (shows localId as
+  order label, uses offline order status)
 
 ### Phase 5 — Batch Sync & Advanced Offline ⏳ Pending
 

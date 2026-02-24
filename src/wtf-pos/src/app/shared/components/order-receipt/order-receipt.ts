@@ -4,7 +4,6 @@ import {
   ElementRef,
   inject,
   input,
-  OnDestroy,
   OnInit,
   signal,
   viewChild,
@@ -15,6 +14,7 @@ import { CartAddOnDto, CartItemDto, OrderStatusEnum, PaymentMethodEnum } from '@
 
 export interface ReceiptData {
   orderNumber?: number | null;
+  orderLabel?: string | null;
   customerName: string;
   date: string;
   status: OrderStatusEnum;
@@ -32,7 +32,7 @@ export interface ReceiptData {
   imports: [CommonModule],
   templateUrl: './order-receipt.html',
 })
-export class OrderReceiptComponent implements OnInit, OnDestroy {
+export class OrderReceiptComponent implements OnInit {
   private readonly receiptEl = viewChild.required<ElementRef<HTMLElement>>('receiptEl');
   private readonly imageDownloadService = inject(ImageDownloadService);
   private readonly alertService = inject(AlertService);
@@ -42,24 +42,19 @@ export class OrderReceiptComponent implements OnInit, OnDestroy {
   protected readonly isGenerating = signal(false);
   protected readonly logoDataUri = signal('');
 
-  private logoBlobUrl: string | null = null;
-
   public ngOnInit(): void {
     this.loadLogo();
-  }
-
-  public ngOnDestroy(): void {
-    if (this.logoBlobUrl) {
-      URL.revokeObjectURL(this.logoBlobUrl);
-    }
   }
 
   private loadLogo(): void {
     fetch('assets/images/logo_new.png')
       .then((res) => res.blob())
       .then((blob) => {
-        this.logoBlobUrl = URL.createObjectURL(blob);
-        this.logoDataUri.set(this.logoBlobUrl);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          this.logoDataUri.set(reader.result as string);
+        };
+        reader.readAsDataURL(blob);
       });
   }
 
@@ -90,8 +85,8 @@ export class OrderReceiptComponent implements OnInit, OnDestroy {
   public async generate(): Promise<void> {
     this.isGenerating.set(true);
     try {
-      const orderNumber = this.data()?.orderNumber ?? 'new';
-      const fileName = `WTF-Order-${orderNumber}.png`;
+      const orderLabel = this.data()?.orderLabel ?? this.data()?.orderNumber ?? 'new';
+      const fileName = `WTF-Order-${orderLabel}.png`;
       await this.imageDownloadService.downloadElementAsImage(
         this.receiptEl().nativeElement,
         fileName,

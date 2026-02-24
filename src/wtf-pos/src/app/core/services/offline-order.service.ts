@@ -7,6 +7,8 @@ import type { PendingOrder } from './db';
 
 @Injectable({ providedIn: 'root' })
 export class OfflineOrderService {
+  private static readonly COUNTER_KEY = 'wtf-offline-counter';
+
   private readonly connectivity = inject(ConnectivityService);
   private readonly orderService = inject(OrderService);
   private readonly alertService = inject(AlertService);
@@ -37,8 +39,14 @@ export class OfflineOrderService {
     cartSnapshot: CartItemDto[],
     customerName: string | null,
   ): Promise<string> {
+    const today = this.getTodayString();
     this.localCounter++;
-    const localId = `L-${String(this.localCounter).padStart(3, '0')}`;
+    const localId = `OFF-${today}-${String(this.localCounter).padStart(3, '0')}`;
+
+    localStorage.setItem(
+      OfflineOrderService.COUNTER_KEY,
+      JSON.stringify({ date: today, counter: this.localCounter }),
+    );
 
     const pendingOrder: PendingOrder = {
       localId,
@@ -59,6 +67,33 @@ export class OfflineOrderService {
 
   public async remove(localId: string): Promise<void> {
     await db.pendingOrders.where('localId').equals(localId).delete();
+    await this.loadPendingOrders();
+  }
+
+  public async get(localId: string): Promise<PendingOrder | undefined> {
+    return db.pendingOrders.where('localId').equals(localId).first();
+  }
+
+  public async update(
+    localId: string,
+    command: CreateOrderCommand,
+    cartSnapshot: CartItemDto[],
+    customerName: string | null,
+  ): Promise<void> {
+    const existing = await db.pendingOrders.where('localId').equals(localId).first();
+
+    if (!existing) {
+      return;
+    }
+
+    await (db.pendingOrders as import('dexie').Table).update(existing.id!, {
+      command,
+      cartSnapshot,
+      customerName,
+      status: 'pending',
+      errorMessage: null,
+    });
+
     await this.loadPendingOrders();
   }
 
@@ -126,16 +161,40 @@ export class OfflineOrderService {
   }
 
   private updateLocalCounter(orders: PendingOrder[]): void {
+    const today = this.getTodayString();
     let maxNum = 0;
 
     for (const order of orders) {
-      const match = order.localId.match(/^L-(\d+)$/);
+      const match = order.localId.match(/^OFF-(\d{6})-(\d+)$/);
 
-      if (match) {
-        maxNum = Math.max(maxNum, parseInt(match[1], 10));
+      if (match && match[1] === today) {
+        maxNum = Math.max(maxNum, parseInt(match[2], 10));
       }
     }
 
+    try {
+      const saved = localStorage.getItem(OfflineOrderService.COUNTER_KEY);
+
+      if (saved) {
+        const parsed = JSON.parse(saved) as { date: string; counter: number };
+
+        if (parsed.date === today) {
+          maxNum = Math.max(maxNum, parsed.counter);
+        }
+      }
+    } catch {
+      // Ignore parse errors
+    }
+
     this.localCounter = maxNum;
+  }
+
+  private getTodayString(): string {
+    const now = new Date();
+    const yy = String(now.getFullYear()).slice(-2);
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+
+    return `${yy}${mm}${dd}`;
   }
 }

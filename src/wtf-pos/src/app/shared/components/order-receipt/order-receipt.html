@@ -21,7 +21,9 @@
 
     <!-- Order info -->
     <div style="font-size: 16px; font-weight: 700; margin-bottom: 8px">
-      @if (data()?.orderNumber) {
+      @if (data()?.orderLabel) {
+        Order {{ data()!.orderLabel }}
+      } @else if (data()?.orderNumber) {
         Order #{{ data()!.orderNumber }}
       } @else {
         New Order

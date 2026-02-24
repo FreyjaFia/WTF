@@ -207,7 +207,18 @@
       <div class="flex items-center justify-between">
         <div>
           <div>
-          @if (isEditMode()) {
+          @if (isOfflineEditMode()) {
+            <h3 class="text-lg font-semibold">
+              {{ isOfflineCompleted() ? 'Order Details' : 'Edit Offline Order' }}
+            </h3>
+            <div class="mt-1 mb-1 flex items-center gap-2">
+              <div class="text-sm opacity-70">{{ offlineLocalId }}</div>
+              <app-badge variant="warning">Offline</app-badge>
+              @if (isOfflineCompleted()) {
+                <app-badge variant="success">Completed</app-badge>
+              }
+            </div>
+          } @else if (isEditMode()) {
             <h3 class="text-lg font-semibold">
               {{ isReadOnly() ? 'Order Details' : 'Edit Order' }}
             </h3>
@@ -256,7 +267,7 @@
             @if (canCreateCustomerInOrder()) {
               <button
                 type="button"
-                class="tooltip tooltip-bottom btn btn-sm rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                class="tooltip tooltip-left btn btn-sm rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
                 (click)="openCreateCustomerModal()"
                 data-tip="Create new customer"
               >
@@ -477,7 +488,14 @@
       <div class="flex flex-col gap-2">
         @if (isReadOnly()) {
           <div class="flex gap-2">
-            @if (isCancellable() && canManageOrderActions()) {
+            @if (isOfflineCompleted()) {
+              <button
+                class="btn btn-error btn-outline flex-1 rounded-lg"
+                (click)="openDiscardOrderModal()"
+              >
+                Discard Order
+              </button>
+            } @else if (isCancellable() && canManageOrderActions()) {
               <button
                 class="btn btn-error btn-outline flex-1 rounded-lg"
                 (click)="openCancelOrderModal()"
@@ -514,7 +532,14 @@
               {{ isSavingOrder() ? (isEditMode() ? 'Updating Order...' : 'Saving Order...') : 'Save' }}
             </button>
           </div>
-          @if (isEditMode() && isCancellable() && canManageOrderActions()) {
+          @if (isOfflineEditMode()) {
+            <button
+              class="btn btn-error btn-outline w-full rounded-lg"
+              (click)="openDiscardOrderModal()"
+            >
+              Discard Order
+            </button>
+          } @else if (isEditMode() && isCancellable() && canManageOrderActions()) {
             <button
               class="btn btn-error btn-outline w-full rounded-lg"
               (click)="openCancelOrderModal()"
@@ -689,6 +714,58 @@
           (click)="confirmCancelOrder()"
         >
           {{ isCompleted() ? 'Refund Order' : 'Cancel Order' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Discard Offline Order Modal -->
+@if (showDiscardOrderModal()) {
+  <div
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="discard-order-title"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md transition-opacity duration-200"
+    (click)="dismissDiscardOrder()"
+    (keydown.escape)="dismissDiscardOrder()"
+    tabindex="0"
+  >
+    <div
+      role="document"
+      class="mx-4 w-full max-w-sm animate-[modal-pop_0.2s_ease-out] rounded-2xl bg-white p-6 shadow-2xl"
+      (click)="$event.stopPropagation()"
+      (keydown)="$event.stopPropagation()"
+    >
+      <div class="mx-auto w-fit rounded-full bg-red-50/60 p-3">
+        <div class="rounded-full bg-red-50 p-3">
+          <app-icon name="icon-cart" [class]="'h-6 w-6 text-red-600'" />
+        </div>
+      </div>
+
+      <h3 id="discard-order-title" class="mt-4 text-center text-lg font-semibold text-gray-900">
+        Discard Order?
+      </h3>
+      <p class="mt-2 text-center text-sm leading-relaxed text-gray-500">
+        Are you sure you want to discard offline order
+        <span class="font-medium text-gray-700">{{ offlineLocalId }}</span
+        >? This action cannot be undone.
+      </p>
+
+      <div class="mt-6 flex items-center justify-end gap-3">
+        <button
+          type="button"
+          class="cursor-pointer px-4 py-2 text-sm font-medium text-gray-500 transition-colors hover:text-gray-700"
+          (click)="dismissDiscardOrder()"
+        >
+          Keep Order
+        </button>
+        <button
+          type="button"
+          class="cursor-pointer rounded-xl bg-red-600 px-6 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-red-700 hover:shadow-md active:scale-[0.97]"
+          (click)="confirmDiscardOrder()"
+        >
+          Discard Order
         </button>
       </div>
     </div>

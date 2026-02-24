@@ -255,6 +255,10 @@ export class OrderList implements OnInit {
     this.router.navigate(['/orders/editor', order.id]);
   }
 
+  protected editPendingOrder(localId: string): void {
+    this.router.navigate(['/orders/editor'], { queryParams: { offline: localId } });
+  }
+
   protected syncPendingOrders(): void {
     this.offlineOrderService.syncAll();
   }
@@ -269,6 +273,30 @@ export class OrderList implements OnInit {
       const addOnTotal = (item.addOns ?? []).reduce((s, ao) => s + ao.price, 0);
       return sum + item.qty * (item.price + addOnTotal);
     }, 0);
+  }
+
+  protected getOrderStatusVariant(
+    status?: OrderStatusEnum | null,
+  ): 'success' | 'error' | 'warning' | 'info' | 'default' {
+    switch (status) {
+      case OrderStatusEnum.Pending:
+        return 'warning';
+      case OrderStatusEnum.Completed:
+        return 'success';
+      default:
+        return 'info';
+    }
+  }
+
+  protected getOrderStatusLabel(status?: OrderStatusEnum | null): string {
+    switch (status) {
+      case OrderStatusEnum.Pending:
+        return 'Pending';
+      case OrderStatusEnum.Completed:
+        return 'Completed';
+      default:
+        return 'Unknown';
+    }
   }
 
   protected isSortActive(column: SortColumn): boolean {
