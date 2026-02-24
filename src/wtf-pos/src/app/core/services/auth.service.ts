@@ -4,6 +4,7 @@ import { environment } from '@environments/environment.development';
 import { LoginDto, MeDto } from '@shared/models';
 import { BehaviorSubject, Observable, Subject, throwError } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
+import { db } from './db';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -138,6 +139,7 @@ export class AuthService {
     localStorage.removeItem('refreshToken');
     this._isLoggedIn.next(false);
     this.rolesSubject.next([]);
+    db.carts.clear();
   }
 
   public getToken(): string | null {
