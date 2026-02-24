@@ -7,6 +7,11 @@ const config: CapacitorConfig = {
   server: {
     androidScheme: 'http',
   },
+  plugins: {
+    Media: {
+      androidGalleryMode: true,
+    },
+  },
 };
 
 export default config;
