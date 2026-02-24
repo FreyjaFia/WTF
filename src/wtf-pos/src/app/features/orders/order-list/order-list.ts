@@ -1,5 +1,5 @@
 ﻿import { CommonModule, DatePipe } from '@angular/common';
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, effect, inject, OnInit, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AlertService, ConnectivityService, ListStateService, OfflineOrderService, OrderService } from '@core/services';
@@ -65,6 +65,47 @@ export class OrderList implements OnInit {
   protected readonly sortColumn = signal<SortColumn | null>(null);
   protected readonly sortDirection = signal<SortDirection>('desc');
   protected readonly selectedStatuses = signal<OrderStatusEnum[]>([]);
+  private readonly waitingForReconnectSync = signal(false);
+  private wasOnline = this.connectivity.isOnline();
+  private wasSyncingOffline = false;
+
+  constructor() {
+    effect(
+      () => {
+        const online = this.isOnline();
+        const syncingOffline = this.isSyncingOffline();
+        const pendingCount = this.pendingOrders().length;
+
+        if (online && !this.wasOnline) {
+          if (pendingCount > 0) {
+            this.waitingForReconnectSync.set(true);
+            this.isLoading.set(true);
+          } else {
+            this.loadOrders();
+          }
+        }
+
+        if (this.wasSyncingOffline && !syncingOffline && online) {
+          if (this.waitingForReconnectSync()) {
+            this.waitingForReconnectSync.set(false);
+            this.loadOrders();
+          } else if (pendingCount === 0) {
+            this.loadOrders();
+          }
+        }
+
+        if (!online) {
+          this.waitingForReconnectSync.set(false);
+          this.isLoading.set(false);
+          this.isRefreshing.set(false);
+        }
+
+        this.wasOnline = online;
+        this.wasSyncingOffline = syncingOffline;
+      },
+      { allowSignalWrites: true },
+    );
+  }
 
   protected readonly groupedOrders = computed<OrderGroup[]>(() => {
     const items = this.orders();
