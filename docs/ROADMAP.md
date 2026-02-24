@@ -16,7 +16,7 @@ Enable the POS app to function without a network connection.
 | 2     | Catalog & Image Caching       | ✅ Completed |
 | 3     | Offline Order Queue           | ✅ Completed |
 | 4     | Edit Pending Offline Orders   | ✅ Completed |
-| 5     | Batch Sync & Advanced Offline | ⏳ Pending   |
+| 5     | Batch Sync & Advanced Offline | ✅ Completed |
 
 ### Phase 1 — Connectivity & Cart Persistence ✅ Completed
 
@@ -59,7 +59,7 @@ Enable the POS app to function without a network connection.
   order label, uses offline order status)
 - Offline order numbering format: `OFF-YYMMDD-###`
 
-### Phase 5 — Batch Sync & Advanced Offline ⏳ Pending
+### Phase 5 — Batch Sync & Advanced Offline ✅ Completed
 
 - **Batch create order endpoint:** `POST /api/orders/batch` accepting an
   array of orders. Implemented via `CreateOrderBatchCommand` +
