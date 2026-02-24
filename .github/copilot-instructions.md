@@ -1,5 +1,11 @@
 # GitHub Copilot Instructions for WTF Project
 
+## Feature Roadmap
+
+For planned features, implementation details, current status, and what
+to work on next, see **`docs/ROADMAP.md`**. Always check that file when
+asked about upcoming work, feature status, or next steps.
+
 ## Core Mindset
 
 When providing assistance, adopt the appropriate professional mindset:
