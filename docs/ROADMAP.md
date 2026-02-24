@@ -15,7 +15,7 @@ Enable the POS app to function without a network connection.
 | 1     | Connectivity & Cart Persistence | ✅ Completed |
 | 2     | Catalog & Image Caching       | ✅ Completed |
 | 3     | Offline Order Queue           | ✅ Completed |
-| 4     | Edit Pending Offline Orders   | ⏳ Pending   |
+| 4     | Edit Pending Offline Orders   | ✅ Completed |
 | 5     | Batch Sync & Advanced Offline | ⏳ Pending   |
 
 ### Phase 1 — Connectivity & Cart Persistence ✅ Completed
@@ -45,10 +45,10 @@ Enable the POS app to function without a network connection.
 - Order list hides synced orders table and pull-to-refresh when offline
 - Cart cleared from IndexedDB on logout
 
-### Phase 4 — Edit Pending Offline Orders ⏳ Pending
+### Phase 4 — Edit Pending Offline Orders ✅ Completed
 
 - Tap a pending offline order to reopen it in the order editor
-- Navigate via query param: `/orders/editor?offline=L-001`
+- Navigate via query param: `/orders/editor?offline=OFF-260224-001`
 - Same editing flow as online orders (modify items, customer,
   special instructions)
 - Save changes back to the pending queue via `OfflineOrderService.update()`
@@ -57,6 +57,7 @@ Enable the POS app to function without a network connection.
 - Discard pending orders from inside the editor (confirmation modal)
 - Save-as-image receipt works for offline orders (shows localId as
   order label, uses offline order status)
+- Offline order numbering format: `OFF-YYMMDD-###`
 
 ### Phase 5 — Batch Sync & Advanced Offline ⏳ Pending
 
