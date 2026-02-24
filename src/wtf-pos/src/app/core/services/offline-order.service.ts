@@ -242,6 +242,10 @@ export class OfflineOrderService {
     return `${yy}${mm}${dd}`;
   }
 
+  public async getPendingSyncCount(): Promise<number> {
+    return db.pendingOrders.count();
+  }
+
   private buildBatchCommand(order: PendingOrder): CreateOrderCommand {
     return {
       ...order.command,
