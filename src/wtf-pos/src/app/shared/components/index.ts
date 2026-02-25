@@ -22,3 +22,4 @@ export * from './price-history-drawer/price-history-drawer';
 export * from './products-swapper/products-swapper';
 export * from './pull-to-refresh/pull-to-refresh';
 export * from './sparkline/sparkline';
+export * from './update-banner/update-banner';
