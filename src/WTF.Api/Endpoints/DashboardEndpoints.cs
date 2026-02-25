@@ -13,9 +13,9 @@ public static class DashboardEndpoints
 
         // GET /api/dashboard - Get dashboard summary with optional date range
         dashboardGroup.MapGet("/",
-            async (string? preset, DateTime? startDate, DateTime? endDate, ISender sender) =>
+            async (string? preset, DateTime? startDate, DateTime? endDate, string? timeZone, ISender sender) =>
             {
-                var result = await sender.Send(new GetDashboardQuery(preset, startDate, endDate));
+                var result = await sender.Send(new GetDashboardQuery(preset, startDate, endDate, timeZone));
                 return Results.Ok(result);
             })
             .RequireAuthorization(AppPolicies.DashboardRead);

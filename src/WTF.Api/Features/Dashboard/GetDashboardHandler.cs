@@ -7,25 +7,29 @@ using WTF.Domain.Entities;
 
 namespace WTF.Api.Features.Dashboard;
 
-public record GetDashboardQuery(string? Preset, DateTime? StartDate, DateTime? EndDate) : IRequest<DashboardDto>;
+public record GetDashboardQuery(string? Preset, DateTime? StartDate, DateTime? EndDate, string? TimeZone) : IRequest<DashboardDto>;
 
 public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor) : IRequestHandler<GetDashboardQuery, DashboardDto>
 {
     private record DateRangeInfo(
-        DateTime PrimaryStart,
-        DateTime PrimaryEnd,
-        DateTime ComparisonStart,
-        DateTime ComparisonEnd,
+        DateTime PrimaryStartUtc,
+        DateTime PrimaryEndUtc,
+        DateTime ComparisonStartUtc,
+        DateTime ComparisonEndUtc,
+        DateTime PrimaryStartLocal,
+        DateTime PrimaryEndLocal,
         string ComparisonLabel,
         bool IsMultiDay);
 
     public async Task<DashboardDto> Handle(GetDashboardQuery request, CancellationToken cancellationToken)
     {
         var nowUtc = DateTime.UtcNow;
-        var range = ComputeDateRange(request, nowUtc);
+        var timeZone = ResolveTimeZone(request.TimeZone);
+        var range = ComputeDateRange(request, nowUtc, timeZone);
+        var nowLocal = TimeZoneInfo.ConvertTimeFromUtc(nowUtc, timeZone);
 
-        var primaryOrders = await QueryOrders(range.PrimaryStart, range.PrimaryEnd, cancellationToken);
-        var comparisonOrders = await QueryOrders(range.ComparisonStart, range.ComparisonEnd, cancellationToken);
+        var primaryOrders = await QueryOrders(range.PrimaryStartUtc, range.PrimaryEndUtc, cancellationToken);
+        var comparisonOrders = await QueryOrders(range.ComparisonStartUtc, range.ComparisonEndUtc, cancellationToken);
 
         var summary = ComputeSummary(primaryOrders, comparisonOrders);
         var topProducts = await ComputeTopProducts(primaryOrders, cancellationToken);
@@ -33,10 +37,10 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
 
         var hourlyRevenue = range.IsMultiDay
             ? []
-            : ComputeHourlyRevenue(primaryOrders, range, nowUtc);
+            : ComputeHourlyRevenue(primaryOrders, range, nowLocal, timeZone);
 
         var dailyRevenue = range.IsMultiDay
-            ? ComputeDailyRevenue(primaryOrders, range)
+            ? ComputeDailyRevenue(primaryOrders, range, timeZone)
             : null;
 
         var recentOrders = await ComputeRecentOrders(range, cancellationToken);
@@ -53,52 +57,61 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
             dailyRevenue);
     }
 
-    private static DateRangeInfo ComputeDateRange(GetDashboardQuery request, DateTime nowUtc)
+    private static DateRangeInfo ComputeDateRange(GetDashboardQuery request, DateTime nowUtc, TimeZoneInfo timeZone)
     {
-        var todayUtc = nowUtc.Date;
+        var localNow = TimeZoneInfo.ConvertTimeFromUtc(nowUtc, timeZone);
+        var localToday = localNow.Date;
         var preset = (request.Preset ?? "today").ToLowerInvariant();
 
         return preset switch
         {
             "yesterday" => new DateRangeInfo(
-                todayUtc.AddDays(-1),
-                todayUtc,
-                todayUtc.AddDays(-2),
-                todayUtc.AddDays(-1),
+                ToUtc(localToday.AddDays(-1), timeZone),
+                ToUtc(localToday, timeZone),
+                ToUtc(localToday.AddDays(-2), timeZone),
+                ToUtc(localToday.AddDays(-1), timeZone),
+                localToday.AddDays(-1),
+                localToday,
                 "vs Day Before",
                 false),
 
             "last7days" => new DateRangeInfo(
-                todayUtc.AddDays(-6),
-                todayUtc.AddDays(1),
-                todayUtc.AddDays(-13),
-                todayUtc.AddDays(-6),
+                ToUtc(localToday.AddDays(-6), timeZone),
+                ToUtc(localToday.AddDays(1), timeZone),
+                ToUtc(localToday.AddDays(-13), timeZone),
+                ToUtc(localToday.AddDays(-6), timeZone),
+                localToday.AddDays(-6),
+                localToday.AddDays(1),
                 "vs Prev. 7 Days",
                 true),
 
             "last30days" => new DateRangeInfo(
-                todayUtc.AddDays(-29),
-                todayUtc.AddDays(1),
-                todayUtc.AddDays(-59),
-                todayUtc.AddDays(-29),
+                ToUtc(localToday.AddDays(-29), timeZone),
+                ToUtc(localToday.AddDays(1), timeZone),
+                ToUtc(localToday.AddDays(-59), timeZone),
+                ToUtc(localToday.AddDays(-29), timeZone),
+                localToday.AddDays(-29),
+                localToday.AddDays(1),
                 "vs Prev. 30 Days",
                 true),
 
             "custom" when request.StartDate.HasValue && request.EndDate.HasValue =>
-                ComputeCustomRange(request.StartDate.Value.Date, request.EndDate.Value.Date),
+                ComputeCustomRange(request.StartDate.Value.Date, request.EndDate.Value.Date, timeZone),
 
             // Default: "today"
             _ => new DateRangeInfo(
-                todayUtc,
-                todayUtc.AddDays(1),
-                todayUtc.AddDays(-1),
-                nowUtc.AddDays(-1),
+                ToUtc(localToday, timeZone),
+                ToUtc(localToday.AddDays(1), timeZone),
+                ToUtc(localToday.AddDays(-1), timeZone),
+                ToUtc(localToday, timeZone),
+                localToday,
+                localToday.AddDays(1),
                 "vs Yesterday",
                 false),
         };
     }
 
-    private static DateRangeInfo ComputeCustomRange(DateTime startDate, DateTime endDate)
+    private static DateRangeInfo ComputeCustomRange(DateTime startDate, DateTime endDate, TimeZoneInfo timeZone)
     {
         var primaryStart = startDate;
         var primaryEnd = endDate.AddDays(1);
@@ -109,10 +122,12 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
         var comparisonEnd = primaryStart;
 
         return new DateRangeInfo(
+            ToUtc(primaryStart, timeZone),
+            ToUtc(primaryEnd, timeZone),
+            ToUtc(comparisonStart, timeZone),
+            ToUtc(comparisonEnd, timeZone),
             primaryStart,
             primaryEnd,
-            comparisonStart,
-            comparisonEnd,
             "vs Prev. Period",
             isMultiDay);
     }
@@ -204,16 +219,18 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
     }
 
     private static List<HourlyRevenuePointDto> ComputeHourlyRevenue(
-        List<Order> orders, DateRangeInfo range, DateTime nowUtc)
+        List<Order> orders, DateRangeInfo range, DateTime nowLocal, TimeZoneInfo timeZone)
     {
         // For partial days (e.g. "Today"), only up to current hour; for complete days, all 24 hours
-        var isPartialDay = range.PrimaryEnd > nowUtc;
-        var maxHour = isPartialDay ? nowUtc.Hour : 23;
+        var isPartialDay = nowLocal >= range.PrimaryStartLocal && nowLocal < range.PrimaryEndLocal;
+        var maxHour = isPartialDay ? nowLocal.Hour : 23;
 
         return Enumerable.Range(0, maxHour + 1)
             .Select(hour =>
             {
-                var hourOrders = orders.Where(o => o.CreatedAt.Hour == hour).ToList();
+                var hourOrders = orders
+                    .Where(o => TimeZoneInfo.ConvertTimeFromUtc(o.CreatedAt, timeZone).Hour == hour)
+                    .ToList();
                 var revenue = hourOrders
                     .Where(o => o.StatusId == 2)
                     .Sum(o => o.OrderItems.Sum(oi => (oi.Price ?? oi.Product.Price) * oi.Quantity));
@@ -224,15 +241,17 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
             .ToList();
     }
 
-    private static List<DailyRevenuePointDto> ComputeDailyRevenue(List<Order> orders, DateRangeInfo range)
+    private static List<DailyRevenuePointDto> ComputeDailyRevenue(List<Order> orders, DateRangeInfo range, TimeZoneInfo timeZone)
     {
-        var days = (int)(range.PrimaryEnd - range.PrimaryStart).TotalDays;
+        var days = (int)(range.PrimaryEndLocal - range.PrimaryStartLocal).TotalDays;
 
         return Enumerable.Range(0, days)
             .Select(offset =>
             {
-                var date = range.PrimaryStart.AddDays(offset);
-                var dayOrders = orders.Where(o => o.CreatedAt.Date == date).ToList();
+                var date = range.PrimaryStartLocal.AddDays(offset);
+                var dayOrders = orders
+                    .Where(o => TimeZoneInfo.ConvertTimeFromUtc(o.CreatedAt, timeZone).Date == date)
+                    .ToList();
                 var revenue = dayOrders
                     .Where(o => o.StatusId == 2)
                     .Sum(o => o.OrderItems.Sum(oi => (oi.Price ?? oi.Product.Price) * oi.Quantity));
@@ -250,7 +269,7 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
             .Include(o => o.Status)
             .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.Product)
-            .Where(o => o.CreatedAt >= range.PrimaryStart && o.CreatedAt < range.PrimaryEnd)
+            .Where(o => o.CreatedAt >= range.PrimaryStartUtc && o.CreatedAt < range.PrimaryEndUtc)
             .OrderByDescending(o => o.CreatedAt)
             .Take(5)
             .ToListAsync(cancellationToken);
@@ -311,5 +330,65 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
                 g.Sum(o => o.OrderItems.Sum(oi => (oi.Price ?? oi.Product.Price) * oi.Quantity))))
             .OrderByDescending(p => p.Total)
             .ToList();
+    }
+
+    private static DateTime ToUtc(DateTime localDateTime, TimeZoneInfo timeZone)
+    {
+        return TimeZoneInfo.ConvertTimeToUtc(
+            DateTime.SpecifyKind(localDateTime, DateTimeKind.Unspecified),
+            timeZone);
+    }
+
+    private static TimeZoneInfo ResolveTimeZone(string? timeZoneId)
+    {
+        if (string.IsNullOrWhiteSpace(timeZoneId))
+        {
+            return TimeZoneInfo.Utc;
+        }
+
+        try
+        {
+            return TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            if (TimeZoneInfo.TryConvertIanaIdToWindowsId(timeZoneId, out var windowsId))
+            {
+                try
+                {
+                    return TimeZoneInfo.FindSystemTimeZoneById(windowsId);
+                }
+                catch (TimeZoneNotFoundException)
+                {
+                    return TimeZoneInfo.Utc;
+                }
+                catch (InvalidTimeZoneException)
+                {
+                    return TimeZoneInfo.Utc;
+                }
+            }
+
+            if (TimeZoneInfo.TryConvertWindowsIdToIanaId(timeZoneId, out var ianaId))
+            {
+                try
+                {
+                    return TimeZoneInfo.FindSystemTimeZoneById(ianaId);
+                }
+                catch (TimeZoneNotFoundException)
+                {
+                    return TimeZoneInfo.Utc;
+                }
+                catch (InvalidTimeZoneException)
+                {
+                    return TimeZoneInfo.Utc;
+                }
+            }
+
+            return TimeZoneInfo.Utc;
+        }
+        catch (InvalidTimeZoneException)
+        {
+            return TimeZoneInfo.Utc;
+        }
     }
 }

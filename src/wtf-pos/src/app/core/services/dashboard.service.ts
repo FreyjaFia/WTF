@@ -17,7 +17,10 @@ export class DashboardService {
   private readonly baseUrl = `${environment.apiUrl}/dashboard`;
 
   public getDashboard(range?: DateRangeSelection): Observable<DashboardDto> {
-    let params = new HttpParams();
+    let params = new HttpParams().set(
+      'timeZone',
+      Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+    );
 
     if (range) {
       params = params.set('preset', range.preset);
