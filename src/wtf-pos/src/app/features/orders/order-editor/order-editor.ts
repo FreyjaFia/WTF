@@ -565,9 +565,17 @@ export class OrderEditor implements OnInit, OnDestroy {
   private enrichCartItems(allProducts: ProductDto[]): void {
     const enrichedCart = this.cart().map((cartItem) => {
       const product = allProducts.find((p) => p.id === cartItem.productId);
+      const addOnTypeById = new Map(
+        this.catalogCache
+          .getAddOnsForProduct(cartItem.productId)
+          .flatMap((group) => group.options.map((option) => [option.id, group.type] as const)),
+      );
       const enrichedAddOns = cartItem.addOns?.map((ao) => {
         const addOnProduct = allProducts.find((p) => p.id === ao.addOnId);
-        return addOnProduct ? { ...ao, name: addOnProduct.name } : ao;
+        const inferredType = ao.addOnType ?? addOnTypeById.get(ao.addOnId);
+        return addOnProduct
+          ? { ...ao, name: addOnProduct.name, addOnType: inferredType }
+          : { ...ao, addOnType: inferredType };
       });
 
       return product

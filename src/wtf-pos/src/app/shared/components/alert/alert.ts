@@ -23,6 +23,8 @@ export class AlertComponent {
 
   readonly type = input<AlertType>('info');
   readonly message = input.required<string>();
+  readonly actionLabel = input<string | null>(null);
+  readonly action = input<(() => void) | null>(null);
   readonly dismissed = output<void>();
 
   protected isDismissing = signal(false);
@@ -116,5 +118,13 @@ export class AlertComponent {
     setTimeout(() => {
       this.dismissed.emit();
     }, 250);
+  }
+
+  protected onActionClick(): void {
+    const action = this.action();
+    if (action) {
+      action();
+    }
+    this.dismiss();
   }
 }

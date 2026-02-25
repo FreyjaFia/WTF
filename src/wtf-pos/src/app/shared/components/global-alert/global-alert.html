@@ -4,6 +4,8 @@
     <app-alert class="pointer-events-auto"
       [type]="alertService.alert().type"
       [message]="alertService.alert().message"
+      [actionLabel]="alertService.alert().actionLabel ?? null"
+      [action]="alertService.alert().action ?? null"
       (dismissed)="alertService.dismiss()"
     />
   </div>

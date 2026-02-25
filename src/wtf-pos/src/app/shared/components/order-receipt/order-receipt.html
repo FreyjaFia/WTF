@@ -71,7 +71,7 @@
 
         @if (item.addOns?.length) {
           <div style="margin-top: 6px; padding-left: 12px">
-            @for (ao of item.addOns; track ao.addOnId) {
+            @for (ao of item.addOns | sortAddOns; track ao.addOnId) {
               <div
                 style="
                   display: flex;

@@ -10,6 +10,16 @@
     [class]="'h-5 w-5 shrink-0 stroke-current ' + iconClass()"
   />
   <span class="flex-1 font-medium" [class]="textClass()">{{ message() }}</span>
+  @if (actionLabel()) {
+    <button
+      type="button"
+      class="shrink-0 cursor-pointer rounded-md px-2 py-1 text-xs font-semibold transition-colors"
+      [class]="closeClass()"
+      (click)="onActionClick()"
+    >
+      {{ actionLabel() }}
+    </button>
+  }
   <button
     type="button"
     class="ml-auto shrink-0 cursor-pointer rounded-md p-1 transition-colors"

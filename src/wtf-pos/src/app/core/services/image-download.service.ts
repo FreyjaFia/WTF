@@ -1,9 +1,12 @@
-﻿import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { Capacitor } from '@capacitor/core';
+import { FileOpener } from '@capacitor-community/file-opener';
+import { SuccessMessages } from '@core/messages';
 import { Directory, Filesystem } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import { Media } from '@capacitor-community/media';
 import { toPng } from 'html-to-image';
+import { AlertService } from './alert.service';
 
 interface MediaAlbum {
   identifier: string;
@@ -13,6 +16,7 @@ interface MediaAlbum {
 @Injectable({ providedIn: 'root' })
 export class ImageDownloadService {
   private readonly galleryAlbumName = 'WTF POS';
+  private readonly alertService = inject(AlertService);
 
   public async downloadElementAsImage(element: HTMLElement, fileName: string): Promise<void> {
     const dataUrl = await toPng(element, {
@@ -54,10 +58,17 @@ export class ImageDownloadService {
       const { uri } = await Filesystem.getUri({ path: cachePath, directory: Directory.Cache });
       const albumIdentifier = await this.getOrCreateAlbumIdentifier(this.galleryAlbumName);
 
-      await Media.savePhoto({
+      const saved = await Media.savePhoto({
         path: uri,
         albumIdentifier,
       });
+
+      const openPath = saved.filePath ?? uri;
+      this.alertService.successWithAction(
+        SuccessMessages.OrderReceipt.ImageSavedToGallery,
+        'Open',
+        () => void this.openSavedImageOnAndroid(openPath),
+      );
     } catch {
       throw new Error('Failed to save image on Android');
     } finally {
@@ -142,6 +153,41 @@ export class ImageDownloadService {
     }
   }
 
+  private async openSavedImageOnAndroid(filePath: string): Promise<void> {
+    const opened = await this.tryOpenImageWithFileOpener(filePath);
+    if (opened) {
+      return;
+    }
+
+    // Fallback to native share sheet so the user can open it in a gallery/viewer app.
+    await this.tryShareFileNative(filePath);
+  }
+
+  private async tryOpenImageWithFileOpener(filePath: string): Promise<boolean> {
+    try {
+      await FileOpener.open({
+        filePath,
+        contentType: 'image/png',
+        openWithDefault: false,
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private async tryShareFileNative(filePath: string): Promise<boolean> {
+    try {
+      await Share.share({
+        title: 'Open image',
+        files: [filePath],
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   private openImageFallback(dataUrl: string): void {
     const link = document.createElement('a');
     link.href = dataUrl;
@@ -185,3 +231,4 @@ export class ImageDownloadService {
     }
   }
 }
+

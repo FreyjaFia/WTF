@@ -4,6 +4,8 @@ import { SuccessMessages } from '@core/messages';
 export interface AlertState {
   type: 'success' | 'error' | 'warning' | 'info';
   message: string;
+  actionLabel?: string | null;
+  action?: (() => void) | null;
   visible: boolean;
 }
 
@@ -12,6 +14,8 @@ export class AlertService {
   private readonly alertState = signal<AlertState>({
     type: 'error',
     message: '',
+    actionLabel: null,
+    action: null,
     visible: false,
   });
 
@@ -45,6 +49,14 @@ export class AlertService {
 
   public info(message: string): void {
     this.show('info', message);
+  }
+
+  public successWithAction(message: string, actionLabel: string, action: () => void): void {
+    this.show('success', message, actionLabel, action);
+  }
+
+  public infoWithAction(message: string, actionLabel: string, action: () => void): void {
+    this.show('info', message, actionLabel, action);
   }
 
   public successCreated(entity: string): void {
@@ -103,11 +115,22 @@ export class AlertService {
     return `Failed to upload ${entity.toLowerCase()}.`;
   }
 
-  private show(type: AlertState['type'], message: string): void {
-    this.alertState.set({ type, message, visible: true });
+  private show(
+    type: AlertState['type'],
+    message: string,
+    actionLabel?: string,
+    action?: () => void,
+  ): void {
+    this.alertState.set({
+      type,
+      message,
+      actionLabel: actionLabel ?? null,
+      action: action ?? null,
+      visible: true,
+    });
   }
 
   public dismiss(): void {
-    this.alertState.update((state) => ({ ...state, visible: false }));
+    this.alertState.update((state) => ({ ...state, visible: false, actionLabel: null, action: null }));
   }
 }

@@ -13,6 +13,7 @@ import { Capacitor } from '@capacitor/core';
 import { SuccessMessages } from '@core/messages';
 import { AlertService, ImageDownloadService } from '@core/services';
 import { CartAddOnDto, CartItemDto, OrderStatusEnum, PaymentMethodEnum } from '@shared/models';
+import { SortAddOnsPipe } from '@shared/pipes';
 
 export interface ReceiptData {
   orderNumber?: number | null;
@@ -31,7 +32,7 @@ export interface ReceiptData {
 
 @Component({
   selector: 'app-order-receipt',
-  imports: [CommonModule],
+  imports: [CommonModule, SortAddOnsPipe],
   templateUrl: './order-receipt.html',
 })
 export class OrderReceiptComponent implements OnInit {
@@ -93,9 +94,7 @@ export class OrderReceiptComponent implements OnInit {
         this.receiptEl().nativeElement,
         fileName,
       );
-      if (Capacitor.getPlatform() === 'android') {
-        this.alertService.success(SuccessMessages.OrderReceipt.ImageSavedToGallery);
-      } else {
+      if (Capacitor.getPlatform() !== 'android') {
         this.alertService.success(SuccessMessages.OrderReceipt.ImageDownloaded);
       }
     } catch {
