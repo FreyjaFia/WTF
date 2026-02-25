@@ -114,6 +114,7 @@ export class UpdateService implements OnDestroy {
       return;
     }
 
+    this.hideForNow();
     window.open(info.downloadUrl, '_blank', 'noopener,noreferrer');
   }
 
@@ -125,6 +126,10 @@ export class UpdateService implements OnDestroy {
     }
 
     localStorage.setItem(UpdateService.DISMISS_KEY, info.version);
+    this._updateAvailable.set(false);
+  }
+
+  public hideForNow(): void {
     this._updateAvailable.set(false);
   }
 

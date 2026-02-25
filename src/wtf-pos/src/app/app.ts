@@ -4,19 +4,14 @@ import { RouterOutlet } from '@angular/router';
 import { App as CapApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { StatusBar, Style } from '@capacitor/status-bar';
-import { ModalStackService, OfflineOrderService, UpdateService } from '@core/services';
-import {
-  ExitConfirmComponent,
-  GlobalAlertComponent,
-  IconsSprite,
-  UpdateBannerComponent,
-} from '@shared/components';
+import { ModalStackService, OfflineOrderService } from '@core/services';
+import { ExitConfirmComponent, GlobalAlertComponent, IconsSprite } from '@shared/components';
 
 import type { PluginListenerHandle } from '@capacitor/core';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, IconsSprite, GlobalAlertComponent, ExitConfirmComponent, UpdateBannerComponent],
+  imports: [RouterOutlet, IconsSprite, GlobalAlertComponent, ExitConfirmComponent],
   templateUrl: './app.html',
 })
 export class App implements OnInit, OnDestroy {
@@ -26,7 +21,6 @@ export class App implements OnInit, OnDestroy {
 
   // Eagerly initialize to enable auto-sync on reconnect
   private readonly _offlineOrder = inject(OfflineOrderService);
-  private readonly _updateService = inject(UpdateService);
 
   private readonly exitConfirm = viewChild(ExitConfirmComponent);
 
