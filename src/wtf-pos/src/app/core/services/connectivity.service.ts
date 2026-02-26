@@ -52,7 +52,6 @@ export class ConnectivityService implements OnDestroy {
   private reconnectedTimeout: ReturnType<typeof setTimeout> | null = null;
   private offlineRecheckInterval: ReturnType<typeof setInterval> | null = null;
   private readonly healthUrl = this.buildHealthUrl();
-  private readonly legacyPingUrl = `${environment.apiUrl}/ping`;
 
   private wasOffline = false;
   private lastManualCheckAt = 0;
@@ -189,21 +188,8 @@ export class ConnectivityService implements OnDestroy {
   }
 
   private async isApiReachable(): Promise<boolean> {
-    const healthOk = await firstValueFrom(
-      this.http.get(this.healthUrl, { responseType: 'text' }).pipe(
-        timeout(ConnectivityService.HEALTH_TIMEOUT_MS),
-        map(() => true),
-        catchError(() => of(false)),
-      ),
-    );
-
-    if (healthOk) {
-      return true;
-    }
-
-    // Backward compatibility while backend fully migrates to /health.
     return await firstValueFrom(
-      this.http.get(this.legacyPingUrl, { responseType: 'text' }).pipe(
+      this.http.get(this.healthUrl, { responseType: 'text' }).pipe(
         timeout(ConnectivityService.HEALTH_TIMEOUT_MS),
         map(() => true),
         catchError(() => of(false)),
@@ -233,8 +219,8 @@ export class ConnectivityService implements OnDestroy {
   }
 
   private buildHealthUrl(): string {
-    const base = environment.apiUrl.replace(/\/api\/?$/, '');
-    return `${base}/health`;
+    const apiBase = environment.apiUrl.replace(/\/$/, '');
+    return `${apiBase}/health`;
   }
 
   private onReconnected(): void {
