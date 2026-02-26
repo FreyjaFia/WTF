@@ -1,7 +1,7 @@
 import { Injectable, OnDestroy, signal } from '@angular/core';
 import { Capacitor } from '@capacitor/core';
 import { appVersion } from '@environments/version';
-import { environment } from '@environments/environment.development';
+import { environment } from '@environments/environment';
 
 interface GitHubReleaseAsset {
   browser_download_url?: string;

@@ -224,6 +224,12 @@
     <button
       type="button"
       class="group absolute inset-y-0 left-0 z-20 hidden w-6 cursor-pointer overflow-hidden bg-gray-200/55 transition-all duration-[400ms] ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:bg-gray-300/60 active:bg-gray-300 md:block"
+      [class.border-r-2]="true"
+      [class.border-r-amber-500]="isEditMode() && !isCancelled() && !isRefunded() && !isCompleted()"
+      [class.border-r-emerald-500]="isEditMode() && isCompleted()"
+      [class.border-r-gray-400]="isEditMode() && isCancelled()"
+      [class.border-r-red-500]="isEditMode() && isRefunded()"
+      [style.border-right-color]="isEditMode() ? null : 'rgb(229 231 235 / 0.55)'"
       (click)="toggleCartCollapse()"
       (mouseenter)="onRailTriggerEnter()"
       [attr.aria-label]="isCartCollapsed() ? 'Expand cart' : 'Collapse cart'"
