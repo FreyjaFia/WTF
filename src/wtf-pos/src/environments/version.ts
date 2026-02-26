@@ -1,1 +1,3 @@
-export const appVersion = '1.0.0';
+import packageJson from '../../package.json';
+
+export const appVersion = packageJson.version;

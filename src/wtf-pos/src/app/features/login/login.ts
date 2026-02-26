@@ -2,6 +2,7 @@
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AlertService, AuthService, ModalStackService, OfflineOrderService } from '@core/services';
+import { appVersion } from '@environments/version';
 import { Icon } from '@shared/components';
 import { finalize, timeout } from 'rxjs/operators';
 
@@ -23,6 +24,7 @@ export class Login implements OnInit, OnDestroy {
   protected readonly pendingSyncCount = signal(0);
 
   protected readonly currentYear = new Date().getFullYear();
+  protected readonly appVersion = appVersion;
   protected readonly loginForm = new FormGroup({
     username: new FormControl('', Validators.required),
     password: new FormControl('', Validators.required),

@@ -1,9 +1,9 @@
-﻿import { CommonModule } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
 import { AuthService, ConnectivityService, ImageCacheService } from '@core/services';
-import { AvatarComponent } from '../avatar/avatar';
-import { Icon } from '../icons/icon/icon';
+import { appVersion } from '@environments/version';
+import { AvatarComponent, Icon } from '@shared/components';
 
 @Component({
   selector: 'app-header',
@@ -23,6 +23,7 @@ export class Header implements OnInit, OnDestroy {
   protected userRoleLabel = 'Unknown';
   protected readonly isLoadingMe = signal(true);
   protected readonly now = signal(new Date());
+  protected readonly appVersion = appVersion;
   protected readonly isOnline = this.connectivity.isOnline;
   private clockIntervalId: ReturnType<typeof setInterval> | null = null;
   private routeSubscription?: { unsubscribe: () => void };
@@ -102,7 +103,11 @@ export class Header implements OnInit, OnDestroy {
     this.userRoleLabel = this.authService.getCurrentRoleLabel();
   }
 
-  private async applyProfile(imgUrl: string | null, firstName: string, lastName: string): Promise<void> {
+  private async applyProfile(
+    imgUrl: string | null,
+    firstName: string,
+    lastName: string,
+  ): Promise<void> {
     this.userFullName = `${firstName ?? ''} ${lastName ?? ''}`.trim() || 'User';
     this.userRoleLabel = this.authService.getCurrentRoleLabel();
     this.imageUrl = imgUrl ? await this.imageCache.resolveUrl(imgUrl) : null;
