@@ -152,69 +152,56 @@ Implemented in-app update detection and APK download flow using GitHub Releases.
 
 ---
 
-## Audit Log Feature ⏳ Pending
+## Audit Log Feature ✅ Completed
 
-Track every significant action in the system so the shop owner can see
-who did what, when, and what changed. Useful for accountability,
-troubleshooting disputes, and debugging.
+Track significant actions so management can review who performed an action and when.
 
-### Database
+### Implemented Database
 
-New `AuditLog` table:
+- SQL script: `tools/sql/20260226_add_audit_log.sql`
+- `dbo.AuditLog` table created with:
+  - `Id`, `UserId`, `Action`, `EntityType`, `EntityId`
+  - `OldValues`, `NewValues`, `IpAddress`, `Timestamp`
+- Indexes added for common reads:
+  - `IX_AuditLog_UserId`
+  - `IX_AuditLog_Action`
+  - `IX_AuditLog_EntityType`
+  - `IX_AuditLog_Timestamp`
+- Scaffolded into `WTFDbContext` and domain entities.
 
-| Column        | Type           | Description                              |
-| ------------- | -------------- | ---------------------------------------- |
-| `Id`          | `GUID` (PK)   | Auto-generated                           |
-| `UserId`      | `GUID` (FK)   | The user who performed the action        |
-| `Action`      | `nvarchar(50)` | Enum-like: `OrderCreated`, `OrderVoided`, `ProductUpdated`, `UserLogin`, etc. |
-| `EntityType`  | `nvarchar(50)` | `Order`, `Product`, `User`, `Customer`   |
-| `EntityId`    | `nvarchar(50)` | The PK of the affected record            |
-| `OldValues`   | `nvarchar(max)`| JSON snapshot of the entity **before** the change (null for create actions) |
-| `NewValues`   | `nvarchar(max)`| JSON snapshot of the entity **after** the change (null for delete actions) |
-| `IpAddress`   | `nvarchar(50)` | Optional — client IP                     |
-| `Timestamp`   | `datetime2`    | UTC timestamp                            |
+### Implemented Backend
 
-### Actions to Log
+- `IAuditService` + `AuditService` implemented and registered in DI.
+- Uses enum-based action/entity values (`AuditAction`, `AuditEntityType`) to avoid magic strings.
+- Audit logging currently integrated in key flows including:
+  - auth login/logout handlers
+  - order creation flow
+- Read endpoints implemented:
+  - `GET /api/audit-logs` (paged response)
+  - `GET /api/schema-script-history`
 
-- **Orders:** created, status changed (e.g., `New → InProgress →
-  Completed`), voided/cancelled, payment method changed, items modified,
-  tips changed
-- **Products:** created, updated (name, price, category, active toggle),
-  add-on assignments changed, price overrides changed
-- **Users:** login, logout, refresh token issued, password changed
-- **Customers:** created, updated, deleted
+### Implemented Frontend
 
-### API
+- Management routes and pages added:
+  - `/management/audit-logs`
+  - `/management/schema-scripts`
+- Navigation entries and icons added under Management.
+- Audit logs page:
+  - fetches and displays audit log entries
+  - refresh support + pull-to-refresh
+  - responsive table/card styling aligned with management list pages
+- Schema scripts page:
+  - displays executed SQL script history
+  - refresh support + pull-to-refresh
+  - responsive table/card styling aligned with management list pages
 
-- `AuditService` — injectable service that handlers call to log actions.
-  Captures `HttpContext.User.GetUserId()` and serializes before/after
-  state as JSON.
-- `GET /api/audit-logs` — paginated query with filters:
-  - `userId`, `action`, `entityType`, `entityId`
-  - `fromDate`, `toDate` (UTC)
-  - `page`, `pageSize`
-  - Returns `PagedResult<AuditLogDto>`
+### Deployment Support
 
-### Frontend
-
-- New route: `/management/audit-logs`
-- **Audit log viewer** with:
-  - Date range picker
-  - Filter dropdowns (user, action type, entity type)
-  - Searchable by entity ID
-  - Paginated table: timestamp, user name, action, entity type,
-    entity ID, expandable diff (old → new values)
-  - Click a row to see full JSON before/after in a side panel or modal
-- Accessible from the management navigation menu
-
-### Retention
-
-- Configurable in `appsettings.json` (e.g., `AuditLog:RetentionDays: 90`)
-- Background job or SQL agent job to purge old records
-
-### Current Status
-
-- Phase 1 started: data model foundation in `WTF.Domain` (entity + EF mapping).
+- Tag-based SQL deployment in CI (`.github/workflows/main.yml`).
+- SQL scripts run in `tools/sql` order on tag builds.
+- Re-run protection via `dbo.SchemaScriptHistory` check:
+  - already applied scripts are skipped
+  - newly applied scripts are inserted into history
 
 ---
 
