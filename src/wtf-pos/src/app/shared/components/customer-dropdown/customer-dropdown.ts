@@ -9,7 +9,7 @@ import {
   output,
   signal,
 } from '@angular/core';
-import { Icon } from '@shared/components';
+import { IconComponent } from '@shared/components/icons/icon/icon';
 
 export interface CustomerDropdownOption {
   id: string;
@@ -18,10 +18,10 @@ export interface CustomerDropdownOption {
 
 @Component({
   selector: 'app-customer-dropdown',
-  imports: [CommonModule, Icon],
+  imports: [CommonModule, IconComponent],
   templateUrl: './customer-dropdown.html',
 })
-export class CustomerDropdown {
+export class CustomerDropdownComponent {
   readonly options = input<CustomerDropdownOption[]>([]);
   readonly selectedId = input<string | null>(null);
   readonly disabled = input(false);

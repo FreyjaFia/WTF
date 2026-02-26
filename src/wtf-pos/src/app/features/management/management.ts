@@ -1,11 +1,11 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService, ListStateService } from '@core/services';
-import { Icon } from '@shared/components';
+import { IconComponent } from '@shared/components';
 
 @Component({
   selector: 'app-management',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, Icon],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, IconComponent],
   templateUrl: './management.html',
   host: { class: 'flex-1 min-h-0' },
 })

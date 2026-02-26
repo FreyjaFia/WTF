@@ -1,14 +1,14 @@
-﻿import { Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AlertService, AuthService, ModalStackService, OfflineOrderService } from '@core/services';
 import { appVersion } from '@environments/version';
-import { Icon } from '@shared/components';
+import { IconComponent } from '@shared/components';
 import { finalize, timeout } from 'rxjs/operators';
 
 @Component({
   selector: 'app-login',
-  imports: [ReactiveFormsModule, Icon],
+  imports: [ReactiveFormsModule, IconComponent],
   templateUrl: './login.html',
 })
 export class Login implements OnInit, OnDestroy {

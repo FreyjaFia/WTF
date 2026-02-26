@@ -12,7 +12,7 @@ import {
   type BadgeVariant,
   DonutChartComponent,
   type DonutSegment,
-  Icon,
+  IconComponent,
   PullToRefreshComponent,
   SparklineComponent,
 } from '@shared/components';
@@ -36,7 +36,7 @@ const GREETINGS = [
     CommonModule,
     DecimalPipe,
     RouterLink,
-    Icon,
+    IconComponent,
     BadgeComponent,
     SparklineComponent,
     AreaChartComponent,

@@ -1,4 +1,4 @@
-﻿import { CommonModule, Location } from '@angular/common';
+import { CommonModule, Location } from '@angular/common';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import {
   AbstractControl,
@@ -10,14 +10,14 @@ import {
 } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AlertService, AuthService, ModalStackService, UserService } from '@core/services';
-import { AvatarComponent, Icon } from '@shared/components';
+import { AvatarComponent, IconComponent } from '@shared/components';
 import { CreateUserDto, UpdateUserDto, UserRoleEnum } from '@shared/models';
 import { jwtDecode } from 'jwt-decode';
 import { of, switchMap } from 'rxjs';
 
 @Component({
   selector: 'app-user-editor',
-  imports: [CommonModule, ReactiveFormsModule, Icon, AvatarComponent],
+  imports: [CommonModule, ReactiveFormsModule, IconComponent, AvatarComponent],
   templateUrl: './user-editor.html',
   host: {
     class: 'block h-full',

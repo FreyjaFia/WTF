@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, ElementRef, HostListener, inject, input, output } from '@angular/core';
-import { Icon } from '@shared/components';
+import { IconComponent } from '@shared/components/icons/icon/icon';
 
 export interface FilterOption {
   id: string | number;
@@ -11,10 +11,10 @@ export interface FilterOption {
 
 @Component({
   selector: 'app-filter-dropdown',
-  imports: [CommonModule, Icon],
+  imports: [CommonModule, IconComponent],
   templateUrl: './filter-dropdown.html',
 })
-export class FilterDropdown {
+export class FilterDropdownComponent {
   private readonly elementRef = inject(ElementRef);
 
   public readonly title = input<string>('Filter');

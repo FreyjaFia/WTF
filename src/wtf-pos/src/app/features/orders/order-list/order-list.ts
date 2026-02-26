@@ -1,4 +1,4 @@
-﻿import { CommonModule, DatePipe } from '@angular/common';
+import { CommonModule, DatePipe } from '@angular/common';
 import { Component, computed, effect, inject, OnInit, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -12,8 +12,8 @@ import {
 } from '@core/services';
 import {
   BadgeComponent,
-  FilterDropdown,
-  Icon,
+  FilterDropdownComponent,
+  IconComponent,
   PullToRefreshComponent,
   type FilterOption,
 } from '@shared/components';
@@ -41,8 +41,8 @@ interface OrderGroup {
     CommonModule,
     DatePipe,
     ReactiveFormsModule,
-    Icon,
-    FilterDropdown,
+    IconComponent,
+    FilterDropdownComponent,
     BadgeComponent,
     PullToRefreshComponent,
   ],

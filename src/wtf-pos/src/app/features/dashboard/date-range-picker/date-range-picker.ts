@@ -8,7 +8,7 @@ import {
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Icon } from '@shared/components';
+import { IconComponent } from '@shared/components';
 import { type DateRangePreset, type DateRangeSelection } from '@shared/models';
 
 interface PresetOption {
@@ -18,7 +18,7 @@ interface PresetOption {
 
 @Component({
   selector: 'app-date-range-picker',
-  imports: [FormsModule, Icon],
+  imports: [FormsModule, IconComponent],
   templateUrl: './date-range-picker.html',
 })
 export class DateRangePickerComponent {

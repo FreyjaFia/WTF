@@ -1,4 +1,4 @@
-﻿import { Routes } from '@angular/router';
+import { Routes } from '@angular/router';
 import { authGuard } from '@core/guards/auth.guard';
 import { loginGuard } from '@core/guards/login.guard';
 import { roleGuard } from '@core/guards/role.guard';
@@ -22,7 +22,7 @@ import { OrderEditor } from '@features/orders/order-editor/order-editor';
 import { OrderList } from '@features/orders/order-list/order-list';
 import { Dashboard } from '@features/dashboard/dashboard';
 import { Orders } from '@features/orders/orders';
-import { Layout } from '@shared/components';
+import { LayoutComponent } from '@shared/components';
 
 export const routes: Routes = [
   {
@@ -37,7 +37,7 @@ export const routes: Routes = [
   },
   {
     path: '',
-    component: Layout,
+    component: LayoutComponent,
     canActivate: [authGuard],
     children: [
       {

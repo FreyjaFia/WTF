@@ -1,4 +1,4 @@
-﻿import { CommonModule } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { Component, computed, inject, OnInit, signal, ViewChild } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -6,7 +6,7 @@ import { AlertService, ModalStackService, ProductService } from '@core/services'
 import {
   AddonsSwapperComponent,
   AvatarComponent,
-  Icon,
+  IconComponent,
   PriceHistoryDrawerComponent,
   ProductsSwapperComponent,
 } from '@shared/components';
@@ -31,7 +31,7 @@ import {
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    Icon,
+    IconComponent,
     AddonsSwapperComponent,
     ProductsSwapperComponent,
     PriceHistoryDrawerComponent,

@@ -8,13 +8,13 @@ import {
   output,
   signal,
 } from '@angular/core';
-import { Icon } from '@shared/components';
+import { IconComponent } from '@shared/components/icons/icon/icon';
 
 export type AlertType = 'info' | 'success' | 'error' | 'warning';
 
 @Component({
   selector: 'app-alert',
-  imports: [Icon],
+  imports: [IconComponent],
   templateUrl: './alert.html',
   styleUrl: './alert.css',
 })

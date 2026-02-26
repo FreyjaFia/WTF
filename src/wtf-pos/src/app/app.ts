@@ -5,13 +5,13 @@ import { App as CapApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { ModalStackService, OfflineOrderService } from '@core/services';
-import { ExitConfirmComponent, GlobalAlertComponent, IconsSprite } from '@shared/components';
+import { ExitConfirmComponent, GlobalAlertComponent, IconsSpriteComponent } from '@shared/components';
 
 import type { PluginListenerHandle } from '@capacitor/core';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, IconsSprite, GlobalAlertComponent, ExitConfirmComponent],
+  imports: [RouterOutlet, IconsSpriteComponent, GlobalAlertComponent, ExitConfirmComponent],
   templateUrl: './app.html',
 })
 export class App implements OnInit, OnDestroy {

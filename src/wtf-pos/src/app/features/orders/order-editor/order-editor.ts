@@ -1,4 +1,4 @@
-﻿import { CommonModule } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import {
   ChangeDetectorRef,
   Component,
@@ -36,8 +36,8 @@ import {
   AddonSelectorComponent,
   AvatarComponent,
   BadgeComponent,
-  CustomerDropdown,
-  Icon,
+  CustomerDropdownComponent,
+  IconComponent,
   OrderReceiptComponent,
   PullToRefreshComponent,
 } from '@shared/components';
@@ -65,9 +65,9 @@ import { CheckoutModal } from '../checkout-modal/checkout-modal';
     CommonModule,
     ReactiveFormsModule,
     FormsModule,
-    Icon,
+    IconComponent,
     CheckoutModal,
-    CustomerDropdown,
+    CustomerDropdownComponent,
     AddonSelectorComponent,
     AvatarComponent,
     BadgeComponent,

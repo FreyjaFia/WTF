@@ -1,10 +1,10 @@
 import { Component, inject } from '@angular/core';
 import { ConnectivityService } from '@core/services';
-import { Icon } from '@shared/components';
+import { IconComponent } from '@shared/components/icons/icon/icon';
 
 @Component({
   selector: 'app-offline-banner',
-  imports: [Icon],
+  imports: [IconComponent],
   templateUrl: './offline-banner.html',
   standalone: true,
 })

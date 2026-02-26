@@ -3,14 +3,15 @@ import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
 import { AuthService, ConnectivityService, ImageCacheService } from '@core/services';
 import { appVersion } from '@environments/version';
-import { AvatarComponent, Icon } from '@shared/components';
+import { AvatarComponent } from '@shared/components/avatar/avatar';
+import { IconComponent } from '@shared/components/icons/icon/icon';
 
 @Component({
   selector: 'app-header',
-  imports: [CommonModule, AvatarComponent, Icon],
+  imports: [CommonModule, AvatarComponent, IconComponent],
   templateUrl: './header.html',
 })
-export class Header implements OnInit, OnDestroy {
+export class HeaderComponent implements OnInit, OnDestroy {
   private static readonly ME_CACHE_KEY = 'wtf_me_cache';
 
   protected readonly authService = inject(AuthService);
@@ -70,7 +71,7 @@ export class Header implements OnInit, OnDestroy {
     this.authService.getMe().subscribe({
       next: async (me) => {
         await this.applyProfile(me.imageUrl ?? null, me.firstName, me.lastName);
-        localStorage.setItem(Header.ME_CACHE_KEY, JSON.stringify(me));
+        localStorage.setItem(HeaderComponent.ME_CACHE_KEY, JSON.stringify(me));
 
         if (me.imageUrl) {
           this.imageCache.cacheUrl(me.imageUrl);
@@ -87,7 +88,7 @@ export class Header implements OnInit, OnDestroy {
 
   private async loadCachedProfile(): Promise<void> {
     try {
-      const raw = localStorage.getItem(Header.ME_CACHE_KEY);
+      const raw = localStorage.getItem(HeaderComponent.ME_CACHE_KEY);
 
       if (raw) {
         const me = JSON.parse(raw);

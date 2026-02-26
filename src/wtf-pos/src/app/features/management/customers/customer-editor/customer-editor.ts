@@ -1,14 +1,14 @@
-﻿import { CommonModule } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AlertService, CustomerService, ModalStackService } from '@core/services';
-import { Icon, AvatarComponent } from '@shared/components';
+import { AvatarComponent, IconComponent } from '@shared/components';
 import { CreateCustomerDto, UpdateCustomerDto } from '@shared/models';
 
 @Component({
   selector: 'app-customer-editor',
-  imports: [CommonModule, ReactiveFormsModule, Icon, AvatarComponent],
+  imports: [CommonModule, ReactiveFormsModule, IconComponent, AvatarComponent],
   templateUrl: './customer-editor.html',
   host: {
     class: 'block h-full',

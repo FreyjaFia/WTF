@@ -1,4 +1,4 @@
-﻿import { CommonModule } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -13,8 +13,8 @@ import {
 import {
   AvatarComponent,
   BadgeComponent,
-  FilterDropdown,
-  Icon,
+  FilterDropdownComponent,
+  IconComponent,
   PullToRefreshComponent,
   type FilterOption,
 } from '@shared/components';
@@ -36,8 +36,8 @@ interface CustomerListState {
     CommonModule,
     ReactiveFormsModule,
     RouterLink,
-    Icon,
-    FilterDropdown,
+    IconComponent,
+    FilterDropdownComponent,
     BadgeComponent,
     AvatarComponent,
     PullToRefreshComponent,

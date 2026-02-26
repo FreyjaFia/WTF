@@ -9,13 +9,14 @@ import {
   ViewChild,
 } from '@angular/core';
 import { AlertService, ModalStackService, ProductService } from '@core/services';
-import { AvatarComponent, Icon } from '@shared/components';
+import { AvatarComponent } from '@shared/components/avatar/avatar';
+import { IconComponent } from '@shared/components/icons/icon/icon';
 import { AddOnTypeEnum, ProductCategoryEnum, ProductDto } from '@shared/models';
 import Sortable from 'sortablejs';
 
 @Component({
   selector: 'app-products-swapper',
-  imports: [CommonModule, Icon, AvatarComponent],
+  imports: [CommonModule, IconComponent, AvatarComponent],
   templateUrl: './products-swapper.html',
   styleUrls: ['./products-swapper.css'],
 })

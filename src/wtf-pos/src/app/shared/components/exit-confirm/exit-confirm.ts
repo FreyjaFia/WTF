@@ -1,10 +1,10 @@
 import { Component, inject, output, signal } from '@angular/core';
 import { ModalStackService } from '@core/services';
-import { Icon } from '@shared/components';
+import { IconComponent } from '@shared/components/icons/icon/icon';
 
 @Component({
   selector: 'app-exit-confirm',
-  imports: [Icon],
+  imports: [IconComponent],
   templateUrl: './exit-confirm.html',
 })
 export class ExitConfirmComponent {

@@ -1,16 +1,16 @@
-﻿import { CommonModule } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { Capacitor } from '@capacitor/core';
 import { AlertService, AuthService, ListStateService, ModalStackService, UserService } from '@core/services';
 import {
-    AvatarComponent,
-    BadgeComponent,
-    FilterDropdown,
-    Icon,
-    PullToRefreshComponent,
-    type FilterOption,
+  AvatarComponent,
+  BadgeComponent,
+  FilterDropdownComponent,
+  IconComponent,
+  PullToRefreshComponent,
+  type FilterOption,
 } from '@shared/components';
 import { UserDto, UserRoleEnum } from '@shared/models';
 import { debounceTime } from 'rxjs';
@@ -32,8 +32,8 @@ interface UserListState {
     CommonModule,
     ReactiveFormsModule,
     RouterLink,
-    Icon,
-    FilterDropdown,
+    IconComponent,
+    FilterDropdownComponent,
     BadgeComponent,
     AvatarComponent,
     PullToRefreshComponent,

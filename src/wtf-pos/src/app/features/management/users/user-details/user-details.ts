@@ -1,13 +1,13 @@
-﻿import { CommonModule } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AlertService, AuthService, ModalStackService, UserService } from '@core/services';
-import { AvatarComponent, BadgeComponent, Icon } from '@shared/components';
+import { AvatarComponent, BadgeComponent, IconComponent } from '@shared/components';
 import { UserDto, UserRoleEnum } from '@shared/models';
 
 @Component({
   selector: 'app-user-details',
-  imports: [CommonModule, RouterLink, Icon, BadgeComponent, AvatarComponent],
+  imports: [CommonModule, RouterLink, IconComponent, BadgeComponent, AvatarComponent],
   templateUrl: './user-details.html',
   host: {
     class: 'block h-full',

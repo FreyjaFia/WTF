@@ -1,14 +1,14 @@
-﻿import { CommonModule } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { Component, ElementRef, computed, inject, input, output, signal, viewChild } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ModalStackService } from '@core/services';
-import { AvatarComponent, Icon } from '@shared/components';
+import { AvatarComponent, IconComponent } from '@shared/components';
 import { CartAddOnDto, CartItemDto, PaymentMethodEnum } from '@shared/models';
 import { SortAddOnsPipe } from '@shared/pipes';
 
 @Component({
   selector: 'app-checkout-modal',
-  imports: [CommonModule, ReactiveFormsModule, Icon, AvatarComponent, SortAddOnsPipe],
+  imports: [CommonModule, ReactiveFormsModule, IconComponent, AvatarComponent, SortAddOnsPipe],
   templateUrl: './checkout-modal.html',
   styleUrl: './checkout-modal.css',
 })

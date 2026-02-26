@@ -1,4 +1,4 @@
-﻿import { CommonModule } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { Component, input } from '@angular/core';
 
 @Component({
@@ -6,7 +6,7 @@ import { Component, input } from '@angular/core';
   imports: [CommonModule],
   templateUrl: './icon.html',
 })
-export class Icon {
+export class IconComponent {
   readonly name = input.required<string>();
   readonly size = input('24');
   readonly fill = input('currentColor');

@@ -1,12 +1,12 @@
-﻿import { CommonModule } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { Component, effect, inject, input, output, signal } from '@angular/core';
 import { ModalStackService } from '@core/services';
-import { Icon } from '@shared/components';
+import { IconComponent } from '@shared/components/icons/icon/icon';
 import { ProductPriceHistoryDto } from '@shared/models';
 
 @Component({
   selector: 'app-price-history-drawer',
-  imports: [CommonModule, Icon],
+  imports: [CommonModule, IconComponent],
   templateUrl: './price-history-drawer.html',
   styleUrl: './price-history-drawer.css',
 })

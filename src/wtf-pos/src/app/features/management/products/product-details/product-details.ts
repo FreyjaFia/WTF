@@ -1,11 +1,11 @@
-﻿import { CommonModule } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AlertService, AuthService, ModalStackService, ProductService } from '@core/services';
 import {
   AvatarComponent,
   BadgeComponent,
-  Icon,
+  IconComponent,
   PriceHistoryDrawerComponent,
 } from '@shared/components';
 import {
@@ -23,7 +23,7 @@ import {
   imports: [
     CommonModule,
     RouterLink,
-    Icon,
+    IconComponent,
     BadgeComponent,
     PriceHistoryDrawerComponent,
     AvatarComponent,

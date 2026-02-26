@@ -1,7 +1,8 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, output, signal } from '@angular/core';
 import { CatalogCacheService, ModalStackService } from '@core/services';
-import { AvatarComponent, Icon } from '@shared/components';
+import { AvatarComponent } from '@shared/components/avatar/avatar';
+import { IconComponent } from '@shared/components/icons/icon/icon';
 import {
   ADD_ON_TYPE_ORDER,
   AddOnGroupDto,
@@ -12,7 +13,7 @@ import {
 
 @Component({
   selector: 'app-addon-selector',
-  imports: [CommonModule, Icon, AvatarComponent],
+  imports: [CommonModule, IconComponent, AvatarComponent],
   templateUrl: './addon-selector.html',
 })
 export class AddonSelectorComponent {
