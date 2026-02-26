@@ -18,6 +18,8 @@ public partial class WTFDbContext : DbContext
 
     public virtual DbSet<AddOnType> AddOnTypes { get; set; }
 
+    public virtual DbSet<AuditLog> AuditLogs { get; set; }
+
     public virtual DbSet<Customer> Customers { get; set; }
 
     public virtual DbSet<CustomerImage> CustomerImages { get; set; }
@@ -48,6 +50,8 @@ public partial class WTFDbContext : DbContext
 
     public virtual DbSet<RefreshToken> RefreshTokens { get; set; }
 
+    public virtual DbSet<SchemaScriptHistory> SchemaScriptHistories { get; set; }
+
     public virtual DbSet<ShortLink> ShortLinks { get; set; }
 
     public virtual DbSet<Status> Statuses { get; set; }
@@ -71,6 +75,31 @@ public partial class WTFDbContext : DbContext
 
             entity.Property(e => e.Id).ValueGeneratedNever();
             entity.Property(e => e.Name).HasMaxLength(50);
+        });
+
+        modelBuilder.Entity<AuditLog>(entity =>
+        {
+            entity.ToTable("AuditLog");
+
+            entity.HasIndex(e => e.Action, "IX_AuditLog_Action");
+
+            entity.HasIndex(e => e.EntityType, "IX_AuditLog_EntityType");
+
+            entity.HasIndex(e => e.Timestamp, "IX_AuditLog_Timestamp").IsDescending();
+
+            entity.HasIndex(e => e.UserId, "IX_AuditLog_UserId");
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_AuditLog_Id");
+            entity.Property(e => e.Action).HasMaxLength(50);
+            entity.Property(e => e.EntityId).HasMaxLength(50);
+            entity.Property(e => e.EntityType).HasMaxLength(50);
+            entity.Property(e => e.IpAddress).HasMaxLength(50);
+            entity.Property(e => e.Timestamp).HasDefaultValueSql("(getutcdate())", "DF_AuditLog_Timestamp");
+
+            entity.HasOne(d => d.User).WithMany(p => p.AuditLogs)
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_AuditLog_Users");
         });
 
         modelBuilder.Entity<Customer>(entity =>
@@ -380,6 +409,16 @@ public partial class WTFDbContext : DbContext
             entity.HasOne(d => d.User).WithMany(p => p.RefreshTokens)
                 .HasForeignKey(d => d.UserId)
                 .HasConstraintName("FK__RefreshTokens__Users");
+        });
+
+        modelBuilder.Entity<SchemaScriptHistory>(entity =>
+        {
+            entity.ToTable("SchemaScriptHistory");
+
+            entity.HasIndex(e => e.ScriptName, "UX_SchemaScriptHistory_ScriptName").IsUnique();
+
+            entity.Property(e => e.AppliedAt).HasDefaultValueSql("(getutcdate())", "DF_SchemaScriptHistory_AppliedAt");
+            entity.Property(e => e.ScriptName).HasMaxLength(260);
         });
 
         modelBuilder.Entity<ShortLink>(entity =>

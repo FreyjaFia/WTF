@@ -3,10 +3,12 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using WTF.Api.Common.Extensions;
+using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Features.Products.Enums;
 using WTF.Api.Hubs;
+using WTF.Api.Services;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 
@@ -35,7 +37,11 @@ public record CreateOrderCommand : IRequest<OrderDto>
     public DateTime? CreatedAt { get; init; }
 }
 
-public class CreateOrderHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor, IHubContext<DashboardHub> dashboardHub) : IRequestHandler<CreateOrderCommand, OrderDto>
+public class CreateOrderHandler(
+    WTFDbContext db,
+    IHttpContextAccessor httpContextAccessor,
+    IHubContext<DashboardHub> dashboardHub,
+    IAuditService auditService) : IRequestHandler<CreateOrderCommand, OrderDto>
 {
     public async Task<OrderDto> Handle(CreateOrderCommand request, CancellationToken cancellationToken)
     {
@@ -232,6 +238,21 @@ public class CreateOrderHandler(WTFDbContext db, IHttpContextAccessor httpContex
 
         await dashboardHub.Clients.Group(HubNames.Groups.DashboardViewers)
             .SendAsync(HubNames.Events.DashboardUpdated, cancellationToken);
+
+        await auditService.LogAsync(
+            action: AuditAction.OrderCreated,
+            entityType: AuditEntityType.Order,
+            entityId: order.Id.ToString(),
+            newValues: new
+            {
+                order.OrderNumber,
+                order.StatusId,
+                order.CustomerId,
+                ItemCount = items.Count,
+                totalAmount
+            },
+            userId: userId,
+            cancellationToken: cancellationToken);
 
         return new OrderDto(
             order.Id,

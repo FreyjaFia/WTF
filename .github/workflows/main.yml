@@ -196,10 +196,86 @@ jobs:
           name: android-apk
           path: src/wtf-pos/android/app/build/outputs/apk/release/wtf-pos-v${{ needs.versioning.outputs.app_version }}.apk
 
+  deploy-sql:
+    name: Deploy SQL Scripts
+    runs-on: ubuntu-latest
+    needs: versioning
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Apply SQL scripts in order
+        env:
+          SQL_SERVER: ${{ secrets.SQL_SERVER }}
+          SQL_DATABASE: ${{ secrets.SQL_DATABASE }}
+          SQL_USERNAME: ${{ secrets.SQL_USERNAME }}
+          SQL_PASSWORD: ${{ secrets.SQL_PASSWORD }}
+        run: |
+          if [ -z "$SQL_SERVER" ] || [ -z "$SQL_DATABASE" ] || [ -z "$SQL_USERNAME" ] || [ -z "$SQL_PASSWORD" ]; then
+            echo "Missing SQL deployment secrets (SQL_SERVER, SQL_DATABASE, SQL_USERNAME, SQL_PASSWORD)."
+            exit 1
+          fi
+
+          mapfile -t scripts < <(find tools/sql -maxdepth 1 -type f -name '*.sql' | sort)
+          if [ "${#scripts[@]}" -eq 0 ]; then
+            echo "No SQL scripts found in tools/sql."
+            exit 0
+          fi
+
+          for script in "${scripts[@]}"; do
+            script_name="$(basename "$script")"
+            script_name_sql="$(printf "%s" "$script_name" | sed "s/'/''/g")"
+
+            applied_count="$(docker run --rm \
+              -v "$PWD:/workspace" \
+              mcr.microsoft.com/mssql-tools \
+              /opt/mssql-tools/bin/sqlcmd \
+              -S "$SQL_SERVER" \
+              -d "$SQL_DATABASE" \
+              -U "$SQL_USERNAME" \
+              -P "$SQL_PASSWORD" \
+              -C \
+              -h -1 \
+              -W \
+              -Q "SET NOCOUNT ON; SELECT COUNT(1) FROM dbo.SchemaScriptHistory WHERE ScriptName = N'$script_name_sql';" \
+              | tr -d '[:space:]')"
+
+            if [ "$applied_count" != "0" ]; then
+              echo "Skipping ${script_name} (already applied)."
+              continue
+            fi
+
+            echo "Applying ${script_name}"
+            docker run --rm \
+              -v "$PWD:/workspace" \
+              mcr.microsoft.com/mssql-tools \
+              /opt/mssql-tools/bin/sqlcmd \
+              -S "$SQL_SERVER" \
+              -d "$SQL_DATABASE" \
+              -U "$SQL_USERNAME" \
+              -P "$SQL_PASSWORD" \
+              -C \
+              -b \
+              -i "/workspace/${script}"
+
+            docker run --rm \
+              -v "$PWD:/workspace" \
+              mcr.microsoft.com/mssql-tools \
+              /opt/mssql-tools/bin/sqlcmd \
+              -S "$SQL_SERVER" \
+              -d "$SQL_DATABASE" \
+              -U "$SQL_USERNAME" \
+              -P "$SQL_PASSWORD" \
+              -C \
+              -b \
+              -Q "INSERT INTO dbo.SchemaScriptHistory (ScriptName) VALUES (N'$script_name_sql');"
+          done
+
   deploy:
     name: Deploy to MonsterASP.NET
     runs-on: ubuntu-latest
-    needs: [build-api, build-frontend, build-android]
+    needs: [build-api, build-frontend, build-android, deploy-sql]
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     steps:
       - name: Checkout app_offline.htm

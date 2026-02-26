@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Features.Auth.DTOs;
+using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Services;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
@@ -9,7 +10,12 @@ namespace WTF.Api.Features.Auth;
 
 public record LoginCommand(string Username, string Password) : IRequest<LoginDto>;
 
-public class LoginHandler(WTFDbContext db, IJwtService jwtService, IUserRoleService userRoleService, IConfiguration config) : IRequestHandler<LoginCommand, LoginDto>
+public class LoginHandler(
+    WTFDbContext db,
+    IJwtService jwtService,
+    IUserRoleService userRoleService,
+    IConfiguration config,
+    IAuditService auditService) : IRequestHandler<LoginCommand, LoginDto>
 {
     public async Task<LoginDto> Handle(LoginCommand request, CancellationToken cancellationToken)
     {
@@ -45,6 +51,19 @@ public class LoginHandler(WTFDbContext db, IJwtService jwtService, IUserRoleServ
 
         db.RefreshTokens.Add(refreshTokenEntity);
         await db.SaveChangesAsync(cancellationToken);
+
+        await auditService.LogAsync(
+            action: AuditAction.UserLogin,
+            entityType: AuditEntityType.User,
+            entityId: user.Id.ToString(),
+            newValues: new
+            {
+                user.Username,
+                user.FirstName,
+                user.LastName
+            },
+            userId: user.Id,
+            cancellationToken: cancellationToken);
 
         return new LoginDto(
             accessToken,

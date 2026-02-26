@@ -27,6 +27,7 @@ builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddSingleton<IJwtService, JwtService>();
 builder.Services.AddScoped<IUserRoleService, UserRoleService>();
+builder.Services.AddScoped<IAuditService, AuditService>();
 
 if (builder.Environment.IsDevelopment())
 {
@@ -183,6 +184,8 @@ app.MapAuth()
     .MapUsers()
     .MapDashboard()
     .MapSync()
+    .MapAudit()
+    .MapSchemaScriptHistory()
     .MapPing();
 
 // SPA fallback: serve index.html for non-API, non-file routes

@@ -27,6 +27,8 @@ public partial class User
 
     public Guid? UpdatedBy { get; set; }
 
+    public virtual ICollection<AuditLog> AuditLogs { get; set; } = new List<AuditLog>();
+
     public virtual User CreatedByNavigation { get; set; } = null!;
 
     public virtual ICollection<Customer> CustomerCreatedByNavigations { get; set; } = new List<Customer>();
