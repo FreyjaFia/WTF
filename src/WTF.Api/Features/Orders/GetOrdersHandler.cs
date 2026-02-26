@@ -6,7 +6,9 @@ using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Orders;
 
-public record GetOrdersQuery(OrderStatusEnum Status = OrderStatusEnum.All, Guid? CustomerId = null) : IRequest<List<OrderDto>>;
+public record GetOrdersQuery(
+    OrderStatusEnum Status = OrderStatusEnum.All,
+    Guid? CustomerId = null) : IRequest<List<OrderDto>>;
 
 public class GetOrdersHandler(WTFDbContext db) : IRequestHandler<GetOrdersQuery, List<OrderDto>>
 {

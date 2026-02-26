@@ -1,7 +1,7 @@
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { ConnectivityService } from '@core/services/connectivity.service';
 import { HttpErrorMessages, ServiceErrorMessages } from '@core/messages';
+import { ConnectivityService } from '@core/services';
 import { environment } from '@environments/environment.development';
 import {
   AddOnGroupDto,
@@ -30,20 +30,28 @@ export class ProductService {
     ServiceErrorMessages.Product.ProductOrAddOnNotFound;
   private static readonly MSG_PRICE_OVERRIDE_NOT_FOUND =
     ServiceErrorMessages.Product.PriceOverrideNotFound;
-  private static readonly MSG_FETCH_PRODUCTS_FAILED = ServiceErrorMessages.Product.FetchProductsFailed;
-  private static readonly MSG_FETCH_PRODUCT_FAILED = ServiceErrorMessages.Product.FetchProductFailed;
-  private static readonly MSG_CREATE_PRODUCT_FAILED = ServiceErrorMessages.Product.CreateProductFailed;
-  private static readonly MSG_UPDATE_PRODUCT_FAILED = ServiceErrorMessages.Product.UpdateProductFailed;
-  private static readonly MSG_DELETE_PRODUCT_FAILED = ServiceErrorMessages.Product.DeleteProductFailed;
+  private static readonly MSG_FETCH_PRODUCTS_FAILED =
+    ServiceErrorMessages.Product.FetchProductsFailed;
+  private static readonly MSG_FETCH_PRODUCT_FAILED =
+    ServiceErrorMessages.Product.FetchProductFailed;
+  private static readonly MSG_CREATE_PRODUCT_FAILED =
+    ServiceErrorMessages.Product.CreateProductFailed;
+  private static readonly MSG_UPDATE_PRODUCT_FAILED =
+    ServiceErrorMessages.Product.UpdateProductFailed;
+  private static readonly MSG_DELETE_PRODUCT_FAILED =
+    ServiceErrorMessages.Product.DeleteProductFailed;
   private static readonly MSG_UPLOAD_IMAGE_FAILED = ServiceErrorMessages.Product.UploadImageFailed;
   private static readonly MSG_DELETE_IMAGE_FAILED = ServiceErrorMessages.Product.DeleteImageFailed;
   private static readonly MSG_FETCH_PRODUCT_ADDONS_FAILED =
     ServiceErrorMessages.Product.FetchProductAddOnsFailed;
   private static readonly MSG_FETCH_LINKED_PRODUCTS_FAILED =
     ServiceErrorMessages.Product.FetchLinkedProductsFailed;
-  private static readonly MSG_ASSIGN_ADDONS_FAILED = ServiceErrorMessages.Product.AssignAddOnsFailed;
-  private static readonly MSG_INVALID_ADDONS_REQUEST = ServiceErrorMessages.Product.InvalidAddOnsRequest;
-  private static readonly MSG_ASSIGN_PRODUCTS_FAILED = ServiceErrorMessages.Product.AssignProductsFailed;
+  private static readonly MSG_ASSIGN_ADDONS_FAILED =
+    ServiceErrorMessages.Product.AssignAddOnsFailed;
+  private static readonly MSG_INVALID_ADDONS_REQUEST =
+    ServiceErrorMessages.Product.InvalidAddOnsRequest;
+  private static readonly MSG_ASSIGN_PRODUCTS_FAILED =
+    ServiceErrorMessages.Product.AssignProductsFailed;
   private static readonly MSG_INVALID_PRODUCTS_REQUEST =
     ServiceErrorMessages.Product.InvalidProductsRequest;
   private static readonly MSG_CREATE_PRICE_OVERRIDE_FAILED =
@@ -237,7 +245,10 @@ export class ProductService {
     );
   }
 
-  public assignProductAddOns(productId: string, addOns: ProductAddOnAssignmentDto[]): Observable<void> {
+  public assignProductAddOns(
+    productId: string,
+    addOns: ProductAddOnAssignmentDto[],
+  ): Observable<void> {
     return this.http.post<void>(`${this.baseUrl}/${productId}/addons`, { productId, addOns }).pipe(
       catchError((error: HttpErrorResponse) => {
         console.error('Error assigning product add-ons:', error);
@@ -245,8 +256,7 @@ export class ProductService {
         let errorMessage: string = ProductService.MSG_ASSIGN_ADDONS_FAILED;
 
         if (error.status === 400) {
-          errorMessage =
-            error.error?.message || ProductService.MSG_INVALID_ADDONS_REQUEST;
+          errorMessage = error.error?.message || ProductService.MSG_INVALID_ADDONS_REQUEST;
         } else if (error.status === 404) {
           errorMessage = ProductService.MSG_PRODUCT_NOT_FOUND;
         } else if (error.status === 0) {
@@ -258,7 +268,10 @@ export class ProductService {
     );
   }
 
-  public assignLinkedProducts(addOnId: string, products: AddOnProductAssignmentDto[]): Observable<void> {
+  public assignLinkedProducts(
+    addOnId: string,
+    products: AddOnProductAssignmentDto[],
+  ): Observable<void> {
     return this.http
       .post<void>(`${this.baseUrl}/addons/${addOnId}/products`, { addOnId, products })
       .pipe(
@@ -268,8 +281,7 @@ export class ProductService {
           let errorMessage: string = ProductService.MSG_ASSIGN_PRODUCTS_FAILED;
 
           if (error.status === 400) {
-            errorMessage =
-              error.error?.message || ProductService.MSG_INVALID_PRODUCTS_REQUEST;
+            errorMessage = error.error?.message || ProductService.MSG_INVALID_PRODUCTS_REQUEST;
           } else if (error.status === 404) {
             errorMessage = ProductService.MSG_ADD_ON_NOT_FOUND;
           } else if (error.status === 0) {
@@ -281,7 +293,9 @@ export class ProductService {
       );
   }
 
-  public getProductAddOnPriceOverrides(productId: string): Observable<ProductAddOnPriceOverrideDto[]> {
+  public getProductAddOnPriceOverrides(
+    productId: string,
+  ): Observable<ProductAddOnPriceOverrideDto[]> {
     return this.http.get<ProductAddOnPriceOverrideDto[]>(
       `${this.baseUrl}/${productId}/addon-price-overrides`,
     );
@@ -302,7 +316,8 @@ export class ProductService {
           let errorMessage: string = ProductService.MSG_CREATE_PRICE_OVERRIDE_FAILED;
 
           if (error.status === 400) {
-            errorMessage = error.error?.message || ProductService.MSG_INVALID_PRICE_OVERRIDE_REQUEST;
+            errorMessage =
+              error.error?.message || ProductService.MSG_INVALID_PRICE_OVERRIDE_REQUEST;
           } else if (error.status === 404) {
             errorMessage = ProductService.MSG_PRODUCT_OR_ADD_ON_NOT_FOUND;
           } else if (error.status === 0) {
@@ -329,7 +344,8 @@ export class ProductService {
           let errorMessage: string = ProductService.MSG_UPDATE_PRICE_OVERRIDE_FAILED;
 
           if (error.status === 400) {
-            errorMessage = error.error?.message || ProductService.MSG_INVALID_PRICE_OVERRIDE_REQUEST;
+            errorMessage =
+              error.error?.message || ProductService.MSG_INVALID_PRICE_OVERRIDE_REQUEST;
           } else if (error.status === 404) {
             errorMessage = ProductService.MSG_PRICE_OVERRIDE_NOT_FOUND;
           } else if (error.status === 0) {

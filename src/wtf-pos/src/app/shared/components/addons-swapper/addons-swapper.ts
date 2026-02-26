@@ -1,4 +1,4 @@
-﻿import { CommonModule } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import {
   AfterViewInit,
   Component,
@@ -9,8 +9,7 @@ import {
   ViewChild,
 } from '@angular/core';
 import { AlertService, ModalStackService, ProductService } from '@core/services';
-import { Icon } from '@shared/components/icons/icon/icon';
-import { AvatarComponent } from '@shared/components/avatar/avatar';
+import { AvatarComponent, Icon } from '@shared/components';
 import { AddOnTypeEnum, ProductDto } from '@shared/models';
 import Sortable from 'sortablejs';
 

@@ -9,7 +9,7 @@ import {
   output,
   signal,
 } from '@angular/core';
-import { Icon } from '../icons/icon/icon';
+import { Icon } from '@shared/components';
 
 export interface CustomerDropdownOption {
   id: string;
@@ -91,4 +91,3 @@ export class CustomerDropdown {
     this.isOpen.set(false);
   }
 }
-

@@ -1,6 +1,6 @@
-﻿import { CommonModule } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { Component, ElementRef, HostListener, inject, input, output } from '@angular/core';
-import { Icon } from '../icons/icon/icon';
+import { Icon } from '@shared/components';
 
 export interface FilterOption {
   id: string | number;

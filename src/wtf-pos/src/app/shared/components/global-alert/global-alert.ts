@@ -1,6 +1,6 @@
-﻿import { Component, inject } from '@angular/core';
-import { AlertComponent } from '../alert/alert';
+import { Component, inject } from '@angular/core';
 import { AlertService } from '@core/services';
+import { AlertComponent } from '@shared/components';
 
 @Component({
   selector: 'app-global-alert',

@@ -1,6 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { ConnectivityService } from '@core/services';
-import { Icon } from '../icons/icon/icon';
+import { Icon } from '@shared/components';
 
 @Component({
   selector: 'app-offline-banner',

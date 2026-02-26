@@ -1,4 +1,4 @@
-﻿import { CommonModule } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import {
   AfterViewInit,
   Component,
@@ -9,8 +9,7 @@ import {
   ViewChild,
 } from '@angular/core';
 import { AlertService, ModalStackService, ProductService } from '@core/services';
-import { Icon } from '@shared/components/icons/icon/icon';
-import { AvatarComponent } from '@shared/components/avatar/avatar';
+import { AvatarComponent, Icon } from '@shared/components';
 import { AddOnTypeEnum, ProductCategoryEnum, ProductDto } from '@shared/models';
 import Sortable from 'sortablejs';
 
@@ -159,9 +158,7 @@ export class ProductsSwapperComponent implements AfterViewInit {
     const existingTypes = new Map(this.linkedProducts().map((p) => [p.id, p.type]));
 
     // Available = everything not linked (includes filtered-out items)
-    this.availableProducts.set(
-      this.sortByName(allProducts.filter((p) => !linkedIdsSet.has(p.id))),
-    );
+    this.availableProducts.set(this.sortByName(allProducts.filter((p) => !linkedIdsSet.has(p.id))));
 
     // Linked = items in the assigned DOM, preserving order
     this.linkedProducts.set(

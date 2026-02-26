@@ -1,4 +1,4 @@
-﻿import {
+import {
   Component,
   computed,
   DestroyRef,
@@ -8,7 +8,7 @@
   output,
   signal,
 } from '@angular/core';
-import { Icon } from '../icons/icon/icon';
+import { Icon } from '@shared/components';
 
 export type AlertType = 'info' | 'success' | 'error' | 'warning';
 

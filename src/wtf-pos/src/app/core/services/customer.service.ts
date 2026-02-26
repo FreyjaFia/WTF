@@ -1,7 +1,7 @@
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { ConnectivityService } from '@core/services/connectivity.service';
 import { HttpErrorMessages, ServiceErrorMessages } from '@core/messages';
+import { ConnectivityService } from '@core/services';
 import { environment } from '@environments/environment.development';
 import { CreateCustomerDto, CustomerDto, UpdateCustomerDto } from '@shared/models';
 import { Observable, throwError } from 'rxjs';
@@ -14,11 +14,16 @@ export class CustomerService {
   private static readonly MSG_CUSTOMER_OR_IMAGE_NOT_FOUND =
     ServiceErrorMessages.Customer.CustomerOrImageNotFound;
   private static readonly MSG_NETWORK_UNAVAILABLE = HttpErrorMessages.NetworkUnavailable;
-  private static readonly MSG_FETCH_CUSTOMERS_FAILED = ServiceErrorMessages.Customer.FetchCustomersFailed;
-  private static readonly MSG_FETCH_CUSTOMER_FAILED = ServiceErrorMessages.Customer.FetchCustomerFailed;
-  private static readonly MSG_CREATE_CUSTOMER_FAILED = ServiceErrorMessages.Customer.CreateCustomerFailed;
-  private static readonly MSG_UPDATE_CUSTOMER_FAILED = ServiceErrorMessages.Customer.UpdateCustomerFailed;
-  private static readonly MSG_DELETE_CUSTOMER_FAILED = ServiceErrorMessages.Customer.DeleteCustomerFailed;
+  private static readonly MSG_FETCH_CUSTOMERS_FAILED =
+    ServiceErrorMessages.Customer.FetchCustomersFailed;
+  private static readonly MSG_FETCH_CUSTOMER_FAILED =
+    ServiceErrorMessages.Customer.FetchCustomerFailed;
+  private static readonly MSG_CREATE_CUSTOMER_FAILED =
+    ServiceErrorMessages.Customer.CreateCustomerFailed;
+  private static readonly MSG_UPDATE_CUSTOMER_FAILED =
+    ServiceErrorMessages.Customer.UpdateCustomerFailed;
+  private static readonly MSG_DELETE_CUSTOMER_FAILED =
+    ServiceErrorMessages.Customer.DeleteCustomerFailed;
   private static readonly MSG_UPLOAD_IMAGE_FAILED = ServiceErrorMessages.Customer.UploadImageFailed;
   private static readonly MSG_DELETE_IMAGE_FAILED = ServiceErrorMessages.Customer.DeleteImageFailed;
 
@@ -43,13 +48,14 @@ export class CustomerService {
     return this.http.get<CustomerDto[]>(this.baseUrl, { params }).pipe(
       catchError((error: HttpErrorResponse) => {
         console.error('Error fetching customers:', error);
-        return throwError(() =>
-          new Error(
-            this.getErrorMessage(error, {
-              fallback: CustomerService.MSG_FETCH_CUSTOMERS_FAILED,
-              forbidden: CustomerService.MSG_NOT_AUTHORIZED,
-            }),
-          ),
+        return throwError(
+          () =>
+            new Error(
+              this.getErrorMessage(error, {
+                fallback: CustomerService.MSG_FETCH_CUSTOMERS_FAILED,
+                forbidden: CustomerService.MSG_NOT_AUTHORIZED,
+              }),
+            ),
         );
       }),
     );
@@ -59,14 +65,15 @@ export class CustomerService {
     return this.http.get<CustomerDto>(`${this.baseUrl}/${id}`).pipe(
       catchError((error: HttpErrorResponse) => {
         console.error('Error fetching customer:', error);
-        return throwError(() =>
-          new Error(
-            this.getErrorMessage(error, {
-              fallback: CustomerService.MSG_FETCH_CUSTOMER_FAILED,
-              forbidden: CustomerService.MSG_NOT_AUTHORIZED,
-              notFound: CustomerService.MSG_CUSTOMER_NOT_FOUND,
-            }),
-          ),
+        return throwError(
+          () =>
+            new Error(
+              this.getErrorMessage(error, {
+                fallback: CustomerService.MSG_FETCH_CUSTOMER_FAILED,
+                forbidden: CustomerService.MSG_NOT_AUTHORIZED,
+                notFound: CustomerService.MSG_CUSTOMER_NOT_FOUND,
+              }),
+            ),
         );
       }),
     );
@@ -76,13 +83,14 @@ export class CustomerService {
     return this.http.post<CustomerDto>(this.baseUrl, customer).pipe(
       catchError((error: HttpErrorResponse) => {
         console.error('Error creating customer:', error);
-        return throwError(() =>
-          new Error(
-            this.getErrorMessage(error, {
-              fallback: CustomerService.MSG_CREATE_CUSTOMER_FAILED,
-              forbidden: CustomerService.MSG_NOT_AUTHORIZED,
-            }),
-          ),
+        return throwError(
+          () =>
+            new Error(
+              this.getErrorMessage(error, {
+                fallback: CustomerService.MSG_CREATE_CUSTOMER_FAILED,
+                forbidden: CustomerService.MSG_NOT_AUTHORIZED,
+              }),
+            ),
         );
       }),
     );
@@ -92,14 +100,15 @@ export class CustomerService {
     return this.http.put<CustomerDto>(`${this.baseUrl}/${customer.id}`, customer).pipe(
       catchError((error: HttpErrorResponse) => {
         console.error('Error updating customer:', error);
-        return throwError(() =>
-          new Error(
-            this.getErrorMessage(error, {
-              fallback: CustomerService.MSG_UPDATE_CUSTOMER_FAILED,
-              forbidden: CustomerService.MSG_NOT_AUTHORIZED,
-              notFound: CustomerService.MSG_CUSTOMER_NOT_FOUND,
-            }),
-          ),
+        return throwError(
+          () =>
+            new Error(
+              this.getErrorMessage(error, {
+                fallback: CustomerService.MSG_UPDATE_CUSTOMER_FAILED,
+                forbidden: CustomerService.MSG_NOT_AUTHORIZED,
+                notFound: CustomerService.MSG_CUSTOMER_NOT_FOUND,
+              }),
+            ),
         );
       }),
     );
@@ -109,14 +118,15 @@ export class CustomerService {
     return this.http.delete<void>(`${this.baseUrl}/${id}`).pipe(
       catchError((error: HttpErrorResponse) => {
         console.error('Error deleting customer:', error);
-        return throwError(() =>
-          new Error(
-            this.getErrorMessage(error, {
-              fallback: CustomerService.MSG_DELETE_CUSTOMER_FAILED,
-              forbidden: CustomerService.MSG_NOT_AUTHORIZED,
-              notFound: CustomerService.MSG_CUSTOMER_NOT_FOUND,
-            }),
-          ),
+        return throwError(
+          () =>
+            new Error(
+              this.getErrorMessage(error, {
+                fallback: CustomerService.MSG_DELETE_CUSTOMER_FAILED,
+                forbidden: CustomerService.MSG_NOT_AUTHORIZED,
+                notFound: CustomerService.MSG_CUSTOMER_NOT_FOUND,
+              }),
+            ),
         );
       }),
     );
@@ -128,13 +138,14 @@ export class CustomerService {
     return this.http.post<CustomerDto>(`${this.baseUrl}/${id}/image`, formData).pipe(
       catchError((error: HttpErrorResponse) => {
         console.error('Error uploading customer image:', error);
-        return throwError(() =>
-          new Error(
-            this.getErrorMessage(error, {
-              fallback: CustomerService.MSG_UPLOAD_IMAGE_FAILED,
-              forbidden: CustomerService.MSG_NOT_AUTHORIZED,
-            }),
-          ),
+        return throwError(
+          () =>
+            new Error(
+              this.getErrorMessage(error, {
+                fallback: CustomerService.MSG_UPLOAD_IMAGE_FAILED,
+                forbidden: CustomerService.MSG_NOT_AUTHORIZED,
+              }),
+            ),
         );
       }),
     );
@@ -144,14 +155,15 @@ export class CustomerService {
     return this.http.delete<CustomerDto>(`${this.baseUrl}/${id}/image`).pipe(
       catchError((error: HttpErrorResponse) => {
         console.error('Error deleting customer image:', error);
-        return throwError(() =>
-          new Error(
-            this.getErrorMessage(error, {
-              fallback: CustomerService.MSG_DELETE_IMAGE_FAILED,
-              forbidden: CustomerService.MSG_NOT_AUTHORIZED,
-              notFound: CustomerService.MSG_CUSTOMER_OR_IMAGE_NOT_FOUND,
-            }),
-          ),
+        return throwError(
+          () =>
+            new Error(
+              this.getErrorMessage(error, {
+                fallback: CustomerService.MSG_DELETE_IMAGE_FAILED,
+                forbidden: CustomerService.MSG_NOT_AUTHORIZED,
+                notFound: CustomerService.MSG_CUSTOMER_OR_IMAGE_NOT_FOUND,
+              }),
+            ),
         );
       }),
     );

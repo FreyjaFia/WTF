@@ -1,6 +1,6 @@
 import { inject, Injectable, OnDestroy } from '@angular/core';
+import { AuthService } from '@core/services';
 import { environment } from '@environments/environment.development';
-import { AuthService } from '@core/services/auth.service';
 import * as signalR from '@microsoft/signalr';
 import { Observable, Subject } from 'rxjs';
 

@@ -1,7 +1,7 @@
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { ConnectivityService } from '@core/services/connectivity.service';
 import { HttpErrorMessages, ServiceErrorMessages } from '@core/messages';
+import { ConnectivityService } from '@core/services';
 import { environment } from '@environments/environment.development';
 import { CreateOrderCommand, OrderDto, OrderStatusEnum, UpdateOrderCommand } from '@shared/models';
 import { Observable, throwError } from 'rxjs';
@@ -12,8 +12,10 @@ export class OrderService {
   private static readonly MSG_NETWORK_UNAVAILABLE = HttpErrorMessages.NetworkUnavailable;
   private static readonly MSG_ORDER_NOT_FOUND = ServiceErrorMessages.Order.OrderNotFound;
   private static readonly MSG_INVALID_ORDER_DATA = ServiceErrorMessages.Order.InvalidOrderData;
-  private static readonly MSG_INVALID_ORDER_BATCH_DATA = ServiceErrorMessages.Order.InvalidOrderBatchData;
-  private static readonly MSG_ORDER_CANNOT_BE_VOIDED = ServiceErrorMessages.Order.OrderCannotBeVoided;
+  private static readonly MSG_INVALID_ORDER_BATCH_DATA =
+    ServiceErrorMessages.Order.InvalidOrderBatchData;
+  private static readonly MSG_ORDER_CANNOT_BE_VOIDED =
+    ServiceErrorMessages.Order.OrderCannotBeVoided;
   private static readonly MSG_FETCH_ORDERS_FAILED = ServiceErrorMessages.Order.FetchOrdersFailed;
   private static readonly MSG_FETCH_ORDER_FAILED = ServiceErrorMessages.Order.FetchOrderFailed;
   private static readonly MSG_CREATE_ORDER_FAILED = ServiceErrorMessages.Order.CreateOrderFailed;
@@ -46,7 +48,9 @@ export class OrderService {
     return this.http.get<OrderDto[]>(this.baseUrl, { params }).pipe(
       catchError((error: HttpErrorResponse) => {
         console.error('Error fetching orders:', error);
-        return throwError(() => new Error(this.getErrorMessage(error, OrderService.MSG_FETCH_ORDERS_FAILED)));
+        return throwError(
+          () => new Error(this.getErrorMessage(error, OrderService.MSG_FETCH_ORDERS_FAILED)),
+        );
       }),
     );
   }
@@ -55,12 +59,13 @@ export class OrderService {
     return this.http.get<OrderDto>(`${this.baseUrl}/${id}`).pipe(
       catchError((error: HttpErrorResponse) => {
         console.error('Error fetching order:', error);
-        return throwError(() =>
-          new Error(
-            this.getErrorMessage(error, OrderService.MSG_FETCH_ORDER_FAILED, {
-              notFound: OrderService.MSG_ORDER_NOT_FOUND,
-            }),
-          ),
+        return throwError(
+          () =>
+            new Error(
+              this.getErrorMessage(error, OrderService.MSG_FETCH_ORDER_FAILED, {
+                notFound: OrderService.MSG_ORDER_NOT_FOUND,
+              }),
+            ),
         );
       }),
     );
@@ -70,12 +75,13 @@ export class OrderService {
     return this.http.post<OrderDto>(this.baseUrl, command).pipe(
       catchError((error: HttpErrorResponse) => {
         console.error('Error creating order:', error);
-        return throwError(() =>
-          new Error(
-            this.getErrorMessage(error, OrderService.MSG_CREATE_ORDER_FAILED, {
-              badRequest: OrderService.MSG_INVALID_ORDER_DATA,
-            }),
-          ),
+        return throwError(
+          () =>
+            new Error(
+              this.getErrorMessage(error, OrderService.MSG_CREATE_ORDER_FAILED, {
+                badRequest: OrderService.MSG_INVALID_ORDER_DATA,
+              }),
+            ),
         );
       }),
     );
@@ -85,12 +91,13 @@ export class OrderService {
     return this.http.post<OrderDto[]>(`${this.baseUrl}/batch`, { orders: commands }).pipe(
       catchError((error: HttpErrorResponse) => {
         console.error('Error creating order batch:', error);
-        return throwError(() =>
-          new Error(
-            this.getErrorMessage(error, OrderService.MSG_SYNC_ORDERS_FAILED, {
-              badRequest: OrderService.MSG_INVALID_ORDER_BATCH_DATA,
-            }),
-          ),
+        return throwError(
+          () =>
+            new Error(
+              this.getErrorMessage(error, OrderService.MSG_SYNC_ORDERS_FAILED, {
+                badRequest: OrderService.MSG_INVALID_ORDER_BATCH_DATA,
+              }),
+            ),
         );
       }),
     );
@@ -100,13 +107,14 @@ export class OrderService {
     return this.http.put<OrderDto>(`${this.baseUrl}/${command.id}`, command).pipe(
       catchError((error: HttpErrorResponse) => {
         console.error('Error updating order:', error);
-        return throwError(() =>
-          new Error(
-            this.getErrorMessage(error, OrderService.MSG_UPDATE_ORDER_FAILED, {
-              notFound: OrderService.MSG_ORDER_NOT_FOUND,
-              badRequest: OrderService.MSG_INVALID_ORDER_DATA,
-            }),
-          ),
+        return throwError(
+          () =>
+            new Error(
+              this.getErrorMessage(error, OrderService.MSG_UPDATE_ORDER_FAILED, {
+                notFound: OrderService.MSG_ORDER_NOT_FOUND,
+                badRequest: OrderService.MSG_INVALID_ORDER_DATA,
+              }),
+            ),
         );
       }),
     );
@@ -116,13 +124,14 @@ export class OrderService {
     return this.http.patch<OrderDto>(`${this.baseUrl}/${id}/void`, {}).pipe(
       catchError((error: HttpErrorResponse) => {
         console.error('Error voiding order:', error);
-        return throwError(() =>
-          new Error(
-            this.getErrorMessage(error, OrderService.MSG_VOID_ORDER_FAILED, {
-              notFound: OrderService.MSG_ORDER_NOT_FOUND,
-              badRequest: OrderService.MSG_ORDER_CANNOT_BE_VOIDED,
-            }),
-          ),
+        return throwError(
+          () =>
+            new Error(
+              this.getErrorMessage(error, OrderService.MSG_VOID_ORDER_FAILED, {
+                notFound: OrderService.MSG_ORDER_NOT_FOUND,
+                badRequest: OrderService.MSG_ORDER_CANNOT_BE_VOIDED,
+              }),
+            ),
         );
       }),
     );
