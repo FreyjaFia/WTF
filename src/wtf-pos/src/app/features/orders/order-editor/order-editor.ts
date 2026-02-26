@@ -133,10 +133,17 @@ export class OrderEditor implements OnInit, OnDestroy {
   protected readonly showCreateCustomerModal = signal(false);
   protected readonly isCreatingCustomer = signal(false);
   protected readonly isSavingOrder = signal(false);
+  protected readonly isCartCollapsed = signal(false);
+  protected readonly quickPayProgress = signal(0);
+  protected readonly isQuickPayHolding = signal(false);
+  protected readonly isRailTriggerHovering = signal(false);
   protected readonly showMobileCart = signal(false);
   protected readonly cartDragY = signal(0);
   protected readonly isCartDragging = signal(false);
   private cartDragStartY = 0;
+  private quickPayHoldRaf: number | null = null;
+  private quickPayHoldStartMs: number | null = null;
+  private readonly quickPayHoldDurationMs = 1000;
   protected readonly isRefreshing = signal(false);
   protected readonly isDownloadingReceipt = signal(false);
   protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
@@ -377,6 +384,70 @@ export class OrderEditor implements OnInit, OnDestroy {
     }
   }
 
+  protected toggleCartCollapse(): void {
+    this.isCartCollapsed.set(!this.isCartCollapsed());
+    this.isRailTriggerHovering.set(false);
+  }
+
+  protected onRailTriggerEnter(): void {
+    if (
+      typeof window !== 'undefined' &&
+      !window.matchMedia('(hover: hover) and (pointer: fine)').matches
+    ) {
+      return;
+    }
+    this.isRailTriggerHovering.set(true);
+  }
+
+  protected onRailTriggerLeave(): void {
+    this.isRailTriggerHovering.set(false);
+  }
+
+  protected startQuickPayHold(): void {
+    if (
+      this.cart().length === 0 ||
+      !this.canManageOrderActions() ||
+      this.isReadOnly() ||
+      this.isQuickPayHolding()
+    ) {
+      return;
+    }
+
+    this.isQuickPayHolding.set(true);
+    this.quickPayProgress.set(0);
+    this.quickPayHoldStartMs = performance.now();
+
+    const tick = (now: number): void => {
+      if (!this.isQuickPayHolding()) {
+        return;
+      }
+
+      const start = this.quickPayHoldStartMs ?? now;
+      const elapsed = now - start;
+      const normalized = Math.min(1, elapsed / this.quickPayHoldDurationMs);
+      const eased = 1 - Math.pow(1 - normalized, 2);
+      this.quickPayProgress.set(Math.round(eased * 100));
+
+      if (normalized >= 1) {
+        this.finishQuickPayHold(true);
+        return;
+      }
+
+      this.quickPayHoldRaf = requestAnimationFrame(tick);
+    };
+
+    this.quickPayHoldRaf = requestAnimationFrame(tick);
+  }
+
+  protected cancelQuickPayHold(): void {
+    this.finishQuickPayHold(false);
+  }
+
+  protected openMobileCart(): void {
+    this.isCartCollapsed.set(false);
+    this.showMobileCart.set(true);
+  }
+
   protected onOrderSpecialInstructionsInput(event: Event): void {
     if (!this.canManageOrderActions()) {
       return;
@@ -413,6 +484,8 @@ export class OrderEditor implements OnInit, OnDestroy {
   }
 
   public ngOnDestroy(): void {
+    this.finishQuickPayHold(false);
+
     if (this.offlineEditSyncLockActive && this.offlineLocalId) {
       this.offlineOrder.unlockSyncForOfflineEdit(this.offlineLocalId);
       this.offlineEditSyncLockActive = false;
@@ -996,6 +1069,23 @@ export class OrderEditor implements OnInit, OnDestroy {
     }
 
     this.checkoutModal().triggerOpen();
+  }
+
+  private finishQuickPayHold(shouldCheckout: boolean): void {
+    if (this.quickPayHoldRaf !== null) {
+      cancelAnimationFrame(this.quickPayHoldRaf);
+      this.quickPayHoldRaf = null;
+    }
+    this.quickPayHoldStartMs = null;
+
+    const reachedConfirm = this.quickPayProgress() >= 100 && shouldCheckout;
+
+    this.isQuickPayHolding.set(false);
+    this.quickPayProgress.set(0);
+
+    if (reachedConfirm) {
+      this.checkout();
+    }
   }
 
   protected onOrderSaved(): void {

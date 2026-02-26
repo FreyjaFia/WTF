@@ -8,7 +8,11 @@
     <div [class.md:pe-75]="showSummary()">
       <div class="mb-6 flex items-center justify-between">
         <h3 class="text-2xl font-bold">Checkout</h3>
-        <button type="button" (click)="toggleSummary()" class="inline-flex cursor-pointer items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-100 active:scale-95">
+        <button
+          type="button"
+          (click)="toggleSummary()"
+          class="inline-flex cursor-pointer items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-100 active:scale-95"
+        >
           <span>{{ showSummary() ? 'Hide Order' : 'View Order' }}</span>
           <app-icon
             name="icon-forward"
@@ -98,12 +102,21 @@
                 [class.text-red-600]="hasInsufficientCash()"
                 [class.text-green-600]="hasAmountReceivedInput() && change() > 0"
               >
-                <app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" />{{ paymentStatusAmount() | number: '1.2-2' }}
+                <app-icon
+                  name="icon-peso"
+                  [class]="'inline h-3 w-3 align-[-0.125em]'"
+                  [fill]="'currentColor'"
+                />{{ paymentStatusAmount() | number: '1.2-2' }}
               </span>
             </div>
             @if (hasInsufficientCash()) {
               <p class="mt-2 text-sm text-red-600">
-                Insufficient payment. Please enter at least <app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" />{{ totalPrice() | number: '1.2-2' }}.
+                Insufficient payment. Please enter at least
+                <app-icon
+                  name="icon-peso"
+                  [class]="'inline h-3 w-3 align-[-0.125em]'"
+                  [fill]="'currentColor'"
+                />{{ totalPrice() | number: '1.2-2' }}.
               </p>
             }
           </div>
@@ -112,7 +125,11 @@
 
       <!-- Action Buttons -->
       <div class="modal-action mt-6 flex gap-3">
-        <button type="button" class="cursor-pointer rounded-lg py-2 font-medium text-gray-600 transition-all hover:bg-gray-100 active:scale-95 flex-1" (click)="cancelCheckout()">
+        <button
+          type="button"
+          class="flex-1 cursor-pointer rounded-lg py-2 font-medium text-gray-600 transition-all hover:bg-gray-100 active:scale-95"
+          (click)="cancelCheckout()"
+        >
           Cancel
         </button>
         <button
@@ -154,16 +171,42 @@
               }
               <div class="flex-1">
                 <p class="text-sm font-semibold">{{ item.name }}</p>
-                <p class="text-xs opacity-70">{{ item.qty }} &times; <app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" />{{ item.price.toFixed(2) }}</p>
+                <p class="text-xs opacity-70">
+                  {{ item.qty }} &times;
+                  <app-icon
+                    name="icon-peso"
+                    [class]="'inline h-3 w-3 align-[-0.125em]'"
+                    [fill]="'currentColor'"
+                  />{{ item.price.toFixed(2) }}
+                </p>
                 @if (item.addOns?.length) {
                   <div class="mt-1 space-y-0.5">
                     @for (ao of item.addOns | sortAddOns; track ao.addOnId) {
                       <p class="flex items-center gap-1 text-xs text-gray-500">
                         <span class="inline-block h-1 w-1 rounded-full bg-gray-400"></span>
                         {{ ao.name }}
-                        <span class="ml-auto">+<app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" />{{ ao.price.toFixed(2) }}</span>
+                        <span class="ml-auto"
+                          >+<app-icon
+                            name="icon-peso"
+                            [class]="'inline h-3 w-3 align-[-0.125em]'"
+                            [fill]="'currentColor'"
+                          />{{ ao.price.toFixed(2) }}</span
+                        >
                       </p>
                     }
+                    <p class="pt-0.5 text-right text-[11px] text-gray-400 italic">
+                      (<app-icon
+                        name="icon-peso"
+                        [class]="'inline h-2.5 w-2.5 align-[-0.125em]'"
+                        [fill]="'currentColor'"
+                      />{{
+                        (
+                          item.price +
+                          (item.addOns?.length ? item.addOns!.reduce(addOnPriceReducer, 0) : 0)
+                        ).toFixed(2)
+                      }}
+                      / unit)
+                    </p>
                   </div>
                 }
                 @if (item.specialInstructions?.trim()) {
@@ -172,7 +215,11 @@
                   </p>
                 }
                 <p class="mt-0.5 text-right text-sm font-semibold">
-                  <app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" />{{
+                  <app-icon
+                    name="icon-peso"
+                    [class]="'inline h-3 w-3 align-[-0.125em]'"
+                    [fill]="'currentColor'"
+                  />{{
                     (
                       item.qty *
                       (item.price +
@@ -198,7 +245,13 @@
           }
           <div class="flex items-center justify-between text-lg font-bold">
             <span>Total:</span>
-            <span><app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" />{{ totalPrice().toFixed(2) }}</span>
+            <span
+              ><app-icon
+                name="icon-peso"
+                [class]="'inline h-3 w-3 align-[-0.125em]'"
+                [fill]="'currentColor'"
+              />{{ totalPrice().toFixed(2) }}</span
+            >
           </div>
         </div>
       </div>

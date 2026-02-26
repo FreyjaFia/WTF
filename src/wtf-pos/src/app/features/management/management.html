@@ -55,7 +55,7 @@
 
   <!-- Desktop Sidebar Navigation -->
   <div
-    class="hidden shrink-0 flex-col border-r border-gray-200 bg-white transition-all duration-300 ease-in-out lg:flex"
+    class="hidden shrink-0 flex-col border-r border-gray-200 bg-white transition-all duration-[400ms] ease-[cubic-bezier(0.175,0.885,0.32,1.275)] lg:flex"
     [class.w-64]="!isSidebarCollapsed()"
     [class.w-20]="isSidebarCollapsed()"
   >
@@ -69,7 +69,7 @@
       }
       <button
         type="button"
-        class="tooltip z-50 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
+        class="tooltip z-50 cursor-pointer rounded-lg p-2 transition-all duration-[400ms] ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:bg-gray-100 active:scale-95"
         [class.tooltip-right]="isSidebarCollapsed()"
         [class.tooltip-bottom]="!isSidebarCollapsed()"
         (click)="toggleSidebar()"
@@ -89,7 +89,7 @@
         routerLink="products"
         routerLinkActive="bg-green-50"
         [routerLinkActiveOptions]="{ exact: false }"
-        class="tooltip mr-4 flex items-center rounded-lg px-4 py-3 whitespace-nowrap text-gray-700 transition-all duration-300 ease-in-out hover:bg-gray-50"
+        class="tooltip mr-4 flex items-center rounded-lg px-4 py-3 whitespace-nowrap text-gray-700 transition-all duration-[400ms] ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:bg-gray-50"
         [class.justify-center]="isSidebarCollapsed()"
         [class.gap-3]="!isSidebarCollapsed()"
         [class.tooltip-right]="isSidebarCollapsed()"
@@ -110,7 +110,7 @@
           routerLink="customers"
           routerLinkActive="bg-green-50"
           [routerLinkActiveOptions]="{ exact: false }"
-          class="tooltip mr-4 flex items-center rounded-lg px-4 py-3 whitespace-nowrap text-gray-700 transition-all duration-300 ease-in-out hover:bg-gray-50"
+          class="tooltip mr-4 flex items-center rounded-lg px-4 py-3 whitespace-nowrap text-gray-700 transition-all duration-[400ms] ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:bg-gray-50"
           [class.justify-center]="isSidebarCollapsed()"
           [class.gap-3]="!isSidebarCollapsed()"
           [class.tooltip-right]="isSidebarCollapsed()"
@@ -131,7 +131,7 @@
         routerLink="users"
         routerLinkActive="bg-green-50"
         [routerLinkActiveOptions]="{ exact: false }"
-        class="tooltip mr-4 flex items-center rounded-lg px-4 py-3 whitespace-nowrap text-gray-700 transition-all duration-300 ease-in-out hover:bg-gray-50"
+        class="tooltip mr-4 flex items-center rounded-lg px-4 py-3 whitespace-nowrap text-gray-700 transition-all duration-[400ms] ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:bg-gray-50"
         [class.justify-center]="isSidebarCollapsed()"
         [class.gap-3]="!isSidebarCollapsed()"
         [class.tooltip-right]="isSidebarCollapsed()"
@@ -151,7 +151,7 @@
         routerLink="audit-logs"
         routerLinkActive="bg-green-50"
         [routerLinkActiveOptions]="{ exact: false }"
-        class="tooltip mr-4 flex items-center rounded-lg px-4 py-3 whitespace-nowrap text-gray-700 transition-all duration-300 ease-in-out hover:bg-gray-50"
+        class="tooltip mr-4 flex items-center rounded-lg px-4 py-3 whitespace-nowrap text-gray-700 transition-all duration-[400ms] ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:bg-gray-50"
         [class.justify-center]="isSidebarCollapsed()"
         [class.gap-3]="!isSidebarCollapsed()"
         [class.tooltip-right]="isSidebarCollapsed()"
@@ -171,7 +171,7 @@
         routerLink="schema-scripts"
         routerLinkActive="bg-green-50"
         [routerLinkActiveOptions]="{ exact: false }"
-        class="tooltip mr-4 flex items-center rounded-lg px-4 py-3 whitespace-nowrap text-gray-700 transition-all duration-300 ease-in-out hover:bg-gray-50"
+        class="tooltip mr-4 flex items-center rounded-lg px-4 py-3 whitespace-nowrap text-gray-700 transition-all duration-[400ms] ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:bg-gray-50"
         [class.justify-center]="isSidebarCollapsed()"
         [class.gap-3]="!isSidebarCollapsed()"
         [class.tooltip-right]="isSidebarCollapsed()"
