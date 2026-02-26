@@ -1,6 +1,7 @@
 import { CommonModule, DecimalPipe } from '@angular/common';
 import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { Capacitor } from '@capacitor/core';
 import { DashboardService, SignalRService } from '@core/services';
 import {
   AnimatedCounterComponent,
@@ -12,10 +13,11 @@ import {
   DonutChartComponent,
   type DonutSegment,
   Icon,
+  PullToRefreshComponent,
   SparklineComponent,
 } from '@shared/components';
 import { type DashboardDto, type DateRangeSelection } from '@shared/models';
-import { Subscription, interval } from 'rxjs';
+import { interval, Subscription } from 'rxjs';
 import { DateRangePickerComponent } from './date-range-picker/date-range-picker';
 
 const TIME_AGO_INTERVAL_MS = 30_000;
@@ -30,7 +32,20 @@ const GREETINGS = [
 
 @Component({
   selector: 'app-dashboard',
-  imports: [CommonModule, DecimalPipe, RouterLink, Icon, BadgeComponent, SparklineComponent, AreaChartComponent, DonutChartComponent, AnimatedCounterComponent, DateRangePickerComponent, AvatarComponent],
+  imports: [
+    CommonModule,
+    DecimalPipe,
+    RouterLink,
+    Icon,
+    BadgeComponent,
+    SparklineComponent,
+    AreaChartComponent,
+    DonutChartComponent,
+    AnimatedCounterComponent,
+    DateRangePickerComponent,
+    AvatarComponent,
+    PullToRefreshComponent,
+  ],
   templateUrl: './dashboard.html',
 })
 export class Dashboard implements OnInit, OnDestroy {
@@ -42,19 +57,19 @@ export class Dashboard implements OnInit, OnDestroy {
 
   protected readonly dashboard = signal<DashboardDto | null>(null);
   protected readonly isLoading = signal(true);
+  protected readonly isRefreshing = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly orderTimeAgos = signal<Record<string, string>>({});
   protected readonly currentRange = signal<DateRangeSelection>({ preset: 'today' });
+  protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
 
   protected readonly greeting = GREETINGS[Math.floor(Math.random() * GREETINGS.length)];
 
-  protected readonly comparisonLabel = computed(() =>
-    this.dashboard()?.comparisonLabel ?? 'vs Yesterday',
+  protected readonly comparisonLabel = computed(
+    () => this.dashboard()?.comparisonLabel ?? 'vs Yesterday',
   );
 
-  protected readonly isMultiDay = computed(() =>
-    (this.dashboard()?.dailyRevenue?.length ?? 0) > 0,
-  );
+  protected readonly isMultiDay = computed(() => (this.dashboard()?.dailyRevenue?.length ?? 0) > 0);
 
   protected readonly chartTitle = computed(() =>
     this.isMultiDay() ? 'Sales by Day' : 'Sales by Hour',
@@ -156,8 +171,50 @@ export class Dashboard implements OnInit, OnDestroy {
     return data
       .filter((h) => h.hour >= 8)
       .map((h) => ({
-        label: h.hour === 0 ? '12am' : h.hour < 12 ? `${h.hour}am` : h.hour === 12 ? '12pm' : `${h.hour - 12}pm`,
+        label:
+          h.hour === 0
+            ? '12am'
+            : h.hour < 12
+              ? `${h.hour}am`
+              : h.hour === 12
+                ? '12pm'
+                : `${h.hour - 12}pm`,
         value: h.revenue,
+      }));
+  });
+
+  protected readonly ordersByPeriod = computed<AreaChartPoint[]>(() => {
+    const daily = this.dashboard()?.dailyRevenue;
+
+    if (daily && daily.length > 0) {
+      return daily.map((d) => {
+        const date = new Date(d.date);
+        const isLongRange = daily.length > 10;
+        const label = isLongRange
+          ? date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+          : date.toLocaleDateString('en-US', { weekday: 'short' });
+        return { label, value: d.orders };
+      });
+    }
+
+    const data = this.dashboard()?.hourlyRevenue;
+
+    if (!data) {
+      return [];
+    }
+
+    return data
+      .filter((h) => h.hour >= 8)
+      .map((h) => ({
+        label:
+          h.hour === 0
+            ? '12am'
+            : h.hour < 12
+              ? `${h.hour}am`
+              : h.hour === 12
+                ? '12pm'
+                : `${h.hour - 12}pm`,
+        value: h.orders,
       }));
   });
 
@@ -184,6 +241,16 @@ export class Dashboard implements OnInit, OnDestroy {
     }
 
     return products.reduce((sum, p) => sum + p.revenue, 0);
+  });
+
+  protected readonly topProductTotalQuantity = computed(() => {
+    const products = this.dashboard()?.topSellingProducts;
+
+    if (!products || products.length === 0) {
+      return 0;
+    }
+
+    return products.reduce((sum, p) => sum + p.quantitySold, 0);
   });
 
   protected readonly statusTotal = computed(() => {
@@ -218,11 +285,13 @@ export class Dashboard implements OnInit, OnDestroy {
   }
 
   protected refreshDashboard(): void {
-    this.loadDashboard();
+    this.isRefreshing.set(true);
+    this.loadDashboard({ showLoading: this.dashboard() === null });
   }
 
   protected onDateRangeChanged(range: DateRangeSelection): void {
     this.currentRange.set(range);
+    this.isRefreshing.set(false);
     this.loadDashboard();
   }
 
@@ -283,19 +352,24 @@ export class Dashboard implements OnInit, OnDestroy {
     this.orderTimeAgos.set(map);
   }
 
-  private loadDashboard(): void {
-    this.isLoading.set(true);
+  private loadDashboard(options?: { showLoading?: boolean }): void {
+    const showLoading = options?.showLoading ?? true;
+    if (showLoading) {
+      this.isLoading.set(true);
+    }
     this.errorMessage.set(null);
 
     this.dashboardService.getDashboard(this.currentRange()).subscribe({
       next: (data) => {
         this.dashboard.set(data);
         this.isLoading.set(false);
+        this.isRefreshing.set(false);
         this.updateTimeAgos();
       },
       error: (err: Error) => {
         this.errorMessage.set(err.message);
         this.isLoading.set(false);
+        this.isRefreshing.set(false);
       },
     });
   }
@@ -322,8 +396,13 @@ export class Dashboard implements OnInit, OnDestroy {
   }
 
   protected productRevenuePercent(revenue: number): number {
-    const total = this.dashboard()?.today?.totalRevenue ?? 0;
+    const total = this.topProductTotalRevenue();
     return total > 0 ? Math.round((revenue / total) * 100) : 0;
+  }
+
+  protected productQuantityPercent(quantity: number): number {
+    const total = this.topProductTotalQuantity();
+    return total > 0 ? Math.round((quantity / total) * 100) : 0;
   }
 
   protected statusPercent(count: number): number {

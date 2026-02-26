@@ -1,13 +1,14 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
+using WTF.Api.Common.Time;
 using WTF.Api.Features.Dashboard.DTOs;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 
 namespace WTF.Api.Features.Dashboard;
 
-public record GetDashboardQuery(string? Preset, DateTime? StartDate, DateTime? EndDate, string? TimeZone) : IRequest<DashboardDto>;
+public record GetDashboardQuery(string? Preset, DateTime? StartDate, DateTime? EndDate) : IRequest<DashboardDto>;
 
 public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor) : IRequestHandler<GetDashboardQuery, DashboardDto>
 {
@@ -24,7 +25,7 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
     public async Task<DashboardDto> Handle(GetDashboardQuery request, CancellationToken cancellationToken)
     {
         var nowUtc = DateTime.UtcNow;
-        var timeZone = ResolveTimeZone(request.TimeZone);
+        var timeZone = RequestTimeZone.ResolveFromRequest(httpContextAccessor);
         var range = ComputeDateRange(request, nowUtc, timeZone);
         var nowLocal = TimeZoneInfo.ConvertTimeFromUtc(nowUtc, timeZone);
 
@@ -339,56 +340,4 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
             timeZone);
     }
 
-    private static TimeZoneInfo ResolveTimeZone(string? timeZoneId)
-    {
-        if (string.IsNullOrWhiteSpace(timeZoneId))
-        {
-            return TimeZoneInfo.Utc;
-        }
-
-        try
-        {
-            return TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
-        }
-        catch (TimeZoneNotFoundException)
-        {
-            if (TimeZoneInfo.TryConvertIanaIdToWindowsId(timeZoneId, out var windowsId))
-            {
-                try
-                {
-                    return TimeZoneInfo.FindSystemTimeZoneById(windowsId);
-                }
-                catch (TimeZoneNotFoundException)
-                {
-                    return TimeZoneInfo.Utc;
-                }
-                catch (InvalidTimeZoneException)
-                {
-                    return TimeZoneInfo.Utc;
-                }
-            }
-
-            if (TimeZoneInfo.TryConvertWindowsIdToIanaId(timeZoneId, out var ianaId))
-            {
-                try
-                {
-                    return TimeZoneInfo.FindSystemTimeZoneById(ianaId);
-                }
-                catch (TimeZoneNotFoundException)
-                {
-                    return TimeZoneInfo.Utc;
-                }
-                catch (InvalidTimeZoneException)
-                {
-                    return TimeZoneInfo.Utc;
-                }
-            }
-
-            return TimeZoneInfo.Utc;
-        }
-        catch (InvalidTimeZoneException)
-        {
-            return TimeZoneInfo.Utc;
-        }
-    }
 }

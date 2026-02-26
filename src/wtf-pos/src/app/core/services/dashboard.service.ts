@@ -1,7 +1,7 @@
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { ConnectivityService } from '@core/services/connectivity.service';
 import { HttpErrorMessages, ServiceErrorMessages } from '@core/messages';
+import { ConnectivityService } from '@core/services';
 import { environment } from '@environments/environment.development';
 import { type DashboardDto, type DateRangeSelection } from '@shared/models';
 import { Observable, throwError } from 'rxjs';
@@ -10,17 +10,15 @@ import { catchError } from 'rxjs/operators';
 @Injectable({ providedIn: 'root' })
 export class DashboardService {
   private static readonly MSG_NETWORK_UNAVAILABLE = HttpErrorMessages.NetworkUnavailable;
-  private static readonly MSG_LOAD_DASHBOARD_FAILED = ServiceErrorMessages.Dashboard.LoadDashboardFailed;
+  private static readonly MSG_LOAD_DASHBOARD_FAILED =
+    ServiceErrorMessages.Dashboard.LoadDashboardFailed;
 
   private readonly http = inject(HttpClient);
   private readonly connectivity = inject(ConnectivityService);
   private readonly baseUrl = `${environment.apiUrl}/dashboard`;
 
   public getDashboard(range?: DateRangeSelection): Observable<DashboardDto> {
-    let params = new HttpParams().set(
-      'timeZone',
-      Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
-    );
+    let params = new HttpParams();
 
     if (range) {
       params = params.set('preset', range.preset);

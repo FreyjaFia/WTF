@@ -2,7 +2,14 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { AlertService, AuthService, CustomerService, ListStateService, ModalStackService } from '@core/services';
+import { Capacitor } from '@capacitor/core';
+import {
+  AlertService,
+  AuthService,
+  CustomerService,
+  ListStateService,
+  ModalStackService,
+} from '@core/services';
 import {
   AvatarComponent,
   BadgeComponent,
@@ -13,7 +20,6 @@ import {
 } from '@shared/components';
 import { CustomerDto } from '@shared/models';
 import { debounceTime } from 'rxjs';
-
 
 type SortColumn = 'name' | 'address';
 type SortDirection = 'asc' | 'desc';
@@ -52,6 +58,7 @@ export class CustomerListComponent implements OnInit {
   protected readonly customersCache = signal<CustomerDto[]>([]);
   protected readonly isLoading = signal(false);
   protected readonly isRefreshing = signal(false);
+  protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
 
   protected readonly selectedStatuses = signal<string[]>(['active']);
 

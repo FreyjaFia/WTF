@@ -26,7 +26,9 @@
     </div>
 
     <!-- Right: Toolbar -->
-    <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:gap-3">
+    <div
+      class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:gap-3"
+    >
       <!-- Search (desktop only) -->
       <label
         class="hidden items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200 sm:flex sm:w-72"
@@ -60,29 +62,31 @@
 
       <!-- Actions -->
       <div class="flex items-center justify-end gap-2">
-        <button
-          class="tooltip tooltip-bottom pointer-events-auto z-30 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
-          [class.opacity-70]="isRefreshing()"
-          type="button"
-          (click)="refresh()"
-          [disabled]="isRefreshing()"
-          aria-label="Refresh customers"
-          data-tip="Refresh"
-        >
-          @if (isRefreshing()) {
-            <app-icon
-              name="icon-refresh"
-              [class]="'h-5 w-5 animate-spin text-gray-600'"
-              [fill]="'currentColor'"
-            />
-          } @else {
-            <app-icon
-              name="icon-refresh"
-              [class]="'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'"
-              [fill]="'currentColor'"
-            />
-          }
-        </button>
+        @if (!isAndroidPlatform) {
+          <button
+            class="tooltip tooltip-bottom pointer-events-auto z-30 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
+            [class.opacity-70]="isRefreshing()"
+            type="button"
+            (click)="refresh()"
+            [disabled]="isRefreshing()"
+            aria-label="Refresh customers"
+            data-tip="Refresh"
+          >
+            @if (isRefreshing()) {
+              <app-icon
+                name="icon-refresh"
+                [class]="'h-5 w-5 animate-spin text-gray-600'"
+                [fill]="'currentColor'"
+              />
+            } @else {
+              <app-icon
+                name="icon-refresh"
+                [class]="'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'"
+                [fill]="'currentColor'"
+              />
+            }
+          </button>
+        }
         @if (canWriteManagement()) {
           <a
             class="btn btn-sm rounded-lg border-0 bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg"
@@ -105,19 +109,16 @@
 
   <!-- Customers Table -->
   @if (!isLoading()) {
-    <app-pull-to-refresh
-      [refreshing]="isRefreshing()"
-      (refreshTriggered)="refresh()"
-    >
-    @if (customers().length === 0) {
-      <div class="rounded-lg bg-white p-8 text-center shadow-lg">
-        <div class="mb-3 flex justify-center">
-          <app-icon name="icon-people" [class]="'h-12 w-12 opacity-60'" />
+    <app-pull-to-refresh [refreshing]="isRefreshing()" (refreshTriggered)="refresh()">
+      @if (customers().length === 0) {
+        <div class="rounded-lg bg-white p-8 text-center shadow-lg">
+          <div class="mb-3 flex justify-center">
+            <app-icon name="icon-people" [class]="'h-12 w-12 opacity-60'" />
+          </div>
+          <p class="text-lg font-semibold text-gray-700">No customers found</p>
+          <p class="text-sm text-gray-500">Try adjusting your filters or add a new customer</p>
         </div>
-        <p class="text-lg font-semibold text-gray-700">No customers found</p>
-        <p class="text-sm text-gray-500">Try adjusting your filters or add a new customer</p>
-      </div>
-    } @else {
+      } @else {
         <div class="space-y-2 md:space-y-3">
           <!-- Column Headers (Sticky) -->
           <div
@@ -283,7 +284,7 @@
             }
           }
         </div>
-    }
+      }
     </app-pull-to-refresh>
   }
 </div>

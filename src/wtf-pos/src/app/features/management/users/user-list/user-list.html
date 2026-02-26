@@ -26,7 +26,9 @@
     </div>
 
     <!-- Right: Toolbar -->
-    <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:gap-3">
+    <div
+      class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:gap-3"
+    >
       <!-- Search (desktop only) -->
       <label
         class="hidden items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200 sm:flex sm:w-72"
@@ -69,29 +71,31 @@
 
       <!-- Actions -->
       <div class="flex items-center justify-end gap-2">
-        <button
-          class="tooltip tooltip-bottom pointer-events-auto z-30 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
-          [class.opacity-70]="isRefreshing()"
-          type="button"
-          (click)="refresh()"
-          [disabled]="isRefreshing()"
-          aria-label="Refresh users"
-          data-tip="Refresh"
-        >
-          @if (isRefreshing()) {
-            <app-icon
-              name="icon-refresh"
-              [class]="'h-5 w-5 animate-spin text-gray-600'"
-              [fill]="'currentColor'"
-            />
-          } @else {
-            <app-icon
-              name="icon-refresh"
-              [class]="'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'"
-              [fill]="'currentColor'"
-            />
-          }
-        </button>
+        @if (!isAndroidPlatform) {
+          <button
+            class="tooltip tooltip-bottom pointer-events-auto z-30 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
+            [class.opacity-70]="isRefreshing()"
+            type="button"
+            (click)="refresh()"
+            [disabled]="isRefreshing()"
+            aria-label="Refresh users"
+            data-tip="Refresh"
+          >
+            @if (isRefreshing()) {
+              <app-icon
+                name="icon-refresh"
+                [class]="'h-5 w-5 animate-spin text-gray-600'"
+                [fill]="'currentColor'"
+              />
+            } @else {
+              <app-icon
+                name="icon-refresh"
+                [class]="'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'"
+                [fill]="'currentColor'"
+              />
+            }
+          </button>
+        }
         @if (canWriteManagement()) {
           <a
             class="btn btn-sm rounded-lg border-0 bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg"
@@ -114,22 +118,21 @@
 
   <!-- Users Table -->
   @if (!isLoading()) {
-    <app-pull-to-refresh
-      [refreshing]="isRefreshing()"
-      (refreshTriggered)="refresh()"
-    >
-    @if (users().length === 0) {
-      <div class="rounded-lg bg-white p-8 text-center shadow-lg">
-        <div class="mb-3 flex justify-center">
-          <app-icon name="icon-user" [class]="'h-12 w-12 opacity-60'" />
+    <app-pull-to-refresh [refreshing]="isRefreshing()" (refreshTriggered)="refresh()">
+      @if (users().length === 0) {
+        <div class="rounded-lg bg-white p-8 text-center shadow-lg">
+          <div class="mb-3 flex justify-center">
+            <app-icon name="icon-user" [class]="'h-12 w-12 opacity-60'" />
+          </div>
+          <p class="text-lg font-semibold text-gray-700">No users found</p>
+          <p class="text-sm text-gray-500">Try adjusting your filters or add a new user</p>
         </div>
-        <p class="text-lg font-semibold text-gray-700">No users found</p>
-        <p class="text-sm text-gray-500">Try adjusting your filters or add a new user</p>
-      </div>
-    } @else {
+      } @else {
         <div class="space-y-2 md:space-y-3">
           <!-- Column Headers (Sticky) -->
-          <div class="sticky top-0 z-10 mb-2 hidden grid-cols-12 gap-4 rounded-lg bg-white px-4 py-3 md:grid">
+          <div
+            class="sticky top-0 z-10 mb-2 hidden grid-cols-12 gap-4 rounded-lg bg-white px-4 py-3 md:grid"
+          >
             <button
               class="col-span-4 flex cursor-pointer items-center gap-1 text-start text-xs font-semibold tracking-wider uppercase transition-colors"
               [class.text-gray-600]="sortColumn() !== 'name'"
@@ -192,15 +195,17 @@
           @if (sortedUsers().length > 0) {
             @for (user of sortedUsers(); track user.id; let isLast = $last) {
               <div
-                class="relative flex items-center gap-3 rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm transition-shadow duration-200 hover:z-10 hover:shadow-md focus-within:z-30 md:border-0 md:shadow-lg md:hover:shadow-xl md:grid md:grid-cols-12 md:gap-4 md:px-4 md:py-4"
+                class="relative flex items-center gap-3 rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm transition-shadow duration-200 focus-within:z-30 hover:z-10 hover:shadow-md md:grid md:grid-cols-12 md:gap-4 md:border-0 md:px-4 md:py-4 md:shadow-lg md:hover:shadow-xl"
               >
                 <a
-                  class="flex min-w-0 flex-1 items-center gap-3 self-stretch cursor-pointer no-underline focus:outline-none md:col-span-11 md:grid md:grid-cols-11 md:gap-4"
+                  class="flex min-w-0 flex-1 cursor-pointer items-center gap-3 self-stretch no-underline focus:outline-none md:col-span-11 md:grid md:grid-cols-11 md:gap-4"
                   [routerLink]="['/management/users/details', user.id]"
                   [attr.aria-label]="'View details for ' + user.firstName + ' ' + user.lastName"
                 >
                   <!-- Avatar and Name -->
-                  <div class="flex min-w-0 flex-1 items-center gap-3 md:col-span-4 md:flex-none md:gap-4">
+                  <div
+                    class="flex min-w-0 flex-1 items-center gap-3 md:col-span-4 md:flex-none md:gap-4"
+                  >
                     <div class="w-10 shrink-0 md:w-14">
                       <div class="flex h-10 w-10 items-center justify-center md:h-14 md:w-14">
                         @if (user.imageUrl) {
@@ -306,7 +311,7 @@
             }
           }
         </div>
-    }
+      }
     </app-pull-to-refresh>
   }
 </div>

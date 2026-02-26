@@ -1,3 +1,4 @@
+import { CommonModule } from '@angular/common';
 import {
   Component,
   computed,
@@ -8,7 +9,6 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { Capacitor } from '@capacitor/core';
 import { SuccessMessages } from '@core/messages';
 import { AlertService, ImageDownloadService } from '@core/services';
@@ -39,26 +39,55 @@ export class OrderReceiptComponent implements OnInit {
   private readonly receiptEl = viewChild.required<ElementRef<HTMLElement>>('receiptEl');
   private readonly imageDownloadService = inject(ImageDownloadService);
   private readonly alertService = inject(AlertService);
+  private logoLoadPromise: Promise<void> | null = null;
 
   public readonly data = input<ReceiptData | null>(null);
 
   protected readonly isGenerating = signal(false);
-  protected readonly logoDataUri = signal('');
+  protected readonly logoDataUri = signal('assets/images/logo_new.png');
 
   public ngOnInit(): void {
-    this.loadLogo();
+    this.logoLoadPromise = this.loadLogo();
   }
 
-  private loadLogo(): void {
-    fetch('assets/images/logo_new.png')
-      .then((res) => res.blob())
-      .then((blob) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          this.logoDataUri.set(reader.result as string);
-        };
-        reader.readAsDataURL(blob);
-      });
+  private async loadLogo(): Promise<void> {
+    try {
+      const res = await fetch('assets/images/logo_new.png');
+      const blob = await res.blob();
+      const dataUrl = await this.blobToDataUrl(blob);
+      this.logoDataUri.set(dataUrl);
+    } catch {
+      // Keep static asset fallback when conversion fails.
+    }
+  }
+
+  private blobToDataUrl(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error('Failed to read logo as data URL.'));
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  private async waitForLogoRender(): Promise<void> {
+    if (this.logoLoadPromise) {
+      await this.logoLoadPromise;
+    }
+
+    const logo = this.receiptEl().nativeElement.querySelector(
+      '[data-receipt-logo]',
+    ) as HTMLImageElement | null;
+    if (!logo || logo.complete) {
+      return;
+    }
+
+    await new Promise<void>((resolve) => {
+      const done = () => resolve();
+      logo.addEventListener('load', done, { once: true });
+      logo.addEventListener('error', done, { once: true });
+      setTimeout(done, 1200);
+    });
   }
 
   protected readonly hasPaymentInfo = computed(() => {
@@ -88,6 +117,7 @@ export class OrderReceiptComponent implements OnInit {
   public async generate(): Promise<void> {
     this.isGenerating.set(true);
     try {
+      await this.waitForLogoRender();
       const orderLabel = this.data()?.orderLabel ?? this.data()?.orderNumber ?? 'new';
       const fileName = `WTF-Order-${orderLabel}.png`;
       await this.imageDownloadService.downloadElementAsImage(

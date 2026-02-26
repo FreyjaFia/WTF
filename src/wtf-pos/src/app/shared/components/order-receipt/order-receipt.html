@@ -16,7 +16,12 @@
   >
     <!-- Brand header -->
     <div style="text-align: center; margin-bottom: 24px">
-      <img [src]="logoDataUri()" alt="WTF" style="height: 88px; margin: 0 auto; display: block" />
+      <img
+        [src]="logoDataUri()"
+        alt="WTF"
+        data-receipt-logo
+        style="height: 88px; margin: 0 auto; display: block"
+      />
     </div>
 
     <!-- Order info -->
@@ -204,7 +209,7 @@
         Total
       </div>
       <div style="font-size: 22px; font-weight: 800; color: #047857">
-        ₱{{ (data()?.totalAmount ?? 0) | number: '1.2-2' }}
+        ₱{{ data()?.totalAmount ?? 0 | number: '1.2-2' }}
       </div>
     </div>
 

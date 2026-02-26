@@ -36,14 +36,33 @@
             <p class="mt-0.5 text-sm text-gray-500">Customize your order</p>
           </div>
           <div class="shrink-0 text-right">
-            <p class="text-lg font-bold text-[#047857]">
-              ₱{{ product()!.price + addOnTotal() | number: '1.2-2' }}
-            </p>
-            @if (addOnTotal() > 0) {
+            <p class="text-lg font-bold text-[#047857]">₱{{ totalPrice() | number: '1.2-2' }}</p>
+            <div class="mt-1 flex items-center justify-end gap-1.5">
+              <button
+                type="button"
+                class="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full bg-gray-200 text-xs font-bold transition-colors hover:bg-gray-300"
+                (click)="decrementProductQuantity($event)"
+                aria-label="Decrease product quantity"
+              >
+                −
+              </button>
+              <span class="w-6 text-center text-xs font-semibold text-gray-700">
+                {{ productQuantity() }}
+              </span>
+              <button
+                type="button"
+                class="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full bg-[#047857] text-xs font-bold text-white transition-colors hover:bg-[#065f46]"
+                (click)="incrementProductQuantity($event)"
+                aria-label="Increase product quantity"
+              >
+                +
+              </button>
+            </div>
+            @if (addOnTotal() > 0 || productQuantity() > 1) {
               <p class="text-xs text-gray-400">
-                Base ₱{{ product()!.price | number: '1.2-2' }} + ₱{{
+                {{ productQuantity() }} × (Base ₱{{ product()!.price | number: '1.2-2' }} + ₱{{
                   addOnTotal() | number: '1.2-2'
-                }}
+                }})
               </p>
             }
           </div>
@@ -201,7 +220,7 @@
                       [class.text-gray-700]="option.isActive"
                       [class.text-gray-400]="!option.isActive"
                     >
-                      +₱{{ (option.overridePrice ?? option.price) | number: '1.2-2' }}
+                      +₱{{ option.overridePrice ?? option.price | number: '1.2-2' }}
                     </span>
                   </button>
                 }
@@ -252,7 +271,13 @@
       <!-- Footer -->
       <div class="shrink-0 border-t border-gray-100 px-6 py-4">
         <div class="flex items-center gap-3">
-          <button type="button" class="cursor-pointer rounded-lg py-2 font-medium text-gray-600 transition-all hover:bg-gray-100 active:scale-95 flex-1" (click)="close()">Cancel</button>
+          <button
+            type="button"
+            class="flex-1 cursor-pointer rounded-lg py-2 font-medium text-gray-600 transition-all hover:bg-gray-100 active:scale-95"
+            (click)="close()"
+          >
+            Cancel
+          </button>
           <button
             type="button"
             class="flex-1 cursor-pointer rounded-xl bg-[#047857] px-6 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#065f46] hover:shadow-md disabled:cursor-not-allowed disabled:bg-gray-300"

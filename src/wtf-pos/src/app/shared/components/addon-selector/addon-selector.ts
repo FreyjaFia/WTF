@@ -1,9 +1,14 @@
-﻿import { CommonModule } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { Component, computed, inject, output, signal } from '@angular/core';
 import { CatalogCacheService, ModalStackService } from '@core/services';
-import { AvatarComponent } from '@shared/components/avatar/avatar';
-import { Icon } from '@shared/components/icons/icon/icon';
-import { ADD_ON_TYPE_ORDER, AddOnGroupDto, AddOnTypeEnum, CartAddOnDto, ProductDto } from '@shared/models';
+import { AvatarComponent, Icon } from '@shared/components';
+import {
+  ADD_ON_TYPE_ORDER,
+  AddOnGroupDto,
+  AddOnTypeEnum,
+  CartAddOnDto,
+  ProductDto,
+} from '@shared/models';
 
 @Component({
   selector: 'app-addon-selector',
@@ -22,12 +27,14 @@ export class AddonSelectorComponent {
   readonly addToCart = output<{
     product: ProductDto;
     addOns: CartAddOnDto[];
+    quantity: number;
     specialInstructions?: string | null;
   }>();
 
   protected readonly isOpen = signal(false);
   protected readonly isLoading = signal(false);
   protected readonly product = signal<ProductDto | null>(null);
+  protected readonly productQuantity = signal(1);
   protected readonly addOnGroups = signal<AddOnGroupDto[]>([]);
 
   // Selections: key = group type, value = map of optionId → quantity
@@ -44,8 +51,7 @@ export class AddonSelectorComponent {
       const activeOptions = group.options.filter((o) => o.isActive);
 
       if (
-        (group.type === AddOnTypeEnum.Size ||
-          group.type === AddOnTypeEnum.Flavor) &&
+        (group.type === AddOnTypeEnum.Size || group.type === AddOnTypeEnum.Flavor) &&
         activeOptions.length > 0
       ) {
         const totalSelected = selected
@@ -106,8 +112,13 @@ export class AddonSelectorComponent {
     return this.selectedAddOns().reduce((sum, a) => sum + a.price, 0);
   });
 
+  protected readonly unitPrice = computed(() => (this.product()?.price ?? 0) + this.addOnTotal());
+
+  protected readonly totalPrice = computed(() => this.unitPrice() * this.productQuantity());
+
   public open(product: ProductDto): void {
     this.product.set(product);
+    this.productQuantity.set(1);
     this.selections.set({});
     this.specialInstructions.set('');
     this.isOpen.set(true);
@@ -167,7 +178,9 @@ export class AddonSelectorComponent {
   }
 
   protected isRadioGroup(type: AddOnTypeEnum): boolean {
-    return type === AddOnTypeEnum.Size || type === AddOnTypeEnum.Flavor || type === AddOnTypeEnum.Sauce;
+    return (
+      type === AddOnTypeEnum.Size || type === AddOnTypeEnum.Flavor || type === AddOnTypeEnum.Sauce
+    );
   }
 
   protected isSelected(type: AddOnTypeEnum, optionId: string): boolean {
@@ -261,6 +274,16 @@ export class AddonSelectorComponent {
     this.specialInstructions.set(value);
   }
 
+  protected incrementProductQuantity(event: Event): void {
+    event.stopPropagation();
+    this.productQuantity.update((qty) => Math.min(qty + 1, 99));
+  }
+
+  protected decrementProductQuantity(event: Event): void {
+    event.stopPropagation();
+    this.productQuantity.update((qty) => Math.max(qty - 1, 1));
+  }
+
   protected confirm(): void {
     if (this.validationError()) {
       return;
@@ -275,6 +298,7 @@ export class AddonSelectorComponent {
     this.addToCart.emit({
       product: prod,
       addOns: this.selectedAddOns(),
+      quantity: this.productQuantity(),
       specialInstructions: this.specialInstructions().trim() || null,
     });
 
@@ -284,6 +308,7 @@ export class AddonSelectorComponent {
   protected close(): void {
     this.isOpen.set(false);
     this.product.set(null);
+    this.productQuantity.set(1);
     this.addOnGroups.set([]);
     this.selections.set({});
     this.specialInstructions.set('');

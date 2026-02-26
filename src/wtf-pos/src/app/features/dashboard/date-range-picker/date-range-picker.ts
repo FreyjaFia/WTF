@@ -1,4 +1,12 @@
-import { Component, computed, ElementRef, HostListener, inject, output, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  ElementRef,
+  HostListener,
+  inject,
+  output,
+  signal,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Icon } from '@shared/components';
 import { type DateRangePreset, type DateRangeSelection } from '@shared/models';
@@ -54,7 +62,7 @@ export class DateRangePickerComponent {
       const end = this.customEnd();
 
       if (start && end) {
-        return `${this.formatShortDate(start)} – ${this.formatShortDate(end)}`;
+        return `${this.formatShortDate(start)} - ${this.formatShortDate(end)}`;
       }
 
       return 'Custom Range';
@@ -65,7 +73,11 @@ export class DateRangePickerComponent {
 
   protected readonly isLive = computed<boolean>(() => this.selectedPreset() === 'today');
 
-  protected readonly maxDate = new Date().toISOString().split('T')[0];
+  protected readonly maxDate = (() => {
+    const now = new Date();
+    const offsetMs = now.getTimezoneOffset() * 60_000;
+    return new Date(now.getTime() - offsetMs).toISOString().split('T')[0];
+  })();
 
   protected selectPreset(preset: DateRangePreset): void {
     this.selectedPreset.set(preset);

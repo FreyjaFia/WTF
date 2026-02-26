@@ -8,9 +8,7 @@
 
     @if (!isEditMode() || !isLoading()) {
       <!-- Header: Title on Left, Tools on Right -->
-      <div
-        class="mb-4 flex shrink-0 flex-col gap-2 sm:mb-6 sm:gap-3"
-      >
+      <div class="mb-4 flex shrink-0 flex-col gap-2 sm:mb-6 sm:gap-3">
         <!-- Row 1: Title + Search -->
         <div class="flex items-center gap-2 sm:gap-3">
           <h2 class="shrink-0 text-xl font-bold text-gray-900 sm:text-2xl">Products</h2>
@@ -32,31 +30,33 @@
               [formControl]="filterForm.controls.searchTerm"
             />
           </label>
-          <button
-            class="tooltip tooltip-bottom pointer-events-auto z-30 hidden shrink-0 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95 md:flex"
-            [class.pointer-events-none]="isReadOnly() || !canManageOrderActions()"
-            [class.opacity-50]="isReadOnly() || !canManageOrderActions()"
-            [class.opacity-70]="isRefreshing()"
-            type="button"
-            (click)="refreshProducts()"
-            [disabled]="isRefreshing()"
-            aria-label="Refresh products"
-            data-tip="Refresh"
-          >
-            @if (isRefreshing()) {
-              <app-icon
-                name="icon-refresh"
-                [class]="'h-5 w-5 animate-spin text-gray-600'"
-                [fill]="'currentColor'"
-              />
-            } @else {
-              <app-icon
-                name="icon-refresh"
-                [class]="'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'"
-                [fill]="'currentColor'"
-              />
-            }
-          </button>
+          @if (!isAndroidPlatform) {
+            <button
+              class="tooltip tooltip-bottom pointer-events-auto z-30 hidden shrink-0 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95 md:flex"
+              [class.pointer-events-none]="isReadOnly() || !canManageOrderActions()"
+              [class.opacity-50]="isReadOnly() || !canManageOrderActions()"
+              [class.opacity-70]="isRefreshing()"
+              type="button"
+              (click)="refreshProducts()"
+              [disabled]="isRefreshing()"
+              aria-label="Refresh products"
+              data-tip="Refresh"
+            >
+              @if (isRefreshing()) {
+                <app-icon
+                  name="icon-refresh"
+                  [class]="'h-5 w-5 animate-spin text-gray-600'"
+                  [fill]="'currentColor'"
+                />
+              } @else {
+                <app-icon
+                  name="icon-refresh"
+                  [class]="'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'"
+                  [fill]="'currentColor'"
+                />
+              }
+            </button>
+          }
         </div>
 
         <!-- Row 2: Sub Category Tabs + Refresh (mobile) -->
@@ -79,29 +79,31 @@
               </button>
             }
           </div>
-          <button
-            class="tooltip tooltip-bottom pointer-events-auto z-30 shrink-0 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95 md:hidden"
-            [class.opacity-70]="isRefreshing()"
-            type="button"
-            (click)="refreshProducts()"
-            [disabled]="isRefreshing()"
-            aria-label="Refresh products"
-            data-tip="Refresh"
-          >
-            @if (isRefreshing()) {
-              <app-icon
-                name="icon-refresh"
-                [class]="'h-5 w-5 animate-spin text-gray-600'"
-                [fill]="'currentColor'"
-              />
-            } @else {
-              <app-icon
-                name="icon-refresh"
-                [class]="'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'"
-                [fill]="'currentColor'"
-              />
-            }
-          </button>
+          @if (!isAndroidPlatform) {
+            <button
+              class="tooltip tooltip-bottom pointer-events-auto z-30 shrink-0 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95 md:hidden"
+              [class.opacity-70]="isRefreshing()"
+              type="button"
+              (click)="refreshProducts()"
+              [disabled]="isRefreshing()"
+              aria-label="Refresh products"
+              data-tip="Refresh"
+            >
+              @if (isRefreshing()) {
+                <app-icon
+                  name="icon-refresh"
+                  [class]="'h-5 w-5 animate-spin text-gray-600'"
+                  [fill]="'currentColor'"
+                />
+              } @else {
+                <app-icon
+                  name="icon-refresh"
+                  [class]="'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'"
+                  [fill]="'currentColor'"
+                />
+              }
+            </button>
+          }
         </div>
       </div>
 
@@ -117,14 +119,14 @@
           [refreshing]="isRefreshing()"
           (refreshTriggered)="refreshProducts()"
         >
-        @if (products().length === 0) {
-          <div class="flex flex-1 flex-col items-center justify-center text-center opacity-60">
-            <app-icon name="icon-search" [class]="'mb-3 h-12 w-12'" />
-            <div class="text-sm font-medium">No products found</div>
-            <div class="text-xs">Try adjusting your filters or add a new product</div>
-          </div>
-        }
-        @if (products().length > 0) {
+          @if (products().length === 0) {
+            <div class="flex flex-1 flex-col items-center justify-center text-center opacity-60">
+              <app-icon name="icon-search" [class]="'mb-3 h-12 w-12'" />
+              <div class="text-sm font-medium">No products found</div>
+              <div class="text-xs">Try adjusting your filters or add a new product</div>
+            </div>
+          }
+          @if (products().length > 0) {
             <div
               class="grid grid-cols-1 gap-4 pb-4 sm:grid-cols-2 lg:grid-cols-3"
               [class.pb-18]="cart().length > 0"
@@ -152,7 +154,9 @@
                     }
                   </figure>
                   <div class="card-body flex flex-1 flex-col justify-between p-4">
-                    <h2 class="card-title line-clamp-2 text-base font-semibold text-gray-800">{{ p.name }}</h2>
+                    <h2 class="card-title line-clamp-2 text-base font-semibold text-gray-800">
+                      {{ p.name }}
+                    </h2>
                     <div class="card-actions mt-auto items-center justify-between">
                       <div class="text-lg font-bold text-black">
                         <span class="text-base opacity-70">₱</span>{{ p.price | number: '1.2-2' }}
@@ -162,7 +166,7 @@
                 </div>
               }
             </div>
-        }
+          }
         </app-pull-to-refresh>
       }
     }
@@ -174,7 +178,9 @@
         (click)="showMobileCart.set(true)"
       >
         <div class="flex items-center gap-3">
-          <div class="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-sm font-bold">
+          <div
+            class="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-sm font-bold"
+          >
             {{ itemCount() }}
           </div>
           <span class="text-sm font-semibold">View Cart</span>
@@ -187,7 +193,7 @@
   </div>
 
   <aside
-    class="fixed inset-0 z-50 flex translate-y-full flex-col bg-white shadow-2xl transition-transform duration-300 ease-out max-md:[&.cart-open]:translate-y-0 md:relative md:inset-auto md:z-auto md:min-h-0 md:w-80 md:shrink-0 md:translate-y-0! md:overflow-hidden md:transition-none! md:rounded-lg md:border-l-2 md:border-gray-200 md:shadow-[-8px_0_24px_rgba(0,0,0,0.1)]"
+    class="fixed inset-0 z-50 flex translate-y-full flex-col bg-white shadow-2xl transition-transform duration-300 ease-out md:relative md:inset-auto md:z-auto md:min-h-0 md:w-80 md:shrink-0 md:translate-y-0! md:overflow-hidden md:rounded-lg md:border-l-2 md:border-gray-200 md:shadow-[-8px_0_24px_rgba(0,0,0,0.1)] md:transition-none! max-md:[&.cart-open]:translate-y-0"
     [class.cart-open]="showMobileCart()"
     [style.translate]="isCartDragging() ? '0 ' + cartDragY() + 'px' : null"
     [style.transition-duration]="isCartDragging() ? '0s' : null"
@@ -207,42 +213,40 @@
       <div class="flex items-center justify-between">
         <div>
           <div>
-          @if (isOfflineEditMode()) {
-            <h3 class="text-lg font-semibold">
-              {{ isOfflineCompleted() ? 'Order Details' : 'Edit Offline Order' }}
-            </h3>
-            <div class="mt-1 mb-1 flex items-center gap-2">
-              <div class="text-sm opacity-70">{{ offlineLocalId }}</div>
-              <app-badge variant="warning">Offline</app-badge>
-              @if (isOfflineCompleted()) {
-                <app-badge variant="success">Completed</app-badge>
-              }
-            </div>
-          } @else if (isEditMode()) {
-            <h3 class="text-lg font-semibold">
-              {{ isReadOnly() ? 'Order Details' : 'Edit Order' }}
-            </h3>
-            @if (currentOrder()) {
+            @if (isOfflineEditMode()) {
+              <h3 class="text-lg font-semibold">
+                {{ isOfflineCompleted() ? 'Order Details' : 'Edit Offline Order' }}
+              </h3>
               <div class="mt-1 mb-1 flex items-center gap-2">
-                <div class="text-sm opacity-70">#{{ currentOrder()!.orderNumber }}</div>
-                <app-badge [variant]="getStatusVariant(currentOrder()!.status)">
-                  {{ getStatusLabel(currentOrder()!.status) }}
-                </app-badge>
+                <div class="text-sm opacity-70">{{ offlineLocalId }}</div>
+                <app-badge variant="warning">Offline</app-badge>
+                @if (isOfflineCompleted()) {
+                  <app-badge variant="success">Completed</app-badge>
+                }
               </div>
-              <div class="text-xs text-gray-400">
-                {{
-                  currentOrder()!.updatedAt || currentOrder()!.createdAt | date: 'd MMM y, h:mm a'
-                }}
-              </div>
+            } @else if (isEditMode()) {
+              <h3 class="text-lg font-semibold">
+                {{ isReadOnly() ? 'Order Details' : 'Edit Order' }}
+              </h3>
+              @if (currentOrder()) {
+                <div class="mt-1 mb-1 flex items-center gap-2">
+                  <div class="text-sm opacity-70">#{{ currentOrder()!.orderNumber }}</div>
+                  <app-badge [variant]="getStatusVariant(currentOrder()!.status)">
+                    {{ getStatusLabel(currentOrder()!.status) }}
+                  </app-badge>
+                </div>
+                <div class="text-xs text-gray-400">
+                  {{ getOrderDateValue(currentOrder()!) | date: 'd MMM y, h:mm a' }}
+                </div>
+              }
+            } @else {
+              <h3 class="text-lg font-semibold">New Order</h3>
             }
-          } @else {
-            <h3 class="text-lg font-semibold">New Order</h3>
-          }
           </div>
         </div>
         <div class="flex items-center">
           <button
-            class="cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium text-error transition-all hover:bg-red-50 active:scale-95"
+            class="text-error cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium transition-all hover:bg-red-50 active:scale-95"
             (click)="clearAll()"
             [class.hidden]="isReadOnly() || !canManageOrderActions()"
           >
@@ -292,14 +296,14 @@
             class="flex cursor-pointer items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium text-gray-400 transition-all hover:bg-gray-100 hover:text-gray-600 active:scale-95"
             [disabled]="isDownloadingReceipt()"
             (click)="downloadOrderImage()"
-            aria-label="Save order as image"
+            aria-label="Download order summary"
           >
             @if (isDownloadingReceipt()) {
               <span class="loading loading-spinner loading-xs"></span>
             } @else {
               <app-icon name="icon-download" [class]="'h-3.5 w-3.5'" [fill]="'currentColor'" />
             }
-            Save as image
+            Download order summary
           </button>
         }
       </div>
@@ -346,7 +350,12 @@
                         <span class="text-base leading-none font-bold">−</span>
                       </button>
                     }
-                    <div class="text-center text-sm font-medium" [class.w-6]="!isReadOnly()">{{ c.qty }}@if (isReadOnly()) {<span class="text-xs">x</span>}</div>
+                    <div class="text-center text-sm font-medium" [class.w-6]="!isReadOnly()">
+                      {{ c.qty }}
+                      @if (isReadOnly()) {
+                        <span class="text-xs">x</span>
+                      }
+                    </div>
                     @if (!isReadOnly() && canManageOrderActions()) {
                       <button
                         class="btn btn-circle btn-sm bg-gray-200 transition-colors hover:bg-gray-300"
@@ -529,7 +538,9 @@
               @if (isSavingOrder()) {
                 <span class="loading loading-spinner loading-xs mr-2"></span>
               }
-              {{ isSavingOrder() ? (isEditMode() ? 'Updating Order...' : 'Saving Order...') : 'Save' }}
+              {{
+                isSavingOrder() ? (isEditMode() ? 'Updating Order...' : 'Saving Order...') : 'Save'
+              }}
             </button>
           </div>
           @if (isOfflineEditMode()) {
@@ -796,7 +807,7 @@
           </h3>
           <p class="mt-1 text-sm text-gray-500">
             {{ selectedCustomerName() }} ·
-            {{ currentOrder()!.updatedAt || currentOrder()!.createdAt | date: 'd MMM y, h:mm a' }}
+            {{ getOrderDateValue(currentOrder()!) | date: 'd MMM y, h:mm a' }}
           </p>
         </div>
         <button
@@ -869,7 +880,9 @@
               }}</span>
             </div>
             <div class="flex items-center justify-between">
-              <span class="text-gray-600">{{ isRefunded() ? 'Original Amount' : 'Amount Paid' }}</span>
+              <span class="text-gray-600">{{
+                isRefunded() ? 'Original Amount' : 'Amount Paid'
+              }}</span>
               <span class="font-medium text-gray-900"
                 >₱{{ paymentAmountPaid() | number: '1.2-2' }}</span
               >
@@ -894,15 +907,22 @@
               <span class="font-semibold text-gray-700">{{
                 isRefunded() ? 'Total Refunded' : 'Total Paid'
               }}</span>
-              <span class="font-semibold" [class.text-emerald-700]="!isRefunded()" [class.text-red-600]="isRefunded()"
-                >₱{{ (isRefunded() ? paymentOrderTotal() : paymentTotalPaid()) | number: '1.2-2' }}</span
+              <span
+                class="font-semibold"
+                [class.text-emerald-700]="!isRefunded()"
+                [class.text-red-600]="isRefunded()"
+                >₱{{
+                  (isRefunded() ? paymentOrderTotal() : paymentTotalPaid()) | number: '1.2-2'
+                }}</span
               >
             </div>
           </div>
         </div>
 
         <div class="md:col-span-2">
-          <div class="mb-2 flex items-center gap-2 text-xs font-semibold tracking-wide text-gray-500 uppercase">
+          <div
+            class="mb-2 flex items-center gap-2 text-xs font-semibold tracking-wide text-gray-500 uppercase"
+          >
             <span>Item Breakdown</span>
             @if (isRefunded()) {
               <span class="rounded bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-600">
@@ -924,9 +944,7 @@
                 <div class="flex items-center justify-between gap-3">
                   <div class="min-w-0">
                     <div class="text-sm font-medium text-gray-900">{{ c.qty }}x {{ c.name }}</div>
-                    <div class="text-xs text-gray-500">
-                      ₱{{ c.price | number: '1.2-2' }} each
-                    </div>
+                    <div class="text-xs text-gray-500">₱{{ c.price | number: '1.2-2' }} each</div>
                   </div>
                   <div class="shrink-0 text-right">
                     <div class="text-sm font-semibold text-gray-900">

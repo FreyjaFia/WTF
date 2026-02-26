@@ -2,7 +2,14 @@
 import { Component, computed, effect, inject, OnInit, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { AlertService, ConnectivityService, ListStateService, OfflineOrderService, OrderService } from '@core/services';
+import { Capacitor } from '@capacitor/core';
+import {
+  AlertService,
+  ConnectivityService,
+  ListStateService,
+  OfflineOrderService,
+  OrderService,
+} from '@core/services';
 import {
   BadgeComponent,
   FilterDropdown,
@@ -10,8 +17,8 @@ import {
   PullToRefreshComponent,
   type FilterOption,
 } from '@shared/components';
-import { OrderDto, OrderStatusEnum } from '@shared/models';
 import type { CartItemDto } from '@shared/models';
+import { OrderDto, OrderStatusEnum } from '@shared/models';
 import { debounceTime } from 'rxjs';
 
 type SortColumn = 'orderNumber' | 'date' | 'totalAmount';
@@ -62,6 +69,7 @@ export class OrderList implements OnInit {
   protected readonly OrderStatusEnum = OrderStatusEnum;
   protected readonly pendingOrders = this.offlineOrderService.pendingOrders;
   protected readonly isSyncingOffline = this.offlineOrderService.isSyncing;
+  protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
   protected readonly sortColumn = signal<SortColumn | null>(null);
   protected readonly sortDirection = signal<SortDirection>('desc');
   protected readonly selectedStatuses = signal<OrderStatusEnum[]>([]);
@@ -260,7 +268,7 @@ export class OrderList implements OnInit {
   }
 
   protected getOrderDate(order: OrderDto): string {
-    return order.updatedAt || order.createdAt;
+    return order.createdAt || order.updatedAt || '';
   }
 
   protected getItemsText(order: OrderDto): string {
@@ -269,7 +277,7 @@ export class OrderList implements OnInit {
   }
 
   private getDateGroupLabel(order: OrderDto): string {
-    const orderDate = new Date(order.updatedAt || order.createdAt);
+    const orderDate = new Date(this.getOrderDate(order));
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
@@ -379,8 +387,8 @@ export class OrderList implements OnInit {
       );
     } else if (sortColumn === 'date') {
       items.sort((a, b) => {
-        const dateA = new Date(a.updatedAt || a.createdAt).getTime();
-        const dateB = new Date(b.updatedAt || b.createdAt).getTime();
+        const dateA = new Date(this.getOrderDate(a) || 0).getTime();
+        const dateB = new Date(this.getOrderDate(b) || 0).getTime();
         return sortDirection === 'asc' ? dateA - dateB : dateB - dateA;
       });
     } else if (sortColumn === 'totalAmount') {
@@ -390,8 +398,8 @@ export class OrderList implements OnInit {
     } else {
       // Default sort by date descending
       items.sort((a, b) => {
-        const dateA = new Date(a.updatedAt || a.createdAt).getTime();
-        const dateB = new Date(b.updatedAt || b.createdAt).getTime();
+        const dateA = new Date(this.getOrderDate(a) || 0).getTime();
+        const dateB = new Date(this.getOrderDate(b) || 0).getTime();
         return dateB - dateA;
       });
     }

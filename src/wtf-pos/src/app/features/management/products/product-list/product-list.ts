@@ -2,12 +2,24 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { AlertService, AuthService, ListStateService, ModalStackService, ProductService } from '@core/services';
+import { Capacitor } from '@capacitor/core';
+import {
+  AlertService,
+  AuthService,
+  ListStateService,
+  ModalStackService,
+  ProductService,
+} from '@core/services';
 import type { FilterOption } from '@shared/components';
-import { AvatarComponent, BadgeComponent, FilterDropdown, Icon, PullToRefreshComponent } from '@shared/components';
+import {
+  AvatarComponent,
+  BadgeComponent,
+  FilterDropdown,
+  Icon,
+  PullToRefreshComponent,
+} from '@shared/components';
 import { ProductCategoryEnum, ProductDto } from '@shared/models';
 import { debounceTime } from 'rxjs';
-
 
 type SortColumn = 'name' | 'price';
 type SortDirection = 'asc' | 'desc';
@@ -47,6 +59,7 @@ export class ProductListComponent implements OnInit {
   protected readonly productsCache = signal<ProductDto[]>([]);
   protected readonly isLoading = signal(false);
   protected readonly isRefreshing = signal(false);
+  protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
   protected readonly ProductCategoryEnum = ProductCategoryEnum;
 
   protected readonly selectedTypes = signal<number[]>([]);
@@ -352,4 +365,3 @@ export class ProductListComponent implements OnInit {
     });
   }
 }
-

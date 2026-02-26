@@ -18,6 +18,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Capacitor } from '@capacitor/core';
 import {
   AlertService,
   AuthService,
@@ -138,6 +139,7 @@ export class OrderEditor implements OnInit, OnDestroy {
   private cartDragStartY = 0;
   protected readonly isRefreshing = signal(false);
   protected readonly isDownloadingReceipt = signal(false);
+  protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
 
   protected readonly createCustomerForm = new FormGroup({
     firstName: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
@@ -192,7 +194,8 @@ export class OrderEditor implements OnInit, OnDestroy {
   );
 
   protected readonly isReadOnly = computed(
-    () => this.isCompleted() || this.isCancelled() || this.isRefunded() || this.isOfflineCompleted(),
+    () =>
+      this.isCompleted() || this.isCancelled() || this.isRefunded() || this.isOfflineCompleted(),
   );
   protected readonly showPaymentSummary = computed(() => {
     const order = this.currentOrder();
@@ -313,7 +316,7 @@ export class OrderEditor implements OnInit, OnDestroy {
       orderLabel: this.isOfflineEditMode() ? this.offlineLocalId : null,
       customerName: this.selectedCustomerName(),
       date: order
-        ? new Date(order.updatedAt || order.createdAt).toLocaleString('en-PH', dateOptions)
+        ? new Date(this.getOrderDateValue(order) || Date.now()).toLocaleString('en-PH', dateOptions)
         : new Date().toLocaleString('en-PH', dateOptions),
       status: offlineStatus ?? order?.status ?? OrderStatusEnum.Pending,
       items: this.cart(),
@@ -628,13 +631,15 @@ export class OrderEditor implements OnInit, OnDestroy {
   protected onAddonSelected(event: {
     product: ProductDto;
     addOns: CartAddOnDto[];
+    quantity: number;
     specialInstructions?: string | null;
   }): void {
     if (!this.canManageOrderActions()) {
       return;
     }
 
-    const { product, addOns, specialInstructions } = event;
+    const { product, addOns, quantity, specialInstructions } = event;
+    const lineQty = Math.max(1, quantity || 1);
 
     // Only stack items without add-ons (plain products) and no special instructions
     if (addOns.length === 0 && !specialInstructions) {
@@ -646,7 +651,7 @@ export class OrderEditor implements OnInit, OnDestroy {
         this.cart.set(
           this.cart().map((c) =>
             c.productId === product.id && !c.addOns?.length && !c.specialInstructions
-              ? { ...c, qty: c.qty + 1 }
+              ? { ...c, qty: c.qty + lineQty }
               : c,
           ),
         );
@@ -661,7 +666,7 @@ export class OrderEditor implements OnInit, OnDestroy {
         productId: product.id,
         name: product.name,
         price: product.price,
-        qty: 1,
+        qty: lineQty,
         imageUrl: product.imageUrl,
         addOns: addOns.length > 0 ? addOns : undefined,
         specialInstructions: specialInstructions || null,
@@ -767,6 +772,10 @@ export class OrderEditor implements OnInit, OnDestroy {
       default:
         return 'Unknown';
     }
+  }
+
+  protected getOrderDateValue(order: OrderDto): string {
+    return order.createdAt || order.updatedAt || '';
   }
 
   protected openOrderSummaryModal() {
@@ -964,7 +973,9 @@ export class OrderEditor implements OnInit, OnDestroy {
     this.removeStackId('discardOrder');
   }
 
-  private removeStackId(modal: 'abandon' | 'cancelOrder' | 'discardOrder' | 'summary' | 'createCustomer'): void {
+  private removeStackId(
+    modal: 'abandon' | 'cancelOrder' | 'discardOrder' | 'summary' | 'createCustomer',
+  ): void {
     const key = `${modal}ModalStackId` as const;
     const id = this[key];
 
@@ -1089,7 +1100,9 @@ export class OrderEditor implements OnInit, OnDestroy {
         this.isSavingOrder.set(false);
         this.skipGuard = true;
         this.cartPersistence.clear();
-        this.alertService.info(`Order ${localId} saved offline. It will sync when you're back online.`);
+        this.alertService.info(
+          `Order ${localId} saved offline. It will sync when you're back online.`,
+        );
         this.router.navigate(['/orders/list']);
       })
       .catch(() => {

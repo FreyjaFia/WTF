@@ -2,6 +2,7 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { Capacitor } from '@capacitor/core';
 import { AlertService, AuthService, ListStateService, ModalStackService, UserService } from '@core/services';
 import {
     AvatarComponent,
@@ -53,6 +54,7 @@ export class UserListComponent implements OnInit {
   protected readonly usersCache = signal<UserDto[]>([]);
   protected readonly isLoading = signal(false);
   protected readonly isRefreshing = signal(false);
+  protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
 
   protected readonly selectedRoles = signal<number[]>([]);
   protected readonly selectedStatuses = signal<string[]>(['active']);
