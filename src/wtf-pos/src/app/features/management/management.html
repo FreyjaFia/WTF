@@ -1,4 +1,4 @@
-<div class="flex h-full w-full flex-col rounded-t-2xl bg-white lg:flex-row">
+﻿<div class="flex h-full w-full flex-col rounded-t-2xl bg-white lg:flex-row">
   <!-- Mobile Navigation -->
   <div class="flex shrink-0 flex-col border-b border-gray-200 bg-white pb-4 lg:hidden">
     <h2 class="mb-3 text-xl font-bold text-gray-900">Management</h2>
@@ -31,6 +31,24 @@
       >
         <app-icon name="icon-user" [class]="'h-4 w-4 shrink-0'"></app-icon>
         Users
+      </a>
+      <a
+        routerLink="audit-logs"
+        routerLinkActive="bg-green-50 text-[#047857]"
+        [routerLinkActiveOptions]="{ exact: false }"
+        class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap text-gray-600 transition-colors hover:bg-gray-50"
+      >
+        <app-icon name="icon-audit-logs" [class]="'h-4 w-4 shrink-0'"></app-icon>
+        Audit Logs
+      </a>
+      <a
+        routerLink="schema-scripts"
+        routerLinkActive="bg-green-50 text-[#047857]"
+        [routerLinkActiveOptions]="{ exact: false }"
+        class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap text-gray-600 transition-colors hover:bg-gray-50"
+      >
+        <app-icon name="icon-schema-scripts" [class]="'h-4 w-4 shrink-0'"></app-icon>
+        Schema Scripts
       </a>
     </nav>
   </div>
@@ -128,6 +146,46 @@
           <span class="font-medium">Users</span>
         }
       </a>
+
+      <a
+        routerLink="audit-logs"
+        routerLinkActive="bg-green-50"
+        [routerLinkActiveOptions]="{ exact: false }"
+        class="tooltip mr-4 flex items-center rounded-lg px-4 py-3 whitespace-nowrap text-gray-700 transition-all duration-300 ease-in-out hover:bg-gray-50"
+        [class.justify-center]="isSidebarCollapsed()"
+        [class.gap-3]="!isSidebarCollapsed()"
+        [class.tooltip-right]="isSidebarCollapsed()"
+        [class.tooltip-bottom]="!isSidebarCollapsed()"
+        [class.z-50]="isSidebarCollapsed()"
+        [attr.data-tip]="'Audit Logs'"
+        [class.text-[#047857]]="isActive('audit-logs')"
+        [class.bg-green-50]="isActive('audit-logs')"
+      >
+        <app-icon name="icon-audit-logs" [class]="'h-5 w-5 shrink-0'"></app-icon>
+        @if (!isSidebarCollapsed()) {
+          <span class="font-medium">Audit Logs</span>
+        }
+      </a>
+
+      <a
+        routerLink="schema-scripts"
+        routerLinkActive="bg-green-50"
+        [routerLinkActiveOptions]="{ exact: false }"
+        class="tooltip mr-4 flex items-center rounded-lg px-4 py-3 whitespace-nowrap text-gray-700 transition-all duration-300 ease-in-out hover:bg-gray-50"
+        [class.justify-center]="isSidebarCollapsed()"
+        [class.gap-3]="!isSidebarCollapsed()"
+        [class.tooltip-right]="isSidebarCollapsed()"
+        [class.tooltip-bottom]="!isSidebarCollapsed()"
+        [class.z-50]="isSidebarCollapsed()"
+        [attr.data-tip]="'Schema Scripts'"
+        [class.text-[#047857]]="isActive('schema-scripts')"
+        [class.bg-green-50]="isActive('schema-scripts')"
+      >
+        <app-icon name="icon-schema-scripts" [class]="'h-5 w-5 shrink-0'"></app-icon>
+        @if (!isSidebarCollapsed()) {
+          <span class="font-medium">Schema Scripts</span>
+        }
+      </a>
     </nav>
   </div>
 
@@ -136,3 +194,4 @@
     <router-outlet />
   </div>
 </div>
+

@@ -3,8 +3,9 @@ import { authGuard } from '@core/guards/auth.guard';
 import { loginGuard } from '@core/guards/login.guard';
 import { roleGuard } from '@core/guards/role.guard';
 import { unsavedChangesGuard } from '@core/guards/unsaved-changes.guard';
+import { Dashboard } from '@features/dashboard/dashboard';
 import { Login } from '@features/login/login';
-import { NotFoundComponent } from '@features/not-found/not-found';
+import { AuditLogsComponent } from '@features/management/audit-logs/audit-logs';
 import { CustomerDetailsComponent } from '@features/management/customers/customer-details/customer-details';
 import { CustomerEditorComponent } from '@features/management/customers/customer-editor/customer-editor';
 import { CustomerListComponent } from '@features/management/customers/customer-list/customer-list';
@@ -14,13 +15,14 @@ import { ProductDetailsComponent } from '@features/management/products/product-d
 import { ProductEditorComponent } from '@features/management/products/product-editor/product-editor';
 import { ProductListComponent } from '@features/management/products/product-list/product-list';
 import { ProductsComponent } from '@features/management/products/products';
+import { SchemaScriptsComponent } from '@features/management/schema-scripts/schema-scripts';
 import { UserDetailsComponent } from '@features/management/users/user-details/user-details';
 import { UserEditorComponent } from '@features/management/users/user-editor/user-editor';
 import { UserListComponent } from '@features/management/users/user-list/user-list';
 import { UsersComponent } from '@features/management/users/users';
+import { NotFoundComponent } from '@features/not-found/not-found';
 import { OrderEditor } from '@features/orders/order-editor/order-editor';
 import { OrderList } from '@features/orders/order-list/order-list';
-import { Dashboard } from '@features/dashboard/dashboard';
 import { Orders } from '@features/orders/orders';
 import { LayoutComponent } from '@shared/components';
 
@@ -159,6 +161,18 @@ export const routes: Routes = [
               },
             ],
           },
+          {
+            path: 'schema-scripts',
+            component: SchemaScriptsComponent,
+            canActivate: [roleGuard],
+            data: { roles: ['Admin', 'AdminViewer'] },
+          },
+          {
+            path: 'audit-logs',
+            component: AuditLogsComponent,
+            canActivate: [roleGuard],
+            data: { roles: ['Admin', 'AdminViewer'] },
+          },
         ],
       },
     ],
@@ -168,4 +182,3 @@ export const routes: Routes = [
     component: NotFoundComponent,
   },
 ];
-

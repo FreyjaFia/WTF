@@ -1,0 +1,77 @@
+﻿<div class="flex h-full flex-col md:ps-6">
+  <div class="mb-4 flex shrink-0 items-center justify-between sm:mb-6">
+    <div>
+      <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Schema Scripts</h1>
+      <p class="text-xs text-gray-500 sm:text-sm">Executed SQL scripts from deployment history</p>
+    </div>
+    @if (!isAndroidPlatform) {
+      <button
+        class="tooltip tooltip-bottom pointer-events-auto z-30 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
+        [class.opacity-70]="isRefreshing()"
+        type="button"
+        (click)="refresh()"
+        [disabled]="isRefreshing()"
+        aria-label="Refresh schema scripts"
+        data-tip="Refresh"
+      >
+        @if (isRefreshing()) {
+          <app-icon
+            name="icon-refresh"
+            [class]="'h-5 w-5 animate-spin text-gray-600'"
+            [fill]="'currentColor'"
+          />
+        } @else {
+          <app-icon
+            name="icon-refresh"
+            [class]="'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'"
+            [fill]="'currentColor'"
+          />
+        }
+      </button>
+    }
+  </div>
+
+  @if (isLoading()) {
+    <div class="flex justify-center py-8">
+      <span class="loading loading-spinner loading-lg"></span>
+    </div>
+  }
+
+  @if (!isLoading()) {
+    <app-pull-to-refresh [refreshing]="isRefreshing()" (refreshTriggered)="refresh()">
+      @if (scripts().length === 0) {
+        <div class="rounded-lg bg-white p-8 text-center shadow-lg">
+          <div class="mb-3 flex justify-center">
+            <app-icon name="icon-file" [class]="'h-12 w-12 opacity-60'" />
+          </div>
+          <p class="text-lg font-semibold text-gray-700">No scripts found</p>
+          <p class="text-sm text-gray-500">No executed scripts have been recorded yet.</p>
+        </div>
+      } @else {
+        <div class="overflow-auto rounded-xl bg-white shadow-lg">
+          <table class="table-zebra table w-full">
+            <thead>
+              <tr class="text-xs tracking-wider text-gray-600 uppercase">
+                <th>ID</th>
+                <th>Script Name</th>
+                <th>Applied At (UTC)</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (script of scripts(); track script.id) {
+                <tr>
+                  <td class="font-mono text-xs">{{ script.id }}</td>
+                  <td class="font-mono text-xs sm:text-sm">{{ script.scriptName }}</td>
+                  <td class="text-xs sm:text-sm">
+                    {{ script.appliedAt | date: 'y-MM-dd HH:mm:ss' }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </app-pull-to-refresh>
+  }
+</div>
+
