@@ -1,4 +1,4 @@
-﻿@if (auth.isLoggedIn$ | async) {
+@if (auth.isLoggedIn$ | async) {
   <div class="dock dock-md relative z-0 shrink-0 justify-between border-t border-gray-100 pb-[env(safe-area-inset-bottom)] sm:justify-center">
     @if (auth.canAccessManagement()) {
       <a [routerLink]="['dashboard']" [routerLinkActive]="'dock-active'">
@@ -25,4 +25,3 @@
     }
   </div>
 }
-

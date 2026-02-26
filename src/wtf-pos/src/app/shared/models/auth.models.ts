@@ -1,4 +1,4 @@
-﻿export interface LoginDto {
+export interface LoginDto {
   accessToken: string;
   expiresAt: Date;
   refreshToken: string;
@@ -9,4 +9,3 @@ export interface MeDto {
   lastName: string;
   imageUrl?: string | null;
 }
-

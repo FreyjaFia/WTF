@@ -15,4 +15,3 @@ export const roleGuard: CanActivateFn = (route) => {
   router.navigateByUrl('/orders/list');
   return false;
 };
-

@@ -1,4 +1,4 @@
-﻿using System.IdentityModel.Tokens.Jwt;
+using System.IdentityModel.Tokens.Jwt;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Features.Auth.DTOs;

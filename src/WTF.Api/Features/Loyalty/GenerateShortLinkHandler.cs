@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using WTF.Api.Features.Loyalty.DTOs;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;

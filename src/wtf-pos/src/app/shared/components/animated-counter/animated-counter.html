@@ -1,4 +1,4 @@
-﻿<span
+<span
   #counterEl
   class="inline-block transition-colors duration-700"
   [class.scale-105]="isHighlighting()"
@@ -8,4 +8,3 @@
     <span class="text-base font-semibold" [style.color]="prefixColor()">{{ prefix() }}</span>
   }{{ displayValue() | number: '1.' + decimals() + '-' + decimals() }}
 </span>
-

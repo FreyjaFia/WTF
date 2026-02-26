@@ -1,4 +1,4 @@
-﻿import { Component, computed, input } from '@angular/core';
+import { Component, computed, input } from '@angular/core';
 
 export interface DonutSegment {
   label: string;
@@ -59,4 +59,3 @@ export class DonutChartComponent {
     return total >= 1000 ? `\u20B1${(total / 1000).toFixed(1)}k` : `\u20B1${total.toFixed(0)}`;
   });
 }
-

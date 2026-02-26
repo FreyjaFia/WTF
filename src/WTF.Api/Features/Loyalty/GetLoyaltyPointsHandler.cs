@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Features.Loyalty.DTOs;
 using WTF.Domain.Data;
