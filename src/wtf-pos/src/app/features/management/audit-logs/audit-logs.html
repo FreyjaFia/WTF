@@ -79,9 +79,7 @@
               class="rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm transition-shadow duration-200 hover:shadow-md md:grid md:grid-cols-12 md:items-center md:gap-4 md:border-0 md:py-4 md:shadow-lg md:hover:shadow-xl"
             >
               <div class="md:col-span-3">
-                <div
-                  class="mb-0.5 text-[10px] tracking-wide text-gray-500 uppercase md:hidden"
-                >
+                <div class="mb-0.5 text-[10px] tracking-wide text-gray-500 uppercase md:hidden">
                   Timestamp (UTC)
                 </div>
                 <div class="text-xs text-gray-700 sm:text-sm">
@@ -93,7 +91,9 @@
                 <div class="mb-0.5 text-[10px] tracking-wide text-gray-500 uppercase md:hidden">
                   User
                 </div>
-                <div class="truncate text-xs text-gray-700 sm:text-sm">{{ log.userName || log.userId }}</div>
+                <div class="truncate text-xs text-gray-700 sm:text-sm">
+                  {{ log.userName || log.userId }}
+                </div>
               </div>
 
               <div class="mt-2 md:col-span-2 md:mt-0">
@@ -111,9 +111,7 @@
               </div>
 
               <div class="mt-2 md:col-span-3 md:mt-0 md:text-right">
-                <div
-                  class="mb-0.5 text-[10px] tracking-wide text-gray-500 uppercase md:hidden"
-                >
+                <div class="mb-0.5 text-[10px] tracking-wide text-gray-500 uppercase md:hidden">
                   Entity ID
                 </div>
                 <div class="truncate font-mono text-xs text-gray-700">{{ log.entityId }}</div>
@@ -125,4 +123,3 @@
     </app-pull-to-refresh>
   }
 </div>
-

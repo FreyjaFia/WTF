@@ -70,7 +70,9 @@
               class="rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm transition-shadow duration-200 hover:shadow-md md:grid md:grid-cols-12 md:items-center md:gap-4 md:border-0 md:py-4 md:shadow-lg md:hover:shadow-xl"
             >
               <div class="md:col-span-2">
-                <div class="mb-0.5 text-[10px] tracking-wide text-gray-500 uppercase md:hidden">ID</div>
+                <div class="mb-0.5 text-[10px] tracking-wide text-gray-500 uppercase md:hidden">
+                  ID
+                </div>
                 <div class="truncate font-mono text-xs text-gray-700">{{ script.id }}</div>
               </div>
 
@@ -78,13 +80,13 @@
                 <div class="mb-0.5 text-[10px] tracking-wide text-gray-500 uppercase md:hidden">
                   Script Name
                 </div>
-                <div class="font-mono text-xs text-gray-900 sm:text-sm">{{ script.scriptName }}</div>
+                <div class="font-mono text-xs text-gray-900 sm:text-sm">
+                  {{ script.scriptName }}
+                </div>
               </div>
 
               <div class="mt-2 md:col-span-4 md:mt-0 md:text-right">
-                <div
-                  class="mb-0.5 text-[10px] tracking-wide text-gray-500 uppercase md:hidden"
-                >
+                <div class="mb-0.5 text-[10px] tracking-wide text-gray-500 uppercase md:hidden">
                   Applied At (UTC)
                 </div>
                 <div class="text-xs text-gray-700 sm:text-sm">
@@ -98,4 +100,3 @@
     </app-pull-to-refresh>
   }
 </div>
-

@@ -15,8 +15,14 @@
         <app-icon name="icon-back" [class]="'h-5 w-5 text-gray-600'" />
       </button>
       <div class="min-w-0">
-<h1 class="text-2xl font-bold wrap-break-word text-gray-900">
-          {{ isProfileMode() ? 'My Profile' : isEditMode() ? userFullNameLabel() || 'Edit User' : 'New User' }}
+        <h1 class="text-2xl font-bold wrap-break-word text-gray-900">
+          {{
+            isProfileMode()
+              ? 'My Profile'
+              : isEditMode()
+                ? userFullNameLabel() || 'Edit User'
+                : 'New User'
+          }}
         </h1>
         @if (isEditMode() && lastUpdatedAt()) {
           <p class="mt-1 text-sm text-gray-500">
@@ -28,7 +34,12 @@
 
     <!-- Right: Action Buttons -->
     <div class="flex shrink-0 justify-end gap-2">
-      <button type="button" class="cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-100 disabled:opacity-50 active:scale-95" (click)="goBack()" [disabled]="isSaving()">
+      <button
+        type="button"
+        class="cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-100 active:scale-95 disabled:opacity-50"
+        (click)="goBack()"
+        [disabled]="isSaving()"
+      >
         Cancel
       </button>
       <button
@@ -42,10 +53,14 @@
         }
         {{
           isSaving()
-            ? (isProfileMode()
+            ? isProfileMode()
               ? 'Saving Profile...'
-              : (isEditMode() ? 'Updating User...' : 'Creating User...'))
-            : (isProfileMode() ? 'Save Profile' : (isEditMode() ? 'Update' : 'Create') + ' User')
+              : isEditMode()
+                ? 'Updating User...'
+                : 'Creating User...'
+            : isProfileMode()
+              ? 'Save Profile'
+              : (isEditMode() ? 'Update' : 'Create') + ' User'
         }}
       </button>
     </div>
@@ -64,7 +79,12 @@
       <form id="userForm" [formGroup]="userForm" (ngSubmit)="saveUser()">
         <div class="grid grid-cols-1 gap-6" [class.lg:grid-cols-3]="isProfileMode()">
           <!-- Left Column: Core Details -->
-          <div class="space-y-6" [class.order-last]="isProfileMode()" [class.lg:order-0]="isProfileMode()" [class.lg:col-span-2]="isProfileMode()">
+          <div
+            class="space-y-6"
+            [class.order-last]="isProfileMode()"
+            [class.lg:order-0]="isProfileMode()"
+            [class.lg:col-span-2]="isProfileMode()"
+          >
             <!-- Main Form Card -->
             <div class="card rounded-xl bg-white shadow-lg">
               <div class="card-body space-y-5">

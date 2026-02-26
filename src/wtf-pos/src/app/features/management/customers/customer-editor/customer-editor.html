@@ -15,7 +15,7 @@
         <app-icon name="icon-back" [class]="'h-5 w-5 text-gray-600'" />
       </button>
       <div class="min-w-0">
-<h1 class="text-2xl font-bold wrap-break-word text-gray-900">
+        <h1 class="text-2xl font-bold wrap-break-word text-gray-900">
           {{ isEditMode() ? customerFullName() || 'Edit Customer' : 'New Customer' }}
         </h1>
         @if (isEditMode() && lastUpdatedAt()) {
@@ -28,7 +28,12 @@
 
     <!-- Right: Action Buttons -->
     <div class="flex shrink-0 justify-end gap-2">
-      <button type="button" class="cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-100 disabled:opacity-50 active:scale-95" (click)="goBack()" [disabled]="isSaving()">
+      <button
+        type="button"
+        class="cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-100 active:scale-95 disabled:opacity-50"
+        (click)="goBack()"
+        [disabled]="isSaving()"
+      >
         Cancel
       </button>
       <button
@@ -42,7 +47,9 @@
         }
         {{
           isSaving()
-            ? (isEditMode() ? 'Updating Customer...' : 'Creating Customer...')
+            ? isEditMode()
+              ? 'Updating Customer...'
+              : 'Creating Customer...'
             : (isEditMode() ? 'Update' : 'Create') + ' Customer'
         }}
       </button>

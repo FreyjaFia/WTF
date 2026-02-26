@@ -6,5 +6,6 @@
 >
   @if (prefix()) {
     <span class="text-base font-semibold" [style.color]="prefixColor()">{{ prefix() }}</span>
-  }{{ displayValue() | number: '1.' + decimals() + '-' + decimals() }}
+  }
+  {{ displayValue() | number: '1.' + decimals() + '-' + decimals() }}
 </span>

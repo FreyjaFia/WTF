@@ -34,10 +34,7 @@
 
   <!-- Area fill -->
   @if (areaPath()) {
-    <path
-      [attr.d]="areaPath()"
-      [attr.fill]="'url(#' + gradientId + ')'"
-    />
+    <path [attr.d]="areaPath()" [attr.fill]="'url(#' + gradientId + ')'" />
   }
 
   <!-- Line -->
@@ -55,13 +52,7 @@
   <!-- Data points -->
   @if (points().length <= 31) {
     @for (pt of points(); track pt.x) {
-      <circle
-        [attr.cx]="pt.x"
-        [attr.cy]="pt.y"
-        r="3"
-        [attr.fill]="color()"
-        opacity="0.9"
-      >
+      <circle [attr.cx]="pt.x" [attr.cy]="pt.y" r="3" [attr.fill]="color()" opacity="0.9">
         <title>{{ pt.label }}: PHP {{ pt.value.toFixed(2) }}</title>
       </circle>
     }

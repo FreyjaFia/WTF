@@ -1,5 +1,7 @@
 @if (auth.isLoggedIn$ | async) {
-  <div class="dock dock-md relative z-0 shrink-0 justify-between border-t border-gray-100 pb-[env(safe-area-inset-bottom)] sm:justify-center">
+  <div
+    class="dock dock-md relative z-0 shrink-0 justify-between border-t border-gray-100 pb-[env(safe-area-inset-bottom)] sm:justify-center"
+  >
     @if (auth.canAccessManagement()) {
       <a [routerLink]="['dashboard']" [routerLinkActive]="'dock-active'">
         <app-icon name="icon-dashboard" [class]="'size-[1.2em]'" [fill]="'#000000'"></app-icon>

@@ -10,7 +10,9 @@
         >
           {{ greeting }}
         </h1>
-        <p class="text-xs text-gray-500 sm:text-sm">Real-time sales, orders, and performance insights</p>
+        <p class="text-xs text-gray-500 sm:text-sm">
+          Real-time sales, orders, and performance insights
+        </p>
       </div>
     </div>
 
@@ -452,7 +454,11 @@
                           ></div>
                         </div>
                         <span class="shrink-0 text-[10px] font-medium text-gray-400">
-                          <span class="text-[9px]"><app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" /></span
+                          <span class="text-[9px]"
+                            ><app-icon
+                              name="icon-peso"
+                              [class]="'inline h-3 w-3 align-[-0.125em]'"
+                              [fill]="'currentColor'" /></span
                           >{{ product.revenue | number: '1.2-2' }}
                         </span>
                       </div>
@@ -516,7 +522,11 @@
                         {{ order.statusName }}
                       </app-badge>
                       <span class="text-right text-sm font-semibold text-gray-900">
-                        <span class="text-xs font-medium text-gray-400"><app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" /></span
+                        <span class="text-xs font-medium text-gray-400"
+                          ><app-icon
+                            name="icon-peso"
+                            [class]="'inline h-3 w-3 align-[-0.125em]'"
+                            [fill]="'currentColor'" /></span
                         >{{ order.totalAmount | number: '1.2-2' }}
                       </span>
                       <span class="w-14 text-right text-xs text-slate-400">{{

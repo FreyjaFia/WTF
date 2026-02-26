@@ -150,7 +150,13 @@
                   }
                   <span>{{ getPendingItemCount(pending.cartSnapshot) }}</span>
                   <span>&middot;</span>
-                  <span><app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" />{{ getPendingTotal(pending.cartSnapshot) | number: '1.2-2' }}</span>
+                  <span
+                    ><app-icon
+                      name="icon-peso"
+                      [class]="'inline h-3 w-3 align-[-0.125em]'"
+                      [fill]="'currentColor'"
+                    />{{ getPendingTotal(pending.cartSnapshot) | number: '1.2-2' }}</span
+                  >
                 </div>
                 @if (pending.errorMessage) {
                   <div class="mt-0.5 text-xs text-red-500">{{ pending.errorMessage }}</div>
@@ -198,8 +204,8 @@
                     name="icon-arrow-up"
                     [class]="
                       sortDirection() === 'desc'
-                        ? 'inline h-3 w-3 align-[-0.05em] transform transition-transform duration-200 ease-out rotate-180'
-                        : 'inline h-3 w-3 align-[-0.05em] transform transition-transform duration-200 ease-out rotate-0'
+                        ? 'inline h-3 w-3 rotate-180 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                        : 'inline h-3 w-3 rotate-0 transform align-[-0.05em] transition-transform duration-200 ease-out'
                     "
                     [fill]="'currentColor'"
                   />
@@ -227,8 +233,8 @@
                     name="icon-arrow-up"
                     [class]="
                       sortDirection() === 'desc'
-                        ? 'inline h-3 w-3 align-[-0.05em] transform transition-transform duration-200 ease-out rotate-180'
-                        : 'inline h-3 w-3 align-[-0.05em] transform transition-transform duration-200 ease-out rotate-0'
+                        ? 'inline h-3 w-3 rotate-180 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                        : 'inline h-3 w-3 rotate-0 transform align-[-0.05em] transition-transform duration-200 ease-out'
                     "
                     [fill]="'currentColor'"
                   />
@@ -268,8 +274,8 @@
                     name="icon-arrow-up"
                     [class]="
                       sortDirection() === 'desc'
-                        ? 'inline h-3 w-3 align-[-0.05em] transform transition-transform duration-200 ease-out rotate-180'
-                        : 'inline h-3 w-3 align-[-0.05em] transform transition-transform duration-200 ease-out rotate-0'
+                        ? 'inline h-3 w-3 rotate-180 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                        : 'inline h-3 w-3 rotate-0 transform align-[-0.05em] transition-transform duration-200 ease-out'
                     "
                     [fill]="'currentColor'"
                   />
@@ -353,7 +359,11 @@
                       <!-- Desktop: Total -->
                       <div class="hidden md:col-span-3 md:block md:text-right">
                         <div class="text-lg font-semibold text-black">
-                          <span class="text-base opacity-70"><app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" /></span
+                          <span class="text-base opacity-70"
+                            ><app-icon
+                              name="icon-peso"
+                              [class]="'inline h-3 w-3 align-[-0.125em]'"
+                              [fill]="'currentColor'" /></span
                           >{{ order.totalAmount | number: '1.2-2' }}
                         </div>
                       </div>
@@ -364,7 +374,11 @@
                       class="flex shrink-0 items-center gap-2 md:col-span-1 md:flex md:justify-end"
                     >
                       <span class="text-base font-semibold text-black md:hidden">
-                        <span class="text-sm opacity-70"><app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" /></span
+                        <span class="text-sm opacity-70"
+                          ><app-icon
+                            name="icon-peso"
+                            [class]="'inline h-3 w-3 align-[-0.125em]'"
+                            [fill]="'currentColor'" /></span
                         >{{ order.totalAmount | number: '1.2-2' }}
                       </span>
                       <app-icon
@@ -383,4 +397,3 @@
     }
   }
 </div>
-

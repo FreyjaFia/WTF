@@ -1,6 +1,8 @@
 <div class="flex h-full flex-col md:ps-6">
   <!-- Header -->
-  <div class="mb-4 flex shrink-0 flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
+  <div
+    class="mb-4 flex shrink-0 flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between"
+  >
     <div class="flex min-w-0 items-start gap-4">
       <a
         class="tooltip tooltip-bottom mt-1 shrink-0 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
@@ -87,14 +89,16 @@
 
             <!-- Pricing + Details -->
             <div
-              class="order-2 space-y-6 p-6 lg:col-span-3 lg:row-span-2 lg:sticky lg:top-0 lg:self-start"
+              class="order-2 space-y-6 p-6 lg:sticky lg:top-0 lg:col-span-3 lg:row-span-2 lg:self-start"
             >
               <!-- Price (Hero) -->
               <div>
                 <p class="mb-2 text-xs font-semibold tracking-wider text-gray-400 uppercase">
                   Pricing
                 </p>
-                <p class="inline-flex items-center gap-1 text-5xl font-black tracking-tight text-[#047857]">
+                <p
+                  class="inline-flex items-center gap-1 text-5xl font-black tracking-tight text-[#047857]"
+                >
                   <app-icon name="icon-peso" [class]="'h-8 w-8'" [fill]="'currentColor'" />
                   {{ product()!.price | number: '1.2-2' }}
                 </p>
@@ -160,242 +164,252 @@
 
             <!-- Linked Items / Add-ons -->
             <div
-              class="order-3 border-t border-gray-100 p-6 lg:col-span-2 lg:border-r lg:border-t-0"
+              class="order-3 border-t border-gray-100 p-6 lg:col-span-2 lg:border-t-0 lg:border-r"
             >
-                @if (product()!.isAddOn) {
-                  <!-- This product IS an add-on: show parent products -->
-                  <div class="mb-3 flex items-baseline justify-between">
-                    <p class="text-xs font-semibold tracking-wider text-gray-400 uppercase">
-                      Linked Products
-                    </p>
-                    @if (totalLinkedCount() > 0) {
-                      <span class="text-xs text-gray-400">
-                        {{ totalLinkedCount() }}
-                        {{ totalLinkedCount() === 1 ? 'product' : 'products' }}
-                      </span>
-                    }
-                  </div>
-
+              @if (product()!.isAddOn) {
+                <!-- This product IS an add-on: show parent products -->
+                <div class="mb-3 flex items-baseline justify-between">
+                  <p class="text-xs font-semibold tracking-wider text-gray-400 uppercase">
+                    Linked Products
+                  </p>
                   @if (totalLinkedCount() > 0) {
-                    <div
-                      class="overflow-hidden transition-[max-height] duration-300 ease-in-out"
-                      [style.max-height]="
-                        showAllLinked() || totalLinkedCount() <= 5 ? '200rem' : '14rem'
-                      "
-                    >
-                      @for (group of sortedLinkedProducts(); track group.type) {
-                        <div class="mt-3 mb-1 flex items-center gap-2 first:mt-0">
-                          <span
-                            class="text-[10px] font-semibold tracking-wider text-gray-400 uppercase"
-                          >
-                            {{ group.displayName }}
-                          </span>
-                          <span class="text-[10px] text-gray-300">
-                            ({{ group.options.length }})
-                          </span>
-                        </div>
-                        @for (linked of group.options; track linked.id; let odd = $odd) {
-                          <div
-                            class="flex items-center gap-3 border-b border-gray-50 px-2 py-2.5 transition-colors last:border-b-0 hover:bg-gray-50"
-                            [class.bg-gray-50/50]="odd"
-                          >
-                            <!-- Thumbnail -->
-                            <div class="shrink-0">
-                              @if (linked.imageUrl) {
-                                <img
-                                  [src]="linked.imageUrl"
-                                  [alt]="linked.name"
-                                  class="h-8 w-8 rounded-full object-cover"
-                                />
-                              } @else {
-                                <app-avatar [label]="linked.name" [size]="32" />
-                              }
-                            </div>
-                            <!-- Name + Code + Price -->
-                            <div class="flex flex-1 items-start justify-between gap-2">
-                              <div class="min-w-0 flex-1">
-                                <span
-                                  class="block text-sm font-medium wrap-break-word text-gray-800"
-                                  [class.line-through]="!linked.isActive"
-                                  [class.text-gray-400]="!linked.isActive"
-                                >
-                                  {{ linked.name }}
-                                </span>
-                                <span class="mt-0.5 font-mono text-[10px] text-gray-400">
-                                  {{ linked.code }}
-                                </span>
-                              </div>
+                    <span class="text-xs text-gray-400">
+                      {{ totalLinkedCount() }}
+                      {{ totalLinkedCount() === 1 ? 'product' : 'products' }}
+                    </span>
+                  }
+                </div>
+
+                @if (totalLinkedCount() > 0) {
+                  <div
+                    class="overflow-hidden transition-[max-height] duration-300 ease-in-out"
+                    [style.max-height]="
+                      showAllLinked() || totalLinkedCount() <= 5 ? '200rem' : '14rem'
+                    "
+                  >
+                    @for (group of sortedLinkedProducts(); track group.type) {
+                      <div class="mt-3 mb-1 flex items-center gap-2 first:mt-0">
+                        <span
+                          class="text-[10px] font-semibold tracking-wider text-gray-400 uppercase"
+                        >
+                          {{ group.displayName }}
+                        </span>
+                        <span class="text-[10px] text-gray-300">
+                          ({{ group.options.length }})
+                        </span>
+                      </div>
+                      @for (linked of group.options; track linked.id; let odd = $odd) {
+                        <div
+                          class="flex items-center gap-3 border-b border-gray-50 px-2 py-2.5 transition-colors last:border-b-0 hover:bg-gray-50"
+                          [class.bg-gray-50/50]="odd"
+                        >
+                          <!-- Thumbnail -->
+                          <div class="shrink-0">
+                            @if (linked.imageUrl) {
+                              <img
+                                [src]="linked.imageUrl"
+                                [alt]="linked.name"
+                                class="h-8 w-8 rounded-full object-cover"
+                              />
+                            } @else {
+                              <app-avatar [label]="linked.name" [size]="32" />
+                            }
+                          </div>
+                          <!-- Name + Code + Price -->
+                          <div class="flex flex-1 items-start justify-between gap-2">
+                            <div class="min-w-0 flex-1">
                               <span
-                                class="inline-flex shrink-0 items-center gap-0.5 text-sm font-semibold text-gray-700"
+                                class="block text-sm font-medium wrap-break-word text-gray-800"
+                                [class.line-through]="!linked.isActive"
                                 [class.text-gray-400]="!linked.isActive"
                               >
-                                <app-icon name="icon-peso" [class]="'h-3 w-3'" [fill]="'currentColor'" />
-                                {{ linked.price | number: '1.2-2' }}
+                                {{ linked.name }}
+                              </span>
+                              <span class="mt-0.5 font-mono text-[10px] text-gray-400">
+                                {{ linked.code }}
                               </span>
                             </div>
+                            <span
+                              class="inline-flex shrink-0 items-center gap-0.5 text-sm font-semibold text-gray-700"
+                              [class.text-gray-400]="!linked.isActive"
+                            >
+                              <app-icon
+                                name="icon-peso"
+                                [class]="'h-3 w-3'"
+                                [fill]="'currentColor'"
+                              />
+                              {{ linked.price | number: '1.2-2' }}
+                            </span>
                           </div>
-                        }
+                        </div>
                       }
-                    </div>
-
-                    <!-- Show All button -->
-                    @if (totalLinkedCount() > 5) {
-                      <button
-                        type="button"
-                        class="mt-3 flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-gray-50 px-4 py-2.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-100"
-                        (click)="toggleShowAllLinked()"
-                      >
-                        {{
-                          showAllLinked()
-                            ? 'Show less'
-                            : 'Show all ' + totalLinkedCount() + ' items'
-                        }}
-                        <app-icon
-                          name="icon-forward"
-                          [class]="
-                            'h-4 w-4 transition-transform duration-200 ' +
-                            (showAllLinked() ? '-rotate-90' : 'rotate-90')
-                          "
-                        />
-                      </button>
-                    }
-                  } @else {
-                    <div class="flex flex-col items-center py-6 text-center">
-                      <p class="text-sm font-medium text-gray-400">No linked products</p>
-                      <p class="mt-1 text-xs text-gray-300">
-                        Products using this add-on will appear here
-                      </p>
-                    </div>
-                  }
-                } @else {
-                  <!-- This product is NOT an add-on: show its add-ons -->
-                  <div class="mb-3 flex items-baseline justify-between">
-                    <p class="text-xs font-semibold tracking-wider text-gray-400 uppercase">
-                      Associated Add-ons
-                    </p>
-                    @if (totalAddOnsCount() > 0) {
-                      <span class="text-xs text-gray-400">
-                        {{ totalAddOnsCount() }}
-                        {{ totalAddOnsCount() === 1 ? 'add-on' : 'add-ons' }}
-                      </span>
                     }
                   </div>
 
-                  @if (totalAddOnsCount() > 0) {
-                    <div
-                      class="overflow-hidden transition-[max-height] duration-300 ease-in-out"
-                      [style.max-height]="
-                        showAllAddOns() || totalAddOnsCount() <= 5 ? '200rem' : '14rem'
-                      "
+                  <!-- Show All button -->
+                  @if (totalLinkedCount() > 5) {
+                    <button
+                      type="button"
+                      class="mt-3 flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-gray-50 px-4 py-2.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-100"
+                      (click)="toggleShowAllLinked()"
                     >
-                      @for (group of sortedAddOns(); track group.type) {
-                        <div class="mt-3 mb-1 flex items-center gap-2 first:mt-0">
-                          <span
-                            class="text-[10px] font-semibold tracking-wider text-gray-400 uppercase"
-                          >
-                            {{ group.displayName }}
-                          </span>
-                          <span class="text-[10px] text-gray-300">
-                            ({{ group.options.length }})
-                          </span>
-                        </div>
-                        @for (addon of group.options; track addon.id; let odd = $odd) {
-                          <div
-                            class="flex items-center gap-3 border-b border-gray-50 px-2 py-2.5 transition-colors last:border-b-0 hover:bg-gray-50"
-                            [class.bg-gray-50/50]="odd"
-                          >
-                            <!-- Thumbnail -->
-                            <div class="shrink-0">
-                              @if (addon.imageUrl) {
-                                <img
-                                  [src]="addon.imageUrl"
-                                  [alt]="addon.name"
-                                  class="h-8 w-8 rounded-full object-cover"
-                                />
-                              } @else {
-                                <app-avatar [label]="addon.name" [size]="32" />
-                              }
-                            </div>
-                            <!-- Name + Code + Price -->
-                            <div class="flex flex-1 items-start justify-between gap-2">
-                              <div class="min-w-0 flex-1">
-                                <span
-                                  class="block text-sm font-medium wrap-break-word text-gray-800"
-                                  [class.line-through]="!addon.isActive"
-                                  [class.text-gray-400]="!addon.isActive"
-                                >
-                                  {{ addon.name }}
-                                </span>
-                                <span class="mt-0.5 flex flex-wrap items-center gap-2">
-                                  <span class="font-mono text-[10px] text-gray-400">
-                                    {{ addon.code }}
-                                  </span>
-                                  @if (
-                                    addon.overridePrice !== null &&
-                                    addon.overridePrice !== undefined &&
-                                    addon.overridePrice !== addon.price
-                                  ) {
-                                    <span
-                                      class="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-amber-700 uppercase"
-                                    >
-                                      Overridden
-                                    </span>
-                                  }
-                                </span>
-                              </div>
-                              <div class="shrink-0 text-right">
-                                <span
-                                  class="inline-flex items-center gap-0.5 text-sm font-semibold text-gray-700"
-                                  [class.text-gray-400]="!addon.isActive"
-                                >
-                                  <app-icon name="icon-peso" [class]="'h-3 w-3'" [fill]="'currentColor'" />
-                                  {{ addon.overridePrice ?? addon.price | number: '1.2-2' }}
+                      {{
+                        showAllLinked() ? 'Show less' : 'Show all ' + totalLinkedCount() + ' items'
+                      }}
+                      <app-icon
+                        name="icon-forward"
+                        [class]="
+                          'h-4 w-4 transition-transform duration-200 ' +
+                          (showAllLinked() ? '-rotate-90' : 'rotate-90')
+                        "
+                      />
+                    </button>
+                  }
+                } @else {
+                  <div class="flex flex-col items-center py-6 text-center">
+                    <p class="text-sm font-medium text-gray-400">No linked products</p>
+                    <p class="mt-1 text-xs text-gray-300">
+                      Products using this add-on will appear here
+                    </p>
+                  </div>
+                }
+              } @else {
+                <!-- This product is NOT an add-on: show its add-ons -->
+                <div class="mb-3 flex items-baseline justify-between">
+                  <p class="text-xs font-semibold tracking-wider text-gray-400 uppercase">
+                    Associated Add-ons
+                  </p>
+                  @if (totalAddOnsCount() > 0) {
+                    <span class="text-xs text-gray-400">
+                      {{ totalAddOnsCount() }}
+                      {{ totalAddOnsCount() === 1 ? 'add-on' : 'add-ons' }}
+                    </span>
+                  }
+                </div>
+
+                @if (totalAddOnsCount() > 0) {
+                  <div
+                    class="overflow-hidden transition-[max-height] duration-300 ease-in-out"
+                    [style.max-height]="
+                      showAllAddOns() || totalAddOnsCount() <= 5 ? '200rem' : '14rem'
+                    "
+                  >
+                    @for (group of sortedAddOns(); track group.type) {
+                      <div class="mt-3 mb-1 flex items-center gap-2 first:mt-0">
+                        <span
+                          class="text-[10px] font-semibold tracking-wider text-gray-400 uppercase"
+                        >
+                          {{ group.displayName }}
+                        </span>
+                        <span class="text-[10px] text-gray-300">
+                          ({{ group.options.length }})
+                        </span>
+                      </div>
+                      @for (addon of group.options; track addon.id; let odd = $odd) {
+                        <div
+                          class="flex items-center gap-3 border-b border-gray-50 px-2 py-2.5 transition-colors last:border-b-0 hover:bg-gray-50"
+                          [class.bg-gray-50/50]="odd"
+                        >
+                          <!-- Thumbnail -->
+                          <div class="shrink-0">
+                            @if (addon.imageUrl) {
+                              <img
+                                [src]="addon.imageUrl"
+                                [alt]="addon.name"
+                                class="h-8 w-8 rounded-full object-cover"
+                              />
+                            } @else {
+                              <app-avatar [label]="addon.name" [size]="32" />
+                            }
+                          </div>
+                          <!-- Name + Code + Price -->
+                          <div class="flex flex-1 items-start justify-between gap-2">
+                            <div class="min-w-0 flex-1">
+                              <span
+                                class="block text-sm font-medium wrap-break-word text-gray-800"
+                                [class.line-through]="!addon.isActive"
+                                [class.text-gray-400]="!addon.isActive"
+                              >
+                                {{ addon.name }}
+                              </span>
+                              <span class="mt-0.5 flex flex-wrap items-center gap-2">
+                                <span class="font-mono text-[10px] text-gray-400">
+                                  {{ addon.code }}
                                 </span>
                                 @if (
                                   addon.overridePrice !== null &&
                                   addon.overridePrice !== undefined &&
                                   addon.overridePrice !== addon.price
                                 ) {
-                                  <span class="inline-flex items-center gap-0.5 text-[10px] text-gray-400 line-through">
-                                    <app-icon name="icon-peso" [class]="'h-2.5 w-2.5'" [fill]="'currentColor'" />
-                                    {{ addon.price | number: '1.2-2' }}
+                                  <span
+                                    class="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-amber-700 uppercase"
+                                  >
+                                    Overridden
                                   </span>
                                 }
-                              </div>
+                              </span>
+                            </div>
+                            <div class="shrink-0 text-right">
+                              <span
+                                class="inline-flex items-center gap-0.5 text-sm font-semibold text-gray-700"
+                                [class.text-gray-400]="!addon.isActive"
+                              >
+                                <app-icon
+                                  name="icon-peso"
+                                  [class]="'h-3 w-3'"
+                                  [fill]="'currentColor'"
+                                />
+                                {{ addon.overridePrice ?? addon.price | number: '1.2-2' }}
+                              </span>
+                              @if (
+                                addon.overridePrice !== null &&
+                                addon.overridePrice !== undefined &&
+                                addon.overridePrice !== addon.price
+                              ) {
+                                <span
+                                  class="inline-flex items-center gap-0.5 text-[10px] text-gray-400 line-through"
+                                >
+                                  <app-icon
+                                    name="icon-peso"
+                                    [class]="'h-2.5 w-2.5'"
+                                    [fill]="'currentColor'"
+                                  />
+                                  {{ addon.price | number: '1.2-2' }}
+                                </span>
+                              }
                             </div>
                           </div>
-                        }
+                        </div>
                       }
-                    </div>
-
-                    <!-- Show All button -->
-                    @if (totalAddOnsCount() > 5) {
-                      <button
-                        type="button"
-                        class="mt-3 flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-gray-50 px-4 py-2.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-100"
-                        (click)="toggleShowAllAddOns()"
-                      >
-                        {{
-                          showAllAddOns()
-                            ? 'Show less'
-                            : 'Show all ' + totalAddOnsCount() + ' items'
-                        }}
-                        <app-icon
-                          name="icon-forward"
-                          [class]="
-                            'h-4 w-4 transition-transform duration-200 ' +
-                            (showAllAddOns() ? '-rotate-90' : 'rotate-90')
-                          "
-                        />
-                      </button>
                     }
-                  } @else {
-                    <div class="flex flex-col items-center py-6 text-center">
-                      <p class="text-sm font-medium text-gray-400">No add-ons assigned</p>
-                      <p class="mt-1 text-xs text-gray-300">Assign add-ons via the Edit page</p>
-                    </div>
+                  </div>
+
+                  <!-- Show All button -->
+                  @if (totalAddOnsCount() > 5) {
+                    <button
+                      type="button"
+                      class="mt-3 flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-gray-50 px-4 py-2.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-100"
+                      (click)="toggleShowAllAddOns()"
+                    >
+                      {{
+                        showAllAddOns() ? 'Show less' : 'Show all ' + totalAddOnsCount() + ' items'
+                      }}
+                      <app-icon
+                        name="icon-forward"
+                        [class]="
+                          'h-4 w-4 transition-transform duration-200 ' +
+                          (showAllAddOns() ? '-rotate-90' : 'rotate-90')
+                        "
+                      />
+                    </button>
                   }
+                } @else {
+                  <div class="flex flex-col items-center py-6 text-center">
+                    <p class="text-sm font-medium text-gray-400">No add-ons assigned</p>
+                    <p class="mt-1 text-xs text-gray-300">Assign add-ons via the Edit page</p>
+                  </div>
                 }
+              }
             </div>
           </div>
         </div>

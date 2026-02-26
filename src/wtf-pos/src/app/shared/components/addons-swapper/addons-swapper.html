@@ -1,5 +1,7 @@
 <dialog id="addons-swapper-modal" class="modal">
-  <div class="modal-box flex max-h-[85vh] w-full max-w-[min(32rem,calc(100vw-2rem))] flex-col rounded-2xl shadow-2xl sm:max-h-[calc(100vh-3rem)] sm:max-w-4xl">
+  <div
+    class="modal-box flex max-h-[85vh] w-full max-w-[min(32rem,calc(100vw-2rem))] flex-col rounded-2xl shadow-2xl sm:max-h-[calc(100vh-3rem)] sm:max-w-4xl"
+  >
     <h3 class="text-lg font-bold text-gray-900">Manage Product Add-ons</h3>
     <p class="mb-5 text-sm text-gray-400">
       Drag and drop add-ons between the lists to assign or remove them.
@@ -12,7 +14,7 @@
       </div>
     } @else {
       <!-- Drag and Drop Lists -->
-      <div class="grid min-h-0 flex-1 grid-cols-1 gap-5 sm:grid-cols-2 max-sm:grid-rows-[1fr_1fr]">
+      <div class="grid min-h-0 flex-1 grid-cols-1 gap-5 max-sm:grid-rows-[1fr_1fr] sm:grid-cols-2">
         <div class="flex min-h-0 flex-col">
           <h4 class="mb-2 text-xs font-semibold tracking-wider text-gray-400 uppercase">
             Available Add-ons
@@ -64,7 +66,11 @@
                   <span class="font-mono text-[10px] text-gray-400">{{ addon.code }}</span>
                 </div>
                 <span class="ml-auto shrink-0 text-xs text-gray-500">
-                  <app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" />{{ addon.price | number: '1.2-2' }}
+                  <app-icon
+                    name="icon-peso"
+                    [class]="'inline h-3 w-3 align-[-0.125em]'"
+                    [fill]="'currentColor'"
+                  />{{ addon.price | number: '1.2-2' }}
                 </span>
               </li>
             }
@@ -97,7 +103,7 @@
               </span>
             }
           </div>
-          <div class="hidden sm:block mb-3 h-8"></div>
+          <div class="mb-3 hidden h-8 sm:block"></div>
           <ul
             #assignedList
             class="flex min-h-0 flex-1 flex-col space-y-1 overflow-x-hidden overflow-y-auto rounded-xl border border-gray-200 bg-gray-50/50 p-3"
@@ -129,7 +135,11 @@
                   <div class="flex items-center justify-between gap-2">
                     <span class="truncate">{{ addon.name }}</span>
                     <span class="shrink-0 text-xs text-gray-500">
-                      <app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" />{{ addon.price | number: '1.2-2' }}
+                      <app-icon
+                        name="icon-peso"
+                        [class]="'inline h-3 w-3 align-[-0.125em]'"
+                        [fill]="'currentColor'"
+                      />{{ addon.price | number: '1.2-2' }}
                     </span>
                   </div>
                   <div class="mt-0.5 flex items-center justify-between gap-2">
@@ -164,7 +174,13 @@
 
     <!-- Modal Actions -->
     <div class="modal-action">
-      <button class="cursor-pointer rounded-lg px-4 py-2 font-medium text-gray-600 transition-all hover:bg-gray-100 active:scale-95" (click)="closeModal()" type="button">Cancel</button>
+      <button
+        class="cursor-pointer rounded-lg px-4 py-2 font-medium text-gray-600 transition-all hover:bg-gray-100 active:scale-95"
+        (click)="closeModal()"
+        type="button"
+      >
+        Cancel
+      </button>
       <button
         class="btn gap-2 rounded-lg border-0 bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg"
         [disabled]="isLoading() || isSaving()"

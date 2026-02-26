@@ -1,4 +1,8 @@
-<svg [attr.viewBox]="'0 0 ' + width + ' ' + height" class="block h-full w-full" preserveAspectRatio="xMidYMid meet">
+<svg
+  [attr.viewBox]="'0 0 ' + width + ' ' + height"
+  class="block h-full w-full"
+  preserveAspectRatio="xMidYMid meet"
+>
   <!-- Grid lines -->
   @for (line of gridLines(); track line.y) {
     <line

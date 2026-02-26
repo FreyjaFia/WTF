@@ -1,6 +1,8 @@
 <div class="flex h-full flex-col md:ps-6">
   <!-- Header -->
-  <div class="mb-4 flex shrink-0 flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
+  <div
+    class="mb-4 flex shrink-0 flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between"
+  >
     <div class="flex min-w-0 items-start gap-4">
       <a
         class="tooltip tooltip-bottom mt-1 shrink-0 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
@@ -39,7 +41,7 @@
           Edit
         </a>
         <button
-          class="inline-flex items-center gap-2 cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium text-red-500 transition-all hover:bg-red-50 hover:text-red-600 active:scale-95"
+          class="inline-flex cursor-pointer items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium text-red-500 transition-all hover:bg-red-50 hover:text-red-600 active:scale-95"
           (click)="deleteUser()"
         >
           <app-icon name="icon-delete" [class]="'h-4 w-4'" />

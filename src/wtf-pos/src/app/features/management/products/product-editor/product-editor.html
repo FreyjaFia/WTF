@@ -38,7 +38,12 @@
 
     <!-- Right: Action Buttons -->
     <div class="flex shrink-0 justify-end gap-2">
-      <button type="button" class="cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-100 disabled:opacity-50 active:scale-95" (click)="goBack()" [disabled]="isSaving()">
+      <button
+        type="button"
+        class="cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-100 active:scale-95 disabled:opacity-50"
+        (click)="goBack()"
+        [disabled]="isSaving()"
+      >
         Cancel
       </button>
       <button
@@ -52,7 +57,9 @@
         }
         {{
           isSaving()
-            ? (isEditMode() ? 'Updating Product...' : 'Creating Product...')
+            ? isEditMode()
+              ? 'Updating Product...'
+              : 'Creating Product...'
             : (isEditMode() ? 'Update' : 'Create') + ' Product'
         }}
       </button>
@@ -223,7 +230,11 @@
                     class="input flex w-full items-center gap-2 border-transparent bg-gray-50 transition-all focus-within:border-[#047857] focus-within:bg-white focus-within:ring-1 focus-within:ring-[#047857]/20"
                     [class.input-error]="hasError('price')"
                   >
-                    <app-icon name="icon-peso" [class]="'h-4 w-4 text-gray-500'" [fill]="'currentColor'" />
+                    <app-icon
+                      name="icon-peso"
+                      [class]="'h-4 w-4 text-gray-500'"
+                      [fill]="'currentColor'"
+                    />
                     <input
                       id="productPrice"
                       type="number"
@@ -392,10 +403,12 @@
 
           <!-- Customization Card (edit mode, non-add-on products) -->
           @if (isEditMode() && productId && !productForm.controls.isAddOn.value) {
-            <div class="order-3 card rounded-xl bg-white shadow-lg lg:order-0">
+            <div class="card order-3 rounded-xl bg-white shadow-lg lg:order-0">
               <div class="card-body">
                 <div class="mb-1 flex flex-wrap items-baseline justify-between gap-1">
-                  <h3 class="text-xs font-semibold tracking-wider text-gray-400 uppercase sm:whitespace-nowrap">
+                  <h3
+                    class="text-xs font-semibold tracking-wider text-gray-400 uppercase sm:whitespace-nowrap"
+                  >
                     Associated Add-ons
                   </h3>
                   @if (totalAssignedAddOnsCount() > 0) {
@@ -405,7 +418,7 @@
                     </span>
                   }
                 </div>
-  
+
                 @if (totalAssignedAddOnsCount() > 0) {
                   <div
                     class="overflow-hidden transition-[max-height] duration-300 ease-in-out"
@@ -447,7 +460,7 @@
                             <div class="flex items-start justify-between gap-2">
                               <div class="min-w-0">
                                 <span
-                                  class="block wrap-break-word text-sm font-medium text-gray-800"
+                                  class="block text-sm font-medium wrap-break-word text-gray-800"
                                   [class.line-through]="!addon.isActive"
                                   [class.text-gray-400]="!addon.isActive"
                                 >
@@ -471,22 +484,38 @@
                                   class="inline-flex items-center gap-0.5 text-sm font-semibold text-gray-700"
                                   [class.text-gray-400]="!addon.isActive"
                                 >
-                                  <app-icon name="icon-peso" [class]="'h-3 w-3'" [fill]="'currentColor'" />
-                                  {{ getAddOnEffectivePrice(addon.id, addon.price) | number: '1.2-2' }}
+                                  <app-icon
+                                    name="icon-peso"
+                                    [class]="'h-3 w-3'"
+                                    [fill]="'currentColor'"
+                                  />
+                                  {{
+                                    getAddOnEffectivePrice(addon.id, addon.price) | number: '1.2-2'
+                                  }}
                                 </span>
                               </div>
                             </div>
                             <div class="mt-2 flex flex-col items-end gap-1">
-                              <span class="inline-flex items-center gap-0.5 text-[10px] text-gray-400">
+                              <span
+                                class="inline-flex items-center gap-0.5 text-[10px] text-gray-400"
+                              >
                                 Default:
-                                <app-icon name="icon-peso" [class]="'h-2.5 w-2.5'" [fill]="'currentColor'" />
+                                <app-icon
+                                  name="icon-peso"
+                                  [class]="'h-2.5 w-2.5'"
+                                  [fill]="'currentColor'"
+                                />
                                 {{ getAddOnBasePrice(addon.id, addon.price) | number: '1.2-2' }}
                               </span>
                               <div class="flex flex-wrap items-center justify-end gap-1">
                                 <label
                                   class="input input-xs flex h-7 w-24 items-center gap-1 border-gray-200 bg-white"
                                 >
-                                  <app-icon name="icon-peso" [class]="'h-2.5 w-2.5 text-gray-500'" [fill]="'currentColor'" />
+                                  <app-icon
+                                    name="icon-peso"
+                                    [class]="'h-2.5 w-2.5 text-gray-500'"
+                                    [fill]="'currentColor'"
+                                  />
                                   <input
                                     type="number"
                                     min="0"
@@ -542,7 +571,7 @@
                       }
                     }
                   </div>
-  
+
                   <!-- Show All button -->
                   @if (totalAssignedAddOnsCount() > 2) {
                     <button
@@ -572,7 +601,7 @@
                     </p>
                   </div>
                 }
-  
+
                 <div class="mt-4">
                   <button
                     type="button"
@@ -590,7 +619,7 @@
 
           <!-- Linked Products Card (edit mode, add-on products) -->
           @if (isEditMode() && productId && productForm.controls.isAddOn.value) {
-            <div class="order-3 card rounded-xl bg-white shadow-lg lg:order-0">
+            <div class="card order-3 rounded-xl bg-white shadow-lg lg:order-0">
               <div class="card-body">
                 <div class="mb-1 flex items-baseline justify-between">
                   <h3 class="text-xs font-semibold tracking-wider text-gray-400 uppercase">
@@ -603,7 +632,7 @@
                     </span>
                   }
                 </div>
-  
+
                 @if (totalLinkedCount() > 0) {
                   <div
                     class="overflow-hidden transition-[max-height] duration-300 ease-in-out"
@@ -643,7 +672,7 @@
                           <div class="flex flex-1 items-start justify-between gap-2">
                             <div class="min-w-0 flex-1">
                               <span
-                                class="block wrap-break-word text-sm font-medium text-gray-800"
+                                class="block text-sm font-medium wrap-break-word text-gray-800"
                                 [class.line-through]="!linked.isActive"
                                 [class.text-gray-400]="!linked.isActive"
                               >
@@ -657,7 +686,11 @@
                               class="inline-flex shrink-0 items-center gap-0.5 text-sm font-semibold text-gray-700"
                               [class.text-gray-400]="!linked.isActive"
                             >
-                              <app-icon name="icon-peso" [class]="'h-3 w-3'" [fill]="'currentColor'" />
+                              <app-icon
+                                name="icon-peso"
+                                [class]="'h-3 w-3'"
+                                [fill]="'currentColor'"
+                              />
                               {{ linked.price | number: '1.2-2' }}
                             </span>
                           </div>
@@ -674,7 +707,7 @@
                       }
                     }
                   </div>
-  
+
                   <!-- Show All button -->
                   @if (totalLinkedCount() > 5) {
                     <button
@@ -683,9 +716,7 @@
                       (click)="showAllLinked.set(!showAllLinked())"
                     >
                       {{
-                        showAllLinked()
-                          ? 'Show less'
-                          : 'Show all ' + totalLinkedCount() + ' items'
+                        showAllLinked() ? 'Show less' : 'Show all ' + totalLinkedCount() + ' items'
                       }}
                       <app-icon
                         name="icon-forward"
@@ -704,7 +735,7 @@
                     </p>
                   </div>
                 }
-  
+
                 <div class="mt-4">
                   <button
                     type="button"

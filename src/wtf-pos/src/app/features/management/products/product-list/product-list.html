@@ -131,8 +131,8 @@
                   name="icon-arrow-up"
                   [class]="
                     sortDirection() === 'desc'
-                      ? 'inline h-3 w-3 align-[-0.05em] transform transition-transform duration-200 ease-out rotate-180'
-                      : 'inline h-3 w-3 align-[-0.05em] transform transition-transform duration-200 ease-out rotate-0'
+                      ? 'inline h-3 w-3 rotate-180 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                      : 'inline h-3 w-3 rotate-0 transform align-[-0.05em] transition-transform duration-200 ease-out'
                   "
                   [fill]="'currentColor'"
                 />
@@ -172,8 +172,8 @@
                   name="icon-arrow-up"
                   [class]="
                     sortDirection() === 'desc'
-                      ? 'inline h-3 w-3 align-[-0.05em] transform transition-transform duration-200 ease-out rotate-180'
-                      : 'inline h-3 w-3 align-[-0.05em] transform transition-transform duration-200 ease-out rotate-0'
+                      ? 'inline h-3 w-3 rotate-180 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                      : 'inline h-3 w-3 rotate-0 transform align-[-0.05em] transition-transform duration-200 ease-out'
                   "
                   [fill]="'currentColor'"
                 />
@@ -218,8 +218,14 @@
                       <p class="font-mono text-xs text-gray-400">{{ product.code }}</p>
                       <!-- Mobile: inline price + status -->
                       <div class="mt-1 flex flex-wrap items-center gap-2 md:hidden">
-                        <span class="inline-flex items-center gap-0.5 text-sm font-semibold text-gray-900">
-                          <app-icon name="icon-peso" [class]="'h-3.5 w-3.5'" [fill]="'currentColor'" />
+                        <span
+                          class="inline-flex items-center gap-0.5 text-sm font-semibold text-gray-900"
+                        >
+                          <app-icon
+                            name="icon-peso"
+                            [class]="'h-3.5 w-3.5'"
+                            [fill]="'currentColor'"
+                          />
                           {{ product.price.toFixed(2) }}
                         </span>
                         @if (product.isActive) {
@@ -253,7 +259,11 @@
                   <!-- Price (desktop only) -->
                   <div class="hidden md:col-span-2 md:block md:text-right">
                     <div class="inline-flex items-center gap-0.5 text-lg font-semibold text-black">
-                      <app-icon name="icon-peso" [class]="'h-4 w-4 opacity-70'" [fill]="'currentColor'" />
+                      <app-icon
+                        name="icon-peso"
+                        [class]="'h-4 w-4 opacity-70'"
+                        [fill]="'currentColor'"
+                      />
                       {{ product.price.toFixed(2) }}
                     </div>
                   </div>
