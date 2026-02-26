@@ -12,6 +12,7 @@ import {
 import { Capacitor } from '@capacitor/core';
 import { SuccessMessages } from '@core/messages';
 import { AlertService, ImageDownloadService } from '@core/services';
+import { IconComponent } from '@shared/components/icons/icon/icon';
 import { CartAddOnDto, CartItemDto, OrderStatusEnum, PaymentMethodEnum } from '@shared/models';
 import { SortAddOnsPipe } from '@shared/pipes';
 
@@ -32,7 +33,7 @@ export interface ReceiptData {
 
 @Component({
   selector: 'app-order-receipt',
-  imports: [CommonModule, SortAddOnsPipe],
+  imports: [CommonModule, SortAddOnsPipe, IconComponent],
   templateUrl: './order-receipt.html',
 })
 export class OrderReceiptComponent implements OnInit {

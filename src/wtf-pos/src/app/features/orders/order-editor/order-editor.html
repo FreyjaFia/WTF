@@ -9,12 +9,17 @@
     @if (!isEditMode() || !isLoading()) {
       <!-- Header: Title on Left, Tools on Right -->
       <div class="mb-4 flex shrink-0 flex-col gap-2 sm:mb-6 sm:gap-3">
-        <!-- Row 1: Title + Search -->
-        <div class="flex items-center gap-2 sm:gap-3">
-          <h2 class="shrink-0 text-xl font-bold text-gray-900 sm:text-2xl">Products</h2>
+        <!-- Row 1: Title + Subtitle + Search -->
+        <div class="flex flex-col gap-2 sm:gap-3 md:flex-row md:flex-wrap md:items-end md:justify-between">
+          <div class="flex flex-col gap-1">
+            <h2 class="shrink-0 text-xl font-bold text-gray-900 sm:text-2xl">Products</h2>
+            <p class="text-xs text-gray-500 sm:text-sm">
+              Browse products, filter by category, and build the current order
+            </p>
+          </div>
 
           <label
-            class="flex min-w-0 flex-1 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200 sm:max-w-72 md:ml-auto"
+            class="flex min-w-0 w-full items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200 sm:max-w-72 md:ml-auto md:w-56 md:flex-none lg:w-72"
             [class.pointer-events-none]="isReadOnly() || !canManageOrderActions()"
             [class.opacity-50]="isReadOnly() || !canManageOrderActions()"
           >
@@ -159,7 +164,7 @@
                     </h2>
                     <div class="card-actions mt-auto items-center justify-between">
                       <div class="text-lg font-bold text-black">
-                        <span class="text-base opacity-70">₱</span>{{ p.price | number: '1.2-2' }}
+                        <span class="text-base opacity-70"><app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" /></span>{{ p.price | number: '1.2-2' }}
                       </div>
                     </div>
                   </div>
@@ -186,7 +191,7 @@
           <span class="text-sm font-semibold">View Cart</span>
         </div>
         <span class="text-lg font-bold">
-          <span class="text-base opacity-70">₱</span>{{ totalPrice() | number: '1.2-2' }}
+          <span class="text-base opacity-70"><app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" /></span>{{ totalPrice() | number: '1.2-2' }}
         </span>
       </button>
     }
@@ -312,7 +317,7 @@
     @if (isEditMode() && isLoading()) {
       <div class="flex min-h-0 flex-1 flex-col items-center justify-center p-4">
         <span class="loading loading-spinner loading-lg text-gray-400"></span>
-        <div class="mt-3 text-sm text-gray-400">Loading order items…</div>
+        <div class="mt-3 text-sm text-gray-400">Loading order items...</div>
       </div>
     } @else if (cart().length === 0) {
       <div class="flex min-h-0 flex-1 flex-col items-center justify-center p-4 text-center">
@@ -336,7 +341,7 @@
                 <div class="flex items-start justify-between gap-4 sm:gap-6">
                   <div class="min-w-0 flex-1 text-sm font-semibold text-gray-900">{{ c.name }}</div>
                   <div class="shrink-0 text-sm text-gray-500">
-                    <span class="text-xs opacity-60">₱</span>{{ c.price | number: '1.2-2' }}
+                    <span class="text-xs opacity-60"><app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" /></span>{{ c.price | number: '1.2-2' }}
                   </div>
                 </div>
                 <div class="flex items-center justify-between">
@@ -347,7 +352,7 @@
                         (click)="decrement(c.productId, $index)"
                         aria-label="Decrease quantity"
                       >
-                        <span class="text-base leading-none font-bold">−</span>
+                        <span class="text-base leading-none font-bold">-</span>
                       </button>
                     }
                     <div class="text-center text-sm font-medium" [class.w-6]="!isReadOnly()">
@@ -367,7 +372,7 @@
                     }
                   </div>
                   <div class="text-base font-bold text-gray-900">
-                    <span class="text-xs opacity-70">₱</span
+                    <span class="text-xs opacity-70"><app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" /></span
                     >{{
                       c.qty *
                         (c.price + (c.addOns?.length ? c.addOns!.reduce(addOnPriceReducer, 0) : 0))
@@ -387,7 +392,7 @@
                       <span class="inline-block h-1 w-1 rounded-full bg-gray-400"></span>
                       {{ ao.name }}
                     </span>
-                    <span>+₱{{ ao.price | number: '1.2-2' }}</span>
+                    <span>+<app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" />{{ ao.price | number: '1.2-2' }}</span>
                   </div>
                 }
               </div>
@@ -490,7 +495,7 @@
           {{ isRefunded() ? 'Total Refunded' : 'Total' }}
         </div>
         <div class="text-2xl font-bold text-black">
-          <span class="text-lg opacity-70">₱</span>{{ totalPrice() | number: '1.2-2' }}
+          <span class="text-lg opacity-70"><app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" /></span>{{ totalPrice() | number: '1.2-2' }}
         </div>
       </div>
 
@@ -806,7 +811,7 @@
             Order #{{ currentOrder()!.orderNumber }} Summary
           </h3>
           <p class="mt-1 text-sm text-gray-500">
-            {{ selectedCustomerName() }} ·
+            {{ selectedCustomerName() }} &middot;
             {{ getOrderDateValue(currentOrder()!) | date: 'd MMM y, h:mm a' }}
           </p>
         </div>
@@ -816,7 +821,7 @@
           (click)="closeOrderSummaryModal()"
           aria-label="Close summary"
         >
-          ✕
+          <app-icon name="icon-close" [class]="'h-5 w-5'" [fill]="'currentColor'" />
         </button>
       </div>
 
@@ -844,7 +849,7 @@
             <div class="flex items-center justify-between">
               <span class="text-gray-600">Order Total</span>
               <span class="font-medium text-gray-900"
-                >₱{{ paymentOrderTotal() | number: '1.2-2' }}</span
+                ><app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" />{{ paymentOrderTotal() | number: '1.2-2' }}</span
               >
             </div>
           </div>
@@ -884,19 +889,19 @@
                 isRefunded() ? 'Original Amount' : 'Amount Paid'
               }}</span>
               <span class="font-medium text-gray-900"
-                >₱{{ paymentAmountPaid() | number: '1.2-2' }}</span
+                ><app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" />{{ paymentAmountPaid() | number: '1.2-2' }}</span
               >
             </div>
             <div class="flex items-center justify-between">
               <span class="text-gray-600">{{ isRefunded() ? 'Original Tips' : 'Tips' }}</span>
               <span class="font-medium text-gray-900"
-                >₱{{ paymentTipsAmount() | number: '1.2-2' }}</span
+                ><app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" />{{ paymentTipsAmount() | number: '1.2-2' }}</span
               >
             </div>
             <div class="flex items-center justify-between">
               <span class="text-gray-600">{{ isRefunded() ? 'Original Change' : 'Change' }}</span>
               <span class="font-medium text-gray-900"
-                >₱{{ paymentChangeAmount() | number: '1.2-2' }}</span
+                ><app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" />{{ paymentChangeAmount() | number: '1.2-2' }}</span
               >
             </div>
             <div
@@ -911,7 +916,7 @@
                 class="font-semibold"
                 [class.text-emerald-700]="!isRefunded()"
                 [class.text-red-600]="isRefunded()"
-                >₱{{
+                ><app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" />{{
                   (isRefunded() ? paymentOrderTotal() : paymentTotalPaid()) | number: '1.2-2'
                 }}</span
               >
@@ -944,11 +949,11 @@
                 <div class="flex items-center justify-between gap-3">
                   <div class="min-w-0">
                     <div class="text-sm font-medium text-gray-900">{{ c.qty }}x {{ c.name }}</div>
-                    <div class="text-xs text-gray-500">₱{{ c.price | number: '1.2-2' }} each</div>
+                    <div class="text-xs text-gray-500"><app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" />{{ c.price | number: '1.2-2' }} each</div>
                   </div>
                   <div class="shrink-0 text-right">
                     <div class="text-sm font-semibold text-gray-900">
-                      ₱{{
+                      <app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" />{{
                         c.qty *
                           (c.price +
                             (c.addOns?.length ? c.addOns!.reduce(addOnPriceReducer, 0) : 0))
@@ -962,7 +967,7 @@
                     @for (ao of c.addOns | sortAddOns; track ao.addOnId) {
                       <div class="flex items-center justify-between">
                         <span>+ {{ ao.name }}</span>
-                        <span>₱{{ ao.price | number: '1.2-2' }}</span>
+                        <span><app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" />{{ ao.price | number: '1.2-2' }}</span>
                       </div>
                     }
                   </div>
@@ -1042,3 +1047,5 @@
     </div>
   </div>
 }
+
+

@@ -64,11 +64,11 @@
               <div class="flex items-center gap-2">
                 @if (entry.oldPrice !== null && entry.oldPrice !== undefined) {
                   <span class="text-base-content/50 text-sm line-through">
-                    ₱{{ entry.oldPrice | number: '1.2-2' }}
+                    <app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" />{{ entry.oldPrice | number: '1.2-2' }}
                   </span>
                   <app-icon name="icon-forward" [class]="'text-base-content/40 h-3 w-3'" />
                 }
-                <span class="text-sm font-semibold"> ₱{{ entry.newPrice | number: '1.2-2' }} </span>
+                <span class="text-sm font-semibold"> <app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" />{{ entry.newPrice | number: '1.2-2' }} </span>
               </div>
             </div>
           }
@@ -86,3 +86,5 @@
     </div>
   </div>
 }
+
+

@@ -1,4 +1,4 @@
-<div class="flex flex-col items-center gap-3">
+﻿<div class="flex flex-col items-center gap-3">
   <svg viewBox="0 0 120 120" class="h-28 w-28 sm:h-32 sm:w-32">
     @for (arc of arcs(); track arc.label) {
       <circle
@@ -13,7 +13,7 @@
         stroke-linecap="round"
         class="transition-all duration-500"
       >
-        <title>{{ arc.label }}: ₱{{ arc.value.toFixed(2) }} ({{ arc.percent }}%)</title>
+        <title>{{ arc.label }}: PHP {{ arc.value.toFixed(2) }} ({{ arc.percent }}%)</title>
       </circle>
     }
     <!-- Center text -->
@@ -51,3 +51,6 @@
     }
   </div>
 </div>
+
+
+

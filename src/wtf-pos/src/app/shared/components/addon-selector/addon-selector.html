@@ -36,7 +36,7 @@
             <p class="mt-0.5 text-sm text-gray-500">Customize your order</p>
           </div>
           <div class="shrink-0 text-right">
-            <p class="text-lg font-bold text-[#047857]">₱{{ totalPrice() | number: '1.2-2' }}</p>
+            <p class="text-lg font-bold text-[#047857]"><app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" />{{ totalPrice() | number: '1.2-2' }}</p>
             <div class="mt-1 flex items-center justify-end gap-1.5">
               <button
                 type="button"
@@ -44,7 +44,7 @@
                 (click)="decrementProductQuantity($event)"
                 aria-label="Decrease product quantity"
               >
-                −
+                -
               </button>
               <span class="w-6 text-center text-xs font-semibold text-gray-700">
                 {{ productQuantity() }}
@@ -60,7 +60,7 @@
             </div>
             @if (addOnTotal() > 0 || productQuantity() > 1) {
               <p class="text-xs text-gray-400">
-                {{ productQuantity() }} × (Base ₱{{ product()!.price | number: '1.2-2' }} + ₱{{
+                {{ productQuantity() }} &times; (Base <app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" />{{ product()!.price | number: '1.2-2' }} + <app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" />{{
                   addOnTotal() | number: '1.2-2'
                 }})
               </p>
@@ -198,7 +198,7 @@
                           (click)="decrementOption(group, option, $event)"
                           aria-label="Decrease quantity"
                         >
-                          −
+                          -
                         </button>
                         <span class="w-5 text-center text-xs font-semibold text-gray-700">
                           {{ getQuantity(group.type, option.id) }}
@@ -220,7 +220,7 @@
                       [class.text-gray-700]="option.isActive"
                       [class.text-gray-400]="!option.isActive"
                     >
-                      +₱{{ option.overridePrice ?? option.price | number: '1.2-2' }}
+                      +<app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" />{{ option.overridePrice ?? option.price | number: '1.2-2' }}
                     </span>
                   </button>
                 }
@@ -291,3 +291,5 @@
     </div>
   </div>
 }
+
+

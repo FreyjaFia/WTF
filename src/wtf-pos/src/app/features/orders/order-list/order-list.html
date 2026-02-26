@@ -1,15 +1,14 @@
 ﻿<div class="flex h-full flex-col">
   <!-- Header: Title on Left, Tools on Right -->
-  <div
-    class="mb-4 flex shrink-0 flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between"
-  >
-    <!-- Left: Title + Search (inline on mobile) -->
-    <div class="flex items-center gap-2">
+  <div class="mb-4 flex shrink-0 flex-col gap-3 sm:mb-6 sm:flex-row sm:items-start sm:justify-between">
+    <!-- Left: Title + Search (mobile) -->
+    <div class="flex flex-col gap-1">
       <h1 class="shrink-0 text-xl font-bold text-gray-900 sm:text-2xl">Orders</h1>
+      <p class="text-xs text-gray-500 sm:text-sm">Track transactions, status, and order totals</p>
 
-      <!-- Search (mobile only, inline beside title) -->
+      <!-- Search (mobile only) -->
       <label
-        class="flex min-w-0 flex-1 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200 sm:hidden"
+        class="mt-2 flex min-w-0 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200 sm:hidden"
       >
         <app-icon
           name="icon-search"
@@ -26,12 +25,10 @@
     </div>
 
     <!-- Right: Toolbar -->
-    <div
-      class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:gap-3"
-    >
+    <div class="flex flex-col gap-2 sm:flex-row sm:flex-nowrap sm:items-center sm:justify-end sm:gap-2 lg:gap-3">
       <!-- Search (desktop only) -->
       <label
-        class="hidden items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200 sm:flex sm:w-72"
+        class="hidden items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200 sm:flex sm:w-56 md:w-64 lg:w-72"
       >
         <app-icon
           name="icon-search"
@@ -150,11 +147,11 @@
                 <div class="flex items-center gap-2 text-xs text-gray-500">
                   @if (pending.customerName) {
                     <span>{{ pending.customerName }}</span>
-                    <span>·</span>
+                    <span>&middot;</span>
                   }
                   <span>{{ getPendingItemCount(pending.cartSnapshot) }}</span>
-                  <span>·</span>
-                  <span>₱{{ getPendingTotal(pending.cartSnapshot) | number: '1.2-2' }}</span>
+                  <span>&middot;</span>
+                  <span><app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" />{{ getPendingTotal(pending.cartSnapshot) | number: '1.2-2' }}</span>
                 </div>
                 @if (pending.errorMessage) {
                   <div class="mt-0.5 text-xs text-red-500">{{ pending.errorMessage }}</div>
@@ -285,24 +282,24 @@
                     <div
                       class="flex min-w-0 flex-1 flex-col gap-1 md:col-span-11 md:grid md:grid-cols-11 md:gap-4"
                     >
-                      <!-- Mobile: Row 1 — Order # -->
+                      <!-- Mobile: Row 1 - Order # -->
                       <div class="md:hidden">
                         <span class="font-semibold text-gray-900">#{{ order.orderNumber }}</span>
                       </div>
 
-                      <!-- Mobile: Row 2 — Status Badge -->
+                      <!-- Mobile: Row 2 - Status Badge -->
                       <div class="md:hidden">
                         <app-badge [variant]="getStatusVariant(order.status)">
                           {{ getStatusLabel(order.status) }}
                         </app-badge>
                       </div>
 
-                      <!-- Mobile: Row 3 — Time • Items -->
+                      <!-- Mobile: Row 3 - Time and Items -->
                       <div class="flex items-center gap-2 md:hidden">
                         <span class="text-xs text-slate-500">
                           {{ getOrderDate(order) | date: 'h:mm a' }}
                         </span>
-                        <span class="text-xs text-slate-500">·</span>
+                        <span class="text-xs text-slate-500">&middot;</span>
                         <span class="text-xs text-slate-500">{{ getItemsText(order) }}</span>
                       </div>
 
@@ -333,7 +330,7 @@
                       <!-- Desktop: Total -->
                       <div class="hidden md:col-span-3 md:block md:text-right">
                         <div class="text-lg font-semibold text-black">
-                          <span class="text-base opacity-70">₱</span
+                          <span class="text-base opacity-70"><app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" /></span
                           >{{ order.totalAmount | number: '1.2-2' }}
                         </div>
                       </div>
@@ -344,7 +341,7 @@
                       class="flex shrink-0 items-center gap-2 md:col-span-1 md:flex md:justify-end"
                     >
                       <span class="text-base font-semibold text-black md:hidden">
-                        <span class="text-sm opacity-70">₱</span
+                        <span class="text-sm opacity-70"><app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" /></span
                         >{{ order.totalAmount | number: '1.2-2' }}
                       </span>
                       <app-icon
@@ -363,3 +360,5 @@
     }
   }
 </div>
+
+

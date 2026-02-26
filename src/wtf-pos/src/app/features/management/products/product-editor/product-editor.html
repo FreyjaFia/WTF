@@ -223,7 +223,7 @@
                     class="input flex w-full items-center gap-2 border-transparent bg-gray-50 transition-all focus-within:border-[#047857] focus-within:bg-white focus-within:ring-1 focus-within:ring-[#047857]/20"
                     [class.input-error]="hasError('price')"
                   >
-                    <span class="font-medium text-gray-500">₱</span>
+                    <app-icon name="icon-peso" [class]="'h-4 w-4 text-gray-500'" [fill]="'currentColor'" />
                     <input
                       id="productPrice"
                       type="number"
@@ -468,27 +468,25 @@
                               </div>
                               <div class="shrink-0 text-right">
                                 <span
-                                  class="block text-sm font-semibold text-gray-700"
+                                  class="inline-flex items-center gap-0.5 text-sm font-semibold text-gray-700"
                                   [class.text-gray-400]="!addon.isActive"
                                 >
-                                  ₱{{
-                                    getAddOnEffectivePrice(addon.id, addon.price)
-                                      | number: '1.2-2'
-                                  }}
+                                  <app-icon name="icon-peso" [class]="'h-3 w-3'" [fill]="'currentColor'" />
+                                  {{ getAddOnEffectivePrice(addon.id, addon.price) | number: '1.2-2' }}
                                 </span>
                               </div>
                             </div>
                             <div class="mt-2 flex flex-col items-end gap-1">
-                              <span class="text-[10px] text-gray-400">
-                                Default: ₱{{
-                                  getAddOnBasePrice(addon.id, addon.price) | number: '1.2-2'
-                                }}
+                              <span class="inline-flex items-center gap-0.5 text-[10px] text-gray-400">
+                                Default:
+                                <app-icon name="icon-peso" [class]="'h-2.5 w-2.5'" [fill]="'currentColor'" />
+                                {{ getAddOnBasePrice(addon.id, addon.price) | number: '1.2-2' }}
                               </span>
                               <div class="flex flex-wrap items-center justify-end gap-1">
                                 <label
                                   class="input input-xs flex h-7 w-24 items-center gap-1 border-gray-200 bg-white"
                                 >
-                                  <span class="text-[10px] text-gray-500">₱</span>
+                                  <app-icon name="icon-peso" [class]="'h-2.5 w-2.5 text-gray-500'" [fill]="'currentColor'" />
                                   <input
                                     type="number"
                                     min="0"
@@ -656,10 +654,11 @@
                               </span>
                             </div>
                             <span
-                              class="shrink-0 text-sm font-semibold text-gray-700"
+                              class="inline-flex shrink-0 items-center gap-0.5 text-sm font-semibold text-gray-700"
                               [class.text-gray-400]="!linked.isActive"
                             >
-                              ₱{{ linked.price | number: '1.2-2' }}
+                              <app-icon name="icon-peso" [class]="'h-3 w-3'" [fill]="'currentColor'" />
+                              {{ linked.price | number: '1.2-2' }}
                             </span>
                           </div>
                           <!-- Unlink -->
@@ -791,3 +790,5 @@
   [priceHistory]="priceHistory()"
   (closed)="closePriceHistory()"
 />
+
+

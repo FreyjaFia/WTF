@@ -80,7 +80,7 @@
                   <span class="font-mono text-[10px] text-gray-400">{{ product.code }}</span>
                 </div>
                 <span class="ml-auto shrink-0 text-xs text-gray-500">
-                  ₱{{ product.price | number: '1.2-2' }}
+                  <app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" />{{ product.price | number: '1.2-2' }}
                 </span>
               </li>
             }
@@ -145,7 +145,7 @@
                   <div class="flex items-center justify-between gap-2">
                     <span class="truncate">{{ product.name }}</span>
                     <span class="shrink-0 text-xs text-gray-500">
-                      ₱{{ product.price | number: '1.2-2' }}
+                      <app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" />{{ product.price | number: '1.2-2' }}
                     </span>
                   </div>
                   <div class="mt-0.5 flex items-center justify-between gap-2">
@@ -205,3 +205,5 @@
     <button type="button">close</button>
   </form>
 </dialog>
+
+

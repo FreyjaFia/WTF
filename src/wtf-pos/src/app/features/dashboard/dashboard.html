@@ -1,13 +1,16 @@
-<div class="flex h-full flex-col">
+﻿<div class="flex h-full flex-col">
   <!-- Header -->
-  <div class="mb-4 flex shrink-0 items-center justify-between gap-3 sm:mb-6">
-    <h1
-      class="text-xl font-extrabold tracking-tight text-gray-900 sm:text-2xl"
-      style="font-family: 'Plus Jakarta Sans', sans-serif"
-    >
-      {{ greeting }}
-    </h1>
-    <div class="flex items-center gap-1.5">
+  <div class="mb-4 flex shrink-0 flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
+    <div class="flex flex-col gap-1">
+      <h1
+        class="text-xl font-extrabold tracking-tight text-gray-900 sm:text-2xl"
+        style="font-family: 'Plus Jakarta Sans', sans-serif"
+      >
+        {{ greeting }}
+      </h1>
+      <p class="text-xs text-gray-500 sm:text-sm">Real-time sales, orders, and performance insights</p>
+    </div>
+    <div class="flex items-center justify-end gap-1.5">
       <app-date-range-picker (rangeChanged)="onDateRangeChanged($event)" />
       @if (!isAndroidPlatform) {
         <button
@@ -441,7 +444,7 @@
                           ></div>
                         </div>
                         <span class="shrink-0 text-[10px] font-medium text-gray-400">
-                          <span class="text-[9px]">&#8369;</span
+                          <span class="text-[9px]"><app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" /></span
                           >{{ product.revenue | number: '1.2-2' }}
                         </span>
                       </div>
@@ -505,7 +508,7 @@
                         {{ order.statusName }}
                       </app-badge>
                       <span class="text-right text-sm font-semibold text-gray-900">
-                        <span class="text-xs font-medium text-gray-400">&#8369;</span
+                        <span class="text-xs font-medium text-gray-400"><app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" /></span
                         >{{ order.totalAmount | number: '1.2-2' }}
                       </span>
                       <span class="w-14 text-right text-xs text-slate-400">{{
@@ -522,3 +525,4 @@
     </app-pull-to-refresh>
   }
 </div>
+

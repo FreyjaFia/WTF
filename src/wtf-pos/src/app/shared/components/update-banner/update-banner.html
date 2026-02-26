@@ -1,4 +1,4 @@
-@if (update.updateAvailable() && update.latest(); as latest) {
+﻿@if (update.updateAvailable() && update.latest(); as latest) {
   <div class="flex items-center justify-between gap-3 bg-sky-600 px-4 py-2 text-sm text-white">
     <span>Update available: v{{ latest.version }}</span>
     <div class="flex items-center gap-2">
@@ -19,3 +19,4 @@
     </div>
   </div>
 }
+

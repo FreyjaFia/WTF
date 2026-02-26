@@ -94,9 +94,9 @@
                 <p class="mb-2 text-xs font-semibold tracking-wider text-gray-400 uppercase">
                   Pricing
                 </p>
-                <p class="text-5xl font-black tracking-tight text-[#047857]">
-                  <span class="text-3xl font-extrabold">₱</span
-                  >{{ product()!.price | number: '1.2-2' }}
+                <p class="inline-flex items-center gap-1 text-5xl font-black tracking-tight text-[#047857]">
+                  <app-icon name="icon-peso" [class]="'h-8 w-8'" [fill]="'currentColor'" />
+                  {{ product()!.price | number: '1.2-2' }}
                 </p>
               </div>
 
@@ -226,10 +226,11 @@
                                 </span>
                               </div>
                               <span
-                                class="shrink-0 text-sm font-semibold text-gray-700"
+                                class="inline-flex shrink-0 items-center gap-0.5 text-sm font-semibold text-gray-700"
                                 [class.text-gray-400]="!linked.isActive"
                               >
-                                ₱{{ linked.price | number: '1.2-2' }}
+                                <app-icon name="icon-peso" [class]="'h-3 w-3'" [fill]="'currentColor'" />
+                                {{ linked.price | number: '1.2-2' }}
                               </span>
                             </div>
                           </div>
@@ -344,18 +345,20 @@
                               </div>
                               <div class="shrink-0 text-right">
                                 <span
-                                  class="block text-sm font-semibold text-gray-700"
+                                  class="inline-flex items-center gap-0.5 text-sm font-semibold text-gray-700"
                                   [class.text-gray-400]="!addon.isActive"
                                 >
-                                  ₱{{ addon.overridePrice ?? addon.price | number: '1.2-2' }}
+                                  <app-icon name="icon-peso" [class]="'h-3 w-3'" [fill]="'currentColor'" />
+                                  {{ addon.overridePrice ?? addon.price | number: '1.2-2' }}
                                 </span>
                                 @if (
                                   addon.overridePrice !== null &&
                                   addon.overridePrice !== undefined &&
                                   addon.overridePrice !== addon.price
                                 ) {
-                                  <span class="block text-[10px] text-gray-400 line-through">
-                                    ₱{{ addon.price | number: '1.2-2' }}
+                                  <span class="inline-flex items-center gap-0.5 text-[10px] text-gray-400 line-through">
+                                    <app-icon name="icon-peso" [class]="'h-2.5 w-2.5'" [fill]="'currentColor'" />
+                                    {{ addon.price | number: '1.2-2' }}
                                   </span>
                                 }
                               </div>
@@ -467,3 +470,5 @@
   [priceHistory]="priceHistory()"
   (closed)="closePriceHistory()"
 />
+
+

@@ -61,7 +61,7 @@
                 <input
                   id="amountReceived"
                   type="number"
-                  placeholder="₱0.00"
+                  placeholder="0.00"
                   formControlName="amountReceived"
                   class="input input-bordered input-lg outline-transparent"
                   min="0"
@@ -75,7 +75,7 @@
                 <input
                   id="tips"
                   type="number"
-                  placeholder="₱0.00"
+                  placeholder="0.00"
                   formControlName="tips"
                   class="input input-bordered input-lg outline-transparent"
                   min="0"
@@ -98,12 +98,12 @@
                 [class.text-red-600]="hasInsufficientCash()"
                 [class.text-green-600]="hasAmountReceivedInput() && change() > 0"
               >
-                ₱{{ paymentStatusAmount() | number: '1.2-2' }}
+                <app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" />{{ paymentStatusAmount() | number: '1.2-2' }}
               </span>
             </div>
             @if (hasInsufficientCash()) {
               <p class="mt-2 text-sm text-red-600">
-                Insufficient payment. Please enter at least ₱{{ totalPrice() | number: '1.2-2' }}.
+                Insufficient payment. Please enter at least <app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" />{{ totalPrice() | number: '1.2-2' }}.
               </p>
             }
           </div>
@@ -127,7 +127,7 @@
       </div>
     </div>
 
-    <!-- Right: Order Summary (absolute — does NOT affect modal height) -->
+    <!-- Right: Order Summary (absolute - does not affect modal height) -->
     @if (showSummary()) {
       <div
         class="mt-6 max-h-60 overflow-y-auto rounded-xl border border-gray-200 bg-green-50 p-4 md:absolute md:inset-y-0 md:right-0 md:mt-0 md:flex md:max-h-none md:w-72 md:flex-col md:overflow-hidden md:rounded-none md:border-0 md:border-l md:border-gray-200 md:p-6"
@@ -154,14 +154,14 @@
               }
               <div class="flex-1">
                 <p class="text-sm font-semibold">{{ item.name }}</p>
-                <p class="text-xs opacity-70">{{ item.qty }} × ₱{{ item.price.toFixed(2) }}</p>
+                <p class="text-xs opacity-70">{{ item.qty }} &times; <app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" />{{ item.price.toFixed(2) }}</p>
                 @if (item.addOns?.length) {
                   <div class="mt-1 space-y-0.5">
                     @for (ao of item.addOns | sortAddOns; track ao.addOnId) {
                       <p class="flex items-center gap-1 text-xs text-gray-500">
                         <span class="inline-block h-1 w-1 rounded-full bg-gray-400"></span>
                         {{ ao.name }}
-                        <span class="ml-auto">+₱{{ ao.price.toFixed(2) }}</span>
+                        <span class="ml-auto">+<app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" />{{ ao.price.toFixed(2) }}</span>
                       </p>
                     }
                   </div>
@@ -172,7 +172,7 @@
                   </p>
                 }
                 <p class="mt-0.5 text-right text-sm font-semibold">
-                  ₱{{
+                  <app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" />{{
                     (
                       item.qty *
                       (item.price +
@@ -198,7 +198,7 @@
           }
           <div class="flex items-center justify-between text-lg font-bold">
             <span>Total:</span>
-            <span>₱{{ totalPrice().toFixed(2) }}</span>
+            <span><app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" />{{ totalPrice().toFixed(2) }}</span>
           </div>
         </div>
       </div>
@@ -208,3 +208,5 @@
     <button>close</button>
   </form>
 </dialog>
+
+

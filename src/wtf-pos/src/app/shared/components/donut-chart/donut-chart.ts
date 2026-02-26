@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+﻿import { Component, computed, input } from '@angular/core';
 
 export interface DonutSegment {
   label: string;
@@ -52,10 +52,11 @@ export class DonutChartComponent {
     const data = this.segments();
 
     if (!data || data.length === 0) {
-      return '₱0';
+      return '\u20B10';
     }
 
     const total = data.reduce((sum, s) => sum + s.value, 0);
-    return total >= 1000 ? `₱${(total / 1000).toFixed(1)}k` : `₱${total.toFixed(0)}`;
+    return total >= 1000 ? `\u20B1${(total / 1000).toFixed(1)}k` : `\u20B1${total.toFixed(0)}`;
   });
 }
+
