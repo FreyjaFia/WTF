@@ -7,106 +7,84 @@
     }
 
     @if (!isEditMode() || !isLoading()) {
-      <!-- Header: Title on Left, Tools on Right -->
+      <!-- Header -->
       <div class="mb-4 flex shrink-0 flex-col gap-2 sm:mb-6 sm:gap-3">
-        <!-- Row 1: Title + Subtitle + Search -->
-        <div class="flex flex-col gap-2 sm:gap-3 md:flex-row md:flex-wrap md:items-end md:justify-between">
+        <!-- Tier 1 -->
+        <div class="flex items-start justify-between gap-3">
           <div class="flex flex-col gap-1">
             <h2 class="shrink-0 text-xl font-bold text-gray-900 sm:text-2xl">Products</h2>
             <p class="text-xs text-gray-500 sm:text-sm">
               Browse products, filter by category, and build the current order
             </p>
           </div>
-
-          <label
-            class="flex min-w-0 w-full items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200 sm:max-w-72 md:ml-auto md:w-56 md:flex-none lg:w-72"
-            [class.pointer-events-none]="isReadOnly() || !canManageOrderActions()"
-            [class.opacity-50]="isReadOnly() || !canManageOrderActions()"
-          >
-            <app-icon
-              name="icon-search"
-              [class]="'h-5 w-5 shrink-0 opacity-40'"
-              [fill]="'currentColor'"
-            />
-            <input
-              type="search"
-              class="grow bg-transparent text-sm placeholder-gray-500 focus:caret-[#047857] focus:outline-none"
-              placeholder="Search by product name"
-              [formControl]="filterForm.controls.searchTerm"
-            />
-          </label>
-          @if (!isAndroidPlatform) {
-            <button
-              class="tooltip tooltip-bottom pointer-events-auto z-30 hidden shrink-0 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95 md:flex"
-              [class.pointer-events-none]="isReadOnly() || !canManageOrderActions()"
-              [class.opacity-50]="isReadOnly() || !canManageOrderActions()"
-              [class.opacity-70]="isRefreshing()"
-              type="button"
-              (click)="refreshProducts()"
-              [disabled]="isRefreshing()"
-              aria-label="Refresh products"
-              data-tip="Refresh"
-            >
-              @if (isRefreshing()) {
-                <app-icon
-                  name="icon-refresh"
-                  [class]="'h-5 w-5 animate-spin text-gray-600'"
-                  [fill]="'currentColor'"
-                />
-              } @else {
-                <app-icon
-                  name="icon-refresh"
-                  [class]="'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'"
-                  [fill]="'currentColor'"
-                />
-              }
-            </button>
-          }
         </div>
 
-        <!-- Row 2: Sub Category Tabs + Refresh (mobile) -->
-        <div
-          class="flex items-center justify-between gap-2"
-          [class.pointer-events-none]="isReadOnly() || !canManageOrderActions()"
-          [class.opacity-50]="isReadOnly() || !canManageOrderActions()"
-        >
-          <div role="tablist" class="tabs tabs-box tabs-sm">
-            @for (tab of subCategoryTabs; track tab.id) {
+        <!-- Tier 2 -->
+        <div class="flex flex-col gap-2 md:gap-3">
+          <div class="flex items-center justify-between gap-2">
+            <label
+              class="flex w-full min-w-0 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200 md:w-[26rem] md:flex-none"
+              [class.pointer-events-none]="isReadOnly() || !canManageOrderActions()"
+              [class.opacity-50]="isReadOnly() || !canManageOrderActions()"
+            >
+              <app-icon
+                name="icon-search"
+                [class]="'h-5 w-5 shrink-0 opacity-40'"
+                [fill]="'currentColor'"
+              />
+              <input
+                type="search"
+                class="grow bg-transparent text-sm placeholder-gray-500 focus:caret-[#047857] focus:outline-none"
+                placeholder="Search by product name"
+                [formControl]="filterForm.controls.searchTerm"
+              />
+            </label>
+
+            @if (!isAndroidPlatform) {
               <button
+                class="tooltip tooltip-bottom pointer-events-auto z-30 shrink-0 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
+                [class.opacity-70]="isRefreshing()"
                 type="button"
-                role="tab"
-                class="tab gap-1.5"
-                [class.tab-active]="activeSubCategoryTab() === tab.id"
-                (click)="selectSubCategoryTab(tab.id)"
+                (click)="refreshProducts()"
+                [disabled]="isRefreshing()"
+                aria-label="Refresh products"
+                data-tip="Refresh"
               >
-                <app-icon [name]="tab.icon" [class]="'h-4 w-4'" />
-                {{ tab.label }}
+                @if (isRefreshing()) {
+                  <app-icon
+                    name="icon-refresh"
+                    [class]="'h-5 w-5 animate-spin text-gray-600'"
+                    [fill]="'currentColor'"
+                  />
+                } @else {
+                  <app-icon
+                    name="icon-refresh"
+                    [class]="'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'"
+                    [fill]="'currentColor'"
+                  />
+                }
               </button>
             }
           </div>
-          @if (!isAndroidPlatform) {
+        </div>
+      </div>
+
+      <div
+        class="mb-3 flex items-center justify-start gap-2 sm:mb-4"
+        [class.pointer-events-none]="isReadOnly() || !canManageOrderActions()"
+        [class.opacity-50]="isReadOnly() || !canManageOrderActions()"
+      >
+        <div role="tablist" class="tabs tabs-box tabs-sm">
+          @for (tab of subCategoryTabs; track tab.id) {
             <button
-              class="tooltip tooltip-bottom pointer-events-auto z-30 shrink-0 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95 md:hidden"
-              [class.opacity-70]="isRefreshing()"
               type="button"
-              (click)="refreshProducts()"
-              [disabled]="isRefreshing()"
-              aria-label="Refresh products"
-              data-tip="Refresh"
+              role="tab"
+              class="tab gap-1.5"
+              [class.tab-active]="activeSubCategoryTab() === tab.id"
+              (click)="selectSubCategoryTab(tab.id)"
             >
-              @if (isRefreshing()) {
-                <app-icon
-                  name="icon-refresh"
-                  [class]="'h-5 w-5 animate-spin text-gray-600'"
-                  [fill]="'currentColor'"
-                />
-              } @else {
-                <app-icon
-                  name="icon-refresh"
-                  [class]="'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'"
-                  [fill]="'currentColor'"
-                />
-              }
+              <app-icon [name]="tab.icon" [class]="'h-4 w-4'" />
+              {{ tab.label }}
             </button>
           }
         </div>

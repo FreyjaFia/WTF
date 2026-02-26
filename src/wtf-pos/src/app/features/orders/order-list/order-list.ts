@@ -1,7 +1,7 @@
 import { CommonModule, DatePipe } from '@angular/common';
 import { Component, computed, effect, inject, OnInit, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { Capacitor } from '@capacitor/core';
 import {
   AlertService,
@@ -26,6 +26,7 @@ type SortDirection = 'asc' | 'desc';
 interface OrderListState {
   searchTerm: string;
   selectedStatuses: OrderStatusEnum[];
+  selectedDateRanges: string[];
   sortColumn: SortColumn | null;
   sortDirection: SortDirection;
 }
@@ -41,6 +42,7 @@ interface OrderGroup {
     CommonModule,
     DatePipe,
     ReactiveFormsModule,
+    RouterLink,
     IconComponent,
     FilterDropdownComponent,
     BadgeComponent,
@@ -73,6 +75,7 @@ export class OrderList implements OnInit {
   protected readonly sortColumn = signal<SortColumn | null>(null);
   protected readonly sortDirection = signal<SortDirection>('desc');
   protected readonly selectedStatuses = signal<OrderStatusEnum[]>([]);
+  protected readonly selectedDateRanges = signal<string[]>([]);
   private readonly waitingForReconnectSync = signal(false);
   private wasOnline = this.connectivity.isOnline();
   private wasSyncingOffline = false;
@@ -166,6 +169,12 @@ export class OrderList implements OnInit {
     },
   ]);
 
+  protected readonly dateRangeOptions = computed<FilterOption[]>(() => [
+    { id: 'today', label: 'Today' },
+    { id: '7d', label: 'Last 7 days' },
+    { id: '30d', label: 'Last 30 days' },
+  ]);
+
   public ngOnInit(): void {
     this.restoreState();
     this.loadOrders();
@@ -203,6 +212,18 @@ export class OrderList implements OnInit {
     this.loadOrders();
   }
 
+  protected onDateRangeFilterChange(selectedIds: (string | number)[]): void {
+    this.selectedDateRanges.set((selectedIds as string[]).slice(0, 1));
+    this.applyFiltersToCache();
+    this.saveState();
+  }
+
+  protected onDateRangeFilterReset(): void {
+    this.selectedDateRanges.set([]);
+    this.applyFiltersToCache();
+    this.saveState();
+  }
+
   protected onStatusFilterChange(selectedIds: (string | number)[]): void {
     this.selectedStatuses.set(selectedIds as OrderStatusEnum[]);
     this.applyFiltersToCache();
@@ -231,6 +252,7 @@ export class OrderList implements OnInit {
       searchTerm: '',
     });
     this.selectedStatuses.set([]);
+    this.selectedDateRanges.set([]);
     this.applyFiltersToCache();
     this.saveState();
   }
@@ -377,6 +399,23 @@ export class OrderList implements OnInit {
       items = items.filter((order) => selectedStatuses.includes(order.status));
     }
 
+    // Filter by date range
+    const selectedDateRange = this.selectedDateRanges()[0];
+    if (selectedDateRange) {
+      const now = new Date();
+      const start = new Date(now);
+      if (selectedDateRange === 'today') {
+        start.setHours(0, 0, 0, 0);
+        items = items.filter((order) => new Date(this.getOrderDate(order)) >= start);
+      } else if (selectedDateRange === '7d') {
+        start.setDate(now.getDate() - 7);
+        items = items.filter((order) => new Date(this.getOrderDate(order)) >= start);
+      } else if (selectedDateRange === '30d') {
+        start.setDate(now.getDate() - 30);
+        items = items.filter((order) => new Date(this.getOrderDate(order)) >= start);
+      }
+    }
+
     // Sort
     const sortColumn = this.sortColumn();
     const sortDirection = this.sortDirection();
@@ -411,6 +450,7 @@ export class OrderList implements OnInit {
     const state = this.listState.load<OrderListState>(this.stateKey, {
       searchTerm: '',
       selectedStatuses: [],
+      selectedDateRanges: [],
       sortColumn: null,
       sortDirection: 'desc',
     });
@@ -421,7 +461,8 @@ export class OrderList implements OnInit {
       },
       { emitEvent: false },
     );
-    this.selectedStatuses.set(state.selectedStatuses);
+    this.selectedStatuses.set(state.selectedStatuses ?? []);
+    this.selectedDateRanges.set(state.selectedDateRanges ?? []);
     this.sortColumn.set(state.sortColumn);
     this.sortDirection.set(state.sortDirection);
   }
@@ -430,6 +471,7 @@ export class OrderList implements OnInit {
     this.listState.save<OrderListState>(this.stateKey, {
       searchTerm: this.filterForm.controls.searchTerm.value ?? '',
       selectedStatuses: this.selectedStatuses(),
+      selectedDateRanges: this.selectedDateRanges(),
       sortColumn: this.sortColumn(),
       sortDirection: this.sortDirection(),
     });

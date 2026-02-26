@@ -48,27 +48,51 @@
           <p class="text-sm text-gray-500">No executed scripts have been recorded yet.</p>
         </div>
       } @else {
-        <div class="overflow-auto rounded-xl bg-white shadow-lg">
-          <table class="table-zebra table w-full">
-            <thead>
-              <tr class="text-xs tracking-wider text-gray-600 uppercase">
-                <th>ID</th>
-                <th>Script Name</th>
-                <th>Applied At (UTC)</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (script of scripts(); track script.id) {
-                <tr>
-                  <td class="font-mono text-xs">{{ script.id }}</td>
-                  <td class="font-mono text-xs sm:text-sm">{{ script.scriptName }}</td>
-                  <td class="text-xs sm:text-sm">
-                    {{ script.appliedAt | date: 'y-MM-dd HH:mm:ss' }}
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
+        <div class="space-y-2 pb-4 md:space-y-3">
+          <div
+            class="sticky top-0 z-10 mb-2 hidden grid-cols-12 gap-4 rounded-lg bg-white px-4 py-3 md:grid"
+          >
+            <div class="col-span-2 text-xs font-semibold tracking-wider text-gray-600 uppercase">
+              ID
+            </div>
+            <div class="col-span-6 text-xs font-semibold tracking-wider text-gray-600 uppercase">
+              Script Name
+            </div>
+            <div
+              class="col-span-4 text-right text-xs font-semibold tracking-wider text-gray-600 uppercase"
+            >
+              Applied At (UTC)
+            </div>
+          </div>
+
+          @for (script of scripts(); track script.id) {
+            <div
+              class="rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm transition-shadow duration-200 hover:shadow-md md:grid md:grid-cols-12 md:items-center md:gap-4 md:border-0 md:py-4 md:shadow-lg md:hover:shadow-xl"
+            >
+              <div class="md:col-span-2">
+                <div class="mb-0.5 text-[10px] tracking-wide text-gray-500 uppercase md:hidden">ID</div>
+                <div class="truncate font-mono text-xs text-gray-700">{{ script.id }}</div>
+              </div>
+
+              <div class="mt-2 md:col-span-6 md:mt-0">
+                <div class="mb-0.5 text-[10px] tracking-wide text-gray-500 uppercase md:hidden">
+                  Script Name
+                </div>
+                <div class="font-mono text-xs text-gray-900 sm:text-sm">{{ script.scriptName }}</div>
+              </div>
+
+              <div class="mt-2 md:col-span-4 md:mt-0 md:text-right">
+                <div
+                  class="mb-0.5 text-[10px] tracking-wide text-gray-500 uppercase md:hidden"
+                >
+                  Applied At (UTC)
+                </div>
+                <div class="text-xs text-gray-700 sm:text-sm">
+                  {{ script.appliedAt | date: 'y-MM-dd HH:mm:ss' }}
+                </div>
+              </div>
+            </div>
+          }
         </div>
       }
     </app-pull-to-refresh>

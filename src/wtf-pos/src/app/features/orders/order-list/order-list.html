@@ -1,34 +1,25 @@
-<div class="flex h-full flex-col">
-  <!-- Header: Title on Left, Tools on Right -->
-  <div class="mb-4 flex shrink-0 flex-col gap-3 sm:mb-6 sm:flex-row sm:items-start sm:justify-between">
-    <!-- Left: Title + Search (mobile) -->
-    <div class="flex flex-col gap-1">
-      <h1 class="shrink-0 text-xl font-bold text-gray-900 sm:text-2xl">Orders</h1>
-      <p class="text-xs text-gray-500 sm:text-sm">Track transactions, status, and order totals</p>
-
-      <!-- Search (mobile only) -->
-      <label
-        class="mt-2 flex min-w-0 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200 sm:hidden"
+﻿<div class="flex h-full flex-col">
+  <!-- Header -->
+  <div class="mb-4 flex shrink-0 flex-col gap-3 sm:mb-6">
+    <!-- Tier 1 -->
+    <div class="flex items-start justify-between gap-3">
+      <div class="flex flex-col gap-1">
+        <h1 class="shrink-0 text-xl font-bold text-gray-900 sm:text-2xl">Orders</h1>
+        <p class="text-xs text-gray-500 sm:text-sm">Manage your store transactions.</p>
+      </div>
+      <a
+        class="btn btn-sm rounded-lg border-0 bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg"
+        [routerLink]="['/orders/editor']"
       >
-        <app-icon
-          name="icon-search"
-          [class]="'h-5 w-5 shrink-0 opacity-40'"
-          [fill]="'currentColor'"
-        />
-        <input
-          type="search"
-          class="grow bg-transparent text-sm placeholder-gray-500 focus:caret-[#047857] focus:outline-none"
-          placeholder="Search by order #"
-          [formControl]="filterForm.controls.searchTerm"
-        />
-      </label>
+        <app-icon name="icon-plus" [class]="'h-4 w-4'" />
+        New Order
+      </a>
     </div>
 
-    <!-- Right: Toolbar -->
-    <div class="flex flex-col gap-2 sm:flex-row sm:flex-nowrap sm:items-center sm:justify-end sm:gap-2 lg:gap-3">
-      <!-- Search (desktop only) -->
+    <!-- Tier 2 -->
+    <div class="flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
       <label
-        class="hidden items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200 sm:flex sm:w-56 md:w-64 lg:w-72"
+        class="flex w-full min-w-0 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200 md:w-[26rem] md:flex-none"
       >
         <app-icon
           name="icon-search"
@@ -43,8 +34,16 @@
         />
       </label>
 
-      <!-- Filters + Refresh -->
-      <div class="flex items-center justify-end gap-2">
+      <div class="flex items-center justify-end gap-2 md:ml-auto">
+        <app-filter-dropdown
+          [title]="'Date Range'"
+          [icon]="'icon-calendar'"
+          [options]="dateRangeOptions()"
+          [selectedIds]="selectedDateRanges()"
+          [showSelectedState]="true"
+          (filterChange)="onDateRangeFilterChange($event)"
+          (filterReset)="onDateRangeFilterReset()"
+        />
         <app-filter-dropdown
           [title]="'Status'"
           [icon]="'icon-status'"
@@ -195,7 +194,15 @@
                   [class.opacity-0]="!isSortActive('orderNumber')"
                   [class.opacity-100]="isSortActive('orderNumber')"
                 >
-                  {{ sortDirection() === 'asc' ? '↑' : '↓' }}
+                  <app-icon
+                    name="icon-arrow-up"
+                    [class]="
+                      sortDirection() === 'desc'
+                        ? 'inline h-3 w-3 align-[-0.05em] transform transition-transform duration-200 ease-out rotate-180'
+                        : 'inline h-3 w-3 align-[-0.05em] transform transition-transform duration-200 ease-out rotate-0'
+                    "
+                    [fill]="'currentColor'"
+                  />
                 </span>
               </div>
 
@@ -216,7 +223,15 @@
                   [class.opacity-0]="!isSortActive('date')"
                   [class.opacity-100]="isSortActive('date')"
                 >
-                  {{ sortDirection() === 'asc' ? '↑' : '↓' }}
+                  <app-icon
+                    name="icon-arrow-up"
+                    [class]="
+                      sortDirection() === 'desc'
+                        ? 'inline h-3 w-3 align-[-0.05em] transform transition-transform duration-200 ease-out rotate-180'
+                        : 'inline h-3 w-3 align-[-0.05em] transform transition-transform duration-200 ease-out rotate-0'
+                    "
+                    [fill]="'currentColor'"
+                  />
                 </span>
               </div>
 
@@ -249,7 +264,15 @@
                   [class.opacity-0]="!isSortActive('totalAmount')"
                   [class.opacity-100]="isSortActive('totalAmount')"
                 >
-                  {{ sortDirection() === 'asc' ? '↑' : '↓' }}
+                  <app-icon
+                    name="icon-arrow-up"
+                    [class]="
+                      sortDirection() === 'desc'
+                        ? 'inline h-3 w-3 align-[-0.05em] transform transition-transform duration-200 ease-out rotate-180'
+                        : 'inline h-3 w-3 align-[-0.05em] transform transition-transform duration-200 ease-out rotate-0'
+                    "
+                    [fill]="'currentColor'"
+                  />
                 </span>
               </div>
 
@@ -360,3 +383,4 @@
     }
   }
 </div>
+
