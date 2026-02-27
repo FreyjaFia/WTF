@@ -148,7 +148,7 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
         var totalOrders = primaryOrders.Count;
         var totalRevenue = primaryOrders
             .Where(o => o.StatusId == 2)
-            .Sum(o => o.OrderItems.Sum(oi => (oi.Price ?? oi.Product.Price) * oi.Quantity));
+            .Sum(ComputeOrderTotal);
         var averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
         var totalTips = primaryOrders.Sum(o => o.Tips ?? 0);
         var totalCustomers = primaryOrders
@@ -160,7 +160,7 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
         var compTotalOrders = comparisonOrders.Count;
         var compTotalRevenue = comparisonOrders
             .Where(o => o.StatusId == 2)
-            .Sum(o => o.OrderItems.Sum(oi => (oi.Price ?? oi.Product.Price) * oi.Quantity));
+            .Sum(ComputeOrderTotal);
         var compAvgOrderValue = compTotalOrders > 0 ? compTotalRevenue / compTotalOrders : 0;
         var compTotalTips = comparisonOrders.Sum(o => o.Tips ?? 0);
 
@@ -234,7 +234,7 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
                     .ToList();
                 var revenue = hourOrders
                     .Where(o => o.StatusId == 2)
-                    .Sum(o => o.OrderItems.Sum(oi => (oi.Price ?? oi.Product.Price) * oi.Quantity));
+                    .Sum(ComputeOrderTotal);
                 var orderCount = hourOrders.Count;
                 var tips = hourOrders.Sum(o => o.Tips ?? 0);
                 return new HourlyRevenuePointDto(hour, revenue, orderCount, tips);
@@ -255,7 +255,7 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
                     .ToList();
                 var revenue = dayOrders
                     .Where(o => o.StatusId == 2)
-                    .Sum(o => o.OrderItems.Sum(oi => (oi.Price ?? oi.Product.Price) * oi.Quantity));
+                    .Sum(ComputeOrderTotal);
                 var orderCount = dayOrders.Count;
                 var tips = dayOrders.Sum(o => o.Tips ?? 0);
                 return new DailyRevenuePointDto(date, revenue, orderCount, tips);
@@ -302,8 +302,8 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
             var parentItems = o.OrderItems.Where(oi => oi.ParentOrderItemId == null).ToList();
             var total = parentItems.Sum(oi =>
             {
-                var itemPrice = (oi.Price ?? oi.Product.Price) * oi.Quantity;
-                var addOnsPrice = o.OrderItems
+                var itemUnitPrice = oi.Price ?? oi.Product.Price;
+                var addOnsPerUnit = o.OrderItems
                     .Where(child => child.ParentOrderItemId == oi.Id)
                     .Sum(child =>
                     {
@@ -313,7 +313,7 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
                                 : child.Product.Price);
                         return effectivePrice * child.Quantity;
                     });
-                return itemPrice + addOnsPrice;
+                return (itemUnitPrice + addOnsPerUnit) * oi.Quantity;
             });
 
             return new RecentOrderDto(o.Id, o.OrderNumber, o.CreatedAt, total, o.StatusId, o.Status.Name);
@@ -328,9 +328,24 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
             .Select(g => new PaymentMethodBreakdownDto(
                 g.Key,
                 g.Count(),
-                g.Sum(o => o.OrderItems.Sum(oi => (oi.Price ?? oi.Product.Price) * oi.Quantity))))
+                g.Sum(ComputeOrderTotal)))
             .OrderByDescending(p => p.Total)
             .ToList();
+    }
+
+    private static decimal ComputeOrderTotal(Order order)
+    {
+        var parentItems = order.OrderItems.Where(oi => oi.ParentOrderItemId == null);
+
+        return parentItems.Sum(parent =>
+        {
+            var parentUnitPrice = parent.Price ?? parent.Product.Price;
+            var addOnPerUnit = order.OrderItems
+                .Where(child => child.ParentOrderItemId == parent.Id)
+                .Sum(child => (child.Price ?? child.Product.Price) * child.Quantity);
+
+            return (parentUnitPrice + addOnPerUnit) * parent.Quantity;
+        });
     }
 
     private static DateTime ToUtc(DateTime localDateTime, TimeZoneInfo timeZone)

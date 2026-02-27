@@ -264,10 +264,45 @@ public class UpdateOrderHandler(WTFDbContext db, IHubContext<DashboardHub> dashb
             ))
             .ToListAsync(cancellationToken);
 
-        var totalAmount = await db.OrderItems
+        var allOrderItems = await db.OrderItems
             .Where(oi => oi.OrderId == order.Id)
             .Include(oi => oi.Product)
-            .SumAsync(oi => (oi.Price ?? oi.Product.Price) * oi.Quantity, cancellationToken);
+            .ToListAsync(cancellationToken);
+
+        var parentItems = allOrderItems.Where(oi => oi.ParentOrderItemId == null).ToList();
+        var parentProductIds = parentItems.Select(oi => oi.ProductId).Distinct().ToList();
+        var addOnProductIds = allOrderItems
+            .Where(oi => oi.ParentOrderItemId != null)
+            .Select(oi => oi.ProductId)
+            .Distinct()
+            .ToList();
+
+        var overridePrices = new Dictionary<(Guid ProductId, Guid AddOnId), decimal>();
+        if (addOnProductIds.Count > 0)
+        {
+            overridePrices = await db.ProductAddOnPriceOverrides
+                .Where(o => parentProductIds.Contains(o.ProductId)
+                    && addOnProductIds.Contains(o.AddOnId)
+                    && o.IsActive)
+                .ToDictionaryAsync(o => (o.ProductId, o.AddOnId), o => o.Price, cancellationToken);
+        }
+
+        var totalAmount = parentItems.Sum(parent =>
+        {
+            var parentUnitPrice = parent.Price ?? parent.Product.Price;
+            var addOnPerUnit = allOrderItems
+                .Where(child => child.ParentOrderItemId == parent.Id)
+                .Sum(child =>
+                {
+                    var effectivePrice = child.Price
+                        ?? (overridePrices.TryGetValue((parent.ProductId, child.ProductId), out var op)
+                            ? op
+                            : child.Product.Price);
+                    return effectivePrice * child.Quantity;
+                });
+
+            return (parentUnitPrice + addOnPerUnit) * parent.Quantity;
+        });
 
         await dashboardHub.Clients.Group(HubNames.Groups.DashboardViewers)
             .SendAsync(HubNames.Events.DashboardUpdated, cancellationToken);

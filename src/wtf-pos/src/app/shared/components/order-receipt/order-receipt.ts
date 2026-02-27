@@ -71,23 +71,79 @@ export class OrderReceiptComponent implements OnInit {
   }
 
   private async waitForLogoRender(): Promise<void> {
+    await this.ensureEmbeddedLogoSource();
+
+    const logo = this.receiptEl().nativeElement.querySelector(
+      '[data-receipt-logo]',
+    ) as HTMLImageElement | null;
+    if (!logo) {
+      return;
+    }
+
+    if (!logo.complete) {
+      await new Promise<void>((resolve) => {
+        const done = () => resolve();
+        logo.addEventListener('load', done, { once: true });
+        logo.addEventListener('error', done, { once: true });
+        setTimeout(done, 1200);
+      });
+    }
+
+    if (typeof logo.decode === 'function') {
+      try {
+        await logo.decode();
+      } catch {
+        // Ignore decode errors and proceed with best-effort rendering.
+      }
+    }
+  }
+
+  private async ensureEmbeddedLogoSource(): Promise<void> {
     if (this.logoLoadPromise) {
       await this.logoLoadPromise;
+    }
+
+    if (this.logoDataUri().startsWith('data:')) {
+      return;
     }
 
     const logo = this.receiptEl().nativeElement.querySelector(
       '[data-receipt-logo]',
     ) as HTMLImageElement | null;
-    if (!logo || logo.complete) {
+
+    if (!logo) {
       return;
     }
 
-    await new Promise<void>((resolve) => {
-      const done = () => resolve();
-      logo.addEventListener('load', done, { once: true });
-      logo.addEventListener('error', done, { once: true });
-      setTimeout(done, 1200);
-    });
+    if (!logo.complete) {
+      await new Promise<void>((resolve) => {
+        const done = () => resolve();
+        logo.addEventListener('load', done, { once: true });
+        logo.addEventListener('error', done, { once: true });
+        setTimeout(done, 1200);
+      });
+    }
+
+    if (logo.naturalWidth <= 0 || logo.naturalHeight <= 0) {
+      return;
+    }
+
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = logo.naturalWidth;
+      canvas.height = logo.naturalHeight;
+      const context = canvas.getContext('2d');
+      if (!context) {
+        return;
+      }
+
+      context.drawImage(logo, 0, 0);
+      this.logoDataUri.set(canvas.toDataURL('image/png'));
+
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    } catch {
+      // Keep static source fallback when canvas conversion fails.
+    }
   }
 
   protected readonly hasPaymentInfo = computed(() => {

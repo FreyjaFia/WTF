@@ -77,8 +77,11 @@ public class GetOrderByIdHandler(WTFDbContext db) : IRequestHandler<GetOrderById
             .ToList();
 
         var totalAmount = items
-            .Sum(item => (item.Price ?? 0) * item.Quantity
-                + item.AddOns.Sum(ao => (ao.Price ?? 0) * ao.Quantity));
+            .Sum(item =>
+            {
+                var addOnUnitTotal = item.AddOns.Sum(ao => (ao.Price ?? 0) * ao.Quantity);
+                return ((item.Price ?? 0) + addOnUnitTotal) * item.Quantity;
+            });
 
         return new OrderDto(
             order.Id,

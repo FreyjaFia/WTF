@@ -225,6 +225,16 @@ export class OrderEditor implements OnInit, OnDestroy {
   protected readonly paymentOrderTotal = computed(
     () => this.currentOrder()?.totalAmount ?? this.totalPrice(),
   );
+  protected readonly receiptTotalAmount = computed(() => {
+    const order = this.currentOrder();
+    const status = this.offlineOrderStatus() ?? order?.status ?? OrderStatusEnum.Pending;
+
+    if (status === OrderStatusEnum.Pending) {
+      return this.totalPrice();
+    }
+
+    return order?.totalAmount ?? this.totalPrice();
+  });
   protected readonly paymentAmountPaid = computed(() => {
     const order = this.currentOrder();
     if (!order) {
@@ -328,7 +338,7 @@ export class OrderEditor implements OnInit, OnDestroy {
       status: offlineStatus ?? order?.status ?? OrderStatusEnum.Pending,
       items: this.cart(),
       specialInstructions: this.orderSpecialInstructions(),
-      totalAmount: order?.totalAmount ?? this.totalPrice(),
+      totalAmount: this.receiptTotalAmount(),
       paymentMethod: order?.paymentMethod ?? null,
       amountReceived: order?.amountReceived ?? null,
       changeAmount: order?.changeAmount ?? null,
