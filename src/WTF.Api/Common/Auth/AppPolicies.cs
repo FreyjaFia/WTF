@@ -5,6 +5,8 @@ public static class AppPolicies
     public const string ProductsRead = "ProductsRead";
     public const string ManagementRead = "ManagementRead";
     public const string ManagementWrite = "ManagementWrite";
+    public const string AuditRead = "AuditRead";
+    public const string SchemaScriptHistoryRead = "SchemaScriptHistoryRead";
     public const string OrdersRead = "OrdersRead";
     public const string OrdersWrite = "OrdersWrite";
     public const string CustomersRead = "CustomersRead";

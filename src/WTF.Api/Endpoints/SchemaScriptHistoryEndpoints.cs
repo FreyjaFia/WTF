@@ -9,7 +9,7 @@ public static class SchemaScriptHistoryEndpoints
     public static IEndpointRouteBuilder MapSchemaScriptHistory(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/schema-script-history")
-            .RequireAuthorization(AppPolicies.ManagementRead);
+            .RequireAuthorization(AppPolicies.SchemaScriptHistoryRead);
 
         group.MapGet("/",
             async (ISender sender) =>

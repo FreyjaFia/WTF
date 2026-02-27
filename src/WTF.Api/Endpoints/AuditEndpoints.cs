@@ -9,7 +9,7 @@ public static class AuditEndpoints
     public static IEndpointRouteBuilder MapAudit(this IEndpointRouteBuilder app)
     {
         var auditGroup = app.MapGroup("/api/audit-logs")
-            .RequireAuthorization(AppPolicies.ManagementRead);
+            .RequireAuthorization(AppPolicies.AuditRead);
 
         auditGroup.MapGet("/",
             async ([AsParameters] GetAuditLogsQuery query, ISender sender) =>

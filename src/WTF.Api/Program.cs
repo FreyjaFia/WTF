@@ -81,23 +81,27 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorizationBuilder()
     .AddPolicy(AppPolicies.ProductsRead, policy =>
-        policy.RequireRole(AppRoles.Admin, AppRoles.AdminViewer, AppRoles.Cashier))
+        policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.Cashier))
     .AddPolicy(AppPolicies.ManagementRead, policy =>
-        policy.RequireRole(AppRoles.Admin, AppRoles.AdminViewer))
+        policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer))
     .AddPolicy(AppPolicies.ManagementWrite, policy =>
-        policy.RequireRole(AppRoles.Admin))
+        policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin))
+    .AddPolicy(AppPolicies.AuditRead, policy =>
+        policy.RequireRole(AppRoles.SuperAdmin))
+    .AddPolicy(AppPolicies.SchemaScriptHistoryRead, policy =>
+        policy.RequireRole(AppRoles.SuperAdmin))
     .AddPolicy(AppPolicies.OrdersRead, policy =>
-        policy.RequireRole(AppRoles.Admin, AppRoles.AdminViewer, AppRoles.Cashier))
+        policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.Cashier))
     .AddPolicy(AppPolicies.OrdersWrite, policy =>
-        policy.RequireRole(AppRoles.Admin, AppRoles.Cashier))
+        policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.Cashier))
     .AddPolicy(AppPolicies.CustomersRead, policy =>
-        policy.RequireRole(AppRoles.Admin, AppRoles.AdminViewer, AppRoles.Cashier))
+        policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.Cashier))
     .AddPolicy(AppPolicies.CustomersWrite, policy =>
-        policy.RequireRole(AppRoles.Admin))
+        policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin))
     .AddPolicy(AppPolicies.CustomersCreate, policy =>
-        policy.RequireRole(AppRoles.Admin, AppRoles.Cashier))
+        policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.Cashier))
     .AddPolicy(AppPolicies.DashboardRead, policy =>
-        policy.RequireRole(AppRoles.Admin, AppRoles.AdminViewer));
+        policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer));
 
 builder.Services.AddCors(options =>
 {
