@@ -2,14 +2,14 @@
   <!-- Mobile Navigation -->
   <div class="flex shrink-0 flex-col border-b border-gray-200 bg-white pb-4 lg:hidden">
     <h2 class="mb-3 text-xl font-bold text-gray-900">Management</h2>
-    <nav class="flex justify-between gap-1 overflow-x-auto md:justify-start">
+    <nav class="flex items-stretch gap-1.5 rounded-xl bg-gray-100 p-1.5">
       <a
         routerLink="products"
-        routerLinkActive="bg-green-50 text-[#047857]"
+        routerLinkActive="bg-green-50 text-emerald-700"
         [routerLinkActiveOptions]="{ exact: false }"
-        class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap text-gray-600 transition-colors hover:bg-gray-50"
-        [class.text-[#047857]]="isActive('products')"
-        [class.bg-green-50]="isActive('products')"
+        class="flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-2 pt-2 pb-2.5 text-[10px] leading-tight font-normal text-gray-500 transition-colors"
+        [class.text-emerald-700]="isActive('products')"
+        [class.bg-emerald-100]="isActive('products')"
       >
         <app-icon name="icon-cart" [class]="'h-4 w-4 shrink-0'" [fill]="'currentColor'"></app-icon>
         Products
@@ -17,11 +17,11 @@
       @if (canReadCustomers()) {
         <a
           routerLink="customers"
-          routerLinkActive="bg-green-50 text-[#047857]"
+          routerLinkActive="bg-green-50 text-emerald-700"
           [routerLinkActiveOptions]="{ exact: false }"
-          class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap text-gray-600 transition-colors hover:bg-gray-50"
-          [class.text-[#047857]]="isActive('customers')"
-          [class.bg-green-50]="isActive('customers')"
+          class="flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-2 pt-2 pb-2.5 text-[10px] leading-tight font-normal text-gray-500 transition-colors"
+          [class.text-emerald-700]="isActive('customers')"
+          [class.bg-emerald-100]="isActive('customers')"
         >
           <app-icon
             name="icon-people"
@@ -33,11 +33,11 @@
       }
       <a
         routerLink="users"
-        routerLinkActive="bg-green-50 text-[#047857]"
+        routerLinkActive="bg-green-50 text-emerald-700"
         [routerLinkActiveOptions]="{ exact: false }"
-        class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap text-gray-600 transition-colors hover:bg-gray-50"
-        [class.text-[#047857]]="isActive('users')"
-        [class.bg-green-50]="isActive('users')"
+        class="flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-2 pt-2 pb-2.5 text-[10px] leading-tight font-normal text-gray-500 transition-colors"
+        [class.text-emerald-700]="isActive('users')"
+        [class.bg-emerald-100]="isActive('users')"
       >
         <app-icon name="icon-user" [class]="'h-4 w-4 shrink-0'" [fill]="'currentColor'"></app-icon>
         Users
@@ -45,35 +45,37 @@
       @if (canAccessAuditLogs()) {
         <a
           routerLink="audit-logs"
-          routerLinkActive="bg-green-50 text-[#047857]"
+          routerLinkActive="bg-green-50 text-emerald-700"
           [routerLinkActiveOptions]="{ exact: false }"
-          class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap text-gray-600 transition-colors hover:bg-gray-50"
-          [class.text-[#047857]]="isActive('audit-logs')"
-          [class.bg-green-50]="isActive('audit-logs')"
+          class="flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-2 pt-2 pb-2.5 text-[10px] leading-tight font-normal text-gray-500 transition-colors"
+          [class.text-emerald-700]="isActive('audit-logs')"
+          [class.bg-emerald-100]="isActive('audit-logs')"
+          aria-label="Audit Logs"
         >
           <app-icon
             name="icon-audit-logs"
             [class]="'h-4 w-4 shrink-0'"
             [fill]="'currentColor'"
           ></app-icon>
-          Audit Logs
+          Audit
         </a>
       }
       @if (canAccessSchemaScriptHistory()) {
         <a
           routerLink="schema-scripts"
-          routerLinkActive="bg-green-50 text-[#047857]"
+          routerLinkActive="bg-green-50 text-emerald-700"
           [routerLinkActiveOptions]="{ exact: false }"
-          class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap text-gray-600 transition-colors hover:bg-gray-50"
-          [class.text-[#047857]]="isActive('schema-scripts')"
-          [class.bg-green-50]="isActive('schema-scripts')"
+          class="flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-2 pt-2 pb-2.5 text-[10px] leading-tight font-normal text-gray-500 transition-colors"
+          [class.text-emerald-700]="isActive('schema-scripts')"
+          [class.bg-emerald-100]="isActive('schema-scripts')"
+          aria-label="Schema Scripts"
         >
           <app-icon
             name="icon-schema-scripts"
             [class]="'h-4 w-4 shrink-0'"
             [fill]="'currentColor'"
           ></app-icon>
-          Schema Scripts
+          Schema
         </a>
       }
     </nav>
@@ -81,7 +83,7 @@
 
   <!-- Desktop Sidebar Navigation -->
   <div
-    class="hidden shrink-0 flex-col border-r border-gray-200 bg-white transition-all duration-[400ms] ease-[cubic-bezier(0.175,0.885,0.32,1.275)] lg:flex"
+    class="hidden shrink-0 flex-col border-r border-gray-200 bg-white transition-all duration-400 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] lg:flex"
     [class.w-64]="!isSidebarCollapsed()"
     [class.w-20]="isSidebarCollapsed()"
   >
@@ -95,7 +97,7 @@
       }
       <button
         type="button"
-        class="tooltip z-50 cursor-pointer rounded-lg p-2 transition-all duration-[400ms] ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:bg-gray-100 active:scale-95"
+        class="tooltip z-50 cursor-pointer rounded-lg p-2 transition-all duration-400 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:bg-gray-100 active:scale-95"
         [class.tooltip-right]="isSidebarCollapsed()"
         [class.tooltip-bottom]="!isSidebarCollapsed()"
         (click)="toggleSidebar()"
@@ -115,14 +117,14 @@
         routerLink="products"
         routerLinkActive="bg-green-50"
         [routerLinkActiveOptions]="{ exact: false }"
-        class="tooltip mr-4 flex items-center rounded-lg px-4 py-3 whitespace-nowrap text-gray-700 transition-all duration-[400ms] ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:bg-gray-50"
+        class="tooltip mr-4 flex items-center rounded-lg px-4 py-3 whitespace-nowrap text-gray-700 transition-all duration-400 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:bg-gray-50"
         [class.justify-center]="isSidebarCollapsed()"
         [class.gap-3]="!isSidebarCollapsed()"
         [class.tooltip-right]="isSidebarCollapsed()"
         [class.tooltip-bottom]="!isSidebarCollapsed()"
         [class.z-50]="isSidebarCollapsed()"
         [attr.data-tip]="'Products'"
-        [class.text-[#047857]]="isActive('products')"
+        [class.text-emerald-700]="isActive('products')"
         [class.bg-green-50]="isActive('products')"
       >
         <app-icon name="icon-cart" [class]="'h-5 w-5 shrink-0'"></app-icon>
@@ -136,14 +138,14 @@
           routerLink="customers"
           routerLinkActive="bg-green-50"
           [routerLinkActiveOptions]="{ exact: false }"
-          class="tooltip mr-4 flex items-center rounded-lg px-4 py-3 whitespace-nowrap text-gray-700 transition-all duration-[400ms] ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:bg-gray-50"
+          class="tooltip mr-4 flex items-center rounded-lg px-4 py-3 whitespace-nowrap text-gray-700 transition-all duration-400 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:bg-gray-50"
           [class.justify-center]="isSidebarCollapsed()"
           [class.gap-3]="!isSidebarCollapsed()"
           [class.tooltip-right]="isSidebarCollapsed()"
           [class.tooltip-bottom]="!isSidebarCollapsed()"
           [class.z-50]="isSidebarCollapsed()"
           [attr.data-tip]="'Customers'"
-          [class.text-[#047857]]="isActive('customers')"
+          [class.text-emerald-700]="isActive('customers')"
           [class.bg-green-50]="isActive('customers')"
         >
           <app-icon name="icon-people" [class]="'h-5 w-5 shrink-0'"></app-icon>
@@ -157,14 +159,14 @@
         routerLink="users"
         routerLinkActive="bg-green-50"
         [routerLinkActiveOptions]="{ exact: false }"
-        class="tooltip mr-4 flex items-center rounded-lg px-4 py-3 whitespace-nowrap text-gray-700 transition-all duration-[400ms] ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:bg-gray-50"
+        class="tooltip mr-4 flex items-center rounded-lg px-4 py-3 whitespace-nowrap text-gray-700 transition-all duration-400 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:bg-gray-50"
         [class.justify-center]="isSidebarCollapsed()"
         [class.gap-3]="!isSidebarCollapsed()"
         [class.tooltip-right]="isSidebarCollapsed()"
         [class.tooltip-bottom]="!isSidebarCollapsed()"
         [class.z-50]="isSidebarCollapsed()"
         [attr.data-tip]="'Users'"
-        [class.text-[#047857]]="isActive('users')"
+        [class.text-emerald-700]="isActive('users')"
         [class.bg-green-50]="isActive('users')"
       >
         <app-icon name="icon-user" [class]="'h-5 w-5 shrink-0'"></app-icon>
@@ -178,14 +180,14 @@
           routerLink="audit-logs"
           routerLinkActive="bg-green-50"
           [routerLinkActiveOptions]="{ exact: false }"
-          class="tooltip mr-4 flex items-center rounded-lg px-4 py-3 whitespace-nowrap text-gray-700 transition-all duration-[400ms] ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:bg-gray-50"
+          class="tooltip mr-4 flex items-center rounded-lg px-4 py-3 whitespace-nowrap text-gray-700 transition-all duration-400 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:bg-gray-50"
           [class.justify-center]="isSidebarCollapsed()"
           [class.gap-3]="!isSidebarCollapsed()"
           [class.tooltip-right]="isSidebarCollapsed()"
           [class.tooltip-bottom]="!isSidebarCollapsed()"
           [class.z-50]="isSidebarCollapsed()"
           [attr.data-tip]="'Audit Logs'"
-          [class.text-[#047857]]="isActive('audit-logs')"
+          [class.text-emerald-700]="isActive('audit-logs')"
           [class.bg-green-50]="isActive('audit-logs')"
         >
           <app-icon name="icon-audit-logs" [class]="'h-5 w-5 shrink-0'"></app-icon>
@@ -200,14 +202,14 @@
           routerLink="schema-scripts"
           routerLinkActive="bg-green-50"
           [routerLinkActiveOptions]="{ exact: false }"
-          class="tooltip mr-4 flex items-center rounded-lg px-4 py-3 whitespace-nowrap text-gray-700 transition-all duration-[400ms] ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:bg-gray-50"
+          class="tooltip mr-4 flex items-center rounded-lg px-4 py-3 whitespace-nowrap text-gray-700 transition-all duration-400 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:bg-gray-50"
           [class.justify-center]="isSidebarCollapsed()"
           [class.gap-3]="!isSidebarCollapsed()"
           [class.tooltip-right]="isSidebarCollapsed()"
           [class.tooltip-bottom]="!isSidebarCollapsed()"
           [class.z-50]="isSidebarCollapsed()"
           [attr.data-tip]="'Schema Scripts'"
-          [class.text-[#047857]]="isActive('schema-scripts')"
+          [class.text-emerald-700]="isActive('schema-scripts')"
           [class.bg-green-50]="isActive('schema-scripts')"
         >
           <app-icon name="icon-schema-scripts" [class]="'h-5 w-5 shrink-0'"></app-icon>
