@@ -25,6 +25,7 @@ import { OrderEditor } from '@features/orders/order-editor/order-editor';
 import { OrderList } from '@features/orders/order-list/order-list';
 import { Orders } from '@features/orders/orders';
 import { LayoutComponent } from '@shared/components';
+import { AppRoleGroups } from '@shared/constants/app-roles';
 
 export const routes: Routes = [
   {
@@ -56,7 +57,7 @@ export const routes: Routes = [
         path: 'dashboard',
         component: Dashboard,
         canActivate: [roleGuard],
-        data: { roles: ['Admin', 'AdminViewer'] },
+        data: { roles: AppRoleGroups.DashboardRead },
       },
       {
         path: 'my-profile',
@@ -68,7 +69,7 @@ export const routes: Routes = [
         path: 'management',
         component: ManagementComponent,
         canActivate: [roleGuard],
-        data: { roles: ['Admin', 'AdminViewer'] },
+        data: { roles: AppRoleGroups.ManagementRead },
         children: [
           {
             path: '',
@@ -88,7 +89,7 @@ export const routes: Routes = [
                 component: ProductEditorComponent,
                 canDeactivate: [unsavedChangesGuard],
                 canActivate: [roleGuard],
-                data: { roles: ['Admin'] },
+                data: { roles: AppRoleGroups.ManagementWrite },
               },
               {
                 path: 'details/:id',
@@ -99,7 +100,7 @@ export const routes: Routes = [
                 component: ProductEditorComponent,
                 canDeactivate: [unsavedChangesGuard],
                 canActivate: [roleGuard],
-                data: { roles: ['Admin'] },
+                data: { roles: AppRoleGroups.ManagementWrite },
               },
             ],
           },
@@ -107,7 +108,7 @@ export const routes: Routes = [
             path: 'customers',
             component: CustomersComponent,
             canActivate: [roleGuard],
-            data: { roles: ['Admin', 'AdminViewer'] },
+            data: { roles: AppRoleGroups.CustomersRead },
             children: [
               {
                 path: '',
@@ -118,7 +119,7 @@ export const routes: Routes = [
                 component: CustomerEditorComponent,
                 canDeactivate: [unsavedChangesGuard],
                 canActivate: [roleGuard],
-                data: { roles: ['Admin'] },
+                data: { roles: AppRoleGroups.CustomersWrite },
               },
               {
                 path: 'details/:id',
@@ -129,7 +130,7 @@ export const routes: Routes = [
                 component: CustomerEditorComponent,
                 canDeactivate: [unsavedChangesGuard],
                 canActivate: [roleGuard],
-                data: { roles: ['Admin'] },
+                data: { roles: AppRoleGroups.CustomersWrite },
               },
             ],
           },
@@ -146,7 +147,7 @@ export const routes: Routes = [
                 component: UserEditorComponent,
                 canDeactivate: [unsavedChangesGuard],
                 canActivate: [roleGuard],
-                data: { roles: ['Admin'] },
+                data: { roles: AppRoleGroups.ManagementWrite },
               },
               {
                 path: 'details/:id',
@@ -157,7 +158,7 @@ export const routes: Routes = [
                 component: UserEditorComponent,
                 canDeactivate: [unsavedChangesGuard],
                 canActivate: [roleGuard],
-                data: { roles: ['Admin'] },
+                data: { roles: AppRoleGroups.ManagementWrite },
               },
             ],
           },
@@ -165,13 +166,13 @@ export const routes: Routes = [
             path: 'schema-scripts',
             component: SchemaScriptsComponent,
             canActivate: [roleGuard],
-            data: { roles: ['Admin', 'AdminViewer'] },
+            data: { roles: AppRoleGroups.SchemaScriptHistoryRead },
           },
           {
             path: 'audit-logs',
             component: AuditLogsComponent,
             canActivate: [roleGuard],
-            data: { roles: ['Admin', 'AdminViewer'] },
+            data: { roles: AppRoleGroups.AuditRead },
           },
         ],
       },

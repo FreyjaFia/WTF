@@ -2,6 +2,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { HttpErrorMessages, ServiceErrorMessages } from '@core/messages';
 import { environment } from '@environments/environment.development';
+import { AppRole, AppRoleGroups, AppRoleLabels, AppRoles } from '@shared/constants/app-roles';
 import { LoginDto, MeDto } from '@shared/models';
 import { BehaviorSubject, Observable, Subject, throwError } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
@@ -275,52 +276,63 @@ export class AuthService {
   }
 
   public canReadCustomers(): boolean {
-    return this.hasAnyRole(['Admin', 'AdminViewer']);
+    return this.hasAnyRole(AppRoleGroups.CustomersRead);
   }
 
   public canWriteCustomers(): boolean {
-    return this.hasAnyRole(['Admin']);
+    return this.hasAnyRole(AppRoleGroups.CustomersWrite);
   }
 
   public canAccessManagement(): boolean {
-    return this.hasAnyRole(['Admin', 'AdminViewer']);
+    return this.hasAnyRole(AppRoleGroups.ManagementRead);
   }
 
   public canWriteManagement(): boolean {
-    return this.hasAnyRole(['Admin']);
+    return this.hasAnyRole(AppRoleGroups.ManagementWrite);
+  }
+
+  public isSuperAdmin(): boolean {
+    return this.hasAnyRole(AppRoleGroups.AuditRead);
+  }
+
+  public canAccessAuditLogs(): boolean {
+    return this.hasAnyRole(AppRoleGroups.AuditRead);
+  }
+
+  public canAccessSchemaScriptHistory(): boolean {
+    return this.hasAnyRole(AppRoleGroups.SchemaScriptHistoryRead);
   }
 
   public canCreateCustomerInOrder(isEditMode: boolean): boolean {
-    if (this.hasAnyRole(['Admin'])) {
+    if (this.hasAnyRole(AppRoleGroups.CustomersWrite)) {
       return true;
     }
 
-    return !isEditMode && this.hasAnyRole(['Cashier']);
+    return !isEditMode && this.hasAnyRole([AppRoles.Cashier]);
   }
 
   public canManageOrders(): boolean {
-    return this.hasAnyRole(['Admin', 'Cashier']);
+    return this.hasAnyRole(AppRoleGroups.OrdersManage);
   }
 
   public getCurrentRoleLabel(): string {
-    const roles = this.rolesSubject.value.map((role) => role.toLowerCase());
+    const prioritizedRoles: readonly AppRole[] = [
+      AppRoles.SuperAdmin,
+      AppRoles.Admin,
+      AppRoles.AdminViewer,
+      AppRoles.Cashier,
+    ];
 
-    if (roles.includes('admin')) {
-      return 'Admin';
-    }
-    if (roles.includes('adminviewer') || roles.includes('admin viewer')) {
-      return 'Admin Viewer';
-    }
-    if (roles.includes('cashier')) {
-      return 'Cashier';
+    const matchedRole = prioritizedRoles.find((role) => this.hasRole(role));
+    if (matchedRole) {
+      return AppRoleLabels[matchedRole];
     }
 
     return 'Unknown';
   }
 
-  public hasAnyRole(requiredRoles: string[]): boolean {
-    const roleSet = new Set(this.rolesSubject.value.map((role) => role.toLowerCase()));
-    return requiredRoles.some((role) => roleSet.has(role.toLowerCase()));
+  public hasAnyRole(requiredRoles: readonly AppRole[]): boolean {
+    return requiredRoles.some((role) => this.hasRole(role));
   }
 
   private syncRolesFromToken(): void {
@@ -361,5 +373,25 @@ export class AuthService {
       .filter((role) => !!role);
 
     return Array.from(new Set(normalized));
+  }
+
+  private hasRole(role: AppRole): boolean {
+    const normalizedRole = this.normalizeRole(role);
+    const roleAliases = new Set<string>([normalizedRole]);
+
+    if (normalizedRole === 'superadmin') {
+      roleAliases.add('super admin');
+    }
+
+    if (normalizedRole === 'adminviewer') {
+      roleAliases.add('admin viewer');
+    }
+
+    const currentRoles = this.rolesSubject.value.map((r) => this.normalizeRole(r));
+    return currentRoles.some((r) => roleAliases.has(r));
+  }
+
+  private normalizeRole(role: string): string {
+    return role.trim().toLowerCase();
   }
 }

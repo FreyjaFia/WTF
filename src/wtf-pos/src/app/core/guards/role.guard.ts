@@ -1,12 +1,13 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { AuthService } from '@core/services';
+import { AppRole } from '@shared/constants/app-roles';
 
 export const roleGuard: CanActivateFn = (route) => {
   const auth = inject(AuthService);
   const router = inject(Router);
 
-  const requiredRoles = (route.data?.['roles'] as string[] | undefined) ?? [];
+  const requiredRoles = (route.data?.['roles'] as AppRole[] | undefined) ?? [];
 
   if (requiredRoles.length === 0 || auth.hasAnyRole(requiredRoles)) {
     return true;

@@ -58,23 +58,17 @@ export class UserDetailsComponent implements OnInit {
   }
 
   protected navigateToEdit(): void {
-    if (!this.canWriteManagement()) {
+    if (!this.user() || !this.canManageUserProfile(this.user()!)) {
       this.alertService.errorUnauthorized();
       return;
     }
 
-    if (this.user()) {
-      this.router.navigate(['/management/users/edit', this.user()!.id]);
-    }
+    this.router.navigate(['/management/users/edit', this.user()!.id]);
   }
 
   protected deleteUser(): void {
-    if (!this.canWriteManagement()) {
+    if (!this.user() || !this.canManageUserProfile(this.user()!)) {
       this.alertService.errorUnauthorized();
-      return;
-    }
-
-    if (!this.user()) {
       return;
     }
 
@@ -96,12 +90,8 @@ export class UserDetailsComponent implements OnInit {
       return;
     }
 
-    if (!this.canWriteManagement()) {
+    if (!this.user() || !this.canManageUserProfile(this.user()!)) {
       this.alertService.errorUnauthorized();
-      return;
-    }
-
-    if (!this.user()) {
       return;
     }
 
@@ -125,6 +115,18 @@ export class UserDetailsComponent implements OnInit {
 
   protected canWriteManagement(): boolean {
     return this.authService.canWriteManagement();
+  }
+
+  protected canManageUserProfile(user: UserDto): boolean {
+    if (!this.canWriteManagement()) {
+      return false;
+    }
+
+    if (user.roleId === UserRoleEnum.SuperAdmin) {
+      return this.authService.isSuperAdmin();
+    }
+
+    return true;
   }
 
   protected getRoleLabel(user: UserDto): string {

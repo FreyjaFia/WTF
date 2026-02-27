@@ -8,8 +8,10 @@
         routerLinkActive="bg-green-50 text-[#047857]"
         [routerLinkActiveOptions]="{ exact: false }"
         class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap text-gray-600 transition-colors hover:bg-gray-50"
+        [class.text-[#047857]]="isActive('products')"
+        [class.bg-green-50]="isActive('products')"
       >
-        <app-icon name="icon-cart" [class]="'h-4 w-4 shrink-0'"></app-icon>
+        <app-icon name="icon-cart" [class]="'h-4 w-4 shrink-0'" [fill]="'currentColor'"></app-icon>
         Products
       </a>
       @if (canReadCustomers()) {
@@ -18,8 +20,14 @@
           routerLinkActive="bg-green-50 text-[#047857]"
           [routerLinkActiveOptions]="{ exact: false }"
           class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap text-gray-600 transition-colors hover:bg-gray-50"
+          [class.text-[#047857]]="isActive('customers')"
+          [class.bg-green-50]="isActive('customers')"
         >
-          <app-icon name="icon-people" [class]="'h-4 w-4 shrink-0'"></app-icon>
+          <app-icon
+            name="icon-people"
+            [class]="'h-4 w-4 shrink-0'"
+            [fill]="'currentColor'"
+          ></app-icon>
           Customers
         </a>
       }
@@ -28,28 +36,46 @@
         routerLinkActive="bg-green-50 text-[#047857]"
         [routerLinkActiveOptions]="{ exact: false }"
         class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap text-gray-600 transition-colors hover:bg-gray-50"
+        [class.text-[#047857]]="isActive('users')"
+        [class.bg-green-50]="isActive('users')"
       >
-        <app-icon name="icon-user" [class]="'h-4 w-4 shrink-0'"></app-icon>
+        <app-icon name="icon-user" [class]="'h-4 w-4 shrink-0'" [fill]="'currentColor'"></app-icon>
         Users
       </a>
-      <a
-        routerLink="audit-logs"
-        routerLinkActive="bg-green-50 text-[#047857]"
-        [routerLinkActiveOptions]="{ exact: false }"
-        class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap text-gray-600 transition-colors hover:bg-gray-50"
-      >
-        <app-icon name="icon-audit-logs" [class]="'h-4 w-4 shrink-0'"></app-icon>
-        Audit Logs
-      </a>
-      <a
-        routerLink="schema-scripts"
-        routerLinkActive="bg-green-50 text-[#047857]"
-        [routerLinkActiveOptions]="{ exact: false }"
-        class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap text-gray-600 transition-colors hover:bg-gray-50"
-      >
-        <app-icon name="icon-schema-scripts" [class]="'h-4 w-4 shrink-0'"></app-icon>
-        Schema Scripts
-      </a>
+      @if (canAccessAuditLogs()) {
+        <a
+          routerLink="audit-logs"
+          routerLinkActive="bg-green-50 text-[#047857]"
+          [routerLinkActiveOptions]="{ exact: false }"
+          class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap text-gray-600 transition-colors hover:bg-gray-50"
+          [class.text-[#047857]]="isActive('audit-logs')"
+          [class.bg-green-50]="isActive('audit-logs')"
+        >
+          <app-icon
+            name="icon-audit-logs"
+            [class]="'h-4 w-4 shrink-0'"
+            [fill]="'currentColor'"
+          ></app-icon>
+          Audit Logs
+        </a>
+      }
+      @if (canAccessSchemaScriptHistory()) {
+        <a
+          routerLink="schema-scripts"
+          routerLinkActive="bg-green-50 text-[#047857]"
+          [routerLinkActiveOptions]="{ exact: false }"
+          class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap text-gray-600 transition-colors hover:bg-gray-50"
+          [class.text-[#047857]]="isActive('schema-scripts')"
+          [class.bg-green-50]="isActive('schema-scripts')"
+        >
+          <app-icon
+            name="icon-schema-scripts"
+            [class]="'h-4 w-4 shrink-0'"
+            [fill]="'currentColor'"
+          ></app-icon>
+          Schema Scripts
+        </a>
+      }
     </nav>
   </div>
 
@@ -147,45 +173,49 @@
         }
       </a>
 
-      <a
-        routerLink="audit-logs"
-        routerLinkActive="bg-green-50"
-        [routerLinkActiveOptions]="{ exact: false }"
-        class="tooltip mr-4 flex items-center rounded-lg px-4 py-3 whitespace-nowrap text-gray-700 transition-all duration-[400ms] ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:bg-gray-50"
-        [class.justify-center]="isSidebarCollapsed()"
-        [class.gap-3]="!isSidebarCollapsed()"
-        [class.tooltip-right]="isSidebarCollapsed()"
-        [class.tooltip-bottom]="!isSidebarCollapsed()"
-        [class.z-50]="isSidebarCollapsed()"
-        [attr.data-tip]="'Audit Logs'"
-        [class.text-[#047857]]="isActive('audit-logs')"
-        [class.bg-green-50]="isActive('audit-logs')"
-      >
-        <app-icon name="icon-audit-logs" [class]="'h-5 w-5 shrink-0'"></app-icon>
-        @if (!isSidebarCollapsed()) {
-          <span class="font-medium">Audit Logs</span>
-        }
-      </a>
+      @if (canAccessAuditLogs()) {
+        <a
+          routerLink="audit-logs"
+          routerLinkActive="bg-green-50"
+          [routerLinkActiveOptions]="{ exact: false }"
+          class="tooltip mr-4 flex items-center rounded-lg px-4 py-3 whitespace-nowrap text-gray-700 transition-all duration-[400ms] ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:bg-gray-50"
+          [class.justify-center]="isSidebarCollapsed()"
+          [class.gap-3]="!isSidebarCollapsed()"
+          [class.tooltip-right]="isSidebarCollapsed()"
+          [class.tooltip-bottom]="!isSidebarCollapsed()"
+          [class.z-50]="isSidebarCollapsed()"
+          [attr.data-tip]="'Audit Logs'"
+          [class.text-[#047857]]="isActive('audit-logs')"
+          [class.bg-green-50]="isActive('audit-logs')"
+        >
+          <app-icon name="icon-audit-logs" [class]="'h-5 w-5 shrink-0'"></app-icon>
+          @if (!isSidebarCollapsed()) {
+            <span class="font-medium">Audit Logs</span>
+          }
+        </a>
+      }
 
-      <a
-        routerLink="schema-scripts"
-        routerLinkActive="bg-green-50"
-        [routerLinkActiveOptions]="{ exact: false }"
-        class="tooltip mr-4 flex items-center rounded-lg px-4 py-3 whitespace-nowrap text-gray-700 transition-all duration-[400ms] ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:bg-gray-50"
-        [class.justify-center]="isSidebarCollapsed()"
-        [class.gap-3]="!isSidebarCollapsed()"
-        [class.tooltip-right]="isSidebarCollapsed()"
-        [class.tooltip-bottom]="!isSidebarCollapsed()"
-        [class.z-50]="isSidebarCollapsed()"
-        [attr.data-tip]="'Schema Scripts'"
-        [class.text-[#047857]]="isActive('schema-scripts')"
-        [class.bg-green-50]="isActive('schema-scripts')"
-      >
-        <app-icon name="icon-schema-scripts" [class]="'h-5 w-5 shrink-0'"></app-icon>
-        @if (!isSidebarCollapsed()) {
-          <span class="font-medium">Schema Scripts</span>
-        }
-      </a>
+      @if (canAccessSchemaScriptHistory()) {
+        <a
+          routerLink="schema-scripts"
+          routerLinkActive="bg-green-50"
+          [routerLinkActiveOptions]="{ exact: false }"
+          class="tooltip mr-4 flex items-center rounded-lg px-4 py-3 whitespace-nowrap text-gray-700 transition-all duration-[400ms] ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:bg-gray-50"
+          [class.justify-center]="isSidebarCollapsed()"
+          [class.gap-3]="!isSidebarCollapsed()"
+          [class.tooltip-right]="isSidebarCollapsed()"
+          [class.tooltip-bottom]="!isSidebarCollapsed()"
+          [class.z-50]="isSidebarCollapsed()"
+          [attr.data-tip]="'Schema Scripts'"
+          [class.text-[#047857]]="isActive('schema-scripts')"
+          [class.bg-green-50]="isActive('schema-scripts')"
+        >
+          <app-icon name="icon-schema-scripts" [class]="'h-5 w-5 shrink-0'"></app-icon>
+          @if (!isSidebarCollapsed()) {
+            <span class="font-medium">Schema Scripts</span>
+          }
+        </a>
+      }
     </nav>
   </div>
 

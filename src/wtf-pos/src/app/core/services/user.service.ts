@@ -83,6 +83,7 @@ export class UserService {
             new Error(
               this.getErrorMessage(error, UserService.MSG_UPDATE_USER_FAILED, {
                 notFound: UserService.MSG_USER_NOT_FOUND,
+                forbidden: HttpErrorMessages.NotAuthorized,
               }),
             ),
         );
@@ -99,6 +100,7 @@ export class UserService {
             new Error(
               this.getErrorMessage(error, UserService.MSG_DELETE_USER_FAILED, {
                 notFound: UserService.MSG_USER_NOT_FOUND,
+                forbidden: HttpErrorMessages.NotAuthorized,
               }),
             ),
         );
@@ -120,6 +122,8 @@ export class UserService {
           errorMessage = error.error || UserService.MSG_INVALID_FILE;
         } else if (error.status === 404) {
           errorMessage = UserService.MSG_USER_NOT_FOUND;
+        } else if (error.status === 403) {
+          errorMessage = HttpErrorMessages.NotAuthorized;
         } else if (error.status === 0) {
           this.connectivity.checkNow();
           errorMessage = UserService.MSG_NETWORK_UNAVAILABLE;
@@ -139,6 +143,8 @@ export class UserService {
 
         if (error.status === 404) {
           errorMessage = UserService.MSG_USER_OR_IMAGE_NOT_FOUND;
+        } else if (error.status === 403) {
+          errorMessage = HttpErrorMessages.NotAuthorized;
         } else if (error.status === 0) {
           this.connectivity.checkNow();
           errorMessage = UserService.MSG_NETWORK_UNAVAILABLE;
@@ -152,7 +158,7 @@ export class UserService {
   private getErrorMessage(
     error: HttpErrorResponse,
     fallback: string,
-    options?: { notFound?: string },
+    options?: { notFound?: string; forbidden?: string },
   ): string {
     if (error.status === 0) {
       this.connectivity.checkNow();
@@ -161,6 +167,9 @@ export class UserService {
 
     if (error.status === 404 && options?.notFound) {
       return options.notFound;
+    }
+    if (error.status === 403 && options?.forbidden) {
+      return options.forbidden;
     }
 
     return fallback;

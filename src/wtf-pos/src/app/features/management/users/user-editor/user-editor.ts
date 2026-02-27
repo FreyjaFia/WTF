@@ -42,11 +42,13 @@ export class UserEditorComponent implements OnInit {
   protected readonly userFullNameLabel = signal('');
   protected readonly lastUpdatedAt = signal<string | null>(null);
   protected currentUserRoleLabel = 'Unknown';
-  protected readonly userRoleOptions = [
+  private readonly allUserRoleOptions = [
+    { label: 'Super Admin', value: UserRoleEnum.SuperAdmin },
     { label: 'Admin', value: UserRoleEnum.Admin },
     { label: 'Cashier', value: UserRoleEnum.Cashier },
     { label: 'Admin Viewer', value: UserRoleEnum.AdminViewer },
   ];
+  protected userRoleOptions = [...this.allUserRoleOptions];
 
   // Image upload signals
   protected readonly isUploading = signal(false);
@@ -93,6 +95,12 @@ export class UserEditorComponent implements OnInit {
   protected userId: string | null = null;
 
   public ngOnInit(): void {
+    if (!this.authService.isSuperAdmin()) {
+      this.userRoleOptions = this.allUserRoleOptions.filter(
+        (role) => role.value !== UserRoleEnum.SuperAdmin,
+      );
+    }
+
     const isProfile = this.route.snapshot.data['isProfile'] === true;
     this.isProfileMode.set(isProfile);
 
@@ -245,6 +253,17 @@ export class UserEditorComponent implements OnInit {
 
     this.userService.getUserById(id).subscribe({
       next: (user) => {
+        if (
+          !this.authService.isSuperAdmin() &&
+          !this.isProfileMode() &&
+          user.roleId === UserRoleEnum.SuperAdmin
+        ) {
+          this.alertService.errorUnauthorized();
+          this.router.navigate(['/management/users']);
+          this.isLoading.set(false);
+          return;
+        }
+
         this.userForm.patchValue({
           firstName: user.firstName,
           lastName: user.lastName,
@@ -271,6 +290,15 @@ export class UserEditorComponent implements OnInit {
 
     if (this.userForm.invalid) {
       this.userForm.markAllAsTouched();
+      return;
+    }
+
+    if (
+      !this.isProfileMode() &&
+      !this.authService.isSuperAdmin() &&
+      this.userForm.controls.roleId.value === UserRoleEnum.SuperAdmin
+    ) {
+      this.alertService.errorUnauthorized();
       return;
     }
 

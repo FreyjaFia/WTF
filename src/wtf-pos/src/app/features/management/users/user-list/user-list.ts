@@ -81,6 +81,7 @@ export class UserListComponent implements OnInit {
   protected readonly roleCounts = computed(() => {
     const cache = this.usersCache();
     return {
+      [UserRoleEnum.SuperAdmin]: cache.filter((u) => u.roleId === UserRoleEnum.SuperAdmin).length,
       [UserRoleEnum.Admin]: cache.filter((u) => u.roleId === UserRoleEnum.Admin).length,
       [UserRoleEnum.Cashier]: cache.filter((u) => u.roleId === UserRoleEnum.Cashier).length,
       [UserRoleEnum.AdminViewer]: cache.filter((u) => u.roleId === UserRoleEnum.AdminViewer).length,
@@ -88,6 +89,11 @@ export class UserListComponent implements OnInit {
   });
 
   protected readonly roleOptions = computed<FilterOption[]>(() => [
+    {
+      id: UserRoleEnum.SuperAdmin,
+      label: 'Super Admin',
+      count: this.roleCounts()[UserRoleEnum.SuperAdmin],
+    },
     { id: UserRoleEnum.Admin, label: 'Admin', count: this.roleCounts()[UserRoleEnum.Admin] },
     {
       id: UserRoleEnum.Cashier,
@@ -317,6 +323,14 @@ export class UserListComponent implements OnInit {
 
   protected canWriteManagement(): boolean {
     return this.authService.canWriteManagement();
+  }
+
+  protected canManageUserProfile(user: UserDto): boolean {
+    if (user.roleId === UserRoleEnum.SuperAdmin) {
+      return this.authService.isSuperAdmin();
+    }
+
+    return this.canWriteManagement();
   }
 
   private restoreState(): void {
