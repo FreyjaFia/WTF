@@ -302,7 +302,7 @@
             [disabled]="!!validationError()"
             (click)="confirm()"
           >
-            Add to Cart
+            {{ editingIndex() !== null ? 'Update Item' : 'Add to Cart' }}
           </button>
         </div>
       </div>

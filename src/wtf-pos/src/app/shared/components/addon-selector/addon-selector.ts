@@ -24,12 +24,14 @@ export class AddonSelectorComponent {
 
   // Special instructions for this item
   protected readonly specialInstructions = signal<string>('');
+  protected readonly editingIndex = signal<number | null>(null);
 
   readonly addToCart = output<{
     product: ProductDto;
     addOns: CartAddOnDto[];
     quantity: number;
     specialInstructions?: string | null;
+    editIndex?: number | null;
   }>();
 
   protected readonly isOpen = signal(false);
@@ -117,17 +119,26 @@ export class AddonSelectorComponent {
 
   protected readonly totalPrice = computed(() => this.unitPrice() * this.productQuantity());
 
-  public open(product: ProductDto): void {
+  public open(
+    product: ProductDto,
+    options?: {
+      quantity?: number;
+      addOns?: CartAddOnDto[];
+      specialInstructions?: string | null;
+      editIndex?: number | null;
+    },
+  ): void {
     this.product.set(product);
-    this.productQuantity.set(1);
+    this.productQuantity.set(Math.max(1, Math.min(options?.quantity ?? 1, 99)));
     this.selections.set({});
-    this.specialInstructions.set('');
+    this.specialInstructions.set(options?.specialInstructions ?? '');
+    this.editingIndex.set(options?.editIndex ?? null);
     this.isOpen.set(true);
     this.modalStackId = this.modalStack.push(() => this.close());
-    this.loadAddOns(product.id);
+    this.loadAddOns(product.id, options?.addOns);
   }
 
-  private loadAddOns(productId: string): void {
+  private loadAddOns(productId: string, initialAddOns?: CartAddOnDto[]): void {
     this.isLoading.set(true);
 
     const groups = this.catalogCache.getAddOnsForProduct(productId);
@@ -141,7 +152,34 @@ export class AddonSelectorComponent {
       }));
 
     this.addOnGroups.set(deduped);
+    this.applyInitialSelections(deduped, initialAddOns ?? []);
     this.isLoading.set(false);
+  }
+
+  private applyInitialSelections(groups: AddOnGroupDto[], addOns: CartAddOnDto[]): void {
+    if (addOns.length === 0) {
+      this.selections.set({});
+      return;
+    }
+
+    const optionTypeById = new Map(
+      groups.flatMap((group) => group.options.map((option) => [option.id, group.type] as const)),
+    );
+    const nextSelections: Record<number, Map<string, number>> = {};
+
+    for (const addOn of addOns) {
+      const type = addOn.addOnType ?? optionTypeById.get(addOn.addOnId);
+
+      if (!type) {
+        continue;
+      }
+
+      const current = nextSelections[type] ?? new Map<string, number>();
+      current.set(addOn.addOnId, (current.get(addOn.addOnId) ?? 0) + 1);
+      nextSelections[type] = current;
+    }
+
+    this.selections.set(nextSelections);
   }
 
   protected getSelectionRule(type: AddOnTypeEnum): string {
@@ -301,6 +339,7 @@ export class AddonSelectorComponent {
       addOns: this.selectedAddOns(),
       quantity: this.productQuantity(),
       specialInstructions: this.specialInstructions().trim() || null,
+      editIndex: this.editingIndex(),
     });
 
     this.close();
@@ -313,6 +352,7 @@ export class AddonSelectorComponent {
     this.addOnGroups.set([]);
     this.selections.set({});
     this.specialInstructions.set('');
+    this.editingIndex.set(null);
 
     if (this.modalStackId !== null) {
       this.modalStack.remove(this.modalStackId);

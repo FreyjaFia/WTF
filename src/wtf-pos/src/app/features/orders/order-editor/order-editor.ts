@@ -706,13 +706,33 @@ export class OrderEditor implements OnInit, OnDestroy {
     addOns: CartAddOnDto[];
     quantity: number;
     specialInstructions?: string | null;
+    editIndex?: number | null;
   }): void {
     if (!this.canManageOrderActions()) {
       return;
     }
 
-    const { product, addOns, quantity, specialInstructions } = event;
+    const { product, addOns, quantity, specialInstructions, editIndex } = event;
     const lineQty = Math.max(1, quantity || 1);
+    const updatedLine: CartItemDto = {
+      productId: product.id,
+      name: product.name,
+      price: product.price,
+      qty: lineQty,
+      imageUrl: product.imageUrl,
+      addOns: addOns.length > 0 ? addOns : undefined,
+      specialInstructions: specialInstructions || null,
+    };
+
+    if (editIndex !== null && editIndex !== undefined) {
+      const current = this.cart();
+      if (editIndex < 0 || editIndex >= current.length) {
+        return;
+      }
+
+      this.cart.set(current.map((line, index) => (index === editIndex ? updatedLine : line)));
+      return;
+    }
 
     // Only stack items without add-ons (plain products) and no special instructions
     if (addOns.length === 0 && !specialInstructions) {
@@ -733,18 +753,7 @@ export class OrderEditor implements OnInit, OnDestroy {
     }
 
     // Items with add-ons or special instructions always get their own cart line
-    this.cart.set([
-      ...this.cart(),
-      {
-        productId: product.id,
-        name: product.name,
-        price: product.price,
-        qty: lineQty,
-        imageUrl: product.imageUrl,
-        addOns: addOns.length > 0 ? addOns : undefined,
-        specialInstructions: specialInstructions || null,
-      },
-    ]);
+    this.cart.set([...this.cart(), updatedLine]);
   }
 
   // Helper for template add-on price calculation
@@ -789,6 +798,25 @@ export class OrderEditor implements OnInit, OnDestroy {
     }
 
     this.cart.set([]);
+  }
+
+  protected editCartItem(index: number): void {
+    if (!this.canManageOrderActions() || this.isReadOnly()) {
+      return;
+    }
+
+    const item = this.cart()[index];
+
+    if (!item) {
+      return;
+    }
+
+    this.addonSelector().open(this.resolveProductForCartItem(item), {
+      quantity: item.qty,
+      addOns: item.addOns ?? [],
+      specialInstructions: item.specialInstructions ?? null,
+      editIndex: index,
+    });
   }
 
   protected onCustomerSelected(customerId: string | null): void {
@@ -1364,5 +1392,36 @@ export class OrderEditor implements OnInit, OnDestroy {
       quantity,
       addOns: [],
     }));
+  }
+
+  private resolveProductForCartItem(item: CartItemDto): ProductDto {
+    const product =
+      this.catalogCache.products().find((p) => p.id === item.productId) ??
+      this.productsCache().find((p) => p.id === item.productId) ??
+      this.products().find((p) => p.id === item.productId);
+
+    if (product) {
+      return product;
+    }
+
+    return {
+      id: item.productId,
+      name: item.name,
+      code: item.productId,
+      description: null,
+      price: item.price,
+      category: ProductCategoryEnum.Other,
+      subCategory: null,
+      isAddOn: false,
+      isActive: true,
+      createdAt: '',
+      createdBy: '',
+      updatedAt: null,
+      updatedBy: null,
+      imageUrl: item.imageUrl,
+      priceHistory: [],
+      addOnCount: 0,
+      overridePrice: null,
+    };
   }
 }
