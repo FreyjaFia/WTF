@@ -1,4 +1,4 @@
-# WTF POS — Feature Roadmap
+﻿# WTF POS - Feature Roadmap
 
 This document tracks planned features, their phases, and implementation
 details. It serves as context for AI assistants (Copilot, Codex, ChatGPT)
@@ -6,46 +6,46 @@ and human developers.
 
 ---
 
-## Offline Feature (Phases 1–5)
+## Offline Feature (Phases 1-5)
 
 Enable the POS app to function without a network connection.
 
 | Phase | Name                          | Status      |
 | ----- | ----------------------------- | ----------- |
-| 1     | Connectivity & Cart Persistence | ✅ Completed |
-| 2     | Catalog & Image Caching       | ✅ Completed |
-| 3     | Offline Order Queue           | ✅ Completed |
-| 4     | Edit Pending Offline Orders   | ✅ Completed |
-| 5     | Batch Sync & Advanced Offline | ✅ Completed |
+| 1     | Connectivity & Cart Persistence | [Completed] |
+| 2     | Catalog & Image Caching       | [Completed] |
+| 3     | Offline Order Queue           | [Completed] |
+| 4     | Edit Pending Offline Orders   | [Completed] |
+| 5     | Batch Sync & Advanced Offline | [Completed] |
 
-### Phase 1 — Connectivity & Cart Persistence ✅ Completed
+### Phase 1 - Connectivity & Cart Persistence [Completed]
 
 - Ping-based connectivity detection (`ConnectivityService`)
 - Offline banner in header when disconnected
 - Cart persistence via IndexedDB/Dexie.js (`carts` table)
 
-### Phase 2 — Catalog & Image Caching ✅ Completed
+### Phase 2 - Catalog & Image Caching [Completed]
 
 - Batch POS catalog sync endpoint (`GET /api/sync/pos-catalog`)
-- `CatalogCacheService` — caches products, categories, subcategories,
+- `CatalogCacheService` - caches products, categories, subcategories,
   add-on types, and product add-ons in Dexie (`catalog` table)
-- `ImageCacheService` — caches images as blobs in Dexie (`images` table),
+- `ImageCacheService` - caches images as blobs in Dexie (`images` table),
   serves blob URLs for offline display
 - Order editor reads from catalog cache when offline
 - Header profile image cached for offline display
 - Receipt logo uses `URL.createObjectURL(blob)` (fixes NG0913)
 
-### Phase 3 — Offline Order Queue ✅ Completed
+### Phase 3 - Offline Order Queue [Completed]
 
 - `pendingOrders` table in Dexie (v4)
-- `OfflineOrderService` — queue, syncAll, auto-sync on reconnect
+- `OfflineOrderService` - queue, syncAll, auto-sync on reconnect
 - Order editor checks connectivity; queues order locally when offline
 - Pending offline orders UI in order list (amber banner, status badges,
   Sync Now button)
 - Order list hides synced orders table and pull-to-refresh when offline
 - Cart cleared from IndexedDB on logout
 
-### Phase 4 — Edit Pending Offline Orders ✅ Completed
+### Phase 4 - Edit Pending Offline Orders [Completed]
 
 - Tap a pending offline order to reopen it in the order editor
 - Navigate via query param: `/orders/editor?offline=OFF-260224-001`
@@ -59,7 +59,7 @@ Enable the POS app to function without a network connection.
   order label, uses offline order status)
 - Offline order numbering format: `OFF-YYMMDD-###`
 
-### Phase 5 — Batch Sync & Advanced Offline ✅ Completed
+### Phase 5 - Batch Sync & Advanced Offline [Completed]
 
 - **Batch create order endpoint:** `POST /api/orders/batch` accepting an
   array of orders. Implemented via `CreateOrderBatchCommand` +
@@ -75,19 +75,19 @@ Enable the POS app to function without a network connection.
 - **Sync safety while editing offline orders:** auto/manual sync is paused
   while an offline order is open in the editor, then resumes after leaving
   the editor.
-- **Stale catalog detection** — detect when product prices have changed
+- **Stale catalog detection** - detect when product prices have changed
   since last catalog sync (tracked via `stalePriceItems` and
   `hasStalePrices` in `CatalogCacheService`).
 - **Periodic background catalog refresh** when online
   (`CatalogCacheService` runs background refresh every 15 minutes and
   on reconnect when catalog is already loaded).
-- **IndexedDB storage management** — clear old cached images
+- **IndexedDB storage management** - clear old cached images
   (`images` table now stores `cachedAt`; cleanup removes stale entries and
   trims cache size by oldest-first policy).
 
 ---
 
-## Auto-Update Feature ✅ Completed
+## Auto-Update Feature [Completed]
 
 Implemented in-app update detection and APK download flow using GitHub Releases.
 
@@ -107,13 +107,13 @@ Implemented in-app update detection and APK download flow using GitHub Releases.
 | Trigger           | What happens                                                    |
 | ----------------- | --------------------------------------------------------------- |
 | `push to main`    | Build API + Frontend + Android APK (CI validation build)        |
-| `push tag v*`     | Build everything → Deploy to MonsterASP → Create GitHub Release |
+| `push tag v*`     | Build everything -> Deploy to MonsterASP -> Create GitHub Release |
 
 - Deploy and release jobs run on tag pushes (`v1.0.0`, `v1.1.0`, etc.)
 - GitHub Release is auto-created with the tagged APK attached
 - Tag format: `v{MAJOR}.{MINOR}.{PATCH}`
 
-### Build-Time Version Injection ✅ Completed
+### Build-Time Version Injection [Completed]
 
 - CI reads version from `src/wtf-pos/package.json`
 - CI computes and injects:
@@ -122,7 +122,7 @@ Implemented in-app update detection and APK download flow using GitHub Releases.
 - Android consumes these in `src/wtf-pos/android/app/build.gradle`
 - CI generates `src/wtf-pos/src/environments/version.ts` for build artifacts
 
-### In-App Update Check ✅ Completed
+### In-App Update Check [Completed]
 
 - **`UpdateService`** (`src/wtf-pos/src/app/core/services/update.service.ts`):
   - Runs on Android only
@@ -152,7 +152,7 @@ Implemented in-app update detection and APK download flow using GitHub Releases.
 
 ---
 
-## Audit Log Feature ✅ Completed
+## Audit Log Feature [Completed]
 
 Track significant actions so management can review who performed an action and when.
 
@@ -179,6 +179,10 @@ Track significant actions so management can review who performed an action and w
 - Read endpoints implemented:
   - `GET /api/audit-logs` (paged response)
   - `GET /api/schema-script-history`
+- Authorization hardening implemented:
+  - dedicated policies for audit resources (`AuditRead`, `SchemaScriptHistoryRead`)
+  - only `SuperAdmin` can access audit logs and schema script history
+  - existing admin capabilities retained for `SuperAdmin`
 
 ### Implemented Frontend
 
@@ -186,6 +190,9 @@ Track significant actions so management can review who performed an action and w
   - `/management/audit-logs`
   - `/management/schema-scripts`
 - Navigation entries and icons added under Management.
+- Role-gated management navigation:
+  - audit logs and schema scripts are visible to `SuperAdmin` only
+  - route guards aligned with backend authorization rules
 - Audit logs page:
   - fetches and displays audit log entries
   - refresh support + pull-to-refresh
@@ -199,122 +206,16 @@ Track significant actions so management can review who performed an action and w
 
 - Tag-based SQL deployment in CI (`.github/workflows/main.yml`).
 - SQL scripts run in `tools/sql` order on tag builds.
+- Role migration script added: `tools/sql/20260227_add_super_admin_role.sql`
+  - upserts `SuperAdmin` in `UserRoles`
+  - upgrades username `admin` to `SuperAdmin`
 - Re-run protection via `dbo.SchemaScriptHistory` check:
   - already applied scripts are skipped
   - newly applied scripts are inserted into history
 
 ---
 
-## Receipt & Kitchen Printing Feature 💡 Planned
-
-Bluetooth/USB thermal printer integration for customer receipts and
-kitchen order tickets.
-
-**⚠️ Requires physical printer hardware for testing.** Development can
-start with print preview UI and a mock print service. Actual hardware
-integration happens when a printer is available.
-
-### Printer Connection
-
-- Evaluate Capacitor ESC/POS printer plugins (e.g.,
-  `capacitor-thermal-printer`, `@nicecode/escpos`)
-- Support connection types: **Bluetooth** (most common for mobile POS),
-  **USB**, and **Network/IP** (for kitchen printers)
-- `PrinterService` (`core/services/`):
-  - `discoverPrinters()` — scan for nearby Bluetooth/network printers
-  - `connect(printerId)` / `disconnect()`
-  - `printReceipt(order)` — format and send receipt data
-  - `printKitchenTicket(order)` — format and send kitchen ticket
-  - `testPrint()` — send a test page to verify connection
-  - Maintain connection state as signals (`isConnected`,
-    `connectedPrinter`)
-
-### Receipt Printing
-
-Triggered after a completed order or manually via the order detail page.
-
-**Receipt layout (58mm or 80mm thermal paper):**
-```
-=============================
-        WTF Coffee Shop
-     123 Main St, City
-    Tel: (02) 1234-5678
-=============================
-Order #1042
-Date: 24 Feb 2026, 2:30 PM
-Cashier: Alain
------------------------------
-1x Iced Latte (L)       ₱180
-   + Vanilla Syrup        ₱30
-1x Croissant             ₱120
------------------------------
-Subtotal                 ₱330
-Tips                      ₱20
-TOTAL                    ₱350
------------------------------
-Cash                     ₱500
-Change                   ₱150
-=============================
-    Thank you! Come again!
-=============================
-```
-
-- Shop branding (name, address, phone) configurable in settings
-- Footer message configurable (e.g., "Thank you! Come again!")
-
-### Kitchen Ticket Printing
-
-Auto-printed when an order is created or when items are added to an
-existing order. Sent to a separate kitchen printer.
-
-**Kitchen ticket layout:**
-```
-=============================
- ORDER #1042 — NEW
- 2:30 PM — Cashier: Alain
-=============================
- 1x Iced Latte (L)
-    + Vanilla Syrup
- 1x Croissant
------------------------------
- Special: No ice please
-=============================
-```
-
-- Only includes items and special instructions (no prices)
-- Bold/large font for order number for visibility
-- When items are **modified** on an existing order, reprint with
-  "MODIFIED" header and highlight changes
-
-### Printer Settings UI
-
-New route: `/management/settings/printers` (or a section within a
-general settings page).
-
-- List discovered printers with connect/disconnect buttons
-- Assign printer roles: **Receipt Printer** and **Kitchen Printer**
-  (can be the same or different devices)
-- Toggle: auto-print receipt on order completion (on/off)
-- Toggle: auto-print kitchen ticket on order creation (on/off)
-- Test print button for each connected printer
-- Save printer preferences in `localStorage` (device-specific)
-
-### Print Preview
-
-- Before sending to a physical printer, show an on-screen preview
-  modal with the formatted receipt/ticket
-- Useful for development without a printer and for user confirmation
-- "Print" and "Cancel" buttons on the preview
-
-### Reprint
-
-- On the order detail page, add "Print Receipt" and "Print Kitchen
-  Ticket" buttons
-- Works for any past order, not just the current one
-
----
-
-## Sales Reporting Feature 💡 Planned
+## Sales Reporting Feature [Planned]
 
 Downloadable sales reports to complement the existing real-time
 dashboard. The dashboard shows live data; reports provide historical
@@ -371,20 +272,54 @@ iTextSharp on the API).
 
 New route: `/management/reports`
 
+- Keep visual language consistent with existing Management pages:
+  - same header hierarchy, spacing, card/table styling, and refresh patterns
+  - reuse existing loading, empty, error, and pull-to-refresh UX patterns
+- Management sidebar ordering:
+  - place `Reports` before super-admin-only tabs (`Audit Logs`, `Schema Scripts`)
 - **Date range picker** (presets: Today, Yesterday, This Week, This
   Month, Last Month, Custom Range)
-- **Report type selector** — tabs or dropdown to switch between report
+- **Report type selector** - tabs or dropdown to switch between report
   types
-- **On-screen preview** — render the report as a table/chart in the
+- **On-screen preview** - render the report as a table/chart in the
   browser
 - **Download buttons:** "Download CSV" and "Download PDF"
   - CSV: calls the API with `Accept: text/csv`, triggers browser
     download
   - PDF: calls the API with `Accept: application/pdf`, triggers browser
     download
-- **Charts** (stretch goal) — bar/line charts using a lightweight
+- **Charts** (stretch goal) - bar/line charts using a lightweight
   library (e.g., Chart.js or ngx-charts) for visual summaries alongside
   tables
+- Mobile UX requirements:
+  - move advanced filters into a modal/bottom sheet on small screens
+  - keep report tabs horizontally scrollable
+  - render table rows as mobile cards with key-value fields
+  - keep export actions reachable (sticky action area or top actions)
+
+### Google Sheets Integration (Planned)
+
+- Add a "Send to Sheets" action (do not generate local `.gsheet` files).
+- File strategy:
+  - create/use 1 spreadsheet per month (example: `WTF Sales Reports - 2026-02`)
+  - create/use tabs per report type inside that file:
+    - `Daily Sales`
+    - `Product Sales`
+    - `Payments`
+    - `Hourly`
+    - `Staff`
+- Write strategy:
+  - append rows to the target tab (do not create a new spreadsheet per export)
+  - auto-create missing monthly spreadsheet/tabs on first write
+  - include metadata columns on each write:
+    - `GeneratedAtUtc`
+    - `FromDate`
+    - `ToDate`
+    - `GeneratedBy`
+    - `GroupBy`
+- Reliability:
+  - support idempotency key / dedupe guard to avoid accidental duplicate pushes
+  - keep CSV/PDF export as fallback if Sheets push fails
 
 ### Scheduled Reports (Stretch Goal)
 
@@ -394,7 +329,116 @@ New route: `/management/reports`
 
 ---
 
-## Dynamic Catalog Management Feature 💡 Planned
+## Receipt & Kitchen Printing Feature [Planned]
+
+Bluetooth/USB thermal printer integration for customer receipts and
+kitchen order tickets.
+
+**NOTE: Requires physical printer hardware for testing.** Development can
+start with print preview UI and a mock print service. Actual hardware
+integration happens when a printer is available.
+
+### Printer Connection
+
+- Evaluate Capacitor ESC/POS printer plugins (e.g.,
+  `capacitor-thermal-printer`, `@nicecode/escpos`)
+- Support connection types: **Bluetooth** (most common for mobile POS),
+  **USB**, and **Network/IP** (for kitchen printers)
+- `PrinterService` (`core/services/`):
+  - `discoverPrinters()` - scan for nearby Bluetooth/network printers
+  - `connect(printerId)` / `disconnect()`
+  - `printReceipt(order)` - format and send receipt data
+  - `printKitchenTicket(order)` - format and send kitchen ticket
+  - `testPrint()` - send a test page to verify connection
+  - Maintain connection state as signals (`isConnected`,
+    `connectedPrinter`)
+
+### Receipt Printing
+
+Triggered after a completed order or manually via the order detail page.
+
+**Receipt layout (58mm or 80mm thermal paper):**
+```
+=============================
+        WTF Coffee Shop
+     123 Main St, City
+    Tel: (02) 1234-5678
+=============================
+Order #1042
+Date: 24 Feb 2026, 2:30 PM
+Cashier: Alain
+-----------------------------
+1x Iced Latte (L)       PHP180
+   + Vanilla Syrup        PHP30
+1x Croissant             PHP120
+-----------------------------
+Subtotal                 PHP330
+Tips                      PHP20
+TOTAL                    PHP350
+-----------------------------
+Cash                     PHP500
+Change                   PHP150
+=============================
+    Thank you! Come again!
+=============================
+```
+
+- Shop branding (name, address, phone) configurable in settings
+- Footer message configurable (e.g., "Thank you! Come again!")
+
+### Kitchen Ticket Printing
+
+Auto-printed when an order is created or when items are added to an
+existing order. Sent to a separate kitchen printer.
+
+**Kitchen ticket layout:**
+```
+=============================
+ ORDER #1042 - NEW
+ 2:30 PM - Cashier: Alain
+=============================
+ 1x Iced Latte (L)
+    + Vanilla Syrup
+ 1x Croissant
+-----------------------------
+ Special: No ice please
+=============================
+```
+
+- Only includes items and special instructions (no prices)
+- Bold/large font for order number for visibility
+- When items are **modified** on an existing order, reprint with
+  "MODIFIED" header and highlight changes
+
+### Printer Settings UI
+
+New route: `/management/settings/printers` (or a section within a
+general settings page).
+
+- List discovered printers with connect/disconnect buttons
+- Assign printer roles: **Receipt Printer** and **Kitchen Printer**
+  (can be the same or different devices)
+- Toggle: auto-print receipt on order completion (on/off)
+- Toggle: auto-print kitchen ticket on order creation (on/off)
+- Test print button for each connected printer
+- Save printer preferences in `localStorage` (device-specific)
+
+### Print Preview
+
+- Before sending to a physical printer, show an on-screen preview
+  modal with the formatted receipt/ticket
+- Useful for development without a printer and for user confirmation
+- "Print" and "Cancel" buttons on the preview
+
+### Reprint
+
+- On the order detail page, add "Print Receipt" and "Print Kitchen
+  Ticket" buttons
+- Works for any past order, not just the current one
+
+---
+
+## Dynamic Catalog Management Feature [Planned]
 
 Currently, product categories (`ProductCategory`), subcategories
 (`ProductSubCategory`), and add-on types (`AddOnType`) are referenced
@@ -402,33 +446,33 @@ by integer IDs that map to hardcoded enums (`ProductCategoryEnum`,
 `ProductSubCategoryEnum`, `AddOnTypeEnum`). Adding a new category or
 add-on type requires a code change, database insert, and redeployment.
 
-This feature makes them fully dynamic — managed through the UI with no
+This feature makes them fully dynamic - managed through the UI with no
 code changes needed.
 
 ### Database Changes
 
-**`ProductCategory` table** — add columns:
+**`ProductCategory` table** - add columns:
 
 | Column       | Type         | Description                           |
 | ------------ | ------------ | ------------------------------------- |
 | `SortOrder`  | `int`        | Display order in POS (lower = first)  |
-| `IsActive`   | `bit`        | Soft delete — hide without removing   |
+| `IsActive`   | `bit`        | Soft delete - hide without removing   |
 | `CreatedAt`  | `datetime2`  | Audit timestamp                       |
 | `CreatedBy`  | `GUID` (FK)  | Who created it                        |
 | `UpdatedAt`  | `datetime2?` | Last update timestamp                 |
 | `UpdatedBy`  | `GUID?` (FK) | Who last updated it                   |
 
-**`ProductSubCategory` table** — same new columns as above, plus:
+**`ProductSubCategory` table** - same new columns as above, plus:
 
 | Column       | Type         | Description                           |
 | ------------ | ------------ | ------------------------------------- |
 | `CategoryId` | `int` (FK)   | Link subcategory to parent category   |
 
 Currently subcategories are independent of categories. Adding
-`CategoryId` creates a proper hierarchy: Category → Subcategory →
+`CategoryId` creates a proper hierarchy: Category -> Subcategory ->
 Product.
 
-**`AddOnType` table** — add columns:
+**`AddOnType` table** - add columns:
 
 | Column       | Type          | Description                          |
 | ------------ | ------------- | ------------------------------------ |
@@ -453,7 +497,7 @@ Product.
 
 ### API Endpoints
 
-**Categories** — `/api/categories`
+**Categories** - `/api/categories`
 
 | Method | Route              | Description                        |
 | ------ | ------------------ | ---------------------------------- |
@@ -463,7 +507,7 @@ Product.
 | DELETE | `/api/categories/{id}` | Soft delete (set `IsActive=false`) |
 | PUT    | `/api/categories/reorder` | Batch update sort orders    |
 
-**Subcategories** — `/api/categories/{categoryId}/subcategories`
+**Subcategories** - `/api/categories/{categoryId}/subcategories`
 
 | Method | Route                                          | Description        |
 | ------ | ---------------------------------------------- | ------------------ |
@@ -473,7 +517,7 @@ Product.
 | DELETE | `/api/subcategories/{id}`                      | Soft delete        |
 | PUT    | `/api/subcategories/reorder`                   | Batch sort orders  |
 
-**Add-On Types** — `/api/addon-types`
+**Add-On Types** - `/api/addon-types`
 
 | Method | Route                | Description                        |
 | ------ | -------------------- | ---------------------------------- |
@@ -483,7 +527,7 @@ Product.
 | DELETE | `/api/addon-types/{id}` | Soft delete                     |
 | PUT    | `/api/addon-types/reorder` | Batch sort orders            |
 
-### Frontend — Management UI
+### Frontend - Management UI
 
 New routes under `/management/catalog/`:
 
@@ -493,7 +537,7 @@ New routes under `/management/catalog/`:
 - Drag-and-drop or up/down arrows to reorder
 - Toggle active/inactive with a switch
 - "Add Category" and "Add Subcategory" buttons
-- Delete confirmation modal — warn if products exist under it
+- Delete confirmation modal - warn if products exist under it
 - When deactivating, show count of affected products
 
 **Add-On Types page** (`/management/catalog/addon-types`):
@@ -507,7 +551,7 @@ New routes under `/management/catalog/`:
 - Reorder via drag-and-drop or arrows
 - Show count of products using each add-on type
 
-### Frontend — POS Enforcement
+### Frontend - POS Enforcement
 
 Update the order editor's add-on selector to enforce the dynamic rules:
 
@@ -515,7 +559,7 @@ Update the order editor's add-on selector to enforce the dynamic rules:
   cached catalog (synced via `PosCatalogDto`)
 - **Required types:** Show a visual indicator (red asterisk) and
   prevent order submission until selection is made
-- **Min/Max:** Show counter (e.g., "Select 2–4") and disable the
+- **Min/Max:** Show counter (e.g., "Select 2-4") and disable the
   "Save" button until valid
 - **Single select:** Radio-button style selection
 - **Multi select:** Checkbox style selection
@@ -533,3 +577,8 @@ Update the order editor's add-on selector to enforce the dynamic rules:
 5. Deploy frontend management UI
 6. Update POS catalog sync to include add-on type rules
 7. Update POS add-on selector to enforce rules
+
+
+
+
+
