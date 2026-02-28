@@ -1,6 +1,7 @@
 using MediatR;
 using System.Globalization;
 using WTF.Api.Common.Auth;
+using WTF.Api.Common.Time;
 using WTF.Api.Features.Reports;
 using WTF.Api.Features.Reports.DTOs;
 using WTF.Api.Features.Reports.Enums;
@@ -192,13 +193,14 @@ public static class ReportEndpoints
         Func<IReadOnlyList<T>, SimplePdfBuilder.PdfDocument> pdfDocumentBuilder)
     {
         var accepts = httpContext.Request.Headers.Accept.ToString();
+        var generatedAtLabel = BuildGeneratedAtLabel(httpContext);
 
         if (accepts.Contains("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", StringComparison.OrdinalIgnoreCase)
             || accepts.Contains("application/vnd.ms-excel", StringComparison.OrdinalIgnoreCase))
         {
             try
             {
-                var excelDocument = excelDocumentBuilder(rows);
+                var excelDocument = excelDocumentBuilder(rows) with { GeneratedAtLabel = generatedAtLabel };
                 var bytes = SimpleExcelBuilder.Build(excelDocument);
                 return Results.File(
                     bytes,
@@ -218,7 +220,7 @@ public static class ReportEndpoints
         {
             try
             {
-                var pdfDocument = pdfDocumentBuilder(rows);
+                var pdfDocument = pdfDocumentBuilder(rows) with { GeneratedAtLabel = generatedAtLabel };
                 var pdfBytes = SimplePdfBuilder.Build(pdfDocument);
                 return Results.File(pdfBytes, "application/pdf", pdfFileName);
             }
@@ -625,6 +627,21 @@ public static class ReportEndpoints
     private static string BuildDateRangeSubtitle(DateTime fromDate, DateTime toDate)
     {
         return $"Date Range: {fromDate:MMM dd, yyyy} - {toDate:MMM dd, yyyy}";
+    }
+
+    private static string BuildGeneratedAtLabel(HttpContext httpContext)
+    {
+        var requestedTimeZoneId = httpContext.Request.Headers["X-TimeZone"].ToString();
+        var timeZone = RequestTimeZone.Resolve(requestedTimeZoneId);
+        var generatedAtLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, timeZone);
+        var offset = timeZone.GetUtcOffset(generatedAtLocal);
+        var offsetSign = offset < TimeSpan.Zero ? "-" : "+";
+        var offsetLabel = $"{offsetSign}{Math.Abs(offset.Hours):00}:{Math.Abs(offset.Minutes):00}";
+        var timeZoneLabel = string.IsNullOrWhiteSpace(requestedTimeZoneId)
+            ? $"UTC{offsetLabel}"
+            : $"{requestedTimeZoneId} (UTC{offsetLabel})";
+
+        return $"Generated: {generatedAtLocal.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)} {timeZoneLabel}";
     }
 
     private static string FormatMoney(decimal value)

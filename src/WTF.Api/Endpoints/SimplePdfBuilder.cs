@@ -57,7 +57,8 @@ internal static class SimplePdfBuilder
         string Title,
         string Subtitle,
         PdfTable Table,
-        IReadOnlyList<PdfSummaryItem> SummaryItems);
+        IReadOnlyList<PdfSummaryItem> SummaryItems,
+        string? GeneratedAtLabel = null);
 
     private sealed record WrappedCell(IReadOnlyList<string> Lines);
 
@@ -380,8 +381,9 @@ internal static class SimplePdfBuilder
         AddText(sb, document.Title, TitleFontSize, logoX, 716f, isBold: true);
         AddText(sb, document.Subtitle, SubtitleFontSize, logoX, 700f);
 
-        var generatedAt = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss 'UTC'", CultureInfo.InvariantCulture);
-        AddText(sb, $"Generated: {generatedAt}", 9f, PageWidth - Margin, 752f, align: PdfTextAlign.Right);
+        var generatedAt = document.GeneratedAtLabel
+            ?? $"Generated: {DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss 'UTC'", CultureInfo.InvariantCulture)}";
+        AddText(sb, generatedAt, 9f, PageWidth - Margin, 752f, align: PdfTextAlign.Right);
         AddText(sb, $"Page {pageNumber} of {pageCount}", 9f, PageWidth - Margin, 738f, align: PdfTextAlign.Right);
     }
 

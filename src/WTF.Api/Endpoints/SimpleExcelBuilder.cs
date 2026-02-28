@@ -23,7 +23,8 @@ internal static class SimpleExcelBuilder
         string Subtitle,
         IReadOnlyList<ExcelTableColumn> Columns,
         IReadOnlyList<IReadOnlyList<string>> Rows,
-        IReadOnlyList<ExcelSummaryItem> SummaryItems);
+        IReadOnlyList<ExcelSummaryItem> SummaryItems,
+        string? GeneratedAtLabel = null);
 
     public static byte[] Build(ExcelDocument document)
     {
@@ -48,7 +49,8 @@ internal static class SimpleExcelBuilder
         worksheet.Cell(row, 1).Style.Font.FontColor = XLColor.FromHtml("#4B5563");
 
         var generatedCell = worksheet.Cell(row, Math.Max(6, document.Columns.Count));
-        generatedCell.Value = $"Generated: {DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss 'UTC'", CultureInfo.InvariantCulture)}";
+        generatedCell.Value = document.GeneratedAtLabel
+            ?? $"Generated: {DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss 'UTC'", CultureInfo.InvariantCulture)}";
         generatedCell.Style.Font.FontSize = 9;
         generatedCell.Style.Font.FontColor = XLColor.FromHtml("#6B7280");
         generatedCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
