@@ -269,6 +269,13 @@ analysis that can be exported and shared.
   - download Excel/PDF from UI
   - Android flow supports save + open/share fallback.
 
+### Reports UX Backlog (Post-Phase 1)
+
+- Mobile filters should move from inline collapsible block to a
+  full-height drawer/sidebar pattern (similar to Price History drawer)
+  for better usability on short-height screens.
+- Keep desktop/tablet behavior unchanged; apply drawer pattern on mobile only.
+
 ### Phase 2 - Google Sheets Integration [Planned]
 
 - Add a "Send to Sheets" action (do not generate local `.gsheet` files).
