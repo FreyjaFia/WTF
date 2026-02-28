@@ -33,6 +33,32 @@
     </div>
   </div>
 
+  <div class="mb-3 flex items-center justify-start gap-2 sm:mb-4">
+    <div role="tablist" class="tabs tabs-box tabs-sm" aria-label="Report tabs">
+      <button
+        type="button"
+        class="tab gap-1.5"
+        role="tab"
+        [class.tab-active]="isReportsTabActive()"
+        [attr.aria-selected]="isReportsTabActive()"
+        (click)="selectTab(reportPageTabs.Reports)"
+      >
+        Reports View
+      </button>
+      <button
+        type="button"
+        class="tab gap-1.5"
+        role="tab"
+        [class.tab-active]="isMonthlyWorkbookTabActive()"
+        [attr.aria-selected]="isMonthlyWorkbookTabActive()"
+        (click)="selectTab(reportPageTabs.MonthlyWorkbook)"
+      >
+        Monthly Workbook
+      </button>
+    </div>
+  </div>
+
+  @if (isReportsTabActive()) {
   <div class="mb-4 rounded-xl bg-white p-4 shadow-lg md:p-5">
     <div class="flex items-center justify-between xl:hidden">
       <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Report Filters</p>
@@ -192,6 +218,7 @@
             </select>
           </label>
         }
+
       </form>
 
       <div class="mt-4 flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
@@ -1389,5 +1416,85 @@
         </div>
       }
     </app-pull-to-refresh>
+  }
+  }
+
+  @if (isMonthlyWorkbookTabActive()) {
+    <div class="rounded-xl bg-white p-4 shadow-lg md:p-5">
+      <form [formGroup]="reportForm" class="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-4">
+        <label
+          class="flex min-w-0 flex-col gap-1 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200"
+        >
+          <span class="text-[11px] font-semibold tracking-wide text-gray-500 uppercase"
+            >Workbook Year</span
+          >
+          <input
+            type="number"
+            class="w-full bg-transparent text-sm text-gray-700 focus:caret-[#047857] focus:outline-none"
+            formControlName="workbookYear"
+            min="2000"
+            max="2100"
+            (change)="onMonthlyWorkbookFilterChanged()"
+          />
+        </label>
+
+        <label
+          class="flex min-w-0 flex-col gap-1 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200"
+        >
+          <span class="text-[11px] font-semibold tracking-wide text-gray-500 uppercase"
+            >Workbook Month</span
+          >
+          <select
+            class="w-full bg-transparent text-sm text-gray-700 focus:caret-[#047857] focus:outline-none"
+            formControlName="workbookMonth"
+            (change)="onMonthlyWorkbookFilterChanged()"
+          >
+            @for (monthOption of monthOptions; track monthOption.value) {
+              <option [ngValue]="monthOption.value">{{ monthOption.label }}</option>
+            }
+          </select>
+        </label>
+      </form>
+
+      <div class="mt-4 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          class="btn btn-sm gap-2 rounded-lg border border-gray-200 bg-white text-gray-700 transition-all hover:bg-gray-50"
+          (click)="generateMonthlyWorkbook()"
+          [disabled]="
+            isGeneratingMonthlyWorkbook() ||
+            isDownloadingMonthlyWorkbook() ||
+            isDownloadingExcel() ||
+            isDownloadingPdf()
+          "
+        >
+          @if (isGeneratingMonthlyWorkbook()) {
+            <span class="loading loading-spinner loading-xs"></span>
+            Generating...
+          } @else {
+            <app-icon name="icon-refresh" [class]="'h-4 w-4'" [fill]="'currentColor'" />
+            Generate Monthly
+          }
+        </button>
+
+        <button
+          type="button"
+          class="btn btn-sm gap-2 rounded-lg border-0 bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg disabled:pointer-events-auto disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none"
+          (click)="downloadMonthlyWorkbook()"
+          [disabled]="isMonthlyWorkbookDownloadDisabled()"
+          [style.cursor]="isMonthlyWorkbookDownloadDisabled() ? 'not-allowed' : 'pointer'"
+        >
+          @if (isDownloadingMonthlyWorkbook()) {
+            <span class="loading loading-spinner loading-xs"></span>
+            Downloading...
+          } @else {
+            <app-icon name="icon-download" [class]="'h-4 w-4'" [fill]="'currentColor'" />
+            Download Workbook
+          }
+        </button>
+      </div>
+
+      <p class="mt-3 text-sm text-gray-600">{{ getMonthlyWorkbookStatusText() }}</p>
+    </div>
   }
 </div>

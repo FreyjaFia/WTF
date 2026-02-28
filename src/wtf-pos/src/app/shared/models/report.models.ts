@@ -71,3 +71,12 @@ export interface StaffPerformanceReportRowDto {
   averageOrderValue: number;
   tipsReceived: number;
 }
+
+export interface MonthlyReportWorkbookStatusDto {
+  year: number;
+  month: number;
+  exists: boolean;
+  fileName: string;
+  generatedAtUtc?: string | null;
+  sizeBytes?: number | null;
+}

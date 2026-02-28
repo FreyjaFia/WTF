@@ -8,6 +8,7 @@ import {
   DailySalesReportRowDto,
   HourlySalesReportQuery,
   HourlySalesReportRowDto,
+  MonthlyReportWorkbookStatusDto,
   PaymentsReportQuery,
   PaymentsReportRowDto,
   ProductSalesReportQuery,
@@ -28,6 +29,12 @@ export class ReportsService {
     ServiceErrorMessages.Report.FetchStaffPerformanceFailed;
   private static readonly MSG_DOWNLOAD_EXCEL_FAILED = ServiceErrorMessages.Report.DownloadExcelFailed;
   private static readonly MSG_DOWNLOAD_PDF_FAILED = ServiceErrorMessages.Report.DownloadPdfFailed;
+  private static readonly MSG_GENERATE_MONTHLY_WORKBOOK_FAILED =
+    ServiceErrorMessages.Report.GenerateMonthlyWorkbookFailed;
+  private static readonly MSG_DOWNLOAD_MONTHLY_WORKBOOK_FAILED =
+    ServiceErrorMessages.Report.DownloadMonthlyWorkbookFailed;
+  private static readonly MSG_FETCH_MONTHLY_WORKBOOK_STATUS_FAILED =
+    ServiceErrorMessages.Report.FetchMonthlyWorkbookStatusFailed;
   private static readonly MSG_PDF_NOT_AVAILABLE = ServiceErrorMessages.Report.PdfNotAvailable;
 
   private readonly http = inject(HttpClient);
@@ -136,6 +143,52 @@ export class ReportsService {
     return this.downloadPdf('/staff', this.buildStaffPerformanceParams(query));
   }
 
+  public getMonthlyWorkbookStatus(
+    year: number,
+    month: number,
+  ): Observable<MonthlyReportWorkbookStatusDto> {
+    return this.http
+      .get<MonthlyReportWorkbookStatusDto>(`${this.baseUrl}/monthly-workbook/status`, {
+        params: this.buildMonthlyWorkbookParams(year, month),
+      })
+      .pipe(
+        catchError((error: HttpErrorResponse) => {
+          return this.buildError(ReportsService.MSG_FETCH_MONTHLY_WORKBOOK_STATUS_FAILED, error);
+        }),
+      );
+  }
+
+  public generateMonthlyWorkbook(
+    year: number,
+    month: number,
+  ): Observable<MonthlyReportWorkbookStatusDto> {
+    return this.http
+      .post<MonthlyReportWorkbookStatusDto>(`${this.baseUrl}/monthly-workbook/generate`, null, {
+        params: this.buildMonthlyWorkbookParams(year, month),
+      })
+      .pipe(
+        catchError((error: HttpErrorResponse) => {
+          return this.buildError(ReportsService.MSG_GENERATE_MONTHLY_WORKBOOK_FAILED, error);
+        }),
+      );
+  }
+
+  public downloadMonthlyWorkbook(year: number, month: number): Observable<Blob> {
+    return this.http
+      .get(`${this.baseUrl}/monthly-workbook/download`, {
+        params: this.buildMonthlyWorkbookParams(year, month),
+        responseType: 'blob',
+        headers: new HttpHeaders({
+          Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        }),
+      })
+      .pipe(
+        catchError((error: HttpErrorResponse) => {
+          return this.buildError(ReportsService.MSG_DOWNLOAD_MONTHLY_WORKBOOK_FAILED, error);
+        }),
+      );
+  }
+
   private downloadExcel(path: string, params: HttpParams): Observable<Blob> {
     return this.http
       .get(`${this.baseUrl}${path}`, {
@@ -209,6 +262,10 @@ export class ReportsService {
 
   private buildBaseDateRangeParams(fromDate: string, toDate: string): HttpParams {
     return new HttpParams().set('fromDate', fromDate).set('toDate', toDate);
+  }
+
+  private buildMonthlyWorkbookParams(year: number, month: number): HttpParams {
+    return new HttpParams().set('year', year).set('month', month);
   }
 
   private buildError(message: string, error: HttpErrorResponse): Observable<never> {

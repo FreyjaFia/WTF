@@ -13,6 +13,7 @@ import {
   DailySalesReportRowDto,
   HourlySalesReportQuery,
   HourlySalesReportRowDto,
+  MonthlyReportWorkbookStatusDto,
   PaymentsReportQuery,
   PaymentsReportRowDto,
   PRODUCT_SUB_CATEGORY_LABELS,
@@ -50,7 +51,13 @@ const ReportGroupByValues = {
   Month: 'Month',
 } as const satisfies Record<string, ReportGroupBy>;
 
+const ReportPageTabs = {
+  Reports: 'reports',
+  MonthlyWorkbook: 'monthly-workbook',
+} as const;
+
 type DatePreset = (typeof DatePresets)[keyof typeof DatePresets];
+type ReportPageTab = (typeof ReportPageTabs)[keyof typeof ReportPageTabs];
 type SortDirection = 'asc' | 'desc';
 type DailySortKey =
   | 'periodStart'
@@ -90,6 +97,11 @@ interface StaffFilterOption {
   name: string;
 }
 
+interface MonthOption {
+  value: number;
+  label: string;
+}
+
 @Component({
   selector: 'app-reports',
   imports: [
@@ -117,13 +129,32 @@ export class ReportsComponent implements OnInit {
   protected readonly isRefreshing = signal(false);
   protected readonly isDownloadingExcel = signal(false);
   protected readonly isDownloadingPdf = signal(false);
+  protected readonly isGeneratingMonthlyWorkbook = signal(false);
+  protected readonly isDownloadingMonthlyWorkbook = signal(false);
   protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
   protected readonly searchTerm = signal('');
   protected readonly isMobileFiltersOpen = signal(false);
   protected readonly staffOptions = signal<StaffFilterOption[]>([]);
+  protected readonly monthlyWorkbookStatus = signal<MonthlyReportWorkbookStatusDto | null>(null);
+  protected readonly activeTab = signal<ReportPageTab>(ReportPageTabs.Reports);
   protected readonly reportTypes = ReportTypes;
+  protected readonly reportPageTabs = ReportPageTabs;
   protected readonly datePresets = DatePresets;
   protected readonly reportGroupByValues = ReportGroupByValues;
+  protected readonly monthOptions: readonly MonthOption[] = [
+    { value: 1, label: 'January' },
+    { value: 2, label: 'February' },
+    { value: 3, label: 'March' },
+    { value: 4, label: 'April' },
+    { value: 5, label: 'May' },
+    { value: 6, label: 'June' },
+    { value: 7, label: 'July' },
+    { value: 8, label: 'August' },
+    { value: 9, label: 'September' },
+    { value: 10, label: 'October' },
+    { value: 11, label: 'November' },
+    { value: 12, label: 'December' },
+  ];
   protected readonly reportTypeOptions: readonly ReportType[] = [
     this.reportTypes.DailySales,
     this.reportTypes.ProductSales,
@@ -185,6 +216,14 @@ export class ReportsComponent implements OnInit {
     }),
     fromDate: this.formBuilder.control<string>('', { validators: [Validators.required] }),
     toDate: this.formBuilder.control<string>('', { validators: [Validators.required] }),
+    workbookYear: this.formBuilder.control<number>(new Date().getFullYear(), {
+      validators: [Validators.required],
+      nonNullable: true,
+    }),
+    workbookMonth: this.formBuilder.control<number>(new Date().getMonth() + 1, {
+      validators: [Validators.required],
+      nonNullable: true,
+    }),
     groupBy: this.formBuilder.control<ReportGroupBy>(this.reportGroupByValues.Day, {
       validators: [Validators.required],
     }),
@@ -309,10 +348,26 @@ export class ReportsComponent implements OnInit {
     this.applyPreset(this.datePresets.ThisMonth);
     this.loadStaffOptions();
     this.loadReport();
+    this.loadMonthlyWorkbookStatus();
   }
 
   protected toggleMobileFilters(): void {
     this.isMobileFiltersOpen.set(!this.isMobileFiltersOpen());
+  }
+
+  protected selectTab(tab: ReportPageTab): void {
+    this.activeTab.set(tab);
+    if (tab === this.reportPageTabs.MonthlyWorkbook) {
+      this.loadMonthlyWorkbookStatus();
+    }
+  }
+
+  protected isReportsTabActive(): boolean {
+    return this.activeTab() === this.reportPageTabs.Reports;
+  }
+
+  protected isMonthlyWorkbookTabActive(): boolean {
+    return this.activeTab() === this.reportPageTabs.MonthlyWorkbook;
   }
 
   protected onPresetChanged(event: Event): void {
@@ -350,6 +405,7 @@ export class ReportsComponent implements OnInit {
   protected refresh(): void {
     this.isRefreshing.set(true);
     this.loadReport();
+    this.loadMonthlyWorkbookStatus();
   }
 
   protected toggleDailySort(column: DailySortKey): void {
@@ -419,7 +475,7 @@ export class ReportsComponent implements OnInit {
   }
 
   protected downloadExcel(): void {
-    if (this.isDownloadingExcel() || this.isDownloadingPdf()) {
+    if (this.isActionBusy()) {
       return;
     }
 
@@ -510,7 +566,7 @@ export class ReportsComponent implements OnInit {
   }
 
   protected downloadPdf(): void {
-    if (this.isDownloadingExcel() || this.isDownloadingPdf()) {
+    if (this.isActionBusy()) {
       return;
     }
 
@@ -594,6 +650,108 @@ export class ReportsComponent implements OnInit {
       next: (blob) => onSuccess(blob, `staff-${query.fromDate}-${query.toDate}.pdf`),
       error: onError,
     });
+  }
+
+  protected onMonthlyWorkbookFilterChanged(): void {
+    this.loadMonthlyWorkbookStatus();
+  }
+
+  protected generateMonthlyWorkbook(): void {
+    if (this.isActionBusy()) {
+      return;
+    }
+
+    const filter = this.getMonthlyWorkbookFilterOrShowError();
+    if (!filter) {
+      return;
+    }
+
+    this.isGeneratingMonthlyWorkbook.set(true);
+    this.reportsService.generateMonthlyWorkbook(filter.year, filter.month).subscribe({
+      next: (status) => {
+        this.isGeneratingMonthlyWorkbook.set(false);
+        this.monthlyWorkbookStatus.set(status);
+        this.alertService.success(`Monthly workbook generated: ${status.fileName}`);
+      },
+      error: (error: Error) => {
+        this.isGeneratingMonthlyWorkbook.set(false);
+        this.alertService.error(error.message);
+      },
+    });
+  }
+
+  protected downloadMonthlyWorkbook(): void {
+    if (this.isActionBusy()) {
+      return;
+    }
+
+    const filter = this.getMonthlyWorkbookFilterOrShowError();
+    if (!filter) {
+      return;
+    }
+
+    this.isDownloadingMonthlyWorkbook.set(true);
+    this.reportsService.getMonthlyWorkbookStatus(filter.year, filter.month).subscribe({
+      next: (status) => {
+        this.monthlyWorkbookStatus.set(status);
+        if (!status.exists) {
+          this.isDownloadingMonthlyWorkbook.set(false);
+          this.alertService.info('Monthly workbook is not generated yet. Generate it first.');
+          return;
+        }
+
+        this.reportsService.downloadMonthlyWorkbook(filter.year, filter.month).subscribe({
+          next: (blob) => {
+            const fileName = status.fileName || this.buildMonthlyWorkbookFileName(filter.year, filter.month);
+            void this.saveBlob(
+              blob,
+              fileName,
+              'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            ).finally(() => this.isDownloadingMonthlyWorkbook.set(false));
+          },
+          error: (error: Error) => {
+            this.isDownloadingMonthlyWorkbook.set(false);
+            this.alertService.error(error.message);
+          },
+        });
+      },
+      error: (error: Error) => {
+        this.isDownloadingMonthlyWorkbook.set(false);
+        this.alertService.error(error.message);
+      },
+    });
+  }
+
+  protected canDownloadMonthlyWorkbook(): boolean {
+    return this.monthlyWorkbookStatus()?.exists === true;
+  }
+
+  protected isMonthlyWorkbookDownloadDisabled(): boolean {
+    return (
+      !this.canDownloadMonthlyWorkbook() ||
+      this.isGeneratingMonthlyWorkbook() ||
+      this.isDownloadingMonthlyWorkbook() ||
+      this.isDownloadingExcel() ||
+      this.isDownloadingPdf()
+    );
+  }
+
+  protected getMonthlyWorkbookStatusText(): string {
+    const status = this.monthlyWorkbookStatus();
+    if (!status || !status.exists) {
+      return 'Monthly workbook not generated yet.';
+    }
+
+    if (!status.generatedAtUtc) {
+      return `Available: ${status.fileName}`;
+    }
+
+    const generated = new Date(status.generatedAtUtc);
+    if (Number.isNaN(generated.getTime())) {
+      return `Available: ${status.fileName}`;
+    }
+
+    return `Last generated: ${generated.toLocaleString()}`;
   }
 
   protected getReportTypeLabel(type: ReportType): string {
@@ -884,6 +1042,23 @@ export class ReportsComponent implements OnInit {
     this.isRefreshing.set(false);
   }
 
+  private loadMonthlyWorkbookStatus(): void {
+    const filter = this.getMonthlyWorkbookFilterOrShowError(false);
+    if (!filter) {
+      this.monthlyWorkbookStatus.set(null);
+      return;
+    }
+
+    this.reportsService.getMonthlyWorkbookStatus(filter.year, filter.month).subscribe({
+      next: (status) => {
+        this.monthlyWorkbookStatus.set(status);
+      },
+      error: () => {
+        this.monthlyWorkbookStatus.set(null);
+      },
+    });
+  }
+
   private buildDailySalesQuery(): DailySalesReportQuery | null {
     const range = this.getDateRangeOrShowError();
     if (!range) {
@@ -968,6 +1143,50 @@ export class ReportsComponent implements OnInit {
     }
 
     return { fromDate, toDate };
+  }
+
+  private getMonthlyWorkbookFilterOrShowError(showError = true): { year: number; month: number } | null {
+    const year = this.reportForm.controls.workbookYear.value;
+    const month = this.reportForm.controls.workbookMonth.value;
+
+    if (!year || !month) {
+      if (showError) {
+        this.alertService.error('Please select workbook month and year first.');
+      }
+
+      return null;
+    }
+
+    if (year < 2000 || year > 2100) {
+      if (showError) {
+        this.alertService.error('Workbook year must be between 2000 and 2100.');
+      }
+
+      return null;
+    }
+
+    if (month < 1 || month > 12) {
+      if (showError) {
+        this.alertService.error('Workbook month must be between 1 and 12.');
+      }
+
+      return null;
+    }
+
+    return { year, month };
+  }
+
+  private isActionBusy(): boolean {
+    return (
+      this.isDownloadingExcel() ||
+      this.isDownloadingPdf() ||
+      this.isGeneratingMonthlyWorkbook() ||
+      this.isDownloadingMonthlyWorkbook()
+    );
+  }
+
+  private buildMonthlyWorkbookFileName(year: number, month: number): string {
+    return `monthly-reports-${year}-${String(month).padStart(2, '0')}.xlsx`;
   }
 
   private applyPreset(preset: DatePreset): void {

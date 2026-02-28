@@ -76,6 +76,12 @@ export const ServiceErrorMessages = {
     FetchStaffPerformanceFailed: 'Failed to fetch staff performance report. Please try again later.',
     DownloadExcelFailed: 'Failed to download Excel report. Please try again later.',
     DownloadPdfFailed: 'Failed to download PDF report. Please try again later.',
+    GenerateMonthlyWorkbookFailed:
+      'Failed to generate monthly workbook. Please try again later.',
+    DownloadMonthlyWorkbookFailed:
+      'Failed to download monthly workbook. Please try again later.',
+    FetchMonthlyWorkbookStatusFailed:
+      'Failed to check monthly workbook status. Please try again later.',
     PdfNotAvailable: 'PDF export is not available yet. Use Excel for now.',
   },
   User: {
