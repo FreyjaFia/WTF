@@ -7,6 +7,7 @@ import { IconComponent } from '@shared/components/icons/icon/icon';
   selector: 'app-search-input',
   imports: [CommonModule, ReactiveFormsModule, IconComponent],
   templateUrl: './search-input.html',
+  host: { class: 'contents' },
 })
 export class SearchInputComponent {
   public readonly control = input<FormControl<string | null> | null>(null);
