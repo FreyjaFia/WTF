@@ -68,6 +68,16 @@ export const ServiceErrorMessages = {
     DeletePriceOverrideFailed: 'Failed to delete add-on price override. Please try again later.',
     InvalidPriceOverrideRequest: 'Invalid price override request.',
   },
+  Report: {
+    FetchDailySalesFailed: 'Failed to fetch daily sales report. Please try again later.',
+    FetchProductSalesFailed: 'Failed to fetch product sales report. Please try again later.',
+    FetchPaymentsFailed: 'Failed to fetch payment report. Please try again later.',
+    FetchHourlySalesFailed: 'Failed to fetch hourly sales report. Please try again later.',
+    FetchStaffPerformanceFailed: 'Failed to fetch staff performance report. Please try again later.',
+    DownloadCsvFailed: 'Failed to download CSV report. Please try again later.',
+    DownloadPdfFailed: 'Failed to download PDF report. Please try again later.',
+    PdfNotAvailable: 'PDF export is not available yet. Use CSV for now.',
+  },
   User: {
     UserNotFound: 'User not found.',
     UserOrImageNotFound: 'User or image not found.',

@@ -11,6 +11,7 @@ export const AppRoleGroups = {
   DashboardRead: [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer],
   ManagementRead: [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer],
   ManagementWrite: [AppRoles.SuperAdmin, AppRoles.Admin],
+  ReportsRead: [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer],
   AuditRead: [AppRoles.SuperAdmin],
   SchemaScriptHistoryRead: [AppRoles.SuperAdmin],
   CustomersRead: [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer],

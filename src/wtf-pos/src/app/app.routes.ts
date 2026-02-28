@@ -15,6 +15,7 @@ import { ProductDetailsComponent } from '@features/management/products/product-d
 import { ProductEditorComponent } from '@features/management/products/product-editor/product-editor';
 import { ProductListComponent } from '@features/management/products/product-list/product-list';
 import { ProductsComponent } from '@features/management/products/products';
+import { ReportsComponent } from '@features/management/reports/reports';
 import { SchemaScriptsComponent } from '@features/management/schema-scripts/schema-scripts';
 import { UserDetailsComponent } from '@features/management/users/user-details/user-details';
 import { UserEditorComponent } from '@features/management/users/user-editor/user-editor';
@@ -161,6 +162,12 @@ export const routes: Routes = [
                 data: { roles: AppRoleGroups.ManagementWrite },
               },
             ],
+          },
+          {
+            path: 'reports',
+            component: ReportsComponent,
+            canActivate: [roleGuard],
+            data: { roles: AppRoleGroups.ReportsRead },
           },
           {
             path: 'schema-scripts',

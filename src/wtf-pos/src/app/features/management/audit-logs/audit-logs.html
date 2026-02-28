@@ -1,5 +1,5 @@
-﻿<div class="flex h-full flex-col md:ps-6">
-  <div class="mb-4 flex shrink-0 items-center justify-between sm:mb-6">
+﻿<div class="flex h-full flex-col lg:ps-6">
+  <div class="mb-4 flex shrink-0 items-start justify-between sm:mb-6">
     <div>
       <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Audit Logs</h1>
       <p class="text-xs text-gray-500 sm:text-sm">Track who did what and when across the system</p>
@@ -42,15 +42,12 @@
       @if (logs().length === 0) {
         <div class="rounded-lg bg-white p-8 text-center shadow-lg">
           <div class="mb-3 flex justify-center">
-            <app-icon name="icon-history" [class]="'h-12 w-12 opacity-60'" />
+            <app-icon name="icon-audit-logs" [class]="'h-12 w-12 opacity-60'" />
           </div>
           <p class="text-lg font-semibold text-gray-700">No audit logs found</p>
           <p class="text-sm text-gray-500">Actions will appear here once they are recorded.</p>
         </div>
       } @else {
-        <p class="mb-3 text-xs text-gray-500">
-          Showing {{ logs().length }} of {{ totalCount() }} entries
-        </p>
         <div class="space-y-2 pb-4 md:space-y-3">
           <div
             class="sticky top-0 z-10 mb-2 hidden grid-cols-12 gap-4 rounded-lg bg-white px-4 py-3 md:grid"

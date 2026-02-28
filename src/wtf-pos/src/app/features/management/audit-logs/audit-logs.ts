@@ -16,7 +16,6 @@ export class AuditLogsComponent implements OnInit {
   private readonly alertService = inject(AlertService);
 
   protected readonly logs = signal<AuditLogDto[]>([]);
-  protected readonly totalCount = signal(0);
   protected readonly isLoading = signal(false);
   protected readonly isRefreshing = signal(false);
   protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
@@ -33,10 +32,9 @@ export class AuditLogsComponent implements OnInit {
   private loadLogs(): void {
     this.isLoading.set(true);
 
-    this.auditLogService.getAuditLogs({ page: 1, pageSize: 200 }).subscribe({
+    this.auditLogService.getAuditLogs().subscribe({
       next: (result) => {
         this.logs.set(result.items);
-        this.totalCount.set(result.totalCount);
         this.isLoading.set(false);
         this.isRefreshing.set(false);
       },

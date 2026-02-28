@@ -1,0 +1,1381 @@
+<div class="flex h-full flex-col lg:ps-6">
+  <div class="mb-4 flex shrink-0 flex-col gap-3 sm:mb-6">
+    <div class="flex items-start justify-between gap-3">
+      <div>
+        <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Sales Reports</h1>
+        <p class="text-xs text-gray-500 sm:text-sm">Preview and export historical sales analytics</p>
+      </div>
+      @if (!isAndroidPlatform) {
+        <button
+          class="tooltip tooltip-bottom pointer-events-auto z-30 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
+          [class.opacity-70]="isRefreshing()"
+          type="button"
+          (click)="refresh()"
+          [disabled]="isRefreshing()"
+          aria-label="Refresh reports"
+          data-tip="Refresh"
+        >
+          @if (isRefreshing()) {
+            <app-icon
+              name="icon-refresh"
+              [class]="'h-5 w-5 animate-spin text-gray-600'"
+              [fill]="'currentColor'"
+            />
+          } @else {
+            <app-icon
+              name="icon-refresh"
+              [class]="'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'"
+              [fill]="'currentColor'"
+            />
+          }
+        </button>
+      }
+    </div>
+  </div>
+
+  <div class="mb-4 rounded-xl bg-white p-4 shadow-lg md:p-5">
+    <div class="flex items-center justify-between xl:hidden">
+      <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Report Filters</p>
+      <button
+        type="button"
+        class="btn btn-xs rounded-lg border border-gray-200 bg-white text-gray-700"
+        (click)="toggleMobileFilters()"
+      >
+        {{ isMobileFiltersOpen() ? 'Hide' : 'Show' }}
+      </button>
+    </div>
+
+    <div
+      [class.mt-3]="isMobileFiltersOpen()"
+      [class.max-h-0]="!isMobileFiltersOpen()"
+      [class.opacity-0]="!isMobileFiltersOpen()"
+      [class.pointer-events-none]="!isMobileFiltersOpen()"
+      [class.max-h-[1200px]]="isMobileFiltersOpen()"
+      [class.opacity-100]="isMobileFiltersOpen()"
+      class="overflow-hidden transition-all duration-300 ease-out xl:pointer-events-auto xl:block xl:max-h-none xl:opacity-100"
+    >
+      <form [formGroup]="reportForm" class="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-5">
+        <label
+          class="flex min-w-0 flex-col gap-1 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200"
+        >
+          <span class="text-[11px] font-semibold tracking-wide text-gray-500 uppercase"
+            >Report Type</span
+          >
+          <select
+            class="w-full bg-transparent text-sm text-gray-700 focus:caret-[#047857] focus:outline-none"
+            formControlName="reportType"
+            (change)="onReportTypeChanged()"
+          >
+            @for (type of reportTypeOptions; track type) {
+              <option [value]="type">{{ getReportTypeLabel(type) }}</option>
+            }
+          </select>
+        </label>
+
+        <label
+          class="flex min-w-0 flex-col gap-1 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200"
+        >
+          <span class="text-[11px] font-semibold tracking-wide text-gray-500 uppercase"
+            >Preset</span
+          >
+          <select
+            class="w-full bg-transparent text-sm text-gray-700 focus:caret-[#047857] focus:outline-none"
+            formControlName="preset"
+            (change)="onPresetChanged($event)"
+          >
+            @for (preset of datePresetOptions; track preset.value) {
+              <option [value]="preset.value">{{ preset.label }}</option>
+            }
+          </select>
+        </label>
+
+        <label
+          class="flex min-w-0 flex-col gap-1 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200"
+        >
+          <span class="text-[11px] font-semibold tracking-wide text-gray-500 uppercase"
+            >From Date</span
+          >
+          <input
+            type="date"
+            class="w-full bg-transparent text-sm text-gray-700 focus:caret-[#047857] focus:outline-none"
+            formControlName="fromDate"
+            (change)="onDateChanged()"
+          />
+        </label>
+
+        <label
+          class="flex min-w-0 flex-col gap-1 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200"
+        >
+          <span class="text-[11px] font-semibold tracking-wide text-gray-500 uppercase"
+            >To Date</span
+          >
+          <input
+            type="date"
+            class="w-full bg-transparent text-sm text-gray-700 focus:caret-[#047857] focus:outline-none"
+            formControlName="toDate"
+            (change)="onDateChanged()"
+          />
+        </label>
+
+        @if (showGroupByFilter()) {
+          <label
+            class="flex min-w-0 flex-col gap-1 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200"
+          >
+            <span class="text-[11px] font-semibold tracking-wide text-gray-500 uppercase"
+              >Group By</span
+            >
+            <select
+              class="w-full bg-transparent text-sm text-gray-700 focus:caret-[#047857] focus:outline-none"
+              formControlName="groupBy"
+              (change)="onGroupByChanged()"
+            >
+              @for (groupBy of groupByOptions; track groupBy.value) {
+                <option [value]="groupBy.value">{{ groupBy.label }}</option>
+              }
+            </select>
+          </label>
+        }
+
+        @if (showProductFilters()) {
+          <label
+            class="flex min-w-0 flex-col gap-1 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200"
+          >
+            <span class="text-[11px] font-semibold tracking-wide text-gray-500 uppercase"
+              >Category</span
+            >
+            <select
+              class="w-full bg-transparent text-sm text-gray-700 focus:caret-[#047857] focus:outline-none"
+              formControlName="categoryId"
+              (change)="onAdvancedFilterChanged()"
+            >
+              <option [ngValue]="null">All Categories</option>
+              @for (category of categoryOptions; track category.value) {
+                <option [ngValue]="category.value">{{ category.label }}</option>
+              }
+            </select>
+          </label>
+          <label
+            class="flex min-w-0 flex-col gap-1 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200"
+          >
+            <span class="text-[11px] font-semibold tracking-wide text-gray-500 uppercase"
+              >Subcategory</span
+            >
+            <select
+              class="w-full bg-transparent text-sm text-gray-700 focus:caret-[#047857] focus:outline-none"
+              formControlName="subCategoryId"
+              (change)="onAdvancedFilterChanged()"
+            >
+              <option [ngValue]="null">All Subcategories</option>
+              @for (subCategory of subCategoryOptions; track subCategory.value) {
+                <option [ngValue]="subCategory.value">{{ subCategory.label }}</option>
+              }
+            </select>
+          </label>
+        }
+
+        @if (showStaffFilter()) {
+          <label
+            class="flex min-w-0 flex-col gap-1 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200"
+          >
+            <span class="text-[11px] font-semibold tracking-wide text-gray-500 uppercase"
+              >Staff</span
+            >
+            <select
+              class="w-full bg-transparent text-sm text-gray-700 focus:caret-[#047857] focus:outline-none"
+              formControlName="staffId"
+              (change)="onAdvancedFilterChanged()"
+            >
+              <option [ngValue]="null">All Staff</option>
+              @for (staff of staffOptions(); track staff.id) {
+                <option [ngValue]="staff.id">{{ staff.name }}</option>
+              }
+            </select>
+          </label>
+        }
+      </form>
+
+      <div class="mt-4 flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
+        <div
+          class="flex w-full min-w-0 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200 md:w-[26rem] md:flex-none"
+        >
+          <app-search-input
+            [value]="searchTerm()"
+            (valueChange)="searchTerm.set($event)"
+            [placeholder]="'Search all columns'"
+            [ariaLabel]="'Search reports'"
+            [clearAriaLabel]="'Clear report search'"
+          />
+        </div>
+
+        <div class="flex flex-wrap items-center justify-end gap-2 md:ml-auto">
+          <button
+            type="button"
+            class="btn btn-sm gap-2 rounded-lg border border-gray-200 bg-white text-gray-700 transition-all hover:bg-gray-50"
+            (click)="downloadCsv()"
+          >
+            <app-icon name="icon-download" [class]="'h-4 w-4'" [fill]="'currentColor'" />
+            Download CSV
+          </button>
+          <button
+            type="button"
+            class="btn btn-sm gap-2 rounded-lg border-0 bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg"
+            (click)="downloadPdf()"
+          >
+            <app-icon name="icon-download" [class]="'h-4 w-4'" [fill]="'currentColor'" />
+            Download PDF
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  @if (isLoading()) {
+    <div class="flex justify-center py-8">
+      <span class="loading loading-spinner loading-lg"></span>
+    </div>
+  }
+
+  @if (!isLoading()) {
+    <app-pull-to-refresh [refreshing]="isRefreshing()" (refreshTriggered)="refresh()">
+      @if (isDailySalesReport()) {
+        @if (filteredDailyReports().length === 0) {
+          <div class="rounded-xl bg-white p-8 text-center shadow-lg">
+            <div class="mb-3 flex justify-center">
+              <app-icon name="icon-trending-up" [class]="'h-12 w-12 opacity-60'" />
+            </div>
+            <p class="text-lg font-semibold text-gray-700">No report data</p>
+            <p class="text-sm text-gray-500">No orders matched your selected filters.</p>
+          </div>
+        } @else {
+          @let totals = getDailyTotals();
+          <div class="mb-3 grid grid-cols-2 gap-3 md:grid-cols-4">
+            <div class="rounded-lg border border-gray-100 bg-white px-4 py-3 shadow-sm">
+              <p class="text-xs text-gray-500">Revenue</p>
+              <p
+                class="inline-flex w-full items-center justify-end gap-1 text-right text-sm font-semibold text-gray-900"
+              >
+                <app-icon name="icon-peso" [class]="'h-3 w-3'" />{{
+                  totals.totalRevenue | number: '1.2-2'
+                }}
+              </p>
+            </div>
+            <div class="rounded-lg border border-gray-100 bg-white px-4 py-3 shadow-sm">
+              <p class="text-xs text-gray-500">Orders</p>
+              <p class="text-right text-sm font-semibold text-gray-900">
+                {{ totals.orderCount | number: '1.0-0' }}
+              </p>
+            </div>
+            <div class="rounded-lg border border-gray-100 bg-white px-4 py-3 shadow-sm">
+              <p class="text-xs text-gray-500">Avg/Order</p>
+              <p
+                class="inline-flex w-full items-center justify-end gap-1 text-right text-sm font-semibold text-gray-900"
+              >
+                <app-icon name="icon-peso" [class]="'h-3 w-3'" />{{
+                  totals.averageOrderValue | number: '1.2-2'
+                }}
+              </p>
+            </div>
+            <div class="rounded-lg border border-gray-100 bg-white px-4 py-3 shadow-sm">
+              <p class="text-xs text-gray-500">Tips</p>
+              <p
+                class="inline-flex w-full items-center justify-end gap-1 text-right text-sm font-semibold text-gray-900"
+              >
+                <app-icon name="icon-peso" [class]="'h-3 w-3'" />{{
+                  totals.tipsTotal | number: '1.2-2'
+                }}
+              </p>
+            </div>
+          </div>
+
+          <div class="space-y-2 md:hidden">
+            @for (row of filteredDailyReports(); track row.periodStart) {
+              <div class="rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm">
+                <div class="mb-2 flex items-center justify-between">
+                  <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase">
+                    {{ getDailyPeriodHeaderLabel() }}
+                  </p>
+                  <p class="text-sm font-semibold text-gray-900">
+                    {{ getDailyPeriodLabel(row.periodStart) }}
+                  </p>
+                </div>
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                  <p class="text-gray-500">Revenue</p>
+                  <p
+                    class="inline-flex items-center justify-end gap-1 text-right font-semibold text-gray-900"
+                  >
+                    <app-icon name="icon-peso" [class]="'h-3 w-3'" />{{
+                      row.totalRevenue | number: '1.2-2'
+                    }}
+                  </p>
+                  <p class="text-gray-500">Orders</p>
+                  <p class="text-right font-semibold text-gray-900">
+                    {{ row.orderCount | number: '1.0-0' }}
+                  </p>
+                  <p class="text-gray-500">Avg/Order</p>
+                  <p
+                    class="inline-flex items-center justify-end gap-1 text-right font-semibold text-gray-900"
+                  >
+                    <app-icon name="icon-peso" [class]="'h-3 w-3'" />{{
+                      row.averageOrderValue | number: '1.2-2'
+                    }}
+                  </p>
+                  <p class="text-gray-500">Tips</p>
+                  <p
+                    class="inline-flex items-center justify-end gap-1 text-right font-semibold text-gray-900"
+                  >
+                    <app-icon name="icon-peso" [class]="'h-3 w-3'" />{{
+                      row.tipsTotal | number: '1.2-2'
+                    }}
+                  </p>
+                  <p class="text-gray-500">Void/Cancelled</p>
+                  <p class="text-right font-semibold text-gray-900">
+                    {{ row.voidCancelledCount | number: '1.0-0' }}
+                  </p>
+                </div>
+              </div>
+            }
+          </div>
+
+          <div class="hidden rounded-xl bg-white shadow-lg md:block">
+            <div class="overflow-x-auto">
+              <table class="table w-full">
+                <thead>
+                  <tr>
+                    <th>
+                      <button
+                        type="button"
+                        class="inline-flex cursor-pointer items-center gap-1 text-xs font-semibold tracking-wider uppercase transition-colors"
+                        [class.text-gray-600]="!isSorted('periodStart')"
+                        [class.hover:text-gray-900]="!isSorted('periodStart')"
+                        [class.text-[#047857]]="isSorted('periodStart')"
+                        (click)="toggleDailySort('periodStart')"
+                      >
+                        {{ getDailyPeriodHeaderLabel() }}
+                        <span
+                          class="text-xs transition-opacity"
+                          [class.opacity-0]="!isSorted('periodStart')"
+                          [class.opacity-100]="isSorted('periodStart')"
+                        >
+                          <app-icon
+                            name="icon-arrow-up"
+                            [class]="
+                              getSortDirection('periodStart') === 'desc'
+                                ? 'inline h-3 w-3 rotate-180 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                                : 'inline h-3 w-3 rotate-0 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                            "
+                            [fill]="'currentColor'"
+                          />
+                        </span>
+                      </button>
+                    </th>
+                    <th class="text-right">
+                      <button
+                        type="button"
+                        class="inline-flex cursor-pointer items-center justify-end gap-1 text-right text-xs font-semibold tracking-wider uppercase transition-colors"
+                        [class.text-gray-600]="!isSorted('totalRevenue')"
+                        [class.hover:text-gray-900]="!isSorted('totalRevenue')"
+                        [class.text-[#047857]]="isSorted('totalRevenue')"
+                        (click)="toggleDailySort('totalRevenue')"
+                      >
+                        Revenue
+                        <span
+                          class="text-xs transition-opacity"
+                          [class.opacity-0]="!isSorted('totalRevenue')"
+                          [class.opacity-100]="isSorted('totalRevenue')"
+                        >
+                          <app-icon
+                            name="icon-arrow-up"
+                            [class]="
+                              getSortDirection('totalRevenue') === 'desc'
+                                ? 'inline h-3 w-3 rotate-180 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                                : 'inline h-3 w-3 rotate-0 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                            "
+                            [fill]="'currentColor'"
+                          />
+                        </span>
+                      </button>
+                    </th>
+                    <th class="text-right">
+                      <button
+                        type="button"
+                        class="inline-flex cursor-pointer items-center justify-end gap-1 text-right text-xs font-semibold tracking-wider uppercase transition-colors"
+                        [class.text-gray-600]="!isSorted('orderCount')"
+                        [class.hover:text-gray-900]="!isSorted('orderCount')"
+                        [class.text-[#047857]]="isSorted('orderCount')"
+                        (click)="toggleDailySort('orderCount')"
+                      >
+                        Orders
+                        <span
+                          class="text-xs transition-opacity"
+                          [class.opacity-0]="!isSorted('orderCount')"
+                          [class.opacity-100]="isSorted('orderCount')"
+                        >
+                          <app-icon
+                            name="icon-arrow-up"
+                            [class]="
+                              getSortDirection('orderCount') === 'desc'
+                                ? 'inline h-3 w-3 rotate-180 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                                : 'inline h-3 w-3 rotate-0 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                            "
+                            [fill]="'currentColor'"
+                          />
+                        </span>
+                      </button>
+                    </th>
+                    <th class="text-right">
+                      <button
+                        type="button"
+                        class="inline-flex cursor-pointer items-center justify-end gap-1 text-right text-xs font-semibold tracking-wider uppercase transition-colors"
+                        [class.text-gray-600]="!isSorted('averageOrderValue')"
+                        [class.hover:text-gray-900]="!isSorted('averageOrderValue')"
+                        [class.text-[#047857]]="isSorted('averageOrderValue')"
+                        (click)="toggleDailySort('averageOrderValue')"
+                      >
+                        Avg/Order
+                        <span
+                          class="text-xs transition-opacity"
+                          [class.opacity-0]="!isSorted('averageOrderValue')"
+                          [class.opacity-100]="isSorted('averageOrderValue')"
+                        >
+                          <app-icon
+                            name="icon-arrow-up"
+                            [class]="
+                              getSortDirection('averageOrderValue') === 'desc'
+                                ? 'inline h-3 w-3 rotate-180 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                                : 'inline h-3 w-3 rotate-0 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                            "
+                            [fill]="'currentColor'"
+                          />
+                        </span>
+                      </button>
+                    </th>
+                    <th class="text-right">
+                      <button
+                        type="button"
+                        class="inline-flex cursor-pointer items-center justify-end gap-1 text-right text-xs font-semibold tracking-wider uppercase transition-colors"
+                        [class.text-gray-600]="!isSorted('tipsTotal')"
+                        [class.hover:text-gray-900]="!isSorted('tipsTotal')"
+                        [class.text-[#047857]]="isSorted('tipsTotal')"
+                        (click)="toggleDailySort('tipsTotal')"
+                      >
+                        Tips
+                        <span
+                          class="text-xs transition-opacity"
+                          [class.opacity-0]="!isSorted('tipsTotal')"
+                          [class.opacity-100]="isSorted('tipsTotal')"
+                        >
+                          <app-icon
+                            name="icon-arrow-up"
+                            [class]="
+                              getSortDirection('tipsTotal') === 'desc'
+                                ? 'inline h-3 w-3 rotate-180 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                                : 'inline h-3 w-3 rotate-0 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                            "
+                            [fill]="'currentColor'"
+                          />
+                        </span>
+                      </button>
+                    </th>
+                    <th class="text-right">
+                      <button
+                        type="button"
+                        class="inline-flex cursor-pointer items-center justify-end gap-1 text-right text-xs font-semibold tracking-wider uppercase transition-colors"
+                        [class.text-gray-600]="!isSorted('voidCancelledCount')"
+                        [class.hover:text-gray-900]="!isSorted('voidCancelledCount')"
+                        [class.text-[#047857]]="isSorted('voidCancelledCount')"
+                        (click)="toggleDailySort('voidCancelledCount')"
+                      >
+                        Void/Cancelled
+                        <span
+                          class="text-xs transition-opacity"
+                          [class.opacity-0]="!isSorted('voidCancelledCount')"
+                          [class.opacity-100]="isSorted('voidCancelledCount')"
+                        >
+                          <app-icon
+                            name="icon-arrow-up"
+                            [class]="
+                              getSortDirection('voidCancelledCount') === 'desc'
+                                ? 'inline h-3 w-3 rotate-180 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                                : 'inline h-3 w-3 rotate-0 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                            "
+                            [fill]="'currentColor'"
+                          />
+                        </span>
+                      </button>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of filteredDailyReports(); track row.periodStart) {
+                    <tr>
+                      <td>{{ getDailyPeriodLabel(row.periodStart) }}</td>
+                      <td class="text-right">
+                        <span class="inline-flex items-center justify-end gap-1">
+                          <app-icon name="icon-peso" [class]="'h-3 w-3'" />{{
+                            row.totalRevenue | number: '1.2-2'
+                          }}
+                        </span>
+                      </td>
+                      <td class="text-right">{{ row.orderCount | number: '1.0-0' }}</td>
+                      <td class="text-right">
+                        <span class="inline-flex items-center justify-end gap-1">
+                          <app-icon name="icon-peso" [class]="'h-3 w-3'" />{{
+                            row.averageOrderValue | number: '1.2-2'
+                          }}
+                        </span>
+                      </td>
+                      <td class="text-right">
+                        <span class="inline-flex items-center justify-end gap-1">
+                          <app-icon name="icon-peso" [class]="'h-3 w-3'" />{{
+                            row.tipsTotal | number: '1.2-2'
+                          }}
+                        </span>
+                      </td>
+                      <td class="text-right">{{ row.voidCancelledCount | number: '1.0-0' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        }
+      } @else if (isProductSalesReport()) {
+        @let totals = getProductTotals();
+        <div class="mb-3 grid grid-cols-2 gap-3">
+          <div class="rounded-lg border border-gray-100 bg-white px-4 py-3 shadow-sm">
+            <p class="text-xs text-gray-500">Quantity Sold</p>
+            <p class="text-right text-sm font-semibold text-gray-900">
+              {{ totals.quantitySold | number: '1.0-0' }}
+            </p>
+          </div>
+          <div class="rounded-lg border border-gray-100 bg-white px-4 py-3 shadow-sm">
+            <p class="text-xs text-gray-500">Revenue</p>
+            <p
+              class="inline-flex w-full items-center justify-end gap-1 text-right text-sm font-semibold text-gray-900"
+            >
+              <app-icon name="icon-peso" [class]="'h-3 w-3'" />{{
+                totals.revenue | number: '1.2-2'
+              }}
+            </p>
+          </div>
+        </div>
+
+        <div class="space-y-2 md:hidden">
+          @for (row of filteredProductReports(); track row.productId) {
+            <div class="rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm">
+              <div class="mb-2">
+                <p class="text-sm font-semibold text-gray-900">{{ row.productName }}</p>
+                <p class="text-xs text-gray-500">
+                  {{ row.categoryName }} / {{ row.subCategoryName || '-' }}
+                </p>
+              </div>
+              <div class="grid grid-cols-2 gap-2 text-xs">
+                <p class="text-gray-500">Qty</p>
+                <p class="text-right font-semibold text-gray-900">
+                  {{ row.quantitySold | number: '1.0-0' }}
+                </p>
+                <p class="text-gray-500">Revenue</p>
+                <p
+                  class="inline-flex items-center justify-end gap-1 text-right font-semibold text-gray-900"
+                >
+                  <app-icon name="icon-peso" [class]="'h-3 w-3'" />{{
+                    row.revenue | number: '1.2-2'
+                  }}
+                </p>
+                <p class="text-gray-500">% of Total</p>
+                <p class="text-right font-semibold text-gray-900">
+                  {{ row.revenuePercent | number: '1.2-2' }}%
+                </p>
+              </div>
+            </div>
+          }
+        </div>
+
+        <div class="hidden rounded-xl bg-white shadow-lg md:block">
+          <div class="overflow-x-auto">
+            <table class="table w-full">
+              <thead>
+                <tr>
+                  <th>
+                    <button
+                      type="button"
+                      class="inline-flex cursor-pointer items-center gap-1 text-xs font-semibold tracking-wider uppercase transition-colors"
+                      [class.text-gray-600]="!isSorted('productName')"
+                      [class.hover:text-gray-900]="!isSorted('productName')"
+                      [class.text-[#047857]]="isSorted('productName')"
+                      (click)="toggleProductSort('productName')"
+                    >
+                      Product
+                      <span
+                        class="text-xs transition-opacity"
+                        [class.opacity-0]="!isSorted('productName')"
+                        [class.opacity-100]="isSorted('productName')"
+                      >
+                        <app-icon
+                          name="icon-arrow-up"
+                          [class]="
+                            getSortDirection('productName') === 'desc'
+                              ? 'inline h-3 w-3 rotate-180 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                              : 'inline h-3 w-3 rotate-0 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                          "
+                          [fill]="'currentColor'"
+                        />
+                      </span>
+                    </button>
+                  </th>
+                  <th>
+                    <button
+                      type="button"
+                      class="inline-flex cursor-pointer items-center gap-1 text-xs font-semibold tracking-wider uppercase transition-colors"
+                      [class.text-gray-600]="!isSorted('categoryName')"
+                      [class.hover:text-gray-900]="!isSorted('categoryName')"
+                      [class.text-[#047857]]="isSorted('categoryName')"
+                      (click)="toggleProductSort('categoryName')"
+                    >
+                      Category
+                      <span
+                        class="text-xs transition-opacity"
+                        [class.opacity-0]="!isSorted('categoryName')"
+                        [class.opacity-100]="isSorted('categoryName')"
+                      >
+                        <app-icon
+                          name="icon-arrow-up"
+                          [class]="
+                            getSortDirection('categoryName') === 'desc'
+                              ? 'inline h-3 w-3 rotate-180 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                              : 'inline h-3 w-3 rotate-0 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                          "
+                          [fill]="'currentColor'"
+                        />
+                      </span>
+                    </button>
+                  </th>
+                  <th>
+                    <button
+                      type="button"
+                      class="inline-flex cursor-pointer items-center gap-1 text-xs font-semibold tracking-wider uppercase transition-colors"
+                      [class.text-gray-600]="!isSorted('subCategoryName')"
+                      [class.hover:text-gray-900]="!isSorted('subCategoryName')"
+                      [class.text-[#047857]]="isSorted('subCategoryName')"
+                      (click)="toggleProductSort('subCategoryName')"
+                    >
+                      Subcategory
+                      <span
+                        class="text-xs transition-opacity"
+                        [class.opacity-0]="!isSorted('subCategoryName')"
+                        [class.opacity-100]="isSorted('subCategoryName')"
+                      >
+                        <app-icon
+                          name="icon-arrow-up"
+                          [class]="
+                            getSortDirection('subCategoryName') === 'desc'
+                              ? 'inline h-3 w-3 rotate-180 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                              : 'inline h-3 w-3 rotate-0 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                          "
+                          [fill]="'currentColor'"
+                        />
+                      </span>
+                    </button>
+                  </th>
+                  <th class="text-right">
+                    <button
+                      type="button"
+                      class="inline-flex cursor-pointer items-center justify-end gap-1 text-right text-xs font-semibold tracking-wider uppercase transition-colors"
+                      [class.text-gray-600]="!isSorted('quantitySold')"
+                      [class.hover:text-gray-900]="!isSorted('quantitySold')"
+                      [class.text-[#047857]]="isSorted('quantitySold')"
+                      (click)="toggleProductSort('quantitySold')"
+                    >
+                      Qty
+                      <span
+                        class="text-xs transition-opacity"
+                        [class.opacity-0]="!isSorted('quantitySold')"
+                        [class.opacity-100]="isSorted('quantitySold')"
+                      >
+                        <app-icon
+                          name="icon-arrow-up"
+                          [class]="
+                            getSortDirection('quantitySold') === 'desc'
+                              ? 'inline h-3 w-3 rotate-180 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                              : 'inline h-3 w-3 rotate-0 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                          "
+                          [fill]="'currentColor'"
+                        />
+                      </span>
+                    </button>
+                  </th>
+                  <th class="text-right">
+                    <button
+                      type="button"
+                      class="inline-flex cursor-pointer items-center justify-end gap-1 text-right text-xs font-semibold tracking-wider uppercase transition-colors"
+                      [class.text-gray-600]="!isSorted('revenue')"
+                      [class.hover:text-gray-900]="!isSorted('revenue')"
+                      [class.text-[#047857]]="isSorted('revenue')"
+                      (click)="toggleProductSort('revenue')"
+                    >
+                      Revenue
+                      <span
+                        class="text-xs transition-opacity"
+                        [class.opacity-0]="!isSorted('revenue')"
+                        [class.opacity-100]="isSorted('revenue')"
+                      >
+                        <app-icon
+                          name="icon-arrow-up"
+                          [class]="
+                            getSortDirection('revenue') === 'desc'
+                              ? 'inline h-3 w-3 rotate-180 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                              : 'inline h-3 w-3 rotate-0 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                          "
+                          [fill]="'currentColor'"
+                        />
+                      </span>
+                    </button>
+                  </th>
+                  <th class="text-right">
+                    <button
+                      type="button"
+                      class="inline-flex cursor-pointer items-center justify-end gap-1 text-right text-xs font-semibold tracking-wider uppercase transition-colors"
+                      [class.text-gray-600]="!isSorted('revenuePercent')"
+                      [class.hover:text-gray-900]="!isSorted('revenuePercent')"
+                      [class.text-[#047857]]="isSorted('revenuePercent')"
+                      (click)="toggleProductSort('revenuePercent')"
+                    >
+                      % of Total
+                      <span
+                        class="text-xs transition-opacity"
+                        [class.opacity-0]="!isSorted('revenuePercent')"
+                        [class.opacity-100]="isSorted('revenuePercent')"
+                      >
+                        <app-icon
+                          name="icon-arrow-up"
+                          [class]="
+                            getSortDirection('revenuePercent') === 'desc'
+                              ? 'inline h-3 w-3 rotate-180 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                              : 'inline h-3 w-3 rotate-0 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                          "
+                          [fill]="'currentColor'"
+                        />
+                      </span>
+                    </button>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of filteredProductReports(); track row.productId) {
+                  <tr>
+                    <td>{{ row.productName }}</td>
+                    <td>{{ row.categoryName }}</td>
+                    <td>{{ row.subCategoryName || '-' }}</td>
+                    <td class="text-right">{{ row.quantitySold | number: '1.0-0' }}</td>
+                    <td class="text-right">
+                      <span class="inline-flex items-center justify-end gap-1">
+                        <app-icon name="icon-peso" [class]="'h-3 w-3'" />{{
+                          row.revenue | number: '1.2-2'
+                        }}
+                      </span>
+                    </td>
+                    <td class="text-right">{{ row.revenuePercent | number: '1.2-2' }}%</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      } @else if (isPaymentsReport()) {
+        @let totals = getPaymentsTotals();
+        <div class="mb-3 grid grid-cols-2 gap-3">
+          <div class="rounded-lg border border-gray-100 bg-white px-4 py-3 shadow-sm">
+            <p class="text-xs text-gray-500">Orders</p>
+            <p class="text-right text-sm font-semibold text-gray-900">
+              {{ totals.orderCount | number: '1.0-0' }}
+            </p>
+          </div>
+          <div class="rounded-lg border border-gray-100 bg-white px-4 py-3 shadow-sm">
+            <p class="text-xs text-gray-500">Total Amount</p>
+            <p
+              class="inline-flex w-full items-center justify-end gap-1 text-right text-sm font-semibold text-gray-900"
+            >
+              <app-icon name="icon-peso" [class]="'h-3 w-3'" />{{
+                totals.totalAmount | number: '1.2-2'
+              }}
+            </p>
+          </div>
+        </div>
+
+        <div class="space-y-2 md:hidden">
+          @for (row of filteredPaymentsReports(); track row.paymentMethod) {
+            <div class="rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm">
+              <div class="mb-2 flex items-center justify-between">
+                <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase">
+                  Payment Method
+                </p>
+                <p class="text-sm font-semibold text-gray-900">{{ row.paymentMethod }}</p>
+              </div>
+              <div class="grid grid-cols-2 gap-2 text-xs">
+                <p class="text-gray-500">Orders</p>
+                <p class="text-right font-semibold text-gray-900">
+                  {{ row.orderCount | number: '1.0-0' }}
+                </p>
+                <p class="text-gray-500">Total Amount</p>
+                <p
+                  class="inline-flex items-center justify-end gap-1 text-right font-semibold text-gray-900"
+                >
+                  <app-icon name="icon-peso" [class]="'h-3 w-3'" />{{
+                    row.totalAmount | number: '1.2-2'
+                  }}
+                </p>
+                <p class="text-gray-500">% of Total</p>
+                <p class="text-right font-semibold text-gray-900">
+                  {{ row.totalPercent | number: '1.2-2' }}%
+                </p>
+              </div>
+            </div>
+          }
+        </div>
+
+        <div class="hidden rounded-xl bg-white shadow-lg md:block">
+          <div class="overflow-x-auto">
+            <table class="table w-full">
+              <thead>
+                <tr>
+                  <th>
+                    <button
+                      type="button"
+                      class="inline-flex cursor-pointer items-center gap-1 text-xs font-semibold tracking-wider uppercase transition-colors"
+                      [class.text-gray-600]="!isSorted('paymentMethod')"
+                      [class.hover:text-gray-900]="!isSorted('paymentMethod')"
+                      [class.text-[#047857]]="isSorted('paymentMethod')"
+                      (click)="togglePaymentsSort('paymentMethod')"
+                    >
+                      Payment Method
+                      <span
+                        class="text-xs transition-opacity"
+                        [class.opacity-0]="!isSorted('paymentMethod')"
+                        [class.opacity-100]="isSorted('paymentMethod')"
+                      >
+                        <app-icon
+                          name="icon-arrow-up"
+                          [class]="
+                            getSortDirection('paymentMethod') === 'desc'
+                              ? 'inline h-3 w-3 rotate-180 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                              : 'inline h-3 w-3 rotate-0 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                          "
+                          [fill]="'currentColor'"
+                        />
+                      </span>
+                    </button>
+                  </th>
+                  <th class="text-right">
+                    <button
+                      type="button"
+                      class="inline-flex cursor-pointer items-center justify-end gap-1 text-right text-xs font-semibold tracking-wider uppercase transition-colors"
+                      [class.text-gray-600]="!isSorted('orderCount')"
+                      [class.hover:text-gray-900]="!isSorted('orderCount')"
+                      [class.text-[#047857]]="isSorted('orderCount')"
+                      (click)="togglePaymentsSort('orderCount')"
+                    >
+                      Orders
+                      <span
+                        class="text-xs transition-opacity"
+                        [class.opacity-0]="!isSorted('orderCount')"
+                        [class.opacity-100]="isSorted('orderCount')"
+                      >
+                        <app-icon
+                          name="icon-arrow-up"
+                          [class]="
+                            getSortDirection('orderCount') === 'desc'
+                              ? 'inline h-3 w-3 rotate-180 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                              : 'inline h-3 w-3 rotate-0 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                          "
+                          [fill]="'currentColor'"
+                        />
+                      </span>
+                    </button>
+                  </th>
+                  <th class="text-right">
+                    <button
+                      type="button"
+                      class="inline-flex cursor-pointer items-center justify-end gap-1 text-right text-xs font-semibold tracking-wider uppercase transition-colors"
+                      [class.text-gray-600]="!isSorted('totalAmount')"
+                      [class.hover:text-gray-900]="!isSorted('totalAmount')"
+                      [class.text-[#047857]]="isSorted('totalAmount')"
+                      (click)="togglePaymentsSort('totalAmount')"
+                    >
+                      Total Amount
+                      <span
+                        class="text-xs transition-opacity"
+                        [class.opacity-0]="!isSorted('totalAmount')"
+                        [class.opacity-100]="isSorted('totalAmount')"
+                      >
+                        <app-icon
+                          name="icon-arrow-up"
+                          [class]="
+                            getSortDirection('totalAmount') === 'desc'
+                              ? 'inline h-3 w-3 rotate-180 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                              : 'inline h-3 w-3 rotate-0 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                          "
+                          [fill]="'currentColor'"
+                        />
+                      </span>
+                    </button>
+                  </th>
+                  <th class="text-right">
+                    <button
+                      type="button"
+                      class="inline-flex cursor-pointer items-center justify-end gap-1 text-right text-xs font-semibold tracking-wider uppercase transition-colors"
+                      [class.text-gray-600]="!isSorted('totalPercent')"
+                      [class.hover:text-gray-900]="!isSorted('totalPercent')"
+                      [class.text-[#047857]]="isSorted('totalPercent')"
+                      (click)="togglePaymentsSort('totalPercent')"
+                    >
+                      % of Total
+                      <span
+                        class="text-xs transition-opacity"
+                        [class.opacity-0]="!isSorted('totalPercent')"
+                        [class.opacity-100]="isSorted('totalPercent')"
+                      >
+                        <app-icon
+                          name="icon-arrow-up"
+                          [class]="
+                            getSortDirection('totalPercent') === 'desc'
+                              ? 'inline h-3 w-3 rotate-180 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                              : 'inline h-3 w-3 rotate-0 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                          "
+                          [fill]="'currentColor'"
+                        />
+                      </span>
+                    </button>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of filteredPaymentsReports(); track row.paymentMethod) {
+                  <tr>
+                    <td>{{ row.paymentMethod }}</td>
+                    <td class="text-right">{{ row.orderCount | number: '1.0-0' }}</td>
+                    <td class="text-right">
+                      <span class="inline-flex items-center justify-end gap-1">
+                        <app-icon name="icon-peso" [class]="'h-3 w-3'" />{{
+                          row.totalAmount | number: '1.2-2'
+                        }}
+                      </span>
+                    </td>
+                    <td class="text-right">{{ row.totalPercent | number: '1.2-2' }}%</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      } @else if (isHourlyReport()) {
+        @let totals = getHourlyTotals();
+        <div class="mb-3 grid grid-cols-2 gap-3">
+          <div class="rounded-lg border border-gray-100 bg-white px-4 py-3 shadow-sm">
+            <p class="text-xs text-gray-500">Orders</p>
+            <p class="text-right text-sm font-semibold text-gray-900">
+              {{ totals.orderCount | number: '1.0-0' }}
+            </p>
+          </div>
+          <div class="rounded-lg border border-gray-100 bg-white px-4 py-3 shadow-sm">
+            <p class="text-xs text-gray-500">Revenue</p>
+            <p
+              class="inline-flex w-full items-center justify-end gap-1 text-right text-sm font-semibold text-gray-900"
+            >
+              <app-icon name="icon-peso" [class]="'h-3 w-3'" />{{
+                totals.revenue | number: '1.2-2'
+              }}
+            </p>
+          </div>
+        </div>
+
+        <div class="space-y-2 md:hidden">
+          @for (row of filteredHourlyReports(); track row.hour) {
+            <div class="rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm">
+              <div class="mb-2 flex items-center justify-between">
+                <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Hour</p>
+                <p class="text-sm font-semibold text-gray-900">{{ toHourLabel(row.hour) }}</p>
+              </div>
+              <div class="grid grid-cols-2 gap-2 text-xs">
+                <p class="text-gray-500">Orders</p>
+                <p class="text-right font-semibold text-gray-900">
+                  {{ row.orderCount | number: '1.0-0' }}
+                </p>
+                <p class="text-gray-500">Revenue</p>
+                <p
+                  class="inline-flex items-center justify-end gap-1 text-right font-semibold text-gray-900"
+                >
+                  <app-icon name="icon-peso" [class]="'h-3 w-3'" />{{
+                    row.revenue | number: '1.2-2'
+                  }}
+                </p>
+              </div>
+            </div>
+          }
+        </div>
+
+        <div class="hidden rounded-xl bg-white shadow-lg md:block">
+          <div class="overflow-x-auto">
+            <table class="table w-full">
+              <thead>
+                <tr>
+                  <th>
+                    <button
+                      type="button"
+                      class="inline-flex cursor-pointer items-center gap-1 text-xs font-semibold tracking-wider uppercase transition-colors"
+                      [class.text-gray-600]="!isSorted('hour')"
+                      [class.hover:text-gray-900]="!isSorted('hour')"
+                      [class.text-[#047857]]="isSorted('hour')"
+                      (click)="toggleHourlySort('hour')"
+                    >
+                      Hour
+                      <span
+                        class="text-xs transition-opacity"
+                        [class.opacity-0]="!isSorted('hour')"
+                        [class.opacity-100]="isSorted('hour')"
+                      >
+                        <app-icon
+                          name="icon-arrow-up"
+                          [class]="
+                            getSortDirection('hour') === 'desc'
+                              ? 'inline h-3 w-3 rotate-180 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                              : 'inline h-3 w-3 rotate-0 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                          "
+                          [fill]="'currentColor'"
+                        />
+                      </span>
+                    </button>
+                  </th>
+                  <th class="text-right">
+                    <button
+                      type="button"
+                      class="inline-flex cursor-pointer items-center justify-end gap-1 text-right text-xs font-semibold tracking-wider uppercase transition-colors"
+                      [class.text-gray-600]="!isSorted('orderCount')"
+                      [class.hover:text-gray-900]="!isSorted('orderCount')"
+                      [class.text-[#047857]]="isSorted('orderCount')"
+                      (click)="toggleHourlySort('orderCount')"
+                    >
+                      Orders
+                      <span
+                        class="text-xs transition-opacity"
+                        [class.opacity-0]="!isSorted('orderCount')"
+                        [class.opacity-100]="isSorted('orderCount')"
+                      >
+                        <app-icon
+                          name="icon-arrow-up"
+                          [class]="
+                            getSortDirection('orderCount') === 'desc'
+                              ? 'inline h-3 w-3 rotate-180 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                              : 'inline h-3 w-3 rotate-0 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                          "
+                          [fill]="'currentColor'"
+                        />
+                      </span>
+                    </button>
+                  </th>
+                  <th class="text-right">
+                    <button
+                      type="button"
+                      class="inline-flex cursor-pointer items-center justify-end gap-1 text-right text-xs font-semibold tracking-wider uppercase transition-colors"
+                      [class.text-gray-600]="!isSorted('revenue')"
+                      [class.hover:text-gray-900]="!isSorted('revenue')"
+                      [class.text-[#047857]]="isSorted('revenue')"
+                      (click)="toggleHourlySort('revenue')"
+                    >
+                      Revenue
+                      <span
+                        class="text-xs transition-opacity"
+                        [class.opacity-0]="!isSorted('revenue')"
+                        [class.opacity-100]="isSorted('revenue')"
+                      >
+                        <app-icon
+                          name="icon-arrow-up"
+                          [class]="
+                            getSortDirection('revenue') === 'desc'
+                              ? 'inline h-3 w-3 rotate-180 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                              : 'inline h-3 w-3 rotate-0 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                          "
+                          [fill]="'currentColor'"
+                        />
+                      </span>
+                    </button>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of filteredHourlyReports(); track row.hour) {
+                  <tr>
+                    <td>{{ toHourLabel(row.hour) }}</td>
+                    <td class="text-right">{{ row.orderCount | number: '1.0-0' }}</td>
+                    <td class="text-right">
+                      <span class="inline-flex items-center justify-end gap-1">
+                        <app-icon name="icon-peso" [class]="'h-3 w-3'" />{{
+                          row.revenue | number: '1.2-2'
+                        }}
+                      </span>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      } @else {
+        @let totals = getStaffTotals();
+        <div class="mb-3 grid grid-cols-2 gap-3 md:grid-cols-4">
+          <div class="rounded-lg border border-gray-100 bg-white px-4 py-3 shadow-sm">
+            <p class="text-xs text-gray-500">Orders</p>
+            <p class="text-right text-sm font-semibold text-gray-900">
+              {{ totals.orderCount | number: '1.0-0' }}
+            </p>
+          </div>
+          <div class="rounded-lg border border-gray-100 bg-white px-4 py-3 shadow-sm">
+            <p class="text-xs text-gray-500">Revenue</p>
+            <p
+              class="inline-flex w-full items-center justify-end gap-1 text-right text-sm font-semibold text-gray-900"
+            >
+              <app-icon name="icon-peso" [class]="'h-3 w-3'" />{{
+                totals.revenue | number: '1.2-2'
+              }}
+            </p>
+          </div>
+          <div class="rounded-lg border border-gray-100 bg-white px-4 py-3 shadow-sm">
+            <p class="text-xs text-gray-500">Avg/Order</p>
+            <p
+              class="inline-flex w-full items-center justify-end gap-1 text-right text-sm font-semibold text-gray-900"
+            >
+              <app-icon name="icon-peso" [class]="'h-3 w-3'" />{{
+                totals.averageOrderValue | number: '1.2-2'
+              }}
+            </p>
+          </div>
+          <div class="rounded-lg border border-gray-100 bg-white px-4 py-3 shadow-sm">
+            <p class="text-xs text-gray-500">Tips</p>
+            <p
+              class="inline-flex w-full items-center justify-end gap-1 text-right text-sm font-semibold text-gray-900"
+            >
+              <app-icon name="icon-peso" [class]="'h-3 w-3'" />{{
+                totals.tipsReceived | number: '1.2-2'
+              }}
+            </p>
+          </div>
+        </div>
+
+        <div class="space-y-2 md:hidden">
+          @for (row of filteredStaffReports(); track row.staffId) {
+            <div class="rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm">
+              <div class="mb-2 flex items-center justify-between">
+                <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Staff</p>
+                <p class="text-sm font-semibold text-gray-900">{{ row.staffName }}</p>
+              </div>
+              <div class="grid grid-cols-2 gap-2 text-xs">
+                <p class="text-gray-500">Orders</p>
+                <p class="text-right font-semibold text-gray-900">
+                  {{ row.orderCount | number: '1.0-0' }}
+                </p>
+                <p class="text-gray-500">Revenue</p>
+                <p
+                  class="inline-flex items-center justify-end gap-1 text-right font-semibold text-gray-900"
+                >
+                  <app-icon name="icon-peso" [class]="'h-3 w-3'" />{{
+                    row.totalRevenue | number: '1.2-2'
+                  }}
+                </p>
+                <p class="text-gray-500">Avg/Order</p>
+                <p
+                  class="inline-flex items-center justify-end gap-1 text-right font-semibold text-gray-900"
+                >
+                  <app-icon name="icon-peso" [class]="'h-3 w-3'" />{{
+                    row.averageOrderValue | number: '1.2-2'
+                  }}
+                </p>
+                <p class="text-gray-500">Tips</p>
+                <p
+                  class="inline-flex items-center justify-end gap-1 text-right font-semibold text-gray-900"
+                >
+                  <app-icon name="icon-peso" [class]="'h-3 w-3'" />{{
+                    row.tipsReceived | number: '1.2-2'
+                  }}
+                </p>
+              </div>
+            </div>
+          }
+        </div>
+
+        <div class="hidden rounded-xl bg-white shadow-lg md:block">
+          <div class="overflow-x-auto">
+            <table class="table w-full">
+              <thead>
+                <tr>
+                  <th>
+                    <button
+                      type="button"
+                      class="inline-flex cursor-pointer items-center gap-1 text-xs font-semibold tracking-wider uppercase transition-colors"
+                      [class.text-gray-600]="!isSorted('staffName')"
+                      [class.hover:text-gray-900]="!isSorted('staffName')"
+                      [class.text-[#047857]]="isSorted('staffName')"
+                      (click)="toggleStaffSort('staffName')"
+                    >
+                      Staff
+                      <span
+                        class="text-xs transition-opacity"
+                        [class.opacity-0]="!isSorted('staffName')"
+                        [class.opacity-100]="isSorted('staffName')"
+                      >
+                        <app-icon
+                          name="icon-arrow-up"
+                          [class]="
+                            getSortDirection('staffName') === 'desc'
+                              ? 'inline h-3 w-3 rotate-180 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                              : 'inline h-3 w-3 rotate-0 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                          "
+                          [fill]="'currentColor'"
+                        />
+                      </span>
+                    </button>
+                  </th>
+                  <th class="text-right">
+                    <button
+                      type="button"
+                      class="inline-flex cursor-pointer items-center justify-end gap-1 text-right text-xs font-semibold tracking-wider uppercase transition-colors"
+                      [class.text-gray-600]="!isSorted('orderCount')"
+                      [class.hover:text-gray-900]="!isSorted('orderCount')"
+                      [class.text-[#047857]]="isSorted('orderCount')"
+                      (click)="toggleStaffSort('orderCount')"
+                    >
+                      Orders
+                      <span
+                        class="text-xs transition-opacity"
+                        [class.opacity-0]="!isSorted('orderCount')"
+                        [class.opacity-100]="isSorted('orderCount')"
+                      >
+                        <app-icon
+                          name="icon-arrow-up"
+                          [class]="
+                            getSortDirection('orderCount') === 'desc'
+                              ? 'inline h-3 w-3 rotate-180 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                              : 'inline h-3 w-3 rotate-0 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                          "
+                          [fill]="'currentColor'"
+                        />
+                      </span>
+                    </button>
+                  </th>
+                  <th class="text-right">
+                    <button
+                      type="button"
+                      class="inline-flex cursor-pointer items-center justify-end gap-1 text-right text-xs font-semibold tracking-wider uppercase transition-colors"
+                      [class.text-gray-600]="!isSorted('totalRevenue')"
+                      [class.hover:text-gray-900]="!isSorted('totalRevenue')"
+                      [class.text-[#047857]]="isSorted('totalRevenue')"
+                      (click)="toggleStaffSort('totalRevenue')"
+                    >
+                      Revenue
+                      <span
+                        class="text-xs transition-opacity"
+                        [class.opacity-0]="!isSorted('totalRevenue')"
+                        [class.opacity-100]="isSorted('totalRevenue')"
+                      >
+                        <app-icon
+                          name="icon-arrow-up"
+                          [class]="
+                            getSortDirection('totalRevenue') === 'desc'
+                              ? 'inline h-3 w-3 rotate-180 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                              : 'inline h-3 w-3 rotate-0 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                          "
+                          [fill]="'currentColor'"
+                        />
+                      </span>
+                    </button>
+                  </th>
+                  <th class="text-right">
+                    <button
+                      type="button"
+                      class="inline-flex cursor-pointer items-center justify-end gap-1 text-right text-xs font-semibold tracking-wider uppercase transition-colors"
+                      [class.text-gray-600]="!isSorted('averageOrderValue')"
+                      [class.hover:text-gray-900]="!isSorted('averageOrderValue')"
+                      [class.text-[#047857]]="isSorted('averageOrderValue')"
+                      (click)="toggleStaffSort('averageOrderValue')"
+                    >
+                      Avg/Order
+                      <span
+                        class="text-xs transition-opacity"
+                        [class.opacity-0]="!isSorted('averageOrderValue')"
+                        [class.opacity-100]="isSorted('averageOrderValue')"
+                      >
+                        <app-icon
+                          name="icon-arrow-up"
+                          [class]="
+                            getSortDirection('averageOrderValue') === 'desc'
+                              ? 'inline h-3 w-3 rotate-180 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                              : 'inline h-3 w-3 rotate-0 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                          "
+                          [fill]="'currentColor'"
+                        />
+                      </span>
+                    </button>
+                  </th>
+                  <th class="text-right">
+                    <button
+                      type="button"
+                      class="inline-flex cursor-pointer items-center justify-end gap-1 text-right text-xs font-semibold tracking-wider uppercase transition-colors"
+                      [class.text-gray-600]="!isSorted('tipsReceived')"
+                      [class.hover:text-gray-900]="!isSorted('tipsReceived')"
+                      [class.text-[#047857]]="isSorted('tipsReceived')"
+                      (click)="toggleStaffSort('tipsReceived')"
+                    >
+                      Tips
+                      <span
+                        class="text-xs transition-opacity"
+                        [class.opacity-0]="!isSorted('tipsReceived')"
+                        [class.opacity-100]="isSorted('tipsReceived')"
+                      >
+                        <app-icon
+                          name="icon-arrow-up"
+                          [class]="
+                            getSortDirection('tipsReceived') === 'desc'
+                              ? 'inline h-3 w-3 rotate-180 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                              : 'inline h-3 w-3 rotate-0 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                          "
+                          [fill]="'currentColor'"
+                        />
+                      </span>
+                    </button>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of filteredStaffReports(); track row.staffId) {
+                  <tr>
+                    <td>{{ row.staffName }}</td>
+                    <td class="text-right">{{ row.orderCount | number: '1.0-0' }}</td>
+                    <td class="text-right">
+                      <span class="inline-flex items-center justify-end gap-1">
+                        <app-icon name="icon-peso" [class]="'h-3 w-3'" />{{
+                          row.totalRevenue | number: '1.2-2'
+                        }}
+                      </span>
+                    </td>
+                    <td class="text-right">
+                      <span class="inline-flex items-center justify-end gap-1">
+                        <app-icon name="icon-peso" [class]="'h-3 w-3'" />{{
+                          row.averageOrderValue | number: '1.2-2'
+                        }}
+                      </span>
+                    </td>
+                    <td class="text-right">
+                      <span class="inline-flex items-center justify-end gap-1">
+                        <app-icon name="icon-peso" [class]="'h-3 w-3'" />{{
+                          row.tipsReceived | number: '1.2-2'
+                        }}
+                      </span>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      }
+    </app-pull-to-refresh>
+  }
+</div>

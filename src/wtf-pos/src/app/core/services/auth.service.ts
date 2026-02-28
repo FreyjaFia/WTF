@@ -291,6 +291,10 @@ export class AuthService {
     return this.hasAnyRole(AppRoleGroups.ManagementWrite);
   }
 
+  public canAccessReports(): boolean {
+    return this.hasAnyRole(AppRoleGroups.ReportsRead);
+  }
+
   public isSuperAdmin(): boolean {
     return this.hasAnyRole(AppRoleGroups.AuditRead);
   }

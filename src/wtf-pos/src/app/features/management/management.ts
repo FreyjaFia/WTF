@@ -59,6 +59,10 @@ export class ManagementComponent implements OnInit {
     return this.authService.canAccessAuditLogs();
   }
 
+  protected canAccessReports(): boolean {
+    return this.authService.canAccessReports();
+  }
+
   protected canAccessSchemaScriptHistory(): boolean {
     return this.authService.canAccessSchemaScriptHistory();
   }

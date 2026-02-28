@@ -215,89 +215,61 @@ Track significant actions so management can review who performed an action and w
 
 ---
 
-## Sales Reporting Feature [Planned]
+## Sales Reporting Feature (Phases 1-3)
 
 Downloadable sales reports to complement the existing real-time
 dashboard. The dashboard shows live data; reports provide historical
 analysis that can be exported and shared.
 
-### API Endpoints
+| Phase | Name                           | Status       |
+| ----- | ------------------------------ | ------------ |
+| 1     | Core Reports + Export UX       | [Completed]  |
+| 2     | Google Sheets Integration      | [Planned]    |
+| 3     | Scheduled Reports              | [Planned]    |
 
-All under `/api/reports`. Require authentication and admin/manager role.
+### Phase 1 - Core Reports + Export UX [Completed]
 
-| Endpoint                        | Description                          |
-| ------------------------------- | ------------------------------------ |
-| `GET /api/reports/daily-sales`  | Revenue, order count, avg per day    |
-| `GET /api/reports/product-sales`| Sales breakdown by product/category  |
-| `GET /api/reports/payments`     | Breakdown by payment method          |
-| `GET /api/reports/hourly`       | Sales distribution by hour of day    |
-| `GET /api/reports/staff`        | Revenue and orders per staff member  |
+### Implemented API
 
-**Common query parameters:** `fromDate`, `toDate` (required, UTC),
-`groupBy` (day/week/month), `categoryId`, `subCategoryId`, `staffId`.
+- Endpoints under `/api/reports` with authorization policy:
+  - `GET /api/reports/daily-sales`
+  - `GET /api/reports/product-sales`
+  - `GET /api/reports/payments`
+  - `GET /api/reports/hourly`
+  - `GET /api/reports/staff`
+- Supported query parameters:
+  - required: `fromDate`, `toDate`
+  - optional: `groupBy` (daily report), `categoryId`, `subCategoryId`, `staffId`
+- Response formats implemented:
+  - JSON (`application/json`) for on-screen preview
+  - CSV (`Accept: text/csv`)
+  - PDF (`Accept: application/pdf`)
+- Totals included in CSV exports and summary sections in PDF exports.
+- Product report revenue computation aligned to order math:
+  - `(parent unit price + add-ons per unit) * parent quantity`
+- Timezone handling:
+  - filtering/comparison based on UTC range
+  - grouped/displayed periods respect request timezone (`X-TimeZone`).
 
-**Response format:** JSON array, but each endpoint also supports
-`Accept: text/csv` header to return CSV directly, and
-`Accept: application/pdf` for PDF (using a library like QuestPDF or
-iTextSharp on the API).
+### Implemented Frontend
 
-### Report Types
+- New route: `/management/reports`.
+- Visual alignment with Management pages:
+  - consistent headers, spacing, table/card styling, refresh pattern, loading/empty states.
+- Report controls implemented:
+  - report type selector
+  - date presets (`Today`, `Yesterday`, `This Week`, `This Month`, `Last Month`, `Custom`)
+  - report-specific filters (`groupBy`, `category`, `subcategory`, `staff`)
+  - search across all visible columns
+  - sortable columns for all report tables
+- Responsive behavior implemented:
+  - mobile/tablet hideable filters
+  - mobile card rendering for report rows
+- Export UX implemented:
+  - download CSV/PDF from UI
+  - Android flow supports save + open/share fallback.
 
-1. **Daily Sales Summary**
-   - Columns: date, total revenue, order count, average order value,
-     tips total, void/cancelled count
-   - Totals row at the bottom
-
-2. **Product Sales Breakdown**
-   - Columns: product name, category, subcategory, quantity sold,
-     revenue, % of total revenue
-   - Sortable by quantity or revenue
-   - Grouped by category with subtotals
-
-3. **Payment Method Breakdown**
-   - Columns: payment method (Cash, GCash, etc.), order count, total
-     amount, % of total
-   - Useful for reconciling cash vs. digital payments
-
-4. **Hourly Sales Distribution**
-   - Columns: hour (6 AM, 7 AM, ..., 10 PM), order count, revenue
-   - Helps identify peak hours for staffing decisions
-
-5. **Staff Performance**
-   - Columns: staff name, order count, total revenue, average order
-     value, tips received
-   - Date-filtered to a single day or range
-
-### Frontend
-
-New route: `/management/reports`
-
-- Keep visual language consistent with existing Management pages:
-  - same header hierarchy, spacing, card/table styling, and refresh patterns
-  - reuse existing loading, empty, error, and pull-to-refresh UX patterns
-- Management sidebar ordering:
-  - place `Reports` before super-admin-only tabs (`Audit Logs`, `Schema Scripts`)
-- **Date range picker** (presets: Today, Yesterday, This Week, This
-  Month, Last Month, Custom Range)
-- **Report type selector** - tabs or dropdown to switch between report
-  types
-- **On-screen preview** - render the report as a table/chart in the
-  browser
-- **Download buttons:** "Download CSV" and "Download PDF"
-  - CSV: calls the API with `Accept: text/csv`, triggers browser
-    download
-  - PDF: calls the API with `Accept: application/pdf`, triggers browser
-    download
-- **Charts** (stretch goal) - bar/line charts using a lightweight
-  library (e.g., Chart.js or ngx-charts) for visual summaries alongside
-  tables
-- Mobile UX requirements:
-  - move advanced filters into a modal/bottom sheet on small screens
-  - keep report tabs horizontally scrollable
-  - render table rows as mobile cards with key-value fields
-  - keep export actions reachable (sticky action area or top actions)
-
-### Google Sheets Integration (Planned)
+### Phase 2 - Google Sheets Integration [Planned]
 
 - Add a "Send to Sheets" action (do not generate local `.gsheet` files).
 - File strategy:
@@ -321,7 +293,7 @@ New route: `/management/reports`
   - support idempotency key / dedupe guard to avoid accidental duplicate pushes
   - keep CSV/PDF export as fallback if Sheets push fails
 
-### Scheduled Reports (Stretch Goal)
+### Phase 3 - Scheduled Reports (Stretch Goal)
 
 - Configure daily/weekly email summary in management settings
 - API background job generates the report and sends via email

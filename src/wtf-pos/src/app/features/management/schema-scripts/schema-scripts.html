@@ -1,5 +1,5 @@
-﻿<div class="flex h-full flex-col md:ps-6">
-  <div class="mb-4 flex shrink-0 items-center justify-between sm:mb-6">
+﻿<div class="flex h-full flex-col lg:ps-6">
+  <div class="mb-4 flex shrink-0 items-start justify-between sm:mb-6">
     <div>
       <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Schema Scripts</h1>
       <p class="text-xs text-gray-500 sm:text-sm">Executed SQL scripts from deployment history</p>
@@ -42,7 +42,7 @@
       @if (scripts().length === 0) {
         <div class="rounded-lg bg-white p-8 text-center shadow-lg">
           <div class="mb-3 flex justify-center">
-            <app-icon name="icon-file" [class]="'h-12 w-12 opacity-60'" />
+            <app-icon name="icon-schema-scripts" [class]="'h-12 w-12 opacity-60'" />
           </div>
           <p class="text-lg font-semibold text-gray-700">No scripts found</p>
           <p class="text-sm text-gray-500">No executed scripts have been recorded yet.</p>

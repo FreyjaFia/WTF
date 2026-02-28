@@ -101,6 +101,8 @@ builder.Services.AddAuthorizationBuilder()
     .AddPolicy(AppPolicies.CustomersCreate, policy =>
         policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.Cashier))
     .AddPolicy(AppPolicies.DashboardRead, policy =>
+        policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer))
+    .AddPolicy(AppPolicies.ReportsRead, policy =>
         policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer));
 
 builder.Services.AddCors(options =>
@@ -187,6 +189,7 @@ app.MapAuth()
     .MapCustomers()
     .MapUsers()
     .MapDashboard()
+    .MapReports()
     .MapSync()
     .MapAudit()
     .MapSchemaScriptHistory()

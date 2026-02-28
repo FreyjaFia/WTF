@@ -29,6 +29,10 @@ export const utcDateInterceptor: HttpInterceptorFn = (req, next) => {
   return next(req).pipe(
     map((event) => {
       if (event instanceof HttpResponse && event.body) {
+        if (event.body instanceof Blob || event.body instanceof ArrayBuffer) {
+          return event;
+        }
+
         return event.clone({ body: normalizeDates(event.body) });
       }
 

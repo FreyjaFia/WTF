@@ -42,6 +42,24 @@
         <app-icon name="icon-user" [class]="'h-4 w-4 shrink-0'" [fill]="'currentColor'"></app-icon>
         Users
       </a>
+      @if (canAccessReports()) {
+        <a
+          routerLink="reports"
+          routerLinkActive="bg-green-50 text-emerald-700"
+          [routerLinkActiveOptions]="{ exact: false }"
+          class="flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-2 pt-2 pb-2.5 text-[10px] leading-tight font-normal text-gray-500 transition-colors"
+          [class.text-emerald-700]="isActive('reports')"
+          [class.bg-emerald-100]="isActive('reports')"
+          aria-label="Reports"
+        >
+          <app-icon
+            name="icon-trending-up"
+            [class]="'h-4 w-4 shrink-0'"
+            [fill]="'currentColor'"
+          ></app-icon>
+          Reports
+        </a>
+      }
       @if (canAccessAuditLogs()) {
         <a
           routerLink="audit-logs"
@@ -174,6 +192,28 @@
           <span class="font-medium">Users</span>
         }
       </a>
+
+      @if (canAccessReports()) {
+        <a
+          routerLink="reports"
+          routerLinkActive="bg-green-50"
+          [routerLinkActiveOptions]="{ exact: false }"
+          class="tooltip mr-4 flex items-center rounded-lg px-4 py-3 whitespace-nowrap text-gray-700 transition-all duration-400 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:bg-gray-50"
+          [class.justify-center]="isSidebarCollapsed()"
+          [class.gap-3]="!isSidebarCollapsed()"
+          [class.tooltip-right]="isSidebarCollapsed()"
+          [class.tooltip-bottom]="!isSidebarCollapsed()"
+          [class.z-50]="isSidebarCollapsed()"
+          [attr.data-tip]="'Reports'"
+          [class.text-emerald-700]="isActive('reports')"
+          [class.bg-green-50]="isActive('reports')"
+        >
+          <app-icon name="icon-trending-up" [class]="'h-5 w-5 shrink-0'"></app-icon>
+          @if (!isSidebarCollapsed()) {
+            <span class="font-medium">Reports</span>
+          }
+        </a>
+      }
 
       @if (canAccessAuditLogs()) {
         <a
