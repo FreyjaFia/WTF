@@ -1,6 +1,6 @@
 <dialog #checkoutDialog id="checkout" class="modal items-center">
   <div
-    class="modal-box relative overflow-y-auto shadow-2xl md:overflow-hidden"
+    class="modal-box checkout-shell relative overflow-y-auto shadow-2xl md:overflow-hidden"
     [class.max-w-2xl]="!showSummary()"
     [class.max-w-5xl]="showSummary()"
   >
@@ -164,6 +164,8 @@
                 <img
                   [src]="item.imageUrl"
                   [alt]="item.name"
+                  loading="lazy"
+                  decoding="async"
                   class="h-12 w-12 shrink-0 object-contain"
                 />
               } @else {

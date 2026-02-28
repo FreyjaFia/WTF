@@ -1,4 +1,4 @@
-﻿/* Smooth width transition for modal-box */
-.modal-box {
-  transition: max-width 0.3s ease-out;
+/* Avoid animating max-width: it causes layout thrash with long order lists. */
+.modal-box.checkout-shell {
+  transition: none;
 }
