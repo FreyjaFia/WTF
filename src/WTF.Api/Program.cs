@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.RateLimiting;
 using WTF.Api.Common.Auth;
 using WTF.Api.Endpoints;
+using WTF.Api.Features.Reports;
 using WTF.Api.Hubs;
 using WTF.Api.Services;
 using WTF.Domain.Data;
@@ -24,18 +25,24 @@ builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Progr
 builder.Services.AddSignalR();
 
 builder.Services.AddHttpContextAccessor();
+builder.Services.Configure<MonthlyReportWorkbookSchedulerOptions>(
+    builder.Configuration.GetSection(MonthlyReportWorkbookSchedulerOptions.SectionName));
 
 builder.Services.AddSingleton<IJwtService, JwtService>();
 builder.Services.AddScoped<IUserRoleService, UserRoleService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
+builder.Services.AddScoped<IMonthlyReportWorkbookService, MonthlyReportWorkbookService>();
+builder.Services.AddHostedService<MonthlyReportWorkbookScheduler>();
 
 if (builder.Environment.IsDevelopment())
 {
     builder.Services.AddScoped<IImageStorage, LocalImageStorage>();
+    builder.Services.AddScoped<IReportFileStorage, LocalReportFileStorage>();
 }
 else
 {
     builder.Services.AddScoped<IImageStorage, AzureBlobImageStorage>();
+    builder.Services.AddScoped<IReportFileStorage, AzureBlobReportFileStorage>();
 }
 
 var jwtSecretKey = builder.Configuration["Jwt:SecretKey"] ?? throw new InvalidOperationException("JWT SecretKey not configured");

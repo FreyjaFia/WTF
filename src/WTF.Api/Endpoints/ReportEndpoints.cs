@@ -115,6 +115,67 @@ public static class ReportEndpoints
                     rows => BuildStaffPerformancePdfDocument(rows, query.FromDate, query.ToDate));
             });
 
+        reportsGroup.MapGet("/monthly-workbook/status",
+            async ([AsParameters] MonthlyWorkbookRequest request, IMonthlyReportWorkbookService workbookService, CancellationToken cancellationToken) =>
+            {
+                var validation = ValidateMonthRequest(request.Year, request.Month);
+                if (validation is not null)
+                {
+                    return validation;
+                }
+
+                var status = await workbookService.GetStatusAsync(
+                    request.Year,
+                    request.Month,
+                    cancellationToken);
+
+                return Results.Ok(status);
+            });
+
+        reportsGroup.MapPost("/monthly-workbook/generate",
+            async (HttpContext httpContext, [AsParameters] MonthlyWorkbookRequest request, IMonthlyReportWorkbookService workbookService, CancellationToken cancellationToken) =>
+            {
+                var validation = ValidateMonthRequest(request.Year, request.Month);
+                if (validation is not null)
+                {
+                    return validation;
+                }
+
+                var requestedTimeZone = httpContext.Request.Headers["X-TimeZone"].ToString();
+                var status = await workbookService.GenerateAsync(
+                    request.Year,
+                    request.Month,
+                    requestedTimeZone,
+                    cancellationToken);
+
+                return Results.Ok(status);
+            });
+
+        reportsGroup.MapGet("/monthly-workbook/download",
+            async ([AsParameters] MonthlyWorkbookRequest request, IMonthlyReportWorkbookService workbookService, CancellationToken cancellationToken) =>
+            {
+                var validation = ValidateMonthRequest(request.Year, request.Month);
+                if (validation is not null)
+                {
+                    return validation;
+                }
+
+                var file = await workbookService.GetFileAsync(
+                    request.Year,
+                    request.Month,
+                    cancellationToken);
+
+                if (file is null)
+                {
+                    return Results.NotFound("Monthly report workbook is not generated yet.");
+                }
+
+                return Results.File(
+                    file.Value.Data,
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    file.Value.FileName);
+            });
+
         return app;
     }
 
@@ -179,6 +240,21 @@ public static class ReportEndpoints
         if (toDate.Date < fromDate.Date)
         {
             return Results.BadRequest("toDate must be greater than or equal to fromDate.");
+        }
+
+        return null;
+    }
+
+    private static IResult? ValidateMonthRequest(int year, int month)
+    {
+        if (year < 2000 || year > 2100)
+        {
+            return Results.BadRequest("year must be between 2000 and 2100.");
+        }
+
+        if (month is < 1 or > 12)
+        {
+            return Results.BadRequest("month must be between 1 and 12.");
         }
 
         return null;
@@ -663,5 +739,12 @@ public static class ReportEndpoints
         }
 
         return periodStart.ToString("MMM dd, yyyy", CultureInfo.InvariantCulture);
+    }
+
+    private sealed record MonthlyWorkbookRequest
+    {
+        public int Year { get; init; }
+
+        public int Month { get; init; }
     }
 }
