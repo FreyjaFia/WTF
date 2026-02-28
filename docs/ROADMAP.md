@@ -242,9 +242,9 @@ analysis that can be exported and shared.
   - optional: `groupBy` (daily report), `categoryId`, `subCategoryId`, `staffId`
 - Response formats implemented:
   - JSON (`application/json`) for on-screen preview
-  - CSV (`Accept: text/csv`)
+  - Excel (`Accept: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`)
   - PDF (`Accept: application/pdf`)
-- Totals included in CSV exports and summary sections in PDF exports.
+- Totals included in Excel exports and summary sections in PDF exports.
 - Product report revenue computation aligned to order math:
   - `(parent unit price + add-ons per unit) * parent quantity`
 - Timezone handling:
@@ -266,7 +266,7 @@ analysis that can be exported and shared.
   - mobile/tablet hideable filters
   - mobile card rendering for report rows
 - Export UX implemented:
-  - download CSV/PDF from UI
+  - download Excel/PDF from UI
   - Android flow supports save + open/share fallback.
 
 ### Phase 2 - Google Sheets Integration [Planned]
@@ -291,7 +291,7 @@ analysis that can be exported and shared.
     - `GroupBy`
 - Reliability:
   - support idempotency key / dedupe guard to avoid accidental duplicate pushes
-  - keep CSV/PDF export as fallback if Sheets push fails
+  - keep Excel/PDF export as fallback if Sheets push fails
 
 ### Phase 3 - Scheduled Reports (Stretch Goal)
 
