@@ -429,6 +429,9 @@ export class ProductEditorComponent implements OnInit, OnDestroy {
 - Prefer `[class]`/`[style]` bindings over `NgClass`/`NgStyle`
 - Name handlers for what they do, not the event (e.g., `saveUserData()` not `handleClick()`)
 - Implement TypeScript interfaces for lifecycle hooks (e.g., `OnInit`)
+- Always use the shared `app-search-input` component for search fields instead of
+  inline `type="search"` markup. Reuse `control` for reactive forms or `value` +
+  `valueChange` for signal-driven inputs.
 
 ### Comments
 - **Do NOT add summary comments** to methods, properties, classes, constants, or fields
