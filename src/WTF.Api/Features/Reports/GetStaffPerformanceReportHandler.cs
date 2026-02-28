@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using WTF.Api.Common.Time;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Features.Reports.DTOs;
 using WTF.Domain.Data;
@@ -13,11 +14,14 @@ public sealed record GetStaffPerformanceReportQuery : IRequest<List<StaffPerform
     public Guid? StaffId { get; init; }
 }
 
-public sealed class GetStaffPerformanceReportHandler(WTFDbContext db) : IRequestHandler<GetStaffPerformanceReportQuery, List<StaffPerformanceReportRowDto>>
+public sealed class GetStaffPerformanceReportHandler(
+    WTFDbContext db,
+    IHttpContextAccessor httpContextAccessor) : IRequestHandler<GetStaffPerformanceReportQuery, List<StaffPerformanceReportRowDto>>
 {
     public async Task<List<StaffPerformanceReportRowDto>> Handle(GetStaffPerformanceReportQuery request, CancellationToken cancellationToken)
     {
-        var (fromUtc, toExclusiveUtc) = ReportDateRange.ToUtcRange(request.FromDate, request.ToDate);
+        var timeZone = RequestTimeZone.ResolveFromRequest(httpContextAccessor);
+        var (fromUtc, toExclusiveUtc) = ReportDateRange.ToUtcRange(request.FromDate, request.ToDate, timeZone);
 
         var query = db.Orders
             .AsNoTracking()

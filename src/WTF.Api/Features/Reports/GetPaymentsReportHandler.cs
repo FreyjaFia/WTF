@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using WTF.Api.Common.Time;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Features.Reports.DTOs;
 using WTF.Domain.Data;
@@ -12,11 +13,14 @@ public sealed record GetPaymentsReportQuery : IRequest<List<PaymentsReportRowDto
     public DateTime ToDate { get; init; }
 }
 
-public sealed class GetPaymentsReportHandler(WTFDbContext db) : IRequestHandler<GetPaymentsReportQuery, List<PaymentsReportRowDto>>
+public sealed class GetPaymentsReportHandler(
+    WTFDbContext db,
+    IHttpContextAccessor httpContextAccessor) : IRequestHandler<GetPaymentsReportQuery, List<PaymentsReportRowDto>>
 {
     public async Task<List<PaymentsReportRowDto>> Handle(GetPaymentsReportQuery request, CancellationToken cancellationToken)
     {
-        var (fromUtc, toExclusiveUtc) = ReportDateRange.ToUtcRange(request.FromDate, request.ToDate);
+        var timeZone = RequestTimeZone.ResolveFromRequest(httpContextAccessor);
+        var (fromUtc, toExclusiveUtc) = ReportDateRange.ToUtcRange(request.FromDate, request.ToDate, timeZone);
 
         var grouped = await db.Orders
             .AsNoTracking()

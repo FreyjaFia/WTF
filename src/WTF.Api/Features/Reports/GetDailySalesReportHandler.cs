@@ -20,8 +20,8 @@ public sealed class GetDailySalesReportHandler(WTFDbContext db, IHttpContextAcce
 {
     public async Task<List<DailySalesReportRowDto>> Handle(GetDailySalesReportQuery request, CancellationToken cancellationToken)
     {
-        var (fromUtc, toExclusiveUtc) = ReportDateRange.ToUtcRange(request.FromDate, request.ToDate);
         var timeZone = RequestTimeZone.ResolveFromRequest(httpContextAccessor);
+        var (fromUtc, toExclusiveUtc) = ReportDateRange.ToUtcRange(request.FromDate, request.ToDate, timeZone);
 
         var orders = await db.Orders
             .AsNoTracking()

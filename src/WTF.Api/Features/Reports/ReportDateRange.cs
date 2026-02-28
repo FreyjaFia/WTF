@@ -2,10 +2,17 @@ namespace WTF.Api.Features.Reports;
 
 public static class ReportDateRange
 {
-    public static (DateTime FromUtc, DateTime ToExclusiveUtc) ToUtcRange(DateTime fromDate, DateTime toDate)
+    public static (DateTime FromUtc, DateTime ToExclusiveUtc) ToUtcRange(
+        DateTime fromDate,
+        DateTime toDate,
+        TimeZoneInfo timeZone)
     {
-        var fromUtc = EnsureUtcDate(fromDate.Date);
-        var toExclusiveUtc = EnsureUtcDate(toDate.Date.AddDays(1));
+        var fromLocal = DateTime.SpecifyKind(fromDate.Date, DateTimeKind.Unspecified);
+        var toExclusiveLocal = DateTime.SpecifyKind(toDate.Date.AddDays(1), DateTimeKind.Unspecified);
+
+        var fromUtc = TimeZoneInfo.ConvertTimeToUtc(fromLocal, timeZone);
+        var toExclusiveUtc = TimeZoneInfo.ConvertTimeToUtc(toExclusiveLocal, timeZone);
+
         return (fromUtc, toExclusiveUtc);
     }
 
