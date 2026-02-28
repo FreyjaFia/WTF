@@ -13,8 +13,8 @@ public sealed record GetAuditLogsQuery : IRequest<PagedResultDto<AuditLogDto>>
     public string? EntityId { get; init; }
     public DateTime? FromDate { get; init; }
     public DateTime? ToDate { get; init; }
-    public int Page { get; init; } = 1;
-    public int PageSize { get; init; } = 20;
+    public int? Page { get; init; }
+    public int? PageSize { get; init; }
 }
 
 public sealed class GetAuditLogsHandler(WTFDbContext db) : IRequestHandler<GetAuditLogsQuery, PagedResultDto<AuditLogDto>>
@@ -23,8 +23,11 @@ public sealed class GetAuditLogsHandler(WTFDbContext db) : IRequestHandler<GetAu
 
     public async Task<PagedResultDto<AuditLogDto>> Handle(GetAuditLogsQuery request, CancellationToken cancellationToken)
     {
-        var page = request.Page < 1 ? 1 : request.Page;
-        var pageSize = request.PageSize < 1 ? 20 : Math.Min(request.PageSize, MaxPageSize);
+        var hasPaging = request.Page.HasValue || request.PageSize.HasValue;
+        var page = request.Page is null || request.Page < 1 ? 1 : request.Page.Value;
+        var pageSize = request.PageSize is null || request.PageSize < 1
+            ? 20
+            : Math.Min(request.PageSize.Value, MaxPageSize);
 
         var query = db.AuditLogs
             .AsNoTracking()
@@ -65,10 +68,8 @@ public sealed class GetAuditLogsHandler(WTFDbContext db) : IRequestHandler<GetAu
 
         var totalCount = await query.CountAsync(cancellationToken);
 
-        var items = await query
+        var orderedQuery = query
             .OrderByDescending(a => a.Timestamp)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
             .Select(a => new AuditLogDto(
                 a.Id,
                 a.UserId,
@@ -79,8 +80,20 @@ public sealed class GetAuditLogsHandler(WTFDbContext db) : IRequestHandler<GetAu
                 a.OldValues,
                 a.NewValues,
                 a.IpAddress,
-                a.Timestamp))
-            .ToListAsync(cancellationToken);
+                a.Timestamp));
+
+        var items = hasPaging
+            ? await orderedQuery
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken)
+            : await orderedQuery.ToListAsync(cancellationToken);
+
+        if (!hasPaging)
+        {
+            page = 1;
+            pageSize = totalCount == 0 ? 1 : totalCount;
+        }
 
         return new PagedResultDto<AuditLogDto>(items, page, pageSize, totalCount);
     }
