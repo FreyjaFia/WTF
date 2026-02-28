@@ -26,7 +26,7 @@ export class ReportsService {
   private static readonly MSG_FETCH_HOURLY_SALES_FAILED = ServiceErrorMessages.Report.FetchHourlySalesFailed;
   private static readonly MSG_FETCH_STAFF_PERFORMANCE_FAILED =
     ServiceErrorMessages.Report.FetchStaffPerformanceFailed;
-  private static readonly MSG_DOWNLOAD_CSV_FAILED = ServiceErrorMessages.Report.DownloadCsvFailed;
+  private static readonly MSG_DOWNLOAD_EXCEL_FAILED = ServiceErrorMessages.Report.DownloadExcelFailed;
   private static readonly MSG_DOWNLOAD_PDF_FAILED = ServiceErrorMessages.Report.DownloadPdfFailed;
   private static readonly MSG_PDF_NOT_AVAILABLE = ServiceErrorMessages.Report.PdfNotAvailable;
 
@@ -96,24 +96,24 @@ export class ReportsService {
       );
   }
 
-  public downloadDailySalesCsv(query: DailySalesReportQuery): Observable<Blob> {
-    return this.downloadCsv('/daily-sales', this.buildDailySalesParams(query));
+  public downloadDailySalesExcel(query: DailySalesReportQuery): Observable<Blob> {
+    return this.downloadExcel('/daily-sales', this.buildDailySalesParams(query));
   }
 
-  public downloadProductSalesCsv(query: ProductSalesReportQuery): Observable<Blob> {
-    return this.downloadCsv('/product-sales', this.buildProductSalesParams(query));
+  public downloadProductSalesExcel(query: ProductSalesReportQuery): Observable<Blob> {
+    return this.downloadExcel('/product-sales', this.buildProductSalesParams(query));
   }
 
-  public downloadPaymentsCsv(query: PaymentsReportQuery): Observable<Blob> {
-    return this.downloadCsv('/payments', this.buildPaymentsParams(query));
+  public downloadPaymentsExcel(query: PaymentsReportQuery): Observable<Blob> {
+    return this.downloadExcel('/payments', this.buildPaymentsParams(query));
   }
 
-  public downloadHourlySalesCsv(query: HourlySalesReportQuery): Observable<Blob> {
-    return this.downloadCsv('/hourly', this.buildHourlySalesParams(query));
+  public downloadHourlySalesExcel(query: HourlySalesReportQuery): Observable<Blob> {
+    return this.downloadExcel('/hourly', this.buildHourlySalesParams(query));
   }
 
-  public downloadStaffPerformanceCsv(query: StaffPerformanceReportQuery): Observable<Blob> {
-    return this.downloadCsv('/staff', this.buildStaffPerformanceParams(query));
+  public downloadStaffPerformanceExcel(query: StaffPerformanceReportQuery): Observable<Blob> {
+    return this.downloadExcel('/staff', this.buildStaffPerformanceParams(query));
   }
 
   public downloadDailySalesPdf(query: DailySalesReportQuery): Observable<Blob> {
@@ -136,18 +136,18 @@ export class ReportsService {
     return this.downloadPdf('/staff', this.buildStaffPerformanceParams(query));
   }
 
-  private downloadCsv(path: string, params: HttpParams): Observable<Blob> {
+  private downloadExcel(path: string, params: HttpParams): Observable<Blob> {
     return this.http
       .get(`${this.baseUrl}${path}`, {
         params,
         responseType: 'blob',
         headers: new HttpHeaders({
-          Accept: 'text/csv',
+          Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         }),
       })
       .pipe(
         catchError((error: HttpErrorResponse) => {
-          return this.buildError(ReportsService.MSG_DOWNLOAD_CSV_FAILED, error);
+          return this.buildError(ReportsService.MSG_DOWNLOAD_EXCEL_FAILED, error);
         }),
       );
   }

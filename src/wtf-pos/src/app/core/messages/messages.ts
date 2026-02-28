@@ -74,9 +74,9 @@ export const ServiceErrorMessages = {
     FetchPaymentsFailed: 'Failed to fetch payment report. Please try again later.',
     FetchHourlySalesFailed: 'Failed to fetch hourly sales report. Please try again later.',
     FetchStaffPerformanceFailed: 'Failed to fetch staff performance report. Please try again later.',
-    DownloadCsvFailed: 'Failed to download CSV report. Please try again later.',
+    DownloadExcelFailed: 'Failed to download Excel report. Please try again later.',
     DownloadPdfFailed: 'Failed to download PDF report. Please try again later.',
-    PdfNotAvailable: 'PDF export is not available yet. Use CSV for now.',
+    PdfNotAvailable: 'PDF export is not available yet. Use Excel for now.',
   },
   User: {
     UserNotFound: 'User not found.',

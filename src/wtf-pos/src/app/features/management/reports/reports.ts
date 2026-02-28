@@ -115,6 +115,8 @@ export class ReportsComponent implements OnInit {
   protected readonly staffReports = signal<StaffPerformanceReportRowDto[]>([]);
   protected readonly isLoading = signal(false);
   protected readonly isRefreshing = signal(false);
+  protected readonly isDownloadingExcel = signal(false);
+  protected readonly isDownloadingPdf = signal(false);
   protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
   protected readonly searchTerm = signal('');
   protected readonly isMobileFiltersOpen = signal(false);
@@ -416,22 +418,39 @@ export class ReportsComponent implements OnInit {
     return 'asc';
   }
 
-  protected downloadCsv(): void {
+  protected downloadExcel(): void {
+    if (this.isDownloadingExcel() || this.isDownloadingPdf()) {
+      return;
+    }
+
     const reportType = this.selectedReportType();
     if (!reportType) {
       return;
     }
 
+    this.isDownloadingExcel.set(true);
+    const onSuccess = (blob: Blob, fileName: string): void => {
+      void this.saveBlob(
+        blob,
+        fileName,
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      ).finally(() => this.isDownloadingExcel.set(false));
+    };
+    const onError = (error: Error): void => {
+      this.isDownloadingExcel.set(false);
+      this.alertService.error(error.message);
+    };
+
     if (reportType === this.reportTypes.DailySales) {
       const query = this.buildDailySalesQuery();
       if (!query) {
+        this.isDownloadingExcel.set(false);
         return;
       }
 
-      this.reportsService.downloadDailySalesCsv(query).subscribe({
-        next: (blob) =>
-          void this.saveBlob(blob, `daily-sales-${query.fromDate}-${query.toDate}.csv`, 'text/csv'),
-        error: (error: Error) => this.alertService.error(error.message),
+      this.reportsService.downloadDailySalesExcel(query).subscribe({
+        next: (blob) => onSuccess(blob, `daily-sales-${query.fromDate}-${query.toDate}.xlsx`),
+        error: onError,
       });
       return;
     }
@@ -439,17 +458,13 @@ export class ReportsComponent implements OnInit {
     if (reportType === this.reportTypes.ProductSales) {
       const query = this.buildProductSalesQuery();
       if (!query) {
+        this.isDownloadingExcel.set(false);
         return;
       }
 
-      this.reportsService.downloadProductSalesCsv(query).subscribe({
-        next: (blob) =>
-          void this.saveBlob(
-            blob,
-            `product-sales-${query.fromDate}-${query.toDate}.csv`,
-            'text/csv',
-          ),
-        error: (error: Error) => this.alertService.error(error.message),
+      this.reportsService.downloadProductSalesExcel(query).subscribe({
+        next: (blob) => onSuccess(blob, `product-sales-${query.fromDate}-${query.toDate}.xlsx`),
+        error: onError,
       });
       return;
     }
@@ -457,13 +472,13 @@ export class ReportsComponent implements OnInit {
     if (reportType === this.reportTypes.Payments) {
       const query = this.buildPaymentsQuery();
       if (!query) {
+        this.isDownloadingExcel.set(false);
         return;
       }
 
-      this.reportsService.downloadPaymentsCsv(query).subscribe({
-        next: (blob) =>
-          void this.saveBlob(blob, `payments-${query.fromDate}-${query.toDate}.csv`, 'text/csv'),
-        error: (error: Error) => this.alertService.error(error.message),
+      this.reportsService.downloadPaymentsExcel(query).subscribe({
+        next: (blob) => onSuccess(blob, `payments-${query.fromDate}-${query.toDate}.xlsx`),
+        error: onError,
       });
       return;
     }
@@ -471,49 +486,58 @@ export class ReportsComponent implements OnInit {
     if (reportType === this.reportTypes.Hourly) {
       const query = this.buildHourlySalesQuery();
       if (!query) {
+        this.isDownloadingExcel.set(false);
         return;
       }
 
-      this.reportsService.downloadHourlySalesCsv(query).subscribe({
-        next: (blob) =>
-          void this.saveBlob(blob, `hourly-${query.fromDate}-${query.toDate}.csv`, 'text/csv'),
-        error: (error: Error) => this.alertService.error(error.message),
+      this.reportsService.downloadHourlySalesExcel(query).subscribe({
+        next: (blob) => onSuccess(blob, `hourly-${query.fromDate}-${query.toDate}.xlsx`),
+        error: onError,
       });
       return;
     }
 
     const query = this.buildStaffPerformanceQuery();
     if (!query) {
+      this.isDownloadingExcel.set(false);
       return;
     }
 
-    this.reportsService.downloadStaffPerformanceCsv(query).subscribe({
-      next: (blob) =>
-        void this.saveBlob(blob, `staff-${query.fromDate}-${query.toDate}.csv`, 'text/csv'),
-      error: (error: Error) => this.alertService.error(error.message),
+    this.reportsService.downloadStaffPerformanceExcel(query).subscribe({
+      next: (blob) => onSuccess(blob, `staff-${query.fromDate}-${query.toDate}.xlsx`),
+      error: onError,
     });
   }
 
   protected downloadPdf(): void {
+    if (this.isDownloadingExcel() || this.isDownloadingPdf()) {
+      return;
+    }
+
     const reportType = this.selectedReportType();
     if (!reportType) {
       return;
     }
 
+    this.isDownloadingPdf.set(true);
+    const onSuccess = (blob: Blob, fileName: string): void => {
+      void this.saveBlob(blob, fileName, 'application/pdf').finally(() => this.isDownloadingPdf.set(false));
+    };
+    const onError = (error: Error): void => {
+      this.isDownloadingPdf.set(false);
+      this.alertService.error(error.message);
+    };
+
     if (reportType === this.reportTypes.DailySales) {
       const query = this.buildDailySalesQuery();
       if (!query) {
+        this.isDownloadingPdf.set(false);
         return;
       }
 
       this.reportsService.downloadDailySalesPdf(query).subscribe({
-        next: (blob) =>
-          void this.saveBlob(
-            blob,
-            `daily-sales-${query.fromDate}-${query.toDate}.pdf`,
-            'application/pdf',
-          ),
-        error: (error: Error) => this.alertService.error(error.message),
+        next: (blob) => onSuccess(blob, `daily-sales-${query.fromDate}-${query.toDate}.pdf`),
+        error: onError,
       });
       return;
     }
@@ -521,17 +545,13 @@ export class ReportsComponent implements OnInit {
     if (reportType === this.reportTypes.ProductSales) {
       const query = this.buildProductSalesQuery();
       if (!query) {
+        this.isDownloadingPdf.set(false);
         return;
       }
 
       this.reportsService.downloadProductSalesPdf(query).subscribe({
-        next: (blob) =>
-          void this.saveBlob(
-            blob,
-            `product-sales-${query.fromDate}-${query.toDate}.pdf`,
-            'application/pdf',
-          ),
-        error: (error: Error) => this.alertService.error(error.message),
+        next: (blob) => onSuccess(blob, `product-sales-${query.fromDate}-${query.toDate}.pdf`),
+        error: onError,
       });
       return;
     }
@@ -539,17 +559,13 @@ export class ReportsComponent implements OnInit {
     if (reportType === this.reportTypes.Payments) {
       const query = this.buildPaymentsQuery();
       if (!query) {
+        this.isDownloadingPdf.set(false);
         return;
       }
 
       this.reportsService.downloadPaymentsPdf(query).subscribe({
-        next: (blob) =>
-          void this.saveBlob(
-            blob,
-            `payments-${query.fromDate}-${query.toDate}.pdf`,
-            'application/pdf',
-          ),
-        error: (error: Error) => this.alertService.error(error.message),
+        next: (blob) => onSuccess(blob, `payments-${query.fromDate}-${query.toDate}.pdf`),
+        error: onError,
       });
       return;
     }
@@ -557,30 +573,26 @@ export class ReportsComponent implements OnInit {
     if (reportType === this.reportTypes.Hourly) {
       const query = this.buildHourlySalesQuery();
       if (!query) {
+        this.isDownloadingPdf.set(false);
         return;
       }
 
       this.reportsService.downloadHourlySalesPdf(query).subscribe({
-        next: (blob) =>
-          void this.saveBlob(
-            blob,
-            `hourly-${query.fromDate}-${query.toDate}.pdf`,
-            'application/pdf',
-          ),
-        error: (error: Error) => this.alertService.error(error.message),
+        next: (blob) => onSuccess(blob, `hourly-${query.fromDate}-${query.toDate}.pdf`),
+        error: onError,
       });
       return;
     }
 
     const query = this.buildStaffPerformanceQuery();
     if (!query) {
+      this.isDownloadingPdf.set(false);
       return;
     }
 
     this.reportsService.downloadStaffPerformancePdf(query).subscribe({
-      next: (blob) =>
-        void this.saveBlob(blob, `staff-${query.fromDate}-${query.toDate}.pdf`, 'application/pdf'),
-      error: (error: Error) => this.alertService.error(error.message),
+      next: (blob) => onSuccess(blob, `staff-${query.fromDate}-${query.toDate}.pdf`),
+      error: onError,
     });
   }
 

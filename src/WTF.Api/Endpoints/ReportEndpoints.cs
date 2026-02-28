@@ -1,10 +1,9 @@
 using MediatR;
-using System.Text;
+using System.Globalization;
 using WTF.Api.Common.Auth;
 using WTF.Api.Features.Reports;
 using WTF.Api.Features.Reports.DTOs;
 using WTF.Api.Features.Reports.Enums;
-using System.Globalization;
 
 namespace WTF.Api.Endpoints;
 
@@ -33,9 +32,9 @@ public static class ReportEndpoints
                 return BuildReportResponse(
                     httpContext,
                     result,
-                    $"daily-sales-{query.FromDate:yyyyMMdd}-{query.ToDate:yyyyMMdd}.csv",
+                    $"daily-sales-{query.FromDate:yyyyMMdd}-{query.ToDate:yyyyMMdd}.xlsx",
                     $"daily-sales-{query.FromDate:yyyyMMdd}-{query.ToDate:yyyyMMdd}.pdf",
-                    BuildDailySalesCsv,
+                    rows => BuildDailySalesExcelDocument(rows, query.FromDate, query.ToDate, query.GroupBy),
                     rows => BuildDailySalesPdfDocument(rows, query.FromDate, query.ToDate, query.GroupBy));
             });
 
@@ -52,9 +51,9 @@ public static class ReportEndpoints
                 return BuildReportResponse(
                     httpContext,
                     result,
-                    $"product-sales-{query.FromDate:yyyyMMdd}-{query.ToDate:yyyyMMdd}.csv",
+                    $"product-sales-{query.FromDate:yyyyMMdd}-{query.ToDate:yyyyMMdd}.xlsx",
                     $"product-sales-{query.FromDate:yyyyMMdd}-{query.ToDate:yyyyMMdd}.pdf",
-                    BuildProductSalesCsv,
+                    rows => BuildProductSalesExcelDocument(rows, query.FromDate, query.ToDate),
                     rows => BuildProductSalesPdfDocument(rows, query.FromDate, query.ToDate));
             });
 
@@ -71,9 +70,9 @@ public static class ReportEndpoints
                 return BuildReportResponse(
                     httpContext,
                     result,
-                    $"payments-{query.FromDate:yyyyMMdd}-{query.ToDate:yyyyMMdd}.csv",
+                    $"payments-{query.FromDate:yyyyMMdd}-{query.ToDate:yyyyMMdd}.xlsx",
                     $"payments-{query.FromDate:yyyyMMdd}-{query.ToDate:yyyyMMdd}.pdf",
-                    BuildPaymentsCsv,
+                    rows => BuildPaymentsExcelDocument(rows, query.FromDate, query.ToDate),
                     rows => BuildPaymentsPdfDocument(rows, query.FromDate, query.ToDate));
             });
 
@@ -90,9 +89,9 @@ public static class ReportEndpoints
                 return BuildReportResponse(
                     httpContext,
                     result,
-                    $"hourly-sales-{query.FromDate:yyyyMMdd}-{query.ToDate:yyyyMMdd}.csv",
+                    $"hourly-sales-{query.FromDate:yyyyMMdd}-{query.ToDate:yyyyMMdd}.xlsx",
                     $"hourly-sales-{query.FromDate:yyyyMMdd}-{query.ToDate:yyyyMMdd}.pdf",
-                    BuildHourlySalesCsv,
+                    rows => BuildHourlySalesExcelDocument(rows, query.FromDate, query.ToDate),
                     rows => BuildHourlySalesPdfDocument(rows, query.FromDate, query.ToDate));
             });
 
@@ -109,35 +108,64 @@ public static class ReportEndpoints
                 return BuildReportResponse(
                     httpContext,
                     result,
-                    $"staff-performance-{query.FromDate:yyyyMMdd}-{query.ToDate:yyyyMMdd}.csv",
+                    $"staff-performance-{query.FromDate:yyyyMMdd}-{query.ToDate:yyyyMMdd}.xlsx",
                     $"staff-performance-{query.FromDate:yyyyMMdd}-{query.ToDate:yyyyMMdd}.pdf",
-                    BuildStaffPerformanceCsv,
+                    rows => BuildStaffPerformanceExcelDocument(rows, query.FromDate, query.ToDate),
                     rows => BuildStaffPerformancePdfDocument(rows, query.FromDate, query.ToDate));
             });
 
         return app;
     }
 
-    private static string BuildDailySalesCsv(IReadOnlyList<DailySalesReportRowDto> rows)
+    private static SimpleExcelBuilder.ExcelDocument BuildDailySalesExcelDocument(
+        IReadOnlyList<DailySalesReportRowDto> rows,
+        DateTime fromDate,
+        DateTime toDate,
+        ReportGroupByEnum groupBy)
     {
-        var builder = new StringBuilder();
-        builder.AppendLine("PeriodStartUtc,TotalRevenue,OrderCount,AverageOrderValue,TipsTotal,VoidCancelledCount");
-
-        foreach (var row in rows)
+        var columns = new List<SimpleExcelBuilder.ExcelTableColumn>
         {
-            builder.AppendLine(
-                $"{row.PeriodStart:yyyy-MM-dd},{row.TotalRevenue:F2},{row.OrderCount},{row.AverageOrderValue:F2},{row.TipsTotal:F2},{row.VoidCancelledCount}");
-        }
+            new("Period"),
+            new("Revenue", SimpleExcelBuilder.ExcelTextAlign.Right),
+            new("Orders", SimpleExcelBuilder.ExcelTextAlign.Right),
+            new("Avg/Order", SimpleExcelBuilder.ExcelTextAlign.Right),
+            new("Tips", SimpleExcelBuilder.ExcelTextAlign.Right),
+            new("Void/Cancelled", SimpleExcelBuilder.ExcelTextAlign.Right)
+        };
 
-        var totalsRevenue = rows.Sum(r => r.TotalRevenue);
-        var totalsOrders = rows.Sum(r => r.OrderCount);
-        var totalsTips = rows.Sum(r => r.TipsTotal);
-        var totalsVoidCancelled = rows.Sum(r => r.VoidCancelledCount);
-        var totalsAverage = totalsOrders > 0 ? totalsRevenue / totalsOrders : 0m;
+        var rowValues = rows
+            .Select(row => (IReadOnlyList<string>)
+            [
+                FormatPeriodLabel(row.PeriodStart, groupBy),
+                FormatMoney(row.TotalRevenue),
+                row.OrderCount.ToString("N0", CultureInfo.InvariantCulture),
+                FormatMoney(row.AverageOrderValue),
+                FormatMoney(row.TipsTotal),
+                row.VoidCancelledCount.ToString("N0", CultureInfo.InvariantCulture)
+            ])
+            .ToList();
 
-        builder.AppendLine(
-            $"TOTAL,{totalsRevenue:F2},{totalsOrders},{totalsAverage:F2},{totalsTips:F2},{totalsVoidCancelled}");
-        return builder.ToString();
+        var totalRevenue = rows.Sum(r => r.TotalRevenue);
+        var totalOrders = rows.Sum(r => r.OrderCount);
+        var totalTips = rows.Sum(r => r.TipsTotal);
+        var totalVoidCancelled = rows.Sum(r => r.VoidCancelledCount);
+        var averageOrder = totalOrders > 0 ? totalRevenue / totalOrders : 0m;
+
+        var summary = new List<SimpleExcelBuilder.ExcelSummaryItem>
+        {
+            new("Total Revenue", FormatMoney(totalRevenue)),
+            new("Total Orders", totalOrders.ToString("N0", CultureInfo.InvariantCulture)),
+            new("Average Order Value", FormatMoney(averageOrder)),
+            new("Total Tips", FormatMoney(totalTips)),
+            new("Void/Cancelled", totalVoidCancelled.ToString("N0", CultureInfo.InvariantCulture))
+        };
+
+        return new SimpleExcelBuilder.ExcelDocument(
+            "Daily Sales Summary",
+            BuildDateRangeSubtitle(fromDate, toDate),
+            columns,
+            rowValues,
+            summary);
     }
 
     private static IResult? ValidateDateRange(DateTime fromDate, DateTime toDate)
@@ -158,25 +186,29 @@ public static class ReportEndpoints
     private static IResult BuildReportResponse<T>(
         HttpContext httpContext,
         IReadOnlyList<T> rows,
-        string csvFileName,
+        string excelFileName,
         string pdfFileName,
-        Func<IReadOnlyList<T>, string> csvBuilder,
+        Func<IReadOnlyList<T>, SimpleExcelBuilder.ExcelDocument> excelDocumentBuilder,
         Func<IReadOnlyList<T>, SimplePdfBuilder.PdfDocument> pdfDocumentBuilder)
     {
         var accepts = httpContext.Request.Headers.Accept.ToString();
 
-        if (accepts.Contains("text/csv", StringComparison.OrdinalIgnoreCase))
+        if (accepts.Contains("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", StringComparison.OrdinalIgnoreCase)
+            || accepts.Contains("application/vnd.ms-excel", StringComparison.OrdinalIgnoreCase))
         {
             try
             {
-                var csv = csvBuilder(rows);
-                var bytes = Encoding.UTF8.GetBytes(csv);
-                return Results.File(bytes, "text/csv; charset=utf-8", csvFileName);
+                var excelDocument = excelDocumentBuilder(rows);
+                var bytes = SimpleExcelBuilder.Build(excelDocument);
+                return Results.File(
+                    bytes,
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    excelFileName);
             }
             catch (Exception ex)
             {
                 return Results.Problem(
-                    title: "CSV export failed",
+                    title: "Excel export failed",
                     detail: ex.Message,
                     statusCode: StatusCodes.Status500InternalServerError);
             }
@@ -202,73 +234,168 @@ public static class ReportEndpoints
         return Results.Ok(rows);
     }
 
-    private static string BuildProductSalesCsv(IReadOnlyList<ProductSalesReportRowDto> rows)
+    private static SimpleExcelBuilder.ExcelDocument BuildProductSalesExcelDocument(
+        IReadOnlyList<ProductSalesReportRowDto> rows,
+        DateTime fromDate,
+        DateTime toDate)
     {
-        var builder = new StringBuilder();
-        builder.AppendLine("ProductId,ProductName,Category,SubCategory,QuantitySold,Revenue,RevenuePercent");
-
-        foreach (var row in rows)
+        var columns = new List<SimpleExcelBuilder.ExcelTableColumn>
         {
-            builder.AppendLine(
-                $"{row.ProductId},{EscapeCsv(row.ProductName)},{EscapeCsv(row.CategoryName)},{EscapeCsv(row.SubCategoryName ?? string.Empty)},{row.QuantitySold},{row.Revenue:F2},{row.RevenuePercent:F2}");
-        }
+            new("Product"),
+            new("Category"),
+            new("Subcategory"),
+            new("Qty", SimpleExcelBuilder.ExcelTextAlign.Right),
+            new("Revenue", SimpleExcelBuilder.ExcelTextAlign.Right),
+            new("Revenue %", SimpleExcelBuilder.ExcelTextAlign.Right)
+        };
 
+        var rowValues = rows
+            .Select(row => (IReadOnlyList<string>)
+            [
+                row.ProductName,
+                row.CategoryName,
+                string.IsNullOrWhiteSpace(row.SubCategoryName) ? "-" : row.SubCategoryName!,
+                row.QuantitySold.ToString("N0", CultureInfo.InvariantCulture),
+                FormatMoney(row.Revenue),
+                $"{row.RevenuePercent:N2}%"
+            ])
+            .ToList();
+
+        var totalRevenue = rows.Sum(r => r.Revenue);
         var totalQuantity = rows.Sum(r => r.QuantitySold);
-        var totalRevenue = rows.Sum(r => r.Revenue);
-        builder.AppendLine($"TOTAL,,,,{totalQuantity},{totalRevenue:F2},100.00");
-        return builder.ToString();
+        var summary = new List<SimpleExcelBuilder.ExcelSummaryItem>
+        {
+            new("Total Revenue", FormatMoney(totalRevenue)),
+            new("Total Quantity", totalQuantity.ToString("N0", CultureInfo.InvariantCulture))
+        };
+
+        return new SimpleExcelBuilder.ExcelDocument(
+            "Product Sales Breakdown",
+            BuildDateRangeSubtitle(fromDate, toDate),
+            columns,
+            rowValues,
+            summary);
     }
 
-    private static string BuildPaymentsCsv(IReadOnlyList<PaymentsReportRowDto> rows)
+    private static SimpleExcelBuilder.ExcelDocument BuildPaymentsExcelDocument(
+        IReadOnlyList<PaymentsReportRowDto> rows,
+        DateTime fromDate,
+        DateTime toDate)
     {
-        var builder = new StringBuilder();
-        builder.AppendLine("PaymentMethod,OrderCount,TotalAmount,TotalPercent");
-
-        foreach (var row in rows)
+        var columns = new List<SimpleExcelBuilder.ExcelTableColumn>
         {
-            builder.AppendLine(
-                $"{EscapeCsv(row.PaymentMethod)},{row.OrderCount},{row.TotalAmount:F2},{row.TotalPercent:F2}");
-        }
+            new("Payment Method"),
+            new("Orders", SimpleExcelBuilder.ExcelTextAlign.Right),
+            new("Amount", SimpleExcelBuilder.ExcelTextAlign.Right),
+            new("Total %", SimpleExcelBuilder.ExcelTextAlign.Right)
+        };
 
-        var totalOrders = rows.Sum(r => r.OrderCount);
+        var rowValues = rows
+            .Select(row => (IReadOnlyList<string>)
+            [
+                row.PaymentMethod,
+                row.OrderCount.ToString("N0", CultureInfo.InvariantCulture),
+                FormatMoney(row.TotalAmount),
+                $"{row.TotalPercent:N2}%"
+            ])
+            .ToList();
+
         var totalAmount = rows.Sum(r => r.TotalAmount);
-        builder.AppendLine($"TOTAL,{totalOrders},{totalAmount:F2},100.00");
-        return builder.ToString();
+        var totalOrders = rows.Sum(r => r.OrderCount);
+        var summary = new List<SimpleExcelBuilder.ExcelSummaryItem>
+        {
+            new("Total Amount", FormatMoney(totalAmount)),
+            new("Total Orders", totalOrders.ToString("N0", CultureInfo.InvariantCulture))
+        };
+
+        return new SimpleExcelBuilder.ExcelDocument(
+            "Payment Method Breakdown",
+            BuildDateRangeSubtitle(fromDate, toDate),
+            columns,
+            rowValues,
+            summary);
     }
 
-    private static string BuildHourlySalesCsv(IReadOnlyList<HourlySalesReportRowDto> rows)
+    private static SimpleExcelBuilder.ExcelDocument BuildHourlySalesExcelDocument(
+        IReadOnlyList<HourlySalesReportRowDto> rows,
+        DateTime fromDate,
+        DateTime toDate)
     {
-        var builder = new StringBuilder();
-        builder.AppendLine("Hour,OrderCount,Revenue");
-
-        foreach (var row in rows)
+        var columns = new List<SimpleExcelBuilder.ExcelTableColumn>
         {
-            builder.AppendLine($"{row.Hour},{row.OrderCount},{row.Revenue:F2}");
-        }
+            new("Hour Range"),
+            new("Orders", SimpleExcelBuilder.ExcelTextAlign.Right),
+            new("Revenue", SimpleExcelBuilder.ExcelTextAlign.Right)
+        };
 
-        var totalOrders = rows.Sum(r => r.OrderCount);
+        var rowValues = rows
+            .Select(row => (IReadOnlyList<string>)
+            [
+                $"{row.Hour:00}:00 - {((row.Hour + 1) % 24):00}:00",
+                row.OrderCount.ToString("N0", CultureInfo.InvariantCulture),
+                FormatMoney(row.Revenue)
+            ])
+            .ToList();
+
         var totalRevenue = rows.Sum(r => r.Revenue);
-        builder.AppendLine($"TOTAL,{totalOrders},{totalRevenue:F2}");
-        return builder.ToString();
+        var totalOrders = rows.Sum(r => r.OrderCount);
+        var summary = new List<SimpleExcelBuilder.ExcelSummaryItem>
+        {
+            new("Total Revenue", FormatMoney(totalRevenue)),
+            new("Total Orders", totalOrders.ToString("N0", CultureInfo.InvariantCulture))
+        };
+
+        return new SimpleExcelBuilder.ExcelDocument(
+            "Hourly Sales Distribution",
+            BuildDateRangeSubtitle(fromDate, toDate),
+            columns,
+            rowValues,
+            summary);
     }
 
-    private static string BuildStaffPerformanceCsv(IReadOnlyList<StaffPerformanceReportRowDto> rows)
+    private static SimpleExcelBuilder.ExcelDocument BuildStaffPerformanceExcelDocument(
+        IReadOnlyList<StaffPerformanceReportRowDto> rows,
+        DateTime fromDate,
+        DateTime toDate)
     {
-        var builder = new StringBuilder();
-        builder.AppendLine("StaffId,StaffName,OrderCount,TotalRevenue,AverageOrderValue,TipsReceived");
-
-        foreach (var row in rows)
+        var columns = new List<SimpleExcelBuilder.ExcelTableColumn>
         {
-            builder.AppendLine(
-                $"{row.StaffId},{EscapeCsv(row.StaffName)},{row.OrderCount},{row.TotalRevenue:F2},{row.AverageOrderValue:F2},{row.TipsReceived:F2}");
-        }
+            new("Staff"),
+            new("Orders", SimpleExcelBuilder.ExcelTextAlign.Right),
+            new("Revenue", SimpleExcelBuilder.ExcelTextAlign.Right),
+            new("Avg/Order", SimpleExcelBuilder.ExcelTextAlign.Right),
+            new("Tips", SimpleExcelBuilder.ExcelTextAlign.Right)
+        };
 
-        var totalOrders = rows.Sum(r => r.OrderCount);
+        var rowValues = rows
+            .Select(row => (IReadOnlyList<string>)
+            [
+                row.StaffName,
+                row.OrderCount.ToString("N0", CultureInfo.InvariantCulture),
+                FormatMoney(row.TotalRevenue),
+                FormatMoney(row.AverageOrderValue),
+                FormatMoney(row.TipsReceived)
+            ])
+            .ToList();
+
         var totalRevenue = rows.Sum(r => r.TotalRevenue);
+        var totalOrders = rows.Sum(r => r.OrderCount);
         var totalTips = rows.Sum(r => r.TipsReceived);
-        var averageOrder = totalOrders > 0 ? totalRevenue / totalOrders : 0m;
-        builder.AppendLine($"TOTAL,,{totalOrders},{totalRevenue:F2},{averageOrder:F2},{totalTips:F2}");
-        return builder.ToString();
+        var averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0m;
+        var summary = new List<SimpleExcelBuilder.ExcelSummaryItem>
+        {
+            new("Total Revenue", FormatMoney(totalRevenue)),
+            new("Total Orders", totalOrders.ToString("N0", CultureInfo.InvariantCulture)),
+            new("Average Order Value", FormatMoney(averageOrderValue)),
+            new("Total Tips", FormatMoney(totalTips))
+        };
+
+        return new SimpleExcelBuilder.ExcelDocument(
+            "Staff Performance",
+            BuildDateRangeSubtitle(fromDate, toDate),
+            columns,
+            rowValues,
+            summary);
     }
 
     private static SimplePdfBuilder.PdfDocument BuildDailySalesPdfDocument(
@@ -493,16 +620,6 @@ public static class ReportEndpoints
             BuildDateRangeSubtitle(fromDate, toDate),
             new SimplePdfBuilder.PdfTable(columns, tableRows),
             summary);
-    }
-
-    private static string EscapeCsv(string value)
-    {
-        if (value.Contains(',') || value.Contains('"') || value.Contains('\n') || value.Contains('\r'))
-        {
-            return $"\"{value.Replace("\"", "\"\"")}\"";
-        }
-
-        return value;
     }
 
     private static string BuildDateRangeSubtitle(DateTime fromDate, DateTime toDate)

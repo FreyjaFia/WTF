@@ -211,18 +211,30 @@
           <button
             type="button"
             class="btn btn-sm gap-2 rounded-lg border border-gray-200 bg-white text-gray-700 transition-all hover:bg-gray-50"
-            (click)="downloadCsv()"
+            (click)="downloadExcel()"
+            [disabled]="isDownloadingExcel() || isDownloadingPdf()"
           >
-            <app-icon name="icon-download" [class]="'h-4 w-4'" [fill]="'currentColor'" />
-            Download CSV
+            @if (isDownloadingExcel()) {
+              <span class="loading loading-spinner loading-xs"></span>
+              Downloading...
+            } @else {
+              <app-icon name="icon-download" [class]="'h-4 w-4'" [fill]="'currentColor'" />
+              Download Excel
+            }
           </button>
           <button
             type="button"
             class="btn btn-sm gap-2 rounded-lg border-0 bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg"
             (click)="downloadPdf()"
+            [disabled]="isDownloadingExcel() || isDownloadingPdf()"
           >
-            <app-icon name="icon-download" [class]="'h-4 w-4'" [fill]="'currentColor'" />
-            Download PDF
+            @if (isDownloadingPdf()) {
+              <span class="loading loading-spinner loading-xs"></span>
+              Downloading...
+            } @else {
+              <app-icon name="icon-download" [class]="'h-4 w-4'" [fill]="'currentColor'" />
+              Download PDF
+            }
           </button>
         </div>
       </div>
