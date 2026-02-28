@@ -2,10 +2,12 @@ using MediatR;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
+using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Features.Products.Enums;
 using WTF.Api.Hubs;
+using WTF.Api.Services;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 
@@ -35,7 +37,7 @@ public record UpdateOrderCommand : IRequest<OrderDto?>
     public decimal? Tips { get; init; }
 }
 
-public class UpdateOrderHandler(WTFDbContext db, IHubContext<DashboardHub> dashboardHub) : IRequestHandler<UpdateOrderCommand, OrderDto?>
+public class UpdateOrderHandler(WTFDbContext db, IHubContext<DashboardHub> dashboardHub, IAuditService auditService) : IRequestHandler<UpdateOrderCommand, OrderDto?>
 {
     public async Task<OrderDto?> Handle(UpdateOrderCommand request, CancellationToken cancellationToken)
     {
@@ -137,6 +139,12 @@ public class UpdateOrderHandler(WTFDbContext db, IHubContext<DashboardHub> dashb
 
         var oldStatus = (OrderStatusEnum)order.StatusId;
         var newStatus = request.Status;
+        var oldValues = new
+        {
+            Status = oldStatus,
+            order.CustomerId,
+            ItemCount = order.OrderItems.Count
+        };
 
         order.CustomerId = request.CustomerId;
         order.SpecialInstructions = request.SpecialInstructions;
@@ -306,6 +314,20 @@ public class UpdateOrderHandler(WTFDbContext db, IHubContext<DashboardHub> dashb
 
         await dashboardHub.Clients.Group(HubNames.Groups.DashboardViewers)
             .SendAsync(HubNames.Events.DashboardUpdated, cancellationToken);
+
+        await auditService.LogAsync(
+            action: AuditAction.OrderUpdated,
+            entityType: AuditEntityType.Order,
+            entityId: order.Id.ToString(),
+            oldValues: oldValues,
+            newValues: new
+            {
+                Status = newStatus,
+                order.CustomerId,
+                ItemCount = request.Items.Count,
+                totalAmount
+            },
+            cancellationToken: cancellationToken);
 
         return new OrderDto(
             order.Id,

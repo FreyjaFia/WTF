@@ -2,8 +2,10 @@ using System.ComponentModel.DataAnnotations;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
+using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Products.DTOs;
 using WTF.Api.Features.Products.Enums;
+using WTF.Api.Services;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 
@@ -36,7 +38,7 @@ public record CreateProductCommand : IRequest<ProductDto>
     public ProductSubCategoryEnum? SubCategory { get; init; }
 }
 
-public class CreateProductHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor) : IRequestHandler<CreateProductCommand, ProductDto>
+public class CreateProductHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor, IAuditService auditService) : IRequestHandler<CreateProductCommand, ProductDto>
 {
     public async Task<ProductDto> Handle(CreateProductCommand request, CancellationToken cancellationToken)
     {
@@ -67,6 +69,23 @@ public class CreateProductHandler(WTFDbContext db, IHttpContextAccessor httpCont
 
         db.Products.Add(product);
         await db.SaveChangesAsync(cancellationToken);
+
+        await auditService.LogAsync(
+            action: AuditAction.ProductCreated,
+            entityType: AuditEntityType.Product,
+            entityId: product.Id.ToString(),
+            newValues: new
+            {
+                product.Name,
+                product.Code,
+                product.Price,
+                product.CategoryId,
+                product.SubCategoryId,
+                product.IsAddOn,
+                product.IsActive
+            },
+            userId: userId,
+            cancellationToken: cancellationToken);
 
         return new ProductDto(
             product.Id,

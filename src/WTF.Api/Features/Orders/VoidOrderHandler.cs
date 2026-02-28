@@ -2,16 +2,22 @@ using MediatR;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
+using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Hubs;
+using WTF.Api.Services;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Orders;
 
 public record VoidOrderCommand(Guid Id) : IRequest<OrderDto?>;
 
-public class VoidOrderHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor, IHubContext<DashboardHub> dashboardHub) : IRequestHandler<VoidOrderCommand, OrderDto?>
+public class VoidOrderHandler(
+    WTFDbContext db,
+    IHttpContextAccessor httpContextAccessor,
+    IHubContext<DashboardHub> dashboardHub,
+    IAuditService auditService) : IRequestHandler<VoidOrderCommand, OrderDto?>
 {
     public async Task<OrderDto?> Handle(VoidOrderCommand request, CancellationToken cancellationToken)
     {
@@ -33,6 +39,9 @@ public class VoidOrderHandler(WTFDbContext db, IHttpContextAccessor httpContextA
         }
 
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
+        var newStatus = currentStatus == OrderStatusEnum.Completed
+            ? OrderStatusEnum.Refunded
+            : OrderStatusEnum.Cancelled;
 
         // Capture price snapshot (resolve add-on overrides)
         var parentProductByOrderItemId = order.OrderItems
@@ -67,9 +76,7 @@ public class VoidOrderHandler(WTFDbContext db, IHttpContextAccessor httpContextA
         }
 
         // Pending -> Cancelled, Completed -> Refunded
-        order.StatusId = currentStatus == OrderStatusEnum.Completed
-            ? (int)OrderStatusEnum.Refunded
-            : (int)OrderStatusEnum.Cancelled;
+        order.StatusId = (int)newStatus;
         order.UpdatedAt = DateTime.UtcNow;
         order.UpdatedBy = userId;
 
@@ -142,6 +149,22 @@ public class VoidOrderHandler(WTFDbContext db, IHttpContextAccessor httpContextA
 
         await dashboardHub.Clients.Group(HubNames.Groups.DashboardViewers)
             .SendAsync(HubNames.Events.DashboardUpdated, cancellationToken);
+
+        await auditService.LogAsync(
+            action: AuditAction.OrderVoided,
+            entityType: AuditEntityType.Order,
+            entityId: order.Id.ToString(),
+            oldValues: new
+            {
+                Status = currentStatus
+            },
+            newValues: new
+            {
+                Status = newStatus,
+                totalAmount
+            },
+            userId: userId,
+            cancellationToken: cancellationToken);
 
         return new OrderDto(
             order.Id,

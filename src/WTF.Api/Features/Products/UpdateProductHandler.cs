@@ -2,8 +2,10 @@ using System.ComponentModel.DataAnnotations;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
+using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Products.DTOs;
 using WTF.Api.Features.Products.Enums;
+using WTF.Api.Services;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 
@@ -39,7 +41,7 @@ public record UpdateProductCommand : IRequest<ProductDto?>
     public ProductSubCategoryEnum? SubCategory { get; init; }
 }
 
-public class UpdateProductHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor) : IRequestHandler<UpdateProductCommand, ProductDto?>
+public class UpdateProductHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor, IAuditService auditService) : IRequestHandler<UpdateProductCommand, ProductDto?>
 {
     public async Task<ProductDto?> Handle(UpdateProductCommand request, CancellationToken cancellationToken)
     {
@@ -55,6 +57,17 @@ public class UpdateProductHandler(WTFDbContext db, IHttpContextAccessor httpCont
 
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
         var normalizedCode = request.Code.Trim().ToUpperInvariant();
+        var oldValues = new
+        {
+            product.Name,
+            product.Code,
+            product.Description,
+            product.Price,
+            product.CategoryId,
+            product.SubCategoryId,
+            product.IsAddOn,
+            product.IsActive
+        };
 
         if (product.Code != normalizedCode)
         {
@@ -106,6 +119,25 @@ public class UpdateProductHandler(WTFDbContext db, IHttpContextAccessor httpCont
         product.UpdatedBy = userId;
 
         await db.SaveChangesAsync(cancellationToken);
+
+        await auditService.LogAsync(
+            action: AuditAction.ProductUpdated,
+            entityType: AuditEntityType.Product,
+            entityId: product.Id.ToString(),
+            oldValues: oldValues,
+            newValues: new
+            {
+                product.Name,
+                product.Code,
+                product.Description,
+                product.Price,
+                product.CategoryId,
+                product.SubCategoryId,
+                product.IsAddOn,
+                product.IsActive
+            },
+            userId: userId,
+            cancellationToken: cancellationToken);
 
         var imageUrl = product.ProductImage != null && product.ProductImage.Image != null
             ? product.ProductImage.Image.ImageUrl

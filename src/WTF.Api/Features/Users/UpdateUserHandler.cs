@@ -1,15 +1,17 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
+using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Users.DTOs;
 using WTF.Api.Features.Users.Enums;
+using WTF.Api.Services;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Users;
 
 public record UpdateUserCommand(Guid Id, string FirstName, string LastName, string Username, string? Password, UserRoleEnum RoleId) : IRequest<UserDto?>;
 
-public class UpdateUserHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor) : IRequestHandler<UpdateUserCommand, UserDto?>
+public class UpdateUserHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor, IAuditService auditService) : IRequestHandler<UpdateUserCommand, UserDto?>
 {
     public async Task<UserDto?> Handle(UpdateUserCommand request, CancellationToken cancellationToken)
     {
@@ -20,6 +22,15 @@ public class UpdateUserHandler(WTFDbContext db, IHttpContextAccessor httpContext
         }
 
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
+        var oldValues = new
+        {
+            user.FirstName,
+            user.LastName,
+            user.Username,
+            user.RoleId,
+            user.IsActive
+        };
+        var isPasswordChanged = !string.IsNullOrWhiteSpace(request.Password);
 
         user.FirstName = request.FirstName;
         user.LastName = request.LastName;
@@ -34,6 +45,23 @@ public class UpdateUserHandler(WTFDbContext db, IHttpContextAccessor httpContext
         }
 
         await db.SaveChangesAsync(cancellationToken);
+
+        await auditService.LogAsync(
+            action: AuditAction.UserUpdated,
+            entityType: AuditEntityType.User,
+            entityId: user.Id.ToString(),
+            oldValues: oldValues,
+            newValues: new
+            {
+                user.FirstName,
+                user.LastName,
+                user.Username,
+                user.RoleId,
+                user.IsActive,
+                IsPasswordChanged = isPasswordChanged
+            },
+            userId: userId,
+            cancellationToken: cancellationToken);
 
         return new UserDto(
             user.Id,

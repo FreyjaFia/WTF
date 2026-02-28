@@ -4,5 +4,17 @@ public enum AuditAction
 {
     UserLogin,
     UserLogout,
-    OrderCreated
+    UserCreated,
+    UserUpdated,
+    UserDeleted,
+    UserPasswordChanged,
+    CustomerCreated,
+    CustomerUpdated,
+    CustomerDeleted,
+    ProductCreated,
+    ProductUpdated,
+    ProductDeleted,
+    OrderCreated,
+    OrderUpdated,
+    OrderVoided
 }
