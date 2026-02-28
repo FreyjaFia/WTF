@@ -13,22 +13,12 @@ public sealed record GetAuditLogsQuery : IRequest<PagedResultDto<AuditLogDto>>
     public string? EntityId { get; init; }
     public DateTime? FromDate { get; init; }
     public DateTime? ToDate { get; init; }
-    public int? Page { get; init; }
-    public int? PageSize { get; init; }
 }
 
 public sealed class GetAuditLogsHandler(WTFDbContext db) : IRequestHandler<GetAuditLogsQuery, PagedResultDto<AuditLogDto>>
 {
-    private const int MaxPageSize = 100;
-
     public async Task<PagedResultDto<AuditLogDto>> Handle(GetAuditLogsQuery request, CancellationToken cancellationToken)
     {
-        var hasPaging = request.Page.HasValue || request.PageSize.HasValue;
-        var page = request.Page is null || request.Page < 1 ? 1 : request.Page.Value;
-        var pageSize = request.PageSize is null || request.PageSize < 1
-            ? 20
-            : Math.Min(request.PageSize.Value, MaxPageSize);
-
         var query = db.AuditLogs
             .AsNoTracking()
             .Include(a => a.User)
@@ -82,18 +72,9 @@ public sealed class GetAuditLogsHandler(WTFDbContext db) : IRequestHandler<GetAu
                 a.IpAddress,
                 a.Timestamp));
 
-        var items = hasPaging
-            ? await orderedQuery
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync(cancellationToken)
-            : await orderedQuery.ToListAsync(cancellationToken);
-
-        if (!hasPaging)
-        {
-            page = 1;
-            pageSize = totalCount == 0 ? 1 : totalCount;
-        }
+        var items = await orderedQuery.ToListAsync(cancellationToken);
+        var page = 1;
+        var pageSize = totalCount == 0 ? 1 : totalCount;
 
         return new PagedResultDto<AuditLogDto>(items, page, pageSize, totalCount);
     }
