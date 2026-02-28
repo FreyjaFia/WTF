@@ -389,7 +389,8 @@ export class OrderList implements OnInit {
       items = items.filter(
         (order) =>
           order.orderNumber.toString().includes(lowerSearch) ||
-          order.id.toLowerCase().includes(lowerSearch),
+          order.id.toLowerCase().includes(lowerSearch) ||
+          (order.customerName ?? '').toLowerCase().includes(lowerSearch),
       );
     }
 

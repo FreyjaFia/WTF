@@ -44,6 +44,7 @@ export interface OrderDto {
   tips?: number | null;
   specialInstructions?: string | null;
   totalAmount: number;
+  customerName?: string | null;
 }
 
 export interface CreateOrderCommand {

@@ -29,7 +29,7 @@
         <input
           type="search"
           class="grow bg-transparent text-sm placeholder-gray-500 focus:caret-[#047857] focus:outline-none"
-          placeholder="Search by order #"
+          placeholder="Search by order # or customer"
           [formControl]="filterForm.controls.searchTerm"
         />
       </label>
@@ -325,6 +325,10 @@
 
                       <!-- Mobile: Row 3 - Time and Items -->
                       <div class="flex items-center gap-2 md:hidden">
+                        @if (order.customerName?.trim()) {
+                          <span class="text-xs text-slate-500">{{ order.customerName }}</span>
+                          <span class="text-xs text-slate-500">&middot;</span>
+                        }
                         <span class="text-xs text-slate-500">
                           {{ getOrderDate(order) | date: 'h:mm a' }}
                         </span>
@@ -335,6 +339,9 @@
                       <!-- Desktop: Order # -->
                       <div class="hidden md:col-span-2 md:block">
                         <div class="font-semibold text-gray-900">#{{ order.orderNumber }}</div>
+                        @if (order.customerName?.trim()) {
+                          <div class="truncate text-xs text-gray-500">{{ order.customerName }}</div>
+                        }
                       </div>
 
                       <!-- Desktop: Date -->

@@ -15,6 +15,7 @@ public class GetOrdersHandler(WTFDbContext db) : IRequestHandler<GetOrdersQuery,
     public async Task<List<OrderDto>> Handle(GetOrdersQuery request, CancellationToken cancellationToken)
     {
         var query = db.Orders
+            .Include(o => o.Customer)
             .Include(o => o.OrderItems.Where(oi => oi.ParentOrderItemId == null))
                 .ThenInclude(oi => oi.Product)
             .Include(o => o.OrderItems.Where(oi => oi.ParentOrderItemId == null))
@@ -117,7 +118,8 @@ public class GetOrdersHandler(WTFDbContext db) : IRequestHandler<GetOrdersQuery,
                 o.ChangeAmount,
                 o.Tips,
                 o.SpecialInstructions,
-                totalAmount
+                totalAmount,
+                o.Customer == null ? null : $"{o.Customer.FirstName} {o.Customer.LastName}".Trim()
             );
         })];
     }

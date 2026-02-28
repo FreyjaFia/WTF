@@ -36,6 +36,7 @@ export interface ReceiptData {
   templateUrl: './order-receipt.html',
 })
 export class OrderReceiptComponent implements OnInit {
+  private static readonly logoPath = '/assets/images/logo_new.png';
   private readonly receiptEl = viewChild.required<ElementRef<HTMLElement>>('receiptEl');
   private readonly imageDownloadService = inject(ImageDownloadService);
   private readonly alertService = inject(AlertService);
@@ -44,21 +45,29 @@ export class OrderReceiptComponent implements OnInit {
   public readonly data = input<ReceiptData | null>(null);
 
   protected readonly isGenerating = signal(false);
-  protected readonly logoDataUri = signal('assets/images/logo_new.png');
+  protected readonly logoDataUri = signal(OrderReceiptComponent.logoPath);
 
   public ngOnInit(): void {
     this.logoLoadPromise = this.loadLogo();
   }
 
   private async loadLogo(): Promise<void> {
-    try {
-      const res = await fetch('assets/images/logo_new.png');
-      const blob = await res.blob();
-      const dataUrl = await this.blobToDataUrl(blob);
-      this.logoDataUri.set(dataUrl);
-    } catch {
-      // Keep static asset fallback when conversion fails.
+    const sources = this.getLogoSources();
+    for (const source of sources) {
+      const fromFetch = await this.dataUrlFromFetch(source);
+      if (fromFetch) {
+        this.logoDataUri.set(fromFetch);
+        return;
+      }
+
+      const fromImage = await this.dataUrlFromImage(source);
+      if (fromImage) {
+        this.logoDataUri.set(fromImage);
+        return;
+      }
     }
+
+    // Keep static asset fallback when conversion fails.
   }
 
   private blobToDataUrl(blob: Blob): Promise<string> {
@@ -68,6 +77,83 @@ export class OrderReceiptComponent implements OnInit {
       reader.onerror = () => reject(new Error('Failed to read logo as data URL.'));
       reader.readAsDataURL(blob);
     });
+  }
+
+  private getLogoSources(): string[] {
+    const sources = new Set<string>();
+    sources.add(OrderReceiptComponent.logoPath);
+    sources.add('assets/images/logo_new.png');
+
+    if (typeof window !== 'undefined') {
+      sources.add(new URL(OrderReceiptComponent.logoPath, window.location.origin).toString());
+      sources.add(new URL('assets/images/logo_new.png', window.location.href).toString());
+    }
+
+    if (typeof document !== 'undefined') {
+      sources.add(new URL(OrderReceiptComponent.logoPath, document.baseURI).toString());
+      sources.add(new URL('assets/images/logo_new.png', document.baseURI).toString());
+    }
+
+    return [...sources];
+  }
+
+  private async dataUrlFromFetch(source: string): Promise<string | null> {
+    try {
+      const res = await fetch(source, { cache: 'no-store' });
+      if (!res.ok) {
+        return null;
+      }
+
+      const blob = await res.blob();
+      if (!blob.type.startsWith('image/')) {
+        return null;
+      }
+
+      return await this.blobToDataUrl(blob);
+    } catch {
+      return null;
+    }
+  }
+
+  private dataUrlFromImage(source: string): Promise<string | null> {
+    return new Promise((resolve) => {
+      const image = new Image();
+      image.decoding = 'sync';
+      image.onload = () => {
+        try {
+          if (image.naturalWidth <= 0 || image.naturalHeight <= 0) {
+            resolve(null);
+            return;
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = image.naturalWidth;
+          canvas.height = image.naturalHeight;
+          const context = canvas.getContext('2d');
+          if (!context) {
+            resolve(null);
+            return;
+          }
+
+          context.drawImage(image, 0, 0);
+          resolve(canvas.toDataURL('image/png'));
+        } catch {
+          resolve(null);
+        }
+      };
+      image.onerror = () => resolve(null);
+      image.src = source;
+    });
+  }
+
+  private waitForAnimationFrame(): Promise<void> {
+    return new Promise((resolve) => requestAnimationFrame(() => resolve()));
+  }
+
+  private async waitForFrames(count: number): Promise<void> {
+    for (let i = 0; i < count; i += 1) {
+      await this.waitForAnimationFrame();
+    }
   }
 
   private async waitForLogoRender(): Promise<void> {
@@ -96,6 +182,9 @@ export class OrderReceiptComponent implements OnInit {
         // Ignore decode errors and proceed with best-effort rendering.
       }
     }
+
+    // Ensure src mutation to data URI has been committed before html-to-image clones the node.
+    await this.waitForFrames(2);
   }
 
   private async ensureEmbeddedLogoSource(): Promise<void> {

@@ -16,7 +16,8 @@
     "android:dev": "npm run build:android-dev && npm run cap:sync && npm run cap:open",
     "release:major": "node scripts/release-version.mjs major",
     "release:minor": "node scripts/release-version.mjs minor",
-    "release:patch": "node scripts/release-version.mjs patch"
+    "release:patch": "node scripts/release-version.mjs patch",
+    "push:main:tags": "git push origin main --tags"
   },
   "prettier": {
     "printWidth": 100,
