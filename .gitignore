@@ -376,6 +376,11 @@ FodyWeavers.xsd
 
 # Ignore all images under wwwroot to avoid committing uploaded or generated files
 src/WTF.Api/wwwroot/images/**
+!src/WTF.Api/wwwroot/images/**/.gitkeep
+
+# Ignore generated monthly report workbooks under wwwroot
+src/WTF.Api/wwwroot/reports/**
+!src/WTF.Api/wwwroot/reports/**/.gitkeep
 
 # Angular / Node.js (wtf-pos)
 dist/
