@@ -125,10 +125,27 @@ builder.Services.AddCors(options =>
         }
         else
         {
-            policy.WithOrigins(
-                    "https://localhost",
-                    "http://localhost",
-                    "capacitor://localhost")
+            policy.SetIsOriginAllowed(origin =>
+                {
+                    if (string.IsNullOrWhiteSpace(origin))
+                    {
+                        return false;
+                    }
+
+                    if (origin.Equals("capacitor://localhost", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return true;
+                    }
+
+                    if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri))
+                    {
+                        return false;
+                    }
+
+                    return uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
+                        || uri.Host.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase)
+                        || uri.Host.Equals("wtfbyfaith.runasp.net", StringComparison.OrdinalIgnoreCase);
+                })
                 .AllowAnyHeader()
                 .AllowAnyMethod()
                 .AllowCredentials();

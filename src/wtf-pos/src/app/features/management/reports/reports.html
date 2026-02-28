@@ -76,9 +76,13 @@
       [class.max-h-0]="!isMobileFiltersOpen()"
       [class.opacity-0]="!isMobileFiltersOpen()"
       [class.pointer-events-none]="!isMobileFiltersOpen()"
-      [class.max-h-[1200px]]="isMobileFiltersOpen()"
+      [class.max-h-[42dvh]]="isMobileFiltersOpen()"
+      [class.sm:max-h-[50dvh]]="isMobileFiltersOpen()"
+      [class.md:max-h-[58dvh]]="isMobileFiltersOpen()"
+      [class.overflow-y-auto]="isMobileFiltersOpen()"
+      [class.overflow-hidden]="!isMobileFiltersOpen()"
       [class.opacity-100]="isMobileFiltersOpen()"
-      class="overflow-hidden transition-all duration-300 ease-out xl:pointer-events-auto xl:block xl:max-h-none xl:opacity-100"
+      class="overscroll-y-contain [scrollbar-gutter:stable] [-webkit-overflow-scrolling:touch] transition-all duration-300 ease-out xl:pointer-events-auto xl:block xl:max-h-none xl:overflow-visible xl:opacity-100"
     >
       <form [formGroup]="reportForm" class="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-5">
         <label
