@@ -1,13 +1,17 @@
-﻿@if (update.updateAvailable() && update.latest(); as latest) {
+@if (update.updateAvailable() && update.latest(); as latest) {
   <div class="flex items-center justify-between gap-3 bg-sky-600 px-4 py-2 text-sm text-white">
-    <span>Update available: v{{ latest.version }}</span>
+    @if (update.shouldRefresh()) {
+      <span>New version available: v{{ latest.version }}. Refresh to update.</span>
+    } @else {
+      <span>Update available: v{{ latest.version }}</span>
+    }
     <div class="flex items-center gap-2">
       <button
         type="button"
         class="rounded bg-white/20 px-3 py-1 text-xs font-semibold hover:bg-white/30"
-        (click)="onDownload()"
+        (click)="onPrimaryAction()"
       >
-        Download
+        {{ getPrimaryActionLabel() }}
       </button>
       <button
         type="button"

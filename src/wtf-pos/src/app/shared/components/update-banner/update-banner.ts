@@ -9,11 +9,15 @@ import { UpdateService } from '@core/services';
 export class UpdateBannerComponent {
   protected readonly update = inject(UpdateService);
 
-  protected onDownload(): void {
-    void this.update.openDownload();
+  protected onPrimaryAction(): void {
+    void this.update.applyUpdate();
   }
 
   protected onDismiss(): void {
     this.update.dismiss();
+  }
+
+  protected getPrimaryActionLabel(): string {
+    return this.update.shouldRefresh() ? 'Refresh' : 'Download';
   }
 }

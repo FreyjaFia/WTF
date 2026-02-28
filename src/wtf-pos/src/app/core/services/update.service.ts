@@ -1,4 +1,4 @@
-import { Injectable, OnDestroy, signal } from '@angular/core';
+import { computed, Injectable, OnDestroy, signal } from '@angular/core';
 import { Capacitor } from '@capacitor/core';
 import { appVersion } from '@environments/version';
 import { environment } from '@environments/environment';
@@ -17,8 +17,9 @@ interface GitHubReleaseResponse {
 
 export interface AppUpdateInfo {
   version: string;
-  downloadUrl: string;
+  downloadUrl: string | null;
   releaseNotes: string;
+  action: 'download' | 'refresh';
 }
 
 @Injectable({ providedIn: 'root' })
@@ -32,17 +33,27 @@ export class UpdateService implements OnDestroy {
 
   private readonly _latest = signal<AppUpdateInfo | null>(null);
   public readonly latest = this._latest.asReadonly();
+  public readonly shouldRefresh = computed(() => this._latest()?.action === 'refresh');
 
   private readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
+  private readonly isBrowserPlatform = Capacitor.getPlatform() === 'web';
   private readonly releasesUrl = this.buildReleasesUrl();
   private checkTimer: ReturnType<typeof setInterval> | null = null;
   private readonly onlineHandler = (): void => {
     void this.checkForUpdates();
   };
+  private readonly focusHandler = (): void => {
+    void this.checkForUpdates();
+  };
+  private readonly visibilityHandler = (): void => {
+    if (document.visibilityState === 'visible') {
+      void this.checkForUpdates();
+    }
+  };
   private checkInProgress = false;
 
   constructor() {
-    if (!this.isAndroidPlatform || !this.releasesUrl) {
+    if ((!this.isAndroidPlatform && !this.isBrowserPlatform) || !this.releasesUrl) {
       return;
     }
 
@@ -51,6 +62,8 @@ export class UpdateService implements OnDestroy {
       void this.checkForUpdates();
     }, UpdateService.CHECK_INTERVAL_MS);
     window.addEventListener('online', this.onlineHandler);
+    window.addEventListener('focus', this.focusHandler);
+    document.addEventListener('visibilitychange', this.visibilityHandler);
   }
 
   public ngOnDestroy(): void {
@@ -60,10 +73,17 @@ export class UpdateService implements OnDestroy {
     }
 
     window.removeEventListener('online', this.onlineHandler);
+    window.removeEventListener('focus', this.focusHandler);
+    document.removeEventListener('visibilitychange', this.visibilityHandler);
   }
 
   public async checkForUpdates(): Promise<void> {
-    if (!this.isAndroidPlatform || !this.releasesUrl || this.checkInProgress || !navigator.onLine) {
+    if (
+      (!this.isAndroidPlatform && !this.isBrowserPlatform) ||
+      !this.releasesUrl ||
+      this.checkInProgress ||
+      !navigator.onLine
+    ) {
       return;
     }
 
@@ -89,16 +109,23 @@ export class UpdateService implements OnDestroy {
         return;
       }
 
-      const downloadUrl = this.pickDownloadUrl(release);
-      if (!downloadUrl) {
-        this._updateAvailable.set(false);
-        return;
+      let action: 'download' | 'refresh' = 'refresh';
+      let downloadUrl: string | null = null;
+
+      if (this.isAndroidPlatform) {
+        action = 'download';
+        downloadUrl = this.pickDownloadUrl(release);
+        if (!downloadUrl) {
+          this._updateAvailable.set(false);
+          return;
+        }
       }
 
       this._latest.set({
         version: latestVersion,
         downloadUrl,
         releaseNotes: release.body?.trim() ?? '',
+        action,
       });
       this._updateAvailable.set(true);
     } catch {
@@ -108,13 +135,23 @@ export class UpdateService implements OnDestroy {
     }
   }
 
-  public async openDownload(): Promise<void> {
+  public async applyUpdate(): Promise<void> {
     const info = this._latest();
-    if (!info?.downloadUrl) {
+    if (!info) {
       return;
     }
 
     this.hideForNow();
+
+    if (info.action === 'refresh') {
+      this.refreshPage();
+      return;
+    }
+
+    if (!info.downloadUrl) {
+      return;
+    }
+
     window.open(info.downloadUrl, '_blank', 'noopener,noreferrer');
   }
 
@@ -131,6 +168,12 @@ export class UpdateService implements OnDestroy {
 
   public hideForNow(): void {
     this._updateAvailable.set(false);
+  }
+
+  private refreshPage(): void {
+    const nextUrl = new URL(window.location.href);
+    nextUrl.searchParams.set('wtf-refresh', Date.now().toString());
+    window.location.replace(nextUrl.toString());
   }
 
   private buildReleasesUrl(): string | null {
