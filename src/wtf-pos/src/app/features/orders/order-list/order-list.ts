@@ -15,6 +15,7 @@ import {
   FilterDropdownComponent,
   IconComponent,
   PullToRefreshComponent,
+  SearchInputComponent,
   type FilterOption,
 } from '@shared/components';
 import type { CartItemDto } from '@shared/models';
@@ -47,6 +48,7 @@ interface OrderGroup {
     FilterDropdownComponent,
     BadgeComponent,
     PullToRefreshComponent,
+    SearchInputComponent,
   ],
   templateUrl: './order-list.html',
 })

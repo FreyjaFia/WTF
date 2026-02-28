@@ -10,6 +10,7 @@ import {
   FilterDropdownComponent,
   IconComponent,
   PullToRefreshComponent,
+  SearchInputComponent,
   type FilterOption,
 } from '@shared/components';
 import { UserDto, UserRoleEnum } from '@shared/models';
@@ -37,6 +38,7 @@ interface UserListState {
     BadgeComponent,
     AvatarComponent,
     PullToRefreshComponent,
+    SearchInputComponent,
   ],
   templateUrl: './user-list.html',
   host: { class: 'flex-1 min-h-0' },

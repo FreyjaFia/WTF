@@ -1,0 +1,33 @@
+<app-icon name="icon-search" [class]="iconClass()" [fill]="'currentColor'" />
+
+@if (control(); as control) {
+  <input
+    type="search"
+    [class]="'app-search-input__input ' + inputClass()"
+    [placeholder]="placeholder()"
+    [formControl]="control"
+    [attr.aria-label]="ariaLabel()"
+  />
+} @else {
+  <input
+    type="search"
+    [class]="'app-search-input__input ' + inputClass()"
+    [placeholder]="placeholder()"
+    [value]="value()"
+    [disabled]="isDisabled()"
+    [attr.aria-label]="ariaLabel()"
+    (input)="onInput($event)"
+  />
+}
+
+@if (hasValue()) {
+  <button
+    type="button"
+    [class]="clearButtonClass()"
+    [disabled]="isDisabled()"
+    [attr.aria-label]="clearAriaLabel()"
+    (click)="clear()"
+  >
+    <app-icon name="icon-close" [class]="'h-3.5 w-3.5'" [fill]="'currentColor'" />
+  </button>
+}

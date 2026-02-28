@@ -10,6 +10,7 @@ import {
   signal,
 } from '@angular/core';
 import { IconComponent } from '@shared/components/icons/icon/icon';
+import { SearchInputComponent } from '@shared/components/search-input/search-input';
 
 export interface CustomerDropdownOption {
   id: string;
@@ -18,7 +19,7 @@ export interface CustomerDropdownOption {
 
 @Component({
   selector: 'app-customer-dropdown',
-  imports: [CommonModule, IconComponent],
+  imports: [CommonModule, IconComponent, SearchInputComponent],
   templateUrl: './customer-dropdown.html',
 })
 export class CustomerDropdownComponent {
@@ -69,8 +70,7 @@ export class CustomerDropdownComponent {
     this.searchTerm.set('');
   }
 
-  protected onSearchInput(event: Event): void {
-    const value = event.target instanceof HTMLInputElement ? event.target.value : '';
+  protected onSearchTermChange(value: string): void {
     this.searchTerm.set(value);
   }
 

@@ -76,6 +76,13 @@ body {
   background: #9ca3af;
 }
 
+/* Use a custom clear button for app search inputs. */
+.app-search-input__input::-webkit-search-cancel-button,
+.app-search-input__input::-webkit-search-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
 /* Premium modal pop-in animation */
 @keyframes modal-pop {
   from {

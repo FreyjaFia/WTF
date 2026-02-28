@@ -40,6 +40,7 @@ import {
   IconComponent,
   OrderReceiptComponent,
   PullToRefreshComponent,
+  SearchInputComponent,
 } from '@shared/components';
 import {
   CartAddOnDto,
@@ -73,6 +74,7 @@ import { CheckoutModal } from '../checkout-modal/checkout-modal';
     BadgeComponent,
     PullToRefreshComponent,
     OrderReceiptComponent,
+    SearchInputComponent,
     SortAddOnsPipe,
   ],
   templateUrl: './order-editor.html',
