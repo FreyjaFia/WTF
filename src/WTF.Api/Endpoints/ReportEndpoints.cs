@@ -33,8 +33,8 @@ public static class ReportEndpoints
                 return BuildReportResponse(
                     httpContext,
                     result,
-                    $"daily-sales-{query.FromDate:yyyyMMdd}-{query.ToDate:yyyyMMdd}.xlsx",
-                    $"daily-sales-{query.FromDate:yyyyMMdd}-{query.ToDate:yyyyMMdd}.pdf",
+                    BuildRangeExportFileName("Daily Sales Summary", query.FromDate, query.ToDate, "xlsx"),
+                    BuildRangeExportFileName("Daily Sales Summary", query.FromDate, query.ToDate, "pdf"),
                     rows => BuildDailySalesExcelDocument(rows, query.FromDate, query.ToDate, query.GroupBy),
                     rows => BuildDailySalesPdfDocument(rows, query.FromDate, query.ToDate, query.GroupBy));
             });
@@ -52,8 +52,8 @@ public static class ReportEndpoints
                 return BuildReportResponse(
                     httpContext,
                     result,
-                    $"product-sales-{query.FromDate:yyyyMMdd}-{query.ToDate:yyyyMMdd}.xlsx",
-                    $"product-sales-{query.FromDate:yyyyMMdd}-{query.ToDate:yyyyMMdd}.pdf",
+                    BuildRangeExportFileName("Product Sales Breakdown", query.FromDate, query.ToDate, "xlsx"),
+                    BuildRangeExportFileName("Product Sales Breakdown", query.FromDate, query.ToDate, "pdf"),
                     rows => BuildProductSalesExcelDocument(rows, query.FromDate, query.ToDate),
                     rows => BuildProductSalesPdfDocument(rows, query.FromDate, query.ToDate));
             });
@@ -71,8 +71,8 @@ public static class ReportEndpoints
                 return BuildReportResponse(
                     httpContext,
                     result,
-                    $"payments-{query.FromDate:yyyyMMdd}-{query.ToDate:yyyyMMdd}.xlsx",
-                    $"payments-{query.FromDate:yyyyMMdd}-{query.ToDate:yyyyMMdd}.pdf",
+                    BuildRangeExportFileName("Payment Method Breakdown", query.FromDate, query.ToDate, "xlsx"),
+                    BuildRangeExportFileName("Payment Method Breakdown", query.FromDate, query.ToDate, "pdf"),
                     rows => BuildPaymentsExcelDocument(rows, query.FromDate, query.ToDate),
                     rows => BuildPaymentsPdfDocument(rows, query.FromDate, query.ToDate));
             });
@@ -90,8 +90,8 @@ public static class ReportEndpoints
                 return BuildReportResponse(
                     httpContext,
                     result,
-                    $"hourly-sales-{query.FromDate:yyyyMMdd}-{query.ToDate:yyyyMMdd}.xlsx",
-                    $"hourly-sales-{query.FromDate:yyyyMMdd}-{query.ToDate:yyyyMMdd}.pdf",
+                    BuildRangeExportFileName("Hourly Sales Distribution", query.FromDate, query.ToDate, "xlsx"),
+                    BuildRangeExportFileName("Hourly Sales Distribution", query.FromDate, query.ToDate, "pdf"),
                     rows => BuildHourlySalesExcelDocument(rows, query.FromDate, query.ToDate),
                     rows => BuildHourlySalesPdfDocument(rows, query.FromDate, query.ToDate));
             });
@@ -109,8 +109,8 @@ public static class ReportEndpoints
                 return BuildReportResponse(
                     httpContext,
                     result,
-                    $"staff-performance-{query.FromDate:yyyyMMdd}-{query.ToDate:yyyyMMdd}.xlsx",
-                    $"staff-performance-{query.FromDate:yyyyMMdd}-{query.ToDate:yyyyMMdd}.pdf",
+                    BuildRangeExportFileName("Staff Performance", query.FromDate, query.ToDate, "xlsx"),
+                    BuildRangeExportFileName("Staff Performance", query.FromDate, query.ToDate, "pdf"),
                     rows => BuildStaffPerformanceExcelDocument(rows, query.FromDate, query.ToDate),
                     rows => BuildStaffPerformancePdfDocument(rows, query.FromDate, query.ToDate));
             });
@@ -705,6 +705,21 @@ public static class ReportEndpoints
         return $"Date Range: {fromDate:MMM dd, yyyy} - {toDate:MMM dd, yyyy}";
     }
 
+    private static string BuildRangeExportFileName(
+        string reportName,
+        DateTime fromDate,
+        DateTime toDate,
+        string extension)
+    {
+        var normalizedReportName = string.Join(
+            '-',
+            reportName
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Select(part => new string(part.Where(ch => char.IsLetterOrDigit(ch) || ch == '-').ToArray())));
+
+        return $"WTF-{normalizedReportName}-{fromDate:yyyyMMdd}-{toDate:yyyyMMdd}.{extension}";
+    }
+
     private static string BuildGeneratedAtLabel(HttpContext httpContext)
     {
         var requestedTimeZoneId = httpContext.Request.Headers["X-TimeZone"].ToString();
@@ -735,10 +750,10 @@ public static class ReportEndpoints
         if (groupBy == ReportGroupByEnum.Week)
         {
             var weekEnd = periodStart.Date.AddDays(6);
-            return $"{periodStart:MMM dd} - {weekEnd:MMM dd, yyyy}";
+            return $"{periodStart:MMMM dd} - {weekEnd:MMMM dd, yyyy}";
         }
 
-        return periodStart.ToString("MMM dd, yyyy", CultureInfo.InvariantCulture);
+        return periodStart.ToString("MMMM dd, yyyy", CultureInfo.InvariantCulture);
     }
 
     private sealed record MonthlyWorkbookRequest

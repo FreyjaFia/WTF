@@ -190,21 +190,6 @@ internal static class SimplePdfBuilder
             ? fullPageCapacity - SummaryReserveHeight
             : fullPageCapacity;
 
-        var lastStart = rows.Count;
-        var lastPageHeight = 0f;
-        for (var i = rows.Count - 1; i >= 0; i--)
-        {
-            var next = rows[i].Height;
-            if (lastStart == rows.Count || (lastPageHeight + next) <= lastPageCapacity)
-            {
-                lastStart = i;
-                lastPageHeight += next;
-                continue;
-            }
-
-            break;
-        }
-
         if (rows.Count == 0)
         {
             pages.Add([]);
@@ -212,14 +197,23 @@ internal static class SimplePdfBuilder
         }
 
         var cursor = 0;
-        while (cursor < lastStart)
+        while (cursor < rows.Count)
         {
+            var remainingHeight = 0f;
+            for (var i = cursor; i < rows.Count; i++)
+            {
+                remainingHeight += rows[i].Height;
+            }
+
+            var isLastPage = reserveSummaryOnLastPage && remainingHeight <= lastPageCapacity;
+            var capacity = isLastPage ? lastPageCapacity : fullPageCapacity;
+
             var chunk = new List<WrappedRow>();
             var used = 0f;
-            while (cursor < lastStart)
+            while (cursor < rows.Count)
             {
                 var row = rows[cursor];
-                if (chunk.Count > 0 && used + row.Height > fullPageCapacity)
+                if (chunk.Count > 0 && used + row.Height > capacity)
                 {
                     break;
                 }
@@ -230,10 +224,11 @@ internal static class SimplePdfBuilder
             }
 
             pages.Add(chunk);
+            if (isLastPage)
+            {
+                break;
+            }
         }
-
-        var lastChunk = rows.Skip(lastStart).ToList();
-        pages.Add(lastChunk);
 
         return pages;
     }

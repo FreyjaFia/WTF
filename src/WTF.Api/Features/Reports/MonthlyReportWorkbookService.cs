@@ -228,7 +228,7 @@ public sealed class MonthlyReportWorkbookService(
 
         AddSheet(
             workbook,
-            "Daily Sales",
+            "Daily Sales Summary",
             "Daily Sales Summary",
             fromDate,
             toDate,
@@ -246,7 +246,7 @@ public sealed class MonthlyReportWorkbookService(
 
         AddSheet(
             workbook,
-            "Product Sales",
+            "Product Sales Breakdown",
             "Product Sales Breakdown",
             fromDate,
             toDate,
@@ -264,7 +264,7 @@ public sealed class MonthlyReportWorkbookService(
 
         AddSheet(
             workbook,
-            "Payments",
+            "Payment Method Breakdown",
             "Payment Method Breakdown",
             fromDate,
             toDate,
@@ -280,7 +280,7 @@ public sealed class MonthlyReportWorkbookService(
 
         AddSheet(
             workbook,
-            "Hourly",
+            "Hourly Sales Distribution",
             "Hourly Sales Distribution",
             fromDate,
             toDate,
@@ -295,7 +295,7 @@ public sealed class MonthlyReportWorkbookService(
 
         AddSheet(
             workbook,
-            "Staff",
+            "Staff Performance",
             "Staff Performance",
             fromDate,
             toDate,

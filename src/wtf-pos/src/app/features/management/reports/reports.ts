@@ -505,7 +505,16 @@ export class ReportsComponent implements OnInit {
       }
 
       this.reportsService.downloadDailySalesExcel(query).subscribe({
-        next: (blob) => onSuccess(blob, `daily-sales-${query.fromDate}-${query.toDate}.xlsx`),
+        next: (blob) =>
+          onSuccess(
+            blob,
+            this.buildRangeExportFileName(
+              'Daily Sales Summary',
+              query.fromDate,
+              query.toDate,
+              'xlsx',
+            ),
+          ),
         error: onError,
       });
       return;
@@ -519,7 +528,16 @@ export class ReportsComponent implements OnInit {
       }
 
       this.reportsService.downloadProductSalesExcel(query).subscribe({
-        next: (blob) => onSuccess(blob, `product-sales-${query.fromDate}-${query.toDate}.xlsx`),
+        next: (blob) =>
+          onSuccess(
+            blob,
+            this.buildRangeExportFileName(
+              'Product Sales Breakdown',
+              query.fromDate,
+              query.toDate,
+              'xlsx',
+            ),
+          ),
         error: onError,
       });
       return;
@@ -533,7 +551,16 @@ export class ReportsComponent implements OnInit {
       }
 
       this.reportsService.downloadPaymentsExcel(query).subscribe({
-        next: (blob) => onSuccess(blob, `payments-${query.fromDate}-${query.toDate}.xlsx`),
+        next: (blob) =>
+          onSuccess(
+            blob,
+            this.buildRangeExportFileName(
+              'Payment Method Breakdown',
+              query.fromDate,
+              query.toDate,
+              'xlsx',
+            ),
+          ),
         error: onError,
       });
       return;
@@ -547,7 +574,16 @@ export class ReportsComponent implements OnInit {
       }
 
       this.reportsService.downloadHourlySalesExcel(query).subscribe({
-        next: (blob) => onSuccess(blob, `hourly-${query.fromDate}-${query.toDate}.xlsx`),
+        next: (blob) =>
+          onSuccess(
+            blob,
+            this.buildRangeExportFileName(
+              'Hourly Sales Distribution',
+              query.fromDate,
+              query.toDate,
+              'xlsx',
+            ),
+          ),
         error: onError,
       });
       return;
@@ -560,7 +596,11 @@ export class ReportsComponent implements OnInit {
     }
 
     this.reportsService.downloadStaffPerformanceExcel(query).subscribe({
-      next: (blob) => onSuccess(blob, `staff-${query.fromDate}-${query.toDate}.xlsx`),
+      next: (blob) =>
+        onSuccess(
+          blob,
+          this.buildRangeExportFileName('Staff Performance', query.fromDate, query.toDate, 'xlsx'),
+        ),
       error: onError,
     });
   }
@@ -592,7 +632,16 @@ export class ReportsComponent implements OnInit {
       }
 
       this.reportsService.downloadDailySalesPdf(query).subscribe({
-        next: (blob) => onSuccess(blob, `daily-sales-${query.fromDate}-${query.toDate}.pdf`),
+        next: (blob) =>
+          onSuccess(
+            blob,
+            this.buildRangeExportFileName(
+              'Daily Sales Summary',
+              query.fromDate,
+              query.toDate,
+              'pdf',
+            ),
+          ),
         error: onError,
       });
       return;
@@ -606,7 +655,16 @@ export class ReportsComponent implements OnInit {
       }
 
       this.reportsService.downloadProductSalesPdf(query).subscribe({
-        next: (blob) => onSuccess(blob, `product-sales-${query.fromDate}-${query.toDate}.pdf`),
+        next: (blob) =>
+          onSuccess(
+            blob,
+            this.buildRangeExportFileName(
+              'Product Sales Breakdown',
+              query.fromDate,
+              query.toDate,
+              'pdf',
+            ),
+          ),
         error: onError,
       });
       return;
@@ -620,7 +678,16 @@ export class ReportsComponent implements OnInit {
       }
 
       this.reportsService.downloadPaymentsPdf(query).subscribe({
-        next: (blob) => onSuccess(blob, `payments-${query.fromDate}-${query.toDate}.pdf`),
+        next: (blob) =>
+          onSuccess(
+            blob,
+            this.buildRangeExportFileName(
+              'Payment Method Breakdown',
+              query.fromDate,
+              query.toDate,
+              'pdf',
+            ),
+          ),
         error: onError,
       });
       return;
@@ -634,7 +701,16 @@ export class ReportsComponent implements OnInit {
       }
 
       this.reportsService.downloadHourlySalesPdf(query).subscribe({
-        next: (blob) => onSuccess(blob, `hourly-${query.fromDate}-${query.toDate}.pdf`),
+        next: (blob) =>
+          onSuccess(
+            blob,
+            this.buildRangeExportFileName(
+              'Hourly Sales Distribution',
+              query.fromDate,
+              query.toDate,
+              'pdf',
+            ),
+          ),
         error: onError,
       });
       return;
@@ -647,7 +723,11 @@ export class ReportsComponent implements OnInit {
     }
 
     this.reportsService.downloadStaffPerformancePdf(query).subscribe({
-      next: (blob) => onSuccess(blob, `staff-${query.fromDate}-${query.toDate}.pdf`),
+      next: (blob) =>
+        onSuccess(
+          blob,
+          this.buildRangeExportFileName('Staff Performance', query.fromDate, query.toDate, 'pdf'),
+        ),
       error: onError,
     });
   }
@@ -901,11 +981,11 @@ export class ReportsComponent implements OnInit {
       endDate.setDate(periodDate.getDate() + 6);
 
       const startLabel = periodDate.toLocaleDateString(undefined, {
-        month: 'short',
+        month: 'long',
         day: 'numeric',
       });
       const endLabel = endDate.toLocaleDateString(undefined, {
-        month: 'short',
+        month: 'long',
         day: 'numeric',
         year: 'numeric',
       });
@@ -920,7 +1000,7 @@ export class ReportsComponent implements OnInit {
     }
 
     return periodDate.toLocaleDateString(undefined, {
-      month: 'short',
+      month: 'long',
       day: 'numeric',
       year: 'numeric',
     });
@@ -1186,7 +1266,21 @@ export class ReportsComponent implements OnInit {
   }
 
   private buildMonthlyWorkbookFileName(year: number, month: number): string {
-    return `monthly-reports-${year}-${String(month).padStart(2, '0')}.xlsx`;
+    return `WTF-Monthly-Reports-${year}-${String(month).padStart(2, '0')}.xlsx`;
+  }
+
+  private buildRangeExportFileName(
+    reportName: string,
+    fromDate: string,
+    toDate: string,
+    extension: 'xlsx' | 'pdf',
+  ): string {
+    const normalizedReportName = reportName
+      .trim()
+      .replace(/\s+/g, '-')
+      .replace(/[^A-Za-z0-9-]/g, '');
+
+    return `WTF-${normalizedReportName}-${fromDate.replaceAll('-', '')}-${toDate.replaceAll('-', '')}.${extension}`;
   }
 
   private applyPreset(preset: DatePreset): void {
