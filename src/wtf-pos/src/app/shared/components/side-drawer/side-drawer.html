@@ -1,0 +1,94 @@
+<div
+  class="fixed inset-0 z-50 md:hidden"
+  style="padding-top: max(var(--safe-area-top, 0px), env(safe-area-inset-top)); padding-bottom: max(var(--safe-area-bottom, 0px), env(safe-area-inset-bottom))"
+  [class.pointer-events-auto]="isOpen()"
+  [class.pointer-events-none]="!isOpen()"
+>
+  <div
+    class="absolute inset-0 bg-black/30 backdrop-blur-md transition-opacity ease-in-out"
+    [class.duration-300]="hasTransitions()"
+    [class.duration-0]="!hasTransitions()"
+    [class.opacity-100]="isOpen()"
+    [class.opacity-0]="!isOpen()"
+    (click)="closeDrawer()"
+    (keydown.escape)="closeDrawer()"
+    (keydown.enter)="closeDrawer()"
+    (keydown.space)="closeDrawer()"
+    tabindex="0"
+    role="button"
+    aria-label="Close filters"
+  ></div>
+
+  <div
+    class="fixed top-0 right-0 z-50 flex h-full w-full max-w-md transform-gpu flex-col bg-white shadow-xl transition-transform ease-in-out will-change-transform md:hidden"
+    style="padding-top: max(var(--safe-area-top, 0px), env(safe-area-inset-top)); padding-bottom: max(var(--safe-area-bottom, 0px), env(safe-area-inset-bottom))"
+    [class.duration-300]="hasTransitions()"
+    [class.duration-0]="!hasTransitions()"
+    [class.translate-x-0]="isOpen()"
+    [class.translate-x-full]="!isOpen()"
+    (keydown.escape)="closeDrawer()"
+    [attr.tabindex]="isOpen() ? 0 : -1"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="title()"
+  >
+    <div class="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+      <div class="flex items-center gap-3">
+        <div class="rounded-lg bg-white p-2 ring-1 ring-gray-200">
+          @if (leadingIconName()) {
+            <app-icon
+              [name]="leadingIconName()!"
+              [class]="leadingIconClass()"
+              [fill]="leadingIconFill()"
+            />
+          } @else {
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 -960 960 960"
+              class="h-5 w-5 text-gray-700"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                d="M400-240v-80h160v80H400ZM240-440v-80h480v80H240ZM120-640v-80h720v80H120Z"
+              />
+            </svg>
+          }
+        </div>
+        <div>
+          <h2 class="text-base font-bold text-gray-900">{{ title() }}</h2>
+          @if (subtitle()) {
+            <p class="text-xs text-gray-500">{{ subtitle() }}</p>
+          }
+        </div>
+      </div>
+      <button
+        type="button"
+        class="cursor-pointer rounded-full p-1.5 transition-all hover:bg-gray-100 active:scale-95"
+        (click)="closeDrawer()"
+        [attr.aria-label]="doneAriaLabel()"
+      >
+        <app-icon name="icon-close" [class]="'h-5 w-5'" />
+      </button>
+    </div>
+
+    <div
+      class="flex-1 overflow-y-auto overscroll-y-contain [scrollbar-gutter:stable]"
+      [class]="contentClass()"
+    >
+      <ng-content></ng-content>
+    </div>
+
+    @if (showFooter()) {
+      <div class="border-t border-gray-200 p-4">
+        <button
+          type="button"
+          class="btn btn-sm w-full rounded-lg border-0 bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg"
+          (click)="closeDrawer()"
+        >
+          {{ doneLabel() }}
+        </button>
+      </div>
+    }
+  </div>
+</div>

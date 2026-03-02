@@ -62,6 +62,7 @@ export class ProductListComponent implements OnInit {
   protected readonly isLoading = signal(false);
   protected readonly isRefreshing = signal(false);
   protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
+  protected readonly isMobileFiltersOpen = signal(false);
   protected readonly ProductCategoryEnum = ProductCategoryEnum;
 
   protected readonly selectedTypes = signal<number[]>([]);
@@ -177,6 +178,14 @@ export class ProductListComponent implements OnInit {
   protected refresh(): void {
     this.isRefreshing.set(true);
     this.loadProducts();
+  }
+
+  protected openMobileFilters(): void {
+    this.isMobileFiltersOpen.set(true);
+  }
+
+  protected closeMobileFilters(): void {
+    this.isMobileFiltersOpen.set(false);
   }
 
   private applyFiltersToCache(): void {
@@ -327,6 +336,46 @@ export class ProductListComponent implements OnInit {
   }
 
   protected onStatusFilterReset(): void {
+    this.selectedStatuses.set([]);
+    this.applyFiltersToCache();
+    this.saveState();
+  }
+
+  protected isTypeSelected(typeId: number): boolean {
+    return this.selectedTypes().includes(typeId);
+  }
+
+  protected toggleTypeSelection(typeId: number): void {
+    const current = this.selectedTypes();
+    const hasType = current.includes(typeId);
+    const next = hasType ? current.filter((id) => id !== typeId) : [...current, typeId];
+
+    this.selectedTypes.set(next);
+    this.applyFiltersToCache();
+    this.saveState();
+  }
+
+  protected clearTypeSelections(): void {
+    this.selectedTypes.set([]);
+    this.applyFiltersToCache();
+    this.saveState();
+  }
+
+  protected isStatusSelected(statusId: string): boolean {
+    return this.selectedStatuses().includes(statusId);
+  }
+
+  protected toggleStatusSelection(statusId: string): void {
+    const current = this.selectedStatuses();
+    const hasStatus = current.includes(statusId);
+    const next = hasStatus ? current.filter((id) => id !== statusId) : [...current, statusId];
+
+    this.selectedStatuses.set(next);
+    this.applyFiltersToCache();
+    this.saveState();
+  }
+
+  protected clearStatusSelections(): void {
     this.selectedStatuses.set([]);
     this.applyFiltersToCache();
     this.saveState();

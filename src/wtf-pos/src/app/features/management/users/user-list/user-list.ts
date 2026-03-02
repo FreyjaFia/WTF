@@ -3,7 +3,13 @@ import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { Capacitor } from '@capacitor/core';
-import { AlertService, AuthService, ListStateService, ModalStackService, UserService } from '@core/services';
+import {
+  AlertService,
+  AuthService,
+  ListStateService,
+  ModalStackService,
+  UserService,
+} from '@core/services';
 import {
   AvatarComponent,
   BadgeComponent,
@@ -15,7 +21,6 @@ import {
 } from '@shared/components';
 import { UserDto, UserRoleEnum } from '@shared/models';
 import { debounceTime } from 'rxjs';
-
 
 type SortColumn = 'name' | 'role';
 type SortDirection = 'asc' | 'desc';
@@ -57,6 +62,7 @@ export class UserListComponent implements OnInit {
   protected readonly isLoading = signal(false);
   protected readonly isRefreshing = signal(false);
   protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
+  protected readonly isMobileFiltersOpen = signal(false);
 
   protected readonly selectedRoles = signal<number[]>([]);
   protected readonly selectedStatuses = signal<string[]>(['active']);
@@ -165,6 +171,14 @@ export class UserListComponent implements OnInit {
   protected refresh(): void {
     this.isRefreshing.set(true);
     this.loadUsers();
+  }
+
+  protected openMobileFilters(): void {
+    this.isMobileFiltersOpen.set(true);
+  }
+
+  protected closeMobileFilters(): void {
+    this.isMobileFiltersOpen.set(false);
   }
 
   private applyFiltersToCache(): void {
@@ -310,6 +324,46 @@ export class UserListComponent implements OnInit {
   }
 
   protected onStatusFilterReset(): void {
+    this.selectedStatuses.set([]);
+    this.applyFiltersToCache();
+    this.saveState();
+  }
+
+  protected isRoleSelected(roleId: number): boolean {
+    return this.selectedRoles().includes(roleId);
+  }
+
+  protected toggleRoleSelection(roleId: number): void {
+    const current = this.selectedRoles();
+    const hasRole = current.includes(roleId);
+    const next = hasRole ? current.filter((id) => id !== roleId) : [...current, roleId];
+
+    this.selectedRoles.set(next);
+    this.applyFiltersToCache();
+    this.saveState();
+  }
+
+  protected clearRoleSelections(): void {
+    this.selectedRoles.set([]);
+    this.applyFiltersToCache();
+    this.saveState();
+  }
+
+  protected isStatusSelected(statusId: string): boolean {
+    return this.selectedStatuses().includes(statusId);
+  }
+
+  protected toggleStatusSelection(statusId: string): void {
+    const current = this.selectedStatuses();
+    const hasStatus = current.includes(statusId);
+    const next = hasStatus ? current.filter((id) => id !== statusId) : [...current, statusId];
+
+    this.selectedStatuses.set(next);
+    this.applyFiltersToCache();
+    this.saveState();
+  }
+
+  protected clearStatusSelections(): void {
     this.selectedStatuses.set([]);
     this.applyFiltersToCache();
     this.saveState();

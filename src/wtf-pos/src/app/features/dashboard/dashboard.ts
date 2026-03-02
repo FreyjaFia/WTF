@@ -12,11 +12,12 @@ import {
   type BadgeVariant,
   DonutChartComponent,
   type DonutSegment,
+  SideDrawerComponent,
   IconComponent,
   PullToRefreshComponent,
   SparklineComponent,
 } from '@shared/components';
-import { type DashboardDto, type DateRangeSelection } from '@shared/models';
+import { type DashboardDto, type DateRangePreset, type DateRangeSelection } from '@shared/models';
 import { interval, Subscription } from 'rxjs';
 import { DateRangePickerComponent } from './date-range-picker/date-range-picker';
 
@@ -41,6 +42,7 @@ const GREETINGS = [
     SparklineComponent,
     AreaChartComponent,
     DonutChartComponent,
+    SideDrawerComponent,
     AnimatedCounterComponent,
     DateRangePickerComponent,
     AvatarComponent,
@@ -62,6 +64,22 @@ export class Dashboard implements OnInit, OnDestroy {
   protected readonly orderTimeAgos = signal<Record<string, string>>({});
   protected readonly currentRange = signal<DateRangeSelection>({ preset: 'today' });
   protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
+  protected readonly isMobileFiltersOpen = signal(false);
+  protected readonly mobilePreset = signal<DateRangePreset>('today');
+  protected readonly mobileCustomStartDate = signal('');
+  protected readonly mobileCustomEndDate = signal('');
+  protected readonly maxDate = (() => {
+    const now = new Date();
+    const offsetMs = now.getTimezoneOffset() * 60_000;
+    return new Date(now.getTime() - offsetMs).toISOString().split('T')[0];
+  })();
+  protected readonly mobilePresetOptions: readonly { value: DateRangePreset; label: string }[] = [
+    { value: 'today', label: 'Today' },
+    { value: 'yesterday', label: 'Yesterday' },
+    { value: 'last7days', label: 'Last 7 Days' },
+    { value: 'last30days', label: 'Last 30 Days' },
+    { value: 'custom', label: 'Custom Range' },
+  ];
 
   protected readonly greeting = GREETINGS[Math.floor(Math.random() * GREETINGS.length)];
 
@@ -293,6 +311,51 @@ export class Dashboard implements OnInit, OnDestroy {
     this.currentRange.set(range);
     this.isRefreshing.set(false);
     this.loadDashboard();
+  }
+
+  protected openMobileFilters(): void {
+    const range = this.currentRange();
+    this.mobilePreset.set(range.preset);
+    this.mobileCustomStartDate.set(range.startDate ?? '');
+    this.mobileCustomEndDate.set(range.endDate ?? '');
+    this.isMobileFiltersOpen.set(true);
+  }
+
+  protected closeMobileFilters(): void {
+    this.isMobileFiltersOpen.set(false);
+  }
+
+  protected selectMobilePreset(preset: DateRangePreset): void {
+    this.mobilePreset.set(preset);
+    if (preset === 'custom') {
+      return;
+    }
+
+    this.mobileCustomStartDate.set('');
+    this.mobileCustomEndDate.set('');
+    this.onDateRangeChanged({ preset });
+  }
+
+  protected applyMobileRange(): void {
+    const preset = this.mobilePreset();
+    if (preset === 'custom') {
+      const startDate = this.mobileCustomStartDate();
+      const endDate = this.mobileCustomEndDate();
+      if (!startDate || !endDate) {
+        return;
+      }
+      this.onDateRangeChanged({ preset: 'custom', startDate, endDate });
+      this.closeMobileFilters();
+      return;
+    }
+
+    this.onDateRangeChanged({ preset });
+    this.closeMobileFilters();
+  }
+
+  protected clearMobileCustomDates(): void {
+    this.mobileCustomStartDate.set('');
+    this.mobileCustomEndDate.set('');
   }
 
   protected getStatusVariant(statusId: number): BadgeVariant {

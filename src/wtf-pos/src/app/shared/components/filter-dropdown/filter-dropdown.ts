@@ -23,6 +23,7 @@ export class FilterDropdownComponent {
   public readonly selectedIds = input<(string | number)[]>([]);
   public readonly showSelectedState = input<boolean>(false);
   public readonly align = input<'start' | 'end'>('start');
+  public readonly singleSelect = input<boolean>(false);
 
   public readonly filterChange = output<(string | number)[]>();
   public readonly filterReset = output<void>();
@@ -38,6 +39,11 @@ export class FilterDropdownComponent {
   }
 
   protected toggleFilter(optionId: string | number): void {
+    if (this.singleSelect()) {
+      this.filterChange.emit([optionId]);
+      return;
+    }
+
     const updated = this.selectedIds().includes(optionId)
       ? this.selectedIds().filter((id) => id !== optionId)
       : [...this.selectedIds(), optionId];

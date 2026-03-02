@@ -10,6 +10,7 @@ export * from './customer-dropdown/customer-dropdown';
 export * from './dock/dock';
 export * from './donut-chart/donut-chart';
 export * from './exit-confirm/exit-confirm';
+export * from './side-drawer/side-drawer';
 export * from './filter-dropdown/filter-dropdown';
 export * from './global-alert/global-alert';
 export * from './header/header';

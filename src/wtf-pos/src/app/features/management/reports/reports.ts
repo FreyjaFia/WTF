@@ -7,7 +7,12 @@ import { Capacitor } from '@capacitor/core';
 import { Directory, Filesystem } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import { AlertService, ReportsService, UserService } from '@core/services';
-import { IconComponent, PullToRefreshComponent, SearchInputComponent } from '@shared/components';
+import {
+  SideDrawerComponent,
+  IconComponent,
+  PullToRefreshComponent,
+  SearchInputComponent,
+} from '@shared/components';
 import {
   DailySalesReportQuery,
   DailySalesReportRowDto,
@@ -109,6 +114,7 @@ interface MonthOption {
     ReactiveFormsModule,
     PullToRefreshComponent,
     IconComponent,
+    SideDrawerComponent,
     SearchInputComponent,
   ],
   templateUrl: './reports.html',
@@ -351,12 +357,17 @@ export class ReportsComponent implements OnInit {
     this.loadMonthlyWorkbookStatus();
   }
 
-  protected toggleMobileFilters(): void {
-    this.isMobileFiltersOpen.set(!this.isMobileFiltersOpen());
+  protected openMobileFilters(): void {
+    this.isMobileFiltersOpen.set(true);
+  }
+
+  protected closeMobileFilters(): void {
+    this.isMobileFiltersOpen.set(false);
   }
 
   protected selectTab(tab: ReportPageTab): void {
     this.activeTab.set(tab);
+    this.isMobileFiltersOpen.set(false);
     if (tab === this.reportPageTabs.MonthlyWorkbook) {
       this.loadMonthlyWorkbookStatus();
     }
@@ -617,7 +628,9 @@ export class ReportsComponent implements OnInit {
 
     this.isDownloadingPdf.set(true);
     const onSuccess = (blob: Blob, fileName: string): void => {
-      void this.saveBlob(blob, fileName, 'application/pdf').finally(() => this.isDownloadingPdf.set(false));
+      void this.saveBlob(blob, fileName, 'application/pdf').finally(() =>
+        this.isDownloadingPdf.set(false),
+      );
     };
     const onError = (error: Error): void => {
       this.isDownloadingPdf.set(false);
@@ -782,7 +795,8 @@ export class ReportsComponent implements OnInit {
 
         this.reportsService.downloadMonthlyWorkbook(filter.year, filter.month).subscribe({
           next: (blob) => {
-            const fileName = status.fileName || this.buildMonthlyWorkbookFileName(filter.year, filter.month);
+            const fileName =
+              status.fileName || this.buildMonthlyWorkbookFileName(filter.year, filter.month);
             void this.saveBlob(
               blob,
               fileName,
@@ -1245,7 +1259,9 @@ export class ReportsComponent implements OnInit {
     return { fromDate, toDate };
   }
 
-  private getMonthlyWorkbookFilterOrShowError(showError = true): { year: number; month: number } | null {
+  private getMonthlyWorkbookFilterOrShowError(
+    showError = true,
+  ): { year: number; month: number } | null {
     const year = this.reportForm.controls.workbookYear.value;
     const month = this.reportForm.controls.workbookMonth.value;
 

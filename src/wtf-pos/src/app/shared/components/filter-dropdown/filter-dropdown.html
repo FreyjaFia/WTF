@@ -46,8 +46,9 @@
           role="button"
         >
           <input
-            type="checkbox"
-            class="checkbox checkbox-sm"
+            [type]="singleSelect() ? 'radio' : 'checkbox'"
+            [name]="singleSelect() ? ('filter-' + title()) : null"
+            [class]="singleSelect() ? 'radio radio-sm' : 'checkbox checkbox-sm'"
             [checked]="selectedIds().includes(option.id)"
             (change)="toggleFilter(option.id)"
           />

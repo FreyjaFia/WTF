@@ -61,6 +61,7 @@ export class CustomerListComponent implements OnInit {
   protected readonly isLoading = signal(false);
   protected readonly isRefreshing = signal(false);
   protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
+  protected readonly isMobileFiltersOpen = signal(false);
 
   protected readonly selectedStatuses = signal<string[]>(['active']);
 
@@ -139,6 +140,14 @@ export class CustomerListComponent implements OnInit {
   protected refresh(): void {
     this.isRefreshing.set(true);
     this.loadCustomers();
+  }
+
+  protected openMobileFilters(): void {
+    this.isMobileFiltersOpen.set(true);
+  }
+
+  protected closeMobileFilters(): void {
+    this.isMobileFiltersOpen.set(false);
   }
 
   private applyFiltersToCache(): void {
@@ -266,6 +275,26 @@ export class CustomerListComponent implements OnInit {
   }
 
   protected onStatusFilterReset(): void {
+    this.selectedStatuses.set([]);
+    this.applyFiltersToCache();
+    this.saveState();
+  }
+
+  protected isStatusSelected(statusId: string): boolean {
+    return this.selectedStatuses().includes(statusId);
+  }
+
+  protected toggleStatusSelection(statusId: string): void {
+    const current = this.selectedStatuses();
+    const hasStatus = current.includes(statusId);
+    const next = hasStatus ? current.filter((id) => id !== statusId) : [...current, statusId];
+
+    this.selectedStatuses.set(next);
+    this.applyFiltersToCache();
+    this.saveState();
+  }
+
+  protected clearStatusSelections(): void {
     this.selectedStatuses.set([]);
     this.applyFiltersToCache();
     this.saveState();

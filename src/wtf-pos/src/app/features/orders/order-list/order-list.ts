@@ -12,6 +12,7 @@ import {
 } from '@core/services';
 import {
   BadgeComponent,
+  SideDrawerComponent,
   FilterDropdownComponent,
   IconComponent,
   PullToRefreshComponent,
@@ -28,6 +29,8 @@ interface OrderListState {
   searchTerm: string;
   selectedStatuses: OrderStatusEnum[];
   selectedDateRanges: string[];
+  customStartDate: string;
+  customEndDate: string;
   sortColumn: SortColumn | null;
   sortDirection: SortDirection;
 }
@@ -45,6 +48,7 @@ interface OrderGroup {
     ReactiveFormsModule,
     RouterLink,
     IconComponent,
+    SideDrawerComponent,
     FilterDropdownComponent,
     BadgeComponent,
     PullToRefreshComponent,
@@ -74,10 +78,18 @@ export class OrderList implements OnInit {
   protected readonly pendingOrders = this.offlineOrderService.pendingOrders;
   protected readonly isSyncingOffline = this.offlineOrderService.isSyncing;
   protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
+  protected readonly isMobileFiltersOpen = signal(false);
   protected readonly sortColumn = signal<SortColumn | null>(null);
   protected readonly sortDirection = signal<SortDirection>('desc');
   protected readonly selectedStatuses = signal<OrderStatusEnum[]>([]);
   protected readonly selectedDateRanges = signal<string[]>([]);
+  protected readonly customStartDate = signal('');
+  protected readonly customEndDate = signal('');
+  protected readonly maxDate = (() => {
+    const now = new Date();
+    const offsetMs = now.getTimezoneOffset() * 60_000;
+    return new Date(now.getTime() - offsetMs).toISOString().split('T')[0];
+  })();
   private readonly waitingForReconnectSync = signal(false);
   private wasOnline = this.connectivity.isOnline();
   private wasSyncingOffline = false;
@@ -175,7 +187,13 @@ export class OrderList implements OnInit {
     { id: 'today', label: 'Today' },
     { id: '7d', label: 'Last 7 days' },
     { id: '30d', label: 'Last 30 days' },
+    { id: 'custom', label: 'Custom Range' },
   ]);
+
+  protected readonly selectedDateRangeId = computed<string[]>(() => {
+    const selected = this.selectedDateRanges()[0];
+    return selected ? [selected] : [];
+  });
 
   public ngOnInit(): void {
     this.restoreState();
@@ -215,13 +233,76 @@ export class OrderList implements OnInit {
   }
 
   protected onDateRangeFilterChange(selectedIds: (string | number)[]): void {
-    this.selectedDateRanges.set((selectedIds as string[]).slice(0, 1));
+    const selected = selectedIds[0]?.toString();
+    if (!selected) {
+      this.selectedDateRanges.set([]);
+      this.customStartDate.set('');
+      this.customEndDate.set('');
+      this.applyFiltersToCache();
+      this.saveState();
+      return;
+    }
+
+    this.selectedDateRanges.set([selected]);
+    if (selected !== 'custom') {
+      this.customStartDate.set('');
+      this.customEndDate.set('');
+    }
     this.applyFiltersToCache();
     this.saveState();
   }
 
   protected onDateRangeFilterReset(): void {
     this.selectedDateRanges.set([]);
+    this.customStartDate.set('');
+    this.customEndDate.set('');
+    this.applyFiltersToCache();
+    this.saveState();
+  }
+
+  protected isDateRangeSelected(rangeId: string): boolean {
+    return this.selectedDateRanges()[0] === rangeId;
+  }
+
+  protected toggleDateRangeSelection(rangeId: string): void {
+    if (this.selectedDateRanges()[0] === rangeId) {
+      this.selectedDateRanges.set([]);
+    } else {
+      this.selectedDateRanges.set([rangeId]);
+    }
+    if (rangeId !== 'custom') {
+      this.customStartDate.set('');
+      this.customEndDate.set('');
+    }
+    this.applyFiltersToCache();
+    this.saveState();
+  }
+
+  protected clearDateRangeSelections(): void {
+    this.selectedDateRanges.set([]);
+    this.customStartDate.set('');
+    this.customEndDate.set('');
+    this.applyFiltersToCache();
+    this.saveState();
+  }
+
+  protected onCustomStartDateChanged(value: string): void {
+    this.customStartDate.set(value);
+    this.selectedDateRanges.set(['custom']);
+    this.applyFiltersToCache();
+    this.saveState();
+  }
+
+  protected onCustomEndDateChanged(value: string): void {
+    this.customEndDate.set(value);
+    this.selectedDateRanges.set(['custom']);
+    this.applyFiltersToCache();
+    this.saveState();
+  }
+
+  protected clearCustomDateRange(): void {
+    this.customStartDate.set('');
+    this.customEndDate.set('');
     this.applyFiltersToCache();
     this.saveState();
   }
@@ -236,6 +317,36 @@ export class OrderList implements OnInit {
     this.selectedStatuses.set([]);
     this.applyFiltersToCache();
     this.saveState();
+  }
+
+  protected isStatusSelected(statusId: number): boolean {
+    return this.selectedStatuses().includes(statusId as OrderStatusEnum);
+  }
+
+  protected toggleStatusSelection(statusId: number): void {
+    const status = statusId as OrderStatusEnum;
+    const current = this.selectedStatuses();
+    if (current.includes(status)) {
+      this.selectedStatuses.set(current.filter((item) => item !== status));
+    } else {
+      this.selectedStatuses.set([...current, status]);
+    }
+    this.applyFiltersToCache();
+    this.saveState();
+  }
+
+  protected clearStatusSelections(): void {
+    this.selectedStatuses.set([]);
+    this.applyFiltersToCache();
+    this.saveState();
+  }
+
+  protected openMobileFilters(): void {
+    this.isMobileFiltersOpen.set(true);
+  }
+
+  protected closeMobileFilters(): void {
+    this.isMobileFiltersOpen.set(false);
   }
 
   protected toggleSort(column: SortColumn): void {
@@ -255,6 +366,8 @@ export class OrderList implements OnInit {
     });
     this.selectedStatuses.set([]);
     this.selectedDateRanges.set([]);
+    this.customStartDate.set('');
+    this.customEndDate.set('');
     this.applyFiltersToCache();
     this.saveState();
   }
@@ -409,7 +522,7 @@ export class OrderList implements OnInit {
 
     // Filter by date range
     const selectedDateRange = this.selectedDateRanges()[0];
-    if (selectedDateRange) {
+    if (selectedDateRange && selectedDateRange !== 'custom') {
       const now = new Date();
       const start = new Date(now);
       if (selectedDateRange === 'today') {
@@ -422,6 +535,17 @@ export class OrderList implements OnInit {
         start.setDate(now.getDate() - 30);
         items = items.filter((order) => new Date(this.getOrderDate(order)) >= start);
       }
+    }
+
+    const customStartDate = this.customStartDate();
+    const customEndDate = this.customEndDate();
+    if (selectedDateRange === 'custom' && customStartDate && customEndDate) {
+      const start = new Date(`${customStartDate}T00:00:00`);
+      const end = new Date(`${customEndDate}T23:59:59.999`);
+      items = items.filter((order) => {
+        const orderDate = new Date(this.getOrderDate(order));
+        return orderDate >= start && orderDate <= end;
+      });
     }
 
     // Sort
@@ -459,6 +583,8 @@ export class OrderList implements OnInit {
       searchTerm: '',
       selectedStatuses: [],
       selectedDateRanges: [],
+      customStartDate: '',
+      customEndDate: '',
       sortColumn: null,
       sortDirection: 'desc',
     });
@@ -471,6 +597,8 @@ export class OrderList implements OnInit {
     );
     this.selectedStatuses.set(state.selectedStatuses ?? []);
     this.selectedDateRanges.set(state.selectedDateRanges ?? []);
+    this.customStartDate.set(state.customStartDate ?? '');
+    this.customEndDate.set(state.customEndDate ?? '');
     this.sortColumn.set(state.sortColumn);
     this.sortDirection.set(state.sortDirection);
   }
@@ -480,6 +608,8 @@ export class OrderList implements OnInit {
       searchTerm: this.filterForm.controls.searchTerm.value ?? '',
       selectedStatuses: this.selectedStatuses(),
       selectedDateRanges: this.selectedDateRanges(),
+      customStartDate: this.customStartDate(),
+      customEndDate: this.customEndDate(),
       sortColumn: this.sortColumn(),
       sortDirection: this.sortDirection(),
     });
