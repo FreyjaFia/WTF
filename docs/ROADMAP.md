@@ -225,7 +225,6 @@ analysis that can be exported and shared.
 | ----- | ------------------------------ | ------------ |
 | 1     | Core Reports + Export UX       | [Completed]  |
 | 2     | Monthly Workbook Automation    | [Completed]  |
-| 3     | Scheduled Reports              | [Planned]    |
 
 ### Phase 1 - Core Reports + Export UX [Completed]
 
@@ -308,20 +307,9 @@ analysis that can be exported and shared.
   - scheduler settings are configurable via `MonthlyReportWorkbookScheduler`
     app settings section
 
-### Phase 3 - Scheduled Reports (Stretch Goal)
-
-- Configure daily/weekly email summary in management settings
-- API background job generates the report and sends via email
-- Configurable recipients and frequency
-
 ### Sales Reporting Remaining Work
 
-To mark the Sales Reporting feature fully completed end-to-end:
-
-- implement Phase 3 email scheduling and delivery
-  - management UI for recipients + cadence
-  - background job orchestration and retry policy
-  - delivery audit/logging and failure visibility
+- None for current approved scope (Phases 1-2 complete).
 
 ---
 
