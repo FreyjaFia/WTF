@@ -31,6 +31,8 @@ public partial class Order
 
     public string? SpecialInstructions { get; set; }
 
+    public string? Note { get; set; }
+
     public virtual User CreatedByNavigation { get; set; } = null!;
 
     public virtual Customer? Customer { get; set; }

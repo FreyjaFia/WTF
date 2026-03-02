@@ -1,0 +1,10 @@
+SET NOCOUNT ON;
+GO
+
+IF OBJECT_ID(N'dbo.Orders', N'U') IS NOT NULL
+    AND COL_LENGTH(N'dbo.Orders', N'Note') IS NULL
+BEGIN
+    ALTER TABLE dbo.Orders
+    ADD Note NVARCHAR(500) NULL;
+END
+GO

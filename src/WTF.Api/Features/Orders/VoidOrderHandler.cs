@@ -11,7 +11,7 @@ using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Orders;
 
-public record VoidOrderCommand(Guid Id) : IRequest<OrderDto?>;
+public record VoidOrderCommand(Guid Id, string? Note = null) : IRequest<OrderDto?>;
 
 public class VoidOrderHandler(
     WTFDbContext db,
@@ -42,6 +42,12 @@ public class VoidOrderHandler(
         var newStatus = currentStatus == OrderStatusEnum.Completed
             ? OrderStatusEnum.Refunded
             : OrderStatusEnum.Cancelled;
+        var note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim();
+
+        if (newStatus == OrderStatusEnum.Refunded && string.IsNullOrWhiteSpace(note))
+        {
+            throw new InvalidOperationException("Refund note is required.");
+        }
 
         // Capture price snapshot (resolve add-on overrides)
         var parentProductByOrderItemId = order.OrderItems
@@ -77,6 +83,7 @@ public class VoidOrderHandler(
 
         // Pending -> Cancelled, Completed -> Refunded
         order.StatusId = (int)newStatus;
+        order.Note = note;
         order.UpdatedAt = DateTime.UtcNow;
         order.UpdatedBy = userId;
 
@@ -161,6 +168,7 @@ public class VoidOrderHandler(
             newValues: new
             {
                 Status = newStatus,
+                Note = order.Note,
                 totalAmount
             },
             userId: userId,
@@ -181,6 +189,7 @@ public class VoidOrderHandler(
             order.ChangeAmount,
             order.Tips,
             order.SpecialInstructions,
+            order.Note,
             totalAmount
         );
     }

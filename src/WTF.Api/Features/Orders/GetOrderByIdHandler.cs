@@ -99,6 +99,7 @@ public class GetOrderByIdHandler(WTFDbContext db) : IRequestHandler<GetOrderById
             order.ChangeAmount,
             order.Tips,
             order.SpecialInstructions,
+            order.Note,
             totalAmount,
             order.Customer == null ? null : $"{order.Customer.FirstName} {order.Customer.LastName}".Trim()
         );

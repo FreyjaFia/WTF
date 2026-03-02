@@ -8,7 +8,8 @@ namespace WTF.Api.Features.Orders;
 
 public record GetOrdersQuery(
     OrderStatusEnum Status = OrderStatusEnum.All,
-    Guid? CustomerId = null) : IRequest<List<OrderDto>>;
+    Guid? CustomerId = null,
+    bool ExcludeFinalized = false) : IRequest<List<OrderDto>>;
 
 public class GetOrdersHandler(WTFDbContext db) : IRequestHandler<GetOrdersQuery, List<OrderDto>>
 {
@@ -31,6 +32,10 @@ public class GetOrdersHandler(WTFDbContext db) : IRequestHandler<GetOrdersQuery,
         if (request.Status != OrderStatusEnum.All)
         {
             query = query.Where(o => o.StatusId == (int)request.Status);
+        }
+        else if (request.ExcludeFinalized)
+        {
+            query = query.Where(o => o.StatusId != (int)OrderStatusEnum.Completed && o.StatusId != (int)OrderStatusEnum.Refunded);
         }
 
         var orders = await query
@@ -118,6 +123,7 @@ public class GetOrdersHandler(WTFDbContext db) : IRequestHandler<GetOrdersQuery,
                 o.ChangeAmount,
                 o.Tips,
                 o.SpecialInstructions,
+                o.Note,
                 totalAmount,
                 o.Customer == null ? null : $"{o.Customer.FirstName} {o.Customer.LastName}".Trim()
             );

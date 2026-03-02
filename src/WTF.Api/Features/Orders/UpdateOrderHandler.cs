@@ -24,6 +24,7 @@ public record UpdateOrderCommand : IRequest<OrderDto?>
     [Required]
     public List<OrderItemRequestDto> Items { get; init; } = [];
     public string? SpecialInstructions { get; init; }
+    public string? Note { get; init; }
 
     [Required]
     public OrderStatusEnum Status { get; init; }
@@ -148,6 +149,7 @@ public class UpdateOrderHandler(WTFDbContext db, IHubContext<DashboardHub> dashb
 
         order.CustomerId = request.CustomerId;
         order.SpecialInstructions = request.SpecialInstructions;
+        order.Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim();
         order.StatusId = (int)request.Status;
         order.PaymentMethodId = request.PaymentMethod.HasValue ? (int)request.PaymentMethod.Value : null;
         order.AmountReceived = request.AmountReceived;
@@ -344,6 +346,7 @@ public class UpdateOrderHandler(WTFDbContext db, IHubContext<DashboardHub> dashb
             order.ChangeAmount,
             order.Tips,
             order.SpecialInstructions,
+            order.Note,
             totalAmount
         );
     }

@@ -22,6 +22,7 @@ public record CreateOrderCommand : IRequest<OrderDto>
     [Required]
     public List<OrderItemRequestDto> Items { get; init; } = [];
     public string? SpecialInstructions { get; init; }
+    public string? Note { get; init; }
 
     [Required]
     public OrderStatusEnum Status { get; init; }
@@ -141,6 +142,7 @@ public class CreateOrderHandler(
             CreatedBy = userId,
             CustomerId = request.CustomerId,
             SpecialInstructions = request.SpecialInstructions,
+            Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim(),
             StatusId = (int)request.Status,
             PaymentMethodId = request.PaymentMethod.HasValue ? (int)request.PaymentMethod.Value : null,
             AmountReceived = request.AmountReceived,
@@ -304,6 +306,7 @@ public class CreateOrderHandler(
             order.ChangeAmount,
             order.Tips,
             order.SpecialInstructions,
+            order.Note,
             totalAmount
         );
     }
