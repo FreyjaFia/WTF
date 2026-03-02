@@ -224,7 +224,7 @@ analysis that can be exported and shared.
 | Phase | Name                           | Status       |
 | ----- | ------------------------------ | ------------ |
 | 1     | Core Reports + Export UX       | [Completed]  |
-| 2     | Google Sheets Integration      | [Planned]    |
+| 2     | Monthly Workbook Automation    | [Completed]  |
 | 3     | Scheduled Reports              | [Planned]    |
 
 ### Phase 1 - Core Reports + Export UX [Completed]
@@ -269,42 +269,59 @@ analysis that can be exported and shared.
   - download Excel/PDF from UI
   - Android flow supports save + open/share fallback.
 
-### Reports UX Backlog (Post-Phase 1)
+### Reports UX Enhancements (Implemented)
 
-- Mobile filters should move from inline collapsible block to a
-  full-height drawer/sidebar pattern (similar to Price History drawer)
-  for better usability on short-height screens.
-- Keep desktop/tablet behavior unchanged; apply drawer pattern on mobile only.
+- Reports filters now use a full-height side drawer pattern on mobile and
+  short-height screens for better usability.
+- Search and action buttons remain outside the drawer for faster access.
+- Drawer interaction and styling are aligned with other management screens
+  and shared through a reusable side drawer component.
 
-### Phase 2 - Google Sheets Integration [Planned]
+### Phase 2 - Monthly Workbook Automation [Completed]
 
-- Add a "Send to Sheets" action (do not generate local `.gsheet` files).
-- File strategy:
-  - create/use 1 spreadsheet per month (example: `WTF Sales Reports - 2026-02`)
-  - create/use tabs per report type inside that file:
-    - `Daily Sales`
-    - `Product Sales`
-    - `Payments`
-    - `Hourly`
-    - `Staff`
-- Write strategy:
-  - append rows to the target tab (do not create a new spreadsheet per export)
-  - auto-create missing monthly spreadsheet/tabs on first write
-  - include metadata columns on each write:
-    - `GeneratedAtUtc`
-    - `FromDate`
-    - `ToDate`
-    - `GeneratedBy`
-    - `GroupBy`
-- Reliability:
-  - support idempotency key / dedupe guard to avoid accidental duplicate pushes
-  - keep Excel/PDF export as fallback if Sheets push fails
+- New monthly workbook APIs under `/api/reports/monthly-workbook`:
+  - `GET /status?year=YYYY&month=MM`
+  - `POST /generate?year=YYYY&month=MM`
+  - `GET /download?year=YYYY&month=MM`
+- Workbook design:
+  - one Excel workbook per month (year/month selector)
+  - report sheets for:
+    - `Daily Sales Summary`
+    - `Product Sales Breakdown`
+    - `Payment Method Breakdown`
+    - `Hourly Sales Distribution`
+    - `Staff Performance`
+  - company header/branding and report summaries included
+- File lifecycle:
+  - regenerate/overwrite the same monthly workbook for same year/month
+    parameters (prevents duplicate historical files for the same period)
+  - storage abstraction supports local filesystem and blob storage
+- Frontend UX:
+  - Reports page has dedicated `Monthly Workbook` tab
+  - year/month selectors with `Generate Workbook` and `Download Workbook`
+    actions
+  - `Download Workbook` disabled when file does not exist or generation is
+    in progress
+- Scheduler:
+  - hosted scheduler regenerates the workbook automatically at configured
+    local time (default `00:00`, `Asia/Manila`)
+  - scheduler settings are configurable via `MonthlyReportWorkbookScheduler`
+    app settings section
 
 ### Phase 3 - Scheduled Reports (Stretch Goal)
 
 - Configure daily/weekly email summary in management settings
 - API background job generates the report and sends via email
 - Configurable recipients and frequency
+
+### Sales Reporting Remaining Work
+
+To mark the Sales Reporting feature fully completed end-to-end:
+
+- implement Phase 3 email scheduling and delivery
+  - management UI for recipients + cadence
+  - background job orchestration and retry policy
+  - delivery audit/logging and failure visibility
 
 ---
 
