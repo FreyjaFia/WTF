@@ -22,6 +22,7 @@ import { UserEditorComponent } from '@features/management/users/user-editor/user
 import { UserListComponent } from '@features/management/users/user-list/user-list';
 import { UsersComponent } from '@features/management/users/users';
 import { NotFoundComponent } from '@features/not-found/not-found';
+import { OrderDetails } from '@features/orders/order-details/order-details';
 import { OrderEditor } from '@features/orders/order-editor/order-editor';
 import { OrderList } from '@features/orders/order-list/order-list';
 import { Orders } from '@features/orders/orders';
@@ -51,6 +52,7 @@ export const routes: Routes = [
           { path: '', redirectTo: 'list', pathMatch: 'full' },
           { path: 'editor', component: OrderEditor, canDeactivate: [unsavedChangesGuard] },
           { path: 'editor/:id', component: OrderEditor, canDeactivate: [unsavedChangesGuard] },
+          { path: 'details/:id', component: OrderDetails },
           { path: 'list', component: OrderList },
         ],
       },

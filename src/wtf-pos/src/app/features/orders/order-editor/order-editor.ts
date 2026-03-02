@@ -108,7 +108,6 @@ export class OrderEditor implements OnInit, OnDestroy {
   private originalCartSnapshot = '';
   private abandonModalStackId: number | null = null;
   private cancelOrderModalStackId: number | null = null;
-  private summaryModalStackId: number | null = null;
   private createCustomerModalStackId: number | null = null;
   private cartPersistenceReady = false;
 
@@ -131,7 +130,8 @@ export class OrderEditor implements OnInit, OnDestroy {
 
   // Cancel order
   protected readonly showCancelOrderModal = signal(false);
-  protected readonly showOrderSummaryModal = signal(false);
+  protected readonly cancelOrderNote = signal('');
+  protected readonly showCancelOrderNoteError = signal(false);
   protected readonly showCreateCustomerModal = signal(false);
   protected readonly isCreatingCustomer = signal(false);
   protected readonly isSavingOrder = signal(false);
@@ -206,22 +206,6 @@ export class OrderEditor implements OnInit, OnDestroy {
     () =>
       this.isCompleted() || this.isCancelled() || this.isRefunded() || this.isOfflineCompleted(),
   );
-  protected readonly showPaymentSummary = computed(() => {
-    const order = this.currentOrder();
-    if (!order) {
-      return false;
-    }
-
-    const isSettledOrder =
-      order.status === OrderStatusEnum.Completed || order.status === OrderStatusEnum.Refunded;
-    const hasPaymentData =
-      order.paymentMethod != null ||
-      order.amountReceived != null ||
-      order.changeAmount != null ||
-      order.tips != null;
-
-    return isSettledOrder && hasPaymentData;
-  });
   protected readonly paymentTipsAmount = computed(() => this.currentOrder()?.tips ?? 0);
   protected readonly paymentChangeAmount = computed(() => this.currentOrder()?.changeAmount ?? 0);
   protected readonly paymentOrderTotal = computed(
@@ -891,19 +875,6 @@ export class OrderEditor implements OnInit, OnDestroy {
     return order.createdAt || order.updatedAt || '';
   }
 
-  protected openOrderSummaryModal() {
-    if (!this.showPaymentSummary()) {
-      return;
-    }
-    this.showOrderSummaryModal.set(true);
-    this.summaryModalStackId = this.modalStack.push(() => this.closeOrderSummaryModal());
-  }
-
-  protected closeOrderSummaryModal() {
-    this.showOrderSummaryModal.set(false);
-    this.removeStackId('summary');
-  }
-
   protected async downloadOrderImage(): Promise<void> {
     this.isDownloadingReceipt.set(true);
     try {
@@ -1020,8 +991,18 @@ export class OrderEditor implements OnInit, OnDestroy {
       return;
     }
 
+    this.cancelOrderNote.set(this.currentOrder()?.note ?? '');
+    this.showCancelOrderNoteError.set(false);
     this.showCancelOrderModal.set(true);
     this.cancelOrderModalStackId = this.modalStack.push(() => this.dismissCancelOrder());
+  }
+
+  protected onCancelOrderNoteInput(event: Event): void {
+    const value = event.target instanceof HTMLTextAreaElement ? event.target.value : '';
+    this.cancelOrderNote.set(value);
+    if (this.showCancelOrderNoteError() && value.trim()) {
+      this.showCancelOrderNoteError.set(false);
+    }
   }
 
   protected confirmCancelOrder(): void {
@@ -1035,10 +1016,17 @@ export class OrderEditor implements OnInit, OnDestroy {
       return;
     }
 
+    const note = this.cancelOrderNote().trim();
+    if (this.isCompleted() && !note) {
+      this.showCancelOrderNoteError.set(true);
+      this.alertService.error('Refund note is required.');
+      return;
+    }
+
     this.showCancelOrderModal.set(false);
     this.removeStackId('cancelOrder');
 
-    this.orderService.voidOrder(order.id).subscribe({
+    this.orderService.voidOrder(order.id, note || null).subscribe({
       next: () => {
         this.skipGuard = true;
 
@@ -1058,6 +1046,7 @@ export class OrderEditor implements OnInit, OnDestroy {
 
   protected dismissCancelOrder(): void {
     this.showCancelOrderModal.set(false);
+    this.showCancelOrderNoteError.set(false);
     this.removeStackId('cancelOrder');
   }
 
@@ -1087,7 +1076,7 @@ export class OrderEditor implements OnInit, OnDestroy {
   }
 
   private removeStackId(
-    modal: 'abandon' | 'cancelOrder' | 'discardOrder' | 'summary' | 'createCustomer',
+    modal: 'abandon' | 'cancelOrder' | 'discardOrder' | 'createCustomer',
   ): void {
     const key = `${modal}ModalStackId` as const;
     const id = this[key];

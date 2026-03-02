@@ -43,6 +43,26 @@ export interface OrderDto {
   changeAmount?: number | null;
   tips?: number | null;
   specialInstructions?: string | null;
+  note?: string | null;
+  totalAmount: number;
+  customerName?: string | null;
+}
+
+export interface OrderHistoryDto {
+  id: string;
+  orderNumber: number;
+  createdAt: string;
+  createdBy: string;
+  updatedAt?: string | null;
+  updatedBy?: string | null;
+  customerId?: string | null;
+  status: OrderStatusEnum;
+  paymentMethod?: PaymentMethodEnum | null;
+  amountReceived?: number | null;
+  changeAmount?: number | null;
+  tips?: number | null;
+  specialInstructions?: string | null;
+  note?: string | null;
   totalAmount: number;
   customerName?: string | null;
 }
@@ -57,6 +77,7 @@ export interface CreateOrderCommand {
   changeAmount?: number | null;
   tips?: number | null;
   createdAt?: string | null;
+  note?: string | null;
 }
 
 export interface UpdateOrderCommand {
@@ -69,4 +90,5 @@ export interface UpdateOrderCommand {
   amountReceived?: number | null;
   changeAmount?: number | null;
   tips?: number | null;
+  note?: string | null;
 }

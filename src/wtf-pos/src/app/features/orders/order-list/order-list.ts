@@ -324,8 +324,13 @@ export class OrderList implements OnInit {
     }
   }
 
-  protected editOrder(order: OrderDto): void {
-    this.router.navigate(['/orders/editor', order.id]);
+  protected openOrder(order: OrderDto): void {
+    if (order.status === OrderStatusEnum.Pending) {
+      this.router.navigate(['/orders/editor', order.id]);
+      return;
+    }
+
+    this.router.navigate(['/orders/details', order.id]);
   }
 
   protected editPendingOrder(localId: string): void {

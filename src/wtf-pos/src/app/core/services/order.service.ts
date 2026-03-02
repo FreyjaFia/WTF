@@ -3,7 +3,13 @@ import { inject, Injectable } from '@angular/core';
 import { HttpErrorMessages, ServiceErrorMessages } from '@core/messages';
 import { ConnectivityService } from '@core/services';
 import { environment } from '@environments/environment.development';
-import { CreateOrderCommand, OrderDto, OrderStatusEnum, UpdateOrderCommand } from '@shared/models';
+import {
+  CreateOrderCommand,
+  OrderDto,
+  OrderHistoryDto,
+  OrderStatusEnum,
+  UpdateOrderCommand,
+} from '@shared/models';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 
@@ -48,6 +54,40 @@ export class OrderService {
     return this.http.get<OrderDto[]>(this.baseUrl, { params }).pipe(
       catchError((error: HttpErrorResponse) => {
         console.error('Error fetching orders:', error);
+        return throwError(
+          () => new Error(this.getErrorMessage(error, OrderService.MSG_FETCH_ORDERS_FAILED)),
+        );
+      }),
+    );
+  }
+
+  public getActiveOrders(query?: { customerId?: string | null }): Observable<OrderDto[]> {
+    let params = new HttpParams();
+
+    if (query?.customerId) {
+      params = params.set('customerId', query.customerId);
+    }
+
+    return this.http.get<OrderDto[]>(`${this.baseUrl}/active`, { params }).pipe(
+      catchError((error: HttpErrorResponse) => {
+        console.error('Error fetching active orders:', error);
+        return throwError(
+          () => new Error(this.getErrorMessage(error, OrderService.MSG_FETCH_ORDERS_FAILED)),
+        );
+      }),
+    );
+  }
+
+  public getOrderHistory(query?: { customerId?: string | null }): Observable<OrderHistoryDto[]> {
+    let params = new HttpParams();
+
+    if (query?.customerId) {
+      params = params.set('customerId', query.customerId);
+    }
+
+    return this.http.get<OrderHistoryDto[]>(`${this.baseUrl}/history`, { params }).pipe(
+      catchError((error: HttpErrorResponse) => {
+        console.error('Error fetching order history:', error);
         return throwError(
           () => new Error(this.getErrorMessage(error, OrderService.MSG_FETCH_ORDERS_FAILED)),
         );
@@ -120,8 +160,8 @@ export class OrderService {
     );
   }
 
-  public voidOrder(id: string): Observable<OrderDto> {
-    return this.http.patch<OrderDto>(`${this.baseUrl}/${id}/void`, {}).pipe(
+  public voidOrder(id: string, note?: string | null): Observable<OrderDto> {
+    return this.http.patch<OrderDto>(`${this.baseUrl}/${id}/void`, { note: note ?? null }).pipe(
       catchError((error: HttpErrorResponse) => {
         console.error('Error voiding order:', error);
         return throwError(
