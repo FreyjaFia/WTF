@@ -51,7 +51,7 @@ internal static class SimpleExcelBuilder
 
         var generatedCell = worksheet.Cell(row, 1);
         generatedCell.Value = document.GeneratedAtLabel
-            ?? $"Generated: {DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss 'UTC'", CultureInfo.InvariantCulture)}";
+            ?? $"Generated: {DateTime.UtcNow.ToString("MMMM d, yyyy h:mm tt", CultureInfo.InvariantCulture)} UTC";
         generatedCell.Style.Font.FontSize = 10;
         generatedCell.Style.Font.FontColor = XLColor.FromHtml("#4B5563");
         row += 2;

@@ -29,6 +29,31 @@ export class AuditLogsComponent implements OnInit {
     this.loadLogs();
   }
 
+  protected formatAuditTimestamp(timestamp: string): string {
+    const date = new Date(timestamp);
+    if (Number.isNaN(date.getTime())) {
+      return timestamp;
+    }
+
+    const parts = new Intl.DateTimeFormat('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    }).formatToParts(date);
+
+    const month = parts.find((part) => part.type === 'month')?.value ?? '';
+    const day = parts.find((part) => part.type === 'day')?.value ?? '';
+    const year = parts.find((part) => part.type === 'year')?.value ?? '';
+    const hour = parts.find((part) => part.type === 'hour')?.value ?? '';
+    const minute = parts.find((part) => part.type === 'minute')?.value ?? '';
+    const dayPeriod = parts.find((part) => part.type === 'dayPeriod')?.value ?? '';
+
+    return `${month} ${day}, ${year} ${hour}:${minute} ${dayPeriod}`.trim();
+  }
+
   private loadLogs(): void {
     this.isLoading.set(true);
 

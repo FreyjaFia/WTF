@@ -8,8 +8,8 @@ internal static class SimplePdfBuilder
     private const float PageWidth = 612f;
     private const float PageHeight = 792f;
     private const float Margin = 40f;
-    private const float HeaderRuleY = 696f;
-    private const float TableTopY = 672f;
+    private const float HeaderRuleY = 682f;
+    private const float TableTopY = 658f;
     private const float TableBottomY = 102f;
     private const float HeaderRowHeight = 22f;
     private const float MinDataRowHeight = 20f;
@@ -377,8 +377,8 @@ internal static class SimplePdfBuilder
         AddText(sb, document.Subtitle, SubtitleFontSize, logoX, 700f);
 
         var generatedAt = document.GeneratedAtLabel
-            ?? $"Generated: {DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss 'UTC'", CultureInfo.InvariantCulture)}";
-        AddText(sb, generatedAt, 9f, PageWidth - Margin, 752f, align: PdfTextAlign.Right);
+            ?? $"Generated: {DateTime.UtcNow.ToString("MMMM d, yyyy h:mm tt", CultureInfo.InvariantCulture)} UTC";
+        AddText(sb, generatedAt, 9f, logoX, 686f);
         AddText(sb, $"Page {pageNumber} of {pageCount}", 9f, PageWidth - Margin, 738f, align: PdfTextAlign.Right);
     }
 

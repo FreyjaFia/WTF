@@ -831,7 +831,27 @@ export class ReportsComponent implements OnInit {
       return `Available: ${status.fileName}`;
     }
 
-    return `Last generated: ${generated.toLocaleString()}`;
+    return `Last generated: ${this.formatGeneratedAt(generated)}`;
+  }
+
+  private formatGeneratedAt(date: Date): string {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    }).formatToParts(date);
+
+    const month = parts.find((part) => part.type === 'month')?.value ?? '';
+    const day = parts.find((part) => part.type === 'day')?.value ?? '';
+    const year = parts.find((part) => part.type === 'year')?.value ?? '';
+    const hour = parts.find((part) => part.type === 'hour')?.value ?? '';
+    const minute = parts.find((part) => part.type === 'minute')?.value ?? '';
+    const dayPeriod = parts.find((part) => part.type === 'dayPeriod')?.value ?? '';
+
+    return `${month} ${day}, ${year} ${hour}:${minute} ${dayPeriod}`.trim();
   }
 
   protected getReportTypeLabel(type: ReportType): string {

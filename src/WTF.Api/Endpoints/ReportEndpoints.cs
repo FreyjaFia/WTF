@@ -702,7 +702,7 @@ public static class ReportEndpoints
 
     private static string BuildDateRangeSubtitle(DateTime fromDate, DateTime toDate)
     {
-        return $"Date Range: {fromDate:MMM dd, yyyy} - {toDate:MMM dd, yyyy}";
+        return $"Date Range: {fromDate:MMMM dd, yyyy} - {toDate:MMMM dd, yyyy}";
     }
 
     private static string BuildRangeExportFileName(
@@ -732,7 +732,7 @@ public static class ReportEndpoints
             ? $"UTC{offsetLabel}"
             : $"{requestedTimeZoneId} (UTC{offsetLabel})";
 
-        return $"Generated: {generatedAtLocal.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)} {timeZoneLabel}";
+        return $"Generated: {generatedAtLocal.ToString("MMMM d, yyyy h:mm tt", CultureInfo.InvariantCulture)} {timeZoneLabel}";
     }
 
     private static string FormatMoney(decimal value)

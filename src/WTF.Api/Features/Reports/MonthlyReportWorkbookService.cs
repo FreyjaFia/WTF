@@ -33,6 +33,8 @@ public sealed class MonthlyReportWorkbookService(
     IHttpContextAccessor httpContextAccessor,
     IReportFileStorage storage) : IMonthlyReportWorkbookService
 {
+    private sealed record WorksheetSummaryItem(string Label, string Value);
+
     private const string CompanyName = "Wake.Taste.Focus by Faith";
     private const string ReportsFolder = "reports/monthly";
     private const string FileNameFormat = "WTF-Monthly-Reports-{0:0000}-{1:00}.xlsx";
@@ -104,7 +106,7 @@ public sealed class MonthlyReportWorkbookService(
                 cancellationToken));
 
         var generatedAtLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, timeZone);
-        var generatedAtLabel = $"{generatedAtLocal:yyyy-MM-dd HH:mm:ss} {timeZone.Id}";
+        var generatedAtLabel = $"{generatedAtLocal.ToString("MMMM d, yyyy h:mm tt", CultureInfo.InvariantCulture)} {timeZone.Id}";
         var workbookBytes = BuildWorkbook(
             fromDate,
             toDate,
@@ -242,7 +244,8 @@ public sealed class MonthlyReportWorkbookService(
                 FormatMoney(row.AverageOrderValue),
                 FormatMoney(row.TipsTotal),
                 row.VoidCancelledCount.ToString("N0", CultureInfo.InvariantCulture)
-            }));
+            }),
+            BuildDailySalesSummary(dailyRows));
 
         AddSheet(
             workbook,
@@ -260,7 +263,8 @@ public sealed class MonthlyReportWorkbookService(
                 row.QuantitySold.ToString("N0", CultureInfo.InvariantCulture),
                 FormatMoney(row.Revenue),
                 $"{row.RevenuePercent:N2}%"
-            }));
+            }),
+            BuildProductSalesSummary(productRows));
 
         AddSheet(
             workbook,
@@ -276,7 +280,8 @@ public sealed class MonthlyReportWorkbookService(
                 row.OrderCount.ToString("N0", CultureInfo.InvariantCulture),
                 FormatMoney(row.TotalAmount),
                 $"{row.TotalPercent:N2}%"
-            }));
+            }),
+            BuildPaymentsSummary(paymentRows));
 
         AddSheet(
             workbook,
@@ -291,7 +296,8 @@ public sealed class MonthlyReportWorkbookService(
                 $"{row.Hour:00}:00 - {((row.Hour + 1) % 24):00}:00",
                 row.OrderCount.ToString("N0", CultureInfo.InvariantCulture),
                 FormatMoney(row.Revenue)
-            }));
+            }),
+            BuildHourlySalesSummary(hourlyRows));
 
         AddSheet(
             workbook,
@@ -308,7 +314,8 @@ public sealed class MonthlyReportWorkbookService(
                 FormatMoney(row.TotalRevenue),
                 FormatMoney(row.AverageOrderValue),
                 FormatMoney(row.TipsReceived)
-            }));
+            }),
+            BuildStaffPerformanceSummary(staffRows));
 
         using var stream = new MemoryStream();
         workbook.SaveAs(stream);
@@ -323,7 +330,8 @@ public sealed class MonthlyReportWorkbookService(
         DateTime toDate,
         string generatedAtLabel,
         IReadOnlyList<string> headers,
-        IEnumerable<IReadOnlyList<string>> rows)
+        IEnumerable<IReadOnlyList<string>> rows,
+        IReadOnlyList<WorksheetSummaryItem>? summaryItems = null)
     {
         var worksheet = workbook.Worksheets.Add(worksheetName);
 
@@ -337,7 +345,7 @@ public sealed class MonthlyReportWorkbookService(
         worksheet.Cell(2, 1).Style.Font.FontSize = 14;
         worksheet.Cell(2, 1).Style.Font.FontColor = XLColor.Black;
 
-        worksheet.Cell(3, 1).Value = $"Date Range: {fromDate:MMM dd, yyyy} - {toDate:MMM dd, yyyy}";
+        worksheet.Cell(3, 1).Value = $"Date Range: {fromDate:MMMM dd, yyyy} - {toDate:MMMM dd, yyyy}";
         worksheet.Cell(3, 1).Style.Font.FontSize = 10;
         worksheet.Cell(3, 1).Style.Font.FontColor = XLColor.FromHtml("#4B5563");
 
@@ -373,7 +381,106 @@ public sealed class MonthlyReportWorkbookService(
             worksheet.Range(headerRow, 1, currentRow - 1, headers.Count).Style.Border.InsideBorder = XLBorderStyleValues.Thin;
         }
 
+        if (summaryItems is { Count: > 0 })
+        {
+            currentRow++;
+            worksheet.Cell(currentRow, 1).Value = "Summary";
+            worksheet.Cell(currentRow, 1).Style.Font.Bold = true;
+            worksheet.Cell(currentRow, 1).Style.Font.FontSize = 11;
+            worksheet.Cell(currentRow, 1).Style.Font.FontColor = XLColor.FromHtml("#111827");
+            currentRow++;
+
+            foreach (var summaryItem in summaryItems)
+            {
+                var labelCell = worksheet.Cell(currentRow, 1);
+                labelCell.Value = summaryItem.Label;
+                labelCell.Style.Font.FontColor = XLColor.FromHtml("#374151");
+
+                var valueCell = worksheet.Cell(currentRow, 2);
+                valueCell.Value = summaryItem.Value;
+                valueCell.Style.Font.Bold = true;
+                valueCell.Style.Font.FontColor = XLColor.FromHtml("#111827");
+                valueCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
+                currentRow++;
+            }
+        }
+
         worksheet.Columns(1, headers.Count).AdjustToContents();
+    }
+
+    private static IReadOnlyList<WorksheetSummaryItem> BuildDailySalesSummary(
+        IReadOnlyList<DailySalesReportRowDto> rows)
+    {
+        var totalRevenue = rows.Sum(r => r.TotalRevenue);
+        var totalOrders = rows.Sum(r => r.OrderCount);
+        var totalTips = rows.Sum(r => r.TipsTotal);
+        var totalVoidCancelled = rows.Sum(r => r.VoidCancelledCount);
+        var averageOrder = totalOrders > 0 ? totalRevenue / totalOrders : 0m;
+
+        return
+        [
+            new WorksheetSummaryItem("Total Revenue", FormatMoney(totalRevenue)),
+            new WorksheetSummaryItem("Total Orders", totalOrders.ToString("N0", CultureInfo.InvariantCulture)),
+            new WorksheetSummaryItem("Average Order Value", FormatMoney(averageOrder)),
+            new WorksheetSummaryItem("Total Tips", FormatMoney(totalTips)),
+            new WorksheetSummaryItem("Void/Cancelled", totalVoidCancelled.ToString("N0", CultureInfo.InvariantCulture))
+        ];
+    }
+
+    private static IReadOnlyList<WorksheetSummaryItem> BuildProductSalesSummary(
+        IReadOnlyList<ProductSalesReportRowDto> rows)
+    {
+        var totalRevenue = rows.Sum(r => r.Revenue);
+        var totalQuantity = rows.Sum(r => r.QuantitySold);
+
+        return
+        [
+            new WorksheetSummaryItem("Total Revenue", FormatMoney(totalRevenue)),
+            new WorksheetSummaryItem("Total Quantity", totalQuantity.ToString("N0", CultureInfo.InvariantCulture))
+        ];
+    }
+
+    private static IReadOnlyList<WorksheetSummaryItem> BuildPaymentsSummary(
+        IReadOnlyList<PaymentsReportRowDto> rows)
+    {
+        var totalAmount = rows.Sum(r => r.TotalAmount);
+        var totalOrders = rows.Sum(r => r.OrderCount);
+
+        return
+        [
+            new WorksheetSummaryItem("Total Amount", FormatMoney(totalAmount)),
+            new WorksheetSummaryItem("Total Orders", totalOrders.ToString("N0", CultureInfo.InvariantCulture))
+        ];
+    }
+
+    private static IReadOnlyList<WorksheetSummaryItem> BuildHourlySalesSummary(
+        IReadOnlyList<HourlySalesReportRowDto> rows)
+    {
+        var totalRevenue = rows.Sum(r => r.Revenue);
+        var totalOrders = rows.Sum(r => r.OrderCount);
+
+        return
+        [
+            new WorksheetSummaryItem("Total Revenue", FormatMoney(totalRevenue)),
+            new WorksheetSummaryItem("Total Orders", totalOrders.ToString("N0", CultureInfo.InvariantCulture))
+        ];
+    }
+
+    private static IReadOnlyList<WorksheetSummaryItem> BuildStaffPerformanceSummary(
+        IReadOnlyList<StaffPerformanceReportRowDto> rows)
+    {
+        var totalRevenue = rows.Sum(r => r.TotalRevenue);
+        var totalOrders = rows.Sum(r => r.OrderCount);
+        var totalTips = rows.Sum(r => r.TipsReceived);
+        var averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0m;
+
+        return
+        [
+            new WorksheetSummaryItem("Total Revenue", FormatMoney(totalRevenue)),
+            new WorksheetSummaryItem("Total Orders", totalOrders.ToString("N0", CultureInfo.InvariantCulture)),
+            new WorksheetSummaryItem("Average Order Value", FormatMoney(averageOrderValue)),
+            new WorksheetSummaryItem("Total Tips", FormatMoney(totalTips))
+        ];
     }
 
     private static string BuildFileName(int year, int month)
