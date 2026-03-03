@@ -279,13 +279,6 @@
                               [fill]="'currentColor'"
                             />{{ c.price | number: '1.2-2' }} each
                           </div>
-                          @if (c.addOns?.length) {
-                            <div class="mt-1 space-y-1 pl-4 text-xs text-gray-500">
-                              @for (ao of c.addOns | sortAddOns; track ao.addOnId) {
-                                <div class="truncate">+ {{ ao.name }}</div>
-                              }
-                            </div>
-                          }
                           @if (c.specialInstructions) {
                             <div class="mt-1 text-xs wrap-break-word text-gray-500 italic">
                               {{ c.specialInstructions }}
@@ -301,27 +294,31 @@
                             [fill]="'currentColor'"
                           />{{ getItemTotal(c) | number: '1.2-2' }}
                         </div>
-                        @if (c.addOns?.length) {
-                          <div class="mt-1 space-y-1 text-xs text-gray-500">
-                            @for (ao of c.addOns | sortAddOns; track ao.addOnId) {
-                              <div>
-                                <app-icon
-                                  name="icon-peso"
-                                  [class]="'inline h-2.5 w-2.5 align-[-0.125em]'"
-                                  [fill]="'currentColor'"
-                                />{{ ao.price | number: '1.2-2' }}
-                              </div>
-                            }
+                      </div>
+                    </div>
+
+                    @if (c.addOns?.length) {
+                      <div class="mt-1 space-y-1 pl-[3.25rem]">
+                        @for (ao of c.addOns | sortAddOns; track ao.addOnId) {
+                          <div class="grid grid-cols-[1fr_auto] items-center gap-3 text-xs text-gray-500">
+                            <div class="truncate">+ {{ ao.name }}</div>
+                            <div class="shrink-0 text-right tabular-nums">
+                              <app-icon
+                                name="icon-peso"
+                                [class]="'inline h-2.5 w-2.5 align-[-0.125em]'"
+                                [fill]="'currentColor'"
+                              />{{ ao.price | number: '1.2-2' }}
+                            </div>
                           </div>
                         }
-                        <div class="pt-0.5 text-[11px] text-gray-400 italic">
-                          (<app-icon
-                            name="icon-peso"
-                            [class]="'inline h-2.5 w-2.5 align-[-0.125em]'"
-                            [fill]="'currentColor'"
-                          />{{ getUnitSubtotal(c) | number: '1.2-2' }} / unit)
-                        </div>
                       </div>
+                    }
+                    <div class="pt-0.5 text-right text-[11px] text-gray-400 italic">
+                      (<app-icon
+                        name="icon-peso"
+                        [class]="'inline h-2.5 w-2.5 align-[-0.125em]'"
+                        [fill]="'currentColor'"
+                      />{{ getUnitSubtotal(c) | number: '1.2-2' }} / unit)
                     </div>
                   </div>
                 }
