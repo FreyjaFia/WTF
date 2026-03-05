@@ -19,6 +19,10 @@ public partial class OrderItem
 
     public string? SpecialInstructions { get; set; }
 
+    public Guid? BundlePromotionId { get; set; }
+
+    public virtual Promotion? BundlePromotion { get; set; }
+
     public virtual ICollection<OrderItem> InverseParentOrderItem { get; set; } = new List<OrderItem>();
 
     public virtual Order Order { get; set; } = null!;

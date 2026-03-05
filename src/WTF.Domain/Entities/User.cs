@@ -49,6 +49,10 @@ public partial class User
 
     public virtual ICollection<Product> ProductUpdatedByNavigations { get; set; } = new List<Product>();
 
+    public virtual ICollection<Promotion> PromotionCreatedByNavigations { get; set; } = new List<Promotion>();
+
+    public virtual ICollection<Promotion> PromotionUpdatedByNavigations { get; set; } = new List<Promotion>();
+
     public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
 
     public virtual UserRole Role { get; set; } = null!;

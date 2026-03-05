@@ -1,0 +1,744 @@
+<div class="flex h-full flex-col lg:ps-6">
+  <div
+    class="sticky top-0 z-10 mb-4 flex shrink-0 flex-col gap-3 bg-white/95 backdrop-blur-sm sm:mb-6 sm:flex-row sm:items-center sm:justify-between"
+  >
+    <div class="flex min-w-0 items-start gap-4">
+      <button
+        class="tooltip tooltip-bottom mt-1 shrink-0 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
+        type="button"
+        (click)="cancel()"
+        aria-label="Go back"
+        data-tip="Back"
+      >
+        <app-icon name="icon-back" [class]="'h-5 w-5 text-gray-600'" />
+      </button>
+      <div class="min-w-0">
+        <h1 class="text-2xl font-bold wrap-break-word text-gray-900">
+          {{ isEditMode() ? currentPromotionName() || 'Edit Promotion' : 'New Promotion' }}
+        </h1>
+        @if (isEditMode() && lastUpdatedAt()) {
+          <p class="mt-1 text-sm text-gray-500">
+            Updated {{ lastUpdatedAt() | date: 'd MMM y, h:mm a' }}
+          </p>
+        }
+      </div>
+    </div>
+
+    <div class="flex shrink-0 justify-end gap-2">
+      <button
+        type="button"
+        class="cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-100 active:scale-95"
+        (click)="cancel()"
+        [disabled]="isSaving()"
+      >
+        Cancel
+      </button>
+      <button
+        type="button"
+        class="btn btn-sm gap-2 rounded-lg border-0 bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none"
+        [disabled]="isSaving()"
+        (click)="save()"
+      >
+        @if (isSaving()) {
+          <span class="loading loading-spinner loading-sm"></span>
+        }
+        {{
+          isSaving()
+            ? isEditMode()
+              ? 'Updating Promotion...'
+              : 'Creating Promotion...'
+            : (isEditMode() ? 'Update' : 'Create') + ' Promotion'
+        }}
+      </button>
+    </div>
+  </div>
+
+  @if (isLoading()) {
+    <div class="flex justify-center py-8">
+      <span class="loading loading-spinner loading-lg"></span>
+    </div>
+  }
+
+  @if (!isLoading()) {
+    <div class="flex-1 overflow-y-auto pr-2 pb-4">
+      <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div class="order-2 space-y-6 lg:order-0 lg:col-span-2">
+          <div class="card rounded-xl bg-white shadow-lg lg:hidden">
+            <div class="card-body">
+              <div class="mb-2">
+                <span class="text-sm font-semibold text-gray-900">Promotion Image</span>
+              </div>
+
+              @if (!imagePreview()) {
+                @if (currentImageUrl()) {
+                  <div class="mb-4 flex justify-center">
+                    <div class="flex flex-col items-center gap-2">
+                      <img
+                        [src]="currentImageUrl()!"
+                        alt="Current promotion image"
+                        class="h-48 w-48 rounded-xl object-cover shadow-lg"
+                      />
+                      <button
+                        type="button"
+                        class="btn btn-xs btn-outline btn-error"
+                        (click)="removeCurrentImage()"
+                        [disabled]="isDeletingImage() || isUploading()"
+                      >
+                        @if (isDeletingImage()) {
+                          <span class="loading loading-spinner loading-xs"></span>
+                        }
+                        {{ isDeletingImage() ? 'Removing image...' : 'Remove current image' }}
+                      </button>
+                    </div>
+                  </div>
+                } @else {
+                  <div class="mb-4 flex justify-center">
+                    <app-avatar [label]="currentPromotionName()" [size]="192" />
+                  </div>
+                }
+              }
+
+              @if (imagePreview()) {
+                <div class="mb-4 flex justify-center">
+                  <div class="relative inline-block">
+                    <img
+                      [src]="imagePreview()!"
+                      alt="Promotion image preview"
+                      class="h-48 w-48 rounded-xl object-cover shadow-lg"
+                    />
+                    <button
+                      type="button"
+                      class="tooltip tooltip-bottom btn btn-circle btn-sm btn-neutral absolute -top-2 -right-2"
+                      (click)="removeImage()"
+                      data-tip="Remove image"
+                    >
+                      <app-icon name="icon-close" [class]="'h-4 w-4'" />
+                    </button>
+                  </div>
+                </div>
+              }
+
+              <label
+                for="promotionImageMobile"
+                class="group flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 p-6 transition-all hover:border-[#047857]/40 hover:bg-[#047857]/5"
+                [class.pointer-events-none]="isUploading()"
+                [class.opacity-50]="isUploading()"
+                [class.border-[#047857]]="isDragging()"
+                [class.bg-[#047857]/5]="isDragging()"
+                (dragover)="onDragOver($event)"
+                (dragleave)="onDragLeave($event)"
+                (drop)="onFileDrop($event)"
+              >
+                <app-icon
+                  name="icon-upload"
+                  [class]="'h-8 w-8 text-gray-400 transition-colors group-hover:text-[#047857]'"
+                />
+                <p class="mt-2 text-sm font-medium text-gray-600 group-hover:text-[#047857]">
+                  Click or drag & drop to upload
+                </p>
+                <p class="mt-1 text-xs text-gray-400">JPG, PNG, GIF, or WebP | Max 5 MB</p>
+              </label>
+              <input
+                id="promotionImageMobile"
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                class="hidden"
+                (change)="onFileSelected($event)"
+                [disabled]="isUploading()"
+              />
+
+              @if (isUploading()) {
+                <div class="mt-3 flex items-center gap-2">
+                  <span class="loading loading-spinner loading-sm"></span>
+                  <span class="text-sm text-gray-700">Uploading image...</span>
+                </div>
+              }
+            </div>
+          </div>
+
+          <div class="card rounded-xl bg-white shadow-lg">
+            <div class="card-body space-y-5">
+              <div>
+                <div class="mb-2 block text-sm font-semibold text-gray-900">Promotion Type</div>
+                @if (!isEditMode()) {
+                  <select
+                    class="select w-full border-transparent bg-gray-50 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                    [ngModel]="type()"
+                    (ngModelChange)="type.set($event)"
+                  >
+                    <option value="fixed-bundle">Fixed Bundle</option>
+                    <option value="mix-match">Mix & Match</option>
+                  </select>
+                } @else {
+                  <label
+                    class="input flex w-full cursor-not-allowed items-center gap-2 border-transparent bg-gray-100 transition-all"
+                  >
+                    <app-icon name="icon-lock" [class]="'h-4 w-4 text-gray-400'" />
+                    <input
+                      type="text"
+                      [value]="getPromotionTypeLabel(type())"
+                      readonly
+                      tabindex="-1"
+                      class="grow cursor-not-allowed bg-transparent text-gray-500 outline-none select-none"
+                      (mousedown)="$event.preventDefault()"
+                    />
+                  </label>
+                }
+              </div>
+
+              <div>
+                <div class="mb-2 block text-sm font-semibold text-gray-900">Promotion Name</div>
+                <input
+                  class="input w-full border-transparent bg-gray-50 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                  type="text"
+                  [ngModel]="type() === 'fixed-bundle' ? fixedBundle().name : mixMatch().name"
+                  (ngModelChange)="
+                    type() === 'fixed-bundle' ? setFixedBundleName($event) : setMixMatchName($event)
+                  "
+                />
+              </div>
+
+              <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div>
+                  <div class="mb-2 block text-sm font-semibold text-gray-900">Start Date</div>
+                  <input
+                    class="input input-bordered w-full"
+                    type="date"
+                    [ngModel]="
+                      type() === 'fixed-bundle'
+                        ? getFixedBundleStartLocal().slice(0, 10)
+                        : getMixMatchStartLocal().slice(0, 10)
+                    "
+                    (ngModelChange)="
+                      type() === 'fixed-bundle'
+                        ? setFixedBundleStartAtUtc($event)
+                        : setMixMatchStartAtUtc($event)
+                    "
+                  />
+                </div>
+                <div>
+                  <div class="mb-2 block text-sm font-semibold text-gray-900">End Date</div>
+                  <input
+                    class="input input-bordered w-full"
+                    type="date"
+                    [ngModel]="
+                      type() === 'fixed-bundle'
+                        ? getFixedBundleEndLocal().slice(0, 10)
+                        : getMixMatchEndLocal().slice(0, 10)
+                    "
+                    (ngModelChange)="
+                      type() === 'fixed-bundle'
+                        ? setFixedBundleEndAtUtc($event)
+                        : setMixMatchEndAtUtc($event)
+                    "
+                  />
+                </div>
+              </div>
+
+              @if (type() === 'fixed-bundle') {
+                <div class="max-w-xs">
+                  <div class="mb-2 block text-sm font-semibold text-gray-900">Bundle Price</div>
+                  <label
+                    class="input flex w-full items-center gap-2 border-transparent bg-gray-50 transition-all focus-within:border-[#047857] focus-within:bg-white focus-within:ring-1 focus-within:ring-[#047857]/20"
+                  >
+                    <app-icon
+                      name="icon-peso"
+                      [class]="'h-4 w-4 text-gray-500'"
+                      [fill]="'currentColor'"
+                    />
+                    <input
+                      class="grow bg-transparent outline-none"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      [ngModel]="fixedBundle().bundlePrice"
+                      (ngModelChange)="setFixedBundlePrice($event)"
+                    />
+                  </label>
+                </div>
+              } @else {
+                <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
+                  <div>
+                    <div class="mb-2 block text-sm font-semibold text-gray-900">Bundle Price</div>
+                    <label
+                      class="input flex w-full items-center gap-2 border-transparent bg-gray-50 transition-all focus-within:border-[#047857] focus-within:bg-white focus-within:ring-1 focus-within:ring-[#047857]/20"
+                    >
+                      <app-icon
+                        name="icon-peso"
+                        [class]="'h-4 w-4 text-gray-500'"
+                        [fill]="'currentColor'"
+                      />
+                      <input
+                        class="grow bg-transparent outline-none"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        [ngModel]="mixMatch().bundlePrice"
+                        (ngModelChange)="setMixMatchBundlePrice($event)"
+                      />
+                    </label>
+                  </div>
+                  <div>
+                    <div class="mb-2 block text-sm font-semibold text-gray-900">
+                      Required Quantity
+                    </div>
+                    <input
+                      class="input input-bordered w-full"
+                      type="number"
+                      min="1"
+                      [ngModel]="mixMatch().requiredQuantity"
+                      (ngModelChange)="setMixMatchRequiredQuantity($event)"
+                    />
+                  </div>
+                  <div>
+                    <div class="mb-2 block text-sm font-semibold text-gray-900">
+                      Max Selections / Order
+                    </div>
+                    <input
+                      class="input input-bordered w-full"
+                      type="number"
+                      min="1"
+                      [ngModel]="mixMatch().maxSelectionsPerOrder"
+                      (ngModelChange)="setMixMatchMaxSelectionsPerOrder($event ? +$event : null)"
+                    />
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+
+          <div class="card rounded-xl bg-white shadow-lg">
+            <div class="card-body space-y-5">
+              <p class="text-xs font-semibold tracking-wider text-gray-400 uppercase">Management</p>
+              <div class="grid grid-cols-1 gap-4 sm:grid-cols-1">
+                <div class="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-3">
+                  <div>
+                    <span class="text-sm font-medium text-gray-900">Active</span>
+                    <p class="text-xs text-gray-500">Inactive promotions are ignored in POS.</p>
+                  </div>
+                  <input
+                    class="toggle toggle-neutral toggle-sm"
+                    type="checkbox"
+                    [ngModel]="
+                      type() === 'fixed-bundle' ? fixedBundle().isActive : mixMatch().isActive
+                    "
+                    (ngModelChange)="
+                      type() === 'fixed-bundle'
+                        ? setFixedBundleIsActive($event)
+                        : setMixMatchIsActive($event)
+                    "
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="order-3 space-y-6 lg:order-0">
+          <div class="card hidden rounded-xl bg-white shadow-lg lg:block">
+            <div class="card-body">
+              <div class="mb-2">
+                <span class="text-sm font-semibold text-gray-900">Promotion Image</span>
+              </div>
+
+              @if (!imagePreview()) {
+                @if (currentImageUrl()) {
+                  <div class="mb-4 flex justify-center">
+                    <div class="flex flex-col items-center gap-2">
+                      <img
+                        [src]="currentImageUrl()!"
+                        alt="Current promotion image"
+                        class="h-48 w-48 rounded-xl object-cover shadow-lg"
+                      />
+                      <button
+                        type="button"
+                        class="btn btn-xs btn-outline btn-error"
+                        (click)="removeCurrentImage()"
+                        [disabled]="isDeletingImage() || isUploading()"
+                      >
+                        @if (isDeletingImage()) {
+                          <span class="loading loading-spinner loading-xs"></span>
+                        }
+                        {{ isDeletingImage() ? 'Removing image...' : 'Remove current image' }}
+                      </button>
+                    </div>
+                  </div>
+                } @else {
+                  <div class="mb-4 flex justify-center">
+                    <app-avatar [label]="currentPromotionName()" [size]="192" />
+                  </div>
+                }
+              }
+
+              @if (imagePreview()) {
+                <div class="mb-4 flex justify-center">
+                  <div class="relative inline-block">
+                    <img
+                      [src]="imagePreview()!"
+                      alt="Promotion image preview"
+                      class="h-48 w-48 rounded-xl object-cover shadow-lg"
+                    />
+                    <button
+                      type="button"
+                      class="tooltip tooltip-bottom btn btn-circle btn-sm btn-neutral absolute -top-2 -right-2"
+                      (click)="removeImage()"
+                      data-tip="Remove image"
+                    >
+                      <app-icon name="icon-close" [class]="'h-4 w-4'" />
+                    </button>
+                  </div>
+                </div>
+              }
+
+              <label
+                for="promotionImage"
+                class="group flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 p-6 transition-all hover:border-[#047857]/40 hover:bg-[#047857]/5"
+                [class.pointer-events-none]="isUploading()"
+                [class.opacity-50]="isUploading()"
+                [class.border-[#047857]]="isDragging()"
+                [class.bg-[#047857]/5]="isDragging()"
+                (dragover)="onDragOver($event)"
+                (dragleave)="onDragLeave($event)"
+                (drop)="onFileDrop($event)"
+              >
+                <app-icon
+                  name="icon-upload"
+                  [class]="'h-8 w-8 text-gray-400 transition-colors group-hover:text-[#047857]'"
+                />
+                <p class="mt-2 text-sm font-medium text-gray-600 group-hover:text-[#047857]">
+                  Click or drag & drop to upload
+                </p>
+                <p class="mt-1 text-xs text-gray-400">JPG, PNG, GIF, or WebP | Max 5 MB</p>
+              </label>
+              <input
+                id="promotionImage"
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                class="hidden"
+                (change)="onFileSelected($event)"
+                [disabled]="isUploading()"
+              />
+
+              @if (isUploading()) {
+                <div class="mt-3 flex items-center gap-2">
+                  <span class="loading loading-spinner loading-sm"></span>
+                  <span class="text-sm text-gray-700">Uploading image...</span>
+                </div>
+              }
+            </div>
+          </div>
+
+          <div class="card rounded-xl bg-white shadow-lg">
+            <div class="card-body">
+              <div class="mb-1 flex items-baseline justify-between">
+                <h3 class="text-xs font-semibold tracking-wider text-gray-400 uppercase">
+                  {{ type() === 'fixed-bundle' ? 'Bundle Items' : 'Mix & Match Items' }}
+                </h3>
+                @if (
+                  (type() === 'fixed-bundle'
+                    ? fixedBundle().items.length
+                    : mixMatch().items.length) > 0
+                ) {
+                  <span class="text-xs text-gray-400">
+                    {{
+                      type() === 'fixed-bundle'
+                        ? fixedBundle().items.length
+                        : mixMatch().items.length
+                    }}
+                    items
+                  </span>
+                }
+              </div>
+
+              @if (
+                (type() === 'fixed-bundle' ? fixedBundle().items.length : mixMatch().items.length) >
+                0
+              ) {
+                <div
+                  class="overflow-hidden transition-[max-height] duration-300 ease-in-out"
+                  [style.max-height]="
+                    showAllBundleItems() ||
+                    (type() === 'fixed-bundle'
+                      ? fixedBundle().items.length
+                      : mixMatch().items.length) <= 3
+                      ? '200rem'
+                      : '16rem'
+                  "
+                >
+                  @if (type() === 'fixed-bundle') {
+                    @for (
+                      item of fixedBundle().items;
+                      track $index;
+                      let i = $index;
+                      let odd = $odd
+                    ) {
+                      <div
+                        class="group/row flex items-start gap-3 border-b border-gray-50 px-2 py-2.5 transition-colors last:border-b-0 hover:bg-gray-50"
+                        [class.bg-gray-50/50]="odd"
+                      >
+                        <div class="shrink-0">
+                          @if (getProductImageUrl(item.productId)) {
+                            <img
+                              [src]="getProductImageUrl(item.productId)!"
+                              [alt]="getProductName(item.productId)"
+                              class="h-8 w-8 rounded-full object-cover"
+                            />
+                          } @else {
+                            <app-avatar [label]="getProductName(item.productId)" [size]="32" />
+                          }
+                        </div>
+                        <div class="min-w-0 flex-1">
+                          <div class="mb-1 flex items-start justify-between gap-2">
+                            <div class="min-w-0 flex-1">
+                              <span
+                                class="block text-sm font-medium wrap-break-word text-gray-800"
+                                >{{ getProductName(item.productId) }}</span
+                              >
+                              @if (getProductCode(item.productId)) {
+                                <span class="mt-0.5 font-mono text-[10px] text-gray-400">{{
+                                  getProductCode(item.productId)
+                                }}</span>
+                              }
+                            </div>
+                            <button
+                              type="button"
+                              class="tooltip tooltip-left shrink-0 cursor-pointer rounded-full p-1 text-gray-400 transition-all hover:bg-red-50 hover:text-red-500"
+                              (click)="removeFixedBundleItem(i)"
+                              data-tip="Remove"
+                            >
+                              <app-icon name="icon-close" [class]="'h-3.5 w-3.5'" />
+                            </button>
+                          </div>
+                          <div class="mb-2 flex items-center justify-between text-xs">
+                            <span class="font-medium text-gray-500">Qty {{ item.quantity }}</span>
+                            <span class="text-gray-300">Default: 1</span>
+                          </div>
+                          <div class="mb-2 flex flex-wrap items-center justify-end gap-2">
+                            <label
+                              class="input input-xs flex w-24 items-center gap-1 border-gray-200 bg-white"
+                            >
+                              <input
+                                class="w-full bg-transparent text-[10px] outline-none"
+                                type="number"
+                                min="1"
+                                [ngModel]="
+                                  getBundleItemQuantityDraft(item.productId, item.quantity)
+                                "
+                                (ngModelChange)="
+                                  onBundleItemQuantityDraftInput(item.productId, $event)
+                                "
+                              />
+                            </label>
+                            <button
+                              type="button"
+                              class="btn btn-xs h-7 min-h-0 rounded-md border-0 bg-[#047857] px-2 text-[10px] text-white hover:bg-[#065f46]"
+                              (click)="saveBundleItemQuantity(i, item.productId)"
+                              [disabled]="isSaving()"
+                            >
+                              Update
+                            </button>
+                            <button
+                              type="button"
+                              class="btn btn-xs h-7 min-h-0 rounded-md border border-gray-200 bg-white px-2 text-[10px] text-gray-600 hover:bg-gray-50"
+                              (click)="resetBundleItemQuantity(i, item.productId)"
+                              [disabled]="isSaving()"
+                            >
+                              Reset
+                            </button>
+                          </div>
+                          @if (item.addOns.length > 0) {
+                            @for (group of getBundleItemAddOnGroups(i); track group.typeLabel) {
+                              <div class="mt-2 mb-1 flex items-center gap-2">
+                                <span
+                                  class="text-[10px] font-semibold tracking-wider text-gray-400 uppercase"
+                                  >{{ group.typeLabel }}</span
+                                >
+                                <span class="text-[10px] text-gray-300"
+                                  >({{ group.options.length }})</span
+                                >
+                              </div>
+                              <div class="flex flex-wrap gap-1.5">
+                                @for (addOn of group.options; track addOn.addOnProductId) {
+                                  <span
+                                    class="rounded bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-700"
+                                    >{{ getAddOnName(addOn.addOnProductId) }}</span
+                                  >
+                                }
+                              </div>
+                            }
+                          }
+                        </div>
+                      </div>
+                    }
+                  } @else {
+                    @for (item of mixMatch().items; track $index; let i = $index; let odd = $odd) {
+                      <div
+                        class="group/row flex items-start gap-3 border-b border-gray-50 px-2 py-2.5 transition-colors last:border-b-0 hover:bg-gray-50"
+                        [class.bg-gray-50/50]="odd"
+                      >
+                        <div class="shrink-0">
+                          @if (getProductImageUrl(item.productId)) {
+                            <img
+                              [src]="getProductImageUrl(item.productId)!"
+                              [alt]="getProductName(item.productId)"
+                              class="h-8 w-8 rounded-full object-cover"
+                            />
+                          } @else {
+                            <app-avatar [label]="getProductName(item.productId)" [size]="32" />
+                          }
+                        </div>
+                        <div class="min-w-0 flex-1">
+                          <div class="mb-1 flex items-start justify-between gap-2">
+                            <div class="min-w-0 flex-1">
+                              <span
+                                class="block text-sm font-medium wrap-break-word text-gray-800"
+                                >{{ getProductName(item.productId) }}</span
+                              >
+                              @if (getProductCode(item.productId)) {
+                                <span class="mt-0.5 font-mono text-[10px] text-gray-400">{{
+                                  getProductCode(item.productId)
+                                }}</span>
+                              }
+                            </div>
+                            <button
+                              type="button"
+                              class="tooltip tooltip-left shrink-0 cursor-pointer rounded-full p-1 text-gray-400 transition-all hover:bg-red-50 hover:text-red-500"
+                              (click)="removeMixMatchItem(i)"
+                              data-tip="Remove"
+                            >
+                              <app-icon name="icon-close" [class]="'h-3.5 w-3.5'" />
+                            </button>
+                          </div>
+                          @if (item.addOns.length > 0) {
+                            @for (group of getMixMatchItemAddOnGroups(i); track group.typeLabel) {
+                              <div class="mt-2 mb-1 flex items-center gap-2">
+                                <span
+                                  class="text-[10px] font-semibold tracking-wider text-gray-400 uppercase"
+                                  >{{ group.typeLabel }}</span
+                                >
+                                <span class="text-[10px] text-gray-300"
+                                  >({{ group.options.length }})</span
+                                >
+                              </div>
+                              <div class="flex flex-wrap gap-1.5">
+                                @for (addOn of group.options; track addOn.addOnProductId) {
+                                  <span
+                                    class="rounded bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-700"
+                                    >{{ getAddOnName(addOn.addOnProductId) }}</span
+                                  >
+                                }
+                              </div>
+                            }
+                          }
+                        </div>
+                      </div>
+                    }
+                  }
+                </div>
+
+                @if (
+                  (type() === 'fixed-bundle'
+                    ? fixedBundle().items.length
+                    : mixMatch().items.length) > 3
+                ) {
+                  <button
+                    type="button"
+                    class="mt-3 flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-gray-50 px-4 py-2.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-100"
+                    (click)="showAllBundleItems.set(!showAllBundleItems())"
+                  >
+                    {{
+                      showAllBundleItems()
+                        ? 'See less items'
+                        : 'Show all ' +
+                          (type() === 'fixed-bundle'
+                            ? fixedBundle().items.length
+                            : mixMatch().items.length) +
+                          ' items'
+                    }}
+                    <app-icon
+                      name="icon-forward"
+                      [class]="
+                        'h-4 w-4 transition-transform duration-200 ' +
+                        (showAllBundleItems() ? '-rotate-90' : 'rotate-90')
+                      "
+                    />
+                  </button>
+                }
+              } @else {
+                <div class="flex flex-col items-center py-6 text-center">
+                  <p class="text-sm font-medium text-gray-400">No items yet</p>
+                  <p class="mt-1 text-xs text-gray-300">
+                    Use Manage Items to select products and add-ons
+                  </p>
+                </div>
+              }
+
+              <div class="mt-4">
+                <button
+                  type="button"
+                  class="btn btn-sm gap-2 rounded-lg border border-[#047857] bg-white text-[#047857] transition-all hover:bg-[#047857]/5"
+                  (click)="openBundleItemsSelector()"
+                  [disabled]="isSaving()"
+                >
+                  <app-icon name="icon-sliders" [class]="'h-4 w-4'" />
+                  Manage Items
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+</div>
+
+<app-bundle-items-selector (confirmed)="onBundleItemsSelected($event)" />
+
+@if (showDiscardModal()) {
+  <div
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="discard-title"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md transition-opacity duration-200"
+    (click)="cancelDiscard()"
+    (keydown.escape)="cancelDiscard()"
+    tabindex="0"
+  >
+    <div
+      role="document"
+      class="mx-4 w-full max-w-sm animate-[modal-pop_0.2s_ease-out] rounded-2xl bg-white p-6 shadow-2xl"
+      (click)="$event.stopPropagation()"
+      (keydown)="$event.stopPropagation()"
+    >
+      <div class="mx-auto w-fit rounded-full bg-amber-50/60 p-3">
+        <div class="rounded-full bg-amber-50 p-3">
+          <app-icon name="icon-back" [class]="'h-6 w-6 text-amber-600'" />
+        </div>
+      </div>
+
+      <h3 id="discard-title" class="mt-4 text-center text-lg font-semibold text-gray-900">
+        Discard Changes?
+      </h3>
+      <p class="mt-2 text-center text-sm leading-relaxed text-gray-500">
+        You have unsaved changes that will be lost if you leave this page.
+      </p>
+
+      <div class="mt-6 flex items-center justify-end gap-3">
+        <button
+          type="button"
+          class="cursor-pointer px-4 py-2 text-sm font-medium text-red-500 transition-colors hover:text-red-700"
+          (click)="confirmDiscard()"
+        >
+          Discard
+        </button>
+        <button
+          type="button"
+          class="cursor-pointer rounded-xl bg-[#047857] px-6 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#065f46] hover:shadow-md active:scale-[0.97]"
+          (click)="cancelDiscard()"
+        >
+          Keep Editing
+        </button>
+      </div>
+    </div>
+  </div>
+}

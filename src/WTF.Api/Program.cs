@@ -200,6 +200,38 @@ if (!app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 }
 
+app.Use(async (context, next) =>
+{
+    try
+    {
+        await next();
+    }
+    catch (InvalidOperationException ex)
+    {
+        if (context.Response.HasStarted)
+        {
+            throw;
+        }
+
+        app.Logger.LogWarning(ex, "Request validation/business rule failure: {Message}", ex.Message);
+        context.Response.Clear();
+        context.Response.StatusCode = StatusCodes.Status400BadRequest;
+        await context.Response.WriteAsJsonAsync(new { message = ex.Message });
+    }
+    catch (ArgumentException ex)
+    {
+        if (context.Response.HasStarted)
+        {
+            throw;
+        }
+
+        app.Logger.LogWarning(ex, "Request argument validation failure: {Message}", ex.Message);
+        context.Response.Clear();
+        context.Response.StatusCode = StatusCodes.Status400BadRequest;
+        await context.Response.WriteAsJsonAsync(new { message = ex.Message });
+    }
+});
+
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -215,6 +247,7 @@ app.MapAuth()
     .MapDashboard()
     .MapReports()
     .MapSync()
+    .MapPromotions()
     .MapAudit()
     .MapSchemaScriptHistory()
     .MapPing();

@@ -1,0 +1,296 @@
+<div class="flex h-full flex-col lg:ps-6">
+  <div class="mb-4 flex shrink-0 flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
+    <div class="flex min-w-0 items-start gap-4">
+      <button
+        class="tooltip tooltip-bottom mt-1 shrink-0 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
+        type="button"
+        (click)="goBack()"
+        aria-label="Go back"
+        data-tip="Back"
+      >
+        <app-icon name="icon-back" [class]="'h-5 w-5 text-gray-600'" />
+      </button>
+      @if (!isLoading() && (fixedBundle() || mixMatch())) {
+        <div class="min-w-0">
+          <h1 class="text-2xl font-bold wrap-break-word text-gray-900">{{ promotionName() }}</h1>
+          <div class="mt-1 flex flex-wrap items-center gap-2">
+            @if (isActive()) {
+              <app-badge variant="success">Active</app-badge>
+            } @else {
+              <app-badge variant="error">Inactive</app-badge>
+            }
+          </div>
+          @if (lastUpdatedAt()) {
+            <p class="mt-1 text-sm text-gray-500">Updated {{ lastUpdatedAt() | date: 'd MMM y, h:mm a' }}</p>
+          }
+        </div>
+      }
+    </div>
+
+    @if (canWriteManagement()) {
+      <div class="flex shrink-0 justify-end gap-2">
+        <button
+          class="btn btn-sm gap-2 rounded-lg border-0 bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg"
+          type="button"
+          (click)="navigateToEdit()"
+        >
+          <app-icon name="icon-edit" [class]="'h-4 w-4'" />
+          Edit
+        </button>
+        <button
+          class="inline-flex cursor-pointer items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium text-red-500 transition-all hover:bg-red-50 hover:text-red-600 active:scale-95"
+          type="button"
+          (click)="deletePromotion()"
+        >
+          <app-icon name="icon-delete" [class]="'h-4 w-4'" />
+          Delete
+        </button>
+      </div>
+    }
+  </div>
+
+  @if (isLoading()) {
+    <div class="flex justify-center py-8">
+      <span class="loading loading-spinner loading-lg"></span>
+    </div>
+  }
+
+  @if (!isLoading() && (fixedBundle() || mixMatch())) {
+    <div class="flex-1 overflow-y-auto pr-2 pb-4">
+      <div class="card rounded-xl bg-white shadow-lg">
+        <div class="card-body p-0">
+          <div class="grid grid-cols-1 lg:grid-cols-5">
+            <div class="order-1 border-b border-gray-100 p-6 lg:col-span-2 lg:border-r lg:border-b-0">
+              <div class="flex justify-center">
+                @if (heroImageUrl()) {
+                  <img [src]="heroImageUrl()!" [alt]="heroLabel()" class="h-52 w-52 object-contain drop-shadow-lg" />
+                } @else {
+                  <app-avatar [label]="heroLabel()" [size]="208" />
+                }
+              </div>
+            </div>
+
+            <div class="order-2 space-y-6 p-6 lg:sticky lg:top-0 lg:col-span-3 lg:row-span-2 lg:self-start">
+              <div>
+                <p class="mb-2 text-xs font-semibold tracking-wider text-gray-400 uppercase">Pricing</p>
+                <p class="inline-flex items-center gap-1 text-5xl font-black tracking-tight text-[#047857]">
+                  <app-icon name="icon-peso" [class]="'h-8 w-8'" [fill]="'currentColor'" />
+                  {{ headlinePrice() | number: '1.2-2' }}
+                </p>
+              </div>
+
+              <div class="border-t border-gray-100 pt-5">
+                <p class="mb-4 text-xs font-semibold tracking-wider text-gray-400 uppercase">Details</p>
+                <div class="grid grid-cols-2 gap-x-6 gap-y-4 md:grid-cols-3">
+                  <div>
+                    <p class="mb-1 text-xs font-medium text-gray-400">Type</p>
+                    <app-badge variant="default">{{ type() === 'mix-match' ? 'Mix & Match' : 'Fixed Bundle' }}</app-badge>
+                  </div>
+                  <div>
+                    <p class="mb-1 text-xs font-medium text-gray-400">Status</p>
+                    @if (isActive()) {
+                      <app-badge variant="success">Active</app-badge>
+                    } @else {
+                      <app-badge variant="error">Inactive</app-badge>
+                    }
+                  </div>
+                  <div>
+                    <p class="mb-1 text-xs font-medium text-gray-400">Bundle Items</p>
+                    <p class="text-sm font-semibold text-gray-800">
+                      @if (type() === 'fixed-bundle') {
+                        {{ fixedBundle()!.items.length }}
+                      } @else {
+                        {{ mixMatch()!.items.length }}
+                      }
+                    </p>
+                  </div>
+                  @if (type() === 'mix-match') {
+                    <div>
+                      <p class="mb-1 text-xs font-medium text-gray-400">Required Quantity</p>
+                      <p class="text-sm font-semibold text-gray-800">{{ mixMatch()!.requiredQuantity }}</p>
+                    </div>
+                    <div>
+                      <p class="mb-1 text-xs font-medium text-gray-400">Max Selections / Order</p>
+                      <p class="text-sm font-semibold text-gray-800">{{ mixMatch()!.maxSelectionsPerOrder ?? 'Not set' }}</p>
+                    </div>
+                  }
+                  <div>
+                    <p class="mb-1 text-xs font-medium text-gray-400">Start Date</p>
+                    <p class="text-sm font-semibold text-gray-800">
+                      {{
+                        type() === 'fixed-bundle'
+                          ? (fixedBundle()!.startDate ? (fixedBundle()!.startDate | date: 'd MMM y') : 'Not set')
+                          : (mixMatch()!.startDate ? (mixMatch()!.startDate | date: 'd MMM y') : 'Not set')
+                      }}
+                    </p>
+                  </div>
+                  <div>
+                    <p class="mb-1 text-xs font-medium text-gray-400">End Date</p>
+                    <p class="text-sm font-semibold text-gray-800">
+                      {{
+                        type() === 'fixed-bundle'
+                          ? (fixedBundle()!.endDate ? (fixedBundle()!.endDate | date: 'd MMM y') : 'Not set')
+                          : (mixMatch()!.endDate ? (mixMatch()!.endDate | date: 'd MMM y') : 'Not set')
+                      }}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="order-3 border-t border-gray-100 p-6 lg:col-span-2 lg:border-t-0 lg:border-r">
+              @if (type() === 'fixed-bundle') {
+                <div class="mb-3 flex items-baseline justify-between">
+                  <p class="text-xs font-semibold tracking-wider text-gray-400 uppercase">Bundle Items</p>
+                  <span class="text-xs text-gray-400">{{ fixedBundle()!.items.length }} items</span>
+                </div>
+                <div
+                  class="overflow-hidden transition-[max-height] duration-300 ease-in-out"
+                  [style.max-height]="showAllBundleItems() || fixedBundle()!.items.length <= 3 ? '200rem' : '16rem'"
+                >
+                  @for (item of fixedBundle()!.items; track $index; let odd = $odd) {
+                    <div class="border-b border-gray-50 px-2 py-2.5 transition-colors last:border-b-0 hover:bg-gray-50" [class.bg-gray-50/50]="odd">
+                      <div class="flex items-center justify-between gap-2">
+                        <span class="text-sm font-medium wrap-break-word text-gray-800">{{ getProductName(item.productId) }}</span>
+                        <span class="text-xs text-gray-500">Qty {{ item.quantity }}</span>
+                      </div>
+
+                      @if (item.addOns.length > 0) {
+                        @for (group of getGroupedItemAddOns(item); track group.typeLabel) {
+                          <div class="mt-2 mb-1 flex items-center gap-2">
+                            <span class="text-[10px] font-semibold tracking-wider text-gray-400 uppercase">{{ group.typeLabel }}</span>
+                            <span class="text-[10px] text-gray-300">({{ group.options.length }})</span>
+                          </div>
+                          <div class="flex flex-wrap gap-1.5">
+                            @for (addOn of group.options; track addOn.addOnProductId) {
+                              <span class="rounded bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-700">{{ getProductName(addOn.addOnProductId) }}</span>
+                            }
+                          </div>
+                        }
+                      }
+                    </div>
+                  }
+                </div>
+
+                @if (fixedBundle()!.items.length > 3) {
+                  <button
+                    type="button"
+                    class="mt-3 flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-gray-50 px-4 py-2.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-100"
+                    (click)="showAllBundleItems.set(!showAllBundleItems())"
+                  >
+                    {{ showAllBundleItems() ? 'See less items' : 'Show all ' + fixedBundle()!.items.length + ' items' }}
+                    <app-icon
+                      name="icon-forward"
+                      [class]="'h-4 w-4 transition-transform duration-200 ' + (showAllBundleItems() ? '-rotate-90' : 'rotate-90')"
+                    />
+                  </button>
+                }
+              } @else {
+                <div class="mb-3 flex items-baseline justify-between">
+                  <p class="text-xs font-semibold tracking-wider text-gray-400 uppercase">Mix & Match Items</p>
+                  <span class="text-xs text-gray-400">{{ mixMatch()!.items.length }} items</span>
+                </div>
+                <div
+                  class="overflow-hidden transition-[max-height] duration-300 ease-in-out"
+                  [style.max-height]="showAllBundleItems() || mixMatch()!.items.length <= 3 ? '200rem' : '16rem'"
+                >
+                  @for (item of mixMatch()!.items; track $index; let odd = $odd) {
+                    <div class="border-b border-gray-50 px-2 py-2.5 transition-colors last:border-b-0 hover:bg-gray-50" [class.bg-gray-50/50]="odd">
+                      <div class="flex items-center justify-between gap-2">
+                        <span class="text-sm font-medium wrap-break-word text-gray-800">{{ getProductName(item.productId) }}</span>
+                      </div>
+
+                      @if (item.addOns.length > 0) {
+                        @for (group of getGroupedMixMatchItemAddOns(item); track group.typeLabel) {
+                          <div class="mt-2 mb-1 flex items-center gap-2">
+                            <span class="text-[10px] font-semibold tracking-wider text-gray-400 uppercase">{{ group.typeLabel }}</span>
+                            <span class="text-[10px] text-gray-300">({{ group.options.length }})</span>
+                          </div>
+                          <div class="flex flex-wrap gap-1.5">
+                            @for (addOn of group.options; track addOn.addOnProductId) {
+                              <span class="rounded bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-700">{{ getProductName(addOn.addOnProductId) }}</span>
+                            }
+                          </div>
+                        }
+                      }
+                    </div>
+                  }
+                </div>
+
+                @if (mixMatch()!.items.length > 3) {
+                  <button
+                    type="button"
+                    class="mt-3 flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-gray-50 px-4 py-2.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-100"
+                    (click)="showAllBundleItems.set(!showAllBundleItems())"
+                  >
+                    {{ showAllBundleItems() ? 'See less items' : 'Show all ' + mixMatch()!.items.length + ' items' }}
+                    <app-icon
+                      name="icon-forward"
+                      [class]="'h-4 w-4 transition-transform duration-200 ' + (showAllBundleItems() ? '-rotate-90' : 'rotate-90')"
+                    />
+                  </button>
+                }
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+</div>
+
+@if (showDeleteModal() && canWriteManagement()) {
+  <div
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="delete-title"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md transition-opacity duration-200"
+    (click)="cancelDelete()"
+    (keydown.escape)="cancelDelete()"
+    tabindex="0"
+  >
+    <div
+      role="document"
+      class="mx-4 w-full max-w-sm animate-[modal-pop_0.2s_ease-out] rounded-2xl bg-white p-6 shadow-2xl"
+      (click)="$event.stopPropagation()"
+      (keydown)="$event.stopPropagation()"
+    >
+      <div class="mx-auto w-fit rounded-full bg-red-50/60 p-3">
+        <div class="rounded-full bg-red-50 p-3">
+          <app-icon name="icon-delete" [class]="'h-6 w-6 text-red-600'" />
+        </div>
+      </div>
+
+      <h3 id="delete-title" class="mt-4 text-center text-lg font-semibold text-gray-900">
+        Delete Promotion?
+      </h3>
+      <p class="mt-2 text-center text-sm leading-relaxed text-gray-500">
+        This will permanently remove
+        <span class="font-medium text-gray-700">{{ promotionName() }}</span>. This action cannot be undone.
+      </p>
+
+      <div class="mt-6 flex items-center justify-end gap-3">
+        <button
+          type="button"
+          class="cursor-pointer px-4 py-2 text-sm font-medium text-gray-500 transition-colors hover:text-gray-700"
+          (click)="cancelDelete()"
+          [disabled]="isDeleting()"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="cursor-pointer rounded-xl bg-red-600 px-6 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-red-700 hover:shadow-md active:scale-[0.97]"
+          (click)="confirmDelete()"
+          [disabled]="isDeleting()"
+        >
+          @if (isDeleting()) {
+            <span class="loading loading-spinner loading-xs mr-2"></span>
+          }
+          {{ isDeleting() ? 'Deleting Promotion...' : 'Delete Promotion' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+

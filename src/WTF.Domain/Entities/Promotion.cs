@@ -3,13 +3,19 @@ using System.Collections.Generic;
 
 namespace WTF.Domain.Entities;
 
-public partial class Order
+public partial class Promotion
 {
     public Guid Id { get; set; }
 
-    public int OrderNumber { get; set; }
+    public string Name { get; set; } = null!;
 
-    public Guid? CustomerId { get; set; }
+    public int TypeId { get; set; }
+
+    public bool IsActive { get; set; }
+
+    public DateTime? StartDate { get; set; }
+
+    public DateTime? EndDate { get; set; }
 
     public DateTime CreatedAt { get; set; }
 
@@ -19,31 +25,17 @@ public partial class Order
 
     public Guid? UpdatedBy { get; set; }
 
-    public decimal? AmountReceived { get; set; }
-
-    public decimal? ChangeAmount { get; set; }
-
-    public decimal? Tips { get; set; }
-
-    public int StatusId { get; set; }
-
-    public int? PaymentMethodId { get; set; }
-
-    public string? SpecialInstructions { get; set; }
-
-    public string? Note { get; set; }
-
     public virtual User CreatedByNavigation { get; set; } = null!;
 
-    public virtual Customer? Customer { get; set; }
+    public virtual FixedBundlePromotion? FixedBundlePromotion { get; set; }
+
+    public virtual MixMatchPromotion? MixMatchPromotion { get; set; }
 
     public virtual ICollection<OrderBundlePromotion> OrderBundlePromotions { get; set; } = new List<OrderBundlePromotion>();
 
     public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
 
-    public virtual PaymentMethod? PaymentMethod { get; set; }
-
-    public virtual Status Status { get; set; } = null!;
+    public virtual PromotionImage? PromotionImage { get; set; }
 
     public virtual User? UpdatedByNavigation { get; set; }
 }

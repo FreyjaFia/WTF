@@ -35,6 +35,14 @@ public partial class Product
 
     public virtual User CreatedByNavigation { get; set; } = null!;
 
+    public virtual ICollection<FixedBundlePromotionItemAddOn> FixedBundlePromotionItemAddOns { get; set; } = new List<FixedBundlePromotionItemAddOn>();
+
+    public virtual ICollection<FixedBundlePromotionItem> FixedBundlePromotionItems { get; set; } = new List<FixedBundlePromotionItem>();
+
+    public virtual ICollection<MixMatchPromotionProductAddOn> MixMatchPromotionProductAddOns { get; set; } = new List<MixMatchPromotionProductAddOn>();
+
+    public virtual ICollection<MixMatchPromotionProduct> MixMatchPromotionProducts { get; set; } = new List<MixMatchPromotionProduct>();
+
     public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
 
     public virtual ICollection<ProductAddOn> ProductAddOnAddOns { get; set; } = new List<ProductAddOn>();

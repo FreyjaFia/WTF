@@ -24,11 +24,25 @@ public partial class WTFDbContext : DbContext
 
     public virtual DbSet<CustomerImage> CustomerImages { get; set; }
 
+    public virtual DbSet<FixedBundlePromotion> FixedBundlePromotions { get; set; }
+
+    public virtual DbSet<FixedBundlePromotionItem> FixedBundlePromotionItems { get; set; }
+
+    public virtual DbSet<FixedBundlePromotionItemAddOn> FixedBundlePromotionItemAddOns { get; set; }
+
     public virtual DbSet<Image> Images { get; set; }
 
     public virtual DbSet<LoyaltyPoint> LoyaltyPoints { get; set; }
 
+    public virtual DbSet<MixMatchPromotion> MixMatchPromotions { get; set; }
+
+    public virtual DbSet<MixMatchPromotionProduct> MixMatchPromotionProducts { get; set; }
+
+    public virtual DbSet<MixMatchPromotionProductAddOn> MixMatchPromotionProductAddOns { get; set; }
+
     public virtual DbSet<Order> Orders { get; set; }
+
+    public virtual DbSet<OrderBundlePromotion> OrderBundlePromotions { get; set; }
 
     public virtual DbSet<OrderItem> OrderItems { get; set; }
 
@@ -47,6 +61,10 @@ public partial class WTFDbContext : DbContext
     public virtual DbSet<ProductPriceHistory> ProductPriceHistories { get; set; }
 
     public virtual DbSet<ProductSubCategory> ProductSubCategories { get; set; }
+
+    public virtual DbSet<Promotion> Promotions { get; set; }
+
+    public virtual DbSet<PromotionImage> PromotionImages { get; set; }
 
     public virtual DbSet<RefreshToken> RefreshTokens { get; set; }
 
@@ -149,6 +167,52 @@ public partial class WTFDbContext : DbContext
                 .HasConstraintName("FK_CustomerImages_Images");
         });
 
+        modelBuilder.Entity<FixedBundlePromotion>(entity =>
+        {
+            entity.HasKey(e => e.PromotionId);
+
+            entity.Property(e => e.PromotionId).ValueGeneratedNever();
+            entity.Property(e => e.BundlePrice).HasColumnType("decimal(10, 2)");
+
+            entity.HasOne(d => d.Promotion).WithOne(p => p.FixedBundlePromotion)
+                .HasForeignKey<FixedBundlePromotion>(d => d.PromotionId)
+                .HasConstraintName("FK_FixedBundlePromotions_Promotions");
+        });
+
+        modelBuilder.Entity<FixedBundlePromotionItem>(entity =>
+        {
+            entity.HasIndex(e => e.ProductId, "IX_FixedBundlePromotionItems_ProductId");
+
+            entity.HasIndex(e => new { e.FixedBundlePromotionId, e.ProductId }, "IX_FixedBundlePromotionItems_Promotion_Product").IsUnique();
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_FixedBundlePromotionItems_Id");
+
+            entity.HasOne(d => d.FixedBundlePromotion).WithMany(p => p.FixedBundlePromotionItems)
+                .HasForeignKey(d => d.FixedBundlePromotionId)
+                .HasConstraintName("FK_FixedBundlePromotionItems_FixedBundlePromotions");
+
+            entity.HasOne(d => d.Product).WithMany(p => p.FixedBundlePromotionItems)
+                .HasForeignKey(d => d.ProductId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_FixedBundlePromotionItems_Products");
+        });
+
+        modelBuilder.Entity<FixedBundlePromotionItemAddOn>(entity =>
+        {
+            entity.HasIndex(e => new { e.FixedBundlePromotionItemId, e.AddOnProductId }, "IX_FixedBundlePromotionItemAddOns_Item_AddOn").IsUnique();
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_FixedBundlePromotionItemAddOns_Id");
+
+            entity.HasOne(d => d.AddOnProduct).WithMany(p => p.FixedBundlePromotionItemAddOns)
+                .HasForeignKey(d => d.AddOnProductId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_FixedBundlePromotionItemAddOns_Product");
+
+            entity.HasOne(d => d.FixedBundlePromotionItem).WithMany(p => p.FixedBundlePromotionItemAddOns)
+                .HasForeignKey(d => d.FixedBundlePromotionItemId)
+                .HasConstraintName("FK_FixedBundlePromotionItemAddOns_Item");
+        });
+
         modelBuilder.Entity<Image>(entity =>
         {
             entity.Property(e => e.ImageId).HasDefaultValueSql("(newid())");
@@ -164,6 +228,52 @@ public partial class WTFDbContext : DbContext
                 .HasForeignKey(d => d.CustomerId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_LoyaltyPoints_Customers");
+        });
+
+        modelBuilder.Entity<MixMatchPromotion>(entity =>
+        {
+            entity.HasKey(e => e.PromotionId);
+
+            entity.Property(e => e.PromotionId).ValueGeneratedNever();
+            entity.Property(e => e.BundlePrice).HasColumnType("decimal(10, 2)");
+
+            entity.HasOne(d => d.Promotion).WithOne(p => p.MixMatchPromotion)
+                .HasForeignKey<MixMatchPromotion>(d => d.PromotionId)
+                .HasConstraintName("FK_MixMatchPromotions_Promotions");
+        });
+
+        modelBuilder.Entity<MixMatchPromotionProduct>(entity =>
+        {
+            entity.HasIndex(e => e.ProductId, "IX_MixMatchPromotionProducts_ProductId");
+
+            entity.HasIndex(e => new { e.MixMatchPromotionId, e.ProductId }, "IX_MixMatchPromotionProducts_Promotion_Product").IsUnique();
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_MixMatchPromotionProducts_Id");
+
+            entity.HasOne(d => d.MixMatchPromotion).WithMany(p => p.MixMatchPromotionProducts)
+                .HasForeignKey(d => d.MixMatchPromotionId)
+                .HasConstraintName("FK_MixMatchPromotionProducts_MixMatchPromotions");
+
+            entity.HasOne(d => d.Product).WithMany(p => p.MixMatchPromotionProducts)
+                .HasForeignKey(d => d.ProductId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_MixMatchPromotionProducts_Products");
+        });
+
+        modelBuilder.Entity<MixMatchPromotionProductAddOn>(entity =>
+        {
+            entity.HasIndex(e => new { e.MixMatchPromotionProductId, e.AddOnProductId }, "IX_MixMatchPromotionProductAddOns_Item_AddOn").IsUnique();
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_MixMatchPromotionProductAddOns_Id");
+
+            entity.HasOne(d => d.AddOnProduct).WithMany(p => p.MixMatchPromotionProductAddOns)
+                .HasForeignKey(d => d.AddOnProductId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_MixMatchPromotionProductAddOns_Product");
+
+            entity.HasOne(d => d.MixMatchPromotionProduct).WithMany(p => p.MixMatchPromotionProductAddOns)
+                .HasForeignKey(d => d.MixMatchPromotionProductId)
+                .HasConstraintName("FK_MixMatchPromotionProductAddOns_Item");
         });
 
         modelBuilder.Entity<Order>(entity =>
@@ -211,8 +321,30 @@ public partial class WTFDbContext : DbContext
                 .HasConstraintName("FK_Orders_UpdatedBy");
         });
 
+        modelBuilder.Entity<OrderBundlePromotion>(entity =>
+        {
+            entity.HasIndex(e => e.OrderId, "IX_OrderBundlePromotions_OrderId");
+
+            entity.HasIndex(e => e.PromotionId, "IX_OrderBundlePromotions_PromotionId");
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_OrderBundlePromotions_Id");
+            entity.Property(e => e.UnitPrice).HasColumnType("decimal(10, 2)");
+
+            entity.HasOne(d => d.Order).WithMany(p => p.OrderBundlePromotions)
+                .HasForeignKey(d => d.OrderId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_OrderBundlePromotions_Order");
+
+            entity.HasOne(d => d.Promotion).WithMany(p => p.OrderBundlePromotions)
+                .HasForeignKey(d => d.PromotionId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_OrderBundlePromotions_Promotion");
+        });
+
         modelBuilder.Entity<OrderItem>(entity =>
         {
+            entity.HasIndex(e => e.BundlePromotionId, "IX_OrderItems_BundlePromotionId");
+
             entity.HasIndex(e => e.OrderId, "IX_OrderItems_OrderId");
 
             entity.HasIndex(e => e.ParentOrderItemId, "IX_OrderItems_ParentOrderItemId");
@@ -225,6 +357,10 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.SpecialInstructions)
                 .HasMaxLength(100)
                 .IsUnicode(false);
+
+            entity.HasOne(d => d.BundlePromotion).WithMany(p => p.OrderItems)
+                .HasForeignKey(d => d.BundlePromotionId)
+                .HasConstraintName("FK_OrderItems_BundlePromotion");
 
             entity.HasOne(d => d.Order).WithMany(p => p.OrderItems)
                 .HasForeignKey(d => d.OrderId)
@@ -392,6 +528,49 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.Name)
                 .HasMaxLength(50)
                 .IsUnicode(false);
+        });
+
+        modelBuilder.Entity<Promotion>(entity =>
+        {
+            entity.HasIndex(e => e.CreatedBy, "IX_Promotions_CreatedBy");
+
+            entity.HasIndex(e => new { e.TypeId, e.IsActive }, "IX_Promotions_TypeId_IsActive");
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_Promotions_Id");
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("(getutcdate())", "DF_Promotions_CreatedAt")
+                .HasColumnType("datetime");
+            entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_Promotions_IsActive");
+            entity.Property(e => e.Name).HasMaxLength(100);
+            entity.Property(e => e.UpdatedAt).HasColumnType("datetime");
+
+            entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.PromotionCreatedByNavigations)
+                .HasForeignKey(d => d.CreatedBy)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Promotions_CreatedBy");
+
+            entity.HasOne(d => d.UpdatedByNavigation).WithMany(p => p.PromotionUpdatedByNavigations)
+                .HasForeignKey(d => d.UpdatedBy)
+                .HasConstraintName("FK_Promotions_UpdatedBy");
+        });
+
+        modelBuilder.Entity<PromotionImage>(entity =>
+        {
+            entity.HasKey(e => new { e.PromotionId, e.ImageId });
+
+            entity.HasIndex(e => e.ImageId, "UQ_PromotionImages_ImageId").IsUnique();
+
+            entity.HasIndex(e => e.PromotionId, "UQ_PromotionImages_PromotionId").IsUnique();
+
+            entity.HasOne(d => d.Image).WithOne(p => p.PromotionImage)
+                .HasForeignKey<PromotionImage>(d => d.ImageId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PromotionImages_Images");
+
+            entity.HasOne(d => d.Promotion).WithOne(p => p.PromotionImage)
+                .HasForeignKey<PromotionImage>(d => d.PromotionId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PromotionImages_Promotions");
         });
 
         modelBuilder.Entity<RefreshToken>(entity =>

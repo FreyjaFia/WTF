@@ -15,6 +15,10 @@ import { ProductDetailsComponent } from '@features/management/products/product-d
 import { ProductEditorComponent } from '@features/management/products/product-editor/product-editor';
 import { ProductListComponent } from '@features/management/products/product-list/product-list';
 import { ProductsComponent } from '@features/management/products/products';
+import { PromotionDetailsComponent } from '@features/management/promotions/promotion-details/promotion-details';
+import { PromotionEditorComponent } from '@features/management/promotions/promotion-editor/promotion-editor';
+import { PromotionListComponent } from '@features/management/promotions/promotion-list/promotion-list';
+import { PromotionsComponent } from '@features/management/promotions/promotions';
 import { ReportsComponent } from '@features/management/reports/reports';
 import { SchemaScriptsComponent } from '@features/management/schema-scripts/schema-scripts';
 import { UserDetailsComponent } from '@features/management/users/user-details/user-details';
@@ -159,6 +163,56 @@ export const routes: Routes = [
               {
                 path: 'edit/:id',
                 component: UserEditorComponent,
+                canDeactivate: [unsavedChangesGuard],
+                canActivate: [roleGuard],
+                data: { roles: AppRoleGroups.ManagementWrite },
+              },
+            ],
+          },
+          {
+            path: 'promotions',
+            component: PromotionsComponent,
+            children: [
+              {
+                path: '',
+                component: PromotionListComponent,
+              },
+              {
+                path: 'new',
+                component: PromotionEditorComponent,
+                canDeactivate: [unsavedChangesGuard],
+                canActivate: [roleGuard],
+                data: { roles: AppRoleGroups.ManagementWrite },
+              },
+              {
+                path: 'fixed-bundles/:id',
+                component: PromotionDetailsComponent,
+              },
+              {
+                path: 'fixed-bundles/:id/edit',
+                component: PromotionEditorComponent,
+                canDeactivate: [unsavedChangesGuard],
+                canActivate: [roleGuard],
+                data: { roles: AppRoleGroups.ManagementWrite },
+              },
+              {
+                path: 'mix-match/:id',
+                component: PromotionDetailsComponent,
+              },
+              {
+                path: 'mix-match/:id/edit',
+                component: PromotionEditorComponent,
+                canDeactivate: [unsavedChangesGuard],
+                canActivate: [roleGuard],
+                data: { roles: AppRoleGroups.ManagementWrite },
+              },
+              {
+                path: 'details/:id',
+                component: PromotionDetailsComponent,
+              },
+              {
+                path: 'edit/:id',
+                component: PromotionEditorComponent,
                 canDeactivate: [unsavedChangesGuard],
                 canActivate: [roleGuard],
                 data: { roles: AppRoleGroups.ManagementWrite },

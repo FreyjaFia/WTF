@@ -5,6 +5,7 @@ export * from './customer.models';
 export * from './dashboard.models';
 export * from './order.models';
 export * from './product.models';
+export * from './promotion.models';
 export * from './report.models';
 export * from './schema-script-history.models';
 export * from './user.models';

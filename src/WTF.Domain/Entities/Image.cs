@@ -15,5 +15,7 @@ public partial class Image
 
     public virtual ProductImage? ProductImage { get; set; }
 
+    public virtual PromotionImage? PromotionImage { get; set; }
+
     public virtual UserImage? UserImage { get; set; }
 }
