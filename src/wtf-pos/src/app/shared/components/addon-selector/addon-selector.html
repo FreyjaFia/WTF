@@ -33,7 +33,7 @@
             <h3 id="addon-selector-title" class="text-lg font-bold text-gray-900">
               {{ product()!.name }}
             </h3>
-            <p class="mt-0.5 text-sm text-gray-500">Customize your order</p>
+            <p class="mt-0.5 text-sm text-gray-500">{{ subtitleText() }}</p>
           </div>
           <div class="shrink-0 text-right">
             <p class="text-lg font-bold text-[#047857]">
@@ -220,6 +220,9 @@
                         <button
                           type="button"
                           class="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full bg-[#047857] text-xs font-bold text-white transition-colors hover:bg-[#065f46]"
+                          [disabled]="!canIncrementOption(group, option.id)"
+                          [class.opacity-50]="!canIncrementOption(group, option.id)"
+                          [class.cursor-not-allowed]="!canIncrementOption(group, option.id)"
                           (click)="incrementOption(group, option, $event)"
                           aria-label="Increase quantity"
                         >
@@ -248,7 +251,9 @@
 
           @if (addOnGroups().length === 0) {
             <div class="flex flex-col items-center py-8 text-center">
-              <p class="text-sm text-gray-400">No add-ons available for this product</p>
+              <p class="text-sm text-gray-400">
+                {{ isCustomOptionMode() ? 'No selectable items available' : 'No add-ons available for this product' }}
+              </p>
             </div>
           }
 

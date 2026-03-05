@@ -37,7 +37,7 @@
         <div class="flex flex-col gap-2 md:gap-3">
           <div class="flex items-center justify-between gap-2">
             <div
-              class="flex w-full min-w-0 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200 md:w-[26rem] md:flex-none"
+              class="flex w-full min-w-0 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200 md:w-104 md:flex-none"
               [class.pointer-events-none]="isReadOnly() || !canManageOrderActions()"
               [class.opacity-50]="isReadOnly() || !canManageOrderActions()"
             >
@@ -81,19 +81,37 @@
         [class.pointer-events-none]="isReadOnly() || !canManageOrderActions()"
         [class.opacity-50]="isReadOnly() || !canManageOrderActions()"
       >
-        <div role="tablist" class="tabs tabs-box tabs-sm">
-          @for (tab of subCategoryTabs; track tab.id) {
+        <div class="max-w-full overflow-x-auto md:w-auto md:overflow-visible">
+          <div role="tablist" class="tabs tabs-box tabs-sm w-max" aria-label="Catalog tabs">
+            @for (tab of subCategoryTabs; track tab.id) {
+              <button
+                type="button"
+                role="tab"
+                class="tab gap-1.5 whitespace-nowrap"
+                [class.tab-active]="
+                  activeCatalogTab() === 'products' && activeSubCategoryTab() === tab.id
+                "
+                [attr.aria-selected]="
+                  activeCatalogTab() === 'products' && activeSubCategoryTab() === tab.id
+                "
+                (click)="selectCatalogTab('products'); selectSubCategoryTab(tab.id)"
+              >
+                <app-icon [name]="tab.icon" [class]="'h-4 w-4'" />
+                {{ tab.label }}
+              </button>
+            }
             <button
               type="button"
               role="tab"
-              class="tab gap-1.5"
-              [class.tab-active]="activeSubCategoryTab() === tab.id"
-              (click)="selectSubCategoryTab(tab.id)"
+              class="tab gap-1.5 whitespace-nowrap"
+              [class.tab-active]="activeCatalogTab() === 'bundles'"
+              [attr.aria-selected]="activeCatalogTab() === 'bundles'"
+              (click)="selectCatalogTab('bundles')"
             >
-              <app-icon [name]="tab.icon" [class]="'h-4 w-4'" />
-              {{ tab.label }}
+              <app-icon name="icon-promotion" [class]="'h-4 w-4'" />
+              Bundles
             </button>
-          }
+          </div>
         </div>
       </div>
 
@@ -109,60 +127,133 @@
           [refreshing]="isRefreshing()"
           (refreshTriggered)="refreshProducts()"
         >
-          @if (products().length === 0) {
-            <div class="flex flex-1 flex-col items-center justify-center text-center opacity-60">
-              <app-icon name="icon-search" [class]="'mb-3 h-12 w-12'" />
-              <div class="text-sm font-medium">No products found</div>
-              <div class="text-xs">Try adjusting your filters or add a new product</div>
-            </div>
-          }
-          @if (products().length > 0) {
-            <div
-              class="grid grid-cols-1 gap-4 pb-4 sm:grid-cols-2 lg:grid-cols-3"
-              [class.pb-18]="cart().length > 0"
-              [class.md:pb-4]="cart().length > 0"
-            >
-              @for (p of products(); track p.id) {
-                <div
-                  class="card flex min-h-60 flex-col overflow-hidden rounded-xl bg-white shadow-lg transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl"
-                  [class.cursor-pointer]="!isReadOnly()"
-                  [class.cursor-default]="isReadOnly() || !canManageOrderActions()"
-                  [class.opacity-50]="isReadOnly() || !canManageOrderActions()"
-                  [class.pointer-events-none]="isReadOnly() || !canManageOrderActions()"
-                  role="button"
-                  tabindex="0"
-                  (click)="!isReadOnly() && canManageOrderActions() && addToCart(p)"
-                  (keydown.enter)="!isReadOnly() && canManageOrderActions() && addToCart(p)"
-                  (keydown.space)="!isReadOnly() && canManageOrderActions() && addToCart(p)"
-                >
-                  <figure class="flex h-32 shrink-0 items-center justify-center">
-                    @if (p.imageUrl) {
-                      <img [src]="p.imageUrl" [alt]="p.name" class="h-24 w-24 object-contain" />
-                    }
-                    @if (!p.imageUrl) {
-                      <app-avatar [label]="p.name" [size]="56" />
-                    }
-                  </figure>
-                  <div class="card-body flex flex-1 flex-col justify-between p-4">
-                    <h2
-                      class="card-title text-base leading-snug font-semibold break-words text-gray-800"
-                    >
-                      {{ p.name }}
-                    </h2>
-                    <div class="card-actions mt-auto items-center justify-between">
-                      <div class="text-lg font-bold text-black">
-                        <span class="text-base opacity-70"
-                          ><app-icon
-                            name="icon-peso"
-                            [class]="'inline h-3 w-3 align-[-0.125em]'"
-                            [fill]="'currentColor'" /></span
-                        >{{ p.price | number: '1.2-2' }}
+          @if (activeCatalogTab() === 'products') {
+            @if (products().length === 0) {
+              <div class="flex flex-1 flex-col items-center justify-center text-center opacity-60">
+                <app-icon name="icon-search" [class]="'mb-3 h-12 w-12'" />
+                <div class="text-sm font-medium">No products found</div>
+                <div class="text-xs">Try adjusting your filters or add a new product</div>
+              </div>
+            }
+            @if (products().length > 0) {
+              <div
+                class="grid grid-cols-1 gap-4 pb-4 sm:grid-cols-2 lg:grid-cols-3"
+                [class.pb-18]="cart().length > 0"
+                [class.md:pb-4]="cart().length > 0"
+              >
+                @for (p of products(); track p.id) {
+                  <div
+                    class="card flex min-h-60 flex-col overflow-hidden rounded-xl bg-white shadow-lg transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl"
+                    [class.cursor-pointer]="!isReadOnly()"
+                    [class.cursor-default]="isReadOnly() || !canManageOrderActions()"
+                    [class.opacity-50]="isReadOnly() || !canManageOrderActions()"
+                    [class.pointer-events-none]="isReadOnly() || !canManageOrderActions()"
+                    role="button"
+                    tabindex="0"
+                    (click)="!isReadOnly() && canManageOrderActions() && addToCart(p)"
+                    (keydown.enter)="!isReadOnly() && canManageOrderActions() && addToCart(p)"
+                    (keydown.space)="!isReadOnly() && canManageOrderActions() && addToCart(p)"
+                  >
+                    <figure class="flex h-32 shrink-0 items-center justify-center">
+                      @if (p.imageUrl) {
+                        <img [src]="p.imageUrl" [alt]="p.name" class="h-24 w-24 object-contain" />
+                      }
+                      @if (!p.imageUrl) {
+                        <app-avatar [label]="p.name" [size]="56" />
+                      }
+                    </figure>
+                    <div class="card-body flex flex-1 flex-col justify-between p-4">
+                      <h2
+                        class="card-title text-base leading-snug font-semibold wrap-break-word text-gray-800"
+                      >
+                        {{ p.name }}
+                      </h2>
+                      <div class="card-actions mt-auto items-center justify-between">
+                        <div class="text-lg font-bold text-black">
+                          <span class="text-base opacity-70"
+                            ><app-icon
+                              name="icon-peso"
+                              [class]="'inline h-3 w-3 align-[-0.125em]'"
+                              [fill]="'currentColor'" /></span
+                          >{{ p.price | number: '1.2-2' }}
+                        </div>
                       </div>
                     </div>
                   </div>
+                }
+              </div>
+            }
+          } @else {
+            @if (isLoadingPromotions()) {
+              <div class="flex justify-center py-8">
+                <span class="loading loading-spinner loading-lg"></span>
+              </div>
+            } @else if (filteredBundlePromotions().length === 0) {
+              <div class="flex flex-1 flex-col items-center justify-center text-center opacity-60">
+                <app-icon name="icon-promotion" [class]="'mb-3 h-12 w-12'" />
+                <div class="text-sm font-medium">No active promotions</div>
+                <div class="text-xs">
+                  Promotion list uses your local timezone for date filtering
                 </div>
-              }
-            </div>
+              </div>
+            } @else {
+              <div
+                class="grid grid-cols-1 gap-4 pb-4 sm:grid-cols-2 lg:grid-cols-3"
+                [class.pb-18]="cart().length > 0"
+                [class.md:pb-4]="cart().length > 0"
+              >
+                @for (promo of filteredBundlePromotions(); track promo.id) {
+                  <div
+                    class="card flex min-h-60 flex-col overflow-hidden rounded-xl bg-white shadow-lg transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl"
+                    [class.cursor-pointer]="!isReadOnly() && canManageOrderActions()"
+                    [class.cursor-default]="isReadOnly() || !canManageOrderActions()"
+                    [class.opacity-50]="isReadOnly() || !canManageOrderActions()"
+                    [class.pointer-events-none]="isReadOnly() || !canManageOrderActions()"
+                    role="button"
+                    tabindex="0"
+                    (click)="
+                      !isReadOnly() && canManageOrderActions() && addBundlePromotionToCart(promo)
+                    "
+                    (keydown.enter)="
+                      !isReadOnly() && canManageOrderActions() && addBundlePromotionToCart(promo)
+                    "
+                    (keydown.space)="
+                      !isReadOnly() && canManageOrderActions() && addBundlePromotionToCart(promo)
+                    "
+                  >
+                    <figure class="flex h-32 shrink-0 items-center justify-center">
+                      @if (promo.imageUrl) {
+                        <img
+                          [src]="promo.imageUrl"
+                          [alt]="promo.name"
+                          class="h-24 w-24 object-contain"
+                        />
+                      }
+                      @if (!promo.imageUrl) {
+                        <app-avatar [label]="promo.name" [size]="56" />
+                      }
+                    </figure>
+                    <div class="card-body flex flex-1 flex-col justify-between p-4">
+                      <h3
+                        class="card-title text-base leading-snug font-semibold wrap-break-word text-gray-800"
+                      >
+                        {{ promo.name }}
+                      </h3>
+                      <div class="card-actions mt-auto items-center justify-between">
+                        <div class="text-lg font-bold text-black">
+                          <span class="text-base opacity-70"
+                            ><app-icon
+                              name="icon-peso"
+                              [class]="'inline h-3 w-3 align-[-0.125em]'"
+                              [fill]="'currentColor'" /></span
+                          >{{ promo.bundlePrice ?? 0 | number: '1.2-2' }}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
           }
         </app-pull-to-refresh>
       }
@@ -195,7 +286,7 @@
   </div>
 
   <aside
-    class="fixed inset-0 z-50 flex translate-y-full flex-col bg-white shadow-2xl transition-transform duration-300 ease-out md:relative md:inset-auto md:z-auto md:h-full md:min-h-0 md:shrink-0 md:translate-y-0! md:overflow-hidden md:rounded-lg md:border-l-2 md:border-gray-200 md:shadow-[-8px_0_24px_rgba(0,0,0,0.1)] md:transition-all md:duration-[400ms] md:ease-[cubic-bezier(0.175,0.885,0.32,1.275)] max-md:[&.cart-open]:translate-y-0"
+    class="fixed inset-0 z-50 flex translate-y-full flex-col bg-white shadow-2xl transition-transform duration-300 ease-out md:relative md:inset-auto md:z-auto md:h-full md:min-h-0 md:shrink-0 md:translate-y-0! md:overflow-hidden md:rounded-lg md:border-l-2 md:border-gray-200 md:shadow-[-8px_0_24px_rgba(0,0,0,0.1)] md:transition-all md:duration-400 md:ease-[cubic-bezier(0.175,0.885,0.32,1.275)] max-md:[&.cart-open]:translate-y-0"
     [class.md:w-[336px]]="!isCartCollapsed()"
     [class.md:w-[88px]]="isCartCollapsed()"
     [class.cart-open]="showMobileCart()"
@@ -216,30 +307,24 @@
 
     <button
       type="button"
-      class="group absolute inset-y-0 left-0 z-20 hidden w-6 cursor-pointer overflow-hidden bg-gray-200/55 transition-all duration-[400ms] ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:bg-gray-300/60 active:bg-gray-300 md:block"
-      [class.border-r-2]="true"
-      [class.border-r-amber-500]="isEditMode() && !isCancelled() && !isRefunded() && !isCompleted()"
-      [class.border-r-emerald-500]="isEditMode() && isCompleted()"
-      [class.border-r-gray-400]="isEditMode() && isCancelled()"
-      [class.border-r-red-500]="isEditMode() && isRefunded()"
-      [style.border-right-color]="isEditMode() ? null : 'rgb(229 231 235 / 0.55)'"
+      class="group absolute inset-y-0 left-0 z-20 hidden w-6 cursor-pointer overflow-hidden bg-gray-200/55 transition-all duration-400 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:bg-gray-300/60 active:bg-gray-300 md:block"
       (click)="toggleCartCollapse()"
       (mouseenter)="onRailTriggerEnter()"
       [attr.aria-label]="isCartCollapsed() ? 'Expand cart' : 'Collapse cart'"
     ></button>
 
     <div
-      class="relative hidden h-full flex-col items-center justify-between py-3 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] md:flex md:pl-6"
+      class="relative hidden h-full flex-col items-center justify-between py-3 transition-all duration-300 ease-in-out md:flex md:pl-6"
       [class.md:hidden]="!isCartCollapsed()"
     >
       <div
-        class="pointer-events-none flex h-10 w-10 items-center justify-center rounded-full bg-gray-900 text-base font-bold text-white shadow-sm transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]"
+        class="pointer-events-none flex h-10 w-10 items-center justify-center rounded-full bg-gray-900 text-base font-bold text-white shadow-sm transition-all duration-300 ease-in-out"
       >
         {{ itemCount() }}
       </div>
 
       <div
-        class="pointer-events-none text-base leading-none font-bold text-gray-800 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] [text-orientation:mixed] [writing-mode:vertical-rl]"
+        class="pointer-events-none text-base leading-none font-bold text-gray-800 transition-all duration-300 ease-in-out [text-orientation:mixed] [writing-mode:vertical-rl]"
         [class.opacity-100]="isCartCollapsed()"
         [class.opacity-0]="!isCartCollapsed()"
         [class.translate-y-0]="isCartCollapsed()"
@@ -410,7 +495,10 @@
               [attr.tabindex]="!isReadOnly() && canManageOrderActions() ? 0 : null"
               (click)="!isReadOnly() && canManageOrderActions() && editCartItem($index)"
               (keydown.enter)="!isReadOnly() && canManageOrderActions() && editCartItem($index)"
-              (keydown.space)="!isReadOnly() && canManageOrderActions() && editCartItem($index); $event.preventDefault()"
+              (keydown.space)="
+                !isReadOnly() && canManageOrderActions() && editCartItem($index);
+                $event.preventDefault()
+              "
             >
               <div class="flex items-center gap-3">
                 <div class="flex h-16 w-16 shrink-0 items-center justify-center">
@@ -468,47 +556,89 @@
                           name="icon-peso"
                           [class]="'inline h-3 w-3 align-[-0.125em]'"
                           [fill]="'currentColor'" /></span
-                      >{{
-                        c.qty *
-                          (c.price + (c.addOns?.length ? c.addOns!.reduce(addOnPriceReducer, 0) : 0))
-                          | number: '1.2-2'
-                      }}
+                      >{{ getLineTotal(c) | number: '1.2-2' }}
                     </div>
                   </div>
                 </div>
               </div>
 
-              <!-- Add-on line items -->
-              @if (c.addOns?.length) {
+              @if (c.bundleItems?.length) {
                 <div class="mt-2 ml-19 space-y-1 border-t border-gray-200 pt-2">
-                  @for (ao of c.addOns | sortAddOns; track ao.addOnId) {
+                  @for (
+                    bundleItem of getSortedBundleItems(c);
+                    track bundleItem.productId + '-' + $index
+                  ) {
+                    <div class="text-xs text-gray-500">
+                      <div class="flex items-center justify-between">
+                        <span class="flex min-w-0 flex-1 items-center gap-1.5 pr-2">
+                          <span
+                            class="inline-block h-1 w-1 shrink-0 rounded-full bg-gray-400"
+                          ></span>
+                          <span class="min-w-0 wrap-break-word">{{
+                            getBundleChildTotalQuantity(c, bundleItem) > 1
+                              ? getBundleChildTotalQuantity(c, bundleItem) + 'x ' + bundleItem.name
+                              : bundleItem.name
+                          }}</span>
+                        </span>
+                      </div>
+                      @if (bundleItem.addOns?.length) {
+                        <div class="mt-0.5 ml-5 space-y-0.5">
+                          @for (
+                            addOn of getGroupedBundleItemAddOns(bundleItem);
+                            track addOn.addOnId
+                          ) {
+                            <div class="flex items-center gap-1.5 text-[11px] text-gray-400">
+                              <span
+                                class="inline-block h-1 w-1 shrink-0 rounded-full bg-gray-300"
+                              ></span>
+                              <span class="min-w-0 wrap-break-word">{{
+                                addOn.quantityPerUnit > 1
+                                  ? addOn.quantityPerUnit + 'x ' + addOn.name + ' (per unit)'
+                                  : addOn.name
+                              }}</span>
+                            </div>
+                          }
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+              } @else if (c.addOns?.length) {
+                <div class="mt-2 ml-19 space-y-1 border-t border-gray-200 pt-2">
+                  @for (ao of getGroupedAddOns(c); track ao.addOnId + '-' + ao.price) {
                     <div class="flex items-center justify-between text-xs text-gray-500">
-                      <span class="flex items-center gap-1.5">
-                        <span class="inline-block h-1 w-1 rounded-full bg-gray-400"></span>
-                        {{ ao.name }}
+                      <span class="flex min-w-0 flex-1 items-center gap-1.5 pr-2">
+                        <span class="inline-block h-1 w-1 shrink-0 rounded-full bg-gray-400"></span>
+                        <span class="min-w-0 wrap-break-word">{{
+                          ao.quantityPerUnit > 1
+                            ? ao.quantityPerUnit + 'x ' + ao.name + ' (per unit)'
+                            : ao.name
+                        }}</span>
                       </span>
-                      <span
+                      <span class="shrink-0"
                         >+<app-icon
                           name="icon-peso"
                           [class]="'inline h-3 w-3 align-[-0.125em]'"
                           [fill]="'currentColor'"
-                        />{{ ao.price | number: '1.2-2' }}</span
+                        />{{ ao.lineTotal | number: '1.2-2' }}</span
                       >
                     </div>
                   }
-                  <div class="pt-0.5 text-right text-[11px] text-gray-400 italic">
-                    (<app-icon
-                      name="icon-peso"
-                      [class]="'inline h-2.5 w-2.5 align-[-0.125em]'"
-                      [fill]="'currentColor'"
-                    />{{ getUnitSubtotal(c) | number: '1.2-2' }} / unit)
-                  </div>
                 </div>
               }
-              <!-- Special Instructions Note -->
+
               @if (c.specialInstructions) {
                 <div class="mt-2 ml-19 text-xs wrap-break-word text-gray-500 italic">
                   {{ c.specialInstructions }}
+                </div>
+              }
+              @if (!c.bundlePromotionId && !c.bundleItems?.length && c.addOns?.length) {
+                <div class="mt-1 ml-19 pt-0.5 text-right text-[11px] text-gray-400 italic">
+                  (<app-icon
+                    name="icon-peso"
+                    [class]="'inline h-2.5 w-2.5 align-[-0.125em]'"
+                    [fill]="'currentColor'"
+                  />{{ getUnitSubtotal(c) | number: '1.2-2' }} / unit)
                 </div>
               }
             </div>
@@ -516,165 +646,246 @@
         </div>
       }
 
+      <button
+        type="button"
+        class="group flex h-4 w-[calc(100%+0.5rem)] cursor-pointer items-center justify-center overflow-hidden rounded-t-lg bg-gray-200/55 transition-all duration-400 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:bg-gray-300/60 active:bg-gray-300 md:hidden"
+        (click)="toggleMobileCartDetailsCollapse()"
+        [attr.aria-expanded]="!isMobileCartDetailsCollapsed()"
+        aria-controls="mobile-cart-details"
+        [attr.aria-label]="
+          isMobileCartDetailsCollapsed() ? 'Expand order details' : 'Collapse order details'
+        "
+      ></button>
+
       <div
         class="sticky bottom-0 shrink-0 border-t border-gray-200 bg-white p-5 shadow-[0_-8px_24px_rgba(0,0,0,0.1)]"
       >
-        <!-- Order Note Section -->
-        @if (canEditOrderSpecialInstructions()) {
-          <div class="mb-4">
-            <div
-              class="overflow-hidden transition-all duration-300 ease-out"
-              [class.max-h-0]="showOrderSpecialInstructions()"
-              [class.opacity-0]="showOrderSpecialInstructions()"
-              [class.translate-y-1]="showOrderSpecialInstructions()"
-              [class.max-h-20]="!showOrderSpecialInstructions()"
-              [class.opacity-100]="!showOrderSpecialInstructions()"
-              [class.translate-y-0]="!showOrderSpecialInstructions()"
-              [class.pointer-events-none]="showOrderSpecialInstructions()"
-            >
+        @if (isMobileCartDetailsCollapsed()) {
+          <div class="mb-2 md:hidden">
+            <div class="grid grid-cols-[2.5rem_1fr_2.5rem] items-center">
               <div
-                class="flex cursor-pointer items-center justify-between rounded-lg border border-dashed border-gray-300 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-700 transition-colors select-none hover:border-[#047857] hover:bg-[#047857]/5 hover:text-[#047857]"
-                tabindex="0"
-                role="button"
-                (click)="showOrderSpecialInstructions.set(true)"
-                (keydown.enter)="showOrderSpecialInstructions.set(true)"
+                class="flex h-10 w-10 items-center justify-center rounded-full bg-gray-900 text-sm font-bold text-white shadow-sm"
               >
-                <span>{{
-                  orderSpecialInstructions().trim().length
-                    ? 'Edit order notes'
-                    : '+ Add order notes'
-                }}</span>
-                <span class="text-xs opacity-70">Tap to edit</span>
+                {{ itemCount() }}
               </div>
-            </div>
 
-            <div
-              class="overflow-hidden transition-all duration-300 ease-out"
-              [class.max-h-0]="!showOrderSpecialInstructions()"
-              [class.opacity-0]="!showOrderSpecialInstructions()"
-              [class.-translate-y-1]="!showOrderSpecialInstructions()"
-              [class.max-h-48]="showOrderSpecialInstructions()"
-              [class.opacity-100]="showOrderSpecialInstructions()"
-              [class.translate-y-0]="showOrderSpecialInstructions()"
-              [class.pointer-events-none]="!showOrderSpecialInstructions()"
-            >
-              <div class="flex flex-col gap-1 pt-1">
-                <textarea
-                  class="textarea textarea-bordered w-full outline-transparent"
-                  placeholder="e.g. Less ice, sauce on the side, etc."
-                  maxlength="100"
-                  rows="2"
-                  [value]="orderSpecialInstructions()"
-                  (input)="onOrderSpecialInstructionsInput($event)"
-                ></textarea>
-                <div class="flex items-center justify-between">
-                  <span class="text-xs text-gray-400 select-none"
-                    >{{ orderSpecialInstructions().length }}/100</span
-                  >
+              <div class="justify-self-center text-xl font-bold text-black">
+                <span class="text-sm opacity-70"
+                  ><app-icon
+                    name="icon-peso"
+                    [class]="'inline h-3.5 w-3.5 align-[-0.125em]'"
+                    [fill]="'currentColor'" /></span
+                >{{ totalPrice() | number: '1.2-2' }}
+              </div>
+
+              @if (!isReadOnly()) {
+                <div class="relative justify-self-end">
+                  <div
+                    class="pointer-events-none absolute -inset-0.75 rounded-full transition-opacity duration-150"
+                    [class.opacity-100]="isQuickPayHolding()"
+                    [class.opacity-0]="!isQuickPayHolding()"
+                    [style.background]="
+                      'conic-gradient(#047857 ' +
+                      quickPayProgress() +
+                      '%, #d1d5db ' +
+                      quickPayProgress() +
+                      '%)'
+                    "
+                  ></div>
                   <button
                     type="button"
-                    class="cursor-pointer rounded-md px-2 py-1 text-xs font-medium text-gray-500 transition-all hover:bg-gray-100 active:scale-95"
-                    (click)="showOrderSpecialInstructions.set(false)"
+                    class="relative flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg active:scale-95 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-100 disabled:shadow-none"
+                    (mousedown)="startQuickPayHold()"
+                    (mouseup)="cancelQuickPayHold()"
+                    (mouseleave)="cancelQuickPayHold()"
+                    (touchstart)="startQuickPayHold()"
+                    (touchend)="cancelQuickPayHold()"
+                    (touchcancel)="cancelQuickPayHold()"
+                    [disabled]="cart().length === 0 || !canManageOrderActions()"
+                    aria-label="Hold to pay"
                   >
-                    Done
+                    <app-icon name="icon-peso" [class]="'h-4.5 w-4.5'" [fill]="'currentColor'" />
                   </button>
                 </div>
-              </div>
-            </div>
-          </div>
-        } @else if (orderSpecialInstructions().trim()) {
-          <div class="mb-4">
-            <div class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
-              <div class="text-[10px] font-semibold tracking-wide text-gray-500 uppercase">
-                Order note
-              </div>
-              <div class="mt-1 text-sm text-gray-700">{{ orderSpecialInstructions() }}</div>
+              } @else {
+                <div class="h-10 w-10 justify-self-end"></div>
+              }
             </div>
           </div>
         }
-        <div class="mb-4 flex items-center justify-between">
-          <div class="text-sm font-semibold tracking-wide text-gray-500 uppercase">
-            {{ isRefunded() ? 'Total Refunded' : 'Total' }}
-          </div>
-          <div class="text-2xl font-bold text-black">
-            <span class="text-lg opacity-70"
-              ><app-icon
-                name="icon-peso"
-                [class]="'inline h-4 w-4 align-[-0.125em]'"
-                [fill]="'currentColor'" /></span
-            >{{ totalPrice() | number: '1.2-2' }}
-          </div>
-        </div>
 
-        <div class="flex flex-col gap-2">
-          @if (isReadOnly()) {
-            <div class="flex gap-2">
-              @if (isOfflineCompleted()) {
-                <button
-                  class="btn btn-error btn-outline flex-1 rounded-lg"
-                  (click)="openDiscardOrderModal()"
+        <div
+          id="mobile-cart-details"
+          class="grid origin-top transform-gpu transition-[grid-template-rows,opacity,transform] duration-400 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] md:overflow-visible md:opacity-100"
+          [class.grid-rows-[0fr]]="isMobileCartDetailsCollapsed()"
+          [class.opacity-0]="isMobileCartDetailsCollapsed()"
+          [class.-translate-y-1]="isMobileCartDetailsCollapsed()"
+          [class.scale-y-95]="isMobileCartDetailsCollapsed()"
+          [class.pointer-events-none]="isMobileCartDetailsCollapsed()"
+          [class.grid-rows-[1fr]]="!isMobileCartDetailsCollapsed()"
+          [class.opacity-100]="!isMobileCartDetailsCollapsed()"
+          [class.translate-y-0]="!isMobileCartDetailsCollapsed()"
+          [class.scale-y-100]="!isMobileCartDetailsCollapsed()"
+        >
+          <div class="min-h-0 overflow-hidden">
+            <!-- Order Note Section -->
+            @if (canEditOrderSpecialInstructions()) {
+              <div class="mb-4">
+                <div
+                  class="overflow-hidden transition-all duration-300 ease-out"
+                  [class.max-h-0]="showOrderSpecialInstructions()"
+                  [class.opacity-0]="showOrderSpecialInstructions()"
+                  [class.translate-y-1]="showOrderSpecialInstructions()"
+                  [class.max-h-20]="!showOrderSpecialInstructions()"
+                  [class.opacity-100]="!showOrderSpecialInstructions()"
+                  [class.translate-y-0]="!showOrderSpecialInstructions()"
+                  [class.pointer-events-none]="showOrderSpecialInstructions()"
                 >
-                  Discard Order
-                </button>
-              } @else if (isCancellable() && canManageOrderActions()) {
-                <button
-                  class="btn btn-error btn-outline flex-1 rounded-lg"
-                  (click)="openCancelOrderModal()"
+                  <div
+                    class="flex cursor-pointer items-center justify-between rounded-lg border border-dashed border-gray-300 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-700 transition-colors select-none hover:border-[#047857] hover:bg-[#047857]/5 hover:text-[#047857]"
+                    tabindex="0"
+                    role="button"
+                    (click)="showOrderSpecialInstructions.set(true)"
+                    (keydown.enter)="showOrderSpecialInstructions.set(true)"
+                  >
+                    <span>{{
+                      orderSpecialInstructions().trim().length
+                        ? 'Edit order notes'
+                        : '+ Add order notes'
+                    }}</span>
+                    <span class="text-xs opacity-70">Tap to edit</span>
+                  </div>
+                </div>
+
+                <div
+                  class="overflow-hidden transition-all duration-300 ease-out"
+                  [class.max-h-0]="!showOrderSpecialInstructions()"
+                  [class.opacity-0]="!showOrderSpecialInstructions()"
+                  [class.-translate-y-1]="!showOrderSpecialInstructions()"
+                  [class.max-h-48]="showOrderSpecialInstructions()"
+                  [class.opacity-100]="showOrderSpecialInstructions()"
+                  [class.translate-y-0]="showOrderSpecialInstructions()"
+                  [class.pointer-events-none]="!showOrderSpecialInstructions()"
                 >
-                  {{ isCompleted() ? 'Refund Order' : 'Cancel Order' }}
+                  <div class="flex flex-col gap-1 pt-1">
+                    <textarea
+                      class="textarea textarea-bordered w-full outline-transparent"
+                      placeholder="e.g. Less ice, sauce on the side, etc."
+                      maxlength="100"
+                      rows="2"
+                      [value]="orderSpecialInstructions()"
+                      (input)="onOrderSpecialInstructionsInput($event)"
+                    ></textarea>
+                    <div class="flex items-center justify-between">
+                      <span class="text-xs text-gray-400 select-none"
+                        >{{ orderSpecialInstructions().length }}/100</span
+                      >
+                      <button
+                        type="button"
+                        class="cursor-pointer rounded-md px-2 py-1 text-xs font-medium text-gray-500 transition-all hover:bg-gray-100 active:scale-95"
+                        (click)="showOrderSpecialInstructions.set(false)"
+                      >
+                        Done
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            } @else if (orderSpecialInstructions().trim()) {
+              <div class="mb-4">
+                <div class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+                  <div class="text-[10px] font-semibold tracking-wide text-gray-500 uppercase">
+                    Order note
+                  </div>
+                  <div class="mt-1 text-sm text-gray-700">{{ orderSpecialInstructions() }}</div>
+                </div>
+              </div>
+            }
+            <div class="mb-4 flex items-center justify-between">
+              <div class="text-sm font-semibold tracking-wide text-gray-500 uppercase">
+                {{ isRefunded() ? 'Total Refunded' : 'Total' }}
+              </div>
+              <div class="text-2xl font-bold text-black">
+                <span class="text-lg opacity-70"
+                  ><app-icon
+                    name="icon-peso"
+                    [class]="'inline h-4 w-4 align-[-0.125em]'"
+                    [fill]="'currentColor'" /></span
+                >{{ totalPrice() | number: '1.2-2' }}
+              </div>
+            </div>
+
+            <div class="flex flex-col gap-2">
+              @if (isReadOnly()) {
+                <div class="flex gap-2">
+                  @if (isOfflineCompleted()) {
+                    <button
+                      class="btn btn-error btn-outline flex-1 rounded-lg"
+                      (click)="openDiscardOrderModal()"
+                    >
+                      Discard Order
+                    </button>
+                  } @else if (isCancellable() && canManageOrderActions()) {
+                    <button
+                      class="btn btn-error btn-outline flex-1 rounded-lg"
+                      (click)="openCancelOrderModal()"
+                    >
+                      {{ isCompleted() ? 'Refund Order' : 'Cancel Order' }}
+                    </button>
+                  }
+                </div>
+              } @else {
+                <div class="flex gap-2">
+                  <button
+                    class="btn btn-outline pointer-events-auto flex-1 rounded-lg transition-all disabled:opacity-50"
+                    [class.cursor-not-allowed]="
+                      cart().length === 0 || !canManageOrderActions() || isSavingOrder()
+                    "
+                    [class.cursor-pointer]="
+                      !(cart().length === 0 || !canManageOrderActions() || isSavingOrder())
+                    "
+                    (click)="onOrderSaved()"
+                    [disabled]="cart().length === 0 || !canManageOrderActions() || isSavingOrder()"
+                  >
+                    @if (isSavingOrder()) {
+                      <span class="loading loading-spinner loading-xs mr-2"></span>
+                    }
+                    {{
+                      isSavingOrder()
+                        ? isEditMode()
+                          ? 'Updating Order...'
+                          : 'Saving Order...'
+                        : 'Save'
+                    }}
+                  </button>
+                </div>
+                @if (isOfflineEditMode()) {
+                  <button
+                    class="btn btn-error btn-outline w-full rounded-lg"
+                    (click)="openDiscardOrderModal()"
+                  >
+                    Discard Order
+                  </button>
+                } @else if (isEditMode() && isCancellable() && canManageOrderActions()) {
+                  <button
+                    class="btn btn-error btn-outline w-full rounded-lg"
+                    (click)="openCancelOrderModal()"
+                  >
+                    {{ isCompleted() ? 'Refund Order' : 'Cancel Order' }}
+                  </button>
+                }
+                <button
+                  class="btn btn-lg pointer-events-auto w-full rounded-lg border-0 bg-[#047857] text-base font-semibold text-white shadow-lg transition-all hover:bg-[#065f46] hover:shadow-xl disabled:bg-gray-200 disabled:text-gray-400 disabled:opacity-100 disabled:shadow-none"
+                  [class.cursor-not-allowed]="cart().length === 0 || !canManageOrderActions()"
+                  [class.cursor-pointer]="!(cart().length === 0 || !canManageOrderActions())"
+                  (click)="checkout()"
+                  [disabled]="cart().length === 0 || !canManageOrderActions()"
+                >
+                  Checkout
                 </button>
               }
             </div>
-          } @else {
-            <div class="flex gap-2">
-              <button
-                class="btn btn-outline pointer-events-auto flex-1 rounded-lg transition-all disabled:opacity-50"
-                [style.cursor]="
-                  cart().length === 0 || !canManageOrderActions() || isSavingOrder()
-                    ? 'not-allowed'
-                    : 'pointer'
-                "
-                (click)="onOrderSaved()"
-                [disabled]="cart().length === 0 || !canManageOrderActions() || isSavingOrder()"
-              >
-                @if (isSavingOrder()) {
-                  <span class="loading loading-spinner loading-xs mr-2"></span>
-                }
-                {{
-                  isSavingOrder()
-                    ? isEditMode()
-                      ? 'Updating Order...'
-                      : 'Saving Order...'
-                    : 'Save'
-                }}
-              </button>
-            </div>
-            @if (isOfflineEditMode()) {
-              <button
-                class="btn btn-error btn-outline w-full rounded-lg"
-                (click)="openDiscardOrderModal()"
-              >
-                Discard Order
-              </button>
-            } @else if (isEditMode() && isCancellable() && canManageOrderActions()) {
-              <button
-                class="btn btn-error btn-outline w-full rounded-lg"
-                (click)="openCancelOrderModal()"
-              >
-                {{ isCompleted() ? 'Refund Order' : 'Cancel Order' }}
-              </button>
-            }
-            <button
-              class="btn btn-lg pointer-events-auto w-full rounded-lg border-0 bg-[#047857] text-base font-semibold text-white shadow-lg transition-all hover:bg-[#065f46] hover:shadow-xl disabled:bg-gray-200 disabled:text-gray-400 disabled:opacity-100 disabled:shadow-none"
-              [style.cursor]="
-                cart().length === 0 || !canManageOrderActions() ? 'not-allowed' : 'pointer'
-              "
-              (click)="checkout()"
-              [disabled]="cart().length === 0 || !canManageOrderActions()"
-            >
-              Checkout
-            </button>
-          }
+          </div>
         </div>
       </div>
     </div>
@@ -966,4 +1177,3 @@
     </div>
   </div>
 }
-

@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+﻿import { CommonModule } from '@angular/common';
 import { Component, computed, inject, output, signal } from '@angular/core';
 import { CatalogCacheService, ModalStackService } from '@core/services';
 import { AvatarComponent } from '@shared/components/avatar/avatar';
@@ -39,13 +39,46 @@ export class AddonSelectorComponent {
   protected readonly product = signal<ProductDto | null>(null);
   protected readonly productQuantity = signal(1);
   protected readonly addOnGroups = signal<AddOnGroupDto[]>([]);
+  protected readonly isCustomOptionMode = signal(false);
+  protected readonly customRequiredSelectionCount = signal<number | null>(null);
+  protected readonly scaleRequiredSelectionByQuantity = signal(false);
+  protected readonly customMaxSelectionPerOption = signal<number | null>(null);
+  protected readonly subtitleText = signal('Customize your order');
 
-  // Selections: key = group type, value = map of optionId → quantity
+  // Selections: key = group type, value = map of optionId â†’ quantity
   protected readonly selections = signal<Record<number, Map<string, number>>>({});
 
   protected readonly AddOnTypeEnum = AddOnTypeEnum;
 
   protected readonly validationError = computed(() => {
+    if (this.isCustomOptionMode()) {
+      const required = this.getScaledRequiredSelectionCount();
+      const maxPerOption = this.customMaxSelectionPerOption();
+      const sel = this.selections();
+
+      if (required !== null) {
+        const totalSelected = Object.values(sel).reduce(
+          (sum, optionMap) => sum + Array.from(optionMap.values()).reduce((inner, qty) => inner + qty, 0),
+          0,
+        );
+        if (totalSelected !== required) {
+          return `Select exactly ${required} item(s).`;
+        }
+      }
+
+      if (maxPerOption !== null) {
+        for (const optionMap of Object.values(sel)) {
+          for (const qty of optionMap.values()) {
+            if (qty > maxPerOption) {
+              return `You can select up to ${maxPerOption} of the same item.`;
+            }
+          }
+        }
+      }
+
+      return null;
+    }
+
     const groups = this.addOnGroups();
     const sel = this.selections();
 
@@ -126,6 +159,11 @@ export class AddonSelectorComponent {
       addOns?: CartAddOnDto[];
       specialInstructions?: string | null;
       editIndex?: number | null;
+      customGroups?: AddOnGroupDto[];
+      requiredSelectionCount?: number | null;
+      scaleRequiredSelectionByQuantity?: boolean;
+      maxSelectionPerOption?: number | null;
+      subtitleText?: string;
     },
   ): void {
     this.product.set(product);
@@ -133,15 +171,24 @@ export class AddonSelectorComponent {
     this.selections.set({});
     this.specialInstructions.set(options?.specialInstructions ?? '');
     this.editingIndex.set(options?.editIndex ?? null);
+    this.isCustomOptionMode.set(!!options?.customGroups);
+    this.customRequiredSelectionCount.set(options?.requiredSelectionCount ?? null);
+    this.scaleRequiredSelectionByQuantity.set(!!options?.scaleRequiredSelectionByQuantity);
+    this.customMaxSelectionPerOption.set(options?.maxSelectionPerOption ?? null);
+    this.subtitleText.set(options?.subtitleText ?? 'Customize your order');
     this.isOpen.set(true);
     this.modalStackId = this.modalStack.push(() => this.close());
-    this.loadAddOns(product.id, options?.addOns);
+    this.loadAddOns(product.id, options?.addOns, options?.customGroups);
   }
 
-  private loadAddOns(productId: string, initialAddOns?: CartAddOnDto[]): void {
+  private loadAddOns(
+    productId: string,
+    initialAddOns?: CartAddOnDto[],
+    customGroups?: AddOnGroupDto[],
+  ): void {
     this.isLoading.set(true);
 
-    const groups = this.catalogCache.getAddOnsForProduct(productId);
+    const groups = customGroups ?? this.catalogCache.getAddOnsForProduct(productId);
     const deduped = groups
       .sort((a, b) => ADD_ON_TYPE_ORDER[a.type] - ADD_ON_TYPE_ORDER[b.type])
       .map((g) => ({
@@ -183,6 +230,21 @@ export class AddonSelectorComponent {
   }
 
   protected getSelectionRule(type: AddOnTypeEnum): string {
+    if (this.isCustomOptionMode()) {
+      const required = this.getScaledRequiredSelectionCount();
+      const maxPerOption = this.customMaxSelectionPerOption();
+
+      if (required !== null && maxPerOption !== null) {
+        return `Pick many · Max selected ${required} · Max ${maxPerOption}/item`;
+      }
+
+      if (required !== null) {
+        return `Pick many · Max selected ${required}`;
+      }
+
+      return maxPerOption ? `Pick many · Max ${maxPerOption}/item` : 'Pick many';
+    }
+
     switch (type) {
       case AddOnTypeEnum.Size:
         return 'Required · Pick one';
@@ -198,7 +260,6 @@ export class AddonSelectorComponent {
         return '';
     }
   }
-
   protected getGroupHeader(group: AddOnGroupDto): string {
     switch (group.type) {
       case AddOnTypeEnum.Size:
@@ -254,14 +315,20 @@ export class AddonSelectorComponent {
         sel[type] = new Map<string, number>([[option.id, 1]]);
       }
     } else {
-      // Checkbox behavior: toggle (first click adds 1, second removes)
+      // Quantity behavior for multi-select: each row click changes by exactly 1.
       const current = sel[type] ?? new Map<string, number>();
       const next = new Map(current);
       const qty = next.get(option.id) ?? 0;
 
-      if (qty > 0) {
+      if (qty > 1) {
+        next.set(option.id, qty - 1);
+      } else if (qty === 1) {
         next.delete(option.id);
       } else {
+        if (!this.canIncrementOption(group, option.id)) {
+          return;
+        }
+
         next.set(option.id, 1);
       }
 
@@ -275,6 +342,10 @@ export class AddonSelectorComponent {
     event.stopPropagation();
 
     if (!option.isActive) {
+      return;
+    }
+
+    if (!this.canIncrementOption(group, option.id)) {
       return;
     }
 
@@ -306,7 +377,33 @@ export class AddonSelectorComponent {
     sel[type] = next;
     this.selections.set(sel);
   }
+  protected canIncrementOption(group: AddOnGroupDto, optionId: string): boolean {
+    if (!this.isCustomOptionMode()) {
+      return true;
+    }
 
+    const sel = this.selections();
+    const currentOptionQty = sel[group.type]?.get(optionId) ?? 0;
+    const maxPerOption = this.customMaxSelectionPerOption();
+    if (maxPerOption !== null && currentOptionQty >= maxPerOption) {
+      return false;
+    }
+
+    const required = this.getScaledRequiredSelectionCount();
+    if (required !== null) {
+      const totalSelected = Object.values(sel).reduce(
+        (sum, optionMap) =>
+          sum + Array.from(optionMap.values()).reduce((inner, qty) => inner + qty, 0),
+        0,
+      );
+
+      if (totalSelected >= required) {
+        return false;
+      }
+    }
+
+    return true;
+  }
   // Handler for textarea input
   protected onSpecialInstructionsInput(event: Event): void {
     const value = event.target instanceof HTMLTextAreaElement ? event.target.value : '';
@@ -316,13 +413,87 @@ export class AddonSelectorComponent {
   protected incrementProductQuantity(event: Event): void {
     event.stopPropagation();
     this.productQuantity.update((qty) => Math.min(qty + 1, 99));
+    this.rebalanceSelectionsForRequiredLimit();
   }
 
   protected decrementProductQuantity(event: Event): void {
     event.stopPropagation();
     this.productQuantity.update((qty) => Math.max(qty - 1, 1));
+    this.rebalanceSelectionsForRequiredLimit();
   }
 
+  private getScaledRequiredSelectionCount(): number | null {
+    const required = this.customRequiredSelectionCount();
+    if (required === null) {
+      return null;
+    }
+
+    if (!this.scaleRequiredSelectionByQuantity()) {
+      return required;
+    }
+
+    return required * this.productQuantity();
+  }
+
+  private rebalanceSelectionsForRequiredLimit(): void {
+    if (!this.isCustomOptionMode()) {
+      return;
+    }
+
+    const required = this.getScaledRequiredSelectionCount();
+    if (required === null) {
+      return;
+    }
+
+    const currentSelections = this.selections();
+    const nextSelections: Record<number, Map<string, number>> = {};
+    for (const [type, optionMap] of Object.entries(currentSelections)) {
+      nextSelections[+type] = new Map(optionMap);
+    }
+
+    const getTotalSelected = (): number =>
+      Object.values(nextSelections).reduce(
+        (sum, optionMap) =>
+          sum + Array.from(optionMap.values()).reduce((inner, qty) => inner + qty, 0),
+        0,
+      );
+
+    let totalSelected = getTotalSelected();
+    if (totalSelected <= required) {
+      return;
+    }
+
+    while (totalSelected > required) {
+      let changed = false;
+
+      for (const optionMap of Object.values(nextSelections)) {
+        for (const [optionId, qty] of optionMap.entries()) {
+          if (totalSelected <= required) {
+            break;
+          }
+
+          if (qty <= 1) {
+            optionMap.delete(optionId);
+          } else {
+            optionMap.set(optionId, qty - 1);
+          }
+
+          totalSelected -= 1;
+          changed = true;
+        }
+
+        if (totalSelected <= required) {
+          break;
+        }
+      }
+
+      if (!changed) {
+        break;
+      }
+    }
+
+    this.selections.set(nextSelections);
+  }
   protected confirm(): void {
     if (this.validationError()) {
       return;
@@ -351,6 +522,11 @@ export class AddonSelectorComponent {
     this.productQuantity.set(1);
     this.addOnGroups.set([]);
     this.selections.set({});
+    this.isCustomOptionMode.set(false);
+    this.customRequiredSelectionCount.set(null);
+    this.scaleRequiredSelectionByQuantity.set(false);
+    this.customMaxSelectionPerOption.set(null);
+    this.subtitleText.set('Customize your order');
     this.specialInstructions.set('');
     this.editingIndex.set(null);
 
@@ -360,3 +536,7 @@ export class AddonSelectorComponent {
     }
   }
 }
+
+
+
+

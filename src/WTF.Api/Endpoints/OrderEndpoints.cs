@@ -77,6 +77,7 @@ public static class OrderEndpoints
                 {
                     return Results.BadRequest("ID mismatch");
                 }
+
                 var result = await sender.Send(command);
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             })

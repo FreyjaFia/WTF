@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using WTF.Api.Common.Orders;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Domain.Data;
@@ -19,6 +20,7 @@ public class GetOrderHistoryHandler(WTFDbContext db) : IRequestHandler<GetOrderH
             .Include(o => o.Customer)
             .Include(o => o.OrderItems.Where(oi => oi.ParentOrderItemId == null))
                 .ThenInclude(oi => oi.InverseParentOrderItem)
+            .Include(o => o.OrderBundlePromotions)
             .Where(o => historyStatuses.Contains(o.StatusId))
             .AsQueryable();
 
@@ -33,14 +35,7 @@ public class GetOrderHistoryHandler(WTFDbContext db) : IRequestHandler<GetOrderH
 
         return [.. orders.Select(o =>
         {
-            var totalAmount = o.OrderItems
-                .Where(oi => oi.ParentOrderItemId == null)
-                .Sum(parent =>
-                {
-                    var parentUnitPrice = parent.Price ?? 0m;
-                    var addOnPerUnit = parent.InverseParentOrderItem.Sum(child => (child.Price ?? 0m) * child.Quantity);
-                    return (parentUnitPrice + addOnPerUnit) * parent.Quantity;
-                });
+            var totalAmount = OrderMetrics.ComputeOrderTotal(o);
 
             return new OrderHistoryDto(
                 o.Id,

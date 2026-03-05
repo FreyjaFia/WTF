@@ -12,6 +12,7 @@ import {
 } from '@shared/models';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import { extractHttpErrorMessage } from './http-error-message';
 
 @Injectable({ providedIn: 'root' })
 export class OrderService {
@@ -185,6 +186,11 @@ export class OrderService {
     if (error.status === 0) {
       this.connectivity.checkNow();
       return OrderService.MSG_NETWORK_UNAVAILABLE;
+    }
+
+    const serverMessage = extractHttpErrorMessage(error);
+    if (serverMessage) {
+      return serverMessage;
     }
 
     if (error.status === 400 && options?.badRequest) {

@@ -16,6 +16,12 @@ export interface OrderItemRequestDto {
   quantity: number;
   addOns: OrderItemRequestDto[];
   specialInstructions?: string | null;
+  bundlePromotionId?: string | null;
+}
+
+export interface OrderBundlePromotionRequestDto {
+  promotionId: string;
+  quantity: number;
 }
 
 export interface OrderItemDto {
@@ -26,6 +32,14 @@ export interface OrderItemDto {
   price?: number | null;
   addOns: OrderItemDto[];
   specialInstructions?: string | null;
+  bundlePromotionId?: string | null;
+}
+
+export interface OrderBundlePromotionDto {
+  promotionId: string;
+  promotionName: string;
+  quantity: number;
+  unitPrice: number;
 }
 
 export interface OrderDto {
@@ -46,6 +60,7 @@ export interface OrderDto {
   note?: string | null;
   totalAmount: number;
   customerName?: string | null;
+  bundlePromotions?: OrderBundlePromotionDto[] | null;
 }
 
 export interface OrderHistoryDto {
@@ -70,6 +85,7 @@ export interface OrderHistoryDto {
 export interface CreateOrderCommand {
   customerId?: string | null;
   items: OrderItemRequestDto[];
+  bundlePromotions?: OrderBundlePromotionRequestDto[];
   specialInstructions?: string | null;
   status: OrderStatusEnum;
   paymentMethod?: PaymentMethodEnum | null;
@@ -84,6 +100,7 @@ export interface UpdateOrderCommand {
   id: string;
   customerId?: string | null;
   items: OrderItemRequestDto[];
+  bundlePromotions?: OrderBundlePromotionRequestDto[];
   specialInstructions?: string | null;
   status: OrderStatusEnum;
   paymentMethod?: PaymentMethodEnum | null;

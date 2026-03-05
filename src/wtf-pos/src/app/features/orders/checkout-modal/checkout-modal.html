@@ -135,7 +135,8 @@
         <button
           type="button"
           class="btn pointer-events-auto flex-2 rounded-lg border-0 bg-[#047857] text-base font-semibold text-white shadow-lg transition-all hover:bg-[#065f46] hover:shadow-xl disabled:bg-gray-300 disabled:opacity-75 disabled:shadow-none"
-          [style.cursor]="isConfirmDisabled() ? 'not-allowed' : 'pointer'"
+          [class.cursor-not-allowed]="isConfirmDisabled()"
+          [class.cursor-pointer]="!isConfirmDisabled()"
           (click)="confirmOrder()"
           [disabled]="isConfirmDisabled()"
         >
@@ -181,39 +182,77 @@
                     [fill]="'currentColor'"
                   />{{ item.price.toFixed(2) }}
                 </p>
-                @if (item.addOns?.length) {
+                @if (isBundleLine(item)) {
                   <div class="mt-1 space-y-0.5">
-                    @for (ao of item.addOns | sortAddOns; track ao.addOnId) {
+                    @for (bundleItem of getSortedBundleItems(item); track bundleItem.productId + '-' + $index) {
+                      <div class="text-xs text-gray-500">
+                        <p class="flex items-center gap-1">
+                          <span class="inline-block h-1 w-1 shrink-0 rounded-full bg-gray-400"></span>
+                          <span class="min-w-0 flex-1 break-words">{{
+                            getBundleChildTotalQuantity(item, bundleItem) > 1
+                              ? getBundleChildTotalQuantity(item, bundleItem) + 'x ' + bundleItem.name
+                              : bundleItem.name
+                          }}</span>
+                        </p>
+                        @if (bundleItem.addOns?.length) {
+                          <div class="mt-0.5 ml-5 space-y-0.5">
+                            @for (
+                              addOn of getGroupedBundleItemAddOns(bundleItem);
+                              track addOn.addOnId
+                            ) {
+                              <p class="flex items-center gap-1 text-[11px] text-gray-400">
+                                <span class="inline-block h-1 w-1 shrink-0 rounded-full bg-gray-300"></span>
+                                <span class="min-w-0 flex-1 break-words">{{
+                                  addOn.quantityPerUnit > 1
+                                    ? addOn.quantityPerUnit + 'x ' + addOn.name + ' (per unit)'
+                                    : addOn.name
+                                }}</span>
+                              </p>
+                            }
+                          </div>
+                        }
+                      </div>
+                    }
+                  </div>
+                } @else if (item.addOns?.length) {
+                  <div class="mt-1 space-y-0.5">
+                    @for (ao of getGroupedAddOns(item); track ao.addOnId + '-' + ao.price) {
                       <p class="flex items-center gap-1 text-xs text-gray-500">
-                        <span class="inline-block h-1 w-1 rounded-full bg-gray-400"></span>
-                        {{ ao.name }}
+                        <span class="inline-block h-1 w-1 shrink-0 rounded-full bg-gray-400"></span>
+                        <span class="min-w-0 flex-1 break-words">{{
+                          ao.quantityPerUnit > 1
+                            ? ao.quantityPerUnit + 'x ' + ao.name + ' (per unit)'
+                            : ao.name
+                        }}</span>
                         <span class="ml-auto"
                           >+<app-icon
                             name="icon-peso"
                             [class]="'inline h-3 w-3 align-[-0.125em]'"
                             [fill]="'currentColor'"
-                          />{{ ao.price.toFixed(2) }}</span
+                          />{{ ao.lineTotal.toFixed(2) }}</span
                         >
                       </p>
                     }
-                    <p class="pt-0.5 text-right text-[11px] text-gray-400 italic">
-                      (<app-icon
-                        name="icon-peso"
-                        [class]="'inline h-2.5 w-2.5 align-[-0.125em]'"
-                        [fill]="'currentColor'"
-                      />{{
-                        (
-                          item.price +
-                          (item.addOns?.length ? item.addOns!.reduce(addOnPriceReducer, 0) : 0)
-                        ).toFixed(2)
-                      }}
-                      / unit)
-                    </p>
                   </div>
                 }
                 @if (item.specialInstructions?.trim()) {
                   <p class="mt-1 rounded px-2 py-1 text-xs break-all text-gray-700 italic">
                     {{ item.specialInstructions }}
+                  </p>
+                }
+                @if (!item.bundlePromotionId && !isBundleLine(item) && item.addOns?.length) {
+                  <p class="mt-1 pt-0.5 text-right text-[11px] text-gray-400 italic">
+                    (<app-icon
+                      name="icon-peso"
+                      [class]="'inline h-2.5 w-2.5 align-[-0.125em]'"
+                      [fill]="'currentColor'"
+                    />{{
+                      (
+                        item.price +
+                        (item.addOns?.length ? item.addOns!.reduce(addOnPriceReducer, 0) : 0)
+                      ).toFixed(2)
+                    }}
+                    / unit)
                   </p>
                 }
                 <p class="mt-0.5 text-right text-sm font-semibold">

@@ -1,8 +1,8 @@
 import { HttpClient } from '@angular/common/http';
 import { computed, effect, inject, Injectable, signal } from '@angular/core';
 import { environment } from '@environments/environment.development';
-import { AddOnGroupDto, CustomerDto, ProductDto } from '@shared/models';
-import { firstValueFrom } from 'rxjs';
+import { AddOnGroupDto, CustomerDto, ProductDto, PromotionListItemDto } from '@shared/models';
+import { catchError, firstValueFrom, of } from 'rxjs';
 import { ConnectivityService } from './connectivity.service';
 import { db } from './db';
 import { ImageCacheService } from './image-cache.service';
@@ -37,6 +37,8 @@ export class CatalogCacheService {
   public readonly customers = this._customers.asReadonly();
 
   private readonly _addOnsByProductId = signal<Record<string, AddOnGroupDto[]>>({});
+  private readonly _bundlePromotions = signal<PromotionListItemDto[]>([]);
+  public readonly bundlePromotions = this._bundlePromotions.asReadonly();
 
   private readonly _isLoading = signal(false);
   public readonly isLoading = this._isLoading.asReadonly();
@@ -111,15 +113,27 @@ export class CatalogCacheService {
   private async syncFromApi(): Promise<void> {
     try {
       const previousCatalog = await db.catalog.get(CatalogCacheService.CATALOG_ROW_ID);
-      const catalog = await firstValueFrom(
-        this.http.get<PosCatalogDto>(`${environment.apiUrl}/sync/pos-catalog`),
-      );
+      const [catalog, fixedBundles, mixMatch] = await Promise.all([
+        firstValueFrom(this.http.get<PosCatalogDto>(`${environment.apiUrl}/sync/pos-catalog`)),
+        firstValueFrom(
+          this.http
+            .get<PromotionListItemDto[]>(`${environment.apiUrl}/management/promotions/fixed-bundles`)
+            .pipe(catchError(() => of<PromotionListItemDto[]>([]))),
+        ),
+        firstValueFrom(
+          this.http
+            .get<PromotionListItemDto[]>(`${environment.apiUrl}/management/promotions/mix-match`)
+            .pipe(catchError(() => of<PromotionListItemDto[]>([]))),
+        ),
+      ]);
+      const bundlePromotions = [...fixedBundles, ...mixMatch];
 
       await db.catalog.put({
         id: CatalogCacheService.CATALOG_ROW_ID,
         products: catalog.products,
         addOnsByProductId: catalog.addOnsByProductId,
         customers: catalog.customers,
+        bundlePromotions,
         syncedAt: catalog.syncedAt,
       });
 
@@ -132,6 +146,7 @@ export class CatalogCacheService {
       this._products.set(await this.imageCache.resolveProducts(catalog.products));
       this._customers.set(await this.imageCache.resolveCustomers(catalog.customers));
       this._addOnsByProductId.set(await this.imageCache.resolveAddOns(catalog.addOnsByProductId));
+      this._bundlePromotions.set(bundlePromotions);
       this.detectStalePrices(previousCatalog?.products ?? [], catalog.products);
     } catch {
       await this.loadFromCache();
@@ -145,7 +160,11 @@ export class CatalogCacheService {
       this._products.set(await this.imageCache.resolveProducts(cached.products));
       this._customers.set(await this.imageCache.resolveCustomers(cached.customers));
       this._addOnsByProductId.set(await this.imageCache.resolveAddOns(cached.addOnsByProductId));
+      this._bundlePromotions.set(cached.bundlePromotions ?? []);
+      return;
     }
+
+    this._bundlePromotions.set([]);
   }
 
   private backgroundRefresh(): void {

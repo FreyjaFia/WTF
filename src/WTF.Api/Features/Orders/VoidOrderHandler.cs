@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
+using WTF.Api.Common.Orders;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
@@ -24,6 +25,7 @@ public class VoidOrderHandler(
         var order = await db.Orders
             .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.Product)
+            .Include(o => o.OrderBundlePromotions)
             .FirstOrDefaultAsync(o => o.Id == request.Id, cancellationToken);
 
         if (order is null)
@@ -108,51 +110,25 @@ public class VoidOrderHandler(
                     child.Quantity,
                     child.Price,
                     new List<OrderItemDto>(),
-                    child.SpecialInstructions
+                    child.SpecialInstructions,
+                    child.BundlePromotionId
                 )).ToList(),
-                oi.SpecialInstructions
+                oi.SpecialInstructions,
+                oi.BundlePromotionId
             ))
             .ToListAsync(cancellationToken);
 
-        var allOrderItems = await db.OrderItems
-            .Where(oi => oi.OrderId == order.Id)
-            .Include(oi => oi.Product)
+        var bundlePromotions = await db.OrderBundlePromotions
+            .Where(obp => obp.OrderId == order.Id)
+            .Include(obp => obp.Promotion)
+            .Select(obp => new OrderBundlePromotionDto(
+                obp.PromotionId,
+                obp.Promotion.Name,
+                obp.Quantity,
+                obp.UnitPrice))
             .ToListAsync(cancellationToken);
 
-        var parentItems = allOrderItems.Where(oi => oi.ParentOrderItemId == null).ToList();
-        var parentProductIds = parentItems.Select(oi => oi.ProductId).Distinct().ToList();
-        var addOnProductIds = allOrderItems
-            .Where(oi => oi.ParentOrderItemId != null)
-            .Select(oi => oi.ProductId)
-            .Distinct()
-            .ToList();
-
-        var overridePrices = new Dictionary<(Guid ProductId, Guid AddOnId), decimal>();
-        if (addOnProductIds.Count > 0)
-        {
-            overridePrices = await db.ProductAddOnPriceOverrides
-                .Where(o => parentProductIds.Contains(o.ProductId)
-                    && addOnProductIds.Contains(o.AddOnId)
-                    && o.IsActive)
-                .ToDictionaryAsync(o => (o.ProductId, o.AddOnId), o => o.Price, cancellationToken);
-        }
-
-        var totalAmount = parentItems.Sum(parent =>
-        {
-            var parentUnitPrice = parent.Price ?? parent.Product.Price;
-            var addOnPerUnit = allOrderItems
-                .Where(child => child.ParentOrderItemId == parent.Id)
-                .Sum(child =>
-                {
-                    var effectivePrice = child.Price
-                        ?? (overridePrices.TryGetValue((parent.ProductId, child.ProductId), out var op)
-                            ? op
-                            : child.Product.Price);
-                    return effectivePrice * child.Quantity;
-                });
-
-            return (parentUnitPrice + addOnPerUnit) * parent.Quantity;
-        });
+        var totalAmount = OrderMetrics.ComputeOrderTotal(order);
 
         await dashboardHub.Clients.Group(HubNames.Groups.DashboardViewers)
             .SendAsync(HubNames.Events.DashboardUpdated, cancellationToken);
@@ -190,7 +166,9 @@ public class VoidOrderHandler(
             order.Tips,
             order.SpecialInstructions,
             order.Note,
-            totalAmount
+            totalAmount,
+            null,
+            bundlePromotions
         );
     }
 }

@@ -409,7 +409,11 @@ export class OrderList implements OnInit {
   }
 
   protected getItemsText(order: OrderDto): string {
-    const count = order.items.reduce((sum, item) => sum + item.quantity, 0);
+    const nonBundleCount = order.items
+      .filter((item) => !item.bundlePromotionId)
+      .reduce((sum, item) => sum + item.quantity, 0);
+    const bundleCount = (order.bundlePromotions ?? []).reduce((sum, bundle) => sum + bundle.quantity, 0);
+    const count = nonBundleCount + bundleCount;
     return count === 1 ? '1 item' : `${count} items`;
   }
 

@@ -3,6 +3,7 @@ import type {
   AddOnGroupDto,
   CreateOrderCommand,
   CustomerDto,
+  PromotionListItemDto,
   ProductDto,
 } from '@shared/models';
 import Dexie, { type Table } from 'dexie';
@@ -20,6 +21,7 @@ export interface CachedCatalog {
   products: ProductDto[];
   addOnsByProductId: Record<string, AddOnGroupDto[]>;
   customers: CustomerDto[];
+  bundlePromotions: PromotionListItemDto[];
   syncedAt: string;
 }
 

@@ -3,12 +3,18 @@ import { Component, ElementRef, computed, inject, input, output, signal, viewChi
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ModalStackService } from '@core/services';
 import { AvatarComponent, IconComponent } from '@shared/components';
-import { CartAddOnDto, CartItemDto, PaymentMethodEnum } from '@shared/models';
-import { SortAddOnsPipe } from '@shared/pipes';
+import {
+  ADD_ON_TYPE_ORDER,
+  CartAddOnDto,
+  CartBundleItemDto,
+  CartItemDto,
+  PaymentMethodEnum,
+  PromotionTypeEnum,
+} from '@shared/models';
 
 @Component({
   selector: 'app-checkout-modal',
-  imports: [CommonModule, ReactiveFormsModule, IconComponent, AvatarComponent, SortAddOnsPipe],
+  imports: [CommonModule, ReactiveFormsModule, IconComponent, AvatarComponent],
   templateUrl: './checkout-modal.html',
   styleUrl: './checkout-modal.css',
 })
@@ -66,6 +72,108 @@ export class CheckoutModal {
 
   // Helper for template add-on price calculation
   protected readonly addOnPriceReducer = (sum: number, ao: CartAddOnDto) => sum + ao.price;
+  protected isBundleLine(item: CartItemDto): boolean {
+    return (item.bundleItems?.length ?? 0) > 0;
+  }
+
+  protected getBundleChildTotalQuantity(line: CartItemDto, child: CartBundleItemDto): number {
+    if (line.bundlePromotionTypeId === PromotionTypeEnum.MixMatch) {
+      return Math.max(1, child.qty);
+    }
+
+    return Math.max(1, line.qty) * Math.max(1, child.qty);
+  }
+
+  protected getBundleChildDisplayRows(line: CartItemDto, child: CartBundleItemDto): number[] {
+    const total = Math.max(1, child.qty);
+    return Array.from({ length: total }, (_, index) => index);
+  }
+
+  protected getSortedBundleItems(item: CartItemDto): CartBundleItemDto[] {
+    return [...(item.bundleItems ?? [])].sort((a, b) =>
+      this.normalizeSortLabel(a.name).localeCompare(this.normalizeSortLabel(b.name)),
+    );
+  }
+
+  protected getGroupedAddOns(item: CartItemDto): {
+    addOnId: string;
+    name: string;
+    price: number;
+    quantityPerUnit: number;
+    lineTotal: number;
+  }[] {
+    const grouped = new Map<
+      string,
+      { addOnId: string; name: string; price: number; quantityPerUnit: number; sortOrder: number }
+    >();
+    const lineQty = Math.max(1, item.qty);
+
+    for (const addOn of item.addOns ?? []) {
+      const key = `${addOn.addOnId}::${addOn.price}`;
+      const current = grouped.get(key);
+
+      if (current) {
+        current.quantityPerUnit += 1;
+        continue;
+      }
+
+      grouped.set(key, {
+        addOnId: addOn.addOnId,
+        name: addOn.name,
+        price: addOn.price,
+        quantityPerUnit: 1,
+        sortOrder: addOn.addOnType != null ? (ADD_ON_TYPE_ORDER[addOn.addOnType] ?? 99) : 99,
+      });
+    }
+
+    return [...grouped.values()]
+      .sort((a, b) => (a.sortOrder - b.sortOrder) || this.normalizeSortLabel(a.name).localeCompare(this.normalizeSortLabel(b.name)))
+      .map((entry) => ({
+        addOnId: entry.addOnId,
+        name: entry.name,
+        price: entry.price,
+        quantityPerUnit: entry.quantityPerUnit,
+        lineTotal: entry.price * entry.quantityPerUnit * lineQty,
+      }));
+  }
+
+  protected getGroupedBundleItemAddOns(bundleItem: CartBundleItemDto): {
+    addOnId: string;
+    name: string;
+    quantityPerUnit: number;
+  }[] {
+    const grouped = new Map<
+      string,
+      { addOnId: string; name: string; quantityPerUnit: number; sortOrder: number }
+    >();
+
+    for (const addOn of bundleItem.addOns ?? []) {
+      const current = grouped.get(addOn.addOnId);
+      if (current) {
+        current.quantityPerUnit += 1;
+        continue;
+      }
+
+      grouped.set(addOn.addOnId, {
+        addOnId: addOn.addOnId,
+        name: addOn.name,
+        quantityPerUnit: 1,
+        sortOrder: addOn.addOnType != null ? (ADD_ON_TYPE_ORDER[addOn.addOnType] ?? 99) : 99,
+      });
+    }
+
+    return [...grouped.values()]
+      .sort(
+        (a, b) =>
+          a.sortOrder - b.sortOrder ||
+          this.normalizeSortLabel(a.name).localeCompare(this.normalizeSortLabel(b.name)),
+      )
+      .map((entry) => ({
+        addOnId: entry.addOnId,
+        name: entry.name,
+        quantityPerUnit: entry.quantityPerUnit,
+      }));
+  }
 
   protected readonly isConfirmDisabled = computed(() => {
     const paymentMethod = this.selectedPaymentMethod();
@@ -176,5 +284,9 @@ export class CheckoutModal {
     this.amountReceivedValue.set(null);
     this.change.set(0);
     this.showSummary.set(false);
+  }
+
+  private normalizeSortLabel(value: string): string {
+    return value.replace(/^\s*\d+\s*x\s+/i, '').trim().toLowerCase();
   }
 }

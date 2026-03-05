@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using WTF.Api.Common.Orders;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Domain.Data;
@@ -22,6 +23,8 @@ public class GetOrdersHandler(WTFDbContext db) : IRequestHandler<GetOrdersQuery,
             .Include(o => o.OrderItems.Where(oi => oi.ParentOrderItemId == null))
                 .ThenInclude(oi => oi.InverseParentOrderItem)
                     .ThenInclude(child => child.Product)
+            .Include(o => o.OrderBundlePromotions)
+                .ThenInclude(obp => obp.Promotion)
             .AsQueryable();
 
         if (request.CustomerId.HasValue)
@@ -84,7 +87,8 @@ public class GetOrdersHandler(WTFDbContext db) : IRequestHandler<GetOrdersQuery,
                                 child.Quantity,
                                 childEffectivePrice,
                                 [],
-                                child.SpecialInstructions
+                                child.SpecialInstructions,
+                                child.BundlePromotionId
                             );
                         })
                         .ToList();
@@ -96,17 +100,21 @@ public class GetOrdersHandler(WTFDbContext db) : IRequestHandler<GetOrdersQuery,
                         oi.Quantity,
                         oi.Price ?? oi.Product.Price,
                         addOns,
-                        oi.SpecialInstructions
+                        oi.SpecialInstructions,
+                        oi.BundlePromotionId
                     );
                 })
                 .ToList();
 
-            var totalAmount = items
-                .Sum(item =>
-                {
-                    var addOnUnitTotal = item.AddOns.Sum(ao => (ao.Price ?? 0) * ao.Quantity);
-                    return ((item.Price ?? 0) + addOnUnitTotal) * item.Quantity;
-                });
+            var bundlePromotions = o.OrderBundlePromotions
+                .Select(obp => new OrderBundlePromotionDto(
+                    obp.PromotionId,
+                    obp.Promotion.Name,
+                    obp.Quantity,
+                    obp.UnitPrice))
+                .ToList();
+
+            var totalAmount = OrderMetrics.ComputeOrderTotal(o);
 
             return new OrderDto(
                 o.Id,
@@ -125,7 +133,8 @@ public class GetOrdersHandler(WTFDbContext db) : IRequestHandler<GetOrdersQuery,
                 o.SpecialInstructions,
                 o.Note,
                 totalAmount,
-                o.Customer == null ? null : $"{o.Customer.FirstName} {o.Customer.LastName}".Trim()
+                o.Customer == null ? null : $"{o.Customer.FirstName} {o.Customer.LastName}".Trim(),
+                bundlePromotions
             );
         })];
     }

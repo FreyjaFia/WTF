@@ -53,6 +53,7 @@
                 Download order summary
               }
             </button>
+            <app-order-receipt #receipt [data]="receiptData()" />
             @if (canRefund()) {
               <div class="ms-auto flex items-center gap-2">
                 <span class="hidden text-[11px] text-gray-400 sm:inline"
@@ -67,7 +68,6 @@
                 </button>
               </div>
             }
-            <app-order-receipt #receipt [data]="receiptData()" />
           </div>
 
           <div class="mt-4 rounded-xl border border-gray-200 bg-white p-3 shadow-sm md:hidden">
@@ -272,16 +272,13 @@
                           <div class="text-sm font-medium text-gray-900">
                             {{ c.qty }}x {{ c.name }}
                           </div>
-                          <div class="text-xs text-gray-500">
-                            <app-icon
-                              name="icon-peso"
-                              [class]="'inline h-3 w-3 align-[-0.125em]'"
-                              [fill]="'currentColor'"
-                            />{{ c.price | number: '1.2-2' }} each
-                          </div>
-                          @if (c.specialInstructions) {
-                            <div class="mt-1 text-xs wrap-break-word text-gray-500 italic">
-                              {{ c.specialInstructions }}
+                          @if (!c.bundlePromotionId && !c.bundleItems?.length) {
+                            <div class="text-xs text-gray-500">
+                              <app-icon
+                                name="icon-peso"
+                                [class]="'inline h-3 w-3 align-[-0.125em]'"
+                                [fill]="'currentColor'"
+                              />{{ c.price | number: '1.2-2' }} each
                             </div>
                           }
                         </div>
@@ -297,29 +294,80 @@
                       </div>
                     </div>
 
-                    @if (c.addOns?.length) {
+                    @if (c.bundleItems?.length) {
                       <div class="mt-1 space-y-1 pl-[3.25rem]">
-                        @for (ao of c.addOns | sortAddOns; track ao.addOnId) {
-                          <div class="grid grid-cols-[1fr_auto] items-center gap-3 text-xs text-gray-500">
-                            <div class="truncate">+ {{ ao.name }}</div>
+                        @for (
+                          bundleItem of getSortedBundleItems(c);
+                          track bundleItem.productId + '-' + $index
+                        ) {
+                          <div class="text-xs text-gray-500">
+                            <div class="grid grid-cols-[1fr_auto] items-center gap-3">
+                              <div class="truncate">
+                                {{
+                                  getBundleChildTotalQuantity(c, bundleItem) > 1
+                                    ? '+ ' + getBundleChildTotalQuantity(c, bundleItem) + 'x ' + bundleItem.name
+                                    : '+ ' + bundleItem.name
+                                }}
+                              </div>
+                            </div>
+                            @if (bundleItem.addOns?.length) {
+                              <div class="mt-0.5 ml-5 space-y-0.5">
+                                @for (
+                                  addOn of getGroupedBundleItemAddOns(bundleItem);
+                                  track addOn.addOnId
+                                ) {
+                                  <div class="flex items-center gap-1.5 text-[11px] text-gray-400">
+                                    <span class="inline-block h-1 w-1 shrink-0 rounded-full bg-gray-300"></span>
+                                    <span class="min-w-0 break-words">{{
+                                      addOn.quantityPerUnit > 1
+                                        ? addOn.quantityPerUnit + 'x ' + addOn.name + ' (per unit)'
+                                        : addOn.name
+                                    }}</span>
+                                  </div>
+                                }
+                              </div>
+                            }
+                          </div>
+                        }
+                      </div>
+                    } @else if (c.addOns?.length) {
+                      <div class="mt-1 space-y-1 pl-[3.25rem]">
+                        @for (ao of getGroupedAddOns(c); track ao.addOnId + '-' + ao.price) {
+                          <div
+                            class="grid grid-cols-[1fr_auto] items-center gap-3 text-xs text-gray-500"
+                          >
+                            <div class="truncate">
+                              {{
+                                ao.quantityPerUnit > 1
+                                  ? '+ ' + ao.quantityPerUnit + 'x ' + ao.name + ' (per unit)'
+                                  : '+ ' + ao.name
+                              }}
+                            </div>
                             <div class="shrink-0 text-right tabular-nums">
                               <app-icon
                                 name="icon-peso"
                                 [class]="'inline h-2.5 w-2.5 align-[-0.125em]'"
                                 [fill]="'currentColor'"
-                              />{{ ao.price | number: '1.2-2' }}
+                              />{{ ao.lineTotal | number: '1.2-2' }}
                             </div>
                           </div>
                         }
                       </div>
                     }
-                    <div class="pt-0.5 text-right text-[11px] text-gray-400 italic">
-                      (<app-icon
-                        name="icon-peso"
-                        [class]="'inline h-2.5 w-2.5 align-[-0.125em]'"
-                        [fill]="'currentColor'"
-                      />{{ getUnitSubtotal(c) | number: '1.2-2' }} / unit)
-                    </div>
+                    @if (c.specialInstructions) {
+                      <div class="mt-1 pl-[3.25rem] text-xs wrap-break-word text-gray-500 italic">
+                        {{ c.specialInstructions }}
+                      </div>
+                    }
+                    @if (!c.bundlePromotionId && !c.bundleItems?.length && c.addOns?.length) {
+                      <div class="pt-0.5 text-right text-[11px] text-gray-400 italic">
+                        (<app-icon
+                          name="icon-peso"
+                          [class]="'inline h-2.5 w-2.5 align-[-0.125em]'"
+                          [fill]="'currentColor'"
+                        />{{ getUnitSubtotal(c) | number: '1.2-2' }} / unit)
+                      </div>
+                    }
                   </div>
                 }
               </div>

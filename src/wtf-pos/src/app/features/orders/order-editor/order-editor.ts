@@ -30,6 +30,7 @@ import {
   OfflineOrderService,
   OrderService,
   ProductService,
+  PromotionService,
 } from '@core/services';
 import type { CustomerDropdownOption, ReceiptData } from '@shared/components';
 import {
@@ -43,7 +44,11 @@ import {
   SearchInputComponent,
 } from '@shared/components';
 import {
+  AddOnGroupDto,
+  ADD_ON_TYPE_ORDER,
+  AddOnTypeEnum,
   CartAddOnDto,
+  CartBundleItemDto,
   CartItemDto,
   CreateOrderCommand,
   CustomerDto,
@@ -53,12 +58,37 @@ import {
   PaymentMethodEnum,
   ProductCategoryEnum,
   ProductDto,
+  FixedBundlePromotionDto,
+  MixMatchPromotionDto,
+  PromotionListItemDto,
+  PromotionTypeEnum,
   ProductSubCategoryEnum,
   UpdateOrderCommand,
 } from '@shared/models';
-import { SortAddOnsPipe } from '@shared/pipes';
 import { debounceTime, forkJoin, of, switchMap } from 'rxjs';
 import { CheckoutModal } from '../checkout-modal/checkout-modal';
+
+interface BundleItemSource {
+  productId: string;
+  addOns: { addOnProductId: string; quantity: number }[];
+  quantity?: number;
+}
+
+interface BundlePromotionSelection {
+  id: string;
+  name: string;
+  typeId: PromotionTypeEnum;
+  isActive: boolean;
+  imageUrl?: string | null;
+  createdAt?: string;
+  createdBy?: string;
+  updatedAt?: string | null;
+  updatedBy?: string | null;
+  bundlePrice: number;
+  requiredQuantity?: number;
+  maxSelectionsPerOrder?: number | null;
+  items: BundleItemSource[];
+}
 
 @Component({
   selector: 'app-order-editor',
@@ -75,7 +105,6 @@ import { CheckoutModal } from '../checkout-modal/checkout-modal';
     PullToRefreshComponent,
     OrderReceiptComponent,
     SearchInputComponent,
-    SortAddOnsPipe,
   ],
   templateUrl: './order-editor.html',
 })
@@ -84,6 +113,7 @@ export class OrderEditor implements OnInit, OnDestroy {
   private readonly addonSelector = viewChild.required(AddonSelectorComponent);
   private readonly orderReceipt = viewChild.required(OrderReceiptComponent);
   private readonly productService = inject(ProductService);
+  private readonly promotionService = inject(PromotionService);
   private readonly orderService = inject(OrderService);
   private readonly customerService = inject(CustomerService);
   private readonly authService = inject(AuthService);
@@ -142,6 +172,7 @@ export class OrderEditor implements OnInit, OnDestroy {
   protected readonly showMobileCart = signal(false);
   protected readonly cartDragY = signal(0);
   protected readonly isCartDragging = signal(false);
+  protected readonly isMobileCartDetailsCollapsed = signal(true);
   private cartDragStartY = 0;
   private quickPayHoldRaf: number | null = null;
   private quickPayHoldStartMs: number | null = null;
@@ -158,6 +189,8 @@ export class OrderEditor implements OnInit, OnDestroy {
   protected readonly filterForm = new FormGroup({
     searchTerm: new FormControl(''),
   });
+
+  protected readonly activeCatalogTab = signal<'products' | 'bundles'>('products');
   protected readonly selectedProductCategories = signal<ProductCategoryEnum[]>([]);
   protected readonly activeSubCategoryTab = signal<ProductSubCategoryEnum>(
     ProductSubCategoryEnum.Coffee,
@@ -171,6 +204,12 @@ export class OrderEditor implements OnInit, OnDestroy {
   protected readonly customers = signal<CustomerDto[]>([]);
   protected readonly products = signal<ProductDto[]>([]);
   protected readonly productsCache = signal<ProductDto[]>([]);
+  protected readonly bundlePromotions = signal<PromotionListItemDto[]>([]);
+  private readonly bundlePromotionsSync = effect(() => {
+    this.bundlePromotions.set(this.catalogCache.bundlePromotions());
+  });
+  private readonly pendingBundleSelection = signal<BundlePromotionSelection | null>(null);
+  protected readonly isLoadingPromotions = signal(false);
   protected readonly selectedCustomerId = signal<string | null>(null);
   protected readonly isLoadingCustomers = signal(false);
   protected readonly isLoading = signal(false);
@@ -333,11 +372,7 @@ export class OrderEditor implements OnInit, OnDestroy {
   });
 
   protected itemCount = () => this.cart().reduce((s, i) => s + i.qty, 0);
-  protected totalPrice = () =>
-    this.cart().reduce((s, i) => {
-      const addOnTotal = (i.addOns ?? []).reduce((a, ao) => a + ao.price, 0);
-      return s + i.qty * (i.price + addOnTotal);
-    }, 0);
+  protected totalPrice = () => this.cart().reduce((s, i) => s + this.getLineTotal(i), 0);
 
   protected readonly categoryCounts = computed(() => {
     const cache = this.productsCache();
@@ -349,9 +384,26 @@ export class OrderEditor implements OnInit, OnDestroy {
     };
   });
 
+  protected readonly filteredBundlePromotions = computed(() => {
+    const term = (this.filterForm.controls.searchTerm.value ?? '').trim().toLowerCase();
+    let items = this.bundlePromotions().filter((promo) =>
+      this.isPromotionActiveInUserTimezone(promo),
+    );
+
+    if (term) {
+      items = items.filter((promo) => promo.name.toLowerCase().includes(term));
+    }
+
+    return [...items].sort((a, b) => a.name.localeCompare(b.name));
+  });
+
   protected selectSubCategoryTab(tab: ProductSubCategoryEnum): void {
     this.activeSubCategoryTab.set(tab);
     this.applyFiltersToCache();
+  }
+
+  protected selectCatalogTab(tab: 'products' | 'bundles'): void {
+    this.activeCatalogTab.set(tab);
   }
 
   protected onCartDragStart(event: TouchEvent): void {
@@ -383,6 +435,10 @@ export class OrderEditor implements OnInit, OnDestroy {
   protected toggleCartCollapse(): void {
     this.isCartCollapsed.set(!this.isCartCollapsed());
     this.isRailTriggerHovering.set(false);
+  }
+
+  protected toggleMobileCartDetailsCollapse(): void {
+    this.isMobileCartDetailsCollapsed.set(!this.isMobileCartDetailsCollapsed());
   }
 
   protected onRailTriggerEnter(): void {
@@ -441,6 +497,7 @@ export class OrderEditor implements OnInit, OnDestroy {
 
   protected openMobileCart(): void {
     this.isCartCollapsed.set(false);
+    this.isMobileCartDetailsCollapsed.set(true);
     this.showMobileCart.set(true);
   }
 
@@ -473,6 +530,8 @@ export class OrderEditor implements OnInit, OnDestroy {
       this.restoreSavedCart();
       this.loadCatalog();
     }
+
+    this.loadBundlePromotions();
 
     this.filterForm.valueChanges.pipe(debounceTime(300)).subscribe(() => {
       this.applyFiltersToCache();
@@ -534,10 +593,23 @@ export class OrderEditor implements OnInit, OnDestroy {
   }
 
   private populateCartFromOrder(order: OrderDto): void {
-    const cartItems: CartItemDto[] = order.items.map((item) => {
-      // Expand add-ons: each add-on item may have quantity > 1
-      const expandedAddOns: CartAddOnDto[] = [];
+    const bundleMetaByPromotionId = new Map(
+      (order.bundlePromotions ?? []).map((bundle) => [bundle.promotionId, bundle]),
+    );
+    const groupedBundleItems = new Map<
+      string,
+      {
+        productId: string;
+        qty: number;
+        price: number;
+        addOns?: CartAddOnDto[];
+        specialInstructions?: string | null;
+      }[]
+    >();
+    const regularItems: CartItemDto[] = [];
 
+    for (const item of order.items) {
+      const expandedAddOns: CartAddOnDto[] = [];
       for (const ao of item.addOns ?? []) {
         for (let i = 0; i < ao.quantity; i++) {
           expandedAddOns.push({
@@ -548,7 +620,20 @@ export class OrderEditor implements OnInit, OnDestroy {
         }
       }
 
-      return {
+      if (item.bundlePromotionId) {
+        const current = groupedBundleItems.get(item.bundlePromotionId) ?? [];
+        current.push({
+          productId: item.productId,
+          qty: item.quantity,
+          price: item.price ?? 0,
+          addOns: expandedAddOns.length > 0 ? expandedAddOns : undefined,
+          specialInstructions: item.specialInstructions ?? null,
+        });
+        groupedBundleItems.set(item.bundlePromotionId, current);
+        continue;
+      }
+
+      regularItems.push({
         productId: item.productId,
         name: '',
         price: item.price ?? 0,
@@ -556,9 +641,46 @@ export class OrderEditor implements OnInit, OnDestroy {
         imageUrl: '',
         addOns: expandedAddOns.length > 0 ? expandedAddOns : undefined,
         specialInstructions: item.specialInstructions,
-      };
-    });
-    this.cart.set(cartItems);
+      });
+    }
+
+    const bundleLines: CartItemDto[] = [];
+    for (const [promotionId, items] of groupedBundleItems.entries()) {
+      const bundleMeta = bundleMetaByPromotionId.get(promotionId);
+      const bundleType =
+        this.bundlePromotions().find((promo) => promo.id === promotionId)?.typeId ?? null;
+      const bundleQty = Math.max(1, bundleMeta?.quantity ?? 1);
+      const bundleItems: CartBundleItemDto[] = items
+        .map((bundleItem) => ({
+          productId: bundleItem.productId,
+          name: '',
+          price: bundleItem.price,
+          qty:
+            bundleType === PromotionTypeEnum.MixMatch
+              ? Math.max(1, bundleItem.qty)
+              : Math.max(1, Math.round(bundleItem.qty / bundleQty)),
+          addOns: bundleItem.addOns,
+          imageUrl: '',
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      bundleLines.push({
+        productId: promotionId,
+        name: bundleMeta?.promotionName ?? 'Bundle',
+        price: bundleMeta?.unitPrice ?? 0,
+        qty: bundleQty,
+        imageUrl: '',
+        specialInstructions:
+          items.find((x) => (x.specialInstructions ?? '').trim().length > 0)?.specialInstructions ??
+          null,
+        bundlePromotionId: promotionId,
+        bundlePromotionName: bundleMeta?.promotionName ?? 'Bundle',
+        bundlePromotionTypeId: bundleType,
+        bundleItems,
+      });
+    }
+
+    this.cart.set([...regularItems, ...bundleLines]);
   }
 
   protected refreshProducts(): void {
@@ -568,6 +690,7 @@ export class OrderEditor implements OnInit, OnDestroy {
       this.productsCache.set(this.catalogCache.products());
       this.customers.set(this.catalogCache.customers());
       this.applyFiltersToCache();
+      this.loadBundlePromotions();
       this.isRefreshing.set(false);
     });
   }
@@ -609,7 +732,11 @@ export class OrderEditor implements OnInit, OnDestroy {
       isActive: true,
     });
 
-    const needsAddOns = this.cart().some((c) => c.addOns?.length);
+    const needsAddOns = this.cart().some(
+      (c) =>
+        (c.addOns?.length ?? 0) > 0 ||
+        (c.bundleItems?.some((bi) => (bi.addOns?.length ?? 0) > 0) ?? false),
+    );
 
     if (needsAddOns) {
       const allProducts$ = this.productService.getProducts({});
@@ -635,29 +762,79 @@ export class OrderEditor implements OnInit, OnDestroy {
   }
 
   private enrichCartItems(allProducts: ProductDto[]): void {
+    const productById = new Map(allProducts.map((p) => [p.id, p]));
     const enrichedCart = this.cart().map((cartItem) => {
-      const product = allProducts.find((p) => p.id === cartItem.productId);
+      const product = productById.get(cartItem.productId);
+      const addOnGroups = this.catalogCache.getAddOnsForProduct(cartItem.productId);
       const addOnTypeById = new Map(
-        this.catalogCache
-          .getAddOnsForProduct(cartItem.productId)
-          .flatMap((group) => group.options.map((option) => [option.id, group.type] as const)),
+        addOnGroups.flatMap((group) =>
+          group.options.map((option) => [option.id, group.type] as const),
+        ),
+      );
+      const addOnOptionById = new Map(
+        addOnGroups.flatMap((group) => group.options.map((option) => [option.id, option] as const)),
       );
       const enrichedAddOns = cartItem.addOns?.map((ao) => {
-        const addOnProduct = allProducts.find((p) => p.id === ao.addOnId);
+        const addOnOption = addOnOptionById.get(ao.addOnId);
+        const addOnProduct = productById.get(ao.addOnId);
         const inferredType = ao.addOnType ?? addOnTypeById.get(ao.addOnId);
-        return addOnProduct
-          ? { ...ao, name: addOnProduct.name, addOnType: inferredType }
-          : { ...ao, addOnType: inferredType };
+        return {
+          ...ao,
+          name: addOnOption?.name ?? addOnProduct?.name ?? ao.name ?? 'Add-on',
+          price:
+            addOnOption?.overridePrice ?? addOnOption?.price ?? addOnProduct?.price ?? ao.price,
+          addOnType: inferredType,
+        };
       });
 
-      return product
-        ? {
-            ...cartItem,
-            name: product.name,
-            imageUrl: product.imageUrl,
-            addOns: enrichedAddOns,
-          }
-        : { ...cartItem, addOns: enrichedAddOns };
+      const enrichedBundleItems = cartItem.bundleItems?.map((bundleItem) => {
+        const bundleProduct = productById.get(bundleItem.productId);
+        const bundleAddOnGroups = this.catalogCache.getAddOnsForProduct(bundleItem.productId);
+        const addOnTypeByBundleItemId = new Map(
+          bundleAddOnGroups.flatMap((group) =>
+            group.options.map((option) => [option.id, group.type] as const),
+          ),
+        );
+        const addOnOptionByBundleItemId = new Map(
+          bundleAddOnGroups.flatMap((group) =>
+            group.options.map((option) => [option.id, option] as const),
+          ),
+        );
+
+        const bundleAddOns = bundleItem.addOns?.map((ao) => {
+          const addOnOption = addOnOptionByBundleItemId.get(ao.addOnId);
+          const addOnProduct = productById.get(ao.addOnId);
+          const inferredType = ao.addOnType ?? addOnTypeByBundleItemId.get(ao.addOnId);
+          return {
+            ...ao,
+            name: addOnOption?.name ?? addOnProduct?.name ?? ao.name ?? 'Add-on',
+            price:
+              addOnOption?.overridePrice ?? addOnOption?.price ?? addOnProduct?.price ?? ao.price,
+            addOnType: inferredType,
+          };
+        });
+
+        return bundleProduct
+          ? {
+              ...bundleItem,
+              name: bundleProduct.name,
+              imageUrl: bundleProduct.imageUrl,
+              addOns: bundleAddOns,
+            }
+          : { ...bundleItem, addOns: bundleAddOns };
+      });
+
+      if (!product) {
+        return { ...cartItem, addOns: enrichedAddOns, bundleItems: enrichedBundleItems };
+      }
+
+      return {
+        ...cartItem,
+        name: product.name,
+        imageUrl: product.imageUrl,
+        addOns: enrichedAddOns,
+        bundleItems: enrichedBundleItems,
+      };
     });
 
     this.cart.set(enrichedCart);
@@ -684,6 +861,14 @@ export class OrderEditor implements OnInit, OnDestroy {
         productId: c.productId,
         qty: c.qty,
         addOns: c.addOns?.map((ao) => ao.addOnId).sort() ?? [],
+        bundleItems:
+          c.bundleItems?.map((bundleItem) => ({
+            productId: bundleItem.productId,
+            qty: bundleItem.qty,
+            addOns: bundleItem.addOns?.map((ao) => ao.addOnId).sort() ?? [],
+          })) ?? [],
+        specialInstructions: c.specialInstructions ?? null,
+        bundlePromotionId: c.bundlePromotionId ?? null,
       })),
     };
   }
@@ -695,6 +880,40 @@ export class OrderEditor implements OnInit, OnDestroy {
 
     // If the product is an add-on-capable product, open the add-on selector
     this.addonSelector().open(p);
+  }
+
+  protected addBundlePromotionToCart(promo: PromotionListItemDto): void {
+    if (!this.canManageOrderActions() || this.isReadOnly()) {
+      return;
+    }
+
+    if (!this.isPromotionActiveInUserTimezone(promo)) {
+      this.alertService.error('This bundle promotion is not active in your local timezone.');
+      return;
+    }
+
+    const request$ =
+      promo.typeId === PromotionTypeEnum.MixMatch
+        ? this.promotionService
+            .getMixMatchPromotion(promo.id)
+            .pipe(
+              switchMap((mixMatch) => of(this.toBundlePromotionSelectionFromMixMatch(mixMatch))),
+            )
+        : this.promotionService
+            .getFixedBundle(promo.id)
+            .pipe(
+              switchMap((fixedBundle) =>
+                of(this.toBundlePromotionSelectionFromFixedBundle(fixedBundle)),
+              ),
+            );
+
+    request$.subscribe({
+      next: (bundle) => this.openBundleSelector(bundle),
+      error: (err: Error) =>
+        this.alertService.error(
+          err.message || this.alertService.getLoadErrorMessage('bundle promotion'),
+        ),
+    });
   }
 
   protected onAddonSelected(event: {
@@ -709,6 +928,32 @@ export class OrderEditor implements OnInit, OnDestroy {
     }
 
     const { product, addOns, quantity, specialInstructions, editIndex } = event;
+    const selectedBundle = this.pendingBundleSelection();
+
+    if (selectedBundle && product.id === selectedBundle.id) {
+      this.pendingBundleSelection.set(null);
+
+      if (selectedBundle.typeId === PromotionTypeEnum.MixMatch) {
+        const normalized = this.buildMixMatchSelectionFromAddonSelection(selectedBundle, addOns);
+        this.upsertBundleCartLine(
+          normalized,
+          Math.max(1, quantity || 1),
+          specialInstructions,
+          editIndex,
+        );
+        return;
+      }
+
+      this.upsertBundleCartLine(
+        selectedBundle,
+        Math.max(1, quantity || 1),
+        specialInstructions,
+        editIndex,
+      );
+      return;
+    }
+    this.pendingBundleSelection.set(null);
+
     const lineQty = Math.max(1, quantity || 1);
     const updatedLine: CartItemDto = {
       productId: product.id,
@@ -726,20 +971,40 @@ export class OrderEditor implements OnInit, OnDestroy {
         return;
       }
 
-      this.cart.set(current.map((line, index) => (index === editIndex ? updatedLine : line)));
+      this.cart.set(
+        current.map((line, index) =>
+          index === editIndex
+            ? {
+                ...updatedLine,
+                bundlePromotionId: line.bundlePromotionId ?? null,
+                bundlePromotionName: line.bundlePromotionName ?? null,
+                bundlePromotionTypeId: line.bundlePromotionTypeId ?? null,
+                bundleRequiredSelectionCount: line.bundleRequiredSelectionCount ?? null,
+                bundleMaxSelectionPerOption: line.bundleMaxSelectionPerOption ?? null,
+              }
+            : line,
+        ),
+      );
       return;
     }
 
     // Only stack items without add-ons (plain products) and no special instructions
     if (addOns.length === 0 && !specialInstructions) {
       const existing = this.cart().find(
-        (c) => c.productId === product.id && !c.addOns?.length && !c.specialInstructions,
+        (c) =>
+          c.productId === product.id &&
+          !c.addOns?.length &&
+          !c.specialInstructions &&
+          !c.bundlePromotionId,
       );
 
       if (existing) {
         this.cart.set(
           this.cart().map((c) =>
-            c.productId === product.id && !c.addOns?.length && !c.specialInstructions
+            c.productId === product.id &&
+            !c.addOns?.length &&
+            !c.specialInstructions &&
+            !c.bundlePromotionId
               ? { ...c, qty: c.qty + lineQty }
               : c,
           ),
@@ -762,9 +1027,143 @@ export class OrderEditor implements OnInit, OnDestroy {
     return item.price + this.getUnitAddOnTotal(item);
   }
 
+  protected getLineTotal(item: CartItemDto): number {
+    if (item.bundleItems?.length) {
+      return item.qty * item.price;
+    }
+
+    return item.qty * this.getUnitSubtotal(item);
+  }
+
+  protected getBundleChildTotalQuantity(
+    bundleLine: CartItemDto,
+    bundleItem: CartBundleItemDto,
+  ): number {
+    if (bundleLine.bundlePromotionTypeId === PromotionTypeEnum.MixMatch) {
+      return Math.max(1, bundleItem.qty);
+    }
+
+    return Math.max(1, bundleLine.qty) * Math.max(1, bundleItem.qty);
+  }
+
+  protected getBundleChildDisplayRows(
+    bundleLine: CartItemDto,
+    bundleItem: CartBundleItemDto,
+  ): number[] {
+    const total = Math.max(1, bundleItem.qty);
+    return Array.from({ length: total }, (_, index) => index);
+  }
+
+  protected getSortedBundleItems(item: CartItemDto): CartBundleItemDto[] {
+    return [...(item.bundleItems ?? [])].sort((a, b) =>
+      this.normalizeSortLabel(a.name).localeCompare(this.normalizeSortLabel(b.name)),
+    );
+  }
+
+  protected getGroupedAddOns(item: CartItemDto): {
+    addOnId: string;
+    name: string;
+    price: number;
+    quantityPerUnit: number;
+    lineTotal: number;
+  }[] {
+    const grouped = new Map<
+      string,
+      { addOnId: string; name: string; price: number; quantityPerUnit: number; sortOrder: number }
+    >();
+    const lineQty = Math.max(1, item.qty);
+
+    for (const addOn of item.addOns ?? []) {
+      const key = `${addOn.addOnId}::${addOn.price}`;
+      const current = grouped.get(key);
+
+      if (current) {
+        current.quantityPerUnit += 1;
+        continue;
+      }
+
+      grouped.set(key, {
+        addOnId: addOn.addOnId,
+        name: addOn.name,
+        price: addOn.price,
+        quantityPerUnit: 1,
+        sortOrder: addOn.addOnType != null ? (ADD_ON_TYPE_ORDER[addOn.addOnType] ?? 99) : 99,
+      });
+    }
+
+    return [...grouped.values()]
+      .sort(
+        (a, b) =>
+          a.sortOrder - b.sortOrder ||
+          this.normalizeSortLabel(a.name).localeCompare(this.normalizeSortLabel(b.name)),
+      )
+      .map((entry) => ({
+        addOnId: entry.addOnId,
+        name: entry.name,
+        price: entry.price,
+        quantityPerUnit: entry.quantityPerUnit,
+        lineTotal: entry.price * entry.quantityPerUnit * lineQty,
+      }));
+  }
+
+  protected getGroupedBundleItemAddOns(bundleItem: CartBundleItemDto): {
+    addOnId: string;
+    name: string;
+    quantityPerUnit: number;
+  }[] {
+    const grouped = new Map<
+      string,
+      { addOnId: string; name: string; quantityPerUnit: number; sortOrder: number }
+    >();
+
+    for (const addOn of bundleItem.addOns ?? []) {
+      const current = grouped.get(addOn.addOnId);
+      if (current) {
+        current.quantityPerUnit += 1;
+        continue;
+      }
+
+      grouped.set(addOn.addOnId, {
+        addOnId: addOn.addOnId,
+        name: addOn.name,
+        quantityPerUnit: 1,
+        sortOrder: addOn.addOnType != null ? (ADD_ON_TYPE_ORDER[addOn.addOnType] ?? 99) : 99,
+      });
+    }
+
+    return [...grouped.values()]
+      .sort(
+        (a, b) =>
+          a.sortOrder - b.sortOrder ||
+          this.normalizeSortLabel(a.name).localeCompare(this.normalizeSortLabel(b.name)),
+      )
+      .map((entry) => ({
+        addOnId: entry.addOnId,
+        name: entry.name,
+        quantityPerUnit: entry.quantityPerUnit,
+      }));
+  }
+
   protected increment(productId: string, index: number): void {
     if (!this.canManageOrderActions()) {
       return;
+    }
+
+    const item = this.cart()[index];
+    if (!item) {
+      return;
+    }
+
+    if (item.bundleItems?.length && item.bundlePromotionId) {
+      const bundleType =
+        item.bundlePromotionTypeId ??
+        this.bundlePromotions().find((promo) => promo.id === item.bundlePromotionId)?.typeId ??
+        null;
+
+      if (bundleType === PromotionTypeEnum.MixMatch) {
+        this.openMixMatchBundleEditorForQuantity(index, Math.max(1, item.qty + 1));
+        return;
+      }
     }
 
     this.cart.set(this.cart().map((c, i) => (i === index ? { ...c, qty: c.qty + 1 } : c)));
@@ -783,7 +1182,20 @@ export class OrderEditor implements OnInit, OnDestroy {
 
     if (item.qty <= 1) {
       this.cart.set(this.cart().filter((_, i) => i !== index));
+      return;
     } else {
+      if (item.bundleItems?.length && item.bundlePromotionId) {
+        const bundleType =
+          item.bundlePromotionTypeId ??
+          this.bundlePromotions().find((promo) => promo.id === item.bundlePromotionId)?.typeId ??
+          null;
+
+        if (bundleType === PromotionTypeEnum.MixMatch) {
+          this.openMixMatchBundleEditorForQuantity(index, Math.max(1, item.qty - 1));
+          return;
+        }
+      }
+
       this.cart.set(this.cart().map((c, i) => (i === index ? { ...c, qty: c.qty - 1 } : c)));
     }
   }
@@ -804,6 +1216,83 @@ export class OrderEditor implements OnInit, OnDestroy {
     const item = this.cart()[index];
 
     if (!item) {
+      return;
+    }
+
+    if (item.bundleItems?.length && item.bundlePromotionId) {
+      const existingType =
+        this.bundlePromotions().find((x) => x.id === item.bundlePromotionId)?.typeId ??
+        item.bundlePromotionTypeId ??
+        PromotionTypeEnum.FixedBundle;
+      if (existingType === PromotionTypeEnum.MixMatch) {
+        this.promotionService.getMixMatchPromotion(item.bundlePromotionId).subscribe({
+          next: (promo) => {
+            const selectedCountByProductId = new Map<string, number>(
+              (item.bundleItems ?? []).map((bundleItem) => [
+                bundleItem.productId,
+                Math.max(0, bundleItem.qty),
+              ]),
+            );
+
+            const hydrated: BundlePromotionSelection = {
+              id: promo.id,
+              name: promo.name,
+              typeId: PromotionTypeEnum.MixMatch,
+              isActive: promo.isActive,
+              imageUrl: promo.imageUrl,
+              createdAt: promo.createdAt,
+              createdBy: promo.createdBy,
+              updatedAt: promo.updatedAt,
+              updatedBy: promo.updatedBy,
+              bundlePrice: promo.bundlePrice,
+              requiredQuantity: promo.requiredQuantity,
+              maxSelectionsPerOrder: promo.maxSelectionsPerOrder,
+              items: promo.items.map((promoItem) => ({
+                productId: promoItem.productId,
+                quantity: selectedCountByProductId.get(promoItem.productId) ?? 0,
+                addOns: promoItem.addOns.map((addOn) => ({
+                  addOnProductId: addOn.addOnProductId,
+                  quantity: addOn.quantity,
+                })),
+              })),
+            };
+
+            this.openBundleSelector(hydrated, {
+              quantity: item.qty,
+              specialInstructions: item.specialInstructions ?? null,
+              editIndex: index,
+            });
+          },
+          error: (err: Error) =>
+            this.alertService.error(
+              err.message || this.alertService.getLoadErrorMessage('bundle promotion'),
+            ),
+        });
+        return;
+      }
+
+      const fixedBundle: BundlePromotionSelection = {
+        id: item.bundlePromotionId,
+        name: item.bundlePromotionName ?? item.name,
+        typeId: PromotionTypeEnum.FixedBundle,
+        isActive: true,
+        imageUrl: item.imageUrl,
+        bundlePrice: item.price,
+        items: item.bundleItems.map((bundleItem) => ({
+          productId: bundleItem.productId,
+          quantity: bundleItem.qty,
+          addOns: (bundleItem.addOns ?? []).map((addOn) => ({
+            addOnProductId: addOn.addOnId,
+            quantity: 1,
+          })),
+        })),
+      };
+
+      this.openBundleSelector(fixedBundle, {
+        quantity: item.qty,
+        specialInstructions: item.specialInstructions ?? null,
+        editIndex: index,
+      });
       return;
     }
 
@@ -1177,12 +1666,8 @@ export class OrderEditor implements OnInit, OnDestroy {
 
     const command: CreateOrderCommand = {
       customerId: this.selectedCustomerId(),
-      items: this.cart().map((c) => ({
-        productId: c.productId,
-        quantity: c.qty,
-        addOns: this.groupAddOns(c.addOns),
-        specialInstructions: c.specialInstructions || null,
-      })),
+      items: this.buildOrderItemsFromCart(),
+      bundlePromotions: this.buildBundlePromotionsFromCart(),
       specialInstructions: this.orderSpecialInstructions().trim() || null,
       status,
       ...(event && {
@@ -1247,12 +1732,8 @@ export class OrderEditor implements OnInit, OnDestroy {
 
     const command: CreateOrderCommand = {
       customerId: this.selectedCustomerId(),
-      items: this.cart().map((c) => ({
-        productId: c.productId,
-        quantity: c.qty,
-        addOns: this.groupAddOns(c.addOns),
-        specialInstructions: c.specialInstructions || null,
-      })),
+      items: this.buildOrderItemsFromCart(),
+      bundlePromotions: this.buildBundlePromotionsFromCart(),
       specialInstructions: this.orderSpecialInstructions().trim() || null,
       status,
       ...(event && {
@@ -1298,12 +1779,8 @@ export class OrderEditor implements OnInit, OnDestroy {
     const command: UpdateOrderCommand = {
       id: order.id,
       customerId: this.selectedCustomerId(),
-      items: this.cart().map((c) => ({
-        productId: c.productId,
-        quantity: c.qty,
-        addOns: this.groupAddOns(c.addOns),
-        specialInstructions: c.specialInstructions || null,
-      })),
+      items: this.buildOrderItemsFromCart(),
+      bundlePromotions: this.buildBundlePromotionsFromCart(),
       specialInstructions: this.orderSpecialInstructions().trim() || null,
       status,
       ...(event && {
@@ -1353,9 +1830,53 @@ export class OrderEditor implements OnInit, OnDestroy {
     }
 
     const productMap = new Map(products.map((p) => [p.id, p]));
+
+    const enrichAddOnsForProduct = (
+      ownerProductId: string,
+      addOns?: CartAddOnDto[],
+    ): CartAddOnDto[] | undefined => {
+      if (!addOns?.length) {
+        return addOns;
+      }
+
+      const addOnGroups = this.catalogCache.getAddOnsForProduct(ownerProductId);
+      const addOnTypeById = new Map(
+        addOnGroups.flatMap((group) =>
+          group.options.map((option) => [option.id, group.type] as const),
+        ),
+      );
+      const addOnOptionById = new Map(
+        addOnGroups.flatMap((group) => group.options.map((option) => [option.id, option] as const)),
+      );
+
+      return addOns.map((addOn) => {
+        const option = addOnOptionById.get(addOn.addOnId);
+        const product = productMap.get(addOn.addOnId);
+        return {
+          ...addOn,
+          name: option?.name ?? product?.name ?? addOn.name ?? 'Add-on',
+          price: option?.overridePrice ?? option?.price ?? product?.price ?? addOn.price,
+          addOnType: addOn.addOnType ?? addOnTypeById.get(addOn.addOnId),
+        };
+      });
+    };
+
     const updated = this.cart().map((item) => {
       const product = productMap.get(item.productId);
-      return product ? { ...item, imageUrl: product.imageUrl } : item;
+      const bundleItems = item.bundleItems
+        ?.map((bundleItem) => {
+          const bundleProduct = productMap.get(bundleItem.productId);
+          const enrichedAddOns = enrichAddOnsForProduct(bundleItem.productId, bundleItem.addOns);
+          return bundleProduct
+            ? { ...bundleItem, imageUrl: bundleProduct.imageUrl, addOns: enrichedAddOns }
+            : { ...bundleItem, addOns: enrichedAddOns };
+        })
+        .sort((a, b) => a.name.localeCompare(b.name));
+      const enrichedItemAddOns = enrichAddOnsForProduct(item.productId, item.addOns);
+
+      return product
+        ? { ...item, imageUrl: product.imageUrl, addOns: enrichedItemAddOns, bundleItems }
+        : { ...item, addOns: enrichedItemAddOns, bundleItems };
     });
 
     this.cart.set(updated);
@@ -1377,6 +1898,53 @@ export class OrderEditor implements OnInit, OnDestroy {
     this.products.set(items);
   }
 
+  private loadBundlePromotions(): void {
+    this.isLoadingPromotions.set(true);
+    this.catalogCache
+      .load()
+      .then(() => {
+        this.bundlePromotions.set(this.catalogCache.bundlePromotions());
+      })
+      .finally(() => this.isLoadingPromotions.set(false));
+  }
+
+  private isPromotionActiveInUserTimezone(promo: PromotionListItemDto): boolean {
+    if (!promo.isActive) {
+      return false;
+    }
+
+    const nowLocal = new Date();
+    const nowLocalDate = this.toLocalDateNumber(nowLocal);
+
+    const startLocal = promo.startDate ? new Date(promo.startDate) : null;
+    if (startLocal && Number.isNaN(startLocal.getTime())) {
+      return false;
+    }
+    const startLocalDate = startLocal ? this.toLocalDateNumber(startLocal) : null;
+    if (startLocalDate !== null && nowLocalDate < startLocalDate) {
+      return false;
+    }
+
+    const endLocal = promo.endDate ? new Date(promo.endDate) : null;
+    if (endLocal && Number.isNaN(endLocal.getTime())) {
+      return false;
+    }
+    const endLocalDate = endLocal ? this.toLocalDateNumber(endLocal) : null;
+    if (endLocalDate !== null && nowLocalDate > endLocalDate) {
+      return false;
+    }
+
+    return true;
+  }
+
+  private toLocalDateNumber(value: Date): number {
+    if (Number.isNaN(value.getTime())) {
+      return -1;
+    }
+
+    return value.getFullYear() * 10000 + (value.getMonth() + 1) * 100 + value.getDate();
+  }
+
   private groupAddOns(addOns?: CartAddOnDto[]): OrderItemRequestDto[] {
     if (!addOns || addOns.length === 0) {
       return [];
@@ -1392,7 +1960,72 @@ export class OrderEditor implements OnInit, OnDestroy {
       productId,
       quantity,
       addOns: [],
+      bundlePromotionId: null,
     }));
+  }
+
+  private buildOrderItemsFromCart(): OrderItemRequestDto[] {
+    const items: OrderItemRequestDto[] = [];
+    const promotionTypeById = new Map(
+      this.bundlePromotions().map((promo) => [promo.id, promo.typeId]),
+    );
+
+    for (const line of this.cart()) {
+      if (line.bundleItems?.length) {
+        const promotionType =
+          line.bundlePromotionTypeId ??
+          (line.bundlePromotionId ? promotionTypeById.get(line.bundlePromotionId) : null) ??
+          null;
+
+        for (const bundleItem of line.bundleItems) {
+          items.push({
+            productId: bundleItem.productId,
+            quantity:
+              promotionType === PromotionTypeEnum.MixMatch
+                ? Math.max(1, bundleItem.qty)
+                : Math.max(1, line.qty) * Math.max(1, bundleItem.qty),
+            addOns: this.groupAddOns(bundleItem.addOns),
+            specialInstructions: line.specialInstructions || null,
+            bundlePromotionId: line.bundlePromotionId ?? null,
+          });
+        }
+
+        continue;
+      }
+
+      items.push({
+        productId: line.productId,
+        quantity: line.qty,
+        addOns: this.groupAddOns(line.addOns),
+        specialInstructions: line.specialInstructions || null,
+        bundlePromotionId: null,
+      });
+    }
+
+    return items;
+  }
+
+  private buildBundlePromotionsFromCart(): { promotionId: string; quantity: number }[] {
+    const grouped = new Map<string, { promotionId: string; quantity: number }>();
+
+    for (const line of this.cart()) {
+      if (!line.bundlePromotionId || !(line.bundleItems?.length ?? 0)) {
+        continue;
+      }
+
+      const current = grouped.get(line.bundlePromotionId);
+      if (current) {
+        current.quantity += Math.max(1, line.qty);
+        continue;
+      }
+
+      grouped.set(line.bundlePromotionId, {
+        promotionId: line.bundlePromotionId,
+        quantity: Math.max(1, line.qty),
+      });
+    }
+
+    return [...grouped.values()];
   }
 
   private resolveProductForCartItem(item: CartItemDto): ProductDto {
@@ -1423,6 +2056,401 @@ export class OrderEditor implements OnInit, OnDestroy {
       priceHistory: [],
       addOnCount: 0,
       overridePrice: null,
+    };
+  }
+
+  private openBundleSelector(
+    bundle: BundlePromotionSelection,
+    options?: { quantity?: number; specialInstructions?: string | null; editIndex?: number | null },
+  ): void {
+    const hasAvailableItems = this.buildBundleCartItems(bundle).length > 0;
+    if (!hasAvailableItems) {
+      this.alertService.error('Bundle products are unavailable in the current catalog.');
+      return;
+    }
+
+    this.pendingBundleSelection.set(bundle);
+    const customGroups =
+      bundle.typeId === PromotionTypeEnum.MixMatch
+        ? this.buildMixMatchOptionGroups(bundle)
+        : undefined;
+    const preselectedAddOns =
+      bundle.typeId === PromotionTypeEnum.MixMatch
+        ? this.buildPreselectedMixMatchOptions(bundle)
+        : undefined;
+
+    this.addonSelector().open(
+      {
+        id: bundle.id,
+        name: bundle.name,
+        code: bundle.id,
+        description: null,
+        price: bundle.bundlePrice,
+        category: ProductCategoryEnum.Other,
+        subCategory: null,
+        isAddOn: false,
+        isActive: bundle.isActive,
+        createdAt: bundle.createdAt ?? '',
+        createdBy: bundle.createdBy ?? '',
+        updatedAt: bundle.updatedAt ?? null,
+        updatedBy: bundle.updatedBy ?? null,
+        imageUrl: bundle.imageUrl ?? null,
+        priceHistory: [],
+        addOnCount: 0,
+        overridePrice: null,
+      },
+      {
+        quantity: options?.quantity ?? 1,
+        addOns: preselectedAddOns,
+        specialInstructions: options?.specialInstructions ?? null,
+        editIndex: options?.editIndex ?? null,
+        customGroups,
+        requiredSelectionCount:
+          bundle.typeId === PromotionTypeEnum.MixMatch
+            ? Math.max(1, bundle.requiredQuantity ?? 1)
+            : null,
+        scaleRequiredSelectionByQuantity: bundle.typeId === PromotionTypeEnum.MixMatch,
+        maxSelectionPerOption:
+          bundle.typeId === PromotionTypeEnum.MixMatch
+            ? (bundle.maxSelectionsPerOrder ?? null)
+            : null,
+        subtitleText:
+          bundle.typeId === PromotionTypeEnum.MixMatch
+            ? 'Select mix & match items'
+            : 'Customize your order',
+      },
+    );
+  }
+
+  private buildPreselectedMixMatchOptions(bundle: BundlePromotionSelection): CartAddOnDto[] {
+    const selections: CartAddOnDto[] = [];
+    const optionById = new Map(
+      this.buildMixMatchOptionGroups(bundle)[0]?.options.map((x) => [x.id, x]) ?? [],
+    );
+
+    for (const item of bundle.items) {
+      const qty = Math.max(0, item.quantity ?? 0);
+      if (qty <= 0) {
+        continue;
+      }
+
+      const option = optionById.get(item.productId);
+      for (let i = 0; i < qty; i++) {
+        selections.push({
+          addOnId: item.productId,
+          name: option?.name ?? 'Selected item',
+          price: 0,
+          addOnType: AddOnTypeEnum.Extra,
+        });
+      }
+    }
+
+    return selections;
+  }
+
+  private buildMixMatchOptionGroups(bundle: BundlePromotionSelection): AddOnGroupDto[] {
+    const catalogProducts = this.catalogCache.products();
+    const allProducts = this.productsCache().length > 0 ? this.productsCache() : catalogProducts;
+    const productById = new Map(allProducts.map((x) => [x.id, x]));
+
+    const options = bundle.items
+      .map((item) => productById.get(item.productId))
+      .filter((x): x is ProductDto => !!x)
+      .map((product) => ({
+        ...product,
+        price: 0,
+        overridePrice: 0,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    return [
+      {
+        type: AddOnTypeEnum.Extra,
+        displayName: 'Items',
+        options,
+      },
+    ];
+  }
+
+  private buildMixMatchSelectionFromAddonSelection(
+    bundle: BundlePromotionSelection,
+    selectedOptions: CartAddOnDto[],
+  ): BundlePromotionSelection {
+    const selectedCountByProductId = new Map<string, number>();
+    for (const option of selectedOptions) {
+      selectedCountByProductId.set(
+        option.addOnId,
+        (selectedCountByProductId.get(option.addOnId) ?? 0) + 1,
+      );
+    }
+
+    return {
+      ...bundle,
+      items: bundle.items
+        .map((item) => ({
+          ...item,
+          quantity: selectedCountByProductId.get(item.productId) ?? 0,
+        }))
+        .filter((item) => (item.quantity ?? 0) > 0),
+    };
+  }
+
+  private upsertBundleCartLine(
+    bundle: BundlePromotionSelection,
+    quantity: number,
+    specialInstructions?: string | null,
+    editIndex?: number | null,
+  ): void {
+    const bundleItems = this.buildBundleCartItems(bundle);
+    if (bundleItems.length === 0) {
+      this.alertService.error('Bundle products are unavailable in the current catalog.');
+      return;
+    }
+
+    const line: CartItemDto = {
+      productId: bundle.id,
+      name: bundle.name,
+      price: bundle.bundlePrice,
+      qty: Math.max(1, quantity || 1),
+      imageUrl: bundle.imageUrl ?? null,
+      addOns: undefined,
+      specialInstructions: specialInstructions || null,
+      bundlePromotionId: bundle.id,
+      bundlePromotionName: bundle.name,
+      bundlePromotionTypeId: bundle.typeId,
+      bundleRequiredSelectionCount:
+        bundle.typeId === PromotionTypeEnum.MixMatch ? (bundle.requiredQuantity ?? null) : null,
+      bundleMaxSelectionPerOption:
+        bundle.typeId === PromotionTypeEnum.MixMatch
+          ? (bundle.maxSelectionsPerOrder ?? null)
+          : null,
+      bundleItems,
+    };
+
+    if (editIndex !== null && editIndex !== undefined) {
+      const current = this.cart();
+      if (editIndex < 0 || editIndex >= current.length) {
+        return;
+      }
+
+      this.cart.set(current.map((item, index) => (index === editIndex ? line : item)));
+      return;
+    }
+
+    const existingIndex = this.cart().findIndex(
+      (item) => item.bundlePromotionId === bundle.id && (item.bundleItems?.length ?? 0) > 0,
+    );
+
+    if (existingIndex < 0) {
+      this.cart.set([...this.cart(), line]);
+      return;
+    }
+
+    const current = this.cart();
+    const existing = current[existingIndex];
+
+    const mergedBundleItems =
+      bundle.typeId === PromotionTypeEnum.MixMatch
+        ? (() => {
+            const mergedByProductId = new Map<string, CartBundleItemDto>();
+            for (const item of existing.bundleItems ?? []) {
+              mergedByProductId.set(item.productId, { ...item, qty: Math.max(1, item.qty) });
+            }
+
+            for (const item of line.bundleItems ?? []) {
+              const currentItem = mergedByProductId.get(item.productId);
+              if (currentItem) {
+                currentItem.qty += Math.max(1, item.qty);
+              } else {
+                mergedByProductId.set(item.productId, { ...item, qty: Math.max(1, item.qty) });
+              }
+            }
+
+            return [...mergedByProductId.values()].sort((a, b) => a.name.localeCompare(b.name));
+          })()
+        : (existing.bundleItems ?? line.bundleItems);
+
+    const mergedLine: CartItemDto = {
+      ...existing,
+      qty: Math.max(1, existing.qty) + Math.max(1, line.qty),
+      bundlePromotionTypeId: line.bundlePromotionTypeId ?? existing.bundlePromotionTypeId ?? null,
+      bundleRequiredSelectionCount:
+        line.bundleRequiredSelectionCount ?? existing.bundleRequiredSelectionCount ?? null,
+      bundleMaxSelectionPerOption:
+        line.bundleMaxSelectionPerOption ?? existing.bundleMaxSelectionPerOption ?? null,
+      specialInstructions: existing.specialInstructions || line.specialInstructions || null,
+      bundleItems: mergedBundleItems,
+    };
+
+    this.cart.set(current.map((item, index) => (index === existingIndex ? mergedLine : item)));
+  }
+
+  private buildBundleCartItems(bundle: BundlePromotionSelection): CartBundleItemDto[] {
+    const catalogProducts = this.catalogCache.products();
+    const allProducts = this.productsCache().length > 0 ? this.productsCache() : catalogProducts;
+    const productById = new Map(allProducts.map((p) => [p.id, p]));
+    const bundleItems: CartBundleItemDto[] = [];
+
+    for (const bundleItem of bundle.items) {
+      const product = productById.get(bundleItem.productId);
+      if (!product) {
+        continue;
+      }
+
+      const addOnGroups = this.catalogCache.getAddOnsForProduct(product.id);
+      const addOnTypeById = new Map(
+        addOnGroups.flatMap((group) =>
+          group.options.map((option) => [option.id, group.type] as const),
+        ),
+      );
+      const addOnOptionById = new Map(
+        addOnGroups.flatMap((group) => group.options.map((option) => [option.id, option] as const)),
+      );
+
+      const expandedAddOns: CartAddOnDto[] = [];
+      for (const addOn of bundleItem.addOns ?? []) {
+        const addOnOption = addOnOptionById.get(addOn.addOnProductId);
+        const addOnProduct = productById.get(addOn.addOnProductId);
+        const qty = Math.max(1, addOn.quantity || 1);
+
+        for (let i = 0; i < qty; i++) {
+          expandedAddOns.push({
+            addOnId: addOn.addOnProductId,
+            name: addOnOption?.name ?? addOnProduct?.name ?? 'Add-on',
+            price: addOnOption?.overridePrice ?? addOnOption?.price ?? addOnProduct?.price ?? 0,
+            addOnType: addOnTypeById.get(addOn.addOnProductId),
+          });
+        }
+      }
+
+      bundleItems.push({
+        productId: product.id,
+        name: product.name,
+        price: product.price,
+        qty: Math.max(1, bundleItem.quantity || 1),
+        imageUrl: product.imageUrl,
+        addOns: expandedAddOns.length > 0 ? expandedAddOns : undefined,
+      });
+    }
+
+    return [...bundleItems].sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  private normalizeSortLabel(value: string): string {
+    return value
+      .replace(/^\s*\d+\s*x\s+/i, '')
+      .trim()
+      .toLowerCase();
+  }
+
+  private openMixMatchBundleEditorForQuantity(index: number, quantity: number): void {
+    const item = this.cart()[index];
+    if (!item || !item.bundlePromotionId) {
+      return;
+    }
+
+    this.promotionService.getMixMatchPromotion(item.bundlePromotionId).subscribe({
+      next: (promo) => {
+        const selectedCountByProductId = new Map<string, number>(
+          (item.bundleItems ?? []).map((bundleItem) => [
+            bundleItem.productId,
+            Math.max(0, bundleItem.qty),
+          ]),
+        );
+
+        const hydrated: BundlePromotionSelection = {
+          id: promo.id,
+          name: promo.name,
+          typeId: PromotionTypeEnum.MixMatch,
+          isActive: promo.isActive,
+          imageUrl: promo.imageUrl,
+          createdAt: promo.createdAt,
+          createdBy: promo.createdBy,
+          updatedAt: promo.updatedAt,
+          updatedBy: promo.updatedBy,
+          bundlePrice: promo.bundlePrice,
+          requiredQuantity: promo.requiredQuantity,
+          maxSelectionsPerOrder: promo.maxSelectionsPerOrder,
+          items: promo.items
+            .map((promoItem) => ({
+              productId: promoItem.productId,
+              quantity: selectedCountByProductId.get(promoItem.productId) ?? 0,
+              addOns: promoItem.addOns.map((addOn) => ({
+                addOnProductId: addOn.addOnProductId,
+                quantity: addOn.quantity,
+              })),
+            }))
+            .sort((a, b) => {
+              const aName =
+                this.catalogCache.products().find((p) => p.id === a.productId)?.name ?? '';
+              const bName =
+                this.catalogCache.products().find((p) => p.id === b.productId)?.name ?? '';
+              return aName.localeCompare(bName);
+            }),
+        };
+
+        this.openBundleSelector(hydrated, {
+          quantity,
+          specialInstructions: item.specialInstructions ?? null,
+          editIndex: index,
+        });
+      },
+      error: (err: Error) =>
+        this.alertService.error(
+          err.message || this.alertService.getLoadErrorMessage('bundle promotion'),
+        ),
+    });
+  }
+
+  private toBundlePromotionSelectionFromFixedBundle(
+    bundle: FixedBundlePromotionDto,
+  ): BundlePromotionSelection {
+    return {
+      id: bundle.id,
+      name: bundle.name,
+      typeId: PromotionTypeEnum.FixedBundle,
+      isActive: bundle.isActive,
+      imageUrl: bundle.imageUrl,
+      createdAt: bundle.createdAt,
+      createdBy: bundle.createdBy,
+      updatedAt: bundle.updatedAt,
+      updatedBy: bundle.updatedBy,
+      bundlePrice: bundle.bundlePrice,
+      items: bundle.items.map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        addOns: item.addOns.map((addOn) => ({
+          addOnProductId: addOn.addOnProductId,
+          quantity: addOn.quantity,
+        })),
+      })),
+    };
+  }
+
+  private toBundlePromotionSelectionFromMixMatch(
+    promo: MixMatchPromotionDto,
+  ): BundlePromotionSelection {
+    return {
+      id: promo.id,
+      name: promo.name,
+      typeId: PromotionTypeEnum.MixMatch,
+      isActive: promo.isActive,
+      imageUrl: promo.imageUrl,
+      createdAt: promo.createdAt,
+      createdBy: promo.createdBy,
+      updatedAt: promo.updatedAt,
+      updatedBy: promo.updatedBy,
+      bundlePrice: promo.bundlePrice,
+      requiredQuantity: promo.requiredQuantity,
+      maxSelectionsPerOrder: promo.maxSelectionsPerOrder,
+      items: promo.items.map((item) => ({
+        productId: item.productId,
+        quantity: 0,
+        addOns: item.addOns.map((addOn) => ({
+          addOnProductId: addOn.addOnProductId,
+          quantity: addOn.quantity,
+        })),
+      })),
     };
   }
 }

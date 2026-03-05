@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using WTF.Api.Common.Extensions;
+using WTF.Api.Common.Orders;
+using WTF.Api.Common.Time;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
@@ -21,6 +23,7 @@ public record CreateOrderCommand : IRequest<OrderDto>
 
     [Required]
     public List<OrderItemRequestDto> Items { get; init; } = [];
+    public List<OrderBundlePromotionRequestDto> BundlePromotions { get; init; } = [];
     public string? SpecialInstructions { get; init; }
     public string? Note { get; init; }
 
@@ -136,6 +139,97 @@ public class CreateOrderHandler(
 
         var createdAt = request.CreatedAt?.ToUniversalTime() ?? DateTime.UtcNow;
 
+        var requestedProductIds = request.Items
+            .Select(i => i.ProductId)
+            .Concat(request.Items.SelectMany(i => i.AddOns.Select(a => a.ProductId)))
+            .Distinct()
+            .ToList();
+
+        var activeProductMap = await db.Products
+            .Where(p => requestedProductIds.Contains(p.Id))
+            .Select(p => new { p.Id, p.Name, p.IsActive })
+            .ToDictionaryAsync(p => p.Id, cancellationToken);
+
+        var inactiveProductNames = activeProductMap.Values
+            .Where(p => !p.IsActive)
+            .Select(p => p.Name)
+            .Distinct()
+            .OrderBy(x => x)
+            .ToList();
+
+        if (inactiveProductNames.Count > 0)
+        {
+            throw new InvalidOperationException(
+                $"Cannot save order with inactive products/add-ons: {string.Join(", ", inactiveProductNames)}.");
+        }
+
+        if (activeProductMap.Count != requestedProductIds.Count)
+        {
+            throw new InvalidOperationException("One or more selected products/add-ons were not found.");
+        }
+
+        var requestedBundlePromotions = request.BundlePromotions
+            .GroupBy(b => b.PromotionId)
+            .Select(group =>
+            {
+                if (group.Count() > 1)
+                {
+                    throw new InvalidOperationException("Duplicate bundle promotions are not allowed.");
+                }
+
+                var entry = group.Single();
+                if (entry.Quantity <= 0)
+                {
+                    throw new InvalidOperationException("Bundle promotion quantity must be greater than zero.");
+                }
+
+                return entry;
+            })
+            .ToList();
+
+        var bundlePromotionIds = requestedBundlePromotions.Select(b => b.PromotionId).ToHashSet();
+        foreach (var item in request.Items)
+        {
+            if (item.BundlePromotionId.HasValue && !bundlePromotionIds.Contains(item.BundlePromotionId.Value))
+            {
+                throw new InvalidOperationException("Order item references an unknown bundle promotion.");
+            }
+        }
+
+        Dictionary<Guid, decimal> bundlePriceByPromotionId = [];
+        if (requestedBundlePromotions.Count > 0)
+        {
+            var timeZone = RequestTimeZone.ResolveFromRequest(httpContextAccessor);
+            var referenceUtc = request.CreatedAt?.ToUniversalTime() ?? DateTime.UtcNow;
+
+            var bundlePromotionEntities = await db.Promotions
+                .Where(p =>
+                    bundlePromotionIds.Contains(p.Id)
+                    && (p.FixedBundlePromotion != null || p.MixMatchPromotion != null))
+                .Include(p => p.FixedBundlePromotion)
+                .Include(p => p.MixMatchPromotion)
+                .ToListAsync(cancellationToken);
+
+            if (bundlePromotionEntities.Count != requestedBundlePromotions.Count)
+            {
+                throw new InvalidOperationException("One or more bundle promotions are invalid.");
+            }
+
+            foreach (var promotion in bundlePromotionEntities)
+            {
+                if (!IsPromotionActiveOnLocalDate(promotion, referenceUtc, timeZone))
+                {
+                    throw new InvalidOperationException($"Bundle promotion '{promotion.Name}' is inactive or outside its active date range.");
+                }
+            }
+
+            bundlePriceByPromotionId = bundlePromotionEntities.ToDictionary(
+                p => p.Id,
+                p => p.FixedBundlePromotion != null
+                    ? p.FixedBundlePromotion.BundlePrice
+                    : p.MixMatchPromotion!.BundlePrice);
+        }
+
         var order = new Order
         {
             CreatedAt = createdAt,
@@ -153,6 +247,19 @@ public class CreateOrderHandler(
         db.Orders.Add(order);
         await db.SaveChangesAsync(cancellationToken);
 
+        if (requestedBundlePromotions.Count > 0)
+        {
+            var orderBundlePromotions = requestedBundlePromotions.Select(bundle => new OrderBundlePromotion
+            {
+                OrderId = order.Id,
+                PromotionId = bundle.PromotionId,
+                Quantity = bundle.Quantity,
+                UnitPrice = bundlePriceByPromotionId[bundle.PromotionId]
+            });
+
+            db.OrderBundlePromotions.AddRange(orderBundlePromotions);
+        }
+
         // Add order items with parent-child relationships
         foreach (var item in request.Items)
         {
@@ -164,7 +271,8 @@ public class CreateOrderHandler(
                 Quantity = item.Quantity,
                 SpecialInstructions = item.SpecialInstructions,
                 Price = null,
-                ParentOrderItemId = null
+                ParentOrderItemId = null,
+                BundlePromotionId = item.BundlePromotionId
             };
 
             // Capture price if order is Completed or Cancelled
@@ -193,7 +301,8 @@ public class CreateOrderHandler(
                     Quantity = addOn.Quantity,
                     SpecialInstructions = addOn.SpecialInstructions,
                     Price = null,
-                    ParentOrderItemId = orderItem.Id
+                    ParentOrderItemId = orderItem.Id,
+                    BundlePromotionId = item.BundlePromotionId
                 };
 
                 // Capture price if order is Completed or Cancelled
@@ -227,51 +336,31 @@ public class CreateOrderHandler(
                     child.Quantity,
                     child.Price,
                     new List<OrderItemDto>(),
-                    child.SpecialInstructions
+                    child.SpecialInstructions,
+                    child.BundlePromotionId
                 )).ToList(),
-                oi.SpecialInstructions
+                oi.SpecialInstructions,
+                oi.BundlePromotionId
             ))
             .ToListAsync(cancellationToken);
 
-        var allOrderItems = await db.OrderItems
-            .Where(oi => oi.OrderId == order.Id)
-            .Include(oi => oi.Product)
+        var bundlePromotions = await db.OrderBundlePromotions
+            .Where(obp => obp.OrderId == order.Id)
+            .Include(obp => obp.Promotion)
+            .Select(obp => new OrderBundlePromotionDto(
+                obp.PromotionId,
+                obp.Promotion.Name,
+                obp.Quantity,
+                obp.UnitPrice))
             .ToListAsync(cancellationToken);
 
-        var parentItems = allOrderItems.Where(oi => oi.ParentOrderItemId == null).ToList();
-        var parentProductIds = parentItems.Select(oi => oi.ProductId).Distinct().ToList();
-        var addOnProductIds = allOrderItems
-            .Where(oi => oi.ParentOrderItemId != null)
-            .Select(oi => oi.ProductId)
-            .Distinct()
-            .ToList();
-
-        var overridePrices = new Dictionary<(Guid ProductId, Guid AddOnId), decimal>();
-        if (addOnProductIds.Count > 0)
-        {
-            overridePrices = await db.ProductAddOnPriceOverrides
-                .Where(o => parentProductIds.Contains(o.ProductId)
-                    && addOnProductIds.Contains(o.AddOnId)
-                    && o.IsActive)
-                .ToDictionaryAsync(o => (o.ProductId, o.AddOnId), o => o.Price, cancellationToken);
-        }
-
-        var totalAmount = parentItems.Sum(parent =>
-        {
-            var parentUnitPrice = parent.Price ?? parent.Product.Price;
-            var addOnPerUnit = allOrderItems
-                .Where(child => child.ParentOrderItemId == parent.Id)
-                .Sum(child =>
-                {
-                    var effectivePrice = child.Price
-                        ?? (overridePrices.TryGetValue((parent.ProductId, child.ProductId), out var op)
-                            ? op
-                            : child.Product.Price);
-                    return effectivePrice * child.Quantity;
-                });
-
-            return (parentUnitPrice + addOnPerUnit) * parent.Quantity;
-        });
+        var orderWithTotals = await db.Orders
+            .AsNoTracking()
+            .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.Product)
+            .Include(o => o.OrderBundlePromotions)
+            .FirstAsync(o => o.Id == order.Id, cancellationToken);
+        var totalAmount = OrderMetrics.ComputeOrderTotal(orderWithTotals);
 
         await dashboardHub.Clients.Group(HubNames.Groups.DashboardViewers)
             .SendAsync(HubNames.Events.DashboardUpdated, cancellationToken);
@@ -307,7 +396,39 @@ public class CreateOrderHandler(
             order.Tips,
             order.SpecialInstructions,
             order.Note,
-            totalAmount
+            totalAmount,
+            null,
+            bundlePromotions
         );
+    }
+
+    private static bool IsPromotionActiveOnLocalDate(Promotion promotion, DateTime utcReference, TimeZoneInfo timeZone)
+    {
+        if (!promotion.IsActive)
+        {
+            return false;
+        }
+
+        var localNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utcReference, DateTimeKind.Utc), timeZone);
+        var localDate = localNow.Date;
+
+        var startLocalDate = promotion.StartDate.HasValue
+            ? TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(promotion.StartDate.Value, DateTimeKind.Utc), timeZone).Date
+            : (DateTime?)null;
+        var endLocalDate = promotion.EndDate.HasValue
+            ? TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(promotion.EndDate.Value, DateTimeKind.Utc), timeZone).Date
+            : (DateTime?)null;
+
+        if (startLocalDate.HasValue && localDate < startLocalDate.Value)
+        {
+            return false;
+        }
+
+        if (endLocalDate.HasValue && localDate > endLocalDate.Value)
+        {
+            return false;
+        }
+
+        return true;
     }
 }
