@@ -6,6 +6,7 @@ import { environment } from '@environments/environment.development';
 import { CreateCustomerDto, CustomerDto, UpdateCustomerDto } from '@shared/models';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import { extractHttpErrorMessage } from './http-error-message';
 
 @Injectable({ providedIn: 'root' })
 export class CustomerService {
@@ -176,6 +177,11 @@ export class CustomerService {
     if (error.status === 0) {
       this.connectivity.checkNow();
       return CustomerService.MSG_NETWORK_UNAVAILABLE;
+    }
+
+    const serverMessage = extractHttpErrorMessage(error);
+    if (serverMessage) {
+      return serverMessage;
     }
 
     if (error.status === 403) {

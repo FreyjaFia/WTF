@@ -6,6 +6,7 @@ import { environment } from '@environments/environment.development';
 import { type DashboardDto, type DateRangeSelection } from '@shared/models';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import { extractHttpErrorMessage } from './http-error-message';
 
 @Injectable({ providedIn: 'root' })
 export class DashboardService {
@@ -35,6 +36,11 @@ export class DashboardService {
         if (error.status === 0) {
           this.connectivity.checkNow();
           return throwError(() => new Error(DashboardService.MSG_NETWORK_UNAVAILABLE));
+        }
+
+        const serverMessage = extractHttpErrorMessage(error);
+        if (serverMessage) {
+          return throwError(() => new Error(serverMessage));
         }
 
         return throwError(() => new Error(DashboardService.MSG_LOAD_DASHBOARD_FAILED));

@@ -5,6 +5,7 @@ import { ConnectivityService } from '@core/services';
 import { environment } from '@environments/environment.development';
 import { CreateUserDto, GetUsersQuery, UpdateUserDto, UserDto } from '@shared/models';
 import { Observable, catchError, throwError } from 'rxjs';
+import { extractHttpErrorMessage } from './http-error-message';
 
 @Injectable({ providedIn: 'root' })
 export class UserService {
@@ -119,7 +120,7 @@ export class UserService {
         let errorMessage: string = UserService.MSG_UPLOAD_IMAGE_FAILED;
 
         if (error.status === 400) {
-          errorMessage = error.error || UserService.MSG_INVALID_FILE;
+          errorMessage = extractHttpErrorMessage(error) || UserService.MSG_INVALID_FILE;
         } else if (error.status === 404) {
           errorMessage = UserService.MSG_USER_NOT_FOUND;
         } else if (error.status === 403) {
@@ -127,6 +128,8 @@ export class UserService {
         } else if (error.status === 0) {
           this.connectivity.checkNow();
           errorMessage = UserService.MSG_NETWORK_UNAVAILABLE;
+        } else {
+          errorMessage = extractHttpErrorMessage(error) || errorMessage;
         }
 
         return throwError(() => new Error(errorMessage));
@@ -148,6 +151,8 @@ export class UserService {
         } else if (error.status === 0) {
           this.connectivity.checkNow();
           errorMessage = UserService.MSG_NETWORK_UNAVAILABLE;
+        } else {
+          errorMessage = extractHttpErrorMessage(error) || errorMessage;
         }
 
         return throwError(() => new Error(errorMessage));
@@ -163,6 +168,11 @@ export class UserService {
     if (error.status === 0) {
       this.connectivity.checkNow();
       return UserService.MSG_NETWORK_UNAVAILABLE;
+    }
+
+    const serverMessage = extractHttpErrorMessage(error);
+    if (serverMessage) {
+      return serverMessage;
     }
 
     if (error.status === 404 && options?.notFound) {

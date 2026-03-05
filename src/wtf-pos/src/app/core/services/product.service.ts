@@ -17,6 +17,7 @@ import {
 } from '@shared/models';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import { extractHttpErrorMessage } from './http-error-message';
 
 @Injectable({ providedIn: 'root' })
 export class ProductService {
@@ -94,11 +95,14 @@ export class ProductService {
     return this.http.get<ProductDto[]>(this.baseUrl, { params }).pipe(
       catchError((error: HttpErrorResponse) => {
         console.error('Error fetching products:', error);
+        const serverMessage = extractHttpErrorMessage(error);
 
         const errorMessage =
           error.status === 0
             ? this.getNetworkErrorMessage()
-            : ProductService.MSG_FETCH_PRODUCTS_FAILED;
+            : serverMessage
+              ? serverMessage
+              : ProductService.MSG_FETCH_PRODUCTS_FAILED;
 
         return throwError(() => new Error(errorMessage));
       }),
@@ -109,13 +113,16 @@ export class ProductService {
     return this.http.get<ProductDto>(`${this.baseUrl}/${id}`).pipe(
       catchError((error: HttpErrorResponse) => {
         console.error('Error fetching product:', error);
+        const serverMessage = extractHttpErrorMessage(error);
 
         const errorMessage =
           error.status === 404
             ? ProductService.MSG_PRODUCT_NOT_FOUND
             : error.status === 0
               ? this.getNetworkErrorMessage()
-              : ProductService.MSG_FETCH_PRODUCT_FAILED;
+              : serverMessage
+                ? serverMessage
+                : ProductService.MSG_FETCH_PRODUCT_FAILED;
 
         return throwError(() => new Error(errorMessage));
       }),
@@ -126,11 +133,14 @@ export class ProductService {
     return this.http.post<ProductDto>(this.baseUrl, product).pipe(
       catchError((error: HttpErrorResponse) => {
         console.error('Error creating product:', error);
+        const serverMessage = extractHttpErrorMessage(error);
 
         const errorMessage =
           error.status === 0
             ? this.getNetworkErrorMessage()
-            : ProductService.MSG_CREATE_PRODUCT_FAILED;
+            : serverMessage
+              ? serverMessage
+              : ProductService.MSG_CREATE_PRODUCT_FAILED;
 
         return throwError(() => new Error(errorMessage));
       }),
@@ -141,13 +151,16 @@ export class ProductService {
     return this.http.put<ProductDto>(`${this.baseUrl}/${product.id}`, product).pipe(
       catchError((error: HttpErrorResponse) => {
         console.error('Error updating product:', error);
+        const serverMessage = extractHttpErrorMessage(error);
 
         const errorMessage =
           error.status === 404
             ? ProductService.MSG_PRODUCT_NOT_FOUND
             : error.status === 0
               ? this.getNetworkErrorMessage()
-              : ProductService.MSG_UPDATE_PRODUCT_FAILED;
+              : serverMessage
+                ? serverMessage
+                : ProductService.MSG_UPDATE_PRODUCT_FAILED;
 
         return throwError(() => new Error(errorMessage));
       }),
@@ -158,13 +171,16 @@ export class ProductService {
     return this.http.delete<void>(`${this.baseUrl}/${id}`).pipe(
       catchError((error: HttpErrorResponse) => {
         console.error('Error deleting product:', error);
+        const serverMessage = extractHttpErrorMessage(error);
 
         const errorMessage =
           error.status === 404
             ? ProductService.MSG_PRODUCT_NOT_FOUND
             : error.status === 0
               ? this.getNetworkErrorMessage()
-              : ProductService.MSG_DELETE_PRODUCT_FAILED;
+              : serverMessage
+                ? serverMessage
+                : ProductService.MSG_DELETE_PRODUCT_FAILED;
 
         return throwError(() => new Error(errorMessage));
       }),
@@ -181,11 +197,13 @@ export class ProductService {
         let errorMessage: string = ProductService.MSG_UPLOAD_IMAGE_FAILED;
 
         if (error.status === 400) {
-          errorMessage = error.error || ProductService.MSG_INVALID_FILE;
+          errorMessage = extractHttpErrorMessage(error) || ProductService.MSG_INVALID_FILE;
         } else if (error.status === 404) {
           errorMessage = ProductService.MSG_PRODUCT_NOT_FOUND;
         } else if (error.status === 0) {
           errorMessage = this.getNetworkErrorMessage();
+        } else {
+          errorMessage = extractHttpErrorMessage(error) || errorMessage;
         }
 
         return throwError(() => new Error(errorMessage));
@@ -204,6 +222,8 @@ export class ProductService {
           errorMessage = ProductService.MSG_PRODUCT_OR_IMAGE_NOT_FOUND;
         } else if (error.status === 0) {
           errorMessage = this.getNetworkErrorMessage();
+        } else {
+          errorMessage = extractHttpErrorMessage(error) || errorMessage;
         }
 
         return throwError(() => new Error(errorMessage));
@@ -215,13 +235,16 @@ export class ProductService {
     return this.http.get<AddOnGroupDto[]>(`${this.baseUrl}/${productId}/addons`).pipe(
       catchError((error: HttpErrorResponse) => {
         console.error('Error fetching product add-ons:', error);
+        const serverMessage = extractHttpErrorMessage(error);
 
         const errorMessage =
           error.status === 404
             ? ProductService.MSG_PRODUCT_NOT_FOUND
             : error.status === 0
               ? this.getNetworkErrorMessage()
-              : ProductService.MSG_FETCH_PRODUCT_ADDONS_FAILED;
+              : serverMessage
+                ? serverMessage
+                : ProductService.MSG_FETCH_PRODUCT_ADDONS_FAILED;
 
         return throwError(() => new Error(errorMessage));
       }),
@@ -232,13 +255,16 @@ export class ProductService {
     return this.http.get<AddOnGroupDto[]>(`${this.baseUrl}/addons/${addOnId}/products`).pipe(
       catchError((error: HttpErrorResponse) => {
         console.error('Error fetching linked products:', error);
+        const serverMessage = extractHttpErrorMessage(error);
 
         const errorMessage =
           error.status === 404
             ? ProductService.MSG_PRODUCT_NOT_FOUND
             : error.status === 0
               ? this.getNetworkErrorMessage()
-              : ProductService.MSG_FETCH_LINKED_PRODUCTS_FAILED;
+              : serverMessage
+                ? serverMessage
+                : ProductService.MSG_FETCH_LINKED_PRODUCTS_FAILED;
 
         return throwError(() => new Error(errorMessage));
       }),
@@ -256,11 +282,14 @@ export class ProductService {
         let errorMessage: string = ProductService.MSG_ASSIGN_ADDONS_FAILED;
 
         if (error.status === 400) {
-          errorMessage = error.error?.message || ProductService.MSG_INVALID_ADDONS_REQUEST;
+          errorMessage =
+            extractHttpErrorMessage(error) || ProductService.MSG_INVALID_ADDONS_REQUEST;
         } else if (error.status === 404) {
           errorMessage = ProductService.MSG_PRODUCT_NOT_FOUND;
         } else if (error.status === 0) {
           errorMessage = this.getNetworkErrorMessage();
+        } else {
+          errorMessage = extractHttpErrorMessage(error) || errorMessage;
         }
 
         return throwError(() => new Error(errorMessage));
@@ -281,11 +310,14 @@ export class ProductService {
           let errorMessage: string = ProductService.MSG_ASSIGN_PRODUCTS_FAILED;
 
           if (error.status === 400) {
-            errorMessage = error.error?.message || ProductService.MSG_INVALID_PRODUCTS_REQUEST;
+            errorMessage =
+              extractHttpErrorMessage(error) || ProductService.MSG_INVALID_PRODUCTS_REQUEST;
           } else if (error.status === 404) {
             errorMessage = ProductService.MSG_ADD_ON_NOT_FOUND;
           } else if (error.status === 0) {
             errorMessage = this.getNetworkErrorMessage();
+          } else {
+            errorMessage = extractHttpErrorMessage(error) || errorMessage;
           }
 
           return throwError(() => new Error(errorMessage));
@@ -317,11 +349,13 @@ export class ProductService {
 
           if (error.status === 400) {
             errorMessage =
-              error.error?.message || ProductService.MSG_INVALID_PRICE_OVERRIDE_REQUEST;
+              extractHttpErrorMessage(error) || ProductService.MSG_INVALID_PRICE_OVERRIDE_REQUEST;
           } else if (error.status === 404) {
             errorMessage = ProductService.MSG_PRODUCT_OR_ADD_ON_NOT_FOUND;
           } else if (error.status === 0) {
             errorMessage = this.getNetworkErrorMessage();
+          } else {
+            errorMessage = extractHttpErrorMessage(error) || errorMessage;
           }
 
           return throwError(() => new Error(errorMessage));
@@ -345,11 +379,13 @@ export class ProductService {
 
           if (error.status === 400) {
             errorMessage =
-              error.error?.message || ProductService.MSG_INVALID_PRICE_OVERRIDE_REQUEST;
+              extractHttpErrorMessage(error) || ProductService.MSG_INVALID_PRICE_OVERRIDE_REQUEST;
           } else if (error.status === 404) {
             errorMessage = ProductService.MSG_PRICE_OVERRIDE_NOT_FOUND;
           } else if (error.status === 0) {
             errorMessage = this.getNetworkErrorMessage();
+          } else {
+            errorMessage = extractHttpErrorMessage(error) || errorMessage;
           }
 
           return throwError(() => new Error(errorMessage));
@@ -370,6 +406,8 @@ export class ProductService {
             errorMessage = ProductService.MSG_PRICE_OVERRIDE_NOT_FOUND;
           } else if (error.status === 0) {
             errorMessage = this.getNetworkErrorMessage();
+          } else {
+            errorMessage = extractHttpErrorMessage(error) || errorMessage;
           }
 
           return throwError(() => new Error(errorMessage));

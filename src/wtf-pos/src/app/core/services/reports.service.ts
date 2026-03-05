@@ -17,17 +17,23 @@ import {
   StaffPerformanceReportRowDto,
 } from '@shared/models';
 import { Observable, catchError, throwError } from 'rxjs';
+import { extractHttpErrorMessage } from './http-error-message';
 
 @Injectable({ providedIn: 'root' })
 export class ReportsService {
   private static readonly MSG_NETWORK_UNAVAILABLE = HttpErrorMessages.NetworkUnavailable;
-  private static readonly MSG_FETCH_DAILY_SALES_FAILED = ServiceErrorMessages.Report.FetchDailySalesFailed;
-  private static readonly MSG_FETCH_PRODUCT_SALES_FAILED = ServiceErrorMessages.Report.FetchProductSalesFailed;
-  private static readonly MSG_FETCH_PAYMENTS_FAILED = ServiceErrorMessages.Report.FetchPaymentsFailed;
-  private static readonly MSG_FETCH_HOURLY_SALES_FAILED = ServiceErrorMessages.Report.FetchHourlySalesFailed;
+  private static readonly MSG_FETCH_DAILY_SALES_FAILED =
+    ServiceErrorMessages.Report.FetchDailySalesFailed;
+  private static readonly MSG_FETCH_PRODUCT_SALES_FAILED =
+    ServiceErrorMessages.Report.FetchProductSalesFailed;
+  private static readonly MSG_FETCH_PAYMENTS_FAILED =
+    ServiceErrorMessages.Report.FetchPaymentsFailed;
+  private static readonly MSG_FETCH_HOURLY_SALES_FAILED =
+    ServiceErrorMessages.Report.FetchHourlySalesFailed;
   private static readonly MSG_FETCH_STAFF_PERFORMANCE_FAILED =
     ServiceErrorMessages.Report.FetchStaffPerformanceFailed;
-  private static readonly MSG_DOWNLOAD_EXCEL_FAILED = ServiceErrorMessages.Report.DownloadExcelFailed;
+  private static readonly MSG_DOWNLOAD_EXCEL_FAILED =
+    ServiceErrorMessages.Report.DownloadExcelFailed;
   private static readonly MSG_DOWNLOAD_PDF_FAILED = ServiceErrorMessages.Report.DownloadPdfFailed;
   private static readonly MSG_GENERATE_MONTHLY_WORKBOOK_FAILED =
     ServiceErrorMessages.Report.GenerateMonthlyWorkbookFailed;
@@ -53,7 +59,9 @@ export class ReportsService {
       );
   }
 
-  public getProductSalesReport(query: ProductSalesReportQuery): Observable<ProductSalesReportRowDto[]> {
+  public getProductSalesReport(
+    query: ProductSalesReportQuery,
+  ): Observable<ProductSalesReportRowDto[]> {
     return this.http
       .get<ProductSalesReportRowDto[]>(`${this.baseUrl}/product-sales`, {
         params: this.buildProductSalesParams(query),
@@ -77,7 +85,9 @@ export class ReportsService {
       );
   }
 
-  public getHourlySalesReport(query: HourlySalesReportQuery): Observable<HourlySalesReportRowDto[]> {
+  public getHourlySalesReport(
+    query: HourlySalesReportQuery,
+  ): Observable<HourlySalesReportRowDto[]> {
     return this.http
       .get<HourlySalesReportRowDto[]>(`${this.baseUrl}/hourly`, {
         params: this.buildHourlySalesParams(query),
@@ -276,6 +286,11 @@ export class ReportsService {
 
     if (error.status === 501) {
       return throwError(() => new Error(ReportsService.MSG_PDF_NOT_AVAILABLE));
+    }
+
+    const serverMessage = extractHttpErrorMessage(error);
+    if (serverMessage) {
+      return throwError(() => new Error(serverMessage));
     }
 
     return throwError(() => new Error(message));

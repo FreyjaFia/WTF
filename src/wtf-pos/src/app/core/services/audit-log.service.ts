@@ -5,6 +5,7 @@ import { ConnectivityService } from '@core/services';
 import { environment } from '@environments/environment.development';
 import { AuditLogDto, AuditLogQuery, PagedResultDto } from '@shared/models';
 import { Observable, catchError, throwError } from 'rxjs';
+import { extractHttpErrorMessage } from './http-error-message';
 
 @Injectable({ providedIn: 'root' })
 export class AuditLogService {
@@ -31,6 +32,11 @@ export class AuditLogService {
         if (error.status === 0) {
           this.connectivity.checkNow();
           return throwError(() => new Error(AuditLogService.MSG_NETWORK_UNAVAILABLE));
+        }
+
+        const serverMessage = extractHttpErrorMessage(error);
+        if (serverMessage) {
+          return throwError(() => new Error(serverMessage));
         }
 
         return throwError(() => new Error(AuditLogService.MSG_FETCH_FAILED));

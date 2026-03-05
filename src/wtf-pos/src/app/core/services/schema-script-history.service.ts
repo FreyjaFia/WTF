@@ -5,6 +5,7 @@ import { ConnectivityService } from '@core/services';
 import { environment } from '@environments/environment.development';
 import { SchemaScriptHistoryDto } from '@shared/models';
 import { Observable, catchError, throwError } from 'rxjs';
+import { extractHttpErrorMessage } from './http-error-message';
 
 @Injectable({ providedIn: 'root' })
 export class SchemaScriptHistoryService {
@@ -23,6 +24,11 @@ export class SchemaScriptHistoryService {
         if (error.status === 0) {
           this.connectivity.checkNow();
           return throwError(() => new Error(SchemaScriptHistoryService.MSG_NETWORK_UNAVAILABLE));
+        }
+
+        const serverMessage = extractHttpErrorMessage(error);
+        if (serverMessage) {
+          return throwError(() => new Error(serverMessage));
         }
 
         return throwError(() => new Error(SchemaScriptHistoryService.MSG_FETCH_FAILED));
