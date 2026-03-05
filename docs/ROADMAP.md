@@ -566,3 +566,112 @@ Update the order editor's add-on selector to enforce the dynamic rules:
 
 
 
+## Promotions / Bundles Feature [Phase 1 Completed]
+
+### Implemented Scope
+
+| Promo Type | Phase | Status |
+| ---------- | ----- | ------ |
+| Fixed Bundle (Preset Combo) | Phase 1 | [Completed] |
+| Mix & Match (Choose from category) | Phase 1 | [Completed] |
+| Buy X Get Y (BXGY) | Phase 1 (legacy) | Replaced by Mix & Match |
+| Percentage Discount (Category-based) | Phase 2+ | Future |
+| Time-Based Promo | Phase 2+ | Future |
+| Order Amount Discount (Spend X Get Y Off) | Phase 2+ | Future |
+| Add-On Upsell Promo | Phase 2+ | Future |
+| Free Size Upgrade | Phase 2+ | Future |
+| Limited Quantity Promo | Phase 2+ | Future |
+
+### Implemented Database
+
+- `Promotions` base table implemented with:
+  - `TypeId`, `IsActive`, `StartDate`, `EndDate`
+  - audit columns: `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`
+- Promotion image mapping implemented using centralized image table:
+  - `PromotionImages` -> `Images`
+- Type tables implemented:
+  - `FixedBundlePromotions`, `FixedBundlePromotionItems`, add-on mappings
+  - `MixMatchPromotions`, `MixMatchPromotionProducts`, add-on mappings
+- Order-level bundle tracking implemented:
+  - `OrderItems.BundlePromotionId`
+  - `OrderBundlePromotions` for sold bundle header rows (qty + unit price)
+
+### Implemented API (Vertical Slices)
+
+- Admin fixed bundle:
+  - `POST/GET/PUT/DELETE /api/management/promotions/fixed-bundles`
+- Admin mix & match:
+  - `POST/GET/PUT/DELETE /api/management/promotions/mix-match`
+- POS promotions:
+  - `POST /api/pos/promotions/evaluate`
+- Promotion image endpoints implemented under management promotions.
+
+### Implemented Domain Logic
+
+- Explicit type-based logic (no generic rule engine yet).
+- Idempotent promotion evaluation flow.
+- Loop prevention rules for promo-produced lines.
+- Validation added for:
+  - inactive/expired promotions (timezone-aware)
+  - inactive/missing products and add-ons
+- Global API exception mapping added:
+  - `InvalidOperationException` and `ArgumentException` return `400` with user-facing message.
+
+### Implemented Frontend (Management + POS)
+
+- Promotions management list/details/editor implemented and aligned to existing management design language.
+- Typed promotion routes implemented:
+  - `/management/promotions/fixed-bundles/:id`
+  - `/management/promotions/mix-match/:id`
+- Promotion images supported in details/editor using centralized image flow.
+- Date UX uses local timezone display while persisted values remain UTC.
+- Bundle item selector supports linked add-on constraints and required rules.
+
+### Implemented Order Flow Integration
+
+- New bundles tab added in order editor.
+- Bundle promotions render as product-like cards (image/name/price).
+- Selected bundles are represented as a grouped bundle line with child items in cart, checkout summary, and order summaries.
+- Bundle quantity editing supports reopen/reselect behavior and max-selection rules for mix & match.
+- Grouped item/add-on display and sorting standardized across cart, order details, and generated summaries.
+- Mobile cart includes collapsible order-actions/details section (notes, totals, actions).
+
+### Implemented Reporting/Dashboard Integration
+
+- Dashboard and report totals updated to include bundle header sales correctly.
+- Product sales breakdown supports promotions category/type filtering.
+- Bundle sales treated as bundle product rows in top-selling/product breakdown contexts.
+- Workbook/Excel/PDF report labels updated where subcategory/type wording applies.
+
+### Phase 2+ Expansion Notes
+
+- Keep explicit evaluators per promo type while scope is small.
+- Introduce a shared `PromoEngine` orchestrator only when multiple additional promo types are live.
+- Future candidates:
+  - percentage/category discounts
+  - time-window promos
+  - spend-threshold promos
+  - add-on upsell/upgrade promos
+  - limited-quantity promos
+
+### Post-Phase 1 Follow-up (Planned)
+
+Enable configurable add-ons on bundled child products during order building for both:
+
+- Fixed Bundle
+- Mix & Match
+
+Planned behavior:
+
+- Cashier can select allowed add-ons per bundled child item in POS (not only preselected/default add-ons).
+- Add-on validation still follows existing product add-on rules (`required`, `max`, add-on type constraints).
+- Bundle pricing remains promo-defined at bundle header level; child add-ons are tracked per selected child item for audit/report detail.
+- Cart, checkout summary, order details, and receipt rendering include selected child add-ons under each bundled child line.
+
+Planned implementation slices:
+
+- Admin promotion payload support for child-item add-on policy mode (`locked defaults` vs `cashier selectable`).
+- POS selector enhancements for bundled child item add-on picking.
+- Order persistence mapping for selected bundled child add-ons.
+- Reporting review to ensure bundled child add-on selections are represented consistently where needed.
+
