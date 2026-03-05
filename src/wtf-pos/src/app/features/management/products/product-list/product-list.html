@@ -123,6 +123,7 @@
 
   <div
     class="fixed inset-0 z-50 md:hidden"
+    style="padding-top: max(var(--safe-area-top, 0px), env(safe-area-inset-top)); padding-bottom: max(var(--safe-area-bottom, 0px), env(safe-area-inset-bottom))"
     [class.pointer-events-auto]="isMobileFiltersOpen()"
     [class.pointer-events-none]="!isMobileFiltersOpen()"
     (keydown.escape)="closeMobileFilters()"
@@ -144,7 +145,8 @@
     ></div>
 
     <div
-      class="absolute top-0 right-0 z-10 flex h-full w-full max-w-md flex-col bg-white shadow-xl transition-transform duration-300 ease-in-out"
+      class="fixed top-0 right-0 z-50 flex h-full w-full max-w-md flex-col bg-white shadow-xl transition-transform duration-300 ease-in-out"
+      style="padding-top: max(var(--safe-area-top, 0px), env(safe-area-inset-top)); padding-bottom: max(var(--safe-area-bottom, 0px), env(safe-area-inset-bottom))"
       [class.translate-x-0]="isMobileFiltersOpen()"
       [class.translate-x-full]="!isMobileFiltersOpen()"
     >
