@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using WTF.Api.Common.Orders;
 using WTF.Api.Common.Time;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Features.Reports.DTOs;
@@ -22,24 +23,28 @@ public sealed class GetPaymentsReportHandler(
         var timeZone = RequestTimeZone.ResolveFromRequest(httpContextAccessor);
         var (fromUtc, toExclusiveUtc) = ReportDateRange.ToUtcRange(request.FromDate, request.ToDate, timeZone);
 
-        var grouped = await db.Orders
+        var orders = await db.Orders
             .AsNoTracking()
             .Include(o => o.PaymentMethod)
             .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.Product)
+            .Include(o => o.OrderBundlePromotions)
             .Where(o =>
                 o.CreatedAt >= fromUtc
                 && o.CreatedAt < toExclusiveUtc
                 && o.StatusId == (int)OrderStatusEnum.Completed)
+            .ToListAsync(cancellationToken);
+
+        var grouped = orders
             .GroupBy(o => o.PaymentMethod != null ? o.PaymentMethod.Name : "Unknown")
             .Select(g => new
             {
                 PaymentMethod = g.Key,
                 OrderCount = g.Count(),
-                TotalAmount = g.Sum(o => o.OrderItems.Sum(oi => (oi.Price ?? oi.Product.Price) * oi.Quantity))
+                TotalAmount = g.Sum(ComputeOrderRevenue)
             })
             .OrderByDescending(r => r.TotalAmount)
-            .ToListAsync(cancellationToken);
+            .ToList();
 
         var grandTotal = grouped.Sum(g => g.TotalAmount);
 
@@ -51,4 +56,6 @@ public sealed class GetPaymentsReportHandler(
                 grandTotal > 0 ? row.TotalAmount / grandTotal * 100 : 0m))
             .ToList();
     }
+
+    private static decimal ComputeOrderRevenue(Domain.Entities.Order order) => OrderMetrics.ComputeOrderTotal(order);
 }

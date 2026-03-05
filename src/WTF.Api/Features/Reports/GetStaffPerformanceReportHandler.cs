@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using WTF.Api.Common.Orders;
 using WTF.Api.Common.Time;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Features.Reports.DTOs;
@@ -28,6 +29,7 @@ public sealed class GetStaffPerformanceReportHandler(
             .Include(o => o.CreatedByNavigation)
             .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.Product)
+            .Include(o => o.OrderBundlePromotions)
             .Where(o =>
                 o.CreatedAt >= fromUtc
                 && o.CreatedAt < toExclusiveUtc
@@ -38,7 +40,9 @@ public sealed class GetStaffPerformanceReportHandler(
             query = query.Where(o => o.CreatedBy == request.StaffId.Value);
         }
 
-        var grouped = await query
+        var orders = await query.ToListAsync(cancellationToken);
+
+        var grouped = orders
             .GroupBy(o => new
             {
                 o.CreatedBy,
@@ -50,11 +54,11 @@ public sealed class GetStaffPerformanceReportHandler(
                 StaffId = g.Key.CreatedBy,
                 StaffName = $"{g.Key.FirstName} {g.Key.LastName}".Trim(),
                 OrderCount = g.Count(),
-                TotalRevenue = g.Sum(o => o.OrderItems.Sum(oi => (oi.Price ?? oi.Product.Price) * oi.Quantity)),
+                TotalRevenue = g.Sum(OrderMetrics.ComputeOrderTotal),
                 TipsReceived = g.Sum(o => o.Tips ?? 0m)
             })
             .OrderByDescending(r => r.TotalRevenue)
-            .ToListAsync(cancellationToken);
+            .ToList();
 
         return grouped
             .Select(row => new StaffPerformanceReportRowDto(

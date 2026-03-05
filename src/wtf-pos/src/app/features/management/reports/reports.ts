@@ -61,6 +61,10 @@ const ReportPageTabs = {
   MonthlyWorkbook: 'monthly-workbook',
 } as const;
 
+const PromotionsReportCategoryFilterId = -1;
+const FixedBundleReportTypeFilterId = -101;
+const MixMatchReportTypeFilterId = -102;
+
 type DatePreset = (typeof DatePresets)[keyof typeof DatePresets];
 type ReportPageTab = (typeof ReportPageTabs)[keyof typeof ReportPageTabs];
 type SortDirection = 'asc' | 'desc';
@@ -181,13 +185,14 @@ export class ReportsComponent implements OnInit {
     { value: this.reportGroupByValues.Week, label: 'Week' },
     { value: this.reportGroupByValues.Month, label: 'Month' },
   ];
-  protected readonly categoryOptions: readonly EnumFilterOption<ProductCategoryEnum>[] = [
+  protected readonly categoryOptions: readonly EnumFilterOption<number>[] = [
     { value: ProductCategoryEnum.Drink, label: 'Drink' },
     { value: ProductCategoryEnum.Food, label: 'Food' },
     { value: ProductCategoryEnum.Dessert, label: 'Dessert' },
     { value: ProductCategoryEnum.Other, label: 'Other' },
+    { value: PromotionsReportCategoryFilterId, label: 'Promotions' },
   ];
-  protected readonly subCategoryOptions: readonly EnumFilterOption<ProductSubCategoryEnum>[] = [
+  protected readonly subCategoryOptions: readonly EnumFilterOption<number>[] = [
     {
       value: ProductSubCategoryEnum.Coffee,
       label: PRODUCT_SUB_CATEGORY_LABELS[ProductSubCategoryEnum.Coffee],
@@ -199,6 +204,14 @@ export class ReportsComponent implements OnInit {
     {
       value: ProductSubCategoryEnum.Snacks,
       label: PRODUCT_SUB_CATEGORY_LABELS[ProductSubCategoryEnum.Snacks],
+    },
+    {
+      value: FixedBundleReportTypeFilterId,
+      label: 'Fixed Bundle',
+    },
+    {
+      value: MixMatchReportTypeFilterId,
+      label: 'Mix & Match',
     },
   ];
 
@@ -233,8 +246,8 @@ export class ReportsComponent implements OnInit {
     groupBy: this.formBuilder.control<ReportGroupBy>(this.reportGroupByValues.Day, {
       validators: [Validators.required],
     }),
-    categoryId: this.formBuilder.control<ProductCategoryEnum | null>(null),
-    subCategoryId: this.formBuilder.control<ProductSubCategoryEnum | null>(null),
+    categoryId: this.formBuilder.control<number | null>(null),
+    subCategoryId: this.formBuilder.control<number | null>(null),
     staffId: this.formBuilder.control<string | null>(null),
   });
 

@@ -179,14 +179,14 @@
             class="flex min-w-0 flex-col gap-1 rounded-lg bg-white px-3 py-2 ring-1 ring-gray-200 transition-colors focus-within:ring-2 focus-within:ring-gray-300"
           >
             <span class="text-[11px] font-semibold tracking-wide text-gray-500 uppercase"
-              >Subcategory</span
+              >Subcategory/Type</span
             >
             <select
               class="w-full bg-transparent text-sm text-gray-700 focus:caret-[#047857] focus:outline-none"
               formControlName="subCategoryId"
               (change)="onAdvancedFilterChanged()"
             >
-              <option [ngValue]="null">All Subcategories</option>
+              <option [ngValue]="null">All Subcategories/Types</option>
               @for (subCategory of subCategoryOptions; track subCategory.value) {
                 <option [ngValue]="subCategory.value">{{ subCategory.label }}</option>
               }
@@ -738,7 +738,7 @@
                         [class.text-[#047857]]="isSorted('subCategoryName')"
                         (click)="toggleProductSort('subCategoryName')"
                       >
-                        Subcategory
+                        Subcategory/Type
                         <span
                           class="text-xs transition-opacity"
                           [class.opacity-0]="!isSorted('subCategoryName')"

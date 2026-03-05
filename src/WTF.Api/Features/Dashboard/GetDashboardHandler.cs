@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
+using WTF.Api.Common.Orders;
 using WTF.Api.Common.Time;
 using WTF.Api.Features.Dashboard.DTOs;
 using WTF.Domain.Data;
@@ -138,6 +139,7 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
         return await db.Orders
             .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.Product)
+            .Include(o => o.OrderBundlePromotions)
             .Include(o => o.PaymentMethod)
             .Where(o => o.CreatedAt >= start && o.CreatedAt < end)
             .ToListAsync(cancellationToken);
@@ -179,34 +181,82 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
     private async Task<List<TopSellingProductDto>> ComputeTopProducts(
         List<Order> orders, CancellationToken cancellationToken)
     {
-        var topProductGroups = orders
+        var productRows = orders
             .Where(o => o.StatusId == 2)
             .SelectMany(o => o.OrderItems)
-            .Where(oi => oi.ParentOrderItemId == null)
+            .Where(oi => oi.ParentOrderItemId == null && oi.BundlePromotionId == null)
             .GroupBy(oi => oi.ProductId)
             .Select(g => new
             {
-                ProductId = g.Key,
-                ProductName = g.First().Product.Name,
+                EntityId = g.Key,
+                Name = g.First().Product.Name,
                 QuantitySold = g.Sum(oi => oi.Quantity),
-                Revenue = g.Sum(oi => (oi.Price ?? oi.Product.Price) * oi.Quantity)
+                Revenue = g.Sum(oi => (oi.Price ?? oi.Product.Price) * oi.Quantity),
+                IsBundle = false
             })
+            .ToList();
+
+        var bundleGroupCandidates = orders
+            .Where(o => o.StatusId == 2)
+            .SelectMany(o => o.OrderBundlePromotions)
+            .GroupBy(obp => obp.PromotionId)
+            .Select(g => new
+            {
+                PromotionId = g.Key,
+                QuantitySold = g.Sum(obp => obp.Quantity),
+                Revenue = g.Sum(obp => obp.UnitPrice * obp.Quantity)
+            })
+            .ToList();
+
+        var bundlePromotionIds = bundleGroupCandidates.Select(x => x.PromotionId).Distinct().ToList();
+        var bundlePromotionMap = bundlePromotionIds.Count == 0
+            ? new Dictionary<Guid, string>()
+            : await db.Promotions
+                .Where(p => bundlePromotionIds.Contains(p.Id))
+                .ToDictionaryAsync(p => p.Id, p => p.Name, cancellationToken);
+
+        var bundleRows = bundleGroupCandidates
+            .Where(x => bundlePromotionMap.ContainsKey(x.PromotionId))
+            .Select(x => new
+            {
+                EntityId = x.PromotionId,
+                Name = bundlePromotionMap[x.PromotionId],
+                x.QuantitySold,
+                x.Revenue,
+                IsBundle = true
+            })
+            .ToList();
+
+        var topRows = productRows
+            .Concat(bundleRows)
             .OrderByDescending(p => p.QuantitySold)
             .Take(5)
             .ToList();
 
-        var topProductIds = topProductGroups.Select(p => p.ProductId).ToList();
+        var topProductIds = topRows.Where(x => !x.IsBundle).Select(x => x.EntityId).ToList();
+        var topBundleIds = topRows.Where(x => x.IsBundle).Select(x => x.EntityId).ToList();
 
-        var productImages = await db.ProductImages
-            .Where(pi => topProductIds.Contains(pi.ProductId))
-            .Include(pi => pi.Image)
-            .ToDictionaryAsync(pi => pi.ProductId, pi => pi.Image.ImageUrl, cancellationToken);
+        var productImages = topProductIds.Count == 0
+            ? new Dictionary<Guid, string>()
+            : await db.ProductImages
+                .Where(pi => topProductIds.Contains(pi.ProductId))
+                .Include(pi => pi.Image)
+                .ToDictionaryAsync(pi => pi.ProductId, pi => pi.Image.ImageUrl, cancellationToken);
 
-        return topProductGroups.Select(g =>
+        var bundleImages = topBundleIds.Count == 0
+            ? new Dictionary<Guid, string>()
+            : await db.PromotionImages
+                .Where(pi => topBundleIds.Contains(pi.PromotionId))
+                .Include(pi => pi.Image)
+                .ToDictionaryAsync(pi => pi.PromotionId, pi => pi.Image.ImageUrl, cancellationToken);
+
+        return topRows.Select(g =>
         {
-            productImages.TryGetValue(g.ProductId, out var relativeUrl);
+            var relativeUrl = g.IsBundle
+                ? bundleImages.GetValueOrDefault(g.EntityId)
+                : productImages.GetValueOrDefault(g.EntityId);
             var absoluteUrl = UrlExtensions.ToAbsoluteUrl(httpContextAccessor, relativeUrl);
-            return new TopSellingProductDto(g.ProductId, g.ProductName, g.QuantitySold, g.Revenue, absoluteUrl);
+            return new TopSellingProductDto(g.EntityId, g.Name, g.QuantitySold, g.Revenue, absoluteUrl);
         }).ToList();
     }
 
@@ -270,6 +320,7 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
             .Include(o => o.Status)
             .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.Product)
+            .Include(o => o.OrderBundlePromotions)
             .Where(o => o.CreatedAt >= range.PrimaryStartUtc && o.CreatedAt < range.PrimaryEndUtc)
             .OrderByDescending(o => o.CreatedAt)
             .Take(5)
@@ -299,12 +350,14 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
 
         return recentOrderEntities.Select(o =>
         {
-            var parentItems = o.OrderItems.Where(oi => oi.ParentOrderItemId == null).ToList();
+            var parentItems = o.OrderItems
+                .Where(oi => oi.ParentOrderItemId == null && oi.BundlePromotionId == null)
+                .ToList();
             var total = parentItems.Sum(oi =>
             {
                 var itemUnitPrice = oi.Price ?? oi.Product.Price;
                 var addOnsPerUnit = o.OrderItems
-                    .Where(child => child.ParentOrderItemId == oi.Id)
+                    .Where(child => child.ParentOrderItemId == oi.Id && child.BundlePromotionId == null)
                     .Sum(child =>
                     {
                         var effectivePrice = child.Price
@@ -315,6 +368,7 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
                     });
                 return (itemUnitPrice + addOnsPerUnit) * oi.Quantity;
             });
+            total += o.OrderBundlePromotions.Sum(bundle => bundle.UnitPrice * bundle.Quantity);
 
             return new RecentOrderDto(o.Id, o.OrderNumber, o.CreatedAt, total, o.StatusId, o.Status.Name);
         }).ToList();
@@ -333,20 +387,7 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
             .ToList();
     }
 
-    private static decimal ComputeOrderTotal(Order order)
-    {
-        var parentItems = order.OrderItems.Where(oi => oi.ParentOrderItemId == null);
-
-        return parentItems.Sum(parent =>
-        {
-            var parentUnitPrice = parent.Price ?? parent.Product.Price;
-            var addOnPerUnit = order.OrderItems
-                .Where(child => child.ParentOrderItemId == parent.Id)
-                .Sum(child => (child.Price ?? child.Product.Price) * child.Quantity);
-
-            return (parentUnitPrice + addOnPerUnit) * parent.Quantity;
-        });
-    }
+    private static decimal ComputeOrderTotal(Order order) => OrderMetrics.ComputeOrderTotal(order);
 
     private static DateTime ToUtc(DateTime localDateTime, TimeZoneInfo timeZone)
     {

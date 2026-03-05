@@ -19,16 +19,16 @@ public sealed class MonthlyReportWorkbookScheduler(
         var timeZone = ResolveTimeZone(settings.TimeZoneId);
         while (!stoppingToken.IsCancellationRequested)
         {
-            var delay = GetNextDelay(timeZone, settings.RunAtHour, settings.RunAtMinute);
-            logger.LogInformation(
-                "Monthly report workbook scheduler sleeping for {Delay}. Next run at local {LocalTime}.",
-                delay,
-                TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow.Add(delay), timeZone));
-
-            await Task.Delay(delay, stoppingToken);
-
             try
             {
+                var delay = GetNextDelay(timeZone, settings.RunAtHour, settings.RunAtMinute);
+                logger.LogInformation(
+                    "Monthly report workbook scheduler sleeping for {Delay}. Next run at local {LocalTime}.",
+                    delay,
+                    TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow.Add(delay), timeZone));
+
+                await Task.Delay(delay, stoppingToken);
+
                 var nowLocal = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, timeZone);
                 using var scope = scopeFactory.CreateScope();
                 var service = scope.ServiceProvider.GetRequiredService<IMonthlyReportWorkbookService>();
@@ -45,6 +45,7 @@ public sealed class MonthlyReportWorkbookScheduler(
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
+                logger.LogInformation("Monthly report workbook scheduler is stopping.");
                 break;
             }
             catch (Exception ex)

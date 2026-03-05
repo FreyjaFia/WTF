@@ -321,7 +321,7 @@ public static class ReportEndpoints
         {
             new("Product"),
             new("Category"),
-            new("Subcategory"),
+            new("Subcategory/Type"),
             new("Qty", SimpleExcelBuilder.ExcelTextAlign.Right),
             new("Revenue", SimpleExcelBuilder.ExcelTextAlign.Right),
             new("Revenue %", SimpleExcelBuilder.ExcelTextAlign.Right)
@@ -537,7 +537,7 @@ public static class ReportEndpoints
         {
             new("Product", 158f),
             new("Category", 90f),
-            new("Subcategory", 90f),
+            new("Subcategory/Type", 90f),
             new("Qty", 52f, SimplePdfBuilder.PdfTextAlign.Right),
             new("Revenue", 88f, SimplePdfBuilder.PdfTextAlign.Right),
             new("Revenue %", 54f, SimplePdfBuilder.PdfTextAlign.Right)

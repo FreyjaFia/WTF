@@ -254,7 +254,7 @@ public sealed class MonthlyReportWorkbookService(
             fromDate,
             toDate,
             generatedAtLabel,
-            ["Product", "Category", "Subcategory", "Qty", "Revenue", "Revenue %"],
+            ["Product", "Category", "Subcategory/Type", "Qty", "Revenue", "Revenue %"],
             productRows.Select(row => new[]
             {
                 row.ProductName,

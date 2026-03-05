@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using WTF.Api.Common.Orders;
 using WTF.Api.Common.Time;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Features.Reports.DTOs;
@@ -24,6 +25,7 @@ public sealed class GetHourlySalesReportHandler(WTFDbContext db, IHttpContextAcc
             .AsNoTracking()
             .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.Product)
+            .Include(o => o.OrderBundlePromotions)
             .Where(o =>
                 o.CreatedAt >= fromUtc
                 && o.CreatedAt < toExclusiveUtc
@@ -38,7 +40,7 @@ public sealed class GetHourlySalesReportHandler(WTFDbContext db, IHttpContextAcc
             {
                 Hour = g.Key,
                 OrderCount = g.Count(),
-                Revenue = g.Sum(o => o.OrderItems.Sum(oi => (oi.Price ?? oi.Product.Price) * oi.Quantity))
+                Revenue = g.Sum(ComputeOrderRevenue)
             })
             .ToList();
 
@@ -55,4 +57,6 @@ public sealed class GetHourlySalesReportHandler(WTFDbContext db, IHttpContextAcc
             })
             .ToList();
     }
+
+    private static decimal ComputeOrderRevenue(Domain.Entities.Order order) => OrderMetrics.ComputeOrderTotal(order);
 }
