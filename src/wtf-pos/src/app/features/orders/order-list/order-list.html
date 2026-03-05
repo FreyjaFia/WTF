@@ -543,6 +543,13 @@
                 }
               </div>
             }
+
+            <div #loadMoreSentinel class="h-4 w-full"></div>
+            @if (isLoadingMore()) {
+              <div class="flex justify-center pt-3">
+                <span class="loading loading-spinner loading-sm"></span>
+              </div>
+            }
           </div>
         }
       </app-pull-to-refresh>

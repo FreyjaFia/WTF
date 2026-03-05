@@ -21,6 +21,15 @@ public static class OrderEndpoints
             })
             .RequireAuthorization(AppPolicies.OrdersRead);
 
+        // GET /api/orders/paged - Get paged orders
+        orderGroup.MapGet("/paged",
+            async ([AsParameters] GetPagedOrdersQuery query, ISender sender) =>
+            {
+                var result = await sender.Send(query);
+                return Results.Ok(result);
+            })
+            .RequireAuthorization(AppPolicies.OrdersRead);
+
         // GET /api/orders/active - Get editable orders only (exclude completed/refunded)
         orderGroup.MapGet("/active",
             async (Guid? customerId, ISender sender) =>

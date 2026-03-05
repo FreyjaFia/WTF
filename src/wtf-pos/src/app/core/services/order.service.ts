@@ -8,6 +8,7 @@ import {
   OrderDto,
   OrderHistoryDto,
   OrderStatusEnum,
+  PagedResultDto,
   UpdateOrderCommand,
 } from '@shared/models';
 import { Observable, throwError } from 'rxjs';
@@ -55,6 +56,49 @@ export class OrderService {
     return this.http.get<OrderDto[]>(this.baseUrl, { params }).pipe(
       catchError((error: HttpErrorResponse) => {
         console.error('Error fetching orders:', error);
+        return throwError(
+          () => new Error(this.getErrorMessage(error, OrderService.MSG_FETCH_ORDERS_FAILED)),
+        );
+      }),
+    );
+  }
+
+  public getOrdersPaged(query?: {
+    status?: OrderStatusEnum | null;
+    customerId?: string | null;
+    searchTerm?: string | null;
+    page?: number;
+    pageSize?: number;
+  }): Observable<PagedResultDto<OrderDto>> {
+    let params = new HttpParams();
+
+    if (
+      query?.status !== undefined &&
+      query?.status !== null &&
+      query?.status !== OrderStatusEnum.All
+    ) {
+      params = params.set('status', String(query.status));
+    }
+
+    if (query?.customerId) {
+      params = params.set('customerId', query.customerId);
+    }
+
+    if (query?.searchTerm && query.searchTerm.trim()) {
+      params = params.set('searchTerm', query.searchTerm.trim());
+    }
+
+    if (query?.page !== undefined && query?.page !== null) {
+      params = params.set('page', String(query.page));
+    }
+
+    if (query?.pageSize !== undefined && query?.pageSize !== null) {
+      params = params.set('pageSize', String(query.pageSize));
+    }
+
+    return this.http.get<PagedResultDto<OrderDto>>(`${this.baseUrl}/paged`, { params }).pipe(
+      catchError((error: HttpErrorResponse) => {
+        console.error('Error fetching paged orders:', error);
         return throwError(
           () => new Error(this.getErrorMessage(error, OrderService.MSG_FETCH_ORDERS_FAILED)),
         );

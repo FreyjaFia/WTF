@@ -1,5 +1,14 @@
 import { CommonModule, DatePipe } from '@angular/common';
-import { Component, computed, effect, inject, OnInit, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  effect,
+  ElementRef,
+  inject,
+  OnInit,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { Capacitor } from '@capacitor/core';
@@ -57,6 +66,7 @@ interface OrderGroup {
   templateUrl: './order-list.html',
 })
 export class OrderList implements OnInit {
+  private readonly loadMoreSentinel = viewChild<ElementRef<HTMLElement>>('loadMoreSentinel');
   private readonly stateKey = 'orders:order-list';
   private readonly orderService = inject(OrderService);
   private readonly router = inject(Router);
@@ -73,7 +83,11 @@ export class OrderList implements OnInit {
   protected readonly orders = signal<OrderDto[]>([]);
   protected readonly ordersCache = signal<OrderDto[]>([]);
   protected readonly isLoading = signal(false);
+  protected readonly isLoadingMore = signal(false);
   protected readonly isRefreshing = signal(false);
+  protected readonly currentPage = signal(1);
+  protected readonly pageSize = signal(20);
+  protected readonly totalCount = signal(0);
   protected readonly OrderStatusEnum = OrderStatusEnum;
   protected readonly pendingOrders = this.offlineOrderService.pendingOrders;
   protected readonly isSyncingOffline = this.offlineOrderService.isSyncing;
@@ -93,6 +107,24 @@ export class OrderList implements OnInit {
   private readonly waitingForReconnectSync = signal(false);
   private wasOnline = this.connectivity.isOnline();
   private wasSyncingOffline = false;
+  private readonly infiniteScrollEffect = effect((onCleanup) => {
+    const sentinel = this.loadMoreSentinel()?.nativeElement;
+    if (!sentinel) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          this.loadMoreOrders();
+        }
+      },
+      { root: null, rootMargin: '300px 0px', threshold: 0 },
+    );
+
+    observer.observe(sentinel);
+    onCleanup(() => observer.disconnect());
+  });
 
   constructor() {
     effect(
@@ -194,13 +226,16 @@ export class OrderList implements OnInit {
     const selected = this.selectedDateRanges()[0];
     return selected ? [selected] : [];
   });
+  protected readonly hasMoreOrders = computed(
+    () => this.ordersCache().length < this.totalCount(),
+  );
 
   public ngOnInit(): void {
     this.restoreState();
-    this.loadOrders();
+    this.resetAndLoadOrders();
 
     this.filterForm.valueChanges.pipe(debounceTime(300)).subscribe(() => {
-      this.applyFiltersToCache();
+      this.resetAndLoadOrders();
       this.saveState();
     });
   }
@@ -211,24 +246,69 @@ export class OrderList implements OnInit {
     }
 
     this.isLoading.set(true);
+    this.currentPage.set(1);
+    this.totalCount.set(0);
+    this.ordersCache.set([]);
+    this.orders.set([]);
 
-    this.orderService.getOrders().subscribe({
-      next: (result) => {
-        this.ordersCache.set(result);
-        this.applyFiltersToCache();
-        this.isLoading.set(false);
-        this.isRefreshing.set(false);
-      },
-      error: (err) => {
-        this.alertService.error(err.message || this.alertService.getLoadErrorMessage('orders'));
-        this.isLoading.set(false);
-        this.isRefreshing.set(false);
-      },
-    });
+    this.orderService
+      .getOrdersPaged({
+        searchTerm: this.filterForm.controls.searchTerm.value,
+        page: 1,
+        pageSize: this.pageSize(),
+      })
+      .subscribe({
+        next: (result) => {
+          this.currentPage.set(result.page);
+          this.totalCount.set(result.totalCount);
+          this.ordersCache.set(result.items);
+          this.applyFiltersToCache();
+          this.isLoading.set(false);
+          this.isRefreshing.set(false);
+        },
+        error: (err) => {
+          this.alertService.error(err.message || this.alertService.getLoadErrorMessage('orders'));
+          this.isLoading.set(false);
+          this.isRefreshing.set(false);
+        },
+      });
+  }
+
+  protected loadMoreOrders(): void {
+    if (!this.connectivity.isOnline() || this.isLoading() || this.isLoadingMore() || !this.hasMoreOrders()) {
+      return;
+    }
+
+    this.isLoadingMore.set(true);
+    const nextPage = this.currentPage() + 1;
+
+    this.orderService
+      .getOrdersPaged({
+        searchTerm: this.filterForm.controls.searchTerm.value,
+        page: nextPage,
+        pageSize: this.pageSize(),
+      })
+      .subscribe({
+        next: (result) => {
+          this.currentPage.set(result.page);
+          this.totalCount.set(result.totalCount);
+          this.ordersCache.set([...this.ordersCache(), ...result.items]);
+          this.applyFiltersToCache();
+          this.isLoadingMore.set(false);
+        },
+        error: (err) => {
+          this.alertService.error(err.message || this.alertService.getLoadErrorMessage('orders'));
+          this.isLoadingMore.set(false);
+        },
+      });
   }
 
   protected refresh(): void {
     this.isRefreshing.set(true);
+    this.resetAndLoadOrders();
+  }
+
+  private resetAndLoadOrders(): void {
     this.loadOrders();
   }
 
@@ -503,20 +583,7 @@ export class OrderList implements OnInit {
   }
 
   private applyFiltersToCache(): void {
-    const { searchTerm } = this.filterForm.value;
-
     let items = [...this.ordersCache()];
-
-    // Filter by search term
-    if (searchTerm && searchTerm.trim()) {
-      const lowerSearch = searchTerm.toLowerCase();
-      items = items.filter(
-        (order) =>
-          order.orderNumber.toString().includes(lowerSearch) ||
-          order.id.toLowerCase().includes(lowerSearch) ||
-          (order.customerName ?? '').toLowerCase().includes(lowerSearch),
-      );
-    }
 
     // Filter by status
     const selectedStatuses = this.selectedStatuses();
