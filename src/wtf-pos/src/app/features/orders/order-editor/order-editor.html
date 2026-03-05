@@ -646,87 +646,10 @@
         </div>
       }
 
-      <button
-        type="button"
-        class="group flex h-4 w-[calc(100%+0.5rem)] cursor-pointer items-center justify-center overflow-hidden rounded-t-lg bg-gray-200/55 transition-all duration-400 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:bg-gray-300/60 active:bg-gray-300 md:hidden"
-        (click)="toggleMobileCartDetailsCollapse()"
-        [attr.aria-expanded]="!isMobileCartDetailsCollapsed()"
-        aria-controls="mobile-cart-details"
-        [attr.aria-label]="
-          isMobileCartDetailsCollapsed() ? 'Expand order details' : 'Collapse order details'
-        "
-      ></button>
-
       <div
         class="sticky bottom-0 shrink-0 border-t border-gray-200 bg-white p-5 shadow-[0_-8px_24px_rgba(0,0,0,0.1)]"
       >
-        @if (isMobileCartDetailsCollapsed()) {
-          <div class="mb-2 md:hidden">
-            <div class="grid grid-cols-[2.5rem_1fr_2.5rem] items-center">
-              <div
-                class="flex h-10 w-10 items-center justify-center rounded-full bg-gray-900 text-sm font-bold text-white shadow-sm"
-              >
-                {{ itemCount() }}
-              </div>
-
-              <div class="justify-self-center text-xl font-bold text-black">
-                <span class="text-sm opacity-70"
-                  ><app-icon
-                    name="icon-peso"
-                    [class]="'inline h-3.5 w-3.5 align-[-0.125em]'"
-                    [fill]="'currentColor'" /></span
-                >{{ totalPrice() | number: '1.2-2' }}
-              </div>
-
-              @if (!isReadOnly()) {
-                <div class="relative justify-self-end">
-                  <div
-                    class="pointer-events-none absolute -inset-0.75 rounded-full transition-opacity duration-150"
-                    [class.opacity-100]="isQuickPayHolding()"
-                    [class.opacity-0]="!isQuickPayHolding()"
-                    [style.background]="
-                      'conic-gradient(#047857 ' +
-                      quickPayProgress() +
-                      '%, #d1d5db ' +
-                      quickPayProgress() +
-                      '%)'
-                    "
-                  ></div>
-                  <button
-                    type="button"
-                    class="relative flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg active:scale-95 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-100 disabled:shadow-none"
-                    (mousedown)="startQuickPayHold()"
-                    (mouseup)="cancelQuickPayHold()"
-                    (mouseleave)="cancelQuickPayHold()"
-                    (touchstart)="startQuickPayHold()"
-                    (touchend)="cancelQuickPayHold()"
-                    (touchcancel)="cancelQuickPayHold()"
-                    [disabled]="cart().length === 0 || !canManageOrderActions()"
-                    aria-label="Hold to pay"
-                  >
-                    <app-icon name="icon-peso" [class]="'h-4.5 w-4.5'" [fill]="'currentColor'" />
-                  </button>
-                </div>
-              } @else {
-                <div class="h-10 w-10 justify-self-end"></div>
-              }
-            </div>
-          </div>
-        }
-
-        <div
-          id="mobile-cart-details"
-          class="grid origin-top transform-gpu transition-[grid-template-rows,opacity,transform] duration-400 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] md:overflow-visible md:opacity-100"
-          [class.grid-rows-[0fr]]="isMobileCartDetailsCollapsed()"
-          [class.opacity-0]="isMobileCartDetailsCollapsed()"
-          [class.-translate-y-1]="isMobileCartDetailsCollapsed()"
-          [class.scale-y-95]="isMobileCartDetailsCollapsed()"
-          [class.pointer-events-none]="isMobileCartDetailsCollapsed()"
-          [class.grid-rows-[1fr]]="!isMobileCartDetailsCollapsed()"
-          [class.opacity-100]="!isMobileCartDetailsCollapsed()"
-          [class.translate-y-0]="!isMobileCartDetailsCollapsed()"
-          [class.scale-y-100]="!isMobileCartDetailsCollapsed()"
-        >
+        <div id="mobile-cart-details" class="grid md:overflow-visible md:opacity-100">
           <div class="min-h-0 overflow-hidden">
             <!-- Order Note Section -->
             @if (canEditOrderSpecialInstructions()) {

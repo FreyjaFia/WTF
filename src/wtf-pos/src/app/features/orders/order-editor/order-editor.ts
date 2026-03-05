@@ -172,7 +172,6 @@ export class OrderEditor implements OnInit, OnDestroy {
   protected readonly showMobileCart = signal(false);
   protected readonly cartDragY = signal(0);
   protected readonly isCartDragging = signal(false);
-  protected readonly isMobileCartDetailsCollapsed = signal(true);
   private cartDragStartY = 0;
   private quickPayHoldRaf: number | null = null;
   private quickPayHoldStartMs: number | null = null;
@@ -437,10 +436,6 @@ export class OrderEditor implements OnInit, OnDestroy {
     this.isRailTriggerHovering.set(false);
   }
 
-  protected toggleMobileCartDetailsCollapse(): void {
-    this.isMobileCartDetailsCollapsed.set(!this.isMobileCartDetailsCollapsed());
-  }
-
   protected onRailTriggerEnter(): void {
     if (
       typeof window !== 'undefined' &&
@@ -497,7 +492,6 @@ export class OrderEditor implements OnInit, OnDestroy {
 
   protected openMobileCart(): void {
     this.isCartCollapsed.set(false);
-    this.isMobileCartDetailsCollapsed.set(true);
     this.showMobileCart.set(true);
   }
 
