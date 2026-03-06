@@ -191,10 +191,8 @@
             } @else if (filteredBundlePromotions().length === 0) {
               <div class="flex flex-1 flex-col items-center justify-center text-center opacity-60">
                 <app-icon name="icon-promotion" [class]="'mb-3 h-12 w-12'" />
-                <div class="text-sm font-medium">No active promotions</div>
-                <div class="text-xs">
-                  Promotion list uses your local timezone for date filtering
-                </div>
+                <div class="text-sm font-medium">No bundles found</div>
+                <div class="text-xs">Try adjusting your filters or add a new bundle</div>
               </div>
             } @else {
               <div
