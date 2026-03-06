@@ -12,6 +12,7 @@ import {
 } from '@shared/components';
 import {
   ADD_ON_TYPE_ORDER,
+  AddOnTypeEnum,
   CartAddOnDto,
   CartBundleItemDto,
   CartItemDto,
@@ -395,11 +396,14 @@ export class OrderDetails implements OnInit {
     const toAddOns = (item: OrderDto['items'][number]): CartAddOnDto[] => {
       const expanded: CartAddOnDto[] = [];
       for (const addOn of item.addOns) {
+        const addOnType = this.getAddOnTypeForOwner(item.productId, addOn.productId);
+
         for (let i = 0; i < addOn.quantity; i++) {
           expanded.push({
             addOnId: addOn.productId,
             name: addOn.productName,
             price: addOn.price ?? 0,
+            addOnType,
           });
         }
       }
@@ -485,6 +489,21 @@ export class OrderDetails implements OnInit {
     }
 
     return [...regularItems, ...bundleLines];
+  }
+
+  private getAddOnTypeForOwner(
+    ownerProductId: string,
+    addOnProductId: string,
+  ): AddOnTypeEnum | undefined {
+    const groups = this.catalogCache.getAddOnsForProduct(ownerProductId);
+
+    for (const group of groups) {
+      if (group.options.some((option) => option.id === addOnProductId)) {
+        return group.type;
+      }
+    }
+
+    return undefined;
   }
 
   private normalizeSortLabel(value: string): string {
