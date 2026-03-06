@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using WTF.Api.Common.Orders;
 using WTF.Api.Common.Time;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Features.Reports.DTOs;
@@ -73,13 +74,23 @@ public sealed class GetProductSalesReportHandler(
             parentItems = await query.ToListAsync(cancellationToken);
         }
 
+        var overridePrices = await BuildAddOnOverridePriceLookup(parentItems, cancellationToken);
+
         var productRows = parentItems
+            .Select(parentItem => new
+            {
+                ParentItem = parentItem,
+                Revenue = OrderMetrics.ComputeParentItemTotal(
+                    parentItem,
+                    parentItem.InverseParentOrderItem.Where(child => child.BundlePromotionId == null),
+                    overridePrices)
+            })
             .GroupBy(oi => new
             {
-                oi.ProductId,
-                oi.Product.Name,
-                CategoryName = oi.Product.Category.Name,
-                SubCategoryName = oi.Product.SubCategory != null ? oi.Product.SubCategory.Name : null
+                oi.ParentItem.ProductId,
+                oi.ParentItem.Product.Name,
+                CategoryName = oi.ParentItem.Product.Category.Name,
+                SubCategoryName = oi.ParentItem.Product.SubCategory != null ? oi.ParentItem.Product.SubCategory.Name : null
             })
             .Select(g => new
             {
@@ -87,8 +98,8 @@ public sealed class GetProductSalesReportHandler(
                 ProductName = g.Key.Name,
                 g.Key.CategoryName,
                 g.Key.SubCategoryName,
-                QuantitySold = g.Sum(oi => oi.Quantity),
-                Revenue = g.Sum(ComputeParentItemRevenue)
+                QuantitySold = g.Sum(oi => oi.ParentItem.Quantity),
+                Revenue = g.Sum(oi => oi.Revenue)
             })
             .ToList();
 
@@ -160,6 +171,33 @@ public sealed class GetProductSalesReportHandler(
             .ToList();
     }
 
+    private async Task<Dictionary<(Guid ProductId, Guid AddOnId), decimal>> BuildAddOnOverridePriceLookup(
+        IReadOnlyCollection<OrderItem> parentItems,
+        CancellationToken cancellationToken)
+    {
+        var parentProductIds = parentItems
+            .Select(oi => oi.ProductId)
+            .Distinct()
+            .ToList();
+
+        var addOnProductIds = parentItems
+            .SelectMany(oi => oi.InverseParentOrderItem)
+            .Select(child => child.ProductId)
+            .Distinct()
+            .ToList();
+
+        if (addOnProductIds.Count == 0)
+        {
+            return [];
+        }
+
+        return await db.ProductAddOnPriceOverrides
+            .Where(o => parentProductIds.Contains(o.ProductId)
+                && addOnProductIds.Contains(o.AddOnId)
+                && o.IsActive)
+            .ToDictionaryAsync(o => (o.ProductId, o.AddOnId), o => o.Price, cancellationToken);
+    }
+
     private static int? ResolvePromotionTypeFilter(int? subCategoryId)
     {
         if (!subCategoryId.HasValue)
@@ -188,15 +226,6 @@ public sealed class GetProductSalesReportHandler(
         }
 
         return subCategoryId.Value;
-    }
-
-    private static decimal ComputeParentItemRevenue(OrderItem parentItem)
-    {
-        var parentUnitPrice = parentItem.Price ?? parentItem.Product.Price;
-        var addOnsPerUnit = parentItem.InverseParentOrderItem
-            .Sum(child => (child.Price ?? child.Product.Price) * child.Quantity);
-
-        return (parentUnitPrice + addOnsPerUnit) * parentItem.Quantity;
     }
 
     private static string GetPromotionSubCategoryLabel(int promotionTypeId)

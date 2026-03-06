@@ -137,7 +137,7 @@ public sealed class GetPagedOrdersHandler(WTFDbContext db)
                     obp.UnitPrice))
                 .ToList();
 
-            var totalAmount = OrderMetrics.ComputeOrderTotal(o);
+            var totalAmount = OrderMetrics.ComputeOrderTotal(o, overridePrices);
 
             return new OrderDto(
                 o.Id,

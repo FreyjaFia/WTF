@@ -407,7 +407,28 @@ public class UpdateOrderHandler(
                 .ThenInclude(oi => oi.Product)
             .Include(o => o.OrderBundlePromotions)
             .FirstAsync(o => o.Id == order.Id, cancellationToken);
-        var totalAmount = OrderMetrics.ComputeOrderTotal(orderWithTotals);
+
+        var parentProductIds = orderWithTotals.OrderItems
+            .Where(oi => oi.ParentOrderItemId == null)
+            .Select(oi => oi.ProductId)
+            .Distinct()
+            .ToList();
+
+        var addOnProductIds = orderWithTotals.OrderItems
+            .Where(oi => oi.ParentOrderItemId != null)
+            .Select(oi => oi.ProductId)
+            .Distinct()
+            .ToList();
+
+        var overridePrices = new Dictionary<(Guid ProductId, Guid AddOnId), decimal>();
+        if (addOnProductIds.Count > 0)
+        {
+            overridePrices = await db.ProductAddOnPriceOverrides
+                .Where(o => parentProductIds.Contains(o.ProductId) && addOnProductIds.Contains(o.AddOnId) && o.IsActive)
+                .ToDictionaryAsync(o => (o.ProductId, o.AddOnId), o => o.Price, cancellationToken);
+        }
+
+        var totalAmount = OrderMetrics.ComputeOrderTotal(orderWithTotals, overridePrices);
 
         await dashboardHub.Clients.Group(HubNames.Groups.DashboardViewers)
             .SendAsync(HubNames.Events.DashboardUpdated, cancellationToken);

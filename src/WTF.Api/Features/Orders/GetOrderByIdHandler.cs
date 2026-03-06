@@ -90,7 +90,7 @@ public class GetOrderByIdHandler(WTFDbContext db) : IRequestHandler<GetOrderById
                 obp.UnitPrice))
             .ToList();
 
-        var totalAmount = OrderMetrics.ComputeOrderTotal(order);
+        var totalAmount = OrderMetrics.ComputeOrderTotal(order, overridePrices);
 
         return new OrderDto(
             order.Id,

@@ -128,7 +128,27 @@ public class VoidOrderHandler(
                 obp.UnitPrice))
             .ToListAsync(cancellationToken);
 
-        var totalAmount = OrderMetrics.ComputeOrderTotal(order);
+        var parentProductIds = order.OrderItems
+            .Where(oi => oi.ParentOrderItemId == null)
+            .Select(oi => oi.ProductId)
+            .Distinct()
+            .ToList();
+
+        var addOnProductIds = order.OrderItems
+            .Where(oi => oi.ParentOrderItemId != null)
+            .Select(oi => oi.ProductId)
+            .Distinct()
+            .ToList();
+
+        var overridePrices = new Dictionary<(Guid ProductId, Guid AddOnId), decimal>();
+        if (addOnProductIds.Count > 0)
+        {
+            overridePrices = await db.ProductAddOnPriceOverrides
+                .Where(o => parentProductIds.Contains(o.ProductId) && addOnProductIds.Contains(o.AddOnId) && o.IsActive)
+                .ToDictionaryAsync(o => (o.ProductId, o.AddOnId), o => o.Price, cancellationToken);
+        }
+
+        var totalAmount = OrderMetrics.ComputeOrderTotal(order, overridePrices);
 
         await dashboardHub.Clients.Group(HubNames.Groups.DashboardViewers)
             .SendAsync(HubNames.Events.DashboardUpdated, cancellationToken);

@@ -32,6 +32,8 @@ public sealed class GetDailySalesReportHandler(WTFDbContext db, IHttpContextAcce
             .Where(o => o.CreatedAt >= fromUtc && o.CreatedAt < toExclusiveUtc)
             .ToListAsync(cancellationToken);
 
+        var overridePrices = await BuildAddOnOverridePriceLookup(orders, cancellationToken);
+
         return orders
             .GroupBy(o => ResolvePeriodStart(o.CreatedAt, request.GroupBy, timeZone))
             .OrderBy(g => g.Key)
@@ -41,7 +43,7 @@ public sealed class GetDailySalesReportHandler(WTFDbContext db, IHttpContextAcce
                     .Where(o => o.StatusId == (int)OrderStatusEnum.Completed)
                     .ToList();
 
-                var revenue = completedOrders.Sum(ComputeOrderRevenue);
+                var revenue = completedOrders.Sum(o => ComputeOrderRevenue(o, overridePrices));
                 var orderCount = completedOrders.Count;
                 var average = orderCount > 0 ? revenue / orderCount : 0m;
                 var tips = completedOrders.Sum(o => o.Tips ?? 0m);
@@ -85,5 +87,36 @@ public sealed class GetDailySalesReportHandler(WTFDbContext db, IHttpContextAcce
         return DateTime.SpecifyKind(localDate, DateTimeKind.Unspecified);
     }
 
-    private static decimal ComputeOrderRevenue(Order order) => OrderMetrics.ComputeOrderTotal(order);
+    private static decimal ComputeOrderRevenue(
+        Order order,
+        IReadOnlyDictionary<(Guid ProductId, Guid AddOnId), decimal> addOnOverridePrices) =>
+        OrderMetrics.ComputeOrderTotal(order, addOnOverridePrices);
+
+    private async Task<Dictionary<(Guid ProductId, Guid AddOnId), decimal>> BuildAddOnOverridePriceLookup(
+        IReadOnlyCollection<Order> orders,
+        CancellationToken cancellationToken)
+    {
+        var parentProductIds = orders
+            .SelectMany(o => o.OrderItems.Where(oi => oi.ParentOrderItemId == null))
+            .Select(oi => oi.ProductId)
+            .Distinct()
+            .ToList();
+
+        var addOnProductIds = orders
+            .SelectMany(o => o.OrderItems.Where(oi => oi.ParentOrderItemId != null))
+            .Select(oi => oi.ProductId)
+            .Distinct()
+            .ToList();
+
+        if (addOnProductIds.Count == 0)
+        {
+            return [];
+        }
+
+        return await db.ProductAddOnPriceOverrides
+            .Where(o => parentProductIds.Contains(o.ProductId)
+                && addOnProductIds.Contains(o.AddOnId)
+                && o.IsActive)
+            .ToDictionaryAsync(o => (o.ProductId, o.AddOnId), o => o.Price, cancellationToken);
+    }
 }

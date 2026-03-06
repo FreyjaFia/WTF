@@ -33,9 +33,30 @@ public class GetOrderHistoryHandler(WTFDbContext db) : IRequestHandler<GetOrderH
             .OrderByDescending(o => o.CreatedAt)
             .ToListAsync(cancellationToken);
 
+        var parentProductIds = orders
+            .SelectMany(o => o.OrderItems.Where(oi => oi.ParentOrderItemId == null))
+            .Select(oi => oi.ProductId)
+            .Distinct()
+            .ToList();
+
+        var addOnProductIds = orders
+            .SelectMany(o => o.OrderItems.Where(oi => oi.ParentOrderItemId == null))
+            .SelectMany(oi => oi.InverseParentOrderItem)
+            .Select(child => child.ProductId)
+            .Distinct()
+            .ToList();
+
+        var overridePrices = new Dictionary<(Guid ProductId, Guid AddOnId), decimal>();
+        if (addOnProductIds.Count > 0)
+        {
+            overridePrices = await db.ProductAddOnPriceOverrides
+                .Where(o => parentProductIds.Contains(o.ProductId) && addOnProductIds.Contains(o.AddOnId) && o.IsActive)
+                .ToDictionaryAsync(o => (o.ProductId, o.AddOnId), o => o.Price, cancellationToken);
+        }
+
         return [.. orders.Select(o =>
         {
-            var totalAmount = OrderMetrics.ComputeOrderTotal(o);
+            var totalAmount = OrderMetrics.ComputeOrderTotal(o, overridePrices);
 
             return new OrderHistoryDto(
                 o.Id,

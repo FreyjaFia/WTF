@@ -32,21 +32,24 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
 
         var primaryOrders = await QueryOrders(range.PrimaryStartUtc, range.PrimaryEndUtc, cancellationToken);
         var comparisonOrders = await QueryOrders(range.ComparisonStartUtc, range.ComparisonEndUtc, cancellationToken);
+        var overridePrices = await BuildAddOnOverridePriceLookup(
+            [.. primaryOrders.Concat(comparisonOrders)],
+            cancellationToken);
 
-        var summary = ComputeSummary(primaryOrders, comparisonOrders);
-        var topProducts = await ComputeTopProducts(primaryOrders, cancellationToken);
+        var summary = ComputeSummary(primaryOrders, comparisonOrders, overridePrices);
+        var topProducts = await ComputeTopProducts(primaryOrders, overridePrices, cancellationToken);
         var ordersByStatus = ComputeOrdersByStatus(primaryOrders);
 
         var hourlyRevenue = range.IsMultiDay
             ? []
-            : ComputeHourlyRevenue(primaryOrders, range, nowLocal, timeZone);
+            : ComputeHourlyRevenue(primaryOrders, range, nowLocal, timeZone, overridePrices);
 
         var dailyRevenue = range.IsMultiDay
-            ? ComputeDailyRevenue(primaryOrders, range, timeZone)
+            ? ComputeDailyRevenue(primaryOrders, range, timeZone, overridePrices)
             : null;
 
         var recentOrders = await ComputeRecentOrders(range, cancellationToken);
-        var paymentMethods = ComputePaymentMethods(primaryOrders);
+        var paymentMethods = ComputePaymentMethods(primaryOrders, overridePrices);
 
         return new DashboardDto(
             summary,
@@ -145,12 +148,15 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
             .ToListAsync(cancellationToken);
     }
 
-    private static DailySummaryDto ComputeSummary(List<Order> primaryOrders, List<Order> comparisonOrders)
+    private static DailySummaryDto ComputeSummary(
+        List<Order> primaryOrders,
+        List<Order> comparisonOrders,
+        IReadOnlyDictionary<(Guid ProductId, Guid AddOnId), decimal> addOnOverridePrices)
     {
         var totalOrders = primaryOrders.Count;
         var totalRevenue = primaryOrders
             .Where(o => o.StatusId == 2)
-            .Sum(ComputeOrderTotal);
+            .Sum(o => OrderMetrics.ComputeOrderTotal(o, addOnOverridePrices));
         var averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
         var totalTips = primaryOrders.Sum(o => o.Tips ?? 0);
         var totalCustomers = primaryOrders
@@ -162,7 +168,7 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
         var compTotalOrders = comparisonOrders.Count;
         var compTotalRevenue = comparisonOrders
             .Where(o => o.StatusId == 2)
-            .Sum(ComputeOrderTotal);
+            .Sum(o => OrderMetrics.ComputeOrderTotal(o, addOnOverridePrices));
         var compAvgOrderValue = compTotalOrders > 0 ? compTotalRevenue / compTotalOrders : 0;
         var compTotalTips = comparisonOrders.Sum(o => o.Tips ?? 0);
 
@@ -179,19 +185,26 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
     }
 
     private async Task<List<TopSellingProductDto>> ComputeTopProducts(
-        List<Order> orders, CancellationToken cancellationToken)
+        List<Order> orders,
+        IReadOnlyDictionary<(Guid ProductId, Guid AddOnId), decimal> addOnOverridePrices,
+        CancellationToken cancellationToken)
     {
         var productRows = orders
             .Where(o => o.StatusId == 2)
-            .SelectMany(o => o.OrderItems)
-            .Where(oi => oi.ParentOrderItemId == null && oi.BundlePromotionId == null)
-            .GroupBy(oi => oi.ProductId)
+            .SelectMany(
+                o => o.OrderItems.Where(oi => oi.ParentOrderItemId == null && oi.BundlePromotionId == null),
+                (o, oi) => new { Order = o, ParentItem = oi })
+            .GroupBy(x => x.ParentItem.ProductId)
             .Select(g => new
             {
                 EntityId = g.Key,
-                Name = g.First().Product.Name,
-                QuantitySold = g.Sum(oi => oi.Quantity),
-                Revenue = g.Sum(oi => (oi.Price ?? oi.Product.Price) * oi.Quantity),
+                Name = g.First().ParentItem.Product.Name,
+                QuantitySold = g.Sum(x => x.ParentItem.Quantity),
+                Revenue = g.Sum(x => OrderMetrics.ComputeParentItemTotal(
+                    x.ParentItem,
+                    x.Order.OrderItems.Where(child =>
+                        child.ParentOrderItemId == x.ParentItem.Id && child.BundlePromotionId == null),
+                    addOnOverridePrices)),
                 IsBundle = false
             })
             .ToList();
@@ -270,7 +283,11 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
     }
 
     private static List<HourlyRevenuePointDto> ComputeHourlyRevenue(
-        List<Order> orders, DateRangeInfo range, DateTime nowLocal, TimeZoneInfo timeZone)
+        List<Order> orders,
+        DateRangeInfo range,
+        DateTime nowLocal,
+        TimeZoneInfo timeZone,
+        IReadOnlyDictionary<(Guid ProductId, Guid AddOnId), decimal> addOnOverridePrices)
     {
         // For partial days (e.g. "Today"), only up to current hour; for complete days, all 24 hours
         var isPartialDay = nowLocal >= range.PrimaryStartLocal && nowLocal < range.PrimaryEndLocal;
@@ -284,7 +301,7 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
                     .ToList();
                 var revenue = hourOrders
                     .Where(o => o.StatusId == 2)
-                    .Sum(ComputeOrderTotal);
+                    .Sum(o => OrderMetrics.ComputeOrderTotal(o, addOnOverridePrices));
                 var orderCount = hourOrders.Count;
                 var tips = hourOrders.Sum(o => o.Tips ?? 0);
                 return new HourlyRevenuePointDto(hour, revenue, orderCount, tips);
@@ -292,7 +309,11 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
             .ToList();
     }
 
-    private static List<DailyRevenuePointDto> ComputeDailyRevenue(List<Order> orders, DateRangeInfo range, TimeZoneInfo timeZone)
+    private static List<DailyRevenuePointDto> ComputeDailyRevenue(
+        List<Order> orders,
+        DateRangeInfo range,
+        TimeZoneInfo timeZone,
+        IReadOnlyDictionary<(Guid ProductId, Guid AddOnId), decimal> addOnOverridePrices)
     {
         var days = (int)(range.PrimaryEndLocal - range.PrimaryStartLocal).TotalDays;
 
@@ -305,7 +326,7 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
                     .ToList();
                 var revenue = dayOrders
                     .Where(o => o.StatusId == 2)
-                    .Sum(ComputeOrderTotal);
+                    .Sum(o => OrderMetrics.ComputeOrderTotal(o, addOnOverridePrices));
                 var orderCount = dayOrders.Count;
                 var tips = dayOrders.Sum(o => o.Tips ?? 0);
                 return new DailyRevenuePointDto(date, revenue, orderCount, tips);
@@ -350,31 +371,14 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
 
         return recentOrderEntities.Select(o =>
         {
-            var parentItems = o.OrderItems
-                .Where(oi => oi.ParentOrderItemId == null && oi.BundlePromotionId == null)
-                .ToList();
-            var total = parentItems.Sum(oi =>
-            {
-                var itemUnitPrice = oi.Price ?? oi.Product.Price;
-                var addOnsPerUnit = o.OrderItems
-                    .Where(child => child.ParentOrderItemId == oi.Id && child.BundlePromotionId == null)
-                    .Sum(child =>
-                    {
-                        var effectivePrice = child.Price
-                            ?? (recentOverridePrices.TryGetValue((oi.ProductId, child.ProductId), out var op)
-                                ? op
-                                : child.Product.Price);
-                        return effectivePrice * child.Quantity;
-                    });
-                return (itemUnitPrice + addOnsPerUnit) * oi.Quantity;
-            });
-            total += o.OrderBundlePromotions.Sum(bundle => bundle.UnitPrice * bundle.Quantity);
-
+            var total = OrderMetrics.ComputeOrderTotal(o, recentOverridePrices);
             return new RecentOrderDto(o.Id, o.OrderNumber, o.CreatedAt, total, o.StatusId, o.Status.Name);
         }).ToList();
     }
 
-    private static List<PaymentMethodBreakdownDto> ComputePaymentMethods(List<Order> orders)
+    private static List<PaymentMethodBreakdownDto> ComputePaymentMethods(
+        List<Order> orders,
+        IReadOnlyDictionary<(Guid ProductId, Guid AddOnId), decimal> addOnOverridePrices)
     {
         return orders
             .Where(o => o.StatusId == 2 && o.PaymentMethodId.HasValue)
@@ -382,12 +386,38 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
             .Select(g => new PaymentMethodBreakdownDto(
                 g.Key,
                 g.Count(),
-                g.Sum(ComputeOrderTotal)))
+                g.Sum(o => OrderMetrics.ComputeOrderTotal(o, addOnOverridePrices))))
             .OrderByDescending(p => p.Total)
             .ToList();
     }
 
-    private static decimal ComputeOrderTotal(Order order) => OrderMetrics.ComputeOrderTotal(order);
+    private async Task<Dictionary<(Guid ProductId, Guid AddOnId), decimal>> BuildAddOnOverridePriceLookup(
+        IReadOnlyCollection<Order> orders,
+        CancellationToken cancellationToken)
+    {
+        var parentProductIds = orders
+            .SelectMany(o => o.OrderItems.Where(oi => oi.ParentOrderItemId == null))
+            .Select(oi => oi.ProductId)
+            .Distinct()
+            .ToList();
+
+        var addOnProductIds = orders
+            .SelectMany(o => o.OrderItems.Where(oi => oi.ParentOrderItemId != null))
+            .Select(oi => oi.ProductId)
+            .Distinct()
+            .ToList();
+
+        if (addOnProductIds.Count == 0)
+        {
+            return [];
+        }
+
+        return await db.ProductAddOnPriceOverrides
+            .Where(o => parentProductIds.Contains(o.ProductId)
+                && addOnProductIds.Contains(o.AddOnId)
+                && o.IsActive)
+            .ToDictionaryAsync(o => (o.ProductId, o.AddOnId), o => o.Price, cancellationToken);
+    }
 
     private static DateTime ToUtc(DateTime localDateTime, TimeZoneInfo timeZone)
     {

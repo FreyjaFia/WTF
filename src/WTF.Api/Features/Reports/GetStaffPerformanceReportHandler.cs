@@ -5,6 +5,7 @@ using WTF.Api.Common.Time;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Features.Reports.DTOs;
 using WTF.Domain.Data;
+using WTF.Domain.Entities;
 
 namespace WTF.Api.Features.Reports;
 
@@ -41,6 +42,7 @@ public sealed class GetStaffPerformanceReportHandler(
         }
 
         var orders = await query.ToListAsync(cancellationToken);
+        var overridePrices = await BuildAddOnOverridePriceLookup(orders, cancellationToken);
 
         var grouped = orders
             .GroupBy(o => new
@@ -54,7 +56,7 @@ public sealed class GetStaffPerformanceReportHandler(
                 StaffId = g.Key.CreatedBy,
                 StaffName = $"{g.Key.FirstName} {g.Key.LastName}".Trim(),
                 OrderCount = g.Count(),
-                TotalRevenue = g.Sum(OrderMetrics.ComputeOrderTotal),
+                TotalRevenue = g.Sum(o => OrderMetrics.ComputeOrderTotal(o, overridePrices)),
                 TipsReceived = g.Sum(o => o.Tips ?? 0m)
             })
             .OrderByDescending(r => r.TotalRevenue)
@@ -69,5 +71,33 @@ public sealed class GetStaffPerformanceReportHandler(
                 row.OrderCount > 0 ? row.TotalRevenue / row.OrderCount : 0m,
                 row.TipsReceived))
             .ToList();
+    }
+
+    private async Task<Dictionary<(Guid ProductId, Guid AddOnId), decimal>> BuildAddOnOverridePriceLookup(
+        IReadOnlyCollection<Order> orders,
+        CancellationToken cancellationToken)
+    {
+        var parentProductIds = orders
+            .SelectMany(o => o.OrderItems.Where(oi => oi.ParentOrderItemId == null))
+            .Select(oi => oi.ProductId)
+            .Distinct()
+            .ToList();
+
+        var addOnProductIds = orders
+            .SelectMany(o => o.OrderItems.Where(oi => oi.ParentOrderItemId != null))
+            .Select(oi => oi.ProductId)
+            .Distinct()
+            .ToList();
+
+        if (addOnProductIds.Count == 0)
+        {
+            return [];
+        }
+
+        return await db.ProductAddOnPriceOverrides
+            .Where(o => parentProductIds.Contains(o.ProductId)
+                && addOnProductIds.Contains(o.AddOnId)
+                && o.IsActive)
+            .ToDictionaryAsync(o => (o.ProductId, o.AddOnId), o => o.Price, cancellationToken);
     }
 }
