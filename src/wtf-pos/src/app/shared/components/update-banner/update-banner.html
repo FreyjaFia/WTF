@@ -1,5 +1,8 @@
 @if (update.updateAvailable() && update.latest(); as latest) {
-  <div class="flex items-center justify-between gap-3 bg-sky-600 px-4 py-2 text-sm text-white">
+  <div
+    class="z-50 flex items-center justify-between gap-3 bg-sky-600 px-4 py-2 text-sm text-white shadow-md"
+    style="padding-top: calc(env(safe-area-inset-top, 0px) + 0.5rem)"
+  >
     @if (update.shouldRefresh()) {
       <span>New version available: v{{ latest.version }}. Refresh to update.</span>
     } @else {
@@ -8,14 +11,14 @@
     <div class="flex items-center gap-2">
       <button
         type="button"
-        class="rounded bg-white/20 px-3 py-1 text-xs font-semibold hover:bg-white/30"
+        class="cursor-pointer rounded bg-white/20 px-3 py-1 text-xs font-semibold hover:bg-white/30"
         (click)="onPrimaryAction()"
       >
         {{ getPrimaryActionLabel() }}
       </button>
       <button
         type="button"
-        class="rounded border border-white/40 px-3 py-1 text-xs hover:bg-white/10"
+        class="cursor-pointer rounded border border-white/40 px-3 py-1 text-xs hover:bg-white/10"
         (click)="onDismiss()"
       >
         Later
