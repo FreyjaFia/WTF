@@ -51,29 +51,31 @@ body {
   transition: background-color 0.2s ease-in-out;
 }
 
-/* Show scrollbar in Firefox */
-.overflow-y-auto {
-  scrollbar-width: thin;
-  scrollbar-color: #d1d5db #f3f4f6;
-}
+/* Keep custom scrollbars on desktop only; Android WebView can show a persistent
+   right gutter that makes narrow layouts look cramped. */
+@media (hover: hover) and (pointer: fine) {
+  .overflow-y-auto {
+    scrollbar-width: thin;
+    scrollbar-color: #d1d5db #f3f4f6;
+  }
 
-/* Webkit scrollbar styling */
-.overflow-y-auto::-webkit-scrollbar {
-  width: 8px;
-}
+  .overflow-y-auto::-webkit-scrollbar {
+    width: 8px;
+  }
 
-.overflow-y-auto::-webkit-scrollbar-track {
-  background: #f3f4f6;
-  border-radius: 4px;
-}
+  .overflow-y-auto::-webkit-scrollbar-track {
+    background: #f3f4f6;
+    border-radius: 4px;
+  }
 
-.overflow-y-auto::-webkit-scrollbar-thumb {
-  background: #d1d5db;
-  border-radius: 4px;
-}
+  .overflow-y-auto::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 4px;
+  }
 
-.overflow-y-auto::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
+  .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+  }
 }
 
 /* Use a custom clear button for app search inputs. */
