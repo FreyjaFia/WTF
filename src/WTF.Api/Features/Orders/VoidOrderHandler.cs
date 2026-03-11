@@ -97,22 +97,27 @@ public class VoidOrderHandler(
             .Include(oi => oi.Product)
             .Include(oi => oi.InverseParentOrderItem)
                 .ThenInclude(child => child.Product)
+            .OrderBy(oi => oi.SortOrder)
+            .ThenBy(oi => oi.Id)
             .Select(oi => new OrderItemDto(
                 oi.Id,
                 oi.ProductId,
                 oi.Product.Name,
                 oi.Quantity,
                 oi.Price,
-                oi.InverseParentOrderItem.Select(child => new OrderItemDto(
-                    child.Id,
-                    child.ProductId,
-                    child.Product.Name,
-                    child.Quantity,
-                    child.Price,
-                    new List<OrderItemDto>(),
-                    child.SpecialInstructions,
-                    child.BundlePromotionId
-                )).ToList(),
+                oi.InverseParentOrderItem
+                    .OrderBy(child => child.SortOrder)
+                    .ThenBy(child => child.Id)
+                    .Select(child => new OrderItemDto(
+                        child.Id,
+                        child.ProductId,
+                        child.Product.Name,
+                        child.Quantity,
+                        child.Price,
+                        new List<OrderItemDto>(),
+                        child.SpecialInstructions,
+                        child.BundlePromotionId
+                    )).ToList(),
                 oi.SpecialInstructions,
                 oi.BundlePromotionId
             ))

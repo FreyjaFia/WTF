@@ -30,7 +30,11 @@ public class GetOrderByIdHandler(WTFDbContext db) : IRequestHandler<GetOrderById
         }
 
         // Build a lookup of override prices so pending orders show the correct effective price
-        var parentItems = order.OrderItems.Where(oi => oi.ParentOrderItemId == null).ToList();
+        var parentItems = order.OrderItems
+            .Where(oi => oi.ParentOrderItemId == null)
+            .OrderBy(oi => oi.SortOrder)
+            .ThenBy(oi => oi.Id)
+            .ToList();
         var parentProductIds = parentItems.Select(oi => oi.ProductId).Distinct().ToList();
         var addOnProductIds = parentItems
             .SelectMany(oi => oi.InverseParentOrderItem)
@@ -51,6 +55,8 @@ public class GetOrderByIdHandler(WTFDbContext db) : IRequestHandler<GetOrderById
             .Select(oi =>
             {
                 var addOns = oi.InverseParentOrderItem
+                    .OrderBy(child => child.SortOrder)
+                    .ThenBy(child => child.Id)
                     .Select(child =>
                     {
                         var childEffectivePrice = child.Price

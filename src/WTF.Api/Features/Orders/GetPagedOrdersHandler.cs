@@ -97,9 +97,13 @@ public sealed class GetPagedOrdersHandler(WTFDbContext db)
         {
             var orderItems = o.OrderItems
                 .Where(oi => oi.ParentOrderItemId == null)
+                .OrderBy(oi => oi.SortOrder)
+                .ThenBy(oi => oi.Id)
                 .Select(oi =>
                 {
                     var addOns = oi.InverseParentOrderItem
+                        .OrderBy(child => child.SortOrder)
+                        .ThenBy(child => child.Id)
                         .Select(child =>
                         {
                             var childEffectivePrice = child.Price

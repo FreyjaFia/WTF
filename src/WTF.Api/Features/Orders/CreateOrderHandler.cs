@@ -261,8 +261,9 @@ public class CreateOrderHandler(
         }
 
         // Add order items with parent-child relationships
-        foreach (var item in request.Items)
+        for (var itemIndex = 0; itemIndex < request.Items.Count; itemIndex++)
         {
+            var item = request.Items[itemIndex];
             var product = await db.Products.FindAsync([item.ProductId], cancellationToken) ?? throw new InvalidOperationException($"Product with ID {item.ProductId} not found.");
             var orderItem = new OrderItem
             {
@@ -271,6 +272,7 @@ public class CreateOrderHandler(
                 Quantity = item.Quantity,
                 SpecialInstructions = item.SpecialInstructions,
                 Price = null,
+                SortOrder = itemIndex,
                 ParentOrderItemId = null,
                 BundlePromotionId = item.BundlePromotionId
             };
@@ -301,6 +303,7 @@ public class CreateOrderHandler(
                     Quantity = addOn.Quantity,
                     SpecialInstructions = addOn.SpecialInstructions,
                     Price = null,
+                    SortOrder = 0,
                     ParentOrderItemId = orderItem.Id,
                     BundlePromotionId = item.BundlePromotionId
                 };
@@ -323,22 +326,27 @@ public class CreateOrderHandler(
             .Include(oi => oi.Product)
             .Include(oi => oi.InverseParentOrderItem)
                 .ThenInclude(child => child.Product)
+            .OrderBy(oi => oi.SortOrder)
+            .ThenBy(oi => oi.Id)
             .Select(oi => new OrderItemDto(
                 oi.Id,
                 oi.ProductId,
                 oi.Product.Name,
                 oi.Quantity,
                 oi.Price,
-                oi.InverseParentOrderItem.Select(child => new OrderItemDto(
-                    child.Id,
-                    child.ProductId,
-                    child.Product.Name,
-                    child.Quantity,
-                    child.Price,
-                    new List<OrderItemDto>(),
-                    child.SpecialInstructions,
-                    child.BundlePromotionId
-                )).ToList(),
+                oi.InverseParentOrderItem
+                    .OrderBy(child => child.SortOrder)
+                    .ThenBy(child => child.Id)
+                    .Select(child => new OrderItemDto(
+                        child.Id,
+                        child.ProductId,
+                        child.Product.Name,
+                        child.Quantity,
+                        child.Price,
+                        new List<OrderItemDto>(),
+                        child.SpecialInstructions,
+                        child.BundlePromotionId
+                    )).ToList(),
                 oi.SpecialInstructions,
                 oi.BundlePromotionId
             ))

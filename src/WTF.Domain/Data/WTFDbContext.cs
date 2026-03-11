@@ -347,6 +347,8 @@ public partial class WTFDbContext : DbContext
 
             entity.HasIndex(e => e.OrderId, "IX_OrderItems_OrderId");
 
+            entity.HasIndex(e => new { e.OrderId, e.SortOrder }, "IX_OrderItems_OrderId_SortOrder");
+
             entity.HasIndex(e => e.ParentOrderItemId, "IX_OrderItems_ParentOrderItemId");
 
             entity.HasIndex(e => e.ProductId, "IX_OrderItems_ProductId");
