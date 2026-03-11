@@ -32,16 +32,12 @@ public sealed class MonthlyReportWorkbookScheduler(
                 var nowLocal = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, timeZone);
                 using var scope = scopeFactory.CreateScope();
                 var service = scope.ServiceProvider.GetRequiredService<IMonthlyReportWorkbookService>();
-                await service.GenerateAsync(
-                    nowLocal.Year,
-                    nowLocal.Month,
-                    timeZone.Id,
+                await GenerateWithRetriesAsync(
+                    service,
+                    nowLocal,
+                    timeZone,
+                    settings,
                     stoppingToken);
-
-                logger.LogInformation(
-                    "Monthly report workbook regenerated for {Year}-{Month:00}.",
-                    nowLocal.Year,
-                    nowLocal.Month);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -98,6 +94,47 @@ public sealed class MonthlyReportWorkbookScheduler(
             }
 
             return TimeZoneInfo.Utc;
+        }
+    }
+
+    private async Task GenerateWithRetriesAsync(
+        IMonthlyReportWorkbookService service,
+        DateTimeOffset nowLocal,
+        TimeZoneInfo timeZone,
+        MonthlyReportWorkbookSchedulerOptions settings,
+        CancellationToken stoppingToken)
+    {
+        var retryCount = Math.Max(0, settings.RetryCount);
+        var totalAttempts = 1 + retryCount;
+        var retryDelay = TimeSpan.FromMinutes(Math.Max(1, settings.RetryDelayMinutes));
+
+        for (var attempt = 1; attempt <= totalAttempts; attempt++)
+        {
+            try
+            {
+                await service.GenerateAsync(
+                    nowLocal.Year,
+                    nowLocal.Month,
+                    timeZone.Id,
+                    stoppingToken);
+
+                logger.LogInformation(
+                    "Monthly report workbook regenerated for {Year}-{Month:00}.",
+                    nowLocal.Year,
+                    nowLocal.Month);
+                return;
+            }
+            catch (Exception ex) when (attempt < totalAttempts && !stoppingToken.IsCancellationRequested)
+            {
+                logger.LogWarning(
+                    ex,
+                    "Monthly report workbook generation failed (attempt {Attempt}/{MaxAttempts}). Retrying in {Delay}.",
+                    attempt,
+                    totalAttempts,
+                    retryDelay);
+
+                await Task.Delay(retryDelay, stoppingToken);
+            }
         }
     }
 }

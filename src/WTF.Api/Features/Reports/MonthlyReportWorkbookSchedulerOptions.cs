@@ -11,4 +11,8 @@ public sealed class MonthlyReportWorkbookSchedulerOptions
     public int RunAtHour { get; set; } = 0;
 
     public int RunAtMinute { get; set; } = 0;
+
+    public int RetryCount { get; set; } = 3;
+
+    public int RetryDelayMinutes { get; set; } = 15;
 }
