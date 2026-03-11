@@ -1,4 +1,5 @@
 export * from './alert.service';
+export * from './auth-loading.service';
 export * from './auth.service';
 export * from './audit-log.service';
 export * from './cart-persistence.service';

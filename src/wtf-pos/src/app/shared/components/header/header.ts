@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
-import { AuthService, ConnectivityService, ImageCacheService } from '@core/services';
+import { AuthLoadingService, AuthService, ConnectivityService, ImageCacheService } from '@core/services';
 import { appVersion } from '@environments/version';
 import { AvatarComponent } from '@shared/components/avatar/avatar';
 import { IconComponent } from '@shared/components/icons/icon/icon';
@@ -18,11 +18,11 @@ export class HeaderComponent implements OnInit, OnDestroy {
   protected readonly router = inject(Router);
   private readonly connectivity = inject(ConnectivityService);
   private readonly imageCache = inject(ImageCacheService);
+  private readonly authLoading = inject(AuthLoadingService);
 
   protected imageUrl: string | null = null;
   protected userFullName = 'User';
   protected userRoleLabel = 'Unknown';
-  protected readonly isLoadingMe = signal(true);
   protected readonly now = signal(new Date());
   protected readonly appVersion = appVersion;
   protected readonly isOnline = this.connectivity.isOnline;
@@ -67,7 +67,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
   }
 
   private loadMe(): void {
-    this.isLoadingMe.set(true);
+    this.authLoading.setLoadingProfile(true);
     this.authService.getMe().subscribe({
       next: async (me) => {
         await this.applyProfile(me.imageUrl ?? null, me.firstName, me.lastName);
@@ -77,11 +77,11 @@ export class HeaderComponent implements OnInit, OnDestroy {
           this.imageCache.cacheUrl(me.imageUrl);
         }
 
-        this.isLoadingMe.set(false);
+        this.authLoading.setLoadingProfile(false);
       },
       error: async () => {
         await this.loadCachedProfile();
-        this.isLoadingMe.set(false);
+        this.authLoading.setLoadingProfile(false);
       },
     });
   }

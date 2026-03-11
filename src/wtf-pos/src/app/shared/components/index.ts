@@ -3,6 +3,7 @@ export * from './addons-swapper/addons-swapper';
 export * from './alert/alert';
 export * from './animated-counter/animated-counter';
 export * from './area-chart/area-chart';
+export * from './auth-loading-overlay/auth-loading-overlay';
 export * from './avatar/avatar';
 export * from './badge/badge';
 export * from './bar-chart/bar-chart';

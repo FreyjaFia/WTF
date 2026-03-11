@@ -11,7 +11,13 @@
 
   <!-- Login Form -->
   <div class="w-full max-w-md rounded-xl bg-white p-8 shadow-lg">
-    <form [formGroup]="loginForm" (ngSubmit)="login()">
+    <form
+      [formGroup]="loginForm"
+      (ngSubmit)="login()"
+      [class.pointer-events-none]="checkingSession()"
+      [class.opacity-70]="checkingSession()"
+      [attr.aria-busy]="checkingSession() ? 'true' : null"
+    >
       <!-- Username -->
       <div class="mb-4">
         <label for="username" class="mb-2 block text-sm font-medium text-gray-700">Username</label>
@@ -20,6 +26,7 @@
           formControlName="username"
           type="text"
           placeholder="Enter your username"
+          [disabled]="checkingSession() || loading"
           class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-gray-400 focus:ring-1 focus:ring-gray-400 focus:outline-none"
         />
       </div>
@@ -33,6 +40,7 @@
             formControlName="password"
             [type]="showPassword ? 'text' : 'password'"
             placeholder="Enter your password"
+            [disabled]="checkingSession() || loading"
             class="w-full rounded-lg border border-gray-300 px-4 py-2.5 pr-16 text-sm focus:border-gray-400 focus:ring-1 focus:ring-gray-400 focus:outline-none"
           />
           <button
@@ -49,7 +57,7 @@
       <!-- Login Button -->
       <button
         type="submit"
-        [disabled]="loading || loginForm.invalid"
+        [disabled]="checkingSession() || loading || loginForm.invalid"
         class="inline-flex w-full items-center justify-center rounded-lg bg-black py-3 text-sm font-medium text-white transition hover:cursor-pointer hover:bg-gray-800 focus:ring-2 focus:ring-black focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
       >
         @if (loading) {

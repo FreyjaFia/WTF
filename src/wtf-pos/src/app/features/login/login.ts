@@ -1,7 +1,13 @@
 import { Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { AlertService, AuthService, ModalStackService, OfflineOrderService } from '@core/services';
+import {
+  AlertService,
+  AuthLoadingService,
+  AuthService,
+  ModalStackService,
+  OfflineOrderService,
+} from '@core/services';
 import { appVersion } from '@environments/version';
 import { IconComponent } from '@shared/components';
 import { finalize, timeout } from 'rxjs/operators';
@@ -14,11 +20,13 @@ import { finalize, timeout } from 'rxjs/operators';
 export class Login implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly auth = inject(AuthService);
+  private readonly authLoading = inject(AuthLoadingService);
   private readonly alertService = inject(AlertService);
   private readonly offlineOrderService = inject(OfflineOrderService);
   private readonly modalStack = inject(ModalStackService);
 
   protected loading = false;
+  protected readonly checkingSession = this.authLoading.checkingSession;
   protected showPassword = false;
   protected readonly showPendingSyncModal = signal(false);
   protected readonly pendingSyncCount = signal(0);
@@ -53,9 +61,13 @@ export class Login implements OnInit, OnDestroy {
     const refreshToken = this.auth.getRefreshToken();
 
     if (refreshToken) {
+      this.authLoading.setCheckingSession(true);
       this.auth
         .refreshToken()
-        .pipe(timeout(30000))
+        .pipe(
+          timeout(30000),
+          finalize(() => this.authLoading.setCheckingSession(false)),
+        )
         .subscribe({
           next: (ok) => {
             if (ok) {
