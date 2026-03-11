@@ -295,7 +295,7 @@
                     </div>
 
                     @if (c.bundleItems?.length) {
-                      <div class="mt-1 space-y-1 pl-[3.25rem]">
+                      <div class="space-y-1 pl-13">
                         @for (
                           bundleItem of getSortedBundleItems(c);
                           track bundleItem.productId + '-' + $index
@@ -318,7 +318,7 @@
                                 ) {
                                   <div class="flex items-center gap-1.5 text-[11px] text-gray-400">
                                     <span class="inline-block h-1 w-1 shrink-0 rounded-full bg-gray-300"></span>
-                                    <span class="min-w-0 break-words">{{
+                                    <span class="min-w-0 wrap-break-word">{{
                                       addOn.quantityPerUnit > 1
                                         ? addOn.quantityPerUnit + 'x ' + addOn.name + ' (per unit)'
                                         : addOn.name
@@ -331,7 +331,7 @@
                         }
                       </div>
                     } @else if (c.addOns?.length) {
-                      <div class="mt-1 space-y-1 pl-[3.25rem]">
+                      <div class="space-y-1 pl-13">
                         @for (ao of getGroupedAddOns(c); track ao.addOnId + '-' + ao.price) {
                           <div
                             class="grid grid-cols-[1fr_auto] items-center gap-3 text-xs text-gray-500"
@@ -355,7 +355,7 @@
                       </div>
                     }
                     @if (c.specialInstructions) {
-                      <div class="mt-1 pl-[3.25rem] text-xs wrap-break-word text-gray-500 italic">
+                      <div class="mt-1 pl-13 text-xs wrap-break-word text-gray-500 italic">
                         {{ c.specialInstructions }}
                       </div>
                     }

@@ -184,13 +184,20 @@
                 </p>
                 @if (isBundleLine(item)) {
                   <div class="mt-1 space-y-0.5">
-                    @for (bundleItem of getSortedBundleItems(item); track bundleItem.productId + '-' + $index) {
+                    @for (
+                      bundleItem of getSortedBundleItems(item);
+                      track bundleItem.productId + '-' + $index
+                    ) {
                       <div class="text-xs text-gray-500">
                         <p class="flex items-center gap-1">
-                          <span class="inline-block h-1 w-1 shrink-0 rounded-full bg-gray-400"></span>
-                          <span class="min-w-0 flex-1 break-words">{{
+                          <span
+                            class="inline-block h-1 w-1 shrink-0 rounded-full bg-gray-400"
+                          ></span>
+                          <span class="min-w-0 flex-1 wrap-break-word">{{
                             getBundleChildTotalQuantity(item, bundleItem) > 1
-                              ? getBundleChildTotalQuantity(item, bundleItem) + 'x ' + bundleItem.name
+                              ? getBundleChildTotalQuantity(item, bundleItem) +
+                                'x ' +
+                                bundleItem.name
                               : bundleItem.name
                           }}</span>
                         </p>
@@ -201,8 +208,10 @@
                               track addOn.addOnId
                             ) {
                               <p class="flex items-center gap-1 text-[11px] text-gray-400">
-                                <span class="inline-block h-1 w-1 shrink-0 rounded-full bg-gray-300"></span>
-                                <span class="min-w-0 flex-1 break-words">{{
+                                <span
+                                  class="inline-block h-1 w-1 shrink-0 rounded-full bg-gray-300"
+                                ></span>
+                                <span class="min-w-0 flex-1 wrap-break-word">{{
                                   addOn.quantityPerUnit > 1
                                     ? addOn.quantityPerUnit + 'x ' + addOn.name + ' (per unit)'
                                     : addOn.name
@@ -219,7 +228,7 @@
                     @for (ao of getGroupedAddOns(item); track ao.addOnId + '-' + ao.price) {
                       <p class="flex items-center gap-1 text-xs text-gray-500">
                         <span class="inline-block h-1 w-1 shrink-0 rounded-full bg-gray-400"></span>
-                        <span class="min-w-0 flex-1 break-words">{{
+                        <span class="min-w-0 flex-1 wrap-break-word">{{
                           ao.quantityPerUnit > 1
                             ? ao.quantityPerUnit + 'x ' + ao.name + ' (per unit)'
                             : ao.name
