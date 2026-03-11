@@ -122,6 +122,36 @@ jobs:
           name: frontend-drop
           path: src/wtf-pos/dist/wtf-pos/browser/
 
+  build-frontend-staging:
+    name: Build Frontend (Staging)
+    runs-on: ubuntu-latest
+    needs: versioning
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: src/wtf-pos/package-lock.json
+
+      - name: Install dependencies
+        working-directory: src/wtf-pos
+        run: npm ci
+
+      - name: Build frontend (staging)
+        working-directory: src/wtf-pos
+        run: npm run build:staging
+
+      - name: Upload Frontend Artifact (staging)
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-drop-staging
+          path: src/wtf-pos/dist/wtf-pos/browser/
+
   build-android:
     name: Build Android APK
     runs-on: ubuntu-latest
@@ -196,6 +226,77 @@ jobs:
           name: android-apk
           path: src/wtf-pos/android/app/build/outputs/apk/release/wtf-pos-v${{ needs.versioning.outputs.app_version }}.apk
 
+  build-android-staging:
+    name: Build Android APK (Staging)
+    runs-on: ubuntu-latest
+    needs: versioning
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: src/wtf-pos/package-lock.json
+
+      - name: Install dependencies
+        working-directory: src/wtf-pos
+        run: npm ci
+
+      - name: Build Angular for Android (staging)
+        working-directory: src/wtf-pos
+        run: npm run build:android-staging
+
+      - name: Sync Capacitor (staging)
+        working-directory: src/wtf-pos
+        run: npx cap sync android
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('src/wtf-pos/android/**/*.gradle*', 'src/wtf-pos/android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Decode Keystore (staging)
+        run: |
+          mkdir -p src/wtf-pos/android/keystore
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64_STAGING }}" | base64 -d > src/wtf-pos/android/keystore/wtf-pos-release.keystore
+
+      - name: Build APK (staging)
+        working-directory: src/wtf-pos/android
+        env:
+          APP_VERSION_NAME: ${{ needs.versioning.outputs.app_version }}-stg.${{ github.sha }}
+          APP_VERSION_CODE: ${{ needs.versioning.outputs.app_version_code }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD_STAGING }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS_STAGING }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD_STAGING }}
+        run: chmod +x ./gradlew && ./gradlew assembleStagingRelease --no-daemon
+
+      - name: Rename APK with version (staging)
+        run: |
+          VERSION="${{ needs.versioning.outputs.app_version }}"
+          SHA="${{ github.sha }}"
+          cp src/wtf-pos/android/app/build/outputs/apk/staging/release/app-staging-release.apk "src/wtf-pos/android/app/build/outputs/apk/staging/release/wtf-pos-staging-${VERSION}-$(echo $SHA | cut -c1-7).apk"
+
+      - name: Upload APK (staging)
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk-staging
+          path: src/wtf-pos/android/app/build/outputs/apk/staging/release/wtf-pos-staging-*.apk
+
   deploy-sql:
     name: Deploy SQL Scripts
     runs-on: ubuntu-latest
@@ -211,6 +312,82 @@ jobs:
           SQL_DATABASE: ${{ secrets.SQL_DATABASE }}
           SQL_USERNAME: ${{ secrets.SQL_USERNAME }}
           SQL_PASSWORD: ${{ secrets.SQL_PASSWORD }}
+        run: |
+          if [ -z "$SQL_SERVER" ] || [ -z "$SQL_DATABASE" ] || [ -z "$SQL_USERNAME" ] || [ -z "$SQL_PASSWORD" ]; then
+            echo "Missing SQL deployment secrets (SQL_SERVER, SQL_DATABASE, SQL_USERNAME, SQL_PASSWORD)."
+            exit 1
+          fi
+
+          mapfile -t scripts < <(find tools/sql -maxdepth 1 -type f -name '*.sql' | sort)
+          if [ "${#scripts[@]}" -eq 0 ]; then
+            echo "No SQL scripts found in tools/sql."
+            exit 0
+          fi
+
+          for script in "${scripts[@]}"; do
+            script_name="$(basename "$script")"
+            script_name_sql="$(printf "%s" "$script_name" | sed "s/'/''/g")"
+
+            applied_count="$(docker run --rm \
+              -v "$PWD:/workspace" \
+              mcr.microsoft.com/mssql-tools \
+              /opt/mssql-tools/bin/sqlcmd \
+              -S "$SQL_SERVER" \
+              -d "$SQL_DATABASE" \
+              -U "$SQL_USERNAME" \
+              -P "$SQL_PASSWORD" \
+              -C \
+              -h -1 \
+              -W \
+              -Q "SET NOCOUNT ON; SELECT COUNT(1) FROM dbo.SchemaScriptHistory WHERE ScriptName = N'$script_name_sql';" \
+              | tr -d '[:space:]')"
+
+            if [ "$applied_count" != "0" ]; then
+              echo "Skipping ${script_name} (already applied)."
+              continue
+            fi
+
+            echo "Applying ${script_name}"
+            docker run --rm \
+              -v "$PWD:/workspace" \
+              mcr.microsoft.com/mssql-tools \
+              /opt/mssql-tools/bin/sqlcmd \
+              -S "$SQL_SERVER" \
+              -d "$SQL_DATABASE" \
+              -U "$SQL_USERNAME" \
+              -P "$SQL_PASSWORD" \
+              -C \
+              -b \
+              -i "/workspace/${script}"
+
+            docker run --rm \
+              -v "$PWD:/workspace" \
+              mcr.microsoft.com/mssql-tools \
+              /opt/mssql-tools/bin/sqlcmd \
+              -S "$SQL_SERVER" \
+              -d "$SQL_DATABASE" \
+              -U "$SQL_USERNAME" \
+              -P "$SQL_PASSWORD" \
+              -C \
+              -b \
+              -Q "INSERT INTO dbo.SchemaScriptHistory (ScriptName) VALUES (N'$script_name_sql');"
+          done
+
+  deploy-sql-staging:
+    name: Deploy SQL Scripts (Staging)
+    runs-on: ubuntu-latest
+    needs: versioning
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Apply SQL scripts in order (staging)
+        env:
+          SQL_SERVER: ${{ secrets.SQL_SERVER_STAGING }}
+          SQL_DATABASE: ${{ secrets.SQL_DATABASE_STAGING }}
+          SQL_USERNAME: ${{ secrets.SQL_USERNAME_STAGING }}
+          SQL_PASSWORD: ${{ secrets.SQL_PASSWORD_STAGING }}
         run: |
           if [ -z "$SQL_SERVER" ] || [ -z "$SQL_DATABASE" ] || [ -z "$SQL_USERNAME" ] || [ -z "$SQL_PASSWORD" ]; then
             echo "Missing SQL deployment secrets (SQL_SERVER, SQL_DATABASE, SQL_USERNAME, SQL_PASSWORD)."
@@ -313,6 +490,48 @@ jobs:
       - name: Remove app_offline.htm
         run: |
           curl "ftp://${{ secrets.MONSTERASP_FTP_SERVER }}/wwwroot/" --user "${{ secrets.MONSTERASP_FTP_USERNAME }}:${{ secrets.MONSTERASP_FTP_PASSWORD }}" -Q "DELE /wwwroot/app_offline.htm"
+
+  deploy-staging:
+    name: Deploy to MonsterASP.NET (Staging)
+    runs-on: ubuntu-latest
+    needs: [build-api, build-frontend-staging, deploy-sql-staging]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout app_offline.htm
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: app_offline.htm
+          sparse-checkout-cone-mode: false
+
+      - name: Take app offline
+        run: |
+          curl -T ./app_offline.htm "ftp://${{ secrets.MONSTERASP_FTP_SERVER_STAGING }}/wwwroot/app_offline.htm" --user "${{ secrets.MONSTERASP_FTP_USERNAME_STAGING }}:${{ secrets.MONSTERASP_FTP_PASSWORD_STAGING }}"
+          sleep 10
+
+      - name: Download API Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: api-drop
+          path: ./deploy
+
+      - name: Download Frontend Artifact (staging)
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-drop-staging
+          path: ./deploy/wwwroot
+
+      - name: Deploy via FTP (staging)
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.MONSTERASP_FTP_SERVER_STAGING }}
+          username: ${{ secrets.MONSTERASP_FTP_USERNAME_STAGING }}
+          password: ${{ secrets.MONSTERASP_FTP_PASSWORD_STAGING }}
+          local-dir: ./deploy/
+          server-dir: /wwwroot/
+
+      - name: Remove app_offline.htm
+        run: |
+          curl "ftp://${{ secrets.MONSTERASP_FTP_SERVER_STAGING }}/wwwroot/" --user "${{ secrets.MONSTERASP_FTP_USERNAME_STAGING }}:${{ secrets.MONSTERASP_FTP_PASSWORD_STAGING }}" -Q "DELE /wwwroot/app_offline.htm"
 
   release:
     name: Create GitHub Release

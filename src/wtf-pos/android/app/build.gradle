@@ -6,6 +6,7 @@ def appVersionNameValue = System.getenv("APP_VERSION_NAME") ?: "1.0.0"
 android {
     namespace = "com.wtf.pos"
     compileSdk = rootProject.ext.compileSdkVersion
+    flavorDimensions "env"
     defaultConfig {
         applicationId "com.wtf.pos"
         minSdkVersion rootProject.ext.minSdkVersion
@@ -35,6 +36,19 @@ android {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.release
+        }
+    }
+    productFlavors {
+        production {
+            dimension "env"
+        }
+        staging {
+            dimension "env"
+            applicationIdSuffix ".staging"
+            resValue "string", "app_name", "WTF POS (Staging)"
+            resValue "string", "title_activity_main", "WTF POS (Staging)"
+            resValue "string", "package_name", "com.wtf.pos.staging"
+            resValue "string", "custom_url_scheme", "com.wtf.pos.staging"
         }
     }
 }
