@@ -3,4 +3,5 @@ export const environment = {
   apiUrl: '/api',
   githubRepoOwner: 'FreyjaFia',
   githubRepoName: 'WTF',
+  skipUpdateChecks: false,
 };

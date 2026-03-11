@@ -88,6 +88,40 @@ jobs:
           name: api-drop
           path: ./publish
 
+  build-api-staging:
+    name: Build API (Staging)
+    runs-on: ubuntu-latest
+    needs: versioning
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.x'
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Restore and Build API
+        run: dotnet build src/WTF.Api/WTF.Api.csproj --configuration Release
+
+      - name: Publish API
+        run: dotnet publish src/WTF.Api/WTF.Api.csproj -c Release -o ./publish
+
+      - name: Upload API Artifact (staging)
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-drop-staging
+          path: ./publish
+
   build-frontend:
     name: Build Frontend
     runs-on: ubuntu-latest
@@ -494,7 +528,7 @@ jobs:
   deploy-staging:
     name: Deploy to MonsterASP.NET (Staging)
     runs-on: ubuntu-latest
-    needs: [build-api, build-frontend-staging, deploy-sql-staging]
+    needs: [build-api-staging, build-frontend-staging, deploy-sql-staging]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - name: Checkout app_offline.htm
@@ -511,7 +545,7 @@ jobs:
       - name: Download API Artifact
         uses: actions/download-artifact@v4
         with:
-          name: api-drop
+          name: api-drop-staging
           path: ./deploy
 
       - name: Download Frontend Artifact (staging)

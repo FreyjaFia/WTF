@@ -144,7 +144,8 @@ builder.Services.AddCors(options =>
 
                     return uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
                         || uri.Host.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase)
-                        || uri.Host.Equals("wtfbyfaith.runasp.net", StringComparison.OrdinalIgnoreCase);
+                        || uri.Host.Equals("wtfbyfaith.runasp.net", StringComparison.OrdinalIgnoreCase)
+                        || uri.Host.Equals("wtfbyfaith-staging.runasp.net", StringComparison.OrdinalIgnoreCase);
                 })
                 .AllowAnyHeader()
                 .AllowAnyMethod()
