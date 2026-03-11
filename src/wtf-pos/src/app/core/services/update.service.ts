@@ -53,7 +53,11 @@ export class UpdateService implements OnDestroy {
   private checkInProgress = false;
 
   constructor() {
-    if ((!this.isAndroidPlatform && !this.isBrowserPlatform) || !this.releasesUrl) {
+    if (
+      environment.skipUpdateChecks ||
+      (!this.isAndroidPlatform && !this.isBrowserPlatform) ||
+      !this.releasesUrl
+    ) {
       return;
     }
 

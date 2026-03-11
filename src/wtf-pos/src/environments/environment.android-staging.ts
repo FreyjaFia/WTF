@@ -3,4 +3,5 @@ export const environment = {
   apiUrl: 'http://wtfbyfaith-staging.runasp.net/api',
   githubRepoOwner: 'FreyjaFia',
   githubRepoName: 'WTF',
+  skipUpdateChecks: true,
 };
