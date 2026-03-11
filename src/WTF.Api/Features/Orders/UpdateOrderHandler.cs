@@ -239,6 +239,11 @@ public class UpdateOrderHandler(
 
         var oldStatus = (OrderStatusEnum)order.StatusId;
         var newStatus = request.Status;
+        if (oldStatus != OrderStatusEnum.Pending)
+        {
+            throw new InvalidOperationException(
+                $"Order is already {oldStatus} and cannot be updated.");
+        }
         var oldValues = new
         {
             Status = oldStatus,

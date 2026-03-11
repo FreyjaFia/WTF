@@ -1794,7 +1794,16 @@ export class OrderEditor implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.isSavingOrder.set(false);
-        this.alertService.error(err.message || this.alertService.getUpdateErrorMessage('order'));
+        const message = err?.message || this.alertService.getUpdateErrorMessage('order');
+        this.alertService.error(message);
+        if (
+          typeof message === 'string' &&
+          message.toLowerCase().includes('order is already') &&
+          message.toLowerCase().includes('cannot be updated')
+        ) {
+          this.skipGuard = true;
+          this.router.navigate(['/orders/list']);
+        }
       },
     });
   }
