@@ -247,18 +247,18 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: chmod +x ./gradlew && ./gradlew assembleRelease --no-daemon
+        run: chmod +x ./gradlew && ./gradlew assembleProductionRelease --no-daemon
 
       - name: Rename APK with version
         run: |
           VERSION="${{ needs.versioning.outputs.app_version }}"
-          cp src/wtf-pos/android/app/build/outputs/apk/release/app-release.apk "src/wtf-pos/android/app/build/outputs/apk/release/wtf-pos-v${VERSION}.apk"
+          cp src/wtf-pos/android/app/build/outputs/apk/production/release/app-production-release.apk "src/wtf-pos/android/app/build/outputs/apk/production/release/wtf-pos-v${VERSION}.apk"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: android-apk
-          path: src/wtf-pos/android/app/build/outputs/apk/release/wtf-pos-v${{ needs.versioning.outputs.app_version }}.apk
+          path: src/wtf-pos/android/app/build/outputs/apk/production/release/wtf-pos-v${{ needs.versioning.outputs.app_version }}.apk
 
   build-android-staging:
     name: Build Android APK (Staging)
