@@ -7,6 +7,15 @@ const scriptDir = dirname(fileURLToPath(import.meta.url));
 const projectDir = resolve(scriptDir, '..');
 const packageJsonPath = resolve(projectDir, 'package.json');
 const versionPath = resolve(projectDir, 'src', 'environments', 'version.ts');
+const manifestPath = resolve(projectDir, 'public', 'manifest.webmanifest');
+const indexPath = resolve(projectDir, 'src', 'index.html');
+
+const APP_NAME = 'WTF POS';
+const APP_NAME_STAGING = 'WTF POS Staging';
+const APP_SHORT_NAME = 'WTF POS';
+const APP_SHORT_NAME_STAGING = 'WTF POS Stg';
+const APP_DESCRIPTION = 'Point of sale for WTF.';
+const APP_DESCRIPTION_STAGING = 'Point of sale for WTF (staging).';
 
 function readArg(name) {
   const arg = process.argv.find((value) => value.startsWith(`${name}=`));
@@ -18,6 +27,10 @@ function readArg(name) {
 
 function getMode() {
   return readArg('--mode') ?? 'prod';
+}
+
+function isStagingMode(mode) {
+  return mode === 'dev' || mode === 'staging';
 }
 
 function getShortSha() {
@@ -35,11 +48,37 @@ function getShortSha() {
 }
 
 function buildSuffix(mode) {
-  if (mode === 'dev' || mode === 'staging') {
+  if (isStagingMode(mode)) {
     return `+stg.${getShortSha()}`;
   }
 
   return '';
+}
+
+async function updateManifest(mode) {
+  const raw = await readFile(manifestPath, 'utf8');
+  const manifest = JSON.parse(raw);
+  const staging = isStagingMode(mode);
+
+  manifest.name = staging ? APP_NAME_STAGING : APP_NAME;
+  manifest.short_name = staging ? APP_SHORT_NAME_STAGING : APP_SHORT_NAME;
+  manifest.description = staging ? APP_DESCRIPTION_STAGING : APP_DESCRIPTION;
+
+  await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
+}
+
+async function updateIndexHtml(mode) {
+  const raw = await readFile(indexPath, 'utf8');
+  const staging = isStagingMode(mode);
+  const title = staging ? APP_NAME_STAGING : APP_NAME;
+
+  let updated = raw.replace(/<title>.*<\/title>/, `<title>${title}</title>`);
+  updated = updated.replace(
+    /<meta name="apple-mobile-web-app-title" content="[^"]*"\s*\/?>/,
+    `<meta name="apple-mobile-web-app-title" content="${title}" />`,
+  );
+
+  await writeFile(indexPath, updated, 'utf8');
 }
 
 async function main() {
@@ -56,6 +95,8 @@ async function main() {
   const version = `${baseVersion}${suffix}`;
   const contents = `export const appVersion = '${version}';\n`;
   await writeFile(versionPath, contents, 'utf8');
+  await updateManifest(mode);
+  await updateIndexHtml(mode);
 }
 
 main().catch((error) => {
