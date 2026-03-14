@@ -17,6 +17,13 @@ public interface IMonthlyReportWorkbookService
         string? requestedTimeZoneId,
         CancellationToken cancellationToken);
 
+    Task<MonthlyReportWorkbookStatusDto> GenerateThroughDateAsync(
+        int year,
+        int month,
+        DateTime throughDateLocal,
+        string? requestedTimeZoneId,
+        CancellationToken cancellationToken);
+
     Task<MonthlyReportWorkbookStatusDto> GetStatusAsync(
         int year,
         int month,
@@ -54,6 +61,50 @@ public sealed class MonthlyReportWorkbookService(
         var fromDate = new DateTime(year, month, 1);
         var toDate = fromDate.AddMonths(1).AddDays(-1);
 
+        return await GenerateForRangeAsync(
+            year,
+            month,
+            timeZone,
+            fromDate,
+            toDate,
+            cancellationToken);
+    }
+
+    public async Task<MonthlyReportWorkbookStatusDto> GenerateThroughDateAsync(
+        int year,
+        int month,
+        DateTime throughDateLocal,
+        string? requestedTimeZoneId,
+        CancellationToken cancellationToken)
+    {
+        ValidateMonth(year, month);
+        var timeZone = RequestTimeZone.Resolve(
+            string.IsNullOrWhiteSpace(requestedTimeZoneId) ? DefaultSchedulerTimeZone : requestedTimeZoneId);
+        var fromDate = new DateTime(year, month, 1);
+        var toDate = throughDateLocal.Date;
+
+        if (toDate < fromDate)
+        {
+            toDate = fromDate;
+        }
+
+        return await GenerateForRangeAsync(
+            year,
+            month,
+            timeZone,
+            fromDate,
+            toDate,
+            cancellationToken);
+    }
+
+    private async Task<MonthlyReportWorkbookStatusDto> GenerateForRangeAsync(
+        int year,
+        int month,
+        TimeZoneInfo timeZone,
+        DateTime fromDate,
+        DateTime toDate,
+        CancellationToken cancellationToken)
+    {
         var dailyRows = await ExecuteWithTimeZoneAsync(
             timeZone.Id,
             () => sender.Send(
