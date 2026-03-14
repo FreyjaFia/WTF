@@ -5,6 +5,7 @@ import {
   effect,
   ElementRef,
   inject,
+  OnDestroy,
   OnInit,
   signal,
   viewChild,
@@ -18,19 +19,20 @@ import {
   ListStateService,
   OfflineOrderService,
   OrderService,
+  SignalRService,
 } from '@core/services';
 import {
   BadgeComponent,
-  SideDrawerComponent,
   FilterDropdownComponent,
   IconComponent,
   PullToRefreshComponent,
   SearchInputComponent,
+  SideDrawerComponent,
   type FilterOption,
 } from '@shared/components';
 import type { CartItemDto } from '@shared/models';
 import { OrderDto, OrderStatusEnum } from '@shared/models';
-import { debounceTime } from 'rxjs';
+import { debounceTime, Subscription } from 'rxjs';
 
 type SortColumn = 'orderNumber' | 'date' | 'totalAmount';
 type SortDirection = 'asc' | 'desc';
@@ -65,7 +67,7 @@ interface OrderGroup {
   ],
   templateUrl: './order-list.html',
 })
-export class OrderList implements OnInit {
+export class OrderList implements OnInit, OnDestroy {
   private readonly loadMoreSentinel = viewChild<ElementRef<HTMLElement>>('loadMoreSentinel');
   private readonly stateKey = 'orders:order-list';
   private readonly orderService = inject(OrderService);
@@ -73,6 +75,7 @@ export class OrderList implements OnInit {
   private readonly alertService = inject(AlertService);
   private readonly listState = inject(ListStateService);
   private readonly connectivity = inject(ConnectivityService);
+  private readonly signalRService = inject(SignalRService);
   protected readonly offlineOrderService = inject(OfflineOrderService);
   protected readonly isOnline = this.connectivity.isOnline;
 
@@ -88,7 +91,6 @@ export class OrderList implements OnInit {
   protected readonly currentPage = signal(1);
   protected readonly pageSize = signal(20);
   protected readonly totalCount = signal(0);
-  protected readonly OrderStatusEnum = OrderStatusEnum;
   protected readonly pendingOrders = this.offlineOrderService.pendingOrders;
   protected readonly isSyncingOffline = this.offlineOrderService.isSyncing;
   protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
@@ -107,6 +109,7 @@ export class OrderList implements OnInit {
   private readonly waitingForReconnectSync = signal(false);
   private wasOnline = this.connectivity.isOnline();
   private wasSyncingOffline = false;
+  private hubSub: Subscription | null = null;
   private readonly infiniteScrollEffect = effect((onCleanup) => {
     const sentinel = this.loadMoreSentinel()?.nativeElement;
     if (!sentinel) {
@@ -226,18 +229,25 @@ export class OrderList implements OnInit {
     const selected = this.selectedDateRanges()[0];
     return selected ? [selected] : [];
   });
-  protected readonly hasMoreOrders = computed(
-    () => this.ordersCache().length < this.totalCount(),
-  );
+  protected readonly hasMoreOrders = computed(() => this.ordersCache().length < this.totalCount());
 
   public ngOnInit(): void {
     this.restoreState();
     this.resetAndLoadOrders();
+    this.signalRService.startDashboardHub();
+    this.hubSub = this.signalRService.orderUpdated.subscribe((orderId) => {
+      this.handleOrderUpdated(orderId);
+    });
 
     this.filterForm.valueChanges.pipe(debounceTime(300)).subscribe(() => {
       this.resetAndLoadOrders();
       this.saveState();
     });
+  }
+
+  public ngOnDestroy(): void {
+    this.hubSub?.unsubscribe();
+    this.signalRService.stopDashboardHub();
   }
 
   protected loadOrders(): void {
@@ -275,7 +285,12 @@ export class OrderList implements OnInit {
   }
 
   protected loadMoreOrders(): void {
-    if (!this.connectivity.isOnline() || this.isLoading() || this.isLoadingMore() || !this.hasMoreOrders()) {
+    if (
+      !this.connectivity.isOnline() ||
+      this.isLoading() ||
+      this.isLoadingMore() ||
+      !this.hasMoreOrders()
+    ) {
       return;
     }
 
@@ -492,7 +507,10 @@ export class OrderList implements OnInit {
     const nonBundleCount = order.items
       .filter((item) => !item.bundlePromotionId)
       .reduce((sum, item) => sum + item.quantity, 0);
-    const bundleCount = (order.bundlePromotions ?? []).reduce((sum, bundle) => sum + bundle.quantity, 0);
+    const bundleCount = (order.bundlePromotions ?? []).reduce(
+      (sum, bundle) => sum + bundle.quantity,
+      0,
+    );
     const count = nonBundleCount + bundleCount;
     return count === 1 ? '1 item' : `${count} items`;
   }
@@ -647,6 +665,49 @@ export class OrderList implements OnInit {
     }
 
     this.orders.set(items);
+  }
+
+  private handleOrderUpdated(orderId: string): void {
+    if (!orderId || !this.connectivity.isOnline()) {
+      return;
+    }
+
+    this.orderService.getOrder(orderId).subscribe({
+      next: (order) => {
+        const existingIndex = this.ordersCache().findIndex((item) => item.id === orderId);
+        if (existingIndex >= 0) {
+          const updated = [...this.ordersCache()];
+          updated[existingIndex] = order;
+          this.ordersCache.set(updated);
+          this.applyFiltersToCache();
+          return;
+        }
+
+        if (!this.matchesSearchTerm(order)) {
+          return;
+        }
+
+        this.ordersCache.set([order, ...this.ordersCache()]);
+        if (!this.filterForm.controls.searchTerm.value?.trim()) {
+          this.totalCount.set(this.totalCount() + 1);
+        }
+        this.applyFiltersToCache();
+      },
+      error: () => {
+        // Silent fail for background updates.
+      },
+    });
+  }
+
+  private matchesSearchTerm(order: OrderDto): boolean {
+    const term = (this.filterForm.controls.searchTerm.value ?? '').trim().toLowerCase();
+    if (!term) {
+      return true;
+    }
+
+    const orderNumber = order.orderNumber.toString();
+    const customerName = (order.customerName ?? '').toLowerCase();
+    return orderNumber.includes(term) || customerName.includes(term);
   }
 
   private restoreState(): void {
