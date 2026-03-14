@@ -10,5 +10,6 @@ public static class HubNames
     public static class Events
     {
         public const string DashboardUpdated = "DashboardUpdated";
+        public const string OrderUpdated = "OrderUpdated";
     }
 }

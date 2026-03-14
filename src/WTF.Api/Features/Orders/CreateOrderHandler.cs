@@ -393,6 +393,8 @@ public class CreateOrderHandler(
 
         await dashboardHub.Clients.Group(HubNames.Groups.DashboardViewers)
             .SendAsync(HubNames.Events.DashboardUpdated, cancellationToken);
+        await dashboardHub.Clients.Group(HubNames.Groups.DashboardViewers)
+            .SendAsync(HubNames.Events.OrderUpdated, order.Id, cancellationToken);
 
         await auditService.LogAsync(
             action: AuditAction.OrderCreated,
