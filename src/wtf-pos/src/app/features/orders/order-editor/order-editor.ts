@@ -403,6 +403,7 @@ export class OrderEditor implements OnInit, OnDestroy {
 
   protected selectCatalogTab(tab: 'products' | 'bundles'): void {
     this.activeCatalogTab.set(tab);
+    this.filterForm.controls.searchTerm.setValue('');
   }
 
   protected onCartDragStart(event: TouchEvent): void {
