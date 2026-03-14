@@ -23,6 +23,7 @@ export class SideDrawerComponent implements OnDestroy {
   public readonly leadingIconFill = input('currentColor');
   public readonly contentClass = input('p-4');
   public readonly showFooter = input(true);
+  public readonly showOnDesktop = input(false);
 
   public readonly closed = output<void>();
   protected readonly hasTransitions = signal(false);

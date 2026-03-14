@@ -1,6 +1,7 @@
 <div
-  class="fixed inset-0 z-50 md:hidden"
+  class="fixed inset-0 z-50"
   style="padding-top: max(var(--safe-area-top, 0px), env(safe-area-inset-top)); padding-bottom: max(var(--safe-area-bottom, 0px), env(safe-area-inset-bottom))"
+  [class.md:hidden]="!showOnDesktop()"
   [class.pointer-events-auto]="isOpen()"
   [class.pointer-events-none]="!isOpen()"
 >
@@ -20,8 +21,9 @@
   ></div>
 
   <div
-    class="fixed top-0 right-0 z-50 flex h-full w-full max-w-md transform-gpu flex-col bg-white shadow-xl transition-transform ease-in-out will-change-transform md:hidden"
+    class="fixed top-0 right-0 z-50 flex h-full w-full max-w-md transform-gpu flex-col bg-white shadow-xl transition-transform ease-in-out will-change-transform"
     style="padding-top: max(var(--safe-area-top, 0px), env(safe-area-inset-top)); padding-bottom: max(var(--safe-area-bottom, 0px), env(safe-area-inset-bottom))"
+    [class.md:hidden]="!showOnDesktop()"
     [class.duration-300]="hasTransitions()"
     [class.duration-0]="!hasTransitions()"
     [class.translate-x-0]="isOpen()"
