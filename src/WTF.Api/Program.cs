@@ -14,7 +14,7 @@ using WTF.Domain.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var logRoot = Path.Combine(builder.Environment.ContentRootPath, "private", "logs");
+var logRoot = Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, "..", "private", "logs"));
 Directory.CreateDirectory(logRoot);
 
 Log.Logger = new LoggerConfiguration()
