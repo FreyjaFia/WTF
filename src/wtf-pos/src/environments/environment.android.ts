@@ -10,9 +10,9 @@ export const environment = {
     projectId: 'wtf-pos',
     storageBucket: 'wtf-pos.firebasestorage.app',
     messagingSenderId: '994532070723',
-    appId: '1:994532070723:web:9e3c5a47de12df17d14bf6',
-    measurementId: 'G-R02NBHHJQD',
+    appId: '1:994532070723:web:4102178f1874ec40d14bf6',
+    measurementId: 'G-5CZQ54PXYG',
   },
   firebaseVapidKey:
-    'BAVS8L9OdesVexOjDVT7XG9gkXJdO7dm5ztpRVUk7w3iwhyOrsDIPne6nslGAkkl3r2zsD18cNDkAUJ-TLo04MM',
+    'BGncYGzcaD1gEy01RcdXyrkaPmtYtDn9W3JADfwgM1mlsAFF_3OurRmMVUOPb0RAd7COvDcpS3eDg0MYQyuCFpU',
 };

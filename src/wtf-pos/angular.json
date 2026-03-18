@@ -88,7 +88,7 @@
               "fileReplacements": [
                 {
                   "replace": "src/environments/environment.development.ts",
-                  "with": "src/environments/environment.android-dev.ts"
+                  "with": "src/environments/environment.android-development.ts"
                 }
               ]
             },
