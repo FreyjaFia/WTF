@@ -552,6 +552,12 @@ export class OrderEditor implements OnInit, OnDestroy {
           this.currentOrder.set(order);
           this.selectedCustomerId.set(order.customerId ?? null);
           this.orderSpecialInstructions.set(order.specialInstructions ?? '');
+
+          if (order.status !== OrderStatusEnum.Pending) {
+            this.router.navigate(['/orders/details', order.id]);
+            return of(null);
+          }
+
           this.populateCartFromOrder(order);
           return this.loadProductsForEdit();
         }),

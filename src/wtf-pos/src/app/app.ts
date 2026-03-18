@@ -4,7 +4,7 @@ import { RouterOutlet } from '@angular/router';
 import { App as CapApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { StatusBar, Style } from '@capacitor/status-bar';
-import { ModalStackService, OfflineOrderService } from '@core/services';
+import { ModalStackService, OfflineOrderService, PushNotificationService } from '@core/services';
 import {
   AuthLoadingOverlayComponent,
   ExitConfirmComponent,
@@ -30,6 +30,7 @@ import type { PluginListenerHandle } from '@capacitor/core';
 export class App implements OnInit, OnDestroy {
   private readonly location = inject(Location);
   private readonly modalStack = inject(ModalStackService);
+  private readonly pushNotifications = inject(PushNotificationService);
   private readonly zone = inject(NgZone);
 
   // Eagerly initialize to enable auto-sync on reconnect
@@ -42,6 +43,8 @@ export class App implements OnInit, OnDestroy {
   protected readonly title = signal('wtf-pos');
 
   public async ngOnInit(): Promise<void> {
+    this.pushNotifications.init();
+
     if (Capacitor.isNativePlatform()) {
       try {
         // Dark icons on transparent status bar (edge-to-edge on Android 15+)

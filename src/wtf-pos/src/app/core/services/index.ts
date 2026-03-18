@@ -15,6 +15,7 @@ export * from './offline-order.service';
 export * from './order.service';
 export * from './product.service';
 export * from './promotion.service';
+export * from './push-notification.service';
 export * from './reports.service';
 export * from './schema-script-history.service';
 export * from './signalr.service';

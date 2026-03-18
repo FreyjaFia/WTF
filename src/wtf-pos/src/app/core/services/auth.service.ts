@@ -29,9 +29,11 @@ export class AuthService {
   private _isLoggedIn = new BehaviorSubject<boolean>(!!localStorage.getItem('token'));
   private readonly rolesSubject = new BehaviorSubject<string[]>([]);
   private readonly meRefreshSubject = new Subject<void>();
+  private readonly tokenRefreshedSubject = new Subject<void>();
   public readonly isLoggedIn$ = this._isLoggedIn.asObservable();
   public readonly roles$ = this.rolesSubject.asObservable();
   public readonly meRefresh$ = this.meRefreshSubject.asObservable();
+  public readonly tokenRefreshed$ = this.tokenRefreshedSubject.asObservable();
 
   constructor() {
     this.syncRolesFromToken();
@@ -53,6 +55,7 @@ export class AuthService {
 
           this._isLoggedIn.next(true);
           this.syncRolesFromToken();
+          this.tokenRefreshedSubject.next();
         }
       }),
       map((res) => {
@@ -240,6 +243,7 @@ export class AuthService {
 
             this._isLoggedIn.next(true);
             this.syncRolesFromToken();
+            this.tokenRefreshedSubject.next();
           }
         }),
         map((res) => !!res?.accessToken),
