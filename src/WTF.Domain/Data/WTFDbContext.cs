@@ -66,6 +66,8 @@ public partial class WTFDbContext : DbContext
 
     public virtual DbSet<PromotionImage> PromotionImages { get; set; }
 
+    public virtual DbSet<PushNotificationToken> PushNotificationTokens { get; set; }
+
     public virtual DbSet<RefreshToken> RefreshTokens { get; set; }
 
     public virtual DbSet<SchemaScriptHistory> SchemaScriptHistories { get; set; }
@@ -573,6 +575,26 @@ public partial class WTFDbContext : DbContext
                 .HasForeignKey<PromotionImage>(d => d.PromotionId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_PromotionImages_Promotions");
+        });
+
+        modelBuilder.Entity<PushNotificationToken>(entity =>
+        {
+            entity.HasIndex(e => e.UserId, "IX_PushNotificationTokens_UserId");
+
+            entity.HasIndex(e => e.Token, "UX_PushNotificationTokens_Token").IsUnique();
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_PushNotificationTokens_Id");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())", "DF_PushNotificationTokens_CreatedAt");
+            entity.Property(e => e.DeviceId).HasMaxLength(100);
+            entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_PushNotificationTokens_IsActive");
+            entity.Property(e => e.LastSeenAt).HasDefaultValueSql("(getutcdate())", "DF_PushNotificationTokens_LastSeenAt");
+            entity.Property(e => e.Platform).HasMaxLength(20);
+            entity.Property(e => e.Token).HasMaxLength(512);
+
+            entity.HasOne(d => d.User).WithMany(p => p.PushNotificationTokens)
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PushNotificationTokens_Users");
         });
 
         modelBuilder.Entity<RefreshToken>(entity =>

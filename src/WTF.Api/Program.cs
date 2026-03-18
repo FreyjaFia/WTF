@@ -27,10 +27,15 @@ builder.Services.AddSignalR();
 builder.Services.AddHttpContextAccessor();
 builder.Services.Configure<MonthlyReportWorkbookSchedulerOptions>(
     builder.Configuration.GetSection(MonthlyReportWorkbookSchedulerOptions.SectionName));
+builder.Services.Configure<FcmOptions>(
+    builder.Configuration.GetSection(FcmOptions.SectionName));
 
 builder.Services.AddSingleton<IJwtService, JwtService>();
 builder.Services.AddScoped<IUserRoleService, UserRoleService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
+builder.Services.AddSingleton<FcmAccessTokenProvider>();
+builder.Services.AddHttpClient<IFcmPushClient, FcmPushClient>();
+builder.Services.AddScoped<IPushNotificationService, PushNotificationService>();
 builder.Services.AddScoped<IMonthlyReportWorkbookService, MonthlyReportWorkbookService>();
 builder.Services.AddHostedService<MonthlyReportWorkbookScheduler>();
 
@@ -246,6 +251,7 @@ app.MapAuth()
     .MapCustomers()
     .MapUsers()
     .MapDashboard()
+    .MapPushNotifications()
     .MapReports()
     .MapSync()
     .MapPromotions()

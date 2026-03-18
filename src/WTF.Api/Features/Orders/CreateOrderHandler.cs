@@ -45,7 +45,8 @@ public class CreateOrderHandler(
     WTFDbContext db,
     IHttpContextAccessor httpContextAccessor,
     IHubContext<DashboardHub> dashboardHub,
-    IAuditService auditService) : IRequestHandler<CreateOrderCommand, OrderDto>
+    IAuditService auditService,
+    IPushNotificationService pushNotifications) : IRequestHandler<CreateOrderCommand, OrderDto>
 {
     public async Task<OrderDto> Handle(CreateOrderCommand request, CancellationToken cancellationToken)
     {
@@ -410,6 +411,8 @@ public class CreateOrderHandler(
             },
             userId: userId,
             cancellationToken: cancellationToken);
+
+        await pushNotifications.SendOrderCreatedAsync(order, totalAmount, userId, cancellationToken);
 
         return new OrderDto(
             order.Id,

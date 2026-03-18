@@ -18,7 +18,8 @@ public class VoidOrderHandler(
     WTFDbContext db,
     IHttpContextAccessor httpContextAccessor,
     IHubContext<DashboardHub> dashboardHub,
-    IAuditService auditService) : IRequestHandler<VoidOrderCommand, OrderDto?>
+    IAuditService auditService,
+    IPushNotificationService pushNotifications) : IRequestHandler<VoidOrderCommand, OrderDto?>
 {
     public async Task<OrderDto?> Handle(VoidOrderCommand request, CancellationToken cancellationToken)
     {
@@ -159,6 +160,13 @@ public class VoidOrderHandler(
             .SendAsync(HubNames.Events.DashboardUpdated, cancellationToken);
         await dashboardHub.Clients.Group(HubNames.Groups.DashboardViewers)
             .SendAsync(HubNames.Events.OrderUpdated, order.Id, cancellationToken);
+
+        await pushNotifications.SendOrderStatusChangedAsync(
+            order,
+            totalAmount,
+            newStatus,
+            userId,
+            cancellationToken);
 
         await auditService.LogAsync(
             action: AuditAction.OrderVoided,

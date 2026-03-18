@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
+using WTF.Api.Common.Extensions;
 using WTF.Api.Common.Orders;
 using WTF.Api.Common.Time;
 using WTF.Api.Features.Audit.Enums;
@@ -45,7 +46,8 @@ public class UpdateOrderHandler(
     WTFDbContext db,
     IHttpContextAccessor httpContextAccessor,
     IHubContext<DashboardHub> dashboardHub,
-    IAuditService auditService) : IRequestHandler<UpdateOrderCommand, OrderDto?>
+    IAuditService auditService,
+    IPushNotificationService pushNotifications) : IRequestHandler<UpdateOrderCommand, OrderDto?>
 {
     public async Task<OrderDto?> Handle(UpdateOrderCommand request, CancellationToken cancellationToken)
     {
@@ -447,6 +449,18 @@ public class UpdateOrderHandler(
             .SendAsync(HubNames.Events.DashboardUpdated, cancellationToken);
         await dashboardHub.Clients.Group(HubNames.Groups.DashboardViewers)
             .SendAsync(HubNames.Events.OrderUpdated, order.Id, cancellationToken);
+
+        if (oldStatus == OrderStatusEnum.Pending &&
+            (newStatus == OrderStatusEnum.Completed || newStatus == OrderStatusEnum.Cancelled))
+        {
+            var actorUserId = httpContextAccessor.HttpContext?.User.GetUserId() ?? Guid.Empty;
+            await pushNotifications.SendOrderStatusChangedAsync(
+                order,
+                totalAmount,
+                newStatus,
+                actorUserId,
+                cancellationToken);
+        }
 
         await auditService.LogAsync(
             action: AuditAction.OrderUpdated,
