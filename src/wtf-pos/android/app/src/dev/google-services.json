@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "994532070723",
+    "project_id": "wtf-pos",
+    "storage_bucket": "wtf-pos.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:994532070723:android:b481712307ac034ad14bf6",
+        "android_client_info": {
+          "package_name": "com.wtf.pos.dev"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA9dO2zE7SPXfn20VJwx_pI7qgwvwe9Zik"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
