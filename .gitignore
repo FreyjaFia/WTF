@@ -402,6 +402,9 @@ __screenshots__/
 # Capacitor
 src/wtf-pos/android/app/build/
 
+# Local secrets
+tools/secrets/
+
 # System files
 .DS_Store
 Thumbs.db

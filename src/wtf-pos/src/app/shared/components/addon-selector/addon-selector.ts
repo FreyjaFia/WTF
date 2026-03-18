@@ -251,7 +251,7 @@ export class AddonSelectorComponent {
       case AddOnTypeEnum.Flavor:
         return 'Required · Pick one';
       case AddOnTypeEnum.Sauce:
-        return 'Optional · Pick one';
+        return 'Required · Pick one';
       case AddOnTypeEnum.Topping:
         return 'Optional · Pick many';
       case AddOnTypeEnum.Extra:
