@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
+using Serilog;
 using System.Text;
 using System.Threading.RateLimiting;
 using WTF.Api.Common.Auth;
@@ -12,6 +13,20 @@ using WTF.Api.Services;
 using WTF.Domain.Data;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var logRoot = Path.Combine(builder.Environment.ContentRootPath, "private", "logs");
+Directory.CreateDirectory(logRoot);
+
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(builder.Configuration)
+    .Enrich.FromLogContext()
+    .WriteTo.File(
+        Path.Combine(logRoot, "wtf-api-.log"),
+        rollingInterval: RollingInterval.Day,
+        retainedFileCountLimit: 7)
+    .CreateLogger();
+
+builder.Host.UseSerilog();
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
