@@ -10,6 +10,7 @@ public sealed class LocalReportFileStorage(IWebHostEnvironment env) : IReportFil
         string relativePath,
         byte[] data,
         string contentType,
+        DateTimeOffset? generatedAtUtc,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(data);
@@ -23,6 +24,10 @@ public sealed class LocalReportFileStorage(IWebHostEnvironment env) : IReportFil
 
         Directory.CreateDirectory(directory);
         await File.WriteAllBytesAsync(fullPath, data, cancellationToken);
+        if (generatedAtUtc is not null)
+        {
+            File.SetLastWriteTimeUtc(fullPath, generatedAtUtc.Value.UtcDateTime);
+        }
     }
 
     public async Task<byte[]?> ReadAllBytesAsync(

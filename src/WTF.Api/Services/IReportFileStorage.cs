@@ -6,6 +6,7 @@ public interface IReportFileStorage
         string relativePath,
         byte[] data,
         string contentType,
+        DateTimeOffset? generatedAtUtc,
         CancellationToken cancellationToken);
 
     Task<byte[]?> ReadAllBytesAsync(

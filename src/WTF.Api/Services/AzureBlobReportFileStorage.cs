@@ -28,6 +28,7 @@ public sealed class AzureBlobReportFileStorage : IReportFileStorage
         string relativePath,
         byte[] data,
         string contentType,
+        DateTimeOffset? generatedAtUtc,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(data);
@@ -40,7 +41,8 @@ public sealed class AzureBlobReportFileStorage : IReportFileStorage
                 ContentType = string.IsNullOrWhiteSpace(contentType)
                     ? "application/octet-stream"
                     : contentType
-            }
+            },
+            Metadata = BuildMetadata(generatedAtUtc)
         };
 
         await blobClient.UploadAsync(BinaryData.FromBytes(data), options, cancellationToken);
@@ -73,10 +75,11 @@ public sealed class AzureBlobReportFileStorage : IReportFileStorage
         }
 
         var properties = await blobClient.GetPropertiesAsync(cancellationToken: cancellationToken);
+        var generatedAtUtc = ParseGeneratedAtUtc(properties.Value.Metadata);
         var info = new ReportFileInfo(
             blobName,
             properties.Value.ContentLength,
-            properties.Value.LastModified.ToUniversalTime());
+            generatedAtUtc ?? properties.Value.LastModified.ToUniversalTime());
 
         return info;
     }
@@ -95,5 +98,43 @@ public sealed class AzureBlobReportFileStorage : IReportFileStorage
         }
 
         return normalized;
+    }
+
+    private static IDictionary<string, string>? BuildMetadata(DateTimeOffset? generatedAtUtc)
+    {
+        if (generatedAtUtc is null)
+        {
+            return null;
+        }
+
+        return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["generatedAtUtc"] = generatedAtUtc.Value.ToUniversalTime().ToString("O")
+        };
+    }
+
+    private static DateTimeOffset? ParseGeneratedAtUtc(IDictionary<string, string> metadata)
+    {
+        if (metadata is null || metadata.Count == 0)
+        {
+            return null;
+        }
+
+        if (!metadata.TryGetValue("generatedAtUtc", out var value))
+        {
+            return null;
+        }
+
+        if (DateTimeOffset.TryParseExact(
+                value,
+                "O",
+                System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.AssumeUniversal,
+                out var parsed))
+        {
+            return parsed.ToUniversalTime();
+        }
+
+        return null;
     }
 }

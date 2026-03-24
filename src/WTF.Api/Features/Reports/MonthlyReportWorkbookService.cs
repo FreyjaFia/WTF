@@ -156,7 +156,17 @@ public sealed class MonthlyReportWorkbookService(
                 },
                 cancellationToken));
 
-        var generatedAtLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, timeZone);
+        var generatedAtLocal = new DateTime(
+            toDate.Year,
+            toDate.Month,
+            toDate.Day,
+            23,
+            59,
+            0,
+            DateTimeKind.Unspecified);
+        var generatedAtUtc = new DateTimeOffset(
+            TimeZoneInfo.ConvertTimeToUtc(generatedAtLocal, timeZone),
+            TimeSpan.Zero);
         var generatedAtLabel = $"{generatedAtLocal.ToString("MMMM d, yyyy h:mm tt", CultureInfo.InvariantCulture)} {timeZone.Id}";
         var workbookBytes = BuildWorkbook(
             fromDate,
@@ -174,6 +184,7 @@ public sealed class MonthlyReportWorkbookService(
             relativePath,
             workbookBytes,
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            generatedAtUtc,
             cancellationToken);
 
         return await GetStatusAsync(year, month, cancellationToken);
