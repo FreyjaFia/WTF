@@ -1,10 +1,10 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, NgZone, OnDestroy, inject } from '@angular/core';
+import { Router } from '@angular/router';
 import { Capacitor } from '@capacitor/core';
 import { Device } from '@capacitor/device';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { PushNotifications } from '@capacitor/push-notifications';
-import { Router } from '@angular/router';
 import { environment } from '@environments/environment.development';
 import { initializeApp } from 'firebase/app';
 import { getMessaging, getToken, isSupported, onMessage } from 'firebase/messaging';
@@ -75,7 +75,8 @@ export class PushNotificationService implements OnDestroy {
       await firstValueFrom(
         this.http.post<void>(`${this.baseUrl}/unsubscribe`, { token, platform }),
       );
-    } catch (error) {
+    } catch (_error) {
+      void _error;
     }
 
     localStorage.removeItem('pushToken');
@@ -144,6 +145,8 @@ export class PushNotificationService implements OnDestroy {
 
     const localPermissions = await LocalNotifications.requestPermissions();
     if (localPermissions.display !== 'granted') {
+      // Continue; push registration still works without local notifications.
+      void localPermissions;
     }
 
     await LocalNotifications.createChannel({
@@ -166,11 +169,20 @@ export class PushNotificationService implements OnDestroy {
         void this.registerToken(token.value, 'android', this.androidDeviceId);
       });
 
-      PushNotifications.addListener('registrationError', (error) => {
+      PushNotifications.addListener('registrationError', (_error) => {
+        void _error;
       });
 
       PushNotifications.addListener('pushNotificationReceived', (notification) => {
         void this.showLocalNotification(notification);
+      });
+
+      PushNotifications.addListener('pushNotificationActionPerformed', (event) => {
+        const data = this.extractNotificationData(event.notification?.data);
+        const path = data['path'] ?? (data['orderId'] ? `/orders/details/${data['orderId']}` : '');
+        if (path) {
+          this.navigateToPath(path);
+        }
       });
 
       LocalNotifications.addListener('localNotificationActionPerformed', (event) => {
@@ -227,5 +239,25 @@ export class PushNotificationService implements OnDestroy {
         window.location.assign(path);
       });
     });
+  }
+
+  private extractNotificationData(payload: unknown): Record<string, string> {
+    if (!payload) {
+      return {};
+    }
+
+    if (typeof payload === 'string') {
+      try {
+        return JSON.parse(payload) as Record<string, string>;
+      } catch {
+        return {};
+      }
+    }
+
+    if (typeof payload === 'object') {
+      return payload as Record<string, string>;
+    }
+
+    return {};
   }
 }

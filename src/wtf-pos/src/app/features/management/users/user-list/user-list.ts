@@ -17,6 +17,7 @@ import {
   IconComponent,
   PullToRefreshComponent,
   SearchInputComponent,
+  SideDrawerComponent,
   type FilterOption,
 } from '@shared/components';
 import { UserDto, UserRoleEnum } from '@shared/models';
@@ -44,6 +45,7 @@ interface UserListState {
     AvatarComponent,
     PullToRefreshComponent,
     SearchInputComponent,
+    SideDrawerComponent,
   ],
   templateUrl: './user-list.html',
   host: { class: 'flex-1 min-h-0' },

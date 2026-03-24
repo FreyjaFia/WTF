@@ -17,6 +17,7 @@ import {
   IconComponent,
   PullToRefreshComponent,
   SearchInputComponent,
+  SideDrawerComponent,
   type FilterOption,
 } from '@shared/components';
 import { CustomerDto } from '@shared/models';
@@ -43,6 +44,7 @@ interface CustomerListState {
     AvatarComponent,
     PullToRefreshComponent,
     SearchInputComponent,
+    SideDrawerComponent,
   ],
   templateUrl: './customer-list.html',
   host: { class: 'flex-1 min-h-0' },

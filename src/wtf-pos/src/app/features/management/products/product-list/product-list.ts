@@ -18,6 +18,7 @@ import {
   IconComponent,
   PullToRefreshComponent,
   SearchInputComponent,
+  SideDrawerComponent,
 } from '@shared/components';
 import { ProductCategoryEnum, ProductDto } from '@shared/models';
 import { debounceTime } from 'rxjs';
@@ -44,6 +45,7 @@ interface ProductListState {
     AvatarComponent,
     PullToRefreshComponent,
     SearchInputComponent,
+    SideDrawerComponent,
   ],
   templateUrl: './product-list.html',
   host: { class: 'flex-1 min-h-0' },
