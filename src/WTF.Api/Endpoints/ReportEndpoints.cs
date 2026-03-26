@@ -753,7 +753,9 @@ public static class ReportEndpoints
             return $"{periodStart:MMMM dd} - {weekEnd:MMMM dd, yyyy}";
         }
 
-        return periodStart.ToString("MMMM dd, yyyy", CultureInfo.InvariantCulture);
+        var dateLabel = periodStart.ToString("MMMM dd, yyyy", CultureInfo.InvariantCulture);
+        var dayLabel = periodStart.ToString("ddd", CultureInfo.InvariantCulture);
+        return $"{dateLabel} ({dayLabel})";
     }
 
     private sealed record MonthlyWorkbookRequest

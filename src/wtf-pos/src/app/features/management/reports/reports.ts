@@ -1046,11 +1046,15 @@ export class ReportsComponent implements OnInit {
       });
     }
 
-    return periodDate.toLocaleDateString(undefined, {
+    const dateLabel = periodDate.toLocaleDateString(undefined, {
       month: 'long',
       day: 'numeric',
       year: 'numeric',
     });
+    const dayLabel = periodDate.toLocaleDateString(undefined, {
+      weekday: 'short',
+    });
+    return `${dateLabel} (${dayLabel})`;
   }
 
   private loadReport(): void {
