@@ -190,6 +190,14 @@ public sealed class MonthlyReportWorkbookScheduler(
             nowLocal.Month,
             throughDate,
             timeZone.Id,
+            new DateTime(
+                throughDate.Year,
+                throughDate.Month,
+                throughDate.Day,
+                23,
+                59,
+                0,
+                DateTimeKind.Unspecified),
             stoppingToken);
 
         logger.LogInformation(

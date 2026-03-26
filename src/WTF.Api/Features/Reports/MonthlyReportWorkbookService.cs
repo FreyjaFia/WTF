@@ -22,6 +22,7 @@ public interface IMonthlyReportWorkbookService
         int month,
         DateTime throughDateLocal,
         string? requestedTimeZoneId,
+        DateTime? generatedAtLocalOverride,
         CancellationToken cancellationToken);
 
     Task<MonthlyReportWorkbookStatusDto> GetStatusAsync(
@@ -67,6 +68,7 @@ public sealed class MonthlyReportWorkbookService(
             timeZone,
             fromDate,
             toDate,
+            null,
             cancellationToken);
     }
 
@@ -75,6 +77,7 @@ public sealed class MonthlyReportWorkbookService(
         int month,
         DateTime throughDateLocal,
         string? requestedTimeZoneId,
+        DateTime? generatedAtLocalOverride,
         CancellationToken cancellationToken)
     {
         ValidateMonth(year, month);
@@ -94,6 +97,7 @@ public sealed class MonthlyReportWorkbookService(
             timeZone,
             fromDate,
             toDate,
+            generatedAtLocalOverride,
             cancellationToken);
     }
 
@@ -103,6 +107,7 @@ public sealed class MonthlyReportWorkbookService(
         TimeZoneInfo timeZone,
         DateTime fromDate,
         DateTime toDate,
+        DateTime? generatedAtLocalOverride,
         CancellationToken cancellationToken)
     {
         var dailyRows = await ExecuteWithTimeZoneAsync(
@@ -156,16 +161,12 @@ public sealed class MonthlyReportWorkbookService(
                 },
                 cancellationToken));
 
-        var generatedAtLocal = new DateTime(
-            toDate.Year,
-            toDate.Month,
-            toDate.Day,
-            23,
-            59,
-            0,
-            DateTimeKind.Unspecified);
+        var generatedAtLocal = generatedAtLocalOverride
+            ?? TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, timeZone);
         var generatedAtUtc = new DateTimeOffset(
-            TimeZoneInfo.ConvertTimeToUtc(generatedAtLocal, timeZone),
+            TimeZoneInfo.ConvertTimeToUtc(
+                DateTime.SpecifyKind(generatedAtLocal, DateTimeKind.Unspecified),
+                timeZone),
             TimeSpan.Zero);
         var generatedAtLabel = $"{generatedAtLocal.ToString("MMMM d, yyyy h:mm tt", CultureInfo.InvariantCulture)} {timeZone.Id}";
         var workbookBytes = BuildWorkbook(
@@ -300,7 +301,7 @@ public sealed class MonthlyReportWorkbookService(
             ["Date", "Revenue", "Orders", "Avg/Order", "Tips", "Void/Cancelled"],
             dailyRows.Select(row => new[]
             {
-                row.PeriodStart.ToString("MMM dd, yyyy", CultureInfo.InvariantCulture),
+                FormatDailyPeriodLabel(row.PeriodStart),
                 FormatMoney(row.TotalRevenue),
                 row.OrderCount.ToString("N0", CultureInfo.InvariantCulture),
                 FormatMoney(row.AverageOrderValue),
@@ -559,5 +560,12 @@ public sealed class MonthlyReportWorkbookService(
     private static string FormatMoney(decimal amount)
     {
         return $"{CurrencyPrefix}{amount.ToString("N2", CultureInfo.InvariantCulture)}";
+    }
+
+    private static string FormatDailyPeriodLabel(DateTime periodStart)
+    {
+        var dateLabel = periodStart.ToString("MMM dd, yyyy", CultureInfo.InvariantCulture);
+        var dayLabel = periodStart.ToString("ddd", CultureInfo.InvariantCulture);
+        return $"{dateLabel} ({dayLabel})";
     }
 }
