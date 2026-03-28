@@ -1450,7 +1450,12 @@ export class OrderEditor implements OnInit, OnDestroy {
 
   public canDeactivate(): boolean | Promise<boolean> {
     // No guard for completed/cancelled orders, after successful save, or unchanged cart
-    if (this.skipGuard || this.isReadOnly() || !this.hasCartChanged()) {
+    if (
+      this.skipGuard ||
+      !this.authService.isAuthenticated() ||
+      this.isReadOnly() ||
+      !this.hasCartChanged()
+    ) {
       return true;
     }
 
