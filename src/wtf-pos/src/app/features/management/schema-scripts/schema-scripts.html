@@ -1,4 +1,4 @@
-<div class="flex h-full flex-col">
+<div class="flex h-full flex-col pt-4 md:pt-0">
   <div class="mb-4 flex shrink-0 items-start justify-between sm:mb-6">
     <div>
       <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Schema Scripts</h1>
@@ -47,9 +47,9 @@
           <p class="text-sm text-gray-500">No executed scripts have been recorded yet.</p>
         </div>
       } @else {
-        <div class="space-y-2 pb-4 md:space-y-3">
+        <div class="space-y-2 pb-4 lg:space-y-3">
           <div
-            class="sticky top-0 z-10 mb-2 hidden grid-cols-12 gap-4 rounded-lg bg-white px-4 py-3 md:grid"
+            class="sticky top-0 z-10 mb-2 hidden grid-cols-12 gap-4 rounded-lg bg-white px-4 py-3 lg:grid"
           >
             <div class="col-span-2 text-xs font-semibold tracking-wider text-gray-600 uppercase">
               ID
@@ -66,17 +66,17 @@
 
           @for (script of scripts(); track script.id) {
             <div
-              class="rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm transition-shadow duration-200 hover:shadow-md md:grid md:grid-cols-12 md:items-center md:gap-4 md:border-0 md:py-4 md:shadow-lg md:hover:shadow-xl"
+              class="rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm transition-shadow duration-200 hover:shadow-md lg:grid lg:grid-cols-12 lg:items-center lg:gap-4 lg:border-0 lg:py-4 lg:shadow-lg lg:hover:shadow-xl"
             >
-              <div class="md:col-span-2">
-                <div class="mb-0.5 text-[10px] tracking-wide text-gray-500 uppercase md:hidden">
+              <div class="lg:col-span-2">
+                <div class="mb-0.5 text-[10px] tracking-wide text-gray-500 uppercase lg:hidden">
                   ID
                 </div>
                 <div class="truncate font-mono text-xs text-gray-700">{{ script.id }}</div>
               </div>
 
-              <div class="mt-2 md:col-span-6 md:mt-0">
-                <div class="mb-0.5 text-[10px] tracking-wide text-gray-500 uppercase md:hidden">
+              <div class="mt-2 lg:col-span-6 lg:mt-0">
+                <div class="mb-0.5 text-[10px] tracking-wide text-gray-500 uppercase lg:hidden">
                   Script Name
                 </div>
                 <div class="font-mono text-xs text-gray-900 sm:text-sm">
@@ -84,8 +84,8 @@
                 </div>
               </div>
 
-              <div class="mt-2 md:col-span-4 md:mt-0 md:text-right">
-                <div class="mb-0.5 text-[10px] tracking-wide text-gray-500 uppercase md:hidden">
+              <div class="mt-2 lg:col-span-4 lg:mt-0 lg:text-right">
+                <div class="mb-0.5 text-[10px] tracking-wide text-gray-500 uppercase lg:hidden">
                   Applied At (UTC)
                 </div>
                 <div class="text-xs text-gray-700 sm:text-sm">

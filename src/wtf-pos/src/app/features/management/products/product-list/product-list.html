@@ -1,4 +1,4 @@
-<div class="flex h-full flex-col">
+<div class="flex h-full flex-col pt-4 md:pt-0">
   <!-- Header -->
   <div class="mb-4 flex shrink-0 flex-col gap-3 sm:mb-6">
     <!-- Tier 1 -->
@@ -28,13 +28,13 @@
         />
       </div>
 
-      <div class="flex items-center justify-between gap-2 md:ml-auto">
+      <div class="flex items-center gap-2 self-end md:self-auto md:ml-auto">
         <button
           type="button"
           class="btn btn-sm gap-2 rounded-lg border border-gray-200 bg-white text-gray-700"
           (click)="openFilters()"
         >
-          <app-icon name="icon-sliders" [class]="'h-4 w-4'" [fill]="'currentColor'" />
+          <app-icon name="icon-filter" [class]="'h-4 w-4'" [fill]="'currentColor'" />
           Filters
         </button>
         @if (!isAndroidPlatform) {
@@ -159,7 +159,7 @@
         <div class="space-y-2 md:space-y-3">
           <!-- Column Headers (Sticky) -->
           <div
-            class="sticky top-0 z-10 mb-2 hidden grid-cols-12 gap-4 rounded-lg bg-white px-4 py-3 md:grid"
+            class="sticky top-0 z-10 mb-2 hidden grid-cols-12 gap-4 rounded-lg bg-white px-4 py-3 lg:grid"
           >
             <button
               class="col-span-5 flex cursor-pointer items-center gap-1 text-start text-xs font-semibold tracking-wider uppercase transition-colors"
@@ -238,38 +238,38 @@
           @if (sortedProducts().length > 0) {
             @for (product of sortedProducts(); track product.id; let isLast = $last) {
               <div
-                class="relative flex items-center gap-3 rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm transition-shadow duration-200 focus-within:z-30 hover:z-10 hover:shadow-md md:grid md:grid-cols-12 md:gap-4 md:border-0 md:px-4 md:py-4 md:shadow-lg md:hover:shadow-xl"
+                class="relative flex items-center gap-3 rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm transition-shadow duration-200 focus-within:z-30 hover:z-10 hover:shadow-md lg:grid lg:grid-cols-12 lg:gap-4 lg:border-0 lg:px-4 lg:py-4 lg:shadow-lg lg:hover:shadow-xl"
               >
                 <a
-                  class="flex min-w-0 flex-1 cursor-pointer items-center gap-3 self-stretch no-underline focus:outline-none md:col-span-11 md:grid md:grid-cols-11 md:gap-4"
+                  class="flex min-w-0 flex-1 cursor-pointer items-center gap-3 self-stretch no-underline focus:outline-none lg:col-span-11 lg:grid lg:grid-cols-11 lg:gap-4"
                   [routerLink]="routes.ManagementProductDetailsById(product.id)"
                   [attr.aria-label]="'View details for ' + product.name"
                 >
                   <!-- Image and Name -->
                   <div
-                    class="flex min-w-0 flex-1 items-center gap-3 md:col-span-5 md:flex-none md:gap-4"
+                    class="flex min-w-0 flex-1 items-center gap-3 lg:col-span-5 lg:flex-none lg:gap-4"
                   >
-                    <div class="w-10 shrink-0 md:w-14">
+                    <div class="w-10 shrink-0 lg:w-14">
                       @if (product.imageUrl) {
-                        <div class="flex h-10 w-10 items-center justify-center md:h-14 md:w-14">
+                        <div class="flex h-10 w-10 items-center justify-center lg:h-14 lg:w-14">
                           <img
                             [src]="product.imageUrl"
                             [alt]="product.name"
-                            class="h-10 w-10 object-contain md:h-14 md:w-14"
+                            class="h-10 w-10 object-contain lg:h-14 lg:w-14"
                           />
                         </div>
                       } @else {
-                        <app-avatar [label]="product.name" [class]="'h-10 w-10 md:h-14 md:w-14'" />
+                        <app-avatar [label]="product.name" [class]="'h-10 w-10 lg:h-14 lg:w-14'" />
                       }
                     </div>
 
                     <div class="min-w-0">
-                      <h3 class="text-sm font-semibold text-gray-900 md:text-base">
+                      <h3 class="text-sm font-semibold text-gray-900 lg:text-base">
                         {{ product.name }}
                       </h3>
                       <p class="font-mono text-xs text-gray-400">{{ product.code }}</p>
                       <!-- Mobile: inline price + status -->
-                      <div class="mt-1 flex flex-wrap items-center gap-2 md:hidden">
+                      <div class="mt-1 flex flex-wrap items-center gap-2 lg:hidden">
                         <span
                           class="inline-flex items-center gap-0.5 text-sm font-semibold text-gray-900"
                         >
@@ -290,7 +290,7 @@
                   </div>
 
                   <!-- Status (desktop only) -->
-                  <div class="hidden md:col-span-2 md:flex md:justify-center">
+                  <div class="hidden lg:col-span-2 lg:flex lg:justify-center">
                     @if (product.isActive) {
                       <app-badge variant="success">Active</app-badge>
                     } @else {
@@ -299,7 +299,7 @@
                   </div>
 
                   <!-- Category (desktop only) -->
-                  <div class="hidden md:col-span-2 md:block md:text-center">
+                  <div class="hidden lg:col-span-2 lg:block lg:text-center">
                     <div class="text-sm text-gray-700">
                       {{ getProductCategoryName(product.category) }}
                     </div>
@@ -309,7 +309,7 @@
                   </div>
 
                   <!-- Price (desktop only) -->
-                  <div class="hidden md:col-span-2 md:block md:text-right">
+                  <div class="hidden lg:col-span-2 lg:block lg:text-right">
                     <div class="inline-flex items-center gap-0.5 text-lg font-semibold text-black">
                       <app-icon
                         name="icon-peso"
@@ -323,7 +323,7 @@
 
                 <!-- Actions -->
                 <div
-                  class="relative shrink-0 md:col-span-1 md:flex md:justify-end"
+                  class="relative shrink-0 lg:col-span-1 lg:flex lg:justify-end"
                   (click)="$event.stopPropagation()"
                   (keydown)="$event.stopPropagation()"
                   role="presentation"
@@ -440,3 +440,4 @@
     </div>
   </div>
 }
+

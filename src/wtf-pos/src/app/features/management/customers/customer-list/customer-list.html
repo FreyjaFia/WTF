@@ -1,4 +1,4 @@
-<div class="flex h-full flex-col">
+<div class="flex h-full flex-col pt-4 md:pt-0">
   <!-- Header -->
   <div class="mb-4 flex shrink-0 flex-col gap-3 sm:mb-6">
     <!-- Tier 1 -->
@@ -34,7 +34,7 @@
           class="btn btn-sm gap-2 rounded-lg border border-gray-200 bg-white text-gray-700"
           (click)="openFilters()"
         >
-          <app-icon name="icon-sliders" [class]="'h-4 w-4'" [fill]="'currentColor'" />
+          <app-icon name="icon-filter" [class]="'h-4 w-4'" [fill]="'currentColor'" />
           Filters
         </button>
         @if (!isAndroidPlatform) {
@@ -126,10 +126,10 @@
           <p class="text-sm text-gray-500">Try adjusting your filters or add a new customer</p>
         </div>
       } @else {
-        <div class="space-y-2 md:space-y-3">
+        <div class="space-y-2 lg:space-y-3">
           <!-- Column Headers (Sticky) -->
           <div
-            class="sticky top-0 z-10 mb-2 hidden grid-cols-12 gap-4 rounded-lg bg-white px-4 py-3 md:grid"
+            class="sticky top-0 z-10 mb-2 hidden grid-cols-12 gap-4 rounded-lg bg-white px-4 py-3 lg:grid"
           >
             <button
               class="col-span-4 flex cursor-pointer items-center gap-1 text-start text-xs font-semibold tracking-wider uppercase transition-colors"
@@ -203,10 +203,10 @@
           @if (sortedCustomers().length > 0) {
             @for (customer of sortedCustomers(); track customer.id; let isLast = $last) {
               <div
-                class="relative flex items-center gap-3 rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm transition-shadow duration-200 focus-within:z-30 hover:z-10 hover:shadow-md md:grid md:grid-cols-12 md:gap-4 md:border-0 md:px-4 md:py-4 md:shadow-lg md:hover:shadow-xl"
+                class="relative flex items-center gap-3 rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm transition-shadow duration-200 focus-within:z-30 hover:z-10 hover:shadow-md lg:grid lg:grid-cols-12 lg:gap-4 lg:border-0 lg:px-4 lg:py-4 lg:shadow-lg lg:hover:shadow-xl"
               >
                 <a
-                  class="flex min-w-0 flex-1 cursor-pointer items-center gap-3 self-stretch no-underline focus:outline-none md:col-span-11 md:grid md:grid-cols-11 md:gap-4"
+                  class="flex min-w-0 flex-1 cursor-pointer items-center gap-3 self-stretch no-underline focus:outline-none lg:col-span-11 lg:grid lg:grid-cols-11 lg:gap-4"
                   [routerLink]="routes.ManagementCustomerDetailsById(customer.id)"
                   [attr.aria-label]="
                     'View details for ' + customer.firstName + ' ' + customer.lastName
@@ -214,10 +214,10 @@
                 >
                   <!-- Avatar and Name -->
                   <div
-                    class="flex min-w-0 flex-1 items-center gap-3 md:col-span-4 md:flex-none md:gap-4"
+                    class="flex min-w-0 flex-1 items-center gap-3 lg:col-span-4 lg:flex-none lg:gap-4"
                   >
-                    <div class="w-10 shrink-0 md:w-14">
-                      <div class="flex h-10 w-10 items-center justify-center md:h-14 md:w-14">
+                    <div class="w-10 shrink-0 lg:w-14">
+                      <div class="flex h-10 w-10 items-center justify-center lg:h-14 lg:w-14">
                         <app-avatar
                           [label]="`${customer.firstName || ''} ${customer.lastName || ''}`"
                           [size]="36"
@@ -227,11 +227,11 @@
                     </div>
 
                     <div class="min-w-0">
-                      <h3 class="text-sm font-semibold text-gray-900 md:text-base">
+                      <h3 class="text-sm font-semibold text-gray-900 lg:text-base">
                         {{ customer.firstName }} {{ customer.lastName }}
                       </h3>
                       <!-- Mobile: inline status -->
-                      <div class="mt-1 flex flex-wrap items-center gap-2 md:hidden">
+                      <div class="mt-1 flex flex-wrap items-center gap-2 lg:hidden">
                         @if (customer.isActive) {
                           <app-badge variant="success">Active</app-badge>
                         } @else {
@@ -242,7 +242,7 @@
                   </div>
 
                   <!-- Status (desktop only) -->
-                  <div class="hidden md:col-span-2 md:flex md:justify-center">
+                  <div class="hidden lg:col-span-2 lg:flex lg:justify-center">
                     @if (customer.isActive) {
                       <app-badge variant="success">Active</app-badge>
                     } @else {
@@ -251,7 +251,7 @@
                   </div>
 
                   <!-- Address (desktop only) -->
-                  <div class="hidden md:col-span-5 md:block">
+                  <div class="hidden lg:col-span-5 lg:block">
                     <div class="truncate text-center text-sm text-gray-700">
                       {{ customer.address }}
                     </div>
@@ -259,7 +259,7 @@
                 </a>
 
                 <!-- Actions -->
-                <div class="shrink-0 md:col-span-1 md:flex md:justify-end" role="presentation">
+                <div class="shrink-0 lg:col-span-1 lg:flex lg:justify-end" role="presentation">
                   @if (canWriteManagement()) {
                     <div class="dropdown dropdown-end" [class.dropdown-top]="isLast">
                       <button
@@ -372,5 +372,6 @@
     </div>
   </div>
 }
+
 
 
