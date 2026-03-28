@@ -1,0 +1,138 @@
+import { CommonModule } from '@angular/common';
+import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { AuthLoadingService, AuthService, ConnectivityService, ImageCacheService } from '@core/services';
+import { appVersion } from '@environments/version';
+import { AvatarComponent } from '@shared/components/avatar/avatar';
+import { IconComponent } from '@shared/components/icons/icon/icon';
+import { AppRoutes } from '@shared/constants/app-routes';
+
+@Component({
+  selector: 'app-sidebar',
+  imports: [CommonModule, RouterLink, RouterLinkActive, AvatarComponent, IconComponent],
+  templateUrl: './sidebar.html',
+})
+export class SidebarComponent implements OnInit, OnDestroy {
+  private static readonly ME_CACHE_KEY = 'wtf_me_cache';
+
+  protected readonly authService = inject(AuthService);
+  protected readonly router = inject(Router);
+  protected readonly routes = AppRoutes;
+  private readonly connectivity = inject(ConnectivityService);
+  private readonly imageCache = inject(ImageCacheService);
+  private readonly authLoading = inject(AuthLoadingService);
+
+  protected imageUrl: string | null = null;
+  protected userFullName = 'User';
+  protected userRoleLabel = 'Unknown';
+  protected readonly now = signal(new Date());
+  protected readonly appVersion = appVersion;
+  protected readonly isOnline = this.connectivity.isOnline;
+  protected readonly showManagement = signal(true);
+  protected readonly isCollapsed = signal(false);
+  private clockIntervalId: ReturnType<typeof setInterval> | null = null;
+  private routeSubscription?: { unsubscribe: () => void };
+  private meRefreshSubscription?: { unsubscribe: () => void };
+
+  public ngOnInit(): void {
+    this.clockIntervalId = setInterval(() => {
+      this.now.set(new Date());
+    }, 1000);
+    this.routeSubscription = this.router.events.subscribe((event) => {
+      if (event instanceof NavigationEnd) {
+        this.closeDropdownFocus();
+      }
+    });
+    this.meRefreshSubscription = this.authService.meRefresh$.subscribe(() => {
+      this.loadMe();
+    });
+
+    this.loadMe();
+  }
+
+  public ngOnDestroy(): void {
+    if (this.clockIntervalId) {
+      clearInterval(this.clockIntervalId);
+      this.clockIntervalId = null;
+    }
+    this.routeSubscription?.unsubscribe();
+    this.meRefreshSubscription?.unsubscribe();
+  }
+
+  protected toggleManagement(): void {
+    this.showManagement.update((open) => !open);
+  }
+
+  protected toggleSidebar(): void {
+    this.isCollapsed.update((collapsed) => !collapsed);
+  }
+
+  protected goToMyProfile(event?: Event): void {
+    event?.preventDefault();
+    this.closeDropdownFocus();
+    this.router.navigateByUrl(this.routes.MyProfile);
+  }
+
+  protected logout(): void {
+    if (!window.confirm('Log out of your account?')) {
+      return;
+    }
+    this.authService.logout();
+    this.router.navigateByUrl(this.routes.Login, { replaceUrl: true });
+  }
+
+  private loadMe(): void {
+    this.authLoading.setLoadingProfile(true);
+    this.authService.getMe().subscribe({
+      next: async (me) => {
+        await this.applyProfile(me.imageUrl ?? null, me.firstName, me.lastName);
+        localStorage.setItem(SidebarComponent.ME_CACHE_KEY, JSON.stringify(me));
+
+        if (me.imageUrl) {
+          this.imageCache.cacheUrl(me.imageUrl);
+        }
+
+        this.authLoading.setLoadingProfile(false);
+      },
+      error: async () => {
+        await this.loadCachedProfile();
+        this.authLoading.setLoadingProfile(false);
+      },
+    });
+  }
+
+  private async loadCachedProfile(): Promise<void> {
+    try {
+      const raw = localStorage.getItem(SidebarComponent.ME_CACHE_KEY);
+
+      if (raw) {
+        const me = JSON.parse(raw);
+        await this.applyProfile(me.imageUrl ?? null, me.firstName, me.lastName);
+        return;
+      }
+    } catch {
+      // Corrupted cache - ignore
+    }
+
+    this.imageUrl = null;
+    this.userFullName = 'User';
+    this.userRoleLabel = this.authService.getCurrentRoleLabel();
+  }
+
+  private async applyProfile(
+    imgUrl: string | null,
+    firstName: string,
+    lastName: string,
+  ): Promise<void> {
+    this.userFullName = `${firstName ?? ''} ${lastName ?? ''}`.trim() || 'User';
+    this.userRoleLabel = this.authService.getCurrentRoleLabel();
+    this.imageUrl = imgUrl ? await this.imageCache.resolveUrl(imgUrl) : null;
+  }
+
+  private closeDropdownFocus(): void {
+    const activeEl = document.activeElement;
+    if (activeEl instanceof HTMLElement) {
+      activeEl.blur();
+    }
+  }
+}

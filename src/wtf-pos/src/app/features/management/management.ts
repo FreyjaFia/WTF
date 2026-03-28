@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import {
   IsActiveMatchOptions,
   Router,
@@ -7,7 +7,7 @@ import {
   RouterLinkActive,
   RouterOutlet,
 } from '@angular/router';
-import { AuthService, ListStateService } from '@core/services';
+import { AuthService } from '@core/services';
 import { IconComponent } from '@shared/components';
 import { AppRoutes } from '@shared/constants/app-routes';
 
@@ -17,7 +17,7 @@ import { AppRoutes } from '@shared/constants/app-routes';
   templateUrl: './management.html',
   host: { class: 'flex-1 min-h-0' },
 })
-export class ManagementComponent implements OnInit {
+export class ManagementComponent {
   private static readonly activeMatchOptions: IsActiveMatchOptions = {
     paths: 'subset',
     queryParams: 'ignored',
@@ -26,17 +26,9 @@ export class ManagementComponent implements OnInit {
   };
 
   private readonly router = inject(Router);
-  private readonly listState = inject(ListStateService);
   protected readonly authService = inject(AuthService);
   protected readonly routes = AppRoutes;
-  protected readonly isSidebarCollapsed = signal(false);
   private readonly activeSignals = new Map<string, ReturnType<typeof routerIsActive>>();
-
-  public ngOnInit(): void {
-    this.isSidebarCollapsed.set(
-      this.listState.load<boolean>('management:sidebar-collapsed', false),
-    );
-  }
 
   protected isActive(route: string): boolean {
     let routeActiveSignal = this.activeSignals.get(route);
@@ -69,9 +61,4 @@ export class ManagementComponent implements OnInit {
     return this.authService.canAccessSchemaScriptHistory();
   }
 
-  protected toggleSidebar() {
-    const next = !this.isSidebarCollapsed();
-    this.isSidebarCollapsed.set(next);
-    this.listState.save('management:sidebar-collapsed', next);
-  }
 }

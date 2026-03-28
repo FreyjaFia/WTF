@@ -1,0 +1,242 @@
+<aside
+  class="hidden h-full flex-none flex-col overflow-hidden border-r border-gray-200 bg-white transition-[width] duration-300 ease-out will-change-[width] md:flex"
+  [class.w-21]="isCollapsed()"
+  [class.w-60]="!isCollapsed()"
+>
+  <div class="border-b border-gray-200 px-3 py-4">
+    <div class="flex items-center gap-2 text-2xl font-bold tracking-widest">
+      <span class="text-neutral">WTF</span>
+      @if (!isCollapsed()) {
+        <span class="text-xs font-normal tracking-wider text-gray-500 uppercase">POS</span>
+      }
+      @if (!isCollapsed()) {
+        <span class="text-[10px] font-semibold tracking-wide text-gray-400">
+          v{{ appVersion }}
+        </span>
+      }
+    </div>
+  </div>
+
+  <div class="border-b border-gray-200 px-4 py-4">
+    <div
+      class="flex items-center gap-3"
+      [class.justify-center]="isCollapsed()"
+      [class.flex-col]="isCollapsed()"
+    >
+      <div
+        class="avatar rounded-full p-0.5 ring-2 ring-transparent transition-all hover:ring-[#047857]/30"
+      >
+        <div class="w-12 rounded-full">
+          @if (imageUrl) {
+            <img alt="User avatar" [src]="imageUrl" />
+          } @else {
+            <app-avatar [label]="userFullName" [size]="44"></app-avatar>
+          }
+        </div>
+      </div>
+      <div class="min-w-0" [class.hidden]="isCollapsed()">
+        <div class="truncate text-sm font-semibold text-gray-800">{{ userFullName }}</div>
+        <div class="flex items-center gap-2 text-xs text-gray-500">
+          <span class="truncate">{{ userRoleLabel }}</span>
+          <span [class.text-emerald-700]="isOnline()" [class.text-amber-700]="!isOnline()">
+            {{ isOnline() ? 'Online' : 'Offline' }}
+          </span>
+        </div>
+        <div class="text-[10px] text-gray-400">{{ now() | date: 'EEE, MMM d, y - h:mm a' }}</div>
+      </div>
+    </div>
+
+    <div class="mt-3 flex flex-col gap-2" [class.hidden]="isCollapsed()">
+      <button
+        type="button"
+        class="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50"
+        (click)="goToMyProfile($event)"
+      >
+        <app-icon name="icon-user" [class]="'h-4 w-4 text-gray-500'" />
+        My Profile
+      </button>
+      <button
+        type="button"
+        class="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-red-600 transition-colors hover:bg-red-50"
+        (click)="logout()"
+      >
+        <app-icon name="icon-logout" [class]="'h-4 w-4 text-red-500'" />
+        Logout
+      </button>
+    </div>
+
+    <div class="mt-3 flex flex-col items-center gap-2" [class.hidden]="!isCollapsed()">
+      <button
+        type="button"
+        class="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-gray-200 text-gray-600 transition-colors hover:bg-gray-50"
+        (click)="goToMyProfile($event)"
+        aria-label="My Profile"
+      >
+        <app-icon name="icon-user" [class]="'h-4 w-4 text-gray-500'" />
+      </button>
+      <button
+        type="button"
+        class="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-gray-200 text-red-600 transition-colors hover:bg-red-50"
+        (click)="logout()"
+        aria-label="Logout"
+      >
+        <app-icon name="icon-logout" [class]="'h-4 w-4 text-red-500'" />
+      </button>
+    </div>
+  </div>
+
+  <nav class="flex-1 overflow-y-auto px-2.5 py-4">
+    <a
+      [routerLink]="routes.Dashboard"
+      routerLinkActive="bg-gray-100 text-gray-900"
+      class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+      [class.justify-center]="isCollapsed()"
+      [attr.title]="'Dashboard'"
+    >
+      <app-icon name="icon-dashboard" [class]="'h-4.5 w-4.5 text-gray-500'" />
+      <span [class.hidden]="isCollapsed()">Dashboard</span>
+    </a>
+
+    <a
+      [routerLink]="routes.OrdersEditor"
+      routerLinkActive="bg-gray-100 text-gray-900"
+      class="mt-1 flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+      [class.justify-center]="isCollapsed()"
+      [attr.title]="'New Order'"
+    >
+      <app-icon name="icon-plus" [class]="'h-4.5 w-4.5 text-gray-500'" />
+      <span [class.hidden]="isCollapsed()">New Order</span>
+    </a>
+
+    <a
+      [routerLink]="routes.OrdersList"
+      routerLinkActive="bg-gray-100 text-gray-900"
+      class="mt-1 flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+      [class.justify-center]="isCollapsed()"
+      [attr.title]="'Orders'"
+    >
+      <app-icon name="icon-file" [class]="'h-4.5 w-4.5 text-gray-500'" />
+      <span [class.hidden]="isCollapsed()">Orders</span>
+    </a>
+
+    @if (authService.canAccessManagement()) {
+      <button
+        type="button"
+        class="mt-1 flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50"
+        (click)="toggleManagement()"
+      >
+        <span class="flex items-center gap-3">
+          <app-icon name="icon-management" [class]="'h-4.5 w-4.5 text-gray-500'" />
+          <span [class.hidden]="isCollapsed()">Management</span>
+        </span>
+        <app-icon
+          name="icon-chevron-down"
+          [class]="'inline-block h-4 w-4 text-gray-500 transition-transform duration-200 ease-out'"
+          [class.rotate-180]="!showManagement()"
+        />
+      </button>
+
+      <div
+        class="mt-1 space-y-1 overflow-hidden pl-4 transition-[max-height,opacity] duration-200 ease-out"
+        [class.max-h-0]="!showManagement()"
+        [class.opacity-0]="!showManagement()"
+        [class.pointer-events-none]="!showManagement()"
+        [class.max-h-96]="showManagement()"
+        [class.opacity-100]="showManagement()"
+        [class.pl-4]="!isCollapsed()"
+        [class.pl-0]="isCollapsed()"
+      >
+        <a
+          [routerLink]="routes.ManagementProducts"
+          routerLinkActive="bg-gray-100 text-gray-900"
+          class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
+          [class.justify-center]="isCollapsed()"
+          [attr.title]="'Products'"
+        >
+          <app-icon name="icon-cart" [class]="'h-4 w-4 text-gray-500'" />
+          <span [class.hidden]="isCollapsed()">Products</span>
+        </a>
+        <a
+          [routerLink]="routes.ManagementCustomers"
+          routerLinkActive="bg-gray-100 text-gray-900"
+          class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
+          [class.justify-center]="isCollapsed()"
+          [attr.title]="'Customers'"
+        >
+          <app-icon name="icon-people" [class]="'h-4 w-4 text-gray-500'" />
+          <span [class.hidden]="isCollapsed()">Customers</span>
+        </a>
+        <a
+          [routerLink]="routes.ManagementUsers"
+          routerLinkActive="bg-gray-100 text-gray-900"
+          class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
+          [class.justify-center]="isCollapsed()"
+          [attr.title]="'Users'"
+        >
+          <app-icon name="icon-user" [class]="'h-4 w-4 text-gray-500'" />
+          <span [class.hidden]="isCollapsed()">Users</span>
+        </a>
+        <a
+          [routerLink]="routes.ManagementPromotions"
+          routerLinkActive="bg-gray-100 text-gray-900"
+          class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
+          [class.justify-center]="isCollapsed()"
+          [attr.title]="'Promotions'"
+        >
+          <app-icon name="icon-promotion" [class]="'h-4 w-4 text-gray-500'" />
+          <span [class.hidden]="isCollapsed()">Promotions</span>
+        </a>
+        @if (authService.canAccessReports()) {
+          <a
+            [routerLink]="routes.ManagementReports"
+            routerLinkActive="bg-gray-100 text-gray-900"
+            class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
+            [class.justify-center]="isCollapsed()"
+            [attr.title]="'Reports'"
+          >
+            <app-icon name="icon-trending-up" [class]="'h-4 w-4 text-gray-500'" />
+            <span [class.hidden]="isCollapsed()">Reports</span>
+          </a>
+        }
+        <a
+          [routerLink]="routes.ManagementAuditLogs"
+          routerLinkActive="bg-gray-100 text-gray-900"
+          class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
+          [class.justify-center]="isCollapsed()"
+          [attr.title]="'Audit Logs'"
+        >
+          <app-icon name="icon-audit-logs" [class]="'h-4 w-4 text-gray-500'" />
+          <span [class.hidden]="isCollapsed()">Audit Logs</span>
+        </a>
+        <a
+          [routerLink]="routes.ManagementSchemaScripts"
+          routerLinkActive="bg-gray-100 text-gray-900"
+          class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
+          [class.justify-center]="isCollapsed()"
+          [attr.title]="'Schema Scripts'"
+        >
+          <app-icon name="icon-schema-scripts" [class]="'h-4 w-4 text-gray-500'" />
+          <span [class.hidden]="isCollapsed()">Schema Scripts</span>
+        </a>
+      </div>
+    }
+  </nav>
+
+  <div class="border-t border-gray-200 p-2.5">
+    <button
+      type="button"
+      class="flex w-full cursor-pointer items-center gap-3 rounded-lg px-2.5 py-2 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100"
+      (click)="toggleSidebar()"
+      [attr.aria-label]="isCollapsed() ? 'Expand sidebar' : 'Collapse sidebar'"
+      [class.justify-center]="isCollapsed()"
+      [class.justify-start]="!isCollapsed()"
+    >
+      <app-icon
+        [name]="isCollapsed() ? 'icon-chevrons-right' : 'icon-chevrons-left'"
+        [class]="'h-4.5 w-4.5 text-gray-600'"
+        [fill]="'currentColor'"
+      />
+      <span [class.hidden]="isCollapsed()">Collapse</span>
+    </button>
+  </div>
+</aside>
