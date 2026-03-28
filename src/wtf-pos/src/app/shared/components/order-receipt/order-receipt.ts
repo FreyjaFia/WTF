@@ -10,7 +10,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { Capacitor } from '@capacitor/core';
-import { SuccessMessages } from '@core/messages';
+import { ServiceErrorMessages, SuccessMessages } from '@core/messages';
 import { AlertService, ImageDownloadService } from '@core/services';
 import {
   ADD_ON_TYPE_ORDER,
@@ -81,7 +81,7 @@ export class OrderReceiptComponent implements OnInit {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = () => reject(new Error('Failed to read logo as data URL.'));
+      reader.onerror = () => reject(new Error(ServiceErrorMessages.Common.ReadLogoFailed));
       reader.readAsDataURL(blob);
     });
   }
@@ -395,7 +395,7 @@ export class OrderReceiptComponent implements OnInit {
         this.alertService.success(SuccessMessages.OrderReceipt.ImageDownloaded);
       }
     } catch {
-      this.alertService.error('Failed to generate order image.');
+      this.alertService.error(ServiceErrorMessages.Common.GenerateOrderImageFailed);
     } finally {
       this.isGenerating.set(false);
     }

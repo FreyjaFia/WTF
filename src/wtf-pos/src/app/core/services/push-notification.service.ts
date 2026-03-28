@@ -11,6 +11,9 @@ import { getMessaging, getToken, isSupported, onMessage } from 'firebase/messagi
 import { Subscription, firstValueFrom } from 'rxjs';
 
 import { AuthService } from './auth.service';
+import { AlertService } from './alert.service';
+import { ServiceErrorMessages } from '@core/messages';
+import { AppRoutes } from '@shared/constants/app-routes';
 
 type PushPlatform = 'web' | 'android';
 
@@ -18,6 +21,7 @@ type PushPlatform = 'web' | 'android';
 export class PushNotificationService implements OnDestroy {
   private readonly http = inject(HttpClient);
   private readonly auth = inject(AuthService);
+  private readonly alerts = inject(AlertService);
   private readonly zone = inject(NgZone);
   private readonly router = inject(Router);
   private readonly baseUrl = `${environment.apiUrl}/push`;
@@ -120,7 +124,9 @@ export class PushNotificationService implements OnDestroy {
 
         const data = payload.data || {};
         const orderId = data['orderId'];
-        const path = data['path'] || (orderId ? `/orders/editor/${orderId}` : '/orders/list');
+        const path =
+          data['path'] ||
+          (orderId ? AppRoutes.OrderEditorById(String(orderId)) : AppRoutes.OrdersList);
         const targetUrl = new URL(path, window.location.origin).toString();
 
         const systemNotification = new Notification(notification.title, {
@@ -179,16 +185,20 @@ export class PushNotificationService implements OnDestroy {
 
       PushNotifications.addListener('pushNotificationActionPerformed', (event) => {
         const data = this.extractNotificationData(event.notification?.data);
-        const path = data['path'] ?? (data['orderId'] ? `/orders/details/${data['orderId']}` : '');
+        const path =
+          data['path'] ??
+          (data['orderId']
+            ? AppRoutes.OrderDetailsById(String(data['orderId']))
+            : '');
         if (path) {
-          this.navigateToPath(path);
+          void this.navigateToPath(path);
         }
       });
 
       LocalNotifications.addListener('localNotificationActionPerformed', (event) => {
         const path = event.notification?.extra?.path as string | undefined;
         if (path) {
-          this.navigateToPath(path);
+          void this.navigateToPath(path);
         }
       });
     }
@@ -216,7 +226,9 @@ export class PushNotificationService implements OnDestroy {
 
     const data = notification.data || {};
     const orderId = data['orderId'];
-    const path = data['path'] || (orderId ? `/orders/details/${orderId}` : '/orders/list');
+    const path =
+      data['path'] ||
+      (orderId ? AppRoutes.OrderDetailsById(String(orderId)) : AppRoutes.OrdersList);
     const id = Math.floor(Math.random() * 1_000_000);
 
     await LocalNotifications.schedule({
@@ -233,7 +245,16 @@ export class PushNotificationService implements OnDestroy {
     });
   }
 
-  private navigateToPath(path: string): void {
+  private async navigateToPath(path: string): Promise<void> {
+    const canNavigate = await this.ensureSession();
+    if (!canNavigate) {
+      this.zone.run(() => {
+        this.alerts.error(ServiceErrorMessages.Auth.SessionExpired);
+        this.router.navigateByUrl(AppRoutes.Login, { replaceUrl: true });
+      });
+      return;
+    }
+
     this.zone.run(() => {
       this.router.navigateByUrl(path).catch(() => {
         window.location.assign(path);
@@ -259,5 +280,22 @@ export class PushNotificationService implements OnDestroy {
     }
 
     return {};
+  }
+
+  private async ensureSession(): Promise<boolean> {
+    if (this.auth.isTokenValid()) {
+      return true;
+    }
+
+    const refreshToken = this.auth.getRefreshToken();
+    if (!refreshToken) {
+      return false;
+    }
+
+    try {
+      return await firstValueFrom(this.auth.refreshToken());
+    } catch {
+      return false;
+    }
   }
 }

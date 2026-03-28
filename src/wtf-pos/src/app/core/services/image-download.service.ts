@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { Capacitor } from '@capacitor/core';
 import { FileOpener } from '@capacitor-community/file-opener';
-import { SuccessMessages } from '@core/messages';
+import { ServiceErrorMessages, SuccessMessages } from '@core/messages';
 import { Directory, Filesystem } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import { Media } from '@capacitor-community/media';
@@ -70,7 +70,7 @@ export class ImageDownloadService {
         () => void this.openSavedImageOnAndroid(openPath),
       );
     } catch {
-      throw new Error('Failed to save image on Android');
+      throw new Error(ServiceErrorMessages.Common.SaveImageFailed);
     } finally {
       await this.deleteCacheFileQuietly(cachePath);
     }
@@ -95,7 +95,7 @@ export class ImageDownloadService {
       if (this.hasDeniedMediaPermission(current)) {
         const requested = await mediaPlugin.requestPermissions();
         if (this.hasDeniedMediaPermission(requested)) {
-          throw new Error('Media permission denied');
+          throw new Error(ServiceErrorMessages.Common.MediaPermissionDenied);
         }
       }
     } catch {
@@ -127,7 +127,7 @@ export class ImageDownloadService {
       return maybe.identifier;
     }
 
-    throw new Error(`Unable to resolve album identifier for ${name}`);
+    throw new Error(`${ServiceErrorMessages.Common.ResolveAlbumFailed} ${name}`);
   }
 
   private async tryShareImageNative(dataUrl: string, fileName: string): Promise<boolean> {
@@ -211,7 +211,7 @@ export class ImageDownloadService {
     const marker = 'base64,';
     const markerIndex = dataUrl.indexOf(marker);
     if (markerIndex < 0) {
-      throw new Error('Expected base64 data URL');
+      throw new Error(ServiceErrorMessages.Common.InvalidBase64DataUrl);
     }
 
     return dataUrl.slice(markerIndex + marker.length);

@@ -1,7 +1,9 @@
 import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
+import { ServiceErrorMessages } from '@core/messages';
 import { AuthService } from '@core/services';
+import { AppRoutes } from '@shared/constants/app-routes';
 import { catchError, switchMap, throwError } from 'rxjs';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
@@ -56,8 +58,8 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
           catchError(() => {
             // If refresh fails, logout and navigate to login
             auth.logout();
-            router.navigateByUrl('/login', { replaceUrl: true });
-            return throwError(() => error);
+            router.navigateByUrl(AppRoutes.Login, { replaceUrl: true });
+            return throwError(() => new Error(ServiceErrorMessages.Auth.SessionExpired));
           }),
         );
       }

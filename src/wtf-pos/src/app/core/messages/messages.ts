@@ -17,6 +17,15 @@ export const ServiceErrorMessages = {
     UploadImageFailed: 'Failed to upload image. Please try again later.',
     NoRefreshToken: 'No refresh token available',
     RefreshTokenFailed: 'Token refresh failed',
+    SessionExpired: 'Session expired. Please log in again.',
+  },
+  Common: {
+    GenerateOrderImageFailed: 'Failed to generate order image.',
+    ReadLogoFailed: 'Failed to read logo as data URL.',
+    SaveImageFailed: 'Failed to save image on Android.',
+    MediaPermissionDenied: 'Media permission denied.',
+    ResolveAlbumFailed: 'Unable to resolve album identifier.',
+    InvalidBase64DataUrl: 'Expected base64 data URL.',
   },
   Customer: {
     CustomerNotFound: 'Customer not found.',
@@ -68,6 +77,9 @@ export const ServiceErrorMessages = {
     DeletePriceOverrideFailed: 'Failed to delete add-on price override. Please try again later.',
     InvalidPriceOverrideRequest: 'Invalid price override request.',
   },
+  Promotion: {
+    RequestFailed: 'Promotion request failed.',
+  },
   Report: {
     FetchDailySalesFailed: 'Failed to fetch daily sales report. Please try again later.',
     FetchProductSalesFailed: 'Failed to fetch product sales report. Please try again later.',
@@ -83,6 +95,11 @@ export const ServiceErrorMessages = {
     FetchMonthlyWorkbookStatusFailed:
       'Failed to check monthly workbook status. Please try again later.',
     PdfNotAvailable: 'PDF export is not available yet. Use Excel for now.',
+    NoWritableDirectory: 'No writable directory found.',
+    ReadBlobFailed: 'Unable to read blob data.',
+    InvalidBlobData: 'Invalid blob data.',
+    FileOpenFailed: 'File was downloaded but could not be opened automatically.',
+    DownloadFileFailed: 'Failed to download file on mobile.',
   },
   User: {
     UserNotFound: 'User not found.',

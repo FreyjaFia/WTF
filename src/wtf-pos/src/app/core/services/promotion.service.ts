@@ -1,6 +1,6 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { HttpErrorMessages } from '@core/messages';
+import { HttpErrorMessages, ServiceErrorMessages } from '@core/messages';
 import { ConnectivityService } from '@core/services';
 import { environment } from '@environments/environment.development';
 import {
@@ -131,6 +131,6 @@ export class PromotionService {
       return throwError(() => new Error(message));
     }
 
-    return throwError(() => new Error('Promotion request failed.'));
+    return throwError(() => new Error(ServiceErrorMessages.Promotion.RequestFailed));
   }
 }
