@@ -37,6 +37,7 @@ import {
   AddonSelectorComponent,
   AvatarComponent,
   BadgeComponent,
+  CartDrawerComponent,
   CustomerDropdownComponent,
   IconComponent,
   OrderReceiptComponent,
@@ -99,6 +100,7 @@ interface BundlePromotionSelection {
     FormsModule,
     IconComponent,
     CheckoutModal,
+    CartDrawerComponent,
     CustomerDropdownComponent,
     AddonSelectorComponent,
     AvatarComponent,
@@ -495,6 +497,10 @@ export class OrderEditor implements OnInit, OnDestroy {
   protected openMobileCart(): void {
     this.isCartCollapsed.set(false);
     this.showMobileCart.set(true);
+  }
+
+  protected closeMobileCart(): void {
+    this.showMobileCart.set(false);
   }
 
   protected onOrderSpecialInstructionsInput(event: Event): void {

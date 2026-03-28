@@ -1,4 +1,4 @@
-<div class="flex h-full flex-col md:flex-row md:gap-4">
+<div class="relative flex h-full flex-col lg:flex-row lg:gap-4">
   <div class="flex min-h-0 flex-1 flex-col">
     @if (isEditMode() && isLoading()) {
       <div class="flex justify-center py-8">
@@ -7,7 +7,7 @@
     }
 
     @if (!isEditMode() || !isLoading()) {
-      <div class="mb-3 flex shrink-0 flex-wrap items-center gap-2 sm:mb-4 sm:gap-3">
+      <div class="mb-3 flex shrink-0 flex-nowrap items-center gap-2 sm:mb-4 sm:gap-3">
         <button
           type="button"
           class="mt-0.5 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
@@ -18,7 +18,7 @@
         </button>
 
         <div
-          class="flex min-w-0 flex-1 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200 md:w-104 md:flex-none"
+          class="flex min-w-0 flex-1 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200 md:max-w-[26rem] md:flex-1"
           [class.pointer-events-none]="isReadOnly() || !canManageOrderActions()"
           [class.opacity-50]="isReadOnly() || !canManageOrderActions()"
         >
@@ -30,7 +30,7 @@
 
         @if (!isAndroidPlatform) {
           <button
-            class="pointer-events-auto z-30 shrink-0 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
+            class="pointer-events-auto z-30 ml-auto shrink-0 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
             [class.opacity-70]="isRefreshing()"
             type="button"
             (click)="refreshProducts()"
@@ -62,14 +62,14 @@
         <div class="w-full overflow-x-hidden sm:w-auto sm:overflow-visible">
           <div
             role="tablist"
-            class="tabs tabs-box tabs-sm grid w-full min-w-0 grid-cols-4 gap-1 sm:w-max sm:flex sm:flex-wrap"
+            class="tabs tabs-box tabs-sm grid w-full min-w-0 grid-cols-4 gap-1 sm:flex sm:w-max sm:flex-wrap"
             aria-label="Catalog tabs"
           >
             @for (tab of subCategoryTabs; track tab.id) {
               <button
                 type="button"
                 role="tab"
-                class="tab h-auto min-w-0 items-center whitespace-normal px-2 py-1.5 text-[11px] leading-tight sm:h-auto sm:px-3 sm:py-2.5 sm:whitespace-nowrap sm:text-sm"
+                class="tab h-auto min-w-0 items-center px-2 py-1.5 text-[11px] leading-tight whitespace-normal sm:h-auto sm:px-3 sm:py-2.5 sm:text-sm sm:whitespace-nowrap"
                 [class.tab-active]="
                   activeCatalogTab() === 'products' && activeSubCategoryTab() === tab.id
                 "
@@ -87,7 +87,7 @@
             <button
               type="button"
               role="tab"
-              class="tab h-auto min-w-0 items-center whitespace-normal px-2 py-1.5 text-[11px] leading-tight sm:h-auto sm:px-3 sm:py-2.5 sm:whitespace-nowrap sm:text-sm"
+              class="tab h-auto min-w-0 items-center px-2 py-1.5 text-[11px] leading-tight whitespace-normal sm:h-auto sm:px-3 sm:py-2.5 sm:text-sm sm:whitespace-nowrap"
               [class.tab-active]="activeCatalogTab() === 'bundles'"
               [attr.aria-selected]="activeCatalogTab() === 'bundles'"
               (click)="selectCatalogTab('bundles')"
@@ -109,7 +109,7 @@
       }
       @if (!isLoading()) {
         <app-pull-to-refresh
-          class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden"
+          class="min-h-0 flex-1 overflow-x-hidden overflow-y-auto"
           [refreshing]="isRefreshing()"
           (refreshTriggered)="refreshProducts()"
         >
@@ -125,7 +125,7 @@
               <div
                 class="grid grid-cols-1 gap-4 pb-4 sm:grid-cols-2 lg:grid-cols-3"
                 [class.pb-18]="cart().length > 0"
-                [class.md:pb-4]="cart().length > 0"
+                [class.lg:pb-4]="cart().length > 0"
               >
                 @for (p of products(); track p.id) {
                   <div
@@ -184,7 +184,7 @@
               <div
                 class="grid grid-cols-1 gap-4 pb-4 sm:grid-cols-2 lg:grid-cols-3"
                 [class.pb-18]="cart().length > 0"
-                [class.md:pb-4]="cart().length > 0"
+                [class.lg:pb-4]="cart().length > 0"
               >
                 @for (promo of filteredBundlePromotions(); track promo.id) {
                   <div
@@ -246,7 +246,7 @@
     <!-- Mobile: Floating Cart Button -->
     @if (cart().length > 0) {
       <button
-        class="fixed inset-x-4 bottom-22 z-30 flex cursor-pointer items-center justify-between rounded-2xl border-0 bg-[#047857] px-5 py-3.5 text-white shadow-xl transition-all active:scale-[0.98] md:hidden"
+        class="absolute inset-x-4 bottom-4 z-30 flex cursor-pointer items-center justify-between rounded-2xl border-0 bg-[#047857] px-5 py-3.5 text-white shadow-xl transition-all active:scale-[0.98] lg:hidden"
         (click)="openMobileCart()"
       >
         <div class="flex items-center gap-3">
@@ -269,37 +269,26 @@
     }
   </div>
 
-  <aside
-    class="fixed inset-0 z-50 flex translate-y-full flex-col bg-white shadow-2xl transition-transform duration-300 ease-out md:relative md:inset-auto md:z-auto md:h-full md:min-h-0 md:shrink-0 md:translate-y-0! md:overflow-hidden md:rounded-lg md:border-l-2 md:border-gray-200 md:shadow-[-8px_0_24px_rgba(0,0,0,0.1)] md:transition-all md:duration-400 md:ease-[cubic-bezier(0.175,0.885,0.32,1.275)] max-md:[&.cart-open]:translate-y-0"
-    [class.md:w-[336px]]="!isCartCollapsed()"
-    [class.md:w-[88px]]="isCartCollapsed()"
-    [class.cart-open]="showMobileCart()"
-    [style.translate]="isCartDragging() ? '0 ' + cartDragY() + 'px' : null"
-    [style.transition-duration]="isCartDragging() ? '0s' : null"
-    (mouseleave)="onRailTriggerLeave()"
-  >
+  <ng-template #cartContent>
     <!-- Drag handle (mobile only) -->
     <div
-      class="flex shrink-0 cursor-grab touch-none justify-center pt-3 pb-1 active:cursor-grabbing md:hidden"
-      (touchstart)="onCartDragStart($event)"
-      (touchmove)="onCartDragMove($event)"
-      (touchend)="onCartDragEnd()"
-      (touchcancel)="onCartDragEnd()"
+      class="flex shrink-0 cursor-grab touch-none justify-center pt-3 pb-1 active:cursor-grabbing lg:hidden"
+      data-cart-drag-handle
     >
       <div class="h-1.5 w-10 rounded-full bg-gray-300"></div>
     </div>
 
     <button
       type="button"
-      class="group absolute inset-y-0 left-0 z-20 hidden w-6 cursor-pointer overflow-hidden bg-gray-200/55 transition-all duration-400 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:bg-gray-300/60 active:bg-gray-300 md:block"
+      class="group absolute inset-y-0 left-0 z-20 hidden w-6 cursor-pointer overflow-hidden bg-gray-200/55 transition-all duration-400 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:bg-gray-300/60 active:bg-gray-300 lg:block"
       (click)="toggleCartCollapse()"
       (mouseenter)="onRailTriggerEnter()"
       [attr.aria-label]="isCartCollapsed() ? 'Expand cart' : 'Collapse cart'"
     ></button>
 
     <div
-      class="relative hidden h-full flex-col items-center justify-between py-3 transition-all duration-300 ease-in-out md:flex md:pl-6"
-      [class.md:hidden]="!isCartCollapsed()"
+      class="relative hidden h-full flex-col items-center justify-between py-3 transition-all duration-300 ease-in-out lg:flex lg:pl-6"
+      [class.lg:hidden]="!isCartCollapsed()"
     >
       <div
         class="pointer-events-none flex h-10 w-10 items-center justify-center rounded-full bg-gray-900 text-base font-bold text-white shadow-sm transition-all duration-300 ease-in-out"
@@ -356,7 +345,7 @@
       }
     </div>
 
-    <div class="flex min-h-0 flex-1 flex-col md:pl-6" [class.md:hidden]="isCartCollapsed()">
+    <div class="flex min-h-0 flex-1 flex-col lg:pl-6" [class.lg:hidden]="isCartCollapsed()">
       <div class="shrink-0 border-b border-gray-100 p-4">
         <div class="flex items-center justify-between">
           <div>
@@ -632,7 +621,7 @@
       <div
         class="sticky bottom-0 shrink-0 border-t border-gray-200 bg-white p-5 shadow-[0_-8px_24px_rgba(0,0,0,0.1)]"
       >
-        <div id="mobile-cart-details" class="grid md:overflow-visible md:opacity-100">
+        <div id="mobile-cart-details" class="grid lg:overflow-visible lg:opacity-100">
           <div class="min-h-0 overflow-hidden">
             <!-- Order Note Section -->
             @if (canEditOrderSpecialInstructions()) {
@@ -795,6 +784,19 @@
         </div>
       </div>
     </div>
+  </ng-template>
+
+  <app-cart-drawer [isOpen]="showMobileCart()" (closed)="closeMobileCart()" [ariaLabel]="'Cart'">
+    <ng-container [ngTemplateOutlet]="cartContent"></ng-container>
+  </app-cart-drawer>
+
+  <aside
+    class="relative hidden flex-col lg:flex lg:h-full lg:min-h-0 lg:shrink-0 lg:overflow-hidden lg:rounded-lg lg:border-l-2 lg:border-gray-200 lg:shadow-[-8px_0_24px_rgba(0,0,0,0.1)] lg:transition-all lg:duration-400 lg:ease-[cubic-bezier(0.175,0.885,0.32,1.275)]"
+    [class.lg:w-[336px]]="!isCartCollapsed()"
+    [class.lg:w-[88px]]="isCartCollapsed()"
+    (mouseleave)="onRailTriggerLeave()"
+  >
+    <ng-container [ngTemplateOutlet]="cartContent"></ng-container>
   </aside>
 </div>
 
