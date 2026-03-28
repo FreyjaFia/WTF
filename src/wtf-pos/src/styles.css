@@ -8,6 +8,10 @@
   themes: light --default;
 }
 
+@theme {
+  --breakpoint-sm: 599px;
+}
+
 /* Force light mode regardless of OS preference */
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -49,6 +53,22 @@ body {
 
 .hover\:bg-transition:hover {
   transition: background-color 0.2s ease-in-out;
+}
+
+.sidebar-active {
+  position: relative;
+  background-color: #f1f5f9;
+}
+
+.sidebar-active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  background: #047857;
+  border-radius: 999px;
 }
 
 /* Keep custom scrollbars on desktop only; Android WebView can show a persistent

@@ -1,19 +1,19 @@
 <div class="flex h-full flex-col overflow-hidden bg-white">
   <app-offline-banner />
 
-  <div class="flex min-h-0 flex-1 flex-col md:flex-row">
-    <div #sidebarHost class="hidden md:flex">
+  <div class="flex min-h-0 flex-1 flex-col sm:flex-row">
+    <div #sidebarHost class="hidden sm:flex">
       <app-sidebar />
     </div>
 
     <div class="flex min-h-0 min-w-0 flex-1 flex-col">
-      <app-header class="md:hidden" />
+      <app-header class="sm:hidden" />
 
       <div class="min-h-0 flex-1 px-4 py-4 md:px-6 md:py-6">
         <router-outlet />
       </div>
 
-      <app-dock class="md:hidden" />
+      <app-dock class="sm:hidden" />
     </div>
   </div>
 </div>

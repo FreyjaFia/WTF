@@ -23,7 +23,7 @@ export class LayoutComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
-    this.mediaQuery = window.matchMedia('(min-width: 768px)');
+    this.mediaQuery = window.matchMedia('(min-width: 599px)');
     this.mediaQuery.addEventListener?.('change', this.onMediaChange);
 
     if (this.sidebarHost?.nativeElement) {

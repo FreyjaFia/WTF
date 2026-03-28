@@ -1,5 +1,5 @@
 <div
-  class="fixed inset-y-0 right-0 z-50 w-screen md:left-(--sidebar-width,0px) md:w-[calc(100vw-var(--sidebar-width,0px))] xl:hidden"
+  class="fixed inset-y-0 right-0 z-40 w-screen sm:left-[var(--sidebar-width,0px)] sm:w-[calc(100vw-var(--sidebar-width,0px))] xl:hidden"
   style="
     padding-top: max(var(--safe-area-top, 0px), env(safe-area-inset-top));
     padding-bottom: max(var(--safe-area-bottom, 0px), env(safe-area-inset-bottom));
@@ -8,7 +8,7 @@
   [class.pointer-events-none]="!isOpen()"
 >
   <div
-    class="absolute inset-0 bg-black/30 backdrop-blur-[1px] transition-opacity ease-in-out"
+    class="absolute inset-0 bg-transparent transition-opacity ease-in-out"
     [class.duration-300]="hasTransitions()"
     [class.duration-0]="!hasTransitions()"
     [class.opacity-100]="isOpen()"
@@ -22,7 +22,7 @@
   ></div>
 
   <div
-    class="fixed inset-y-0 right-0 z-50 flex h-full w-screen flex-col bg-white shadow-2xl transition-transform ease-in-out will-change-transform md:left-(--sidebar-width,0px) md:w-[calc(100vw-var(--sidebar-width,0px))] xl:hidden"
+    class="fixed inset-y-0 right-0 z-40 flex h-full w-screen flex-col bg-white shadow-2xl transition-transform ease-in-out will-change-transform sm:left-[var(--sidebar-width,0px)] sm:w-[calc(100vw-var(--sidebar-width,0px))] xl:hidden"
     style="
       padding-top: max(var(--safe-area-top, 0px), env(safe-area-inset-top));
       padding-bottom: max(var(--safe-area-bottom, 0px), env(safe-area-inset-bottom));
