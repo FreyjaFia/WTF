@@ -10,6 +10,7 @@ import {
 } from '@core/services';
 import { appVersion } from '@environments/version';
 import { IconComponent } from '@shared/components';
+import { AppRoutes } from '@shared/constants/app-routes';
 import { finalize, timeout } from 'rxjs/operators';
 
 @Component({
@@ -39,7 +40,7 @@ export class Login implements OnInit, OnDestroy {
   });
 
   private pendingSyncModalStackId: number | null = null;
-  private pendingDefaultRoute = '/orders/editor';
+  private pendingDefaultRoute: string = AppRoutes.OrdersEditor;
   private checkingPendingAfterLogin = false;
 
   public ngOnInit(): void {
@@ -117,7 +118,7 @@ export class Login implements OnInit, OnDestroy {
 
   protected goToOrderList(): void {
     this.closePendingSyncModal();
-    void this.router.navigateByUrl('/orders/list', { replaceUrl: true });
+    void this.router.navigateByUrl(AppRoutes.OrdersList, { replaceUrl: true });
   }
 
   protected dismissPendingSyncReminder(): void {
@@ -168,6 +169,6 @@ export class Login implements OnInit, OnDestroy {
   }
 
   private getPostLoginRoute(): string {
-    return this.auth.canAccessManagement() ? '/dashboard' : '/orders/editor';
+    return this.auth.canAccessManagement() ? AppRoutes.Dashboard : AppRoutes.OrdersEditor;
   }
 }

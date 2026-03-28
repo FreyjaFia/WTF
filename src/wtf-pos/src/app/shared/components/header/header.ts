@@ -5,6 +5,7 @@ import { AuthLoadingService, AuthService, ConnectivityService, ImageCacheService
 import { appVersion } from '@environments/version';
 import { AvatarComponent } from '@shared/components/avatar/avatar';
 import { IconComponent } from '@shared/components/icons/icon/icon';
+import { AppRoutes } from '@shared/constants/app-routes';
 
 @Component({
   selector: 'app-header',
@@ -16,6 +17,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   protected readonly authService = inject(AuthService);
   protected readonly router = inject(Router);
+  protected readonly routes = AppRoutes;
   private readonly connectivity = inject(ConnectivityService);
   private readonly imageCache = inject(ImageCacheService);
   private readonly authLoading = inject(AuthLoadingService);
@@ -58,12 +60,12 @@ export class HeaderComponent implements OnInit, OnDestroy {
   protected goToMyProfile(event?: Event): void {
     event?.preventDefault();
     this.closeDropdownFocus();
-    this.router.navigateByUrl('/my-profile');
+    this.router.navigateByUrl(this.routes.MyProfile);
   }
 
   protected logout(): void {
     this.authService.logout();
-    this.router.navigateByUrl('/login', { replaceUrl: true });
+    this.router.navigateByUrl(this.routes.Login, { replaceUrl: true });
   }
 
   private loadMe(): void {

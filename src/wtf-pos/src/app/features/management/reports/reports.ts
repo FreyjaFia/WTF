@@ -7,6 +7,7 @@ import { Capacitor } from '@capacitor/core';
 import { Directory, Filesystem } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import { AlertService, ReportsService, UserService } from '@core/services';
+import { ServiceErrorMessages } from '@core/messages';
 import {
   SideDrawerComponent,
   IconComponent,
@@ -1457,14 +1458,14 @@ export class ReportsComponent implements OnInit {
       if (!opened) {
         const shared = await this.tryShareFile(uri);
         if (!shared) {
-          this.alertService.info('File was downloaded but could not be opened automatically.');
+          this.alertService.info(ServiceErrorMessages.Report.FileOpenFailed);
         }
       }
     } catch {
       try {
         this.triggerBrowserDownload(blob, fileName);
       } catch {
-        this.alertService.error('Failed to download file on mobile.');
+        this.alertService.error(ServiceErrorMessages.Report.DownloadFileFailed);
       }
     }
   }
@@ -1488,7 +1489,7 @@ export class ReportsComponent implements OnInit {
       }
     }
 
-    throw new Error('No writable directory found.');
+    throw new Error(ServiceErrorMessages.Report.NoWritableDirectory);
   }
 
   private async tryOpenFile(filePath: string, contentType: string): Promise<boolean> {
@@ -1525,16 +1526,17 @@ export class ReportsComponent implements OnInit {
           return;
         }
 
-        reject(new Error('Unable to read blob data.'));
+        reject(new Error(ServiceErrorMessages.Report.ReadBlobFailed));
       };
-      reader.onerror = () => reject(reader.error ?? new Error('Unable to read blob data.'));
+      reader.onerror = () =>
+        reject(reader.error ?? new Error(ServiceErrorMessages.Report.ReadBlobFailed));
       reader.readAsDataURL(blob);
     });
 
     const marker = 'base64,';
     const markerIndex = dataUrl.indexOf(marker);
     if (markerIndex < 0) {
-      throw new Error('Invalid blob data.');
+      throw new Error(ServiceErrorMessages.Report.InvalidBlobData);
     }
 
     return dataUrl.slice(markerIndex + marker.length);

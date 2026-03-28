@@ -9,7 +9,7 @@
       </div>
       <a
         class="btn btn-sm rounded-lg border-0 bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg"
-        [routerLink]="['/orders/editor']"
+        [routerLink]="routes.OrdersEditor"
       >
         <app-icon name="icon-plus" [class]="'h-4 w-4'" />
         New Order
@@ -46,13 +46,12 @@
         </button>
         @if (!isAndroidPlatform) {
           <button
-            class="tooltip tooltip-bottom pointer-events-auto z-30 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
+            class="pointer-events-auto z-30 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
             [class.opacity-70]="isRefreshing()"
             type="button"
             (click)="refresh()"
             [disabled]="isRefreshing()"
             aria-label="Refresh orders"
-            data-tip="Refresh"
           >
             @if (isRefreshing()) {
               <app-icon
@@ -94,13 +93,12 @@
         />
         @if (!isAndroidPlatform) {
           <button
-            class="tooltip tooltip-bottom pointer-events-auto z-30 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
+            class="pointer-events-auto z-30 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
             [class.opacity-70]="isRefreshing()"
             type="button"
             (click)="refresh()"
             [disabled]="isRefreshing()"
             aria-label="Refresh orders"
-            data-tip="Refresh"
           >
             @if (isRefreshing()) {
               <app-icon

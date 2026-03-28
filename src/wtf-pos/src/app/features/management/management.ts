@@ -9,6 +9,7 @@ import {
 } from '@angular/router';
 import { AuthService, ListStateService } from '@core/services';
 import { IconComponent } from '@shared/components';
+import { AppRoutes } from '@shared/constants/app-routes';
 
 @Component({
   selector: 'app-management',
@@ -27,6 +28,7 @@ export class ManagementComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly listState = inject(ListStateService);
   protected readonly authService = inject(AuthService);
+  protected readonly routes = AppRoutes;
   protected readonly isSidebarCollapsed = signal(false);
   private readonly activeSignals = new Map<string, ReturnType<typeof routerIsActive>>();
 
@@ -39,7 +41,7 @@ export class ManagementComponent implements OnInit {
   protected isActive(route: string): boolean {
     let routeActiveSignal = this.activeSignals.get(route);
     if (!routeActiveSignal) {
-      const routeTree = this.router.createUrlTree(['/management', route]);
+      const routeTree = this.router.createUrlTree([AppRoutes.ManagementRoot, route]);
       routeActiveSignal = routerIsActive(
         routeTree,
         this.router,

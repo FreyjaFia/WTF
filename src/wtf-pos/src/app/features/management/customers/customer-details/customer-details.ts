@@ -4,6 +4,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AlertService, AuthService, CustomerService, ModalStackService } from '@core/services';
 import { AvatarComponent, BadgeComponent, IconComponent } from '@shared/components';
 import { CustomerDto } from '@shared/models';
+import { AppRoutes } from '@shared/constants/app-routes';
 
 @Component({
   selector: 'app-customer-details',
@@ -20,6 +21,7 @@ export class CustomerDetailsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly alertService = inject(AlertService);
   private readonly modalStack = inject(ModalStackService);
+  protected readonly routes = AppRoutes;
 
   protected readonly customer = signal<CustomerDto | null>(null);
   protected readonly isLoading = signal(false);
@@ -51,7 +53,7 @@ export class CustomerDetailsComponent implements OnInit {
   }
 
   protected goBack(): void {
-    this.router.navigate(['/management/customers']);
+    this.router.navigateByUrl(AppRoutes.ManagementCustomers);
   }
 
   protected navigateToEdit(): void {
@@ -60,7 +62,7 @@ export class CustomerDetailsComponent implements OnInit {
       return;
     }
     if (this.customer()) {
-      this.router.navigate(['/management/customers/edit', this.customer()!.id]);
+      this.router.navigateByUrl(AppRoutes.ManagementCustomerEditById(this.customer()!.id));
     }
   }
 
@@ -109,7 +111,7 @@ export class CustomerDetailsComponent implements OnInit {
         this.showDeleteModal.set(false);
         this.removeFromStack();
         this.alertService.successDeleted('Customer');
-        this.router.navigateByUrl('/management/customers');
+        this.router.navigateByUrl(AppRoutes.ManagementCustomers);
       },
       error: (err) => {
         this.isDeleting.set(false);

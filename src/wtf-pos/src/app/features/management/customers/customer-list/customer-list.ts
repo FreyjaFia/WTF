@@ -21,6 +21,7 @@ import {
   type FilterOption,
 } from '@shared/components';
 import { CustomerDto } from '@shared/models';
+import { AppRoutes } from '@shared/constants/app-routes';
 import { debounceTime } from 'rxjs';
 
 type SortColumn = 'name' | 'address';
@@ -57,6 +58,7 @@ export class CustomerListComponent implements OnInit {
   private readonly alertService = inject(AlertService);
   private readonly listState = inject(ListStateService);
   private readonly modalStack = inject(ModalStackService);
+  protected readonly routes = AppRoutes;
 
   protected readonly customers = signal<CustomerDto[]>([]);
   protected readonly customersCache = signal<CustomerDto[]>([]);
@@ -189,14 +191,14 @@ export class CustomerListComponent implements OnInit {
     }
 
     if (customerId) {
-      this.router.navigate(['/management/customers/edit', customerId]);
+      this.router.navigateByUrl(AppRoutes.ManagementCustomerEditById(customerId));
     } else {
-      this.router.navigate(['/management/customers/new']);
+      this.router.navigateByUrl(AppRoutes.ManagementCustomersNew);
     }
   }
 
   protected navigateToDetails(customerId: string): void {
-    this.router.navigate(['/management/customers/details', customerId]);
+    this.router.navigateByUrl(AppRoutes.ManagementCustomerDetailsById(customerId));
   }
 
   protected deleteCustomer(customer: CustomerDto): void {

@@ -4,7 +4,7 @@
     <h2 class="mb-3 text-xl font-bold text-gray-900">Management</h2>
     <nav class="flex items-stretch gap-1.5 rounded-xl bg-gray-100 p-1.5">
       <a
-        routerLink="products"
+        [routerLink]="routes.ManagementProducts"
         routerLinkActive="bg-green-50 text-emerald-700"
         [routerLinkActiveOptions]="{ exact: false }"
         class="flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-2 pt-2 pb-2.5 text-[10px] leading-tight font-normal text-gray-500 transition-colors"
@@ -16,7 +16,7 @@
       </a>
       @if (canReadCustomers()) {
         <a
-          routerLink="customers"
+          [routerLink]="routes.ManagementCustomers"
           routerLinkActive="bg-green-50 text-emerald-700"
           [routerLinkActiveOptions]="{ exact: false }"
           class="flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-2 pt-2 pb-2.5 text-[10px] leading-tight font-normal text-gray-500 transition-colors"
@@ -32,7 +32,7 @@
         </a>
       }
       <a
-        routerLink="promotions"
+        [routerLink]="routes.ManagementPromotions"
         routerLinkActive="bg-green-50 text-emerald-700"
         [routerLinkActiveOptions]="{ exact: false }"
         class="flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-2 pt-2 pb-2.5 text-[10px] leading-tight font-normal text-gray-500 transition-colors"
@@ -43,7 +43,7 @@
         Promos
       </a>
       <a
-        routerLink="users"
+        [routerLink]="routes.ManagementUsers"
         routerLinkActive="bg-green-50 text-emerald-700"
         [routerLinkActiveOptions]="{ exact: false }"
         class="flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-2 pt-2 pb-2.5 text-[10px] leading-tight font-normal text-gray-500 transition-colors"
@@ -55,7 +55,7 @@
       </a>
       @if (canAccessReports()) {
         <a
-          routerLink="reports"
+          [routerLink]="routes.ManagementReports"
           routerLinkActive="bg-green-50 text-emerald-700"
           [routerLinkActiveOptions]="{ exact: false }"
           class="flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-2 pt-2 pb-2.5 text-[10px] leading-tight font-normal text-gray-500 transition-colors"
@@ -73,7 +73,7 @@
       }
       @if (canAccessAuditLogs()) {
         <a
-          routerLink="audit-logs"
+          [routerLink]="routes.ManagementAuditLogs"
           routerLinkActive="bg-green-50 text-emerald-700"
           [routerLinkActiveOptions]="{ exact: false }"
           class="flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-2 pt-2 pb-2.5 text-[10px] leading-tight font-normal text-gray-500 transition-colors"
@@ -91,7 +91,7 @@
       }
       @if (canAccessSchemaScriptHistory()) {
         <a
-          routerLink="schema-scripts"
+          [routerLink]="routes.ManagementSchemaScripts"
           routerLinkActive="bg-green-50 text-emerald-700"
           [routerLinkActiveOptions]="{ exact: false }"
           class="flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-2 pt-2 pb-2.5 text-[10px] leading-tight font-normal text-gray-500 transition-colors"
@@ -112,7 +112,7 @@
 
   <!-- Desktop Sidebar Navigation -->
   <div
-    class="hidden shrink-0 flex-col border-r border-gray-200 bg-white transition-all duration-400 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] lg:flex"
+    class="hidden shrink-0 flex-col border-r border-gray-200 bg-white transition-[width] duration-400 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] lg:flex"
     [class.w-64]="!isSidebarCollapsed()"
     [class.w-20]="isSidebarCollapsed()"
   >
@@ -126,16 +126,13 @@
       }
       <button
         type="button"
-        class="tooltip z-50 cursor-pointer rounded-lg p-2 transition-all duration-400 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:bg-gray-100 active:scale-95"
-        [class.tooltip-right]="isSidebarCollapsed()"
-        [class.tooltip-bottom]="!isSidebarCollapsed()"
+        class="z-50 cursor-pointer rounded-lg p-2 hover:bg-gray-100 active:scale-95"
         (click)="toggleSidebar()"
         [attr.aria-label]="isSidebarCollapsed() ? 'Expand sidebar' : 'Collapse sidebar'"
-        [attr.data-tip]="isSidebarCollapsed() ? 'Expand' : 'Collapse'"
       >
         <app-icon
           [name]="isSidebarCollapsed() ? 'icon-chevrons-right' : 'icon-chevrons-left'"
-          [class]="'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'"
+          [class]="'h-5 w-5 text-gray-600 hover:text-gray-900'"
           [fill]="'currentColor'"
         ></app-icon>
       </button>
@@ -143,16 +140,14 @@
 
     <nav class="space-y-2">
       <a
-        routerLink="products"
+        [routerLink]="routes.ManagementProducts"
         routerLinkActive="bg-green-50"
         [routerLinkActiveOptions]="{ exact: false }"
-        class="tooltip mr-4 flex items-center rounded-lg px-4 py-3 whitespace-nowrap text-gray-700 transition-all duration-400 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:bg-gray-50"
+        class="mr-4 flex items-center rounded-lg px-4 py-3 whitespace-nowrap text-gray-700 hover:bg-gray-50"
         [class.justify-center]="isSidebarCollapsed()"
         [class.gap-3]="!isSidebarCollapsed()"
-        [class.tooltip-right]="isSidebarCollapsed()"
-        [class.tooltip-bottom]="!isSidebarCollapsed()"
         [class.z-50]="isSidebarCollapsed()"
-        [attr.data-tip]="'Products'"
+        title="Products"
         [class.text-emerald-700]="isActive('products')"
         [class.bg-green-50]="isActive('products')"
       >
@@ -164,16 +159,14 @@
 
       @if (canReadCustomers()) {
         <a
-          routerLink="customers"
+          [routerLink]="routes.ManagementCustomers"
           routerLinkActive="bg-green-50"
           [routerLinkActiveOptions]="{ exact: false }"
-          class="tooltip mr-4 flex items-center rounded-lg px-4 py-3 whitespace-nowrap text-gray-700 transition-all duration-400 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:bg-gray-50"
+          class="mr-4 flex items-center rounded-lg px-4 py-3 whitespace-nowrap text-gray-700 hover:bg-gray-50"
           [class.justify-center]="isSidebarCollapsed()"
           [class.gap-3]="!isSidebarCollapsed()"
-          [class.tooltip-right]="isSidebarCollapsed()"
-          [class.tooltip-bottom]="!isSidebarCollapsed()"
           [class.z-50]="isSidebarCollapsed()"
-          [attr.data-tip]="'Customers'"
+          title="Customers"
           [class.text-emerald-700]="isActive('customers')"
           [class.bg-green-50]="isActive('customers')"
         >
@@ -185,16 +178,14 @@
       }
 
       <a
-        routerLink="promotions"
+        [routerLink]="routes.ManagementPromotions"
         routerLinkActive="bg-green-50"
         [routerLinkActiveOptions]="{ exact: false }"
-        class="tooltip mr-4 flex items-center rounded-lg px-4 py-3 whitespace-nowrap text-gray-700 transition-all duration-400 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:bg-gray-50"
+        class="mr-4 flex items-center rounded-lg px-4 py-3 whitespace-nowrap text-gray-700 hover:bg-gray-50"
         [class.justify-center]="isSidebarCollapsed()"
         [class.gap-3]="!isSidebarCollapsed()"
-        [class.tooltip-right]="isSidebarCollapsed()"
-        [class.tooltip-bottom]="!isSidebarCollapsed()"
         [class.z-50]="isSidebarCollapsed()"
-        [attr.data-tip]="'Promotions'"
+        title="Promotions"
         [class.text-emerald-700]="isActive('promotions')"
         [class.bg-green-50]="isActive('promotions')"
       >
@@ -205,16 +196,14 @@
       </a>
 
       <a
-        routerLink="users"
+        [routerLink]="routes.ManagementUsers"
         routerLinkActive="bg-green-50"
         [routerLinkActiveOptions]="{ exact: false }"
-        class="tooltip mr-4 flex items-center rounded-lg px-4 py-3 whitespace-nowrap text-gray-700 transition-all duration-400 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:bg-gray-50"
+        class="mr-4 flex items-center rounded-lg px-4 py-3 whitespace-nowrap text-gray-700 hover:bg-gray-50"
         [class.justify-center]="isSidebarCollapsed()"
         [class.gap-3]="!isSidebarCollapsed()"
-        [class.tooltip-right]="isSidebarCollapsed()"
-        [class.tooltip-bottom]="!isSidebarCollapsed()"
         [class.z-50]="isSidebarCollapsed()"
-        [attr.data-tip]="'Users'"
+        title="Users"
         [class.text-emerald-700]="isActive('users')"
         [class.bg-green-50]="isActive('users')"
       >
@@ -226,16 +215,14 @@
 
       @if (canAccessReports()) {
         <a
-          routerLink="reports"
+          [routerLink]="routes.ManagementReports"
           routerLinkActive="bg-green-50"
           [routerLinkActiveOptions]="{ exact: false }"
-          class="tooltip mr-4 flex items-center rounded-lg px-4 py-3 whitespace-nowrap text-gray-700 transition-all duration-400 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:bg-gray-50"
+          class="mr-4 flex items-center rounded-lg px-4 py-3 whitespace-nowrap text-gray-700 hover:bg-gray-50"
           [class.justify-center]="isSidebarCollapsed()"
           [class.gap-3]="!isSidebarCollapsed()"
-          [class.tooltip-right]="isSidebarCollapsed()"
-          [class.tooltip-bottom]="!isSidebarCollapsed()"
           [class.z-50]="isSidebarCollapsed()"
-          [attr.data-tip]="'Reports'"
+          title="Reports"
           [class.text-emerald-700]="isActive('reports')"
           [class.bg-green-50]="isActive('reports')"
         >
@@ -248,16 +235,14 @@
 
       @if (canAccessAuditLogs()) {
         <a
-          routerLink="audit-logs"
+          [routerLink]="routes.ManagementAuditLogs"
           routerLinkActive="bg-green-50"
           [routerLinkActiveOptions]="{ exact: false }"
-          class="tooltip mr-4 flex items-center rounded-lg px-4 py-3 whitespace-nowrap text-gray-700 transition-all duration-400 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:bg-gray-50"
+          class="mr-4 flex items-center rounded-lg px-4 py-3 whitespace-nowrap text-gray-700 hover:bg-gray-50"
           [class.justify-center]="isSidebarCollapsed()"
           [class.gap-3]="!isSidebarCollapsed()"
-          [class.tooltip-right]="isSidebarCollapsed()"
-          [class.tooltip-bottom]="!isSidebarCollapsed()"
           [class.z-50]="isSidebarCollapsed()"
-          [attr.data-tip]="'Audit Logs'"
+          title="Audit Logs"
           [class.text-emerald-700]="isActive('audit-logs')"
           [class.bg-green-50]="isActive('audit-logs')"
         >
@@ -270,16 +255,14 @@
 
       @if (canAccessSchemaScriptHistory()) {
         <a
-          routerLink="schema-scripts"
+          [routerLink]="routes.ManagementSchemaScripts"
           routerLinkActive="bg-green-50"
           [routerLinkActiveOptions]="{ exact: false }"
-          class="tooltip mr-4 flex items-center rounded-lg px-4 py-3 whitespace-nowrap text-gray-700 transition-all duration-400 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:bg-gray-50"
+          class="mr-4 flex items-center rounded-lg px-4 py-3 whitespace-nowrap text-gray-700 hover:bg-gray-50"
           [class.justify-center]="isSidebarCollapsed()"
           [class.gap-3]="!isSidebarCollapsed()"
-          [class.tooltip-right]="isSidebarCollapsed()"
-          [class.tooltip-bottom]="!isSidebarCollapsed()"
           [class.z-50]="isSidebarCollapsed()"
-          [attr.data-tip]="'Schema Scripts'"
+          title="Schema Scripts"
           [class.text-emerald-700]="isActive('schema-scripts')"
           [class.bg-green-50]="isActive('schema-scripts')"
         >

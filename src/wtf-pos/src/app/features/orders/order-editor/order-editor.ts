@@ -65,6 +65,7 @@ import {
   ProductSubCategoryEnum,
   UpdateOrderCommand,
 } from '@shared/models';
+import { AppRoutes } from '@shared/constants/app-routes';
 import { debounceTime, forkJoin, of, switchMap } from 'rxjs';
 import { CheckoutModal } from '../checkout-modal/checkout-modal';
 
@@ -554,7 +555,7 @@ export class OrderEditor implements OnInit, OnDestroy {
           this.orderSpecialInstructions.set(order.specialInstructions ?? '');
 
           if (order.status !== OrderStatusEnum.Pending) {
-            this.router.navigate(['/orders/details', order.id]);
+            this.router.navigateByUrl(AppRoutes.OrderDetailsById(order.id));
             return of(null);
           }
 
@@ -580,7 +581,7 @@ export class OrderEditor implements OnInit, OnDestroy {
       if (!pending) {
         this.alertService.error('Offline order not found.');
         this.isLoading.set(false);
-        this.router.navigate(['/orders/list']);
+        this.router.navigateByUrl(AppRoutes.OrdersList);
         return;
       }
 
@@ -1438,7 +1439,7 @@ export class OrderEditor implements OnInit, OnDestroy {
   }
 
   protected cancel(): void {
-    this.router.navigate(['/orders/list']);
+    this.router.navigateByUrl(AppRoutes.OrdersList);
   }
 
   public canDeactivate(): boolean | Promise<boolean> {
@@ -1526,7 +1527,7 @@ export class OrderEditor implements OnInit, OnDestroy {
             : 'Order has been cancelled';
 
         this.alertService.success(message);
-        this.router.navigate(['/orders/list']);
+        this.router.navigateByUrl(AppRoutes.OrdersList);
       },
       error: (err: Error) => {
         this.alertService.error(err.message || this.alertService.getUpdateErrorMessage('order'));
@@ -1556,7 +1557,7 @@ export class OrderEditor implements OnInit, OnDestroy {
     this.offlineOrder.remove(this.offlineLocalId).then(() => {
       this.skipGuard = true;
       this.alertService.success(`Order ${this.offlineLocalId} discarded.`);
-      this.router.navigate(['/orders/list']);
+      this.router.navigateByUrl(AppRoutes.OrdersList);
     });
   }
 
@@ -1689,7 +1690,7 @@ export class OrderEditor implements OnInit, OnDestroy {
         this.isSavingOrder.set(false);
         this.skipGuard = true;
         this.cartPersistence.clear();
-        this.router.navigate(['/orders/list']);
+        this.router.navigateByUrl(AppRoutes.OrdersList);
       },
       error: (err) => {
         this.isSavingOrder.set(false);
@@ -1708,7 +1709,7 @@ export class OrderEditor implements OnInit, OnDestroy {
         this.alertService.info(
           `Order ${localId} saved offline. It will sync when you're back online.`,
         );
-        this.router.navigate(['/orders/list']);
+        this.router.navigateByUrl(AppRoutes.OrdersList);
       })
       .catch(() => {
         this.isSavingOrder.set(false);
@@ -1751,7 +1752,7 @@ export class OrderEditor implements OnInit, OnDestroy {
         this.isSavingOrder.set(false);
         this.skipGuard = true;
         this.alertService.info(`Order ${this.offlineLocalId} updated offline.`);
-        this.router.navigate(['/orders/list']);
+        this.router.navigateByUrl(AppRoutes.OrdersList);
       })
       .catch(() => {
         this.isSavingOrder.set(false);
@@ -1797,7 +1798,7 @@ export class OrderEditor implements OnInit, OnDestroy {
         this.isSavingOrder.set(false);
         this.skipGuard = true;
         this.cartPersistence.clear();
-        this.router.navigate(['/orders/list']);
+        this.router.navigateByUrl(AppRoutes.OrdersList);
       },
       error: (err) => {
         this.isSavingOrder.set(false);
@@ -1809,7 +1810,7 @@ export class OrderEditor implements OnInit, OnDestroy {
           message.toLowerCase().includes('cannot be updated')
         ) {
           this.skipGuard = true;
-          this.router.navigate(['/orders/list']);
+          this.router.navigateByUrl(AppRoutes.OrdersList);
         }
       },
     });

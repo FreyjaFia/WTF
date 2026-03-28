@@ -10,7 +10,7 @@
       @if (canWriteManagement()) {
         <a
           class="btn btn-sm rounded-lg border-0 bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg"
-          [routerLink]="['/management/users/new']"
+          [routerLink]="routes.ManagementUsersNew"
         >
           <app-icon name="icon-plus" [class]="'h-4 w-4'" />
           Add User
@@ -44,13 +44,12 @@
         </button>
         @if (!isAndroidPlatform) {
           <button
-            class="tooltip tooltip-bottom pointer-events-auto z-30 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
+            class="pointer-events-auto z-30 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
             [class.opacity-70]="isRefreshing()"
             type="button"
             (click)="refresh()"
             [disabled]="isRefreshing()"
             aria-label="Refresh users"
-            data-tip="Refresh"
           >
             @if (isRefreshing()) {
               <app-icon
@@ -91,13 +90,12 @@
         />
         @if (!isAndroidPlatform) {
           <button
-            class="tooltip tooltip-bottom pointer-events-auto z-30 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
+            class="pointer-events-auto z-30 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
             [class.opacity-70]="isRefreshing()"
             type="button"
             (click)="refresh()"
             [disabled]="isRefreshing()"
             aria-label="Refresh users"
-            data-tip="Refresh"
           >
             @if (isRefreshing()) {
               <app-icon
@@ -295,7 +293,7 @@
               >
                 <a
                   class="flex min-w-0 flex-1 cursor-pointer items-center gap-3 self-stretch no-underline focus:outline-none md:col-span-11 md:grid md:grid-cols-11 md:gap-4"
-                  [routerLink]="['/management/users/details', user.id]"
+                  [routerLink]="routes.ManagementUserDetailsById(user.id)"
                   [attr.aria-label]="'View details for ' + user.firstName + ' ' + user.lastName"
                 >
                   <!-- Avatar and Name -->
@@ -380,7 +378,7 @@
                       >
                         <li>
                           <a
-                            [routerLink]="['/management/users/edit', user.id]"
+                            [routerLink]="routes.ManagementUserEditById(user.id)"
                             class="flex items-center gap-2 text-gray-700 hover:bg-gray-100"
                           >
                             <app-icon name="icon-edit" [class]="'h-4 w-4 text-gray-600'" />

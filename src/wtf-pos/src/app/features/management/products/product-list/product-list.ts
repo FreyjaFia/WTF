@@ -21,6 +21,7 @@ import {
   SideDrawerComponent,
 } from '@shared/components';
 import { ProductCategoryEnum, ProductDto } from '@shared/models';
+import { AppRoutes } from '@shared/constants/app-routes';
 import { debounceTime } from 'rxjs';
 
 type SortColumn = 'name' | 'price';
@@ -58,6 +59,7 @@ export class ProductListComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly listState = inject(ListStateService);
   private readonly modalStack = inject(ModalStackService);
+  protected readonly routes = AppRoutes;
 
   protected readonly products = signal<ProductDto[]>([]);
   protected readonly productsCache = signal<ProductDto[]>([]);
@@ -223,14 +225,14 @@ export class ProductListComponent implements OnInit {
     }
 
     if (productId) {
-      this.router.navigate(['/management/products/edit', productId]);
+      this.router.navigateByUrl(AppRoutes.ManagementProductEditById(productId));
     } else {
-      this.router.navigate(['/management/products/new']);
+      this.router.navigateByUrl(AppRoutes.ManagementProductsNew);
     }
   }
 
   protected navigateToDetails(productId: string): void {
-    this.router.navigate(['/management/products/details', productId]);
+    this.router.navigateByUrl(AppRoutes.ManagementProductDetailsById(productId));
   }
 
   protected deleteProduct(product: ProductDto): void {

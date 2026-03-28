@@ -5,6 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { AlertService, CustomerService, ModalStackService } from '@core/services';
 import { AvatarComponent, IconComponent } from '@shared/components';
 import { CreateCustomerDto, UpdateCustomerDto } from '@shared/models';
+import { AppRoutes } from '@shared/constants/app-routes';
 
 @Component({
   selector: 'app-customer-editor',
@@ -325,14 +326,14 @@ export class CustomerEditorComponent implements OnInit {
 
   protected goBack(): void {
     if (this.isEditMode() && this.customerId) {
-      this.router.navigate(['/management/customers/details', this.customerId]);
+      this.router.navigateByUrl(AppRoutes.ManagementCustomerDetailsById(this.customerId));
     } else {
-      this.router.navigate(['/management/customers']);
+      this.router.navigateByUrl(AppRoutes.ManagementCustomers);
     }
   }
 
   private navigateToDetails(customerId: string): void {
-    this.router.navigate(['/management/customers/details', customerId]);
+    this.router.navigateByUrl(AppRoutes.ManagementCustomerDetailsById(customerId));
   }
 
   protected getErrorMessage(controlName: string): string | null {

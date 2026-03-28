@@ -11,6 +11,7 @@ import {
   FixedBundlePromotionDto,
   ProductDto,
 } from '@shared/models';
+import { AppRoutes } from '@shared/constants/app-routes';
 import { forkJoin } from 'rxjs';
 
 type PromoEditorType = 'fixed-bundle' | 'mix-match';
@@ -530,11 +531,11 @@ export class PromotionEditorComponent implements OnInit {
 
   protected cancel(): void {
     if (this.isEditMode() && this.promotionId) {
-      this.router.navigate(this.buildDetailsRoute(this.promotionId, this.type()));
+      this.router.navigateByUrl(this.buildDetailsRoute(this.promotionId, this.type()));
       return;
     }
 
-    this.router.navigate(['/management/promotions']);
+    this.router.navigateByUrl(AppRoutes.ManagementPromotions);
   }
 
   public canDeactivate(): boolean | Promise<boolean> {
@@ -727,7 +728,7 @@ export class PromotionEditorComponent implements OnInit {
     this.isSaving.set(false);
     this.skipGuard = true;
     this.alertService.success(message);
-    this.router.navigate(this.buildDetailsRoute(this.promotionId!, this.type()));
+    this.router.navigateByUrl(this.buildDetailsRoute(this.promotionId!, this.type()));
   }
 
   private onSaveError(err: Error): void {
@@ -881,10 +882,10 @@ export class PromotionEditorComponent implements OnInit {
     return queryType === 'mix-match' || queryType === 'mixMatch' ? 'mix-match' : 'fixed-bundle';
   }
 
-  private buildDetailsRoute(id: string, type: PromoEditorType): string[] {
+  private buildDetailsRoute(id: string, type: PromoEditorType): string {
     return type === 'mix-match'
-      ? ['/management/promotions/mix-match', id]
-      : ['/management/promotions/fixed-bundles', id];
+      ? AppRoutes.ManagementPromotionMixMatchDetailsById(id)
+      : AppRoutes.ManagementPromotionFixedBundleDetailsById(id);
   }
 
   private utcToLocalInput(utcValue: string | null | undefined): string {
@@ -925,5 +926,3 @@ export class PromotionEditorComponent implements OnInit {
     return local.toISOString();
   }
 }
-
-

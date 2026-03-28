@@ -4,6 +4,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AlertService, AuthService, ModalStackService, UserService } from '@core/services';
 import { AvatarComponent, BadgeComponent, IconComponent } from '@shared/components';
 import { UserDto, UserRoleEnum } from '@shared/models';
+import { AppRoutes } from '@shared/constants/app-routes';
 
 @Component({
   selector: 'app-user-details',
@@ -20,6 +21,7 @@ export class UserDetailsComponent implements OnInit {
   private readonly alertService = inject(AlertService);
   private readonly authService = inject(AuthService);
   private readonly modalStack = inject(ModalStackService);
+  protected readonly routes = AppRoutes;
 
   protected readonly user = signal<UserDto | null>(null);
   protected readonly isLoading = signal(false);
@@ -54,7 +56,7 @@ export class UserDetailsComponent implements OnInit {
   }
 
   protected goBack(): void {
-    this.router.navigate(['/management/users']);
+    this.router.navigateByUrl(AppRoutes.ManagementUsers);
   }
 
   protected navigateToEdit(): void {
@@ -63,7 +65,7 @@ export class UserDetailsComponent implements OnInit {
       return;
     }
 
-    this.router.navigate(['/management/users/edit', this.user()!.id]);
+    this.router.navigateByUrl(AppRoutes.ManagementUserEditById(this.user()!.id));
   }
 
   protected deleteUser(): void {
@@ -104,7 +106,7 @@ export class UserDetailsComponent implements OnInit {
         this.showDeleteModal.set(false);
         this.removeFromStack();
         this.alertService.successDeleted('User');
-        this.router.navigateByUrl('/management/users');
+        this.router.navigateByUrl(AppRoutes.ManagementUsers);
       },
       error: (err) => {
         this.isDeleting.set(false);

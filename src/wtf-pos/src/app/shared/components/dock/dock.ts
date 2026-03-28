@@ -3,6 +3,7 @@ import { Component, inject } from '@angular/core';
 import { RouterLink, RouterModule } from '@angular/router';
 import { AuthService } from '@core/services';
 import { IconComponent } from '@shared/components/icons/icon/icon';
+import { AppRoutes } from '@shared/constants/app-routes';
 
 @Component({
   selector: 'app-dock',
@@ -11,4 +12,5 @@ import { IconComponent } from '@shared/components/icons/icon/icon';
 })
 export class DockComponent {
   protected readonly auth = inject(AuthService);
+  protected readonly routes = AppRoutes;
 }

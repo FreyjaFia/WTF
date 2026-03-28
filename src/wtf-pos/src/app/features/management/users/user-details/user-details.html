@@ -5,10 +5,10 @@
   >
     <div class="flex min-w-0 items-start gap-4">
       <a
-        class="tooltip tooltip-bottom mt-1 shrink-0 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
-        [routerLink]="['/management/users']"
+        class="mt-1 shrink-0 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
+        [routerLink]="routes.ManagementUsers"
         aria-label="Go back"
-        data-tip="Back"
+        title="Back"
       >
         <app-icon name="icon-back" [class]="'h-5 w-5 text-gray-600'" />
       </a>
@@ -33,10 +33,10 @@
 
     @if (user() && canManageUserProfile(user()!)) {
       <div class="flex shrink-0 justify-end gap-2">
-        <a
-          class="btn btn-sm gap-2 rounded-lg border-0 bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg"
-          [routerLink]="['/management/users/edit', user()!.id]"
-        >
+          <a
+            class="btn btn-sm gap-2 rounded-lg border-0 bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg"
+            [routerLink]="routes.ManagementUserEditById(user()!.id)"
+          >
           <app-icon name="icon-edit" [class]="'h-4 w-4'" />
           Edit
         </a>

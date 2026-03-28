@@ -1,4 +1,4 @@
-﻿<div class="flex h-full flex-col lg:ps-6">
+<div class="flex h-full flex-col lg:ps-6">
   <div class="mb-4 flex shrink-0 items-start justify-between sm:mb-6">
     <div>
       <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Schema Scripts</h1>
@@ -6,13 +6,12 @@
     </div>
     @if (!isAndroidPlatform) {
       <button
-        class="tooltip tooltip-bottom pointer-events-auto z-30 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
+        class="pointer-events-auto z-30 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
         [class.opacity-70]="isRefreshing()"
         type="button"
         (click)="refresh()"
         [disabled]="isRefreshing()"
         aria-label="Refresh schema scripts"
-        data-tip="Refresh"
       >
         @if (isRefreshing()) {
           <app-icon

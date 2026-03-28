@@ -2,6 +2,7 @@ import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { AuthService } from '@core/services';
 import { AppRole } from '@shared/constants/app-roles';
+import { AppRoutes } from '@shared/constants/app-routes';
 
 export const roleGuard: CanActivateFn = (route) => {
   const auth = inject(AuthService);
@@ -13,6 +14,6 @@ export const roleGuard: CanActivateFn = (route) => {
     return true;
   }
 
-  router.navigateByUrl('/orders/list');
+  router.navigateByUrl(AppRoutes.OrdersList);
   return false;
 };

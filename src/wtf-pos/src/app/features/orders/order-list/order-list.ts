@@ -32,6 +32,7 @@ import {
 } from '@shared/components';
 import type { CartItemDto } from '@shared/models';
 import { OrderDto, OrderStatusEnum } from '@shared/models';
+import { AppRoutes } from '@shared/constants/app-routes';
 import { debounceTime, Subscription } from 'rxjs';
 
 type SortColumn = 'orderNumber' | 'date' | 'totalAmount';
@@ -78,6 +79,7 @@ export class OrderList implements OnInit, OnDestroy {
   private readonly signalRService = inject(SignalRService);
   protected readonly offlineOrderService = inject(OfflineOrderService);
   protected readonly isOnline = this.connectivity.isOnline;
+  protected readonly routes = AppRoutes;
 
   protected readonly filterForm = new FormGroup({
     searchTerm: new FormControl(''),
@@ -541,15 +543,15 @@ export class OrderList implements OnInit, OnDestroy {
 
   protected openOrder(order: OrderDto): void {
     if (order.status === OrderStatusEnum.Pending) {
-      this.router.navigate(['/orders/editor', order.id]);
+      this.router.navigateByUrl(AppRoutes.OrderEditorById(order.id));
       return;
     }
 
-    this.router.navigate(['/orders/details', order.id]);
+    this.router.navigateByUrl(AppRoutes.OrderDetailsById(order.id));
   }
 
   protected editPendingOrder(localId: string): void {
-    this.router.navigate(['/orders/editor'], { queryParams: { offline: localId } });
+    void this.router.navigate([AppRoutes.OrdersEditor], { queryParams: { offline: localId } });
   }
 
   protected syncPendingOrders(): void {

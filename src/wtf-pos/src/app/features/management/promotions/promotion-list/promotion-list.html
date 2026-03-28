@@ -46,13 +46,12 @@
         </button>
         @if (!isAndroidPlatform) {
           <button
-            class="tooltip tooltip-bottom pointer-events-auto z-30 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
+            class="pointer-events-auto z-30 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
             [class.opacity-70]="isRefreshing()"
             type="button"
             (click)="refresh()"
             [disabled]="isRefreshing()"
             aria-label="Refresh promotions"
-            data-tip="Refresh"
           >
             @if (isRefreshing()) {
               <app-icon
@@ -94,13 +93,12 @@
         />
         @if (!isAndroidPlatform) {
           <button
-            class="tooltip tooltip-bottom pointer-events-auto z-30 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
+            class="pointer-events-auto z-30 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
             [class.opacity-70]="isRefreshing()"
             type="button"
             (click)="refresh()"
             [disabled]="isRefreshing()"
             aria-label="Refresh promotions"
-            data-tip="Refresh"
           >
             @if (isRefreshing()) {
               <app-icon
@@ -317,8 +315,8 @@
                 class="flex min-w-0 flex-1 cursor-pointer items-center gap-3 self-stretch no-underline focus:outline-none md:col-span-11 md:grid md:grid-cols-11 md:gap-4"
                 [routerLink]="
                   promo.typeId === PromotionTypeEnum.MixMatch
-                    ? ['/management/promotions/mix-match', promo.id]
-                    : ['/management/promotions/fixed-bundles', promo.id]
+                    ? routes.ManagementPromotionMixMatchDetailsById(promo.id)
+                    : routes.ManagementPromotionFixedBundleDetailsById(promo.id)
                 "
                 [attr.aria-label]="'View details for ' + promo.name"
               >

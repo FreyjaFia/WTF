@@ -12,6 +12,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { AlertService, AuthService, ModalStackService, UserService } from '@core/services';
 import { AvatarComponent, IconComponent } from '@shared/components';
 import { CreateUserDto, UpdateUserDto, UserRoleEnum } from '@shared/models';
+import { AppRoutes } from '@shared/constants/app-routes';
 import { jwtDecode } from 'jwt-decode';
 import { of, switchMap } from 'rxjs';
 
@@ -109,7 +110,7 @@ export class UserEditorComponent implements OnInit {
 
       if (!currentUserId) {
         this.alertService.error('Unable to load profile. Please sign in again.');
-        this.router.navigateByUrl('/login', { replaceUrl: true });
+        this.router.navigateByUrl(AppRoutes.Login, { replaceUrl: true });
         return;
       }
 
@@ -259,7 +260,7 @@ export class UserEditorComponent implements OnInit {
           user.roleId === UserRoleEnum.SuperAdmin
         ) {
           this.alertService.errorUnauthorized();
-          this.router.navigate(['/management/users']);
+          this.router.navigateByUrl(AppRoutes.ManagementUsers);
           this.isLoading.set(false);
           return;
         }
@@ -463,14 +464,14 @@ export class UserEditorComponent implements OnInit {
     }
 
     if (this.isEditMode() && this.userId) {
-      this.router.navigate(['/management/users/details', this.userId]);
+      this.router.navigateByUrl(AppRoutes.ManagementUserDetailsById(this.userId));
     } else {
-      this.router.navigate(['/management/users']);
+      this.router.navigateByUrl(AppRoutes.ManagementUsers);
     }
   }
 
   private navigateToDetails(userId: string) {
-    this.router.navigate(['/management/users/details', userId]);
+    this.router.navigateByUrl(AppRoutes.ManagementUserDetailsById(userId));
   }
 
   protected hasError(control: string): boolean {

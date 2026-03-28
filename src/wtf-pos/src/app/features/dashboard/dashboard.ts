@@ -18,6 +18,7 @@ import {
   SparklineComponent,
 } from '@shared/components';
 import { type DashboardDto, type DateRangePreset, type DateRangeSelection } from '@shared/models';
+import { AppRoutes } from '@shared/constants/app-routes';
 import { interval, Subscription } from 'rxjs';
 import { DateRangePickerComponent } from './date-range-picker/date-range-picker';
 
@@ -80,6 +81,7 @@ export class Dashboard implements OnInit, OnDestroy {
     { value: 'last30days', label: 'Last 30 Days' },
     { value: 'custom', label: 'Custom Range' },
   ];
+  protected readonly routes = AppRoutes;
 
   protected readonly greeting = GREETINGS[Math.floor(Math.random() * GREETINGS.length)];
 

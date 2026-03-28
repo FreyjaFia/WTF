@@ -36,13 +36,12 @@
       </button>
       @if (!isAndroidPlatform) {
         <button
-          class="tooltip tooltip-bottom pointer-events-auto z-30 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
+          class="pointer-events-auto z-30 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
           [class.opacity-70]="isLoading() || isRefreshing()"
           type="button"
           (click)="refreshDashboard()"
           [disabled]="isLoading() || isRefreshing()"
           aria-label="Refresh dashboard"
-          data-tip="Refresh"
         >
           @if (isLoading() || isRefreshing()) {
             <app-icon
@@ -65,13 +64,12 @@
       <app-date-range-picker (rangeChanged)="onDateRangeChanged($event)" />
       @if (!isAndroidPlatform) {
         <button
-          class="tooltip tooltip-bottom pointer-events-auto z-30 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
+          class="pointer-events-auto z-30 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
           [class.opacity-70]="isLoading() || isRefreshing()"
           type="button"
           (click)="refreshDashboard()"
           [disabled]="isLoading() || isRefreshing()"
           aria-label="Refresh dashboard"
-          data-tip="Refresh"
         >
           @if (isLoading() || isRefreshing()) {
             <app-icon
@@ -616,7 +614,7 @@
                   Recent Activity
                 </h2>
                 <a
-                  routerLink="/orders/list"
+                  [routerLink]="routes.OrdersList"
                   class="text-xs font-medium text-emerald-700 hover:underline"
                 >
                   View All

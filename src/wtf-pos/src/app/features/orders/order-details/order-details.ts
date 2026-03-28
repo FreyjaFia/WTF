@@ -21,6 +21,7 @@ import {
   PaymentMethodEnum,
   PromotionTypeEnum,
 } from '@shared/models';
+import { AppRoutes } from '@shared/constants/app-routes';
 
 @Component({
   selector: 'app-order-details',
@@ -137,7 +138,7 @@ export class OrderDetails implements OnInit {
   }
 
   protected backToOrders(): void {
-    this.router.navigate(['/orders/list']);
+    this.router.navigateByUrl(AppRoutes.OrdersList);
   }
 
   protected refresh(): void {
@@ -514,7 +515,7 @@ export class OrderDetails implements OnInit {
     const orderId = this.route.snapshot.paramMap.get('id');
     if (!orderId) {
       this.alertService.error('Order not found.');
-      this.router.navigate(['/orders/list']);
+      this.router.navigateByUrl(AppRoutes.OrdersList);
       return;
     }
 

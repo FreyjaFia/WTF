@@ -25,6 +25,7 @@ import {
   UpdateProductAddOnPriceOverrideDto,
   UpdateProductDto,
 } from '@shared/models';
+import { AppRoutes } from '@shared/constants/app-routes';
 
 @Component({
   selector: 'app-product-editor',
@@ -457,14 +458,14 @@ export class ProductEditorComponent implements OnInit {
 
   protected goBack(): void {
     if (this.isEditMode() && this.productId) {
-      this.router.navigate(['/management/products/details', this.productId]);
+      this.router.navigateByUrl(AppRoutes.ManagementProductDetailsById(this.productId));
     } else {
-      this.router.navigate(['/management/products']);
+      this.router.navigateByUrl(AppRoutes.ManagementProducts);
     }
   }
 
   private navigateToDetails(productId: string): void {
-    this.router.navigate(['/management/products/details', productId]);
+    this.router.navigateByUrl(AppRoutes.ManagementProductDetailsById(productId));
   }
 
   protected getErrorMessage(controlName: string): string | null {

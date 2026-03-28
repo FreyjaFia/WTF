@@ -14,6 +14,7 @@ import {
   FixedBundlePromotionDto,
   ProductDto,
 } from '@shared/models';
+import { AppRoutes } from '@shared/constants/app-routes';
 import { forkJoin, of, switchMap } from 'rxjs';
 
 type PromotionDetailsType = 'fixed-bundle' | 'mix-match';
@@ -75,7 +76,7 @@ export class PromotionDetailsComponent implements OnInit {
   public ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
     if (!id) {
-      this.router.navigate(['/management/promotions']);
+      this.router.navigateByUrl(AppRoutes.ManagementPromotions);
       return;
     }
 
@@ -88,7 +89,7 @@ export class PromotionDetailsComponent implements OnInit {
   }
 
   protected goBack(): void {
-    this.router.navigate(['/management/promotions']);
+    this.router.navigateByUrl(AppRoutes.ManagementPromotions);
   }
 
   protected navigateToEdit(): void {
@@ -97,7 +98,7 @@ export class PromotionDetailsComponent implements OnInit {
       return;
     }
 
-    this.router.navigate(this.buildEditRoute(id, this.type()));
+    this.router.navigateByUrl(this.buildEditRoute(id, this.type()));
   }
 
   protected getProductName(productId: string): string {
@@ -163,7 +164,7 @@ export class PromotionDetailsComponent implements OnInit {
         this.showDeleteModal.set(false);
         this.removeFromStack();
         this.alertService.successDeleted('Promotion');
-        this.router.navigate(['/management/promotions']);
+        this.router.navigateByUrl(AppRoutes.ManagementPromotions);
       },
       error: (err: Error) => {
         this.isDeleting.set(false);
@@ -204,7 +205,7 @@ export class PromotionDetailsComponent implements OnInit {
         error: (err: Error) => {
           this.alertService.error(err.message);
           this.isLoading.set(false);
-          this.router.navigate(['/management/promotions']);
+          this.router.navigateByUrl(AppRoutes.ManagementPromotions);
         },
       });
   }
@@ -315,10 +316,9 @@ export class PromotionDetailsComponent implements OnInit {
     return queryType === 'mix-match' || queryType === 'mixMatch' ? 'mix-match' : 'fixed-bundle';
   }
 
-  private buildEditRoute(id: string, type: PromotionDetailsType): string[] {
+  private buildEditRoute(id: string, type: PromotionDetailsType): string {
     return type === 'mix-match'
-      ? ['/management/promotions/mix-match', id, 'edit']
-      : ['/management/promotions/fixed-bundles', id, 'edit'];
+      ? AppRoutes.ManagementPromotionMixMatchEditById(id)
+      : AppRoutes.ManagementPromotionFixedBundleEditById(id);
   }
 }
-

@@ -21,6 +21,7 @@ import {
   type FilterOption,
 } from '@shared/components';
 import { UserDto, UserRoleEnum } from '@shared/models';
+import { AppRoutes } from '@shared/constants/app-routes';
 import { debounceTime } from 'rxjs';
 
 type SortColumn = 'name' | 'role';
@@ -58,6 +59,7 @@ export class UserListComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly listState = inject(ListStateService);
   private readonly modalStack = inject(ModalStackService);
+  protected readonly routes = AppRoutes;
 
   protected readonly users = signal<UserDto[]>([]);
   protected readonly usersCache = signal<UserDto[]>([]);
@@ -225,14 +227,14 @@ export class UserListComponent implements OnInit {
     }
 
     if (userId) {
-      this.router.navigate(['/management/users/edit', userId]);
+      this.router.navigateByUrl(AppRoutes.ManagementUserEditById(userId));
     } else {
-      this.router.navigate(['/management/users/new']);
+      this.router.navigateByUrl(AppRoutes.ManagementUsersNew);
     }
   }
 
   protected navigateToDetails(userId: string): void {
-    this.router.navigate(['/management/users/details', userId]);
+    this.router.navigateByUrl(AppRoutes.ManagementUserDetailsById(userId));
   }
 
   protected deleteUser(user: UserDto): void {

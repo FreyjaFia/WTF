@@ -4,11 +4,10 @@
   >
     <div class="flex min-w-0 items-start gap-4">
       <button
-        class="tooltip tooltip-bottom mt-1 shrink-0 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
+        class="mt-1 shrink-0 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
         type="button"
         (click)="cancel()"
         aria-label="Go back"
-        data-tip="Back"
       >
         <app-icon name="icon-back" [class]="'h-5 w-5 text-gray-600'" />
       </button>
@@ -108,9 +107,8 @@
                     />
                     <button
                       type="button"
-                      class="tooltip tooltip-bottom btn btn-circle btn-sm btn-neutral absolute -top-2 -right-2"
+                      class="btn btn-circle btn-sm btn-neutral absolute -top-2 -right-2"
                       (click)="removeImage()"
-                      data-tip="Remove image"
                     >
                       <app-icon name="icon-close" [class]="'h-4 w-4'" />
                     </button>
@@ -380,9 +378,8 @@
                     />
                     <button
                       type="button"
-                      class="tooltip tooltip-bottom btn btn-circle btn-sm btn-neutral absolute -top-2 -right-2"
+                      class="btn btn-circle btn-sm btn-neutral absolute -top-2 -right-2"
                       (click)="removeImage()"
-                      data-tip="Remove image"
                     >
                       <app-icon name="icon-close" [class]="'h-4 w-4'" />
                     </button>
@@ -502,9 +499,8 @@
                             </div>
                             <button
                               type="button"
-                              class="tooltip tooltip-left shrink-0 cursor-pointer rounded-full p-1 text-gray-400 transition-all hover:bg-red-50 hover:text-red-500"
+                              class="shrink-0 cursor-pointer rounded-full p-1 text-gray-400 transition-all hover:bg-red-50 hover:text-red-500"
                               (click)="removeFixedBundleItem(i)"
-                              data-tip="Remove"
                             >
                               <app-icon name="icon-close" [class]="'h-3.5 w-3.5'" />
                             </button>
@@ -602,9 +598,8 @@
                             </div>
                             <button
                               type="button"
-                              class="tooltip tooltip-left shrink-0 cursor-pointer rounded-full p-1 text-gray-400 transition-all hover:bg-red-50 hover:text-red-500"
+                              class="shrink-0 cursor-pointer rounded-full p-1 text-gray-400 transition-all hover:bg-red-50 hover:text-red-500"
                               (click)="removeMixMatchItem(i)"
-                              data-tip="Remove"
                             >
                               <app-icon name="icon-close" [class]="'h-3.5 w-3.5'" />
                             </button>

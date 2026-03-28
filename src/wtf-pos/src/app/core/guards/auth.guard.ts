@@ -1,6 +1,7 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { AuthService } from '@core/services';
+import { AppRoutes } from '@shared/constants/app-routes';
 import { of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 
@@ -22,13 +23,13 @@ export const authGuard: CanActivateFn = (_route, _state) => {
       map(() => true),
       catchError(() => {
         // Refresh failed, redirect to login
-        router.navigateByUrl('/login', { replaceUrl: true });
+        router.navigateByUrl(AppRoutes.Login, { replaceUrl: true });
         return of(false);
       }),
     );
   }
 
   // No valid token and no refresh token, redirect to login
-  router.navigateByUrl('/login', { replaceUrl: true });
+  router.navigateByUrl(AppRoutes.Login, { replaceUrl: true });
   return false;
 };

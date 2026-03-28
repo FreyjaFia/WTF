@@ -17,6 +17,7 @@ import {
   ProductPriceHistoryDto,
   ProductSubCategoryEnum,
 } from '@shared/models';
+import { AppRoutes } from '@shared/constants/app-routes';
 
 @Component({
   selector: 'app-product-details',
@@ -40,6 +41,7 @@ export class ProductDetailsComponent implements OnInit {
   private readonly alertService = inject(AlertService);
   private readonly authService = inject(AuthService);
   private readonly modalStack = inject(ModalStackService);
+  protected readonly routes = AppRoutes;
 
   protected readonly product = signal<ProductDto | null>(null);
   protected readonly addOns = signal<AddOnGroupDto[]>([]);
@@ -129,7 +131,7 @@ export class ProductDetailsComponent implements OnInit {
   }
 
   protected goBack(): void {
-    this.router.navigate(['/management/products']);
+    this.router.navigateByUrl(AppRoutes.ManagementProducts);
   }
 
   protected navigateToEdit(): void {
@@ -139,7 +141,7 @@ export class ProductDetailsComponent implements OnInit {
     }
 
     if (this.product()) {
-      this.router.navigate(['/management/products/edit', this.product()!.id]);
+      this.router.navigateByUrl(AppRoutes.ManagementProductEditById(this.product()!.id));
     }
   }
 
@@ -189,7 +191,7 @@ export class ProductDetailsComponent implements OnInit {
         this.showDeleteModal.set(false);
         this.removeFromStack();
         this.alertService.successDeleted('Product');
-        this.router.navigateByUrl('/management/products');
+        this.router.navigateByUrl(AppRoutes.ManagementProducts);
       },
       error: (err) => {
         this.isDeleting.set(false);

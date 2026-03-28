@@ -11,9 +11,9 @@
     </p>
 
     @if (isLoggedIn) {
-      <a routerLink="/orders" class="btn btn-neutral btn-wide">Go to Home</a>
+      <a [routerLink]="routes.OrdersRoot" class="btn btn-neutral btn-wide">Go to Home</a>
     } @else {
-      <a routerLink="/login" class="btn btn-neutral btn-wide">Go to Login</a>
+      <a [routerLink]="routes.Login" class="btn btn-neutral btn-wide">Go to Login</a>
     }
   </div>
 </div>

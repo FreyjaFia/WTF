@@ -14,6 +14,7 @@ import {
   type FilterOption,
 } from '@shared/components';
 import { PromotionListItemDto, PromotionTypeEnum } from '@shared/models';
+import { AppRoutes } from '@shared/constants/app-routes';
 import { debounceTime, forkJoin } from 'rxjs';
 
 type SortColumn = 'name' | 'type';
@@ -50,6 +51,7 @@ export class PromotionListComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly listState = inject(ListStateService);
   private readonly router = inject(Router);
+  protected readonly routes = AppRoutes;
 
   protected readonly PromotionTypeEnum = PromotionTypeEnum;
   protected readonly isLoading = signal(false);
@@ -156,7 +158,7 @@ export class PromotionListComponent implements OnInit {
       return;
     }
 
-    this.router.navigate(['/management/promotions/new']);
+    this.router.navigateByUrl(AppRoutes.ManagementPromotionsNew);
   }
 
   protected editPromotion(promo: PromotionListItemDto): void {
@@ -166,11 +168,11 @@ export class PromotionListComponent implements OnInit {
     }
 
     if (promo.typeId === PromotionTypeEnum.MixMatch) {
-      this.router.navigate(['/management/promotions/mix-match', promo.id, 'edit']);
+      this.router.navigateByUrl(AppRoutes.ManagementPromotionMixMatchEditById(promo.id));
       return;
     }
 
-    this.router.navigate(['/management/promotions/fixed-bundles', promo.id, 'edit']);
+    this.router.navigateByUrl(AppRoutes.ManagementPromotionFixedBundleEditById(promo.id));
   }
 
   protected deletePromotion(promo: PromotionListItemDto): void {
