@@ -58,7 +58,7 @@
       <button
         type="button"
         class="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-red-600 transition-colors hover:bg-red-50"
-        (click)="logout()"
+        (click)="requestLogout()"
       >
         <app-icon name="icon-logout" [class]="'h-4 w-4 text-red-500'" />
         Logout
@@ -77,7 +77,7 @@
       <button
         type="button"
         class="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-gray-200 text-red-600 transition-colors hover:bg-red-50"
-        (click)="logout()"
+        (click)="requestLogout()"
         aria-label="Logout"
       >
         <app-icon name="icon-logout" [class]="'h-4 w-4 text-red-500'" />
@@ -240,3 +240,52 @@
     </button>
   </div>
 </aside>
+
+@if (showLogoutModal()) {
+  <div
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="logout-title"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md transition-opacity duration-200"
+    (click)="closeLogoutModal()"
+    (keydown.escape)="closeLogoutModal()"
+    tabindex="0"
+  >
+    <div
+      role="document"
+      class="mx-4 w-full max-w-sm animate-[modal-pop_0.2s_ease-out] rounded-2xl bg-white p-6 shadow-2xl"
+      (click)="$event.stopPropagation()"
+      (keydown)="$event.stopPropagation()"
+    >
+      <div class="mx-auto w-fit rounded-full bg-red-50/60 p-3">
+        <div class="rounded-full bg-red-50 p-3">
+          <app-icon name="icon-logout" [class]="'h-6 w-6 text-red-600'" />
+        </div>
+      </div>
+
+      <h3 id="logout-title" class="mt-4 text-center text-lg font-semibold text-gray-900">
+        Log out?
+      </h3>
+      <p class="mt-2 text-center text-sm leading-relaxed text-gray-500">
+        You will be signed out of your account. You can log in again anytime.
+      </p>
+
+      <div class="mt-6 flex items-center justify-end gap-3">
+        <button
+          type="button"
+          class="cursor-pointer px-4 py-2 text-sm font-medium text-gray-500 transition-colors hover:text-gray-700"
+          (click)="closeLogoutModal()"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="cursor-pointer rounded-xl bg-red-600 px-6 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-red-700 hover:shadow-md active:scale-[0.97]"
+          (click)="confirmLogout()"
+        >
+          Log out
+        </button>
+      </div>
+    </div>
+  </div>
+}

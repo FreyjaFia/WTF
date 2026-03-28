@@ -30,6 +30,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
   protected readonly isOnline = this.connectivity.isOnline;
   protected readonly showManagement = signal(true);
   protected readonly isCollapsed = signal(false);
+  protected readonly showLogoutModal = signal(false);
   private clockIntervalId: ReturnType<typeof setInterval> | null = null;
   private routeSubscription?: { unsubscribe: () => void };
   private meRefreshSubscription?: { unsubscribe: () => void };
@@ -73,10 +74,16 @@ export class SidebarComponent implements OnInit, OnDestroy {
     this.router.navigateByUrl(this.routes.MyProfile);
   }
 
-  protected logout(): void {
-    if (!window.confirm('Log out of your account?')) {
-      return;
-    }
+  protected requestLogout(): void {
+    this.showLogoutModal.set(true);
+  }
+
+  protected closeLogoutModal(): void {
+    this.showLogoutModal.set(false);
+  }
+
+  protected confirmLogout(): void {
+    this.showLogoutModal.set(false);
     this.authService.logout();
     this.router.navigateByUrl(this.routes.Login, { replaceUrl: true });
   }
