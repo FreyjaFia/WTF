@@ -1,4 +1,4 @@
-<div class="relative flex h-full flex-col lg:flex-row lg:gap-4">
+<div class="relative flex h-full flex-col xl:flex-row xl:gap-4">
   <div class="flex min-h-0 flex-1 flex-col">
     @if (isEditMode() && isLoading()) {
       <div class="flex justify-center py-8">
@@ -123,9 +123,9 @@
             }
             @if (products().length > 0) {
               <div
-                class="grid grid-cols-1 gap-4 pb-4 sm:grid-cols-2 lg:grid-cols-3"
+                class="grid grid-cols-1 gap-4 pb-4 sm:grid-cols-2 xl:grid-cols-3"
                 [class.pb-18]="cart().length > 0"
-                [class.lg:pb-4]="cart().length > 0"
+                [class.xl:pb-4]="cart().length > 0"
               >
                 @for (p of products(); track p.id) {
                   <div
@@ -182,9 +182,9 @@
               </div>
             } @else {
               <div
-                class="grid grid-cols-1 gap-4 pb-4 sm:grid-cols-2 lg:grid-cols-3"
+                class="grid grid-cols-1 gap-4 pb-4 sm:grid-cols-2 xl:grid-cols-3"
                 [class.pb-18]="cart().length > 0"
-                [class.lg:pb-4]="cart().length > 0"
+                [class.xl:pb-4]="cart().length > 0"
               >
                 @for (promo of filteredBundlePromotions(); track promo.id) {
                   <div
@@ -246,7 +246,7 @@
     <!-- Mobile: Floating Cart Button -->
     @if (cart().length > 0) {
       <button
-        class="absolute inset-x-4 bottom-4 z-30 flex cursor-pointer items-center justify-between rounded-2xl border-0 bg-[#047857] px-5 py-3.5 text-white shadow-xl transition-all active:scale-[0.98] lg:hidden"
+        class="absolute inset-x-4 bottom-4 z-30 flex cursor-pointer items-center justify-between rounded-2xl border-0 bg-[#047857] px-5 py-3.5 text-white shadow-xl transition-all active:scale-[0.98] xl:hidden"
         (click)="openMobileCart()"
       >
         <div class="flex items-center gap-3">
@@ -272,7 +272,7 @@
   <ng-template #cartContent>
     <!-- Drag handle (mobile only) -->
     <div
-      class="flex shrink-0 cursor-grab touch-none justify-center pt-3 pb-1 active:cursor-grabbing lg:hidden"
+      class="flex shrink-0 cursor-grab touch-none justify-center pt-3 pb-1 active:cursor-grabbing xl:hidden"
       data-cart-drag-handle
     >
       <div class="h-1.5 w-10 rounded-full bg-gray-300"></div>
@@ -280,15 +280,15 @@
 
     <button
       type="button"
-      class="group absolute inset-y-0 left-0 z-20 hidden w-6 cursor-pointer overflow-hidden bg-gray-200/55 transition-all duration-400 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:bg-gray-300/60 active:bg-gray-300 lg:block"
+      class="group absolute inset-y-0 left-0 z-20 hidden w-6 cursor-pointer overflow-hidden bg-gray-200/55 transition-all duration-400 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:bg-gray-300/60 active:bg-gray-300 xl:block"
       (click)="toggleCartCollapse()"
       (mouseenter)="onRailTriggerEnter()"
       [attr.aria-label]="isCartCollapsed() ? 'Expand cart' : 'Collapse cart'"
     ></button>
 
     <div
-      class="relative hidden h-full flex-col items-center justify-between py-3 transition-all duration-300 ease-in-out lg:flex lg:pl-6"
-      [class.lg:hidden]="!isCartCollapsed()"
+      class="relative hidden h-full flex-col items-center justify-between py-3 transition-all duration-300 ease-in-out xl:flex xl:pl-6"
+      [class.xl:hidden]="!isCartCollapsed()"
     >
       <div
         class="pointer-events-none flex h-10 w-10 items-center justify-center rounded-full bg-gray-900 text-base font-bold text-white shadow-sm transition-all duration-300 ease-in-out"
@@ -345,7 +345,7 @@
       }
     </div>
 
-    <div class="flex min-h-0 flex-1 flex-col lg:pl-6" [class.lg:hidden]="isCartCollapsed()">
+    <div class="flex min-h-0 flex-1 flex-col xl:pl-6" [class.xl:hidden]="isCartCollapsed()">
       <div class="shrink-0 border-b border-gray-100 p-4">
         <div class="flex items-center justify-between">
           <div>
@@ -621,7 +621,7 @@
       <div
         class="sticky bottom-0 shrink-0 border-t border-gray-200 bg-white p-5 shadow-[0_-8px_24px_rgba(0,0,0,0.1)]"
       >
-        <div id="mobile-cart-details" class="grid lg:overflow-visible lg:opacity-100">
+        <div id="mobile-cart-details" class="grid xl:overflow-visible xl:opacity-100">
           <div class="min-h-0 overflow-hidden">
             <!-- Order Note Section -->
             @if (canEditOrderSpecialInstructions()) {
@@ -791,9 +791,9 @@
   </app-cart-drawer>
 
   <aside
-    class="relative hidden flex-col lg:flex lg:h-full lg:min-h-0 lg:shrink-0 lg:overflow-hidden lg:rounded-lg lg:border-l-2 lg:border-gray-200 lg:shadow-[-8px_0_24px_rgba(0,0,0,0.1)] lg:transition-all lg:duration-400 lg:ease-[cubic-bezier(0.175,0.885,0.32,1.275)]"
-    [class.lg:w-[336px]]="!isCartCollapsed()"
-    [class.lg:w-[88px]]="isCartCollapsed()"
+    class="relative hidden flex-col xl:flex xl:h-full xl:min-h-0 xl:shrink-0 xl:overflow-hidden xl:rounded-lg xl:border-l-2 xl:border-gray-200 xl:shadow-[-8px_0_24px_rgba(0,0,0,0.1)] xl:transition-all xl:duration-400 xl:ease-[cubic-bezier(0.175,0.885,0.32,1.275)]"
+    [class.xl:w-[336px]]="!isCartCollapsed()"
+    [class.xl:w-[88px]]="isCartCollapsed()"
     (mouseleave)="onRailTriggerLeave()"
   >
     <ng-container [ngTemplateOutlet]="cartContent"></ng-container>

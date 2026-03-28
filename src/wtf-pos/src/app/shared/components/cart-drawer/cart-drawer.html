@@ -1,6 +1,9 @@
 <div
-  class="fixed inset-y-0 right-0 z-50 w-screen lg:hidden md:[left:var(--sidebar-width,0px)] md:[width:calc(100vw-var(--sidebar-width,0px))]"
-  style="padding-top: max(var(--safe-area-top, 0px), env(safe-area-inset-top)); padding-bottom: max(var(--safe-area-bottom, 0px), env(safe-area-inset-bottom))"
+  class="fixed inset-y-0 right-0 z-50 w-screen md:left-(--sidebar-width,0px) md:w-[calc(100vw-var(--sidebar-width,0px))] xl:hidden"
+  style="
+    padding-top: max(var(--safe-area-top, 0px), env(safe-area-inset-top));
+    padding-bottom: max(var(--safe-area-bottom, 0px), env(safe-area-inset-bottom));
+  "
   [class.pointer-events-auto]="isOpen()"
   [class.pointer-events-none]="!isOpen()"
 >
@@ -19,8 +22,11 @@
   ></div>
 
   <div
-    class="fixed inset-y-0 right-0 z-50 flex h-full w-screen flex-col bg-white shadow-2xl transition-transform ease-in-out will-change-transform md:[left:var(--sidebar-width,0px)] md:[width:calc(100vw-var(--sidebar-width,0px))]"
-    style="padding-top: max(var(--safe-area-top, 0px), env(safe-area-inset-top)); padding-bottom: max(var(--safe-area-bottom, 0px), env(safe-area-inset-bottom))"
+    class="fixed inset-y-0 right-0 z-50 flex h-full w-screen flex-col bg-white shadow-2xl transition-transform ease-in-out will-change-transform md:left-(--sidebar-width,0px) md:w-[calc(100vw-var(--sidebar-width,0px))] xl:hidden"
+    style="
+      padding-top: max(var(--safe-area-top, 0px), env(safe-area-inset-top));
+      padding-bottom: max(var(--safe-area-bottom, 0px), env(safe-area-inset-bottom));
+    "
     [class.duration-300]="hasTransitions()"
     [class.duration-0]="!hasTransitions()"
     [style.transform]="drawerTransform()"
