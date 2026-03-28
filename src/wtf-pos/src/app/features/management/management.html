@@ -1,6 +1,6 @@
-<div class="flex h-full w-full flex-col rounded-t-2xl bg-white lg:flex-row">
+<div class="flex h-full w-full flex-col rounded-t-2xl bg-white sm:-mt-4 md:mt-0 lg:flex-row">
   <!-- Mobile Navigation -->
-  <div class="flex shrink-0 flex-col border-b border-gray-200 bg-white pb-4 md:hidden">
+  <div class="flex shrink-0 flex-col border-b border-gray-200 bg-white pb-4 sm:hidden">
     <h2 class="mb-3 text-xl font-bold text-gray-900">Management</h2>
     <nav class="flex items-stretch gap-1.5 rounded-xl bg-gray-100 p-1.5">
       <a
@@ -32,17 +32,6 @@
         </a>
       }
       <a
-        [routerLink]="routes.ManagementPromotions"
-        routerLinkActive="bg-green-50 text-emerald-700"
-        [routerLinkActiveOptions]="{ exact: false }"
-        class="flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-2 pt-2 pb-2.5 text-[10px] leading-tight font-normal text-gray-500 transition-colors"
-        [class.text-emerald-700]="isActive('promotions')"
-        [class.bg-emerald-100]="isActive('promotions')"
-      >
-        <app-icon name="icon-promotion" [class]="'h-4 w-4 shrink-0'" [fill]="'currentColor'"></app-icon>
-        Promos
-      </a>
-      <a
         [routerLink]="routes.ManagementUsers"
         routerLinkActive="bg-green-50 text-emerald-700"
         [routerLinkActiveOptions]="{ exact: false }"
@@ -52,6 +41,21 @@
       >
         <app-icon name="icon-user" [class]="'h-4 w-4 shrink-0'" [fill]="'currentColor'"></app-icon>
         Users
+      </a>
+      <a
+        [routerLink]="routes.ManagementPromotions"
+        routerLinkActive="bg-green-50 text-emerald-700"
+        [routerLinkActiveOptions]="{ exact: false }"
+        class="flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-2 pt-2 pb-2.5 text-[10px] leading-tight font-normal text-gray-500 transition-colors"
+        [class.text-emerald-700]="isActive('promotions')"
+        [class.bg-emerald-100]="isActive('promotions')"
+      >
+        <app-icon
+          name="icon-promotion"
+          [class]="'h-4 w-4 shrink-0'"
+          [fill]="'currentColor'"
+        ></app-icon>
+        Promos
       </a>
       @if (canAccessReports()) {
         <a
