@@ -1,5 +1,6 @@
 <aside
-  class="hidden h-full flex-none flex-col overflow-hidden border-r border-gray-200 bg-white md:flex"
+  class="hidden h-full flex-none flex-col overflow-visible border-r border-gray-200 bg-white sm:flex"
+  [class.sidebar-collapsed]="isCollapsed()"
   [class.w-21]="isCollapsed()"
   [class.w-60]="!isCollapsed()"
 >
@@ -17,23 +18,60 @@
     </div>
   </div>
 
-  <div class="border-b border-gray-200 px-4 py-4">
+  <div class="overflow-visible border-b border-gray-200 px-4 py-4">
     <div
       class="flex items-center gap-3"
       [class.justify-center]="isCollapsed()"
       [class.flex-col]="isCollapsed()"
     >
-      <div
-        class="avatar rounded-full p-0.5 ring-2 ring-transparent transition-all hover:ring-[#047857]/30"
-      >
-        <div class="w-12 rounded-full">
-          @if (imageUrl) {
-            <img alt="User avatar" [src]="imageUrl" />
-          } @else {
-            <app-avatar [label]="userFullName" [size]="44"></app-avatar>
-          }
+      <div class="dropdown dropdown-bottom z-45">
+        <div
+          tabindex="0"
+          role="button"
+          class="avatar cursor-pointer rounded-full p-0.5 ring-2 ring-transparent transition-all hover:ring-[#047857]/30 active:scale-95"
+        >
+          <div class="w-12 rounded-full">
+            @if (imageUrl) {
+              <img alt="User avatar" [src]="imageUrl" />
+            } @else {
+              <app-avatar [label]="userFullName" [size]="44"></app-avatar>
+            }
+          </div>
+        </div>
+        <div
+          tabindex="-1"
+          class="dropdown-content left-0 z-45 mt-3 w-48 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl"
+        >
+          <div class="p-1.5">
+            <a
+              role="button"
+              tabindex="0"
+              class="flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 active:bg-gray-200"
+              (click)="goToMyProfile($event)"
+              (keydown.enter)="goToMyProfile($event)"
+              (keydown.space)="goToMyProfile($event)"
+            >
+              <app-icon name="icon-user" [class]="'h-4.5 w-4.5 text-gray-500'" />
+              My Profile
+            </a>
+
+            <div class="my-1 border-t border-gray-100" aria-hidden="true"></div>
+
+            <a
+              role="button"
+              tabindex="0"
+              class="flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 active:bg-red-100"
+              (click)="requestLogout()"
+              (keydown.enter)="requestLogout()"
+              (keydown.space)="requestLogout()"
+            >
+              <app-icon name="icon-logout" [class]="'h-4.5 w-4.5 text-red-500'" />
+              Logout
+            </a>
+          </div>
         </div>
       </div>
+
       <div class="min-w-0" [class.hidden]="isCollapsed()">
         <div class="truncate text-sm font-semibold text-gray-800">{{ userFullName }}</div>
         <div class="flex items-center gap-2 text-xs text-gray-500">
@@ -45,84 +83,48 @@
         <div class="text-[10px] text-gray-400">{{ now() | date: 'EEE, MMM d, y - h:mm a' }}</div>
       </div>
     </div>
-
-    <div class="mt-3 flex flex-col gap-2" [class.hidden]="isCollapsed()">
-      <button
-        type="button"
-        class="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50"
-        (click)="goToMyProfile($event)"
-      >
-        <app-icon name="icon-user" [class]="'h-4 w-4 text-gray-500'" />
-        My Profile
-      </button>
-      <button
-        type="button"
-        class="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-red-600 transition-colors hover:bg-red-50"
-        (click)="requestLogout()"
-      >
-        <app-icon name="icon-logout" [class]="'h-4 w-4 text-red-500'" />
-        Logout
-      </button>
-    </div>
-
-    <div class="mt-3 flex flex-col items-center gap-2" [class.hidden]="!isCollapsed()">
-      <button
-        type="button"
-        class="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-gray-200 text-gray-600 transition-colors hover:bg-gray-50"
-        (click)="goToMyProfile($event)"
-        aria-label="My Profile"
-      >
-        <app-icon name="icon-user" [class]="'h-4 w-4 text-gray-500'" />
-      </button>
-      <button
-        type="button"
-        class="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-gray-200 text-red-600 transition-colors hover:bg-red-50"
-        (click)="requestLogout()"
-        aria-label="Logout"
-      >
-        <app-icon name="icon-logout" [class]="'h-4 w-4 text-red-500'" />
-      </button>
-    </div>
   </div>
 
   <nav class="flex-1 overflow-y-auto px-2.5 py-4">
-    <a
-      [routerLink]="routes.Dashboard"
-      routerLinkActive="bg-gray-100 text-gray-900"
-      class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
-      [class.justify-center]="isCollapsed()"
-      [attr.title]="'Dashboard'"
-    >
-      <app-icon name="icon-dashboard" [class]="'h-4.5 w-4.5 text-gray-500'" />
-      <span [class.hidden]="isCollapsed()">Dashboard</span>
-    </a>
+    <div class="mb-3 space-y-1 border-b border-gray-200 pb-3">
+      <a
+        [routerLink]="routes.Dashboard"
+        routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
+        class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+        [class.justify-center]="isCollapsed()"
+        [attr.title]="'Dashboard'"
+      >
+        <app-icon name="icon-dashboard" [class]="'h-4.5 w-4.5 text-gray-500'" />
+        <span [class.hidden]="isCollapsed()">Dashboard</span>
+      </a>
 
-    <a
-      [routerLink]="routes.OrdersEditor"
-      routerLinkActive="bg-gray-100 text-gray-900"
-      class="mt-1 flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
-      [class.justify-center]="isCollapsed()"
-      [attr.title]="'New Order'"
-    >
-      <app-icon name="icon-plus" [class]="'h-4.5 w-4.5 text-gray-500'" />
-      <span [class.hidden]="isCollapsed()">New Order</span>
-    </a>
+      <a
+        [routerLink]="routes.OrdersEditor"
+        routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
+        class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+        [class.justify-center]="isCollapsed()"
+        [attr.title]="'New Order'"
+      >
+        <app-icon name="icon-plus" [class]="'h-4.5 w-4.5 text-gray-500'" />
+        <span [class.hidden]="isCollapsed()">New Order</span>
+      </a>
 
-    <a
-      [routerLink]="routes.OrdersList"
-      routerLinkActive="bg-gray-100 text-gray-900"
-      class="mt-1 flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
-      [class.justify-center]="isCollapsed()"
-      [attr.title]="'Orders'"
-    >
-      <app-icon name="icon-file" [class]="'h-4.5 w-4.5 text-gray-500'" />
-      <span [class.hidden]="isCollapsed()">Orders</span>
-    </a>
+      <a
+        [routerLink]="routes.OrdersList"
+        routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
+        class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+        [class.justify-center]="isCollapsed()"
+        [attr.title]="'Orders'"
+      >
+        <app-icon name="icon-file" [class]="'h-4.5 w-4.5 text-gray-500'" />
+        <span [class.hidden]="isCollapsed()">Orders</span>
+      </a>
+    </div>
 
     @if (authService.canAccessManagement()) {
       <button
         type="button"
-        class="mt-1 flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50"
+        class="flex w-full cursor-pointer items-center justify-between rounded-lg px-2.5 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50"
         (click)="toggleManagement()"
       >
         <span class="flex items-center gap-3">
@@ -148,7 +150,7 @@
       >
         <a
           [routerLink]="routes.ManagementProducts"
-          routerLinkActive="bg-gray-100 text-gray-900"
+          routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
           class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
           [class.justify-center]="isCollapsed()"
           [attr.title]="'Products'"
@@ -158,7 +160,7 @@
         </a>
         <a
           [routerLink]="routes.ManagementCustomers"
-          routerLinkActive="bg-gray-100 text-gray-900"
+          routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
           class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
           [class.justify-center]="isCollapsed()"
           [attr.title]="'Customers'"
@@ -168,7 +170,7 @@
         </a>
         <a
           [routerLink]="routes.ManagementUsers"
-          routerLinkActive="bg-gray-100 text-gray-900"
+          routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
           class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
           [class.justify-center]="isCollapsed()"
           [attr.title]="'Users'"
@@ -178,7 +180,7 @@
         </a>
         <a
           [routerLink]="routes.ManagementPromotions"
-          routerLinkActive="bg-gray-100 text-gray-900"
+          routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
           class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
           [class.justify-center]="isCollapsed()"
           [attr.title]="'Promotions'"
@@ -189,7 +191,7 @@
         @if (authService.canAccessReports()) {
           <a
             [routerLink]="routes.ManagementReports"
-            routerLinkActive="bg-gray-100 text-gray-900"
+            routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
             class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
             [class.justify-center]="isCollapsed()"
             [attr.title]="'Reports'"
@@ -200,7 +202,7 @@
         }
         <a
           [routerLink]="routes.ManagementAuditLogs"
-          routerLinkActive="bg-gray-100 text-gray-900"
+          routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
           class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
           [class.justify-center]="isCollapsed()"
           [attr.title]="'Audit Logs'"
@@ -210,7 +212,7 @@
         </a>
         <a
           [routerLink]="routes.ManagementSchemaScripts"
-          routerLinkActive="bg-gray-100 text-gray-900"
+          routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
           class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
           [class.justify-center]="isCollapsed()"
           [attr.title]="'Schema Scripts'"
