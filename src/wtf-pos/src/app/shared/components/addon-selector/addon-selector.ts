@@ -1,4 +1,4 @@
-﻿import { CommonModule } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { Component, computed, inject, output, signal } from '@angular/core';
 import { CatalogCacheService, ModalStackService } from '@core/services';
 import { AvatarComponent } from '@shared/components/avatar/avatar';
@@ -536,7 +536,3 @@ export class AddonSelectorComponent {
     }
   }
 }
-
-
-
-

@@ -1,4 +1,4 @@
-﻿export enum ProductCategoryEnum {
+export enum ProductCategoryEnum {
   Drink = 1,
   Food = 2,
   Dessert = 3,

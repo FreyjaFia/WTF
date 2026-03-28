@@ -1,4 +1,4 @@
-﻿import { Component, input } from '@angular/core';
+import { Component, input } from '@angular/core';
 
 export type BadgeVariant = 'success' | 'error' | 'warning' | 'info' | 'default';
 

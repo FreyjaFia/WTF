@@ -107,4 +107,3 @@ export interface PromotionImageDto {
   promotionId: string;
   imageUrl?: string | null;
 }
-

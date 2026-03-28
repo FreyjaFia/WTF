@@ -1,4 +1,4 @@
-﻿export enum OrderStatusEnum {
+export enum OrderStatusEnum {
   All = 0,
   Pending = 1,
   Completed = 2,

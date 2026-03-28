@@ -1,4 +1,4 @@
-﻿export * from './addon-selector/addon-selector';
+export * from './addon-selector/addon-selector';
 export * from './addons-swapper/addons-swapper';
 export * from './alert/alert';
 export * from './animated-counter/animated-counter';
