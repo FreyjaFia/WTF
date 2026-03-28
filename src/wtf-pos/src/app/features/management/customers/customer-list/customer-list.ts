@@ -4,24 +4,23 @@ import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { Capacitor } from '@capacitor/core';
 import {
-  AlertService,
-  AuthService,
-  CustomerService,
-  ListStateService,
-  ModalStackService,
+    AlertService,
+    AuthService,
+    CustomerService,
+    ListStateService,
+    ModalStackService,
 } from '@core/services';
 import {
-  AvatarComponent,
-  BadgeComponent,
-  FilterDropdownComponent,
-  IconComponent,
-  PullToRefreshComponent,
-  SearchInputComponent,
-  SideDrawerComponent,
-  type FilterOption,
+    AvatarComponent,
+    BadgeComponent,
+    IconComponent,
+    PullToRefreshComponent,
+    SearchInputComponent,
+    SideDrawerComponent,
+    type FilterOption
 } from '@shared/components';
-import { CustomerDto } from '@shared/models';
 import { AppRoutes } from '@shared/constants/app-routes';
+import { CustomerDto } from '@shared/models';
 import { debounceTime } from 'rxjs';
 
 type SortColumn = 'name' | 'address';
@@ -40,7 +39,6 @@ interface CustomerListState {
     ReactiveFormsModule,
     RouterLink,
     IconComponent,
-    FilterDropdownComponent,
     BadgeComponent,
     AvatarComponent,
     PullToRefreshComponent,
@@ -65,7 +63,7 @@ export class CustomerListComponent implements OnInit {
   protected readonly isLoading = signal(false);
   protected readonly isRefreshing = signal(false);
   protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
-  protected readonly isMobileFiltersOpen = signal(false);
+  protected readonly isFiltersOpen = signal(false);
 
   protected readonly selectedStatuses = signal<string[]>(['active']);
 
@@ -146,12 +144,12 @@ export class CustomerListComponent implements OnInit {
     this.loadCustomers();
   }
 
-  protected openMobileFilters(): void {
-    this.isMobileFiltersOpen.set(true);
+  protected openFilters(): void {
+    this.isFiltersOpen.set(true);
   }
 
-  protected closeMobileFilters(): void {
-    this.isMobileFiltersOpen.set(false);
+  protected closeFilters(): void {
+    this.isFiltersOpen.set(false);
   }
 
   private applyFiltersToCache(): void {
@@ -336,3 +334,4 @@ export class CustomerListComponent implements OnInit {
     });
   }
 }
+

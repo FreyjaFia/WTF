@@ -13,15 +13,14 @@ import {
 import {
   AvatarComponent,
   BadgeComponent,
-  FilterDropdownComponent,
   IconComponent,
   PullToRefreshComponent,
   SearchInputComponent,
   SideDrawerComponent,
   type FilterOption,
 } from '@shared/components';
-import { UserDto, UserRoleEnum } from '@shared/models';
 import { AppRoutes } from '@shared/constants/app-routes';
+import { UserDto, UserRoleEnum } from '@shared/models';
 import { debounceTime } from 'rxjs';
 
 type SortColumn = 'name' | 'role';
@@ -41,7 +40,6 @@ interface UserListState {
     ReactiveFormsModule,
     RouterLink,
     IconComponent,
-    FilterDropdownComponent,
     BadgeComponent,
     AvatarComponent,
     PullToRefreshComponent,
@@ -66,7 +64,7 @@ export class UserListComponent implements OnInit {
   protected readonly isLoading = signal(false);
   protected readonly isRefreshing = signal(false);
   protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
-  protected readonly isMobileFiltersOpen = signal(false);
+  protected readonly isFiltersOpen = signal(false);
 
   protected readonly selectedRoles = signal<number[]>([]);
   protected readonly selectedStatuses = signal<string[]>(['active']);
@@ -177,12 +175,12 @@ export class UserListComponent implements OnInit {
     this.loadUsers();
   }
 
-  protected openMobileFilters(): void {
-    this.isMobileFiltersOpen.set(true);
+  protected openFilters(): void {
+    this.isFiltersOpen.set(true);
   }
 
-  protected closeMobileFilters(): void {
-    this.isMobileFiltersOpen.set(false);
+  protected closeFilters(): void {
+    this.isFiltersOpen.set(false);
   }
 
   private applyFiltersToCache(): void {

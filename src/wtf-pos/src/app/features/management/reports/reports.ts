@@ -144,7 +144,7 @@ export class ReportsComponent implements OnInit {
   protected readonly isDownloadingMonthlyWorkbook = signal(false);
   protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
   protected readonly searchTerm = signal('');
-  protected readonly isMobileFiltersOpen = signal(false);
+  protected readonly isFiltersOpen = signal(false);
   protected readonly staffOptions = signal<StaffFilterOption[]>([]);
   protected readonly monthlyWorkbookStatus = signal<MonthlyReportWorkbookStatusDto | null>(null);
   protected readonly activeTab = signal<ReportPageTab>(ReportPageTabs.Reports);
@@ -371,17 +371,17 @@ export class ReportsComponent implements OnInit {
     this.loadMonthlyWorkbookStatus();
   }
 
-  protected openMobileFilters(): void {
-    this.isMobileFiltersOpen.set(true);
+  protected openFilters(): void {
+    this.isFiltersOpen.set(true);
   }
 
-  protected closeMobileFilters(): void {
-    this.isMobileFiltersOpen.set(false);
+  protected closeFilters(): void {
+    this.isFiltersOpen.set(false);
   }
 
   protected selectTab(tab: ReportPageTab): void {
     this.activeTab.set(tab);
-    this.isMobileFiltersOpen.set(false);
+    this.isFiltersOpen.set(false);
     if (tab === this.reportPageTabs.MonthlyWorkbook) {
       this.loadMonthlyWorkbookStatus();
     }
@@ -1582,3 +1582,4 @@ export class ReportsComponent implements OnInit {
     return user.username;
   }
 }
+

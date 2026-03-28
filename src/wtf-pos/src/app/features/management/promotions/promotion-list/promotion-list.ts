@@ -1,20 +1,20 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { Capacitor } from '@capacitor/core';
 import { Router, RouterLink } from '@angular/router';
+import { Capacitor } from '@capacitor/core';
 import { AlertService, AuthService, ListStateService, PromotionService } from '@core/services';
 import {
   AvatarComponent,
   BadgeComponent,
-  FilterDropdownComponent,
   IconComponent,
   PullToRefreshComponent,
   SearchInputComponent,
+  SideDrawerComponent,
   type FilterOption,
 } from '@shared/components';
-import { PromotionListItemDto, PromotionTypeEnum } from '@shared/models';
 import { AppRoutes } from '@shared/constants/app-routes';
+import { PromotionListItemDto, PromotionTypeEnum } from '@shared/models';
 import { debounceTime, forkJoin } from 'rxjs';
 
 type SortColumn = 'name' | 'type';
@@ -37,9 +37,9 @@ interface PromotionListState {
     AvatarComponent,
     BadgeComponent,
     IconComponent,
-    FilterDropdownComponent,
     PullToRefreshComponent,
     SearchInputComponent,
+    SideDrawerComponent,
   ],
   templateUrl: './promotion-list.html',
   host: { class: 'flex-1 min-h-0' },
@@ -57,7 +57,7 @@ export class PromotionListComponent implements OnInit {
   protected readonly isLoading = signal(false);
   protected readonly isRefreshing = signal(false);
   protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
-  protected readonly isMobileFiltersOpen = signal(false);
+  protected readonly isFiltersOpen = signal(false);
   protected readonly promotions = signal<PromotionListItemDto[]>([]);
   protected readonly promotionsCache = signal<PromotionListItemDto[]>([]);
 
@@ -223,12 +223,12 @@ export class PromotionListComponent implements OnInit {
     this.saveState();
   }
 
-  protected openMobileFilters(): void {
-    this.isMobileFiltersOpen.set(true);
+  protected openFilters(): void {
+    this.isFiltersOpen.set(true);
   }
 
-  protected closeMobileFilters(): void {
-    this.isMobileFiltersOpen.set(false);
+  protected closeFilters(): void {
+    this.isFiltersOpen.set(false);
   }
 
   protected clearTypeSelections(): void {
@@ -253,14 +253,18 @@ export class PromotionListComponent implements OnInit {
 
   protected toggleTypeSelection(id: string): void {
     const selected = this.selectedTypes();
-    this.selectedTypes.set(selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id]);
+    this.selectedTypes.set(
+      selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id],
+    );
     this.applyFiltersToCache();
     this.saveState();
   }
 
   protected toggleStatusSelection(id: string): void {
     const selected = this.selectedStatuses();
-    this.selectedStatuses.set(selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id]);
+    this.selectedStatuses.set(
+      selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id],
+    );
     this.applyFiltersToCache();
     this.saveState();
   }

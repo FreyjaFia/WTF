@@ -23,16 +23,15 @@ import {
 } from '@core/services';
 import {
   BadgeComponent,
-  FilterDropdownComponent,
   IconComponent,
   PullToRefreshComponent,
   SearchInputComponent,
   SideDrawerComponent,
   type FilterOption,
 } from '@shared/components';
+import { AppRoutes } from '@shared/constants/app-routes';
 import type { CartItemDto } from '@shared/models';
 import { OrderDto, OrderStatusEnum } from '@shared/models';
-import { AppRoutes } from '@shared/constants/app-routes';
 import { debounceTime, Subscription } from 'rxjs';
 
 type SortColumn = 'orderNumber' | 'date' | 'totalAmount';
@@ -61,7 +60,6 @@ interface OrderGroup {
     RouterLink,
     IconComponent,
     SideDrawerComponent,
-    FilterDropdownComponent,
     BadgeComponent,
     PullToRefreshComponent,
     SearchInputComponent,
@@ -96,7 +94,7 @@ export class OrderList implements OnInit, OnDestroy {
   protected readonly pendingOrders = this.offlineOrderService.pendingOrders;
   protected readonly isSyncingOffline = this.offlineOrderService.isSyncing;
   protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
-  protected readonly isMobileFiltersOpen = signal(false);
+  protected readonly isFiltersOpen = signal(false);
   protected readonly sortColumn = signal<SortColumn | null>(null);
   protected readonly sortDirection = signal<SortDirection>('desc');
   protected readonly selectedStatuses = signal<OrderStatusEnum[]>([]);
@@ -438,12 +436,12 @@ export class OrderList implements OnInit, OnDestroy {
     this.saveState();
   }
 
-  protected openMobileFilters(): void {
-    this.isMobileFiltersOpen.set(true);
+  protected openFilters(): void {
+    this.isFiltersOpen.set(true);
   }
 
-  protected closeMobileFilters(): void {
-    this.isMobileFiltersOpen.set(false);
+  protected closeFilters(): void {
+    this.isFiltersOpen.set(false);
   }
 
   protected toggleSort(column: SortColumn): void {

@@ -81,16 +81,5 @@
       <ng-content></ng-content>
     </div>
 
-    @if (showFooter()) {
-      <div class="border-t border-gray-200 p-4">
-        <button
-          type="button"
-          class="btn btn-sm w-full rounded-lg border-0 bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg"
-          (click)="closeDrawer()"
-        >
-          {{ doneLabel() }}
-        </button>
-      </div>
-    }
   </div>
 </div>

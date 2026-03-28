@@ -12,15 +12,14 @@ import {
   type BadgeVariant,
   DonutChartComponent,
   type DonutSegment,
-  SideDrawerComponent,
   IconComponent,
   PullToRefreshComponent,
+  SideDrawerComponent,
   SparklineComponent,
 } from '@shared/components';
-import { type DashboardDto, type DateRangePreset, type DateRangeSelection } from '@shared/models';
 import { AppRoutes } from '@shared/constants/app-routes';
+import { type DashboardDto, type DateRangePreset, type DateRangeSelection } from '@shared/models';
 import { interval, Subscription } from 'rxjs';
-import { DateRangePickerComponent } from './date-range-picker/date-range-picker';
 
 const TIME_AGO_INTERVAL_MS = 30_000;
 
@@ -45,7 +44,6 @@ const GREETINGS = [
     DonutChartComponent,
     SideDrawerComponent,
     AnimatedCounterComponent,
-    DateRangePickerComponent,
     AvatarComponent,
     PullToRefreshComponent,
   ],
@@ -65,7 +63,7 @@ export class Dashboard implements OnInit, OnDestroy {
   protected readonly orderTimeAgos = signal<Record<string, string>>({});
   protected readonly currentRange = signal<DateRangeSelection>({ preset: 'today' });
   protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
-  protected readonly isMobileFiltersOpen = signal(false);
+  protected readonly isFiltersOpen = signal(false);
   protected readonly mobilePreset = signal<DateRangePreset>('today');
   protected readonly mobileCustomStartDate = signal('');
   protected readonly mobileCustomEndDate = signal('');
@@ -315,16 +313,16 @@ export class Dashboard implements OnInit, OnDestroy {
     this.loadDashboard();
   }
 
-  protected openMobileFilters(): void {
+  protected openFilters(): void {
     const range = this.currentRange();
     this.mobilePreset.set(range.preset);
     this.mobileCustomStartDate.set(range.startDate ?? '');
     this.mobileCustomEndDate.set(range.endDate ?? '');
-    this.isMobileFiltersOpen.set(true);
+    this.isFiltersOpen.set(true);
   }
 
-  protected closeMobileFilters(): void {
-    this.isMobileFiltersOpen.set(false);
+  protected closeFilters(): void {
+    this.isFiltersOpen.set(false);
   }
 
   protected selectMobilePreset(preset: DateRangePreset): void {
@@ -347,12 +345,12 @@ export class Dashboard implements OnInit, OnDestroy {
         return;
       }
       this.onDateRangeChanged({ preset: 'custom', startDate, endDate });
-      this.closeMobileFilters();
+      this.closeFilters();
       return;
     }
 
     this.onDateRangeChanged({ preset });
-    this.closeMobileFilters();
+    this.closeFilters();
   }
 
   protected clearMobileCustomDates(): void {

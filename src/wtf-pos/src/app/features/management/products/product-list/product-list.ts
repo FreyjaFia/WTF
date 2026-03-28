@@ -14,14 +14,13 @@ import type { FilterOption } from '@shared/components';
 import {
   AvatarComponent,
   BadgeComponent,
-  FilterDropdownComponent,
   IconComponent,
   PullToRefreshComponent,
   SearchInputComponent,
   SideDrawerComponent,
 } from '@shared/components';
-import { ProductCategoryEnum, ProductDto } from '@shared/models';
 import { AppRoutes } from '@shared/constants/app-routes';
+import { ProductCategoryEnum, ProductDto } from '@shared/models';
 import { debounceTime } from 'rxjs';
 
 type SortColumn = 'name' | 'price';
@@ -41,7 +40,6 @@ interface ProductListState {
     ReactiveFormsModule,
     RouterLink,
     IconComponent,
-    FilterDropdownComponent,
     BadgeComponent,
     AvatarComponent,
     PullToRefreshComponent,
@@ -66,7 +64,7 @@ export class ProductListComponent implements OnInit {
   protected readonly isLoading = signal(false);
   protected readonly isRefreshing = signal(false);
   protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
-  protected readonly isMobileFiltersOpen = signal(false);
+  protected readonly isFiltersOpen = signal(false);
   protected readonly ProductCategoryEnum = ProductCategoryEnum;
 
   protected readonly selectedTypes = signal<number[]>([]);
@@ -184,12 +182,12 @@ export class ProductListComponent implements OnInit {
     this.loadProducts();
   }
 
-  protected openMobileFilters(): void {
-    this.isMobileFiltersOpen.set(true);
+  protected openFilters(): void {
+    this.isFiltersOpen.set(true);
   }
 
-  protected closeMobileFilters(): void {
-    this.isMobileFiltersOpen.set(false);
+  protected closeFilters(): void {
+    this.isFiltersOpen.set(false);
   }
 
   private applyFiltersToCache(): void {
