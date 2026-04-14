@@ -59,17 +59,17 @@
         [class.pointer-events-none]="isReadOnly() || !canManageOrderActions()"
         [class.opacity-50]="isReadOnly() || !canManageOrderActions()"
       >
-        <div class="w-full overflow-x-auto">
+        <div class="w-full overflow-x-auto border-b border-gray-200">
           <div
             role="tablist"
-            class="tabs tabs-box tabs-sm grid w-full min-w-0 grid-cols-4 gap-1 sm:flex sm:w-max sm:min-w-0 sm:flex-nowrap"
+            class="flex w-max min-w-full items-end gap-6 pb-2 text-sm sm:text-base"
             aria-label="Catalog tabs"
           >
             @for (tab of subCategoryTabs; track tab.id) {
               <button
                 type="button"
                 role="tab"
-                class="tab h-auto min-w-0 items-center px-2 py-1.5 text-[11px] leading-tight whitespace-normal sm:h-auto sm:px-3 sm:py-2.5 sm:text-sm sm:whitespace-nowrap"
+                class="relative pb-2 font-semibold text-gray-500 transition-colors"
                 [class.tab-active]="
                   activeCatalogTab() === 'products' && activeSubCategoryTab() === tab.id
                 "
@@ -78,23 +78,43 @@
                 "
                 (click)="selectCatalogTab('products'); selectSubCategoryTab(tab.id)"
               >
-                <span class="flex flex-col items-center gap-1">
-                  <app-icon [name]="tab.icon" [class]="'h-4 w-4'" />
+                <span
+                  class="relative"
+                  [class.text-gray-900]="
+                    activeCatalogTab() === 'products' && activeSubCategoryTab() === tab.id
+                  "
+                >
                   {{ tab.label }}
+                  <span
+                    class="absolute left-0 -bottom-2 h-1 w-full rounded-full bg-gray-900 transition-opacity"
+                    [class.opacity-100]="
+                      activeCatalogTab() === 'products' && activeSubCategoryTab() === tab.id
+                    "
+                    [class.opacity-0]="
+                      !(activeCatalogTab() === 'products' && activeSubCategoryTab() === tab.id)
+                    "
+                  ></span>
                 </span>
               </button>
             }
             <button
               type="button"
               role="tab"
-              class="tab h-auto min-w-0 items-center px-2 py-1.5 text-[11px] leading-tight whitespace-normal sm:h-auto sm:px-3 sm:py-2.5 sm:text-sm sm:whitespace-nowrap"
+              class="relative pb-2 font-semibold text-gray-500 transition-colors"
               [class.tab-active]="activeCatalogTab() === 'bundles'"
               [attr.aria-selected]="activeCatalogTab() === 'bundles'"
               (click)="selectCatalogTab('bundles')"
             >
-              <span class="flex flex-col items-center gap-1">
-                <app-icon name="icon-promotion" [class]="'h-4 w-4'" />
+              <span
+                class="relative"
+                [class.text-gray-900]="activeCatalogTab() === 'bundles'"
+              >
                 Bundles
+                <span
+                  class="absolute left-0 -bottom-2 h-1 w-full rounded-full bg-gray-900 transition-opacity"
+                  [class.opacity-100]="activeCatalogTab() === 'bundles'"
+                  [class.opacity-0]="activeCatalogTab() !== 'bundles'"
+                ></span>
               </span>
             </button>
           </div>
@@ -123,7 +143,7 @@
             }
             @if (products().length > 0) {
               <div
-                class="grid grid-cols-1 gap-4 pb-4 sm:[grid-template-columns:repeat(auto-fill,minmax(220px,1fr))]"
+                class="grid grid-cols-1 gap-4 pb-4 sm:grid-cols-[repeat(auto-fill,minmax(220px,1fr))]"
                 [class.pb-18]="cart().length > 0"
                 [class.xl:pb-4]="cart().length > 0"
               >
@@ -182,7 +202,7 @@
               </div>
             } @else {
               <div
-                class="grid grid-cols-1 gap-4 pb-4 sm:[grid-template-columns:repeat(auto-fill,minmax(220px,1fr))]"
+                class="grid grid-cols-1 gap-4 pb-4 sm:grid-cols-[repeat(auto-fill,minmax(220px,1fr))]"
                 [class.pb-18]="cart().length > 0"
                 [class.xl:pb-4]="cart().length > 0"
               >

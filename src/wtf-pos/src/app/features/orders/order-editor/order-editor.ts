@@ -201,6 +201,7 @@ export class OrderEditor implements OnInit, OnDestroy {
     { id: ProductSubCategoryEnum.Coffee, label: 'Coffee', icon: 'icon-coffee' },
     { id: ProductSubCategoryEnum.NonCoffee, label: 'Non-Coffee', icon: 'icon-cold-drink' },
     { id: ProductSubCategoryEnum.Snacks, label: 'Snacks', icon: 'icon-snacks' },
+    { id: ProductSubCategoryEnum.Retail, label: 'Retail', icon: 'icon-others' },
   ];
   protected readonly cart = signal<CartItemDto[]>([]);
   protected readonly customers = signal<CustomerDto[]>([]);
@@ -1915,7 +1916,13 @@ export class OrderEditor implements OnInit, OnDestroy {
       items = items.filter((p) => p.name.toLowerCase().includes(lowerSearchTerm));
     }
 
-    items = items.filter((p) => p.subCategory === activeTab);
+    if (activeTab === ProductSubCategoryEnum.Retail) {
+      items = items.filter(
+        (p) => p.category === ProductCategoryEnum.Other && !p.isAddOn,
+      );
+    } else {
+      items = items.filter((p) => p.subCategory === activeTab);
+    }
 
     this.products.set(items);
   }
