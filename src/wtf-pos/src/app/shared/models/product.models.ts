@@ -9,12 +9,14 @@ export enum ProductSubCategoryEnum {
   Coffee = 1,
   NonCoffee = 2,
   Snacks = 3,
+  Retail = 4,
 }
 
 export const PRODUCT_SUB_CATEGORY_LABELS: Record<ProductSubCategoryEnum, string> = {
   [ProductSubCategoryEnum.Coffee]: 'Coffee',
   [ProductSubCategoryEnum.NonCoffee]: 'Non-Coffee',
   [ProductSubCategoryEnum.Snacks]: 'Snacks',
+  [ProductSubCategoryEnum.Retail]: 'Retail',
 };
 
 export enum AddOnTypeEnum {

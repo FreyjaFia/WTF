@@ -207,6 +207,10 @@ export class ReportsComponent implements OnInit {
       label: PRODUCT_SUB_CATEGORY_LABELS[ProductSubCategoryEnum.Snacks],
     },
     {
+      value: ProductSubCategoryEnum.Retail,
+      label: PRODUCT_SUB_CATEGORY_LABELS[ProductSubCategoryEnum.Retail],
+    },
+    {
       value: FixedBundleReportTypeFilterId,
       label: 'Fixed Bundle',
     },
