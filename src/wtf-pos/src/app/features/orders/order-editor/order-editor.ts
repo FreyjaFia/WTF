@@ -65,6 +65,7 @@ import {
   PromotionTypeEnum,
   ProductSubCategoryEnum,
   UpdateOrderCommand,
+  PRODUCT_SUB_CATEGORY_LABELS,
 } from '@shared/models';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { debounceTime, forkJoin, of, switchMap } from 'rxjs';
@@ -193,6 +194,8 @@ export class OrderEditor implements OnInit, OnDestroy {
   });
 
   protected readonly activeCatalogTab = signal<'products' | 'bundles'>('products');
+  protected readonly ProductSubCategoryEnum = ProductSubCategoryEnum;
+  protected readonly subCategoryLabels = PRODUCT_SUB_CATEGORY_LABELS;
   protected readonly selectedProductCategories = signal<ProductCategoryEnum[]>([]);
   protected readonly activeSubCategoryTab = signal<ProductSubCategoryEnum>(
     ProductSubCategoryEnum.Coffee,
@@ -387,6 +390,25 @@ export class OrderEditor implements OnInit, OnDestroy {
     };
   });
 
+  protected readonly productsBySubCategory = computed(() => {
+    const items = this.products().filter((p) => !p.isAddOn);
+
+    return {
+      [ProductSubCategoryEnum.Coffee]: items.filter(
+        (p) => p.subCategory === ProductSubCategoryEnum.Coffee,
+      ),
+      [ProductSubCategoryEnum.NonCoffee]: items.filter(
+        (p) => p.subCategory === ProductSubCategoryEnum.NonCoffee,
+      ),
+      [ProductSubCategoryEnum.Snacks]: items.filter(
+        (p) => p.subCategory === ProductSubCategoryEnum.Snacks,
+      ),
+      [ProductSubCategoryEnum.Retail]: items.filter(
+        (p) => p.subCategory === ProductSubCategoryEnum.Retail,
+      ),
+    };
+  });
+
   protected readonly filteredBundlePromotions = computed(() => {
     const term = (this.filterForm.controls.searchTerm.value ?? '').trim().toLowerCase();
     let items = this.bundlePromotions().filter((promo) =>
@@ -402,7 +424,7 @@ export class OrderEditor implements OnInit, OnDestroy {
 
   protected selectSubCategoryTab(tab: ProductSubCategoryEnum): void {
     this.activeSubCategoryTab.set(tab);
-    this.applyFiltersToCache();
+    this.scrollToSubCategory(tab);
   }
 
   protected selectCatalogTab(tab: 'products' | 'bundles'): void {
@@ -1907,7 +1929,6 @@ export class OrderEditor implements OnInit, OnDestroy {
 
   private applyFiltersToCache(): void {
     const { searchTerm } = this.filterForm.value;
-    const activeTab = this.activeSubCategoryTab();
 
     let items = [...this.productsCache()];
 
@@ -1916,15 +1937,21 @@ export class OrderEditor implements OnInit, OnDestroy {
       items = items.filter((p) => p.name.toLowerCase().includes(lowerSearchTerm));
     }
 
-    if (activeTab === ProductSubCategoryEnum.Retail) {
-      items = items.filter(
-        (p) => p.category === ProductCategoryEnum.Other && !p.isAddOn,
-      );
-    } else {
-      items = items.filter((p) => p.subCategory === activeTab);
+    this.products.set(items);
+  }
+
+  private scrollToSubCategory(tab: ProductSubCategoryEnum): void {
+    if (typeof window === 'undefined') {
+      return;
     }
 
-    this.products.set(items);
+    const id = `subcategory-${tab}`;
+    const target = document.getElementById(id);
+    if (!target) {
+      return;
+    }
+
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   private loadBundlePromotions(): void {
