@@ -61,6 +61,11 @@
             <div style="font-size: 14px; font-weight: 600">
               {{ item.name }}
             </div>
+            @if (item.promoLabel) {
+              <div style="font-size: 11px; color: #047857; margin-top: 2px">
+                {{ item.promoLabel }}
+              </div>
+            }
             <div style="font-size: 12px; color: #9ca3af; margin-top: 2px">
               {{ item.qty }} x <span style="color: inherit">&#8369;</span
               >{{ item.price | number: '1.2-2' }}
@@ -114,7 +119,27 @@
               </div>
             }
           </div>
-        } @else if (item.addOns?.length) {
+        }
+        @if (item.promoDiscount) {
+          <div style="margin-top: 4px; padding-left: 12px">
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                font-size: 12px;
+                color: #047857;
+                font-weight: 600;
+              "
+            >
+              <span>Promo discount</span>
+              <span
+                >-<span style="color: inherit">&#8369;</span
+                >{{ item.promoDiscount | number: '1.2-2' }}</span
+              >
+            </div>
+          </div>
+        }
+        @if (!isBundleLine(item) && item.addOns?.length) {
           <div style="margin-top: 6px; padding-left: 12px">
             @for (ao of getGroupedAddOns(item); track ao.addOnId + '-' + ao.price) {
               <div

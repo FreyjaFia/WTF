@@ -44,6 +44,10 @@ export class AddonSelectorComponent {
   protected readonly scaleRequiredSelectionByQuantity = signal(false);
   protected readonly customMaxSelectionPerOption = signal<number | null>(null);
   protected readonly subtitleText = signal('Customize your order');
+  protected readonly promoLabel = signal<string | null>(null);
+  protected readonly promoRules = signal<
+    { fixedPrice?: number | null; percentOff?: number | null; addOns: { addOnProductId: string; quantity: number }[] }[]
+  >([]);
 
   // Selections: key = group type, value = map of optionId â†’ quantity
   protected readonly selections = signal<Record<number, Map<string, number>>>({});
@@ -148,9 +152,63 @@ export class AddonSelectorComponent {
     return this.selectedAddOns().reduce((sum, a) => sum + a.price, 0);
   });
 
-  protected readonly unitPrice = computed(() => (this.product()?.price ?? 0) + this.addOnTotal());
+  protected readonly unitPrice = computed(() => {
+    const basePrice = this.product()?.price ?? 0;
+    const discountedBase = this.getDiscountedBasePrice(basePrice);
+    return (discountedBase ?? basePrice) + this.addOnTotal();
+  });
 
   protected readonly totalPrice = computed(() => this.unitPrice() * this.productQuantity());
+  protected readonly activePromoLabel = computed(() => {
+    const rules = this.promoRules();
+    if (rules.length === 0) {
+      return null;
+    }
+
+    const basePrice = this.product()?.price ?? 0;
+    const addOnCounts = new Map<string, number>();
+    for (const addOn of this.selectedAddOns()) {
+      addOnCounts.set(addOn.addOnId, (addOnCounts.get(addOn.addOnId) ?? 0) + 1);
+    }
+
+    let best: { fixedPrice?: number | null; percentOff?: number | null; price: number } | null = null;
+    for (const rule of rules) {
+      if (!this.satisfiesRequiredAddOns(addOnCounts, rule.addOns)) {
+        continue;
+      }
+
+      const discounted = this.calculateDiscountedPrice(
+        basePrice,
+        rule.fixedPrice ?? null,
+        rule.percentOff ?? null,
+      );
+      if (discounted == null) {
+        continue;
+      }
+
+      if (!best || discounted < best.price) {
+        best = { fixedPrice: rule.fixedPrice, percentOff: rule.percentOff, price: discounted };
+      }
+    }
+
+    if (!best) {
+      return null;
+    }
+
+    if (best.fixedPrice != null && best.fixedPrice > 0) {
+      return `Promo -\u20B1${this.formatCurrency(best.fixedPrice)}`;
+    }
+
+    if (best.percentOff != null && best.percentOff > 0) {
+      const percent = best.percentOff.toLocaleString('en-PH', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+      });
+      return `Promo -${percent}%`;
+    }
+
+    return null;
+  });
 
   public open(
     product: ProductDto,
@@ -164,6 +222,12 @@ export class AddonSelectorComponent {
       scaleRequiredSelectionByQuantity?: boolean;
       maxSelectionPerOption?: number | null;
       subtitleText?: string;
+      promoLabel?: string | null;
+      promoRules?: {
+        fixedPrice?: number | null;
+        percentOff?: number | null;
+        addOns: { addOnProductId: string; quantity: number }[];
+      }[];
     },
   ): void {
     this.product.set(product);
@@ -176,6 +240,8 @@ export class AddonSelectorComponent {
     this.scaleRequiredSelectionByQuantity.set(!!options?.scaleRequiredSelectionByQuantity);
     this.customMaxSelectionPerOption.set(options?.maxSelectionPerOption ?? null);
     this.subtitleText.set(options?.subtitleText ?? 'Customize your order');
+    this.promoLabel.set(options?.promoLabel ?? null);
+    this.promoRules.set(options?.promoRules ?? []);
     this.isOpen.set(true);
     this.modalStackId = this.modalStack.push(() => this.close());
     this.loadAddOns(product.id, options?.addOns, options?.customGroups);
@@ -412,13 +478,19 @@ export class AddonSelectorComponent {
 
   protected incrementProductQuantity(event: Event): void {
     event.stopPropagation();
-    this.productQuantity.update((qty) => Math.min(qty + 1, 99));
+    const previous = this.productQuantity();
+    const next = Math.min(previous + 1, 99);
+    this.productQuantity.set(next);
+    this.scaleSelectionsForQuantityChange(previous, next);
     this.rebalanceSelectionsForRequiredLimit();
   }
 
   protected decrementProductQuantity(event: Event): void {
     event.stopPropagation();
-    this.productQuantity.update((qty) => Math.max(qty - 1, 1));
+    const previous = this.productQuantity();
+    const next = Math.max(previous - 1, 1);
+    this.productQuantity.set(next);
+    this.scaleSelectionsForQuantityChange(previous, next);
     this.rebalanceSelectionsForRequiredLimit();
   }
 
@@ -494,6 +566,117 @@ export class AddonSelectorComponent {
 
     this.selections.set(nextSelections);
   }
+
+  private scaleSelectionsForQuantityChange(previousQty: number, nextQty: number): void {
+    if (previousQty <= 0 || previousQty === nextQty) {
+      return;
+    }
+
+    // Only custom group flows (ex: mix-and-match) should scale selections with base qty.
+    // Standard add-on groups (Size/Flavor/Sauce/Topping/Extra) are per-unit selections.
+    if (!this.isCustomOptionMode() || !this.scaleRequiredSelectionByQuantity()) {
+      return;
+    }
+
+    const current = this.selections();
+    const nextSelections: Record<number, Map<string, number>> = {};
+
+    for (const [typeKey, optionMap] of Object.entries(current)) {
+      const nextMap = new Map<string, number>();
+      for (const [optionId, qty] of optionMap.entries()) {
+        const perUnit = qty / previousQty;
+        const scaled = Math.max(0, Math.round(perUnit * nextQty));
+        if (scaled > 0) {
+          nextMap.set(optionId, scaled);
+        }
+      }
+
+      nextSelections[+typeKey] = nextMap;
+    }
+
+    this.selections.set(nextSelections);
+  }
+
+  private getDiscountedBasePrice(basePrice: number): number | null {
+    const rules = this.promoRules();
+    if (rules.length === 0) {
+      return null;
+    }
+
+    const addOnCounts = new Map<string, number>();
+    for (const addOn of this.selectedAddOns()) {
+      addOnCounts.set(addOn.addOnId, (addOnCounts.get(addOn.addOnId) ?? 0) + 1);
+    }
+
+    let best: number | null = null;
+    for (const rule of rules) {
+      if (!this.satisfiesRequiredAddOns(addOnCounts, rule.addOns)) {
+        continue;
+      }
+
+      const discounted = this.calculateDiscountedPrice(
+        basePrice,
+        rule.fixedPrice ?? null,
+        rule.percentOff ?? null,
+      );
+      if (discounted == null) {
+        continue;
+      }
+
+      if (best == null || discounted < best) {
+        best = discounted;
+      }
+    }
+
+    return best;
+  }
+
+  private satisfiesRequiredAddOns(
+    addOnCounts: Map<string, number>,
+    requiredAddOns: { addOnProductId: string; quantity: number }[],
+  ): boolean {
+    if (requiredAddOns.length === 0) {
+      return false;
+    }
+
+    const requiredSet = new Set(requiredAddOns.map((r) => r.addOnProductId));
+    for (const required of requiredAddOns) {
+      const qty = addOnCounts.get(required.addOnProductId) ?? 0;
+      const expected = required.quantity;
+      if (qty !== expected) {
+        return false;
+      }
+    }
+
+    for (const [id, qty] of addOnCounts.entries()) {
+      if (!requiredSet.has(id) && qty > 0) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  private calculateDiscountedPrice(
+    basePrice: number,
+    fixedPrice?: number | null,
+    percentOff?: number | null,
+  ): number | null {
+    if (fixedPrice != null && fixedPrice > 0) {
+      return Math.max(0, basePrice - fixedPrice);
+    }
+
+    if (percentOff != null && percentOff > 0) {
+      const discounted = basePrice * (1 - percentOff / 100);
+      return Math.round(discounted * 100) / 100;
+    }
+
+    return null;
+  }
+
+  private formatCurrency(value: number): string {
+    return value.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
   protected confirm(): void {
     if (this.validationError()) {
       return;
@@ -527,6 +710,8 @@ export class AddonSelectorComponent {
     this.scaleRequiredSelectionByQuantity.set(false);
     this.customMaxSelectionPerOption.set(null);
     this.subtitleText.set('Customize your order');
+    this.promoLabel.set(null);
+    this.promoRules.set([]);
     this.specialInstructions.set('');
     this.editingIndex.set(null);
 

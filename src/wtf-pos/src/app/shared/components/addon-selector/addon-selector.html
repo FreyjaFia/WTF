@@ -33,6 +33,13 @@
             <h3 id="addon-selector-title" class="text-lg font-bold text-gray-900">
               {{ product()!.name }}
             </h3>
+            @if (promoLabel()) {
+              <span
+                class="mt-1 inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700"
+              >
+                {{ promoLabel() }}
+              </span>
+            }
             <p class="mt-0.5 text-sm text-gray-500">{{ subtitleText() }}</p>
           </div>
           <div class="shrink-0 text-right">
@@ -64,19 +71,25 @@
                 +
               </button>
             </div>
-            @if (addOnTotal() > 0 || productQuantity() > 1) {
-              <p class="text-xs text-gray-400">
-                {{ productQuantity() }} &times; (Base
-                <app-icon
-                  name="icon-peso"
-                  [class]="'inline h-3 w-3 align-[-0.125em]'"
-                  [fill]="'currentColor'"
-                />{{ product()!.price | number: '1.2-2' }} +
-                <app-icon
-                  name="icon-peso"
-                  [class]="'inline h-3 w-3 align-[-0.125em]'"
-                  [fill]="'currentColor'"
-                />{{ addOnTotal() | number: '1.2-2' }})
+            @if (addOnTotal() > 0 || productQuantity() > 1 || activePromoLabel()) {
+              <p class="text-xs wrap-break-word text-gray-400">
+                <span class="block">
+                  (Base
+                  <app-icon
+                    name="icon-peso"
+                    [class]="'inline h-3 w-3 align-[-0.125em]'"
+                    [fill]="'currentColor'"
+                  />{{ product()!.price | number: '1.2-2' }} +
+                  <app-icon
+                    name="icon-peso"
+                    [class]="'inline h-3 w-3 align-[-0.125em]'"
+                    [fill]="'currentColor'"
+                  />{{ addOnTotal() | number: '1.2-2' }}
+                  @if (activePromoLabel()) {
+                    - {{ activePromoLabel() }}
+                  }
+                  )
+                </span>
               </p>
             }
           </div>
@@ -252,16 +265,18 @@
           @if (addOnGroups().length === 0) {
             <div class="flex flex-col items-center py-8 text-center">
               <p class="text-sm text-gray-400">
-                {{ isCustomOptionMode() ? 'No selectable items available' : 'No add-ons available for this product' }}
+                {{
+                  isCustomOptionMode()
+                    ? 'No selectable items available'
+                    : 'No add-ons available for this product'
+                }}
               </p>
             </div>
           }
 
           <!-- Special Instructions (Optional) -->
           <div [class.mt-6]="addOnGroups().length > 0">
-            <label
-              for="specialInstructions"
-              class="mb-2 block text-xs font-semibold tracking-wider text-gray-400 uppercase"
+            <label class="mb-2 block text-xs font-semibold tracking-wider text-gray-400 uppercase"
               >SPECIAL INSTRUCTIONS (Optional)</label
             >
             <div class="relative">

@@ -223,7 +223,20 @@
                       </div>
                     }
                   </div>
-                } @else if (item.addOns?.length) {
+                }
+                @if (item.promoDiscount) {
+                  <div class="mt-1 text-xs font-semibold text-emerald-700">
+                    Promo discount
+                    <span class="float-right"
+                      >-<app-icon
+                        name="icon-peso"
+                        [class]="'inline h-3 w-3 align-[-0.125em]'"
+                        [fill]="'currentColor'"
+                      />{{ item.promoDiscount.toFixed(2) }}</span
+                    >
+                  </div>
+                }
+                @if (item.addOns?.length) {
                   <div class="mt-1 space-y-0.5">
                     @for (ao of getGroupedAddOns(item); track ao.addOnId + '-' + ao.price) {
                       <p class="flex items-center gap-1 text-xs text-gray-500">

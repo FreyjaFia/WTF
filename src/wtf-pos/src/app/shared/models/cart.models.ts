@@ -25,6 +25,8 @@ export interface CartItemDto {
   imageUrl?: string | null;
   addOns?: CartAddOnDto[];
   specialInstructions?: string | null;
+  promoLabel?: string | null;
+  promoDiscount?: number | null;
   bundlePromotionId?: string | null;
   bundlePromotionName?: string | null;
   bundlePromotionTypeId?: PromotionTypeEnum | null;

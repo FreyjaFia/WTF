@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { AlertService, CatalogCacheService, OrderService } from '@core/services';
+import { AlertService, CatalogCacheService, OrderService, PromotionService } from '@core/services';
 import {
   AvatarComponent,
   BadgeComponent,
@@ -16,6 +16,8 @@ import {
   CartAddOnDto,
   CartBundleItemDto,
   CartItemDto,
+  DiscountedProductItemDto,
+  DiscountedProductPromotionDto,
   OrderDto,
   OrderStatusEnum,
   PaymentMethodEnum,
@@ -41,6 +43,7 @@ export class OrderDetails implements OnInit {
   private readonly orderService = inject(OrderService);
   private readonly catalogCache = inject(CatalogCacheService);
   private readonly alertService = inject(AlertService);
+  private readonly promotionService = inject(PromotionService);
 
   protected readonly order = signal<OrderDto | null>(null);
   protected readonly productImageById = signal<Record<string, string | null>>({});
@@ -95,6 +98,7 @@ export class OrderDetails implements OnInit {
     () => this.paymentAmountPaid() - this.paymentChangeAmount(),
   );
   protected readonly addOnPriceReducer = (sum: number, ao: CartAddOnDto) => sum + ao.price;
+  protected readonly discountedProductPromotions = signal<DiscountedProductPromotionDto[]>([]);
   protected readonly detailItems = computed<CartItemDto[]>(() => {
     const order = this.order();
     if (!order) {
@@ -135,6 +139,7 @@ export class OrderDetails implements OnInit {
   public ngOnInit(): void {
     this.loadCatalogImages();
     this.loadOrder();
+    this.loadDiscountedProductPromotions();
   }
 
   protected backToOrders(): void {
@@ -393,6 +398,13 @@ export class OrderDetails implements OnInit {
     this.productImageById.set(map);
   }
 
+  private loadDiscountedProductPromotions(): void {
+    this.promotionService.getActiveDiscountedProductPromotions().subscribe({
+      next: (promos) => this.discountedProductPromotions.set(promos),
+      error: () => this.discountedProductPromotions.set([]),
+    });
+  }
+
   private mapOrderItemsToCartItems(order: OrderDto): CartItemDto[] {
     const toAddOns = (item: OrderDto['items'][number]): CartAddOnDto[] => {
       const expanded: CartAddOnDto[] = [];
@@ -443,7 +455,7 @@ export class OrderDetails implements OnInit {
         continue;
       }
 
-      regularItems.push({
+      const cartItem: CartItemDto = {
         productId: item.productId,
         name: item.productName,
         price: item.price ?? 0,
@@ -451,7 +463,14 @@ export class OrderDetails implements OnInit {
         imageUrl: this.getProductImage(item.productId),
         addOns: toAddOns(item),
         specialInstructions: item.specialInstructions ?? null,
-      });
+      };
+      const promo = this.getBestDiscountedPromo(cartItem);
+      if (promo) {
+        const promoDiscount = Math.max(0, cartItem.price - promo.price) * cartItem.qty;
+        cartItem.promoLabel = this.formatPromoLabel(promo.entry);
+        cartItem.promoDiscount = promoDiscount > 0 ? promoDiscount : null;
+      }
+      regularItems.push(cartItem);
     }
 
     const bundleLines: CartItemDto[] = [];
@@ -490,6 +509,109 @@ export class OrderDetails implements OnInit {
     }
 
     return [...regularItems, ...bundleLines];
+  }
+
+  private getBestDiscountedPromo(
+    item: CartItemDto,
+  ): { entry: DiscountedProductItemDto; price: number } | null {
+    if (item.bundleItems?.length || item.bundlePromotionId) {
+      return null;
+    }
+
+    const promos = this.discountedProductPromotions()
+      .flatMap((promo) => promo.items.map((entry) => ({ entry })))
+      .filter((promo) => promo.entry.productId === item.productId);
+    if (promos.length === 0) {
+      return null;
+    }
+
+    const addOnCounts = new Map<string, number>();
+    for (const addOn of item.addOns ?? []) {
+      addOnCounts.set(addOn.addOnId, (addOnCounts.get(addOn.addOnId) ?? 0) + 1);
+    }
+
+    let best: { entry: DiscountedProductItemDto; price: number } | null = null;
+    for (const promo of promos) {
+      if (!this.lineSatisfiesRequiredAddOns(addOnCounts, promo.entry.addOns)) {
+        continue;
+      }
+
+      const discounted = this.calculateDiscountedPrice(
+        item.price,
+        promo.entry.fixedPrice,
+        promo.entry.percentOff,
+      );
+      if (discounted == null) {
+        continue;
+      }
+
+      if (best == null || discounted < best.price) {
+        best = { entry: promo.entry, price: discounted };
+      }
+    }
+
+    return best;
+  }
+
+  private lineSatisfiesRequiredAddOns(
+    addOnCounts: Map<string, number>,
+    requiredAddOns: { addOnProductId: string; quantity: number }[],
+  ): boolean {
+    if (requiredAddOns.length === 0) {
+      return false;
+    }
+
+    const requiredSet = new Set(requiredAddOns.map((r) => r.addOnProductId));
+    for (const required of requiredAddOns) {
+      const qty = addOnCounts.get(required.addOnProductId) ?? 0;
+      if (qty !== required.quantity) {
+        return false;
+      }
+    }
+
+    for (const [id, qty] of addOnCounts.entries()) {
+      if (!requiredSet.has(id) && qty > 0) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  private calculateDiscountedPrice(
+    basePrice: number,
+    fixedPrice?: number | null,
+    percentOff?: number | null,
+  ): number | null {
+    if (fixedPrice != null && fixedPrice > 0) {
+      return Math.max(0, basePrice - fixedPrice);
+    }
+
+    if (percentOff != null && percentOff > 0) {
+      const discounted = basePrice * (1 - percentOff / 100);
+      return Math.round(discounted * 100) / 100;
+    }
+
+    return null;
+  }
+
+  private formatPromoLabel(entry: DiscountedProductItemDto): string | null {
+    if (entry.fixedPrice != null && entry.fixedPrice > 0) {
+      return `Promo -\u20B1${entry.fixedPrice.toLocaleString('en-PH', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`;
+    }
+
+    if (entry.percentOff != null && entry.percentOff > 0) {
+      const percent = entry.percentOff.toLocaleString('en-PH', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+      });
+      return `Promo -${percent}%`;
+    }
+
+    return null;
   }
 
   private getAddOnTypeForOwner(

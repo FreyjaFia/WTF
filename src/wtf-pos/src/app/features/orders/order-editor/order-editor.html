@@ -142,50 +142,78 @@
               </div>
             }
             @if (products().length > 0) {
-              <div
-                class="grid grid-cols-1 gap-4 pb-4 sm:grid-cols-[repeat(auto-fill,minmax(220px,1fr))]"
-                [class.pb-18]="cart().length > 0"
-                [class.xl:pb-4]="cart().length > 0"
-              >
-                @for (p of products(); track p.id) {
-                  <div
-                    class="card flex min-h-60 flex-col overflow-hidden rounded-xl bg-white shadow-lg transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl"
-                    [class.cursor-pointer]="!isReadOnly()"
-                    [class.cursor-default]="isReadOnly() || !canManageOrderActions()"
-                    [class.opacity-50]="isReadOnly() || !canManageOrderActions()"
-                    [class.pointer-events-none]="isReadOnly() || !canManageOrderActions()"
-                    role="button"
-                    tabindex="0"
-                    (click)="!isReadOnly() && canManageOrderActions() && addToCart(p)"
-                    (keydown.enter)="!isReadOnly() && canManageOrderActions() && addToCart(p)"
-                    (keydown.space)="!isReadOnly() && canManageOrderActions() && addToCart(p)"
-                  >
-                    <figure class="flex h-32 shrink-0 items-center justify-center">
-                      @if (p.imageUrl) {
-                        <img [src]="p.imageUrl" [alt]="p.name" class="h-24 w-24 object-contain" />
-                      }
-                      @if (!p.imageUrl) {
-                        <app-avatar [label]="p.name" [size]="56" />
-                      }
-                    </figure>
-                    <div class="card-body flex flex-1 flex-col justify-between p-4">
-                      <h2
-                        class="card-title text-base leading-snug font-semibold wrap-break-word text-gray-800"
-                      >
-                        {{ p.name }}
-                      </h2>
-                      <div class="card-actions mt-auto items-center justify-between">
-                        <div class="text-lg font-bold text-black">
-                          <span class="text-base opacity-70"
-                            ><app-icon
-                              name="icon-peso"
-                              [class]="'inline h-3 w-3 align-[-0.125em]'"
-                              [fill]="'currentColor'" /></span
-                          >{{ p.price | number: '1.2-2' }}
-                        </div>
+              <ng-template #productCard let-p>
+                <div
+                  class="card flex min-h-60 flex-col overflow-hidden rounded-xl bg-white shadow-lg transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl"
+                  [class.cursor-pointer]="!isReadOnly()"
+                  [class.cursor-default]="isReadOnly() || !canManageOrderActions()"
+                  [class.opacity-50]="isReadOnly() || !canManageOrderActions()"
+                  [class.pointer-events-none]="isReadOnly() || !canManageOrderActions()"
+                  role="button"
+                  tabindex="0"
+                  (click)="!isReadOnly() && canManageOrderActions() && addToCart(p)"
+                  (keydown.enter)="!isReadOnly() && canManageOrderActions() && addToCart(p)"
+                  (keydown.space)="!isReadOnly() && canManageOrderActions() && addToCart(p)"
+                >
+                  <figure class="flex h-32 shrink-0 items-center justify-center">
+                    @if (p.imageUrl) {
+                      <img [src]="p.imageUrl" [alt]="p.name" class="h-24 w-24 object-contain" />
+                    }
+                    @if (!p.imageUrl) {
+                      <app-avatar [label]="p.name" [size]="56" />
+                    }
+                  </figure>
+                  <div class="card-body flex flex-1 flex-col justify-between p-4">
+                    <h2
+                      class="card-title text-base leading-snug font-semibold wrap-break-word text-gray-800"
+                    >
+                      <span [innerHTML]="getHighlightedName(p.name)"></span>
+                    </h2>
+                    <div class="card-actions mt-auto items-center justify-between">
+                      <div class="text-lg font-bold text-black">
+                        <span class="text-base opacity-70"
+                          ><app-icon
+                            name="icon-peso"
+                            [class]="'inline h-3 w-3 align-[-0.125em]'"
+                            [fill]="'currentColor'" /></span
+                        >{{ p.price | number: '1.2-2' }}
                       </div>
                     </div>
                   </div>
+                </div>
+              </ng-template>
+
+              <div
+                class="space-y-6 pb-4"
+                [class.pb-18]="cart().length > 0"
+                [class.xl:pb-4]="cart().length > 0"
+              >
+                @for (
+                  tab of [
+                    ProductSubCategoryEnum.Coffee,
+                    ProductSubCategoryEnum.NonCoffee,
+                    ProductSubCategoryEnum.Snacks,
+                    ProductSubCategoryEnum.Retail
+                  ];
+                  track tab
+                ) {
+                  @if (productsBySubCategory()[tab].length > 0) {
+                    <section [attr.id]="'subcategory-' + tab">
+                      <h3 class="mb-3 text-base font-semibold text-gray-800">
+                        {{ subCategoryLabels[tab] }}
+                      </h3>
+                      <div
+                        class="grid grid-cols-1 gap-4 sm:grid-cols-[repeat(auto-fill,minmax(220px,1fr))]"
+                      >
+                        @for (p of productsBySubCategory()[tab]; track p.id) {
+                          <ng-container
+                            [ngTemplateOutlet]="productCard"
+                            [ngTemplateOutletContext]="{ $implicit: p }"
+                          ></ng-container>
+                        }
+                      </div>
+                    </section>
+                  }
                 }
               </div>
             }
@@ -505,6 +533,13 @@
                   <div class="flex items-start justify-between gap-4 sm:gap-6">
                     <div class="min-w-0 flex-1 text-sm font-semibold text-gray-900">
                       {{ c.name }}
+                      @if (getDiscountedPromoLabel(c)) {
+                        <div
+                          class="mt-1 inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700"
+                        >
+                          {{ getDiscountedPromoLabel(c) }}
+                        </div>
+                      }
                     </div>
                     <div class="shrink-0 text-sm text-gray-500">
                       <span class="text-xs opacity-60"
@@ -596,8 +631,23 @@
                     </div>
                   }
                 </div>
-              } @else if (c.addOns?.length) {
+              } @else if (c.addOns?.length || getDiscountedAmount(c) > 0) {
                 <div class="mt-2 ml-19 space-y-1 border-t border-gray-200 pt-2">
+                  @if (getDiscountedAmount(c) > 0) {
+                    <div class="flex items-center justify-between text-xs font-semibold text-emerald-700">
+                      <span class="flex min-w-0 flex-1 items-center gap-1.5 pr-2">
+                        <span class="inline-block h-1 w-1 shrink-0 rounded-full bg-emerald-400"></span>
+                        <span class="min-w-0 wrap-break-word">Promo discount</span>
+                      </span>
+                      <span class="shrink-0"
+                        >-<app-icon
+                          name="icon-peso"
+                          [class]="'inline h-3 w-3 align-[-0.125em]'"
+                          [fill]="'currentColor'"
+                        />{{ getDiscountedAmount(c) | number: '1.2-2' }}</span
+                      >
+                    </div>
+                  }
                   @for (ao of getGroupedAddOns(c); track ao.addOnId + '-' + ao.price) {
                     <div class="flex items-center justify-between text-xs text-gray-500">
                       <span class="flex min-w-0 flex-1 items-center gap-1.5 pr-2">
@@ -823,7 +873,7 @@
 </div>
 
 <app-checkout-modal
-  [cartItems]="cart()"
+  [cartItems]="checkoutCartItems()"
   [totalPrice]="totalPrice()"
   [selectedCustomerName]="selectedCustomerName()"
   [orderSpecialInstructions]="orderSpecialInstructions()"

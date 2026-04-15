@@ -8,6 +8,7 @@ using WTF.Api.Common.Time;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
+using WTF.Api.Features.Promotions.DTOs;
 using WTF.Api.Features.Products.Enums;
 using WTF.Api.Hubs;
 using WTF.Api.Services;
@@ -261,11 +262,43 @@ public class CreateOrderHandler(
             db.OrderBundlePromotions.AddRange(orderBundlePromotions);
         }
 
+        var shouldCapturePrice = request.Status == OrderStatusEnum.Completed || request.Status == OrderStatusEnum.Cancelled;
+        Dictionary<Guid, List<DiscountedRule>> discountedRulesByProductId = [];
+        if (shouldCapturePrice)
+        {
+            var timeZone = RequestTimeZone.ResolveFromRequest(httpContextAccessor);
+            var referenceUtc = request.CreatedAt?.ToUniversalTime() ?? DateTime.UtcNow;
+
+            var discountedPromotions = await db.Promotions
+                .Where(p => p.TypeId == PromotionTypeIds.DiscountedProduct)
+                .Include(p => p.DiscountedProductPromotions)
+                    .ThenInclude(d => d.DiscountedProductPromotionAddOns)
+                .ToListAsync(cancellationToken);
+
+            discountedRulesByProductId = discountedPromotions
+                .Where(p => IsPromotionActiveOnLocalDate(p, referenceUtc, timeZone))
+                .SelectMany(p => p.DiscountedProductPromotions)
+                .GroupBy(d => d.ProductId)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Select(d => new DiscountedRule(
+                        d.FixedPrice,
+                        d.PercentOff,
+                        d.DiscountedProductPromotionAddOns
+                            .Select(a => (a.AddOnProductId, a.Quantity))
+                            .ToList()))
+                        .ToList());
+        }
+
         // Add order items with parent-child relationships
         for (var itemIndex = 0; itemIndex < request.Items.Count; itemIndex++)
         {
             var item = request.Items[itemIndex];
             var product = await db.Products.FindAsync([item.ProductId], cancellationToken) ?? throw new InvalidOperationException($"Product with ID {item.ProductId} not found.");
+            var basePrice = product.Price;
+            var discountedPrice = shouldCapturePrice
+                ? GetDiscountedUnitPrice(basePrice, item, discountedRulesByProductId)
+                : null;
             var orderItem = new OrderItem
             {
                 OrderId = order.Id,
@@ -279,9 +312,9 @@ public class CreateOrderHandler(
             };
 
             // Capture price if order is Completed or Cancelled
-            if (request.Status == OrderStatusEnum.Completed || request.Status == OrderStatusEnum.Cancelled)
+            if (shouldCapturePrice)
             {
-                orderItem.Price = product.Price;
+                orderItem.Price = discountedPrice ?? basePrice;
             }
 
             db.OrderItems.Add(orderItem);
@@ -464,5 +497,95 @@ public class CreateOrderHandler(
         }
 
         return true;
+    }
+
+    private sealed record DiscountedRule(
+        decimal? FixedPrice,
+        decimal? PercentOff,
+        List<(Guid AddOnProductId, int Quantity)> RequiredAddOns);
+
+    private static decimal? GetDiscountedUnitPrice(
+        decimal basePrice,
+        OrderItemRequestDto item,
+        Dictionary<Guid, List<DiscountedRule>> rulesByProductId)
+    {
+        if (!rulesByProductId.TryGetValue(item.ProductId, out var rules) || rules.Count == 0)
+        {
+            return null;
+        }
+
+        var addOnMap = item.AddOns
+            .GroupBy(x => x.ProductId)
+            .ToDictionary(x => x.Key, x => x.Sum(y => y.Quantity));
+
+        var best = (decimal?)null;
+        foreach (var rule in rules)
+        {
+            if (!SatisfiesExactAddOns(addOnMap, rule.RequiredAddOns))
+            {
+                continue;
+            }
+
+            var discounted = CalculateDiscountedUnitPrice(basePrice, rule.FixedPrice, rule.PercentOff);
+            if (!discounted.HasValue)
+            {
+                continue;
+            }
+
+            if (!best.HasValue || discounted.Value < best.Value)
+            {
+                best = discounted.Value;
+            }
+        }
+
+        return best;
+    }
+
+    private static bool SatisfiesExactAddOns(
+        Dictionary<Guid, int> addOnMap,
+        IEnumerable<(Guid AddOnProductId, int Quantity)> requiredAddOns)
+    {
+        var required = requiredAddOns.ToList();
+        if (required.Count == 0)
+        {
+            return false;
+        }
+
+        var requiredSet = required.Select(x => x.AddOnProductId).ToHashSet();
+        foreach (var (addOnProductId, quantity) in required)
+        {
+            if (!addOnMap.TryGetValue(addOnProductId, out var qty) || qty != quantity)
+            {
+                return false;
+            }
+        }
+
+        foreach (var entry in addOnMap)
+        {
+            if (!requiredSet.Contains(entry.Key) && entry.Value > 0)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static decimal? CalculateDiscountedUnitPrice(decimal basePrice, decimal? fixedPrice, decimal? percentOff)
+    {
+        if (fixedPrice.HasValue && fixedPrice.Value > 0)
+        {
+            var discounted = basePrice - fixedPrice.Value;
+            return Math.Max(0, discounted);
+        }
+
+        if (percentOff.HasValue && percentOff.Value > 0)
+        {
+            var multiplier = 1m - (percentOff.Value / 100m);
+            var discounted = basePrice * multiplier;
+            return Math.Round(discounted, 2, MidpointRounding.AwayFromZero);
+        }
+
+        return null;
     }
 }

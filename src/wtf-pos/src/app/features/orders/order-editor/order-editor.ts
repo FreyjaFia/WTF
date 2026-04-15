@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+﻿import { CommonModule } from '@angular/common';
 import {
   ChangeDetectorRef,
   Component,
@@ -61,6 +61,8 @@ import {
   ProductDto,
   FixedBundlePromotionDto,
   MixMatchPromotionDto,
+  DiscountedProductItemDto,
+  DiscountedProductPromotionDto,
   PromotionListItemDto,
   PromotionTypeEnum,
   ProductSubCategoryEnum,
@@ -211,11 +213,13 @@ export class OrderEditor implements OnInit, OnDestroy {
   protected readonly products = signal<ProductDto[]>([]);
   protected readonly productsCache = signal<ProductDto[]>([]);
   protected readonly bundlePromotions = signal<PromotionListItemDto[]>([]);
+  protected readonly discountedProductPromotions = signal<DiscountedProductPromotionDto[]>([]);
   private readonly bundlePromotionsSync = effect(() => {
     this.bundlePromotions.set(this.catalogCache.bundlePromotions());
   });
   private readonly pendingBundleSelection = signal<BundlePromotionSelection | null>(null);
   protected readonly isLoadingPromotions = signal(false);
+  protected readonly isLoadingDiscountedPromotions = signal(false);
   protected readonly selectedCustomerId = signal<string | null>(null);
   protected readonly isLoadingCustomers = signal(false);
   protected readonly isLoading = signal(false);
@@ -367,7 +371,7 @@ export class OrderEditor implements OnInit, OnDestroy {
         ? new Date(this.getOrderDateValue(order) || Date.now()).toLocaleString('en-PH', dateOptions)
         : new Date().toLocaleString('en-PH', dateOptions),
       status: offlineStatus ?? order?.status ?? OrderStatusEnum.Pending,
-      items: this.cart(),
+      items: this.checkoutCartItems(),
       specialInstructions: this.orderSpecialInstructions(),
       totalAmount: this.receiptTotalAmount(),
       paymentMethod: order?.paymentMethod ?? null,
@@ -380,6 +384,45 @@ export class OrderEditor implements OnInit, OnDestroy {
   protected itemCount = () => this.cart().reduce((s, i) => s + i.qty, 0);
   protected totalPrice = () => this.cart().reduce((s, i) => s + this.getLineTotal(i), 0);
 
+  protected getHighlightedName(name: string): string {
+    const term = this.filterForm.controls.searchTerm.value?.trim();
+    if (!term) {
+      return this.escapeHtml(name);
+    }
+
+    const source = name;
+    const lowerSource = source.toLowerCase();
+    const lowerTerm = term.toLowerCase();
+    if (!lowerSource.includes(lowerTerm)) {
+      return this.escapeHtml(source);
+    }
+
+    let result = '';
+    let index = 0;
+    while (true) {
+      const found = lowerSource.indexOf(lowerTerm, index);
+      if (found === -1) {
+        result += this.escapeHtml(source.slice(index));
+        break;
+      }
+
+      result += this.escapeHtml(source.slice(index, found));
+      result += `<mark class=\"rounded bg-amber-100 px-0.5 text-gray-900\">${this.escapeHtml(source.slice(found, found + term.length))}</mark>`;
+      index = found + term.length;
+    }
+
+    return result;
+  }
+
+  private escapeHtml(value: string): string {
+    return value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   protected readonly categoryCounts = computed(() => {
     const cache = this.productsCache();
     return {
@@ -389,6 +432,20 @@ export class OrderEditor implements OnInit, OnDestroy {
         .length,
     };
   });
+
+  protected readonly checkoutCartItems = computed<CartItemDto[]>(() =>
+    this.cart().map((item) => {
+      const discountedBase = this.getDiscountedUnitPrice(item);
+      const promoDiscount =
+        discountedBase != null ? Math.max(0, item.price - discountedBase) * item.qty : 0;
+      return {
+        ...item,
+        promoLabel: this.getDiscountedPromoLabel(item),
+        promoDiscount: promoDiscount > 0 ? promoDiscount : null,
+        price: discountedBase ?? item.price,
+      };
+    }),
+  );
 
   protected readonly productsBySubCategory = computed(() => {
     const items = this.products().filter((p) => !p.isAddOn);
@@ -557,6 +614,7 @@ export class OrderEditor implements OnInit, OnDestroy {
     }
 
     this.loadBundlePromotions();
+    this.loadDiscountedProductPromotions();
 
     this.filterForm.valueChanges.pipe(debounceTime(300)).subscribe(() => {
       this.applyFiltersToCache();
@@ -910,7 +968,10 @@ export class OrderEditor implements OnInit, OnDestroy {
     }
 
     // If the product is an add-on-capable product, open the add-on selector
-    this.addonSelector().open(p);
+    this.addonSelector().open(p, {
+      promoLabel: this.getPromoLabelForProduct(p.id),
+      promoRules: this.getPromoRulesForProduct(p.id),
+    });
   }
 
   protected addBundlePromotionToCart(promo: PromotionListItemDto): void {
@@ -1054,8 +1115,18 @@ export class OrderEditor implements OnInit, OnDestroy {
     return (item.addOns ?? []).reduce(this.addOnPriceReducer, 0);
   }
 
+  protected getDiscountedUnitPrice(item: CartItemDto): number | null {
+    if (item.bundleItems?.length || item.bundlePromotionId) {
+      return null;
+    }
+
+    return this.getBestDiscountedPromo(item)?.price ?? null;
+  }
+
   protected getUnitSubtotal(item: CartItemDto): number {
-    return item.price + this.getUnitAddOnTotal(item);
+    const discountedBase = this.getDiscountedUnitPrice(item);
+    const basePrice = discountedBase ?? item.price;
+    return basePrice + this.getUnitAddOnTotal(item);
   }
 
   protected getLineTotal(item: CartItemDto): number {
@@ -1064,6 +1135,167 @@ export class OrderEditor implements OnInit, OnDestroy {
     }
 
     return item.qty * this.getUnitSubtotal(item);
+  }
+
+  protected getDiscountedAmount(item: CartItemDto): number {
+    if (item.bundleItems?.length || item.bundlePromotionId) {
+      return 0;
+    }
+
+    const discountedBase = this.getDiscountedUnitPrice(item);
+    if (discountedBase == null) {
+      return 0;
+    }
+
+    const basePrice = item.price;
+    const diff = Math.max(0, basePrice - discountedBase);
+    return diff * Math.max(1, item.qty);
+  }
+
+  private lineSatisfiesRequiredAddOns(
+    addOnCounts: Map<string, number>,
+    requiredAddOns: { addOnProductId: string; quantity: number }[],
+  ): boolean {
+    if (requiredAddOns.length === 0) {
+      return false;
+    }
+
+    const requiredSet = new Set(requiredAddOns.map((r) => r.addOnProductId));
+    for (const required of requiredAddOns) {
+      const qty = addOnCounts.get(required.addOnProductId) ?? 0;
+      const expected = required.quantity;
+      if (qty !== expected) {
+        return false;
+      }
+    }
+
+    for (const [id, qty] of addOnCounts.entries()) {
+      if (!requiredSet.has(id) && qty > 0) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  private calculateDiscountedPrice(
+    basePrice: number,
+    fixedPrice?: number | null,
+    percentOff?: number | null,
+  ): number | null {
+    if (fixedPrice != null && fixedPrice > 0) {
+      return Math.max(0, basePrice - fixedPrice);
+    }
+
+    if (percentOff != null && percentOff > 0) {
+      const discounted = basePrice * (1 - percentOff / 100);
+      return Math.round(discounted * 100) / 100;
+    }
+
+    return null;
+  }
+
+    protected getDiscountedPromoLabel(item: CartItemDto): string | null {
+    const best = this.getBestDiscountedPromo(item);
+    if (!best) {
+      return null;
+    }
+
+    return this.formatPromoLabel(best.entry);
+  }
+
+  private getPromoLabelForProduct(productId: string): string | null {
+    const entries = this.discountedProductPromotions()
+      .flatMap((promo) => promo.items)
+      .filter((entry) => entry.productId === productId);
+    if (entries.length === 0) {
+      return null;
+    }
+
+    const label = this.formatPromoLabel(entries[0]);
+    if (!label) {
+      return null;
+    }
+
+    return label;
+  }
+
+  private getPromoRulesForProduct(productId: string): {
+    fixedPrice?: number | null;
+    percentOff?: number | null;
+    addOns: { addOnProductId: string; quantity: number }[];
+  }[] {
+    return this.discountedProductPromotions()
+      .flatMap((promo) => promo.items)
+      .filter((entry) => entry.productId === productId)
+      .map((entry) => ({
+        fixedPrice: entry.fixedPrice ?? null,
+        percentOff: entry.percentOff ?? null,
+        addOns: entry.addOns,
+      }));
+  }
+
+  private formatPromoLabel(entry: DiscountedProductItemDto): string | null {
+    if (entry.fixedPrice != null && entry.fixedPrice > 0) {
+      return `Promo -\u20B1${this.formatCurrency(entry.fixedPrice)}`;
+    }
+
+    if (entry.percentOff != null && entry.percentOff > 0) {
+      const percent = entry.percentOff.toLocaleString('en-PH', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+      });
+      return `Promo -${percent}%`;
+    }
+
+    return null;
+  }
+
+  private getBestDiscountedPromo(
+    item: CartItemDto,
+  ): { entry: DiscountedProductItemDto; price: number } | null {
+    if (item.bundleItems?.length || item.bundlePromotionId) {
+      return null;
+    }
+
+    const promos = this.discountedProductPromotions()
+      .flatMap((promo) => promo.items.map((entry) => ({ entry })))
+      .filter((promo) => promo.entry.productId === item.productId);
+    if (promos.length === 0) {
+      return null;
+    }
+
+    const addOnCounts = new Map<string, number>();
+    for (const addOn of item.addOns ?? []) {
+      addOnCounts.set(addOn.addOnId, (addOnCounts.get(addOn.addOnId) ?? 0) + 1);
+    }
+
+    let best: { entry: DiscountedProductItemDto; price: number } | null = null;
+
+    for (const promo of promos) {
+      if (!this.lineSatisfiesRequiredAddOns(addOnCounts, promo.entry.addOns)) {
+        continue;
+      }
+
+      const discounted = this.calculateDiscountedPrice(
+        item.price,
+        promo.entry.fixedPrice,
+        promo.entry.percentOff,
+      );
+      if (discounted == null) {
+        continue;
+      }
+
+      if (best == null || discounted < best.price) {
+        best = { entry: promo.entry, price: discounted };
+      }
+    }
+
+    return best;
+  }
+
+  private formatCurrency(value: number): string {
+    return value.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
   protected getBundleChildTotalQuantity(
@@ -1332,6 +1564,8 @@ export class OrderEditor implements OnInit, OnDestroy {
       addOns: item.addOns ?? [],
       specialInstructions: item.specialInstructions ?? null,
       editIndex: index,
+      promoLabel: this.getPromoLabelForProduct(item.productId),
+      promoRules: this.getPromoRulesForProduct(item.productId),
     });
   }
 
@@ -1964,6 +2198,20 @@ export class OrderEditor implements OnInit, OnDestroy {
       .finally(() => this.isLoadingPromotions.set(false));
   }
 
+  private loadDiscountedProductPromotions(): void {
+    this.isLoadingDiscountedPromotions.set(true);
+    this.promotionService.getActiveDiscountedProductPromotions().subscribe({
+      next: (promos) => {
+        this.discountedProductPromotions.set(promos);
+        this.isLoadingDiscountedPromotions.set(false);
+      },
+      error: () => {
+        this.discountedProductPromotions.set([]);
+        this.isLoadingDiscountedPromotions.set(false);
+      },
+    });
+  }
+
   private isPromotionActiveInUserTimezone(promo: PromotionListItemDto): boolean {
     if (!promo.isActive) {
       return false;
@@ -2510,3 +2758,7 @@ export class OrderEditor implements OnInit, OnDestroy {
     };
   }
 }
+
+
+
+

@@ -27,11 +27,14 @@ public sealed class EvaluatePromotionsHandler(WTFDbContext db)
             .Include(x => x.FixedBundlePromotion!)
                 .ThenInclude(x => x.FixedBundlePromotionItems)
                     .ThenInclude(x => x.FixedBundlePromotionItemAddOns)
+            .Include(x => x.DiscountedProductPromotions)
+                .ThenInclude(x => x.DiscountedProductPromotionAddOns)
             .ToListAsync(cancellationToken);
 
         var generated = new List<PromotionCartLineDto>();
 
         ApplyFixedBundles(workingLines, generated, activePromotions.Where(x => x.TypeId == PromotionTypeIds.FixedBundle));
+        ApplyDiscountedProducts(workingLines, activePromotions.Where(x => x.TypeId == PromotionTypeIds.DiscountedProduct));
 
         var output = workingLines
             .Where(x => x.Quantity > 0)
@@ -39,6 +42,72 @@ public sealed class EvaluatePromotionsHandler(WTFDbContext db)
             .ToList();
 
         return new EvaluatePromotionsResponseDto(output);
+    }
+
+    private static void ApplyDiscountedProducts(List<PromotionCartLineDto> workingLines, IEnumerable<Promotion> promos)
+    {
+        var promosByProduct = promos
+            .SelectMany(promo => promo.DiscountedProductPromotions
+                .Select(item => (promo, item)))
+            .GroupBy(x => x.item.ProductId)
+            .ToDictionary(x => x.Key, x => x.ToList());
+
+        foreach (var line in workingLines)
+        {
+            if (!promosByProduct.TryGetValue(line.ProductId, out var candidates))
+            {
+                continue;
+            }
+
+            Promotion? selectedPromo = null;
+            decimal? bestUnitPrice = null;
+
+            foreach (var promo in candidates)
+            {
+                var discounted = promo.item;
+
+                if (!SatisfiesExactAddOns(line, discounted.DiscountedProductPromotionAddOns.Select(a => (a.AddOnProductId, a.Quantity))))
+                {
+                    continue;
+                }
+
+                var proposed = CalculateDiscountedUnitPrice(line.UnitPrice, discounted.FixedPrice, discounted.PercentOff);
+                if (!proposed.HasValue)
+                {
+                    continue;
+                }
+
+                if (!bestUnitPrice.HasValue || proposed.Value < bestUnitPrice.Value)
+                {
+                    bestUnitPrice = proposed.Value;
+                    selectedPromo = promo.promo;
+                }
+            }
+
+            if (bestUnitPrice.HasValue && selectedPromo is not null)
+            {
+                line.UnitPrice = bestUnitPrice.Value;
+                line.PromotionId = selectedPromo.Id;
+            }
+        }
+    }
+
+    private static decimal? CalculateDiscountedUnitPrice(decimal basePrice, decimal? fixedPrice, decimal? percentOff)
+    {
+        if (fixedPrice.HasValue && fixedPrice.Value > 0)
+        {
+            var discounted = basePrice - fixedPrice.Value;
+            return Math.Max(0, discounted);
+        }
+
+        if (percentOff.HasValue && percentOff.Value > 0)
+        {
+            var multiplier = 1m - (percentOff.Value / 100m);
+            var discounted = basePrice * multiplier;
+            return Math.Round(discounted, 2, MidpointRounding.AwayFromZero);
+        }
+
+        return null;
     }
 
     private static void ApplyFixedBundles(List<PromotionCartLineDto> workingLines, List<PromotionCartLineDto> generated, IEnumerable<Promotion> promos)
@@ -178,6 +247,42 @@ public sealed class EvaluatePromotionsHandler(WTFDbContext db)
         foreach (var (addOnProductId, quantity) in requiredAddOns)
         {
             if (!addOnMap.TryGetValue(addOnProductId, out var qty) || qty < quantity)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool SatisfiesExactAddOns(
+        PromotionCartLineDto line,
+        IEnumerable<(Guid AddOnProductId, int Quantity)> requiredAddOns)
+    {
+        var required = requiredAddOns.ToList();
+        if (required.Count == 0)
+        {
+            return false;
+        }
+
+        var addOnMap = line.AddOns
+            .GroupBy(x => x.AddOnProductId)
+            .ToDictionary(x => x.Key, x => x.Sum(y => y.Quantity));
+
+        var requiredSet = required.Select(x => x.AddOnProductId).ToHashSet();
+
+        foreach (var (addOnProductId, quantity) in required)
+        {
+            var expected = quantity;
+            if (!addOnMap.TryGetValue(addOnProductId, out var qty) || qty != expected)
+            {
+                return false;
+            }
+        }
+
+        foreach (var entry in addOnMap)
+        {
+            if (!requiredSet.Contains(entry.Key) && entry.Value > 0)
             {
                 return false;
             }
