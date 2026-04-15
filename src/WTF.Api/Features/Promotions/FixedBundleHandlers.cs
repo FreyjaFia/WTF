@@ -34,6 +34,8 @@ public sealed class GetFixedBundlePromotionsHandler(WTFDbContext db, IHttpContex
                 x.EndDate,
                 UrlExtensions.ToAbsoluteUrl(httpContextAccessor, x.PromotionImage?.Image?.ImageUrl),
                 x.FixedBundlePromotion?.BundlePrice,
+                null,
+                null,
                 x.CreatedAt,
                 x.CreatedBy,
                 x.UpdatedAt,

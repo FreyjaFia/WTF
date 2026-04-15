@@ -4,6 +4,7 @@ public static class PromotionTypeIds
 {
     public const int FixedBundle = 1;
     public const int MixMatch = 2;
+    public const int DiscountedProduct = 3;
 }
 
 public sealed record PromotionListItemDto(
@@ -15,6 +16,8 @@ public sealed record PromotionListItemDto(
     DateTime? EndDate,
     string? ImageUrl,
     decimal? BundlePrice,
+    decimal? FixedPrice,
+    decimal? PercentOff,
     DateTime CreatedAt,
     Guid CreatedBy,
     DateTime? UpdatedAt,
@@ -70,6 +73,31 @@ public sealed record MixMatchPromotionDto(
     int? MaxSelectionsPerOrder,
     decimal BundlePrice,
     List<MixMatchItemDto> Items);
+
+public sealed record DiscountedProductAddOnDto(
+    Guid? Id,
+    Guid AddOnProductId,
+    int Quantity);
+
+public sealed record DiscountedProductItemDto(
+    Guid? Id,
+    Guid ProductId,
+    decimal? FixedPrice,
+    decimal? PercentOff,
+    List<DiscountedProductAddOnDto> AddOns);
+
+public sealed record DiscountedProductPromotionDto(
+    Guid Id,
+    string Name,
+    bool IsActive,
+    DateTime? StartDate,
+    DateTime? EndDate,
+    string? ImageUrl,
+    DateTime CreatedAt,
+    Guid CreatedBy,
+    DateTime? UpdatedAt,
+    Guid? UpdatedBy,
+    List<DiscountedProductItemDto> Items);
 
 public sealed class PromotionCartAddOnLineDto
 {

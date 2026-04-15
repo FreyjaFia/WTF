@@ -35,6 +35,10 @@ public partial class Product
 
     public virtual User CreatedByNavigation { get; set; } = null!;
 
+    public virtual ICollection<DiscountedProductPromotionAddOn> DiscountedProductPromotionAddOns { get; set; } = new List<DiscountedProductPromotionAddOn>();
+
+    public virtual ICollection<DiscountedProductPromotion> DiscountedProductPromotions { get; set; } = new List<DiscountedProductPromotion>();
+
     public virtual ICollection<FixedBundlePromotionItemAddOn> FixedBundlePromotionItemAddOns { get; set; } = new List<FixedBundlePromotionItemAddOn>();
 
     public virtual ICollection<FixedBundlePromotionItem> FixedBundlePromotionItems { get; set; } = new List<FixedBundlePromotionItem>();

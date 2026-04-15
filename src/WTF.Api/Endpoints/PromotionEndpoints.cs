@@ -15,6 +15,8 @@ public static class PromotionEndpoints
             .RequireAuthorization(AppPolicies.ManagementRead);
         var adminMixMatchGroup = app.MapGroup("/api/management/promotions/mix-match")
             .RequireAuthorization(AppPolicies.ManagementRead);
+        var adminDiscountedGroup = app.MapGroup("/api/management/promotions/discounted-products")
+            .RequireAuthorization(AppPolicies.ManagementRead);
         var posGroup = app.MapGroup("/api/pos/promotions")
             .RequireAuthorization(AppPolicies.OrdersWrite);
 
@@ -142,10 +144,60 @@ public static class PromotionEndpoints
 
         MapMixMatchRoutes(adminMixMatchGroup);
 
+        adminDiscountedGroup.MapGet("/",
+            async (ISender sender) =>
+            {
+                var result = await sender.Send(new GetDiscountedProductPromotionsQuery());
+                return Results.Ok(result);
+            });
+
+        adminDiscountedGroup.MapGet("/{promotionId:guid}",
+            async (Guid promotionId, ISender sender) =>
+            {
+                var result = await sender.Send(new GetDiscountedProductPromotionByIdQuery(promotionId));
+                return result is null ? Results.NotFound() : Results.Ok(result);
+            });
+
+        adminDiscountedGroup.MapPost("/",
+            async (CreateDiscountedProductPromotionCommand command, ISender sender) =>
+            {
+                var result = await sender.Send(command);
+                return Results.Ok(result);
+            })
+            .RequireAuthorization(AppPolicies.ManagementWrite);
+
+        adminDiscountedGroup.MapPut("/{promotionId:guid}",
+            async (Guid promotionId, UpdateDiscountedProductPromotionCommand command, ISender sender) =>
+            {
+                if (promotionId != command.PromotionId)
+                {
+                    return Results.BadRequest("Promotion ID mismatch.");
+                }
+
+                var result = await sender.Send(command);
+                return result is null ? Results.NotFound() : Results.Ok(result);
+            })
+            .RequireAuthorization(AppPolicies.ManagementWrite);
+
+        adminDiscountedGroup.MapDelete("/{promotionId:guid}",
+            async (Guid promotionId, ISender sender) =>
+            {
+                var removed = await sender.Send(new DeleteDiscountedProductPromotionCommand(promotionId));
+                return removed ? Results.NoContent() : Results.NotFound();
+            })
+            .RequireAuthorization(AppPolicies.ManagementWrite);
+
         posGroup.MapPost("/evaluate",
             async (EvaluatePromotionsRequestDto request, ISender sender) =>
             {
                 var result = await sender.Send(new EvaluatePromotionsCommand(request));
+                return Results.Ok(result);
+            });
+
+        posGroup.MapGet("/discounted-products",
+            async (DateTime? evaluatedAtUtc, ISender sender) =>
+            {
+                var result = await sender.Send(new GetActiveDiscountedProductPromotionsQuery(evaluatedAtUtc));
                 return Results.Ok(result);
             });
 

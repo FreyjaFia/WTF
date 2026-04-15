@@ -27,6 +27,8 @@ public partial class Promotion
 
     public virtual User CreatedByNavigation { get; set; } = null!;
 
+    public virtual ICollection<DiscountedProductPromotion> DiscountedProductPromotions { get; set; } = new List<DiscountedProductPromotion>();
+
     public virtual FixedBundlePromotion? FixedBundlePromotion { get; set; }
 
     public virtual MixMatchPromotion? MixMatchPromotion { get; set; }

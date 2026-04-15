@@ -34,6 +34,8 @@ public sealed class GetMixMatchPromotionsHandler(WTFDbContext db, IHttpContextAc
             x.EndDate,
             UrlExtensions.ToAbsoluteUrl(httpContextAccessor, x.PromotionImage?.Image?.ImageUrl),
             x.MixMatchPromotion?.BundlePrice,
+            null,
+            null,
             x.CreatedAt,
             x.CreatedBy,
             x.UpdatedAt,
