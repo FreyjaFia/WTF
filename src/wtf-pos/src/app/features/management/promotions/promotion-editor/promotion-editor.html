@@ -166,6 +166,7 @@
                   >
                     <option value="fixed-bundle">Fixed Bundle</option>
                     <option value="mix-match">Mix & Match</option>
+                    <option value="discounted-product">Discounted Product</option>
                   </select>
                 } @else {
                   <label
@@ -189,9 +190,19 @@
                 <input
                   class="input w-full border-transparent bg-gray-50 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
                   type="text"
-                  [ngModel]="type() === 'fixed-bundle' ? fixedBundle().name : mixMatch().name"
+                  [ngModel]="
+                    type() === 'fixed-bundle'
+                      ? fixedBundle().name
+                      : type() === 'mix-match'
+                        ? mixMatch().name
+                        : discountedProduct().name
+                  "
                   (ngModelChange)="
-                    type() === 'fixed-bundle' ? setFixedBundleName($event) : setMixMatchName($event)
+                    type() === 'fixed-bundle'
+                      ? setFixedBundleName($event)
+                      : type() === 'mix-match'
+                        ? setMixMatchName($event)
+                        : setDiscountedProductName($event)
                   "
                 />
               </div>
@@ -205,12 +216,16 @@
                     [ngModel]="
                       type() === 'fixed-bundle'
                         ? getFixedBundleStartLocal().slice(0, 10)
-                        : getMixMatchStartLocal().slice(0, 10)
+                        : type() === 'mix-match'
+                          ? getMixMatchStartLocal().slice(0, 10)
+                          : getDiscountedProductStartLocal().slice(0, 10)
                     "
                     (ngModelChange)="
                       type() === 'fixed-bundle'
                         ? setFixedBundleStartAtUtc($event)
-                        : setMixMatchStartAtUtc($event)
+                        : type() === 'mix-match'
+                          ? setMixMatchStartAtUtc($event)
+                          : setDiscountedProductStartAtUtc($event)
                     "
                   />
                 </div>
@@ -222,12 +237,16 @@
                     [ngModel]="
                       type() === 'fixed-bundle'
                         ? getFixedBundleEndLocal().slice(0, 10)
-                        : getMixMatchEndLocal().slice(0, 10)
+                        : type() === 'mix-match'
+                          ? getMixMatchEndLocal().slice(0, 10)
+                          : getDiscountedProductEndLocal().slice(0, 10)
                     "
                     (ngModelChange)="
                       type() === 'fixed-bundle'
                         ? setFixedBundleEndAtUtc($event)
-                        : setMixMatchEndAtUtc($event)
+                        : type() === 'mix-match'
+                          ? setMixMatchEndAtUtc($event)
+                          : setDiscountedProductEndAtUtc($event)
                     "
                   />
                 </div>
@@ -254,7 +273,7 @@
                     />
                   </label>
                 </div>
-              } @else {
+              } @else if (type() === 'mix-match') {
                 <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
                   <div>
                     <div class="mb-2 block text-sm font-semibold text-gray-900">Bundle Price</div>
@@ -301,6 +320,54 @@
                     />
                   </div>
                 </div>
+              } @else {
+                <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <div>
+                    <div class="mb-2 block text-sm font-semibold text-gray-900">Discount Type</div>
+                    <select
+                      class="select w-full border-transparent bg-gray-50 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                      [ngModel]="discountedProductDiscountType()"
+                      (ngModelChange)="setDiscountedProductDiscountType($event)"
+                    >
+                      <option value="fixed">Fixed Price</option>
+                      <option value="percent">Percent Off</option>
+                    </select>
+                  </div>
+                  <div>
+                    <div class="mb-2 block text-sm font-semibold text-gray-900">
+                      {{ discountedProductDiscountType() === 'fixed' ? 'Fixed Price' : 'Percent Off' }}
+                    </div>
+                    <label
+                      class="input flex w-full items-center gap-2 border-transparent bg-gray-50 transition-all focus-within:border-[#047857] focus-within:bg-white focus-within:ring-1 focus-within:ring-[#047857]/20"
+                    >
+                      @if (discountedProductDiscountType() === 'fixed') {
+                        <app-icon
+                          name="icon-peso"
+                          [class]="'h-4 w-4 text-gray-500'"
+                          [fill]="'currentColor'"
+                        />
+                      } @else {
+                        <span class="text-xs font-semibold text-gray-500">%</span>
+                      }
+                      <input
+                        class="grow bg-transparent outline-none"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        [ngModel]="
+                          discountedProductDiscountType() === 'fixed'
+                            ? discountedProductFixedPrice()
+                            : discountedProductPercentOff()
+                        "
+                        (ngModelChange)="
+                          discountedProductDiscountType() === 'fixed'
+                            ? setDiscountedProductFixedPrice($event)
+                            : setDiscountedProductPercentOff($event)
+                        "
+                      />
+                    </label>
+                  </div>
+                </div>
               }
             </div>
           </div>
@@ -318,12 +385,18 @@
                     class="toggle toggle-neutral toggle-sm"
                     type="checkbox"
                     [ngModel]="
-                      type() === 'fixed-bundle' ? fixedBundle().isActive : mixMatch().isActive
+                      type() === 'fixed-bundle'
+                        ? fixedBundle().isActive
+                        : type() === 'mix-match'
+                          ? mixMatch().isActive
+                          : discountedProduct().isActive
                     "
                     (ngModelChange)="
                       type() === 'fixed-bundle'
                         ? setFixedBundleIsActive($event)
-                        : setMixMatchIsActive($event)
+                        : type() === 'mix-match'
+                          ? setMixMatchIsActive($event)
+                          : setDiscountedProductIsActive($event)
                     "
                   />
                 </div>
@@ -429,18 +502,28 @@
             <div class="card-body">
               <div class="mb-1 flex items-baseline justify-between">
                 <h3 class="text-xs font-semibold tracking-wider text-gray-400 uppercase">
-                  {{ type() === 'fixed-bundle' ? 'Bundle Items' : 'Mix & Match Items' }}
+                  {{
+                    type() === 'fixed-bundle'
+                      ? 'Bundle Items'
+                      : type() === 'mix-match'
+                        ? 'Mix & Match Items'
+                        : 'Discounted Product'
+                  }}
                 </h3>
                 @if (
                   (type() === 'fixed-bundle'
                     ? fixedBundle().items.length
-                    : mixMatch().items.length) > 0
+                    : type() === 'mix-match'
+                      ? mixMatch().items.length
+                      : discountedProduct().items.length) > 0
                 ) {
                   <span class="text-xs text-gray-400">
                     {{
                       type() === 'fixed-bundle'
                         ? fixedBundle().items.length
-                        : mixMatch().items.length
+                        : type() === 'mix-match'
+                          ? mixMatch().items.length
+                          : discountedProduct().items.length
                     }}
                     items
                   </span>
@@ -448,8 +531,11 @@
               </div>
 
               @if (
-                (type() === 'fixed-bundle' ? fixedBundle().items.length : mixMatch().items.length) >
-                0
+                (type() === 'fixed-bundle'
+                  ? fixedBundle().items.length
+                  : type() === 'mix-match'
+                    ? mixMatch().items.length
+                    : discountedProduct().items.length) > 0
               ) {
                 <div
                   class="overflow-hidden transition-[max-height] duration-300 ease-in-out"
@@ -457,7 +543,9 @@
                     showAllBundleItems() ||
                     (type() === 'fixed-bundle'
                       ? fixedBundle().items.length
-                      : mixMatch().items.length) <= 3
+                      : type() === 'mix-match'
+                        ? mixMatch().items.length
+                        : discountedProduct().items.length) <= 3
                       ? '200rem'
                       : '16rem'
                   "
@@ -566,7 +654,7 @@
                         </div>
                       </div>
                     }
-                  } @else {
+                  } @else if (type() === 'mix-match') {
                     @for (item of mixMatch().items; track $index; let i = $index; let odd = $odd) {
                       <div
                         class="group/row flex items-start gap-3 border-b border-gray-50 px-2 py-2.5 transition-colors last:border-b-0 hover:bg-gray-50"
@@ -628,13 +716,81 @@
                         </div>
                       </div>
                     }
+                  } @else {
+                    @for (
+                      item of discountedProduct().items;
+                      track $index;
+                      let i = $index;
+                      let odd = $odd
+                    ) {
+                      <div
+                        class="group/row flex items-start gap-3 border-b border-gray-50 px-2 py-2.5 transition-colors last:border-b-0 hover:bg-gray-50"
+                        [class.bg-gray-50/50]="odd"
+                      >
+                        <div class="shrink-0">
+                          @if (getProductImageUrl(item.productId)) {
+                            <img
+                              [src]="getProductImageUrl(item.productId)!"
+                              [alt]="getProductName(item.productId)"
+                              class="h-8 w-8 rounded-full object-cover"
+                            />
+                          } @else {
+                            <app-avatar [label]="getProductName(item.productId)" [size]="32" />
+                          }
+                        </div>
+                        <div class="min-w-0 flex-1">
+                          <div class="mb-1 flex items-start justify-between gap-2">
+                            <div class="min-w-0 flex-1">
+                              <span class="block text-sm font-medium wrap-break-word text-gray-800">
+                                {{ getProductName(item.productId) }}
+                              </span>
+                              @if (getProductCode(item.productId)) {
+                                <span class="mt-0.5 font-mono text-[10px] text-gray-400">{{
+                                  getProductCode(item.productId)
+                                }}</span>
+                              }
+                            </div>
+                            <button
+                              type="button"
+                              class="shrink-0 cursor-pointer rounded-full p-1 text-gray-400 transition-all hover:bg-red-50 hover:text-red-500"
+                              (click)="removeDiscountedProductItem(i)"
+                            >
+                              <app-icon name="icon-close" [class]="'h-3.5 w-3.5'" />
+                            </button>
+                          </div>
+                          @if (item.addOns.length > 0) {
+                            @for (group of getDiscountedProductAddOnGroups(i); track group.typeLabel) {
+                              <div class="mt-2 mb-1 flex items-center gap-2">
+                                <span
+                                  class="text-[10px] font-semibold tracking-wider text-gray-400 uppercase"
+                                  >{{ group.typeLabel }}</span
+                                >
+                                <span class="text-[10px] text-gray-300"
+                                  >({{ group.options.length }})</span
+                                >
+                              </div>
+                              <div class="flex flex-wrap gap-1.5">
+                                @for (addOn of group.options; track addOn.addOnProductId) {
+                                  <span
+                                    class="rounded bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-700"
+                                    >{{ getAddOnName(addOn.addOnProductId) }}</span
+                                  >
+                                }
+                              </div>
+                            }
+                          }
+                        </div>
+                      </div>
+                    }
                   }
                 </div>
 
                 @if (
                   (type() === 'fixed-bundle'
                     ? fixedBundle().items.length
-                    : mixMatch().items.length) > 3
+                    : type() === 'mix-match'
+                      ? mixMatch().items.length
+                      : discountedProduct().items.length) > 3
                 ) {
                   <button
                     type="button"
@@ -647,7 +803,9 @@
                         : 'Show all ' +
                           (type() === 'fixed-bundle'
                             ? fixedBundle().items.length
-                            : mixMatch().items.length) +
+                            : type() === 'mix-match'
+                              ? mixMatch().items.length
+                              : discountedProduct().items.length) +
                           ' items'
                     }}
                     <app-icon

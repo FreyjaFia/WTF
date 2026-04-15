@@ -7,6 +7,7 @@ import { AvatarComponent, BundleItemSelection, BundleItemsSelectorComponent, Ico
 import {
   ADD_ON_TYPE_ORDER,
   AddOnGroupDto,
+  DiscountedProductPromotionDto,
   MixMatchPromotionDto,
   FixedBundlePromotionDto,
   ProductDto,
@@ -14,7 +15,8 @@ import {
 import { AppRoutes } from '@shared/constants/app-routes';
 import { forkJoin } from 'rxjs';
 
-type PromoEditorType = 'fixed-bundle' | 'mix-match';
+type PromoEditorType = 'fixed-bundle' | 'mix-match' | 'discounted-product';
+type DiscountedProductDiscountType = 'fixed' | 'percent';
 
 @Component({
   selector: 'app-promotion-editor',
@@ -73,10 +75,29 @@ export class PromotionEditorComponent implements OnInit {
     items: [],
   });
 
+  protected readonly discountedProduct = signal<Omit<DiscountedProductPromotionDto, 'id'>>({
+    name: '',
+    isActive: true,
+    startDate: null,
+    endDate: null,
+    items: [],
+  });
+  protected readonly discountedProductDiscountType = signal<DiscountedProductDiscountType>('fixed');
+  protected readonly discountedProductFixedPrice = signal<number | null>(null);
+  protected readonly discountedProductPercentOff = signal<number | null>(null);
+
   protected readonly isEditMode = computed(() => !!this.promotionId);
-  protected readonly currentPromotionName = computed(() =>
-    this.type() === 'fixed-bundle' ? this.fixedBundle().name : this.mixMatch().name,
-  );
+  protected readonly currentPromotionName = computed(() => {
+    if (this.type() === 'fixed-bundle') {
+      return this.fixedBundle().name;
+    }
+
+    if (this.type() === 'mix-match') {
+      return this.mixMatch().name;
+    }
+
+    return this.discountedProduct().name;
+  });
 
   public ngOnInit(): void {
     this.type.set(this.resolveTypeFromRoute());
@@ -127,6 +148,45 @@ export class PromotionEditorComponent implements OnInit {
             this.ensureAllowedAddOnsLoaded(item.productId);
           }
           this.currentImageUrl.set(promo.imageUrl ?? null);
+          this.snapshotEditorState();
+          this.isLoading.set(false);
+        },
+        error: (err: Error) => {
+          this.alertService.error(err.message);
+          this.isLoading.set(false);
+        },
+      });
+      return;
+    }
+
+    if (this.type() === 'discounted-product') {
+      forkJoin({
+        products: products$,
+        promo: this.promotionService.getDiscountedProductPromotion(this.promotionId),
+      }).subscribe({
+        next: ({ products, promo }) => {
+          this.products.set(products);
+          this.lastUpdatedAt.set(promo.updatedAt ?? promo.createdAt ?? null);
+          this.discountedProduct.set({
+            name: promo.name,
+            isActive: promo.isActive,
+            startDate: promo.startDate,
+            endDate: promo.endDate,
+            imageUrl: promo.imageUrl ?? null,
+            items: promo.items ?? [],
+          });
+          if (promo.items?.length) {
+            this.discountedProductFixedPrice.set(promo.items[0]?.fixedPrice ?? null);
+            this.discountedProductPercentOff.set(promo.items[0]?.percentOff ?? null);
+            this.discountedProductDiscountType.set(
+              promo.items[0]?.percentOff != null && promo.items[0].percentOff > 0 ? 'percent' : 'fixed',
+            );
+          }
+
+          this.currentImageUrl.set(promo.imageUrl ?? null);
+          for (const item of promo.items ?? []) {
+            this.ensureAllowedAddOnsLoaded(item.productId);
+          }
           this.snapshotEditorState();
           this.isLoading.set(false);
         },
@@ -191,7 +251,15 @@ export class PromotionEditorComponent implements OnInit {
   }
 
   protected getPromotionTypeLabel(type: PromoEditorType): string {
-    return type === 'mix-match' ? 'Mix & Match' : 'Fixed Bundle';
+    if (type === 'mix-match') {
+      return 'Mix & Match';
+    }
+
+    if (type === 'discounted-product') {
+      return 'Discounted Product';
+    }
+
+    return 'Fixed Bundle';
   }
 
   protected getBundleItemAddOnGroups(itemIndex: number): {
@@ -272,6 +340,46 @@ export class PromotionEditorComponent implements OnInit {
       }));
   }
 
+  protected getDiscountedProductAddOnGroups(itemIndex: number): {
+    typeLabel: string;
+    options: { addOnProductId: string; quantity: number }[];
+  }[] {
+    const promo = this.discountedProduct();
+    const item = promo.items[itemIndex];
+    if (!item?.productId || item.addOns.length === 0) {
+      return [];
+    }
+
+    const groups = this.allowedAddOnGroupsByProductId()[item.productId] ?? [];
+    const typeLabelByAddOnId = new Map<string, { order: number; label: string }>();
+
+    for (const group of groups) {
+      for (const option of group.options) {
+        typeLabelByAddOnId.set(option.id, {
+          order: ADD_ON_TYPE_ORDER[group.type],
+          label: group.displayName,
+        });
+      }
+    }
+
+    const grouped = new Map<string, { order: number; options: { addOnProductId: string; quantity: number }[] }>();
+    for (const addOn of item.addOns) {
+      const meta = typeLabelByAddOnId.get(addOn.addOnProductId) ?? { order: 999, label: 'Other' };
+      const existing = grouped.get(meta.label) ?? { order: meta.order, options: [] };
+      existing.options.push(addOn);
+      grouped.set(meta.label, existing);
+    }
+
+    return [...grouped.entries()]
+      .sort((a, b) => a[1].order - b[1].order || a[0].localeCompare(b[0]))
+      .map(([typeLabel, value]) => ({
+        typeLabel,
+        options: [...value.options].sort((a, b) =>
+          this.getAddOnName(a.addOnProductId).localeCompare(this.getAddOnName(b.addOnProductId)),
+        ),
+      }));
+  }
+
   protected getFixedBundleStartLocal(): string {
     return this.utcToLocalInput(this.fixedBundle().startDate);
   }
@@ -286,6 +394,14 @@ export class PromotionEditorComponent implements OnInit {
 
   protected getMixMatchEndLocal(): string {
     return this.utcToLocalInput(this.mixMatch().endDate);
+  }
+
+  protected getDiscountedProductStartLocal(): string {
+    return this.utcToLocalInput(this.discountedProduct().startDate);
+  }
+
+  protected getDiscountedProductEndLocal(): string {
+    return this.utcToLocalInput(this.discountedProduct().endDate);
   }
 
   protected setFixedBundleName(value: string): void {
@@ -316,7 +432,12 @@ export class PromotionEditorComponent implements OnInit {
   }
 
   protected openBundleItemsSelector(): void {
-    const sourceItems = this.type() === 'fixed-bundle' ? this.fixedBundle().items : this.mixMatch().items;
+    const sourceItems =
+      this.type() === 'fixed-bundle'
+        ? this.fixedBundle().items
+        : this.type() === 'mix-match'
+          ? this.mixMatch().items
+          : this.discountedProduct().items;
     const selectedItems: BundleItemSelection[] = sourceItems
       .filter((x) => !!x.productId)
       .map((x) => ({
@@ -349,12 +470,24 @@ export class PromotionEditorComponent implements OnInit {
         ...state,
         items: nextItems,
       }));
-    } else {
+    } else if (this.type() === 'mix-match') {
       this.mixMatch.update((state) => ({
         ...state,
         items: items.map((selected) => ({
           productId: selected.productId,
           addOns: selected.addOns,
+        })),
+      }));
+    } else {
+      const fixedPrice = this.discountedProductFixedPrice();
+      const percentOff = this.discountedProductPercentOff();
+      this.discountedProduct.update((state) => ({
+        ...state,
+        items: items.map((selected) => ({
+          productId: selected.productId,
+          addOns: selected.addOns,
+          fixedPrice,
+          percentOff,
         })),
       }));
     }
@@ -480,16 +613,32 @@ export class PromotionEditorComponent implements OnInit {
     this.mixMatch.update((state) => ({ ...state, name: value }));
   }
 
+  protected setDiscountedProductName(value: string): void {
+    this.discountedProduct.update((state) => ({ ...state, name: value }));
+  }
+
   protected setMixMatchStartAtUtc(value: string): void {
     this.mixMatch.update((state) => ({ ...state, startDate: this.localInputToUtc(value) }));
+  }
+
+  protected setDiscountedProductStartAtUtc(value: string): void {
+    this.discountedProduct.update((state) => ({ ...state, startDate: this.localInputToUtc(value) }));
   }
 
   protected setMixMatchEndAtUtc(value: string): void {
     this.mixMatch.update((state) => ({ ...state, endDate: this.localInputToUtc(value) }));
   }
 
+  protected setDiscountedProductEndAtUtc(value: string): void {
+    this.discountedProduct.update((state) => ({ ...state, endDate: this.localInputToUtc(value) }));
+  }
+
   protected setMixMatchIsActive(value: boolean): void {
     this.mixMatch.update((state) => ({ ...state, isActive: value }));
+  }
+
+  protected setDiscountedProductIsActive(value: boolean): void {
+    this.discountedProduct.update((state) => ({ ...state, isActive: value }));
   }
 
   protected setMixMatchRequiredQuantity(value: number): void {
@@ -504,8 +653,72 @@ export class PromotionEditorComponent implements OnInit {
     this.mixMatch.update((state) => ({ ...state, bundlePrice: Number(value) || 0 }));
   }
 
+  protected setDiscountedProductFixedPrice(value: number | null): void {
+    const parsed = value == null || value === undefined ? null : Number(value);
+    if (Number.isFinite(parsed) && (parsed ?? 0) > 0) {
+      this.discountedProductDiscountType.set('fixed');
+    }
+    const fixedPrice = Number.isFinite(parsed) && (parsed ?? 0) > 0 ? parsed : null;
+    this.discountedProductFixedPrice.set(fixedPrice);
+    if (fixedPrice) {
+      this.discountedProductPercentOff.set(null);
+    }
+    this.discountedProduct.update((state) => ({
+      ...state,
+      items: state.items.map((item) => ({
+        ...item,
+        fixedPrice,
+        percentOff: fixedPrice ? null : item.percentOff,
+      })),
+    }));
+  }
+
+  protected setDiscountedProductPercentOff(value: number | null): void {
+    const parsed = value == null || value === undefined ? null : Number(value);
+    if (Number.isFinite(parsed) && (parsed ?? 0) > 0) {
+      this.discountedProductDiscountType.set('percent');
+    }
+    const percentOff = Number.isFinite(parsed) && (parsed ?? 0) > 0 ? parsed : null;
+    this.discountedProductPercentOff.set(percentOff);
+    if (percentOff) {
+      this.discountedProductFixedPrice.set(null);
+    }
+    this.discountedProduct.update((state) => ({
+      ...state,
+      items: state.items.map((item) => ({
+        ...item,
+        percentOff,
+        fixedPrice: percentOff ? null : item.fixedPrice,
+      })),
+    }));
+  }
+
+  protected setDiscountedProductDiscountType(value: DiscountedProductDiscountType): void {
+    this.discountedProductDiscountType.set(value);
+    if (value === 'fixed') {
+      this.discountedProductPercentOff.set(null);
+    } else {
+      this.discountedProductFixedPrice.set(null);
+    }
+    this.discountedProduct.update((state) => ({
+      ...state,
+      items: state.items.map((item) => ({
+        ...item,
+        fixedPrice: value === 'fixed' ? item.fixedPrice : null,
+        percentOff: value === 'percent' ? item.percentOff : null,
+      })),
+    }));
+  }
+
   protected removeMixMatchItem(index: number): void {
     this.mixMatch.update((value) => ({
+      ...value,
+      items: value.items.filter((_, i) => i !== index),
+    }));
+  }
+
+  protected removeDiscountedProductItem(index: number): void {
+    this.discountedProduct.update((value) => ({
       ...value,
       items: value.items.filter((_, i) => i !== index),
     }));
@@ -523,6 +736,11 @@ export class PromotionEditorComponent implements OnInit {
     this.isSaving.set(true);
     if (this.type() === 'mix-match') {
       this.saveMixMatch();
+      return;
+    }
+
+    if (this.type() === 'discounted-product') {
+      this.saveDiscountedProduct();
       return;
     }
 
@@ -698,6 +916,40 @@ export class PromotionEditorComponent implements OnInit {
     });
   }
 
+  private saveDiscountedProduct(): void {
+    const payload = this.discountedProduct();
+    const discountType = this.discountedProductDiscountType();
+    if (discountType === 'fixed') {
+      this.discountedProductPercentOff.set(null);
+    } else {
+      this.discountedProductFixedPrice.set(null);
+    }
+    const fixedPrice = this.discountedProductFixedPrice();
+    const percentOff = this.discountedProductPercentOff();
+    const normalized = {
+      ...payload,
+      items: payload.items.map((item) => ({
+        ...item,
+        fixedPrice: discountType === 'fixed' ? fixedPrice : null,
+        percentOff: discountType === 'percent' ? percentOff : null,
+      })),
+    };
+    if (this.promotionId) {
+      this.promotionService.updateDiscountedProduct({ id: this.promotionId, ...normalized }).subscribe({
+        next: (saved) =>
+          this.onPromotionSaved(saved.id, saved.imageUrl ?? null, 'Discounted product updated.'),
+        error: (err: Error) => this.onSaveError(err),
+      });
+      return;
+    }
+
+    this.promotionService.createDiscountedProduct(normalized).subscribe({
+      next: (saved) =>
+        this.onPromotionSaved(saved.id, saved.imageUrl ?? null, 'Discounted product created.'),
+      error: (err: Error) => this.onSaveError(err),
+    });
+  }
+
   private onPromotionSaved(promotionId: string, imageUrl: string | null, successMessage: string): void {
     this.promotionId = promotionId;
     this.currentImageUrl.set(imageUrl);
@@ -753,6 +1005,12 @@ export class PromotionEditorComponent implements OnInit {
       type: this.type(),
       fixedBundle: this.fixedBundle(),
       mixMatch: this.mixMatch(),
+      discountedProduct: this.discountedProduct(),
+      discountedProductPricing: {
+        fixedPrice: this.discountedProductFixedPrice(),
+        percentOff: this.discountedProductPercentOff(),
+        discountType: this.discountedProductDiscountType(),
+      },
       currentImageUrl: this.currentImageUrl(),
       hasPendingImage: !!this.selectedFile(),
     });
@@ -831,6 +1089,74 @@ export class PromotionEditorComponent implements OnInit {
       return true;
     }
 
+    if (this.type() === 'discounted-product') {
+      const payload = this.discountedProduct();
+      if (!payload.name.trim()) {
+        this.alertService.error('Promotion name is required.');
+        return false;
+      }
+
+      if (payload.items.length === 0) {
+        this.alertService.error('Select at least one product for the discounted promotion.');
+        return false;
+      }
+
+      const uniqueProducts = new Set(payload.items.map((item) => item.productId).filter(Boolean));
+      if (uniqueProducts.size !== payload.items.length) {
+        this.alertService.error('Each discounted product must be unique.');
+        return false;
+      }
+
+      const hasFixed = this.discountedProductFixedPrice() != null && this.discountedProductFixedPrice()! > 0;
+      const hasPercent =
+        this.discountedProductPercentOff() != null && this.discountedProductPercentOff()! > 0;
+
+      if (!hasFixed && !hasPercent) {
+        this.alertService.error('Set a fixed price or percent discount.');
+        return false;
+      }
+
+      if (hasFixed && hasPercent) {
+        this.alertService.error('Choose either fixed price or percent discount, not both.');
+        return false;
+      }
+
+      if (hasPercent && this.discountedProductPercentOff()! <= 0) {
+        this.alertService.error('Percent discount must be greater than zero.');
+        return false;
+      }
+
+      if (hasPercent && this.discountedProductPercentOff()! > 100) {
+        this.alertService.error('Percent discount must be less than or equal to 100.');
+        return false;
+      }
+
+      for (const item of payload.items) {
+        if (!item.productId) {
+          this.alertService.error('Each discounted item must have a product.');
+          return false;
+        }
+
+        if (item.addOns.length === 0) {
+          this.alertService.error('Select at least one required add-on for each product.');
+          return false;
+        }
+
+        if (item.addOns.some((x) => x.quantity <= 0)) {
+          this.alertService.error('Add-on quantity must be greater than zero.');
+          return false;
+        }
+
+        const allowedIds = new Set((this.allowedAddOnsByProductId()[item.productId] ?? []).map((x) => x.id));
+        if (item.addOns.some((x) => !x.addOnProductId || !allowedIds.has(x.addOnProductId))) {
+          this.alertService.error('Discounted add-ons must be linked to the selected product.');
+          return false;
+        }
+      }
+
+      return true;
+    }
+
     const payload = this.mixMatch();
     if (!payload.name.trim()) {
       this.alertService.error('Promotion name is required.');
@@ -878,14 +1204,32 @@ export class PromotionEditorComponent implements OnInit {
       return 'fixed-bundle';
     }
 
+    if (path.startsWith('discounted-products/')) {
+      return 'discounted-product';
+    }
+
     const queryType = this.route.snapshot.queryParamMap.get('type');
-    return queryType === 'mix-match' || queryType === 'mixMatch' ? 'mix-match' : 'fixed-bundle';
+    if (queryType === 'mix-match' || queryType === 'mixMatch') {
+      return 'mix-match';
+    }
+
+    if (queryType === 'discounted-product' || queryType === 'discountedProduct') {
+      return 'discounted-product';
+    }
+
+    return 'fixed-bundle';
   }
 
   private buildDetailsRoute(id: string, type: PromoEditorType): string {
-    return type === 'mix-match'
-      ? AppRoutes.ManagementPromotionMixMatchDetailsById(id)
-      : AppRoutes.ManagementPromotionFixedBundleDetailsById(id);
+    if (type === 'mix-match') {
+      return AppRoutes.ManagementPromotionMixMatchDetailsById(id);
+    }
+
+    if (type === 'discounted-product') {
+      return AppRoutes.ManagementPromotionDiscountedProductDetailsById(id);
+    }
+
+    return AppRoutes.ManagementPromotionFixedBundleDetailsById(id);
   }
 
   private utcToLocalInput(utcValue: string | null | undefined): string {

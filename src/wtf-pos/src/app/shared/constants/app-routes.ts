@@ -27,10 +27,14 @@ export const AppRoutes = {
     `/management/promotions/fixed-bundles/${promoId}`,
   ManagementPromotionMixMatchDetailsById: (promoId: string) =>
     `/management/promotions/mix-match/${promoId}`,
+  ManagementPromotionDiscountedProductDetailsById: (promoId: string) =>
+    `/management/promotions/discounted-products/${promoId}`,
   ManagementPromotionFixedBundleEditById: (promoId: string) =>
     `/management/promotions/fixed-bundles/${promoId}/edit`,
   ManagementPromotionMixMatchEditById: (promoId: string) =>
     `/management/promotions/mix-match/${promoId}/edit`,
+  ManagementPromotionDiscountedProductEditById: (promoId: string) =>
+    `/management/promotions/discounted-products/${promoId}/edit`,
   ManagementReports: '/management/reports',
   ManagementAuditLogs: '/management/audit-logs',
   ManagementSchemaScripts: '/management/schema-scripts',

@@ -75,6 +75,7 @@ export class PromotionListComponent implements OnInit {
     return {
       fixedBundle: cache.filter((x) => x.typeId === PromotionTypeEnum.FixedBundle).length,
       mixMatch: cache.filter((x) => x.typeId === PromotionTypeEnum.MixMatch).length,
+      discountedProduct: cache.filter((x) => x.typeId === PromotionTypeEnum.DiscountedProduct).length,
     };
   });
 
@@ -89,6 +90,11 @@ export class PromotionListComponent implements OnInit {
   protected readonly typeOptions = computed<FilterOption[]>(() => [
     { id: 'fixed-bundle', label: 'Fixed Bundle', count: this.typeCounts().fixedBundle },
     { id: 'mix-match', label: 'Mix & Match', count: this.typeCounts().mixMatch },
+    {
+      id: 'discounted-product',
+      label: 'Discounted Product',
+      count: this.typeCounts().discountedProduct,
+    },
   ]);
 
   protected readonly statusOptions = computed<FilterOption[]>(() => [
@@ -127,9 +133,10 @@ export class PromotionListComponent implements OnInit {
     forkJoin({
       fixedBundles: this.promotionService.getFixedBundles(),
       mixMatch: this.promotionService.getMixMatchPromotions(),
+      discountedProducts: this.promotionService.getDiscountedProductPromotions(),
     }).subscribe({
-      next: ({ fixedBundles, mixMatch }) => {
-        const all = [...fixedBundles, ...mixMatch];
+      next: ({ fixedBundles, mixMatch, discountedProducts }) => {
+        const all = [...fixedBundles, ...mixMatch, ...discountedProducts];
         this.promotionsCache.set(all);
         this.applyFiltersToCache();
         this.isLoading.set(false);
@@ -172,6 +179,11 @@ export class PromotionListComponent implements OnInit {
       return;
     }
 
+    if (promo.typeId === PromotionTypeEnum.DiscountedProduct) {
+      this.router.navigateByUrl(AppRoutes.ManagementPromotionDiscountedProductEditById(promo.id));
+      return;
+    }
+
     this.router.navigateByUrl(AppRoutes.ManagementPromotionFixedBundleEditById(promo.id));
   }
 
@@ -184,7 +196,9 @@ export class PromotionListComponent implements OnInit {
     const request$ =
       promo.typeId === PromotionTypeEnum.MixMatch
         ? this.promotionService.deleteMixMatch(promo.id)
-        : this.promotionService.deleteFixedBundle(promo.id);
+        : promo.typeId === PromotionTypeEnum.DiscountedProduct
+          ? this.promotionService.deleteDiscountedProduct(promo.id)
+          : this.promotionService.deleteFixedBundle(promo.id);
 
     request$.subscribe({
       next: () => {
@@ -196,7 +210,15 @@ export class PromotionListComponent implements OnInit {
   }
 
   protected getTypeLabel(typeId: PromotionTypeEnum): string {
-    return typeId === PromotionTypeEnum.MixMatch ? 'Mix & Match' : 'Fixed Bundle';
+    if (typeId === PromotionTypeEnum.MixMatch) {
+      return 'Mix & Match';
+    }
+
+    if (typeId === PromotionTypeEnum.DiscountedProduct) {
+      return 'Discounted Product';
+    }
+
+    return 'Fixed Bundle';
   }
 
   protected onTypeFilterChange(selectedIds: (string | number)[]): void {
@@ -297,6 +319,10 @@ export class PromotionListComponent implements OnInit {
         }
 
         if (types.includes('mix-match') && x.typeId === PromotionTypeEnum.MixMatch) {
+          return true;
+        }
+
+        if (types.includes('discounted-product') && x.typeId === PromotionTypeEnum.DiscountedProduct) {
           return true;
         }
 

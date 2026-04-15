@@ -6,6 +6,7 @@ import { environment } from '@environments/environment.development';
 import {
   EvaluatePromotionsRequestDto,
   EvaluatePromotionsResponseDto,
+  DiscountedProductPromotionDto,
   FixedBundlePromotionDto,
   MixMatchPromotionDto,
   PromotionImageDto,
@@ -21,6 +22,7 @@ export class PromotionService {
   private readonly connectivity = inject(ConnectivityService);
   private readonly fixedBundleBaseUrl = `${environment.apiUrl}/management/promotions/fixed-bundles`;
   private readonly mixMatchBaseUrl = `${environment.apiUrl}/management/promotions/mix-match`;
+  private readonly discountedProductBaseUrl = `${environment.apiUrl}/management/promotions/discounted-products`;
   private readonly posBaseUrl = `${environment.apiUrl}/pos/promotions`;
 
   public getFixedBundles(): Observable<PromotionListItemDto[]> {
@@ -90,6 +92,49 @@ export class PromotionService {
   public deleteMixMatch(id: string): Observable<void> {
     return this.http
       .delete<void>(`${this.mixMatchBaseUrl}/${id}`)
+      .pipe(catchError((error) => this.handleError(error)));
+  }
+
+  public getDiscountedProductPromotions(): Observable<PromotionListItemDto[]> {
+    return this.http
+      .get<PromotionListItemDto[]>(this.discountedProductBaseUrl)
+      .pipe(catchError((error) => this.handleError(error)));
+  }
+
+  public getDiscountedProductPromotion(id: string): Observable<DiscountedProductPromotionDto> {
+    return this.http
+      .get<DiscountedProductPromotionDto>(`${this.discountedProductBaseUrl}/${id}`)
+      .pipe(catchError((error) => this.handleError(error)));
+  }
+
+  public createDiscountedProduct(
+    payload: Omit<DiscountedProductPromotionDto, 'id'>,
+  ): Observable<DiscountedProductPromotionDto> {
+    return this.http
+      .post<DiscountedProductPromotionDto>(this.discountedProductBaseUrl, payload)
+      .pipe(catchError((error) => this.handleError(error)));
+  }
+
+  public updateDiscountedProduct(
+    payload: DiscountedProductPromotionDto,
+  ): Observable<DiscountedProductPromotionDto> {
+    return this.http
+      .put<DiscountedProductPromotionDto>(`${this.discountedProductBaseUrl}/${payload.id}`, {
+        promotionId: payload.id,
+        ...payload,
+      })
+      .pipe(catchError((error) => this.handleError(error)));
+  }
+
+  public deleteDiscountedProduct(id: string): Observable<void> {
+    return this.http
+      .delete<void>(`${this.discountedProductBaseUrl}/${id}`)
+      .pipe(catchError((error) => this.handleError(error)));
+  }
+
+  public getActiveDiscountedProductPromotions(): Observable<DiscountedProductPromotionDto[]> {
+    return this.http
+      .get<DiscountedProductPromotionDto[]>(`${this.posBaseUrl}/discounted-products`)
       .pipe(catchError((error) => this.handleError(error)));
   }
 

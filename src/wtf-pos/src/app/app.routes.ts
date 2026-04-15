@@ -207,6 +207,17 @@ export const routes: Routes = [
                 data: { roles: AppRoleGroups.ManagementWrite },
               },
               {
+                path: 'discounted-products/:id',
+                component: PromotionDetailsComponent,
+              },
+              {
+                path: 'discounted-products/:id/edit',
+                component: PromotionEditorComponent,
+                canDeactivate: [unsavedChangesGuard],
+                canActivate: [roleGuard],
+                data: { roles: AppRoleGroups.ManagementWrite },
+              },
+              {
                 path: 'details/:id',
                 component: PromotionDetailsComponent,
               },

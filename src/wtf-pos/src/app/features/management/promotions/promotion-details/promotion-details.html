@@ -9,7 +9,7 @@
       >
         <app-icon name="icon-back" [class]="'h-5 w-5 text-gray-600'" />
       </button>
-      @if (!isLoading() && (fixedBundle() || mixMatch())) {
+      @if (!isLoading() && (fixedBundle() || mixMatch() || discountedProduct())) {
         <div class="min-w-0">
           <h1 class="text-2xl font-bold wrap-break-word text-gray-900">{{ promotionName() }}</h1>
           <div class="mt-1 flex flex-wrap items-center gap-2">
@@ -54,7 +54,7 @@
     </div>
   }
 
-  @if (!isLoading() && (fixedBundle() || mixMatch())) {
+  @if (!isLoading() && (fixedBundle() || mixMatch() || discountedProduct())) {
     <div class="flex-1 overflow-y-auto pr-2 pb-4">
       <div class="card rounded-xl bg-white shadow-lg">
         <div class="card-body p-0">
@@ -72,10 +72,16 @@
             <div class="order-2 space-y-6 p-6 lg:sticky lg:top-0 lg:col-span-3 lg:row-span-2 lg:self-start">
               <div>
                 <p class="mb-2 text-xs font-semibold tracking-wider text-gray-400 uppercase">Pricing</p>
-                <p class="inline-flex items-center gap-1 text-5xl font-black tracking-tight text-[#047857]">
-                  <app-icon name="icon-peso" [class]="'h-8 w-8'" [fill]="'currentColor'" />
-                  {{ headlinePrice() | number: '1.2-2' }}
-                </p>
+                @if (type() === 'discounted-product' && getDiscountedPrimaryItem()?.percentOff) {
+                  <p class="inline-flex items-center gap-2 text-4xl font-black tracking-tight text-[#047857]">
+                    {{ getDiscountedPrimaryItem()!.percentOff | number: '1.0-2' }}% off
+                  </p>
+                } @else {
+                  <p class="inline-flex items-center gap-1 text-5xl font-black tracking-tight text-[#047857]">
+                    <app-icon name="icon-peso" [class]="'h-8 w-8'" [fill]="'currentColor'" />
+                    {{ headlinePrice() | number: '1.2-2' }}
+                  </p>
+                }
               </div>
 
               <div class="border-t border-gray-100 pt-5">
@@ -83,7 +89,15 @@
                 <div class="grid grid-cols-2 gap-x-6 gap-y-4 md:grid-cols-3">
                   <div>
                     <p class="mb-1 text-xs font-medium text-gray-400">Type</p>
-                    <app-badge variant="default">{{ type() === 'mix-match' ? 'Mix & Match' : 'Fixed Bundle' }}</app-badge>
+                    <app-badge variant="default">
+                      @if (type() === 'mix-match') {
+                        Mix & Match
+                      } @else if (type() === 'discounted-product') {
+                        Discounted Product
+                      } @else {
+                        Fixed Bundle
+                      }
+                    </app-badge>
                   </div>
                   <div>
                     <p class="mb-1 text-xs font-medium text-gray-400">Status</p>
@@ -94,12 +108,20 @@
                     }
                   </div>
                   <div>
-                    <p class="mb-1 text-xs font-medium text-gray-400">Bundle Items</p>
+                    <p class="mb-1 text-xs font-medium text-gray-400">
+                      @if (type() === 'discounted-product') {
+                        Products
+                      } @else {
+                        Bundle Items
+                      }
+                    </p>
                     <p class="text-sm font-semibold text-gray-800">
                       @if (type() === 'fixed-bundle') {
                         {{ fixedBundle()!.items.length }}
-                      } @else {
+                      } @else if (type() === 'mix-match') {
                         {{ mixMatch()!.items.length }}
+                      } @else {
+                        {{ discountedProduct()!.items.length }}
                       }
                     </p>
                   </div>
@@ -113,13 +135,29 @@
                       <p class="text-sm font-semibold text-gray-800">{{ mixMatch()!.maxSelectionsPerOrder ?? 'Not set' }}</p>
                     </div>
                   }
+                  @if (type() === 'discounted-product') {
+                    <div>
+                      <p class="mb-1 text-xs font-medium text-gray-400">Discount Type</p>
+                      <p class="text-sm font-semibold text-gray-800">
+                        @if (getDiscountedPrimaryItem()?.fixedPrice != null) {
+                          Fixed Price
+                        } @else {
+                          Percent Off
+                        }
+                      </p>
+                    </div>
+                  }
                   <div>
                     <p class="mb-1 text-xs font-medium text-gray-400">Start Date</p>
                     <p class="text-sm font-semibold text-gray-800">
                       {{
                         type() === 'fixed-bundle'
                           ? (fixedBundle()!.startDate ? (fixedBundle()!.startDate | date: 'd MMM y') : 'Not set')
-                          : (mixMatch()!.startDate ? (mixMatch()!.startDate | date: 'd MMM y') : 'Not set')
+                          : type() === 'mix-match'
+                            ? (mixMatch()!.startDate ? (mixMatch()!.startDate | date: 'd MMM y') : 'Not set')
+                            : (discountedProduct()!.startDate
+                                ? (discountedProduct()!.startDate | date: 'd MMM y')
+                                : 'Not set')
                       }}
                     </p>
                   </div>
@@ -129,7 +167,11 @@
                       {{
                         type() === 'fixed-bundle'
                           ? (fixedBundle()!.endDate ? (fixedBundle()!.endDate | date: 'd MMM y') : 'Not set')
-                          : (mixMatch()!.endDate ? (mixMatch()!.endDate | date: 'd MMM y') : 'Not set')
+                          : type() === 'mix-match'
+                            ? (mixMatch()!.endDate ? (mixMatch()!.endDate | date: 'd MMM y') : 'Not set')
+                            : (discountedProduct()!.endDate
+                                ? (discountedProduct()!.endDate | date: 'd MMM y')
+                                : 'Not set')
                       }}
                     </p>
                   </div>
@@ -184,7 +226,7 @@
                     />
                   </button>
                 }
-              } @else {
+              } @else if (type() === 'mix-match') {
                 <div class="mb-3 flex items-baseline justify-between">
                   <p class="text-xs font-semibold tracking-wider text-gray-400 uppercase">Mix & Match Items</p>
                   <span class="text-xs text-gray-400">{{ mixMatch()!.items.length }} items</span>
@@ -229,6 +271,39 @@
                     />
                   </button>
                 }
+              } @else {
+                <div class="mb-3 flex items-baseline justify-between">
+                  <p class="text-xs font-semibold tracking-wider text-gray-400 uppercase">Required Add-ons</p>
+                  <span class="text-xs text-gray-400">{{ getDiscountedAddOnCount() }} items</span>
+                </div>
+                <div class="overflow-hidden">
+                  @if (getDiscountedAddOnCount() === 0) {
+                    <p class="text-sm text-gray-500">No required add-ons.</p>
+                  } @else {
+                    @for (item of discountedProduct()!.items; track item.productId) {
+                      <div class="mt-4 first:mt-0">
+                        <p class="text-sm font-semibold text-gray-800">
+                          {{ getProductName(item.productId) }}
+                        </p>
+                        @if (item.addOns.length === 0) {
+                          <p class="mt-1 text-xs text-gray-400">No required add-ons.</p>
+                        } @else {
+                          @for (group of getGroupedDiscountedAddOns(item); track group.typeLabel) {
+                            <div class="mt-2 mb-1 flex items-center gap-2">
+                              <span class="text-[10px] font-semibold tracking-wider text-gray-400 uppercase">{{ group.typeLabel }}</span>
+                              <span class="text-[10px] text-gray-300">({{ group.options.length }})</span>
+                            </div>
+                            <div class="flex flex-wrap gap-1.5">
+                              @for (addOn of group.options; track addOn.addOnProductId) {
+                                <span class="rounded bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-700">{{ getProductName(addOn.addOnProductId) }}</span>
+                              }
+                            </div>
+                          }
+                        }
+                      </div>
+                    }
+                  }
+                </div>
               }
             </div>
           </div>

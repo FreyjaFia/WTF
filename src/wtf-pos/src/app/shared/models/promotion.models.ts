@@ -1,6 +1,7 @@
 export enum PromotionTypeEnum {
   FixedBundle = 1,
   MixMatch = 2,
+  DiscountedProduct = 3,
 }
 
 export interface PromotionListItemDto {
@@ -12,6 +13,8 @@ export interface PromotionListItemDto {
   endDate: string | null;
   imageUrl?: string | null;
   bundlePrice?: number | null;
+  fixedPrice?: number | null;
+  percentOff?: number | null;
   createdAt?: string;
   createdBy?: string;
   updatedAt?: string | null;
@@ -73,6 +76,34 @@ export interface MixMatchPromotionDto {
   maxSelectionsPerOrder: number | null;
   bundlePrice: number;
   items: MixMatchItemDto[];
+}
+
+export interface DiscountedProductAddOnDto {
+  id?: string | null;
+  addOnProductId: string;
+  quantity: number;
+}
+
+export interface DiscountedProductItemDto {
+  id?: string | null;
+  productId: string;
+  fixedPrice?: number | null;
+  percentOff?: number | null;
+  addOns: DiscountedProductAddOnDto[];
+}
+
+export interface DiscountedProductPromotionDto {
+  id: string;
+  name: string;
+  isActive: boolean;
+  startDate: string | null;
+  endDate: string | null;
+  imageUrl?: string | null;
+  createdAt?: string;
+  createdBy?: string;
+  updatedAt?: string | null;
+  updatedBy?: string | null;
+  items: DiscountedProductItemDto[];
 }
 
 export interface PromotionCartAddOnLineDto {

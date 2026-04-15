@@ -9,6 +9,9 @@ import {
   MixMatchItemAddOnDto,
   MixMatchItemDto,
   MixMatchPromotionDto,
+  DiscountedProductAddOnDto,
+  DiscountedProductItemDto,
+  DiscountedProductPromotionDto,
   FixedBundleItemAddOnDto,
   FixedBundleItemDto,
   FixedBundlePromotionDto,
@@ -17,7 +20,7 @@ import {
 import { AppRoutes } from '@shared/constants/app-routes';
 import { forkJoin, of, switchMap } from 'rxjs';
 
-type PromotionDetailsType = 'fixed-bundle' | 'mix-match';
+type PromotionDetailsType = 'fixed-bundle' | 'mix-match' | 'discounted-product';
 
 @Component({
   selector: 'app-promotion-details',
@@ -39,30 +42,55 @@ export class PromotionDetailsComponent implements OnInit {
   protected readonly addOnGroupsByProductId = signal<Record<string, AddOnGroupDto[]>>({});
   protected readonly fixedBundle = signal<FixedBundlePromotionDto | null>(null);
   protected readonly mixMatch = signal<MixMatchPromotionDto | null>(null);
+  protected readonly discountedProduct = signal<DiscountedProductPromotionDto | null>(null);
   protected readonly type = signal<PromotionDetailsType>('fixed-bundle');
   protected readonly showAllBundleItems = signal(false);
   protected readonly showDeleteModal = signal(false);
   protected readonly isDeleting = signal(false);
   private modalStackId: number | null = null;
 
-  protected readonly promotionName = computed(() =>
-    this.type() === 'fixed-bundle' ? this.fixedBundle()?.name ?? '' : this.mixMatch()?.name ?? '',
-  );
+  protected readonly promotionName = computed(() => {
+    if (this.type() === 'fixed-bundle') {
+      return this.fixedBundle()?.name ?? '';
+    }
+
+    if (this.type() === 'mix-match') {
+      return this.mixMatch()?.name ?? '';
+    }
+
+    return this.discountedProduct()?.name ?? '';
+  });
   protected readonly lastUpdatedAt = computed(() =>
     this.type() === 'fixed-bundle'
       ? this.fixedBundle()?.updatedAt ?? this.fixedBundle()?.createdAt ?? null
-      : this.mixMatch()?.updatedAt ?? this.mixMatch()?.createdAt ?? null,
+      : this.type() === 'mix-match'
+        ? this.mixMatch()?.updatedAt ?? this.mixMatch()?.createdAt ?? null
+        : this.discountedProduct()?.updatedAt ?? this.discountedProduct()?.createdAt ?? null,
   );
 
-  protected readonly isActive = computed(() =>
-    this.type() === 'fixed-bundle' ? this.fixedBundle()?.isActive ?? false : this.mixMatch()?.isActive ?? false,
-  );
+  protected readonly isActive = computed(() => {
+    if (this.type() === 'fixed-bundle') {
+      return this.fixedBundle()?.isActive ?? false;
+    }
 
-  protected readonly heroImageUrl = computed(() =>
-    this.type() === 'fixed-bundle'
-      ? this.fixedBundle()?.imageUrl ?? null
-      : this.mixMatch()?.imageUrl ?? null,
-  );
+    if (this.type() === 'mix-match') {
+      return this.mixMatch()?.isActive ?? false;
+    }
+
+    return this.discountedProduct()?.isActive ?? false;
+  });
+
+  protected readonly heroImageUrl = computed(() => {
+    if (this.type() === 'fixed-bundle') {
+      return this.fixedBundle()?.imageUrl ?? null;
+    }
+
+    if (this.type() === 'mix-match') {
+      return this.mixMatch()?.imageUrl ?? null;
+    }
+
+    return this.discountedProduct()?.imageUrl ?? null;
+  });
   protected readonly heroLabel = computed(() => this.promotionName());
 
   protected readonly headlinePrice = computed(() => {
@@ -70,7 +98,11 @@ export class PromotionDetailsComponent implements OnInit {
       return this.fixedBundle()?.bundlePrice ?? 0;
     }
 
-    return this.mixMatch()?.bundlePrice ?? 0;
+    if (this.type() === 'mix-match') {
+      return this.mixMatch()?.bundlePrice ?? 0;
+    }
+
+    return this.discountedProduct()?.items?.[0]?.fixedPrice ?? 0;
   });
 
   public ngOnInit(): void {
@@ -110,6 +142,24 @@ export class PromotionDetailsComponent implements OnInit {
   }
 
   protected getGroupedMixMatchItemAddOns(item: MixMatchItemDto): { typeLabel: string; options: MixMatchItemAddOnDto[] }[] {
+    return this.groupAddOns(item.productId, item.addOns);
+  }
+
+  protected getDiscountedPrimaryItem(): DiscountedProductItemDto | null {
+    return this.discountedProduct()?.items?.[0] ?? null;
+  }
+
+  protected getDiscountedAddOnCount(): number {
+    return this.discountedProduct()?.items?.reduce((total, item) => total + item.addOns.length, 0) ?? 0;
+  }
+
+  protected getGroupedDiscountedAddOns(
+    item: DiscountedProductItemDto,
+  ): { typeLabel: string; options: DiscountedProductAddOnDto[] }[] {
+    if (!item) {
+      return [];
+    }
+
     return this.groupAddOns(item.productId, item.addOns);
   }
 
@@ -155,7 +205,9 @@ export class PromotionDetailsComponent implements OnInit {
     const request$ =
       this.type() === 'mix-match'
         ? this.promotionService.deleteMixMatch(id)
-        : this.promotionService.deleteFixedBundle(id);
+        : this.type() === 'discounted-product'
+          ? this.promotionService.deleteDiscountedProduct(id)
+          : this.promotionService.deleteFixedBundle(id);
 
     this.isDeleting.set(true);
     request$.subscribe({
@@ -186,19 +238,30 @@ export class PromotionDetailsComponent implements OnInit {
             return forkJoin({
               fixed: of<FixedBundlePromotionDto | null>(null),
               mixMatch: this.promotionService.getMixMatchPromotion(id),
+              discounted: of<DiscountedProductPromotionDto | null>(null),
+            });
+          }
+
+          if (this.type() === 'discounted-product') {
+            return forkJoin({
+              fixed: of<FixedBundlePromotionDto | null>(null),
+              mixMatch: of<MixMatchPromotionDto | null>(null),
+              discounted: this.promotionService.getDiscountedProductPromotion(id),
             });
           }
 
           return forkJoin({
             fixed: this.promotionService.getFixedBundle(id),
             mixMatch: of<MixMatchPromotionDto | null>(null),
+            discounted: of<DiscountedProductPromotionDto | null>(null),
           });
         }),
       )
       .subscribe({
-        next: ({ fixed, mixMatch }) => {
+        next: ({ fixed, mixMatch, discounted }) => {
           this.fixedBundle.set(fixed);
           this.mixMatch.set(mixMatch);
+          this.discountedProduct.set(discounted);
           this.primeAddOnGroupCache();
           this.isLoading.set(false);
         },
@@ -258,6 +321,7 @@ export class PromotionDetailsComponent implements OnInit {
     const ids = new Set<string>();
     const fixed = this.fixedBundle();
     const mixMatch = this.mixMatch();
+    const discounted = this.discountedProduct();
 
     if (fixed) {
       for (const item of fixed.items) {
@@ -269,6 +333,14 @@ export class PromotionDetailsComponent implements OnInit {
 
     if (mixMatch) {
       for (const item of mixMatch.items) {
+        if (item.productId) {
+          ids.add(item.productId);
+        }
+      }
+    }
+
+    if (discounted?.items?.length) {
+      for (const item of discounted.items) {
         if (item.productId) {
           ids.add(item.productId);
         }
@@ -312,13 +384,31 @@ export class PromotionDetailsComponent implements OnInit {
       return 'fixed-bundle';
     }
 
+    if (path.startsWith('discounted-products/')) {
+      return 'discounted-product';
+    }
+
     const queryType = this.route.snapshot.queryParamMap.get('type');
-    return queryType === 'mix-match' || queryType === 'mixMatch' ? 'mix-match' : 'fixed-bundle';
+    if (queryType === 'mix-match' || queryType === 'mixMatch') {
+      return 'mix-match';
+    }
+
+    if (queryType === 'discounted-product' || queryType === 'discountedProduct') {
+      return 'discounted-product';
+    }
+
+    return 'fixed-bundle';
   }
 
   private buildEditRoute(id: string, type: PromotionDetailsType): string {
-    return type === 'mix-match'
-      ? AppRoutes.ManagementPromotionMixMatchEditById(id)
-      : AppRoutes.ManagementPromotionFixedBundleEditById(id);
+    if (type === 'mix-match') {
+      return AppRoutes.ManagementPromotionMixMatchEditById(id);
+    }
+
+    if (type === 'discounted-product') {
+      return AppRoutes.ManagementPromotionDiscountedProductEditById(id);
+    }
+
+    return AppRoutes.ManagementPromotionFixedBundleEditById(id);
   }
 }

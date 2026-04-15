@@ -201,6 +201,8 @@
                 [routerLink]="
                   promo.typeId === PromotionTypeEnum.MixMatch
                     ? routes.ManagementPromotionMixMatchDetailsById(promo.id)
+                    : promo.typeId === PromotionTypeEnum.DiscountedProduct
+                      ? routes.ManagementPromotionDiscountedProductDetailsById(promo.id)
                     : routes.ManagementPromotionFixedBundleDetailsById(promo.id)
                 "
                 [attr.aria-label]="'View details for ' + promo.name"
