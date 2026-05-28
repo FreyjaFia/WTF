@@ -18,7 +18,7 @@
         </button>
 
         <div
-          class="flex min-w-0 flex-1 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200 md:max-w-[26rem] md:flex-1"
+          class="flex min-w-0 flex-1 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200 md:max-w-104 md:flex-1"
           [class.pointer-events-none]="isReadOnly() || !canManageOrderActions()"
           [class.opacity-50]="isReadOnly() || !canManageOrderActions()"
         >
@@ -62,14 +62,14 @@
         <div class="w-full overflow-x-auto border-b border-gray-200">
           <div
             role="tablist"
-            class="flex w-max min-w-full items-end gap-6 pb-2 text-sm sm:text-base"
+            class="flex w-max min-w-full items-end gap-4 pb-2 text-sm sm:text-base"
             aria-label="Catalog tabs"
           >
-            @for (tab of subCategoryTabs; track tab.id) {
+            @for (tab of visibleSubCategoryTabs(); track tab.id) {
               <button
                 type="button"
                 role="tab"
-                class="relative pb-2 font-semibold text-gray-500 transition-colors"
+                class="relative cursor-pointer rounded-md px-2 py-1 font-bold text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-800"
                 [class.tab-active]="
                   activeCatalogTab() === 'products' && activeSubCategoryTab() === tab.id
                 "
@@ -86,7 +86,7 @@
                 >
                   {{ tab.label }}
                   <span
-                    class="absolute left-0 -bottom-2 h-1 w-full rounded-full bg-gray-900 transition-opacity"
+                    class="absolute -bottom-1 left-0 h-1 w-full rounded-full bg-gray-900 transition-opacity"
                     [class.opacity-100]="
                       activeCatalogTab() === 'products' && activeSubCategoryTab() === tab.id
                     "
@@ -97,26 +97,25 @@
                 </span>
               </button>
             }
-            <button
-              type="button"
-              role="tab"
-              class="relative pb-2 font-semibold text-gray-500 transition-colors"
-              [class.tab-active]="activeCatalogTab() === 'bundles'"
-              [attr.aria-selected]="activeCatalogTab() === 'bundles'"
-              (click)="selectCatalogTab('bundles')"
-            >
-              <span
-                class="relative"
-                [class.text-gray-900]="activeCatalogTab() === 'bundles'"
+            @if (filteredBundlePromotions().length > 0) {
+              <button
+                type="button"
+                role="tab"
+                class="relative cursor-pointer rounded-md px-2 py-1 font-bold text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-800"
+                [class.tab-active]="activeCatalogTab() === 'bundles'"
+                [attr.aria-selected]="activeCatalogTab() === 'bundles'"
+                (click)="selectCatalogTab('bundles')"
               >
-                Bundles
-                <span
-                  class="absolute left-0 -bottom-2 h-1 w-full rounded-full bg-gray-900 transition-opacity"
-                  [class.opacity-100]="activeCatalogTab() === 'bundles'"
-                  [class.opacity-0]="activeCatalogTab() !== 'bundles'"
-                ></span>
-              </span>
-            </button>
+                <span class="relative" [class.text-gray-900]="activeCatalogTab() === 'bundles'">
+                  Bundles
+                  <span
+                    class="absolute -bottom-1 left-0 h-1 w-full rounded-full bg-gray-900 transition-opacity"
+                    [class.opacity-100]="activeCatalogTab() === 'bundles'"
+                    [class.opacity-0]="activeCatalogTab() !== 'bundles'"
+                  ></span>
+                </span>
+              </button>
+            }
           </div>
         </div>
       </div>
@@ -193,13 +192,13 @@
                     ProductSubCategoryEnum.Coffee,
                     ProductSubCategoryEnum.NonCoffee,
                     ProductSubCategoryEnum.Snacks,
-                    ProductSubCategoryEnum.Retail
+                    ProductSubCategoryEnum.Retail,
                   ];
                   track tab
                 ) {
                   @if (productsBySubCategory()[tab].length > 0) {
                     <section [attr.id]="'subcategory-' + tab">
-                      <h3 class="mb-3 text-base font-semibold text-gray-800">
+                      <h3 class="mb-4 text-xl font-semibold text-gray-900">
                         {{ subCategoryLabels[tab] }}
                       </h3>
                       <div
@@ -507,185 +506,193 @@
       } @else {
         <div class="min-h-0 flex-1 overflow-y-auto p-4">
           <div class="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-1">
-          @for (c of cart(); track $index; let last = $last) {
-            <div
-              class="rounded-lg bg-gray-50 p-4 shadow-sm transition-colors"
-              [class.cursor-pointer]="!isReadOnly() && canManageOrderActions()"
-              [class.hover:bg-gray-100]="!isReadOnly() && canManageOrderActions()"
-              [attr.role]="!isReadOnly() && canManageOrderActions() ? 'button' : null"
-              [attr.tabindex]="!isReadOnly() && canManageOrderActions() ? 0 : null"
-              (click)="!isReadOnly() && canManageOrderActions() && editCartItem($index)"
-              (keydown.enter)="!isReadOnly() && canManageOrderActions() && editCartItem($index)"
-              (keydown.space)="
-                !isReadOnly() && canManageOrderActions() && editCartItem($index);
-                $event.preventDefault()
-              "
-            >
-              <div class="flex items-center gap-3">
-                <div class="flex h-16 w-16 shrink-0 items-center justify-center">
-                  @if (c.imageUrl) {
-                    <img [src]="c.imageUrl" [alt]="c.name" class="h-12 w-12 object-contain" />
-                  } @else {
-                    <app-avatar [label]="c.name" [size]="56" />
-                  }
-                </div>
-                <div class="flex min-w-0 flex-1 flex-col justify-between gap-2">
-                  <div class="flex items-start justify-between gap-4 sm:gap-6">
-                    <div class="min-w-0 flex-1 text-sm font-semibold text-gray-900">
-                      {{ c.name }}
-                      @if (getDiscountedPromoLabel(c)) {
-                        <div
-                          class="mt-1 inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700"
-                        >
-                          {{ getDiscountedPromoLabel(c) }}
-                        </div>
-                      }
-                    </div>
-                    <div class="shrink-0 text-sm text-gray-500">
-                      <span class="text-xs opacity-60"
-                        ><app-icon
-                          name="icon-peso"
-                          [class]="'inline h-3 w-3 align-[-0.125em]'"
-                          [fill]="'currentColor'" /></span
-                      >{{ c.price | number: '1.2-2' }}
-                    </div>
+            @for (c of cart(); track $index; let last = $last) {
+              <div
+                class="rounded-lg bg-gray-50 p-4 shadow-sm transition-colors"
+                [class.cursor-pointer]="!isReadOnly() && canManageOrderActions()"
+                [class.hover:bg-gray-100]="!isReadOnly() && canManageOrderActions()"
+                [attr.role]="!isReadOnly() && canManageOrderActions() ? 'button' : null"
+                [attr.tabindex]="!isReadOnly() && canManageOrderActions() ? 0 : null"
+                (click)="!isReadOnly() && canManageOrderActions() && editCartItem($index)"
+                (keydown.enter)="!isReadOnly() && canManageOrderActions() && editCartItem($index)"
+                (keydown.space)="
+                  !isReadOnly() && canManageOrderActions() && editCartItem($index);
+                  $event.preventDefault()
+                "
+              >
+                <div class="flex items-center gap-3">
+                  <div class="flex h-16 w-16 shrink-0 items-center justify-center">
+                    @if (c.imageUrl) {
+                      <img [src]="c.imageUrl" [alt]="c.name" class="h-12 w-12 object-contain" />
+                    } @else {
+                      <app-avatar [label]="c.name" [size]="56" />
+                    }
                   </div>
-                  <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-1">
-                      @if (!isReadOnly() && canManageOrderActions()) {
-                        <button
-                          class="btn btn-circle btn-sm bg-gray-200 transition-colors hover:bg-gray-300"
-                          (click)="$event.stopPropagation(); decrement(c.productId, $index)"
-                          aria-label="Decrease quantity"
-                        >
-                          <span class="text-base leading-none font-bold">-</span>
-                        </button>
-                      }
-                      <div class="text-center text-sm font-medium" [class.w-6]="!isReadOnly()">
-                        @if (isReadOnly()) {
-                          {{ c.qty }}<span class="text-xs">x</span>
-                        } @else {
-                          {{ c.qty }}
+                  <div class="flex min-w-0 flex-1 flex-col justify-between gap-2">
+                    <div class="flex items-start justify-between gap-4 sm:gap-6">
+                      <div class="min-w-0 flex-1 text-sm font-semibold text-gray-900">
+                        {{ c.name }}
+                        @if (getDiscountedPromoLabel(c)) {
+                          <div
+                            class="mt-1 inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700"
+                          >
+                            {{ getDiscountedPromoLabel(c) }}
+                          </div>
                         }
                       </div>
-                      @if (!isReadOnly() && canManageOrderActions()) {
-                        <button
-                          class="btn btn-circle btn-sm bg-gray-200 transition-colors hover:bg-gray-300"
-                          (click)="$event.stopPropagation(); increment(c.productId, $index)"
-                          aria-label="Increase quantity"
-                        >
-                          <span class="text-base leading-none font-bold">+</span>
-                        </button>
-                      }
+                      <div class="shrink-0 text-sm text-gray-500">
+                        <span class="text-xs opacity-60"
+                          ><app-icon
+                            name="icon-peso"
+                            [class]="'inline h-3 w-3 align-[-0.125em]'"
+                            [fill]="'currentColor'" /></span
+                        >{{ c.price | number: '1.2-2' }}
+                      </div>
                     </div>
-                    <div class="text-base font-bold whitespace-nowrap text-gray-900">
-                      <span class="text-xs opacity-70"
-                        ><app-icon
-                          name="icon-peso"
-                          [class]="'inline h-3 w-3 align-[-0.125em]'"
-                          [fill]="'currentColor'" /></span
-                      >{{ getLineTotal(c) | number: '1.2-2' }}
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center gap-1">
+                        @if (!isReadOnly() && canManageOrderActions()) {
+                          <button
+                            class="btn btn-circle btn-sm bg-gray-200 transition-colors hover:bg-gray-300"
+                            (click)="$event.stopPropagation(); decrement(c.productId, $index)"
+                            aria-label="Decrease quantity"
+                          >
+                            <span class="text-base leading-none font-bold">-</span>
+                          </button>
+                        }
+                        <div class="text-center text-sm font-medium" [class.w-6]="!isReadOnly()">
+                          @if (isReadOnly()) {
+                            {{ c.qty }}<span class="text-xs">x</span>
+                          } @else {
+                            {{ c.qty }}
+                          }
+                        </div>
+                        @if (!isReadOnly() && canManageOrderActions()) {
+                          <button
+                            class="btn btn-circle btn-sm bg-gray-200 transition-colors hover:bg-gray-300"
+                            (click)="$event.stopPropagation(); increment(c.productId, $index)"
+                            aria-label="Increase quantity"
+                          >
+                            <span class="text-base leading-none font-bold">+</span>
+                          </button>
+                        }
+                      </div>
+                      <div class="text-base font-bold whitespace-nowrap text-gray-900">
+                        <span class="text-xs opacity-70"
+                          ><app-icon
+                            name="icon-peso"
+                            [class]="'inline h-3 w-3 align-[-0.125em]'"
+                            [fill]="'currentColor'" /></span
+                        >{{ getLineTotal(c) | number: '1.2-2' }}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              @if (c.bundleItems?.length) {
-                <div class="mt-2 ml-19 space-y-1 border-t border-gray-200 pt-2">
-                  @for (
-                    bundleItem of getSortedBundleItems(c);
-                    track bundleItem.productId + '-' + $index
-                  ) {
-                    <div class="text-xs text-gray-500">
-                      <div class="flex items-center justify-between">
+                @if (c.bundleItems?.length) {
+                  <div class="mt-2 ml-19 space-y-1 border-t border-gray-200 pt-2">
+                    @for (
+                      bundleItem of getSortedBundleItems(c);
+                      track bundleItem.productId + '-' + $index
+                    ) {
+                      <div class="text-xs text-gray-500">
+                        <div class="flex items-center justify-between">
+                          <span class="flex min-w-0 flex-1 items-center gap-1.5 pr-2">
+                            <span
+                              class="inline-block h-1 w-1 shrink-0 rounded-full bg-gray-400"
+                            ></span>
+                            <span class="min-w-0 wrap-break-word">{{
+                              getBundleChildTotalQuantity(c, bundleItem) > 1
+                                ? getBundleChildTotalQuantity(c, bundleItem) +
+                                  'x ' +
+                                  bundleItem.name
+                                : bundleItem.name
+                            }}</span>
+                          </span>
+                        </div>
+                        @if (bundleItem.addOns?.length) {
+                          <div class="mt-0.5 ml-5 space-y-0.5">
+                            @for (
+                              addOn of getGroupedBundleItemAddOns(bundleItem);
+                              track addOn.addOnId
+                            ) {
+                              <div class="flex items-center gap-1.5 text-[11px] text-gray-400">
+                                <span
+                                  class="inline-block h-1 w-1 shrink-0 rounded-full bg-gray-300"
+                                ></span>
+                                <span class="min-w-0 wrap-break-word">{{
+                                  addOn.quantityPerUnit > 1
+                                    ? addOn.quantityPerUnit + 'x ' + addOn.name + ' (per unit)'
+                                    : addOn.name
+                                }}</span>
+                              </div>
+                            }
+                          </div>
+                        }
+                      </div>
+                    }
+                  </div>
+                } @else if (c.addOns?.length || getDiscountedAmount(c) > 0) {
+                  <div class="mt-2 ml-19 space-y-1 border-t border-gray-200 pt-2">
+                    @if (getDiscountedAmount(c) > 0) {
+                      <div
+                        class="flex items-center justify-between text-xs font-semibold text-emerald-700"
+                      >
+                        <span class="flex min-w-0 flex-1 items-center gap-1.5 pr-2">
+                          <span
+                            class="inline-block h-1 w-1 shrink-0 rounded-full bg-emerald-400"
+                          ></span>
+                          <span class="min-w-0 wrap-break-word">Promo discount</span>
+                        </span>
+                        <span class="shrink-0"
+                          >-<app-icon
+                            name="icon-peso"
+                            [class]="'inline h-3 w-3 align-[-0.125em]'"
+                            [fill]="'currentColor'"
+                          />{{ getDiscountedAmount(c) | number: '1.2-2' }}</span
+                        >
+                      </div>
+                    }
+                    @for (ao of getGroupedAddOns(c); track ao.addOnId + '-' + ao.price) {
+                      <div class="flex items-center justify-between text-xs text-gray-500">
                         <span class="flex min-w-0 flex-1 items-center gap-1.5 pr-2">
                           <span
                             class="inline-block h-1 w-1 shrink-0 rounded-full bg-gray-400"
                           ></span>
                           <span class="min-w-0 wrap-break-word">{{
-                            getBundleChildTotalQuantity(c, bundleItem) > 1
-                              ? getBundleChildTotalQuantity(c, bundleItem) + 'x ' + bundleItem.name
-                              : bundleItem.name
+                            ao.quantityPerUnit > 1
+                              ? ao.quantityPerUnit + 'x ' + ao.name + ' (per unit)'
+                              : ao.name
                           }}</span>
                         </span>
+                        <span class="shrink-0"
+                          >+<app-icon
+                            name="icon-peso"
+                            [class]="'inline h-3 w-3 align-[-0.125em]'"
+                            [fill]="'currentColor'"
+                          />{{ ao.lineTotal | number: '1.2-2' }}</span
+                        >
                       </div>
-                      @if (bundleItem.addOns?.length) {
-                        <div class="mt-0.5 ml-5 space-y-0.5">
-                          @for (
-                            addOn of getGroupedBundleItemAddOns(bundleItem);
-                            track addOn.addOnId
-                          ) {
-                            <div class="flex items-center gap-1.5 text-[11px] text-gray-400">
-                              <span
-                                class="inline-block h-1 w-1 shrink-0 rounded-full bg-gray-300"
-                              ></span>
-                              <span class="min-w-0 wrap-break-word">{{
-                                addOn.quantityPerUnit > 1
-                                  ? addOn.quantityPerUnit + 'x ' + addOn.name + ' (per unit)'
-                                  : addOn.name
-                              }}</span>
-                            </div>
-                          }
-                        </div>
-                      }
-                    </div>
-                  }
-                </div>
-              } @else if (c.addOns?.length || getDiscountedAmount(c) > 0) {
-                <div class="mt-2 ml-19 space-y-1 border-t border-gray-200 pt-2">
-                  @if (getDiscountedAmount(c) > 0) {
-                    <div class="flex items-center justify-between text-xs font-semibold text-emerald-700">
-                      <span class="flex min-w-0 flex-1 items-center gap-1.5 pr-2">
-                        <span class="inline-block h-1 w-1 shrink-0 rounded-full bg-emerald-400"></span>
-                        <span class="min-w-0 wrap-break-word">Promo discount</span>
-                      </span>
-                      <span class="shrink-0"
-                        >-<app-icon
-                          name="icon-peso"
-                          [class]="'inline h-3 w-3 align-[-0.125em]'"
-                          [fill]="'currentColor'"
-                        />{{ getDiscountedAmount(c) | number: '1.2-2' }}</span
-                      >
-                    </div>
-                  }
-                  @for (ao of getGroupedAddOns(c); track ao.addOnId + '-' + ao.price) {
-                    <div class="flex items-center justify-between text-xs text-gray-500">
-                      <span class="flex min-w-0 flex-1 items-center gap-1.5 pr-2">
-                        <span class="inline-block h-1 w-1 shrink-0 rounded-full bg-gray-400"></span>
-                        <span class="min-w-0 wrap-break-word">{{
-                          ao.quantityPerUnit > 1
-                            ? ao.quantityPerUnit + 'x ' + ao.name + ' (per unit)'
-                            : ao.name
-                        }}</span>
-                      </span>
-                      <span class="shrink-0"
-                        >+<app-icon
-                          name="icon-peso"
-                          [class]="'inline h-3 w-3 align-[-0.125em]'"
-                          [fill]="'currentColor'"
-                        />{{ ao.lineTotal | number: '1.2-2' }}</span
-                      >
-                    </div>
-                  }
-                </div>
-              }
+                    }
+                  </div>
+                }
 
-              @if (c.specialInstructions) {
-                <div class="mt-2 ml-19 text-xs wrap-break-word text-gray-500 italic">
-                  {{ c.specialInstructions }}
-                </div>
-              }
-              @if (!c.bundlePromotionId && !c.bundleItems?.length && c.addOns?.length) {
-                <div class="mt-1 ml-19 pt-0.5 text-right text-[11px] text-gray-400 italic">
-                  (<app-icon
-                    name="icon-peso"
-                    [class]="'inline h-2.5 w-2.5 align-[-0.125em]'"
-                    [fill]="'currentColor'"
-                  />{{ getUnitSubtotal(c) | number: '1.2-2' }} / unit)
-                </div>
-              }
-            </div>
-          }
+                @if (c.specialInstructions) {
+                  <div class="mt-2 ml-19 text-xs wrap-break-word text-gray-500 italic">
+                    {{ c.specialInstructions }}
+                  </div>
+                }
+                @if (!c.bundlePromotionId && !c.bundleItems?.length && c.addOns?.length) {
+                  <div class="mt-1 ml-19 pt-0.5 text-right text-[11px] text-gray-400 italic">
+                    (<app-icon
+                      name="icon-peso"
+                      [class]="'inline h-2.5 w-2.5 align-[-0.125em]'"
+                      [fill]="'currentColor'"
+                    />{{ getUnitSubtotal(c) | number: '1.2-2' }} / unit)
+                  </div>
+                }
+              </div>
+            }
           </div>
         </div>
       }

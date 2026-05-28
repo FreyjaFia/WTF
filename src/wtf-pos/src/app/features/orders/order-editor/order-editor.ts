@@ -466,6 +466,11 @@ export class OrderEditor implements OnInit, OnDestroy {
     };
   });
 
+  protected readonly visibleSubCategoryTabs = computed(() => {
+    const productsBySubCategory = this.productsBySubCategory();
+    return this.subCategoryTabs.filter((tab) => productsBySubCategory[tab.id].length > 0);
+  });
+
   protected readonly filteredBundlePromotions = computed(() => {
     const term = (this.filterForm.controls.searchTerm.value ?? '').trim().toLowerCase();
     let items = this.bundlePromotions().filter((promo) =>
@@ -480,13 +485,24 @@ export class OrderEditor implements OnInit, OnDestroy {
   });
 
   protected selectSubCategoryTab(tab: ProductSubCategoryEnum): void {
+    if (this.productsBySubCategory()[tab].length === 0) {
+      return;
+    }
+
     this.activeSubCategoryTab.set(tab);
     this.scrollToSubCategory(tab);
   }
 
   protected selectCatalogTab(tab: 'products' | 'bundles'): void {
+    if (tab === 'bundles' && this.filteredBundlePromotions().length === 0) {
+      return;
+    }
+
+    if (tab === 'products') {
+      this.ensureVisibleProductTab();
+    }
+
     this.activeCatalogTab.set(tab);
-    this.filterForm.controls.searchTerm.setValue('');
   }
 
   protected onCartDragStart(event: TouchEvent): void {
@@ -2172,6 +2188,30 @@ export class OrderEditor implements OnInit, OnDestroy {
     }
 
     this.products.set(items);
+    this.ensureVisibleCatalogTab();
+  }
+
+  private ensureVisibleCatalogTab(): void {
+    if (this.activeCatalogTab() === 'bundles') {
+      if (this.filteredBundlePromotions().length > 0) {
+        return;
+      }
+
+      this.activeCatalogTab.set('products');
+    }
+
+    this.ensureVisibleProductTab();
+  }
+
+  private ensureVisibleProductTab(): void {
+    const visibleTabs = this.visibleSubCategoryTabs();
+    if (visibleTabs.length === 0) {
+      return;
+    }
+
+    if (!visibleTabs.some((tab) => tab.id === this.activeSubCategoryTab())) {
+      this.activeSubCategoryTab.set(visibleTabs[0].id);
+    }
   }
 
   private scrollToSubCategory(tab: ProductSubCategoryEnum): void {
