@@ -6,6 +6,18 @@ using WTF.Domain.Entities;
 
 namespace WTF.Api.Services;
 
+public interface IAuditService
+{
+    Task LogAsync(
+        AuditAction action,
+        AuditEntityType entityType,
+        string entityId,
+        object? oldValues = null,
+        object? newValues = null,
+        Guid? userId = null,
+        CancellationToken cancellationToken = default);
+}
+
 public sealed class AuditService(
     WTFDbContext db,
     IHttpContextAccessor httpContextAccessor) : IAuditService

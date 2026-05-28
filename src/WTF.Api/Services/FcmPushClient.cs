@@ -5,6 +5,18 @@ using Microsoft.Extensions.Options;
 
 namespace WTF.Api.Services;
 
+public interface IFcmPushClient
+{
+    bool IsConfigured { get; }
+
+    Task<bool> SendAsync(
+        string token,
+        string title,
+        string body,
+        IReadOnlyDictionary<string, string>? data,
+        CancellationToken cancellationToken);
+}
+
 public sealed class FcmPushClient : IFcmPushClient
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
