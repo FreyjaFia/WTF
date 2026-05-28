@@ -6,8 +6,8 @@ import android.content.pm.PackageManager;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
+import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
-import com.getcapacitor.annotation.PluginMethod;
 import com.huawei.agconnect.config.AGConnectServicesConfig;
 import com.huawei.hms.aaid.HmsInstanceId;
 import com.huawei.hms.api.HuaweiApiAvailability;
@@ -28,7 +28,7 @@ public class HuaweiPushPlugin extends Plugin {
     @PluginMethod
     public void getToken(PluginCall call) {
         Context context = getContext();
-        getBridge().getExecutorService().execute(() -> {
+        new Thread(() -> {
             try {
                 String appId = getConfiguredAppId(context);
 
@@ -44,7 +44,7 @@ public class HuaweiPushPlugin extends Plugin {
             } catch (Exception ex) {
                 call.reject("Failed to obtain Huawei push token.", ex);
             }
-        });
+        }).start();
     }
 
     private String getConfiguredAppId(Context context) throws PackageManager.NameNotFoundException {
