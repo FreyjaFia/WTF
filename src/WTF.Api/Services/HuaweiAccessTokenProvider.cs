@@ -57,14 +57,11 @@ public sealed class HuaweiAccessTokenProvider
         var endpoint = string.IsNullOrWhiteSpace(_options.OAuthEndpoint)
             ? DefaultOAuthEndpoint
             : _options.OAuthEndpoint!;
-        var clientId = string.IsNullOrWhiteSpace(_options.ClientId)
-            ? _options.AppId!
-            : _options.ClientId!;
 
         var payload = new Dictionary<string, string>
         {
             ["grant_type"] = "client_credentials",
-            ["client_id"] = clientId,
+            ["client_id"] = _options.AppId!,
             ["client_secret"] = _options.AppSecret!
         };
 

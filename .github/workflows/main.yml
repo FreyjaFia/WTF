@@ -86,22 +86,18 @@ jobs:
         if: github.event_name != 'pull_request'
         env:
           HUAWEI_PUSH_APP_ID: ${{ secrets.HUAWEI_PUSH_APP_ID }}
-          HUAWEI_PUSH_CLIENT_ID: ${{ secrets.HUAWEI_PUSH_CLIENT_ID }}
           HUAWEI_PUSH_APP_SECRET: ${{ secrets.HUAWEI_PUSH_APP_SECRET }}
         run: |
           if [ -z "$HUAWEI_PUSH_APP_ID" ] || [ -z "$HUAWEI_PUSH_APP_SECRET" ]; then
             echo "Missing Huawei Push secrets (HUAWEI_PUSH_APP_ID, HUAWEI_PUSH_APP_SECRET)."
             exit 1
           fi
-          HUAWEI_PUSH_CLIENT_ID="${HUAWEI_PUSH_CLIENT_ID:-$HUAWEI_PUSH_APP_ID}"
 
           jq \
             --arg appId "$HUAWEI_PUSH_APP_ID" \
-            --arg clientId "$HUAWEI_PUSH_CLIENT_ID" \
             --arg appSecret "$HUAWEI_PUSH_APP_SECRET" \
             '.HuaweiPush = {
               AppId: $appId,
-              ClientId: $clientId,
               AppSecret: $appSecret,
               OAuthEndpoint: "https://oauth-login.cloud.huawei.com/oauth2/v3/token",
               PushEndpoint: "https://push-api.cloud.huawei.com"
@@ -147,22 +143,18 @@ jobs:
       - name: Configure Huawei Push (staging)
         env:
           HUAWEI_PUSH_APP_ID: ${{ secrets.HUAWEI_PUSH_APP_ID_STAGING }}
-          HUAWEI_PUSH_CLIENT_ID: ${{ secrets.HUAWEI_PUSH_CLIENT_ID_STAGING }}
           HUAWEI_PUSH_APP_SECRET: ${{ secrets.HUAWEI_PUSH_APP_SECRET_STAGING }}
         run: |
           if [ -z "$HUAWEI_PUSH_APP_ID" ] || [ -z "$HUAWEI_PUSH_APP_SECRET" ]; then
             echo "Missing Huawei Push staging secrets (HUAWEI_PUSH_APP_ID_STAGING, HUAWEI_PUSH_APP_SECRET_STAGING)."
             exit 1
           fi
-          HUAWEI_PUSH_CLIENT_ID="${HUAWEI_PUSH_CLIENT_ID:-$HUAWEI_PUSH_APP_ID}"
 
           jq \
             --arg appId "$HUAWEI_PUSH_APP_ID" \
-            --arg clientId "$HUAWEI_PUSH_CLIENT_ID" \
             --arg appSecret "$HUAWEI_PUSH_APP_SECRET" \
             '.HuaweiPush = {
               AppId: $appId,
-              ClientId: $clientId,
               AppSecret: $appSecret,
               OAuthEndpoint: "https://oauth-login.cloud.huawei.com/oauth2/v3/token",
               PushEndpoint: "https://push-api.cloud.huawei.com"
