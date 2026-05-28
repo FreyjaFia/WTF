@@ -25,15 +25,18 @@ public interface IPushNotificationService
 public sealed class PushNotificationService(
     WTFDbContext db,
     IFcmPushClient fcmClient,
+    IHuaweiPushClient huaweiClient,
     ILogger<PushNotificationService> logger) : IPushNotificationService
 {
+    private const string PlatformHuawei = "huawei";
+
     public async Task SendOrderCreatedAsync(
         Order order,
         decimal totalAmount,
         Guid actorUserId,
         CancellationToken cancellationToken)
     {
-        if (!fcmClient.IsConfigured)
+        if (!fcmClient.IsConfigured && !huaweiClient.IsConfigured)
         {
             logger.LogInformation("Push notifications are not configured. Skipping send.");
             return;
@@ -52,7 +55,7 @@ public sealed class PushNotificationService(
                 (joined, role) => new { joined.token, role.Name })
             .Where(x => x.Name != AppRoles.AdminViewer)
             .Where(x => x.token.UserId != actorUserId)
-            .Select(x => x.token.Token)
+            .Select(x => new { x.token.Token, x.token.Platform })
             .Distinct()
             .ToListAsync(cancellationToken);
 
@@ -70,7 +73,18 @@ public sealed class PushNotificationService(
             ["path"] = $"/orders/editor/{order.Id}"
         };
 
-        foreach (var token in tokens)
+        var fcmTokens = tokens
+            .Where(t => !string.Equals(t.Platform, PlatformHuawei, StringComparison.OrdinalIgnoreCase))
+            .Select(t => t.Token)
+            .Distinct()
+            .ToList();
+        var huaweiTokens = tokens
+            .Where(t => string.Equals(t.Platform, PlatformHuawei, StringComparison.OrdinalIgnoreCase))
+            .Select(t => t.Token)
+            .Distinct()
+            .ToList();
+
+        foreach (var token in fcmTokens)
         {
             try
             {
@@ -79,6 +93,18 @@ public sealed class PushNotificationService(
             catch (Exception ex)
             {
                 logger.LogWarning(ex, "Failed to send push notification for order {OrderId}.", order.Id);
+            }
+        }
+
+        foreach (var token in huaweiTokens)
+        {
+            try
+            {
+                await huaweiClient.SendAsync(token, title, body, data, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Failed to send Huawei push notification for order {OrderId}.", order.Id);
             }
         }
     }
@@ -90,7 +116,7 @@ public sealed class PushNotificationService(
         Guid actorUserId,
         CancellationToken cancellationToken)
     {
-        if (!fcmClient.IsConfigured)
+        if (!fcmClient.IsConfigured && !huaweiClient.IsConfigured)
         {
             logger.LogInformation("Push notifications are not configured. Skipping send.");
             return;
@@ -117,7 +143,7 @@ public sealed class PushNotificationService(
                 (joined, role) => new { joined.token, role.Name })
             .Where(x => x.Name != AppRoles.AdminViewer)
             .Where(x => x.token.UserId != actorUserId)
-            .Select(x => x.token.Token)
+            .Select(x => new { x.token.Token, x.token.Platform })
             .Distinct()
             .ToListAsync(cancellationToken);
 
@@ -136,7 +162,18 @@ public sealed class PushNotificationService(
             ["path"] = $"/orders/details/{order.Id}"
         };
 
-        foreach (var token in tokens)
+        var fcmTokens = tokens
+            .Where(t => !string.Equals(t.Platform, PlatformHuawei, StringComparison.OrdinalIgnoreCase))
+            .Select(t => t.Token)
+            .Distinct()
+            .ToList();
+        var huaweiTokens = tokens
+            .Where(t => string.Equals(t.Platform, PlatformHuawei, StringComparison.OrdinalIgnoreCase))
+            .Select(t => t.Token)
+            .Distinct()
+            .ToList();
+
+        foreach (var token in fcmTokens)
         {
             try
             {
@@ -145,6 +182,18 @@ public sealed class PushNotificationService(
             catch (Exception ex)
             {
                 logger.LogWarning(ex, "Failed to send push notification for order {OrderId}.", order.Id);
+            }
+        }
+
+        foreach (var token in huaweiTokens)
+        {
+            try
+            {
+                await huaweiClient.SendAsync(token, title, body, data, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Failed to send Huawei push notification for order {OrderId}.", order.Id);
             }
         }
     }

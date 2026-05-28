@@ -10,12 +10,13 @@ import { initializeApp } from 'firebase/app';
 import { getMessaging, getToken, isSupported, onMessage } from 'firebase/messaging';
 import { Subscription, firstValueFrom } from 'rxjs';
 
-import { AuthService } from './auth.service';
-import { AlertService } from './alert.service';
 import { ServiceErrorMessages } from '@core/messages';
 import { AppRoutes } from '@shared/constants/app-routes';
+import { AlertService } from './alert.service';
+import { AuthService } from './auth.service';
+import { HuaweiPush } from './huawei-push.plugin';
 
-type PushPlatform = 'web' | 'android';
+type PushPlatform = 'web' | 'android' | 'huawei';
 
 @Injectable({ providedIn: 'root' })
 export class PushNotificationService implements OnDestroy {
@@ -167,6 +168,12 @@ export class PushNotificationService implements OnDestroy {
     const deviceId = await Device.getId();
     this.androidDeviceId = deviceId.identifier;
 
+    const huaweiToken = await this.tryHuaweiToken();
+    if (huaweiToken) {
+      await this.registerToken(huaweiToken, 'huawei', this.androidDeviceId);
+      return;
+    }
+
     await PushNotifications.register();
 
     if (!this.androidListenersReady) {
@@ -201,6 +208,20 @@ export class PushNotificationService implements OnDestroy {
           void this.navigateToPath(path);
         }
       });
+    }
+  }
+
+  private async tryHuaweiToken(): Promise<string | null> {
+    try {
+      const availability = await HuaweiPush.isAvailable();
+      if (!availability.available) {
+        return null;
+      }
+
+      const tokenResult = await HuaweiPush.getToken();
+      return tokenResult.token ?? null;
+    } catch {
+      return null;
     }
   }
 

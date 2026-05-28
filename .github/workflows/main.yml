@@ -82,6 +82,33 @@ jobs:
         if: github.event_name != 'pull_request'
         run: dotnet publish src/WTF.Api/WTF.Api.csproj -c Release -o ./publish
 
+      - name: Configure Huawei Push
+        if: github.event_name != 'pull_request'
+        env:
+          HUAWEI_PUSH_APP_ID: ${{ secrets.HUAWEI_PUSH_APP_ID }}
+          HUAWEI_PUSH_CLIENT_ID: ${{ secrets.HUAWEI_PUSH_CLIENT_ID }}
+          HUAWEI_PUSH_APP_SECRET: ${{ secrets.HUAWEI_PUSH_APP_SECRET }}
+        run: |
+          if [ -z "$HUAWEI_PUSH_APP_ID" ] || [ -z "$HUAWEI_PUSH_APP_SECRET" ]; then
+            echo "Missing Huawei Push secrets (HUAWEI_PUSH_APP_ID, HUAWEI_PUSH_APP_SECRET)."
+            exit 1
+          fi
+          HUAWEI_PUSH_CLIENT_ID="${HUAWEI_PUSH_CLIENT_ID:-$HUAWEI_PUSH_APP_ID}"
+
+          jq \
+            --arg appId "$HUAWEI_PUSH_APP_ID" \
+            --arg clientId "$HUAWEI_PUSH_CLIENT_ID" \
+            --arg appSecret "$HUAWEI_PUSH_APP_SECRET" \
+            '.HuaweiPush = {
+              AppId: $appId,
+              ClientId: $clientId,
+              AppSecret: $appSecret,
+              OAuthEndpoint: "https://oauth-login.cloud.huawei.com/oauth2/v3/token",
+              PushEndpoint: "https://push-api.cloud.huawei.com"
+            }' \
+            ./publish/appsettings.Production.json > ./publish/appsettings.Production.tmp.json
+          mv ./publish/appsettings.Production.tmp.json ./publish/appsettings.Production.json
+
       - name: Upload API Artifact
         if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
@@ -116,6 +143,32 @@ jobs:
 
       - name: Publish API
         run: dotnet publish src/WTF.Api/WTF.Api.csproj -c Release -o ./publish
+
+      - name: Configure Huawei Push (staging)
+        env:
+          HUAWEI_PUSH_APP_ID: ${{ secrets.HUAWEI_PUSH_APP_ID_STAGING }}
+          HUAWEI_PUSH_CLIENT_ID: ${{ secrets.HUAWEI_PUSH_CLIENT_ID_STAGING }}
+          HUAWEI_PUSH_APP_SECRET: ${{ secrets.HUAWEI_PUSH_APP_SECRET_STAGING }}
+        run: |
+          if [ -z "$HUAWEI_PUSH_APP_ID" ] || [ -z "$HUAWEI_PUSH_APP_SECRET" ]; then
+            echo "Missing Huawei Push staging secrets (HUAWEI_PUSH_APP_ID_STAGING, HUAWEI_PUSH_APP_SECRET_STAGING)."
+            exit 1
+          fi
+          HUAWEI_PUSH_CLIENT_ID="${HUAWEI_PUSH_CLIENT_ID:-$HUAWEI_PUSH_APP_ID}"
+
+          jq \
+            --arg appId "$HUAWEI_PUSH_APP_ID" \
+            --arg clientId "$HUAWEI_PUSH_CLIENT_ID" \
+            --arg appSecret "$HUAWEI_PUSH_APP_SECRET" \
+            '.HuaweiPush = {
+              AppId: $appId,
+              ClientId: $clientId,
+              AppSecret: $appSecret,
+              OAuthEndpoint: "https://oauth-login.cloud.huawei.com/oauth2/v3/token",
+              PushEndpoint: "https://push-api.cloud.huawei.com"
+            }' \
+            ./publish/appsettings.Production.json > ./publish/appsettings.Production.tmp.json
+          mv ./publish/appsettings.Production.tmp.json ./publish/appsettings.Production.json
 
       - name: Upload API Artifact (staging)
         uses: actions/upload-artifact@v4
@@ -249,6 +302,7 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          HUAWEI_APP_ID: ${{ secrets.HUAWEI_PUSH_APP_ID }}
         run: chmod +x ./gradlew && ./gradlew assembleProductionRelease --no-daemon
 
       - name: Rename APK with version
@@ -319,6 +373,7 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD_STAGING }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS_STAGING }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD_STAGING }}
+          HUAWEI_APP_ID: ${{ secrets.HUAWEI_PUSH_APP_ID_STAGING }}
         run: chmod +x ./gradlew && ./gradlew assembleStagingRelease --no-daemon
 
       - name: Rename APK with version (staging)

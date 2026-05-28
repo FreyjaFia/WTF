@@ -1,0 +1,12 @@
+{
+  "client": {
+    "app_id": "",
+    "cp_id": "",
+    "product_id": ""
+  },
+  "service": {
+    "analytics": {
+      "app_id": ""
+    }
+  }
+}

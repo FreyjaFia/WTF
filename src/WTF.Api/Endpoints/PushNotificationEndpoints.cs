@@ -10,8 +10,9 @@ public static class PushNotificationEndpoints
 {
     private const string PlatformWeb = "web";
     private const string PlatformAndroid = "android";
+    private const string PlatformHuawei = "huawei";
     private static readonly HashSet<string> AllowedPlatforms =
-        new(StringComparer.OrdinalIgnoreCase) { PlatformWeb, PlatformAndroid };
+        new(StringComparer.OrdinalIgnoreCase) { PlatformWeb, PlatformAndroid, PlatformHuawei };
 
     public static IEndpointRouteBuilder MapPushNotifications(this IEndpointRouteBuilder app)
     {
@@ -33,7 +34,7 @@ public static class PushNotificationEndpoints
                 if (string.IsNullOrWhiteSpace(request.Platform)
                     || !AllowedPlatforms.Contains(request.Platform))
                 {
-                    return Results.BadRequest("platform must be 'web' or 'android'.");
+                    return Results.BadRequest("platform must be 'web', 'android', or 'huawei'.");
                 }
 
                 var userId = httpContext.User.GetUserId();
@@ -53,11 +54,12 @@ public static class PushNotificationEndpoints
                             .SetProperty(t => t.IsActive, false)
                             .SetProperty(t => t.LastSeenAt, now), cancellationToken);
                 }
-                else if (normalizedPlatform == PlatformAndroid && !string.IsNullOrWhiteSpace(deviceId))
+                else if ((normalizedPlatform == PlatformAndroid || normalizedPlatform == PlatformHuawei)
+                    && !string.IsNullOrWhiteSpace(deviceId))
                 {
                     await db.PushNotificationTokens
                         .Where(t => t.UserId == userId
-                            && t.Platform == PlatformAndroid
+                            && t.Platform == normalizedPlatform
                             && t.DeviceId == deviceId
                             && t.Token != normalizedToken
                             && t.IsActive)

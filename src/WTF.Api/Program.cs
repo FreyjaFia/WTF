@@ -44,12 +44,16 @@ builder.Services.Configure<MonthlyReportWorkbookSchedulerOptions>(
     builder.Configuration.GetSection(MonthlyReportWorkbookSchedulerOptions.SectionName));
 builder.Services.Configure<FcmOptions>(
     builder.Configuration.GetSection(FcmOptions.SectionName));
+builder.Services.Configure<HuaweiPushOptions>(
+    builder.Configuration.GetSection(HuaweiPushOptions.SectionName));
 
 builder.Services.AddSingleton<IJwtService, JwtService>();
 builder.Services.AddScoped<IUserRoleService, UserRoleService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddSingleton<FcmAccessTokenProvider>();
 builder.Services.AddHttpClient<IFcmPushClient, FcmPushClient>();
+builder.Services.AddSingleton<HuaweiAccessTokenProvider>();
+builder.Services.AddHttpClient<IHuaweiPushClient, HuaweiPushClient>();
 builder.Services.AddScoped<IPushNotificationService, PushNotificationService>();
 builder.Services.AddScoped<IMonthlyReportWorkbookService, MonthlyReportWorkbookService>();
 builder.Services.AddHostedService<MonthlyReportWorkbookScheduler>();
