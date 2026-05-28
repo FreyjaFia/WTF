@@ -69,7 +69,8 @@
               <button
                 type="button"
                 role="tab"
-                class="relative cursor-pointer rounded-md px-2 py-1 font-bold text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-800"
+                class="relative cursor-pointer rounded-md px-2 py-1 font-bold text-gray-500 transition-colors [@media(hover:hover)]:hover:bg-gray-100 [@media(hover:hover)]:hover:text-gray-800"
+                [attr.data-catalog-tab]="tab.id"
                 [class.tab-active]="
                   activeCatalogTab() === 'products' && activeSubCategoryTab() === tab.id
                 "
@@ -101,7 +102,8 @@
               <button
                 type="button"
                 role="tab"
-                class="relative cursor-pointer rounded-md px-2 py-1 font-bold text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-800"
+                class="relative cursor-pointer rounded-md px-2 py-1 font-bold text-gray-500 transition-colors [@media(hover:hover)]:hover:bg-gray-100 [@media(hover:hover)]:hover:text-gray-800"
+                data-catalog-tab="bundles"
                 [class.tab-active]="activeCatalogTab() === 'bundles'"
                 [attr.aria-selected]="activeCatalogTab() === 'bundles'"
                 (click)="selectCatalogTab('bundles')"
@@ -130,6 +132,7 @@
         <app-pull-to-refresh
           class="min-h-0 flex-1 overflow-x-hidden overflow-y-auto"
           [refreshing]="isRefreshing()"
+          (contentScrolled)="onCatalogContentScrolled($event)"
           (refreshTriggered)="refreshProducts()"
         >
           @if (activeCatalogTab() === 'products') {
@@ -198,7 +201,10 @@
                 ) {
                   @if (productsBySubCategory()[tab].length > 0) {
                     <section [attr.id]="'subcategory-' + tab">
-                      <h3 class="mb-4 text-xl font-semibold text-gray-900">
+                      @if (!$first) {
+                        <div class="mb-5 border-t border-gray-200"></div>
+                      }
+                      <h3 class="mb-4 text-2xl leading-none font-bold text-gray-950">
                         {{ subCategoryLabels[tab] }}
                       </h3>
                       <div
@@ -229,6 +235,7 @@
               </div>
             } @else {
               <div
+                id="catalog-bundles"
                 class="grid grid-cols-1 gap-4 pb-4 sm:grid-cols-[repeat(auto-fill,minmax(220px,1fr))]"
                 [class.pb-18]="cart().length > 0"
                 [class.xl:pb-4]="cart().length > 0"

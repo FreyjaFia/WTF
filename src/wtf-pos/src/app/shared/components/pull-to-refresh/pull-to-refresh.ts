@@ -1,13 +1,4 @@
-import {
-  Component,
-  computed,
-  ElementRef,
-  input,
-  output,
-  signal,
-  viewChild,
-} from '@angular/core';
-
+import { Component, computed, ElementRef, input, output, signal, viewChild } from '@angular/core';
 
 const PULL_THRESHOLD = 80;
 const MAX_PULL = 120;
@@ -21,8 +12,10 @@ const MAX_PULL = 120;
 export class PullToRefreshComponent {
   public readonly refreshing = input<boolean>(false);
   public readonly refreshTriggered = output<void>();
+  public readonly contentScrolled = output<Event>();
 
-  protected readonly scrollContainer = viewChild.required<ElementRef<HTMLElement>>('scrollContainer');
+  protected readonly scrollContainer =
+    viewChild.required<ElementRef<HTMLElement>>('scrollContainer');
 
   protected readonly pullDistance = signal(0);
   private isPulling = false;

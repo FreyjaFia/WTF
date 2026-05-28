@@ -35,6 +35,7 @@
   (touchstart)="onTouchStart($event)"
   (touchmove)="onTouchMove($event)"
   (touchend)="onTouchEnd()"
+  (scroll)="contentScrolled.emit($event)"
 >
   <ng-content />
 </div>

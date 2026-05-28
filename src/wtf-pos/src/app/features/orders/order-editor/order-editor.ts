@@ -95,6 +95,8 @@ interface BundlePromotionSelection {
   items: BundleItemSource[];
 }
 
+type CatalogScrollTab = ProductSubCategoryEnum | 'bundles';
+
 @Component({
   selector: 'app-order-editor',
   imports: [
@@ -185,6 +187,8 @@ export class OrderEditor implements OnInit, OnDestroy {
   protected readonly isRefreshing = signal(false);
   protected readonly isDownloadingReceipt = signal(false);
   protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
+  private isProgrammaticSubCategoryScroll = false;
+  private programmaticSubCategoryScrollTimeout: number | null = null;
 
   protected readonly createCustomerForm = new FormGroup({
     firstName: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
@@ -490,6 +494,7 @@ export class OrderEditor implements OnInit, OnDestroy {
     }
 
     this.activeSubCategoryTab.set(tab);
+    this.scrollCatalogTabIntoView(tab);
     this.scrollToSubCategory(tab);
   }
 
@@ -500,9 +505,64 @@ export class OrderEditor implements OnInit, OnDestroy {
 
     if (tab === 'products') {
       this.ensureVisibleProductTab();
+    } else {
+      this.scrollCatalogTabIntoView('bundles');
     }
 
     this.activeCatalogTab.set(tab);
+  }
+
+  protected onCatalogContentScrolled(event: Event): void {
+    if (this.isProgrammaticSubCategoryScroll) {
+      return;
+    }
+
+    const container = event.currentTarget;
+    if (!(container instanceof HTMLElement)) {
+      return;
+    }
+
+    const visibleSections = this.getVisibleCatalogScrollSections();
+    if (visibleSections.length === 0) {
+      return;
+    }
+
+    const isScrollable = container.scrollHeight > container.clientHeight + 4;
+    const isNearBottom =
+      isScrollable && container.scrollTop + container.clientHeight >= container.scrollHeight - 4;
+    if (isNearBottom) {
+      const lastVisibleSection = visibleSections[visibleSections.length - 1];
+      this.setActiveCatalogTabFromScroll(lastVisibleSection.tab);
+      return;
+    }
+
+    const containerRect = container.getBoundingClientRect();
+    const activationLine = containerRect.top + containerRect.height * 0.35;
+    let activeTab: CatalogScrollTab | null = null;
+    let firstVisibleTab: CatalogScrollTab | null = null;
+
+    for (const { tab, sectionId } of visibleSections) {
+      const section = document.getElementById(sectionId);
+      if (!section) {
+        continue;
+      }
+
+      const sectionRect = section.getBoundingClientRect();
+      const visibleTop = Math.max(sectionRect.top, containerRect.top);
+      const visibleBottom = Math.min(sectionRect.bottom, containerRect.bottom);
+      const visibleHeight = Math.max(0, visibleBottom - visibleTop);
+      if (visibleHeight === 0) {
+        continue;
+      }
+
+      firstVisibleTab ??= tab;
+
+      if (sectionRect.top <= activationLine) {
+        activeTab = tab;
+      }
+    }
+
+    this.setActiveCatalogTabFromScroll(activeTab ?? firstVisibleTab ?? visibleSections[0].tab);
   }
 
   protected onCartDragStart(event: TouchEvent): void {
@@ -639,6 +699,10 @@ export class OrderEditor implements OnInit, OnDestroy {
 
   public ngOnDestroy(): void {
     this.finishQuickPayHold(false);
+    if (typeof window !== 'undefined' && this.programmaticSubCategoryScrollTimeout !== null) {
+      window.clearTimeout(this.programmaticSubCategoryScrollTimeout);
+      this.programmaticSubCategoryScrollTimeout = null;
+    }
 
     if (this.offlineEditSyncLockActive && this.offlineLocalId) {
       this.offlineOrder.unlockSyncForOfflineEdit(this.offlineLocalId);
@@ -1211,7 +1275,7 @@ export class OrderEditor implements OnInit, OnDestroy {
     return null;
   }
 
-    protected getDiscountedPromoLabel(item: CartItemDto): string | null {
+  protected getDiscountedPromoLabel(item: CartItemDto): string | null {
     const best = this.getBestDiscountedPromo(item);
     if (!best) {
       return null;
@@ -2225,7 +2289,62 @@ export class OrderEditor implements OnInit, OnDestroy {
       return;
     }
 
+    this.isProgrammaticSubCategoryScroll = true;
+    if (this.programmaticSubCategoryScrollTimeout !== null) {
+      window.clearTimeout(this.programmaticSubCategoryScrollTimeout);
+    }
+
     target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    this.programmaticSubCategoryScrollTimeout = window.setTimeout(() => {
+      this.isProgrammaticSubCategoryScroll = false;
+      this.programmaticSubCategoryScrollTimeout = null;
+    }, 700);
+  }
+
+  private scrollCatalogTabIntoView(tab: CatalogScrollTab): void {
+    if (typeof document === 'undefined') {
+      return;
+    }
+
+    const tabButton = document.querySelector(`[data-catalog-tab="${tab}"]`);
+    if (!(tabButton instanceof HTMLElement)) {
+      return;
+    }
+
+    tabButton.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  }
+
+  private setActiveCatalogTabFromScroll(tab: CatalogScrollTab): void {
+    if (tab === 'bundles') {
+      if (this.activeCatalogTab() === 'bundles') {
+        return;
+      }
+
+      this.activeCatalogTab.set('bundles');
+      this.scrollCatalogTabIntoView(tab);
+      return;
+    }
+
+    if (this.activeCatalogTab() === 'products' && tab === this.activeSubCategoryTab()) {
+      return;
+    }
+
+    this.activeCatalogTab.set('products');
+    this.activeSubCategoryTab.set(tab);
+    this.scrollCatalogTabIntoView(tab);
+  }
+
+  private getVisibleCatalogScrollSections(): { tab: CatalogScrollTab; sectionId: string }[] {
+    if (this.activeCatalogTab() === 'bundles') {
+      return this.filteredBundlePromotions().length > 0
+        ? [{ tab: 'bundles', sectionId: 'catalog-bundles' }]
+        : [];
+    }
+
+    return this.visibleSubCategoryTabs().map((tab) => ({
+      tab: tab.id,
+      sectionId: `subcategory-${tab.id}`,
+    }));
   }
 
   private loadBundlePromotions(): void {
@@ -2798,7 +2917,3 @@ export class OrderEditor implements OnInit, OnDestroy {
     };
   }
 }
-
-
-
-
