@@ -59,7 +59,9 @@
         [class.pointer-events-none]="isReadOnly() || !canManageOrderActions()"
         [class.opacity-50]="isReadOnly() || !canManageOrderActions()"
       >
-        <div class="w-full overflow-x-auto border-b border-gray-200">
+        <div
+          class="w-full overflow-x-auto border-b border-gray-200 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
           <div
             role="tablist"
             class="flex w-max min-w-full items-end gap-4 pb-2 text-sm sm:text-base"
@@ -86,16 +88,16 @@
                   "
                 >
                   {{ tab.label }}
-                  <span
-                    class="absolute -bottom-1 left-0 h-1 w-full rounded-full bg-gray-900 transition-opacity"
-                    [class.opacity-100]="
-                      activeCatalogTab() === 'products' && activeSubCategoryTab() === tab.id
-                    "
-                    [class.opacity-0]="
-                      !(activeCatalogTab() === 'products' && activeSubCategoryTab() === tab.id)
-                    "
-                  ></span>
                 </span>
+                <span
+                  class="absolute right-2 -bottom-2 left-2 h-0.5 rounded-full bg-gray-700 transition-opacity"
+                  [class.opacity-100]="
+                    activeCatalogTab() === 'products' && activeSubCategoryTab() === tab.id
+                  "
+                  [class.opacity-0]="
+                    !(activeCatalogTab() === 'products' && activeSubCategoryTab() === tab.id)
+                  "
+                ></span>
               </button>
             }
             @if (filteredBundlePromotions().length > 0) {
@@ -110,12 +112,12 @@
               >
                 <span class="relative" [class.text-gray-900]="activeCatalogTab() === 'bundles'">
                   Bundles
-                  <span
-                    class="absolute -bottom-1 left-0 h-1 w-full rounded-full bg-gray-900 transition-opacity"
-                    [class.opacity-100]="activeCatalogTab() === 'bundles'"
-                    [class.opacity-0]="activeCatalogTab() !== 'bundles'"
-                  ></span>
                 </span>
+                <span
+                  class="absolute right-2 -bottom-2 left-2 h-0.5 rounded-full bg-gray-700 transition-opacity"
+                  [class.opacity-100]="activeCatalogTab() === 'bundles'"
+                  [class.opacity-0]="activeCatalogTab() !== 'bundles'"
+                ></span>
               </button>
             }
           </div>
@@ -201,9 +203,6 @@
                 ) {
                   @if (productsBySubCategory()[tab].length > 0) {
                     <section [attr.id]="'subcategory-' + tab">
-                      @if (!$first) {
-                        <div class="mb-5 border-t border-gray-200"></div>
-                      }
                       <h3 class="mb-4 text-2xl leading-none font-bold text-gray-950">
                         {{ subCategoryLabels[tab] }}
                       </h3>

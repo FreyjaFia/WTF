@@ -1,114 +1,133 @@
 <div class="flex h-full w-full flex-col rounded-t-2xl bg-white sm:-mt-4 md:mt-0 lg:flex-row">
   <!-- Mobile Navigation -->
-  <div class="flex shrink-0 flex-col border-b border-gray-200 bg-white pb-4 sm:hidden">
+  <div class="flex shrink-0 flex-col bg-white pb-4 sm:hidden">
     <h2 class="mb-3 text-xl font-bold text-gray-900">Management</h2>
-    <nav class="flex items-stretch gap-1.5 rounded-xl bg-gray-100 p-1.5">
+    <nav
+      role="tablist"
+      class="flex w-full items-end gap-4 overflow-x-auto border-b border-gray-200 pb-2 text-sm [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      aria-label="Management tabs"
+    >
       <a
         [routerLink]="routes.ManagementProducts"
-        routerLinkActive="bg-green-50 text-emerald-700"
-        [routerLinkActiveOptions]="{ exact: false }"
-        class="flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-2 pt-2 pb-2.5 text-[10px] leading-tight font-normal text-gray-500 transition-colors"
-        [class.text-emerald-700]="isActive('products')"
-        [class.bg-emerald-100]="isActive('products')"
+        role="tab"
+        data-management-tab="products"
+        class="relative flex shrink-0 rounded-md px-2 py-1 font-bold text-gray-500 transition-colors [@media(hover:hover)]:hover:bg-gray-100 [@media(hover:hover)]:hover:text-gray-800"
+        [class.text-gray-900]="isActive('products')"
+        [attr.aria-selected]="isActive('products')"
+        (click)="scrollManagementTabIntoView('products')"
       >
-        <app-icon name="icon-cart" [class]="'h-4 w-4 shrink-0'" [fill]="'currentColor'"></app-icon>
-        Products
+        <span class="relative"> Products </span>
+        <span
+          class="absolute right-2 -bottom-2 left-2 h-0.5 rounded-full bg-gray-700 transition-opacity"
+          [class.opacity-100]="isActive('products')"
+          [class.opacity-0]="!isActive('products')"
+        ></span>
       </a>
       @if (canReadCustomers()) {
         <a
           [routerLink]="routes.ManagementCustomers"
-          routerLinkActive="bg-green-50 text-emerald-700"
-          [routerLinkActiveOptions]="{ exact: false }"
-          class="flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-2 pt-2 pb-2.5 text-[10px] leading-tight font-normal text-gray-500 transition-colors"
-          [class.text-emerald-700]="isActive('customers')"
-          [class.bg-emerald-100]="isActive('customers')"
+          role="tab"
+          data-management-tab="customers"
+          class="relative flex shrink-0 rounded-md px-2 py-1 font-bold text-gray-500 transition-colors [@media(hover:hover)]:hover:bg-gray-100 [@media(hover:hover)]:hover:text-gray-800"
+          [class.text-gray-900]="isActive('customers')"
+          [attr.aria-selected]="isActive('customers')"
+          (click)="scrollManagementTabIntoView('customers')"
         >
-          <app-icon
-            name="icon-people"
-            [class]="'h-4 w-4 shrink-0'"
-            [fill]="'currentColor'"
-          ></app-icon>
-          Customers
+          <span class="relative"> Customers </span>
+          <span
+            class="absolute right-2 -bottom-2 left-2 h-0.5 rounded-full bg-gray-700 transition-opacity"
+            [class.opacity-100]="isActive('customers')"
+            [class.opacity-0]="!isActive('customers')"
+          ></span>
         </a>
       }
       <a
         [routerLink]="routes.ManagementUsers"
-        routerLinkActive="bg-green-50 text-emerald-700"
-        [routerLinkActiveOptions]="{ exact: false }"
-        class="flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-2 pt-2 pb-2.5 text-[10px] leading-tight font-normal text-gray-500 transition-colors"
-        [class.text-emerald-700]="isActive('users')"
-        [class.bg-emerald-100]="isActive('users')"
+        role="tab"
+        data-management-tab="users"
+        class="relative flex shrink-0 rounded-md px-2 py-1 font-bold text-gray-500 transition-colors [@media(hover:hover)]:hover:bg-gray-100 [@media(hover:hover)]:hover:text-gray-800"
+        [class.text-gray-900]="isActive('users')"
+        [attr.aria-selected]="isActive('users')"
+        (click)="scrollManagementTabIntoView('users')"
       >
-        <app-icon name="icon-user" [class]="'h-4 w-4 shrink-0'" [fill]="'currentColor'"></app-icon>
-        Users
+        <span class="relative"> Users </span>
+        <span
+          class="absolute right-2 -bottom-2 left-2 h-0.5 rounded-full bg-gray-700 transition-opacity"
+          [class.opacity-100]="isActive('users')"
+          [class.opacity-0]="!isActive('users')"
+        ></span>
       </a>
       <a
         [routerLink]="routes.ManagementPromotions"
-        routerLinkActive="bg-green-50 text-emerald-700"
-        [routerLinkActiveOptions]="{ exact: false }"
-        class="flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-2 pt-2 pb-2.5 text-[10px] leading-tight font-normal text-gray-500 transition-colors"
-        [class.text-emerald-700]="isActive('promotions')"
-        [class.bg-emerald-100]="isActive('promotions')"
+        role="tab"
+        data-management-tab="promotions"
+        class="relative flex shrink-0 rounded-md px-2 py-1 font-bold text-gray-500 transition-colors [@media(hover:hover)]:hover:bg-gray-100 [@media(hover:hover)]:hover:text-gray-800"
+        [class.text-gray-900]="isActive('promotions')"
+        [attr.aria-selected]="isActive('promotions')"
+        (click)="scrollManagementTabIntoView('promotions')"
       >
-        <app-icon
-          name="icon-promotion"
-          [class]="'h-4 w-4 shrink-0'"
-          [fill]="'currentColor'"
-        ></app-icon>
-        Promos
+        <span class="relative"> Promos </span>
+        <span
+          class="absolute right-2 -bottom-2 left-2 h-0.5 rounded-full bg-gray-700 transition-opacity"
+          [class.opacity-100]="isActive('promotions')"
+          [class.opacity-0]="!isActive('promotions')"
+        ></span>
       </a>
       @if (canAccessReports()) {
         <a
           [routerLink]="routes.ManagementReports"
-          routerLinkActive="bg-green-50 text-emerald-700"
-          [routerLinkActiveOptions]="{ exact: false }"
-          class="flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-2 pt-2 pb-2.5 text-[10px] leading-tight font-normal text-gray-500 transition-colors"
-          [class.text-emerald-700]="isActive('reports')"
-          [class.bg-emerald-100]="isActive('reports')"
+          role="tab"
+          data-management-tab="reports"
+          class="relative flex shrink-0 rounded-md px-2 py-1 font-bold text-gray-500 transition-colors [@media(hover:hover)]:hover:bg-gray-100 [@media(hover:hover)]:hover:text-gray-800"
+          [class.text-gray-900]="isActive('reports')"
+          [attr.aria-selected]="isActive('reports')"
           aria-label="Reports"
+          (click)="scrollManagementTabIntoView('reports')"
         >
-          <app-icon
-            name="icon-trending-up"
-            [class]="'h-4 w-4 shrink-0'"
-            [fill]="'currentColor'"
-          ></app-icon>
-          Reports
+          <span class="relative"> Reports </span>
+          <span
+            class="absolute right-2 -bottom-2 left-2 h-0.5 rounded-full bg-gray-700 transition-opacity"
+            [class.opacity-100]="isActive('reports')"
+            [class.opacity-0]="!isActive('reports')"
+          ></span>
         </a>
       }
       @if (canAccessAuditLogs()) {
         <a
           [routerLink]="routes.ManagementAuditLogs"
-          routerLinkActive="bg-green-50 text-emerald-700"
-          [routerLinkActiveOptions]="{ exact: false }"
-          class="flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-2 pt-2 pb-2.5 text-[10px] leading-tight font-normal text-gray-500 transition-colors"
-          [class.text-emerald-700]="isActive('audit-logs')"
-          [class.bg-emerald-100]="isActive('audit-logs')"
+          role="tab"
+          data-management-tab="audit-logs"
+          class="relative flex shrink-0 rounded-md px-2 py-1 font-bold text-gray-500 transition-colors [@media(hover:hover)]:hover:bg-gray-100 [@media(hover:hover)]:hover:text-gray-800"
+          [class.text-gray-900]="isActive('audit-logs')"
+          [attr.aria-selected]="isActive('audit-logs')"
           aria-label="Audit Logs"
+          (click)="scrollManagementTabIntoView('audit-logs')"
         >
-          <app-icon
-            name="icon-audit-logs"
-            [class]="'h-4 w-4 shrink-0'"
-            [fill]="'currentColor'"
-          ></app-icon>
-          Audit
+          <span class="relative"> Audit </span>
+          <span
+            class="absolute right-2 -bottom-2 left-2 h-0.5 rounded-full bg-gray-700 transition-opacity"
+            [class.opacity-100]="isActive('audit-logs')"
+            [class.opacity-0]="!isActive('audit-logs')"
+          ></span>
         </a>
       }
       @if (canAccessSchemaScriptHistory()) {
         <a
           [routerLink]="routes.ManagementSchemaScripts"
-          routerLinkActive="bg-green-50 text-emerald-700"
-          [routerLinkActiveOptions]="{ exact: false }"
-          class="flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-2 pt-2 pb-2.5 text-[10px] leading-tight font-normal text-gray-500 transition-colors"
-          [class.text-emerald-700]="isActive('schema-scripts')"
-          [class.bg-emerald-100]="isActive('schema-scripts')"
+          role="tab"
+          data-management-tab="schema-scripts"
+          class="relative flex shrink-0 rounded-md px-2 py-1 font-bold text-gray-500 transition-colors [@media(hover:hover)]:hover:bg-gray-100 [@media(hover:hover)]:hover:text-gray-800"
+          [class.text-gray-900]="isActive('schema-scripts')"
+          [attr.aria-selected]="isActive('schema-scripts')"
           aria-label="Schema Scripts"
+          (click)="scrollManagementTabIntoView('schema-scripts')"
         >
-          <app-icon
-            name="icon-schema-scripts"
-            [class]="'h-4 w-4 shrink-0'"
-            [fill]="'currentColor'"
-          ></app-icon>
-          Schema
+          <span class="relative"> Schema </span>
+          <span
+            class="absolute right-2 -bottom-2 left-2 h-0.5 rounded-full bg-gray-700 transition-opacity"
+            [class.opacity-100]="isActive('schema-scripts')"
+            [class.opacity-0]="!isActive('schema-scripts')"
+          ></span>
         </a>
       }
     </nav>
