@@ -87,6 +87,151 @@ Enable the POS app to function without a network connection.
 
 ---
 
+## Inventory Management Feature [In Progress]
+
+Track physical stock for retail products, product bundles, and consumable
+items such as cups, lids, milk, syrups, and packaging. Products remain the
+sellable POS catalog entries; inventory items are the physical stock being
+counted. A product can deduct from one or more inventory items.
+
+### Core Model
+
+- **Product** - what the cashier sells in POS.
+  - Example: `1L Oat Milk`, `Oat Milk Box of 6`, `Regular Latte`.
+- **Inventory item** - what the business physically counts.
+  - Example: `1L Oat Milk`, `Regular Cup`, `Large Cup`, `Cup Lid`.
+- **Product inventory link** - how selling a product consumes stock.
+  - Example: `1L Oat Milk` deducts `1` from `1L Oat Milk`.
+  - Example: `Oat Milk Box of 6` deducts `6` from `1L Oat Milk`.
+  - Example: `Regular Latte` deducts `1` from `Regular Cup`.
+- **Stock movement** - immutable ledger of stock changes.
+  - Add stock, sale deduction, manual adjustment, correction, spoilage,
+    and other future movement types.
+  - Includes quantity, date/time, user, notes/reference, and before/after
+    quantity where useful.
+
+### Product Creation Helper
+
+When adding or editing a product, support an optional inventory setup flow:
+
+- `No stock tracking`
+- `Track this product as its own inventory item`
+  - Auto-create an inventory item using the product name.
+  - Link the product to that inventory item with deduct quantity `1`.
+  - Optional starting stock, merchant/cost price, warning level, and
+    critical level.
+- `Deduct from existing inventory item`
+  - Used for boxes, bundles, alternate units, or variants.
+  - Example: `Oat Milk Box of 6` deducts `6` from the existing
+    `1L Oat Milk` inventory item.
+- Future: `Deduct multiple consumables / ingredients`
+  - Used for drinks and prepared items that consume cups, lids, milk, etc.
+
+### Phase 1 - Retail Inventory Foundation [Partially Completed]
+
+Implemented:
+
+- Inventory database foundation:
+  - `InventoryItems`
+  - `ProductInventoryLinks`
+  - `StockMovements`
+  - indexes, constraints, audit FKs, and SQL deployment script
+- Scaffolded EF Core domain/context support for inventory entities.
+- Inventory API endpoints under `/api/inventory`:
+  - list items
+  - get item details
+  - create/update/deactivate items
+  - add stock movement
+  - link products to inventory items
+- Inventory item fields now track:
+  - name, SKU, barcode, base unit, stock display unit
+  - units per stock unit
+  - current quantity, cost price
+  - warning and critical stock levels
+  - active/inactive status
+  - created/updated audit fields
+- Stock movement ledger implemented for initial stock, stock-in, and sale
+  deduction movements.
+- Product inventory links support configurable quantity per sale.
+- Order creation deducts inventory for completed tracked product sales and
+  validates available stock before completing the order.
+- Inventory audit actions/entity types added for item create/update/delete,
+  stock-in, and product-inventory linking.
+- Frontend inventory module added:
+  - `/inventory/items`
+  - `/inventory/items/new`
+  - `/inventory/items/details/:id`
+  - `/inventory/items/edit/:id`
+  - `/inventory/stock-in`
+- Inventory item list/details/editor implemented with management-aligned
+  responsive layout, low-stock badges, delete confirmation, unsaved-change
+  guard, and item action menu.
+- Inventory unit constants include display abbreviations for list/detail
+  quantity rendering.
+- Management and inventory tab navigation now uses array-driven route
+  configuration with aria labels.
+- Inventory navigation added to sidebar and mobile dock.
+
+Remaining:
+
+- Complete the stock-in workflow UI beyond the placeholder page.
+- Add product editor inventory setup/linking UI.
+- Expose stock movement history and adjustment/correction workflows in the UI.
+- Add richer product inventory mapping management for existing products.
+- Review report/dashboard inventory impacts after real usage data exists.
+
+### Phase 2 - Pack, Box, and Shared Stock Selling [Planned]
+
+- Allow multiple products to deduct from the same inventory item.
+- Support configurable deduct quantity per product sale.
+- Example:
+  - `1L Oat Milk` sells for `PHP150` and deducts `1`.
+  - `Oat Milk Box of 6` sells for `PHP850` and deducts `6`.
+- Validate stock availability using the total required quantity.
+- Show stock impact before saving product inventory mappings.
+
+### Phase 3 - Consumables and Required Product Usage [Planned]
+
+- Treat cups, lids, sleeves, milk, syrups, and other consumables as
+  inventory items.
+- Link products and required add-ons to consumables.
+- Deduct consumables automatically when an order is completed.
+- Support multiple required consumables per product or add-on selection.
+- Example:
+  - regular drink deducts `1 Regular Cup`
+  - large drink deducts `1 Large Cup`
+  - selected oat milk add-on deducts oat milk stock if configured
+
+### Phase 4 - Inventory Alerts and Notifications [Planned]
+
+- Notify assigned users or roles when inventory reaches warning or
+  critical levels.
+- Support per-inventory-item alert recipients or category-level defaults.
+- Show warning and critical indicators in Management and POS where useful.
+- Prevent duplicate alert noise by tracking last notification state.
+
+### Backend Notes
+
+- Prefer a stock movement ledger over directly editing quantities without
+  history.
+- Keep sale deductions tied to order references so inventory changes can be
+  reviewed later.
+- Consider transaction boundaries carefully: order creation and inventory
+  deduction should succeed or fail together for tracked products.
+- Avoid separate systems for retail stock and consumables; both should use
+  the same inventory item and stock movement model.
+
+### Frontend Notes
+
+- Product editor should expose a simple `Track inventory` flow instead of
+  forcing users to manually create separate records every time.
+- Inventory management should allow adding stock with date, user, quantity,
+  cost, notes, and optional supplier/merchant details.
+- For mobile/tablet management screens, follow the existing responsive
+  table/card pattern used by audit logs, reports, and promotions.
+
+---
+
 ## Auto-Update Feature [Completed]
 
 Implemented in-app update detection and APK download flow using GitHub Releases.
