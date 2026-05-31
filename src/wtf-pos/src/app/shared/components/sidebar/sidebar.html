@@ -125,6 +125,56 @@
       <button
         type="button"
         class="flex w-full cursor-pointer items-center justify-between rounded-lg px-2.5 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50"
+        (click)="toggleInventory()"
+      >
+        <span class="flex items-center gap-3">
+          <app-icon name="icon-inventory-module" [class]="'h-4.5 w-4.5 text-gray-500'" />
+          <span [class.hidden]="isCollapsed()">Inventory</span>
+        </span>
+        <app-icon
+          name="icon-chevron-down"
+          [class]="'inline-block h-4 w-4 text-gray-500 transition-transform duration-200 ease-out'"
+          [class.rotate-180]="!showInventory()"
+        />
+      </button>
+
+      <div
+        class="mt-1 mb-3 space-y-1 overflow-hidden border-b border-gray-200 pb-3 pl-4 transition-[max-height,opacity] duration-200 ease-out"
+        [class.max-h-0]="!showInventory()"
+        [class.opacity-0]="!showInventory()"
+        [class.pointer-events-none]="!showInventory()"
+        [class.max-h-40]="showInventory()"
+        [class.opacity-100]="showInventory()"
+        [class.pl-4]="!isCollapsed()"
+        [class.pl-0]="isCollapsed()"
+      >
+        <a
+          [routerLink]="routes.InventoryItems"
+          routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
+          class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
+          [class.justify-center]="isCollapsed()"
+          [attr.title]="'Items'"
+        >
+          <app-icon name="icon-inventory-items" [class]="'h-4 w-4 text-gray-500'" />
+          <span [class.hidden]="isCollapsed()">Items</span>
+        </a>
+        <a
+          [routerLink]="routes.InventoryStockIn"
+          routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
+          class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
+          [class.justify-center]="isCollapsed()"
+          [attr.title]="'Stock In'"
+        >
+          <app-icon name="icon-inventory" [class]="'h-4 w-4 text-gray-500'" />
+          <span [class.hidden]="isCollapsed()">Stock In</span>
+        </a>
+      </div>
+    }
+
+    @if (authService.canAccessManagement()) {
+      <button
+        type="button"
+        class="flex w-full cursor-pointer items-center justify-between rounded-lg px-2.5 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50"
         (click)="toggleManagement()"
       >
         <span class="flex items-center gap-3">

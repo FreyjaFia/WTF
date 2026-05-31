@@ -29,6 +29,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
   protected readonly appVersion = appVersion;
   protected readonly isOnline = this.connectivity.isOnline;
   protected readonly showManagement = signal(true);
+  protected readonly showInventory = signal(true);
   protected readonly isCollapsed = signal(false);
   protected readonly showLogoutModal = signal(false);
   private clockIntervalId: ReturnType<typeof setInterval> | null = null;
@@ -62,6 +63,10 @@ export class SidebarComponent implements OnInit, OnDestroy {
 
   protected toggleManagement(): void {
     this.showManagement.update((open) => !open);
+  }
+
+  protected toggleInventory(): void {
+    this.showInventory.update((open) => !open);
   }
 
   protected toggleSidebar(): void {

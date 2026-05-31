@@ -9,6 +9,7 @@ export * from './customer.service';
 export * from './dashboard.service';
 export * from './image-cache.service';
 export * from './image-download.service';
+export * from './inventory.service';
 export * from './list-state.service';
 export * from './modal-stack.service';
 export * from './offline-order.service';

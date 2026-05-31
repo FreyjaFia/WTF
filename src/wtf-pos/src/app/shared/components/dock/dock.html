@@ -20,6 +20,17 @@
     </a>
 
     @if (auth.canAccessManagement()) {
+      <a [routerLink]="routes.InventoryRoot" [routerLinkActive]="'dock-active'">
+        <app-icon
+          name="icon-inventory-module"
+          [class]="'size-[1.2em]'"
+          [fill]="'#000000'"
+        ></app-icon>
+        <span class="dock-label">Inventory</span>
+      </a>
+    }
+
+    @if (auth.canAccessManagement()) {
       <a [routerLink]="routes.ManagementRoot" [routerLinkActive]="'dock-active'">
         <app-icon name="icon-management" [class]="'size-[1.2em]'" [fill]="'#000000'"></app-icon>
         <span class="dock-label">Management</span>

@@ -1,0 +1,371 @@
+<div class="flex h-full flex-col pt-4 md:pt-0">
+  <div
+    class="sticky top-0 z-10 mb-4 flex shrink-0 flex-col gap-3 bg-white/95 backdrop-blur-sm sm:mb-6 sm:flex-row sm:items-center sm:justify-between"
+  >
+    <div class="flex min-w-0 items-start gap-4">
+      <button
+        class="mt-1 shrink-0 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
+        type="button"
+        (click)="goBack()"
+        aria-label="Go back"
+      >
+        <app-icon name="icon-back" [class]="'h-5 w-5 text-gray-600'" />
+      </button>
+      <div class="min-w-0">
+        <h1 class="text-2xl font-bold wrap-break-word text-gray-900">
+          {{ isEditMode() ? itemName() || 'Edit Inventory Item' : 'New Inventory Item' }}
+        </h1>
+        @if (isEditMode() && lastUpdatedAt()) {
+          <p class="mt-1 text-sm text-gray-500">
+            Updated {{ lastUpdatedAt() | date: 'd MMM y, h:mm a' }}
+          </p>
+        }
+      </div>
+    </div>
+
+    <div class="flex shrink-0 justify-end gap-2">
+      <button
+        type="button"
+        class="cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-100 active:scale-95 disabled:opacity-50"
+        (click)="goBack()"
+        [disabled]="isSaving()"
+      >
+        Cancel
+      </button>
+      <button
+        type="submit"
+        form="inventoryForm"
+        class="btn btn-sm gap-2 rounded-lg border-0 bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none"
+        [disabled]="inventoryForm.invalid || isSaving()"
+      >
+        @if (isSaving()) {
+          <span class="loading loading-spinner loading-sm"></span>
+        }
+        {{
+          isSaving()
+            ? isEditMode()
+              ? 'Updating Item...'
+              : 'Creating Item...'
+            : (isEditMode() ? 'Update' : 'Create') + ' Item'
+        }}
+      </button>
+    </div>
+  </div>
+
+  @if (isLoading()) {
+    <div class="flex justify-center py-8">
+      <span class="loading loading-spinner loading-lg"></span>
+    </div>
+  }
+
+  @if (!isLoading()) {
+    <div class="flex-1 overflow-y-auto pr-2 pb-4">
+      <form id="inventoryForm" [formGroup]="inventoryForm" (ngSubmit)="saveInventoryItem()">
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div class="space-y-6 lg:col-span-2">
+            <div class="card rounded-xl bg-white shadow-lg">
+              <div class="card-body space-y-5">
+                <div>
+                  <label class="mb-2 block text-sm font-semibold text-gray-900" for="itemName">
+                    Name <span class="text-error">*</span>
+                  </label>
+                  <input
+                    id="itemName"
+                    type="text"
+                    formControlName="name"
+                    placeholder="Enter item name"
+                    class="input w-full border-transparent bg-gray-50 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                    [class.input-error]="hasError('name')"
+                  />
+                  @if (getErrorMessage('name')) {
+                    <p class="text-error mt-2 text-sm">{{ getErrorMessage('name') }}</p>
+                  }
+                </div>
+
+                <div class="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label class="mb-2 block text-sm font-semibold text-gray-900" for="itemSku">
+                      SKU
+                    </label>
+                    <input
+                      id="itemSku"
+                      type="text"
+                      formControlName="sku"
+                      placeholder="Enter SKU"
+                      class="input w-full border-transparent bg-gray-50 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                      [class.input-error]="hasError('sku')"
+                    />
+                    @if (getErrorMessage('sku')) {
+                      <p class="text-error mt-2 text-sm">{{ getErrorMessage('sku') }}</p>
+                    }
+                  </div>
+
+                  <div>
+                    <label class="mb-2 block text-sm font-semibold text-gray-900" for="itemBarcode">
+                      Barcode
+                    </label>
+                    <input
+                      id="itemBarcode"
+                      type="text"
+                      formControlName="barcode"
+                      placeholder="Enter barcode"
+                      class="input w-full border-transparent bg-gray-50 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                      [class.input-error]="hasError('barcode')"
+                    />
+                    @if (getErrorMessage('barcode')) {
+                      <p class="text-error mt-2 text-sm">{{ getErrorMessage('barcode') }}</p>
+                    }
+                  </div>
+                </div>
+
+                <div>
+                  <label class="mb-2 block text-sm font-semibold text-gray-900" for="itemUnit">
+                    Base Unit <span class="text-error">*</span>
+                  </label>
+                  <select
+                    id="itemUnit"
+                    formControlName="unitName"
+                    class="select w-full border-transparent bg-gray-50 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                    [class.select-error]="hasError('unitName')"
+                  >
+                    @for (unit of unitOptions; track unit.value) {
+                      <option [value]="unit.value">{{ unit.label }}</option>
+                    }
+                  </select>
+                  @if (getErrorMessage('unitName')) {
+                    <p class="text-error mt-2 text-sm">{{ getErrorMessage('unitName') }}</p>
+                  }
+                  <p class="mt-2 text-xs text-gray-500">
+                    Use the smallest unit needed for ingredient deduction.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div class="card rounded-xl bg-white shadow-lg">
+              <div class="card-body space-y-5">
+                <p class="text-xs font-semibold tracking-wider text-gray-400 uppercase">
+                  Stock Settings
+                </p>
+
+                <div class="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label
+                      class="mb-2 block text-sm font-semibold text-gray-900"
+                      for="stockUnitName"
+                    >
+                      Stock Unit
+                    </label>
+                    <select
+                      id="stockUnitName"
+                      formControlName="stockUnitName"
+                      class="select w-full border-transparent bg-gray-50 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                      [class.select-error]="hasError('stockUnitName')"
+                    >
+                      <option value="">Same as base unit</option>
+                      @for (unit of unitOptions; track unit.value) {
+                        <option [value]="unit.value">{{ unit.label }}</option>
+                      }
+                    </select>
+                    @if (getErrorMessage('stockUnitName')) {
+                      <p class="text-error mt-2 text-sm">{{ getErrorMessage('stockUnitName') }}</p>
+                    }
+                  </div>
+
+                  <div>
+                    <label
+                      class="mb-2 block text-sm font-semibold text-gray-900"
+                      for="unitsPerStockUnit"
+                    >
+                      Units per Stock Unit
+                    </label>
+                    <input
+                      id="unitsPerStockUnit"
+                      type="number"
+                      step="0.001"
+                      min="0.001"
+                      formControlName="unitsPerStockUnit"
+                      placeholder="Example: 1000"
+                      class="input w-full border-transparent bg-gray-50 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                      [class.input-error]="hasError('unitsPerStockUnit')"
+                      [class.bg-gray-100]="inventoryForm.controls.unitsPerStockUnit.disabled"
+                      [class.cursor-not-allowed]="inventoryForm.controls.unitsPerStockUnit.disabled"
+                    />
+                    @if (getErrorMessage('unitsPerStockUnit')) {
+                      <p class="text-error mt-2 text-sm">
+                        {{ getErrorMessage('unitsPerStockUnit') }}
+                      </p>
+                    }
+                  </div>
+                </div>
+
+                <p class="text-xs text-gray-500">
+                  If set, lists show stock in this unit. Example: 12000 ml with liter and 1000
+                  units per stock unit displays as 12 L.
+                </p>
+
+                @if (!isEditMode()) {
+                  <div>
+                    <label
+                      class="mb-2 block text-sm font-semibold text-gray-900"
+                      for="startingQuantity"
+                    >
+                      Starting Stock
+                    </label>
+                    <input
+                      id="startingQuantity"
+                      type="number"
+                      step="1"
+                      min="0"
+                      formControlName="startingQuantity"
+                      placeholder="0"
+                      class="input w-full border-transparent bg-gray-50 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                      [class.input-error]="hasError('startingQuantity')"
+                    />
+                    @if (getErrorMessage('startingQuantity')) {
+                      <p class="text-error mt-2 text-sm">
+                        {{ getErrorMessage('startingQuantity') }}
+                      </p>
+                    }
+                  </div>
+                }
+
+                <div class="grid gap-4 sm:grid-cols-3">
+                  <div>
+                    <label class="mb-2 block text-sm font-semibold text-gray-900" for="costPrice">
+                      Cost Price
+                    </label>
+                    <input
+                      id="costPrice"
+                      type="number"
+                      step="1"
+                      min="0"
+                      formControlName="costPrice"
+                      placeholder="0.00"
+                      class="input w-full border-transparent bg-gray-50 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                    />
+                  </div>
+
+                  <div>
+                    <label
+                      class="mb-2 block text-sm font-semibold text-gray-900"
+                      for="warningQuantity"
+                    >
+                      Warning Level
+                    </label>
+                    <input
+                      id="warningQuantity"
+                      type="number"
+                      step="1"
+                      min="0"
+                      formControlName="warningQuantity"
+                      placeholder="0"
+                      class="input w-full border-transparent bg-gray-50 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                    />
+                  </div>
+
+                  <div>
+                    <label
+                      class="mb-2 block text-sm font-semibold text-gray-900"
+                      for="criticalQuantity"
+                    >
+                      Critical Level
+                    </label>
+                    <input
+                      id="criticalQuantity"
+                      type="number"
+                      step="1"
+                      min="0"
+                      formControlName="criticalQuantity"
+                      placeholder="0"
+                      class="input w-full border-transparent bg-gray-50 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-6">
+            <div class="card rounded-xl bg-white shadow-lg">
+              <div class="card-body space-y-5">
+                <p class="text-xs font-semibold tracking-wider text-gray-400 uppercase">
+                  Management
+                </p>
+
+                <div class="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-3">
+                  <div>
+                    <span class="text-sm font-medium text-gray-900">Active</span>
+                    <p class="text-xs text-gray-500">Inactive items are hidden from normal use</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    formControlName="isActive"
+                    class="toggle toggle-neutral toggle-sm"
+                  />
+                </div>
+
+                <div class="rounded-xl bg-gray-50 px-4 py-3 text-sm text-gray-600">
+                  <p class="font-semibold text-gray-900">SKU vs Barcode</p>
+                  <p class="mt-1 text-xs leading-relaxed">
+                    SKU is your internal item code. Barcode is the scanned code printed on the
+                    product or packaging.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+  }
+</div>
+
+@if (showDiscardModal()) {
+  <div
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="discard-title"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md transition-opacity duration-200"
+    (click)="cancelDiscard()"
+    (keydown.escape)="cancelDiscard()"
+    tabindex="0"
+  >
+    <div
+      role="document"
+      class="mx-4 w-full max-w-sm animate-[modal-pop_0.2s_ease-out] rounded-2xl bg-white p-6 shadow-2xl"
+      (click)="$event.stopPropagation()"
+      (keydown)="$event.stopPropagation()"
+    >
+      <div class="mx-auto w-fit rounded-full bg-amber-50/60 p-3">
+        <div class="rounded-full bg-amber-50 p-3">
+          <app-icon name="icon-back" [class]="'h-6 w-6 text-amber-600'" />
+        </div>
+      </div>
+
+      <h3 id="discard-title" class="mt-4 text-center text-lg font-semibold text-gray-900">
+        Discard Changes?
+      </h3>
+      <p class="mt-2 text-center text-sm leading-relaxed text-gray-500">
+        You have unsaved changes that will be lost if you leave this page.
+      </p>
+
+      <div class="mt-6 flex items-center justify-end gap-3">
+        <button
+          type="button"
+          class="cursor-pointer px-4 py-2 text-sm font-medium text-red-500 transition-colors hover:text-red-700"
+          (click)="confirmDiscard()"
+        >
+          Discard
+        </button>
+        <button
+          type="button"
+          class="cursor-pointer rounded-xl bg-[#047857] px-6 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#065f46] hover:shadow-md active:scale-[0.97]"
+          (click)="cancelDiscard()"
+        >
+          Keep Editing
+        </button>
+      </div>
+    </div>
+  </div>
+}

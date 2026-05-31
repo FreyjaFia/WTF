@@ -4,6 +4,12 @@ import { loginGuard } from '@core/guards/login.guard';
 import { roleGuard } from '@core/guards/role.guard';
 import { unsavedChangesGuard } from '@core/guards/unsaved-changes.guard';
 import { Dashboard } from '@features/dashboard/dashboard';
+import { InventoryComponent } from '@features/inventory/inventory';
+import { ItemDetailsComponent } from '@features/inventory/items/item-details/item-details';
+import { ItemEditorComponent } from '@features/inventory/items/item-editor/item-editor';
+import { ItemListComponent } from '@features/inventory/items/item-list/item-list';
+import { ItemsComponent } from '@features/inventory/items/items';
+import { StockInComponent } from '@features/inventory/stock-in/stock-in';
 import { Login } from '@features/login/login';
 import { AuditLogsComponent } from '@features/management/audit-logs/audit-logs';
 import { CustomerDetailsComponent } from '@features/management/customers/customer-details/customer-details';
@@ -65,6 +71,47 @@ export const routes: Routes = [
         component: Dashboard,
         canActivate: [roleGuard],
         data: { roles: AppRoleGroups.DashboardRead },
+      },
+      {
+        path: 'inventory',
+        component: InventoryComponent,
+        canActivate: [roleGuard],
+        data: { roles: AppRoleGroups.ManagementRead },
+        children: [
+          { path: '', redirectTo: 'items', pathMatch: 'full' },
+          {
+            path: 'items',
+            component: ItemsComponent,
+            children: [
+              {
+                path: '',
+                component: ItemListComponent,
+              },
+              {
+                path: 'new',
+                component: ItemEditorComponent,
+                canDeactivate: [unsavedChangesGuard],
+                canActivate: [roleGuard],
+                data: { roles: AppRoleGroups.ManagementWrite },
+              },
+              {
+                path: 'details/:id',
+                component: ItemDetailsComponent,
+              },
+              {
+                path: 'edit/:id',
+                component: ItemEditorComponent,
+                canDeactivate: [unsavedChangesGuard],
+                canActivate: [roleGuard],
+                data: { roles: AppRoleGroups.ManagementWrite },
+              },
+            ],
+          },
+          {
+            path: 'stock-in',
+            component: StockInComponent,
+          },
+        ],
       },
       {
         path: 'my-profile',
