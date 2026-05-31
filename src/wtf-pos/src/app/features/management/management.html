@@ -1,134 +1,32 @@
 <div class="flex h-full w-full flex-col rounded-t-2xl bg-white sm:-mt-4 md:mt-0 lg:flex-row">
   <!-- Mobile Navigation -->
-  <div class="flex shrink-0 flex-col bg-white pb-4 sm:hidden">
+  <div class="flex shrink-0 flex-col bg-white sm:hidden">
     <h2 class="mb-3 text-xl font-bold text-gray-900">Management</h2>
     <nav
       role="tablist"
       class="flex w-full items-end gap-4 overflow-x-auto border-b border-gray-200 pb-2 text-sm [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       aria-label="Management tabs"
     >
-      <a
-        [routerLink]="routes.ManagementProducts"
-        role="tab"
-        data-management-tab="products"
-        class="relative flex shrink-0 rounded-md px-2 py-1 font-bold text-gray-500 transition-colors [@media(hover:hover)]:hover:bg-gray-100 [@media(hover:hover)]:hover:text-gray-800"
-        [class.text-gray-900]="isActive('products')"
-        [attr.aria-selected]="isActive('products')"
-        (click)="scrollManagementTabIntoView('products')"
-      >
-        <span class="relative"> Products </span>
-        <span
-          class="absolute right-2 -bottom-2 left-2 h-0.5 rounded-full bg-gray-700 transition-opacity"
-          [class.opacity-100]="isActive('products')"
-          [class.opacity-0]="!isActive('products')"
-        ></span>
-      </a>
-      @if (canReadCustomers()) {
-        <a
-          [routerLink]="routes.ManagementCustomers"
-          role="tab"
-          data-management-tab="customers"
-          class="relative flex shrink-0 rounded-md px-2 py-1 font-bold text-gray-500 transition-colors [@media(hover:hover)]:hover:bg-gray-100 [@media(hover:hover)]:hover:text-gray-800"
-          [class.text-gray-900]="isActive('customers')"
-          [attr.aria-selected]="isActive('customers')"
-          (click)="scrollManagementTabIntoView('customers')"
-        >
-          <span class="relative"> Customers </span>
-          <span
-            class="absolute right-2 -bottom-2 left-2 h-0.5 rounded-full bg-gray-700 transition-opacity"
-            [class.opacity-100]="isActive('customers')"
-            [class.opacity-0]="!isActive('customers')"
-          ></span>
-        </a>
-      }
-      <a
-        [routerLink]="routes.ManagementUsers"
-        role="tab"
-        data-management-tab="users"
-        class="relative flex shrink-0 rounded-md px-2 py-1 font-bold text-gray-500 transition-colors [@media(hover:hover)]:hover:bg-gray-100 [@media(hover:hover)]:hover:text-gray-800"
-        [class.text-gray-900]="isActive('users')"
-        [attr.aria-selected]="isActive('users')"
-        (click)="scrollManagementTabIntoView('users')"
-      >
-        <span class="relative"> Users </span>
-        <span
-          class="absolute right-2 -bottom-2 left-2 h-0.5 rounded-full bg-gray-700 transition-opacity"
-          [class.opacity-100]="isActive('users')"
-          [class.opacity-0]="!isActive('users')"
-        ></span>
-      </a>
-      <a
-        [routerLink]="routes.ManagementPromotions"
-        role="tab"
-        data-management-tab="promotions"
-        class="relative flex shrink-0 rounded-md px-2 py-1 font-bold text-gray-500 transition-colors [@media(hover:hover)]:hover:bg-gray-100 [@media(hover:hover)]:hover:text-gray-800"
-        [class.text-gray-900]="isActive('promotions')"
-        [attr.aria-selected]="isActive('promotions')"
-        (click)="scrollManagementTabIntoView('promotions')"
-      >
-        <span class="relative"> Promos </span>
-        <span
-          class="absolute right-2 -bottom-2 left-2 h-0.5 rounded-full bg-gray-700 transition-opacity"
-          [class.opacity-100]="isActive('promotions')"
-          [class.opacity-0]="!isActive('promotions')"
-        ></span>
-      </a>
-      @if (canAccessReports()) {
-        <a
-          [routerLink]="routes.ManagementReports"
-          role="tab"
-          data-management-tab="reports"
-          class="relative flex shrink-0 rounded-md px-2 py-1 font-bold text-gray-500 transition-colors [@media(hover:hover)]:hover:bg-gray-100 [@media(hover:hover)]:hover:text-gray-800"
-          [class.text-gray-900]="isActive('reports')"
-          [attr.aria-selected]="isActive('reports')"
-          aria-label="Reports"
-          (click)="scrollManagementTabIntoView('reports')"
-        >
-          <span class="relative"> Reports </span>
-          <span
-            class="absolute right-2 -bottom-2 left-2 h-0.5 rounded-full bg-gray-700 transition-opacity"
-            [class.opacity-100]="isActive('reports')"
-            [class.opacity-0]="!isActive('reports')"
-          ></span>
-        </a>
-      }
-      @if (canAccessAuditLogs()) {
-        <a
-          [routerLink]="routes.ManagementAuditLogs"
-          role="tab"
-          data-management-tab="audit-logs"
-          class="relative flex shrink-0 rounded-md px-2 py-1 font-bold text-gray-500 transition-colors [@media(hover:hover)]:hover:bg-gray-100 [@media(hover:hover)]:hover:text-gray-800"
-          [class.text-gray-900]="isActive('audit-logs')"
-          [attr.aria-selected]="isActive('audit-logs')"
-          aria-label="Audit Logs"
-          (click)="scrollManagementTabIntoView('audit-logs')"
-        >
-          <span class="relative"> Audit </span>
-          <span
-            class="absolute right-2 -bottom-2 left-2 h-0.5 rounded-full bg-gray-700 transition-opacity"
-            [class.opacity-100]="isActive('audit-logs')"
-            [class.opacity-0]="!isActive('audit-logs')"
-          ></span>
-        </a>
-      }
-      @if (canAccessSchemaScriptHistory()) {
-        <a
-          [routerLink]="routes.ManagementSchemaScripts"
-          role="tab"
-          data-management-tab="schema-scripts"
-          class="relative flex shrink-0 rounded-md px-2 py-1 font-bold text-gray-500 transition-colors [@media(hover:hover)]:hover:bg-gray-100 [@media(hover:hover)]:hover:text-gray-800"
-          [class.text-gray-900]="isActive('schema-scripts')"
-          [attr.aria-selected]="isActive('schema-scripts')"
-          aria-label="Schema Scripts"
-          (click)="scrollManagementTabIntoView('schema-scripts')"
-        >
-          <span class="relative"> Schema </span>
-          <span
-            class="absolute right-2 -bottom-2 left-2 h-0.5 rounded-full bg-gray-700 transition-opacity"
-            [class.opacity-100]="isActive('schema-scripts')"
-            [class.opacity-0]="!isActive('schema-scripts')"
-          ></span>
-        </a>
+      @for (tab of managementTabs; track tab.route) {
+        @if (!tab.canShow || tab.canShow()) {
+          <a
+            [routerLink]="tab.path"
+            role="tab"
+            [attr.data-management-tab]="tab.route"
+            class="relative flex shrink-0 rounded-md px-2 py-1 font-bold text-gray-500 transition-colors"
+            [class.text-gray-900]="isActive(tab.route)"
+            [attr.aria-selected]="isActive(tab.route)"
+            [attr.aria-label]="tab.ariaLabel"
+            (click)="scrollManagementTabIntoView(tab.route)"
+          >
+            <span class="relative"> {{ tab.label }} </span>
+            <span
+              class="absolute right-2 -bottom-2 left-2 h-0.5 rounded-full bg-gray-700 transition-opacity"
+              [class.opacity-100]="isActive(tab.route)"
+              [class.opacity-0]="!isActive(tab.route)"
+            ></span>
+          </a>
+        }
       }
     </nav>
   </div>

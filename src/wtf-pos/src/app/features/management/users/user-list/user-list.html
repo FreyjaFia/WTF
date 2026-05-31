@@ -235,7 +235,7 @@
           </div>
 
           @if (sortedUsers().length > 0) {
-            @for (user of sortedUsers(); track user.id; let isLast = $last) {
+            @for (user of sortedUsers(); track user.id; let isLast = $last; let isFirst = $first) {
               <div
                 class="relative flex items-center gap-3 rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm transition-shadow duration-200 focus-within:z-30 hover:z-10 hover:shadow-md lg:grid lg:grid-cols-12 lg:gap-4 lg:border-0 lg:px-4 lg:py-4 lg:shadow-lg lg:hover:shadow-xl"
               >
@@ -307,7 +307,7 @@
                 <!-- Actions -->
                 <div class="shrink-0 lg:col-span-1 lg:flex lg:justify-end" role="presentation">
                   @if (canManageUserProfile(user)) {
-                    <div class="dropdown dropdown-end" [class.dropdown-top]="isLast">
+                    <div class="dropdown dropdown-end" [class.dropdown-top]="isLast && !isFirst">
                       <button
                         type="button"
                         class="cursor-pointer rounded-lg p-1.5 transition-all hover:bg-gray-100 active:scale-95"

@@ -11,9 +11,7 @@ import { AppRoutes } from '@shared/constants/app-routes';
   selector: 'app-customer-editor',
   imports: [CommonModule, ReactiveFormsModule, IconComponent, AvatarComponent],
   templateUrl: './customer-editor.html',
-  host: {
-    class: 'block h-full',
-  },
+  host: { class: 'block h-full' },
 })
 export class CustomerEditorComponent implements OnInit {
   private readonly customerService = inject(CustomerService);

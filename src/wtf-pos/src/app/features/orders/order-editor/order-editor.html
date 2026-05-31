@@ -71,7 +71,7 @@
               <button
                 type="button"
                 role="tab"
-                class="relative cursor-pointer rounded-md px-2 py-1 font-bold text-gray-500 transition-colors [@media(hover:hover)]:hover:bg-gray-100 [@media(hover:hover)]:hover:text-gray-800"
+                class="relative cursor-pointer rounded-md px-2 py-1 font-bold text-gray-500 transition-colors"
                 [attr.data-catalog-tab]="tab.id"
                 [class.tab-active]="
                   activeCatalogTab() === 'products' && activeSubCategoryTab() === tab.id
@@ -104,7 +104,7 @@
               <button
                 type="button"
                 role="tab"
-                class="relative cursor-pointer rounded-md px-2 py-1 font-bold text-gray-500 transition-colors [@media(hover:hover)]:hover:bg-gray-100 [@media(hover:hover)]:hover:text-gray-800"
+                class="relative cursor-pointer rounded-md px-2 py-1 font-bold text-gray-500 transition-colors"
                 data-catalog-tab="bundles"
                 [class.tab-active]="activeCatalogTab() === 'bundles'"
                 [attr.aria-selected]="activeCatalogTab() === 'bundles'"
