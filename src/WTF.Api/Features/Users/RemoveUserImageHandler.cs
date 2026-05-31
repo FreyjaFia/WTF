@@ -33,18 +33,6 @@ public class RemoveUserImageHandler(WTFDbContext db, IImageStorage imageStorage)
             await db.SaveChangesAsync(cancellationToken);
         }
 
-        return new UserDto(
-            user.Id,
-            user.FirstName,
-            user.LastName,
-            user.Username,
-            user.IsActive,
-            user.CreatedAt,
-            user.CreatedBy,
-            user.UpdatedAt,
-            user.UpdatedBy,
-            null,
-            (UserRoleEnum)user.RoleId
-        );
+        return UserMapping.ToDto(user, null);
     }
 }

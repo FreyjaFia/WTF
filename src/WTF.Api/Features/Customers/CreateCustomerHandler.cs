@@ -16,6 +16,8 @@ public class CreateCustomerHandler(WTFDbContext db, IHttpContextAccessor httpCon
     {
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
 
+        CustomerValidation.EnsureValidNames(request.FirstName, request.LastName);
+
         var customer = new Customer
         {
             FirstName = request.FirstName,
@@ -43,17 +45,6 @@ public class CreateCustomerHandler(WTFDbContext db, IHttpContextAccessor httpCon
             userId: userId,
             cancellationToken: cancellationToken);
 
-        return new CustomerDto(
-            customer.Id,
-            customer.FirstName,
-            customer.LastName,
-            customer.Address,
-            customer.IsActive,
-            customer.CreatedAt,
-            customer.CreatedBy,
-            customer.UpdatedAt,
-            customer.UpdatedBy,
-            null
-        );
+        return CustomerMapping.ToDto(customer, null);
     }
 }

@@ -32,6 +32,9 @@ public class UpdateUserHandler(WTFDbContext db, IHttpContextAccessor httpContext
         };
         var isPasswordChanged = !string.IsNullOrWhiteSpace(request.Password);
 
+        UserValidation.EnsureValidUsername(request.Username);
+        UserValidation.EnsureValidPassword(request.Password, isUpdate: true);
+
         user.FirstName = request.FirstName;
         user.LastName = request.LastName;
         user.Username = request.Username;
@@ -63,18 +66,6 @@ public class UpdateUserHandler(WTFDbContext db, IHttpContextAccessor httpContext
             userId: userId,
             cancellationToken: cancellationToken);
 
-        return new UserDto(
-            user.Id,
-            user.FirstName,
-            user.LastName,
-            user.Username,
-            user.IsActive,
-            user.CreatedAt,
-            user.CreatedBy,
-            user.UpdatedAt,
-            user.UpdatedBy,
-            null,
-            (UserRoleEnum)user.RoleId
-        );
+        return UserMapping.ToDto(user, null);
     }
 }

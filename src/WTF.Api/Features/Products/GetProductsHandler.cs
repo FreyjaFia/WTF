@@ -106,24 +106,7 @@ public class GetProductsHandler(WTFDbContext db, IHttpContextAccessor httpContex
                 addOnCountByProductId.TryGetValue(p.Id, out count);
             }
 
-            return new ProductDto(
-                p.Id,
-                p.Name,
-                p.Code,
-                p.Description,
-                p.Price,
-                (ProductCategoryEnum)p.CategoryId,
-                p.SubCategoryId.HasValue ? (ProductSubCategoryEnum)p.SubCategoryId.Value : null,
-                p.IsAddOn,
-                p.IsActive,
-                p.CreatedAt,
-                p.CreatedBy,
-                p.UpdatedAt,
-                p.UpdatedBy,
-                imageUrl,
-                [],
-                count
-            );
+            return ProductMapping.ToDto(p, imageUrl, new List<ProductPriceHistoryDto>(), count);
         })];
     }
 }

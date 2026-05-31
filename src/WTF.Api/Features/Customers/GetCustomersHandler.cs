@@ -49,19 +49,7 @@ public class GetCustomersHandler(WTFDbContext db, IHttpContextAccessor httpConte
 
             imageUrl = UrlExtensions.ToAbsoluteUrl(httpContextAccessor, imageUrl);
 
-
-        return new CustomerDto(
-                c.Id,
-                c.FirstName,
-                c.LastName,
-                c.Address,
-                c.IsActive,
-                c.CreatedAt,
-                c.CreatedBy,
-                c.UpdatedAt,
-                c.UpdatedBy,
-                imageUrl
-            );
+            return CustomerMapping.ToDto(c, imageUrl);
         })];
     }
 }

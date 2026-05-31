@@ -55,7 +55,7 @@ public partial class Product
 
     public virtual ProductImage? ProductImage { get; set; }
 
-    public virtual ICollection<ProductInventoryLink> ProductInventoryLinks { get; set; } = new List<ProductInventoryLink>();
+    public virtual ICollection<ProductItemLink> ProductItemLinks { get; set; } = new List<ProductItemLink>();
 
     public virtual ICollection<ProductPriceHistory> ProductPriceHistories { get; set; } = new List<ProductPriceHistory>();
 

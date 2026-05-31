@@ -49,24 +49,7 @@ public class GetProductAddOnsHandler(WTFDbContext db, IHttpContextAccessor httpC
                         ? UrlExtensions.ToAbsoluteUrl(httpContextAccessor, item.AddOn.ProductImage.Image.ImageUrl)
                         : null;
 
-                    return new ProductDto(
-                        item.AddOn.Id,
-                        item.AddOn.Name,
-                        item.AddOn.Code,
-                        item.AddOn.Description,
-                        item.AddOn.Price,
-                        (ProductCategoryEnum)item.AddOn.CategoryId,
-                        item.AddOn.SubCategoryId.HasValue ? (ProductSubCategoryEnum)item.AddOn.SubCategoryId.Value : null,
-                        item.AddOn.IsAddOn,
-                        item.AddOn.IsActive,
-                        item.AddOn.CreatedAt,
-                        item.AddOn.CreatedBy,
-                        item.AddOn.UpdatedAt,
-                        item.AddOn.UpdatedBy,
-                        imageUrl,
-                        [],
-                        OverridePrice: item.OverridePrice
-                    );
+                    return ProductMapping.ToDto(item.AddOn, imageUrl, new List<ProductPriceHistoryDto>(), overridePrice: item.OverridePrice);
                 })]
             ))
             .OrderBy(group => group.Type)

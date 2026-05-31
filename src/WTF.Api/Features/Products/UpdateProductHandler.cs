@@ -56,7 +56,7 @@ public class UpdateProductHandler(WTFDbContext db, IHttpContextAccessor httpCont
         }
 
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
-        var normalizedCode = request.Code.Trim().ToUpperInvariant();
+        var normalizedCode = ProductValidation.NormalizeCode(request.Code);
         var oldValues = new
         {
             product.Name,
@@ -71,13 +71,7 @@ public class UpdateProductHandler(WTFDbContext db, IHttpContextAccessor httpCont
 
         if (product.Code != normalizedCode)
         {
-            var codeExists = await db.Products
-                .AnyAsync(p => p.Code == normalizedCode && p.Id != request.Id, cancellationToken);
-
-            if (codeExists)
-            {
-                throw new InvalidOperationException("Product code already exists.");
-            }
+            await ProductValidation.EnsureUniqueCodeAsync(db, normalizedCode, request.Id, cancellationToken);
         }
 
         // Validate IsAddOn change: Block changing from false to true if product has been used as parent item
@@ -160,22 +154,6 @@ public class UpdateProductHandler(WTFDbContext db, IHttpContextAccessor httpCont
             ))
             .ToListAsync(cancellationToken);
 
-        return new ProductDto(
-            product.Id,
-            product.Name,
-            product.Code,
-            product.Description,
-            product.Price,
-            (ProductCategoryEnum)product.CategoryId,
-            product.SubCategoryId.HasValue ? (ProductSubCategoryEnum)product.SubCategoryId.Value : null,
-            product.IsAddOn,
-            product.IsActive,
-            product.CreatedAt,
-            product.CreatedBy,
-            product.UpdatedAt,
-            product.UpdatedBy,
-            imageUrl,
-            priceHistory
-        );
+        return ProductMapping.ToDto(product, imageUrl, priceHistory);
     }
 }

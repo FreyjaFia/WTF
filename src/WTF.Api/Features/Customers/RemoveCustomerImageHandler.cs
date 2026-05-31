@@ -32,17 +32,6 @@ public class RemoveCustomerImageHandler(WTFDbContext db, IImageStorage imageStor
             await db.SaveChangesAsync(cancellationToken);
         }
 
-        return new CustomerDto(
-            customer.Id,
-            customer.FirstName,
-            customer.LastName,
-            customer.Address,
-            customer.IsActive,
-            customer.CreatedAt,
-            customer.CreatedBy,
-            customer.UpdatedAt,
-            customer.UpdatedBy,
-            null
-        );
+        return CustomerMapping.ToDto(customer, null);
     }
 }

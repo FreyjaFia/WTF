@@ -76,18 +76,6 @@ public class UploadUserImageHandler(WTFDbContext db, IImageStorage imageStorage,
         // At this point DB was updated. Old files were already deleted above when user.UserImage existed.
         var absoluteImageUrl = UrlExtensions.ToAbsoluteUrl(httpContextAccessor, imageUrl);
 
-        return new UserDto(
-            user.Id,
-            user.FirstName,
-            user.LastName,
-            user.Username,
-            user.IsActive,
-            user.CreatedAt,
-            user.CreatedBy,
-            user.UpdatedAt,
-            user.UpdatedBy,
-            absoluteImageUrl,
-            (UserRoleEnum)user.RoleId
-        );
+        return UserMapping.ToDto(user, absoluteImageUrl);
     }
 }

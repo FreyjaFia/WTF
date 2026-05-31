@@ -43,15 +43,9 @@ public class CreateProductHandler(WTFDbContext db, IHttpContextAccessor httpCont
     public async Task<ProductDto> Handle(CreateProductCommand request, CancellationToken cancellationToken)
     {
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
-        var normalizedCode = request.Code.Trim().ToUpperInvariant();
+        var normalizedCode = ProductValidation.NormalizeCode(request.Code);
 
-        var codeExists = await db.Products
-            .AnyAsync(p => p.Code == normalizedCode, cancellationToken);
-
-        if (codeExists)
-        {
-            throw new InvalidOperationException("Product code already exists.");
-        }
+        await ProductValidation.EnsureUniqueCodeAsync(db, normalizedCode, cancellationToken: cancellationToken);
 
         var product = new Product
         {
@@ -87,22 +81,6 @@ public class CreateProductHandler(WTFDbContext db, IHttpContextAccessor httpCont
             userId: userId,
             cancellationToken: cancellationToken);
 
-        return new ProductDto(
-            product.Id,
-            product.Name,
-            product.Code,
-            product.Description,
-            product.Price,
-            (ProductCategoryEnum)product.CategoryId,
-            product.SubCategoryId.HasValue ? (ProductSubCategoryEnum)product.SubCategoryId.Value : null,
-            product.IsAddOn,
-            product.IsActive,
-            product.CreatedAt,
-            product.CreatedBy,
-            product.UpdatedAt,
-            product.UpdatedBy,
-            null,
-            []
-        );
+        return ProductMapping.ToDto(product, null, new List<ProductPriceHistoryDto>());
     }
 }

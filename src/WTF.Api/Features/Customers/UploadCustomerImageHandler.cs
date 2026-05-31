@@ -74,17 +74,6 @@ public class UploadCustomerImageHandler(WTFDbContext db, IImageStorage imageStor
 
         var absoluteImageUrl = UrlExtensions.ToAbsoluteUrl(httpContextAccessor, imageUrl);
 
-        return new CustomerDto(
-            customer.Id,
-            customer.FirstName,
-            customer.LastName,
-            customer.Address,
-            customer.IsActive,
-            customer.CreatedAt,
-            customer.CreatedBy,
-            customer.UpdatedAt,
-            customer.UpdatedBy,
-            absoluteImageUrl
-        );
+        return CustomerMapping.ToDto(customer, absoluteImageUrl);
     }
 }

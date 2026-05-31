@@ -30,18 +30,6 @@ public class GetUserByIdHandler(WTFDbContext db, IHttpContextAccessor httpContex
 
         imageUrl = UrlExtensions.ToAbsoluteUrl(httpContextAccessor, imageUrl);
 
-        return new UserDto(
-            user.Id,
-            user.FirstName,
-            user.LastName,
-            user.Username,
-            user.IsActive,
-            user.CreatedAt,
-            user.CreatedBy,
-            user.UpdatedAt,
-            user.UpdatedBy,
-            imageUrl,
-            (UserRoleEnum)user.RoleId
-        );
+        return UserMapping.ToDto(user, imageUrl);
     }
 }

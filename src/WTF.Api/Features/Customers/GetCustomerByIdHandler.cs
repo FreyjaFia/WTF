@@ -28,17 +28,6 @@ public class GetCustomerByIdHandler(WTFDbContext db, IHttpContextAccessor httpCo
 
         imageUrl = UrlExtensions.ToAbsoluteUrl(httpContextAccessor, imageUrl);
 
-        return new CustomerDto(
-            customer.Id,
-            customer.FirstName,
-            customer.LastName,
-            customer.Address,
-            customer.IsActive,
-            customer.CreatedAt,
-            customer.CreatedBy,
-            customer.UpdatedAt,
-            customer.UpdatedBy,
-            imageUrl
-        );
+        return CustomerMapping.ToDto(customer, imageUrl);
     }
 }

@@ -45,22 +45,6 @@ public class GetProductByIdHandler(WTFDbContext db, IHttpContextAccessor httpCon
             ))
             .ToListAsync(cancellationToken);
 
-        return new ProductDto(
-            product.Id,
-            product.Name,
-            product.Code,
-            product.Description,
-            product.Price,
-            (ProductCategoryEnum)product.CategoryId,
-            product.SubCategoryId.HasValue ? (ProductSubCategoryEnum)product.SubCategoryId.Value : null,
-            product.IsAddOn,
-            product.IsActive,
-            product.CreatedAt,
-            product.CreatedBy,
-            product.UpdatedAt,
-            product.UpdatedBy,
-            imageUrl,
-            priceHistory
-        );
+        return ProductMapping.ToDto(product, imageUrl, priceHistory);
     }
 }

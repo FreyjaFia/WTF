@@ -31,6 +31,8 @@ public class UpdateCustomerHandler(WTFDbContext db, IHttpContextAccessor httpCon
         };
 
         customer.FirstName = request.FirstName;
+        CustomerValidation.EnsureValidNames(request.FirstName, request.LastName);
+
         customer.LastName = request.LastName;
         customer.Address = request.Address;
         customer.UpdatedAt = DateTime.UtcNow;
@@ -52,17 +54,6 @@ public class UpdateCustomerHandler(WTFDbContext db, IHttpContextAccessor httpCon
             userId: userId,
             cancellationToken: cancellationToken);
 
-        return new CustomerDto(
-            customer.Id,
-            customer.FirstName,
-            customer.LastName,
-            customer.Address,
-            customer.IsActive,
-            customer.CreatedAt,
-            customer.CreatedBy,
-            customer.UpdatedAt,
-            customer.UpdatedBy,
-            null
-        );
+        return CustomerMapping.ToDto(customer, null);
     }
 }
