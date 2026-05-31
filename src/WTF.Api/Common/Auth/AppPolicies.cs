@@ -12,6 +12,8 @@ public static class AppPolicies
     public const string CustomersRead = "CustomersRead";
     public const string CustomersWrite = "CustomersWrite";
     public const string CustomersCreate = "CustomersCreate";
+    public const string ItemsRead = "ItemsRead";
+    public const string ItemsWrite = "ItemsWrite";
     public const string DashboardRead = "DashboardRead";
     public const string ReportsRead = "ReportsRead";
 }

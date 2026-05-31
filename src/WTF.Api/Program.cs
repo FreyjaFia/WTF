@@ -131,6 +131,10 @@ builder.Services.AddAuthorizationBuilder()
         policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin))
     .AddPolicy(AppPolicies.CustomersCreate, policy =>
         policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.Cashier))
+    .AddPolicy(AppPolicies.ItemsRead, policy =>
+        policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer))
+    .AddPolicy(AppPolicies.ItemsWrite, policy =>
+        policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin))
     .AddPolicy(AppPolicies.DashboardRead, policy =>
         policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer))
     .AddPolicy(AppPolicies.ReportsRead, policy =>
@@ -274,7 +278,7 @@ app.MapAuth()
     .MapReports()
     .MapSync()
     .MapPromotions()
-    .MapInventory()
+    .MapItems()
     .MapAudit()
     .MapSchemaScriptHistory()
     .MapPing();

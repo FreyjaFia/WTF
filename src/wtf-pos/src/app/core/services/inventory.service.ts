@@ -3,10 +3,10 @@ import { inject, Injectable } from '@angular/core';
 import { ConnectivityService } from '@core/services/connectivity.service';
 import { environment } from '@environments/environment.development';
 import {
-  AddInventoryStockDto,
-  CreateInventoryItemDto,
-  InventoryItemDto,
-  UpdateInventoryItemDto,
+  AddItemStockDto,
+  CreateItemDto,
+  ItemDto,
+  UpdateItemDto,
 } from '@shared/models';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
@@ -16,13 +16,13 @@ import { extractHttpErrorMessage } from './http-error-message';
 export class InventoryService {
   private readonly http = inject(HttpClient);
   private readonly connectivity = inject(ConnectivityService);
-  private readonly baseUrl = `${environment.apiUrl}/inventory`;
+  private readonly baseUrl = `${environment.apiUrl}/items`;
 
   public getInventoryItems(query?: {
     searchTerm?: string | null;
     isActive?: boolean | null;
     includeInactive?: boolean | null;
-  }): Observable<InventoryItemDto[]> {
+  }): Observable<ItemDto[]> {
     let params = new HttpParams();
 
     if (query?.searchTerm) {
@@ -38,38 +38,38 @@ export class InventoryService {
     }
 
     return this.http
-      .get<InventoryItemDto[]>(this.baseUrl, { params })
-      .pipe(catchError((error) => this.handleError(error, 'Unable to fetch inventory items.')));
+      .get<ItemDto[]>(this.baseUrl, { params })
+      .pipe(catchError((error) => this.handleError(error, 'Unable to fetch items.')));
   }
 
-  public createInventoryItem(payload: CreateInventoryItemDto): Observable<InventoryItemDto> {
+  public createInventoryItem(payload: CreateItemDto): Observable<ItemDto> {
     return this.http
-      .post<InventoryItemDto>(this.baseUrl, payload)
-      .pipe(catchError((error) => this.handleError(error, 'Unable to create inventory item.')));
+      .post<ItemDto>(this.baseUrl, payload)
+      .pipe(catchError((error) => this.handleError(error, 'Unable to create item.')));
   }
 
-  public getInventoryItem(id: string): Observable<InventoryItemDto> {
+  public getInventoryItem(id: string): Observable<ItemDto> {
     return this.http
-      .get<InventoryItemDto>(`${this.baseUrl}/${id}`)
-      .pipe(catchError((error) => this.handleError(error, 'Unable to fetch inventory item.')));
+      .get<ItemDto>(`${this.baseUrl}/${id}`)
+      .pipe(catchError((error) => this.handleError(error, 'Unable to fetch item.')));
   }
 
-  public updateInventoryItem(payload: UpdateInventoryItemDto): Observable<InventoryItemDto> {
+  public updateInventoryItem(payload: UpdateItemDto): Observable<ItemDto> {
     return this.http
-      .put<InventoryItemDto>(`${this.baseUrl}/${payload.id}`, payload)
-      .pipe(catchError((error) => this.handleError(error, 'Unable to update inventory item.')));
+      .put<ItemDto>(`${this.baseUrl}/${payload.id}`, payload)
+      .pipe(catchError((error) => this.handleError(error, 'Unable to update item.')));
   }
 
-  public addStock(payload: AddInventoryStockDto): Observable<InventoryItemDto> {
+  public addStock(payload: AddItemStockDto): Observable<ItemDto> {
     return this.http
-      .post<InventoryItemDto>(`${this.baseUrl}/${payload.inventoryItemId}/stock`, payload)
+      .post<ItemDto>(`${this.baseUrl}/${payload.itemId}/stock`, payload)
       .pipe(catchError((error) => this.handleError(error, 'Unable to add stock.')));
   }
 
   public deleteInventoryItem(id: string): Observable<void> {
     return this.http
       .delete<void>(`${this.baseUrl}/${id}`)
-      .pipe(catchError((error) => this.handleError(error, 'Unable to delete inventory item.')));
+      .pipe(catchError((error) => this.handleError(error, 'Unable to delete item.')));
   }
 
   private handleError(error: HttpErrorResponse, fallback: string) {

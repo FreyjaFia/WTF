@@ -5,7 +5,7 @@ import { AlertService, AuthService, InventoryService, ModalStackService } from '
 import { BadgeComponent, IconComponent } from '@shared/components';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { getInventoryUnitAbbreviation } from '@shared/constants/inventory-units';
-import { InventoryItemDto } from '@shared/models';
+import { ItemDto } from '@shared/models';
 
 type StockStatus = 'ok' | 'warning' | 'critical';
 
@@ -24,7 +24,7 @@ export class ItemDetailsComponent implements OnInit {
   private readonly modalStack = inject(ModalStackService);
   protected readonly routes = AppRoutes;
 
-  protected readonly item = signal<InventoryItemDto | null>(null);
+  protected readonly item = signal<ItemDto | null>(null);
   protected readonly isLoading = signal(false);
   protected readonly showDeleteModal = signal(false);
   protected readonly isDeleting = signal(false);
@@ -37,7 +37,7 @@ export class ItemDetailsComponent implements OnInit {
     }
   }
 
-  protected getStockStatus(item: InventoryItemDto): StockStatus {
+  protected getStockStatus(item: ItemDto): StockStatus {
     if (
       item.criticalQuantity !== null &&
       item.criticalQuantity !== undefined &&
@@ -57,7 +57,7 @@ export class ItemDetailsComponent implements OnInit {
     return 'ok';
   }
 
-  protected getStockQuantity(item: InventoryItemDto): number {
+  protected getStockQuantity(item: ItemDto): number {
     if (item.stockUnitName && item.unitsPerStockUnit && item.unitsPerStockUnit > 0) {
       return item.currentQuantity / item.unitsPerStockUnit;
     }
@@ -65,15 +65,15 @@ export class ItemDetailsComponent implements OnInit {
     return item.currentQuantity;
   }
 
-  protected getStockUnitAbbreviation(item: InventoryItemDto): string {
+  protected getStockUnitAbbreviation(item: ItemDto): string {
     return getInventoryUnitAbbreviation(item.stockUnitName || item.unitName);
   }
 
-  protected getBaseUnitAbbreviation(item: InventoryItemDto): string {
+  protected getBaseUnitAbbreviation(item: ItemDto): string {
     return getInventoryUnitAbbreviation(item.unitName);
   }
 
-  protected shouldShowBaseQuantity(item: InventoryItemDto): boolean {
+  protected shouldShowBaseQuantity(item: ItemDto): boolean {
     return !!item.stockUnitName && !!item.unitsPerStockUnit && item.unitsPerStockUnit > 0;
   }
 
@@ -121,13 +121,13 @@ export class ItemDetailsComponent implements OnInit {
         this.isDeleting.set(false);
         this.showDeleteModal.set(false);
         this.removeFromStack();
-        this.alertService.successDeleted('Inventory item');
+        this.alertService.successDeleted('Item');
         this.router.navigateByUrl(AppRoutes.InventoryItems);
       },
       error: (err) => {
         this.isDeleting.set(false);
         this.alertService.error(
-          err.message || this.alertService.getDeleteErrorMessage('inventory item'),
+          err.message || this.alertService.getDeleteErrorMessage('item'),
         );
       },
     });

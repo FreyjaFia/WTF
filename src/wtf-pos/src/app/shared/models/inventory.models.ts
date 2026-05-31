@@ -1,4 +1,4 @@
-export interface InventoryItemDto {
+export interface ItemDto {
   id: string;
   name: string;
   sku?: string | null;
@@ -15,23 +15,23 @@ export interface InventoryItemDto {
   createdBy: string;
   updatedAt?: string | null;
   updatedBy?: string | null;
-  productLinks: ProductInventoryLinkDto[];
+  productLinks: ProductItemLinkDto[];
   recentMovements: StockMovementDto[];
 }
 
-export interface ProductInventoryLinkDto {
+export interface ProductItemLinkDto {
   id: string;
   productId: string;
   productName: string;
   productCode: string;
-  inventoryItemId: string;
+  itemId: string;
   quantityPerSale: number;
   isActive: boolean;
 }
 
 export interface StockMovementDto {
   id: string;
-  inventoryItemId: string;
+  itemId: string;
   movementType: string;
   quantityDelta: number;
   quantityBefore: number;
@@ -45,7 +45,7 @@ export interface StockMovementDto {
   createdByName: string;
 }
 
-export interface CreateInventoryItemDto {
+export interface CreateItemDto {
   name: string;
   sku?: string | null;
   barcode?: string | null;
@@ -59,7 +59,7 @@ export interface CreateInventoryItemDto {
   isActive: boolean;
 }
 
-export interface UpdateInventoryItemDto {
+export interface UpdateItemDto {
   id: string;
   name: string;
   sku?: string | null;
@@ -73,8 +73,8 @@ export interface UpdateInventoryItemDto {
   isActive: boolean;
 }
 
-export interface AddInventoryStockDto {
-  inventoryItemId: string;
+export interface AddItemStockDto {
+  itemId: string;
   quantity: number;
   unitCost?: number | null;
   notes?: string | null;

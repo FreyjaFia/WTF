@@ -36,7 +36,7 @@ public partial class WTFDbContext : DbContext
 
     public virtual DbSet<Image> Images { get; set; }
 
-    public virtual DbSet<InventoryItem> InventoryItems { get; set; }
+    public virtual DbSet<Item> Items { get; set; }
 
     public virtual DbSet<LoyaltyPoint> LoyaltyPoints { get; set; }
 
@@ -64,7 +64,7 @@ public partial class WTFDbContext : DbContext
 
     public virtual DbSet<ProductImage> ProductImages { get; set; }
 
-    public virtual DbSet<ProductInventoryLink> ProductInventoryLinks { get; set; }
+    public virtual DbSet<ProductItemLink> ProductItemLinks { get; set; }
 
     public virtual DbSet<ProductPriceHistory> ProductPriceHistories { get; set; }
 
@@ -270,44 +270,46 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.UploadedAt).HasDefaultValueSql("(sysdatetime())");
         });
 
-        modelBuilder.Entity<InventoryItem>(entity =>
+        modelBuilder.Entity<Item>(entity =>
         {
-            entity.HasIndex(e => e.IsActive, "IX_InventoryItems_IsActive");
+            entity.HasKey(e => e.Id).HasName("PK_InventoryItems");
 
-            entity.HasIndex(e => e.Name, "IX_InventoryItems_Name");
+            entity.HasIndex(e => e.IsActive, "IX_Items_IsActive");
 
-            entity.HasIndex(e => e.Barcode, "UX_InventoryItems_Barcode")
+            entity.HasIndex(e => e.Name, "IX_Items_Name");
+
+            entity.HasIndex(e => e.Barcode, "UX_Items_Barcode")
                 .IsUnique()
                 .HasFilter("([Barcode] IS NOT NULL)");
 
-            entity.HasIndex(e => e.Sku, "UX_InventoryItems_Sku")
+            entity.HasIndex(e => e.Sku, "UX_Items_Sku")
                 .IsUnique()
                 .HasFilter("([Sku] IS NOT NULL)");
 
-            entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_InventoryItems_Id");
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_Items_Id");
             entity.Property(e => e.Barcode).HasMaxLength(100);
             entity.Property(e => e.CostPrice).HasColumnType("decimal(10, 2)");
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())", "DF_InventoryItems_CreatedAt");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())", "DF_Items_CreatedAt");
             entity.Property(e => e.CriticalQuantity).HasColumnType("decimal(18, 3)");
             entity.Property(e => e.CurrentQuantity).HasColumnType("decimal(18, 3)");
-            entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_InventoryItems_IsActive");
+            entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_Items_IsActive");
             entity.Property(e => e.Name).HasMaxLength(100);
             entity.Property(e => e.Sku).HasMaxLength(50);
             entity.Property(e => e.StockUnitName).HasMaxLength(30);
             entity.Property(e => e.UnitName)
                 .HasMaxLength(30)
-                .HasDefaultValue("piece", "DF_InventoryItems_UnitName");
+                .HasDefaultValue("piece", "DF_Items_UnitName");
             entity.Property(e => e.UnitsPerStockUnit).HasColumnType("decimal(18, 3)");
             entity.Property(e => e.WarningQuantity).HasColumnType("decimal(18, 3)");
 
-            entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.InventoryItemCreatedByNavigations)
+            entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.ItemCreatedByNavigations)
                 .HasForeignKey(d => d.CreatedBy)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_InventoryItems_CreatedBy");
+                .HasConstraintName("FK_Items_CreatedBy");
 
-            entity.HasOne(d => d.UpdatedByNavigation).WithMany(p => p.InventoryItemUpdatedByNavigations)
+            entity.HasOne(d => d.UpdatedByNavigation).WithMany(p => p.ItemUpdatedByNavigations)
                 .HasForeignKey(d => d.UpdatedBy)
-                .HasConstraintName("FK_InventoryItems_UpdatedBy");
+                .HasConstraintName("FK_Items_UpdatedBy");
         });
 
         modelBuilder.Entity<LoyaltyPoint>(entity =>
@@ -589,39 +591,39 @@ public partial class WTFDbContext : DbContext
                 .HasConstraintName("FK_ProductImages_Products");
         });
 
-        modelBuilder.Entity<ProductInventoryLink>(entity =>
+        modelBuilder.Entity<ProductItemLink>(entity =>
         {
-            entity.HasIndex(e => e.InventoryItemId, "IX_ProductInventoryLinks_InventoryItemId");
+            entity.HasIndex(e => e.ItemId, "IX_ProductItemLinks_ItemId");
 
-            entity.HasIndex(e => e.ProductId, "IX_ProductInventoryLinks_ProductId");
+            entity.HasIndex(e => e.ProductId, "IX_ProductItemLinks_ProductId");
 
-            entity.HasIndex(e => new { e.ProductId, e.InventoryItemId }, "UX_ProductInventoryLinks_Product_Inventory").IsUnique();
+            entity.HasIndex(e => new { e.ProductId, e.ItemId }, "UX_ProductItemLinks_Product_Item").IsUnique();
 
-            entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_ProductInventoryLinks_Id");
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())", "DF_ProductInventoryLinks_CreatedAt");
-            entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_ProductInventoryLinks_IsActive");
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_ProductItemLinks_Id");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())", "DF_ProductItemLinks_CreatedAt");
+            entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_ProductItemLinks_IsActive");
             entity.Property(e => e.QuantityPerSale)
-                .HasDefaultValue(1m, "DF_ProductInventoryLinks_QuantityPerSale")
+                .HasDefaultValue(1m, "DF_ProductItemLinks_QuantityPerSale")
                 .HasColumnType("decimal(18, 3)");
 
-            entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.ProductInventoryLinkCreatedByNavigations)
+            entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.ProductItemLinkCreatedByNavigations)
                 .HasForeignKey(d => d.CreatedBy)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_ProductInventoryLinks_CreatedBy");
+                .HasConstraintName("FK_ProductItemLinks_CreatedBy");
 
-            entity.HasOne(d => d.InventoryItem).WithMany(p => p.ProductInventoryLinks)
-                .HasForeignKey(d => d.InventoryItemId)
+            entity.HasOne(d => d.Item).WithMany(p => p.ProductItemLinks)
+                .HasForeignKey(d => d.ItemId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_ProductInventoryLinks_InventoryItems");
+                .HasConstraintName("FK_ProductItemLinks_Items");
 
-            entity.HasOne(d => d.Product).WithMany(p => p.ProductInventoryLinks)
+            entity.HasOne(d => d.Product).WithMany(p => p.ProductItemLinks)
                 .HasForeignKey(d => d.ProductId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_ProductInventoryLinks_Products");
+                .HasConstraintName("FK_ProductItemLinks_Products");
 
-            entity.HasOne(d => d.UpdatedByNavigation).WithMany(p => p.ProductInventoryLinkUpdatedByNavigations)
+            entity.HasOne(d => d.UpdatedByNavigation).WithMany(p => p.ProductItemLinkUpdatedByNavigations)
                 .HasForeignKey(d => d.UpdatedBy)
-                .HasConstraintName("FK_ProductInventoryLinks_UpdatedBy");
+                .HasConstraintName("FK_ProductItemLinks_UpdatedBy");
         });
 
         modelBuilder.Entity<ProductPriceHistory>(entity =>
@@ -771,7 +773,7 @@ public partial class WTFDbContext : DbContext
 
         modelBuilder.Entity<StockMovement>(entity =>
         {
-            entity.HasIndex(e => new { e.InventoryItemId, e.CreatedAt }, "IX_StockMovements_InventoryItemId_CreatedAt").IsDescending(false, true);
+            entity.HasIndex(e => new { e.ItemId, e.CreatedAt }, "IX_StockMovements_ItemId_CreatedAt").IsDescending(false, true);
 
             entity.HasIndex(e => new { e.ReferenceType, e.ReferenceId }, "IX_StockMovements_Reference");
 
@@ -790,10 +792,10 @@ public partial class WTFDbContext : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_StockMovements_CreatedBy");
 
-            entity.HasOne(d => d.InventoryItem).WithMany(p => p.StockMovements)
-                .HasForeignKey(d => d.InventoryItemId)
+            entity.HasOne(d => d.Item).WithMany(p => p.StockMovements)
+                .HasForeignKey(d => d.ItemId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_StockMovements_InventoryItems");
+                .HasConstraintName("FK_StockMovements_Items");
         });
 
         modelBuilder.Entity<User>(entity =>

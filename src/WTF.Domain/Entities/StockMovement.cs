@@ -7,7 +7,7 @@ public partial class StockMovement
 {
     public Guid Id { get; set; }
 
-    public Guid InventoryItemId { get; set; }
+    public Guid ItemId { get; set; }
 
     public string MovementType { get; set; } = null!;
 
@@ -31,5 +31,5 @@ public partial class StockMovement
 
     public virtual User CreatedByNavigation { get; set; } = null!;
 
-    public virtual InventoryItem InventoryItem { get; set; } = null!;
+    public virtual Item Item { get; set; } = null!;
 }

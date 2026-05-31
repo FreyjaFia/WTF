@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace WTF.Domain.Entities;
 
-public partial class InventoryItem
+public partial class Item
 {
     public Guid Id { get; set; }
 
@@ -39,7 +39,7 @@ public partial class InventoryItem
 
     public virtual User CreatedByNavigation { get; set; } = null!;
 
-    public virtual ICollection<ProductInventoryLink> ProductInventoryLinks { get; set; } = new List<ProductInventoryLink>();
+    public virtual ICollection<ProductItemLink> ProductItemLinks { get; set; } = new List<ProductItemLink>();
 
     public virtual ICollection<StockMovement> StockMovements { get; set; } = new List<StockMovement>();
 

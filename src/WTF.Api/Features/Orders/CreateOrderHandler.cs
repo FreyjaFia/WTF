@@ -622,8 +622,8 @@ public class CreateOrderHandler(
         }
 
         var productIds = productQuantities.Keys.ToList();
-        var links = await db.ProductInventoryLinks
-            .Include(link => link.InventoryItem)
+        var links = await db.ProductItemLinks
+            .Include(link => link.Item)
             .Include(link => link.Product)
             .Where(link =>
                 link.IsActive
@@ -636,18 +636,18 @@ public class CreateOrderHandler(
         }
 
         var requiredByInventory = links
-            .GroupBy(link => link.InventoryItemId)
+            .GroupBy(link => link.ItemId)
             .Select(group => new
             {
-                InventoryItem = group.First().InventoryItem,
+                Item = group.First().Item,
                 RequiredQuantity = group.Sum(link => productQuantities[link.ProductId] * link.QuantityPerSale),
                 ProductNames = group.Select(link => link.Product.Name).Distinct().OrderBy(name => name).ToList()
             })
             .ToList();
 
         var insufficient = requiredByInventory
-            .Where(entry => !entry.InventoryItem.IsActive || entry.InventoryItem.CurrentQuantity < entry.RequiredQuantity)
-            .Select(entry => $"{entry.InventoryItem.Name} needs {entry.RequiredQuantity:0.###} {entry.InventoryItem.UnitName}, available {entry.InventoryItem.CurrentQuantity:0.###}")
+            .Where(entry => !entry.Item.IsActive || entry.Item.CurrentQuantity < entry.RequiredQuantity)
+            .Select(entry => $"{entry.Item.Name} needs {entry.RequiredQuantity:0.###} {entry.Item.UnitName}, available {entry.Item.CurrentQuantity:0.###}")
             .ToList();
 
         if (insufficient.Count > 0)
@@ -658,7 +658,7 @@ public class CreateOrderHandler(
         var now = DateTime.UtcNow;
         foreach (var entry in requiredByInventory)
         {
-            var item = entry.InventoryItem;
+            var item = entry.Item;
             var before = item.CurrentQuantity;
             var after = before - entry.RequiredQuantity;
 
@@ -668,7 +668,7 @@ public class CreateOrderHandler(
 
             db.StockMovements.Add(new StockMovement
             {
-                InventoryItemId = item.Id,
+                ItemId = item.Id,
                 MovementType = "SaleDeduction",
                 QuantityDelta = -entry.RequiredQuantity,
                 QuantityBefore = before,

@@ -20,7 +20,7 @@ import {
 } from '@shared/components';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { getInventoryUnitAbbreviation } from '@shared/constants/inventory-units';
-import { InventoryItemDto } from '@shared/models';
+import { ItemDto } from '@shared/models';
 import { debounceTime } from 'rxjs';
 
 type StockStatus = 'ok' | 'warning' | 'critical';
@@ -55,14 +55,14 @@ export class ItemListComponent implements OnInit {
   private readonly router = inject(Router);
   protected readonly routes = AppRoutes;
 
-  protected readonly items = signal<InventoryItemDto[]>([]);
+  protected readonly items = signal<ItemDto[]>([]);
   protected readonly isLoading = signal(false);
   protected readonly isRefreshing = signal(false);
   protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
   protected readonly isFiltersOpen = signal(false);
   protected readonly selectedStatuses = signal<StockStatus[]>(['ok', 'warning', 'critical']);
   protected readonly showDeleteModal = signal(false);
-  protected readonly itemToDelete = signal<InventoryItemDto | null>(null);
+  protected readonly itemToDelete = signal<ItemDto | null>(null);
   protected readonly isDeleting = signal(false);
   private modalStackId: number | null = null;
 
@@ -148,7 +148,7 @@ export class ItemListComponent implements OnInit {
     this.router.navigateByUrl(AppRoutes.InventoryStockIn);
   }
 
-  protected deleteItem(item: InventoryItemDto): void {
+  protected deleteItem(item: ItemDto): void {
     if (!this.canWriteManagement()) {
       this.alertService.errorUnauthorized();
       return;
@@ -208,7 +208,7 @@ export class ItemListComponent implements OnInit {
     this.isFiltersOpen.set(false);
   }
 
-  protected getStockStatus(item: InventoryItemDto): StockStatus {
+  protected getStockStatus(item: ItemDto): StockStatus {
     if (
       item.criticalQuantity !== null &&
       item.criticalQuantity !== undefined &&
@@ -232,7 +232,7 @@ export class ItemListComponent implements OnInit {
     return this.authService.canWriteManagement();
   }
 
-  protected getStockQuantity(item: InventoryItemDto): number {
+  protected getStockQuantity(item: ItemDto): number {
     if (item.stockUnitName && item.unitsPerStockUnit && item.unitsPerStockUnit > 0) {
       return item.currentQuantity / item.unitsPerStockUnit;
     }
@@ -240,15 +240,15 @@ export class ItemListComponent implements OnInit {
     return item.currentQuantity;
   }
 
-  protected getStockUnitAbbreviation(item: InventoryItemDto): string {
+  protected getStockUnitAbbreviation(item: ItemDto): string {
     return getInventoryUnitAbbreviation(item.stockUnitName || item.unitName);
   }
 
-  protected getBaseUnitAbbreviation(item: InventoryItemDto): string {
+  protected getBaseUnitAbbreviation(item: ItemDto): string {
     return getInventoryUnitAbbreviation(item.unitName);
   }
 
-  protected shouldShowBaseQuantity(item: InventoryItemDto): boolean {
+  protected shouldShowBaseQuantity(item: ItemDto): boolean {
     return !!item.stockUnitName && !!item.unitsPerStockUnit && item.unitsPerStockUnit > 0;
   }
 

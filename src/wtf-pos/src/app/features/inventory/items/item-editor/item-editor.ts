@@ -60,7 +60,7 @@ export class ItemEditorComponent implements OnInit {
     isActive: new FormControl(true, { nonNullable: true }),
   });
 
-  private inventoryItemId: string | null = null;
+  private itemId: string | null = null;
   private skipGuard = false;
   private modalStackId: number | null = null;
   private pendingDeactivateResolve: ((value: boolean) => void) | null = null;
@@ -75,7 +75,7 @@ export class ItemEditorComponent implements OnInit {
     }
 
     this.isEditMode.set(true);
-    this.inventoryItemId = id;
+    this.itemId = id;
     this.inventoryForm.controls.startingQuantity.disable();
     this.loadInventoryItem(id);
   }
@@ -89,10 +89,10 @@ export class ItemEditorComponent implements OnInit {
     const value = this.inventoryForm.getRawValue();
     this.isSaving.set(true);
 
-    if (this.isEditMode() && this.inventoryItemId) {
+    if (this.isEditMode() && this.itemId) {
       this.inventoryService
         .updateInventoryItem({
-          id: this.inventoryItemId,
+          id: this.itemId,
           name: value.name,
           sku: value.sku || null,
           barcode: value.barcode || null,
@@ -105,7 +105,7 @@ export class ItemEditorComponent implements OnInit {
           isActive: value.isActive,
         })
         .subscribe({
-          next: (item) => this.afterSave('Inventory item updated.', item.id),
+          next: (item) => this.afterSave('Item updated.', item.id),
           error: (err) => this.handleSaveError(err),
         });
       return;
@@ -126,7 +126,7 @@ export class ItemEditorComponent implements OnInit {
         isActive: value.isActive,
       })
       .subscribe({
-        next: (item) => this.afterSave('Inventory item created.', item.id),
+        next: (item) => this.afterSave('Item created.', item.id),
         error: (err) => this.handleSaveError(err),
       });
   }
@@ -145,8 +145,8 @@ export class ItemEditorComponent implements OnInit {
   }
 
   protected goBack(): void {
-    if (this.isEditMode() && this.inventoryItemId) {
-      this.router.navigateByUrl(AppRoutes.InventoryItemDetailsById(this.inventoryItemId));
+    if (this.isEditMode() && this.itemId) {
+      this.router.navigateByUrl(AppRoutes.InventoryItemDetailsById(this.itemId));
     } else {
       this.router.navigateByUrl(AppRoutes.InventoryItems);
     }

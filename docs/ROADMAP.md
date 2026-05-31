@@ -137,7 +137,7 @@ Implemented:
   - `StockMovements`
   - indexes, constraints, audit FKs, and SQL deployment script
 - Scaffolded EF Core domain/context support for inventory entities.
-- Inventory API endpoints under `/api/inventory`:
+- Item API endpoints under `/api/items`:
   - list items
   - get item details
   - create/update/deactivate items
