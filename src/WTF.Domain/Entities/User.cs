@@ -35,6 +35,10 @@ public partial class User
 
     public virtual ICollection<Customer> CustomerUpdatedByNavigations { get; set; } = new List<Customer>();
 
+    public virtual ICollection<InventoryItem> InventoryItemCreatedByNavigations { get; set; } = new List<InventoryItem>();
+
+    public virtual ICollection<InventoryItem> InventoryItemUpdatedByNavigations { get; set; } = new List<InventoryItem>();
+
     public virtual ICollection<User> InverseCreatedByNavigation { get; set; } = new List<User>();
 
     public virtual ICollection<User> InverseUpdatedByNavigation { get; set; } = new List<User>();
@@ -44,6 +48,10 @@ public partial class User
     public virtual ICollection<Order> OrderUpdatedByNavigations { get; set; } = new List<Order>();
 
     public virtual ICollection<Product> ProductCreatedByNavigations { get; set; } = new List<Product>();
+
+    public virtual ICollection<ProductInventoryLink> ProductInventoryLinkCreatedByNavigations { get; set; } = new List<ProductInventoryLink>();
+
+    public virtual ICollection<ProductInventoryLink> ProductInventoryLinkUpdatedByNavigations { get; set; } = new List<ProductInventoryLink>();
 
     public virtual ICollection<ProductPriceHistory> ProductPriceHistories { get; set; } = new List<ProductPriceHistory>();
 
@@ -58,6 +66,8 @@ public partial class User
     public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
 
     public virtual UserRole Role { get; set; } = null!;
+
+    public virtual ICollection<StockMovement> StockMovements { get; set; } = new List<StockMovement>();
 
     public virtual User? UpdatedByNavigation { get; set; }
 

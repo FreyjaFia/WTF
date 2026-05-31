@@ -232,6 +232,8 @@ public class CreateOrderHandler(
                     : p.MixMatchPromotion!.BundlePrice);
         }
 
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+
         var order = new Order
         {
             CreatedAt = createdAt,
@@ -248,6 +250,8 @@ public class CreateOrderHandler(
 
         db.Orders.Add(order);
         await db.SaveChangesAsync(cancellationToken);
+
+        await DeductInventoryForCompletedOrderAsync(request, order.Id, userId, cancellationToken);
 
         if (requestedBundlePromotions.Count > 0)
         {
@@ -445,6 +449,8 @@ public class CreateOrderHandler(
             userId: userId,
             cancellationToken: cancellationToken);
 
+        await transaction.CommitAsync(cancellationToken);
+
         await pushNotifications.SendOrderCreatedAsync(order, totalAmount, userId, cancellationToken);
 
         return new OrderDto(
@@ -587,5 +593,94 @@ public class CreateOrderHandler(
         }
 
         return null;
+    }
+
+    private async Task DeductInventoryForCompletedOrderAsync(
+        CreateOrderCommand request,
+        Guid orderId,
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        if (request.Status != OrderStatusEnum.Completed)
+        {
+            return;
+        }
+
+        var productQuantities = request.Items
+            .Select(item => new { item.ProductId, Quantity = (decimal)item.Quantity })
+            .Concat(request.Items.SelectMany(item => item.AddOns.Select(addOn => new
+            {
+                addOn.ProductId,
+                Quantity = (decimal)addOn.Quantity
+            })))
+            .GroupBy(item => item.ProductId)
+            .ToDictionary(group => group.Key, group => group.Sum(item => item.Quantity));
+
+        if (productQuantities.Count == 0)
+        {
+            return;
+        }
+
+        var productIds = productQuantities.Keys.ToList();
+        var links = await db.ProductInventoryLinks
+            .Include(link => link.InventoryItem)
+            .Include(link => link.Product)
+            .Where(link =>
+                link.IsActive
+                && productIds.Contains(link.ProductId))
+            .ToListAsync(cancellationToken);
+
+        if (links.Count == 0)
+        {
+            return;
+        }
+
+        var requiredByInventory = links
+            .GroupBy(link => link.InventoryItemId)
+            .Select(group => new
+            {
+                InventoryItem = group.First().InventoryItem,
+                RequiredQuantity = group.Sum(link => productQuantities[link.ProductId] * link.QuantityPerSale),
+                ProductNames = group.Select(link => link.Product.Name).Distinct().OrderBy(name => name).ToList()
+            })
+            .ToList();
+
+        var insufficient = requiredByInventory
+            .Where(entry => !entry.InventoryItem.IsActive || entry.InventoryItem.CurrentQuantity < entry.RequiredQuantity)
+            .Select(entry => $"{entry.InventoryItem.Name} needs {entry.RequiredQuantity:0.###} {entry.InventoryItem.UnitName}, available {entry.InventoryItem.CurrentQuantity:0.###}")
+            .ToList();
+
+        if (insufficient.Count > 0)
+        {
+            throw new InvalidOperationException($"Insufficient inventory: {string.Join("; ", insufficient)}.");
+        }
+
+        var now = DateTime.UtcNow;
+        foreach (var entry in requiredByInventory)
+        {
+            var item = entry.InventoryItem;
+            var before = item.CurrentQuantity;
+            var after = before - entry.RequiredQuantity;
+
+            item.CurrentQuantity = after;
+            item.UpdatedAt = now;
+            item.UpdatedBy = userId;
+
+            db.StockMovements.Add(new StockMovement
+            {
+                InventoryItemId = item.Id,
+                MovementType = "SaleDeduction",
+                QuantityDelta = -entry.RequiredQuantity,
+                QuantityBefore = before,
+                QuantityAfter = after,
+                ReferenceType = "Order",
+                ReferenceId = orderId,
+                Notes = $"Order stock deduction for {string.Join(", ", entry.ProductNames)}",
+                CreatedAt = now,
+                CreatedBy = userId
+            });
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
     }
 }

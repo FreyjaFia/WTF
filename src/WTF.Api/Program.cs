@@ -274,6 +274,7 @@ app.MapAuth()
     .MapReports()
     .MapSync()
     .MapPromotions()
+    .MapInventory()
     .MapAudit()
     .MapSchemaScriptHistory()
     .MapPing();

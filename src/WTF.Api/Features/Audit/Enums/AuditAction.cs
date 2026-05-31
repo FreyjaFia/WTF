@@ -14,6 +14,11 @@ public enum AuditAction
     ProductCreated,
     ProductUpdated,
     ProductDeleted,
+    InventoryItemCreated,
+    InventoryItemUpdated,
+    InventoryItemDeleted,
+    InventoryStockAdded,
+    ProductInventoryLinked,
     OrderCreated,
     OrderUpdated,
     OrderVoided
