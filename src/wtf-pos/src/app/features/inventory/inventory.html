@@ -7,6 +7,7 @@
       aria-label="Inventory tabs"
     >
       @for (tab of inventoryTabs; track tab.route) {
+        @if (!tab.canShow || tab.canShow()) {
         <a
           [routerLink]="tab.path"
           role="tab"
@@ -24,6 +25,7 @@
             [class.opacity-0]="!isActive(tab.route)"
           ></span>
         </a>
+        }
       }
     </nav>
   </div>

@@ -98,6 +98,7 @@
         <span [class.hidden]="isCollapsed()">Dashboard</span>
       </a>
 
+      @if (authService.canWriteOrders()) {
       <a
         [routerLink]="routes.OrdersEditor"
         routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
@@ -108,7 +109,9 @@
         <app-icon name="icon-plus" [class]="'h-4.5 w-4.5 text-gray-500'" />
         <span [class.hidden]="isCollapsed()">New Order</span>
       </a>
+      }
 
+      @if (authService.canReadOrders()) {
       <a
         [routerLink]="routes.OrdersList"
         routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
@@ -119,9 +122,10 @@
         <app-icon name="icon-file" [class]="'h-4.5 w-4.5 text-gray-500'" />
         <span [class.hidden]="isCollapsed()">Orders</span>
       </a>
+      }
     </div>
 
-    @if (authService.canAccessManagement()) {
+    @if (authService.canReadInventory()) {
       <button
         type="button"
         class="flex w-full cursor-pointer items-center justify-between rounded-lg px-2.5 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50"
@@ -148,6 +152,7 @@
         [class.pl-4]="!isCollapsed()"
         [class.pl-0]="isCollapsed()"
       >
+        @if (authService.canReadItems()) {
         <a
           [routerLink]="routes.InventoryItems"
           routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
@@ -158,6 +163,8 @@
           <app-icon name="icon-inventory-items" [class]="'h-4 w-4 text-gray-500'" />
           <span [class.hidden]="isCollapsed()">Items</span>
         </a>
+        }
+        @if (authService.canReadStockMovements()) {
         <a
           [routerLink]="routes.InventoryStockIn"
           routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
@@ -168,10 +175,11 @@
           <app-icon name="icon-inventory" [class]="'h-4 w-4 text-gray-500'" />
           <span [class.hidden]="isCollapsed()">Stock In</span>
         </a>
+        }
       </div>
     }
 
-    @if (authService.canAccessManagement()) {
+    @if (authService.canReadManagement()) {
       <button
         type="button"
         class="flex w-full cursor-pointer items-center justify-between rounded-lg px-2.5 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50"
@@ -198,6 +206,7 @@
         [class.pl-4]="!isCollapsed()"
         [class.pl-0]="isCollapsed()"
       >
+        @if (authService.canReadProducts()) {
         <a
           [routerLink]="routes.ManagementProducts"
           routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
@@ -208,6 +217,8 @@
           <app-icon name="icon-cart" [class]="'h-4 w-4 text-gray-500'" />
           <span [class.hidden]="isCollapsed()">Products</span>
         </a>
+        }
+        @if (authService.canReadCustomers()) {
         <a
           [routerLink]="routes.ManagementCustomers"
           routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
@@ -218,6 +229,8 @@
           <app-icon name="icon-people" [class]="'h-4 w-4 text-gray-500'" />
           <span [class.hidden]="isCollapsed()">Customers</span>
         </a>
+        }
+        @if (authService.canReadUsers()) {
         <a
           [routerLink]="routes.ManagementUsers"
           routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
@@ -228,6 +241,8 @@
           <app-icon name="icon-user" [class]="'h-4 w-4 text-gray-500'" />
           <span [class.hidden]="isCollapsed()">Users</span>
         </a>
+        }
+        @if (authService.canReadPromotions()) {
         <a
           [routerLink]="routes.ManagementPromotions"
           routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
@@ -238,6 +253,7 @@
           <app-icon name="icon-promotion" [class]="'h-4 w-4 text-gray-500'" />
           <span [class.hidden]="isCollapsed()">Promotions</span>
         </a>
+        }
         @if (authService.canAccessReports()) {
           <a
             [routerLink]="routes.ManagementReports"
@@ -250,26 +266,30 @@
             <span [class.hidden]="isCollapsed()">Reports</span>
           </a>
         }
-        <a
-          [routerLink]="routes.ManagementAuditLogs"
-          routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
-          class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
-          [class.justify-center]="isCollapsed()"
-          [attr.title]="'Audit Logs'"
-        >
-          <app-icon name="icon-audit-logs" [class]="'h-4 w-4 text-gray-500'" />
-          <span [class.hidden]="isCollapsed()">Audit Logs</span>
-        </a>
-        <a
-          [routerLink]="routes.ManagementSchemaScripts"
-          routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
-          class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
-          [class.justify-center]="isCollapsed()"
-          [attr.title]="'Schema Scripts'"
-        >
-          <app-icon name="icon-schema-scripts" [class]="'h-4 w-4 text-gray-500'" />
-          <span [class.hidden]="isCollapsed()">Schema Scripts</span>
-        </a>
+        @if (authService.canAccessAuditLogs()) {
+          <a
+            [routerLink]="routes.ManagementAuditLogs"
+            routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
+            class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
+            [class.justify-center]="isCollapsed()"
+            [attr.title]="'Audit Logs'"
+          >
+            <app-icon name="icon-audit-logs" [class]="'h-4 w-4 text-gray-500'" />
+            <span [class.hidden]="isCollapsed()">Audit Logs</span>
+          </a>
+        }
+        @if (authService.canAccessSchemaScriptHistory()) {
+          <a
+            [routerLink]="routes.ManagementSchemaScripts"
+            routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
+            class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
+            [class.justify-center]="isCollapsed()"
+            [attr.title]="'Schema Scripts'"
+          >
+            <app-icon name="icon-schema-scripts" [class]="'h-4 w-4 text-gray-500'" />
+            <span [class.hidden]="isCollapsed()">Schema Scripts</span>
+          </a>
+        }
       </div>
     }
   </nav>

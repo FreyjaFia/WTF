@@ -217,7 +217,7 @@ export class ProductListComponent implements OnInit {
   }
 
   protected navigateToEditor(productId?: string): void {
-    if (!this.canWriteManagement()) {
+    if (!this.canWriteProducts()) {
       this.alertService.errorUnauthorized();
       return;
     }
@@ -234,7 +234,7 @@ export class ProductListComponent implements OnInit {
   }
 
   protected deleteProduct(product: ProductDto): void {
-    if (!this.canWriteManagement()) {
+    if (!this.canWriteProducts()) {
       this.alertService.errorUnauthorized();
       return;
     }
@@ -259,7 +259,7 @@ export class ProductListComponent implements OnInit {
       return;
     }
 
-    if (!this.canWriteManagement()) {
+    if (!this.canWriteProducts()) {
       this.alertService.errorUnauthorized();
       return;
     }
@@ -383,8 +383,8 @@ export class ProductListComponent implements OnInit {
     this.saveState();
   }
 
-  protected canWriteManagement(): boolean {
-    return this.authService.canWriteManagement();
+  protected canWriteProducts(): boolean {
+    return this.authService.canWriteProducts();
   }
 
   private restoreState(): void {

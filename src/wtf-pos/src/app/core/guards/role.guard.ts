@@ -14,6 +14,11 @@ export const roleGuard: CanActivateFn = (route) => {
     return true;
   }
 
-  router.navigateByUrl(AppRoutes.OrdersList);
+  const fallbackRoute = auth.canReadOrders()
+    ? AppRoutes.OrdersList
+    : auth.canReadManagement()
+      ? AppRoutes.Dashboard
+      : AppRoutes.Login;
+  router.navigateByUrl(fallbackRoute);
   return false;
 };

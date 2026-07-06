@@ -7,7 +7,7 @@
         <h1 class="shrink-0 text-xl font-bold text-gray-900 sm:text-2xl">Products</h1>
         <p class="text-xs text-gray-500 sm:text-sm">Manage products, pricing, and catalog status</p>
       </div>
-      @if (canWriteManagement()) {
+      @if (canWriteProducts()) {
         <a
           class="btn btn-sm rounded-lg border-0 bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg"
           [routerLink]="routes.ManagementProductsNew"
@@ -328,7 +328,7 @@
                   (keydown)="$event.stopPropagation()"
                   role="presentation"
                 >
-                  @if (canWriteManagement()) {
+                  @if (canWriteProducts()) {
                     <div class="dropdown dropdown-end" [class.dropdown-top]="isLast && !isFirst">
                       <button
                         type="button"
@@ -382,7 +382,7 @@
 </div>
 
 <!-- Delete Confirmation Modal -->
-@if (showDeleteModal() && productToDelete() && canWriteManagement()) {
+@if (showDeleteModal() && productToDelete() && canWriteProducts()) {
   <div
     role="dialog"
     aria-modal="true"

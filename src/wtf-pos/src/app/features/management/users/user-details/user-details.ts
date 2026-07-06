@@ -115,12 +115,12 @@ export class UserDetailsComponent implements OnInit {
     });
   }
 
-  protected canWriteManagement(): boolean {
-    return this.authService.canWriteManagement();
+  protected canWriteUsers(): boolean {
+    return this.authService.canWriteUsers();
   }
 
   protected canManageUserProfile(user: UserDto): boolean {
-    if (!this.canWriteManagement()) {
+    if (!this.canWriteUsers()) {
       return false;
     }
 

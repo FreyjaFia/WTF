@@ -169,6 +169,10 @@ export class Login implements OnInit, OnDestroy {
   }
 
   private getPostLoginRoute(): string {
-    return this.auth.canAccessManagement() ? AppRoutes.Dashboard : AppRoutes.OrdersEditor;
+    if (this.auth.canReadManagement()) {
+      return AppRoutes.Dashboard;
+    }
+
+    return this.auth.canWriteOrders() ? AppRoutes.OrdersEditor : AppRoutes.OrdersList;
   }
 }

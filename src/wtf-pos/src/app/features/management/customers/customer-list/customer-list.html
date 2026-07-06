@@ -7,7 +7,7 @@
         <h1 class="shrink-0 text-xl font-bold text-gray-900 sm:text-2xl">Customers</h1>
         <p class="text-xs text-gray-500 sm:text-sm">Manage customer records and contact details</p>
       </div>
-      @if (canWriteManagement()) {
+      @if (canWriteCustomers()) {
         <a
           class="btn btn-sm rounded-lg border-0 bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg"
           [routerLink]="routes.ManagementCustomersNew"
@@ -259,7 +259,7 @@
 
                 <!-- Actions -->
                 <div class="shrink-0 lg:col-span-1 lg:flex lg:justify-end" role="presentation">
-                  @if (canWriteManagement()) {
+                  @if (canWriteCustomers()) {
                     <div class="dropdown dropdown-end" [class.dropdown-top]="isLast && !isFirst">
                       <button
                         type="button"

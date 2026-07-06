@@ -140,7 +140,7 @@ export class ItemListComponent implements OnInit {
   }
 
   protected navigateToStockIn(): void {
-    if (!this.canWriteManagement()) {
+    if (!this.canWriteStockMovements()) {
       this.alertService.errorUnauthorized();
       return;
     }
@@ -149,7 +149,7 @@ export class ItemListComponent implements OnInit {
   }
 
   protected deleteItem(item: ItemDto): void {
-    if (!this.canWriteManagement()) {
+    if (!this.canWriteItems()) {
       this.alertService.errorUnauthorized();
       return;
     }
@@ -174,7 +174,7 @@ export class ItemListComponent implements OnInit {
       return;
     }
 
-    if (!this.canWriteManagement()) {
+    if (!this.canWriteItems()) {
       this.alertService.errorUnauthorized();
       return;
     }
@@ -228,8 +228,12 @@ export class ItemListComponent implements OnInit {
     return 'ok';
   }
 
-  protected canWriteManagement(): boolean {
-    return this.authService.canWriteManagement();
+  protected canWriteItems(): boolean {
+    return this.authService.canWriteItems();
+  }
+
+  protected canWriteStockMovements(): boolean {
+    return this.authService.canWriteStockMovements();
   }
 
   protected getStockQuantity(item: ItemDto): number {

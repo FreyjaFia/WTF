@@ -7,7 +7,7 @@
         <h1 class="shrink-0 text-xl font-bold text-gray-900 sm:text-2xl">Users</h1>
         <p class="text-xs text-gray-500 sm:text-sm">Manage staff accounts, roles, and access</p>
       </div>
-      @if (canWriteManagement()) {
+      @if (canWriteUsers()) {
         <a
           class="btn btn-sm rounded-lg border-0 bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg"
           [routerLink]="routes.ManagementUsersNew"
@@ -359,7 +359,7 @@
 </div>
 
 <!-- Delete Confirmation Modal -->
-@if (showDeleteModal() && userToDelete() && canWriteManagement()) {
+@if (showDeleteModal() && userToDelete() && canWriteUsers()) {
   <div
     role="dialog"
     aria-modal="true"

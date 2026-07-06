@@ -26,7 +26,7 @@
       }
     </div>
 
-    @if (canWriteManagement()) {
+    @if (canWritePromotions()) {
       <div class="flex shrink-0 justify-end gap-2">
         <button
           class="btn btn-sm gap-2 rounded-lg border-0 bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg"
@@ -313,7 +313,7 @@
   }
 </div>
 
-@if (showDeleteModal() && canWriteManagement()) {
+@if (showDeleteModal() && canWritePromotions()) {
   <div
     role="dialog"
     aria-modal="true"

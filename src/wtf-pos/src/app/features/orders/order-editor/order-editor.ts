@@ -334,7 +334,7 @@ export class OrderEditor implements OnInit, OnDestroy {
   protected readonly canCreateCustomerInOrder = computed(() =>
     this.authService.canCreateCustomerInOrder(this.isEditMode()),
   );
-  protected readonly canManageOrderActions = computed(() => this.authService.canManageOrders());
+  protected readonly canManageOrderActions = computed(() => this.authService.canWriteOrders());
   protected readonly selectedCustomerName = computed(() => {
     const selectedId = this.selectedCustomerId();
     if (!selectedId) {

@@ -48,6 +48,8 @@ export class UserEditorComponent implements OnInit {
     { label: 'Admin', value: UserRoleEnum.Admin },
     { label: 'Cashier', value: UserRoleEnum.Cashier },
     { label: 'Admin Viewer', value: UserRoleEnum.AdminViewer },
+    { label: 'Item Manager', value: UserRoleEnum.ItemManager },
+    { label: 'Stock Manager', value: UserRoleEnum.StockManager },
   ];
   protected userRoleOptions = [...this.allUserRoleOptions];
 

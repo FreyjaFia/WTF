@@ -30,7 +30,7 @@
       }
     </div>
 
-    @if (item() && canWriteManagement()) {
+    @if (item() && canWriteItems()) {
       <div class="flex shrink-0 justify-end gap-2">
         <a
           class="btn btn-sm gap-2 rounded-lg border-0 bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg"
@@ -199,7 +199,7 @@
   }
 </div>
 
-@if (showDeleteModal() && item() && canWriteManagement()) {
+@if (showDeleteModal() && item() && canWriteItems()) {
   <div
     role="dialog"
     aria-modal="true"

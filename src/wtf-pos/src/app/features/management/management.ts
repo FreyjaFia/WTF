@@ -39,6 +39,7 @@ export class ManagementComponent {
       route: 'products',
       path: AppRoutes.ManagementProducts,
       ariaLabel: 'Products',
+      canShow: () => this.canReadProducts(),
     },
     {
       label: 'Customers',
@@ -47,12 +48,19 @@ export class ManagementComponent {
       ariaLabel: 'Customers',
       canShow: () => this.canReadCustomers(),
     },
-    { label: 'Users', route: 'users', path: AppRoutes.ManagementUsers, ariaLabel: 'Users' },
+    {
+      label: 'Users',
+      route: 'users',
+      path: AppRoutes.ManagementUsers,
+      ariaLabel: 'Users',
+      canShow: () => this.canReadUsers(),
+    },
     {
       label: 'Promos',
       route: 'promotions',
       path: AppRoutes.ManagementPromotions,
       ariaLabel: 'Promotions',
+      canShow: () => this.canReadPromotions(),
     },
     {
       label: 'Reports',
@@ -104,6 +112,18 @@ export class ManagementComponent {
 
   protected canReadCustomers(): boolean {
     return this.authService.canReadCustomers();
+  }
+
+  protected canReadProducts(): boolean {
+    return this.authService.canReadProducts();
+  }
+
+  protected canReadUsers(): boolean {
+    return this.authService.canReadUsers();
+  }
+
+  protected canReadPromotions(): boolean {
+    return this.authService.canReadPromotions();
   }
 
   protected canAccessAuditLogs(): boolean {

@@ -60,10 +60,32 @@ export const routes: Routes = [
         component: Orders,
         children: [
           { path: '', redirectTo: 'list', pathMatch: 'full' },
-          { path: 'editor', component: OrderEditor, canDeactivate: [unsavedChangesGuard] },
-          { path: 'editor/:id', component: OrderEditor, canDeactivate: [unsavedChangesGuard] },
-          { path: 'details/:id', component: OrderDetails },
-          { path: 'list', component: OrderList },
+          {
+            path: 'editor',
+            component: OrderEditor,
+            canActivate: [roleGuard],
+            canDeactivate: [unsavedChangesGuard],
+            data: { roles: AppRoleGroups.OrdersWrite },
+          },
+          {
+            path: 'editor/:id',
+            component: OrderEditor,
+            canActivate: [roleGuard],
+            canDeactivate: [unsavedChangesGuard],
+            data: { roles: AppRoleGroups.OrdersWrite },
+          },
+          {
+            path: 'details/:id',
+            component: OrderDetails,
+            canActivate: [roleGuard],
+            data: { roles: AppRoleGroups.OrdersRead },
+          },
+          {
+            path: 'list',
+            component: OrderList,
+            canActivate: [roleGuard],
+            data: { roles: AppRoleGroups.OrdersRead },
+          },
         ],
       },
       {
@@ -75,13 +97,13 @@ export const routes: Routes = [
       {
         path: 'inventory',
         component: InventoryComponent,
-        canActivate: [roleGuard],
-        data: { roles: AppRoleGroups.ManagementRead },
         children: [
           { path: '', redirectTo: 'items', pathMatch: 'full' },
           {
             path: 'items',
             component: ItemsComponent,
+            canActivate: [roleGuard],
+            data: { roles: AppRoleGroups.ItemsRead },
             children: [
               {
                 path: '',
@@ -92,7 +114,7 @@ export const routes: Routes = [
                 component: ItemEditorComponent,
                 canDeactivate: [unsavedChangesGuard],
                 canActivate: [roleGuard],
-                data: { roles: AppRoleGroups.ManagementWrite },
+                data: { roles: AppRoleGroups.ItemsWrite },
               },
               {
                 path: 'details/:id',
@@ -103,13 +125,15 @@ export const routes: Routes = [
                 component: ItemEditorComponent,
                 canDeactivate: [unsavedChangesGuard],
                 canActivate: [roleGuard],
-                data: { roles: AppRoleGroups.ManagementWrite },
+                data: { roles: AppRoleGroups.ItemsWrite },
               },
             ],
           },
           {
             path: 'stock-in',
             component: StockInComponent,
+            canActivate: [roleGuard],
+            data: { roles: AppRoleGroups.StockMovementsRead },
           },
         ],
       },
@@ -122,8 +146,6 @@ export const routes: Routes = [
       {
         path: 'management',
         component: ManagementComponent,
-        canActivate: [roleGuard],
-        data: { roles: AppRoleGroups.ManagementRead },
         children: [
           {
             path: '',
@@ -133,6 +155,8 @@ export const routes: Routes = [
           {
             path: 'products',
             component: ProductsComponent,
+            canActivate: [roleGuard],
+            data: { roles: AppRoleGroups.ProductsRead },
             children: [
               {
                 path: '',
@@ -143,7 +167,7 @@ export const routes: Routes = [
                 component: ProductEditorComponent,
                 canDeactivate: [unsavedChangesGuard],
                 canActivate: [roleGuard],
-                data: { roles: AppRoleGroups.ManagementWrite },
+                data: { roles: AppRoleGroups.ProductsWrite },
               },
               {
                 path: 'details/:id',
@@ -154,7 +178,7 @@ export const routes: Routes = [
                 component: ProductEditorComponent,
                 canDeactivate: [unsavedChangesGuard],
                 canActivate: [roleGuard],
-                data: { roles: AppRoleGroups.ManagementWrite },
+                data: { roles: AppRoleGroups.ProductsWrite },
               },
             ],
           },
@@ -191,6 +215,8 @@ export const routes: Routes = [
           {
             path: 'users',
             component: UsersComponent,
+            canActivate: [roleGuard],
+            data: { roles: AppRoleGroups.UsersRead },
             children: [
               {
                 path: '',
@@ -201,7 +227,7 @@ export const routes: Routes = [
                 component: UserEditorComponent,
                 canDeactivate: [unsavedChangesGuard],
                 canActivate: [roleGuard],
-                data: { roles: AppRoleGroups.ManagementWrite },
+                data: { roles: AppRoleGroups.UsersWrite },
               },
               {
                 path: 'details/:id',
@@ -212,13 +238,15 @@ export const routes: Routes = [
                 component: UserEditorComponent,
                 canDeactivate: [unsavedChangesGuard],
                 canActivate: [roleGuard],
-                data: { roles: AppRoleGroups.ManagementWrite },
+                data: { roles: AppRoleGroups.UsersWrite },
               },
             ],
           },
           {
             path: 'promotions',
             component: PromotionsComponent,
+            canActivate: [roleGuard],
+            data: { roles: AppRoleGroups.PromotionsRead },
             children: [
               {
                 path: '',
@@ -229,7 +257,7 @@ export const routes: Routes = [
                 component: PromotionEditorComponent,
                 canDeactivate: [unsavedChangesGuard],
                 canActivate: [roleGuard],
-                data: { roles: AppRoleGroups.ManagementWrite },
+                data: { roles: AppRoleGroups.PromotionsWrite },
               },
               {
                 path: 'fixed-bundles/:id',
@@ -240,7 +268,7 @@ export const routes: Routes = [
                 component: PromotionEditorComponent,
                 canDeactivate: [unsavedChangesGuard],
                 canActivate: [roleGuard],
-                data: { roles: AppRoleGroups.ManagementWrite },
+                data: { roles: AppRoleGroups.PromotionsWrite },
               },
               {
                 path: 'mix-match/:id',
@@ -251,7 +279,7 @@ export const routes: Routes = [
                 component: PromotionEditorComponent,
                 canDeactivate: [unsavedChangesGuard],
                 canActivate: [roleGuard],
-                data: { roles: AppRoleGroups.ManagementWrite },
+                data: { roles: AppRoleGroups.PromotionsWrite },
               },
               {
                 path: 'discounted-products/:id',
@@ -262,7 +290,7 @@ export const routes: Routes = [
                 component: PromotionEditorComponent,
                 canDeactivate: [unsavedChangesGuard],
                 canActivate: [roleGuard],
-                data: { roles: AppRoleGroups.ManagementWrite },
+                data: { roles: AppRoleGroups.PromotionsWrite },
               },
               {
                 path: 'details/:id',
@@ -273,7 +301,7 @@ export const routes: Routes = [
                 component: PromotionEditorComponent,
                 canDeactivate: [unsavedChangesGuard],
                 canActivate: [roleGuard],
-                data: { roles: AppRoleGroups.ManagementWrite },
+                data: { roles: AppRoleGroups.PromotionsWrite },
               },
             ],
           },

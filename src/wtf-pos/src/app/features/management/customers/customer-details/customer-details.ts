@@ -57,7 +57,7 @@ export class CustomerDetailsComponent implements OnInit {
   }
 
   protected navigateToEdit(): void {
-    if (!this.canWriteManagement()) {
+    if (!this.canWriteCustomers()) {
       this.alertService.errorUnauthorized();
       return;
     }
@@ -67,7 +67,7 @@ export class CustomerDetailsComponent implements OnInit {
   }
 
   protected deleteCustomer(): void {
-    if (!this.canWriteManagement()) {
+    if (!this.canWriteCustomers()) {
       this.alertService.errorUnauthorized();
       return;
     }
@@ -93,7 +93,7 @@ export class CustomerDetailsComponent implements OnInit {
       return;
     }
 
-    if (!this.canWriteManagement()) {
+    if (!this.canWriteCustomers()) {
       this.alertService.errorUnauthorized();
       return;
     }
@@ -120,8 +120,8 @@ export class CustomerDetailsComponent implements OnInit {
     });
   }
 
-  protected canWriteManagement(): boolean {
-    return this.authService.canWriteManagement();
+  protected canWriteCustomers(): boolean {
+    return this.authService.canWriteCustomers();
   }
 
   private removeFromStack(): void {

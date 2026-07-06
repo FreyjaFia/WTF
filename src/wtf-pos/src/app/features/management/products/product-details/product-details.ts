@@ -135,7 +135,7 @@ export class ProductDetailsComponent implements OnInit {
   }
 
   protected navigateToEdit(): void {
-    if (!this.canWriteManagement()) {
+    if (!this.canWriteProducts()) {
       this.alertService.errorUnauthorized();
       return;
     }
@@ -146,7 +146,7 @@ export class ProductDetailsComponent implements OnInit {
   }
 
   protected deleteProduct(): void {
-    if (!this.canWriteManagement()) {
+    if (!this.canWriteProducts()) {
       this.alertService.errorUnauthorized();
       return;
     }
@@ -173,7 +173,7 @@ export class ProductDetailsComponent implements OnInit {
       return;
     }
 
-    if (!this.canWriteManagement()) {
+    if (!this.canWriteProducts()) {
       this.alertService.errorUnauthorized();
       return;
     }
@@ -234,7 +234,7 @@ export class ProductDetailsComponent implements OnInit {
     this.showAllLinked.update((v) => !v);
   }
 
-  protected canWriteManagement(): boolean {
-    return this.authService.canWriteManagement();
+  protected canWriteProducts(): boolean {
+    return this.authService.canWriteProducts();
   }
 }

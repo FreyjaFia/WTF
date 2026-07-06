@@ -95,6 +95,10 @@ export class UserListComponent implements OnInit {
       [UserRoleEnum.Admin]: cache.filter((u) => u.roleId === UserRoleEnum.Admin).length,
       [UserRoleEnum.Cashier]: cache.filter((u) => u.roleId === UserRoleEnum.Cashier).length,
       [UserRoleEnum.AdminViewer]: cache.filter((u) => u.roleId === UserRoleEnum.AdminViewer).length,
+      [UserRoleEnum.ItemManager]: cache.filter((u) => u.roleId === UserRoleEnum.ItemManager)
+        .length,
+      [UserRoleEnum.StockManager]: cache.filter((u) => u.roleId === UserRoleEnum.StockManager)
+        .length,
     };
   });
 
@@ -104,7 +108,11 @@ export class UserListComponent implements OnInit {
       label: 'Super Admin',
       count: this.roleCounts()[UserRoleEnum.SuperAdmin],
     },
-    { id: UserRoleEnum.Admin, label: 'Admin', count: this.roleCounts()[UserRoleEnum.Admin] },
+    {
+      id: UserRoleEnum.Admin,
+      label: 'Admin',
+      count: this.roleCounts()[UserRoleEnum.Admin],
+    },
     {
       id: UserRoleEnum.Cashier,
       label: 'Cashier',
@@ -114,6 +122,16 @@ export class UserListComponent implements OnInit {
       id: UserRoleEnum.AdminViewer,
       label: 'Admin Viewer',
       count: this.roleCounts()[UserRoleEnum.AdminViewer],
+    },
+    {
+      id: UserRoleEnum.ItemManager,
+      label: 'Item Manager',
+      count: this.roleCounts()[UserRoleEnum.ItemManager],
+    },
+    {
+      id: UserRoleEnum.StockManager,
+      label: 'Stock Manager',
+      count: this.roleCounts()[UserRoleEnum.StockManager],
     },
   ]);
 
@@ -219,7 +237,7 @@ export class UserListComponent implements OnInit {
   }
 
   protected navigateToEditor(userId?: string): void {
-    if (!this.canWriteManagement()) {
+    if (!this.canWriteUsers()) {
       this.alertService.errorUnauthorized();
       return;
     }
@@ -236,7 +254,7 @@ export class UserListComponent implements OnInit {
   }
 
   protected deleteUser(user: UserDto): void {
-    if (!this.canWriteManagement()) {
+    if (!this.canWriteUsers()) {
       this.alertService.errorUnauthorized();
       return;
     }
@@ -261,7 +279,7 @@ export class UserListComponent implements OnInit {
       return;
     }
 
-    if (!this.canWriteManagement()) {
+    if (!this.canWriteUsers()) {
       this.alertService.errorUnauthorized();
       return;
     }
@@ -379,8 +397,8 @@ export class UserListComponent implements OnInit {
     return enumName.replace(/([a-z])([A-Z])/g, '$1 $2').trim();
   }
 
-  protected canWriteManagement(): boolean {
-    return this.authService.canWriteManagement();
+  protected canWriteUsers(): boolean {
+    return this.authService.canWriteUsers();
   }
 
   protected canManageUserProfile(user: UserDto): boolean {
@@ -388,7 +406,7 @@ export class UserListComponent implements OnInit {
       return this.authService.isSuperAdmin();
     }
 
-    return this.canWriteManagement();
+    return this.canWriteUsers();
   }
 
   private restoreState(): void {

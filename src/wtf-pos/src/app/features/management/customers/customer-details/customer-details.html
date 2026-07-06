@@ -31,7 +31,7 @@
       }
     </div>
 
-    @if (customer() && canWriteManagement()) {
+    @if (customer() && canWriteCustomers()) {
       <div class="flex shrink-0 justify-end gap-2">
           <a
             class="btn btn-sm gap-2 rounded-lg border-0 bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg"
@@ -128,7 +128,7 @@
 </div>
 
 <!-- Delete Confirmation Modal -->
-@if (showDeleteModal() && canWriteManagement()) {
+@if (showDeleteModal() && canWriteCustomers()) {
   <div
     role="dialog"
     aria-modal="true"

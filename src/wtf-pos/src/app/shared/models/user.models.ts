@@ -3,6 +3,8 @@ export enum UserRoleEnum {
   Cashier = 2,
   AdminViewer = 3,
   SuperAdmin = 4,
+  ItemManager = 5,
+  StockManager = 6,
 }
 
 export interface UserDto {

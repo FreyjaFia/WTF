@@ -155,12 +155,12 @@ export class PromotionListComponent implements OnInit {
     this.load();
   }
 
-  protected canWriteManagement(): boolean {
-    return this.authService.canWriteManagement();
+  protected canWritePromotions(): boolean {
+    return this.authService.canWritePromotions();
   }
 
   protected addPromotion(): void {
-    if (!this.canWriteManagement()) {
+    if (!this.canWritePromotions()) {
       this.alertService.errorUnauthorized();
       return;
     }
@@ -169,7 +169,7 @@ export class PromotionListComponent implements OnInit {
   }
 
   protected editPromotion(promo: PromotionListItemDto): void {
-    if (!this.canWriteManagement()) {
+    if (!this.canWritePromotions()) {
       this.alertService.errorUnauthorized();
       return;
     }
@@ -188,7 +188,7 @@ export class PromotionListComponent implements OnInit {
   }
 
   protected deletePromotion(promo: PromotionListItemDto): void {
-    if (!this.canWriteManagement()) {
+    if (!this.canWritePromotions()) {
       this.alertService.errorUnauthorized();
       return;
     }

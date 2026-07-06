@@ -287,12 +287,49 @@ export class AuthService {
     return this.hasAnyRole(AppRoleGroups.CustomersWrite);
   }
 
-  public canAccessManagement(): boolean {
-    return this.hasAnyRole(AppRoleGroups.ManagementRead);
+  public canReadProducts(): boolean {
+    return this.hasAnyRole(AppRoleGroups.ProductsRead);
+  }
+
+  public canWriteProducts(): boolean {
+    return this.hasAnyRole(AppRoleGroups.ProductsWrite);
+  }
+
+  public canReadUsers(): boolean {
+    return this.hasAnyRole(AppRoleGroups.UsersRead);
+  }
+
+  public canWriteUsers(): boolean {
+    return this.hasAnyRole(AppRoleGroups.UsersWrite);
+  }
+
+  public canReadPromotions(): boolean {
+    return this.hasAnyRole(AppRoleGroups.PromotionsRead);
+  }
+
+  public canWritePromotions(): boolean {
+    return this.hasAnyRole(AppRoleGroups.PromotionsWrite);
+  }
+
+  public canReadManagement(): boolean {
+    return (
+      this.canReadProducts() ||
+      this.canReadCustomers() ||
+      this.canReadUsers() ||
+      this.canReadPromotions() ||
+      this.canAccessReports() ||
+      this.canAccessAuditLogs() ||
+      this.canAccessSchemaScriptHistory()
+    );
   }
 
   public canWriteManagement(): boolean {
-    return this.hasAnyRole(AppRoleGroups.ManagementWrite);
+    return (
+      this.canWriteProducts() ||
+      this.canWriteCustomers() ||
+      this.canWriteUsers() ||
+      this.canWritePromotions()
+    );
   }
 
   public canAccessReports(): boolean {
@@ -311,16 +348,40 @@ export class AuthService {
     return this.hasAnyRole(AppRoleGroups.SchemaScriptHistoryRead);
   }
 
-  public canCreateCustomerInOrder(isEditMode: boolean): boolean {
-    if (this.hasAnyRole(AppRoleGroups.CustomersWrite)) {
-      return true;
-    }
-
-    return !isEditMode && this.hasAnyRole([AppRoles.Cashier]);
+  public canCreateCustomerInOrder(_isEditMode: boolean): boolean {
+    return this.hasAnyRole(AppRoleGroups.CustomersWrite);
   }
 
-  public canManageOrders(): boolean {
-    return this.hasAnyRole(AppRoleGroups.OrdersManage);
+  public canReadOrders(): boolean {
+    return this.hasAnyRole(AppRoleGroups.OrdersRead);
+  }
+
+  public canWriteOrders(): boolean {
+    return this.hasAnyRole(AppRoleGroups.OrdersWrite);
+  }
+
+  public canReadInventory(): boolean {
+    return this.canReadItems() || this.canReadStockMovements();
+  }
+
+  public canWriteInventory(): boolean {
+    return this.canWriteItems() || this.canWriteStockMovements();
+  }
+
+  public canReadItems(): boolean {
+    return this.hasAnyRole(AppRoleGroups.ItemsRead);
+  }
+
+  public canWriteItems(): boolean {
+    return this.hasAnyRole(AppRoleGroups.ItemsWrite);
+  }
+
+  public canReadStockMovements(): boolean {
+    return this.hasAnyRole(AppRoleGroups.StockMovementsRead);
+  }
+
+  public canWriteStockMovements(): boolean {
+    return this.hasAnyRole(AppRoleGroups.StockMovementsWrite);
   }
 
   public getCurrentRoleLabel(): string {
@@ -329,6 +390,8 @@ export class AuthService {
       AppRoles.Admin,
       AppRoles.AdminViewer,
       AppRoles.Cashier,
+      AppRoles.ItemManager,
+      AppRoles.StockManager,
     ];
 
     const matchedRole = prioritizedRoles.find((role) => this.hasRole(role));

@@ -183,7 +183,7 @@ export class CustomerListComponent implements OnInit {
   }
 
   protected navigateToEditor(customerId?: string): void {
-    if (!this.canWriteManagement()) {
+    if (!this.canWriteCustomers()) {
       this.alertService.errorUnauthorized();
       return;
     }
@@ -200,7 +200,7 @@ export class CustomerListComponent implements OnInit {
   }
 
   protected deleteCustomer(customer: CustomerDto): void {
-    if (!this.canWriteManagement()) {
+    if (!this.canWriteCustomers()) {
       this.alertService.errorUnauthorized();
       return;
     }
@@ -224,7 +224,7 @@ export class CustomerListComponent implements OnInit {
       return;
     }
 
-    if (!this.canWriteManagement()) {
+    if (!this.canWriteCustomers()) {
       this.alertService.errorUnauthorized();
       return;
     }
@@ -302,8 +302,8 @@ export class CustomerListComponent implements OnInit {
     this.saveState();
   }
 
-  protected canWriteManagement(): boolean {
-    return this.authService.canWriteManagement();
+  protected canWriteCustomers(): boolean {
+    return this.authService.canWriteCustomers();
   }
 
   private restoreState(): void {

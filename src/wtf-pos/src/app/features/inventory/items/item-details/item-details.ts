@@ -78,7 +78,7 @@ export class ItemDetailsComponent implements OnInit {
   }
 
   protected deleteItem(): void {
-    if (!this.canWriteManagement()) {
+    if (!this.canWriteItems()) {
       this.alertService.errorUnauthorized();
       return;
     }
@@ -105,7 +105,7 @@ export class ItemDetailsComponent implements OnInit {
       return;
     }
 
-    if (!this.canWriteManagement()) {
+    if (!this.canWriteItems()) {
       this.alertService.errorUnauthorized();
       return;
     }
@@ -133,8 +133,8 @@ export class ItemDetailsComponent implements OnInit {
     });
   }
 
-  protected canWriteManagement(): boolean {
-    return this.authService.canWriteManagement();
+  protected canWriteItems(): boolean {
+    return this.authService.canWriteItems();
   }
 
   private loadItem(id: string): void {

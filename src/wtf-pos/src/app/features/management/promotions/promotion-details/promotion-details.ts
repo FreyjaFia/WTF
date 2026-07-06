@@ -116,8 +116,8 @@ export class PromotionDetailsComponent implements OnInit {
     this.loadPromotion(id);
   }
 
-  protected canWriteManagement(): boolean {
-    return this.authService.canWriteManagement();
+  protected canWritePromotions(): boolean {
+    return this.authService.canWritePromotions();
   }
 
   protected goBack(): void {
@@ -164,7 +164,7 @@ export class PromotionDetailsComponent implements OnInit {
   }
 
   protected deletePromotion(): void {
-    if (!this.canWriteManagement()) {
+    if (!this.canWritePromotions()) {
       this.alertService.errorUnauthorized();
       return;
     }
@@ -192,7 +192,7 @@ export class PromotionDetailsComponent implements OnInit {
       return;
     }
 
-    if (!this.canWriteManagement()) {
+    if (!this.canWritePromotions()) {
       this.alertService.errorUnauthorized();
       return;
     }

@@ -6,6 +6,7 @@ import {
   RouterOutlet,
   isActive as routerIsActive,
 } from '@angular/router';
+import { AuthService } from '@core/services';
 import { AppRoutes } from '@shared/constants/app-routes';
 
 interface InventoryTab {
@@ -13,6 +14,7 @@ interface InventoryTab {
   route: string;
   path: string;
   ariaLabel: string;
+  canShow?: () => boolean;
 }
 
 @Component({
@@ -30,13 +32,21 @@ export class InventoryComponent {
   };
 
   private readonly router = inject(Router);
+  private readonly authService = inject(AuthService);
   protected readonly inventoryTabs: readonly InventoryTab[] = [
-    { label: 'Items', route: 'items', path: AppRoutes.InventoryItems, ariaLabel: 'Items' },
+    {
+      label: 'Items',
+      route: 'items',
+      path: AppRoutes.InventoryItems,
+      ariaLabel: 'Items',
+      canShow: () => this.canReadItems(),
+    },
     {
       label: 'Stock In',
       route: 'stock-in',
       path: AppRoutes.InventoryStockIn,
       ariaLabel: 'Stock In',
+      canShow: () => this.canReadStockMovements(),
     },
   ];
   private readonly activeSignals = new Map<string, ReturnType<typeof routerIsActive>>();
@@ -63,6 +73,14 @@ export class InventoryComponent {
     }
 
     return routeActiveSignal();
+  }
+
+  protected canReadItems(): boolean {
+    return this.authService.canReadItems();
+  }
+
+  protected canReadStockMovements(): boolean {
+    return this.authService.canReadStockMovements();
   }
 
   protected scrollInventoryTabIntoView(route: string): void {
