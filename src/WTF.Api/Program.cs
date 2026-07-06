@@ -113,9 +113,15 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorizationBuilder()
     .AddPolicy(AppPolicies.ProductsRead, policy =>
         policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.Cashier))
-    .AddPolicy(AppPolicies.ManagementRead, policy =>
+    .AddPolicy(AppPolicies.ProductsWrite, policy =>
+        policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin))
+    .AddPolicy(AppPolicies.UsersRead, policy =>
         policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer))
-    .AddPolicy(AppPolicies.ManagementWrite, policy =>
+    .AddPolicy(AppPolicies.UsersWrite, policy =>
+        policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin))
+    .AddPolicy(AppPolicies.PromotionsRead, policy =>
+        policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer))
+    .AddPolicy(AppPolicies.PromotionsWrite, policy =>
         policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin))
     .AddPolicy(AppPolicies.AuditRead, policy =>
         policy.RequireRole(AppRoles.SuperAdmin))
@@ -128,13 +134,15 @@ builder.Services.AddAuthorizationBuilder()
     .AddPolicy(AppPolicies.CustomersRead, policy =>
         policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.Cashier))
     .AddPolicy(AppPolicies.CustomersWrite, policy =>
-        policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin))
-    .AddPolicy(AppPolicies.CustomersCreate, policy =>
         policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.Cashier))
     .AddPolicy(AppPolicies.ItemsRead, policy =>
-        policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer))
+        policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.ItemManager))
     .AddPolicy(AppPolicies.ItemsWrite, policy =>
-        policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin))
+        policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.ItemManager))
+    .AddPolicy(AppPolicies.StockMovementsRead, policy =>
+        policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.StockManager))
+    .AddPolicy(AppPolicies.StockMovementsWrite, policy =>
+        policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.StockManager))
     .AddPolicy(AppPolicies.DashboardRead, policy =>
         policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer))
     .AddPolicy(AppPolicies.ReportsRead, policy =>

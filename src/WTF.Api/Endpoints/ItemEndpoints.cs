@@ -68,7 +68,7 @@ public static class ItemEndpoints
                 var result = await sender.Send(command);
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.ItemsWrite);
+            .RequireAuthorization(AppPolicies.StockMovementsWrite);
 
         itemGroup.MapPost("/product-links",
             async (LinkProductItemCommand command, ISender sender) =>

@@ -41,7 +41,7 @@ public static class ProductEndpoints
                 var result = await sender.Send(command);
                 return Results.CreatedAtRoute("GetProductById", new { id = result.Id }, result);
             })
-            .RequireAuthorization(AppPolicies.ManagementWrite);
+            .RequireAuthorization(AppPolicies.ProductsWrite);
 
         // PUT /api/products/{id} - Update product
         productGroup.MapPut("/{id:guid}",
@@ -55,7 +55,7 @@ public static class ProductEndpoints
                 var result = await sender.Send(command);
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.ManagementWrite);
+            .RequireAuthorization(AppPolicies.ProductsWrite);
 
         // DELETE /api/products/{id} - Soft delete product
         productGroup.MapDelete("/{id:guid}",
@@ -64,7 +64,7 @@ public static class ProductEndpoints
                 var result = await sender.Send(new DeleteProductCommand(id));
                 return result ? Results.NoContent() : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.ManagementWrite);
+            .RequireAuthorization(AppPolicies.ProductsWrite);
 
         // GET /api/products/{id}/price-history - Get price history for a product
         productGroup.MapGet("/{id:guid}/price-history",
@@ -96,7 +96,7 @@ public static class ProductEndpoints
                 var result = await sender.Send(command);
                 return result ? Results.Ok() : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.ManagementWrite);
+            .RequireAuthorization(AppPolicies.ProductsWrite);
 
         // GET /api/products/{id}/addon-price-overrides - Get add-on price overrides for product
         productGroup.MapGet("/{id:guid}/addon-price-overrides",
@@ -105,7 +105,7 @@ public static class ProductEndpoints
                 var result = await sender.Send(new GetProductAddOnPriceOverridesQuery(id));
                 return Results.Ok(result);
             })
-            .RequireAuthorization(AppPolicies.ManagementRead);
+            .RequireAuthorization(AppPolicies.ProductsRead);
 
         // POST /api/products/{id}/addon-price-overrides - Create add-on price override
         productGroup.MapPost("/{id:guid}/addon-price-overrides",
@@ -119,7 +119,7 @@ public static class ProductEndpoints
                 var result = await sender.Send(command);
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.ManagementWrite);
+            .RequireAuthorization(AppPolicies.ProductsWrite);
 
         // PUT /api/products/{id}/addon-price-overrides/{addOnId} - Update add-on price override
         productGroup.MapPut("/{id:guid}/addon-price-overrides/{addOnId:guid}",
@@ -133,7 +133,7 @@ public static class ProductEndpoints
                 var result = await sender.Send(command);
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.ManagementWrite);
+            .RequireAuthorization(AppPolicies.ProductsWrite);
 
         // DELETE /api/products/{id}/addon-price-overrides/{addOnId} - Delete add-on price override
         productGroup.MapDelete("/{id:guid}/addon-price-overrides/{addOnId:guid}",
@@ -142,7 +142,7 @@ public static class ProductEndpoints
                 var result = await sender.Send(new DeleteProductAddOnPriceOverrideCommand(id, addOnId));
                 return result ? Results.NoContent() : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.ManagementWrite);
+            .RequireAuthorization(AppPolicies.ProductsWrite);
 
         // GET /api/products/addons/{addOnId}/products - Get products that use this add-on (reverse lookup)
         productGroup.MapGet("/addons/{addOnId:guid}/products",
@@ -165,7 +165,7 @@ public static class ProductEndpoints
                 var result = await sender.Send(command);
                 return result ? Results.Ok() : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.ManagementWrite);
+            .RequireAuthorization(AppPolicies.ProductsWrite);
 
         // POST /api/products/{id}/images - Upload product image
         productGroup.MapPost("/{id:guid}/images",
@@ -200,7 +200,7 @@ public static class ProductEndpoints
 
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.ManagementWrite)
+            .RequireAuthorization(AppPolicies.ProductsWrite)
             .DisableAntiforgery();
 
         // DELETE /api/products/{id}/images - Remove product image
@@ -210,7 +210,7 @@ public static class ProductEndpoints
                 var result = await sender.Send(new RemoveProductImageCommand(id));
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.ManagementWrite);
+            .RequireAuthorization(AppPolicies.ProductsWrite);
 
         return app;
     }

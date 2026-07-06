@@ -17,7 +17,7 @@ public static class LoyaltyEndpoints
                 var result = await sender.Send(new GetLoyaltyPointsQuery(customerId));
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.ManagementRead);
+            .RequireAuthorization(AppPolicies.CustomersRead);
 
         loyaltyGroup.MapPost("/generate/{customerId:guid}",
             async (Guid customerId, ISender sender) =>
@@ -25,7 +25,7 @@ public static class LoyaltyEndpoints
                 var result = await sender.Send(new GenerateShortLinkCommand(customerId));
                 return Results.Ok(result);
             })
-            .RequireAuthorization(AppPolicies.ManagementWrite);
+            .RequireAuthorization(AppPolicies.CustomersWrite);
 
         loyaltyGroup.MapGet("/redirect/{token}",
             async (string token, ISender sender) =>

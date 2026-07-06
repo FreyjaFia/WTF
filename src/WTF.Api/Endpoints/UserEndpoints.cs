@@ -23,7 +23,7 @@ public static class UserEndpoints
                 var result = await sender.Send(query);
                 return Results.Ok(result);
             })
-            .RequireAuthorization(AppPolicies.ManagementRead);
+            .RequireAuthorization(AppPolicies.UsersRead);
 
         // GET /api/users/{id} - Get user by ID
         userGroup.MapGet("/{id:guid}",
@@ -32,7 +32,7 @@ public static class UserEndpoints
                 var result = await sender.Send(new GetUserByIdQuery(id));
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.ManagementRead)
+            .RequireAuthorization(AppPolicies.UsersRead)
             .WithName("GetUserById");
 
         // POST /api/users - Create new user
@@ -42,7 +42,7 @@ public static class UserEndpoints
                 var result = await sender.Send(command);
                 return Results.CreatedAtRoute("GetUserById", new { id = result.Id }, result);
             })
-            .RequireAuthorization(AppPolicies.ManagementWrite);
+            .RequireAuthorization(AppPolicies.UsersWrite);
 
         // PUT /api/users/{id} - Update user
         userGroup.MapPut("/{id:guid}",
@@ -70,7 +70,7 @@ public static class UserEndpoints
                 var result = await sender.Send(command);
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.ManagementWrite);
+            .RequireAuthorization(AppPolicies.UsersWrite);
 
         // DELETE /api/users/{id} - Delete user
         userGroup.MapDelete("/{id:guid}",
@@ -92,7 +92,7 @@ public static class UserEndpoints
                 var result = await sender.Send(new DeleteUserCommand(id));
                 return result ? Results.NoContent() : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.ManagementWrite);
+            .RequireAuthorization(AppPolicies.UsersWrite);
 
         // POST /api/users/{id}/images - Upload user image
         userGroup.MapPost("/{id:guid}/images",
@@ -140,7 +140,7 @@ public static class UserEndpoints
 
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.ManagementWrite)
+            .RequireAuthorization(AppPolicies.UsersWrite)
             .DisableAntiforgery();
 
         // DELETE /api/users/{id}/images - Remove user image
@@ -163,7 +163,7 @@ public static class UserEndpoints
                 var result = await sender.Send(new RemoveUserImageCommand(id));
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.ManagementWrite);
+            .RequireAuthorization(AppPolicies.UsersWrite);
 
         return app;
     }

@@ -10,13 +10,13 @@ public static class PromotionEndpoints
     public static IEndpointRouteBuilder MapPromotions(this IEndpointRouteBuilder app)
     {
         var adminGroup = app.MapGroup("/api/management/promotions")
-            .RequireAuthorization(AppPolicies.ManagementRead);
+            .RequireAuthorization(AppPolicies.PromotionsRead);
         var adminFixedBundleGroup = app.MapGroup("/api/management/promotions/fixed-bundles")
-            .RequireAuthorization(AppPolicies.ManagementRead);
+            .RequireAuthorization(AppPolicies.PromotionsRead);
         var adminMixMatchGroup = app.MapGroup("/api/management/promotions/mix-match")
-            .RequireAuthorization(AppPolicies.ManagementRead);
+            .RequireAuthorization(AppPolicies.PromotionsRead);
         var adminDiscountedGroup = app.MapGroup("/api/management/promotions/discounted-products")
-            .RequireAuthorization(AppPolicies.ManagementRead);
+            .RequireAuthorization(AppPolicies.PromotionsRead);
         var posGroup = app.MapGroup("/api/pos/promotions")
             .RequireAuthorization(AppPolicies.OrdersWrite);
 
@@ -43,7 +43,7 @@ public static class PromotionEndpoints
                 var result = await sender.Send(new UploadPromotionImageCommand(promotionId, data, file.FileName));
                 return result is null ? Results.NotFound() : Results.Ok(result);
             })
-            .RequireAuthorization(AppPolicies.ManagementWrite);
+            .RequireAuthorization(AppPolicies.PromotionsWrite);
 
         adminGroup.MapDelete("/{promotionId:guid}/images",
             async (Guid promotionId, ISender sender) =>
@@ -51,7 +51,7 @@ public static class PromotionEndpoints
                 var result = await sender.Send(new RemovePromotionImageCommand(promotionId));
                 return result is null ? Results.NotFound() : Results.Ok(result);
             })
-            .RequireAuthorization(AppPolicies.ManagementWrite);
+            .RequireAuthorization(AppPolicies.PromotionsWrite);
 
         adminFixedBundleGroup.MapGet("/",
             async (ISender sender) =>
@@ -73,7 +73,7 @@ public static class PromotionEndpoints
                 var result = await sender.Send(command);
                 return Results.Ok(result);
             })
-            .RequireAuthorization(AppPolicies.ManagementWrite);
+            .RequireAuthorization(AppPolicies.PromotionsWrite);
 
         adminFixedBundleGroup.MapPut("/{promotionId:guid}",
             async (Guid promotionId, UpdateFixedBundlePromotionCommand command, ISender sender) =>
@@ -86,7 +86,7 @@ public static class PromotionEndpoints
                 var result = await sender.Send(command);
                 return result is null ? Results.NotFound() : Results.Ok(result);
             })
-            .RequireAuthorization(AppPolicies.ManagementWrite);
+            .RequireAuthorization(AppPolicies.PromotionsWrite);
 
         adminFixedBundleGroup.MapDelete("/{promotionId:guid}",
             async (Guid promotionId, ISender sender) =>
@@ -94,7 +94,7 @@ public static class PromotionEndpoints
                 var removed = await sender.Send(new DeleteFixedBundlePromotionCommand(promotionId));
                 return removed ? Results.NoContent() : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.ManagementWrite);
+            .RequireAuthorization(AppPolicies.PromotionsWrite);
 
         void MapMixMatchRoutes(RouteGroupBuilder group)
         {
@@ -118,7 +118,7 @@ public static class PromotionEndpoints
                 var result = await sender.Send(command);
                 return Results.Ok(result);
             })
-            .RequireAuthorization(AppPolicies.ManagementWrite);
+            .RequireAuthorization(AppPolicies.PromotionsWrite);
 
             group.MapPut("/{promotionId:guid}",
             async (Guid promotionId, UpdateMixMatchPromotionCommand command, ISender sender) =>
@@ -131,7 +131,7 @@ public static class PromotionEndpoints
                 var result = await sender.Send(command);
                 return result is null ? Results.NotFound() : Results.Ok(result);
             })
-            .RequireAuthorization(AppPolicies.ManagementWrite);
+            .RequireAuthorization(AppPolicies.PromotionsWrite);
 
             group.MapDelete("/{promotionId:guid}",
             async (Guid promotionId, ISender sender) =>
@@ -139,7 +139,7 @@ public static class PromotionEndpoints
                 var removed = await sender.Send(new DeleteMixMatchPromotionCommand(promotionId));
                 return removed ? Results.NoContent() : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.ManagementWrite);
+            .RequireAuthorization(AppPolicies.PromotionsWrite);
         }
 
         MapMixMatchRoutes(adminMixMatchGroup);
@@ -164,7 +164,7 @@ public static class PromotionEndpoints
                 var result = await sender.Send(command);
                 return Results.Ok(result);
             })
-            .RequireAuthorization(AppPolicies.ManagementWrite);
+            .RequireAuthorization(AppPolicies.PromotionsWrite);
 
         adminDiscountedGroup.MapPut("/{promotionId:guid}",
             async (Guid promotionId, UpdateDiscountedProductPromotionCommand command, ISender sender) =>
@@ -177,7 +177,7 @@ public static class PromotionEndpoints
                 var result = await sender.Send(command);
                 return result is null ? Results.NotFound() : Results.Ok(result);
             })
-            .RequireAuthorization(AppPolicies.ManagementWrite);
+            .RequireAuthorization(AppPolicies.PromotionsWrite);
 
         adminDiscountedGroup.MapDelete("/{promotionId:guid}",
             async (Guid promotionId, ISender sender) =>
@@ -185,7 +185,7 @@ public static class PromotionEndpoints
                 var removed = await sender.Send(new DeleteDiscountedProductPromotionCommand(promotionId));
                 return removed ? Results.NoContent() : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.ManagementWrite);
+            .RequireAuthorization(AppPolicies.PromotionsWrite);
 
         posGroup.MapPost("/evaluate",
             async (EvaluatePromotionsRequestDto request, ISender sender) =>

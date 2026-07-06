@@ -39,7 +39,7 @@ public static class CustomerEndpoints
                 var result = await sender.Send(command);
                 return Results.CreatedAtRoute("GetCustomerById", new { id = result.Id }, result);
             })
-            .RequireAuthorization(AppPolicies.CustomersCreate);
+            .RequireAuthorization(AppPolicies.CustomersWrite);
 
         // PUT /api/customers/{id} - Update customer
         customerGroup.MapPut("/{id:guid}",
