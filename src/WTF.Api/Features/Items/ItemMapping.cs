@@ -24,6 +24,17 @@ internal static class ItemMapping
             item.CreatedBy,
             item.UpdatedAt,
             item.UpdatedBy,
+            item.ItemPriceHistories
+                .OrderByDescending(h => h.UpdatedAt)
+                .Select(h => new ItemPriceHistoryDto(
+                    h.Id,
+                    h.ItemId,
+                    h.OldPrice,
+                    h.NewPrice,
+                    h.UpdatedAt,
+                    h.UpdatedBy,
+                    $"{h.UpdatedByNavigation.FirstName} {h.UpdatedByNavigation.LastName}".Trim()))
+                .ToList(),
             item.ProductItemLinks
                 .OrderBy(l => l.Product.Name)
                 .Select(l => new ProductItemLinkDto(

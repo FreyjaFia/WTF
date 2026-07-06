@@ -39,6 +39,8 @@ public partial class Item
 
     public virtual User CreatedByNavigation { get; set; } = null!;
 
+    public virtual ICollection<ItemPriceHistory> ItemPriceHistories { get; set; } = new List<ItemPriceHistory>();
+
     public virtual ICollection<ProductItemLink> ProductItemLinks { get; set; } = new List<ProductItemLink>();
 
     public virtual ICollection<StockMovement> StockMovements { get; set; } = new List<StockMovement>();

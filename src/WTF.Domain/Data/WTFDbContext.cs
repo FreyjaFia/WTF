@@ -38,6 +38,8 @@ public partial class WTFDbContext : DbContext
 
     public virtual DbSet<Item> Items { get; set; }
 
+    public virtual DbSet<ItemPriceHistory> ItemPriceHistories { get; set; }
+
     public virtual DbSet<LoyaltyPoint> LoyaltyPoints { get; set; }
 
     public virtual DbSet<MixMatchPromotion> MixMatchPromotions { get; set; }
@@ -310,6 +312,32 @@ public partial class WTFDbContext : DbContext
             entity.HasOne(d => d.UpdatedByNavigation).WithMany(p => p.ItemUpdatedByNavigations)
                 .HasForeignKey(d => d.UpdatedBy)
                 .HasConstraintName("FK_Items_UpdatedBy");
+        });
+
+        modelBuilder.Entity<ItemPriceHistory>(entity =>
+        {
+            entity.ToTable("ItemPriceHistory");
+
+            entity.HasIndex(e => e.ItemId, "IX_ItemPriceHistory_ItemId");
+
+            entity.HasIndex(e => e.UpdatedAt, "IX_ItemPriceHistory_UpdatedAt").IsDescending();
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_ItemPriceHistory_Id");
+            entity.Property(e => e.NewPrice).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.OldPrice).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.UpdatedAt)
+                .HasDefaultValueSql("(getutcdate())", "DF_ItemPriceHistory_UpdatedAt")
+                .HasColumnType("datetime");
+
+            entity.HasOne(d => d.Item).WithMany(p => p.ItemPriceHistories)
+                .HasForeignKey(d => d.ItemId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ItemPriceHistory_Item");
+
+            entity.HasOne(d => d.UpdatedByNavigation).WithMany(p => p.ItemPriceHistories)
+                .HasForeignKey(d => d.UpdatedBy)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ItemPriceHistory_UpdatedBy");
         });
 
         modelBuilder.Entity<LoyaltyPoint>(entity =>

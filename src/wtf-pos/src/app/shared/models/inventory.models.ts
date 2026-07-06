@@ -1,3 +1,5 @@
+import type { PriceHistoryEntryDto } from './price-history.models';
+
 export interface ItemDto {
   id: string;
   name: string;
@@ -15,8 +17,13 @@ export interface ItemDto {
   createdBy: string;
   updatedAt?: string | null;
   updatedBy?: string | null;
+  priceHistory: ItemPriceHistoryDto[];
   productLinks: ProductItemLinkDto[];
   recentMovements: StockMovementDto[];
+}
+
+export interface ItemPriceHistoryDto extends PriceHistoryEntryDto {
+  itemId: string;
 }
 
 export interface ProductItemLinkDto {

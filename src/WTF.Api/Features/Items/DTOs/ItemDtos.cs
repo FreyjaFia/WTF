@@ -17,6 +17,7 @@ public record ItemDto(
     Guid CreatedBy,
     DateTime? UpdatedAt,
     Guid? UpdatedBy,
+    List<ItemPriceHistoryDto> PriceHistory,
     List<ProductItemLinkDto> ProductLinks,
     List<StockMovementDto> RecentMovements);
 

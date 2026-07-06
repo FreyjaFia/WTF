@@ -3,13 +3,14 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AlertService, InventoryService, ModalStackService } from '@core/services';
-import { IconComponent } from '@shared/components';
+import { IconComponent, PriceHistoryDrawerComponent } from '@shared/components';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { INVENTORY_UNIT_OPTIONS } from '@shared/constants/inventory-units';
+import { ItemPriceHistoryDto } from '@shared/models';
 
 @Component({
   selector: 'app-item-editor',
-  imports: [CommonModule, ReactiveFormsModule, IconComponent],
+  imports: [CommonModule, ReactiveFormsModule, IconComponent, PriceHistoryDrawerComponent],
   templateUrl: './item-editor.html',
   host: { class: 'block h-full' },
 })
@@ -25,6 +26,8 @@ export class ItemEditorComponent implements OnInit {
   protected readonly isSaving = signal(false);
   protected readonly itemName = signal('');
   protected readonly lastUpdatedAt = signal<string | null>(null);
+  protected readonly isHistoryOpen = signal(false);
+  protected readonly priceHistory = signal<ItemPriceHistoryDto[]>([]);
   protected readonly unitOptions = INVENTORY_UNIT_OPTIONS;
   protected readonly showDiscardModal = signal(false);
 
@@ -60,7 +63,7 @@ export class ItemEditorComponent implements OnInit {
     isActive: new FormControl(true, { nonNullable: true }),
   });
 
-  private itemId: string | null = null;
+  protected itemId: string | null = null;
   private skipGuard = false;
   private modalStackId: number | null = null;
   private pendingDeactivateResolve: ((value: boolean) => void) | null = null;
@@ -221,6 +224,7 @@ export class ItemEditorComponent implements OnInit {
         );
         this.itemName.set(item.name);
         this.lastUpdatedAt.set(item.updatedAt || item.createdAt);
+        this.priceHistory.set(item.priceHistory || []);
         this.syncUnitsPerStockUnitState();
         this.inventoryForm.markAsPristine();
         this.isLoading.set(false);
@@ -294,5 +298,13 @@ export class ItemEditorComponent implements OnInit {
     };
 
     return labels[controlName] || controlName;
+  }
+
+  protected openPriceHistory(): void {
+    this.isHistoryOpen.set(true);
+  }
+
+  protected closePriceHistory(): void {
+    this.isHistoryOpen.set(false);
   }
 }

@@ -1,3 +1,5 @@
+import type { PriceHistoryEntryDto } from './price-history.models';
+
 export enum ProductCategoryEnum {
   Drink = 1,
   Food = 2,
@@ -35,14 +37,8 @@ export const ADD_ON_TYPE_ORDER: Record<AddOnTypeEnum, number> = {
   [AddOnTypeEnum.Extra]: 4,
 };
 
-export interface ProductPriceHistoryDto {
-  id: string;
+export interface ProductPriceHistoryDto extends PriceHistoryEntryDto {
   productId: string;
-  oldPrice?: number | null;
-  newPrice: number;
-  updatedAt: string;
-  updatedBy: string;
-  updatedByName?: string | null;
 }
 
 export interface ProductDto {

@@ -41,6 +41,8 @@ public partial class User
 
     public virtual ICollection<Item> ItemCreatedByNavigations { get; set; } = new List<Item>();
 
+    public virtual ICollection<ItemPriceHistory> ItemPriceHistories { get; set; } = new List<ItemPriceHistory>();
+
     public virtual ICollection<Item> ItemUpdatedByNavigations { get; set; } = new List<Item>();
 
     public virtual ICollection<Order> OrderCreatedByNavigations { get; set; } = new List<Order>();

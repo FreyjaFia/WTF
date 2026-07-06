@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, input, output } from '@angular/core';
 import { IconComponent, SideDrawerComponent } from '@shared/components';
-import { ProductPriceHistoryDto } from '@shared/models';
+import { PriceHistoryEntryDto } from '@shared/models';
 
 @Component({
   selector: 'app-price-history-drawer',
@@ -11,7 +11,7 @@ import { ProductPriceHistoryDto } from '@shared/models';
 })
 export class PriceHistoryDrawerComponent {
   readonly isOpen = input(false);
-  readonly priceHistory = input<ProductPriceHistoryDto[]>([]);
+  readonly priceHistory = input<PriceHistoryEntryDto[]>([]);
   readonly closed = output<void>();
 
   protected closeDrawer(): void {

@@ -18,6 +18,16 @@
         @if (isEditMode() && lastUpdatedAt()) {
           <p class="mt-1 text-sm text-gray-500">
             Updated {{ lastUpdatedAt() | date: 'd MMM y, h:mm a' }}
+            @if (itemId) {
+              &middot;
+              <button
+                type="button"
+                class="cursor-pointer font-medium text-[#047857] hover:text-[#065f46]"
+                (click)="openPriceHistory()"
+              >
+                Price History
+              </button>
+            }
           </p>
         }
       </div>
@@ -369,3 +379,9 @@
     </div>
   </div>
 }
+
+<app-price-history-drawer
+  [isOpen]="isHistoryOpen()"
+  [priceHistory]="priceHistory()"
+  (closed)="closePriceHistory()"
+/>

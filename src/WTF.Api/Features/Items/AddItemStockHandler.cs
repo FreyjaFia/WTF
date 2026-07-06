@@ -46,6 +46,18 @@ public class AddItemStockHandler(
         item.UpdatedBy = userId;
         if (request.UnitCost.HasValue)
         {
+            if (item.CostPrice != request.UnitCost)
+            {
+                db.ItemPriceHistories.Add(new ItemPriceHistory
+                {
+                    ItemId = item.Id,
+                    OldPrice = item.CostPrice,
+                    NewPrice = request.UnitCost.Value,
+                    UpdatedAt = DateTime.UtcNow,
+                    UpdatedBy = userId
+                });
+            }
+
             item.CostPrice = request.UnitCost;
         }
 

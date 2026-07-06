@@ -25,6 +25,14 @@
           </div>
           <p class="mt-1 text-sm text-gray-500">
             Updated {{ item()!.updatedAt || item()!.createdAt | date: 'd MMM y, h:mm a' }}
+            &middot;
+            <button
+              type="button"
+              class="cursor-pointer font-medium text-[#047857] hover:text-[#065f46]"
+              (click)="openPriceHistory()"
+            >
+              Price History
+            </button>
           </p>
         </div>
       }
@@ -254,3 +262,9 @@
     </div>
   </div>
 }
+
+<app-price-history-drawer
+  [isOpen]="isHistoryOpen()"
+  [priceHistory]="priceHistory()"
+  (closed)="closePriceHistory()"
+/>

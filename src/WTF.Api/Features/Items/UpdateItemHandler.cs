@@ -6,6 +6,7 @@ using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Items.DTOs;
 using WTF.Api.Services;
 using WTF.Domain.Data;
+using WTF.Domain.Entities;
 
 namespace WTF.Api.Features.Items;
 
@@ -75,6 +76,18 @@ public class UpdateItemHandler(
         await ItemValidation.ValidateUniqueSkuAndBarcode(db, request.Sku, request.Barcode, request.Id, cancellationToken);
 
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
+        if (request.CostPrice.HasValue && item.CostPrice != request.CostPrice)
+        {
+            db.ItemPriceHistories.Add(new ItemPriceHistory
+            {
+                ItemId = item.Id,
+                OldPrice = item.CostPrice,
+                NewPrice = request.CostPrice.Value,
+                UpdatedAt = DateTime.UtcNow,
+                UpdatedBy = userId
+            });
+        }
+
         item.Name = request.Name.Trim();
         item.Sku = ItemValidation.NormalizeOptional(request.Sku);
         item.Barcode = ItemValidation.NormalizeOptional(request.Barcode);

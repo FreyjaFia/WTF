@@ -13,6 +13,8 @@ public class GetItemByIdHandler(WTFDbContext db) : IRequestHandler<GetItemByIdQu
     {
         var item = await db.Items
             .AsNoTracking()
+            .Include(i => i.ItemPriceHistories)
+                .ThenInclude(h => h.UpdatedByNavigation)
             .Include(i => i.ProductItemLinks)
                 .ThenInclude(l => l.Product)
             .Include(i => i.StockMovements.OrderByDescending(m => m.CreatedAt).Take(25))

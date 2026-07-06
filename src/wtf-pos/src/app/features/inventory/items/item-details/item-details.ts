@@ -2,16 +2,16 @@ import { CommonModule } from '@angular/common';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AlertService, AuthService, InventoryService, ModalStackService } from '@core/services';
-import { BadgeComponent, IconComponent } from '@shared/components';
+import { BadgeComponent, IconComponent, PriceHistoryDrawerComponent } from '@shared/components';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { getInventoryUnitAbbreviation } from '@shared/constants/inventory-units';
-import { ItemDto } from '@shared/models';
+import { ItemDto, ItemPriceHistoryDto } from '@shared/models';
 
 type StockStatus = 'ok' | 'warning' | 'critical';
 
 @Component({
   selector: 'app-item-details',
-  imports: [CommonModule, RouterLink, IconComponent, BadgeComponent],
+  imports: [CommonModule, RouterLink, IconComponent, BadgeComponent, PriceHistoryDrawerComponent],
   templateUrl: './item-details.html',
   host: { class: 'block h-full' },
 })
@@ -26,6 +26,8 @@ export class ItemDetailsComponent implements OnInit {
 
   protected readonly item = signal<ItemDto | null>(null);
   protected readonly isLoading = signal(false);
+  protected readonly isHistoryOpen = signal(false);
+  protected readonly priceHistory = signal<ItemPriceHistoryDto[]>([]);
   protected readonly showDeleteModal = signal(false);
   protected readonly isDeleting = signal(false);
   private modalStackId: number | null = null;
@@ -137,11 +139,20 @@ export class ItemDetailsComponent implements OnInit {
     return this.authService.canWriteItems();
   }
 
+  protected openPriceHistory(): void {
+    this.isHistoryOpen.set(true);
+  }
+
+  protected closePriceHistory(): void {
+    this.isHistoryOpen.set(false);
+  }
+
   private loadItem(id: string): void {
     this.isLoading.set(true);
     this.inventoryService.getInventoryItem(id).subscribe({
       next: (item) => {
         this.item.set(item);
+        this.priceHistory.set(item.priceHistory || []);
         this.isLoading.set(false);
       },
       error: (err) => {
