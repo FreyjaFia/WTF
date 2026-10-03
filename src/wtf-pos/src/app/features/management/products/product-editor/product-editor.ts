@@ -748,8 +748,8 @@ export class ProductEditorComponent implements OnInit {
 
     const parsedPrice = Number(rawDraft);
 
-    if (!Number.isFinite(parsedPrice) || parsedPrice < 0) {
-      this.alertService.error('Override price must be a valid amount (0 or higher).');
+    if (!Number.isFinite(parsedPrice)) {
+      this.alertService.error('Override price must be a valid amount.');
       return;
     }
 

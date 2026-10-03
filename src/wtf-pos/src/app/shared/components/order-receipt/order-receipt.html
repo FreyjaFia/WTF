@@ -156,9 +156,14 @@
                     ? '+ ' + ao.quantityPerUnit + 'x ' + ao.name + ' (per unit)'
                     : '+ ' + ao.name
                 }}</span>
-                <span
-                  ><span style="color: inherit">&#8369;</span>{{ ao.lineTotal | number: '1.2-2' }}</span
-                >
+                <span>
+                  @if (ao.lineTotal < 0) {
+                    (
+                  }<span style="color: inherit">&#8369;</span>{{ ao.lineTotal | number: '1.2-2' }}@if
+                    (ao.lineTotal < 0) {
+                      )
+                    }
+                </span>
               </div>
             }
           </div>

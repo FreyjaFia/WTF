@@ -354,12 +354,17 @@
                                 class="inline-flex items-center gap-0.5 text-sm font-semibold text-gray-700"
                                 [class.text-gray-400]="!addon.isActive"
                               >
-                                <app-icon
+                                @if ((addon.overridePrice ?? addon.price) < 0) {
+                                  (
+                                }<app-icon
                                   name="icon-peso"
                                   [class]="'h-3 w-3'"
                                   [fill]="'currentColor'"
                                 />
-                                {{ addon.overridePrice ?? addon.price | number: '1.2-2' }}
+                                {{ addon.overridePrice ?? addon.price | number: '1.2-2' }}@if
+                                  ((addon.overridePrice ?? addon.price) < 0) {
+                                    )
+                                  }
                               </span>
                               @if (
                                 addon.overridePrice !== null &&

@@ -671,13 +671,17 @@
                               : ao.name
                           }}</span>
                         </span>
-                        <span class="shrink-0"
-                          >+<app-icon
+                        <span class="shrink-0">
+                          + @if (ao.lineTotal < 0) {
+                            (
+                          }<app-icon
                             name="icon-peso"
                             [class]="'inline h-3 w-3 align-[-0.125em]'"
                             [fill]="'currentColor'"
-                          />{{ ao.lineTotal | number: '1.2-2' }}</span
-                        >
+                          />{{ ao.lineTotal | number: '1.2-2' }}@if (ao.lineTotal < 0) {
+                            )
+                          }
+                        </span>
                       </div>
                     }
                   </div>

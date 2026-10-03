@@ -359,11 +359,15 @@
                               }}
                             </div>
                             <div class="shrink-0 text-right tabular-nums">
-                              <app-icon
+                              @if (ao.lineTotal < 0) {
+                                (
+                              }<app-icon
                                 name="icon-peso"
                                 [class]="'inline h-2.5 w-2.5 align-[-0.125em]'"
                                 [fill]="'currentColor'"
-                              />{{ ao.lineTotal | number: '1.2-2' }}
+                              />{{ ao.lineTotal | number: '1.2-2' }}@if (ao.lineTotal < 0) {
+                                )
+                              }
                             </div>
                           </div>
                         }

@@ -12,7 +12,7 @@ public record CreateProductAddOnPriceOverrideCommand : IRequest<ProductAddOnPric
 {
     [Required] public Guid ProductId { get; init; }
     [Required] public Guid AddOnId { get; init; }
-    [Range(0, double.MaxValue)] public decimal Price { get; init; }
+    public decimal Price { get; init; }
     public bool IsActive { get; init; } = true;
 }
 

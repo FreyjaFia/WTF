@@ -303,6 +303,25 @@ public class CreateOrderHandler(
             var discountedPrice = shouldCapturePrice
                 ? GetDiscountedUnitPrice(basePrice, item, discountedRulesByProductId)
                 : null;
+            var addOnPrices = new List<(OrderItemRequestDto AddOn, decimal Price)>();
+            foreach (var addOn in item.AddOns)
+            {
+                var addOnProduct = await db.Products.FindAsync([addOn.ProductId], cancellationToken)
+                    ?? throw new InvalidOperationException($"Add-on product with ID {addOn.ProductId} not found.");
+                var addOnOverridePrice = await db.ProductAddOnPriceOverrides
+                    .Where(o => o.ProductId == item.ProductId && o.AddOnId == addOn.ProductId && o.IsActive)
+                    .Select(o => (decimal?)o.Price)
+                    .FirstOrDefaultAsync(cancellationToken);
+                addOnPrices.Add((addOn, addOnOverridePrice ?? addOnProduct.Price));
+            }
+
+            var finalUnitPrice = (discountedPrice ?? basePrice)
+                + addOnPrices.Sum(addOn => addOn.Price * addOn.AddOn.Quantity);
+            if (!item.BundlePromotionId.HasValue && finalUnitPrice <= 0)
+            {
+                throw new InvalidOperationException($"The final unit price for '{product.Name}' must be greater than zero.");
+            }
+
             var orderItem = new OrderItem
             {
                 OrderId = order.Id,
@@ -325,15 +344,8 @@ public class CreateOrderHandler(
             await db.SaveChangesAsync(cancellationToken);
 
             // Add child items (add-ons)
-            foreach (var addOn in item.AddOns)
+            foreach (var (addOn, effectiveAddOnPrice) in addOnPrices)
             {
-                var addOnProduct = await db.Products.FindAsync([addOn.ProductId], cancellationToken) ?? throw new InvalidOperationException($"Add-on product with ID {addOn.ProductId} not found.");
-                var addOnOverridePrice = await db.ProductAddOnPriceOverrides
-                    .Where(o => o.ProductId == item.ProductId && o.AddOnId == addOn.ProductId && o.IsActive)
-                    .Select(o => (decimal?)o.Price)
-                    .FirstOrDefaultAsync(cancellationToken);
-                var effectiveAddOnPrice = addOnOverridePrice ?? addOnProduct.Price;
-
                 var addOnOrderItem = new OrderItem
                 {
                     OrderId = order.Id,

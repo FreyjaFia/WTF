@@ -483,14 +483,18 @@
                                   class="inline-flex items-center gap-0.5 text-sm font-semibold text-gray-700"
                                   [class.text-gray-400]="!addon.isActive"
                                 >
-                                  <app-icon
+                                  @if (getAddOnEffectivePrice(addon.id, addon.price) < 0) {
+                                    (
+                                  }<app-icon
                                     name="icon-peso"
                                     [class]="'h-3 w-3'"
                                     [fill]="'currentColor'"
                                   />
                                   {{
                                     getAddOnEffectivePrice(addon.id, addon.price) | number: '1.2-2'
-                                  }}
+                                  }}@if (getAddOnEffectivePrice(addon.id, addon.price) < 0) {
+                                    )
+                                  }
                                 </span>
                               </div>
                             </div>
@@ -517,7 +521,6 @@
                                   />
                                   <input
                                     type="number"
-                                    min="0"
                                     step="0.01"
                                     placeholder="{{
                                       getAddOnBasePrice(addon.id, addon.price) | number: '1.2-2'

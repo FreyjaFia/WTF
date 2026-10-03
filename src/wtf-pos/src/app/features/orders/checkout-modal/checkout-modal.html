@@ -246,13 +246,17 @@
                             ? ao.quantityPerUnit + 'x ' + ao.name + ' (per unit)'
                             : ao.name
                         }}</span>
-                        <span class="ml-auto"
-                          >+<app-icon
+                        <span class="ml-auto">
+                          + @if (ao.lineTotal < 0) {
+                            (
+                          }<app-icon
                             name="icon-peso"
                             [class]="'inline h-3 w-3 align-[-0.125em]'"
                             [fill]="'currentColor'"
-                          />{{ ao.lineTotal.toFixed(2) }}</span
-                        >
+                          />{{ ao.lineTotal.toFixed(2) }}@if (ao.lineTotal < 0) {
+                            )
+                          }
+                        </span>
                       </p>
                     }
                   </div>

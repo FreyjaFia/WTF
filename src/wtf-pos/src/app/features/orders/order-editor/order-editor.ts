@@ -1217,6 +1217,24 @@ export class OrderEditor implements OnInit, OnDestroy {
     return item.qty * this.getUnitSubtotal(item);
   }
 
+  private validateCartUnitPrices(): boolean {
+    const invalidItem = this.cart().find(
+      (item) =>
+        !item.bundleItems?.length &&
+        !item.bundlePromotionId &&
+        this.getUnitSubtotal(item) <= 0,
+    );
+
+    if (!invalidItem) {
+      return true;
+    }
+
+    this.alertService.error(
+      `${invalidItem.name} must have a final unit price greater than zero.`,
+    );
+    return false;
+  }
+
   protected getDiscountedAmount(item: CartItemDto): number {
     if (item.bundleItems?.length || item.bundlePromotionId) {
       return 0;
@@ -1936,6 +1954,10 @@ export class OrderEditor implements OnInit, OnDestroy {
       return;
     }
 
+    if (!this.validateCartUnitPrices()) {
+      return;
+    }
+
     this.checkoutModal().triggerOpen();
   }
 
@@ -1966,6 +1988,10 @@ export class OrderEditor implements OnInit, OnDestroy {
       return;
     }
 
+    if (!this.validateCartUnitPrices()) {
+      return;
+    }
+
     if (this.isSavingOrder()) {
       return;
     }
@@ -1987,6 +2013,10 @@ export class OrderEditor implements OnInit, OnDestroy {
   }): void {
     if (!this.canManageOrderActions()) {
       this.alertService.errorUnauthorized();
+      return;
+    }
+
+    if (!this.validateCartUnitPrices()) {
       return;
     }
 

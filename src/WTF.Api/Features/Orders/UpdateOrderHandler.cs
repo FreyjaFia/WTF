@@ -247,76 +247,6 @@ public class UpdateOrderHandler(
             throw new InvalidOperationException(
                 $"Order is already {oldStatus} and cannot be updated.");
         }
-        var oldValues = new
-        {
-            Status = oldStatus,
-            order.CustomerId,
-            ItemCount = order.OrderItems.Count
-        };
-
-        order.CustomerId = request.CustomerId;
-        order.SpecialInstructions = request.SpecialInstructions;
-        order.Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim();
-        order.StatusId = (int)request.Status;
-        order.PaymentMethodId = request.PaymentMethod.HasValue ? (int)request.PaymentMethod.Value : null;
-        order.AmountReceived = request.AmountReceived;
-        order.ChangeAmount = request.ChangeAmount;
-        order.Tips = request.Tips;
-        order.UpdatedAt = DateTime.UtcNow;
-
-        // Capture price snapshot when order changes to Completed or Cancelled
-        if (oldStatus == OrderStatusEnum.Pending && 
-            (newStatus == OrderStatusEnum.Completed || newStatus == OrderStatusEnum.Cancelled))
-        {
-            var parentProductByOrderItemId = order.OrderItems
-                .Where(oi => oi.ParentOrderItemId == null)
-                .ToDictionary(oi => oi.Id, oi => oi.ProductId);
-
-            foreach (var orderItem in order.OrderItems)
-            {
-                if (orderItem.Price != null)
-                {
-                    continue;
-                }
-
-                if (orderItem.ParentOrderItemId == null)
-                {
-                    orderItem.Price = orderItem.Product.Price;
-                    continue;
-                }
-
-                if (!parentProductByOrderItemId.TryGetValue(orderItem.ParentOrderItemId.Value, out var parentProductId))
-                {
-                    orderItem.Price = orderItem.Product.Price;
-                    continue;
-                }
-
-                var overridePrice = await db.ProductAddOnPriceOverrides
-                    .Where(o => o.ProductId == parentProductId && o.AddOnId == orderItem.ProductId && o.IsActive)
-                    .Select(o => (decimal?)o.Price)
-                    .FirstOrDefaultAsync(cancellationToken);
-
-                orderItem.Price = overridePrice ?? orderItem.Product.Price;
-            }
-        }
-
-        // Update items: remove old, add new
-        db.OrderItems.RemoveRange(order.OrderItems);
-        db.OrderBundlePromotions.RemoveRange(order.OrderBundlePromotions);
-        await db.SaveChangesAsync(cancellationToken);
-
-        if (requestedBundlePromotions.Count > 0)
-        {
-            var orderBundlePromotions = requestedBundlePromotions.Select(bundle => new OrderBundlePromotion
-            {
-                OrderId = order.Id,
-                PromotionId = bundle.PromotionId,
-                Quantity = bundle.Quantity,
-                UnitPrice = bundlePriceByPromotionId[bundle.PromotionId]
-            });
-
-            db.OrderBundlePromotions.AddRange(orderBundlePromotions);
-        }
 
         var shouldCapturePrice = newStatus == OrderStatusEnum.Completed || newStatus == OrderStatusEnum.Cancelled;
         Dictionary<Guid, List<DiscountedRule>> discountedRulesByProductId = [];
@@ -346,6 +276,12 @@ public class UpdateOrderHandler(
                         .ToList());
         }
 
+        var pricedItems = new List<(
+            OrderItemRequestDto Item,
+            Product Product,
+            decimal? DiscountedPrice,
+            List<(OrderItemRequestDto AddOn, decimal Price)> AddOnPrices)>();
+
         for (var itemIndex = 0; itemIndex < request.Items.Count; itemIndex++)
         {
             var item = request.Items[itemIndex];
@@ -354,8 +290,68 @@ public class UpdateOrderHandler(
             var discountedPrice = shouldCapturePrice
                 ? GetDiscountedUnitPrice(basePrice, item, discountedRulesByProductId)
                 : null;
+            var addOnPrices = new List<(OrderItemRequestDto AddOn, decimal Price)>();
+            foreach (var addOn in item.AddOns)
+            {
+                var addOnProduct = await db.Products.FindAsync([addOn.ProductId], cancellationToken)
+                    ?? throw new InvalidOperationException($"Add-on product with ID {addOn.ProductId} not found.");
+                var addOnOverridePrice = await db.ProductAddOnPriceOverrides
+                    .Where(o => o.ProductId == item.ProductId && o.AddOnId == addOn.ProductId && o.IsActive)
+                    .Select(o => (decimal?)o.Price)
+                    .FirstOrDefaultAsync(cancellationToken);
+                addOnPrices.Add((addOn, addOnOverridePrice ?? addOnProduct.Price));
+            }
+
+            var finalUnitPrice = (discountedPrice ?? basePrice)
+                + addOnPrices.Sum(addOn => addOn.Price * addOn.AddOn.Quantity);
+            if (!item.BundlePromotionId.HasValue && finalUnitPrice <= 0)
+            {
+                throw new InvalidOperationException($"The final unit price for '{product.Name}' must be greater than zero.");
+            }
+
+            pricedItems.Add((item, product, discountedPrice, addOnPrices));
+        }
+
+        var oldValues = new
+        {
+            Status = oldStatus,
+            order.CustomerId,
+            ItemCount = order.OrderItems.Count
+        };
+
+        order.CustomerId = request.CustomerId;
+        order.SpecialInstructions = request.SpecialInstructions;
+        order.Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim();
+        order.StatusId = (int)request.Status;
+        order.PaymentMethodId = request.PaymentMethod.HasValue ? (int)request.PaymentMethod.Value : null;
+        order.AmountReceived = request.AmountReceived;
+        order.ChangeAmount = request.ChangeAmount;
+        order.Tips = request.Tips;
+        order.UpdatedAt = DateTime.UtcNow;
+
+        // Update items: remove old, add new
+        db.OrderItems.RemoveRange(order.OrderItems);
+        db.OrderBundlePromotions.RemoveRange(order.OrderBundlePromotions);
+
+        if (requestedBundlePromotions.Count > 0)
+        {
+            var orderBundlePromotions = requestedBundlePromotions.Select(bundle => new OrderBundlePromotion
+            {
+                OrderId = order.Id,
+                PromotionId = bundle.PromotionId,
+                Quantity = bundle.Quantity,
+                UnitPrice = bundlePriceByPromotionId[bundle.PromotionId]
+            });
+
+            db.OrderBundlePromotions.AddRange(orderBundlePromotions);
+        }
+
+        for (var itemIndex = 0; itemIndex < pricedItems.Count; itemIndex++)
+        {
+            var (item, product, discountedPrice, addOnPrices) = pricedItems[itemIndex];
             var newItem = new OrderItem
             {
+                Id = Guid.NewGuid(),
                 OrderId = order.Id,
                 ProductId = item.ProductId,
                 Quantity = item.Quantity,
@@ -369,23 +365,16 @@ public class UpdateOrderHandler(
             // Capture price snapshot when order is Completed or Cancelled
             if (shouldCapturePrice)
             {
-                newItem.Price = discountedPrice ?? basePrice;
+                newItem.Price = discountedPrice ?? product.Price;
             }
 
             db.OrderItems.Add(newItem);
-            await db.SaveChangesAsync(cancellationToken);
 
-            foreach (var addOn in item.AddOns)
+            foreach (var (addOn, effectiveAddOnPrice) in addOnPrices)
             {
-                var addOnProduct = await db.Products.FindAsync([addOn.ProductId], cancellationToken) ?? throw new InvalidOperationException($"Add-on product with ID {addOn.ProductId} not found.");
-                var addOnOverridePrice = await db.ProductAddOnPriceOverrides
-                    .Where(o => o.ProductId == item.ProductId && o.AddOnId == addOn.ProductId && o.IsActive)
-                    .Select(o => (decimal?)o.Price)
-                    .FirstOrDefaultAsync(cancellationToken);
-                var effectiveAddOnPrice = addOnOverridePrice ?? addOnProduct.Price;
-
                 var addOnItem = new OrderItem
                 {
+                    Id = Guid.NewGuid(),
                     OrderId = order.Id,
                     ProductId = addOn.ProductId,
                     Quantity = addOn.Quantity,

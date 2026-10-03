@@ -80,6 +80,10 @@ export class AddonSelectorComponent {
         }
       }
 
+      if (this.unitPrice() <= 0) {
+        return 'The final item price must be greater than zero.';
+      }
+
       return null;
     }
 
@@ -114,6 +118,10 @@ export class AddonSelectorComponent {
           return 'You can select at most one sauce.';
         }
       }
+    }
+
+    if (this.unitPrice() <= 0) {
+      return 'The final item price must be greater than zero.';
     }
 
     return null;
