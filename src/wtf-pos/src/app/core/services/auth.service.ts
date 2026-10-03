@@ -5,7 +5,7 @@ import { environment } from '@environments/environment.development';
 import { AppRole, AppRoleGroups, AppRoleLabels, AppRoles } from '@shared/constants/app-roles';
 import { LoginDto, MeDto } from '@shared/models';
 import { BehaviorSubject, Observable, Subject, throwError } from 'rxjs';
-import { catchError, map, tap } from 'rxjs/operators';
+import { catchError, finalize, map, shareReplay, tap } from 'rxjs/operators';
 import { db } from './db';
 
 @Injectable({ providedIn: 'root' })
@@ -30,6 +30,7 @@ export class AuthService {
   private readonly rolesSubject = new BehaviorSubject<string[]>([]);
   private readonly meRefreshSubject = new Subject<void>();
   private readonly tokenRefreshedSubject = new Subject<void>();
+  private refreshRequest$: Observable<boolean> | null = null;
   public readonly isLoggedIn$ = this._isLoggedIn.asObservable();
   public readonly roles$ = this.rolesSubject.asObservable();
   public readonly meRefresh$ = this.meRefreshSubject.asObservable();
@@ -221,13 +222,17 @@ export class AuthService {
   }
 
   public refreshToken(): Observable<boolean> {
+    if (this.refreshRequest$) {
+      return this.refreshRequest$;
+    }
+
     const refreshToken = this.getRefreshToken();
 
     if (!refreshToken) {
       return throwError(() => new Error(AuthService.MSG_NO_REFRESH_TOKEN));
     }
 
-    return this.http
+    this.refreshRequest$ = this.http
       .post<{
         accessToken: string;
         refreshToken?: string;
@@ -253,7 +258,13 @@ export class AuthService {
           this.logout();
           return throwError(() => new Error(AuthService.MSG_REFRESH_TOKEN_FAILED));
         }),
+        finalize(() => {
+          this.refreshRequest$ = null;
+        }),
+        shareReplay({ bufferSize: 1, refCount: false }),
       );
+
+    return this.refreshRequest$;
   }
 
   private decodeToken(token: string): Record<string, unknown> | null {

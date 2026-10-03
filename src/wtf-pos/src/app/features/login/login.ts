@@ -26,7 +26,7 @@ export class Login implements OnInit, OnDestroy {
   private readonly offlineOrderService = inject(OfflineOrderService);
   private readonly modalStack = inject(ModalStackService);
 
-  protected loading = false;
+  protected readonly loading = signal(false);
   protected readonly checkingSession = this.authLoading.checkingSession;
   protected showPassword = false;
   protected readonly showPendingSyncModal = signal(false);
@@ -84,15 +84,19 @@ export class Login implements OnInit, OnDestroy {
   }
 
   protected login(): void {
+    if (this.loading() || this.checkingSession()) {
+      return;
+    }
+
     const { username, password } = this.loginForm.value;
 
-    this.loading = true;
+    this.loading.set(true);
 
     this.auth
       .login(username!, password!)
       .pipe(
         timeout(30000),
-        finalize(() => (this.loading = false)),
+        finalize(() => this.loading.set(false)),
       )
       .subscribe({
         next: (ok) => {
