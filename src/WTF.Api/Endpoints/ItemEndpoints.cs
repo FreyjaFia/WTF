@@ -78,6 +78,19 @@ public static class ItemEndpoints
             })
             .RequireAuthorization(AppPolicies.ItemsWrite);
 
+        itemGroup.MapPut("/{id:guid}/product-links",
+            async (Guid id, SyncProductItemLinksCommand command, ISender sender) =>
+            {
+                if (id != command.ItemId)
+                {
+                    return Results.BadRequest("Item ID mismatch");
+                }
+
+                var result = await sender.Send(command);
+                return result is not null ? Results.Ok(result) : Results.NotFound();
+            })
+            .RequireAuthorization(AppPolicies.ItemsWrite);
+
         return app;
     }
 }

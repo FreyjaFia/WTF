@@ -36,6 +36,12 @@ export interface ProductItemLinkDto {
   isActive: boolean;
 }
 
+export interface ProductItemLinkAssignmentDto {
+  productId: string;
+  quantityPerSale: number;
+  isActive?: boolean;
+}
+
 export interface StockMovementDto {
   id: string;
   itemId: string;

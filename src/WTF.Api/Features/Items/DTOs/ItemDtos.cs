@@ -21,15 +21,6 @@ public record ItemDto(
     List<ProductItemLinkDto> ProductLinks,
     List<StockMovementDto> RecentMovements);
 
-public record ProductItemLinkDto(
-    Guid Id,
-    Guid ProductId,
-    string ProductName,
-    string ProductCode,
-    Guid ItemId,
-    decimal QuantityPerSale,
-    bool IsActive);
-
 public record StockMovementDto(
     Guid Id,
     Guid ItemId,

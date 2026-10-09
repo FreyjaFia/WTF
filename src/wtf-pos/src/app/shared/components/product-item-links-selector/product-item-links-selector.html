@@ -1,0 +1,236 @@
+<dialog id="product-item-links-modal" class="modal">
+  <div
+    class="modal-box flex max-h-[85vh] w-full max-w-[min(32rem,calc(100vw-2rem))] flex-col rounded-2xl shadow-2xl sm:max-h-[calc(100vh-3rem)] sm:max-w-4xl"
+  >
+    <h3 class="text-lg font-bold text-gray-900">Manage Product Links</h3>
+    <p class="mb-5 text-sm text-gray-400">
+      Drag products and add-ons between the lists to link or unlink them from this item.
+    </p>
+
+    @if (isLoading()) {
+      <div class="flex items-center justify-center py-8">
+        <span class="loading loading-spinner loading-lg"></span>
+      </div>
+    } @else {
+      <div class="grid min-h-0 flex-1 grid-cols-1 gap-5 max-sm:grid-rows-[1fr_1fr] sm:grid-cols-2">
+        <div class="flex min-h-0 flex-col">
+          <div class="mb-2 flex items-baseline justify-between">
+            <h4 class="text-xs font-semibold tracking-wider text-gray-400 uppercase">
+              Available Products
+            </h4>
+            @if (filteredAvailableProducts.length > 0) {
+              <span class="text-xs text-gray-400">{{ filteredAvailableProducts.length }} items</span>
+            }
+          </div>
+
+          <div class="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto]">
+            <div class="relative">
+              <app-icon
+                name="icon-search"
+                fill="none"
+                [class]="'absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 stroke-current text-gray-400'"
+              />
+              <input
+                type="text"
+                placeholder="Search products..."
+                class="input input-sm w-full rounded-xl border-transparent bg-gray-50 pl-9 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                [value]="searchTerm()"
+                (input)="onSearchInput($event)"
+              />
+            </div>
+            <select
+              class="select select-sm w-full rounded-xl border-gray-200 bg-white text-sm focus:border-[#047857] focus:ring-1 focus:ring-[#047857]/20 sm:w-36"
+              [value]="selectedFilter()"
+              (change)="onFilterChange($event)"
+            >
+              <option value="all">All</option>
+              <option value="products">Products</option>
+              <option value="addons">Add-ons</option>
+            </select>
+          </div>
+
+          <ul
+            #availableList
+            class="flex min-h-0 flex-1 flex-col space-y-1 overflow-x-hidden overflow-y-auto rounded-xl border border-gray-200 bg-gray-50/50 p-3"
+          >
+            @for (product of filteredAvailableProducts; track product.id) {
+              <li
+                [attr.data-id]="product.id"
+                class="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm font-medium text-gray-800 transition-shadow hover:shadow-sm"
+              >
+                <app-icon
+                  name="icon-grip"
+                  [class]="'drag-handle h-5 w-5 shrink-0 cursor-grab touch-none text-gray-300 hover:text-gray-500 active:cursor-grabbing'"
+                />
+                <div class="shrink-0">
+                  @if (product.imageUrl) {
+                    <img
+                      [src]="product.imageUrl"
+                      [alt]="product.name"
+                      class="h-8 w-8 rounded-full object-cover"
+                    />
+                  } @else {
+                    <app-avatar [label]="product.name" [size]="32" />
+                  }
+                </div>
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center gap-2">
+                    <span class="block truncate">{{ product.name }}</span>
+                    @if (product.isAddOn) {
+                      <span class="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-amber-700 uppercase">
+                        Add-on
+                      </span>
+                    } @else {
+                      <span class="rounded bg-[#047857]/10 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-[#047857] uppercase">
+                        Product
+                      </span>
+                    }
+                  </div>
+                  <span class="font-mono text-[10px] text-gray-400">{{ product.code }}</span>
+                </div>
+                <span class="ml-auto shrink-0 text-xs text-gray-500">
+                  <app-icon
+                    name="icon-peso"
+                    [class]="'inline h-3 w-3 align-[-0.125em]'"
+                    [fill]="'currentColor'"
+                  />{{ product.price | number: '1.2-2' }}
+                </span>
+              </li>
+            }
+
+            @if (filteredAvailableProducts.length === 0 && (searchTerm() || selectedFilter() !== 'all')) {
+              <div class="flex flex-col items-center justify-center py-8 text-gray-400">
+                <p class="text-sm">No products match your filters</p>
+              </div>
+            } @else if (availableProducts().length === 0) {
+              <div class="flex flex-col items-center justify-center gap-1 py-8 text-gray-400">
+                <p class="text-sm">No products available</p>
+                <p class="text-xs">Create products and add-ons first.</p>
+              </div>
+            }
+          </ul>
+        </div>
+
+        <div class="flex min-h-0 flex-col">
+          <div class="mb-2 flex items-baseline justify-between">
+            <h4 class="text-xs font-semibold tracking-wider text-gray-400 uppercase">
+              Linked Products
+            </h4>
+            @if (getSelectedCount() > 0) {
+              <span class="text-xs text-gray-400">
+                {{ getSelectedCount() }} {{ getSelectedCount() === 1 ? 'product' : 'products' }}
+              </span>
+            }
+          </div>
+
+          <div class="mb-3 hidden h-8 sm:block"></div>
+
+          <ul
+            #assignedList
+            class="flex min-h-0 flex-1 flex-col space-y-1 overflow-x-hidden overflow-y-auto rounded-xl border border-gray-200 bg-gray-50/50 p-3"
+          >
+            @for (product of linkedProducts(); track product.productId) {
+              <li
+                [attr.data-id]="product.productId"
+                class="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm font-medium text-gray-800 transition-shadow hover:shadow-sm"
+              >
+                <app-icon
+                  name="icon-grip"
+                  [class]="'drag-handle h-5 w-5 shrink-0 cursor-grab touch-none text-gray-300 hover:text-gray-500 active:cursor-grabbing'"
+                />
+                <div class="shrink-0">
+                  @if (product.imageUrl) {
+                    <img
+                      [src]="product.imageUrl"
+                      [alt]="product.name"
+                      class="h-8 w-8 rounded-full object-cover"
+                    />
+                  } @else {
+                    <app-avatar [label]="product.name" [size]="32" />
+                  }
+                </div>
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center gap-2">
+                    <span class="block truncate">{{ product.name }}</span>
+                    @if (product.isAddOn) {
+                      <span class="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-amber-700 uppercase">
+                        Add-on
+                      </span>
+                    } @else {
+                      <span class="rounded bg-[#047857]/10 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-[#047857] uppercase">
+                        Product
+                      </span>
+                    }
+                  </div>
+                  <div class="mt-0.5 flex items-center justify-between gap-2">
+                    <span class="font-mono text-[10px] text-gray-400">{{ product.code }}</span>
+                    <span class="shrink-0 text-xs text-gray-500">
+                      <app-icon
+                        name="icon-peso"
+                        [class]="'inline h-3 w-3 align-[-0.125em]'"
+                        [fill]="'currentColor'"
+                      />{{ product.price | number: '1.2-2' }}
+                    </span>
+                  </div>
+                </div>
+
+                <div class="flex shrink-0 items-center gap-2">
+                  <label class="input input-xs flex h-7 w-24 items-center gap-1 border-gray-200 bg-white">
+                    <input
+                      class="w-full bg-transparent text-[10px] outline-none"
+                      type="number"
+                      min="0.001"
+                      step="0.001"
+                      [ngModel]="product.quantityPerSale"
+                      (ngModelChange)="onQuantityChange(product.productId, $event)"
+                      [ngModelOptions]="{ standalone: true }"
+                    />
+                    <span class="shrink-0 text-[10px] text-gray-400">{{ unitAbbreviation() }}</span>
+                  </label>
+                  <button
+                    type="button"
+                    class="cursor-pointer rounded-full p-1 text-gray-400 transition-all hover:bg-red-50 hover:text-red-500"
+                    (click)="removeLinkedProduct(product.productId)"
+                  >
+                    <app-icon name="icon-close" [class]="'h-3.5 w-3.5'" />
+                  </button>
+                </div>
+              </li>
+            }
+
+            @if (linkedProducts().length === 0) {
+              <div class="flex items-center justify-center py-8 text-gray-400">
+                <p class="text-sm">Drag products here</p>
+              </div>
+            }
+          </ul>
+        </div>
+      </div>
+    }
+
+    <div class="modal-action">
+      <button
+        class="cursor-pointer rounded-lg px-4 py-2 font-medium text-gray-600 transition-all hover:bg-gray-100 active:scale-95"
+        (click)="closeModal()"
+        type="button"
+      >
+        Cancel
+      </button>
+      <button
+        class="btn gap-2 rounded-lg border-0 bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg"
+        [disabled]="isLoading() || isSaving()"
+        (click)="save()"
+        type="button"
+      >
+        @if (isSaving()) {
+          <span class="loading loading-spinner loading-sm"></span>
+        }
+        {{ isSaving() ? 'Saving Links...' : 'Save Links' }}
+      </button>
+    </div>
+  </div>
+
+  <form method="dialog" class="modal-backdrop bg-black/30 backdrop-blur-md">
+    <button type="button">close</button>
+  </form>
+</dialog>

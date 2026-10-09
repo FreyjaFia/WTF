@@ -1,16 +1,29 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal, ViewChild } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AlertService, InventoryService, ModalStackService } from '@core/services';
-import { IconComponent, PriceHistoryDrawerComponent } from '@shared/components';
+import {
+  IconComponent,
+  PriceHistoryDrawerComponent,
+  ProductItemLinksSelectorComponent,
+} from '@shared/components';
 import { AppRoutes } from '@shared/constants/app-routes';
-import { INVENTORY_UNIT_OPTIONS } from '@shared/constants/inventory-units';
-import { ItemPriceHistoryDto } from '@shared/models';
+import {
+  getInventoryUnitAbbreviation,
+  INVENTORY_UNIT_OPTIONS,
+} from '@shared/constants/inventory-units';
+import { ItemDto, ItemPriceHistoryDto, ProductItemLinkDto } from '@shared/models';
 
 @Component({
   selector: 'app-item-editor',
-  imports: [CommonModule, ReactiveFormsModule, IconComponent, PriceHistoryDrawerComponent],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    IconComponent,
+    PriceHistoryDrawerComponent,
+    ProductItemLinksSelectorComponent,
+  ],
   templateUrl: './item-editor.html',
   host: { class: 'block h-full' },
 })
@@ -21,6 +34,9 @@ export class ItemEditorComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly modalStack = inject(ModalStackService);
 
+  @ViewChild(ProductItemLinksSelectorComponent)
+  private readonly productItemLinksSelector!: ProductItemLinksSelectorComponent;
+
   protected readonly isEditMode = signal(false);
   protected readonly isLoading = signal(false);
   protected readonly isSaving = signal(false);
@@ -28,6 +44,11 @@ export class ItemEditorComponent implements OnInit {
   protected readonly lastUpdatedAt = signal<string | null>(null);
   protected readonly isHistoryOpen = signal(false);
   protected readonly priceHistory = signal<ItemPriceHistoryDto[]>([]);
+  protected readonly linkedProducts = signal<ProductItemLinkDto[]>([]);
+  protected readonly savedUnitName = signal('');
+  protected readonly savedUnitAbbreviation = computed(() =>
+    getInventoryUnitAbbreviation(this.savedUnitName()),
+  );
   protected readonly unitOptions = INVENTORY_UNIT_OPTIONS;
   protected readonly showDiscardModal = signal(false);
 
@@ -225,6 +246,8 @@ export class ItemEditorComponent implements OnInit {
         this.itemName.set(item.name);
         this.lastUpdatedAt.set(item.updatedAt || item.createdAt);
         this.priceHistory.set(item.priceHistory || []);
+        this.linkedProducts.set((item.productLinks || []).filter((link) => link.isActive));
+        this.savedUnitName.set(item.unitName);
         this.syncUnitsPerStockUnitState();
         this.inventoryForm.markAsPristine();
         this.isLoading.set(false);
@@ -306,5 +329,26 @@ export class ItemEditorComponent implements OnInit {
 
   protected closePriceHistory(): void {
     this.isHistoryOpen.set(false);
+  }
+
+  protected openProductLinksManager(): void {
+    if (!this.itemId) {
+      this.alertService.error('Please save the item first before managing product links.');
+      return;
+    }
+
+    const modal = document.querySelector('#product-item-links-modal') as HTMLDialogElement;
+    if (!modal) {
+      return;
+    }
+
+    this.productItemLinksSelector.open(this.itemId, this.linkedProducts(), this.savedUnitName());
+
+    modal.showModal();
+    this.productItemLinksSelector.registerOnStack();
+  }
+
+  protected onProductLinksSaved(item: ItemDto): void {
+    this.linkedProducts.set((item.productLinks || []).filter((link) => link.isActive));
   }
 }

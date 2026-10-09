@@ -6,6 +6,7 @@ import {
   AddItemStockDto,
   CreateItemDto,
   ItemDto,
+  ProductItemLinkAssignmentDto,
   UpdateItemDto,
 } from '@shared/models';
 import { Observable, throwError } from 'rxjs';
@@ -64,6 +65,15 @@ export class InventoryService {
     return this.http
       .post<ItemDto>(`${this.baseUrl}/${payload.itemId}/stock`, payload)
       .pipe(catchError((error) => this.handleError(error, 'Unable to add stock.')));
+  }
+
+  public syncProductItemLinks(
+    itemId: string,
+    productLinks: ProductItemLinkAssignmentDto[],
+  ): Observable<ItemDto> {
+    return this.http
+      .put<ItemDto>(`${this.baseUrl}/${itemId}/product-links`, { itemId, productLinks })
+      .pipe(catchError((error) => this.handleError(error, 'Unable to update item links.')));
   }
 
   public deleteInventoryItem(id: string): Observable<void> {

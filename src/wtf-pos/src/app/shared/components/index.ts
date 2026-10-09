@@ -23,6 +23,7 @@ export * from './layout/layout';
 export * from './offline-banner/offline-banner';
 export * from './order-receipt/order-receipt';
 export * from './price-history-drawer/price-history-drawer';
+export * from './product-item-links-selector/product-item-links-selector';
 export * from './products-swapper/products-swapper';
 export * from './pull-to-refresh/pull-to-refresh';
 export * from './search-input/search-input';
