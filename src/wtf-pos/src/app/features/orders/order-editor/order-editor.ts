@@ -44,6 +44,7 @@ import {
   PullToRefreshComponent,
   SearchInputComponent,
 } from '@shared/components';
+import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import {
   AddOnGroupDto,
   ADD_ON_TYPE_ORDER,
@@ -113,6 +114,7 @@ type CatalogScrollTab = ProductSubCategoryEnum | 'bundles';
     PullToRefreshComponent,
     OrderReceiptComponent,
     SearchInputComponent,
+    ConfirmDialogComponent,
   ],
   templateUrl: './order-editor.html',
 })

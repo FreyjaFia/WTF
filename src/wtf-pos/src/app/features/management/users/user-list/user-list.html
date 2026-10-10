@@ -334,16 +334,29 @@
                           </a>
                         </li>
                         <li>
-                          <button
-                            type="button"
-                            (click)="deleteUser(user)"
-                            (keydown.enter)="deleteUser(user)"
-                            (keydown.space)="deleteUser(user)"
-                            class="flex items-center gap-2 text-red-600 hover:bg-red-50"
-                          >
-                            <app-icon name="icon-delete" [class]="'h-4 w-4 text-red-600'" />
-                            Delete
-                          </button>
+                          @if (user.isActive) {
+                            <button
+                              type="button"
+                              (click)="deleteUser(user)"
+                              (keydown.enter)="deleteUser(user)"
+                              (keydown.space)="deleteUser(user)"
+                              class="flex items-center gap-2 text-red-600 hover:bg-red-50"
+                            >
+                              <app-icon name="icon-delete" [class]="'h-4 w-4 text-red-600'" />
+                              Delete
+                            </button>
+                          } @else {
+                            <button
+                              type="button"
+                              (click)="restoreUser(user)"
+                              (keydown.enter)="restoreUser(user)"
+                              (keydown.space)="restoreUser(user)"
+                              class="flex items-center gap-2 text-[#047857] hover:bg-[#047857]/10"
+                            >
+                              <app-icon name="icon-refresh" [class]="'h-4 w-4 text-[#047857]'" />
+                              Restore
+                            </button>
+                          }
                         </li>
                       </ul>
                     </div>
@@ -360,64 +373,38 @@
 
 <!-- Delete Confirmation Modal -->
 @if (showDeleteModal() && userToDelete() && canWriteUsers()) {
-  <div
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="delete-title"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md transition-opacity duration-200"
-    (click)="cancelDelete()"
-    (keydown.escape)="cancelDelete()"
-    tabindex="0"
+  <app-confirm-dialog
+    icon="icon-delete"
+    heading="Delete User?"
+    confirmLabel="Delete User"
+    busyLabel="Deleting User..."
+    [isBusy]="isDeleting()"
+    (confirmed)="confirmDelete()"
+    (cancelled)="cancelDelete()"
   >
-    <div
-      role="document"
-      class="mx-4 w-full max-w-sm animate-[modal-pop_0.2s_ease-out] rounded-2xl bg-white p-6 shadow-2xl"
-      (click)="$event.stopPropagation()"
-      (keydown)="$event.stopPropagation()"
-    >
-      <!-- Double-Ring Warning Icon -->
-      <div class="mx-auto w-fit rounded-full bg-red-50/60 p-3">
-        <div class="rounded-full bg-red-50 p-3">
-          <app-icon name="icon-delete" [class]="'h-6 w-6 text-red-600'" />
-        </div>
-      </div>
-
-      <!-- Title & Body -->
-      <h3 id="delete-title" class="mt-4 text-center text-lg font-semibold text-gray-900">
-        Delete User?
-      </h3>
-      <p class="mt-2 text-center text-sm leading-relaxed text-gray-500">
-        This will permanently remove
-        <span class="font-medium text-gray-700">
-          {{ userToDelete()!.firstName }} {{ userToDelete()!.lastName }}</span
-        >. This action cannot be undone.
-      </p>
-
-      <!-- Actions -->
-      <div class="mt-6 flex items-center justify-end gap-3">
-        <button
-          type="button"
-          class="cursor-pointer px-4 py-2 text-sm font-medium text-gray-500 transition-colors hover:text-gray-700"
-          (click)="cancelDelete()"
-          [disabled]="isDeleting()"
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          class="cursor-pointer rounded-xl bg-red-600 px-6 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-red-700 hover:shadow-md active:scale-[0.97]"
-          (click)="confirmDelete()"
-          [disabled]="isDeleting()"
-        >
-          @if (isDeleting()) {
-            <span class="loading loading-spinner loading-xs mr-2"></span>
-          }
-          {{ isDeleting() ? 'Deleting User...' : 'Delete User' }}
-        </button>
-      </div>
-    </div>
-  </div>
+    This will deactivate
+    <span class="font-medium text-gray-700">
+      {{ userToDelete()!.firstName }} {{ userToDelete()!.lastName }}</span
+    >. They will no longer be able to sign in. You can restore them later.
+  </app-confirm-dialog>
 }
 
 
 
+
+@if (showRestoreModal() && userToRestore() && canWriteUsers()) {
+  <app-confirm-dialog
+    variant="success"
+    icon="icon-refresh"
+    heading="Restore User?"
+    confirmLabel="Restore User"
+    busyLabel="Restoring User..."
+    [isBusy]="isRestoring()"
+    (confirmed)="confirmRestore()"
+    (cancelled)="cancelRestore()"
+  >
+    This will reactivate
+    <span class="font-medium text-gray-700">{{ userToRestore()!.firstName + ' ' + userToRestore()!.lastName }}</span
+    >. They will be able to sign in again.
+  </app-confirm-dialog>
+}

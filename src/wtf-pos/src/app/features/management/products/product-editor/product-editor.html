@@ -764,55 +764,18 @@
 
 <!-- Discard Changes Modal -->
 @if (showDiscardModal()) {
-  <div
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="discard-title"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md transition-opacity duration-200"
-    (click)="cancelDiscard()"
-    (keydown.escape)="cancelDiscard()"
-    tabindex="0"
+  <app-confirm-dialog
+    variant="warning"
+    icon="icon-back"
+    heading="Discard Changes?"
+    confirmLabel="Discard"
+    cancelLabel="Keep Editing"
+    confirmPlacement="secondary"
+    (confirmed)="confirmDiscard()"
+    (cancelled)="cancelDiscard()"
   >
-    <div
-      role="document"
-      class="mx-4 w-full max-w-sm animate-[modal-pop_0.2s_ease-out] rounded-2xl bg-white p-6 shadow-2xl"
-      (click)="$event.stopPropagation()"
-      (keydown)="$event.stopPropagation()"
-    >
-      <!-- Double-Ring Warning Icon -->
-      <div class="mx-auto w-fit rounded-full bg-amber-50/60 p-3">
-        <div class="rounded-full bg-amber-50 p-3">
-          <app-icon name="icon-back" [class]="'h-6 w-6 text-amber-600'" />
-        </div>
-      </div>
-
-      <!-- Title & Body -->
-      <h3 id="discard-title" class="mt-4 text-center text-lg font-semibold text-gray-900">
-        Discard Changes?
-      </h3>
-      <p class="mt-2 text-center text-sm leading-relaxed text-gray-500">
-        You have unsaved changes that will be lost if you leave this page.
-      </p>
-
-      <!-- Actions -->
-      <div class="mt-6 flex items-center justify-end gap-3">
-        <button
-          type="button"
-          class="cursor-pointer px-4 py-2 text-sm font-medium text-red-500 transition-colors hover:text-red-700"
-          (click)="confirmDiscard()"
-        >
-          Discard
-        </button>
-        <button
-          type="button"
-          class="cursor-pointer rounded-xl bg-[#047857] px-6 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#065f46] hover:shadow-md active:scale-[0.97]"
-          (click)="cancelDiscard()"
-        >
-          Keep Editing
-        </button>
-      </div>
-    </div>
-  </div>
+    You have unsaved changes that will be lost if you leave this page.
+  </app-confirm-dialog>
 }
 
 <!-- Price History Drawer -->

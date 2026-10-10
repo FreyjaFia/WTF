@@ -399,77 +399,39 @@
 </div>
 
 @if (showRefundModal() && order(); as currentOrder) {
-  <div
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="refund-order-title"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md transition-opacity duration-200"
-    (click)="dismissRefundModal()"
-    (keydown.escape)="dismissRefundModal()"
-    tabindex="0"
+  <app-confirm-dialog
+    icon="icon-cart"
+    heading="Refund Order?"
+    confirmLabel="Refund Order"
+    busyLabel="Refunding..."
+    cancelLabel="Keep Order"
+    [isBusy]="isRefunding()"
+    [muteWhenDisabled]="true"
+    (confirmed)="confirmRefund()"
+    (cancelled)="dismissRefundModal()"
   >
-    <div
-      role="document"
-      class="mx-4 w-full max-w-sm animate-[modal-pop_0.2s_ease-out] rounded-2xl bg-white p-6 shadow-2xl"
-      (click)="$event.stopPropagation()"
-      (keydown)="$event.stopPropagation()"
-    >
-      <div class="mx-auto w-fit rounded-full bg-red-50/60 p-3">
-        <div class="rounded-full bg-red-50 p-3">
-          <app-icon name="icon-cart" [class]="'h-6 w-6 text-red-600'" />
-        </div>
-      </div>
+    Are you sure you want to refund order
+    <span class="font-medium text-gray-700">#{{ currentOrder.orderNumber }}</span
+    >?
 
-      <h3 id="refund-order-title" class="mt-4 text-center text-lg font-semibold text-gray-900">
-        Refund Order?
-      </h3>
-      <p class="mt-2 text-center text-sm leading-relaxed text-gray-500">
-        Are you sure you want to refund order
-        <span class="font-medium text-gray-700">#{{ currentOrder.orderNumber }}</span
-        >?
-      </p>
-
-      <div class="mt-4">
-        <label
-          for="refund-note"
-          class="mb-1 block text-xs font-semibold tracking-wide text-gray-600 uppercase"
-        >
-          Refund note
-        </label>
-        <textarea
-          id="refund-note"
-          class="textarea textarea-bordered min-h-24 w-full text-sm"
-          [value]="refundNote()"
-          (input)="onRefundNoteInput($event)"
-          placeholder="Enter reason for refund"
-          maxlength="500"
-        ></textarea>
-        @if (showRefundNoteError()) {
-          <p class="mt-1 text-xs text-red-600">Refund note is required.</p>
-        }
-      </div>
-
-      <div class="mt-6 flex items-center justify-end gap-3">
-        <button
-          type="button"
-          class="cursor-pointer px-4 py-2 text-sm font-medium text-gray-500 transition-colors hover:text-gray-700"
-          (click)="dismissRefundModal()"
-          [disabled]="isRefunding()"
-        >
-          Keep Order
-        </button>
-        <button
-          type="button"
-          class="cursor-pointer rounded-xl bg-red-600 px-6 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-red-700 hover:shadow-md active:scale-[0.97] disabled:cursor-not-allowed disabled:bg-gray-300"
-          (click)="confirmRefund()"
-          [disabled]="isRefunding()"
-        >
-          @if (isRefunding()) {
-            <span class="loading loading-spinner loading-xs mr-2"></span>
-          }
-          {{ isRefunding() ? 'Refunding...' : 'Refund Order' }}
-        </button>
-      </div>
+    <div dialogExtra class="mt-4">
+      <label
+        for="refund-note"
+        class="mb-1 block text-xs font-semibold tracking-wide text-gray-600 uppercase"
+      >
+        Refund note
+      </label>
+      <textarea
+        id="refund-note"
+        class="textarea textarea-bordered min-h-24 w-full text-sm"
+        [value]="refundNote()"
+        (input)="onRefundNoteInput($event)"
+        placeholder="Enter reason for refund"
+        maxlength="500"
+      ></textarea>
+      @if (showRefundNoteError()) {
+        <p class="mt-1 text-xs text-red-600">Refund note is required.</p>
+      }
     </div>
-  </div>
+  </app-confirm-dialog>
 }

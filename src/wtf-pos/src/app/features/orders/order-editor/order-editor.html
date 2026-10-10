@@ -1002,185 +1002,74 @@
 
 <!-- Cancel Order Modal -->
 @if (showCancelOrderModal()) {
-  <div
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="cancel-order-title"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md transition-opacity duration-200"
-    (click)="dismissCancelOrder()"
-    (keydown.escape)="dismissCancelOrder()"
-    tabindex="0"
+  <app-confirm-dialog
+    icon="icon-cart"
+    [heading]="isCompleted() ? 'Refund Order?' : 'Cancel Order?'"
+    [confirmLabel]="isCompleted() ? 'Refund Order' : 'Cancel Order'"
+    cancelLabel="Keep Order"
+    (confirmed)="confirmCancelOrder()"
+    (cancelled)="dismissCancelOrder()"
   >
-    <div
-      role="document"
-      class="mx-4 w-full max-w-sm animate-[modal-pop_0.2s_ease-out] rounded-2xl bg-white p-6 shadow-2xl"
-      (click)="$event.stopPropagation()"
-      (keydown)="$event.stopPropagation()"
-    >
-      <!-- Double-Ring Warning Icon -->
-      <div class="mx-auto w-fit rounded-full bg-red-50/60 p-3">
-        <div class="rounded-full bg-red-50 p-3">
-          <app-icon name="icon-cart" [class]="'h-6 w-6 text-red-600'" />
-        </div>
-      </div>
+    Are you sure you want to {{ isCompleted() ? 'refund' : 'cancel' }} order
+    <span class="font-medium text-gray-700">#{{ currentOrder()!.orderNumber }}</span
+    >? This action cannot be undone.
 
-      <!-- Title & Body -->
-      <h3 id="cancel-order-title" class="mt-4 text-center text-lg font-semibold text-gray-900">
-        {{ isCompleted() ? 'Refund Order?' : 'Cancel Order?' }}
-      </h3>
-      <p class="mt-2 text-center text-sm leading-relaxed text-gray-500">
-        Are you sure you want to {{ isCompleted() ? 'refund' : 'cancel' }} order
-        <span class="font-medium text-gray-700">#{{ currentOrder()!.orderNumber }}</span
-        >? This action cannot be undone.
-      </p>
-
-      @if (isCompleted()) {
-        <div class="mt-4">
-          <label
-            for="cancel-order-note"
-            class="mb-1 block text-xs font-semibold tracking-wide text-gray-600 uppercase"
-          >
-            Refund note
-          </label>
-          <textarea
-            id="cancel-order-note"
-            class="textarea textarea-bordered min-h-24 w-full text-sm"
-            [value]="cancelOrderNote()"
-            (input)="onCancelOrderNoteInput($event)"
-            placeholder="Enter reason for refund"
-            maxlength="500"
-          ></textarea>
-          @if (showCancelOrderNoteError()) {
-            <p class="mt-1 text-xs text-red-600">Refund note is required.</p>
-          }
-        </div>
-      }
-
-      <!-- Actions -->
-      <div class="mt-6 flex items-center justify-end gap-3">
-        <button
-          type="button"
-          class="cursor-pointer px-4 py-2 text-sm font-medium text-gray-500 transition-colors hover:text-gray-700"
-          (click)="dismissCancelOrder()"
+    @if (isCompleted()) {
+      <div dialogExtra class="mt-4">
+        <label
+          for="cancel-order-note"
+          class="mb-1 block text-xs font-semibold tracking-wide text-gray-600 uppercase"
         >
-          Keep Order
-        </button>
-        <button
-          type="button"
-          class="cursor-pointer rounded-xl bg-red-600 px-6 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-red-700 hover:shadow-md active:scale-[0.97]"
-          (click)="confirmCancelOrder()"
-        >
-          {{ isCompleted() ? 'Refund Order' : 'Cancel Order' }}
-        </button>
+          Refund note
+        </label>
+        <textarea
+          id="cancel-order-note"
+          class="textarea textarea-bordered min-h-24 w-full text-sm"
+          [value]="cancelOrderNote()"
+          (input)="onCancelOrderNoteInput($event)"
+          placeholder="Enter reason for refund"
+          maxlength="500"
+        ></textarea>
+        @if (showCancelOrderNoteError()) {
+          <p class="mt-1 text-xs text-red-600">Refund note is required.</p>
+        }
       </div>
-    </div>
-  </div>
+    }
+  </app-confirm-dialog>
 }
 
 <!-- Discard Offline Order Modal -->
 @if (showDiscardOrderModal()) {
-  <div
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="discard-order-title"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md transition-opacity duration-200"
-    (click)="dismissDiscardOrder()"
-    (keydown.escape)="dismissDiscardOrder()"
-    tabindex="0"
+  <app-confirm-dialog
+    icon="icon-cart"
+    heading="Discard Order?"
+    confirmLabel="Discard Order"
+    cancelLabel="Keep Order"
+    (confirmed)="confirmDiscardOrder()"
+    (cancelled)="dismissDiscardOrder()"
   >
-    <div
-      role="document"
-      class="mx-4 w-full max-w-sm animate-[modal-pop_0.2s_ease-out] rounded-2xl bg-white p-6 shadow-2xl"
-      (click)="$event.stopPropagation()"
-      (keydown)="$event.stopPropagation()"
-    >
-      <div class="mx-auto w-fit rounded-full bg-red-50/60 p-3">
-        <div class="rounded-full bg-red-50 p-3">
-          <app-icon name="icon-cart" [class]="'h-6 w-6 text-red-600'" />
-        </div>
-      </div>
-
-      <h3 id="discard-order-title" class="mt-4 text-center text-lg font-semibold text-gray-900">
-        Discard Order?
-      </h3>
-      <p class="mt-2 text-center text-sm leading-relaxed text-gray-500">
-        Are you sure you want to discard offline order
-        <span class="font-medium text-gray-700">{{ offlineLocalId }}</span
-        >? This action cannot be undone.
-      </p>
-
-      <div class="mt-6 flex items-center justify-end gap-3">
-        <button
-          type="button"
-          class="cursor-pointer px-4 py-2 text-sm font-medium text-gray-500 transition-colors hover:text-gray-700"
-          (click)="dismissDiscardOrder()"
-        >
-          Keep Order
-        </button>
-        <button
-          type="button"
-          class="cursor-pointer rounded-xl bg-red-600 px-6 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-red-700 hover:shadow-md active:scale-[0.97]"
-          (click)="confirmDiscardOrder()"
-        >
-          Discard Order
-        </button>
-      </div>
-    </div>
-  </div>
+    Are you sure you want to discard offline order
+    <span class="font-medium text-gray-700">{{ offlineLocalId }}</span
+    >? This action cannot be undone.
+  </app-confirm-dialog>
 }
 
 <!-- Abandon Order Modal -->
 @if (showAbandonModal()) {
-  <div
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="abandon-title"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md transition-opacity duration-200"
-    (click)="cancelAbandon()"
-    (keydown.escape)="cancelAbandon()"
-    tabindex="0"
+  <app-confirm-dialog
+    variant="warning"
+    icon="icon-cart"
+    heading="Leave Order?"
+    confirmLabel="Leave"
+    cancelLabel="Keep Ordering"
+    confirmPlacement="secondary"
+    secondaryTone="neutral"
+    (confirmed)="confirmAbandon()"
+    (cancelled)="cancelAbandon()"
   >
-    <div
-      role="document"
-      class="mx-4 w-full max-w-sm animate-[modal-pop_0.2s_ease-out] rounded-2xl bg-white p-6 shadow-2xl"
-      (click)="$event.stopPropagation()"
-      (keydown)="$event.stopPropagation()"
-    >
-      <!-- Double-Ring Warning Icon -->
-      <div class="mx-auto w-fit rounded-full bg-amber-50/60 p-3">
-        <div class="rounded-full bg-amber-50 p-3">
-          <app-icon name="icon-cart" [class]="'h-6 w-6 text-amber-600'" />
-        </div>
-      </div>
-
-      <!-- Title & Body -->
-      <h3 id="abandon-title" class="mt-4 text-center text-lg font-semibold text-gray-900">
-        Leave Order?
-      </h3>
-      <p class="mt-2 text-center text-sm leading-relaxed text-gray-500">
-        There are
-        <span class="font-medium text-gray-700">{{ itemCount() }}</span>
-        {{ itemCount() === 1 ? 'item' : 'items' }} in the cart. Your order will be saved and
-        restored when you come back.
-      </p>
-
-      <!-- Actions -->
-      <div class="mt-6 flex items-center justify-end gap-3">
-        <button
-          type="button"
-          class="cursor-pointer px-4 py-2 text-sm font-medium text-gray-500 transition-colors hover:text-gray-700"
-          (click)="confirmAbandon()"
-        >
-          Leave
-        </button>
-        <button
-          type="button"
-          class="cursor-pointer rounded-xl bg-[#047857] px-6 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#065f46] hover:shadow-md active:scale-[0.97]"
-          (click)="cancelAbandon()"
-        >
-          Keep Ordering
-        </button>
-      </div>
-    </div>
-  </div>
+    There are
+    <span class="font-medium text-gray-700">{{ itemCount() }}</span>
+    {{ itemCount() === 1 ? 'item' : 'items' }} in the cart. Your order will be saved and
+    restored when you come back.
+  </app-confirm-dialog>
 }

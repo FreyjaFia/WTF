@@ -8,6 +8,7 @@ import {
   IconComponent,
   PriceHistoryDrawerComponent,
 } from '@shared/components';
+import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import {
   ADD_ON_TYPE_ORDER,
   AddOnGroupDto,
@@ -26,6 +27,7 @@ import { AppRoutes } from '@shared/constants/app-routes';
     RouterLink,
     IconComponent,
     BadgeComponent,
+    ConfirmDialogComponent,
     PriceHistoryDrawerComponent,
     AvatarComponent,
   ],
@@ -53,6 +55,8 @@ export class ProductDetailsComponent implements OnInit {
   protected readonly showAllLinked = signal(false);
   protected readonly showDeleteModal = signal(false);
   protected readonly isDeleting = signal(false);
+  protected readonly showRestoreModal = signal(false);
+  protected readonly isRestoring = signal(false);
   private modalStackId: number | null = null;
 
   protected readonly sortedAddOns = computed(() =>
@@ -143,6 +147,60 @@ export class ProductDetailsComponent implements OnInit {
     if (this.product()) {
       this.router.navigateByUrl(AppRoutes.ManagementProductEditById(this.product()!.id));
     }
+  }
+
+  protected restoreProduct(): void {
+    if (!this.canWriteProducts()) {
+      this.alertService.errorUnauthorized();
+      return;
+    }
+
+    if (!this.product()) {
+      return;
+    }
+
+    this.showRestoreModal.set(true);
+    this.modalStackId = this.modalStack.push(() => this.cancelRestore());
+  }
+
+  protected cancelRestore(): void {
+    if (this.isRestoring()) {
+      return;
+    }
+
+    this.showRestoreModal.set(false);
+    this.removeFromStack();
+  }
+
+  protected confirmRestore(): void {
+    if (this.isRestoring()) {
+      return;
+    }
+
+    if (!this.canWriteProducts()) {
+      this.alertService.errorUnauthorized();
+      return;
+    }
+
+    const product = this.product();
+    if (!product) {
+      return;
+    }
+
+    this.isRestoring.set(true);
+    this.productService.restoreProduct(product.id).subscribe({
+      next: () => {
+        this.isRestoring.set(false);
+        this.showRestoreModal.set(false);
+        this.removeFromStack();
+        this.alertService.successRestored('Product');
+        this.loadProduct(product.id);
+      },
+      error: (err) => {
+        this.isRestoring.set(false);
+        this.alertService.error(err.message);
+      },
+    });
   }
 
   protected deleteProduct(): void {

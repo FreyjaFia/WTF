@@ -3,12 +3,13 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AlertService, AuthService, ModalStackService, UserService } from '@core/services';
 import { AvatarComponent, BadgeComponent, IconComponent } from '@shared/components';
+import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import { UserDto, UserRoleEnum } from '@shared/models';
 import { AppRoutes } from '@shared/constants/app-routes';
 
 @Component({
   selector: 'app-user-details',
-  imports: [CommonModule, RouterLink, IconComponent, BadgeComponent, AvatarComponent],
+  imports: [CommonModule, RouterLink, IconComponent, BadgeComponent, AvatarComponent, ConfirmDialogComponent],
   templateUrl: './user-details.html',
   host: {
     class: 'block h-full',
@@ -27,6 +28,8 @@ export class UserDetailsComponent implements OnInit {
   protected readonly isLoading = signal(false);
   protected readonly showDeleteModal = signal(false);
   protected readonly isDeleting = signal(false);
+  protected readonly showRestoreModal = signal(false);
+  protected readonly isRestoring = signal(false);
   private modalStackId: number | null = null;
   // For image preview consistency with editor
   protected readonly currentImageUrl = signal<string | null>(null);
@@ -66,6 +69,53 @@ export class UserDetailsComponent implements OnInit {
     }
 
     this.router.navigateByUrl(AppRoutes.ManagementUserEditById(this.user()!.id));
+  }
+
+  protected restoreUser(): void {
+    const user = this.user();
+    if (!user || !this.canManageUserProfile(user)) {
+      this.alertService.errorUnauthorized();
+      return;
+    }
+
+    this.showRestoreModal.set(true);
+    this.modalStackId = this.modalStack.push(() => this.cancelRestore());
+  }
+
+  protected cancelRestore(): void {
+    if (this.isRestoring()) {
+      return;
+    }
+
+    this.showRestoreModal.set(false);
+    this.removeFromStack();
+  }
+
+  protected confirmRestore(): void {
+    if (this.isRestoring()) {
+      return;
+    }
+
+    const user = this.user();
+    if (!user || !this.canManageUserProfile(user)) {
+      this.alertService.errorUnauthorized();
+      return;
+    }
+
+    this.isRestoring.set(true);
+    this.userService.restoreUser(user.id).subscribe({
+      next: () => {
+        this.isRestoring.set(false);
+        this.showRestoreModal.set(false);
+        this.removeFromStack();
+        this.alertService.successRestored('User');
+        this.loadUser(user.id);
+      },
+      error: (err) => {
+        this.isRestoring.set(false);
+        this.alertService.error(err.message);
+      },
+    });
   }
 
   protected deleteUser(): void {

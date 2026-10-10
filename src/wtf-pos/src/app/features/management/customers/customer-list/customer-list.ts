@@ -19,6 +19,7 @@ import {
     SideDrawerComponent,
     type FilterOption
 } from '@shared/components';
+import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { CustomerDto } from '@shared/models';
 import { debounceTime } from 'rxjs';
@@ -40,6 +41,7 @@ interface CustomerListState {
     RouterLink,
     IconComponent,
     BadgeComponent,
+    ConfirmDialogComponent,
     AvatarComponent,
     PullToRefreshComponent,
     SearchInputComponent,
@@ -76,6 +78,9 @@ export class CustomerListComponent implements OnInit {
   protected readonly showDeleteModal = signal(false);
   protected readonly customerToDelete = signal<CustomerDto | null>(null);
   protected readonly isDeleting = signal(false);
+  protected readonly showRestoreModal = signal(false);
+  protected readonly customerToRestore = signal<CustomerDto | null>(null);
+  protected readonly isRestoring = signal(false);
   private modalStackId: number | null = null;
 
   protected readonly statusCounts = computed(() => {
@@ -225,12 +230,48 @@ export class CustomerListComponent implements OnInit {
       return;
     }
 
+    this.customerToRestore.set(customer);
+    this.showRestoreModal.set(true);
+    this.modalStackId = this.modalStack.push(() => this.cancelRestore());
+  }
+
+  protected cancelRestore(): void {
+    if (this.isRestoring()) {
+      return;
+    }
+
+    this.showRestoreModal.set(false);
+    this.customerToRestore.set(null);
+    this.removeFromStack();
+  }
+
+  protected confirmRestore(): void {
+    if (this.isRestoring()) {
+      return;
+    }
+
+    if (!this.canWriteCustomers()) {
+      this.alertService.errorUnauthorized();
+      return;
+    }
+
+    const customer = this.customerToRestore();
+    if (!customer) {
+      return;
+    }
+
+    this.isRestoring.set(true);
     this.customerService.restoreCustomer(customer.id).subscribe({
       next: () => {
+        this.isRestoring.set(false);
+        this.showRestoreModal.set(false);
+        this.customerToRestore.set(null);
+        this.removeFromStack();
         this.alertService.successRestored('Customer');
         this.loadCustomers();
       },
       error: (err) => {
+        this.isRestoring.set(false);
         this.alertService.error(err.message);
       },
     });

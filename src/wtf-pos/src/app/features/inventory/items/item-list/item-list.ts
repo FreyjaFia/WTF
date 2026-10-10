@@ -18,6 +18,7 @@ import {
   SearchInputComponent,
   SideDrawerComponent,
 } from '@shared/components';
+import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { getInventoryUnitAbbreviation } from '@shared/constants/inventory-units';
 import { ItemDto } from '@shared/models';
@@ -38,6 +39,7 @@ interface ItemListState {
     RouterLink,
     IconComponent,
     BadgeComponent,
+    ConfirmDialogComponent,
     PullToRefreshComponent,
     SearchInputComponent,
     SideDrawerComponent,
@@ -64,6 +66,9 @@ export class ItemListComponent implements OnInit {
   protected readonly showDeleteModal = signal(false);
   protected readonly itemToDelete = signal<ItemDto | null>(null);
   protected readonly isDeleting = signal(false);
+  protected readonly showRestoreModal = signal(false);
+  protected readonly itemToRestore = signal<ItemDto | null>(null);
+  protected readonly isRestoring = signal(false);
   private modalStackId: number | null = null;
 
   protected readonly filterForm = new FormGroup({
@@ -175,12 +180,48 @@ export class ItemListComponent implements OnInit {
       return;
     }
 
+    this.itemToRestore.set(item);
+    this.showRestoreModal.set(true);
+    this.modalStackId = this.modalStack.push(() => this.cancelRestore());
+  }
+
+  protected cancelRestore(): void {
+    if (this.isRestoring()) {
+      return;
+    }
+
+    this.showRestoreModal.set(false);
+    this.itemToRestore.set(null);
+    this.removeFromStack();
+  }
+
+  protected confirmRestore(): void {
+    if (this.isRestoring()) {
+      return;
+    }
+
+    if (!this.canWriteItems()) {
+      this.alertService.errorUnauthorized();
+      return;
+    }
+
+    const item = this.itemToRestore();
+    if (!item) {
+      return;
+    }
+
+    this.isRestoring.set(true);
     this.inventoryService.restoreInventoryItem(item.id).subscribe({
       next: () => {
+        this.isRestoring.set(false);
+        this.showRestoreModal.set(false);
+        this.itemToRestore.set(null);
+        this.removeFromStack();
         this.alertService.successRestored('Item');
         this.loadInventory();
       },
       error: (err) => {
+        this.isRestoring.set(false);
         this.alertService.error(err.message);
       },
     });

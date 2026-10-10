@@ -3,12 +3,13 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AlertService, AuthService, CustomerService, ModalStackService } from '@core/services';
 import { AvatarComponent, BadgeComponent, IconComponent } from '@shared/components';
+import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import { CustomerDto } from '@shared/models';
 import { AppRoutes } from '@shared/constants/app-routes';
 
 @Component({
   selector: 'app-customer-details',
-  imports: [CommonModule, RouterLink, IconComponent, BadgeComponent, AvatarComponent],
+  imports: [CommonModule, RouterLink, IconComponent, BadgeComponent, AvatarComponent, ConfirmDialogComponent],
   templateUrl: './customer-details.html',
   host: {
     class: 'block h-full',
@@ -27,6 +28,8 @@ export class CustomerDetailsComponent implements OnInit {
   protected readonly isLoading = signal(false);
   protected readonly showDeleteModal = signal(false);
   protected readonly isDeleting = signal(false);
+  protected readonly showRestoreModal = signal(false);
+  protected readonly isRestoring = signal(false);
   private modalStackId: number | null = null;
 
   public ngOnInit(): void {
@@ -64,6 +67,60 @@ export class CustomerDetailsComponent implements OnInit {
     if (this.customer()) {
       this.router.navigateByUrl(AppRoutes.ManagementCustomerEditById(this.customer()!.id));
     }
+  }
+
+  protected restoreCustomer(): void {
+    if (!this.canWriteCustomers()) {
+      this.alertService.errorUnauthorized();
+      return;
+    }
+
+    if (!this.customer()) {
+      return;
+    }
+
+    this.showRestoreModal.set(true);
+    this.modalStackId = this.modalStack.push(() => this.cancelRestore());
+  }
+
+  protected cancelRestore(): void {
+    if (this.isRestoring()) {
+      return;
+    }
+
+    this.showRestoreModal.set(false);
+    this.removeFromStack();
+  }
+
+  protected confirmRestore(): void {
+    if (this.isRestoring()) {
+      return;
+    }
+
+    if (!this.canWriteCustomers()) {
+      this.alertService.errorUnauthorized();
+      return;
+    }
+
+    const customer = this.customer();
+    if (!customer) {
+      return;
+    }
+
+    this.isRestoring.set(true);
+    this.customerService.restoreCustomer(customer.id).subscribe({
+      next: () => {
+        this.isRestoring.set(false);
+        this.showRestoreModal.set(false);
+        this.removeFromStack();
+        this.alertService.successRestored('Customer');
+        this.loadCustomer(customer.id);
+      },
+      error: (err) => {
+        this.isRestoring.set(false);
+        this.alertService.error(err.message);
+      },
+    });
   }
 
   protected deleteCustomer(): void {

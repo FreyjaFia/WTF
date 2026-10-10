@@ -10,6 +10,7 @@ import {
   PullToRefreshComponent,
   ReceiptData,
 } from '@shared/components';
+import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import {
   ADD_ON_TYPE_ORDER,
   AddOnTypeEnum,
@@ -34,6 +35,7 @@ import { AppRoutes } from '@shared/constants/app-routes';
     AvatarComponent,
     PullToRefreshComponent,
     OrderReceiptComponent,
+    ConfirmDialogComponent,
   ],
   templateUrl: './order-details.html',
 })

@@ -111,6 +111,7 @@ export const ServiceErrorMessages = {
     CreateUserFailed: 'Failed to create user. Please try again later.',
     UpdateUserFailed: 'Failed to update user. Please try again later.',
     DeleteUserFailed: 'Failed to delete user. Please try again later.',
+    RestoreUserFailed: 'Failed to restore user. Please try again later.',
     UploadImageFailed: 'Failed to upload image. Please try again later.',
     DeleteImageFailed: 'Failed to delete image. Please try again later.',
   },

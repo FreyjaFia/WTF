@@ -11,6 +11,7 @@ import {
 import { ActivatedRoute, Router } from '@angular/router';
 import { AlertService, AuthService, ModalStackService, UserService } from '@core/services';
 import { AvatarComponent, IconComponent } from '@shared/components';
+import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import { CreateUserDto, UpdateUserDto, UserRoleEnum } from '@shared/models';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { jwtDecode } from 'jwt-decode';
@@ -18,7 +19,7 @@ import { of, switchMap } from 'rxjs';
 
 @Component({
   selector: 'app-user-editor',
-  imports: [CommonModule, ReactiveFormsModule, IconComponent, AvatarComponent],
+  imports: [CommonModule, ReactiveFormsModule, IconComponent, AvatarComponent, ConfirmDialogComponent],
   templateUrl: './user-editor.html',
   host: {
     class: 'block h-full',

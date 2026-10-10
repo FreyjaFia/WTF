@@ -304,9 +304,9 @@
                               (click)="restoreCustomer(customer)"
                               (keydown.enter)="restoreCustomer(customer)"
                               (keydown.space)="restoreCustomer(customer)"
-                              class="flex items-center gap-2 text-gray-700 hover:bg-gray-100"
+                              class="flex items-center gap-2 text-[#047857] hover:bg-[#047857]/10"
                             >
-                              <app-icon name="icon-refresh" [class]="'h-4 w-4 text-gray-600'" />
+                              <app-icon name="icon-refresh" [class]="'h-4 w-4 text-[#047857]'" />
                               Restore
                             </button>
                           }
@@ -326,61 +326,35 @@
 
 <!-- Delete Confirmation Modal -->
 @if (showDeleteModal() && customerToDelete()) {
-  <div
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="delete-title"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md transition-opacity duration-200"
-    (click)="cancelDelete()"
-    (keydown.escape)="cancelDelete()"
-    tabindex="0"
+  <app-confirm-dialog
+    icon="icon-delete"
+    heading="Delete Customer?"
+    confirmLabel="Delete Customer"
+    busyLabel="Deleting Customer..."
+    [isBusy]="isDeleting()"
+    (confirmed)="confirmDelete()"
+    (cancelled)="cancelDelete()"
   >
-    <div
-      role="document"
-      class="mx-4 w-full max-w-sm animate-[modal-pop_0.2s_ease-out] rounded-2xl bg-white p-6 shadow-2xl"
-      (click)="$event.stopPropagation()"
-      (keydown)="$event.stopPropagation()"
-    >
-      <!-- Double-Ring Warning Icon -->
-      <div class="mx-auto w-fit rounded-full bg-red-50/60 p-3">
-        <div class="rounded-full bg-red-50 p-3">
-          <app-icon name="icon-delete" [class]="'h-6 w-6 text-red-600'" />
-        </div>
-      </div>
+    This will deactivate
+    <span class="font-medium text-gray-700">
+      {{ customerToDelete()!.firstName }} {{ customerToDelete()!.lastName }}</span
+    >. You can restore it later.
+  </app-confirm-dialog>
+}
 
-      <!-- Title & Body -->
-      <h3 id="delete-title" class="mt-4 text-center text-lg font-semibold text-gray-900">
-        Delete Customer?
-      </h3>
-      <p class="mt-2 text-center text-sm leading-relaxed text-gray-500">
-        This will deactivate
-        <span class="font-medium text-gray-700">
-          {{ customerToDelete()!.firstName }} {{ customerToDelete()!.lastName }}</span
-        >. You can restore it later.
-      </p>
-
-      <!-- Actions -->
-      <div class="mt-6 flex items-center justify-end gap-3">
-        <button
-          type="button"
-          class="cursor-pointer px-4 py-2 text-sm font-medium text-gray-500 transition-colors hover:text-gray-700"
-          (click)="cancelDelete()"
-          [disabled]="isDeleting()"
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          class="cursor-pointer rounded-xl bg-red-600 px-6 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-red-700 hover:shadow-md active:scale-[0.97]"
-          (click)="confirmDelete()"
-          [disabled]="isDeleting()"
-        >
-          @if (isDeleting()) {
-            <span class="loading loading-spinner loading-xs mr-2"></span>
-          }
-          {{ isDeleting() ? 'Deleting Customer...' : 'Delete Customer' }}
-        </button>
-      </div>
-    </div>
-  </div>
+@if (showRestoreModal() && customerToRestore() && canWriteCustomers()) {
+  <app-confirm-dialog
+    variant="success"
+    icon="icon-refresh"
+    heading="Restore Customer?"
+    confirmLabel="Restore Customer"
+    busyLabel="Restoring Customer..."
+    [isBusy]="isRestoring()"
+    (confirmed)="confirmRestore()"
+    (cancelled)="cancelRestore()"
+  >
+    This will reactivate
+    <span class="font-medium text-gray-700">{{ customerToRestore()!.firstName + ' ' + customerToRestore()!.lastName }}</span
+    >. They will be available for new orders again.
+  </app-confirm-dialog>
 }

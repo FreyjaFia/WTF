@@ -9,6 +9,7 @@ export * from './badge/badge';
 export * from './bar-chart/bar-chart';
 export * from './bundle-items-selector/bundle-items-selector';
 export * from './cart-drawer/cart-drawer';
+export * from './confirm-dialog/confirm-dialog';
 export * from './customer-dropdown/customer-dropdown';
 export * from './dock/dock';
 export * from './donut-chart/donut-chart';

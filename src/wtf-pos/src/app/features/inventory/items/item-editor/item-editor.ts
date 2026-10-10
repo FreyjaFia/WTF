@@ -8,6 +8,7 @@ import {
   PriceHistoryDrawerComponent,
   ProductItemLinksSelectorComponent,
 } from '@shared/components';
+import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import { AppRoutes } from '@shared/constants/app-routes';
 import {
   getInventoryUnitAbbreviation,
@@ -23,6 +24,7 @@ import { ItemDto, ItemPriceHistoryDto, ProductItemLinkDto } from '@shared/models
     IconComponent,
     PriceHistoryDrawerComponent,
     ProductItemLinksSelectorComponent,
+    ConfirmDialogComponent,
   ],
   templateUrl: './item-editor.html',
   host: { class: 'block h-full' },

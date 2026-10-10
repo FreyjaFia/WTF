@@ -10,6 +10,7 @@ import {
   PriceHistoryDrawerComponent,
   ProductsSwapperComponent,
 } from '@shared/components';
+import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import {
   ADD_ON_TYPE_ORDER,
   AddOnGroupDto,
@@ -37,6 +38,7 @@ import { AppRoutes } from '@shared/constants/app-routes';
     ProductsSwapperComponent,
     PriceHistoryDrawerComponent,
     AvatarComponent,
+    ConfirmDialogComponent,
   ],
   templateUrl: './product-editor.html',
   host: {

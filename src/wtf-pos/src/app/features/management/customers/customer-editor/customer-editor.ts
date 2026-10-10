@@ -4,12 +4,13 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { ActivatedRoute, Router } from '@angular/router';
 import { AlertService, CustomerService, ModalStackService } from '@core/services';
 import { AvatarComponent, IconComponent } from '@shared/components';
+import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import { CreateCustomerDto, UpdateCustomerDto } from '@shared/models';
 import { AppRoutes } from '@shared/constants/app-routes';
 
 @Component({
   selector: 'app-customer-editor',
-  imports: [CommonModule, ReactiveFormsModule, IconComponent, AvatarComponent],
+  imports: [CommonModule, ReactiveFormsModule, IconComponent, AvatarComponent, ConfirmDialogComponent],
   templateUrl: './customer-editor.html',
   host: { class: 'block h-full' },
 })

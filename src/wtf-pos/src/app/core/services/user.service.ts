@@ -19,6 +19,7 @@ export class UserService {
   private static readonly MSG_CREATE_USER_FAILED = ServiceErrorMessages.User.CreateUserFailed;
   private static readonly MSG_UPDATE_USER_FAILED = ServiceErrorMessages.User.UpdateUserFailed;
   private static readonly MSG_DELETE_USER_FAILED = ServiceErrorMessages.User.DeleteUserFailed;
+  private static readonly MSG_RESTORE_USER_FAILED = ServiceErrorMessages.User.RestoreUserFailed;
   private static readonly MSG_UPLOAD_IMAGE_FAILED = ServiceErrorMessages.User.UploadImageFailed;
   private static readonly MSG_DELETE_IMAGE_FAILED = ServiceErrorMessages.User.DeleteImageFailed;
 
@@ -100,6 +101,23 @@ export class UserService {
           () =>
             new Error(
               this.getErrorMessage(error, UserService.MSG_DELETE_USER_FAILED, {
+                notFound: UserService.MSG_USER_NOT_FOUND,
+                forbidden: HttpErrorMessages.NotAuthorized,
+              }),
+            ),
+        );
+      }),
+    );
+  }
+
+  public restoreUser(id: string): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/${id}/restore`, {}).pipe(
+      catchError((error: HttpErrorResponse) => {
+        console.error('Error restoring user:', error);
+        return throwError(
+          () =>
+            new Error(
+              this.getErrorMessage(error, UserService.MSG_RESTORE_USER_FAILED, {
                 notFound: UserService.MSG_USER_NOT_FOUND,
                 forbidden: HttpErrorMessages.NotAuthorized,
               }),

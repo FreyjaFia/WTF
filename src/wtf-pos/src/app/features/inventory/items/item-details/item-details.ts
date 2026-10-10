@@ -3,6 +3,7 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AlertService, AuthService, InventoryService, ModalStackService } from '@core/services';
 import { BadgeComponent, IconComponent, PriceHistoryDrawerComponent } from '@shared/components';
+import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { getInventoryUnitAbbreviation } from '@shared/constants/inventory-units';
 import { ItemDto, ItemPriceHistoryDto } from '@shared/models';
@@ -11,7 +12,7 @@ type StockStatus = 'ok' | 'warning' | 'critical';
 
 @Component({
   selector: 'app-item-details',
-  imports: [CommonModule, RouterLink, IconComponent, BadgeComponent, PriceHistoryDrawerComponent],
+  imports: [CommonModule, RouterLink, IconComponent, BadgeComponent, PriceHistoryDrawerComponent, ConfirmDialogComponent],
   templateUrl: './item-details.html',
   host: { class: 'block h-full' },
 })
@@ -30,6 +31,8 @@ export class ItemDetailsComponent implements OnInit {
   protected readonly priceHistory = signal<ItemPriceHistoryDto[]>([]);
   protected readonly showDeleteModal = signal(false);
   protected readonly isDeleting = signal(false);
+  protected readonly showRestoreModal = signal(false);
+  protected readonly isRestoring = signal(false);
   private modalStackId: number | null = null;
 
   public ngOnInit(): void {
@@ -77,6 +80,60 @@ export class ItemDetailsComponent implements OnInit {
 
   protected shouldShowBaseQuantity(item: ItemDto): boolean {
     return !!item.stockUnitName && !!item.unitsPerStockUnit && item.unitsPerStockUnit > 0;
+  }
+
+  protected restoreItem(): void {
+    if (!this.canWriteItems()) {
+      this.alertService.errorUnauthorized();
+      return;
+    }
+
+    if (!this.item()) {
+      return;
+    }
+
+    this.showRestoreModal.set(true);
+    this.modalStackId = this.modalStack.push(() => this.cancelRestore());
+  }
+
+  protected cancelRestore(): void {
+    if (this.isRestoring()) {
+      return;
+    }
+
+    this.showRestoreModal.set(false);
+    this.removeFromStack();
+  }
+
+  protected confirmRestore(): void {
+    if (this.isRestoring()) {
+      return;
+    }
+
+    if (!this.canWriteItems()) {
+      this.alertService.errorUnauthorized();
+      return;
+    }
+
+    const item = this.item();
+    if (!item) {
+      return;
+    }
+
+    this.isRestoring.set(true);
+    this.inventoryService.restoreInventoryItem(item.id).subscribe({
+      next: () => {
+        this.isRestoring.set(false);
+        this.showRestoreModal.set(false);
+        this.removeFromStack();
+        this.alertService.successRestored('Item');
+        this.loadItem(item.id);
+      },
+      error: (err) => {
+        this.isRestoring.set(false);
+        this.alertService.error(err.message);
+      },
+    });
   }
 
   protected deleteItem(): void {
