@@ -205,7 +205,9 @@ public class VoidOrderHandler(
             order.Note,
             totalAmount,
             null,
-            bundlePromotions
+            bundlePromotions,
+            order.OverrideReason,
+            order.OverriddenAt
         );
     }
 }

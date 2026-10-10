@@ -118,7 +118,9 @@ public class GetOrderByIdHandler(WTFDbContext db) : IRequestHandler<GetOrderById
             order.Note,
             totalAmount,
             order.Customer == null ? null : $"{order.Customer.FirstName} {order.Customer.LastName}".Trim(),
-            bundlePromotions
+            bundlePromotions,
+            order.OverrideReason,
+            order.OverriddenAt
         );
     }
 }

@@ -33,6 +33,10 @@ public partial class Order
 
     public string? Note { get; set; }
 
+    public string? OverrideReason { get; set; }
+
+    public DateTime? OverriddenAt { get; set; }
+
     public virtual User CreatedByNavigation { get; set; } = null!;
 
     public virtual Customer? Customer { get; set; }

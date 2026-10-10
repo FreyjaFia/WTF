@@ -25,5 +25,6 @@ public enum AuditAction
     ProductItemLinked,
     OrderCreated,
     OrderUpdated,
-    OrderVoided
+    OrderVoided,
+    OrderOverridden
 }

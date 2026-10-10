@@ -412,6 +412,7 @@ public partial class WTFDbContext : DbContext
                 .HasColumnType("datetime");
             entity.Property(e => e.Note).HasMaxLength(500);
             entity.Property(e => e.OrderNumber).HasDefaultValueSql("(NEXT VALUE FOR [dbo].[OrderNumberSeq])", "DF_Orders_OrderNumber_DEFAULT");
+            entity.Property(e => e.OverrideReason).HasMaxLength(500);
             entity.Property(e => e.SpecialInstructions)
                 .HasMaxLength(100)
                 .IsUnicode(false);

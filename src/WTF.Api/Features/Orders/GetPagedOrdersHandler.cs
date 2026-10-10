@@ -163,7 +163,9 @@ public sealed class GetPagedOrdersHandler(WTFDbContext db)
                 o.Note,
                 totalAmount,
                 o.Customer == null ? null : $"{o.Customer.FirstName} {o.Customer.LastName}".Trim(),
-                bundlePromotions);
+                bundlePromotions,
+                o.OverrideReason,
+                o.OverriddenAt);
         }).ToList();
 
         return new PagedResultDto<OrderDto>(items, page, pageSize, totalCount);

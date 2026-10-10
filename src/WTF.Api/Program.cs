@@ -131,6 +131,8 @@ builder.Services.AddAuthorizationBuilder()
         policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.Cashier))
     .AddPolicy(AppPolicies.OrdersWrite, policy =>
         policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.Cashier))
+    .AddPolicy(AppPolicies.OrdersOverride, policy =>
+        policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin))
     .AddPolicy(AppPolicies.CustomersRead, policy =>
         policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.Cashier))
     .AddPolicy(AppPolicies.CustomersWrite, policy =>

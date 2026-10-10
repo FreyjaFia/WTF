@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Common.Orders;
 using WTF.Api.Common.Time;
@@ -41,6 +42,16 @@ public record UpdateOrderCommand : IRequest<OrderDto?>
     public decimal? ChangeAmount { get; init; }
 
     public decimal? Tips { get; init; }
+
+    /// <summary>Why a completed order is being corrected. Only used by the override endpoint.</summary>
+    public string? OverrideReason { get; init; }
+
+    /// <summary>
+    /// Set by the override endpoint only (never bound from the request body), so regular
+    /// updates can never touch a completed order.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsOverride { get; init; }
 }
 
 public class UpdateOrderHandler(
@@ -249,7 +260,26 @@ public class UpdateOrderHandler(
 
         var oldStatus = (OrderStatusEnum)order.StatusId;
         var newStatus = request.Status;
-        if (oldStatus != OrderStatusEnum.Pending)
+        var isOverride = request.IsOverride;
+        var overrideReason = request.OverrideReason?.Trim();
+        if (isOverride)
+        {
+            if (oldStatus != OrderStatusEnum.Completed)
+            {
+                throw new InvalidOperationException("Only completed orders can be overridden.");
+            }
+
+            if (newStatus != OrderStatusEnum.Completed)
+            {
+                throw new InvalidOperationException("An overridden order must stay completed. Use refund to void it.");
+            }
+
+            if (string.IsNullOrWhiteSpace(overrideReason))
+            {
+                throw new InvalidOperationException("An override reason is required.");
+            }
+        }
+        else if (oldStatus != OrderStatusEnum.Pending)
         {
             throw new InvalidOperationException(
                 $"Order is already {oldStatus} and cannot be updated.");
@@ -321,12 +351,39 @@ public class UpdateOrderHandler(
             pricedItems.Add((item, product, discountedPrice, appliedDiscount, addOnPrices));
         }
 
-        var oldValues = new
+        object oldValues = new
         {
             Status = oldStatus,
             order.CustomerId,
             ItemCount = order.OrderItems.Count
         };
+
+        // An override keeps the prices the customer already paid for lines that are still on the
+        // order (same product and bundle), so later promo changes do not reprice them.
+        var priceSnapshots = new Dictionary<(Guid ProductId, Guid? BundleId), Queue<(decimal? Price, decimal? OriginalPrice, string? PromoLabel)>>();
+        var addOnPriceSnapshots = new Dictionary<(Guid ParentProductId, Guid AddOnId), decimal>();
+        if (isOverride)
+        {
+            oldValues = BuildOrderSnapshot(order);
+
+            var oldParents = order.OrderItems.Where(oi => oi.ParentOrderItemId == null).ToList();
+            foreach (var parent in oldParents.OrderBy(oi => oi.SortOrder))
+            {
+                var key = (parent.ProductId, parent.BundlePromotionId);
+                if (!priceSnapshots.TryGetValue(key, out var queue))
+                {
+                    queue = new Queue<(decimal?, decimal?, string?)>();
+                    priceSnapshots[key] = queue;
+                }
+
+                queue.Enqueue((parent.Price, parent.OriginalPrice, parent.PromoLabel));
+
+                foreach (var child in order.OrderItems.Where(oi => oi.ParentOrderItemId == parent.Id && oi.Price.HasValue))
+                {
+                    addOnPriceSnapshots.TryAdd((parent.ProductId, child.ProductId), child.Price!.Value);
+                }
+            }
+        }
 
         order.CustomerId = request.CustomerId;
         order.SpecialInstructions = request.SpecialInstructions;
@@ -337,6 +394,12 @@ public class UpdateOrderHandler(
         order.ChangeAmount = request.ChangeAmount;
         order.Tips = request.Tips;
         order.UpdatedAt = DateTime.UtcNow;
+        if (isOverride)
+        {
+            order.UpdatedBy = httpContextAccessor.HttpContext?.User.GetUserId();
+            order.OverrideReason = overrideReason;
+            order.OverriddenAt = order.UpdatedAt;
+        }
 
         // Update items: remove old, add new
         db.OrderItems.RemoveRange(order.OrderItems);
@@ -377,6 +440,16 @@ public class UpdateOrderHandler(
                 newItem.Price = discountedPrice ?? product.Price;
                 newItem.OriginalPrice = product.Price;
                 newItem.PromoLabel = appliedDiscount?.Label;
+
+                if (isOverride
+                    && priceSnapshots.TryGetValue((item.ProductId, item.BundlePromotionId), out var snapshots)
+                    && snapshots.Count > 0)
+                {
+                    var snapshot = snapshots.Dequeue();
+                    newItem.Price = snapshot.Price ?? newItem.Price;
+                    newItem.OriginalPrice = snapshot.OriginalPrice;
+                    newItem.PromoLabel = snapshot.PromoLabel;
+                }
             }
 
             db.OrderItems.Add(newItem);
@@ -399,7 +472,10 @@ public class UpdateOrderHandler(
                 // Capture price if order is Completed or Cancelled
                 if (newStatus == OrderStatusEnum.Completed || newStatus == OrderStatusEnum.Cancelled)
                 {
-                    addOnItem.Price = effectiveAddOnPrice;
+                    addOnItem.Price = isOverride
+                        && addOnPriceSnapshots.TryGetValue((item.ProductId, addOn.ProductId), out var paidAddOnPrice)
+                            ? paidAddOnPrice
+                            : effectiveAddOnPrice;
                 }
 
                 db.OrderItems.Add(addOnItem);
@@ -497,19 +573,45 @@ public class UpdateOrderHandler(
                 cancellationToken);
         }
 
-        await auditService.LogAsync(
-            action: AuditAction.OrderUpdated,
-            entityType: AuditEntityType.Order,
-            entityId: order.Id.ToString(),
-            oldValues: oldValues,
-            newValues: new
-            {
-                Status = newStatus,
-                order.CustomerId,
-                ItemCount = request.Items.Count,
-                totalAmount
-            },
-            cancellationToken: cancellationToken);
+        if (isOverride)
+        {
+            await auditService.LogAsync(
+                action: AuditAction.OrderOverridden,
+                entityType: AuditEntityType.Order,
+                entityId: order.Id.ToString(),
+                oldValues: oldValues,
+                newValues: new
+                {
+                    Reason = overrideReason,
+                    Status = newStatus,
+                    order.CustomerId,
+                    PaymentMethod = order.PaymentMethodId.HasValue ? (PaymentMethodEnum)order.PaymentMethodId.Value : (PaymentMethodEnum?)null,
+                    order.AmountReceived,
+                    order.ChangeAmount,
+                    order.Tips,
+                    order.SpecialInstructions,
+                    TotalAmount = totalAmount,
+                    Items = items.Select(DescribeItem).ToList(),
+                    BundlePromotions = bundlePromotions.Select(b => new { b.PromotionName, b.Quantity, b.UnitPrice }).ToList()
+                },
+                cancellationToken: cancellationToken);
+        }
+        else
+        {
+            await auditService.LogAsync(
+                action: AuditAction.OrderUpdated,
+                entityType: AuditEntityType.Order,
+                entityId: order.Id.ToString(),
+                oldValues: oldValues,
+                newValues: new
+                {
+                    Status = newStatus,
+                    order.CustomerId,
+                    ItemCount = request.Items.Count,
+                    totalAmount
+                },
+                cancellationToken: cancellationToken);
+        }
 
         return new OrderDto(
             order.Id,
@@ -529,8 +631,56 @@ public class UpdateOrderHandler(
             order.Note,
             totalAmount,
             null,
-            bundlePromotions
+            bundlePromotions,
+            order.OverrideReason,
+            order.OverriddenAt
         );
+    }
+
+    private static object DescribeItem(OrderItemDto item)
+    {
+        return new
+        {
+            Product = item.ProductName,
+            item.Quantity,
+            item.Price,
+            AddOns = item.AddOns.Select(a => new { Product = a.ProductName, a.Quantity, a.Price }).ToList()
+        };
+    }
+
+    /// <summary>What the order looked like before an override, for the audit log.</summary>
+    private static object BuildOrderSnapshot(Order order)
+    {
+        var items = order.OrderItems
+            .Where(oi => oi.ParentOrderItemId == null)
+            .OrderBy(oi => oi.SortOrder)
+            .Select(parent => new
+            {
+                Product = parent.Product.Name,
+                parent.Quantity,
+                parent.Price,
+                AddOns = order.OrderItems
+                    .Where(child => child.ParentOrderItemId == parent.Id)
+                    .Select(child => new { Product = child.Product.Name, child.Quantity, child.Price })
+                    .ToList()
+            })
+            .ToList();
+
+        return new
+        {
+            Status = (OrderStatusEnum)order.StatusId,
+            order.CustomerId,
+            PaymentMethod = order.PaymentMethodId.HasValue ? (PaymentMethodEnum)order.PaymentMethodId.Value : (PaymentMethodEnum?)null,
+            order.AmountReceived,
+            order.ChangeAmount,
+            order.Tips,
+            order.SpecialInstructions,
+            TotalAmount = OrderMetrics.ComputeOrderTotal(order, new Dictionary<(Guid ProductId, Guid AddOnId), decimal>()),
+            Items = items,
+            BundlePromotions = order.OrderBundlePromotions
+                .Select(b => new { PromotionId = b.PromotionId, b.Quantity, b.UnitPrice })
+                .ToList()
+        };
     }
 
     private static bool IsPromotionActiveOnLocalDate(Promotion promotion, DateTime utcReference, TimeZoneInfo timeZone)

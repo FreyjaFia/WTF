@@ -92,6 +92,20 @@ public static class OrderEndpoints
             })
             .RequireAuthorization(AppPolicies.OrdersWrite);
 
+        // PUT /api/orders/{id}/override - Correct a completed order (Admin and above, reason required)
+        orderGroup.MapPut("/{id:guid}/override",
+            async (Guid id, UpdateOrderCommand command, ISender sender) =>
+            {
+                if (id != command.Id)
+                {
+                    return Results.BadRequest("ID mismatch");
+                }
+
+                var result = await sender.Send(command with { IsOverride = true });
+                return result is not null ? Results.Ok(result) : Results.NotFound();
+            })
+            .RequireAuthorization(AppPolicies.OrdersOverride);
+
         // PATCH /api/orders/{id}/void - Void order (Pending -> Cancelled, Completed -> Refunded)
         orderGroup.MapPatch("/{id:guid}/void",
             async (Guid id, VoidOrderRequestDto request, ISender sender) =>

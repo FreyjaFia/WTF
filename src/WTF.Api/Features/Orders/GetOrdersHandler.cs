@@ -140,7 +140,9 @@ public class GetOrdersHandler(WTFDbContext db) : IRequestHandler<GetOrdersQuery,
                 o.Note,
                 totalAmount,
                 o.Customer == null ? null : $"{o.Customer.FirstName} {o.Customer.LastName}".Trim(),
-                bundlePromotions
+                bundlePromotions,
+                o.OverrideReason,
+                o.OverriddenAt
             );
         })];
     }
