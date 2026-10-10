@@ -287,16 +287,29 @@
                           </a>
                         </li>
                         <li>
-                          <button
-                            type="button"
-                            (click)="deleteCustomer(customer)"
-                            (keydown.enter)="deleteCustomer(customer)"
-                            (keydown.space)="deleteCustomer(customer)"
-                            class="flex items-center gap-2 text-red-600 hover:bg-red-50"
-                          >
-                            <app-icon name="icon-delete" [class]="'h-4 w-4 text-red-600'" />
-                            Delete
-                          </button>
+                          @if (customer.isActive) {
+                            <button
+                              type="button"
+                              (click)="deleteCustomer(customer)"
+                              (keydown.enter)="deleteCustomer(customer)"
+                              (keydown.space)="deleteCustomer(customer)"
+                              class="flex items-center gap-2 text-red-600 hover:bg-red-50"
+                            >
+                              <app-icon name="icon-delete" [class]="'h-4 w-4 text-red-600'" />
+                              Delete
+                            </button>
+                          } @else {
+                            <button
+                              type="button"
+                              (click)="restoreCustomer(customer)"
+                              (keydown.enter)="restoreCustomer(customer)"
+                              (keydown.space)="restoreCustomer(customer)"
+                              class="flex items-center gap-2 text-gray-700 hover:bg-gray-100"
+                            >
+                              <app-icon name="icon-refresh" [class]="'h-4 w-4 text-gray-600'" />
+                              Restore
+                            </button>
+                          }
                         </li>
                       </ul>
                     </div>
@@ -340,10 +353,10 @@
         Delete Customer?
       </h3>
       <p class="mt-2 text-center text-sm leading-relaxed text-gray-500">
-        This will permanently remove
+        This will deactivate
         <span class="font-medium text-gray-700">
-          {{ customerToDelete()!.firstName }} {{ customerToDelete()!.lastName }} </span
-        >. This action cannot be undone.
+          {{ customerToDelete()!.firstName }} {{ customerToDelete()!.lastName }}</span
+        >. You can restore it later.
       </p>
 
       <!-- Actions -->

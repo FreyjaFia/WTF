@@ -40,6 +40,7 @@ export class ProductItemLinksSelectorComponent {
   private assignedSortable: Sortable | null = null;
   private itemId = '';
   private initialLinks: ProductItemLinkDto[] = [];
+  private rememberedQuantities = new Map<string, number>();
 
   @ViewChild('availableList') private readonly availableList!: ElementRef;
   @ViewChild('assignedList') private readonly assignedList!: ElementRef;
@@ -62,6 +63,9 @@ export class ProductItemLinksSelectorComponent {
     this.itemId = itemId;
     this.unitName.set(unitName);
     this.initialLinks = currentLinks.filter((link) => link.isActive);
+    this.rememberedQuantities = new Map(
+      currentLinks.filter((link) => !link.isActive).map((link) => [link.productId, link.quantityPerSale]),
+    );
     this.searchTerm.set('');
     this.selectedFilter.set('all');
     this.allProducts.set([]);
@@ -84,6 +88,7 @@ export class ProductItemLinksSelectorComponent {
     this.isSaving.set(false);
     this.itemId = '';
     this.initialLinks = [];
+    this.rememberedQuantities = new Map();
     this.allProducts.set([]);
     this.unitName.set('');
 
@@ -152,6 +157,9 @@ export class ProductItemLinksSelectorComponent {
 
   protected removeLinkedProduct(productId: string): void {
     const removed = this.linkedProducts().find((row) => row.productId === productId);
+    if (removed) {
+      this.rememberedQuantities.set(productId, removed.quantityPerSale);
+    }
     this.linkedProducts.set(this.linkedProducts().filter((row) => row.productId !== productId));
 
     if (!removed) {
@@ -188,7 +196,7 @@ export class ProductItemLinksSelectorComponent {
       isActive: true,
     }));
 
-    this.inventoryService.syncProductItemLinks(this.itemId, productLinks).subscribe({
+    this.inventoryService.assignProductItemLinks(this.itemId, productLinks).subscribe({
       next: (item) => {
         this.isSaving.set(false);
         this.alertService.successSaved('Product links');
@@ -323,7 +331,8 @@ export class ProductItemLinksSelectorComponent {
           imageUrl: product.imageUrl ?? null,
           isAddOn: product.isAddOn,
           isActive: product.isActive,
-          quantityPerSale: existingQuantities.get(product.id) ?? 1,
+          quantityPerSale:
+            existingQuantities.get(product.id) ?? this.rememberedQuantities.get(product.id) ?? 1,
         };
       })
       .filter((row): row is LinkedProductRow => !!row);

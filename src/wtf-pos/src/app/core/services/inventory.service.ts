@@ -67,7 +67,7 @@ export class InventoryService {
       .pipe(catchError((error) => this.handleError(error, 'Unable to add stock.')));
   }
 
-  public syncProductItemLinks(
+  public assignProductItemLinks(
     itemId: string,
     productLinks: ProductItemLinkAssignmentDto[],
   ): Observable<ItemDto> {
@@ -80,6 +80,12 @@ export class InventoryService {
     return this.http
       .delete<void>(`${this.baseUrl}/${id}`)
       .pipe(catchError((error) => this.handleError(error, 'Unable to delete item.')));
+  }
+
+  public restoreInventoryItem(id: string): Observable<void> {
+    return this.http
+      .post<void>(`${this.baseUrl}/${id}/restore`, {})
+      .pipe(catchError((error) => this.handleError(error, 'Unable to restore item.')));
   }
 
   private handleError(error: HttpErrorResponse, fallback: string) {

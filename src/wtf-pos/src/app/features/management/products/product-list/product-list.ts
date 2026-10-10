@@ -254,6 +254,23 @@ export class ProductListComponent implements OnInit {
     this.removeFromStack();
   }
 
+  protected restoreProduct(product: ProductDto): void {
+    if (!this.canWriteProducts()) {
+      this.alertService.errorUnauthorized();
+      return;
+    }
+
+    this.productService.restoreProduct(product.id).subscribe({
+      next: () => {
+        this.alertService.successRestored('Product');
+        this.loadProducts();
+      },
+      error: (err) => {
+        this.alertService.error(err.message);
+      },
+    });
+  }
+
   protected confirmDelete(): void {
     if (this.isDeleting()) {
       return;

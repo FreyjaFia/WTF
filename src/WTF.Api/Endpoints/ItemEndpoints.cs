@@ -57,6 +57,14 @@ public static class ItemEndpoints
             })
             .RequireAuthorization(AppPolicies.ItemsWrite);
 
+        itemGroup.MapPost("/{id:guid}/restore",
+            async (Guid id, ISender sender) =>
+            {
+                var result = await sender.Send(new RestoreItemCommand(id));
+                return result ? Results.NoContent() : Results.NotFound();
+            })
+            .RequireAuthorization(AppPolicies.ItemsWrite);
+
         itemGroup.MapPost("/{id:guid}/stock",
             async (Guid id, AddItemStockCommand command, ISender sender) =>
             {
@@ -79,7 +87,7 @@ public static class ItemEndpoints
             .RequireAuthorization(AppPolicies.ItemsWrite);
 
         itemGroup.MapPut("/{id:guid}/product-links",
-            async (Guid id, SyncProductItemLinksCommand command, ISender sender) =>
+            async (Guid id, AssignItemProductLinksCommand command, ISender sender) =>
             {
                 if (id != command.ItemId)
                 {

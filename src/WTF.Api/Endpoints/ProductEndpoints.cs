@@ -66,6 +66,15 @@ public static class ProductEndpoints
             })
             .RequireAuthorization(AppPolicies.ProductsWrite);
 
+        // POST /api/products/{id}/restore - Restore soft deleted product
+        productGroup.MapPost("/{id:guid}/restore",
+            async (Guid id, ISender sender) =>
+            {
+                var result = await sender.Send(new RestoreProductCommand(id));
+                return result ? Results.NoContent() : Results.NotFound();
+            })
+            .RequireAuthorization(AppPolicies.ProductsWrite);
+
         // GET /api/products/{id}/price-history - Get price history for a product
         productGroup.MapGet("/{id:guid}/price-history",
             async (Guid id, ISender sender) =>

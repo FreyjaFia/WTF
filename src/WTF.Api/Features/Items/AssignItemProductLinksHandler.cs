@@ -10,7 +10,7 @@ using WTF.Domain.Entities;
 
 namespace WTF.Api.Features.Items;
 
-public record SyncProductItemLinksCommand : IRequest<ItemDto?>
+public record AssignItemProductLinksCommand : IRequest<ItemDto?>
 {
     [Required]
     public Guid ItemId { get; init; }
@@ -19,12 +19,12 @@ public record SyncProductItemLinksCommand : IRequest<ItemDto?>
     public List<ProductItemLinkAssignmentDto> ProductLinks { get; init; } = [];
 }
 
-public class SyncProductItemLinksHandler(
+public class AssignItemProductLinksHandler(
     WTFDbContext db,
     IHttpContextAccessor httpContextAccessor,
-    IAuditService auditService) : IRequestHandler<SyncProductItemLinksCommand, ItemDto?>
+    IAuditService auditService) : IRequestHandler<AssignItemProductLinksCommand, ItemDto?>
 {
-    public async Task<ItemDto?> Handle(SyncProductItemLinksCommand request, CancellationToken cancellationToken)
+    public async Task<ItemDto?> Handle(AssignItemProductLinksCommand request, CancellationToken cancellationToken)
     {
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
 
@@ -70,12 +70,14 @@ public class SyncProductItemLinksHandler(
         var existingByProductId = existingLinks.ToDictionary(link => link.ProductId);
 
         var removedLinks = existingLinks
-            .Where(link => !requestedProductIds.Contains(link.ProductId))
+            .Where(link => link.IsActive && !requestedProductIds.Contains(link.ProductId))
             .ToList();
 
-        if (removedLinks.Count > 0)
+        foreach (var removed in removedLinks)
         {
-            db.ProductItemLinks.RemoveRange(removedLinks);
+            removed.IsActive = false;
+            removed.UpdatedAt = DateTime.UtcNow;
+            removed.UpdatedBy = userId;
         }
 
         foreach (var link in distinctLinks)
@@ -110,6 +112,7 @@ public class SyncProductItemLinksHandler(
             {
                 request.ItemId,
                 LinkCount = distinctLinks.Count,
+                RemovedProductIds = removedLinks.Select(link => link.ProductId),
                 LinkedProducts = distinctLinks.Select(link => new
                 {
                     link.ProductId,

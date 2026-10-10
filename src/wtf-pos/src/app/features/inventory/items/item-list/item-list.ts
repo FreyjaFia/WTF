@@ -169,6 +169,23 @@ export class ItemListComponent implements OnInit {
     this.removeFromStack();
   }
 
+  protected restoreItem(item: ItemDto): void {
+    if (!this.canWriteItems()) {
+      this.alertService.errorUnauthorized();
+      return;
+    }
+
+    this.inventoryService.restoreInventoryItem(item.id).subscribe({
+      next: () => {
+        this.alertService.successRestored('Item');
+        this.loadInventory();
+      },
+      error: (err) => {
+        this.alertService.error(err.message);
+      },
+    });
+  }
+
   protected confirmDelete(): void {
     if (this.isDeleting()) {
       return;

@@ -71,6 +71,10 @@ export class AlertService {
     this.success(SuccessMessages.Common.Deleted(entity));
   }
 
+  public successRestored(entity: string): void {
+    this.success(SuccessMessages.Common.Restored(entity));
+  }
+
   public successSaved(entity: string): void {
     this.success(SuccessMessages.Common.Saved(entity));
   }

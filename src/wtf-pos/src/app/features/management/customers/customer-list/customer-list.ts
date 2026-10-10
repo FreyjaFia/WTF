@@ -219,6 +219,23 @@ export class CustomerListComponent implements OnInit {
     this.removeFromStack();
   }
 
+  protected restoreCustomer(customer: CustomerDto): void {
+    if (!this.canWriteCustomers()) {
+      this.alertService.errorUnauthorized();
+      return;
+    }
+
+    this.customerService.restoreCustomer(customer.id).subscribe({
+      next: () => {
+        this.alertService.successRestored('Customer');
+        this.loadCustomers();
+      },
+      error: (err) => {
+        this.alertService.error(err.message);
+      },
+    });
+  }
+
   protected confirmDelete(): void {
     if (this.isDeleting()) {
       return;

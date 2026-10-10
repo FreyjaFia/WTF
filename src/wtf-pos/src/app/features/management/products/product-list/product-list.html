@@ -357,16 +357,29 @@
                           </a>
                         </li>
                         <li>
-                          <button
-                            type="button"
-                            (click)="deleteProduct(product); $event.stopPropagation()"
-                            (keydown.enter)="deleteProduct(product); $event.stopPropagation()"
-                            (keydown.space)="deleteProduct(product); $event.stopPropagation()"
-                            class="flex items-center gap-2 text-red-600 hover:bg-red-50"
-                          >
-                            <app-icon name="icon-delete" [class]="'h-4 w-4 text-red-600'" />
-                            Delete
-                          </button>
+                          @if (product.isActive) {
+                            <button
+                              type="button"
+                              (click)="deleteProduct(product); $event.stopPropagation()"
+                              (keydown.enter)="deleteProduct(product); $event.stopPropagation()"
+                              (keydown.space)="deleteProduct(product); $event.stopPropagation()"
+                              class="flex items-center gap-2 text-red-600 hover:bg-red-50"
+                            >
+                              <app-icon name="icon-delete" [class]="'h-4 w-4 text-red-600'" />
+                              Delete
+                            </button>
+                          } @else {
+                            <button
+                              type="button"
+                              (click)="restoreProduct(product); $event.stopPropagation()"
+                              (keydown.enter)="restoreProduct(product); $event.stopPropagation()"
+                              (keydown.space)="restoreProduct(product); $event.stopPropagation()"
+                              class="flex items-center gap-2 text-gray-700 hover:bg-gray-100"
+                            >
+                              <app-icon name="icon-refresh" [class]="'h-4 w-4 text-gray-600'" />
+                              Restore
+                            </button>
+                          }
                         </li>
                       </ul>
                     </div>
@@ -410,9 +423,9 @@
         Delete Product?
       </h3>
       <p class="mt-2 text-center text-sm leading-relaxed text-gray-500">
-        This will permanently remove
+        This will deactivate
         <span class="font-medium text-gray-700">{{ productToDelete()!.name }}</span
-        >. This action cannot be undone.
+        >. You can restore it later.
       </p>
 
       <!-- Actions -->

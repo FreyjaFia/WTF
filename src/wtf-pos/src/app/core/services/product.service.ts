@@ -41,6 +41,8 @@ export class ProductService {
     ServiceErrorMessages.Product.UpdateProductFailed;
   private static readonly MSG_DELETE_PRODUCT_FAILED =
     ServiceErrorMessages.Product.DeleteProductFailed;
+  private static readonly MSG_RESTORE_PRODUCT_FAILED =
+    ServiceErrorMessages.Product.RestoreProductFailed;
   private static readonly MSG_UPLOAD_IMAGE_FAILED = ServiceErrorMessages.Product.UploadImageFailed;
   private static readonly MSG_DELETE_IMAGE_FAILED = ServiceErrorMessages.Product.DeleteImageFailed;
   private static readonly MSG_FETCH_PRODUCT_ADDONS_FAILED =
@@ -181,6 +183,26 @@ export class ProductService {
               : serverMessage
                 ? serverMessage
                 : ProductService.MSG_DELETE_PRODUCT_FAILED;
+
+        return throwError(() => new Error(errorMessage));
+      }),
+    );
+  }
+
+  public restoreProduct(id: string): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/${id}/restore`, {}).pipe(
+      catchError((error: HttpErrorResponse) => {
+        console.error('Error restoring product:', error);
+        const serverMessage = extractHttpErrorMessage(error);
+
+        const errorMessage =
+          error.status === 404
+            ? ProductService.MSG_PRODUCT_NOT_FOUND
+            : error.status === 0
+              ? this.getNetworkErrorMessage()
+              : serverMessage
+                ? serverMessage
+                : ProductService.MSG_RESTORE_PRODUCT_FAILED;
 
         return throwError(() => new Error(errorMessage));
       }),

@@ -25,6 +25,8 @@ export class CustomerService {
     ServiceErrorMessages.Customer.UpdateCustomerFailed;
   private static readonly MSG_DELETE_CUSTOMER_FAILED =
     ServiceErrorMessages.Customer.DeleteCustomerFailed;
+  private static readonly MSG_RESTORE_CUSTOMER_FAILED =
+    ServiceErrorMessages.Customer.RestoreCustomerFailed;
   private static readonly MSG_UPLOAD_IMAGE_FAILED = ServiceErrorMessages.Customer.UploadImageFailed;
   private static readonly MSG_DELETE_IMAGE_FAILED = ServiceErrorMessages.Customer.DeleteImageFailed;
 
@@ -124,6 +126,24 @@ export class CustomerService {
             new Error(
               this.getErrorMessage(error, {
                 fallback: CustomerService.MSG_DELETE_CUSTOMER_FAILED,
+                forbidden: CustomerService.MSG_NOT_AUTHORIZED,
+                notFound: CustomerService.MSG_CUSTOMER_NOT_FOUND,
+              }),
+            ),
+        );
+      }),
+    );
+  }
+
+  public restoreCustomer(id: string): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/${id}/restore`, {}).pipe(
+      catchError((error: HttpErrorResponse) => {
+        console.error('Error restoring customer:', error);
+        return throwError(
+          () =>
+            new Error(
+              this.getErrorMessage(error, {
+                fallback: CustomerService.MSG_RESTORE_CUSTOMER_FAILED,
                 forbidden: CustomerService.MSG_NOT_AUTHORIZED,
                 notFound: CustomerService.MSG_CUSTOMER_NOT_FOUND,
               }),

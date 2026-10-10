@@ -64,6 +64,15 @@ public static class CustomerEndpoints
             })
             .RequireAuthorization(AppPolicies.CustomersWrite);
 
+        // POST /api/customers/{id}/restore - Restore soft deleted customer
+        customerGroup.MapPost("/{id:guid}/restore",
+            async (Guid id, ISender sender) =>
+            {
+                var result = await sender.Send(new RestoreCustomerCommand(id));
+                return result ? Results.NoContent() : Results.NotFound();
+            })
+            .RequireAuthorization(AppPolicies.CustomersWrite);
+
         // POST /api/customers/{id}/image - Upload customer image
         customerGroup.MapPost("/{id:guid}/image",
             async (Guid id, HttpRequest request, ISender sender) =>

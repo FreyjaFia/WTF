@@ -44,7 +44,10 @@ export class ItemEditorComponent implements OnInit {
   protected readonly lastUpdatedAt = signal<string | null>(null);
   protected readonly isHistoryOpen = signal(false);
   protected readonly priceHistory = signal<ItemPriceHistoryDto[]>([]);
-  protected readonly linkedProducts = signal<ProductItemLinkDto[]>([]);
+  protected readonly productLinks = signal<ProductItemLinkDto[]>([]);
+  protected readonly linkedProducts = computed(() =>
+    this.productLinks().filter((link) => link.isActive),
+  );
   protected readonly savedUnitName = signal('');
   protected readonly savedUnitAbbreviation = computed(() =>
     getInventoryUnitAbbreviation(this.savedUnitName()),
@@ -246,7 +249,7 @@ export class ItemEditorComponent implements OnInit {
         this.itemName.set(item.name);
         this.lastUpdatedAt.set(item.updatedAt || item.createdAt);
         this.priceHistory.set(item.priceHistory || []);
-        this.linkedProducts.set((item.productLinks || []).filter((link) => link.isActive));
+        this.productLinks.set(item.productLinks || []);
         this.savedUnitName.set(item.unitName);
         this.syncUnitsPerStockUnitState();
         this.inventoryForm.markAsPristine();
@@ -342,13 +345,13 @@ export class ItemEditorComponent implements OnInit {
       return;
     }
 
-    this.productItemLinksSelector.open(this.itemId, this.linkedProducts(), this.savedUnitName());
+    this.productItemLinksSelector.open(this.itemId, this.productLinks(), this.savedUnitName());
 
     modal.showModal();
     this.productItemLinksSelector.registerOnStack();
   }
 
   protected onProductLinksSaved(item: ItemDto): void {
-    this.linkedProducts.set((item.productLinks || []).filter((link) => link.isActive));
+    this.productLinks.set(item.productLinks || []);
   }
 }
