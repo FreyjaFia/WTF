@@ -88,6 +88,20 @@ public class UpdateProductHandler(WTFDbContext db, IHttpContextAccessor httpCont
             }
         }
 
+        // Validate IsAddOn change: Block changing from true to false while the add-on is linked to products
+        if (product.IsAddOn && !request.IsAddOn)
+        {
+            var hasActiveLinks = await db.ProductAddOns
+                .AnyAsync(pa => pa.AddOnId == product.Id && pa.IsActive, cancellationToken);
+
+            if (hasActiveLinks)
+            {
+                throw new InvalidOperationException(
+                    "Cannot change add-on to a regular product while it is linked to products. " +
+                    "Unlink it from all products first.");
+            }
+        }
+
         if (product.Price != request.Price)
         {
             var historyRecord = new ProductPriceHistory

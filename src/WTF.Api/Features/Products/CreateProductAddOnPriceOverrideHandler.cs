@@ -21,7 +21,7 @@ public class CreateProductAddOnPriceOverrideHandler(WTFDbContext db, IHttpContex
     public async Task<ProductAddOnPriceOverrideDto?> Handle(CreateProductAddOnPriceOverrideCommand request, CancellationToken cancellationToken)
     {
         var productAddOnExists = await db.ProductAddOns
-            .AnyAsync(pa => pa.ProductId == request.ProductId && pa.AddOnId == request.AddOnId, cancellationToken);
+            .AnyAsync(pa => pa.ProductId == request.ProductId && pa.AddOnId == request.AddOnId && pa.IsActive, cancellationToken);
 
         if (!productAddOnExists)
         {

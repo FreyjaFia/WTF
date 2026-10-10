@@ -68,13 +68,15 @@ public class AssignProductAddOnsHandler(WTFDbContext db) : IRequestHandler<Assig
             .Where(pa => pa.ProductId == request.ProductId)
             .ToListAsync(cancellationToken);
 
-        // Identify add-ons being removed
+        // Identify add-ons being removed (only currently active links count; inactive ones are reactivated when re-added)
         var currentAddOnIds = existingLinks
+            .Where(pa => pa.IsActive)
             .Select(pa => pa.AddOnId)
             .ToList();
 
         var removedAddOnIds = currentAddOnIds.Except(addOnIds).ToList();
         var addedAddOnIds = addOnIds.Except(currentAddOnIds).ToList();
+        var existingAddOnIds = existingLinks.Select(pa => pa.AddOnId).ToHashSet();
 
         // Update pending orders: decouple removed add-ons from this parent product
         if (removedAddOnIds.Count != 0)
@@ -105,29 +107,16 @@ public class AssignProductAddOnsHandler(WTFDbContext db) : IRequestHandler<Assig
             }
         }
 
-        // Remove override rows for unlinked add-ons before deleting ProductAddOn rows (FK dependency)
-        if (removedAddOnIds.Count != 0)
-        {
-            var overridesToRemove = await db.ProductAddOnPriceOverrides
-                .Where(o => o.ProductId == request.ProductId && removedAddOnIds.Contains(o.AddOnId))
-                .ToListAsync(cancellationToken);
-
-            if (overridesToRemove.Count != 0)
-            {
-                db.ProductAddOnPriceOverrides.RemoveRange(overridesToRemove);
-            }
-        }
-
-        // Remove links that are no longer assigned
-        var linksToRemove = existingLinks
+        // Deactivate links that are no longer assigned; rows and price overrides are kept for history and re-linking
+        var linksToDeactivate = existingLinks
             .Where(link => removedAddOnIds.Contains(link.AddOnId))
             .ToList();
-        if (linksToRemove.Count != 0)
+        foreach (var link in linksToDeactivate)
         {
-            db.ProductAddOns.RemoveRange(linksToRemove);
+            link.IsActive = false;
         }
 
-        // Update AddOnType for existing links that remain
+        // Reactivate and update AddOnType for existing links that are requested
         var linksToUpdate = existingLinks
             .Where(link => requestedAddOnTypeById.ContainsKey(link.AddOnId))
             .ToList();
@@ -138,11 +127,13 @@ public class AssignProductAddOnsHandler(WTFDbContext db) : IRequestHandler<Assig
             {
                 link.AddOnTypeId = requestedTypeId;
             }
+
+            link.IsActive = true;
         }
 
         // Add newly assigned add-ons with types
         var newLinks = request.AddOns
-            .Where(addOn => addedAddOnIds.Contains(addOn.AddOnId))
+            .Where(addOn => addedAddOnIds.Contains(addOn.AddOnId) && !existingAddOnIds.Contains(addOn.AddOnId))
             .Select(addOn => new ProductAddOn
         {
             ProductId = request.ProductId,

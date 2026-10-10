@@ -22,6 +22,7 @@ public class GetProductsByAddOnHandler(WTFDbContext db, IHttpContextAccessor htt
         }
 
         var productLinks = await db.ProductAddOns
+            .Where(pa => pa.IsActive)
             .Where(pa => pa.AddOnId == request.AddOnId)
             .Where(pa => pa.Product.IsActive)
             .Include(pa => pa.Product)

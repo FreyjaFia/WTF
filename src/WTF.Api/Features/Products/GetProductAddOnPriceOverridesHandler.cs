@@ -20,7 +20,7 @@ public class GetProductAddOnPriceOverridesHandler(WTFDbContext db) : IRequestHan
         }
 
         var overrides = await db.ProductAddOnPriceOverrides
-            .Where(o => o.ProductId == request.ProductId)
+            .Where(o => o.ProductId == request.ProductId && o.ProductAddOn.IsActive)
             .OrderBy(o => o.AddOnId)
             .Select(o => new ProductAddOnPriceOverrideDto(
                 o.ProductId,

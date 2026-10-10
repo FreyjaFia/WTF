@@ -105,6 +105,7 @@ internal static class DiscountedProductValidation
 
             var addOnIds = addOns.Select(x => x.AddOnProductId).Distinct().ToList();
             var allowed = await db.ProductAddOns
+                .Where(x => x.IsActive)
                 .Where(x => x.ProductId == item.ProductId && addOnIds.Contains(x.AddOnId))
                 .Select(x => x.AddOnId)
                 .ToListAsync(cancellationToken);

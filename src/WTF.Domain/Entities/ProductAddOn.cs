@@ -11,6 +11,8 @@ public partial class ProductAddOn
 
     public int? AddOnTypeId { get; set; }
 
+    public bool IsActive { get; set; }
+
     public virtual Product AddOn { get; set; } = null!;
 
     public virtual AddOnType? AddOnType { get; set; }

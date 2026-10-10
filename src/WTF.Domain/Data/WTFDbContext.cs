@@ -551,9 +551,9 @@ public partial class WTFDbContext : DbContext
         {
             entity.HasKey(e => new { e.ProductId, e.AddOnId });
 
-            entity.ToTable(tb => tb.HasTrigger("TR_ProductAddOns_ValidateAddOn"));
-
             entity.HasIndex(e => e.AddOnId, "IX_ProductAddOns_AddOnId");
+
+            entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_ProductAddOns_IsActive");
 
             entity.HasOne(d => d.AddOn).WithMany(p => p.ProductAddOnAddOns)
                 .HasForeignKey(d => d.AddOnId)

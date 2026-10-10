@@ -64,6 +64,7 @@ public class CreateOrderHandler(
             var addOnIds = item.AddOns.Select(addOn => addOn.ProductId).ToList();
 
             var availableTypes = await db.ProductAddOns
+                .Where(pa => pa.IsActive)
                 .Where(pa => pa.ProductId == item.ProductId)
                 .Select(pa => (AddOnTypeEnum)(pa.AddOnTypeId ?? (int)AddOnTypeEnum.Extra))
                 .Distinct()
@@ -85,6 +86,7 @@ public class CreateOrderHandler(
             }
 
             var productAddOns = await db.ProductAddOns
+                .Where(pa => pa.IsActive)
                 .Where(pa => pa.ProductId == item.ProductId && addOnIds.Contains(pa.AddOnId))
                 .Select(pa => new
                 {

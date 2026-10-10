@@ -61,6 +61,7 @@ internal static class FixedBundleValidation
         var productIds = pairs.Select(x => x.ProductId).Distinct().ToList();
         var addOnIds = pairs.Select(x => x.AddOnProductId).Distinct().ToList();
         var allowed = await db.ProductAddOns
+            .Where(x => x.IsActive)
             .Where(x => productIds.Contains(x.ProductId) && addOnIds.Contains(x.AddOnId))
             .Select(x => new { x.ProductId, x.AddOnId })
             .ToListAsync(cancellationToken);

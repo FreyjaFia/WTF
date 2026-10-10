@@ -34,6 +34,7 @@ public class GetPosCatalogHandler(WTFDbContext db, IHttpContextAccessor httpCont
         var productIds = products.Select(p => p.Id).ToList();
 
         var addOnCounts = await db.ProductAddOns
+            .Where(pa => pa.IsActive)
             .Where(pa => productIds.Contains(pa.ProductId))
             .GroupBy(pa => pa.ProductId)
             .Select(g => new { ProductId = g.Key, Count = g.Count() })
@@ -61,6 +62,7 @@ public class GetPosCatalogHandler(WTFDbContext db, IHttpContextAccessor httpCont
         var productIds = products.Select(p => p.Id).ToList();
 
         var allAddOns = await db.ProductAddOns
+            .Where(pa => pa.IsActive)
             .Where(pa => productIds.Contains(pa.ProductId))
             .Include(pa => pa.AddOn)
                 .ThenInclude(a => a.ProductImage)

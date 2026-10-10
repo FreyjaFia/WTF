@@ -22,6 +22,7 @@ public class GetProductAddOnsHandler(WTFDbContext db, IHttpContextAccessor httpC
         }
 
         var addOns = await db.ProductAddOns
+            .Where(pa => pa.IsActive)
             .Where(pa => pa.ProductId == request.ProductId)
             .Include(pa => pa.AddOn)
                 .ThenInclude(p => p.ProductImage)

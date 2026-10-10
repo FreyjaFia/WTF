@@ -107,6 +107,7 @@ internal static class MixMatchValidation
 
         var uniqueIds = addOnIds.Distinct().ToList();
         var allowed = await db.ProductAddOns
+            .Where(x => x.IsActive)
             .Where(x => x.ProductId == productId && uniqueIds.Contains(x.AddOnId))
             .Select(x => x.AddOnId)
             .ToListAsync(cancellationToken);

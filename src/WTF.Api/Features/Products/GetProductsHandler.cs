@@ -60,6 +60,7 @@ public class GetProductsHandler(WTFDbContext db, IHttpContextAccessor httpContex
         if (request.IsAddOn == true)
         {
             linkedProductCountByAddOnId = await db.ProductAddOns
+                .Where(pa => pa.IsActive)
                 .Where(pa => productIds.Contains(pa.AddOnId))
                 .GroupBy(pa => pa.AddOnId)
                 .Select(g => new { AddOnId = g.Key, LinkedProductCount = g.Count() })
@@ -68,6 +69,7 @@ public class GetProductsHandler(WTFDbContext db, IHttpContextAccessor httpContex
         else if (request.IsAddOn == false)
         {
             addOnCountByProductId = await db.ProductAddOns
+                .Where(pa => pa.IsActive)
                 .Where(pa => productIds.Contains(pa.ProductId))
                 .GroupBy(pa => pa.ProductId)
                 .Select(g => new { ProductId = g.Key, AddOnCount = g.Count() })
@@ -76,6 +78,7 @@ public class GetProductsHandler(WTFDbContext db, IHttpContextAccessor httpContex
         else
         {
             var links = await db.ProductAddOns
+                .Where(pa => pa.IsActive)
                 .Where(pa => productIds.Contains(pa.ProductId) || productIds.Contains(pa.AddOnId))
                 .Select(pa => new { pa.ProductId, pa.AddOnId })
                 .ToListAsync(cancellationToken);
