@@ -4,7 +4,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap');
 
 @import 'tailwindcss';
-@plugin "daisyui" {
+@plugin 'daisyui' {
   themes: light --default;
 }
 
@@ -147,7 +147,7 @@ body {
 
 @layer components {
   .app-btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all select-none;
+    @apply inline-flex shrink-0 items-center justify-center gap-2 rounded-lg font-medium whitespace-nowrap transition-all select-none;
     @apply cursor-pointer active:scale-95 disabled:cursor-not-allowed disabled:active:scale-100;
   }
 
