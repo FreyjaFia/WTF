@@ -171,7 +171,17 @@
                     <h2
                       class="card-title text-base leading-snug font-semibold wrap-break-word text-gray-800"
                     >
-                      <span [innerHTML]="getHighlightedName(p.name)"></span>
+                      <span>
+                        @for (part of getNameParts(p.name); track $index) {
+                          @if (part.isMatch) {
+                            <mark class="rounded bg-amber-100 px-0.5 text-gray-900">{{
+                              part.text
+                            }}</mark>
+                          } @else {
+                            <span>{{ part.text }}</span>
+                          }
+                        }
+                      </span>
                     </h2>
                     <div class="card-actions mt-auto items-center justify-between">
                       <div class="text-lg font-bold text-black">

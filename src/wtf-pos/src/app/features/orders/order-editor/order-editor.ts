@@ -388,43 +388,33 @@ export class OrderEditor implements OnInit, OnDestroy {
   protected itemCount = () => this.cart().reduce((s, i) => s + i.qty, 0);
   protected totalPrice = () => this.cart().reduce((s, i) => s + this.getLineTotal(i), 0);
 
-  protected getHighlightedName(name: string): string {
+  protected getNameParts(name: string): { text: string; isMatch: boolean }[] {
     const term = this.filterForm.controls.searchTerm.value?.trim();
     if (!term) {
-      return this.escapeHtml(name);
+      return [{ text: name, isMatch: false }];
     }
 
-    const source = name;
-    const lowerSource = source.toLowerCase();
+    const lowerSource = name.toLowerCase();
     const lowerTerm = term.toLowerCase();
-    if (!lowerSource.includes(lowerTerm)) {
-      return this.escapeHtml(source);
-    }
-
-    let result = '';
+    const parts: { text: string; isMatch: boolean }[] = [];
     let index = 0;
     while (true) {
       const found = lowerSource.indexOf(lowerTerm, index);
       if (found === -1) {
-        result += this.escapeHtml(source.slice(index));
+        if (index < name.length) {
+          parts.push({ text: name.slice(index), isMatch: false });
+        }
         break;
       }
 
-      result += this.escapeHtml(source.slice(index, found));
-      result += `<mark class=\"rounded bg-amber-100 px-0.5 text-gray-900\">${this.escapeHtml(source.slice(found, found + term.length))}</mark>`;
+      if (found > index) {
+        parts.push({ text: name.slice(index, found), isMatch: false });
+      }
+      parts.push({ text: name.slice(found, found + term.length), isMatch: true });
       index = found + term.length;
     }
 
-    return result;
-  }
-
-  private escapeHtml(value: string): string {
-    return value
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/\"/g, '&quot;')
-      .replace(/'/g, '&#39;');
+    return parts;
   }
 
   protected readonly categoryCounts = computed(() => {
