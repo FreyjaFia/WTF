@@ -190,10 +190,20 @@ Implemented:
     keeps its row and quantity; assigning links never deletes them.
   - Re-adding a product reuses the old link and pre-fills its previous
     quantity, including quantities of links removed earlier in the same session.
-  - Restore button in the list 3-dot menu for inactive items, products, and
-    customers (`POST /api/{items,products,customers}/{id}/restore`, audited as
-    `ItemRestored`, `ProductRestored`, `CustomerRestored`). The item list now
-    shows an Inactive badge.
+  - Restore button (list 3-dot menu and details page header, with a confirmation
+    dialog via the shared `app-confirm-dialog`) for inactive items, products,
+    customers, and users (`POST /api/{items,products,customers,users}/{id}/restore`,
+    audited as `ItemRestored`, `ProductRestored`, `CustomerRestored`,
+    `UserRestored`). The item list now shows an Inactive badge.
+  - Deleting a user deactivates them and revokes their refresh tokens. Login
+    and token refresh now reject inactive users, so a deleted user can no
+    longer sign in (login only matches active users).
+    The users list API now returns all users unless `isActive` is passed.
+  - Deleting a price override deactivates it instead of removing the row;
+    creating it again reactivates the same row with the new price. Inactive
+    overrides are ignored when pricing orders, same as before.
+  - Closing the Manage Links modal by clicking the backdrop now runs the same
+    cleanup as Cancel.
 - Product add-on links are soft deleted too (`tools/sql/20261010_add_product_addons_is_active.sql`
   adds `ProductAddOns.IsActive`; run it before deploying the API):
   - Unlinking from the product or add-on side sets `IsActive = false`; the row
@@ -222,11 +232,10 @@ Remaining:
   should block completion. Record the product (and order line) on each
   sale deduction movement so per-product ingredient/cup usage reports stay
   accurate after link edits.
-- Apply the same soft-delete and Restore rules to promotions and users (both
-  hard deleted today) and to promotion child rows (deleted and recreated on
-  every update).
-- Close the item links modal cleanly on backdrop click (modal stack and
-  sortable cleanup are skipped today).
+- Apply the same soft-delete and Restore rules to promotions (hard deleted
+  today; deleting a bundle promotion that appears on an order is expected to
+  fail on the order foreign keys) and to promotion child rows (deleted and
+  recreated on every update).
 
 ### Phase 2 - Pack, Box, and Shared Stock Selling [Planned]
 
