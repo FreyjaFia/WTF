@@ -1,4 +1,4 @@
-<dialog #checkoutDialog id="checkout" class="modal items-center">
+<dialog #checkoutDialog id="checkout" class="modal items-center" (close)="cancelCheckout()">
   <div
     class="modal-box checkout-shell relative overflow-y-auto shadow-2xl md:overflow-hidden"
     [class.max-w-2xl]="!showSummary()"
