@@ -119,6 +119,7 @@ async function main() {
   const repoRoot = findRepoRoot(projectDir);
   const relativePackageJson = 'src/wtf-pos/package.json';
   const relativePackageLock = 'src/wtf-pos/package-lock.json';
+  const relativeVersionFile = 'src/wtf-pos/src/environments/version.ts';
 
   if (dryRun) {
     console.log(`Current version: ${oldVersion}`);
@@ -145,7 +146,14 @@ async function main() {
     // package-lock update is optional for this tool.
   }
 
-  run(GIT_BIN, ['add', relativePackageJson, relativePackageLock], { cwd: repoRoot });
+  // Regenerate the app version file the UI and update check read, so local runs match the release.
+  run(process.execPath, [resolve(scriptDir, 'write-version.mjs'), '--mode=prod'], {
+    cwd: projectDir,
+  });
+
+  run(GIT_BIN, ['add', relativePackageJson, relativePackageLock, relativeVersionFile], {
+    cwd: repoRoot,
+  });
 
   const tempDir = await mkdtemp(join(tmpdir(), 'wtf-release-'));
   const commitMsgPath = join(tempDir, 'commit-msg.txt');
@@ -154,7 +162,15 @@ async function main() {
     await writeFile(commitMsgPath, buildCommitMessage(oldVersion, newVersion), 'utf8');
     run(
       GIT_BIN,
-      ['commit', '--only', relativePackageJson, relativePackageLock, '-F', commitMsgPath],
+      [
+        'commit',
+        '--only',
+        relativePackageJson,
+        relativePackageLock,
+        relativeVersionFile,
+        '-F',
+        commitMsgPath,
+      ],
       {
         cwd: repoRoot,
       },
