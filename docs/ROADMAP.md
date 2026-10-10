@@ -841,6 +841,8 @@ Update the order editor's add-on selector to enforce the dynamic rules:
 - Bundle quantity editing supports reopen/reselect behavior and max-selection rules for mix & match.
 - Grouped item/add-on display and sorting standardized across cart, order details, and generated summaries.
 - Mobile cart includes collapsible order-actions/details section (notes, totals, actions).
+- Discounted-product promotions are captured on the order line when the price is saved (`OrderItems.OriginalPrice` and `PromoLabel`, added by `tools/sql/20261010_add_order_item_promo_details.sql`). The discount is `OriginalPrice - Price`, and the server writes the label, so new promotion types need no new columns. Order details, the downloadable summary, and the Payment Summary total discount read the stored values, so percent promotions, promotions larger than the price (free items), and ended promotions display correctly. Orders saved before this keep the previous best-effort display from the promotions active today. Bundle promotions are not included in the total discount.
+- A final unit price of zero is allowed for products and bundles (for example a promotion that covers the whole price); only negative prices are rejected, in the product selector, the editor cart, and the server.
 
 ### Implemented Reporting/Dashboard Integration
 
