@@ -63,6 +63,13 @@ export class ProductEditorComponent implements OnInit {
   protected readonly isSaving = signal(false);
   protected readonly isUploading = signal(false);
   protected readonly isDeletingImage = signal(false);
+  protected readonly isBusy = computed(
+    () =>
+      this.isSaving() ||
+      this.isUploading() ||
+      this.isDeletingImage() ||
+      Object.values(this.addOnOverrideSaving()).some(Boolean),
+  );
   protected readonly isDragging = signal(false);
   protected readonly ProductCategoryEnum = ProductCategoryEnum;
   protected readonly ProductSubCategoryEnum = ProductSubCategoryEnum;
@@ -211,6 +218,10 @@ export class ProductEditorComponent implements OnInit {
   }
 
   protected saveProduct(): void {
+    if (this.isBusy()) {
+      return;
+    }
+
     if (this.productForm.invalid) {
       this.productForm.markAllAsTouched();
       return;

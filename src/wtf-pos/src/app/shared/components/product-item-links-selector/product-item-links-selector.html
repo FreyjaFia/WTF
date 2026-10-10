@@ -1,4 +1,4 @@
-<dialog id="product-item-links-modal" class="modal" (close)="closeModal()">
+<dialog id="product-item-links-modal" class="modal" (close)="closeModal()" (cancel)="isSaving() && $event.preventDefault()">
   <div
     class="modal-box flex max-h-[85vh] w-full max-w-[min(32rem,calc(100vw-2rem))] flex-col rounded-2xl shadow-2xl sm:max-h-[calc(100vh-3rem)] sm:max-w-4xl"
   >
@@ -192,6 +192,7 @@
                     class="app-btn app-btn-icon-danger p-1"
                     aria-label="Unlink product"
                     (click)="removeLinkedProduct(product.productId)"
+                  [disabled]="isSaving()"
                   >
                     <app-icon name="icon-close" [class]="'h-3.5 w-3.5'" />
                   </button>
@@ -213,6 +214,7 @@
       <button
         class="app-btn app-btn-secondary app-btn-md"
         (click)="closeModal()"
+        [disabled]="isSaving()"
         type="button"
       >
         Cancel
@@ -232,6 +234,6 @@
   </div>
 
   <form method="dialog" class="modal-backdrop bg-black/30 backdrop-blur-md">
-    <button type="button">close</button>
+    <button type="button" [disabled]="isSaving()">close</button>
   </form>
 </dialog>

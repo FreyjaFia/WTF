@@ -1,4 +1,9 @@
-<dialog id="products-swapper-modal" class="modal" (close)="closeModal()">
+<dialog
+  id="products-swapper-modal"
+  class="modal"
+  (close)="closeModal()"
+  (cancel)="isSaving() && $event.preventDefault()"
+>
   <div
     class="modal-box flex max-h-[85vh] w-full max-w-[min(32rem,calc(100vw-2rem))] flex-col rounded-2xl shadow-2xl sm:max-h-[calc(100vh-3rem)] sm:max-w-4xl"
   >
@@ -191,6 +196,7 @@
       <button
         class="app-btn app-btn-secondary app-btn-md"
         (click)="closeModal()"
+        [disabled]="isSaving()"
         type="button"
       >
         Cancel
@@ -210,6 +216,6 @@
   </div>
 
   <form method="dialog" class="modal-backdrop bg-black/30 backdrop-blur-md">
-    <button type="button">close</button>
+    <button type="button" [disabled]="isSaving()">close</button>
   </form>
 </dialog>

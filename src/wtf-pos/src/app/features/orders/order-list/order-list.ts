@@ -319,6 +319,10 @@ export class OrderList implements OnInit, OnDestroy {
   }
 
   protected refresh(): void {
+    if (this.isRefreshing() || this.isSyncingOffline()) {
+      return;
+    }
+
     this.isRefreshing.set(true);
     this.resetAndLoadOrders();
   }
@@ -553,6 +557,10 @@ export class OrderList implements OnInit, OnDestroy {
   }
 
   protected syncPendingOrders(): void {
+    if (this.isRefreshing()) {
+      return;
+    }
+
     this.offlineOrderService.syncAll();
   }
 

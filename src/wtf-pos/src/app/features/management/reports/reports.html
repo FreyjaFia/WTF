@@ -239,12 +239,12 @@
         }
       </div>
 
-      <div class="flex flex-wrap items-center justify-end gap-2 md:justify-end md:w-full">
+      <div class="flex flex-wrap items-center justify-end gap-2 md:w-full md:justify-end">
         <button
           type="button"
           class="app-btn app-btn-secondary app-btn-sm gap-2"
           (click)="downloadExcel()"
-          [disabled]="isDownloadingExcel() || isDownloadingPdf()"
+          [disabled]="isReportExportBusy()"
         >
           @if (isDownloadingExcel()) {
             <span class="loading loading-spinner loading-xs"></span>
@@ -258,7 +258,7 @@
           type="button"
           class="app-btn app-btn-secondary app-btn-sm gap-2"
           (click)="downloadPdf()"
-          [disabled]="isDownloadingExcel() || isDownloadingPdf()"
+          [disabled]="isReportExportBusy()"
         >
           @if (isDownloadingPdf()) {
             <span class="loading loading-spinner loading-xs"></span>
@@ -1464,12 +1464,7 @@
           type="button"
           class="app-btn app-btn-secondary app-btn-sm gap-2"
           (click)="generateMonthlyWorkbook()"
-          [disabled]="
-            isGeneratingMonthlyWorkbook() ||
-            isDownloadingMonthlyWorkbook() ||
-            isDownloadingExcel() ||
-            isDownloadingPdf()
-          "
+          [disabled]="isReportExportBusy()"
         >
           @if (isGeneratingMonthlyWorkbook()) {
             <span class="loading loading-spinner loading-xs"></span>
@@ -1501,5 +1496,3 @@
     </div>
   }
 </div>
-
-

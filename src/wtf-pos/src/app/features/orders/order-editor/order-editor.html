@@ -12,6 +12,7 @@
           type="button"
           class="app-btn app-btn-ghost mt-0.5 p-2"
           (click)="cancel()"
+          [disabled]="isOrderRequestBusy()"
           aria-label="Back to orders"
         >
           <app-icon name="icon-back" [class]="'h-5 w-5 text-gray-600'" [fill]="'currentColor'" />
@@ -400,7 +401,7 @@
             (touchstart)="startQuickPayHold()"
             (touchend)="cancelQuickPayHold()"
             (touchcancel)="cancelQuickPayHold()"
-            [disabled]="cart().length === 0 || !canManageOrderActions()"
+            [disabled]="cart().length === 0 || !canManageOrderActions() || isOrderRequestBusy()"
             aria-label="Hold to pay"
           >
             <app-icon name="icon-peso" [class]="'h-4.5 w-4.5'" [fill]="'currentColor'" />
@@ -458,6 +459,7 @@
               type="button"
               class="app-btn app-btn-outline-danger app-btn-sm"
               (click)="clearAll()"
+              [disabled]="isOrderRequestBusy()"
               [class.hidden]="isReadOnly() || !canManageOrderActions()"
             >
               Clear
@@ -472,7 +474,7 @@
                 <app-customer-dropdown
                   [options]="customerOptions()"
                   [selectedId]="selectedCustomerId()"
-                  [disabled]="isLoadingCustomers()"
+                  [disabled]="isLoadingCustomers() || isOrderRequestBusy()"
                   [walkInLabel]="'Walk-in customer'"
                   [placeholder]="'Search customer...'"
                   (selectedIdChange)="onCustomerSelected($event)"
@@ -483,6 +485,7 @@
                   type="button"
                   class="app-btn app-btn-secondary app-btn-sm"
                   (click)="openCreateCustomerModal()"
+                  [disabled]="isOrderRequestBusy()"
                 >
                   + New
                 </button>
@@ -503,7 +506,7 @@
             <button
               type="button"
               class="app-btn app-btn-secondary app-btn-xs gap-1.5"
-              [disabled]="isDownloadingReceipt()"
+              [disabled]="isDownloadingReceipt() || isOrderRequestBusy()"
               (click)="downloadOrderImage()"
               aria-label="Download order summary"
             >
@@ -582,6 +585,7 @@
                             type="button"
                             class="app-stepper-btn h-8 w-8"
                             (click)="$event.stopPropagation(); decrement(c.productId, $index)"
+                            [disabled]="isOrderRequestBusy()"
                             aria-label="Decrease quantity"
                           >
                             <span class="text-base leading-none font-bold">-</span>
@@ -599,6 +603,7 @@
                             type="button"
                             class="app-stepper-btn h-8 w-8"
                             (click)="$event.stopPropagation(); increment(c.productId, $index)"
+                            [disabled]="isOrderRequestBusy()"
                             aria-label="Increase quantity"
                           >
                             <span class="text-base leading-none font-bold">+</span>
@@ -832,6 +837,7 @@
                       type="button"
                       class="app-btn app-btn-outline-danger app-btn-md flex-1"
                       (click)="openDiscardOrderModal()"
+                      [disabled]="isOrderRequestBusy()"
                     >
                       Discard Order
                     </button>
@@ -840,6 +846,7 @@
                       type="button"
                       class="app-btn app-btn-outline-danger app-btn-md flex-1"
                       (click)="openCancelOrderModal()"
+                      [disabled]="isOrderRequestBusy()"
                     >
                       {{ isCompleted() ? 'Refund Order' : 'Cancel Order' }}
                     </button>
@@ -854,7 +861,9 @@
                   type="button"
                   class="app-btn app-btn-primary app-btn-lg pointer-events-auto w-full"
                   (click)="checkout()"
-                  [disabled]="cart().length === 0 || !canManageOrderActions() || isSavingOrder()"
+                  [disabled]="
+                    cart().length === 0 || !canManageOrderActions() || isOrderRequestBusy()
+                  "
                 >
                   @if (isSavingOrder()) {
                     <span class="loading loading-spinner loading-xs mr-2"></span>
@@ -867,7 +876,7 @@
                   type="button"
                   class="app-btn app-btn-secondary app-btn-md w-full"
                   (click)="cancelOverride()"
-                  [disabled]="isSavingOrder()"
+                  [disabled]="isOrderRequestBusy()"
                 >
                   Cancel Override
                 </button>
@@ -877,19 +886,21 @@
                     type="button"
                     class="app-btn app-btn-secondary app-btn-md pointer-events-auto flex-1"
                     [class.cursor-not-allowed]="
-                      cart().length === 0 || !canManageOrderActions() || isSavingOrder()
+                      cart().length === 0 || !canManageOrderActions() || isOrderRequestBusy()
                     "
                     [class.cursor-pointer]="
-                      !(cart().length === 0 || !canManageOrderActions() || isSavingOrder())
+                      !(cart().length === 0 || !canManageOrderActions() || isOrderRequestBusy())
                     "
                     (click)="onOrderSaved()"
-                    [disabled]="cart().length === 0 || !canManageOrderActions() || isSavingOrder()"
+                    [disabled]="
+                      cart().length === 0 || !canManageOrderActions() || isOrderRequestBusy()
+                    "
                   >
-                    @if (isSavingOrder()) {
+                    @if (isSavingOrderDraft()) {
                       <span class="loading loading-spinner loading-xs mr-2"></span>
                     }
                     {{
-                      isSavingOrder()
+                      isSavingOrderDraft()
                         ? isEditMode()
                           ? 'Updating Order...'
                           : 'Saving Order...'
@@ -902,6 +913,7 @@
                     type="button"
                     class="app-btn app-btn-outline-danger app-btn-md w-full"
                     (click)="openDiscardOrderModal()"
+                    [disabled]="isOrderRequestBusy()"
                   >
                     Discard Order
                   </button>
@@ -910,6 +922,7 @@
                     type="button"
                     class="app-btn app-btn-outline-danger app-btn-md w-full"
                     (click)="openCancelOrderModal()"
+                    [disabled]="isOrderRequestBusy()"
                   >
                     {{ isCompleted() ? 'Refund Order' : 'Cancel Order' }}
                   </button>
@@ -917,12 +930,23 @@
                 <button
                   type="button"
                   class="app-btn app-btn-primary app-btn-lg pointer-events-auto w-full"
-                  [class.cursor-not-allowed]="cart().length === 0 || !canManageOrderActions()"
-                  [class.cursor-pointer]="!(cart().length === 0 || !canManageOrderActions())"
+                  [class.cursor-not-allowed]="
+                    cart().length === 0 || !canManageOrderActions() || isOrderRequestBusy()
+                  "
+                  [class.cursor-pointer]="
+                    !(cart().length === 0 || !canManageOrderActions() || isOrderRequestBusy())
+                  "
                   (click)="checkout()"
-                  [disabled]="cart().length === 0 || !canManageOrderActions()"
+                  [disabled]="
+                    cart().length === 0 || !canManageOrderActions() || isOrderRequestBusy()
+                  "
                 >
-                  Checkout
+                  @if (isCheckingOut()) {
+                    <span class="loading loading-spinner loading-xs mr-2"></span>
+                    Processing Order...
+                  } @else {
+                    Checkout
+                  }
                 </button>
               }
             </div>
@@ -951,6 +975,8 @@
   [totalPrice]="totalPrice()"
   [selectedCustomerName]="selectedCustomerName()"
   [orderSpecialInstructions]="orderSpecialInstructions()"
+  [isBusy]="isSavingOrder()"
+  [busyLabel]="isEditMode() ? 'Updating Order...' : 'Saving Order...'"
   (orderConfirmed)="onOrderConfirmed($event)"
 />
 <app-order-receipt [data]="receiptData()" />
@@ -1054,6 +1080,8 @@
     [heading]="isCompleted() ? 'Refund Order?' : 'Cancel Order?'"
     [confirmLabel]="isCompleted() ? 'Refund Order' : 'Cancel Order'"
     cancelLabel="Keep Order"
+    [busyLabel]="isCompleted() ? 'Refunding...' : 'Cancelling...'"
+    [isBusy]="isCancellingOrder()"
     (confirmed)="confirmCancelOrder()"
     (cancelled)="dismissCancelOrder()"
   >
@@ -1074,6 +1102,7 @@
           class="textarea textarea-bordered min-h-24 w-full text-sm"
           [value]="cancelOrderNote()"
           (input)="onCancelOrderNoteInput($event)"
+          [disabled]="isCancellingOrder()"
           placeholder="Enter reason for refund"
           maxlength="500"
         ></textarea>
@@ -1113,6 +1142,7 @@
         class="textarea textarea-bordered min-h-24 w-full text-sm"
         [value]="overrideReason()"
         (input)="onOverrideReasonInput($event)"
+        [disabled]="isSavingOrder()"
         placeholder="Why is this order being corrected?"
         maxlength="500"
       ></textarea>

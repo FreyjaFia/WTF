@@ -79,6 +79,10 @@ export class ProductItemLinksSelectorComponent {
   }
 
   protected closeModal(): void {
+    if (this.isSaving()) {
+      return;
+    }
+
     this.destroySortables();
     this.availableProducts.set([]);
     this.linkedProducts.set([]);

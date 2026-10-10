@@ -186,6 +186,17 @@ export class OrderEditor implements OnInit, OnDestroy {
   protected readonly showCreateCustomerModal = signal(false);
   protected readonly isCreatingCustomer = signal(false);
   protected readonly isSavingOrder = signal(false);
+  private readonly activeOrderAction = signal<'save' | 'checkout' | null>(null);
+  protected readonly isCancellingOrder = signal(false);
+  protected readonly isSavingOrderDraft = computed(
+    () => this.isSavingOrder() && this.activeOrderAction() === 'save',
+  );
+  protected readonly isCheckingOut = computed(
+    () => this.isSavingOrder() && this.activeOrderAction() === 'checkout',
+  );
+  protected readonly isOrderRequestBusy = computed(
+    () => this.isSavingOrder() || this.isCancellingOrder(),
+  );
   protected readonly isCartCollapsed = signal(false);
   protected readonly quickPayProgress = signal(0);
   protected readonly isQuickPayHolding = signal(false);
@@ -1056,7 +1067,7 @@ export class OrderEditor implements OnInit, OnDestroy {
   }
 
   protected addToCart(p: ProductDto): void {
-    if (!this.canManageOrderActions()) {
+    if (!this.canManageOrderActions() || this.isOrderRequestBusy()) {
       return;
     }
 
@@ -1068,7 +1079,7 @@ export class OrderEditor implements OnInit, OnDestroy {
   }
 
   protected addBundlePromotionToCart(promo: PromotionListItemDto): void {
-    if (!this.canManageOrderActions() || this.isReadOnly()) {
+    if (!this.canManageOrderActions() || this.isOrderRequestBusy() || this.isReadOnly()) {
       return;
     }
 
@@ -1516,7 +1527,7 @@ export class OrderEditor implements OnInit, OnDestroy {
   }
 
   protected increment(productId: string, index: number): void {
-    if (!this.canManageOrderActions()) {
+    if (!this.canManageOrderActions() || this.isOrderRequestBusy()) {
       return;
     }
 
@@ -1541,7 +1552,7 @@ export class OrderEditor implements OnInit, OnDestroy {
   }
 
   protected decrement(productId: string, index: number): void {
-    if (!this.canManageOrderActions()) {
+    if (!this.canManageOrderActions() || this.isOrderRequestBusy()) {
       return;
     }
 
@@ -1572,7 +1583,7 @@ export class OrderEditor implements OnInit, OnDestroy {
   }
 
   protected clearAll(): void {
-    if (!this.canManageOrderActions()) {
+    if (!this.canManageOrderActions() || this.isOrderRequestBusy()) {
       return;
     }
 
@@ -1580,7 +1591,7 @@ export class OrderEditor implements OnInit, OnDestroy {
   }
 
   protected editCartItem(index: number): void {
-    if (!this.canManageOrderActions() || this.isReadOnly()) {
+    if (!this.canManageOrderActions() || this.isOrderRequestBusy() || this.isReadOnly()) {
       return;
     }
 
@@ -1678,7 +1689,7 @@ export class OrderEditor implements OnInit, OnDestroy {
   }
 
   protected onCustomerSelected(customerId: string | null): void {
-    if (!this.canManageOrderActions()) {
+    if (!this.canManageOrderActions() || this.isOrderRequestBusy()) {
       return;
     }
 
@@ -1890,11 +1901,17 @@ export class OrderEditor implements OnInit, OnDestroy {
       return;
     }
 
-    this.showCancelOrderModal.set(false);
-    this.removeStackId('cancelOrder');
+    if (this.isOrderRequestBusy()) {
+      return;
+    }
+
+    this.isCancellingOrder.set(true);
 
     this.orderService.voidOrder(order.id, note || null).subscribe({
       next: () => {
+        this.isCancellingOrder.set(false);
+        this.showCancelOrderModal.set(false);
+        this.removeStackId('cancelOrder');
         this.skipGuard = true;
 
         const message =
@@ -1906,12 +1923,17 @@ export class OrderEditor implements OnInit, OnDestroy {
         this.router.navigateByUrl(AppRoutes.OrdersList);
       },
       error: (err: Error) => {
+        this.isCancellingOrder.set(false);
         this.alertService.error(err.message || this.alertService.getUpdateErrorMessage('order'));
       },
     });
   }
 
   protected dismissCancelOrder(): void {
+    if (this.isCancellingOrder()) {
+      return;
+    }
+
     this.showCancelOrderModal.set(false);
     this.showCancelOrderNoteError.set(false);
     this.removeStackId('cancelOrder');
@@ -1939,6 +1961,10 @@ export class OrderEditor implements OnInit, OnDestroy {
   }
 
   protected dismissOverride(): void {
+    if (this.isSavingOrder()) {
+      return;
+    }
+
     this.showOverrideModal.set(false);
     this.showOverrideReasonError.set(false);
     this.removeStackId('overrideOrder');
@@ -2038,6 +2064,10 @@ export class OrderEditor implements OnInit, OnDestroy {
   }
 
   protected checkout(): void {
+    if (this.isOrderRequestBusy()) {
+      return;
+    }
+
     if (!this.canManageOrderActions()) {
       this.alertService.errorUnauthorized();
       return;
@@ -2072,6 +2102,7 @@ export class OrderEditor implements OnInit, OnDestroy {
   }
 
   protected onOrderSaved(): void {
+    this.activeOrderAction.set('save');
     if (!this.canManageOrderActions()) {
       this.alertService.errorUnauthorized();
       return;
@@ -2104,16 +2135,20 @@ export class OrderEditor implements OnInit, OnDestroy {
     changeAmount?: number;
     tips?: number;
   }): void {
+    this.activeOrderAction.set('checkout');
     if (!this.canManageOrderActions()) {
+      this.checkoutModal().close();
       this.alertService.errorUnauthorized();
       return;
     }
 
     if (!this.validateCartUnitPrices()) {
+      this.checkoutModal().close();
       return;
     }
 
     if (this.isOverrideMode()) {
+      this.checkoutModal().close();
       this.pendingOverridePayment = event;
       this.openOverrideModal();
     } else if (this.isOfflineEditMode()) {

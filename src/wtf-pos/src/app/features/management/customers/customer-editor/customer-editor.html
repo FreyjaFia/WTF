@@ -31,7 +31,7 @@
         type="button"
         class="app-btn app-btn-secondary app-btn-sm"
         (click)="goBack()"
-        [disabled]="isSaving()"
+        [disabled]="isBusy()"
       >
         Cancel
       </button>
@@ -39,7 +39,7 @@
         type="submit"
         form="customerForm"
         class="app-btn app-btn-primary app-btn-sm gap-2"
-        [disabled]="customerForm.invalid || isSaving()"
+        [disabled]="customerForm.invalid || isBusy()"
       >
         @if (isSaving()) {
           <span class="loading loading-spinner loading-sm"></span>
@@ -153,7 +153,7 @@
                           type="button"
                           class="app-btn app-btn-outline-danger app-btn-xs"
                           (click)="removeCurrentImage()"
-                          [disabled]="isDeletingImage() || isUploading()"
+                          [disabled]="isBusy()"
                         >
                           @if (isDeletingImage()) {
                             <span class="loading loading-spinner loading-xs"></span>
@@ -183,6 +183,7 @@
                         class="app-btn app-btn-overlay absolute -top-2 -right-2 h-8 w-8"
                         aria-label="Remove image"
                         (click)="removeImage()"
+                        [disabled]="isBusy()"
                       >
                         <app-icon name="icon-close" [class]="'h-4 w-4'"></app-icon>
                       </button>
@@ -194,8 +195,8 @@
                 <label
                   for="customerImage"
                   class="group flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 p-6 transition-all hover:border-[#047857]/40 hover:bg-[#047857]/5"
-                  [class.pointer-events-none]="isUploading()"
-                  [class.opacity-50]="isUploading()"
+                  [class.pointer-events-none]="isBusy()"
+                  [class.opacity-50]="isBusy()"
                   [class.border-[#047857]]="isDragging()"
                   [class.bg-[#047857]/5]="isDragging()"
                   (dragover)="onDragOver($event)"
@@ -217,7 +218,7 @@
                   accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
                   class="hidden"
                   (change)="onFileSelected($event)"
-                  [disabled]="isUploading()"
+                  [disabled]="isBusy()"
                 />
 
                 @if (isUploading()) {
@@ -250,4 +251,3 @@
     You have unsaved changes that will be lost if you leave this page.
   </app-confirm-dialog>
 }
-

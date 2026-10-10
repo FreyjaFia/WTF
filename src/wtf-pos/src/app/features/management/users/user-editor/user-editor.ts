@@ -1,5 +1,5 @@
 import { CommonModule, Location } from '@angular/common';
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import {
   AbstractControl,
   FormControl,
@@ -19,7 +19,13 @@ import { of, switchMap } from 'rxjs';
 
 @Component({
   selector: 'app-user-editor',
-  imports: [CommonModule, ReactiveFormsModule, IconComponent, AvatarComponent, ConfirmDialogComponent],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    IconComponent,
+    AvatarComponent,
+    ConfirmDialogComponent,
+  ],
   templateUrl: './user-editor.html',
   host: {
     class: 'block h-full',
@@ -57,6 +63,9 @@ export class UserEditorComponent implements OnInit {
   // Image upload signals
   protected readonly isUploading = signal(false);
   protected readonly isDeletingImage = signal(false);
+  protected readonly isBusy = computed(
+    () => this.isSaving() || this.isUploading() || this.isDeletingImage(),
+  );
   protected readonly isDragging = signal(false);
   protected readonly selectedFile = signal<File | null>(null);
   protected readonly imagePreview = signal<string | null>(null);
@@ -139,7 +148,6 @@ export class UserEditorComponent implements OnInit {
       this.applyRoleValidators();
     }
   }
-
 
   protected onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
@@ -287,6 +295,10 @@ export class UserEditorComponent implements OnInit {
   }
 
   protected saveUser(): void {
+    if (this.isBusy()) {
+      return;
+    }
+
     if (this.isProfileMode()) {
       this.saveProfile();
       return;

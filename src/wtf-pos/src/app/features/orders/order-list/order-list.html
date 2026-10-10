@@ -43,7 +43,7 @@
             [class.opacity-70]="isRefreshing()"
             type="button"
             (click)="refresh()"
-            [disabled]="isRefreshing()"
+            [disabled]="isRefreshing() || isSyncingOffline()"
             aria-label="Refresh orders"
           >
             @if (isRefreshing()) {
@@ -197,7 +197,7 @@
           <button
             type="button"
             class="app-btn app-btn-ghost-warning app-btn-sm"
-            [disabled]="isSyncingOffline()"
+            [disabled]="isSyncingOffline() || isRefreshing()"
             (click)="syncPendingOrders()"
           >
             @if (isSyncingOffline()) {
@@ -217,7 +217,7 @@
               role="button"
               tabindex="0"
               (click)="editPendingOrder(pending.localId)"
-              (keydown.enter)="editPendingOrder(pending.localId)"
+              (keydown.enter)="pending.status !== 'syncing' && editPendingOrder(pending.localId)"
             >
               <div class="flex min-w-0 flex-1 flex-col gap-0.5">
                 <div class="flex items-center gap-2">
@@ -501,4 +501,3 @@
     }
   }
 </div>
-

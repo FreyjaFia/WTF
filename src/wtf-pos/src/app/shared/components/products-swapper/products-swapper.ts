@@ -197,6 +197,10 @@ export class ProductsSwapperComponent implements AfterViewInit {
   }
 
   protected closeModal(): void {
+    if (this.isSaving()) {
+      return;
+    }
+
     const modal = document.querySelector('#products-swapper-modal') as HTMLDialogElement;
 
     if (modal) {

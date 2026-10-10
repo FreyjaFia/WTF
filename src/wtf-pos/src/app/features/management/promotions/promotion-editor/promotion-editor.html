@@ -28,14 +28,14 @@
         type="button"
         class="app-btn app-btn-secondary app-btn-sm"
         (click)="cancel()"
-        [disabled]="isSaving()"
+        [disabled]="isBusy()"
       >
         Cancel
       </button>
       <button
         type="button"
         class="app-btn app-btn-primary app-btn-sm gap-2"
-        [disabled]="isSaving()"
+        [disabled]="isBusy()"
         (click)="save()"
       >
         @if (isSaving()) {
@@ -81,7 +81,7 @@
                         type="button"
                         class="app-btn app-btn-outline-danger app-btn-xs"
                         (click)="removeCurrentImage()"
-                        [disabled]="isDeletingImage() || isUploading()"
+                        [disabled]="isBusy()"
                       >
                         @if (isDeletingImage()) {
                           <span class="loading loading-spinner loading-xs"></span>
@@ -110,6 +110,7 @@
                       class="app-btn app-btn-overlay absolute -top-2 -right-2 h-8 w-8"
                       aria-label="Remove image"
                       (click)="removeImage()"
+                      [disabled]="isBusy()"
                     >
                       <app-icon name="icon-close" [class]="'h-4 w-4'" />
                     </button>
@@ -120,8 +121,8 @@
               <label
                 for="promotionImageMobile"
                 class="group flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 p-6 transition-all hover:border-[#047857]/40 hover:bg-[#047857]/5"
-                [class.pointer-events-none]="isUploading()"
-                [class.opacity-50]="isUploading()"
+                [class.pointer-events-none]="isBusy()"
+                [class.opacity-50]="isBusy()"
                 [class.border-[#047857]]="isDragging()"
                 [class.bg-[#047857]/5]="isDragging()"
                 (dragover)="onDragOver($event)"
@@ -143,7 +144,7 @@
                 accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
                 class="hidden"
                 (change)="onFileSelected($event)"
-                [disabled]="isUploading()"
+                [disabled]="isBusy()"
               />
 
               @if (isUploading()) {
@@ -336,7 +337,9 @@
                   </div>
                   <div>
                     <div class="mb-2 block text-sm font-semibold text-gray-900">
-                      {{ discountedProductDiscountType() === 'fixed' ? 'Fixed Price' : 'Percent Off' }}
+                      {{
+                        discountedProductDiscountType() === 'fixed' ? 'Fixed Price' : 'Percent Off'
+                      }}
                     </div>
                     <label
                       class="input flex w-full items-center gap-2 border-transparent bg-gray-50 transition-all focus-within:border-[#047857] focus-within:bg-white focus-within:ring-1 focus-within:ring-[#047857]/20"
@@ -426,7 +429,7 @@
                         type="button"
                         class="app-btn app-btn-outline-danger app-btn-xs"
                         (click)="removeCurrentImage()"
-                        [disabled]="isDeletingImage() || isUploading()"
+                        [disabled]="isBusy()"
                       >
                         @if (isDeletingImage()) {
                           <span class="loading loading-spinner loading-xs"></span>
@@ -455,6 +458,7 @@
                       class="app-btn app-btn-overlay absolute -top-2 -right-2 h-8 w-8"
                       aria-label="Remove image"
                       (click)="removeImage()"
+                      [disabled]="isBusy()"
                     >
                       <app-icon name="icon-close" [class]="'h-4 w-4'" />
                     </button>
@@ -465,8 +469,8 @@
               <label
                 for="promotionImage"
                 class="group flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 p-6 transition-all hover:border-[#047857]/40 hover:bg-[#047857]/5"
-                [class.pointer-events-none]="isUploading()"
-                [class.opacity-50]="isUploading()"
+                [class.pointer-events-none]="isBusy()"
+                [class.opacity-50]="isBusy()"
                 [class.border-[#047857]]="isDragging()"
                 [class.bg-[#047857]/5]="isDragging()"
                 (dragover)="onDragOver($event)"
@@ -488,7 +492,7 @@
                 accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
                 class="hidden"
                 (change)="onFileSelected($event)"
-                [disabled]="isUploading()"
+                [disabled]="isBusy()"
               />
 
               @if (isUploading()) {
@@ -620,7 +624,7 @@
                               type="button"
                               class="app-btn app-btn-primary app-btn-xs h-7 min-h-0 px-2"
                               (click)="saveBundleItemQuantity(i, item.productId)"
-                              [disabled]="isSaving()"
+                              [disabled]="isBusy()"
                             >
                               Update
                             </button>
@@ -628,7 +632,7 @@
                               type="button"
                               class="app-btn app-btn-secondary app-btn-xs h-7 min-h-0 px-2"
                               (click)="resetBundleItemQuantity(i, item.productId)"
-                              [disabled]="isSaving()"
+                              [disabled]="isBusy()"
                             >
                               Reset
                             </button>
@@ -764,7 +768,10 @@
                             </button>
                           </div>
                           @if (item.addOns.length > 0) {
-                            @for (group of getDiscountedProductAddOnGroups(i); track group.typeLabel) {
+                            @for (
+                              group of getDiscountedProductAddOnGroups(i);
+                              track group.typeLabel
+                            ) {
                               <div class="mt-2 mb-1 flex items-center gap-2">
                                 <span
                                   class="text-[10px] font-semibold tracking-wider text-gray-400 uppercase"
@@ -836,7 +843,7 @@
                   type="button"
                   class="app-btn app-btn-accent-outline app-btn-sm gap-2"
                   (click)="openBundleItemsSelector()"
-                  [disabled]="isSaving()"
+                  [disabled]="isBusy()"
                 >
                   <app-icon name="icon-sliders" [class]="'h-4 w-4'" />
                   Manage Items
@@ -866,4 +873,3 @@
     You have unsaved changes that will be lost if you leave this page.
   </app-confirm-dialog>
 }
-

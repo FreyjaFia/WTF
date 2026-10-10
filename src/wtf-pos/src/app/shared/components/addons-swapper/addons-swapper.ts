@@ -188,6 +188,10 @@ export class AddonsSwapperComponent implements AfterViewInit {
   }
 
   protected closeModal(): void {
+    if (this.isSaving()) {
+      return;
+    }
+
     // Close the modal - implementation depends on how parent handles this
     const modal = document.querySelector('#addons-swapper-modal') as HTMLDialogElement;
 

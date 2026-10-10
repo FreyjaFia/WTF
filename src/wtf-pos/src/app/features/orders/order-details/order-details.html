@@ -4,6 +4,7 @@
       type="button"
       class="app-btn app-btn-ghost mt-0.5 p-2"
       (click)="backToOrders()"
+      [disabled]="isRefunding()"
       aria-label="Back to orders"
     >
       <app-icon name="icon-back" [class]="'h-5 w-5 text-gray-600'" [fill]="'currentColor'" />
@@ -43,7 +44,7 @@
               type="button"
               class="app-btn app-btn-secondary app-btn-sm"
               (click)="downloadOrderImage(receipt)"
-              [disabled]="isDownloadingReceipt()"
+              [disabled]="isDownloadingReceipt() || isRefunding()"
             >
               @if (isDownloadingReceipt()) {
                 <span class="loading loading-spinner loading-xs"></span>
@@ -58,6 +59,7 @@
                 type="button"
                 class="app-btn app-btn-outline-warning app-btn-sm"
                 (click)="openOverrideEditor()"
+                [disabled]="isRefunding()"
               >
                 Override Order
               </button>
@@ -72,6 +74,7 @@
                   type="button"
                   class="app-btn app-btn-outline-danger app-btn-sm"
                   (click)="openRefundModal()"
+                  [disabled]="isRefunding()"
                 >
                   Refund Order
                 </button>

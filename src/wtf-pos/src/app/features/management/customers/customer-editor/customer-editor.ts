@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AlertService, CustomerService, ModalStackService } from '@core/services';
@@ -10,7 +10,13 @@ import { AppRoutes } from '@shared/constants/app-routes';
 
 @Component({
   selector: 'app-customer-editor',
-  imports: [CommonModule, ReactiveFormsModule, IconComponent, AvatarComponent, ConfirmDialogComponent],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    IconComponent,
+    AvatarComponent,
+    ConfirmDialogComponent,
+  ],
   templateUrl: './customer-editor.html',
   host: { class: 'block h-full' },
 })
@@ -30,6 +36,9 @@ export class CustomerEditorComponent implements OnInit {
   // Image upload signals
   protected readonly isUploading = signal(false);
   protected readonly isDeletingImage = signal(false);
+  protected readonly isBusy = computed(
+    () => this.isSaving() || this.isUploading() || this.isDeletingImage(),
+  );
   protected readonly isDragging = signal(false);
   protected readonly selectedFile = signal<File | null>(null);
   protected readonly imagePreview = signal<string | null>(null);
@@ -202,6 +211,10 @@ export class CustomerEditorComponent implements OnInit {
   }
 
   protected saveCustomer(): void {
+    if (this.isBusy()) {
+      return;
+    }
+
     if (this.customerForm.invalid) {
       this.customerForm.markAllAsTouched();
       return;

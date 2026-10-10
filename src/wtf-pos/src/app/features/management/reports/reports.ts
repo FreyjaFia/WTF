@@ -835,14 +835,17 @@ export class ReportsComponent implements OnInit {
     return this.monthlyWorkbookStatus()?.exists === true;
   }
 
-  protected isMonthlyWorkbookDownloadDisabled(): boolean {
+  protected isReportExportBusy(): boolean {
     return (
-      !this.canDownloadMonthlyWorkbook() ||
       this.isGeneratingMonthlyWorkbook() ||
       this.isDownloadingMonthlyWorkbook() ||
       this.isDownloadingExcel() ||
       this.isDownloadingPdf()
     );
+  }
+
+  protected isMonthlyWorkbookDownloadDisabled(): boolean {
+    return !this.canDownloadMonthlyWorkbook() || this.isReportExportBusy();
   }
 
   protected getMonthlyWorkbookStatusText(): string {

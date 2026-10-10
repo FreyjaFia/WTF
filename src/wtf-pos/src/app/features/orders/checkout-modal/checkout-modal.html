@@ -1,4 +1,10 @@
-<dialog #checkoutDialog id="checkout" class="modal items-center" (close)="cancelCheckout()">
+<dialog
+  #checkoutDialog
+  id="checkout"
+  class="modal items-center"
+  (close)="onDialogClosed()"
+  (cancel)="onDialogCancel($event)"
+>
   <div
     class="modal-box checkout-shell relative overflow-y-auto shadow-2xl md:overflow-hidden"
     [class.max-w-2xl]="!showSummary()"
@@ -21,106 +27,108 @@
         </button>
       </div>
 
-      <form [formGroup]="paymentForm" class="space-y-4">
-        <!-- Payment Method -->
-        <div class="rounded-lg border border-gray-200 bg-white p-4">
-          <h4 class="mb-4 text-lg font-semibold">Payment Method</h4>
-          <div class="grid grid-cols-2 gap-3">
-            <label
-              class="flex cursor-pointer items-center gap-3 rounded-lg border border-gray-300 px-3 py-2 transition-all hover:border-gray-400"
-            >
-              <input
-                type="radio"
-                [value]="PaymentMethodEnum.Cash"
-                formControlName="paymentMethod"
-                class="radio radio-sm"
-                (change)="calculateChange()"
-              />
-              <span class="text-sm font-medium">Cash</span>
-            </label>
-            <label
-              class="flex cursor-pointer items-center gap-3 rounded-lg border border-gray-300 px-3 py-2 transition-all hover:border-gray-400"
-            >
-              <input
-                type="radio"
-                [value]="PaymentMethodEnum.GCash"
-                formControlName="paymentMethod"
-                class="radio radio-sm"
-                (change)="calculateChange()"
-              />
-              <span class="text-sm font-medium">GCash</span>
-            </label>
-          </div>
-        </div>
-
-        <!-- Cash Payment Details -->
-        @if (paymentForm.get('paymentMethod')?.value === PaymentMethodEnum.Cash) {
+      <form [formGroup]="paymentForm">
+        <fieldset [disabled]="isBusy()" class="min-w-0 space-y-4">
+          <!-- Payment Method -->
           <div class="rounded-lg border border-gray-200 bg-white p-4">
-            <h4 class="mb-4 text-lg font-semibold">Cash Payment Details</h4>
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div class="form-control">
-                <label for="amountReceived" class="label">
-                  <span class="label-text font-medium">Amount Received</span>
-                </label>
-                <input
-                  id="amountReceived"
-                  type="number"
-                  placeholder="0.00"
-                  formControlName="amountReceived"
-                  class="input input-bordered input-lg outline-transparent"
-                  min="0"
-                  step="0.01"
-                />
-              </div>
-              <div class="form-control">
-                <label for="tips" class="label">
-                  <span class="label-text font-medium">Tips (optional)</span>
-                </label>
-                <input
-                  id="tips"
-                  type="number"
-                  placeholder="0.00"
-                  formControlName="tips"
-                  class="input input-bordered input-lg outline-transparent"
-                  min="0"
-                  step="0.01"
-                />
-              </div>
-            </div>
-            <div
-              class="mt-4 flex items-center justify-between rounded-lg border-l-4 p-4 shadow-sm"
-              [class.border-gray-300]="!hasInsufficientCash()"
-              [class.bg-gray-50]="!hasInsufficientCash()"
-              [class.border-red-400]="hasInsufficientCash()"
-              [class.bg-red-50]="hasInsufficientCash()"
-            >
-              <span class="text-lg font-semibold">
-                {{ paymentStatusLabel() }}
-              </span>
-              <span
-                class="text-2xl font-bold"
-                [class.text-red-600]="hasInsufficientCash()"
-                [class.text-green-600]="hasAmountReceivedInput() && change() > 0"
+            <h4 class="mb-4 text-lg font-semibold">Payment Method</h4>
+            <div class="grid grid-cols-2 gap-3">
+              <label
+                class="flex cursor-pointer items-center gap-3 rounded-lg border border-gray-300 px-3 py-2 transition-all hover:border-gray-400"
               >
-                <app-icon
-                  name="icon-peso"
-                  [class]="'inline h-3 w-3 align-[-0.125em]'"
-                  [fill]="'currentColor'"
-                />{{ paymentStatusAmount() | number: '1.2-2' }}
-              </span>
+                <input
+                  type="radio"
+                  [value]="PaymentMethodEnum.Cash"
+                  formControlName="paymentMethod"
+                  class="radio radio-sm"
+                  (change)="calculateChange()"
+                />
+                <span class="text-sm font-medium">Cash</span>
+              </label>
+              <label
+                class="flex cursor-pointer items-center gap-3 rounded-lg border border-gray-300 px-3 py-2 transition-all hover:border-gray-400"
+              >
+                <input
+                  type="radio"
+                  [value]="PaymentMethodEnum.GCash"
+                  formControlName="paymentMethod"
+                  class="radio radio-sm"
+                  (change)="calculateChange()"
+                />
+                <span class="text-sm font-medium">GCash</span>
+              </label>
             </div>
-            @if (hasInsufficientCash()) {
-              <p class="mt-2 text-sm text-red-600">
-                Insufficient payment. Please enter at least
-                <app-icon
-                  name="icon-peso"
-                  [class]="'inline h-3 w-3 align-[-0.125em]'"
-                  [fill]="'currentColor'"
-                />{{ totalPrice() | number: '1.2-2' }}.
-              </p>
-            }
           </div>
-        }
+
+          <!-- Cash Payment Details -->
+          @if (paymentForm.get('paymentMethod')?.value === PaymentMethodEnum.Cash) {
+            <div class="rounded-lg border border-gray-200 bg-white p-4">
+              <h4 class="mb-4 text-lg font-semibold">Cash Payment Details</h4>
+              <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div class="form-control">
+                  <label for="amountReceived" class="label">
+                    <span class="label-text font-medium">Amount Received</span>
+                  </label>
+                  <input
+                    id="amountReceived"
+                    type="number"
+                    placeholder="0.00"
+                    formControlName="amountReceived"
+                    class="input input-bordered input-lg outline-transparent"
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+                <div class="form-control">
+                  <label for="tips" class="label">
+                    <span class="label-text font-medium">Tips (optional)</span>
+                  </label>
+                  <input
+                    id="tips"
+                    type="number"
+                    placeholder="0.00"
+                    formControlName="tips"
+                    class="input input-bordered input-lg outline-transparent"
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+              </div>
+              <div
+                class="mt-4 flex items-center justify-between rounded-lg border-l-4 p-4 shadow-sm"
+                [class.border-gray-300]="!hasInsufficientCash()"
+                [class.bg-gray-50]="!hasInsufficientCash()"
+                [class.border-red-400]="hasInsufficientCash()"
+                [class.bg-red-50]="hasInsufficientCash()"
+              >
+                <span class="text-lg font-semibold">
+                  {{ paymentStatusLabel() }}
+                </span>
+                <span
+                  class="text-2xl font-bold"
+                  [class.text-red-600]="hasInsufficientCash()"
+                  [class.text-green-600]="hasAmountReceivedInput() && change() > 0"
+                >
+                  <app-icon
+                    name="icon-peso"
+                    [class]="'inline h-3 w-3 align-[-0.125em]'"
+                    [fill]="'currentColor'"
+                  />{{ paymentStatusAmount() | number: '1.2-2' }}
+                </span>
+              </div>
+              @if (hasInsufficientCash()) {
+                <p class="mt-2 text-sm text-red-600">
+                  Insufficient payment. Please enter at least
+                  <app-icon
+                    name="icon-peso"
+                    [class]="'inline h-3 w-3 align-[-0.125em]'"
+                    [fill]="'currentColor'"
+                  />{{ totalPrice() | number: '1.2-2' }}.
+                </p>
+              }
+            </div>
+          }
+        </fieldset>
       </form>
 
       <!-- Action Buttons -->
@@ -129,6 +137,7 @@
           type="button"
           class="app-btn app-btn-secondary app-btn-md flex-1"
           (click)="cancelCheckout()"
+          [disabled]="isBusy()"
         >
           Cancel
         </button>
@@ -140,7 +149,10 @@
           (click)="confirmOrder()"
           [disabled]="isConfirmDisabled()"
         >
-          Confirm & Pay
+          @if (isBusy()) {
+            <span class="loading loading-spinner loading-xs mr-2"></span>
+          }
+          {{ isBusy() ? busyLabel() : 'Confirm & Pay' }}
         </button>
       </div>
     </div>
@@ -247,13 +259,16 @@
                             : ao.name
                         }}</span>
                         <span class="ml-auto">
-                          + @if (ao.lineTotal < 0) {
+                          +
+                          @if (ao.lineTotal < 0) {
                             (
-                          }<app-icon
+                          }
+                          <app-icon
                             name="icon-peso"
                             [class]="'inline h-3 w-3 align-[-0.125em]'"
                             [fill]="'currentColor'"
-                          />{{ ao.lineTotal.toFixed(2) }}@if (ao.lineTotal < 0) {
+                          />{{ ao.lineTotal.toFixed(2) }}
+                          @if (ao.lineTotal < 0) {
                             )
                           }
                         </span>
@@ -325,6 +340,6 @@
     }
   </div>
   <form method="dialog" class="modal-backdrop bg-black/30 backdrop-blur-md">
-    <button>close</button>
+    <button [disabled]="isBusy()">close</button>
   </form>
 </dialog>

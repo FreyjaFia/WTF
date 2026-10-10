@@ -38,6 +38,9 @@ export class PromotionEditorComponent implements OnInit {
   protected readonly isSaving = signal(false);
   protected readonly isUploading = signal(false);
   protected readonly isDeletingImage = signal(false);
+  protected readonly isBusy = computed(
+    () => this.isSaving() || this.isUploading() || this.isDeletingImage(),
+  );
   protected readonly isDragging = signal(false);
   protected readonly imagePreview = signal<string | null>(null);
   protected readonly currentImageUrl = signal<string | null>(null);
@@ -726,7 +729,7 @@ export class PromotionEditorComponent implements OnInit {
   }
 
   protected save(): void {
-    if (this.isSaving()) {
+    if (this.isBusy()) {
       return;
     }
 

@@ -1,5 +1,15 @@
 import { CommonModule } from '@angular/common';
-import { Component, ElementRef, computed, inject, input, output, signal, viewChild } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  computed,
+  effect,
+  inject,
+  input,
+  output,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ModalStackService } from '@core/services';
 import { AvatarComponent, IconComponent } from '@shared/components';
@@ -20,14 +30,18 @@ import {
 })
 export class CheckoutModal {
   private readonly modalStack = inject(ModalStackService);
-  private readonly checkoutDialog = viewChild.required<ElementRef<HTMLDialogElement>>('checkoutDialog');
+  private readonly checkoutDialog =
+    viewChild.required<ElementRef<HTMLDialogElement>>('checkoutDialog');
 
   private modalStackId: number | null = null;
+  private wasBusy = false;
 
   readonly cartItems = input<CartItemDto[]>([]);
   readonly totalPrice = input<number>(0);
   readonly selectedCustomerName = input<string>('Walk-in customer');
   readonly orderSpecialInstructions = input<string>('');
+  readonly isBusy = input<boolean>(false);
+  readonly busyLabel = input<string>('Processing Order...');
 
   readonly orderConfirmed = output<{
     paymentMethod: PaymentMethodEnum;
@@ -127,7 +141,11 @@ export class CheckoutModal {
     }
 
     return [...grouped.values()]
-      .sort((a, b) => (a.sortOrder - b.sortOrder) || this.normalizeSortLabel(a.name).localeCompare(this.normalizeSortLabel(b.name)))
+      .sort(
+        (a, b) =>
+          a.sortOrder - b.sortOrder ||
+          this.normalizeSortLabel(a.name).localeCompare(this.normalizeSortLabel(b.name)),
+      )
       .map((entry) => ({
         addOnId: entry.addOnId,
         name: entry.name,
@@ -176,6 +194,10 @@ export class CheckoutModal {
   }
 
   protected readonly isConfirmDisabled = computed(() => {
+    if (this.isBusy()) {
+      return true;
+    }
+
     const paymentMethod = this.selectedPaymentMethod();
 
     // Disable if form is invalid
@@ -208,6 +230,15 @@ export class CheckoutModal {
     this.paymentForm.get('tips')?.valueChanges.subscribe(() => {
       this.calculateChange();
     });
+
+    // The dialog stays open while the order request runs, then closes once it settles.
+    effect(() => {
+      const busy = this.isBusy();
+      if (this.wasBusy && !busy) {
+        this.close();
+      }
+      this.wasBusy = busy;
+    });
   }
 
   public triggerOpen(): void {
@@ -216,6 +247,11 @@ export class CheckoutModal {
     this.calculateChange();
     this.checkoutDialog().nativeElement.showModal();
     this.modalStackId = this.modalStack.push(() => this.cancelCheckout());
+  }
+
+  public close(): void {
+    this.checkoutDialog().nativeElement.close();
+    this.removeFromStack();
   }
 
   protected toggleSummary(): void {
@@ -244,15 +280,11 @@ export class CheckoutModal {
     const amountReceived = this.paymentForm.get('amountReceived')?.value;
     const tips = this.paymentForm.get('tips')?.value;
 
-    if (paymentMethod === null || paymentMethod === undefined) {
+    if (paymentMethod === null || paymentMethod === undefined || this.isBusy()) {
       return;
     }
 
-    // Close and immediately hide to prevent backdrop/focus artifacts during navigation
-    const dialog = this.checkoutDialog().nativeElement;
-    dialog.close();
-    this.removeFromStack();
-
+    // The parent closes the dialog once the order request settles.
     this.orderConfirmed.emit({
       paymentMethod,
       amountReceived:
@@ -263,8 +295,20 @@ export class CheckoutModal {
   }
 
   protected cancelCheckout(): void {
-    this.checkoutDialog().nativeElement.close();
+    if (this.isBusy()) {
+      return;
+    }
+    this.close();
+  }
+
+  protected onDialogClosed(): void {
     this.removeFromStack();
+  }
+
+  protected onDialogCancel(event: Event): void {
+    if (this.isBusy()) {
+      event.preventDefault();
+    }
   }
 
   private removeFromStack(): void {
@@ -287,6 +331,9 @@ export class CheckoutModal {
   }
 
   private normalizeSortLabel(value: string): string {
-    return value.replace(/^\s*\d+\s*x\s+/i, '').trim().toLowerCase();
+    return value
+      .replace(/^\s*\d+\s*x\s+/i, '')
+      .trim()
+      .toLowerCase();
   }
 }
