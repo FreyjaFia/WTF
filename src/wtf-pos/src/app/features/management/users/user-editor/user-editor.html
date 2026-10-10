@@ -6,7 +6,7 @@
     <!-- Left: Title and Navigation -->
     <div class="flex min-w-0 items-start gap-4">
       <button
-        class="mt-1 shrink-0 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
+        class="app-btn app-btn-ghost mt-1 shrink-0 p-2"
         type="button"
         (click)="goBack()"
         aria-label="Go back"
@@ -35,7 +35,7 @@
     <div class="flex shrink-0 justify-end gap-2">
       <button
         type="button"
-        class="cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-100 active:scale-95 disabled:opacity-50"
+        class="app-btn app-btn-secondary app-btn-sm"
         (click)="goBack()"
         [disabled]="isSaving()"
       >
@@ -44,7 +44,7 @@
       <button
         type="submit"
         form="userForm"
-        class="btn btn-sm gap-2 rounded-lg border-0 bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none"
+        class="app-btn app-btn-primary app-btn-sm gap-2"
         [disabled]="userForm.invalid || isSaving()"
       >
         @if (isSaving()) {
@@ -261,7 +261,7 @@
                     />
                     <button
                       type="button"
-                      class="absolute inset-y-0 right-2 my-auto h-8 rounded-md px-2 text-xs font-medium text-gray-600 hover:bg-gray-100"
+                      class="app-btn app-btn-ghost absolute inset-y-0 right-2 my-auto h-8 px-2 text-xs"
                       (click)="togglePasswordVisibility()"
                       [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
                     >
@@ -299,7 +299,7 @@
                     />
                     <button
                       type="button"
-                      class="absolute inset-y-0 right-2 my-auto h-8 rounded-md px-2 text-xs font-medium text-gray-600 hover:bg-gray-100"
+                      class="app-btn app-btn-ghost absolute inset-y-0 right-2 my-auto h-8 px-2 text-xs"
                       (click)="toggleConfirmPasswordVisibility()"
                       [attr.aria-label]="
                         showConfirmPassword() ? 'Hide confirm password' : 'Show confirm password'
@@ -337,7 +337,7 @@
                           />
                           <button
                             type="button"
-                            class="btn btn-xs btn-outline btn-error"
+                            class="app-btn app-btn-outline-danger app-btn-xs"
                             (click)="removeCurrentImage()"
                             [disabled]="isDeletingImage() || isUploading()"
                           >
@@ -366,7 +366,8 @@
                         />
                         <button
                           type="button"
-                          class="btn btn-circle btn-sm btn-neutral absolute -top-2 -right-2"
+                          class="app-btn app-btn-overlay absolute -top-2 -right-2 h-8 w-8"
+                          aria-label="Remove image"
                           (click)="removeImage()"
                         >
                           <app-icon name="icon-close" [class]="'h-4 w-4'"></app-icon>

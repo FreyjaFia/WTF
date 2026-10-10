@@ -4,7 +4,7 @@
   >
     <div class="flex min-w-0 items-start gap-4">
       <button
-        class="mt-1 shrink-0 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
+        class="app-btn app-btn-ghost mt-1 shrink-0 p-2"
         type="button"
         (click)="goBack()"
         aria-label="Go back"
@@ -22,7 +22,7 @@
               &middot;
               <button
                 type="button"
-                class="cursor-pointer font-medium text-[#047857] hover:text-[#065f46]"
+                class="app-btn app-btn-link"
                 (click)="openPriceHistory()"
               >
                 Price History
@@ -36,7 +36,7 @@
     <div class="flex shrink-0 justify-end gap-2">
       <button
         type="button"
-        class="cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-100 active:scale-95 disabled:opacity-50"
+        class="app-btn app-btn-secondary app-btn-sm"
         (click)="goBack()"
         [disabled]="isSaving()"
       >
@@ -45,7 +45,7 @@
       <button
         type="submit"
         form="inventoryForm"
-        class="btn btn-sm gap-2 rounded-lg border-0 bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none"
+        class="app-btn app-btn-primary app-btn-sm gap-2"
         [disabled]="inventoryForm.invalid || isSaving()"
       >
         @if (isSaving()) {
@@ -369,7 +369,7 @@
                 <div class="mt-4">
                   <button
                     type="button"
-                    class="btn btn-sm gap-2 rounded-lg border border-[#047857] bg-white text-[#047857] transition-all hover:bg-[#047857]/5"
+                    class="app-btn app-btn-accent-outline app-btn-sm gap-2"
                     (click)="openProductLinksManager()"
                     [disabled]="isSaving()"
                   >

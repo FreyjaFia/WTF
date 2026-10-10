@@ -2,7 +2,7 @@
   <div class="mb-4 flex items-start gap-2 sm:mb-6">
     <button
       type="button"
-      class="mt-0.5 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
+      class="app-btn app-btn-ghost mt-0.5 p-2"
       (click)="backToOrders()"
       aria-label="Back to orders"
     >
@@ -41,7 +41,7 @@
           <div class="mt-3 flex flex-wrap items-center gap-2">
             <button
               type="button"
-              class="btn btn-sm rounded-lg border border-gray-200 bg-white text-gray-700 transition-all hover:bg-gray-50"
+              class="app-btn app-btn-secondary app-btn-sm"
               (click)="downloadOrderImage(receipt)"
               [disabled]="isDownloadingReceipt()"
             >
@@ -61,7 +61,7 @@
                 >
                 <button
                   type="button"
-                  class="btn btn-sm rounded-lg border border-red-300 bg-white text-red-700 transition-all hover:border-red-400 hover:bg-red-50"
+                  class="app-btn app-btn-outline-danger app-btn-sm"
                   (click)="openRefundModal()"
                 >
                   Refund Order
@@ -418,7 +418,6 @@
     busyLabel="Refunding..."
     cancelLabel="Keep Order"
     [isBusy]="isRefunding()"
-    [muteWhenDisabled]="true"
     (confirmed)="confirmRefund()"
     (cancelled)="dismissRefundModal()"
   >

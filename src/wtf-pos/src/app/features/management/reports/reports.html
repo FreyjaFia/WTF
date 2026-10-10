@@ -206,7 +206,7 @@
       <div class="mb-2 ml-auto flex items-center justify-end gap-2">
         <button
           type="button"
-          class="btn btn-sm gap-2 rounded-lg border border-gray-200 bg-white text-gray-700"
+          class="app-btn app-btn-secondary app-btn-sm gap-2"
           (click)="openFilters()"
         >
           <app-icon name="icon-filter" [class]="'h-4 w-4'" [fill]="'currentColor'" />
@@ -215,7 +215,7 @@
 
         @if (!isAndroidPlatform) {
           <button
-            class="pointer-events-auto z-30 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
+            class="app-btn app-btn-ghost pointer-events-auto z-30 p-2"
             [class.opacity-70]="isRefreshing()"
             type="button"
             (click)="refresh()"
@@ -242,7 +242,7 @@
       <div class="flex flex-wrap items-center justify-end gap-2 md:justify-end md:w-full">
         <button
           type="button"
-          class="btn btn-sm gap-2 rounded-lg border border-gray-200 bg-white text-gray-700 transition-all hover:bg-gray-50"
+          class="app-btn app-btn-secondary app-btn-sm gap-2"
           (click)="downloadExcel()"
           [disabled]="isDownloadingExcel() || isDownloadingPdf()"
         >
@@ -256,7 +256,7 @@
         </button>
         <button
           type="button"
-          class="btn btn-sm gap-2 rounded-lg border-0 bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg"
+          class="app-btn app-btn-secondary app-btn-sm gap-2"
           (click)="downloadPdf()"
           [disabled]="isDownloadingExcel() || isDownloadingPdf()"
         >
@@ -1462,7 +1462,7 @@
       <div class="mt-4 flex flex-wrap items-center gap-2">
         <button
           type="button"
-          class="btn btn-sm gap-2 rounded-lg border border-gray-200 bg-white text-gray-700 transition-all hover:bg-gray-50"
+          class="app-btn app-btn-secondary app-btn-sm gap-2"
           (click)="generateMonthlyWorkbook()"
           [disabled]="
             isGeneratingMonthlyWorkbook() ||
@@ -1482,7 +1482,7 @@
 
         <button
           type="button"
-          class="btn btn-sm gap-2 rounded-lg border-0 bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg disabled:pointer-events-auto disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none"
+          class="app-btn app-btn-primary app-btn-sm gap-2"
           (click)="downloadMonthlyWorkbook()"
           [disabled]="isMonthlyWorkbookDownloadDisabled()"
           [style.cursor]="isMonthlyWorkbookDownloadDisabled() ? 'not-allowed' : 'pointer'"

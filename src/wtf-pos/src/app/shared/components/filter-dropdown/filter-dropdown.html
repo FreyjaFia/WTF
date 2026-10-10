@@ -4,10 +4,7 @@
   [class.dropdown-end]="align() === 'end'"
 >
   <summary
-    class="btn btn-sm cursor-pointer gap-2 whitespace-nowrap shadow-sm"
-    [class.border-gray-300]="!isActive()"
-    [class.bg-white]="!isActive()"
-    [class.hover:bg-gray-50]="!isActive()"
+    class="app-btn app-btn-secondary app-btn-sm gap-2 whitespace-nowrap"
     [class.border-[#047857]/30]="isActive()"
     [class.bg-[#047857]/10]="isActive()"
     [class.text-[#065f46]]="isActive()"
@@ -67,7 +64,7 @@
       <button
         type="button"
         (click)="resetFilters()"
-        class="rounded-lg py-2 text-center text-sm text-gray-600 hover:bg-gray-50"
+        class="app-menu-item py-2 text-center text-sm"
       >
         Reset Filters
       </button>

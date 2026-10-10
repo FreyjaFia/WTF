@@ -4,7 +4,8 @@
   >
     <div class="flex min-w-0 items-start gap-4">
       <a
-        class="mt-1 shrink-0 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
+        draggable="false"
+        class="app-btn app-btn-ghost mt-1 shrink-0 p-2"
         [routerLink]="routes.InventoryItems"
         aria-label="Go back"
         title="Back"
@@ -28,7 +29,7 @@
             &middot;
             <button
               type="button"
-              class="cursor-pointer font-medium text-[#047857] hover:text-[#065f46]"
+              class="app-btn app-btn-link"
               (click)="openPriceHistory()"
             >
               Price History
@@ -40,24 +41,27 @@
 
     @if (item() && canWriteItems()) {
       <div class="flex shrink-0 justify-end gap-2">
+        @if (item()!.isActive) {
         <a
-          class="btn btn-sm gap-2 rounded-lg border-0 bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg"
+          draggable="false"
+          class="app-btn app-btn-primary app-btn-sm gap-2"
           [routerLink]="routes.InventoryItemsEditById(item()!.id)"
         >
           <app-icon name="icon-edit" [class]="'h-4 w-4'" />
           Edit
         </a>
+        }
         @if (item()!.isActive) {
-          <button
-            class="inline-flex cursor-pointer items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium text-red-500 transition-all hover:bg-red-50 hover:text-red-600 active:scale-95"
+          <button type="button"
+            class="app-btn app-btn-outline-danger app-btn-sm"
             (click)="deleteItem()"
           >
             <app-icon name="icon-delete" [class]="'h-4 w-4'" />
             Delete
           </button>
         } @else {
-          <button
-            class="inline-flex cursor-pointer items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium text-[#047857] transition-all hover:bg-[#047857]/10 active:scale-95"
+          <button type="button"
+            class="app-btn app-btn-accent-outline app-btn-sm"
             (click)="restoreItem()"
           >
             <app-icon name="icon-refresh" [class]="'h-4 w-4'" />

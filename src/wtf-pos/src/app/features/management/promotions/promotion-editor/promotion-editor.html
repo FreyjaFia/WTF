@@ -4,7 +4,7 @@
   >
     <div class="flex min-w-0 items-start gap-4">
       <button
-        class="mt-1 shrink-0 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
+        class="app-btn app-btn-ghost mt-1 shrink-0 p-2"
         type="button"
         (click)="cancel()"
         aria-label="Go back"
@@ -26,7 +26,7 @@
     <div class="flex shrink-0 justify-end gap-2">
       <button
         type="button"
-        class="cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-100 active:scale-95"
+        class="app-btn app-btn-secondary app-btn-sm"
         (click)="cancel()"
         [disabled]="isSaving()"
       >
@@ -34,7 +34,7 @@
       </button>
       <button
         type="button"
-        class="btn btn-sm gap-2 rounded-lg border-0 bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none"
+        class="app-btn app-btn-primary app-btn-sm gap-2"
         [disabled]="isSaving()"
         (click)="save()"
       >
@@ -79,7 +79,7 @@
                       />
                       <button
                         type="button"
-                        class="btn btn-xs btn-outline btn-error"
+                        class="app-btn app-btn-outline-danger app-btn-xs"
                         (click)="removeCurrentImage()"
                         [disabled]="isDeletingImage() || isUploading()"
                       >
@@ -107,7 +107,8 @@
                     />
                     <button
                       type="button"
-                      class="btn btn-circle btn-sm btn-neutral absolute -top-2 -right-2"
+                      class="app-btn app-btn-overlay absolute -top-2 -right-2 h-8 w-8"
+                      aria-label="Remove image"
                       (click)="removeImage()"
                     >
                       <app-icon name="icon-close" [class]="'h-4 w-4'" />
@@ -423,7 +424,7 @@
                       />
                       <button
                         type="button"
-                        class="btn btn-xs btn-outline btn-error"
+                        class="app-btn app-btn-outline-danger app-btn-xs"
                         (click)="removeCurrentImage()"
                         [disabled]="isDeletingImage() || isUploading()"
                       >
@@ -451,7 +452,8 @@
                     />
                     <button
                       type="button"
-                      class="btn btn-circle btn-sm btn-neutral absolute -top-2 -right-2"
+                      class="app-btn app-btn-overlay absolute -top-2 -right-2 h-8 w-8"
+                      aria-label="Remove image"
                       (click)="removeImage()"
                     >
                       <app-icon name="icon-close" [class]="'h-4 w-4'" />
@@ -587,7 +589,8 @@
                             </div>
                             <button
                               type="button"
-                              class="shrink-0 cursor-pointer rounded-full p-1 text-gray-400 transition-all hover:bg-red-50 hover:text-red-500"
+                              class="app-btn app-btn-icon-danger shrink-0 p-1"
+                              aria-label="Remove product from bundle"
                               (click)="removeFixedBundleItem(i)"
                             >
                               <app-icon name="icon-close" [class]="'h-3.5 w-3.5'" />
@@ -615,7 +618,7 @@
                             </label>
                             <button
                               type="button"
-                              class="btn btn-xs h-7 min-h-0 rounded-md border-0 bg-[#047857] px-2 text-[10px] text-white hover:bg-[#065f46]"
+                              class="app-btn app-btn-primary app-btn-xs h-7 min-h-0 px-2"
                               (click)="saveBundleItemQuantity(i, item.productId)"
                               [disabled]="isSaving()"
                             >
@@ -623,7 +626,7 @@
                             </button>
                             <button
                               type="button"
-                              class="btn btn-xs h-7 min-h-0 rounded-md border border-gray-200 bg-white px-2 text-[10px] text-gray-600 hover:bg-gray-50"
+                              class="app-btn app-btn-secondary app-btn-xs h-7 min-h-0 px-2"
                               (click)="resetBundleItemQuantity(i, item.productId)"
                               [disabled]="isSaving()"
                             >
@@ -686,7 +689,8 @@
                             </div>
                             <button
                               type="button"
-                              class="shrink-0 cursor-pointer rounded-full p-1 text-gray-400 transition-all hover:bg-red-50 hover:text-red-500"
+                              class="app-btn app-btn-icon-danger shrink-0 p-1"
+                              aria-label="Remove product from promotion"
                               (click)="removeMixMatchItem(i)"
                             >
                               <app-icon name="icon-close" [class]="'h-3.5 w-3.5'" />
@@ -752,7 +756,8 @@
                             </div>
                             <button
                               type="button"
-                              class="shrink-0 cursor-pointer rounded-full p-1 text-gray-400 transition-all hover:bg-red-50 hover:text-red-500"
+                              class="app-btn app-btn-icon-danger shrink-0 p-1"
+                              aria-label="Remove product from promotion"
                               (click)="removeDiscountedProductItem(i)"
                             >
                               <app-icon name="icon-close" [class]="'h-3.5 w-3.5'" />
@@ -794,7 +799,7 @@
                 ) {
                   <button
                     type="button"
-                    class="mt-3 flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-gray-50 px-4 py-2.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-100"
+                    class="app-btn app-btn-subtle mt-3 flex w-full items-center justify-center gap-2 px-4 py-2.5 text-sm"
                     (click)="showAllBundleItems.set(!showAllBundleItems())"
                   >
                     {{
@@ -829,7 +834,7 @@
               <div class="mt-4">
                 <button
                   type="button"
-                  class="btn btn-sm gap-2 rounded-lg border border-[#047857] bg-white text-[#047857] transition-all hover:bg-[#047857]/5"
+                  class="app-btn app-btn-accent-outline app-btn-sm gap-2"
                   (click)="openBundleItemsSelector()"
                   [disabled]="isSaving()"
                 >

@@ -52,7 +52,7 @@
         </button>
         <button
           type="button"
-          [class]="confirmButtonClass()"
+          [class]="styles().confirmButton"
           (click)="confirmed.emit()"
           [disabled]="isBusy()"
         >

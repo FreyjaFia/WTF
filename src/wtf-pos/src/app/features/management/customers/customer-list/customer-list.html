@@ -9,7 +9,8 @@
       </div>
       @if (canWriteCustomers()) {
         <a
-          class="btn btn-sm rounded-lg border-0 bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg"
+          draggable="false"
+          class="app-btn app-btn-primary app-btn-sm"
           [routerLink]="routes.ManagementCustomersNew"
         >
           <app-icon name="icon-plus" [class]="'h-4 w-4'" />
@@ -31,7 +32,7 @@
       <div class="ml-auto flex items-center justify-end gap-2">
         <button
           type="button"
-          class="btn btn-sm gap-2 rounded-lg border border-gray-200 bg-white text-gray-700"
+          class="app-btn app-btn-secondary app-btn-sm gap-2"
           (click)="openFilters()"
         >
           <app-icon name="icon-filter" [class]="'h-4 w-4'" [fill]="'currentColor'" />
@@ -39,7 +40,7 @@
         </button>
         @if (!isAndroidPlatform) {
           <button
-            class="pointer-events-auto z-30 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
+            class="app-btn app-btn-ghost pointer-events-auto z-30 p-2"
             [class.opacity-70]="isRefreshing()"
             type="button"
             (click)="refresh()"
@@ -78,7 +79,7 @@
           <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Status</p>
           <button
             type="button"
-            class="text-xs font-semibold text-[#047857] hover:text-[#065f46]"
+            class="app-btn app-btn-secondary app-btn-xs"
             (click)="clearStatusSelections()"
           >
             Clear
@@ -130,7 +131,7 @@
           <div
             class="sticky top-0 z-10 mb-2 hidden grid-cols-12 gap-4 rounded-lg bg-white px-4 py-3 lg:grid"
           >
-            <button
+            <button type="button"
               class="col-span-4 flex cursor-pointer items-center gap-1 text-start text-xs font-semibold tracking-wider uppercase transition-colors"
               [class.text-gray-600]="sortColumn() !== 'name'"
               [class.hover:text-gray-900]="sortColumn() !== 'name'"
@@ -166,7 +167,7 @@
               Status
             </div>
 
-            <button
+            <button type="button"
               class="col-span-5 flex cursor-pointer items-center justify-center gap-1 text-center text-xs font-semibold tracking-wider uppercase transition-colors"
               [class.text-gray-600]="sortColumn() !== 'address'"
               [class.hover:text-gray-900]="sortColumn() !== 'address'"
@@ -263,7 +264,7 @@
                     <div class="dropdown dropdown-end" [class.dropdown-top]="isLast && !isFirst">
                       <button
                         type="button"
-                        class="cursor-pointer rounded-lg p-1.5 transition-all hover:bg-gray-100 active:scale-95"
+                        class="app-btn app-btn-ghost p-1.5"
                         tabindex="0"
                         aria-label="Customer actions"
                       >
@@ -277,15 +278,18 @@
                         tabindex="0"
                         class="dropdown-content menu bg-base-100 rounded-box z-50 w-52 p-2 shadow"
                       >
+                        @if (customer.isActive) {
                         <li>
                           <a
+                            draggable="false"
                             [routerLink]="routes.ManagementCustomerEditById(customer.id)"
-                            class="flex items-center gap-2 text-gray-700 hover:bg-gray-100"
+                            class="app-menu-item"
                           >
                             <app-icon name="icon-edit" [class]="'h-4 w-4 text-gray-600'" />
                             Edit
                           </a>
                         </li>
+                        }
                         <li>
                           @if (customer.isActive) {
                             <button
@@ -293,7 +297,7 @@
                               (click)="deleteCustomer(customer)"
                               (keydown.enter)="deleteCustomer(customer)"
                               (keydown.space)="deleteCustomer(customer)"
-                              class="flex items-center gap-2 text-red-600 hover:bg-red-50"
+                              class="app-menu-item-danger"
                             >
                               <app-icon name="icon-delete" [class]="'h-4 w-4 text-red-600'" />
                               Delete
@@ -304,7 +308,7 @@
                               (click)="restoreCustomer(customer)"
                               (keydown.enter)="restoreCustomer(customer)"
                               (keydown.space)="restoreCustomer(customer)"
-                              class="flex items-center gap-2 text-[#047857] hover:bg-[#047857]/10"
+                              class="app-menu-item-success"
                             >
                               <app-icon name="icon-refresh" [class]="'h-4 w-4 text-[#047857]'" />
                               Restore

@@ -53,7 +53,7 @@
             <div class="mt-1 flex items-center justify-end gap-1.5">
               <button
                 type="button"
-                class="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full bg-gray-200 text-xs font-bold transition-colors hover:bg-gray-300"
+                class="app-stepper-btn flex h-6 w-6 text-xs"
                 (click)="decrementProductQuantity($event)"
                 aria-label="Decrease product quantity"
               >
@@ -64,7 +64,7 @@
               </span>
               <button
                 type="button"
-                class="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full bg-[#047857] text-xs font-bold text-white transition-colors hover:bg-[#065f46]"
+                class="app-stepper-btn-primary flex h-6 w-6 text-xs"
                 (click)="incrementProductQuantity($event)"
                 aria-label="Increase product quantity"
               >
@@ -220,7 +220,7 @@
                       >
                         <button
                           type="button"
-                          class="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full bg-gray-200 text-xs font-bold transition-colors hover:bg-gray-300"
+                          class="app-stepper-btn flex h-6 w-6 text-xs"
                           (click)="decrementOption(group, option, $event)"
                           aria-label="Decrease quantity"
                         >
@@ -231,7 +231,7 @@
                         </span>
                         <button
                           type="button"
-                          class="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full bg-[#047857] text-xs font-bold text-white transition-colors hover:bg-[#065f46]"
+                          class="app-stepper-btn-primary flex h-6 w-6 text-xs"
                           [disabled]="!canIncrementOption(group, option.id)"
                           [class.opacity-50]="!canIncrementOption(group, option.id)"
                           [class.cursor-not-allowed]="!canIncrementOption(group, option.id)"
@@ -310,14 +310,14 @@
         <div class="flex items-center gap-3">
           <button
             type="button"
-            class="flex-1 cursor-pointer rounded-lg py-2 font-medium text-gray-600 transition-all hover:bg-gray-100 active:scale-95"
+            class="app-btn app-btn-secondary app-btn-md flex-1"
             (click)="close()"
           >
             Cancel
           </button>
           <button
             type="button"
-            class="flex-1 cursor-pointer rounded-xl bg-[#047857] px-6 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#065f46] hover:shadow-md disabled:cursor-not-allowed disabled:bg-gray-300"
+            class="app-btn app-btn-primary app-btn-md flex-1"
             [disabled]="!!validationError()"
             (click)="confirm()"
           >

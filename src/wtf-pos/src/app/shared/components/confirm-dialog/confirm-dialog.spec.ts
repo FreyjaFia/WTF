@@ -283,6 +283,8 @@ function normalize(root: HTMLElement): string {
   return root.innerHTML
     .replace(/<!--[\s\S]*?-->/g, '')
     .replace(/\sdialogextra=""/g, '')
+    // Button styling now comes from the shared button system, so compare button structure and text only.
+    .replace(/(<button[^>]*?)\sclass="[^"]*"/g, '$1 class="BTN"')
     .replace(/\s(_ngcontent|_nghost|ng-reflect)[-\w]*(="[^"]*")?/g, '')
     // A static `name="..."` input is echoed onto <app-icon>; a bound [name] is not. The rendered
     // <svg>/<use> inside is what matters and is compared as-is.
@@ -766,7 +768,6 @@ class OriginalRefundHost {
     busyLabel="Refunding..."
     cancelLabel="Keep Order"
     [isBusy]="busy"
-    [muteWhenDisabled]="true"
   >
     Are you sure you want to refund order
     <span class="font-medium text-gray-700">#42</span

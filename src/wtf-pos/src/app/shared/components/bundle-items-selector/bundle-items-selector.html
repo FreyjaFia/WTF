@@ -266,7 +266,7 @@
                             >
                               <button
                                 type="button"
-                                class="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full bg-gray-200 text-xs font-bold transition-colors hover:bg-gray-300"
+                                class="app-stepper-btn flex h-6 w-6 text-xs"
                                 (click)="
                                   decrementOption(activeProduct()!.id, group, option, $event)
                                 "
@@ -279,7 +279,7 @@
                               </span>
                               <button
                                 type="button"
-                                class="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full bg-[#047857] text-xs font-bold text-white transition-colors hover:bg-[#065f46]"
+                                class="app-stepper-btn-primary flex h-6 w-6 text-xs"
                                 (click)="
                                   incrementOption(activeProduct()!.id, group, option, $event)
                                 "
@@ -309,14 +309,14 @@
 
       <div class="modal-action px-6 pb-6">
         <button
-          class="cursor-pointer rounded-lg px-4 py-2 font-medium text-gray-600 transition-all hover:bg-gray-100 active:scale-95"
+          class="app-btn app-btn-secondary app-btn-md"
           (click)="close()"
           type="button"
         >
           Cancel
         </button>
         <button
-          class="btn gap-2 rounded-lg border-0 bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg"
+          class="app-btn app-btn-primary app-btn-md gap-2"
           (click)="save()"
           type="button"
         >

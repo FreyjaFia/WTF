@@ -45,7 +45,7 @@
           />
           <button
             type="button"
-            class="absolute inset-y-0 right-2 my-auto h-8 rounded-md px-2 text-xs font-medium text-gray-600 hover:bg-gray-100"
+            class="app-btn app-btn-ghost absolute inset-y-0 right-2 my-auto h-8 px-2 text-xs"
             (click)="togglePasswordVisibility()"
             [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'"
           >
@@ -58,7 +58,7 @@
       <button
         type="submit"
         [disabled]="checkingSession() || loading() || loginForm.invalid"
-        class="inline-flex w-full items-center justify-center rounded-lg bg-black py-3 text-sm font-medium text-white transition hover:cursor-pointer hover:bg-gray-800 focus:ring-2 focus:ring-black focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+        class="app-btn app-btn-dark inline-flex w-full items-center justify-center py-3 text-sm"
       >
         @if (loading()) {
           <span class="loading loading-spinner loading-sm mr-2 text-white"></span>

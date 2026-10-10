@@ -11,7 +11,7 @@
         <button
           type="button"
           (click)="toggleSummary()"
-          class="inline-flex cursor-pointer items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-100 active:scale-95"
+          class="app-btn app-btn-ghost inline-flex items-center gap-2 px-3 py-1.5 text-sm"
         >
           <span>{{ showSummary() ? 'Hide Order' : 'View Order' }}</span>
           <app-icon
@@ -127,14 +127,14 @@
       <div class="modal-action mt-6 flex gap-3">
         <button
           type="button"
-          class="flex-1 cursor-pointer rounded-lg py-2 font-medium text-gray-600 transition-all hover:bg-gray-100 active:scale-95"
+          class="app-btn app-btn-secondary app-btn-md flex-1"
           (click)="cancelCheckout()"
         >
           Cancel
         </button>
         <button
           type="button"
-          class="btn pointer-events-auto flex-2 rounded-lg border-0 bg-[#047857] text-base font-semibold text-white shadow-lg transition-all hover:bg-[#065f46] hover:shadow-xl disabled:bg-gray-300 disabled:opacity-75 disabled:shadow-none"
+          class="app-btn app-btn-primary app-btn-md pointer-events-auto flex-2"
           [class.cursor-not-allowed]="isConfirmDisabled()"
           [class.cursor-pointer]="!isConfirmDisabled()"
           (click)="confirmOrder()"

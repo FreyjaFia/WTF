@@ -6,7 +6,7 @@
     </div>
     @if (!isAndroidPlatform) {
       <button
-        class="pointer-events-auto z-30 cursor-pointer rounded-lg p-2 transition-all hover:bg-gray-100 active:scale-95"
+        class="app-btn app-btn-ghost pointer-events-auto z-30 p-2"
         [class.opacity-70]="isRefreshing()"
         type="button"
         (click)="refresh()"

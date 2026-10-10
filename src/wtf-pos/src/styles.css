@@ -116,3 +116,180 @@ body {
     transform: scale(1);
   }
 }
+
+/* ==========================================================================
+   Buttons
+   One place that defines how buttons look and behave. Templates pick a role
+   (app-btn-primary, app-btn-ghost, ...) and, where needed, a size
+   (app-btn-xs/sm/md/lg). Colors, hover, active, focus and disabled states
+   live here so every button of the same role behaves the same.
+   Brand green: #047857 (hover #065f46).
+   ========================================================================== */
+
+@layer base {
+  /* Tailwind v4 no longer gives buttons a pointer cursor. */
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']) {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [aria-disabled='true'] {
+    cursor: not-allowed;
+  }
+
+  /* One keyboard focus ring for every interactive element. */
+  :where(button, a, [role='button'], summary):focus-visible {
+    outline: 2px solid #047857;
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .app-btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all select-none;
+    @apply cursor-pointer active:scale-95 disabled:cursor-not-allowed disabled:active:scale-100;
+  }
+
+  /* Sizes (match the daisyUI btn-xs/sm/md/lg heights used before). */
+  .app-btn-xs {
+    @apply h-6 rounded-md px-2 text-xs;
+  }
+
+  .app-btn-sm {
+    @apply h-8 px-3 text-sm;
+  }
+
+  .app-btn-md {
+    @apply h-10 px-4 text-sm;
+  }
+
+  .app-btn-lg {
+    @apply h-12 px-6 text-base font-semibold;
+  }
+
+  /* Main action: save, add, confirm, checkout. */
+  .app-btn-primary {
+    @apply bg-[#047857] text-white shadow-md hover:bg-[#065f46] hover:shadow-lg;
+    @apply disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none;
+  }
+
+  /* Solid black action: the login submit. */
+  .app-btn-dark {
+    @apply bg-black text-white hover:bg-gray-800;
+    @apply disabled:bg-gray-200 disabled:text-gray-400;
+  }
+
+  .app-btn-dark:focus-visible {
+    outline-color: #000;
+  }
+
+  /* Neutral bordered action: filter, export, secondary actions, cancel. */
+  .app-btn-secondary {
+    @apply border border-gray-200 bg-white text-gray-700 hover:bg-gray-50;
+    @apply disabled:bg-gray-50 disabled:text-gray-400;
+  }
+
+  /* Light gray resting background: "Show all" / "Show less" expanders. */
+  .app-btn-subtle {
+    @apply bg-gray-50 text-gray-600 hover:bg-gray-100 disabled:opacity-50;
+  }
+
+  /* Round dark button laid over an image: remove image. */
+  .app-btn-overlay {
+    @apply rounded-full bg-gray-800 text-white shadow-md hover:bg-gray-900;
+    @apply disabled:bg-gray-400;
+  }
+
+  /* Bordered action in the brand color: manage links, add-ons. */
+  .app-btn-accent-outline {
+    @apply border border-[#047857] bg-white text-[#047857] hover:bg-[#047857]/5;
+    @apply disabled:border-gray-200 disabled:text-gray-400;
+  }
+
+  /* Low emphasis: cancel, back, close, collapse. */
+  .app-btn-ghost {
+    @apply text-gray-600 hover:bg-gray-100 disabled:opacity-50;
+  }
+
+  /* Bordered destructive action: refund, void. */
+  .app-btn-outline-danger {
+    @apply border border-red-300 bg-white text-red-700 hover:border-red-400 hover:bg-red-50;
+    @apply disabled:opacity-50;
+  }
+
+  /* Solid destructive action. */
+  .app-btn-danger {
+    @apply bg-red-600 text-white shadow-sm hover:bg-red-700 hover:shadow-md;
+    @apply disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none;
+  }
+
+  /* Text link that triggers an action: view all, clear, reset. */
+  .app-btn-link {
+    @apply rounded-md font-semibold text-[#047857] hover:text-[#065f46] disabled:opacity-50;
+  }
+
+  /* Icon-only buttons (always add an aria-label). */
+  .app-btn-icon {
+    @apply rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 disabled:opacity-50;
+  }
+
+  .app-btn-icon-danger {
+    @apply rounded-full p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-500 disabled:opacity-50;
+  }
+
+  /* Rows inside dropdown action menus. daisyUI styles menu rows itself (a gray hover/focus
+     tint and a dark pressed state) and its rules are not overridable by layer order or
+     specificity alone, so the row colors are important. Hover, keyboard focus and pressed
+     all use the same colors, so a row never changes look while it is being clicked or dragged. */
+  .app-menu-item,
+  .app-menu-item-danger,
+  .app-menu-item-success {
+    @apply flex cursor-pointer items-center gap-2;
+  }
+
+  .app-menu-item {
+    @apply text-gray-700;
+  }
+
+  .app-menu-item:is(:hover, :focus-visible, :active, .menu-focus, .menu-active) {
+    background-color: #f3f4f6 !important;
+    color: #374151 !important;
+  }
+
+  .app-menu-item-danger {
+    @apply text-red-600;
+  }
+
+  .app-menu-item-danger:is(:hover, :focus-visible, :active, .menu-focus, .menu-active) {
+    background-color: #fef2f2 !important;
+    color: #dc2626 !important;
+  }
+
+  .app-menu-item-success {
+    @apply text-[#047857];
+  }
+
+  .app-menu-item-success:is(:hover, :focus-visible, :active, .menu-focus, .menu-active) {
+    background-color: #ecfdf5 !important;
+    color: #047857 !important;
+  }
+}
+
+@layer components {
+  /* Warning-toned low emphasis action: sync pending offline orders. */
+  .app-btn-ghost-warning {
+    @apply text-amber-700 hover:bg-amber-100 disabled:opacity-50;
+  }
+
+  /* Round +/- quantity buttons. */
+  .app-stepper-btn {
+    @apply inline-flex cursor-pointer items-center justify-center rounded-full bg-gray-200 font-bold text-gray-700 transition-colors select-none;
+    @apply hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .app-stepper-btn-primary {
+    @apply inline-flex cursor-pointer items-center justify-center rounded-full bg-[#047857] font-bold text-white transition-colors select-none;
+    @apply hover:bg-[#065f46] disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400;
+  }
+}

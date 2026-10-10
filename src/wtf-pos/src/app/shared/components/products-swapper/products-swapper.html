@@ -189,14 +189,14 @@
     <!-- Modal Actions -->
     <div class="modal-action">
       <button
-        class="cursor-pointer rounded-lg px-4 py-2 font-medium text-gray-600 transition-all hover:bg-gray-100 active:scale-95"
+        class="app-btn app-btn-secondary app-btn-md"
         (click)="closeModal()"
         type="button"
       >
         Cancel
       </button>
       <button
-        class="btn gap-2 rounded-lg border-0 bg-[#047857] text-white shadow-md transition-all hover:bg-[#065f46] hover:shadow-lg"
+        class="app-btn app-btn-primary app-btn-md gap-2"
         [disabled]="isLoading() || isSaving()"
         (click)="saveProducts()"
         type="button"

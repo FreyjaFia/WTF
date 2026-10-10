@@ -25,31 +25,25 @@ const variantStyles: Record<ConfirmDialogVariant, VariantStyle> = {
     outerRing: 'mx-auto w-fit rounded-full bg-red-50/60 p-3',
     innerRing: 'rounded-full bg-red-50 p-3',
     icon: 'h-6 w-6 text-red-600',
-    confirmButton:
-      'cursor-pointer rounded-xl bg-red-600 px-6 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-red-700 hover:shadow-md active:scale-[0.97]',
+    confirmButton: 'app-btn app-btn-danger app-btn-md px-6',
   },
   warning: {
     outerRing: 'mx-auto w-fit rounded-full bg-amber-50/60 p-3',
     innerRing: 'rounded-full bg-amber-50 p-3',
     icon: 'h-6 w-6 text-amber-600',
-    confirmButton:
-      'cursor-pointer rounded-xl bg-amber-600 px-6 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-amber-700 hover:shadow-md active:scale-[0.97]',
+    confirmButton: 'app-btn app-btn-primary app-btn-md px-6',
   },
   success: {
     outerRing: 'mx-auto w-fit rounded-full bg-[#047857]/10 p-3',
     innerRing: 'rounded-full bg-[#047857]/10 p-3',
     icon: 'h-6 w-6 text-[#047857]',
-    confirmButton:
-      'cursor-pointer rounded-xl bg-[#047857] px-6 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#065f46] hover:shadow-md active:scale-[0.97]',
+    confirmButton: 'app-btn app-btn-primary app-btn-md px-6',
   },
 };
 
-const cancelButtonClass =
-  'cursor-pointer px-4 py-2 text-sm font-medium text-gray-500 transition-colors hover:text-gray-700';
-const discardButtonClass =
-  'cursor-pointer px-4 py-2 text-sm font-medium text-red-500 transition-colors hover:text-red-700';
+const cancelButtonClass = 'app-btn app-btn-secondary app-btn-md';
+const discardButtonClass = 'app-btn app-btn-outline-danger app-btn-md';
 const keepButtonClass = variantStyles.success.confirmButton;
-const mutedDisabledClass = 'disabled:cursor-not-allowed disabled:bg-gray-300';
 
 @Component({
   selector: 'app-confirm-dialog',
@@ -67,16 +61,10 @@ export class ConfirmDialogComponent {
   readonly isBusy = input(false);
   readonly confirmPlacement = input<ConfirmPlacement>('primary');
   readonly secondaryTone = input<SecondaryTone>('danger');
-  readonly muteWhenDisabled = input(false);
   readonly confirmed = output<void>();
   readonly cancelled = output<void>();
 
   protected readonly styles = computed(() => variantStyles[this.variant()]);
-  protected readonly confirmButtonClass = computed(() =>
-    this.muteWhenDisabled()
-      ? `${this.styles().confirmButton} ${mutedDisabledClass}`
-      : this.styles().confirmButton,
-  );
   protected readonly secondaryButtonClass = computed(() =>
     this.secondaryTone() === 'neutral' ? cancelButtonClass : discardButtonClass,
   );

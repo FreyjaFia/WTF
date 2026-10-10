@@ -1,7 +1,7 @@
 <div class="relative">
   <button
     type="button"
-    class="btn btn-sm btn-ghost gap-1.5 rounded-lg border border-gray-200 bg-white px-3 shadow-sm hover:bg-gray-50"
+    class="app-btn app-btn-secondary app-btn-sm gap-1.5 px-3"
     (click)="toggleDropdown()"
   >
     @if (isLive()) {
@@ -16,8 +16,8 @@
       class="absolute right-0 z-50 mt-2 w-56 rounded-xl bg-white p-1.5 shadow-lg ring-1 ring-black/5"
     >
       @for (preset of presets; track preset.value) {
-        <button
-          class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-gray-50"
+        <button type="button"
+          class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-gray-100"
           [class.bg-emerald-50]="selectedPreset() === preset.value"
           [class.text-emerald-700]="selectedPreset() === preset.value"
           [class.font-medium]="selectedPreset() === preset.value"
@@ -31,8 +31,8 @@
       <div class="my-1 border-t border-gray-100"></div>
 
       @if (!showCustomInputs()) {
-        <button
-          class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-gray-50"
+        <button type="button"
+          class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-gray-100"
           [class.bg-emerald-50]="selectedPreset() === 'custom'"
           [class.text-emerald-700]="selectedPreset() === 'custom'"
           [class.font-medium]="selectedPreset() === 'custom'"
@@ -81,8 +81,8 @@
               (ngModelChange)="customEnd.set($event)"
             />
           </div>
-          <button
-            class="btn btn-sm w-full border-0 bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
+          <button type="button"
+            class="app-btn app-btn-primary app-btn-sm w-full"
             [disabled]="!customStart() || !customEnd()"
             (click)="applyCustomRange()"
           >
