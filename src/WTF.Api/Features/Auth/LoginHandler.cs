@@ -22,7 +22,7 @@ public class LoginHandler(
         var user = await db.Users
             .Include(u => u.UserImage)
                 .ThenInclude(ui => ui!.Image)
-            .FirstOrDefaultAsync(u => u.Username == request.Username, cancellationToken);
+            .FirstOrDefaultAsync(u => u.Username == request.Username && u.IsActive, cancellationToken);
 
         if (user == null)
         {

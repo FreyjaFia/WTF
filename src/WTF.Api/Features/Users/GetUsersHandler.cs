@@ -9,7 +9,7 @@ namespace WTF.Api.Features.Users;
 
 public record GetUsersQuery : IRequest<List<UserDto>>
 {
-    public bool? IsActive { get; init; } = true;
+    public bool? IsActive { get; init; }
     public string? SearchTerm { get; init; }
 }
 

@@ -7,11 +7,11 @@ using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Users;
 
-public record DeleteUserCommand(Guid Id) : IRequest<bool>;
+public record RestoreUserCommand(Guid Id) : IRequest<bool>;
 
-public class DeleteUserHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor, IAuditService auditService) : IRequestHandler<DeleteUserCommand, bool>
+public class RestoreUserHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor, IAuditService auditService) : IRequestHandler<RestoreUserCommand, bool>
 {
-    public async Task<bool> Handle(DeleteUserCommand request, CancellationToken cancellationToken)
+    public async Task<bool> Handle(RestoreUserCommand request, CancellationToken cancellationToken)
     {
         var user = await db.Users.FirstOrDefaultAsync(u => u.Id == request.Id, cancellationToken);
         if (user == null)
@@ -29,24 +29,14 @@ public class DeleteUserHandler(WTFDbContext db, IHttpContextAccessor httpContext
             user.IsActive
         };
 
-        // Soft delete - deactivate the user and revoke their sessions
-        user.IsActive = false;
+        user.IsActive = true;
         user.UpdatedAt = DateTime.UtcNow;
         user.UpdatedBy = actorUserId;
-
-        var activeRefreshTokens = await db.RefreshTokens
-            .Where(rt => rt.UserId == user.Id && !rt.IsRevoked)
-            .ToListAsync(cancellationToken);
-
-        foreach (var refreshToken in activeRefreshTokens)
-        {
-            refreshToken.IsRevoked = true;
-        }
 
         await db.SaveChangesAsync(cancellationToken);
 
         await auditService.LogAsync(
-            action: AuditAction.UserDeleted,
+            action: AuditAction.UserRestored,
             entityType: AuditEntityType.User,
             entityId: request.Id.ToString(),
             oldValues: oldValues,

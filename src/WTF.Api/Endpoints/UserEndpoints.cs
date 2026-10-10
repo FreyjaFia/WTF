@@ -94,6 +94,28 @@ public static class UserEndpoints
             })
             .RequireAuthorization(AppPolicies.UsersWrite);
 
+        // POST /api/users/{id}/restore - Restore soft deleted user
+        userGroup.MapPost("/{id:guid}/restore",
+            async (Guid id, ISender sender, WTFDbContext db, HttpContext httpContext) =>
+            {
+                var targetUser = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == id);
+                if (targetUser == null)
+                {
+                    return Results.NotFound();
+                }
+
+                var isCurrentUserSuperAdmin = httpContext.User.IsInRole(AppRoles.SuperAdmin);
+                var isTargetUserSuperAdmin = targetUser.RoleId == (int)UserRoleEnum.SuperAdmin;
+                if (isTargetUserSuperAdmin && !isCurrentUserSuperAdmin)
+                {
+                    return Results.Forbid();
+                }
+
+                var result = await sender.Send(new RestoreUserCommand(id));
+                return result ? Results.NoContent() : Results.NotFound();
+            })
+            .RequireAuthorization(AppPolicies.UsersWrite);
+
         // POST /api/users/{id}/images - Upload user image
         userGroup.MapPost("/{id:guid}/images",
             async (Guid id, IFormFile file, ISender sender, WTFDbContext db, HttpContext httpContext) =>
