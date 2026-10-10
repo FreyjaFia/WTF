@@ -86,7 +86,9 @@ namespace WTF.Api.Services
         public Guid? GetUserIdFromToken(string token)
         {
             var principal = ValidateToken(token);
-            var userIdClaim = principal?.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+            // The handler maps "sub" to NameIdentifier on inbound tokens, so check both.
+            var userIdClaim = (principal?.FindFirst(ClaimTypes.NameIdentifier)
+                ?? principal?.FindFirst(JwtRegisteredClaimNames.Sub))?.Value;
 
             if (Guid.TryParse(userIdClaim, out var userId))
             {
