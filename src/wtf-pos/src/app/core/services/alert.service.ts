@@ -22,16 +22,15 @@ export class AlertService {
   public readonly alert = this.alertState.asReadonly();
 
   constructor() {
-    effect(() => {
+    effect((onCleanup) => {
       const state = this.alertState();
       if (state.visible) {
         const timer = setTimeout(() => {
           this.dismiss();
         }, 5000);
 
-        return () => clearTimeout(timer);
+        onCleanup(() => clearTimeout(timer));
       }
-      return undefined;
     });
   }
 
