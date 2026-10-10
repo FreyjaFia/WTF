@@ -195,6 +195,7 @@ Implemented:
     customers, and users (`POST /api/{items,products,customers,users}/{id}/restore`,
     audited as `ItemRestored`, `ProductRestored`, `CustomerRestored`,
     `UserRestored`). The item list now shows an Inactive badge.
+  - Promotions (all three types) are soft deleted too: deleting sets `IsActive = false` and keeps the promotion, its image and its rules, so a promotion used on past orders no longer fails on the order foreign keys. `POST /api/management/promotions/{id}/restore` reactivates it, and the list and details pages have confirmed Delete and Restore actions.
   - Deleting a user deactivates them and revokes their refresh tokens. Login
     and token refresh now reject inactive users, so a deleted user can no
     longer sign in (login only matches active users).
@@ -232,10 +233,10 @@ Remaining:
   should block completion. Record the product (and order line) on each
   sale deduction movement so per-product ingredient/cup usage reports stay
   accurate after link edits.
-- Apply the same soft-delete and Restore rules to promotions (hard deleted
-  today; deleting a bundle promotion that appears on an order is expected to
-  fail on the order foreign keys) and to promotion child rows (deleted and
-  recreated on every update).
+- Remaining hard deletes (decision pending): promotion child rows (rules and
+  bundle items are deleted and recreated on every promotion save), order lines
+  (deleted and rebuilt when an order is edited), and replaced or removed images
+  (the stored file and image rows are deleted).
 
 ### Phase 2 - Pack, Box, and Shared Stock Selling [Planned]
 
