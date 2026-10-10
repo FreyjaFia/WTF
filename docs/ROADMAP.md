@@ -404,6 +404,8 @@ Track significant actions so management can review who performed an action and w
   - fetches and displays audit log entries
   - refresh support + pull-to-refresh
   - responsive table/card styling aligned with management list pages
+  - Filters drawer (same pattern as orders): date range (today / last 7 days / last 30 days / custom) and multi-select actions, remembered between visits
+  - Download Excel / Download PDF of the filtered logs (`Accept` header negotiation on `GET /api/audit-logs`; `GET /api/audit-logs/actions` lists the action names)
 - Schema scripts page:
   - displays executed SQL script history
   - refresh support + pull-to-refresh
@@ -884,3 +886,234 @@ Planned implementation slices:
 - Order persistence mapping for selected bundled child add-ons.
 - Reporting review to ensure bundled child add-on selections are represented consistently where needed.
 
+
+---
+
+## Automated Testing Plan [Planned]
+
+Goal: cover both the API and the POS app with automated tests, run on every push.
+
+### Layout
+
+```
+src/
+  WTF.Api/
+  WTF.Domain/
+  WTF.Tests/        <- new API test project (sibling of Api/Domain, added to WTF.slnx)
+  wtf-pos/          <- specs live beside their source files (*.spec.ts)
+```
+
+### Test Types
+
+- **Unit**: one class/function in isolation (pure helpers, validators, pipes, guards).
+- **Integration**: several parts together, in-process (endpoint + auth + EF + real SQL Server).
+- **E2E** (later, optional): real browser driving the running app (Playwright), main flows only.
+
+### API (`WTF.Tests`)
+
+Handlers use `WTFDbContext` directly, so mocking the DbContext tests very little. The API
+leans on **integration tests against a real SQL Server**; unit tests cover pure logic only.
+
+- Stack: xUnit, NSubstitute, Shouldly, `Microsoft.AspNetCore.Mvc.Testing`.
+- Database: **TBD** (LocalDB vs Docker/Testcontainers vs InMemory/SQLite). Docker is not
+  installed on the dev machine; LocalDB is the current recommendation.
+- Shared `WebApplicationFactory` fixture; Azure Blob, FCM and Huawei replaced with fakes
+  (`IImageStorage` and `IReportFileStorage` already exist as interfaces).
+- JWT helper that mints tokens per role; per-test data reset.
+- Folders mirror the API: `Features/Auth`, `Features/Orders`, ..., plus `Common/` and
+  `Infrastructure/`.
+
+| Phase | Area                                                                 | Why                          |
+| ----- | -------------------------------------------------------------------- | ---------------------------- |
+| 1     | Auth: login, refresh token, role guards                              | Security                     |
+| 2     | Orders: create, update, void, batch (offline sync)                   | Money, stock, loyalty        |
+| 3     | Promotions: `EvaluatePromotionsHandler` and the three validators     | Complex pricing rules        |
+| 4     | Soft delete / restore for products, items, links; add-on overrides   | Recently changed behavior    |
+| 5     | Users, customers, audit log entries                                  | CRUD plus rules              |
+| 6     | Reports and dashboard                                                | Aggregation correctness      |
+
+Open item: order/promotion math is embedded in large handlers (`CreateOrderHandler`,
+`UpdateOrderHandler`). Consider extracting it into a small calculator class so it can be
+unit tested directly (decision pending).
+
+### Angular (`wtf-pos`)
+
+Vitest via `ng test`. **Every file with logic or a template gets a spec** (no area skipped):
+
+1. Guards, interceptors, pipes, utilities, constants and messages.
+2. All services in `core/services` (HTTP services via `HttpTestingController`).
+3. All shared components (charts, icons, badges, dialogs, cart drawer, order receipt, ...).
+4. All feature pages: login, dashboard, not-found, orders, inventory (items, stock-in),
+   management (products, customers, users, promotions, reports, audit logs, schema scripts),
+   each with list, details and editor views.
+
+Depth per file keeps this maintainable:
+
+- Simple components: smoke test (renders) plus key interactions.
+- Logic-heavy ones (order editor, checkout modal, cart drawer, promotion editor, offline
+  sync): thorough tests.
+- Shared fakes and a `provideTestingDefaults()` helper keep specs short.
+
+Work is done in batches by area, running `ng test` and committing after each batch.
+
+### Applying the Plan to New and Existing Files (Rules, Not a Snapshot)
+
+This plan may be implemented later, after more files have been added. The lists above are
+examples as of writing; the **rules below are what to follow**, so the plan applies to any
+file that exists when the work starts and to every file added afterwards.
+
+**Step 0 - build the inventory when starting (do not rely on the lists above):**
+
+- Angular: list every non-spec `.ts` under `src/wtf-pos/src/app` that has no sibling
+  `*.spec.ts` (guards, interceptors, pipes, services, components, pages).
+- API: list every handler, validator, service and endpoint group under `WTF.Api` that has no
+  matching test in `WTF.Tests`.
+- Work through the gaps in batches by area, in the API phase order above.
+
+**Mapping rules (which test a new file needs):**
+
+| New file                                  | Test required                                              |
+| ----------------------------------------- | ---------------------------------------------------------- |
+| Angular guard / interceptor / pipe / util | Unit spec beside the file                                  |
+| Angular service                           | Spec with `HttpTestingController` for each public method   |
+| Angular component / page                  | Smoke spec (renders) + key interactions; thorough if logic-heavy |
+| API handler (`Features/<Area>/*Handler`)  | Integration test in `WTF.Tests/Features/<Area>/`           |
+| API validator / pure helper in `Common/`  | Unit test in `WTF.Tests/Common/` or `Features/<Area>/`     |
+| API endpoint group / auth rule            | Integration test covering status codes and role access     |
+| Bug fix                                   | Regression test that fails before the fix                  |
+
+**Conventions:**
+
+- Angular: `<name>.spec.ts` next to `<name>.ts`; shared fakes and
+  `provideTestingDefaults()` live in one testing folder.
+- API: test class `<Handler>Tests` in the folder mirroring the source path; test names
+  `Method_Scenario_ExpectedResult`.
+- Every handler test covers: success, validation failure, not found, forbidden (wrong role),
+  and any soft-delete/restore or audit-log side effect it has.
+
+**Definition of done for new code:** a feature or fix is not complete until its files follow
+the mapping above and `dotnet test` / `ng test` pass.
+
+**Keeping it enforced (optional, add after the baseline exists):**
+
+- CI fails the build when tests fail.
+- A small script (or CI step) lists source files without a matching spec/test and reports
+  them, so gaps from new files are visible.
+- Optional coverage thresholds (start low and raise gradually) rather than a one-time big-bang.
+
+### CI
+
+Run `dotnet test` and `ng test` on every push. If Docker/Testcontainers is chosen, the
+runner must support Docker; if LocalDB is chosen, a Windows runner is required.
+
+---
+
+## Customer Ordering Links Feature [Planned]
+
+Let selected customers place orders themselves through a personal link, without logging in
+to the POS. Staff control which customers get a link and can set an end date so links expire.
+
+### Behavior
+
+- On the **customer details page**, a staff member with the right role can:
+  - enable/disable "Allow ordering link" for that customer (opt-in per customer; default off)
+  - generate a link, optionally with an **end date** (no end date = never expires)
+  - see existing links with status (Active / Expired / Revoked), created by, last used
+  - copy, revoke, or regenerate a link
+- Only customers with ordering enabled can have links generated.
+- Opening a link shows a public ordering page (catalog, cart, submit) scoped to that customer.
+- Expired, revoked, or unknown tokens show a friendly "link no longer valid" page (reuses the
+  404-style layout); the response does not reveal whether the token ever existed.
+- Disabling ordering for a customer immediately invalidates all of their links.
+
+### Open Questions
+
+- Do submitted orders go straight into the normal order flow, or into a "pending approval"
+  state that staff must confirm?
+- Payment: pay on pickup/delivery only, or online payment later?
+- Can a link be used for multiple orders until it expires, or is it single use?
+- Should the public page show the full catalog or a restricted list/price set per customer?
+- Notifications: push/SignalR alert to staff when a link order arrives (existing infra can be reused).
+
+### Database Changes
+
+Reuse or extend the existing `ShortLink` entity (currently `Token`, `TargetType`, `TargetId`,
+`TargetUrl`, `ExpiresAt`) with a new `TargetType = "CustomerOrder"`, adding:
+
+- `RevokedAt` (nullable), `CreatedAt`, `CreatedBy`, `LastUsedAt`
+- `Customer.AllowOrderingLink` (bool, default false)
+
+Order-side: `Order.Source` (POS / CustomerLink) and `Order.OrderLinkId` (nullable FK) to trace
+where an order came from.
+
+### API
+
+Staff endpoints (authenticated, role-gated, audited):
+
+- `PUT /api/customers/{id}/ordering-link-access` - enable/disable
+- `POST /api/customers/{id}/ordering-links` - generate (body: optional `expiresAt`)
+- `GET /api/customers/{id}/ordering-links` - list with status
+- `DELETE /api/customers/{id}/ordering-links/{linkId}` - revoke
+
+Public endpoints (anonymous, token-based, rate limited like the existing `loyalty-policy`):
+
+- `GET /api/public/order-links/{token}` - validate; returns customer display name + catalog
+- `POST /api/public/order-links/{token}/orders` - submit an order
+
+### Security
+
+- Tokens must be long and cryptographically random (e.g. 32 bytes from
+  `RandomNumberGenerator`, URL-safe). The existing 8-character `System.Random` token in
+  `GenerateShortLinkHandler` is not suitable for this feature.
+- Store only a hash of the token if links never need to be re-displayed; otherwise store it
+  but never log it.
+- Validate on every request: token exists, not revoked, not expired, customer active and
+  ordering enabled.
+- Strict rate limiting per token and per IP; server recalculates prices and promotions
+  (never trust client totals); cap items per order.
+- All link creation, revocation and link-originated orders are written to the audit log.
+
+### Frontend
+
+- Customer details page: new "Ordering link" section (toggle, generate with optional end
+  date picker, links table with copy/revoke).
+- New public route (outside `authGuard`/`LayoutComponent`), e.g. `/order/:token`, with a
+  mobile-first catalog, cart and confirmation screen.
+- Invalid/expired state page.
+- Permissions: new roles/role-group entries for managing ordering links.
+
+### Phases
+
+1. Data model + staff endpoints + customer details UI (generate, expire, revoke).
+2. Public validation endpoint + public ordering page (read-only catalog, cart).
+3. Order submission, staff notification, and approval flow (per open questions).
+4. Reporting: filter/report orders by source; usage stats per link.
+
+---
+
+## Button States & Text Audit [Planned]
+
+A cleanup pass over every button in the app, following `docs/BUTTONS.md` and the
+`button-conventions.spec.ts` rules. To be reviewed before work starts.
+
+### Audit checklist
+
+- **Right button for the job:** primary / secondary / ghost / danger / restore applied to the
+  correct actions (e.g. login, cancel, clear, delete, restore, "Later" on the update banner).
+- **Busy states:** every save / update / delete / restore / download / refresh button shows a
+  spinner, is disabled while running, and cannot be double-submitted.
+- **API-call feedback:** every API call shows its in-progress text (Saving..., Loading...,
+  Updating..., Deleting...) and then updates to the result (success alert, error alert, reset
+  label); no stuck or missing loading text, including offline and failed calls.
+- **Button text:** consistent wording per state (e.g. Save / Saving..., Update / Updating...,
+  Delete / Deleting..., Download Excel / Downloading...), no stray spaces or punctuation.
+- **Loading vs empty vs error states:** spinners, empty-state text and error alerts match
+  across list, details and editor pages.
+- **Edit / read-only rules:** edit actions hidden or disabled on inactive (soft-deleted)
+  records; Add Stock hidden on inactive items; route guard for edit URLs of inactive records.
+- **Layout:** toolbars follow one pattern (Filters + Refresh row, downloads row) and labels
+  never wrap (see shared `.app-btn` rules); check phone width and the Android build.
+- **Disabled / hover / pressed / focus / cursor** states are consistent, including the 3-dot
+  menus and dialog buttons.
+- **Tests & docs:** extend `button-conventions.spec.ts` where a rule can be enforced, and
+  update `docs/BUTTONS.md`.
