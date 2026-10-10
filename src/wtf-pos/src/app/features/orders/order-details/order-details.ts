@@ -1,7 +1,13 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { AlertService, CatalogCacheService, OrderService, PromotionService } from '@core/services';
+import {
+  AlertService,
+  AuthService,
+  CatalogCacheService,
+  OrderService,
+  PromotionService,
+} from '@core/services';
 import {
   AvatarComponent,
   BadgeComponent,
@@ -45,6 +51,7 @@ export class OrderDetails implements OnInit {
   private readonly orderService = inject(OrderService);
   private readonly catalogCache = inject(CatalogCacheService);
   private readonly alertService = inject(AlertService);
+  private readonly authService = inject(AuthService);
   private readonly promotionService = inject(PromotionService);
 
   protected readonly order = signal<OrderDto | null>(null);
@@ -74,6 +81,9 @@ export class OrderDetails implements OnInit {
   });
 
   protected readonly canRefund = computed(() => this.order()?.status === OrderStatusEnum.Completed);
+  protected readonly canOverride = computed(
+    () => this.canRefund() && this.authService.canOverrideOrders(),
+  );
   protected readonly isCompleted = computed(
     () => this.order()?.status === OrderStatusEnum.Completed,
   );
@@ -164,6 +174,17 @@ export class OrderDetails implements OnInit {
     } finally {
       this.isDownloadingReceipt.set(false);
     }
+  }
+
+  protected openOverrideEditor(): void {
+    const current = this.order();
+    if (!current || !this.canOverride()) {
+      return;
+    }
+
+    this.router.navigate([AppRoutes.OrderEditorById(current.id)], {
+      queryParams: { override: 1 },
+    });
   }
 
   protected openRefundModal(): void {
@@ -292,7 +313,10 @@ export class OrderDetails implements OnInit {
     return item.price + addOnTotal;
   }
 
-  protected getBundleChildTotalQuantity(bundleLine: CartItemDto, bundleItem: CartBundleItemDto): number {
+  protected getBundleChildTotalQuantity(
+    bundleLine: CartItemDto,
+    bundleItem: CartBundleItemDto,
+  ): number {
     if (bundleLine.bundlePromotionTypeId === PromotionTypeEnum.MixMatch) {
       return Math.max(1, bundleItem.qty);
     }
@@ -300,7 +324,10 @@ export class OrderDetails implements OnInit {
     return Math.max(1, bundleLine.qty) * Math.max(1, bundleItem.qty);
   }
 
-  protected getBundleChildDisplayRows(bundleLine: CartItemDto, bundleItem: CartBundleItemDto): number[] {
+  protected getBundleChildDisplayRows(
+    bundleLine: CartItemDto,
+    bundleItem: CartBundleItemDto,
+  ): number[] {
     const total = Math.max(1, bundleItem.qty);
     return Array.from({ length: total }, (_, index) => index);
   }
@@ -343,7 +370,11 @@ export class OrderDetails implements OnInit {
     }
 
     return [...grouped.values()]
-      .sort((a, b) => (a.sortOrder - b.sortOrder) || this.normalizeSortLabel(a.name).localeCompare(this.normalizeSortLabel(b.name)))
+      .sort(
+        (a, b) =>
+          a.sortOrder - b.sortOrder ||
+          this.normalizeSortLabel(a.name).localeCompare(this.normalizeSortLabel(b.name)),
+      )
       .map((entry) => ({
         addOnId: entry.addOnId,
         name: entry.name,
@@ -491,20 +522,22 @@ export class OrderDetails implements OnInit {
     for (const [promotionId, items] of groupedBundleItems.entries()) {
       const bundleMeta = bundleMetaByPromotionId.get(promotionId);
       const bundleType =
-        this.catalogCache.bundlePromotions().find((promo) => promo.id === promotionId)?.typeId ?? null;
+        this.catalogCache.bundlePromotions().find((promo) => promo.id === promotionId)?.typeId ??
+        null;
       const bundleQty = Math.max(1, bundleMeta?.quantity ?? 1);
-      const bundleItems: CartBundleItemDto[] = items.map((bundleItem) => ({
-        productId: bundleItem.productId,
-        name: bundleItem.productName,
-        price: bundleItem.price,
-        qty:
-          bundleType === PromotionTypeEnum.MixMatch
-            ? Math.max(1, bundleItem.qty)
-            : Math.max(1, Math.round(bundleItem.qty / bundleQty)),
-        imageUrl: this.getProductImage(bundleItem.productId),
-        addOns: bundleItem.addOns.length > 0 ? bundleItem.addOns : undefined,
-      }))
-      .sort((a, b) => a.name.localeCompare(b.name));
+      const bundleItems: CartBundleItemDto[] = items
+        .map((bundleItem) => ({
+          productId: bundleItem.productId,
+          name: bundleItem.productName,
+          price: bundleItem.price,
+          qty:
+            bundleType === PromotionTypeEnum.MixMatch
+              ? Math.max(1, bundleItem.qty)
+              : Math.max(1, Math.round(bundleItem.qty / bundleQty)),
+          imageUrl: this.getProductImage(bundleItem.productId),
+          addOns: bundleItem.addOns.length > 0 ? bundleItem.addOns : undefined,
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
 
       bundleLines.push({
         productId: promotionId,
@@ -644,7 +677,10 @@ export class OrderDetails implements OnInit {
   }
 
   private normalizeSortLabel(value: string): string {
-    return value.replace(/^\s*\d+\s*x\s+/i, '').trim().toLowerCase();
+    return value
+      .replace(/^\s*\d+\s*x\s+/i, '')
+      .trim()
+      .toLowerCase();
   }
 
   private loadOrder(): void {

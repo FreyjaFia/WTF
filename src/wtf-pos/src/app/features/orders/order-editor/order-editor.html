@@ -429,7 +429,13 @@
                 </div>
               } @else if (isEditMode()) {
                 <h3 class="text-lg font-semibold">
-                  {{ isReadOnly() ? 'Order Details' : 'Edit Order' }}
+                  {{
+                    isReadOnly()
+                      ? 'Order Details'
+                      : isOverrideMode()
+                        ? 'Override Order'
+                        : 'Edit Order'
+                  }}
                 </h3>
                 @if (currentOrder()) {
                   <div class="mt-1 mb-1 flex items-center gap-2">
@@ -448,7 +454,8 @@
             </div>
           </div>
           <div class="flex items-center">
-            <button type="button"
+            <button
+              type="button"
               class="app-btn app-btn-outline-danger app-btn-sm"
               (click)="clearAll()"
               [class.hidden]="isReadOnly() || !canManageOrderActions()"
@@ -571,7 +578,8 @@
                     <div class="flex items-center justify-between">
                       <div class="flex items-center gap-1">
                         @if (!isReadOnly() && canManageOrderActions()) {
-                          <button type="button"
+                          <button
+                            type="button"
                             class="app-stepper-btn h-8 w-8"
                             (click)="$event.stopPropagation(); decrement(c.productId, $index)"
                             aria-label="Decrease quantity"
@@ -587,7 +595,8 @@
                           }
                         </div>
                         @if (!isReadOnly() && canManageOrderActions()) {
-                          <button type="button"
+                          <button
+                            type="button"
                             class="app-stepper-btn h-8 w-8"
                             (click)="$event.stopPropagation(); increment(c.productId, $index)"
                             aria-label="Increase quantity"
@@ -685,13 +694,16 @@
                           }}</span>
                         </span>
                         <span class="shrink-0">
-                          + @if (ao.lineTotal < 0) {
+                          +
+                          @if (ao.lineTotal < 0) {
                             (
-                          }<app-icon
+                          }
+                          <app-icon
                             name="icon-peso"
                             [class]="'inline h-3 w-3 align-[-0.125em]'"
                             [fill]="'currentColor'"
-                          />{{ ao.lineTotal | number: '1.2-2' }}@if (ao.lineTotal < 0) {
+                          />{{ ao.lineTotal | number: '1.2-2' }}
+                          @if (ao.lineTotal < 0) {
                             )
                           }
                         </span>
@@ -816,14 +828,16 @@
               @if (isReadOnly()) {
                 <div class="flex gap-2">
                   @if (isOfflineCompleted()) {
-                    <button type="button"
+                    <button
+                      type="button"
                       class="app-btn app-btn-outline-danger app-btn-md flex-1"
                       (click)="openDiscardOrderModal()"
                     >
                       Discard Order
                     </button>
                   } @else if (isCancellable() && canManageOrderActions()) {
-                    <button type="button"
+                    <button
+                      type="button"
                       class="app-btn app-btn-outline-danger app-btn-md flex-1"
                       (click)="openCancelOrderModal()"
                     >
@@ -831,9 +845,36 @@
                     </button>
                   }
                 </div>
+              } @else if (isOverrideMode()) {
+                <p class="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                  Override mode: changes correct this completed order. A reason is required and the
+                  change is recorded in the audit log.
+                </p>
+                <button
+                  type="button"
+                  class="app-btn app-btn-primary app-btn-lg pointer-events-auto w-full"
+                  (click)="checkout()"
+                  [disabled]="cart().length === 0 || !canManageOrderActions() || isSavingOrder()"
+                >
+                  @if (isSavingOrder()) {
+                    <span class="loading loading-spinner loading-xs mr-2"></span>
+                    Overriding Order...
+                  } @else {
+                    Review Payment
+                  }
+                </button>
+                <button
+                  type="button"
+                  class="app-btn app-btn-secondary app-btn-md w-full"
+                  (click)="cancelOverride()"
+                  [disabled]="isSavingOrder()"
+                >
+                  Cancel Override
+                </button>
               } @else {
                 <div class="flex gap-2">
-                  <button type="button"
+                  <button
+                    type="button"
                     class="app-btn app-btn-secondary app-btn-md pointer-events-auto flex-1"
                     [class.cursor-not-allowed]="
                       cart().length === 0 || !canManageOrderActions() || isSavingOrder()
@@ -857,21 +898,24 @@
                   </button>
                 </div>
                 @if (isOfflineEditMode()) {
-                  <button type="button"
+                  <button
+                    type="button"
                     class="app-btn app-btn-outline-danger app-btn-md w-full"
                     (click)="openDiscardOrderModal()"
                   >
                     Discard Order
                   </button>
                 } @else if (isEditMode() && isCancellable() && canManageOrderActions()) {
-                  <button type="button"
+                  <button
+                    type="button"
                     class="app-btn app-btn-outline-danger app-btn-md w-full"
                     (click)="openCancelOrderModal()"
                   >
                     {{ isCompleted() ? 'Refund Order' : 'Cancel Order' }}
                   </button>
                 }
-                <button type="button"
+                <button
+                  type="button"
                   class="app-btn app-btn-primary app-btn-lg pointer-events-auto w-full"
                   [class.cursor-not-allowed]="cart().length === 0 || !canManageOrderActions()"
                   [class.cursor-pointer]="!(cart().length === 0 || !canManageOrderActions())"
@@ -1041,6 +1085,44 @@
   </app-confirm-dialog>
 }
 
+<!-- Override Completed Order Modal -->
+@if (showOverrideModal()) {
+  <app-confirm-dialog
+    icon="icon-cart"
+    heading="Override Order?"
+    confirmLabel="Override Order"
+    busyLabel="Overriding..."
+    cancelLabel="Keep Editing"
+    [isBusy]="isSavingOrder()"
+    (confirmed)="confirmOverride()"
+    (cancelled)="dismissOverride()"
+  >
+    This replaces the saved details of completed order
+    <span class="font-medium text-gray-700">#{{ currentOrder()!.orderNumber }}</span
+    >. The previous and new values are recorded in the audit log.
+
+    <div dialogExtra class="mt-4">
+      <label
+        for="override-order-reason"
+        class="mb-1 block text-xs font-semibold tracking-wide text-gray-600 uppercase"
+      >
+        Override reason
+      </label>
+      <textarea
+        id="override-order-reason"
+        class="textarea textarea-bordered min-h-24 w-full text-sm"
+        [value]="overrideReason()"
+        (input)="onOverrideReasonInput($event)"
+        placeholder="Why is this order being corrected?"
+        maxlength="500"
+      ></textarea>
+      @if (showOverrideReasonError()) {
+        <p class="mt-1 text-xs text-red-600">Override reason is required.</p>
+      }
+    </div>
+  </app-confirm-dialog>
+}
+
 <!-- Discard Offline Order Modal -->
 @if (showDiscardOrderModal()) {
   <app-confirm-dialog
@@ -1072,7 +1154,7 @@
   >
     There are
     <span class="font-medium text-gray-700">{{ itemCount() }}</span>
-    {{ itemCount() === 1 ? 'item' : 'items' }} in the cart. Your order will be saved and
-    restored when you come back.
+    {{ itemCount() === 1 ? 'item' : 'items' }} in the cart. Your order will be saved and restored
+    when you come back.
   </app-confirm-dialog>
 }

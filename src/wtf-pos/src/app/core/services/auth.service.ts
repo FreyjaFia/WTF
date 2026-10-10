@@ -371,6 +371,10 @@ export class AuthService {
     return this.hasAnyRole(AppRoleGroups.OrdersWrite);
   }
 
+  public canOverrideOrders(): boolean {
+    return this.hasAnyRole(AppRoleGroups.OrdersOverride);
+  }
+
   public canReadInventory(): boolean {
     return this.canReadItems() || this.canReadStockMovements();
   }

@@ -53,6 +53,15 @@
                 Download order summary
               }
             </button>
+            @if (canOverride()) {
+              <button
+                type="button"
+                class="app-btn app-btn-outline-warning app-btn-sm"
+                (click)="openOverrideEditor()"
+              >
+                Override Order
+              </button>
+            }
             <app-order-receipt #receipt [data]="receiptData()" />
             @if (canRefund()) {
               <div class="ms-auto flex items-center gap-2">
@@ -138,6 +147,20 @@
             <div class="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
               <p class="text-xs font-semibold tracking-wide text-amber-700 uppercase">Note</p>
               <p class="mt-1 text-sm text-amber-900">{{ currentOrder.note }}</p>
+            </div>
+          }
+
+          @if (currentOrder.overrideReason?.trim()) {
+            <div class="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+              <p class="text-xs font-semibold tracking-wide text-amber-700 uppercase">
+                Overridden
+                @if (currentOrder.overriddenAt) {
+                  <span class="font-normal tracking-normal normal-case">
+                    on {{ currentOrder.overriddenAt | date: 'd MMM y, h:mm a' }}
+                  </span>
+                }
+              </p>
+              <p class="mt-1 text-sm text-amber-900">{{ currentOrder.overrideReason }}</p>
             </div>
           }
         </div>
@@ -317,7 +340,10 @@
                               <div class="truncate">
                                 {{
                                   getBundleChildTotalQuantity(c, bundleItem) > 1
-                                    ? '+ ' + getBundleChildTotalQuantity(c, bundleItem) + 'x ' + bundleItem.name
+                                    ? '+ ' +
+                                      getBundleChildTotalQuantity(c, bundleItem) +
+                                      'x ' +
+                                      bundleItem.name
                                     : '+ ' + bundleItem.name
                                 }}
                               </div>
@@ -329,7 +355,9 @@
                                   track addOn.addOnId
                                 ) {
                                   <div class="flex items-center gap-1.5 text-[11px] text-gray-400">
-                                    <span class="inline-block h-1 w-1 shrink-0 rounded-full bg-gray-300"></span>
+                                    <span
+                                      class="inline-block h-1 w-1 shrink-0 rounded-full bg-gray-300"
+                                    ></span>
                                     <span class="min-w-0 wrap-break-word">{{
                                       addOn.quantityPerUnit > 1
                                         ? addOn.quantityPerUnit + 'x ' + addOn.name + ' (per unit)'
@@ -373,11 +401,13 @@
                             <div class="shrink-0 text-right tabular-nums">
                               @if (ao.lineTotal < 0) {
                                 (
-                              }<app-icon
+                              }
+                              <app-icon
                                 name="icon-peso"
                                 [class]="'inline h-2.5 w-2.5 align-[-0.125em]'"
                                 [fill]="'currentColor'"
-                              />{{ ao.lineTotal | number: '1.2-2' }}@if (ao.lineTotal < 0) {
+                              />{{ ao.lineTotal | number: '1.2-2' }}
+                              @if (ao.lineTotal < 0) {
                                 )
                               }
                             </div>

@@ -53,6 +53,7 @@ export const ServiceErrorMessages = {
     SyncOrdersFailed: 'Failed to sync offline orders. Please try again later.',
     UpdateOrderFailed: 'Failed to update order. Please try again later.',
     VoidOrderFailed: 'Failed to void order. Please try again later.',
+    OverrideOrderFailed: 'Failed to override order. Please try again later.',
   },
   Product: {
     ProductNotFound: 'Product not found.',

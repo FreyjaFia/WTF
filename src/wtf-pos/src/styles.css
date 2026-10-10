@@ -218,6 +218,12 @@ body {
     @apply disabled:opacity-50;
   }
 
+  /* Bordered caution action that changes a finished record: override a completed order. */
+  .app-btn-outline-warning {
+    @apply border border-amber-300 bg-white text-amber-800 hover:border-amber-400 hover:bg-amber-50;
+    @apply disabled:opacity-50;
+  }
+
   /* Solid destructive action. */
   .app-btn-danger {
     @apply bg-red-600 text-white shadow-sm hover:bg-red-700 hover:shadow-md;

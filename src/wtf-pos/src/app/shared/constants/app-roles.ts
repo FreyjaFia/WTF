@@ -22,6 +22,7 @@ export const AppRoleGroups = {
   SchemaScriptHistoryRead: [AppRoles.SuperAdmin],
   OrdersRead: [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.Cashier],
   OrdersWrite: [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.Cashier],
+  OrdersOverride: [AppRoles.SuperAdmin, AppRoles.Admin],
   CustomersRead: [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer],
   CustomersWrite: [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.Cashier],
   ItemsRead: [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.ItemManager],

@@ -30,6 +30,8 @@ export class OrderService {
   private static readonly MSG_SYNC_ORDERS_FAILED = ServiceErrorMessages.Order.SyncOrdersFailed;
   private static readonly MSG_UPDATE_ORDER_FAILED = ServiceErrorMessages.Order.UpdateOrderFailed;
   private static readonly MSG_VOID_ORDER_FAILED = ServiceErrorMessages.Order.VoidOrderFailed;
+  private static readonly MSG_OVERRIDE_ORDER_FAILED =
+    ServiceErrorMessages.Order.OverrideOrderFailed;
 
   private readonly http = inject(HttpClient);
   private readonly connectivity = inject(ConnectivityService);
@@ -196,6 +198,23 @@ export class OrderService {
           () =>
             new Error(
               this.getErrorMessage(error, OrderService.MSG_UPDATE_ORDER_FAILED, {
+                notFound: OrderService.MSG_ORDER_NOT_FOUND,
+                badRequest: OrderService.MSG_INVALID_ORDER_DATA,
+              }),
+            ),
+        );
+      }),
+    );
+  }
+
+  public overrideOrder(command: UpdateOrderCommand): Observable<OrderDto> {
+    return this.http.put<OrderDto>(`${this.baseUrl}/${command.id}/override`, command).pipe(
+      catchError((error: HttpErrorResponse) => {
+        console.error('Error overriding order:', error);
+        return throwError(
+          () =>
+            new Error(
+              this.getErrorMessage(error, OrderService.MSG_OVERRIDE_ORDER_FAILED, {
                 notFound: OrderService.MSG_ORDER_NOT_FOUND,
                 badRequest: OrderService.MSG_INVALID_ORDER_DATA,
               }),

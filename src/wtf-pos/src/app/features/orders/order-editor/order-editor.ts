@@ -148,6 +148,7 @@ export class OrderEditor implements OnInit, OnDestroy {
   private originalCartSnapshot = '';
   private abandonModalStackId: number | null = null;
   private cancelOrderModalStackId: number | null = null;
+  private overrideOrderModalStackId: number | null = null;
   private createCustomerModalStackId: number | null = null;
   private cartPersistenceReady = false;
 
@@ -171,6 +172,16 @@ export class OrderEditor implements OnInit, OnDestroy {
   // Cancel order
   protected readonly showCancelOrderModal = signal(false);
   protected readonly cancelOrderNote = signal('');
+  protected readonly isOverrideMode = signal(false);
+  protected readonly showOverrideModal = signal(false);
+  protected readonly overrideReason = signal('');
+  protected readonly showOverrideReasonError = signal(false);
+  private pendingOverridePayment: {
+    paymentMethod: PaymentMethodEnum;
+    amountReceived?: number;
+    changeAmount?: number;
+    tips?: number;
+  } | null = null;
   protected readonly showCancelOrderNoteError = signal(false);
   protected readonly showCreateCustomerModal = signal(false);
   protected readonly isCreatingCustomer = signal(false);
@@ -259,7 +270,10 @@ export class OrderEditor implements OnInit, OnDestroy {
 
   protected readonly isReadOnly = computed(
     () =>
-      this.isCompleted() || this.isCancelled() || this.isRefunded() || this.isOfflineCompleted(),
+      (this.isCompleted() && !this.isOverrideMode()) ||
+      this.isCancelled() ||
+      this.isRefunded() ||
+      this.isOfflineCompleted(),
   );
   protected readonly paymentTipsAmount = computed(() => this.currentOrder()?.tips ?? 0);
   protected readonly paymentChangeAmount = computed(() => this.currentOrder()?.changeAmount ?? 0);
@@ -315,7 +329,7 @@ export class OrderEditor implements OnInit, OnDestroy {
     }
 
     const order = this.currentOrder();
-    return order?.status === OrderStatusEnum.Pending;
+    return order?.status === OrderStatusEnum.Pending || this.isOverrideMode();
   });
   protected readonly canEditCustomerSelection = computed(() => {
     if (!this.canManageOrderActions()) {
@@ -331,7 +345,7 @@ export class OrderEditor implements OnInit, OnDestroy {
     }
 
     const order = this.currentOrder();
-    return order?.status === OrderStatusEnum.Pending;
+    return order?.status === OrderStatusEnum.Pending || this.isOverrideMode();
   });
   protected readonly canCreateCustomerInOrder = computed(() =>
     this.authService.canCreateCustomerInOrder(this.isEditMode()),
@@ -713,7 +727,14 @@ export class OrderEditor implements OnInit, OnDestroy {
           this.selectedCustomerId.set(order.customerId ?? null);
           this.orderSpecialInstructions.set(order.specialInstructions ?? '');
 
-          if (order.status !== OrderStatusEnum.Pending) {
+          const wantsOverride = this.route.snapshot.queryParamMap.has('override');
+          if (
+            wantsOverride &&
+            order.status === OrderStatusEnum.Completed &&
+            this.authService.canOverrideOrders()
+          ) {
+            this.isOverrideMode.set(true);
+          } else if (order.status !== OrderStatusEnum.Pending) {
             this.router.navigateByUrl(AppRoutes.OrderDetailsById(order.id));
             return of(null);
           }
@@ -1220,9 +1241,7 @@ export class OrderEditor implements OnInit, OnDestroy {
       return true;
     }
 
-    this.alertService.error(
-      `${invalidItem.name} cannot have a negative final unit price.`,
-    );
+    this.alertService.error(`${invalidItem.name} cannot have a negative final unit price.`);
     return false;
   }
 
@@ -1898,6 +1917,89 @@ export class OrderEditor implements OnInit, OnDestroy {
     this.removeStackId('cancelOrder');
   }
 
+  protected cancelOverride(): void {
+    const order = this.currentOrder();
+    this.skipGuard = true;
+    this.router.navigateByUrl(order ? AppRoutes.OrderDetailsById(order.id) : AppRoutes.OrdersList);
+  }
+
+  private openOverrideModal(): void {
+    this.overrideReason.set('');
+    this.showOverrideReasonError.set(false);
+    this.showOverrideModal.set(true);
+    this.overrideOrderModalStackId = this.modalStack.push(() => this.dismissOverride());
+  }
+
+  protected onOverrideReasonInput(event: Event): void {
+    const value = event.target instanceof HTMLTextAreaElement ? event.target.value : '';
+    this.overrideReason.set(value);
+    if (this.showOverrideReasonError() && value.trim()) {
+      this.showOverrideReasonError.set(false);
+    }
+  }
+
+  protected dismissOverride(): void {
+    this.showOverrideModal.set(false);
+    this.showOverrideReasonError.set(false);
+    this.removeStackId('overrideOrder');
+  }
+
+  protected confirmOverride(): void {
+    const order = this.currentOrder();
+    const payment = this.pendingOverridePayment;
+    if (!order || !payment || !this.isOverrideMode()) {
+      return;
+    }
+
+    if (!this.authService.canOverrideOrders()) {
+      this.alertService.errorUnauthorized();
+      return;
+    }
+
+    const reason = this.overrideReason().trim();
+    if (!reason) {
+      this.showOverrideReasonError.set(true);
+      this.alertService.error('Override reason is required.');
+      return;
+    }
+
+    if (this.isSavingOrder()) {
+      return;
+    }
+
+    this.isSavingOrder.set(true);
+
+    const command: UpdateOrderCommand = {
+      id: order.id,
+      customerId: this.selectedCustomerId(),
+      items: this.buildOrderItemsFromCart(),
+      bundlePromotions: this.buildBundlePromotionsFromCart(),
+      specialInstructions: this.orderSpecialInstructions().trim() || null,
+      status: OrderStatusEnum.Completed,
+      paymentMethod: payment.paymentMethod,
+      amountReceived: payment.amountReceived ?? null,
+      changeAmount: payment.changeAmount ?? null,
+      tips: payment.tips ?? null,
+      overrideReason: reason,
+    };
+
+    this.orderService.overrideOrder(command).subscribe({
+      next: () => {
+        this.isSavingOrder.set(false);
+        this.showOverrideModal.set(false);
+        this.removeStackId('overrideOrder');
+        this.skipGuard = true;
+        this.cartPersistence.clear();
+        this.alertService.success('Order has been overridden');
+        this.router.navigateByUrl(AppRoutes.OrderDetailsById(order.id));
+      },
+      error: (err: Error) => {
+        this.isSavingOrder.set(false);
+        this.alertService.error(err.message || this.alertService.getUpdateErrorMessage('order'));
+      },
+    });
+  }
+
   protected openDiscardOrderModal(): void {
     this.showDiscardOrderModal.set(true);
     this.discardOrderModalStackId = this.modalStack.push(() => this.dismissDiscardOrder());
@@ -1924,7 +2026,7 @@ export class OrderEditor implements OnInit, OnDestroy {
   }
 
   private removeStackId(
-    modal: 'abandon' | 'cancelOrder' | 'discardOrder' | 'createCustomer',
+    modal: 'abandon' | 'cancelOrder' | 'overrideOrder' | 'discardOrder' | 'createCustomer',
   ): void {
     const key = `${modal}ModalStackId` as const;
     const id = this[key];
@@ -2011,7 +2113,10 @@ export class OrderEditor implements OnInit, OnDestroy {
       return;
     }
 
-    if (this.isOfflineEditMode()) {
+    if (this.isOverrideMode()) {
+      this.pendingOverridePayment = event;
+      this.openOverrideModal();
+    } else if (this.isOfflineEditMode()) {
       this.saveOfflineOrder(OrderStatusEnum.Completed, event);
     } else if (this.isEditMode()) {
       this.updateExistingOrder(OrderStatusEnum.Completed, event);

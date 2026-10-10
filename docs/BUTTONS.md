@@ -19,6 +19,7 @@ icon-only button without an accessible name.
 | `app-btn-ghost` | Low emphasis: Back, Close, Done, Collapse | Gray text, gray hover |
 | `app-btn-subtle` | Full-width expanders: Show all, Show less | Light gray background |
 | `app-btn-ghost-warning` | Warning-toned: Sync offline orders | Amber text, amber hover |
+| `app-btn-outline-warning` | Bordered caution action on a finished record: Override Order | White, amber border |
 | `app-btn-outline-danger` | Bordered destructive: Delete, Refund, Void, Discard, Delete image, clear the cart | White, red border |
 | `app-btn-overlay` | Round close button over an image: remove image | Dark circle |
 | `app-btn-danger` | Solid destructive confirm (used by `app-confirm-dialog`) | Solid red |

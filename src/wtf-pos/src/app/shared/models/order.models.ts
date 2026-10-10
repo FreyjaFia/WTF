@@ -65,6 +65,8 @@ export interface OrderDto {
   totalAmount: number;
   customerName?: string | null;
   bundlePromotions?: OrderBundlePromotionDto[] | null;
+  overrideReason?: string | null;
+  overriddenAt?: string | null;
 }
 
 export interface OrderHistoryDto {
@@ -112,4 +114,6 @@ export interface UpdateOrderCommand {
   changeAmount?: number | null;
   tips?: number | null;
   note?: string | null;
+  /** Required when correcting a completed order through the override endpoint. */
+  overrideReason?: string | null;
 }
