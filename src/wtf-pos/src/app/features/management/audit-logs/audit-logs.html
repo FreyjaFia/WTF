@@ -1,34 +1,190 @@
 <div class="flex h-full flex-col pt-4 md:pt-0">
-  <div class="mb-4 flex shrink-0 items-start justify-between sm:mb-6">
-    <div>
-      <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Audit Logs</h1>
-      <p class="text-xs text-gray-500 sm:text-sm">Track who did what and when across the system</p>
+  <div class="mb-4 flex shrink-0 flex-col gap-3 sm:mb-6">
+    <div class="flex items-start justify-between gap-3">
+      <div>
+        <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Audit Logs</h1>
+        <p class="text-xs text-gray-500 sm:text-sm">
+          Track who did what and when across the system
+        </p>
+      </div>
     </div>
-    @if (!isAndroidPlatform) {
-      <button
-        class="app-btn app-btn-ghost pointer-events-auto z-30 p-2"
-        [class.opacity-70]="isRefreshing()"
-        type="button"
-        (click)="refresh()"
-        [disabled]="isRefreshing()"
-        aria-label="Refresh audit logs"
-      >
-        @if (isRefreshing()) {
-          <app-icon
-            name="icon-refresh"
-            [class]="'h-5 w-5 animate-spin text-gray-600'"
-            [fill]="'currentColor'"
-          />
-        } @else {
-          <app-icon
-            name="icon-refresh"
-            [class]="'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'"
-            [fill]="'currentColor'"
-          />
+
+    <div class="flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center md:gap-3">
+      <div class="ml-auto flex items-center justify-end gap-2">
+        <button
+          type="button"
+          class="app-btn app-btn-secondary app-btn-sm gap-2"
+          (click)="openFilters()"
+        >
+          <app-icon name="icon-filter" [class]="'h-4 w-4'" [fill]="'currentColor'" />
+          Filters
+          @if (activeFilterCount() > 0) {
+            <span class="text-xs text-gray-500">({{ activeFilterCount() }})</span>
+          }
+        </button>
+        @if (!isAndroidPlatform) {
+          <button
+            class="app-btn app-btn-ghost pointer-events-auto z-30 p-2"
+            [class.opacity-70]="isRefreshing()"
+            type="button"
+            (click)="refresh()"
+            [disabled]="isRefreshing()"
+            aria-label="Refresh audit logs"
+          >
+            @if (isRefreshing()) {
+              <app-icon
+                name="icon-refresh"
+                [class]="'h-5 w-5 animate-spin text-gray-600'"
+                [fill]="'currentColor'"
+              />
+            } @else {
+              <app-icon
+                name="icon-refresh"
+                [class]="'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'"
+                [fill]="'currentColor'"
+              />
+            }
+          </button>
         }
-      </button>
-    }
+      </div>
+
+      <div class="flex flex-wrap items-center justify-end gap-2 md:w-full md:justify-end">
+        <button
+          type="button"
+          class="app-btn app-btn-secondary app-btn-sm gap-2"
+          (click)="downloadExcel()"
+          [disabled]="isDownloadingExcel() || isDownloadingPdf()"
+        >
+          @if (isDownloadingExcel()) {
+            <span class="loading loading-spinner loading-xs"></span>
+            Downloading...
+          } @else {
+            <app-icon name="icon-download" [class]="'h-4 w-4'" [fill]="'currentColor'" />
+            Download Excel
+          }
+        </button>
+        <button
+          type="button"
+          class="app-btn app-btn-secondary app-btn-sm gap-2"
+          (click)="downloadPdf()"
+          [disabled]="isDownloadingExcel() || isDownloadingPdf()"
+        >
+          @if (isDownloadingPdf()) {
+            <span class="loading loading-spinner loading-xs"></span>
+            Downloading...
+          } @else {
+            <app-icon name="icon-download" [class]="'h-4 w-4'" [fill]="'currentColor'" />
+            Download PDF
+          }
+        </button>
+      </div>
+    </div>
   </div>
+
+  <app-side-drawer
+    [isOpen]="isFiltersOpen()"
+    [title]="'Audit Log Filters'"
+    [subtitle]="'Refine audit log results'"
+    [showOnDesktop]="true"
+    (closed)="closeFilters()"
+  >
+    <div class="space-y-3">
+      <div class="rounded-xl border border-gray-200 bg-white p-3">
+        <div class="mb-3 flex items-center justify-between">
+          <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Date Range</p>
+          <button
+            type="button"
+            class="app-btn app-btn-secondary app-btn-xs"
+            (click)="clearDateRangeSelections()"
+          >
+            Clear
+          </button>
+        </div>
+        <div class="space-y-2">
+          @for (option of dateRangeOptions(); track option.id) {
+            <label
+              class="flex cursor-pointer items-center justify-between rounded-lg bg-white px-3 py-2 text-sm text-gray-700"
+            >
+              <span>{{ option.label }}</span>
+              <input
+                type="radio"
+                name="audit-date-range"
+                class="radio radio-sm"
+                [checked]="isDateRangeSelected(option.id.toString())"
+                (change)="toggleDateRangeSelection(option.id.toString())"
+              />
+            </label>
+          }
+        </div>
+
+        @if (isDateRangeSelected('custom')) {
+          <div class="mt-3 grid grid-cols-1 gap-2 border-t border-gray-100 pt-3">
+            <div class="flex items-center justify-end">
+              <button
+                type="button"
+                class="app-btn app-btn-secondary app-btn-xs"
+                (click)="clearCustomDateRange()"
+              >
+                Clear Custom Dates
+              </button>
+            </div>
+            <label class="flex flex-col gap-1">
+              <span class="text-[11px] font-semibold tracking-wide text-gray-500 uppercase"
+                >From</span
+              >
+              <input
+                type="date"
+                class="input input-sm input-bordered w-full bg-white"
+                [max]="maxDate"
+                [value]="customStartDate()"
+                (change)="onCustomStartDateChanged($any($event.target).value)"
+              />
+            </label>
+            <label class="flex flex-col gap-1">
+              <span class="text-[11px] font-semibold tracking-wide text-gray-500 uppercase"
+                >To</span
+              >
+              <input
+                type="date"
+                class="input input-sm input-bordered w-full bg-white"
+                [max]="maxDate"
+                [value]="customEndDate()"
+                (change)="onCustomEndDateChanged($any($event.target).value)"
+              />
+            </label>
+          </div>
+        }
+      </div>
+
+      <div class="rounded-xl border border-gray-200 bg-white p-3">
+        <div class="mb-3 flex items-center justify-between">
+          <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Action</p>
+          <button
+            type="button"
+            class="app-btn app-btn-secondary app-btn-xs"
+            (click)="clearActionSelections()"
+          >
+            Clear
+          </button>
+        </div>
+        <div class="space-y-2">
+          @for (action of availableActions(); track action) {
+            <label
+              class="flex cursor-pointer items-center justify-between rounded-lg bg-white px-3 py-2 text-sm text-gray-700"
+            >
+              <span class="font-mono">{{ action }}</span>
+              <input
+                type="checkbox"
+                class="checkbox checkbox-sm"
+                [checked]="isActionSelected(action)"
+                (change)="toggleActionSelection(action)"
+              />
+            </label>
+          }
+        </div>
+      </div>
+    </div>
+  </app-side-drawer>
 
   @if (isLoading()) {
     <div class="flex justify-center py-8">
@@ -119,4 +275,3 @@
     </app-pull-to-refresh>
   }
 </div>
-

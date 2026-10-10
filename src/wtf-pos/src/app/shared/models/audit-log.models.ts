@@ -14,6 +14,7 @@ export interface AuditLogDto {
 export interface AuditLogQuery {
   userId?: string;
   action?: string;
+  actions?: string[];
   entityType?: string;
   entityId?: string;
   fromDate?: string;

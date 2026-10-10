@@ -2,12 +2,8 @@ import { CommonModule } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { FileOpener } from '@capacitor-community/file-opener';
 import { Capacitor } from '@capacitor/core';
-import { Directory, Filesystem } from '@capacitor/filesystem';
-import { Share } from '@capacitor/share';
-import { AlertService, ReportsService, UserService } from '@core/services';
-import { ServiceErrorMessages } from '@core/messages';
+import { AlertService, FileDownloadService, ReportsService, UserService } from '@core/services';
 import {
   SideDrawerComponent,
   IconComponent,
@@ -127,6 +123,7 @@ interface MonthOption {
 })
 export class ReportsComponent implements OnInit {
   private readonly reportsService = inject(ReportsService);
+  private readonly fileDownload = inject(FileDownloadService);
   private readonly userService = inject(UserService);
   private readonly alertService = inject(AlertService);
   private readonly formBuilder = inject(FormBuilder);
@@ -515,7 +512,7 @@ export class ReportsComponent implements OnInit {
 
     this.isDownloadingExcel.set(true);
     const onSuccess = (blob: Blob, fileName: string): void => {
-      void this.saveBlob(
+      void this.fileDownload.saveBlob(
         blob,
         fileName,
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -646,7 +643,7 @@ export class ReportsComponent implements OnInit {
 
     this.isDownloadingPdf.set(true);
     const onSuccess = (blob: Blob, fileName: string): void => {
-      void this.saveBlob(blob, fileName, 'application/pdf').finally(() =>
+      void this.fileDownload.saveBlob(blob, fileName, 'application/pdf').finally(() =>
         this.isDownloadingPdf.set(false),
       );
     };
@@ -815,7 +812,7 @@ export class ReportsComponent implements OnInit {
           next: (blob) => {
             const fileName =
               status.fileName || this.buildMonthlyWorkbookFileName(filter.year, filter.month);
-            void this.saveBlob(
+            void this.fileDownload.saveBlob(
               blob,
               fileName,
               'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -1430,133 +1427,6 @@ export class ReportsComponent implements OnInit {
 
     keySignal.set(column);
     directionSignal.set('asc');
-  }
-
-  private async saveBlob(blob: Blob, fileName: string, contentType: string): Promise<void> {
-    if (Capacitor.getPlatform() === 'android') {
-      await this.saveAndOpenOnAndroid(blob, fileName, contentType);
-      return;
-    }
-
-    const objectUrl = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = objectUrl;
-    link.download = fileName;
-    link.click();
-    window.URL.revokeObjectURL(objectUrl);
-  }
-
-  private async saveAndOpenOnAndroid(
-    blob: Blob,
-    fileName: string,
-    contentType: string,
-  ): Promise<void> {
-    try {
-      const safeFileName = this.normalizeFileName(fileName);
-      const path = `reports/${Date.now()}-${safeFileName}`;
-      const base64Data = await this.blobToBase64(blob);
-
-      const uri = await this.writeFileToAvailableDirectory(path, base64Data);
-
-      const opened = await this.tryOpenFile(uri, contentType);
-      if (!opened) {
-        const shared = await this.tryShareFile(uri);
-        if (!shared) {
-          this.alertService.info(ServiceErrorMessages.Report.FileOpenFailed);
-        }
-      }
-    } catch {
-      try {
-        this.triggerBrowserDownload(blob, fileName);
-      } catch {
-        this.alertService.error(ServiceErrorMessages.Report.DownloadFileFailed);
-      }
-    }
-  }
-
-  private async writeFileToAvailableDirectory(path: string, base64Data: string): Promise<string> {
-    const directories: Directory[] = [Directory.Documents, Directory.Cache];
-
-    for (const directory of directories) {
-      try {
-        await Filesystem.writeFile({
-          path,
-          data: base64Data,
-          directory,
-          recursive: true,
-        });
-
-        const { uri } = await Filesystem.getUri({ path, directory });
-        return uri;
-      } catch {
-        // Try next directory.
-      }
-    }
-
-    throw new Error(ServiceErrorMessages.Report.NoWritableDirectory);
-  }
-
-  private async tryOpenFile(filePath: string, contentType: string): Promise<boolean> {
-    try {
-      await FileOpener.open({
-        filePath,
-        contentType,
-        openWithDefault: true,
-      });
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  private async tryShareFile(filePath: string): Promise<boolean> {
-    try {
-      await Share.share({
-        title: 'Open file',
-        files: [filePath],
-      });
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  private async blobToBase64(blob: Blob): Promise<string> {
-    const dataUrl = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result === 'string') {
-          resolve(reader.result);
-          return;
-        }
-
-        reject(new Error(ServiceErrorMessages.Report.ReadBlobFailed));
-      };
-      reader.onerror = () =>
-        reject(reader.error ?? new Error(ServiceErrorMessages.Report.ReadBlobFailed));
-      reader.readAsDataURL(blob);
-    });
-
-    const marker = 'base64,';
-    const markerIndex = dataUrl.indexOf(marker);
-    if (markerIndex < 0) {
-      throw new Error(ServiceErrorMessages.Report.InvalidBlobData);
-    }
-
-    return dataUrl.slice(markerIndex + marker.length);
-  }
-
-  private normalizeFileName(fileName: string): string {
-    return fileName.replace(/[<>:"/\\|?*]/g, '-').trim();
-  }
-
-  private triggerBrowserDownload(blob: Blob, fileName: string): void {
-    const objectUrl = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = objectUrl;
-    link.download = fileName;
-    link.click();
-    window.URL.revokeObjectURL(objectUrl);
   }
 
   private loadStaffOptions(): void {

@@ -9,10 +9,22 @@ public sealed record GetAuditLogsQuery : IRequest<PagedResultDto<AuditLogDto>>
 {
     public Guid? UserId { get; init; }
     public string? Action { get; init; }
+    public string[]? Actions { get; init; }
     public string? EntityType { get; init; }
     public string? EntityId { get; init; }
     public DateTime? FromDate { get; init; }
     public DateTime? ToDate { get; init; }
+
+    /// <summary>Every requested action: the repeated <c>actions</c> values plus the single <c>action</c>.</summary>
+    public IReadOnlyList<string> GetActions()
+    {
+        return (Actions ?? [])
+            .Append(Action)
+            .Where(action => !string.IsNullOrWhiteSpace(action))
+            .Select(action => action!.Trim())
+            .Distinct()
+            .ToList();
+    }
 }
 
 public sealed class GetAuditLogsHandler(WTFDbContext db) : IRequestHandler<GetAuditLogsQuery, PagedResultDto<AuditLogDto>>
@@ -29,9 +41,16 @@ public sealed class GetAuditLogsHandler(WTFDbContext db) : IRequestHandler<GetAu
             query = query.Where(a => a.UserId == request.UserId.Value);
         }
 
-        if (!string.IsNullOrWhiteSpace(request.Action))
+        var actions = request.GetActions();
+        if (actions.Count == 1)
         {
-            query = query.Where(a => a.Action == request.Action);
+            var action = actions[0];
+            query = query.Where(a => a.Action == action);
+        }
+        else if (actions.Count > 1)
+        {
+            var actionList = actions.ToArray();
+            query = query.Where(a => actionList.Contains(a.Action));
         }
 
         if (!string.IsNullOrWhiteSpace(request.EntityType))

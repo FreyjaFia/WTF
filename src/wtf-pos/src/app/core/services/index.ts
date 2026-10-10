@@ -7,6 +7,7 @@ export * from './catalog-cache.service';
 export * from './connectivity.service';
 export * from './customer.service';
 export * from './dashboard.service';
+export * from './file-download.service';
 export * from './image-cache.service';
 export * from './image-download.service';
 export * from './inventory.service';
