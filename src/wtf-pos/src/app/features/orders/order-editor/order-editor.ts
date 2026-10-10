@@ -1210,11 +1210,10 @@ export class OrderEditor implements OnInit, OnDestroy {
   }
 
   private validateCartUnitPrices(): boolean {
-    const invalidItem = this.cart().find(
-      (item) =>
-        !item.bundleItems?.length &&
-        !item.bundlePromotionId &&
-        this.getUnitSubtotal(item) <= 0,
+    const invalidItem = this.cart().find((item) =>
+      item.bundleItems?.length || item.bundlePromotionId
+        ? item.price < 0
+        : this.getUnitSubtotal(item) < 0,
     );
 
     if (!invalidItem) {
@@ -1222,7 +1221,7 @@ export class OrderEditor implements OnInit, OnDestroy {
     }
 
     this.alertService.error(
-      `${invalidItem.name} must have a final unit price greater than zero.`,
+      `${invalidItem.name} cannot have a negative final unit price.`,
     );
     return false;
   }

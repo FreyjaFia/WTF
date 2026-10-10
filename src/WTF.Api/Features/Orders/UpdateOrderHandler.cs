@@ -240,6 +240,11 @@ public class UpdateOrderHandler(
                 p => p.FixedBundlePromotion != null
                     ? p.FixedBundlePromotion.BundlePrice
                     : p.MixMatchPromotion!.BundlePrice);
+
+            if (bundlePriceByPromotionId.Values.Any(price => price < 0))
+            {
+                throw new InvalidOperationException("The bundle price cannot be negative.");
+            }
         }
 
         var oldStatus = (OrderStatusEnum)order.StatusId;
@@ -306,9 +311,9 @@ public class UpdateOrderHandler(
 
             var finalUnitPrice = (discountedPrice ?? basePrice)
                 + addOnPrices.Sum(addOn => addOn.Price * addOn.AddOn.Quantity);
-            if (!item.BundlePromotionId.HasValue && finalUnitPrice <= 0)
+            if (!item.BundlePromotionId.HasValue && finalUnitPrice < 0)
             {
-                throw new InvalidOperationException($"The final unit price for '{product.Name}' must be greater than zero.");
+                throw new InvalidOperationException($"The final unit price for '{product.Name}' cannot be negative.");
             }
 
             pricedItems.Add((item, product, discountedPrice, addOnPrices));

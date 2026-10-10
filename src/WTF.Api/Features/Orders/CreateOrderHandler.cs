@@ -232,6 +232,11 @@ public class CreateOrderHandler(
                 p => p.FixedBundlePromotion != null
                     ? p.FixedBundlePromotion.BundlePrice
                     : p.MixMatchPromotion!.BundlePrice);
+
+            if (bundlePriceByPromotionId.Values.Any(price => price < 0))
+            {
+                throw new InvalidOperationException("The bundle price cannot be negative.");
+            }
         }
 
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
@@ -317,9 +322,9 @@ public class CreateOrderHandler(
 
             var finalUnitPrice = (discountedPrice ?? basePrice)
                 + addOnPrices.Sum(addOn => addOn.Price * addOn.AddOn.Quantity);
-            if (!item.BundlePromotionId.HasValue && finalUnitPrice <= 0)
+            if (!item.BundlePromotionId.HasValue && finalUnitPrice < 0)
             {
-                throw new InvalidOperationException($"The final unit price for '{product.Name}' must be greater than zero.");
+                throw new InvalidOperationException($"The final unit price for '{product.Name}' cannot be negative.");
             }
 
             var orderItem = new OrderItem

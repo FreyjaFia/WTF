@@ -80,8 +80,8 @@ export class AddonSelectorComponent {
         }
       }
 
-      if (this.unitPrice() <= 0) {
-        return 'The final item price must be greater than zero.';
+      if (this.unitPrice() < 0) {
+        return 'The final item price cannot be negative.';
       }
 
       return null;
@@ -120,8 +120,8 @@ export class AddonSelectorComponent {
       }
     }
 
-    if (this.unitPrice() <= 0) {
-      return 'The final item price must be greater than zero.';
+    if (this.unitPrice() < 0) {
+      return 'The final item price cannot be negative.';
     }
 
     return null;
