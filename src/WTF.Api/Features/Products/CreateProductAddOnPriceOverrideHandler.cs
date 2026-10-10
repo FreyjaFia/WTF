@@ -28,15 +28,33 @@ public class CreateProductAddOnPriceOverrideHandler(WTFDbContext db, IHttpContex
             return null;
         }
 
-        var alreadyExists = await db.ProductAddOnPriceOverrides
-            .AnyAsync(o => o.ProductId == request.ProductId && o.AddOnId == request.AddOnId, cancellationToken);
+        var existing = await db.ProductAddOnPriceOverrides
+            .FirstOrDefaultAsync(o => o.ProductId == request.ProductId && o.AddOnId == request.AddOnId, cancellationToken);
 
-        if (alreadyExists)
+        if (existing is { IsActive: true })
         {
             return null;
         }
 
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
+
+        // A previously deleted (inactive) override is reused instead of creating a duplicate row
+        if (existing is not null)
+        {
+            existing.Price = request.Price;
+            existing.IsActive = request.IsActive;
+            existing.UpdatedAt = DateTime.UtcNow;
+            existing.UpdatedBy = userId;
+            await db.SaveChangesAsync(cancellationToken);
+
+            return new ProductAddOnPriceOverrideDto(
+                existing.ProductId,
+                existing.AddOnId,
+                existing.Price,
+                existing.IsActive
+            );
+        }
+
         var item = new ProductAddOnPriceOverride
         {
             ProductId = request.ProductId,
