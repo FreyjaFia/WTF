@@ -11,7 +11,18 @@ dotnet ef dbcontext scaffold "Name=ConnectionStrings:WtfDb" Microsoft.EntityFram
  --startup-project ..\src\WTF.Api\WTF.Api.csproj ^
  --force
 
+if errorlevel 1 (
+    echo.
+    echo ============================================================
+    echo  Scaffolding FAILED. Check the errors above.
+    echo  If the API is running in the debugger, stop it and try again.
+    echo ============================================================
+    pause
+    exit /b 1
+)
+
 echo.
 echo ============================================================
 echo  Scaffolding completed successfully.
 echo ============================================================
+pause
