@@ -20,7 +20,6 @@ export class SignalRService implements OnDestroy {
   private hubConnection: signalR.HubConnection | null = null;
   private readonly dashboardUpdated$ = new Subject<void>();
   private readonly orderUpdated$ = new Subject<string>();
-  private isConnecting = false;
   private hubUsageCount = 0;
 
   public get dashboardUpdated(): Observable<void> {
@@ -33,39 +32,38 @@ export class SignalRService implements OnDestroy {
 
   public startDashboardHub(): void {
     this.hubUsageCount += 1;
-    if (this.hubConnection || this.isConnecting) {
+    if (this.hubConnection) {
       return;
     }
 
-    this.isConnecting = true;
     const hubUrl = environment.apiUrl.replace('/api', HUB_PATHS.dashboard);
     const token = this.authService.getToken();
 
-    this.hubConnection = new signalR.HubConnectionBuilder()
+    const connection = new signalR.HubConnectionBuilder()
       .withUrl(hubUrl, {
         accessTokenFactory: () => token ?? '',
       })
       .withAutomaticReconnect()
       .build();
+    this.hubConnection = connection;
 
-    this.hubConnection.on(HUB_EVENTS.dashboardUpdated, () => {
+    connection.on(HUB_EVENTS.dashboardUpdated, () => {
       this.dashboardUpdated$.next();
     });
-    this.hubConnection.on(HUB_EVENTS.orderUpdated, (orderId: string) => {
+    connection.on(HUB_EVENTS.orderUpdated, (orderId: string) => {
       if (orderId) {
         this.orderUpdated$.next(orderId);
       }
     });
 
-    this.hubConnection
-      .start()
-      .then(() => {
-        this.isConnecting = false;
-      })
-      .catch((err) => {
-        this.isConnecting = false;
-        console.error('Dashboard SignalR hub connection error:', err);
-      });
+    connection.start().catch((err) => {
+      console.error('Dashboard SignalR hub connection error:', err);
+
+      // Drop the dead connection so the next start reconnects, unless it was already replaced.
+      if (this.hubConnection === connection) {
+        this.hubConnection = null;
+      }
+    });
   }
 
   public stopDashboardHub(): void {

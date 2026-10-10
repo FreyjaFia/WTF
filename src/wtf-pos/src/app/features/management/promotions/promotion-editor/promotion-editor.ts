@@ -90,7 +90,9 @@ export class PromotionEditorComponent implements OnInit {
   protected readonly discountedProductFixedPrice = signal<number | null>(null);
   protected readonly discountedProductPercentOff = signal<number | null>(null);
 
-  protected readonly isEditMode = computed(() => !!this.promotionId);
+  // Mirrors promotionId so isEditMode reacts when a create turns into an edit.
+  private readonly editingPromotionId = signal<string | null>(null);
+  protected readonly isEditMode = computed(() => !!this.editingPromotionId());
   protected readonly currentPromotionName = computed(() => {
     if (this.type() === 'fixed-bundle') {
       return this.fixedBundle().name;
@@ -106,6 +108,7 @@ export class PromotionEditorComponent implements OnInit {
   public ngOnInit(): void {
     this.type.set(this.resolveTypeFromRoute());
     this.promotionId = this.route.snapshot.paramMap.get('id');
+    this.editingPromotionId.set(this.promotionId);
     this.loadData();
   }
 
@@ -956,6 +959,7 @@ export class PromotionEditorComponent implements OnInit {
 
   private onPromotionSaved(promotionId: string, imageUrl: string | null, successMessage: string): void {
     this.promotionId = promotionId;
+    this.editingPromotionId.set(promotionId);
     this.currentImageUrl.set(imageUrl);
 
     const file = this.selectedFile();
@@ -1105,8 +1109,9 @@ export class PromotionEditorComponent implements OnInit {
         return false;
       }
 
-      const uniqueProducts = new Set(payload.items.map((item) => item.productId).filter(Boolean));
-      if (uniqueProducts.size !== payload.items.length) {
+      // Items without a product are reported separately below, so only compare the chosen ones.
+      const chosenProducts = payload.items.map((item) => item.productId).filter(Boolean);
+      if (new Set(chosenProducts).size !== chosenProducts.length) {
         this.alertService.error('Each discounted product must be unique.');
         return false;
       }

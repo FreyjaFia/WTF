@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { Capacitor } from '@capacitor/core';
@@ -90,8 +91,11 @@ export class ItemListComponent implements OnInit {
     { id: 'critical', label: 'Critical', count: this.statusCounts().critical },
   ]);
 
+  // Mirrors the search box: a plain FormControl value is not a signal, so computeds cannot react to it.
+  private readonly searchTerm = signal('');
+
   protected readonly filteredItems = computed(() => {
-    const search = (this.filterForm.controls.searchTerm.value ?? '').trim().toLowerCase();
+    const search = this.searchTerm().trim().toLowerCase();
     const selectedStatuses = this.selectedStatuses();
     let items = [...this.items()];
 
@@ -109,6 +113,12 @@ export class ItemListComponent implements OnInit {
         .some((value) => value!.toLowerCase().includes(search)),
     );
   });
+
+  constructor() {
+    this.filterForm.controls.searchTerm.valueChanges
+      .pipe(takeUntilDestroyed())
+      .subscribe((value) => this.searchTerm.set(value ?? ''));
+  }
 
   public ngOnInit(): void {
     this.restoreState();
@@ -346,6 +356,7 @@ export class ItemListComponent implements OnInit {
       },
       { emitEvent: false },
     );
+    this.searchTerm.set(state.searchTerm ?? '');
     this.selectedStatuses.set(state.selectedStatuses);
   }
 

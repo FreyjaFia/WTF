@@ -492,8 +492,11 @@ export class OrderEditor implements OnInit, OnDestroy {
     return this.subCategoryTabs.filter((tab) => productsBySubCategory[tab.id].length > 0);
   });
 
+  // Mirrors the search box: a plain FormControl value is not a signal, so computeds cannot react to it.
+  private readonly catalogSearchTerm = signal('');
+
   protected readonly filteredBundlePromotions = computed(() => {
-    const term = (this.filterForm.controls.searchTerm.value ?? '').trim().toLowerCase();
+    const term = this.catalogSearchTerm().trim().toLowerCase();
     let items = this.bundlePromotions().filter((promo) =>
       this.isPromotionActiveInUserTimezone(promo),
     );
@@ -2404,6 +2407,7 @@ export class OrderEditor implements OnInit, OnDestroy {
 
   private applyFiltersToCache(): void {
     const { searchTerm } = this.filterForm.value;
+    this.catalogSearchTerm.set(searchTerm ?? '');
 
     let items = [...this.productsCache()];
 

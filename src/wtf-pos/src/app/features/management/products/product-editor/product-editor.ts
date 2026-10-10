@@ -492,8 +492,8 @@ export class ProductEditorComponent implements OnInit {
       return `${this.getFieldLabel(controlName)} is required`;
     }
 
-    if (control.errors['maxLength']) {
-      return `${this.getFieldLabel(controlName)} cannot exceed ${control.errors['maxLength'].requiredLength} characters`;
+    if (control.errors['maxlength']) {
+      return `${this.getFieldLabel(controlName)} cannot exceed ${control.errors['maxlength'].requiredLength} characters`;
     }
 
     if (control.errors['min']) {
