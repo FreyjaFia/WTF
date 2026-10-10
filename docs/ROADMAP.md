@@ -150,11 +150,10 @@ Implemented:
   - warning and critical stock levels
   - active/inactive status
   - created/updated audit fields
-- Stock movement ledger implemented for initial stock, stock-in, and sale
-  deduction movements.
+- Stock movement ledger implemented for initial stock and stock-in movements.
+  Sale deduction movements were removed from order creation for now.
 - Product inventory links support configurable quantity per sale.
-- Order creation deducts inventory for completed tracked product sales and
-  validates available stock before completing the order.
+- Order creation no longer deducts inventory or blocks orders on low stock.
 - Inventory audit actions/entity types added for item create/update/delete,
   stock-in, and product-inventory linking.
 - Frontend inventory module added:
@@ -171,14 +170,63 @@ Implemented:
 - Management and inventory tab navigation now uses array-driven route
   configuration with aria labels.
 - Inventory navigation added to sidebar and mobile dock.
+- Item-side product link management (v1.8.0):
+  - `PUT /api/items/{id}/product-links` assigns an item's full set of product
+    links in one request (add, update quantity, remove), validates duplicates,
+    quantities, and product existence, writes an audit entry, and returns the
+    refreshed item.
+  - Item editor has a Linked Products card showing each linked product with
+    its quantity per sale in the item's base unit (for example `x200 ml`).
+  - `Manage Links` opens a drag-and-drop modal (available vs linked lists)
+    with search, a product/add-on filter, and a per-product quantity input.
+  - Products and add-ons can both be linked, so size or flavor add-ons can
+    consume their own stock once order-time deduction returns.
+  - Saving links refreshes only the Linked Products card, so cancelling the
+    modal never discards unsaved item form edits.
+- Link and restore rules for items, products, and customers:
+  - Deleting is always a soft delete (`IsActive = false`); nothing is removed.
+    Links stay as they are, so restoring brings everything back.
+  - Removing a product from an item in Manage Links deactivates the link and
+    keeps its row and quantity; assigning links never deletes them.
+  - Re-adding a product reuses the old link and pre-fills its previous
+    quantity, including quantities of links removed earlier in the same session.
+  - Restore button in the list 3-dot menu for inactive items, products, and
+    customers (`POST /api/{items,products,customers}/{id}/restore`, audited as
+    `ItemRestored`, `ProductRestored`, `CustomerRestored`). The item list now
+    shows an Inactive badge.
+- Product add-on links are soft deleted too (`tools/sql/20261010_add_product_addons_is_active.sql`
+  adds `ProductAddOns.IsActive`; run it before deploying the API):
+  - Unlinking from the product or add-on side sets `IsActive = false`; the row
+    and its price override are kept, so pending/historical order pricing that
+    reads overrides directly is unchanged.
+  - Re-linking reactivates the same row and updates its add-on type.
+  - Every reader filters on `IsActive`: order create/update validation, the
+    POS catalog, product add-on lists, linked-product counts, products-by-add-on,
+    promotion validations (discounted, bundle, mix-match), and price override
+    create/update/list.
+  - The same script drops the `TR_ProductAddOns_ValidateAddOn` trigger. The rule
+    (only add-ons can be linked) now lives in the assign handlers, and
+    `UpdateProductHandler` blocks turning an add-on into a regular product
+    while it has active links.
 
 Remaining:
 
 - Complete the stock-in workflow UI beyond the placeholder page.
-- Add product editor inventory setup/linking UI.
+- Add product editor inventory setup/linking UI (linking is currently only
+  available from the item editor).
 - Expose stock movement history and adjustment/correction workflows in the UI.
-- Add richer product inventory mapping management for existing products.
 - Review report/dashboard inventory impacts after real usage data exists.
+- Re-introduce order-time stock handling, currently removed: deduct linked
+  stock when an order becomes Completed (on create and on update), restore it
+  when a completed order is voided, and decide whether insufficient stock
+  should block completion. Record the product (and order line) on each
+  sale deduction movement so per-product ingredient/cup usage reports stay
+  accurate after link edits.
+- Apply the same soft-delete and Restore rules to promotions and users (both
+  hard deleted today) and to promotion child rows (deleted and recreated on
+  every update).
+- Close the item links modal cleanly on backdrop click (modal stack and
+  sortable cleanup are skipped today).
 
 ### Phase 2 - Pack, Box, and Shared Stock Selling [Planned]
 
@@ -197,6 +245,10 @@ Remaining:
 - Link products and required add-ons to consumables.
 - Deduct consumables automatically when an order is completed.
 - Support multiple required consumables per product or add-on selection.
+- Progress: linking items to products and add-ons works from the item editor.
+  Order-time deduction is currently disabled (see Phase 1 Remaining). Size cups
+  are meant to be linked to the Size add-on (not the base product) to avoid
+  double deduction once deduction returns.
 - Example:
   - regular drink deducts `1 Regular Cup`
   - large drink deducts `1 Large Cup`
