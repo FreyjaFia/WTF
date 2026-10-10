@@ -20,6 +20,14 @@ public static class PromotionEndpoints
         var posGroup = app.MapGroup("/api/pos/promotions")
             .RequireAuthorization(AppPolicies.OrdersWrite);
 
+        adminGroup.MapPost("/{promotionId:guid}/restore",
+            async (Guid promotionId, ISender sender) =>
+            {
+                var restored = await sender.Send(new RestorePromotionCommand(promotionId));
+                return restored ? Results.NoContent() : Results.NotFound();
+            })
+            .RequireAuthorization(AppPolicies.PromotionsWrite);
+
         adminGroup.MapPost("/{promotionId:guid}/images",
             async (Guid promotionId, HttpRequest httpRequest, ISender sender) =>
             {

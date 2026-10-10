@@ -36,14 +36,25 @@
           <app-icon name="icon-edit" [class]="'h-4 w-4'" />
           Edit
         </button>
-        <button
-          class="inline-flex cursor-pointer items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium text-red-500 transition-all hover:bg-red-50 hover:text-red-600 active:scale-95"
-          type="button"
-          (click)="deletePromotion()"
-        >
-          <app-icon name="icon-delete" [class]="'h-4 w-4'" />
-          Delete
-        </button>
+        @if (isActive()) {
+          <button
+            class="inline-flex cursor-pointer items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium text-red-500 transition-all hover:bg-red-50 hover:text-red-600 active:scale-95"
+            type="button"
+            (click)="deletePromotion()"
+          >
+            <app-icon name="icon-delete" [class]="'h-4 w-4'" />
+            Delete
+          </button>
+        } @else {
+          <button
+            class="inline-flex cursor-pointer items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium text-[#047857] transition-all hover:bg-[#047857]/10 active:scale-95"
+            type="button"
+            (click)="restorePromotion()"
+          >
+            <app-icon name="icon-refresh" [class]="'h-4 w-4'" />
+            Restore
+          </button>
+        }
       </div>
     }
   </div>
@@ -323,9 +334,25 @@
     (confirmed)="confirmDelete()"
     (cancelled)="cancelDelete()"
   >
-    This will permanently remove
-    <span class="font-medium text-gray-700">{{ promotionName() }}</span>. This action cannot be undone.
+    This will deactivate
+    <span class="font-medium text-gray-700">{{ promotionName() }}</span
+    >. You can restore it later.
   </app-confirm-dialog>
 }
 
-
+@if (showRestoreModal() && canWritePromotions()) {
+  <app-confirm-dialog
+    variant="success"
+    icon="icon-refresh"
+    heading="Restore Promotion?"
+    confirmLabel="Restore Promotion"
+    busyLabel="Restoring Promotion..."
+    [isBusy]="isRestoring()"
+    (confirmed)="confirmRestore()"
+    (cancelled)="cancelRestore()"
+  >
+    This will reactivate
+    <span class="font-medium text-gray-700">{{ promotionName() }}</span
+    >. It will apply to new orders again when it is within its dates.
+  </app-confirm-dialog>
+}

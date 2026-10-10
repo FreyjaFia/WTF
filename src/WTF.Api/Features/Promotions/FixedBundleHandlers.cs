@@ -232,14 +232,12 @@ public sealed class UpdateFixedBundlePromotionHandler(WTFDbContext db, IHttpCont
 
 public record DeleteFixedBundlePromotionCommand(Guid PromotionId) : IRequest<bool>;
 
-public sealed class DeleteFixedBundlePromotionHandler(WTFDbContext db, IImageStorage imageStorage)
+public sealed class DeleteFixedBundlePromotionHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor)
     : IRequestHandler<DeleteFixedBundlePromotionCommand, bool>
 {
     public async Task<bool> Handle(DeleteFixedBundlePromotionCommand request, CancellationToken cancellationToken)
     {
         var promo = await db.Promotions
-            .Include(x => x.PromotionImage!)
-                .ThenInclude(x => x.Image)
             .FirstOrDefaultAsync(x => x.Id == request.PromotionId && x.TypeId == PromotionTypeIds.FixedBundle, cancellationToken);
 
         if (promo is null)
@@ -247,14 +245,11 @@ public sealed class DeleteFixedBundlePromotionHandler(WTFDbContext db, IImageSto
             return false;
         }
 
-        if (promo.PromotionImage?.Image is not null)
-        {
-            await imageStorage.DeleteAsync(promo.PromotionImage.Image.ImageUrl, cancellationToken);
-            db.PromotionImages.Remove(promo.PromotionImage);
-            db.Images.Remove(promo.PromotionImage.Image);
-        }
+        // Soft delete - keep the promotion, its image, and its rules so it can be restored
+        promo.IsActive = false;
+        promo.UpdatedAt = DateTime.UtcNow;
+        promo.UpdatedBy = httpContextAccessor.HttpContext!.User.GetUserId();
 
-        db.Promotions.Remove(promo);
         await db.SaveChangesAsync(cancellationToken);
         return true;
     }

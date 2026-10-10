@@ -282,14 +282,25 @@
                         </button>
                       </li>
                       <li>
-                        <button
-                          type="button"
-                          (click)="deletePromotion(promo)"
-                          class="flex items-center gap-2 text-red-600 hover:bg-red-50"
-                        >
-                          <app-icon name="icon-delete" [class]="'h-4 w-4 text-red-600'" />
-                          Delete
-                        </button>
+                        @if (promo.isActive) {
+                          <button
+                            type="button"
+                            (click)="deletePromotion(promo)"
+                            class="flex items-center gap-2 text-red-600 hover:bg-red-50"
+                          >
+                            <app-icon name="icon-delete" [class]="'h-4 w-4 text-red-600'" />
+                            Delete
+                          </button>
+                        } @else {
+                          <button
+                            type="button"
+                            (click)="restorePromotion(promo)"
+                            class="flex items-center gap-2 text-[#047857] hover:bg-[#047857]/10"
+                          >
+                            <app-icon name="icon-refresh" [class]="'h-4 w-4 text-[#047857]'" />
+                            Restore
+                          </button>
+                        }
                       </li>
                     </ul>
                   </div>
@@ -304,4 +315,35 @@
   }
 </div>
 
+@if (showDeleteModal() && promotionToDelete() && canWritePromotions()) {
+  <app-confirm-dialog
+    icon="icon-delete"
+    heading="Delete Promotion?"
+    confirmLabel="Delete Promotion"
+    busyLabel="Deleting Promotion..."
+    [isBusy]="isDeleting()"
+    (confirmed)="confirmDelete()"
+    (cancelled)="cancelDelete()"
+  >
+    This will deactivate
+    <span class="font-medium text-gray-700">{{ promotionToDelete()!.name }}</span
+    >. You can restore it later.
+  </app-confirm-dialog>
+}
 
+@if (showRestoreModal() && promotionToRestore() && canWritePromotions()) {
+  <app-confirm-dialog
+    variant="success"
+    icon="icon-refresh"
+    heading="Restore Promotion?"
+    confirmLabel="Restore Promotion"
+    busyLabel="Restoring Promotion..."
+    [isBusy]="isRestoring()"
+    (confirmed)="confirmRestore()"
+    (cancelled)="cancelRestore()"
+  >
+    This will reactivate
+    <span class="font-medium text-gray-700">{{ promotionToRestore()!.name }}</span
+    >. It will apply to new orders again when it is within its dates.
+  </app-confirm-dialog>
+}

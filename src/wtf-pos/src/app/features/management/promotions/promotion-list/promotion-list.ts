@@ -3,7 +3,13 @@ import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { Capacitor } from '@capacitor/core';
-import { AlertService, AuthService, ListStateService, PromotionService } from '@core/services';
+import {
+  AlertService,
+  AuthService,
+  ListStateService,
+  ModalStackService,
+  PromotionService,
+} from '@core/services';
 import {
   AvatarComponent,
   BadgeComponent,
@@ -13,6 +19,7 @@ import {
   SideDrawerComponent,
   type FilterOption,
 } from '@shared/components';
+import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { PromotionListItemDto, PromotionTypeEnum } from '@shared/models';
 import { debounceTime, forkJoin } from 'rxjs';
@@ -31,6 +38,7 @@ interface PromotionListState {
 @Component({
   selector: 'app-promotion-list',
   imports: [
+    ConfirmDialogComponent,
     CommonModule,
     ReactiveFormsModule,
     RouterLink,
@@ -51,10 +59,18 @@ export class PromotionListComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly listState = inject(ListStateService);
   private readonly router = inject(Router);
+  private readonly modalStack = inject(ModalStackService);
   protected readonly routes = AppRoutes;
 
   protected readonly PromotionTypeEnum = PromotionTypeEnum;
   protected readonly isLoading = signal(false);
+  protected readonly showDeleteModal = signal(false);
+  protected readonly promotionToDelete = signal<PromotionListItemDto | null>(null);
+  protected readonly isDeleting = signal(false);
+  protected readonly showRestoreModal = signal(false);
+  protected readonly promotionToRestore = signal<PromotionListItemDto | null>(null);
+  protected readonly isRestoring = signal(false);
+  private modalStackId: number | null = null;
   protected readonly isRefreshing = signal(false);
   protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
   protected readonly isFiltersOpen = signal(false);
@@ -193,6 +209,36 @@ export class PromotionListComponent implements OnInit {
       return;
     }
 
+    this.promotionToDelete.set(promo);
+    this.showDeleteModal.set(true);
+    this.modalStackId = this.modalStack.push(() => this.cancelDelete());
+  }
+
+  protected cancelDelete(): void {
+    if (this.isDeleting()) {
+      return;
+    }
+
+    this.showDeleteModal.set(false);
+    this.promotionToDelete.set(null);
+    this.removeFromStack();
+  }
+
+  protected confirmDelete(): void {
+    if (this.isDeleting()) {
+      return;
+    }
+
+    if (!this.canWritePromotions()) {
+      this.alertService.errorUnauthorized();
+      return;
+    }
+
+    const promo = this.promotionToDelete();
+    if (!promo) {
+      return;
+    }
+
     const request$ =
       promo.typeId === PromotionTypeEnum.MixMatch
         ? this.promotionService.deleteMixMatch(promo.id)
@@ -200,13 +246,81 @@ export class PromotionListComponent implements OnInit {
           ? this.promotionService.deleteDiscountedProduct(promo.id)
           : this.promotionService.deleteFixedBundle(promo.id);
 
+    this.isDeleting.set(true);
     request$.subscribe({
       next: () => {
-        this.alertService.success('Promotion deleted.');
+        this.isDeleting.set(false);
+        this.showDeleteModal.set(false);
+        this.promotionToDelete.set(null);
+        this.removeFromStack();
+        this.alertService.successDeleted('Promotion');
         this.load();
       },
-      error: (err: Error) => this.alertService.error(err.message),
+      error: (err: Error) => {
+        this.isDeleting.set(false);
+        this.alertService.error(err.message);
+      },
     });
+  }
+
+  protected restorePromotion(promo: PromotionListItemDto): void {
+    if (!this.canWritePromotions()) {
+      this.alertService.errorUnauthorized();
+      return;
+    }
+
+    this.promotionToRestore.set(promo);
+    this.showRestoreModal.set(true);
+    this.modalStackId = this.modalStack.push(() => this.cancelRestore());
+  }
+
+  protected cancelRestore(): void {
+    if (this.isRestoring()) {
+      return;
+    }
+
+    this.showRestoreModal.set(false);
+    this.promotionToRestore.set(null);
+    this.removeFromStack();
+  }
+
+  protected confirmRestore(): void {
+    if (this.isRestoring()) {
+      return;
+    }
+
+    if (!this.canWritePromotions()) {
+      this.alertService.errorUnauthorized();
+      return;
+    }
+
+    const promo = this.promotionToRestore();
+    if (!promo) {
+      return;
+    }
+
+    this.isRestoring.set(true);
+    this.promotionService.restorePromotion(promo.id).subscribe({
+      next: () => {
+        this.isRestoring.set(false);
+        this.showRestoreModal.set(false);
+        this.promotionToRestore.set(null);
+        this.removeFromStack();
+        this.alertService.successRestored('Promotion');
+        this.load();
+      },
+      error: (err: Error) => {
+        this.isRestoring.set(false);
+        this.alertService.error(err.message);
+      },
+    });
+  }
+
+  private removeFromStack(): void {
+    if (this.modalStackId !== null) {
+      this.modalStack.remove(this.modalStackId);
+      this.modalStackId = null;
+    }
   }
 
   protected getTypeLabel(typeId: PromotionTypeEnum): string {

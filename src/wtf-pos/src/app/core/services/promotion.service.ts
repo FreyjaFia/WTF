@@ -23,6 +23,7 @@ export class PromotionService {
   private readonly fixedBundleBaseUrl = `${environment.apiUrl}/management/promotions/fixed-bundles`;
   private readonly mixMatchBaseUrl = `${environment.apiUrl}/management/promotions/mix-match`;
   private readonly discountedProductBaseUrl = `${environment.apiUrl}/management/promotions/discounted-products`;
+  private readonly promotionsBaseUrl = `${environment.apiUrl}/management/promotions`;
   private readonly posBaseUrl = `${environment.apiUrl}/pos/promotions`;
 
   public getFixedBundles(): Observable<PromotionListItemDto[]> {
@@ -146,6 +147,12 @@ export class PromotionService {
         `${environment.apiUrl}/management/promotions/${promotionId}/images`,
         formData,
       )
+      .pipe(catchError((error) => this.handleError(error)));
+  }
+
+  public restorePromotion(id: string): Observable<void> {
+    return this.http
+      .post<void>(`${this.promotionsBaseUrl}/${id}/restore`, {})
       .pipe(catchError((error) => this.handleError(error)));
   }
 

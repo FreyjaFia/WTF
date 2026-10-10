@@ -245,14 +245,12 @@ public sealed class UpdateDiscountedProductPromotionHandler(WTFDbContext db, IHt
 
 public record DeleteDiscountedProductPromotionCommand(Guid PromotionId) : IRequest<bool>;
 
-public sealed class DeleteDiscountedProductPromotionHandler(WTFDbContext db, IImageStorage imageStorage)
+public sealed class DeleteDiscountedProductPromotionHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor)
     : IRequestHandler<DeleteDiscountedProductPromotionCommand, bool>
 {
     public async Task<bool> Handle(DeleteDiscountedProductPromotionCommand request, CancellationToken cancellationToken)
     {
         var promo = await db.Promotions
-            .Include(x => x.PromotionImage!)
-                .ThenInclude(x => x.Image)
             .FirstOrDefaultAsync(x => x.Id == request.PromotionId && x.TypeId == PromotionTypeIds.DiscountedProduct, cancellationToken);
 
         if (promo is null)
@@ -260,14 +258,11 @@ public sealed class DeleteDiscountedProductPromotionHandler(WTFDbContext db, IIm
             return false;
         }
 
-        if (promo.PromotionImage?.Image is not null)
-        {
-            await imageStorage.DeleteAsync(promo.PromotionImage.Image.ImageUrl, cancellationToken);
-            db.PromotionImages.Remove(promo.PromotionImage);
-            db.Images.Remove(promo.PromotionImage.Image);
-        }
+        // Soft delete - keep the promotion, its image, and its rules so it can be restored
+        promo.IsActive = false;
+        promo.UpdatedAt = DateTime.UtcNow;
+        promo.UpdatedBy = httpContextAccessor.HttpContext!.User.GetUserId();
 
-        db.Promotions.Remove(promo);
         await db.SaveChangesAsync(cancellationToken);
         return true;
     }

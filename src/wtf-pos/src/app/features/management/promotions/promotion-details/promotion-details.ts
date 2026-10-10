@@ -48,6 +48,8 @@ export class PromotionDetailsComponent implements OnInit {
   protected readonly showAllBundleItems = signal(false);
   protected readonly showDeleteModal = signal(false);
   protected readonly isDeleting = signal(false);
+  protected readonly showRestoreModal = signal(false);
+  protected readonly isRestoring = signal(false);
   private modalStackId: number | null = null;
 
   protected readonly promotionName = computed(() => {
@@ -221,6 +223,60 @@ export class PromotionDetailsComponent implements OnInit {
       },
       error: (err: Error) => {
         this.isDeleting.set(false);
+        this.alertService.error(err.message);
+      },
+    });
+  }
+
+  protected restorePromotion(): void {
+    if (!this.canWritePromotions()) {
+      this.alertService.errorUnauthorized();
+      return;
+    }
+
+    if (!this.route.snapshot.paramMap.get('id')) {
+      return;
+    }
+
+    this.showRestoreModal.set(true);
+    this.modalStackId = this.modalStack.push(() => this.cancelRestore());
+  }
+
+  protected cancelRestore(): void {
+    if (this.isRestoring()) {
+      return;
+    }
+
+    this.showRestoreModal.set(false);
+    this.removeFromStack();
+  }
+
+  protected confirmRestore(): void {
+    if (this.isRestoring()) {
+      return;
+    }
+
+    if (!this.canWritePromotions()) {
+      this.alertService.errorUnauthorized();
+      return;
+    }
+
+    const id = this.route.snapshot.paramMap.get('id');
+    if (!id) {
+      return;
+    }
+
+    this.isRestoring.set(true);
+    this.promotionService.restorePromotion(id).subscribe({
+      next: () => {
+        this.isRestoring.set(false);
+        this.showRestoreModal.set(false);
+        this.removeFromStack();
+        this.alertService.successRestored('Promotion');
+        this.loadPromotion(id);
+      },
+      error: (err: Error) => {
+        this.isRestoring.set(false);
         this.alertService.error(err.message);
       },
     });
