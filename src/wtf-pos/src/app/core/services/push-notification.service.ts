@@ -105,6 +105,8 @@ export class PushNotificationService implements OnDestroy {
     const app = initializeApp(environment.firebaseConfig);
     const messaging = getMessaging(app);
     const swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+    // getToken needs an active worker; subscribing right after register() can fail otherwise.
+    await this.waitForActiveWorker(swRegistration);
     const token = await getToken(messaging, {
       vapidKey: environment.firebaseVapidKey,
       serviceWorkerRegistration: swRegistration,
@@ -141,6 +143,28 @@ export class PushNotificationService implements OnDestroy {
           window.location.assign(targetUrl);
         };
       });
+    });
+  }
+
+  private async waitForActiveWorker(registration: ServiceWorkerRegistration): Promise<void> {
+    if (registration.active) {
+      return;
+    }
+
+    const worker = registration.installing ?? registration.waiting;
+    if (!worker) {
+      return;
+    }
+
+    await new Promise<void>((resolve) => {
+      const onChange = (): void => {
+        if (worker.state === 'activated' || worker.state === 'redundant') {
+          worker.removeEventListener('statechange', onChange);
+          resolve();
+        }
+      };
+      worker.addEventListener('statechange', onChange);
+      onChange();
     });
   }
 

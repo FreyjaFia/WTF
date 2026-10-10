@@ -148,7 +148,7 @@ export class UpdateService implements OnDestroy {
     this.hideForNow();
 
     if (info.action === 'refresh') {
-      this.refreshPage();
+      await this.refreshPage();
       return;
     }
 
@@ -174,7 +174,22 @@ export class UpdateService implements OnDestroy {
     this._updateAvailable.set(false);
   }
 
-  private refreshPage(): void {
+  /** Hard refresh (like Ctrl+F5): drop the service worker and its caches so the new build loads. */
+  private async refreshPage(): Promise<void> {
+    try {
+      const registrations = await navigator.serviceWorker?.getRegistrations();
+      await Promise.all((registrations ?? []).map((registration) => registration.unregister()));
+    } catch {
+      // Continue with the reload even if the service worker cannot be removed.
+    }
+
+    try {
+      const cacheNames = await caches.keys();
+      await Promise.all(cacheNames.map((name) => caches.delete(name)));
+    } catch {
+      // Cache Storage can be unavailable (e.g. insecure context); reload anyway.
+    }
+
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set('wtf-refresh', Date.now().toString());
     window.location.replace(nextUrl.toString());
