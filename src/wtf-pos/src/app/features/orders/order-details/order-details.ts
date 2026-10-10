@@ -110,6 +110,10 @@ export class OrderDetails implements OnInit {
     return this.mapOrderItemsToCartItems(order);
   });
 
+  protected readonly paymentTotalDiscount = computed(() =>
+    this.detailItems().reduce((sum, item) => sum + (item.promoDiscount ?? 0), 0),
+  );
+
   protected readonly receiptData = computed<ReceiptData | null>(() => {
     const order = this.order();
     if (!order) {
@@ -466,11 +470,19 @@ export class OrderDetails implements OnInit {
         addOns: toAddOns(item),
         specialInstructions: item.specialInstructions ?? null,
       };
-      const promo = this.getBestDiscountedPromo(cartItem);
-      if (promo) {
-        const promoDiscount = Math.max(0, cartItem.price - promo.price) * cartItem.qty;
-        cartItem.promoLabel = this.formatPromoLabel(promo.entry);
+      if (item.originalPrice != null) {
+        // The promotion was captured with the line, so show exactly what was applied.
+        const promoDiscount = Math.max(0, item.originalPrice - cartItem.price) * cartItem.qty;
+        cartItem.promoLabel = item.promoLabel ?? null;
         cartItem.promoDiscount = promoDiscount > 0 ? promoDiscount : null;
+      } else {
+        // Older or not-yet-priced orders: best guess from the promotions active today.
+        const promo = this.getBestDiscountedPromo(cartItem);
+        if (promo) {
+          const promoDiscount = Math.max(0, cartItem.price - promo.price) * cartItem.qty;
+          cartItem.promoLabel = this.formatPromoLabel(promo.entry);
+          cartItem.promoDiscount = promoDiscount > 0 ? promoDiscount : null;
+        }
       }
       regularItems.push(cartItem);
     }

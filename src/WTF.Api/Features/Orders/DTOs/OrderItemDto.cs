@@ -8,4 +8,6 @@ public record OrderItemDto(
     decimal? Price,
     List<OrderItemDto> AddOns,
     string? SpecialInstructions,
-    Guid? BundlePromotionId = null);
+    Guid? BundlePromotionId = null,
+    decimal? OriginalPrice = null,
+    string? PromoLabel = null);

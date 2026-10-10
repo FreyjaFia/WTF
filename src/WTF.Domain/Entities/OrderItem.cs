@@ -23,6 +23,10 @@ public partial class OrderItem
 
     public int SortOrder { get; set; }
 
+    public decimal? OriginalPrice { get; set; }
+
+    public string? PromoLabel { get; set; }
+
     public virtual Promotion? BundlePromotion { get; set; }
 
     public virtual ICollection<OrderItem> InverseParentOrderItem { get; set; } = new List<OrderItem>();

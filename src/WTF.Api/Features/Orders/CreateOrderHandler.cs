@@ -305,9 +305,10 @@ public class CreateOrderHandler(
             var item = request.Items[itemIndex];
             var product = await db.Products.FindAsync([item.ProductId], cancellationToken) ?? throw new InvalidOperationException($"Product with ID {item.ProductId} not found.");
             var basePrice = product.Price;
-            var discountedPrice = shouldCapturePrice
+            var appliedDiscount = shouldCapturePrice
                 ? GetDiscountedUnitPrice(basePrice, item, discountedRulesByProductId)
                 : null;
+            var discountedPrice = appliedDiscount?.Price;
             var addOnPrices = new List<(OrderItemRequestDto AddOn, decimal Price)>();
             foreach (var addOn in item.AddOns)
             {
@@ -343,6 +344,8 @@ public class CreateOrderHandler(
             if (shouldCapturePrice)
             {
                 orderItem.Price = discountedPrice ?? basePrice;
+                orderItem.OriginalPrice = basePrice;
+                orderItem.PromoLabel = appliedDiscount?.Label;
             }
 
             db.OrderItems.Add(orderItem);
@@ -403,7 +406,9 @@ public class CreateOrderHandler(
                         child.BundlePromotionId
                     )).ToList(),
                 oi.SpecialInstructions,
-                oi.BundlePromotionId
+                oi.BundlePromotionId,
+                oi.OriginalPrice,
+                oi.PromoLabel
             ))
             .ToListAsync(cancellationToken);
 
@@ -527,7 +532,9 @@ public class CreateOrderHandler(
         decimal? PercentOff,
         List<(Guid AddOnProductId, int Quantity)> RequiredAddOns);
 
-    private static decimal? GetDiscountedUnitPrice(
+    private sealed record AppliedDiscount(decimal Price, string? Label);
+
+    private static AppliedDiscount? GetDiscountedUnitPrice(
         decimal basePrice,
         OrderItemRequestDto item,
         Dictionary<Guid, List<DiscountedRule>> rulesByProductId)
@@ -541,7 +548,7 @@ public class CreateOrderHandler(
             .GroupBy(x => x.ProductId)
             .ToDictionary(x => x.Key, x => x.Sum(y => y.Quantity));
 
-        var best = (decimal?)null;
+        AppliedDiscount? best = null;
         foreach (var rule in rules)
         {
             if (!SatisfiesExactAddOns(addOnMap, rule.RequiredAddOns))
@@ -555,9 +562,11 @@ public class CreateOrderHandler(
                 continue;
             }
 
-            if (!best.HasValue || discounted.Value < best.Value)
+            if (best is null || discounted.Value < best.Price)
             {
-                best = discounted.Value;
+                best = new AppliedDiscount(
+                    discounted.Value,
+                    PromotionLabelFormatter.Format(rule.FixedPrice, rule.PercentOff));
             }
         }
 

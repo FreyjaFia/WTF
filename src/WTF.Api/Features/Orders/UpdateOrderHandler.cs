@@ -287,6 +287,7 @@ public class UpdateOrderHandler(
             OrderItemRequestDto Item,
             Product Product,
             decimal? DiscountedPrice,
+            AppliedDiscount? AppliedDiscount,
             List<(OrderItemRequestDto AddOn, decimal Price)> AddOnPrices)>();
 
         for (var itemIndex = 0; itemIndex < request.Items.Count; itemIndex++)
@@ -294,9 +295,10 @@ public class UpdateOrderHandler(
             var item = request.Items[itemIndex];
             var product = await db.Products.FindAsync([item.ProductId], cancellationToken) ?? throw new InvalidOperationException($"Product with ID {item.ProductId} not found.");
             var basePrice = product.Price;
-            var discountedPrice = shouldCapturePrice
+            var appliedDiscount = shouldCapturePrice
                 ? GetDiscountedUnitPrice(basePrice, item, discountedRulesByProductId)
                 : null;
+            var discountedPrice = appliedDiscount?.Price;
             var addOnPrices = new List<(OrderItemRequestDto AddOn, decimal Price)>();
             foreach (var addOn in item.AddOns)
             {
@@ -316,7 +318,7 @@ public class UpdateOrderHandler(
                 throw new InvalidOperationException($"The final unit price for '{product.Name}' cannot be negative.");
             }
 
-            pricedItems.Add((item, product, discountedPrice, addOnPrices));
+            pricedItems.Add((item, product, discountedPrice, appliedDiscount, addOnPrices));
         }
 
         var oldValues = new
@@ -355,7 +357,7 @@ public class UpdateOrderHandler(
 
         for (var itemIndex = 0; itemIndex < pricedItems.Count; itemIndex++)
         {
-            var (item, product, discountedPrice, addOnPrices) = pricedItems[itemIndex];
+            var (item, product, discountedPrice, appliedDiscount, addOnPrices) = pricedItems[itemIndex];
             var newItem = new OrderItem
             {
                 Id = Guid.NewGuid(),
@@ -373,6 +375,8 @@ public class UpdateOrderHandler(
             if (shouldCapturePrice)
             {
                 newItem.Price = discountedPrice ?? product.Price;
+                newItem.OriginalPrice = product.Price;
+                newItem.PromoLabel = appliedDiscount?.Label;
             }
 
             db.OrderItems.Add(newItem);
@@ -431,7 +435,9 @@ public class UpdateOrderHandler(
                         child.BundlePromotionId
                     )).ToList(),
                 oi.SpecialInstructions,
-                oi.BundlePromotionId
+                oi.BundlePromotionId,
+                oi.OriginalPrice,
+                oi.PromoLabel
             ))
             .ToListAsync(cancellationToken);
 
@@ -562,7 +568,9 @@ public class UpdateOrderHandler(
         decimal? PercentOff,
         List<(Guid AddOnProductId, int Quantity)> RequiredAddOns);
 
-    private static decimal? GetDiscountedUnitPrice(
+    private sealed record AppliedDiscount(decimal Price, string? Label);
+
+    private static AppliedDiscount? GetDiscountedUnitPrice(
         decimal basePrice,
         OrderItemRequestDto item,
         Dictionary<Guid, List<DiscountedRule>> rulesByProductId)
@@ -576,7 +584,7 @@ public class UpdateOrderHandler(
             .GroupBy(x => x.ProductId)
             .ToDictionary(x => x.Key, x => x.Sum(y => y.Quantity));
 
-        var best = (decimal?)null;
+        AppliedDiscount? best = null;
         foreach (var rule in rules)
         {
             if (!SatisfiesExactAddOns(addOnMap, rule.RequiredAddOns))
@@ -590,9 +598,11 @@ public class UpdateOrderHandler(
                 continue;
             }
 
-            if (!best.HasValue || discounted.Value < best.Value)
+            if (best is null || discounted.Value < best.Price)
             {
-                best = discounted.Value;
+                best = new AppliedDiscount(
+                    discounted.Value,
+                    PromotionLabelFormatter.Format(rule.FixedPrice, rule.PercentOff));
             }
         }
 

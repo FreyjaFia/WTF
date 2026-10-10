@@ -129,7 +129,9 @@ public sealed class GetPagedOrdersHandler(WTFDbContext db)
                         oi.Price ?? oi.Product.Price,
                         addOns,
                         oi.SpecialInstructions,
-                        oi.BundlePromotionId);
+                        oi.BundlePromotionId,
+                        oi.OriginalPrice,
+                        oi.PromoLabel);
                 })
                 .ToList();
 

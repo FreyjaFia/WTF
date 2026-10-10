@@ -474,7 +474,9 @@ public partial class WTFDbContext : DbContext
             entity.HasIndex(e => e.ProductId, "IX_OrderItems_ProductId");
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
+            entity.Property(e => e.OriginalPrice).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.Price).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.PromoLabel).HasMaxLength(100);
             entity.Property(e => e.Quantity).HasDefaultValue(1);
             entity.Property(e => e.SpecialInstructions)
                 .HasMaxLength(100)

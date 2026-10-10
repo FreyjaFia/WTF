@@ -33,6 +33,10 @@ export interface OrderItemDto {
   addOns: OrderItemDto[];
   specialInstructions?: string | null;
   bundlePromotionId?: string | null;
+  /** Unit price before a discounted-product promotion; null for orders saved before it was captured. */
+  originalPrice?: number | null;
+  /** Label of the promotion applied to the line when its price was saved. */
+  promoLabel?: string | null;
 }
 
 export interface OrderBundlePromotionDto {

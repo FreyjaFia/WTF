@@ -83,7 +83,9 @@ public class GetOrderByIdHandler(WTFDbContext db) : IRequestHandler<GetOrderById
                     oi.Price ?? oi.Product.Price,
                     addOns,
                     oi.SpecialInstructions,
-                    oi.BundlePromotionId
+                    oi.BundlePromotionId,
+                    oi.OriginalPrice,
+                    oi.PromoLabel
                 );
             })
             .ToList();
