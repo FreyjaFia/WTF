@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
 import { AuthLoadingService, AuthService, ConnectivityService, ImageCacheService } from '@core/services';
 import { appVersion } from '@environments/version';
@@ -20,6 +20,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
   protected readonly routes = AppRoutes;
   private readonly connectivity = inject(ConnectivityService);
   private readonly imageCache = inject(ImageCacheService);
+  private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly authLoading = inject(AuthLoadingService);
 
   protected imageUrl: string | null = null;
@@ -114,6 +115,8 @@ export class HeaderComponent implements OnInit, OnDestroy {
     this.userFullName = `${firstName ?? ''} ${lastName ?? ''}`.trim() || 'User';
     this.userRoleLabel = this.authService.getCurrentRoleLabel();
     this.imageUrl = imgUrl ? await this.imageCache.resolveUrl(imgUrl) : null;
+    // The app is zoneless and these are plain fields, so tell Angular the view changed.
+    this.changeDetector.markForCheck();
   }
 
   private closeDropdownFocus(): void {

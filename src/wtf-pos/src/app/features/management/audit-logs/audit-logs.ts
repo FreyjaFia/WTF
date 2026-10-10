@@ -210,6 +210,9 @@ export class AuditLogsComponent implements OnInit {
       next: (blob) => {
         void this.fileDownload
           .saveBlob(blob, this.buildExportFileName(extension), contentType, 'audit-logs')
+          .catch((err: unknown) => {
+            this.alertService.error(err instanceof Error ? err.message : 'Failed to save the file.');
+          })
           .finally(() => busy.set(false));
       },
       error: (err) => {

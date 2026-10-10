@@ -152,7 +152,7 @@
                     <div>
                       <p class="mb-1 text-xs font-medium text-gray-400">Discount Type</p>
                       <p class="text-sm font-semibold text-gray-800">
-                        @if (getDiscountedPrimaryItem()?.fixedPrice != null) {
+                        @if ((getDiscountedPrimaryItem()?.fixedPrice ?? null) !== null) {
                           Fixed Price
                         } @else {
                           Percent Off

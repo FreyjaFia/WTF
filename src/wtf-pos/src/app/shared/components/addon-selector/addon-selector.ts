@@ -263,7 +263,7 @@ export class AddonSelectorComponent {
     this.isLoading.set(true);
 
     const groups = customGroups ?? this.catalogCache.getAddOnsForProduct(productId);
-    const deduped = groups
+    const deduped = [...groups]
       .sort((a, b) => ADD_ON_TYPE_ORDER[a.type] - ADD_ON_TYPE_ORDER[b.type])
       .map((g) => ({
         ...g,
