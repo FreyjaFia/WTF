@@ -4,12 +4,13 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/ro
 import { AuthLoadingService, AuthService, ConnectivityService, ImageCacheService } from '@core/services';
 import { appVersion } from '@environments/version';
 import { AvatarComponent } from '@shared/components/avatar/avatar';
+import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import { IconComponent } from '@shared/components/icons/icon/icon';
 import { AppRoutes } from '@shared/constants/app-routes';
 
 @Component({
   selector: 'app-sidebar',
-  imports: [CommonModule, RouterLink, RouterLinkActive, AvatarComponent, IconComponent],
+  imports: [CommonModule, RouterLink, RouterLinkActive, AvatarComponent, IconComponent, ConfirmDialogComponent],
   templateUrl: './sidebar.html',
 })
 export class SidebarComponent implements OnInit, OnDestroy {

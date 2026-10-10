@@ -9,13 +9,13 @@ import {
   OfflineOrderService,
 } from '@core/services';
 import { appVersion } from '@environments/version';
-import { IconComponent } from '@shared/components';
+import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { finalize, timeout } from 'rxjs/operators';
 
 @Component({
   selector: 'app-login',
-  imports: [ReactiveFormsModule, IconComponent],
+  imports: [ReactiveFormsModule, ConfirmDialogComponent],
   templateUrl: './login.html',
 })
 export class Login implements OnInit, OnDestroy {
