@@ -11,8 +11,8 @@ namespace WTF.Api.Features.Reports;
 
 public sealed record GetProductSalesReportQuery : IRequest<List<ProductSalesReportRowDto>>
 {
-    public DateTime FromDate { get; init; }
-    public DateTime ToDate { get; init; }
+    public DateTime? FromDate { get; init; }
+    public DateTime? ToDate { get; init; }
     public int? CategoryId { get; init; }
     public int? SubCategoryId { get; init; }
 }
@@ -31,7 +31,7 @@ public sealed class GetProductSalesReportHandler(
     public async Task<List<ProductSalesReportRowDto>> Handle(GetProductSalesReportQuery request, CancellationToken cancellationToken)
     {
         var timeZone = RequestTimeZone.ResolveFromRequest(httpContextAccessor);
-        var (fromUtc, toExclusiveUtc) = ReportDateRange.ToUtcRange(request.FromDate, request.ToDate, timeZone);
+        var (fromUtc, toExclusiveUtc) = ReportDateRange.ToUtcRange(request.FromDate ?? default, request.ToDate ?? default, timeZone);
         var promotionTypeFilter = ResolvePromotionTypeFilter(request.SubCategoryId);
         var productSubCategoryFilter = ResolveProductSubCategoryFilter(request.SubCategoryId);
 

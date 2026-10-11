@@ -12,9 +12,9 @@ namespace WTF.Api.Features.Reports;
 
 public sealed record GetDailySalesReportQuery : IRequest<List<DailySalesReportRowDto>>
 {
-    public DateTime FromDate { get; init; }
-    public DateTime ToDate { get; init; }
-    public ReportGroupByEnum GroupBy { get; init; } = ReportGroupByEnum.Day;
+    public DateTime? FromDate { get; init; }
+    public DateTime? ToDate { get; init; }
+    public ReportGroupByEnum? GroupBy { get; init; }
 }
 
 public sealed class GetDailySalesReportHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor) : IRequestHandler<GetDailySalesReportQuery, List<DailySalesReportRowDto>>
@@ -22,7 +22,7 @@ public sealed class GetDailySalesReportHandler(WTFDbContext db, IHttpContextAcce
     public async Task<List<DailySalesReportRowDto>> Handle(GetDailySalesReportQuery request, CancellationToken cancellationToken)
     {
         var timeZone = RequestTimeZone.ResolveFromRequest(httpContextAccessor);
-        var (fromUtc, toExclusiveUtc) = ReportDateRange.ToUtcRange(request.FromDate, request.ToDate, timeZone);
+        var (fromUtc, toExclusiveUtc) = ReportDateRange.ToUtcRange(request.FromDate ?? default, request.ToDate ?? default, timeZone);
 
         var orders = await db.Orders
             .AsNoTracking()
@@ -35,7 +35,7 @@ public sealed class GetDailySalesReportHandler(WTFDbContext db, IHttpContextAcce
         var overridePrices = await BuildAddOnOverridePriceLookup(orders, cancellationToken);
 
         return orders
-            .GroupBy(o => ResolvePeriodStart(o.CreatedAt, request.GroupBy, timeZone))
+            .GroupBy(o => ResolvePeriodStart(o.CreatedAt, request.GroupBy ?? ReportGroupByEnum.Day, timeZone))
             .OrderBy(g => g.Key)
             .Select(group =>
             {

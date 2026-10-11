@@ -11,8 +11,8 @@ namespace WTF.Api.Features.Reports;
 
 public sealed record GetStaffPerformanceReportQuery : IRequest<List<StaffPerformanceReportRowDto>>
 {
-    public DateTime FromDate { get; init; }
-    public DateTime ToDate { get; init; }
+    public DateTime? FromDate { get; init; }
+    public DateTime? ToDate { get; init; }
     public Guid? StaffId { get; init; }
 }
 
@@ -23,7 +23,7 @@ public sealed class GetStaffPerformanceReportHandler(
     public async Task<List<StaffPerformanceReportRowDto>> Handle(GetStaffPerformanceReportQuery request, CancellationToken cancellationToken)
     {
         var timeZone = RequestTimeZone.ResolveFromRequest(httpContextAccessor);
-        var (fromUtc, toExclusiveUtc) = ReportDateRange.ToUtcRange(request.FromDate, request.ToDate, timeZone);
+        var (fromUtc, toExclusiveUtc) = ReportDateRange.ToUtcRange(request.FromDate ?? default, request.ToDate ?? default, timeZone);
 
         var query = db.Orders
             .AsNoTracking()

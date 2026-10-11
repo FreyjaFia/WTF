@@ -9,6 +9,15 @@ export const AppRoles = {
 
 export type AppRole = (typeof AppRoles)[keyof typeof AppRoles];
 
+/**
+ * Who may see each area of the UI (menus, management screens, buttons).
+ *
+ * These are intentionally NOT a copy of the API policies in WTF.Api AppAuthorizationExtensions: the API
+ * is the wider, authoritative rule. For example Cashiers may read products and customers through the API
+ * (the POS needs the catalog and customer picker) but have no products or customers management screens,
+ * so they are absent from ProductsRead and CustomersRead here. A UI group must never grant a role the
+ * API denies; app-roles.spec.ts enforces that.
+ */
 export const AppRoleGroups = {
   DashboardRead: [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer],
   ProductsRead: [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer],

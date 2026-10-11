@@ -11,8 +11,8 @@ namespace WTF.Api.Features.Reports;
 
 public sealed record GetPaymentsReportQuery : IRequest<List<PaymentsReportRowDto>>
 {
-    public DateTime FromDate { get; init; }
-    public DateTime ToDate { get; init; }
+    public DateTime? FromDate { get; init; }
+    public DateTime? ToDate { get; init; }
 }
 
 public sealed class GetPaymentsReportHandler(
@@ -22,7 +22,7 @@ public sealed class GetPaymentsReportHandler(
     public async Task<List<PaymentsReportRowDto>> Handle(GetPaymentsReportQuery request, CancellationToken cancellationToken)
     {
         var timeZone = RequestTimeZone.ResolveFromRequest(httpContextAccessor);
-        var (fromUtc, toExclusiveUtc) = ReportDateRange.ToUtcRange(request.FromDate, request.ToDate, timeZone);
+        var (fromUtc, toExclusiveUtc) = ReportDateRange.ToUtcRange(request.FromDate ?? default, request.ToDate ?? default, timeZone);
 
         var orders = await db.Orders
             .AsNoTracking()

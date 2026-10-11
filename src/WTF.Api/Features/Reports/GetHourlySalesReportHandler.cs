@@ -11,8 +11,8 @@ namespace WTF.Api.Features.Reports;
 
 public sealed record GetHourlySalesReportQuery : IRequest<List<HourlySalesReportRowDto>>
 {
-    public DateTime FromDate { get; init; }
-    public DateTime ToDate { get; init; }
+    public DateTime? FromDate { get; init; }
+    public DateTime? ToDate { get; init; }
 }
 
 public sealed class GetHourlySalesReportHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor) : IRequestHandler<GetHourlySalesReportQuery, List<HourlySalesReportRowDto>>
@@ -20,7 +20,7 @@ public sealed class GetHourlySalesReportHandler(WTFDbContext db, IHttpContextAcc
     public async Task<List<HourlySalesReportRowDto>> Handle(GetHourlySalesReportQuery request, CancellationToken cancellationToken)
     {
         var timeZone = RequestTimeZone.ResolveFromRequest(httpContextAccessor);
-        var (fromUtc, toExclusiveUtc) = ReportDateRange.ToUtcRange(request.FromDate, request.ToDate, timeZone);
+        var (fromUtc, toExclusiveUtc) = ReportDateRange.ToUtcRange(request.FromDate ?? default, request.ToDate ?? default, timeZone);
 
         var orders = await db.Orders
             .AsNoTracking()

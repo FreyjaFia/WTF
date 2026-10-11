@@ -24,7 +24,11 @@ public static class ReportEndpoints
                     return validationResult;
                 }
 
-                if (!Enum.IsDefined(query.GroupBy))
+                var fromDate = query.FromDate!.Value;
+                var toDate = query.ToDate!.Value;
+
+                var groupBy = query.GroupBy ?? ReportGroupByEnum.Day;
+                if (!Enum.IsDefined(groupBy))
                 {
                     return Results.BadRequest($"groupBy must be one of: {nameof(ReportGroupByEnum.Day)}, {nameof(ReportGroupByEnum.Week)}, {nameof(ReportGroupByEnum.Month)}.");
                 }
@@ -33,10 +37,10 @@ public static class ReportEndpoints
                 return BuildReportResponse(
                     httpContext,
                     result,
-                    BuildRangeExportFileName("Daily Sales Summary", query.FromDate, query.ToDate, "xlsx"),
-                    BuildRangeExportFileName("Daily Sales Summary", query.FromDate, query.ToDate, "pdf"),
-                    rows => BuildDailySalesExcelDocument(rows, query.FromDate, query.ToDate, query.GroupBy),
-                    rows => BuildDailySalesPdfDocument(rows, query.FromDate, query.ToDate, query.GroupBy));
+                    BuildRangeExportFileName("Daily Sales Summary", fromDate, toDate, "xlsx"),
+                    BuildRangeExportFileName("Daily Sales Summary", fromDate, toDate, "pdf"),
+                    rows => BuildDailySalesExcelDocument(rows, fromDate, toDate, groupBy),
+                    rows => BuildDailySalesPdfDocument(rows, fromDate, toDate, groupBy));
             });
 
         reportsGroup.MapGet("/product-sales",
@@ -48,14 +52,17 @@ public static class ReportEndpoints
                     return validationResult;
                 }
 
+                var fromDate = query.FromDate!.Value;
+                var toDate = query.ToDate!.Value;
+
                 var result = await sender.Send(query);
                 return BuildReportResponse(
                     httpContext,
                     result,
-                    BuildRangeExportFileName("Product Sales Breakdown", query.FromDate, query.ToDate, "xlsx"),
-                    BuildRangeExportFileName("Product Sales Breakdown", query.FromDate, query.ToDate, "pdf"),
-                    rows => BuildProductSalesExcelDocument(rows, query.FromDate, query.ToDate),
-                    rows => BuildProductSalesPdfDocument(rows, query.FromDate, query.ToDate));
+                    BuildRangeExportFileName("Product Sales Breakdown", fromDate, toDate, "xlsx"),
+                    BuildRangeExportFileName("Product Sales Breakdown", fromDate, toDate, "pdf"),
+                    rows => BuildProductSalesExcelDocument(rows, fromDate, toDate),
+                    rows => BuildProductSalesPdfDocument(rows, fromDate, toDate));
             });
 
         reportsGroup.MapGet("/payments",
@@ -67,14 +74,17 @@ public static class ReportEndpoints
                     return validationResult;
                 }
 
+                var fromDate = query.FromDate!.Value;
+                var toDate = query.ToDate!.Value;
+
                 var result = await sender.Send(query);
                 return BuildReportResponse(
                     httpContext,
                     result,
-                    BuildRangeExportFileName("Payment Method Breakdown", query.FromDate, query.ToDate, "xlsx"),
-                    BuildRangeExportFileName("Payment Method Breakdown", query.FromDate, query.ToDate, "pdf"),
-                    rows => BuildPaymentsExcelDocument(rows, query.FromDate, query.ToDate),
-                    rows => BuildPaymentsPdfDocument(rows, query.FromDate, query.ToDate));
+                    BuildRangeExportFileName("Payment Method Breakdown", fromDate, toDate, "xlsx"),
+                    BuildRangeExportFileName("Payment Method Breakdown", fromDate, toDate, "pdf"),
+                    rows => BuildPaymentsExcelDocument(rows, fromDate, toDate),
+                    rows => BuildPaymentsPdfDocument(rows, fromDate, toDate));
             });
 
         reportsGroup.MapGet("/hourly",
@@ -86,14 +96,17 @@ public static class ReportEndpoints
                     return validationResult;
                 }
 
+                var fromDate = query.FromDate!.Value;
+                var toDate = query.ToDate!.Value;
+
                 var result = await sender.Send(query);
                 return BuildReportResponse(
                     httpContext,
                     result,
-                    BuildRangeExportFileName("Hourly Sales Distribution", query.FromDate, query.ToDate, "xlsx"),
-                    BuildRangeExportFileName("Hourly Sales Distribution", query.FromDate, query.ToDate, "pdf"),
-                    rows => BuildHourlySalesExcelDocument(rows, query.FromDate, query.ToDate),
-                    rows => BuildHourlySalesPdfDocument(rows, query.FromDate, query.ToDate));
+                    BuildRangeExportFileName("Hourly Sales Distribution", fromDate, toDate, "xlsx"),
+                    BuildRangeExportFileName("Hourly Sales Distribution", fromDate, toDate, "pdf"),
+                    rows => BuildHourlySalesExcelDocument(rows, fromDate, toDate),
+                    rows => BuildHourlySalesPdfDocument(rows, fromDate, toDate));
             });
 
         reportsGroup.MapGet("/staff",
@@ -105,14 +118,17 @@ public static class ReportEndpoints
                     return validationResult;
                 }
 
+                var fromDate = query.FromDate!.Value;
+                var toDate = query.ToDate!.Value;
+
                 var result = await sender.Send(query);
                 return BuildReportResponse(
                     httpContext,
                     result,
-                    BuildRangeExportFileName("Staff Performance", query.FromDate, query.ToDate, "xlsx"),
-                    BuildRangeExportFileName("Staff Performance", query.FromDate, query.ToDate, "pdf"),
-                    rows => BuildStaffPerformanceExcelDocument(rows, query.FromDate, query.ToDate),
-                    rows => BuildStaffPerformancePdfDocument(rows, query.FromDate, query.ToDate));
+                    BuildRangeExportFileName("Staff Performance", fromDate, toDate, "xlsx"),
+                    BuildRangeExportFileName("Staff Performance", fromDate, toDate, "pdf"),
+                    rows => BuildStaffPerformanceExcelDocument(rows, fromDate, toDate),
+                    rows => BuildStaffPerformancePdfDocument(rows, fromDate, toDate));
             });
 
         reportsGroup.MapGet("/monthly-workbook/status",
@@ -230,14 +246,14 @@ public static class ReportEndpoints
             summary);
     }
 
-    private static IResult? ValidateDateRange(DateTime fromDate, DateTime toDate)
+    private static IResult? ValidateDateRange(DateTime? fromDate, DateTime? toDate)
     {
-        if (fromDate == default || toDate == default)
+        if (fromDate is null || toDate is null || fromDate == default(DateTime) || toDate == default(DateTime))
         {
             return Results.BadRequest("fromDate and toDate are required.");
         }
 
-        if (toDate.Date < fromDate.Date)
+        if (toDate.Value.Date < fromDate.Value.Date)
         {
             return Results.BadRequest("toDate must be greater than or equal to fromDate.");
         }
