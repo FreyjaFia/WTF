@@ -11,8 +11,10 @@ public static class UrlExtensions
             return null;
         }
 
-        // If already absolute, return as-is
-        if (Uri.TryCreate(imageUrl, UriKind.Absolute, out _))
+        // If already absolute, return as-is. Restrict to http(s): a rooted path like
+        // "/images/a.png" parses as an absolute file URI on some platforms.
+        if (Uri.TryCreate(imageUrl, UriKind.Absolute, out var absolute)
+            && (absolute.Scheme == Uri.UriSchemeHttp || absolute.Scheme == Uri.UriSchemeHttps))
         {
             return imageUrl;
         }
