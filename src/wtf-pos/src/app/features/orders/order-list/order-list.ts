@@ -1,4 +1,6 @@
 import { CommonModule, DatePipe } from '@angular/common';
+import { FilterButtonComponent } from '@shared/components/filter-button/filter-button';
+import { selectedFilterCount } from '@shared/utils/filter-count';
 import {
   Component,
   computed,
@@ -15,6 +17,7 @@ import { Router, RouterLink } from '@angular/router';
 import { Capacitor } from '@capacitor/core';
 import {
   AlertService,
+  AuthService,
   ConnectivityService,
   ListStateService,
   OfflineOrderService,
@@ -25,13 +28,14 @@ import {
   BadgeComponent,
   IconComponent,
   PullToRefreshComponent,
+  RejectOrderDialogComponent,
   SearchInputComponent,
   SideDrawerComponent,
   type FilterOption,
 } from '@shared/components';
 import { AppRoutes } from '@shared/constants/app-routes';
 import type { CartItemDto } from '@shared/models';
-import { OrderDto, OrderStatusEnum } from '@shared/models';
+import { FulfillmentTypeEnum, OrderDto, OrderStatusEnum, PaymentMethodEnum } from '@shared/models';
 import { debounceTime, Subscription } from 'rxjs';
 
 type SortColumn = 'orderNumber' | 'date' | 'totalAmount';
@@ -54,6 +58,7 @@ interface OrderGroup {
 @Component({
   selector: 'app-order-list',
   imports: [
+    FilterButtonComponent,
     CommonModule,
     DatePipe,
     ReactiveFormsModule,
@@ -62,6 +67,7 @@ interface OrderGroup {
     SideDrawerComponent,
     BadgeComponent,
     PullToRefreshComponent,
+    RejectOrderDialogComponent,
     SearchInputComponent,
   ],
   templateUrl: './order-list.html',
@@ -75,6 +81,7 @@ export class OrderList implements OnInit, OnDestroy {
   private readonly listState = inject(ListStateService);
   private readonly connectivity = inject(ConnectivityService);
   private readonly signalRService = inject(SignalRService);
+  private readonly authService = inject(AuthService);
   protected readonly offlineOrderService = inject(OfflineOrderService);
   protected readonly isOnline = this.connectivity.isOnline;
   protected readonly routes = AppRoutes;
@@ -84,6 +91,12 @@ export class OrderList implements OnInit, OnDestroy {
   });
 
   protected readonly orders = signal<OrderDto[]>([]);
+  /** Orders customers placed through their link, waiting for staff to accept or reject them. Oldest first. */
+  protected readonly awaitingOrders = signal<OrderDto[]>([]);
+  /** The waiting order an accept or reject request is running for. */
+  protected readonly decidingOrderId = signal<string | null>(null);
+  protected readonly orderToReject = signal<OrderDto | null>(null);
+  protected readonly canDecideOrders = computed(() => this.authService.canWriteOrders());
   protected readonly ordersCache = signal<OrderDto[]>([]);
   protected readonly isLoading = signal(false);
   protected readonly isLoadingMore = signal(false);
@@ -229,6 +242,7 @@ export class OrderList implements OnInit, OnDestroy {
     const selected = this.selectedDateRanges()[0];
     return selected ? [selected] : [];
   });
+  protected readonly PaymentMethodEnum = PaymentMethodEnum;
   protected readonly hasMoreOrders = computed(() => this.ordersCache().length < this.totalCount());
 
   public ngOnInit(): void {
@@ -260,6 +274,7 @@ export class OrderList implements OnInit, OnDestroy {
     this.totalCount.set(0);
     this.ordersCache.set([]);
     this.orders.set([]);
+    this.loadAwaitingOrders();
 
     this.orderService
       .getOrdersPaged({
@@ -440,6 +455,13 @@ export class OrderList implements OnInit, OnDestroy {
     this.saveState();
   }
 
+  /** How many filters are applied, shown on the Filters button. */
+  protected readonly activeFilterCount = computed(
+    () =>
+      selectedFilterCount(this.selectedStatuses().length, this.filterOptions().length) +
+      (this.selectedDateRanges().length > 0 ? 1 : 0),
+  );
+
   protected openFilters(): void {
     this.isFiltersOpen.set(true);
   }
@@ -473,7 +495,7 @@ export class OrderList implements OnInit, OnDestroy {
 
   protected getStatusVariant(
     status: OrderStatusEnum,
-  ): 'success' | 'error' | 'warning' | 'info' | 'default' {
+  ): 'success' | 'error' | 'warning' | 'info' | 'amber' | 'default' {
     switch (status) {
       case OrderStatusEnum.Pending:
         return 'warning';
@@ -483,6 +505,8 @@ export class OrderList implements OnInit, OnDestroy {
         return 'default';
       case OrderStatusEnum.Refunded:
         return 'error';
+      case OrderStatusEnum.PendingApproval:
+        return 'amber';
       default:
         return 'info';
     }
@@ -490,6 +514,8 @@ export class OrderList implements OnInit, OnDestroy {
 
   protected getStatusLabel(status: OrderStatusEnum): string {
     switch (status) {
+      case OrderStatusEnum.PendingApproval:
+        return 'Awaiting approval';
       case OrderStatusEnum.Pending:
         return 'Pending';
       case OrderStatusEnum.Completed:
@@ -561,7 +587,7 @@ export class OrderList implements OnInit, OnDestroy {
       return;
     }
 
-    this.offlineOrderService.syncAll();
+    void this.offlineOrderService.syncNow();
   }
 
   protected getPendingItemCount(cartSnapshot: CartItemDto[]): string {
@@ -682,29 +708,145 @@ export class OrderList implements OnInit, OnDestroy {
 
     this.orderService.getOrder(orderId).subscribe({
       next: (order) => {
-        const existingIndex = this.ordersCache().findIndex((item) => item.id === orderId);
-        if (existingIndex >= 0) {
-          const updated = [...this.ordersCache()];
-          updated[existingIndex] = order;
-          this.ordersCache.set(updated);
-          this.applyFiltersToCache();
+        // An order waiting for approval belongs in the banner, never in the normal list.
+        if (order.status === OrderStatusEnum.PendingApproval) {
+          this.upsertAwaiting(order);
           return;
         }
 
-        if (!this.matchesSearchTerm(order)) {
-          return;
-        }
-
-        this.ordersCache.set([order, ...this.ordersCache()]);
-        if (!this.filterForm.controls.searchTerm.value?.trim()) {
-          this.totalCount.set(this.totalCount() + 1);
-        }
-        this.applyFiltersToCache();
+        this.removeAwaiting(order.id);
+        this.mergeIntoList(order);
       },
       error: () => {
         // Silent fail for background updates.
       },
     });
+  }
+
+  /** Puts an order that changed (or was just accepted or rejected) into the normal list. */
+  private mergeIntoList(order: OrderDto): void {
+    const existingIndex = this.ordersCache().findIndex((item) => item.id === order.id);
+    if (existingIndex >= 0) {
+      const updated = [...this.ordersCache()];
+      updated[existingIndex] = order;
+      this.ordersCache.set(updated);
+      this.applyFiltersToCache();
+      return;
+    }
+
+    if (!this.matchesSearchTerm(order)) {
+      return;
+    }
+
+    this.ordersCache.set([order, ...this.ordersCache()]);
+    if (!this.filterForm.controls.searchTerm.value?.trim()) {
+      this.totalCount.set(this.totalCount() + 1);
+    }
+    this.applyFiltersToCache();
+  }
+
+  // --- orders waiting for approval ---
+
+  protected loadAwaitingOrders(): void {
+    if (!this.connectivity.isOnline()) {
+      return;
+    }
+
+    this.orderService.getAwaitingOrders().subscribe({
+      next: (orders) => this.awaitingOrders.set(this.oldestFirst(orders)),
+      error: () => {
+        // The banner is a background extra; the main list reports its own errors.
+      },
+    });
+  }
+
+  private oldestFirst(orders: OrderDto[]): OrderDto[] {
+    return [...orders].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  }
+
+  private upsertAwaiting(order: OrderDto): void {
+    const rest = this.awaitingOrders().filter((o) => o.id !== order.id);
+    this.awaitingOrders.set(this.oldestFirst([...rest, order]));
+  }
+
+  private removeAwaiting(orderId: string): void {
+    if (this.awaitingOrders().some((o) => o.id === orderId)) {
+      this.awaitingOrders.set(this.awaitingOrders().filter((o) => o.id !== orderId));
+    }
+  }
+
+  protected approveAwaiting(order: OrderDto): void {
+    if (this.decidingOrderId() || !this.canDecideOrders()) {
+      return;
+    }
+
+    this.decidingOrderId.set(order.id);
+    this.orderService.approveOrder(order.id).subscribe({
+      next: (updated) => {
+        this.decidingOrderId.set(null);
+        this.removeAwaiting(order.id);
+        this.mergeIntoList(updated);
+        this.alertService.success(`Order #${order.orderNumber} accepted.`);
+      },
+      error: (err) => {
+        this.decidingOrderId.set(null);
+        this.alertService.error(err.message);
+        // Someone else may already have answered it: show what is really waiting now.
+        this.loadAwaitingOrders();
+      },
+    });
+  }
+
+  protected askRejectAwaiting(order: OrderDto): void {
+    if (this.decidingOrderId() || !this.canDecideOrders()) {
+      return;
+    }
+
+    this.orderToReject.set(order);
+  }
+
+  protected cancelRejectAwaiting(): void {
+    if (this.decidingOrderId()) {
+      return;
+    }
+
+    this.orderToReject.set(null);
+  }
+
+  protected confirmRejectAwaiting(reason: string): void {
+    const order = this.orderToReject();
+    if (!order || this.decidingOrderId() || !this.canDecideOrders()) {
+      return;
+    }
+
+    this.decidingOrderId.set(order.id);
+    this.orderService.rejectOrder(order.id, reason).subscribe({
+      next: (updated) => {
+        this.decidingOrderId.set(null);
+        this.orderToReject.set(null);
+        this.removeAwaiting(order.id);
+        this.mergeIntoList(updated);
+        this.alertService.success(`Order #${order.orderNumber} rejected.`);
+      },
+      error: (err) => {
+        this.decidingOrderId.set(null);
+        this.orderToReject.set(null);
+        this.alertService.error(err.message);
+        this.loadAwaitingOrders();
+      },
+    });
+  }
+
+  protected openAwaitingOrder(order: OrderDto): void {
+    this.router.navigateByUrl(AppRoutes.OrderDetailsById(order.id));
+  }
+
+  protected awaitingItemsSummary(order: OrderDto): string {
+    return order.items.map((item) => `${item.quantity}x ${item.productName}`).join(', ');
+  }
+
+  protected isDelivery(order: OrderDto): boolean {
+    return order.fulfillmentType === FulfillmentTypeEnum.Delivery;
   }
 
   private matchesSearchTerm(order: OrderDto): boolean {

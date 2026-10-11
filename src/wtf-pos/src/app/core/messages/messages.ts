@@ -44,6 +44,7 @@ export const ServiceErrorMessages = {
     LoadFailed: 'Failed to load the menu. Please try again.',
     LoadOrdersFailed: 'Failed to load your orders. Please try again.',
     TooManyRequests: 'Too many requests. Please wait a moment and try again.',
+    PlaceOrderFailed: 'Failed to place your order. Please try again.',
   },
   OrderLink: {
     FetchLinksFailed: 'Failed to fetch ordering links. Please try again later.',
@@ -67,6 +68,12 @@ export const ServiceErrorMessages = {
     UpdateOrderFailed: 'Failed to update order. Please try again later.',
     VoidOrderFailed: 'Failed to void order. Please try again later.',
     OverrideOrderFailed: 'Failed to override order. Please try again later.',
+    ApproveOrderFailed: 'Failed to accept the order. Please try again later.',
+    RejectOrderFailed: 'Failed to reject the order. Please try again later.',
+    OrderNotWaiting: 'This order is no longer waiting for approval.',
+    MarkReadyFailed: 'Failed to mark the order ready. Please try again later.',
+    OrderCannotBeMarkedReady: 'This order cannot be marked ready.',
+    RejectReasonRequired: 'Please enter a reason for rejecting the order.',
   },
   Product: {
     ProductNotFound: 'Product not found.',

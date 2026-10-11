@@ -12,7 +12,7 @@ import {
   UpdateOrderCommand,
 } from '@shared/models';
 import { Observable, throwError } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { catchError, map } from 'rxjs/operators';
 import { extractHttpErrorMessage } from './http-error-message';
 
 @Injectable({ providedIn: 'root' })
@@ -32,6 +32,12 @@ export class OrderService {
   private static readonly MSG_VOID_ORDER_FAILED = ServiceErrorMessages.Order.VoidOrderFailed;
   private static readonly MSG_OVERRIDE_ORDER_FAILED =
     ServiceErrorMessages.Order.OverrideOrderFailed;
+  private static readonly MSG_APPROVE_ORDER_FAILED = ServiceErrorMessages.Order.ApproveOrderFailed;
+  private static readonly MSG_REJECT_ORDER_FAILED = ServiceErrorMessages.Order.RejectOrderFailed;
+  private static readonly MSG_ORDER_NOT_WAITING = ServiceErrorMessages.Order.OrderNotWaiting;
+  private static readonly MSG_MARK_READY_FAILED = ServiceErrorMessages.Order.MarkReadyFailed;
+  private static readonly MSG_CANNOT_MARK_READY =
+    ServiceErrorMessages.Order.OrderCannotBeMarkedReady;
 
   private readonly http = inject(HttpClient);
   private readonly connectivity = inject(ConnectivityService);
@@ -106,6 +112,15 @@ export class OrderService {
         );
       }),
     );
+  }
+
+  /** Orders customers placed through their link that are waiting for staff to accept or reject them. */
+  public getAwaitingOrders(): Observable<OrderDto[]> {
+    return this.getOrdersPaged({
+      status: OrderStatusEnum.PendingApproval,
+      page: 1,
+      pageSize: 50,
+    }).pipe(map((result) => result.items));
   }
 
   public getActiveOrders(query?: { customerId?: string | null }): Observable<OrderDto[]> {
@@ -234,6 +249,60 @@ export class OrderService {
               this.getErrorMessage(error, OrderService.MSG_VOID_ORDER_FAILED, {
                 notFound: OrderService.MSG_ORDER_NOT_FOUND,
                 badRequest: OrderService.MSG_ORDER_CANNOT_BE_VOIDED,
+              }),
+            ),
+        );
+      }),
+    );
+  }
+
+  /** Accepts an order a customer placed through their link: it joins the normal flow as Pending. */
+  public approveOrder(id: string): Observable<OrderDto> {
+    return this.http.post<OrderDto>(`${this.baseUrl}/${id}/approve`, {}).pipe(
+      catchError((error: HttpErrorResponse) => {
+        console.error('Error approving order:', error);
+        return throwError(
+          () =>
+            new Error(
+              this.getErrorMessage(error, OrderService.MSG_APPROVE_ORDER_FAILED, {
+                notFound: OrderService.MSG_ORDER_NOT_FOUND,
+                badRequest: OrderService.MSG_ORDER_NOT_WAITING,
+              }),
+            ),
+        );
+      }),
+    );
+  }
+
+  /** An accepted customer order is ready for pickup or delivery; the customer sees it on their order. */
+  public markOrderReady(id: string): Observable<OrderDto> {
+    return this.http.post<OrderDto>(`${this.baseUrl}/${id}/ready`, {}).pipe(
+      catchError((error: HttpErrorResponse) => {
+        console.error('Error marking order ready:', error);
+        return throwError(
+          () =>
+            new Error(
+              this.getErrorMessage(error, OrderService.MSG_MARK_READY_FAILED, {
+                notFound: OrderService.MSG_ORDER_NOT_FOUND,
+                badRequest: OrderService.MSG_CANNOT_MARK_READY,
+              }),
+            ),
+        );
+      }),
+    );
+  }
+
+  /** Turns an order down. The reason is required and is shown to the customer. */
+  public rejectOrder(id: string, reason: string): Observable<OrderDto> {
+    return this.http.post<OrderDto>(`${this.baseUrl}/${id}/reject`, { reason }).pipe(
+      catchError((error: HttpErrorResponse) => {
+        console.error('Error rejecting order:', error);
+        return throwError(
+          () =>
+            new Error(
+              this.getErrorMessage(error, OrderService.MSG_REJECT_ORDER_FAILED, {
+                notFound: OrderService.MSG_ORDER_NOT_FOUND,
+                badRequest: OrderService.MSG_ORDER_NOT_WAITING,
               }),
             ),
         );

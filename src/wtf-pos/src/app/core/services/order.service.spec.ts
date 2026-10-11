@@ -99,6 +99,114 @@ describe('OrderService', () => {
     expect(http.expectOne(`${base}/5/void`).request.body).toEqual({ note: null });
   });
 
+  describe('orders waiting for approval', () => {
+    it('lists them with the PendingApproval status and returns just the orders', () => {
+      const { service, http } = setupHttpService(OrderService);
+      const result = capture(service.getAwaitingOrders());
+
+      const req = http.expectOne((r) => r.url === `${base}/paged`);
+      expect(req.request.params.get('status')).toBe(String(OrderStatusEnum.PendingApproval));
+      expect(req.request.params.get('page')).toBe('1');
+      expect(req.request.params.get('pageSize')).toBe('50');
+      req.flush({ items: [{ id: 'o1' }, { id: 'o2' }], page: 1, pageSize: 50, totalCount: 2 });
+
+      expect(result.value).toEqual([{ id: 'o1' }, { id: 'o2' }]);
+    });
+
+    it('accepts an order with a POST to approve', () => {
+      const { service, http } = setupHttpService(OrderService);
+      const result = capture(service.approveOrder('7'));
+
+      const req = http.expectOne(`${base}/7/approve`);
+      expect(req.request.method).toBe('POST');
+      req.flush({ id: '7', status: OrderStatusEnum.Pending });
+
+      expect(result.value).toMatchObject({ id: '7', status: OrderStatusEnum.Pending });
+    });
+
+    it('marks an order ready with a POST to ready', () => {
+      const { service, http } = setupHttpService(OrderService);
+      const result = capture(service.markOrderReady('9'));
+
+      const req = http.expectOne(`${base}/9/ready`);
+      expect(req.request.method).toBe('POST');
+      req.flush({ id: '9', readyAt: '2026-10-12T10:00:00Z' });
+
+      expect(result.value).toMatchObject({ id: '9', readyAt: '2026-10-12T10:00:00Z' });
+    });
+
+    it('says why marking ready failed', () => {
+      const { service, http } = setupHttpService(OrderService);
+      const server = capture(service.markOrderReady('1'));
+      failWith(http.expectOne(`${base}/1/ready`), 400, { message: 'This order is already marked ready.' });
+      const bad = capture(service.markOrderReady('1'));
+      failWith(http.expectOne(`${base}/1/ready`), 400);
+      const missing = capture(service.markOrderReady('1'));
+      failWith(http.expectOne(`${base}/1/ready`), 404);
+      const other = capture(service.markOrderReady('1'));
+      failWith(http.expectOne(`${base}/1/ready`), 500);
+
+      expect(server.error).toBe('This order is already marked ready.');
+      expect(bad.error).toBe(msgs.OrderCannotBeMarkedReady);
+      expect(missing.error).toBe(msgs.OrderNotFound);
+      expect(other.error).toBe(msgs.MarkReadyFailed);
+    });
+
+    it('rejects an order with a POST to reject carrying the reason', () => {
+      const { service, http } = setupHttpService(OrderService);
+      service.rejectOrder('8', 'Out of stock').subscribe();
+
+      const req = http.expectOne(`${base}/8/reject`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({ reason: 'Out of stock' });
+    });
+
+    it('prefers the server message', () => {
+      const { service, http } = setupHttpService(OrderService);
+      const approve = capture(service.approveOrder('1'));
+      failWith(http.expectOne(`${base}/1/approve`), 400, {
+        message: 'Only orders waiting for approval can be accepted.',
+      });
+      const reject = capture(service.rejectOrder('1', 'x'));
+      failWith(http.expectOne(`${base}/1/reject`), 400, { message: 'A reason is required to reject an order.' });
+
+      expect(approve.error).toBe('Only orders waiting for approval can be accepted.');
+      expect(reject.error).toBe('A reason is required to reject an order.');
+    });
+
+    it('maps 400 and 404 without a server message', () => {
+      const { service, http } = setupHttpService(OrderService);
+      const approve400 = capture(service.approveOrder('1'));
+      failWith(http.expectOne(`${base}/1/approve`), 400);
+      const reject400 = capture(service.rejectOrder('1', 'x'));
+      failWith(http.expectOne(`${base}/1/reject`), 400);
+      const approve404 = capture(service.approveOrder('1'));
+      failWith(http.expectOne(`${base}/1/approve`), 404);
+      const reject404 = capture(service.rejectOrder('1', 'x'));
+      failWith(http.expectOne(`${base}/1/reject`), 404);
+
+      expect(approve400.error).toBe(msgs.OrderNotWaiting);
+      expect(reject400.error).toBe(msgs.OrderNotWaiting);
+      expect(approve404.error).toBe(msgs.OrderNotFound);
+      expect(reject404.error).toBe(msgs.OrderNotFound);
+    });
+
+    it('falls back to a plain message for other failures and handles a lost connection', () => {
+      const { service, http, connectivity } = setupHttpService(OrderService);
+      const approve = capture(service.approveOrder('1'));
+      failWith(http.expectOne(`${base}/1/approve`), 500);
+      const reject = capture(service.rejectOrder('1', 'x'));
+      failWith(http.expectOne(`${base}/1/reject`), 500);
+      const offline = capture(service.approveOrder('1'));
+      failNetwork(http.expectOne(`${base}/1/approve`));
+
+      expect(approve.error).toBe(msgs.ApproveOrderFailed);
+      expect(reject.error).toBe(msgs.RejectOrderFailed);
+      expect(offline.error).toBe(HttpErrorMessages.NetworkUnavailable);
+      expect(connectivity.checkNow).toHaveBeenCalled();
+    });
+  });
+
   describe('error mapping', () => {
     it('network loss re-checks connectivity', () => {
       const { service, http, connectivity } = setupHttpService(OrderService);

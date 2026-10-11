@@ -169,21 +169,26 @@
                     }
                   </figure>
                   <div class="card-body flex flex-1 flex-col justify-between p-4">
-                    <h2
-                      class="card-title text-base leading-snug font-semibold wrap-break-word text-gray-800"
-                    >
-                      <span>
-                        @for (part of getNameParts(p.name); track $index) {
-                          @if (part.isMatch) {
-                            <mark class="rounded bg-amber-100 px-0.5 text-gray-900">{{
-                              part.text
-                            }}</mark>
-                          } @else {
-                            <span>{{ part.text }}</span>
+                    <div>
+                      <h2
+                        class="card-title text-base leading-snug font-semibold wrap-break-word text-gray-800"
+                      >
+                        <span>
+                          @for (part of getNameParts(p.name); track $index) {
+                            @if (part.isMatch) {
+                              <mark class="rounded bg-amber-100 px-0.5 text-gray-900">{{
+                                part.text
+                              }}</mark>
+                            } @else {
+                              <span>{{ part.text }}</span>
+                            }
                           }
-                        }
-                      </span>
-                    </h2>
+                        </span>
+                      </h2>
+                      @if (p.description) {
+                        <p class="mt-1 line-clamp-2 text-xs text-gray-500">{{ p.description }}</p>
+                      }
+                    </div>
                     <div class="card-actions mt-auto items-center justify-between">
                       <div class="text-lg font-bold text-black">
                         <span class="text-base opacity-70"
@@ -312,7 +317,7 @@
       <button
         type="button"
         data-custom-button
-        class="absolute inset-x-4 bottom-4 z-30 flex cursor-pointer items-center justify-between rounded-2xl border-0 bg-[#047857] px-5 py-3.5 text-white shadow-xl transition-all active:scale-[0.98] xl:hidden"
+        class="absolute inset-x-0 bottom-4 z-30 flex cursor-pointer items-center justify-between rounded-2xl border-0 bg-[#047857] px-5 py-3.5 text-white shadow-xl transition-all active:scale-[0.98] xl:hidden"
         (click)="openMobileCart()"
       >
         <div class="flex items-center gap-3">
@@ -908,6 +913,28 @@
                     }}
                   </button>
                 </div>
+                @if (canMarkReady()) {
+                  <button
+                    type="button"
+                    class="app-btn app-btn-secondary app-btn-md w-full"
+                    data-mark-ready
+                    (click)="markReady()"
+                    [disabled]="isMarkingReady() || isOrderRequestBusy()"
+                  >
+                    @if (isMarkingReady()) {
+                      <span class="loading loading-spinner loading-xs mr-2"></span>
+                    }
+                    Mark {{ readyLabel().toLowerCase() }}
+                  </button>
+                } @else if (isEditMode() && currentOrder()?.readyAt) {
+                  <p
+                    class="rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-800"
+                    data-ready-note
+                  >
+                    Marked {{ readyLabel().toLowerCase() }} at
+                    {{ currentOrder()!.readyAt | date: 'h:mm a' }}.
+                  </p>
+                }
                 @if (isOfflineEditMode()) {
                   <button
                     type="button"
@@ -971,10 +998,7 @@
 </div>
 
 <app-checkout-modal
-  [cartItems]="checkoutCartItems()"
   [totalPrice]="totalPrice()"
-  [selectedCustomerName]="selectedCustomerName()"
-  [orderSpecialInstructions]="orderSpecialInstructions()"
   [isBusy]="isSavingOrder()"
   [busyLabel]="isEditMode() ? 'Updating Order...' : 'Saving Order...'"
   (orderConfirmed)="onOrderConfirmed($event)"

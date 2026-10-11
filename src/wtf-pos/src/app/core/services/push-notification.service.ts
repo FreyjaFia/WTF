@@ -18,6 +18,9 @@ import { HuaweiPush } from './huawei-push.plugin';
 
 type PushPlatform = 'web' | 'android' | 'huawei';
 
+/** The `type` the API sends for an order a customer placed through their link (it waits for approval). */
+export const PUSH_TYPE_ONLINE_ORDER = 'online-order';
+
 @Injectable({ providedIn: 'root' })
 export class PushNotificationService implements OnDestroy {
   private readonly http = inject(HttpClient);
@@ -126,10 +129,7 @@ export class PushNotificationService implements OnDestroy {
         }
 
         const data = payload.data || {};
-        const orderId = data['orderId'];
-        const path =
-          data['path'] ||
-          (orderId ? AppRoutes.OrderEditorById(String(orderId)) : AppRoutes.OrdersList);
+        const path = this.resolveOrderPath(data, AppRoutes.OrderEditorById);
         const targetUrl = new URL(path, window.location.origin).toString();
 
         const systemNotification = new Notification(notification.title, {
@@ -217,10 +217,9 @@ export class PushNotificationService implements OnDestroy {
       PushNotifications.addListener('pushNotificationActionPerformed', (event) => {
         const data = this.extractNotificationData(event.notification?.data);
         const path =
-          data['path'] ??
-          (data['orderId']
-            ? AppRoutes.OrderDetailsById(String(data['orderId']))
-            : '');
+          data['type'] === PUSH_TYPE_ONLINE_ORDER || data['orderId']
+            ? this.resolveOrderPath(data, AppRoutes.OrderDetailsById)
+            : (data['path'] ?? '');
         if (path) {
           void this.navigateToPath(path);
         }
@@ -270,10 +269,7 @@ export class PushNotificationService implements OnDestroy {
     }
 
     const data = notification.data || {};
-    const orderId = data['orderId'];
-    const path =
-      data['path'] ||
-      (orderId ? AppRoutes.OrderDetailsById(String(orderId)) : AppRoutes.OrdersList);
+    const path = this.resolveOrderPath(data, AppRoutes.OrderDetailsById);
     const id = Math.floor(Math.random() * 1_000_000);
 
     await LocalNotifications.schedule({
@@ -288,6 +284,24 @@ export class PushNotificationService implements OnDestroy {
         },
       ],
     });
+  }
+
+  /**
+   * Where tapping a notification goes. An order a customer placed through their link waits for approval and cannot be
+   * opened in the order editor, so those always open the orders list (where the Awaiting approval banner is), even if
+   * a payload names the editor or only an order id. Everything else keeps its explicit path, then its order, then the list.
+   */
+  private resolveOrderPath(
+    data: Record<string, string>,
+    pathForOrder: (orderId: string) => string,
+  ): string {
+    if (data['type'] === PUSH_TYPE_ONLINE_ORDER) {
+      const path = data['path'];
+      return path && !path.startsWith('/orders/editor') ? path : AppRoutes.OrdersList;
+    }
+
+    const orderId = data['orderId'];
+    return data['path'] || (orderId ? pathForOrder(String(orderId)) : AppRoutes.OrdersList);
   }
 
   private async navigateToPath(path: string): Promise<void> {

@@ -1,0 +1,35 @@
+<app-confirm-dialog
+  icon="icon-error"
+  heading="Reject Order #{{ orderNumber() }}?"
+  confirmLabel="Reject Order"
+  busyLabel="Rejecting..."
+  [isBusy]="isBusy()"
+  (confirmed)="submit()"
+  (cancelled)="cancelled.emit()"
+>
+  The customer will see your reason on their order.
+  <div dialogExtra class="mt-4">
+    <label for="reject-order-reason" class="mb-1 block text-xs font-semibold text-gray-500"
+      >Reason</label
+    >
+    <div class="relative">
+      <textarea
+        id="reject-order-reason"
+        class="textarea textarea-bordered w-full pr-16 outline-transparent"
+        rows="3"
+        placeholder="e.g. Sorry, we are out of stock today."
+        [attr.maxlength]="maxLength"
+        [attr.aria-invalid]="error() ? 'true' : null"
+        [value]="reason()"
+        [disabled]="isBusy()"
+        (input)="onInput($any($event.target).value)"
+      ></textarea>
+      <span class="absolute right-3 bottom-2 text-xs text-gray-400 select-none">
+        {{ reason().length }}/{{ maxLength }}
+      </span>
+    </div>
+    @if (error(); as message) {
+      <p class="mt-1 text-sm text-red-600" role="alert">{{ message }}</p>
+    }
+  </div>
+</app-confirm-dialog>

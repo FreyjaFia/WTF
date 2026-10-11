@@ -1113,8 +1113,10 @@ the tests and checks each phase needs. Paths are relative to the repo root; `app
   reused because it means "open POS order". Unapproved orders must not appear in sales
   totals, the dashboard, reports or the active order list (see "Status audit" below).
 - **Payment:** same methods as the POS (Cash, GCash). For cash the customer enters the amount
-  they will pay (`AmountReceived`), so staff know how much change to prepare. Must be >= total.
-  Tips are hidden on the public page.
+  they will pay (`AmountReceived`), so staff know how much change to prepare. Must be >= total plus the tip.
+  An optional tip for the shop can be entered (cash or GCash); it is sent as `Tips`, stored on the order, and
+  shown to staff and on My orders. The cash amount must cover the total and the tip, and the change is
+  `amount - total - tip`. The tip is not part of the order total.
 - **Fulfillment:** the customer chooses **Pickup** or **Delivery**. Delivery needs an address
   (prefilled from the customer, editable). A contact number is required on every link order
   (customers have no phone field).
@@ -1130,6 +1132,11 @@ the tests and checks each phase needs. Paths are relative to the repo root; `app
   hand-written idempotent scripts in `tools/sql`, then `tools/dbsync.bat` rescaffolds
   `src/WTF.Domain/Entities/*.cs` and `Data/WTFDbContext.cs` (never hand-edit
   `OnModelCreating`, only `OnModelCreatingPartial`).
+- **Revoke is final.** There is no restore / un-revoke button: revoking is the "this link is compromised"
+  action, and restoring would bring the same token back for anyone who still holds it. A revoked link is
+  replaced by generating a new one (the old one stays dead). Disabling ordering for a customer revokes all of
+  their links and re-enabling it does not bring them back. An "extend end date" for expired links is a possible
+  later addition, only while ordering is enabled for the customer.
 - **Out of scope for now:** the customer cancelling or editing an order, bundles on the public
   page, per-customer catalogs or prices, online payment.
 
@@ -1264,6 +1271,17 @@ Other API pieces:
 ### Security checklist
 
 - Tokens: 32 random bytes, never logged, same 404 for every invalid state.
+- **Link state is checked on every call and again at the moment something is finalized.** Every public handler
+  runs `OrderLinkAccess.ResolveAsync` first, which reads `RevokedAt` and `ExpiresAt` (and the customer's
+  active / `AllowOrderingLink` flags) fresh from the database on every request; nothing about a link is
+  cached or trusted from an earlier call. A write must not rely on the check made at the start of the request
+  alone: the submit handler checks the link again immediately before it creates the order (so a link revoked
+  or expired while the customer was filling in checkout, or while the request was being validated, cannot
+  place an order), and any later write (chat message, hub connection) does the same right before it saves.
+  The check compares against the current UTC time, never a client-supplied time.
+- **The page treats any 404 from a public call as "link no longer valid"**: a failed menu refresh, My orders
+  load, order submit or chat send switches to the invalid-link page and keeps nothing on screen, so a revoked
+  link stops working mid-session instead of failing quietly.
 - Rate limits per IP and per token on every public route; separate, tighter limit for chat.
 - Server recalculates prices and promotions (through `CreateOrderHandler`); cap items per order
   and quantity per item; maximum text lengths for address, contact and instructions.
@@ -1412,7 +1430,7 @@ Work items:
 | ----- | -------------------------------------------- | --------- |
 | 1     | Data model, staff endpoints, customer UI     | [Completed] |
 | 2     | Public validation, ordering page, My orders  | [Completed] |
-| 3     | Order submission, approval, staff alerts     | [Planned] |
+| 3     | Order submission, approval, staff alerts     | [Completed] |
 | 4     | Reporting by source and per-link usage       | [Planned] |
 | 5     | Order chat (per order, SignalR both sides)   | [Planned] |
 
@@ -1465,7 +1483,81 @@ Implemented: `OrderLinkAccess` (the shared token check, ordinal token compare), 
   audit fields, My orders only returns this customer's link orders and hides POS orders and other
   customers', status label mapping, service and page specs, `app.routes.spec.ts` still passes.
 
-#### Phase 3 - Order submission, approval, notification
+#### Phase 3 - Order submission, approval, notification [Completed]
+
+Implemented (details; the original plan follows below):
+
+- **Placing an order.** `POST /api/public/order-links/{token}/orders` (`SubmitPublicOrderHandler`) creates the order
+  through the normal `CreateOrderCommand`, so the size/flavor/sauce and add-on rules, inactive products and the
+  rest are checked in the one place that already does it. Server-only fields on the command (`ActorUserId`,
+  `Source`, `OrderLinkId`, `FulfillmentType`, `DeliveryAddress`, `ContactNumber`) are `[JsonIgnore]`, so a
+  signed-in caller cannot set them. The order starts as `PendingApproval` and is owned by the system user
+  `customer-link`. The request carries no prices; the server works the total out from today's catalog (product
+  price plus each add-on at the price set for that product) and requires a cash amount that covers it. Limits:
+  30 lines per order, quantities 1-99 for items and add-ons, 20 different add-ons per item, address 300, contact
+  7-30 characters (digits, spaces, + ( ) -), notes 100, cash amount at most 1,000,000, and at most 5 orders
+  waiting for confirmation per customer. Repeated add-ons are merged. GCash stores no cash amount.
+- **The link is re-checked right before the order is created** (`OrderLinkAccess.IsStillValidAsync`, a fresh
+  yes/no query: EF would otherwise hand back the already-loaded link unchanged). `TimeProvider` is injected so
+  a link expiring mid-request is testable. A link that stopped working returns the same 404 and creates nothing.
+- **Approve / reject.** `POST /api/orders/{id}/approve` and `/reject` (`OrdersWrite`, so Cashier and up). Only
+  `PendingApproval` orders; approve -> `Pending`, reject -> `Cancelled` with a required reason (max 500) stored in
+  `Orders.RejectionReason` and shown to the customer. Both are audited (`OrderApproved` / `OrderRejected`) and
+  tell open screens through SignalR. Revoking a link does not stop staff from answering orders already placed.
+- **Status audit done.** Waiting orders are left out of the normal order lists (`All` and `ExcludeFinalized` both
+  hide them; they come back only for `Status = PendingApproval`), the dashboard's recent orders, void (use reject)
+  and edit (the update handler refuses them and refuses moving any order into the status). Staff cannot create an
+  order as `PendingApproval`. The add-on unlink handlers treat them like pending orders. Reports, the dashboard
+  totals and the monthly workbook already counted only Completed orders, so they needed no change.
+- **Order data for staff.** `OrderDto` now carries `source`, `fulfillmentType`, `deliveryAddress`,
+  `contactNumber` and `rejectionReason`.
+- **Staff alerts.** `SendLinkOrderCreatedAsync` -> "New online order" to every active non-viewer staff member (the
+  system user is the actor, so nobody is excluded), `type = online-order`, `path = /orders/list`. The app routes
+  an `online-order` push to the orders list on every platform and never to the editor.
+- **Staff screens.** Orders list: an "Awaiting approval" banner (oldest first) showing customer, pickup/delivery,
+  items, contact, address, total and the change to prepare, with Accept and Reject (reject asks for a reason in
+  `RejectOrderDialogComponent`); it refreshes over SignalR and a waiting order never appears in the normal list.
+  Order details: an "Online order" box with handover, address, contact, what the customer will pay and the
+  rejection reason, plus Accept / Reject. The editor sends a waiting order to its details page.
+- **Public checkout.** `PublicCheckoutComponent`: pickup or delivery (address prefilled from the customer),
+  contact number, cash (with an "I will pay with" amount, change preview and an exact-amount button) or GCash, and
+  notes. It checks the same rules the server does, then the page sends the cart, clears it and opens My orders,
+  where the order shows as "Waiting for confirmation". A server refusal is shown inside the checkout; an item that
+  is no longer sold also refreshes the menu and cart underneath; a 404 switches to the invalid-link page.
+- **Optional tip.** `SubmitPublicOrderRequest.Tips` (max 100,000, rounded to the cent, never negative, zero is none) is
+  stored in `Orders.Tips` and returned to the customer; the banner and order details show it to staff.
+- **Colored payment states** on the public checkout: the amount box and a status row are gray while no amount is
+  typed (amount due), red as soon as the amount is too small (still needed) and green when it covers it (change to
+  prepare). The logged-in checkout turns its amount box red the same way.
+- **Hold to place the order.** On the public checkout, Place Order only acts when pressed and held for one second
+  (`HoldButtonComponent`: a fill grows across the button, letting go early cancels and shows a reminder; it also
+  works from the keyboard by holding Enter or Space), so an order is never sent by an accidental tap. The form is
+  still checked when the hold completes.
+- **Logged-in checkout modal restyled like the public checkout** (rounded card, header with the total, Cash / GCash
+  as radio buttons, peso icon inside the amount received and tips boxes, an "Exact amount" button, the same footer).
+  The "View Order" order-summary panel was removed from it, and the modal no longer takes the cart, customer name or
+  order note as inputs.
+- **Logged-in order screen:** product cards now show the product description under the name, like the public page.
+- **Real-database tests** (`Database/OrderLinkDatabaseTests`): the link re-check query, the case-insensitive token
+  match, the unique token index, column lengths, the new status row, the full submit and approve/reject flows with
+  every foreign key enforced.
+
+Not done / decided:
+
+- A discounted-product promotion is applied when staff complete the order (as for every pending order), not at
+  submit, so the total a customer sees is the base price total.
+- No push to the customer (they are anonymous); they see the answer on My orders (30 s poll).
+- No "order accepted / rejected" push to other staff (the banner already updates over SignalR).
+
+Original plan:
+
+- **Re-check the link before finalizing.** `SubmitPublicOrderHandler` resolves the link at the start (so a bad
+  link fails fast with the same 404) and checks `RevokedAt`, `ExpiresAt` and the customer flags once more
+  right before it sends the create-order command. If the link is no longer valid at that point it returns the
+  same 404 and creates nothing. Tests: revoked or expired between the first check and the create, ordering
+  disabled mid-request, and a revoked link whose earlier orders still show and are still approved or rejected
+  by staff (revoking a link stops new orders, it does not cancel existing ones).
+- **The checkout switches to the invalid-link page on a 404** from the submit call (and keeps nothing).
 
 - The public page already lets a customer add toppings and extras more than once (a per-add-on quantity, same as the shop's own add-on screen; size, flavor and sauce stay pick-one). The submit request must carry that quantity per add-on (the child order item's `Quantity`, per unit of the parent), validated like any other.
 
@@ -1501,6 +1593,9 @@ approval.
   OrderId FK Orders, SenderType tinyint [Customer|Staff], SenderUserId FK Users null, Body
   nvarchar(1000), CreatedAt datetime2, ReadByStaffAt null, ReadByCustomerAt null)`, index
   `(OrderId, CreatedAt)`. Append-only; then rescaffold.
+- Every customer-side write and the hub connection re-check the link (`RevokedAt`, `ExpiresAt`, customer
+  flags) right before they act, like the order submit does; a revoked link also sends `LinkRevoked` and closes
+  the connection.
 - Rules: only for `Source = CustomerLink` orders; open while `PendingApproval` or `Pending`,
   read-only history after Completed/Cancelled/Refunded; body trimmed, 1-1000 chars, plain text
   only (never render as HTML); tighter `order-chat-policy` rate limit per token and IP.

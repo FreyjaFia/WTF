@@ -3,6 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import {
   AlertService,
+  AuthService,
   ConnectivityService,
   ListStateService,
   OfflineOrderService,
@@ -10,7 +11,14 @@ import {
   SignalRService,
 } from '@core/services';
 import { AppRoutes } from '@shared/constants/app-routes';
-import { CartItemDto, OrderDto, OrderStatusEnum } from '@shared/models';
+import {
+  CartItemDto,
+  FulfillmentTypeEnum,
+  OrderDto,
+  OrderSourceEnum,
+  OrderStatusEnum,
+  PaymentMethodEnum,
+} from '@shared/models';
 import { Observable, Subject, of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { OrderList } from './order-list';
@@ -93,14 +101,27 @@ describe('OrderList', () => {
   let orderService: {
     getOrdersPaged: ReturnType<typeof vi.fn>;
     getOrder: ReturnType<typeof vi.fn>;
+    getAwaitingOrders: ReturnType<typeof vi.fn>;
+    approveOrder: ReturnType<typeof vi.fn>;
+    rejectOrder: ReturnType<typeof vi.fn>;
   };
-  let alert: { error: ReturnType<typeof vi.fn>; getLoadErrorMessage: ReturnType<typeof vi.fn> };
+  let canWrite: boolean;
+  let alert: {
+    error: ReturnType<typeof vi.fn>;
+    success: ReturnType<typeof vi.fn>;
+    getLoadErrorMessage: ReturnType<typeof vi.fn>;
+  };
   let signalR: {
     startDashboardHub: ReturnType<typeof vi.fn>;
     stopDashboardHub: ReturnType<typeof vi.fn>;
     orderUpdated: Observable<string>;
   };
-  let offline: { pendingOrders: unknown; isSyncing: unknown; syncAll: ReturnType<typeof vi.fn> };
+  let offline: {
+    pendingOrders: unknown;
+    isSyncing: unknown;
+    syncAll: ReturnType<typeof vi.fn>;
+    syncNow: ReturnType<typeof vi.fn>;
+  };
   let listState: { load: ReturnType<typeof vi.fn>; save: ReturnType<typeof vi.fn> };
   let router: Router;
 
@@ -137,6 +158,7 @@ describe('OrderList', () => {
         disconnect = vi.fn();
       },
     );
+    canWrite = true;
     isOnline = signal(true);
     pendingOrders = signal<unknown[]>([]);
     isSyncing = signal(false);
@@ -144,19 +166,27 @@ describe('OrderList', () => {
     orderService = {
       getOrdersPaged: vi.fn().mockReturnValue(of(page([]))),
       getOrder: vi.fn(),
+      getAwaitingOrders: vi.fn().mockReturnValue(of([])),
+      approveOrder: vi.fn(),
+      rejectOrder: vi.fn(),
     };
-    alert = { error: vi.fn(), getLoadErrorMessage: vi.fn((e: string) => `Failed ${e}`) };
+    alert = {
+      error: vi.fn(),
+      success: vi.fn(),
+      getLoadErrorMessage: vi.fn((e: string) => `Failed ${e}`),
+    };
     signalR = {
       startDashboardHub: vi.fn(),
       stopDashboardHub: vi.fn(),
       orderUpdated: hubUpdates.asObservable(),
     };
-    offline = { pendingOrders, isSyncing, syncAll: vi.fn() };
+    offline = { pendingOrders, isSyncing, syncAll: vi.fn(), syncNow: vi.fn() };
     listState = { load: vi.fn(), save: vi.fn() };
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
         { provide: OrderService, useValue: orderService },
+        { provide: AuthService, useValue: { canWriteOrders: () => canWrite } },
         { provide: AlertService, useValue: alert },
         { provide: ListStateService, useValue: listState },
         { provide: ConnectivityService, useValue: { isOnline } },
@@ -592,9 +622,16 @@ describe('OrderList', () => {
       });
     });
 
-    it('syncs pending orders unless refreshing', () => {
+    it('syncs pending orders through the Sync Now action, which explains when it cannot run', () => {
       t.syncPendingOrders();
-      expect(offline.syncAll).toHaveBeenCalledTimes(1);
+      expect(offline.syncNow).toHaveBeenCalledTimes(1);
+      expect(offline.syncAll).not.toHaveBeenCalled();
+    });
+
+    it('does not start a sync while the list is refreshing', () => {
+      (t as unknown as { isRefreshing: { set: (v: boolean) => void } }).isRefreshing.set(true);
+      t.syncPendingOrders();
+      expect(offline.syncNow).not.toHaveBeenCalled();
     });
 
     it('computes pending order totals and counts', () => {
@@ -656,6 +693,403 @@ describe('OrderList', () => {
       // One order is overridden, rendered once for the mobile row and once for the desktop column.
       expect(overridden).toHaveLength(2);
       expect(overridden.every((b) => b.querySelector('span')?.classList.contains('bg-amber-50'))).toBe(true);
+    });
+  });
+
+  describe('orders awaiting approval', () => {
+    const waiting = (id: string, over: Partial<OrderDto> = {}): OrderDto =>
+      makeOrder(id, {
+        status: OrderStatusEnum.PendingApproval,
+        customerName: 'Maria Cruz',
+        totalAmount: 360,
+        source: OrderSourceEnum.CustomerLink,
+        fulfillmentType: FulfillmentTypeEnum.Pickup,
+        contactNumber: '0917 123 4567',
+        paymentMethod: PaymentMethodEnum.Cash,
+        amountReceived: 500,
+        changeAmount: 140,
+        items: [
+          {
+            id: 'i1',
+            productId: 'p1',
+            productName: 'Latte',
+            quantity: 2,
+            addOns: [],
+          },
+        ],
+        ...over,
+      });
+
+    const el = () => fixture.nativeElement as HTMLElement;
+    const banner = () => el().querySelector('[data-awaiting-approval]') as HTMLElement | null;
+    const buttons = (label: string) =>
+      [...el().querySelectorAll('button')].filter((b) =>
+        b.textContent?.trim().startsWith(label),
+      ) as HTMLButtonElement[];
+
+    it('loads the waiting orders with the list, oldest first, and shows them in a banner', () => {
+      orderService.getAwaitingOrders.mockReturnValue(
+        of([
+          waiting('o2', { orderNumber: 2, createdAt: '2026-10-11T10:00:00Z' }),
+          waiting('o1', { orderNumber: 1, createdAt: '2026-10-11T09:00:00Z' }),
+        ]),
+      );
+      init();
+
+      expect(orderService.getAwaitingOrders).toHaveBeenCalledTimes(1);
+      expect((t as unknown as { awaitingOrders: () => OrderDto[] }).awaitingOrders().map((o) => o.id)).toEqual(['o1', 'o2']);
+      expect(banner()!.textContent).toContain('Awaiting approval');
+      expect(banner()!.textContent).toContain('#1');
+      expect(banner()!.textContent).toContain('#2');
+    });
+
+    it('shows nothing when no order is waiting', () => {
+      init();
+      expect(banner()).toBeNull();
+    });
+
+    it('shows the customer, how it is handed over, the items, contact, total and the change to prepare', () => {
+      orderService.getAwaitingOrders.mockReturnValue(of([waiting('o1', { orderNumber: 1042 })]));
+      init();
+
+      const text = banner()!.textContent ?? '';
+      expect(text).toContain('#1042');
+      expect(text).toContain('Maria Cruz');
+      expect(text).toContain('Pickup');
+      expect(text).toContain('2x Latte');
+      expect(text).toContain('0917 123 4567');
+      expect(text).toContain('360.00');
+      expect(text).toContain('Cash');
+      expect(text).toContain('prepare change');
+      expect(text).toContain('140.00');
+    });
+
+    it('shows the tip the customer plans to leave', () => {
+      orderService.getAwaitingOrders.mockReturnValue(of([waiting('o1', { tips: 20 })]));
+      init();
+
+      expect(banner()!.textContent).toContain('Tip');
+      expect(banner()!.textContent).toContain('20.00');
+    });
+
+    it('shows no tip when there is none', () => {
+      orderService.getAwaitingOrders.mockReturnValue(of([waiting('o1', { tips: null })]));
+      init();
+
+      expect(banner()!.textContent).not.toContain('Tip');
+    });
+
+    it('shows the address and the notes for a delivery', () => {
+      orderService.getAwaitingOrders.mockReturnValue(
+        of([
+          waiting('o1', {
+            fulfillmentType: FulfillmentTypeEnum.Delivery,
+            deliveryAddress: '5 Side St',
+            specialInstructions: 'No ice',
+            paymentMethod: PaymentMethodEnum.GCash,
+            changeAmount: null,
+          }),
+        ]),
+      );
+      init();
+
+      const text = banner()!.textContent ?? '';
+      expect(text).toContain('Delivery');
+      expect(text).toContain('5 Side St');
+      expect(text).toContain('No ice');
+      expect(text).toContain('GCash');
+      expect(text).not.toContain('prepare change');
+    });
+
+    it('keeps waiting orders out of the normal list and the filter counts', () => {
+      orderService.getAwaitingOrders.mockReturnValue(of([waiting('o9')]));
+      orderService.getOrdersPaged.mockReturnValue(of(page([makeOrder('o1')])));
+      init();
+
+      expect(t.ordersCache().map((o) => o.id)).toEqual(['o1']);
+      expect(t.orders().map((o) => o.id)).toEqual(['o1']);
+    });
+
+    it('tolerates the banner request failing', () => {
+      orderService.getAwaitingOrders.mockReturnValue(throwError(() => new Error('x')));
+      init();
+
+      expect(banner()).toBeNull();
+      expect(alert.error).not.toHaveBeenCalled();
+    });
+
+    it('does not ask for waiting orders while offline', () => {
+      isOnline.set(false);
+      init();
+      expect(orderService.getAwaitingOrders).not.toHaveBeenCalled();
+    });
+
+    it('opens the order details when a waiting order is tapped', () => {
+      const navigate = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
+      orderService.getAwaitingOrders.mockReturnValue(of([waiting('o1')]));
+      init();
+
+      (el().querySelector('[aria-label="Open order 1"]') as HTMLElement).click();
+
+      expect(navigate).toHaveBeenCalledWith(AppRoutes.OrderDetailsById('o1'));
+    });
+
+    describe('accepting', () => {
+      it('accepts the order, takes it off the banner, puts it in the list and says so', () => {
+        orderService.getAwaitingOrders.mockReturnValue(of([waiting('o1', { orderNumber: 7 })]));
+        orderService.approveOrder.mockReturnValue(
+          of(makeOrder('o1', { orderNumber: 7, status: OrderStatusEnum.Pending })),
+        );
+        init();
+
+        buttons('Accept')[0].click();
+        fixture.detectChanges();
+
+        expect(orderService.approveOrder).toHaveBeenCalledWith('o1');
+        expect(banner()).toBeNull();
+        expect(t.ordersCache()[0]).toMatchObject({ id: 'o1', status: OrderStatusEnum.Pending });
+        expect(alert.success).toHaveBeenCalledWith('Order #7 accepted.');
+      });
+
+      it('blocks both buttons while the answer is being sent', () => {
+        orderService.getAwaitingOrders.mockReturnValue(of([waiting('o1')]));
+        orderService.approveOrder.mockReturnValue(new Subject());
+        init();
+
+        buttons('Accept')[0].click();
+        fixture.detectChanges();
+
+        expect(el().textContent).toContain('Accepting...');
+        expect(buttons('Reject')[0].disabled).toBe(true);
+        expect(buttons('Accepting')[0].disabled).toBe(true);
+        buttons('Accepting')[0].click();
+        expect(orderService.approveOrder).toHaveBeenCalledTimes(1);
+      });
+
+      it('shows the error and refreshes the banner when it cannot be accepted', () => {
+        orderService.getAwaitingOrders.mockReturnValue(of([waiting('o1')]));
+        orderService.approveOrder.mockReturnValue(
+          throwError(() => new Error('This order is no longer waiting for approval.')),
+        );
+        init();
+        orderService.getAwaitingOrders.mockClear();
+        orderService.getAwaitingOrders.mockReturnValue(of([]));
+
+        buttons('Accept')[0].click();
+        fixture.detectChanges();
+
+        expect(alert.error).toHaveBeenCalledWith('This order is no longer waiting for approval.');
+        expect(orderService.getAwaitingOrders).toHaveBeenCalledTimes(1);
+        expect(banner()).toBeNull();
+      });
+    });
+
+    describe('rejecting', () => {
+      const start = () => {
+        orderService.getAwaitingOrders.mockReturnValue(of([waiting('o1', { orderNumber: 7 })]));
+        init();
+        buttons('Reject')[0].click();
+        fixture.detectChanges();
+      };
+      const dialog = () => el().querySelector('app-reject-order-dialog') as HTMLElement | null;
+      const typeReason = (value: string) => {
+        const area = dialog()!.querySelector('textarea') as HTMLTextAreaElement;
+        area.value = value;
+        area.dispatchEvent(new Event('input'));
+        fixture.detectChanges();
+      };
+      const confirm = () =>
+        ([...dialog()!.querySelectorAll('button')].find((b) =>
+          b.textContent?.includes('Reject Order'),
+        ) as HTMLButtonElement).click();
+
+      it('asks for a reason first and sends nothing until there is one', () => {
+        start();
+
+        expect(dialog()).not.toBeNull();
+        expect(dialog()!.textContent).toContain('Reject Order #7?');
+        confirm();
+        fixture.detectChanges();
+
+        expect(orderService.rejectOrder).not.toHaveBeenCalled();
+        expect(dialog()!.textContent).toContain('Please enter a reason');
+      });
+
+      it('rejects with the reason, takes the order off the banner, files it as cancelled and says so', () => {
+        orderService.rejectOrder.mockReturnValue(
+          of(makeOrder('o1', { orderNumber: 7, status: OrderStatusEnum.Cancelled, rejectionReason: 'Closed' })),
+        );
+        start();
+
+        typeReason('Closed');
+        confirm();
+        fixture.detectChanges();
+
+        expect(orderService.rejectOrder).toHaveBeenCalledWith('o1', 'Closed');
+        expect(dialog()).toBeNull();
+        expect(banner()).toBeNull();
+        expect(t.ordersCache()[0]).toMatchObject({ id: 'o1', status: OrderStatusEnum.Cancelled });
+        expect(alert.success).toHaveBeenCalledWith('Order #7 rejected.');
+      });
+
+      it('can be cancelled without rejecting', () => {
+        start();
+        ([...dialog()!.querySelectorAll('button')].find((b) =>
+          b.textContent?.includes('Cancel'),
+        ) as HTMLButtonElement).click();
+        fixture.detectChanges();
+
+        expect(dialog()).toBeNull();
+        expect(orderService.rejectOrder).not.toHaveBeenCalled();
+        expect(banner()).not.toBeNull();
+      });
+
+      it('shows the error, closes the dialog and refreshes the banner when it fails', () => {
+        orderService.rejectOrder.mockReturnValue(throwError(() => new Error('nope')));
+        start();
+        orderService.getAwaitingOrders.mockClear();
+        orderService.getAwaitingOrders.mockReturnValue(of([]));
+
+        typeReason('Closed');
+        confirm();
+        fixture.detectChanges();
+
+        expect(alert.error).toHaveBeenCalledWith('nope');
+        expect(dialog()).toBeNull();
+        expect(orderService.getAwaitingOrders).toHaveBeenCalledTimes(1);
+      });
+
+      it('cannot be cancelled or repeated while the answer is being sent', () => {
+        orderService.rejectOrder.mockReturnValue(new Subject());
+        start();
+        typeReason('Closed');
+        confirm();
+        fixture.detectChanges();
+
+        const internals = t as unknown as {
+          cancelRejectAwaiting: () => void;
+          confirmRejectAwaiting: (reason: string) => void;
+        };
+        internals.cancelRejectAwaiting();
+        internals.confirmRejectAwaiting('Closed');
+
+        expect(dialog()).not.toBeNull();
+        expect(orderService.rejectOrder).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    describe('without permission to answer orders', () => {
+      it('shows the waiting orders but no Accept or Reject buttons', () => {
+        canWrite = false;
+        orderService.getAwaitingOrders.mockReturnValue(of([waiting('o1')]));
+        TestBed.resetTestingModule();
+        TestBed.configureTestingModule({
+          providers: [
+            provideRouter([]),
+            { provide: OrderService, useValue: orderService },
+            { provide: AuthService, useValue: { canWriteOrders: () => false } },
+            { provide: AlertService, useValue: alert },
+            { provide: ListStateService, useValue: listState },
+            { provide: ConnectivityService, useValue: { isOnline } },
+            { provide: SignalRService, useValue: signalR },
+            { provide: OfflineOrderService, useValue: offline },
+          ],
+        });
+        init();
+
+        expect(banner()).not.toBeNull();
+        expect(buttons('Accept').length).toBe(0);
+        expect(buttons('Reject').length).toBe(0);
+        (t as unknown as { approveAwaiting: (o: OrderDto) => void }).approveAwaiting(waiting('o1'));
+        expect(orderService.approveOrder).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('live updates', () => {
+      it('adds a new waiting order to the banner and not to the normal list', () => {
+        init();
+        orderService.getOrder.mockReturnValue(of(waiting('o5', { orderNumber: 5 })));
+
+        hubUpdates.next('o5');
+        fixture.detectChanges();
+
+        expect(banner()!.textContent).toContain('#5');
+        expect(t.ordersCache().map((o) => o.id)).not.toContain('o5');
+        expect(t.totalCount()).toBe(0);
+      });
+
+      it('updates a waiting order that changed without duplicating it', () => {
+        orderService.getAwaitingOrders.mockReturnValue(of([waiting('o5', { totalAmount: 100 })]));
+        init();
+        orderService.getOrder.mockReturnValue(of(waiting('o5', { totalAmount: 250 })));
+
+        hubUpdates.next('o5');
+        fixture.detectChanges();
+
+        const list = (t as unknown as { awaitingOrders: () => OrderDto[] }).awaitingOrders();
+        expect(list.length).toBe(1);
+        expect(list[0].totalAmount).toBe(250);
+      });
+
+      it('moves an order to the normal list when someone else accepts it', () => {
+        orderService.getAwaitingOrders.mockReturnValue(of([waiting('o5', { orderNumber: 5 })]));
+        init();
+        orderService.getOrder.mockReturnValue(
+          of(makeOrder('o5', { orderNumber: 5, status: OrderStatusEnum.Pending })),
+        );
+
+        hubUpdates.next('o5');
+        fixture.detectChanges();
+
+        expect(banner()).toBeNull();
+        expect(t.ordersCache()[0]).toMatchObject({ id: 'o5', status: OrderStatusEnum.Pending });
+      });
+
+      it('moves an order to the normal list when someone else rejects it', () => {
+        orderService.getAwaitingOrders.mockReturnValue(of([waiting('o5', { orderNumber: 5 })]));
+        init();
+        orderService.getOrder.mockReturnValue(
+          of(makeOrder('o5', { orderNumber: 5, status: OrderStatusEnum.Cancelled })),
+        );
+
+        hubUpdates.next('o5');
+        fixture.detectChanges();
+
+        expect(banner()).toBeNull();
+        expect(t.ordersCache()[0]).toMatchObject({ id: 'o5', status: OrderStatusEnum.Cancelled });
+      });
+    });
+
+    describe('refreshing', () => {
+      it('reloads the waiting orders whenever the list is reloaded', () => {
+        init();
+        orderService.getAwaitingOrders.mockClear();
+
+        t.loadOrders();
+
+        expect(orderService.getAwaitingOrders).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    describe('status badge', () => {
+      it('has its own label and amber color', () => {
+        init();
+        expect(t.getStatusLabel(OrderStatusEnum.PendingApproval)).toBe('Awaiting approval');
+        expect(t.getStatusVariant(OrderStatusEnum.PendingApproval)).toBe('amber');
+      });
+    });
+  });
+  describe('filter count on the Filters button', () => {
+    it('counts the chosen statuses and the date range', () => {
+      init();
+      const count = () => (t as unknown as { activeFilterCount: () => number }).activeFilterCount();
+      expect(count()).toBe(0);
+
+      (t as unknown as { selectedStatuses: { set: (v: unknown) => void } }).selectedStatuses.set([1, 2]);
+      expect(count()).toBe(2);
+
+      (t as unknown as { selectedDateRanges: { set: (v: unknown) => void } }).selectedDateRanges.set(['today']);
+      expect(count()).toBe(3);
     });
   });
 });

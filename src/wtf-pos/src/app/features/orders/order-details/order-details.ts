@@ -15,6 +15,7 @@ import {
   OrderReceiptComponent,
   PullToRefreshComponent,
   ReceiptData,
+  RejectOrderDialogComponent,
 } from '@shared/components';
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import {
@@ -25,7 +26,9 @@ import {
   CartItemDto,
   DiscountedProductItemDto,
   DiscountedProductPromotionDto,
+  FulfillmentTypeEnum,
   OrderDto,
+  OrderSourceEnum,
   OrderStatusEnum,
   PaymentMethodEnum,
   PromotionTypeEnum,
@@ -42,6 +45,7 @@ import { AppRoutes } from '@shared/constants/app-routes';
     PullToRefreshComponent,
     OrderReceiptComponent,
     ConfirmDialogComponent,
+    RejectOrderDialogComponent,
   ],
   templateUrl: './order-details.html',
 })
@@ -79,6 +83,22 @@ export class OrderDetails implements OnInit {
     );
     return nonBundleCount + bundleCount;
   });
+
+  /** Placed by the customer through their ordering link (not by staff at the POS). */
+  protected readonly isOnlineOrder = computed(
+    () => this.order()?.source === OrderSourceEnum.CustomerLink,
+  );
+  protected readonly isAwaitingApproval = computed(
+    () => this.order()?.status === OrderStatusEnum.PendingApproval,
+  );
+  protected readonly canDecide = computed(
+    () => this.isAwaitingApproval() && this.authService.canWriteOrders(),
+  );
+  protected readonly isDeciding = signal(false);
+  protected readonly showRejectDialog = signal(false);
+  protected readonly isDelivery = computed(
+    () => this.order()?.fulfillmentType === FulfillmentTypeEnum.Delivery,
+  );
 
   protected readonly canRefund = computed(() => this.order()?.status === OrderStatusEnum.Completed);
   protected readonly canOverride = computed(
@@ -241,8 +261,10 @@ export class OrderDetails implements OnInit {
 
   protected getStatusVariant(
     status?: OrderStatusEnum | null,
-  ): 'success' | 'error' | 'warning' | 'info' | 'default' {
+  ): 'success' | 'error' | 'warning' | 'info' | 'amber' | 'default' {
     switch (status) {
+      case OrderStatusEnum.PendingApproval:
+        return 'amber';
       case OrderStatusEnum.Pending:
         return 'warning';
       case OrderStatusEnum.Completed:
@@ -258,6 +280,8 @@ export class OrderDetails implements OnInit {
 
   protected getStatusLabel(status?: OrderStatusEnum | null): string {
     switch (status) {
+      case OrderStatusEnum.PendingApproval:
+        return 'Awaiting approval';
       case OrderStatusEnum.Pending:
         return 'Pending';
       case OrderStatusEnum.Completed:
@@ -269,6 +293,65 @@ export class OrderDetails implements OnInit {
       default:
         return 'Unknown';
     }
+  }
+
+  // --- orders waiting for approval ---
+
+  protected approveOrder(): void {
+    const current = this.order();
+    if (!current || this.isDeciding() || !this.canDecide()) {
+      return;
+    }
+
+    this.isDeciding.set(true);
+    this.orderService.approveOrder(current.id).subscribe({
+      next: (updated) => {
+        this.isDeciding.set(false);
+        this.order.set(updated);
+        this.alertService.success(`Order #${current.orderNumber} accepted.`);
+      },
+      error: (err) => {
+        this.isDeciding.set(false);
+        this.alertService.error(err.message);
+        // Someone else may have answered it already: show what the order really is now.
+        this.refresh();
+      },
+    });
+  }
+
+  protected askRejectOrder(): void {
+    if (!this.isDeciding() && this.canDecide()) {
+      this.showRejectDialog.set(true);
+    }
+  }
+
+  protected cancelRejectOrder(): void {
+    if (!this.isDeciding()) {
+      this.showRejectDialog.set(false);
+    }
+  }
+
+  protected confirmRejectOrder(reason: string): void {
+    const current = this.order();
+    if (!current || this.isDeciding() || !this.canDecide()) {
+      return;
+    }
+
+    this.isDeciding.set(true);
+    this.orderService.rejectOrder(current.id, reason).subscribe({
+      next: (updated) => {
+        this.isDeciding.set(false);
+        this.showRejectDialog.set(false);
+        this.order.set(updated);
+        this.alertService.success(`Order #${current.orderNumber} rejected.`);
+      },
+      error: (err) => {
+        this.isDeciding.set(false);
+        this.showRejectDialog.set(false);
+        this.alertService.error(err.message);
+        this.refresh();
+      },
+    });
   }
 
   protected getPaymentMethodLabel(method?: PaymentMethodEnum | null): string {

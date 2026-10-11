@@ -23,6 +23,8 @@ import {
   CustomerDto,
   DiscountedProductPromotionDto,
   OrderDto,
+  FulfillmentTypeEnum,
+  OrderSourceEnum,
   OrderStatusEnum,
   PaymentMethodEnum,
   ProductCategoryEnum,
@@ -49,7 +51,7 @@ interface Editor {
   discountedProductPromotions: Sig<DiscountedProductPromotionDto[]>;
   selectedCustomerId: Sig<string | null>;
   orderSpecialInstructions: Sig<string>;
-  isEditMode: () => boolean;
+  isEditMode: Sig<boolean>;
   isOfflineEditMode: () => boolean;
   isOverrideMode: Sig<boolean>;
   isLoading: () => boolean;
@@ -390,6 +392,7 @@ describe('OrderEditor', () => {
       updateOrder: vi.fn().mockReturnValue(of(order())),
       overrideOrder: vi.fn().mockReturnValue(of(order())),
       voidOrder: vi.fn().mockReturnValue(of(order())),
+      markOrderReady: vi.fn(),
     };
     promotionService = {
       getActiveDiscountedProductPromotions: vi.fn().mockReturnValue(of([])),
@@ -533,6 +536,54 @@ describe('OrderEditor', () => {
         { text: 'te', isMatch: false },
       ]);
       expect(t.getNameParts('Chips')).toEqual([{ text: 'Chips', isMatch: false }]);
+    });
+
+    describe('product cards', () => {
+      const cards = () =>
+        [...(fixture.nativeElement as HTMLElement).querySelectorAll('.card')].filter((c) =>
+          c.className.includes('min-h-60'),
+        ) as HTMLElement[];
+      const cardOf = (name: string) =>
+        cards().find((c) => c.querySelector('h2')?.textContent?.includes(name)) as HTMLElement;
+
+      it('shows the product description under the name, like the public page', async () => {
+        catalog.products.set([
+          { ...P_LATTE, description: 'Espresso with steamed milk' },
+          { ...P_COLA, description: null },
+        ]);
+        await start();
+
+        const latte = cardOf('Latte');
+        expect(latte.textContent).toContain('Espresso with steamed milk');
+        const description = [...latte.querySelectorAll('p')].find((p) =>
+          p.textContent?.includes('Espresso'),
+        ) as HTMLElement;
+        expect(description.className).toContain('line-clamp-2');
+        expect(description.className).toContain('text-xs');
+        expect(description.previousElementSibling!.tagName).toBe('H2');
+      });
+
+      it('keeps the price at the bottom of the card with or without a description', async () => {
+        catalog.products.set([
+          { ...P_LATTE, description: 'Espresso with steamed milk' },
+          { ...P_COLA, description: null },
+        ]);
+        await start();
+
+        for (const name of ['Latte', 'Cola']) {
+          const actions = cardOf(name).querySelector('.card-actions') as HTMLElement;
+          expect(actions.className).toContain('mt-auto');
+          expect(actions.closest('.card-body')!.className).toContain('justify-between');
+        }
+        expect(cardOf('Cola').querySelectorAll('p').length).toBe(0);
+      });
+
+      it('clamps a long description to two lines', async () => {
+        catalog.products.set([{ ...P_LATTE, description: 'word '.repeat(200) }]);
+        await start();
+
+        expect(cardOf('Latte').querySelector('p')!.className).toContain('line-clamp-2');
+      });
     });
 
     it('refreshProducts re-pulls catalog', async () => {
@@ -1441,6 +1492,108 @@ describe('OrderEditor', () => {
       expect(checkoutOpen).toHaveBeenCalledTimes(1);
     });
 
+    it('checkout shows how a customer link order was paid for, so staff do not enter it again', () => {
+      t.isEditMode.set(true);
+      t.currentOrder.set(
+        order({
+          source: OrderSourceEnum.CustomerLink,
+          paymentMethod: PaymentMethodEnum.Cash,
+          amountReceived: 500,
+          tips: 20,
+        }),
+      );
+      t.checkout();
+      expect(checkoutOpen).toHaveBeenCalledWith({
+        paymentMethod: PaymentMethodEnum.Cash,
+        amountReceived: 500,
+        tips: 20,
+      });
+    });
+
+    it('checkout starts empty for an order staff took themselves', () => {
+      t.isEditMode.set(true);
+      t.currentOrder.set(order({ source: OrderSourceEnum.Pos, paymentMethod: PaymentMethodEnum.Cash }));
+      t.checkout();
+      expect(checkoutOpen).toHaveBeenCalledWith(null);
+    });
+
+    describe('marking a customer order ready', () => {
+      const linkOrder = (over: Partial<OrderDto> = {}) =>
+        order({ source: OrderSourceEnum.CustomerLink, status: OrderStatusEnum.Pending, ...over });
+      const markReady = () => (t as unknown as { markReady: () => void }).markReady();
+      const canMarkReady = () => (t as unknown as { canMarkReady: () => boolean }).canMarkReady();
+      const readyLabel = () => (t as unknown as { readyLabel: () => string }).readyLabel();
+
+      it('is offered for an accepted customer order not yet ready', () => {
+        t.isEditMode.set(true);
+        t.currentOrder.set(linkOrder());
+        expect(canMarkReady()).toBe(true);
+      });
+
+      it.each([
+        ['an order the shop took itself', { source: OrderSourceEnum.Pos }],
+        ['an order already marked ready', { readyAt: '2026-10-12T10:00:00Z' }],
+        ['a completed order', { status: OrderStatusEnum.Completed }],
+        ['a cancelled order', { status: OrderStatusEnum.Cancelled }],
+      ])('is not offered for %s', (_name, over) => {
+        t.isEditMode.set(true);
+        t.currentOrder.set(linkOrder(over as Partial<OrderDto>));
+        expect(canMarkReady()).toBe(false);
+      });
+
+      it('is not offered without permission', async () => {
+        canWrite = false;
+        await start();
+        t.isEditMode.set(true);
+        t.currentOrder.set(linkOrder());
+        expect(canMarkReady()).toBe(false);
+      });
+
+      it('is labelled for pickup or for delivery', () => {
+        t.currentOrder.set(linkOrder({ fulfillmentType: FulfillmentTypeEnum.Pickup }));
+        expect(readyLabel()).toBe('Ready for pickup');
+        t.currentOrder.set(linkOrder({ fulfillmentType: FulfillmentTypeEnum.Delivery }));
+        expect(readyLabel()).toBe('Ready for delivery');
+      });
+
+      it('marks it ready, keeps the updated order and tells the staff', () => {
+        t.isEditMode.set(true);
+        t.currentOrder.set(linkOrder({ fulfillmentType: FulfillmentTypeEnum.Delivery }));
+        const updated = linkOrder({
+          fulfillmentType: FulfillmentTypeEnum.Delivery,
+          readyAt: '2026-10-12T10:00:00Z',
+        });
+        orderService['markOrderReady'].mockReturnValue(of(updated));
+
+        markReady();
+
+        expect(orderService['markOrderReady']).toHaveBeenCalledWith('o1');
+        expect(t.currentOrder()).toEqual(updated);
+        expect(canMarkReady()).toBe(false);
+        expect(alert['success']).toHaveBeenCalledWith('Order #5 marked ready for delivery.');
+      });
+
+      it('shows the server message and stays available when it fails', () => {
+        t.isEditMode.set(true);
+        t.currentOrder.set(linkOrder());
+        orderService['markOrderReady'].mockReturnValue(
+          throwError(() => new Error('This order cannot be marked ready.')),
+        );
+
+        markReady();
+
+        expect(alert['error']).toHaveBeenCalledWith('This order cannot be marked ready.');
+        expect(canMarkReady()).toBe(true);
+      });
+
+      it('does nothing when it is not allowed or already running', () => {
+        t.isEditMode.set(true);
+        t.currentOrder.set(linkOrder({ source: OrderSourceEnum.Pos }));
+        markReady();
+        expect(orderService['markOrderReady']).not.toHaveBeenCalled();
+      });
+    });
+
     it('checkout is refused without write permission', async () => {
       canWrite = false;
       await start();
@@ -1559,6 +1712,8 @@ describe('OrderEditor', () => {
       expect(t.getStatusLabel(OrderStatusEnum.Cancelled)).toBe('Cancelled');
       expect(t.getStatusLabel(OrderStatusEnum.Refunded)).toBe('Refunded');
       expect(t.getStatusLabel(null)).toBe('Unknown');
+      expect(t.getStatusLabel(OrderStatusEnum.PendingApproval)).toBe('Awaiting approval');
+      expect(t.getStatusVariant(OrderStatusEnum.PendingApproval)).toBe('amber');
       expect(t.getOrderDateValue(order({ createdAt: '', updatedAt: 'u' }))).toBe('u');
     });
 
@@ -1749,6 +1904,15 @@ describe('OrderEditor', () => {
 
     it('redirects away from completed orders', async () => {
       orderService['getOrder'].mockReturnValue(of(order({ status: OrderStatusEnum.Completed })));
+      await start();
+      expect(nav).toHaveBeenCalledWith(AppRoutes.OrderDetailsById('o1'));
+      expect(t.cart()).toEqual([]);
+    });
+
+    it('never opens an order waiting for approval for editing: it goes to the details page', async () => {
+      orderService['getOrder'].mockReturnValue(
+        of(order({ status: OrderStatusEnum.PendingApproval })),
+      );
       await start();
       expect(nav).toHaveBeenCalledWith(AppRoutes.OrderDetailsById('o1'));
       expect(t.cart()).toEqual([]);

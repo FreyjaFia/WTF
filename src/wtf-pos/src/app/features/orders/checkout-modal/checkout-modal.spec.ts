@@ -1,47 +1,26 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ModalStackService } from '@core/services';
-import {
-  AddOnTypeEnum,
-  CartBundleItemDto,
-  CartItemDto,
-  PaymentMethodEnum,
-  PromotionTypeEnum,
-} from '@shared/models';
+import { PaymentMethodEnum } from '@shared/models';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CheckoutModal } from './checkout-modal';
 
 interface Internals {
   change: () => number;
-  showSummary: () => boolean;
   hasInsufficientCash: () => boolean;
   hasAmountReceivedInput: () => boolean;
   paymentStatusLabel: () => string;
   paymentStatusAmount: () => number;
   isConfirmDisabled: () => boolean;
+  isCash: () => boolean;
   paymentForm: {
-    get: (n: string) => { setValue: (v: unknown) => void };
+    get: (n: string) => { setValue: (v: unknown) => void; value: unknown };
   };
-  toggleSummary: () => void;
   confirmOrder: () => void;
   cancelCheckout: () => void;
   onDialogClosed: () => void;
   onDialogCancel: (e: Event) => void;
-  isBundleLine: (i: CartItemDto) => boolean;
-  getBundleChildTotalQuantity: (l: CartItemDto, c: CartBundleItemDto) => number;
-  getBundleChildDisplayRows: (l: CartItemDto, c: CartBundleItemDto) => number[];
-  getSortedBundleItems: (i: CartItemDto) => CartBundleItemDto[];
-  getGroupedAddOns: (i: CartItemDto) => {
-    addOnId: string;
-    name: string;
-    price: number;
-    quantityPerUnit: number;
-    lineTotal: number;
-  }[];
-  getGroupedBundleItemAddOns: (b: CartBundleItemDto) => {
-    addOnId: string;
-    name: string;
-    quantityPerUnit: number;
-  }[];
+  choosePayment: (m: PaymentMethodEnum) => void;
+  useExactAmount: () => void;
 }
 
 describe('CheckoutModal', () => {
@@ -84,6 +63,28 @@ describe('CheckoutModal', () => {
     expect(t.paymentStatusLabel()).toBe('Amount Due:');
     expect(t.paymentStatusAmount()).toBe(100);
     expect(t.isConfirmDisabled()).toBe(true);
+  });
+
+  it('shows the payment a customer already chose, ready to confirm', () => {
+    cmp.triggerOpen({ paymentMethod: PaymentMethodEnum.Cash, amountReceived: 150, tips: 10 });
+    expect(t.paymentForm.get('paymentMethod').value).toBe(PaymentMethodEnum.Cash);
+    expect(t.paymentForm.get('amountReceived').value).toBe(150);
+    expect(t.paymentForm.get('tips').value).toBe(10);
+    expect(t.change()).toBe(50);
+    expect(t.isConfirmDisabled()).toBe(false);
+  });
+
+  it('shows a cashless payment the customer chose with no amount', () => {
+    cmp.triggerOpen({ paymentMethod: PaymentMethodEnum.GCash, amountReceived: 150, tips: null });
+    expect(t.paymentForm.get('paymentMethod').value).toBe(PaymentMethodEnum.GCash);
+    expect(t.paymentForm.get('amountReceived').value).toBeNull();
+  });
+
+  it('starts empty again after a prefilled opening', () => {
+    cmp.triggerOpen({ paymentMethod: PaymentMethodEnum.Cash, amountReceived: 150, tips: 10 });
+    cmp.triggerOpen();
+    expect(t.paymentForm.get('amountReceived').value).toBeNull();
+    expect(t.paymentForm.get('tips').value).toBeNull();
   });
 
   it('computes change for cash and flags insufficient payment', () => {
@@ -169,25 +170,6 @@ describe('CheckoutModal', () => {
     expect(emitted).toEqual([]);
   });
 
-  it('toggles summary and renders the order summary', () => {
-    setInput('cartItems', [
-      { productId: 'p', name: 'Burger', price: 50, qty: 2, specialInstructions: 'no onion' },
-    ]);
-    setInput('selectedCustomerName', 'Jane');
-    setInput('orderSpecialInstructions', 'rush');
-    t.toggleSummary();
-    fixture.detectChanges();
-    expect(t.showSummary()).toBe(true);
-    const text = fixture.nativeElement.textContent as string;
-    expect(text).toContain('Burger');
-    expect(text).toContain('Jane');
-    expect(text).toContain('no onion');
-    expect(text).toContain('rush');
-    expect(text).toContain('100.00');
-    t.toggleSummary();
-    expect(t.showSummary()).toBe(false);
-  });
-
   it('cancel closes unless busy; removes from stack', () => {
     cmp.triggerOpen();
     t.cancelCheckout();
@@ -232,94 +214,145 @@ describe('CheckoutModal', () => {
     expect(modalStack.hasOpen()).toBe(false);
   });
 
-  describe('helpers', () => {
-    const line = (o: Partial<CartItemDto> = {}): CartItemDto => ({
-      productId: 'p',
-      name: 'x',
-      price: 10,
-      qty: 3,
-      ...o,
-    });
-    const child = (o: Partial<CartBundleItemDto> = {}): CartBundleItemDto => ({
-      productId: 'c',
-      name: 'c',
-      price: 0,
-      qty: 2,
-      ...o,
+  describe('look and feel (same as the public checkout)', () => {
+    const el = () => fixture.nativeElement as HTMLElement;
+    const text = () => el().textContent ?? '';
+    const radio = (label: string) =>
+      [...el().querySelectorAll('[role="radio"]')].find((r) => r.textContent?.trim() === label) as HTMLButtonElement;
+
+    it('is a rounded card with a header showing the total', () => {
+      const box = el().querySelector('.modal-box') as HTMLElement;
+      expect(box.className).toContain('rounded-2xl');
+      expect(box.className).toContain('max-w-lg');
+      expect(box.className).toContain('modal-pop');
+      expect(el().querySelector('h3')!.textContent).toContain('Checkout');
+      expect((el().querySelector('[data-checkout-total]') as HTMLElement).textContent).toContain('100.00');
     });
 
-    it('isBundleLine', () => {
-      expect(t.isBundleLine(line())).toBe(false);
-      expect(t.isBundleLine(line({ bundleItems: [child()] }))).toBe(true);
+    it('shows the total from the input as it changes', () => {
+      setInput('totalPrice', 250.5);
+      expect((el().querySelector('[data-checkout-total]') as HTMLElement).textContent).toContain('250.50');
     });
 
-    it('bundle child quantity: mix&match uses child qty, fixed multiplies by line qty', () => {
-      expect(
-        t.getBundleChildTotalQuantity(
-          line({ bundlePromotionTypeId: PromotionTypeEnum.MixMatch }),
-          child(),
-        ),
-      ).toBe(2);
-      expect(
-        t.getBundleChildTotalQuantity(
-          line({ bundlePromotionTypeId: PromotionTypeEnum.FixedBundle }),
-          child(),
-        ),
-      ).toBe(6);
-      expect(t.getBundleChildTotalQuantity(line({ qty: 0 }), child({ qty: 0 }))).toBe(1);
+    it('no longer has the order summary or a View Order button', () => {
+      expect(text()).not.toContain('Order Summary');
+      expect(text()).not.toContain('View Order');
+      expect(text()).not.toContain('Hide Order');
+      expect(el().querySelector('.modal-box')!.className).not.toContain('max-w-5xl');
     });
 
-    it('display rows follow child qty', () => {
-      expect(t.getBundleChildDisplayRows(line(), child({ qty: 3 }))).toEqual([0, 1, 2]);
-      expect(t.getBundleChildDisplayRows(line(), child({ qty: 0 }))).toEqual([0]);
+    it('offers cash and GCash as radio buttons, cash first and chosen', () => {
+      const radios = [...el().querySelectorAll('[role="radio"]')] as HTMLElement[];
+      expect(radios.map((r) => r.textContent?.trim())).toEqual(['Cash', 'GCash']);
+      expect(radio('Cash').getAttribute('aria-checked')).toBe('true');
+      expect(radio('GCash').getAttribute('aria-checked')).toBe('false');
     });
 
-    it('sorts bundle items ignoring "Nx " prefix and case', () => {
-      const items = [
-        child({ name: '2x Zebra' }),
-        child({ name: 'apple' }),
-        child({ name: '3 x Mango' }),
-      ];
-      expect(t.getSortedBundleItems(line({ bundleItems: items })).map((i) => i.name)).toEqual([
-        'apple',
-        '3 x Mango',
-        '2x Zebra',
-      ]);
-      expect(t.getSortedBundleItems(line())).toEqual([]);
+    it('switches payment method from the buttons and hides the cash fields for GCash', () => {
+      radio('GCash').click();
+      fixture.detectChanges();
+
+      expect(t.paymentForm.get('paymentMethod').value).toBe(PaymentMethodEnum.GCash);
+      expect(radio('GCash').getAttribute('aria-checked')).toBe('true');
+      expect(el().querySelector('#amountReceived')).toBeNull();
+      expect(text()).toContain('The customer pays with GCash.');
+
+      radio('Cash').click();
+      fixture.detectChanges();
+      expect(el().querySelector('#amountReceived')).not.toBeNull();
     });
 
-    it('groups add-ons by id+price, orders by type then name, multiplies by line qty', () => {
-      const res = t.getGroupedAddOns(
-        line({
-          qty: 2,
-          addOns: [
-            { addOnId: 'a', name: 'Cheese', price: 5, addOnType: AddOnTypeEnum.Topping },
-            { addOnId: 'a', name: 'Cheese', price: 5, addOnType: AddOnTypeEnum.Topping },
-            { addOnId: 's', name: 'Large', price: 10, addOnType: AddOnTypeEnum.Size },
-            { addOnId: 'n', name: 'Misc', price: -2 },
-          ],
-        }),
-      );
-      expect(res.map((r) => r.addOnId)).toEqual(['s', 'a', 'n']);
-      expect(res[1]).toMatchObject({ quantityPerUnit: 2, lineTotal: 20 });
-      expect(res[2].lineTotal).toBe(-4);
+    it('does not change the payment method while busy', () => {
+      setInput('isBusy', true);
+      t.choosePayment(PaymentMethodEnum.GCash);
+      expect(t.paymentForm.get('paymentMethod').value).toBe(PaymentMethodEnum.Cash);
     });
 
-    it('groups bundle item add-ons', () => {
-      const res = t.getGroupedBundleItemAddOns(
-        child({
-          addOns: [
-            { addOnId: 'a', name: 'B', price: 0, addOnType: AddOnTypeEnum.Extra },
-            { addOnId: 'a', name: 'B', price: 0, addOnType: AddOnTypeEnum.Extra },
-            { addOnId: 'z', name: 'A', price: 0, addOnType: AddOnTypeEnum.Size },
-          ],
-        }),
-      );
-      expect(res).toEqual([
-        { addOnId: 'z', name: 'A', quantityPerUnit: 1 },
-        { addOnId: 'a', name: 'B', quantityPerUnit: 2 },
-      ]);
-      expect(t.getGroupedBundleItemAddOns(child())).toEqual([]);
+    it('shows the peso icon inside the amount received and tips boxes, above the input', () => {
+      const icons = [...el().querySelectorAll('[data-peso-icon]')] as HTMLElement[];
+
+      expect(icons.length).toBe(2);
+      for (const icon of icons) {
+        expect(icon.querySelector('app-icon')).not.toBeNull();
+        expect(icon.className).toContain('z-10');
+        expect(icon.className).toContain('absolute');
+        expect(icon.className).toContain('pointer-events-none');
+      }
+      expect((el().querySelector('#amountReceived') as HTMLElement).className).toContain('pl-9');
+      expect((el().querySelector('#tips') as HTMLElement).className).toContain('pl-9');
+    });
+
+    it('fills in the exact amount with one tap and enables confirm', () => {
+      cmp.triggerOpen();
+      (([...el().querySelectorAll('button')].find((b) => b.textContent?.trim() === 'Exact amount')) as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect((el().querySelector('#amountReceived') as HTMLInputElement).value).toBe('100');
+      expect(t.change()).toBe(0);
+      expect(t.isConfirmDisabled()).toBe(false);
+    });
+
+    it('has a Exact amount button as tall as the amount box, not a small one', () => {
+      const exact = [...el().querySelectorAll('button')].find(
+        (b) => b.textContent?.trim() === 'Exact amount',
+      ) as HTMLButtonElement;
+
+      expect(exact.className).toContain('app-btn-md');
+      expect(exact.className).not.toContain('app-btn-sm');
+    });
+
+    it('turns the amount box red while the amount is too small, and clears it when it is enough', () => {
+      cmp.triggerOpen();
+      const box = () => el().querySelector('#amountReceived') as HTMLInputElement;
+      expect(box().className).not.toContain('input-error');
+
+      setAmount(60);
+      fixture.detectChanges();
+      expect(box().className).toContain('input-error');
+      expect(box().getAttribute('aria-invalid')).toBe('true');
+
+      setAmount(150);
+      fixture.detectChanges();
+      expect(box().className).not.toContain('input-error');
+      expect(box().getAttribute('aria-invalid')).toBeNull();
+    });
+
+    it('rounds the exact amount to the cent', () => {
+      setInput('totalPrice', 100.456);
+      t.useExactAmount();
+      expect(t.paymentForm.get('amountReceived').value).toBe(100.46);
+    });
+
+    it('does not fill the exact amount while busy', () => {
+      setInput('isBusy', true);
+      t.useExactAmount();
+      expect(t.paymentForm.get('amountReceived').value).toBeNull();
+    });
+
+    it('shows what is due, then the change, then what is still owed', () => {
+      cmp.triggerOpen();
+      fixture.detectChanges();
+      expect(text()).toContain('Amount Due:');
+
+      setAmount(150);
+      fixture.detectChanges();
+      expect(text()).toContain('Change Due:');
+
+      setAmount(60);
+      fixture.detectChanges();
+      expect(text()).toContain('Amount Owed:');
+      expect(el().querySelector('[role="alert"]')!.textContent).toContain('Insufficient payment');
+    });
+
+    it('has Cancel and Confirm & Pay in the footer', () => {
+      const labels = [...el().querySelectorAll('.border-t button')].map((b) => b.textContent?.trim());
+      expect(labels).toEqual(['Cancel', 'Confirm & Pay']);
+    });
+
+    it('shows the busy label on the confirm button while saving', () => {
+      setInput('isBusy', true);
+      setInput('busyLabel', 'Saving Order...');
+      expect(text()).toContain('Saving Order...');
     });
   });
 });

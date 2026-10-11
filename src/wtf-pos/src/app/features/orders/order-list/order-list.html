@@ -29,14 +29,7 @@
       </div>
 
       <div class="ml-auto flex items-center justify-end gap-2">
-        <button
-          type="button"
-          class="app-btn app-btn-secondary app-btn-sm gap-2"
-          (click)="openFilters()"
-        >
-          <app-icon name="icon-filter" [class]="'h-4 w-4'" [fill]="'currentColor'" />
-          Filters
-        </button>
+        <app-filter-button [count]="activeFilterCount()" (pressed)="openFilters()" />
         @if (!isAndroidPlatform) {
           <button
             class="app-btn app-btn-ghost pointer-events-auto z-30 p-2"
@@ -177,6 +170,123 @@
   @if (isLoading()) {
     <div class="flex justify-center py-8">
       <span class="loading loading-spinner loading-lg"></span>
+    </div>
+  }
+
+  <!-- Orders waiting for approval (placed by customers through their link) -->
+  @if (awaitingOrders().length > 0) {
+    <div class="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4" data-awaiting-approval>
+      <div class="mb-3 flex items-center gap-2">
+        <div
+          class="flex h-6 w-6 items-center justify-center rounded-full bg-amber-400 text-xs font-bold text-white"
+        >
+          {{ awaitingOrders().length }}
+        </div>
+        <span class="text-sm font-semibold text-amber-800">Awaiting approval</span>
+      </div>
+      <div class="space-y-2">
+        @for (waiting of awaitingOrders(); track waiting.id) {
+          <div class="rounded-lg bg-white px-3 py-3 shadow-sm">
+            <div
+              class="flex cursor-pointer flex-col gap-1 rounded-md transition-colors hover:bg-gray-50"
+              role="button"
+              tabindex="0"
+              [attr.aria-label]="'Open order ' + waiting.orderNumber"
+              (click)="openAwaitingOrder(waiting)"
+              (keydown.enter)="openAwaitingOrder(waiting)"
+            >
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <div class="flex items-center gap-2">
+                  <span class="text-sm font-semibold text-gray-900"
+                    >#{{ waiting.orderNumber }}</span
+                  >
+                  <span class="text-sm text-gray-700">{{
+                    waiting.customerName || 'Customer'
+                  }}</span>
+                  <app-badge variant="amber">{{
+                    isDelivery(waiting) ? 'Delivery' : 'Pickup'
+                  }}</app-badge>
+                </div>
+                <span class="text-sm font-bold whitespace-nowrap text-gray-900">
+                  <app-icon
+                    name="icon-peso"
+                    [class]="'inline h-3 w-3 align-[-0.125em]'"
+                    [fill]="'currentColor'"
+                  />{{ waiting.totalAmount | number: '1.2-2' }}
+                </span>
+              </div>
+              <p class="text-xs wrap-break-word text-gray-500">
+                {{ awaitingItemsSummary(waiting) }}
+              </p>
+              <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-gray-500">
+                <span>{{ waiting.createdAt | date: 'd MMM, h:mm a' }}</span>
+                @if (waiting.contactNumber) {
+                  <span>{{ waiting.contactNumber }}</span>
+                }
+                @if (waiting.paymentMethod === PaymentMethodEnum.Cash) {
+                  <span>
+                    Cash
+                    @if (waiting.changeAmount != null) {
+                      &middot; prepare change
+                      <app-icon
+                        name="icon-peso"
+                        [class]="'inline h-2.5 w-2.5 align-[-0.125em]'"
+                        [fill]="'currentColor'"
+                      />{{ waiting.changeAmount | number: '1.2-2' }}
+                    }
+                  </span>
+                } @else if (waiting.paymentMethod === PaymentMethodEnum.GCash) {
+                  <span>GCash</span>
+                }
+                @if (waiting.tips) {
+                  <span class="font-medium text-emerald-700">
+                    Tip
+                    <app-icon
+                      name="icon-peso"
+                      [class]="'inline h-2.5 w-2.5 align-[-0.125em]'"
+                      [fill]="'currentColor'"
+                    />{{ waiting.tips | number: '1.2-2' }}
+                  </span>
+                }
+              </div>
+              @if (isDelivery(waiting) && waiting.deliveryAddress) {
+                <p class="text-xs wrap-break-word text-gray-500">{{ waiting.deliveryAddress }}</p>
+              }
+              @if (waiting.specialInstructions) {
+                <p class="text-xs wrap-break-word text-gray-400 italic">
+                  {{ waiting.specialInstructions }}
+                </p>
+              }
+            </div>
+
+            @if (canDecideOrders()) {
+              <div class="mt-3 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  class="app-btn app-btn-outline-danger app-btn-sm"
+                  [disabled]="decidingOrderId() !== null"
+                  (click)="askRejectAwaiting(waiting)"
+                >
+                  Reject
+                </button>
+                <button
+                  type="button"
+                  class="app-btn app-btn-primary app-btn-sm"
+                  [disabled]="decidingOrderId() !== null"
+                  (click)="approveAwaiting(waiting)"
+                >
+                  @if (decidingOrderId() === waiting.id && !orderToReject()) {
+                    <span class="loading loading-spinner loading-xs"></span>
+                    Accepting...
+                  } @else {
+                    Accept
+                  }
+                </button>
+              </div>
+            }
+          </div>
+        }
+      </div>
     </div>
   }
 
@@ -509,3 +619,12 @@
     }
   }
 </div>
+
+@if (orderToReject(); as target) {
+  <app-reject-order-dialog
+    [orderNumber]="target.orderNumber"
+    [isBusy]="decidingOrderId() !== null"
+    (confirmed)="confirmRejectAwaiting($event)"
+    (cancelled)="cancelRejectAwaiting()"
+  />
+}

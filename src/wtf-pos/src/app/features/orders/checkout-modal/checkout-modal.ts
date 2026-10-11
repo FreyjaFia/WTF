@@ -12,19 +12,18 @@ import {
 } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ModalStackService } from '@core/services';
-import { AvatarComponent, IconComponent } from '@shared/components';
-import {
-  ADD_ON_TYPE_ORDER,
-  CartAddOnDto,
-  CartBundleItemDto,
-  CartItemDto,
-  PaymentMethodEnum,
-  PromotionTypeEnum,
-} from '@shared/models';
+import { IconComponent } from '@shared/components';
+import { PaymentMethodEnum } from '@shared/models';
+
+export interface CheckoutPrefill {
+  paymentMethod?: PaymentMethodEnum | null;
+  amountReceived?: number | null;
+  tips?: number | null;
+}
 
 @Component({
   selector: 'app-checkout-modal',
-  imports: [CommonModule, ReactiveFormsModule, IconComponent, AvatarComponent],
+  imports: [CommonModule, ReactiveFormsModule, IconComponent],
   templateUrl: './checkout-modal.html',
   styleUrl: './checkout-modal.css',
 })
@@ -36,10 +35,7 @@ export class CheckoutModal {
   private modalStackId: number | null = null;
   private wasBusy = false;
 
-  readonly cartItems = input<CartItemDto[]>([]);
   readonly totalPrice = input<number>(0);
-  readonly selectedCustomerName = input<string>('Walk-in customer');
-  readonly orderSpecialInstructions = input<string>('');
   readonly isBusy = input<boolean>(false);
   readonly busyLabel = input<string>('Processing Order...');
 
@@ -58,9 +54,11 @@ export class CheckoutModal {
 
   protected readonly PaymentMethodEnum = PaymentMethodEnum;
   protected readonly change = signal<number>(0);
-  protected readonly showSummary = signal<boolean>(false);
   private readonly selectedPaymentMethod = signal<PaymentMethodEnum>(PaymentMethodEnum.Cash);
   private readonly amountReceivedValue = signal<number | null>(null);
+  protected readonly isCash = computed(
+    () => this.selectedPaymentMethod() === PaymentMethodEnum.Cash,
+  );
   protected readonly hasAmountReceivedInput = computed(() => {
     const value = this.amountReceivedValue();
     return value !== null && value !== undefined;
@@ -83,115 +81,6 @@ export class CheckoutModal {
     }
     return this.change() < 0 ? -this.change() : this.change();
   });
-
-  // Helper for template add-on price calculation
-  protected readonly addOnPriceReducer = (sum: number, ao: CartAddOnDto) => sum + ao.price;
-  protected isBundleLine(item: CartItemDto): boolean {
-    return (item.bundleItems?.length ?? 0) > 0;
-  }
-
-  protected getBundleChildTotalQuantity(line: CartItemDto, child: CartBundleItemDto): number {
-    if (line.bundlePromotionTypeId === PromotionTypeEnum.MixMatch) {
-      return Math.max(1, child.qty);
-    }
-
-    return Math.max(1, line.qty) * Math.max(1, child.qty);
-  }
-
-  protected getBundleChildDisplayRows(line: CartItemDto, child: CartBundleItemDto): number[] {
-    const total = Math.max(1, child.qty);
-    return Array.from({ length: total }, (_, index) => index);
-  }
-
-  protected getSortedBundleItems(item: CartItemDto): CartBundleItemDto[] {
-    return [...(item.bundleItems ?? [])].sort((a, b) =>
-      this.normalizeSortLabel(a.name).localeCompare(this.normalizeSortLabel(b.name)),
-    );
-  }
-
-  protected getGroupedAddOns(item: CartItemDto): {
-    addOnId: string;
-    name: string;
-    price: number;
-    quantityPerUnit: number;
-    lineTotal: number;
-  }[] {
-    const grouped = new Map<
-      string,
-      { addOnId: string; name: string; price: number; quantityPerUnit: number; sortOrder: number }
-    >();
-    const lineQty = Math.max(1, item.qty);
-
-    for (const addOn of item.addOns ?? []) {
-      const key = `${addOn.addOnId}::${addOn.price}`;
-      const current = grouped.get(key);
-
-      if (current) {
-        current.quantityPerUnit += 1;
-        continue;
-      }
-
-      grouped.set(key, {
-        addOnId: addOn.addOnId,
-        name: addOn.name,
-        price: addOn.price,
-        quantityPerUnit: 1,
-        sortOrder: addOn.addOnType != null ? (ADD_ON_TYPE_ORDER[addOn.addOnType] ?? 99) : 99,
-      });
-    }
-
-    return [...grouped.values()]
-      .sort(
-        (a, b) =>
-          a.sortOrder - b.sortOrder ||
-          this.normalizeSortLabel(a.name).localeCompare(this.normalizeSortLabel(b.name)),
-      )
-      .map((entry) => ({
-        addOnId: entry.addOnId,
-        name: entry.name,
-        price: entry.price,
-        quantityPerUnit: entry.quantityPerUnit,
-        lineTotal: entry.price * entry.quantityPerUnit * lineQty,
-      }));
-  }
-
-  protected getGroupedBundleItemAddOns(bundleItem: CartBundleItemDto): {
-    addOnId: string;
-    name: string;
-    quantityPerUnit: number;
-  }[] {
-    const grouped = new Map<
-      string,
-      { addOnId: string; name: string; quantityPerUnit: number; sortOrder: number }
-    >();
-
-    for (const addOn of bundleItem.addOns ?? []) {
-      const current = grouped.get(addOn.addOnId);
-      if (current) {
-        current.quantityPerUnit += 1;
-        continue;
-      }
-
-      grouped.set(addOn.addOnId, {
-        addOnId: addOn.addOnId,
-        name: addOn.name,
-        quantityPerUnit: 1,
-        sortOrder: addOn.addOnType != null ? (ADD_ON_TYPE_ORDER[addOn.addOnType] ?? 99) : 99,
-      });
-    }
-
-    return [...grouped.values()]
-      .sort(
-        (a, b) =>
-          a.sortOrder - b.sortOrder ||
-          this.normalizeSortLabel(a.name).localeCompare(this.normalizeSortLabel(b.name)),
-      )
-      .map((entry) => ({
-        addOnId: entry.addOnId,
-        name: entry.name,
-        quantityPerUnit: entry.quantityPerUnit,
-      }));
-  }
 
   protected readonly isConfirmDisabled = computed(() => {
     if (this.isBusy()) {
@@ -241,8 +130,20 @@ export class CheckoutModal {
     });
   }
 
-  public triggerOpen(): void {
+  /**
+   * Opens the dialog. `prefill` is for an order whose customer already chose how to pay (an order from their ordering
+   * link), so the staff only check it instead of typing it again.
+   */
+  public triggerOpen(prefill?: CheckoutPrefill | null): void {
     this.resetForm();
+    if (prefill?.paymentMethod !== undefined && prefill.paymentMethod !== null) {
+      this.paymentForm.patchValue({
+        paymentMethod: prefill.paymentMethod,
+        amountReceived:
+          prefill.paymentMethod === PaymentMethodEnum.Cash ? (prefill.amountReceived ?? null) : null,
+        tips: prefill.tips ?? null,
+      });
+    }
     // Calculate initial change to show the amount owed
     this.calculateChange();
     this.checkoutDialog().nativeElement.showModal();
@@ -254,8 +155,21 @@ export class CheckoutModal {
     this.removeFromStack();
   }
 
-  protected toggleSummary(): void {
-    this.showSummary.set(!this.showSummary());
+  protected choosePayment(method: PaymentMethodEnum): void {
+    if (this.isBusy()) {
+      return;
+    }
+
+    this.paymentForm.get('paymentMethod')?.setValue(method);
+  }
+
+  /** Fills in exactly the total, for a customer who pays the exact amount. */
+  protected useExactAmount(): void {
+    if (this.isBusy()) {
+      return;
+    }
+
+    this.paymentForm.get('amountReceived')?.setValue(Math.round(this.totalPrice() * 100) / 100);
   }
 
   protected calculateChange(): void {
@@ -327,13 +241,5 @@ export class CheckoutModal {
     this.selectedPaymentMethod.set(PaymentMethodEnum.Cash);
     this.amountReceivedValue.set(null);
     this.change.set(0);
-    this.showSummary.set(false);
-  }
-
-  private normalizeSortLabel(value: string): string {
-    return value
-      .replace(/^\s*\d+\s*x\s+/i, '')
-      .trim()
-      .toLowerCase();
   }
 }

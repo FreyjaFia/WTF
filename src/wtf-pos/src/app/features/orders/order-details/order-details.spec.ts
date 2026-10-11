@@ -16,11 +16,13 @@ import {
   DiscountedProductPromotionDto,
   OrderDto,
   OrderItemDto,
+  FulfillmentTypeEnum,
+  OrderSourceEnum,
   OrderStatusEnum,
   PaymentMethodEnum,
   PromotionTypeEnum,
 } from '@shared/models';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { OrderDetails } from './order-details';
 
@@ -102,7 +104,13 @@ describe('OrderDetails', () => {
   let t: Internals;
   let router: Router;
   let canOverride: ReturnType<typeof vi.fn>;
-  let orderService: { getOrder: ReturnType<typeof vi.fn>; voidOrder: ReturnType<typeof vi.fn> };
+  let canWrite: boolean;
+  let orderService: {
+    getOrder: ReturnType<typeof vi.fn>;
+    voidOrder: ReturnType<typeof vi.fn>;
+    approveOrder: ReturnType<typeof vi.fn>;
+    rejectOrder: ReturnType<typeof vi.fn>;
+  };
   let alert: Record<string, ReturnType<typeof vi.fn>>;
   let catalog: {
     load: ReturnType<typeof vi.fn>;
@@ -131,7 +139,13 @@ describe('OrderDetails', () => {
   beforeEach(() => {
     paramId = 'o1';
     canOverride = vi.fn().mockReturnValue(true);
-    orderService = { getOrder: vi.fn(), voidOrder: vi.fn() };
+    canWrite = true;
+    orderService = {
+      getOrder: vi.fn(),
+      voidOrder: vi.fn(),
+      approveOrder: vi.fn(),
+      rejectOrder: vi.fn(),
+    };
     alert = {
       error: vi.fn(),
       success: vi.fn(),
@@ -158,7 +172,10 @@ describe('OrderDetails', () => {
         },
         { provide: OrderService, useValue: orderService },
         { provide: AlertService, useValue: alert },
-        { provide: AuthService, useValue: { canOverrideOrders: canOverride } },
+        {
+          provide: AuthService,
+          useValue: { canOverrideOrders: canOverride, canWriteOrders: () => canWrite },
+        },
         { provide: CatalogCacheService, useValue: catalog },
         { provide: PromotionService, useValue: promotions },
       ],
@@ -681,6 +698,232 @@ describe('OrderDetails', () => {
       await create(makeOrder({ status: OrderStatusEnum.Cancelled }));
       t.confirmRefund();
       expect(orderService.voidOrder).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('orders placed through a customer link', () => {
+    const online = (over: Partial<OrderDto> = {}) =>
+      makeOrder({
+        status: OrderStatusEnum.PendingApproval,
+        source: OrderSourceEnum.CustomerLink,
+        fulfillmentType: FulfillmentTypeEnum.Delivery,
+        deliveryAddress: '5 Side St',
+        contactNumber: '0917 123 4567',
+        paymentMethod: PaymentMethodEnum.Cash,
+        amountReceived: 500,
+        changeAmount: 140,
+        customerName: 'Maria Cruz',
+        totalAmount: 360,
+        ...over,
+      });
+
+    const el = () => fixture.nativeElement as HTMLElement;
+    const box = () => el().querySelector('[data-online-order]') as HTMLElement | null;
+    const button = (label: string) =>
+      [...el().querySelectorAll('button')].find((b) =>
+        b.textContent?.trim().startsWith(label),
+      ) as HTMLButtonElement | undefined;
+    const dialog = () => el().querySelector('app-reject-order-dialog') as HTMLElement | null;
+    const online$ = () =>
+      t as unknown as {
+        isOnlineOrder: () => boolean;
+        isAwaitingApproval: () => boolean;
+        canDecide: () => boolean;
+        isDeciding: () => boolean;
+        order: () => OrderDto | null;
+        approveOrder: () => void;
+        askRejectOrder: () => void;
+        cancelRejectOrder: () => void;
+        confirmRejectOrder: (reason: string) => void;
+        showRejectDialog: () => boolean;
+      };
+
+    it('shows how the customer wants it handed over, the address, contact and what they will pay', async () => {
+      await create(online());
+
+      const text = box()!.textContent ?? '';
+      expect(text).toContain('Online order');
+      expect(text).toContain('Delivery');
+      expect(text).toContain('5 Side St');
+      expect(text).toContain('0917 123 4567');
+      expect(text).toContain('Customer will pay');
+      expect(text).toContain('500.00');
+      expect(text).toContain('140.00');
+    });
+
+    it('shows the tip the customer leaves', async () => {
+      await create(online({ tips: 20 }));
+
+      expect(box()!.textContent).toContain('Tip');
+      expect(box()!.textContent).toContain('20.00');
+    });
+
+    it('shows no tip row when there is none', async () => {
+      await create(online({ tips: null }));
+
+      expect(box()!.textContent).not.toContain('Tip');
+    });
+
+    it('shows pickup without an address', async () => {
+      await create(online({ fulfillmentType: FulfillmentTypeEnum.Pickup, deliveryAddress: null }));
+
+      const text = box()!.textContent ?? '';
+      expect(text).toContain('Pickup');
+      expect(text).not.toContain('Address');
+    });
+
+    it('has no online box for an ordinary POS order', async () => {
+      await create(makeOrder({ status: OrderStatusEnum.Pending }));
+
+      expect(box()).toBeNull();
+      expect(online$().isOnlineOrder()).toBe(false);
+    });
+
+    it('labels the status Awaiting approval and says what to do', async () => {
+      await create(online());
+
+      expect(t.getStatusLabel(OrderStatusEnum.PendingApproval)).toBe('Awaiting approval');
+      expect(t.getStatusVariant(OrderStatusEnum.PendingApproval)).toBe('amber');
+      expect(el().textContent).toContain('Awaiting approval');
+      expect(el().textContent).toContain('Accept or reject it to continue');
+    });
+
+    it('offers Accept and Reject only while it waits, and only to someone who may answer', async () => {
+      await create(online());
+      expect(button('Accept')).toBeDefined();
+      expect(button('Reject')).toBeDefined();
+      expect(online$().canDecide()).toBe(true);
+    });
+
+    it('hides Accept and Reject without permission to write orders', async () => {
+      canWrite = false;
+      await create(online());
+
+      expect(button('Accept')).toBeUndefined();
+      expect(button('Reject')).toBeUndefined();
+      expect(online$().canDecide()).toBe(false);
+      online$().approveOrder();
+      expect(orderService.approveOrder).not.toHaveBeenCalled();
+    });
+
+    it('hides Accept and Reject once the order has been answered', async () => {
+      await create(online({ status: OrderStatusEnum.Pending }));
+
+      expect(button('Accept')).toBeUndefined();
+      expect(button('Reject')).toBeUndefined();
+      expect(box()).not.toBeNull();
+    });
+
+    it('shows why a rejected order was turned down', async () => {
+      await create(online({ status: OrderStatusEnum.Cancelled, rejectionReason: 'Closed today' }));
+
+      expect(box()!.textContent).toContain('Rejected because');
+      expect(box()!.textContent).toContain('Closed today');
+    });
+
+    it('accepts the order and shows it as pending afterwards', async () => {
+      orderService.approveOrder.mockReturnValue(
+        of(online({ status: OrderStatusEnum.Pending })),
+      );
+      await create(online());
+
+      button('Accept')!.click();
+      await flush();
+
+      expect(orderService.approveOrder).toHaveBeenCalledWith('o1');
+      expect(online$().order()!.status).toBe(OrderStatusEnum.Pending);
+      expect(alert['success']).toHaveBeenCalledWith('Order #12 accepted.');
+      expect(button('Accept')).toBeUndefined();
+    });
+
+    it('blocks double clicks while accepting', async () => {
+      orderService.approveOrder.mockReturnValue(new Subject());
+      await create(online());
+
+      button('Accept')!.click();
+      fixture.detectChanges();
+
+      expect(el().textContent).toContain('Accepting...');
+      expect(online$().isDeciding()).toBe(true);
+      online$().approveOrder();
+      expect(orderService.approveOrder).toHaveBeenCalledTimes(1);
+      expect(button('Reject')!.disabled).toBe(true);
+    });
+
+    it('shows the error and reloads the order when it cannot be accepted', async () => {
+      orderService.approveOrder.mockReturnValue(
+        throwError(() => new Error('This order is no longer waiting for approval.')),
+      );
+      await create(online());
+      orderService.getOrder.mockClear();
+      orderService.getOrder.mockReturnValue(of(online({ status: OrderStatusEnum.Cancelled })));
+
+      button('Accept')!.click();
+      await flush();
+
+      expect(alert['error']).toHaveBeenCalledWith('This order is no longer waiting for approval.');
+      expect(orderService.getOrder).toHaveBeenCalledTimes(1);
+      expect(online$().isDeciding()).toBe(false);
+    });
+
+    it('asks for a reason before rejecting, then rejects and shows the reason', async () => {
+      orderService.rejectOrder.mockReturnValue(
+        of(online({ status: OrderStatusEnum.Cancelled, rejectionReason: 'Closed' })),
+      );
+      await create(online());
+
+      button('Reject')!.click();
+      fixture.detectChanges();
+      expect(dialog()).not.toBeNull();
+      expect(dialog()!.textContent).toContain('Reject Order #12?');
+      expect(orderService.rejectOrder).not.toHaveBeenCalled();
+
+      online$().confirmRejectOrder('Closed');
+      await flush();
+
+      expect(orderService.rejectOrder).toHaveBeenCalledWith('o1', 'Closed');
+      expect(dialog()).toBeNull();
+      expect(online$().order()!.status).toBe(OrderStatusEnum.Cancelled);
+      expect(box()!.textContent).toContain('Closed');
+      expect(alert['success']).toHaveBeenCalledWith('Order #12 rejected.');
+    });
+
+    it('can cancel the reject dialog, but not while a rejection is being sent', async () => {
+      orderService.rejectOrder.mockReturnValue(new Subject());
+      await create(online());
+
+      online$().askRejectOrder();
+      online$().cancelRejectOrder();
+      expect(online$().showRejectDialog()).toBe(false);
+
+      online$().askRejectOrder();
+      online$().confirmRejectOrder('Closed');
+      online$().cancelRejectOrder();
+      expect(online$().showRejectDialog()).toBe(true);
+      online$().confirmRejectOrder('Closed again');
+      expect(orderService.rejectOrder).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows the error, closes the dialog and reloads when the rejection fails', async () => {
+      orderService.rejectOrder.mockReturnValue(throwError(() => new Error('nope')));
+      await create(online());
+      orderService.getOrder.mockClear();
+
+      online$().askRejectOrder();
+      online$().confirmRejectOrder('Closed');
+      await flush();
+
+      expect(alert['error']).toHaveBeenCalledWith('nope');
+      expect(online$().showRejectDialog()).toBe(false);
+      expect(orderService.getOrder).toHaveBeenCalledTimes(1);
+    });
+
+    it('cannot start a reject without permission', async () => {
+      canWrite = false;
+      await create(online());
+
+      online$().askRejectOrder();
+      expect(online$().showRejectDialog()).toBe(false);
     });
   });
 });

@@ -56,6 +56,8 @@ import {
   CustomerDto,
   OrderDto,
   OrderItemRequestDto,
+  FulfillmentTypeEnum,
+  OrderSourceEnum,
   OrderStatusEnum,
   PaymentMethodEnum,
   ProductCategoryEnum,
@@ -362,6 +364,27 @@ export class OrderEditor implements OnInit, OnDestroy {
     this.authService.canCreateCustomerInOrder(this.isEditMode()),
   );
   protected readonly canManageOrderActions = computed(() => this.authService.canWriteOrders());
+
+  protected readonly isMarkingReady = signal(false);
+
+  /** An accepted customer order that staff have not yet marked ready. */
+  protected readonly canMarkReady = computed(() => {
+    const order = this.currentOrder();
+    return (
+      this.isEditMode() &&
+      order?.source === OrderSourceEnum.CustomerLink &&
+      order.status === OrderStatusEnum.Pending &&
+      !order.readyAt &&
+      this.canManageOrderActions()
+    );
+  });
+
+  /** Says where the customer gets the order, matching what they chose. */
+  protected readonly readyLabel = computed(() =>
+    this.currentOrder()?.fulfillmentType === FulfillmentTypeEnum.Delivery
+      ? 'Ready for delivery'
+      : 'Ready for pickup',
+  );
   protected readonly selectedCustomerName = computed(() => {
     const selectedId = this.selectedCustomerId();
     if (!selectedId) {
@@ -677,6 +700,26 @@ export class OrderEditor implements OnInit, OnDestroy {
 
   protected closeMobileCart(): void {
     this.showMobileCart.set(false);
+  }
+
+  protected markReady(): void {
+    const order = this.currentOrder();
+    if (!order || !this.canMarkReady() || this.isMarkingReady() || this.isOrderRequestBusy()) {
+      return;
+    }
+
+    this.isMarkingReady.set(true);
+    this.orderService.markOrderReady(order.id).subscribe({
+      next: (updated) => {
+        this.isMarkingReady.set(false);
+        this.currentOrder.set(updated);
+        this.alertService.success(`Order #${order.orderNumber} marked ${this.readyLabel().toLowerCase()}.`);
+      },
+      error: (err: Error) => {
+        this.isMarkingReady.set(false);
+        this.alertService.error(err.message);
+      },
+    });
   }
 
   protected onOrderSpecialInstructionsInput(event: Event): void {
@@ -1717,8 +1760,10 @@ export class OrderEditor implements OnInit, OnDestroy {
 
   protected getStatusVariant(
     status?: OrderStatusEnum | null,
-  ): 'success' | 'error' | 'warning' | 'info' | 'default' {
+  ): 'success' | 'error' | 'warning' | 'info' | 'amber' | 'default' {
     switch (status) {
+      case OrderStatusEnum.PendingApproval:
+        return 'amber';
       case OrderStatusEnum.Pending:
         return 'warning';
       case OrderStatusEnum.Completed:
@@ -1734,6 +1779,8 @@ export class OrderEditor implements OnInit, OnDestroy {
 
   protected getStatusLabel(status?: OrderStatusEnum | null): string {
     switch (status) {
+      case OrderStatusEnum.PendingApproval:
+        return 'Awaiting approval';
       case OrderStatusEnum.Pending:
         return 'Pending';
       case OrderStatusEnum.Completed:
@@ -2084,7 +2131,17 @@ export class OrderEditor implements OnInit, OnDestroy {
       return;
     }
 
-    this.checkoutModal().triggerOpen();
+    // A customer's own order already says how they chose to pay: show that instead of an empty form.
+    const placed = this.currentOrder();
+    this.checkoutModal().triggerOpen(
+      this.isEditMode() && placed?.source === OrderSourceEnum.CustomerLink
+        ? {
+            paymentMethod: placed.paymentMethod,
+            amountReceived: placed.amountReceived,
+            tips: placed.tips,
+          }
+        : null,
+    );
   }
 
   private finishQuickPayHold(shouldCheckout: boolean): void {

@@ -330,6 +330,47 @@ describe('PushNotificationService', () => {
         expect(typeof shown.onclick).toBe('function');
       });
 
+      /** Taps every shown notification and returns the addresses the page was sent to. */
+      const tapAll = (): string[] => {
+        const assign = vi.fn();
+        vi.stubGlobal('location', { origin: 'http://localhost', assign });
+        try {
+          for (const shown of FakeNotification.instances) {
+            shown.onclick!();
+          }
+        } finally {
+          vi.unstubAllGlobals();
+        }
+        return assign.mock.calls.map((c) => c[0] as string);
+      };
+      // The address is built when the message arrives, so it uses the page's real origin.
+      const url = (path: string) => new URL(path, window.location.origin).toString();
+
+      it('opens the order editor for an ordinary new order when no path is given', () => {
+        onMessageHandler({ notification: { title: 'New order' }, data: { orderId: '42' } });
+
+        expect(tapAll()).toEqual([url(AppRoutes.OrderEditorById('42'))]);
+      });
+
+      it('opens the orders list for an online order, never the editor', () => {
+        const title = { title: 'New online order' };
+        onMessageHandler({
+          notification: title,
+          data: { type: 'online-order', orderId: '42', path: '/orders/list' },
+        });
+        onMessageHandler({ notification: title, data: { type: 'online-order', orderId: '42' } });
+        onMessageHandler({
+          notification: title,
+          data: { type: 'online-order', orderId: '42', path: AppRoutes.OrderEditorById('42') },
+        });
+
+        expect(tapAll()).toEqual([
+          url('/orders/list'),
+          url(AppRoutes.OrdersList),
+          url(AppRoutes.OrdersList),
+        ]);
+      });
+
       it('ignores payloads without a title', () => {
         onMessageHandler({ notification: { body: 'x' } });
         onMessageHandler({});
@@ -467,6 +508,21 @@ describe('PushNotificationService', () => {
         expect(second.title).toBe('WTF POS');
       });
 
+      it('opens the orders list for an online order, even from a payload that names only the order', async () => {
+        listener('pushNotificationReceived')({
+          title: 'New online order',
+          data: { type: 'online-order', orderId: '7' },
+        } as never);
+        listener('pushNotificationReceived')({
+          title: 'New online order',
+          data: { type: 'online-order', orderId: '7', path: '/orders/editor/7' },
+        } as never);
+
+        await vi.waitFor(() => expect(mocks.localSchedule).toHaveBeenCalledTimes(2));
+        const paths = mocks.localSchedule.mock.calls.map((c) => c[0].notifications[0].extra.path);
+        expect(paths).toEqual([AppRoutes.OrdersList, AppRoutes.OrdersList]);
+      });
+
       it('ignores notifications without title and body', async () => {
         listener('pushNotificationReceived')({ data: { orderId: '1' } } as never);
         await Promise.resolve();
@@ -486,6 +542,31 @@ describe('PushNotificationService', () => {
 
         await vi.waitFor(() =>
           expect(router.navigateByUrl).toHaveBeenCalledWith(AppRoutes.OrderDetailsById('9')),
+        );
+      });
+
+      it('opens the orders list when an online order notification is tapped', async () => {
+        tap({ type: 'online-order', orderId: '9', path: '/orders/list' });
+
+        await vi.waitFor(() => expect(router.navigateByUrl).toHaveBeenCalledWith('/orders/list'));
+      });
+
+      it('sends an online order tap to the list even if the payload points at the editor or has no path', async () => {
+        tap({ type: 'online-order', orderId: '9', path: AppRoutes.OrderEditorById('9') });
+        tap({ type: 'online-order', orderId: '9' });
+        tap({ type: 'online-order' });
+
+        await vi.waitFor(() => expect(router.navigateByUrl).toHaveBeenCalledTimes(3));
+        expect(
+          (router.navigateByUrl as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0]),
+        ).toEqual([AppRoutes.OrdersList, AppRoutes.OrdersList, AppRoutes.OrdersList]);
+      });
+
+      it('still sends an ordinary order notification to its details', async () => {
+        tap({ orderId: '5', status: 'Completed' });
+
+        await vi.waitFor(() =>
+          expect(router.navigateByUrl).toHaveBeenCalledWith(AppRoutes.OrderDetailsById('5')),
         );
       });
 
