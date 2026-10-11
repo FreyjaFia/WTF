@@ -23,7 +23,7 @@ public record UpdateOrderCommand : IRequest<OrderDto?>
     [Required]
     public Guid Id { get; init; }
 
-    [Required]
+    /// <summary>The customer, or null for a walk-in order.</summary>
     public Guid? CustomerId { get; init; }
 
     [Required]
@@ -801,7 +801,8 @@ public class UpdateOrderHandler(
         {
             var multiplier = 1m - (percentOff.Value / 100m);
             var discounted = basePrice * multiplier;
-            return Math.Round(discounted, 2, MidpointRounding.AwayFromZero);
+            // A discount of more than 100% never takes the price below zero (the fixed-price branch clamps the same way).
+            return Math.Max(0m, Math.Round(discounted, 2, MidpointRounding.AwayFromZero));
         }
 
         return null;

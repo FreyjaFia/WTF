@@ -104,7 +104,8 @@ public sealed class EvaluatePromotionsHandler(WTFDbContext db)
         {
             var multiplier = 1m - (percentOff.Value / 100m);
             var discounted = basePrice * multiplier;
-            return Math.Round(discounted, 2, MidpointRounding.AwayFromZero);
+            // A discount of more than 100% never takes the price below zero (the fixed-price branch clamps the same way).
+        return Math.Max(0m, Math.Round(discounted, 2, MidpointRounding.AwayFromZero));
         }
 
         return null;
@@ -210,8 +211,10 @@ public sealed class EvaluatePromotionsHandler(WTFDbContext db)
         int requiredQty,
         IEnumerable<(Guid AddOnProductId, int Quantity)> requiredAddOns)
     {
+        // Free items are never consumed: ApplyFixedBundles counts bundles from non-free lines only, so consuming a
+        // free line here would use it up instead of the paid line the bundle was counted from.
         var candidates = lines
-            .Where(x => x.ProductId == productId && x.Quantity > 0)
+            .Where(x => x.ProductId == productId && x.Quantity > 0 && !x.IsFreeItem)
             .Where(x => SatisfiesRequiredAddOns(x, requiredAddOns))
             .OrderByDescending(x => x.Quantity)
             .ToList();

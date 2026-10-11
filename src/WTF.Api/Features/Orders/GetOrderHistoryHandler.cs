@@ -18,8 +18,10 @@ public class GetOrderHistoryHandler(WTFDbContext db) : IRequestHandler<GetOrderH
         var query = db.Orders
             .AsNoTracking()
             .Include(o => o.Customer)
-            .Include(o => o.OrderItems.Where(oi => oi.ParentOrderItemId == null))
-                .ThenInclude(oi => oi.InverseParentOrderItem)
+            // Load every line (parents and add-ons) with its product: OrderMetrics.ComputeOrderTotal reads add-ons
+            // from Order.OrderItems, and a filtered include of parents only would leave them out of the total.
+            .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.Product)
             .Include(o => o.OrderBundlePromotions)
             .Where(o => historyStatuses.Contains(o.StatusId))
             .AsQueryable();
@@ -40,8 +42,7 @@ public class GetOrderHistoryHandler(WTFDbContext db) : IRequestHandler<GetOrderH
             .ToList();
 
         var addOnProductIds = orders
-            .SelectMany(o => o.OrderItems.Where(oi => oi.ParentOrderItemId == null))
-            .SelectMany(oi => oi.InverseParentOrderItem)
+            .SelectMany(o => o.OrderItems.Where(oi => oi.ParentOrderItemId != null))
             .Select(child => child.ProductId)
             .Distinct()
             .ToList();

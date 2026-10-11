@@ -19,7 +19,7 @@ namespace WTF.Api.Features.Orders;
 
 public record CreateOrderCommand : IRequest<OrderDto>
 {
-    [Required]
+    /// <summary>The customer, or null for a walk-in order.</summary>
     public Guid? CustomerId { get; init; }
 
     [Required]
@@ -53,9 +53,24 @@ public class CreateOrderHandler(
     {
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
 
+        if (request.Items.Count == 0 && request.BundlePromotions.Count == 0)
+        {
+            throw new InvalidOperationException("An order must contain at least one item.");
+        }
+
         // Validate no nested add-ons and add-on type rules
         foreach (var item in request.Items)
         {
+            if (item.Quantity <= 0)
+            {
+                throw new InvalidOperationException("Item quantity must be greater than zero.");
+            }
+
+            if (item.AddOns.Any(addOn => addOn.Quantity <= 0))
+            {
+                throw new InvalidOperationException("Add-on quantity must be greater than zero.");
+            }
+
             if (item.AddOns.Any(addOn => addOn.AddOns?.Count > 0))
             {
                 throw new InvalidOperationException("Nested add-ons are not allowed. Add-ons cannot have their own add-ons.");
@@ -615,7 +630,8 @@ public class CreateOrderHandler(
         {
             var multiplier = 1m - (percentOff.Value / 100m);
             var discounted = basePrice * multiplier;
-            return Math.Round(discounted, 2, MidpointRounding.AwayFromZero);
+            // A discount of more than 100% never takes the price below zero (the fixed-price branch clamps the same way).
+            return Math.Max(0m, Math.Round(discounted, 2, MidpointRounding.AwayFromZero));
         }
 
         return null;
