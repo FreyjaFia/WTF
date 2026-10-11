@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthLoadingService, AuthService, ConnectivityService, ImageCacheService } from '@core/services';
 import { appVersion } from '@environments/version';
@@ -7,6 +8,8 @@ import { AvatarComponent } from '@shared/components/avatar/avatar';
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import { IconComponent } from '@shared/components/icons/icon/icon';
 import { AppRoutes } from '@shared/constants/app-routes';
+import { ordersNavSection } from '@shared/utils/orders-nav';
+import { filter, map } from 'rxjs';
 
 @Component({
   selector: 'app-sidebar',
@@ -19,6 +22,15 @@ export class SidebarComponent implements OnInit, OnDestroy {
   protected readonly authService = inject(AuthService);
   protected readonly router = inject(Router);
   protected readonly routes = AppRoutes;
+  private readonly currentUrl = toSignal(
+    this.router.events.pipe(
+      filter((event) => event instanceof NavigationEnd),
+      map(() => this.router.url),
+    ),
+    { initialValue: this.router.url },
+  );
+  /** Orders stays lit while an order is open; New Order only for a blank editor. */
+  protected readonly ordersSection = computed(() => ordersNavSection(this.currentUrl()));
   private readonly connectivity = inject(ConnectivityService);
   private readonly imageCache = inject(ImageCacheService);
   private readonly changeDetector = inject(ChangeDetectorRef);

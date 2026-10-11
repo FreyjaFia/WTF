@@ -58,6 +58,29 @@ describe('SidebarComponent', () => {
     return { fixture, el, fakes, router, navigate, loading, byText, linkLabels };
   }
 
+  describe('which order link is lit', () => {
+    const lit = (el: HTMLElement) =>
+      [...el.querySelectorAll('nav a.sidebar-active')].map((a) =>
+        a.textContent!.replace(/\s+/g, ' ').trim(),
+      );
+
+    it.each([
+      ['/orders/list', ['Orders']],
+      ['/orders/details/abc', ['Orders']],
+      ['/orders/editor/abc', ['New Order']],
+      ['/orders/editor?offline=OFF-1', ['New Order']],
+      ['/orders/editor', ['New Order']],
+    ])('at %s', async (url, expected) => {
+      const { fixture, el, router } = await setup();
+      router.resetConfig([{ path: '**', children: [] }]);
+      (router.navigateByUrl as unknown as { mockRestore?: () => void }).mockRestore?.();
+      await router.navigateByUrl(url);
+      await fixture.whenStable();
+      fixture.detectChanges(false);
+      expect(lit(el)).toEqual(expected);
+    });
+  });
+
   it('loads the profile and shows name and role', async () => {
     const { el, loading, fakes } = await setup();
     expect(fakes.auth.getMe).toHaveBeenCalledTimes(1);

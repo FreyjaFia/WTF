@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { AuthService } from '@core/services';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { BehaviorSubject } from 'rxjs';
@@ -24,13 +24,19 @@ describe('DockComponent', () => {
       canReadInventory: () => perms.canReadInventory ?? false,
     };
     TestBed.configureTestingModule({
-      providers: [provideRouter([]), { provide: AuthService, useValue: fake }],
+      providers: [
+        provideRouter([{ path: '**', children: [] }]),
+        { provide: AuthService, useValue: fake },
+      ],
     });
     const fixture = TestBed.createComponent(DockComponent);
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
     const labels = () => [...el.querySelectorAll('.dock-label')].map((l) => l.textContent!.trim());
-    return { fixture, el, isLoggedIn$, labels };
+    const router = TestBed.inject(Router);
+    const activeLabels = () =>
+      [...el.querySelectorAll('a.dock-active .dock-label')].map((l) => l.textContent!.trim());
+    return { fixture, el, isLoggedIn$, labels, router, activeLabels };
   }
 
   it('renders nothing when logged out', () => {
@@ -63,6 +69,23 @@ describe('DockComponent', () => {
     const { el } = setup(true, { canReadOrders: true });
     const href = el.querySelector('a')!.getAttribute('href');
     expect(href).toBe(AppRoutes.OrdersList);
+  });
+
+  describe('which order entry is lit', () => {
+    const full = { canWriteOrders: true, canReadOrders: true };
+
+    it.each([
+      ['/orders/list', ['Orders']],
+      ['/orders/details/abc', ['Orders']],
+      ['/orders/editor/abc', ['New Order']],
+      ['/orders/editor?offline=OFF-1', ['New Order']],
+      ['/orders/editor', ['New Order']],
+    ])('at %s', async (url, expected) => {
+      const { fixture, router, activeLabels } = setup(true, full);
+      await router.navigateByUrl(url);
+      fixture.detectChanges();
+      expect(activeLabels()).toEqual(expected);
+    });
   });
 
   it('hides the dock after logout', () => {

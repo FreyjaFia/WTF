@@ -101,7 +101,8 @@
       @if (authService.canWriteOrders()) {
       <a
         [routerLink]="routes.OrdersEditor"
-        routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
+        [class]="ordersSection() === 'new-order' ? 'bg-gray-100 text-gray-900 sidebar-active' : ''"
+        [attr.aria-current]="ordersSection() === 'new-order' ? 'page' : null"
         class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
         [class.justify-center]="isCollapsed()"
         [attr.title]="'New Order'"
@@ -114,7 +115,8 @@
       @if (authService.canReadOrders()) {
       <a
         [routerLink]="routes.OrdersList"
-        routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
+        [class]="ordersSection() === 'orders' ? 'bg-gray-100 text-gray-900 sidebar-active' : ''"
+        [attr.aria-current]="ordersSection() === 'orders' ? 'page' : null"
         class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
         [class.justify-center]="isCollapsed()"
         [attr.title]="'Orders'"

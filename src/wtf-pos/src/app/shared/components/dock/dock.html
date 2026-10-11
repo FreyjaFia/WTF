@@ -10,14 +10,14 @@
     }
 
     @if (auth.canWriteOrders()) {
-      <a [routerLink]="routes.OrdersEditor" [routerLinkActive]="'dock-active'">
+      <a [routerLink]="routes.OrdersEditor" [class.dock-active]="ordersSection() === 'new-order'">
         <app-icon name="icon-plus" [class]="'size-[1.2em]'" [fill]="'#000000'"></app-icon>
         <span class="dock-label">New Order</span>
       </a>
     }
 
     @if (auth.canReadOrders()) {
-      <a [routerLink]="routes.OrdersList" [routerLinkActive]="'dock-active'">
+      <a [routerLink]="routes.OrdersList" [class.dock-active]="ordersSection() === 'orders'">
         <app-icon name="icon-file" [class]="'size-[1.2em]'" [fill]="'#000000'"></app-icon>
         <span class="dock-label">Orders</span>
       </a>
