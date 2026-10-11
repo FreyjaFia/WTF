@@ -28,6 +28,9 @@ public class UpdateMeHandler(WTFDbContext db, IHttpContextAccessor httpContextAc
 
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
+        // End every other session: a stolen refresh token must not survive a password change.
+        await SessionRevocation.RevokeRefreshTokensAsync(db, userId, cancellationToken);
+
         await db.SaveChangesAsync(cancellationToken);
 
         await auditService.LogAsync(

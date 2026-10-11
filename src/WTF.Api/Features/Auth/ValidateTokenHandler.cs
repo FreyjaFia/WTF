@@ -1,4 +1,5 @@
 using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Features.Auth.DTOs;
@@ -20,7 +21,9 @@ public class ValidateTokenHandler(WTFDbContext db, IJwtService jwtService) : IRe
             return new ValidateTokenDto(false);
         }
 
-        var userIdClaim = principal.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+        // The JWT handler maps the inbound "sub" claim to NameIdentifier, so check both.
+        var userIdClaim = (principal.FindFirst(ClaimTypes.NameIdentifier)
+            ?? principal.FindFirst(JwtRegisteredClaimNames.Sub))?.Value;
 
         if (!Guid.TryParse(userIdClaim, out var userId))
         {
@@ -29,7 +32,7 @@ public class ValidateTokenHandler(WTFDbContext db, IJwtService jwtService) : IRe
 
         var user = await db.Users
             .AsNoTracking()
-            .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+            .FirstOrDefaultAsync(u => u.Id == userId && u.IsActive, cancellationToken);
 
         if (user is null)
         {
