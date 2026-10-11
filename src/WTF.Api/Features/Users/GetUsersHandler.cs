@@ -28,9 +28,9 @@ public class GetUsersHandler(WTFDbContext db, IHttpContextAccessor httpContextAc
         {
             var searchTerm = request.SearchTerm.ToLower();
             query = query.Where(u =>
-                u.FirstName.Contains(searchTerm, StringComparison.CurrentCultureIgnoreCase) ||
-                u.LastName.Contains(searchTerm, StringComparison.CurrentCultureIgnoreCase) ||
-                u.Username.Contains(searchTerm, StringComparison.CurrentCultureIgnoreCase)
+                u.FirstName.ToLower().Contains(searchTerm) ||
+                u.LastName.ToLower().Contains(searchTerm) ||
+                u.Username.ToLower().Contains(searchTerm)
             );
         }
 

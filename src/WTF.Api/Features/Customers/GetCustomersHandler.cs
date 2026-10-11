@@ -30,9 +30,9 @@ public class GetCustomersHandler(WTFDbContext db, IHttpContextAccessor httpConte
         {
             var searchTerm = request.SearchTerm.ToLower();
             query = query.Where(c =>
-                c.FirstName.Contains(searchTerm, StringComparison.CurrentCultureIgnoreCase) ||
-                c.LastName.Contains(searchTerm, StringComparison.CurrentCultureIgnoreCase) ||
-                (c.Address != null && c.Address.Contains(searchTerm, StringComparison.CurrentCultureIgnoreCase))
+                c.FirstName.ToLower().Contains(searchTerm) ||
+                c.LastName.ToLower().Contains(searchTerm) ||
+                (c.Address != null && c.Address.ToLower().Contains(searchTerm))
             );
         }
 
