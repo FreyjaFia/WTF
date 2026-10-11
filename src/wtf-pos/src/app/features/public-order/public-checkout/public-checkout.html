@@ -1,0 +1,312 @@
+<div
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="public-checkout-title"
+  class="fixed inset-0 z-50 flex animate-[backdrop-fade_0.2s_ease-out] items-center justify-center bg-black/30 backdrop-blur-md"
+  tabindex="-1"
+  (click)="!isBusy() && cancelled.emit()"
+  (keydown.escape)="!isBusy() && cancelled.emit()"
+>
+  <div
+    role="document"
+    class="mx-4 flex max-h-[92vh] w-full max-w-lg animate-[modal-pop_0.2s_ease-out] flex-col rounded-2xl bg-white shadow-2xl"
+    (click)="$event.stopPropagation()"
+    (keydown)="$event.stopPropagation()"
+  >
+    <!-- Header -->
+    <div class="shrink-0 border-b border-gray-100 px-6 pt-6 pb-4">
+      <div class="flex items-start justify-between gap-4">
+        <div class="min-w-0">
+          <h3 id="public-checkout-title" class="text-lg font-bold text-gray-900">Checkout</h3>
+          <p class="mt-0.5 text-sm text-gray-500">The shop will confirm your order.</p>
+        </div>
+        <div class="shrink-0 text-right">
+          <p class="text-xs text-gray-400">Total</p>
+          <p class="text-lg font-bold text-[#047857]">₱{{ total() | number: '1.2-2' }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Form -->
+    <div class="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-4">
+      <fieldset>
+        <legend class="mb-2 text-xs font-semibold tracking-wider text-gray-400 uppercase">
+          Handover
+        </legend>
+        <div class="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Handover">
+          @for (option of [Fulfillment.Pickup, Fulfillment.Delivery]; track option) {
+            <button
+              type="button"
+              role="radio"
+              class="rounded-xl border px-3 py-3 text-sm font-medium transition-colors"
+              [class]="
+                fulfillment() === option
+                  ? 'border-[#047857] bg-[#047857]/5 text-gray-900'
+                  : 'border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+              "
+              [attr.aria-checked]="fulfillment() === option"
+              (click)="chooseFulfillment(option)"
+            >
+              {{ option === Fulfillment.Pickup ? 'Pickup' : 'Delivery' }}
+            </button>
+          }
+        </div>
+      </fieldset>
+
+      @if (isDelivery()) {
+        <div>
+          <label
+            for="checkout-address"
+            class="mb-2 block text-xs font-semibold tracking-wider text-gray-400 uppercase"
+            >Delivery address</label
+          >
+          <textarea
+            id="checkout-address"
+            class="textarea textarea-bordered w-full outline-transparent"
+            [class.textarea-error]="attempted() && addressError()"
+            rows="2"
+            placeholder="House no., street, barangay, city"
+            autocomplete="street-address"
+            [attr.maxlength]="maxAddress"
+            [attr.aria-invalid]="attempted() && addressError() ? 'true' : null"
+            [value]="address()"
+            [disabled]="isBusy()"
+            (input)="onAddress($any($event.target).value)"
+          ></textarea>
+          @if (attempted() && addressError(); as message) {
+            <p class="mt-1 text-sm text-red-600" role="alert">{{ message }}</p>
+          }
+        </div>
+      }
+
+      <div>
+        <label
+          for="checkout-contact"
+          class="mb-2 block text-xs font-semibold tracking-wider text-gray-400 uppercase"
+          >Contact number</label
+        >
+        <input
+          id="checkout-contact"
+          type="tel"
+          class="input input-bordered w-full outline-transparent"
+          [class.input-error]="attempted() && contactError()"
+          placeholder="0917 123 4567"
+          autocomplete="tel"
+          inputmode="tel"
+          [attr.maxlength]="maxContact"
+          [attr.aria-invalid]="attempted() && contactError() ? 'true' : null"
+          [value]="contact()"
+          [disabled]="isBusy()"
+          (input)="onContact($any($event.target).value)"
+        />
+        @if (attempted() && contactError(); as message) {
+          <p class="mt-1 text-sm text-red-600" role="alert">{{ message }}</p>
+        }
+      </div>
+
+      <fieldset>
+        <legend class="mb-2 text-xs font-semibold tracking-wider text-gray-400 uppercase">
+          Payment
+        </legend>
+        <div class="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Payment">
+          @for (option of [Payment.Cash, Payment.GCash]; track option) {
+            <button
+              type="button"
+              role="radio"
+              class="rounded-xl border px-3 py-3 text-sm font-medium transition-colors"
+              [class]="
+                payment() === option
+                  ? 'border-[#047857] bg-[#047857]/5 text-gray-900'
+                  : 'border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+              "
+              [attr.aria-checked]="payment() === option"
+              (click)="choosePayment(option)"
+            >
+              {{ option === Payment.Cash ? 'Cash' : 'GCash' }}
+            </button>
+          }
+        </div>
+
+        <!-- Optional tip for the shop -->
+        <div class="mt-3">
+          <label for="checkout-tip" class="mb-1 block text-sm text-gray-600"
+            >Tip for the shop (Optional)</label
+          >
+          <div class="relative">
+            <span
+              class="pointer-events-none absolute inset-y-0 left-3 z-10 flex items-center text-gray-500"
+              data-peso-icon
+            >
+              <app-icon name="icon-peso" [class]="'h-4 w-4'" [fill]="'currentColor'" />
+            </span>
+            <input
+              id="checkout-tip"
+              type="number"
+              inputmode="decimal"
+              min="0"
+              step="0.01"
+              class="input input-bordered w-full pl-9 outline-transparent"
+              [class.input-error]="tipError()"
+              placeholder="0.00"
+              [attr.aria-invalid]="tipError() ? 'true' : null"
+              [value]="tip()"
+              [disabled]="isBusy()"
+              (input)="tip.set($any($event.target).value)"
+            />
+          </div>
+          @if (tipError(); as message) {
+            <p class="mt-1 text-sm text-red-600" role="alert">{{ message }}</p>
+          }
+        </div>
+
+        @if (isCash()) {
+          <div class="mt-3">
+            <label for="checkout-amount" class="mb-1 block text-sm text-gray-600"
+              >I will pay with</label
+            >
+            <div class="flex items-center gap-2">
+              <div class="relative flex-1">
+                <span
+                  class="pointer-events-none absolute inset-y-0 left-3 z-10 flex items-center text-gray-500"
+                  data-peso-icon
+                >
+                  <app-icon name="icon-peso" [class]="'h-4 w-4'" [fill]="'currentColor'" />
+                </span>
+                <input
+                  id="checkout-amount"
+                  type="number"
+                  inputmode="decimal"
+                  min="0"
+                  step="0.01"
+                  class="input input-bordered w-full pl-9 outline-transparent"
+                  [class.input-error]="amountInvalid()"
+                  placeholder="0.00"
+                  [attr.aria-invalid]="amountInvalid() ? 'true' : null"
+                  [value]="amount()"
+                  [disabled]="isBusy()"
+                  (input)="amount.set($any($event.target).value)"
+                />
+              </div>
+              <button
+                type="button"
+                class="app-btn app-btn-secondary app-btn-md shrink-0"
+                [disabled]="isBusy()"
+                (click)="useExactAmount()"
+              >
+                Exact amount
+              </button>
+            </div>
+
+            <!-- What is due, what is still owed, or the change to prepare -->
+            <div
+              class="mt-2 flex items-center justify-between rounded-lg border-l-4 px-3 py-2 text-sm"
+              data-cash-status
+              [attr.data-status]="cashStatus()"
+              [class]="
+                cashStatus() === 'owed'
+                  ? 'border-red-400 bg-red-50 text-red-700'
+                  : cashStatus() === 'change'
+                    ? 'border-[#047857] bg-[#047857]/5 text-[#065f46]'
+                    : 'border-gray-300 bg-gray-50 text-gray-600'
+              "
+            >
+              <span class="font-medium">
+                @switch (cashStatus()) {
+                  @case ('owed') {
+                    Still needed
+                  }
+                  @case ('change') {
+                    Change to prepare
+                  }
+                  @default {
+                    Amount due
+                  }
+                }
+              </span>
+              <span class="font-bold">₱{{ cashDifference() | number: '1.2-2' }}</span>
+            </div>
+            @if (toPay() !== total()) {
+              <p class="mt-1 text-xs text-gray-400">
+                Includes your ₱{{ tipValue() | number: '1.2-2' }} tip.
+              </p>
+            }
+            @if (attempted() && amountError(); as message) {
+              <p class="mt-1 text-sm text-red-600" role="alert">{{ message }}</p>
+            }
+          </div>
+        } @else {
+          <p class="mt-3 text-sm text-gray-500">You will pay with GCash.</p>
+        }
+      </fieldset>
+
+      <div>
+        <label
+          for="checkout-instructions"
+          class="mb-2 block text-xs font-semibold tracking-wider text-gray-400 uppercase"
+          >Notes for the shop (Optional)</label
+        >
+        <div class="relative">
+          <textarea
+            id="checkout-instructions"
+            class="textarea textarea-bordered w-full pr-16 outline-transparent"
+            rows="2"
+            placeholder="e.g. Please call when you arrive"
+            [attr.maxlength]="maxInstructions"
+            [value]="instructions()"
+            [disabled]="isBusy()"
+            (input)="onInstructions($any($event.target).value)"
+          ></textarea>
+          <span class="absolute right-3 bottom-2 text-xs text-gray-400 select-none">
+            {{ instructions().length }}/{{ maxInstructions }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    @if (serverError(); as message) {
+      <div class="mx-6 mb-2 flex items-center gap-2 rounded-lg bg-red-50 px-4 py-2.5" role="alert">
+        <app-icon name="icon-error" [class]="'h-4 w-4 shrink-0 text-red-500'" />
+        <p class="text-sm font-medium text-red-600">{{ message }}</p>
+      </div>
+    }
+
+    <!-- Footer -->
+    <div class="shrink-0 border-t border-gray-100 px-6 py-4">
+      <!-- One help line: it explains the hold, and turns into the reminder when the button is let go too early -->
+      <p
+        class="mb-3 min-h-4 text-center text-xs"
+        [class]="holdReminder() ? 'font-semibold text-amber-600' : 'text-gray-400'"
+        data-hold-help
+        [attr.data-reminding]="holdReminder()"
+        role="status"
+      >
+        @if (holdReminder()) {
+          Keep holding until the button fills to place your order.
+        } @else {
+          Press and hold <span class="font-semibold text-gray-500">Place Order</span> to send your
+          order.
+        }
+      </p>
+      <div class="flex items-center gap-3">
+        <button
+          type="button"
+          class="app-btn app-btn-secondary app-btn-md flex-1"
+          [disabled]="isBusy()"
+          (click)="cancelled.emit()"
+        >
+          Back
+        </button>
+        <app-hold-button
+          label="Place Order"
+          busyLabel="Placing order..."
+          hint="Keep holding to place your order"
+          buttonClass="app-btn app-btn-primary app-btn-md"
+          [reminder]="false"
+          [busy]="isBusy()"
+          (held)="submit()"
+          (released)="onHoldReleased()"
+        />
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,4 +1,4 @@
-import { DatePipe, DecimalPipe, NgTemplateOutlet } from '@angular/common';
+import { DecimalPipe, NgTemplateOutlet } from '@angular/common';
 import {
   Component,
   computed,
@@ -11,22 +11,25 @@ import {
   viewChild,
 } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import { AlertService } from '@core/services/alert.service';
 import { PublicLinkInvalidError, PublicOrderService } from '@core/services/public-order.service';
 import { AvatarComponent } from '@shared/components/avatar/avatar';
-import { BadgeComponent, BadgeVariant } from '@shared/components/badge/badge';
 import { CartDrawerComponent } from '@shared/components/cart-drawer/cart-drawer';
 import { IconComponent } from '@shared/components/icons/icon/icon';
 import { SearchInputComponent } from '@shared/components/search-input/search-input';
+import { PublicOrderDetailsComponent } from './public-order-details/public-order-details';
+import { PublicOrdersComponent } from './public-orders/public-orders';
 import {
   ProductCategoryEnum,
   PublicAddOnGroupDto,
   PublicCartLine,
   PublicOrderDto,
   PublicOrderLinkDto,
-  PublicOrderStatusKind,
   PublicProductDto,
+  SubmitPublicOrderRequest,
 } from '@shared/models';
 import { LinkInvalidComponent } from './link-invalid/link-invalid';
+import { PublicCheckoutComponent, PublicCheckoutForm } from './public-checkout/public-checkout';
 import {
   MAX_ITEM_QUANTITY,
   PublicAddonPickerComponent,
@@ -41,6 +44,10 @@ export const MENU_STALE_AFTER_MS = 60_000;
 /** How often My orders refreshes itself while it is open and visible. */
 export const ORDERS_POLL_MS = 30_000;
 const ORDERS_PAGE_SIZE = 50;
+/** A saved cart older than this is thrown away. */
+const CART_KEEP_MS = 24 * 60 * 60 * 1000;
+const MAX_CART_LINES = 30;
+const CART_STORAGE_PREFIX = 'wtf.public-cart.';
 /** How long a tab-click scroll is allowed to glide before scroll events move the highlight again. */
 export const PROGRAMMATIC_SCROLL_MS = 700;
 
@@ -51,34 +58,29 @@ const CATEGORY_LABELS: Record<number, string> = {
   [ProductCategoryEnum.Other]: 'Other',
 };
 
-const STATUS_VARIANTS: Record<PublicOrderStatusKind, BadgeVariant> = {
-  waiting: 'amber',
-  accepted: 'info',
-  completed: 'success',
-  rejected: 'error',
-  cancelled: 'default',
-  refunded: 'default',
-};
-
 /**
  * The page a customer opens from their personal ordering link. They are not signed in.
  *
- * Nothing here is saved on the device: the catalog is fetched fresh every time the page loads and every time the
- * customer returns to the Menu tab, and the cart lives in memory only. That way a customer can never order from an
- * obsolete list. Do not add the catalog cache, the image cache or the offline queue to this page.
+ * The catalog is never saved on the device: it is fetched fresh every time the page loads and every time the customer
+ * returns to the Menu tab, so a customer can never order from an obsolete list. Do not add the catalog cache, the image
+ * cache or the offline queue to this page.
+ *
+ * Only the customer's choices (which products, how many, which add-ons) are kept for this tab, so a reload does not
+ * lose the order. They are checked against the fresh menu before they are shown, like any other cart.
  */
 @Component({
   selector: 'app-public-order',
   imports: [
-    DatePipe,
     DecimalPipe,
     AvatarComponent,
-    BadgeComponent,
     CartDrawerComponent,
     IconComponent,
     LinkInvalidComponent,
     NgTemplateOutlet,
     PublicAddonPickerComponent,
+    PublicCheckoutComponent,
+    PublicOrderDetailsComponent,
+    PublicOrdersComponent,
     SearchInputComponent,
   ],
   templateUrl: './public-order.html',
@@ -87,6 +89,7 @@ const STATUS_VARIANTS: Record<PublicOrderStatusKind, BadgeVariant> = {
 export class PublicOrderComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly service = inject(PublicOrderService);
+  private readonly alerts = inject(AlertService);
 
   private readonly sidebarHost = viewChild<ElementRef<HTMLElement>>('sidebarHost');
   private resizeObserver: ResizeObserver | null = null;
@@ -113,16 +116,25 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
   private programmaticScrollTimer: ReturnType<typeof setTimeout> | null = null;
 
   protected readonly cart = signal<PublicCartLine[]>([]);
+  /** Saving the cart waits until the saved one has been read back, or it would be erased first. */
+  private cartRestored = false;
   protected readonly cartOpen = signal(false);
   protected readonly pickerProduct = signal<PublicProductDto | null>(null);
   /** The cart line being edited in the picker, or null when adding a new item. */
   protected readonly editingKey = signal<string | null>(null);
-  protected readonly notice = signal<string | null>(null);
+  protected readonly checkoutOpen = signal(false);
+  protected readonly isPlacingOrder = signal(false);
+  /** What the server said about the last attempt to place the order, shown in the checkout. */
+  protected readonly checkoutError = signal<string | null>(null);
 
   protected readonly orders = signal<PublicOrderDto[]>([]);
   protected readonly ordersState = signal<'idle' | 'loading' | 'ready' | 'error'>('idle');
   protected readonly ordersError = signal('');
-  protected readonly expandedOrderId = signal<string | null>(null);
+  /** The order whose details are open on My orders, or null for the list. */
+  protected readonly selectedOrderId = signal<string | null>(null);
+  protected readonly selectedOrder = computed(
+    () => this.orders().find((order) => order.id === this.selectedOrderId()) ?? null,
+  );
 
   /** The customer's picture, unless there is none or it failed to load. */
   protected readonly profileImage = computed(() =>
@@ -189,18 +201,14 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
     this.cart().reduce((sum, line) => sum + this.lineTotal(line), 0),
   );
 
-  protected readonly ordersByDate = computed(() => {
-    const groups = new Map<string, PublicOrderDto[]>();
-
-    for (const order of this.orders()) {
-      const key = new Date(order.createdAt).toDateString();
-      groups.set(key, [...(groups.get(key) ?? []), order]);
-    }
-
-    return [...groups.entries()].map(([date, orders]) => ({ date, orders }));
-  });
-
   public constructor() {
+    effect(() => {
+      const lines = this.cart();
+      if (this.cartRestored) {
+        this.saveCart(lines);
+      }
+    });
+
     // Like the signed-in layout: publish the sidebar width so the cart sheet opens beside it, not over it.
     effect(() => {
       const host = this.sidebarHost()?.nativeElement ?? null;
@@ -285,6 +293,7 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
         this.loadedAt = Date.now();
         this.isRefreshingMenu.set(false);
         this.state.set('ready');
+        this.restoreCart();
         this.reconcileCart();
       },
       error: (err: Error) => {
@@ -294,7 +303,7 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
           this.state.set('invalid');
         } else if (silent && this.link()) {
           // Keep what is on screen, but make sure the customer knows it may be out of date.
-          this.notice.set(`${err.message} The menu below may be out of date.`);
+          this.alerts.warning(`${err.message} The menu below may be out of date.`);
         } else {
           this.errorMessage.set(err.message);
           this.state.set('error');
@@ -346,6 +355,7 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
     }
 
     this.tab.set(tab);
+    this.selectedOrderId.set(null);
 
     if (tab === 'menu') {
       // Always show a fresh menu when coming back to it.
@@ -446,10 +456,6 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
     this.search.set(value);
   }
 
-  protected dismissNotice(): void {
-    this.notice.set(null);
-  }
-
   private groupsFor(productId: string): PublicAddOnGroupDto[] {
     return (this.link()?.catalog.addOnsByProductId[productId] ?? []).filter(
       (group) => group.options.length > 0,
@@ -471,7 +477,7 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
     const product = this.products().find((p) => p.id === line.productId);
 
     if (!product) {
-      this.notice.set('That item is no longer available.');
+      this.alerts.warning('That item is no longer available.');
       this.removeLine(line.key);
       return;
     }
@@ -498,7 +504,79 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
     this.addLine(product, result);
   }
 
-  // --- cart (in memory only) ---
+  // --- cart ---
+
+  private get cartStorageKey(): string {
+    return CART_STORAGE_PREFIX + this.token;
+  }
+
+  /** Keeps the choices for this tab only. Storage can be blocked or full, and then the cart simply is not kept. */
+  private saveCart(lines: PublicCartLine[]): void {
+    try {
+      if (lines.length === 0) {
+        sessionStorage.removeItem(this.cartStorageKey);
+      } else {
+        sessionStorage.setItem(this.cartStorageKey, JSON.stringify({ savedAt: Date.now(), lines }));
+      }
+    } catch {
+      // Not kept.
+    }
+  }
+
+  /** Puts back the cart saved before a reload, once, when the menu has just loaded. The menu check follows. */
+  private restoreCart(): void {
+    if (this.cartRestored) {
+      return;
+    }
+    this.cartRestored = true;
+
+    try {
+      const raw = sessionStorage.getItem(this.cartStorageKey);
+      if (!raw || this.cart().length > 0) {
+        return;
+      }
+
+      const saved = JSON.parse(raw) as { savedAt?: unknown; lines?: unknown };
+      if (
+        typeof saved.savedAt !== 'number' ||
+        Date.now() - saved.savedAt > CART_KEEP_MS ||
+        !Array.isArray(saved.lines)
+      ) {
+        sessionStorage.removeItem(this.cartStorageKey);
+        return;
+      }
+
+      const lines = saved.lines.filter((line) => this.isCartLine(line)).slice(0, MAX_CART_LINES);
+      if (lines.length > 0) {
+        this.cart.set(lines as PublicCartLine[]);
+      }
+    } catch {
+      // Unreadable or blocked: start with an empty cart.
+    }
+  }
+
+  private isCartLine(line: unknown): boolean {
+    const l = line as Partial<PublicCartLine> | null;
+    return (
+      !!l &&
+      typeof l.key === 'string' &&
+      typeof l.productId === 'string' &&
+      typeof l.name === 'string' &&
+      typeof l.price === 'number' &&
+      Number.isInteger(l.quantity) &&
+      l.quantity! >= 1 &&
+      l.quantity! <= MAX_ITEM_QUANTITY &&
+      Array.isArray(l.addOns) &&
+      l.addOns.every(
+        (a) =>
+          typeof a?.id === 'string' &&
+          typeof a.name === 'string' &&
+          typeof a.price === 'number' &&
+          Number.isInteger(a.quantity) &&
+          a.quantity >= 1,
+      )
+    );
+  }
 
   private addLine(product: PublicProductDto, result: PublicAddonPickerResult): void {
     const key = [
@@ -549,9 +627,7 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
     this.cart.update((lines) =>
       lines
         .map((l) =>
-          l.key === key
-            ? { ...l, quantity: Math.min(MAX_ITEM_QUANTITY, l.quantity + delta) }
-            : l,
+          l.key === key ? { ...l, quantity: Math.min(MAX_ITEM_QUANTITY, l.quantity + delta) } : l,
         )
         .filter((l) => l.quantity > 0),
     );
@@ -602,11 +678,12 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
         continue;
       }
 
-      const fresh = line.addOns.map((a, i) => ({ ...a, name: addOns[i]!.name, price: addOns[i]!.price }));
-      if (
-        product.price !== line.price ||
-        fresh.some((a, i) => a.price !== line.addOns[i].price)
-      ) {
+      const fresh = line.addOns.map((a, i) => ({
+        ...a,
+        name: addOns[i]!.name,
+        price: addOns[i]!.price,
+      }));
+      if (product.price !== line.price || fresh.some((a, i) => a.price !== line.addOns[i].price)) {
         repriced = true;
       }
 
@@ -627,25 +704,100 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
       messages.push('Some prices have changed. Your order shows the current prices.');
     }
     if (messages.length > 0) {
-      this.notice.set(messages.join(' '));
+      this.alerts.warning(messages.join(' '));
     }
+  }
+
+  // --- checkout ---
+
+  protected openCheckout(): void {
+    if (this.cart().length === 0) {
+      return;
+    }
+
+    this.checkoutError.set(null);
+    this.cartOpen.set(false);
+    this.checkoutOpen.set(true);
+  }
+
+  protected closeCheckout(): void {
+    if (this.isPlacingOrder()) {
+      return;
+    }
+
+    this.checkoutOpen.set(false);
+    this.checkoutError.set(null);
+  }
+
+  /** The order request for the cart and the checkout form. It carries no prices: the server decides those. */
+  protected buildOrderRequest(form: PublicCheckoutForm): SubmitPublicOrderRequest {
+    return {
+      items: this.cart().map((line) => ({
+        productId: line.productId,
+        quantity: line.quantity,
+        addOns: line.addOns.map((addOn) => ({ productId: addOn.id, quantity: addOn.quantity })),
+        specialInstructions: line.specialInstructions ?? null,
+      })),
+      fulfillment: form.fulfillment,
+      deliveryAddress: form.deliveryAddress,
+      contactNumber: form.contactNumber,
+      paymentMethod: form.paymentMethod,
+      amountReceived: form.amountReceived,
+      tips: form.tips,
+      specialInstructions: form.specialInstructions,
+    };
+  }
+
+  protected placeOrder(form: PublicCheckoutForm): void {
+    if (this.isPlacingOrder() || this.cart().length === 0) {
+      return;
+    }
+
+    this.isPlacingOrder.set(true);
+    this.checkoutError.set(null);
+
+    this.service.createOrder(this.token, this.buildOrderRequest(form)).subscribe({
+      next: (order) => {
+        this.isPlacingOrder.set(false);
+        this.checkoutOpen.set(false);
+        this.cart.set([]);
+        this.cartOpen.set(false);
+        this.alerts.success(
+          `Your order #${order.orderNumber} was sent. The shop will confirm it shortly.`,
+        );
+        // Show it straight away on My orders, waiting for confirmation.
+        this.tab.set('orders');
+        this.loadOrders();
+      },
+      error: (err: Error) => {
+        this.isPlacingOrder.set(false);
+
+        // The link stopped working while the customer was filling in checkout: nothing was created, and nothing
+        // stays on screen.
+        if (err instanceof PublicLinkInvalidError) {
+          this.checkoutOpen.set(false);
+          this.cart.set([]);
+          this.state.set('invalid');
+          return;
+        }
+
+        this.checkoutError.set(err.message);
+
+        // An item that is no longer sold or a changed price: bring the menu and the cart up to date underneath.
+        if (/no longer available/i.test(err.message)) {
+          this.loadMenu(true);
+        }
+      },
+    });
   }
 
   // --- my orders ---
 
-  protected toggleOrder(id: string): void {
-    this.expandedOrderId.update((current) => (current === id ? null : id));
+  protected openOrder(id: string): void {
+    this.selectedOrderId.set(id);
   }
 
-  protected statusVariant(kind: PublicOrderStatusKind): BadgeVariant {
-    return STATUS_VARIANTS[kind];
-  }
-
-  protected orderLineTotal(unitPrice: number, quantity: number, addOnsPerUnit: number): number {
-    return (unitPrice + addOnsPerUnit) * quantity;
-  }
-
-  protected addOnsPerUnit(item: PublicOrderDto['items'][number]): number {
-    return item.addOns.reduce((sum, a) => sum + a.unitPrice * a.quantity, 0);
+  protected closeOrder(): void {
+    this.selectedOrderId.set(null);
   }
 }

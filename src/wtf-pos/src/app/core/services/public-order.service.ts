@@ -2,9 +2,15 @@ import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http'
 import { inject, Injectable } from '@angular/core';
 import { HttpErrorMessages, ServiceErrorMessages } from '@core/messages';
 import { environment } from '@environments/environment.development';
-import { PagedResultDto, PublicOrderDto, PublicOrderLinkDto } from '@shared/models';
+import {
+  PagedResultDto,
+  PublicOrderDto,
+  PublicOrderLinkDto,
+  SubmitPublicOrderRequest,
+} from '@shared/models';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import { extractHttpErrorMessage } from './http-error-message';
 
 /** The link is unknown, expired, revoked, or its customer may no longer order. The API gives one answer for all. */
 export class PublicLinkInvalidError extends Error {
@@ -47,6 +53,18 @@ export class PublicOrderService {
       );
   }
 
+  /**
+   * Places an order. It waits for the shop to accept it. A 404 means the link stopped working (revoked, expired or
+   * switched off), possibly while the customer was filling in checkout, and nothing was created.
+   */
+  public createOrder(token: string, request: SubmitPublicOrderRequest): Observable<PublicOrderDto> {
+    return this.http
+      .post<PublicOrderDto>(`${this.url(token)}/orders`, request, this.noCache())
+      .pipe(
+        catchError((error) => this.fail(error, ServiceErrorMessages.PublicOrder.PlaceOrderFailed)),
+      );
+  }
+
   private url(token: string): string {
     return `${this.baseUrl}/${encodeURIComponent(token)}`;
   }
@@ -67,6 +85,14 @@ export class PublicOrderService {
 
     if (error.status === 429) {
       return throwError(() => new Error(ServiceErrorMessages.PublicOrder.TooManyRequests));
+    }
+
+    // The server explains what is wrong with an order in plain words (for example an item that is no longer sold).
+    if (error.status === 400) {
+      const message = extractHttpErrorMessage(error);
+      if (message) {
+        return throwError(() => new Error(message));
+      }
     }
 
     console.error('Public ordering request failed:', error);

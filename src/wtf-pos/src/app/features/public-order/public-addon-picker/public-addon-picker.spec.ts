@@ -66,7 +66,8 @@ describe('PublicAddonPickerComponent', () => {
     ]);
     expect(text()).toContain('Large');
     expect(text()).toContain('+₱30.00');
-    expect(text()).toContain('Free');
+    expect(text()).toContain('+₱0.00');
+    expect(text()).not.toContain('Free');
   });
 
   it('requires a size before adding', () => {
@@ -206,7 +207,9 @@ describe('PublicAddonPickerComponent', () => {
     expect(dialog.className).toContain('bg-black/30');
     expect(dialog.className).toContain('backdrop-blur-md');
     expect(dialog.className).toContain('backdrop-fade');
-    expect((fixture.nativeElement.querySelector('[role="document"]') as HTMLElement).className).toContain('modal-pop');
+    expect(
+      (fixture.nativeElement.querySelector('[role="document"]') as HTMLElement).className,
+    ).toContain('modal-pop');
   });
 
   it('works for a product with no add-ons: quantity and instructions only', () => {
@@ -280,7 +283,9 @@ describe('PublicAddonPickerComponent', () => {
       setup([EXTRA]);
       c.toggle(4, 'e-1');
       fixture.detectChanges();
-      const increase = fixture.nativeElement.querySelector('[aria-label="Increase Extra shot quantity"]') as HTMLButtonElement;
+      const increase = fixture.nativeElement.querySelector(
+        '[aria-label="Increase Extra shot quantity"]',
+      ) as HTMLButtonElement;
       increase.click();
       expect(c.quantityOf(4, 'e-1')).toBe(2);
     });
@@ -323,7 +328,9 @@ describe('PublicAddonPickerComponent', () => {
 
   it('makes the quantity buttons a comfortable tap size', () => {
     setup([]);
-    for (const button of fixture.nativeElement.querySelectorAll('.app-stepper-btn, .app-stepper-btn-primary')) {
+    for (const button of fixture.nativeElement.querySelectorAll(
+      '.app-stepper-btn, .app-stepper-btn-primary',
+    )) {
       expect(button.className).toContain('h-8');
       expect(button.className).toContain('w-8');
     }
@@ -371,7 +378,9 @@ describe('PublicAddonPickerComponent', () => {
   describe('fits narrow screens', () => {
     it('stacks the header on narrow screens so a long name is not squeezed', () => {
       setup([]);
-      const title = fixture.nativeElement.querySelector('#public-addon-picker-title') as HTMLElement;
+      const title = fixture.nativeElement.querySelector(
+        '#public-addon-picker-title',
+      ) as HTMLElement;
       const header = title.closest('.border-b')!.firstElementChild as HTMLElement;
       expect(header.className).toContain('flex-col');
       expect(header.className).toContain('sm:flex-row');
@@ -396,8 +405,12 @@ describe('PublicAddonPickerComponent', () => {
       c.toggle(4, 'e-1');
       fixture.detectChanges();
 
-      const row = fixture.nativeElement.querySelector('[role="button"][aria-pressed="true"]') as HTMLElement;
-      const name = [...row.querySelectorAll('span')].find((x) => x.textContent?.includes('Extra shot of')) as HTMLElement;
+      const row = fixture.nativeElement.querySelector(
+        '[role="button"][aria-pressed="true"]',
+      ) as HTMLElement;
+      const name = [...row.querySelectorAll('span')].find((x) =>
+        x.textContent?.includes('Extra shot of'),
+      ) as HTMLElement;
       expect(name.className).toContain('min-w-0');
       expect(name.className).toContain('flex-1');
       expect(name.className).toContain('wrap-break-word');
@@ -408,7 +421,9 @@ describe('PublicAddonPickerComponent', () => {
       expect(cluster.className).toContain('sm:flex-row');
       expect(cluster.querySelector('[aria-label^="Increase"]')).not.toBeNull();
       expect(cluster.textContent).toContain('25.00');
-      const price = [...cluster.querySelectorAll('span')].find((x) => x.textContent?.includes('25.00')) as HTMLElement;
+      const price = [...cluster.querySelectorAll('span')].find((x) =>
+        x.textContent?.includes('25.00'),
+      ) as HTMLElement;
       expect(price.className).toContain('whitespace-nowrap');
     });
 

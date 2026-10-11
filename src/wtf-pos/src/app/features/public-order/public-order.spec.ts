@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute } from '@angular/router';
+import { AlertService } from '@core/services/alert.service';
 import { PublicLinkInvalidError, PublicOrderService } from '@core/services/public-order.service';
 import {
   PublicAddOnGroupDto,
@@ -8,7 +9,7 @@ import {
   PublicProductDto,
 } from '@shared/models';
 import { of, Subject, throwError } from 'rxjs';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 import { internals, Internals, stubRoute } from '../../testing/management-spec-helpers';
 import {
   MENU_STALE_AFTER_MS,
@@ -48,7 +49,11 @@ function link(over: Partial<PublicOrderLinkDto['catalog']> = {}): PublicOrderLin
   };
 }
 
-const order = (id: string, createdAt: string, over: Partial<PublicOrderDto> = {}): PublicOrderDto => ({
+const order = (
+  id: string,
+  createdAt: string,
+  over: Partial<PublicOrderDto> = {},
+): PublicOrderDto => ({
   id,
   orderNumber: 1001,
   createdAt,
@@ -74,18 +79,25 @@ const order = (id: string, createdAt: string, over: Partial<PublicOrderDto> = {}
 describe('PublicOrderComponent', () => {
   let fixture: ComponentFixture<PublicOrderComponent>;
   let c: Internals;
-  let service: { getLink: ReturnType<typeof vi.fn>; getOrders: ReturnType<typeof vi.fn> };
+  let service: {
+    getLink: ReturnType<typeof vi.fn>;
+    getOrders: ReturnType<typeof vi.fn>;
+    createOrder: ReturnType<typeof vi.fn>;
+  };
 
   function setup(opts: { link?: unknown; orders?: unknown; token?: string } = {}) {
+    alerts = { success: vi.fn(), warning: vi.fn(), info: vi.fn(), error: vi.fn() };
     service = {
       getLink: vi.fn(() => opts.link ?? of(link())),
       getOrders: vi.fn(
         () => opts.orders ?? of({ items: [], page: 1, pageSize: 50, totalCount: 0 }),
       ),
+      createOrder: vi.fn(),
     };
     TestBed.configureTestingModule({
       providers: [
         { provide: PublicOrderService, useValue: service },
+        { provide: AlertService, useValue: alerts },
         { provide: ActivatedRoute, useValue: stubRoute({ token: opts.token ?? 'tok-1' }) },
       ],
     });
@@ -100,16 +112,118 @@ describe('PublicOrderComponent', () => {
     c.onPicked({ addOns: [], quantity: 1, specialInstructions: null });
   }
 
+  let alerts: { success: Mock; warning: Mock; info: Mock; error: Mock };
+
   const el = () => fixture.nativeElement as HTMLElement;
   const text = () => el().textContent ?? '';
 
   beforeEach(() => {
+    sessionStorage.clear();
     vi.spyOn(Storage.prototype, 'setItem');
   });
 
   afterEach(() => {
+    sessionStorage.clear();
     vi.useRealTimers();
     vi.restoreAllMocks();
+  });
+
+  describe('keeping the order on reload', () => {
+    const KEY = 'wtf.public-cart.tok-1';
+    const savedLine = (productId: string, over: Record<string, unknown> = {}) => ({
+      key: productId + '||',
+      productId,
+      name: 'Old name',
+      price: 1,
+      quantity: 2,
+      addOns: [],
+      specialInstructions: null,
+      ...over,
+    });
+
+    it('saves the choices as the cart changes, and forgets them when the cart is emptied', () => {
+      setup();
+      addCroissant();
+      fixture.detectChanges();
+      const saved = JSON.parse(sessionStorage.getItem(KEY)!);
+      expect(saved.lines.length).toBe(1);
+      expect(saved.lines[0].productId).toBe(c.products()[1].id);
+
+      c.clearCart();
+      fixture.detectChanges();
+      expect(sessionStorage.getItem(KEY)).toBeNull();
+    });
+
+    it('brings the saved cart back after a reload, with names and prices from the fresh menu', () => {
+      const croissant = link().catalog.products[1];
+      sessionStorage.setItem(
+        KEY,
+        JSON.stringify({ savedAt: Date.now(), lines: [savedLine(croissant.id)] }),
+      );
+
+      setup();
+
+      expect(c.cart().length).toBe(1);
+      expect(c.cart()[0].quantity).toBe(2);
+      expect(c.cart()[0].name).toBe(croissant.name);
+      expect(c.cart()[0].price).toBe(croissant.price);
+      expect(alerts.warning).toHaveBeenCalledWith(expect.stringContaining('prices have changed'));
+    });
+
+    it('drops saved items the menu no longer sells and says so', () => {
+      const croissant = link().catalog.products[1];
+      sessionStorage.setItem(
+        KEY,
+        JSON.stringify({
+          savedAt: Date.now(),
+          lines: [savedLine(croissant.id), savedLine('gone', { key: 'gone||' })],
+        }),
+      );
+
+      setup();
+
+      expect(c.cart().map((l: { productId: string }) => l.productId)).toEqual([croissant.id]);
+      expect(alerts.warning).toHaveBeenCalledWith(expect.stringContaining('no longer available'));
+    });
+
+    it('ignores a cart saved more than a day ago', () => {
+      const croissant = link().catalog.products[1];
+      sessionStorage.setItem(
+        KEY,
+        JSON.stringify({ savedAt: Date.now() - 25 * 60 * 60 * 1000, lines: [savedLine(croissant.id)] }),
+      );
+
+      setup();
+
+      expect(c.cart()).toEqual([]);
+      expect(sessionStorage.getItem(KEY)).toBeNull();
+    });
+
+    it('ignores saved data that is not a cart', () => {
+      sessionStorage.setItem(KEY, '{not json');
+      setup();
+      expect(c.cart()).toEqual([]);
+
+      sessionStorage.setItem(
+        KEY,
+        JSON.stringify({ savedAt: Date.now(), lines: [{ productId: 5, quantity: 'many' }, null] }),
+      );
+      TestBed.resetTestingModule();
+      setup();
+      expect(c.cart()).toEqual([]);
+    });
+
+    it('keeps the cart of each link apart', () => {
+      const croissant = link().catalog.products[1];
+      sessionStorage.setItem(
+        'wtf.public-cart.other',
+        JSON.stringify({ savedAt: Date.now(), lines: [savedLine(croissant.id)] }),
+      );
+
+      setup();
+
+      expect(c.cart()).toEqual([]);
+    });
   });
 
   describe('loading', () => {
@@ -152,7 +266,7 @@ describe('PublicOrderComponent', () => {
       service.getLink.mockReturnValue(throwError(() => new Error('Unable to connect.')));
       c.loadMenu(true);
       expect(c.state()).toBe('ready');
-      expect(c.notice()).toContain('may be out of date');
+      expect(alerts.warning).toHaveBeenCalledWith(expect.stringContaining('may be out of date'));
     });
 
     it('turns into the invalid page when the link is revoked during a refresh', () => {
@@ -211,7 +325,9 @@ describe('PublicOrderComponent', () => {
       ]);
       expect(el().querySelector('#category-1 h3')?.textContent).toContain('Drinks');
       expect(el().querySelector('#category-2 h3')?.textContent).toContain('Food');
-      expect(el().querySelector('[aria-label="Menu categories"]')!.parentElement!.className).toContain('border-b');
+      expect(
+        el().querySelector('[aria-label="Menu categories"]')!.parentElement!.className,
+      ).toContain('border-b');
     });
 
     it('highlights the first tab to begin with', () => {
@@ -259,14 +375,20 @@ describe('PublicOrderComponent', () => {
       vi.useFakeTimers();
       setup();
       const container = el().querySelector('[data-menu-scroll]') as HTMLElement;
-      vi.spyOn(container, 'getBoundingClientRect').mockReturnValue({ top: 0, bottom: 500, height: 500 } as DOMRect);
+      vi.spyOn(container, 'getBoundingClientRect').mockReturnValue({
+        top: 0,
+        bottom: 500,
+        height: 500,
+      } as DOMRect);
       const sectionRects: Record<string, { top: number; bottom: number }> = {
         'category-1': { top: -600, bottom: -100 },
         'category-2': { top: -80, bottom: 300 },
         'category-3': { top: 300, bottom: 700 },
       };
       for (const [id, rect] of Object.entries(sectionRects)) {
-        vi.spyOn(document.getElementById(id)!, 'getBoundingClientRect').mockReturnValue(rect as DOMRect);
+        vi.spyOn(document.getElementById(id)!, 'getBoundingClientRect').mockReturnValue(
+          rect as DOMRect,
+        );
       }
 
       c.selectCategoryTab(3);
@@ -293,10 +415,23 @@ describe('PublicOrderComponent', () => {
     it('moves the highlight to the category in view while scrolling', () => {
       setup();
       const container = el().querySelector('[data-menu-scroll]') as HTMLElement;
-      vi.spyOn(container, 'getBoundingClientRect').mockReturnValue({ top: 0, bottom: 500, height: 500 } as DOMRect);
-      vi.spyOn(document.getElementById('category-1')!, 'getBoundingClientRect').mockReturnValue({ top: -400, bottom: 50 } as DOMRect);
-      vi.spyOn(document.getElementById('category-2')!, 'getBoundingClientRect').mockReturnValue({ top: 50, bottom: 400 } as DOMRect);
-      vi.spyOn(document.getElementById('category-3')!, 'getBoundingClientRect').mockReturnValue({ top: 400, bottom: 800 } as DOMRect);
+      vi.spyOn(container, 'getBoundingClientRect').mockReturnValue({
+        top: 0,
+        bottom: 500,
+        height: 500,
+      } as DOMRect);
+      vi.spyOn(document.getElementById('category-1')!, 'getBoundingClientRect').mockReturnValue({
+        top: -400,
+        bottom: 50,
+      } as DOMRect);
+      vi.spyOn(document.getElementById('category-2')!, 'getBoundingClientRect').mockReturnValue({
+        top: 50,
+        bottom: 400,
+      } as DOMRect);
+      vi.spyOn(document.getElementById('category-3')!, 'getBoundingClientRect').mockReturnValue({
+        top: 400,
+        bottom: 800,
+      } as DOMRect);
 
       container.dispatchEvent(new Event('scroll'));
       expect(c.highlightedCategory()).toBe(2);
@@ -343,7 +478,9 @@ describe('PublicOrderComponent', () => {
 
     it('collapses the side bar to icons and expands it again', () => {
       setup();
-      const toggle = sidebar().querySelector('[aria-label="Collapse sidebar"]') as HTMLButtonElement;
+      const toggle = sidebar().querySelector(
+        '[aria-label="Collapse sidebar"]',
+      ) as HTMLButtonElement;
       toggle.click();
       fixture.detectChanges();
       expect(sidebar().className).toContain('w-21');
@@ -357,9 +494,10 @@ describe('PublicOrderComponent', () => {
 
     describe('profile picture', () => {
       const withPicture = () => ({ ...link(), imageUrl: 'https://cdn.example.com/maria.png' });
-      const pictures = () => [...el().querySelectorAll('img[alt="Your profile picture"]')] as HTMLImageElement[];
+      const pictures = () =>
+        [...el().querySelectorAll('img[alt="Your profile picture"]')] as HTMLImageElement[];
 
-      it('shows the customer\'s picture in the side bar and in the phone header', () => {
+      it("shows the customer's picture in the side bar and in the phone header", () => {
         setup({ link: of(withPicture()) });
         expect(pictures().length).toBe(2);
         for (const picture of pictures()) {
@@ -448,7 +586,8 @@ describe('PublicOrderComponent', () => {
       const button = [...el().querySelectorAll('button')].find((b) =>
         b.textContent?.includes('View Order'),
       ) as HTMLButtonElement;
-      expect(button.className).toContain('inset-x-4');
+      expect(button.className).toContain('inset-x-0');
+      expect(button.className).not.toContain('inset-x-4');
       expect(button.className).toContain('bottom-4');
 
       // The button sits in the same wrapper the order screen uses, inside the same padded area.
@@ -632,7 +771,7 @@ describe('PublicOrderComponent', () => {
       fixture.detectChanges();
       const refresh = el().querySelector('[aria-label="Refresh orders"]') as HTMLButtonElement;
       expect(refresh.className).toContain('app-btn-ghost');
-      expect(refresh.className).toContain('ml-auto');
+      expect(refresh.parentElement!.className).toContain('ml-auto');
       expect(refresh.closest('[class*="max-w-"]')).toBeNull();
 
       refresh.click();
@@ -699,9 +838,17 @@ describe('PublicOrderComponent', () => {
       expect(c.cart()[0].quantity).toBe(2);
 
       c.openProduct(c.products()[0]);
-      c.onPicked({ addOns: [{ id: 's-r', name: 'Regular', price: 0, quantity: 1 }], quantity: 1, specialInstructions: null });
+      c.onPicked({
+        addOns: [{ id: 's-r', name: 'Regular', price: 0, quantity: 1 }],
+        quantity: 1,
+        specialInstructions: null,
+      });
       c.openProduct(c.products()[0]);
-      c.onPicked({ addOns: [{ id: 's-l', name: 'Large', price: 30, quantity: 1 }], quantity: 1, specialInstructions: null });
+      c.onPicked({
+        addOns: [{ id: 's-l', name: 'Large', price: 30, quantity: 1 }],
+        quantity: 1,
+        specialInstructions: null,
+      });
       expect(c.cart().length).toBe(3);
     });
 
@@ -710,13 +857,19 @@ describe('PublicOrderComponent', () => {
       const extra = { id: 'e-1', name: 'Extra shot', price: 40 };
       c.openProduct(c.products()[0]);
       c.onPicked({
-        addOns: [{ id: 's-r', name: 'Regular', price: 0, quantity: 1 }, { ...extra, quantity: 2 }],
+        addOns: [
+          { id: 's-r', name: 'Regular', price: 0, quantity: 1 },
+          { ...extra, quantity: 2 },
+        ],
         quantity: 2,
         specialInstructions: null,
       });
       c.openProduct(c.products()[0]);
       c.onPicked({
-        addOns: [{ id: 's-r', name: 'Regular', price: 0, quantity: 1 }, { ...extra, quantity: 3 }],
+        addOns: [
+          { id: 's-r', name: 'Regular', price: 0, quantity: 1 },
+          { ...extra, quantity: 3 },
+        ],
         quantity: 1,
         specialInstructions: null,
       });
@@ -780,6 +933,35 @@ describe('PublicOrderComponent', () => {
       expect(card.textContent).toContain('80.00');
       expect(card.textContent).toContain('less ice');
       expect(card.textContent).toContain('260.00 / unit');
+    });
+
+    it('shows a no-cost add-on in the cart as +0.00, like the shop cart, and a paid one with its price', () => {
+      setup();
+      c.openProduct(c.products()[0]);
+      c.onPicked({
+        addOns: [
+          { id: 's-r', name: 'Regular', price: 0, quantity: 1 },
+          { id: 'e-1', name: 'Extra shot', price: 40, quantity: 1 },
+        ],
+        quantity: 1,
+        specialInstructions: null,
+      });
+      c.openCart();
+      fixture.detectChanges();
+
+      const rows = [
+        ...(el().querySelector('[aria-label="Edit Latte"]') as HTMLElement).querySelectorAll(
+          '.border-t > div',
+        ),
+      ];
+      const regular = rows.find((r) => r.textContent?.includes('Regular')) as HTMLElement;
+      const shot = rows.find((r) => r.textContent?.includes('Extra shot')) as HTMLElement;
+      expect(regular.textContent).toContain('+');
+      expect(regular.textContent).toContain('0.00');
+      expect(regular.textContent).not.toContain('Free');
+      expect(shot.textContent).toContain('40.00');
+      expect(shot.textContent).not.toContain('Free');
+      expect(shot.textContent).toContain('+');
     });
 
     it('does not open the editor when a quantity button is pressed', () => {
@@ -856,7 +1038,7 @@ describe('PublicOrderComponent', () => {
       c.editLine(line);
 
       expect(c.cart().length).toBe(0);
-      expect(c.notice()).toContain('no longer available');
+      expect(alerts.warning).toHaveBeenCalledWith(expect.stringContaining('no longer available'));
     });
 
     it('caps a line at 99', () => {
@@ -905,12 +1087,295 @@ describe('PublicOrderComponent', () => {
       expect(c.cartOpen()).toBe(true);
     });
 
-    it('never saves the cart or the menu on the device', () => {
+    it('never saves the menu on the device, only the cart choices for this tab', () => {
       setup();
       addCroissant();
       c.openProduct(c.products()[0]);
-      c.onPicked({ addOns: [{ id: 's-l', name: 'Large', price: 30, quantity: 1 }], quantity: 1, specialInstructions: null });
-      expect(Storage.prototype.setItem).not.toHaveBeenCalled();
+      c.onPicked({
+        addOns: [{ id: 's-l', name: 'Large', price: 30, quantity: 1 }],
+        quantity: 1,
+        specialInstructions: null,
+      });
+      fixture.detectChanges();
+      const keys = (Storage.prototype.setItem as unknown as ReturnType<typeof vi.fn>).mock.calls.map(
+        (call) => call[0],
+      );
+      expect(keys.every((key: string) => key.startsWith('wtf.public-cart.'))).toBe(true);
+      expect(localStorage.length).toBe(0);
+      expect(JSON.stringify(Object.entries(sessionStorage))).not.toContain('catalog');
+    });
+  });
+
+  describe('checkout', () => {
+    const form = (over: Record<string, unknown> = {}) => ({
+      fulfillment: 0,
+      deliveryAddress: null,
+      contactNumber: '0917 123 4567',
+      paymentMethod: 1,
+      amountReceived: 500,
+      specialInstructions: null,
+      ...over,
+    });
+    const placed = (over: Record<string, unknown> = {}) => ({
+      id: 'o1',
+      orderNumber: 1042,
+      statusKind: 'waiting',
+      ...over,
+    });
+    const checkout = () => el().querySelector('app-public-checkout') as HTMLElement | null;
+    const checkoutButton = () =>
+      [...el().querySelectorAll('button')].find((b) => b.textContent?.trim() === 'Checkout') as
+        | HTMLButtonElement
+        | undefined;
+
+    function fillCart() {
+      addCroissant();
+      c.openProduct(c.products()[0]);
+      c.onPicked({
+        addOns: [{ id: 's-l', name: 'Large', price: 30, quantity: 1 }],
+        quantity: 2,
+        specialInstructions: 'less ice',
+      });
+    }
+
+    it('has a Checkout button in the cart that is off while the cart is empty', () => {
+      setup();
+      c.openCart();
+      fixture.detectChanges();
+      expect(checkoutButton()).toBeDefined();
+      expect(checkoutButton()!.disabled).toBe(true);
+      expect(checkoutButton()!.className).toContain('app-btn-primary');
+
+      addCroissant();
+      fixture.detectChanges();
+      expect(checkoutButton()!.disabled).toBe(false);
+    });
+
+    it('no longer says that placing orders is coming soon', () => {
+      setup();
+      c.openCart();
+      fixture.detectChanges();
+      expect(text()).not.toContain('coming soon');
+    });
+
+    it('opens the checkout with the cart total and closes the cart sheet', () => {
+      setup();
+      fillCart();
+      c.openCart();
+      fixture.detectChanges();
+
+      checkoutButton()!.click();
+      fixture.detectChanges();
+
+      expect(c.checkoutOpen()).toBe(true);
+      expect(c.cartOpen()).toBe(false);
+      expect(checkout()).not.toBeNull();
+      expect(checkout()!.textContent).toContain('Checkout');
+      expect(checkout()!.textContent).toContain(String((120 + (150 + 30) * 2).toFixed(2)));
+    });
+
+    it('offers the address on file for a delivery', () => {
+      setup();
+      addCroissant();
+      c.openCheckout();
+      fixture.detectChanges();
+
+      const buttons = [...checkout()!.querySelectorAll('button')];
+      (buttons.find((b) => b.textContent?.trim() === 'Delivery') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect((checkout()!.querySelector('#checkout-address') as HTMLTextAreaElement).value).toBe(
+        '12 Main St',
+      );
+    });
+
+    it('does not open with an empty cart', () => {
+      setup();
+      c.openCheckout();
+      expect(c.checkoutOpen()).toBe(false);
+    });
+
+    it('goes back to the cart from the checkout', () => {
+      setup();
+      addCroissant();
+      c.openCheckout();
+      c.closeCheckout();
+      expect(c.checkoutOpen()).toBe(false);
+      expect(c.cart().length).toBe(1);
+    });
+
+    describe('the order request', () => {
+      it('sends the tip with the order', () => {
+        setup();
+        addCroissant();
+
+        expect(c.buildOrderRequest(form({ tips: 20 })).tips).toBe(20);
+        expect(c.buildOrderRequest(form({ tips: null })).tips).toBeNull();
+      });
+
+      it('lists the items with add-on quantities and instructions, and no prices', () => {
+        setup();
+        fillCart();
+
+        const request = c.buildOrderRequest(
+          form({ fulfillment: 1, deliveryAddress: '5 Side St', specialInstructions: 'Ring' }),
+        );
+
+        expect(request).toEqual({
+          items: [
+            { productId: 'croissant', quantity: 1, addOns: [], specialInstructions: null },
+            {
+              productId: 'latte',
+              quantity: 2,
+              addOns: [{ productId: 's-l', quantity: 1 }],
+              specialInstructions: 'less ice',
+            },
+          ],
+          fulfillment: 1,
+          deliveryAddress: '5 Side St',
+          contactNumber: '0917 123 4567',
+          paymentMethod: 1,
+          amountReceived: 500,
+          specialInstructions: 'Ring',
+        });
+        expect(JSON.stringify(request)).not.toMatch(/price|total/i);
+      });
+    });
+
+    describe('placing the order', () => {
+      it('sends it to the link in the address and shows it waiting on My orders', () => {
+        setup();
+        fillCart();
+        c.openCheckout();
+        service.createOrder.mockReturnValue(of(placed()));
+        service.getOrders.mockReturnValue(
+          of({
+            items: [
+              placed({
+                statusLabel: 'Waiting for confirmation',
+                items: [],
+                total: 480,
+                createdAt: '2026-10-11T09:00:00',
+              }),
+            ],
+            page: 1,
+            pageSize: 50,
+            totalCount: 1,
+          }),
+        );
+
+        c.placeOrder(form());
+        fixture.detectChanges();
+
+        expect(service.createOrder).toHaveBeenCalledWith(
+          'tok-1',
+          expect.objectContaining({ contactNumber: '0917 123 4567' }),
+        );
+        expect(c.checkoutOpen()).toBe(false);
+        expect(c.cart()).toEqual([]);
+        expect(c.cartOpen()).toBe(false);
+        expect(c.tab()).toBe('orders');
+        expect(service.getOrders).toHaveBeenCalled();
+        expect(alerts.success).toHaveBeenCalledWith(
+          'Your order #1042 was sent. The shop will confirm it shortly.',
+        );
+        expect(text()).toContain('#1042');
+      });
+
+      it('locks the checkout while it is being sent and ignores repeats', () => {
+        setup();
+        addCroissant();
+        c.openCheckout();
+        service.createOrder.mockReturnValue(new Subject());
+
+        c.placeOrder(form());
+        c.placeOrder(form());
+        c.closeCheckout();
+
+        expect(service.createOrder).toHaveBeenCalledTimes(1);
+        expect(c.isPlacingOrder()).toBe(true);
+        expect(c.checkoutOpen()).toBe(true);
+      });
+
+      it('sends nothing for an empty cart', () => {
+        setup();
+        c.placeOrder(form());
+        expect(service.createOrder).not.toHaveBeenCalled();
+      });
+
+      it('keeps the cart and the checkout open and shows the reason when the shop refuses it', () => {
+        setup();
+        addCroissant();
+        c.openCheckout();
+        service.createOrder.mockReturnValue(
+          throwError(
+            () => new Error('The cash amount must be at least the order total of PHP 120.00.'),
+          ),
+        );
+
+        c.placeOrder(form({ amountReceived: 50 }));
+        fixture.detectChanges();
+
+        expect(c.checkoutOpen()).toBe(true);
+        expect(c.cart().length).toBe(1);
+        expect(c.isPlacingOrder()).toBe(false);
+        expect(c.checkoutError()).toContain('at least the order total');
+        expect(checkout()!.textContent).toContain('at least the order total');
+        expect(service.getLink).toHaveBeenCalledTimes(1);
+      });
+
+      it('refreshes the menu underneath when an item is no longer sold', () => {
+        setup();
+        addCroissant();
+        c.openCheckout();
+        service.createOrder.mockReturnValue(
+          throwError(
+            () =>
+              new Error(
+                'Some items are no longer available. Please refresh the menu and try again.',
+              ),
+          ),
+        );
+        service.getLink.mockReturnValue(
+          of(link({ products: [product('latte', 'Latte', 150, 1)] })),
+        );
+
+        c.placeOrder(form());
+
+        expect(service.getLink).toHaveBeenCalledTimes(2);
+        expect(c.cart()).toEqual([]);
+        expect(c.checkoutOpen()).toBe(true);
+        expect(c.checkoutError()).toContain('no longer available');
+      });
+
+      it('clears the error when the checkout is closed and opened again', () => {
+        setup();
+        addCroissant();
+        c.openCheckout();
+        service.createOrder.mockReturnValue(throwError(() => new Error('nope')));
+        c.placeOrder(form());
+        expect(c.checkoutError()).toBe('nope');
+
+        c.closeCheckout();
+        c.openCheckout();
+        expect(c.checkoutError()).toBeNull();
+      });
+
+      it('switches to the invalid link page and keeps nothing when the link stopped working', () => {
+        setup();
+        fillCart();
+        c.openCheckout();
+        service.createOrder.mockReturnValue(throwError(() => new PublicLinkInvalidError()));
+
+        c.placeOrder(form());
+        fixture.detectChanges();
+
+        expect(c.state()).toBe('invalid');
+        expect(c.checkoutOpen()).toBe(false);
+        expect(c.cart()).toEqual([]);
+        expect(c.isPlacingOrder()).toBe(false);
+        expect(text()).toContain('This link is no longer valid');
+        expect(checkout()).toBeNull();
+      });
     });
   });
 
@@ -918,18 +1383,20 @@ describe('PublicOrderComponent', () => {
     function fill() {
       addCroissant();
       c.openProduct(c.products()[0]);
-      c.onPicked({ addOns: [{ id: 's-l', name: 'Large', price: 30, quantity: 1 }], quantity: 1, specialInstructions: null });
+      c.onPicked({
+        addOns: [{ id: 's-l', name: 'Large', price: 30, quantity: 1 }],
+        quantity: 1,
+        specialInstructions: null,
+      });
     }
 
     it('removes items that are no longer sold and says so', () => {
       setup();
       fill();
-      service.getLink.mockReturnValue(
-        of(link({ products: [product('latte', 'Latte', 150, 1)] })),
-      );
+      service.getLink.mockReturnValue(of(link({ products: [product('latte', 'Latte', 150, 1)] })));
       c.loadMenu(true);
       expect(c.cart().map((l: { productId: string }) => l.productId)).toEqual(['latte']);
-      expect(c.notice()).toContain('no longer available');
+      expect(alerts.warning).toHaveBeenCalledWith(expect.stringContaining('no longer available'));
     });
 
     it('removes a line whose add-on was withdrawn', () => {
@@ -948,8 +1415,13 @@ describe('PublicOrderComponent', () => {
       service.getLink.mockReturnValue(
         of(
           link({
-            products: [product('latte', 'Latte', 175, 1), product('croissant', 'Croissant', 120, 2)],
-            addOnsByProductId: { latte: [{ ...SIZE, options: [product('s-l', 'Large', 40), SIZE.options[1]] }] },
+            products: [
+              product('latte', 'Latte', 175, 1),
+              product('croissant', 'Croissant', 120, 2),
+            ],
+            addOnsByProductId: {
+              latte: [{ ...SIZE, options: [product('s-l', 'Large', 40), SIZE.options[1]] }],
+            },
           }),
         ),
       );
@@ -958,7 +1430,7 @@ describe('PublicOrderComponent', () => {
       expect(latte.price).toBe(175);
       expect(latte.addOns[0].price).toBe(40);
       expect(c.cartTotal()).toBe(175 + 40 + 120);
-      expect(c.notice()).toContain('prices have changed');
+      expect(alerts.warning).toHaveBeenCalledWith(expect.stringContaining('prices have changed'));
     });
 
     it('stays quiet when nothing changed', () => {
@@ -966,23 +1438,18 @@ describe('PublicOrderComponent', () => {
       fill();
       c.loadMenu(true);
       expect(c.cart().length).toBe(2);
-      expect(c.notice()).toBeNull();
-    });
-
-    it('lets the customer dismiss the message', () => {
-      setup();
-      c.notice.set('Hello');
-      fixture.detectChanges();
-      expect(text()).toContain('Hello');
-      c.dismissNotice();
-      expect(c.notice()).toBeNull();
+      expect(alerts.warning).not.toHaveBeenCalled();
     });
   });
 
   describe('my orders', () => {
     const PAGE = {
       items: [
-        order('o2', '2026-10-11T09:00:00', { orderNumber: 1002, statusLabel: 'Accepted', statusKind: 'accepted' }),
+        order('o2', '2026-10-11T09:00:00', {
+          orderNumber: 1002,
+          statusLabel: 'Accepted',
+          statusKind: 'accepted',
+        }),
         order('o1', '2026-10-10T09:00:00', {
           statusLabel: 'Rejected',
           statusKind: 'rejected',
@@ -999,11 +1466,37 @@ describe('PublicOrderComponent', () => {
       c.selectTab('orders');
       fixture.detectChanges();
       expect(service.getOrders).toHaveBeenCalledWith('tok-1', 1, 50);
-      expect(c.ordersByDate().length).toBe(2);
-      expect(text()).toContain('Order #1002');
+      expect(el().querySelectorAll('[data-order-row]').length).toBe(2);
+      expect(text()).toContain('#1002');
       expect(text()).toContain('Accepted');
       expect(text()).toContain('Rejected');
-      expect(text()).toContain('Reason: Closed today');
+      expect(text()).not.toContain('Closed today');
+    });
+
+    it('keeps My orders lit in the side bar and dock while an order is open', () => {
+      setup({ orders: of(PAGE) });
+      c.selectTab('orders');
+      c.openOrder('o2');
+      fixture.detectChanges();
+
+      expect(el().querySelector('[data-order-details]')).not.toBeNull();
+      const current = [...el().querySelectorAll('[aria-current="page"]')].map((n) =>
+        n.textContent!.replace(/s+/g, ' ').trim(),
+      );
+      expect(current.length).toBeGreaterThan(0);
+      expect(current.every((label) => label.includes('My order'))).toBe(true);
+    });
+
+    it('shows the menu again from the New Order button on My orders', () => {
+      setup({ orders: of(PAGE) });
+      c.selectTab('orders');
+      fixture.detectChanges();
+
+      (el().querySelector('[data-new-order]') as HTMLElement).click();
+      fixture.detectChanges();
+
+      expect(c.tab()).toBe('menu');
+      expect(el().querySelector('[data-new-order]')).toBeNull();
     });
 
     it('says so when there are no orders yet', () => {
@@ -1013,21 +1506,82 @@ describe('PublicOrderComponent', () => {
       expect(text()).toContain('You have not placed any orders yet.');
     });
 
-    it('expands an order to show items, add-ons and details, and collapses it again', () => {
+    it('opens an order on its own page with items, add-ons and details, and goes back to the list', () => {
       setup({ orders: of(PAGE) });
       c.selectTab('orders');
-      c.toggleOrder('o2');
       fixture.detectChanges();
+      expect(el().querySelector('[data-order-details]')).toBeNull();
+
+      (el().querySelectorAll('[data-order-row]')[1] as HTMLElement).click();
+      fixture.detectChanges();
+      expect(el().querySelector('[data-order-details]')).not.toBeNull();
       expect(text()).toContain('2× Latte');
       expect(text()).toContain('+ Large');
       expect(text()).toContain('less ice');
-      expect(text()).toContain('₱360.00');
+      expect(text()).toContain('360.00');
       expect(text()).toContain('Delivery');
       expect(text()).toContain('5 Side St');
       expect(text()).toContain('Cash');
-      c.toggleOrder('o2');
+      (el().querySelector('[aria-label="Back to my orders"]') as HTMLElement).click();
       fixture.detectChanges();
+      expect(el().querySelector('[data-order-details]')).toBeNull();
       expect(text()).not.toContain('5 Side St');
+      expect(text()).toContain('#1002');
+    });
+
+    it('explains where the order stands in a plain sentence', () => {
+      setup({
+        orders: of({
+          items: [
+            order('w', '2026-10-11T10:00:00', { statusKind: 'waiting', statusLabel: 'Waiting for confirmation' }),
+            order('r', '2026-10-11T09:00:00', {
+              statusKind: 'rejected',
+              statusLabel: 'Rejected',
+              rejectionReason: 'Closed today',
+            }),
+          ],
+          page: 1,
+          pageSize: 50,
+          totalCount: 2,
+        }),
+      });
+      c.selectTab('orders');
+
+      c.openOrder('w');
+      fixture.detectChanges();
+      expect(el().querySelector('[data-status-note]')!.textContent).toContain('Waiting for the shop');
+
+      c.openOrder('r');
+      fixture.detectChanges();
+      expect(el().querySelector('[data-status-note]')!.textContent).toContain(
+        'could not take this order. Reason: Closed today',
+      );
+    });
+
+    it('shows the new status on an open order when the list refreshes', () => {
+      setup({ orders: of(PAGE) });
+      c.selectTab('orders');
+      c.openOrder('o1');
+      const items = PAGE.items.map((o: { id: string }) =>
+        o.id === 'o1' ? { ...o, statusKind: 'completed', statusLabel: 'Completed', rejectionReason: null } : o,
+      );
+      service.getOrders.mockReturnValue(of({ ...PAGE, items }));
+      c.loadOrders(true);
+      fixture.detectChanges();
+
+      expect(el().querySelector('[data-status-note]')!.textContent).toContain('complete');
+    });
+
+    it('goes back to the list when the open order is no longer there, or the tab is left', () => {
+      setup({ orders: of(PAGE) });
+      c.selectTab('orders');
+      c.openOrder('missing');
+      expect(c.selectedOrder()).toBeNull();
+
+      c.openOrder('o1');
+      c.selectTab('menu');
+      c.selectTab('orders');
+      expect(c.selectedOrderId()).toBeNull();
     });
 
     it('shows an error when the orders cannot be loaded', () => {
@@ -1053,15 +1607,6 @@ describe('PublicOrderComponent', () => {
       service.getOrders.mockReturnValue(throwError(() => new PublicLinkInvalidError()));
       c.loadOrders(true);
       expect(c.state()).toBe('invalid');
-    });
-
-    it('colors the status badge by kind', () => {
-      setup();
-      expect(c.statusVariant('waiting')).toBe('amber');
-      expect(c.statusVariant('accepted')).toBe('info');
-      expect(c.statusVariant('completed')).toBe('success');
-      expect(c.statusVariant('rejected')).toBe('error');
-      expect(c.statusVariant('cancelled')).toBe('default');
     });
   });
 

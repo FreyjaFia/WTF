@@ -1,0 +1,42 @@
+<div class="relative flex min-w-0 flex-1 flex-col">
+  <button
+    type="button"
+    data-custom-button
+    [class]="buttonClass() + ' relative w-full touch-none overflow-hidden select-none'"
+    [disabled]="inactive()"
+    [attr.aria-label]="label() + '. ' + hint()"
+    (pointerdown)="onPointerDown($event)"
+    (pointerup)="onRelease()"
+    (pointerleave)="onRelease()"
+    (pointercancel)="onRelease()"
+    (keydown)="onKeyDown($event)"
+    (keyup)="onKeyUp($event)"
+    (blur)="onRelease()"
+    (click)="onClick($event)"
+    (contextmenu)="onContextMenu($event)"
+  >
+    <!-- The fill that grows while the button is held -->
+    <span
+      class="pointer-events-none absolute inset-y-0 left-0 bg-white/30"
+      aria-hidden="true"
+      data-hold-progress
+      [style.width.%]="progress()"
+    ></span>
+    <span class="relative z-10 flex items-center justify-center">
+      @if (busy()) {
+        <span class="loading loading-spinner loading-xs mr-2"></span>
+        {{ busyLabel() }}
+      } @else {
+        {{ label() }}
+      }
+    </span>
+  </button>
+  @if (showReminder() && reminder()) {
+    <p
+      class="pointer-events-none absolute right-0 bottom-full left-0 mb-1 text-center text-xs text-gray-500"
+      role="status"
+    >
+      {{ hint() }}
+    </p>
+  }
+</div>

@@ -139,23 +139,6 @@
             </div>
           </div>
 
-          @if (notice(); as message) {
-            <div
-              class="flex shrink-0 items-start justify-between gap-3 bg-amber-50 px-4 py-2 text-sm text-amber-800"
-              role="status"
-            >
-              <p class="flex-1">{{ message }}</p>
-              <button
-                type="button"
-                class="app-btn app-btn-icon"
-                aria-label="Dismiss message"
-                (click)="dismissNotice()"
-              >
-                <app-icon name="icon-close" [class]="'h-4 w-4'" />
-              </button>
-            </div>
-          }
-
           <div class="min-h-0 flex-1 px-4 py-4 md:px-6 md:py-6">
             <div class="relative flex h-full flex-col xl:flex-row xl:gap-4">
               <div class="flex min-h-0 flex-1 flex-col">
@@ -314,163 +297,21 @@
                     </div>
                   </div>
                 } @else {
-                  <div class="min-h-0 flex-1 overflow-y-auto pb-6">
-                    <div class="mb-3 flex items-center justify-between gap-2 sm:mb-4">
-                      <h2 class="text-lg font-bold text-gray-900">My orders</h2>
-                      <button
-                        class="app-btn app-btn-ghost pointer-events-auto z-30 ml-auto shrink-0 p-2"
-                        [class.opacity-70]="ordersState() === 'loading'"
-                        type="button"
-                        (click)="loadOrders()"
-                        [disabled]="ordersState() === 'loading'"
-                        aria-label="Refresh orders"
-                      >
-                        @if (ordersState() === 'loading') {
-                          <app-icon
-                            name="icon-refresh"
-                            [class]="'h-5 w-5 animate-spin text-gray-600'"
-                            [fill]="'currentColor'"
-                          />
-                        } @else {
-                          <app-icon
-                            name="icon-refresh"
-                            [class]="'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'"
-                            [fill]="'currentColor'"
-                          />
-                        }
-                      </button>
+                  @if (selectedOrder(); as detail) {
+                    <div class="min-h-0 flex-1 overflow-y-auto pb-6">
+                      <app-public-order-details [order]="detail" (back)="closeOrder()" />
                     </div>
-                    <div class="mx-auto max-w-3xl">
-                      @if (ordersState() === 'loading' && orders().length === 0) {
-                        <div class="flex justify-center py-12">
-                          <span class="loading loading-spinner loading-lg"></span>
-                        </div>
-                      } @else if (ordersState() === 'error') {
-                        <p class="py-12 text-center text-sm text-red-600" role="alert">
-                          {{ ordersError() }}
-                        </p>
-                      } @else if (orders().length === 0) {
-                        <p class="py-12 text-center text-sm text-gray-500">
-                          You have not placed any orders yet.
-                        </p>
-                      } @else {
-                        @for (group of ordersByDate(); track group.date) {
-                          <h2
-                            class="mt-4 mb-2 text-xs font-semibold tracking-wider text-gray-400 uppercase"
-                          >
-                            {{ group.date | date: 'EEEE, d MMM y' }}
-                          </h2>
-                          <ul class="space-y-3">
-                            @for (order of group.orders; track order.id) {
-                              <li class="card rounded-xl bg-white shadow-lg">
-                                <div class="card-body gap-2 p-4">
-                                  <button
-                                    type="button"
-                                    class="flex w-full items-center justify-between gap-3 text-left"
-                                    data-custom-button
-                                    [attr.aria-expanded]="expandedOrderId() === order.id"
-                                    (click)="toggleOrder(order.id)"
-                                  >
-                                    <div class="min-w-0">
-                                      <p class="text-sm font-bold text-gray-900">
-                                        Order #{{ order.orderNumber }}
-                                      </p>
-                                      <p class="text-xs text-gray-500">
-                                        {{ order.createdAt | date: 'h:mm a' }} &middot; ₱{{
-                                          order.total | number: '1.2-2'
-                                        }}
-                                      </p>
-                                    </div>
-                                    <app-badge [variant]="statusVariant(order.statusKind)">{{
-                                      order.statusLabel
-                                    }}</app-badge>
-                                  </button>
-
-                                  @if (order.rejectionReason) {
-                                    <p class="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">
-                                      Reason: {{ order.rejectionReason }}
-                                    </p>
-                                  }
-
-                                  @if (expandedOrderId() === order.id) {
-                                    <div
-                                      class="mt-1 space-y-3 border-t border-gray-100 pt-3 text-sm"
-                                    >
-                                      @for (item of order.items; track $index) {
-                                        <div>
-                                          <div class="flex justify-between gap-3">
-                                            <span class="text-gray-900"
-                                              >{{ item.quantity }}&times; {{ item.name }}</span
-                                            >
-                                            <span class="shrink-0 text-gray-700"
-                                              >₱{{
-                                                orderLineTotal(
-                                                  item.unitPrice,
-                                                  item.quantity,
-                                                  addOnsPerUnit(item)
-                                                ) | number: '1.2-2'
-                                              }}</span
-                                            >
-                                          </div>
-                                          @for (addOn of item.addOns; track $index) {
-                                            <p class="pl-4 text-xs text-gray-500">
-                                              + {{ addOn.name }}
-                                              @if (addOn.quantity > 1) {
-                                                &times;{{ addOn.quantity }}
-                                              }
-                                            </p>
-                                          }
-                                          @if (item.specialInstructions) {
-                                            <p class="pl-4 text-xs text-gray-400 italic">
-                                              {{ item.specialInstructions }}
-                                            </p>
-                                          }
-                                        </div>
-                                      }
-
-                                      <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-xs">
-                                        <dt class="text-gray-400">Total</dt>
-                                        <dd class="text-right font-semibold text-gray-900">
-                                          ₱{{ order.total | number: '1.2-2' }}
-                                        </dd>
-                                        @if (order.fulfillmentType) {
-                                          <dt class="text-gray-400">Handover</dt>
-                                          <dd class="text-right text-gray-700">
-                                            {{ order.fulfillmentType }}
-                                          </dd>
-                                        }
-                                        @if (order.deliveryAddress) {
-                                          <dt class="text-gray-400">Address</dt>
-                                          <dd class="text-right text-gray-700">
-                                            {{ order.deliveryAddress }}
-                                          </dd>
-                                        }
-                                        @if (order.paymentMethod) {
-                                          <dt class="text-gray-400">Payment</dt>
-                                          <dd class="text-right text-gray-700">
-                                            {{ order.paymentMethod }}
-                                            @if (order.amountReceived) {
-                                              (₱{{ order.amountReceived | number: '1.2-2' }})
-                                            }
-                                          </dd>
-                                        }
-                                        @if (order.specialInstructions) {
-                                          <dt class="text-gray-400">Notes</dt>
-                                          <dd class="text-right text-gray-700">
-                                            {{ order.specialInstructions }}
-                                          </dd>
-                                        }
-                                      </dl>
-                                    </div>
-                                  }
-                                </div>
-                              </li>
-                            }
-                          </ul>
-                        }
-                      }
-                    </div>
-                  </div>
+                  } @else {
+                    <app-public-orders
+                      class="min-h-0 flex-1"
+                      [orders]="orders()"
+                      [state]="ordersState()"
+                      [errorMessage]="ordersError()"
+                      (refresh)="loadOrders()"
+                      (opened)="openOrder($event)"
+                      (newOrder)="selectTab('menu')"
+                    />
+                  }
                 }
               </div>
 
@@ -693,9 +534,14 @@
                           >{{ cartTotal() | number: '1.2-2' }}
                         </span>
                       </div>
-                      <p class="mt-2 text-xs text-gray-400">
-                        Placing orders from this page is coming soon.
-                      </p>
+                      <button
+                        type="button"
+                        class="app-btn app-btn-primary app-btn-lg mt-3 w-full"
+                        [disabled]="cart().length === 0"
+                        (click)="openCheckout()"
+                      >
+                        Checkout
+                      </button>
                     </div>
                   </div>
                 </ng-template>
@@ -720,7 +566,7 @@
                   <button
                     type="button"
                     data-custom-button
-                    class="absolute inset-x-4 bottom-4 z-30 flex cursor-pointer items-center justify-between rounded-2xl border-0 bg-[#047857] px-5 py-3.5 text-white shadow-xl transition-all active:scale-[0.98] xl:hidden"
+                    class="absolute inset-x-0 bottom-4 z-30 flex cursor-pointer items-center justify-between rounded-2xl border-0 bg-[#047857] px-5 py-3.5 text-white shadow-xl transition-all active:scale-[0.98] xl:hidden"
                     (click)="openCart()"
                   >
                     <div class="flex items-center gap-3">
@@ -770,6 +616,18 @@
         </div>
       </div>
     </div>
+
+    @if (checkoutOpen()) {
+      <app-public-checkout
+        [total]="cartTotal()"
+        [defaultAddress]="link()!.address ?? null"
+        [defaultContact]="link()!.contactNumber ?? null"
+        [isBusy]="isPlacingOrder()"
+        [serverError]="checkoutError()"
+        (submitted)="placeOrder($event)"
+        (cancelled)="closeCheckout()"
+      />
+    }
 
     @if (pickerProduct(); as product) {
       <app-public-addon-picker

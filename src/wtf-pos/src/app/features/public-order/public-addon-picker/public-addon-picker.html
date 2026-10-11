@@ -194,12 +194,10 @@
                   }
 
                   <span class="shrink-0 text-sm whitespace-nowrap text-gray-600">
-                    @if (option.price > 0) {
-                      +₱{{ option.price | number: '1.2-2' }}
-                    } @else if (option.price < 0) {
+                    @if (option.price < 0) {
                       -₱{{ -option.price | number: '1.2-2' }}
                     } @else {
-                      Free
+                      +₱{{ option.price | number: '1.2-2' }}
                     }
                   </span>
                 </div>

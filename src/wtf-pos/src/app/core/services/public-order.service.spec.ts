@@ -54,6 +54,75 @@ describe('PublicOrderService', () => {
     expect(http.expectOne(`${base}/tok/orders/o1`).request.method).toBe('GET');
   });
 
+  describe('createOrder', () => {
+    const request = {
+      items: [{ productId: 'p1', quantity: 2, addOns: [{ productId: 'a1', quantity: 1 }] }],
+      fulfillment: 0,
+      contactNumber: '0917 123 4567',
+      paymentMethod: 1,
+      amountReceived: 500,
+    };
+
+    it('posts the order to the link and returns it', () => {
+      const { service, http } = setupHttpService(PublicOrderService);
+      const result = capture(service.createOrder('tok', request));
+
+      const req = http.expectOne(`${base}/tok/orders`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual(request);
+      expect(req.request.headers.get('Cache-Control')).toBe('no-cache');
+      req.flush({ id: 'o1', orderNumber: 1042, statusKind: 'waiting' });
+
+      expect(result.value).toMatchObject({ id: 'o1', orderNumber: 1042 });
+    });
+
+    it('never sends a price', () => {
+      const { service, http } = setupHttpService(PublicOrderService);
+      service.createOrder('tok', request).subscribe();
+
+      const body = JSON.stringify(http.expectOne(`${base}/tok/orders`).request.body);
+      expect(body).not.toMatch(/price|total/i);
+    });
+
+    it('turns a 404 into the invalid link error', () => {
+      const { service, http } = setupHttpService(PublicOrderService);
+      const errors: unknown[] = [];
+      service.createOrder('tok', request).subscribe({ error: (e) => errors.push(e) });
+
+      failWith(http.expectOne(`${base}/tok/orders`), 404);
+
+      expect(errors[0]).toBeInstanceOf(PublicLinkInvalidError);
+    });
+
+    it("shows the server's plain explanation for a 400", () => {
+      const { service, http } = setupHttpService(PublicOrderService);
+      const result = capture(service.createOrder('tok', request));
+
+      failWith(http.expectOne(`${base}/tok/orders`), 400, {
+        message: 'The cash amount must be at least the order total of PHP 360.00.',
+      });
+
+      expect(result.error).toBe('The cash amount must be at least the order total of PHP 360.00.');
+    });
+
+    it('falls back to a plain message for other failures', () => {
+      const { service, http } = setupHttpService(PublicOrderService);
+      const noMessage = capture(service.createOrder('tok', request));
+      failWith(http.expectOne(`${base}/tok/orders`), 400);
+      const server = capture(service.createOrder('tok', request));
+      failWith(http.expectOne(`${base}/tok/orders`), 500);
+      const limited = capture(service.createOrder('tok', request));
+      failWith(http.expectOne(`${base}/tok/orders`), 429);
+      const offline = capture(service.createOrder('tok', request));
+      failNetwork(http.expectOne(`${base}/tok/orders`));
+
+      expect(noMessage.error).toBe('Failed to place your order. Please try again.');
+      expect(server.error).toBe('Failed to place your order. Please try again.');
+      expect(limited.error).toContain('Too many requests');
+      expect(offline.error).toContain('Unable to connect');
+    });
+  });
+
   it('turns a 404 into the invalid link error on every call', () => {
     const { service, http } = setupHttpService(PublicOrderService);
     const errors: unknown[] = [];

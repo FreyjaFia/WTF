@@ -194,7 +194,10 @@ export class PublicAddonPickerComponent implements OnInit {
       return;
     }
 
-    this.selected.update((s) => ({ ...s, [type]: { ...s[type], [id]: this.quantityOf(type, id) + 1 } }));
+    this.selected.update((s) => ({
+      ...s,
+      [type]: { ...s[type], [id]: this.quantityOf(type, id) + 1 },
+    }));
   }
 
   protected decrementAddOn(type: number, id: string, event: Event): void {

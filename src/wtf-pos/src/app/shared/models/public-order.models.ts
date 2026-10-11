@@ -27,6 +27,8 @@ export interface PublicCatalogDto {
 export interface PublicOrderLinkDto {
   firstName: string;
   address?: string | null;
+  /** The customer's saved contact number, offered at checkout. */
+  contactNumber?: string | null;
   /** The customer's own profile picture, if they have one. */
   imageUrl?: string | null;
   expiresAt?: string | null;
@@ -36,6 +38,7 @@ export interface PublicOrderLinkDto {
 export type PublicOrderStatusKind =
   | 'waiting'
   | 'accepted'
+  | 'ready'
   | 'completed'
   | 'rejected'
   | 'cancelled'
@@ -69,6 +72,42 @@ export interface PublicOrderDto {
   contactNumber?: string | null;
   paymentMethod?: string | null;
   amountReceived?: number | null;
+  tips?: number | null;
+  specialInstructions?: string | null;
+  /** When staff accepted it. */
+  acceptedAt?: string | null;
+  /** When it was marked ready for pickup or delivery. */
+  readyAt?: string | null;
+  /** When it ended: completed, rejected, cancelled or refunded. */
+  finishedAt?: string | null;
+}
+
+// What the customer sends to place an order. It never carries a price: the server works out every price.
+
+export interface PublicOrderAddOnRequest {
+  productId: string;
+  quantity: number;
+}
+
+export interface PublicOrderItemRequest {
+  productId: string;
+  quantity: number;
+  addOns: PublicOrderAddOnRequest[];
+  specialInstructions?: string | null;
+}
+
+export interface SubmitPublicOrderRequest {
+  items: PublicOrderItemRequest[];
+  /** FulfillmentTypeEnum: 0 = Pickup, 1 = Delivery. */
+  fulfillment: number;
+  deliveryAddress?: string | null;
+  contactNumber: string;
+  /** PaymentMethodEnum: 1 = Cash, 2 = GCash. */
+  paymentMethod: number;
+  /** What the customer will pay with, for cash only. It covers the total and the tip. */
+  amountReceived?: number | null;
+  /** An optional tip for the shop, on top of the total. */
+  tips?: number | null;
   specialInstructions?: string | null;
 }
 

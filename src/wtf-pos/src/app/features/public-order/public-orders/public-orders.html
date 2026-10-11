@@ -1,0 +1,253 @@
+<div class="mb-4 flex shrink-0 flex-col gap-3 sm:mb-6">
+  <div class="flex items-start justify-between gap-3">
+    <div class="flex flex-col gap-1">
+      <h1 class="shrink-0 text-xl font-bold text-gray-900 sm:text-2xl">My orders</h1>
+      <p class="text-xs text-gray-500 sm:text-sm">Track the orders you have placed.</p>
+    </div>
+    <button
+      type="button"
+      class="app-btn app-btn-primary app-btn-sm"
+      data-new-order
+      (click)="newOrder.emit()"
+    >
+      <app-icon name="icon-plus" [class]="'h-4 w-4'" />
+      New Order
+    </button>
+  </div>
+
+  <div class="flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center md:gap-3">
+    <div
+      class="mb-2 flex w-full min-w-0 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200 md:mb-0 md:max-w-104 md:flex-1"
+    >
+      <app-search-input
+        placeholder="Search by order #"
+        [ariaLabel]="'Search by order number'"
+        [value]="search()"
+        (valueChange)="search.set($event)"
+      />
+    </div>
+
+    <div class="ml-auto flex items-center justify-end gap-2">
+      <app-filter-button [count]="filterCount()" (pressed)="isFiltersOpen.set(true)" />
+      <button
+        class="app-btn app-btn-ghost pointer-events-auto z-30 shrink-0 p-2"
+        [class.opacity-70]="state() === 'loading'"
+        type="button"
+        (click)="refresh.emit()"
+        [disabled]="state() === 'loading'"
+        aria-label="Refresh orders"
+      >
+        <app-icon
+          name="icon-refresh"
+          [class]="
+            state() === 'loading'
+              ? 'h-5 w-5 animate-spin text-gray-600'
+              : 'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'
+          "
+          [fill]="'currentColor'"
+        />
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Only the list scrolls; the title and the search stay put. -->
+<div class="min-h-0 flex-1 overflow-y-auto pb-6">
+  @if (state() === 'loading' && orders().length === 0) {
+    <div class="flex justify-center py-12">
+      <span class="loading loading-spinner loading-lg"></span>
+    </div>
+  } @else if (state() === 'error') {
+    <p class="py-12 text-center text-sm text-red-600" role="alert">{{ errorMessage() }}</p>
+  } @else if (orders().length === 0) {
+    <p class="py-12 text-center text-sm text-gray-500">You have not placed any orders yet.</p>
+  } @else if (visibleOrders().length === 0) {
+    <div class="py-12 text-center">
+      <p class="text-sm text-gray-500">No orders match your search or filters.</p>
+      <button
+        type="button"
+        class="app-btn app-btn-secondary app-btn-sm mt-3"
+        (click)="clearFilters()"
+      >
+        Clear search and filters
+      </button>
+    </div>
+  } @else {
+    <div class="space-y-2">
+      <!-- Column titles (wide screens) -->
+      <div class="hidden grid-cols-12 gap-4 px-4 py-2 lg:grid">
+        <div class="col-span-2 text-xs font-semibold tracking-wider text-gray-600 uppercase">
+          Order
+        </div>
+        <div class="col-span-3 text-xs font-semibold tracking-wider text-gray-600 uppercase">
+          Date
+        </div>
+        <div
+          class="col-span-3 text-center text-xs font-semibold tracking-wider text-gray-600 uppercase"
+        >
+          Status
+        </div>
+        <div
+          class="col-span-2 text-right text-xs font-semibold tracking-wider text-gray-600 uppercase"
+        >
+          Items
+        </div>
+        <div
+          class="col-span-2 text-right text-xs font-semibold tracking-wider text-gray-600 uppercase"
+        >
+          Total
+        </div>
+      </div>
+
+      @for (group of byDate(); track group.date) {
+        <div>
+          <div class="mb-2 flex items-center gap-3 px-4 py-2">
+            <div class="h-px flex-1 bg-gray-200"></div>
+            <div class="text-xs font-semibold tracking-wide text-gray-500 uppercase">
+              {{ group.label }}
+            </div>
+            <div class="h-px flex-1 bg-gray-200"></div>
+          </div>
+
+          <div class="space-y-2">
+            @for (order of group.orders; track order.id) {
+              <div
+                class="group flex cursor-pointer items-center gap-3 rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm transition-shadow duration-200 hover:shadow-md lg:grid lg:grid-cols-12 lg:gap-4 lg:border-0 lg:py-4 lg:shadow-lg lg:hover:shadow-xl"
+                role="button"
+                tabindex="0"
+                data-order-row
+                (click)="opened.emit(order.id)"
+                (keydown.enter)="opened.emit(order.id)"
+                (keydown.space)="opened.emit(order.id)"
+              >
+                <!-- Phones -->
+                <div class="flex min-w-0 flex-1 flex-col gap-1 lg:hidden">
+                  <span class="font-semibold text-gray-900">#{{ order.orderNumber }}</span>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <app-badge [variant]="variant(order.statusKind)">{{
+                      order.statusLabel
+                    }}</app-badge>
+                  </div>
+                  <div class="flex items-center gap-2 text-xs text-slate-500">
+                    <span>{{ order.createdAt | date: 'h:mm a' }}</span>
+                    <span>&middot;</span>
+                    <span>{{ itemsText(order) }}</span>
+                  </div>
+                </div>
+                <div class="flex shrink-0 items-center gap-2 lg:hidden">
+                  <span class="text-base font-semibold text-black">
+                    <span class="text-sm opacity-70"
+                      ><app-icon
+                        name="icon-peso"
+                        [class]="'inline h-3 w-3 align-[-0.125em]'"
+                        [fill]="'currentColor'" /></span
+                    >{{ order.total | number: '1.2-2' }}
+                  </span>
+                  <app-icon
+                    name="icon-forward"
+                    [class]="'h-5 w-5 text-gray-400 transition-colors group-hover:text-gray-600'"
+                    [fill]="'currentColor'"
+                  />
+                </div>
+
+                <!-- Wide screens -->
+                <div class="hidden lg:col-span-2 lg:block">
+                  <div class="font-semibold text-gray-900">#{{ order.orderNumber }}</div>
+                </div>
+                <div class="hidden lg:col-span-3 lg:block">
+                  <div class="text-sm text-gray-700">
+                    {{ order.createdAt | date: 'd MMM y, h:mm a' }}
+                  </div>
+                </div>
+                <div class="hidden lg:col-span-3 lg:flex lg:flex-col lg:items-center lg:gap-1">
+                  <app-badge [variant]="variant(order.statusKind)">{{
+                    order.statusLabel
+                  }}</app-badge>
+                </div>
+                <div class="hidden lg:col-span-2 lg:block lg:text-right">
+                  <div class="text-sm text-gray-600">{{ itemsText(order) }}</div>
+                </div>
+                <div class="hidden lg:col-span-2 lg:flex lg:items-center lg:justify-end lg:gap-2">
+                  <span class="text-lg font-semibold text-black">
+                    <span class="text-base opacity-70"
+                      ><app-icon
+                        name="icon-peso"
+                        [class]="'inline h-3 w-3 align-[-0.125em]'"
+                        [fill]="'currentColor'" /></span
+                    >{{ order.total | number: '1.2-2' }}
+                  </span>
+                  <app-icon
+                    name="icon-forward"
+                    [class]="'h-5 w-5 text-gray-400 transition-colors group-hover:text-gray-600'"
+                    [fill]="'currentColor'"
+                  />
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>
+
+<app-side-drawer
+  [isOpen]="isFiltersOpen()"
+  [title]="'Order Filters'"
+  [subtitle]="'Refine your orders'"
+  [showOnDesktop]="true"
+  (closed)="isFiltersOpen.set(false)"
+>
+  <div class="space-y-3">
+    <div class="rounded-xl border border-gray-200 bg-white p-3">
+      <p class="mb-3 text-xs font-semibold tracking-wide text-gray-500 uppercase">Date Range</p>
+      <div class="space-y-2">
+        @for (range of dateRanges; track range.id) {
+          <label
+            class="flex cursor-pointer items-center justify-between rounded-lg bg-white px-3 py-2 text-sm text-gray-700"
+          >
+            <span>{{ range.label }}</span>
+            <input
+              type="radio"
+              name="public-order-date-range"
+              class="radio radio-sm"
+              [checked]="dateRange() === range.id"
+              (change)="dateRange.set(range.id)"
+            />
+          </label>
+        }
+      </div>
+    </div>
+
+    <div class="rounded-xl border border-gray-200 bg-white p-3">
+      <div class="mb-3 flex items-center justify-between">
+        <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Status</p>
+        <button
+          type="button"
+          class="app-btn app-btn-secondary app-btn-xs"
+          (click)="clearStatuses()"
+        >
+          Clear
+        </button>
+      </div>
+      <div class="space-y-2">
+        @for (option of statusOptions(); track option.kind) {
+          <label
+            class="flex cursor-pointer items-center justify-between rounded-lg bg-white px-3 py-2 text-sm text-gray-700"
+          >
+            <span>{{ option.label }}</span>
+            <span class="flex items-center gap-2">
+              <span class="text-xs text-gray-500">{{ option.count }}</span>
+              <input
+                type="checkbox"
+                class="checkbox checkbox-sm"
+                [checked]="selectedStatuses().includes(option.kind)"
+                (change)="toggleStatus(option.kind)"
+              />
+            </span>
+          </label>
+        }
+      </div>
+    </div>
+  </div>
+</app-side-drawer>
