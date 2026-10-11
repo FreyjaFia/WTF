@@ -312,7 +312,12 @@ describe('PublicOrdersComponent', () => {
   });
 
   describe('sorting', () => {
-    const when = (hoursAgo: number) => new Date(Date.now() - hoursAgo * 3600e3).toISOString();
+    // Anchored to midday so the rows share one calendar day whatever time the tests run.
+    const when = (hoursAgo: number) => {
+      const midday = new Date();
+      midday.setHours(12, 0, 0, 0);
+      return new Date(midday.getTime() - hoursAgo * 3600e3).toISOString();
+    };
     const mixed = () => [
       make('a', when(1), { orderNumber: 1002, total: 500 }),
       make('b', when(3), { orderNumber: 1003, total: 100 }),
@@ -406,7 +411,12 @@ describe('PublicOrdersComponent', () => {
   });
 
   describe('sorting', () => {
-    const when = (hoursAgo: number) => new Date(Date.now() - hoursAgo * 3600e3).toISOString();
+    // Anchored to midday so the rows share one calendar day whatever time the tests run.
+    const when = (hoursAgo: number) => {
+      const midday = new Date();
+      midday.setHours(12, 0, 0, 0);
+      return new Date(midday.getTime() - hoursAgo * 3600e3).toISOString();
+    };
     const mixed = () => [
       make('a', when(1), { orderNumber: 1002, total: 500 }),
       make('b', when(3), { orderNumber: 1003, total: 100 }),

@@ -375,7 +375,7 @@ public class PushNotificationServiceTests
         var call = Sends(_fcm).Single().GetArguments();
         call[0].ShouldBe("t1");
         call[1].ShouldBe("New online order");
-        call[2].ShouldBe("Order #42 - Maria Cruz - Delivery - PHP 360.00");
+        call[2].ShouldBe("Order #42 · Maria Cruz · Delivery · PHP 360.00");
         var data = (IReadOnlyDictionary<string, string>)call[3]!;
         data["orderId"].ShouldBe(_order.Id.ToString());
         data["orderNumber"].ShouldBe("42");
@@ -461,11 +461,11 @@ public class PushNotificationServiceTests
     }
 
     [Theory]
-    [InlineData("Maria Cruz", FulfillmentTypeEnum.Pickup, "Order #42 - Maria Cruz - Pickup - PHP 360.00")]
-    [InlineData("  Maria  ", FulfillmentTypeEnum.Delivery, "Order #42 - Maria - Delivery - PHP 360.00")]
-    [InlineData(null, FulfillmentTypeEnum.Pickup, "Order #42 - Pickup - PHP 360.00")]
-    [InlineData("", FulfillmentTypeEnum.Delivery, "Order #42 - Delivery - PHP 360.00")]
-    [InlineData("Maria Cruz", null, "Order #42 - Maria Cruz - PHP 360.00")]
+    [InlineData("Maria Cruz", FulfillmentTypeEnum.Pickup, "Order #42 · Maria Cruz · Pickup · PHP 360.00")]
+    [InlineData("  Maria  ", FulfillmentTypeEnum.Delivery, "Order #42 · Maria · Delivery · PHP 360.00")]
+    [InlineData(null, FulfillmentTypeEnum.Pickup, "Order #42 · Pickup · PHP 360.00")]
+    [InlineData("", FulfillmentTypeEnum.Delivery, "Order #42 · Delivery · PHP 360.00")]
+    [InlineData("Maria Cruz", null, "Order #42 · Maria Cruz · PHP 360.00")]
     public async Task SendLinkOrderCreatedAsync_BodyLeavesOutWhatIsMissing(
         string? customer, FulfillmentTypeEnum? fulfillment, string expectedBody)
     {
