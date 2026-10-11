@@ -146,6 +146,8 @@ export const routes: Routes = [
       {
         path: 'management',
         component: ManagementComponent,
+        canActivate: [roleGuard],
+        data: { roles: AppRoleGroups.ManagementAccess },
         children: [
           {
             path: '',

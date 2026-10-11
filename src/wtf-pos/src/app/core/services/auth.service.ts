@@ -322,16 +322,9 @@ export class AuthService {
     return this.hasAnyRole(AppRoleGroups.PromotionsWrite);
   }
 
+  /** Whether the Management area (menu, login landing, routes) is available; separate from the per-area reads. */
   public canReadManagement(): boolean {
-    return (
-      this.canReadProducts() ||
-      this.canReadCustomers() ||
-      this.canReadUsers() ||
-      this.canReadPromotions() ||
-      this.canAccessReports() ||
-      this.canAccessAuditLogs() ||
-      this.canAccessSchemaScriptHistory()
-    );
+    return this.hasAnyRole(AppRoleGroups.ManagementAccess);
   }
 
   public canWriteManagement(): boolean {
