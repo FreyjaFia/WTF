@@ -201,4 +201,129 @@ describe('SignalRService', () => {
     expect(dashboardDone).toHaveBeenCalledTimes(1);
     expect(orderDone).toHaveBeenCalledTimes(1);
   });
+  describe('staff orders hub (chat)', () => {
+    it('connects to its own hub, not the dashboard one, with the sign-in token', () => {
+      service.startStaffOrdersHub();
+
+      expect(hub.builderUrl).toHaveLength(1);
+      expect(hub.builderUrl[0].url).toBe('http://localhost:5282/hubs/staff-orders');
+      expect(hub.builderUrl[0].options.accessTokenFactory()).toBe('jwt-token');
+      expect(hub.reconnect).toHaveBeenCalledTimes(1);
+      expect(instances()[0].start).toHaveBeenCalledTimes(1);
+    });
+
+    it('reads the token again on every connect, so a refreshed sign-in is used', () => {
+      service.startStaffOrdersHub();
+      token = 'newer-token';
+
+      expect(hub.builderUrl[0].options.accessTokenFactory()).toBe('newer-token');
+    });
+
+    it('uses an empty token when signed out', () => {
+      token = null;
+      service.startStaffOrdersHub();
+
+      expect(hub.builderUrl[0].options.accessTokenFactory()).toBe('');
+    });
+
+    it('is a separate connection from the dashboard hub', () => {
+      service.startDashboardHub();
+      service.startStaffOrdersHub();
+
+      expect(instances()).toHaveLength(2);
+      expect(hub.builderUrl.map((b) => b.url)).toEqual([
+        'http://localhost:5282/hubs/dashboard',
+        'http://localhost:5282/hubs/staff-orders',
+      ]);
+    });
+
+    it('shares one connection between consumers and stops with the last one', () => {
+      service.startStaffOrdersHub();
+      service.startStaffOrdersHub();
+      const connection = instances()[0];
+      expect(instances()).toHaveLength(1);
+
+      service.stopStaffOrdersHub();
+      expect(connection.stop).not.toHaveBeenCalled();
+
+      service.stopStaffOrdersHub();
+      expect(connection.stop).toHaveBeenCalledTimes(1);
+    });
+
+    it('tells which conversation and order a new message belongs to', () => {
+      const next = vi.fn();
+      service.orderMessage.subscribe(next);
+      service.startStaffOrdersHub();
+
+      instances()[0].handlers['OrderMessageReceived']('c1', 'o1');
+
+      expect(next).toHaveBeenCalledWith({ conversationId: 'c1', orderId: 'o1' });
+    });
+
+    it('tells when a chat was read', () => {
+      const next = vi.fn();
+      service.conversationRead.subscribe(next);
+      service.startStaffOrdersHub();
+
+      instances()[0].handlers['ConversationRead']('c1', 'o1');
+
+      expect(next).toHaveBeenCalledWith({ conversationId: 'c1', orderId: 'o1' });
+    });
+
+    it('logs a failed start and tries again later on the same connection', async () => {
+      vi.useFakeTimers();
+      try {
+        const start = vi.fn().mockRejectedValueOnce(new Error('offline')).mockResolvedValue(undefined);
+        hub.startImpl = start;
+        service.startStaffOrdersHub();
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(errorSpy.mock.calls[0][0]).toBe('Staff orders SignalR hub connection error:');
+        expect(start).toHaveBeenCalledTimes(1);
+        await vi.advanceTimersByTimeAsync(2000);
+
+        expect(start).toHaveBeenCalledTimes(2);
+        expect(instances()).toHaveLength(1);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('stops trying again once the hub is stopped', async () => {
+      vi.useFakeTimers();
+      try {
+        const start = vi.fn().mockRejectedValue(new Error('offline'));
+        hub.startImpl = start;
+        service.startStaffOrdersHub();
+        await vi.advanceTimersByTimeAsync(0);
+        service.stopStaffOrdersHub();
+        await vi.advanceTimersByTimeAsync(60000);
+
+        expect(start).toHaveBeenCalledTimes(1);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('logs a failed stop without throwing', async () => {
+      hub.stopImpl = () => Promise.reject(new Error('stop failed'));
+      service.startStaffOrdersHub();
+
+      service.stopStaffOrdersHub();
+      await vi.waitFor(() => expect(errorSpy).toHaveBeenCalled());
+
+      expect(errorSpy.mock.calls[0][0]).toBe('Error stopping staff orders hub:');
+    });
+
+    it('does nothing when stopping without a start, and stops both hubs on destroy', () => {
+      service.stopStaffOrdersHub();
+      expect(instances()).toHaveLength(0);
+
+      service.startDashboardHub();
+      service.startStaffOrdersHub();
+      TestBed.resetTestingModule();
+
+      expect(instances().every((connection) => (connection.stop as ReturnType<typeof vi.fn>).mock.calls.length === 1)).toBe(true);
+    });
+  });
 });

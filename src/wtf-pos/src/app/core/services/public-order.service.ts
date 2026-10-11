@@ -3,6 +3,9 @@ import { inject, Injectable } from '@angular/core';
 import { HttpErrorMessages, ServiceErrorMessages } from '@core/messages';
 import { environment } from '@environments/environment.development';
 import {
+  ConversationListDto,
+  ConversationMessageDto,
+  OrderConversationDto,
   PagedResultDto,
   PublicOrderDto,
   PublicOrderLinkDto,
@@ -51,6 +54,35 @@ export class PublicOrderService {
       .pipe(
         catchError((error) => this.fail(error, ServiceErrorMessages.PublicOrder.LoadOrdersFailed)),
       );
+  }
+
+  /** My order chats, for the envelope: the ones the shop has answered and I have not read come first. */
+  public getConversations(token: string): Observable<ConversationListDto> {
+    return this.http
+      .get<ConversationListDto>(`${this.url(token)}/conversations`, this.noCache())
+      .pipe(catchError((error) => this.fail(error, ServiceErrorMessages.PublicOrder.ChatFailed)));
+  }
+
+  public getOrderConversation(token: string, orderId: string): Observable<OrderConversationDto> {
+    return this.http
+      .get<OrderConversationDto>(`${this.url(token)}/orders/${orderId}/messages`, this.noCache())
+      .pipe(catchError((error) => this.fail(error, ServiceErrorMessages.PublicOrder.ChatFailed)));
+  }
+
+  /** Writes to the shop about one of my orders. A 404 means the link stopped working. */
+  public sendMessage(token: string, orderId: string, body: string): Observable<ConversationMessageDto> {
+    return this.http
+      .post<ConversationMessageDto>(`${this.url(token)}/orders/${orderId}/messages`, { body })
+      .pipe(
+        catchError((error) => this.fail(error, ServiceErrorMessages.PublicOrder.SendMessageFailed)),
+      );
+  }
+
+  /** I read the shop's replies. */
+  public markConversationRead(token: string, orderId: string): Observable<void> {
+    return this.http
+      .post<void>(`${this.url(token)}/orders/${orderId}/messages/read`, {})
+      .pipe(catchError((error) => this.fail(error, ServiceErrorMessages.PublicOrder.ChatFailed)));
   }
 
   /**

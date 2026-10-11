@@ -1,4 +1,5 @@
 export * from './auth.models';
+export * from './conversation.models';
 export * from './audit-log.models';
 export * from './cart.models';
 export * from './customer.models';

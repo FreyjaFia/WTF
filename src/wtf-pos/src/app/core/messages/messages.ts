@@ -45,6 +45,15 @@ export const ServiceErrorMessages = {
     LoadOrdersFailed: 'Failed to load your orders. Please try again.',
     TooManyRequests: 'Too many requests. Please wait a moment and try again.',
     PlaceOrderFailed: 'Failed to place your order. Please try again.',
+    ChatFailed: 'Failed to load the chat. Please try again.',
+    SendMessageFailed: 'Failed to send your message. Please try again.',
+  },
+  Conversation: {
+    LoadListFailed: 'Failed to load messages. Please try again later.',
+    LoadChatFailed: 'Failed to load the chat. Please try again later.',
+    SendFailed: 'Failed to send the message. Please try again later.',
+    MarkReadFailed: 'Failed to mark the chat as read.',
+    OrderNotFound: 'Order not found.',
   },
   OrderLink: {
     FetchLinksFailed: 'Failed to fetch ordering links. Please try again later.',

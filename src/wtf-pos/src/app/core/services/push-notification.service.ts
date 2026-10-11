@@ -20,6 +20,7 @@ type PushPlatform = 'web' | 'android' | 'huawei';
 
 /** The `type` the API sends for an order a customer placed through their link (it waits for approval). */
 export const PUSH_TYPE_ONLINE_ORDER = 'online-order';
+export const PUSH_TYPE_ORDER_MESSAGE = 'order-message';
 
 @Injectable({ providedIn: 'root' })
 export class PushNotificationService implements OnDestroy {
@@ -301,7 +302,12 @@ export class PushNotificationService implements OnDestroy {
     }
 
     const orderId = data['orderId'];
-    return data['path'] || (orderId ? pathForOrder(String(orderId)) : AppRoutes.OrdersList);
+    const path = data['path'] || (orderId ? pathForOrder(String(orderId)) : AppRoutes.OrdersList);
+
+    // A chat message opens its order with the chat panel already open.
+    return data['type'] === PUSH_TYPE_ORDER_MESSAGE && data['chat'] === 'open' && !path.includes('?')
+      ? `${path}?chat=open`
+      : path;
   }
 
   private async navigateToPath(path: string): Promise<void> {

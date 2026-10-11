@@ -1,3 +1,4 @@
+import { ServiceErrorMessages } from '@core/messages';
 import { environment } from '@environments/environment.development';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { capture, failNetwork, failWith, setupHttpService } from '../../testing/service-testing';
@@ -120,6 +121,89 @@ describe('PublicOrderService', () => {
       expect(server.error).toBe('Failed to place your order. Please try again.');
       expect(limited.error).toContain('Too many requests');
       expect(offline.error).toContain('Unable to connect');
+    });
+  });
+
+  describe('chat', () => {
+    it('loads my conversations fresh', () => {
+      const { service, http } = setupHttpService(PublicOrderService);
+      const result = capture(service.getConversations('tok-1'));
+
+      const req = http.expectOne(`${base}/tok-1/conversations`);
+      expect(req.request.method).toBe('GET');
+      expect(req.request.headers.get('Cache-Control')).toBe('no-cache');
+      req.flush({ unreadConversations: 1, items: [] });
+
+      expect(result.value).toEqual({ unreadConversations: 1, items: [] });
+    });
+
+    it('loads the chat of one of my orders', () => {
+      const { service, http } = setupHttpService(PublicOrderService);
+      service.getOrderConversation('tok-1', 'o1').subscribe();
+
+      const req = http.expectOne(`${base}/tok-1/orders/o1/messages`);
+      expect(req.request.method).toBe('GET');
+      expect(req.request.headers.get('Cache-Control')).toBe('no-cache');
+      req.flush({ orderId: 'o1', messages: [] });
+    });
+
+    it('sends only the text to the shop', () => {
+      const { service, http } = setupHttpService(PublicOrderService);
+      service.sendMessage('tok-1', 'o1', 'Is 5pm ok?').subscribe();
+
+      const req = http.expectOne(`${base}/tok-1/orders/o1/messages`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({ body: 'Is 5pm ok?' });
+      req.flush({ id: 'm1' });
+    });
+
+    it('marks the shop replies read', () => {
+      const { service, http } = setupHttpService(PublicOrderService);
+      service.markConversationRead('tok-1', 'o1').subscribe();
+
+      const req = http.expectOne(`${base}/tok-1/orders/o1/messages/read`);
+      expect(req.request.method).toBe('POST');
+      req.flush(null, { status: 204, statusText: 'No Content' });
+    });
+
+    it('turns a 404 on any chat call into the invalid link error', () => {
+      const { service, http } = setupHttpService(PublicOrderService);
+      const list = capture(service.getConversations('tok-1'));
+      failWith(http.expectOne(`${base}/tok-1/conversations`), 404);
+      const chat = capture(service.getOrderConversation('tok-1', 'o1'));
+      failWith(http.expectOne(`${base}/tok-1/orders/o1/messages`), 404);
+      const send = capture(service.sendMessage('tok-1', 'o1', 'x'));
+      failWith(http.expectOne(`${base}/tok-1/orders/o1/messages`), 404);
+      const read = capture(service.markConversationRead('tok-1', 'o1'));
+      failWith(http.expectOne(`${base}/tok-1/orders/o1/messages/read`), 404);
+
+      for (const result of [list, chat, send, read]) {
+        expect(result.error).toBe(new PublicLinkInvalidError().message);
+      }
+    });
+
+    it('shows why a message was refused, and slows down on too many', () => {
+      const { service, http } = setupHttpService(PublicOrderService);
+      const refused = capture(service.sendMessage('tok-1', 'o1', 'x'));
+      failWith(http.expectOne(`${base}/tok-1/orders/o1/messages`), 400, {
+        message: 'Please wait for the shop to reply before sending more messages.',
+      });
+      const slow = capture(service.sendMessage('tok-1', 'o1', 'x'));
+      failWith(http.expectOne(`${base}/tok-1/orders/o1/messages`), 429);
+
+      expect(refused.error).toBe('Please wait for the shop to reply before sending more messages.');
+      expect(slow.error).toBe(ServiceErrorMessages.PublicOrder.TooManyRequests);
+    });
+
+    it('falls back to a plain message', () => {
+      const { service, http } = setupHttpService(PublicOrderService);
+      const chat = capture(service.getOrderConversation('tok-1', 'o1'));
+      failWith(http.expectOne(`${base}/tok-1/orders/o1/messages`), 500);
+      const send = capture(service.sendMessage('tok-1', 'o1', 'x'));
+      failWith(http.expectOne(`${base}/tok-1/orders/o1/messages`), 500);
+
+      expect(chat.error).toBe(ServiceErrorMessages.PublicOrder.ChatFailed);
+      expect(send.error).toBe(ServiceErrorMessages.PublicOrder.SendMessageFailed);
     });
   });
 

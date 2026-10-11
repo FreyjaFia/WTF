@@ -352,6 +352,20 @@ describe('PushNotificationService', () => {
         expect(tapAll()).toEqual([url(AppRoutes.OrderEditorById('42'))]);
       });
 
+      it('opens the order with its chat open for a chat message', () => {
+        const title = { title: 'New message on order #42' };
+        onMessageHandler({
+          notification: title,
+          data: { type: 'order-message', orderId: '42', path: '/orders/details/42', chat: 'open' },
+        });
+        onMessageHandler({
+          notification: title,
+          data: { type: 'order-message', orderId: '42', path: '/orders/editor/42', chat: 'open' },
+        });
+
+        expect(tapAll()).toEqual([url('/orders/details/42?chat=open'), url('/orders/editor/42?chat=open')]);
+      });
+
       it('opens the orders list for an online order, never the editor', () => {
         const title = { title: 'New online order' };
         onMessageHandler({
@@ -549,6 +563,25 @@ describe('PushNotificationService', () => {
         tap({ type: 'online-order', orderId: '9', path: '/orders/list' });
 
         await vi.waitFor(() => expect(router.navigateByUrl).toHaveBeenCalledWith('/orders/list'));
+      });
+
+      it('opens the order with its chat when a chat message is tapped', async () => {
+        tap({ type: 'order-message', orderId: '9', path: '/orders/details/9', chat: 'open' });
+
+        await vi.waitFor(() =>
+          expect(router.navigateByUrl).toHaveBeenCalledWith('/orders/details/9?chat=open'),
+        );
+      });
+
+      it('falls back to the order details for a chat message with no path, and adds the chat once', async () => {
+        tap({ type: 'order-message', orderId: '9', chat: 'open' });
+        tap({ type: 'order-message', orderId: '9', path: '/orders/details/9?chat=open', chat: 'open' });
+        tap({ type: 'order-message', orderId: '9', path: '/orders/details/9' });
+
+        await vi.waitFor(() => expect(router.navigateByUrl).toHaveBeenCalledTimes(3));
+        expect(
+          (router.navigateByUrl as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0]),
+        ).toEqual([AppRoutes.OrderDetailsById('9') + '?chat=open', '/orders/details/9?chat=open', '/orders/details/9']);
       });
 
       it('sends an online order tap to the list even if the payload points at the editor or has no path', async () => {
