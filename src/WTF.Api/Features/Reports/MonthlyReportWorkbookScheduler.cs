@@ -17,6 +17,7 @@ public sealed class MonthlyReportWorkbookScheduler(
         }
 
         var timeZone = ResolveTimeZone(settings.TimeZoneId);
+        var consecutiveFailures = 0;
         while (!stoppingToken.IsCancellationRequested)
         {
             try
@@ -42,6 +43,8 @@ public sealed class MonthlyReportWorkbookScheduler(
                     nowLocal,
                     timeZone,
                     stoppingToken);
+
+                consecutiveFailures = 0;
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -50,7 +53,31 @@ public sealed class MonthlyReportWorkbookScheduler(
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Failed to regenerate monthly report workbook.");
+                consecutiveFailures++;
+                logger.LogError(ex, "Failed to regenerate monthly report workbook (attempt {Attempt}).", consecutiveFailures);
+
+                // Wait before trying again instead of looping straight back. After RetryCount quick retries,
+                // give up until the next scheduled run.
+                TimeSpan wait;
+                if (consecutiveFailures <= settings.RetryCount)
+                {
+                    wait = TimeSpan.FromMinutes(Math.Max(1, settings.RetryDelayMinutes));
+                }
+                else
+                {
+                    consecutiveFailures = 0;
+                    wait = GetNextDelay(timeZone, settings.RunAtHour, settings.RunAtMinute);
+                }
+
+                try
+                {
+                    await Task.Delay(wait, stoppingToken);
+                }
+                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+                {
+                    logger.LogInformation("Monthly report workbook scheduler is stopping.");
+                    break;
+                }
             }
         }
     }
