@@ -1,5 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using WTF.Api.Common.Time;
+using WTF.Api.Features.Orders;
 using WTF.Api.Features.Promotions.DTOs;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
@@ -8,7 +10,7 @@ namespace WTF.Api.Features.Promotions;
 
 public record EvaluatePromotionsCommand(EvaluatePromotionsRequestDto Request) : IRequest<EvaluatePromotionsResponseDto>;
 
-public sealed class EvaluatePromotionsHandler(WTFDbContext db)
+public sealed class EvaluatePromotionsHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor)
     : IRequestHandler<EvaluatePromotionsCommand, EvaluatePromotionsResponseDto>
 {
     public async Task<EvaluatePromotionsResponseDto> Handle(EvaluatePromotionsCommand request, CancellationToken cancellationToken)
@@ -20,16 +22,19 @@ public sealed class EvaluatePromotionsHandler(WTFDbContext db)
             .Select(Clone)
             .ToList();
 
-        var activePromotions = await db.Promotions
+        // Same rule the order is saved with: start and end are calendar days in the shop's time zone.
+        var timeZone = RequestTimeZone.ResolveFromRequest(httpContextAccessor);
+        var scheduledPromotions = await db.Promotions
             .Where(x => x.IsActive)
-            .Where(x => !x.StartDate.HasValue || x.StartDate <= now)
-            .Where(x => !x.EndDate.HasValue || x.EndDate >= now)
             .Include(x => x.FixedBundlePromotion!)
                 .ThenInclude(x => x.FixedBundlePromotionItems)
                     .ThenInclude(x => x.FixedBundlePromotionItemAddOns)
             .Include(x => x.DiscountedProductPromotions)
                 .ThenInclude(x => x.DiscountedProductPromotionAddOns)
             .ToListAsync(cancellationToken);
+        var activePromotions = scheduledPromotions
+            .Where(x => CreateOrderHandler.IsPromotionActiveOnLocalDate(x, now, timeZone))
+            .ToList();
 
         var generated = new List<PromotionCartLineDto>();
 

@@ -2,6 +2,8 @@ using System.ComponentModel.DataAnnotations;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
+using WTF.Api.Common.Time;
+using WTF.Api.Features.Orders;
 using WTF.Api.Features.Promotions.DTOs;
 using WTF.Api.Services;
 using WTF.Domain.Data;
@@ -51,17 +53,19 @@ public sealed class GetActiveDiscountedProductPromotionsHandler(WTFDbContext db,
     public async Task<List<DiscountedProductPromotionDto>> Handle(GetActiveDiscountedProductPromotionsQuery request, CancellationToken cancellationToken)
     {
         var now = (request.EvaluatedAtUtc ?? DateTime.UtcNow).ToUniversalTime();
-        var promotions = await db.Promotions
+        var timeZone = RequestTimeZone.ResolveFromRequest(httpContextAccessor);
+        var scheduled = await db.Promotions
             .Where(x => x.TypeId == PromotionTypeIds.DiscountedProduct)
             .Where(x => x.IsActive)
-            .Where(x => !x.StartDate.HasValue || x.StartDate <= now)
-            .Where(x => !x.EndDate.HasValue || x.EndDate >= now)
             .Include(x => x.DiscountedProductPromotions)
                 .ThenInclude(x => x.DiscountedProductPromotionAddOns)
             .Include(x => x.PromotionImage!)
                 .ThenInclude(x => x.Image)
             .OrderBy(x => x.Name)
             .ToListAsync(cancellationToken);
+
+        // Same rule the order is saved with: start and end are calendar days in the shop's time zone.
+        var promotions = scheduled.Where(x => CreateOrderHandler.IsPromotionActiveOnLocalDate(x, now, timeZone));
 
         return [.. promotions
             .Where(x => x.DiscountedProductPromotions.Count > 0)
