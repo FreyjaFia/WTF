@@ -107,8 +107,8 @@ export class AuthService {
     );
   }
 
-  public updateMe(password: string): Observable<void> {
-    return this.http.put<void>(`${this.baseUrl}/me`, { password }).pipe(
+  public updateMe(password: string, currentPassword: string): Observable<void> {
+    return this.http.put<void>(`${this.baseUrl}/me`, { password, currentPassword }).pipe(
       catchError((error: HttpErrorResponse) => {
         console.error('Update me error:', error);
 
@@ -117,7 +117,8 @@ export class AuthService {
         if (error.status === 401) {
           errorMessage = AuthService.MSG_UNAUTHORIZED;
         } else if (error.status === 400) {
-          errorMessage = AuthService.MSG_INVALID_PASSWORD;
+          // The server says which rule failed (wrong current password, new password too short).
+          errorMessage = error.error?.message ?? AuthService.MSG_INVALID_PASSWORD;
         } else if (error.status === 0) {
           errorMessage = AuthService.MSG_NETWORK_UNAVAILABLE;
         }

@@ -7,12 +7,18 @@ using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Auth;
 
-public record UpdateMeCommand(string Password) : IRequest<bool>;
+public record UpdateMeCommand(string Password, string? CurrentPassword = null) : IRequest<bool>;
 
 public class UpdateMeHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor, IAuditService auditService) : IRequestHandler<UpdateMeCommand, bool>
 {
     public async Task<bool> Handle(UpdateMeCommand request, CancellationToken cancellationToken)
     {
+        // Same rule as ChangePassword: a new password is at least 8 characters.
+        if (string.IsNullOrWhiteSpace(request.Password) || request.Password.Length < ChangePasswordHandler.MinPasswordLength)
+        {
+            throw new InvalidOperationException($"New password must be at least {ChangePasswordHandler.MinPasswordLength} characters.");
+        }
+
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
 
         var user = await db.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
@@ -21,9 +27,10 @@ public class UpdateMeHandler(WTFDbContext db, IHttpContextAccessor httpContextAc
             return false;
         }
 
-        if (string.IsNullOrWhiteSpace(request.Password))
+        // A stolen access token alone must not be enough to take over the account.
+        if (string.IsNullOrEmpty(request.CurrentPassword) || !BCrypt.Net.BCrypt.Verify(request.CurrentPassword, user.PasswordHash))
         {
-            return false;
+            throw new InvalidOperationException("Current password is incorrect.");
         }
 
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);

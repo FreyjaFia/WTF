@@ -17,6 +17,9 @@ import { AppRoutes } from '@shared/constants/app-routes';
 import { jwtDecode } from 'jwt-decode';
 import { of, switchMap } from 'rxjs';
 
+// Same minimum the API enforces when you change your own password.
+const PROFILE_PASSWORD_MIN_LENGTH = 8;
+
 @Component({
   selector: 'app-user-editor',
   imports: [
@@ -45,6 +48,7 @@ export class UserEditorComponent implements OnInit {
   protected readonly isProfileMode = signal(false);
   protected readonly isLoading = signal(false);
   protected readonly isSaving = signal(false);
+  protected readonly showCurrentPassword = signal(false);
   protected readonly showPassword = signal(false);
   protected readonly showConfirmPassword = signal(false);
   protected readonly userFullNameLabel = signal('');
@@ -87,6 +91,11 @@ export class UserEditorComponent implements OnInit {
         validators: [Validators.required, Validators.maxLength(100)],
       }),
       roleId: new FormControl<UserRoleEnum | null>(null),
+      // Only used on the profile page, where changing your own password requires the current one.
+      currentPassword: new FormControl('', {
+        nonNullable: false,
+        validators: [Validators.maxLength(100)],
+      }),
       password: new FormControl('', {
         nonNullable: false,
         validators: [Validators.maxLength(100)],
@@ -393,7 +402,10 @@ export class UserEditorComponent implements OnInit {
 
     this.isSaving.set(true);
 
-    const updatePassword$ = hasPasswordUpdate ? this.authService.updateMe(password) : of(void 0);
+    const currentPassword = this.userForm.controls.currentPassword.value || '';
+    const updatePassword$ = hasPasswordUpdate
+      ? this.authService.updateMe(password, currentPassword)
+      : of(void 0);
 
     updatePassword$
       .pipe(
@@ -417,6 +429,7 @@ export class UserEditorComponent implements OnInit {
           this.isSaving.set(false);
           this.selectedFile.set(null);
           this.imagePreview.set(null);
+          this.userForm.controls.currentPassword.setValue(null);
           this.userForm.controls.password.setValue(null);
           this.userForm.controls.confirmPassword.setValue(null);
           this.userForm.markAsPristine();
@@ -507,6 +520,18 @@ export class UserEditorComponent implements OnInit {
       return true;
     }
 
+    if (control === 'password' && touched && this.userForm.errors?.['passwordTooShort']) {
+      return true;
+    }
+
+    if (
+      control === 'currentPassword' &&
+      touched &&
+      this.userForm.errors?.['currentPasswordRequired']
+    ) {
+      return true;
+    }
+
     return hasControlError;
   }
 
@@ -523,6 +548,12 @@ export class UserEditorComponent implements OnInit {
     }
     if (control === 'password' && this.userForm.errors?.['passwordRequired']) {
       return 'Password is required when confirm password is set.';
+    }
+    if (control === 'password' && this.userForm.errors?.['passwordTooShort']) {
+      return `Password must be at least ${PROFILE_PASSWORD_MIN_LENGTH} characters.`;
+    }
+    if (control === 'currentPassword' && this.userForm.errors?.['currentPasswordRequired']) {
+      return 'Enter your current password to change it.';
     }
 
     const ctrl = this.userForm.get(control);
@@ -573,6 +604,10 @@ export class UserEditorComponent implements OnInit {
     const first = this.userForm.controls.firstName.value || '';
     const last = this.userForm.controls.lastName.value || '';
     return `${first} ${last}`.trim();
+  }
+
+  protected toggleCurrentPasswordVisibility(): void {
+    this.showCurrentPassword.set(!this.showCurrentPassword());
   }
 
   protected togglePasswordVisibility(): void {
@@ -633,6 +668,15 @@ export class UserEditorComponent implements OnInit {
       }
       if (passwordTrimmed !== confirmTrimmed) {
         return { passwordMismatch: true };
+      }
+      if (this.isProfileMode()) {
+        // Changing your own password needs the current one and a minimum length (the API enforces both).
+        if (passwordTrimmed.length < PROFILE_PASSWORD_MIN_LENGTH) {
+          return { passwordTooShort: true };
+        }
+        if (!((control.get('currentPassword')?.value as string | null) ?? '')) {
+          return { currentPasswordRequired: true };
+        }
       }
       return null;
     }

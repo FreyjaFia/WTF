@@ -242,6 +242,45 @@
                   </div>
                 }
 
+                @if (isProfileMode()) {
+                  <!-- Current Password (only needed to change your own password) -->
+                  <div>
+                    <label
+                      class="mb-2 block text-sm font-semibold text-gray-900"
+                      for="currentPassword"
+                    >
+                      Current Password
+                      <span class="text-xs text-gray-400">(required to change your password)</span>
+                    </label>
+                    <div class="relative">
+                      <input
+                        id="currentPassword"
+                        [type]="showCurrentPassword() ? 'text' : 'password'"
+                        formControlName="currentPassword"
+                        placeholder="Enter current password"
+                        autocomplete="current-password"
+                        class="input w-full border-transparent bg-gray-50 pr-16 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                        [class.input-error]="hasError('currentPassword')"
+                      />
+                      <button
+                        type="button"
+                        class="app-btn app-btn-ghost absolute inset-y-0 right-2 my-auto h-8 px-2 text-xs"
+                        (click)="toggleCurrentPasswordVisibility()"
+                        [attr.aria-label]="
+                          showCurrentPassword() ? 'Hide current password' : 'Show current password'
+                        "
+                      >
+                        {{ showCurrentPassword() ? 'Hide' : 'Show' }}
+                      </button>
+                    </div>
+                    @if (getErrorMessage('currentPassword')) {
+                      <p class="text-error mt-2 text-sm">
+                        {{ getErrorMessage('currentPassword') }}
+                      </p>
+                    }
+                  </div>
+                }
+
                 <!-- Password -->
                 <div>
                   <label class="mb-2 block text-sm font-semibold text-gray-900" for="password">
