@@ -53,10 +53,55 @@ jobs:
           echo "app_version_code=$APP_VERSION_CODE" >> "$GITHUB_OUTPUT"
           echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
 
+  test-api:
+    name: Test API (unit)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.x'
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Run API unit tests
+        run: dotnet test src/WTF.Tests/WTF.Tests.csproj --configuration Release
+
+  test-frontend:
+    name: Test Frontend (unit)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: src/wtf-pos/package-lock.json
+
+      - name: Install dependencies
+        working-directory: src/wtf-pos
+        run: npm ci
+
+      - name: Run frontend unit tests
+        working-directory: src/wtf-pos
+        run: npm test -- --watch=false
+
   build-api:
     name: Build API (Production)
     runs-on: ubuntu-latest
-    needs: versioning
+    needs: [versioning, test-api, test-frontend]
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     steps:
       - name: Checkout
@@ -115,7 +160,7 @@ jobs:
   build-api-staging:
     name: Build API (Staging)
     runs-on: ubuntu-latest
-    needs: versioning
+    needs: [versioning, test-api, test-frontend]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - name: Checkout
@@ -171,7 +216,7 @@ jobs:
   build-frontend:
     name: Build Frontend (Production)
     runs-on: ubuntu-latest
-    needs: versioning
+    needs: [versioning, test-api, test-frontend]
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     steps:
       - name: Checkout
@@ -206,7 +251,7 @@ jobs:
   build-frontend-staging:
     name: Build Frontend (Staging)
     runs-on: ubuntu-latest
-    needs: versioning
+    needs: [versioning, test-api, test-frontend]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - name: Checkout
@@ -236,7 +281,7 @@ jobs:
   build-android:
     name: Build Android APK (Production)
     runs-on: ubuntu-latest
-    needs: versioning
+    needs: [versioning, test-api, test-frontend]
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     steps:
       - name: Checkout
@@ -311,7 +356,7 @@ jobs:
   build-android-staging:
     name: Build Android APK (Staging)
     runs-on: ubuntu-latest
-    needs: versioning
+    needs: [versioning, test-api, test-frontend]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - name: Checkout
@@ -383,7 +428,7 @@ jobs:
   deploy-sql:
     name: Deploy SQL Scripts (Production)
     runs-on: ubuntu-latest
-    needs: versioning
+    needs: [versioning, test-api, test-frontend]
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     steps:
       - name: Checkout
@@ -459,7 +504,7 @@ jobs:
   deploy-sql-staging:
     name: Deploy SQL Scripts (Staging)
     runs-on: ubuntu-latest
-    needs: versioning
+    needs: [versioning, test-api, test-frontend]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - name: Checkout
