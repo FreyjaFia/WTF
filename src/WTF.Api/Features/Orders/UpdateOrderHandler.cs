@@ -564,8 +564,9 @@ public class UpdateOrderHandler(
         await dashboardHub.Clients.Group(HubNames.Groups.DashboardViewers)
             .SendAsync(HubNames.Events.OrderUpdated, order.Id, cancellationToken);
 
-        if (oldStatus == OrderStatusEnum.Pending &&
-            (newStatus == OrderStatusEnum.Completed || newStatus == OrderStatusEnum.Cancelled))
+        if (isOverride ||
+            (oldStatus == OrderStatusEnum.Pending &&
+                (newStatus == OrderStatusEnum.Completed || newStatus == OrderStatusEnum.Cancelled)))
         {
             var actorUserId = httpContextAccessor.HttpContext?.User.GetUserId() ?? Guid.Empty;
             await pushNotifications.SendOrderStatusChangedAsync(
@@ -573,7 +574,8 @@ public class UpdateOrderHandler(
                 totalAmount,
                 newStatus,
                 actorUserId,
-                cancellationToken);
+                cancellationToken,
+                isOverride);
         }
 
         if (isOverride)
