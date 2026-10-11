@@ -518,6 +518,8 @@ public partial class WTFDbContext : DbContext
 
             entity.HasIndex(e => e.IsAddOn, "IX_Products_IsAddOn");
 
+            entity.HasIndex(e => e.Code, "UX_Products_Code").IsUnique();
+
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
             entity.Property(e => e.Code).HasMaxLength(10);
             entity.Property(e => e.CreatedAt)
@@ -834,6 +836,8 @@ public partial class WTFDbContext : DbContext
             entity.HasIndex(e => e.CreatedBy, "IX_Users_CreatedBy");
 
             entity.HasIndex(e => e.RoleId, "IX_Users_RoleId");
+
+            entity.HasIndex(e => e.Username, "UX_Users_Username").IsUnique();
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_Users_Id");
             entity.Property(e => e.CreatedAt)
