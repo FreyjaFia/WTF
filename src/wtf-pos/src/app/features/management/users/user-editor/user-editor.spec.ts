@@ -33,7 +33,10 @@ function tokenFor(claims: Record<string, unknown>): string {
 
 const fileEvent = (file: File) => ({ target: { files: [file] } }) as unknown as Event;
 const dropEvent = (file?: File) =>
-  ({ preventDefault: vi.fn(), dataTransfer: { files: file ? [file] : [] } }) as unknown as DragEvent;
+  ({
+    preventDefault: vi.fn(),
+    dataTransfer: { files: file ? [file] : [] },
+  }) as unknown as DragEvent;
 
 interface Opts {
   id?: string;
@@ -63,9 +66,7 @@ describe('UserEditorComponent', () => {
     };
     auth = {
       isSuperAdmin: vi.fn(() => opts.superAdmin ?? false),
-      getToken: vi.fn(() =>
-        opts.token === undefined ? tokenFor({ sub: 'me1' }) : opts.token,
-      ),
+      getToken: vi.fn(() => (opts.token === undefined ? tokenFor({ sub: 'me1' }) : opts.token)),
       getCurrentRoleLabel: vi.fn(() => 'Cashier'),
       updateMe: vi.fn(() => of(void 0)),
       uploadMeImage: vi.fn(() => of({ imageUrl: 'http://img/me.png' })),
@@ -467,12 +468,43 @@ describe('UserEditorComponent', () => {
       expect(alert.errorNothingToUpdate).not.toHaveBeenCalled();
     });
 
+    it('asks for the current password and a minimum length before changing it', () => {
+      setup({ profile: true });
+      c.userForm.patchValue({
+        password: 'short',
+        confirmPassword: 'short',
+        currentPassword: 'old-pass',
+      });
+      expect(c.userForm.errors?.['passwordTooShort']).toBe(true);
+
+      c.userForm.patchValue({
+        password: 'pw123456',
+        confirmPassword: 'pw123456',
+        currentPassword: '',
+      });
+      expect(c.userForm.errors?.['currentPasswordRequired']).toBe(true);
+      c.saveUser();
+      expect(auth['updateMe']).not.toHaveBeenCalled();
+
+      c.userForm.patchValue({ currentPassword: 'old-pass' });
+      expect(c.userForm.errors).toBeNull();
+    });
+
+    it('shows the current password field only on the profile page', () => {
+      setup({ profile: true });
+      expect(fixture.nativeElement.querySelector('#currentPassword')).not.toBeNull();
+    });
+
     it('changes the password and goes back', () => {
       setup({ profile: true });
-      c.userForm.patchValue({ password: 'pw1234', confirmPassword: 'pw1234' });
+      c.userForm.patchValue({
+        currentPassword: 'old-pass',
+        password: 'pw123456',
+        confirmPassword: 'pw123456',
+      });
       c.userForm.markAsDirty();
       c.saveUser();
-      expect(auth['updateMe']).toHaveBeenCalledWith('pw1234');
+      expect(auth['updateMe']).toHaveBeenCalledWith('pw123456', 'old-pass');
       expect(auth['uploadMeImage']).not.toHaveBeenCalled();
       expect(auth['notifyMeUpdated']).toHaveBeenCalled();
       expect(alert.successUpdated).toHaveBeenCalledWith('Profile');
@@ -495,7 +527,11 @@ describe('UserEditorComponent', () => {
     it('does not upload when the password change fails', () => {
       setup({ profile: true });
       auth['updateMe'].mockReturnValue(throwError(() => new Error('weak')));
-      c.userForm.patchValue({ password: 'pw', confirmPassword: 'pw' });
+      c.userForm.patchValue({
+        currentPassword: 'old-pass',
+        password: 'pw123456',
+        confirmPassword: 'pw123456',
+      });
       c.selectedFile.set(fileOf('image/png'));
       c.saveUser();
       expect(alert.error).toHaveBeenCalledWith('weak');

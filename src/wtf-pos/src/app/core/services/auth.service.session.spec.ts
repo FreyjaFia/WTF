@@ -134,19 +134,19 @@ describe('AuthService session', () => {
 
     it('updateMe sends the password and maps errors', () => {
       const auth = create();
-      auth.updateMe('new-pw').subscribe();
+      auth.updateMe('new-pw', 'old-pw').subscribe();
       const ok = http.expectOne(`${base}/me`);
       expect(ok.request.method).toBe('PUT');
-      expect(ok.request.body).toEqual({ password: 'new-pw' });
+      expect(ok.request.body).toEqual({ password: 'new-pw', currentPassword: 'old-pw' });
       ok.flush(null);
 
-      const unauthorized = capture(auth.updateMe('x'));
+      const unauthorized = capture(auth.updateMe('x', 'y'));
       failWith(http.expectOne(`${base}/me`), 401);
-      const invalid = capture(auth.updateMe('x'));
+      const invalid = capture(auth.updateMe('x', 'y'));
       failWith(http.expectOne(`${base}/me`), 400);
-      const network = capture(auth.updateMe('x'));
+      const network = capture(auth.updateMe('x', 'y'));
       failNetwork(http.expectOne(`${base}/me`));
-      const other = capture(auth.updateMe('x'));
+      const other = capture(auth.updateMe('x', 'y'));
       failWith(http.expectOne(`${base}/me`), 500);
 
       expect(unauthorized.error).toBe(HttpErrorMessages.Unauthorized);
@@ -358,20 +358,48 @@ describe('AuthService session', () => {
       ['canWritePromotions', (a) => a.canWritePromotions(), ['SuperAdmin', 'Admin']],
       ['canReadCustomers', (a) => a.canReadCustomers(), ['SuperAdmin', 'Admin', 'AdminViewer']],
       ['canWriteCustomers', (a) => a.canWriteCustomers(), ['SuperAdmin', 'Admin', 'Cashier']],
-      ['canCreateCustomerInOrder', (a) => a.canCreateCustomerInOrder(true), ['SuperAdmin', 'Admin', 'Cashier']],
+      [
+        'canCreateCustomerInOrder',
+        (a) => a.canCreateCustomerInOrder(true),
+        ['SuperAdmin', 'Admin', 'Cashier'],
+      ],
       ['canAccessReports', (a) => a.canAccessReports(), ['SuperAdmin', 'Admin', 'AdminViewer']],
       ['canAccessAuditLogs', (a) => a.canAccessAuditLogs(), ['SuperAdmin']],
       ['isSuperAdmin', (a) => a.isSuperAdmin(), ['SuperAdmin']],
       ['canAccessSchemaScriptHistory', (a) => a.canAccessSchemaScriptHistory(), ['SuperAdmin']],
-      ['canReadOrders', (a) => a.canReadOrders(), ['SuperAdmin', 'Admin', 'AdminViewer', 'Cashier']],
+      [
+        'canReadOrders',
+        (a) => a.canReadOrders(),
+        ['SuperAdmin', 'Admin', 'AdminViewer', 'Cashier'],
+      ],
       ['canWriteOrders', (a) => a.canWriteOrders(), ['SuperAdmin', 'Admin', 'Cashier']],
       ['canOverrideOrders', (a) => a.canOverrideOrders(), ['SuperAdmin', 'Admin']],
-      ['canReadItems', (a) => a.canReadItems(), ['SuperAdmin', 'Admin', 'AdminViewer', 'ItemManager']],
+      [
+        'canReadItems',
+        (a) => a.canReadItems(),
+        ['SuperAdmin', 'Admin', 'AdminViewer', 'ItemManager'],
+      ],
       ['canWriteItems', (a) => a.canWriteItems(), ['SuperAdmin', 'Admin', 'ItemManager']],
-      ['canReadStockMovements', (a) => a.canReadStockMovements(), ['SuperAdmin', 'Admin', 'AdminViewer', 'StockManager']],
-      ['canWriteStockMovements', (a) => a.canWriteStockMovements(), ['SuperAdmin', 'Admin', 'StockManager']],
-      ['canReadInventory', (a) => a.canReadInventory(), ['SuperAdmin', 'Admin', 'AdminViewer', 'ItemManager', 'StockManager']],
-      ['canWriteInventory', (a) => a.canWriteInventory(), ['SuperAdmin', 'Admin', 'ItemManager', 'StockManager']],
+      [
+        'canReadStockMovements',
+        (a) => a.canReadStockMovements(),
+        ['SuperAdmin', 'Admin', 'AdminViewer', 'StockManager'],
+      ],
+      [
+        'canWriteStockMovements',
+        (a) => a.canWriteStockMovements(),
+        ['SuperAdmin', 'Admin', 'StockManager'],
+      ],
+      [
+        'canReadInventory',
+        (a) => a.canReadInventory(),
+        ['SuperAdmin', 'Admin', 'AdminViewer', 'ItemManager', 'StockManager'],
+      ],
+      [
+        'canWriteInventory',
+        (a) => a.canWriteInventory(),
+        ['SuperAdmin', 'Admin', 'ItemManager', 'StockManager'],
+      ],
       ['canReadManagement', (a) => a.canReadManagement(), ['SuperAdmin', 'Admin', 'AdminViewer']],
       ['canWriteManagement', (a) => a.canWriteManagement(), ['SuperAdmin', 'Admin', 'Cashier']],
     ];
