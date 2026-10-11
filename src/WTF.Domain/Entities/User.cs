@@ -29,6 +29,8 @@ public partial class User
 
     public virtual ICollection<AuditLog> AuditLogs { get; set; } = new List<AuditLog>();
 
+    public virtual ICollection<ConversationMessage> ConversationMessages { get; set; } = new List<ConversationMessage>();
+
     public virtual User CreatedByNavigation { get; set; } = null!;
 
     public virtual ICollection<Customer> CustomerCreatedByNavigations { get; set; } = new List<Customer>();

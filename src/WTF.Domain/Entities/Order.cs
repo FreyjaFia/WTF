@@ -53,6 +53,8 @@ public partial class Order
 
     public DateTime? ReadyAt { get; set; }
 
+    public virtual Conversation? Conversation { get; set; }
+
     public virtual User CreatedByNavigation { get; set; } = null!;
 
     public virtual Customer? Customer { get; set; }

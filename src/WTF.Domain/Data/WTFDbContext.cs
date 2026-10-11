@@ -20,6 +20,10 @@ public partial class WTFDbContext : DbContext
 
     public virtual DbSet<AuditLog> AuditLogs { get; set; }
 
+    public virtual DbSet<Conversation> Conversations { get; set; }
+
+    public virtual DbSet<ConversationMessage> ConversationMessages { get; set; }
+
     public virtual DbSet<Customer> Customers { get; set; }
 
     public virtual DbSet<CustomerImage> CustomerImages { get; set; }
@@ -132,6 +136,53 @@ public partial class WTFDbContext : DbContext
                 .HasForeignKey(d => d.UserId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_AuditLog_Users");
+        });
+
+        modelBuilder.Entity<Conversation>(entity =>
+        {
+            entity.HasIndex(e => new { e.CustomerId, e.LastMessageAt }, "IX_Conversations_CustomerId_LastMessageAt").IsDescending(false, true);
+
+            entity.HasIndex(e => e.LastMessageAt, "IX_Conversations_LastMessageAt").IsDescending();
+
+            entity.HasIndex(e => e.OrderId, "UX_Conversations_OrderId")
+                .IsUnique()
+                .HasFilter("([OrderId] IS NOT NULL)");
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_Conversations_Id");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_Conversations_CreatedAt");
+            entity.Property(e => e.LastMessageAt).HasDefaultValueSql("(sysutcdatetime())", "DF_Conversations_LastMessageAt");
+            entity.Property(e => e.Title).HasMaxLength(100);
+
+            entity.HasOne(d => d.Customer).WithMany(p => p.Conversations)
+                .HasForeignKey(d => d.CustomerId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Conversations_Customer");
+
+            entity.HasOne(d => d.Order).WithOne(p => p.Conversation)
+                .HasForeignKey<Conversation>(d => d.OrderId)
+                .HasConstraintName("FK_Conversations_Order");
+        });
+
+        modelBuilder.Entity<ConversationMessage>(entity =>
+        {
+            entity.HasIndex(e => new { e.ConversationId, e.CreatedAt }, "IX_ConversationMessages_ConversationId_CreatedAt");
+
+            entity.HasIndex(e => e.ConversationId, "IX_ConversationMessages_UnreadForCustomer").HasFilter("([SenderType]=(1) AND [ReadByCustomerAt] IS NULL)");
+
+            entity.HasIndex(e => e.ConversationId, "IX_ConversationMessages_UnreadForStaff").HasFilter("([SenderType]=(0) AND [ReadByStaffAt] IS NULL)");
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_ConversationMessages_Id");
+            entity.Property(e => e.Body).HasMaxLength(1000);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_ConversationMessages_CreatedAt");
+
+            entity.HasOne(d => d.Conversation).WithMany(p => p.ConversationMessages)
+                .HasForeignKey(d => d.ConversationId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ConversationMessages_Conversation");
+
+            entity.HasOne(d => d.SenderUser).WithMany(p => p.ConversationMessages)
+                .HasForeignKey(d => d.SenderUserId)
+                .HasConstraintName("FK_ConversationMessages_SenderUser");
         });
 
         modelBuilder.Entity<Customer>(entity =>

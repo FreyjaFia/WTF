@@ -27,6 +27,8 @@ public partial class Customer
 
     public string? ContactNumber { get; set; }
 
+    public virtual ICollection<Conversation> Conversations { get; set; } = new List<Conversation>();
+
     public virtual User CreatedByNavigation { get; set; } = null!;
 
     public virtual CustomerImage? CustomerImage { get; set; }
