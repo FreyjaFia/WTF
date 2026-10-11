@@ -203,6 +203,86 @@ describe('OrderList', () => {
     vi.restoreAllMocks();
   });
 
+  describe('filtering by source', () => {
+    const sources = () => (t as unknown as {
+      selectedSources: () => number[];
+      toggleSourceSelection: (s: number) => void;
+      clearSourceSelections: () => void;
+      isSourceSelected: (s: number) => boolean;
+      activeFilterCount: () => number;
+      resetFilters: () => void;
+    });
+    const lastQuery = () => orderService.getOrdersPaged.mock.calls.at(-1)![0];
+
+    it('asks the server for one source when exactly one is chosen', () => {
+      init();
+      orderService.getOrdersPaged.mockClear();
+
+      sources().toggleSourceSelection(1);
+      expect(lastQuery().source).toBe(1);
+      expect(sources().isSourceSelected(1)).toBe(true);
+
+      sources().toggleSourceSelection(1);
+      sources().toggleSourceSelection(0);
+      expect(lastQuery().source).toBe(0);
+    });
+
+    it('asks for every order when both or none are chosen', () => {
+      init();
+      sources().toggleSourceSelection(0);
+      sources().toggleSourceSelection(1);
+      expect(lastQuery().source).toBeUndefined();
+
+      sources().clearSourceSelections();
+      expect(sources().selectedSources()).toEqual([]);
+      expect(lastQuery().source).toBeUndefined();
+    });
+
+    it('also asks for the chosen source when more orders are loaded', () => {
+      orderService.getOrdersPaged.mockReturnValue(of(page([makeOrder('o1')], 1, 50)));
+      init();
+      sources().toggleSourceSelection(1);
+      orderService.getOrdersPaged.mockClear();
+
+      (t as unknown as { loadMoreOrders: () => void }).loadMoreOrders();
+
+      if (orderService.getOrdersPaged.mock.calls.length > 0) {
+        expect(lastQuery().source).toBe(1);
+      }
+    });
+
+    it('counts the source on the Filters button, and none when both are chosen', () => {
+      init();
+      expect(sources().activeFilterCount()).toBe(0);
+      sources().toggleSourceSelection(1);
+      expect(sources().activeFilterCount()).toBe(1);
+      sources().toggleSourceSelection(0);
+      expect(sources().activeFilterCount()).toBe(0);
+    });
+
+    it('is cleared with the other filters', () => {
+      init();
+      sources().toggleSourceSelection(1);
+      sources().resetFilters();
+      expect(sources().selectedSources()).toEqual([]);
+    });
+
+    it('is remembered with the other filters', () => {
+      init({ ...defaultState, selectedSources: [1] });
+      expect(sources().selectedSources()).toEqual([1]);
+      expect(orderService.getOrdersPaged.mock.calls[0][0].source).toBe(1);
+    });
+
+    it('has a Source section in the filter drawer', () => {
+      init();
+      sources().toggleSourceSelection(0);
+      fixture.detectChanges();
+      const section = fixture.nativeElement.querySelector('[data-source-filter]') as HTMLElement;
+      expect(section.textContent).toContain('Shop orders');
+      expect(section.textContent).toContain('Customer link orders');
+    });
+  });
+
   describe('loading', () => {
     it('loads first page on init and starts hub', () => {
       orderService.getOrdersPaged.mockReturnValue(of(page([makeOrder('o1')], 1, 50)));

@@ -26,6 +26,7 @@ import {
   ProductSalesReportRowDto,
   ProductSubCategoryEnum,
   ReportGroupBy,
+  ReportSource,
   ReportType,
   StaffPerformanceReportQuery,
   StaffPerformanceReportRowDto,
@@ -93,6 +94,7 @@ type StaffSortKey =
 interface DateRangeValue {
   fromDate: string;
   toDate: string;
+  source?: ReportSource;
 }
 
 interface EnumFilterOption<T extends number> {
@@ -254,6 +256,7 @@ export class ReportsComponent implements OnInit {
     categoryId: this.formBuilder.control<number | null>(null),
     subCategoryId: this.formBuilder.control<number | null>(null),
     staffId: this.formBuilder.control<string | null>(null),
+    source: this.formBuilder.control<ReportSource | null>(null),
   });
 
   protected readonly selectedReportType = toSignal(
@@ -389,7 +392,8 @@ export class ReportsComponent implements OnInit {
       (this.reportFormValue().preset !== this.datePresets.ThisMonth ? 1 : 0) +
       (this.reportFormValue().categoryId != null ? 1 : 0) +
       (this.reportFormValue().subCategoryId != null ? 1 : 0) +
-      (this.reportFormValue().staffId != null ? 1 : 0),
+      (this.reportFormValue().staffId != null ? 1 : 0) +
+      (this.reportFormValue().source != null ? 1 : 0),
   );
 
   protected openFilters(): void {
@@ -949,6 +953,12 @@ export class ReportsComponent implements OnInit {
     return this.isProductSalesReport();
   }
 
+  protected readonly sourceOptions: readonly { value: ReportSource | null; label: string }[] = [
+    { value: null, label: 'All Orders' },
+    { value: 0, label: 'Shop Orders' },
+    { value: 1, label: 'Customer Link Orders' },
+  ];
+
   protected showStaffFilter(): boolean {
     return this.isStaffReport();
   }
@@ -1298,7 +1308,8 @@ export class ReportsComponent implements OnInit {
       return null;
     }
 
-    return { fromDate, toDate };
+    const source = this.reportForm.controls.source.value;
+    return source === null ? { fromDate, toDate } : { fromDate, toDate, source };
   }
 
   private getMonthlyWorkbookFilterOrShowError(

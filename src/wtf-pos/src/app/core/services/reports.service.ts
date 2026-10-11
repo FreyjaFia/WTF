@@ -13,6 +13,7 @@ import {
   PaymentsReportRowDto,
   ProductSalesReportQuery,
   ProductSalesReportRowDto,
+  ReportSource,
   StaffPerformanceReportQuery,
   StaffPerformanceReportRowDto,
 } from '@shared/models';
@@ -232,7 +233,7 @@ export class ReportsService {
   }
 
   private buildDailySalesParams(query: DailySalesReportQuery): HttpParams {
-    let params = this.buildBaseDateRangeParams(query.fromDate, query.toDate);
+    let params = this.buildBaseDateRangeParams(query.fromDate, query.toDate, query.source);
     if (query.groupBy) {
       params = params.set('groupBy', query.groupBy);
     }
@@ -241,7 +242,7 @@ export class ReportsService {
   }
 
   private buildProductSalesParams(query: ProductSalesReportQuery): HttpParams {
-    let params = this.buildBaseDateRangeParams(query.fromDate, query.toDate);
+    let params = this.buildBaseDateRangeParams(query.fromDate, query.toDate, query.source);
     if (query.categoryId !== undefined) {
       params = params.set('categoryId', query.categoryId);
     }
@@ -254,15 +255,15 @@ export class ReportsService {
   }
 
   private buildPaymentsParams(query: PaymentsReportQuery): HttpParams {
-    return this.buildBaseDateRangeParams(query.fromDate, query.toDate);
+    return this.buildBaseDateRangeParams(query.fromDate, query.toDate, query.source);
   }
 
   private buildHourlySalesParams(query: HourlySalesReportQuery): HttpParams {
-    return this.buildBaseDateRangeParams(query.fromDate, query.toDate);
+    return this.buildBaseDateRangeParams(query.fromDate, query.toDate, query.source);
   }
 
   private buildStaffPerformanceParams(query: StaffPerformanceReportQuery): HttpParams {
-    let params = this.buildBaseDateRangeParams(query.fromDate, query.toDate);
+    let params = this.buildBaseDateRangeParams(query.fromDate, query.toDate, query.source);
     if (query.staffId) {
       params = params.set('staffId', query.staffId);
     }
@@ -270,8 +271,13 @@ export class ReportsService {
     return params;
   }
 
-  private buildBaseDateRangeParams(fromDate: string, toDate: string): HttpParams {
-    return new HttpParams().set('fromDate', fromDate).set('toDate', toDate);
+  private buildBaseDateRangeParams(
+    fromDate: string,
+    toDate: string,
+    source?: ReportSource,
+  ): HttpParams {
+    const params = new HttpParams().set('fromDate', fromDate).set('toDate', toDate);
+    return source === undefined ? params : params.set('source', source);
   }
 
   private buildMonthlyWorkbookParams(year: number, month: number): HttpParams {

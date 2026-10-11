@@ -250,6 +250,10 @@
                               } @else {
                                 Never used
                               }
+                              <span class="mx-1">&middot;</span>
+                              <span data-link-orders>{{
+                                link.ordersCount === 1 ? '1 order' : (link.ordersCount ?? 0) + ' orders'
+                              }}</span>
                               @if (link.revokedAt) {
                                 <span class="mx-1">&middot;</span>
                                 Revoked {{ link.revokedAt | date: 'd MMM y, h:mm a' }}

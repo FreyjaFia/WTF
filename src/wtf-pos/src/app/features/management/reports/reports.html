@@ -110,6 +110,24 @@
           />
         </label>
 
+        <label
+          class="flex min-w-0 flex-col gap-1 rounded-lg bg-white px-3 py-2 ring-1 ring-gray-200 transition-colors focus-within:ring-2 focus-within:ring-gray-300"
+        >
+          <span class="text-[11px] font-semibold tracking-wide text-gray-500 uppercase"
+            >Source</span
+          >
+          <select
+            class="w-full bg-transparent text-sm text-gray-700 focus:caret-[#047857] focus:outline-none"
+            formControlName="source"
+            data-source-filter
+            (change)="onAdvancedFilterChanged()"
+          >
+            @for (option of sourceOptions; track option.label) {
+              <option [ngValue]="option.value">{{ option.label }}</option>
+            }
+          </select>
+        </label>
+
         @if (showGroupByFilter()) {
           <label
             class="flex min-w-0 flex-col gap-1 rounded-lg bg-white px-3 py-2 ring-1 ring-gray-200 transition-colors focus-within:ring-2 focus-within:ring-gray-300"

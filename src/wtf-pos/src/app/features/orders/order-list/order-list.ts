@@ -35,7 +35,13 @@ import {
 } from '@shared/components';
 import { AppRoutes } from '@shared/constants/app-routes';
 import type { CartItemDto } from '@shared/models';
-import { FulfillmentTypeEnum, OrderDto, OrderStatusEnum, PaymentMethodEnum } from '@shared/models';
+import {
+  FulfillmentTypeEnum,
+  OrderDto,
+  OrderSourceEnum,
+  OrderStatusEnum,
+  PaymentMethodEnum,
+} from '@shared/models';
 import { debounceTime, Subscription } from 'rxjs';
 
 type SortColumn = 'orderNumber' | 'date' | 'totalAmount';
@@ -43,6 +49,7 @@ type SortDirection = 'asc' | 'desc';
 interface OrderListState {
   searchTerm: string;
   selectedStatuses: OrderStatusEnum[];
+  selectedSources?: OrderSourceEnum[];
   selectedDateRanges: string[];
   customStartDate: string;
   customEndDate: string;
@@ -111,6 +118,11 @@ export class OrderList implements OnInit, OnDestroy {
   protected readonly sortColumn = signal<SortColumn | null>(null);
   protected readonly sortDirection = signal<SortDirection>('desc');
   protected readonly selectedStatuses = signal<OrderStatusEnum[]>([]);
+  protected readonly selectedSources = signal<OrderSourceEnum[]>([]);
+  protected readonly sourceOptions: { id: OrderSourceEnum; label: string }[] = [
+    { id: OrderSourceEnum.Pos, label: 'Shop orders' },
+    { id: OrderSourceEnum.CustomerLink, label: 'Customer link orders' },
+  ];
   protected readonly selectedDateRanges = signal<string[]>([]);
   protected readonly customStartDate = signal('');
   protected readonly customEndDate = signal('');
@@ -279,6 +291,7 @@ export class OrderList implements OnInit, OnDestroy {
     this.orderService
       .getOrdersPaged({
         searchTerm: this.filterForm.controls.searchTerm.value,
+        source: this.sourceFilter(),
         page: 1,
         pageSize: this.pageSize(),
       })
@@ -315,6 +328,7 @@ export class OrderList implements OnInit, OnDestroy {
     this.orderService
       .getOrdersPaged({
         searchTerm: this.filterForm.controls.searchTerm.value,
+        source: this.sourceFilter(),
         page: nextPage,
         pageSize: this.pageSize(),
       })
@@ -455,10 +469,36 @@ export class OrderList implements OnInit, OnDestroy {
     this.saveState();
   }
 
+  /** The one source to ask the server for. Both chosen, or none, means every order. */
+  private sourceFilter(): OrderSourceEnum | undefined {
+    const chosen = this.selectedSources();
+    return chosen.length === 1 ? chosen[0] : undefined;
+  }
+
+  protected isSourceSelected(source: OrderSourceEnum): boolean {
+    return this.selectedSources().includes(source);
+  }
+
+  protected toggleSourceSelection(source: OrderSourceEnum): void {
+    const current = this.selectedSources();
+    this.selectedSources.set(
+      current.includes(source) ? current.filter((item) => item !== source) : [...current, source],
+    );
+    this.saveState();
+    this.resetAndLoadOrders();
+  }
+
+  protected clearSourceSelections(): void {
+    this.selectedSources.set([]);
+    this.saveState();
+    this.resetAndLoadOrders();
+  }
+
   /** How many filters are applied, shown on the Filters button. */
   protected readonly activeFilterCount = computed(
     () =>
       selectedFilterCount(this.selectedStatuses().length, this.filterOptions().length) +
+      selectedFilterCount(this.selectedSources().length, this.sourceOptions.length) +
       (this.selectedDateRanges().length > 0 ? 1 : 0),
   );
 
@@ -486,11 +526,13 @@ export class OrderList implements OnInit, OnDestroy {
       searchTerm: '',
     });
     this.selectedStatuses.set([]);
+    this.selectedSources.set([]);
     this.selectedDateRanges.set([]);
     this.customStartDate.set('');
     this.customEndDate.set('');
     this.applyFiltersToCache();
     this.saveState();
+    this.resetAndLoadOrders();
   }
 
   protected getStatusVariant(
@@ -638,6 +680,11 @@ export class OrderList implements OnInit, OnDestroy {
     let items = [...this.ordersCache()];
 
     // Filter by status
+    const onlySource = this.sourceFilter();
+    if (onlySource !== undefined) {
+      items = items.filter((order) => (order.source ?? OrderSourceEnum.Pos) === onlySource);
+    }
+
     const selectedStatuses = this.selectedStatuses();
     if (selectedStatuses.length > 0) {
       items = items.filter((order) => selectedStatuses.includes(order.status));
@@ -864,6 +911,7 @@ export class OrderList implements OnInit, OnDestroy {
     const state = this.listState.load<OrderListState>(this.stateKey, {
       searchTerm: '',
       selectedStatuses: [],
+      selectedSources: [],
       selectedDateRanges: [],
       customStartDate: '',
       customEndDate: '',
@@ -878,6 +926,7 @@ export class OrderList implements OnInit, OnDestroy {
       { emitEvent: false },
     );
     this.selectedStatuses.set(state.selectedStatuses ?? []);
+    this.selectedSources.set(state.selectedSources ?? []);
     this.selectedDateRanges.set(state.selectedDateRanges ?? []);
     this.customStartDate.set(state.customStartDate ?? '');
     this.customEndDate.set(state.customEndDate ?? '');
@@ -889,6 +938,7 @@ export class OrderList implements OnInit, OnDestroy {
     this.listState.save<OrderListState>(this.stateKey, {
       searchTerm: this.filterForm.controls.searchTerm.value ?? '',
       selectedStatuses: this.selectedStatuses(),
+      selectedSources: this.selectedSources(),
       selectedDateRanges: this.selectedDateRanges(),
       customStartDate: this.customStartDate(),
       customEndDate: this.customEndDate(),

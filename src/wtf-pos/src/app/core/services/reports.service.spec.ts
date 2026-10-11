@@ -46,6 +46,40 @@ describe('ReportsService', () => {
       req.flush([]);
     });
 
+    it.each([
+      ['daily-sales', (s: ReportsService) => s.getDailySalesReport({ ...range, source: 1 } as never)],
+      ['product-sales', (s: ReportsService) => s.getProductSalesReport({ ...range, source: 1 } as never)],
+      ['payments', (s: ReportsService) => s.getPaymentsReport({ ...range, source: 1 } as never)],
+      ['hourly', (s: ReportsService) => s.getHourlySalesReport({ ...range, source: 1 } as never)],
+      ['staff', (s: ReportsService) => s.getStaffPerformanceReport({ ...range, source: 1 } as never)],
+    ])('%s report sends the source when one is chosen', (path, call) => {
+      const { service, http } = setupHttpService(ReportsService);
+      (call(service) as { subscribe: () => unknown }).subscribe();
+
+      const req = http.expectOne((r) => r.url === `${base}/${path}`);
+      expect(req.request.params.get('source')).toBe('1');
+      req.flush([]);
+    });
+
+    it('sends the shop source (0) and leaves it out for all orders', () => {
+      const { service, http } = setupHttpService(ReportsService);
+      service.getPaymentsReport({ ...range, source: 0 } as never).subscribe();
+      service.getPaymentsReport(range as never).subscribe();
+
+      const requests = http.match((r) => r.url === `${base}/payments`);
+      expect(requests[0].request.params.get('source')).toBe('0');
+      expect(requests[1].request.params.has('source')).toBe(false);
+    });
+
+    it('exports carry the source too', () => {
+      const { service, http } = setupHttpService(ReportsService);
+      service.downloadDailySalesExcel({ ...range, source: 1 } as never).subscribe();
+      service.downloadDailySalesPdf({ ...range, source: 0 } as never).subscribe();
+
+      const requests = http.match((r) => r.url === `${base}/daily-sales`);
+      expect(requests.map((r) => r.request.params.get('source'))).toEqual(['1', '0']);
+    });
+
     it('staff performance adds staffId only when set', () => {
       const { service, http } = setupHttpService(ReportsService);
       service.getStaffPerformanceReport({ ...range, staffId: 's1' } as never).subscribe();

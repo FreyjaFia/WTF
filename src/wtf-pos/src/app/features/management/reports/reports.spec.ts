@@ -385,6 +385,45 @@ describe('ReportsComponent', () => {
       });
     });
 
+    it('limits a report to one source and sends nothing for all orders', async () => {
+      await create();
+      setField('reportType', 'payments');
+      t.onReportTypeChanged();
+      setField('source', 1);
+      t.onAdvancedFilterChanged();
+      expect(reports['getPaymentsReport']).toHaveBeenLastCalledWith({
+        fromDate: '2026-03-01',
+        toDate: '2026-03-15',
+        source: 1,
+      });
+
+      setField('source', 0);
+      t.onAdvancedFilterChanged();
+      expect(reports['getPaymentsReport']).toHaveBeenLastCalledWith({
+        fromDate: '2026-03-01',
+        toDate: '2026-03-15',
+        source: 0,
+      });
+
+      setField('source', null);
+      t.onAdvancedFilterChanged();
+      expect(reports['getPaymentsReport']).toHaveBeenLastCalledWith({
+        fromDate: '2026-03-01',
+        toDate: '2026-03-15',
+      });
+    });
+
+    it('has a Source filter for every report, with all orders first', async () => {
+      await create();
+      const select = fixture.nativeElement.querySelector('[data-source-filter]') as HTMLSelectElement;
+      expect(select).not.toBeNull();
+      expect([...select.options].map((o) => o.textContent!.trim())).toEqual([
+        'All Orders',
+        'Shop Orders',
+        'Customer Link Orders',
+      ]);
+    });
+
     it('staff filter trims id and ignores blank', async () => {
       await create();
       setField('reportType', 'staff');
@@ -787,6 +826,9 @@ describe('ReportsComponent', () => {
       expect(count()).toBe(1);
       setField('staffId', 'u1');
       expect(count()).toBe(2);
+      setField('source', 1);
+      expect(count()).toBe(3);
+      setField('source', null);
       setField('categoryId', 3);
       expect(count()).toBe(3);
       setField('preset', 'this-month');

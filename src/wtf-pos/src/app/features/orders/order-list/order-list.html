@@ -163,6 +163,34 @@
           }
         </div>
       </div>
+
+      <div class="rounded-xl border border-gray-200 bg-white p-3" data-source-filter>
+        <div class="mb-3 flex items-center justify-between">
+          <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Source</p>
+          <button
+            type="button"
+            class="app-btn app-btn-secondary app-btn-xs"
+            (click)="clearSourceSelections()"
+          >
+            Clear
+          </button>
+        </div>
+        <div class="space-y-2">
+          @for (option of sourceOptions; track option.id) {
+            <label
+              class="flex cursor-pointer items-center justify-between rounded-lg bg-white px-3 py-2 text-sm text-gray-700"
+            >
+              <span>{{ option.label }}</span>
+              <input
+                type="checkbox"
+                class="checkbox checkbox-sm"
+                [checked]="isSourceSelected(option.id)"
+                (change)="toggleSourceSelection(option.id)"
+              />
+            </label>
+          }
+        </div>
+      </div>
     </div>
   </app-side-drawer>
 

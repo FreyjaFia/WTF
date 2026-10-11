@@ -47,6 +47,18 @@ describe('OrderService', () => {
       req.flush({ items: [] });
     });
 
+    it('asks for one source, including the shop (0), and leaves it out for all', () => {
+      const { service, http } = setupHttpService(OrderService);
+      service.getOrdersPaged({ source: 0 }).subscribe();
+      service.getOrdersPaged({ source: 1 }).subscribe();
+      service.getOrdersPaged({ source: null }).subscribe();
+      service.getOrdersPaged({}).subscribe();
+
+      const requests = http.match((r) => r.url === `${base}/paged`);
+      expect(requests.map((r) => r.request.params.get('source'))).toEqual(['0', '1', null, null]);
+      requests.forEach((r) => r.flush({ items: [] }));
+    });
+
     it('drops blank search terms', () => {
       const { service, http } = setupHttpService(OrderService);
       service.getOrdersPaged({ searchTerm: '   ' }).subscribe();

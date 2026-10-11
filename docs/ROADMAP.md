@@ -1579,10 +1579,26 @@ Original plan:
   role access), status audit regressions (unapproved orders excluded from reports/dashboard),
   route and policy snapshots, order-list and checkout specs.
 
-#### Phase 4 - Reporting
+#### Phase 4 - Reporting [Completed]
 
-- Filter orders and reports by `Source`; per-link usage stats (orders count, last used) in the
-  customer details links table; check the monthly workbook and PDF/Excel labels.
+- **Reports by source.** Every report (daily sales, product sales, payments, hourly, staff) takes an optional
+  `source` (`Pos` = 0, `CustomerLink` = 1; anything else is a 400). Left out it counts every order, so existing
+  numbers do not change. It filters the order rows (and, for product sales, both the items and the bundles). The Excel
+  and PDF exports say which source they cover in their subtitle ("Source: Shop orders" / "Customer link orders").
+  The reports page has a Source select (All Orders, Shop Orders, Customer Link Orders) that counts on the Filters
+  badge.
+- **Orders by source.** `GET /api/orders/paged` takes `source` too. The order list's Filters drawer has a Source
+  section (Shop orders, Customer link orders): one chosen asks the server for that source, both or none asks for all,
+  it is remembered with the other list filters and counts on the Filters badge. Orders waiting for approval stay out of
+  the normal list either way.
+- **Link usage.** The customer details links list shows how many orders each link produced (`OrderLinkDto.OrdersCount`,
+  whatever became of the orders) next to "Last used".
+- **Monthly workbook.** Checked: it builds its sheets from the same handlers without a source, so it keeps counting
+  every completed order and its labels are unchanged. Waiting, rejected and cancelled orders were already excluded
+  from revenue by the status audit.
+- Tests: each report limited to a source and the same totals when added up, paged orders by source (waiting orders
+  stay hidden), link order counts, the report and order services' parameters, the reports page and order list
+  filters, and the links list.
 
 #### Phase 5 - Order chat (one thread per order)
 

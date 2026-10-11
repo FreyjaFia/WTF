@@ -7,6 +7,7 @@ import {
   CreateOrderCommand,
   OrderDto,
   OrderHistoryDto,
+  OrderSourceEnum,
   OrderStatusEnum,
   PagedResultDto,
   UpdateOrderCommand,
@@ -75,6 +76,8 @@ export class OrderService {
     status?: OrderStatusEnum | null;
     customerId?: string | null;
     searchTerm?: string | null;
+    /** Only orders from this source; leave out for all. */
+    source?: OrderSourceEnum | null;
     page?: number;
     pageSize?: number;
   }): Observable<PagedResultDto<OrderDto>> {
@@ -94,6 +97,10 @@ export class OrderService {
 
     if (query?.searchTerm && query.searchTerm.trim()) {
       params = params.set('searchTerm', query.searchTerm.trim());
+    }
+
+    if (query?.source !== undefined && query?.source !== null) {
+      params = params.set('source', String(query.source));
     }
 
     if (query?.page !== undefined && query?.page !== null) {

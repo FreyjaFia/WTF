@@ -289,6 +289,22 @@ describe('CustomerDetailsComponent', () => {
       expect(linkService['getLinks']).not.toHaveBeenCalled();
     });
 
+    it('shows how many orders each link has produced', () => {
+      setup({
+        customer: ENABLED,
+        links: [
+          { ...LINK, id: 'l1', ordersCount: 3 },
+          { ...LINK, id: 'l2', ordersCount: 1 },
+          { ...LINK, id: 'l3', ordersCount: 0 },
+          { ...LINK, id: 'l4', ordersCount: undefined },
+        ],
+      });
+      const counts = [...fixture.nativeElement.querySelectorAll('[data-link-orders]')].map(
+        (n: Element) => n.textContent!.trim(),
+      );
+      expect(counts).toEqual(['3 orders', '1 order', '0 orders', '0 orders']);
+    });
+
     it('loads and lists the links when ordering is on', () => {
       setup({ customer: ENABLED, links: [LINK] });
       expect(linkService['getLinks']).toHaveBeenCalledWith('c1');

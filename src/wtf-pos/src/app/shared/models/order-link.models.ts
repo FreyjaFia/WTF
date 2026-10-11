@@ -9,6 +9,8 @@ export interface OrderLinkDto {
   expiresAt?: string | null;
   revokedAt?: string | null;
   lastUsedAt?: string | null;
+  /** How many orders customers placed through this link, whatever became of them. */
+  ordersCount?: number;
 }
 
 export interface OrderingLinkAccessDto {
