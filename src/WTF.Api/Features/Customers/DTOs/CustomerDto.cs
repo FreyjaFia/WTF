@@ -10,5 +10,6 @@ public record CustomerDto(
     Guid CreatedBy,
     DateTime? UpdatedAt,
     Guid? UpdatedBy,
-    string? ImageUrl
+    string? ImageUrl,
+    bool AllowOrderingLink
 );

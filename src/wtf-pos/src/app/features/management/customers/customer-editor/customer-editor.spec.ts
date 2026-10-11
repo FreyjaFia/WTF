@@ -23,6 +23,7 @@ const CUSTOMER: CustomerDto = {
   updatedAt: '2024-02-02T00:00:00Z',
   createdBy: 'x',
   imageUrl: 'http://img/a.png',
+  allowOrderingLink: false,
 };
 
 const fileEvent = (file: File) => ({ target: { files: [file] } }) as unknown as Event;

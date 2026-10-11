@@ -400,6 +400,8 @@ public partial class WTFDbContext : DbContext
         {
             entity.HasIndex(e => e.CustomerId, "IX_Orders_CustomerId");
 
+            entity.HasIndex(e => e.OrderLinkId, "IX_Orders_OrderLinkId");
+
             entity.HasIndex(e => e.StatusId, "IX_Orders_StatusId");
 
             entity.HasIndex(e => e.OrderNumber, "UQ_Orders_OrderNumber").IsUnique();
@@ -407,12 +409,15 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
             entity.Property(e => e.AmountReceived).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.ChangeAmount).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.ContactNumber).HasMaxLength(30);
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("(getutcdate())")
                 .HasColumnType("datetime");
+            entity.Property(e => e.DeliveryAddress).HasMaxLength(300);
             entity.Property(e => e.Note).HasMaxLength(500);
             entity.Property(e => e.OrderNumber).HasDefaultValueSql("(NEXT VALUE FOR [dbo].[OrderNumberSeq])", "DF_Orders_OrderNumber_DEFAULT");
             entity.Property(e => e.OverrideReason).HasMaxLength(500);
+            entity.Property(e => e.RejectionReason).HasMaxLength(500);
             entity.Property(e => e.SpecialInstructions)
                 .HasMaxLength(100)
                 .IsUnicode(false);
@@ -427,6 +432,10 @@ public partial class WTFDbContext : DbContext
             entity.HasOne(d => d.Customer).WithMany(p => p.Orders)
                 .HasForeignKey(d => d.CustomerId)
                 .HasConstraintName("FK_Orders_Customer");
+
+            entity.HasOne(d => d.OrderLink).WithMany(p => p.Orders)
+                .HasForeignKey(d => d.OrderLinkId)
+                .HasConstraintName("FK_Orders_OrderLink");
 
             entity.HasOne(d => d.PaymentMethod).WithMany(p => p.Orders)
                 .HasForeignKey(d => d.PaymentMethodId)
@@ -787,14 +796,21 @@ public partial class WTFDbContext : DbContext
         {
             entity.HasIndex(e => e.Token, "IX_ShortLinks").IsUnique();
 
+            entity.HasIndex(e => e.CreatedBy, "IX_ShortLinks_CreatedBy");
+
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_ShortLinks_Id");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_ShortLinks_CreatedAt");
             entity.Property(e => e.TargetType)
                 .HasMaxLength(50)
                 .IsUnicode(false);
             entity.Property(e => e.TargetUrl).IsUnicode(false);
             entity.Property(e => e.Token)
-                .HasMaxLength(20)
+                .HasMaxLength(64)
                 .IsUnicode(false);
+
+            entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.ShortLinks)
+                .HasForeignKey(d => d.CreatedBy)
+                .HasConstraintName("FK_ShortLinks_CreatedBy");
         });
 
         modelBuilder.Entity<Status>(entity =>

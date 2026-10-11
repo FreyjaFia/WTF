@@ -13,7 +13,9 @@ public class RedirectToLoyaltyHandler(WTFDbContext db)
     public async Task<RedirectToLoyaltyDto> Handle(RedirectToLoyaltyQuery request,
         CancellationToken cancellationToken)
     {
-        var link = await db.ShortLinks.FirstOrDefaultAsync(x => x.Token == request.Token, cancellationToken);
+        // Only loyalty links resolve here; a customer ordering token must never return a customer id.
+        var link = await db.ShortLinks.FirstOrDefaultAsync(
+            x => x.Token == request.Token && x.TargetType == "Loyalty", cancellationToken);
 
         if (link == null || (link.ExpiresAt.HasValue && link.ExpiresAt < DateTime.UtcNow))
         {

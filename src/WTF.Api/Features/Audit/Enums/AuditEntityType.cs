@@ -8,5 +8,6 @@ public enum AuditEntityType
     Customer,
     Item,
     ProductItemLink,
-    StockMovement
+    StockMovement,
+    OrderLink
 }

@@ -47,6 +47,7 @@ public class EnumAndConstantConsistencyTests
         ((int)OrderStatusEnum.Completed).ShouldBe(2);
         ((int)OrderStatusEnum.Cancelled).ShouldBe(3);
         ((int)OrderStatusEnum.Refunded).ShouldBe(4);
+        ((int)OrderStatusEnum.PendingApproval).ShouldBe(5);
     }
 
     [Fact]

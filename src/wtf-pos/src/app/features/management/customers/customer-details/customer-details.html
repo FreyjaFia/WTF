@@ -133,6 +133,125 @@
                   </p>
                 </div>
               }
+
+              <!-- Ordering link -->
+              @if (showOrderLinks()) {
+                <div class="border-t border-gray-100 pt-5">
+                  <p class="mb-3 text-xs font-semibold tracking-wider text-gray-400 uppercase">
+                    Ordering link
+                  </p>
+
+                  <div class="flex items-center justify-between gap-4 rounded-xl bg-gray-50 px-4 py-3">
+                    <div>
+                      <span class="text-sm font-medium text-gray-900">Allow ordering link</span>
+                      <p class="text-xs text-gray-500">
+                        Lets this customer place orders themselves through a personal link
+                      </p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      class="toggle toggle-neutral toggle-sm"
+                      aria-label="Allow ordering link"
+                      [checked]="customer()!.allowOrderingLink"
+                      [disabled]="isUpdatingAccess()"
+                      (change)="onOrderingToggle($any($event.target).checked)"
+                    />
+                  </div>
+
+                  @if (customer()!.allowOrderingLink) {
+                    <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
+                      <label class="flex flex-col gap-1">
+                        <span class="text-[11px] font-semibold tracking-wide text-gray-500 uppercase"
+                          >End date (optional)</span
+                        >
+                        <input
+                          type="date"
+                          class="input input-sm input-bordered w-full bg-white sm:w-44"
+                          [min]="today"
+                          [value]="newLinkEndDate()"
+                          (change)="newLinkEndDate.set($any($event.target).value)"
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        class="app-btn app-btn-primary app-btn-sm gap-2"
+                        [disabled]="isCreatingLink()"
+                        (click)="generateLink()"
+                      >
+                        <app-icon name="icon-plus" [class]="'h-4 w-4'" />
+                        {{ isCreatingLink() ? 'Generating...' : 'Generate Link' }}
+                      </button>
+                    </div>
+                    <p class="mt-1 text-xs text-gray-400">
+                      Leave the end date empty for a link that never expires.
+                    </p>
+
+                    @if (isLoadingLinks()) {
+                      <div class="flex justify-center py-4">
+                        <span class="loading loading-spinner loading-sm"></span>
+                      </div>
+                    } @else if (orderLinks().length === 0) {
+                      <p class="mt-4 text-sm text-gray-500">No links yet.</p>
+                    } @else {
+                      <ul class="mt-4 space-y-2">
+                        @for (link of orderLinks(); track link.id) {
+                          <li class="rounded-xl border border-gray-100 px-4 py-3">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                              <div class="flex flex-wrap items-center gap-2">
+                                <app-badge [variant]="linkStatusVariants[link.status]">{{
+                                  link.status
+                                }}</app-badge>
+                                <span class="text-xs text-gray-500">
+                                  Created {{ link.createdAt | date: 'd MMM y, h:mm a' }}
+                                  @if (link.createdByName) {
+                                    by {{ link.createdByName }}
+                                  }
+                                </span>
+                              </div>
+                              @if (link.status === 'Active') {
+                                <div class="flex gap-2">
+                                  <button
+                                    type="button"
+                                    class="app-btn app-btn-secondary app-btn-xs"
+                                    (click)="copyLink(link)"
+                                  >
+                                    Copy
+                                  </button>
+                                  <button
+                                    type="button"
+                                    class="app-btn app-btn-outline-danger app-btn-xs"
+                                    (click)="askRevokeLink(link)"
+                                  >
+                                    Revoke
+                                  </button>
+                                </div>
+                              }
+                            </div>
+                            <p class="mt-1 text-xs text-gray-500">
+                              @if (link.expiresAt) {
+                                {{ link.status === 'Expired' ? 'Expired' : 'Ends' }}
+                                {{ link.expiresAt | date: 'd MMM y, h:mm a' }}
+                              } @else {
+                                No end date
+                              }
+                              <span class="mx-1">&middot;</span>
+                              @if (link.lastUsedAt) {
+                                Last used {{ link.lastUsedAt | date: 'd MMM y, h:mm a' }}
+                              } @else {
+                                Never used
+                              }
+                              @if (link.revokedAt) {
+                                <span class="mx-1">&middot;</span>
+                                Revoked {{ link.revokedAt | date: 'd MMM y, h:mm a' }}
+                              }
+                            </p>
+                          </li>
+                        }
+                      </ul>
+                    }
+                  }
+                </div>
+              }
             </div>
           </div>
         </div>
@@ -140,6 +259,39 @@
     </div>
   }
 </div>
+
+@if (showDisableOrderingModal() && showOrderLinks()) {
+  <app-confirm-dialog
+    icon="icon-warning"
+    heading="Disable Ordering Link?"
+    confirmLabel="Disable Ordering"
+    busyLabel="Disabling..."
+    [isBusy]="isUpdatingAccess()"
+    (confirmed)="confirmDisableOrdering()"
+    (cancelled)="cancelDisableOrdering()"
+  >
+    This will revoke every ordering link of
+    <span class="font-medium text-gray-700"
+      >{{ customer()!.firstName }} {{ customer()!.lastName }}</span
+    >
+    right away. You can enable it again later and generate new links.
+  </app-confirm-dialog>
+}
+
+@if (linkToRevoke() && showOrderLinks()) {
+  <app-confirm-dialog
+    icon="icon-delete"
+    heading="Revoke Link?"
+    confirmLabel="Revoke Link"
+    busyLabel="Revoking..."
+    [isBusy]="isRevokingLink()"
+    (confirmed)="confirmRevokeLink()"
+    (cancelled)="cancelRevokeLink()"
+  >
+    Anyone opening this link will see that it is no longer valid. Orders already placed are not
+    affected.
+  </app-confirm-dialog>
+}
 
 <!-- Delete Confirmation Modal -->
 @if (showDeleteModal() && canWriteCustomers()) {

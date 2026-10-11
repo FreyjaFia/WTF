@@ -17,7 +17,8 @@ internal static class CustomerMapping
             customer.CreatedBy,
             customer.UpdatedAt,
             customer.UpdatedBy,
-            imageUrl
+            imageUrl,
+            customer.AllowOrderingLink
         );
     }
 }

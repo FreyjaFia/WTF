@@ -12,6 +12,7 @@ export function internals(component: unknown): Internals {
 export function fakeAlert() {
   return {
     error: vi.fn(),
+    success: vi.fn(),
     errorUnauthorized: vi.fn(),
     errorInvalidImageType: vi.fn(),
     errorFileTooLarge: vi.fn(),

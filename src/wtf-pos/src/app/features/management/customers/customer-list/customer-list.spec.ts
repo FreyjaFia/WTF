@@ -27,6 +27,7 @@ function customer(
     isActive,
     createdAt: '2024-01-01',
     createdBy: 'x',
+    allowOrderingLink: false,
   };
 }
 

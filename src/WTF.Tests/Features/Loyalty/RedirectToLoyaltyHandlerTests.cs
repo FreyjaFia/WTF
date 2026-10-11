@@ -48,4 +48,20 @@ public class RedirectToLoyaltyHandlerTests
         await Link("abc12345", null, Guid.NewGuid());
         (await Redirect("nope")).ShouldBeNull();
     }
+
+    [Fact]
+    public async Task Handle_CustomerOrderingToken_ReturnsNull()
+    {
+        await using (var db = TestDb.Create(_db))
+        {
+            db.ShortLinks.Add(new ShortLink
+            {
+                Id = Guid.NewGuid(), Token = "order-link-token", TargetType = "CustomerOrder",
+                TargetId = Guid.NewGuid(), CreatedAt = DateTime.UtcNow
+            });
+            await db.SaveChangesAsync();
+        }
+
+        (await Redirect("order-link-token")).ShouldBeNull();
+    }
 }

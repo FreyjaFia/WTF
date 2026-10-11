@@ -26,5 +26,11 @@ public enum AuditAction
     OrderCreated,
     OrderUpdated,
     OrderVoided,
-    OrderOverridden
+    OrderOverridden,
+    OrderLinkEnabled,
+    OrderLinkDisabled,
+    OrderLinkCreated,
+    OrderLinkRevoked,
+    OrderApproved,
+    OrderRejected
 }

@@ -37,6 +37,18 @@ public partial class Order
 
     public DateTime? OverriddenAt { get; set; }
 
+    public byte Source { get; set; }
+
+    public Guid? OrderLinkId { get; set; }
+
+    public byte? FulfillmentType { get; set; }
+
+    public string? DeliveryAddress { get; set; }
+
+    public string? ContactNumber { get; set; }
+
+    public string? RejectionReason { get; set; }
+
     public virtual User CreatedByNavigation { get; set; } = null!;
 
     public virtual Customer? Customer { get; set; }
@@ -44,6 +56,8 @@ public partial class Order
     public virtual ICollection<OrderBundlePromotion> OrderBundlePromotions { get; set; } = new List<OrderBundlePromotion>();
 
     public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
+
+    public virtual ShortLink? OrderLink { get; set; }
 
     public virtual PaymentMethod? PaymentMethod { get; set; }
 

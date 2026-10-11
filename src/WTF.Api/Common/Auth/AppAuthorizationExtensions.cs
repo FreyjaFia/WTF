@@ -30,6 +30,8 @@ public static class AppAuthorizationExtensions
                 policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.Cashier))
             .AddPolicy(AppPolicies.OrdersOverride, policy =>
                 policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin))
+            .AddPolicy(AppPolicies.OrderLinksManage, policy =>
+                policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.Cashier))
             .AddPolicy(AppPolicies.CustomersRead, policy =>
                 policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.Cashier))
             .AddPolicy(AppPolicies.CustomersWrite, policy =>

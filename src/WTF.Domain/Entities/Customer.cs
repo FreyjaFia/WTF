@@ -23,6 +23,8 @@ public partial class Customer
 
     public Guid? UpdatedBy { get; set; }
 
+    public bool AllowOrderingLink { get; set; }
+
     public virtual User CreatedByNavigation { get; set; } = null!;
 
     public virtual CustomerImage? CustomerImage { get; set; }

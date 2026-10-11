@@ -303,6 +303,7 @@ describe('OrderEditor', () => {
     isActive: true,
     createdAt: '',
     createdBy: '',
+    allowOrderingLink: false,
   };
 
   const bundlePromo = (over: Partial<PromotionListItemDto> = {}): PromotionListItemDto => ({

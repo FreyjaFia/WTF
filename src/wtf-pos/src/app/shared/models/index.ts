@@ -6,6 +6,7 @@ export * from './dashboard.models';
 export * from './inventory.models';
 export * from './price-history.models';
 export * from './order.models';
+export * from './order-link.models';
 export * from './product.models';
 export * from './promotion.models';
 export * from './report.models';

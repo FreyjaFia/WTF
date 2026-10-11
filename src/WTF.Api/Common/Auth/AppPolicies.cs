@@ -13,6 +13,7 @@ public static class AppPolicies
     public const string OrdersRead = "OrdersRead";
     public const string OrdersWrite = "OrdersWrite";
     public const string OrdersOverride = "OrdersOverride";
+    public const string OrderLinksManage = "OrderLinksManage";
     public const string CustomersRead = "CustomersRead";
     public const string CustomersWrite = "CustomersWrite";
     public const string ItemsRead = "ItemsRead";

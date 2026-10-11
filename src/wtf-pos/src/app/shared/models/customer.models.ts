@@ -9,6 +9,7 @@ export interface CustomerDto {
   updatedAt?: string | null;
   updatedBy?: string | null;
   imageUrl?: string | null;
+  allowOrderingLink: boolean;
 }
 
 export interface CreateCustomerDto {

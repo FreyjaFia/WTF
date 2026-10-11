@@ -69,6 +69,8 @@ public partial class User
 
     public virtual UserRole Role { get; set; } = null!;
 
+    public virtual ICollection<ShortLink> ShortLinks { get; set; } = new List<ShortLink>();
+
     public virtual ICollection<StockMovement> StockMovements { get; set; } = new List<StockMovement>();
 
     public virtual User? UpdatedByNavigation { get; set; }

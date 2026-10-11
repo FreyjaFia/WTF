@@ -70,6 +70,7 @@ describe('app roles vs the API policies', () => {
     OrdersRead: ['SuperAdmin', 'Admin', 'AdminViewer', 'Cashier'],
     OrdersWrite: ['SuperAdmin', 'Admin', 'Cashier'],
     OrdersOverride: ['SuperAdmin', 'Admin'],
+    OrderLinksWrite: ['SuperAdmin', 'Admin', 'Cashier'],
     CustomersRead: ['SuperAdmin', 'Admin', 'AdminViewer', 'Cashier'],
     CustomersWrite: ['SuperAdmin', 'Admin', 'Cashier'],
     ItemsRead: ['SuperAdmin', 'Admin', 'AdminViewer', 'ItemManager'],

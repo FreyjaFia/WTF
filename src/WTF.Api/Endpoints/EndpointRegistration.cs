@@ -11,6 +11,7 @@ public static class EndpointRegistration
             .MapProducts()
             .MapOrders()
             .MapCustomers()
+            .MapOrderLinks()
             .MapUsers()
             .MapDashboard()
             .MapPushNotifications()

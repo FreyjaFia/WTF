@@ -124,7 +124,8 @@ public class GetPosCatalogHandler(WTFDbContext db, IHttpContextAccessor httpCont
                 c.CreatedAt, c.CreatedBy, c.UpdatedAt, c.UpdatedBy,
                 c.CustomerImage != null && c.CustomerImage.Image != null
                     ? UrlExtensions.ToAbsoluteUrl(httpContextAccessor, c.CustomerImage.Image.ImageUrl)
-                    : null))
+                    : null,
+                c.AllowOrderingLink))
             .ToListAsync(cancellationToken);
     }
 }

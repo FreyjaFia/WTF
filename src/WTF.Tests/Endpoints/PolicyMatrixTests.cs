@@ -25,6 +25,7 @@ public class PolicyMatrixTests : IDisposable
         [AppPolicies.OrdersRead] = [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.Cashier],
         [AppPolicies.OrdersWrite] = [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.Cashier],
         [AppPolicies.OrdersOverride] = [AppRoles.SuperAdmin, AppRoles.Admin],
+        [AppPolicies.OrderLinksManage] = [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.Cashier],
         [AppPolicies.CustomersRead] = [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.Cashier],
         [AppPolicies.CustomersWrite] = [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.Cashier],
         [AppPolicies.ItemsRead] = [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.ItemManager],

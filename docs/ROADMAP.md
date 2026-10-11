@@ -1404,13 +1404,13 @@ Work items:
 
 | Phase | Name                                         | Status    |
 | ----- | -------------------------------------------- | --------- |
-| 1     | Data model, staff endpoints, customer UI     | [Planned] |
+| 1     | Data model, staff endpoints, customer UI     | [Completed] |
 | 2     | Public validation, ordering page, My orders  | [Planned] |
 | 3     | Order submission, approval, staff alerts     | [Planned] |
 | 4     | Reporting by source and per-link usage       | [Planned] |
 | 5     | Order chat (per order, SignalR both sides)   | [Planned] |
 
-#### Phase 1 - Data model, staff endpoints, customer details UI
+#### Phase 1 - Data model, staff endpoints, customer details UI [Completed]
 
 Deliverables:
 
