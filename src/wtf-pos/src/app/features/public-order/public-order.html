@@ -1,0 +1,784 @@
+@switch (state()) {
+  @case ('invalid') {
+    <app-link-invalid />
+  }
+  @case ('loading') {
+    <div class="flex h-full items-center justify-center bg-gray-50">
+      <span class="loading loading-spinner loading-lg" aria-label="Loading menu"></span>
+    </div>
+  }
+  @case ('error') {
+    <div class="flex h-full flex-col items-center justify-center gap-4 bg-gray-50 px-4 text-center">
+      <img src="/assets/images/logo_new.png" alt="WTF Logo" class="h-24 w-24" />
+      <p class="text-sm text-gray-600" role="alert">{{ errorMessage() }}</p>
+      <button type="button" class="app-btn app-btn-primary app-btn-md" (click)="loadMenu()">
+        Try again
+      </button>
+    </div>
+  }
+  @case ('ready') {
+    <div class="flex h-full flex-col overflow-hidden bg-white">
+      <div class="flex min-h-0 flex-1 flex-col sm:flex-row">
+        <div #sidebarHost class="hidden sm:flex">
+          <aside
+            class="hidden h-full flex-none flex-col overflow-visible border-r border-gray-200 bg-white sm:flex"
+            [class.sidebar-collapsed]="isSidebarCollapsed()"
+            [class.w-21]="isSidebarCollapsed()"
+            [class.w-60]="!isSidebarCollapsed()"
+          >
+            <div class="border-b border-gray-200 px-3 py-4">
+              <div class="flex items-center gap-2 text-2xl font-bold tracking-widest">
+                <span class="text-neutral">WTF</span>
+                @if (!isSidebarCollapsed()) {
+                  <span class="text-xs font-normal tracking-wider text-gray-500 uppercase"
+                    >Ordering</span
+                  >
+                }
+              </div>
+            </div>
+
+            <div class="overflow-visible border-b border-gray-200 px-4 py-4">
+              <div
+                class="flex items-center gap-3"
+                [class.justify-center]="isSidebarCollapsed()"
+                [class.flex-col]="isSidebarCollapsed()"
+              >
+                <div class="avatar rounded-full p-0.5">
+                  <div class="w-12 rounded-full">
+                    @if (profileImage(); as image) {
+                      <img
+                        alt="Your profile picture"
+                        [src]="image"
+                        (error)="imageFailed.set(true)"
+                      />
+                    } @else {
+                      <app-avatar [label]="link()!.firstName" [size]="44"></app-avatar>
+                    }
+                  </div>
+                </div>
+                <div class="min-w-0" [class.hidden]="isSidebarCollapsed()">
+                  <div class="text-xs text-gray-500">Ordering as</div>
+                  <div class="truncate text-sm font-semibold text-gray-800">
+                    {{ link()!.firstName }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <nav class="flex-1 overflow-y-auto px-2.5 py-4" aria-label="Ordering">
+              <div class="space-y-1">
+                <button
+                  type="button"
+                  class="flex w-full cursor-pointer items-center gap-3 rounded-lg px-2.5 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                  [class]="tab() === 'menu' ? 'sidebar-active bg-gray-100 text-gray-900' : ''"
+                  [class.justify-center]="isSidebarCollapsed()"
+                  [attr.aria-current]="tab() === 'menu' ? 'page' : null"
+                  title="Menu"
+                  (click)="selectTab('menu')"
+                >
+                  <app-icon name="icon-coffee" [class]="'h-4.5 w-4.5 text-gray-500'" />
+                  <span [class.hidden]="isSidebarCollapsed()">Menu</span>
+                </button>
+                <button
+                  type="button"
+                  class="flex w-full cursor-pointer items-center gap-3 rounded-lg px-2.5 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                  [class]="tab() === 'orders' ? 'sidebar-active bg-gray-100 text-gray-900' : ''"
+                  [class.justify-center]="isSidebarCollapsed()"
+                  [attr.aria-current]="tab() === 'orders' ? 'page' : null"
+                  title="My orders"
+                  (click)="selectTab('orders')"
+                >
+                  <app-icon name="icon-file" [class]="'h-4.5 w-4.5 text-gray-500'" />
+                  <span [class.hidden]="isSidebarCollapsed()">My orders</span>
+                </button>
+              </div>
+            </nav>
+
+            <div class="border-t border-gray-200 p-2.5">
+              <button
+                type="button"
+                class="flex w-full cursor-pointer items-center gap-3 rounded-lg px-2.5 py-2 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-50"
+                (click)="toggleSidebar()"
+                [attr.aria-label]="isSidebarCollapsed() ? 'Expand sidebar' : 'Collapse sidebar'"
+                [class.justify-center]="isSidebarCollapsed()"
+                [class.justify-start]="!isSidebarCollapsed()"
+              >
+                <app-icon
+                  [name]="isSidebarCollapsed() ? 'icon-chevrons-right' : 'icon-chevrons-left'"
+                  [class]="'h-4.5 w-4.5 text-gray-600'"
+                  [fill]="'currentColor'"
+                />
+                <span [class.hidden]="isSidebarCollapsed()">Collapse</span>
+              </button>
+            </div>
+          </aside>
+        </div>
+
+        <div class="flex min-h-0 min-w-0 flex-1 flex-col">
+          <div class="navbar shrink-0 border-b border-gray-200 bg-white px-3 shadow-md sm:hidden">
+            <div class="flex-1">
+              <span class="flex items-center gap-2 text-2xl font-bold tracking-tight">
+                <span class="text-neutral">WTF</span>
+                <span class="text-xs font-normal tracking-wider text-gray-500 uppercase"
+                  >Ordering</span
+                >
+              </span>
+            </div>
+            <div class="text-right">
+              <div class="text-xs text-gray-500">Ordering as</div>
+              <div class="text-sm font-semibold text-gray-800">{{ link()!.firstName }}</div>
+            </div>
+            <div class="avatar ml-3 rounded-full p-0.5">
+              <div class="w-10 rounded-full">
+                @if (profileImage(); as image) {
+                  <img alt="Your profile picture" [src]="image" (error)="imageFailed.set(true)" />
+                } @else {
+                  <app-avatar [label]="link()!.firstName" [size]="36"></app-avatar>
+                }
+              </div>
+            </div>
+          </div>
+
+          @if (notice(); as message) {
+            <div
+              class="flex shrink-0 items-start justify-between gap-3 bg-amber-50 px-4 py-2 text-sm text-amber-800"
+              role="status"
+            >
+              <p class="flex-1">{{ message }}</p>
+              <button
+                type="button"
+                class="app-btn app-btn-icon"
+                aria-label="Dismiss message"
+                (click)="dismissNotice()"
+              >
+                <app-icon name="icon-close" [class]="'h-4 w-4'" />
+              </button>
+            </div>
+          }
+
+          <div class="min-h-0 flex-1 px-4 py-4 md:px-6 md:py-6">
+            <div class="relative flex h-full flex-col xl:flex-row xl:gap-4">
+              <div class="flex min-h-0 flex-1 flex-col">
+                @if (tab() === 'menu') {
+                  <div class="flex min-h-0 flex-1 flex-col">
+                    <div class="mb-3 flex shrink-0 flex-nowrap items-center gap-2 sm:mb-4 sm:gap-3">
+                      <div
+                        class="flex min-w-0 flex-1 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200 md:max-w-104 md:flex-1"
+                      >
+                        <app-search-input
+                          placeholder="Search by product name"
+                          [value]="search()"
+                          (valueChange)="onSearch($event)"
+                        />
+                      </div>
+
+                      <button
+                        class="app-btn app-btn-ghost pointer-events-auto z-30 ml-auto shrink-0 p-2"
+                        [class.opacity-70]="isRefreshingMenu()"
+                        type="button"
+                        (click)="loadMenu(true)"
+                        [disabled]="isRefreshingMenu()"
+                        aria-label="Refresh menu"
+                      >
+                        @if (isRefreshingMenu()) {
+                          <app-icon
+                            name="icon-refresh"
+                            [class]="'h-5 w-5 animate-spin text-gray-600'"
+                            [fill]="'currentColor'"
+                          />
+                        } @else {
+                          <app-icon
+                            name="icon-refresh"
+                            [class]="'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'"
+                            [fill]="'currentColor'"
+                          />
+                        }
+                      </button>
+                    </div>
+
+                    @if (sections().length > 0) {
+                      <div class="mb-3 shrink-0 sm:mb-4">
+                        <div
+                          class="w-full overflow-x-auto border-b border-gray-200 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                        >
+                          <div
+                            role="tablist"
+                            class="flex w-max min-w-full items-end gap-4 pb-2 text-sm sm:text-base"
+                            aria-label="Menu categories"
+                          >
+                            @for (section of sections(); track section.id) {
+                              <button
+                                type="button"
+                                role="tab"
+                                class="relative cursor-pointer rounded-md px-2 py-1 font-bold text-gray-500 transition-colors hover:text-gray-700"
+                                [attr.data-menu-tab]="section.id"
+                                [attr.aria-selected]="highlightedCategory() === section.id"
+                                (click)="selectCategoryTab(section.id)"
+                              >
+                                <span
+                                  class="relative"
+                                  [class.text-gray-900]="highlightedCategory() === section.id"
+                                >
+                                  {{ section.label }}
+                                </span>
+                                <span
+                                  class="absolute right-2 -bottom-2 left-2 h-0.5 rounded-full bg-gray-700 transition-opacity"
+                                  [class.opacity-100]="highlightedCategory() === section.id"
+                                  [class.opacity-0]="highlightedCategory() !== section.id"
+                                ></span>
+                              </button>
+                            }
+                          </div>
+                        </div>
+                      </div>
+                    }
+
+                    <div
+                      class="min-h-0 flex-1 overflow-y-auto pb-4"
+                      [class.pb-24]="cartCount() > 0"
+                      [class.xl:pb-4]="cartCount() > 0"
+                      data-menu-scroll
+                      (scroll)="onMenuScrolled($event)"
+                    >
+                      @if (sections().length === 0) {
+                        <p class="py-12 text-center text-sm text-gray-500">
+                          @if (products().length === 0) {
+                            The menu is empty right now. Please check back soon.
+                          } @else {
+                            Nothing matches your search.
+                          }
+                        </p>
+                      } @else {
+                        <div class="space-y-6 pb-4">
+                          @for (section of sections(); track section.id) {
+                            <section [attr.id]="'category-' + section.id">
+                              <h3 class="mb-4 text-2xl leading-none font-bold text-gray-950">
+                                {{ section.label }}
+                              </h3>
+                              <div
+                                class="grid grid-cols-1 gap-4 sm:grid-cols-[repeat(auto-fill,minmax(220px,1fr))]"
+                              >
+                                @for (product of section.products; track product.id) {
+                                  <div
+                                    class="card flex min-h-60 cursor-pointer flex-col overflow-hidden rounded-xl bg-white shadow-lg transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl"
+                                    role="button"
+                                    tabindex="0"
+                                    (click)="openProduct(product)"
+                                    (keydown.enter)="openProduct(product)"
+                                    (keydown.space)="$event.preventDefault(); openProduct(product)"
+                                  >
+                                    <figure class="flex h-32 shrink-0 items-center justify-center">
+                                      @if (product.imageUrl) {
+                                        <img
+                                          [src]="product.imageUrl"
+                                          [alt]="product.name"
+                                          class="h-24 w-24 object-contain"
+                                        />
+                                      } @else {
+                                        <app-avatar [label]="product.name" [size]="56" />
+                                      }
+                                    </figure>
+                                    <div class="card-body flex flex-1 flex-col justify-between p-4">
+                                      <div>
+                                        <h2
+                                          class="card-title text-base leading-snug font-semibold wrap-break-word text-gray-800"
+                                        >
+                                          {{ product.name }}
+                                        </h2>
+                                        @if (product.description) {
+                                          <p class="mt-1 line-clamp-2 text-xs text-gray-500">
+                                            {{ product.description }}
+                                          </p>
+                                        }
+                                      </div>
+                                      <div
+                                        class="card-actions mt-auto items-center justify-between"
+                                      >
+                                        <div class="text-lg font-bold text-black">
+                                          <span class="text-base opacity-70"
+                                            ><app-icon
+                                              name="icon-peso"
+                                              [class]="'inline h-3 w-3 align-[-0.125em]'"
+                                              [fill]="'currentColor'" /></span
+                                          >{{ product.price | number: '1.2-2' }}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                }
+                              </div>
+                            </section>
+                          }
+                        </div>
+                      }
+                    </div>
+                  </div>
+                } @else {
+                  <div class="min-h-0 flex-1 overflow-y-auto pb-6">
+                    <div class="mb-3 flex items-center justify-between gap-2 sm:mb-4">
+                      <h2 class="text-lg font-bold text-gray-900">My orders</h2>
+                      <button
+                        class="app-btn app-btn-ghost pointer-events-auto z-30 ml-auto shrink-0 p-2"
+                        [class.opacity-70]="ordersState() === 'loading'"
+                        type="button"
+                        (click)="loadOrders()"
+                        [disabled]="ordersState() === 'loading'"
+                        aria-label="Refresh orders"
+                      >
+                        @if (ordersState() === 'loading') {
+                          <app-icon
+                            name="icon-refresh"
+                            [class]="'h-5 w-5 animate-spin text-gray-600'"
+                            [fill]="'currentColor'"
+                          />
+                        } @else {
+                          <app-icon
+                            name="icon-refresh"
+                            [class]="'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'"
+                            [fill]="'currentColor'"
+                          />
+                        }
+                      </button>
+                    </div>
+                    <div class="mx-auto max-w-3xl">
+                      @if (ordersState() === 'loading' && orders().length === 0) {
+                        <div class="flex justify-center py-12">
+                          <span class="loading loading-spinner loading-lg"></span>
+                        </div>
+                      } @else if (ordersState() === 'error') {
+                        <p class="py-12 text-center text-sm text-red-600" role="alert">
+                          {{ ordersError() }}
+                        </p>
+                      } @else if (orders().length === 0) {
+                        <p class="py-12 text-center text-sm text-gray-500">
+                          You have not placed any orders yet.
+                        </p>
+                      } @else {
+                        @for (group of ordersByDate(); track group.date) {
+                          <h2
+                            class="mt-4 mb-2 text-xs font-semibold tracking-wider text-gray-400 uppercase"
+                          >
+                            {{ group.date | date: 'EEEE, d MMM y' }}
+                          </h2>
+                          <ul class="space-y-3">
+                            @for (order of group.orders; track order.id) {
+                              <li class="card rounded-xl bg-white shadow-lg">
+                                <div class="card-body gap-2 p-4">
+                                  <button
+                                    type="button"
+                                    class="flex w-full items-center justify-between gap-3 text-left"
+                                    data-custom-button
+                                    [attr.aria-expanded]="expandedOrderId() === order.id"
+                                    (click)="toggleOrder(order.id)"
+                                  >
+                                    <div class="min-w-0">
+                                      <p class="text-sm font-bold text-gray-900">
+                                        Order #{{ order.orderNumber }}
+                                      </p>
+                                      <p class="text-xs text-gray-500">
+                                        {{ order.createdAt | date: 'h:mm a' }} &middot; ₱{{
+                                          order.total | number: '1.2-2'
+                                        }}
+                                      </p>
+                                    </div>
+                                    <app-badge [variant]="statusVariant(order.statusKind)">{{
+                                      order.statusLabel
+                                    }}</app-badge>
+                                  </button>
+
+                                  @if (order.rejectionReason) {
+                                    <p class="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">
+                                      Reason: {{ order.rejectionReason }}
+                                    </p>
+                                  }
+
+                                  @if (expandedOrderId() === order.id) {
+                                    <div
+                                      class="mt-1 space-y-3 border-t border-gray-100 pt-3 text-sm"
+                                    >
+                                      @for (item of order.items; track $index) {
+                                        <div>
+                                          <div class="flex justify-between gap-3">
+                                            <span class="text-gray-900"
+                                              >{{ item.quantity }}&times; {{ item.name }}</span
+                                            >
+                                            <span class="shrink-0 text-gray-700"
+                                              >₱{{
+                                                orderLineTotal(
+                                                  item.unitPrice,
+                                                  item.quantity,
+                                                  addOnsPerUnit(item)
+                                                ) | number: '1.2-2'
+                                              }}</span
+                                            >
+                                          </div>
+                                          @for (addOn of item.addOns; track $index) {
+                                            <p class="pl-4 text-xs text-gray-500">
+                                              + {{ addOn.name }}
+                                              @if (addOn.quantity > 1) {
+                                                &times;{{ addOn.quantity }}
+                                              }
+                                            </p>
+                                          }
+                                          @if (item.specialInstructions) {
+                                            <p class="pl-4 text-xs text-gray-400 italic">
+                                              {{ item.specialInstructions }}
+                                            </p>
+                                          }
+                                        </div>
+                                      }
+
+                                      <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-xs">
+                                        <dt class="text-gray-400">Total</dt>
+                                        <dd class="text-right font-semibold text-gray-900">
+                                          ₱{{ order.total | number: '1.2-2' }}
+                                        </dd>
+                                        @if (order.fulfillmentType) {
+                                          <dt class="text-gray-400">Handover</dt>
+                                          <dd class="text-right text-gray-700">
+                                            {{ order.fulfillmentType }}
+                                          </dd>
+                                        }
+                                        @if (order.deliveryAddress) {
+                                          <dt class="text-gray-400">Address</dt>
+                                          <dd class="text-right text-gray-700">
+                                            {{ order.deliveryAddress }}
+                                          </dd>
+                                        }
+                                        @if (order.paymentMethod) {
+                                          <dt class="text-gray-400">Payment</dt>
+                                          <dd class="text-right text-gray-700">
+                                            {{ order.paymentMethod }}
+                                            @if (order.amountReceived) {
+                                              (₱{{ order.amountReceived | number: '1.2-2' }})
+                                            }
+                                          </dd>
+                                        }
+                                        @if (order.specialInstructions) {
+                                          <dt class="text-gray-400">Notes</dt>
+                                          <dd class="text-right text-gray-700">
+                                            {{ order.specialInstructions }}
+                                          </dd>
+                                        }
+                                      </dl>
+                                    </div>
+                                  }
+                                </div>
+                              </li>
+                            }
+                          </ul>
+                        }
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+
+              @if (tab() === 'menu') {
+                <!-- Cart (side panel on wide screens, bottom sheet on phones and tablets) -->
+                <ng-template #cartContent>
+                  <!-- Drag handle (mobile only): drag the sheet down to close it -->
+                  <div
+                    class="flex shrink-0 cursor-grab touch-none justify-center pt-3 pb-1 active:cursor-grabbing xl:hidden"
+                    data-cart-drag-handle
+                  >
+                    <div class="h-1.5 w-10 rounded-full bg-gray-300"></div>
+                  </div>
+
+                  <!-- Collapse / expand rail (wide screens) -->
+                  <button
+                    type="button"
+                    class="group absolute inset-y-0 left-0 z-20 hidden w-6 cursor-pointer overflow-hidden bg-gray-200/55 transition-all duration-400 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:bg-gray-300/60 active:bg-gray-300 xl:block"
+                    (click)="toggleCartCollapse()"
+                    [attr.aria-label]="isCartCollapsed() ? 'Expand cart' : 'Collapse cart'"
+                  ></button>
+
+                  <!-- Collapsed view: item count and total -->
+                  <div
+                    class="relative hidden h-full flex-col items-center justify-between py-3 transition-all duration-300 ease-in-out xl:flex xl:pl-6"
+                    [class.xl:hidden]="!isCartCollapsed()"
+                  >
+                    <div
+                      class="pointer-events-none flex h-10 w-10 items-center justify-center rounded-full bg-gray-900 text-base font-bold text-white shadow-sm"
+                    >
+                      {{ cartCount() }}
+                    </div>
+                    <div
+                      class="pointer-events-none text-base leading-none font-bold text-gray-800 [text-orientation:mixed] [writing-mode:vertical-rl]"
+                    >
+                      <app-icon
+                        name="icon-peso"
+                        [class]="'mr-1 inline h-4 w-4 rotate-90 transform'"
+                        [fill]="'currentColor'"
+                      />
+                      {{ cartTotal() | number: '1.2-2' }}
+                    </div>
+                    <div class="h-10 w-10"></div>
+                  </div>
+
+                  <div
+                    class="flex min-h-0 flex-1 flex-col bg-white xl:pl-6"
+                    [class.xl:hidden]="isCartCollapsed()"
+                  >
+                    <div class="shrink-0 border-b border-gray-100 p-4">
+                      <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-semibold">Your Order</h3>
+                        <button
+                          type="button"
+                          class="app-btn app-btn-outline-danger app-btn-sm"
+                          [class.hidden]="cart().length === 0"
+                          (click)="clearCart()"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                      <div class="mt-2 text-sm opacity-70">
+                        {{ cartCount() }} {{ cartCount() === 1 ? 'item' : 'items' }}
+                      </div>
+                    </div>
+
+                    @if (cart().length === 0) {
+                      <div
+                        class="flex min-h-0 flex-1 flex-col items-center justify-center p-4 text-center"
+                      >
+                        <app-icon name="icon-cart" [class]="'mb-4 h-20 w-20 opacity-20'" />
+                        <div class="text-base font-semibold text-gray-700">Your cart is empty</div>
+                        <div class="text-sm text-gray-500">Add items to get started</div>
+                      </div>
+                    } @else {
+                      <div class="min-h-0 flex-1 overflow-y-auto p-4">
+                        <div
+                          class="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-1"
+                        >
+                          @for (line of cart(); track line.key) {
+                            <div
+                              class="cursor-pointer rounded-lg bg-gray-50 p-4 shadow-sm transition-colors hover:bg-gray-100"
+                              role="button"
+                              tabindex="0"
+                              [attr.aria-label]="'Edit ' + line.name"
+                              (click)="editLine(line)"
+                              (keydown.enter)="editLine(line)"
+                              (keydown.space)="editLine(line); $event.preventDefault()"
+                            >
+                              <div class="flex items-center gap-3">
+                                <div class="flex h-16 w-16 shrink-0 items-center justify-center">
+                                  @if (line.imageUrl) {
+                                    <img
+                                      [src]="line.imageUrl"
+                                      [alt]="line.name"
+                                      class="h-12 w-12 object-contain"
+                                    />
+                                  } @else {
+                                    <app-avatar [label]="line.name" [size]="56" />
+                                  }
+                                </div>
+                                <div class="flex min-w-0 flex-1 flex-col justify-between gap-2">
+                                  <div class="flex items-start justify-between gap-4 sm:gap-6">
+                                    <div class="min-w-0 flex-1 text-sm font-semibold text-gray-900">
+                                      {{ line.name }}
+                                    </div>
+                                    <div class="shrink-0 text-sm text-gray-500">
+                                      <span class="text-xs opacity-60"
+                                        ><app-icon
+                                          name="icon-peso"
+                                          [class]="'inline h-3 w-3 align-[-0.125em]'"
+                                          [fill]="'currentColor'" /></span
+                                      >{{ line.price | number: '1.2-2' }}
+                                    </div>
+                                  </div>
+                                  <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-1">
+                                      <button
+                                        type="button"
+                                        class="app-stepper-btn h-8 w-8"
+                                        aria-label="Decrease quantity"
+                                        (click)="
+                                          $event.stopPropagation(); changeQuantity(line.key, -1)
+                                        "
+                                      >
+                                        <span class="text-base leading-none font-bold">-</span>
+                                      </button>
+                                      <div class="w-6 text-center text-sm font-medium">
+                                        {{ line.quantity }}
+                                      </div>
+                                      <button
+                                        type="button"
+                                        class="app-stepper-btn h-8 w-8"
+                                        aria-label="Increase quantity"
+                                        [disabled]="line.quantity >= 99"
+                                        (click)="
+                                          $event.stopPropagation(); changeQuantity(line.key, 1)
+                                        "
+                                      >
+                                        <span class="text-base leading-none font-bold">+</span>
+                                      </button>
+                                    </div>
+                                    <div
+                                      class="text-base font-bold whitespace-nowrap text-gray-900"
+                                    >
+                                      <span class="text-xs opacity-70"
+                                        ><app-icon
+                                          name="icon-peso"
+                                          [class]="'inline h-3 w-3 align-[-0.125em]'"
+                                          [fill]="'currentColor'" /></span
+                                      >{{ lineTotal(line) | number: '1.2-2' }}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              @if (line.addOns.length > 0) {
+                                <div class="mt-2 ml-19 space-y-1 border-t border-gray-200 pt-2">
+                                  @for (addOn of line.addOns; track addOn.id) {
+                                    <div
+                                      class="flex items-center justify-between text-xs text-gray-500"
+                                    >
+                                      <span class="flex min-w-0 flex-1 items-center gap-1.5 pr-2">
+                                        <span
+                                          class="inline-block h-1 w-1 shrink-0 rounded-full bg-gray-400"
+                                        ></span>
+                                        <span class="min-w-0 wrap-break-word">{{
+                                          addOn.quantity > 1
+                                            ? addOn.quantity + 'x ' + addOn.name + ' (per unit)'
+                                            : addOn.name
+                                        }}</span>
+                                      </span>
+                                      <span class="shrink-0">
+                                        +<app-icon
+                                          name="icon-peso"
+                                          [class]="'inline h-3 w-3 align-[-0.125em]'"
+                                          [fill]="'currentColor'"
+                                        />{{ addOn.price * addOn.quantity | number: '1.2-2' }}
+                                      </span>
+                                    </div>
+                                  }
+                                </div>
+                              }
+
+                              @if (line.specialInstructions) {
+                                <div
+                                  class="mt-2 ml-19 text-xs wrap-break-word text-gray-500 italic"
+                                >
+                                  {{ line.specialInstructions }}
+                                </div>
+                              }
+                              @if (line.addOns.length > 0) {
+                                <div
+                                  class="mt-1 ml-19 pt-0.5 text-right text-[11px] text-gray-400 italic"
+                                >
+                                  (<app-icon
+                                    name="icon-peso"
+                                    [class]="'inline h-2.5 w-2.5 align-[-0.125em]'"
+                                    [fill]="'currentColor'"
+                                  />{{ unitPrice(line) | number: '1.2-2' }} / unit)
+                                </div>
+                              }
+                            </div>
+                          }
+                        </div>
+                      </div>
+                    }
+
+                    <div
+                      class="sticky bottom-0 shrink-0 border-t border-gray-200 bg-white p-5 shadow-[0_-8px_24px_rgba(0,0,0,0.1)]"
+                    >
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-500">Total</span>
+                        <span class="text-lg font-bold text-gray-900">
+                          <span class="text-base opacity-70"
+                            ><app-icon
+                              name="icon-peso"
+                              [class]="'inline h-3 w-3 align-[-0.125em]'"
+                              [fill]="'currentColor'" /></span
+                          >{{ cartTotal() | number: '1.2-2' }}
+                        </span>
+                      </div>
+                      <p class="mt-2 text-xs text-gray-400">
+                        Placing orders from this page is coming soon.
+                      </p>
+                    </div>
+                  </div>
+                </ng-template>
+
+                <app-cart-drawer
+                  [isOpen]="cartOpen()"
+                  (closed)="closeCart()"
+                  [ariaLabel]="'Your order'"
+                >
+                  <ng-container [ngTemplateOutlet]="cartContent" />
+                </app-cart-drawer>
+
+                <aside
+                  class="relative hidden flex-col xl:flex xl:h-full xl:min-h-0 xl:shrink-0 xl:overflow-hidden xl:rounded-lg xl:border-l-2 xl:border-gray-200 xl:shadow-[-8px_0_24px_rgba(0,0,0,0.1)] xl:transition-all xl:duration-400 xl:ease-[cubic-bezier(0.175,0.885,0.32,1.275)]"
+                  [class.xl:w-[336px]]="!isCartCollapsed()"
+                  [class.xl:w-[88px]]="isCartCollapsed()"
+                >
+                  <ng-container [ngTemplateOutlet]="cartContent" />
+                </aside>
+
+                @if (cartCount() > 0) {
+                  <button
+                    type="button"
+                    data-custom-button
+                    class="absolute inset-x-4 bottom-4 z-30 flex cursor-pointer items-center justify-between rounded-2xl border-0 bg-[#047857] px-5 py-3.5 text-white shadow-xl transition-all active:scale-[0.98] xl:hidden"
+                    (click)="openCart()"
+                  >
+                    <div class="flex items-center gap-3">
+                      <div
+                        class="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-sm font-bold"
+                      >
+                        {{ cartCount() }}
+                      </div>
+                      <span class="text-sm font-semibold">View Order</span>
+                    </div>
+                    <span class="text-lg font-bold">
+                      <span class="text-base opacity-70"
+                        ><app-icon
+                          name="icon-peso"
+                          [class]="'inline h-3 w-3 align-[-0.125em]'"
+                          [fill]="'currentColor'" /></span
+                      >{{ cartTotal() | number: '1.2-2' }}
+                    </span>
+                  </button>
+                }
+              }
+            </div>
+          </div>
+
+          <div
+            class="dock dock-md relative z-0 shrink-0 justify-between border-t border-gray-100 pb-[env(safe-area-inset-bottom)] sm:hidden"
+          >
+            <button
+              type="button"
+              [class.dock-active]="tab() === 'menu'"
+              [attr.aria-current]="tab() === 'menu' ? 'page' : null"
+              (click)="selectTab('menu')"
+            >
+              <app-icon name="icon-coffee" [class]="'size-[1.2em]'" [fill]="'#000000'"></app-icon>
+              <span class="dock-label">Menu</span>
+            </button>
+            <button
+              type="button"
+              [class.dock-active]="tab() === 'orders'"
+              [attr.aria-current]="tab() === 'orders' ? 'page' : null"
+              (click)="selectTab('orders')"
+            >
+              <app-icon name="icon-file" [class]="'size-[1.2em]'" [fill]="'#000000'"></app-icon>
+              <span class="dock-label">My orders</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    @if (pickerProduct(); as product) {
+      <app-public-addon-picker
+        [product]="product"
+        [groups]="pickerGroups()"
+        [initial]="pickerInitial()"
+        (confirmed)="onPicked($event)"
+        (cancelled)="closePicker()"
+      />
+    }
+  }
+}

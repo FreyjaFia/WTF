@@ -1312,6 +1312,12 @@ Public page (`/order/:token`):
   public variant. `checkout-modal` is the best base for the payment step: it already has the
   Cash/GCash toggle, amount received and change; add Pickup/Delivery, address and contact, hide tips.
 - Do not use the offline stack on this page (no Dexie cart, no queue): the customer must be online.
+- **No local copy of the catalog.** The page never uses `CatalogCacheService`, `ImageCacheService` or any
+  IndexedDB/localStorage copy of products, prices or the cart, so a customer cannot order from an obsolete
+  list. It loads the catalog fresh on every page load and every return to the Menu tab. Public API responses
+  send `Cache-Control: no-store`, and the service worker (`ngsw-config.json`) has no data groups, so it never
+  caches them. The server still revalidates every product, add-on and price on submit (Phase 3) and rejects
+  inactive or missing ones.
 - `app/app.ts` eagerly injects `PushNotificationService` and `OfflineOrderService` and
   `app.html` mounts global alert, update-banner and exit-confirm components. Check they are
   harmless for a logged-out visitor.
@@ -1405,7 +1411,7 @@ Work items:
 | Phase | Name                                         | Status    |
 | ----- | -------------------------------------------- | --------- |
 | 1     | Data model, staff endpoints, customer UI     | [Completed] |
-| 2     | Public validation, ordering page, My orders  | [Planned] |
+| 2     | Public validation, ordering page, My orders  | [Completed] |
 | 3     | Order submission, approval, staff alerts     | [Planned] |
 | 4     | Reporting by source and per-link usage       | [Planned] |
 | 5     | Order chat (per order, SignalR both sides)   | [Planned] |
@@ -1439,7 +1445,9 @@ Tests:
 Done when: a Cashier can enable ordering, generate (with and without end date), copy, revoke and
 disable links; an AdminViewer cannot; an order-link token returns 404 on the loyalty redirect.
 
-#### Phase 2 - Public validation, ordering page and My orders
+#### Phase 2 - Public validation, ordering page and My orders [Completed]
+
+Implemented: `OrderLinkAccess` (the shared token check, ordinal token compare), `GET /api/public/order-links/{token}` (+ `/orders`, `/orders/{id}`), `PublicCatalogDto` built from the loaders now shared with the POS sync (`PosCatalogLoader`), `LastUsedAt` (written at most once a minute), `order-link-policy` (per IP) plus a per-token global limiter, `Cache-Control: no-store`, the `/order/:token` page (menu, search, categories, own add-on picker, in-memory cart, My orders with a 30 s poll), the invalid-link page and the `/public/` interceptor exclusion. The cart has no checkout yet (Phase 3). Verified harmless for a logged-out visitor: push registration only runs after login, the offline queue only syncs when authenticated, and the update banner only offers a web refresh.
 
 - `GET /api/public/order-links/{token}` with the shared token check, `PublicCatalogDto` (extract
   the loaders from `GetPosCatalogHandler`), `LastUsedAt`, `order-link-policy`.
@@ -1458,6 +1466,8 @@ disable links; an AdminViewer cannot; an order-link token returns 404 on the loy
   customers', status label mapping, service and page specs, `app.routes.spec.ts` still passes.
 
 #### Phase 3 - Order submission, approval, notification
+
+- The public page already lets a customer add toppings and extras more than once (a per-add-on quantity, same as the shop's own add-on screen; size, flavor and sauce stay pick-one). The submit request must carry that quantity per add-on (the child order item's `Quantity`, per unit of the parent), validated like any other.
 
 - `POST /api/public/order-links/{token}/orders`: items, fulfillment, delivery address (required
   for Delivery), contact number (required), payment method, cash amount (>= server total),

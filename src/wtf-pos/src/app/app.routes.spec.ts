@@ -4,6 +4,7 @@ import { loginGuard } from '@core/guards/login.guard';
 import { roleGuard } from '@core/guards/role.guard';
 import { unsavedChangesGuard } from '@core/guards/unsaved-changes.guard';
 import { NotFoundComponent } from '@features/not-found/not-found';
+import { PublicOrderComponent } from '@features/public-order/public-order';
 import { AppRoleGroups, AppRoles } from '@shared/constants/app-roles';
 import { describe, expect, it } from 'vitest';
 import { routes } from './app.routes';
@@ -41,6 +42,16 @@ describe('app.routes', () => {
     const shell = routes.find((r) => r.path === '' && r.component);
     expect(shell?.canActivate).toEqual([authGuard]);
     expect(shell?.children?.length).toBeGreaterThan(0);
+  });
+
+  it('serves the public ordering page without any guard, between login and the layout shell', () => {
+    const index = routes.findIndex((r) => r.path === 'order/:token');
+    expect(index).toBeGreaterThan(routes.findIndex((r) => r.path === 'login'));
+    expect(index).toBeLessThan(routes.findIndex((r) => r.path === '' && r.component));
+    const route = routes[index];
+    expect(route.component).toBe(PublicOrderComponent);
+    expect(route.canActivate).toBeUndefined();
+    expect(route.canActivate ?? []).not.toContain(authGuard);
   });
 
   it('ends with a wildcard route rendering NotFound', () => {

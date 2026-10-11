@@ -39,6 +39,12 @@ export const ServiceErrorMessages = {
     UploadImageFailed: 'Failed to upload image. Please try again later.',
     DeleteImageFailed: 'Failed to delete image. Please try again later.',
   },
+  PublicOrder: {
+    LinkInvalid: 'This link is no longer valid.',
+    LoadFailed: 'Failed to load the menu. Please try again.',
+    LoadOrdersFailed: 'Failed to load your orders. Please try again.',
+    TooManyRequests: 'Too many requests. Please wait a moment and try again.',
+  },
   OrderLink: {
     FetchLinksFailed: 'Failed to fetch ordering links. Please try again later.',
     CreateLinkFailed: 'Failed to create ordering link. Please try again later.',

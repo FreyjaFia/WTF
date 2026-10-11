@@ -12,8 +12,13 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const url = req.url || '';
   const isAuthEndpoint = url.includes('/auth/login') || url.includes('/auth/refresh');
 
+  // Public ordering pages are for customers who are not signed in. Never send a staff token to them (a staff member
+  // opening a customer's link in their own browser would otherwise act as that customer) and never start a refresh
+  // or login redirect when one of these calls fails.
+  const isPublicEndpoint = url.includes('/public/');
+
   // Do not attach token or trigger refresh flow on auth endpoints.
-  if (isAuthEndpoint) {
+  if (isAuthEndpoint || isPublicEndpoint) {
     return next(req);
   }
 

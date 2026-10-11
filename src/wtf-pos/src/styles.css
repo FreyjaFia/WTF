@@ -105,6 +105,16 @@ body {
   appearance: none;
 }
 
+/* Dim-and-blur backdrop fade-in, used with modal-pop */
+@keyframes backdrop-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 /* Premium modal pop-in animation */
 @keyframes modal-pop {
   from {

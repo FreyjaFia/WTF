@@ -18,6 +18,7 @@ export * from './order-link.service';
 export * from './order.service';
 export * from './product.service';
 export * from './promotion.service';
+export * from './public-order.service';
 export * from './push-notification.service';
 export * from './reports.service';
 export * from './schema-script-history.service';

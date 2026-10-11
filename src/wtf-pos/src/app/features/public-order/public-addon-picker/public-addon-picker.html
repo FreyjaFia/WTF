@@ -1,0 +1,265 @@
+<div
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="public-addon-picker-title"
+  class="fixed inset-0 z-50 flex animate-[backdrop-fade_0.2s_ease-out] items-center justify-center bg-black/30 backdrop-blur-md"
+  tabindex="-1"
+  (click)="cancelled.emit()"
+  (keydown.escape)="cancelled.emit()"
+>
+  <div
+    role="document"
+    class="mx-4 flex max-h-[90vh] w-full max-w-lg animate-[modal-pop_0.2s_ease-out] flex-col rounded-2xl bg-white shadow-2xl"
+    (click)="$event.stopPropagation()"
+    (keydown)="$event.stopPropagation()"
+  >
+    <!-- Header -->
+    <div class="shrink-0 border-b border-gray-100 px-6 pt-6 pb-4">
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
+        <div class="flex min-w-0 flex-1 items-start gap-4">
+          @if (product().imageUrl) {
+            <img
+              [src]="product().imageUrl"
+              [alt]="product().name"
+              class="h-16 w-16 shrink-0 rounded-xl object-cover shadow-md"
+            />
+          } @else {
+            <div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-gray-100">
+              <app-avatar [label]="product().name" [size]="64" />
+            </div>
+          }
+          <div class="min-w-0 flex-1">
+            <h3
+              id="public-addon-picker-title"
+              class="text-lg font-bold wrap-break-word text-gray-900"
+            >
+              {{ product().name }}
+            </h3>
+            <p class="mt-0.5 text-sm text-gray-500">
+              {{ sortedGroups().length > 0 ? 'Customize your order' : 'How many would you like?' }}
+            </p>
+          </div>
+        </div>
+        <div class="shrink-0 sm:text-right">
+          <div class="flex items-center justify-between gap-3 sm:block">
+            <p class="text-lg font-bold text-[#047857]">₱{{ total() | number: '1.2-2' }}</p>
+            <div class="flex items-center justify-end gap-2 sm:mt-1">
+              <button
+                type="button"
+                class="app-stepper-btn flex h-8 w-8 text-base"
+                aria-label="Decrease quantity"
+                [disabled]="quantity() <= 1"
+                (click)="changeQuantity(-1)"
+              >
+                &minus;
+              </button>
+              <span class="w-6 text-center text-sm font-semibold text-gray-700" aria-live="polite">
+                {{ quantity() }}
+              </span>
+              <button
+                type="button"
+                class="app-stepper-btn-primary flex h-8 w-8 text-base"
+                aria-label="Increase quantity"
+                [disabled]="quantity() >= 99"
+                (click)="changeQuantity(1)"
+              >
+                +
+              </button>
+            </div>
+          </div>
+          @if (selectedAddOns().length > 0 || quantity() > 1) {
+            <p class="mt-1 text-left text-xs text-gray-400 sm:text-right">
+              Base ₱{{ product().price | number: '1.2-2' }} + ₱{{ addOnTotal() | number: '1.2-2' }}
+            </p>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- Choices -->
+    <div class="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+      @for (group of sortedGroups(); track group.type; let last = $last) {
+        <div
+          class="border-gray-100"
+          [class.mb-5]="!last"
+          [class.pb-5]="!last"
+          [class.border-b]="!last"
+        >
+          <div class="mb-3 flex items-baseline justify-between">
+            <h4 class="text-xs font-semibold tracking-wider text-gray-400 uppercase">
+              {{ group.displayName }}
+            </h4>
+            <span class="text-xs text-gray-400">{{ selectionRule(group.type) }}</span>
+          </div>
+
+          <div class="space-y-2">
+            @for (option of group.options; track option.id) {
+              <div
+                role="button"
+                tabindex="0"
+                class="flex w-full cursor-pointer items-center gap-3 rounded-xl border px-3 py-3 text-left transition-all"
+                [class]="
+                  isSelected(group.type, option.id)
+                    ? 'border-[#047857] bg-[#047857]/5'
+                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                "
+                [attr.aria-pressed]="isSelected(group.type, option.id)"
+                (click)="toggle(group.type, option.id)"
+                (keydown.enter)="toggle(group.type, option.id)"
+                (keydown.space)="$event.preventDefault(); toggle(group.type, option.id)"
+              >
+                <!-- Radio (one choice) or checkbox (any number) -->
+                <div class="shrink-0">
+                  @if (isSingleChoice(group.type)) {
+                    <div
+                      class="flex h-5 w-5 items-center justify-center rounded-full border-2 transition-colors"
+                      [class]="
+                        isSelected(group.type, option.id) ? 'border-[#047857]' : 'border-gray-300'
+                      "
+                    >
+                      @if (isSelected(group.type, option.id)) {
+                        <div class="h-2.5 w-2.5 rounded-full bg-[#047857]"></div>
+                      }
+                    </div>
+                  } @else {
+                    <div
+                      class="flex h-5 w-5 items-center justify-center rounded-md border-2 transition-colors"
+                      [class]="
+                        isSelected(group.type, option.id)
+                          ? 'border-[#047857] bg-[#047857]'
+                          : 'border-gray-300'
+                      "
+                    >
+                      @if (isSelected(group.type, option.id)) {
+                        <svg
+                          class="h-3 w-3 text-white"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          stroke-width="3"
+                        >
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      }
+                    </div>
+                  }
+                </div>
+
+                <div class="shrink-0">
+                  @if (option.imageUrl) {
+                    <img
+                      [src]="option.imageUrl"
+                      [alt]="option.name"
+                      class="h-8 w-8 rounded-full object-cover"
+                    />
+                  } @else {
+                    <div class="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100">
+                      <app-avatar [label]="option.name" [size]="32" />
+                    </div>
+                  }
+                </div>
+
+                <span class="min-w-0 flex-1 text-sm font-medium wrap-break-word text-gray-800"
+                  >+ {{ option.name }}</span
+                >
+
+                <!-- Stepper and price stay together: side by side when there is room, stacked on narrow screens -->
+                <div
+                  class="flex shrink-0 flex-col-reverse items-end gap-1.5 sm:flex-row sm:items-center sm:gap-3"
+                >
+                  <!-- Quantity of this add-on, for toppings and extras -->
+                  @if (!isSingleChoice(group.type) && isSelected(group.type, option.id)) {
+                    <div class="flex shrink-0 items-center gap-2">
+                      <button
+                        type="button"
+                        class="app-stepper-btn flex h-8 w-8 text-base"
+                        [attr.aria-label]="'Decrease ' + option.name + ' quantity'"
+                        (click)="decrementAddOn(group.type, option.id, $event)"
+                      >
+                        &minus;
+                      </button>
+                      <span class="w-5 text-center text-sm font-semibold text-gray-700">{{
+                        quantityOf(group.type, option.id)
+                      }}</span>
+                      <button
+                        type="button"
+                        class="app-stepper-btn-primary flex h-8 w-8 text-base"
+                        [attr.aria-label]="'Increase ' + option.name + ' quantity'"
+                        [disabled]="!canIncrement(group.type, option.id)"
+                        (click)="incrementAddOn(group.type, option.id, $event)"
+                      >
+                        +
+                      </button>
+                    </div>
+                  }
+
+                  <span class="shrink-0 text-sm whitespace-nowrap text-gray-600">
+                    @if (option.price > 0) {
+                      +₱{{ option.price | number: '1.2-2' }}
+                    } @else if (option.price < 0) {
+                      -₱{{ -option.price | number: '1.2-2' }}
+                    } @else {
+                      Free
+                    }
+                  </span>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      <div [class.mt-6]="sortedGroups().length > 0">
+        <label
+          for="public-special-instructions"
+          class="mb-2 block text-xs font-semibold tracking-wider text-gray-400 uppercase"
+          >Special instructions (Optional)</label
+        >
+        <div class="relative">
+          <textarea
+            id="public-special-instructions"
+            class="textarea textarea-bordered w-full pr-16 outline-transparent"
+            placeholder="e.g. Less ice, sauce on the side, etc."
+            rows="2"
+            [attr.maxlength]="maxInstructions"
+            [value]="instructions()"
+            (input)="onInstructions($any($event.target).value)"
+            (keydown.enter)="$event.preventDefault()"
+          ></textarea>
+          <span class="absolute right-3 bottom-2 text-xs text-gray-400 select-none">
+            {{ instructions().length }}/{{ maxInstructions }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Validation error -->
+    @if (validationError(); as error) {
+      <div class="mx-6 mb-2 flex items-center gap-2 rounded-lg bg-red-50 px-4 py-2.5" role="alert">
+        <app-icon name="icon-error" [class]="'h-4 w-4 shrink-0 text-red-500'" />
+        <p class="text-sm font-medium text-red-600">{{ error }}</p>
+      </div>
+    }
+
+    <!-- Footer -->
+    <div class="shrink-0 border-t border-gray-100 px-6 py-4">
+      <div class="flex items-center gap-3">
+        <button
+          type="button"
+          class="app-btn app-btn-secondary app-btn-md flex-1"
+          (click)="cancelled.emit()"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="app-btn app-btn-primary app-btn-md flex-1"
+          [disabled]="!!validationError()"
+          (click)="confirm()"
+        >
+          {{ isEditing() ? 'Update Item' : 'Add to Order' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

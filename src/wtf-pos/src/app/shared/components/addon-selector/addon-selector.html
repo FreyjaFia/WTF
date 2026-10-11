@@ -16,63 +16,69 @@
     >
       <!-- Header -->
       <div class="shrink-0 border-b border-gray-100 px-6 pt-6 pb-4">
-        <div class="flex items-start gap-4">
-          <!-- Product thumbnail -->
-          @if (product()?.imageUrl) {
-            <img
-              [src]="product()!.imageUrl"
-              [alt]="product()!.name"
-              class="h-16 w-16 shrink-0 rounded-xl object-cover shadow-md"
-            />
-          } @else {
-            <div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-gray-100">
-              <app-avatar [label]="product()!.name" [size]="64" />
-            </div>
-          }
-          <div class="min-w-0 flex-1">
-            <h3 id="addon-selector-title" class="text-lg font-bold text-gray-900">
-              {{ product()!.name }}
-            </h3>
-            @if (promoLabel()) {
-              <span
-                class="mt-1 inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700"
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
+          <div class="flex min-w-0 flex-1 items-start gap-4">
+            <!-- Product thumbnail -->
+            @if (product()?.imageUrl) {
+              <img
+                [src]="product()!.imageUrl"
+                [alt]="product()!.name"
+                class="h-16 w-16 shrink-0 rounded-xl object-cover shadow-md"
+              />
+            } @else {
+              <div
+                class="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-gray-100"
               >
-                {{ promoLabel() }}
-              </span>
+                <app-avatar [label]="product()!.name" [size]="64" />
+              </div>
             }
-            <p class="mt-0.5 text-sm text-gray-500">{{ subtitleText() }}</p>
+            <div class="min-w-0 flex-1">
+              <h3 id="addon-selector-title" class="text-lg font-bold wrap-break-word text-gray-900">
+                {{ product()!.name }}
+              </h3>
+              @if (promoLabel()) {
+                <span
+                  class="mt-1 inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700"
+                >
+                  {{ promoLabel() }}
+                </span>
+              }
+              <p class="mt-0.5 text-sm text-gray-500">{{ subtitleText() }}</p>
+            </div>
           </div>
-          <div class="shrink-0 text-right">
-            <p class="text-lg font-bold text-[#047857]">
-              <app-icon
-                name="icon-peso"
-                [class]="'inline h-3 w-3 align-[-0.125em]'"
-                [fill]="'currentColor'"
-              />{{ totalPrice() | number: '1.2-2' }}
-            </p>
-            <div class="mt-1 flex items-center justify-end gap-1.5">
-              <button
-                type="button"
-                class="app-stepper-btn flex h-6 w-6 text-xs"
-                (click)="decrementProductQuantity($event)"
-                aria-label="Decrease product quantity"
-              >
-                -
-              </button>
-              <span class="w-6 text-center text-xs font-semibold text-gray-700">
-                {{ productQuantity() }}
-              </span>
-              <button
-                type="button"
-                class="app-stepper-btn-primary flex h-6 w-6 text-xs"
-                (click)="incrementProductQuantity($event)"
-                aria-label="Increase product quantity"
-              >
-                +
-              </button>
+          <div class="shrink-0 sm:text-right">
+            <div class="flex items-center justify-between gap-3 sm:block">
+              <p class="text-lg font-bold text-[#047857]">
+                <app-icon
+                  name="icon-peso"
+                  [class]="'inline h-3 w-3 align-[-0.125em]'"
+                  [fill]="'currentColor'"
+                />{{ totalPrice() | number: '1.2-2' }}
+              </p>
+              <div class="flex items-center justify-end gap-1.5 sm:mt-1">
+                <button
+                  type="button"
+                  class="app-stepper-btn flex h-6 w-6 text-xs"
+                  (click)="decrementProductQuantity($event)"
+                  aria-label="Decrease product quantity"
+                >
+                  -
+                </button>
+                <span class="w-6 text-center text-xs font-semibold text-gray-700">
+                  {{ productQuantity() }}
+                </span>
+                <button
+                  type="button"
+                  class="app-stepper-btn-primary flex h-6 w-6 text-xs"
+                  (click)="incrementProductQuantity($event)"
+                  aria-label="Increase product quantity"
+                >
+                  +
+                </button>
+              </div>
             </div>
             @if (addOnTotal() !== 0 || productQuantity() > 1 || activePromoLabel()) {
-              <p class="text-xs wrap-break-word text-gray-400">
+              <p class="mt-1 text-left text-xs wrap-break-word text-gray-400 sm:text-right">
                 <span class="block">
                   Base
                   <app-icon
@@ -200,7 +206,7 @@
 
                     <!-- Name -->
                     <span
-                      class="flex-1 text-sm font-medium"
+                      class="min-w-0 flex-1 text-sm font-medium wrap-break-word"
                       [class.text-gray-800]="option.isActive"
                       [class.text-gray-400]="!option.isActive"
                     >
@@ -210,51 +216,56 @@
                       }
                     </span>
 
-                    <!-- Quantity stepper for Topping/Extra -->
-                    @if (!isRadioGroup(group.type) && isSelected(group.type, option.id)) {
-                      <div
-                        class="flex shrink-0 items-center gap-1.5"
-                        (click)="$event.stopPropagation()"
-                        (keydown.enter)="$event.stopPropagation()"
-                        tabindex="0"
-                      >
-                        <button
-                          type="button"
-                          class="app-stepper-btn flex h-6 w-6 text-xs"
-                          (click)="decrementOption(group, option, $event)"
-                          aria-label="Decrease quantity"
-                        >
-                          -
-                        </button>
-                        <span class="w-5 text-center text-xs font-semibold text-gray-700">
-                          {{ getQuantity(group.type, option.id) }}
-                        </span>
-                        <button
-                          type="button"
-                          class="app-stepper-btn-primary flex h-6 w-6 text-xs"
-                          [disabled]="!canIncrementOption(group, option.id)"
-                          [class.opacity-50]="!canIncrementOption(group, option.id)"
-                          [class.cursor-not-allowed]="!canIncrementOption(group, option.id)"
-                          (click)="incrementOption(group, option, $event)"
-                          aria-label="Increase quantity"
-                        >
-                          +
-                        </button>
-                      </div>
-                    }
-
-                    <!-- Price -->
-                    <span
-                      class="shrink-0 text-sm font-semibold"
-                      [class.text-gray-700]="option.isActive"
-                      [class.text-gray-400]="!option.isActive"
+                    <!-- Stepper and price stay together: side by side when there is room, stacked on narrow screens -->
+                    <div
+                      class="flex shrink-0 flex-col-reverse items-end gap-1.5 sm:flex-row sm:items-center sm:gap-3"
                     >
-                      <app-icon
-                        name="icon-peso"
-                        [class]="'inline h-3 w-3 align-[-0.125em]'"
-                        [fill]="'currentColor'"
-                      />{{ option.overridePrice ?? option.price | number: '1.2-2' }}
-                    </span>
+                      <!-- Quantity stepper for Topping/Extra -->
+                      @if (!isRadioGroup(group.type) && isSelected(group.type, option.id)) {
+                        <div
+                          class="flex shrink-0 items-center gap-1.5"
+                          (click)="$event.stopPropagation()"
+                          (keydown.enter)="$event.stopPropagation()"
+                          tabindex="0"
+                        >
+                          <button
+                            type="button"
+                            class="app-stepper-btn flex h-6 w-6 text-xs"
+                            (click)="decrementOption(group, option, $event)"
+                            aria-label="Decrease quantity"
+                          >
+                            -
+                          </button>
+                          <span class="w-5 text-center text-xs font-semibold text-gray-700">
+                            {{ getQuantity(group.type, option.id) }}
+                          </span>
+                          <button
+                            type="button"
+                            class="app-stepper-btn-primary flex h-6 w-6 text-xs"
+                            [disabled]="!canIncrementOption(group, option.id)"
+                            [class.opacity-50]="!canIncrementOption(group, option.id)"
+                            [class.cursor-not-allowed]="!canIncrementOption(group, option.id)"
+                            (click)="incrementOption(group, option, $event)"
+                            aria-label="Increase quantity"
+                          >
+                            +
+                          </button>
+                        </div>
+                      }
+
+                      <!-- Price -->
+                      <span
+                        class="shrink-0 text-sm font-semibold whitespace-nowrap"
+                        [class.text-gray-700]="option.isActive"
+                        [class.text-gray-400]="!option.isActive"
+                      >
+                        <app-icon
+                          name="icon-peso"
+                          [class]="'inline h-3 w-3 align-[-0.125em]'"
+                          [fill]="'currentColor'"
+                        />{{ option.overridePrice ?? option.price | number: '1.2-2' }}
+                      </span>
+                    </div>
                   </button>
                 }
               </div>

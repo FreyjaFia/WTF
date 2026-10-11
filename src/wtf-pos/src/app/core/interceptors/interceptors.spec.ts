@@ -50,6 +50,25 @@ describe('authInterceptor', () => {
     req.flush({});
   });
 
+  it('never attaches the staff token to public ordering calls', () => {
+    http.get('/api/public/order-links/abc').subscribe();
+
+    const req = ctrl.expectOne('/api/public/order-links/abc');
+    expect(req.request.headers.has('Authorization')).toBe(false);
+    req.flush({});
+  });
+
+  it('does not refresh the session or redirect when a public ordering call fails with 401', () => {
+    let failed = false;
+    http.get('/api/public/order-links/abc').subscribe({ error: () => (failed = true) });
+
+    ctrl.expectOne('/api/public/order-links/abc').flush({}, { status: 401, statusText: 'Unauthorized' });
+
+    expect(failed).toBe(true);
+    expect(auth.refreshToken).not.toHaveBeenCalled();
+    expect(router.navigateByUrl).not.toHaveBeenCalled();
+  });
+
   it('does not override an existing Authorization header', () => {
     http.get('/api/orders', { headers: { Authorization: 'Custom x' } }).subscribe();
 

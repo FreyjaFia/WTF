@@ -36,6 +36,7 @@ import { OrderDetails } from '@features/orders/order-details/order-details';
 import { OrderEditor } from '@features/orders/order-editor/order-editor';
 import { OrderList } from '@features/orders/order-list/order-list';
 import { Orders } from '@features/orders/orders';
+import { PublicOrderComponent } from '@features/public-order/public-order';
 import { LayoutComponent } from '@shared/components';
 import { AppRoleGroups } from '@shared/constants/app-roles';
 
@@ -49,6 +50,11 @@ export const routes: Routes = [
     path: 'login',
     component: Login,
     canActivate: [loginGuard],
+  },
+  {
+    // Public page for customers with a personal ordering link. No sign-in, so no guards.
+    path: 'order/:token',
+    component: PublicOrderComponent,
   },
   {
     path: '',

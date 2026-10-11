@@ -541,6 +541,52 @@ describe('AddonSelectorComponent', () => {
       expect(added.mock.calls[0][0].editIndex).toBeNull();
     });
 
+    it('stacks the header on narrow screens so a long product name is not squeezed', () => {
+      const { fixture, cmp, el } = setup([]);
+      cmp.open({ ...MAIN, name: 'Brown Sugar Oatside Iced Shaken Espresso' });
+      fixture.detectChanges();
+
+      const title = el.querySelector('#addon-selector-title') as HTMLElement;
+      const header = title.closest('.border-b')!.firstElementChild as HTMLElement;
+      expect(header.className).toContain('flex-col');
+      expect(header.className).toContain('sm:flex-row');
+      const nameRow = title.parentElement!.parentElement as HTMLElement;
+      expect(nameRow.className).toContain('min-w-0');
+      expect(nameRow.className).toContain('flex-1');
+      expect(title.className).toContain('wrap-break-word');
+      const priceBlock = header.lastElementChild as HTMLElement;
+      expect(priceBlock.className).toContain('shrink-0');
+      expect(priceBlock.firstElementChild!.className).toContain('justify-between');
+    });
+
+    it('keeps the price and quantity buttons of a selected extra inside its row', () => {
+      const long = { ...prod('x', 'Extra shot of freshly pulled single origin espresso', 25) };
+      const { fixture, cmp, i, el } = setup([
+        { type: AddOnTypeEnum.Extra, displayName: 'Extra', options: [long] },
+      ]);
+      cmp.open(MAIN);
+      fixture.detectChanges();
+      i.toggleOption({ type: AddOnTypeEnum.Extra, displayName: 'Extra', options: [long] }, long);
+      fixture.detectChanges();
+
+      const row = el.querySelector('button.border-\\[\\#047857\\]') as HTMLElement;
+      const name = [...row.querySelectorAll('span')].find((x) =>
+        x.textContent?.includes('Extra shot of'),
+      ) as HTMLElement;
+      expect(name.className).toContain('min-w-0');
+      expect(name.className).toContain('wrap-break-word');
+
+      const cluster = row.querySelector('.flex-col-reverse') as HTMLElement;
+      expect(cluster).not.toBeNull();
+      expect(cluster.className).toContain('shrink-0');
+      expect(cluster.className).toContain('sm:flex-row');
+      expect(cluster.querySelector('[aria-label="Increase quantity"]')).not.toBeNull();
+      const price = [...cluster.querySelectorAll('span')].find((x) =>
+        x.textContent?.includes('25.00'),
+      ) as HTMLElement;
+      expect(price.className).toContain('whitespace-nowrap');
+    });
+
     it('confirm button is wired up in the template', () => {
       const { fixture, cmp, el, added } = setup([]);
       cmp.open(MAIN);
