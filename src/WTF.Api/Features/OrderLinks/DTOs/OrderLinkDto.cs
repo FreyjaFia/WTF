@@ -8,7 +8,8 @@ public record OrderLinkDto(
     string? CreatedByName,
     DateTime? ExpiresAt,
     DateTime? RevokedAt,
-    DateTime? LastUsedAt
+    DateTime? LastUsedAt,
+    int OrdersCount = 0
 );
 
 public record OrderingLinkAccessDto(bool AllowOrderingLink, int RevokedLinks);

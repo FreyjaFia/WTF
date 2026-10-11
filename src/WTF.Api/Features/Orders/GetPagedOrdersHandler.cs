@@ -14,7 +14,8 @@ public sealed record GetPagedOrdersQuery(
     bool ExcludeFinalized = false,
     string? SearchTerm = null,
     int Page = 1,
-    int PageSize = 20) : IRequest<PagedResultDto<OrderDto>>;
+    int PageSize = 20,
+    OrderSourceEnum? Source = null) : IRequest<PagedResultDto<OrderDto>>;
 
 public sealed class GetPagedOrdersHandler(WTFDbContext db)
     : IRequestHandler<GetPagedOrdersQuery, PagedResultDto<OrderDto>>
@@ -29,6 +30,12 @@ public sealed class GetPagedOrdersHandler(WTFDbContext db)
         if (request.CustomerId.HasValue)
         {
             baseQuery = baseQuery.Where(o => o.CustomerId == request.CustomerId.Value);
+        }
+
+        if (request.Source.HasValue)
+        {
+            var source = (byte)request.Source.Value;
+            baseQuery = baseQuery.Where(o => o.Source == source);
         }
 
         if (request.Status != OrderStatusEnum.All)

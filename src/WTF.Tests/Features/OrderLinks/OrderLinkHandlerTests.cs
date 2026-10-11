@@ -250,6 +250,49 @@ public class OrderLinkHandlerTests
     }
 
     [Fact]
+    public async Task List_CountsTheOrdersEachLinkProduced_WhateverBecameOfThem()
+    {
+        var customer = await SeedCustomerAsync();
+        await TestDb.SaveAsync(_dbName, new User
+        {
+            Id = _userId, Username = "cashier", PasswordHash = "x", FirstName = "Cara", LastName = "Shier",
+            IsActive = true, RoleId = 2, CreatedAt = DateTime.UtcNow, CreatedBy = _userId
+        });
+        var busy = await SeedLinkAsync(customer.Id);
+        var quiet = await SeedLinkAsync(customer.Id);
+        var revoked = await SeedLinkAsync(customer.Id, revokedAt: DateTime.UtcNow.AddMinutes(-5));
+        await using (var db = TestDb.Create(_dbName))
+        {
+            db.Statuses.AddRange(
+                new Status { Id = 1, Name = "Pending" }, new Status { Id = 3, Name = "Cancelled" },
+                new Status { Id = 5, Name = "PendingApproval" });
+            foreach (var (link, status) in new[] { (busy, 5), (busy, 1), (busy, 3), (revoked, 1) })
+            {
+                db.Orders.Add(new Order
+                {
+                    Id = Guid.NewGuid(), OrderNumber = Random.Shared.Next(1, 1_000_000), CustomerId = customer.Id,
+                    OrderLinkId = link.Id, StatusId = status, CreatedAt = DateTime.UtcNow, CreatedBy = _userId,
+                    Source = 1
+                });
+            }
+
+            // An order from the shop is not the link's.
+            db.Orders.Add(new Order
+            {
+                Id = Guid.NewGuid(), OrderNumber = Random.Shared.Next(1, 1_000_000), CustomerId = customer.Id,
+                StatusId = 1, CreatedAt = DateTime.UtcNow, CreatedBy = _userId
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var links = await List().Handle(new GetOrderLinksQuery(customer.Id), CancellationToken.None);
+
+        links!.Single(l => l.Id == busy.Id).OrdersCount.ShouldBe(3);
+        links.Single(l => l.Id == quiet.Id).OrdersCount.ShouldBe(0);
+        links.Single(l => l.Id == revoked.Id).OrdersCount.ShouldBe(1);
+    }
+
+    [Fact]
     public async Task List_UnknownCustomer_ReturnsNull()
     {
         (await List().Handle(new GetOrderLinksQuery(Guid.NewGuid()), CancellationToken.None)).ShouldBeNull();

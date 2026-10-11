@@ -13,6 +13,8 @@ public sealed record GetPaymentsReportQuery : IRequest<List<PaymentsReportRowDto
 {
     public DateTime? FromDate { get; init; }
     public DateTime? ToDate { get; init; }
+    /// <summary>Only orders that came from this source: the shop itself or a customer ordering link. Null means all.</summary>
+    public OrderSourceEnum? Source { get; init; }
 }
 
 public sealed class GetPaymentsReportHandler(
@@ -24,6 +26,8 @@ public sealed class GetPaymentsReportHandler(
         var timeZone = RequestTimeZone.ResolveFromRequest(httpContextAccessor);
         var (fromUtc, toExclusiveUtc) = ReportDateRange.ToUtcRange(request.FromDate ?? default, request.ToDate ?? default, timeZone);
 
+        byte? source = request.Source.HasValue ? (byte)request.Source.Value : null;
+
         var orders = await db.Orders
             .AsNoTracking()
             .Include(o => o.PaymentMethod)
@@ -33,7 +37,8 @@ public sealed class GetPaymentsReportHandler(
             .Where(o =>
                 o.CreatedAt >= fromUtc
                 && o.CreatedAt < toExclusiveUtc
-                && o.StatusId == (int)OrderStatusEnum.Completed)
+                && o.StatusId == (int)OrderStatusEnum.Completed
+                && (source == null || o.Source == source))
             .ToListAsync(cancellationToken);
 
         var overridePrices = await BuildAddOnOverridePriceLookup(orders, cancellationToken);

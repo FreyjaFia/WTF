@@ -23,6 +23,14 @@ public class GetOrderLinksHandler(WTFDbContext db) : IRequestHandler<GetOrderLin
             .OrderByDescending(l => l.CreatedAt)
             .ToListAsync(cancellationToken);
 
+        // How many orders each link has produced, whatever became of them.
+        var linkIds = links.Select(l => l.Id).ToList();
+        var counts = await db.Orders
+            .Where(o => o.OrderLinkId != null && linkIds.Contains(o.OrderLinkId.Value))
+            .GroupBy(o => o.OrderLinkId!.Value)
+            .Select(g => new { LinkId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.LinkId, x => x.Count, cancellationToken);
+
         return links
             .Select(l => new OrderLinkDto(
                 l.Id,
@@ -34,7 +42,8 @@ public class GetOrderLinksHandler(WTFDbContext db) : IRequestHandler<GetOrderLin
                     : $"{l.CreatedByNavigation.FirstName} {l.CreatedByNavigation.LastName}",
                 l.ExpiresAt,
                 l.RevokedAt,
-                l.LastUsedAt))
+                l.LastUsedAt,
+                counts.GetValueOrDefault(l.Id)))
             .ToList();
     }
 }

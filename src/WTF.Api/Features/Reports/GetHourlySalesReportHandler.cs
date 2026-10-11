@@ -13,6 +13,8 @@ public sealed record GetHourlySalesReportQuery : IRequest<List<HourlySalesReport
 {
     public DateTime? FromDate { get; init; }
     public DateTime? ToDate { get; init; }
+    /// <summary>Only orders that came from this source: the shop itself or a customer ordering link. Null means all.</summary>
+    public OrderSourceEnum? Source { get; init; }
 }
 
 public sealed class GetHourlySalesReportHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor) : IRequestHandler<GetHourlySalesReportQuery, List<HourlySalesReportRowDto>>
@@ -22,6 +24,8 @@ public sealed class GetHourlySalesReportHandler(WTFDbContext db, IHttpContextAcc
         var timeZone = RequestTimeZone.ResolveFromRequest(httpContextAccessor);
         var (fromUtc, toExclusiveUtc) = ReportDateRange.ToUtcRange(request.FromDate ?? default, request.ToDate ?? default, timeZone);
 
+        byte? source = request.Source.HasValue ? (byte)request.Source.Value : null;
+
         var orders = await db.Orders
             .AsNoTracking()
             .Include(o => o.OrderItems)
@@ -30,7 +34,8 @@ public sealed class GetHourlySalesReportHandler(WTFDbContext db, IHttpContextAcc
             .Where(o =>
                 o.CreatedAt >= fromUtc
                 && o.CreatedAt < toExclusiveUtc
-                && o.StatusId == (int)OrderStatusEnum.Completed)
+                && o.StatusId == (int)OrderStatusEnum.Completed
+                && (source == null || o.Source == source))
             .ToListAsync(cancellationToken);
 
         var overridePrices = await BuildAddOnOverridePriceLookup(orders, cancellationToken);

@@ -15,6 +15,8 @@ public sealed record GetDailySalesReportQuery : IRequest<List<DailySalesReportRo
     public DateTime? FromDate { get; init; }
     public DateTime? ToDate { get; init; }
     public ReportGroupByEnum? GroupBy { get; init; }
+    /// <summary>Only orders that came from this source: the shop itself or a customer ordering link. Null means all.</summary>
+    public OrderSourceEnum? Source { get; init; }
 }
 
 public sealed class GetDailySalesReportHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor) : IRequestHandler<GetDailySalesReportQuery, List<DailySalesReportRowDto>>
@@ -24,12 +26,15 @@ public sealed class GetDailySalesReportHandler(WTFDbContext db, IHttpContextAcce
         var timeZone = RequestTimeZone.ResolveFromRequest(httpContextAccessor);
         var (fromUtc, toExclusiveUtc) = ReportDateRange.ToUtcRange(request.FromDate ?? default, request.ToDate ?? default, timeZone);
 
+        byte? source = request.Source.HasValue ? (byte)request.Source.Value : null;
+
         var orders = await db.Orders
             .AsNoTracking()
             .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.Product)
             .Include(o => o.OrderBundlePromotions)
-            .Where(o => o.CreatedAt >= fromUtc && o.CreatedAt < toExclusiveUtc)
+            .Where(o => o.CreatedAt >= fromUtc && o.CreatedAt < toExclusiveUtc
+                && (source == null || o.Source == source))
             .ToListAsync(cancellationToken);
 
         var overridePrices = await BuildAddOnOverridePriceLookup(orders, cancellationToken);

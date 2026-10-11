@@ -15,6 +15,8 @@ public sealed record GetProductSalesReportQuery : IRequest<List<ProductSalesRepo
     public DateTime? ToDate { get; init; }
     public int? CategoryId { get; init; }
     public int? SubCategoryId { get; init; }
+    /// <summary>Only orders that came from this source: the shop itself or a customer ordering link. Null means all.</summary>
+    public OrderSourceEnum? Source { get; init; }
 }
 
 public sealed class GetProductSalesReportHandler(
@@ -32,6 +34,7 @@ public sealed class GetProductSalesReportHandler(
     {
         var timeZone = RequestTimeZone.ResolveFromRequest(httpContextAccessor);
         var (fromUtc, toExclusiveUtc) = ReportDateRange.ToUtcRange(request.FromDate ?? default, request.ToDate ?? default, timeZone);
+        byte? source = request.Source.HasValue ? (byte)request.Source.Value : null;
         var promotionTypeFilter = ResolvePromotionTypeFilter(request.SubCategoryId);
         var productSubCategoryFilter = ResolveProductSubCategoryFilter(request.SubCategoryId);
 
@@ -59,7 +62,8 @@ public sealed class GetProductSalesReportHandler(
                     && oi.BundlePromotionId == null
                     && oi.Order.CreatedAt >= fromUtc
                     && oi.Order.CreatedAt < toExclusiveUtc
-                    && oi.Order.StatusId == (int)OrderStatusEnum.Completed);
+                    && oi.Order.StatusId == (int)OrderStatusEnum.Completed
+                    && (source == null || oi.Order.Source == source));
 
             if (request.CategoryId.HasValue && request.CategoryId.Value != PromotionsCategoryFilterId)
             {
@@ -114,6 +118,7 @@ public sealed class GetProductSalesReportHandler(
                     obp.Order.CreatedAt >= fromUtc
                     && obp.Order.CreatedAt < toExclusiveUtc
                     && obp.Order.StatusId == (int)OrderStatusEnum.Completed
+                    && (source == null || obp.Order.Source == source)
                     && (obp.Promotion.TypeId == FixedBundlePromotionTypeId
                         || obp.Promotion.TypeId == MixMatchPromotionTypeId));
 

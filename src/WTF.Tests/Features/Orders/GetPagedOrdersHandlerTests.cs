@@ -19,6 +19,47 @@ public class GetPagedOrdersHandlerTests
         }
     }
 
+    private void SetSource(Guid orderId, OrderSourceEnum source)
+    {
+        using var db = _data.Open();
+        db.Orders.Single(o => o.Id == orderId).Source = (byte)source;
+        db.SaveChanges();
+    }
+
+    [Fact]
+    public async Task Handle_SourceFilter_ReturnsOnlyOrdersFromThatSource()
+    {
+        var shop = _data.AddOrder(orderNumber: 7001);
+        var online = _data.AddOrder(orderNumber: 7002);
+        var online2 = _data.AddOrder(orderNumber: 7003);
+        SetSource(online, OrderSourceEnum.CustomerLink);
+        SetSource(online2, OrderSourceEnum.CustomerLink);
+
+        var link = await Handler().Handle(
+            new GetPagedOrdersQuery(Source: OrderSourceEnum.CustomerLink), CancellationToken.None);
+        var pos = await Handler().Handle(new GetPagedOrdersQuery(Source: OrderSourceEnum.Pos), CancellationToken.None);
+        var all = await Handler().Handle(new GetPagedOrdersQuery(), CancellationToken.None);
+
+        link.Items.Select(o => o.Id).ShouldBe([online2, online], ignoreOrder: true);
+        link.TotalCount.ShouldBe(2);
+        pos.Items.Select(o => o.Id).ShouldBe([shop]);
+        all.TotalCount.ShouldBe(3);
+    }
+
+    [Fact]
+    public async Task Handle_SourceFilter_StillHidesOrdersWaitingForApproval()
+    {
+        var waiting = _data.AddOrder(OrderStatusEnum.PendingApproval, orderNumber: 7101);
+        var accepted = _data.AddOrder(orderNumber: 7102);
+        SetSource(waiting, OrderSourceEnum.CustomerLink);
+        SetSource(accepted, OrderSourceEnum.CustomerLink);
+
+        var result = await Handler().Handle(
+            new GetPagedOrdersQuery(Source: OrderSourceEnum.CustomerLink), CancellationToken.None);
+
+        result.Items.Select(o => o.Id).ShouldBe([accepted]);
+    }
+
     [Fact]
     public async Task Handle_NoOrders_ReturnsEmptyPageWithEchoedPaging()
     {

@@ -14,6 +14,8 @@ public sealed record GetStaffPerformanceReportQuery : IRequest<List<StaffPerform
     public DateTime? FromDate { get; init; }
     public DateTime? ToDate { get; init; }
     public Guid? StaffId { get; init; }
+    /// <summary>Only orders that came from this source: the shop itself or a customer ordering link. Null means all.</summary>
+    public OrderSourceEnum? Source { get; init; }
 }
 
 public sealed class GetStaffPerformanceReportHandler(
@@ -25,6 +27,8 @@ public sealed class GetStaffPerformanceReportHandler(
         var timeZone = RequestTimeZone.ResolveFromRequest(httpContextAccessor);
         var (fromUtc, toExclusiveUtc) = ReportDateRange.ToUtcRange(request.FromDate ?? default, request.ToDate ?? default, timeZone);
 
+        byte? source = request.Source.HasValue ? (byte)request.Source.Value : null;
+
         var query = db.Orders
             .AsNoTracking()
             .Include(o => o.CreatedByNavigation)
@@ -34,7 +38,8 @@ public sealed class GetStaffPerformanceReportHandler(
             .Where(o =>
                 o.CreatedAt >= fromUtc
                 && o.CreatedAt < toExclusiveUtc
-                && o.StatusId == (int)OrderStatusEnum.Completed);
+                && o.StatusId == (int)OrderStatusEnum.Completed
+                && (source == null || o.Source == source));
 
         if (request.StaffId.HasValue)
         {

@@ -2,6 +2,7 @@ using MediatR;
 using System.Globalization;
 using WTF.Api.Common.Auth;
 using WTF.Api.Common.Time;
+using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Features.Reports;
 using WTF.Api.Features.Reports.DTOs;
 using WTF.Api.Features.Reports.Enums;
@@ -18,7 +19,7 @@ public static class ReportEndpoints
         reportsGroup.MapGet("/daily-sales",
             async (HttpContext httpContext, [AsParameters] GetDailySalesReportQuery query, ISender sender) =>
             {
-                var validationResult = ValidateDateRange(query.FromDate, query.ToDate);
+                var validationResult = ValidateReportFilters(query.FromDate, query.ToDate, query.Source);
                 if (validationResult != null)
                 {
                     return validationResult;
@@ -39,14 +40,14 @@ public static class ReportEndpoints
                     result,
                     BuildRangeExportFileName("Daily Sales Summary", fromDate, toDate, "xlsx"),
                     BuildRangeExportFileName("Daily Sales Summary", fromDate, toDate, "pdf"),
-                    rows => BuildDailySalesExcelDocument(rows, fromDate, toDate, groupBy),
-                    rows => BuildDailySalesPdfDocument(rows, fromDate, toDate, groupBy));
+                    rows => BuildDailySalesExcelDocument(rows, fromDate, toDate, groupBy, query.Source),
+                    rows => BuildDailySalesPdfDocument(rows, fromDate, toDate, groupBy, query.Source));
             });
 
         reportsGroup.MapGet("/product-sales",
             async (HttpContext httpContext, [AsParameters] GetProductSalesReportQuery query, ISender sender) =>
             {
-                var validationResult = ValidateDateRange(query.FromDate, query.ToDate);
+                var validationResult = ValidateReportFilters(query.FromDate, query.ToDate, query.Source);
                 if (validationResult != null)
                 {
                     return validationResult;
@@ -61,14 +62,14 @@ public static class ReportEndpoints
                     result,
                     BuildRangeExportFileName("Product Sales Breakdown", fromDate, toDate, "xlsx"),
                     BuildRangeExportFileName("Product Sales Breakdown", fromDate, toDate, "pdf"),
-                    rows => BuildProductSalesExcelDocument(rows, fromDate, toDate),
-                    rows => BuildProductSalesPdfDocument(rows, fromDate, toDate));
+                    rows => BuildProductSalesExcelDocument(rows, fromDate, toDate, query.Source),
+                    rows => BuildProductSalesPdfDocument(rows, fromDate, toDate, query.Source));
             });
 
         reportsGroup.MapGet("/payments",
             async (HttpContext httpContext, [AsParameters] GetPaymentsReportQuery query, ISender sender) =>
             {
-                var validationResult = ValidateDateRange(query.FromDate, query.ToDate);
+                var validationResult = ValidateReportFilters(query.FromDate, query.ToDate, query.Source);
                 if (validationResult != null)
                 {
                     return validationResult;
@@ -83,14 +84,14 @@ public static class ReportEndpoints
                     result,
                     BuildRangeExportFileName("Payment Method Breakdown", fromDate, toDate, "xlsx"),
                     BuildRangeExportFileName("Payment Method Breakdown", fromDate, toDate, "pdf"),
-                    rows => BuildPaymentsExcelDocument(rows, fromDate, toDate),
-                    rows => BuildPaymentsPdfDocument(rows, fromDate, toDate));
+                    rows => BuildPaymentsExcelDocument(rows, fromDate, toDate, query.Source),
+                    rows => BuildPaymentsPdfDocument(rows, fromDate, toDate, query.Source));
             });
 
         reportsGroup.MapGet("/hourly",
             async (HttpContext httpContext, [AsParameters] GetHourlySalesReportQuery query, ISender sender) =>
             {
-                var validationResult = ValidateDateRange(query.FromDate, query.ToDate);
+                var validationResult = ValidateReportFilters(query.FromDate, query.ToDate, query.Source);
                 if (validationResult != null)
                 {
                     return validationResult;
@@ -105,14 +106,14 @@ public static class ReportEndpoints
                     result,
                     BuildRangeExportFileName("Hourly Sales Distribution", fromDate, toDate, "xlsx"),
                     BuildRangeExportFileName("Hourly Sales Distribution", fromDate, toDate, "pdf"),
-                    rows => BuildHourlySalesExcelDocument(rows, fromDate, toDate),
-                    rows => BuildHourlySalesPdfDocument(rows, fromDate, toDate));
+                    rows => BuildHourlySalesExcelDocument(rows, fromDate, toDate, query.Source),
+                    rows => BuildHourlySalesPdfDocument(rows, fromDate, toDate, query.Source));
             });
 
         reportsGroup.MapGet("/staff",
             async (HttpContext httpContext, [AsParameters] GetStaffPerformanceReportQuery query, ISender sender) =>
             {
-                var validationResult = ValidateDateRange(query.FromDate, query.ToDate);
+                var validationResult = ValidateReportFilters(query.FromDate, query.ToDate, query.Source);
                 if (validationResult != null)
                 {
                     return validationResult;
@@ -127,8 +128,8 @@ public static class ReportEndpoints
                     result,
                     BuildRangeExportFileName("Staff Performance", fromDate, toDate, "xlsx"),
                     BuildRangeExportFileName("Staff Performance", fromDate, toDate, "pdf"),
-                    rows => BuildStaffPerformanceExcelDocument(rows, fromDate, toDate),
-                    rows => BuildStaffPerformancePdfDocument(rows, fromDate, toDate));
+                    rows => BuildStaffPerformanceExcelDocument(rows, fromDate, toDate, query.Source),
+                    rows => BuildStaffPerformancePdfDocument(rows, fromDate, toDate, query.Source));
             });
 
         reportsGroup.MapGet("/monthly-workbook/status",
@@ -199,7 +200,8 @@ public static class ReportEndpoints
         IReadOnlyList<DailySalesReportRowDto> rows,
         DateTime fromDate,
         DateTime toDate,
-        ReportGroupByEnum groupBy)
+        ReportGroupByEnum groupBy,
+        OrderSourceEnum? source = null)
     {
         var columns = new List<SimpleExcelBuilder.ExcelTableColumn>
         {
@@ -240,7 +242,7 @@ public static class ReportEndpoints
 
         return new SimpleExcelBuilder.ExcelDocument(
             "Daily Sales Summary",
-            BuildDateRangeSubtitle(fromDate, toDate),
+            BuildDateRangeSubtitle(fromDate, toDate, source),
             columns,
             rowValues,
             summary);
@@ -331,7 +333,8 @@ public static class ReportEndpoints
     private static SimpleExcelBuilder.ExcelDocument BuildProductSalesExcelDocument(
         IReadOnlyList<ProductSalesReportRowDto> rows,
         DateTime fromDate,
-        DateTime toDate)
+        DateTime toDate,
+        OrderSourceEnum? source = null)
     {
         var columns = new List<SimpleExcelBuilder.ExcelTableColumn>
         {
@@ -365,7 +368,7 @@ public static class ReportEndpoints
 
         return new SimpleExcelBuilder.ExcelDocument(
             "Product Sales Breakdown",
-            BuildDateRangeSubtitle(fromDate, toDate),
+            BuildDateRangeSubtitle(fromDate, toDate, source),
             columns,
             rowValues,
             summary);
@@ -374,7 +377,8 @@ public static class ReportEndpoints
     private static SimpleExcelBuilder.ExcelDocument BuildPaymentsExcelDocument(
         IReadOnlyList<PaymentsReportRowDto> rows,
         DateTime fromDate,
-        DateTime toDate)
+        DateTime toDate,
+        OrderSourceEnum? source = null)
     {
         var columns = new List<SimpleExcelBuilder.ExcelTableColumn>
         {
@@ -404,7 +408,7 @@ public static class ReportEndpoints
 
         return new SimpleExcelBuilder.ExcelDocument(
             "Payment Method Breakdown",
-            BuildDateRangeSubtitle(fromDate, toDate),
+            BuildDateRangeSubtitle(fromDate, toDate, source),
             columns,
             rowValues,
             summary);
@@ -413,7 +417,8 @@ public static class ReportEndpoints
     private static SimpleExcelBuilder.ExcelDocument BuildHourlySalesExcelDocument(
         IReadOnlyList<HourlySalesReportRowDto> rows,
         DateTime fromDate,
-        DateTime toDate)
+        DateTime toDate,
+        OrderSourceEnum? source = null)
     {
         var columns = new List<SimpleExcelBuilder.ExcelTableColumn>
         {
@@ -441,7 +446,7 @@ public static class ReportEndpoints
 
         return new SimpleExcelBuilder.ExcelDocument(
             "Hourly Sales Distribution",
-            BuildDateRangeSubtitle(fromDate, toDate),
+            BuildDateRangeSubtitle(fromDate, toDate, source),
             columns,
             rowValues,
             summary);
@@ -450,7 +455,8 @@ public static class ReportEndpoints
     private static SimpleExcelBuilder.ExcelDocument BuildStaffPerformanceExcelDocument(
         IReadOnlyList<StaffPerformanceReportRowDto> rows,
         DateTime fromDate,
-        DateTime toDate)
+        DateTime toDate,
+        OrderSourceEnum? source = null)
     {
         var columns = new List<SimpleExcelBuilder.ExcelTableColumn>
         {
@@ -486,7 +492,7 @@ public static class ReportEndpoints
 
         return new SimpleExcelBuilder.ExcelDocument(
             "Staff Performance",
-            BuildDateRangeSubtitle(fromDate, toDate),
+            BuildDateRangeSubtitle(fromDate, toDate, source),
             columns,
             rowValues,
             summary);
@@ -496,7 +502,8 @@ public static class ReportEndpoints
         IReadOnlyList<DailySalesReportRowDto> rows,
         DateTime fromDate,
         DateTime toDate,
-        ReportGroupByEnum groupBy)
+        ReportGroupByEnum groupBy,
+        OrderSourceEnum? source = null)
     {
         var columns = new List<SimplePdfBuilder.PdfTableColumn>
         {
@@ -539,7 +546,7 @@ public static class ReportEndpoints
 
         return new SimplePdfBuilder.PdfDocument(
             "Daily Sales Summary",
-            BuildDateRangeSubtitle(fromDate, toDate),
+            BuildDateRangeSubtitle(fromDate, toDate, source),
             new SimplePdfBuilder.PdfTable(columns, tableRows),
             summary);
     }
@@ -547,7 +554,8 @@ public static class ReportEndpoints
     private static SimplePdfBuilder.PdfDocument BuildProductSalesPdfDocument(
         IReadOnlyList<ProductSalesReportRowDto> rows,
         DateTime fromDate,
-        DateTime toDate)
+        DateTime toDate,
+        OrderSourceEnum? source = null)
     {
         var columns = new List<SimplePdfBuilder.PdfTableColumn>
         {
@@ -584,7 +592,7 @@ public static class ReportEndpoints
 
         return new SimplePdfBuilder.PdfDocument(
             "Product Sales Breakdown",
-            BuildDateRangeSubtitle(fromDate, toDate),
+            BuildDateRangeSubtitle(fromDate, toDate, source),
             new SimplePdfBuilder.PdfTable(columns, tableRows),
             summary);
     }
@@ -592,7 +600,8 @@ public static class ReportEndpoints
     private static SimplePdfBuilder.PdfDocument BuildPaymentsPdfDocument(
         IReadOnlyList<PaymentsReportRowDto> rows,
         DateTime fromDate,
-        DateTime toDate)
+        DateTime toDate,
+        OrderSourceEnum? source = null)
     {
         var columns = new List<SimplePdfBuilder.PdfTableColumn>
         {
@@ -625,7 +634,7 @@ public static class ReportEndpoints
 
         return new SimplePdfBuilder.PdfDocument(
             "Payment Method Breakdown",
-            BuildDateRangeSubtitle(fromDate, toDate),
+            BuildDateRangeSubtitle(fromDate, toDate, source),
             new SimplePdfBuilder.PdfTable(columns, tableRows),
             summary);
     }
@@ -633,7 +642,8 @@ public static class ReportEndpoints
     private static SimplePdfBuilder.PdfDocument BuildHourlySalesPdfDocument(
         IReadOnlyList<HourlySalesReportRowDto> rows,
         DateTime fromDate,
-        DateTime toDate)
+        DateTime toDate,
+        OrderSourceEnum? source = null)
     {
         var columns = new List<SimplePdfBuilder.PdfTableColumn>
         {
@@ -664,7 +674,7 @@ public static class ReportEndpoints
 
         return new SimplePdfBuilder.PdfDocument(
             "Hourly Sales Distribution",
-            BuildDateRangeSubtitle(fromDate, toDate),
+            BuildDateRangeSubtitle(fromDate, toDate, source),
             new SimplePdfBuilder.PdfTable(columns, tableRows),
             summary);
     }
@@ -672,7 +682,8 @@ public static class ReportEndpoints
     private static SimplePdfBuilder.PdfDocument BuildStaffPerformancePdfDocument(
         IReadOnlyList<StaffPerformanceReportRowDto> rows,
         DateTime fromDate,
-        DateTime toDate)
+        DateTime toDate,
+        OrderSourceEnum? source = null)
     {
         var columns = new List<SimplePdfBuilder.PdfTableColumn>
         {
@@ -711,14 +722,35 @@ public static class ReportEndpoints
 
         return new SimplePdfBuilder.PdfDocument(
             "Staff Performance",
-            BuildDateRangeSubtitle(fromDate, toDate),
+            BuildDateRangeSubtitle(fromDate, toDate, source),
             new SimplePdfBuilder.PdfTable(columns, tableRows),
             summary);
     }
 
-    private static string BuildDateRangeSubtitle(DateTime fromDate, DateTime toDate)
+    private static string BuildDateRangeSubtitle(DateTime fromDate, DateTime toDate, OrderSourceEnum? source = null)
     {
-        return $"Date Range: {fromDate:MMMM dd, yyyy} - {toDate:MMMM dd, yyyy}";
+        var range = $"Date Range: {fromDate:MMMM dd, yyyy} - {toDate:MMMM dd, yyyy}";
+        return source.HasValue ? $"{range} | Source: {SourceLabel(source.Value)}" : range;
+    }
+
+    /// <summary>What the exports call each order source.</summary>
+    private static string SourceLabel(OrderSourceEnum source) =>
+        source == OrderSourceEnum.CustomerLink ? "Customer link orders" : "Shop orders";
+
+    private static IResult? ValidateReportFilters(DateTime? fromDate, DateTime? toDate, OrderSourceEnum? source)
+    {
+        var dateError = ValidateDateRange(fromDate, toDate);
+        if (dateError != null)
+        {
+            return dateError;
+        }
+
+        if (source.HasValue && !Enum.IsDefined(source.Value))
+        {
+            return Results.BadRequest("source must be Pos or CustomerLink.");
+        }
+
+        return null;
     }
 
     private static string BuildRangeExportFileName(
