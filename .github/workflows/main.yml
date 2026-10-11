@@ -54,8 +54,19 @@ jobs:
           echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
 
   test-api:
-    name: Test API (unit)
+    name: Test API (unit and database)
     runs-on: ubuntu-latest
+    # A throw-away SQL Server for the tests that need real constraints, transactions and collation.
+    # The password only protects this container, which lives for the duration of the job.
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: 'Y'
+          MSSQL_PID: Developer
+          MSSQL_SA_PASSWORD: Wtf-Test-Passw0rd!
+        ports:
+          - 1433:1433
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -73,7 +84,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nuget-
 
-      - name: Run API unit tests
+      # WTF_TEST_SQL points the database tests at the container above. Each test creates and drops its own
+      # WTF_Test_* database. The tests wait for the server to accept logins, so no health check is needed here.
+      - name: Run API tests (unit and database)
+        env:
+          WTF_TEST_SQL: Server=localhost,1433;User Id=sa;Password=Wtf-Test-Passw0rd!;TrustServerCertificate=true;Encrypt=false
         run: dotnet test src/WTF.Tests/WTF.Tests.csproj --configuration Release
 
   test-frontend:

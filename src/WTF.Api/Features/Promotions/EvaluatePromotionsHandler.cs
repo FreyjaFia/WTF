@@ -49,7 +49,7 @@ public sealed class EvaluatePromotionsHandler(WTFDbContext db, IHttpContextAcces
         return new EvaluatePromotionsResponseDto(output);
     }
 
-    private static void ApplyDiscountedProducts(List<PromotionCartLineDto> workingLines, IEnumerable<Promotion> promos)
+    internal static void ApplyDiscountedProducts(List<PromotionCartLineDto> workingLines, IEnumerable<Promotion> promos)
     {
         var promosByProduct = promos
             .SelectMany(promo => promo.DiscountedProductPromotions
@@ -103,7 +103,7 @@ public sealed class EvaluatePromotionsHandler(WTFDbContext db, IHttpContextAcces
         }
     }
 
-    private static decimal? CalculateDiscountedUnitPrice(decimal basePrice, decimal? fixedPrice, decimal? percentOff)
+    internal static decimal? CalculateDiscountedUnitPrice(decimal basePrice, decimal? fixedPrice, decimal? percentOff)
     {
         if (fixedPrice.HasValue && fixedPrice.Value > 0)
         {
@@ -122,7 +122,7 @@ public sealed class EvaluatePromotionsHandler(WTFDbContext db, IHttpContextAcces
         return null;
     }
 
-    private static void ApplyFixedBundles(List<PromotionCartLineDto> workingLines, List<PromotionCartLineDto> generated, IEnumerable<Promotion> promos)
+    internal static void ApplyFixedBundles(List<PromotionCartLineDto> workingLines, List<PromotionCartLineDto> generated, IEnumerable<Promotion> promos)
     {
         foreach (var promo in promos)
         {
@@ -216,7 +216,7 @@ public sealed class EvaluatePromotionsHandler(WTFDbContext db, IHttpContextAcces
         }
     }
 
-    private static PromotionCartLineDto? ConsumeQuantity(
+    internal static PromotionCartLineDto? ConsumeQuantity(
         List<PromotionCartLineDto> lines,
         Guid productId,
         int requiredQty,
@@ -250,7 +250,7 @@ public sealed class EvaluatePromotionsHandler(WTFDbContext db, IHttpContextAcces
         return remaining == 0 ? first : null;
     }
 
-    private static bool SatisfiesRequiredAddOns(
+    internal static bool SatisfiesRequiredAddOns(
         PromotionCartLineDto line,
         IEnumerable<(Guid AddOnProductId, int Quantity)> requiredAddOns)
     {
@@ -269,7 +269,7 @@ public sealed class EvaluatePromotionsHandler(WTFDbContext db, IHttpContextAcces
         return true;
     }
 
-    private static bool SatisfiesExactAddOns(
+    internal static bool SatisfiesExactAddOns(
         PromotionCartLineDto line,
         IEnumerable<(Guid AddOnProductId, int Quantity)> requiredAddOns)
     {
@@ -305,7 +305,7 @@ public sealed class EvaluatePromotionsHandler(WTFDbContext db, IHttpContextAcces
         return true;
     }
 
-    private static PromotionCartLineDto Clone(PromotionCartLineDto line)
+    internal static PromotionCartLineDto Clone(PromotionCartLineDto line)
     {
         return new PromotionCartLineDto
         {

@@ -515,7 +515,7 @@ public class CreateOrderHandler(
         );
     }
 
-    private static bool IsPromotionActiveOnLocalDate(Promotion promotion, DateTime utcReference, TimeZoneInfo timeZone)
+    internal static bool IsPromotionActiveOnLocalDate(Promotion promotion, DateTime utcReference, TimeZoneInfo timeZone)
     {
         if (!promotion.IsActive)
         {
@@ -545,14 +545,14 @@ public class CreateOrderHandler(
         return true;
     }
 
-    private sealed record DiscountedRule(
+    internal sealed record DiscountedRule(
         decimal? FixedPrice,
         decimal? PercentOff,
         List<(Guid AddOnProductId, int Quantity)> RequiredAddOns);
 
-    private sealed record AppliedDiscount(decimal Price, string? Label);
+    internal sealed record AppliedDiscount(decimal Price, string? Label);
 
-    private static AppliedDiscount? GetDiscountedUnitPrice(
+    internal static AppliedDiscount? GetDiscountedUnitPrice(
         decimal basePrice,
         OrderItemRequestDto item,
         Dictionary<Guid, List<DiscountedRule>> rulesByProductId)
@@ -591,7 +591,7 @@ public class CreateOrderHandler(
         return best;
     }
 
-    private static bool SatisfiesExactAddOns(
+    internal static bool SatisfiesExactAddOns(
         Dictionary<Guid, int> addOnMap,
         IEnumerable<(Guid AddOnProductId, int Quantity)> requiredAddOns)
     {
@@ -621,7 +621,7 @@ public class CreateOrderHandler(
         return true;
     }
 
-    private static decimal? CalculateDiscountedUnitPrice(decimal basePrice, decimal? fixedPrice, decimal? percentOff)
+    internal static decimal? CalculateDiscountedUnitPrice(decimal basePrice, decimal? fixedPrice, decimal? percentOff)
     {
         if (fixedPrice.HasValue && fixedPrice.Value > 0)
         {
