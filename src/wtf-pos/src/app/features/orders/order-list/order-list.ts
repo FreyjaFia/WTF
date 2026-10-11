@@ -127,6 +127,8 @@ export class OrderList implements OnInit, OnDestroy {
   protected readonly isSyncingOffline = this.offlineOrderService.isSyncing;
   protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
   protected readonly isFiltersOpen = signal(false);
+  protected readonly isAwaitingExpanded = signal(true);
+  protected readonly isPendingExpanded = signal(true);
   protected readonly sortColumn = signal<SortColumn | null>(null);
   protected readonly sortDirection = signal<SortDirection>('desc');
   protected readonly selectedStatuses = signal<OrderStatusEnum[]>([]);
@@ -899,10 +901,6 @@ export class OrderList implements OnInit, OnDestroy {
 
   protected openAwaitingOrder(order: OrderDto): void {
     this.router.navigateByUrl(AppRoutes.OrderDetailsById(order.id));
-  }
-
-  protected awaitingItemsSummary(order: OrderDto): string {
-    return order.items.map((item) => `${item.quantity}x ${item.productName}`).join(', ');
   }
 
   protected isDelivery(order: OrderDto): boolean {

@@ -906,7 +906,7 @@ describe('OrderList', () => {
       expect(banner()).toBeNull();
     });
 
-    it('shows the customer, how it is handed over, the items, contact, total and the change to prepare', () => {
+    it('shows the customer, how it is handed over, the item count, total and payment method', () => {
       orderService.getAwaitingOrders.mockReturnValue(of([waiting('o1', { orderNumber: 1042 })]));
       init();
 
@@ -914,27 +914,20 @@ describe('OrderList', () => {
       expect(text).toContain('#1042');
       expect(text).toContain('Maria Cruz');
       expect(text).toContain('Pickup');
-      expect(text).toContain('2x Latte');
-      expect(text).toContain('0917 123 4567');
+      expect(text).toContain('2 items');
+      expect(text).not.toContain('Latte');
       expect(text).toContain('360.00');
       expect(text).toContain('Cash');
-      expect(text).toContain('prepare change');
-      expect(text).toContain('140.00');
     });
 
-    it('shows the tip the customer plans to leave', () => {
+    it('leaves the contact number, tip and change to the order details', () => {
       orderService.getAwaitingOrders.mockReturnValue(of([waiting('o1', { tips: 20 })]));
       init();
 
-      expect(banner()!.textContent).toContain('Tip');
-      expect(banner()!.textContent).toContain('20.00');
-    });
-
-    it('shows no tip when there is none', () => {
-      orderService.getAwaitingOrders.mockReturnValue(of([waiting('o1', { tips: null })]));
-      init();
-
-      expect(banner()!.textContent).not.toContain('Tip');
+      const text = banner()!.textContent ?? '';
+      expect(text).not.toContain('0917 123 4567');
+      expect(text).not.toContain('Tip');
+      expect(text).not.toContain('prepare change');
     });
 
     it('shows the address and the notes for a delivery', () => {

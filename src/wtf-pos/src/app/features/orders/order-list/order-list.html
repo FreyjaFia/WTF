@@ -202,17 +202,31 @@
   }
 
   <!-- Orders waiting for approval (placed by customers through their link) -->
-  @if (awaitingOrders().length > 0) {
-    <div class="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4" data-awaiting-approval>
-      <div class="mb-3 flex items-center gap-2">
+  @if (isOnline() && awaitingOrders().length > 0) {
+    <div
+      class="mb-4 shrink-0 rounded-xl border border-amber-200 bg-amber-50 p-4"
+      data-awaiting-approval
+    >
+      <button
+        type="button"
+        class="flex w-full items-center gap-2 text-left"
+        [class.mb-3]="isAwaitingExpanded()"
+        [attr.aria-expanded]="isAwaitingExpanded()"
+        (click)="isAwaitingExpanded.set(!isAwaitingExpanded())"
+      >
         <div
           class="flex h-6 w-6 items-center justify-center rounded-full bg-amber-400 text-xs font-bold text-white"
         >
           {{ awaitingOrders().length }}
         </div>
         <span class="text-sm font-semibold text-amber-800">Awaiting approval</span>
-      </div>
-      <div class="space-y-2">
+        <app-icon
+          [name]="isAwaitingExpanded() ? 'icon-chevron-up' : 'icon-chevron-down'"
+          [class]="'ml-auto h-4 w-4 text-amber-800'"
+          [fill]="'currentColor'"
+        />
+      </button>
+      <div class="max-h-[40vh] space-y-2 overflow-y-auto" [class.hidden]="!isAwaitingExpanded()">
         @for (waiting of awaitingOrders(); track waiting.id) {
           <div class="rounded-lg bg-white px-3 py-3 shadow-sm">
             <div
@@ -235,53 +249,29 @@
                     isDelivery(waiting) ? 'Delivery' : 'Pickup'
                   }}</app-badge>
                 </div>
-                <span class="text-sm font-bold whitespace-nowrap text-gray-900">
-                  <app-icon
-                    name="icon-peso"
-                    [class]="'inline h-3 w-3 align-[-0.125em]'"
-                    [fill]="'currentColor'"
-                  />{{ waiting.totalAmount | number: '1.2-2' }}
+                <span class="text-base font-semibold whitespace-nowrap text-black lg:text-lg">
+                  <span class="text-sm opacity-70 lg:text-base"
+                    ><app-icon
+                      name="icon-peso"
+                      [class]="'inline h-3 w-3 align-[-0.125em]'"
+                      [fill]="'currentColor'" /></span
+                  >{{ waiting.totalAmount | number: '1.2-2' }}
                 </span>
               </div>
-              <p class="text-xs wrap-break-word text-gray-500">
-                {{ awaitingItemsSummary(waiting) }}
-              </p>
               <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-gray-500">
                 <span>{{ waiting.createdAt | date: 'd MMM, h:mm a' }}</span>
-                @if (waiting.contactNumber) {
-                  <span>{{ waiting.contactNumber }}</span>
-                }
+                <span>&middot; {{ getItemsText(waiting) }}</span>
                 @if (waiting.paymentMethod === PaymentMethodEnum.Cash) {
-                  <span>
-                    Cash
-                    @if (waiting.changeAmount != null) {
-                      &middot; prepare change
-                      <app-icon
-                        name="icon-peso"
-                        [class]="'inline h-2.5 w-2.5 align-[-0.125em]'"
-                        [fill]="'currentColor'"
-                      />{{ waiting.changeAmount | number: '1.2-2' }}
-                    }
-                  </span>
+                  <span>&middot; Cash</span>
                 } @else if (waiting.paymentMethod === PaymentMethodEnum.GCash) {
-                  <span>GCash</span>
-                }
-                @if (waiting.tips) {
-                  <span class="font-medium text-emerald-700">
-                    Tip
-                    <app-icon
-                      name="icon-peso"
-                      [class]="'inline h-2.5 w-2.5 align-[-0.125em]'"
-                      [fill]="'currentColor'"
-                    />{{ waiting.tips | number: '1.2-2' }}
-                  </span>
+                  <span>&middot; GCash</span>
                 }
               </div>
               @if (isDelivery(waiting) && waiting.deliveryAddress) {
                 <p class="text-xs wrap-break-word text-gray-500">{{ waiting.deliveryAddress }}</p>
               }
               @if (waiting.specialInstructions) {
-                <p class="text-xs wrap-break-word text-gray-400 italic">
+                <p class="truncate text-xs text-gray-400 italic">
                   {{ waiting.specialInstructions }}
                 </p>
               }
@@ -335,16 +325,26 @@
   @if (!isLoading()) {
     <!-- Pending Offline Orders -->
     @if (pendingOrders().length > 0) {
-      <div class="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
-        <div class="mb-3 flex items-center justify-between">
-          <div class="flex items-center gap-2">
+      <div class="mb-4 shrink-0 rounded-xl border border-amber-200 bg-amber-50 p-4">
+        <div class="flex items-center justify-between gap-2" [class.mb-3]="isPendingExpanded()">
+          <button
+            type="button"
+            class="flex min-w-0 flex-1 items-center gap-2 text-left"
+            [attr.aria-expanded]="isPendingExpanded()"
+            (click)="isPendingExpanded.set(!isPendingExpanded())"
+          >
             <div
               class="flex h-6 w-6 items-center justify-center rounded-full bg-amber-400 text-xs font-bold text-white"
             >
               {{ pendingOrders().length }}
             </div>
             <span class="text-sm font-semibold text-amber-800">Pending Offline Orders</span>
-          </div>
+            <app-icon
+              [name]="isPendingExpanded() ? 'icon-chevron-up' : 'icon-chevron-down'"
+              [class]="'h-4 w-4 text-amber-800'"
+              [fill]="'currentColor'"
+            />
+          </button>
           <button
             type="button"
             class="app-btn app-btn-ghost-warning app-btn-sm"
@@ -359,7 +359,7 @@
             }
           </button>
         </div>
-        <div class="space-y-2">
+        <div class="max-h-[25vh] space-y-2 overflow-y-auto" [class.hidden]="!isPendingExpanded()">
           @for (pending of pendingOrders(); track pending.localId) {
             <div
               class="flex cursor-pointer items-center justify-between rounded-lg bg-white px-3 py-2.5 shadow-sm transition-colors hover:bg-gray-50 active:bg-gray-100"
@@ -390,20 +390,22 @@
                     <span>&middot;</span>
                   }
                   <span>{{ getPendingItemCount(pending.cartSnapshot) }}</span>
-                  <span>&middot;</span>
-                  <span
-                    ><app-icon
-                      name="icon-peso"
-                      [class]="'inline h-3 w-3 align-[-0.125em]'"
-                      [fill]="'currentColor'"
-                    />{{ getPendingTotal(pending.cartSnapshot) | number: '1.2-2' }}</span
-                  >
                 </div>
                 @if (pending.errorMessage) {
                   <div class="mt-0.5 text-xs text-red-500">{{ pending.errorMessage }}</div>
                 }
               </div>
-              <app-icon name="icon-chevrons-right" [class]="'h-4 w-4 shrink-0 text-gray-400'" />
+              <div class="flex shrink-0 items-center gap-2">
+                <span class="text-base font-semibold whitespace-nowrap text-black lg:text-lg">
+                  <span class="text-sm opacity-70 lg:text-base"
+                    ><app-icon
+                      name="icon-peso"
+                      [class]="'inline h-3 w-3 align-[-0.125em]'"
+                      [fill]="'currentColor'" /></span
+                  >{{ getPendingTotal(pending.cartSnapshot) | number: '1.2-2' }}
+                </span>
+                <app-icon name="icon-chevrons-right" [class]="'h-4 w-4 shrink-0 text-gray-400'" />
+              </div>
             </div>
           }
         </div>
