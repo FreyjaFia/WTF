@@ -17,11 +17,6 @@ using WTF.Domain.Data;
 
 namespace WTF.Tests.Endpoints;
 
-internal sealed class BodyDetection : Microsoft.AspNetCore.Http.Features.IHttpRequestBodyDetectionFeature
-{
-    public bool CanHaveBody => true;
-}
-
 /// <summary>Builds the real route table and authorization policies in memory (no server, no database).</summary>
 internal sealed class EndpointTestHost : IDisposable
 {
