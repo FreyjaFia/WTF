@@ -19,6 +19,7 @@ public class CreateUserHandler(WTFDbContext db, IHttpContextAccessor httpContext
 
         UserValidation.EnsureValidUsername(request.Username);
         UserValidation.EnsureValidPassword(request.Password);
+        await UserValidation.EnsureUniqueUsernameAsync(db, request.Username, null, cancellationToken);
 
         var user = new User
         {

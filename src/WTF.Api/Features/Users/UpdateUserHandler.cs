@@ -34,6 +34,7 @@ public class UpdateUserHandler(WTFDbContext db, IHttpContextAccessor httpContext
 
         UserValidation.EnsureValidUsername(request.Username);
         UserValidation.EnsureValidPassword(request.Password, isUpdate: true);
+        await UserValidation.EnsureUniqueUsernameAsync(db, request.Username, user.Id, cancellationToken);
 
         user.FirstName = request.FirstName;
         user.LastName = request.LastName;
