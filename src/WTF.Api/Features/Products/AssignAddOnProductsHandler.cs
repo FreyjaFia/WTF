@@ -82,7 +82,7 @@ public class AssignAddOnProductsHandler(WTFDbContext db) : IRequestHandler<Assig
         if (removedProductIds.Count != 0)
         {
             var pendingOrders = await db.Orders
-                .Where(o => o.StatusId == (int)OrderStatusEnum.Pending)
+                .Where(o => o.StatusId == (int)OrderStatusEnum.Pending || o.StatusId == (int)OrderStatusEnum.PendingApproval)
                 .Select(o => o.Id)
                 .ToListAsync(cancellationToken);
 

@@ -120,7 +120,14 @@ public class GetOrderByIdHandler(WTFDbContext db) : IRequestHandler<GetOrderById
             order.Customer == null ? null : $"{order.Customer.FirstName} {order.Customer.LastName}".Trim(),
             bundlePromotions,
             order.OverrideReason,
-            order.OverriddenAt
+            order.OverriddenAt,
+            (OrderSourceEnum)order.Source,
+            order.FulfillmentType.HasValue ? (FulfillmentTypeEnum)order.FulfillmentType.Value : null,
+            order.DeliveryAddress,
+            order.ContactNumber,
+            order.RejectionReason,
+            order.AcceptedAt,
+            order.ReadyAt
         );
     }
 }

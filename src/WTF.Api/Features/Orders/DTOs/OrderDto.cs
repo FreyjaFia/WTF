@@ -9,4 +9,11 @@ public record OrderDto(
     string? CustomerName = null,
     List<OrderBundlePromotionDto>? BundlePromotions = null,
     string? OverrideReason = null,
-    DateTime? OverriddenAt = null);
+    DateTime? OverriddenAt = null,
+    OrderSourceEnum Source = OrderSourceEnum.Pos,
+    FulfillmentTypeEnum? FulfillmentType = null,
+    string? DeliveryAddress = null,
+    string? ContactNumber = null,
+    string? RejectionReason = null,
+    DateTime? AcceptedAt = null,
+    DateTime? ReadyAt = null);

@@ -359,4 +359,129 @@ public class PushNotificationServiceTests
 
         await _fcm.Received(1).SendAsync("t1", Arg.Any<string>(), Arg.Any<string>(), AnyData(), cts.Token);
     }
+
+    // ---- online (customer link) orders -----------------------------------------------------------
+
+    private Task SendOnline(string? customer = "Maria Cruz", FulfillmentTypeEnum? fulfillment = FulfillmentTypeEnum.Delivery) =>
+        Service().SendLinkOrderCreatedAsync(_order, 360m, customer, fulfillment, CancellationToken.None);
+
+    [Fact]
+    public async Task SendLinkOrderCreatedAsync_TellsStaffAboutTheOnlineOrderAndOpensTheOrdersList()
+    {
+        AddToken(AddUser(), "t1");
+
+        await SendOnline();
+
+        var call = Sends(_fcm).Single().GetArguments();
+        call[0].ShouldBe("t1");
+        call[1].ShouldBe("New online order");
+        call[2].ShouldBe("Order #42 - Maria Cruz - Delivery - PHP 360.00");
+        var data = (IReadOnlyDictionary<string, string>)call[3]!;
+        data["orderId"].ShouldBe(_order.Id.ToString());
+        data["orderNumber"].ShouldBe("42");
+        data["type"].ShouldBe("online-order");
+        data["type"].ShouldBe(PushTypes.OnlineOrder);
+        data["path"].ShouldBe("/orders/list");
+    }
+
+    [Fact]
+    public async Task SendLinkOrderCreatedAsync_DoesNotOpenTheEditor_WhichCannotShowAWaitingOrder()
+    {
+        AddToken(AddUser(), "t1");
+
+        await SendOnline();
+
+        var data = (IReadOnlyDictionary<string, string>)Sends(_fcm).Single().GetArguments()[3]!;
+        data["path"].ShouldNotContain("/orders/editor");
+    }
+
+    [Theory]
+    [InlineData("Maria Cruz", FulfillmentTypeEnum.Pickup, "Order #42 - Maria Cruz - Pickup - PHP 360.00")]
+    [InlineData("  Maria  ", FulfillmentTypeEnum.Delivery, "Order #42 - Maria - Delivery - PHP 360.00")]
+    [InlineData(null, FulfillmentTypeEnum.Pickup, "Order #42 - Pickup - PHP 360.00")]
+    [InlineData("", FulfillmentTypeEnum.Delivery, "Order #42 - Delivery - PHP 360.00")]
+    [InlineData("Maria Cruz", null, "Order #42 - Maria Cruz - PHP 360.00")]
+    public async Task SendLinkOrderCreatedAsync_BodyLeavesOutWhatIsMissing(
+        string? customer, FulfillmentTypeEnum? fulfillment, string expectedBody)
+    {
+        AddToken(AddUser(), "t1");
+
+        await SendOnline(customer, fulfillment);
+
+        Sends(_fcm).Single().GetArguments()[2].ShouldBe(expectedBody);
+    }
+
+    [Fact]
+    public async Task SendLinkOrderCreatedAsync_GoesToEveryActiveStaffMemberExceptViewers_NobodyIsExcludedAsTheActor()
+    {
+        var cashier = AddUser();
+        var admin = AddUser(3);
+        var viewer = AddUser(2);
+        var inactiveUser = AddUser(active: false);
+        AddToken(cashier, "cashier-token");
+        AddToken(admin, "admin-token");
+        AddToken(viewer, "viewer-token");
+        AddToken(inactiveUser, "inactive-user-token");
+        AddToken(cashier, "inactive-token", active: false);
+        // The order is owned by the inactive system user, so even a user who happens to match must still be told.
+        AddToken(AddUser(id: _actor), "actor-token");
+
+        await SendOnline();
+
+        Sends(_fcm).Select(c => (string)c.GetArguments()[0]!).OrderBy(x => x)
+            .ShouldBe(["actor-token", "admin-token", "cashier-token"]);
+    }
+
+    [Fact]
+    public async Task SendLinkOrderCreatedAsync_SplitsFcmAndHuaweiTokens()
+    {
+        var user = AddUser();
+        AddToken(user, "android-1", "android");
+        AddToken(user, "hw-1", "huawei");
+
+        await SendOnline();
+
+        Sends(_fcm).Select(c => (string)c.GetArguments()[0]!).ShouldBe(["android-1"]);
+        Sends(_huawei).Select(c => (string)c.GetArguments()[0]!).ShouldBe(["hw-1"]);
+    }
+
+    [Fact]
+    public async Task SendLinkOrderCreatedAsync_NothingConfiguredOrNoTokens_SendsNothing()
+    {
+        await SendOnline();
+        Sends(_fcm).ShouldBeEmpty();
+
+        _fcm.IsConfigured.Returns(false);
+        _huawei.IsConfigured.Returns(false);
+        AddToken(AddUser(), "t1");
+        await SendOnline();
+
+        Sends(_fcm).ShouldBeEmpty();
+        Sends(_huawei).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task SendLinkOrderCreatedAsync_OneClientFailing_DoesNotStopTheOthersOrFailTheOrder()
+    {
+        var user = AddUser();
+        AddToken(user, "android-1", "android");
+        AddToken(user, "hw-1", "huawei");
+        _fcm.SendAsync(default!, default!, default!, default, default).ThrowsAsyncForAnyArgs(new InvalidOperationException("boom"));
+
+        await Should.NotThrowAsync(() => SendOnline());
+
+        Sends(_huawei).Count().ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task SendOrderCreatedAsync_ForPosOrders_IsUnchangedAndCarriesNoType()
+    {
+        AddToken(AddUser(), "t1");
+
+        await SendCreated();
+
+        var data = (IReadOnlyDictionary<string, string>)Sends(_fcm).Single().GetArguments()[3]!;
+        data.ContainsKey("type").ShouldBeFalse();
+        data["path"].ShouldStartWith("/orders/editor/");
+    }
 }

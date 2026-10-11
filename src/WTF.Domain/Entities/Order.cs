@@ -49,6 +49,10 @@ public partial class Order
 
     public string? RejectionReason { get; set; }
 
+    public DateTime? AcceptedAt { get; set; }
+
+    public DateTime? ReadyAt { get; set; }
+
     public virtual User CreatedByNavigation { get; set; } = null!;
 
     public virtual Customer? Customer { get; set; }

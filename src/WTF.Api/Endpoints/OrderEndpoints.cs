@@ -5,6 +5,8 @@ using WTF.Api.Features.Orders.Enums;
 
 namespace WTF.Api.Endpoints;
 
+public record RejectOrderRequest(string Reason);
+
 public static class OrderEndpoints
 {
     public static IEndpointRouteBuilder MapOrders(this IEndpointRouteBuilder app)
@@ -105,6 +107,33 @@ public static class OrderEndpoints
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             })
             .RequireAuthorization(AppPolicies.OrdersOverride);
+
+        // POST /api/orders/{id}/approve - Accept an order a customer placed through their link (-> Pending)
+        orderGroup.MapPost("/{id:guid}/approve",
+            async (Guid id, ISender sender) =>
+            {
+                var result = await sender.Send(new ApproveOrderCommand(id));
+                return result is not null ? Results.Ok(result) : Results.NotFound();
+            })
+            .RequireAuthorization(AppPolicies.OrdersWrite);
+
+        // POST /api/orders/{id}/ready - An accepted customer order is ready for pickup or delivery
+        orderGroup.MapPost("/{id:guid}/ready",
+            async (Guid id, ISender sender) =>
+            {
+                var result = await sender.Send(new MarkOrderReadyCommand(id));
+                return result is not null ? Results.Ok(result) : Results.NotFound();
+            })
+            .RequireAuthorization(AppPolicies.OrdersWrite);
+
+        // POST /api/orders/{id}/reject - Turn down an order a customer placed through their link (reason required)
+        orderGroup.MapPost("/{id:guid}/reject",
+            async (Guid id, RejectOrderRequest request, ISender sender) =>
+            {
+                var result = await sender.Send(new RejectOrderCommand(id, request.Reason));
+                return result is not null ? Results.Ok(result) : Results.NotFound();
+            })
+            .RequireAuthorization(AppPolicies.OrdersWrite);
 
         // PATCH /api/orders/{id}/void - Void order (Pending -> Cancelled, Completed -> Refunded)
         orderGroup.MapPatch("/{id:guid}/void",

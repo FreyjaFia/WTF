@@ -269,6 +269,17 @@ public class UpdateOrderHandler(
 
         var oldStatus = (OrderStatusEnum)order.StatusId;
         var newStatus = request.Status;
+
+        if (newStatus == OrderStatusEnum.PendingApproval)
+        {
+            throw new InvalidOperationException("An order cannot be set to waiting for approval.");
+        }
+
+        if (oldStatus == OrderStatusEnum.PendingApproval)
+        {
+            throw new InvalidOperationException("This order is waiting for approval. Accept or reject it first.");
+        }
+
         var isOverride = request.IsOverride;
         var overrideReason = request.OverrideReason?.Trim();
         if (isOverride)

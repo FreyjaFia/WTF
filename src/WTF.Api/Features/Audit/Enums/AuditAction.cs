@@ -32,5 +32,6 @@ public enum AuditAction
     OrderLinkCreated,
     OrderLinkRevoked,
     OrderApproved,
-    OrderRejected
+    OrderRejected,
+    OrderMarkedReady
 }

@@ -35,9 +35,15 @@ public sealed class GetPagedOrdersHandler(WTFDbContext db)
         {
             baseQuery = baseQuery.Where(o => o.StatusId == (int)request.Status);
         }
-        else if (request.ExcludeFinalized)
+        else
         {
-            baseQuery = baseQuery.Where(o => o.StatusId != (int)OrderStatusEnum.Completed && o.StatusId != (int)OrderStatusEnum.Refunded);
+            // Orders waiting for staff approval are not part of the normal list: they only come back when asked for.
+            baseQuery = baseQuery.Where(o => o.StatusId != (int)OrderStatusEnum.PendingApproval);
+
+            if (request.ExcludeFinalized)
+            {
+                baseQuery = baseQuery.Where(o => o.StatusId != (int)OrderStatusEnum.Completed && o.StatusId != (int)OrderStatusEnum.Refunded);
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(request.SearchTerm))
@@ -165,7 +171,14 @@ public sealed class GetPagedOrdersHandler(WTFDbContext db)
                 o.Customer == null ? null : $"{o.Customer.FirstName} {o.Customer.LastName}".Trim(),
                 bundlePromotions,
                 o.OverrideReason,
-                o.OverriddenAt);
+                o.OverriddenAt,
+                (OrderSourceEnum)o.Source,
+                o.FulfillmentType.HasValue ? (FulfillmentTypeEnum)o.FulfillmentType.Value : null,
+                o.DeliveryAddress,
+                o.ContactNumber,
+                o.RejectionReason,
+                o.AcceptedAt,
+                o.ReadyAt);
         }).ToList();
 
         return new PagedResultDto<OrderDto>(items, page, pageSize, totalCount);

@@ -46,6 +46,7 @@ public class RouteTableTests : IDisposable
         "GET /api/loyalty/redirect/{token} => anonymous",
         "GET /api/public/order-links/{token}/ => anonymous",
         "GET /api/public/order-links/{token}/orders => anonymous",
+        "POST /api/public/order-links/{token}/orders => anonymous",
         "GET /api/public/order-links/{token}/orders/{orderId:guid} => anonymous",
         "GET /api/loyalty/{customerId:guid} => CustomersRead",
         "GET /api/management/promotions/discounted-products/ => PromotionsRead",
@@ -75,6 +76,9 @@ public class RouteTableTests : IDisposable
         "GET /api/orders/{id:guid} => OrdersRead",
         "PUT /api/orders/{id:guid} => OrdersWrite",
         "PUT /api/orders/{id:guid}/override => OrdersOverride",
+        "POST /api/orders/{id:guid}/approve => OrdersWrite",
+        "POST /api/orders/{id:guid}/ready => OrdersWrite",
+        "POST /api/orders/{id:guid}/reject => OrdersWrite",
         "PATCH /api/orders/{id:guid}/void => OrdersWrite",
         "GET /api/pos/promotions/discounted-products => OrdersWrite",
         "POST /api/pos/promotions/evaluate => OrdersWrite",
@@ -165,6 +169,7 @@ public class RouteTableTests : IDisposable
             "POST /api/auth/logout",
             "POST /api/auth/refresh",
             "POST /api/auth/validate",
+            "POST /api/public/order-links/{token}/orders",
         ]);
     }
 
@@ -185,6 +190,7 @@ public class RouteTableTests : IDisposable
             "POST /api/auth/logout => anonymous",
             "POST /api/auth/refresh => anonymous",
             "POST /api/auth/validate => anonymous",
+            "POST /api/public/order-links/{token}/orders => anonymous",
             "POST /api/push/subscribe => authenticated",
             "POST /api/push/unsubscribe => authenticated",
             "PUT /api/auth/me => authenticated",

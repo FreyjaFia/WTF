@@ -152,6 +152,87 @@ public class PublicOrderLinkTests
         (await Resolve(link.Token.ToUpperInvariant())).ShouldBeNull();
     }
 
+    // --- checking again right before something is finalized ---
+
+    [Fact]
+    public async Task StillValid_AnActiveLink_IsValid()
+    {
+        var customer = await AddCustomerAsync();
+        var link = await AddLinkAsync(customer.Id, expiresAt: DateTime.UtcNow.AddHours(1));
+
+        (await OrderLinkAccess.IsStillValidAsync(TestDb.Create(_db), link.Id, DateTime.UtcNow, default)).ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task StillValid_EveryWayALinkStopsBeingValid_IsNotValid()
+    {
+        var good = await AddCustomerAsync();
+        var disabled = await AddCustomerAsync(allow: false);
+        var inactive = await AddCustomerAsync(active: false);
+        var now = DateTime.UtcNow;
+
+        var revoked = await AddLinkAsync(good.Id, revokedAt: now.AddMinutes(-1));
+        var expired = await AddLinkAsync(good.Id, expiresAt: now.AddSeconds(-1));
+        var endsNow = await AddLinkAsync(good.Id, expiresAt: now);
+        var ordering = await AddLinkAsync(disabled.Id);
+        var gone = await AddLinkAsync(inactive.Id);
+        var loyalty = await AddLinkAsync(good.Id, targetType: "Loyalty");
+
+        foreach (var id in new[] { revoked.Id, expired.Id, endsNow.Id, ordering.Id, gone.Id, loyalty.Id, Guid.NewGuid() })
+        {
+            (await OrderLinkAccess.IsStillValidAsync(TestDb.Create(_db), id, now, default)).ShouldBeFalse();
+        }
+    }
+
+    [Fact]
+    public async Task StillValid_SeesARevokeMadeAfterTheLinkWasAlreadyLoaded()
+    {
+        var customer = await AddCustomerAsync();
+        var link = await AddLinkAsync(customer.Id);
+        var db = TestDb.Create(_db);
+
+        // The first check loads (and tracks) the link in this context...
+        (await OrderLinkAccess.ResolveAsync(db, link.Token, default)).ShouldNotBeNull();
+
+        // ...then someone else revokes it.
+        await using (var other = TestDb.Create(_db))
+        {
+            (await other.ShortLinks.SingleAsync()).RevokedAt = DateTime.UtcNow;
+            await other.SaveChangesAsync();
+        }
+
+        // A second ResolveAsync would still see the tracked, stale copy; the re-check must not.
+        (await OrderLinkAccess.IsStillValidAsync(db, link.Id, DateTime.UtcNow, default)).ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task StillValid_SeesOrderingBeingSwitchedOffAfterTheCustomerWasAlreadyLoaded()
+    {
+        var customer = await AddCustomerAsync();
+        var link = await AddLinkAsync(customer.Id);
+        var db = TestDb.Create(_db);
+        (await OrderLinkAccess.ResolveAsync(db, link.Token, default)).ShouldNotBeNull();
+
+        await using (var other = TestDb.Create(_db))
+        {
+            (await other.Customers.SingleAsync()).AllowOrderingLink = false;
+            await other.SaveChangesAsync();
+        }
+
+        (await OrderLinkAccess.IsStillValidAsync(db, link.Id, DateTime.UtcNow, default)).ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task Resolve_UsesTheTimeItIsGiven()
+    {
+        var customer = await AddCustomerAsync();
+        var end = DateTime.UtcNow.AddMinutes(10);
+        var link = await AddLinkAsync(customer.Id, expiresAt: end);
+
+        (await OrderLinkAccess.ResolveAsync(TestDb.Create(_db), link.Token, default, end.AddMinutes(-1))).ShouldNotBeNull();
+        (await OrderLinkAccess.ResolveAsync(TestDb.Create(_db), link.Token, default, end.AddMinutes(1))).ShouldBeNull();
+    }
+
     // --- opening a link ---
 
     [Fact]
@@ -455,6 +536,64 @@ public class PublicOrderLinkTests
     public void StatusOf_MapsToCustomerFacingLabels(OrderStatusEnum status, string? reason, string label, string kind)
     {
         PublicOrderMapping.StatusOf((int)status, reason).ShouldBe((label, kind));
+    }
+
+    [Theory]
+    [InlineData(FulfillmentTypeEnum.Pickup, "Ready for pickup")]
+    [InlineData(FulfillmentTypeEnum.Delivery, "Ready for delivery")]
+    public void StatusOf_AnAcceptedOrderThatIsReady_SaysWhereToGetIt(FulfillmentTypeEnum fulfillment, string label)
+    {
+        PublicOrderMapping.StatusOf((int)OrderStatusEnum.Pending, null, DateTime.UtcNow, (byte)fulfillment)
+            .ShouldBe((label, "ready"));
+    }
+
+    [Fact]
+    public void StatusOf_ReadyOnlyMattersWhileTheOrderIsStillAccepted()
+    {
+        PublicOrderMapping.StatusOf((int)OrderStatusEnum.Completed, null, DateTime.UtcNow, 0).Kind.ShouldBe("completed");
+        PublicOrderMapping.StatusOf((int)OrderStatusEnum.Cancelled, "no", DateTime.UtcNow, 0).Kind.ShouldBe("rejected");
+    }
+
+    [Fact]
+    public async Task Order_CarriesTheTimesForTheTimeline()
+    {
+        var ana = await AddCustomerAsync();
+        var link = await AddLinkAsync(ana.Id);
+        var accepted = DateTime.UtcNow.AddMinutes(-30);
+        var ready = DateTime.UtcNow.AddMinutes(-10);
+        var done = DateTime.UtcNow.AddMinutes(-2);
+        var order = await AddOrderAsync(ana.Id, status: OrderStatusEnum.Completed);
+        await using (var db = TestDb.Create(_db))
+        {
+            var row = await db.Orders.SingleAsync(o => o.Id == order.Id);
+            row.AcceptedAt = accepted;
+            row.ReadyAt = ready;
+            row.UpdatedAt = done;
+            await db.SaveChangesAsync();
+        }
+
+        var dto = await Orders().Handle(new GetPublicOrderQuery(link.Token, order.Id), CancellationToken.None);
+
+        dto!.AcceptedAt.ShouldBe(accepted);
+        dto.ReadyAt.ShouldBe(ready);
+        dto.FinishedAt.ShouldBe(done);
+    }
+
+    [Fact]
+    public async Task Order_StillOpenHasNoFinishTime()
+    {
+        var ana = await AddCustomerAsync();
+        var link = await AddLinkAsync(ana.Id);
+        var order = await AddOrderAsync(ana.Id, status: OrderStatusEnum.Pending);
+        await using (var db = TestDb.Create(_db))
+        {
+            (await db.Orders.SingleAsync(o => o.Id == order.Id)).UpdatedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync();
+        }
+
+        var dto = await Orders().Handle(new GetPublicOrderQuery(link.Token, order.Id), CancellationToken.None);
+
+        dto!.FinishedAt.ShouldBeNull();
     }
 
     [Fact]

@@ -39,6 +39,14 @@ public static class PublicOrderLinkEndpoints
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             });
 
+        // POST /api/public/order-links/{token}/orders - Place an order (waits for staff approval)
+        group.MapPost("/orders",
+            async (string token, SubmitPublicOrderRequest request, ISender sender) =>
+            {
+                var result = await sender.Send(new SubmitPublicOrderCommand(token, request));
+                return result is not null ? Results.Ok(result) : Results.NotFound();
+            });
+
         // GET /api/public/order-links/{token}/orders/{orderId} - One of my orders
         group.MapGet("/orders/{orderId:guid}",
             async (string token, Guid orderId, ISender sender) =>

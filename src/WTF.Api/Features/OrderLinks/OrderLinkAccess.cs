@@ -15,8 +15,9 @@ public sealed record OrderLinkAccessResult(ShortLink Link, Customer Customer);
 public static class OrderLinkAccess
 {
     public static async Task<OrderLinkAccessResult?> ResolveAsync(
-        WTFDbContext db, string? token, CancellationToken cancellationToken)
+        WTFDbContext db, string? token, CancellationToken cancellationToken, DateTime? nowUtc = null)
     {
+        var now = nowUtc ?? DateTime.UtcNow;
         if (string.IsNullOrWhiteSpace(token) || token.Length > 64)
         {
             return null;
@@ -30,7 +31,7 @@ public static class OrderLinkAccess
         if (link == null
             || !string.Equals(link.Token, token, StringComparison.Ordinal)
             || link.RevokedAt.HasValue
-            || (link.ExpiresAt.HasValue && link.ExpiresAt <= DateTime.UtcNow)
+            || (link.ExpiresAt.HasValue && link.ExpiresAt <= now)
             || !link.TargetId.HasValue)
         {
             return null;
@@ -43,5 +44,27 @@ public static class OrderLinkAccess
         }
 
         return new OrderLinkAccessResult(link, customer);
+    }
+
+    /// <summary>
+    /// Asks the database again, right now, whether this link may still be used. Call it immediately before an action
+    /// is finalized: a link revoked, expired or switched off after the first check (while the customer filled in a
+    /// form, or while the request was being validated) must not still go through.
+    ///
+    /// It deliberately projects to a yes/no instead of loading the link again: EF Core keeps the values of an entity it
+    /// already tracks and does not refresh them from a second query, which would make a re-check of the same
+    /// <see cref="ShortLink"/> instance always agree with the first one.
+    /// </summary>
+    public static Task<bool> IsStillValidAsync(
+        WTFDbContext db, Guid linkId, DateTime nowUtc, CancellationToken cancellationToken)
+    {
+        return db.ShortLinks
+            .AsNoTracking()
+            .Where(l => l.Id == linkId
+                        && l.TargetType == OrderLinkToken.TargetType
+                        && l.RevokedAt == null
+                        && (l.ExpiresAt == null || l.ExpiresAt > nowUtc))
+            .AnyAsync(l => db.Customers.Any(c =>
+                c.Id == l.TargetId && c.IsActive && c.AllowOrderingLink), cancellationToken);
     }
 }

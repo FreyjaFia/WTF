@@ -2,6 +2,8 @@ using MediatR;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Common.Orders;
 using WTF.Api.Common.Time;
@@ -40,6 +42,28 @@ public record CreateOrderCommand : IRequest<OrderDto>
     public decimal? Tips { get; init; }
 
     public DateTime? CreatedAt { get; init; }
+
+    // The fields below are set by the server only (for orders placed through a customer ordering link). They are never
+    // read from a request body, so a signed-in caller cannot claim another user, a source or a link.
+
+    /// <summary>The user the order is created for. Null means the signed-in user of the current request.</summary>
+    [JsonIgnore]
+    public Guid? ActorUserId { get; init; }
+
+    [JsonIgnore]
+    public OrderSourceEnum Source { get; init; } = OrderSourceEnum.Pos;
+
+    [JsonIgnore]
+    public Guid? OrderLinkId { get; init; }
+
+    [JsonIgnore]
+    public FulfillmentTypeEnum? FulfillmentType { get; init; }
+
+    [JsonIgnore]
+    public string? DeliveryAddress { get; init; }
+
+    [JsonIgnore]
+    public string? ContactNumber { get; init; }
 }
 
 public class CreateOrderHandler(
@@ -51,7 +75,13 @@ public class CreateOrderHandler(
 {
     public async Task<OrderDto> Handle(CreateOrderCommand request, CancellationToken cancellationToken)
     {
-        var userId = httpContextAccessor.HttpContext!.User.GetUserId();
+        var userId = request.ActorUserId ?? httpContextAccessor.HttpContext!.User.GetUserId();
+
+        // Orders waiting for approval only come from a customer's ordering link; staff cannot create one.
+        if (request.Status == OrderStatusEnum.PendingApproval && request.Source != OrderSourceEnum.CustomerLink)
+        {
+            throw new InvalidOperationException("An order cannot be created as waiting for approval.");
+        }
 
         if (request.Items.Count == 0 && request.BundlePromotions.Count == 0)
         {
@@ -257,7 +287,12 @@ public class CreateOrderHandler(
             }
         }
 
-        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        // Several orders can be created inside one transaction (the offline sync batch opens it around them all so
+        // a failed order undoes the ones before it). SQL Server does not allow a second transaction on a connection
+        // that already has one, so join the one that is open and leave committing it to whoever started it.
+        await using var ownTransaction = db.Database.CurrentTransaction is null
+            ? await db.Database.BeginTransactionAsync(cancellationToken)
+            : null;
 
         var order = new Order
         {
@@ -270,7 +305,12 @@ public class CreateOrderHandler(
             PaymentMethodId = request.PaymentMethod.HasValue ? (int)request.PaymentMethod.Value : null,
             AmountReceived = request.AmountReceived,
             ChangeAmount = request.ChangeAmount,
-            Tips = request.Tips
+            Tips = request.Tips,
+            Source = (byte)request.Source,
+            OrderLinkId = request.OrderLinkId,
+            FulfillmentType = request.FulfillmentType.HasValue ? (byte)request.FulfillmentType.Value : null,
+            DeliveryAddress = request.DeliveryAddress,
+            ContactNumber = request.ContactNumber
         };
 
         db.Orders.Add(order);
@@ -483,15 +523,45 @@ public class CreateOrderHandler(
                 order.OrderNumber,
                 order.StatusId,
                 order.CustomerId,
+                Source = request.Source.ToString(),
                 ItemCount = items.Count,
                 totalAmount
             },
             userId: userId,
             cancellationToken: cancellationToken);
 
-        await transaction.CommitAsync(cancellationToken);
+        if (ownTransaction is not null)
+        {
+            await ownTransaction.CommitAsync(cancellationToken);
+        }
 
-        await pushNotifications.SendOrderCreatedAsync(order, totalAmount, userId, cancellationToken);
+        if (request.Source == OrderSourceEnum.CustomerLink)
+        {
+            var customerName = await db.Customers
+                .Where(c => c.Id == order.CustomerId)
+                .Select(c => c.FirstName + " " + c.LastName)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            await pushNotifications.SendLinkOrderCreatedAsync(
+                order, totalAmount, customerName, request.FulfillmentType, cancellationToken);
+        }
+        else
+        {
+            if (request.Source == OrderSourceEnum.CustomerLink)
+        {
+            var customerName = await db.Customers
+                .Where(c => c.Id == order.CustomerId)
+                .Select(c => c.FirstName + " " + c.LastName)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            await pushNotifications.SendLinkOrderCreatedAsync(
+                order, totalAmount, customerName, request.FulfillmentType, cancellationToken);
+        }
+        else
+        {
+            await pushNotifications.SendOrderCreatedAsync(order, totalAmount, userId, cancellationToken);
+        }
+        }
 
         return new OrderDto(
             order.Id,
@@ -511,7 +581,11 @@ public class CreateOrderHandler(
             order.Note,
             totalAmount,
             null,
-            bundlePromotions
+            bundlePromotions,
+            Source: request.Source,
+            FulfillmentType: request.FulfillmentType,
+            DeliveryAddress: request.DeliveryAddress,
+            ContactNumber: request.ContactNumber
         );
     }
 

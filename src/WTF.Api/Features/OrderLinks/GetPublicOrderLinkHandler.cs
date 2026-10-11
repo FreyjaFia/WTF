@@ -44,6 +44,7 @@ public class GetPublicOrderLinkHandler(WTFDbContext db, IHttpContextAccessor htt
         return new PublicOrderLinkDto(
             access.Customer.FirstName,
             access.Customer.Address,
+            access.Customer.ContactNumber,
             UrlExtensions.ToAbsoluteUrl(httpContextAccessor, imageUrl),
             access.Link.ExpiresAt,
             new PublicCatalogDto(

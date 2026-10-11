@@ -24,6 +24,7 @@ public record PublicCatalogDto(
 public record PublicOrderLinkDto(
     string FirstName,
     string? Address,
+    string? ContactNumber,
     string? ImageUrl,
     DateTime? ExpiresAt,
     PublicCatalogDto Catalog
@@ -40,8 +41,9 @@ public record PublicOrderItemDto(
 );
 
 /// <summary>
-/// <see cref="StatusKind"/> is one of waiting, accepted, completed, rejected, cancelled or refunded, so the page can
-/// pick a badge color without knowing the internal status ids.
+/// <see cref="StatusKind"/> is one of waiting, accepted, ready, completed, rejected, cancelled or refunded, so the page
+/// can pick a badge color without knowing the internal status ids. The three times draw the timeline: when staff
+/// accepted it, when it was ready, and when it ended (completed, rejected, cancelled or refunded).
 /// </summary>
 public record PublicOrderDto(
     Guid Id,
@@ -57,5 +59,9 @@ public record PublicOrderDto(
     string? ContactNumber,
     string? PaymentMethod,
     decimal? AmountReceived,
-    string? SpecialInstructions
+    decimal? Tips,
+    string? SpecialInstructions,
+    DateTime? AcceptedAt = null,
+    DateTime? ReadyAt = null,
+    DateTime? FinishedAt = null
 );

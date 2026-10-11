@@ -47,6 +47,8 @@ builder.Services.Configure<FcmOptions>(
 builder.Services.Configure<HuaweiPushOptions>(
     builder.Configuration.GetSection(HuaweiPushOptions.SectionName));
 
+// One clock for code that must be testable around time (for example an ordering link expiring mid-request).
+builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<IJwtService, JwtService>();
 builder.Services.AddScoped<IUserRoleService, UserRoleService>();
 builder.Services.AddScoped<IAuditService, AuditService>();

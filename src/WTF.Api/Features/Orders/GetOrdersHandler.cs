@@ -36,9 +36,15 @@ public class GetOrdersHandler(WTFDbContext db) : IRequestHandler<GetOrdersQuery,
         {
             query = query.Where(o => o.StatusId == (int)request.Status);
         }
-        else if (request.ExcludeFinalized)
+        else
         {
-            query = query.Where(o => o.StatusId != (int)OrderStatusEnum.Completed && o.StatusId != (int)OrderStatusEnum.Refunded);
+            // Orders waiting for staff approval are not part of the normal list: they only come back when asked for.
+            query = query.Where(o => o.StatusId != (int)OrderStatusEnum.PendingApproval);
+
+            if (request.ExcludeFinalized)
+            {
+                query = query.Where(o => o.StatusId != (int)OrderStatusEnum.Completed && o.StatusId != (int)OrderStatusEnum.Refunded);
+            }
         }
 
         var orders = await query
@@ -142,7 +148,14 @@ public class GetOrdersHandler(WTFDbContext db) : IRequestHandler<GetOrdersQuery,
                 o.Customer == null ? null : $"{o.Customer.FirstName} {o.Customer.LastName}".Trim(),
                 bundlePromotions,
                 o.OverrideReason,
-                o.OverriddenAt
+                o.OverriddenAt,
+                (OrderSourceEnum)o.Source,
+                o.FulfillmentType.HasValue ? (FulfillmentTypeEnum)o.FulfillmentType.Value : null,
+                o.DeliveryAddress,
+                o.ContactNumber,
+                o.RejectionReason,
+                o.AcceptedAt,
+                o.ReadyAt
             );
         })];
     }

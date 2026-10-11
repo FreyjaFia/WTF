@@ -12,17 +12,21 @@ public static class PublicOrderMapping
 {
     public const string Waiting = "waiting";
     public const string Accepted = "accepted";
+    public const string Ready = "ready";
     public const string Completed = "completed";
     public const string Rejected = "rejected";
     public const string Cancelled = "cancelled";
     public const string Refunded = "refunded";
 
     /// <summary>The customer-facing status. A cancelled order that has a rejection reason was rejected by staff.</summary>
-    public static (string Label, string Kind) StatusOf(int statusId, string? rejectionReason)
+    public static (string Label, string Kind) StatusOf(
+        int statusId, string? rejectionReason, DateTime? readyAt = null, byte? fulfillmentType = null)
     {
         return (OrderStatusEnum)statusId switch
         {
             OrderStatusEnum.PendingApproval => ("Waiting for confirmation", Waiting),
+            OrderStatusEnum.Pending when readyAt.HasValue =>
+                (fulfillmentType == (byte)FulfillmentTypeEnum.Delivery ? "Ready for delivery" : "Ready for pickup", Ready),
             OrderStatusEnum.Pending => ("Accepted", Accepted),
             OrderStatusEnum.Completed => ("Completed", Completed),
             OrderStatusEnum.Cancelled when !string.IsNullOrWhiteSpace(rejectionReason) => ("Rejected", Rejected),
@@ -64,7 +68,7 @@ public static class PublicOrderMapping
     private static PublicOrderDto ToDto(
         Order order, IReadOnlyDictionary<(Guid ProductId, Guid AddOnId), decimal> overridePrices)
     {
-        var (label, kind) = StatusOf(order.StatusId, order.RejectionReason);
+        var (label, kind) = StatusOf(order.StatusId, order.RejectionReason, order.ReadyAt, order.FulfillmentType);
 
         var items = order.OrderItems
             .Where(oi => oi.ParentOrderItemId == null && oi.BundlePromotionId == null)
@@ -102,6 +106,14 @@ public static class PublicOrderMapping
             order.ContactNumber,
             order.PaymentMethodId.HasValue ? ((PaymentMethodEnum)order.PaymentMethodId.Value).ToString() : null,
             order.AmountReceived,
-            order.SpecialInstructions);
+            order.Tips,
+            order.SpecialInstructions,
+            order.AcceptedAt,
+            order.ReadyAt,
+            IsFinished(order.StatusId) ? order.UpdatedAt : null);
     }
+
+    /// <summary>Completed, rejected, cancelled and refunded orders end at their last update.</summary>
+    private static bool IsFinished(int statusId) => (OrderStatusEnum)statusId is
+        OrderStatusEnum.Completed or OrderStatusEnum.Cancelled or OrderStatusEnum.Refunded;
 }

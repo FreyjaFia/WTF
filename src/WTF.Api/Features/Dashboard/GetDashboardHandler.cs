@@ -4,6 +4,7 @@ using WTF.Api.Common.Extensions;
 using WTF.Api.Common.Orders;
 using WTF.Api.Common.Time;
 using WTF.Api.Features.Dashboard.DTOs;
+using WTF.Api.Features.Orders.Enums;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 
@@ -343,6 +344,7 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
                 .ThenInclude(oi => oi.Product)
             .Include(o => o.OrderBundlePromotions)
             .Where(o => o.CreatedAt >= range.PrimaryStartUtc && o.CreatedAt < range.PrimaryEndUtc)
+            .Where(o => o.StatusId != (int)OrderStatusEnum.PendingApproval)
             .OrderByDescending(o => o.CreatedAt)
             .Take(5)
             .ToListAsync(cancellationToken);

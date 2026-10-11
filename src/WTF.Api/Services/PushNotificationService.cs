@@ -14,6 +14,17 @@ public interface IPushNotificationService
         Guid actorUserId,
         CancellationToken cancellationToken);
 
+    /// <summary>
+    /// A customer placed an order through their ordering link. It goes to every active staff member (the order is owned
+    /// by the system user, so nobody is excluded as the actor) and opens the orders list, where it waits for approval.
+    /// </summary>
+    Task SendLinkOrderCreatedAsync(
+        Order order,
+        decimal totalAmount,
+        string? customerName,
+        FulfillmentTypeEnum? fulfillment,
+        CancellationToken cancellationToken);
+
     Task SendOrderStatusChangedAsync(
         Order order,
         decimal totalAmount,
@@ -21,6 +32,12 @@ public interface IPushNotificationService
         Guid actorUserId,
         CancellationToken cancellationToken,
         bool isOverride = false);
+}
+
+/// <summary>Values of the <c>type</c> field in push data, so the app can route each kind of notification.</summary>
+public static class PushTypes
+{
+    public const string OnlineOrder = "online-order";
 }
 
 public sealed class PushNotificationService(
@@ -50,6 +67,43 @@ public sealed class PushNotificationService(
             $"Order #{order.OrderNumber} • PHP {totalAmount:N2}",
             data,
             actorUserId,
+            cancellationToken);
+    }
+
+    public Task SendLinkOrderCreatedAsync(
+        Order order,
+        decimal totalAmount,
+        string? customerName,
+        FulfillmentTypeEnum? fulfillment,
+        CancellationToken cancellationToken)
+    {
+        var data = new Dictionary<string, string>
+        {
+            ["orderId"] = order.Id.ToString(),
+            ["orderNumber"] = order.OrderNumber.ToString(),
+            ["type"] = PushTypes.OnlineOrder,
+            ["path"] = "/orders/list"
+        };
+
+        var parts = new List<string> { $"Order #{order.OrderNumber}" };
+        if (!string.IsNullOrWhiteSpace(customerName))
+        {
+            parts.Add(customerName.Trim());
+        }
+
+        if (fulfillment.HasValue)
+        {
+            parts.Add(fulfillment.Value.ToString());
+        }
+
+        parts.Add($"PHP {totalAmount:N2}");
+
+        return SendToOthersAsync(
+            order,
+            "New online order",
+            string.Join(" - ", parts),
+            data,
+            Guid.Empty,
             cancellationToken);
     }
 
