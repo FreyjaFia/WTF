@@ -157,7 +157,12 @@ body {
 
 @layer components {
   .app-btn {
-    @apply inline-flex shrink-0 items-center justify-center gap-2 rounded-lg font-medium whitespace-nowrap transition-all select-none;
+    @apply inline-flex shrink-0 items-center justify-center gap-2 rounded-lg font-medium whitespace-nowrap select-none;
+    /* Everything except the text color fades. A button that appears already has its final color, and fading the text
+       would show it going from the inherited black to white as the page loads. */
+    transition-property: background-color, border-color, box-shadow, opacity, transform;
+    transition-duration: 150ms;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
     @apply cursor-pointer active:scale-95 disabled:cursor-not-allowed disabled:active:scale-100;
   }
 
