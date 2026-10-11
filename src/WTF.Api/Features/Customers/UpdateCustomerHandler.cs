@@ -15,6 +15,8 @@ public class UpdateCustomerHandler(WTFDbContext db, IHttpContextAccessor httpCon
     public async Task<CustomerDto?> Handle(UpdateCustomerCommand request, CancellationToken cancellationToken)
     {
         var customer = await db.Customers
+            .Include(c => c.CustomerImage)
+                .ThenInclude(ci => ci!.Image)
             .FirstOrDefaultAsync(c => c.Id == request.Id, cancellationToken);
 
         if (customer == null)
@@ -54,6 +56,8 @@ public class UpdateCustomerHandler(WTFDbContext db, IHttpContextAccessor httpCon
             userId: userId,
             cancellationToken: cancellationToken);
 
-        return CustomerMapping.ToDto(customer, null);
+        var imageUrl = UrlExtensions.ToAbsoluteUrl(httpContextAccessor, customer.CustomerImage?.Image?.ImageUrl);
+
+        return CustomerMapping.ToDto(customer, imageUrl);
     }
 }
