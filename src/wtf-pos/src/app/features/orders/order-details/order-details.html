@@ -34,9 +34,14 @@
                 {{ getOrderDate(currentOrder) | date: 'd MMM y, h:mm a' }}
               </p>
             </div>
-            <app-badge [variant]="getStatusVariant(currentOrder.status)">
-              {{ getStatusLabel(currentOrder.status) }}
-            </app-badge>
+            <div class="flex flex-wrap items-center justify-end gap-2">
+              <app-badge [variant]="getStatusVariant(currentOrder.status)">
+                {{ getStatusLabel(currentOrder.status) }}
+              </app-badge>
+              @if (currentOrder.overriddenAt) {
+                <app-badge variant="amber">Overridden</app-badge>
+              }
+            </div>
           </div>
 
           <div class="mt-3 flex flex-wrap items-center gap-2">
@@ -67,9 +72,7 @@
             <app-order-receipt #receipt [data]="receiptData()" />
             @if (canRefund()) {
               <div class="ms-auto flex items-center gap-2">
-                <span class="hidden text-[11px] text-gray-400 sm:inline"
-                  >Requires confirmation</span
-                >
+                <span class="text-[11px] text-gray-400">Requires confirmation</span>
                 <button
                   type="button"
                   class="app-btn app-btn-outline-danger app-btn-sm"

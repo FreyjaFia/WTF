@@ -399,7 +399,7 @@
                   >
                     <!-- Main Content -->
                     <div
-                      class="flex min-w-0 flex-1 flex-col gap-1 lg:col-span-11 lg:grid lg:grid-cols-11 lg:gap-4"
+                      class="flex min-w-0 flex-1 flex-col gap-1 lg:col-span-11 lg:grid lg:grid-cols-11 lg:items-center lg:gap-4"
                     >
                       <!-- Mobile: Row 1 - Order # -->
                       <div class="lg:hidden">
@@ -407,10 +407,13 @@
                       </div>
 
                       <!-- Mobile: Row 2 - Status Badge -->
-                      <div class="lg:hidden">
+                      <div class="flex flex-wrap items-center gap-2 lg:hidden">
                         <app-badge [variant]="getStatusVariant(order.status)">
                           {{ getStatusLabel(order.status) }}
                         </app-badge>
+                        @if (order.overriddenAt) {
+                          <app-badge variant="amber">Overridden</app-badge>
+                        }
                       </div>
 
                       <!-- Mobile: Row 3 - Time and Items -->
@@ -442,10 +445,15 @@
                       </div>
 
                       <!-- Desktop: Status -->
-                      <div class="hidden lg:col-span-2 lg:flex lg:justify-center">
+                      <div
+                        class="hidden lg:col-span-2 lg:flex lg:flex-col lg:items-center lg:justify-center lg:gap-1"
+                      >
                         <app-badge [variant]="getStatusVariant(order.status)">
                           {{ getStatusLabel(order.status) }}
                         </app-badge>
+                        @if (order.overriddenAt) {
+                          <app-badge variant="amber">Overridden</app-badge>
+                        }
                       </div>
 
                       <!-- Desktop: Items -->
