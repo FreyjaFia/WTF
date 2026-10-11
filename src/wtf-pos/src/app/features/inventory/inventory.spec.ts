@@ -1,0 +1,119 @@
+import { Component } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
+import { RouterTestingHarness } from '@angular/router/testing';
+import { AuthService } from '@core/services';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { InventoryComponent } from './inventory';
+
+@Component({ selector: 'app-stub-a', template: 'items page' })
+class ItemsStub {}
+
+@Component({ selector: 'app-stub-b', template: 'stock page' })
+class StockStub {}
+
+interface Scrollable {
+  scrollInventoryTabIntoView: (route: string) => void;
+}
+
+describe('InventoryComponent', () => {
+  let perms: { items: boolean; stock: boolean };
+
+  function configure(): void {
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([
+          {
+            path: 'inventory',
+            component: InventoryComponent,
+            children: [
+              { path: 'items', component: ItemsStub },
+              { path: 'stock-in', component: StockStub },
+            ],
+          },
+        ]),
+        {
+          provide: AuthService,
+          useValue: {
+            canReadItems: () => perms.items,
+            canReadStockMovements: () => perms.stock,
+          },
+        },
+      ],
+    });
+  }
+
+  async function setup(url = '/inventory/items') {
+    configure();
+    const harness = await RouterTestingHarness.create(url);
+    const el = harness.routeNativeElement as HTMLElement;
+    return { harness, el };
+  }
+
+  const tabs = (el: HTMLElement): HTMLAnchorElement[] =>
+    Array.from(el.querySelectorAll<HTMLAnchorElement>('a[role="tab"]'));
+
+  beforeEach(() => {
+    perms = { items: true, stock: true };
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('renders both tabs with links when the user can read items and stock', async () => {
+    const { el } = await setup();
+    const rendered = tabs(el);
+    expect(rendered.map((t) => t.getAttribute('data-inventory-tab'))).toEqual([
+      'items',
+      'stock-in',
+    ]);
+    expect(rendered.map((t) => t.getAttribute('href'))).toEqual([
+      '/inventory/items',
+      '/inventory/stock-in',
+    ]);
+  });
+
+  it('hides tabs the user cannot read', async () => {
+    perms = { items: false, stock: true };
+    const { el } = await setup('/inventory/stock-in');
+    expect(tabs(el).map((t) => t.getAttribute('data-inventory-tab'))).toEqual(['stock-in']);
+  });
+
+  it('renders no tabs without any permission', async () => {
+    perms = { items: false, stock: false };
+    const { el } = await setup();
+    expect(tabs(el)).toHaveLength(0);
+  });
+
+  it('marks only the active route as selected', async () => {
+    const { el } = await setup('/inventory/items');
+    expect(tabs(el).map((t) => t.getAttribute('aria-selected'))).toEqual(['true', 'false']);
+  });
+
+  it('updates the selected tab after navigation and shows the routed page', async () => {
+    const { harness, el } = await setup('/inventory/items');
+    expect(el.textContent).toContain('items page');
+    await harness.navigateByUrl('/inventory/stock-in');
+    harness.detectChanges();
+    expect(tabs(el).map((t) => t.getAttribute('aria-selected'))).toEqual(['false', 'true']);
+    expect(el.textContent).toContain('stock page');
+  });
+
+  it('scrolls the active tab into view after routing', async () => {
+    const { el } = await setup('/inventory/stock-in');
+    const scroll = vi.fn();
+    tabs(el)[1].scrollIntoView = scroll;
+    vi.runAllTimers();
+    expect(scroll).toHaveBeenCalledWith({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  });
+
+  it('does not throw when the tab element to scroll is missing', () => {
+    configure();
+    const component = TestBed.createComponent(InventoryComponent)
+      .componentInstance as unknown as Scrollable;
+    component.scrollInventoryTabIntoView('nope');
+    expect(() => vi.runAllTimers()).not.toThrow();
+  });
+});
