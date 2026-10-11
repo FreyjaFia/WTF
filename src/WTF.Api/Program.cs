@@ -110,45 +110,7 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-builder.Services.AddAuthorizationBuilder()
-    .AddPolicy(AppPolicies.ProductsRead, policy =>
-        policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.Cashier))
-    .AddPolicy(AppPolicies.ProductsWrite, policy =>
-        policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin))
-    .AddPolicy(AppPolicies.UsersRead, policy =>
-        policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer))
-    .AddPolicy(AppPolicies.UsersWrite, policy =>
-        policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin))
-    .AddPolicy(AppPolicies.PromotionsRead, policy =>
-        policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer))
-    .AddPolicy(AppPolicies.PromotionsWrite, policy =>
-        policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin))
-    .AddPolicy(AppPolicies.AuditRead, policy =>
-        policy.RequireRole(AppRoles.SuperAdmin))
-    .AddPolicy(AppPolicies.SchemaScriptHistoryRead, policy =>
-        policy.RequireRole(AppRoles.SuperAdmin))
-    .AddPolicy(AppPolicies.OrdersRead, policy =>
-        policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.Cashier))
-    .AddPolicy(AppPolicies.OrdersWrite, policy =>
-        policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.Cashier))
-    .AddPolicy(AppPolicies.OrdersOverride, policy =>
-        policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin))
-    .AddPolicy(AppPolicies.CustomersRead, policy =>
-        policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.Cashier))
-    .AddPolicy(AppPolicies.CustomersWrite, policy =>
-        policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.Cashier))
-    .AddPolicy(AppPolicies.ItemsRead, policy =>
-        policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.ItemManager))
-    .AddPolicy(AppPolicies.ItemsWrite, policy =>
-        policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.ItemManager))
-    .AddPolicy(AppPolicies.StockMovementsRead, policy =>
-        policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.StockManager))
-    .AddPolicy(AppPolicies.StockMovementsWrite, policy =>
-        policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.StockManager))
-    .AddPolicy(AppPolicies.DashboardRead, policy =>
-        policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer))
-    .AddPolicy(AppPolicies.ReportsRead, policy =>
-        policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer));
+builder.Services.AddAppAuthorization();
 
 builder.Services.AddCors(options =>
 {
@@ -276,22 +238,7 @@ app.UseAuthorization();
 
 app.MapHub<DashboardHub>("/hubs/dashboard");
 
-app.MapGet("/api", () => "Welcome to the WTF API!");
-app.MapAuth()
-    .MapLoyalty()
-    .MapProducts()
-    .MapOrders()
-    .MapCustomers()
-    .MapUsers()
-    .MapDashboard()
-    .MapPushNotifications()
-    .MapReports()
-    .MapSync()
-    .MapPromotions()
-    .MapItems()
-    .MapAudit()
-    .MapSchemaScriptHistory()
-    .MapPing();
+app.MapAppEndpoints();
 
 // SPA fallback: serve index.html for non-API, non-file routes
 app.MapFallbackToFile("index.html");
