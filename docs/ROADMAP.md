@@ -889,9 +889,23 @@ Planned implementation slices:
 
 ---
 
-## Automated Testing Plan [Planned]
+## Automated Testing Plan [In Progress]
 
 Goal: cover both the API and the POS app with automated tests, run on every push.
+
+**Scope decision:** unit tests only for now. Integration tests (a real database, a running API, or a
+browser) are deliberately deferred; the cases that need them are listed under "Needs a real database".
+
+### Status (as of 11 Oct 2026)
+
+| Area | State |
+| --- | --- |
+| API unit tests (`src/WTF.Tests`) | **Done for everything that needs no database**: 299 tests. |
+| Angular unit tests (`src/wtf-pos`) | **Every guard, interceptor, pipe, service, shared component and feature page has a spec**: 102 files, 1886 tests. |
+| CI | **Done**: `test-api` and `test-frontend` jobs run on every push and pull request, and the build and SQL deploy jobs depend on them. |
+| API handler tests | **Planned (next).** About 75 handler files and 10,000 lines have no tests. See "Next: handler tests". |
+| Tests that need a real database | **Deferred.** See "Needs a real database". |
+| E2E (Playwright) | Not started; optional. |
 
 ### Layout
 
@@ -899,68 +913,120 @@ Goal: cover both the API and the POS app with automated tests, run on every push
 src/
   WTF.Api/
   WTF.Domain/
-  WTF.Tests/        <- new API test project (sibling of Api/Domain, added to WTF.slnx)
+  WTF.Tests/        <- API unit tests (Common/, Endpoints/, Features/, Services/), in WTF.slnx
   wtf-pos/          <- specs live beside their source files (*.spec.ts)
+    src/app/testing/  <- shared test helpers (HTTP service setup, fake services, feature helpers)
+    vitest.config.ts  <- turns on per-file isolation (see "Angular notes")
 ```
 
 ### Test Types
 
-- **Unit**: one class/function in isolation (pure helpers, validators, pipes, guards).
-- **Integration**: several parts together, in-process (endpoint + auth + EF + real SQL Server).
+- **Unit**: one class/function in isolation, or a handler against an in-memory fake database.
+- **Integration**: several parts together against a real SQL Server (deferred).
 - **E2E** (later, optional): real browser driving the running app (Playwright), main flows only.
 
-### API (`WTF.Tests`)
+### API (`WTF.Tests`) - what exists
 
-Handlers use `WTFDbContext` directly, so mocking the DbContext tests very little. The API
-leans on **integration tests against a real SQL Server**; unit tests cover pure logic only.
+Stack: xUnit, NSubstitute, Shouldly. `WTF.Api` exposes its internals to the test project.
 
-- Stack: xUnit, NSubstitute, Shouldly, `Microsoft.AspNetCore.Mvc.Testing`.
-- Database: **TBD** (LocalDB vs Docker/Testcontainers vs InMemory/SQLite). Docker is not
-  installed on the dev machine; LocalDB is the current recommendation.
-- Shared `WebApplicationFactory` fixture; Azure Blob, FCM and Huawei replaced with fakes
-  (`IImageStorage` and `IReportFileStorage` already exist as interfaces).
-- JWT helper that mints tokens per role; per-test data reset.
-- Folders mirror the API: `Features/Auth`, `Features/Orders`, ..., plus `Common/` and
-  `Infrastructure/`.
+- Validators and mappers: customers, users, products, items, the three promotion types.
+- Pure helpers: order total calculation, promotion labels, time zones, report date ranges, URL helper, claims helper.
+- `JwtService`, local image and report file storage, options defaults, Excel and PDF builders.
+- **Route table snapshot** (`Endpoints/RouteTableTests`): a reviewed list of every route and who may call it. Adding a route or changing its access rule fails the test, so security changes are deliberate. The only anonymous routes are `/api`, `/api/health`, login, logout, refresh, validate and the loyalty redirect link.
+- **Role matrix** (`Endpoints/PolicyMatrixTests`): for each authorization policy, which roles are admitted, evaluated by the real authorization service.
+- **Endpoint validation** (`Endpoints/EndpointValidationTests`): the checks inside endpoint delegates (ID mismatch, report date and month ranges, push token input, login) run against a fake `ISender`.
+- **Audit paging** (`Endpoints/AuditPagingTests`): paging is forwarded for the screen and dropped for Excel and PDF exports.
 
-| Phase | Area                                                                 | Why                          |
-| ----- | -------------------------------------------------------------------- | ---------------------------- |
-| 1     | Auth: login, refresh token, role guards                              | Security                     |
-| 2     | Orders: create, update, void, batch (offline sync)                   | Money, stock, loyalty        |
-| 3     | Promotions: `EvaluatePromotionsHandler` and the three validators     | Complex pricing rules        |
-| 4     | Soft delete / restore for products, items, links; add-on overrides   | Recently changed behavior    |
-| 5     | Users, customers, audit log entries                                  | CRUD plus rules              |
-| 6     | Reports and dashboard                                                | Aggregation correctness      |
+To make the routes testable, the policies live in `AddAppAuthorization()` and the route mapping in `MapAppEndpoints()` (behavior-neutral extraction from `Program.cs`).
 
-Open item: order/promotion math is embedded in large handlers (`CreateOrderHandler`,
-`UpdateOrderHandler`). Consider extracting it into a small calculator class so it can be
-unit tested directly (decision pending).
+### Angular (`wtf-pos`) - what exists
 
-### Angular (`wtf-pos`)
+Vitest via `ng test`. Shared helpers in `src/app/testing`.
 
-Vitest via `ng test`. **Every file with logic or a template gets a spec** (no area skipped):
+- Guards, interceptors, pipes, constants, messages and models.
+- Every service in `core/services`: HTTP services (request URL, verb, params, body and every error path), connectivity, offline order queue (with an in-memory stand-in for the Dexie table), catalog and image caches, update check, push, SignalR, file and image download.
+- Every shared component, and every feature page (login, dashboard, orders, inventory, management, audit logs, reports).
+- App-level checks: the route table (guards and role data), role groups vs the API policies (the UI may never grant a role the API denies), and button conventions.
 
-1. Guards, interceptors, pipes, utilities, constants and messages.
-2. All services in `core/services` (HTTP services via `HttpTestingController`).
-3. All shared components (charts, icons, badges, dialogs, cart drawer, order receipt, ...).
-4. All feature pages: login, dashboard, not-found, orders, inventory (items, stock-in),
-   management (products, customers, users, promotions, reports, audit logs, schema scripts),
-   each with list, details and editor views.
+**Angular notes**
 
-Depth per file keeps this maintainable:
+- `vi.mock` works for package names but not for relative imports (the Angular builder blocks those).
+- The Angular builder shares the module cache between spec files by default, which made specs that mock packages pass or fail depending on file order. `vitest.config.ts` sets `isolate: true` and `angular.json` points the test target at it. Keep it.
+- The Dexie `db` is replaced with small in-memory fakes (see `offline-order.service.spec.ts`).
 
-- Simple components: smoke test (renders) plus key interactions.
-- Logic-heavy ones (order editor, checkout modal, cart drawer, promotion editor, offline
-  sync): thorough tests.
-- Shared fakes and a `provideTestingDefaults()` helper keep specs short.
+### Bugs the tests found (all fixed)
 
-Work is done in batches by area, running `ng test` and committing after each batch.
+`GetUserIdFromToken` always returned null; the alert auto-dismiss timer was never cleared; bundle and item search never re-filtered; over-long product fields showed no error; a discounted item without a product got the wrong message; promotion `isEditMode` stayed false after a create; SignalR could not reconnect after stop/start or a failed start; the audit export swallowed save errors; header and sidebar avatars did not refresh; the add-on selector reordered the shared catalog cache; missing report dates got a bare framework 400.
+
+### Next: handler tests (planned)
+
+Handlers use `WTFDbContext` directly, so a mock of the context would test almost nothing. The plan is to run
+handlers against **EF Core InMemory**: the handler's real queries run against actual tables held in memory,
+with no SQL Server. (This adds one test package, `Microsoft.EntityFrameworkCore.InMemory`.)
+
+| Phase | What | Needs a database stand-in? |
+| --- | --- | --- |
+| 1 | **Pricing and promotion rules**: fixed price vs percent, exact add-on matching, active date windows across time zones, bundle consumption in `EvaluatePromotionsHandler`. Test the pure helpers directly. | No |
+| 2 | **Test setup**: a factory for an in-memory `WTFDbContext`, fakes for audit, push, the SignalR hub and the current user, and builders for users, products, orders and promotions. | Sets it up |
+| 3 | **Orders**: create (totals, stock and loyalty effects, promotions), update, void, override (reason required, Completed only), batch. Highest risk: money, stock, loyalty. | Yes |
+| 4 | **Auth**: login, refresh, logout, change password, me. Password checks, expired and revoked tokens, inactive users. | Yes |
+| 5 | **Items, products, customers, users, promotions CRUD**: soft delete and restore, unique codes, add-on links, price history, audit entries, role limits. | Yes |
+| 6 | **Reports and dashboard**: aggregations, time zone boundaries, the monthly workbook. | Yes |
+
+**Pricing math is duplicated three times.** `GetDiscountedUnitPrice`, `SatisfiesExactAddOns`,
+`CalculateDiscountedUnitPrice` and `IsPromotionActiveOnLocalDate` exist in both `CreateOrderHandler` and
+`UpdateOrderHandler`, and `EvaluatePromotionsHandler` has its own copies of two of them. If they drift, the
+cart preview and the saved order can disagree on price. Plan: make the helpers `internal`, pin the current
+behavior in all three places with tests, then merge them into one shared class with those tests proving nothing
+changed. The pure rules in `EvaluatePromotionsHandler` (`ApplyFixedBundles`, `ApplyDiscountedProducts`) need no
+database at all.
+
+**Limits of the in-memory database:** it does not enforce keys or unique indexes, ignores transactions, does not
+apply SQL Server defaults (`newid()`, `getutcdate()`, `sysdatetime()`) and matches text case-sensitively. Tests
+account for these; anything that depends on them goes to the list below.
+
+### Needs a real database (deferred)
+
+These behaviors only exist in SQL Server, so they are not worth testing against the in-memory fake:
+
+| Behavior | Where |
+| --- | --- |
+| Transaction rollback: a failed order in a batch undoes the earlier ones | Order batch sync, create order, create item |
+| Unique and foreign key constraints: duplicate product code, SKU or barcode; missing references | Products, items, orders |
+| `SqlException` handling (database duplicate error turned into a normal response) | Push token subscribe |
+| Case-insensitive text search | List search filters |
+| Values that rely on database defaults | Anywhere a handler leaves a column to its default |
+| Two users saving at the same moment | Stock changes, order numbers |
+
+Plan for when these are added (about 10 to 15 tests, in a separate "needs database" category):
+
+- **Local:** the tests read `WTF_TEST_SQL`. If it is not set they use LocalDB (`(localdb)\MSSQLLocalDB`, already installed on the dev machine). Each run creates a throwaway database named `WTF_Test_<random>`, builds the tables from the EF model, and drops it afterwards. Leftover `WTF_Test_*` databases from killed runs are removed at the start of the next run. Nothing touches the real dev database.
+- **CI:** the workflow starts a SQL Server container (`mcr.microsoft.com/mssql/server`) next to the test job and sets `WTF_TEST_SQL` to it (or uses Testcontainers). Ubuntu runners have Docker; the `deploy-sql` job already uses a Docker image. Expect about 20 to 40 seconds of extra start-up.
+- **No database reachable:** these tests skip with a clear message, so `dotnet test` still works for anyone without SQL Server.
+- Until then, keep these cases as skipped placeholder tests so the gap stays visible.
+
+### Known gaps in the existing tests
+
+- `order-editor`: scroll-position tab syncing, real interaction with the add-on selector and checkout modal (both are spied), template checks beyond a smoke render.
+- Debounced search in the product, customer and user lists: `SearchInputComponent` raises a change-detection error when rendered there, so those tests use a template-less version of the list.
+- `push-notification`: the Huawei token success path (a relative import that cannot be mocked) and the web notification click handler.
+- Real drag-and-drop in the swappers (tested by moving DOM nodes) and logo loading in the order receipt (jsdom has no images or canvas).
+- Some specs combine several files (`guards.spec.ts`, `interceptors.spec.ts`, a few service specs) where the rules below say one `<name>.spec.ts` beside each file. Cosmetic.
+- Private helpers inside handlers (for example the scheduler's `GetNextDelay`) and the Excel and PDF document builders in the endpoint files are not reachable from tests yet.
+- API clients for Azure, FCM and Huawei, and `DashboardHub`, are untested.
+- The `.NET` tests have only been run on Windows; the first run on the Linux CI runner may show differences (two time zone tests use Windows ids).
+
+### Not started
+
+- E2E tests (Playwright) for the main flows.
+- A script or CI step that lists source files without a matching spec or test.
+- Coverage thresholds (start low and raise gradually).
 
 ### Applying the Plan to New and Existing Files (Rules, Not a Snapshot)
 
-This plan may be implemented later, after more files have been added. The lists above are
-examples as of writing; the **rules below are what to follow**, so the plan applies to any
-file that exists when the work starts and to every file added afterwards.
+The plan is partly implemented and files keep being added. The lists above describe the state on
+the date shown; the **rules below are what to follow**, so the plan applies to any file that exists
+when the work starts and to every file added afterwards.
 
 **Step 0 - build the inventory when starting (do not rely on the lists above):**
 
@@ -994,17 +1060,23 @@ file that exists when the work starts and to every file added afterwards.
 **Definition of done for new code:** a feature or fix is not complete until its files follow
 the mapping above and `dotnet test` / `ng test` pass.
 
-**Keeping it enforced (optional, add after the baseline exists):**
+**Keeping it enforced:**
 
-- CI fails the build when tests fail.
+- CI fails the build when tests fail (done: see the CI section).
 - A small script (or CI step) lists source files without a matching spec/test and reports
   them, so gaps from new files are visible.
 - Optional coverage thresholds (start low and raise gradually) rather than a one-time big-bang.
 
 ### CI
 
-Run `dotnet test` and `ng test` on every push. If Docker/Testcontainers is chosen, the
-runner must support Docker; if LocalDB is chosen, a Windows runner is required.
+Done. `.github/workflows/main.yml` has two jobs that run on every push and pull request:
+
+- `test-api`: `dotnet test src/WTF.Tests/WTF.Tests.csproj --configuration Release`
+- `test-frontend`: `npm ci` then `npm test -- --watch=false` in `src/wtf-pos`
+
+The build jobs (API, frontend, Android, production and staging) and both SQL deploy jobs `need` both test jobs, so
+a failing test blocks the build and the deploy. Pull requests run only the test jobs (the build and deploy jobs are
+skipped for them). When the database tests above are added, the API job needs the SQL Server container.
 
 ---
 
