@@ -73,17 +73,72 @@
       </button>
     </div>
   } @else {
-    <div class="space-y-2">
-      <!-- Column titles (wide screens) -->
-      <div class="hidden grid-cols-12 gap-4 px-4 py-2 lg:grid">
-        <div class="col-span-2 text-xs font-semibold tracking-wider text-gray-600 uppercase">
+    <div class="space-y-2 pb-4 lg:space-y-3">
+      <!-- Column titles (wide screens): same grid as the shop order list -->
+      <div
+        class="sticky top-0 z-10 mb-2 hidden grid-cols-12 gap-4 rounded-lg bg-white px-4 py-3 lg:grid"
+        data-column-titles
+      >
+        <div
+          class="col-span-2 flex cursor-pointer items-center gap-1 text-xs font-semibold tracking-wider uppercase transition-colors"
+          [class.text-gray-600]="!isSortActive('orderNumber')"
+          [class.hover:text-gray-900]="!isSortActive('orderNumber')"
+          [class.text-[#047857]]="isSortActive('orderNumber')"
+          role="button"
+          tabindex="0"
+          data-sort="orderNumber"
+          (click)="toggleSort('orderNumber')"
+          (keydown.enter)="toggleSort('orderNumber')"
+          (keydown.space)="toggleSort('orderNumber')"
+        >
           Order
-        </div>
-        <div class="col-span-3 text-xs font-semibold tracking-wider text-gray-600 uppercase">
-          Date
+          <span
+            class="text-xs transition-opacity"
+            [class.opacity-0]="!isSortActive('orderNumber')"
+            [class.opacity-100]="isSortActive('orderNumber')"
+          >
+            <app-icon
+              name="icon-arrow-up"
+              [class]="
+                sortDirection() === 'desc'
+                  ? 'inline h-3 w-3 rotate-180 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                  : 'inline h-3 w-3 rotate-0 transform align-[-0.05em] transition-transform duration-200 ease-out'
+              "
+              [fill]="'currentColor'"
+            />
+          </span>
         </div>
         <div
-          class="col-span-3 text-center text-xs font-semibold tracking-wider text-gray-600 uppercase"
+          class="col-span-2 flex cursor-pointer items-center gap-1 text-xs font-semibold tracking-wider uppercase transition-colors"
+          [class.text-gray-600]="!isSortActive('date')"
+          [class.hover:text-gray-900]="!isSortActive('date')"
+          [class.text-[#047857]]="isSortActive('date')"
+          role="button"
+          tabindex="0"
+          data-sort="date"
+          (click)="toggleSort('date')"
+          (keydown.enter)="toggleSort('date')"
+          (keydown.space)="toggleSort('date')"
+        >
+          Date
+          <span
+            class="text-xs transition-opacity"
+            [class.opacity-0]="!isSortActive('date')"
+            [class.opacity-100]="isSortActive('date')"
+          >
+            <app-icon
+              name="icon-arrow-up"
+              [class]="
+                sortDirection() === 'desc'
+                  ? 'inline h-3 w-3 rotate-180 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                  : 'inline h-3 w-3 rotate-0 transform align-[-0.05em] transition-transform duration-200 ease-out'
+              "
+              [fill]="'currentColor'"
+            />
+          </span>
+        </div>
+        <div
+          class="col-span-2 text-center text-xs font-semibold tracking-wider text-gray-600 uppercase"
         >
           Status
         </div>
@@ -93,14 +148,41 @@
           Items
         </div>
         <div
-          class="col-span-2 text-right text-xs font-semibold tracking-wider text-gray-600 uppercase"
+          class="col-span-3 flex cursor-pointer items-center justify-end gap-1 text-right text-xs font-semibold tracking-wider uppercase transition-colors"
+          [class.text-gray-600]="!isSortActive('total')"
+          [class.hover:text-gray-900]="!isSortActive('total')"
+          [class.text-[#047857]]="isSortActive('total')"
+          role="button"
+          tabindex="0"
+          data-sort="total"
+          (click)="toggleSort('total')"
+          (keydown.enter)="toggleSort('total')"
+          (keydown.space)="toggleSort('total')"
         >
           Total
+          <span
+            class="text-xs transition-opacity"
+            [class.opacity-0]="!isSortActive('total')"
+            [class.opacity-100]="isSortActive('total')"
+          >
+            <app-icon
+              name="icon-arrow-up"
+              [class]="
+                sortDirection() === 'desc'
+                  ? 'inline h-3 w-3 rotate-180 transform align-[-0.05em] transition-transform duration-200 ease-out'
+                  : 'inline h-3 w-3 rotate-0 transform align-[-0.05em] transition-transform duration-200 ease-out'
+              "
+              [fill]="'currentColor'"
+            />
+          </span>
         </div>
+        <div class="col-span-1"></div>
       </div>
 
+      <!-- Order groups by date -->
       @for (group of byDate(); track group.date) {
         <div>
+          <!-- Date separator -->
           <div class="mb-2 flex items-center gap-3 px-4 py-2">
             <div class="h-px flex-1 bg-gray-200"></div>
             <div class="text-xs font-semibold tracking-wide text-gray-500 uppercase">
@@ -109,82 +191,97 @@
             <div class="h-px flex-1 bg-gray-200"></div>
           </div>
 
-          <div class="space-y-2">
-            @for (order of group.orders; track order.id) {
+          <!-- Order cards for this day -->
+          @for (order of group.orders; track order.id) {
+            <div
+              class="group flex cursor-pointer items-center gap-3 rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm transition-shadow duration-200 hover:shadow-md lg:grid lg:grid-cols-12 lg:gap-4 lg:border-0 lg:py-4 lg:shadow-lg lg:hover:shadow-xl"
+              role="button"
+              tabindex="0"
+              data-order-row
+              (click)="opened.emit(order.id)"
+              (keydown.enter)="opened.emit(order.id)"
+              (keydown.space)="opened.emit(order.id)"
+            >
+              <!-- Main content -->
               <div
-                class="group flex cursor-pointer items-center gap-3 rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm transition-shadow duration-200 hover:shadow-md lg:grid lg:grid-cols-12 lg:gap-4 lg:border-0 lg:py-4 lg:shadow-lg lg:hover:shadow-xl"
-                role="button"
-                tabindex="0"
-                data-order-row
-                (click)="opened.emit(order.id)"
-                (keydown.enter)="opened.emit(order.id)"
-                (keydown.space)="opened.emit(order.id)"
+                class="flex min-w-0 flex-1 flex-col gap-1 lg:col-span-11 lg:grid lg:grid-cols-11 lg:items-center lg:gap-4"
               >
-                <!-- Phones -->
-                <div class="flex min-w-0 flex-1 flex-col gap-1 lg:hidden">
+                <!-- Phones: order number -->
+                <div class="lg:hidden">
                   <span class="font-semibold text-gray-900">#{{ order.orderNumber }}</span>
-                  <div class="flex flex-wrap items-center gap-2">
-                    <app-badge [variant]="variant(order.statusKind)">{{
-                      order.statusLabel
-                    }}</app-badge>
-                  </div>
-                  <div class="flex items-center gap-2 text-xs text-slate-500">
-                    <span>{{ order.createdAt | date: 'h:mm a' }}</span>
-                    <span>&middot;</span>
-                    <span>{{ itemsText(order) }}</span>
-                  </div>
-                </div>
-                <div class="flex shrink-0 items-center gap-2 lg:hidden">
-                  <span class="text-base font-semibold text-black">
-                    <span class="text-sm opacity-70"
-                      ><app-icon
-                        name="icon-peso"
-                        [class]="'inline h-3 w-3 align-[-0.125em]'"
-                        [fill]="'currentColor'" /></span
-                    >{{ order.total | number: '1.2-2' }}
-                  </span>
-                  <app-icon
-                    name="icon-forward"
-                    [class]="'h-5 w-5 text-gray-400 transition-colors group-hover:text-gray-600'"
-                    [fill]="'currentColor'"
-                  />
                 </div>
 
-                <!-- Wide screens -->
-                <div class="hidden lg:col-span-2 lg:block">
-                  <div class="font-semibold text-gray-900">#{{ order.orderNumber }}</div>
-                </div>
-                <div class="hidden lg:col-span-3 lg:block">
-                  <div class="text-sm text-gray-700">
-                    {{ order.createdAt | date: 'd MMM y, h:mm a' }}
-                  </div>
-                </div>
-                <div class="hidden lg:col-span-3 lg:flex lg:flex-col lg:items-center lg:gap-1">
+                <!-- Phones: status -->
+                <div class="flex flex-wrap items-center gap-2 lg:hidden">
                   <app-badge [variant]="variant(order.statusKind)">{{
                     order.statusLabel
                   }}</app-badge>
                 </div>
+
+                <!-- Phones: time and items -->
+                <div class="flex items-center gap-2 lg:hidden">
+                  <span class="text-xs text-slate-500">{{ order.createdAt | date: 'h:mm a' }}</span>
+                  <span class="text-xs text-slate-500">&middot;</span>
+                  <span class="text-xs text-slate-500">{{ itemsText(order) }}</span>
+                </div>
+
+                <!-- Wide: order number -->
+                <div class="hidden lg:col-span-2 lg:block">
+                  <div class="font-semibold text-gray-900">#{{ order.orderNumber }}</div>
+                </div>
+
+                <!-- Wide: date -->
+                <div class="hidden lg:col-span-2 lg:block">
+                  <div class="text-sm text-gray-700">
+                    {{ order.createdAt | date: 'd MMM y, h:mm a' }}
+                  </div>
+                </div>
+
+                <!-- Wide: status -->
+                <div
+                  class="hidden lg:col-span-2 lg:flex lg:flex-col lg:items-center lg:justify-center lg:gap-1"
+                >
+                  <app-badge [variant]="variant(order.statusKind)">{{
+                    order.statusLabel
+                  }}</app-badge>
+                </div>
+
+                <!-- Wide: items -->
                 <div class="hidden lg:col-span-2 lg:block lg:text-right">
                   <div class="text-sm text-gray-600">{{ itemsText(order) }}</div>
                 </div>
-                <div class="hidden lg:col-span-2 lg:flex lg:items-center lg:justify-end lg:gap-2">
-                  <span class="text-lg font-semibold text-black">
+
+                <!-- Wide: total -->
+                <div class="hidden lg:col-span-3 lg:block lg:text-right">
+                  <div class="text-lg font-semibold text-black">
                     <span class="text-base opacity-70"
                       ><app-icon
                         name="icon-peso"
                         [class]="'inline h-3 w-3 align-[-0.125em]'"
                         [fill]="'currentColor'" /></span
                     >{{ order.total | number: '1.2-2' }}
-                  </span>
-                  <app-icon
-                    name="icon-forward"
-                    [class]="'h-5 w-5 text-gray-400 transition-colors group-hover:text-gray-600'"
-                    [fill]="'currentColor'"
-                  />
+                  </div>
                 </div>
               </div>
-            }
-          </div>
+
+              <!-- Price (phones) and forward arrow -->
+              <div class="flex shrink-0 items-center gap-2 lg:col-span-1 lg:flex lg:justify-end">
+                <span class="text-base font-semibold text-black lg:hidden">
+                  <span class="text-sm opacity-70"
+                    ><app-icon
+                      name="icon-peso"
+                      [class]="'inline h-3 w-3 align-[-0.125em]'"
+                      [fill]="'currentColor'" /></span
+                  >{{ order.total | number: '1.2-2' }}
+                </span>
+                <app-icon
+                  name="icon-forward"
+                  [class]="'h-5 w-5 text-gray-400 transition-colors group-hover:text-gray-600'"
+                  [fill]="'currentColor'"
+                />
+              </div>
+            </div>
+          }
         </div>
       }
     </div>

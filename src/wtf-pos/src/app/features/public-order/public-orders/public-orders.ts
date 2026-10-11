@@ -12,6 +12,8 @@ import { publicStatusVariant } from '../public-order-status';
 export type PublicOrdersState = 'idle' | 'loading' | 'ready' | 'error';
 
 type DateRange = 'all' | 'today' | '7d' | '30d';
+type SortColumn = 'orderNumber' | 'date' | 'total';
+type SortDirection = 'asc' | 'desc';
 
 const DATE_RANGES: { id: DateRange; label: string; days: number | null }[] = [
   { id: 'all', label: 'All time', days: null },
@@ -60,6 +62,9 @@ export class PublicOrdersComponent {
 
   /** What the customer typed: matches the order number. */
   protected readonly search = signal('');
+  /** Newest first, like the shop's own order list. */
+  protected readonly sortColumn = signal<SortColumn>('date');
+  protected readonly sortDirection = signal<SortDirection>('desc');
   protected readonly isFiltersOpen = signal(false);
   protected readonly selectedStatuses = signal<PublicOrderStatusKind[]>([]);
   protected readonly dateRange = signal<DateRange>('all');
@@ -87,12 +92,23 @@ export class PublicOrdersComponent {
 
     const term = this.search().trim().replace(/^#/, '');
 
-    return this.orders().filter(
+    const matching = this.orders().filter(
       (order) =>
         (term === '' || String(order.orderNumber).includes(term)) &&
         (statuses.length === 0 || statuses.includes(order.statusKind)) &&
         (since === null || new Date(order.createdAt) >= since),
     );
+
+    const column = this.sortColumn();
+    const direction = this.sortDirection() === 'asc' ? 1 : -1;
+    const key = (order: PublicOrderDto): number =>
+      column === 'orderNumber'
+        ? order.orderNumber
+        : column === 'total'
+          ? order.total
+          : new Date(order.createdAt).getTime();
+
+    return [...matching].sort((a, b) => (key(a) - key(b)) * direction);
   });
 
   protected readonly byDate = computed(() => {
@@ -109,6 +125,20 @@ export class PublicOrdersComponent {
       orders,
     }));
   });
+
+  protected isSortActive(column: SortColumn): boolean {
+    return this.sortColumn() === column;
+  }
+
+  /** The same column again flips the direction; another column starts with the biggest or newest first. */
+  protected toggleSort(column: SortColumn): void {
+    if (this.sortColumn() === column) {
+      this.sortDirection.set(this.sortDirection() === 'asc' ? 'desc' : 'asc');
+    } else {
+      this.sortColumn.set(column);
+      this.sortDirection.set('desc');
+    }
+  }
 
   protected toggleStatus(kind: PublicOrderStatusKind): void {
     this.selectedStatuses.update((current) =>

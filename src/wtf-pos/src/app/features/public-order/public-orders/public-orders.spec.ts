@@ -299,6 +299,194 @@ describe('PublicOrdersComponent', () => {
     });
   });
 
+  describe('sorting', () => {
+    const when = (hoursAgo: number) => new Date(Date.now() - hoursAgo * 3600e3).toISOString();
+    const mixed = () => [
+      make('a', when(1), { orderNumber: 1002, total: 500 }),
+      make('b', when(3), { orderNumber: 1003, total: 100 }),
+      make('c', when(2), { orderNumber: 1001, total: 300 }),
+    ];
+    const numbers = () => rows().map((row) => row.textContent!.match(/#(\d+)/)![1]);
+    const titles = () => [...el().querySelectorAll('[data-sort]')] as HTMLElement[];
+    const title = (column: string) => el().querySelector(`[data-sort="${column}"]`) as HTMLElement;
+    const c = () => fixture.componentInstance as unknown as {
+      sortColumn: () => string;
+      sortDirection: () => string;
+      toggleSort: (column: string) => void;
+    };
+
+    it('has sortable Order, Date and Total headings, and plain Status and Items', () => {
+      setup(mixed());
+      expect(titles().map((t) => t.getAttribute('data-sort'))).toEqual(['orderNumber', 'date', 'total']);
+      const heading = el().querySelector('[data-column-titles]')!.textContent!;
+      expect(heading).toContain('Status');
+      expect(heading).toContain('Items');
+      for (const t of titles()) {
+        expect(t.getAttribute('role')).toBe('button');
+        expect(t.tabIndex).toBe(0);
+      }
+    });
+
+    it('starts with the newest first, with the Date heading marked', () => {
+      setup(mixed());
+      expect(numbers()).toEqual(['1002', '1001', '1003']);
+      expect(c().sortColumn()).toBe('date');
+      expect(c().sortDirection()).toBe('desc');
+      expect(title('date').className).toContain('text-[#047857]');
+      expect(title('total').className).not.toContain('text-[#047857]');
+    });
+
+    it('sorts by order number, biggest first, then the other way on a second press', () => {
+      setup(mixed());
+      title('orderNumber').click();
+      fixture.detectChanges();
+      expect(numbers()).toEqual(['1003', '1002', '1001']);
+
+      title('orderNumber').click();
+      fixture.detectChanges();
+      expect(numbers()).toEqual(['1001', '1002', '1003']);
+      expect(c().sortDirection()).toBe('asc');
+    });
+
+    it('sorts by total', () => {
+      setup(mixed());
+      title('total').click();
+      fixture.detectChanges();
+      expect(numbers()).toEqual(['1002', '1001', '1003']);
+
+      title('total').click();
+      fixture.detectChanges();
+      expect(numbers()).toEqual(['1003', '1001', '1002']);
+    });
+
+    it('sorts by date, oldest first on the second press', () => {
+      setup(mixed());
+      title('date').click();
+      fixture.detectChanges();
+      expect(numbers()).toEqual(['1003', '1001', '1002']);
+    });
+
+    it('can be pressed from the keyboard', () => {
+      setup(mixed());
+      title('orderNumber').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+      fixture.detectChanges();
+      expect(c().sortColumn()).toBe('orderNumber');
+      title('total').dispatchEvent(new KeyboardEvent('keydown', { key: ' ' }));
+      expect(c().sortColumn()).toBe('total');
+    });
+
+    it('keeps the filters and the search while sorting', () => {
+      setup([
+        make('a', when(1), { orderNumber: 1002, total: 500, statusKind: 'ready' }),
+        make('b', when(3), { orderNumber: 1003, total: 100, statusKind: 'ready' }),
+        make('c', when(2), { orderNumber: 1001, total: 300, statusKind: 'waiting' }),
+      ]);
+      (fixture.componentInstance as unknown as { toggleStatus: (k: string) => void }).toggleStatus('ready');
+      title('total').click();
+      fixture.detectChanges();
+      expect(numbers()).toEqual(['1002', '1003']);
+    });
+
+    it('keeps the headings in view while the list scrolls', () => {
+      setup(mixed());
+      expect(el().querySelector('[data-column-titles]')!.className).toContain('sticky');
+    });
+  });
+
+  describe('sorting', () => {
+    const when = (hoursAgo: number) => new Date(Date.now() - hoursAgo * 3600e3).toISOString();
+    const mixed = () => [
+      make('a', when(1), { orderNumber: 1002, total: 500 }),
+      make('b', when(3), { orderNumber: 1003, total: 100 }),
+      make('c', when(2), { orderNumber: 1001, total: 300 }),
+    ];
+    const numbers = () => rows().map((row) => row.textContent!.match(/#(\d+)/)![1]);
+    const titles = () => [...el().querySelectorAll('[data-sort]')] as HTMLElement[];
+    const title = (column: string) => el().querySelector(`[data-sort="${column}"]`) as HTMLElement;
+    const c = () => fixture.componentInstance as unknown as {
+      sortColumn: () => string;
+      sortDirection: () => string;
+      toggleSort: (column: string) => void;
+    };
+
+    it('has sortable Order, Date and Total headings, and plain Status and Items', () => {
+      setup(mixed());
+      expect(titles().map((t) => t.getAttribute('data-sort'))).toEqual(['orderNumber', 'date', 'total']);
+      const heading = el().querySelector('[data-column-titles]')!.textContent!;
+      expect(heading).toContain('Status');
+      expect(heading).toContain('Items');
+      for (const t of titles()) {
+        expect(t.getAttribute('role')).toBe('button');
+        expect(t.tabIndex).toBe(0);
+      }
+    });
+
+    it('starts with the newest first, with the Date heading marked', () => {
+      setup(mixed());
+      expect(numbers()).toEqual(['1002', '1001', '1003']);
+      expect(c().sortColumn()).toBe('date');
+      expect(c().sortDirection()).toBe('desc');
+      expect(title('date').className).toContain('text-[#047857]');
+      expect(title('total').className).not.toContain('text-[#047857]');
+    });
+
+    it('sorts by order number, biggest first, then the other way on a second press', () => {
+      setup(mixed());
+      title('orderNumber').click();
+      fixture.detectChanges();
+      expect(numbers()).toEqual(['1003', '1002', '1001']);
+
+      title('orderNumber').click();
+      fixture.detectChanges();
+      expect(numbers()).toEqual(['1001', '1002', '1003']);
+      expect(c().sortDirection()).toBe('asc');
+    });
+
+    it('sorts by total', () => {
+      setup(mixed());
+      title('total').click();
+      fixture.detectChanges();
+      expect(numbers()).toEqual(['1002', '1001', '1003']);
+
+      title('total').click();
+      fixture.detectChanges();
+      expect(numbers()).toEqual(['1003', '1001', '1002']);
+    });
+
+    it('sorts by date, oldest first on the second press', () => {
+      setup(mixed());
+      title('date').click();
+      fixture.detectChanges();
+      expect(numbers()).toEqual(['1003', '1001', '1002']);
+    });
+
+    it('can be pressed from the keyboard', () => {
+      setup(mixed());
+      title('orderNumber').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+      fixture.detectChanges();
+      expect(c().sortColumn()).toBe('orderNumber');
+      title('total').dispatchEvent(new KeyboardEvent('keydown', { key: ' ' }));
+      expect(c().sortColumn()).toBe('total');
+    });
+
+    it('keeps the filters and the search while sorting', () => {
+      setup([
+        make('a', when(1), { orderNumber: 1002, total: 500, statusKind: 'ready' }),
+        make('b', when(3), { orderNumber: 1003, total: 100, statusKind: 'ready' }),
+        make('c', when(2), { orderNumber: 1001, total: 300, statusKind: 'waiting' }),
+      ]);
+      (fixture.componentInstance as unknown as { toggleStatus: (k: string) => void }).toggleStatus('ready');
+      title('total').click();
+      fixture.detectChanges();
+      expect(numbers()).toEqual(['1002', '1003']);
+    });
+
+    it('keeps the headings in view while the list scrolls', () => {
+      setup(mixed());
+      expect(el().querySelector('[data-column-titles]')!.className).toContain('sticky');
+    });
+  });
+
   describe('layout', () => {
     it('scrolls only the list, so the title and the search stay in place', () => {
       setup(some());
