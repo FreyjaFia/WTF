@@ -1,0 +1,105 @@
+<!-- Messages -->
+<div
+  #list
+  class="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4"
+  role="log"
+  aria-live="polite"
+  aria-label="Messages"
+  data-chat-messages
+>
+  @if (isLoading() && messages().length === 0) {
+    <div class="flex justify-center py-8">
+      <span class="loading loading-spinner loading-md"></span>
+    </div>
+  } @else if (messages().length === 0) {
+    <p class="py-8 text-center text-sm text-gray-400" data-chat-empty>{{ emptyText() }}</p>
+  } @else {
+    @for (message of messages(); track message.id) {
+      @if (message.sender === 'system') {
+        <div class="flex flex-col items-center gap-0.5 py-1" data-message data-sender="system" data-system-line>
+          <span class="rounded-full bg-gray-100 px-3 py-1 text-center text-xs font-medium text-gray-600">
+            {{ message.body }}@if (message.senderName) {
+              <span class="font-normal text-gray-400"> · {{ message.senderName }}</span>
+            }
+          </span>
+          <span class="text-[10px] text-gray-400">{{ message.createdAt | date: 'd MMM, h:mm a' }}</span>
+        </div>
+      } @else {
+        <div
+          class="flex flex-col"
+          [class.items-end]="isMine(message)"
+          [class.items-start]="!isMine(message)"
+          data-message
+          [attr.data-sender]="message.sender"
+          [attr.data-mine]="isMine(message)"
+        >
+          @if (!isMine(message)) {
+            <span class="mb-0.5 px-1 text-xs font-medium text-gray-500">{{ nameOf(message) }}</span>
+          }
+          <div
+            class="max-w-[85%] rounded-2xl px-3.5 py-2 text-sm wrap-break-word whitespace-pre-wrap"
+            [class]="
+              isMine(message)
+                ? 'rounded-br-md bg-[#047857] text-white'
+                : 'rounded-bl-md bg-gray-100 text-gray-900'
+            "
+          >
+            {{ message.body }}
+          </div>
+          <span class="mt-0.5 px-1 text-[10px] text-gray-400">
+            {{ message.createdAt | date: 'd MMM, h:mm a' }}
+          </span>
+        </div>
+      }
+    }
+  }
+</div>
+
+<!-- Writing box, or why there is none -->
+<div class="shrink-0 border-t border-gray-100 bg-white px-3 py-3">
+  @if (error(); as message) {
+    <p class="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700" role="alert" data-chat-error>
+      {{ message }}
+    </p>
+  }
+
+  @if (canSend()) {
+    <div class="flex items-end gap-2">
+      <textarea
+        class="max-h-32 min-h-10 flex-1 resize-none rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm transition-colors focus:border-[#047857] focus:bg-white focus:outline-none"
+        rows="1"
+        placeholder="Write a message"
+        aria-label="Write a message"
+        data-chat-input
+        [maxLength]="maxLength"
+        [value]="draft()"
+        [disabled]="isSending()"
+        (input)="onInput($event)"
+        (keydown)="onKeydown($event)"
+      ></textarea>
+      <button
+        type="button"
+        class="app-btn app-btn-primary h-10 w-10 shrink-0 p-0"
+        aria-label="Send message"
+        data-chat-send
+        [disabled]="!canSubmit()"
+        (click)="submit()"
+      >
+        @if (isSending()) {
+          <span class="loading loading-spinner loading-xs"></span>
+        } @else {
+          <app-icon name="icon-send" [class]="'h-5 w-5'" [fill]="'currentColor'" />
+        }
+      </button>
+    </div>
+    @if (showCounter()) {
+      <p class="mt-1 text-right text-[10px] text-gray-400" data-chat-counter>
+        {{ draft().length }}/{{ maxLength }}
+      </p>
+    }
+  } @else {
+    <p class="rounded-lg bg-gray-50 px-3 py-2 text-center text-xs text-gray-500" data-chat-closed>
+      {{ closedReason() || 'This chat is closed.' }}
+    </p>
+  }
+</div>

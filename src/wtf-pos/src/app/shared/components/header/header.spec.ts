@@ -3,6 +3,7 @@ import { NavigationEnd, Router, provideRouter } from '@angular/router';
 import {
   AuthLoadingService,
   AuthService,
+  ConversationInboxService,
   ConnectivityService,
   ImageCacheService,
 } from '@core/services';
@@ -30,6 +31,7 @@ describe('HeaderComponent', () => {
       providers: [
         provideRouter([]),
         { provide: AuthService, useValue: fakes.auth },
+        { provide: ConversationInboxService, useValue: fakes.inbox },
         { provide: ConnectivityService, useValue: fakes.connectivity },
         { provide: ImageCacheService, useValue: fakes.imageCache },
       ],
@@ -51,6 +53,30 @@ describe('HeaderComponent', () => {
       ) as HTMLElement;
     return { fixture, el, fakes, router, navigate, loading, menu };
   }
+
+  describe('the envelope and the avatar menu', () => {
+    it('has the envelope beside the avatar, and starts the shared inbox', async () => {
+      const { el, fakes } = await setup();
+
+      expect(el.querySelector('app-staff-envelope [data-envelope]')).not.toBeNull();
+      expect(fakes.inbox.start).toHaveBeenCalledTimes(1);
+      const bar = el.querySelector('.navbar')!;
+      const envelope = bar.querySelector('app-staff-envelope')!;
+      const avatar = bar.querySelector('.dropdown')!;
+      expect(envelope.compareDocumentPosition(avatar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it('keeps the name, role, status and clock out of the bar, in the avatar menu', async () => {
+      const { el } = await setup();
+
+      const info = el.querySelector('[data-user-info]') as HTMLElement;
+      expect(info.closest('.dropdown-content')).not.toBeNull();
+      expect(info.textContent).toContain('Jane Doe');
+      expect(info.textContent).toContain('Admin');
+      expect(info.textContent).toContain('Online');
+      expect(el.querySelector('.navbar > .flex.items-center > .text-right')).toBeNull();
+    });
+  });
 
   it('loads the profile and shows the full name and role', async () => {
     const { el, loading, fakes } = await setup();

@@ -3,6 +3,7 @@ import { NavigationEnd, Router, provideRouter } from '@angular/router';
 import {
   AuthLoadingService,
   AuthService,
+  ConversationInboxService,
   ConnectivityService,
   ImageCacheService,
 } from '@core/services';
@@ -34,6 +35,7 @@ describe('SidebarComponent', () => {
       providers: [
         provideRouter([]),
         { provide: AuthService, useValue: fakes.auth },
+        { provide: ConversationInboxService, useValue: fakes.inbox },
         { provide: ConnectivityService, useValue: fakes.connectivity },
         { provide: ImageCacheService, useValue: fakes.imageCache },
       ],
@@ -78,6 +80,30 @@ describe('SidebarComponent', () => {
       await fixture.whenStable();
       fixture.detectChanges(false);
       expect(lit(el)).toEqual(expected);
+    });
+  });
+
+  describe('the envelope', () => {
+    it('sits in the top row beside the logo, above the user block', async () => {
+      const { el, fakes } = await setup();
+
+      const top = el.querySelector('aside > div')!;
+      expect(top.querySelector('app-staff-envelope [data-envelope]')).not.toBeNull();
+      expect(top.textContent).toContain('WTF');
+      expect(fakes.inbox.start).toHaveBeenCalledTimes(1);
+    });
+
+    it('stacks under the logo when the sidebar is collapsed', async () => {
+      const { el, fixture } = await setup();
+      const aside = el.querySelector('aside') as HTMLElement;
+      const row = aside.querySelector('aside > div > div') as HTMLElement;
+      expect(row.className).toContain('justify-between');
+
+      (fixture.componentInstance as unknown as { isCollapsed: { set: (v: boolean) => void } }).isCollapsed.set(true);
+      fixture.detectChanges();
+
+      expect(row.className).toContain('flex-col');
+      expect(row.className).not.toContain('justify-between');
     });
   });
 

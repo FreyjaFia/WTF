@@ -7,20 +7,7 @@
     </a>
   </div>
   <div class="flex items-center gap-2 sm:gap-4">
-    <div class="text-right">
-      <div class="text-sm font-semibold text-gray-800">{{ userFullName }}</div>
-      <div class="flex items-center justify-end gap-2 text-xs text-gray-500">
-        <span>{{ userRoleLabel }}</span>
-        <span class="inline-flex items-center gap-1.5">
-          <span [class.text-emerald-700]="isOnline()" [class.text-amber-700]="!isOnline()">{{
-            isOnline() ? 'Online' : 'Offline'
-          }}</span>
-        </span>
-      </div>
-      <div class="text-[10px] text-gray-400 sm:text-xs">
-        {{ now() | date: 'EEE, MMM d, y • h:mm:ss a' }}
-      </div>
-    </div>
+    <app-staff-envelope />
 
     <div class="dropdown dropdown-end z-[35]">
       <div
@@ -38,8 +25,20 @@
       </div>
       <div
         tabindex="-1"
-        class="dropdown-content right-0 z-[35] mt-3 w-48 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl"
+        class="dropdown-content right-0 z-[35] mt-3 w-56 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl"
       >
+        <div class="border-b border-gray-100 px-4 py-3" data-user-info>
+          <div class="truncate text-sm font-semibold text-gray-800">{{ userFullName }}</div>
+          <div class="flex items-center gap-2 text-xs text-gray-500">
+            <span class="truncate">{{ userRoleLabel }}</span>
+            <span [class.text-emerald-700]="isOnline()" [class.text-amber-700]="!isOnline()">{{
+              isOnline() ? 'Online' : 'Offline'
+            }}</span>
+          </div>
+          <div class="mt-0.5 text-[10px] text-gray-400">
+            {{ now() | date: 'EEE, MMM d, y • h:mm:ss a' }}
+          </div>
+        </div>
         <div class="p-1.5">
           <a
             role="button"

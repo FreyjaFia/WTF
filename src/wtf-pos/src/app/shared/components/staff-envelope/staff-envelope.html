@@ -1,0 +1,21 @@
+@if (auth.canReadOrders()) {
+  <app-envelope
+    viewer="staff"
+    [showCustomer]="true"
+    [align]="align()"
+    [unread]="inbox.unreadConversations()"
+    [items]="inbox.items()"
+    [isLoading]="inbox.isLoading()"
+    (listOpened)="inbox.refresh()"
+    (opened)="open($event)"
+  />
+  <app-order-chat-drawer
+    [isOpen]="openChat() !== null"
+    [orderId]="openChat()?.orderId ?? null"
+    [orderNumber]="openChat()?.orderNumber ?? null"
+    [customerName]="openChat()?.customerName ?? 'Customer'"
+    [canGoToOrder]="true"
+    (goToOrder)="goToOrder()"
+    (closed)="openChat.set(null)"
+  />
+}

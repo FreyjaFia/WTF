@@ -5,16 +5,23 @@
   [class.w-60]="!isCollapsed()"
 >
   <div class="border-b border-gray-200 px-3 py-4">
-    <div class="flex items-center gap-2 text-2xl font-bold tracking-widest">
-      <span class="text-neutral">WTF</span>
-      @if (!isCollapsed()) {
-        <span class="text-xs font-normal tracking-wider text-gray-500 uppercase">POS</span>
-      }
-      @if (!isCollapsed()) {
-        <span class="text-[10px] font-semibold tracking-wide text-gray-400">
-          v{{ appVersion }}
-        </span>
-      }
+    <div
+      class="flex items-center gap-2"
+      [class.flex-col]="isCollapsed()"
+      [class.justify-between]="!isCollapsed()"
+    >
+      <div class="flex items-center gap-2 text-2xl font-bold tracking-widest">
+        <span class="text-neutral">WTF</span>
+        @if (!isCollapsed()) {
+          <span class="text-xs font-normal tracking-wider text-gray-500 uppercase">POS</span>
+        }
+        @if (!isCollapsed()) {
+          <span class="text-[10px] font-semibold tracking-wide text-gray-400">
+            v{{ appVersion }}
+          </span>
+        }
+      </div>
+      <app-staff-envelope align="start" />
     </div>
   </div>
 

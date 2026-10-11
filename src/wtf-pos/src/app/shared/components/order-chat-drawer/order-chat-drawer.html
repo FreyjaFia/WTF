@@ -1,0 +1,75 @@
+<div
+  class="fixed inset-0 z-50"
+  style="padding-top: max(var(--safe-area-top, 0px), env(safe-area-inset-top)); padding-bottom: max(var(--safe-area-bottom, 0px), env(safe-area-inset-bottom))"
+  [class.pointer-events-auto]="isOpen()"
+  [class.pointer-events-none]="!isOpen()"
+>
+  <div
+    class="absolute inset-0 bg-black/30 backdrop-blur-md transition-opacity ease-in-out"
+    [class.duration-300]="hasTransitions()"
+    [class.duration-0]="!hasTransitions()"
+    [class.opacity-100]="isOpen()"
+    [class.opacity-0]="!isOpen()"
+    (click)="close()"
+    role="presentation"
+  ></div>
+
+  <section
+    class="fixed top-0 right-0 z-50 flex h-full w-full max-w-md transform-gpu flex-col bg-white shadow-xl transition-transform ease-in-out"
+    [class.duration-300]="hasTransitions()"
+    [class.duration-0]="!hasTransitions()"
+    style="padding-top: max(var(--safe-area-top, 0px), env(safe-area-inset-top)); padding-bottom: max(var(--safe-area-bottom, 0px), env(safe-area-inset-bottom))"
+    [class.translate-x-0]="isOpen()"
+    [class.translate-x-full]="!isOpen()"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="title()"
+    [attr.aria-hidden]="!isOpen()"
+    (keydown.escape)="close()"
+    data-order-chat
+  >
+    <header class="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+      <div class="flex min-w-0 items-center gap-3">
+        <div class="rounded-lg bg-white p-2 ring-1 ring-gray-200">
+          <app-icon name="icon-chat" [class]="'h-5 w-5 text-gray-700'" [fill]="'currentColor'" />
+        </div>
+        <div class="min-w-0">
+          <h2 class="truncate text-base font-bold text-gray-900" data-chat-title>{{ title() }}</h2>
+          <p class="truncate text-xs text-gray-500">{{ customerName() }}</p>
+        </div>
+      </div>
+      <div class="flex shrink-0 items-center gap-2">
+      @if (canGoToOrder()) {
+        <button type="button" class="app-btn app-btn-secondary px-3 py-1.5 text-sm" data-chat-go-to-order (click)="goToOrder.emit()">
+          Go to order
+        </button>
+      }
+      <button
+        type="button"
+        class="app-btn app-btn-ghost p-1.5"
+        aria-label="Close chat"
+        data-chat-close
+        (click)="close()"
+      >
+        <app-icon name="icon-close" [class]="'h-5 w-5'" />
+      </button>
+      </div>
+    </header>
+
+    @if (isOpen()) {
+      <app-chat
+        viewer="staff"
+        [messages]="conversation()?.messages ?? []"
+        [customerLabel]="customerName()"
+        [canSend]="conversation() ? conversation()!.canSend : true"
+        [closedReason]="conversation()?.closedReason ?? null"
+        [isLoading]="isLoading()"
+        [isSending]="isSending()"
+        [error]="error()"
+        emptyText="No messages yet. Write the first one."
+        [(draft)]="draft"
+        (sent)="send($event)"
+      />
+    }
+  </section>
+</div>

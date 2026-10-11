@@ -1,0 +1,91 @@
+<button
+  type="button"
+  class="relative flex h-10 w-10 cursor-pointer items-center justify-center rounded-full text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 active:scale-95"
+  [class.bg-gray-100]="isOpen()"
+  [attr.aria-label]="label()"
+  [attr.aria-expanded]="isOpen()"
+  aria-haspopup="dialog"
+  data-envelope
+  (click)="toggle()"
+>
+  <app-icon name="icon-envelope" [class]="'h-6 w-6'" [fill]="'currentColor'" />
+  @if (unread() > 0) {
+    <span
+      class="absolute -top-0.5 -right-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] leading-none font-bold text-white ring-2 ring-white"
+      data-envelope-badge
+      >{{ badge() }}</span
+    >
+  }
+</button>
+
+@if (isOpen()) {
+  <div
+    class="fixed inset-x-3 top-16 z-50 max-h-[70vh] overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl sm:absolute sm:inset-x-auto sm:top-auto sm:mt-2 sm:w-96"
+    [class.sm:right-0]="align() === 'end'"
+    [class.sm:left-0]="align() === 'start'"
+    role="dialog"
+    aria-label="Messages"
+    data-envelope-panel
+  >
+    <div class="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+      <h2 class="text-sm font-bold text-gray-900">Messages</h2>
+      @if (unread() > 0) {
+        <span class="text-xs text-gray-500">{{ unread() }} unread</span>
+      }
+    </div>
+
+    <ul class="max-h-[calc(70vh-3rem)] divide-y divide-gray-50 overflow-y-auto">
+      @if (isLoading() && items().length === 0) {
+        <li class="flex justify-center py-8">
+          <span class="loading loading-spinner loading-md"></span>
+        </li>
+      } @else if (items().length === 0) {
+        <li class="px-4 py-8 text-center text-sm text-gray-400" data-envelope-empty>
+          No messages yet.
+        </li>
+      } @else {
+        @for (item of items(); track item.id) {
+          <li>
+            <button
+              type="button"
+              class="flex w-full cursor-pointer items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-50"
+              [class.bg-emerald-50/40]="item.unreadCount > 0"
+              data-envelope-item
+              [attr.data-unread]="item.unreadCount > 0"
+              (click)="open(item)"
+            >
+              <span class="min-w-0 flex-1">
+                <span class="flex items-baseline justify-between gap-2">
+                  <span
+                    class="truncate text-sm text-gray-900"
+                    [class.font-bold]="item.unreadCount > 0"
+                    [class.font-semibold]="item.unreadCount === 0"
+                    >{{ item.title }}</span
+                  >
+                  <span class="shrink-0 text-xs text-gray-400">{{ ago(item.lastMessageAt) }}</span>
+                </span>
+                @if (showCustomer() && item.customerName) {
+                  <span class="block truncate text-xs text-gray-500">{{ item.customerName }}</span>
+                }
+                <span
+                  class="block truncate text-xs"
+                  [class.font-semibold]="item.unreadCount > 0"
+                  [class.text-gray-900]="item.unreadCount > 0"
+                  [class.text-gray-500]="item.unreadCount === 0"
+                  >{{ preview(item) }}</span
+                >
+              </span>
+              @if (item.unreadCount > 0) {
+                <span
+                  class="mt-1 flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-[#047857] px-1 text-[11px] leading-none font-bold text-white"
+                  data-envelope-item-count
+                  >{{ item.unreadCount }}</span
+                >
+              }
+            </button>
+          </li>
+        }
+      }
+    </ul>
+  </div>
+}

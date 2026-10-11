@@ -7,13 +7,22 @@ import { appVersion } from '@environments/version';
 import { AvatarComponent } from '@shared/components/avatar/avatar';
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import { IconComponent } from '@shared/components/icons/icon/icon';
+import { StaffEnvelopeComponent } from '@shared/components/staff-envelope/staff-envelope';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { ordersNavSection } from '@shared/utils/orders-nav';
 import { filter, map } from 'rxjs';
 
 @Component({
   selector: 'app-sidebar',
-  imports: [CommonModule, RouterLink, RouterLinkActive, AvatarComponent, IconComponent, ConfirmDialogComponent],
+  imports: [
+    CommonModule,
+    RouterLink,
+    RouterLinkActive,
+    AvatarComponent,
+    IconComponent,
+    ConfirmDialogComponent,
+    StaffEnvelopeComponent,
+  ],
   templateUrl: './sidebar.html',
 })
 export class SidebarComponent implements OnInit, OnDestroy {

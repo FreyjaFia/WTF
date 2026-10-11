@@ -5,11 +5,12 @@ import { AuthLoadingService, AuthService, ConnectivityService, ImageCacheService
 import { appVersion } from '@environments/version';
 import { AvatarComponent } from '@shared/components/avatar/avatar';
 import { IconComponent } from '@shared/components/icons/icon/icon';
+import { StaffEnvelopeComponent } from '@shared/components/staff-envelope/staff-envelope';
 import { AppRoutes } from '@shared/constants/app-routes';
 
 @Component({
   selector: 'app-header',
-  imports: [CommonModule, AvatarComponent, IconComponent],
+  imports: [CommonModule, AvatarComponent, IconComponent, StaffEnvelopeComponent],
   templateUrl: './header.html',
 })
 export class HeaderComponent implements OnInit, OnDestroy {

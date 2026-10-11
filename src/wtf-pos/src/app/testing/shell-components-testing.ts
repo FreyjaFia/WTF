@@ -14,6 +14,16 @@ export function createShellFakes(me: Observable<FakeMe> = of({ firstName: 'Jane'
   const permissions: Record<string, boolean> = {};
   const can = (name: string) => () => permissions[name] ?? true;
 
+  // The envelope in the header and sidebar listens through this; the shell tests do not need real chat data.
+  const inbox = {
+    start: vi.fn(),
+    stop: vi.fn(),
+    refresh: vi.fn(),
+    unreadConversations: signal(0),
+    items: signal([]),
+    isLoading: signal(false),
+  };
+
   const auth = {
     meRefresh$: meRefresh$.asObservable(),
     getMe: vi.fn(() => me),
@@ -41,7 +51,7 @@ export function createShellFakes(me: Observable<FakeMe> = of({ firstName: 'Jane'
 
   const connectivity = { isOnline: signal(true), showReconnected: signal(false) };
 
-  return { auth, imageCache, connectivity, meRefresh$, permissions };
+  return { auth, imageCache, connectivity, meRefresh$, permissions, inbox };
 }
 
 /** Lets pending promise continuations (async subscribe handlers) run. */

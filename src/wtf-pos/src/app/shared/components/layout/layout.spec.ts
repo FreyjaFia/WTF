@@ -1,7 +1,8 @@
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
-import { AuthService, ConnectivityService, ImageCacheService } from '@core/services';
+import { AuthService,
+  ConversationInboxService, ConnectivityService, ImageCacheService } from '@core/services';
 import { BehaviorSubject } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createShellFakes } from '../../../testing/shell-components-testing';
@@ -62,6 +63,7 @@ describe('LayoutComponent', () => {
       providers: [
         provideRouter([{ path: '', component: RoutedPageComponent }]),
         { provide: AuthService, useValue: auth },
+        { provide: ConversationInboxService, useValue: fakes.inbox },
         { provide: ConnectivityService, useValue: fakes.connectivity },
         { provide: ImageCacheService, useValue: fakes.imageCache },
       ],
