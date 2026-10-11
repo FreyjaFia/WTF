@@ -108,6 +108,26 @@
                   }
                 </div>
 
+                <!-- Contact number -->
+                <div>
+                  <label class="mb-2 block text-sm font-semibold text-gray-900" for="customerContact">
+                    Contact Number
+                  </label>
+                  <input
+                    id="customerContact"
+                    type="tel"
+                    inputmode="tel"
+                    formControlName="contactNumber"
+                    placeholder="e.g. 0917 123 4567"
+                    maxlength="30"
+                    class="input w-full border-transparent bg-gray-50 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                    [class.input-error]="hasError('contactNumber')"
+                  />
+                  @if (hasError('contactNumber')) {
+                    <p class="text-error mt-2 text-sm">Please enter a valid contact number.</p>
+                  }
+                </div>
+
                 <!-- Address -->
                 <div>
                   <div class="mb-2 flex items-baseline justify-between">

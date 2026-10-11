@@ -122,6 +122,16 @@
                 </div>
               </div>
 
+              <!-- Contact number -->
+              @if (customer()!.contactNumber) {
+                <div class="border-t border-gray-100 pt-5">
+                  <p class="mb-3 text-xs font-semibold tracking-wider text-gray-400 uppercase">
+                    Contact Number
+                  </p>
+                  <p class="text-sm text-gray-600">{{ customer()!.contactNumber }}</p>
+                </div>
+              }
+
               <!-- Address -->
               @if (customer()!.address) {
                 <div class="border-t border-gray-100 pt-5">

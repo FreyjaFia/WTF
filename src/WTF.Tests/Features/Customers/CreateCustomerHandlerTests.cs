@@ -40,6 +40,41 @@ public class CreateCustomerHandlerTests
             Arg.Any<CancellationToken>());
     }
 
+    [Fact]
+    public async Task Handle_ContactNumber_IsTrimmedAndSaved()
+    {
+        var dto = await Handler().Handle(
+            new CreateCustomerCommand("Ana", "Cruz", null, "  +63 917 123 4567 "), CancellationToken.None);
+
+        dto.ContactNumber.ShouldBe("+63 917 123 4567");
+        await using var db = TestDb.Create(_dbName);
+        (await db.Customers.SingleAsync()).ContactNumber.ShouldBe("+63 917 123 4567");
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task Handle_BlankContactNumber_IsStoredAsNone(string? contact)
+    {
+        var dto = await Handler().Handle(new CreateCustomerCommand("Ana", "Cruz", null, contact), CancellationToken.None);
+
+        dto.ContactNumber.ShouldBeNull();
+    }
+
+    [Theory]
+    [InlineData("call me")]
+    [InlineData("12345")]
+    [InlineData("0917123456789012345678901234567890")]
+    public async Task Handle_InvalidContactNumber_ThrowsAndSavesNothing(string contact)
+    {
+        await Should.ThrowAsync<InvalidOperationException>(() =>
+            Handler().Handle(new CreateCustomerCommand("Ana", "Cruz", null, contact), CancellationToken.None));
+
+        await using var db = TestDb.Create(_dbName);
+        (await db.Customers.CountAsync()).ShouldBe(0);
+    }
+
     [Theory]
     [InlineData("", "Cruz")]
     [InlineData("Ana", " ")]

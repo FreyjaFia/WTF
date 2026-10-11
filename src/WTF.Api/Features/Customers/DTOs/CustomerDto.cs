@@ -11,5 +11,6 @@ public record CustomerDto(
     DateTime? UpdatedAt,
     Guid? UpdatedBy,
     string? ImageUrl,
-    bool AllowOrderingLink
+    bool AllowOrderingLink,
+    string? ContactNumber = null
 );

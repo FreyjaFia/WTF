@@ -25,6 +25,8 @@ public partial class Customer
 
     public bool AllowOrderingLink { get; set; }
 
+    public string? ContactNumber { get; set; }
+
     public virtual User CreatedByNavigation { get; set; } = null!;
 
     public virtual CustomerImage? CustomerImage { get; set; }

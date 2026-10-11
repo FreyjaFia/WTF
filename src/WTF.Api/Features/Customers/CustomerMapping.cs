@@ -18,7 +18,8 @@ internal static class CustomerMapping
             customer.UpdatedAt,
             customer.UpdatedBy,
             imageUrl,
-            customer.AllowOrderingLink
+            customer.AllowOrderingLink,
+            customer.ContactNumber
         );
     }
 }

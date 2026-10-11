@@ -47,6 +47,35 @@ public class UpdateCustomerHandlerTests
     }
 
     [Fact]
+    public async Task Handle_ContactNumber_IsSavedChangedAndCleared()
+    {
+        var customer = CustomerSeed.NewCustomer();
+        await CustomerSeed.SeedAsync(_dbName, customer);
+
+        var dto = await Handler().Handle(
+            new UpdateCustomerCommand(customer.Id, "Ana", "Cruz", null, "0917 123 4567"), CancellationToken.None);
+        dto!.ContactNumber.ShouldBe("0917 123 4567");
+
+        await Handler().Handle(new UpdateCustomerCommand(customer.Id, "Ana", "Cruz", null, null), CancellationToken.None);
+        await using var db = TestDb.Create(_dbName);
+        (await db.Customers.SingleAsync()).ContactNumber.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task Handle_InvalidContactNumber_ThrowsAndKeepsTheOldOne()
+    {
+        var customer = CustomerSeed.NewCustomer();
+        customer.ContactNumber = "0917 123 4567";
+        await CustomerSeed.SeedAsync(_dbName, customer);
+
+        await Should.ThrowAsync<InvalidOperationException>(() =>
+            Handler().Handle(new UpdateCustomerCommand(customer.Id, "Ana", "Cruz", null, "abc"), CancellationToken.None));
+
+        await using var db = TestDb.Create(_dbName);
+        (await db.Customers.SingleAsync()).ContactNumber.ShouldBe("0917 123 4567");
+    }
+
+    [Fact]
     public async Task Handle_NullAddress_ClearsAddress()
     {
         var customer = CustomerSeed.NewCustomer(address: "Manila");

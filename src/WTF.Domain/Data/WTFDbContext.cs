@@ -140,6 +140,7 @@ public partial class WTFDbContext : DbContext
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_Customers_Id");
             entity.Property(e => e.Address).IsUnicode(false);
+            entity.Property(e => e.ContactNumber).HasMaxLength(30);
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("(getutcdate())", "DF_Customers_CreatedAt")
                 .HasColumnType("datetime");

@@ -109,10 +109,37 @@ describe('CustomerEditorComponent', () => {
         firstName: 'Zoe',
         lastName: 'Kim',
         address: null,
+        contactNumber: null,
       });
       expect(alert.successCreated).toHaveBeenCalledWith('Customer');
       expect(router.navigateByUrl).toHaveBeenCalledWith(expect.stringContaining('new1'));
       expect(c.isSaving()).toBe(false);
+    });
+
+    it('sends a trimmed contact number, and accepts none', () => {
+      setup();
+      fillValid();
+      c.customerForm.patchValue({ contactNumber: '  0917 123 4567 ' });
+      c.saveCustomer();
+      expect(service['createCustomer']).toHaveBeenCalledWith(
+        expect.objectContaining({ contactNumber: '0917 123 4567' }),
+      );
+    });
+
+    it.each(['abc', '12345', '0917-xyz-1234'])('rejects the contact number "%s"', (value) => {
+      setup();
+      fillValid();
+      c.customerForm.patchValue({ contactNumber: value });
+      c.saveCustomer();
+      expect(c.customerForm.controls.contactNumber.invalid).toBe(true);
+      expect(service['createCustomer']).not.toHaveBeenCalled();
+    });
+
+    it.each(['+63 917 123 4567', '(02) 8123-4567', ''])('accepts the contact number "%s"', (value) => {
+      setup();
+      fillValid();
+      c.customerForm.patchValue({ contactNumber: value });
+      expect(c.customerForm.controls.contactNumber.valid).toBe(true);
     });
 
     it('creates then uploads the selected image', async () => {
@@ -169,6 +196,7 @@ describe('CustomerEditorComponent', () => {
         firstName: 'Ann',
         lastName: 'Lee',
         address: '12 Main St',
+        contactNumber: '',
       });
       expect(c.customerFullName()).toBe('Ann Lee');
       expect(c.currentImageUrl()).toBe('http://img/a.png');
@@ -208,6 +236,7 @@ describe('CustomerEditorComponent', () => {
         firstName: 'Ann',
         lastName: 'Lee',
         address: null,
+        contactNumber: null,
       });
       expect(alert.successUpdated).toHaveBeenCalledWith('Customer');
       expect(router.navigateByUrl).toHaveBeenCalledWith(expect.stringContaining('c1'));

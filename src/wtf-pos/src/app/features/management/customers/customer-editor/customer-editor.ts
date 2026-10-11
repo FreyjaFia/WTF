@@ -57,6 +57,10 @@ export class CustomerEditorComponent implements OnInit {
       nonNullable: true,
       validators: [Validators.maxLength(500)],
     }),
+    contactNumber: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.maxLength(30), Validators.pattern(/^$|^(?=(?:\D*\d){7})[0-9+()\-\s]+$/)],
+    }),
   });
 
   protected customerId: string | null = null;
@@ -197,6 +201,7 @@ export class CustomerEditorComponent implements OnInit {
           firstName: customer.firstName,
           lastName: customer.lastName,
           address: customer.address || '',
+          contactNumber: customer.contactNumber || '',
         });
         this.customerFullName.set(`${customer.firstName} ${customer.lastName}`.trim());
         this.currentImageUrl.set(customer.imageUrl || null);
@@ -230,6 +235,7 @@ export class CustomerEditorComponent implements OnInit {
         firstName: formValue.firstName,
         lastName: formValue.lastName,
         address: formValue.address || null,
+        contactNumber: formValue.contactNumber.trim() || null,
       };
 
       this.customerService.updateCustomer(updateDto).subscribe({
@@ -254,6 +260,7 @@ export class CustomerEditorComponent implements OnInit {
         firstName: formValue.firstName,
         lastName: formValue.lastName,
         address: formValue.address || null,
+        contactNumber: formValue.contactNumber.trim() || null,
       };
 
       this.customerService.createCustomer(createDto).subscribe({
@@ -371,6 +378,7 @@ export class CustomerEditorComponent implements OnInit {
       firstName: 'First name',
       lastName: 'Last name',
       address: 'Address',
+      contactNumber: 'Contact number',
     };
     return labels[controlName] || controlName;
   }

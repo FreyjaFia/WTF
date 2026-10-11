@@ -10,12 +10,14 @@ export interface CustomerDto {
   updatedBy?: string | null;
   imageUrl?: string | null;
   allowOrderingLink: boolean;
+  contactNumber?: string | null;
 }
 
 export interface CreateCustomerDto {
   firstName: string;
   lastName: string;
   address?: string | null;
+  contactNumber?: string | null;
 }
 
 export interface UpdateCustomerDto {
@@ -23,4 +25,5 @@ export interface UpdateCustomerDto {
   firstName: string;
   lastName: string;
   address?: string | null;
+  contactNumber?: string | null;
 }
