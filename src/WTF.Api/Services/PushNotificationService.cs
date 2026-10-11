@@ -19,7 +19,8 @@ public interface IPushNotificationService
         decimal totalAmount,
         OrderStatusEnum newStatus,
         Guid actorUserId,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken,
+        bool isOverride = false);
 }
 
 public sealed class PushNotificationService(
@@ -30,42 +31,12 @@ public sealed class PushNotificationService(
 {
     private const string PlatformHuawei = "huawei";
 
-    public async Task SendOrderCreatedAsync(
+    public Task SendOrderCreatedAsync(
         Order order,
         decimal totalAmount,
         Guid actorUserId,
         CancellationToken cancellationToken)
     {
-        if (!fcmClient.IsConfigured && !huaweiClient.IsConfigured)
-        {
-            logger.LogInformation("Push notifications are not configured. Skipping send.");
-            return;
-        }
-
-        var tokens = await db.PushNotificationTokens
-            .AsNoTracking()
-            .Where(t => t.IsActive)
-            .Join(db.Users.Where(u => u.IsActive),
-                token => token.UserId,
-                user => user.Id,
-                (token, user) => new { token, user.RoleId })
-            .Join(db.UserRoles,
-                joined => joined.RoleId,
-                role => role.Id,
-                (joined, role) => new { joined.token, role.Name })
-            .Where(x => x.Name != AppRoles.AdminViewer)
-            .Where(x => x.token.UserId != actorUserId)
-            .Select(x => new { x.token.Token, x.token.Platform })
-            .Distinct()
-            .ToListAsync(cancellationToken);
-
-        if (tokens.Count == 0)
-        {
-            return;
-        }
-
-        var title = "New order created";
-        var body = $"Order #{order.OrderNumber} \u2022 PHP {totalAmount:N2}";
         var data = new Dictionary<string, string>
         {
             ["orderId"] = order.Id.ToString(),
@@ -73,46 +44,55 @@ public sealed class PushNotificationService(
             ["path"] = $"/orders/editor/{order.Id}"
         };
 
-        var fcmTokens = tokens
-            .Where(t => !string.Equals(t.Platform, PlatformHuawei, StringComparison.OrdinalIgnoreCase))
-            .Select(t => t.Token)
-            .Distinct()
-            .ToList();
-        var huaweiTokens = tokens
-            .Where(t => string.Equals(t.Platform, PlatformHuawei, StringComparison.OrdinalIgnoreCase))
-            .Select(t => t.Token)
-            .Distinct()
-            .ToList();
-
-        foreach (var token in fcmTokens)
-        {
-            try
-            {
-                await fcmClient.SendAsync(token, title, body, data, cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                logger.LogWarning(ex, "Failed to send push notification for order {OrderId}.", order.Id);
-            }
-        }
-
-        foreach (var token in huaweiTokens)
-        {
-            try
-            {
-                await huaweiClient.SendAsync(token, title, body, data, cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                logger.LogWarning(ex, "Failed to send Huawei push notification for order {OrderId}.", order.Id);
-            }
-        }
+        return SendToOthersAsync(
+            order,
+            "New order created",
+            $"Order #{order.OrderNumber} • PHP {totalAmount:N2}",
+            data,
+            actorUserId,
+            cancellationToken);
     }
 
-    public async Task SendOrderStatusChangedAsync(
+    public Task SendOrderStatusChangedAsync(
         Order order,
         decimal totalAmount,
         OrderStatusEnum newStatus,
+        Guid actorUserId,
+        CancellationToken cancellationToken,
+        bool isOverride = false)
+    {
+        var statusLabel = isOverride
+            ? "overridden"
+            : newStatus switch
+            {
+                OrderStatusEnum.Completed => "completed",
+                OrderStatusEnum.Cancelled => "cancelled",
+                OrderStatusEnum.Refunded => "refunded",
+                _ => "updated"
+            };
+
+        var data = new Dictionary<string, string>
+        {
+            ["orderId"] = order.Id.ToString(),
+            ["orderNumber"] = order.OrderNumber.ToString(),
+            ["status"] = newStatus.ToString(),
+            ["path"] = $"/orders/details/{order.Id}"
+        };
+
+        return SendToOthersAsync(
+            order,
+            $"Order {statusLabel}",
+            $"Order #{order.OrderNumber} • PHP {totalAmount:N2}",
+            data,
+            actorUserId,
+            cancellationToken);
+    }
+
+    private async Task SendToOthersAsync(
+        Order order,
+        string title,
+        string body,
+        Dictionary<string, string> data,
         Guid actorUserId,
         CancellationToken cancellationToken)
     {
@@ -121,14 +101,6 @@ public sealed class PushNotificationService(
             logger.LogInformation("Push notifications are not configured. Skipping send.");
             return;
         }
-
-        var statusLabel = newStatus switch
-        {
-            OrderStatusEnum.Completed => "completed",
-            OrderStatusEnum.Cancelled => "cancelled",
-            OrderStatusEnum.Refunded => "refunded",
-            _ => "updated"
-        };
 
         var tokens = await db.PushNotificationTokens
             .AsNoTracking()
@@ -151,16 +123,6 @@ public sealed class PushNotificationService(
         {
             return;
         }
-
-        var title = $"Order {statusLabel}";
-        var body = $"Order #{order.OrderNumber} \u2022 PHP {totalAmount:N2}";
-        var data = new Dictionary<string, string>
-        {
-            ["orderId"] = order.Id.ToString(),
-            ["orderNumber"] = order.OrderNumber.ToString(),
-            ["status"] = newStatus.ToString(),
-            ["path"] = $"/orders/details/{order.Id}"
-        };
 
         var fcmTokens = tokens
             .Where(t => !string.Equals(t.Platform, PlatformHuawei, StringComparison.OrdinalIgnoreCase))
