@@ -112,7 +112,7 @@ public sealed class PushNotificationService(
         return SendToOthersAsync(
             order,
             "New online order",
-            string.Join(" - ", parts),
+            string.Join(" · ", parts),
             data,
             Guid.Empty,
             cancellationToken);

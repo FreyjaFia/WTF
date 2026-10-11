@@ -96,7 +96,9 @@ export class PublicChatComponent implements OnDestroy {
     this.service.sendMessage(this.token(), id, body).subscribe({
       next: (message) => {
         this.conversation.update((current) =>
-          current ? { ...current, messages: [...current.messages, message] } : current,
+          current && !current.messages.some((m) => m.id === message.id)
+            ? { ...current, messages: [...current.messages, message] }
+            : current,
         );
         this.draft.set('');
         this.isSending.set(false);
