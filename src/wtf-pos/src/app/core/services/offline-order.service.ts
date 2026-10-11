@@ -1,7 +1,7 @@
 import { effect, inject, Injectable, signal } from '@angular/core';
 import { AlertService, ConnectivityService, OrderService } from '@core/services';
 import { CartItemDto, CreateOrderCommand } from '@shared/models';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, timeout } from 'rxjs';
 import { db } from './db';
 import type { PendingOrder } from './db';
 
@@ -11,6 +11,10 @@ export class OfflineOrderService {
   private static readonly SYNC_BATCH_SIZE = 5;
   private static readonly MAX_SYNC_ATTEMPTS = 3;
   private static readonly INITIAL_BACKOFF_MS = 500;
+  /** A batch request that gets no answer for this long is given up on, so a hung server cannot leave orders syncing. */
+  public static readonly SYNC_REQUEST_TIMEOUT_MS = 60_000;
+  public static readonly TIMED_OUT_MESSAGE =
+    'The server took too long to answer. Check the orders list before syncing again, in case the order already went through.';
 
   private readonly connectivity = inject(ConnectivityService);
   private readonly orderService = inject(OrderService);
@@ -25,16 +29,32 @@ export class OfflineOrderService {
 
   private localCounter = 0;
   private syncInProgress = false;
+  private wasOnline = false;
 
   constructor() {
-    this.loadPendingOrders();
+    void this.recoverInterruptedSync();
 
+    // Automatic sync. An order that just failed must NOT start another sync by itself: marking it failed changes
+    // the list, which would run this again at once and loop against a server that keeps failing (every card flickers
+    // "Syncing" and Sync Now finds a sync already running). Failed orders are tried again when the connection
+    // returns, or when the user presses Sync Now. Orders still waiting are sent as soon as they can be.
     effect(() => {
       const online = this.connectivity.isOnline();
       const isAuthenticated = this.isAuthenticated();
       const hasActiveOfflineEdit = this._activeOfflineEdits().length > 0;
+      const orders = this._pendingOrders();
+      const reconnected = online && !this.wasOnline;
+      this.wasOnline = online;
 
-      if (online && isAuthenticated && !hasActiveOfflineEdit && this._pendingOrders().length > 0) {
+      const hasWaiting = orders.some((order) => order.status === 'pending');
+      const hasFailed = orders.some((order) => order.status === 'failed');
+
+      if (
+        online &&
+        isAuthenticated &&
+        !hasActiveOfflineEdit &&
+        (hasWaiting || (reconnected && hasFailed))
+      ) {
         this.syncAll();
       }
     });
@@ -118,6 +138,34 @@ export class OfflineOrderService {
     await this.loadPendingOrders();
   }
 
+  /**
+   * What the Sync Now button does: the same as <see cref="syncAll"/>, but when sync cannot start it says why instead
+   * of doing nothing.
+   */
+  public async syncNow(): Promise<void> {
+    if (this.syncInProgress) {
+      this.alertService.warning('Orders are already syncing. Please wait a moment.');
+      return;
+    }
+
+    if (!this.connectivity.isOnline()) {
+      this.alertService.warning('You are offline. Orders will sync when the connection returns.');
+      return;
+    }
+
+    if (!this.isAuthenticated()) {
+      this.alertService.warning('Please sign in again to sync your offline orders.');
+      return;
+    }
+
+    if (this._activeOfflineEdits().length > 0) {
+      this.alertService.warning('Close the offline order you are editing, then sync again.');
+      return;
+    }
+
+    await this.syncAll();
+  }
+
   public async syncAll(): Promise<void> {
     if (
       this.syncInProgress ||
@@ -154,16 +202,21 @@ export class OfflineOrderService {
         try {
           await this.retryWithBackoff(() =>
             firstValueFrom(
-              this.orderService.createOrdersBatch(
-                batch.map((order) => this.buildBatchCommand(order)),
-              ),
+              this.orderService
+                .createOrdersBatch(batch.map((order) => this.buildBatchCommand(order)))
+                .pipe(timeout(OfflineOrderService.SYNC_REQUEST_TIMEOUT_MS)),
             ),
           );
 
           await db.pendingOrders.bulkDelete(batchIds);
           successCount += batch.length;
         } catch (err: unknown) {
-          const message = err instanceof Error ? err.message : 'Unknown error';
+          const message =
+            this.isTimeout(err)
+              ? OfflineOrderService.TIMED_OUT_MESSAGE
+              : err instanceof Error
+                ? err.message
+                : 'Unknown error';
           failCount += batch.length;
 
           await (db.pendingOrders as import('dexie').Table).bulkUpdate(
@@ -196,6 +249,23 @@ export class OfflineOrderService {
       this.syncInProgress = false;
       this._isSyncing.set(false);
     }
+  }
+
+  /**
+   * An order is marked syncing while its request runs. If the page was closed or reloaded in the middle, nothing is
+   * running any more but the mark stays, and the order could never be sent or opened again. A new service instance
+   * means no sync is running, so any order still syncing was interrupted: put it back to pending.
+   */
+  private async recoverInterruptedSync(): Promise<void> {
+    const stuck = (await db.pendingOrders.toArray()).filter((order) => order.status === 'syncing');
+
+    if (stuck.length > 0) {
+      await (db.pendingOrders as import('dexie').Table).bulkUpdate(
+        stuck.map((order) => ({ key: order.id!, changes: { status: 'pending' } })),
+      );
+    }
+
+    await this.loadPendingOrders();
   }
 
   private async loadPendingOrders(): Promise<void> {
@@ -263,6 +333,11 @@ export class OfflineOrderService {
     return chunks;
   }
 
+  /** The error the timeout operator raises (matched by name, so it is found wherever the library was loaded from). */
+  private isTimeout(error: unknown): boolean {
+    return error instanceof Error && error.name === 'TimeoutError';
+  }
+
   private async retryWithBackoff<T>(operation: () => Promise<T>): Promise<T> {
     let attempt = 0;
     let lastError: unknown = null;
@@ -273,6 +348,11 @@ export class OfflineOrderService {
       } catch (error: unknown) {
         lastError = error;
         attempt++;
+
+        // The server may have created the order even though it never answered, so asking again could save it twice.
+        if (this.isTimeout(error)) {
+          break;
+        }
 
         if (attempt >= OfflineOrderService.MAX_SYNC_ATTEMPTS) {
           break;

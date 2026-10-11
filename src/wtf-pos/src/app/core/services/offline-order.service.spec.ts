@@ -301,9 +301,19 @@ describe('OfflineOrderService', () => {
       expect((createBatch.mock.calls[1][0] as unknown[]).length).toBe(2);
     });
 
-    it('does not resend orders that are already syncing', async () => {
-      const service = await create([{ localId: 'a', status: 'syncing' }, { localId: 'b' }]);
+    it('does not resend an order that another sync is working on right now', async () => {
+      const service = await create([{ localId: 'b' }]);
       online.set(true);
+      // Marked syncing after startup: a sync is genuinely running for it.
+      await table.add({
+        localId: 'a',
+        command: command(),
+        cartSnapshot: cart,
+        customerName: null,
+        createdAt: new Date().toISOString(),
+        status: 'syncing',
+        retryCount: 0,
+      });
 
       await service.syncAll();
 
@@ -400,6 +410,160 @@ describe('OfflineOrderService', () => {
       await Promise.all([first, second]);
 
       expect(createBatch).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('an interrupted sync', () => {
+    beforeEach(() => localStorage.setItem('token', 'tok'));
+
+    it('puts an order left syncing back to pending when the app starts, so it can be sent again', async () => {
+      const service = await create([
+        { localId: 'a', status: 'syncing', errorMessage: 'old error' },
+        { localId: 'b', status: 'pending' },
+        { localId: 'c', status: 'failed', errorMessage: 'nope' },
+      ]);
+
+      expect(table.rows.find((r) => r.localId === 'a')!.status).toBe('pending');
+      expect(table.rows.find((r) => r.localId === 'b')!.status).toBe('pending');
+      expect(table.rows.find((r) => r.localId === 'c')!.status).toBe('failed');
+      expect(service.pendingOrders().find((o) => o.localId === 'a')!.status).toBe('pending');
+    });
+
+    it('sends the recovered order on the next sync', async () => {
+      const service = await create([{ localId: 'a', status: 'syncing' }]);
+      online.set(true);
+
+      await service.syncAll();
+
+      expect((createBatch.mock.calls[0][0] as unknown[]).length).toBe(1);
+      expect(table.rows).toEqual([]);
+    });
+
+    it('leaves a healthy list alone', async () => {
+      await create([{ localId: 'a' }, { localId: 'b', status: 'failed' }]);
+
+      expect(table.rows.map((r) => r.status)).toEqual(['pending', 'failed']);
+    });
+  });
+
+  describe('a server that never answers', () => {
+    beforeEach(() => localStorage.setItem('token', 'tok'));
+
+    it('gives up after the timeout and marks the order failed with a clear message', async () => {
+      createBatch.mockImplementation(() => new Observable(() => undefined));
+      const service = await create([{ localId: 'a' }]);
+      online.set(true);
+
+      const done = service.syncAll();
+      await vi.advanceTimersByTimeAsync(OfflineOrderService.SYNC_REQUEST_TIMEOUT_MS + 10);
+      await done;
+
+      expect(table.rows[0]).toMatchObject({
+        status: 'failed',
+        errorMessage: OfflineOrderService.TIMED_OUT_MESSAGE,
+        retryCount: 1,
+      });
+      expect(service.isSyncing()).toBe(false);
+    });
+
+    it('does not ask again after a timeout, because the order may already be saved', async () => {
+      createBatch.mockImplementation(() => new Observable(() => undefined));
+      const service = await create([{ localId: 'a' }]);
+      online.set(true);
+
+      const done = service.syncAll();
+      await vi.advanceTimersByTimeAsync(OfflineOrderService.SYNC_REQUEST_TIMEOUT_MS * 3);
+      await done;
+
+      expect(createBatch).toHaveBeenCalledTimes(1);
+    });
+
+    it('can be synced again afterwards', async () => {
+      createBatch.mockImplementationOnce(() => new Observable(() => undefined));
+      const service = await create([{ localId: 'a' }]);
+      online.set(true);
+      let done = service.syncAll();
+      await vi.advanceTimersByTimeAsync(OfflineOrderService.SYNC_REQUEST_TIMEOUT_MS + 10);
+      await done;
+
+      createBatch.mockImplementation(() => of([]));
+      done = service.syncAll();
+      await vi.advanceTimersByTimeAsync(0);
+      await done;
+
+      expect(table.rows).toEqual([]);
+    });
+  });
+
+  describe('syncNow (the Sync Now button)', () => {
+    beforeEach(() => localStorage.setItem('token', 'tok'));
+
+    it('syncs when it can', async () => {
+      const service = await create([{ localId: 'a' }]);
+      online.set(true);
+
+      await service.syncNow();
+
+      expect(createBatch).toHaveBeenCalledTimes(1);
+      expect(alerts.warning).not.toHaveBeenCalled();
+    });
+
+    it('says so when offline instead of doing nothing', async () => {
+      const service = await create([{ localId: 'a' }]);
+
+      await service.syncNow();
+
+      expect(createBatch).not.toHaveBeenCalled();
+      expect(alerts.warning).toHaveBeenCalledWith(
+        'You are offline. Orders will sync when the connection returns.',
+      );
+    });
+
+    it('says so when the user has to sign in again', async () => {
+      localStorage.removeItem('token');
+      const service = await create([{ localId: 'a' }]);
+      online.set(true);
+
+      await service.syncNow();
+
+      expect(createBatch).not.toHaveBeenCalled();
+      expect(alerts.warning).toHaveBeenCalledWith('Please sign in again to sync your offline orders.');
+    });
+
+    it('says so when an offline order is open for editing', async () => {
+      const service = await create([{ localId: 'a' }]);
+      online.set(true);
+      service.lockSyncForOfflineEdit('a');
+
+      await service.syncNow();
+
+      expect(createBatch).not.toHaveBeenCalled();
+      expect(alerts.warning).toHaveBeenCalledWith('Close the offline order you are editing, then sync again.');
+    });
+
+    it('says so when a sync is already running, and does not start a second one', async () => {
+      createBatch.mockImplementation(() => new Observable(() => undefined));
+      const service = await create([{ localId: 'a' }]);
+      online.set(true);
+      const first = service.syncAll();
+      await vi.advanceTimersByTimeAsync(10);
+
+      await service.syncNow();
+
+      expect(alerts.warning).toHaveBeenCalledWith('Orders are already syncing. Please wait a moment.');
+      expect(createBatch).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(OfflineOrderService.SYNC_REQUEST_TIMEOUT_MS + 10);
+      await first;
+    });
+
+    it('retries an order that failed before', async () => {
+      const service = await create([{ localId: 'a', status: 'failed', errorMessage: 'nope', retryCount: 2 }]);
+      online.set(true);
+
+      await service.syncNow();
+
+      expect(createBatch).toHaveBeenCalledTimes(1);
+      expect(table.rows).toEqual([]);
     });
   });
 
