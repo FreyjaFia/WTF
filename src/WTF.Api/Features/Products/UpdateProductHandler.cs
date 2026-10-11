@@ -57,6 +57,7 @@ public class UpdateProductHandler(WTFDbContext db, IHttpContextAccessor httpCont
 
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
         var normalizedCode = ProductValidation.NormalizeCode(request.Code);
+        ProductValidation.EnsureValidCategory(request.Category, request.SubCategory);
         var oldValues = new
         {
             product.Name,

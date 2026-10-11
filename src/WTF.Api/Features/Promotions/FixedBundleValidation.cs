@@ -43,6 +43,28 @@ internal static class FixedBundleValidation
         }
     }
 
+    public static async Task EnsureProductsExistAsync(
+        WTFDbContext db,
+        List<CreateFixedBundlePromotionItemRequestDto> items,
+        CancellationToken cancellationToken)
+    {
+        var requested = items
+            .Select(item => item.ProductId)
+            .Concat(items.SelectMany(item => (item.AddOns ?? []).Select(addOn => addOn.AddOnProductId)))
+            .Distinct()
+            .ToList();
+
+        var existing = await db.Products
+            .Where(p => requested.Contains(p.Id))
+            .Select(p => p.Id)
+            .ToListAsync(cancellationToken);
+
+        if (existing.Count != requested.Count)
+        {
+            throw new InvalidOperationException("One or more bundle products do not exist.");
+        }
+    }
+
     public static async Task EnsureAddOnsAreLinkedToBundleItemsAsync(
         WTFDbContext db,
         List<CreateFixedBundlePromotionItemRequestDto> items,

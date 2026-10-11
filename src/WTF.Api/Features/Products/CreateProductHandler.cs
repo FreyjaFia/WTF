@@ -45,6 +45,7 @@ public class CreateProductHandler(WTFDbContext db, IHttpContextAccessor httpCont
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
         var normalizedCode = ProductValidation.NormalizeCode(request.Code);
 
+        ProductValidation.EnsureValidCategory(request.Category, request.SubCategory);
         await ProductValidation.EnsureUniqueCodeAsync(db, normalizedCode, cancellationToken: cancellationToken);
 
         var product = new Product
