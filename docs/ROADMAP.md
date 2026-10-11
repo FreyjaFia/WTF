@@ -1600,7 +1600,7 @@ Original plan:
   stay hidden), link order counts, the report and order services' parameters, the reports page and order list
   filters, and the links list.
 
-#### Phase 5 - Order chat (one thread per order)
+#### Phase 5 - Order chat (one thread per order) [Completed]
 
 Customer and staff talk about a specific order (for example "is 5pm pickup ok?") before or after
 approval.
@@ -1640,6 +1640,37 @@ approval.
 - Tests: send/list, other customer's order 404, closed thread rejected, length limits, unread
   marking, hub connection validation (valid token joins; revoked/expired/disabled aborts),
   `RouteTableTests` (public POSTs on the write-routes list), service and component specs.
+
+**What was built (and where it differs from the plan above).**
+
+- **Conversations, not order threads.** The tables are `Conversations` (customer, kind `Order`/`Support`, optional order, title
+  "Order #1042", last message time, closed time) and `ConversationMessages` (sender customer/staff, staff user, body 1-1000,
+  read-by-staff and read-by-customer times), from `tools/sql/20261012_add_conversations.sql`. An order has at most one conversation
+  (unique filtered index); it is created by the first message. Only the Order kind has screens: Support can be added later
+  without a change to the tables, as its own inbox with its own access rule.
+- **One shared staff inbox.** An order has no owner. A customer's message reaches every signed-in staff member who can read orders
+  (live) and every active staff device except viewers (push, type `order-message`, opens the order with the chat open). Opening a
+  chat or replying marks the customer's messages read for everyone; each reply shows who sent it. Admin Viewers can read but not reply.
+- **API.** Staff: `GET /api/conversations` (the envelope list, unread first, with the number of unread conversations),
+  `GET /api/orders/{id}/conversation`, `POST /api/orders/{id}/messages`, `POST /api/orders/{id}/messages/read`. Customer, behind the
+  link: `GET .../conversations`, `GET|POST .../orders/{orderId}/messages`, `POST .../orders/{orderId}/messages/read`. Every customer
+  call runs the link check, only reaches an order the customer placed through a link, and sending re-checks the link right before
+  saving. A customer sees a staff member's first name only. Chat is open while the order is waiting or accepted and read-only after;
+  a customer can send ten messages in a row before the shop must reply; sending has its own rate limit (`order-chat-policy`).
+- **Real time uses two hubs, and the dashboard hub is unchanged.** `DashboardHub` keeps its dashboard-only policy, so cashiers (who
+  answer customers) cannot connect to it. Staff chat events go through a new `StaffOrderHub` (`/hubs/staff-orders`, orders-read
+  policy). Customers use `CustomerOrderHub` (`/hubs/customer-orders`): anonymous, the link token (`access_token`) is checked on
+  connect and anything invalid is aborted, ten connections per address, and no method a client can call. The events only say that
+  something changed (`OrderMessageReceived`, `ConversationRead`, `OrderStatusChanged`, `LinkRevoked`); the page then asks for the
+  data again. Approve, reject and ready update the customer's page at once; revoking a link sends every page open through it to the
+  invalid-link page.
+- **Screens.** An envelope with a red unread count (conversations, not messages) in the sidebar's top row (beside the logo) and in the
+  phone top bar (name, role, status and clock moved into the avatar's menu); it opens a list, unread first, and a row opens that order
+  with its chat open. Staff: a Chat button with an unread badge on every waiting order, on order details and in the editor, a badge on
+  list rows, and a side panel. Customer: the same envelope, a "Chat with the shop" card on an order's details, a badge on rows, and a
+  chat that rises as a sheet on phones and opens as a panel on wide screens. Nothing of the chat is stored on the customer's device.
+- Tests: handlers (staff and customer), rules, the notifier, both hubs, push, real SQL Server tests, route snapshots, and the services,
+  chat, envelope, panels, header, sidebar and pages on the front end.
 
 ### Testing and verification
 
