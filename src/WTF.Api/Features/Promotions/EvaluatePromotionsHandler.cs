@@ -59,6 +59,12 @@ public sealed class EvaluatePromotionsHandler(WTFDbContext db, IHttpContextAcces
 
         foreach (var line in workingLines)
         {
+            // A locked line already carries its final price and a free item is free: neither is discounted again.
+            if (line.IsLocked || line.IsFreeItem)
+            {
+                continue;
+            }
+
             if (!promosByProduct.TryGetValue(line.ProductId, out var candidates))
             {
                 continue;
@@ -110,7 +116,7 @@ public sealed class EvaluatePromotionsHandler(WTFDbContext db, IHttpContextAcces
             var multiplier = 1m - (percentOff.Value / 100m);
             var discounted = basePrice * multiplier;
             // A discount of more than 100% never takes the price below zero (the fixed-price branch clamps the same way).
-        return Math.Max(0m, Math.Round(discounted, 2, MidpointRounding.AwayFromZero));
+            return Math.Max(0m, Math.Round(discounted, 2, MidpointRounding.AwayFromZero));
         }
 
         return null;
