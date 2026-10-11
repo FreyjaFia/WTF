@@ -1,4 +1,6 @@
 import { CommonModule } from '@angular/common';
+import { FilterButtonComponent } from '@shared/components/filter-button/filter-button';
+import { selectedFilterCount } from '@shared/utils/filter-count';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -36,6 +38,7 @@ interface CustomerListState {
 @Component({
   selector: 'app-customer-list',
   imports: [
+    FilterButtonComponent,
     CommonModule,
     ReactiveFormsModule,
     RouterLink,
@@ -149,12 +152,24 @@ export class CustomerListComponent implements OnInit {
     this.loadCustomers();
   }
 
+  /** How many filters are applied, shown on the Filters button. */
+  protected readonly activeFilterCount = computed(
+    () =>
+      selectedFilterCount(this.selectedStatuses().length, this.statusOptions().length),
+  );
+
   protected openFilters(): void {
     this.isFiltersOpen.set(true);
   }
 
   protected closeFilters(): void {
     this.isFiltersOpen.set(false);
+  }
+
+  /** Matches a typed number against the saved one whatever the spacing or dashes, e.g. "0917123" finds "0917 123 4567". */
+  private contactMatches(contact: string | null | undefined, term: string): boolean {
+    const typed = term.replace(/\D/g, '');
+    return !!contact && typed.length > 0 && contact.replace(/\D/g, '').includes(typed);
   }
 
   private applyFiltersToCache(): void {
@@ -167,7 +182,8 @@ export class CustomerListComponent implements OnInit {
         (c) =>
           c.firstName.toLowerCase().includes(lowerSearch) ||
           c.lastName.toLowerCase().includes(lowerSearch) ||
-          `${c.firstName} ${c.lastName}`.toLowerCase().includes(lowerSearch),
+          `${c.firstName} ${c.lastName}`.toLowerCase().includes(lowerSearch) ||
+          this.contactMatches(c.contactNumber, searchTerm),
       );
     }
 

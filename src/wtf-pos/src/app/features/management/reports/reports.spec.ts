@@ -773,4 +773,24 @@ describe('ReportsComponent', () => {
       expect(reports['downloadMonthlyWorkbook']).not.toHaveBeenCalled();
     });
   });
+  describe('filter count on the Filters button', () => {
+    const count = () => (t as unknown as { activeFilterCount: () => number }).activeFilterCount();
+
+    it('is zero for the defaults', async () => {
+      await create();
+      expect(count()).toBe(0);
+    });
+
+    it('counts a changed date range, category and staff', async () => {
+      await create();
+      setField('preset', 'today');
+      expect(count()).toBe(1);
+      setField('staffId', 'u1');
+      expect(count()).toBe(2);
+      setField('categoryId', 3);
+      expect(count()).toBe(3);
+      setField('preset', 'this-month');
+      expect(count()).toBe(2);
+    });
+  });
 });

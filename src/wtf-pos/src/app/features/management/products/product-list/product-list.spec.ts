@@ -424,4 +424,14 @@ describe('ProductListComponent', () => {
     setup(true);
     expect(c.canWriteProducts()).toBe(true);
   });
+  describe('filter count on the Filters button', () => {
+    it('adds the chosen types to the chosen statuses', () => {
+      setup(true);
+      expect(c.activeFilterCount()).toBe(1);
+      c.selectedTypes.set([c.typeOptions()[0].id]);
+      expect(c.activeFilterCount()).toBe(2);
+      c.selectedStatuses.set([]);
+      expect(c.activeFilterCount()).toBe(1);
+    });
+  });
 });

@@ -1,4 +1,6 @@
 import { CommonModule } from '@angular/common';
+import { FilterButtonComponent } from '@shared/components/filter-button/filter-button';
+import { selectedFilterCount } from '@shared/utils/filter-count';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -37,6 +39,7 @@ interface UserListState {
 @Component({
   selector: 'app-user-list',
   imports: [
+    FilterButtonComponent,
     CommonModule,
     ReactiveFormsModule,
     RouterLink,
@@ -197,6 +200,13 @@ export class UserListComponent implements OnInit {
     this.isRefreshing.set(true);
     this.loadUsers();
   }
+
+  /** How many filters are applied, shown on the Filters button. */
+  protected readonly activeFilterCount = computed(
+    () =>
+      selectedFilterCount(this.selectedRoles().length, this.roleOptions().length) +
+      selectedFilterCount(this.selectedStatuses().length, this.statusOptions().length),
+  );
 
   protected openFilters(): void {
     this.isFiltersOpen.set(true);

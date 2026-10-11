@@ -1,4 +1,6 @@
 import { CommonModule } from '@angular/common';
+import { FilterButtonComponent } from '@shared/components/filter-button/filter-button';
+import { selectedFilterCount } from '@shared/utils/filter-count';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
@@ -35,6 +37,7 @@ interface ItemListState {
 @Component({
   selector: 'app-item-list',
   imports: [
+    FilterButtonComponent,
     CommonModule,
     ReactiveFormsModule,
     RouterLink,
@@ -267,6 +270,12 @@ export class ItemListComponent implements OnInit {
       },
     });
   }
+
+  /** How many filters are applied, shown on the Filters button. */
+  protected readonly activeFilterCount = computed(
+    () =>
+      selectedFilterCount(this.selectedStatuses().length, this.statusOptions().length),
+  );
 
   protected openFilters(): void {
     this.isFiltersOpen.set(true);

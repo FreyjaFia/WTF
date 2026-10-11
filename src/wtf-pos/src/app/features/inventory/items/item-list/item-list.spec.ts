@@ -521,4 +521,18 @@ describe('ItemListComponent', () => {
       expect(inventory.restoreInventoryItem).not.toHaveBeenCalled();
     });
   });
+  describe('filter count on the Filters button', () => {
+    it('counts the chosen stock statuses, and none when all are chosen', () => {
+      const { fixture, vm } = create();
+      expect(vm['activeFilterCount']()).toBe(0);
+
+      vm['selectedStatuses'].set(['ok']);
+      fixture.detectChanges();
+      expect(vm['activeFilterCount']()).toBe(1);
+      expect(fixture.nativeElement.querySelector('[data-filter-count]').textContent.trim()).toBe('1');
+
+      vm['selectedStatuses'].set(['ok', 'warning']);
+      expect(vm['activeFilterCount']()).toBe(2);
+    });
+  });
 });

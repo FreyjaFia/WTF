@@ -1,4 +1,5 @@
 import { CommonModule, DecimalPipe } from '@angular/common';
+import { FilterButtonComponent } from '@shared/components/filter-button/filter-button';
 import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Capacitor } from '@capacitor/core';
@@ -34,6 +35,7 @@ const GREETINGS = [
 @Component({
   selector: 'app-dashboard',
   imports: [
+    FilterButtonComponent,
     CommonModule,
     DecimalPipe,
     RouterLink,
@@ -312,6 +314,12 @@ export class Dashboard implements OnInit, OnDestroy {
     this.isRefreshing.set(false);
     this.loadDashboard();
   }
+
+  /** How many filters are applied, shown on the Filters button. */
+  protected readonly activeFilterCount = computed(
+    () =>
+      this.currentRange().preset !== 'today' ? 1 : 0,
+  );
 
   protected openFilters(): void {
     const range = this.currentRange();

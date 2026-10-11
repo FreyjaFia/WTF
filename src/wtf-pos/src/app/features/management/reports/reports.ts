@@ -1,5 +1,7 @@
 import { CommonModule } from '@angular/common';
+import { FilterButtonComponent } from '@shared/components/filter-button/filter-button';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { map, startWith } from 'rxjs';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Capacitor } from '@capacitor/core';
@@ -111,6 +113,7 @@ interface MonthOption {
 @Component({
   selector: 'app-reports',
   imports: [
+    FilterButtonComponent,
     CommonModule,
     ReactiveFormsModule,
     PullToRefreshComponent,
@@ -371,6 +374,23 @@ export class ReportsComponent implements OnInit {
     this.loadReport();
     this.loadMonthlyWorkbookStatus();
   }
+
+  private readonly reportFormValue = toSignal(
+    this.reportForm.valueChanges.pipe(
+      startWith(null),
+      map(() => this.reportForm.getRawValue()),
+    ),
+    { initialValue: this.reportForm.getRawValue() },
+  );
+
+  /** Filters changed from their defaults: the date range, category, sub-category and staff. */
+  protected readonly activeFilterCount = computed(
+    () =>
+      (this.reportFormValue().preset !== this.datePresets.ThisMonth ? 1 : 0) +
+      (this.reportFormValue().categoryId != null ? 1 : 0) +
+      (this.reportFormValue().subCategoryId != null ? 1 : 0) +
+      (this.reportFormValue().staffId != null ? 1 : 0),
+  );
 
   protected openFilters(): void {
     this.isFiltersOpen.set(true);

@@ -30,14 +30,7 @@
       </div>
 
       <div class="ml-auto flex items-center justify-end gap-2">
-        <button
-          type="button"
-          class="app-btn app-btn-secondary app-btn-sm gap-2"
-          (click)="openFilters()"
-        >
-          <app-icon name="icon-filter" [class]="'h-4 w-4'" [fill]="'currentColor'" />
-          Filters
-        </button>
+        <app-filter-button [count]="activeFilterCount()" (pressed)="openFilters()" />
         @if (!isAndroidPlatform) {
           <button
             class="app-btn app-btn-ghost pointer-events-auto z-30 p-2"
@@ -167,8 +160,14 @@
               Status
             </div>
 
+            <div
+              class="col-span-2 text-center text-xs font-semibold tracking-wider text-gray-600 uppercase"
+            >
+              Contact
+            </div>
+
             <button type="button"
-              class="col-span-5 flex cursor-pointer items-center justify-center gap-1 text-center text-xs font-semibold tracking-wider uppercase transition-colors"
+              class="col-span-3 flex cursor-pointer items-center justify-center gap-1 text-center text-xs font-semibold tracking-wider uppercase transition-colors"
               [class.text-gray-600]="sortColumn() !== 'address'"
               [class.hover:text-gray-900]="sortColumn() !== 'address'"
               [class.text-[#047857]]="sortColumn() === 'address'"
@@ -230,6 +229,9 @@
                       <h3 class="text-sm font-semibold text-gray-900 lg:text-base">
                         {{ customer.firstName }} {{ customer.lastName }}
                       </h3>
+                      @if (customer.contactNumber) {
+                        <p class="mt-0.5 text-xs text-gray-500 lg:hidden">{{ customer.contactNumber }}</p>
+                      }
                       <!-- Mobile: inline status -->
                       <div class="mt-1 flex flex-wrap items-center gap-2 lg:hidden">
                         @if (customer.isActive) {
@@ -250,8 +252,15 @@
                     }
                   </div>
 
+                  <!-- Contact number (desktop only) -->
+                  <div class="hidden lg:col-span-2 lg:block">
+                    <div class="truncate text-center text-sm text-gray-700">
+                      {{ customer.contactNumber }}
+                    </div>
+                  </div>
+
                   <!-- Address (desktop only) -->
-                  <div class="hidden lg:col-span-5 lg:block">
+                  <div class="hidden lg:col-span-3 lg:block">
                     <div class="truncate text-center text-sm text-gray-700">
                       {{ customer.address }}
                     </div>

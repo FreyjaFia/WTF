@@ -514,4 +514,16 @@ describe('Dashboard', () => {
       expect(vm['orderTimeAgos']()).toEqual({ keep: 'me' });
     });
   });
+  describe('filter count on the Filters button', () => {
+    it('shows no number for the default range and 1 for another', () => {
+      const { fixture, vm } = create();
+      expect(vm['activeFilterCount']()).toBe(0);
+      expect(fixture.nativeElement.querySelector('[data-filter-count]')).toBeNull();
+
+      vm['currentRange'].set({ preset: 'last7days' });
+      fixture.detectChanges();
+      expect(vm['activeFilterCount']()).toBe(1);
+      expect(fixture.nativeElement.querySelector('[data-filter-count]').textContent.trim()).toBe('1');
+    });
+  });
 });

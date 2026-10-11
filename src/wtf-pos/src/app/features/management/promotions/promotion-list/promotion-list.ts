@@ -1,4 +1,6 @@
 import { CommonModule } from '@angular/common';
+import { FilterButtonComponent } from '@shared/components/filter-button/filter-button';
+import { selectedFilterCount } from '@shared/utils/filter-count';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -38,6 +40,7 @@ interface PromotionListState {
 @Component({
   selector: 'app-promotion-list',
   imports: [
+    FilterButtonComponent,
     ConfirmDialogComponent,
     CommonModule,
     ReactiveFormsModule,
@@ -358,6 +361,13 @@ export class PromotionListComponent implements OnInit {
     this.applyFiltersToCache();
     this.saveState();
   }
+
+  /** How many filters are applied, shown on the Filters button. */
+  protected readonly activeFilterCount = computed(
+    () =>
+      selectedFilterCount(this.selectedTypes().length, this.typeOptions().length) +
+      selectedFilterCount(this.selectedStatuses().length, this.statusOptions().length),
+  );
 
   protected openFilters(): void {
     this.isFiltersOpen.set(true);

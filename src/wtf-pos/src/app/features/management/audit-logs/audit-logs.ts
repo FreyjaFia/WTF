@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { FilterButtonComponent } from '@shared/components/filter-button/filter-button';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { Capacitor } from '@capacitor/core';
 import {
@@ -29,7 +30,7 @@ const DEFAULT_PAGE_SIZE = 10;
 
 @Component({
   selector: 'app-audit-logs',
-  imports: [CommonModule, IconComponent, PullToRefreshComponent, SideDrawerComponent],
+  imports: [FilterButtonComponent, CommonModule, IconComponent, PullToRefreshComponent, SideDrawerComponent],
   templateUrl: './audit-logs.html',
   host: { class: 'flex-1 min-h-0' },
 })
@@ -102,10 +103,10 @@ export class AuditLogsComponent implements OnInit {
     { id: 'custom', label: 'Custom Range' },
   ]);
 
-  protected readonly activeFilterCount = computed(() => {
-    const hasDate = this.buildDateRange() !== null ? 1 : 0;
-    return hasDate + (this.selectedActions().length > 0 ? 1 : 0);
-  });
+  /** Filters applied: each chosen action, plus the date range. */
+  protected readonly activeFilterCount = computed(
+    () => this.selectedActions().length + (this.buildDateRange() !== null ? 1 : 0),
+  );
 
   public ngOnInit(): void {
     this.restoreState();

@@ -165,6 +165,27 @@ describe('CustomerListComponent', () => {
       );
     });
 
+    it('finds a customer by contact number whatever the spacing or dashes', () => {
+      setup({
+        getCustomers: vi.fn(() =>
+          of([
+            { ...customer('1', 'Bob', 'Zed', true), contactNumber: '0917 123 4567' },
+            { ...customer('2', 'Alice', 'Smith', true), contactNumber: '(02) 8555-0000' },
+            customer('3', 'Carl', 'Gone', true),
+          ]),
+        ),
+      });
+      c.filterForm.controls.searchTerm.setValue('0917-123');
+      fixture.destroy();
+      fixture.detectChanges();
+      vi.advanceTimersByTime(300);
+      expect(ids(c.customers())).toEqual(['1']);
+
+      c.filterForm.controls.searchTerm.setValue('85550');
+      vi.advanceTimersByTime(300);
+      expect(ids(c.customers())).toEqual(['2']);
+    });
+
     it('whitespace-only search does not filter', () => {
       setup();
       c.filterForm.controls.searchTerm.setValue('   ');
@@ -361,6 +382,22 @@ describe('CustomerListComponent', () => {
       c.cancelRestore();
       expect(service['restoreCustomer']).toHaveBeenCalledTimes(1);
       expect(c.showRestoreModal()).toBe(true);
+    });
+  });
+  describe('filter count on the Filters button', () => {
+    it('counts the chosen statuses, and none when all are chosen', () => {
+      setup();
+      expect(c.activeFilterCount()).toBe(1);
+      c.selectedStatuses.set(['active', 'inactive']);
+      expect(c.activeFilterCount()).toBe(0);
+      c.selectedStatuses.set([]);
+      expect(c.activeFilterCount()).toBe(0);
+    });
+
+    it('shows the number on the button', () => {
+      setup();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[data-filter-count]').textContent.trim()).toBe('1');
     });
   });
 });

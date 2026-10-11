@@ -405,4 +405,14 @@ describe('UserListComponent', () => {
       expect(c.showRestoreModal()).toBe(true);
     });
   });
+  describe('filter count on the Filters button', () => {
+    it('adds the chosen roles to the chosen statuses', () => {
+      setup();
+      expect(c.activeFilterCount()).toBe(1);
+      c.selectedRoles.set([c.roleOptions()[0].id]);
+      expect(c.activeFilterCount()).toBe(2);
+      c.selectedStatuses.set(['active', 'inactive']);
+      expect(c.activeFilterCount()).toBe(1);
+    });
+  });
 });

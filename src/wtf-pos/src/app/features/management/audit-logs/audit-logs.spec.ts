@@ -691,4 +691,15 @@ describe('AuditLogsComponent', () => {
       expect(vm['formatAuditTimestamp']('not-a-date')).toBe('not-a-date');
     });
   });
+  describe('filter count on the Filters button', () => {
+    it('shows the number of applied filters on the button', () => {
+      const { fixture, vm } = create();
+      expect(fixture.nativeElement.querySelector('[data-filter-count]')).toBeNull();
+
+      vm['selectedActions'].set(['Login', 'Logout']);
+      fixture.detectChanges();
+      expect(vm['activeFilterCount']()).toBe(2);
+      expect(fixture.nativeElement.querySelector('[data-filter-count]').textContent.trim()).toBe('2');
+    });
+  });
 });
