@@ -15,6 +15,17 @@ public sealed record GetAuditLogsQuery : IRequest<PagedResultDto<AuditLogDto>>
     public DateTime? FromDate { get; init; }
     public DateTime? ToDate { get; init; }
 
+    public const int DefaultPageSize = 10;
+    public const int MaxPageSize = 100;
+
+    /// <summary>1-based page. Leave both paging values out to get every matching log (used by exports).</summary>
+    public int? Page { get; init; }
+
+    /// <summary>Rows per page, capped at <see cref="MaxPageSize"/>; non-positive values use the default.</summary>
+    public int? PageSize { get; init; }
+
+    public bool IsPaged => Page.HasValue || PageSize.HasValue;
+
     /// <summary>Every requested action: the repeated <c>actions</c> values plus the single <c>action</c>.</summary>
     public IReadOnlyList<string> GetActions()
     {
@@ -91,9 +102,21 @@ public sealed class GetAuditLogsHandler(WTFDbContext db) : IRequestHandler<GetAu
                 a.IpAddress,
                 a.Timestamp));
 
-        var items = await orderedQuery.ToListAsync(cancellationToken);
-        var page = 1;
-        var pageSize = totalCount == 0 ? 1 : totalCount;
+        if (!request.IsPaged)
+        {
+            var all = await orderedQuery.ToListAsync(cancellationToken);
+            return new PagedResultDto<AuditLogDto>(all, 1, totalCount == 0 ? 1 : totalCount, totalCount);
+        }
+
+        var page = request.Page is null or <= 0 ? 1 : request.Page.Value;
+        var pageSize = request.PageSize is null or <= 0
+            ? GetAuditLogsQuery.DefaultPageSize
+            : Math.Min(request.PageSize.Value, GetAuditLogsQuery.MaxPageSize);
+
+        var items = await orderedQuery
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
 
         return new PagedResultDto<AuditLogDto>(items, page, pageSize, totalCount);
     }

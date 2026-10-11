@@ -23,6 +23,12 @@ public static class AuditEndpoints
         auditGroup.MapGet("/",
             async (HttpContext httpContext, [AsParameters] GetAuditLogsQuery query, ISender sender) =>
             {
+                // A file always contains every matching log, whatever page the screen is on.
+                if (WantsExport(httpContext))
+                {
+                    query = query with { Page = null, PageSize = null };
+                }
+
                 var result = await sender.Send(query);
                 return BuildAuditLogResponse(httpContext, query, result);
             });
@@ -34,15 +40,25 @@ public static class AuditEndpoints
         return app;
     }
 
+    private static bool WantsExcel(HttpContext httpContext)
+    {
+        var accepts = httpContext.Request.Headers.Accept.ToString();
+        return accepts.Contains(ExcelContentType, StringComparison.OrdinalIgnoreCase)
+            || accepts.Contains("application/vnd.ms-excel", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool WantsPdf(HttpContext httpContext) =>
+        httpContext.Request.Headers.Accept.ToString().Contains(PdfContentType, StringComparison.OrdinalIgnoreCase);
+
+    private static bool WantsExport(HttpContext httpContext) => WantsExcel(httpContext) || WantsPdf(httpContext);
+
     private static IResult BuildAuditLogResponse(
         HttpContext httpContext,
         GetAuditLogsQuery query,
         PagedResultDto<AuditLogDto> result)
     {
-        var accepts = httpContext.Request.Headers.Accept.ToString();
-        var wantsExcel = accepts.Contains(ExcelContentType, StringComparison.OrdinalIgnoreCase)
-            || accepts.Contains("application/vnd.ms-excel", StringComparison.OrdinalIgnoreCase);
-        var wantsPdf = accepts.Contains(PdfContentType, StringComparison.OrdinalIgnoreCase);
+        var wantsExcel = WantsExcel(httpContext);
+        var wantsPdf = WantsPdf(httpContext);
 
         if (!wantsExcel && !wantsPdf)
         {

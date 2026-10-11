@@ -21,7 +21,11 @@ interface AuditLogListState {
   selectedDateRanges: string[];
   customStartDate: string;
   customEndDate: string;
+  pageSize?: number;
 }
+
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
+const DEFAULT_PAGE_SIZE = 10;
 
 @Component({
   selector: 'app-audit-logs',
@@ -43,6 +47,42 @@ export class AuditLogsComponent implements OnInit {
   protected readonly isDownloadingPdf = signal(false);
   protected readonly isFiltersOpen = signal(false);
   protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
+
+  protected readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
+  protected readonly page = signal(1);
+  protected readonly pageSize = signal<number>(DEFAULT_PAGE_SIZE);
+  protected readonly totalCount = signal(0);
+  protected readonly totalPages = computed(() =>
+    Math.max(1, Math.ceil(this.totalCount() / this.pageSize())),
+  );
+  protected readonly firstRow = computed(() =>
+    this.totalCount() === 0 ? 0 : (this.page() - 1) * this.pageSize() + 1,
+  );
+  protected readonly lastRow = computed(() =>
+    Math.min(this.page() * this.pageSize(), this.totalCount()),
+  );
+
+  /** Page numbers to show; null stands for a gap (an ellipsis) between distant pages. */
+  protected readonly pageItems = computed<(number | null)[]>(() => {
+    const total = this.totalPages();
+    const current = this.page();
+
+    if (total <= 7) {
+      return Array.from({ length: total }, (_, i) => i + 1);
+    }
+
+    const pages = new Set([1, total, current - 1, current, current + 1]);
+    const sorted = [...pages].filter((p) => p >= 1 && p <= total).sort((a, b) => a - b);
+    const items: (number | null)[] = [];
+    for (const p of sorted) {
+      const previous = items[items.length - 1];
+      if (typeof previous === 'number' && p - previous > 1) {
+        items.push(null);
+      }
+      items.push(p);
+    }
+    return items;
+  });
 
   protected readonly availableActions = signal<string[]>([]);
   protected readonly selectedActions = signal<string[]>([]);
@@ -75,6 +115,28 @@ export class AuditLogsComponent implements OnInit {
 
   protected refresh(): void {
     this.isRefreshing.set(true);
+    this.loadLogs();
+  }
+
+  protected goToPage(target: number): void {
+    const next = Math.min(Math.max(1, target), this.totalPages());
+    if (next === this.page()) {
+      return;
+    }
+
+    this.page.set(next);
+    this.loadLogs();
+  }
+
+  protected onPageSizeChange(event: Event): void {
+    const value = Number((event.target as HTMLSelectElement).value);
+    if (!PAGE_SIZE_OPTIONS.some((option) => option === value) || value === this.pageSize()) {
+      return;
+    }
+
+    this.pageSize.set(value);
+    this.page.set(1);
+    this.saveState();
     this.loadLogs();
   }
 
@@ -191,6 +253,7 @@ export class AuditLogsComponent implements OnInit {
   }
 
   private filtersChanged(): void {
+    this.page.set(1);
     this.saveState();
     this.loadLogs();
   }
@@ -270,6 +333,7 @@ export class AuditLogsComponent implements OnInit {
     return null;
   }
 
+  /** Filters only. Exports use this so a file always holds every matching log, not just one page. */
   private buildQuery(): AuditLogQuery {
     const query: AuditLogQuery = { ...this.buildDateRange() };
     const actions = this.selectedActions();
@@ -289,8 +353,23 @@ export class AuditLogsComponent implements OnInit {
   private loadLogs(): void {
     this.isLoading.set(true);
 
-    this.auditLogService.getAuditLogs(this.buildQuery()).subscribe({
+    const query: AuditLogQuery = {
+      ...this.buildQuery(),
+      page: this.page(),
+      pageSize: this.pageSize(),
+    };
+
+    this.auditLogService.getAuditLogs(query).subscribe({
       next: (result) => {
+        this.totalCount.set(result.totalCount);
+
+        // The page no longer exists (fewer logs than before): jump to the last one that does.
+        if (result.items.length === 0 && result.totalCount > 0 && this.page() > this.totalPages()) {
+          this.page.set(this.totalPages());
+          this.loadLogs();
+          return;
+        }
+
         this.logs.set(result.items);
         this.isLoading.set(false);
         this.isRefreshing.set(false);
@@ -315,6 +394,12 @@ export class AuditLogsComponent implements OnInit {
     this.selectedDateRanges.set(state.selectedDateRanges ?? []);
     this.customStartDate.set(state.customStartDate ?? '');
     this.customEndDate.set(state.customEndDate ?? '');
+    const savedPageSize = state.pageSize;
+    this.pageSize.set(
+      PAGE_SIZE_OPTIONS.some((option) => option === savedPageSize)
+        ? (savedPageSize as number)
+        : DEFAULT_PAGE_SIZE,
+    );
   }
 
   private saveState(): void {
@@ -323,6 +408,7 @@ export class AuditLogsComponent implements OnInit {
       selectedDateRanges: this.selectedDateRanges(),
       customStartDate: this.customStartDate(),
       customEndDate: this.customEndDate(),
+      pageSize: this.pageSize(),
     });
   }
 }
