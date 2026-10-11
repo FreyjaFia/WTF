@@ -3,6 +3,7 @@ import {
   ChangeDetectorRef,
   Component,
   computed,
+  DestroyRef,
   effect,
   inject,
   OnDestroy,
@@ -10,6 +11,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   FormControl,
   FormGroup,
@@ -25,6 +27,7 @@ import {
   CartPersistenceService,
   CatalogCacheService,
   ConnectivityService,
+  ConversationInboxService,
   CustomerService,
   ModalStackService,
   OfflineOrderService,
@@ -40,6 +43,7 @@ import {
   CartDrawerComponent,
   CustomerDropdownComponent,
   IconComponent,
+  OrderChatDrawerComponent,
   OrderReceiptComponent,
   PullToRefreshComponent,
   SearchInputComponent,
@@ -114,6 +118,7 @@ type CatalogScrollTab = ProductSubCategoryEnum | 'bundles';
     AvatarComponent,
     BadgeComponent,
     PullToRefreshComponent,
+    OrderChatDrawerComponent,
     OrderReceiptComponent,
     SearchInputComponent,
     ConfirmDialogComponent,
@@ -366,6 +371,30 @@ export class OrderEditor implements OnInit, OnDestroy {
   protected readonly canManageOrderActions = computed(() => this.authService.canWriteOrders());
 
   protected readonly isMarkingReady = signal(false);
+
+  private readonly conversationInbox = inject(ConversationInboxService);
+  private readonly destroyRef = inject(DestroyRef);
+  protected readonly showChat = signal(false);
+
+  /** A customer link order that is open here: staff can chat with the customer about it. */
+  protected readonly hasChat = computed(
+    () =>
+      this.isEditMode() &&
+      !this.isOfflineEditMode() &&
+      this.currentOrder()?.source === OrderSourceEnum.CustomerLink,
+  );
+  protected readonly chatUnread = computed(() => {
+    const id = this.currentOrder()?.id;
+    return id ? this.conversationInbox.unreadFor(id) : 0;
+  });
+
+  protected openChat(): void {
+    this.showChat.set(true);
+  }
+
+  protected closeChat(): void {
+    this.showChat.set(false);
+  }
 
   /** An accepted customer order that staff have not yet marked ready. */
   protected readonly canMarkReady = computed(() => {
@@ -732,6 +761,18 @@ export class OrderEditor implements OnInit, OnDestroy {
   }
 
   public ngOnInit(): void {
+    // A notification sends staff here with ?chat=open. The parameter is cleared once used.
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
+      if (params.get('chat') === 'open') {
+        this.showChat.set(true);
+        void this.router.navigate([], {
+          queryParams: { chat: null },
+          queryParamsHandling: 'merge',
+          replaceUrl: true,
+        });
+      }
+    });
+
     const orderId = this.route.snapshot.paramMap.get('id');
     const offlineLocalId = this.route.snapshot.queryParamMap.get('offline');
 

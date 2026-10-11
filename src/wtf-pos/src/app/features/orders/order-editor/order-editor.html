@@ -913,6 +913,24 @@
                     }}
                   </button>
                 </div>
+                @if (hasChat()) {
+                  <button
+                type="button"
+                class="app-btn app-btn-secondary app-btn-md w-full gap-2"
+                data-chat-button
+                (click)="openChat()"
+              >
+                <app-icon name="icon-chat" [class]="'h-4 w-4'" [fill]="'currentColor'" />
+                Chat
+                @if (chatUnread() > 0) {
+                  <span
+                    class="flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] leading-none font-bold text-white"
+                    data-chat-unread
+                    >{{ chatUnread() }}</span
+                  >
+                }
+              </button>
+                }
                 @if (canMarkReady()) {
                   <button
                     type="button"
@@ -1004,6 +1022,13 @@
   (orderConfirmed)="onOrderConfirmed($event)"
 />
 <app-order-receipt [data]="receiptData()" />
+<app-order-chat-drawer
+  [isOpen]="showChat()"
+  [orderId]="hasChat() ? (currentOrder()?.id ?? null) : null"
+  [orderNumber]="currentOrder()?.orderNumber ?? null"
+  [customerName]="currentOrder()?.customerName || 'Customer'"
+  (closed)="closeChat()"
+/>
 <app-addon-selector (addToCart)="onAddonSelected($event)" />
 
 <!-- Create Customer Modal -->

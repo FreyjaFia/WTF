@@ -1,12 +1,15 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
+import { ActivatedRoute, ParamMap, Router, convertToParamMap, provideRouter } from '@angular/router';
 import {
   AlertService,
   AuthService,
   CatalogCacheService,
+  ConversationInboxService,
+  ConversationService,
   OrderService,
   PromotionService,
+  SignalRService,
 } from '@core/services';
 import { AppRoutes } from '@shared/constants/app-routes';
 import {
@@ -22,7 +25,7 @@ import {
   PaymentMethodEnum,
   PromotionTypeEnum,
 } from '@shared/models';
-import { Subject, of, throwError } from 'rxjs';
+import { BehaviorSubject, Observable, Subject, of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { OrderDetails } from './order-details';
 
@@ -120,6 +123,17 @@ describe('OrderDetails', () => {
   };
   let promotions: { getActiveDiscountedProductPromotions: ReturnType<typeof vi.fn> };
   let paramId: string | null;
+  let queryParams$: BehaviorSubject<ParamMap>;
+  let unreadByOrder: Record<string, number>;
+  let inbox: { unreadFor: ReturnType<typeof vi.fn> };
+  let chatApi: { getOrderConversation: ReturnType<typeof vi.fn> };
+  let orderChanged$: Subject<string>;
+  let chatHub: {
+    orderMessage: Observable<unknown>;
+    orderChanged: Observable<string>;
+    startStaffOrdersHub: ReturnType<typeof vi.fn>;
+    stopStaffOrdersHub: ReturnType<typeof vi.fn>;
+  };
 
   const flush = async () => {
     await fixture.whenStable();
@@ -159,6 +173,29 @@ describe('OrderDetails', () => {
       getAddOnsForProduct: vi.fn().mockReturnValue([]),
     };
     promotions = { getActiveDiscountedProductPromotions: vi.fn().mockReturnValue(of([])) };
+    queryParams$ = new BehaviorSubject<ParamMap>(convertToParamMap({}));
+    unreadByOrder = {};
+    inbox = { unreadFor: vi.fn((orderId: string) => unreadByOrder[orderId] ?? 0) };
+    chatApi = {
+      getOrderConversation: vi.fn(() =>
+        of({
+          conversationId: null,
+          orderId: 'o1',
+          orderNumber: 5,
+          title: 'Order #5',
+          canSend: true,
+          unreadCount: 0,
+          messages: [],
+        }),
+      ),
+    };
+    orderChanged$ = new Subject<string>();
+    chatHub = {
+      orderMessage: new Subject<unknown>().asObservable(),
+      orderChanged: orderChanged$.asObservable(),
+      startStaffOrdersHub: vi.fn(),
+      stopStaffOrdersHub: vi.fn(),
+    };
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
@@ -168,8 +205,12 @@ describe('OrderDetails', () => {
             get snapshot() {
               return { paramMap: convertToParamMap(paramId ? { id: paramId } : {}) };
             },
+            queryParamMap: queryParams$.asObservable(),
           },
         },
+        { provide: ConversationInboxService, useValue: inbox },
+        { provide: ConversationService, useValue: chatApi },
+        { provide: SignalRService, useValue: chatHub },
         { provide: OrderService, useValue: orderService },
         { provide: AlertService, useValue: alert },
         {
@@ -227,6 +268,27 @@ describe('OrderDetails', () => {
       t.refresh();
       expect(orderService.getOrder).toHaveBeenCalledTimes(1);
       expect(t.isRefreshing()).toBe(false);
+    });
+
+    it('reloads quietly when this order changes elsewhere, and ignores other orders', async () => {
+      await create();
+      orderService.getOrder.mockClear();
+
+      orderChanged$.next('some-other-order');
+      expect(orderService.getOrder).not.toHaveBeenCalled();
+
+      orderChanged$.next(t.order()!.id);
+      expect(orderService.getOrder).toHaveBeenCalledTimes(1);
+      expect(t.isLoading()).toBe(false);
+    });
+
+    it('listens to the staff hub while open and lets go of it after', async () => {
+      await create();
+      expect(chatHub.startStaffOrdersHub).toHaveBeenCalled();
+
+      fixture.destroy();
+
+      expect(chatHub.stopStaffOrdersHub).toHaveBeenCalled();
     });
 
     it('promotion load failure yields empty list', async () => {
@@ -737,6 +799,88 @@ describe('OrderDetails', () => {
         confirmRejectOrder: (reason: string) => void;
         showRejectDialog: () => boolean;
       };
+
+    describe('chat with the customer', () => {
+      const chatButton = () => el().querySelector('[data-chat-button]') as HTMLButtonElement | null;
+      const panel = () => el().querySelector('[data-order-chat]') as HTMLElement;
+      const router = () => TestBed.inject(Router);
+
+      it('has a Chat button on a customer order, and none on an ordinary POS order', async () => {
+        await create(online());
+        expect(chatButton()).not.toBeNull();
+
+        await create(makeOrder());
+        expect(chatButton()).toBeNull();
+      });
+
+      it('shows how many of the customers messages are unread', async () => {
+        unreadByOrder['o1'] = 4;
+        await create(online());
+
+        expect(chatButton()!.querySelector('[data-chat-unread]')!.textContent!.trim()).toBe('4');
+      });
+
+      it('shows no number when nothing is unread', async () => {
+        await create(online());
+
+        expect(chatButton()!.querySelector('[data-chat-unread]')).toBeNull();
+      });
+
+      it('opens the chat of that order in the side panel, and closes it', async () => {
+        await create(online({ orderNumber: 1042 }));
+        expect(panel().className).toContain('translate-x-full');
+
+        chatButton()!.click();
+        fixture.detectChanges();
+        expect(panel().className).toContain('translate-x-0');
+        expect(chatApi.getOrderConversation).toHaveBeenCalledWith('o1');
+
+        (el().querySelector('[data-chat-close]') as HTMLElement).click();
+        fixture.detectChanges();
+        expect(panel().className).toContain('translate-x-full');
+      });
+
+      it('opens straight away from a notification (?chat=open), then clears the parameter', async () => {
+        const navigate = vi.spyOn(router(), 'navigate').mockResolvedValue(true);
+        await create(online());
+
+        queryParams$.next(convertToParamMap({ chat: 'open' }));
+        fixture.detectChanges();
+
+        expect(panel().className).toContain('translate-x-0');
+        expect(navigate).toHaveBeenCalledWith([], {
+          queryParams: { chat: null },
+          queryParamsHandling: 'merge',
+          replaceUrl: true,
+        });
+      });
+
+      it('can be opened again by the same link later', async () => {
+        vi.spyOn(router(), 'navigate').mockResolvedValue(true);
+        await create(online());
+
+        queryParams$.next(convertToParamMap({ chat: 'open' }));
+        fixture.detectChanges();
+        (el().querySelector('[data-chat-close]') as HTMLElement).click();
+        fixture.detectChanges();
+        expect(panel().className).toContain('translate-x-full');
+
+        queryParams$.next(convertToParamMap({ chat: 'open' }));
+        fixture.detectChanges();
+        expect(panel().className).toContain('translate-x-0');
+      });
+
+      it('ignores other parameters', async () => {
+        const navigate = vi.spyOn(router(), 'navigate').mockResolvedValue(true);
+        await create(online());
+
+        queryParams$.next(convertToParamMap({ chat: 'closed', other: '1' }));
+        fixture.detectChanges();
+
+        expect(panel().className).toContain('translate-x-full');
+        expect(navigate).not.toHaveBeenCalled();
+      });
+    });
 
     it('shows how the customer wants it handed over, the address, contact and what they will pay', async () => {
       await create(online());

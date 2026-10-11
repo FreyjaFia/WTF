@@ -1,6 +1,7 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
+import { ConversationInboxService, ConversationService } from '@core/services';
 import {
   AlertService,
   AuthService,
@@ -96,6 +97,8 @@ describe('OrderList', () => {
   let t: Internals;
   let isOnline: ReturnType<typeof signal<boolean>>;
   let pendingOrders: ReturnType<typeof signal<unknown[]>>;
+  let unread: Record<string, number>;
+  let inbox: { unreadFor: ReturnType<typeof vi.fn> };
   let isSyncing: ReturnType<typeof signal<boolean>>;
   let hubUpdates: Subject<string>;
   let orderService: {
@@ -112,9 +115,10 @@ describe('OrderList', () => {
     getLoadErrorMessage: ReturnType<typeof vi.fn>;
   };
   let signalR: {
-    startDashboardHub: ReturnType<typeof vi.fn>;
-    stopDashboardHub: ReturnType<typeof vi.fn>;
-    orderUpdated: Observable<string>;
+    startStaffOrdersHub: ReturnType<typeof vi.fn>;
+    stopStaffOrdersHub: ReturnType<typeof vi.fn>;
+    orderChanged: Observable<string>;
+    orderMessage: Observable<unknown>;
   };
   let offline: {
     pendingOrders: unknown;
@@ -176,11 +180,14 @@ describe('OrderList', () => {
       getLoadErrorMessage: vi.fn((e: string) => `Failed ${e}`),
     };
     signalR = {
-      startDashboardHub: vi.fn(),
-      stopDashboardHub: vi.fn(),
-      orderUpdated: hubUpdates.asObservable(),
+      startStaffOrdersHub: vi.fn(),
+      stopStaffOrdersHub: vi.fn(),
+      orderChanged: hubUpdates.asObservable(),
+      orderMessage: new Subject<unknown>().asObservable(),
     };
     offline = { pendingOrders, isSyncing, syncAll: vi.fn(), syncNow: vi.fn() };
+    unread = {};
+    inbox = { unreadFor: vi.fn((orderId: string) => unread[orderId] ?? 0) };
     listState = { load: vi.fn(), save: vi.fn() };
     TestBed.configureTestingModule({
       providers: [
@@ -192,6 +199,15 @@ describe('OrderList', () => {
         { provide: ConnectivityService, useValue: { isOnline } },
         { provide: SignalRService, useValue: signalR },
         { provide: OfflineOrderService, useValue: offline },
+        { provide: ConversationInboxService, useValue: inbox },
+        {
+          provide: ConversationService,
+          useValue: {
+            getOrderConversation: vi.fn(() =>
+              of({ conversationId: null, orderId: 'o1', orderNumber: 1042, title: 'Order #1042', canSend: true, unreadCount: 0, messages: [] }),
+            ),
+          },
+        },
       ],
     });
     router = TestBed.inject(Router);
@@ -292,7 +308,7 @@ describe('OrderList', () => {
         page: 1,
         pageSize: 20,
       });
-      expect(signalR.startDashboardHub).toHaveBeenCalled();
+      expect(signalR.startStaffOrdersHub).toHaveBeenCalled();
       expect(t.orders().length).toBe(1);
       expect(t.totalCount()).toBe(50);
       expect(t.isLoading()).toBe(false);
@@ -406,7 +422,7 @@ describe('OrderList', () => {
     it('unsubscribes hub and stops it on destroy', () => {
       init();
       fixture.destroy();
-      expect(signalR.stopDashboardHub).toHaveBeenCalled();
+      expect(signalR.stopStaffOrdersHub).toHaveBeenCalled();
     });
   });
 
@@ -823,6 +839,68 @@ describe('OrderList', () => {
       expect(banner()!.textContent).toContain('#2');
     });
 
+    describe('chat with the customer', () => {
+      const chatButtons = () => [...el().querySelectorAll('[data-chat-button]')] as HTMLButtonElement[];
+      const drawer = () => el().querySelector('app-order-chat-drawer') as HTMLElement;
+      const chatSection = () => el().querySelector('[data-order-chat]') as HTMLElement;
+
+      it('puts a Chat button on every waiting order', () => {
+        orderService.getAwaitingOrders.mockReturnValue(of([waiting('o1', { orderNumber: 1 }), waiting('o2', { orderNumber: 2 })]));
+        init();
+
+        expect(chatButtons().length).toBe(2);
+        expect(chatButtons()[0].getAttribute('aria-label')).toBe('Chat about order 1');
+      });
+
+      it('shows no message count on the button: the envelope has the unread count', () => {
+        unread['o1'] = 3;
+        orderService.getAwaitingOrders.mockReturnValue(of([waiting('o1'), waiting('o2')]));
+        init();
+
+        expect(chatButtons()[0].querySelector('[data-chat-unread]')).toBeNull();
+      });
+
+      it('is there for staff who can only read, who cannot accept or reject', () => {
+        canWrite = false;
+        orderService.getAwaitingOrders.mockReturnValue(of([waiting('o1')]));
+        init();
+
+        expect(chatButtons().length).toBe(1);
+        expect(buttons('Accept').length).toBe(0);
+      });
+
+      it('opens the chat of that order in the side panel, and closes it again', () => {
+        orderService.getAwaitingOrders.mockReturnValue(
+          of([waiting('o1', { orderNumber: 1042, customerName: 'Maria Cruz' })]),
+        );
+        init();
+        expect(chatSection().className).toContain('translate-x-full');
+
+        chatButtons()[0].click();
+        fixture.detectChanges();
+
+        const drawerCmp = drawer();
+        expect(drawerCmp).not.toBeNull();
+        expect(chatSection().className).toContain('translate-x-0');
+        expect(chatSection().textContent).toContain('Order #1042');
+        expect(chatSection().textContent).toContain('Maria Cruz');
+
+        (el().querySelector('[data-chat-close]') as HTMLElement).click();
+        fixture.detectChanges();
+        expect(chatSection().className).toContain('translate-x-full');
+      });
+
+      it('shows no unread badge on list rows: the envelope has the unread count', () => {
+        unread['o5'] = 2;
+        orderService.getOrdersPaged.mockReturnValue(
+          of(page([makeOrder('o5', { status: OrderStatusEnum.Pending, source: OrderSourceEnum.CustomerLink })])),
+        );
+        init();
+
+        expect(el().querySelector('[data-row-unread]')).toBeNull();
+      });
+    });
+
     it('shows nothing when no order is waiting', () => {
       init();
       expect(banner()).toBeNull();
@@ -1073,6 +1151,7 @@ describe('OrderList', () => {
             { provide: ConnectivityService, useValue: { isOnline } },
             { provide: SignalRService, useValue: signalR },
             { provide: OfflineOrderService, useValue: offline },
+            { provide: ConversationInboxService, useValue: inbox },
           ],
         });
         init();

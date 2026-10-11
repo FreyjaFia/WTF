@@ -27,6 +27,7 @@ import {
 import {
   BadgeComponent,
   IconComponent,
+  OrderChatDrawerComponent,
   PullToRefreshComponent,
   RejectOrderDialogComponent,
   SearchInputComponent,
@@ -73,6 +74,7 @@ interface OrderGroup {
     IconComponent,
     SideDrawerComponent,
     BadgeComponent,
+    OrderChatDrawerComponent,
     PullToRefreshComponent,
     RejectOrderDialogComponent,
     SearchInputComponent,
@@ -100,9 +102,19 @@ export class OrderList implements OnInit, OnDestroy {
   protected readonly orders = signal<OrderDto[]>([]);
   /** Orders customers placed through their link, waiting for staff to accept or reject them. Oldest first. */
   protected readonly awaitingOrders = signal<OrderDto[]>([]);
+  /** The order whose chat is open in the side panel. */
+  protected readonly chatOrder = signal<OrderDto | null>(null);
   /** The waiting order an accept or reject request is running for. */
   protected readonly decidingOrderId = signal<string | null>(null);
   protected readonly orderToReject = signal<OrderDto | null>(null);
+
+  protected openChat(order: OrderDto): void {
+    this.chatOrder.set(order);
+  }
+
+  protected closeChat(): void {
+    this.chatOrder.set(null);
+  }
   protected readonly canDecideOrders = computed(() => this.authService.canWriteOrders());
   protected readonly ordersCache = signal<OrderDto[]>([]);
   protected readonly isLoading = signal(false);
@@ -260,8 +272,9 @@ export class OrderList implements OnInit, OnDestroy {
   public ngOnInit(): void {
     this.restoreState();
     this.resetAndLoadOrders();
-    this.signalRService.startDashboardHub();
-    this.hubSub = this.signalRService.orderUpdated.subscribe((orderId) => {
+    // The orders hub, not the dashboard one, so staff who cannot open the dashboard still see changes live.
+    this.signalRService.startStaffOrdersHub();
+    this.hubSub = this.signalRService.orderChanged.subscribe((orderId) => {
       this.handleOrderUpdated(orderId);
     });
 
@@ -273,7 +286,7 @@ export class OrderList implements OnInit, OnDestroy {
 
   public ngOnDestroy(): void {
     this.hubSub?.unsubscribe();
-    this.signalRService.stopDashboardHub();
+    this.signalRService.stopStaffOrdersHub();
   }
 
   protected loadOrders(): void {

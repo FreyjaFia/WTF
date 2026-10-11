@@ -287,31 +287,44 @@
               }
             </div>
 
-            @if (canDecideOrders()) {
-              <div class="mt-3 flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  class="app-btn app-btn-outline-danger app-btn-sm"
-                  [disabled]="decidingOrderId() !== null"
-                  (click)="askRejectAwaiting(waiting)"
-                >
-                  Reject
-                </button>
-                <button
-                  type="button"
-                  class="app-btn app-btn-primary app-btn-sm"
-                  [disabled]="decidingOrderId() !== null"
-                  (click)="approveAwaiting(waiting)"
-                >
-                  @if (decidingOrderId() === waiting.id && !orderToReject()) {
-                    <span class="loading loading-spinner loading-xs"></span>
-                    Accepting...
-                  } @else {
-                    Accept
-                  }
-                </button>
-              </div>
-            }
+            <div class="mt-3 flex items-center justify-between gap-2">
+              <button
+                type="button"
+                class="app-btn app-btn-secondary app-btn-sm gap-2"
+                data-chat-button
+                [attr.aria-label]="'Chat about order ' + waiting.orderNumber"
+                (click)="openChat(waiting)"
+              >
+                <app-icon name="icon-chat" [class]="'h-4 w-4'" [fill]="'currentColor'" />
+                Chat
+              </button>
+
+              @if (canDecideOrders()) {
+                <div class="flex items-center gap-2">
+                  <button
+                    type="button"
+                    class="app-btn app-btn-outline-danger app-btn-sm"
+                    [disabled]="decidingOrderId() !== null"
+                    (click)="askRejectAwaiting(waiting)"
+                  >
+                    Reject
+                  </button>
+                  <button
+                    type="button"
+                    class="app-btn app-btn-primary app-btn-sm"
+                    [disabled]="decidingOrderId() !== null"
+                    (click)="approveAwaiting(waiting)"
+                  >
+                    @if (decidingOrderId() === waiting.id && !orderToReject()) {
+                      <span class="loading loading-spinner loading-xs"></span>
+                      Accepting...
+                    } @else {
+                      Accept
+                    }
+                  </button>
+                </div>
+              }
+            </div>
           </div>
         }
       </div>
@@ -647,6 +660,14 @@
     }
   }
 </div>
+
+<app-order-chat-drawer
+  [isOpen]="chatOrder() !== null"
+  [orderId]="chatOrder()?.id ?? null"
+  [orderNumber]="chatOrder()?.orderNumber ?? null"
+  [customerName]="chatOrder()?.customerName || 'Customer'"
+  (closed)="closeChat()"
+/>
 
 @if (orderToReject(); as target) {
   <app-reject-order-dialog

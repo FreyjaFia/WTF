@@ -1,18 +1,21 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
+import { ActivatedRoute, ParamMap, Router, convertToParamMap, provideRouter } from '@angular/router';
 import {
   AlertService,
   AuthService,
   CartPersistenceService,
   CatalogCacheService,
   ConnectivityService,
+  ConversationInboxService,
+  ConversationService,
   CustomerService,
   ModalStackService,
   OfflineOrderService,
   OrderService,
   ProductService,
   PromotionService,
+  SignalRService,
 } from '@core/services';
 import { AppRoutes } from '@shared/constants/app-routes';
 import {
@@ -33,7 +36,7 @@ import {
   PromotionListItemDto,
   PromotionTypeEnum,
 } from '@shared/models';
-import { of, throwError } from 'rxjs';
+import { BehaviorSubject, Observable, Subject, of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { OrderEditor } from './order-editor';
 
@@ -272,6 +275,15 @@ describe('OrderEditor', () => {
   let nav: ReturnType<typeof vi.spyOn>;
   let params: Record<string, string>;
   let query: Record<string, string>;
+  let queryParams$: BehaviorSubject<ParamMap>;
+  let unreadByOrder: Record<string, number>;
+  let inbox: { unreadFor: ReturnType<typeof vi.fn> };
+  let chatApi: { getOrderConversation: ReturnType<typeof vi.fn> };
+  let chatHub: {
+    orderMessage: Observable<unknown>;
+    startStaffOrdersHub: ReturnType<typeof vi.fn>;
+    stopStaffOrdersHub: ReturnType<typeof vi.fn>;
+  };
   let isOnline: ReturnType<typeof signal<boolean>>;
   let canWrite: boolean;
   let canOverride: boolean;
@@ -426,6 +438,27 @@ describe('OrderEditor', () => {
       getAddOnsForProduct: vi.fn().mockReturnValue([]),
     };
 
+    queryParams$ = new BehaviorSubject<ParamMap>(convertToParamMap({}));
+    unreadByOrder = {};
+    inbox = { unreadFor: vi.fn((orderId: string) => unreadByOrder[orderId] ?? 0) };
+    chatApi = {
+      getOrderConversation: vi.fn(() =>
+        of({
+          conversationId: null,
+          orderId: 'o1',
+          orderNumber: 5,
+          title: 'Order #5',
+          canSend: true,
+          unreadCount: 0,
+          messages: [],
+        }),
+      ),
+    };
+    chatHub = {
+      orderMessage: new Subject<unknown>().asObservable(),
+      startStaffOrdersHub: vi.fn(),
+      stopStaffOrdersHub: vi.fn(),
+    };
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
@@ -438,8 +471,12 @@ describe('OrderEditor', () => {
                 queryParamMap: convertToParamMap(query),
               };
             },
+            queryParamMap: queryParams$.asObservable(),
           },
         },
+        { provide: ConversationInboxService, useValue: inbox },
+        { provide: ConversationService, useValue: chatApi },
+        { provide: SignalRService, useValue: chatHub },
         { provide: AlertService, useValue: alert },
         {
           provide: AuthService,
@@ -1515,6 +1552,82 @@ describe('OrderEditor', () => {
       t.currentOrder.set(order({ source: OrderSourceEnum.Pos, paymentMethod: PaymentMethodEnum.Cash }));
       t.checkout();
       expect(checkoutOpen).toHaveBeenCalledWith(null);
+    });
+
+    describe('chat with the customer', () => {
+      const linkOrder = (over: Partial<OrderDto> = {}) =>
+        order({ source: OrderSourceEnum.CustomerLink, status: OrderStatusEnum.Pending, customerName: 'Maria Cruz', ...over });
+      const hasChat = () => (t as unknown as { hasChat: () => boolean }).hasChat();
+      const chatButton = () => fixture.nativeElement.querySelector('[data-chat-button]') as HTMLButtonElement | null;
+      const panel = () => fixture.nativeElement.querySelector('[data-order-chat]') as HTMLElement;
+      const unread = () => (t as unknown as { chatUnread: () => number }).chatUnread();
+
+      it('is offered for a customer order that is open', () => {
+        t.isEditMode.set(true);
+        t.currentOrder.set(linkOrder());
+        fixture.detectChanges();
+
+        expect(hasChat()).toBe(true);
+        expect(chatButton()).not.toBeNull();
+      });
+
+      it.each([
+        ['an order the shop took itself', { source: OrderSourceEnum.Pos }],
+      ])('is not offered for %s', (_name, over) => {
+        t.isEditMode.set(true);
+        t.currentOrder.set(linkOrder(over as Partial<OrderDto>));
+        fixture.detectChanges();
+
+        expect(hasChat()).toBe(false);
+        expect(chatButton()).toBeNull();
+      });
+
+      it('is not offered for a new order that has not been saved', () => {
+        t.currentOrder.set(linkOrder());
+        fixture.detectChanges();
+
+        expect(hasChat()).toBe(false);
+      });
+
+      it('counts the messages nobody has read', () => {
+        unreadByOrder['o1'] = 2;
+        t.isEditMode.set(true);
+        t.currentOrder.set(linkOrder());
+        fixture.detectChanges();
+
+        expect(unread()).toBe(2);
+        expect(chatButton()!.querySelector('[data-chat-unread]')!.textContent!.trim()).toBe('2');
+      });
+
+      it('opens the chat in the side panel with the order and the customer', () => {
+        t.isEditMode.set(true);
+        t.currentOrder.set(linkOrder({ orderNumber: 1042 }));
+        fixture.detectChanges();
+
+        chatButton()!.click();
+        fixture.detectChanges();
+
+        expect(panel().className).toContain('translate-x-0');
+        expect(chatApi.getOrderConversation).toHaveBeenCalledWith('o1');
+        expect(panel().textContent).toContain('Maria Cruz');
+      });
+
+      it('opens straight away from a notification (?chat=open), then clears the parameter', () => {
+        const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+        t.isEditMode.set(true);
+        t.currentOrder.set(linkOrder());
+        fixture.detectChanges();
+
+        queryParams$.next(convertToParamMap({ chat: 'open' }));
+        fixture.detectChanges();
+
+        expect(panel().className).toContain('translate-x-0');
+        expect(navigate).toHaveBeenCalledWith([], {
+          queryParams: { chat: null },
+          queryParamsHandling: 'merge',
+          replaceUrl: true,
+        });
+      });
     });
 
     describe('marking a customer order ready', () => {

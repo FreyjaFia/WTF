@@ -1,17 +1,21 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
   AlertService,
   AuthService,
   CatalogCacheService,
+  ConversationInboxService,
   OrderService,
   PromotionService,
+  SignalRService,
 } from '@core/services';
 import {
   AvatarComponent,
   BadgeComponent,
   IconComponent,
+  OrderChatDrawerComponent,
   OrderReceiptComponent,
   PullToRefreshComponent,
   ReceiptData,
@@ -46,6 +50,7 @@ import { AppRoutes } from '@shared/constants/app-routes';
     OrderReceiptComponent,
     ConfirmDialogComponent,
     RejectOrderDialogComponent,
+    OrderChatDrawerComponent,
   ],
   templateUrl: './order-details.html',
 })
@@ -57,6 +62,16 @@ export class OrderDetails implements OnInit {
   private readonly alertService = inject(AlertService);
   private readonly authService = inject(AuthService);
   private readonly promotionService = inject(PromotionService);
+  private readonly inbox = inject(ConversationInboxService);
+  private readonly signalR = inject(SignalRService);
+  private readonly destroyRef = inject(DestroyRef);
+
+  protected readonly showChat = signal(false);
+  /** Messages from the customer that no staff member has read yet, for the badge on the Chat button. */
+  protected readonly chatUnread = computed(() => {
+    const id = this.order()?.id;
+    return id ? this.inbox.unreadFor(id) : 0;
+  });
 
   protected readonly order = signal<OrderDto | null>(null);
   protected readonly productImageById = signal<Record<string, string | null>>({});
@@ -173,9 +188,39 @@ export class OrderDetails implements OnInit {
   });
 
   public ngOnInit(): void {
+    // A notification or the envelope sends staff here with ?chat=open. The parameter is cleared once used, so the same
+    // link works again the next time.
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
+      if (params.get('chat') === 'open') {
+        this.showChat.set(true);
+        void this.router.navigate([], {
+          queryParams: { chat: null },
+          queryParamsHandling: 'merge',
+          replaceUrl: true,
+        });
+      }
+    });
+
+    // Another cashier or the customer's link changed this order: show it as it is now, without a spinner.
+    this.signalR.startStaffOrdersHub();
+    this.destroyRef.onDestroy(() => this.signalR.stopStaffOrdersHub());
+    this.signalR.orderChanged.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((orderId) => {
+      if (orderId === this.order()?.id) {
+        this.loadOrder(true);
+      }
+    });
+
     this.loadCatalogImages();
     this.loadOrder();
     this.loadDiscountedProductPromotions();
+  }
+
+  protected openChat(): void {
+    this.showChat.set(true);
+  }
+
+  protected closeChat(): void {
+    this.showChat.set(false);
   }
 
   protected backToOrders(): void {
@@ -766,7 +811,7 @@ export class OrderDetails implements OnInit {
       .toLowerCase();
   }
 
-  private loadOrder(): void {
+  private loadOrder(silent = false): void {
     const orderId = this.route.snapshot.paramMap.get('id');
     if (!orderId) {
       this.alertService.error('Order not found.');
@@ -774,7 +819,9 @@ export class OrderDetails implements OnInit {
       return;
     }
 
-    this.isLoading.set(true);
+    if (!silent) {
+      this.isLoading.set(true);
+    }
     this.orderService.getOrder(orderId).subscribe({
       next: (order) => {
         this.order.set(order);
@@ -782,6 +829,9 @@ export class OrderDetails implements OnInit {
         this.isRefreshing.set(false);
       },
       error: (err: Error) => {
+        if (silent) {
+          return;
+        }
         this.alertService.error(err.message || this.alertService.getLoadErrorMessage('order'));
         this.isLoading.set(false);
         this.isRefreshing.set(false);
