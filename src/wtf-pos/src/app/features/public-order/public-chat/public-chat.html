@@ -1,0 +1,77 @@
+<div
+  class="fixed inset-0 z-50"
+  [class.pointer-events-auto]="isOpen()"
+  [class.pointer-events-none]="!isOpen()"
+>
+  <div
+    class="absolute inset-0 bg-black/30 backdrop-blur-md transition-opacity ease-in-out"
+    [class.duration-300]="hasTransitions()"
+    [class.duration-0]="!hasTransitions()"
+    [class.opacity-100]="isOpen()"
+    [class.opacity-0]="!isOpen()"
+    (click)="close()"
+    role="presentation"
+  ></div>
+
+  <!-- A sheet from the bottom on phones, a panel from the right on wide screens -->
+  <section
+    class="fixed inset-x-0 bottom-0 z-50 flex h-[85dvh] transform-gpu flex-col rounded-t-2xl bg-white shadow-xl transition-transform ease-in-out sm:inset-y-0 sm:right-0 sm:left-auto sm:h-full sm:w-full sm:max-w-md sm:rounded-none"
+    [class.duration-300]="hasTransitions()"
+    [class.duration-0]="!hasTransitions()"
+    [class]="
+      isOpen()
+        ? 'translate-y-0 sm:translate-x-0'
+        : 'translate-y-full sm:translate-x-full sm:translate-y-0'
+    "
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="'Chat with the shop, ' + title()"
+    [attr.aria-hidden]="!isOpen()"
+    (keydown.escape)="close()"
+    data-public-chat
+  >
+    <header class="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+      <div class="flex min-w-0 items-center gap-3">
+        <div class="rounded-lg bg-white p-2 ring-1 ring-gray-200">
+          <app-icon name="icon-chat" [class]="'h-5 w-5 text-gray-700'" [fill]="'currentColor'" />
+        </div>
+        <div class="min-w-0">
+          <h2 class="truncate text-base font-bold text-gray-900" data-chat-title>{{ title() }}</h2>
+          <p class="truncate text-xs text-gray-500">Chat with the shop</p>
+        </div>
+      </div>
+      <div class="flex shrink-0 items-center gap-2">
+      @if (canGoToOrder()) {
+        <button type="button" class="app-btn app-btn-secondary px-3 py-1.5 text-sm" data-chat-go-to-order (click)="goToOrder.emit()">
+          Go to order
+        </button>
+      }
+      <button
+        type="button"
+        class="app-btn app-btn-ghost p-1.5"
+        aria-label="Close chat"
+        data-chat-close
+        (click)="close()"
+      >
+        <app-icon name="icon-close" [class]="'h-5 w-5'" />
+      </button>
+      </div>
+    </header>
+
+    @if (isOpen()) {
+      <app-chat
+        viewer="customer"
+        customerLabel="You"
+        [messages]="conversation()?.messages ?? []"
+        [canSend]="conversation() ? conversation()!.canSend : true"
+        [closedReason]="conversation()?.closedReason ?? null"
+        [isLoading]="isLoading()"
+        [isSending]="isSending()"
+        [error]="error()"
+        emptyText="Ask the shop anything about your order."
+        [(draft)]="draft"
+        (sent)="send($event)"
+      />
+    }
+  </section>
+</div>

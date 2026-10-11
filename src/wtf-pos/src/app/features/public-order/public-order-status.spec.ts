@@ -59,7 +59,7 @@ describe('publicTimeline', () => {
     ]);
   });
 
-  it('carries each time, and leaves out a time that was not recorded', () => {
+  it('carries each time; a step that was skipped shows the time of the step after it', () => {
     const steps = publicTimeline(
       make({
         statusKind: 'completed',
@@ -71,9 +71,28 @@ describe('publicTimeline', () => {
     expect(steps.map((s) => s.at)).toEqual([
       '2026-01-11T09:00:00',
       '2026-01-11T09:05:00',
-      null,
+      '2026-01-11T09:40:00',
       '2026-01-11T09:40:00',
     ]);
+  });
+
+  it('shows the same time for accepted, ready and completed when the shop went straight to checkout', () => {
+    const steps = publicTimeline(
+      make({ statusKind: 'completed', acceptedAt: null, readyAt: null, finishedAt: '2026-01-11T09:40:00' }),
+    );
+
+    expect(steps.map((s) => s.at)).toEqual([
+      '2026-01-11T09:00:00',
+      '2026-01-11T09:40:00',
+      '2026-01-11T09:40:00',
+      '2026-01-11T09:40:00',
+    ]);
+  });
+
+  it('does not invent a time for a step that has not happened yet', () => {
+    const steps = publicTimeline(make({ statusKind: 'accepted', acceptedAt: '2026-01-11T09:05:00' }));
+
+    expect(steps.map((s) => s.at)).toEqual(['2026-01-11T09:00:00', '2026-01-11T09:05:00', null, null]);
   });
 
   it('names the ready step for what the customer chose', () => {

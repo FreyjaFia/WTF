@@ -27,13 +27,25 @@
             [class.w-60]="!isSidebarCollapsed()"
           >
             <div class="border-b border-gray-200 px-3 py-4">
-              <div class="flex items-center gap-2 text-2xl font-bold tracking-widest">
-                <span class="text-neutral">WTF</span>
-                @if (!isSidebarCollapsed()) {
-                  <span class="text-xs font-normal tracking-wider text-gray-500 uppercase"
-                    >Ordering</span
-                  >
-                }
+              <div
+                class="flex items-center gap-2"
+                [class.flex-col]="isSidebarCollapsed()"
+                [class.justify-between]="!isSidebarCollapsed()"
+              >
+                <div class="flex items-center gap-2 text-2xl font-bold tracking-widest">
+                  <span class="text-neutral">WTF</span>
+                  @if (!isSidebarCollapsed()) {
+                    <span class="text-xs font-normal tracking-wider text-gray-500 uppercase"
+                      >Ordering</span
+                    >
+                  }
+                </div>
+                <ng-container
+                  *ngTemplateOutlet="
+                    envelopeTpl;
+                    context: { align: 'start' }
+                  "
+                />
               </div>
             </div>
 
@@ -128,7 +140,10 @@
               <div class="text-xs text-gray-500">Ordering as</div>
               <div class="text-sm font-semibold text-gray-800">{{ link()!.firstName }}</div>
             </div>
-            <div class="avatar ml-3 rounded-full p-0.5">
+            <div class="ml-1">
+              <ng-container *ngTemplateOutlet="envelopeTpl; context: { align: 'end' }" />
+            </div>
+            <div class="avatar ml-1 rounded-full p-0.5">
               <div class="w-10 rounded-full">
                 @if (profileImage(); as image) {
                   <img alt="Your profile picture" [src]="image" (error)="imageFailed.set(true)" />
@@ -299,7 +314,12 @@
                 } @else {
                   @if (selectedOrder(); as detail) {
                     <div class="min-h-0 flex-1 overflow-y-auto pb-6">
-                      <app-public-order-details [order]="detail" (back)="closeOrder()" />
+                      <app-public-order-details
+                        [order]="detail"
+                        [unread]="unreadByOrder()[detail.id] || 0"
+                        (back)="closeOrder()"
+                        (chat)="openChat(detail.id, detail.orderNumber)"
+                      />
                     </div>
                   } @else {
                     <app-public-orders
@@ -616,6 +636,32 @@
         </div>
       </div>
     </div>
+
+    <!-- The envelope: my order chats and how many have something new from the shop -->
+    <ng-template #envelopeTpl let-align="align">
+      <app-envelope
+        viewer="customer"
+        [showCustomer]="false"
+        [align]="align"
+        [unread]="unreadConversations()"
+        [items]="conversations()?.items ?? []"
+        [isLoading]="isLoadingConversations()"
+        (listOpened)="loadConversations()"
+        (opened)="openConversation($event)"
+      />
+    </ng-template>
+
+    <app-public-chat
+      [isOpen]="chatOrderId() !== null"
+      [token]="token"
+      [orderId]="chatOrderId()"
+      [orderNumber]="chatOrderNumber()"
+      [canGoToOrder]="chatFromEnvelope()"
+      (goToOrder)="goToChatOrder()"
+      (closed)="closeChat()"
+      (changed)="loadConversations()"
+      (linkInvalid)="onChatLinkInvalid()"
+    />
 
     @if (checkoutOpen()) {
       <app-public-checkout

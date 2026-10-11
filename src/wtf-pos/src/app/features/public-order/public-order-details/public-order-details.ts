@@ -24,7 +24,12 @@ import {
 export class PublicOrderDetailsComponent {
   public readonly order = input.required<PublicOrderDto>();
 
+  /** Messages from the shop that the customer has not read yet. */
+  public readonly unread = input(0);
+
   public readonly back = output<void>();
+  /** The customer wants to chat with the shop about this order. */
+  public readonly chat = output<void>();
 
   protected readonly variant = publicStatusVariant;
   protected readonly note = computed(() => publicStatusNote(this.order()));

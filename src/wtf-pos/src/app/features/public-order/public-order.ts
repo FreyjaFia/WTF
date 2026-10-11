@@ -11,15 +11,21 @@ import {
   viewChild,
 } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { AlertService } from '@core/services/alert.service';
+import { PublicOrderHubService } from '@core/services/public-order-hub.service';
 import { PublicLinkInvalidError, PublicOrderService } from '@core/services/public-order.service';
+import { EnvelopeComponent } from '@shared/components/envelope/envelope';
 import { AvatarComponent } from '@shared/components/avatar/avatar';
 import { CartDrawerComponent } from '@shared/components/cart-drawer/cart-drawer';
 import { IconComponent } from '@shared/components/icons/icon/icon';
 import { SearchInputComponent } from '@shared/components/search-input/search-input';
+import { PublicChatComponent } from './public-chat/public-chat';
 import { PublicOrderDetailsComponent } from './public-order-details/public-order-details';
 import { PublicOrdersComponent } from './public-orders/public-orders';
 import {
+  ConversationListDto,
+  ConversationSummaryDto,
   ProductCategoryEnum,
   PublicAddOnGroupDto,
   PublicCartLine,
@@ -74,11 +80,13 @@ const CATEGORY_LABELS: Record<number, string> = {
     DecimalPipe,
     AvatarComponent,
     CartDrawerComponent,
+    EnvelopeComponent,
     IconComponent,
     LinkInvalidComponent,
     NgTemplateOutlet,
     PublicAddonPickerComponent,
     PublicCheckoutComponent,
+    PublicChatComponent,
     PublicOrderDetailsComponent,
     PublicOrdersComponent,
     SearchInputComponent,
@@ -89,12 +97,13 @@ const CATEGORY_LABELS: Record<number, string> = {
 export class PublicOrderComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly service = inject(PublicOrderService);
+  private readonly hub = inject(PublicOrderHubService);
   private readonly alerts = inject(AlertService);
 
   private readonly sidebarHost = viewChild<ElementRef<HTMLElement>>('sidebarHost');
   private resizeObserver: ResizeObserver | null = null;
 
-  private token = '';
+  protected token = '';
   private loadedAt = 0;
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private readonly onVisibility = () => this.handleVisibility();
@@ -132,6 +141,30 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
   protected readonly ordersError = signal('');
   /** The order whose details are open on My orders, or null for the list. */
   protected readonly selectedOrderId = signal<string | null>(null);
+
+  // --- chat with the shop ---
+  /** My order chats for the envelope. Loaded fresh from the shop; nothing is kept on the device. */
+  protected readonly conversations = signal<ConversationListDto | null>(null);
+  protected readonly isLoadingConversations = signal(false);
+  /** The order whose chat is open. */
+  protected readonly chatOrderId = signal<string | null>(null);
+  protected readonly chatOrderNumber = signal<number | null>(null);
+  /** The chat was opened from the envelope, away from its order, so it offers a way to the order. */
+  protected readonly chatFromEnvelope = signal(false);
+  protected readonly unreadConversations = computed(
+    () => this.conversations()?.unreadConversations ?? 0,
+  );
+  protected readonly unreadByOrder = computed(() => {
+    const unread: Record<string, number> = {};
+    for (const item of this.conversations()?.items ?? []) {
+      if (item.orderId && item.unreadCount > 0) {
+        unread[item.orderId] = item.unreadCount;
+      }
+    }
+    return unread;
+  });
+  private liveSubscriptions: Subscription[] = [];
+  private liveStarted = false;
   protected readonly selectedOrder = computed(
     () => this.orders().find((order) => order.id === this.selectedOrderId()) ?? null,
   );
@@ -232,6 +265,7 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
   public ngOnInit(): void {
     this.token = this.route.snapshot.paramMap.get('token') ?? '';
     this.loadMenu();
+    this.startLive();
 
     document.addEventListener('visibilitychange', this.onVisibility);
     this.pollTimer = setInterval(() => {
@@ -242,6 +276,9 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
   }
 
   public ngOnDestroy(): void {
+    this.liveSubscriptions.forEach((subscription) => subscription.unsubscribe());
+    this.liveSubscriptions = [];
+    this.hub.disconnect();
     document.removeEventListener('visibilitychange', this.onVisibility);
     this.resizeObserver?.disconnect();
     this.resizeObserver = null;
@@ -275,6 +312,89 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
     document.documentElement.style.setProperty('--sidebar-width', `${width}px`);
   }
 
+  // --- real time and chat ---
+
+  /**
+   * Listens for the shop's news: a message, an order that changed, or a revoked link. The server only says that
+   * something happened; the page then asks for the data again, so what is shown always comes from the shop. If the
+   * connection never opens, the refreshes the page already does keep everything current.
+   */
+  private startLive(): void {
+    if (this.liveStarted || !this.token) {
+      return;
+    }
+
+    this.liveStarted = true;
+    this.liveSubscriptions = [
+      this.hub.orderMessage.subscribe(() => this.loadConversations()),
+      this.hub.conversationRead.subscribe(() => this.loadConversations()),
+      this.hub.orderStatusChanged.subscribe(() => {
+        this.loadOrders(true);
+        this.loadConversations();
+      }),
+      this.hub.linkRevoked.subscribe(() => this.state.set('invalid')),
+    ];
+    this.hub.connect(this.token);
+  }
+
+  protected loadConversations(): void {
+    if (this.state() !== 'ready' && this.state() !== 'loading') {
+      return;
+    }
+
+    this.isLoadingConversations.set(true);
+    this.service.getConversations(this.token).subscribe({
+      next: (list) => {
+        this.conversations.set(list);
+        this.isLoadingConversations.set(false);
+      },
+      error: (err: Error) => {
+        this.isLoadingConversations.set(false);
+        if (err instanceof PublicLinkInvalidError) {
+          this.state.set('invalid');
+        }
+        // Anything else leaves the envelope as it was.
+      },
+    });
+  }
+
+  protected openChat(orderId: string, orderNumber: number | null = null): void {
+    this.chatFromEnvelope.set(false);
+    this.chatOrderNumber.set(
+      orderNumber ?? this.orders().find((o) => o.id === orderId)?.orderNumber ?? null,
+    );
+    this.chatOrderId.set(orderId);
+  }
+
+  protected closeChat(): void {
+    this.chatOrderId.set(null);
+    this.chatFromEnvelope.set(false);
+  }
+
+  protected goToChatOrder(): void {
+    const orderId = this.chatOrderId();
+    this.closeChat();
+    if (orderId) {
+      this.selectTab('orders');
+      this.openOrder(orderId);
+    }
+  }
+
+  /** A conversation was pressed in the envelope: open its chat where the customer is. */
+  protected openConversation(item: ConversationSummaryDto): void {
+    if (!item.orderId) {
+      return;
+    }
+
+    this.openChat(item.orderId, item.orderNumber ?? null);
+    this.chatFromEnvelope.set(true);
+  }
+
+  protected onChatLinkInvalid(): void {
+    this.chatOrderId.set(null);
+    this.state.set('invalid');
+  }
+
   // --- loading ---
 
   protected loadMenu(silent = false): void {
@@ -295,6 +415,7 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
         this.state.set('ready');
         this.restoreCart();
         this.reconcileCart();
+        this.loadConversations();
       },
       error: (err: Error) => {
         this.isRefreshingMenu.set(false);
@@ -715,8 +836,9 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // The cart stays where it is behind the checkout, as in the signed-in order screen, so it does not slide away
+    // and back. It closes when the order is placed.
     this.checkoutError.set(null);
-    this.cartOpen.set(false);
     this.checkoutOpen.set(true);
   }
 

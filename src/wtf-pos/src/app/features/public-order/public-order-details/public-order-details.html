@@ -59,6 +59,43 @@
       }
     </div>
 
+    <div class="rounded-xl bg-white p-4 shadow-lg sm:p-5" data-chat-card>
+      <div class="flex items-center justify-between gap-3">
+        <div class="min-w-0">
+          <h3 class="text-sm font-semibold text-gray-900">Chat with the shop</h3>
+          <p class="text-xs text-gray-500">
+            @if (unread() > 0) {
+              The shop wrote to you.
+            } @else if (
+              order().statusKind === 'waiting' ||
+              order().statusKind === 'accepted' ||
+              order().statusKind === 'ready'
+            ) {
+              Ask about your order, for example the time or the address.
+            } @else {
+              This order is finished. You can still read the messages.
+            }
+          </p>
+        </div>
+        <button
+          type="button"
+          class="app-btn app-btn-secondary app-btn-sm shrink-0 gap-2"
+          data-chat-button
+          (click)="chat.emit()"
+        >
+          <app-icon name="icon-chat" [class]="'h-4 w-4'" [fill]="'currentColor'" />
+          Chat
+          @if (unread() > 0) {
+            <span
+              class="flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] leading-none font-bold text-white"
+              data-chat-unread
+              >{{ unread() }}</span
+            >
+          }
+        </button>
+      </div>
+    </div>
+
     <div class="rounded-xl bg-white p-4 shadow-lg sm:p-5" data-timeline>
       <div class="mb-3 text-xs font-semibold tracking-wide text-gray-500 uppercase">Progress</div>
       <ol class="flex flex-col md:flex-row">

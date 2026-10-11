@@ -159,8 +159,15 @@ export function publicTimeline(order: PublicOrderDto): TimelineStep[] {
     const state: TimelineState = reached[i] ? 'done' : i === next ? 'current' : 'upcoming';
     return {
       ...step,
+      // A step the shop skipped (paid straight from checkout, never marked ready) shows the time of the next step
+      // that has one, since that is when the order got past it.
+      at: state === 'done' ? (step.at ?? skippedAt(steps, i)) : step.at,
       state,
       hint: state === 'current' ? nowHints[step.key] : state === 'upcoming' ? 'Not yet' : null,
     };
   });
+}
+
+function skippedAt(steps: TimelineStep[], index: number): string | null {
+  return steps.slice(index + 1).find((step) => step.at)?.at ?? null;
 }

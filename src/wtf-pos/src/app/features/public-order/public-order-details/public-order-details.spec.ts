@@ -198,6 +198,61 @@ describe('PublicOrderDetailsComponent', () => {
     });
   });
 
+  describe('chat with the shop', () => {
+    const card = () => el().querySelector('[data-chat-card]') as HTMLElement;
+    const button = () => el().querySelector('[data-chat-button]') as HTMLButtonElement;
+
+    it('has a card with a Chat button above the progress', () => {
+      setup();
+
+      expect(card().textContent).toContain('Chat with the shop');
+      expect(button().textContent).toContain('Chat');
+      const timeline = el().querySelector('[data-timeline]')!;
+      expect(card().compareDocumentPosition(timeline) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it('asks the page to open the chat', () => {
+      setup();
+      const chat = vi.fn();
+      fixture.componentInstance.chat.subscribe(chat);
+
+      button().click();
+
+      expect(chat).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows how many messages from the shop are unread, and says the shop wrote', () => {
+      setup();
+      fixture.componentRef.setInput('unread', 3);
+      fixture.detectChanges();
+
+      expect(button().querySelector('[data-chat-unread]')!.textContent!.trim()).toBe('3');
+      expect(card().textContent).toContain('The shop wrote to you.');
+    });
+
+    it('shows no number when nothing is unread', () => {
+      setup();
+
+      expect(button().querySelector('[data-chat-unread]')).toBeNull();
+    });
+
+    it.each(['waiting', 'accepted', 'ready'] as const)('invites a question on a %s order', (statusKind) => {
+      setup(make({ statusKind }));
+
+      expect(card().textContent).toContain('Ask about your order');
+    });
+
+    it.each(['completed', 'rejected', 'cancelled', 'refunded'] as const)(
+      'says a %s order is finished, but its messages can still be read',
+      (statusKind) => {
+        setup(make({ statusKind }));
+
+        expect(card().textContent).toContain('This order is finished. You can still read the messages.');
+        expect(button()).not.toBeNull();
+      },
+    );
+  });
+
   it('asks to go back', () => {
     setup();
     const back = vi.fn();

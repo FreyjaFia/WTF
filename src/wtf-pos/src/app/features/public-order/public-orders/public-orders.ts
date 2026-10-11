@@ -60,6 +60,8 @@ export class PublicOrdersComponent {
   /** The customer wants to order again: the page shows the menu. */
   public readonly newOrder = output<void>();
 
+  /** Unread messages from the shop, by order id, for the small badge on a row. */
+
   /** What the customer typed: matches the order number. */
   protected readonly search = signal('');
   /** Newest first, like the shop's own order list. */

@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute } from '@angular/router';
 import { AlertService } from '@core/services/alert.service';
+import { PublicOrderHubService } from '@core/services/public-order-hub.service';
 import { PublicLinkInvalidError, PublicOrderService } from '@core/services/public-order.service';
 import {
   PublicAddOnGroupDto,
@@ -9,6 +10,7 @@ import {
   PublicProductDto,
 } from '@shared/models';
 import { of, Subject, throwError } from 'rxjs';
+import type { ConversationListDto } from '@shared/models';
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 import { internals, Internals, stubRoute } from '../../testing/management-spec-helpers';
 import {
@@ -83,9 +85,13 @@ describe('PublicOrderComponent', () => {
     getLink: ReturnType<typeof vi.fn>;
     getOrders: ReturnType<typeof vi.fn>;
     createOrder: ReturnType<typeof vi.fn>;
+    getConversations: ReturnType<typeof vi.fn>;
+    getOrderConversation: ReturnType<typeof vi.fn>;
+    sendMessage: ReturnType<typeof vi.fn>;
+    markConversationRead: ReturnType<typeof vi.fn>;
   };
 
-  function setup(opts: { link?: unknown; orders?: unknown; token?: string } = {}) {
+  function setup(opts: { link?: unknown; orders?: unknown; token?: string; conversations?: ConversationListDto } = {}) {
     alerts = { success: vi.fn(), warning: vi.fn(), info: vi.fn(), error: vi.fn() };
     service = {
       getLink: vi.fn(() => opts.link ?? of(link())),
@@ -93,11 +99,36 @@ describe('PublicOrderComponent', () => {
         () => opts.orders ?? of({ items: [], page: 1, pageSize: 50, totalCount: 0 }),
       ),
       createOrder: vi.fn(),
+      getConversations: vi.fn(() => of(opts.conversations ?? { unreadConversations: 0, items: [] })),
+      getOrderConversation: vi.fn(() =>
+        of({ conversationId: null, orderId: 'o1', orderNumber: 1, title: 'Order #1', canSend: true, unreadCount: 0, messages: [] }),
+      ),
+      sendMessage: vi.fn(),
+      markConversationRead: vi.fn(() => of(undefined)),
+    };
+    live = {
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+      orderMessage$: new Subject<{ conversationId: string; orderId: string }>(),
+      conversationRead$: new Subject<{ conversationId: string; orderId: string }>(),
+      orderStatusChanged$: new Subject<string>(),
+      linkRevoked$: new Subject<void>(),
     };
     TestBed.configureTestingModule({
       providers: [
         { provide: PublicOrderService, useValue: service },
         { provide: AlertService, useValue: alerts },
+        {
+          provide: PublicOrderHubService,
+          useValue: {
+            connect: live.connect,
+            disconnect: live.disconnect,
+            orderMessage: live.orderMessage$.asObservable(),
+            conversationRead: live.conversationRead$.asObservable(),
+            orderStatusChanged: live.orderStatusChanged$.asObservable(),
+            linkRevoked: live.linkRevoked$.asObservable(),
+          },
+        },
         { provide: ActivatedRoute, useValue: stubRoute({ token: opts.token ?? 'tok-1' }) },
       ],
     });
@@ -113,6 +144,14 @@ describe('PublicOrderComponent', () => {
   }
 
   let alerts: { success: Mock; warning: Mock; info: Mock; error: Mock };
+  let live: {
+    connect: Mock;
+    disconnect: Mock;
+    orderMessage$: Subject<{ conversationId: string; orderId: string }>;
+    conversationRead$: Subject<{ conversationId: string; orderId: string }>;
+    orderStatusChanged$: Subject<string>;
+    linkRevoked$: Subject<void>;
+  };
 
   const el = () => fixture.nativeElement as HTMLElement;
   const text = () => el().textContent ?? '';
@@ -223,6 +262,296 @@ describe('PublicOrderComponent', () => {
       setup();
 
       expect(c.cart()).toEqual([]);
+    });
+  });
+
+  describe('chat with the shop', () => {
+    const list = (unread: number, items: Record<string, unknown>[] = []) =>
+      ({
+        unreadConversations: unread,
+        items: items.map((item, i) => ({
+          id: 'c' + i,
+          orderId: 'o' + i,
+          orderNumber: 1000 + i,
+          title: 'Order #' + (1000 + i),
+          customerName: null,
+          lastMessage: 'Ready at 5',
+          lastSender: 'staff',
+          lastMessageAt: new Date().toISOString(),
+          unreadCount: 1,
+          ...item,
+        })),
+      }) as ConversationListDto;
+    const badges = () => [...el().querySelectorAll('[data-envelope-badge]')].map((b) => b.textContent!.trim());
+    const panel = () => el().querySelector('[data-public-chat]') as HTMLElement;
+
+    it('listens for the shops news once the page opens, with the link token', () => {
+      setup();
+
+      expect(live.connect).toHaveBeenCalledTimes(1);
+      expect(live.connect).toHaveBeenCalledWith('tok-1');
+    });
+
+    it('does not listen at all without a token', () => {
+      setup({ token: '' });
+
+      expect(live.connect).not.toHaveBeenCalled();
+    });
+
+    it('loads my conversations once the menu is in', () => {
+      setup();
+
+      expect(service.getConversations).toHaveBeenCalledWith('tok-1');
+    });
+
+    it('shows the envelope with the number of unread chats, in the side bar and the top bar', () => {
+      setup({ conversations: list(2) });
+
+      expect(el().querySelectorAll('[data-envelope]').length).toBe(2);
+      expect(badges()).toEqual(['2', '2']);
+    });
+
+    it('shows no number when nothing is unread', () => {
+      setup({ conversations: list(0) });
+
+      expect(badges()).toEqual([]);
+    });
+
+    it('shows no badge on the orders list: the envelope has the unread count', () => {
+      setup({
+        orders: of({
+          items: [order('o0', '2026-01-11T09:00:00', { orderNumber: 1000 }), order('o9', '2026-01-10T09:00:00', { orderNumber: 1009 })],
+          page: 1,
+          pageSize: 50,
+          totalCount: 2,
+        }),
+        conversations: list(1, [{ orderId: 'o0', unreadCount: 3 }]),
+      });
+      c.selectTab('orders');
+      fixture.detectChanges();
+
+      expect(el().querySelector('[data-row-unread]')).toBeNull();
+    });
+
+    describe('live news', () => {
+      it('loads my conversations again when a message arrives', () => {
+        setup();
+        service.getConversations.mockClear();
+
+        live.orderMessage$.next({ conversationId: 'c1', orderId: 'o1' });
+
+        expect(service.getConversations).toHaveBeenCalledTimes(1);
+      });
+
+      it('loads them again when a chat was read on another screen', () => {
+        setup();
+        service.getConversations.mockClear();
+
+        live.conversationRead$.next({ conversationId: 'c1', orderId: 'o1' });
+
+        expect(service.getConversations).toHaveBeenCalledTimes(1);
+      });
+
+      it('shows the new number after a message', () => {
+        setup({ conversations: list(0) });
+        service.getConversations.mockReturnValue(of(list(1, [{}])));
+
+        live.orderMessage$.next({ conversationId: 'c1', orderId: 'o1' });
+        fixture.detectChanges();
+
+        expect(badges()).toEqual(['1', '1']);
+      });
+
+      it('refreshes my orders and chats at once when an order changes', () => {
+        setup();
+        service.getOrders.mockClear();
+        service.getConversations.mockClear();
+
+        live.orderStatusChanged$.next('o1');
+
+        expect(service.getOrders).toHaveBeenCalledTimes(1);
+        expect(service.getConversations).toHaveBeenCalledTimes(1);
+      });
+
+      it('shows the invalid link page when the link is revoked while the page is open', () => {
+        setup();
+
+        live.linkRevoked$.next();
+        fixture.detectChanges();
+
+        expect(c.state()).toBe('invalid');
+      });
+
+      it('stops listening when the page goes away', () => {
+        setup();
+
+        fixture.destroy();
+        service.getConversations.mockClear();
+        live.orderMessage$.next({ conversationId: 'c1', orderId: 'o1' });
+
+        expect(live.disconnect).toHaveBeenCalledTimes(1);
+        expect(service.getConversations).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('the envelope list', () => {
+      it('loads the list again each time it is opened', () => {
+        setup({ conversations: list(0) });
+        service.getConversations.mockClear();
+
+        (el().querySelector('[data-envelope]') as HTMLElement).click();
+
+        expect(service.getConversations).toHaveBeenCalledTimes(1);
+      });
+
+      it('opens the chat in place when a conversation is pressed', () => {
+        setup({
+          orders: of({
+            items: [order('o0', '2026-01-11T09:00:00', { orderNumber: 1000 })],
+            page: 1,
+            pageSize: 50,
+            totalCount: 1,
+          }),
+          conversations: list(1, [{ orderId: 'o0', orderNumber: 1000 }]),
+        });
+        (el().querySelector('[data-envelope]') as HTMLElement).click();
+        fixture.detectChanges();
+
+        (el().querySelector('[data-envelope-item]') as HTMLElement).click();
+        fixture.detectChanges();
+
+        expect(c.tab()).toBe('menu');
+        expect(panel().className).toContain('translate-y-0');
+        expect(service.getOrderConversation).toHaveBeenCalledWith('tok-1', 'o0');
+        expect(el().querySelector('[data-chat-title]')!.textContent).toContain('Order #');
+      });
+
+      it('goes to the order from the chat when the button beside the title is pressed', () => {
+        setup({
+          orders: of({
+            items: [order('o0', '2026-01-11T09:00:00', { orderNumber: 1000 })],
+            page: 1,
+            pageSize: 50,
+            totalCount: 1,
+          }),
+          conversations: list(1, [{ orderId: 'o0', orderNumber: 1000 }]),
+        });
+        (el().querySelector('[data-envelope]') as HTMLElement).click();
+        fixture.detectChanges();
+        (el().querySelector('[data-envelope-item]') as HTMLElement).click();
+        fixture.detectChanges();
+
+        (el().querySelector('[data-chat-go-to-order]') as HTMLElement).click();
+        fixture.detectChanges();
+
+        expect(c.tab()).toBe('orders');
+        expect(el().querySelector('[data-order-details]')).not.toBeNull();
+        expect(panel().className).toContain('translate-y-full');
+      });
+
+      it('does nothing for a conversation that is not about an order', () => {
+        setup({ conversations: list(1, [{ orderId: null }]) });
+        (el().querySelector('[data-envelope]') as HTMLElement).click();
+        fixture.detectChanges();
+
+        (el().querySelector('[data-envelope-item]') as HTMLElement).click();
+        fixture.detectChanges();
+
+        expect(c.tab()).toBe('menu');
+        expect(panel().className).toContain('translate-y-full');
+      });
+    });
+
+    describe('the chat panel', () => {
+      const PAGE = {
+        items: [order('o2', '2026-01-11T09:00:00', { orderNumber: 1002 })],
+        page: 1,
+        pageSize: 50,
+        totalCount: 1,
+      };
+
+      it('opens from the Chat button of an order, and closes', () => {
+        setup({ orders: of(PAGE) });
+        service.getOrderConversation.mockReturnValue(
+          of({ conversationId: 'c', orderId: 'o2', orderNumber: 1002, title: 'Order #1002', canSend: true, unreadCount: 0, messages: [] }),
+        );
+        c.selectTab('orders');
+        c.openOrder('o2');
+        fixture.detectChanges();
+        expect(panel().className).toContain('translate-y-full');
+
+        (el().querySelector('[data-chat-button]') as HTMLElement).click();
+        fixture.detectChanges();
+
+        expect(panel().className).toContain('translate-y-0');
+        expect(service.getOrderConversation).toHaveBeenCalledWith('tok-1', 'o2');
+        expect(el().querySelector('[data-chat-title]')!.textContent).toContain('Order #1002');
+
+        (el().querySelector('[data-chat-close]') as HTMLElement).click();
+        fixture.detectChanges();
+        expect(panel().className).toContain('translate-y-full');
+      });
+
+      it('refreshes the badges when the shops replies were read', () => {
+        setup({ orders: of(PAGE) });
+        service.getOrderConversation.mockReturnValue(
+          of({ conversationId: 'c', orderId: 'o2', orderNumber: 1002, title: 'Order #1002', canSend: true, unreadCount: 2, messages: [] }),
+        );
+        service.getConversations.mockClear();
+        c.selectTab('orders');
+        c.openOrder('o2');
+        fixture.detectChanges();
+
+        (el().querySelector('[data-chat-button]') as HTMLElement).click();
+        fixture.detectChanges();
+
+        expect(service.markConversationRead).toHaveBeenCalledWith('tok-1', 'o2');
+        expect(service.getConversations).toHaveBeenCalled();
+      });
+
+      it('shows the invalid link page when the link stopped working during the chat', () => {
+        setup({ orders: of(PAGE) });
+        service.getOrderConversation.mockReturnValue(throwError(() => new PublicLinkInvalidError()));
+        c.selectTab('orders');
+        c.openOrder('o2');
+        fixture.detectChanges();
+
+        (el().querySelector('[data-chat-button]') as HTMLElement).click();
+        fixture.detectChanges();
+
+        expect(c.state()).toBe('invalid');
+      });
+    });
+
+    describe('problems loading conversations', () => {
+      it('shows the invalid link page if the link no longer works', () => {
+        setup();
+        service.getConversations.mockReturnValue(throwError(() => new PublicLinkInvalidError()));
+
+        c.loadConversations();
+
+        expect(c.state()).toBe('invalid');
+      });
+
+      it('keeps the envelope as it was on any other failure', () => {
+        setup({ conversations: list(2) });
+        service.getConversations.mockReturnValue(throwError(() => new Error('offline')));
+
+        c.loadConversations();
+        fixture.detectChanges();
+
+        expect(c.state()).toBe('ready');
+        expect(badges()).toEqual(['2', '2']);
+      });
+
+      it('does not ask once the page has shown the invalid link', () => {
+        setup({ link: throwError(() => new PublicLinkInvalidError()) });
+        service.getConversations.mockClear();
+
+        c.loadConversations();
+
+        expect(service.getConversations).not.toHaveBeenCalled();
+      });
     });
   });
 
@@ -1158,7 +1487,7 @@ describe('PublicOrderComponent', () => {
       expect(text()).not.toContain('coming soon');
     });
 
-    it('opens the checkout with the cart total and closes the cart sheet', () => {
+    it('opens the checkout with the cart total and keeps the cart sheet open behind it', () => {
       setup();
       fillCart();
       c.openCart();
@@ -1168,7 +1497,7 @@ describe('PublicOrderComponent', () => {
       fixture.detectChanges();
 
       expect(c.checkoutOpen()).toBe(true);
-      expect(c.cartOpen()).toBe(false);
+      expect(c.cartOpen()).toBe(true);
       expect(checkout()).not.toBeNull();
       expect(checkout()!.textContent).toContain('Checkout');
       expect(checkout()!.textContent).toContain(String((120 + (150 + 30) * 2).toFixed(2)));
@@ -1201,6 +1530,21 @@ describe('PublicOrderComponent', () => {
       c.closeCheckout();
       expect(c.checkoutOpen()).toBe(false);
       expect(c.cart().length).toBe(1);
+    });
+
+    it('leaves the cart sheet open behind the checkout instead of sliding it away', () => {
+      setup();
+      addCroissant();
+      c.openCart();
+
+      c.openCheckout();
+
+      expect(c.checkoutOpen()).toBe(true);
+      expect(c.cartOpen()).toBe(true);
+
+      c.closeCheckout();
+
+      expect(c.cartOpen()).toBe(true);
     });
 
     describe('the order request', () => {
