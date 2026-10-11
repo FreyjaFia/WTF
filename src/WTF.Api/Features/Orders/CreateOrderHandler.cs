@@ -58,6 +58,8 @@ public class CreateOrderHandler(
             throw new InvalidOperationException("An order must contain at least one item.");
         }
 
+        OrderInputValidation.EnsureLengths(request.SpecialInstructions, request.Note?.Trim(), request.Items);
+
         // Validate no nested add-ons and add-on type rules
         foreach (var item in request.Items)
         {

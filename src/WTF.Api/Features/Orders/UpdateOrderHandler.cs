@@ -258,6 +258,9 @@ public class UpdateOrderHandler(
             }
         }
 
+        OrderInputValidation.EnsureLengths(
+            request.SpecialInstructions, request.Note?.Trim(), request.Items, request.OverrideReason?.Trim());
+
         var oldStatus = (OrderStatusEnum)order.StatusId;
         var newStatus = request.Status;
         var isOverride = request.IsOverride;

@@ -46,6 +46,7 @@ public class VoidOrderHandler(
             ? OrderStatusEnum.Refunded
             : OrderStatusEnum.Cancelled;
         var note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim();
+        OrderInputValidation.EnsureNoteLength(note);
 
         if (newStatus == OrderStatusEnum.Refunded && string.IsNullOrWhiteSpace(note))
         {
