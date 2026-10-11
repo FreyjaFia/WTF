@@ -261,6 +261,12 @@ public class UpdateOrderHandler(
         OrderInputValidation.EnsureLengths(
             request.SpecialInstructions, request.Note?.Trim(), request.Items, request.OverrideReason?.Trim());
 
+        // Keeping the customer an order already has is always fine, even if they were deactivated since.
+        if (request.CustomerId != order.CustomerId)
+        {
+            await OrderInputValidation.EnsureCustomerAsync(db, request.CustomerId, cancellationToken);
+        }
+
         var oldStatus = (OrderStatusEnum)order.StatusId;
         var newStatus = request.Status;
         var isOverride = request.IsOverride;

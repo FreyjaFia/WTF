@@ -1,4 +1,6 @@
+using Microsoft.EntityFrameworkCore;
 using WTF.Api.Features.Orders.DTOs;
+using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Orders;
 
@@ -21,6 +23,30 @@ internal static class OrderInputValidation
         foreach (var item in items)
         {
             EnsureItemLengths(item);
+        }
+    }
+
+    /// <summary>An order with no customer is a walk-in and is fine; an id must belong to an existing, active customer.</summary>
+    public static async Task EnsureCustomerAsync(WTFDbContext db, Guid? customerId, CancellationToken cancellationToken)
+    {
+        if (!customerId.HasValue)
+        {
+            return;
+        }
+
+        var isActive = await db.Customers
+            .Where(c => c.Id == customerId.Value)
+            .Select(c => (bool?)c.IsActive)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (isActive is null)
+        {
+            throw new InvalidOperationException("Customer does not exist.");
+        }
+
+        if (isActive == false)
+        {
+            throw new InvalidOperationException("Customer is inactive.");
         }
     }
 

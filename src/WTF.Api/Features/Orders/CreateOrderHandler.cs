@@ -59,6 +59,7 @@ public class CreateOrderHandler(
         }
 
         OrderInputValidation.EnsureLengths(request.SpecialInstructions, request.Note?.Trim(), request.Items);
+        await OrderInputValidation.EnsureCustomerAsync(db, request.CustomerId, cancellationToken);
 
         // Validate no nested add-ons and add-on type rules
         foreach (var item in request.Items)
