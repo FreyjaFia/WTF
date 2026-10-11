@@ -109,36 +109,63 @@
 
           @if (isOnlineOrder()) {
             <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3" data-online-order>
-              <p class="text-xs font-semibold tracking-wide text-amber-800 uppercase">
-                Online order
-              </p>
-              <div class="mt-2 space-y-1.5 text-sm text-gray-700">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <p class="text-xs font-semibold tracking-wide text-amber-800 uppercase">
+                  Online order
+                </p>
+                @if (canDecide()) {
+                  <div class="flex items-center gap-2">
+                    <button
+                      type="button"
+                      class="app-btn app-btn-outline-danger app-btn-sm"
+                      [disabled]="isDeciding()"
+                      (click)="askRejectOrder()"
+                    >
+                      Reject
+                    </button>
+                    <button
+                      type="button"
+                      class="app-btn app-btn-primary app-btn-sm"
+                      [disabled]="isDeciding()"
+                      (click)="approveOrder()"
+                    >
+                      @if (isDeciding() && !showRejectDialog()) {
+                        <span class="loading loading-spinner loading-xs"></span>
+                        Accepting...
+                      } @else {
+                        Accept
+                      }
+                    </button>
+                  </div>
+                }
+              </div>
+              <div class="mt-3 space-y-1.5 text-sm text-gray-700">
                 @if (currentOrder.fulfillmentType != null) {
-                  <div class="flex items-start justify-between gap-3">
+                  <div class="grid grid-cols-[8.5rem_1fr] items-start gap-3">
                     <span class="text-gray-500">Handover</span>
-                    <span class="text-right text-gray-900">{{
+                    <span class="text-gray-900">{{
                       isDelivery() ? 'Delivery' : 'Pickup'
                     }}</span>
                   </div>
                 }
                 @if (isDelivery() && currentOrder.deliveryAddress) {
-                  <div class="flex items-start justify-between gap-3">
+                  <div class="grid grid-cols-[8.5rem_1fr] items-start gap-3">
                     <span class="text-gray-500">Address</span>
-                    <span class="text-right wrap-break-word text-gray-900">{{
+                    <span class="wrap-break-word text-gray-900">{{
                       currentOrder.deliveryAddress
                     }}</span>
                   </div>
                 }
                 @if (currentOrder.contactNumber) {
-                  <div class="flex items-start justify-between gap-3">
+                  <div class="grid grid-cols-[8.5rem_1fr] items-start gap-3">
                     <span class="text-gray-500">Contact</span>
-                    <span class="text-right text-gray-900">{{ currentOrder.contactNumber }}</span>
+                    <span class="text-gray-900">{{ currentOrder.contactNumber }}</span>
                   </div>
                 }
                 @if (isAwaitingApproval() && currentOrder.paymentMethod === 1) {
-                  <div class="flex items-start justify-between gap-3">
+                  <div class="grid grid-cols-[8.5rem_1fr] items-start gap-3">
                     <span class="text-gray-500">Customer will pay</span>
-                    <span class="text-right text-gray-900">
+                    <span class="text-gray-900">
                       <app-icon
                         name="icon-peso"
                         [class]="'inline h-3 w-3 align-[-0.125em]'"
@@ -158,9 +185,9 @@
                   </div>
                 }
                 @if (isOnlineOrder() && currentOrder.tips) {
-                  <div class="flex items-start justify-between gap-3">
+                  <div class="grid grid-cols-[8.5rem_1fr] items-start gap-3">
                     <span class="text-gray-500">Tip</span>
-                    <span class="text-right font-medium text-emerald-700">
+                    <span class="font-medium text-emerald-700">
                       <app-icon
                         name="icon-peso"
                         [class]="'inline h-3 w-3 align-[-0.125em]'"
@@ -170,40 +197,15 @@
                   </div>
                 }
                 @if (currentOrder.rejectionReason) {
-                  <div class="flex items-start justify-between gap-3">
+                  <div class="grid grid-cols-[8.5rem_1fr] items-start gap-3">
                     <span class="text-gray-500">Rejected because</span>
-                    <span class="text-right wrap-break-word text-red-700">{{
+                    <span class="wrap-break-word text-red-700">{{
                       currentOrder.rejectionReason
                     }}</span>
                   </div>
                 }
               </div>
 
-              @if (canDecide()) {
-                <div class="mt-3 flex items-center justify-end gap-2">
-                  <button
-                    type="button"
-                    class="app-btn app-btn-outline-danger app-btn-sm"
-                    [disabled]="isDeciding()"
-                    (click)="askRejectOrder()"
-                  >
-                    Reject
-                  </button>
-                  <button
-                    type="button"
-                    class="app-btn app-btn-primary app-btn-sm"
-                    [disabled]="isDeciding()"
-                    (click)="approveOrder()"
-                  >
-                    @if (isDeciding() && !showRejectDialog()) {
-                      <span class="loading loading-spinner loading-xs"></span>
-                      Accepting...
-                    } @else {
-                      Accept
-                    }
-                  </button>
-                </div>
-              }
             </div>
           }
 
