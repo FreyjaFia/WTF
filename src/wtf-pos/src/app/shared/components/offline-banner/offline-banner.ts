@@ -9,5 +9,4 @@ import { IconComponent } from '@shared/components/icons/icon/icon';
   standalone: true,
 })
 export class OfflineBannerComponent {
-  protected readonly connectivity = inject(ConnectivityService);
-}
+  protected readonly connectivity = inject(ConnectivityService);}

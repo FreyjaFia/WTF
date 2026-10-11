@@ -1,6 +1,8 @@
+import { signal, type WritableSignal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute } from '@angular/router';
 import { AlertService } from '@core/services/alert.service';
+import { ConnectivityService } from '@core/services/connectivity.service';
 import { PublicOrderHubService } from '@core/services/public-order-hub.service';
 import { PublicLinkInvalidError, PublicOrderService } from '@core/services/public-order.service';
 import {
@@ -93,6 +95,7 @@ describe('PublicOrderComponent', () => {
 
   function setup(opts: { link?: unknown; orders?: unknown; token?: string; conversations?: ConversationListDto } = {}) {
     alerts = { success: vi.fn(), warning: vi.fn(), info: vi.fn(), error: vi.fn() };
+    online = signal(true);
     service = {
       getLink: vi.fn(() => opts.link ?? of(link())),
       getOrders: vi.fn(
@@ -118,6 +121,7 @@ describe('PublicOrderComponent', () => {
       providers: [
         { provide: PublicOrderService, useValue: service },
         { provide: AlertService, useValue: alerts },
+        { provide: ConnectivityService, useValue: { isOnline: online, showReconnected: signal(false) } },
         {
           provide: PublicOrderHubService,
           useValue: {
@@ -144,6 +148,7 @@ describe('PublicOrderComponent', () => {
   }
 
   let alerts: { success: Mock; warning: Mock; info: Mock; error: Mock };
+  let online: WritableSignal<boolean>;
   let live: {
     connect: Mock;
     disconnect: Mock;
@@ -598,6 +603,15 @@ describe('PublicOrderComponent', () => {
       expect(alerts.warning).toHaveBeenCalledWith(expect.stringContaining('may be out of date'));
     });
 
+    it('does not toast a failed background refresh while offline: the page says so instead', () => {
+      setup();
+      online.set(false);
+      service.getLink.mockReturnValue(throwError(() => new Error('Unable to connect.')));
+      c.loadMenu(true);
+      expect(c.state()).toBe('ready');
+      expect(alerts.warning).not.toHaveBeenCalled();
+    });
+
     it('turns into the invalid page when the link is revoked during a refresh', () => {
       setup();
       service.getLink.mockReturnValue(throwError(() => new PublicLinkInvalidError()));
@@ -631,6 +645,73 @@ describe('PublicOrderComponent', () => {
       expect(service.getLink).toHaveBeenCalledTimes(2);
       c.selectTab('menu');
       expect(service.getLink).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('offline', () => {
+    const notice = () => el().querySelector('[data-offline-notice]');
+
+    it('replaces the product list with an offline message and brings it back online', () => {
+      setup();
+      expect(notice()).toBeNull();
+      expect(text()).toContain('Latte');
+
+      online.set(false);
+      fixture.detectChanges();
+      expect(notice()).not.toBeNull();
+      expect(text()).toContain("You're offline");
+      expect(text()).not.toContain('Latte');
+
+      online.set(true);
+      fixture.detectChanges();
+      expect(notice()).toBeNull();
+      expect(text()).toContain('Latte');
+    });
+
+    it('loads the menu again when the connection comes back', () => {
+      setup();
+      online.set(false);
+      fixture.detectChanges();
+      expect(service.getLink).toHaveBeenCalledTimes(1);
+
+      online.set(true);
+      fixture.detectChanges();
+      expect(service.getLink).toHaveBeenCalledTimes(2);
+    });
+
+    it('keeps the My orders title and search, and hides the list', () => {
+      setup({ orders: of({ items: [order('o1', '2026-10-11T09:00:00')], page: 1, pageSize: 50, totalCount: 1 }) });
+      c.selectTab('orders');
+      online.set(false);
+      fixture.detectChanges();
+
+      expect(text()).toContain('My orders');
+      expect(el().querySelector('app-search-input')).not.toBeNull();
+      expect(notice()).not.toBeNull();
+      expect(el().querySelector('[data-order-row]')).toBeNull();
+    });
+
+    it('does not open the checkout or send an order', () => {
+      setup();
+      addCroissant();
+      online.set(false);
+      fixture.detectChanges();
+
+      c.openCheckout();
+      expect(c.checkoutOpen()).toBe(false);
+
+      c.checkoutOpen.set(true);
+      c.placeOrder({
+        fulfillment: 0,
+        deliveryAddress: null,
+        contactNumber: '0917 123 4567',
+        paymentMethod: 1,
+        amountReceived: 500,
+        tips: 0,
+        specialInstructions: null,
+      });
+      expect(service.createOrder).not.toHaveBeenCalled();
+      expect(c.checkoutError()).toContain("You're offline");
     });
   });
 

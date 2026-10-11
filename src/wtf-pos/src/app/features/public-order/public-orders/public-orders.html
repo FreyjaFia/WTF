@@ -53,7 +53,9 @@
 
 <!-- Only the list scrolls; the title and the search stay put. -->
 <div class="min-h-0 flex-1 overflow-y-auto pb-6">
-  @if (state() === 'loading' && orders().length === 0) {
+  @if (offline()) {
+    <app-public-offline-notice message="Reconnect to see your orders." />
+  } @else if (state() === 'loading' && orders().length === 0) {
     <div class="flex justify-center py-12">
       <span class="loading loading-spinner loading-lg"></span>
     </div>

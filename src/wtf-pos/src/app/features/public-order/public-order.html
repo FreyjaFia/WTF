@@ -238,7 +238,9 @@
                       data-menu-scroll
                       (scroll)="onMenuScrolled($event)"
                     >
-                      @if (sections().length === 0) {
+                      @if (!connectivity.isOnline()) {
+                        <app-public-offline-notice message="Reconnect to see the menu and place an order." />
+                      } @else if (sections().length === 0) {
                         <p class="py-12 text-center text-sm text-gray-500">
                           @if (products().length === 0) {
                             The menu is empty right now. Please check back soon.
@@ -324,6 +326,7 @@
                   } @else {
                     <app-public-orders
                       class="min-h-0 flex-1"
+                      [offline]="!connectivity.isOnline()"
                       [orders]="orders()"
                       [state]="ordersState()"
                       [errorMessage]="ordersError()"
@@ -557,7 +560,7 @@
                       <button
                         type="button"
                         class="app-btn app-btn-primary app-btn-lg mt-3 w-full"
-                        [disabled]="cart().length === 0"
+                        [disabled]="cart().length === 0 || !connectivity.isOnline()"
                         (click)="openCheckout()"
                       >
                         Checkout

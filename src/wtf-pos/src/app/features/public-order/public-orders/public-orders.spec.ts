@@ -131,6 +131,18 @@ describe('PublicOrdersComponent', () => {
       expect(text()).toContain('You have not placed any orders yet.');
     });
 
+    it('replaces the list with an offline notice but keeps the title and search', () => {
+      fixture = TestBed.createComponent(PublicOrdersComponent);
+      fixture.componentRef.setInput('orders', [make('a', '2026-01-11T09:00:00')]);
+      fixture.componentRef.setInput('offline', true);
+      fixture.detectChanges();
+
+      expect(el().querySelector('[data-offline-notice]')).not.toBeNull();
+      expect(rows().length).toBe(0);
+      expect(text()).toContain('My orders');
+      expect(el().querySelector('app-search-input')).not.toBeNull();
+    });
+
     it('shows the error', () => {
       setup([], { state: 'error', error: 'Failed to load your orders.' });
       expect(text()).toContain('Failed to load your orders.');

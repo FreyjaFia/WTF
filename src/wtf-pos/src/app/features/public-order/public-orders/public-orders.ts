@@ -7,6 +7,7 @@ import { SearchInputComponent } from '@shared/components/search-input/search-inp
 import { SideDrawerComponent } from '@shared/components/side-drawer/side-drawer';
 import { selectedFilterCount } from '@shared/utils/filter-count';
 import { PublicOrderDto, PublicOrderStatusKind } from '@shared/models';
+import { PublicOfflineNoticeComponent } from '../public-offline-notice/public-offline-notice';
 import { publicStatusVariant } from '../public-order-status';
 
 export type PublicOrdersState = 'idle' | 'loading' | 'ready' | 'error';
@@ -44,6 +45,7 @@ const STATUS_FILTERS: { kind: PublicOrderStatusKind; label: string }[] = [
     DecimalPipe,
     FilterButtonComponent,
     IconComponent,
+    PublicOfflineNoticeComponent,
     SearchInputComponent,
     SideDrawerComponent,
   ],
@@ -54,6 +56,8 @@ export class PublicOrdersComponent {
   public readonly orders = input.required<PublicOrderDto[]>();
   public readonly state = input<PublicOrdersState>('idle');
   public readonly errorMessage = input('');
+  /** There is no connection: the list is replaced by a notice, while the title and the search stay. */
+  public readonly offline = input(false);
 
   public readonly refresh = output<void>();
   public readonly opened = output<string>();

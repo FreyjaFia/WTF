@@ -8,11 +8,13 @@ import {
   OnDestroy,
   OnInit,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { AlertService } from '@core/services/alert.service';
+import { ConnectivityService } from '@core/services/connectivity.service';
 import { PublicOrderHubService } from '@core/services/public-order-hub.service';
 import { PublicLinkInvalidError, PublicOrderService } from '@core/services/public-order.service';
 import { EnvelopeComponent } from '@shared/components/envelope/envelope';
@@ -21,6 +23,7 @@ import { CartDrawerComponent } from '@shared/components/cart-drawer/cart-drawer'
 import { IconComponent } from '@shared/components/icons/icon/icon';
 import { SearchInputComponent } from '@shared/components/search-input/search-input';
 import { PublicChatComponent } from './public-chat/public-chat';
+import { PublicOfflineNoticeComponent } from './public-offline-notice/public-offline-notice';
 import { PublicOrderDetailsComponent } from './public-order-details/public-order-details';
 import { PublicOrdersComponent } from './public-orders/public-orders';
 import {
@@ -87,6 +90,7 @@ const CATEGORY_LABELS: Record<number, string> = {
     PublicAddonPickerComponent,
     PublicCheckoutComponent,
     PublicChatComponent,
+    PublicOfflineNoticeComponent,
     PublicOrderDetailsComponent,
     PublicOrdersComponent,
     SearchInputComponent,
@@ -99,6 +103,7 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
   private readonly service = inject(PublicOrderService);
   private readonly hub = inject(PublicOrderHubService);
   private readonly alerts = inject(AlertService);
+  protected readonly connectivity = inject(ConnectivityService);
 
   private readonly sidebarHost = viewChild<ElementRef<HTMLElement>>('sidebarHost');
   private resizeObserver: ResizeObserver | null = null;
@@ -235,6 +240,16 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
   );
 
   public constructor() {
+    // Coming back online: the menu on screen may be old, so load it again without asking the customer.
+    let wasOnline = this.connectivity.isOnline();
+    effect(() => {
+      const online = this.connectivity.isOnline();
+      if (online && !wasOnline && untracked(() => this.state() === 'ready')) {
+        untracked(() => this.loadMenu(true));
+      }
+      wasOnline = online;
+    });
+
     effect(() => {
       const lines = this.cart();
       if (this.cartRestored) {
@@ -423,8 +438,11 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
         if (err instanceof PublicLinkInvalidError) {
           this.state.set('invalid');
         } else if (silent && this.link()) {
-          // Keep what is on screen, but make sure the customer knows it may be out of date.
-          this.alerts.warning(`${err.message} The menu below may be out of date.`);
+          // Keep what is on screen. While the connection is down the offline banner already says it may be out of
+          // date, so only another kind of failure needs a message of its own.
+          if (this.connectivity.isOnline()) {
+            this.alerts.warning(`${err.message} The menu below may be out of date.`);
+          }
         } else {
           this.errorMessage.set(err.message);
           this.state.set('error');
@@ -832,7 +850,7 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
   // --- checkout ---
 
   protected openCheckout(): void {
-    if (this.cart().length === 0) {
+    if (this.cart().length === 0 || !this.connectivity.isOnline()) {
       return;
     }
 
@@ -872,6 +890,11 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
 
   protected placeOrder(form: PublicCheckoutForm): void {
     if (this.isPlacingOrder() || this.cart().length === 0) {
+      return;
+    }
+
+    if (!this.connectivity.isOnline()) {
+      this.checkoutError.set("You're offline. Reconnect to place your order.");
       return;
     }
 
