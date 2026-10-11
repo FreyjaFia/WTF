@@ -24,9 +24,10 @@ public class CreateOrderHandlerTests
     private readonly IAuditService _audit = TestFakes.Audit();
     private readonly IPushNotificationService _push = TestFakes.Push();
     private readonly IHubContext<DashboardHub> _hub = TestFakes.Hub();
+    private readonly IConversationNotifier _conversations = TestFakes.Conversations();
 
     private CreateOrderHandler Handler(string? timeZone = null) =>
-        new(TestDb.Create(_dbName), TestRequest.As(_userId, AppRoles.Admin, timeZone), _hub, _audit, _push);
+        new(TestDb.Create(_dbName), TestRequest.As(_userId, AppRoles.Admin, timeZone), _hub, _audit, _push, _conversations);
 
     private static OrderItemRequestDto Line(Guid productId, int qty = 1, Guid? bundle = null, string? note = null, params OrderItemRequestDto[] addOns) =>
         new(productId, qty, [.. addOns], note, bundle);
@@ -143,6 +144,17 @@ public class CreateOrderHandlerTests
         saved.CustomerId.ShouldBe(customer);
         saved.StatusId.ShouldBe((int)OrderStatusEnum.Pending);
         saved.OrderItems.Count.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task Handle_TellsTheOrdersHubSoStaffWithoutTheDashboardSeeTheNewOrder()
+    {
+        var pizza = await SeedProduct("Pizza", 100m);
+
+        var dto = await Handler().Handle(Cmd(OrderStatusEnum.Pending, Line(pizza)), CancellationToken.None);
+
+        await _conversations.Received(1).OrderChangedAsync(
+            Arg.Is<WTF.Domain.Entities.Order>(o => o.Id == dto.Id), null, Arg.Any<CancellationToken>());
     }
 
     [Fact]

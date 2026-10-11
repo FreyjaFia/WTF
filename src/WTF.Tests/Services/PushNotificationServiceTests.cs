@@ -384,6 +384,71 @@ public class PushNotificationServiceTests
         data["path"].ShouldBe("/orders/list");
     }
 
+    // ---- chat messages ---------------------------------------------------------------------------
+
+    private Task SendMessage(OrderStatusEnum status = OrderStatusEnum.Pending, string? customer = "Maria Cruz",
+        string preview = "Is 5pm ok?")
+    {
+        _order.StatusId = (int)status;
+        return Service().SendOrderMessageAsync(_order, customer, preview, CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task SendOrderMessageAsync_TellsStaffWhoWroteWhatAndOnWhichOrder()
+    {
+        AddToken(AddUser(), "t1");
+
+        await SendMessage();
+
+        var call = Sends(_fcm).Single().GetArguments();
+        call[0].ShouldBe("t1");
+        call[1].ShouldBe("New message on order #42");
+        call[2].ShouldBe("Maria Cruz: Is 5pm ok?");
+        var data = (IReadOnlyDictionary<string, string>)call[3]!;
+        data["type"].ShouldBe(PushTypes.OrderMessage);
+        data["type"].ShouldBe("order-message");
+        data["orderId"].ShouldBe(_order.Id.ToString());
+        data["orderNumber"].ShouldBe("42");
+        data["chat"].ShouldBe("open");
+    }
+
+    [Theory]
+    [InlineData(OrderStatusEnum.PendingApproval, "details")]
+    [InlineData(OrderStatusEnum.Pending, "editor")]
+    public async Task SendOrderMessageAsync_OpensTheScreenThatCanShowThatOrder(OrderStatusEnum status, string screen)
+    {
+        AddToken(AddUser(), "t1");
+
+        await SendMessage(status);
+
+        var data = (IReadOnlyDictionary<string, string>)Sends(_fcm).Single().GetArguments()[3]!;
+        data["path"].ShouldBe($"/orders/{screen}/{_order.Id}");
+    }
+
+    [Fact]
+    public async Task SendOrderMessageAsync_AnUnnamedCustomerIsJustCustomer()
+    {
+        AddToken(AddUser(), "t1");
+
+        await SendMessage(customer: "  ");
+
+        Sends(_fcm).Single().GetArguments()[2].ShouldBe("Customer: Is 5pm ok?");
+    }
+
+    [Fact]
+    public async Task SendOrderMessageAsync_GoesToActiveStaffExceptViewers()
+    {
+        AddToken(AddUser(), "cashier-token");
+        AddToken(AddUser(3), "admin-token");
+        AddToken(AddUser(2), "viewer-token");
+        AddToken(AddUser(active: false), "inactive-token");
+
+        await SendMessage();
+
+        Sends(_fcm).Select(c => (string)c.GetArguments()[0]!).OrderBy(x => x)
+            .ShouldBe(["admin-token", "cashier-token"]);
+    }
+
     [Fact]
     public async Task SendLinkOrderCreatedAsync_DoesNotOpenTheEditor_WhichCannotShowAWaitingOrder()
     {

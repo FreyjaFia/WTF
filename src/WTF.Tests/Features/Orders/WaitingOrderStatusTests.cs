@@ -157,7 +157,7 @@ public class WaitingOrderStatusTests
     {
         var waiting = AddWaiting();
         var handler = new VoidOrderHandler(
-            _data.Open(), TestRequest.As(_userId, AppRoles.Admin), TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push());
+            _data.Open(), TestRequest.As(_userId, AppRoles.Admin), TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(), TestFakes.Conversations());
 
         var ex = await Should.ThrowAsync<InvalidOperationException>(() =>
             handler.Handle(new VoidOrderCommand(waiting, "x"), CancellationToken.None));
@@ -168,7 +168,7 @@ public class WaitingOrderStatusTests
     }
 
     private UpdateOrderHandler UpdateHandler() =>
-        new(_data.Open(), TestRequest.As(_userId, AppRoles.Admin), TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push());
+        new(_data.Open(), TestRequest.As(_userId, AppRoles.Admin), TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(), TestFakes.Conversations());
 
     private static UpdateOrderCommand Update(Guid id, OrderStatusEnum status, Guid productId) => new()
     {
@@ -212,7 +212,7 @@ public class WaitingOrderStatusTests
     {
         var burger = _data.AddProduct("Burger", 100);
         var handler = new CreateOrderHandler(
-            _data.Open(), TestRequest.As(_userId, AppRoles.Cashier), TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push());
+            _data.Open(), TestRequest.As(_userId, AppRoles.Cashier), TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(), TestFakes.Conversations());
 
         var ex = await Should.ThrowAsync<InvalidOperationException>(() => handler.Handle(
             new CreateOrderCommand
@@ -259,7 +259,7 @@ public class WaitingOrderStatusTests
         var systemUser = Guid.NewGuid();
         var push = TestFakes.Push();
         var handler = new CreateOrderHandler(
-            _data.Open(), TestRequest.None(), TestFakes.Hub(), TestFakes.Audit(), push);
+            _data.Open(), TestRequest.None(), TestFakes.Hub(), TestFakes.Audit(), push, TestFakes.Conversations());
 
         await handler.Handle(new CreateOrderCommand
         {
@@ -279,7 +279,7 @@ public class WaitingOrderStatusTests
         var burger = _data.AddProduct("Burger", 100);
         var push = TestFakes.Push();
         var handler = new CreateOrderHandler(
-            _data.Open(), TestRequest.As(_userId, AppRoles.Cashier), TestFakes.Hub(), TestFakes.Audit(), push);
+            _data.Open(), TestRequest.As(_userId, AppRoles.Cashier), TestFakes.Hub(), TestFakes.Audit(), push, TestFakes.Conversations());
 
         await handler.Handle(new CreateOrderCommand
         {

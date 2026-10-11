@@ -53,7 +53,7 @@ public class OrderLinkDatabaseTests
             .Returns(async call =>
             {
                 await using var db = database.CreateContext();
-                return await new CreateOrderHandler(db, TestRequest.None(), TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push())
+                return await new CreateOrderHandler(db, TestRequest.None(), TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(), TestFakes.Conversations())
                     .Handle((CreateOrderCommand)call.Arg<IRequest<OrderDto>>(), call.Arg<CancellationToken>());
             });
         return sender;
@@ -341,13 +341,13 @@ public class OrderLinkDatabaseTests
 
         await using (var db = database.CreateContext())
         {
-            await new ApproveOrderHandler(db, TestRequest.As(setup.Staff.Id, AppRoles.Cashier), TestFakes.Hub(), TestFakes.Audit(), GetById())
+            await new ApproveOrderHandler(db, TestRequest.As(setup.Staff.Id, AppRoles.Cashier), TestFakes.Hub(), TestFakes.Audit(), Substitute.For<WTF.Api.Services.IConversationNotifier>(), GetById())
                 .Handle(new ApproveOrderCommand(ids[0]), default);
         }
 
         await using (var db = database.CreateContext())
         {
-            await new RejectOrderHandler(db, TestRequest.As(setup.Staff.Id, AppRoles.Cashier), TestFakes.Hub(), TestFakes.Audit(), GetById())
+            await new RejectOrderHandler(db, TestRequest.As(setup.Staff.Id, AppRoles.Cashier), TestFakes.Hub(), TestFakes.Audit(), Substitute.For<WTF.Api.Services.IConversationNotifier>(), GetById())
                 .Handle(new RejectOrderCommand(ids[1], "Out of stock"), default);
         }
 

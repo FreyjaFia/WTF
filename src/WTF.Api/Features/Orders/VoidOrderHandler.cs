@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Common.Orders;
 using WTF.Api.Features.Audit.Enums;
+using WTF.Api.Features.Conversations;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Hubs;
@@ -19,7 +20,8 @@ public class VoidOrderHandler(
     IHttpContextAccessor httpContextAccessor,
     IHubContext<DashboardHub> dashboardHub,
     IAuditService auditService,
-    IPushNotificationService pushNotifications) : IRequestHandler<VoidOrderCommand, OrderDto?>
+    IPushNotificationService pushNotifications,
+    IConversationNotifier conversationNotifier) : IRequestHandler<VoidOrderCommand, OrderDto?>
 {
     public async Task<OrderDto?> Handle(VoidOrderCommand request, CancellationToken cancellationToken)
     {
@@ -96,7 +98,11 @@ public class VoidOrderHandler(
         order.UpdatedAt = DateTime.UtcNow;
         order.UpdatedBy = userId;
 
+        var chat = await ConversationStore.AddSystemMessageAsync(
+            db, order, OrderChatLines.For(newStatus)!, userId, order.UpdatedAt.Value, cancellationToken);
+
         await db.SaveChangesAsync(cancellationToken);
+        await conversationNotifier.OrderChangedAsync(order, chat, cancellationToken);
 
         // Build response
         var items = await db.OrderItems

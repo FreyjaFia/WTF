@@ -27,7 +27,7 @@ public class UpdateOrderHandlerTests
     }
 
     private UpdateOrderHandler Handler(string? timeZone = null) =>
-        new(_data.Open(), TestRequest.As(_userId, AppRoles.Admin, timeZone), _hub, _audit, _push);
+        new(_data.Open(), TestRequest.As(_userId, AppRoles.Admin, timeZone), _hub, _audit, _push, TestFakes.Conversations());
 
     private static OrderItemRequestDto Line(Guid productId, int qty = 1, params OrderItemRequestDto[] addOns) =>
         new(productId, qty, [.. addOns], null, null);

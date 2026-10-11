@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Features.Audit.Enums;
+using WTF.Api.Features.Conversations;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Hubs;
@@ -25,6 +26,7 @@ public class ApproveOrderHandler(
     IHttpContextAccessor httpContextAccessor,
     IHubContext<DashboardHub> dashboardHub,
     IAuditService auditService,
+    IConversationNotifier conversationNotifier,
     ISender sender) : IRequestHandler<ApproveOrderCommand, OrderDto?>
 {
     public async Task<OrderDto?> Handle(ApproveOrderCommand request, CancellationToken cancellationToken)
@@ -42,6 +44,8 @@ public class ApproveOrderHandler(
         order.AcceptedAt = DateTime.UtcNow;
         order.UpdatedAt = order.AcceptedAt;
         order.UpdatedBy = userId;
+        var chat = await ConversationStore.AddSystemMessageAsync(
+            db, order, "Order accepted", userId, order.AcceptedAt.Value, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
 
         await auditService.LogAsync(
@@ -54,6 +58,7 @@ public class ApproveOrderHandler(
             cancellationToken: cancellationToken);
 
         await OrderDecision.NotifyAsync(dashboardHub, order.Id, cancellationToken);
+        await conversationNotifier.OrderChangedAsync(order, chat, cancellationToken);
         return await sender.Send(new GetOrderByIdQuery(order.Id), cancellationToken);
     }
 }
@@ -63,6 +68,7 @@ public class RejectOrderHandler(
     IHttpContextAccessor httpContextAccessor,
     IHubContext<DashboardHub> dashboardHub,
     IAuditService auditService,
+    IConversationNotifier conversationNotifier,
     ISender sender) : IRequestHandler<RejectOrderCommand, OrderDto?>
 {
     public async Task<OrderDto?> Handle(RejectOrderCommand request, CancellationToken cancellationToken)
@@ -92,6 +98,8 @@ public class RejectOrderHandler(
         order.RejectionReason = reason;
         order.UpdatedAt = DateTime.UtcNow;
         order.UpdatedBy = userId;
+        var chat = await ConversationStore.AddSystemMessageAsync(
+            db, order, $"Order rejected: {reason}", userId, order.UpdatedAt.Value, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
 
         await auditService.LogAsync(
@@ -104,6 +112,7 @@ public class RejectOrderHandler(
             cancellationToken: cancellationToken);
 
         await OrderDecision.NotifyAsync(dashboardHub, order.Id, cancellationToken);
+        await conversationNotifier.OrderChangedAsync(order, chat, cancellationToken);
         return await sender.Send(new GetOrderByIdQuery(order.Id), cancellationToken);
     }
 }
@@ -113,6 +122,7 @@ public class MarkOrderReadyHandler(
     IHttpContextAccessor httpContextAccessor,
     IHubContext<DashboardHub> dashboardHub,
     IAuditService auditService,
+    IConversationNotifier conversationNotifier,
     ISender sender) : IRequestHandler<MarkOrderReadyCommand, OrderDto?>
 {
     public async Task<OrderDto?> Handle(MarkOrderReadyCommand request, CancellationToken cancellationToken)
@@ -142,6 +152,12 @@ public class MarkOrderReadyHandler(
         order.ReadyAt = DateTime.UtcNow;
         order.UpdatedAt = order.ReadyAt;
         order.UpdatedBy = userId;
+        var chat = await ConversationStore.AddSystemMessageAsync(
+            db, order,
+            order.FulfillmentType == (byte)FulfillmentTypeEnum.Delivery
+                ? "Order is ready for delivery"
+                : "Order is ready for pickup",
+            userId, order.ReadyAt.Value, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
 
         await auditService.LogAsync(
@@ -153,6 +169,7 @@ public class MarkOrderReadyHandler(
             cancellationToken: cancellationToken);
 
         await OrderDecision.NotifyAsync(dashboardHub, order.Id, cancellationToken);
+        await conversationNotifier.OrderChangedAsync(order, chat, cancellationToken);
         return await sender.Send(new GetOrderByIdQuery(order.Id), cancellationToken);
     }
 }

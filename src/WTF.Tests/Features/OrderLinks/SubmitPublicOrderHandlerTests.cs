@@ -96,7 +96,7 @@ public class SubmitPublicOrderHandlerTests
         var sender = Substitute.For<ISender>();
         sender.Send(Arg.Any<IRequest<OrderDto>>(), Arg.Any<CancellationToken>())
             .Returns(call => new CreateOrderHandler(
-                    TestDb.Create(_db), TestRequest.None(), TestFakes.Hub(), _audit, _push)
+                    TestDb.Create(_db), TestRequest.None(), TestFakes.Hub(), _audit, _push, TestFakes.Conversations())
                 .Handle((CreateOrderCommand)call.Arg<IRequest<OrderDto>>(), call.Arg<CancellationToken>()));
         return sender;
     }

@@ -57,6 +57,7 @@ builder.Services.AddHttpClient<IFcmPushClient, FcmPushClient>();
 builder.Services.AddSingleton<HuaweiAccessTokenProvider>();
 builder.Services.AddHttpClient<IHuaweiPushClient, HuaweiPushClient>();
 builder.Services.AddScoped<IPushNotificationService, PushNotificationService>();
+builder.Services.AddScoped<IConversationNotifier, ConversationNotifier>();
 builder.Services.AddScoped<IMonthlyReportWorkbookService, MonthlyReportWorkbookService>();
 builder.Services.AddHostedService<MonthlyReportWorkbookScheduler>();
 
@@ -181,6 +182,17 @@ builder.Services.AddRateLimiter(options =>
                 QueueLimit = 0
             }));
 
+    // Writing to the shop is tighter than reading: a few messages a minute from one address is plenty for a chat.
+    options.AddPolicy(PublicOrderLinkEndpoints.ChatRateLimitPolicy, context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "local",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
+
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
     {
         const string prefix = "/api/public/order-links/";
@@ -273,6 +285,8 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapHub<DashboardHub>("/hubs/dashboard");
+app.MapHub<StaffOrderHub>("/hubs/staff-orders");
+app.MapHub<CustomerOrderHub>("/hubs/customer-orders");
 
 app.MapAppEndpoints();
 

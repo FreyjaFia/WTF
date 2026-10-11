@@ -12,6 +12,8 @@ internal static class TestFakes
 
     public static IPushNotificationService Push() => Substitute.For<IPushNotificationService>();
 
+    public static IConversationNotifier Conversations() => Substitute.For<IConversationNotifier>();
+
     /// <summary>A dashboard hub context whose clients accept any broadcast (NSubstitute auto-creates the nested proxies).</summary>
     public static IHubContext<DashboardHub> Hub() => Substitute.For<IHubContext<DashboardHub>>();
 }

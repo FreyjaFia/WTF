@@ -20,7 +20,9 @@ public class OrderLinkHandlerTests
 
     private CreateOrderLinkHandler Create() => new(TestDb.Create(_dbName), TestRequest.As(_userId), _audit);
 
-    private RevokeOrderLinkHandler Revoke() => new(TestDb.Create(_dbName), TestRequest.As(_userId), _audit);
+    private readonly IConversationNotifier _conversations = Substitute.For<IConversationNotifier>();
+
+    private RevokeOrderLinkHandler Revoke() => new(TestDb.Create(_dbName), TestRequest.As(_userId), _audit, _conversations);
 
     private GetOrderLinksHandler List() => new(TestDb.Create(_dbName));
 
@@ -290,6 +292,29 @@ public class OrderLinkHandlerTests
         links!.Single(l => l.Id == busy.Id).OrdersCount.ShouldBe(3);
         links.Single(l => l.Id == quiet.Id).OrdersCount.ShouldBe(0);
         links.Single(l => l.Id == revoked.Id).OrdersCount.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task Revoke_SendsEveryPageOpenThroughTheLinkBackToTheInvalidLinkPage()
+    {
+        var customer = await SeedCustomerAsync();
+        var link = await SeedLinkAsync(customer.Id);
+
+        await Revoke().Handle(new RevokeOrderLinkCommand(customer.Id, link.Id), CancellationToken.None);
+
+        await _conversations.Received(1).LinkRevokedAsync(link.Id, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Revoke_AnAlreadyRevokedLinkOrAnUnknownOne_SaysNothing()
+    {
+        var customer = await SeedCustomerAsync();
+        var link = await SeedLinkAsync(customer.Id, revokedAt: DateTime.UtcNow.AddMinutes(-5));
+
+        await Revoke().Handle(new RevokeOrderLinkCommand(customer.Id, link.Id), CancellationToken.None);
+        await Revoke().Handle(new RevokeOrderLinkCommand(customer.Id, Guid.NewGuid()), CancellationToken.None);
+
+        await _conversations.DidNotReceiveWithAnyArgs().LinkRevokedAsync(default, default);
     }
 
     [Fact]

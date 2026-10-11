@@ -7,6 +7,7 @@ using WTF.Api.Common.Extensions;
 using WTF.Api.Common.Orders;
 using WTF.Api.Common.Time;
 using WTF.Api.Features.Audit.Enums;
+using WTF.Api.Features.Conversations;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Features.Promotions.DTOs;
@@ -59,7 +60,8 @@ public class UpdateOrderHandler(
     IHttpContextAccessor httpContextAccessor,
     IHubContext<DashboardHub> dashboardHub,
     IAuditService auditService,
-    IPushNotificationService pushNotifications) : IRequestHandler<UpdateOrderCommand, OrderDto?>
+    IPushNotificationService pushNotifications,
+    IConversationNotifier conversationNotifier) : IRequestHandler<UpdateOrderCommand, OrderDto?>
 {
     public async Task<OrderDto?> Handle(UpdateOrderCommand request, CancellationToken cancellationToken)
     {
@@ -502,7 +504,15 @@ public class UpdateOrderHandler(
             }
         }
 
+        var statusLine = newStatus != oldStatus ? OrderChatLines.For(newStatus) : null;
+        var chat = statusLine == null
+            ? null
+            : await ConversationStore.AddSystemMessageAsync(
+                db, order, statusLine, httpContextAccessor.HttpContext?.User.GetUserId(), order.UpdatedAt!.Value,
+                cancellationToken);
+
         await db.SaveChangesAsync(cancellationToken);
+        await conversationNotifier.OrderChangedAsync(order, chat, cancellationToken);
 
         var items = await db.OrderItems
             .Where(oi => oi.OrderId == order.Id && oi.ParentOrderItemId == null)

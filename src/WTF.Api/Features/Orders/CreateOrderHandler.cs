@@ -71,7 +71,8 @@ public class CreateOrderHandler(
     IHttpContextAccessor httpContextAccessor,
     IHubContext<DashboardHub> dashboardHub,
     IAuditService auditService,
-    IPushNotificationService pushNotifications) : IRequestHandler<CreateOrderCommand, OrderDto>
+    IPushNotificationService pushNotifications,
+    IConversationNotifier conversationNotifier) : IRequestHandler<CreateOrderCommand, OrderDto>
 {
     public async Task<OrderDto> Handle(CreateOrderCommand request, CancellationToken cancellationToken)
     {
@@ -513,6 +514,8 @@ public class CreateOrderHandler(
             .SendAsync(HubNames.Events.DashboardUpdated, cancellationToken);
         await dashboardHub.Clients.Group(HubNames.Groups.DashboardViewers)
             .SendAsync(HubNames.Events.OrderUpdated, order.Id, cancellationToken);
+        // Staff without the dashboard permission watch the orders list through the orders hub.
+        await conversationNotifier.OrderChangedAsync(order, null, cancellationToken);
 
         await auditService.LogAsync(
             action: AuditAction.OrderCreated,

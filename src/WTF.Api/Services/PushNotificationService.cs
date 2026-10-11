@@ -25,6 +25,16 @@ public interface IPushNotificationService
         FulfillmentTypeEnum? fulfillment,
         CancellationToken cancellationToken);
 
+    /// <summary>
+    /// A customer wrote in an order's chat. It goes to the same staff as a new online order (never viewers, who cannot
+    /// reply) and opens that order with its chat open.
+    /// </summary>
+    Task SendOrderMessageAsync(
+        Order order,
+        string? customerName,
+        string preview,
+        CancellationToken cancellationToken);
+
     Task SendOrderStatusChangedAsync(
         Order order,
         decimal totalAmount,
@@ -38,6 +48,7 @@ public interface IPushNotificationService
 public static class PushTypes
 {
     public const string OnlineOrder = "online-order";
+    public const string OrderMessage = "order-message";
 }
 
 public sealed class PushNotificationService(
@@ -102,6 +113,33 @@ public sealed class PushNotificationService(
             order,
             "New online order",
             string.Join(" - ", parts),
+            data,
+            Guid.Empty,
+            cancellationToken);
+    }
+
+    public Task SendOrderMessageAsync(
+        Order order,
+        string? customerName,
+        string preview,
+        CancellationToken cancellationToken)
+    {
+        // A waiting order only has its details page; an accepted one is opened in the editor.
+        var screen = order.StatusId == (int)OrderStatusEnum.PendingApproval ? "details" : "editor";
+        var data = new Dictionary<string, string>
+        {
+            ["orderId"] = order.Id.ToString(),
+            ["orderNumber"] = order.OrderNumber.ToString(),
+            ["type"] = PushTypes.OrderMessage,
+            ["path"] = $"/orders/{screen}/{order.Id}",
+            ["chat"] = "open"
+        };
+
+        var who = string.IsNullOrWhiteSpace(customerName) ? "Customer" : customerName.Trim();
+        return SendToOthersAsync(
+            order,
+            $"New message on order #{order.OrderNumber}",
+            $"{who}: {preview}",
             data,
             Guid.Empty,
             cancellationToken);

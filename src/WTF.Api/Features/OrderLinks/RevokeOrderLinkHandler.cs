@@ -12,7 +12,8 @@ public record RevokeOrderLinkCommand(Guid CustomerId, Guid LinkId) : IRequest<bo
 public class RevokeOrderLinkHandler(
     WTFDbContext db,
     IHttpContextAccessor httpContextAccessor,
-    IAuditService auditService) : IRequestHandler<RevokeOrderLinkCommand, bool>
+    IAuditService auditService,
+    IConversationNotifier conversationNotifier) : IRequestHandler<RevokeOrderLinkCommand, bool>
 {
     public async Task<bool> Handle(RevokeOrderLinkCommand request, CancellationToken cancellationToken)
     {
@@ -43,6 +44,9 @@ public class RevokeOrderLinkHandler(
             newValues: new { request.CustomerId, link.RevokedAt },
             userId: httpContextAccessor.HttpContext!.User.GetUserId(),
             cancellationToken: cancellationToken);
+
+        // Anyone with this link open on a phone is sent back to the invalid-link page at once.
+        await conversationNotifier.LinkRevokedAsync(link.Id, cancellationToken);
 
         return true;
     }

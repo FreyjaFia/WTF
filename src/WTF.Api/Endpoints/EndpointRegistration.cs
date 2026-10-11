@@ -10,6 +10,7 @@ public static class EndpointRegistration
             .MapLoyalty()
             .MapProducts()
             .MapOrders()
+            .MapConversations()
             .MapCustomers()
             .MapOrderLinks()
             .MapPublicOrderLinks()

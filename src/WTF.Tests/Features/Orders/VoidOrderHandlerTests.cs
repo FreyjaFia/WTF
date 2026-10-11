@@ -20,7 +20,7 @@ public class VoidOrderHandlerTests
     private readonly IHubContext<DashboardHub> _hub = TestFakes.Hub();
 
     private VoidOrderHandler Handler() =>
-        new(_data.Open(), TestRequest.As(_userId, AppRoles.Admin), _hub, _audit, _push);
+        new(_data.Open(), TestRequest.As(_userId, AppRoles.Admin), _hub, _audit, _push, TestFakes.Conversations());
 
     [Fact]
     public async Task Handle_NoteOverFiveHundredCharacters_IsRejectedAndTheOrderIsUntouched()
@@ -245,7 +245,7 @@ public class VoidOrderHandlerTests
     public async Task Handle_NoRequestContext_ThrowsAndLeavesOrderPending()
     {
         var orderId = _data.AddOrder();
-        var handler = new VoidOrderHandler(_data.Open(), TestRequest.None(), _hub, _audit, _push);
+        var handler = new VoidOrderHandler(_data.Open(), TestRequest.None(), _hub, _audit, _push, TestFakes.Conversations());
 
         await Should.ThrowAsync<Exception>(() => handler.Handle(new VoidOrderCommand(orderId), CancellationToken.None));
 

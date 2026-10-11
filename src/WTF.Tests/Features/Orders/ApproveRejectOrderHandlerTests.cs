@@ -20,6 +20,7 @@ public class ApproveRejectOrderHandlerTests
     private readonly OrderSeed _data = new(TestDb.NewName());
     private readonly IAuditService _audit = TestFakes.Audit();
     private readonly IHubContext<DashboardHub> _hub = TestFakes.Hub();
+    private readonly IConversationNotifier _conversations = Substitute.For<IConversationNotifier>();
 
     private ISender Sender()
     {
@@ -31,13 +32,13 @@ public class ApproveRejectOrderHandlerTests
     }
 
     private ApproveOrderHandler Approve() =>
-        new(_data.Open(), TestRequest.As(_staffId, AppRoles.Cashier), _hub, _audit, Sender());
+        new(_data.Open(), TestRequest.As(_staffId, AppRoles.Cashier), _hub, _audit, _conversations, Sender());
 
     private MarkOrderReadyHandler Ready() =>
-        new(_data.Open(), TestRequest.As(_staffId, AppRoles.Cashier), _hub, _audit, Sender());
+        new(_data.Open(), TestRequest.As(_staffId, AppRoles.Cashier), _hub, _audit, _conversations, Sender());
 
     private RejectOrderHandler Reject() =>
-        new(_data.Open(), TestRequest.As(_staffId, AppRoles.Cashier), _hub, _audit, Sender());
+        new(_data.Open(), TestRequest.As(_staffId, AppRoles.Cashier), _hub, _audit, _conversations, Sender());
 
     private Guid AddWaitingOrder(OrderStatusEnum status = OrderStatusEnum.PendingApproval)
     {
@@ -86,6 +87,53 @@ public class ApproveRejectOrderHandlerTests
             .SendCoreAsync(HubNames.Events.OrderUpdated, Arg.Any<object?[]>(), Arg.Any<CancellationToken>());
         await _hub.Clients.Group(HubNames.Groups.DashboardViewers).Received(1)
             .SendCoreAsync(HubNames.Events.DashboardUpdated, Arg.Any<object?[]>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Approve_TellsTheCustomersPageAtOnce()
+    {
+        var id = AddWaitingOrder();
+
+        await Approve().Handle(new ApproveOrderCommand(id), CancellationToken.None);
+
+        await _conversations.Received(1).OrderChangedAsync(
+            Arg.Is<WTF.Domain.Entities.Order>(o => o.Id == id), Arg.Any<WTF.Domain.Entities.Conversation?>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Reject_TellsTheCustomersPageAtOnce()
+    {
+        var id = AddWaitingOrder();
+
+        await Reject().Handle(new RejectOrderCommand(id, "Closed today"), CancellationToken.None);
+
+        await _conversations.Received(1).OrderChangedAsync(
+            Arg.Is<WTF.Domain.Entities.Order>(o => o.Id == id), Arg.Any<WTF.Domain.Entities.Conversation?>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Ready_TellsTheCustomersPageAtOnce()
+    {
+        var id = AddAcceptedLinkOrder();
+
+        await Ready().Handle(new MarkOrderReadyCommand(id), CancellationToken.None);
+
+        await _conversations.Received(1).OrderChangedAsync(
+            Arg.Is<WTF.Domain.Entities.Order>(o => o.Id == id), Arg.Any<WTF.Domain.Entities.Conversation?>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ARefusedChange_TellsNobody()
+    {
+        var id = AddWaitingOrder(OrderStatusEnum.Completed);
+
+        await Should.ThrowAsync<InvalidOperationException>(() =>
+            Approve().Handle(new ApproveOrderCommand(id), CancellationToken.None));
+
+        await _conversations.DidNotReceiveWithAnyArgs().OrderChangedAsync(default!, default, default);
     }
 
     [Fact]
@@ -357,5 +405,95 @@ public class ApproveRejectOrderHandlerTests
     {
         PublicOrderMapping.StatusOf((int)OrderStatusEnum.Cancelled, "Closed today").Label.ShouldBe("Rejected");
         PublicOrderMapping.StatusOf((int)OrderStatusEnum.Pending, null).Label.ShouldBe("Accepted");
+    }
+
+    // --- the line the order's chat shows ---
+
+    private async Task<List<WTF.Domain.Entities.ConversationMessage>> ChatLinesAsync(Guid orderId)
+    {
+        await using var db = _data.Open();
+        return await db.ConversationMessages
+            .Where(m => m.Conversation.OrderId == orderId)
+            .OrderBy(m => m.CreatedAt)
+            .ToListAsync();
+    }
+
+    [Fact]
+    public async Task Approve_WritesAnAcceptedLineIntoTheChat_NamingWhoDidIt()
+    {
+        var id = AddAcceptedLinkOrder(OrderStatusEnum.PendingApproval);
+
+        await Approve().Handle(new ApproveOrderCommand(id), CancellationToken.None);
+
+        var line = (await ChatLinesAsync(id)).ShouldHaveSingleItem();
+        line.SenderType.ShouldBe((byte)WTF.Api.Features.Conversations.MessageSender.System);
+        line.Body.ShouldBe("Order accepted");
+        line.SenderUserId.ShouldBe(_staffId);
+        line.ReadByStaffAt.ShouldBeNull();
+        line.ReadByCustomerAt.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task Approve_TellsOpenChatsAboutTheNewLine()
+    {
+        var id = AddAcceptedLinkOrder(OrderStatusEnum.PendingApproval);
+
+        await Approve().Handle(new ApproveOrderCommand(id), CancellationToken.None);
+
+        await _conversations.Received(1).OrderChangedAsync(
+            Arg.Any<WTF.Domain.Entities.Order>(), Arg.Is<WTF.Domain.Entities.Conversation?>(c => c != null),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Reject_WritesTheReasonIntoTheChat()
+    {
+        var id = AddAcceptedLinkOrder(OrderStatusEnum.PendingApproval);
+
+        await Reject().Handle(new RejectOrderCommand(id, "Closed today"), CancellationToken.None);
+
+        (await ChatLinesAsync(id)).ShouldHaveSingleItem().Body.ShouldBe("Order rejected: Closed today");
+    }
+
+    [Theory]
+    [InlineData(FulfillmentTypeEnum.Delivery, "Order is ready for delivery")]
+    [InlineData(FulfillmentTypeEnum.Pickup, "Order is ready for pickup")]
+    public async Task Ready_WritesWhereItIsReady(FulfillmentTypeEnum type, string expected)
+    {
+        var id = AddAcceptedLinkOrder();
+        await using (var db = _data.Open())
+        {
+            (await db.Orders.SingleAsync(o => o.Id == id)).FulfillmentType = (byte)type;
+            await db.SaveChangesAsync();
+        }
+
+        await Ready().Handle(new MarkOrderReadyCommand(id), CancellationToken.None);
+
+        (await ChatLinesAsync(id)).ShouldHaveSingleItem().Body.ShouldBe(expected);
+    }
+
+    [Fact]
+    public async Task Approve_AnOrderTheShopTookItself_StartsNoChat()
+    {
+        var id = AddAcceptedLinkOrder(OrderStatusEnum.PendingApproval, OrderSourceEnum.Pos);
+
+        await Approve().Handle(new ApproveOrderCommand(id), CancellationToken.None);
+
+        (await ChatLinesAsync(id)).ShouldBeEmpty();
+        await _conversations.Received(1).OrderChangedAsync(
+            Arg.Any<WTF.Domain.Entities.Order>(), null, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ASystemLineIsNeverUnread()
+    {
+        var id = AddAcceptedLinkOrder(OrderStatusEnum.PendingApproval);
+
+        await Approve().Handle(new ApproveOrderCommand(id), CancellationToken.None);
+
+        await using var db = _data.Open();
+        var conversationId = (await db.Conversations.SingleAsync(c => c.OrderId == id)).Id;
+        (await WTF.Api.Features.Conversations.ConversationStore.UnreadForStaffAsync(db, conversationId, default)).ShouldBe(0);
+        (await WTF.Api.Features.Conversations.ConversationStore.UnreadForCustomerAsync(db, conversationId, default)).ShouldBe(0);
     }
 }
