@@ -1,7 +1,8 @@
 <!-- Messages -->
 <div
   #list
-  class="min-h-0 flex-1 overflow-y-auto px-4 py-4"
+  class="min-h-0 flex-1 overflow-y-auto px-4 py-4 transition-opacity duration-150"
+  [class.opacity-0]="!positioned()"
   role="log"
   aria-live="polite"
   aria-label="Messages"
@@ -16,9 +17,9 @@
   } @else if (messages().length === 0) {
     <p class="py-8 text-center text-sm text-gray-400" data-chat-empty>{{ emptyText() }}</p>
   } @else {
-    @for (message of messages(); track message.id) {
+    @for (message of messages(); track message.id; let i = $index) {
       @if (message.sender === 'system') {
-        <div class="flex flex-col items-center gap-0.5 py-1" data-message data-sender="system" data-system-line>
+        <div class="flex flex-col items-center gap-0.5 py-1" [class.app-fade-in]="i >= messages().length - 6" data-message data-sender="system" data-system-line>
           <span class="rounded-full bg-gray-100 px-3 py-1 text-center text-xs font-medium text-gray-600">
             {{ message.body }}@if (message.senderName && viewer() === 'staff') {
               <span class="font-normal text-gray-400"> · {{ message.senderName }}</span>
@@ -29,6 +30,7 @@
       } @else {
         <div
           class="flex flex-col"
+          [class.app-fade-in]="i >= messages().length - 6"
           [class.items-end]="isMine(message)"
           [class.items-start]="!isMine(message)"
           data-message

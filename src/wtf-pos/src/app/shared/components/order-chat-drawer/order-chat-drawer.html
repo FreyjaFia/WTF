@@ -5,8 +5,7 @@
   [class.pointer-events-none]="!isOpen()"
 >
   <div
-    class="absolute inset-0 bg-black/30 backdrop-blur-md transition-opacity ease-in-out"
-    [class.duration-300]="hasTransitions()"
+    class="absolute inset-0 bg-black/30 backdrop-blur-md app-drawer-backdrop"
     [class.duration-0]="!hasTransitions()"
     [class.opacity-100]="isOpen()"
     [class.opacity-0]="!isOpen()"
@@ -15,8 +14,7 @@
   ></div>
 
   <section
-    class="fixed top-0 right-0 z-50 flex h-full w-full max-w-md transform-gpu flex-col bg-white shadow-xl transition-transform ease-in-out"
-    [class.duration-300]="hasTransitions()"
+    class="fixed top-0 right-0 z-50 flex h-full w-full max-w-md flex-col bg-white shadow-xl app-drawer-panel"
     [class.duration-0]="!hasTransitions()"
     style="padding-top: max(var(--safe-area-top, 0px), env(safe-area-inset-top)); padding-bottom: max(var(--safe-area-bottom, 0px), env(safe-area-inset-bottom))"
     [class.translate-x-0]="isOpen()"
@@ -56,14 +54,14 @@
       </div>
     </header>
 
-    @if (isOpen()) {
+    @if (contentMounted()) {
       <app-chat
         viewer="staff"
-        [messages]="conversation()?.messages ?? []"
+        [messages]="contentReady() ? (conversation()?.messages ?? []) : []"
         [customerLabel]="customerName()"
         [canSend]="conversation() ? conversation()!.canSend : true"
         [closedReason]="conversation()?.closedReason ?? null"
-        [isLoading]="isLoading()"
+        [isLoading]="isLoading() || !contentReady()"
         [isSending]="isSending()"
         [error]="error()"
         emptyText="No messages yet. Write the first one."

@@ -95,7 +95,8 @@ describe('SideDrawerComponent', () => {
     expect(dialog(el).classList).toContain('duration-0');
     vi.advanceTimersByTime(16);
     fixture.detectChanges();
-    expect(dialog(el).classList).toContain('duration-300');
+    expect(dialog(el).classList).not.toContain('duration-0');
+    expect(dialog(el).classList).toContain('app-drawer-panel');
   });
 
   it('emits closed from the close button and the backdrop', () => {

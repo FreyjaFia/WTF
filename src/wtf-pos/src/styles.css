@@ -298,6 +298,33 @@ body {
 }
 
 @layer components {
+  /* Every slide-in panel (filters, cart, order chat, customer chat) and its dimmed backdrop move with this one timing, so
+     they all feel the same. Change the speed here and nowhere else. A panel is given the duration-0 utility until the page
+     has painted once, which turns the animation off (utilities win over components). */
+  .app-drawer-panel {
+    @apply transform-gpu will-change-transform;
+    transition-property: transform;
+    transition-duration: 300ms;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .app-drawer-backdrop {
+    transition-property: opacity;
+    transition-duration: 300ms;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Chat rows and pictures ease in instead of popping in. A row is only drawn once, so only new ones animate. */
+  .app-fade-in {
+    animation: app-fade-in 180ms ease-out both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .app-fade-in {
+      animation: none;
+    }
+  }
+
   /* Warning-toned low emphasis action: sync pending offline orders. */
   .app-btn-ghost-warning {
     @apply text-amber-700 hover:bg-amber-100 disabled:opacity-50;
@@ -312,5 +339,16 @@ body {
   .app-stepper-btn-primary {
     @apply inline-flex cursor-pointer items-center justify-center rounded-full bg-[#047857] font-bold text-white transition-colors select-none;
     @apply hover:bg-[#065f46] disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400;
+  }
+}
+
+@keyframes app-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }

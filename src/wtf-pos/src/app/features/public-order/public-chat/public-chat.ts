@@ -1,4 +1,5 @@
 import { Component, effect, inject, input, OnDestroy, output, signal, untracked } from '@angular/core';
+import { DRAWER_SLIDE_MS } from '@shared/components/drawer-timing';
 import { ModalStackService } from '@core/services';
 import { PublicLinkInvalidError, PublicOrderService } from '@core/services/public-order.service';
 import { PublicOrderHubService } from '@core/services/public-order-hub.service';
@@ -51,6 +52,12 @@ export class PublicChatComponent implements OnDestroy {
 
   protected readonly hasTransitions = signal(false);
 
+  /** The chat body exists while the panel is open and for the length of the slide out, so it never empties while moving. */
+  protected readonly contentMounted = signal(false);
+  /** The messages are drawn once the panel has finished sliding in, so building them does not stutter the slide. */
+  protected readonly contentReady = signal(false);
+  private slideTimerId: number | null = null;
+
   private modalStackId: number | null = null;
   private initTimerId: number | null = null;
   private liveSubscription: Subscription | null = null;
@@ -81,6 +88,7 @@ export class PublicChatComponent implements OnDestroy {
       window.clearTimeout(this.initTimerId);
     }
     this.end();
+    this.clearSlideTimer();
   }
 
   protected close(): void {
@@ -159,6 +167,7 @@ export class PublicChatComponent implements OnDestroy {
   }
 
   private begin(orderId: string): void {
+    this.showContent();
     this.conversation.set(null);
     this.error.set(null);
     this.draft.set('');
@@ -175,12 +184,56 @@ export class PublicChatComponent implements OnDestroy {
   }
 
   private end(): void {
+    this.hideContent();
     this.liveSubscription?.unsubscribe();
     this.liveSubscription = null;
 
     if (this.modalStackId !== null) {
       this.modalStack.remove(this.modalStackId);
       this.modalStackId = null;
+    }
+  }
+
+  /** Builds the chat body now; the messages follow when the slide has finished (at once if nothing animates). */
+  private showContent(): void {
+    this.clearSlideTimer();
+    const alreadyShown = this.contentMounted();
+    this.contentMounted.set(true);
+    if (alreadyShown || !this.hasTransitions()) {
+      this.contentReady.set(true);
+      return;
+    }
+
+    this.contentReady.set(false);
+    this.slideTimerId = window.setTimeout(() => {
+      this.contentReady.set(true);
+      this.slideTimerId = null;
+    }, DRAWER_SLIDE_MS);
+  }
+
+  /** Keeps the chat body until the panel has slid out, so it does not turn into an empty white panel on the way. */
+  private hideContent(): void {
+    if (!this.contentMounted()) {
+      return;
+    }
+
+    this.clearSlideTimer();
+    const remove = () => {
+      this.contentMounted.set(false);
+      this.contentReady.set(false);
+      this.slideTimerId = null;
+    };
+    if (this.hasTransitions()) {
+      this.slideTimerId = window.setTimeout(remove, DRAWER_SLIDE_MS);
+    } else {
+      remove();
+    }
+  }
+
+  private clearSlideTimer(): void {
+    if (this.slideTimerId !== null) {
+      window.clearTimeout(this.slideTimerId);
+      this.slideTimerId = null;
     }
   }
 

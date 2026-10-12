@@ -64,6 +64,8 @@ export class ChatComponent {
 
   protected readonly fileError = signal<string | null>(null);
   protected readonly previewUrl = signal<string | null>(null);
+  /** False until the list has been put at the newest message, so the first draw is never seen jumping down from the top. */
+  protected readonly positioned = signal(false);
   /** The picture shown larger. */
   protected readonly zoomed = signal<string | null>(null);
   /** The message whose "remove photo" is waiting for a second tap. */
@@ -90,7 +92,14 @@ export class ChatComponent {
       }
 
       this.shownCount = messages.length;
-      if (this.list() && this.stickToBottom) {
+      if (messages.length === 0) {
+        this.positioned.set(true);
+      } else if (this.list() && (this.stickToBottom || !this.positioned())) {
+      // The first messages to arrive are put at the bottom while hidden, even if an empty list was already showing.
+      if (this.shownCount === 0 && messages.length > 0) {
+        this.positioned.set(false);
+      }
+
         this.scrollToBottom();
       }
     });
@@ -142,7 +151,10 @@ export class ChatComponent {
     queueMicrotask(go);
     // Once more after the browser has laid the new rows out.
     cancelAnimationFrame(this.frame);
-    this.frame = requestAnimationFrame(go);
+    this.frame = requestAnimationFrame(() => {
+      go();
+      this.positioned.set(true);
+    });
   }
 
   protected isMine(message: ConversationMessageDto): boolean {

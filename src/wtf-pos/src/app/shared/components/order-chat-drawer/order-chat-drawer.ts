@@ -1,4 +1,5 @@
 import { Component, effect, inject, input, OnDestroy, output, signal, untracked } from '@angular/core';
+import { DRAWER_SLIDE_MS } from '@shared/components/drawer-timing';
 import { ConversationInboxService, ConversationService, ModalStackService, SignalRService } from '@core/services';
 import { ChatComponent } from '@shared/components/chat/chat';
 import { IconComponent } from '@shared/components/icons/icon/icon';
@@ -46,6 +47,15 @@ export class OrderChatDrawerComponent implements OnDestroy {
 
   protected readonly hasTransitions = signal(false);
 
+  /** The chat body exists while the panel is open and for the length of the slide out, so it never empties while moving. */
+  protected readonly contentMounted = signal(false);
+  /** The messages are drawn once the panel has finished sliding in, so building them does not stutter the slide. */
+  protected readonly contentReady = signal(false);
+  private slideTimerId: number | null = null;
+
+  /** The chats opened so far, so opening one again shows it at once while it is refreshed in the background. */
+  private readonly opened = new Map<string, OrderConversationDto>();
+
   private modalStackId: number | null = null;
   private initTimerId: number | null = null;
   private liveSubscription: Subscription | null = null;
@@ -76,6 +86,7 @@ export class OrderChatDrawerComponent implements OnDestroy {
       window.clearTimeout(this.initTimerId);
     }
     this.end();
+    this.clearSlideTimer();
   }
 
   protected close(): void {
@@ -141,7 +152,8 @@ export class OrderChatDrawerComponent implements OnDestroy {
   }
 
   private begin(orderId: string): void {
-    this.conversation.set(null);
+    this.showContent();
+    this.conversation.set(this.opened.get(orderId) ?? null);
     this.error.set(null);
     this.draft.set('');
     this.attachment.set(null);
@@ -158,6 +170,7 @@ export class OrderChatDrawerComponent implements OnDestroy {
   }
 
   private end(): void {
+    this.hideContent();
     if (this.liveSubscription) {
       this.liveSubscription.unsubscribe();
       this.liveSubscription = null;
@@ -170,6 +183,49 @@ export class OrderChatDrawerComponent implements OnDestroy {
     }
   }
 
+  /** Builds the chat body now; the messages follow when the slide has finished (at once if nothing animates). */
+  private showContent(): void {
+    this.clearSlideTimer();
+    const alreadyShown = this.contentMounted();
+    this.contentMounted.set(true);
+    if (alreadyShown || !this.hasTransitions()) {
+      this.contentReady.set(true);
+      return;
+    }
+
+    this.contentReady.set(false);
+    this.slideTimerId = window.setTimeout(() => {
+      this.contentReady.set(true);
+      this.slideTimerId = null;
+    }, DRAWER_SLIDE_MS);
+  }
+
+  /** Keeps the chat body until the panel has slid out, so it does not turn into an empty white panel on the way. */
+  private hideContent(): void {
+    if (!this.contentMounted()) {
+      return;
+    }
+
+    this.clearSlideTimer();
+    const remove = () => {
+      this.contentMounted.set(false);
+      this.contentReady.set(false);
+      this.slideTimerId = null;
+    };
+    if (this.hasTransitions()) {
+      this.slideTimerId = window.setTimeout(remove, DRAWER_SLIDE_MS);
+    } else {
+      remove();
+    }
+  }
+
+  private clearSlideTimer(): void {
+    if (this.slideTimerId !== null) {
+      window.clearTimeout(this.slideTimerId);
+      this.slideTimerId = null;
+    }
+  }
+
   private load(orderId: string, silent: boolean): void {
     if (!silent) {
       this.isLoading.set(true);
@@ -177,6 +233,7 @@ export class OrderChatDrawerComponent implements OnDestroy {
 
     this.conversations.getOrderConversation(orderId).subscribe({
       next: (conversation) => {
+        this.opened.set(orderId, conversation);
         this.conversation.set(conversation);
         this.isLoading.set(false);
 

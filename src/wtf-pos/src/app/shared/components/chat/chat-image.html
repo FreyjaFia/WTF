@@ -9,7 +9,7 @@
   (click)="open()"
 >
   @if (src(); as address) {
-    <img [src]="address" alt="Photo sent in the chat" class="h-full w-full object-cover" data-chat-image-loaded />
+    <img [src]="address" alt="Photo sent in the chat" class="app-fade-in h-full w-full object-cover" data-chat-image-loaded />
   } @else if (failed()) {
     <span class="absolute inset-0 flex items-center justify-center px-3 text-center text-xs text-gray-500" data-chat-image-failed>
       The photo could not be loaded.
