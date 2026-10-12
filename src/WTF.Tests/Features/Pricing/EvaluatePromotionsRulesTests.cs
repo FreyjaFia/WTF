@@ -2,7 +2,7 @@ using WTF.Api.Features.Promotions;
 using WTF.Api.Features.Promotions.DTOs;
 using WTF.Domain.Entities;
 using WTF.Tests.Infrastructure;
-using static WTF.Tests.Features.Pricing.PricingCopies;
+using static WTF.Tests.Features.Pricing.PricingTestHelpers;
 
 namespace WTF.Tests.Features.Pricing;
 

@@ -1,7 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using WTF.Api.Common.Orders;
 using WTF.Api.Common.Time;
-using WTF.Api.Features.Orders;
 using WTF.Api.Features.Promotions.DTOs;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
@@ -33,7 +33,7 @@ public sealed class EvaluatePromotionsHandler(WTFDbContext db, IHttpContextAcces
                 .ThenInclude(x => x.DiscountedProductPromotionAddOns)
             .ToListAsync(cancellationToken);
         var activePromotions = scheduledPromotions
-            .Where(x => CreateOrderHandler.IsPromotionActiveOnLocalDate(x, now, timeZone))
+            .Where(x => PromotionPricing.IsPromotionActiveOnLocalDate(x, now, timeZone))
             .ToList();
 
         var generated = new List<PromotionCartLineDto>();
@@ -82,7 +82,7 @@ public sealed class EvaluatePromotionsHandler(WTFDbContext db, IHttpContextAcces
                     continue;
                 }
 
-                var proposed = CalculateDiscountedUnitPrice(line.UnitPrice, discounted.FixedPrice, discounted.PercentOff);
+                var proposed = PromotionPricing.CalculateDiscountedUnitPrice(line.UnitPrice, discounted.FixedPrice, discounted.PercentOff);
                 if (!proposed.HasValue)
                 {
                     continue;
@@ -101,25 +101,6 @@ public sealed class EvaluatePromotionsHandler(WTFDbContext db, IHttpContextAcces
                 line.PromotionId = selectedPromo.Id;
             }
         }
-    }
-
-    internal static decimal? CalculateDiscountedUnitPrice(decimal basePrice, decimal? fixedPrice, decimal? percentOff)
-    {
-        if (fixedPrice.HasValue && fixedPrice.Value > 0)
-        {
-            var discounted = basePrice - fixedPrice.Value;
-            return Math.Max(0, discounted);
-        }
-
-        if (percentOff.HasValue && percentOff.Value > 0)
-        {
-            var multiplier = 1m - (percentOff.Value / 100m);
-            var discounted = basePrice * multiplier;
-            // A discount of more than 100% never takes the price below zero (the fixed-price branch clamps the same way).
-            return Math.Max(0m, Math.Round(discounted, 2, MidpointRounding.AwayFromZero));
-        }
-
-        return null;
     }
 
     internal static void ApplyFixedBundles(List<PromotionCartLineDto> workingLines, List<PromotionCartLineDto> generated, IEnumerable<Promotion> promos)
@@ -273,36 +254,11 @@ public sealed class EvaluatePromotionsHandler(WTFDbContext db, IHttpContextAcces
         PromotionCartLineDto line,
         IEnumerable<(Guid AddOnProductId, int Quantity)> requiredAddOns)
     {
-        var required = requiredAddOns.ToList();
-        if (required.Count == 0)
-        {
-            return false;
-        }
-
         var addOnMap = line.AddOns
             .GroupBy(x => x.AddOnProductId)
             .ToDictionary(x => x.Key, x => x.Sum(y => y.Quantity));
 
-        var requiredSet = required.Select(x => x.AddOnProductId).ToHashSet();
-
-        foreach (var (addOnProductId, quantity) in required)
-        {
-            var expected = quantity;
-            if (!addOnMap.TryGetValue(addOnProductId, out var qty) || qty != expected)
-            {
-                return false;
-            }
-        }
-
-        foreach (var entry in addOnMap)
-        {
-            if (!requiredSet.Contains(entry.Key) && entry.Value > 0)
-            {
-                return false;
-            }
-        }
-
-        return true;
+        return PromotionPricing.SatisfiesExactAddOns(addOnMap, requiredAddOns);
     }
 
     internal static PromotionCartLineDto Clone(PromotionCartLineDto line)

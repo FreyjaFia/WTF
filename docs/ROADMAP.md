@@ -889,22 +889,22 @@ Planned implementation slices:
 
 ---
 
-## Automated Testing Plan [In Progress]
+## Automated Testing Plan [Mostly Completed]
 
 Goal: cover both the API and the POS app with automated tests, run on every push.
 
-**Scope decision:** unit tests only for now. Integration tests (a real database, a running API, or a
-browser) are deliberately deferred; the cases that need them are listed under "Needs a real database".
+**Scope decision:** API unit/handler tests (in-memory) and real SQL Server tests are done. Browser E2E tests are
+deliberately deferred.
 
-### Status (as of 11 Oct 2026)
+### Status (as of 13 Oct 2026)
 
 | Area | State |
 | --- | --- |
-| API unit tests (`src/WTF.Tests`) | **Done for everything that needs no database**: 299 tests. |
-| Angular unit tests (`src/wtf-pos`) | **Every guard, interceptor, pipe, service, shared component and feature page has a spec**: 102 files, 1886 tests. |
-| CI | **Done**: `test-api` and `test-frontend` jobs run on every push and pull request, and the build and SQL deploy jobs depend on them. |
-| API handler tests | **Planned (next).** About 75 handler files and 10,000 lines have no tests. See "Next: handler tests". |
-| Tests that need a real database | **Deferred.** See "Needs a real database". |
+| API unit and handler tests (`src/WTF.Tests`) | **Done**: about 1,240 test methods covering validators, mappers, helpers, every handler area (customers, products, items, users, auth, orders, pricing, promotions, loyalty, reports, dashboard, audit, sync, order links, conversations), services, hubs and endpoints. |
+| Angular unit tests (`src/wtf-pos`) | **Done**: 124 spec files, about 2,350 tests. |
+| Tests that need a real database | **Done** (`src/WTF.Tests/Database`): orders, customers, items, products, promotions, users, order links and conversations run against SQL Server (LocalDB locally, a container in CI) and skip when none is reachable. |
+| CI | **Done**: `test-api` (with a SQL Server container) and `test-frontend` run on every push and pull request; build and SQL deploy jobs depend on them. |
+| Pricing math consolidation | **Done.** One shared class, `PromotionPricing`. |
 | E2E (Playwright) | Not started; optional. |
 
 ### Layout
@@ -958,52 +958,28 @@ Vitest via `ng test`. Shared helpers in `src/app/testing`.
 
 `GetUserIdFromToken` always returned null; the alert auto-dismiss timer was never cleared; bundle and item search never re-filtered; over-long product fields showed no error; a discounted item without a product got the wrong message; promotion `isEditMode` stayed false after a create; SignalR could not reconnect after stop/start or a failed start; the audit export swallowed save errors; header and sidebar avatars did not refresh; the add-on selector reordered the shared catalog cache; missing report dates got a bare framework 400.
 
-### Next: handler tests (planned)
+### Handler tests (done)
 
-Handlers use `WTFDbContext` directly, so a mock of the context would test almost nothing. The plan is to run
-handlers against **EF Core InMemory**: the handler's real queries run against actual tables held in memory,
-with no SQL Server. (This adds one test package, `Microsoft.EntityFrameworkCore.InMemory`.)
+Handlers run against EF Core InMemory (`Microsoft.EntityFrameworkCore.InMemory`) with fakes for audit, push, SignalR and
+the current user, plus builders in `Features/*/*Seed.cs` and `Infrastructure/TestDb.cs`. The in-memory database does not
+enforce keys or unique indexes, ignores transactions, does not apply SQL Server defaults and matches text
+case-sensitively, so those behaviors are covered by the real-database tests below.
 
-| Phase | What | Needs a database stand-in? |
-| --- | --- | --- |
-| 1 | **Pricing and promotion rules**: fixed price vs percent, exact add-on matching, active date windows across time zones, bundle consumption in `EvaluatePromotionsHandler`. Test the pure helpers directly. | No |
-| 2 | **Test setup**: a factory for an in-memory `WTFDbContext`, fakes for audit, push, the SignalR hub and the current user, and builders for users, products, orders and promotions. | Sets it up |
-| 3 | **Orders**: create (totals, stock and loyalty effects, promotions), update, void, override (reason required, Completed only), batch. Highest risk: money, stock, loyalty. | Yes |
-| 4 | **Auth**: login, refresh, logout, change password, me. Password checks, expired and revoked tokens, inactive users. | Yes |
-| 5 | **Items, products, customers, users, promotions CRUD**: soft delete and restore, unique codes, add-on links, price history, audit entries, role limits. | Yes |
-| 6 | **Reports and dashboard**: aggregations, time zone boundaries, the monthly workbook. | Yes |
+### Pricing math merged (done)
 
-**Pricing math is duplicated three times.** `GetDiscountedUnitPrice`, `SatisfiesExactAddOns`,
-`CalculateDiscountedUnitPrice` and `IsPromotionActiveOnLocalDate` exist in both `CreateOrderHandler` and
-`UpdateOrderHandler`, and `EvaluatePromotionsHandler` has its own copies of two of them. If they drift, the
-cart preview and the saved order can disagree on price. Plan: make the helpers `internal`, pin the current
-behavior in all three places with tests, then merge them into one shared class with those tests proving nothing
-changed. The pure rules in `EvaluatePromotionsHandler` (`ApplyFixedBundles`, `ApplyDiscountedProducts`) need no
-database at all.
+The discounted-product rules now live in one class, `Common/Orders/PromotionPricing.cs` (`IsPromotionActiveOnLocalDate`,
+`GetDiscountedUnitPrice`, `CalculateDiscountedUnitPrice`, `SatisfiesExactAddOns`). `CreateOrderHandler`,
+`UpdateOrderHandler`, `EvaluatePromotionsHandler` and the discounted-product handlers all call it, so the cart preview and
+the saved order cannot drift apart. The cart-line overload of `SatisfiesExactAddOns` in `EvaluatePromotionsHandler` is a
+thin wrapper. The pricing tests (`Features/Pricing`) now run against the shared class; the old "all copies agree" tests
+were removed because there is one copy.
 
-**Limits of the in-memory database:** it does not enforce keys or unique indexes, ignores transactions, does not
-apply SQL Server defaults (`newid()`, `getutcdate()`, `sysdatetime()`) and matches text case-sensitively. Tests
-account for these; anything that depends on them goes to the list below.
+### Real-database tests (done)
 
-### Needs a real database (deferred)
-
-These behaviors only exist in SQL Server, so they are not worth testing against the in-memory fake:
-
-| Behavior | Where |
-| --- | --- |
-| Transaction rollback: a failed order in a batch undoes the earlier ones | Order batch sync, create order, create item |
-| Unique and foreign key constraints: duplicate product code, SKU or barcode; missing references | Products, items, orders |
-| `SqlException` handling (database duplicate error turned into a normal response) | Push token subscribe |
-| Case-insensitive text search | List search filters |
-| Values that rely on database defaults | Anywhere a handler leaves a column to its default |
-| Two users saving at the same moment | Stock changes, order numbers |
-
-Plan for when these are added (about 10 to 15 tests, in a separate "needs database" category):
-
-- **Local:** the tests read `WTF_TEST_SQL`. If it is not set they use LocalDB (`(localdb)\MSSQLLocalDB`, already installed on the dev machine). Each run creates a throwaway database named `WTF_Test_<random>`, builds the tables from the EF model, and drops it afterwards. Leftover `WTF_Test_*` databases from killed runs are removed at the start of the next run. Nothing touches the real dev database.
-- **CI:** the workflow starts a SQL Server container (`mcr.microsoft.com/mssql/server`) next to the test job and sets `WTF_TEST_SQL` to it (or uses Testcontainers). Ubuntu runners have Docker; the `deploy-sql` job already uses a Docker image. Expect about 20 to 40 seconds of extra start-up.
-- **No database reachable:** these tests skip with a clear message, so `dotnet test` still works for anyone without SQL Server.
-- Until then, keep these cases as skipped placeholder tests so the gap stays visible.
+`WTF_TEST_SQL` points the tests at a SQL Server; if unset they use LocalDB, and they skip with a clear message when
+neither is reachable. Each test creates and drops its own throwaway `WTF_Test_*` database. Covered: transaction rollback
+in batches, unique and foreign key constraints, case-insensitive search, database defaults, the order link re-check and
+the full submit/approve/reject flows. Not covered: two users saving at the same moment (stock changes, order numbers).
 
 ### Known gaps in the existing tests
 
@@ -1076,11 +1052,11 @@ Done. `.github/workflows/main.yml` has two jobs that run on every push and pull 
 
 The build jobs (API, frontend, Android, production and staging) and both SQL deploy jobs `need` both test jobs, so
 a failing test blocks the build and the deploy. Pull requests run only the test jobs (the build and deploy jobs are
-skipped for them). When the database tests above are added, the API job needs the SQL Server container.
+skipped for them). The API job also starts a SQL Server container for the real-database tests.
 
 ---
 
-## Customer Ordering Links Feature [Planned]
+## Customer Ordering Links Feature [Completed]
 
 Let selected customers place orders themselves through a personal link, without logging in
 to the POS. Staff control which customers get a link and can set an end date so links expire.
@@ -1431,8 +1407,8 @@ Work items:
 | 1     | Data model, staff endpoints, customer UI     | [Completed] |
 | 2     | Public validation, ordering page, My orders  | [Completed] |
 | 3     | Order submission, approval, staff alerts     | [Completed] |
-| 4     | Reporting by source and per-link usage       | [Planned] |
-| 5     | Order chat (per order, SignalR both sides)   | [Planned] |
+| 4     | Reporting by source and per-link usage       | [Completed] |
+| 5     | Order chat (per order, SignalR both sides)   | [Completed] |
 
 #### Phase 1 - Data model, staff endpoints, customer details UI [Completed]
 
@@ -1754,19 +1730,115 @@ instead of only refunding it.
 
 ### Possible follow-ups
 
-- Automated tests for the override rules (role gating, pending/refunded rejection, price keep).
+- None. Override rules are now covered by `UpdateOrderHandlerTests` and `UpdateOrderDatabaseTests` (override path, reason
+  required, non-pending rejected), and the policy is in the route and role snapshots.
 
 ---
 
-## Image Storage CORS [Planned]
+## Image Storage CORS [Completed]
 
-Browser `fetch()` of Azure Blob images from `https://wtfbyfaith.runasp.net` is blocked
+Browser `fetch()` of Azure Blob images from `https://wtfbyfaith.runasp.net` was blocked
 (`No 'Access-Control-Allow-Origin' header`), so the offline image cache
-(`ImageCacheService`) and the receipt image conversion cannot download them on the web
-build. Images still display normally through `<img>` tags.
+(`ImageCacheService`) and the receipt image conversion could not download them on the web
+build. Fixed in configuration (a CORS rule on the `wtfstorageacc` Blob service), not code.
 
-- Fix is configuration, not code: add a CORS rule on the `wtfstorageacc` Blob service
-  (Storage account -> Resource sharing (CORS)): allowed origins `https://wtfbyfaith.runasp.net`
+- Keep the rule if the storage account or hosts change: allowed origins `https://wtfbyfaith.runasp.net`
   (plus any staging/dev origins), methods `GET, HEAD, OPTIONS`, allowed headers `*`,
   exposed headers `*`, max age `3600`.
-- Android (Capacitor) builds are not affected the same way; verify after the change.
+- Still worth checking once: the Android (Capacitor) build.
+
+---
+
+## Stale Image Cleanup [Planned]
+
+Remove images that nothing uses any more after a configurable number of days, so the blob storage does not grow
+forever. Replaced or removed images currently delete the stored file and image rows right away (see the hard-delete
+note under Inventory); this feature covers what that path misses: orphaned blobs (an upload that was never saved, a
+failed delete, a removed product or promotion), and the chat images below once their messages expire.
+
+- **Setting.** `StaleImageCleanup:RetentionDays` (default 30, `0` = disabled) in app settings, plus `Enabled` and the
+  run time (default `02:00`, `Asia/Manila`), in the style of `MonthlyReportWorkbookScheduler`.
+- **Hosted service** (`StaleImageCleanupScheduler`, registered next to the workbook scheduler in `Program.cs`). Once a
+  day, two passes:
+  1. **Blobs with no database row:** list the container, skip anything newer than `RetentionDays` (so an upload that is
+     still being saved is never touched), delete the rest.
+  2. **Image rows nothing points to** (no product, customer, user, promotion or chat message references them) older than
+     `RetentionDays`: delete the blob, then the row.
+- **Safety.** Dry-run mode that only logs what would be deleted (on for the first run), a cap on how many files one run
+  may delete (stop and log if exceeded), never touch the shared logo or report folders, one audit entry per run with the
+  counts.
+- **Needs first:** one central list of every place that references an image (product, customer, user, promotion and
+  chat), so a new feature cannot be forgotten, plus a test that fails when an entity with an image reference is missing
+  from the list.
+- **Tests.** A recent unreferenced blob is kept, an old one is deleted, a referenced one is never deleted at any age,
+  `RetentionDays = 0` does nothing, the delete cap stops a run, a failing delete does not stop the others.
+- Optional: a "Run cleanup now" button and the last run's result for SuperAdmin on a management page.
+
+---
+
+## Chat Images and Message Expiry [Planned]
+
+Builds on the order chat (Customer Ordering Links, phase 5). Two parts: send pictures in the chat, and delete old
+messages automatically.
+
+### Images in chat
+
+Use case: a customer sends a GCash payment screenshot or a photo of what they want; staff send a product photo. Both
+sides can send, and the customer is anonymous, so everything is enforced on the server.
+
+- **Rules (server side, never trust the client).**
+  - Allowed types: JPEG, PNG and WebP only. No SVG, GIF or HTML. The type is decided from the file's first bytes (magic
+    numbers), not the file name or the `Content-Type` header.
+  - Maximum 5 MB per image (`ChatImages:MaxBytes`) and a maximum pixel size (for example 4096 x 4096, against
+    decompression bombs). One image per message, with an optional caption (the existing 1-1000 character body).
+  - Re-encode every upload (decode, strip metadata such as GPS/EXIF, resize to about 1600 px, save as JPEG or WebP).
+    This removes hidden payloads and means the stored file is ours, not the sender's.
+  - Random server-generated file names in a dedicated `chat` folder; the original name is never stored or shown.
+  - Served with our own `Content-Type`, `X-Content-Type-Options: nosniff` and `Content-Disposition: inline`.
+- **Access.** Images are not public URLs. They are served by an endpoint that applies the same checks as the message
+  list (customer: link check and the order must be theirs; staff: `OrdersRead`), either streaming the file or issuing a
+  short-lived signed URL (a few minutes). Once the message is deleted the URL stops working.
+- **Rate limiting.** Tighter than text (for example 5 images per minute and 30 per day per customer) using the existing
+  `order-chat-policy` partitions; the "ten messages before the shop replies" rule counts images too. Read-only
+  conversations accept no images, same as text.
+- **Database.** New script `tools/sql/<date>_add_conversation_message_images.sql`: `ConversationMessages.ImageId` (null
+  FK to `Images`) or its own table (blob key, content type, size, width, height); `Body` may be empty when an image is
+  present (the rule becomes "text or image"). Then rescaffold.
+- **API.** Staff and customer send endpoints accept `multipart/form-data` (file plus optional text); a GET for the image
+  on each side; a larger request size limit on those endpoints only. Message DTOs get `imageUrl`, `imageWidth` and
+  `imageHeight` (so the layout does not jump). The staff push says "Sent a photo" when there is no text.
+- **UI.** Attach button in the shared chat component (file picker, camera on phones), a preview with Remove before
+  sending, client-side type and size checks that use the server's messages (convenience only), progress and error
+  state on the bubble, tap an image to see it larger. Images load lazily and are never stored on the customer's device
+  (same rule as the rest of the public page).
+- **Abuse.** Audit uploads that look hostile (wrong magic bytes, oversized), not every image. Staff can remove one
+  message's image (the picture is deleted, a "photo removed" line stays).
+- **Tests.** Wrong type renamed to `.jpg`, SVG, oversized file, oversized dimensions, corrupt image, a disguised
+  executable, metadata gone after re-encode, rate limit, read-only conversation, another customer's order is 404, revoked
+  link is 404, viewer role cannot send, response headers; front end: attach, preview, remove, error messages.
+
+### Automatic message expiry
+
+- **Setting.** `ChatRetention:MessageDays` (default 90, `0` = keep forever), counted from each message's `CreatedAt`.
+  A setting, not hard-coded; a change applies at the next run.
+- **Hosted service** (`ChatMessageCleanupScheduler`, same pattern as the workbook scheduler, daily). Deletes messages
+  older than the limit in small batches (for example 500 per statement) so a large backlog does not lock the table, and
+  removes the message's image file at the same time (blob first, then row, so a failure leaves a row to retry instead of
+  an orphan; Stale Image Cleanup is the safety net).
+- **Conversations.** A conversation left with no messages is deleted too, so the envelope list shows no empty threads;
+  the "Chat with the shop" card then starts a new one. Unread counts and the envelope update through the existing
+  SignalR events, and an open chat drops deleted messages on its next refresh.
+- **Order records are unaffected.** Deleting chat never changes an order, its status or its history. The system lines that
+  record order changes ("Order accepted") are chat messages too; recommended: they expire with the rest, because the
+  audit log is the permanent record.
+- **Decisions (confirmed).**
+  - Chats of orders that are still open (waiting or accepted) are kept regardless of age; messages expire only once the
+    order is Completed, Cancelled or Refunded, counted from each message date.
+  - The limit is shown to users ("Messages are deleted after 90 days"): a line in the staff panel and on the customer sheet.
+- **Safety.** Dry-run on the first run, a cap per run, one audit entry per run with the counts, and no deletion at all
+  when the setting is `0`.
+- **Tests.** A message exactly at, before and after the limit; the open vs closed order rule; image blob removed with
+  its message; empty conversation removed and non-empty one kept; `0` disables; batch limit; one failing blob delete does
+  not stop the run; a real SQL Server test for the batch delete.
+
+Suggested order: Stale Image Cleanup first (it also protects the chat images), then message expiry, then chat images.

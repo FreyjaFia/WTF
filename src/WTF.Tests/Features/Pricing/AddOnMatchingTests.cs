@@ -1,83 +1,81 @@
 using WTF.Api.Features.Promotions;
-using static WTF.Tests.Features.Pricing.PricingCopies;
+using static WTF.Tests.Features.Pricing.PricingTestHelpers;
 
 namespace WTF.Tests.Features.Pricing;
 
 public class AddOnMatchingTests
 {
-    public static IEnumerable<object[]> Copies() => CopyNames.Select(c => new object[] { c });
-
-    public static IEnumerable<object[]> OrderCopies() => new[] { "Create", "Update" }.Select(c => new object[] { c });
+    public static IEnumerable<object[]> ImplementationNames() => Implementations.Select(c => new object[] { c });
 
     [Theory]
-    [MemberData(nameof(Copies))]
-    public void SatisfiesExactAddOns_SameAddOnAndQuantity_ReturnsTrue(string copy)
+    [MemberData(nameof(ImplementationNames))]
+    public void SatisfiesExactAddOns_SameAddOnAndQuantity_ReturnsTrue(string implementation)
     {
-        SatisfiesExact(copy, [(AddOnA, 2)], [(AddOnA, 2)]).ShouldBeTrue();
+        SatisfiesExact(implementation, [(AddOnA, 2)], [(AddOnA, 2)]).ShouldBeTrue();
     }
 
     [Theory]
-    [MemberData(nameof(Copies))]
-    public void SatisfiesExactAddOns_NoRequiredAddOns_ReturnsFalse(string copy)
+    [MemberData(nameof(ImplementationNames))]
+    public void SatisfiesExactAddOns_NoRequiredAddOns_ReturnsFalse(string implementation)
     {
-        SatisfiesExact(copy, [], []).ShouldBeFalse();
-        SatisfiesExact(copy, [(AddOnA, 1)], []).ShouldBeFalse();
+        SatisfiesExact(implementation, [], []).ShouldBeFalse();
+        SatisfiesExact(implementation, [(AddOnA, 1)], []).ShouldBeFalse();
     }
 
     [Theory]
-    [MemberData(nameof(Copies))]
-    public void SatisfiesExactAddOns_QuantityTooLow_ReturnsFalse(string copy)
+    [MemberData(nameof(ImplementationNames))]
+    public void SatisfiesExactAddOns_QuantityTooLow_ReturnsFalse(string implementation)
     {
-        SatisfiesExact(copy, [(AddOnA, 1)], [(AddOnA, 2)]).ShouldBeFalse();
+        SatisfiesExact(implementation, [(AddOnA, 1)], [(AddOnA, 2)]).ShouldBeFalse();
     }
 
     [Theory]
-    [MemberData(nameof(Copies))]
-    public void SatisfiesExactAddOns_QuantityTooHigh_ReturnsFalse(string copy)
+    [MemberData(nameof(ImplementationNames))]
+    public void SatisfiesExactAddOns_QuantityTooHigh_ReturnsFalse(string implementation)
     {
-        SatisfiesExact(copy, [(AddOnA, 3)], [(AddOnA, 2)]).ShouldBeFalse();
+        SatisfiesExact(implementation, [(AddOnA, 3)], [(AddOnA, 2)]).ShouldBeFalse();
     }
 
     [Theory]
-    [MemberData(nameof(Copies))]
-    public void SatisfiesExactAddOns_MissingRequiredAddOn_ReturnsFalse(string copy)
+    [MemberData(nameof(ImplementationNames))]
+    public void SatisfiesExactAddOns_MissingRequiredAddOn_ReturnsFalse(string implementation)
     {
-        SatisfiesExact(copy, [(AddOnA, 1)], [(AddOnA, 1), (AddOnB, 1)]).ShouldBeFalse();
-        SatisfiesExact(copy, [], [(AddOnA, 1)]).ShouldBeFalse();
+        SatisfiesExact(implementation, [(AddOnA, 1)], [(AddOnA, 1), (AddOnB, 1)]).ShouldBeFalse();
+        SatisfiesExact(implementation, [], [(AddOnA, 1)]).ShouldBeFalse();
     }
 
     [Theory]
-    [MemberData(nameof(Copies))]
-    public void SatisfiesExactAddOns_ExtraAddOn_ReturnsFalse(string copy)
+    [MemberData(nameof(ImplementationNames))]
+    public void SatisfiesExactAddOns_ExtraAddOn_ReturnsFalse(string implementation)
     {
-        SatisfiesExact(copy, [(AddOnA, 1), (AddOnB, 1)], [(AddOnA, 1)]).ShouldBeFalse();
+        SatisfiesExact(implementation, [(AddOnA, 1), (AddOnB, 1)], [(AddOnA, 1)]).ShouldBeFalse();
     }
 
     [Theory]
-    [MemberData(nameof(Copies))]
-    public void SatisfiesExactAddOns_ExtraAddOnWithZeroQuantity_IsIgnored(string copy)
+    [MemberData(nameof(ImplementationNames))]
+    public void SatisfiesExactAddOns_ExtraAddOnWithZeroQuantity_IsIgnored(string implementation)
     {
-        SatisfiesExact(copy, [(AddOnA, 1), (AddOnB, 0)], [(AddOnA, 1)]).ShouldBeTrue();
+        SatisfiesExact(implementation, [(AddOnA, 1), (AddOnB, 0)], [(AddOnA, 1)]).ShouldBeTrue();
     }
 
     [Theory]
-    [MemberData(nameof(Copies))]
-    public void SatisfiesExactAddOns_OrderIndependent(string copy)
+    [MemberData(nameof(ImplementationNames))]
+    public void SatisfiesExactAddOns_OrderIndependent(string implementation)
     {
-        SatisfiesExact(copy, [(AddOnB, 2), (AddOnA, 1)], [(AddOnA, 1), (AddOnB, 2)]).ShouldBeTrue();
-        SatisfiesExact(copy, [(AddOnA, 1), (AddOnB, 2)], [(AddOnB, 2), (AddOnA, 1)]).ShouldBeTrue();
+        SatisfiesExact(implementation, [(AddOnB, 2), (AddOnA, 1)], [(AddOnA, 1), (AddOnB, 2)]).ShouldBeTrue();
+        SatisfiesExact(implementation, [(AddOnA, 1), (AddOnB, 2)], [(AddOnB, 2), (AddOnA, 1)]).ShouldBeTrue();
     }
 
     [Theory]
-    [MemberData(nameof(Copies))]
-    public void SatisfiesExactAddOns_RepeatedCartEntries_AreSummed(string copy)
+    [MemberData(nameof(ImplementationNames))]
+    public void SatisfiesExactAddOns_RepeatedCartEntries_AreSummed(string implementation)
     {
-        SatisfiesExact(copy, [(AddOnA, 1), (AddOnA, 1)], [(AddOnA, 2)]).ShouldBeTrue();
-        SatisfiesExact(copy, [(AddOnA, 1), (AddOnA, 1)], [(AddOnA, 1)]).ShouldBeFalse();
+        SatisfiesExact(implementation, [(AddOnA, 1), (AddOnA, 1)], [(AddOnA, 2)]).ShouldBeTrue();
+        SatisfiesExact(implementation, [(AddOnA, 1), (AddOnA, 1)], [(AddOnA, 1)]).ShouldBeFalse();
     }
 
     [Fact]
-    public void SatisfiesExactAddOns_AllCopies_AgreeOnEveryCombination()
+    public void SatisfiesExactAddOns_EvaluateWrapper_AgreesWithShared()
     {
         (Guid, int)[][] carts =
         [
@@ -92,9 +90,7 @@ public class AddOnMatchingTests
         foreach (var cart in carts)
         foreach (var req in reqs)
         {
-            var create = SatisfiesExact("Create", cart, req);
-            SatisfiesExact("Update", cart, req).ShouldBe(create);
-            SatisfiesExact("Evaluate", cart, req).ShouldBe(create);
+            SatisfiesExact("Evaluate", cart, req).ShouldBe(SatisfiesExact("Shared", cart, req));
         }
     }
 
@@ -126,64 +122,57 @@ public class AddOnMatchingTests
         EvaluatePromotionsHandler.SatisfiesRequiredAddOns(Line([(AddOnA, 1), (AddOnA, 1)]), [(AddOnA, 2)]).ShouldBeTrue();
     }
 
-    // ---- GetDiscountedUnitPrice (Create / Update) ----
+    // ---- GetDiscountedUnitPrice ----
 
-    [Theory]
-    [MemberData(nameof(OrderCopies))]
-    public void GetDiscountedUnitPrice_ProductWithoutRules_ReturnsNull(string copy)
+    [Fact]
+    public void GetDiscountedUnitPrice_ProductWithoutRules_ReturnsNull()
     {
-        GetDiscounted(copy, 100m, [(AddOnA, 1)]).ShouldBeNull();
+        GetDiscounted(100m, [(AddOnA, 1)]).ShouldBeNull();
     }
 
-    [Theory]
-    [MemberData(nameof(OrderCopies))]
-    public void GetDiscountedUnitPrice_NoRuleMatchesAddOns_ReturnsNull(string copy)
+    [Fact]
+    public void GetDiscountedUnitPrice_NoRuleMatchesAddOns_ReturnsNull()
     {
-        GetDiscounted(copy, 100m, [(AddOnA, 1)], new RuleSpec(null, 10m, (AddOnB, 1))).ShouldBeNull();
+        GetDiscounted(100m, [(AddOnA, 1)], new RuleSpec(null, 10m, (AddOnB, 1))).ShouldBeNull();
     }
 
-    [Theory]
-    [MemberData(nameof(OrderCopies))]
-    public void GetDiscountedUnitPrice_MatchingRule_ReturnsPriceAndPercentLabel(string copy)
+    [Fact]
+    public void GetDiscountedUnitPrice_MatchingRule_ReturnsPriceAndPercentLabel()
     {
-        var r = GetDiscounted(copy, 100m, [(AddOnA, 1)], new RuleSpec(null, 10m, (AddOnA, 1)));
+        var r = GetDiscounted(100m, [(AddOnA, 1)], new RuleSpec(null, 10m, (AddOnA, 1)));
         r.ShouldNotBeNull();
         r.Value.Price.ShouldBe(90m);
         r.Value.Label.ShouldBe("Promo -10%");
     }
 
-    [Theory]
-    [MemberData(nameof(OrderCopies))]
-    public void GetDiscountedUnitPrice_FixedRule_UsesPesoLabel(string copy)
+    [Fact]
+    public void GetDiscountedUnitPrice_FixedRule_UsesPesoLabel()
     {
-        var r = GetDiscounted(copy, 100m, [(AddOnA, 1)], new RuleSpec(25m, null, (AddOnA, 1)));
+        var r = GetDiscounted(100m, [(AddOnA, 1)], new RuleSpec(25m, null, (AddOnA, 1)));
         r.ShouldNotBeNull();
         r.Value.Price.ShouldBe(75m);
         r.Value.Label.ShouldBe("Promo -₱25.00");
     }
 
-    [Theory]
-    [MemberData(nameof(OrderCopies))]
-    public void GetDiscountedUnitPrice_FixedAndPercent_LabelFollowsFixed(string copy)
+    [Fact]
+    public void GetDiscountedUnitPrice_FixedAndPercent_LabelFollowsFixed()
     {
-        var r = GetDiscounted(copy, 100m, [(AddOnA, 1)], new RuleSpec(5m, 50m, (AddOnA, 1)));
+        var r = GetDiscounted(100m, [(AddOnA, 1)], new RuleSpec(5m, 50m, (AddOnA, 1)));
         r.ShouldNotBeNull();
         r.Value.Price.ShouldBe(95m);
         r.Value.Label.ShouldBe("Promo -₱5.00");
     }
 
-    [Theory]
-    [MemberData(nameof(OrderCopies))]
-    public void GetDiscountedUnitPrice_FractionalPercent_LabelTrimsTrailingZeros(string copy)
+    [Fact]
+    public void GetDiscountedUnitPrice_FractionalPercent_LabelTrimsTrailingZeros()
     {
-        GetDiscounted(copy, 100m, [(AddOnA, 1)], new RuleSpec(null, 12.5m, (AddOnA, 1)))!.Value.Label.ShouldBe("Promo -12.5%");
+        GetDiscounted(100m, [(AddOnA, 1)], new RuleSpec(null, 12.5m, (AddOnA, 1)))!.Value.Label.ShouldBe("Promo -12.5%");
     }
 
-    [Theory]
-    [MemberData(nameof(OrderCopies))]
-    public void GetDiscountedUnitPrice_SeveralMatchingRules_PicksLowestPrice(string copy)
+    [Fact]
+    public void GetDiscountedUnitPrice_SeveralMatchingRules_PicksLowestPrice()
     {
-        var r = GetDiscounted(copy, 100m, [(AddOnA, 1)],
+        var r = GetDiscounted(100m, [(AddOnA, 1)],
             new RuleSpec(null, 10m, (AddOnA, 1)),
             new RuleSpec(null, 40m, (AddOnA, 1)),
             new RuleSpec(null, 20m, (AddOnA, 1)));
@@ -191,81 +180,53 @@ public class AddOnMatchingTests
         r.Value.Label.ShouldBe("Promo -40%");
     }
 
-    [Theory]
-    [MemberData(nameof(OrderCopies))]
-    public void GetDiscountedUnitPrice_TiedRules_KeepsFirst(string copy)
+    [Fact]
+    public void GetDiscountedUnitPrice_TiedRules_KeepsFirst()
     {
         // 20 fixed and 20% off 100 both give 80; the first rule listed wins.
-        var r = GetDiscounted(copy, 100m, [(AddOnA, 1)],
+        var r = GetDiscounted(100m, [(AddOnA, 1)],
             new RuleSpec(20m, null, (AddOnA, 1)),
             new RuleSpec(null, 20m, (AddOnA, 1)));
         r!.Value.Price.ShouldBe(80m);
         r.Value.Label.ShouldBe("Promo -₱20.00");
     }
 
-    [Theory]
-    [MemberData(nameof(OrderCopies))]
-    public void GetDiscountedUnitPrice_NonMatchingCheaperRule_IsIgnored(string copy)
+    [Fact]
+    public void GetDiscountedUnitPrice_NonMatchingCheaperRule_IsIgnored()
     {
-        var r = GetDiscounted(copy, 100m, [(AddOnA, 1)],
+        var r = GetDiscounted(100m, [(AddOnA, 1)],
             new RuleSpec(null, 90m, (AddOnB, 1)),
             new RuleSpec(null, 10m, (AddOnA, 1)));
         r!.Value.Price.ShouldBe(90m);
     }
 
-    [Theory]
-    [MemberData(nameof(OrderCopies))]
-    public void GetDiscountedUnitPrice_RuleWithoutValue_IsSkipped(string copy)
+    [Fact]
+    public void GetDiscountedUnitPrice_RuleWithoutValue_IsSkipped()
     {
-        var r = GetDiscounted(copy, 100m, [(AddOnA, 1)],
+        var r = GetDiscounted(100m, [(AddOnA, 1)],
             new RuleSpec(null, null, (AddOnA, 1)),
             new RuleSpec(null, 10m, (AddOnA, 1)));
         r!.Value.Price.ShouldBe(90m);
     }
 
-    [Theory]
-    [MemberData(nameof(OrderCopies))]
-    public void GetDiscountedUnitPrice_RuleWithoutAddOns_NeverApplies(string copy)
+    [Fact]
+    public void GetDiscountedUnitPrice_RuleWithoutAddOns_NeverApplies()
     {
         // Pins current behaviour: SatisfiesExactAddOns returns false for an empty requirement list,
         // so a discounted-product rule with no add-ons can never match (even a cart with no add-ons).
-        GetDiscounted(copy, 100m, [], new RuleSpec(null, 10m)).ShouldBeNull();
-    }
-
-    [Theory]
-    [MemberData(nameof(OrderCopies))]
-    public void GetDiscountedUnitPrice_RepeatedCartAddOns_AreSummedBeforeMatching(string copy)
-    {
-        var r = GetDiscounted(copy, 100m, [(AddOnA, 1), (AddOnA, 1)], new RuleSpec(null, 10m, (AddOnA, 2)));
-        r!.Value.Price.ShouldBe(90m);
-    }
-
-    [Theory]
-    [MemberData(nameof(OrderCopies))]
-    public void GetDiscountedUnitPrice_ExtraCartAddOn_Blocks(string copy)
-    {
-        GetDiscounted(copy, 100m, [(AddOnA, 1), (AddOnB, 1)], new RuleSpec(null, 10m, (AddOnA, 1))).ShouldBeNull();
+        GetDiscounted(100m, [], new RuleSpec(null, 10m)).ShouldBeNull();
     }
 
     [Fact]
-    public void GetDiscountedUnitPrice_CreateAndUpdate_AgreeOnEveryScenario()
+    public void GetDiscountedUnitPrice_RepeatedCartAddOns_AreSummedBeforeMatching()
     {
-        (Guid, int)[][] carts = [[], [(AddOnA, 1)], [(AddOnA, 1), (AddOnB, 1)], [(AddOnB, 2)]];
-        RuleSpec[][] ruleSets =
-        [
-            [],
-            [new RuleSpec(null, 10m, (AddOnA, 1))],
-            [new RuleSpec(5m, null, (AddOnA, 1)), new RuleSpec(null, 50m, (AddOnB, 2))],
-            [new RuleSpec(20m, 20m, (AddOnA, 1), (AddOnB, 1)), new RuleSpec(null, 33.33m, (AddOnA, 1))],
-            [new RuleSpec(null, null, (AddOnA, 1))]
-        ];
+        var r = GetDiscounted(100m, [(AddOnA, 1), (AddOnA, 1)], new RuleSpec(null, 10m, (AddOnA, 2)));
+        r!.Value.Price.ShouldBe(90m);
+    }
 
-        foreach (var cart in carts)
-        foreach (var rules in ruleSets)
-        {
-            var create = GetDiscounted("Create", 79.99m, cart, rules);
-            var update = GetDiscounted("Update", 79.99m, cart, rules);
-            update.ShouldBe(create);
-        }
+    [Fact]
+    public void GetDiscountedUnitPrice_ExtraCartAddOn_Blocks()
+    {
+        GetDiscounted(100m, [(AddOnA, 1), (AddOnB, 1)], new RuleSpec(null, 10m, (AddOnA, 1))).ShouldBeNull();
     }
 }

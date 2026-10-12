@@ -2,8 +2,8 @@ using System.ComponentModel.DataAnnotations;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
+using WTF.Api.Common.Orders;
 using WTF.Api.Common.Time;
-using WTF.Api.Features.Orders;
 using WTF.Api.Features.Promotions.DTOs;
 using WTF.Api.Services;
 using WTF.Domain.Data;
@@ -65,7 +65,7 @@ public sealed class GetActiveDiscountedProductPromotionsHandler(WTFDbContext db,
             .ToListAsync(cancellationToken);
 
         // Same rule the order is saved with: start and end are calendar days in the shop's time zone.
-        var promotions = scheduled.Where(x => CreateOrderHandler.IsPromotionActiveOnLocalDate(x, now, timeZone));
+        var promotions = scheduled.Where(x => PromotionPricing.IsPromotionActiveOnLocalDate(x, now, timeZone));
 
         return [.. promotions
             .Where(x => x.DiscountedProductPromotions.Count > 0)

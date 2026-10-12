@@ -242,7 +242,7 @@ public class UpdateOrderHandler(
 
             foreach (var promotion in bundlePromotionEntities)
             {
-                if (!IsPromotionActiveOnLocalDate(promotion, referenceUtc, timeZone))
+                if (!PromotionPricing.IsPromotionActiveOnLocalDate(promotion, referenceUtc, timeZone))
                 {
                     throw new InvalidOperationException($"Bundle promotion '{promotion.Name}' is inactive or outside its active date range.");
                 }
@@ -308,7 +308,7 @@ public class UpdateOrderHandler(
         }
 
         var shouldCapturePrice = newStatus == OrderStatusEnum.Completed || newStatus == OrderStatusEnum.Cancelled;
-        Dictionary<Guid, List<DiscountedRule>> discountedRulesByProductId = [];
+        Dictionary<Guid, List<PromotionPricing.DiscountedRule>> discountedRulesByProductId = [];
         if (shouldCapturePrice)
         {
             var timeZone = RequestTimeZone.ResolveFromRequest(httpContextAccessor);
@@ -321,12 +321,12 @@ public class UpdateOrderHandler(
                 .ToListAsync(cancellationToken);
 
             discountedRulesByProductId = discountedPromotions
-                .Where(p => IsPromotionActiveOnLocalDate(p, referenceUtc, timeZone))
+                .Where(p => PromotionPricing.IsPromotionActiveOnLocalDate(p, referenceUtc, timeZone))
                 .SelectMany(p => p.DiscountedProductPromotions)
                 .GroupBy(d => d.ProductId)
                 .ToDictionary(
                     g => g.Key,
-                    g => g.Select(d => new DiscountedRule(
+                    g => g.Select(d => new PromotionPricing.DiscountedRule(
                         d.FixedPrice,
                         d.PercentOff,
                         d.DiscountedProductPromotionAddOns
@@ -339,7 +339,7 @@ public class UpdateOrderHandler(
             OrderItemRequestDto Item,
             Product Product,
             decimal? DiscountedPrice,
-            AppliedDiscount? AppliedDiscount,
+            PromotionPricing.AppliedDiscount? AppliedDiscount,
             List<(OrderItemRequestDto AddOn, decimal Price)> AddOnPrices)>();
 
         for (var itemIndex = 0; itemIndex < request.Items.Count; itemIndex++)
@@ -348,7 +348,7 @@ public class UpdateOrderHandler(
             var product = await db.Products.FindAsync([item.ProductId], cancellationToken) ?? throw new InvalidOperationException($"Product with ID {item.ProductId} not found.");
             var basePrice = product.Price;
             var appliedDiscount = shouldCapturePrice
-                ? GetDiscountedUnitPrice(basePrice, item, discountedRulesByProductId)
+                ? PromotionPricing.GetDiscountedUnitPrice(basePrice, item, discountedRulesByProductId)
                 : null;
             var discountedPrice = appliedDiscount?.Price;
             var addOnPrices = new List<(OrderItemRequestDto AddOn, decimal Price)>();
@@ -713,130 +713,5 @@ public class UpdateOrderHandler(
                 .Select(b => new { PromotionId = b.PromotionId, b.Quantity, b.UnitPrice })
                 .ToList()
         };
-    }
-
-    internal static bool IsPromotionActiveOnLocalDate(Promotion promotion, DateTime utcReference, TimeZoneInfo timeZone)
-    {
-        if (!promotion.IsActive)
-        {
-            return false;
-        }
-
-        var localNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utcReference, DateTimeKind.Utc), timeZone);
-        var localDate = localNow.Date;
-
-        var startLocalDate = promotion.StartDate.HasValue
-            ? TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(promotion.StartDate.Value, DateTimeKind.Utc), timeZone).Date
-            : (DateTime?)null;
-        var endLocalDate = promotion.EndDate.HasValue
-            ? TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(promotion.EndDate.Value, DateTimeKind.Utc), timeZone).Date
-            : (DateTime?)null;
-
-        if (startLocalDate.HasValue && localDate < startLocalDate.Value)
-        {
-            return false;
-        }
-
-        if (endLocalDate.HasValue && localDate > endLocalDate.Value)
-        {
-            return false;
-        }
-
-        return true;
-    }
-
-    internal sealed record DiscountedRule(
-        decimal? FixedPrice,
-        decimal? PercentOff,
-        List<(Guid AddOnProductId, int Quantity)> RequiredAddOns);
-
-    internal sealed record AppliedDiscount(decimal Price, string? Label);
-
-    internal static AppliedDiscount? GetDiscountedUnitPrice(
-        decimal basePrice,
-        OrderItemRequestDto item,
-        Dictionary<Guid, List<DiscountedRule>> rulesByProductId)
-    {
-        if (!rulesByProductId.TryGetValue(item.ProductId, out var rules) || rules.Count == 0)
-        {
-            return null;
-        }
-
-        var addOnMap = item.AddOns
-            .GroupBy(x => x.ProductId)
-            .ToDictionary(x => x.Key, x => x.Sum(y => y.Quantity));
-
-        AppliedDiscount? best = null;
-        foreach (var rule in rules)
-        {
-            if (!SatisfiesExactAddOns(addOnMap, rule.RequiredAddOns))
-            {
-                continue;
-            }
-
-            var discounted = CalculateDiscountedUnitPrice(basePrice, rule.FixedPrice, rule.PercentOff);
-            if (!discounted.HasValue)
-            {
-                continue;
-            }
-
-            if (best is null || discounted.Value < best.Price)
-            {
-                best = new AppliedDiscount(
-                    discounted.Value,
-                    PromotionLabelFormatter.Format(rule.FixedPrice, rule.PercentOff));
-            }
-        }
-
-        return best;
-    }
-
-    internal static bool SatisfiesExactAddOns(
-        Dictionary<Guid, int> addOnMap,
-        IEnumerable<(Guid AddOnProductId, int Quantity)> requiredAddOns)
-    {
-        var required = requiredAddOns.ToList();
-        if (required.Count == 0)
-        {
-            return false;
-        }
-
-        var requiredSet = required.Select(x => x.AddOnProductId).ToHashSet();
-        foreach (var (addOnProductId, quantity) in required)
-        {
-            if (!addOnMap.TryGetValue(addOnProductId, out var qty) || qty != quantity)
-            {
-                return false;
-            }
-        }
-
-        foreach (var entry in addOnMap)
-        {
-            if (!requiredSet.Contains(entry.Key) && entry.Value > 0)
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    internal static decimal? CalculateDiscountedUnitPrice(decimal basePrice, decimal? fixedPrice, decimal? percentOff)
-    {
-        if (fixedPrice.HasValue && fixedPrice.Value > 0)
-        {
-            var discounted = basePrice - fixedPrice.Value;
-            return Math.Max(0, discounted);
-        }
-
-        if (percentOff.HasValue && percentOff.Value > 0)
-        {
-            var multiplier = 1m - (percentOff.Value / 100m);
-            var discounted = basePrice * multiplier;
-            // A discount of more than 100% never takes the price below zero (the fixed-price branch clamps the same way).
-            return Math.Max(0m, Math.Round(discounted, 2, MidpointRounding.AwayFromZero));
-        }
-
-        return null;
     }
 }
