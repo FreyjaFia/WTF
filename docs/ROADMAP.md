@@ -314,28 +314,49 @@ and 3 (consumables) build on it, so it should land first and stay generic.
   repeating it in each, matching how discounted-product pricing was merged
   into one shared class.
 
-**Decision needed: should low stock block completion?**
+**Decision: low stock blocking is configurable per item (option C)**
 
-- Option A, never block: stock may go negative, a warning is shown, and the
-  shop is never stopped at the counter. Simple, and safe while stock counts
-  are still being set up.
-- Option B, always block: reject completion when any linked item would go
-  below zero. Accurate, but a wrong or stale count stops sales.
-- Option C, configurable per item (recommended): add an `AllowNegativeStock`
-  flag on `Item`, default true during rollout. Items that must be exact can
-  opt in to blocking. Blocking returns a clear error naming the item and the
-  shortfall.
-- Whatever is chosen, record the quantity before and after on each movement
-  so negative balances are visible in history and can be corrected with an
-  adjustment.
+- Add an `AllowNegativeStock` flag on `Item`, default true so nothing blocks
+  sales while stock counts are still being set up.
+- When the flag is false, completing an order that would take the item below
+  zero is rejected with a clear error naming the item and the shortfall. The
+  whole order rolls back (see Transaction boundary).
+- When the flag is true, the order completes, the balance may go negative,
+  and the POS shows a low-stock warning.
+- Every movement records the quantity before and after, so negative balances
+  are visible in history and can be corrected (next section).
+- Options not chosen: never blocking (A) and always blocking (B).
+
+**Stock correction (adjustment)**
+
+- Add an adjustment action so the remaining stock can be corrected, for
+  example after a physical count, spoilage, breakage, or a negative balance
+  left by non-blocking items. This is the "adjustment/correction workflow"
+  already listed in Phase 1 Remaining.
+- The user enters the counted quantity (or a plus/minus change) and a
+  required reason. The system calculates the difference.
+- It never overwrites `CurrentQuantity` silently. It writes a new
+  `Adjustment` stock movement with the delta, before and after, reason,
+  user, and time, and writes an audit entry. Existing movements are never
+  edited or deleted.
+- Restrict it to roles allowed to manage inventory, using the same policy
+  style as `AddItemStock`.
+- An adjustment applies on top of the current balance, so orders completed
+  between opening the form and saving are not lost. Use the same concurrency
+  protection as order deduction.
+- Suggested reasons: Count correction, Damaged or spoiled, Lost, Other (note
+  required).
+- Adjustments are excluded from sales usage reports but shown in item
+  movement history.
 
 **UI and API surface**
 
 - POS: show the stock error (or warning) in the completion flow. Low-stock
   badges can wait for Phase 4.
 - Order details: list the stock movements an order caused.
-- Item details: movement history shows `Sale` and `SaleVoid` rows with the
-  order number as a link.
+- Item details: movement history shows `Sale`, `SaleVoid` and `Adjustment`
+  rows, with the order number as a link on sale rows, plus an Adjust stock
+  button.
 - Audit log: add an audit action for order stock deduction and restore, or
   include the stock changes in the existing order audit entries.
 
@@ -348,17 +369,20 @@ and 3 (consumables) build on it, so it should land first and stay generic.
   quantity was changed; void Pending restores nothing.
 - Add-on child lines and multiple lines sharing one item sum correctly.
 - Inactive links and untracked products are ignored.
-- Blocking behaviour for the chosen option, including the transaction rolling
+- Blocking when `AllowNegativeStock` is false, and warn-only when true, including the transaction rolling
   back the order when stock is insufficient.
 - Concurrent completions on the same item do not lose updates.
 - Editing a Completed order applies only the net difference.
+- An adjustment writes a movement with the correct delta, requires a reason,
+  and fixes a negative balance.
 
 **Rollout order**
 
 1. Schema script and the shared stock service with unit tests, not yet wired.
 2. Wire into create and update, behind the non-blocking default.
 3. Wire into void, then the movement history UI.
-4. Enable per-item blocking once real stock counts exist.
+4. Add the stock adjustment action, then enable per-item blocking once real
+   stock counts exist.
 5. Phases 2 and 3 then add pack/box deduct quantities and consumables on top
    of the same service and ledger.
 
