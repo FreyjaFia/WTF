@@ -157,6 +157,62 @@ describe('PublicOrderService', () => {
       req.flush({ id: 'm1' });
     });
 
+    it('sends a picture and its text as a form', () => {
+      const { service, http } = setupHttpService(PublicOrderService);
+      const file = new File([new Uint8Array([1, 2, 3])], 'gcash.jpg', { type: 'image/jpeg' });
+      service.sendImageMessage('tok-1', 'o1', file, 'Paid').subscribe();
+
+      const req = http.expectOne(`${base}/tok-1/orders/o1/messages/image`);
+      expect(req.request.method).toBe('POST');
+      const form = req.request.body as FormData;
+      expect((form.get('file') as File).name).toBe('gcash.jpg');
+      expect(form.get('body')).toBe('Paid');
+      req.flush({ id: 'm1', hasImage: true });
+    });
+
+    it('gives the address of a picture, with the token encoded', () => {
+      const { service } = setupHttpService(PublicOrderService);
+
+      expect(service.messageImageUrl('tok-1', 'o1', 'm1')).toBe(`${base}/tok-1/orders/o1/messages/m1/image`);
+      expect(service.messageImageUrl('a/b', 'o1', 'm1')).toContain('a%2Fb');
+    });
+
+    it('treats a dead link as invalid when sending a picture, and shows why one was refused', () => {
+      const { service, http } = setupHttpService(PublicOrderService);
+      const file = new File(['x'], 'a.png', { type: 'image/png' });
+      const dead = capture(service.sendImageMessage('tok-1', 'o1', file, ''));
+      failWith(http.expectOne(`${base}/tok-1/orders/o1/messages/image`), 404);
+      const refused = capture(service.sendImageMessage('tok-1', 'o1', file, ''));
+      failWith(http.expectOne(`${base}/tok-1/orders/o1/messages/image`), 400, {
+        message: 'That file is not a picture we accept.',
+      });
+
+      expect(dead.error).toBe(new PublicLinkInvalidError().message);
+      expect(refused.error).toBe('That file is not a picture we accept.');
+    });
+
+    it('takes back a picture I sent', () => {
+      const { service, http } = setupHttpService(PublicOrderService);
+      const result = capture(service.removeMessageImage('tok-1', 'o1', 'm1'));
+
+      const req = http.expectOne(`${base}/tok-1/orders/o1/messages/m1/image`);
+      expect(req.request.method).toBe('DELETE');
+      req.flush({ id: 'm1', imageRemoved: true });
+
+      expect(result.value).toMatchObject({ imageRemoved: true });
+    });
+
+    it('treats a dead link as invalid when taking back a picture, and falls back otherwise', () => {
+      const { service, http } = setupHttpService(PublicOrderService);
+      const dead = capture(service.removeMessageImage('tok-1', 'o1', 'm1'));
+      failWith(http.expectOne(`${base}/tok-1/orders/o1/messages/m1/image`), 404);
+      const broken = capture(service.removeMessageImage('tok-1', 'o1', 'm1'));
+      failWith(http.expectOne(`${base}/tok-1/orders/o1/messages/m1/image`), 500);
+
+      expect(dead.error).toBe(new PublicLinkInvalidError().message);
+      expect(broken.error).toBe('Failed to remove your photo. Please try again.');
+    });
+
     it('marks the shop replies read', () => {
       const { service, http } = setupHttpService(PublicOrderService);
       service.markConversationRead('tok-1', 'o1').subscribe();

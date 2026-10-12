@@ -52,7 +52,10 @@ public class RouteTableTests : IDisposable
         "GET /api/public/order-links/{token}/orders/{orderId:guid} => anonymous",
         "GET /api/public/order-links/{token}/orders/{orderId:guid}/messages => anonymous",
         "POST /api/public/order-links/{token}/orders/{orderId:guid}/messages => anonymous",
+        "POST /api/public/order-links/{token}/orders/{orderId:guid}/messages/image => anonymous",
         "POST /api/public/order-links/{token}/orders/{orderId:guid}/messages/read => anonymous",
+        "GET /api/public/order-links/{token}/orders/{orderId:guid}/messages/{messageId:guid}/image => anonymous",
+        "DELETE /api/public/order-links/{token}/orders/{orderId:guid}/messages/{messageId:guid}/image => anonymous",
         "GET /api/loyalty/{customerId:guid} => CustomersRead",
         "GET /api/management/promotions/discounted-products/ => PromotionsRead",
         "POST /api/management/promotions/discounted-products/ => PromotionsRead+PromotionsWrite",
@@ -86,7 +89,10 @@ public class RouteTableTests : IDisposable
         "POST /api/orders/{id:guid}/reject => OrdersWrite",
         "GET /api/orders/{id:guid}/conversation => OrdersRead",
         "POST /api/orders/{id:guid}/messages => OrdersWrite",
+        "POST /api/orders/{id:guid}/messages/image => OrdersWrite",
         "POST /api/orders/{id:guid}/messages/read => OrdersWrite",
+        "DELETE /api/orders/{id:guid}/messages/{messageId:guid}/image => OrdersWrite",
+        "GET /api/orders/{id:guid}/messages/{messageId:guid}/image => OrdersRead",
         "PATCH /api/orders/{id:guid}/void => OrdersWrite",
         "GET /api/pos/promotions/discounted-products => OrdersWrite",
         "POST /api/pos/promotions/evaluate => OrdersWrite",
@@ -167,6 +173,7 @@ public class RouteTableTests : IDisposable
 
         anonymous.OrderBy(x => x, StringComparer.Ordinal).ShouldBe(
         [
+            "DELETE /api/public/order-links/{token}/orders/{orderId:guid}/messages/{messageId:guid}/image",
             "GET /api",
             "GET /api/health",
             "GET /api/loyalty/redirect/{token}",
@@ -175,12 +182,14 @@ public class RouteTableTests : IDisposable
             "GET /api/public/order-links/{token}/orders",
             "GET /api/public/order-links/{token}/orders/{orderId:guid}",
             "GET /api/public/order-links/{token}/orders/{orderId:guid}/messages",
+            "GET /api/public/order-links/{token}/orders/{orderId:guid}/messages/{messageId:guid}/image",
             "POST /api/auth/login",
             "POST /api/auth/logout",
             "POST /api/auth/refresh",
             "POST /api/auth/validate",
             "POST /api/public/order-links/{token}/orders",
             "POST /api/public/order-links/{token}/orders/{orderId:guid}/messages",
+            "POST /api/public/order-links/{token}/orders/{orderId:guid}/messages/image",
             "POST /api/public/order-links/{token}/orders/{orderId:guid}/messages/read",
         ]);
     }
@@ -197,6 +206,7 @@ public class RouteTableTests : IDisposable
         // These legitimately need only a login (or none): sign-in flows, own profile, push tokens.
         weak.ShouldBe(
         [
+            "DELETE /api/public/order-links/{token}/orders/{orderId:guid}/messages/{messageId:guid}/image => anonymous",
             "POST /api/auth/change-password => authenticated",
             "POST /api/auth/login => anonymous",
             "POST /api/auth/logout => anonymous",
@@ -204,6 +214,7 @@ public class RouteTableTests : IDisposable
             "POST /api/auth/validate => anonymous",
             "POST /api/public/order-links/{token}/orders => anonymous",
             "POST /api/public/order-links/{token}/orders/{orderId:guid}/messages => anonymous",
+            "POST /api/public/order-links/{token}/orders/{orderId:guid}/messages/image => anonymous",
             "POST /api/public/order-links/{token}/orders/{orderId:guid}/messages/read => anonymous",
             "POST /api/push/subscribe => authenticated",
             "POST /api/push/unsubscribe => authenticated",

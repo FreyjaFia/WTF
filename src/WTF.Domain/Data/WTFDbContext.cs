@@ -167,6 +167,8 @@ public partial class WTFDbContext : DbContext
         {
             entity.HasIndex(e => new { e.ConversationId, e.CreatedAt }, "IX_ConversationMessages_ConversationId_CreatedAt");
 
+            entity.HasIndex(e => new { e.ConversationId, e.CreatedAt }, "IX_ConversationMessages_Images").HasFilter("([ImageKey] IS NOT NULL)");
+
             entity.HasIndex(e => e.ConversationId, "IX_ConversationMessages_UnreadForCustomer").HasFilter("([SenderType]=(1) AND [ReadByCustomerAt] IS NULL)");
 
             entity.HasIndex(e => e.ConversationId, "IX_ConversationMessages_UnreadForStaff").HasFilter("([SenderType]=(0) AND [ReadByStaffAt] IS NULL)");
@@ -174,6 +176,10 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_ConversationMessages_Id");
             entity.Property(e => e.Body).HasMaxLength(1000);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_ConversationMessages_CreatedAt");
+            entity.Property(e => e.ImageContentType)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.ImageKey).HasMaxLength(200);
 
             entity.HasOne(d => d.Conversation).WithMany(p => p.ConversationMessages)
                 .HasForeignKey(d => d.ConversationId)

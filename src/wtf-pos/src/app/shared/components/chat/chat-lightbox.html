@@ -1,0 +1,26 @@
+<dialog
+  #dialog
+  class="fixed inset-0 m-0 h-full max-h-none w-full max-w-none cursor-zoom-out items-center justify-center border-0 bg-transparent p-0 outline-none backdrop:bg-black/90 open:flex"
+  aria-label="Photo"
+  data-chat-zoom
+  (click)="onClick($event)"
+  (cancel)="onCancel($event)"
+  (keydown.escape)="$event.stopPropagation()"
+>
+  <img
+    [src]="src()"
+    alt="Photo sent in the chat"
+    class="max-h-[92dvh] max-w-[94vw] cursor-default rounded-lg object-contain"
+    data-chat-zoom-image
+    (click)="$event.stopPropagation()"
+  />
+  <button
+    type="button"
+    class="app-btn app-btn-overlay absolute top-4 right-4"
+    aria-label="Close photo"
+    data-chat-zoom-close
+    (click)="close(); $event.stopPropagation()"
+  >
+    <app-icon name="icon-close" [class]="'h-5 w-5'" />
+  </button>
+</dialog>

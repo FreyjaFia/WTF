@@ -426,7 +426,7 @@ describe('PublicOrderComponent', () => {
         fixture.detectChanges();
 
         expect(c.tab()).toBe('menu');
-        expect(panel().className).toContain('translate-y-0');
+        expect(panel().className).toContain('translate-x-0');
         expect(service.getOrderConversation).toHaveBeenCalledWith('tok-1', 'o0');
         expect(el().querySelector('[data-chat-title]')!.textContent).toContain('Order #');
       });
@@ -451,7 +451,7 @@ describe('PublicOrderComponent', () => {
 
         expect(c.tab()).toBe('orders');
         expect(el().querySelector('[data-order-details]')).not.toBeNull();
-        expect(panel().className).toContain('translate-y-full');
+        expect(panel().className).toContain('translate-x-full');
       });
 
       it('does nothing for a conversation that is not about an order', () => {
@@ -463,7 +463,7 @@ describe('PublicOrderComponent', () => {
         fixture.detectChanges();
 
         expect(c.tab()).toBe('menu');
-        expect(panel().className).toContain('translate-y-full');
+        expect(panel().className).toContain('translate-x-full');
       });
     });
 
@@ -483,18 +483,18 @@ describe('PublicOrderComponent', () => {
         c.selectTab('orders');
         c.openOrder('o2');
         fixture.detectChanges();
-        expect(panel().className).toContain('translate-y-full');
+        expect(panel().className).toContain('translate-x-full');
 
         (el().querySelector('[data-chat-button]') as HTMLElement).click();
         fixture.detectChanges();
 
-        expect(panel().className).toContain('translate-y-0');
+        expect(panel().className).toContain('translate-x-0');
         expect(service.getOrderConversation).toHaveBeenCalledWith('tok-1', 'o2');
         expect(el().querySelector('[data-chat-title]')!.textContent).toContain('Order #1002');
 
         (el().querySelector('[data-chat-close]') as HTMLElement).click();
         fixture.detectChanges();
-        expect(panel().className).toContain('translate-y-full');
+        expect(panel().className).toContain('translate-x-full');
       });
 
       it('refreshes the badges when the shops replies were read', () => {

@@ -89,6 +89,10 @@ internal static class ConversationStore
                 m.SenderType,
                 m.Body,
                 m.CreatedAt,
+                m.ImageKey,
+                m.ImageWidth,
+                m.ImageHeight,
+                m.ImageRemovedAt,
                 First = m.SenderUser != null ? m.SenderUser.FirstName : null,
                 Last = m.SenderUser != null ? m.SenderUser.LastName : null
             })
@@ -101,7 +105,11 @@ internal static class ConversationStore
                 ConversationRules.SenderName((MessageSender)m.SenderType),
                 m.SenderType != CustomerSender ? StaffName(m.First, m.Last, forCustomer) : null,
                 m.Body,
-                m.CreatedAt))];
+                m.CreatedAt,
+                m.ImageKey != null,
+                m.ImageWidth,
+                m.ImageHeight,
+                m.ImageRemovedAt != null))];
     }
 
     public static ConversationMessageDto ToDto(ConversationMessage message, string? staffFirst, string? staffLast, bool forCustomer) =>
@@ -110,7 +118,39 @@ internal static class ConversationStore
             ConversationRules.SenderName((MessageSender)message.SenderType),
             message.SenderType != CustomerSender ? StaffName(staffFirst, staffLast, forCustomer) : null,
             message.Body,
-            message.CreatedAt);
+            message.CreatedAt,
+            message.ImageKey != null,
+            message.ImageWidth,
+            message.ImageHeight,
+            message.ImageRemovedAt != null);
+
+    /// <summary>The picture of one message of an order's chat, or null when there is none (or it was removed).</summary>
+    public static async Task<ChatImageFile?> ReadImageAsync(
+        WTFDbContext db, IChatImageService chatImages, Guid orderId, Guid messageId, CancellationToken cancellationToken)
+    {
+        var stored = await db.ConversationMessages.AsNoTracking()
+            .Where(m => m.Id == messageId && m.Conversation.OrderId == orderId && m.ImageKey != null)
+            .Select(m => new { m.ImageKey, m.ImageContentType })
+            .FirstOrDefaultAsync(cancellationToken);
+        if (stored == null)
+        {
+            return null;
+        }
+
+        var data = await chatImages.ReadAsync(stored.ImageKey!, cancellationToken);
+        return data == null ? null : new ChatImageFile(data, stored.ImageContentType ?? ChatImageProcessor.StoredContentType);
+    }
+
+    /// <summary>Takes the picture off a message but keeps the message, which then shows "photo removed". The file is deleted by the caller.</summary>
+    public static void ClearImage(ConversationMessage message, DateTime nowUtc)
+    {
+        message.ImageKey = null;
+        message.ImageContentType = null;
+        message.ImageWidth = null;
+        message.ImageHeight = null;
+        message.ImageSizeBytes = null;
+        message.ImageRemovedAt = nowUtc;
+    }
 
     /// <summary>A customer sees a staff member by first name only; staff see each other's full names.</summary>
     private static string? StaffName(string? first, string? last, bool forCustomer) =>
@@ -184,7 +224,7 @@ internal static class ConversationStore
                     && (isCustomerView ? m.ReadByCustomerAt == null : m.ReadByStaffAt == null)),
                 Last = c.ConversationMessages
                     .OrderByDescending(m => m.CreatedAt)
-                    .Select(m => new { m.Body, m.SenderType })
+                    .Select(m => new { m.Body, m.SenderType, HasImage = m.ImageKey != null, Removed = m.ImageRemovedAt != null })
                     .FirstOrDefault()
             })
             .OrderByDescending(x => x.Unread > 0)
@@ -204,7 +244,7 @@ internal static class ConversationStore
                 r.OrderNumber,
                 r.Title,
                 forCustomerId.HasValue ? null : r.CustomerName.Trim(),
-                r.Last == null ? string.Empty : ConversationRules.Preview(r.Last.Body),
+                r.Last == null ? string.Empty : ConversationRules.PreviewOf(r.Last.Body, r.Last.HasImage, r.Last.Removed),
                 r.Last == null ? string.Empty : ConversationRules.SenderName((MessageSender)r.Last.SenderType),
                 r.LastMessageAt,
                 r.Unread))]);

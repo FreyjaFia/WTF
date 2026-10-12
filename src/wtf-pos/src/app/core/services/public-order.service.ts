@@ -78,6 +78,28 @@ export class PublicOrderService {
       );
   }
 
+  /** Sends the shop a picture (and optional text) about one of my orders. */
+  public sendImageMessage(token: string, orderId: string, file: File, body: string): Observable<ConversationMessageDto> {
+    const form = new FormData();
+    form.append('file', file, file.name);
+    form.append('body', body);
+    return this.http
+      .post<ConversationMessageDto>(`${this.url(token)}/orders/${orderId}/messages/image`, form)
+      .pipe(catchError((error) => this.fail(error, ServiceErrorMessages.PublicOrder.SendImageFailed)));
+  }
+
+  /** Takes back a picture I sent. The message stays and shows "photo removed". */
+  public removeMessageImage(token: string, orderId: string, messageId: string): Observable<ConversationMessageDto> {
+    return this.http
+      .delete<ConversationMessageDto>(`${this.url(token)}/orders/${orderId}/messages/${messageId}/image`)
+      .pipe(catchError((error) => this.fail(error, ServiceErrorMessages.PublicOrder.RemoveImageFailed)));
+  }
+
+  /** Where one picture of my chat is served. The link's token is the proof, so a plain image tag can load it. */
+  public messageImageUrl(token: string, orderId: string, messageId: string): string {
+    return `${this.url(token)}/orders/${orderId}/messages/${messageId}/image`;
+  }
+
   /** I read the shop's replies. */
   public markConversationRead(token: string, orderId: string): Observable<void> {
     return this.http

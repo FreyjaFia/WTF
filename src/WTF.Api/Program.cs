@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.RateLimiting;
 using WTF.Api.Common.Auth;
 using WTF.Api.Endpoints;
+using WTF.Api.Features.Conversations;
 using WTF.Api.Features.Images;
 using WTF.Api.Features.Reports;
 using WTF.Api.Hubs;
@@ -59,6 +60,9 @@ builder.Services.AddSingleton<HuaweiAccessTokenProvider>();
 builder.Services.AddHttpClient<IHuaweiPushClient, HuaweiPushClient>();
 builder.Services.AddScoped<IPushNotificationService, PushNotificationService>();
 builder.Services.AddScoped<IConversationNotifier, ConversationNotifier>();
+builder.Services.Configure<ChatImageOptions>(
+    builder.Configuration.GetSection(ChatImageOptions.SectionName));
+builder.Services.AddScoped<IChatImageService, ChatImageService>();
 builder.Services.AddScoped<IMonthlyReportWorkbookService, MonthlyReportWorkbookService>();
 builder.Services.AddHostedService<MonthlyReportWorkbookScheduler>();
 builder.Services.Configure<StaleImageCleanupOptions>(
@@ -70,11 +74,13 @@ if (builder.Environment.IsDevelopment())
 {
     builder.Services.AddScoped<IImageStorage, LocalImageStorage>();
     builder.Services.AddScoped<IReportFileStorage, LocalReportFileStorage>();
+    builder.Services.AddScoped<IChatImageStore, LocalChatImageStore>();
 }
 else
 {
     builder.Services.AddScoped<IImageStorage, AzureBlobImageStorage>();
     builder.Services.AddScoped<IReportFileStorage, AzureBlobReportFileStorage>();
+    builder.Services.AddSingleton<IChatImageStore, AzureBlobChatImageStore>();
 }
 
 var jwtSecretKey = builder.Configuration["Jwt:SecretKey"] ?? throw new InvalidOperationException("JWT SecretKey not configured");
@@ -194,6 +200,17 @@ builder.Services.AddRateLimiter(options =>
             factory: _ => new FixedWindowRateLimiterOptions
             {
                 PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
+
+    // Pictures are tighter again: a handful a minute from one address.
+    options.AddPolicy(PublicOrderLinkEndpoints.ChatImageRateLimitPolicy, context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "local",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0
             }));

@@ -1,5 +1,6 @@
 <div
   class="fixed inset-0 z-50"
+  style="padding-top: max(var(--safe-area-top, 0px), env(safe-area-inset-top)); padding-bottom: max(var(--safe-area-bottom, 0px), env(safe-area-inset-bottom))"
   [class.pointer-events-auto]="isOpen()"
   [class.pointer-events-none]="!isOpen()"
 >
@@ -13,16 +14,14 @@
     role="presentation"
   ></div>
 
-  <!-- A sheet from the bottom on phones, a panel from the right on wide screens -->
+  <!-- The same panel as the shop's: full height, sliding in from the right (the whole screen on a phone) -->
   <section
-    class="fixed inset-x-0 bottom-0 z-50 flex h-[85dvh] transform-gpu flex-col rounded-t-2xl bg-white shadow-xl transition-transform ease-in-out sm:inset-y-0 sm:right-0 sm:left-auto sm:h-full sm:w-full sm:max-w-md sm:rounded-none"
+    class="fixed top-0 right-0 z-50 flex h-full w-full max-w-md transform-gpu flex-col bg-white shadow-xl transition-transform ease-in-out"
     [class.duration-300]="hasTransitions()"
     [class.duration-0]="!hasTransitions()"
-    [class]="
-      isOpen()
-        ? 'translate-y-0 sm:translate-x-0'
-        : 'translate-y-full sm:translate-x-full sm:translate-y-0'
-    "
+    style="padding-top: max(var(--safe-area-top, 0px), env(safe-area-inset-top)); padding-bottom: max(var(--safe-area-bottom, 0px), env(safe-area-inset-bottom))"
+    [class.translate-x-0]="isOpen()"
+    [class.translate-x-full]="!isOpen()"
     role="dialog"
     aria-modal="true"
     [attr.aria-label]="'Chat with the shop, ' + title()"
@@ -69,8 +68,13 @@
         [isSending]="isSending()"
         [error]="error()"
         emptyText="Ask the shop anything about your order."
+        [imageLoader]="imageLoader"
+        [canRemoveImages]="true"
         [(draft)]="draft"
+        [(attachment)]="attachment"
         (sent)="send($event)"
+        (sentImage)="sendImage($event)"
+        (removeImage)="removeImage($event)"
       />
     }
   </section>

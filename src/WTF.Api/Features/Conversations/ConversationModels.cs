@@ -25,7 +25,11 @@ public record ConversationMessageDto(
     string Sender,
     string? SenderName,
     string Body,
-    DateTime CreatedAt
+    DateTime CreatedAt,
+    bool HasImage = false,
+    int? ImageWidth = null,
+    int? ImageHeight = null,
+    bool ImageRemoved = false
 );
 
 /// <summary>
@@ -87,6 +91,29 @@ public static class ConversationRules
         }
 
         return text;
+    }
+
+    /// <summary>The optional text sent with a picture: trimmed, may be empty, never longer than a normal message.</summary>
+    public static string NormalizeCaption(string? body)
+    {
+        var text = (body ?? string.Empty).Replace("\r\n", "\n").Trim();
+        if (text.Length > MaxBodyLength)
+        {
+            throw new InvalidOperationException($"A message cannot be longer than {MaxBodyLength} characters.");
+        }
+
+        return text;
+    }
+
+    /// <summary>The short line for a list or a push: the text, or "Sent a photo" for a picture without text.</summary>
+    public static string PreviewOf(string body, bool hasImage, bool imageRemoved = false, int max = 80)
+    {
+        if (!string.IsNullOrWhiteSpace(body))
+        {
+            return Preview(body, max);
+        }
+
+        return imageRemoved ? "Photo removed" : hasImage ? "Sent a photo" : string.Empty;
     }
 
     /// <summary>Fits a line of text into a message: flattened to one line and cut at the limit.</summary>

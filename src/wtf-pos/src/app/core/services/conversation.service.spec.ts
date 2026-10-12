@@ -44,6 +44,62 @@ describe('ConversationService', () => {
     expect(result.value).toMatchObject({ id: 'm1' });
   });
 
+  it('sends a picture and its text as a form, with the file under "file"', () => {
+    const { service, http } = setupHttpService(ConversationService);
+    const file = new File([new Uint8Array([1, 2, 3])], 'proof.png', { type: 'image/png' });
+    const result = capture(service.sendImageMessage('o1', file, 'Your drink'));
+
+    const req = http.expectOne(`${base}/orders/o1/messages/image`);
+    expect(req.request.method).toBe('POST');
+    const form = req.request.body as FormData;
+    expect((form.get('file') as File).name).toBe('proof.png');
+    expect(form.get('body')).toBe('Your drink');
+    req.flush({ id: 'm2', sender: 'staff', body: 'Your drink', createdAt: '2026-10-13T09:00:00Z', hasImage: true });
+
+    expect(result.value).toMatchObject({ id: 'm2', hasImage: true });
+  });
+
+  it('fetches a picture as a file', () => {
+    const { service, http } = setupHttpService(ConversationService);
+    const result = capture(service.getMessageImage('o1', 'm2'));
+
+    const req = http.expectOne(`${base}/orders/o1/messages/m2/image`);
+    expect(req.request.method).toBe('GET');
+    expect(req.request.responseType).toBe('blob');
+    req.flush(new Blob(['x'], { type: 'image/jpeg' }));
+
+    expect(result.value).toBeInstanceOf(Blob);
+  });
+
+  it('removes a picture', () => {
+    const { service, http } = setupHttpService(ConversationService);
+    const result = capture(service.removeMessageImage('o1', 'm2'));
+
+    const req = http.expectOne(`${base}/orders/o1/messages/m2/image`);
+    expect(req.request.method).toBe('DELETE');
+    req.flush({ id: 'm2', imageRemoved: true });
+
+    expect(result.value).toMatchObject({ imageRemoved: true });
+  });
+
+  it('explains a refused picture with the server words, and falls back otherwise', () => {
+    const { service, http } = setupHttpService(ConversationService);
+    const file = new File(['x'], 'a.png', { type: 'image/png' });
+    const refused = capture(service.sendImageMessage('o1', file, ''));
+    failWith(http.expectOne(`${base}/orders/o1/messages/image`), 400, { message: 'The picture is too big.' });
+    const broken = capture(service.sendImageMessage('o1', file, ''));
+    failWith(http.expectOne(`${base}/orders/o1/messages/image`), 500);
+    const missing = capture(service.getMessageImage('o1', 'm2'));
+    failWith(http.expectOne(`${base}/orders/o1/messages/m2/image`), 500);
+    const notRemoved = capture(service.removeMessageImage('o1', 'm2'));
+    failWith(http.expectOne(`${base}/orders/o1/messages/m2/image`), 500);
+
+    expect(refused.error).toBe('The picture is too big.');
+    expect(broken.error).toBe(msgs.SendImageFailed);
+    expect(missing.error).toBe(msgs.LoadImageFailed);
+    expect(notRemoved.error).toBe(msgs.RemoveImageFailed);
+  });
+
   it('marks a chat read', () => {
     const { service, http } = setupHttpService(ConversationService);
     service.markRead('o1').subscribe();

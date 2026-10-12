@@ -38,6 +38,30 @@ export class ConversationService {
       .pipe(catchError((error) => this.fail(error, ServiceErrorMessages.Conversation.SendFailed)));
   }
 
+  /** A reply with a picture (and optional text). */
+  public sendImageMessage(orderId: string, file: File, body: string): Observable<ConversationMessageDto> {
+    const form = new FormData();
+    form.append('file', file, file.name);
+    form.append('body', body);
+    return this.http
+      .post<ConversationMessageDto>(`${this.baseUrl}/orders/${orderId}/messages/image`, form)
+      .pipe(catchError((error) => this.fail(error, ServiceErrorMessages.Conversation.SendImageFailed)));
+  }
+
+  /** The picture of one message. It needs the staff login, so it is fetched as a file and not linked to. */
+  public getMessageImage(orderId: string, messageId: string): Observable<Blob> {
+    return this.http
+      .get(`${this.baseUrl}/orders/${orderId}/messages/${messageId}/image`, { responseType: 'blob' })
+      .pipe(catchError((error) => this.fail(error, ServiceErrorMessages.Conversation.LoadImageFailed)));
+  }
+
+  /** Removes a message's picture. The message stays, as "photo removed". */
+  public removeMessageImage(orderId: string, messageId: string): Observable<ConversationMessageDto> {
+    return this.http
+      .delete<ConversationMessageDto>(`${this.baseUrl}/orders/${orderId}/messages/${messageId}/image`)
+      .pipe(catchError((error) => this.fail(error, ServiceErrorMessages.Conversation.RemoveImageFailed)));
+  }
+
   /** The customer's messages were read: for every staff member, not only this one. */
   public markRead(orderId: string): Observable<void> {
     return this.http

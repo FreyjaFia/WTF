@@ -1,12 +1,14 @@
 <!-- Messages -->
 <div
   #list
-  class="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4"
+  class="min-h-0 flex-1 overflow-y-auto px-4 py-4"
   role="log"
   aria-live="polite"
   aria-label="Messages"
   data-chat-messages
+  (scroll)="onScroll()"
 >
+  <div #content class="space-y-3">
   @if (isLoading() && messages().length === 0) {
     <div class="flex justify-center py-8">
       <span class="loading loading-spinner loading-md"></span>
@@ -37,14 +39,37 @@
             <span class="mb-0.5 px-1 text-xs font-medium text-gray-500">{{ nameOf(message) }}</span>
           }
           <div
-            class="max-w-[85%] rounded-2xl px-3.5 py-2 text-sm wrap-break-word whitespace-pre-wrap"
+            class="max-w-[85%] space-y-2 rounded-2xl px-3.5 py-2 text-sm wrap-break-word whitespace-pre-wrap"
             [class]="
               isMine(message)
                 ? 'rounded-br-md bg-[#047857] text-white'
                 : 'rounded-bl-md bg-gray-100 text-gray-900'
             "
           >
-            {{ message.body }}
+            @if (message.hasImage && imageLoader(); as loader) {
+              <app-chat-image [message]="message" [loader]="loader" (opened)="zoom($event)" />
+              @if (canRemoveImages() && (viewer() === 'staff' || isMine(message))) {
+                @if (confirmingRemove() === message.id) {
+                  <div class="flex items-center gap-2 text-xs" data-chat-remove-confirm>
+                    <span>Remove this photo?</span>
+                    <button type="button" class="font-semibold underline" data-chat-remove-yes (click)="confirmRemove(message)">
+                      Remove
+                    </button>
+                    <button type="button" class="underline" data-chat-remove-no (click)="confirmingRemove.set(null)">Keep</button>
+                  </div>
+                } @else {
+                  <button type="button" class="text-xs underline opacity-80" data-chat-remove-photo (click)="askRemove(message)">
+                    Remove photo
+                  </button>
+                }
+              }
+            }
+            @if (message.imageRemoved) {
+              <p class="text-xs italic opacity-80" data-chat-photo-removed>Photo removed</p>
+            }
+            @if (message.body) {
+              <p>{{ message.body }}</p>
+            }
           </div>
           <span class="mt-0.5 px-1 text-[10px] text-gray-400">
             {{ message.createdAt | date: 'd MMM, h:mm a' }}
@@ -53,22 +78,61 @@
       }
     }
   }
+  </div>
 </div>
 
 <!-- Writing box, or why there is none -->
 <div class="shrink-0 border-t border-gray-100 bg-white px-3 py-3">
-  @if (error(); as message) {
+  @if (shownError(); as message) {
     <p class="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700" role="alert" data-chat-error>
       {{ message }}
     </p>
   }
 
   @if (canSend()) {
+    @if (previewUrl(); as preview) {
+      <div class="mb-2 flex items-center gap-3 rounded-xl bg-gray-50 p-2" data-chat-attachment>
+        <img [src]="preview" alt="Photo to send" class="h-14 w-14 rounded-lg object-cover" data-chat-attachment-preview />
+        <span class="min-w-0 flex-1 truncate text-xs text-gray-600">{{ attachment()?.name }}</span>
+        <button
+          type="button"
+          class="app-btn app-btn-ghost p-1.5"
+          aria-label="Remove photo"
+          data-chat-attachment-remove
+          [disabled]="isSending()"
+          (click)="removeAttachment()"
+        >
+          <app-icon name="icon-close" [class]="'h-4 w-4'" />
+        </button>
+      </div>
+    }
     <div class="flex items-end gap-2">
+      @if (canAttach()) {
+        <label
+          class="app-btn app-btn-ghost flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center p-0"
+          [class.pointer-events-none]="isSending()"
+          [class.opacity-50]="isSending()"
+          aria-label="Attach a photo"
+        >
+          <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="4" width="18" height="16" rx="2.5" />
+            <circle cx="8.5" cy="9.5" r="1.5" />
+            <path d="m21 16-5-5-9 9" />
+          </svg>
+          <input
+            type="file"
+            class="sr-only"
+            data-chat-file
+            [accept]="accept"
+            [disabled]="isSending()"
+            (change)="onFileChosen($event)"
+          />
+        </label>
+      }
       <textarea
         class="max-h-32 min-h-10 flex-1 resize-none rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm transition-colors focus:border-[#047857] focus:bg-white focus:outline-none"
         rows="1"
-        placeholder="Write a message"
+        [placeholder]="attachment() ? 'Add a caption (optional)' : 'Write a message'"
         aria-label="Write a message"
         data-chat-input
         [maxLength]="maxLength"
@@ -103,3 +167,8 @@
     </p>
   }
 </div>
+
+<!-- A picture shown larger, over the whole screen -->
+@if (zoomed(); as address) {
+  <app-chat-lightbox [src]="address" (closed)="closeZoom()" />
+}

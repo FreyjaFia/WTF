@@ -54,7 +54,7 @@ public sealed class ConversationNotifier(
             if (message.SenderType == (byte)MessageSender.Customer)
             {
                 await push.SendOrderMessageAsync(
-                    order, customerName, ConversationRules.Preview(message.Body), cancellationToken);
+                    order, customerName, ConversationRules.PreviewOf(message.Body, message.ImageKey != null), cancellationToken);
             }
         });
     }

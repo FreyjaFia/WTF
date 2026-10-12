@@ -4,8 +4,9 @@ import { PublicLinkInvalidError, PublicOrderService } from '@core/services/publi
 import { PublicOrderHubService } from '@core/services/public-order-hub.service';
 import { ChatComponent } from '@shared/components/chat/chat';
 import { IconComponent } from '@shared/components/icons/icon/icon';
-import { OrderConversationDto } from '@shared/models';
-import { Subscription } from 'rxjs';
+import { ChatImageLoader } from '@shared/components/chat/chat-image';
+import { ChatImageSend, ConversationMessageDto, OrderConversationDto } from '@shared/models';
+import { Observable, of, Subscription } from 'rxjs';
 
 /**
  * The customer's side of an order's chat: a sheet that rises from the bottom on phones and slides in from the right on
@@ -42,6 +43,11 @@ export class PublicChatComponent implements OnDestroy {
   protected readonly isSending = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly draft = signal('');
+  protected readonly attachment = signal<File | null>(null);
+
+  /** The customer's link is the proof, so a picture is a plain address an image tag can load. */
+  protected readonly imageLoader: ChatImageLoader = (message) =>
+    of(this.service.messageImageUrl(this.token(), this.orderId() ?? '', message.id));
 
   protected readonly hasTransitions = signal(false);
 
@@ -86,6 +92,40 @@ export class PublicChatComponent implements OnDestroy {
   }
 
   protected send(body: string): void {
+    this.submit((id) => this.service.sendMessage(this.token(), id, body));
+  }
+
+  protected sendImage(upload: ChatImageSend): void {
+    this.submit((id) => this.service.sendImageMessage(this.token(), id, upload.file, upload.body));
+  }
+
+  /** Takes back a picture I sent. The message stays and says the photo was removed. */
+  protected removeImage(message: ConversationMessageDto): void {
+    const id = this.orderId();
+    if (!id) {
+      return;
+    }
+
+    this.error.set(null);
+    this.service.removeMessageImage(this.token(), id, message.id).subscribe({
+      next: (updated) =>
+        this.conversation.update((current) =>
+          current ? { ...current, messages: current.messages.map((m) => (m.id === updated.id ? updated : m)) } : current,
+        ),
+      error: (err: Error) => {
+        if (err instanceof PublicLinkInvalidError) {
+          this.linkInvalid.emit();
+          return;
+        }
+
+        this.error.set(err.message);
+        // The chat may have just closed: show it as it is now.
+        this.load(id, true);
+      },
+    });
+  }
+
+  private submit(request: (orderId: string) => Observable<ConversationMessageDto>): void {
     const id = this.orderId();
     if (!id || this.isSending()) {
       return;
@@ -93,7 +133,7 @@ export class PublicChatComponent implements OnDestroy {
 
     this.isSending.set(true);
     this.error.set(null);
-    this.service.sendMessage(this.token(), id, body).subscribe({
+    request(id).subscribe({
       next: (message) => {
         this.conversation.update((current) =>
           current && !current.messages.some((m) => m.id === message.id)
@@ -101,6 +141,7 @@ export class PublicChatComponent implements OnDestroy {
             : current,
         );
         this.draft.set('');
+        this.attachment.set(null);
         this.isSending.set(false);
       },
       error: (err: Error) => {
@@ -121,6 +162,7 @@ export class PublicChatComponent implements OnDestroy {
     this.conversation.set(null);
     this.error.set(null);
     this.draft.set('');
+    this.attachment.set(null);
     this.load(orderId, false);
 
     this.modalStackId ??= this.modalStack.push(() => this.close());

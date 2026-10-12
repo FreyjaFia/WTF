@@ -107,15 +107,16 @@ describe('PublicChatComponent', () => {
       expect(rows()[1].getAttribute('data-mine')).toBe('true');
     });
 
-    it('is a sheet that rises on phones and a panel from the right on wide screens', () => {
+    it('is the same panel as the staff chat: full height, sliding in from the right, on every screen', () => {
       setup();
-      expect(sheet().className).toContain('translate-y-0');
-      expect(sheet().className).toContain('sm:translate-x-0');
+      expect(sheet().className).toContain('translate-x-0');
+      expect(sheet().className).toContain('h-full');
+      expect(sheet().className).not.toContain('translate-y');
+      expect(sheet().className).not.toContain('rounded-t-2xl');
 
       fixture.componentRef.setInput('isOpen', false);
       fixture.detectChanges();
-      expect(sheet().className).toContain('translate-y-full');
-      expect(sheet().className).toContain('sm:translate-x-full');
+      expect(sheet().className).toContain('translate-x-full');
     });
 
     it('titles itself from the order number before the chat has loaded', () => {

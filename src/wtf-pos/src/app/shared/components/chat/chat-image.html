@@ -1,0 +1,25 @@
+<button
+  type="button"
+  class="relative block max-w-full overflow-hidden rounded-xl bg-gray-200"
+  style="width: min(100%, 260px)"
+  [style.aspect-ratio]="ratio()"
+  [disabled]="!src()"
+  aria-label="View photo larger"
+  data-chat-image
+  (click)="open()"
+>
+  @if (src(); as address) {
+    <img [src]="address" alt="Photo sent in the chat" class="h-full w-full object-cover" data-chat-image-loaded />
+  } @else if (failed()) {
+    <span class="absolute inset-0 flex items-center justify-center px-3 text-center text-xs text-gray-500" data-chat-image-failed>
+      The photo could not be loaded.
+    </span>
+  } @else {
+    <span class="absolute inset-0 flex items-center justify-center" data-chat-image-loading>
+      <span class="loading loading-spinner loading-sm text-gray-400"></span>
+    </span>
+  }
+</button>
+@if (failed()) {
+  <button type="button" class="mt-1 text-xs font-medium underline" data-chat-image-retry (click)="retry()">Try again</button>
+}

@@ -67,8 +67,13 @@
         [isSending]="isSending()"
         [error]="error()"
         emptyText="No messages yet. Write the first one."
+        [imageLoader]="imageLoader"
+        [canRemoveImages]="true"
         [(draft)]="draft"
+        [(attachment)]="attachment"
         (sent)="send($event)"
+        (sentImage)="sendImage($event)"
+        (removeImage)="removeImage($event)"
       />
     }
   </section>

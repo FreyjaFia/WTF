@@ -2,8 +2,9 @@ import { Component, effect, inject, input, OnDestroy, output, signal, untracked 
 import { ConversationInboxService, ConversationService, ModalStackService, SignalRService } from '@core/services';
 import { ChatComponent } from '@shared/components/chat/chat';
 import { IconComponent } from '@shared/components/icons/icon/icon';
-import { OrderConversationDto } from '@shared/models';
-import { Subscription } from 'rxjs';
+import { ChatImageLoader } from '@shared/components/chat/chat-image';
+import { ChatImageSend, ConversationMessageDto, OrderConversationDto } from '@shared/models';
+import { Observable, Subscription } from 'rxjs';
 
 /**
  * The staff side of an order's chat, in a panel that slides in from the right. It loads the chat when opened, marks the
@@ -37,6 +38,11 @@ export class OrderChatDrawerComponent implements OnDestroy {
   protected readonly isSending = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly draft = signal('');
+  protected readonly attachment = signal<File | null>(null);
+
+  /** Staff fetch a picture as a file (it needs their login), shown from memory only. */
+  protected readonly imageLoader: ChatImageLoader = (message) =>
+    this.conversations.getMessageImage(this.orderId() ?? '', message.id);
 
   protected readonly hasTransitions = signal(false);
 
@@ -81,6 +87,31 @@ export class OrderChatDrawerComponent implements OnDestroy {
   }
 
   protected send(body: string): void {
+    this.submit((id) => this.conversations.sendMessage(id, body));
+  }
+
+  protected sendImage(upload: ChatImageSend): void {
+    this.submit((id) => this.conversations.sendImageMessage(id, upload.file, upload.body));
+  }
+
+  /** The message stays and says the photo was removed; the picture itself is deleted on the server. */
+  protected removeImage(message: ConversationMessageDto): void {
+    const id = this.orderId();
+    if (!id) {
+      return;
+    }
+
+    this.error.set(null);
+    this.conversations.removeMessageImage(id, message.id).subscribe({
+      next: (updated) =>
+        this.conversation.update((current) =>
+          current ? { ...current, messages: current.messages.map((m) => (m.id === updated.id ? updated : m)) } : current,
+        ),
+      error: (err: Error) => this.error.set(err.message),
+    });
+  }
+
+  private submit(request: (orderId: string) => Observable<ConversationMessageDto>): void {
     const id = this.orderId();
     if (!id || this.isSending()) {
       return;
@@ -88,7 +119,7 @@ export class OrderChatDrawerComponent implements OnDestroy {
 
     this.isSending.set(true);
     this.error.set(null);
-    this.conversations.sendMessage(id, body).subscribe({
+    request(id).subscribe({
       next: (message) => {
         this.conversation.update((current) =>
           current && !current.messages.some((m) => m.id === message.id)
@@ -96,6 +127,7 @@ export class OrderChatDrawerComponent implements OnDestroy {
             : current,
         );
         this.draft.set('');
+        this.attachment.set(null);
         this.isSending.set(false);
       },
       error: (err: Error) => {
@@ -112,6 +144,7 @@ export class OrderChatDrawerComponent implements OnDestroy {
     this.conversation.set(null);
     this.error.set(null);
     this.draft.set('');
+    this.attachment.set(null);
     this.load(orderId, false);
 
     this.modalStackId ??= this.modalStack.push(() => this.close());

@@ -1,4 +1,6 @@
 using MediatR;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using WTF.Api.Features.Conversations;
 using WTF.Api.Features.OrderLinks;
 
@@ -12,6 +14,7 @@ public static class PublicOrderLinkEndpoints
 {
     public const string RateLimitPolicy = "order-link-policy";
     public const string ChatRateLimitPolicy = "order-chat-policy";
+    public const string ChatImageRateLimitPolicy = "order-chat-image-policy";
 
     public static IEndpointRouteBuilder MapPublicOrderLinks(this IEndpointRouteBuilder app)
     {
@@ -81,6 +84,31 @@ public static class PublicOrderLinkEndpoints
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             })
             .RequireRateLimiting(ChatRateLimitPolicy);
+
+        // POST /api/public/order-links/{token}/orders/{orderId}/messages/image - Send the shop a picture (multipart: file, body)
+        group.MapPost("/orders/{orderId:guid}/messages/image",
+            async (string token, Guid orderId, IFormFile file, [FromForm] string? body, ISender sender, IOptions<ChatImageOptions> options) =>
+            {
+                var data = await ChatImageUploads.ReadAsync(file, options.Value);
+                var result = await sender.Send(new SendPublicMessageCommand(token, orderId, body ?? string.Empty, data));
+                return result is not null ? Results.Ok(result) : Results.NotFound();
+            })
+            .RequireRateLimiting(ChatImageRateLimitPolicy)
+            .WithMetadata(new RequestSizeLimitAttribute(ChatImageUploads.RequestLimit))
+            .DisableAntiforgery();
+
+        // GET /api/public/order-links/{token}/orders/{orderId}/messages/{messageId}/image - One picture of my chat
+        group.MapGet("/orders/{orderId:guid}/messages/{messageId:guid}/image",
+            async (string token, Guid orderId, Guid messageId, ISender sender, HttpContext http) =>
+                ChatImageUploads.Serve(http, await sender.Send(new GetPublicMessageImageQuery(token, orderId, messageId))));
+
+        // DELETE /api/public/order-links/{token}/orders/{orderId}/messages/{messageId}/image - Take back a picture I sent
+        group.MapDelete("/orders/{orderId:guid}/messages/{messageId:guid}/image",
+            async (string token, Guid orderId, Guid messageId, ISender sender) =>
+            {
+                var result = await sender.Send(new RemovePublicMessageImageCommand(token, orderId, messageId));
+                return result is not null ? Results.Ok(result) : Results.NotFound();
+            });
 
         // POST /api/public/order-links/{token}/orders/{orderId}/messages/read - I read the shop's replies
         group.MapPost("/orders/{orderId:guid}/messages/read",

@@ -16,7 +16,14 @@ public record GetPublicConversationsQuery(string Token) : IRequest<ConversationL
 public record GetPublicOrderConversationQuery(string Token, Guid OrderId) : IRequest<OrderConversationDto?>;
 
 /// <summary>A customer's message about one of their orders.</summary>
-public record SendPublicMessageCommand(string Token, Guid OrderId, string Body) : IRequest<ConversationMessageDto?>;
+public record SendPublicMessageCommand(string Token, Guid OrderId, string Body, byte[]? Image = null)
+    : IRequest<ConversationMessageDto?>;
+
+/// <summary>One picture from a message of one of the customer's own orders.</summary>
+public record GetPublicMessageImageQuery(string Token, Guid OrderId, Guid MessageId) : IRequest<ChatImageFile?>;
+
+/// <summary>The customer takes back a picture they sent. The message stays and shows "photo removed".</summary>
+public record RemovePublicMessageImageCommand(string Token, Guid OrderId, Guid MessageId) : IRequest<ConversationMessageDto?>;
 
 /// <summary>The customer opened the chat: the shop's replies count as read.</summary>
 public record MarkPublicConversationReadCommand(string Token, Guid OrderId) : IRequest<bool>;
@@ -97,7 +104,8 @@ public class SendPublicMessageHandler(
     WTFDbContext db,
     IAuditService auditService,
     IConversationNotifier notifier,
-    TimeProvider timeProvider) : IRequestHandler<SendPublicMessageCommand, ConversationMessageDto?>
+    TimeProvider timeProvider,
+    IChatImageService? chatImages = null) : IRequestHandler<SendPublicMessageCommand, ConversationMessageDto?>
 {
     public async Task<ConversationMessageDto?> Handle(SendPublicMessageCommand request, CancellationToken cancellationToken)
     {
@@ -113,7 +121,8 @@ public class SendPublicMessageHandler(
             throw new InvalidOperationException(ConversationRules.ClosedOrderMessage);
         }
 
-        var body = ConversationRules.NormalizeBody(request.Body);
+        var hasImage = request.Image != null;
+        var body = hasImage ? ConversationRules.NormalizeCaption(request.Body) : ConversationRules.NormalizeBody(request.Body);
         var now = timeProvider.GetUtcNow().UtcDateTime;
 
         var conversation = await ConversationStore.FindForOrderAsync(db, order.Id, cancellationToken);
@@ -121,6 +130,34 @@ public class SendPublicMessageHandler(
         if (!started)
         {
             await EnsureNotFloodingAsync(conversation!.Id, cancellationToken);
+        }
+
+        // A picture is checked and re-encoded before anything is written. A refusal is explained to the sender, and one
+        // that looks hostile (wrong type, oversized, damaged) is recorded.
+        ProcessedChatImage? processed = null;
+        if (hasImage)
+        {
+            if (chatImages == null)
+            {
+                throw new InvalidOperationException("Pictures are not available right now.");
+            }
+
+            await EnsureUnderDailyImageLimitAsync(access.Customer.Id, now, chatImages.DailyLimitPerCustomer, cancellationToken);
+            try
+            {
+                processed = chatImages.Prepare(request.Image!);
+            }
+            catch (ChatImageException ex) when (ex.Suspicious)
+            {
+                await auditService.LogAsync(
+                    action: AuditAction.ChatImageRejected,
+                    entityType: AuditEntityType.Conversation,
+                    entityId: conversation?.Id.ToString() ?? order.Id.ToString(),
+                    newValues: new { order.OrderNumber, Reason = ex.Message, Bytes = request.Image!.Length, By = "Customer" },
+                    userId: await SystemUserIdAsync(cancellationToken),
+                    cancellationToken: cancellationToken);
+                throw;
+            }
         }
 
         conversation ??= ConversationStore.Start(db, order, now);
@@ -143,7 +180,34 @@ public class SendPublicMessageHandler(
             return null;
         }
 
-        await db.SaveChangesAsync(cancellationToken);
+        // The picture is stored just before the row is saved; if saving fails the file is removed again, so no
+        // file is left without a message.
+        string? storedKey = null;
+        try
+        {
+            if (processed != null)
+            {
+                // The folder name only groups a chat's files; a new chat has no final id until it is saved.
+                var folder = conversation.Id == Guid.Empty ? Guid.NewGuid() : conversation.Id;
+                storedKey = await chatImages!.SaveAsync(folder, processed, cancellationToken);
+                message.ImageKey = storedKey;
+                message.ImageContentType = processed.ContentType;
+                message.ImageWidth = processed.Width;
+                message.ImageHeight = processed.Height;
+                message.ImageSizeBytes = processed.Data.Length;
+            }
+
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch
+        {
+            if (storedKey != null)
+            {
+                await TryDeleteAsync(storedKey);
+            }
+
+            throw;
+        }
 
         if (started)
         {
@@ -167,6 +231,40 @@ public class SendPublicMessageHandler(
             .Where(u => u.Username == SubmitPublicOrderHandler.SystemUsername)
             .Select(u => (Guid?)u.Id)
             .FirstOrDefaultAsync(cancellationToken);
+
+    private async Task TryDeleteAsync(string key)
+    {
+        try
+        {
+            await chatImages!.DeleteAsync(key, CancellationToken.None);
+        }
+        catch
+        {
+            // Best effort: a file that could not be removed here is cleaned up with the chat later.
+        }
+    }
+
+    /// <summary>One customer may send only so many pictures a day, over all their chats.</summary>
+    private async Task EnsureUnderDailyImageLimitAsync(Guid customerId, DateTime now, int limit, CancellationToken cancellationToken)
+    {
+        if (limit <= 0)
+        {
+            return;
+        }
+
+        var since = now.AddDays(-1);
+        var sent = await db.ConversationMessages.CountAsync(
+            m => m.SenderType == (byte)MessageSender.Customer
+                 && (m.ImageKey != null || m.ImageRemovedAt != null)
+                 && m.CreatedAt > since
+                 && m.Conversation.CustomerId == customerId,
+            cancellationToken);
+
+        if (sent >= limit)
+        {
+            throw new InvalidOperationException("You have sent a lot of photos today. Please try again tomorrow.");
+        }
+    }
 
     /// <summary>A customer may send a handful of messages in a row; after that the shop has to answer first.</summary>
     private async Task EnsureNotFloodingAsync(Guid conversationId, CancellationToken cancellationToken)
@@ -215,5 +313,78 @@ public class MarkPublicConversationReadHandler(WTFDbContext db, TimeProvider tim
         }
 
         return true;
+    }
+}
+
+public class GetPublicMessageImageHandler(WTFDbContext db, IChatImageService? chatImages = null)
+    : IRequestHandler<GetPublicMessageImageQuery, ChatImageFile?>
+{
+    public async Task<ChatImageFile?> Handle(GetPublicMessageImageQuery request, CancellationToken cancellationToken)
+    {
+        // Same checks as reading the messages: a working link, and an order that is this customer's.
+        var found = await PublicChatAccess.ResolveAsync(db, request.Token, request.OrderId, false, cancellationToken);
+        if (found == null || chatImages == null)
+        {
+            return null;
+        }
+
+        return await ConversationStore.ReadImageAsync(db, chatImages, found.Value.Order.Id, request.MessageId, cancellationToken);
+    }
+}
+
+public class RemovePublicMessageImageHandler(
+    WTFDbContext db,
+    IAuditService auditService,
+    IConversationNotifier notifier,
+    TimeProvider timeProvider,
+    IChatImageService? chatImages = null) : IRequestHandler<RemovePublicMessageImageCommand, ConversationMessageDto?>
+{
+    public async Task<ConversationMessageDto?> Handle(RemovePublicMessageImageCommand request, CancellationToken cancellationToken)
+    {
+        var found = await PublicChatAccess.ResolveAsync(db, request.Token, request.OrderId, false, cancellationToken);
+        if (found == null || chatImages == null)
+        {
+            return null;
+        }
+
+        var order = found.Value.Order;
+
+        // Only the customer's own pictures, and only while the chat is open (a finished order's chat is history).
+        var message = await db.ConversationMessages
+            .Include(m => m.Conversation)
+            .FirstOrDefaultAsync(
+                m => m.Id == request.MessageId
+                     && m.Conversation.OrderId == order.Id
+                     && m.SenderType == (byte)MessageSender.Customer
+                     && m.ImageKey != null,
+                cancellationToken);
+        if (message == null)
+        {
+            return null;
+        }
+
+        if (!ConversationRules.IsChatOpen(order))
+        {
+            throw new InvalidOperationException(ConversationRules.ClosedOrderMessage);
+        }
+
+        // The file goes first, then the row, so a failed delete can simply be tried again.
+        await chatImages.DeleteAsync(message.ImageKey!, cancellationToken);
+        ConversationStore.ClearImage(message, timeProvider.GetUtcNow().UtcDateTime);
+        await db.SaveChangesAsync(cancellationToken);
+
+        await auditService.LogAsync(
+            action: AuditAction.ChatImageRemoved,
+            entityType: AuditEntityType.Conversation,
+            entityId: message.ConversationId.ToString(),
+            newValues: new { order.OrderNumber, MessageId = message.Id, By = "Customer" },
+            userId: await db.Users.AsNoTracking()
+                .Where(u => u.Username == SubmitPublicOrderHandler.SystemUsername)
+                .Select(u => (Guid?)u.Id)
+                .FirstOrDefaultAsync(cancellationToken),
+            cancellationToken: cancellationToken);
+
+        await notifier.OrderChangedAsync(order, message.Conversation, cancellationToken);
+        return ConversationStore.ToDto(message, null, null, forCustomer: true);
     }
 }

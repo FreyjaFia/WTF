@@ -47,6 +47,8 @@ export const ServiceErrorMessages = {
     PlaceOrderFailed: 'Failed to place your order. Please try again.',
     ChatFailed: 'Failed to load the chat. Please try again.',
     SendMessageFailed: 'Failed to send your message. Please try again.',
+    SendImageFailed: 'Failed to send your photo. Please try again.',
+    RemoveImageFailed: 'Failed to remove your photo. Please try again.',
   },
   Conversation: {
     LoadListFailed: 'Failed to load messages. Please try again later.',
@@ -54,6 +56,9 @@ export const ServiceErrorMessages = {
     SendFailed: 'Failed to send the message. Please try again later.',
     MarkReadFailed: 'Failed to mark the chat as read.',
     OrderNotFound: 'Order not found.',
+    SendImageFailed: 'Failed to send the photo. Please try again later.',
+    LoadImageFailed: 'The photo could not be loaded.',
+    RemoveImageFailed: 'Failed to remove the photo. Please try again later.',
   },
   OrderLink: {
     FetchLinksFailed: 'Failed to fetch ordering links. Please try again later.',

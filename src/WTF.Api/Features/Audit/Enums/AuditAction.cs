@@ -34,5 +34,7 @@ public enum AuditAction
     OrderApproved,
     OrderRejected,
     OrderMarkedReady,
-    ConversationStarted
+    ConversationStarted,
+    ChatImageRejected,
+    ChatImageRemoved
 }

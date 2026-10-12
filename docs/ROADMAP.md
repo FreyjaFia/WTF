@@ -1797,12 +1797,38 @@ failed delete, a removed product or promotion), and the chat images below once t
 
 ---
 
-## Chat Images and Message Expiry [Planned]
+## Chat Images and Message Expiry [Chat images completed, message expiry planned]
 
 Builds on the order chat (Customer Ordering Links, phase 5). Two parts: send pictures in the chat, and delete old
 messages automatically.
 
-### Images in chat
+### Images in chat [Completed]
+
+**Implemented** (message expiry below is still planned). Differences from the plan:
+
+- **Private container, not the `Images` table.** Pictures live in their own private container (`ChatImages:Container`,
+  default `wtf-chat-images`, created with no public access; locally `App_Data/chat-images`). They are columns on
+  `ConversationMessages` (`ImageKey`, `ImageContentType`, `ImageWidth`, `ImageHeight`, `ImageSizeBytes`,
+  `ImageRemovedAt`), script `tools/sql/20261013_add_conversation_message_images.sql`. Because they are not in
+  `Images`, Stale Image Cleanup never sees them; **message expiry must delete the blob with the message** (`ImageKey`).
+- **Image library: SkiaSharp** (MIT, no key). ImageSharp 4 fails a Release build without a paid Six Labors licence key,
+  and ImageSharp 3.1.12 has known high-severity decoder vulnerabilities, so neither is used. Every upload is decoded and
+  written out again as a JPEG (no metadata), turned upright from its orientation tag, shrunk to 1600 px if larger, never
+  scaled up, and flattened onto white. The type comes from the first bytes; the pixel size is read from the header before
+  decoding.
+- **Endpoints.** Staff: `POST /api/orders/{id}/messages/image`, `GET` and `DELETE /api/orders/{id}/messages/{messageId}/image`.
+  Customer: `POST .../orders/{orderId}/messages/image` and `GET .../messages/{messageId}/image` under the link. Pictures
+  are sent as `multipart/form-data` (`file`, `body`); served with our own type, `nosniff`, `inline`, private 60 s cache.
+- **Limits.** 5 MB, 4096 px per side, 5 pictures a minute per address (`order-chat-image-policy`), 30 a day per customer
+  (`ChatImages:DailyLimitPerCustomer`, counted from the database), and pictures count toward the ten messages before the
+  shop replies. Refused uploads that look hostile are written to the audit log (`ChatImageRejected`); staff removal is
+  `ChatImageRemoved`.
+- **UI.** Attach button, preview with Remove, caption, client checks (type, 5 MB), spinner while sending, tap to enlarge,
+  pictures load only when scrolled into view and are never stored on the device. Staff fetch a picture as a file with
+  their login (the customer's link token is the proof for the customer). Staff can remove a picture after a confirm.
+- Push text for a picture without text is "Sent a photo"; lists show "Sent a photo" or "Photo removed".
+
+Original plan:
 
 Use case: a customer sends a GCash payment screenshot or a photo of what they want; staff send a product photo. Both
 sides can send, and the customer is anonymous, so everything is enforced on the server.
