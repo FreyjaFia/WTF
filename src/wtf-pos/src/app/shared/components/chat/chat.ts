@@ -36,6 +36,8 @@ export class ChatComponent {
   public readonly isSending = input(false);
   public readonly error = input<string | null>(null);
   public readonly emptyText = input('No messages yet.');
+  /** How long messages are kept, to tell the reader. Nothing is shown when it is empty. */
+  public readonly retentionDays = input<number | null>(null);
 
   /** How a message's picture is fetched. Without it the chat cannot show or send pictures. */
   public readonly imageLoader = input<ChatImageLoader | null>(null);
@@ -62,10 +64,10 @@ export class ChatComponent {
   private shownCount = 0;
   private frame = 0;
 
-  protected readonly fileError = signal<string | null>(null);
-  protected readonly previewUrl = signal<string | null>(null);
   /** False until the list has been put at the newest message, so the first draw is never seen jumping down from the top. */
   protected readonly positioned = signal(false);
+  protected readonly fileError = signal<string | null>(null);
+  protected readonly previewUrl = signal<string | null>(null);
   /** The picture shown larger. */
   protected readonly zoomed = signal<string | null>(null);
   /** The message whose "remove photo" is waiting for a second tap. */
@@ -91,15 +93,15 @@ export class ChatComponent {
         this.stickToBottom = true;
       }
 
-      this.shownCount = messages.length;
-      if (messages.length === 0) {
-        this.positioned.set(true);
-      } else if (this.list() && (this.stickToBottom || !this.positioned())) {
       // The first messages to arrive are put at the bottom while hidden, even if an empty list was already showing.
       if (this.shownCount === 0 && messages.length > 0) {
         this.positioned.set(false);
       }
 
+      this.shownCount = messages.length;
+      if (messages.length === 0) {
+        this.positioned.set(true);
+      } else if (this.list() && (this.stickToBottom || !this.positioned())) {
         this.scrollToBottom();
       }
     });

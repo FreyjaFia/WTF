@@ -69,6 +69,10 @@ builder.Services.Configure<StaleImageCleanupOptions>(
     builder.Configuration.GetSection(StaleImageCleanupOptions.SectionName));
 builder.Services.AddScoped<IStaleImageCleanupService, StaleImageCleanupService>();
 builder.Services.AddHostedService<StaleImageCleanupScheduler>();
+builder.Services.Configure<ChatRetentionOptions>(
+    builder.Configuration.GetSection(ChatRetentionOptions.SectionName));
+builder.Services.AddScoped<IChatMessageExpiryService, ChatMessageExpiryService>();
+builder.Services.AddHostedService<ChatMessageExpiryScheduler>();
 
 if (builder.Environment.IsDevelopment())
 {

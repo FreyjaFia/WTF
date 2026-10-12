@@ -44,7 +44,9 @@ public record OrderConversationDto(
     bool CanSend,
     string? ClosedReason,
     int UnreadCount,
-    List<ConversationMessageDto> Messages
+    List<ConversationMessageDto> Messages,
+    /// <summary>Messages are deleted this many days after they are sent, once the order is finished. Null when they are kept.</summary>
+    int? RetentionDays = null
 );
 
 /// <summary>One row of the envelope list: who it is with, the last message and how many are unread.</summary>

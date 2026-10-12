@@ -59,6 +59,7 @@
         viewer="staff"
         [messages]="contentReady() ? (conversation()?.messages ?? []) : []"
         [customerLabel]="customerName()"
+        [retentionDays]="conversation()?.retentionDays ?? null"
         [canSend]="conversation() ? conversation()!.canSend : true"
         [closedReason]="conversation()?.closedReason ?? null"
         [isLoading]="isLoading() || !contentReady()"

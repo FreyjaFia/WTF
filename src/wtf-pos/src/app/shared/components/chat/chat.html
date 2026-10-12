@@ -85,6 +85,12 @@
 
 <!-- Writing box, or why there is none -->
 <div class="shrink-0 border-t border-gray-100 bg-white px-3 py-3">
+  @if (retentionDays(); as days) {
+    <p class="mb-2 text-center text-[11px] text-gray-400" data-chat-retention>
+      Messages are deleted after {{ days }} days once the order is finished.
+    </p>
+  }
+
   @if (shownError(); as message) {
     <p class="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700" role="alert" data-chat-error>
       {{ message }}

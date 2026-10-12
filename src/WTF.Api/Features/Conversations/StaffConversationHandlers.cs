@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.Extensions.Options;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Features.Audit.Enums;
@@ -32,7 +33,7 @@ public class GetConversationsHandler(WTFDbContext db) : IRequestHandler<GetConve
         ConversationStore.ListAsync(db, null, cancellationToken);
 }
 
-public class GetOrderConversationHandler(WTFDbContext db)
+public class GetOrderConversationHandler(WTFDbContext db, IOptions<ChatRetentionOptions>? retention = null)
     : IRequestHandler<GetOrderConversationQuery, OrderConversationDto?>
 {
     public async Task<OrderConversationDto?> Handle(GetOrderConversationQuery request, CancellationToken cancellationToken)
@@ -50,7 +51,7 @@ public class GetOrderConversationHandler(WTFDbContext db)
         {
             return new OrderConversationDto(
                 null, order.Id, order.OrderNumber, ConversationRules.OrderTitle(order.OrderNumber),
-                ConversationRules.IsChatOpen(order), ConversationRules.ClosedReason(order), 0, []);
+                ConversationRules.IsChatOpen(order), ConversationRules.ClosedReason(order), 0, [], retention?.Value.DaysToShow);
         }
 
         return new OrderConversationDto(
@@ -61,7 +62,8 @@ public class GetOrderConversationHandler(WTFDbContext db)
             ConversationRules.IsChatOpen(order),
             ConversationRules.ClosedReason(order),
             await ConversationStore.UnreadForStaffAsync(db, conversation.Id, cancellationToken),
-            await ConversationStore.LoadMessagesAsync(db, conversation.Id, false, cancellationToken));
+            await ConversationStore.LoadMessagesAsync(db, conversation.Id, false, cancellationToken),
+            retention?.Value.DaysToShow);
     }
 }
 

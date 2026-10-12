@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.Extensions.Options;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.OrderLinks;
@@ -65,7 +66,7 @@ public class GetPublicConversationsHandler(WTFDbContext db)
     }
 }
 
-public class GetPublicOrderConversationHandler(WTFDbContext db)
+public class GetPublicOrderConversationHandler(WTFDbContext db, IOptions<ChatRetentionOptions>? retention = null)
     : IRequestHandler<GetPublicOrderConversationQuery, OrderConversationDto?>
 {
     public async Task<OrderConversationDto?> Handle(
@@ -85,7 +86,7 @@ public class GetPublicOrderConversationHandler(WTFDbContext db)
         {
             return new OrderConversationDto(
                 null, order.Id, order.OrderNumber, ConversationRules.OrderTitle(order.OrderNumber),
-                ConversationRules.IsChatOpen(order), ConversationRules.ClosedReason(order), 0, []);
+                ConversationRules.IsChatOpen(order), ConversationRules.ClosedReason(order), 0, [], retention?.Value.DaysToShow);
         }
 
         return new OrderConversationDto(
@@ -96,7 +97,8 @@ public class GetPublicOrderConversationHandler(WTFDbContext db)
             ConversationRules.IsChatOpen(order),
             ConversationRules.ClosedReason(order),
             await ConversationStore.UnreadForCustomerAsync(db, conversation.Id, cancellationToken),
-            await ConversationStore.LoadMessagesAsync(db, conversation.Id, true, cancellationToken));
+            await ConversationStore.LoadMessagesAsync(db, conversation.Id, true, cancellationToken),
+            retention?.Value.DaysToShow);
     }
 }
 

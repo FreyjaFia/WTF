@@ -28,6 +28,8 @@ export interface OrderConversationDto {
   closedReason?: string | null;
   unreadCount: number;
   messages: ConversationMessageDto[];
+  /** Messages are deleted this many days after they are sent, once the order is finished. Missing when they are kept. */
+  retentionDays?: number | null;
 }
 
 /** One row of the envelope list. */

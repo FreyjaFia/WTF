@@ -1945,7 +1945,7 @@ failed delete, a removed product or promotion), and the chat images below once t
 
 ---
 
-## Chat Images and Message Expiry [Chat images completed, message expiry planned]
+## Chat Images and Message Expiry [Completed]
 
 Builds on the order chat (Customer Ordering Links, phase 5). Two parts: send pictures in the chat, and delete old
 messages automatically.
@@ -2019,7 +2019,27 @@ sides can send, and the customer is anonymous, so everything is enforced on the 
   executable, metadata gone after re-encode, rate limit, read-only conversation, another customer's order is 404, revoked
   link is 404, viewer role cannot send, response headers; front end: attach, preview, remove, error messages.
 
-### Automatic message expiry
+### Automatic message expiry [Completed]
+
+**Implemented** (`ChatMessageExpiryService` and `ChatMessageExpiryScheduler` in `Features/Conversations`), settings under
+`ChatRetention`. Differences from the plan below:
+
+- **Same cold-start handling as the image cleanup.** Both daily jobs now share `DailyCatchUpScheduler`: a pass on startup
+  and at least every 30 minutes asks "past the run time and not run today?" using the last run saved in report storage
+  (`system/chat-message-expiry.json`), so a sleeping app catches up when it wakes. Run time is 03:00 Manila.
+- **Rule.** A message goes `MessageDays` (default 90, `0` = keep for ever) after it was sent, but only when its order is
+  Completed, Cancelled or Refunded (a chat with no order expires by age). Open orders (waiting or accepted) keep their chat.
+  System lines ("Order accepted") expire with the rest. Orders are never changed.
+- **Pictures.** The picture file is deleted first, then the message, in batches of `BatchSize` (500). A picture that cannot
+  be deleted leaves its message for the next run; the rest of the run goes on. A conversation left empty is deleted too.
+- **Safety.** `DryRun` (on in `appsettings.json`), `MaxDeletesPerRun` (5000), no audit entry (a background job has no
+  user; each run is logged and saved as JSON), nothing at all when `MessageDays` is `0` or `Enabled` is false.
+- **People are told.** `OrderConversationDto.retentionDays` drives a line in both chats: "Messages are deleted after N days
+  once the order is finished."
+- **Not built:** a live push so an open envelope drops expired chats at once; they disappear on the next refresh or open.
+- Tests include a real SQL Server one (`ChatMessageExpiryDatabaseTests`).
+
+Original plan:
 
 - **Setting.** `ChatRetention:MessageDays` (default 90, `0` = keep forever), counted from each message's `CreatedAt`.
   A setting, not hard-coded; a change applies at the next run.

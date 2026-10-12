@@ -60,6 +60,7 @@
         viewer="customer"
         customerLabel="You"
         [messages]="contentReady() ? (conversation()?.messages ?? []) : []"
+        [retentionDays]="conversation()?.retentionDays ?? null"
         [canSend]="conversation() ? conversation()!.canSend : true"
         [closedReason]="conversation()?.closedReason ?? null"
         [isLoading]="isLoading() || !contentReady()"
