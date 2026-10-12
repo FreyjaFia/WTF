@@ -227,16 +227,140 @@ Remaining:
   available from the item editor).
 - Expose stock movement history and adjustment/correction workflows in the UI.
 - Review report/dashboard inventory impacts after real usage data exists.
-- Re-introduce order-time stock handling, currently removed: deduct linked
-  stock when an order becomes Completed (on create and on update), restore it
-  when a completed order is voided, and decide whether insufficient stock
-  should block completion. Record the product (and order line) on each
-  sale deduction movement so per-product ingredient/cup usage reports stay
-  accurate after link edits.
+- Re-introduce order-time stock handling, currently removed. Detailed plan
+  below.
 - Remaining hard deletes (decision pending): promotion child rows (rules and
   bundle items are deleted and recreated on every promotion save), order lines
   (deleted and rebuilt when an order is edited), and replaced or removed images
   (the stored file and image rows are deleted).
+
+#### Order-Time Stock Deduction (detailed plan)
+
+This is the largest unfinished piece of Phase 1. Phases 2 (pack/box selling)
+and 3 (consumables) build on it, so it should land first and stay generic.
+
+**Current state**
+
+- `Item.CurrentQuantity` is changed only by `AddItemStockHandler`, which
+  writes an `AddStock` row to `StockMovements` (delta, before, after, optional
+  unit cost, notes, user).
+- `ProductItemLink` (`ProductId`, `ItemId`, `QuantityPerSale`, `IsActive`)
+  already exists and is editable from the item editor. Nothing reads it when
+  an order is placed, so no stock is ever deducted.
+- `StockMovement` has only a generic `ReferenceType`/`ReferenceId` pair, so it
+  cannot say which product or order line caused a deduction.
+
+**When stock is deducted**
+
+- Deduct once, at the moment an order first becomes `Completed`:
+  - `CreateOrderHandler` / `CreateOrderBatchHandler` when the order is created
+    as Completed (POS walk-in sale).
+  - `UpdateOrderHandler` when an order moves from Pending to Completed.
+- Do not deduct for `PendingApproval`, `Pending`, or `Cancelled` orders.
+  Reserving stock for pending orders is out of scope for now.
+- Accepting an online order (`ApproveOrderCommand`, PendingApproval to
+  Pending) does not touch stock.
+
+**How the quantity is calculated**
+
+- For each order line (including add-on child lines, `ParentOrderItemId`),
+  take the product's active `ProductItemLink` rows and deduct
+  `QuantityPerSale x OrderItem.Quantity` from each linked item.
+- Sum the required quantity per item across all lines first, then check and
+  deduct once per item. This keeps the stock check correct when the same item
+  is used by several lines (and later by pack/box products in Phase 2).
+- Ignore inactive links and inactive items. Unlinked products deduct nothing.
+- Size cups stay linked to the Size add-on, not the base product, to avoid
+  double deduction (see Phase 3).
+
+**Voiding and editing**
+
+- `VoidOrderHandler`: a Completed order voided to Refunded restores the stock
+  that order deducted. A Pending order voided to Cancelled never deducted
+  anything, so it restores nothing.
+- Restore from the original deduction movements, not by re-reading the
+  product links, so link edits made after the sale do not change what is put
+  back. Write the restore as new movement rows (positive delta), never by
+  editing or deleting the old ones.
+- Order edit on a Completed order (override flow in `UpdateOrderHandler`):
+  reverse the old deduction and apply the new one in the same transaction,
+  as a net difference per item where possible. Order lines are deleted and
+  rebuilt on edit, so movements must not depend on `OrderItem` foreign keys
+  that disappear (see schema below).
+- Make deduction and restore idempotent: if a Completed order already has
+  sale movements, saving it again must not deduct twice.
+
+**Schema changes** (new script under `tools/sql/`, run before deploying the API)
+
+- Add nullable `ProductId` (and a nullable order line id snapshot, stored
+  without a hard foreign key because lines are rebuilt on edit) to
+  `StockMovements`, so per-product ingredient and cup usage reports stay
+  accurate after link edits.
+- Set `ReferenceType = "Order"` and `ReferenceId = order.Id` on every sale and
+  restore movement, with movement types `Sale` and `SaleVoid`.
+- Add an index on `(ReferenceType, ReferenceId)` so voids can find an order's
+  movements quickly.
+- Add a concurrency token (rowversion) on `Items`, or use an atomic
+  `UPDATE ... SET CurrentQuantity = CurrentQuantity - @q`, so two registers
+  completing orders at the same time cannot overwrite each other.
+
+**Transaction boundary**
+
+- Deduction runs inside the same database transaction as the order save
+  (`CreateOrderHandler` already opens one; `UpdateOrderHandler` and
+  `VoidOrderHandler` need one). Order and stock succeed or fail together.
+- Put the logic in one shared service (for example `IOrderStockService` with
+  `DeductForOrder` and `RestoreForOrder`) called by every handler, instead of
+  repeating it in each, matching how discounted-product pricing was merged
+  into one shared class.
+
+**Decision needed: should low stock block completion?**
+
+- Option A, never block: stock may go negative, a warning is shown, and the
+  shop is never stopped at the counter. Simple, and safe while stock counts
+  are still being set up.
+- Option B, always block: reject completion when any linked item would go
+  below zero. Accurate, but a wrong or stale count stops sales.
+- Option C, configurable per item (recommended): add an `AllowNegativeStock`
+  flag on `Item`, default true during rollout. Items that must be exact can
+  opt in to blocking. Blocking returns a clear error naming the item and the
+  shortfall.
+- Whatever is chosen, record the quantity before and after on each movement
+  so negative balances are visible in history and can be corrected with an
+  adjustment.
+
+**UI and API surface**
+
+- POS: show the stock error (or warning) in the completion flow. Low-stock
+  badges can wait for Phase 4.
+- Order details: list the stock movements an order caused.
+- Item details: movement history shows `Sale` and `SaleVoid` rows with the
+  order number as a link.
+- Audit log: add an audit action for order stock deduction and restore, or
+  include the stock changes in the existing order audit entries.
+
+**Tests**
+
+- Create as Completed deducts; create as Pending does not.
+- Pending to Completed deducts once; saving a Completed order again does not
+  deduct twice.
+- Void Completed restores the original quantities even after the product link
+  quantity was changed; void Pending restores nothing.
+- Add-on child lines and multiple lines sharing one item sum correctly.
+- Inactive links and untracked products are ignored.
+- Blocking behaviour for the chosen option, including the transaction rolling
+  back the order when stock is insufficient.
+- Concurrent completions on the same item do not lose updates.
+- Editing a Completed order applies only the net difference.
+
+**Rollout order**
+
+1. Schema script and the shared stock service with unit tests, not yet wired.
+2. Wire into create and update, behind the non-blocking default.
+3. Wire into void, then the movement history UI.
+4. Enable per-item blocking once real stock counts exist.
+5. Phases 2 and 3 then add pack/box deduct quantities and consumables on top
+   of the same service and ledger.
 
 ### Phase 2 - Pack, Box, and Shared Stock Selling [Planned]
 
