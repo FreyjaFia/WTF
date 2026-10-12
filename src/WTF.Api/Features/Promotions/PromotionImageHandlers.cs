@@ -30,25 +30,17 @@ public sealed class UploadPromotionImageHandler(
             return null;
         }
 
-        var allowed = new[] { ".jpg", ".jpeg", ".png", ".webp" };
-        var extension = Path.GetExtension(request.FileName)?.ToLowerInvariant() ?? string.Empty;
-        if (!allowed.Contains(extension))
-        {
-            return null;
-        }
-
-        if (request.ImageData is null || request.ImageData.Length == 0 || request.ImageData.Length > 5 * 1024 * 1024)
-        {
-            return null;
-        }
+        // The real type, size and pixels are checked, and the picture is cleaned and written out again (the same rules for
+        // every upload, in ImageUploads). A refusal is explained to the sender as a 400.
+        var processed = ImageUploads.Prepare(request.ImageData);
 
         var promoNameSlug = promo.Name
             .ToLowerInvariant()
             .Replace(" ", "_")
             .Replace("-", "_");
 
-        var fileName = $"{promoNameSlug}_{Guid.NewGuid():N}{extension}";
-        var imageUrl = await imageStorage.SaveAsync("promotions", fileName, request.ImageData, cancellationToken);
+        var fileName = $"{promoNameSlug}_{Guid.NewGuid():N}{processed.Extension}";
+        var imageUrl = await imageStorage.SaveAsync("promotions", fileName, processed.Data, cancellationToken);
 
         if (promo.PromotionImage?.Image is not null)
         {

@@ -13,7 +13,7 @@ public class PromotionImageHandlersTests
     private readonly Guid _userId = Guid.NewGuid();
     private readonly string _dbName = TestDb.NewName();
     private readonly IImageStorage _storage = Substitute.For<IImageStorage>();
-    private readonly byte[] _png = [1, 2, 3];
+    private readonly byte[] _png = TestImages.Png();
 
     public PromotionImageHandlersTests()
     {
@@ -50,7 +50,7 @@ public class PromotionImageHandlersTests
         dto.PromotionId.ShouldBe(id);
         dto.ImageUrl.ShouldNotBeNull().ShouldContain("/uploads/promotions/summer_sale_deal_");
         dto.ImageUrl.ShouldEndWith(".png");
-        await _storage.Received(1).SaveAsync("promotions", Arg.Is<string>(n => n.StartsWith("summer_sale_deal_") && n.EndsWith(".png")), _png, Arg.Any<CancellationToken>());
+        await _storage.Received(1).SaveAsync("promotions", Arg.Is<string>(n => n.StartsWith("summer_sale_deal_") && n.EndsWith(".png")), Arg.Any<byte[]>(), Arg.Any<CancellationToken>());
         await using var db = TestDb.Create(_dbName);
         (await db.Images.CountAsync()).ShouldBe(1);
         (await db.PromotionImages.SingleAsync()).PromotionId.ShouldBe(id);
@@ -86,46 +86,72 @@ public class PromotionImageHandlersTests
     [InlineData("a.gif")]
     [InlineData("a.exe")]
     [InlineData("noextension")]
-    public async Task Upload_DisallowedExtension_ReturnsNullAndStoresNothing(string fileName)
+    public async Task Upload_FileNameIsIgnored_TheRealTypeNamesTheStoredFile(string fileName)
     {
         var id = await SeedPromotionAsync();
 
-        var dto = await Upload().Handle(new UploadPromotionImageCommand(id, _png, fileName), CancellationToken.None);
+        var result = await Upload().Handle(new UploadPromotionImageCommand(id, _png, fileName), CancellationToken.None);
 
-        dto.ShouldBeNull();
-        await _storage.DidNotReceiveWithAnyArgs().SaveAsync(default!, default!, default!, default);
-    }
-
-    [Theory]
-    [InlineData("a.jpg")]
-    [InlineData("a.jpeg")]
-    [InlineData("a.webp")]
-    public async Task Upload_AllowedExtensions_Succeed(string fileName)
-    {
-        var id = await SeedPromotionAsync();
-
-        var dto = await Upload().Handle(new UploadPromotionImageCommand(id, _png, fileName), CancellationToken.None);
-
-        dto.ShouldNotBeNull();
+        result.ShouldNotBeNull();
+        await _storage.Received(1).SaveAsync("promotions", Arg.Is<string>(n => n.EndsWith(".png")), Arg.Any<byte[]>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task Upload_EmptyData_ReturnsNull()
+    public async Task Upload_AScriptNamedLikeAPicture_IsRefusedWithAMessage_AndStoresNothing()
     {
         var id = await SeedPromotionAsync();
 
-        (await Upload().Handle(new UploadPromotionImageCommand(id, [], "a.png"), CancellationToken.None)).ShouldBeNull();
+        var error = await Should.ThrowAsync<ImageRejectedException>(() =>
+            Upload().Handle(new UploadPromotionImageCommand(id, TestImages.Script(), "a.png"), CancellationToken.None));
+
+        error.Message.ShouldBe(ImageSanitizer.NotAnImageMessage);
+        await _storage.DidNotReceiveWithAnyArgs().SaveAsync(default!, default!, default!, default);
     }
 
     [Fact]
-    public async Task Upload_FileOverFiveMegabytes_ReturnsNull()
+    public async Task Upload_EmptyData_IsRefused()
     {
         var id = await SeedPromotionAsync();
 
-        var dto = await Upload().Handle(new UploadPromotionImageCommand(id, new byte[5 * 1024 * 1024 + 1], "a.png"), CancellationToken.None);
-
-        dto.ShouldBeNull();
+        await Should.ThrowAsync<ImageRejectedException>(() =>
+            Upload().Handle(new UploadPromotionImageCommand(id, [], "a.png"), CancellationToken.None));
         await _storage.DidNotReceiveWithAnyArgs().SaveAsync(default!, default!, default!, default);
+    }
+
+    [Fact]
+    public async Task Upload_OverFiveMegabytes_IsRefusedAsTooBig()
+    {
+        var id = await SeedPromotionAsync();
+
+        var error = await Should.ThrowAsync<ImageRejectedException>(() =>
+            Upload().Handle(new UploadPromotionImageCommand(id, TestImages.OverTheLimit(), "a.png"), CancellationToken.None));
+
+        error.Message.ShouldContain("too big");
+        await _storage.DidNotReceiveWithAnyArgs().SaveAsync(default!, default!, default!, default);
+    }
+
+    [Fact]
+    public async Task Upload_AJpegAndAWebpKeepTheirOwnType_AndAPngKeepsItsTransparency()
+    {
+        var id = await SeedPromotionAsync();
+
+        await Upload().Handle(new UploadPromotionImageCommand(id, TestImages.Jpeg(), "x.png"), CancellationToken.None);
+        await Upload().Handle(new UploadPromotionImageCommand(id, TestImages.Webp(), "x.jpg"), CancellationToken.None);
+        await Upload().Handle(new UploadPromotionImageCommand(id, TestImages.Png(8, 8, SkiaSharp.SKColors.Transparent), "x.webp"), CancellationToken.None);
+
+        await _storage.Received(1).SaveAsync("promotions", Arg.Is<string>(n => n.EndsWith(".jpg")), Arg.Any<byte[]>(), Arg.Any<CancellationToken>());
+        await _storage.Received(1).SaveAsync("promotions", Arg.Is<string>(n => n.EndsWith(".webp")), Arg.Any<byte[]>(), Arg.Any<CancellationToken>());
+        await _storage.Received(1).SaveAsync(
+            "promotions",
+            Arg.Is<string>(n => n.EndsWith(".png")),
+            Arg.Is<byte[]>(d => TestImages.FormatOf(d) == SkiaSharp.SKEncodedImageFormat.Png && HasTransparentCorner(d)),
+            Arg.Any<CancellationToken>());
+    }
+
+    private static bool HasTransparentCorner(byte[] png)
+    {
+        using var bitmap = SkiaSharp.SKBitmap.Decode(png);
+        return bitmap.GetPixel(0, 0).Alpha == 0;
     }
 
     [Fact]

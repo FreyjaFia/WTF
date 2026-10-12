@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using WTF.Api.Common.Auth;
 using WTF.Api.Features.Conversations;
+using WTF.Api.Services;
 
 namespace WTF.Api.Endpoints;
 
@@ -75,25 +76,11 @@ public static class ConversationEndpoints
 internal static class ChatImageUploads
 {
     /// <summary>A little over the picture limit, for the form's own overhead.</summary>
-    public const long RequestLimit = 6 * 1024 * 1024;
+    public const long RequestLimit = ImageUploads.RequestLimit;
 
     /// <summary>Reads the upload into memory, refusing an empty or oversized one before any of it is processed.</summary>
-    public static async Task<byte[]> ReadAsync(IFormFile? file, ChatImageOptions options)
-    {
-        if (file == null || file.Length == 0)
-        {
-            throw new InvalidOperationException("No picture was sent.");
-        }
-
-        if (file.Length > options.MaxBytes)
-        {
-            throw new InvalidOperationException($"The picture is too big. The limit is {options.MaxBytes / (1024 * 1024)} MB.");
-        }
-
-        using var stream = new MemoryStream((int)file.Length);
-        await file.CopyToAsync(stream);
-        return stream.ToArray();
-    }
+    public static Task<byte[]> ReadAsync(IFormFile? file, ChatImageOptions options) =>
+        ImageUploads.ReadAsync(file, options.MaxBytes);
 
     /// <summary>
     /// Our own content type, never sniffed (nosniff), shown in the page and not downloaded. Private to the viewer's browser,

@@ -1,4 +1,6 @@
 using MediatR;
+using Microsoft.AspNetCore.Mvc;
+using WTF.Api.Services;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Auth;
 using WTF.Api.Features.Users;
@@ -9,7 +11,6 @@ namespace WTF.Api.Endpoints;
 
 public static class UserEndpoints
 {
-    private static readonly string[] imageTypes = [".jpg", ".jpeg", ".png", ".gif", ".webp"];
 
     public static IEndpointRouteBuilder MapUsers(this IEndpointRouteBuilder app)
     {
@@ -138,24 +139,8 @@ public static class UserEndpoints
                     return Results.Forbid();
                 }
 
-                // Validate file type (only images)
-                var allowedExtensions = imageTypes;
-                var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
-
-                if (!allowedExtensions.Contains(extension))
-                {
-                    return Results.BadRequest("Invalid file type. Only image files are allowed.");
-                }
-
-                // Validate file size (max 5MB)
-                if (file.Length > 5 * 1024 * 1024)
-                {
-                    return Results.BadRequest("File size exceeds 5MB limit.");
-                }
-
-                using var memoryStream = new MemoryStream();
-                await file.CopyToAsync(memoryStream);
-                var imageData = memoryStream.ToArray();
+                // The size is checked before the file is read; the real type and contents are checked by the handler (ImageUploads).
+                var imageData = await ImageUploads.ReadAsync(file);
 
                 var command = new UploadUserImageCommand(id, imageData, file.FileName);
                 var result = await sender.Send(command);
@@ -163,6 +148,7 @@ public static class UserEndpoints
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             })
             .RequireAuthorization(AppPolicies.UsersWrite)
+            .WithMetadata(new RequestSizeLimitAttribute(ImageUploads.RequestLimit))
             .DisableAntiforgery();
 
         // DELETE /api/users/{id}/images - Remove user image

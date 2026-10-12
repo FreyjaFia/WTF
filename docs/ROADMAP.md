@@ -1975,6 +1975,13 @@ messages automatically.
   pictures load only when scrolled into view and are never stored on the device. Staff fetch a picture as a file with
   their login (the customer's link token is the proof for the customer). Staff can remove a picture after a confirm.
 - Push text for a picture without text is "Sent a photo"; lists show "Sent a photo" or "Photo removed".
+- **One validation for every picture upload.** `Services/ImageProcessing.cs` (`ImageSanitizer`, `ImageUploads`) now checks and
+  cleans the chat photos AND the user, customer, product and promotion pictures: the real type from the first bytes (the
+  file name is ignored), size and pixels from the header before decoding, then decode and write out again (no metadata,
+  upright, shrunk to 2048 px at most, never scaled up). Chat always stores a JPEG on white; the others keep their own type
+  and transparency, and the stored extension comes from what the picture really is (so a `.gif` name no longer matters).
+  A refusal is now a 400 with an explanation instead of an empty 404. The endpoints share one reader that enforces the
+  5 MB limit before reading the file (the customer, promotion and own-profile uploads had no limit before the handler).
 
 Original plan:
 

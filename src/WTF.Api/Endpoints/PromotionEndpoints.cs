@@ -1,4 +1,6 @@
 using MediatR;
+using Microsoft.AspNetCore.Mvc;
+using WTF.Api.Services;
 using WTF.Api.Common.Auth;
 using WTF.Api.Features.Promotions;
 using WTF.Api.Features.Promotions.DTOs;
@@ -43,15 +45,13 @@ public static class PromotionEndpoints
                     return Results.BadRequest("No file uploaded.");
                 }
 
-                using var stream = file.OpenReadStream();
-                using var ms = new MemoryStream();
-                await stream.CopyToAsync(ms);
-                var data = ms.ToArray();
+                var data = await ImageUploads.ReadAsync(file);
 
                 var result = await sender.Send(new UploadPromotionImageCommand(promotionId, data, file.FileName));
                 return result is null ? Results.NotFound() : Results.Ok(result);
             })
-            .RequireAuthorization(AppPolicies.PromotionsWrite);
+            .RequireAuthorization(AppPolicies.PromotionsWrite)
+            .WithMetadata(new RequestSizeLimitAttribute(ImageUploads.RequestLimit));
 
         adminGroup.MapDelete("/{promotionId:guid}/images",
             async (Guid promotionId, ISender sender) =>

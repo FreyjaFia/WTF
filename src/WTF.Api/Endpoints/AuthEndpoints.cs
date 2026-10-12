@@ -1,4 +1,6 @@
 using MediatR;
+using Microsoft.AspNetCore.Mvc;
+using WTF.Api.Services;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Features.Auth;
 using WTF.Api.Features.Auth.DTOs;
@@ -95,15 +97,13 @@ public static class AuthEndpoints
 
             var userId = request.HttpContext.User.GetUserId();
             var file = request.Form.Files[0];
-
-            using var ms = new MemoryStream();
-            await file.CopyToAsync(ms);
-            var data = ms.ToArray();
+            var data = await ImageUploads.ReadAsync(file);
 
             var result = await mediator.Send(new UploadUserImageCommand(userId, data, file.FileName));
             return result is not null ? Results.Ok(result) : Results.BadRequest();
         })
         .RequireAuthorization()
+        .WithMetadata(new RequestSizeLimitAttribute(ImageUploads.RequestLimit))
         .DisableAntiforgery();
 
         return app;

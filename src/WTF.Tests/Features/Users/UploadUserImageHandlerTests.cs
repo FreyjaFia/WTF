@@ -13,7 +13,7 @@ public class UploadUserImageHandlerTests
     private readonly string _dbName = TestDb.NewName();
     private readonly IImageStorage _storage = Substitute.For<IImageStorage>();
     private readonly Guid _userId = Guid.NewGuid();
-    private static readonly byte[] Bytes = [1, 2, 3, 4];
+    private static readonly byte[] Bytes = TestImages.Png();
 
     public UploadUserImageHandlerTests()
     {
@@ -59,7 +59,7 @@ public class UploadUserImageHandlerTests
         await _storage.Received(1).SaveAsync(
             "users",
             Arg.Is<string>(f => f.StartsWith("ana_cruz_jr_") && f.EndsWith(".png")),
-            Bytes, Arg.Any<CancellationToken>());
+            Arg.Any<byte[]>(), Arg.Any<CancellationToken>());
         await using var db = TestDb.Create(_dbName);
         var link = await db.UserImages.Include(ui => ui.Image).SingleAsync();
         link.UserId.ShouldBe(_userId);
@@ -81,57 +81,75 @@ public class UploadUserImageHandlerTests
     }
 
     [Theory]
-    [InlineData("doc.pdf")]
-    [InlineData("script.exe")]
+    [InlineData("a.gif")]
+    [InlineData("a.exe")]
     [InlineData("noextension")]
-    [InlineData("image.gif")]
-    public async Task Handle_DisallowedExtension_ReturnsNullAndStoresNothing(string fileName)
+    public async Task Upload_FileNameIsIgnored_TheRealTypeNamesTheStoredFile(string fileName)
     {
         await Seed();
 
-        var dto = await Handler().Handle(new UploadUserImageCommand(_userId, Bytes, fileName), CancellationToken.None);
+        var result = await Handler().Handle(new UploadUserImageCommand(_userId, Bytes, fileName), CancellationToken.None);
 
-        dto.ShouldBeNull();
-        await _storage.DidNotReceiveWithAnyArgs().SaveAsync(default!, default!, default!, default);
-        await using var db = TestDb.Create(_dbName);
-        (await db.Images.CountAsync()).ShouldBe(0);
-    }
-
-    [Theory]
-    [InlineData("a.jpg")]
-    [InlineData("a.jpeg")]
-    [InlineData("a.png")]
-    [InlineData("a.webp")]
-    public async Task Handle_AllowedExtensions_AreAccepted(string fileName)
-    {
-        await Seed();
-
-        var dto = await Handler().Handle(new UploadUserImageCommand(_userId, Bytes, fileName), CancellationToken.None);
-
-        dto.ShouldNotBeNull();
+        result.ShouldNotBeNull();
+        await _storage.Received(1).SaveAsync("users", Arg.Is<string>(n => n.EndsWith(".png")), Arg.Any<byte[]>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task Handle_EmptyData_ReturnsNull()
+    public async Task Upload_AScriptNamedLikeAPicture_IsRefusedWithAMessage_AndStoresNothing()
     {
         await Seed();
 
-        var dto = await Handler().Handle(new UploadUserImageCommand(_userId, [], "a.png"), CancellationToken.None);
+        var error = await Should.ThrowAsync<ImageRejectedException>(() =>
+            Handler().Handle(new UploadUserImageCommand(_userId, TestImages.Script(), "a.png"), CancellationToken.None));
 
-        dto.ShouldBeNull();
+        error.Message.ShouldBe(ImageSanitizer.NotAnImageMessage);
         await _storage.DidNotReceiveWithAnyArgs().SaveAsync(default!, default!, default!, default);
     }
 
     [Fact]
-    public async Task Handle_FiveMegabytes_IsAcceptedButOverIsRejected()
+    public async Task Upload_EmptyData_IsRefused()
     {
         await Seed();
 
-        var ok = await Handler().Handle(new UploadUserImageCommand(_userId, new byte[5 * 1024 * 1024], "a.png"), CancellationToken.None);
-        var tooBig = await Handler().Handle(new UploadUserImageCommand(_userId, new byte[5 * 1024 * 1024 + 1], "a.png"), CancellationToken.None);
+        await Should.ThrowAsync<ImageRejectedException>(() =>
+            Handler().Handle(new UploadUserImageCommand(_userId, [], "a.png"), CancellationToken.None));
+        await _storage.DidNotReceiveWithAnyArgs().SaveAsync(default!, default!, default!, default);
+    }
 
-        ok.ShouldNotBeNull();
-        tooBig.ShouldBeNull();
+    [Fact]
+    public async Task Upload_OverFiveMegabytes_IsRefusedAsTooBig()
+    {
+        await Seed();
+
+        var error = await Should.ThrowAsync<ImageRejectedException>(() =>
+            Handler().Handle(new UploadUserImageCommand(_userId, TestImages.OverTheLimit(), "a.png"), CancellationToken.None));
+
+        error.Message.ShouldContain("too big");
+        await _storage.DidNotReceiveWithAnyArgs().SaveAsync(default!, default!, default!, default);
+    }
+
+    [Fact]
+    public async Task Upload_AJpegAndAWebpKeepTheirOwnType_AndAPngKeepsItsTransparency()
+    {
+        await Seed();
+
+        await Handler().Handle(new UploadUserImageCommand(_userId, TestImages.Jpeg(), "x.png"), CancellationToken.None);
+        await Handler().Handle(new UploadUserImageCommand(_userId, TestImages.Webp(), "x.jpg"), CancellationToken.None);
+        await Handler().Handle(new UploadUserImageCommand(_userId, TestImages.Png(8, 8, SkiaSharp.SKColors.Transparent), "x.webp"), CancellationToken.None);
+
+        await _storage.Received(1).SaveAsync("users", Arg.Is<string>(n => n.EndsWith(".jpg")), Arg.Any<byte[]>(), Arg.Any<CancellationToken>());
+        await _storage.Received(1).SaveAsync("users", Arg.Is<string>(n => n.EndsWith(".webp")), Arg.Any<byte[]>(), Arg.Any<CancellationToken>());
+        await _storage.Received(1).SaveAsync(
+            "users",
+            Arg.Is<string>(n => n.EndsWith(".png")),
+            Arg.Is<byte[]>(d => TestImages.FormatOf(d) == SkiaSharp.SKEncodedImageFormat.Png && HasTransparentCorner(d)),
+            Arg.Any<CancellationToken>());
+    }
+
+    private static bool HasTransparentCorner(byte[] png)
+    {
+        using var bitmap = SkiaSharp.SKBitmap.Decode(png);
+        return bitmap.GetPixel(0, 0).Alpha == 0;
     }
 
     [Fact]

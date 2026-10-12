@@ -10,7 +10,7 @@ public class UploadCustomerImageHandlerTests
 {
     private readonly string _dbName = TestDb.NewName();
     private readonly IImageStorage _storage = Substitute.For<IImageStorage>();
-    private static readonly byte[] Data = [1, 2, 3];
+    private static readonly byte[] Data = TestImages.Png();
 
     public UploadCustomerImageHandlerTests()
     {
@@ -31,40 +31,79 @@ public class UploadCustomerImageHandlerTests
 
     [Theory]
     [InlineData("a.gif")]
-    [InlineData("a.svg")]
+    [InlineData("a.exe")]
     [InlineData("noextension")]
-    public async Task Handle_DisallowedExtension_ReturnsNull(string fileName)
+    public async Task Upload_FileNameIsIgnored_TheRealTypeNamesTheStoredFile(string fileName)
     {
         var customer = CustomerSeed.NewCustomer();
         await CustomerSeed.SeedAsync(_dbName, customer);
 
         var result = await Handler().Handle(new UploadCustomerImageCommand(customer.Id, Data, fileName), CancellationToken.None);
 
-        result.ShouldBeNull();
-        await _storage.DidNotReceiveWithAnyArgs().SaveAsync(default!, default!, default!, default);
+        result.ShouldNotBeNull();
+        await _storage.Received(1).SaveAsync("customers", Arg.Is<string>(n => n.EndsWith(".png")), Arg.Any<byte[]>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task Handle_EmptyData_ReturnsNull()
+    public async Task Upload_AScriptNamedLikeAPicture_IsRefusedWithAMessage_AndStoresNothing()
     {
         var customer = CustomerSeed.NewCustomer();
         await CustomerSeed.SeedAsync(_dbName, customer);
 
-        var result = await Handler().Handle(new UploadCustomerImageCommand(customer.Id, [], "a.png"), CancellationToken.None);
+        var error = await Should.ThrowAsync<ImageRejectedException>(() =>
+            Handler().Handle(new UploadCustomerImageCommand(customer.Id, TestImages.Script(), "a.png"), CancellationToken.None));
 
-        result.ShouldBeNull();
+        error.Message.ShouldBe(ImageSanitizer.NotAnImageMessage);
+        await _storage.DidNotReceiveWithAnyArgs().SaveAsync(default!, default!, default!, default);
     }
 
     [Fact]
-    public async Task Handle_DataOverFiveMegabytes_ReturnsNull()
+    public async Task Upload_EmptyData_IsRefused()
     {
         var customer = CustomerSeed.NewCustomer();
         await CustomerSeed.SeedAsync(_dbName, customer);
 
-        var result = await Handler().Handle(new UploadCustomerImageCommand(customer.Id, new byte[5 * 1024 * 1024 + 1], "a.png"), CancellationToken.None);
-
-        result.ShouldBeNull();
+        await Should.ThrowAsync<ImageRejectedException>(() =>
+            Handler().Handle(new UploadCustomerImageCommand(customer.Id, [], "a.png"), CancellationToken.None));
         await _storage.DidNotReceiveWithAnyArgs().SaveAsync(default!, default!, default!, default);
+    }
+
+    [Fact]
+    public async Task Upload_OverFiveMegabytes_IsRefusedAsTooBig()
+    {
+        var customer = CustomerSeed.NewCustomer();
+        await CustomerSeed.SeedAsync(_dbName, customer);
+
+        var error = await Should.ThrowAsync<ImageRejectedException>(() =>
+            Handler().Handle(new UploadCustomerImageCommand(customer.Id, TestImages.OverTheLimit(), "a.png"), CancellationToken.None));
+
+        error.Message.ShouldContain("too big");
+        await _storage.DidNotReceiveWithAnyArgs().SaveAsync(default!, default!, default!, default);
+    }
+
+    [Fact]
+    public async Task Upload_AJpegAndAWebpKeepTheirOwnType_AndAPngKeepsItsTransparency()
+    {
+        var customer = CustomerSeed.NewCustomer();
+        await CustomerSeed.SeedAsync(_dbName, customer);
+
+        await Handler().Handle(new UploadCustomerImageCommand(customer.Id, TestImages.Jpeg(), "x.png"), CancellationToken.None);
+        await Handler().Handle(new UploadCustomerImageCommand(customer.Id, TestImages.Webp(), "x.jpg"), CancellationToken.None);
+        await Handler().Handle(new UploadCustomerImageCommand(customer.Id, TestImages.Png(8, 8, SkiaSharp.SKColors.Transparent), "x.webp"), CancellationToken.None);
+
+        await _storage.Received(1).SaveAsync("customers", Arg.Is<string>(n => n.EndsWith(".jpg")), Arg.Any<byte[]>(), Arg.Any<CancellationToken>());
+        await _storage.Received(1).SaveAsync("customers", Arg.Is<string>(n => n.EndsWith(".webp")), Arg.Any<byte[]>(), Arg.Any<CancellationToken>());
+        await _storage.Received(1).SaveAsync(
+            "customers",
+            Arg.Is<string>(n => n.EndsWith(".png")),
+            Arg.Is<byte[]>(d => TestImages.FormatOf(d) == SkiaSharp.SKEncodedImageFormat.Png && HasTransparentCorner(d)),
+            Arg.Any<CancellationToken>());
+    }
+
+    private static bool HasTransparentCorner(byte[] png)
+    {
+        using var bitmap = SkiaSharp.SKBitmap.Decode(png);
+        return bitmap.GetPixel(0, 0).Alpha == 0;
     }
 
     [Fact]
@@ -73,14 +112,14 @@ public class UploadCustomerImageHandlerTests
         var customer = CustomerSeed.NewCustomer("Mary Ann", "De-La Cruz");
         await CustomerSeed.SeedAsync(_dbName, customer);
 
-        var result = await Handler().Handle(new UploadCustomerImageCommand(customer.Id, Data, "Me.WEBP"), CancellationToken.None);
+        var result = await Handler().Handle(new UploadCustomerImageCommand(customer.Id, TestImages.Webp(), "Me.WEBP"), CancellationToken.None);
 
         result.ShouldNotBeNull();
         result.ImageUrl.ShouldBe("/images/customers/new.png");
         await _storage.Received(1).SaveAsync(
             "customers",
             Arg.Is<string>(n => n.StartsWith("mary_ann_de_la_cruz_") && n.EndsWith(".webp")),
-            Data,
+            Arg.Any<byte[]>(),
             Arg.Any<CancellationToken>());
 
         await using var db = TestDb.Create(_dbName);

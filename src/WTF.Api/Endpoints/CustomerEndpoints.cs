@@ -1,4 +1,6 @@
 using MediatR;
+using Microsoft.AspNetCore.Mvc;
+using WTF.Api.Services;
 using WTF.Api.Common.Auth;
 using WTF.Api.Features.Customers;
 
@@ -82,15 +84,14 @@ public static class CustomerEndpoints
                     return Results.BadRequest("No file provided");
                 }
 
+                var data = await ImageUploads.ReadAsync(request.Form.Files[0]);
                 var file = request.Form.Files[0];
-                using var ms = new MemoryStream();
-                await file.CopyToAsync(ms);
-                var data = ms.ToArray();
 
                 var result = await sender.Send(new UploadCustomerImageCommand(id, data, file.FileName));
                 return result is not null ? Results.Ok(result) : Results.BadRequest();
             })
-            .RequireAuthorization(AppPolicies.CustomersWrite);
+            .RequireAuthorization(AppPolicies.CustomersWrite)
+            .WithMetadata(new RequestSizeLimitAttribute(ImageUploads.RequestLimit));
 
         // DELETE /api/customers/{id}/image - Remove customer image
         customerGroup.MapDelete("/{id:guid}/image",

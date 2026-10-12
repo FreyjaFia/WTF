@@ -24,27 +24,18 @@ public class UploadCustomerImageHandler(WTFDbContext db, IImageStorage imageStor
             return null;
         }
 
-        // Basic validation: file extension and size
-        var allowed = new[] { ".jpg", ".jpeg", ".png", ".webp" };
-        var extension = Path.GetExtension(request.FileName)?.ToLowerInvariant() ?? string.Empty;
-        if (!allowed.Contains(extension))
-        {
-            return null;
-        }
-
-        if (request.ImageData == null || request.ImageData.Length == 0 || request.ImageData.Length > 5 * 1024 * 1024) // 5MB max
-        {
-            return null;
-        }
+        // The real type, size and pixels are checked, and the picture is cleaned and written out again (the same rules for
+        // every upload, in ImageUploads). A refusal is explained to the sender as a 400.
+        var processed = ImageUploads.Prepare(request.ImageData);
 
         var nameSlug = (customer.FirstName + "_" + customer.LastName)
             .ToLowerInvariant()
             .Replace(" ", "_")
             .Replace("-", "_");
 
-        var fileName = $"{nameSlug}_{Guid.NewGuid():N}{extension}";
+        var fileName = $"{nameSlug}_{Guid.NewGuid():N}{processed.Extension}";
 
-        var imageUrl = await imageStorage.SaveAsync("customers", fileName, request.ImageData, cancellationToken);
+        var imageUrl = await imageStorage.SaveAsync("customers", fileName, processed.Data, cancellationToken);
 
         // Delete old image file and db rows if exists
         if (customer.CustomerImage != null)
