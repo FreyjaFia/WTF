@@ -67,7 +67,12 @@ describe('ChatComponent', () => {
         const line = el().querySelector('[data-system-line]') as HTMLElement;
         expect(line).not.toBeNull();
         expect(line.textContent).toContain('Order accepted');
-        expect(line.textContent).toContain('Ana');
+        // Staff are told who made the change; the customer is never given a staff name.
+        if (viewer === 'staff') {
+          expect(line.textContent).toContain('Ana');
+        } else {
+          expect(line.textContent).not.toContain('Ana');
+        }
         expect(line.textContent).toContain('12 Oct, 9:15 AM');
         expect(el().querySelector('[data-mine]')).toBeNull();
       }

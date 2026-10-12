@@ -115,7 +115,7 @@ public class OrderStatusChatLineTests
     }
 
     [Fact]
-    public async Task TheLineIsShownToBothSides_NamingTheStaffMemberToEach()
+    public async Task TheLineIsShownToBothSides_NamingTheStaffMemberToStaffOnly()
     {
         var (id, product, customer) = AddOrder();
         await using (var seed = _data.Open())
@@ -137,6 +137,7 @@ public class OrderStatusChatLineTests
 
         forStaff.ShouldHaveSingleItem().Sender.ShouldBe("system");
         forStaff[0].SenderName.ShouldBe("Ana Reyes");
-        forCustomer[0].SenderName.ShouldBe("Ana");
+        forCustomer.ShouldHaveSingleItem().Sender.ShouldBe("system");
+        forCustomer[0].SenderName.ShouldBeNull("the customer is never told which staff member made the change");
     }
 }

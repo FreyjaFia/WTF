@@ -103,7 +103,7 @@ internal static class ConversationStore
             .Select(m => new ConversationMessageDto(
                 m.Id,
                 ConversationRules.SenderName((MessageSender)m.SenderType),
-                m.SenderType != CustomerSender ? StaffName(m.First, m.Last, forCustomer) : null,
+                SenderNameFor(m.SenderType, m.First, m.Last, forCustomer),
                 m.Body,
                 m.CreatedAt,
                 m.ImageKey != null,
@@ -116,7 +116,7 @@ internal static class ConversationStore
         new(
             message.Id,
             ConversationRules.SenderName((MessageSender)message.SenderType),
-            message.SenderType != CustomerSender ? StaffName(staffFirst, staffLast, forCustomer) : null,
+            SenderNameFor(message.SenderType, staffFirst, staffLast, forCustomer),
             message.Body,
             message.CreatedAt,
             message.ImageKey != null,
@@ -150,6 +150,20 @@ internal static class ConversationStore
         message.ImageHeight = null;
         message.ImageSizeBytes = null;
         message.ImageRemovedAt = nowUtc;
+    }
+
+    /// <summary>
+    /// Who to name on a message. A customer's own message names no one. A system line ("Order accepted") names the staff
+    /// member to staff but nobody to the customer: it is the shop speaking, and a staff member's name is not theirs to see.
+    /// </summary>
+    private static string? SenderNameFor(byte senderType, string? first, string? last, bool forCustomer)
+    {
+        if (senderType == CustomerSender || (senderType == (byte)MessageSender.System && forCustomer))
+        {
+            return null;
+        }
+
+        return StaffName(first, last, forCustomer);
     }
 
     /// <summary>A customer sees a staff member by first name only; staff see each other's full names.</summary>
