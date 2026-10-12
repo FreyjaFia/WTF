@@ -1,6 +1,6 @@
 <button
   type="button"
-  class="relative flex h-10 w-10 cursor-pointer items-center justify-center rounded-full text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 active:scale-95"
+  class="relative flex h-10 w-10 cursor-pointer items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 active:scale-95"
   [class.bg-gray-100]="isOpen()"
   [attr.aria-label]="label()"
   [attr.aria-expanded]="isOpen()"
@@ -8,7 +8,7 @@
   data-envelope
   (click)="toggle()"
 >
-  <app-icon name="icon-envelope" [class]="'h-6 w-6'" [fill]="'currentColor'" />
+  <app-icon name="icon-envelope" [class]="'h-5 w-5'" [fill]="'currentColor'" />
   @if (unread() > 0) {
     <span
       class="absolute -top-0.5 -right-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] leading-none font-bold text-white ring-2 ring-white"
@@ -77,7 +77,7 @@
               </span>
               @if (item.unreadCount > 0) {
                 <span
-                  class="mt-1 flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-[#047857] px-1 text-[11px] leading-none font-bold text-white"
+                  class="mt-1 flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] leading-none font-bold text-white"
                   data-envelope-item-count
                   >{{ item.unreadCount }}</span
                 >
