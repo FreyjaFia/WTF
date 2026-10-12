@@ -48,13 +48,23 @@ public class AzureBlobImageStorage : IImageStorage
         await blobClient.DeleteIfExistsAsync(cancellationToken: cancellationToken);
     }
 
-    private static string ToBlobName(string imageUrl)
+    public async Task<IReadOnlyList<StoredImageInfo>> ListAsync(CancellationToken cancellationToken)
     {
-        if (Uri.TryCreate(imageUrl, UriKind.Absolute, out var absoluteUri))
+        var files = new List<StoredImageInfo>();
+        await foreach (var blob in _containerClient.GetBlobsAsync(prefix: "images/", cancellationToken: cancellationToken))
         {
-            return absoluteUri.AbsolutePath.TrimStart('/');
+            var modified = blob.Properties.LastModified ?? DateTimeOffset.UtcNow;
+            files.Add(new StoredImageInfo(
+                blob.Name,
+                _containerClient.GetBlobClient(blob.Name).Uri.ToString(),
+                modified.ToUniversalTime()));
         }
 
-        return imageUrl.TrimStart('/');
+        return files;
     }
+
+    public string GetKey(string imageUrl) => ToBlobName(imageUrl);
+
+    // A saved URL is https://account/container/images/...; the blob name inside the container starts at images/.
+    private string ToBlobName(string imageUrl) => ImageKey.From(imageUrl, _containerClient.Name);
 }

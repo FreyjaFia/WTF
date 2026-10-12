@@ -39,13 +39,27 @@ public class LocalImageStorage(IWebHostEnvironment env) : IImageStorage
         return Task.CompletedTask;
     }
 
-    private static string ToRelativePath(string imageUrl)
+    public Task<IReadOnlyList<StoredImageInfo>> ListAsync(CancellationToken cancellationToken)
     {
-        if (Uri.TryCreate(imageUrl, UriKind.Absolute, out var absoluteUri))
+        var root = Path.Combine(_webRootPath, "images");
+        var files = new List<StoredImageInfo>();
+        if (Directory.Exists(root))
         {
-            return absoluteUri.AbsolutePath.TrimStart('/');
+            foreach (var path in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+            {
+                var key = "images/" + Path.GetRelativePath(root, path).Replace(Path.DirectorySeparatorChar, '/');
+                files.Add(new StoredImageInfo(key, "/" + key, new DateTimeOffset(File.GetLastWriteTimeUtc(path), TimeSpan.Zero)));
+            }
         }
 
-        return imageUrl.TrimStart('/');
+        return Task.FromResult<IReadOnlyList<StoredImageInfo>>(files);
+    }
+
+    public string GetKey(string imageUrl) => ImageKey.From(imageUrl);
+
+    private static string ToRelativePath(string imageUrl)
+    {
+        var key = ImageKey.From(imageUrl);
+        return key.Contains("..", StringComparison.Ordinal) ? string.Empty : key;
     }
 }

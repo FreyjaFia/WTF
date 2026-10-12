@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.RateLimiting;
 using WTF.Api.Common.Auth;
 using WTF.Api.Endpoints;
+using WTF.Api.Features.Images;
 using WTF.Api.Features.Reports;
 using WTF.Api.Hubs;
 using WTF.Api.Services;
@@ -60,6 +61,10 @@ builder.Services.AddScoped<IPushNotificationService, PushNotificationService>();
 builder.Services.AddScoped<IConversationNotifier, ConversationNotifier>();
 builder.Services.AddScoped<IMonthlyReportWorkbookService, MonthlyReportWorkbookService>();
 builder.Services.AddHostedService<MonthlyReportWorkbookScheduler>();
+builder.Services.Configure<StaleImageCleanupOptions>(
+    builder.Configuration.GetSection(StaleImageCleanupOptions.SectionName));
+builder.Services.AddScoped<IStaleImageCleanupService, StaleImageCleanupService>();
+builder.Services.AddHostedService<StaleImageCleanupScheduler>();
 
 if (builder.Environment.IsDevelopment())
 {
