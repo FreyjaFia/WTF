@@ -413,3 +413,6 @@ Thumbs.db
 # Signing keystores
 *.keystore
 *.jks
+
+# Ignore the stale image cleanup run record written under wwwroot
+src/WTF.Api/wwwroot/system/**

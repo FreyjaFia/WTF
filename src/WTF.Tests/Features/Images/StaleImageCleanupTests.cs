@@ -447,8 +447,8 @@ public class StaleImageCleanupTests
     public async Task Scheduler_StartedBeforeRunTime_WaitsForIt()
     {
         var service = Substitute.For<IStaleImageCleanupService>();
-        // Run time is one minute from now in UTC (hour/minute wrap handled), so it is not yet due.
-        var later = DateTimeOffset.UtcNow.AddMinutes(1);
+        // Run time is ten minutes from now in UTC, so it is not yet due (skipped near midnight, where the date would wrap).
+        var later = DateTimeOffset.UtcNow.AddMinutes(10);
         if (later.Date != DateTimeOffset.UtcNow.Date)
         {
             return; // too close to midnight UTC for this check to mean anything
