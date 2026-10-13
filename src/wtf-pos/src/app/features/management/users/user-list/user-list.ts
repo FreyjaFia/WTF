@@ -1,3 +1,4 @@
+import { HttpErrorMessages } from '@core/messages';
 import { CommonModule } from '@angular/common';
 import { FilterButtonComponent } from '@shared/components/filter-button/filter-button';
 import { selectedFilterCount } from '@shared/utils/filter-count';
@@ -16,6 +17,7 @@ import {
   AvatarComponent,
   BadgeComponent,
   IconComponent,
+  ConnectionErrorComponent,
   PullToRefreshComponent,
   SearchInputComponent,
   SideDrawerComponent,
@@ -47,6 +49,7 @@ interface UserListState {
     BadgeComponent,
     ConfirmDialogComponent,
     AvatarComponent,
+    ConnectionErrorComponent,
     PullToRefreshComponent,
     SearchInputComponent,
     SideDrawerComponent,
@@ -67,6 +70,7 @@ export class UserListComponent implements OnInit {
   protected readonly users = signal<UserDto[]>([]);
   protected readonly usersCache = signal<UserDto[]>([]);
   protected readonly isLoading = signal(false);
+  protected readonly connectionFailed = signal(false);
   protected readonly isRefreshing = signal(false);
   protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
   protected readonly isFiltersOpen = signal(false);
@@ -103,8 +107,7 @@ export class UserListComponent implements OnInit {
       [UserRoleEnum.Admin]: cache.filter((u) => u.roleId === UserRoleEnum.Admin).length,
       [UserRoleEnum.Cashier]: cache.filter((u) => u.roleId === UserRoleEnum.Cashier).length,
       [UserRoleEnum.AdminViewer]: cache.filter((u) => u.roleId === UserRoleEnum.AdminViewer).length,
-      [UserRoleEnum.ItemManager]: cache.filter((u) => u.roleId === UserRoleEnum.ItemManager)
-        .length,
+      [UserRoleEnum.ItemManager]: cache.filter((u) => u.roleId === UserRoleEnum.ItemManager).length,
       [UserRoleEnum.StockManager]: cache.filter((u) => u.roleId === UserRoleEnum.StockManager)
         .length,
     };
@@ -180,6 +183,7 @@ export class UserListComponent implements OnInit {
 
   protected loadUsers(): void {
     this.isLoading.set(true);
+    this.connectionFailed.set(false);
 
     this.userService.getUsers().subscribe({
       next: (data) => {
@@ -189,6 +193,7 @@ export class UserListComponent implements OnInit {
         this.isRefreshing.set(false);
       },
       error: (err) => {
+        this.connectionFailed.set(err.message === HttpErrorMessages.NetworkUnavailable);
         this.alertService.error(err.message);
         this.isLoading.set(false);
         this.isRefreshing.set(false);

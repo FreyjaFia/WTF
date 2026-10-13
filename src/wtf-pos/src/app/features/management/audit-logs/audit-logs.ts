@@ -1,3 +1,4 @@
+import { HttpErrorMessages } from '@core/messages';
 import { CommonModule } from '@angular/common';
 import { FilterButtonComponent } from '@shared/components/filter-button/filter-button';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
@@ -10,6 +11,7 @@ import {
 } from '@core/services';
 import {
   IconComponent,
+  ConnectionErrorComponent,
   PullToRefreshComponent,
   SideDrawerComponent,
   type FilterOption,
@@ -30,7 +32,14 @@ const DEFAULT_PAGE_SIZE = 10;
 
 @Component({
   selector: 'app-audit-logs',
-  imports: [FilterButtonComponent, CommonModule, IconComponent, PullToRefreshComponent, SideDrawerComponent],
+  imports: [
+    FilterButtonComponent,
+    CommonModule,
+    IconComponent,
+    ConnectionErrorComponent,
+    PullToRefreshComponent,
+    SideDrawerComponent,
+  ],
   templateUrl: './audit-logs.html',
   host: { class: 'flex-1 min-h-0' },
 })
@@ -43,6 +52,7 @@ export class AuditLogsComponent implements OnInit {
 
   protected readonly logs = signal<AuditLogDto[]>([]);
   protected readonly isLoading = signal(false);
+  protected readonly connectionFailed = signal(false);
   protected readonly isRefreshing = signal(false);
   protected readonly isDownloadingExcel = signal(false);
   protected readonly isDownloadingPdf = signal(false);
@@ -275,7 +285,9 @@ export class AuditLogsComponent implements OnInit {
         void this.fileDownload
           .saveBlob(blob, this.buildExportFileName(extension), contentType, 'audit-logs')
           .catch((err: unknown) => {
-            this.alertService.error(err instanceof Error ? err.message : 'Failed to save the file.');
+            this.alertService.error(
+              err instanceof Error ? err.message : 'Failed to save the file.',
+            );
           })
           .finally(() => busy.set(false));
       },
@@ -353,6 +365,7 @@ export class AuditLogsComponent implements OnInit {
 
   private loadLogs(): void {
     this.isLoading.set(true);
+    this.connectionFailed.set(false);
 
     const query: AuditLogQuery = {
       ...this.buildQuery(),
@@ -376,6 +389,7 @@ export class AuditLogsComponent implements OnInit {
         this.isRefreshing.set(false);
       },
       error: (err) => {
+        this.connectionFailed.set(err.message === HttpErrorMessages.NetworkUnavailable);
         this.alertService.error(err.message);
         this.isLoading.set(false);
         this.isRefreshing.set(false);

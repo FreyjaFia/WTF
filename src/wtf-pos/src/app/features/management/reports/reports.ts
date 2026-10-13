@@ -5,10 +5,12 @@ import { map, startWith } from 'rxjs';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Capacitor } from '@capacitor/core';
+import { HttpErrorMessages } from '@core/messages';
 import { AlertService, FileDownloadService, ReportsService, UserService } from '@core/services';
 import {
   SideDrawerComponent,
   IconComponent,
+  ConnectionErrorComponent,
   PullToRefreshComponent,
   SearchInputComponent,
 } from '@shared/components';
@@ -118,6 +120,7 @@ interface MonthOption {
     FilterButtonComponent,
     CommonModule,
     ReactiveFormsModule,
+    ConnectionErrorComponent,
     PullToRefreshComponent,
     IconComponent,
     SideDrawerComponent,
@@ -139,6 +142,7 @@ export class ReportsComponent implements OnInit {
   protected readonly hourlyReports = signal<HourlySalesReportRowDto[]>([]);
   protected readonly staffReports = signal<StaffPerformanceReportRowDto[]>([]);
   protected readonly isLoading = signal(false);
+  protected readonly connectionFailed = signal(false);
   protected readonly isRefreshing = signal(false);
   protected readonly isDownloadingExcel = signal(false);
   protected readonly isDownloadingPdf = signal(false);
@@ -536,11 +540,13 @@ export class ReportsComponent implements OnInit {
 
     this.isDownloadingExcel.set(true);
     const onSuccess = (blob: Blob, fileName: string): void => {
-      void this.fileDownload.saveBlob(
-        blob,
-        fileName,
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      ).finally(() => this.isDownloadingExcel.set(false));
+      void this.fileDownload
+        .saveBlob(
+          blob,
+          fileName,
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+        .finally(() => this.isDownloadingExcel.set(false));
     };
     const onError = (error: Error): void => {
       this.isDownloadingExcel.set(false);
@@ -667,9 +673,9 @@ export class ReportsComponent implements OnInit {
 
     this.isDownloadingPdf.set(true);
     const onSuccess = (blob: Blob, fileName: string): void => {
-      void this.fileDownload.saveBlob(blob, fileName, 'application/pdf').finally(() =>
-        this.isDownloadingPdf.set(false),
-      );
+      void this.fileDownload
+        .saveBlob(blob, fileName, 'application/pdf')
+        .finally(() => this.isDownloadingPdf.set(false));
     };
     const onError = (error: Error): void => {
       this.isDownloadingPdf.set(false);
@@ -836,11 +842,13 @@ export class ReportsComponent implements OnInit {
           next: (blob) => {
             const fileName =
               status.fileName || this.buildMonthlyWorkbookFileName(filter.year, filter.month);
-            void this.fileDownload.saveBlob(
-              blob,
-              fileName,
-              'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            ).finally(() => this.isDownloadingMonthlyWorkbook.set(false));
+            void this.fileDownload
+              .saveBlob(
+                blob,
+                fileName,
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+              )
+              .finally(() => this.isDownloadingMonthlyWorkbook.set(false));
           },
           error: (error: Error) => {
             this.isDownloadingMonthlyWorkbook.set(false);
@@ -1099,6 +1107,7 @@ export class ReportsComponent implements OnInit {
     }
 
     this.isLoading.set(true);
+    this.connectionFailed.set(false);
 
     if (reportType === this.reportTypes.DailySales) {
       const query = this.buildDailySalesQuery();
@@ -1113,6 +1122,7 @@ export class ReportsComponent implements OnInit {
           this.finishLoading();
         },
         error: (error: Error) => {
+          this.connectionFailed.set(error.message === HttpErrorMessages.NetworkUnavailable);
           this.alertService.error(error.message);
           this.dailyReports.set([]);
           this.finishLoading();
@@ -1134,6 +1144,7 @@ export class ReportsComponent implements OnInit {
           this.finishLoading();
         },
         error: (error: Error) => {
+          this.connectionFailed.set(error.message === HttpErrorMessages.NetworkUnavailable);
           this.alertService.error(error.message);
           this.productReports.set([]);
           this.finishLoading();
@@ -1155,6 +1166,7 @@ export class ReportsComponent implements OnInit {
           this.finishLoading();
         },
         error: (error: Error) => {
+          this.connectionFailed.set(error.message === HttpErrorMessages.NetworkUnavailable);
           this.alertService.error(error.message);
           this.paymentsReports.set([]);
           this.finishLoading();
@@ -1176,6 +1188,7 @@ export class ReportsComponent implements OnInit {
           this.finishLoading();
         },
         error: (error: Error) => {
+          this.connectionFailed.set(error.message === HttpErrorMessages.NetworkUnavailable);
           this.alertService.error(error.message);
           this.hourlyReports.set([]);
           this.finishLoading();
@@ -1196,6 +1209,7 @@ export class ReportsComponent implements OnInit {
         this.finishLoading();
       },
       error: (error: Error) => {
+        this.connectionFailed.set(error.message === HttpErrorMessages.NetworkUnavailable);
         this.alertService.error(error.message);
         this.staffReports.set([]);
         this.finishLoading();
@@ -1490,4 +1504,3 @@ export class ReportsComponent implements OnInit {
     return user.username;
   }
 }
-

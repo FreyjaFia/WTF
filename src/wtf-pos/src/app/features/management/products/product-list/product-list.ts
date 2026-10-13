@@ -1,3 +1,4 @@
+import { HttpErrorMessages } from '@core/messages';
 import { CommonModule } from '@angular/common';
 import { FilterButtonComponent } from '@shared/components/filter-button/filter-button';
 import { selectedFilterCount } from '@shared/utils/filter-count';
@@ -17,6 +18,7 @@ import {
   AvatarComponent,
   BadgeComponent,
   IconComponent,
+  ConnectionErrorComponent,
   PullToRefreshComponent,
   SearchInputComponent,
   SideDrawerComponent,
@@ -47,6 +49,7 @@ interface ProductListState {
     BadgeComponent,
     ConfirmDialogComponent,
     AvatarComponent,
+    ConnectionErrorComponent,
     PullToRefreshComponent,
     SearchInputComponent,
     SideDrawerComponent,
@@ -67,6 +70,7 @@ export class ProductListComponent implements OnInit {
   protected readonly products = signal<ProductDto[]>([]);
   protected readonly productsCache = signal<ProductDto[]>([]);
   protected readonly isLoading = signal(false);
+  protected readonly connectionFailed = signal(false);
   protected readonly isRefreshing = signal(false);
   protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
   protected readonly isFiltersOpen = signal(false);
@@ -169,6 +173,7 @@ export class ProductListComponent implements OnInit {
 
   protected loadProducts(): void {
     this.isLoading.set(true);
+    this.connectionFailed.set(false);
 
     this.productService.getProducts().subscribe({
       next: (data) => {
@@ -178,6 +183,7 @@ export class ProductListComponent implements OnInit {
         this.isRefreshing.set(false);
       },
       error: (err) => {
+        this.connectionFailed.set(err.message === HttpErrorMessages.NetworkUnavailable);
         this.alertService.error(err.message);
         this.isLoading.set(false);
         this.isRefreshing.set(false);

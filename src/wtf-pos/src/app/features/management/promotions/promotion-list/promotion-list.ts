@@ -1,3 +1,4 @@
+import { HttpErrorMessages } from '@core/messages';
 import { CommonModule } from '@angular/common';
 import { FilterButtonComponent } from '@shared/components/filter-button/filter-button';
 import { selectedFilterCount } from '@shared/utils/filter-count';
@@ -16,6 +17,7 @@ import {
   AvatarComponent,
   BadgeComponent,
   IconComponent,
+  ConnectionErrorComponent,
   PullToRefreshComponent,
   SearchInputComponent,
   SideDrawerComponent,
@@ -48,6 +50,7 @@ interface PromotionListState {
     AvatarComponent,
     BadgeComponent,
     IconComponent,
+    ConnectionErrorComponent,
     PullToRefreshComponent,
     SearchInputComponent,
     SideDrawerComponent,
@@ -67,6 +70,7 @@ export class PromotionListComponent implements OnInit {
 
   protected readonly PromotionTypeEnum = PromotionTypeEnum;
   protected readonly isLoading = signal(false);
+  protected readonly connectionFailed = signal(false);
   protected readonly showDeleteModal = signal(false);
   protected readonly promotionToDelete = signal<PromotionListItemDto | null>(null);
   protected readonly isDeleting = signal(false);
@@ -94,7 +98,8 @@ export class PromotionListComponent implements OnInit {
     return {
       fixedBundle: cache.filter((x) => x.typeId === PromotionTypeEnum.FixedBundle).length,
       mixMatch: cache.filter((x) => x.typeId === PromotionTypeEnum.MixMatch).length,
-      discountedProduct: cache.filter((x) => x.typeId === PromotionTypeEnum.DiscountedProduct).length,
+      discountedProduct: cache.filter((x) => x.typeId === PromotionTypeEnum.DiscountedProduct)
+        .length,
     };
   });
 
@@ -149,6 +154,7 @@ export class PromotionListComponent implements OnInit {
 
   protected load(): void {
     this.isLoading.set(true);
+    this.connectionFailed.set(false);
     forkJoin({
       fixedBundles: this.promotionService.getFixedBundles(),
       mixMatch: this.promotionService.getMixMatchPromotions(),
@@ -162,6 +168,7 @@ export class PromotionListComponent implements OnInit {
         this.isRefreshing.set(false);
       },
       error: (err: Error) => {
+        this.connectionFailed.set(err.message === HttpErrorMessages.NetworkUnavailable);
         this.alertService.error(err.message);
         this.isLoading.set(false);
         this.isRefreshing.set(false);
@@ -446,7 +453,10 @@ export class PromotionListComponent implements OnInit {
           return true;
         }
 
-        if (types.includes('discounted-product') && x.typeId === PromotionTypeEnum.DiscountedProduct) {
+        if (
+          types.includes('discounted-product') &&
+          x.typeId === PromotionTypeEnum.DiscountedProduct
+        ) {
           return true;
         }
 

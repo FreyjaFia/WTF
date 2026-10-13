@@ -1,3 +1,4 @@
+import { HttpErrorMessages } from '@core/messages';
 import { CommonModule } from '@angular/common';
 import { FilterButtonComponent } from '@shared/components/filter-button/filter-button';
 import { selectedFilterCount } from '@shared/utils/filter-count';
@@ -6,20 +7,21 @@ import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { Capacitor } from '@capacitor/core';
 import {
-    AlertService,
-    AuthService,
-    CustomerService,
-    ListStateService,
-    ModalStackService,
+  AlertService,
+  AuthService,
+  CustomerService,
+  ListStateService,
+  ModalStackService,
 } from '@core/services';
 import {
-    AvatarComponent,
-    BadgeComponent,
-    IconComponent,
-    PullToRefreshComponent,
-    SearchInputComponent,
-    SideDrawerComponent,
-    type FilterOption
+  AvatarComponent,
+  BadgeComponent,
+  IconComponent,
+  ConnectionErrorComponent,
+  PullToRefreshComponent,
+  SearchInputComponent,
+  SideDrawerComponent,
+  type FilterOption,
 } from '@shared/components';
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import { AppRoutes } from '@shared/constants/app-routes';
@@ -46,6 +48,7 @@ interface CustomerListState {
     BadgeComponent,
     ConfirmDialogComponent,
     AvatarComponent,
+    ConnectionErrorComponent,
     PullToRefreshComponent,
     SearchInputComponent,
     SideDrawerComponent,
@@ -66,6 +69,7 @@ export class CustomerListComponent implements OnInit {
   protected readonly customers = signal<CustomerDto[]>([]);
   protected readonly customersCache = signal<CustomerDto[]>([]);
   protected readonly isLoading = signal(false);
+  protected readonly connectionFailed = signal(false);
   protected readonly isRefreshing = signal(false);
   protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
   protected readonly isFiltersOpen = signal(false);
@@ -131,6 +135,7 @@ export class CustomerListComponent implements OnInit {
 
   protected loadCustomers(): void {
     this.isLoading.set(true);
+    this.connectionFailed.set(false);
 
     this.customerService.getCustomers().subscribe({
       next: (data) => {
@@ -140,6 +145,7 @@ export class CustomerListComponent implements OnInit {
         this.isRefreshing.set(false);
       },
       error: (err) => {
+        this.connectionFailed.set(err.message === HttpErrorMessages.NetworkUnavailable);
         this.alertService.error(err.message);
         this.isLoading.set(false);
         this.isRefreshing.set(false);
@@ -153,9 +159,8 @@ export class CustomerListComponent implements OnInit {
   }
 
   /** How many filters are applied, shown on the Filters button. */
-  protected readonly activeFilterCount = computed(
-    () =>
-      selectedFilterCount(this.selectedStatuses().length, this.statusOptions().length),
+  protected readonly activeFilterCount = computed(() =>
+    selectedFilterCount(this.selectedStatuses().length, this.statusOptions().length),
   );
 
   protected openFilters(): void {
@@ -408,4 +413,3 @@ export class CustomerListComponent implements OnInit {
     });
   }
 }
-

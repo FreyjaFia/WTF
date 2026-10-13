@@ -290,7 +290,9 @@
 
     @if (!isLoading()) {
       <app-pull-to-refresh [refreshing]="isRefreshing()" (refreshTriggered)="refresh()">
-        @if (isDailySalesReport()) {
+        @if (connectionFailed()) {
+          <app-connection-error />
+        } @else if (isDailySalesReport()) {
           @if (filteredDailyReports().length === 0) {
             <div class="rounded-xl bg-white p-8 text-center shadow-lg">
               <div class="mb-3 flex justify-center">

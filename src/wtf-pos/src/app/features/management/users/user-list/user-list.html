@@ -21,7 +21,7 @@
 
     <div class="flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center md:gap-3">
       <div
-        class="mb-2 flex w-full min-w-0 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200 md:mb-0 md:flex-1 md:max-w-[26rem]"
+        class="mb-2 flex w-full min-w-0 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200 md:mb-0 md:max-w-[26rem] md:flex-1"
       >
         <app-search-input placeholder="Search by name" [control]="filterForm.controls.searchTerm" />
       </div>
@@ -53,7 +53,6 @@
           </button>
         }
       </div>
-
     </div>
   </div>
 
@@ -139,7 +138,9 @@
   <!-- Users Table -->
   @if (!isLoading()) {
     <app-pull-to-refresh [refreshing]="isRefreshing()" (refreshTriggered)="refresh()">
-      @if (users().length === 0) {
+      @if (connectionFailed()) {
+        <app-connection-error />
+      } @else if (users().length === 0) {
         <div class="rounded-lg bg-white p-8 text-center shadow-lg">
           <div class="mb-3 flex justify-center">
             <app-icon name="icon-user" [class]="'h-12 w-12 opacity-60'" />
@@ -153,7 +154,8 @@
           <div
             class="sticky top-0 z-10 mb-2 hidden grid-cols-12 gap-4 rounded-lg bg-white px-4 py-3 lg:grid"
           >
-            <button type="button"
+            <button
+              type="button"
               class="col-span-4 flex cursor-pointer items-center gap-1 text-start text-xs font-semibold tracking-wider uppercase transition-colors"
               [class.text-gray-600]="sortColumn() !== 'name'"
               [class.hover:text-gray-900]="sortColumn() !== 'name'"
@@ -189,7 +191,8 @@
               Status
             </div>
 
-            <button type="button"
+            <button
+              type="button"
               class="col-span-3 flex cursor-pointer items-center justify-center gap-1 text-center text-xs font-semibold tracking-wider uppercase transition-colors"
               [class.text-gray-600]="sortColumn() !== 'role'"
               [class.hover:text-gray-900]="sortColumn() !== 'role'"
@@ -319,16 +322,16 @@
                         class="dropdown-content menu bg-base-100 rounded-box z-50 w-52 p-2 shadow"
                       >
                         @if (user.isActive) {
-                        <li>
-                          <a
-                            draggable="false"
-                            [routerLink]="routes.ManagementUserEditById(user.id)"
-                            class="app-menu-item"
-                          >
-                            <app-icon name="icon-edit" [class]="'h-4 w-4 text-gray-600'" />
-                            Edit
-                          </a>
-                        </li>
+                          <li>
+                            <a
+                              draggable="false"
+                              [routerLink]="routes.ManagementUserEditById(user.id)"
+                              class="app-menu-item"
+                            >
+                              <app-icon name="icon-edit" [class]="'h-4 w-4 text-gray-600'" />
+                              Edit
+                            </a>
+                          </li>
                         }
                         <li>
                           @if (user.isActive) {
@@ -386,9 +389,6 @@
   </app-confirm-dialog>
 }
 
-
-
-
 @if (showRestoreModal() && userToRestore() && canWriteUsers()) {
   <app-confirm-dialog
     variant="success"
@@ -401,7 +401,9 @@
     (cancelled)="cancelRestore()"
   >
     This will reactivate
-    <span class="font-medium text-gray-700">{{ userToRestore()!.firstName + ' ' + userToRestore()!.lastName }}</span
+    <span class="font-medium text-gray-700">{{
+      userToRestore()!.firstName + ' ' + userToRestore()!.lastName
+    }}</span
     >. They will be able to sign in again.
   </app-confirm-dialog>
 }

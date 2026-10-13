@@ -110,7 +110,9 @@
   <!-- Customers Table -->
   @if (!isLoading()) {
     <app-pull-to-refresh [refreshing]="isRefreshing()" (refreshTriggered)="refresh()">
-      @if (customers().length === 0) {
+      @if (connectionFailed()) {
+        <app-connection-error />
+      } @else if (customers().length === 0) {
         <div class="rounded-lg bg-white p-8 text-center shadow-lg">
           <div class="mb-3 flex justify-center">
             <app-icon name="icon-people" [class]="'h-12 w-12 opacity-60'" />
@@ -124,7 +126,8 @@
           <div
             class="sticky top-0 z-10 mb-2 hidden grid-cols-12 gap-4 rounded-lg bg-white px-4 py-3 lg:grid"
           >
-            <button type="button"
+            <button
+              type="button"
               class="col-span-4 flex cursor-pointer items-center gap-1 text-start text-xs font-semibold tracking-wider uppercase transition-colors"
               [class.text-gray-600]="sortColumn() !== 'name'"
               [class.hover:text-gray-900]="sortColumn() !== 'name'"
@@ -166,7 +169,8 @@
               Contact
             </div>
 
-            <button type="button"
+            <button
+              type="button"
               class="col-span-3 flex cursor-pointer items-center justify-center gap-1 text-center text-xs font-semibold tracking-wider uppercase transition-colors"
               [class.text-gray-600]="sortColumn() !== 'address'"
               [class.hover:text-gray-900]="sortColumn() !== 'address'"
@@ -200,7 +204,12 @@
           </div>
 
           @if (sortedCustomers().length > 0) {
-            @for (customer of sortedCustomers(); track customer.id; let isLast = $last; let isFirst = $first) {
+            @for (
+              customer of sortedCustomers();
+              track customer.id;
+              let isLast = $last;
+              let isFirst = $first
+            ) {
               <div
                 class="relative flex items-center gap-3 rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm transition-shadow duration-200 focus-within:z-30 hover:z-10 hover:shadow-md lg:grid lg:grid-cols-12 lg:gap-4 lg:border-0 lg:px-4 lg:py-4 lg:shadow-lg lg:hover:shadow-xl"
               >
@@ -230,7 +239,9 @@
                         {{ customer.firstName }} {{ customer.lastName }}
                       </h3>
                       @if (customer.contactNumber) {
-                        <p class="mt-0.5 text-xs text-gray-500 lg:hidden">{{ customer.contactNumber }}</p>
+                        <p class="mt-0.5 text-xs text-gray-500 lg:hidden">
+                          {{ customer.contactNumber }}
+                        </p>
                       }
                       <!-- Mobile: inline status -->
                       <div class="mt-1 flex flex-wrap items-center gap-2 lg:hidden">
@@ -288,16 +299,16 @@
                         class="dropdown-content menu bg-base-100 rounded-box z-50 w-52 p-2 shadow"
                       >
                         @if (customer.isActive) {
-                        <li>
-                          <a
-                            draggable="false"
-                            [routerLink]="routes.ManagementCustomerEditById(customer.id)"
-                            class="app-menu-item"
-                          >
-                            <app-icon name="icon-edit" [class]="'h-4 w-4 text-gray-600'" />
-                            Edit
-                          </a>
-                        </li>
+                          <li>
+                            <a
+                              draggable="false"
+                              [routerLink]="routes.ManagementCustomerEditById(customer.id)"
+                              class="app-menu-item"
+                            >
+                              <app-icon name="icon-edit" [class]="'h-4 w-4 text-gray-600'" />
+                              Edit
+                            </a>
+                          </li>
                         }
                         <li>
                           @if (customer.isActive) {
@@ -367,7 +378,9 @@
     (cancelled)="cancelRestore()"
   >
     This will reactivate
-    <span class="font-medium text-gray-700">{{ customerToRestore()!.firstName + ' ' + customerToRestore()!.lastName }}</span
+    <span class="font-medium text-gray-700">{{
+      customerToRestore()!.firstName + ' ' + customerToRestore()!.lastName
+    }}</span
     >. They will be available for new orders again.
   </app-confirm-dialog>
 }

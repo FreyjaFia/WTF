@@ -44,7 +44,6 @@
         </button>
       }
     </div>
-
   </div>
 
   <app-side-drawer
@@ -136,7 +135,10 @@
       <!-- Error State -->
       @if (errorMessage()) {
         <div class="rounded-2xl bg-white p-8 text-center shadow-md ring-1 ring-black/5">
-          <app-icon name="icon-error" [class]="'mx-auto mb-3 h-12 w-12 text-gray-400'" />
+          <app-icon
+            [name]="isConnectionError() ? 'icon-cloud-off' : 'icon-error'"
+            [class]="'mx-auto mb-3 h-12 w-12 text-gray-400'"
+          />
           <p class="text-lg font-semibold text-gray-700">{{ errorMessage() }}</p>
           <p class="text-sm text-gray-500">Pull down to try again</p>
         </div>
@@ -617,5 +619,3 @@
     </app-pull-to-refresh>
   }
 </div>
-
-

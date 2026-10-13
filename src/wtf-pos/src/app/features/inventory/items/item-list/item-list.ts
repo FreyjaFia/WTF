@@ -1,3 +1,4 @@
+import { HttpErrorMessages } from '@core/messages';
 import { CommonModule } from '@angular/common';
 import { FilterButtonComponent } from '@shared/components/filter-button/filter-button';
 import { selectedFilterCount } from '@shared/utils/filter-count';
@@ -17,6 +18,7 @@ import type { FilterOption } from '@shared/components';
 import {
   BadgeComponent,
   IconComponent,
+  ConnectionErrorComponent,
   PullToRefreshComponent,
   SearchInputComponent,
   SideDrawerComponent,
@@ -44,6 +46,7 @@ interface ItemListState {
     IconComponent,
     BadgeComponent,
     ConfirmDialogComponent,
+    ConnectionErrorComponent,
     PullToRefreshComponent,
     SearchInputComponent,
     SideDrawerComponent,
@@ -63,6 +66,7 @@ export class ItemListComponent implements OnInit {
 
   protected readonly items = signal<ItemDto[]>([]);
   protected readonly isLoading = signal(false);
+  protected readonly connectionFailed = signal(false);
   protected readonly isRefreshing = signal(false);
   protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
   protected readonly isFiltersOpen = signal(false);
@@ -134,6 +138,7 @@ export class ItemListComponent implements OnInit {
 
   protected loadInventory(): void {
     this.isLoading.set(true);
+    this.connectionFailed.set(false);
     this.inventoryService.getInventoryItems({ includeInactive: true }).subscribe({
       next: (items) => {
         this.items.set(items);
@@ -141,6 +146,7 @@ export class ItemListComponent implements OnInit {
         this.isRefreshing.set(false);
       },
       error: (err) => {
+        this.connectionFailed.set(err.message === HttpErrorMessages.NetworkUnavailable);
         this.alertService.error(err.message);
         this.isLoading.set(false);
         this.isRefreshing.set(false);
@@ -272,9 +278,8 @@ export class ItemListComponent implements OnInit {
   }
 
   /** How many filters are applied, shown on the Filters button. */
-  protected readonly activeFilterCount = computed(
-    () =>
-      selectedFilterCount(this.selectedStatuses().length, this.statusOptions().length),
+  protected readonly activeFilterCount = computed(() =>
+    selectedFilterCount(this.selectedStatuses().length, this.statusOptions().length),
   );
 
   protected openFilters(): void {

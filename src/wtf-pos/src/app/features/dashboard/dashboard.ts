@@ -3,6 +3,7 @@ import { FilterButtonComponent } from '@shared/components/filter-button/filter-b
 import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Capacitor } from '@capacitor/core';
+import { HttpErrorMessages } from '@core/messages';
 import { DashboardService, SignalRService } from '@core/services';
 import {
   AnimatedCounterComponent,
@@ -62,6 +63,9 @@ export class Dashboard implements OnInit, OnDestroy {
   protected readonly isLoading = signal(true);
   protected readonly isRefreshing = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
+  protected readonly isConnectionError = computed(
+    () => this.errorMessage() === HttpErrorMessages.NetworkUnavailable,
+  );
   protected readonly orderTimeAgos = signal<Record<string, string>>({});
   protected readonly currentRange = signal<DateRangeSelection>({ preset: 'today' });
   protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
@@ -316,9 +320,8 @@ export class Dashboard implements OnInit, OnDestroy {
   }
 
   /** How many filters are applied, shown on the Filters button. */
-  protected readonly activeFilterCount = computed(
-    () =>
-      this.currentRange().preset !== 'today' ? 1 : 0,
+  protected readonly activeFilterCount = computed(() =>
+    this.currentRange().preset !== 'today' ? 1 : 0,
   );
 
   protected openFilters(): void {

@@ -184,7 +184,9 @@
 
   @if (!isLoading()) {
     <app-pull-to-refresh [refreshing]="isRefreshing()" (refreshTriggered)="refresh()">
-      @if (logs().length === 0) {
+      @if (connectionFailed()) {
+        <app-connection-error />
+      } @else if (logs().length === 0) {
         <div class="rounded-lg bg-white p-8 text-center shadow-lg">
           <div class="mb-3 flex justify-center">
             <app-icon name="icon-audit-logs" [class]="'h-12 w-12 opacity-60'" />

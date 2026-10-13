@@ -141,7 +141,9 @@
   <!-- Products Table -->
   @if (!isLoading()) {
     <app-pull-to-refresh [refreshing]="isRefreshing()" (refreshTriggered)="refresh()">
-      @if (products().length === 0) {
+      @if (connectionFailed()) {
+        <app-connection-error />
+      } @else if (products().length === 0) {
         <div class="rounded-lg bg-white p-8 text-center shadow-lg">
           <div class="mb-3 flex justify-center">
             <app-icon name="icon-cart" [class]="'h-12 w-12 opacity-60'" />
@@ -155,7 +157,8 @@
           <div
             class="sticky top-0 z-10 mb-2 hidden grid-cols-12 gap-4 rounded-lg bg-white px-4 py-3 lg:grid"
           >
-            <button type="button"
+            <button
+              type="button"
               class="col-span-5 flex cursor-pointer items-center gap-1 text-start text-xs font-semibold tracking-wider uppercase transition-colors"
               [class.text-gray-600]="sortColumn() !== 'name'"
               [class.hover:text-gray-900]="sortColumn() !== 'name'"
@@ -197,7 +200,8 @@
               Category
             </div>
 
-            <button type="button"
+            <button
+              type="button"
               class="col-span-2 flex cursor-pointer items-center justify-end gap-1 text-right text-xs font-semibold tracking-wider uppercase transition-colors"
               [class.text-gray-600]="sortColumn() !== 'price'"
               [class.hover:text-gray-900]="sortColumn() !== 'price'"
@@ -230,7 +234,12 @@
           </div>
 
           @if (sortedProducts().length > 0) {
-            @for (product of sortedProducts(); track product.id; let isLast = $last; let isFirst = $first) {
+            @for (
+              product of sortedProducts();
+              track product.id;
+              let isLast = $last;
+              let isFirst = $first
+            ) {
               <div
                 class="relative flex items-center gap-3 rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm transition-shadow duration-200 focus-within:z-30 hover:z-10 hover:shadow-md lg:grid lg:grid-cols-12 lg:gap-4 lg:border-0 lg:px-4 lg:py-4 lg:shadow-lg lg:hover:shadow-xl"
               >
@@ -341,17 +350,17 @@
                         class="dropdown-content menu bg-base-100 rounded-box z-50 w-52 p-2 shadow"
                       >
                         @if (product.isActive) {
-                        <li>
-                          <a
-                            draggable="false"
-                            [routerLink]="routes.ManagementProductEditById(product.id)"
-                            (click)="$event.stopPropagation()"
-                            class="app-menu-item"
-                          >
-                            <app-icon name="icon-edit" [class]="'h-4 w-4 text-gray-600'" />
-                            Edit
-                          </a>
-                        </li>
+                          <li>
+                            <a
+                              draggable="false"
+                              [routerLink]="routes.ManagementProductEditById(product.id)"
+                              (click)="$event.stopPropagation()"
+                              class="app-menu-item"
+                            >
+                              <app-icon name="icon-edit" [class]="'h-4 w-4 text-gray-600'" />
+                              Edit
+                            </a>
+                          </li>
                         }
                         <li>
                           @if (product.isActive) {
@@ -407,7 +416,6 @@
     >. You can restore it later.
   </app-confirm-dialog>
 }
-
 
 @if (showRestoreModal() && productToRestore() && canWriteProducts()) {
   <app-confirm-dialog
