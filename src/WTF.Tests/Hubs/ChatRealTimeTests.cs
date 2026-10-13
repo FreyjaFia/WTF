@@ -201,7 +201,9 @@ public sealed class ChatRealTimeTests : IAsyncLifetime
         listener.Listen(HubNames.Events.OrderStatusChanged, typeof(Guid));
         listener.Listen(HubNames.Events.LinkRevoked);
         await connection.StartAsync();
-        // The hub adds the connection to its groups while connecting; the server finishes that before answering.
+        // SignalR answers the handshake before the hub's OnConnectedAsync has added the connection to its groups, so
+        // StartAsync can return a moment too early. Give the join time to finish before anything is sent.
+        await Task.Delay(250);
         return listener;
     }
 
