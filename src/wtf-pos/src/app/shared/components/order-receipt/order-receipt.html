@@ -3,13 +3,10 @@
     #receiptEl
     style="
       width: 380px;
-      font-family:
-        'Segoe UI',
-        system-ui,
-        -apple-system,
-        sans-serif;
-      background: #ffffff;
-      color: #1f2937;
+      font-family: var(--receipt-font);
+      background: var(--receipt-bg);
+      border: var(--receipt-frame);
+      color: var(--color-gray-800);
       padding: 32px 28px;
       border-radius: 16px;
     "
@@ -29,7 +26,14 @@
     </div>
 
     <!-- Order info -->
-    <div style="font-size: 16px; font-weight: 700; margin-bottom: 8px">
+    <div
+      style="
+        font-family: var(--receipt-heading-font);
+        font-size: 16px;
+        font-weight: 700;
+        margin-bottom: 8px;
+      "
+    >
       @if (data()?.orderLabel) {
         Order {{ data()!.orderLabel }}
       } @else if (data()?.orderNumber) {
@@ -39,22 +43,22 @@
       }
     </div>
 
-    <div style="font-size: 13px; color: #6b7280; margin-bottom: 4px">
+    <div style="font-size: 13px; color: var(--color-gray-500); margin-bottom: 4px">
       {{ data()?.customerName }}
     </div>
-    <div style="font-size: 12px; color: #9ca3af; margin-bottom: 20px">
+    <div style="font-size: 12px; color: var(--color-gray-400); margin-bottom: 20px">
       {{ data()?.date }}
     </div>
 
     <!-- Divider -->
-    <div style="border-top: 2px dashed #e5e7eb; margin-bottom: 16px"></div>
+    <div style="border-top: 2px dashed var(--color-gray-200); margin-bottom: 16px"></div>
 
     <!-- Items -->
     @for (item of data()?.items ?? []; track $index; let last = $last) {
       <div
         style="margin-bottom: 12px"
         [style.padding-bottom]="last ? '0' : '12px'"
-        [style.border-bottom]="last ? 'none' : '1px solid #f3f4f6'"
+        [style.border-bottom]="last ? 'none' : '1px solid var(--color-gray-100)'"
       >
         <div style="display: flex; justify-content: space-between; align-items: flex-start">
           <div style="flex: 1; min-width: 0">
@@ -62,11 +66,11 @@
               {{ item.name }}
             </div>
             @if (item.promoLabel) {
-              <div style="font-size: 11px; color: #047857; margin-top: 2px">
+              <div style="font-size: 11px; color: var(--brand-ink); margin-top: 2px">
                 {{ item.promoLabel }}
               </div>
             }
-            <div style="font-size: 12px; color: #9ca3af; margin-top: 2px">
+            <div style="font-size: 12px; color: var(--color-gray-400); margin-top: 2px">
               {{ item.qty }} x <span style="color: inherit">&#8369;</span
               >{{ item.price | number: '1.2-2' }}
             </div>
@@ -87,7 +91,7 @@
         @if (isBundleLine(item)) {
           <div style="margin-top: 6px; padding-left: 12px">
             @for (bundleItem of getSortedBundleItems(item); track bundleItem.productId + '-' + $index) {
-              <div style="font-size: 12px; color: #6b7280; margin-top: 2px">
+              <div style="font-size: 12px; color: var(--color-gray-500); margin-top: 2px">
                 <div
                   style="
                     display: flex;
@@ -106,7 +110,7 @@
                       addOn of getGroupedBundleItemAddOns(bundleItem);
                       track addOn.addOnId
                     ) {
-                      <div style="font-size: 11px; color: #9ca3af; margin-top: 1px">
+                      <div style="font-size: 11px; color: var(--color-gray-400); margin-top: 1px">
                         {{
                           addOn.quantityPerUnit > 1
                             ? '+ ' + addOn.quantityPerUnit + 'x ' + addOn.name + ' (per unit)'
@@ -127,7 +131,7 @@
                 display: flex;
                 justify-content: space-between;
                 font-size: 12px;
-                color: #047857;
+                color: var(--brand-ink);
                 font-weight: 600;
               "
             >
@@ -147,7 +151,7 @@
                   display: flex;
                   justify-content: space-between;
                   font-size: 12px;
-                  color: #6b7280;
+                  color: var(--color-gray-500);
                   margin-top: 2px;
                 "
               >
@@ -173,7 +177,7 @@
           <div
             style="
               font-size: 11px;
-              color: #9ca3af;
+              color: var(--color-gray-400);
               font-style: italic;
               margin-top: 4px;
               padding-left: 12px;
@@ -188,7 +192,7 @@
               margin-top: 4px;
               text-align: right;
               font-size: 11px;
-              color: #9ca3af;
+              color: var(--color-gray-400);
               font-style: italic;
             "
           >
@@ -201,27 +205,27 @@
 
     <!-- Order note -->
     @if (data()?.specialInstructions?.trim()) {
-      <div style="border-top: 2px dashed #e5e7eb; padding-top: 12px; margin-bottom: 12px">
+      <div style="border-top: 2px dashed var(--color-gray-200); padding-top: 12px; margin-bottom: 12px">
         <div
           style="
             font-size: 10px;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 1px;
-            color: #9ca3af;
+            color: var(--color-gray-400);
             margin-bottom: 4px;
           "
         >
           Note
         </div>
-        <div style="font-size: 13px; color: #6b7280; font-style: italic">
+        <div style="font-size: 13px; color: var(--color-gray-500); font-style: italic">
           {{ data()!.specialInstructions }}
         </div>
       </div>
     }
 
     <!-- Divider -->
-    <div style="border-top: 2px dashed #e5e7eb; margin-top: 4px; margin-bottom: 16px"></div>
+    <div style="border-top: 2px dashed var(--color-gray-200); margin-top: 4px; margin-bottom: 16px"></div>
 
     <!-- Payment details (for settled orders) -->
     @if (hasPaymentInfo()) {
@@ -231,12 +235,12 @@
             display: flex;
             justify-content: space-between;
             font-size: 13px;
-            color: #6b7280;
+            color: var(--color-gray-500);
             margin-bottom: 6px;
           "
         >
           <span>Payment</span>
-          <span style="font-weight: 600; color: #1f2937">{{ paymentMethodLabel() }}</span>
+          <span style="font-weight: 600; color: var(--color-gray-800)">{{ paymentMethodLabel() }}</span>
         </div>
         @if (data()?.amountReceived !== null && data()?.amountReceived !== undefined) {
           <div
@@ -244,7 +248,7 @@
               display: flex;
               justify-content: space-between;
               font-size: 13px;
-              color: #6b7280;
+              color: var(--color-gray-500);
               margin-bottom: 4px;
             "
           >
@@ -261,7 +265,7 @@
               display: flex;
               justify-content: space-between;
               font-size: 13px;
-              color: #6b7280;
+              color: var(--color-gray-500);
               margin-bottom: 4px;
             "
           >
@@ -278,7 +282,7 @@
               display: flex;
               justify-content: space-between;
               font-size: 13px;
-              color: #6b7280;
+              color: var(--color-gray-500);
               margin-bottom: 4px;
             "
           >
@@ -291,7 +295,7 @@
         }
       </div>
 
-      <div style="border-top: 1px solid #e5e7eb; margin-bottom: 16px"></div>
+      <div style="border-top: 1px solid var(--color-gray-200); margin-bottom: 16px"></div>
     }
 
     <!-- Total -->
@@ -302,12 +306,12 @@
           font-weight: 700;
           text-transform: uppercase;
           letter-spacing: 0.5px;
-          color: #374151;
+          color: var(--color-gray-700);
         "
       >
         Total
       </div>
-      <div style="font-size: 22px; font-weight: 800; color: #047857">
+      <div style="font-size: 22px; font-weight: 800; color: var(--brand-ink)">
         <span style="color: inherit">&#8369;</span>{{ data()?.totalAmount ?? 0 | number: '1.2-2' }}
       </div>
     </div>
@@ -318,10 +322,10 @@
         text-align: center;
         margin-top: 24px;
         padding-top: 16px;
-        border-top: 2px dashed #e5e7eb;
+        border-top: 2px dashed var(--color-gray-200);
       "
     >
-      <div style="font-size: 11px; color: #9ca3af">Thank you for your order!</div>
+      <div style="font-size: 11px; color: var(--color-gray-400)">Thank you for your order!</div>
     </div>
   </div>
 </div>
