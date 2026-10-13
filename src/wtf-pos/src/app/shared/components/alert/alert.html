@@ -1,14 +1,20 @@
 <div
-  class="toast-enter flex items-center gap-3 rounded-xl border-l-4 px-4 py-3 text-sm shadow-[0_8px_30px_rgba(0,0,0,0.08)]"
+  class="app-toast toast-enter relative flex items-center gap-3 overflow-hidden rounded-xl border-l-4 py-3 pr-3 pl-3.5 text-sm shadow-[0_10px_32px_-8px_rgba(0,0,0,0.18)]"
   [class]="toastClass()"
   [class.toast-exit]="isDismissing()"
+  [attr.data-type]="type()"
   role="alert"
 >
-  <app-icon
-    [name]="iconId"
-    [fill]="'none'"
-    [class]="'h-5 w-5 shrink-0 stroke-current ' + iconClass()"
-  />
+  <span
+    class="app-toast-icon flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface/70"
+    aria-hidden="true"
+  >
+    <app-icon
+      [name]="iconId"
+      [fill]="'none'"
+      [class]="'h-5 w-5 shrink-0 stroke-current ' + iconClass()"
+    />
+  </span>
   <span class="flex-1 font-medium" [class]="textClass()">{{ message() }}</span>
   @if (actionLabel()) {
     <button
@@ -29,4 +35,6 @@
   >
     <app-icon name="icon-close" [fill]="'currentColor'" [class]="'h-4 w-4'" />
   </button>
+  <!-- Shows how long the toast stays: it shrinks over the 4 seconds before it dismisses itself. -->
+  <span class="app-toast-timer" [class]="iconClass()" aria-hidden="true"></span>
 </div>

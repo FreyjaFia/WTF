@@ -59,3 +59,30 @@
     }
   }
 }
+
+/* Countdown bar along the bottom edge: the toast dismisses itself after 4 seconds. */
+.app-toast-timer {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background-color: currentColor;
+  opacity: 0.4;
+  transform-origin: left center;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .app-toast-timer {
+    animation: toast-timer 4s linear forwards;
+  }
+}
+
+@keyframes toast-timer {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
