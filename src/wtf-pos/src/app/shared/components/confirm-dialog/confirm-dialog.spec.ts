@@ -10,14 +10,14 @@ const ORIGINAL_DELETE_ITEM = `@if (showDeleteModal() && itemToDelete() && canWri
     role="dialog"
     aria-modal="true"
     aria-labelledby="delete-title"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md transition-opacity duration-200"
+    class="fixed inset-0 z-50 flex items-center justify-center app-backdrop bg-black/30 backdrop-blur-md transition-opacity duration-200"
     (click)="cancelDelete()"
     (keydown.escape)="cancelDelete()"
     tabindex="0"
   >
     <div
       role="document"
-      class="mx-4 w-full max-w-sm animate-[modal-pop_0.2s_ease-out] rounded-2xl bg-white p-6 shadow-2xl"
+      class="mx-4 w-full max-w-sm app-dialog animate-[modal-pop_0.2s_ease-out] rounded-2xl bg-surface p-6 shadow-2xl"
       (click)="$event.stopPropagation()"
       (keydown)="$event.stopPropagation()"
     >
@@ -66,14 +66,14 @@ const ORIGINAL_DELETE_CUSTOMER = `@if (showDeleteModal() && customerToDelete()) 
     role="dialog"
     aria-modal="true"
     aria-labelledby="delete-title"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md transition-opacity duration-200"
+    class="fixed inset-0 z-50 flex items-center justify-center app-backdrop bg-black/30 backdrop-blur-md transition-opacity duration-200"
     (click)="cancelDelete()"
     (keydown.escape)="cancelDelete()"
     tabindex="0"
   >
     <div
       role="document"
-      class="mx-4 w-full max-w-sm animate-[modal-pop_0.2s_ease-out] rounded-2xl bg-white p-6 shadow-2xl"
+      class="mx-4 w-full max-w-sm app-dialog animate-[modal-pop_0.2s_ease-out] rounded-2xl bg-surface p-6 shadow-2xl"
       (click)="$event.stopPropagation()"
       (keydown)="$event.stopPropagation()"
     >
@@ -126,14 +126,14 @@ const ORIGINAL_DISCARD = `@if (showDiscardModal()) {
     role="dialog"
     aria-modal="true"
     aria-labelledby="discard-title"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md transition-opacity duration-200"
+    class="fixed inset-0 z-50 flex items-center justify-center app-backdrop bg-black/30 backdrop-blur-md transition-opacity duration-200"
     (click)="cancelDiscard()"
     (keydown.escape)="cancelDiscard()"
     tabindex="0"
   >
     <div
       role="document"
-      class="mx-4 w-full max-w-sm animate-[modal-pop_0.2s_ease-out] rounded-2xl bg-white p-6 shadow-2xl"
+      class="mx-4 w-full max-w-sm app-dialog animate-[modal-pop_0.2s_ease-out] rounded-2xl bg-surface p-6 shadow-2xl"
       (click)="$event.stopPropagation()"
       (keydown)="$event.stopPropagation()"
     >
@@ -160,7 +160,7 @@ const ORIGINAL_DISCARD = `@if (showDiscardModal()) {
         </button>
         <button
           type="button"
-          class="cursor-pointer rounded-xl bg-[#047857] px-6 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#065f46] hover:shadow-md active:scale-[0.97]"
+          class="cursor-pointer rounded-xl bg-brand px-6 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-brand-hover hover:shadow-md active:scale-[0.97]"
           (click)="cancelDiscard()"
         >
           Keep Editing
@@ -175,14 +175,14 @@ const ORIGINAL_EXIT = `@if (visible()) {
     role="dialog"
     aria-modal="true"
     aria-labelledby="exit-confirm-title"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md transition-opacity duration-200"
+    class="fixed inset-0 z-50 flex items-center justify-center app-backdrop bg-black/30 backdrop-blur-md transition-opacity duration-200"
     (click)="cancel()"
     (keydown.escape)="cancel()"
     tabindex="0"
   >
     <div
       role="document"
-      class="mx-4 w-full max-w-sm animate-[modal-pop_0.2s_ease-out] rounded-2xl bg-white p-6 shadow-2xl"
+      class="mx-4 w-full max-w-sm app-dialog animate-[modal-pop_0.2s_ease-out] rounded-2xl bg-surface p-6 shadow-2xl"
       (click)="$event.stopPropagation()"
       (keydown)="$event.stopPropagation()"
     >
@@ -226,20 +226,20 @@ const ORIGINAL_RESTORE = `<div
   role="dialog"
   aria-modal="true"
   aria-labelledby="restore-title"
-  class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md transition-opacity duration-200"
+  class="fixed inset-0 z-50 flex items-center justify-center app-backdrop bg-black/30 backdrop-blur-md transition-opacity duration-200"
   (click)="cancelled.emit()"
   (keydown.escape)="cancelled.emit()"
   tabindex="0"
 >
   <div
     role="document"
-    class="mx-4 w-full max-w-sm animate-[modal-pop_0.2s_ease-out] rounded-2xl bg-white p-6 shadow-2xl"
+    class="mx-4 w-full max-w-sm app-dialog animate-[modal-pop_0.2s_ease-out] rounded-2xl bg-surface p-6 shadow-2xl"
     (click)="$event.stopPropagation()"
     (keydown)="$event.stopPropagation()"
   >
-    <div class="mx-auto w-fit rounded-full bg-[#047857]/10 p-3">
-      <div class="rounded-full bg-[#047857]/10 p-3">
-        <app-icon name="icon-refresh" [class]="'h-6 w-6 text-[#047857]'" />
+    <div class="mx-auto w-fit rounded-full bg-brand/10 p-3">
+      <div class="rounded-full bg-brand/10 p-3">
+        <app-icon name="icon-refresh" [class]="'h-6 w-6 text-brand-ink'" />
       </div>
     </div>
 
@@ -266,7 +266,7 @@ const ORIGINAL_RESTORE = `<div
       </button>
       <button
         type="button"
-        class="cursor-pointer rounded-xl bg-[#047857] px-6 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#065f46] hover:shadow-md active:scale-[0.97]"
+        class="cursor-pointer rounded-xl bg-brand px-6 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-brand-hover hover:shadow-md active:scale-[0.97]"
         (click)="confirmed.emit()"
         [disabled]="isRestoring()"
       >
@@ -591,14 +591,14 @@ const ORIGINAL_ABANDON = `@if (showAbandonModal()) {
     role="dialog"
     aria-modal="true"
     aria-labelledby="abandon-title"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md transition-opacity duration-200"
+    class="fixed inset-0 z-50 flex items-center justify-center app-backdrop bg-black/30 backdrop-blur-md transition-opacity duration-200"
     (click)="cancelAbandon()"
     (keydown.escape)="cancelAbandon()"
     tabindex="0"
   >
     <div
       role="document"
-      class="mx-4 w-full max-w-sm animate-[modal-pop_0.2s_ease-out] rounded-2xl bg-white p-6 shadow-2xl"
+      class="mx-4 w-full max-w-sm app-dialog animate-[modal-pop_0.2s_ease-out] rounded-2xl bg-surface p-6 shadow-2xl"
       (click)="$event.stopPropagation()"
       (keydown)="$event.stopPropagation()"
     >
@@ -631,7 +631,7 @@ const ORIGINAL_ABANDON = `@if (showAbandonModal()) {
         </button>
         <button
           type="button"
-          class="cursor-pointer rounded-xl bg-[#047857] px-6 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#065f46] hover:shadow-md active:scale-[0.97]"
+          class="cursor-pointer rounded-xl bg-brand px-6 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-brand-hover hover:shadow-md active:scale-[0.97]"
           (click)="cancelAbandon()"
         >
           Keep Ordering
@@ -646,14 +646,14 @@ const ORIGINAL_REFUND = `@if (showRefundModal() && order(); as currentOrder) {
     role="dialog"
     aria-modal="true"
     aria-labelledby="refund-order-title"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md transition-opacity duration-200"
+    class="fixed inset-0 z-50 flex items-center justify-center app-backdrop bg-black/30 backdrop-blur-md transition-opacity duration-200"
     (click)="dismissRefundModal()"
     (keydown.escape)="dismissRefundModal()"
     tabindex="0"
   >
     <div
       role="document"
-      class="mx-4 w-full max-w-sm animate-[modal-pop_0.2s_ease-out] rounded-2xl bg-white p-6 shadow-2xl"
+      class="mx-4 w-full max-w-sm app-dialog animate-[modal-pop_0.2s_ease-out] rounded-2xl bg-surface p-6 shadow-2xl"
       (click)="$event.stopPropagation()"
       (keydown)="$event.stopPropagation()"
     >

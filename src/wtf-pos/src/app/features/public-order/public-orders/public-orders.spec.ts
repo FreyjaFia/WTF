@@ -349,8 +349,8 @@ describe('PublicOrdersComponent', () => {
       expect(numbers()).toEqual(['1002', '1001', '1003']);
       expect(c().sortColumn()).toBe('date');
       expect(c().sortDirection()).toBe('desc');
-      expect(title('date').className).toContain('text-[#047857]');
-      expect(title('total').className).not.toContain('text-[#047857]');
+      expect(title('date').className).toContain('text-brand-ink');
+      expect(title('total').className).not.toContain('text-brand-ink');
     });
 
     it('sorts by order number, biggest first, then the other way on a second press', () => {
@@ -448,8 +448,8 @@ describe('PublicOrdersComponent', () => {
       expect(numbers()).toEqual(['1002', '1001', '1003']);
       expect(c().sortColumn()).toBe('date');
       expect(c().sortDirection()).toBe('desc');
-      expect(title('date').className).toContain('text-[#047857]');
-      expect(title('total').className).not.toContain('text-[#047857]');
+      expect(title('date').className).toContain('text-brand-ink');
+      expect(title('total').className).not.toContain('text-brand-ink');
     });
 
     it('sorts by order number, biggest first, then the other way on a second press', () => {

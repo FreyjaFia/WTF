@@ -81,7 +81,7 @@
   <!-- Master Card -->
   @if (!isLoading() && product()) {
     <div class="flex-1 overflow-y-auto pr-2 pb-4">
-      <div class="card rounded-xl bg-white shadow-lg">
+      <div class="card rounded-xl bg-surface shadow-lg">
         <div class="card-body p-0">
           <div class="grid grid-cols-1 lg:grid-cols-5">
             <!-- Image -->
@@ -111,7 +111,7 @@
                   Pricing
                 </p>
                 <p
-                  class="inline-flex items-center gap-1 text-5xl font-black tracking-tight text-[#047857]"
+                  class="inline-flex items-center gap-1 text-5xl font-black tracking-tight text-brand-ink"
                 >
                   <app-icon name="icon-peso" [class]="'h-8 w-8'" [fill]="'currentColor'" />
                   {{ product()!.price | number: '1.2-2' }}

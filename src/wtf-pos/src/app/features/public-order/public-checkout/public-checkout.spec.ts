@@ -544,8 +544,8 @@ describe('PublicCheckoutComponent', () => {
       type('checkout-amount', '500');
 
       expect(status().getAttribute('data-status')).toBe('change');
-      expect(status().className).toContain('border-[#047857]');
-      expect(status().className).toContain('text-[#065f46]');
+      expect(status().className).toContain('border-brand');
+      expect(status().className).toContain('text-brand-ink-hover');
       expect(input('checkout-amount').className).not.toContain('input-error');
       expect(input('checkout-amount').getAttribute('aria-invalid')).toBeNull();
     });

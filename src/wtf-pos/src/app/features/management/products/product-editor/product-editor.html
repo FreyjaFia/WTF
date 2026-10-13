@@ -1,7 +1,7 @@
 <div class="flex h-full flex-col pt-4 md:pt-0">
   <!-- Sticky Header -->
   <div
-    class="sticky top-0 z-10 mb-4 flex shrink-0 flex-col gap-3 bg-white/95 backdrop-blur-sm sm:mb-6 sm:flex-row sm:items-center sm:justify-between"
+    class="sticky top-0 z-10 mb-4 flex shrink-0 flex-col gap-3 bg-surface/95 backdrop-blur-sm sm:mb-6 sm:flex-row sm:items-center sm:justify-between"
   >
     <!-- Left: Title and Navigation -->
     <div class="flex min-w-0 items-start gap-4">
@@ -76,7 +76,7 @@
           <!-- Left Column: Core Details -->
           <div class="order-2 space-y-6 lg:order-0 lg:col-span-2 lg:row-span-2">
             <!-- Main Form Card -->
-            <div class="card rounded-xl bg-white shadow-lg">
+            <div class="card rounded-xl bg-surface shadow-lg">
               <div class="card-body space-y-5">
                 <!-- Name -->
                 <div>
@@ -88,7 +88,7 @@
                     type="text"
                     formControlName="name"
                     placeholder="Enter product name"
-                    class="input w-full border-transparent bg-gray-50 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                    class="input w-full border-transparent bg-gray-50 transition-all focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20"
                     [class.input-error]="hasError('name')"
                   />
                   @if (getErrorMessage('name')) {
@@ -106,10 +106,10 @@
                     [class.bg-gray-100]="isEditMode()"
                     [class.bg-gray-50]="!isEditMode()"
                     [class.cursor-not-allowed]="isEditMode()"
-                    [class.focus-within:border-[#047857]]="!isEditMode()"
-                    [class.focus-within:bg-white]="!isEditMode()"
+                    [class.focus-within:border-brand]="!isEditMode()"
+                    [class.focus-within:bg-surface]="!isEditMode()"
                     [class.focus-within:ring-1]="!isEditMode()"
-                    [class.focus-within:ring-[#047857]/20]="!isEditMode()"
+                    [class.focus-within:ring-brand/20]="!isEditMode()"
                     [class.input-error]="hasError('code')"
                   >
                     @if (isEditMode()) {
@@ -153,7 +153,7 @@
                   <select
                     id="productCategory"
                     formControlName="category"
-                    class="select w-full border-transparent bg-gray-50 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                    class="select w-full border-transparent bg-gray-50 transition-all focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20"
                     [class.select-error]="hasError('category')"
                   >
                     <option [ngValue]="ProductCategoryEnum.Drink">Drink</option>
@@ -183,7 +183,7 @@
                     <select
                       id="productSubCategory"
                       formControlName="subCategory"
-                      class="select w-full border-transparent bg-gray-50 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                      class="select w-full border-transparent bg-gray-50 transition-all focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20"
                     >
                       <option [ngValue]="null">None</option>
                       <option [ngValue]="ProductSubCategoryEnum.Coffee">Coffee</option>
@@ -213,7 +213,7 @@
                     placeholder="Brief product description"
                     rows="3"
                     maxlength="500"
-                    class="textarea w-full border-transparent bg-gray-50 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                    class="textarea w-full border-transparent bg-gray-50 transition-all focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20"
                   ></textarea>
                 </div>
 
@@ -223,7 +223,7 @@
                     Price <span class="text-error">*</span>
                   </label>
                   <label
-                    class="input flex w-full items-center gap-2 border-transparent bg-gray-50 transition-all focus-within:border-[#047857] focus-within:bg-white focus-within:ring-1 focus-within:ring-[#047857]/20"
+                    class="input flex w-full items-center gap-2 border-transparent bg-gray-50 transition-all focus-within:border-brand focus-within:bg-surface focus-within:ring-1 focus-within:ring-brand/20"
                     [class.input-error]="hasError('price')"
                   >
                     <app-icon
@@ -250,7 +250,7 @@
             </div>
 
             <!-- Management Card -->
-            <div class="card rounded-xl bg-white shadow-lg">
+            <div class="card rounded-xl bg-surface shadow-lg">
               <div class="card-body space-y-5">
                 <p class="text-xs font-semibold tracking-wider text-gray-400 uppercase">
                   Management
@@ -300,7 +300,7 @@
           <!-- Right Column: Sidebar -->
           <div class="order-1 space-y-6 lg:order-0">
             <!-- Product Image Card -->
-            <div class="card rounded-xl bg-white shadow-lg">
+            <div class="card rounded-xl bg-surface shadow-lg">
               <div class="card-body">
                 <div class="mb-2">
                   <span class="text-sm font-semibold text-gray-900">Product Image</span>
@@ -361,20 +361,20 @@
                 <!-- Dropzone File Input -->
                 <label
                   for="productImage"
-                  class="group flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 p-6 transition-all hover:border-[#047857]/40 hover:bg-[#047857]/5"
+                  class="group flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 p-6 transition-all hover:border-brand/40 hover:bg-brand/5"
                   [class.pointer-events-none]="isBusy()"
                   [class.opacity-50]="isBusy()"
-                  [class.border-[#047857]]="isDragging()"
-                  [class.bg-[#047857]/5]="isDragging()"
+                  [class.border-brand]="isDragging()"
+                  [class.bg-brand/5]="isDragging()"
                   (dragover)="onDragOver($event)"
                   (dragleave)="onDragLeave($event)"
                   (drop)="onFileDrop($event)"
                 >
                   <app-icon
                     name="icon-upload"
-                    [class]="'h-8 w-8 text-gray-400 transition-colors group-hover:text-[#047857]'"
+                    [class]="'h-8 w-8 text-gray-400 transition-colors group-hover:text-brand-ink'"
                   />
-                  <p class="mt-2 text-sm font-medium text-gray-600 group-hover:text-[#047857]">
+                  <p class="mt-2 text-sm font-medium text-gray-600 group-hover:text-brand-ink">
                     Click or drag & drop to upload
                   </p>
                   <p class="mt-1 text-xs text-gray-400">JPG, PNG, GIF, or WebP · Max 5 MB</p>
@@ -400,7 +400,7 @@
 
           <!-- Customization Card (edit mode, non-add-on products) -->
           @if (isEditMode() && productId && !productForm.controls.isAddOn.value) {
-            <div class="card order-3 rounded-xl bg-white shadow-lg lg:order-0">
+            <div class="card order-3 rounded-xl bg-surface shadow-lg lg:order-0">
               <div class="card-body">
                 <div class="mb-1 flex flex-wrap items-baseline justify-between gap-1">
                   <h3
@@ -512,7 +512,7 @@
                               </span>
                               <div class="flex flex-wrap items-center justify-end gap-1">
                                 <label
-                                  class="input input-xs flex h-7 w-24 items-center gap-1 border-gray-200 bg-white"
+                                  class="input input-xs flex h-7 w-24 items-center gap-1 border-gray-200 bg-surface"
                                 >
                                   <app-icon
                                     name="icon-peso"
@@ -622,7 +622,7 @@
 
           <!-- Linked Products Card (edit mode, add-on products) -->
           @if (isEditMode() && productId && productForm.controls.isAddOn.value) {
-            <div class="card order-3 rounded-xl bg-white shadow-lg lg:order-0">
+            <div class="card order-3 rounded-xl bg-surface shadow-lg lg:order-0">
               <div class="card-body">
                 <div class="mb-1 flex items-baseline justify-between">
                   <h3 class="text-xs font-semibold tracking-wider text-gray-400 uppercase">

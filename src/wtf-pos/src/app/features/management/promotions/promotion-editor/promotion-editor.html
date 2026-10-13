@@ -1,6 +1,6 @@
 <div class="flex h-full flex-col pt-4 md:pt-0">
   <div
-    class="sticky top-0 z-10 mb-4 flex shrink-0 flex-col gap-3 bg-white/95 backdrop-blur-sm sm:mb-6 sm:flex-row sm:items-center sm:justify-between"
+    class="sticky top-0 z-10 mb-4 flex shrink-0 flex-col gap-3 bg-surface/95 backdrop-blur-sm sm:mb-6 sm:flex-row sm:items-center sm:justify-between"
   >
     <div class="flex min-w-0 items-start gap-4">
       <button
@@ -62,7 +62,7 @@
     <div class="flex-1 overflow-y-auto pr-2 pb-4">
       <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div class="order-2 space-y-6 lg:order-0 lg:col-span-2">
-          <div class="card rounded-xl bg-white shadow-lg lg:hidden">
+          <div class="card rounded-xl bg-surface shadow-lg lg:hidden">
             <div class="card-body">
               <div class="mb-2">
                 <span class="text-sm font-semibold text-gray-900">Promotion Image</span>
@@ -120,20 +120,20 @@
 
               <label
                 for="promotionImageMobile"
-                class="group flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 p-6 transition-all hover:border-[#047857]/40 hover:bg-[#047857]/5"
+                class="group flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 p-6 transition-all hover:border-brand/40 hover:bg-brand/5"
                 [class.pointer-events-none]="isBusy()"
                 [class.opacity-50]="isBusy()"
-                [class.border-[#047857]]="isDragging()"
-                [class.bg-[#047857]/5]="isDragging()"
+                [class.border-brand]="isDragging()"
+                [class.bg-brand/5]="isDragging()"
                 (dragover)="onDragOver($event)"
                 (dragleave)="onDragLeave($event)"
                 (drop)="onFileDrop($event)"
               >
                 <app-icon
                   name="icon-upload"
-                  [class]="'h-8 w-8 text-gray-400 transition-colors group-hover:text-[#047857]'"
+                  [class]="'h-8 w-8 text-gray-400 transition-colors group-hover:text-brand-ink'"
                 />
-                <p class="mt-2 text-sm font-medium text-gray-600 group-hover:text-[#047857]">
+                <p class="mt-2 text-sm font-medium text-gray-600 group-hover:text-brand-ink">
                   Click or drag & drop to upload
                 </p>
                 <p class="mt-1 text-xs text-gray-400">JPG, PNG, GIF, or WebP | Max 5 MB</p>
@@ -156,13 +156,13 @@
             </div>
           </div>
 
-          <div class="card rounded-xl bg-white shadow-lg">
+          <div class="card rounded-xl bg-surface shadow-lg">
             <div class="card-body space-y-5">
               <div>
                 <div class="mb-2 block text-sm font-semibold text-gray-900">Promotion Type</div>
                 @if (!isEditMode()) {
                   <select
-                    class="select w-full border-transparent bg-gray-50 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                    class="select w-full border-transparent bg-gray-50 transition-all focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20"
                     [ngModel]="type()"
                     (ngModelChange)="type.set($event)"
                   >
@@ -190,7 +190,7 @@
               <div>
                 <div class="mb-2 block text-sm font-semibold text-gray-900">Promotion Name</div>
                 <input
-                  class="input w-full border-transparent bg-gray-50 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                  class="input w-full border-transparent bg-gray-50 transition-all focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20"
                   type="text"
                   [ngModel]="
                     type() === 'fixed-bundle'
@@ -258,7 +258,7 @@
                 <div class="max-w-xs">
                   <div class="mb-2 block text-sm font-semibold text-gray-900">Bundle Price</div>
                   <label
-                    class="input flex w-full items-center gap-2 border-transparent bg-gray-50 transition-all focus-within:border-[#047857] focus-within:bg-white focus-within:ring-1 focus-within:ring-[#047857]/20"
+                    class="input flex w-full items-center gap-2 border-transparent bg-gray-50 transition-all focus-within:border-brand focus-within:bg-surface focus-within:ring-1 focus-within:ring-brand/20"
                   >
                     <app-icon
                       name="icon-peso"
@@ -280,7 +280,7 @@
                   <div>
                     <div class="mb-2 block text-sm font-semibold text-gray-900">Bundle Price</div>
                     <label
-                      class="input flex w-full items-center gap-2 border-transparent bg-gray-50 transition-all focus-within:border-[#047857] focus-within:bg-white focus-within:ring-1 focus-within:ring-[#047857]/20"
+                      class="input flex w-full items-center gap-2 border-transparent bg-gray-50 transition-all focus-within:border-brand focus-within:bg-surface focus-within:ring-1 focus-within:ring-brand/20"
                     >
                       <app-icon
                         name="icon-peso"
@@ -327,7 +327,7 @@
                   <div>
                     <div class="mb-2 block text-sm font-semibold text-gray-900">Discount Type</div>
                     <select
-                      class="select w-full border-transparent bg-gray-50 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                      class="select w-full border-transparent bg-gray-50 transition-all focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20"
                       [ngModel]="discountedProductDiscountType()"
                       (ngModelChange)="setDiscountedProductDiscountType($event)"
                     >
@@ -342,7 +342,7 @@
                       }}
                     </div>
                     <label
-                      class="input flex w-full items-center gap-2 border-transparent bg-gray-50 transition-all focus-within:border-[#047857] focus-within:bg-white focus-within:ring-1 focus-within:ring-[#047857]/20"
+                      class="input flex w-full items-center gap-2 border-transparent bg-gray-50 transition-all focus-within:border-brand focus-within:bg-surface focus-within:ring-1 focus-within:ring-brand/20"
                     >
                       @if (discountedProductDiscountType() === 'fixed') {
                         <app-icon
@@ -376,7 +376,7 @@
             </div>
           </div>
 
-          <div class="card rounded-xl bg-white shadow-lg">
+          <div class="card rounded-xl bg-surface shadow-lg">
             <div class="card-body space-y-5">
               <p class="text-xs font-semibold tracking-wider text-gray-400 uppercase">Management</p>
               <div class="grid grid-cols-1 gap-4 sm:grid-cols-1">
@@ -410,7 +410,7 @@
         </div>
 
         <div class="order-3 space-y-6 lg:order-0">
-          <div class="card hidden rounded-xl bg-white shadow-lg lg:block">
+          <div class="card hidden rounded-xl bg-surface shadow-lg lg:block">
             <div class="card-body">
               <div class="mb-2">
                 <span class="text-sm font-semibold text-gray-900">Promotion Image</span>
@@ -468,20 +468,20 @@
 
               <label
                 for="promotionImage"
-                class="group flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 p-6 transition-all hover:border-[#047857]/40 hover:bg-[#047857]/5"
+                class="group flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 p-6 transition-all hover:border-brand/40 hover:bg-brand/5"
                 [class.pointer-events-none]="isBusy()"
                 [class.opacity-50]="isBusy()"
-                [class.border-[#047857]]="isDragging()"
-                [class.bg-[#047857]/5]="isDragging()"
+                [class.border-brand]="isDragging()"
+                [class.bg-brand/5]="isDragging()"
                 (dragover)="onDragOver($event)"
                 (dragleave)="onDragLeave($event)"
                 (drop)="onFileDrop($event)"
               >
                 <app-icon
                   name="icon-upload"
-                  [class]="'h-8 w-8 text-gray-400 transition-colors group-hover:text-[#047857]'"
+                  [class]="'h-8 w-8 text-gray-400 transition-colors group-hover:text-brand-ink'"
                 />
-                <p class="mt-2 text-sm font-medium text-gray-600 group-hover:text-[#047857]">
+                <p class="mt-2 text-sm font-medium text-gray-600 group-hover:text-brand-ink">
                   Click or drag & drop to upload
                 </p>
                 <p class="mt-1 text-xs text-gray-400">JPG, PNG, GIF, or WebP | Max 5 MB</p>
@@ -504,7 +504,7 @@
             </div>
           </div>
 
-          <div class="card rounded-xl bg-white shadow-lg">
+          <div class="card rounded-xl bg-surface shadow-lg">
             <div class="card-body">
               <div class="mb-1 flex items-baseline justify-between">
                 <h3 class="text-xs font-semibold tracking-wider text-gray-400 uppercase">
@@ -606,7 +606,7 @@
                           </div>
                           <div class="mb-2 flex flex-wrap items-center justify-end gap-2">
                             <label
-                              class="input input-xs flex w-24 items-center gap-1 border-gray-200 bg-white"
+                              class="input input-xs flex w-24 items-center gap-1 border-gray-200 bg-surface"
                             >
                               <input
                                 class="w-full bg-transparent text-[10px] outline-none"

@@ -6,7 +6,7 @@
   @if (indicatorHeight() > 0) {
     <div
       class="flex items-center gap-2 text-sm text-gray-500"
-      [class.text-[#047857]]="isPastThreshold()"
+      [class.text-brand-ink]="isPastThreshold()"
     >
       @if (refreshing()) {
         <span class="loading loading-spinner loading-sm"></span>

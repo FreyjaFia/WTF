@@ -10,7 +10,7 @@ export class SparklineComponent {
   private static readonly PAD = 2;
 
   public readonly values = input.required<number[]>();
-  public readonly color = input<string>('#047857');
+  public readonly color = input<string>('var(--brand)');
   public readonly id = input<string>('sparkline');
 
   protected readonly gradientId = computed(() => `${this.id()}-gradient`);

@@ -11,7 +11,7 @@ export interface BarChartPoint {
 })
 export class BarChartComponent {
   public readonly data = input.required<BarChartPoint[]>();
-  public readonly color = input<string>('#047857');
+  public readonly color = input<string>('var(--brand)');
 
   protected readonly width = 400;
   protected readonly height = 180;

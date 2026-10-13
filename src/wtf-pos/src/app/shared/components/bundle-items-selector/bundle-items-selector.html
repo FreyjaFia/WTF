@@ -3,14 +3,14 @@
     role="dialog"
     aria-modal="true"
     aria-labelledby="bundle-items-title"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md transition-opacity duration-200"
+    class="fixed inset-0 z-50 flex items-center justify-center app-backdrop bg-black/30 backdrop-blur-md transition-opacity duration-200"
     (click)="close()"
     (keydown.escape)="close()"
     tabindex="0"
   >
     <div
       role="document"
-      class="mx-4 flex max-h-[90vh] w-full max-w-[min(72rem,calc(100vw-2rem))] flex-col rounded-2xl bg-white shadow-2xl"
+      class="mx-4 flex max-h-[90vh] w-full max-w-[min(72rem,calc(100vw-2rem))] flex-col rounded-2xl bg-surface shadow-2xl"
       (click)="$event.stopPropagation()"
       (keydown)="$event.stopPropagation()"
     >
@@ -37,7 +37,7 @@
             <input
               type="text"
               placeholder="Search products..."
-              class="input input-sm w-full rounded-xl border-transparent bg-gray-50 pl-9 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+              class="input input-sm w-full rounded-xl border-transparent bg-gray-50 pl-9 transition-all focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20"
               [value]="searchTerm()"
               (input)="onSearchInput($event)"
             />
@@ -50,7 +50,7 @@
             @for (product of filteredAvailableProducts(); track product.id) {
               <li
                 [attr.data-id]="product.id"
-                class="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm font-medium text-gray-800 transition-shadow hover:shadow-sm"
+                class="flex items-center gap-3 rounded-lg border border-gray-200 bg-surface px-3 py-2.5 text-sm font-medium text-gray-800 transition-shadow hover:shadow-sm"
               >
                 <app-icon
                   name="icon-grip"
@@ -92,10 +92,10 @@
               <li
                 [attr.data-id]="product.id"
                 class="flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2.5 text-sm font-medium transition-all"
-                [class.border-[#047857]]="activeSelectedProductId() === product.id"
-                [class.bg-[#047857]/5]="activeSelectedProductId() === product.id"
+                [class.border-brand]="activeSelectedProductId() === product.id"
+                [class.bg-brand/5]="activeSelectedProductId() === product.id"
                 [class.border-gray-200]="activeSelectedProductId() !== product.id"
-                [class.bg-white]="activeSelectedProductId() !== product.id"
+                [class.bg-surface]="activeSelectedProductId() !== product.id"
                 role="button"
                 tabindex="0"
                 (click)="setActiveProduct(product.id)"
@@ -120,7 +120,7 @@
                   <span class="font-mono text-[10px] text-gray-400">{{ product.code }}</span>
                 </div>
                 @if (getSelectedAddOnCount(product.id) > 0) {
-                  <span class="badge badge-sm border-0 bg-[#047857]/10 text-[#047857]">
+                  <span class="badge badge-sm border-0 bg-brand/10 text-brand-ink">
                     {{ getSelectedAddOnCount(product.id) }} add-on(s)
                   </span>
                 }
@@ -180,10 +180,10 @@
                         <button
                           type="button"
                           class="flex w-full items-center gap-2.5 rounded-xl border px-2.5 py-2 text-left transition-all"
-                          [class.border-[#047857]]="
+                          [class.border-brand]="
                             isSelected(activeProduct()!.id, group.type, option.id)
                           "
-                          [class.bg-[#047857]/5]="
+                          [class.bg-brand/5]="
                             isSelected(activeProduct()!.id, group.type, option.id)
                           "
                           [class.border-gray-200]="
@@ -193,7 +193,7 @@
                             !isSelected(activeProduct()!.id, group.type, option.id) &&
                             option.isActive
                           "
-                          [class.hover:bg-white]="
+                          [class.hover:bg-surface]="
                             !isSelected(activeProduct()!.id, group.type, option.id) &&
                             option.isActive
                           "
@@ -207,7 +207,7 @@
                             @if (isRadioGroup(group.type)) {
                               <div
                                 class="flex h-4.5 w-4.5 items-center justify-center rounded-full border-2 transition-colors"
-                                [class.border-[#047857]]="
+                                [class.border-brand]="
                                   isSelected(activeProduct()!.id, group.type, option.id)
                                 "
                                 [class.border-gray-300]="
@@ -215,16 +215,16 @@
                                 "
                               >
                                 @if (isSelected(activeProduct()!.id, group.type, option.id)) {
-                                  <div class="h-2 w-2 rounded-full bg-[#047857]"></div>
+                                  <div class="h-2 w-2 rounded-full bg-brand"></div>
                                 }
                               </div>
                             } @else {
                               <div
                                 class="flex h-4.5 w-4.5 items-center justify-center rounded-md border-2 transition-colors"
-                                [class.border-[#047857]]="
+                                [class.border-brand]="
                                   isSelected(activeProduct()!.id, group.type, option.id)
                                 "
-                                [class.bg-[#047857]]="
+                                [class.bg-brand]="
                                   isSelected(activeProduct()!.id, group.type, option.id)
                                 "
                                 [class.border-gray-300]="

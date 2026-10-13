@@ -18,7 +18,7 @@ export class SearchInputComponent {
   public readonly clearAriaLabel = input('Clear search');
   public readonly iconClass = input('h-5 w-5 shrink-0 opacity-40');
   public readonly inputClass = input(
-    'grow bg-transparent text-sm placeholder-gray-500 focus:caret-[#047857] focus:outline-none',
+    'grow bg-transparent text-sm placeholder-gray-500 focus:caret-brand focus:outline-none',
   );
   public readonly clearButtonClass = input(
     'flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-200 hover:text-gray-700',

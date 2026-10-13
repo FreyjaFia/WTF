@@ -6,7 +6,7 @@
   (cancel)="onDialogCancel($event)"
 >
   <div
-    class="modal-box checkout-shell relative flex max-h-[92vh] w-[calc(100%-2rem)] max-w-lg animate-[modal-pop_0.2s_ease-out] flex-col overflow-hidden rounded-2xl p-0 shadow-2xl"
+    class="modal-box checkout-shell relative flex max-h-[92vh] w-[calc(100%-2rem)] max-w-lg app-dialog animate-[modal-pop_0.2s_ease-out] flex-col overflow-hidden rounded-2xl p-0 shadow-2xl"
   >
     <!-- Header -->
     <div class="shrink-0 border-b border-gray-100 px-6 pt-6 pb-4">
@@ -17,7 +17,7 @@
         </div>
         <div class="shrink-0 text-right">
           <p class="text-xs text-gray-400">Total</p>
-          <p class="text-lg font-bold text-[#047857]" data-checkout-total>
+          <p class="text-lg font-bold text-brand-ink" data-checkout-total>
             <app-icon
               name="icon-peso"
               [class]="'inline h-3 w-3 align-[-0.125em]'"
@@ -41,7 +41,7 @@
                 class="rounded-xl border px-3 py-3 text-sm font-medium transition-colors"
                 [class]="
                   paymentForm.controls.paymentMethod.value === option
-                    ? 'border-[#047857] bg-[#047857]/5 text-gray-900'
+                    ? 'border-brand bg-brand/5 text-gray-900'
                     : 'border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
                 "
                 [attr.aria-checked]="paymentForm.controls.paymentMethod.value === option"
@@ -184,7 +184,7 @@
       </div>
     </div>
   </div>
-  <form method="dialog" class="modal-backdrop bg-black/30 backdrop-blur-md">
+  <form method="dialog" class="modal-backdrop app-backdrop bg-black/30 backdrop-blur-md">
     <button [disabled]="isBusy()">close</button>
   </form>
 </dialog>

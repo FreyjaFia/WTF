@@ -11,7 +11,7 @@ export interface AreaChartPoint {
 })
 export class AreaChartComponent {
   public readonly data = input.required<AreaChartPoint[]>();
-  public readonly color = input<string>('#047857');
+  public readonly color = input<string>('var(--brand)');
 
   protected readonly width = 400;
   protected readonly height = 180;

@@ -5,7 +5,7 @@
   [class.pointer-events-none]="!isOpen()"
 >
   <div
-    class="absolute inset-0 bg-black/30 backdrop-blur-md app-drawer-backdrop"
+    class="absolute inset-0 app-backdrop bg-black/30 backdrop-blur-md app-drawer-backdrop"
     [class.duration-0]="!hasTransitions()"
     [class.opacity-100]="isOpen()"
     [class.opacity-0]="!isOpen()"
@@ -14,7 +14,7 @@
   ></div>
 
   <section
-    class="fixed top-0 right-0 z-50 flex h-full w-full max-w-md flex-col bg-white shadow-xl app-drawer-panel"
+    class="fixed top-0 right-0 z-50 flex h-full w-full max-w-md flex-col bg-surface shadow-xl app-drawer-panel"
     [class.duration-0]="!hasTransitions()"
     style="padding-top: max(var(--safe-area-top, 0px), env(safe-area-inset-top)); padding-bottom: max(var(--safe-area-bottom, 0px), env(safe-area-inset-bottom))"
     [class.translate-x-0]="isOpen()"
@@ -28,7 +28,7 @@
   >
     <header class="flex items-center justify-between border-b border-gray-200 px-5 py-4">
       <div class="flex min-w-0 items-center gap-3">
-        <div class="rounded-lg bg-white p-2 ring-1 ring-gray-200">
+        <div class="rounded-lg bg-surface p-2 ring-1 ring-gray-200">
           <app-icon name="icon-chat" [class]="'h-5 w-5 text-gray-700'" [fill]="'currentColor'" />
         </div>
         <div class="min-w-0">

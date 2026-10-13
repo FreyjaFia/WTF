@@ -34,9 +34,9 @@ const variantStyles: Record<ConfirmDialogVariant, VariantStyle> = {
     confirmButton: 'app-btn app-btn-primary app-btn-md px-6',
   },
   success: {
-    outerRing: 'mx-auto w-fit rounded-full bg-[#047857]/10 p-3',
-    innerRing: 'rounded-full bg-[#047857]/10 p-3',
-    icon: 'h-6 w-6 text-[#047857]',
+    outerRing: 'mx-auto w-fit rounded-full bg-brand/10 p-3',
+    innerRing: 'rounded-full bg-brand/10 p-3',
+    icon: 'h-6 w-6 text-brand-ink',
     confirmButton: 'app-btn app-btn-primary app-btn-md px-6',
   },
 };

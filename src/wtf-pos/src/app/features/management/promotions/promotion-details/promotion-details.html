@@ -69,7 +69,7 @@
 
   @if (!isLoading() && (fixedBundle() || mixMatch() || discountedProduct())) {
     <div class="flex-1 overflow-y-auto pr-2 pb-4">
-      <div class="card rounded-xl bg-white shadow-lg">
+      <div class="card rounded-xl bg-surface shadow-lg">
         <div class="card-body p-0">
           <div class="grid grid-cols-1 lg:grid-cols-5">
             <div class="order-1 border-b border-gray-100 p-6 lg:col-span-2 lg:border-r lg:border-b-0">
@@ -86,11 +86,11 @@
               <div>
                 <p class="mb-2 text-xs font-semibold tracking-wider text-gray-400 uppercase">Pricing</p>
                 @if (type() === 'discounted-product' && getDiscountedPrimaryItem()?.percentOff) {
-                  <p class="inline-flex items-center gap-2 text-4xl font-black tracking-tight text-[#047857]">
+                  <p class="inline-flex items-center gap-2 text-4xl font-black tracking-tight text-brand-ink">
                     {{ getDiscountedPrimaryItem()!.percentOff | number: '1.0-2' }}% off
                   </p>
                 } @else {
-                  <p class="inline-flex items-center gap-1 text-5xl font-black tracking-tight text-[#047857]">
+                  <p class="inline-flex items-center gap-1 text-5xl font-black tracking-tight text-brand-ink">
                     <app-icon name="icon-peso" [class]="'h-8 w-8'" [fill]="'currentColor'" />
                     {{ headlinePrice() | number: '1.2-2' }}
                   </p>

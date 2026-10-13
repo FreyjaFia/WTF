@@ -44,7 +44,7 @@
             class="max-w-[85%] space-y-2 rounded-2xl px-3.5 py-2 text-sm wrap-break-word whitespace-pre-wrap"
             [class]="
               isMine(message)
-                ? 'rounded-br-md bg-[#047857] text-white'
+                ? 'rounded-br-md bg-brand text-white'
                 : 'rounded-bl-md bg-gray-100 text-gray-900'
             "
           >
@@ -84,7 +84,7 @@
 </div>
 
 <!-- Writing box, or why there is none -->
-<div class="shrink-0 border-t border-gray-100 bg-white px-3 py-3">
+<div class="shrink-0 border-t border-gray-100 bg-surface px-3 py-3">
   @if (retentionDays(); as days) {
     <p class="mb-2 text-center text-[11px] text-gray-400" data-chat-retention>
       Messages are deleted after {{ days }} days once the order is finished.
@@ -138,7 +138,7 @@
         </label>
       }
       <textarea
-        class="max-h-32 min-h-10 flex-1 resize-none rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm transition-colors focus:border-[#047857] focus:bg-white focus:outline-none"
+        class="max-h-32 min-h-10 flex-1 resize-none rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm transition-colors focus:border-brand focus:bg-surface focus:outline-none"
         rows="1"
         [placeholder]="attachment() ? 'Add a caption (optional)' : 'Write a message'"
         aria-label="Write a message"

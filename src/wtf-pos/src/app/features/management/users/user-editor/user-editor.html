@@ -1,7 +1,7 @@
 <div class="flex h-full flex-col pt-4 md:pt-0">
   <!-- Sticky Header -->
   <div
-    class="sticky top-0 z-10 mb-4 flex shrink-0 flex-col gap-3 bg-white/95 backdrop-blur-sm sm:mb-6 sm:flex-row sm:items-center sm:justify-between"
+    class="sticky top-0 z-10 mb-4 flex shrink-0 flex-col gap-3 bg-surface/95 backdrop-blur-sm sm:mb-6 sm:flex-row sm:items-center sm:justify-between"
   >
     <!-- Left: Title and Navigation -->
     <div class="flex min-w-0 items-start gap-4">
@@ -85,7 +85,7 @@
             [class.lg:col-span-2]="isProfileMode()"
           >
             <!-- Main Form Card -->
-            <div class="card rounded-xl bg-white shadow-lg">
+            <div class="card rounded-xl bg-surface shadow-lg">
               <div class="card-body space-y-5">
                 <!-- First Name -->
                 <div>
@@ -97,10 +97,10 @@
                     [class.bg-gray-100]="isProfileMode()"
                     [class.bg-gray-50]="!isProfileMode()"
                     [class.cursor-not-allowed]="isProfileMode()"
-                    [class.focus-within:border-[#047857]]="!isProfileMode()"
-                    [class.focus-within:bg-white]="!isProfileMode()"
+                    [class.focus-within:border-brand]="!isProfileMode()"
+                    [class.focus-within:bg-surface]="!isProfileMode()"
                     [class.focus-within:ring-1]="!isProfileMode()"
-                    [class.focus-within:ring-[#047857]/20]="!isProfileMode()"
+                    [class.focus-within:ring-brand/20]="!isProfileMode()"
                     [class.input-error]="hasError('firstName')"
                   >
                     @if (isProfileMode()) {
@@ -135,10 +135,10 @@
                     [class.bg-gray-100]="isProfileMode()"
                     [class.bg-gray-50]="!isProfileMode()"
                     [class.cursor-not-allowed]="isProfileMode()"
-                    [class.focus-within:border-[#047857]]="!isProfileMode()"
-                    [class.focus-within:bg-white]="!isProfileMode()"
+                    [class.focus-within:border-brand]="!isProfileMode()"
+                    [class.focus-within:bg-surface]="!isProfileMode()"
                     [class.focus-within:ring-1]="!isProfileMode()"
-                    [class.focus-within:ring-[#047857]/20]="!isProfileMode()"
+                    [class.focus-within:ring-brand/20]="!isProfileMode()"
                     [class.input-error]="hasError('lastName')"
                   >
                     @if (isProfileMode()) {
@@ -173,10 +173,10 @@
                     [class.bg-gray-100]="isProfileMode()"
                     [class.bg-gray-50]="!isProfileMode()"
                     [class.cursor-not-allowed]="isProfileMode()"
-                    [class.focus-within:border-[#047857]]="!isProfileMode()"
-                    [class.focus-within:bg-white]="!isProfileMode()"
+                    [class.focus-within:border-brand]="!isProfileMode()"
+                    [class.focus-within:bg-surface]="!isProfileMode()"
                     [class.focus-within:ring-1]="!isProfileMode()"
-                    [class.focus-within:ring-[#047857]/20]="!isProfileMode()"
+                    [class.focus-within:ring-brand/20]="!isProfileMode()"
                     [class.input-error]="hasError('username')"
                   >
                     @if (isProfileMode()) {
@@ -209,7 +209,7 @@
                     <select
                       id="roleId"
                       formControlName="roleId"
-                      class="select w-full border-transparent bg-gray-50 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                      class="select w-full border-transparent bg-gray-50 transition-all focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20"
                       [class.select-error]="hasError('roleId')"
                     >
                       <option [ngValue]="null">Select role</option>
@@ -259,7 +259,7 @@
                         formControlName="currentPassword"
                         placeholder="Enter current password"
                         autocomplete="current-password"
-                        class="input w-full border-transparent bg-gray-50 pr-16 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                        class="input w-full border-transparent bg-gray-50 pr-16 transition-all focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20"
                         [class.input-error]="hasError('currentPassword')"
                       />
                       <button
@@ -295,7 +295,7 @@
                       [type]="showPassword() ? 'text' : 'password'"
                       formControlName="password"
                       placeholder="Enter password"
-                      class="input w-full border-transparent bg-gray-50 pr-16 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                      class="input w-full border-transparent bg-gray-50 pr-16 transition-all focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20"
                       [class.input-error]="hasError('password')"
                     />
                     <button
@@ -329,7 +329,7 @@
                       [type]="showConfirmPassword() ? 'text' : 'password'"
                       formControlName="confirmPassword"
                       placeholder="Re-enter password"
-                      class="input w-full border-transparent bg-gray-50 pr-16 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                      class="input w-full border-transparent bg-gray-50 pr-16 transition-all focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20"
                       [class.input-error]="
                         hasError('confirmPassword') ||
                         !!userForm.errors?.['passwordMismatch'] ||
@@ -358,7 +358,7 @@
           @if (isProfileMode()) {
             <div class="order-first space-y-6 lg:order-0">
               <!-- User Image Card -->
-              <div class="card rounded-xl bg-white shadow-lg">
+              <div class="card rounded-xl bg-surface shadow-lg">
                 <div class="card-body">
                   <div class="mb-2">
                     <span class="text-sm font-semibold text-gray-900">User Image</span>
@@ -419,20 +419,20 @@
                   <!-- Dropzone File Input -->
                   <label
                     for="userImage"
-                    class="group flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 p-6 transition-all hover:border-[#047857]/40 hover:bg-[#047857]/5"
+                    class="group flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 p-6 transition-all hover:border-brand/40 hover:bg-brand/5"
                     [class.pointer-events-none]="isBusy()"
                     [class.opacity-50]="isBusy()"
-                    [class.border-[#047857]]="isDragging()"
-                    [class.bg-[#047857]/5]="isDragging()"
+                    [class.border-brand]="isDragging()"
+                    [class.bg-brand/5]="isDragging()"
                     (dragover)="onDragOver($event)"
                     (dragleave)="onDragLeave($event)"
                     (drop)="onFileDrop($event)"
                   >
                     <app-icon
                       name="icon-upload"
-                      [class]="'h-8 w-8 text-gray-400 transition-colors group-hover:text-[#047857]'"
+                      [class]="'h-8 w-8 text-gray-400 transition-colors group-hover:text-brand-ink'"
                     />
-                    <p class="mt-2 text-sm font-medium text-gray-600 group-hover:text-[#047857]">
+                    <p class="mt-2 text-sm font-medium text-gray-600 group-hover:text-brand-ink">
                       Click or drag & drop to upload
                     </p>
                     <p class="mt-1 text-xs text-gray-400">JPG, PNG, GIF, or WebP · Max 5 MB</p>

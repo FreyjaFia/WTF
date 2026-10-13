@@ -34,7 +34,7 @@
             <input
               type="text"
               placeholder="Search add-ons..."
-              class="input input-sm w-full rounded-xl border-transparent bg-gray-50 pl-9 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+              class="input input-sm w-full rounded-xl border-transparent bg-gray-50 pl-9 transition-all focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20"
               [value]="searchTerm()"
               (input)="onSearchInput($event)"
             />
@@ -46,7 +46,7 @@
             @for (addon of filteredAvailableAddOns(); track addon.id) {
               <li
                 [attr.data-id]="addon.id"
-                class="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm font-medium text-gray-800 transition-shadow hover:shadow-sm"
+                class="flex items-center gap-3 rounded-lg border border-gray-200 bg-surface px-3 py-2.5 text-sm font-medium text-gray-800 transition-shadow hover:shadow-sm"
               >
                 <app-icon
                   name="icon-grip"
@@ -116,7 +116,7 @@
             @for (addon of assignedAddOns(); track addon.id) {
               <li
                 [attr.data-id]="addon.id"
-                class="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm font-medium text-gray-800 transition-shadow hover:shadow-sm"
+                class="flex items-center gap-3 rounded-lg border border-gray-200 bg-surface px-3 py-2.5 text-sm font-medium text-gray-800 transition-shadow hover:shadow-sm"
               >
                 <app-icon
                   name="icon-grip"
@@ -151,7 +151,7 @@
                     <span class="font-mono text-[10px] text-gray-400">{{ addon.code }}</span>
                     <!-- Type Selector -->
                     <select
-                      class="select select-xs w-24 shrink-0 rounded-lg border-gray-200 bg-gray-50 text-xs font-medium focus:border-[#047857] focus:ring-1 focus:ring-[#047857]/20"
+                      class="select select-xs w-24 shrink-0 rounded-lg border-gray-200 bg-gray-50 text-xs font-medium focus:border-brand focus:ring-1 focus:ring-brand/20"
                       [value]="addon.type"
                       (change)="changeAddOnType(addon.id, $event)"
                       (mousedown)="$event.stopPropagation()"
@@ -201,7 +201,7 @@
     </div>
   </div>
 
-  <form method="dialog" class="modal-backdrop bg-black/30 backdrop-blur-md">
+  <form method="dialog" class="modal-backdrop app-backdrop bg-black/30 backdrop-blur-md">
     <button type="button" [disabled]="isSaving()">close</button>
   </form>
 </dialog>

@@ -249,7 +249,7 @@ export class Dashboard implements OnInit, OnDestroy {
       return [];
     }
 
-    const colors = ['#047857', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#6b7280'];
+    const colors = ['var(--brand)', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#6b7280'];
     return methods.map((m, i) => ({
       label: m.name,
       value: m.total,

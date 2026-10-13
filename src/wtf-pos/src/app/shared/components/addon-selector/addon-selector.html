@@ -3,14 +3,14 @@
     role="dialog"
     aria-modal="true"
     aria-labelledby="addon-selector-title"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md transition-opacity duration-200"
+    class="fixed inset-0 z-50 flex items-center justify-center app-backdrop bg-black/30 backdrop-blur-md transition-opacity duration-200"
     (click)="close()"
     (keydown.escape)="close()"
     tabindex="0"
   >
     <div
       role="document"
-      class="mx-4 flex w-full max-w-lg animate-[modal-pop_0.2s_ease-out] flex-col rounded-2xl bg-white shadow-2xl"
+      class="mx-4 flex w-full max-w-lg app-dialog animate-[modal-pop_0.2s_ease-out] flex-col rounded-2xl bg-surface shadow-2xl"
       (click)="$event.stopPropagation()"
       (keydown)="$event.stopPropagation()"
     >
@@ -48,7 +48,7 @@
           </div>
           <div class="shrink-0 sm:text-right">
             <div class="flex items-center justify-between gap-3 sm:block">
-              <p class="text-lg font-bold text-[#047857]">
+              <p class="text-lg font-bold text-brand-ink">
                 <app-icon
                   name="icon-peso"
                   [class]="'inline h-3 w-3 align-[-0.125em]'"
@@ -134,8 +134,8 @@
                   <button
                     type="button"
                     class="flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-left transition-all"
-                    [class.border-[#047857]]="isSelected(group.type, option.id)"
-                    [class.bg-[#047857]/5]="isSelected(group.type, option.id)"
+                    [class.border-brand]="isSelected(group.type, option.id)"
+                    [class.bg-brand/5]="isSelected(group.type, option.id)"
                     [class.border-gray-200]="!isSelected(group.type, option.id)"
                     [class.hover:border-gray-300]="
                       !isSelected(group.type, option.id) && option.isActive
@@ -153,19 +153,19 @@
                         <!-- Radio circle -->
                         <div
                           class="flex h-5 w-5 items-center justify-center rounded-full border-2 transition-colors"
-                          [class.border-[#047857]]="isSelected(group.type, option.id)"
+                          [class.border-brand]="isSelected(group.type, option.id)"
                           [class.border-gray-300]="!isSelected(group.type, option.id)"
                         >
                           @if (isSelected(group.type, option.id)) {
-                            <div class="h-2.5 w-2.5 rounded-full bg-[#047857]"></div>
+                            <div class="h-2.5 w-2.5 rounded-full bg-brand"></div>
                           }
                         </div>
                       } @else {
                         <!-- Checkbox square -->
                         <div
                           class="flex h-5 w-5 items-center justify-center rounded-md border-2 transition-colors"
-                          [class.border-[#047857]]="isSelected(group.type, option.id)"
-                          [class.bg-[#047857]]="isSelected(group.type, option.id)"
+                          [class.border-brand]="isSelected(group.type, option.id)"
+                          [class.bg-brand]="isSelected(group.type, option.id)"
                           [class.border-gray-300]="!isSelected(group.type, option.id)"
                         >
                           @if (isSelected(group.type, option.id)) {

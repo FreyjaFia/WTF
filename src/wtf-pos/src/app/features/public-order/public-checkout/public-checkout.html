@@ -2,14 +2,14 @@
   role="dialog"
   aria-modal="true"
   aria-labelledby="public-checkout-title"
-  class="fixed inset-0 z-50 flex animate-[backdrop-fade_0.2s_ease-out] items-center justify-center bg-black/30 backdrop-blur-md"
+  class="fixed inset-0 z-50 flex animate-[backdrop-fade_0.2s_ease-out] items-center justify-center app-backdrop bg-black/30 backdrop-blur-md"
   tabindex="-1"
   (click)="!isBusy() && cancelled.emit()"
   (keydown.escape)="!isBusy() && cancelled.emit()"
 >
   <div
     role="document"
-    class="mx-4 flex max-h-[92vh] w-full max-w-lg animate-[modal-pop_0.2s_ease-out] flex-col rounded-2xl bg-white shadow-2xl"
+    class="mx-4 flex max-h-[92vh] w-full max-w-lg app-dialog animate-[modal-pop_0.2s_ease-out] flex-col rounded-2xl bg-surface shadow-2xl"
     (click)="$event.stopPropagation()"
     (keydown)="$event.stopPropagation()"
   >
@@ -22,7 +22,7 @@
         </div>
         <div class="shrink-0 text-right">
           <p class="text-xs text-gray-400">Total</p>
-          <p class="text-lg font-bold text-[#047857]">₱{{ total() | number: '1.2-2' }}</p>
+          <p class="text-lg font-bold text-brand-ink">₱{{ total() | number: '1.2-2' }}</p>
         </div>
       </div>
     </div>
@@ -41,7 +41,7 @@
               class="rounded-xl border px-3 py-3 text-sm font-medium transition-colors"
               [class]="
                 fulfillment() === option
-                  ? 'border-[#047857] bg-[#047857]/5 text-gray-900'
+                  ? 'border-brand bg-brand/5 text-gray-900'
                   : 'border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
               "
               [attr.aria-checked]="fulfillment() === option"
@@ -116,7 +116,7 @@
               class="rounded-xl border px-3 py-3 text-sm font-medium transition-colors"
               [class]="
                 payment() === option
-                  ? 'border-[#047857] bg-[#047857]/5 text-gray-900'
+                  ? 'border-brand bg-brand/5 text-gray-900'
                   : 'border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
               "
               [attr.aria-checked]="payment() === option"
@@ -206,7 +206,7 @@
                 cashStatus() === 'owed'
                   ? 'border-red-400 bg-red-50 text-red-700'
                   : cashStatus() === 'change'
-                    ? 'border-[#047857] bg-[#047857]/5 text-[#065f46]'
+                    ? 'border-brand bg-brand/5 text-brand-ink-hover'
                     : 'border-gray-300 bg-gray-50 text-gray-600'
               "
             >

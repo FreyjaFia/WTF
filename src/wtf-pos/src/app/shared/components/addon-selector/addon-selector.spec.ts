@@ -569,7 +569,7 @@ describe('AddonSelectorComponent', () => {
       i.toggleOption({ type: AddOnTypeEnum.Extra, displayName: 'Extra', options: [long] }, long);
       fixture.detectChanges();
 
-      const row = el.querySelector('button.border-\\[\\#047857\\]') as HTMLElement;
+      const row = el.querySelector('button.border-brand') as HTMLElement;
       const name = [...row.querySelectorAll('span')].find((x) =>
         x.textContent?.includes('Extra shot of'),
       ) as HTMLElement;

@@ -91,7 +91,7 @@ describe('button conventions', () => {
 
   it('uses a button role instead of hand-built brand or danger backgrounds', () => {
     const offenders = buttons
-      .filter((tag) => /class="[^"]*(bg-\[#047857\]|bg-red-600|bg-emerald-6|bg-black)/.test(tag.text))
+      .filter((tag) => /class="[^"]*(bg-brand|bg-red-600|bg-emerald-6|bg-black)/.test(tag.text))
       .filter((tag) => !/\sdata-custom-button\b/.test(tag.text))
       .filter((tag) => !/app-(btn|stepper-btn)/.test(tag.text))
       .map(where);

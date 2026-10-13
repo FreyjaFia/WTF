@@ -421,7 +421,7 @@ describe('Dashboard', () => {
       const { vm } = create();
       const segments = vm['paymentDonutSegments']();
       expect(segments).toHaveLength(7);
-      expect(segments[0]).toEqual({ label: 'M0', value: 0, color: '#047857' });
+      expect(segments[0]).toEqual({ label: 'M0', value: 0, color: 'var(--brand)' });
       expect(segments[6].color).toBe(segments[0].color);
     });
 

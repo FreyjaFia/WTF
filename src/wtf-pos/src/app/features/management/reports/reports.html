@@ -49,13 +49,13 @@
     <ng-template #reportFiltersContent>
       <form [formGroup]="reportForm" class="grid grid-cols-1 gap-2">
         <label
-          class="flex min-w-0 flex-col gap-1 rounded-lg bg-white px-3 py-2 ring-1 ring-gray-200 transition-colors focus-within:ring-2 focus-within:ring-gray-300"
+          class="flex min-w-0 flex-col gap-1 rounded-lg bg-surface px-3 py-2 ring-1 ring-gray-200 transition-colors focus-within:ring-2 focus-within:ring-gray-300"
         >
           <span class="text-[11px] font-semibold tracking-wide text-gray-500 uppercase"
             >Report Type</span
           >
           <select
-            class="w-full bg-transparent text-sm text-gray-700 focus:caret-[#047857] focus:outline-none"
+            class="w-full bg-transparent text-sm text-gray-700 focus:caret-brand focus:outline-none"
             formControlName="reportType"
             (change)="onReportTypeChanged()"
           >
@@ -66,13 +66,13 @@
         </label>
 
         <label
-          class="flex min-w-0 flex-col gap-1 rounded-lg bg-white px-3 py-2 ring-1 ring-gray-200 transition-colors focus-within:ring-2 focus-within:ring-gray-300"
+          class="flex min-w-0 flex-col gap-1 rounded-lg bg-surface px-3 py-2 ring-1 ring-gray-200 transition-colors focus-within:ring-2 focus-within:ring-gray-300"
         >
           <span class="text-[11px] font-semibold tracking-wide text-gray-500 uppercase"
             >Preset</span
           >
           <select
-            class="w-full bg-transparent text-sm text-gray-700 focus:caret-[#047857] focus:outline-none"
+            class="w-full bg-transparent text-sm text-gray-700 focus:caret-brand focus:outline-none"
             formControlName="preset"
             (change)="onPresetChanged($event)"
           >
@@ -83,41 +83,41 @@
         </label>
 
         <label
-          class="flex min-w-0 flex-col gap-1 rounded-lg bg-white px-3 py-2 ring-1 ring-gray-200 transition-colors focus-within:ring-2 focus-within:ring-gray-300"
+          class="flex min-w-0 flex-col gap-1 rounded-lg bg-surface px-3 py-2 ring-1 ring-gray-200 transition-colors focus-within:ring-2 focus-within:ring-gray-300"
         >
           <span class="text-[11px] font-semibold tracking-wide text-gray-500 uppercase"
             >From Date</span
           >
           <input
             type="date"
-            class="w-full bg-transparent text-sm text-gray-700 focus:caret-[#047857] focus:outline-none"
+            class="w-full bg-transparent text-sm text-gray-700 focus:caret-brand focus:outline-none"
             formControlName="fromDate"
             (change)="onDateChanged()"
           />
         </label>
 
         <label
-          class="flex min-w-0 flex-col gap-1 rounded-lg bg-white px-3 py-2 ring-1 ring-gray-200 transition-colors focus-within:ring-2 focus-within:ring-gray-300"
+          class="flex min-w-0 flex-col gap-1 rounded-lg bg-surface px-3 py-2 ring-1 ring-gray-200 transition-colors focus-within:ring-2 focus-within:ring-gray-300"
         >
           <span class="text-[11px] font-semibold tracking-wide text-gray-500 uppercase"
             >To Date</span
           >
           <input
             type="date"
-            class="w-full bg-transparent text-sm text-gray-700 focus:caret-[#047857] focus:outline-none"
+            class="w-full bg-transparent text-sm text-gray-700 focus:caret-brand focus:outline-none"
             formControlName="toDate"
             (change)="onDateChanged()"
           />
         </label>
 
         <label
-          class="flex min-w-0 flex-col gap-1 rounded-lg bg-white px-3 py-2 ring-1 ring-gray-200 transition-colors focus-within:ring-2 focus-within:ring-gray-300"
+          class="flex min-w-0 flex-col gap-1 rounded-lg bg-surface px-3 py-2 ring-1 ring-gray-200 transition-colors focus-within:ring-2 focus-within:ring-gray-300"
         >
           <span class="text-[11px] font-semibold tracking-wide text-gray-500 uppercase"
             >Source</span
           >
           <select
-            class="w-full bg-transparent text-sm text-gray-700 focus:caret-[#047857] focus:outline-none"
+            class="w-full bg-transparent text-sm text-gray-700 focus:caret-brand focus:outline-none"
             formControlName="source"
             data-source-filter
             (change)="onAdvancedFilterChanged()"
@@ -130,13 +130,13 @@
 
         @if (showGroupByFilter()) {
           <label
-            class="flex min-w-0 flex-col gap-1 rounded-lg bg-white px-3 py-2 ring-1 ring-gray-200 transition-colors focus-within:ring-2 focus-within:ring-gray-300"
+            class="flex min-w-0 flex-col gap-1 rounded-lg bg-surface px-3 py-2 ring-1 ring-gray-200 transition-colors focus-within:ring-2 focus-within:ring-gray-300"
           >
             <span class="text-[11px] font-semibold tracking-wide text-gray-500 uppercase"
               >Group By</span
             >
             <select
-              class="w-full bg-transparent text-sm text-gray-700 focus:caret-[#047857] focus:outline-none"
+              class="w-full bg-transparent text-sm text-gray-700 focus:caret-brand focus:outline-none"
               formControlName="groupBy"
               (change)="onGroupByChanged()"
             >
@@ -149,13 +149,13 @@
 
         @if (showProductFilters()) {
           <label
-            class="flex min-w-0 flex-col gap-1 rounded-lg bg-white px-3 py-2 ring-1 ring-gray-200 transition-colors focus-within:ring-2 focus-within:ring-gray-300"
+            class="flex min-w-0 flex-col gap-1 rounded-lg bg-surface px-3 py-2 ring-1 ring-gray-200 transition-colors focus-within:ring-2 focus-within:ring-gray-300"
           >
             <span class="text-[11px] font-semibold tracking-wide text-gray-500 uppercase"
               >Category</span
             >
             <select
-              class="w-full bg-transparent text-sm text-gray-700 focus:caret-[#047857] focus:outline-none"
+              class="w-full bg-transparent text-sm text-gray-700 focus:caret-brand focus:outline-none"
               formControlName="categoryId"
               (change)="onAdvancedFilterChanged()"
             >
@@ -166,13 +166,13 @@
             </select>
           </label>
           <label
-            class="flex min-w-0 flex-col gap-1 rounded-lg bg-white px-3 py-2 ring-1 ring-gray-200 transition-colors focus-within:ring-2 focus-within:ring-gray-300"
+            class="flex min-w-0 flex-col gap-1 rounded-lg bg-surface px-3 py-2 ring-1 ring-gray-200 transition-colors focus-within:ring-2 focus-within:ring-gray-300"
           >
             <span class="text-[11px] font-semibold tracking-wide text-gray-500 uppercase"
               >Subcategory/Type</span
             >
             <select
-              class="w-full bg-transparent text-sm text-gray-700 focus:caret-[#047857] focus:outline-none"
+              class="w-full bg-transparent text-sm text-gray-700 focus:caret-brand focus:outline-none"
               formControlName="subCategoryId"
               (change)="onAdvancedFilterChanged()"
             >
@@ -186,13 +186,13 @@
 
         @if (showStaffFilter()) {
           <label
-            class="flex min-w-0 flex-col gap-1 rounded-lg bg-white px-3 py-2 ring-1 ring-gray-200 transition-colors focus-within:ring-2 focus-within:ring-gray-300"
+            class="flex min-w-0 flex-col gap-1 rounded-lg bg-surface px-3 py-2 ring-1 ring-gray-200 transition-colors focus-within:ring-2 focus-within:ring-gray-300"
           >
             <span class="text-[11px] font-semibold tracking-wide text-gray-500 uppercase"
               >Staff</span
             >
             <select
-              class="w-full bg-transparent text-sm text-gray-700 focus:caret-[#047857] focus:outline-none"
+              class="w-full bg-transparent text-sm text-gray-700 focus:caret-brand focus:outline-none"
               formControlName="staffId"
               (change)="onAdvancedFilterChanged()"
             >
@@ -208,7 +208,7 @@
 
     <div class="mb-4 flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center md:gap-3">
       <div
-        class="mb-2 flex w-full min-w-0 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200 md:mb-0 md:max-w-[26rem] md:flex-1"
+        class="mb-2 flex w-full min-w-0 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-surface focus-within:ring-2 focus-within:ring-gray-200 md:mb-0 md:max-w-[26rem] md:flex-1"
       >
         <div class="flex w-full min-w-0 items-center gap-2">
           <app-search-input
@@ -294,7 +294,7 @@
           <app-connection-error />
         } @else if (isDailySalesReport()) {
           @if (filteredDailyReports().length === 0) {
-            <div class="rounded-xl bg-white p-8 text-center shadow-lg">
+            <div class="rounded-xl bg-surface p-8 text-center shadow-lg">
               <div class="mb-3 flex justify-center">
                 <app-icon name="icon-trending-up" [class]="'h-12 w-12 opacity-60'" />
               </div>
@@ -304,7 +304,7 @@
           } @else {
             @let totals = getDailyTotals();
             <div class="mb-3 grid grid-cols-2 gap-3 md:grid-cols-4">
-              <div class="rounded-lg border border-gray-100 bg-white px-4 py-3 shadow-sm">
+              <div class="rounded-lg border border-gray-100 bg-surface px-4 py-3 shadow-sm">
                 <p class="text-xs text-gray-500">Revenue</p>
                 <p
                   class="inline-flex w-full items-center justify-end gap-1 text-right text-sm font-semibold text-gray-900"
@@ -314,13 +314,13 @@
                   }}
                 </p>
               </div>
-              <div class="rounded-lg border border-gray-100 bg-white px-4 py-3 shadow-sm">
+              <div class="rounded-lg border border-gray-100 bg-surface px-4 py-3 shadow-sm">
                 <p class="text-xs text-gray-500">Orders</p>
                 <p class="text-right text-sm font-semibold text-gray-900">
                   {{ totals.orderCount | number: '1.0-0' }}
                 </p>
               </div>
-              <div class="rounded-lg border border-gray-100 bg-white px-4 py-3 shadow-sm">
+              <div class="rounded-lg border border-gray-100 bg-surface px-4 py-3 shadow-sm">
                 <p class="text-xs text-gray-500">Avg/Order</p>
                 <p
                   class="inline-flex w-full items-center justify-end gap-1 text-right text-sm font-semibold text-gray-900"
@@ -330,7 +330,7 @@
                   }}
                 </p>
               </div>
-              <div class="rounded-lg border border-gray-100 bg-white px-4 py-3 shadow-sm">
+              <div class="rounded-lg border border-gray-100 bg-surface px-4 py-3 shadow-sm">
                 <p class="text-xs text-gray-500">Tips</p>
                 <p
                   class="inline-flex w-full items-center justify-end gap-1 text-right text-sm font-semibold text-gray-900"
@@ -344,7 +344,7 @@
 
             <div class="space-y-2 lg:hidden">
               @for (row of filteredDailyReports(); track row.periodStart) {
-                <div class="rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm">
+                <div class="rounded-xl border border-gray-100 bg-surface px-4 py-3 shadow-sm">
                   <div class="mb-2 flex items-center justify-between">
                     <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase">
                       {{ getDailyPeriodHeaderLabel() }}
@@ -391,7 +391,7 @@
               }
             </div>
 
-            <div class="hidden rounded-xl bg-white shadow-lg lg:block">
+            <div class="hidden rounded-xl bg-surface shadow-lg lg:block">
               <div class="overflow-x-auto">
                 <table class="table w-full">
                   <thead>
@@ -402,7 +402,7 @@
                           class="inline-flex cursor-pointer items-center gap-1 text-xs font-semibold tracking-wider uppercase transition-colors"
                           [class.text-gray-600]="!isSorted('periodStart')"
                           [class.hover:text-gray-900]="!isSorted('periodStart')"
-                          [class.text-[#047857]]="isSorted('periodStart')"
+                          [class.text-brand-ink]="isSorted('periodStart')"
                           (click)="toggleDailySort('periodStart')"
                         >
                           {{ getDailyPeriodHeaderLabel() }}
@@ -429,7 +429,7 @@
                           class="inline-flex cursor-pointer items-center justify-end gap-1 text-right text-xs font-semibold tracking-wider uppercase transition-colors"
                           [class.text-gray-600]="!isSorted('totalRevenue')"
                           [class.hover:text-gray-900]="!isSorted('totalRevenue')"
-                          [class.text-[#047857]]="isSorted('totalRevenue')"
+                          [class.text-brand-ink]="isSorted('totalRevenue')"
                           (click)="toggleDailySort('totalRevenue')"
                         >
                           Revenue
@@ -456,7 +456,7 @@
                           class="inline-flex cursor-pointer items-center justify-end gap-1 text-right text-xs font-semibold tracking-wider uppercase transition-colors"
                           [class.text-gray-600]="!isSorted('orderCount')"
                           [class.hover:text-gray-900]="!isSorted('orderCount')"
-                          [class.text-[#047857]]="isSorted('orderCount')"
+                          [class.text-brand-ink]="isSorted('orderCount')"
                           (click)="toggleDailySort('orderCount')"
                         >
                           Orders
@@ -483,7 +483,7 @@
                           class="inline-flex cursor-pointer items-center justify-end gap-1 text-right text-xs font-semibold tracking-wider uppercase transition-colors"
                           [class.text-gray-600]="!isSorted('averageOrderValue')"
                           [class.hover:text-gray-900]="!isSorted('averageOrderValue')"
-                          [class.text-[#047857]]="isSorted('averageOrderValue')"
+                          [class.text-brand-ink]="isSorted('averageOrderValue')"
                           (click)="toggleDailySort('averageOrderValue')"
                         >
                           Avg/Order
@@ -510,7 +510,7 @@
                           class="inline-flex cursor-pointer items-center justify-end gap-1 text-right text-xs font-semibold tracking-wider uppercase transition-colors"
                           [class.text-gray-600]="!isSorted('tipsTotal')"
                           [class.hover:text-gray-900]="!isSorted('tipsTotal')"
-                          [class.text-[#047857]]="isSorted('tipsTotal')"
+                          [class.text-brand-ink]="isSorted('tipsTotal')"
                           (click)="toggleDailySort('tipsTotal')"
                         >
                           Tips
@@ -537,7 +537,7 @@
                           class="inline-flex cursor-pointer items-center justify-end gap-1 text-right text-xs font-semibold tracking-wider uppercase transition-colors"
                           [class.text-gray-600]="!isSorted('voidCancelledCount')"
                           [class.hover:text-gray-900]="!isSorted('voidCancelledCount')"
-                          [class.text-[#047857]]="isSorted('voidCancelledCount')"
+                          [class.text-brand-ink]="isSorted('voidCancelledCount')"
                           (click)="toggleDailySort('voidCancelledCount')"
                         >
                           Void/Cancelled
@@ -597,13 +597,13 @@
         } @else if (isProductSalesReport()) {
           @let totals = getProductTotals();
           <div class="mb-3 grid grid-cols-2 gap-3">
-            <div class="rounded-lg border border-gray-100 bg-white px-4 py-3 shadow-sm">
+            <div class="rounded-lg border border-gray-100 bg-surface px-4 py-3 shadow-sm">
               <p class="text-xs text-gray-500">Quantity Sold</p>
               <p class="text-right text-sm font-semibold text-gray-900">
                 {{ totals.quantitySold | number: '1.0-0' }}
               </p>
             </div>
-            <div class="rounded-lg border border-gray-100 bg-white px-4 py-3 shadow-sm">
+            <div class="rounded-lg border border-gray-100 bg-surface px-4 py-3 shadow-sm">
               <p class="text-xs text-gray-500">Revenue</p>
               <p
                 class="inline-flex w-full items-center justify-end gap-1 text-right text-sm font-semibold text-gray-900"
@@ -617,7 +617,7 @@
 
           <div class="space-y-2 lg:hidden">
             @for (row of filteredProductReports(); track row.productId) {
-              <div class="rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm">
+              <div class="rounded-xl border border-gray-100 bg-surface px-4 py-3 shadow-sm">
                 <div class="mb-2">
                   <p class="text-sm font-semibold text-gray-900">{{ row.productName }}</p>
                   <p class="text-xs text-gray-500">
@@ -646,7 +646,7 @@
             }
           </div>
 
-          <div class="hidden rounded-xl bg-white shadow-lg lg:block">
+          <div class="hidden rounded-xl bg-surface shadow-lg lg:block">
             <div class="overflow-x-auto">
               <table class="table w-full">
                 <thead>
@@ -657,7 +657,7 @@
                         class="inline-flex cursor-pointer items-center gap-1 text-xs font-semibold tracking-wider uppercase transition-colors"
                         [class.text-gray-600]="!isSorted('productName')"
                         [class.hover:text-gray-900]="!isSorted('productName')"
-                        [class.text-[#047857]]="isSorted('productName')"
+                        [class.text-brand-ink]="isSorted('productName')"
                         (click)="toggleProductSort('productName')"
                       >
                         Product
@@ -684,7 +684,7 @@
                         class="inline-flex cursor-pointer items-center gap-1 text-xs font-semibold tracking-wider uppercase transition-colors"
                         [class.text-gray-600]="!isSorted('categoryName')"
                         [class.hover:text-gray-900]="!isSorted('categoryName')"
-                        [class.text-[#047857]]="isSorted('categoryName')"
+                        [class.text-brand-ink]="isSorted('categoryName')"
                         (click)="toggleProductSort('categoryName')"
                       >
                         Category
@@ -711,7 +711,7 @@
                         class="inline-flex cursor-pointer items-center gap-1 text-xs font-semibold tracking-wider uppercase transition-colors"
                         [class.text-gray-600]="!isSorted('subCategoryName')"
                         [class.hover:text-gray-900]="!isSorted('subCategoryName')"
-                        [class.text-[#047857]]="isSorted('subCategoryName')"
+                        [class.text-brand-ink]="isSorted('subCategoryName')"
                         (click)="toggleProductSort('subCategoryName')"
                       >
                         Subcategory/Type
@@ -738,7 +738,7 @@
                         class="inline-flex cursor-pointer items-center justify-end gap-1 text-right text-xs font-semibold tracking-wider uppercase transition-colors"
                         [class.text-gray-600]="!isSorted('quantitySold')"
                         [class.hover:text-gray-900]="!isSorted('quantitySold')"
-                        [class.text-[#047857]]="isSorted('quantitySold')"
+                        [class.text-brand-ink]="isSorted('quantitySold')"
                         (click)="toggleProductSort('quantitySold')"
                       >
                         Qty
@@ -765,7 +765,7 @@
                         class="inline-flex cursor-pointer items-center justify-end gap-1 text-right text-xs font-semibold tracking-wider uppercase transition-colors"
                         [class.text-gray-600]="!isSorted('revenue')"
                         [class.hover:text-gray-900]="!isSorted('revenue')"
-                        [class.text-[#047857]]="isSorted('revenue')"
+                        [class.text-brand-ink]="isSorted('revenue')"
                         (click)="toggleProductSort('revenue')"
                       >
                         Revenue
@@ -792,7 +792,7 @@
                         class="inline-flex cursor-pointer items-center justify-end gap-1 text-right text-xs font-semibold tracking-wider uppercase transition-colors"
                         [class.text-gray-600]="!isSorted('revenuePercent')"
                         [class.hover:text-gray-900]="!isSorted('revenuePercent')"
-                        [class.text-[#047857]]="isSorted('revenuePercent')"
+                        [class.text-brand-ink]="isSorted('revenuePercent')"
                         (click)="toggleProductSort('revenuePercent')"
                       >
                         % of Total
@@ -839,13 +839,13 @@
         } @else if (isPaymentsReport()) {
           @let totals = getPaymentsTotals();
           <div class="mb-3 grid grid-cols-2 gap-3">
-            <div class="rounded-lg border border-gray-100 bg-white px-4 py-3 shadow-sm">
+            <div class="rounded-lg border border-gray-100 bg-surface px-4 py-3 shadow-sm">
               <p class="text-xs text-gray-500">Orders</p>
               <p class="text-right text-sm font-semibold text-gray-900">
                 {{ totals.orderCount | number: '1.0-0' }}
               </p>
             </div>
-            <div class="rounded-lg border border-gray-100 bg-white px-4 py-3 shadow-sm">
+            <div class="rounded-lg border border-gray-100 bg-surface px-4 py-3 shadow-sm">
               <p class="text-xs text-gray-500">Total Amount</p>
               <p
                 class="inline-flex w-full items-center justify-end gap-1 text-right text-sm font-semibold text-gray-900"
@@ -859,7 +859,7 @@
 
           <div class="space-y-2 lg:hidden">
             @for (row of filteredPaymentsReports(); track row.paymentMethod) {
-              <div class="rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm">
+              <div class="rounded-xl border border-gray-100 bg-surface px-4 py-3 shadow-sm">
                 <div class="mb-2 flex items-center justify-between">
                   <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase">
                     Payment Method
@@ -888,7 +888,7 @@
             }
           </div>
 
-          <div class="hidden rounded-xl bg-white shadow-lg lg:block">
+          <div class="hidden rounded-xl bg-surface shadow-lg lg:block">
             <div class="overflow-x-auto">
               <table class="table w-full">
                 <thead>
@@ -899,7 +899,7 @@
                         class="inline-flex cursor-pointer items-center gap-1 text-xs font-semibold tracking-wider uppercase transition-colors"
                         [class.text-gray-600]="!isSorted('paymentMethod')"
                         [class.hover:text-gray-900]="!isSorted('paymentMethod')"
-                        [class.text-[#047857]]="isSorted('paymentMethod')"
+                        [class.text-brand-ink]="isSorted('paymentMethod')"
                         (click)="togglePaymentsSort('paymentMethod')"
                       >
                         Payment Method
@@ -926,7 +926,7 @@
                         class="inline-flex cursor-pointer items-center justify-end gap-1 text-right text-xs font-semibold tracking-wider uppercase transition-colors"
                         [class.text-gray-600]="!isSorted('orderCount')"
                         [class.hover:text-gray-900]="!isSorted('orderCount')"
-                        [class.text-[#047857]]="isSorted('orderCount')"
+                        [class.text-brand-ink]="isSorted('orderCount')"
                         (click)="togglePaymentsSort('orderCount')"
                       >
                         Orders
@@ -953,7 +953,7 @@
                         class="inline-flex cursor-pointer items-center justify-end gap-1 text-right text-xs font-semibold tracking-wider uppercase transition-colors"
                         [class.text-gray-600]="!isSorted('totalAmount')"
                         [class.hover:text-gray-900]="!isSorted('totalAmount')"
-                        [class.text-[#047857]]="isSorted('totalAmount')"
+                        [class.text-brand-ink]="isSorted('totalAmount')"
                         (click)="togglePaymentsSort('totalAmount')"
                       >
                         Total Amount
@@ -980,7 +980,7 @@
                         class="inline-flex cursor-pointer items-center justify-end gap-1 text-right text-xs font-semibold tracking-wider uppercase transition-colors"
                         [class.text-gray-600]="!isSorted('totalPercent')"
                         [class.hover:text-gray-900]="!isSorted('totalPercent')"
-                        [class.text-[#047857]]="isSorted('totalPercent')"
+                        [class.text-brand-ink]="isSorted('totalPercent')"
                         (click)="togglePaymentsSort('totalPercent')"
                       >
                         % of Total
@@ -1025,13 +1025,13 @@
         } @else if (isHourlyReport()) {
           @let totals = getHourlyTotals();
           <div class="mb-3 grid grid-cols-2 gap-3">
-            <div class="rounded-lg border border-gray-100 bg-white px-4 py-3 shadow-sm">
+            <div class="rounded-lg border border-gray-100 bg-surface px-4 py-3 shadow-sm">
               <p class="text-xs text-gray-500">Orders</p>
               <p class="text-right text-sm font-semibold text-gray-900">
                 {{ totals.orderCount | number: '1.0-0' }}
               </p>
             </div>
-            <div class="rounded-lg border border-gray-100 bg-white px-4 py-3 shadow-sm">
+            <div class="rounded-lg border border-gray-100 bg-surface px-4 py-3 shadow-sm">
               <p class="text-xs text-gray-500">Revenue</p>
               <p
                 class="inline-flex w-full items-center justify-end gap-1 text-right text-sm font-semibold text-gray-900"
@@ -1045,7 +1045,7 @@
 
           <div class="space-y-2 lg:hidden">
             @for (row of filteredHourlyReports(); track row.hour) {
-              <div class="rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm">
+              <div class="rounded-xl border border-gray-100 bg-surface px-4 py-3 shadow-sm">
                 <div class="mb-2 flex items-center justify-between">
                   <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Hour</p>
                   <p class="text-sm font-semibold text-gray-900">{{ toHourLabel(row.hour) }}</p>
@@ -1068,7 +1068,7 @@
             }
           </div>
 
-          <div class="hidden rounded-xl bg-white shadow-lg lg:block">
+          <div class="hidden rounded-xl bg-surface shadow-lg lg:block">
             <div class="overflow-x-auto">
               <table class="table w-full">
                 <thead>
@@ -1079,7 +1079,7 @@
                         class="inline-flex cursor-pointer items-center gap-1 text-xs font-semibold tracking-wider uppercase transition-colors"
                         [class.text-gray-600]="!isSorted('hour')"
                         [class.hover:text-gray-900]="!isSorted('hour')"
-                        [class.text-[#047857]]="isSorted('hour')"
+                        [class.text-brand-ink]="isSorted('hour')"
                         (click)="toggleHourlySort('hour')"
                       >
                         Hour
@@ -1106,7 +1106,7 @@
                         class="inline-flex cursor-pointer items-center justify-end gap-1 text-right text-xs font-semibold tracking-wider uppercase transition-colors"
                         [class.text-gray-600]="!isSorted('orderCount')"
                         [class.hover:text-gray-900]="!isSorted('orderCount')"
-                        [class.text-[#047857]]="isSorted('orderCount')"
+                        [class.text-brand-ink]="isSorted('orderCount')"
                         (click)="toggleHourlySort('orderCount')"
                       >
                         Orders
@@ -1133,7 +1133,7 @@
                         class="inline-flex cursor-pointer items-center justify-end gap-1 text-right text-xs font-semibold tracking-wider uppercase transition-colors"
                         [class.text-gray-600]="!isSorted('revenue')"
                         [class.hover:text-gray-900]="!isSorted('revenue')"
-                        [class.text-[#047857]]="isSorted('revenue')"
+                        [class.text-brand-ink]="isSorted('revenue')"
                         (click)="toggleHourlySort('revenue')"
                       >
                         Revenue
@@ -1177,13 +1177,13 @@
         } @else {
           @let totals = getStaffTotals();
           <div class="mb-3 grid grid-cols-2 gap-3 md:grid-cols-4">
-            <div class="rounded-lg border border-gray-100 bg-white px-4 py-3 shadow-sm">
+            <div class="rounded-lg border border-gray-100 bg-surface px-4 py-3 shadow-sm">
               <p class="text-xs text-gray-500">Orders</p>
               <p class="text-right text-sm font-semibold text-gray-900">
                 {{ totals.orderCount | number: '1.0-0' }}
               </p>
             </div>
-            <div class="rounded-lg border border-gray-100 bg-white px-4 py-3 shadow-sm">
+            <div class="rounded-lg border border-gray-100 bg-surface px-4 py-3 shadow-sm">
               <p class="text-xs text-gray-500">Revenue</p>
               <p
                 class="inline-flex w-full items-center justify-end gap-1 text-right text-sm font-semibold text-gray-900"
@@ -1193,7 +1193,7 @@
                 }}
               </p>
             </div>
-            <div class="rounded-lg border border-gray-100 bg-white px-4 py-3 shadow-sm">
+            <div class="rounded-lg border border-gray-100 bg-surface px-4 py-3 shadow-sm">
               <p class="text-xs text-gray-500">Avg/Order</p>
               <p
                 class="inline-flex w-full items-center justify-end gap-1 text-right text-sm font-semibold text-gray-900"
@@ -1203,7 +1203,7 @@
                 }}
               </p>
             </div>
-            <div class="rounded-lg border border-gray-100 bg-white px-4 py-3 shadow-sm">
+            <div class="rounded-lg border border-gray-100 bg-surface px-4 py-3 shadow-sm">
               <p class="text-xs text-gray-500">Tips</p>
               <p
                 class="inline-flex w-full items-center justify-end gap-1 text-right text-sm font-semibold text-gray-900"
@@ -1217,7 +1217,7 @@
 
           <div class="space-y-2 lg:hidden">
             @for (row of filteredStaffReports(); track row.staffId) {
-              <div class="rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm">
+              <div class="rounded-xl border border-gray-100 bg-surface px-4 py-3 shadow-sm">
                 <div class="mb-2 flex items-center justify-between">
                   <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Staff</p>
                   <p class="text-sm font-semibold text-gray-900">{{ row.staffName }}</p>
@@ -1256,7 +1256,7 @@
             }
           </div>
 
-          <div class="hidden rounded-xl bg-white shadow-lg lg:block">
+          <div class="hidden rounded-xl bg-surface shadow-lg lg:block">
             <div class="overflow-x-auto">
               <table class="table w-full">
                 <thead>
@@ -1267,7 +1267,7 @@
                         class="inline-flex cursor-pointer items-center gap-1 text-xs font-semibold tracking-wider uppercase transition-colors"
                         [class.text-gray-600]="!isSorted('staffName')"
                         [class.hover:text-gray-900]="!isSorted('staffName')"
-                        [class.text-[#047857]]="isSorted('staffName')"
+                        [class.text-brand-ink]="isSorted('staffName')"
                         (click)="toggleStaffSort('staffName')"
                       >
                         Staff
@@ -1294,7 +1294,7 @@
                         class="inline-flex cursor-pointer items-center justify-end gap-1 text-right text-xs font-semibold tracking-wider uppercase transition-colors"
                         [class.text-gray-600]="!isSorted('orderCount')"
                         [class.hover:text-gray-900]="!isSorted('orderCount')"
-                        [class.text-[#047857]]="isSorted('orderCount')"
+                        [class.text-brand-ink]="isSorted('orderCount')"
                         (click)="toggleStaffSort('orderCount')"
                       >
                         Orders
@@ -1321,7 +1321,7 @@
                         class="inline-flex cursor-pointer items-center justify-end gap-1 text-right text-xs font-semibold tracking-wider uppercase transition-colors"
                         [class.text-gray-600]="!isSorted('totalRevenue')"
                         [class.hover:text-gray-900]="!isSorted('totalRevenue')"
-                        [class.text-[#047857]]="isSorted('totalRevenue')"
+                        [class.text-brand-ink]="isSorted('totalRevenue')"
                         (click)="toggleStaffSort('totalRevenue')"
                       >
                         Revenue
@@ -1348,7 +1348,7 @@
                         class="inline-flex cursor-pointer items-center justify-end gap-1 text-right text-xs font-semibold tracking-wider uppercase transition-colors"
                         [class.text-gray-600]="!isSorted('averageOrderValue')"
                         [class.hover:text-gray-900]="!isSorted('averageOrderValue')"
-                        [class.text-[#047857]]="isSorted('averageOrderValue')"
+                        [class.text-brand-ink]="isSorted('averageOrderValue')"
                         (click)="toggleStaffSort('averageOrderValue')"
                       >
                         Avg/Order
@@ -1375,7 +1375,7 @@
                         class="inline-flex cursor-pointer items-center justify-end gap-1 text-right text-xs font-semibold tracking-wider uppercase transition-colors"
                         [class.text-gray-600]="!isSorted('tipsReceived')"
                         [class.hover:text-gray-900]="!isSorted('tipsReceived')"
-                        [class.text-[#047857]]="isSorted('tipsReceived')"
+                        [class.text-brand-ink]="isSorted('tipsReceived')"
                         (click)="toggleStaffSort('tipsReceived')"
                       >
                         Tips
@@ -1436,17 +1436,17 @@
   }
 
   @if (isMonthlyWorkbookTabActive()) {
-    <div class="rounded-xl bg-white p-4 shadow-lg md:p-5">
+    <div class="rounded-xl bg-surface p-4 shadow-lg md:p-5">
       <form [formGroup]="reportForm" class="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-4">
         <label
-          class="flex min-w-0 flex-col gap-1 rounded-lg bg-white px-3 py-2 ring-1 ring-gray-200 transition-colors focus-within:ring-2 focus-within:ring-gray-300"
+          class="flex min-w-0 flex-col gap-1 rounded-lg bg-surface px-3 py-2 ring-1 ring-gray-200 transition-colors focus-within:ring-2 focus-within:ring-gray-300"
         >
           <span class="text-[11px] font-semibold tracking-wide text-gray-500 uppercase"
             >Workbook Year</span
           >
           <input
             type="number"
-            class="w-full bg-transparent text-sm text-gray-700 focus:caret-[#047857] focus:outline-none"
+            class="w-full bg-transparent text-sm text-gray-700 focus:caret-brand focus:outline-none"
             formControlName="workbookYear"
             min="2000"
             max="2100"
@@ -1455,13 +1455,13 @@
         </label>
 
         <label
-          class="flex min-w-0 flex-col gap-1 rounded-lg bg-white px-3 py-2 ring-1 ring-gray-200 transition-colors focus-within:ring-2 focus-within:ring-gray-300"
+          class="flex min-w-0 flex-col gap-1 rounded-lg bg-surface px-3 py-2 ring-1 ring-gray-200 transition-colors focus-within:ring-2 focus-within:ring-gray-300"
         >
           <span class="text-[11px] font-semibold tracking-wide text-gray-500 uppercase"
             >Workbook Month</span
           >
           <select
-            class="w-full bg-transparent text-sm text-gray-700 focus:caret-[#047857] focus:outline-none"
+            class="w-full bg-transparent text-sm text-gray-700 focus:caret-brand focus:outline-none"
             formControlName="workbookMonth"
             (change)="onMonthlyWorkbookFilterChanged()"
           >

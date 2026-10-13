@@ -29,7 +29,7 @@ export class AnimatedCounterComponent {
   public readonly prefixColor = input<string>('');
   public readonly decimals = input<number>(0);
   public readonly duration = input<number>(600);
-  public readonly highlightColor = input<string>('#047857');
+  public readonly highlightColor = input<string>('var(--brand)');
 
   protected readonly displayValue = signal(0);
   protected readonly isHighlighting = signal(false);

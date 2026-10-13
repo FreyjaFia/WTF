@@ -1,6 +1,6 @@
 <div class="flex h-full flex-col pt-4 md:pt-0">
   <div
-    class="sticky top-0 z-10 mb-4 flex shrink-0 flex-col gap-3 bg-white/95 backdrop-blur-sm sm:mb-6 sm:flex-row sm:items-center sm:justify-between"
+    class="sticky top-0 z-10 mb-4 flex shrink-0 flex-col gap-3 bg-surface/95 backdrop-blur-sm sm:mb-6 sm:flex-row sm:items-center sm:justify-between"
   >
     <div class="flex min-w-0 items-start gap-4">
       <button
@@ -73,7 +73,7 @@
       <form id="inventoryForm" [formGroup]="inventoryForm" (ngSubmit)="saveInventoryItem()">
         <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <div class="space-y-6 lg:col-span-2">
-            <div class="card rounded-xl bg-white shadow-lg">
+            <div class="card rounded-xl bg-surface shadow-lg">
               <div class="card-body space-y-5">
                 <div>
                   <label class="mb-2 block text-sm font-semibold text-gray-900" for="itemName">
@@ -84,7 +84,7 @@
                     type="text"
                     formControlName="name"
                     placeholder="Enter item name"
-                    class="input w-full border-transparent bg-gray-50 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                    class="input w-full border-transparent bg-gray-50 transition-all focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20"
                     [class.input-error]="hasError('name')"
                   />
                   @if (getErrorMessage('name')) {
@@ -102,7 +102,7 @@
                       type="text"
                       formControlName="sku"
                       placeholder="Enter SKU"
-                      class="input w-full border-transparent bg-gray-50 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                      class="input w-full border-transparent bg-gray-50 transition-all focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20"
                       [class.input-error]="hasError('sku')"
                     />
                     @if (getErrorMessage('sku')) {
@@ -119,7 +119,7 @@
                       type="text"
                       formControlName="barcode"
                       placeholder="Enter barcode"
-                      class="input w-full border-transparent bg-gray-50 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                      class="input w-full border-transparent bg-gray-50 transition-all focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20"
                       [class.input-error]="hasError('barcode')"
                     />
                     @if (getErrorMessage('barcode')) {
@@ -135,7 +135,7 @@
                   <select
                     id="itemUnit"
                     formControlName="unitName"
-                    class="select w-full border-transparent bg-gray-50 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                    class="select w-full border-transparent bg-gray-50 transition-all focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20"
                     [class.select-error]="hasError('unitName')"
                   >
                     @for (unit of unitOptions; track unit.value) {
@@ -152,7 +152,7 @@
               </div>
             </div>
 
-            <div class="card rounded-xl bg-white shadow-lg">
+            <div class="card rounded-xl bg-surface shadow-lg">
               <div class="card-body space-y-5">
                 <p class="text-xs font-semibold tracking-wider text-gray-400 uppercase">
                   Stock Settings
@@ -169,7 +169,7 @@
                     <select
                       id="stockUnitName"
                       formControlName="stockUnitName"
-                      class="select w-full border-transparent bg-gray-50 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                      class="select w-full border-transparent bg-gray-50 transition-all focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20"
                       [class.select-error]="hasError('stockUnitName')"
                     >
                       <option value="">Same as base unit</option>
@@ -196,7 +196,7 @@
                       min="0.001"
                       formControlName="unitsPerStockUnit"
                       placeholder="Example: 1000"
-                      class="input w-full border-transparent bg-gray-50 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                      class="input w-full border-transparent bg-gray-50 transition-all focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20"
                       [class.input-error]="hasError('unitsPerStockUnit')"
                       [class.bg-gray-100]="inventoryForm.controls.unitsPerStockUnit.disabled"
                       [class.cursor-not-allowed]="inventoryForm.controls.unitsPerStockUnit.disabled"
@@ -229,7 +229,7 @@
                       min="0"
                       formControlName="startingQuantity"
                       placeholder="0"
-                      class="input w-full border-transparent bg-gray-50 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                      class="input w-full border-transparent bg-gray-50 transition-all focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20"
                       [class.input-error]="hasError('startingQuantity')"
                     />
                     @if (getErrorMessage('startingQuantity')) {
@@ -252,7 +252,7 @@
                       min="0"
                       formControlName="costPrice"
                       placeholder="0.00"
-                      class="input w-full border-transparent bg-gray-50 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                      class="input w-full border-transparent bg-gray-50 transition-all focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20"
                     />
                   </div>
 
@@ -270,7 +270,7 @@
                       min="0"
                       formControlName="warningQuantity"
                       placeholder="0"
-                      class="input w-full border-transparent bg-gray-50 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                      class="input w-full border-transparent bg-gray-50 transition-all focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20"
                     />
                   </div>
 
@@ -288,7 +288,7 @@
                       min="0"
                       formControlName="criticalQuantity"
                       placeholder="0"
-                      class="input w-full border-transparent bg-gray-50 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                      class="input w-full border-transparent bg-gray-50 transition-all focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20"
                     />
                   </div>
                 </div>
@@ -297,7 +297,7 @@
           </div>
 
           <div class="space-y-6">
-            <div class="card rounded-xl bg-white shadow-lg">
+            <div class="card rounded-xl bg-surface shadow-lg">
               <div class="card-body space-y-5">
                 <p class="text-xs font-semibold tracking-wider text-gray-400 uppercase">
                   Management
@@ -325,7 +325,7 @@
               </div>
             </div>
 
-            <div class="card rounded-xl bg-white shadow-lg">
+            <div class="card rounded-xl bg-surface shadow-lg">
               <div class="card-body">
                 <div class="mb-1 flex items-baseline justify-between">
                   <h3 class="text-xs font-semibold tracking-wider text-gray-400 uppercase">

@@ -21,7 +21,7 @@
 
     <div class="flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center md:gap-3">
       <div
-        class="mb-2 flex w-full min-w-0 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-200 md:mb-0 md:max-w-104 md:flex-1"
+        class="mb-2 flex w-full min-w-0 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-surface focus-within:ring-2 focus-within:ring-gray-200 md:mb-0 md:max-w-104 md:flex-1"
       >
         <app-search-input
           placeholder="Search by product name"
@@ -67,7 +67,7 @@
     (closed)="closeFilters()"
   >
     <div class="space-y-3">
-      <div class="rounded-xl border border-gray-200 bg-white p-3">
+      <div class="rounded-xl border border-gray-200 bg-surface p-3">
         <div class="mb-3 flex items-center justify-between">
           <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Category</p>
           <button
@@ -81,7 +81,7 @@
         <div class="space-y-2">
           @for (option of typeOptions(); track option.id) {
             <label
-              class="flex cursor-pointer items-center justify-between rounded-lg bg-white px-3 py-2 text-sm text-gray-700"
+              class="flex cursor-pointer items-center justify-between rounded-lg bg-surface px-3 py-2 text-sm text-gray-700"
             >
               <span>{{ option.label }}</span>
               <span class="flex items-center gap-2">
@@ -98,7 +98,7 @@
         </div>
       </div>
 
-      <div class="rounded-xl border border-gray-200 bg-white p-3">
+      <div class="rounded-xl border border-gray-200 bg-surface p-3">
         <div class="mb-3 flex items-center justify-between">
           <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Status</p>
           <button
@@ -112,7 +112,7 @@
         <div class="space-y-2">
           @for (option of statusOptions(); track option.id) {
             <label
-              class="flex cursor-pointer items-center justify-between rounded-lg bg-white px-3 py-2 text-sm text-gray-700"
+              class="flex cursor-pointer items-center justify-between rounded-lg bg-surface px-3 py-2 text-sm text-gray-700"
             >
               <span>{{ option.label }}</span>
               <span class="flex items-center gap-2">
@@ -144,7 +144,7 @@
       @if (connectionFailed()) {
         <app-connection-error />
       } @else if (products().length === 0) {
-        <div class="rounded-lg bg-white p-8 text-center shadow-lg">
+        <div class="rounded-lg bg-surface p-8 text-center shadow-lg">
           <div class="mb-3 flex justify-center">
             <app-icon name="icon-cart" [class]="'h-12 w-12 opacity-60'" />
           </div>
@@ -155,14 +155,14 @@
         <div class="space-y-2 md:space-y-3">
           <!-- Column Headers (Sticky) -->
           <div
-            class="sticky top-0 z-10 mb-2 hidden grid-cols-12 gap-4 rounded-lg bg-white px-4 py-3 lg:grid"
+            class="sticky top-0 z-10 mb-2 hidden grid-cols-12 gap-4 rounded-lg bg-surface px-4 py-3 lg:grid"
           >
             <button
               type="button"
               class="col-span-5 flex cursor-pointer items-center gap-1 text-start text-xs font-semibold tracking-wider uppercase transition-colors"
               [class.text-gray-600]="sortColumn() !== 'name'"
               [class.hover:text-gray-900]="sortColumn() !== 'name'"
-              [class.text-[#047857]]="sortColumn() === 'name'"
+              [class.text-brand-ink]="sortColumn() === 'name'"
               role="button"
               tabindex="0"
               (click)="toggleSort('name')"
@@ -205,7 +205,7 @@
               class="col-span-2 flex cursor-pointer items-center justify-end gap-1 text-right text-xs font-semibold tracking-wider uppercase transition-colors"
               [class.text-gray-600]="sortColumn() !== 'price'"
               [class.hover:text-gray-900]="sortColumn() !== 'price'"
-              [class.text-[#047857]]="sortColumn() === 'price'"
+              [class.text-brand-ink]="sortColumn() === 'price'"
               role="button"
               tabindex="0"
               (click)="toggleSort('price')"
@@ -241,7 +241,7 @@
               let isFirst = $first
             ) {
               <div
-                class="relative flex items-center gap-3 rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm transition-shadow duration-200 focus-within:z-30 hover:z-10 hover:shadow-md lg:grid lg:grid-cols-12 lg:gap-4 lg:border-0 lg:px-4 lg:py-4 lg:shadow-lg lg:hover:shadow-xl"
+                class="relative flex items-center gap-3 rounded-xl border border-gray-100 bg-surface px-4 py-3 shadow-sm transition-shadow duration-200 focus-within:z-30 hover:z-10 hover:shadow-md lg:grid lg:grid-cols-12 lg:gap-4 lg:border-0 lg:px-4 lg:py-4 lg:shadow-lg lg:hover:shadow-xl"
               >
                 <a
                   class="flex min-w-0 flex-1 cursor-pointer items-center gap-3 self-stretch no-underline focus:outline-none lg:col-span-11 lg:grid lg:grid-cols-11 lg:gap-4"
@@ -313,7 +313,7 @@
 
                   <!-- Price (desktop only) -->
                   <div class="hidden lg:col-span-2 lg:block lg:text-right">
-                    <div class="inline-flex items-center gap-0.5 text-lg font-semibold text-black">
+                    <div class="inline-flex items-center gap-0.5 text-lg font-semibold text-gray-950">
                       <app-icon
                         name="icon-peso"
                         [class]="'h-4 w-4 opacity-70'"
@@ -382,7 +382,7 @@
                               (keydown.space)="restoreProduct(product); $event.stopPropagation()"
                               class="app-menu-item-success"
                             >
-                              <app-icon name="icon-refresh" [class]="'h-4 w-4 text-[#047857]'" />
+                              <app-icon name="icon-refresh" [class]="'h-4 w-4 text-brand-ink'" />
                               Restore
                             </button>
                           }

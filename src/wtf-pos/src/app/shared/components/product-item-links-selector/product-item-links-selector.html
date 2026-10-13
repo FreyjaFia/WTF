@@ -33,13 +33,13 @@
               <input
                 type="text"
                 placeholder="Search products..."
-                class="input input-sm w-full rounded-xl border-transparent bg-gray-50 pl-9 transition-all focus:border-[#047857] focus:bg-white focus:ring-1 focus:ring-[#047857]/20"
+                class="input input-sm w-full rounded-xl border-transparent bg-gray-50 pl-9 transition-all focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20"
                 [value]="searchTerm()"
                 (input)="onSearchInput($event)"
               />
             </div>
             <select
-              class="select select-sm w-full rounded-xl border-gray-200 bg-white text-sm focus:border-[#047857] focus:ring-1 focus:ring-[#047857]/20 sm:w-36"
+              class="select select-sm w-full rounded-xl border-gray-200 bg-surface text-sm focus:border-brand focus:ring-1 focus:ring-brand/20 sm:w-36"
               [value]="selectedFilter()"
               (change)="onFilterChange($event)"
             >
@@ -56,7 +56,7 @@
             @for (product of filteredAvailableProducts; track product.id) {
               <li
                 [attr.data-id]="product.id"
-                class="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm font-medium text-gray-800 transition-shadow hover:shadow-sm"
+                class="flex items-center gap-3 rounded-lg border border-gray-200 bg-surface px-3 py-2.5 text-sm font-medium text-gray-800 transition-shadow hover:shadow-sm"
               >
                 <app-icon
                   name="icon-grip"
@@ -81,7 +81,7 @@
                         Add-on
                       </span>
                     } @else {
-                      <span class="rounded bg-[#047857]/10 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-[#047857] uppercase">
+                      <span class="rounded bg-brand/10 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-brand-ink uppercase">
                         Product
                       </span>
                     }
@@ -132,7 +132,7 @@
             @for (product of linkedProducts(); track product.productId) {
               <li
                 [attr.data-id]="product.productId"
-                class="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm font-medium text-gray-800 transition-shadow hover:shadow-sm"
+                class="flex items-center gap-3 rounded-lg border border-gray-200 bg-surface px-3 py-2.5 text-sm font-medium text-gray-800 transition-shadow hover:shadow-sm"
               >
                 <app-icon
                   name="icon-grip"
@@ -157,7 +157,7 @@
                         Add-on
                       </span>
                     } @else {
-                      <span class="rounded bg-[#047857]/10 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-[#047857] uppercase">
+                      <span class="rounded bg-brand/10 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-brand-ink uppercase">
                         Product
                       </span>
                     }
@@ -175,7 +175,7 @@
                 </div>
 
                 <div class="flex shrink-0 items-center gap-2">
-                  <label class="input input-xs flex h-7 w-24 items-center gap-1 border-gray-200 bg-white">
+                  <label class="input input-xs flex h-7 w-24 items-center gap-1 border-gray-200 bg-surface">
                     <input
                       class="w-full bg-transparent text-[10px] outline-none"
                       type="number"
@@ -233,7 +233,7 @@
     </div>
   </div>
 
-  <form method="dialog" class="modal-backdrop bg-black/30 backdrop-blur-md">
+  <form method="dialog" class="modal-backdrop app-backdrop bg-black/30 backdrop-blur-md">
     <button type="button" [disabled]="isSaving()">close</button>
   </form>
 </dialog>

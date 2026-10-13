@@ -6,7 +6,7 @@ import { IconComponent } from '@shared/components/icons/icon/icon';
   selector: 'app-connection-error',
   imports: [IconComponent],
   template: `
-    <div class="rounded-lg bg-white p-8 text-center shadow-lg" role="status" data-connection-error>
+    <div class="rounded-lg bg-surface p-8 text-center shadow-lg" role="status" data-connection-error>
       <app-icon name="icon-cloud-off" [class]="'mx-auto mb-3 h-12 w-12 text-gray-400'" />
       <p class="text-lg font-semibold text-gray-700">
         Unable to connect to server. Please check your connection.
