@@ -4,21 +4,21 @@
   >
     @if (auth.canReadManagement()) {
       <a [routerLink]="routes.Dashboard" [routerLinkActive]="'dock-active'">
-        <app-icon name="icon-dashboard" [class]="'size-[1.2em]'" [fill]="'#000000'"></app-icon>
+        <app-icon name="icon-dashboard" [class]="'size-[1.2em]'" [fill]="'currentColor'"></app-icon>
         <span class="dock-label">Dashboard</span>
       </a>
     }
 
     @if (auth.canWriteOrders()) {
       <a [routerLink]="routes.OrdersEditor" [class.dock-active]="ordersSection() === 'new-order'">
-        <app-icon name="icon-plus" [class]="'size-[1.2em]'" [fill]="'#000000'"></app-icon>
+        <app-icon name="icon-plus" [class]="'size-[1.2em]'" [fill]="'currentColor'"></app-icon>
         <span class="dock-label">New Order</span>
       </a>
     }
 
     @if (auth.canReadOrders()) {
       <a [routerLink]="routes.OrdersList" [class.dock-active]="ordersSection() === 'orders'">
-        <app-icon name="icon-file" [class]="'size-[1.2em]'" [fill]="'#000000'"></app-icon>
+        <app-icon name="icon-file" [class]="'size-[1.2em]'" [fill]="'currentColor'"></app-icon>
         <span class="dock-label">Orders</span>
       </a>
     }
@@ -28,7 +28,7 @@
         <app-icon
           name="icon-inventory-module"
           [class]="'size-[1.2em]'"
-          [fill]="'#000000'"
+          [fill]="'currentColor'"
         ></app-icon>
         <span class="dock-label">Inventory</span>
       </a>
@@ -36,7 +36,7 @@
 
     @if (auth.canReadManagement()) {
       <a [routerLink]="routes.ManagementRoot" [routerLinkActive]="'dock-active'">
-        <app-icon name="icon-management" [class]="'size-[1.2em]'" [fill]="'#000000'"></app-icon>
+        <app-icon name="icon-management" [class]="'size-[1.2em]'" [fill]="'currentColor'"></app-icon>
         <span class="dock-label">Management</span>
       </a>
     }

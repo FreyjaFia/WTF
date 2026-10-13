@@ -98,7 +98,7 @@ describe('Login', () => {
       const fixture = create();
       const el: HTMLElement = fixture.nativeElement;
       const password = el.querySelector('#password') as HTMLInputElement;
-      const toggle = el.querySelector('button[type="button"]') as HTMLButtonElement;
+      const toggle = el.querySelector('button[aria-label="Show password"]') as HTMLButtonElement;
       expect(password.type).toBe('password');
       expect(toggle.textContent?.trim()).toBe('Show');
       toggle.click();

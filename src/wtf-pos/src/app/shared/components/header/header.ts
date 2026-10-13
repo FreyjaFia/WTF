@@ -6,11 +6,12 @@ import { appVersion } from '@environments/version';
 import { AvatarComponent } from '@shared/components/avatar/avatar';
 import { IconComponent } from '@shared/components/icons/icon/icon';
 import { StaffEnvelopeComponent } from '@shared/components/staff-envelope/staff-envelope';
+import { ThemeSwitcherComponent } from '@shared/components/theme-switcher/theme-switcher';
 import { AppRoutes } from '@shared/constants/app-routes';
 
 @Component({
   selector: 'app-header',
-  imports: [CommonModule, AvatarComponent, IconComponent, StaffEnvelopeComponent],
+  imports: [CommonModule, AvatarComponent, IconComponent, StaffEnvelopeComponent, ThemeSwitcherComponent],
   templateUrl: './header.html',
 })
 export class HeaderComponent implements OnInit, OnDestroy {

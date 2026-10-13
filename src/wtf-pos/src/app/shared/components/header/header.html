@@ -1,4 +1,4 @@
-<div class="navbar shrink-0 border-b border-gray-200 bg-white px-3 shadow-md sm:px-6">
+<div class="navbar shrink-0 border-b border-gray-200 bg-surface px-3 shadow-md sm:px-6">
   <div class="flex-1">
     <a class="flex items-center gap-2 text-2xl font-bold tracking-tight">
       <span class="text-neutral">WTF</span>
@@ -7,13 +7,15 @@
     </a>
   </div>
   <div class="flex items-center gap-2 sm:gap-4">
+    <app-theme-switcher [compact]="true" placement="bottom-end" />
+
     <app-staff-envelope />
 
     <div class="dropdown dropdown-end z-[35]">
       <div
         tabindex="0"
         role="button"
-        class="avatar cursor-pointer rounded-full p-0.5 ring-2 ring-transparent transition-all hover:ring-[#047857]/30 active:scale-95"
+        class="avatar cursor-pointer rounded-full p-0.5 ring-2 ring-transparent transition-all hover:ring-brand/30 active:scale-95"
       >
         <div class="w-10 rounded-full">
           @if (imageUrl) {
@@ -25,7 +27,7 @@
       </div>
       <div
         tabindex="-1"
-        class="dropdown-content right-0 z-[35] mt-3 w-56 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl"
+        class="dropdown-content right-0 z-[35] mt-3 w-56 overflow-hidden rounded-xl border border-gray-200 bg-surface shadow-xl"
       >
         <div class="border-b border-gray-100 px-4 py-3" data-user-info>
           <div class="truncate text-sm font-semibold text-gray-800">{{ userFullName }}</div>

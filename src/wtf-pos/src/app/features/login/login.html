@@ -1,16 +1,23 @@
-<div class="flex min-h-full flex-col items-center justify-center">
+<div class="app-login relative flex min-h-full flex-col items-center justify-center overflow-hidden">
+  <div class="login-art" aria-hidden="true">
+    <span class="login-art__orb login-art__orb--a"></span>
+    <span class="login-art__orb login-art__orb--b"></span>
+    <span class="login-art__grid"></span>
+    <span class="login-art__awning"></span>
+  </div>
+
   <!-- Logo -->
-  <div class="mb-6 text-center">
+  <div class="relative z-10 mb-6 text-center">
     <img src="/assets/images/logo_new.png" alt="WTF Logo" class="mx-auto h-32 w-32" />
   </div>
 
   <!-- POS Portal Badge -->
-  <div class="mb-8">
-    <span class="rounded-full bg-black px-6 py-2 text-sm font-medium text-white">POS PORTAL</span>
+  <div class="relative z-10 mb-8">
+    <span class="rounded-full bg-ink px-6 py-2 text-sm font-medium text-on-ink">POS PORTAL</span>
   </div>
 
   <!-- Login Form -->
-  <div class="w-full max-w-md rounded-xl bg-white p-8 shadow-lg">
+  <div class="app-login-card relative z-10 w-full max-w-md rounded-xl bg-surface p-8 shadow-lg">
     <form
       [formGroup]="loginForm"
       (ngSubmit)="login()"
@@ -70,8 +77,13 @@
     </form>
   </div>
 
+  <!-- Style switch -->
+  <div class="relative z-10 mt-6 w-56">
+    <app-theme-switcher [outlined]="true" placement="top-center" />
+  </div>
+
   <!-- Footer -->
-  <div class="mt-8 text-center">
+  <div class="relative z-10 mt-6 text-center">
     <p class="mb-1 text-xs font-medium text-gray-400">Version v{{ appVersion }}</p>
     <p class="text-xs text-gray-500">
       © {{ currentYear }} Wake.Taste.Focus by Faith All rights reserved.

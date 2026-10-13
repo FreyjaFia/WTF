@@ -8,6 +8,7 @@ import { AvatarComponent } from '@shared/components/avatar/avatar';
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import { IconComponent } from '@shared/components/icons/icon/icon';
 import { StaffEnvelopeComponent } from '@shared/components/staff-envelope/staff-envelope';
+import { ThemeSwitcherComponent } from '@shared/components/theme-switcher/theme-switcher';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { ordersNavSection } from '@shared/utils/orders-nav';
 import { filter, map } from 'rxjs';
@@ -22,6 +23,7 @@ import { filter, map } from 'rxjs';
     IconComponent,
     ConfirmDialogComponent,
     StaffEnvelopeComponent,
+    ThemeSwitcherComponent,
   ],
   templateUrl: './sidebar.html',
 })

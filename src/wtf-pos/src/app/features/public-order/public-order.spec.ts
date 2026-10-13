@@ -1486,7 +1486,7 @@ describe('PublicOrderComponent', () => {
         b.textContent?.includes('View Order'),
       ) as HTMLButtonElement;
       expect(button).toBeDefined();
-      expect(button.className).toContain('bg-[#047857]');
+      expect(button.className).toContain('bg-brand');
       expect(button.className).toContain('absolute');
       expect(button.className).toContain('rounded-2xl');
       expect(button.className).toContain('xl:hidden');

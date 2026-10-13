@@ -4,7 +4,12 @@ import { RouterOutlet } from '@angular/router';
 import { App as CapApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { StatusBar, Style } from '@capacitor/status-bar';
-import { ModalStackService, OfflineOrderService, PushNotificationService } from '@core/services';
+import {
+  ModalStackService,
+  OfflineOrderService,
+  PushNotificationService,
+  ThemeService,
+} from '@core/services';
 import {
   AuthLoadingOverlayComponent,
   ExitConfirmComponent,
@@ -32,6 +37,9 @@ export class App implements OnInit, OnDestroy {
   private readonly modalStack = inject(ModalStackService);
   private readonly pushNotifications = inject(PushNotificationService);
   private readonly zone = inject(NgZone);
+
+  // Eagerly initialize so the saved style is applied on every screen, including login
+  private readonly _theme = inject(ThemeService);
 
   // Eagerly initialize to enable auto-sync on reconnect
   private readonly _offlineOrder = inject(OfflineOrderService);

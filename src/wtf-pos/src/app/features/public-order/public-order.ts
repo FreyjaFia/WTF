@@ -22,6 +22,7 @@ import { AvatarComponent } from '@shared/components/avatar/avatar';
 import { CartDrawerComponent } from '@shared/components/cart-drawer/cart-drawer';
 import { IconComponent } from '@shared/components/icons/icon/icon';
 import { SearchInputComponent } from '@shared/components/search-input/search-input';
+import { ThemeSwitcherComponent } from '@shared/components/theme-switcher/theme-switcher';
 import { PublicChatComponent } from './public-chat/public-chat';
 import { PublicOfflineNoticeComponent } from './public-offline-notice/public-offline-notice';
 import { PublicOrderDetailsComponent } from './public-order-details/public-order-details';
@@ -94,6 +95,7 @@ const CATEGORY_LABELS: Record<number, string> = {
     PublicOrderDetailsComponent,
     PublicOrdersComponent,
     SearchInputComponent,
+    ThemeSwitcherComponent,
   ],
   templateUrl: './public-order.html',
   host: { class: 'block h-full' },

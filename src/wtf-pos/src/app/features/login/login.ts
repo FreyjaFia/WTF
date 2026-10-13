@@ -10,12 +10,13 @@ import {
 } from '@core/services';
 import { appVersion } from '@environments/version';
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
+import { ThemeSwitcherComponent } from '@shared/components/theme-switcher/theme-switcher';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { finalize, timeout } from 'rxjs/operators';
 
 @Component({
   selector: 'app-login',
-  imports: [ReactiveFormsModule, ConfirmDialogComponent],
+  imports: [ReactiveFormsModule, ConfirmDialogComponent, ThemeSwitcherComponent],
   templateUrl: './login.html',
 })
 export class Login implements OnInit, OnDestroy {

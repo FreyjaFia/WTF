@@ -62,7 +62,7 @@ describe('HeaderComponent', () => {
       expect(fakes.inbox.start).toHaveBeenCalledTimes(1);
       const bar = el.querySelector('.navbar')!;
       const envelope = bar.querySelector('app-staff-envelope')!;
-      const avatar = bar.querySelector('.dropdown')!;
+      const avatar = bar.querySelector('.dropdown:has([data-user-info])')!;
       expect(envelope.compareDocumentPosition(avatar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
 
