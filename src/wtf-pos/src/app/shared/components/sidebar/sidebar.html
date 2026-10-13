@@ -10,18 +10,21 @@
       [class.flex-col]="isCollapsed()"
       [class.justify-between]="!isCollapsed()"
     >
-      <div class="flex items-center gap-2 text-2xl font-bold tracking-widest">
+      <div class="flex min-w-0 items-center gap-2 text-2xl font-bold tracking-widest">
         <span class="text-neutral">WTF</span>
         @if (!isCollapsed()) {
           <span class="text-xs font-normal tracking-wider text-gray-500 uppercase">POS</span>
         }
         @if (!isCollapsed()) {
-          <span class="text-[10px] font-semibold tracking-wide text-gray-400">
+          <span
+            class="min-w-0 truncate text-[10px] font-semibold tracking-wide text-gray-400"
+            [title]="'v' + appVersion"
+          >
             v{{ appVersion }}
           </span>
         }
       </div>
-      <app-staff-envelope align="start" />
+      <app-staff-envelope class="flex-none" align="start" />
     </div>
   </div>
 
