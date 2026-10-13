@@ -1,12 +1,17 @@
 /* You can add global styles to this file, and also import other style files */
 
 /* Import Inter font from Google Fonts */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,400;1,500&family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
 
 @import 'tailwindcss';
 @plugin 'daisyui' {
   themes: light --default;
 }
+
+/* The app styles: Default (themes.css) and Cafe (theme-cafe.css). The style dropdown is driven by core/theme/themes.ts. */
+@import './themes.css';
+@import './theme-styles.css';
+@import './theme-cafe.css';
 
 @theme {
   --breakpoint-sm: 599px;
@@ -15,14 +20,14 @@
 /* Force light mode regardless of OS preference */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Prevent Samsung Internet (and similar browsers) from forcing dark mode */
+/* Prevent Samsung Internet (and similar browsers) from forcing its own dark mode */
 html {
   color-scheme: light only;
 }
 
-/* Apply Inter font globally */
+/* The font comes from the active style (see themes.css) */
 body {
-  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--app-font);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
@@ -57,7 +62,7 @@ body {
 
 .sidebar-active {
   position: relative;
-  background-color: #f1f5f9;
+  background-color: var(--sidebar-active-bg);
 }
 
 .sidebar-active::before {
@@ -67,7 +72,7 @@ body {
   top: 8px;
   bottom: 8px;
   width: 3px;
-  background: #047857;
+  background: var(--brand);
   border-radius: 999px;
 }
 
@@ -76,7 +81,7 @@ body {
 @media (hover: hover) and (pointer: fine) {
   .overflow-y-auto {
     scrollbar-width: thin;
-    scrollbar-color: #d1d5db #f3f4f6;
+    scrollbar-color: var(--scroll-thumb) var(--scroll-track);
   }
 
   .overflow-y-auto::-webkit-scrollbar {
@@ -84,17 +89,17 @@ body {
   }
 
   .overflow-y-auto::-webkit-scrollbar-track {
-    background: #f3f4f6;
+    background: var(--scroll-track);
     border-radius: 4px;
   }
 
   .overflow-y-auto::-webkit-scrollbar-thumb {
-    background: #d1d5db;
+    background: var(--scroll-thumb);
     border-radius: 4px;
   }
 
   .overflow-y-auto::-webkit-scrollbar-thumb:hover {
-    background: #9ca3af;
+    background: var(--scroll-thumb-hover);
   }
 }
 
@@ -133,7 +138,7 @@ body {
    (app-btn-primary, app-btn-ghost, ...) and, where needed, a size
    (app-btn-xs/sm/md/lg). Colors, hover, active, focus and disabled states
    live here so every button of the same role behaves the same.
-   Brand green: #047857 (hover #065f46).
+   Brand color: the active style's --brand / --brand-hover (themes.css).
    ========================================================================== */
 
 @layer base {
@@ -150,7 +155,7 @@ body {
 
   /* One keyboard focus ring for every interactive element. */
   :where(button, a, [role='button'], summary):focus-visible {
-    outline: 2px solid #047857;
+    outline: 2px solid var(--brand);
     outline-offset: 2px;
   }
 }
@@ -185,7 +190,7 @@ body {
 
   /* Main action: save, add, confirm, checkout. */
   .app-btn-primary {
-    @apply bg-[#047857] text-white shadow-md hover:bg-[#065f46] hover:shadow-lg;
+    @apply bg-brand text-white shadow-md hover:bg-brand-hover hover:shadow-lg;
     @apply disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none;
   }
 
@@ -201,7 +206,7 @@ body {
 
   /* Neutral bordered action: filter, export, secondary actions, cancel. */
   .app-btn-secondary {
-    @apply border border-gray-200 bg-white text-gray-700 hover:bg-gray-50;
+    @apply border border-gray-200 bg-surface text-gray-700 hover:bg-gray-50;
     @apply disabled:bg-gray-50 disabled:text-gray-400;
   }
 
@@ -218,7 +223,7 @@ body {
 
   /* Bordered action in the brand color: manage links, add-ons. */
   .app-btn-accent-outline {
-    @apply border border-[#047857] bg-white text-[#047857] hover:bg-[#047857]/5;
+    @apply border border-brand bg-surface text-brand-ink hover:bg-brand/5;
     @apply disabled:border-gray-200 disabled:text-gray-400;
   }
 
@@ -229,13 +234,13 @@ body {
 
   /* Bordered destructive action: refund, void. */
   .app-btn-outline-danger {
-    @apply border border-red-300 bg-white text-red-700 hover:border-red-400 hover:bg-red-50;
+    @apply border border-red-300 bg-surface text-red-700 hover:border-red-400 hover:bg-red-50;
     @apply disabled:opacity-50;
   }
 
   /* Bordered caution action that changes a finished record: override a completed order. */
   .app-btn-outline-warning {
-    @apply border border-amber-300 bg-white text-amber-800 hover:border-amber-400 hover:bg-amber-50;
+    @apply border border-amber-300 bg-surface text-amber-800 hover:border-amber-400 hover:bg-amber-50;
     @apply disabled:opacity-50;
   }
 
@@ -247,7 +252,7 @@ body {
 
   /* Text link that triggers an action: view all, clear, reset. */
   .app-btn-link {
-    @apply rounded-md font-semibold text-[#047857] hover:text-[#065f46] disabled:opacity-50;
+    @apply rounded-md font-semibold text-brand-ink hover:text-brand-ink-hover disabled:opacity-50;
   }
 
   /* Icon-only buttons (always add an aria-label). */
@@ -274,8 +279,8 @@ body {
   }
 
   .app-menu-item:is(:hover, :focus-visible, :active, .menu-focus, .menu-active) {
-    background-color: #f3f4f6 !important;
-    color: #374151 !important;
+    background-color: var(--menu-hover-bg) !important;
+    color: var(--menu-hover-fg) !important;
   }
 
   .app-menu-item-danger {
@@ -283,17 +288,17 @@ body {
   }
 
   .app-menu-item-danger:is(:hover, :focus-visible, :active, .menu-focus, .menu-active) {
-    background-color: #fef2f2 !important;
-    color: #dc2626 !important;
+    background-color: var(--menu-danger-bg) !important;
+    color: var(--menu-danger-fg) !important;
   }
 
   .app-menu-item-success {
-    @apply text-[#047857];
+    @apply text-brand-ink;
   }
 
   .app-menu-item-success:is(:hover, :focus-visible, :active, .menu-focus, .menu-active) {
-    background-color: #ecfdf5 !important;
-    color: #047857 !important;
+    background-color: var(--menu-success-bg) !important;
+    color: var(--menu-success-fg) !important;
   }
 }
 
@@ -337,8 +342,8 @@ body {
   }
 
   .app-stepper-btn-primary {
-    @apply inline-flex cursor-pointer items-center justify-center rounded-full bg-[#047857] font-bold text-white transition-colors select-none;
-    @apply hover:bg-[#065f46] disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400;
+    @apply inline-flex cursor-pointer items-center justify-center rounded-full bg-brand font-bold text-white transition-colors select-none;
+    @apply hover:bg-brand-hover disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400;
   }
 }
 

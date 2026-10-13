@@ -3,6 +3,15 @@
   <head>
     <meta charset="utf-8" />
     <title>WTF POS</title>
+    <script>
+      // Apply the saved style before the first paint so a dark style never flashes white.
+      try {
+        var savedTheme = localStorage.getItem('wtf-theme');
+        if (savedTheme === 'cafe') {
+          document.documentElement.setAttribute('data-theme', savedTheme);
+        }
+      } catch (e) {}
+    </script>
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="color-scheme" content="light only" />

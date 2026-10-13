@@ -26,5 +26,6 @@ export * from './push-notification.service';
 export * from './reports.service';
 export * from './schema-script-history.service';
 export * from './signalr.service';
+export * from './theme.service';
 export * from './update.service';
 export * from './user.service';

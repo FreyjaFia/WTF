@@ -1,0 +1,77 @@
+/* ==========================================================================
+   Shared theme plumbing: the cross-fade between styles and the login backdrop art shell.
+   What each style looks like lives in its own file (theme-cafe.css).
+   Hook classes used by templates: app-shell, app-sidebar, app-dialog, app-backdrop,
+   app-login, app-login-card, login-art. daisyUI's .card is styled directly.
+   ========================================================================== */
+
+/* Fade colors between styles instead of snapping (ThemeService toggles this class). */
+@media (prefers-reduced-motion: no-preference) {
+  html.theme-transition *,
+  html.theme-transition *::before,
+  html.theme-transition *::after {
+    transition:
+      background-color 0.35s ease,
+      color 0.35s ease,
+      border-color 0.35s ease,
+      fill 0.35s ease,
+      stroke 0.35s ease,
+      box-shadow 0.35s ease !important;
+  }
+}
+
+/* Login backdrop art. Hidden in Default, which keeps its plain white page; other styles show it. */
+.login-art {
+  display: none;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.login-art__orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(72px);
+}
+
+.login-art__grid {
+  position: absolute;
+  inset: 0;
+}
+
+@keyframes login-orb-drift {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(4vmax, 3vmax, 0) scale(1.08);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .login-art__orb {
+    animation: login-orb-drift 14s ease-in-out infinite alternate;
+  }
+
+  .login-art__orb--b {
+    animation-duration: 18s;
+    animation-direction: alternate-reverse;
+  }
+}
+
+.login-art__awning {
+  display: none;
+}
+
+/* The style menu on phones is a panel pinned under the app bar, so it can never run off the screen
+   (it used to hang off the small icon button and get cut at the edge). */
+@media (max-width: 598px) {
+  .app-theme-menu {
+    position: fixed;
+    top: calc(var(--safe-area-top, 0px) + 4.25rem);
+    right: 0.75rem;
+    left: 0.75rem;
+    width: auto;
+    margin: 0;
+  }
+}

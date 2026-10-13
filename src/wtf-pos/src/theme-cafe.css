@@ -1,0 +1,478 @@
+/* ==========================================================================
+   Cafe: a paper menu board.
+   Cream paper and cup-white cards, coffee-brown text, one terracotta accent. Serif headings and
+   italic serif field labels, a striped awning edge, "ticket" cards with a stitched inner border,
+   chunky buttons that press down like stamps, dialogs that read like a receipt.
+   Terracotta and cream are used on purpose here: the brief for this style is a cafe.
+   ========================================================================== */
+
+[data-theme='cafe'] {
+  --app-font: 'DM Sans', 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --app-font-display: 'DM Sans', 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'DM Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --receipt-font: 'DM Sans', system-ui, sans-serif;
+  --receipt-heading-font: 'Playfair Display', Georgia, serif;
+  --receipt-bg: #fffdf8;
+  --receipt-frame: 1.5px dashed #d2c3ab;
+  --shell-bg: #f6efe2;
+  --surface: #fffdf8;
+  --brand: #b4532a;
+  --brand-hover: #8f3f1d;
+  --brand-ink: #a14722;
+  --brand-ink-hover: #7c3517;
+  --ink: #2a1e16;
+  --on-ink: #fffdf8;
+  --sidebar-active-bg: #f1e4cf;
+  --scroll-track: #f1e7d6;
+  --scroll-thumb: #d2c3ab;
+  --scroll-thumb-hover: #a08f7c;
+  --menu-hover-bg: #f6efe2;
+  --menu-hover-fg: #44382f;
+  --menu-danger-bg: #fdecea;
+  --menu-danger-fg: #b91c1c;
+  --menu-success-bg: #f1f5e6;
+  --menu-success-fg: #4d6b1f;
+
+  --color-gray-50: #faf5ec;
+  --color-gray-100: #f3ebdd;
+  --color-gray-200: #e6dac7;
+  --color-gray-300: #d2c3ab;
+  --color-gray-400: #8f7e6b;
+  --color-gray-500: #6f5f50;
+  --color-gray-600: #594b3f;
+  --color-gray-700: #44382f;
+  --color-gray-800: #31271f;
+  --color-gray-900: #1f1812;
+  --color-gray-950: #120d09;
+  --color-slate-50: var(--color-gray-50);
+  --color-slate-100: var(--color-gray-100);
+  --color-slate-200: var(--color-gray-200);
+  --color-slate-400: var(--color-gray-400);
+  --color-slate-500: var(--color-gray-500);
+  --color-slate-700: var(--color-gray-700);
+
+  --radius-md: 0.625rem;
+  --radius-lg: 0.875rem;
+  --radius-xl: 1.125rem;
+  --radius-2xl: 1.5rem;
+  --radius-3xl: 2rem;
+
+  --shadow-md: 0 4px 10px -4px rgb(74 44 22 / 0.18);
+  --shadow-lg: 0 10px 22px -10px rgb(74 44 22 / 0.28);
+  --shadow-xl: 0 22px 40px -16px rgb(74 44 22 / 0.34);
+}
+
+@plugin 'daisyui/theme' {
+  name: 'cafe';
+  default: false;
+  prefersdark: false;
+  color-scheme: light;
+  --color-base-100: #fffdf8;
+  --color-base-200: #f6efe2;
+  --color-base-300: #e6dac7;
+  --color-base-content: #2a1e16;
+  --color-primary: #b4532a;
+  --color-primary-content: #fffdf8;
+  --color-secondary: #6f5f50;
+  --color-secondary-content: #fffdf8;
+  --color-accent: #d9a05b;
+  --color-accent-content: #2a1e16;
+  --color-neutral: #2a1e16;
+  --color-neutral-content: #f6efe2;
+  --color-info: #3b82a6;
+  --color-info-content: #ffffff;
+  --color-success: #5f8a2b;
+  --color-success-content: #ffffff;
+  --color-warning: #d9a05b;
+  --color-warning-content: #2a1e16;
+  --color-error: #c2410c;
+  --color-error-content: #ffffff;
+  --radius-selector: 0.875rem;
+  --radius-field: 0.75rem;
+  --radius-box: 1.125rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1.5px;
+  --depth: 0;
+  --noise: 0;
+}
+
+/* Canvas: cream paper with a barely-there pattern of coffee beans, under a striped awning edge. */
+[data-theme='cafe'] .app-shell {
+  background-color: var(--shell-bg);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72' viewBox='0 0 72 72'%3E%3Cg fill='none' stroke='%23b4532a' stroke-opacity='.07' stroke-width='1.4'%3E%3Cellipse cx='14' cy='16' rx='6' ry='4' transform='rotate(-30 14 16)'/%3E%3Cpath d='M9.5 18.5c3-1 5-3 9-5' transform='rotate(0)'/%3E%3Cellipse cx='50' cy='46' rx='6' ry='4' transform='rotate(25 50 46)'/%3E%3Cpath d='M45.5 47.5c3-1 5-2 9-5'/%3E%3C/g%3E%3C/svg%3E");
+  border-top: 7px solid transparent;
+  border-image: repeating-linear-gradient(90deg, #b4532a 0 16px, #f7ead6 16px 32px) 7 / 7px 0 0 0 stretch;
+}
+
+[data-theme='cafe'] :is(h1, h2, h3, h4, .card-title) {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+
+[data-theme='cafe'] .app-content h1 {
+  font-size: 2rem;
+  line-height: 1.1;
+}
+
+/* Sidebar: a menu card. Serif section names, dashed rules, items that stamp in when active. */
+[data-theme='cafe'] .app-sidebar {
+  background-color: #fbf5e9;
+  border-right: 1.5px dashed #d2c3ab;
+}
+
+[data-theme='cafe'] .app-sidebar :is(.border-b, .border-t) {
+  border-style: dashed;
+}
+
+[data-theme='cafe'] .app-sidebar nav :is(a, button) {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 0.95rem;
+  letter-spacing: 0.005em;
+}
+
+[data-theme='cafe'] .app-sidebar nav a.sidebar-active {
+  color: var(--brand-ink);
+  box-shadow: inset 0 0 0 1.5px rgb(180 83 42 / 0.35);
+}
+
+[data-theme='cafe'] .sidebar-active::before {
+  display: none;
+}
+
+/* Cards: tickets with a stitched inner border. */
+[data-theme='cafe'] .card {
+  background-color: var(--surface);
+  border: 1.5px solid var(--color-gray-200);
+  outline: 1px dashed rgb(111 95 80 / 0.28);
+  outline-offset: -7px;
+  box-shadow: 0 8px 18px -12px rgb(74 44 22 / 0.35);
+}
+
+/* Buttons: chunky, with a hard underside that squashes when pressed. */
+[data-theme='cafe'] .app-btn {
+  border-radius: 0.875rem;
+  box-shadow: none;
+  font-weight: 600;
+  letter-spacing: 0.005em;
+  transition-duration: 120ms;
+}
+
+[data-theme='cafe'] .app-btn-primary:not(:disabled) {
+  background-color: #b4532a;
+  box-shadow: inset 0 -3px 0 rgb(0 0 0 / 0.22);
+}
+
+[data-theme='cafe'] .app-btn-primary:hover:not(:disabled) {
+  background-color: #c25f33;
+}
+
+[data-theme='cafe'] .app-btn-primary:active:not(:disabled) {
+  box-shadow: inset 0 -1px 0 rgb(0 0 0 / 0.22);
+  filter: brightness(0.96);
+}
+
+[data-theme='cafe'] .app-btn-secondary:not(:disabled) {
+  background-color: #fffdf8;
+  border: 1.5px solid #d2c3ab;
+  box-shadow: inset 0 -2px 0 #eadfca;
+  color: #44382f;
+}
+
+[data-theme='cafe'] .app-btn-secondary:hover:not(:disabled) {
+  background-color: #f6efe2;
+  border-color: #b4532a;
+}
+
+[data-theme='cafe'] .app-btn-secondary:active:not(:disabled) {
+  box-shadow: inset 0 -1px 0 #eadfca;
+}
+
+[data-theme='cafe'] .app-btn-dark:not(:disabled) {
+  background-color: #2a1e16;
+  box-shadow: inset 0 -3px 0 rgb(0 0 0 / 0.35);
+}
+
+[data-theme='cafe'] .app-btn-dark:hover:not(:disabled) {
+  background-color: #44382f;
+}
+
+[data-theme='cafe'] .app-btn-danger:not(:disabled) {
+  box-shadow: inset 0 -3px 0 rgb(0 0 0 / 0.22);
+}
+
+/* Fields: paper forms. Warm outlined boxes, italic serif labels. */
+[data-theme='cafe']
+  :is(
+    input:not(
+        [type='checkbox'],
+        [type='radio'],
+        [type='range'],
+        [type='file'],
+        [type='color'],
+        .app-search-input__input
+      ),
+    select,
+    textarea,
+    .input,
+    .select,
+    .textarea
+  ) {
+  min-height: 2.6rem;
+  border: 1.5px solid #d9c9b0;
+  border-radius: 0.8rem;
+  background-color: #fffdf8;
+  color: #2a1e16;
+  box-shadow: inset 0 2px 3px rgb(74 44 22 / 0.06);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+[data-theme='cafe'] :is(input, select, textarea, .input, .select, .textarea):focus-within,
+[data-theme='cafe'] :is(input, select, textarea):is(:focus, :focus-visible) {
+  border-color: #b4532a;
+  box-shadow:
+    inset 0 2px 3px rgb(74 44 22 / 0.04),
+    0 0 0 4px rgb(180 83 42 / 0.14);
+  outline: none;
+}
+
+[data-theme='cafe'] .input input {
+  min-height: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+[data-theme='cafe'] label[for] {
+  color: var(--color-gray-600);
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 0.92rem;
+  font-style: italic;
+  font-weight: 500;
+}
+
+/* Dialogs: a receipt. Stitched border, centered serif title, tear line above the actions. */
+[data-theme='cafe'] .app-dialog {
+  border: 1.5px solid #d2c3ab;
+  border-radius: 1.5rem;
+  outline: 1px dashed rgb(111 95 80 / 0.3);
+  outline-offset: -10px;
+  box-shadow: 0 30px 60px -24px rgb(74 44 22 / 0.5);
+}
+
+[data-theme='cafe'] .app-dialog > div:last-child:has(> button) {
+  justify-content: center;
+  margin-top: 1.75rem;
+  padding-top: 1.1rem;
+  border-top: 1.5px dashed #d2c3ab;
+}
+
+[data-theme='cafe'] .app-dialog > div:last-child:has(> button) > button {
+  flex: 1;
+  height: 2.75rem;
+  justify-content: center;
+}
+
+[data-theme='cafe'] .app-backdrop {
+  background-color: rgb(42 30 22 / 0.45);
+  backdrop-filter: blur(6px);
+}
+
+/* Mobile dock: a paper strip with a torn dashed top edge. */
+@media (max-width: 598px) {
+  [data-theme='cafe'] .dock {
+    background-color: #fbf5e9;
+    border-top: 1.5px dashed #d2c3ab;
+  }
+
+  [data-theme='cafe'] .dock .dock-active {
+    color: #b4532a;
+  }
+}
+
+/* Login: a striped scalloped awning across the top, warm light, bean pattern. */
+[data-theme='cafe'] .login-art {
+  display: block;
+}
+
+[data-theme='cafe'] .login-art__orb--a {
+  top: -10vmax;
+  left: -8vmax;
+  width: 40vmax;
+  height: 40vmax;
+  background: rgb(217 160 91 / 0.35);
+}
+
+[data-theme='cafe'] .login-art__orb--b {
+  right: -12vmax;
+  bottom: -14vmax;
+  width: 44vmax;
+  height: 44vmax;
+  background: rgb(180 83 42 / 0.2);
+}
+
+[data-theme='cafe'] .login-art__grid {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72' viewBox='0 0 72 72'%3E%3Cg fill='none' stroke='%23b4532a' stroke-opacity='.1' stroke-width='1.4'%3E%3Cellipse cx='14' cy='16' rx='6' ry='4' transform='rotate(-30 14 16)'/%3E%3Cpath d='M9.5 18.5c3-1 5-3 9-5'/%3E%3Cellipse cx='50' cy='46' rx='6' ry='4' transform='rotate(25 50 46)'/%3E%3Cpath d='M45.5 47.5c3-1 5-2 9-5'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+[data-theme='cafe'] .login-art__awning {
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  background: repeating-linear-gradient(90deg, #b4532a 0 24px, #f7ead6 24px 48px);
+  -webkit-mask:
+    linear-gradient(#000 0 0) top / 100% 40px no-repeat,
+    radial-gradient(circle at 50% 0, #000 11.5px, #0000 12px) bottom / 24px 16px repeat-x;
+  mask:
+    linear-gradient(#000 0 0) top / 100% 40px no-repeat,
+    radial-gradient(circle at 50% 0, #000 11.5px, #0000 12px) bottom / 24px 16px repeat-x;
+  filter: drop-shadow(0 6px 6px rgb(74 44 22 / 0.2));
+}
+
+[data-theme='cafe'] .app-login-card {
+  border: 1.5px solid #d2c3ab;
+  border-radius: 1.5rem;
+  outline: 1px dashed rgb(111 95 80 / 0.3);
+  outline-offset: -10px;
+  background-color: #fffdf8;
+  box-shadow: 0 30px 60px -28px rgb(74 44 22 / 0.5);
+}
+
+/* Let the paper canvas show through page wrappers so titles are not flush against a box edge. */
+[data-theme='cafe'] .app-content .bg-surface.rounded-t-2xl {
+  background-color: transparent;
+}
+
+/* Playfair's default figures hang below the baseline; prices and counts need lining numerals. */
+[data-theme='cafe'] body {
+  font-variant-numeric: lining-nums;
+}
+
+/* Sticky page and column headers were white strips on the cream canvas; give them the canvas color
+   (opaque, so rows scrolling underneath stay hidden). */
+[data-theme='cafe'] .app-content .sticky[class*='top-0'][class*='bg-surface'] {
+  background-color: var(--shell-bg);
+}
+
+/* The remaining button roles get the same chunky, bordered treatment as primary and secondary, so
+   every button on a page reads as one family. Depth is drawn inside the button (inset shadow). */
+[data-theme='cafe'] .app-btn-accent-outline:not(:disabled),
+[data-theme='cafe'] .app-btn-outline-danger:not(:disabled),
+[data-theme='cafe'] .app-btn-outline-warning:not(:disabled) {
+  border-width: 1.5px;
+  background-color: #fffdf8;
+  box-shadow: inset 0 -2px 0 rgb(0 0 0 / 0.06);
+}
+
+[data-theme='cafe'] .app-btn-subtle:not(:disabled) {
+  background-color: #f3ebdd;
+  color: #594b3f;
+  box-shadow: inset 0 -2px 0 #e6dac7;
+}
+
+[data-theme='cafe'] .app-btn-subtle:hover:not(:disabled) {
+  background-color: #ecdfca;
+}
+
+[data-theme='cafe'] .app-btn-ghost:hover:not(:disabled),
+[data-theme='cafe'] .app-btn-icon:hover:not(:disabled) {
+  background-color: #f3ebdd;
+}
+
+[data-theme='cafe'] .app-btn-overlay:not(:disabled) {
+  background-color: rgb(42 30 22 / 0.78);
+  box-shadow: none;
+}
+
+[data-theme='cafe'] .app-btn-link {
+  box-shadow: none;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 3px;
+}
+
+/* The floating cart bar (small screens) is a raw button, not .app-btn: give it the same look. */
+[data-theme='cafe'] button[data-custom-button] {
+  border-radius: 1.1rem;
+  box-shadow: inset 0 -3px 0 rgb(0 0 0 / 0.22);
+}
+
+/* Payment-method / option tiles share the button radius and stitched focus. */
+[data-theme='cafe'] button[role='radio'] {
+  border-width: 1.5px;
+  border-radius: 0.875rem;
+}
+
+/* The dashboard title sets its font inline (for the numbers' sake); headings stay serif everywhere. */
+[data-theme='cafe'] h1 {
+  font-family: 'Playfair Display', Georgia, serif !important;
+}
+
+/* Toasts: a paper ticket. Cream card, a colored tab on the left, stitched inner border, round stamp icon. */
+[data-theme='cafe'] .app-toast {
+  border-radius: 1.1rem;
+  border-left-width: 7px;
+  background-color: #fffdf8;
+  outline: 1px dashed rgb(111 95 80 / 0.3);
+  outline-offset: -6px;
+  box-shadow: 0 16px 30px -16px rgb(74 44 22 / 0.5);
+}
+
+[data-theme='cafe'] .app-toast-icon {
+  background-color: #f6efe2;
+  box-shadow: inset 0 0 0 1.5px rgb(111 95 80 / 0.25);
+}
+
+[data-theme='cafe'] .app-toast [class*='text-emerald-9'],
+[data-theme='cafe'] .app-toast [class*='text-red-9'],
+[data-theme='cafe'] .app-toast [class*='text-amber-9'],
+[data-theme='cafe'] .app-toast [class*='text-blue-9'] {
+  color: #2a1e16;
+}
+
+[data-theme='cafe'] .app-toast-timer {
+  height: 4px;
+  opacity: 0.55;
+  background: repeating-linear-gradient(90deg, currentColor 0 6px, transparent 6px 10px);
+}
+
+/* Mobile Management / Inventory tab strips: let the canvas show instead of a white band. */
+[data-theme='cafe'] .app-page-nav {
+  background-color: transparent;
+}
+
+/* Mobile dock: icons and labels take the brown of the style, the current page is terracotta. */
+[data-theme='cafe'] .dock :is(a, button) {
+  color: var(--color-gray-500);
+}
+
+[data-theme='cafe'] .dock .dock-active {
+  color: #b4532a;
+}
+
+/* Login: keep everything clear of the awning, and shrink the logo on short screens so the
+   whole form (logo, card, style switch, footer) fits without riding up under the awning. */
+[data-theme='cafe'] .app-login {
+  padding: 4.75rem 1rem 1.5rem;
+}
+
+@media (max-height: 820px) {
+  [data-theme='cafe'] .app-login img[alt='WTF Logo'] {
+    width: 5.5rem;
+    height: 5.5rem;
+  }
+
+  [data-theme='cafe'] .app-login > div:nth-child(2) {
+    margin-bottom: 1rem;
+  }
+
+  [data-theme='cafe'] .app-login > div:nth-child(3) {
+    margin-bottom: 1.25rem;
+  }
+}

@@ -1,0 +1,56 @@
+/* ==========================================================================
+   Themes
+   Every color, font and corner radius that changes between app styles lives in this file.
+   A style is picked by the data-theme attribute on <html> (set by ThemeService), and the
+   list shown in the style dropdown is src/app/core/theme/themes.ts. To add a style:
+     1. add a [data-theme='x'] block below,
+     2. add a daisyUI theme block (base / primary / neutral colors for modals, inputs, ...),
+     (theme-cafe.css is a complete example: tokens, daisyUI theme and personality in one file),
+     3. add the entry to themes.ts.
+   Templates never use raw hex values for themed things. They use these tokens:
+     bg-surface / bg-brand / text-brand-ink / bg-ink ... and the gray-*, emerald-*, red-*, ...
+   scales, which a style can redefine (a dark style flips the gray scale).
+   "Default" is the original light look and is declared on :root, so it is also the fallback.
+   ========================================================================== */
+
+@theme inline {
+  --color-surface: var(--surface);
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-ink-hover: var(--brand-ink-hover);
+  --color-ink: var(--ink);
+  --color-on-ink: var(--on-ink);
+}
+
+/* --------------------------------------------------------------------------
+   Default (light). Same values the app always had.
+   -------------------------------------------------------------------------- */
+:root,
+[data-theme='light'] {
+  --app-font: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --app-font-display: 'Plus Jakarta Sans', sans-serif;
+  --shell-bg: #ffffff;
+  --surface: #ffffff;
+  --brand: #047857;
+  --brand-hover: #065f46;
+  --brand-ink: #047857;
+  --brand-ink-hover: #065f46;
+  --ink: #000000;
+  --on-ink: #ffffff;
+  --sidebar-active-bg: #f1f5f9;
+  --scroll-track: #f3f4f6;
+  --scroll-thumb: #d1d5db;
+  --scroll-thumb-hover: #9ca3af;
+  --menu-hover-bg: #f3f4f6;
+  --menu-hover-fg: #374151;
+  --menu-danger-bg: #fef2f2;
+  --menu-danger-fg: #dc2626;
+  --menu-success-bg: #ecfdf5;
+  --menu-success-fg: #047857;
+  /* Order summary image (OrderReceiptComponent) */
+  --receipt-font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --receipt-heading-font: var(--receipt-font);
+  --receipt-bg: #ffffff;
+  --receipt-frame: none;
+}

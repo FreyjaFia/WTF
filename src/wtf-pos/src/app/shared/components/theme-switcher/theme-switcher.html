@@ -1,0 +1,74 @@
+<div class="dropdown" [class]="placementClass()" [class.w-full]="!compact() || fullWidth()">
+  <button
+    type="button"
+    tabindex="0"
+    class="app-btn"
+    [class.app-btn-ghost]="!outlined()"
+    [class.app-btn-secondary]="outlined()"
+    [class.h-10]="compact() && !fullWidth()"
+    [class.w-10]="compact() && !fullWidth()"
+    [class.w-full]="!compact() || fullWidth()"
+    [class.h-9]="!compact() || fullWidth()"
+    [class.justify-start]="!compact()"
+    [class.px-2.5]="!compact() || fullWidth()"
+    [class.text-xs]="!compact()"
+    [attr.aria-label]="'Change style, current style ' + themeService.current().label"
+    [attr.title]="compact() ? 'Style: ' + themeService.current().label : null"
+    aria-haspopup="listbox"
+  >
+    <app-icon name="icon-palette" [class]="'h-4.5 w-4.5 shrink-0'" />
+    @if (!compact()) {
+      <span class="min-w-0 flex-1 truncate text-left">
+        Style: {{ themeService.current().label }}
+      </span>
+      <app-icon name="icon-chevron-down" [class]="'h-4 w-4 shrink-0 text-gray-500'" />
+    }
+  </button>
+
+  <ul
+    tabindex="-1"
+    role="listbox"
+    aria-label="Style"
+    [class.app-theme-menu]="underAppBar()"
+    class="dropdown-content z-50 my-2 w-72 max-w-[calc(100vw-2rem)] rounded-xl border border-gray-200 bg-surface p-1.5 shadow-xl"
+  >
+    @for (theme of themeService.themes; track theme.id) {
+      <li role="presentation">
+        <button
+          type="button"
+          role="option"
+          class="flex w-full cursor-pointer items-center gap-3 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-gray-100 focus-visible:bg-gray-100"
+          [class.bg-gray-100]="theme.id === themeService.current().id"
+          [attr.aria-selected]="theme.id === themeService.current().id"
+          (click)="pick(theme.id)"
+        >
+          <span
+            class="relative h-10 w-14 shrink-0 overflow-hidden rounded-lg border border-gray-300"
+            [style.background-color]="theme.swatches[0]"
+            aria-hidden="true"
+          >
+            <span
+              class="absolute top-2 left-2 h-1.5 w-7 rounded-full opacity-80"
+              [style.background-color]="theme.swatches[2]"
+            ></span>
+            <span
+              class="absolute top-5 left-2 h-1 w-5 rounded-full opacity-35"
+              [style.background-color]="theme.swatches[2]"
+            ></span>
+            <span
+              class="absolute right-1.5 bottom-1.5 h-3 w-6 rounded-full"
+              [style.background-color]="theme.swatches[1]"
+            ></span>
+          </span>
+          <span class="min-w-0 flex-1">
+            <span class="block truncate text-sm font-medium text-gray-900">{{ theme.label }}</span>
+            <span class="block truncate text-xs text-gray-500">{{ theme.description }}</span>
+          </span>
+          @if (theme.id === themeService.current().id) {
+            <app-icon name="icon-success" [class]="'h-4.5 w-4.5 shrink-0 text-brand-ink'" />
+          }
+        </button>
+      </li>
+    }
+  </ul>
+</div>
