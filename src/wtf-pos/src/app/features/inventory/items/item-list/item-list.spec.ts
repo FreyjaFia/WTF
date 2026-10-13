@@ -535,4 +535,75 @@ describe('ItemListComponent', () => {
       expect(vm['activeFilterCount']()).toBe(2);
     });
   });
+
+  describe('sorting from the column headers', () => {
+    it('keeps the server order until a column is picked', () => {
+      const { vm } = create();
+      expect(vm['sortColumn']()).toBeNull();
+      expect(vm['sortedItems']().map((i: ItemDto) => i.name)).toEqual([
+        'Alpha Milk',
+        'Beta Sugar',
+        'Gamma Cups',
+      ]);
+    });
+
+    it('sorts by name, and reverses when the same column is picked again', () => {
+      const { vm } = create();
+      vm['toggleSort']('name');
+      expect(vm['sortDirection']()).toBe('asc');
+      expect(vm['sortedItems']().map((i: ItemDto) => i.name)).toEqual([
+        'Alpha Milk',
+        'Beta Sugar',
+        'Gamma Cups',
+      ]);
+
+      vm['toggleSort']('name');
+      expect(vm['sortDirection']()).toBe('desc');
+      expect(vm['sortedItems']().map((i: ItemDto) => i.name)).toEqual([
+        'Gamma Cups',
+        'Beta Sugar',
+        'Alpha Milk',
+      ]);
+    });
+
+    it('sorts by stock quantity', () => {
+      const { vm } = create();
+      vm['toggleSort']('stock');
+      expect(vm['sortedItems']().map((i: ItemDto) => i.currentQuantity)).toEqual([5, 40, 100]);
+    });
+
+    it('sorts by status with the most urgent first', () => {
+      const { vm } = create();
+      vm['toggleSort']('status');
+      expect(vm['sortedItems']().map((i: ItemDto) => i.id)).toEqual(['crit', 'warn', 'ok']);
+    });
+
+    it('sorts by cost, with items that have no cost first', () => {
+      inventory.getInventoryItems.mockReturnValue(
+        of([
+          makeItem({ id: 'a', name: 'A', costPrice: 9 }),
+          makeItem({ id: 'b', name: 'B', costPrice: null }),
+          makeItem({ id: 'c', name: 'C', costPrice: 2 }),
+        ]),
+      );
+      const { vm } = create();
+      vm['toggleSort']('cost');
+      expect(vm['sortedItems']().map((i: ItemDto) => i.id)).toEqual(['b', 'c', 'a']);
+    });
+
+    it('starts a newly picked column ascending', () => {
+      const { vm } = create();
+      vm['toggleSort']('name');
+      vm['toggleSort']('name');
+      vm['toggleSort']('stock');
+      expect(vm['sortDirection']()).toBe('asc');
+    });
+
+    it('still honours the search and status filters', () => {
+      const { vm } = create();
+      vm['selectedStatuses'].set(['ok', 'warning']);
+      vm['toggleSort']('stock');
+      expect(vm['sortedItems']().map((i: ItemDto) => i.id)).toEqual(['warn', 'ok']);
+    });
+  });
 });

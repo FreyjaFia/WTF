@@ -702,4 +702,64 @@ describe('AuditLogsComponent', () => {
       expect(fixture.nativeElement.querySelector('[data-filter-count]').textContent.trim()).toBe('2');
     });
   });
+
+  describe('sorting from the column headers', () => {
+    const logsFor = (...rows: Partial<AuditLogDto>[]) => {
+      service.getAuditLogs.mockReturnValue(
+        of({ items: rows.map((row, i) => makeLog({ id: `s${i}`, ...row })), page: 1, pageSize: 10, totalCount: rows.length }),
+      );
+    };
+    const ids = (vm: ReturnType<typeof internals>): string[] =>
+      vm['sortedLogs']().map((log: AuditLogDto) => log.id);
+
+    it('starts newest first, like the server', () => {
+      logsFor(
+        { timestamp: '2026-03-01T10:00:00Z' },
+        { timestamp: '2026-03-03T10:00:00Z' },
+        { timestamp: '2026-03-02T10:00:00Z' },
+      );
+      const { vm } = create();
+      expect(vm['sortColumn']()).toBe('timestamp');
+      expect(vm['sortDirection']()).toBe('desc');
+      expect(ids(vm)).toEqual(['s1', 's2', 's0']);
+    });
+
+    it('reverses the timestamp order when the header is picked again', () => {
+      logsFor({ timestamp: '2026-03-01T10:00:00Z' }, { timestamp: '2026-03-03T10:00:00Z' });
+      const { vm } = create();
+      vm['toggleSort']('timestamp');
+      expect(vm['sortDirection']()).toBe('asc');
+      expect(ids(vm)).toEqual(['s0', 's1']);
+    });
+
+    it('sorts by action, ignoring case', () => {
+      logsFor({ action: 'update' }, { action: 'Create' }, { action: 'Delete' });
+      const { vm } = create();
+      vm['toggleSort']('action');
+      expect(ids(vm)).toEqual(['s1', 's2', 's0']);
+      vm['toggleSort']('action');
+      expect(ids(vm)).toEqual(['s0', 's2', 's1']);
+    });
+
+    it('sorts by user name, falling back to the user id when there is no name', () => {
+      logsFor({ userName: 'zed' }, { userName: null, userId: 'alice-id' }, { userName: 'Bob' });
+      const { vm } = create();
+      vm['toggleSort']('user');
+      expect(ids(vm)).toEqual(['s1', 's2', 's0']);
+    });
+
+    it('sorts by entity type', () => {
+      logsFor({ entityType: 'Product' }, { entityType: 'Customer' }, { entityType: 'Order' });
+      const { vm } = create();
+      vm['toggleSort']('entityType');
+      expect(ids(vm)).toEqual(['s1', 's2', 's0']);
+    });
+
+    it('does not change the rows the server returned', () => {
+      logsFor({ action: 'b' }, { action: 'a' });
+      const { vm } = create();
+      vm['toggleSort']('action');
+      expect(vm['logs']().map((log: AuditLogDto) => log.id)).toEqual(['s0', 's1']);
+    });
+  });
 });

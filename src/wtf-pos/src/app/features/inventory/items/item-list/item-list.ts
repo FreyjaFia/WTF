@@ -26,6 +26,7 @@ import {
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { getInventoryUnitAbbreviation } from '@shared/constants/inventory-units';
+import { SortDirection, SortHeaderComponent } from '@shared/components/sort-header/sort-header';
 import { ItemDto } from '@shared/models';
 import { debounceTime } from 'rxjs';
 
@@ -36,9 +37,12 @@ interface ItemListState {
   selectedStatuses: StockStatus[];
 }
 
+type ItemSortColumn = 'name' | 'stock' | 'status' | 'cost';
+
 @Component({
   selector: 'app-item-list',
   imports: [
+    SortHeaderComponent,
     FilterButtonComponent,
     CommonModule,
     ReactiveFormsModule,
@@ -120,6 +124,45 @@ export class ItemListComponent implements OnInit {
         .some((value) => value!.toLowerCase().includes(search)),
     );
   });
+
+  protected readonly sortColumn = signal<ItemSortColumn | null>(null);
+  protected readonly sortDirection = signal<SortDirection>('asc');
+
+  /** The filtered items in the order picked by the column headers (server order until one is picked). */
+  protected readonly sortedItems = computed(() => {
+    const column = this.sortColumn();
+    const items = [...this.filteredItems()];
+
+    if (!column) {
+      return items;
+    }
+
+    const statusRank = { critical: 0, warning: 1, ok: 2 } as const;
+    const direction = this.sortDirection() === 'asc' ? 1 : -1;
+    const compare = (a: ItemDto, b: ItemDto): number => {
+      switch (column) {
+        case 'name':
+          return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+        case 'stock':
+          return a.currentQuantity - b.currentQuantity;
+        case 'status':
+          return statusRank[this.getStockStatus(a)] - statusRank[this.getStockStatus(b)];
+        case 'cost':
+          return (a.costPrice ?? -1) - (b.costPrice ?? -1);
+      }
+    };
+
+    return items.sort((a, b) => compare(a, b) * direction);
+  });
+
+  protected toggleSort(column: ItemSortColumn): void {
+    if (this.sortColumn() === column) {
+      this.sortDirection.update((direction) => (direction === 'asc' ? 'desc' : 'asc'));
+    } else {
+      this.sortColumn.set(column);
+      this.sortDirection.set('asc');
+    }
+  }
 
   constructor() {
     this.filterForm.controls.searchTerm.valueChanges

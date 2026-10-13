@@ -16,6 +16,7 @@ import {
   SideDrawerComponent,
   type FilterOption,
 } from '@shared/components';
+import { SortDirection, SortHeaderComponent } from '@shared/components/sort-header/sort-header';
 import { AuditLogDto, AuditLogQuery } from '@shared/models';
 import { Observable } from 'rxjs';
 
@@ -27,12 +28,15 @@ interface AuditLogListState {
   pageSize?: number;
 }
 
+type AuditSortColumn = 'timestamp' | 'user' | 'action' | 'entityType';
+
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
 const DEFAULT_PAGE_SIZE = 10;
 
 @Component({
   selector: 'app-audit-logs',
   imports: [
+    SortHeaderComponent,
     FilterButtonComponent,
     CommonModule,
     IconComponent,
@@ -51,6 +55,34 @@ export class AuditLogsComponent implements OnInit {
   private readonly stateKey = 'management:audit-logs';
 
   protected readonly logs = signal<AuditLogDto[]>([]);
+  protected readonly sortColumn = signal<AuditSortColumn>('timestamp');
+  protected readonly sortDirection = signal<SortDirection>('desc');
+
+  /** The logs on this page in the order picked by the column headers (newest first, like the server). */
+  protected readonly sortedLogs = computed(() => {
+    const column = this.sortColumn();
+    const direction = this.sortDirection() === 'asc' ? 1 : -1;
+    const text = (log: AuditLogDto): string => {
+      switch (column) {
+        case 'user':
+          return log.userName || log.userId;
+        case 'action':
+          return log.action;
+        case 'entityType':
+          return log.entityType;
+        default:
+          return log.timestamp;
+      }
+    };
+
+    return [...this.logs()].sort((a, b) => {
+      if (column === 'timestamp') {
+        return (Date.parse(a.timestamp) - Date.parse(b.timestamp)) * direction;
+      }
+
+      return text(a).localeCompare(text(b), undefined, { sensitivity: 'base' }) * direction;
+    });
+  });
   protected readonly isLoading = signal(false);
   protected readonly connectionFailed = signal(false);
   protected readonly isRefreshing = signal(false);
@@ -58,6 +90,15 @@ export class AuditLogsComponent implements OnInit {
   protected readonly isDownloadingPdf = signal(false);
   protected readonly isFiltersOpen = signal(false);
   protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
+
+  protected toggleSort(column: AuditSortColumn): void {
+    if (this.sortColumn() === column) {
+      this.sortDirection.update((direction) => (direction === 'asc' ? 'desc' : 'asc'));
+    } else {
+      this.sortColumn.set(column);
+      this.sortDirection.set(column === 'timestamp' ? 'desc' : 'asc');
+    }
+  }
 
   protected readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
   protected readonly page = signal(1);

@@ -36,5 +36,7 @@ export * from './pull-to-refresh/pull-to-refresh';
 export * from './reject-order-dialog/reject-order-dialog';
 export * from './search-input/search-input';
 export * from './sidebar/sidebar';
+export * from './sort-header/sort-header';
 export * from './sparkline/sparkline';
+export * from './theme-switcher/theme-switcher';
 export * from './update-banner/update-banner';
