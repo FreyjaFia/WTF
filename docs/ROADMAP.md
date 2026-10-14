@@ -747,10 +747,18 @@ database) and compared every figure with the answer worked out by hand, using th
   the amount sent, a GCash tip would be recorded, not verified. Proposed: allow it at the POS too, show the amount to
   send (total + tip), and later split tips by payment method in the Payments report so GCash tips can be reconciled
   against the GCash statement.
-- Observed, not changed: opening `/orders/editor` directly in a browser with an empty local cache shows "No products
-  found" until you navigate inside the app or press refresh (the catalog loads on in-app navigation). A completed order
-  that has no stored promotion (older orders) still shows a "best guess" promo discount line from today's promotions,
-  although its total is unaffected.
+- Two smaller findings, both fixed afterwards:
+  - Opening `/orders/editor` directly with an empty local cache (a fresh device) showed "No products found". The connection
+    check starts out "not online", so the first catalog load read the empty local cache. The background refresh that should
+    follow once the connection is confirmed ignores any moment before the load has finished, and nothing retried it, so the
+    catalog stayed empty until the next 15-minute refresh. `CatalogCacheService.load()` now catches up right after a
+    cache-only load, and a new order follows the shared catalog as it fills in (the editor had copied the list once).
+    Found by testing in the running app: the first fix (following the catalog) alone did not help.
+  - A finished order (completed, cancelled or refunded) with no stored promotion showed a "best guess" promo discount line
+    from today's promotions, although nothing was discounted. The guess is now only made for orders still waiting, which
+    have no stored prices yet.
+- Build: the packages with known vulnerabilities (`System.Security.Cryptography.Xml` and `Pkcs`, and the SignalR client
+  used by the tests) are updated to 10.0.13; `dotnet list package --vulnerable` reports none.
 
 **Tooling**
 
