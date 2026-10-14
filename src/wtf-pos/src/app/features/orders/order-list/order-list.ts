@@ -151,26 +151,27 @@ export class OrderList implements OnInit, OnDestroy {
   private wasOnline = this.connectivity.isOnline();
   private wasSyncingOffline = false;
   private hubSub: Subscription | null = null;
-  private readonly infiniteScrollEffect = effect((onCleanup) => {
-    const sentinel = this.loadMoreSentinel()?.nativeElement;
-    if (!sentinel) {
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) {
-          this.loadMoreOrders();
-        }
-      },
-      { root: null, rootMargin: '300px 0px', threshold: 0 },
-    );
-
-    observer.observe(sentinel);
-    onCleanup(() => observer.disconnect());
-  });
-
   constructor() {
+    // Loads the next page of orders when the sentinel at the end of the list scrolls into view.
+    effect((onCleanup) => {
+      const sentinel = this.loadMoreSentinel()?.nativeElement;
+      if (!sentinel) {
+        return;
+      }
+
+      const observer = new IntersectionObserver(
+        (entries) => {
+          if (entries.some((entry) => entry.isIntersecting)) {
+            this.loadMoreOrders();
+          }
+        },
+        { root: null, rootMargin: '300px 0px', threshold: 0 },
+      );
+
+      observer.observe(sentinel);
+      onCleanup(() => observer.disconnect());
+    });
+
     effect(
       () => {
         const online = this.isOnline();

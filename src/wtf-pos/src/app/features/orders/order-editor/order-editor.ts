@@ -169,23 +169,6 @@ export class OrderEditor implements OnInit, OnDestroy {
   private createCustomerModalStackId: number | null = null;
   private cartPersistenceReady = false;
 
-  private readonly _ = effect(() => {
-    const items = this.cart();
-    const customerId = this.selectedCustomerId();
-    const instructions = this.orderSpecialInstructions();
-
-    if (!this.cartPersistenceReady || this.isEditMode()) {
-      return;
-    }
-
-    if (items.length === 0) {
-      this.cartPersistence.clear();
-      return;
-    }
-
-    this.cartPersistence.save(items, customerId, instructions);
-  });
-
   // Cancel order
   protected readonly showCancelOrderModal = signal(false);
   protected readonly cancelOrderNote = signal('');
@@ -260,9 +243,6 @@ export class OrderEditor implements OnInit, OnDestroy {
 
   protected readonly bundlePromotions = signal<PromotionListItemDto[]>([]);
   protected readonly discountedProductPromotions = signal<DiscountedProductPromotionDto[]>([]);
-  private readonly bundlePromotionsSync = effect(() => {
-    this.bundlePromotions.set(this.catalogCache.bundlePromotions());
-  });
   private readonly pendingBundleSelection = signal<BundlePromotionSelection | null>(null);
   protected readonly isLoadingPromotions = signal(false);
   protected readonly isLoadingDiscountedPromotions = signal(false);
@@ -772,6 +752,29 @@ export class OrderEditor implements OnInit, OnDestroy {
   }
 
   public constructor() {
+    // Keeps a new order's cart saved as it changes, so a reload does not lose it.
+    effect(() => {
+      const items = this.cart();
+      const customerId = this.selectedCustomerId();
+      const instructions = this.orderSpecialInstructions();
+
+      if (!this.cartPersistenceReady || this.isEditMode()) {
+        return;
+      }
+
+      if (items.length === 0) {
+        this.cartPersistence.clear();
+        return;
+      }
+
+      this.cartPersistence.save(items, customerId, instructions);
+    });
+
+    // The bundle promotions come from the shared catalog.
+    effect(() => {
+      this.bundlePromotions.set(this.catalogCache.bundlePromotions());
+    });
+
     // The shared catalog can fill in after the page has opened: on a fresh device the first sync only starts once the
     // connection check has finished. A new order follows it, so the product list is not left empty or out of date.
     effect(() => {
