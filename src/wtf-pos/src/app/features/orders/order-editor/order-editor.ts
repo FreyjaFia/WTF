@@ -5,6 +5,7 @@ import {
   computed,
   DestroyRef,
   effect,
+  untracked,
   inject,
   OnDestroy,
   OnInit,
@@ -256,6 +257,7 @@ export class OrderEditor implements OnInit, OnDestroy {
   protected readonly customers = signal<CustomerDto[]>([]);
   protected readonly products = signal<ProductDto[]>([]);
   protected readonly productsCache = signal<ProductDto[]>([]);
+
   protected readonly bundlePromotions = signal<PromotionListItemDto[]>([]);
   protected readonly discountedProductPromotions = signal<DiscountedProductPromotionDto[]>([]);
   private readonly bundlePromotionsSync = effect(() => {
@@ -767,6 +769,28 @@ export class OrderEditor implements OnInit, OnDestroy {
 
     const value = event.target instanceof HTMLTextAreaElement ? event.target.value : '';
     this.orderSpecialInstructions.set(value);
+  }
+
+  public constructor() {
+    // The shared catalog can fill in after the page has opened: on a fresh device the first sync only starts once the
+    // connection check has finished. A new order follows it, so the product list is not left empty or out of date.
+    effect(() => {
+      const products = this.catalogCache.products();
+      const customers = this.catalogCache.customers();
+
+      untracked(() => {
+        if (this.isEditMode() || products.length === 0 || products === this.productsCache()) {
+          return;
+        }
+
+        this.productsCache.set(products);
+        this.customers.set(customers);
+        this.applyFiltersToCache();
+        this.refreshCartImageUrls();
+        this.isLoading.set(false);
+        this.isLoadingCustomers.set(false);
+      });
+    });
   }
 
   public ngOnInit(): void {

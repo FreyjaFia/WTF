@@ -183,6 +183,22 @@ describe('CatalogCacheService', () => {
       expect(service.bundlePromotions()).toEqual([]);
     });
 
+    it('syncs right after loading when the connection came back while the cache was being read', async () => {
+      online.set(false);
+      // The first connection check finishes in the middle of reading the cache.
+      (db.catalog as unknown as { get: ReturnType<typeof vi.fn> }).get.mockImplementation(() => {
+        online.set(true);
+        return Promise.resolve(stored);
+      });
+      const service = create();
+
+      await service.load();
+      TestBed.tick();
+
+      await answerSync({ products: [prod('fresh', 1)] });
+      expect(service.products().map((p) => p.id)).toEqual(['fresh']);
+    });
+
     it('stays empty when offline with nothing cached', async () => {
       online.set(false);
       const service = create();

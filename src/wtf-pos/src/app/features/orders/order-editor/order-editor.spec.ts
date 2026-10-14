@@ -1175,6 +1175,21 @@ describe('OrderEditor', () => {
       );
     });
 
+    it('shows the products when the catalog fills in after the page opened', async () => {
+      // A fresh device: nothing cached, and the first sync only finishes once the connection check does.
+      catalog.products.set([]);
+      await start();
+      expect(t.products().length).toBe(0);
+
+      catalog.products.set(ALL_PRODUCTS);
+      fixture.detectChanges();
+      await settle();
+      fixture.detectChanges();
+
+      expect(t.products().length).toBe(5);
+      expect(t.productsBySubCategory()[ProductSubCategoryEnum.Coffee].map((p) => p.id)).toEqual(['latte', 'mocha']);
+    });
+
     it('falls back to a synthesized product when not in any cache', () => {
       catalog.products.set([]);
       t.productsCache.set([]);

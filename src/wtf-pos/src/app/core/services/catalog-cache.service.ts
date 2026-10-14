@@ -73,16 +73,25 @@ export class CatalogCacheService {
     }
 
     this._isLoading.set(true);
+    let syncedFromApi = false;
 
     try {
       if (this.connectivity.isOnline()) {
         await this.syncFromApi();
+        syncedFromApi = true;
       } else {
         await this.loadFromCache();
       }
     } finally {
       this.loaded = true;
       this._isLoading.set(false);
+    }
+
+    // The connection check can finish while the cache is still being read (it always starts out "not online"). The
+    // background refresh ignores that moment because nothing is loaded yet, so catch up now. Without this a fresh
+    // device stays empty until the next 15-minute refresh.
+    if (!syncedFromApi) {
+      this.backgroundRefresh();
     }
   }
 
