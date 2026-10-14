@@ -4,8 +4,9 @@ using WTF.Api.Common.Orders;
 using WTF.Api.Common.Time;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Features.Reports.DTOs;
+using WTF.Calculations.Sales;
+using WTF.Calculations.Time;
 using WTF.Domain.Data;
-using WTF.Domain.Entities;
 
 namespace WTF.Api.Features.Reports;
 
@@ -37,64 +38,30 @@ public sealed class GetPaymentsReportHandler(
             .Where(o =>
                 o.CreatedAt >= fromUtc
                 && o.CreatedAt < toExclusiveUtc
-                && o.StatusId == (int)OrderStatusEnum.Completed
+                && o.StatusId == OrderStatuses.Completed
                 && (source == null || o.Source == source))
             .ToListAsync(cancellationToken);
 
-        var overridePrices = await BuildAddOnOverridePriceLookup(orders, cancellationToken);
+        var overridePrices = await AddOnPriceLookup.ForOrdersAsync(db, orders, cancellationToken);
 
         var grouped = orders
             .GroupBy(o => o.PaymentMethod != null ? o.PaymentMethod.Name : "Unknown")
             .Select(g => new
             {
                 PaymentMethod = g.Key,
-                OrderCount = g.Count(),
-                TotalAmount = g.Sum(o => ComputeOrderRevenue(o, overridePrices))
+                Summary = SalesRules.Summarize(g, overridePrices)
             })
-            .OrderByDescending(r => r.TotalAmount)
+            .OrderByDescending(r => r.Summary.Revenue)
             .ToList();
 
-        var grandTotal = grouped.Sum(g => g.TotalAmount);
+        var grandTotal = grouped.Sum(g => g.Summary.Revenue);
 
         return grouped
             .Select(row => new PaymentsReportRowDto(
                 row.PaymentMethod,
-                row.OrderCount,
-                row.TotalAmount,
-                grandTotal > 0 ? row.TotalAmount / grandTotal * 100 : 0m))
+                row.Summary.CompletedOrderCount,
+                row.Summary.Revenue,
+                SalesRules.PercentOfTotal(row.Summary.Revenue, grandTotal)))
             .ToList();
-    }
-
-    private static decimal ComputeOrderRevenue(
-        Order order,
-        IReadOnlyDictionary<(Guid ProductId, Guid AddOnId), decimal> addOnOverridePrices) =>
-        OrderMetrics.ComputeOrderTotal(order, addOnOverridePrices);
-
-    private async Task<Dictionary<(Guid ProductId, Guid AddOnId), decimal>> BuildAddOnOverridePriceLookup(
-        IReadOnlyCollection<Order> orders,
-        CancellationToken cancellationToken)
-    {
-        var parentProductIds = orders
-            .SelectMany(o => o.OrderItems.Where(oi => oi.ParentOrderItemId == null))
-            .Select(oi => oi.ProductId)
-            .Distinct()
-            .ToList();
-
-        var addOnProductIds = orders
-            .SelectMany(o => o.OrderItems.Where(oi => oi.ParentOrderItemId != null))
-            .Select(oi => oi.ProductId)
-            .Distinct()
-            .ToList();
-
-        if (addOnProductIds.Count == 0)
-        {
-            return [];
-        }
-
-        return await db.ProductAddOnPriceOverrides
-            .Where(o => parentProductIds.Contains(o.ProductId)
-                && addOnProductIds.Contains(o.AddOnId)
-                && o.IsActive)
-            .ToDictionaryAsync(o => (o.ProductId, o.AddOnId), o => o.Price, cancellationToken);
     }
 }

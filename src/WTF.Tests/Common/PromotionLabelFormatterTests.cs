@@ -1,4 +1,4 @@
-using WTF.Api.Common.Orders;
+using WTF.Calculations.Orders;
 
 namespace WTF.Tests.Common;
 

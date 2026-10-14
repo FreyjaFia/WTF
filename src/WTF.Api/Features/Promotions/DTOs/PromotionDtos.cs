@@ -99,34 +99,6 @@ public sealed record DiscountedProductPromotionDto(
     Guid? UpdatedBy,
     List<DiscountedProductItemDto> Items);
 
-public sealed class PromotionCartAddOnLineDto
-{
-    public Guid AddOnProductId { get; set; }
-    public int Quantity { get; set; }
-}
-
-public sealed class PromotionCartLineDto
-{
-    public string LineId { get; set; } = string.Empty;
-    public Guid ProductId { get; set; }
-    public int Quantity { get; set; }
-    public decimal UnitPrice { get; set; }
-    public List<PromotionCartAddOnLineDto> AddOns { get; set; } = [];
-    public bool IsPromoLine { get; set; }
-    public bool IsFreeItem { get; set; }
-    public string? BundleParentId { get; set; }
-    public string? TriggerLineId { get; set; }
-    public Guid? PromotionId { get; set; }
-    public bool IsLocked { get; set; }
-}
-
-public sealed record EvaluatePromotionsRequestDto(
-    List<PromotionCartLineDto> Lines,
-    DateTime? EvaluatedAtUtc);
-
-public sealed record EvaluatePromotionsResponseDto(
-    List<PromotionCartLineDto> Lines);
-
 public sealed record PromotionImageDto(
     Guid PromotionId,
     string? ImageUrl);

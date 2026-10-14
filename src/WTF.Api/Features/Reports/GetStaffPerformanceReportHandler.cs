@@ -2,10 +2,12 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Orders;
 using WTF.Api.Common.Time;
+using WTF.Api.Features.OrderLinks;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Features.Reports.DTOs;
+using WTF.Calculations.Sales;
+using WTF.Calculations.Time;
 using WTF.Domain.Data;
-using WTF.Domain.Entities;
 
 namespace WTF.Api.Features.Reports;
 
@@ -22,6 +24,9 @@ public sealed class GetStaffPerformanceReportHandler(
     WTFDbContext db,
     IHttpContextAccessor httpContextAccessor) : IRequestHandler<GetStaffPerformanceReportQuery, List<StaffPerformanceReportRowDto>>
 {
+    /// <summary>Customer link orders are saved under a system user, so the report names that row for what it is.</summary>
+    public const string CustomerLinkLabel = "Customer link (online)";
+
     public async Task<List<StaffPerformanceReportRowDto>> Handle(GetStaffPerformanceReportQuery request, CancellationToken cancellationToken)
     {
         var timeZone = RequestTimeZone.ResolveFromRequest(httpContextAccessor);
@@ -38,7 +43,7 @@ public sealed class GetStaffPerformanceReportHandler(
             .Where(o =>
                 o.CreatedAt >= fromUtc
                 && o.CreatedAt < toExclusiveUtc
-                && o.StatusId == (int)OrderStatusEnum.Completed
+                && o.StatusId == OrderStatuses.Completed
                 && (source == null || o.Source == source));
 
         if (request.StaffId.HasValue)
@@ -47,62 +52,35 @@ public sealed class GetStaffPerformanceReportHandler(
         }
 
         var orders = await query.ToListAsync(cancellationToken);
-        var overridePrices = await BuildAddOnOverridePriceLookup(orders, cancellationToken);
+        var overridePrices = await AddOnPriceLookup.ForOrdersAsync(db, orders, cancellationToken);
 
         var grouped = orders
             .GroupBy(o => new
             {
                 o.CreatedBy,
                 o.CreatedByNavigation.FirstName,
-                o.CreatedByNavigation.LastName
+                o.CreatedByNavigation.LastName,
+                o.CreatedByNavigation.Username
             })
             .Select(g => new
             {
                 StaffId = g.Key.CreatedBy,
-                StaffName = $"{g.Key.FirstName} {g.Key.LastName}".Trim(),
-                OrderCount = g.Count(),
-                TotalRevenue = g.Sum(o => OrderMetrics.ComputeOrderTotal(o, overridePrices)),
-                TipsReceived = g.Sum(o => o.Tips ?? 0m)
+                StaffName = g.Key.Username == SubmitPublicOrderHandler.SystemUsername
+                    ? CustomerLinkLabel
+                    : $"{g.Key.FirstName} {g.Key.LastName}".Trim(),
+                Summary = SalesRules.Summarize(g, overridePrices)
             })
-            .OrderByDescending(r => r.TotalRevenue)
+            .OrderByDescending(r => r.Summary.Revenue)
             .ToList();
 
         return grouped
             .Select(row => new StaffPerformanceReportRowDto(
                 row.StaffId,
                 row.StaffName,
-                row.OrderCount,
-                row.TotalRevenue,
-                row.OrderCount > 0 ? row.TotalRevenue / row.OrderCount : 0m,
-                row.TipsReceived))
+                row.Summary.CompletedOrderCount,
+                row.Summary.Revenue,
+                row.Summary.AverageOrderValue,
+                row.Summary.Tips))
             .ToList();
-    }
-
-    private async Task<Dictionary<(Guid ProductId, Guid AddOnId), decimal>> BuildAddOnOverridePriceLookup(
-        IReadOnlyCollection<Order> orders,
-        CancellationToken cancellationToken)
-    {
-        var parentProductIds = orders
-            .SelectMany(o => o.OrderItems.Where(oi => oi.ParentOrderItemId == null))
-            .Select(oi => oi.ProductId)
-            .Distinct()
-            .ToList();
-
-        var addOnProductIds = orders
-            .SelectMany(o => o.OrderItems.Where(oi => oi.ParentOrderItemId != null))
-            .Select(oi => oi.ProductId)
-            .Distinct()
-            .ToList();
-
-        if (addOnProductIds.Count == 0)
-        {
-            return [];
-        }
-
-        return await db.ProductAddOnPriceOverrides
-            .Where(o => parentProductIds.Contains(o.ProductId)
-                && addOnProductIds.Contains(o.AddOnId)
-                && o.IsActive)
-            .ToDictionaryAsync(o => (o.ProductId, o.AddOnId), o => o.Price, cancellationToken);
     }
 }

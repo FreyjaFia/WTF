@@ -4,6 +4,7 @@ using WTF.Api.Common.DTOs;
 using WTF.Api.Common.Orders;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
+using WTF.Calculations.Orders;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Orders;
@@ -85,26 +86,10 @@ public sealed class GetPagedOrdersHandler(WTFDbContext db)
                 .ThenInclude(obp => obp.Promotion)
             .ToListAsync(cancellationToken);
 
-        var allParentProductIds = orders
-            .SelectMany(o => o.OrderItems.Where(oi => oi.ParentOrderItemId == null))
-            .Select(oi => oi.ProductId)
-            .Distinct()
-            .ToList();
-
-        var allAddOnProductIds = orders
-            .SelectMany(o => o.OrderItems.Where(oi => oi.ParentOrderItemId == null))
-            .SelectMany(oi => oi.InverseParentOrderItem)
-            .Select(child => child.ProductId)
-            .Distinct()
-            .ToList();
-
-        var overridePrices = new Dictionary<(Guid ProductId, Guid AddOnId), decimal>();
-        if (allAddOnProductIds.Count > 0)
-        {
-            overridePrices = await db.ProductAddOnPriceOverrides
-                .Where(o => allParentProductIds.Contains(o.ProductId) && allAddOnProductIds.Contains(o.AddOnId) && o.IsActive)
-                .ToDictionaryAsync(o => (o.ProductId, o.AddOnId), o => o.Price, cancellationToken);
-        }
+        var overridePrices = await AddOnPriceLookup.ForParentItemsAsync(
+            db,
+            orders.SelectMany(o => o.OrderItems.Where(oi => oi.ParentOrderItemId == null)),
+            cancellationToken);
 
         var items = orders.Select(o =>
         {

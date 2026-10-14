@@ -1,4 +1,3 @@
-using WTF.Api.Features.Promotions;
 using static WTF.Tests.Features.Pricing.PricingTestHelpers;
 
 namespace WTF.Tests.Features.Pricing;
@@ -72,54 +71,6 @@ public class AddOnMatchingTests
     {
         SatisfiesExact(implementation, [(AddOnA, 1), (AddOnA, 1)], [(AddOnA, 2)]).ShouldBeTrue();
         SatisfiesExact(implementation, [(AddOnA, 1), (AddOnA, 1)], [(AddOnA, 1)]).ShouldBeFalse();
-    }
-
-    [Fact]
-    public void SatisfiesExactAddOns_EvaluateWrapper_AgreesWithShared()
-    {
-        (Guid, int)[][] carts =
-        [
-            [], [(AddOnA, 1)], [(AddOnA, 2)], [(AddOnA, 1), (AddOnB, 1)], [(AddOnB, 1), (AddOnA, 1)],
-            [(AddOnA, 1), (AddOnA, 1)], [(AddOnA, 1), (AddOnC, 0)], [(AddOnC, 1)], [(AddOnA, 1), (AddOnB, 2), (AddOnC, 3)]
-        ];
-        (Guid, int)[][] reqs =
-        [
-            [], [(AddOnA, 1)], [(AddOnA, 2)], [(AddOnA, 1), (AddOnB, 1)], [(AddOnB, 1)], [(AddOnA, 1), (AddOnB, 2), (AddOnC, 3)]
-        ];
-
-        foreach (var cart in carts)
-        foreach (var req in reqs)
-        {
-            SatisfiesExact("Evaluate", cart, req).ShouldBe(SatisfiesExact("Shared", cart, req));
-        }
-    }
-
-    // ---- SatisfiesRequiredAddOns (Evaluate only): "at least" semantics, unlike the exact match ----
-
-    [Fact]
-    public void SatisfiesRequiredAddOns_NoRequirements_ReturnsTrue()
-    {
-        EvaluatePromotionsHandler.SatisfiesRequiredAddOns(Line([(AddOnA, 1)]), []).ShouldBeTrue();
-        EvaluatePromotionsHandler.SatisfiesRequiredAddOns(Line(), []).ShouldBeTrue();
-    }
-
-    [Fact]
-    public void SatisfiesRequiredAddOns_ExtraAddOnsAndHigherQuantity_StillSatisfied()
-    {
-        EvaluatePromotionsHandler.SatisfiesRequiredAddOns(Line([(AddOnA, 3), (AddOnB, 1)]), [(AddOnA, 2)]).ShouldBeTrue();
-    }
-
-    [Fact]
-    public void SatisfiesRequiredAddOns_LowerQuantityOrMissing_NotSatisfied()
-    {
-        EvaluatePromotionsHandler.SatisfiesRequiredAddOns(Line([(AddOnA, 1)]), [(AddOnA, 2)]).ShouldBeFalse();
-        EvaluatePromotionsHandler.SatisfiesRequiredAddOns(Line([(AddOnB, 5)]), [(AddOnA, 1)]).ShouldBeFalse();
-    }
-
-    [Fact]
-    public void SatisfiesRequiredAddOns_RepeatedEntries_AreSummed()
-    {
-        EvaluatePromotionsHandler.SatisfiesRequiredAddOns(Line([(AddOnA, 1), (AddOnA, 1)]), [(AddOnA, 2)]).ShouldBeTrue();
     }
 
     // ---- GetDiscountedUnitPrice ----

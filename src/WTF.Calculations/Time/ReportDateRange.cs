@@ -1,4 +1,4 @@
-namespace WTF.Api.Features.Reports;
+namespace WTF.Calculations.Time;
 
 public static class ReportDateRange
 {

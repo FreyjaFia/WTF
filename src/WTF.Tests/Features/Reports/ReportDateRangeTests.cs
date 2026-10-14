@@ -1,4 +1,4 @@
-using WTF.Api.Features.Reports;
+using WTF.Calculations.Time;
 
 namespace WTF.Tests.Features.Reports;
 

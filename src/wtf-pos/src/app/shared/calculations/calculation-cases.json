@@ -1,0 +1,747 @@
+{
+  "_readme": "Sample inputs with the answers both calculators must give. The Angular specs (shared/calculations) and the .NET tests (WTF.Tests/Calculations/SharedCasesTests) load this one file. Change an answer here and both sides must change with it. Prices are pesos with at most two decimals.",
+  "orderTotals": [
+    {
+      "name": "empty order",
+      "lines": [],
+      "bundles": [],
+      "expectedTotal": 0
+    },
+    {
+      "name": "one plain line",
+      "lines": [
+        {
+          "quantity": 2,
+          "price": 100,
+          "addOns": []
+        }
+      ],
+      "bundles": [],
+      "expectedTotal": 200,
+      "expectedLineTotals": [200]
+    },
+    {
+      "name": "add-ons are added to each item and multiplied by the line quantity",
+      "lines": [
+        {
+          "quantity": 3,
+          "price": 100,
+          "addOns": [
+            {
+              "price": 10,
+              "quantity": 1
+            },
+            {
+              "price": 5,
+              "quantity": 2
+            }
+          ]
+        }
+      ],
+      "bundles": [],
+      "expectedTotal": 360,
+      "expectedLineTotals": [360]
+    },
+    {
+      "name": "an add-on quantity above one multiplies its price",
+      "lines": [
+        {
+          "quantity": 1,
+          "price": 80,
+          "addOns": [
+            {
+              "price": 12.5,
+              "quantity": 4
+            }
+          ]
+        }
+      ],
+      "bundles": [],
+      "expectedTotal": 130,
+      "expectedLineTotals": [130]
+    },
+    {
+      "name": "cents add up exactly (0.10 + 0.20 is 0.30, not 0.30000000000000004)",
+      "lines": [
+        {
+          "quantity": 1,
+          "price": 0.1,
+          "addOns": []
+        },
+        {
+          "quantity": 1,
+          "price": 0.2,
+          "addOns": []
+        }
+      ],
+      "bundles": [],
+      "expectedTotal": 0.3,
+      "expectedLineTotals": [0.1, 0.2]
+    },
+    {
+      "name": "three of an odd price",
+      "lines": [
+        {
+          "quantity": 3,
+          "price": 33.33,
+          "addOns": []
+        }
+      ],
+      "bundles": [],
+      "expectedTotal": 99.99,
+      "expectedLineTotals": [99.99]
+    },
+    {
+      "name": "a bundle is sold at its own price and the items inside add nothing",
+      "lines": [
+        {
+          "quantity": 1,
+          "price": 50,
+          "addOns": []
+        }
+      ],
+      "bundles": [
+        {
+          "unitPrice": 150,
+          "quantity": 2,
+          "items": [
+            {
+              "price": 80,
+              "quantity": 1,
+              "addOns": []
+            },
+            {
+              "price": 90,
+              "quantity": 1,
+              "addOns": [
+                {
+                  "price": 10,
+                  "quantity": 1
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "expectedTotal": 350
+    },
+    {
+      "name": "several lines and a bundle",
+      "lines": [
+        {
+          "quantity": 2,
+          "price": 120,
+          "addOns": [
+            {
+              "price": 15,
+              "quantity": 1
+            }
+          ]
+        },
+        {
+          "quantity": 1,
+          "price": 95.5,
+          "addOns": []
+        },
+        {
+          "quantity": 4,
+          "price": 60,
+          "addOns": [
+            {
+              "price": 7.25,
+              "quantity": 2
+            }
+          ]
+        }
+      ],
+      "bundles": [
+        {
+          "unitPrice": 199.99,
+          "quantity": 1,
+          "items": [
+            {
+              "price": 100,
+              "quantity": 2,
+              "addOns": []
+            }
+          ]
+        }
+      ],
+      "expectedTotal": 863.49,
+      "expectedLineTotals": [270, 95.5, 298]
+    },
+    {
+      "name": "a free line (price 0) with a paid add-on",
+      "lines": [
+        {
+          "quantity": 2,
+          "price": 0,
+          "addOns": [
+            {
+              "price": 20,
+              "quantity": 1
+            }
+          ]
+        }
+      ],
+      "bundles": [],
+      "expectedTotal": 40,
+      "expectedLineTotals": [40]
+    }
+  ],
+  "discountedUnitPrice": [
+    {
+      "name": "fixed amount off",
+      "basePrice": 100,
+      "fixedPrice": 15,
+      "percentOff": null,
+      "expected": 85
+    },
+    {
+      "name": "fixed amount larger than the price stops at zero",
+      "basePrice": 10,
+      "fixedPrice": 25,
+      "percentOff": null,
+      "expected": 0
+    },
+    {
+      "name": "percentage off",
+      "basePrice": 100,
+      "fixedPrice": null,
+      "percentOff": 10,
+      "expected": 90
+    },
+    {
+      "name": "fractional percentage",
+      "basePrice": 100,
+      "fixedPrice": null,
+      "percentOff": 12.5,
+      "expected": 87.5
+    },
+    {
+      "name": "fixed amount wins over a percentage",
+      "basePrice": 100,
+      "fixedPrice": 5,
+      "percentOff": 50,
+      "expected": 95
+    },
+    {
+      "name": "zero fixed amount falls back to the percentage",
+      "basePrice": 100,
+      "fixedPrice": 0,
+      "percentOff": 20,
+      "expected": 80
+    },
+    {
+      "name": "100 percent off is free",
+      "basePrice": 100,
+      "fixedPrice": null,
+      "percentOff": 100,
+      "expected": 0
+    },
+    {
+      "name": "more than 100 percent never goes below zero",
+      "basePrice": 100,
+      "fixedPrice": null,
+      "percentOff": 150,
+      "expected": 0
+    },
+    {
+      "name": "half a centavo rounds up (0.315 -> 0.32)",
+      "basePrice": 0.35,
+      "fixedPrice": null,
+      "percentOff": 10,
+      "expected": 0.32
+    },
+    {
+      "name": "half a centavo rounds up (0.135 -> 0.14)",
+      "basePrice": 0.15,
+      "fixedPrice": null,
+      "percentOff": 10,
+      "expected": 0.14
+    },
+    {
+      "name": "half a centavo rounds up (9.595 -> 9.60)",
+      "basePrice": 10.1,
+      "fixedPrice": null,
+      "percentOff": 5,
+      "expected": 9.6
+    },
+    {
+      "name": "half a centavo rounds up (0.495 -> 0.50)",
+      "basePrice": 0.5,
+      "fixedPrice": null,
+      "percentOff": 1,
+      "expected": 0.5
+    },
+    {
+      "name": "under half a centavo rounds down (9.054 -> 9.05)",
+      "basePrice": 10.06,
+      "fixedPrice": null,
+      "percentOff": 10,
+      "expected": 9.05
+    },
+    {
+      "name": "no value gives no discount",
+      "basePrice": 100,
+      "fixedPrice": null,
+      "percentOff": null,
+      "expected": null
+    },
+    {
+      "name": "zero values give no discount",
+      "basePrice": 100,
+      "fixedPrice": 0,
+      "percentOff": 0,
+      "expected": null
+    }
+  ],
+  "promoLabels": [
+    {
+      "name": "fixed amount",
+      "fixedPrice": 5,
+      "percentOff": null,
+      "expected": "Promo -₱5.00"
+    },
+    {
+      "name": "fixed amount with thousands",
+      "fixedPrice": 1234.5,
+      "percentOff": null,
+      "expected": "Promo -₱1,234.50"
+    },
+    {
+      "name": "whole percentage",
+      "fixedPrice": null,
+      "percentOff": 10,
+      "expected": "Promo -10%"
+    },
+    {
+      "name": "fractional percentage",
+      "fixedPrice": null,
+      "percentOff": 12.5,
+      "expected": "Promo -12.5%"
+    },
+    {
+      "name": "fixed wins over percentage",
+      "fixedPrice": 5,
+      "percentOff": 10,
+      "expected": "Promo -₱5.00"
+    },
+    {
+      "name": "zero fixed falls back to percentage",
+      "fixedPrice": 0,
+      "percentOff": 10,
+      "expected": "Promo -10%"
+    },
+    {
+      "name": "nothing to label",
+      "fixedPrice": null,
+      "percentOff": null,
+      "expected": null
+    },
+    {
+      "name": "zero values have no label",
+      "fixedPrice": 0,
+      "percentOff": 0,
+      "expected": null
+    }
+  ],
+  "bestDiscount": [
+    {
+      "name": "a rule whose add-ons match exactly applies",
+      "basePrice": 100,
+      "cartAddOns": [
+        {
+          "id": "cheese",
+          "quantity": 1
+        }
+      ],
+      "rules": [
+        {
+          "fixedPrice": null,
+          "percentOff": 10,
+          "requiredAddOns": [
+            {
+              "id": "cheese",
+              "quantity": 1
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "price": 90,
+        "label": "Promo -10%"
+      }
+    },
+    {
+      "name": "an extra add-on in the cart blocks the rule",
+      "basePrice": 100,
+      "cartAddOns": [
+        {
+          "id": "cheese",
+          "quantity": 1
+        },
+        {
+          "id": "bacon",
+          "quantity": 1
+        }
+      ],
+      "rules": [
+        {
+          "fixedPrice": null,
+          "percentOff": 10,
+          "requiredAddOns": [
+            {
+              "id": "cheese",
+              "quantity": 1
+            }
+          ]
+        }
+      ],
+      "expected": null
+    },
+    {
+      "name": "a different quantity of the required add-on does not match",
+      "basePrice": 100,
+      "cartAddOns": [
+        {
+          "id": "cheese",
+          "quantity": 2
+        }
+      ],
+      "rules": [
+        {
+          "fixedPrice": null,
+          "percentOff": 10,
+          "requiredAddOns": [
+            {
+              "id": "cheese",
+              "quantity": 1
+            }
+          ]
+        }
+      ],
+      "expected": null
+    },
+    {
+      "name": "a missing required add-on does not match",
+      "basePrice": 100,
+      "cartAddOns": [],
+      "rules": [
+        {
+          "fixedPrice": null,
+          "percentOff": 10,
+          "requiredAddOns": [
+            {
+              "id": "cheese",
+              "quantity": 1
+            }
+          ]
+        }
+      ],
+      "expected": null
+    },
+    {
+      "name": "a rule with no required add-ons never applies",
+      "basePrice": 100,
+      "cartAddOns": [],
+      "rules": [
+        {
+          "fixedPrice": null,
+          "percentOff": 10,
+          "requiredAddOns": []
+        }
+      ],
+      "expected": null
+    },
+    {
+      "name": "the same add-on listed twice in the cart is added up",
+      "basePrice": 100,
+      "cartAddOns": [
+        {
+          "id": "cheese",
+          "quantity": 1
+        },
+        {
+          "id": "cheese",
+          "quantity": 1
+        }
+      ],
+      "rules": [
+        {
+          "fixedPrice": 20,
+          "percentOff": null,
+          "requiredAddOns": [
+            {
+              "id": "cheese",
+              "quantity": 2
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "price": 80,
+        "label": "Promo -₱20.00"
+      }
+    },
+    {
+      "name": "the order of add-ons does not matter",
+      "basePrice": 100,
+      "cartAddOns": [
+        {
+          "id": "bacon",
+          "quantity": 2
+        },
+        {
+          "id": "cheese",
+          "quantity": 1
+        }
+      ],
+      "rules": [
+        {
+          "fixedPrice": null,
+          "percentOff": 25,
+          "requiredAddOns": [
+            {
+              "id": "cheese",
+              "quantity": 1
+            },
+            {
+              "id": "bacon",
+              "quantity": 2
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "price": 75,
+        "label": "Promo -25%"
+      }
+    },
+    {
+      "name": "of several matching rules the lowest price wins",
+      "basePrice": 100,
+      "cartAddOns": [
+        {
+          "id": "cheese",
+          "quantity": 1
+        }
+      ],
+      "rules": [
+        {
+          "fixedPrice": null,
+          "percentOff": 10,
+          "requiredAddOns": [
+            {
+              "id": "cheese",
+              "quantity": 1
+            }
+          ]
+        },
+        {
+          "fixedPrice": 30,
+          "percentOff": null,
+          "requiredAddOns": [
+            {
+              "id": "cheese",
+              "quantity": 1
+            }
+          ]
+        },
+        {
+          "fixedPrice": null,
+          "percentOff": 20,
+          "requiredAddOns": [
+            {
+              "id": "cheese",
+              "quantity": 1
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "price": 70,
+        "label": "Promo -₱30.00"
+      }
+    },
+    {
+      "name": "a tie keeps the first rule",
+      "basePrice": 100,
+      "cartAddOns": [
+        {
+          "id": "cheese",
+          "quantity": 1
+        }
+      ],
+      "rules": [
+        {
+          "fixedPrice": null,
+          "percentOff": 10,
+          "requiredAddOns": [
+            {
+              "id": "cheese",
+              "quantity": 1
+            }
+          ]
+        },
+        {
+          "fixedPrice": 10,
+          "percentOff": null,
+          "requiredAddOns": [
+            {
+              "id": "cheese",
+              "quantity": 1
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "price": 90,
+        "label": "Promo -10%"
+      }
+    },
+    {
+      "name": "a cheaper rule that does not match is ignored",
+      "basePrice": 100,
+      "cartAddOns": [
+        {
+          "id": "cheese",
+          "quantity": 1
+        }
+      ],
+      "rules": [
+        {
+          "fixedPrice": 90,
+          "percentOff": null,
+          "requiredAddOns": [
+            {
+              "id": "bacon",
+              "quantity": 1
+            }
+          ]
+        },
+        {
+          "fixedPrice": null,
+          "percentOff": 10,
+          "requiredAddOns": [
+            {
+              "id": "cheese",
+              "quantity": 1
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "price": 90,
+        "label": "Promo -10%"
+      }
+    },
+    {
+      "name": "a rule without a value is skipped",
+      "basePrice": 100,
+      "cartAddOns": [
+        {
+          "id": "cheese",
+          "quantity": 1
+        }
+      ],
+      "rules": [
+        {
+          "fixedPrice": null,
+          "percentOff": null,
+          "requiredAddOns": [
+            {
+              "id": "cheese",
+              "quantity": 1
+            }
+          ]
+        },
+        {
+          "fixedPrice": null,
+          "percentOff": 5,
+          "requiredAddOns": [
+            {
+              "id": "cheese",
+              "quantity": 1
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "price": 95,
+        "label": "Promo -5%"
+      }
+    },
+    {
+      "name": "no rules for the product",
+      "basePrice": 100,
+      "cartAddOns": [],
+      "rules": [],
+      "expected": null
+    }
+  ],
+  "average": [
+    {
+      "name": "spread over a count",
+      "amount": 300,
+      "count": 3,
+      "expected": 100
+    },
+    {
+      "name": "does not divide evenly",
+      "amount": 100,
+      "count": 3,
+      "expected": 33.3333
+    },
+    {
+      "name": "nothing sold",
+      "amount": 0,
+      "count": 4,
+      "expected": 0
+    },
+    {
+      "name": "no orders",
+      "amount": 500,
+      "count": 0,
+      "expected": 0
+    }
+  ],
+  "percentOfTotal": [
+    {
+      "name": "a quarter",
+      "part": 25,
+      "total": 100,
+      "expected": 25
+    },
+    {
+      "name": "all of it",
+      "part": 100,
+      "total": 100,
+      "expected": 100
+    },
+    {
+      "name": "none of it",
+      "part": 0,
+      "total": 100,
+      "expected": 0
+    },
+    {
+      "name": "a third",
+      "part": 1,
+      "total": 3,
+      "expected": 33.3333
+    },
+    {
+      "name": "cash share of a day",
+      "part": 903.48,
+      "total": 998.98,
+      "expected": 90.4402
+    },
+    {
+      "name": "no total to share",
+      "part": 10,
+      "total": 0,
+      "expected": 0
+    }
+  ]
+}

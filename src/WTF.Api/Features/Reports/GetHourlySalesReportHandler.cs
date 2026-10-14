@@ -4,8 +4,9 @@ using WTF.Api.Common.Orders;
 using WTF.Api.Common.Time;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Features.Reports.DTOs;
+using WTF.Calculations.Sales;
+using WTF.Calculations.Time;
 using WTF.Domain.Data;
-using WTF.Domain.Entities;
 
 namespace WTF.Api.Features.Reports;
 
@@ -34,21 +35,18 @@ public sealed class GetHourlySalesReportHandler(WTFDbContext db, IHttpContextAcc
             .Where(o =>
                 o.CreatedAt >= fromUtc
                 && o.CreatedAt < toExclusiveUtc
-                && o.StatusId == (int)OrderStatusEnum.Completed
+                && o.StatusId == OrderStatuses.Completed
                 && (source == null || o.Source == source))
             .ToListAsync(cancellationToken);
 
-        var overridePrices = await BuildAddOnOverridePriceLookup(orders, cancellationToken);
+        var overridePrices = await AddOnPriceLookup.ForOrdersAsync(db, orders, cancellationToken);
 
         var grouped = orders
-            .GroupBy(o => TimeZoneInfo.ConvertTimeFromUtc(
-                ReportDateRange.EnsureUtcDate(o.CreatedAt),
-                timeZone).Hour)
+            .GroupBy(o => ReportPeriods.LocalHour(o.CreatedAt, timeZone))
             .Select(g => new
             {
                 Hour = g.Key,
-                OrderCount = g.Count(),
-                Revenue = g.Sum(o => ComputeOrderRevenue(o, overridePrices))
+                Summary = SalesRules.Summarize(g, overridePrices)
             })
             .ToList();
 
@@ -60,42 +58,9 @@ public sealed class GetHourlySalesReportHandler(WTFDbContext db, IHttpContextAcc
                 byHour.TryGetValue(hour, out var row);
                 return new HourlySalesReportRowDto(
                     hour,
-                    row?.OrderCount ?? 0,
-                    row?.Revenue ?? 0m);
+                    row?.Summary.CompletedOrderCount ?? 0,
+                    row?.Summary.Revenue ?? 0m);
             })
             .ToList();
-    }
-
-    private static decimal ComputeOrderRevenue(
-        Order order,
-        IReadOnlyDictionary<(Guid ProductId, Guid AddOnId), decimal> addOnOverridePrices) =>
-        OrderMetrics.ComputeOrderTotal(order, addOnOverridePrices);
-
-    private async Task<Dictionary<(Guid ProductId, Guid AddOnId), decimal>> BuildAddOnOverridePriceLookup(
-        IReadOnlyCollection<Order> orders,
-        CancellationToken cancellationToken)
-    {
-        var parentProductIds = orders
-            .SelectMany(o => o.OrderItems.Where(oi => oi.ParentOrderItemId == null))
-            .Select(oi => oi.ProductId)
-            .Distinct()
-            .ToList();
-
-        var addOnProductIds = orders
-            .SelectMany(o => o.OrderItems.Where(oi => oi.ParentOrderItemId != null))
-            .Select(oi => oi.ProductId)
-            .Distinct()
-            .ToList();
-
-        if (addOnProductIds.Count == 0)
-        {
-            return [];
-        }
-
-        return await db.ProductAddOnPriceOverrides
-            .Where(o => parentProductIds.Contains(o.ProductId)
-                && addOnProductIds.Contains(o.AddOnId)
-                && o.IsActive)
-            .ToDictionaryAsync(o => (o.ProductId, o.AddOnId), o => o.Price, cancellationToken);
     }
 }

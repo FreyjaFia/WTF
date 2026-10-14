@@ -1,6 +1,6 @@
 using WTF.Domain.Entities;
 
-namespace WTF.Api.Common.Orders;
+namespace WTF.Calculations.Orders;
 
 public static class OrderMetrics
 {

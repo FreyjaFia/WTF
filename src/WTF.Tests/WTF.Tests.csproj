@@ -20,12 +20,20 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The sample orders and discounts the Angular calculators are tested with too (see SharedCasesTests). -->
+    <None Include="..\wtf-pos\src\app\shared\calculations\calculation-cases.json"
+          Link="Calculations\calculation-cases.json"
+          CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Using Include="Xunit" />
     <Using Include="Shouldly" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\WTF.Api\WTF.Api.csproj" />
+    <ProjectReference Include="..\WTF.Calculations\WTF.Calculations.csproj" />
     <ProjectReference Include="..\WTF.Domain\WTF.Domain.csproj" />
   </ItemGroup>
 

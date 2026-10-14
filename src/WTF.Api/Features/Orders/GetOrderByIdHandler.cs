@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Orders;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
+using WTF.Calculations.Orders;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Orders;
@@ -35,21 +36,7 @@ public class GetOrderByIdHandler(WTFDbContext db) : IRequestHandler<GetOrderById
             .OrderBy(oi => oi.SortOrder)
             .ThenBy(oi => oi.Id)
             .ToList();
-        var parentProductIds = parentItems.Select(oi => oi.ProductId).Distinct().ToList();
-        var addOnProductIds = parentItems
-            .SelectMany(oi => oi.InverseParentOrderItem)
-            .Select(child => child.ProductId)
-            .Distinct()
-            .ToList();
-
-        var overridePrices = new Dictionary<(Guid ProductId, Guid AddOnId), decimal>();
-
-        if (addOnProductIds.Count > 0)
-        {
-            overridePrices = await db.ProductAddOnPriceOverrides
-                .Where(o => parentProductIds.Contains(o.ProductId) && addOnProductIds.Contains(o.AddOnId) && o.IsActive)
-                .ToDictionaryAsync(o => (o.ProductId, o.AddOnId), o => o.Price, cancellationToken);
-        }
+        var overridePrices = await AddOnPriceLookup.ForParentItemsAsync(db, parentItems, cancellationToken);
 
         var items = parentItems
             .Select(oi =>

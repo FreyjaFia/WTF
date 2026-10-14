@@ -1,7 +1,7 @@
-using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Orders;
 using WTF.Api.Features.OrderLinks.DTOs;
 using WTF.Api.Features.Orders.Enums;
+using WTF.Calculations.Orders;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 
@@ -41,26 +41,7 @@ public static class PublicOrderMapping
         WTFDbContext db, IReadOnlyList<Order> orders, CancellationToken cancellationToken)
     {
         // Orders that are not completed yet store no prices, so add-on prices come from the current overrides.
-        var parentLinks = orders
-            .SelectMany(o => o.OrderItems)
-            .Where(oi => oi.ParentOrderItemId == null)
-            .Select(oi => oi.ProductId)
-            .Distinct()
-            .ToList();
-        var addOnIds = orders
-            .SelectMany(o => o.OrderItems)
-            .Where(oi => oi.ParentOrderItemId != null)
-            .Select(oi => oi.ProductId)
-            .Distinct()
-            .ToList();
-
-        var overridePrices = new Dictionary<(Guid ProductId, Guid AddOnId), decimal>();
-        if (addOnIds.Count > 0)
-        {
-            overridePrices = await db.ProductAddOnPriceOverrides
-                .Where(o => parentLinks.Contains(o.ProductId) && addOnIds.Contains(o.AddOnId) && o.IsActive)
-                .ToDictionaryAsync(o => (o.ProductId, o.AddOnId), o => o.Price, cancellationToken);
-        }
+        var overridePrices = await AddOnPriceLookup.ForOrdersAsync(db, orders, cancellationToken);
 
         return [.. orders.Select(order => ToDto(order, overridePrices))];
     }

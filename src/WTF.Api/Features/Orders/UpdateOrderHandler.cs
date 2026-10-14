@@ -10,10 +10,11 @@ using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Conversations;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
-using WTF.Api.Features.Promotions.DTOs;
 using WTF.Api.Features.Products.Enums;
+using WTF.Api.Features.Promotions.DTOs;
 using WTF.Api.Hubs;
 using WTF.Api.Services;
+using WTF.Calculations.Orders;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 
@@ -348,7 +349,11 @@ public class UpdateOrderHandler(
             var product = await db.Products.FindAsync([item.ProductId], cancellationToken) ?? throw new InvalidOperationException($"Product with ID {item.ProductId} not found.");
             var basePrice = product.Price;
             var appliedDiscount = shouldCapturePrice
-                ? PromotionPricing.GetDiscountedUnitPrice(basePrice, item, discountedRulesByProductId)
+                ? PromotionPricing.GetDiscountedUnitPrice(
+                    basePrice,
+                    item.ProductId,
+                    item.AddOns.Select(a => (a.ProductId, a.Quantity)),
+                    discountedRulesByProductId)
                 : null;
             var discountedPrice = appliedDiscount?.Price;
             var addOnPrices = new List<(OrderItemRequestDto AddOn, decimal Price)>();
@@ -564,25 +569,7 @@ public class UpdateOrderHandler(
             .Include(o => o.OrderBundlePromotions)
             .FirstAsync(o => o.Id == order.Id, cancellationToken);
 
-        var parentProductIds = orderWithTotals.OrderItems
-            .Where(oi => oi.ParentOrderItemId == null)
-            .Select(oi => oi.ProductId)
-            .Distinct()
-            .ToList();
-
-        var addOnProductIds = orderWithTotals.OrderItems
-            .Where(oi => oi.ParentOrderItemId != null)
-            .Select(oi => oi.ProductId)
-            .Distinct()
-            .ToList();
-
-        var overridePrices = new Dictionary<(Guid ProductId, Guid AddOnId), decimal>();
-        if (addOnProductIds.Count > 0)
-        {
-            overridePrices = await db.ProductAddOnPriceOverrides
-                .Where(o => parentProductIds.Contains(o.ProductId) && addOnProductIds.Contains(o.AddOnId) && o.IsActive)
-                .ToDictionaryAsync(o => (o.ProductId, o.AddOnId), o => o.Price, cancellationToken);
-        }
+        var overridePrices = await AddOnPriceLookup.ForOrdersAsync(db, [orderWithTotals], cancellationToken);
 
         var totalAmount = OrderMetrics.ComputeOrderTotal(orderWithTotals, overridePrices);
 

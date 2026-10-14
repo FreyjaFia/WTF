@@ -1,9 +1,8 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using WTF.Api.Services;
 using WTF.Api.Common.Auth;
 using WTF.Api.Features.Promotions;
-using WTF.Api.Features.Promotions.DTOs;
+using WTF.Api.Services;
 
 namespace WTF.Api.Endpoints;
 
@@ -194,13 +193,6 @@ public static class PromotionEndpoints
                 return removed ? Results.NoContent() : Results.NotFound();
             })
             .RequireAuthorization(AppPolicies.PromotionsWrite);
-
-        posGroup.MapPost("/evaluate",
-            async (EvaluatePromotionsRequestDto request, ISender sender) =>
-            {
-                var result = await sender.Send(new EvaluatePromotionsCommand(request));
-                return Results.Ok(result);
-            });
 
         posGroup.MapGet("/discounted-products",
             async (DateTime? evaluatedAtUtc, ISender sender) =>

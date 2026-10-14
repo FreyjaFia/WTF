@@ -1,6 +1,4 @@
 using WTF.Api.Features.Dashboard;
-using WTF.Domain.Entities;
-using WTF.Tests.Features.Reports;
 using WTF.Tests.Infrastructure;
 using static WTF.Tests.Features.Reports.SalesSeed;
 
@@ -171,8 +169,8 @@ public class GetDashboardHandlerTests
 
         dto.Today.TotalOrders.ShouldBe(5);                 // every status
         dto.Today.TotalRevenue.ShouldBe(200m);             // completed only
-        dto.Today.AverageOrderValue.ShouldBe(40m);         // revenue / all orders
-        dto.Today.TotalTips.ShouldBe(16m);                 // every status
+        dto.Today.AverageOrderValue.ShouldBe(100m);        // revenue / completed orders, as in the reports
+        dto.Today.TotalTips.ShouldBe(10m);                 // completed only
         dto.Today.TotalCustomers.ShouldBe(2);
         dto.OrdersByStatus.Pending.ShouldBe(1);
         dto.OrdersByStatus.Completed.ShouldBe(2);
@@ -290,7 +288,7 @@ public class GetDashboardHandlerTests
         var point = dto.DailyRevenue!.Single(d => d.Date == today.AddDays(-2));
         point.Revenue.ShouldBe(100m);
         point.Orders.ShouldBe(2);
-        point.Tips.ShouldBe(5m);
+        point.Tips.ShouldBe(3m); // the cancelled order's tip is not income
     }
 
     [Fact]

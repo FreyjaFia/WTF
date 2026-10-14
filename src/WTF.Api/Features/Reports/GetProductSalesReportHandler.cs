@@ -4,6 +4,9 @@ using WTF.Api.Common.Orders;
 using WTF.Api.Common.Time;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Features.Reports.DTOs;
+using WTF.Calculations.Orders;
+using WTF.Calculations.Sales;
+using WTF.Calculations.Time;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 
@@ -62,7 +65,7 @@ public sealed class GetProductSalesReportHandler(
                     && oi.BundlePromotionId == null
                     && oi.Order.CreatedAt >= fromUtc
                     && oi.Order.CreatedAt < toExclusiveUtc
-                    && oi.Order.StatusId == (int)OrderStatusEnum.Completed
+                    && oi.Order.StatusId == OrderStatuses.Completed
                     && (source == null || oi.Order.Source == source));
 
             if (request.CategoryId.HasValue && request.CategoryId.Value != PromotionsCategoryFilterId)
@@ -78,7 +81,7 @@ public sealed class GetProductSalesReportHandler(
             parentItems = await query.ToListAsync(cancellationToken);
         }
 
-        var overridePrices = await BuildAddOnOverridePriceLookup(parentItems, cancellationToken);
+        var overridePrices = await AddOnPriceLookup.ForParentItemsAsync(db, parentItems, cancellationToken);
 
         var productRows = parentItems
             .Select(parentItem => new
@@ -117,7 +120,7 @@ public sealed class GetProductSalesReportHandler(
                 .Where(obp =>
                     obp.Order.CreatedAt >= fromUtc
                     && obp.Order.CreatedAt < toExclusiveUtc
-                    && obp.Order.StatusId == (int)OrderStatusEnum.Completed
+                    && obp.Order.StatusId == OrderStatuses.Completed
                     && (source == null || obp.Order.Source == source)
                     && (obp.Promotion.TypeId == FixedBundlePromotionTypeId
                         || obp.Promotion.TypeId == MixMatchPromotionTypeId));
@@ -172,35 +175,8 @@ public sealed class GetProductSalesReportHandler(
                 row.SubCategoryName,
                 row.QuantitySold,
                 row.Revenue,
-                totalRevenue > 0 ? row.Revenue / totalRevenue * 100 : 0m))
+                SalesRules.PercentOfTotal(row.Revenue, totalRevenue)))
             .ToList();
-    }
-
-    private async Task<Dictionary<(Guid ProductId, Guid AddOnId), decimal>> BuildAddOnOverridePriceLookup(
-        IReadOnlyCollection<OrderItem> parentItems,
-        CancellationToken cancellationToken)
-    {
-        var parentProductIds = parentItems
-            .Select(oi => oi.ProductId)
-            .Distinct()
-            .ToList();
-
-        var addOnProductIds = parentItems
-            .SelectMany(oi => oi.InverseParentOrderItem)
-            .Select(child => child.ProductId)
-            .Distinct()
-            .ToList();
-
-        if (addOnProductIds.Count == 0)
-        {
-            return [];
-        }
-
-        return await db.ProductAddOnPriceOverrides
-            .Where(o => parentProductIds.Contains(o.ProductId)
-                && addOnProductIds.Contains(o.AddOnId)
-                && o.IsActive)
-            .ToDictionaryAsync(o => (o.ProductId, o.AddOnId), o => o.Price, cancellationToken);
     }
 
     private static int? ResolvePromotionTypeFilter(int? subCategoryId)

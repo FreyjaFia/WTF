@@ -10,6 +10,7 @@
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/WTF.Api/WTF.Api.csproj" />
+    <Project Path="src/WTF.Calculations/WTF.Calculations.csproj" />
     <Project Path="src/WTF.Domain/WTF.Domain.csproj" />
     <Project Path="src/WTF.Tests/WTF.Tests.csproj" />
   </Folder>

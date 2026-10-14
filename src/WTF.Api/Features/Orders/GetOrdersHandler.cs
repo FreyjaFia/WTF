@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Orders;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
+using WTF.Calculations.Orders;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Orders;
@@ -52,27 +53,10 @@ public class GetOrdersHandler(WTFDbContext db) : IRequestHandler<GetOrdersQuery,
             .ToListAsync(cancellationToken);
 
         // Build a lookup of override prices so pending orders show the correct effective price
-        var allParentProductIds = orders
-            .SelectMany(o => o.OrderItems.Where(oi => oi.ParentOrderItemId == null))
-            .Select(oi => oi.ProductId)
-            .Distinct()
-            .ToList();
-
-        var allAddOnProductIds = orders
-            .SelectMany(o => o.OrderItems.Where(oi => oi.ParentOrderItemId == null))
-            .SelectMany(oi => oi.InverseParentOrderItem)
-            .Select(child => child.ProductId)
-            .Distinct()
-            .ToList();
-
-        var overridePrices = new Dictionary<(Guid ProductId, Guid AddOnId), decimal>();
-
-        if (allAddOnProductIds.Count > 0)
-        {
-            overridePrices = await db.ProductAddOnPriceOverrides
-                .Where(o => allParentProductIds.Contains(o.ProductId) && allAddOnProductIds.Contains(o.AddOnId) && o.IsActive)
-                .ToDictionaryAsync(o => (o.ProductId, o.AddOnId), o => o.Price, cancellationToken);
-        }
+        var overridePrices = await AddOnPriceLookup.ForParentItemsAsync(
+            db,
+            orders.SelectMany(o => o.OrderItems.Where(oi => oi.ParentOrderItemId == null)),
+            cancellationToken);
 
         return [.. orders.Select(o =>
         {

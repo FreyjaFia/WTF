@@ -5,8 +5,9 @@ using WTF.Api.Common.Time;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Features.Reports.DTOs;
 using WTF.Api.Features.Reports.Enums;
+using WTF.Calculations.Sales;
+using WTF.Calculations.Time;
 using WTF.Domain.Data;
-using WTF.Domain.Entities;
 
 namespace WTF.Api.Features.Reports;
 
@@ -37,91 +38,32 @@ public sealed class GetDailySalesReportHandler(WTFDbContext db, IHttpContextAcce
                 && (source == null || o.Source == source))
             .ToListAsync(cancellationToken);
 
-        var overridePrices = await BuildAddOnOverridePriceLookup(orders, cancellationToken);
+        var overridePrices = await AddOnPriceLookup.ForOrdersAsync(db, orders, cancellationToken);
+
+        var period = ToPeriod(request.GroupBy ?? ReportGroupByEnum.Day);
 
         return orders
-            .GroupBy(o => ResolvePeriodStart(o.CreatedAt, request.GroupBy ?? ReportGroupByEnum.Day, timeZone))
+            .GroupBy(o => ReportPeriods.PeriodStart(o.CreatedAt, period, timeZone))
             .OrderBy(g => g.Key)
             .Select(group =>
             {
-                var completedOrders = group
-                    .Where(o => o.StatusId == (int)OrderStatusEnum.Completed)
-                    .ToList();
-
-                var revenue = completedOrders.Sum(o => ComputeOrderRevenue(o, overridePrices));
-                var orderCount = completedOrders.Count;
-                var average = orderCount > 0 ? revenue / orderCount : 0m;
-                var tips = completedOrders.Sum(o => o.Tips ?? 0m);
-                var voidCancelledCount = group.Count(o =>
-                    o.StatusId == (int)OrderStatusEnum.Cancelled
-                    || o.StatusId == (int)OrderStatusEnum.Refunded);
+                var summary = SalesRules.Summarize(group, overridePrices);
 
                 return new DailySalesReportRowDto(
                     group.Key,
-                    revenue,
-                    orderCount,
-                    average,
-                    tips,
-                    voidCancelledCount);
+                    summary.Revenue,
+                    summary.CompletedOrderCount,
+                    summary.AverageOrderValue,
+                    summary.Tips,
+                    summary.VoidedOrderCount);
             })
             .ToList();
     }
 
-    private static DateTime ResolvePeriodStart(
-        DateTime createdAtUtc,
-        ReportGroupByEnum groupBy,
-        TimeZoneInfo timeZone)
+    private static ReportPeriod ToPeriod(ReportGroupByEnum groupBy) => groupBy switch
     {
-        var localDate = TimeZoneInfo.ConvertTimeFromUtc(
-            ReportDateRange.EnsureUtcDate(createdAtUtc),
-            timeZone).Date;
-
-        if (groupBy == ReportGroupByEnum.Week)
-        {
-            var offset = ((int)localDate.DayOfWeek + 6) % 7;
-            return DateTime.SpecifyKind(localDate.AddDays(-offset), DateTimeKind.Unspecified);
-        }
-
-        if (groupBy == ReportGroupByEnum.Month)
-        {
-            return DateTime.SpecifyKind(
-                new DateTime(localDate.Year, localDate.Month, 1),
-                DateTimeKind.Unspecified);
-        }
-
-        return DateTime.SpecifyKind(localDate, DateTimeKind.Unspecified);
-    }
-
-    private static decimal ComputeOrderRevenue(
-        Order order,
-        IReadOnlyDictionary<(Guid ProductId, Guid AddOnId), decimal> addOnOverridePrices) =>
-        OrderMetrics.ComputeOrderTotal(order, addOnOverridePrices);
-
-    private async Task<Dictionary<(Guid ProductId, Guid AddOnId), decimal>> BuildAddOnOverridePriceLookup(
-        IReadOnlyCollection<Order> orders,
-        CancellationToken cancellationToken)
-    {
-        var parentProductIds = orders
-            .SelectMany(o => o.OrderItems.Where(oi => oi.ParentOrderItemId == null))
-            .Select(oi => oi.ProductId)
-            .Distinct()
-            .ToList();
-
-        var addOnProductIds = orders
-            .SelectMany(o => o.OrderItems.Where(oi => oi.ParentOrderItemId != null))
-            .Select(oi => oi.ProductId)
-            .Distinct()
-            .ToList();
-
-        if (addOnProductIds.Count == 0)
-        {
-            return [];
-        }
-
-        return await db.ProductAddOnPriceOverrides
-            .Where(o => parentProductIds.Contains(o.ProductId)
-                && addOnProductIds.Contains(o.AddOnId)
-                && o.IsActive)
-            .ToDictionaryAsync(o => (o.ProductId, o.AddOnId), o => o.Price, cancellationToken);
-    }
+        ReportGroupByEnum.Week => ReportPeriod.Week,
+        ReportGroupByEnum.Month => ReportPeriod.Month,
+        _ => ReportPeriod.Day
+    };
 }

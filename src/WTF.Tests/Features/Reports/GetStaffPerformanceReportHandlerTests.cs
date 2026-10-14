@@ -1,4 +1,6 @@
+using WTF.Api.Features.OrderLinks;
 using WTF.Api.Features.Reports;
+using WTF.Domain.Entities;
 using WTF.Tests.Infrastructure;
 using static WTF.Tests.Features.Reports.SalesSeed;
 
@@ -114,5 +116,34 @@ public class GetStaffPerformanceReportHandlerTests
         var rows = await Handler().Handle(Query(new DateTime(2026, 3, 10), new DateTime(2026, 3, 10)), default);
 
         rows.ShouldHaveSingleItem().TipsReceived.ShouldBe(0m);
+    }
+
+    [Fact]
+    public async Task Handle_CustomerLinkOrders_AreLabelledAsOnlineNotAsAStaffMember()
+    {
+        var systemUser = Guid.NewGuid();
+        await using (var db = TestDb.Create(_dbName))
+        {
+            Basics(db);
+            db.Users.Add(new User
+            {
+                Id = systemUser,
+                Username = SubmitPublicOrderHandler.SystemUsername,
+                PasswordHash = "x",
+                FirstName = "Customer",
+                LastName = "Link",
+                IsActive = true,
+            });
+            var p = Product(db, "Burger", 100m);
+            var at = Utc(2026, 3, 10, 4);
+            Sale(db, p, at, 100m, by: StaffA);
+            Sale(db, p, at, 250m, by: systemUser);
+            await db.SaveChangesAsync();
+        }
+
+        var rows = await Handler().Handle(Query(new DateTime(2026, 3, 10), new DateTime(2026, 3, 10)), default);
+
+        rows.Select(r => r.StaffName).ShouldBe([GetStaffPerformanceReportHandler.CustomerLinkLabel, "Ana Cruz"]);
+        rows.Sum(r => r.TotalRevenue).ShouldBe(350m);
     }
 }

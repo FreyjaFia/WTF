@@ -95,7 +95,6 @@ public class RouteTableTests : IDisposable
         "GET /api/orders/{id:guid}/messages/{messageId:guid}/image => OrdersRead",
         "PATCH /api/orders/{id:guid}/void => OrdersWrite",
         "GET /api/pos/promotions/discounted-products => OrdersWrite",
-        "POST /api/pos/promotions/evaluate => OrdersWrite",
         "GET /api/products/ => ProductsRead",
         "POST /api/products/ => ProductsWrite",
         "GET /api/products/addons/{addOnId:guid}/products => ProductsRead",

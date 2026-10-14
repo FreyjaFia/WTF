@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace WTF.Api.Common.Orders;
+namespace WTF.Calculations.Orders;
 
 /// <summary>Builds the label saved with an order line for the promotion that was applied to it.</summary>
 public static class PromotionLabelFormatter

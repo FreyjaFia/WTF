@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Pure business arithmetic: no EF queries, no HTTP, no file formats. Everything here works on objects already in memory. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\WTF.Domain\WTF.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,7 +1,6 @@
-using WTF.Api.Features.Orders.DTOs;
 using WTF.Domain.Entities;
 
-namespace WTF.Api.Common.Orders;
+namespace WTF.Calculations.Orders;
 
 /// <summary>
 /// The one copy of the discounted-product pricing rules, shared by creating an order, updating an order and the
@@ -48,16 +47,17 @@ public static class PromotionPricing
 
     public static AppliedDiscount? GetDiscountedUnitPrice(
         decimal basePrice,
-        OrderItemRequestDto item,
+        Guid productId,
+        IEnumerable<(Guid AddOnProductId, int Quantity)> cartAddOns,
         Dictionary<Guid, List<DiscountedRule>> rulesByProductId)
     {
-        if (!rulesByProductId.TryGetValue(item.ProductId, out var rules) || rules.Count == 0)
+        if (!rulesByProductId.TryGetValue(productId, out var rules) || rules.Count == 0)
         {
             return null;
         }
 
-        var addOnMap = item.AddOns
-            .GroupBy(x => x.ProductId)
+        var addOnMap = cartAddOns
+            .GroupBy(x => x.AddOnProductId)
             .ToDictionary(x => x.Key, x => x.Sum(y => y.Quantity));
 
         AppliedDiscount? best = null;
