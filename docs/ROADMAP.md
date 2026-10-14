@@ -583,7 +583,7 @@ analysis that can be exported and shared.
 | 1     | Core Reports + Export UX                 | [Completed]  |
 | 2     | Monthly Workbook Automation              | [Completed]  |
 | 3     | Central Calculator + Report Consistency  | [Completed]  |
-| 4     | Report Page Rework + New Reports         | [Planned]    |
+| 4     | Report Page Rework + New Reports         | [Implemented, being verified] |
 
 ### Phase 1 - Core Reports + Export UX [Completed]
 
@@ -773,7 +773,14 @@ database) and compared every figure with the answer worked out by hand, using th
   each line's total in the browser (now with the shared calculator, so it cannot drift from the API). Showing a
   server-provided line total would need a new field on `OrderItemDto`.
 
-### Phase 4 - Report Page Rework + New Reports [Planned]
+### Phase 4 - Report Page Rework + New Reports [Implemented, being verified]
+
+**Built (Oct 2026):** exports follow the on-screen search and sort (`search`, `sortBy`, `sortDir`; totals over the remaining rows); daily sales shows gross sales, refunded and net sales (`SalesSummary.RefundedAmount/GrossSales/NetSales`); product report can list add-ons as separate rows (`splitAddOns`); the page is a report catalog (Sales, Products, Staff, Customers, Operations, Inventory) driven by one definition per report (`report-definitions.ts`) and one generic table with the shared sort header, charts, CSV and more date presets; new reports: Daily Close (Z-report), Voids and Refunds (with reason), Promotions Performance, Customer Link Orders, Customers, Stock Status. Report ranges are capped at 366 days and exports at 50,000 rows. New math lives in `WTF.Calculations` (`ReportRules`, `StockRules`, `SalesRules.VoidRate`). Not done: monthly workbook still ignores the source filter, weekday x hour heatmap, add-on attach rate, purchases and theoretical usage reports, upgrades listed in step 4, server-side row limits in the handlers.
+
+The original findings and plan follow.
+
+**Round 2 (Oct 2026):** every sales table now shows its steps in order, gross (list price x quantity, add-ons included) - discount (OriginalPrice vs Price) - refunded = net, with a Total row that equals the sum of the rows on screen, Excel, PDF and CSV (not on Daily Close, whose sections mix different measures). Applies to daily sales, product, the new Sales by Category, payments, hourly and staff. Refunded orders now feed those reports (quantity and order counts stay completed-only); a bundle's price is both its gross and net (no discount is attributed); tips and the average order value stay outside the identity (tips are order-level). The math is in `OrderMetrics.ComputeOrderBreakdown` and `SalesSummary.Discounts/GrossSales`. Layout: below 1280 px the reports show cards (two columns from tablet width), the table starts at 1280 px with low-value columns hidden until 1536 px; the report header is a compact back button, title, filters and refresh, with search and Excel/PDF/CSV below. The monthly workbook now has 12 sheets built from the same report tables (adds Daily Close, Sales by Category, Promotions, Customers, Customer Link Orders, Voids and Refunds, Stock Status). The dashboard has an insights row (refunds and discounts, void rate, stock to restock, awaiting approval, customer link orders, top promotion, new vs returning customers) that links to the matching report (`/management/reports?report=<slug>`).
+
 
 Findings from a review of the reports page and handlers (Oct 2026). Build the shared pieces first, then the reports.
 
