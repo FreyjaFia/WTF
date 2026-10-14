@@ -578,10 +578,12 @@ Downloadable sales reports to complement the existing real-time
 dashboard. The dashboard shows live data; reports provide historical
 analysis that can be exported and shared.
 
-| Phase | Name                           | Status       |
-| ----- | ------------------------------ | ------------ |
-| 1     | Core Reports + Export UX       | [Completed]  |
-| 2     | Monthly Workbook Automation    | [Completed]  |
+| Phase | Name                                     | Status       |
+| ----- | ---------------------------------------- | ------------ |
+| 1     | Core Reports + Export UX                 | [Completed]  |
+| 2     | Monthly Workbook Automation              | [Completed]  |
+| 3     | Central Calculator + Report Consistency  | [Completed]  |
+| 4     | Report Page Rework + New Reports         | [Planned]    |
 
 ### Phase 1 - Core Reports + Export UX [Completed]
 
@@ -664,9 +666,138 @@ analysis that can be exported and shared.
   - scheduler settings are configurable via `MonthlyReportWorkbookScheduler`
     app settings section
 
-### Sales Reporting Remaining Work
+### Phase 3 - Central Calculator + Report Consistency [Completed]
 
-- None for current approved scope (Phases 1-2 complete).
+Why: the dashboard and the reports each decided for themselves what counts as revenue, an order, an average and tips, so
+the same day showed different numbers. All business arithmetic now lives in one project.
+
+**`WTF.Calculations` (new project, `src/WTF.Calculations`)**
+
+- Pure arithmetic on objects already in memory: no EF queries, no HTTP, no file formats. References `WTF.Domain` only.
+  `WTF.Api` and `WTF.Tests` reference it. All of its tests stay in `WTF.Tests` (`Calculations/`, `Common/`, `Features/Pricing/`).
+- `Orders/OrderMetrics` (order and line totals, add-on overrides, bundles), `Orders/PromotionPricing` (discounted-product
+  rules; no longer depends on an API DTO) and `Orders/PromotionLabelFormatter`. Moved here unchanged from `WTF.Api/Common/Orders`.
+- `Sales/OrderStatuses` (status ids) and `Sales/SalesRules`: the one definition of a sale. `IsSale` (completed only),
+  `IsVoided` (cancelled or refunded), `Summarize` -> `SalesSummary` (total, completed and voided counts, revenue, tips,
+  average order value), `Average` and `PercentOfTotal`. A test keeps `OrderStatuses` equal to the API's `OrderStatusEnum`.
+- `Time/ReportDateRange` (local day range -> UTC) and `Time/ReportPeriods` (local date, hour, and the day, Monday-based week
+  or month an order falls in).
+- In `WTF.Api`, `Common/Orders/AddOnPriceLookup` is the one database query that loads the active add-on price overrides an
+  order total needs. It replaced about fifteen copy-pasted versions (five reports, the dashboard, and the order handlers).
+
+**Definitions (reports and dashboard now agree)**
+
+- Revenue, order count, average order value and tips count **completed orders only**. Cancelled, refunded and pending
+  orders never add to them.
+- Average order value = completed revenue / completed orders. (The dashboard used to divide by every order and add tips
+  from cancelled and refunded orders; both fixed. Order counts and the status breakdown still count every status.)
+- Customer link orders are saved under the system user `customer-link`. The staff report shows that row as
+  "Customer link (online)" and the staff filter no longer lists the user.
+- Orders are still bucketed by **creation time**, so a refund made later lowers the revenue of the day the order was created.
+
+**Who uses it:** the dashboard (summary, hourly and daily points, payment methods, top products), the five reports, the
+monthly workbook (through the reports), and the create, update, void, list, history and public order handlers.
+
+**Removed:** the unused `POST /api/pos/promotions/evaluate` endpoint with `EvaluatePromotionsHandler`, its DTOs and its
+tests, and the client method `PromotionService.evaluateCart` with its models. Nothing in the app called them, and the
+handler held a second copy of the fixed-bundle logic. (Bundle prices are taken from the promotion when an order is saved.)
+
+**Angular side (`src/wtf-pos/src/app/shared/calculations`)**
+
+- The POS cannot ask the API for every cart change (no round trip per tap, and it must work offline), so it keeps its own
+  calculator, now in one place instead of copies spread over components:
+  - `money.ts`: all money maths in whole cents, so sums match the API's decimal arithmetic to the centavo.
+  - `order-pricing.ts`: add-on totals, unit and line prices, cart totals, saved-order line totals, promotion discount.
+  - `promotion-pricing.ts`: exact add-on matching, discounted price (fixed wins, never below zero, half a centavo
+    rounds up), promo label and the best matching rule.
+- Used by the order editor, order details, receipt, order list (offline pending total), add-on selector, public order
+  page and public add-on picker. The discounted-product rules had four copies (editor, details, add-on selector twice);
+  there is now one.
+- **Compared against the API.** `calculation-cases.json` holds sample orders, discounts, labels and rule matches with the
+  answers both sides must give. The Angular specs and `WTF.Tests/Calculations/SharedCasesTests.cs` both run it, so a rule
+  changed on one side only fails a test.
+- The API stays the authority: it recomputes the total whenever an order is saved, and offline orders send no totals.
+- Also in the module: `addMoney`, `subtractMoney` and `roundMoney` (checkout change, amount due, exact amount), and
+  `sales-stats.ts` (`average`, `percentOfTotal`, `percentChange`) used by the dashboard, the donut chart and the report
+  totals. `average` and `percentOfTotal` run the same shared cases as `SalesRules` in the API.
+
+**Checked in the running app (14 Oct 2026)**
+
+Ran the API and the Angular app against a throwaway LocalDB database with hand-calculable data (never the real `WTF`
+database) and compared every figure with the answer worked out by hand, using the Playwright skill for the browser.
+
+- API: 79 checks on order totals (every status, add-on overrides, bundle), the dashboard (today vs the day before,
+  hourly and daily points, payment methods, top products), all five reports, and the source filter. All match.
+- Excel exports of the five reports: 17 checks, all match (the PDF endpoint returns a valid PDF; PDF text was not read).
+- Screens: dashboard tiles and change percentages, all five reports, order details and receipt (promotion discount,
+  add-on override, bundle), the live cart in the order editor (exact add-on promotion, override price, an extra add-on
+  blocking the promotion, quantity), the POS checkout change, the customer link page (cart, add-on picker, tip, cash
+  change, order placed and what the server saved), and the saved order against the cart total. All match.
+- **Bug found and fixed:** an order queued while offline showed its list-price total in the Orders list (285.00) instead
+  of the total with promotions (273.00) that the cart and receipt showed. Queued orders now store the total worked out
+  at queue time (`PendingOrder.previewTotal`); the list shows it.
+- **Open question (not changed):** the POS checkout and the customer link treat tips differently. The customer link
+  adds the tip to what must be paid, so change = cash - (total + tip). The POS checkout leaves the tip out, so change =
+  cash - total, and the order details then show "Total Paid" without the tip. If a customer hands over 700 for a 629
+  order and leaves a 10 tip, the POS tells the cashier to give 71 back, not 61. Decide which rule the shop wants.
+- Observed, not changed: opening `/orders/editor` directly in a browser with an empty local cache shows "No products
+  found" until you navigate inside the app or press refresh (the catalog loads on in-app navigation). A completed order
+  that has no stored promotion (older orders) still shows a "best guess" promo discount line from today's promotions,
+  although its total is unaffected.
+
+**Tooling**
+
+- Root `.editorconfig` (C# style, usings sorting, unused usings as a warning) so `dotnet format` and the
+  `dotnet-cs-cleanup` skill apply the project's own rules. The Angular app keeps its own `.editorconfig`.
+- Root `CLAUDE.md` for Claude Code (shares `.github/copilot-instructions.md` and this roadmap): run the C# cleanup on
+  every edited `.cs` file, put calculations in the two calculator folders, how to run the tests.
+
+**Still open**
+
+- Saved orders on the details and list screens show the server's `totalAmount` for the whole order but still work out
+  each line's total in the browser (now with the shared calculator, so it cannot drift from the API). Showing a
+  server-provided line total would need a new field on `OrderItemDto`.
+
+### Phase 4 - Report Page Rework + New Reports [Planned]
+
+Findings from a review of the reports page and handlers (Oct 2026). Build the shared pieces first, then the reports.
+
+**Problems still to fix**
+
+- Excel and PDF exports ignore the on-screen search and column sort, while the totals cards reflect them. The monthly
+  workbook ignores the source filter.
+- Refunds are only counted: no refunded amount, net sales or reason is shown, although the reason is saved in `Order.Note`.
+- Add-ons are invisible in the product report (their revenue is folded into the parent line).
+- The report type picker sits inside the filters drawer, so on mobile you open the drawer to switch reports.
+- Searching the daily report by month name finds nothing (it matches an ISO string, not the displayed label).
+- Every report loads full order graphs into memory with no limit; a year range or the monthly workbook will get slow.
+- `reports.ts` (about 1,500 lines) and `reports.html` repeat one block per report and the sort header about 24 times,
+  although the shared sort-header component exists.
+
+**Suggested order**
+
+1. Refactor the page to one report definition per report (columns, query, totals) driving a generic table that uses the
+   shared sort header; add a report catalog landing page (Sales, Products, Staff, Customers, Operations, Inventory); make
+   exports respect search and sort; add CSV; more date presets (last 7 and 30 days, last week, quarter, year to date);
+   charts reusing the dashboard charts.
+2. New reports from data that already exists:
+   - **Daily close (Z-report):** one printable day with sales, cash vs GCash, tips, voids with reasons, per-staff totals.
+   - **Voids and refunds:** order, date, staff, amount, reason, who voided; void rate per staff.
+   - **Promotions performance:** uses, revenue and discount given per promotion (`OrderBundlePromotions`,
+     `OrderItem.OriginalPrice` vs `Price`, `PromoLabel`).
+   - **Customer link orders:** accepted vs rejected, rejection reasons, time to accept and to ready, pickup vs delivery,
+     orders per link.
+   - **Customers:** top spenders, new vs returning, last visit, loyalty points.
+   - **Add-on performance:** sold, revenue, attach rate per product.
+   - **Weekday x hour heatmap.**
+3. Inventory reports: stock status (warning, critical, out of stock, stock value), purchases (stock-in with cost), and
+   theoretical usage and margin (sales x `ProductItemLink.QuantityPerSale` x item cost; works without order-time stock
+   deduction). Actual vs theoretical usage needs order-time stock deduction (see Inventory).
+4. Upgrades to existing reports: daily (refunded amount, net sales, pending count, previous-period comparison, best and
+   worst day); product (add-on toggle, category rollup, cumulative share, active products with no sales); payments (source
+   split, tips per method); hourly (average per day, peak hour, hide closed hours); staff (voids per staff, items per order).
+
+New report math goes into `WTF.Calculations`, not into handlers. Tax and VAT cannot be reported: nothing stores them.
 
 ---
 
@@ -960,7 +1091,7 @@ Update the order editor's add-on selector to enforce the dynamic rules:
 - Admin mix & match:
   - `POST/GET/PUT/DELETE /api/management/promotions/mix-match`
 - POS promotions:
-  - `POST /api/pos/promotions/evaluate`
+  - `POST /api/pos/promotions/evaluate` (not called by the app; see Sales Reporting Phase 3, "Still open")
 - Promotion image endpoints implemented under management promotions.
 
 ### Implemented Domain Logic
@@ -1053,6 +1184,7 @@ deliberately deferred.
 | Tests that need a real database | **Done** (`src/WTF.Tests/Database`): orders, customers, items, products, promotions, users, order links and conversations run against SQL Server (LocalDB locally, a container in CI) and skip when none is reachable. |
 | CI | **Done**: `test-api` (with a SQL Server container) and `test-frontend` run on every push and pull request; build and SQL deploy jobs depend on them. |
 | Pricing math consolidation | **Done.** One shared class, `PromotionPricing`. |
+| Calculation consolidation | **Done** (14 Oct 2026). `WTF.Calculations` holds order totals, pricing, sales rules and report periods; 1,779 API tests pass. |
 | E2E (Playwright) | Not started; optional. |
 
 ### Layout
@@ -1060,8 +1192,9 @@ deliberately deferred.
 ```
 src/
   WTF.Api/
+  WTF.Calculations/ <- all business arithmetic (order totals, promotion pricing, sales rules, report periods); no EF or HTTP
   WTF.Domain/
-  WTF.Tests/        <- API unit tests (Common/, Endpoints/, Features/, Services/), in WTF.slnx
+  WTF.Tests/        <- API and calculation unit tests (Calculations/, Common/, Endpoints/, Features/, Services/), in WTF.slnx
   wtf-pos/          <- specs live beside their source files (*.spec.ts)
     src/app/testing/  <- shared test helpers (HTTP service setup, fake services, feature helpers)
     vitest.config.ts  <- turns on per-file isolation (see "Angular notes")
@@ -1115,8 +1248,9 @@ case-sensitively, so those behaviors are covered by the real-database tests belo
 
 ### Pricing math merged (done)
 
-The discounted-product rules now live in one class, `Common/Orders/PromotionPricing.cs` (`IsPromotionActiveOnLocalDate`,
-`GetDiscountedUnitPrice`, `CalculateDiscountedUnitPrice`, `SatisfiesExactAddOns`). `CreateOrderHandler`,
+The discounted-product rules now live in one class, `PromotionPricing` in the `WTF.Calculations` project
+(`src/WTF.Calculations/Orders/PromotionPricing.cs`, moved from `WTF.Api/Common/Orders`; see Sales Reporting Phase 3). Its methods are `IsPromotionActiveOnLocalDate`,
+`GetDiscountedUnitPrice`, `CalculateDiscountedUnitPrice`, `SatisfiesExactAddOns`. `CreateOrderHandler`,
 `UpdateOrderHandler`, `EvaluatePromotionsHandler` and the discounted-product handlers all call it, so the cart preview and
 the saved order cannot drift apart. The cart-line overload of `SatisfiesExactAddOns` in `EvaluatePromotionsHandler` is a
 thin wrapper. The pricing tests (`Features/Pricing`) now run against the shared class; the old "all copies agree" tests
@@ -1379,7 +1513,7 @@ Other API pieces:
 - Public order DTO (`PublicOrderDto`): order number, created time, customer-facing status, items
   with add-ons, total, fulfillment, address, payment method and cash amount, special
   instructions, rejection reason. No staff names, user ids or audit fields. Compute totals with
-  `OrderMetrics.ComputeOrderTotal` (`src/WTF.Api/Common/Orders/OrderMetrics.cs`).
+  `OrderMetrics.ComputeOrderTotal` (`src/WTF.Calculations/Orders/OrderMetrics.cs`).
 - Customer-facing status labels: `PendingApproval` "Waiting for confirmation", `Pending`
   "Accepted", `Completed` "Completed", `Cancelled` with a rejection reason "Rejected" (show the
   reason), other `Cancelled` "Cancelled", `Refunded` "Refunded".
