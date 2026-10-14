@@ -451,6 +451,7 @@ describe('OrderDetails', () => {
       );
       await create(
         makeOrder({
+          status: OrderStatusEnum.Pending,
           items: [
             orderItem({
               addOns: [orderItem({ id: 'x', productId: 'a1', productName: 'Cheese', quantity: 1, price: 0 })],
@@ -462,6 +463,36 @@ describe('OrderDetails', () => {
       expect(line.promoDiscount).toBe(20);
       expect(line.promoLabel).toContain('Promo -');
       expect(line.promoLabel).toContain('10.00');
+    });
+
+    it('does not invent a promo for a finished order that has none stored', async () => {
+      promotions.getActiveDiscountedProductPromotions.mockReturnValue(
+        of([
+          {
+            id: 'pr',
+            name: 'P',
+            isActive: true,
+            startDate: null,
+            endDate: null,
+            items: [{ productId: 'p1', percentOff: 50, addOns: [{ addOnProductId: 'a1', quantity: 1 }] }],
+          },
+        ]),
+      );
+      for (const status of [OrderStatusEnum.Completed, OrderStatusEnum.Cancelled, OrderStatusEnum.Refunded]) {
+        await create(
+          makeOrder({
+            status,
+            items: [
+              orderItem({
+                addOns: [orderItem({ id: 'x', productId: 'a1', productName: 'Cheese', quantity: 1, price: 0 })],
+              }),
+            ],
+          }),
+        );
+        const line = t.detailItems()[0];
+        expect(line.promoDiscount).toBeUndefined();
+        expect(line.promoLabel).toBeUndefined();
+      }
     });
 
     it('guesses percent promos and picks best; ignores mismatching add-ons', async () => {
@@ -485,6 +516,7 @@ describe('OrderDetails', () => {
       );
       await create(
         makeOrder({
+          status: OrderStatusEnum.Pending,
           items: [
             orderItem({
               addOns: [orderItem({ id: 'x', productId: 'a1', productName: 'Cheese', quantity: 1, price: 0 })],
@@ -512,6 +544,7 @@ describe('OrderDetails', () => {
       );
       await create(
         makeOrder({
+          status: OrderStatusEnum.Pending,
           items: [
             orderItem({
               addOns: [

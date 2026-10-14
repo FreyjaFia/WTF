@@ -630,8 +630,10 @@ export class OrderDetails implements OnInit {
         const discount = promoDiscount(item.originalPrice, cartItem.price, cartItem.qty);
         cartItem.promoLabel = item.promoLabel ?? null;
         cartItem.promoDiscount = discount > 0 ? discount : null;
-      } else {
-        // Older or not-yet-priced orders: best guess from the promotions active today.
+      } else if (!this.isFinalized(order.status)) {
+        // A waiting order has no stored prices yet, so show the promotion it will get from the promotions active today.
+        // A finished order with no stored promotion (saved before promotions were recorded) shows none: guessing from
+        // today's promotions would invent a discount that was never given.
         const promo = this.getBestDiscountedPromo(cartItem);
         if (promo) {
           const discount = promoDiscount(cartItem.price, promo.price, cartItem.qty);
@@ -680,6 +682,15 @@ export class OrderDetails implements OnInit {
     }
 
     return [...regularItems, ...bundleLines];
+  }
+
+  /** Completed, cancelled and refunded orders have their prices (and any promotion) stored with them. */
+  private isFinalized(status: OrderStatusEnum | undefined): boolean {
+    return (
+      status === OrderStatusEnum.Completed ||
+      status === OrderStatusEnum.Cancelled ||
+      status === OrderStatusEnum.Refunded
+    );
   }
 
   private getBestDiscountedPromo(
