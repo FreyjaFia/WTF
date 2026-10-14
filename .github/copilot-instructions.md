@@ -36,6 +36,7 @@ When providing assistance, adopt the appropriate professional mindset:
 Wake. Taste. Focus (WTF) is a coffee shop application. The monorepo contains:
 - **WTF.Api** (`src/WTF.Api/`): ASP.NET Core Web API (backend) — includes all DTOs, commands, queries, enums, and handlers
 - **WTF.Domain** (`src/WTF.Domain/`): Entity models and EF Core DbContext
+- **WTF.Calculations** (`src/WTF.Calculations/`): all business arithmetic (order totals, promotion pricing, what counts as a sale, report periods). Pure code: no EF queries, no HTTP, no file formats. New totals, averages or percentages go here, not in handlers; its tests live in `WTF.Tests`
 - **wtf-pos** (`src/wtf-pos/`): Angular 19 POS frontend — customer-facing point-of-sale application
 
 ## Technologies & Dependencies

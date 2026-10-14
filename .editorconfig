@@ -1,0 +1,76 @@
+# Editor configuration, see https://editorconfig.org
+# The Angular app (src/wtf-pos) has its own .editorconfig with root = true, which takes over there.
+root = true
+
+[*]
+indent_style = space
+trim_trailing_whitespace = true
+
+[*.md]
+trim_trailing_whitespace = false
+
+[*.{csproj,props,targets,slnx,xml,json,yml,yaml}]
+indent_size = 2
+
+###############################################################################
+# C#
+# Matches the style the code already uses, so `dotnet format` only fixes drift:
+# 4 spaces, Allman braces, file-scoped namespaces, usings outside the namespace.
+# Line endings and the byte-order mark are left alone (git normalizes line endings
+# through .gitattributes, and Windows and Linux checkouts differ).
+###############################################################################
+[*.cs]
+indent_size = 4
+tab_width = 4
+
+# Usings: plain A-Z (no System-first rule), one block, outside the namespace.
+dotnet_sort_system_directives_first = false
+dotnet_separate_import_directive_groups = false
+csharp_using_directive_placement = outside_namespace:suggestion
+csharp_style_namespace_declarations = file_scoped:suggestion
+
+# An unused using is a finding, so `dotnet format style --diagnostics IDE0005` can remove it.
+dotnet_diagnostic.IDE0005.severity = warning
+
+# Braces and layout
+csharp_new_line_before_open_brace = all
+csharp_new_line_before_else = true
+csharp_new_line_before_catch = true
+csharp_new_line_before_finally = true
+csharp_new_line_before_members_in_object_initializers = true
+csharp_new_line_before_members_in_anonymous_types = true
+csharp_new_line_between_query_expression_clauses = true
+csharp_indent_case_contents = true
+csharp_indent_switch_labels = true
+csharp_indent_labels = one_less_than_current
+csharp_preserve_single_line_statements = false
+csharp_preserve_single_line_blocks = true
+
+# Spacing
+csharp_space_after_cast = false
+csharp_space_after_keywords_in_control_flow_statements = true
+csharp_space_between_method_declaration_parameter_list_parentheses = false
+csharp_space_between_method_call_parameter_list_parentheses = false
+csharp_space_between_parentheses = false
+
+# Naming: private fields are _camelCase, constants and types are PascalCase.
+dotnet_naming_rule.private_fields_underscore.severity = suggestion
+dotnet_naming_rule.private_fields_underscore.symbols = private_fields
+dotnet_naming_rule.private_fields_underscore.style = underscore_camel_case
+
+dotnet_naming_symbols.private_fields.applicable_kinds = field
+dotnet_naming_symbols.private_fields.applicable_accessibilities = private, private_protected
+
+dotnet_naming_style.underscore_camel_case.required_prefix = _
+dotnet_naming_style.underscore_camel_case.capitalization = camel_case
+
+# Generated code is not ours to format.
+[**/Migrations/**.cs]
+generated_code = true
+
+[*.{g,generated,designer}.cs]
+generated_code = true
+
+# The real-database tests build raw SQL on purpose (table names cannot be parameters), so EF1002 must not be "fixed".
+[src/WTF.Tests/**.cs]
+dotnet_diagnostic.EF1002.severity = none
