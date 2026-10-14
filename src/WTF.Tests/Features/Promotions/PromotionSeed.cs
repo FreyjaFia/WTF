@@ -17,16 +17,16 @@ internal static class PromotionSeed
 
     public static Promotion NewPromotion(int typeId, string name = "Promo", bool isActive = true,
         DateTime? start = null, DateTime? end = null) => new()
-    {
-        Id = Guid.NewGuid(),
-        Name = name,
-        TypeId = typeId,
-        IsActive = isActive,
-        StartDate = start,
-        EndDate = end,
-        CreatedAt = Now.AddDays(-30),
-        CreatedBy = Guid.NewGuid()
-    };
+        {
+            Id = Guid.NewGuid(),
+            Name = name,
+            TypeId = typeId,
+            IsActive = isActive,
+            StartDate = start,
+            EndDate = end,
+            CreatedAt = Now.AddDays(-30),
+            CreatedBy = Guid.NewGuid()
+        };
 
     public static async Task<Promotion> AddBundleAsync(WTFDbContext db, Guid productId, int quantity, decimal price,
         Guid? addOnId = null, int addOnQty = 1, bool isActive = true, DateTime? start = null, DateTime? end = null,
@@ -53,7 +53,10 @@ internal static class PromotionSeed
         var promo = NewPromotion(PromotionTypeIds.DiscountedProduct, name, isActive, start, end);
         var item = new DiscountedProductPromotion
         {
-            Id = Guid.NewGuid(), ProductId = productId, FixedPrice = fixedPrice, PercentOff = percentOff
+            Id = Guid.NewGuid(),
+            ProductId = productId,
+            FixedPrice = fixedPrice,
+            PercentOff = percentOff
         };
         item.DiscountedProductPromotionAddOns.Add(new DiscountedProductPromotionAddOn
         { Id = Guid.NewGuid(), AddOnProductId = addOnId, Quantity = addOnQty });

@@ -1,5 +1,3 @@
-using Microsoft.AspNetCore.Http;
-
 namespace WTF.Api.Common.Extensions;
 
 public static class UrlExtensions

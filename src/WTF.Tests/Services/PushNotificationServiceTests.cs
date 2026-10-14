@@ -1,11 +1,9 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using WTF.Api.Common.Auth;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Services;
-using WTF.Domain.Data;
 using WTF.Domain.Entities;
 using WTF.Tests.Infrastructure;
 

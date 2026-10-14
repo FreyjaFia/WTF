@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using NSubstitute;
 using WTF.Api.Features.Audit.Enums;
-using WTF.Api.Features.Customers;
 using WTF.Api.Features.OrderLinks;
 using WTF.Api.Services;
 using WTF.Domain.Entities;
@@ -231,8 +230,15 @@ public class OrderLinkHandlerTests
         var other = await SeedCustomerAsync();
         await TestDb.SaveAsync(_dbName, new User
         {
-            Id = _userId, Username = "cashier", PasswordHash = "x", FirstName = "Cara", LastName = "Shier",
-            IsActive = true, RoleId = 2, CreatedAt = DateTime.UtcNow, CreatedBy = _userId
+            Id = _userId,
+            Username = "cashier",
+            PasswordHash = "x",
+            FirstName = "Cara",
+            LastName = "Shier",
+            IsActive = true,
+            RoleId = 2,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = _userId
         });
         var active = await SeedLinkAsync(customer.Id);
         var expired = await SeedLinkAsync(customer.Id, expiresAt: DateTime.UtcNow.AddDays(-1));
@@ -257,8 +263,15 @@ public class OrderLinkHandlerTests
         var customer = await SeedCustomerAsync();
         await TestDb.SaveAsync(_dbName, new User
         {
-            Id = _userId, Username = "cashier", PasswordHash = "x", FirstName = "Cara", LastName = "Shier",
-            IsActive = true, RoleId = 2, CreatedAt = DateTime.UtcNow, CreatedBy = _userId
+            Id = _userId,
+            Username = "cashier",
+            PasswordHash = "x",
+            FirstName = "Cara",
+            LastName = "Shier",
+            IsActive = true,
+            RoleId = 2,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = _userId
         });
         var busy = await SeedLinkAsync(customer.Id);
         var quiet = await SeedLinkAsync(customer.Id);
@@ -272,8 +285,13 @@ public class OrderLinkHandlerTests
             {
                 db.Orders.Add(new Order
                 {
-                    Id = Guid.NewGuid(), OrderNumber = Random.Shared.Next(1, 1_000_000), CustomerId = customer.Id,
-                    OrderLinkId = link.Id, StatusId = status, CreatedAt = DateTime.UtcNow, CreatedBy = _userId,
+                    Id = Guid.NewGuid(),
+                    OrderNumber = Random.Shared.Next(1, 1_000_000),
+                    CustomerId = customer.Id,
+                    OrderLinkId = link.Id,
+                    StatusId = status,
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = _userId,
                     Source = 1
                 });
             }
@@ -281,8 +299,12 @@ public class OrderLinkHandlerTests
             // An order from the shop is not the link's.
             db.Orders.Add(new Order
             {
-                Id = Guid.NewGuid(), OrderNumber = Random.Shared.Next(1, 1_000_000), CustomerId = customer.Id,
-                StatusId = 1, CreatedAt = DateTime.UtcNow, CreatedBy = _userId
+                Id = Guid.NewGuid(),
+                OrderNumber = Random.Shared.Next(1, 1_000_000),
+                CustomerId = customer.Id,
+                StatusId = 1,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = _userId
             });
             await db.SaveChangesAsync();
         }

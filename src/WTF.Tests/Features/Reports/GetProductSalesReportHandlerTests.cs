@@ -165,7 +165,11 @@ public class GetProductSalesReportHandlerTests
             Item(db, order, bacon, 1, parent: parent);
             db.ProductAddOnPriceOverrides.Add(new ProductAddOnPriceOverride
             {
-                Id = Guid.NewGuid(), ProductId = burger.Id, AddOnId = bacon.Id, Price = 5m, IsActive = true,
+                Id = Guid.NewGuid(),
+                ProductId = burger.Id,
+                AddOnId = bacon.Id,
+                Price = 5m,
+                IsActive = true,
             });
             await db.SaveChangesAsync();
         }

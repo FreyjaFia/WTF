@@ -1,5 +1,4 @@
 using WTF.Api.Features.Customers;
-using WTF.Domain.Entities;
 
 namespace WTF.Tests.Features.Customers;
 

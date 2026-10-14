@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using WTF.Api.Features.Loyalty;
 using WTF.Domain.Entities;
 using WTF.Tests.Infrastructure;
@@ -17,8 +16,12 @@ public class GetLoyaltyPointsHandlerTests
         {
             db.Customers.Add(new Customer
             {
-                Id = customerId, FirstName = "Ana", LastName = "Cruz", IsActive = true,
-                CreatedAt = DateTime.UtcNow, CreatedBy = Guid.NewGuid()
+                Id = customerId,
+                FirstName = "Ana",
+                LastName = "Cruz",
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = Guid.NewGuid()
             });
             db.LoyaltyPoints.Add(new LoyaltyPoint { Id = Guid.NewGuid(), CustomerId = customerId, Points = 42 });
             await db.SaveChangesAsync();

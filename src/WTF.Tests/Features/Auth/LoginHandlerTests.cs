@@ -1,7 +1,7 @@
-using System.IdentityModel.Tokens.Jwt;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using NSubstitute;
+using System.IdentityModel.Tokens.Jwt;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Auth;
 using WTF.Api.Services;
@@ -36,9 +36,14 @@ public class LoginHandlerTests
         db.UserRoles.Add(new UserRole { Id = 1, Name = "Admin" });
         db.Users.Add(new User
         {
-            Id = _userId, Username = username, FirstName = "Al", LastName = "Em",
+            Id = _userId,
+            Username = username,
+            FirstName = "Al",
+            LastName = "Em",
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(Password),
-            IsActive = isActive, RoleId = 1, CreatedAt = DateTime.UtcNow
+            IsActive = isActive,
+            RoleId = 1,
+            CreatedAt = DateTime.UtcNow
         });
         await db.SaveChangesAsync();
     }

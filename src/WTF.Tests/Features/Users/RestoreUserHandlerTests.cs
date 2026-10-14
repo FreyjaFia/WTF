@@ -20,8 +20,14 @@ public class RestoreUserHandlerTests
         await using var db = TestDb.Create(_dbName);
         db.Users.Add(new User
         {
-            Id = _userId, Username = "target", FirstName = "F", LastName = "L", PasswordHash = "h",
-            IsActive = active, RoleId = 2, CreatedAt = DateTime.UtcNow
+            Id = _userId,
+            Username = "target",
+            FirstName = "F",
+            LastName = "L",
+            PasswordHash = "h",
+            IsActive = active,
+            RoleId = 2,
+            CreatedAt = DateTime.UtcNow
         });
         await db.SaveChangesAsync();
     }

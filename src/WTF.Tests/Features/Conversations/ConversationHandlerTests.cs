@@ -46,13 +46,26 @@ public class ConversationHandlerTests
         await TestDb.SaveAsync(_db,
             new User
             {
-                Id = _staffId, Username = "ana", PasswordHash = "x", FirstName = "Ana", LastName = "Reyes",
-                IsActive = true, RoleId = 2, CreatedAt = DateTime.UtcNow, CreatedBy = _staffId
+                Id = _staffId,
+                Username = "ana",
+                PasswordHash = "x",
+                FirstName = "Ana",
+                LastName = "Reyes",
+                IsActive = true,
+                RoleId = 2,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = _staffId
             },
             new User
             {
-                Id = _systemUserId, Username = SubmitPublicOrderHandler.SystemUsername, PasswordHash = "x",
-                FirstName = "Customer", LastName = "Link", IsActive = false, RoleId = 2, CreatedAt = DateTime.UtcNow,
+                Id = _systemUserId,
+                Username = SubmitPublicOrderHandler.SystemUsername,
+                PasswordHash = "x",
+                FirstName = "Customer",
+                LastName = "Link",
+                IsActive = false,
+                RoleId = 2,
+                CreatedAt = DateTime.UtcNow,
                 CreatedBy = _staffId
             });
     }
@@ -61,8 +74,13 @@ public class ConversationHandlerTests
     {
         var customer = new Customer
         {
-            Id = Guid.NewGuid(), FirstName = first, LastName = "Cruz", IsActive = true, AllowOrderingLink = true,
-            CreatedAt = DateTime.UtcNow, CreatedBy = _staffId
+            Id = Guid.NewGuid(),
+            FirstName = first,
+            LastName = "Cruz",
+            IsActive = true,
+            AllowOrderingLink = true,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = _staffId
         };
         await TestDb.SaveAsync(_db, customer);
         return customer;
@@ -72,8 +90,13 @@ public class ConversationHandlerTests
     {
         var link = new ShortLink
         {
-            Id = Guid.NewGuid(), Token = OrderLinkToken.Generate(), TargetType = OrderLinkToken.TargetType,
-            TargetId = customerId, RevokedAt = revokedAt, CreatedAt = DateTime.UtcNow.AddHours(-1), CreatedBy = _staffId
+            Id = Guid.NewGuid(),
+            Token = OrderLinkToken.Generate(),
+            TargetType = OrderLinkToken.TargetType,
+            TargetId = customerId,
+            RevokedAt = revokedAt,
+            CreatedAt = DateTime.UtcNow.AddHours(-1),
+            CreatedBy = _staffId
         };
         await TestDb.SaveAsync(_db, link);
         return link;
@@ -84,8 +107,13 @@ public class ConversationHandlerTests
     {
         var order = new Order
         {
-            Id = Guid.NewGuid(), OrderNumber = number, CustomerId = customerId, Source = (byte)source,
-            StatusId = (int)status, CreatedAt = DateTime.UtcNow, CreatedBy = _staffId
+            Id = Guid.NewGuid(),
+            OrderNumber = number,
+            CustomerId = customerId,
+            Source = (byte)source,
+            StatusId = (int)status,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = _staffId
         };
         await TestDb.SaveAsync(_db, order);
         return order;
@@ -95,8 +123,12 @@ public class ConversationHandlerTests
     {
         var conversation = new Conversation
         {
-            Id = Guid.NewGuid(), CustomerId = customerId, Kind = (byte)ConversationKind.Order, OrderId = order.Id,
-            Title = ConversationRules.OrderTitle(order.OrderNumber), CreatedAt = DateTime.UtcNow,
+            Id = Guid.NewGuid(),
+            CustomerId = customerId,
+            Kind = (byte)ConversationKind.Order,
+            OrderId = order.Id,
+            Title = ConversationRules.OrderTitle(order.OrderNumber),
+            CreatedAt = DateTime.UtcNow,
             LastMessageAt = DateTime.UtcNow
         };
         await TestDb.SaveAsync(_db, conversation);
@@ -109,8 +141,12 @@ public class ConversationHandlerTests
         var when = at ?? DateTime.UtcNow;
         await TestDb.SaveAsync(_db, new ConversationMessage
         {
-            Id = Guid.NewGuid(), ConversationId = conversation.Id, SenderType = (byte)sender,
-            SenderUserId = sender == MessageSender.Staff ? _staffId : null, Body = body, CreatedAt = when,
+            Id = Guid.NewGuid(),
+            ConversationId = conversation.Id,
+            SenderType = (byte)sender,
+            SenderUserId = sender == MessageSender.Staff ? _staffId : null,
+            Body = body,
+            CreatedAt = when,
             ReadByStaffAt = sender == MessageSender.Staff || read ? when : null,
             ReadByCustomerAt = sender == MessageSender.Customer || read ? when : null
         });

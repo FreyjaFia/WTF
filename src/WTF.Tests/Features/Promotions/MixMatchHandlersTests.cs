@@ -50,7 +50,8 @@ public class MixMatchHandlersTests
     [Fact]
     public async Task Create_LinkedAddOn_SavesAddOn()
     {
-        await using (var seed = TestDb.Create(_dbName)) await PromotionSeed.LinkAddOnAsync(seed, _coffee, _milk);
+        await using (var seed = TestDb.Create(_dbName))
+            await PromotionSeed.LinkAddOnAsync(seed, _coffee, _milk);
 
         var dto = await Create().Handle(Cmd(Item(_coffee, _milk)), CancellationToken.None);
 
@@ -70,7 +71,8 @@ public class MixMatchHandlersTests
     [Fact]
     public async Task Create_InactiveLink_Throws()
     {
-        await using (var seed = TestDb.Create(_dbName)) await PromotionSeed.LinkAddOnAsync(seed, _coffee, _milk, isActive: false);
+        await using (var seed = TestDb.Create(_dbName))
+            await PromotionSeed.LinkAddOnAsync(seed, _coffee, _milk, isActive: false);
 
         await Should.ThrowAsync<InvalidOperationException>(() =>
             Create().Handle(Cmd(Item(_coffee, _milk)), CancellationToken.None));
@@ -79,7 +81,8 @@ public class MixMatchHandlersTests
     [Fact]
     public async Task Create_SeveralAddOnsOneUnlinked_Throws()
     {
-        await using (var seed = TestDb.Create(_dbName)) await PromotionSeed.LinkAddOnAsync(seed, _coffee, _milk);
+        await using (var seed = TestDb.Create(_dbName))
+            await PromotionSeed.LinkAddOnAsync(seed, _coffee, _milk);
 
         await Should.ThrowAsync<InvalidOperationException>(() =>
             Create().Handle(Cmd(Item(_coffee, _milk, _sugar)), CancellationToken.None));
@@ -102,7 +105,8 @@ public class MixMatchHandlersTests
     [Fact]
     public async Task Create_AddOnLinkedOnlyToAnotherItem_Throws()
     {
-        await using (var seed = TestDb.Create(_dbName)) await PromotionSeed.LinkAddOnAsync(seed, _tea, _milk);
+        await using (var seed = TestDb.Create(_dbName))
+            await PromotionSeed.LinkAddOnAsync(seed, _tea, _milk);
 
         await Should.ThrowAsync<InvalidOperationException>(() =>
             Create().Handle(Cmd(Item(_coffee, _milk), Item(_tea)), CancellationToken.None));
@@ -140,7 +144,9 @@ public class MixMatchHandlersTests
     {
         var cmd = Cmd(Item(_coffee)) with
         {
-            IsActive = false, StartDate = PromotionSeed.Now, EndDate = PromotionSeed.Now.AddDays(2)
+            IsActive = false,
+            StartDate = PromotionSeed.Now,
+            EndDate = PromotionSeed.Now.AddDays(2)
         };
 
         var dto = await Create().Handle(cmd, CancellationToken.None);
@@ -154,10 +160,15 @@ public class MixMatchHandlersTests
     public async Task Update_ExistingPromotion_RebuildsProductsAndRules()
     {
         Guid id;
-        await using (var seed = TestDb.Create(_dbName)) id = (await PromotionSeed.AddMixMatchAsync(seed)).Id;
+        await using (var seed = TestDb.Create(_dbName))
+            id = (await PromotionSeed.AddMixMatchAsync(seed)).Id;
         var cmd = new UpdateMixMatchPromotionCommand
         {
-            PromotionId = id, Name = "Renamed", RequiredQuantity = 4, BundlePrice = 22m, IsActive = false,
+            PromotionId = id,
+            Name = "Renamed",
+            RequiredQuantity = 4,
+            BundlePrice = 22m,
+            IsActive = false,
             Items = [Item(_coffee), Item(_tea)]
         };
 
@@ -190,7 +201,8 @@ public class MixMatchHandlersTests
     public async Task Update_UnlinkedAddOn_Throws()
     {
         Guid id;
-        await using (var seed = TestDb.Create(_dbName)) id = (await PromotionSeed.AddMixMatchAsync(seed)).Id;
+        await using (var seed = TestDb.Create(_dbName))
+            id = (await PromotionSeed.AddMixMatchAsync(seed)).Id;
         var cmd = new UpdateMixMatchPromotionCommand
         { PromotionId = id, Name = "x", RequiredQuantity = 1, Items = [Item(_coffee, _milk)] };
 
@@ -201,7 +213,8 @@ public class MixMatchHandlersTests
     public async Task Delete_ExistingPromotion_SoftDeletes()
     {
         Guid id;
-        await using (var seed = TestDb.Create(_dbName)) id = (await PromotionSeed.AddMixMatchAsync(seed)).Id;
+        await using (var seed = TestDb.Create(_dbName))
+            id = (await PromotionSeed.AddMixMatchAsync(seed)).Id;
 
         var ok = await new DeleteMixMatchPromotionHandler(TestDb.Create(_dbName), TestRequest.As(_userId))
             .Handle(new DeleteMixMatchPromotionCommand(id), CancellationToken.None);
@@ -225,7 +238,8 @@ public class MixMatchHandlersTests
     public async Task GetById_ExistingAndMissing_ReturnsDtoOrNull()
     {
         Guid id;
-        await using (var seed = TestDb.Create(_dbName)) id = (await PromotionSeed.AddMixMatchAsync(seed)).Id;
+        await using (var seed = TestDb.Create(_dbName))
+            id = (await PromotionSeed.AddMixMatchAsync(seed)).Id;
         var handler = new GetMixMatchPromotionByIdHandler(TestDb.Create(_dbName), TestRequest.As(_userId));
 
         var dto = await handler.Handle(new GetMixMatchPromotionByIdQuery(id), CancellationToken.None);

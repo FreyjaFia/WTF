@@ -1,13 +1,12 @@
-using System.Net;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Connections.Features;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
+using System.Net;
 using WTF.Api.Features.OrderLinks;
 using WTF.Api.Hubs;
-using WTF.Domain.Data;
 using WTF.Domain.Entities;
 using WTF.Tests.Infrastructure;
 
@@ -29,13 +28,23 @@ public class CustomerOrderHubTests
     {
         var customer = new Customer
         {
-            Id = Guid.NewGuid(), FirstName = "Maria", LastName = "Cruz", IsActive = active, AllowOrderingLink = allow,
-            CreatedAt = DateTime.UtcNow, CreatedBy = _staffId
+            Id = Guid.NewGuid(),
+            FirstName = "Maria",
+            LastName = "Cruz",
+            IsActive = active,
+            AllowOrderingLink = allow,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = _staffId
         };
         var link = new ShortLink
         {
-            Id = Guid.NewGuid(), Token = OrderLinkToken.Generate(), TargetType = OrderLinkToken.TargetType,
-            TargetId = customer.Id, RevokedAt = revokedAt, ExpiresAt = expiresAt, CreatedAt = DateTime.UtcNow.AddHours(-1),
+            Id = Guid.NewGuid(),
+            Token = OrderLinkToken.Generate(),
+            TargetType = OrderLinkToken.TargetType,
+            TargetId = customer.Id,
+            RevokedAt = revokedAt,
+            ExpiresAt = expiresAt,
+            CreatedAt = DateTime.UtcNow.AddHours(-1),
             CreatedBy = _staffId
         };
         await TestDb.SaveAsync(_db, customer, link);

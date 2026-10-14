@@ -2,7 +2,6 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Features.Customers.DTOs;
-using WTF.Api.Features.Products.DTOs;
 using WTF.Api.Features.Sync.DTOs;
 using WTF.Domain.Data;
 

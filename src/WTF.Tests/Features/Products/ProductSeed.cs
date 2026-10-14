@@ -1,4 +1,3 @@
-using WTF.Domain.Data;
 using WTF.Domain.Entities;
 using WTF.Tests.Infrastructure;
 
@@ -9,17 +8,17 @@ internal static class ProductSeed
 {
     public static Product NewProduct(string name = "Latte", string code = "LAT", decimal price = 100m,
         int categoryId = 1, bool isAddOn = false, bool isActive = true, Guid? id = null) => new()
-    {
-        Id = id ?? Guid.NewGuid(),
-        Name = name,
-        Code = code,
-        Price = price,
-        CategoryId = categoryId,
-        IsAddOn = isAddOn,
-        IsActive = isActive,
-        CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-        CreatedBy = Guid.NewGuid()
-    };
+        {
+            Id = id ?? Guid.NewGuid(),
+            Name = name,
+            Code = code,
+            Price = price,
+            CategoryId = categoryId,
+            IsAddOn = isAddOn,
+            IsActive = isActive,
+            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            CreatedBy = Guid.NewGuid()
+        };
 
     public static User NewUser(Guid id, string first = "Ada", string last = "Lovelace") => new()
     {

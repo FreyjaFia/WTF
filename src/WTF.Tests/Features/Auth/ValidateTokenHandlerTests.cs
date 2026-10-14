@@ -25,8 +25,14 @@ public class ValidateTokenHandlerTests
 
     private User SeedUser(bool active = true) => new()
     {
-        Id = _userId, Username = "alem", FirstName = "Al", LastName = "Em",
-        PasswordHash = "h", IsActive = active, RoleId = 1, CreatedAt = DateTime.UtcNow
+        Id = _userId,
+        Username = "alem",
+        FirstName = "Al",
+        LastName = "Em",
+        PasswordHash = "h",
+        IsActive = active,
+        RoleId = 1,
+        CreatedAt = DateTime.UtcNow
     };
 
     private async Task Seed(bool active = true)

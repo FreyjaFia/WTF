@@ -21,7 +21,12 @@ public class CreateItemHandlerTests
         await ItemSeed.User(_db, _userId);
         var dto = await Handler().Handle(new CreateItemCommand
         {
-            Name = "  Flour ", Sku = " F-1 ", Barcode = "  ", UnitName = " kg ", StockUnitName = " ", CostPrice = 5
+            Name = "  Flour ",
+            Sku = " F-1 ",
+            Barcode = "  ",
+            UnitName = " kg ",
+            StockUnitName = " ",
+            CostPrice = 5
         }, CancellationToken.None);
 
         dto.Name.ShouldBe("Flour");

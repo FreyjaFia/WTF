@@ -1,6 +1,5 @@
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Features.Reports;
-using WTF.Domain.Entities;
 using WTF.Tests.Infrastructure;
 using static WTF.Tests.Features.Reports.SalesSeed;
 

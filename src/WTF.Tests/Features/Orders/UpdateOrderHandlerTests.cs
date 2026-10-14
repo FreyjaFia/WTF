@@ -427,7 +427,11 @@ public class UpdateOrderHandlerTests
         {
             db.OrderBundlePromotions.Add(new WTF.Domain.Entities.OrderBundlePromotion
             {
-                Id = Guid.NewGuid(), OrderId = orderId, PromotionId = promoId, Quantity = 5, UnitPrice = 150m,
+                Id = Guid.NewGuid(),
+                OrderId = orderId,
+                PromotionId = promoId,
+                Quantity = 5,
+                UnitPrice = 150m,
             });
             await db.SaveChangesAsync();
         }

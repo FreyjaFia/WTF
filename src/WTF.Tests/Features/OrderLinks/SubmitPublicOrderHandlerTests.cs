@@ -31,13 +31,22 @@ public class SubmitPublicOrderHandlerTests
     {
         _customer = new Customer
         {
-            Id = Guid.NewGuid(), FirstName = "Maria", LastName = "Cruz", IsActive = true, AllowOrderingLink = true,
-            CreatedAt = DateTime.UtcNow, CreatedBy = _staffId
+            Id = Guid.NewGuid(),
+            FirstName = "Maria",
+            LastName = "Cruz",
+            IsActive = true,
+            AllowOrderingLink = true,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = _staffId
         };
         _link = new ShortLink
         {
-            Id = Guid.NewGuid(), Token = OrderLinkToken.Generate(), TargetType = "CustomerOrder", TargetId = _customer.Id,
-            CreatedAt = DateTime.UtcNow, CreatedBy = _staffId
+            Id = Guid.NewGuid(),
+            Token = OrderLinkToken.Generate(),
+            TargetType = "CustomerOrder",
+            TargetId = _customer.Id,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = _staffId
         };
         _latte = NewProduct("Latte", 150);
         _croissant = NewProduct("Croissant", 120);
@@ -48,14 +57,28 @@ public class SubmitPublicOrderHandlerTests
 
     private static User NewSystemUser(Guid id) => new()
     {
-        Id = id, Username = SubmitPublicOrderHandler.SystemUsername, PasswordHash = "!", FirstName = "Customer",
-        LastName = "Link", IsActive = false, RoleId = 2, CreatedAt = DateTime.UtcNow, CreatedBy = id
+        Id = id,
+        Username = SubmitPublicOrderHandler.SystemUsername,
+        PasswordHash = "!",
+        FirstName = "Customer",
+        LastName = "Link",
+        IsActive = false,
+        RoleId = 2,
+        CreatedAt = DateTime.UtcNow,
+        CreatedBy = id
     };
 
     private Product NewProduct(string name, decimal price, bool addOn = false, bool active = true) => new()
     {
-        Id = Guid.NewGuid(), Name = name, Code = name.ToUpperInvariant(), Price = price, CategoryId = 1,
-        IsActive = active, IsAddOn = addOn, CreatedAt = DateTime.UtcNow, CreatedBy = _staffId
+        Id = Guid.NewGuid(),
+        Name = name,
+        Code = name.ToUpperInvariant(),
+        Price = price,
+        CategoryId = 1,
+        IsActive = active,
+        IsAddOn = addOn,
+        CreatedAt = DateTime.UtcNow,
+        CreatedBy = _staffId
     };
 
     private async Task<Product> AddAddOnAsync(Product parent, string name, decimal price,
@@ -68,8 +91,12 @@ public class SubmitPublicOrderHandlerTests
         {
             await TestDb.SaveAsync(_db, new ProductAddOnPriceOverride
             {
-                Id = Guid.NewGuid(), ProductId = parent.Id, AddOnId = addOn.Id, Price = overridePrice.Value,
-                IsActive = true, CreatedAt = DateTime.UtcNow
+                Id = Guid.NewGuid(),
+                ProductId = parent.Id,
+                AddOnId = addOn.Id,
+                Price = overridePrice.Value,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
             });
         }
 
@@ -83,8 +110,13 @@ public class SubmitPublicOrderHandlerTests
         {
             await TestDb.SaveAsync(_db, new Order
             {
-                Id = Guid.NewGuid(), OrderNumber = Random.Shared.Next(1, 1_000_000), CustomerId = customerId,
-                StatusId = (int)status, Source = (byte)source, CreatedAt = DateTime.UtcNow, CreatedBy = _staffId
+                Id = Guid.NewGuid(),
+                OrderNumber = Random.Shared.Next(1, 1_000_000),
+                CustomerId = customerId,
+                StatusId = (int)status,
+                Source = (byte)source,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = _staffId
             });
         }
     }
@@ -263,13 +295,21 @@ public class SubmitPublicOrderHandlerTests
         {
             db.ShortLinks.Add(new ShortLink
             {
-                Id = Guid.NewGuid(), Token = "revoked-token", TargetType = "CustomerOrder", TargetId = _customer.Id,
-                RevokedAt = DateTime.UtcNow.AddMinutes(-1), CreatedAt = DateTime.UtcNow
+                Id = Guid.NewGuid(),
+                Token = "revoked-token",
+                TargetType = "CustomerOrder",
+                TargetId = _customer.Id,
+                RevokedAt = DateTime.UtcNow.AddMinutes(-1),
+                CreatedAt = DateTime.UtcNow
             });
             db.ShortLinks.Add(new ShortLink
             {
-                Id = Guid.NewGuid(), Token = "expired-token", TargetType = "CustomerOrder", TargetId = _customer.Id,
-                ExpiresAt = DateTime.UtcNow.AddMinutes(-1), CreatedAt = DateTime.UtcNow
+                Id = Guid.NewGuid(),
+                Token = "expired-token",
+                TargetType = "CustomerOrder",
+                TargetId = _customer.Id,
+                ExpiresAt = DateTime.UtcNow.AddMinutes(-1),
+                CreatedAt = DateTime.UtcNow
             });
             await db.SaveChangesAsync();
         }
@@ -616,7 +656,11 @@ public class SubmitPublicOrderHandlerTests
     {
         var other = new Customer
         {
-            Id = Guid.NewGuid(), FirstName = "Ben", LastName = "Lee", IsActive = true, CreatedAt = DateTime.UtcNow,
+            Id = Guid.NewGuid(),
+            FirstName = "Ben",
+            LastName = "Lee",
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow,
             CreatedBy = _staffId
         };
         await TestDb.SaveAsync(_db, other);

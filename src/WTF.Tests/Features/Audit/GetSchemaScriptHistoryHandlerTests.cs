@@ -1,6 +1,4 @@
-using WTF.Tests.Features.Items;
 using WTF.Api.Features.Audit;
-using WTF.Api.Features.Audit.DTOs;
 using WTF.Domain.Entities;
 using WTF.Tests.Infrastructure;
 

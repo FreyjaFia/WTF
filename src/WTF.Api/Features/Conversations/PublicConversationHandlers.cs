@@ -1,6 +1,6 @@
 using MediatR;
-using Microsoft.Extensions.Options;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.OrderLinks;
 using WTF.Api.Features.Orders.Enums;

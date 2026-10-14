@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Features.Loyalty;
-using WTF.Domain.Entities;
 using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Features.Loyalty;

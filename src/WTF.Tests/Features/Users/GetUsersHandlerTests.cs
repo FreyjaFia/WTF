@@ -22,8 +22,14 @@ public class GetUsersHandlerTests
 
     private static User U(string first, string last, string username, bool active) => new()
     {
-        Id = Guid.NewGuid(), Username = username, FirstName = first, LastName = last, PasswordHash = "h",
-        IsActive = active, RoleId = 2, CreatedAt = DateTime.UtcNow
+        Id = Guid.NewGuid(),
+        Username = username,
+        FirstName = first,
+        LastName = last,
+        PasswordHash = "h",
+        IsActive = active,
+        RoleId = 2,
+        CreatedAt = DateTime.UtcNow
     };
 
     private GetUsersHandler Handler()

@@ -44,8 +44,13 @@ public class LinkProductItemHandlerTests
         {
             db.ProductItemLinks.Add(new ProductItemLink
             {
-                Id = Guid.NewGuid(), ItemId = item.Id, ProductId = product.Id, QuantityPerSale = 1, IsActive = false,
-                CreatedAt = DateTime.UtcNow, CreatedBy = _userId
+                Id = Guid.NewGuid(),
+                ItemId = item.Id,
+                ProductId = product.Id,
+                QuantityPerSale = 1,
+                IsActive = false,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = _userId
             });
             await db.SaveChangesAsync();
         }

@@ -1,8 +1,3 @@
-using Microsoft.EntityFrameworkCore;
-using NSubstitute;
-using WTF.Api.Features.Audit.Enums;
-using WTF.Api.Features.Customers;
-using WTF.Api.Services;
 using WTF.Domain.Entities;
 using WTF.Tests.Infrastructure;
 

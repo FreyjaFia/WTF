@@ -1,7 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Features.Users.DTOs;
-using WTF.Api.Features.Users.Enums;
 using WTF.Api.Services;
 using WTF.Domain.Data;
 

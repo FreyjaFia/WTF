@@ -27,8 +27,14 @@ public class UploadUserImageHandlerTests
         db.UserRoles.Add(new UserRole { Id = 2, Name = "Cashier" });
         db.Users.Add(new User
         {
-            Id = _userId, Username = username, FirstName = "Ana", LastName = "Cruz", PasswordHash = "h",
-            IsActive = true, RoleId = 2, CreatedAt = DateTime.UtcNow
+            Id = _userId,
+            Username = username,
+            FirstName = "Ana",
+            LastName = "Cruz",
+            PasswordHash = "h",
+            IsActive = true,
+            RoleId = 2,
+            CreatedAt = DateTime.UtcNow
         });
         if (existingImageUrl != null)
         {

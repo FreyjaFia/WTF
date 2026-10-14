@@ -1,9 +1,8 @@
-using System.ComponentModel.DataAnnotations;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Features.Products.DTOs;
-using WTF.Api.Features.Products.Enums;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 
@@ -135,11 +134,11 @@ public class AssignProductAddOnsHandler(WTFDbContext db) : IRequestHandler<Assig
         var newLinks = request.AddOns
             .Where(addOn => addedAddOnIds.Contains(addOn.AddOnId) && !existingAddOnIds.Contains(addOn.AddOnId))
             .Select(addOn => new ProductAddOn
-        {
-            ProductId = request.ProductId,
-            AddOnId = addOn.AddOnId,
-            AddOnTypeId = (int)addOn.AddOnType
-        });
+            {
+                ProductId = request.ProductId,
+                AddOnId = addOn.AddOnId,
+                AddOnTypeId = (int)addOn.AddOnType
+            });
 
         db.ProductAddOns.AddRange(newLinks);
 

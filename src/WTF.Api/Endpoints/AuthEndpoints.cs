@@ -1,10 +1,10 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using WTF.Api.Services;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Features.Auth;
 using WTF.Api.Features.Auth.DTOs;
 using WTF.Api.Features.Users;
+using WTF.Api.Services;
 
 namespace WTF.Api.Endpoints;
 

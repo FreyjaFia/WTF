@@ -1,5 +1,5 @@
-using WTF.Tests.Infrastructure;
 using WTF.Domain.Entities;
+using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Features.Items;
 
@@ -11,8 +11,14 @@ internal static class ItemSeed
         await using var db = TestDb.Create(dbName);
         var user = new User
         {
-            Id = id ?? Guid.NewGuid(), Username = "u" + Guid.NewGuid().ToString("N"), PasswordHash = "x",
-            FirstName = first, LastName = last, IsActive = true, RoleId = 1, CreatedAt = DateTime.UtcNow
+            Id = id ?? Guid.NewGuid(),
+            Username = "u" + Guid.NewGuid().ToString("N"),
+            PasswordHash = "x",
+            FirstName = first,
+            LastName = last,
+            IsActive = true,
+            RoleId = 1,
+            CreatedAt = DateTime.UtcNow
         };
         db.Users.Add(user);
         await db.SaveChangesAsync();
@@ -25,8 +31,16 @@ internal static class ItemSeed
         await using var db = TestDb.Create(dbName);
         var item = new Item
         {
-            Id = Guid.NewGuid(), Name = name, Sku = sku, Barcode = barcode, UnitName = "kg", CurrentQuantity = qty,
-            CostPrice = cost, IsActive = active, CreatedAt = DateTime.UtcNow, CreatedBy = userId
+            Id = Guid.NewGuid(),
+            Name = name,
+            Sku = sku,
+            Barcode = barcode,
+            UnitName = "kg",
+            CurrentQuantity = qty,
+            CostPrice = cost,
+            IsActive = active,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = userId
         };
         db.Items.Add(item);
         await db.SaveChangesAsync();
@@ -38,8 +52,14 @@ internal static class ItemSeed
         await using var db = TestDb.Create(dbName);
         var p = new Product
         {
-            Id = Guid.NewGuid(), Name = name, Code = code, Price = 100, CategoryId = 1, IsActive = true,
-            CreatedAt = DateTime.UtcNow, CreatedBy = userId
+            Id = Guid.NewGuid(),
+            Name = name,
+            Code = code,
+            Price = 100,
+            CategoryId = 1,
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = userId
         };
         db.Products.Add(p);
         await db.SaveChangesAsync();

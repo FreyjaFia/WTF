@@ -8,7 +8,6 @@ using WTF.Api.Features.OrderLinks.DTOs;
 using WTF.Api.Features.Orders;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
-using WTF.Domain.Data;
 using WTF.Domain.Entities;
 using WTF.Tests.Infrastructure;
 
@@ -31,13 +30,22 @@ public class OrderLinkDatabaseTests
         await using var db = database.CreateContext();
         var customer = new Customer
         {
-            Id = Guid.NewGuid(), FirstName = "Maria", LastName = "Cruz", IsActive = true, AllowOrderingLink = true,
-            CreatedAt = DateTime.UtcNow, CreatedBy = staff.Id
+            Id = Guid.NewGuid(),
+            FirstName = "Maria",
+            LastName = "Cruz",
+            IsActive = true,
+            AllowOrderingLink = true,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = staff.Id
         };
         var link = new ShortLink
         {
-            Id = Guid.NewGuid(), Token = OrderLinkToken.Generate(), TargetType = OrderLinkToken.TargetType,
-            TargetId = customer.Id, CreatedAt = DateTime.UtcNow, CreatedBy = staff.Id
+            Id = Guid.NewGuid(),
+            Token = OrderLinkToken.Generate(),
+            TargetType = OrderLinkToken.TargetType,
+            TargetId = customer.Id,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = staff.Id
         };
         db.Customers.Add(customer);
         db.ShortLinks.Add(link);
@@ -90,8 +98,12 @@ public class OrderLinkDatabaseTests
         await using var duplicate = database.CreateContext();
         duplicate.ShortLinks.Add(new ShortLink
         {
-            Id = Guid.NewGuid(), Token = setup.Link.Token, TargetType = OrderLinkToken.TargetType,
-            TargetId = setup.Customer.Id, CreatedAt = DateTime.UtcNow, CreatedBy = setup.Staff.Id
+            Id = Guid.NewGuid(),
+            Token = setup.Link.Token,
+            TargetType = OrderLinkToken.TargetType,
+            TargetId = setup.Customer.Id,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = setup.Staff.Id
         });
         await Should.ThrowAsync<DbUpdateException>(() => duplicate.SaveChangesAsync());
     }

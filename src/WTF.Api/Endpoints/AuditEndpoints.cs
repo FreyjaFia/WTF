@@ -1,6 +1,6 @@
+using MediatR;
 using System.Globalization;
 using System.Text.Json;
-using MediatR;
 using WTF.Api.Common.Auth;
 using WTF.Api.Features.Audit;
 using WTF.Api.Features.Audit.DTOs;

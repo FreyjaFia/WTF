@@ -23,8 +23,14 @@ public class DeleteUserHandlerTests
         {
             db.Users.Add(new User
             {
-                Id = id, Username = id == _userId ? "target" : "other", FirstName = "F", LastName = "L", PasswordHash = "h",
-                IsActive = true, RoleId = 2, CreatedAt = DateTime.UtcNow
+                Id = id,
+                Username = id == _userId ? "target" : "other",
+                FirstName = "F",
+                LastName = "L",
+                PasswordHash = "h",
+                IsActive = true,
+                RoleId = 2,
+                CreatedAt = DateTime.UtcNow
             });
         }
         db.RefreshTokens.Add(Token(_userId, "u1"));
@@ -35,7 +41,11 @@ public class DeleteUserHandlerTests
 
     private static RefreshToken Token(Guid userId, string value) => new()
     {
-        Id = Guid.NewGuid(), UserId = userId, Token = value, CreatedAt = DateTime.UtcNow, ExpiresAt = DateTime.UtcNow.AddDays(1)
+        Id = Guid.NewGuid(),
+        UserId = userId,
+        Token = value,
+        CreatedAt = DateTime.UtcNow,
+        ExpiresAt = DateTime.UtcNow.AddDays(1)
     };
 
     private DeleteUserHandler Handler() => new(TestDb.Create(_dbName), TestRequest.As(_actorId), _audit);

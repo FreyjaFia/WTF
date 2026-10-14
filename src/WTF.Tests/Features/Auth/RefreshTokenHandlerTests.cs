@@ -31,13 +31,23 @@ public class RefreshTokenHandlerTests
         db.UserRoles.Add(new UserRole { Id = 1, Name = "Admin" });
         db.Users.Add(new User
         {
-            Id = _userId, Username = "alem", FirstName = "Al", LastName = "Em", PasswordHash = "x",
-            IsActive = userActive, RoleId = 1, CreatedAt = DateTime.UtcNow
+            Id = _userId,
+            Username = "alem",
+            FirstName = "Al",
+            LastName = "Em",
+            PasswordHash = "x",
+            IsActive = userActive,
+            RoleId = 1,
+            CreatedAt = DateTime.UtcNow
         });
         db.RefreshTokens.Add(new RefreshToken
         {
-            Id = Guid.NewGuid(), UserId = _userId, Token = token, IsRevoked = revoked,
-            CreatedAt = DateTime.UtcNow, ExpiresAt = DateTime.UtcNow.AddDays(expiresInDays)
+            Id = Guid.NewGuid(),
+            UserId = _userId,
+            Token = token,
+            IsRevoked = revoked,
+            CreatedAt = DateTime.UtcNow,
+            ExpiresAt = DateTime.UtcNow.AddDays(expiresInDays)
         });
         await db.SaveChangesAsync();
     }

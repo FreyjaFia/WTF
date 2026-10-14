@@ -1,6 +1,5 @@
 using ClosedXML.Excel;
 using MediatR;
-using Microsoft.AspNetCore.Http;
 using System.Globalization;
 using WTF.Api.Common.Time;
 using WTF.Api.Features.Reports.DTOs;

@@ -27,18 +27,32 @@ public class ConversationDatabaseTests
         await using var db = database.CreateContext();
         var customer = new Customer
         {
-            Id = Guid.NewGuid(), FirstName = "Maria", LastName = "Cruz", IsActive = true, AllowOrderingLink = true,
-            CreatedAt = DateTime.UtcNow, CreatedBy = staff.Id
+            Id = Guid.NewGuid(),
+            FirstName = "Maria",
+            LastName = "Cruz",
+            IsActive = true,
+            AllowOrderingLink = true,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = staff.Id
         };
         var link = new ShortLink
         {
-            Id = Guid.NewGuid(), Token = OrderLinkToken.Generate(), TargetType = OrderLinkToken.TargetType,
-            TargetId = customer.Id, CreatedAt = DateTime.UtcNow, CreatedBy = staff.Id
+            Id = Guid.NewGuid(),
+            Token = OrderLinkToken.Generate(),
+            TargetType = OrderLinkToken.TargetType,
+            TargetId = customer.Id,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = staff.Id
         };
         var order = new Order
         {
-            Id = Guid.NewGuid(), OrderNumber = number, CustomerId = customer.Id, Source = (byte)OrderSourceEnum.CustomerLink,
-            StatusId = (int)status, CreatedAt = DateTime.UtcNow, CreatedBy = staff.Id
+            Id = Guid.NewGuid(),
+            OrderNumber = number,
+            CustomerId = customer.Id,
+            Source = (byte)OrderSourceEnum.CustomerLink,
+            StatusId = (int)status,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = staff.Id
         };
         db.Customers.Add(customer);
         db.ShortLinks.Add(link);
@@ -124,9 +138,13 @@ public class ConversationDatabaseTests
             {
                 var order = new Order
                 {
-                    Id = Guid.NewGuid(), OrderNumber = i, CustomerId = first.Customer.Id,
-                    Source = (byte)OrderSourceEnum.CustomerLink, StatusId = (int)OrderStatusEnum.Pending,
-                    CreatedAt = DateTime.UtcNow, CreatedBy = first.Staff.Id
+                    Id = Guid.NewGuid(),
+                    OrderNumber = i,
+                    CustomerId = first.Customer.Id,
+                    Source = (byte)OrderSourceEnum.CustomerLink,
+                    StatusId = (int)OrderStatusEnum.Pending,
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = first.Staff.Id
                 };
                 orders.Add(order);
                 db.Orders.Add(order);
@@ -167,16 +185,24 @@ public class ConversationDatabaseTests
         await using var db = database.CreateContext();
         db.Conversations.Add(new Conversation
         {
-            CustomerId = s.Customer.Id, Kind = (byte)ConversationKind.Order, OrderId = s.Order.Id, Title = "Order #1042",
-            CreatedAt = DateTime.UtcNow, LastMessageAt = DateTime.UtcNow
+            CustomerId = s.Customer.Id,
+            Kind = (byte)ConversationKind.Order,
+            OrderId = s.Order.Id,
+            Title = "Order #1042",
+            CreatedAt = DateTime.UtcNow,
+            LastMessageAt = DateTime.UtcNow
         });
         await db.SaveChangesAsync();
 
         await using var second = database.CreateContext();
         second.Conversations.Add(new Conversation
         {
-            CustomerId = s.Customer.Id, Kind = (byte)ConversationKind.Order, OrderId = s.Order.Id, Title = "Order #1042",
-            CreatedAt = DateTime.UtcNow, LastMessageAt = DateTime.UtcNow
+            CustomerId = s.Customer.Id,
+            Kind = (byte)ConversationKind.Order,
+            OrderId = s.Order.Id,
+            Title = "Order #1042",
+            CreatedAt = DateTime.UtcNow,
+            LastMessageAt = DateTime.UtcNow
         });
         await Should.ThrowAsync<DbUpdateException>(() => second.SaveChangesAsync());
     }
@@ -190,7 +216,9 @@ public class ConversationDatabaseTests
         await using var db = database.CreateContext();
         db.ConversationMessages.Add(new ConversationMessage
         {
-            ConversationId = Guid.NewGuid(), SenderType = (byte)MessageSender.Customer, Body = "orphan",
+            ConversationId = Guid.NewGuid(),
+            SenderType = (byte)MessageSender.Customer,
+            Body = "orphan",
             CreatedAt = DateTime.UtcNow
         });
 

@@ -1,14 +1,12 @@
-using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using NSubstitute;
+using System.Text.Json;
 using WTF.Api.Common.Auth;
 using WTF.Api.Features.Dashboard;
 using WTF.Api.Features.Orders;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Features.Products;
-using WTF.Api.Features.Products.DTOs;
-using WTF.Api.Features.Products.Enums;
 using WTF.Domain.Entities;
 using WTF.Tests.Features.Products;
 using WTF.Tests.Infrastructure;

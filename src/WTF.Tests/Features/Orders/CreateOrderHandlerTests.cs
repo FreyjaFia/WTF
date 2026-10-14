@@ -63,7 +63,12 @@ public class CreateOrderHandlerTests
         {
             db.ProductAddOnPriceOverrides.Add(new ProductAddOnPriceOverride
             {
-                Id = Guid.NewGuid(), ProductId = productId, AddOnId = addOnId, Price = overridePrice.Value, IsActive = overrideActive, CreatedAt = Now
+                Id = Guid.NewGuid(),
+                ProductId = productId,
+                AddOnId = addOnId,
+                Price = overridePrice.Value,
+                IsActive = overrideActive,
+                CreatedAt = Now
             });
         }
         await db.SaveChangesAsync();
@@ -74,11 +79,19 @@ public class CreateOrderHandlerTests
         await using var db = TestDb.Create(_dbName);
         var promo = new Promotion
         {
-            Id = Guid.NewGuid(), Name = name, TypeId = mixMatch ? PromotionTypeIds.MixMatch : PromotionTypeIds.FixedBundle,
-            IsActive = active, StartDate = start, EndDate = end, CreatedAt = Now, CreatedBy = _userId
+            Id = Guid.NewGuid(),
+            Name = name,
+            TypeId = mixMatch ? PromotionTypeIds.MixMatch : PromotionTypeIds.FixedBundle,
+            IsActive = active,
+            StartDate = start,
+            EndDate = end,
+            CreatedAt = Now,
+            CreatedBy = _userId
         };
-        if (mixMatch) promo.MixMatchPromotion = new MixMatchPromotion { PromotionId = promo.Id, RequiredQuantity = 2, BundlePrice = price };
-        else promo.FixedBundlePromotion = new FixedBundlePromotion { PromotionId = promo.Id, BundlePrice = price };
+        if (mixMatch)
+            promo.MixMatchPromotion = new MixMatchPromotion { PromotionId = promo.Id, RequiredQuantity = 2, BundlePrice = price };
+        else
+            promo.FixedBundlePromotion = new FixedBundlePromotion { PromotionId = promo.Id, BundlePrice = price };
         db.Promotions.Add(promo);
         await db.SaveChangesAsync();
         return promo.Id;
@@ -90,8 +103,14 @@ public class CreateOrderHandlerTests
         await using var db = TestDb.Create(_dbName);
         var promo = new Promotion
         {
-            Id = Guid.NewGuid(), Name = "Disc", TypeId = PromotionTypeIds.DiscountedProduct, IsActive = active,
-            StartDate = start, EndDate = end, CreatedAt = Now, CreatedBy = _userId
+            Id = Guid.NewGuid(),
+            Name = "Disc",
+            TypeId = PromotionTypeIds.DiscountedProduct,
+            IsActive = active,
+            StartDate = start,
+            EndDate = end,
+            CreatedAt = Now,
+            CreatedBy = _userId
         };
         var rule = new DiscountedProductPromotion { Id = Guid.NewGuid(), PromotionId = promo.Id, ProductId = productId, FixedPrice = fixedPrice, PercentOff = percent };
         foreach (var (addOn, qty) in required ?? [])
@@ -224,7 +243,10 @@ public class CreateOrderHandlerTests
         var pizza = await SeedProduct("Pizza", 100m);
         var cmd = Cmd(OrderStatusEnum.Completed, Line(pizza)) with
         {
-            PaymentMethod = PaymentMethodEnum.GCash, AmountReceived = 150m, ChangeAmount = 40m, Tips = 10m
+            PaymentMethod = PaymentMethodEnum.GCash,
+            AmountReceived = 150m,
+            ChangeAmount = 40m,
+            Tips = 10m
         };
 
         var dto = await Handler().Handle(cmd, CancellationToken.None);

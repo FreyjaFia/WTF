@@ -32,7 +32,12 @@ public class UpdateItemHandlerTests
 
         var dto = await Handler().Handle(new UpdateItemCommand
         {
-            Id = item.Id, Name = " New ", Sku = " NEW ", UnitName = "g", IsActive = false, WarningQuantity = 3
+            Id = item.Id,
+            Name = " New ",
+            Sku = " NEW ",
+            UnitName = "g",
+            IsActive = false,
+            WarningQuantity = 3
         }, CancellationToken.None);
 
         dto!.Name.ShouldBe("New");

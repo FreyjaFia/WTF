@@ -1,5 +1,5 @@
-using System.Reflection;
 using Microsoft.EntityFrameworkCore;
+using System.Reflection;
 using WTF.Api.Features.OrderLinks;
 using WTF.Api.Features.OrderLinks.DTOs;
 using WTF.Api.Features.Orders.Enums;
@@ -21,8 +21,14 @@ public class PublicOrderLinkTests
     {
         var customer = new Customer
         {
-            Id = Guid.NewGuid(), FirstName = first, LastName = "Cruz", Address = address, IsActive = active,
-            AllowOrderingLink = allow, CreatedAt = DateTime.UtcNow, CreatedBy = _staffId
+            Id = Guid.NewGuid(),
+            FirstName = first,
+            LastName = "Cruz",
+            Address = address,
+            IsActive = active,
+            AllowOrderingLink = allow,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = _staffId
         };
         await TestDb.SaveAsync(_db, customer);
         return customer;
@@ -33,9 +39,14 @@ public class PublicOrderLinkTests
     {
         var link = new ShortLink
         {
-            Id = Guid.NewGuid(), Token = token ?? OrderLinkToken.Generate(), TargetType = targetType,
-            TargetId = customerId, ExpiresAt = expiresAt, RevokedAt = revokedAt,
-            CreatedAt = DateTime.UtcNow.AddHours(-1), CreatedBy = _staffId
+            Id = Guid.NewGuid(),
+            Token = token ?? OrderLinkToken.Generate(),
+            TargetType = targetType,
+            TargetId = customerId,
+            ExpiresAt = expiresAt,
+            RevokedAt = revokedAt,
+            CreatedAt = DateTime.UtcNow.AddHours(-1),
+            CreatedBy = _staffId
         };
         await TestDb.SaveAsync(_db, link);
         return link;
@@ -45,8 +56,15 @@ public class PublicOrderLinkTests
     {
         var product = new Product
         {
-            Id = Guid.NewGuid(), Name = name, Code = name.ToUpperInvariant(), Price = price, CategoryId = 1,
-            IsActive = active, IsAddOn = addOn, CreatedAt = DateTime.UtcNow, CreatedBy = _staffId
+            Id = Guid.NewGuid(),
+            Name = name,
+            Code = name.ToUpperInvariant(),
+            Price = price,
+            CategoryId = 1,
+            IsActive = active,
+            IsAddOn = addOn,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = _staffId
         };
         await TestDb.SaveAsync(_db, product);
         return product;
@@ -58,11 +76,20 @@ public class PublicOrderLinkTests
     {
         var order = new Order
         {
-            Id = Guid.NewGuid(), OrderNumber = Random.Shared.Next(1, 1_000_000), CustomerId = customerId,
-            Source = (byte)source, StatusId = (int)status, CreatedAt = createdAt ?? DateTime.UtcNow,
-            CreatedBy = _staffId, RejectionReason = rejectionReason, OrderLinkId = linkId,
-            FulfillmentType = (byte)FulfillmentTypeEnum.Delivery, DeliveryAddress = "5 Side St",
-            ContactNumber = "0917", PaymentMethodId = (int)PaymentMethodEnum.Cash, AmountReceived = 500,
+            Id = Guid.NewGuid(),
+            OrderNumber = Random.Shared.Next(1, 1_000_000),
+            CustomerId = customerId,
+            Source = (byte)source,
+            StatusId = (int)status,
+            CreatedAt = createdAt ?? DateTime.UtcNow,
+            CreatedBy = _staffId,
+            RejectionReason = rejectionReason,
+            OrderLinkId = linkId,
+            FulfillmentType = (byte)FulfillmentTypeEnum.Delivery,
+            DeliveryAddress = "5 Side St",
+            ContactNumber = "0917",
+            PaymentMethodId = (int)PaymentMethodEnum.Cash,
+            AmountReceived = 500,
             SpecialInstructions = "No ice"
         };
         await TestDb.SaveAsync(_db, order);
@@ -74,7 +101,11 @@ public class PublicOrderLinkTests
     {
         var item = new OrderItem
         {
-            Id = Guid.NewGuid(), OrderId = orderId, ProductId = productId, Quantity = quantity, Price = price,
+            Id = Guid.NewGuid(),
+            OrderId = orderId,
+            ProductId = productId,
+            Quantity = quantity,
+            Price = price,
             ParentOrderItemId = parentId
         };
         await TestDb.SaveAsync(_db, item);
@@ -245,9 +276,9 @@ public class PublicOrderLinkTests
         await AddProductAsync("Retired", 99, active: false);
         var syrup = await AddProductAsync("Syrup", 30, addOn: true);
         await TestDb.SaveAsync(_db, new ProductAddOn
-            { ProductId = latte.Id, AddOnId = syrup.Id, AddOnTypeId = (int)AddOnTypeEnum.Extra, IsActive = true });
+        { ProductId = latte.Id, AddOnId = syrup.Id, AddOnTypeId = (int)AddOnTypeEnum.Extra, IsActive = true });
         await TestDb.SaveAsync(_db, new ProductAddOnPriceOverride
-            { Id = Guid.NewGuid(), ProductId = latte.Id, AddOnId = syrup.Id, Price = 20, IsActive = true, CreatedAt = DateTime.UtcNow });
+        { Id = Guid.NewGuid(), ProductId = latte.Id, AddOnId = syrup.Id, Price = 20, IsActive = true, CreatedAt = DateTime.UtcNow });
 
         var dto = await OpenLink(link.Token);
 
@@ -467,7 +498,7 @@ public class PublicOrderLinkTests
         var latte = await AddProductAsync("Latte", 150);
         var syrup = await AddProductAsync("Syrup", 30, addOn: true);
         await TestDb.SaveAsync(_db, new ProductAddOnPriceOverride
-            { Id = Guid.NewGuid(), ProductId = latte.Id, AddOnId = syrup.Id, Price = 20, IsActive = true, CreatedAt = DateTime.UtcNow });
+        { Id = Guid.NewGuid(), ProductId = latte.Id, AddOnId = syrup.Id, Price = 20, IsActive = true, CreatedAt = DateTime.UtcNow });
         var order = await AddOrderAsync(ana.Id, linkId: link.Id);
         var parent = await AddLineAsync(order.Id, latte.Id, quantity: 2);
         await AddLineAsync(order.Id, syrup.Id, parentId: parent.Id);

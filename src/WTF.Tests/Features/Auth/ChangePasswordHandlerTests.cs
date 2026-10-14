@@ -20,9 +20,14 @@ public class ChangePasswordHandlerTests
         await using var db = TestDb.Create(_dbName);
         db.Users.Add(new User
         {
-            Id = _userId, Username = "alem", FirstName = "Al", LastName = "Em",
+            Id = _userId,
+            Username = "alem",
+            FirstName = "Al",
+            LastName = "Em",
             PasswordHash = BCrypt.Net.BCrypt.HashPassword("old-password"),
-            IsActive = true, RoleId = 1, CreatedAt = DateTime.UtcNow
+            IsActive = true,
+            RoleId = 1,
+            CreatedAt = DateTime.UtcNow
         });
         await db.SaveChangesAsync();
     }
@@ -53,7 +58,8 @@ public class ChangePasswordHandlerTests
     {
         await Seed();
         string before;
-        await using (var db = TestDb.Create(_dbName)) before = (await db.Users.SingleAsync()).PasswordHash;
+        await using (var db = TestDb.Create(_dbName))
+            before = (await db.Users.SingleAsync()).PasswordHash;
 
         var ok = await Handler().Handle(new ChangePasswordCommand { CurrentPassword = "guess", NewPassword = "new-password-1" }, CancellationToken.None);
 

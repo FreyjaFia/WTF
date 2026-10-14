@@ -74,7 +74,12 @@ public class CreateProductHandlerTests
     {
         await Handler().Handle(new CreateProductCommand
         {
-            Name = "Extra shot", Code = "XS", Price = 0m, Category = ProductCategoryEnum.Drink, IsAddOn = true, IsActive = false
+            Name = "Extra shot",
+            Code = "XS",
+            Price = 0m,
+            Category = ProductCategoryEnum.Drink,
+            IsAddOn = true,
+            IsActive = false
         }, CancellationToken.None);
 
         await using var db = TestDb.Create(_dbName);

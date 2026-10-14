@@ -10,8 +10,14 @@ public class UserRoleServiceTests
 
     private static User U(Guid id, int roleId) => new()
     {
-        Id = id, Username = id.ToString("N"), FirstName = "F", LastName = "L", PasswordHash = "h",
-        IsActive = true, RoleId = roleId, CreatedAt = DateTime.UtcNow
+        Id = id,
+        Username = id.ToString("N"),
+        FirstName = "F",
+        LastName = "L",
+        PasswordHash = "h",
+        IsActive = true,
+        RoleId = roleId,
+        CreatedAt = DateTime.UtcNow
     };
 
     [Fact]

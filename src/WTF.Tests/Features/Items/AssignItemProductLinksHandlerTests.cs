@@ -23,8 +23,13 @@ public class AssignItemProductLinksHandlerTests
         await using var db = TestDb.Create(_db);
         db.ProductItemLinks.Add(new ProductItemLink
         {
-            Id = Guid.NewGuid(), ItemId = itemId, ProductId = productId, QuantityPerSale = qty, IsActive = active,
-            CreatedAt = DateTime.UtcNow, CreatedBy = _userId
+            Id = Guid.NewGuid(),
+            ItemId = itemId,
+            ProductId = productId,
+            QuantityPerSale = qty,
+            IsActive = active,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = _userId
         });
         await db.SaveChangesAsync();
     }

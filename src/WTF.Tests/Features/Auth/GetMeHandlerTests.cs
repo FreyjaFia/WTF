@@ -16,8 +16,14 @@ public class GetMeHandlerTests
         await using var db = TestDb.Create(_dbName);
         db.Users.Add(new User
         {
-            Id = _userId, Username = "alem", FirstName = "Al", LastName = "Em",
-            PasswordHash = "hash", IsActive = true, RoleId = 1, CreatedAt = DateTime.UtcNow
+            Id = _userId,
+            Username = "alem",
+            FirstName = "Al",
+            LastName = "Em",
+            PasswordHash = "hash",
+            IsActive = true,
+            RoleId = 1,
+            CreatedAt = DateTime.UtcNow
         });
         if (imageUrl != null)
         {

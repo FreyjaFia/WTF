@@ -10,9 +10,13 @@ public class PromotionMappingTests
 
     private static Promotion BasePromo() => new()
     {
-        Id = Guid.NewGuid(), Name = "P", IsActive = true,
-        StartDate = new DateTime(2025, 1, 1), EndDate = new DateTime(2025, 2, 1),
-        CreatedAt = new DateTime(2025, 1, 1), CreatedBy = Guid.NewGuid()
+        Id = Guid.NewGuid(),
+        Name = "P",
+        IsActive = true,
+        StartDate = new DateTime(2025, 1, 1),
+        EndDate = new DateTime(2025, 2, 1),
+        CreatedAt = new DateTime(2025, 1, 1),
+        CreatedBy = Guid.NewGuid()
     };
 
     [Fact]

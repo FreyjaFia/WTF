@@ -50,25 +50,41 @@ public class ChatMessageExpiryTests
     {
         var customer = new Customer
         {
-            Id = Guid.NewGuid(), FirstName = "Maria", LastName = "Cruz", IsActive = true, CreatedAt = DateTime.UtcNow,
+            Id = Guid.NewGuid(),
+            FirstName = "Maria",
+            LastName = "Cruz",
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow,
             CreatedBy = _staffId
         };
         var order = new Order
         {
-            Id = Guid.NewGuid(), OrderNumber = _number++, CustomerId = customer.Id, Source = (byte)OrderSourceEnum.CustomerLink,
-            StatusId = (int)status, CreatedAt = DateTime.UtcNow.AddDays(-200), CreatedBy = _staffId
+            Id = Guid.NewGuid(),
+            OrderNumber = _number++,
+            CustomerId = customer.Id,
+            Source = (byte)OrderSourceEnum.CustomerLink,
+            StatusId = (int)status,
+            CreatedAt = DateTime.UtcNow.AddDays(-200),
+            CreatedBy = _staffId
         };
         var newest = ageDays.Min();
         var conversation = new Conversation
         {
-            Id = Guid.NewGuid(), CustomerId = customer.Id, Kind = (byte)ConversationKind.Order, OrderId = order.Id,
-            Title = ConversationRules.OrderTitle(order.OrderNumber), CreatedAt = DateTime.UtcNow.AddDays(-ageDays.Max()),
+            Id = Guid.NewGuid(),
+            CustomerId = customer.Id,
+            Kind = (byte)ConversationKind.Order,
+            OrderId = order.Id,
+            Title = ConversationRules.OrderTitle(order.OrderNumber),
+            CreatedAt = DateTime.UtcNow.AddDays(-ageDays.Max()),
             LastMessageAt = DateTime.UtcNow.AddDays(-newest)
         };
         var messages = ageDays.Select(age => new ConversationMessage
         {
-            Id = Guid.NewGuid(), ConversationId = conversation.Id, SenderType = (byte)MessageSender.Customer,
-            Body = $"{age} days old", CreatedAt = DateTime.UtcNow.AddDays(-age)
+            Id = Guid.NewGuid(),
+            ConversationId = conversation.Id,
+            SenderType = (byte)MessageSender.Customer,
+            Body = $"{age} days old",
+            CreatedAt = DateTime.UtcNow.AddDays(-age)
         }).ToList();
 
         await TestDb.SaveAsync(_db, [customer, order, conversation, .. messages]);
@@ -155,8 +171,11 @@ public class ChatMessageExpiryTests
         var (order, conversation, _) = await ChatAsync(OrderStatusEnum.Completed, 150);
         await TestDb.SaveAsync(_db, new ConversationMessage
         {
-            Id = Guid.NewGuid(), ConversationId = conversation.Id, SenderType = (byte)MessageSender.System,
-            Body = "Order completed", CreatedAt = DateTime.UtcNow.AddDays(-150)
+            Id = Guid.NewGuid(),
+            ConversationId = conversation.Id,
+            SenderType = (byte)MessageSender.System,
+            Body = "Order completed",
+            CreatedAt = DateTime.UtcNow.AddDays(-150)
         });
 
         var result = await Service().RunAsync(CancellationToken.None);
@@ -175,9 +194,16 @@ public class ChatMessageExpiryTests
         _photos[key] = [1, 2, 3];
         await TestDb.SaveAsync(_db, new ConversationMessage
         {
-            Id = Guid.NewGuid(), ConversationId = conversation.Id, SenderType = (byte)MessageSender.Customer, Body = "",
-            CreatedAt = DateTime.UtcNow.AddDays(-age), ImageKey = key, ImageContentType = "image/jpeg", ImageWidth = 10,
-            ImageHeight = 10, ImageSizeBytes = 3
+            Id = Guid.NewGuid(),
+            ConversationId = conversation.Id,
+            SenderType = (byte)MessageSender.Customer,
+            Body = "",
+            CreatedAt = DateTime.UtcNow.AddDays(-age),
+            ImageKey = key,
+            ImageContentType = "image/jpeg",
+            ImageWidth = 10,
+            ImageHeight = 10,
+            ImageSizeBytes = 3
         });
     }
 
@@ -343,18 +369,32 @@ public class ChatMessageExpiryTests
     {
         var customer = new Customer
         {
-            Id = Guid.NewGuid(), FirstName = "Maria", LastName = "Cruz", IsActive = true, AllowOrderingLink = true,
-            CreatedAt = DateTime.UtcNow, CreatedBy = _staffId
+            Id = Guid.NewGuid(),
+            FirstName = "Maria",
+            LastName = "Cruz",
+            IsActive = true,
+            AllowOrderingLink = true,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = _staffId
         };
         var link = new ShortLink
         {
-            Id = Guid.NewGuid(), Token = OrderLinkToken.Generate(), TargetType = OrderLinkToken.TargetType,
-            TargetId = customer.Id, CreatedAt = DateTime.UtcNow.AddHours(-1), CreatedBy = _staffId
+            Id = Guid.NewGuid(),
+            Token = OrderLinkToken.Generate(),
+            TargetType = OrderLinkToken.TargetType,
+            TargetId = customer.Id,
+            CreatedAt = DateTime.UtcNow.AddHours(-1),
+            CreatedBy = _staffId
         };
         var order = new Order
         {
-            Id = Guid.NewGuid(), OrderNumber = 1, CustomerId = customer.Id, Source = (byte)OrderSourceEnum.CustomerLink,
-            StatusId = (int)OrderStatusEnum.Pending, CreatedAt = DateTime.UtcNow, CreatedBy = _staffId
+            Id = Guid.NewGuid(),
+            OrderNumber = 1,
+            CustomerId = customer.Id,
+            Source = (byte)OrderSourceEnum.CustomerLink,
+            StatusId = (int)OrderStatusEnum.Pending,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = _staffId
         };
         await TestDb.SaveAsync(_db, customer, link, order);
 

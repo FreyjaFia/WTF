@@ -1,6 +1,4 @@
 using WTF.Api.Features.Users;
-using WTF.Api.Features.Users.Enums;
-using WTF.Domain.Entities;
 
 namespace WTF.Tests.Features.Users;
 

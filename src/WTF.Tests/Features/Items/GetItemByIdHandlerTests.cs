@@ -30,8 +30,14 @@ public class GetItemByIdHandlerTests
             {
                 db.StockMovements.Add(new StockMovement
                 {
-                    Id = Guid.NewGuid(), ItemId = item.Id, MovementType = "AddStock", QuantityDelta = 1,
-                    QuantityBefore = i, QuantityAfter = i + 1, CreatedAt = t.AddMinutes(i), CreatedBy = user.Id
+                    Id = Guid.NewGuid(),
+                    ItemId = item.Id,
+                    MovementType = "AddStock",
+                    QuantityDelta = 1,
+                    QuantityBefore = i,
+                    QuantityAfter = i + 1,
+                    CreatedAt = t.AddMinutes(i),
+                    CreatedBy = user.Id
                 });
             }
             await db.SaveChangesAsync();

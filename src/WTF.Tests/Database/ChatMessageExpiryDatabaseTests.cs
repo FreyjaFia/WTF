@@ -25,18 +25,31 @@ public class ChatMessageExpiryDatabaseTests
         await using var db = database.CreateContext();
         var customer = new Customer
         {
-            Id = Guid.NewGuid(), FirstName = "Maria", LastName = "Cruz", IsActive = true, CreatedAt = DateTime.UtcNow,
+            Id = Guid.NewGuid(),
+            FirstName = "Maria",
+            LastName = "Cruz",
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow,
             CreatedBy = staff.Id
         };
         var order = new Order
         {
-            Id = Guid.NewGuid(), OrderNumber = number, CustomerId = customer.Id, Source = (byte)OrderSourceEnum.CustomerLink,
-            StatusId = (int)status, CreatedAt = DateTime.UtcNow.AddDays(-300), CreatedBy = staff.Id
+            Id = Guid.NewGuid(),
+            OrderNumber = number,
+            CustomerId = customer.Id,
+            Source = (byte)OrderSourceEnum.CustomerLink,
+            StatusId = (int)status,
+            CreatedAt = DateTime.UtcNow.AddDays(-300),
+            CreatedBy = staff.Id
         };
         var conversation = new Conversation
         {
-            Id = Guid.NewGuid(), CustomerId = customer.Id, Kind = (byte)ConversationKind.Order, OrderId = order.Id,
-            Title = ConversationRules.OrderTitle(number), CreatedAt = DateTime.UtcNow.AddDays(-ageDays.Max()),
+            Id = Guid.NewGuid(),
+            CustomerId = customer.Id,
+            Kind = (byte)ConversationKind.Order,
+            OrderId = order.Id,
+            Title = ConversationRules.OrderTitle(number),
+            CreatedAt = DateTime.UtcNow.AddDays(-ageDays.Max()),
             LastMessageAt = DateTime.UtcNow.AddDays(-ageDays.Min())
         };
         db.Customers.Add(customer);
@@ -46,8 +59,12 @@ public class ChatMessageExpiryDatabaseTests
 
         db.ConversationMessages.AddRange(ageDays.Select(age => new ConversationMessage
         {
-            Id = Guid.NewGuid(), ConversationId = conversation.Id, SenderType = (byte)MessageSender.Customer,
-            Body = $"{age} days", CreatedAt = DateTime.UtcNow.AddDays(-age), ReadByCustomerAt = DateTime.UtcNow
+            Id = Guid.NewGuid(),
+            ConversationId = conversation.Id,
+            SenderType = (byte)MessageSender.Customer,
+            Body = $"{age} days",
+            CreatedAt = DateTime.UtcNow.AddDays(-age),
+            ReadByCustomerAt = DateTime.UtcNow
         }));
         await db.SaveChangesAsync();
         return (conversation.Id, order.Id);

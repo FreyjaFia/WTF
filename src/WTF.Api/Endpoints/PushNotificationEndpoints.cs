@@ -1,5 +1,5 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;

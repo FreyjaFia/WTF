@@ -1,8 +1,7 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using NSubstitute;
+using System.IdentityModel.Tokens.Jwt;
 using WTF.Api.Services;
 using WTF.Domain.Entities;
 

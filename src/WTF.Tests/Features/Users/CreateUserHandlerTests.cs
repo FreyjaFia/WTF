@@ -4,7 +4,6 @@ using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Users;
 using WTF.Api.Features.Users.Enums;
 using WTF.Api.Services;
-using WTF.Domain.Entities;
 using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Features.Users;

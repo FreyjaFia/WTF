@@ -20,10 +20,20 @@ public class ItemMappingTests
     {
         var item = new Item
         {
-            Id = Guid.NewGuid(), Name = "Milk", Sku = "S1", Barcode = "B1", UnitName = "ml",
-            StockUnitName = "box", UnitsPerStockUnit = 12, CurrentQuantity = 5.5m, CostPrice = 10m,
-            WarningQuantity = 3, CriticalQuantity = 1, IsActive = true,
-            CreatedAt = new DateTime(2025, 1, 1), CreatedBy = Guid.NewGuid()
+            Id = Guid.NewGuid(),
+            Name = "Milk",
+            Sku = "S1",
+            Barcode = "B1",
+            UnitName = "ml",
+            StockUnitName = "box",
+            UnitsPerStockUnit = 12,
+            CurrentQuantity = 5.5m,
+            CostPrice = 10m,
+            WarningQuantity = 3,
+            CriticalQuantity = 1,
+            IsActive = true,
+            CreatedAt = new DateTime(2025, 1, 1),
+            CreatedBy = Guid.NewGuid()
         };
 
         var dto = ItemMapping.ToDto(item);

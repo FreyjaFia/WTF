@@ -106,7 +106,8 @@ public class CalculateDiscountedUnitPriceTests
                 foreach (var pct in new decimal?[] { null, 0.01m, 10m, 99.99m, 100m })
                 {
                     var result = PricingTestHelpers.Calculate(basePrice, fixedPrice, pct);
-                    if (result is null) continue;
+                    if (result is null)
+                        continue;
                     result.Value.ShouldBeGreaterThanOrEqualTo(0m);
                     result.Value.ShouldBeLessThanOrEqualTo(basePrice);
                 }

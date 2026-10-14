@@ -16,8 +16,15 @@ public class GetPosCatalogHandlerTests
         await using var db = TestDb.Create(_db);
         var p = new Product
         {
-            Id = Guid.NewGuid(), Name = name, Code = name[..3].ToUpperInvariant(), Price = price, CategoryId = 1,
-            IsActive = active, IsAddOn = addOn, CreatedAt = DateTime.UtcNow, CreatedBy = _userId
+            Id = Guid.NewGuid(),
+            Name = name,
+            Code = name[..3].ToUpperInvariant(),
+            Price = price,
+            CategoryId = 1,
+            IsActive = active,
+            IsAddOn = addOn,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = _userId
         };
         db.Products.Add(p);
         if (imageUrl is not null)
@@ -38,8 +45,12 @@ public class GetPosCatalogHandlerTests
         {
             db.ProductAddOnPriceOverrides.Add(new ProductAddOnPriceOverride
             {
-                Id = Guid.NewGuid(), ProductId = productId, AddOnId = addOnId, Price = overridePrice.Value,
-                IsActive = overrideActive, CreatedAt = DateTime.UtcNow
+                Id = Guid.NewGuid(),
+                ProductId = productId,
+                AddOnId = addOnId,
+                Price = overridePrice.Value,
+                IsActive = overrideActive,
+                CreatedAt = DateTime.UtcNow
             });
         }
         await db.SaveChangesAsync();
@@ -50,7 +61,12 @@ public class GetPosCatalogHandlerTests
         await using var db = TestDb.Create(_db);
         db.Customers.Add(new Customer
         {
-            Id = Guid.NewGuid(), FirstName = first, LastName = last, IsActive = active, CreatedAt = DateTime.UtcNow, CreatedBy = _userId
+            Id = Guid.NewGuid(),
+            FirstName = first,
+            LastName = last,
+            IsActive = active,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = _userId
         });
         await db.SaveChangesAsync();
     }

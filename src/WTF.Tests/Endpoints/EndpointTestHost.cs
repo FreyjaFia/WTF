@@ -1,6 +1,3 @@
-using System.Security.Claims;
-using System.Text;
-using System.Text.Json;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -10,6 +7,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using NSubstitute;
+using System.Security.Claims;
+using System.Text;
+using System.Text.Json;
 using WTF.Api.Common.Auth;
 using WTF.Api.Endpoints;
 using WTF.Api.Features.Reports;

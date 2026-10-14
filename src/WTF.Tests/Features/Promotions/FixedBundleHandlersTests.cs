@@ -21,8 +21,14 @@ public class FixedBundleHandlersTests : IAsyncLifetime
         {
             db.Products.Add(new WTF.Domain.Entities.Product
             {
-                Id = id, Name = name, Code = name.ToUpperInvariant(), Price = 10m, CategoryId = 1, IsActive = true,
-                CreatedAt = DateTime.UtcNow, CreatedBy = _userId,
+                Id = id,
+                Name = name,
+                Code = name.ToUpperInvariant(),
+                Price = 10m,
+                CategoryId = 1,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = _userId,
             });
         }
 
@@ -65,7 +71,8 @@ public class FixedBundleHandlersTests : IAsyncLifetime
     [Fact]
     public async Task Create_ValidBundle_SavesPromotionItemsAndAddOnsWithTrimmedName()
     {
-        await using (var seed = TestDb.Create(_dbName)) await PromotionSeed.LinkAddOnAsync(seed, _burger, _cheese);
+        await using (var seed = TestDb.Create(_dbName))
+            await PromotionSeed.LinkAddOnAsync(seed, _burger, _cheese);
 
         var dto = await Create().Handle(Cmd(_burger, 2, _cheese), CancellationToken.None);
 
@@ -151,7 +158,8 @@ public class FixedBundleHandlersTests : IAsyncLifetime
     [Fact]
     public async Task Create_AddOnLinkIsInactive_Throws()
     {
-        await using (var seed = TestDb.Create(_dbName)) await PromotionSeed.LinkAddOnAsync(seed, _burger, _cheese, isActive: false);
+        await using (var seed = TestDb.Create(_dbName))
+            await PromotionSeed.LinkAddOnAsync(seed, _burger, _cheese, isActive: false);
 
         await Should.ThrowAsync<InvalidOperationException>(() =>
             Create().Handle(Cmd(_burger, 1, _cheese), CancellationToken.None));
@@ -160,7 +168,8 @@ public class FixedBundleHandlersTests : IAsyncLifetime
     [Fact]
     public async Task Create_AddOnLinkedToDifferentProduct_Throws()
     {
-        await using (var seed = TestDb.Create(_dbName)) await PromotionSeed.LinkAddOnAsync(seed, Guid.NewGuid(), _cheese);
+        await using (var seed = TestDb.Create(_dbName))
+            await PromotionSeed.LinkAddOnAsync(seed, Guid.NewGuid(), _cheese);
 
         await Should.ThrowAsync<InvalidOperationException>(() =>
             Create().Handle(Cmd(_burger, 1, _cheese), CancellationToken.None));
@@ -183,7 +192,8 @@ public class FixedBundleHandlersTests : IAsyncLifetime
     [Fact]
     public async Task Create_SeveralAddOnsOneUnlinked_Throws()
     {
-        await using (var seed = TestDb.Create(_dbName)) await PromotionSeed.LinkAddOnAsync(seed, _burger, _cheese);
+        await using (var seed = TestDb.Create(_dbName))
+            await PromotionSeed.LinkAddOnAsync(seed, _burger, _cheese);
 
         await Should.ThrowAsync<InvalidOperationException>(() =>
             Create().Handle(Cmd(_burger, 1, _cheese, _bacon), CancellationToken.None));
@@ -201,7 +211,10 @@ public class FixedBundleHandlersTests : IAsyncLifetime
         var newProduct = _bacon;
         var cmd = new UpdateFixedBundlePromotionCommand
         {
-            PromotionId = id, Name = " Renamed ", BundlePrice = 70m, IsActive = false,
+            PromotionId = id,
+            Name = " Renamed ",
+            BundlePrice = 70m,
+            IsActive = false,
             Items = [new CreateFixedBundlePromotionItemRequestDto(newProduct, 3, [])]
         };
 
@@ -229,7 +242,9 @@ public class FixedBundleHandlersTests : IAsyncLifetime
     {
         var cmd = new UpdateFixedBundlePromotionCommand
         {
-            PromotionId = Guid.NewGuid(), Name = "x", Items = [new(_burger, 1, [])]
+            PromotionId = Guid.NewGuid(),
+            Name = "x",
+            Items = [new(_burger, 1, [])]
         };
 
         (await Update().Handle(cmd, CancellationToken.None)).ShouldBeNull();
@@ -239,7 +254,8 @@ public class FixedBundleHandlersTests : IAsyncLifetime
     public async Task Update_PromotionOfAnotherType_ReturnsNull()
     {
         Guid id;
-        await using (var seed = TestDb.Create(_dbName)) id = (await PromotionSeed.AddMixMatchAsync(seed)).Id;
+        await using (var seed = TestDb.Create(_dbName))
+            id = (await PromotionSeed.AddMixMatchAsync(seed)).Id;
         var cmd = new UpdateFixedBundlePromotionCommand { PromotionId = id, Name = "x", Items = [new(_burger, 1, [])] };
 
         (await Update().Handle(cmd, CancellationToken.None)).ShouldBeNull();
@@ -249,7 +265,8 @@ public class FixedBundleHandlersTests : IAsyncLifetime
     public async Task Update_InvalidItems_ThrowsAndLeavesPromotionUntouched()
     {
         Guid id;
-        await using (var seed = TestDb.Create(_dbName)) id = (await PromotionSeed.AddBundleAsync(seed, _burger, 1, 50m)).Id;
+        await using (var seed = TestDb.Create(_dbName))
+            id = (await PromotionSeed.AddBundleAsync(seed, _burger, 1, 50m)).Id;
         var cmd = new UpdateFixedBundlePromotionCommand { PromotionId = id, Name = "New", Items = [new(_burger, 0, [])] };
 
         await Should.ThrowAsync<InvalidOperationException>(() => Update().Handle(cmd, CancellationToken.None));
@@ -262,10 +279,13 @@ public class FixedBundleHandlersTests : IAsyncLifetime
     public async Task Update_AddOnNotLinked_Throws()
     {
         Guid id;
-        await using (var seed = TestDb.Create(_dbName)) id = (await PromotionSeed.AddBundleAsync(seed, _burger, 1, 50m)).Id;
+        await using (var seed = TestDb.Create(_dbName))
+            id = (await PromotionSeed.AddBundleAsync(seed, _burger, 1, 50m)).Id;
         var cmd = new UpdateFixedBundlePromotionCommand
         {
-            PromotionId = id, Name = "New", Items = [new(_burger, 1, [new(_cheese, 1)])]
+            PromotionId = id,
+            Name = "New",
+            Items = [new(_burger, 1, [new(_cheese, 1)])]
         };
 
         await Should.ThrowAsync<InvalidOperationException>(() => Update().Handle(cmd, CancellationToken.None));
@@ -275,7 +295,8 @@ public class FixedBundleHandlersTests : IAsyncLifetime
     public async Task Delete_ExistingBundle_SoftDeletesAndKeepsRules()
     {
         Guid id;
-        await using (var seed = TestDb.Create(_dbName)) id = (await PromotionSeed.AddBundleAsync(seed, _burger, 1, 50m)).Id;
+        await using (var seed = TestDb.Create(_dbName))
+            id = (await PromotionSeed.AddBundleAsync(seed, _burger, 1, 50m)).Id;
 
         var result = await new DeleteFixedBundlePromotionHandler(TestDb.Create(_dbName), TestRequest.As(_userId))
             .Handle(new DeleteFixedBundlePromotionCommand(id), CancellationToken.None);
@@ -292,7 +313,8 @@ public class FixedBundleHandlersTests : IAsyncLifetime
     public async Task Delete_UnknownOrOtherType_ReturnsFalse()
     {
         Guid mixId;
-        await using (var seed = TestDb.Create(_dbName)) mixId = (await PromotionSeed.AddMixMatchAsync(seed)).Id;
+        await using (var seed = TestDb.Create(_dbName))
+            mixId = (await PromotionSeed.AddMixMatchAsync(seed)).Id;
         var handler = new DeleteFixedBundlePromotionHandler(TestDb.Create(_dbName), TestRequest.As(_userId));
 
         (await handler.Handle(new DeleteFixedBundlePromotionCommand(Guid.NewGuid()), CancellationToken.None)).ShouldBeFalse();
@@ -303,7 +325,8 @@ public class FixedBundleHandlersTests : IAsyncLifetime
     public async Task GetById_ExistingBundle_ReturnsDtoWithItems()
     {
         Guid id;
-        await using (var seed = TestDb.Create(_dbName)) id = (await PromotionSeed.AddBundleAsync(seed, _burger, 2, 50m, _cheese)).Id;
+        await using (var seed = TestDb.Create(_dbName))
+            id = (await PromotionSeed.AddBundleAsync(seed, _burger, 2, 50m, _cheese)).Id;
 
         var dto = await new GetFixedBundlePromotionByIdHandler(TestDb.Create(_dbName), TestRequest.As(_userId))
             .Handle(new GetFixedBundlePromotionByIdQuery(id), CancellationToken.None);
@@ -318,7 +341,8 @@ public class FixedBundleHandlersTests : IAsyncLifetime
     public async Task GetById_UnknownOrOtherType_ReturnsNull()
     {
         Guid mixId;
-        await using (var seed = TestDb.Create(_dbName)) mixId = (await PromotionSeed.AddMixMatchAsync(seed)).Id;
+        await using (var seed = TestDb.Create(_dbName))
+            mixId = (await PromotionSeed.AddMixMatchAsync(seed)).Id;
         var handler = new GetFixedBundlePromotionByIdHandler(TestDb.Create(_dbName), TestRequest.As(_userId));
 
         (await handler.Handle(new GetFixedBundlePromotionByIdQuery(Guid.NewGuid()), CancellationToken.None)).ShouldBeNull();

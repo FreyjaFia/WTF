@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using WTF.Api.Features.Products;
 using WTF.Tests.Infrastructure;
 

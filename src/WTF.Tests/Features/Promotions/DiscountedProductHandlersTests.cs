@@ -56,7 +56,9 @@ public class DiscountedProductHandlersTests
         await LinkAsync(_burger, _cheese);
         var cmd = Cmd(Item(_burger, 5m, null, _cheese)) with
         {
-            IsActive = false, StartDate = PromotionSeed.Now, EndDate = PromotionSeed.Now.AddDays(3)
+            IsActive = false,
+            StartDate = PromotionSeed.Now,
+            EndDate = PromotionSeed.Now.AddDays(3)
         };
 
         await Create().Handle(cmd, CancellationToken.None);
@@ -180,7 +182,9 @@ public class DiscountedProductHandlersTests
             id = (await PromotionSeed.AddDiscountAsync(seed, _burger, _cheese, 1, 5m, null)).Id;
         var cmd = new UpdateDiscountedProductPromotionCommand
         {
-            PromotionId = id, Name = " Renamed ", IsActive = false,
+            PromotionId = id,
+            Name = " Renamed ",
+            IsActive = false,
             Items = [Item(_fries, null, 15m, _bacon)]
         };
 
@@ -247,7 +251,8 @@ public class DiscountedProductHandlersTests
     public async Task Delete_UnknownOrOtherType_ReturnsFalse()
     {
         Guid bundleId;
-        await using (var seed = TestDb.Create(_dbName)) bundleId = (await PromotionSeed.AddBundleAsync(seed, _burger, 1, 5m)).Id;
+        await using (var seed = TestDb.Create(_dbName))
+            bundleId = (await PromotionSeed.AddBundleAsync(seed, _burger, 1, 5m)).Id;
         var handler = new DeleteDiscountedProductPromotionHandler(TestDb.Create(_dbName), TestRequest.As(_userId));
 
         (await handler.Handle(new DeleteDiscountedProductPromotionCommand(Guid.NewGuid()), CancellationToken.None)).ShouldBeFalse();

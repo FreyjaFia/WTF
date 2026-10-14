@@ -19,15 +19,15 @@ public class UpdateProductHandlerTests
 
     private static UpdateProductCommand Command(Product p, string? name = null, string? code = null, decimal? price = null,
         bool? isAddOn = null, bool? isActive = null) => new()
-    {
-        Id = p.Id,
-        Name = name ?? p.Name,
-        Code = code ?? p.Code,
-        Price = price ?? p.Price,
-        Category = ProductCategoryEnum.Drink,
-        IsAddOn = isAddOn ?? p.IsAddOn,
-        IsActive = isActive ?? p.IsActive
-    };
+        {
+            Id = p.Id,
+            Name = name ?? p.Name,
+            Code = code ?? p.Code,
+            Price = price ?? p.Price,
+            Category = ProductCategoryEnum.Drink,
+            IsAddOn = isAddOn ?? p.IsAddOn,
+            IsActive = isActive ?? p.IsActive
+        };
 
     [Fact]
     public async Task Handle_UnknownProduct_ReturnsNullAndDoesNotAudit()

@@ -19,8 +19,14 @@ public class RemoveUserImageHandlerTests
         db.UserRoles.Add(new UserRole { Id = 2, Name = "Cashier" });
         db.Users.Add(new User
         {
-            Id = _userId, Username = "acruz", FirstName = "Ana", LastName = "Cruz", PasswordHash = "h",
-            IsActive = true, RoleId = 2, CreatedAt = DateTime.UtcNow
+            Id = _userId,
+            Username = "acruz",
+            FirstName = "Ana",
+            LastName = "Cruz",
+            PasswordHash = "h",
+            IsActive = true,
+            RoleId = 2,
+            CreatedAt = DateTime.UtcNow
         });
         // An unrelated image that must survive.
         var keepId = Guid.NewGuid();

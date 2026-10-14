@@ -23,8 +23,15 @@ public class UpdateUserHandlerTests
         await using var db = TestDb.Create(_dbName);
         db.Users.Add(new User
         {
-            Id = _userId, Username = "old", FirstName = "Old", LastName = "Name", PasswordHash = _originalHash,
-            IsActive = true, RoleId = (int)UserRoleEnum.Cashier, CreatedAt = DateTime.UtcNow.AddDays(-5), CreatedBy = _actorId
+            Id = _userId,
+            Username = "old",
+            FirstName = "Old",
+            LastName = "Name",
+            PasswordHash = _originalHash,
+            IsActive = true,
+            RoleId = (int)UserRoleEnum.Cashier,
+            CreatedAt = DateTime.UtcNow.AddDays(-5),
+            CreatedBy = _actorId
         });
         await db.SaveChangesAsync();
     }

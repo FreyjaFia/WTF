@@ -232,11 +232,19 @@ public class GetDailySalesReportHandlerTests
             Bundle(db, order, promo, 2, 50m);
             db.ProductAddOnPriceOverrides.Add(new ProductAddOnPriceOverride
             {
-                Id = Guid.NewGuid(), ProductId = burger.Id, AddOnId = bacon.Id, Price = 5m, IsActive = true,
+                Id = Guid.NewGuid(),
+                ProductId = burger.Id,
+                AddOnId = bacon.Id,
+                Price = 5m,
+                IsActive = true,
             });
             db.ProductAddOnPriceOverrides.Add(new ProductAddOnPriceOverride
             {
-                Id = Guid.NewGuid(), ProductId = burger.Id, AddOnId = cheese.Id, Price = 1m, IsActive = false,
+                Id = Guid.NewGuid(),
+                ProductId = burger.Id,
+                AddOnId = cheese.Id,
+                Price = 1m,
+                IsActive = false,
             });
             await db.SaveChangesAsync();
         }

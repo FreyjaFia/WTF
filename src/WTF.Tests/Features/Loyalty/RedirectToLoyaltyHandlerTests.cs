@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using WTF.Api.Features.Loyalty;
 using WTF.Domain.Entities;
 using WTF.Tests.Infrastructure;
@@ -56,8 +55,11 @@ public class RedirectToLoyaltyHandlerTests
         {
             db.ShortLinks.Add(new ShortLink
             {
-                Id = Guid.NewGuid(), Token = "order-link-token", TargetType = "CustomerOrder",
-                TargetId = Guid.NewGuid(), CreatedAt = DateTime.UtcNow
+                Id = Guid.NewGuid(),
+                Token = "order-link-token",
+                TargetType = "CustomerOrder",
+                TargetId = Guid.NewGuid(),
+                CreatedAt = DateTime.UtcNow
             });
             await db.SaveChangesAsync();
         }

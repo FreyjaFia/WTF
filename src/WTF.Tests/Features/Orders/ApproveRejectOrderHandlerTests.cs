@@ -274,7 +274,10 @@ public class ApproveRejectOrderHandlerTests
     {
         var link = new WTF.Domain.Entities.ShortLink
         {
-            Id = Guid.NewGuid(), Token = "t", TargetType = "CustomerOrder", RevokedAt = DateTime.UtcNow,
+            Id = Guid.NewGuid(),
+            Token = "t",
+            TargetType = "CustomerOrder",
+            RevokedAt = DateTime.UtcNow,
             CreatedAt = DateTime.UtcNow
         };
         await TestDb.SaveAsync(_data.DbName, link);

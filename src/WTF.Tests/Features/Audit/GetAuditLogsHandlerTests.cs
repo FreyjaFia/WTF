@@ -1,7 +1,7 @@
-using WTF.Tests.Features.Items;
 using WTF.Api.Features.Audit;
 using WTF.Api.Features.Audit.DTOs;
 using WTF.Domain.Entities;
+using WTF.Tests.Features.Items;
 using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Features.Audit;
@@ -28,8 +28,14 @@ public class GetAuditLogsHandlerTests
         await using var db = TestDb.Create(_db);
         db.AuditLogs.Add(new AuditLog
         {
-            Id = Guid.NewGuid(), UserId = userId, Action = action, EntityType = entityType, EntityId = entityId,
-            Timestamp = at, IpAddress = "1.2.3.4", NewValues = "{}"
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            Action = action,
+            EntityType = entityType,
+            EntityId = entityId,
+            Timestamp = at,
+            IpAddress = "1.2.3.4",
+            NewValues = "{}"
         });
         await db.SaveChangesAsync();
     }

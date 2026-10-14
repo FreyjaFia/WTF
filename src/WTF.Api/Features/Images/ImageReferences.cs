@@ -28,10 +28,14 @@ public static class ImageReferences
     /// <summary>The link rows (<see cref="ReferencingEntities"/>) that point at this image. Needs <see cref="WithLinks"/>.</summary>
     public static IEnumerable<object> LinksOf(Image image)
     {
-        if (image.CustomerImage != null) yield return image.CustomerImage;
-        if (image.ProductImage != null) yield return image.ProductImage;
-        if (image.PromotionImage != null) yield return image.PromotionImage;
-        if (image.UserImage != null) yield return image.UserImage;
+        if (image.CustomerImage != null)
+            yield return image.CustomerImage;
+        if (image.ProductImage != null)
+            yield return image.ProductImage;
+        if (image.PromotionImage != null)
+            yield return image.PromotionImage;
+        if (image.UserImage != null)
+            yield return image.UserImage;
     }
 
     /// <summary>Images that no entity in <see cref="ReferencingEntities"/> points to.</summary>

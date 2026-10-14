@@ -287,32 +287,58 @@ public class ChatImageTests
             await TestDb.SaveAsync(_db,
                 new User
                 {
-                    Id = _staffId, Username = "ana", PasswordHash = "x", FirstName = "Ana", LastName = "Reyes",
-                    IsActive = true, RoleId = 2, CreatedAt = DateTime.UtcNow, CreatedBy = _staffId
+                    Id = _staffId,
+                    Username = "ana",
+                    PasswordHash = "x",
+                    FirstName = "Ana",
+                    LastName = "Reyes",
+                    IsActive = true,
+                    RoleId = 2,
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = _staffId
                 },
                 new User
                 {
-                    Id = _systemUserId, Username = SubmitPublicOrderHandler.SystemUsername, PasswordHash = "x",
-                    FirstName = "Customer", LastName = "Link", IsActive = false, RoleId = 2, CreatedAt = DateTime.UtcNow,
+                    Id = _systemUserId,
+                    Username = SubmitPublicOrderHandler.SystemUsername,
+                    PasswordHash = "x",
+                    FirstName = "Customer",
+                    LastName = "Link",
+                    IsActive = false,
+                    RoleId = 2,
+                    CreatedAt = DateTime.UtcNow,
                     CreatedBy = _staffId
                 });
         }
 
         var customer = new Customer
         {
-            Id = Guid.NewGuid(), FirstName = first, LastName = "Cruz", IsActive = true, AllowOrderingLink = true,
-            CreatedAt = DateTime.UtcNow, CreatedBy = _staffId
+            Id = Guid.NewGuid(),
+            FirstName = first,
+            LastName = "Cruz",
+            IsActive = true,
+            AllowOrderingLink = true,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = _staffId
         };
         var link = new ShortLink
         {
-            Id = Guid.NewGuid(), Token = OrderLinkToken.Generate(), TargetType = OrderLinkToken.TargetType,
-            TargetId = customer.Id, RevokedAt = revoked ? DateTime.UtcNow : null,
-            CreatedAt = DateTime.UtcNow.AddHours(-1), CreatedBy = _staffId
+            Id = Guid.NewGuid(),
+            Token = OrderLinkToken.Generate(),
+            TargetType = OrderLinkToken.TargetType,
+            TargetId = customer.Id,
+            RevokedAt = revoked ? DateTime.UtcNow : null,
+            CreatedAt = DateTime.UtcNow.AddHours(-1),
+            CreatedBy = _staffId
         };
         var order = new Order
         {
-            Id = Guid.NewGuid(), OrderNumber = number, CustomerId = customer.Id,
-            Source = (byte)OrderSourceEnum.CustomerLink, StatusId = (int)status, CreatedAt = DateTime.UtcNow,
+            Id = Guid.NewGuid(),
+            OrderNumber = number,
+            CustomerId = customer.Id,
+            Source = (byte)OrderSourceEnum.CustomerLink,
+            StatusId = (int)status,
+            CreatedAt = DateTime.UtcNow,
             CreatedBy = _staffId
         };
         await TestDb.SaveAsync(_db, customer, link, order);

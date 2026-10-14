@@ -1,15 +1,14 @@
-using System.Security.Claims;
-using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http.Connections;
-using Microsoft.AspNetCore.Http.Connections.Client;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NSubstitute;
+using System.Security.Claims;
+using System.Text.Encodings.Web;
 using WTF.Api.Common.Auth;
 using WTF.Api.Features.Conversations;
 using WTF.Api.Features.OrderLinks;
@@ -94,15 +93,24 @@ public sealed class ChatRealTimeTests : IAsyncLifetime
     {
         var customer = new Customer
         {
-            Id = Guid.NewGuid(), FirstName = first, LastName = "Cruz", IsActive = true, AllowOrderingLink = true,
-            CreatedAt = DateTime.UtcNow, CreatedBy = _staffId
+            Id = Guid.NewGuid(),
+            FirstName = first,
+            LastName = "Cruz",
+            IsActive = true,
+            AllowOrderingLink = true,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = _staffId
         };
         var link = NewLink(customer.Id);
         var order = new Order
         {
-            Id = Guid.NewGuid(), OrderNumber = Random.Shared.Next(1, 100000), CustomerId = customer.Id,
-            Source = (byte)OrderSourceEnum.CustomerLink, StatusId = (int)OrderStatusEnum.Pending,
-            CreatedAt = DateTime.UtcNow, CreatedBy = _staffId
+            Id = Guid.NewGuid(),
+            OrderNumber = Random.Shared.Next(1, 100000),
+            CustomerId = customer.Id,
+            Source = (byte)OrderSourceEnum.CustomerLink,
+            StatusId = (int)OrderStatusEnum.Pending,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = _staffId
         };
         await TestDb.SaveAsync(_db, customer, link, order);
         return (customer, link, order);
@@ -110,8 +118,12 @@ public sealed class ChatRealTimeTests : IAsyncLifetime
 
     private ShortLink NewLink(Guid customerId) => new()
     {
-        Id = Guid.NewGuid(), Token = OrderLinkToken.Generate(), TargetType = OrderLinkToken.TargetType,
-        TargetId = customerId, CreatedAt = DateTime.UtcNow.AddHours(-1), CreatedBy = _staffId
+        Id = Guid.NewGuid(),
+        Token = OrderLinkToken.Generate(),
+        TargetType = OrderLinkToken.TargetType,
+        TargetId = customerId,
+        CreatedAt = DateTime.UtcNow.AddHours(-1),
+        CreatedBy = _staffId
     };
 
     private async Task SeedUsersAsync()
@@ -119,13 +131,26 @@ public sealed class ChatRealTimeTests : IAsyncLifetime
         await TestDb.SaveAsync(_db,
             new User
             {
-                Id = _staffId, Username = "ana", PasswordHash = "x", FirstName = "Ana", LastName = "Reyes",
-                IsActive = true, RoleId = 2, CreatedAt = DateTime.UtcNow, CreatedBy = _staffId
+                Id = _staffId,
+                Username = "ana",
+                PasswordHash = "x",
+                FirstName = "Ana",
+                LastName = "Reyes",
+                IsActive = true,
+                RoleId = 2,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = _staffId
             },
             new User
             {
-                Id = Guid.NewGuid(), Username = SubmitPublicOrderHandler.SystemUsername, PasswordHash = "x",
-                FirstName = "Customer", LastName = "Link", IsActive = false, RoleId = 2, CreatedAt = DateTime.UtcNow,
+                Id = Guid.NewGuid(),
+                Username = SubmitPublicOrderHandler.SystemUsername,
+                PasswordHash = "x",
+                FirstName = "Customer",
+                LastName = "Link",
+                IsActive = false,
+                RoleId = 2,
+                CreatedAt = DateTime.UtcNow,
                 CreatedBy = _staffId
             });
     }

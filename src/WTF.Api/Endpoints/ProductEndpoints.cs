@@ -1,8 +1,8 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using WTF.Api.Services;
 using WTF.Api.Common.Auth;
 using WTF.Api.Features.Products;
+using WTF.Api.Services;
 
 namespace WTF.Api.Endpoints;
 

@@ -1,5 +1,4 @@
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Domain.Data;
 

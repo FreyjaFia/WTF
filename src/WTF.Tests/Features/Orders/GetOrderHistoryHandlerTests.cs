@@ -59,7 +59,11 @@ public class GetOrderHistoryHandlerTests
         {
             db.OrderBundlePromotions.Add(new WTF.Domain.Entities.OrderBundlePromotion
             {
-                Id = Guid.NewGuid(), OrderId = orderId, PromotionId = promo, Quantity = 1, UnitPrice = 150m,
+                Id = Guid.NewGuid(),
+                OrderId = orderId,
+                PromotionId = promo,
+                Quantity = 1,
+                UnitPrice = 150m,
             });
             await db.SaveChangesAsync();
         }

@@ -122,8 +122,15 @@ public class OrderStatusChatLineTests
         {
             seed.Users.Add(new WTF.Domain.Entities.User
             {
-                Id = _userId, Username = "ana", PasswordHash = "x", FirstName = "Ana", LastName = "Reyes",
-                IsActive = true, RoleId = 2, CreatedAt = DateTime.UtcNow, CreatedBy = _userId
+                Id = _userId,
+                Username = "ana",
+                PasswordHash = "x",
+                FirstName = "Ana",
+                LastName = "Reyes",
+                IsActive = true,
+                RoleId = 2,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = _userId
             });
             await seed.SaveChangesAsync();
         }

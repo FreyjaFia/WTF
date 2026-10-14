@@ -20,40 +20,74 @@ public class ChatSystemLineTests
     {
         var customer = new Customer
         {
-            Id = Guid.NewGuid(), FirstName = "Maria", LastName = "Cruz", IsActive = true, AllowOrderingLink = true,
-            CreatedAt = DateTime.UtcNow, CreatedBy = _staffId
+            Id = Guid.NewGuid(),
+            FirstName = "Maria",
+            LastName = "Cruz",
+            IsActive = true,
+            AllowOrderingLink = true,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = _staffId
         };
         var link = new ShortLink
         {
-            Id = Guid.NewGuid(), Token = OrderLinkToken.Generate(), TargetType = OrderLinkToken.TargetType,
-            TargetId = customer.Id, CreatedAt = DateTime.UtcNow.AddHours(-1), CreatedBy = _staffId
+            Id = Guid.NewGuid(),
+            Token = OrderLinkToken.Generate(),
+            TargetType = OrderLinkToken.TargetType,
+            TargetId = customer.Id,
+            CreatedAt = DateTime.UtcNow.AddHours(-1),
+            CreatedBy = _staffId
         };
         var order = new Order
         {
-            Id = Guid.NewGuid(), OrderNumber = 1042, CustomerId = customer.Id, Source = (byte)OrderSourceEnum.CustomerLink,
-            StatusId = (int)OrderStatusEnum.Pending, CreatedAt = DateTime.UtcNow, CreatedBy = _staffId
+            Id = Guid.NewGuid(),
+            OrderNumber = 1042,
+            CustomerId = customer.Id,
+            Source = (byte)OrderSourceEnum.CustomerLink,
+            StatusId = (int)OrderStatusEnum.Pending,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = _staffId
         };
         var conversation = new Conversation
         {
-            Id = Guid.NewGuid(), CustomerId = customer.Id, Kind = (byte)ConversationKind.Order, OrderId = order.Id,
-            Title = "Order #1042", CreatedAt = DateTime.UtcNow, LastMessageAt = DateTime.UtcNow
+            Id = Guid.NewGuid(),
+            CustomerId = customer.Id,
+            Kind = (byte)ConversationKind.Order,
+            OrderId = order.Id,
+            Title = "Order #1042",
+            CreatedAt = DateTime.UtcNow,
+            LastMessageAt = DateTime.UtcNow
         };
         await TestDb.SaveAsync(_db,
             new User
             {
-                Id = _staffId, Username = "ana", PasswordHash = "x", FirstName = "Ana", LastName = "Reyes", IsActive = true,
-                RoleId = 2, CreatedAt = DateTime.UtcNow, CreatedBy = _staffId
+                Id = _staffId,
+                Username = "ana",
+                PasswordHash = "x",
+                FirstName = "Ana",
+                LastName = "Reyes",
+                IsActive = true,
+                RoleId = 2,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = _staffId
             },
             customer, link, order, conversation,
             new ConversationMessage
             {
-                Id = Guid.NewGuid(), ConversationId = conversation.Id, SenderType = (byte)MessageSender.System,
-                SenderUserId = _staffId, Body = "Order accepted", CreatedAt = DateTime.UtcNow.AddMinutes(-2)
+                Id = Guid.NewGuid(),
+                ConversationId = conversation.Id,
+                SenderType = (byte)MessageSender.System,
+                SenderUserId = _staffId,
+                Body = "Order accepted",
+                CreatedAt = DateTime.UtcNow.AddMinutes(-2)
             },
             new ConversationMessage
             {
-                Id = Guid.NewGuid(), ConversationId = conversation.Id, SenderType = (byte)MessageSender.Staff,
-                SenderUserId = _staffId, Body = "Ready at 5", CreatedAt = DateTime.UtcNow.AddMinutes(-1)
+                Id = Guid.NewGuid(),
+                ConversationId = conversation.Id,
+                SenderType = (byte)MessageSender.Staff,
+                SenderUserId = _staffId,
+                Body = "Ready at 5",
+                CreatedAt = DateTime.UtcNow.AddMinutes(-1)
             });
         return (link, order);
     }

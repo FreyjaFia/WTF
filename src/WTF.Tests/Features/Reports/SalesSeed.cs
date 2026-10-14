@@ -44,8 +44,13 @@ internal static class SalesSeed
     {
         var product = new Product
         {
-            Id = Guid.NewGuid(), Name = name, Code = name, Price = price, CategoryId = categoryId,
-            SubCategoryId = subCategoryId, IsActive = true,
+            Id = Guid.NewGuid(),
+            Name = name,
+            Code = name,
+            Price = price,
+            CategoryId = categoryId,
+            SubCategoryId = subCategoryId,
+            IsActive = true,
         };
         db.Products.Add(product);
         return product;
@@ -64,8 +69,14 @@ internal static class SalesSeed
     {
         var order = new Order
         {
-            Id = Guid.NewGuid(), OrderNumber = Interlocked.Increment(ref _orderNumber), CreatedAt = createdAtUtc,
-            CreatedBy = by ?? StaffA, StatusId = status, PaymentMethodId = payment, Tips = tips, CustomerId = customerId,
+            Id = Guid.NewGuid(),
+            OrderNumber = Interlocked.Increment(ref _orderNumber),
+            CreatedAt = createdAtUtc,
+            CreatedBy = by ?? StaffA,
+            StatusId = status,
+            PaymentMethodId = payment,
+            Tips = tips,
+            CustomerId = customerId,
         };
         db.Orders.Add(order);
         return order;
@@ -76,7 +87,11 @@ internal static class SalesSeed
     {
         var item = new OrderItem
         {
-            Id = Guid.NewGuid(), OrderId = order.Id, ProductId = product.Id, Quantity = quantity, Price = price,
+            Id = Guid.NewGuid(),
+            OrderId = order.Id,
+            ProductId = product.Id,
+            Quantity = quantity,
+            Price = price,
             ParentOrderItemId = parent?.Id,
         };
         db.OrderItems.Add(item);
@@ -86,7 +101,11 @@ internal static class SalesSeed
     public static void Bundle(WTFDbContext db, Order order, Promotion promotion, int quantity, decimal unitPrice) =>
         db.OrderBundlePromotions.Add(new OrderBundlePromotion
         {
-            Id = Guid.NewGuid(), OrderId = order.Id, PromotionId = promotion.Id, Quantity = quantity, UnitPrice = unitPrice,
+            Id = Guid.NewGuid(),
+            OrderId = order.Id,
+            PromotionId = promotion.Id,
+            Quantity = quantity,
+            UnitPrice = unitPrice,
         });
 
     /// <summary>A completed order worth exactly <paramref name="amount"/> (one item priced at that amount).</summary>
