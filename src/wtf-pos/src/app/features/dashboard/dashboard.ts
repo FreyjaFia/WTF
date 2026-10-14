@@ -22,6 +22,7 @@ import {
 import { AppRoutes } from '@shared/constants/app-routes';
 import { type DashboardDto, type DateRangePreset, type DateRangeSelection } from '@shared/models';
 import { interval, Subscription } from 'rxjs';
+import { percentChange, percentOfTotal, sumAmounts } from '@shared/calculations';
 
 const TIME_AGO_INTERVAL_MS = 30_000;
 
@@ -264,7 +265,7 @@ export class Dashboard implements OnInit, OnDestroy {
       return 0;
     }
 
-    return products.reduce((sum, p) => sum + p.revenue, 0);
+    return sumAmounts(products.map((p) => p.revenue));
   });
 
   protected readonly topProductTotalQuantity = computed(() => {
@@ -462,25 +463,18 @@ export class Dashboard implements OnInit, OnDestroy {
   }
 
   private calcChangePercent(today: number, yesterday: number): number {
-    if (yesterday === 0) {
-      return today > 0 ? 100 : 0;
-    }
-
-    return Math.round(((today - yesterday) / yesterday) * 100);
+    return percentChange(today, yesterday);
   }
 
   protected productRevenuePercent(revenue: number): number {
-    const total = this.topProductTotalRevenue();
-    return total > 0 ? Math.round((revenue / total) * 100) : 0;
+    return Math.round(percentOfTotal(revenue, this.topProductTotalRevenue()));
   }
 
   protected productQuantityPercent(quantity: number): number {
-    const total = this.topProductTotalQuantity();
-    return total > 0 ? Math.round((quantity / total) * 100) : 0;
+    return Math.round(percentOfTotal(quantity, this.topProductTotalQuantity()));
   }
 
   protected statusPercent(count: number): number {
-    const total = this.statusTotal();
-    return total > 0 ? (count / total) * 100 : 0;
+    return percentOfTotal(count, this.statusTotal());
   }
 }

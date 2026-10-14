@@ -1,4 +1,5 @@
 import { Component, computed, input } from '@angular/core';
+import { percentOfTotal, sumAmounts } from '@shared/calculations';
 
 export interface DonutSegment {
   label: string;
@@ -22,7 +23,7 @@ export class DonutChartComponent {
       return [];
     }
 
-    const total = data.reduce((sum, s) => sum + s.value, 0);
+    const total = sumAmounts(data.map((s) => s.value));
 
     if (total === 0) {
       return [];
@@ -32,7 +33,7 @@ export class DonutChartComponent {
     let offset = C * 0.25; // Start from top (12 o'clock)
 
     return data.map((s) => {
-      const pct = (s.value / total) * 100;
+      const pct = percentOfTotal(s.value, total);
       const arcLen = (s.value / total) * C;
       const gap = data.length > 1 ? 4 : 0;
       const arc = {
@@ -55,7 +56,7 @@ export class DonutChartComponent {
       return '\u20B10';
     }
 
-    const total = data.reduce((sum, s) => sum + s.value, 0);
+    const total = sumAmounts(data.map((s) => s.value));
     return total >= 1000 ? `\u20B1${(total / 1000).toFixed(1)}k` : `\u20B1${total.toFixed(0)}`;
   });
 }

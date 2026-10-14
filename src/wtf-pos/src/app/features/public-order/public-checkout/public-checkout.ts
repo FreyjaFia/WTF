@@ -3,6 +3,7 @@ import { Component, computed, input, OnDestroy, OnInit, output, signal } from '@
 import { HoldButtonComponent } from '@shared/components/hold-button/hold-button';
 import { IconComponent } from '@shared/components/icons/icon/icon';
 import { FulfillmentTypeEnum, PaymentMethodEnum } from '@shared/models';
+import { addMoney, subtractMoney } from '@shared/calculations';
 
 export const MAX_ADDRESS_LENGTH = 300;
 export const MAX_CONTACT_LENGTH = 30;
@@ -88,7 +89,7 @@ export class PublicCheckoutComponent implements OnInit, OnDestroy {
   });
 
   /** The total plus the tip: what the customer has to hand over. */
-  protected readonly toPay = computed(() => this.round(this.total() + this.tipToAdd()));
+  protected readonly toPay = computed(() => addMoney(this.total(), this.tipToAdd()));
 
   /** Where the cash amount stands against what is to be paid. */
   protected readonly cashStatus = computed<CashStatus>(() => {
@@ -107,7 +108,7 @@ export class PublicCheckoutComponent implements OnInit, OnDestroy {
       return this.toPay();
     }
 
-    return Math.abs(this.round(value - this.toPay()));
+    return Math.abs(subtractMoney(value, this.toPay()));
   });
 
   protected readonly change = computed<number | null>(() =>
@@ -268,7 +269,4 @@ export class PublicCheckoutComponent implements OnInit, OnDestroy {
     return Number.isFinite(value) ? value : Number.NaN;
   }
 
-  private round(value: number): number {
-    return Math.round(value * 100) / 100;
-  }
 }

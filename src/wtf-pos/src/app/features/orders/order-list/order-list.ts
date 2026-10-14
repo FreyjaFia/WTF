@@ -44,6 +44,7 @@ import {
   PaymentMethodEnum,
 } from '@shared/models';
 import { debounceTime, Subscription } from 'rxjs';
+import { cartTotal } from '@shared/calculations';
 
 type SortColumn = 'orderNumber' | 'date' | 'totalAmount';
 type SortDirection = 'asc' | 'desc';
@@ -653,10 +654,7 @@ export class OrderList implements OnInit, OnDestroy {
   }
 
   protected getPendingTotal(cartSnapshot: CartItemDto[]): number {
-    return cartSnapshot.reduce((sum, item) => {
-      const addOnTotal = (item.addOns ?? []).reduce((s, ao) => s + ao.price, 0);
-      return sum + item.qty * (item.price + addOnTotal);
-    }, 0);
+    return cartTotal(cartSnapshot);
   }
 
   protected getOrderStatusVariant(

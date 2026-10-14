@@ -14,13 +14,13 @@ import { ServiceErrorMessages, SuccessMessages } from '@core/messages';
 import { AlertService, ImageDownloadService } from '@core/services';
 import {
   ADD_ON_TYPE_ORDER,
-  CartAddOnDto,
   CartBundleItemDto,
   CartItemDto,
   OrderStatusEnum,
   PaymentMethodEnum,
   PromotionTypeEnum,
 } from '@shared/models';
+import { lineTotal, lineUnitSubtotal } from '@shared/calculations';
 
 export interface ReceiptData {
   orderNumber?: number | null;
@@ -259,19 +259,11 @@ export class OrderReceiptComponent implements OnInit {
   });
 
   protected getItemTotal(item: CartItemDto): number {
-    const addOnTotal = (item.addOns ?? []).reduce(
-      (sum: number, ao: CartAddOnDto) => sum + ao.price,
-      0,
-    );
-    return item.qty * (item.price + addOnTotal);
+    return lineTotal(item);
   }
 
   protected getUnitSubtotal(item: CartItemDto): number {
-    const addOnTotal = (item.addOns ?? []).reduce(
-      (sum: number, ao: CartAddOnDto) => sum + ao.price,
-      0,
-    );
-    return item.price + addOnTotal;
+    return lineUnitSubtotal(item);
   }
 
   protected isBundleLine(item: CartItemDto): boolean {

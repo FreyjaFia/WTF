@@ -4,8 +4,6 @@ import { HttpErrorMessages, ServiceErrorMessages } from '@core/messages';
 import { ConnectivityService } from '@core/services';
 import { environment } from '@environments/environment.development';
 import {
-  EvaluatePromotionsRequestDto,
-  EvaluatePromotionsResponseDto,
   DiscountedProductPromotionDto,
   FixedBundlePromotionDto,
   MixMatchPromotionDto,
@@ -161,14 +159,6 @@ export class PromotionService {
       .delete<PromotionImageDto>(
         `${environment.apiUrl}/management/promotions/${promotionId}/images`,
       )
-      .pipe(catchError((error) => this.handleError(error)));
-  }
-
-  public evaluateCart(
-    request: EvaluatePromotionsRequestDto,
-  ): Observable<EvaluatePromotionsResponseDto> {
-    return this.http
-      .post<EvaluatePromotionsResponseDto>(`${this.posBaseUrl}/evaluate`, request)
       .pipe(catchError((error) => this.handleError(error)));
   }
 

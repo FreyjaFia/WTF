@@ -10,6 +10,7 @@ import {
   publicStatusVariant,
   publicTimeline,
 } from '../public-order-status';
+import { addMoney, extendedPrice, priceWithAddOns, subtractMoney } from '@shared/calculations';
 
 /**
  * One of the customer's orders on the public page, laid out like the order details the shop staff see. It is its own
@@ -42,15 +43,18 @@ export class PublicOrderDetailsComponent {
   );
 
   /** What the customer owes: the order plus the tip they chose. */
-  protected readonly amountDue = computed(() => this.order().total + (this.order().tips ?? 0));
+  protected readonly amountDue = computed(() => addMoney(this.order().total, this.order().tips ?? 0));
 
   protected readonly change = computed(() => {
     const { amountReceived } = this.order();
-    return amountReceived ? Math.max(0, amountReceived - this.amountDue()) : null;
+    return amountReceived ? Math.max(0, subtractMoney(amountReceived, this.amountDue())) : null;
   });
 
   protected lineTotal(item: PublicOrderDto['items'][number]): number {
-    const addOns = item.addOns.reduce((sum, a) => sum + a.unitPrice * a.quantity, 0);
-    return (item.unitPrice + addOns) * item.quantity;
+    const unit = priceWithAddOns(
+      item.unitPrice,
+      item.addOns.map((addOn) => ({ price: addOn.unitPrice, quantity: addOn.quantity })),
+    );
+    return extendedPrice(unit, item.quantity);
   }
 }

@@ -106,34 +106,6 @@ export interface DiscountedProductPromotionDto {
   items: DiscountedProductItemDto[];
 }
 
-export interface PromotionCartAddOnLineDto {
-  addOnProductId: string;
-  quantity: number;
-}
-
-export interface PromotionCartLineDto {
-  lineId: string;
-  productId: string;
-  quantity: number;
-  unitPrice: number;
-  addOns: PromotionCartAddOnLineDto[];
-  isPromoLine: boolean;
-  isFreeItem: boolean;
-  bundleParentId?: string | null;
-  triggerLineId?: string | null;
-  promotionId?: string | null;
-  isLocked: boolean;
-}
-
-export interface EvaluatePromotionsRequestDto {
-  lines: PromotionCartLineDto[];
-  evaluatedAtUtc?: string | null;
-}
-
-export interface EvaluatePromotionsResponseDto {
-  lines: PromotionCartLineDto[];
-}
-
 export interface PromotionImageDto {
   promotionId: string;
   imageUrl?: string | null;

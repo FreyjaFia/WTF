@@ -9,6 +9,7 @@ import {
   PublicCartAddOn,
   PublicProductDto,
 } from '@shared/models';
+import { addOnsTotal, extendedPrice, priceWithAddOns } from '@shared/calculations';
 
 export interface PublicAddonPickerResult {
   addOns: PublicCartAddOn[];
@@ -99,13 +100,13 @@ export class PublicAddonPickerComponent implements OnInit {
   });
 
   /** What the chosen add-ons add to the price of one item. */
-  protected readonly addOnTotal = computed(() =>
-    this.selectedAddOns().reduce((sum, a) => sum + a.price * a.quantity, 0),
+  protected readonly addOnTotal = computed(() => addOnsTotal(this.selectedAddOns()));
+
+  protected readonly unitPrice = computed(() =>
+    priceWithAddOns(this.product().price, this.selectedAddOns()),
   );
 
-  protected readonly unitPrice = computed(() => this.product().price + this.addOnTotal());
-
-  protected readonly total = computed(() => this.unitPrice() * this.quantity());
+  protected readonly total = computed(() => extendedPrice(this.unitPrice(), this.quantity()));
 
   /** Size and flavor need exactly one choice, sauce at most one (same as the shop's own ordering screen). */
   protected readonly validationError = computed<string | null>(() => {

@@ -135,7 +135,6 @@ interface Editor {
     specialInstructions?: string | null;
     editIndex?: number | null;
   }) => void;
-  getUnitAddOnTotal: (i: CartItemDto) => number;
   getDiscountedUnitPrice: (i: CartItemDto) => number | null;
   getUnitSubtotal: (i: CartItemDto) => number;
   getLineTotal: (i: CartItemDto) => number;
@@ -898,7 +897,6 @@ describe('OrderEditor', () => {
     it('plain line totals include add-ons', async () => {
       await start();
       const l = line({ qty: 2, addOns: [shotAddOn(), shotAddOn()] });
-      expect(t.getUnitAddOnTotal(l)).toBe(40);
       expect(t.getUnitSubtotal(l)).toBe(140);
       expect(t.getLineTotal(l)).toBe(280);
       expect(t.getDiscountedUnitPrice(l)).toBeNull();

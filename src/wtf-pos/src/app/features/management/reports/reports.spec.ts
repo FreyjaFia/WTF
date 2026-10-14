@@ -188,6 +188,7 @@ describe('ReportsComponent', () => {
           { id: 'u2', firstName: 'Zed', lastName: 'Z', username: 'zz' },
           { id: 'u1', firstName: 'Amy', lastName: 'A', username: 'aa' },
           { id: 'u3', firstName: '', lastName: '', username: 'noname' },
+          { id: 'u4', firstName: 'Customer', lastName: 'Link', username: 'customer-link' },
         ]),
       ),
     };

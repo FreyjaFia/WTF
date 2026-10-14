@@ -45,6 +45,7 @@ import {
   PublicAddonPickerComponent,
   PublicAddonPickerResult,
 } from './public-addon-picker/public-addon-picker';
+import { extendedPrice, priceWithAddOns, sumAmounts } from '@shared/calculations';
 
 type LoadState = 'loading' | 'ready' | 'invalid' | 'error';
 type Tab = 'menu' | 'orders';
@@ -238,7 +239,7 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
     this.cart().reduce((sum, line) => sum + line.quantity, 0),
   );
   protected readonly cartTotal = computed(() =>
-    this.cart().reduce((sum, line) => sum + this.lineTotal(line), 0),
+    sumAmounts(this.cart().map((line) => this.lineTotal(line))),
   );
 
   public constructor() {
@@ -757,11 +758,11 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
   }
 
   protected unitPrice(line: PublicCartLine): number {
-    return line.price + line.addOns.reduce((sum, a) => sum + a.price * a.quantity, 0);
+    return priceWithAddOns(line.price, line.addOns);
   }
 
   protected lineTotal(line: PublicCartLine): number {
-    return this.unitPrice(line) * line.quantity;
+    return extendedPrice(this.unitPrice(line), line.quantity);
   }
 
   protected changeQuantity(key: string, delta: number): void {

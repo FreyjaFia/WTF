@@ -34,6 +34,7 @@ import {
   StaffPerformanceReportRowDto,
   UserDto,
 } from '@shared/models';
+import { average, sumAmounts } from '@shared/calculations';
 
 const ReportTypes = {
   DailySales: 'daily-sales',
@@ -62,6 +63,9 @@ const ReportPageTabs = {
   Reports: 'reports',
   MonthlyWorkbook: 'monthly-workbook',
 } as const;
+
+/** Customer link orders are saved under this system user; it is not a staff member. */
+const CUSTOMER_LINK_USERNAME = 'customer-link';
 
 const PromotionsReportCategoryFilterId = -1;
 const FixedBundleReportTypeFilterId = -101;
@@ -973,10 +977,10 @@ export class ReportsComponent implements OnInit {
 
   protected getDailyTotals(): DailySalesReportRowDto {
     const rows = this.filteredDailyReports();
-    const totalRevenue = rows.reduce((sum, row) => sum + row.totalRevenue, 0);
+    const totalRevenue = sumAmounts(rows.map((row) => row.totalRevenue));
     const orderCount = rows.reduce((sum, row) => sum + row.orderCount, 0);
-    const averageOrderValue = orderCount > 0 ? totalRevenue / orderCount : 0;
-    const tipsTotal = rows.reduce((sum, row) => sum + row.tipsTotal, 0);
+    const averageOrderValue = average(totalRevenue, orderCount);
+    const tipsTotal = sumAmounts(rows.map((row) => row.tipsTotal));
     const voidCancelledCount = rows.reduce((sum, row) => sum + row.voidCancelledCount, 0);
 
     return {
@@ -993,7 +997,7 @@ export class ReportsComponent implements OnInit {
     const rows = this.filteredProductReports();
     return {
       quantitySold: rows.reduce((sum, row) => sum + row.quantitySold, 0),
-      revenue: rows.reduce((sum, row) => sum + row.revenue, 0),
+      revenue: sumAmounts(rows.map((row) => row.revenue)),
     };
   }
 
@@ -1001,7 +1005,7 @@ export class ReportsComponent implements OnInit {
     const rows = this.filteredPaymentsReports();
     return {
       orderCount: rows.reduce((sum, row) => sum + row.orderCount, 0),
-      totalAmount: rows.reduce((sum, row) => sum + row.totalAmount, 0),
+      totalAmount: sumAmounts(rows.map((row) => row.totalAmount)),
     };
   }
 
@@ -1009,7 +1013,7 @@ export class ReportsComponent implements OnInit {
     const rows = this.filteredHourlyReports();
     return {
       orderCount: rows.reduce((sum, row) => sum + row.orderCount, 0),
-      revenue: rows.reduce((sum, row) => sum + row.revenue, 0),
+      revenue: sumAmounts(rows.map((row) => row.revenue)),
     };
   }
 
@@ -1021,12 +1025,12 @@ export class ReportsComponent implements OnInit {
   } {
     const rows = this.filteredStaffReports();
     const orderCount = rows.reduce((sum, row) => sum + row.orderCount, 0);
-    const revenue = rows.reduce((sum, row) => sum + row.totalRevenue, 0);
+    const revenue = sumAmounts(rows.map((row) => row.totalRevenue));
     return {
       orderCount,
       revenue,
-      averageOrderValue: orderCount > 0 ? revenue / orderCount : 0,
-      tipsReceived: rows.reduce((sum, row) => sum + row.tipsReceived, 0),
+      averageOrderValue: average(revenue, orderCount),
+      tipsReceived: sumAmounts(rows.map((row) => row.tipsReceived)),
     };
   }
 
@@ -1482,6 +1486,7 @@ export class ReportsComponent implements OnInit {
       next: (users) => {
         this.staffOptions.set(
           users
+            .filter((user) => user.username !== CUSTOMER_LINK_USERNAME)
             .map((user) => ({
               id: user.id,
               name: this.toStaffDisplayName(user),

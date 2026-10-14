@@ -2,6 +2,13 @@ import { CommonModule } from '@angular/common';
 import { Component, computed, inject, output, signal } from '@angular/core';
 import { CatalogCacheService, ModalStackService } from '@core/services';
 import { AvatarComponent } from '@shared/components/avatar/avatar';
+import {
+  addOnsTotal,
+  extendedPrice,
+  findBestDiscount,
+  formatPromoLabel,
+  priceWithAddOns,
+} from '@shared/calculations';
 import { IconComponent } from '@shared/components/icons/icon/icon';
 import {
   ADD_ON_TYPE_ORDER,
@@ -156,66 +163,22 @@ export class AddonSelectorComponent {
     return result;
   });
 
-  protected readonly addOnTotal = computed(() => {
-    return this.selectedAddOns().reduce((sum, a) => sum + a.price, 0);
-  });
+  protected readonly addOnTotal = computed(() => addOnsTotal(this.selectedAddOns()));
 
   protected readonly unitPrice = computed(() => {
     const basePrice = this.product()?.price ?? 0;
     const discountedBase = this.getDiscountedBasePrice(basePrice);
-    return (discountedBase ?? basePrice) + this.addOnTotal();
+    return priceWithAddOns(discountedBase ?? basePrice, this.selectedAddOns());
   });
 
-  protected readonly totalPrice = computed(() => this.unitPrice() * this.productQuantity());
+  protected readonly totalPrice = computed(() => extendedPrice(this.unitPrice(), this.productQuantity()));
   protected readonly activePromoLabel = computed(() => {
-    const rules = this.promoRules();
-    if (rules.length === 0) {
-      return null;
-    }
-
-    const basePrice = this.product()?.price ?? 0;
-    const addOnCounts = new Map<string, number>();
-    for (const addOn of this.selectedAddOns()) {
-      addOnCounts.set(addOn.addOnId, (addOnCounts.get(addOn.addOnId) ?? 0) + 1);
-    }
-
-    let best: { fixedPrice?: number | null; percentOff?: number | null; price: number } | null = null;
-    for (const rule of rules) {
-      if (!this.satisfiesRequiredAddOns(addOnCounts, rule.addOns)) {
-        continue;
-      }
-
-      const discounted = this.calculateDiscountedPrice(
-        basePrice,
-        rule.fixedPrice ?? null,
-        rule.percentOff ?? null,
-      );
-      if (discounted == null) {
-        continue;
-      }
-
-      if (!best || discounted < best.price) {
-        best = { fixedPrice: rule.fixedPrice, percentOff: rule.percentOff, price: discounted };
-      }
-    }
-
-    if (!best) {
-      return null;
-    }
-
-    if (best.fixedPrice != null && best.fixedPrice > 0) {
-      return `Promo -\u20B1${this.formatCurrency(best.fixedPrice)}`;
-    }
-
-    if (best.percentOff != null && best.percentOff > 0) {
-      const percent = best.percentOff.toLocaleString('en-PH', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 2,
-      });
-      return `Promo -${percent}%`;
-    }
-
-    return null;
+    const best = findBestDiscount(
+      this.product()?.price ?? 0,
+      this.selectedAddOns().map((addOn) => addOn.addOnId),
+      this.promoRules(),
+    );
+    return best ? formatPromoLabel(best.rule) : null;
   });
 
   public open(
@@ -606,84 +569,13 @@ export class AddonSelectorComponent {
   }
 
   private getDiscountedBasePrice(basePrice: number): number | null {
-    const rules = this.promoRules();
-    if (rules.length === 0) {
-      return null;
-    }
-
-    const addOnCounts = new Map<string, number>();
-    for (const addOn of this.selectedAddOns()) {
-      addOnCounts.set(addOn.addOnId, (addOnCounts.get(addOn.addOnId) ?? 0) + 1);
-    }
-
-    let best: number | null = null;
-    for (const rule of rules) {
-      if (!this.satisfiesRequiredAddOns(addOnCounts, rule.addOns)) {
-        continue;
-      }
-
-      const discounted = this.calculateDiscountedPrice(
+    return (
+      findBestDiscount(
         basePrice,
-        rule.fixedPrice ?? null,
-        rule.percentOff ?? null,
-      );
-      if (discounted == null) {
-        continue;
-      }
-
-      if (best == null || discounted < best) {
-        best = discounted;
-      }
-    }
-
-    return best;
-  }
-
-  private satisfiesRequiredAddOns(
-    addOnCounts: Map<string, number>,
-    requiredAddOns: { addOnProductId: string; quantity: number }[],
-  ): boolean {
-    if (requiredAddOns.length === 0) {
-      return false;
-    }
-
-    const requiredSet = new Set(requiredAddOns.map((r) => r.addOnProductId));
-    for (const required of requiredAddOns) {
-      const qty = addOnCounts.get(required.addOnProductId) ?? 0;
-      const expected = required.quantity;
-      if (qty !== expected) {
-        return false;
-      }
-    }
-
-    for (const [id, qty] of addOnCounts.entries()) {
-      if (!requiredSet.has(id) && qty > 0) {
-        return false;
-      }
-    }
-
-    return true;
-  }
-
-  private calculateDiscountedPrice(
-    basePrice: number,
-    fixedPrice?: number | null,
-    percentOff?: number | null,
-  ): number | null {
-    if (fixedPrice != null && fixedPrice > 0) {
-      return Math.max(0, basePrice - fixedPrice);
-    }
-
-    if (percentOff != null && percentOff > 0) {
-      const discounted = basePrice * (1 - percentOff / 100);
-      return Math.round(discounted * 100) / 100;
-    }
-
-    return null;
-  }
-
-  private formatCurrency(value: number): string {
-    return value.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        this.selectedAddOns().map((addOn) => addOn.addOnId),
+        this.promoRules(),
+      )?.price ?? null
+    );
   }
   protected confirm(): void {
     if (this.validationError()) {

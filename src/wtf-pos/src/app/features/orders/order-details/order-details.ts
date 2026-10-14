@@ -37,6 +37,17 @@ import {
   PaymentMethodEnum,
   PromotionTypeEnum,
 } from '@shared/models';
+import {
+  findBestDiscount,
+  formatPromoLabel,
+  lineTotal,
+  lineUnitSubtotal,
+  promoDiscount,
+  savedLineTotal,
+  addMoney,
+  sumAmounts,
+  subtractMoney,
+} from '@shared/calculations';
 import { AppRoutes } from '@shared/constants/app-routes';
 
 @Component({
@@ -139,12 +150,11 @@ export class OrderDetails implements OnInit {
       return current.amountReceived;
     }
 
-    return this.paymentOrderTotal() + this.paymentTipsAmount();
+    return addMoney(this.paymentOrderTotal(), this.paymentTipsAmount());
   });
   protected readonly paymentTotalPaid = computed(
-    () => this.paymentAmountPaid() - this.paymentChangeAmount(),
+    () => subtractMoney(this.paymentAmountPaid(), this.paymentChangeAmount()),
   );
-  protected readonly addOnPriceReducer = (sum: number, ao: CartAddOnDto) => sum + ao.price;
   protected readonly discountedProductPromotions = signal<DiscountedProductPromotionDto[]>([]);
   protected readonly detailItems = computed<CartItemDto[]>(() => {
     const order = this.order();
@@ -156,7 +166,7 @@ export class OrderDetails implements OnInit {
   });
 
   protected readonly paymentTotalDiscount = computed(() =>
-    this.detailItems().reduce((sum, item) => sum + (item.promoDiscount ?? 0), 0),
+    sumAmounts(this.detailItems().map((item) => item.promoDiscount ?? 0)),
   );
 
   protected readonly receiptData = computed<ReceiptData | null>(() => {
@@ -416,29 +426,15 @@ export class OrderDetails implements OnInit {
   }
 
   protected getOrderItemTotal(item: OrderDto['items'][number]): number {
-    const addOnUnitTotal = item.addOns.reduce(
-      (sum, addOn) => sum + (addOn.price ?? 0) * addOn.quantity,
-      0,
-    );
-    return ((item.price ?? 0) + addOnUnitTotal) * item.quantity;
+    return savedLineTotal(item);
   }
 
   protected getItemTotal(item: CartItemDto): number {
-    if (item.bundleItems?.length) {
-      return item.qty * item.price;
-    }
-
-    const addOnTotal = (item.addOns ?? []).reduce((sum, ao) => sum + ao.price, 0);
-    return item.qty * (item.price + addOnTotal);
+    return lineTotal(item);
   }
 
   protected getUnitSubtotal(item: CartItemDto): number {
-    if (item.bundleItems?.length) {
-      return item.price;
-    }
-
-    const addOnTotal = (item.addOns ?? []).reduce((sum, ao) => sum + ao.price, 0);
-    return item.price + addOnTotal;
+    return lineUnitSubtotal(item);
   }
 
   protected getBundleChildTotalQuantity(
@@ -631,16 +627,16 @@ export class OrderDetails implements OnInit {
       };
       if (item.originalPrice != null) {
         // The promotion was captured with the line, so show exactly what was applied.
-        const promoDiscount = Math.max(0, item.originalPrice - cartItem.price) * cartItem.qty;
+        const discount = promoDiscount(item.originalPrice, cartItem.price, cartItem.qty);
         cartItem.promoLabel = item.promoLabel ?? null;
-        cartItem.promoDiscount = promoDiscount > 0 ? promoDiscount : null;
+        cartItem.promoDiscount = discount > 0 ? discount : null;
       } else {
         // Older or not-yet-priced orders: best guess from the promotions active today.
         const promo = this.getBestDiscountedPromo(cartItem);
         if (promo) {
-          const promoDiscount = Math.max(0, cartItem.price - promo.price) * cartItem.qty;
-          cartItem.promoLabel = this.formatPromoLabel(promo.entry);
-          cartItem.promoDiscount = promoDiscount > 0 ? promoDiscount : null;
+          const discount = promoDiscount(cartItem.price, promo.price, cartItem.qty);
+          cartItem.promoLabel = formatPromoLabel(promo.entry);
+          cartItem.promoDiscount = discount > 0 ? discount : null;
         }
       }
       regularItems.push(cartItem);
@@ -693,100 +689,19 @@ export class OrderDetails implements OnInit {
       return null;
     }
 
-    const promos = this.discountedProductPromotions()
-      .flatMap((promo) => promo.items.map((entry) => ({ entry })))
-      .filter((promo) => promo.entry.productId === item.productId);
-    if (promos.length === 0) {
+    const rules = this.discountedProductPromotions()
+      .flatMap((promo) => promo.items)
+      .filter((entry) => entry.productId === item.productId);
+    if (rules.length === 0) {
       return null;
     }
 
-    const addOnCounts = new Map<string, number>();
-    for (const addOn of item.addOns ?? []) {
-      addOnCounts.set(addOn.addOnId, (addOnCounts.get(addOn.addOnId) ?? 0) + 1);
-    }
-
-    let best: { entry: DiscountedProductItemDto; price: number } | null = null;
-    for (const promo of promos) {
-      if (!this.lineSatisfiesRequiredAddOns(addOnCounts, promo.entry.addOns)) {
-        continue;
-      }
-
-      const discounted = this.calculateDiscountedPrice(
-        item.price,
-        promo.entry.fixedPrice,
-        promo.entry.percentOff,
-      );
-      if (discounted == null) {
-        continue;
-      }
-
-      if (best == null || discounted < best.price) {
-        best = { entry: promo.entry, price: discounted };
-      }
-    }
-
-    return best;
-  }
-
-  private lineSatisfiesRequiredAddOns(
-    addOnCounts: Map<string, number>,
-    requiredAddOns: { addOnProductId: string; quantity: number }[],
-  ): boolean {
-    if (requiredAddOns.length === 0) {
-      return false;
-    }
-
-    const requiredSet = new Set(requiredAddOns.map((r) => r.addOnProductId));
-    for (const required of requiredAddOns) {
-      const qty = addOnCounts.get(required.addOnProductId) ?? 0;
-      if (qty !== required.quantity) {
-        return false;
-      }
-    }
-
-    for (const [id, qty] of addOnCounts.entries()) {
-      if (!requiredSet.has(id) && qty > 0) {
-        return false;
-      }
-    }
-
-    return true;
-  }
-
-  private calculateDiscountedPrice(
-    basePrice: number,
-    fixedPrice?: number | null,
-    percentOff?: number | null,
-  ): number | null {
-    if (fixedPrice != null && fixedPrice > 0) {
-      return Math.max(0, basePrice - fixedPrice);
-    }
-
-    if (percentOff != null && percentOff > 0) {
-      const discounted = basePrice * (1 - percentOff / 100);
-      return Math.round(discounted * 100) / 100;
-    }
-
-    return null;
-  }
-
-  private formatPromoLabel(entry: DiscountedProductItemDto): string | null {
-    if (entry.fixedPrice != null && entry.fixedPrice > 0) {
-      return `Promo -\u20B1${entry.fixedPrice.toLocaleString('en-PH', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      })}`;
-    }
-
-    if (entry.percentOff != null && entry.percentOff > 0) {
-      const percent = entry.percentOff.toLocaleString('en-PH', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 2,
-      });
-      return `Promo -${percent}%`;
-    }
-
-    return null;
+    const best = findBestDiscount(
+      item.price,
+      (item.addOns ?? []).map((addOn) => addOn.addOnId),
+      rules,
+    );
+    return best ? { entry: best.rule, price: best.price } : null;
   }
 
   private getAddOnTypeForOwner(

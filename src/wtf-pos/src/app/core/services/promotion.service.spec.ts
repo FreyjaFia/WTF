@@ -40,7 +40,7 @@ describe('PromotionService', () => {
     });
   });
 
-  it('handles images, restore, POS list and cart evaluation', () => {
+  it('handles images, restore and POS list', () => {
     const { service, http } = setupHttpService(PromotionService);
 
     service.getActiveDiscountedProductPromotions().subscribe();
@@ -56,12 +56,6 @@ describe('PromotionService', () => {
 
     service.restorePromotion('p2').subscribe();
     expect(http.expectOne(`${root}/p2/restore`).request.method).toBe('POST');
-
-    const request = { lines: [], evaluatedAtUtc: null } as never;
-    service.evaluateCart(request).subscribe();
-    const evaluate = http.expectOne(`${environment.apiUrl}/pos/promotions/evaluate`);
-    expect(evaluate.request.method).toBe('POST');
-    expect(evaluate.request.body).toBe(request);
   });
 
   describe('error mapping', () => {

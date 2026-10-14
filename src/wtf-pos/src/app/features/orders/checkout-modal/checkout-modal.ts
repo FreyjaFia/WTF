@@ -14,6 +14,7 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { ModalStackService } from '@core/services';
 import { IconComponent } from '@shared/components';
 import { PaymentMethodEnum } from '@shared/models';
+import { roundMoney, subtractMoney } from '@shared/calculations';
 
 export interface CheckoutPrefill {
   paymentMethod?: PaymentMethodEnum | null;
@@ -169,7 +170,7 @@ export class CheckoutModal {
       return;
     }
 
-    this.paymentForm.get('amountReceived')?.setValue(Math.round(this.totalPrice() * 100) / 100);
+    this.paymentForm.get('amountReceived')?.setValue(roundMoney(this.totalPrice()));
   }
 
   protected calculateChange(): void {
@@ -178,7 +179,7 @@ export class CheckoutModal {
 
     if (paymentMethod === PaymentMethodEnum.Cash) {
       if (amountReceived !== null && amountReceived !== undefined) {
-        const calculatedChange = amountReceived - this.totalPrice();
+        const calculatedChange = subtractMoney(amountReceived, this.totalPrice());
         this.change.set(calculatedChange);
       } else {
         // Initial neutral state before user enters a cash amount
