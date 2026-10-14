@@ -4,5 +4,8 @@ public sealed record PaymentsReportRowDto(
     string PaymentMethod,
     int OrderCount,
     decimal TotalAmount,
-    decimal TotalPercent
+    decimal TotalPercent,
+    decimal GrossSales = 0m,
+    decimal Discounts = 0m,
+    decimal RefundedAmount = 0m
 );

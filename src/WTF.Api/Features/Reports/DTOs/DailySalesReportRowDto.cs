@@ -6,5 +6,10 @@ public sealed record DailySalesReportRowDto(
     int OrderCount,
     decimal AverageOrderValue,
     decimal TipsTotal,
-    int VoidCancelledCount
+    int VoidCancelledCount,
+    int RefundedCount = 0,
+    decimal RefundedAmount = 0m,
+    decimal GrossSales = 0m,
+    decimal NetSales = 0m,
+    decimal Discounts = 0m
 );

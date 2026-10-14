@@ -17,11 +17,10 @@ public sealed class AzureBlobReportFileStorage : IReportFileStorage
             throw new InvalidOperationException("Storage connection string is not configured.");
         }
 
-        var containerName = configuration["Storage:AzureBlob:Container"]
-            ?? configuration["Storage:Container"]
-            ?? "images";
+        // Reports get their own private container; the images container allows public reads.
+        var containerName = configuration["Storage:AzureBlob:ReportsContainer"] ?? "wtf-reports";
         _containerClient = new BlobContainerClient(connectionString, containerName);
-        _containerClient.CreateIfNotExists(PublicAccessType.Blob);
+        _containerClient.CreateIfNotExists(PublicAccessType.None);
     }
 
     public async Task SaveAsync(

@@ -5,6 +5,7 @@ using WTF.Api.Common.Orders;
 using WTF.Api.Common.Time;
 using WTF.Api.Features.Dashboard.DTOs;
 using WTF.Api.Features.Orders.Enums;
+using WTF.Calculations.Inventory;
 using WTF.Calculations.Orders;
 using WTF.Calculations.Sales;
 using WTF.Calculations.Time;
@@ -55,6 +56,7 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
 
         var recentOrders = await ComputeRecentOrders(range, cancellationToken);
         var paymentMethods = ComputePaymentMethods(primaryOrders, overridePrices);
+        var insights = await ComputeInsights(primaryOrders, range, overridePrices, cancellationToken);
 
         return new DashboardDto(
             summary,
@@ -64,7 +66,70 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
             hourlyRevenue,
             paymentMethods,
             range.ComparisonLabel,
-            dailyRevenue);
+            dailyRevenue,
+            insights);
+    }
+
+    private async Task<DashboardInsightsDto> ComputeInsights(
+        List<Order> primaryOrders,
+        DateRangeInfo range,
+        IReadOnlyDictionary<(Guid ProductId, Guid AddOnId), decimal> addOnOverridePrices,
+        CancellationToken cancellationToken)
+    {
+        var summary = SalesRules.Summarize(primaryOrders, addOnOverridePrices);
+        var finishedCount = summary.CompletedOrderCount + summary.VoidedOrderCount;
+
+        var linkSource = (byte)OrderSourceEnum.CustomerLink;
+        var linkOrders = primaryOrders.Where(o => o.Source == linkSource && o.StatusId != OrderStatuses.PendingApproval).ToList();
+        var linkSummary = SalesRules.Summarize(linkOrders, addOnOverridePrices);
+
+        var awaiting = await db.Orders.CountAsync(o => o.StatusId == OrderStatuses.PendingApproval, cancellationToken);
+
+        var stock = await db.Items
+            .AsNoTracking()
+            .Where(i => i.IsActive)
+            .Select(i => new { i.CurrentQuantity, i.WarningQuantity, i.CriticalQuantity })
+            .ToListAsync(cancellationToken);
+        var stockStatuses = stock.Select(i => StockRules.StatusFor(i.CurrentQuantity, i.WarningQuantity, i.CriticalQuantity)).ToList();
+
+        var sales = primaryOrders.Where(o => SalesRules.IsSale(o.StatusId)).ToList();
+        var promotionUses = sales
+            .SelectMany(o => o.OrderItems.Where(oi => oi.ParentOrderItemId == null && oi.BundlePromotionId == null && oi.PromoLabel != null))
+            .GroupBy(oi => oi.PromoLabel!)
+            .Select(g => (Name: g.Key, Uses: g.Sum(oi => oi.Quantity), Revenue: g.Sum(oi => (oi.Price ?? 0m) * oi.Quantity)))
+            .Concat(sales
+                .SelectMany(o => o.OrderBundlePromotions)
+                .GroupBy(b => b.Promotion.Name)
+                .Select(g => (Name: g.Key, Uses: g.Sum(b => b.Quantity), Revenue: g.Sum(b => b.UnitPrice * b.Quantity))))
+            .OrderByDescending(x => x.Uses)
+            .ThenByDescending(x => x.Revenue)
+            .ThenBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var topPromotion = promotionUses.Count > 0 ? promotionUses[0] : (Name: (string?)null, Uses: 0, Revenue: 0m);
+
+        var customerIds = sales.Where(o => o.CustomerId.HasValue).Select(o => o.CustomerId!.Value).Distinct().ToList();
+        var firstSales = await db.Orders
+            .AsNoTracking()
+            .Where(o => o.CustomerId != null && customerIds.Contains(o.CustomerId.Value) && o.StatusId == OrderStatuses.Completed)
+            .GroupBy(o => o.CustomerId!.Value)
+            .Select(g => g.Min(o => o.CreatedAt))
+            .ToListAsync(cancellationToken);
+        var newCustomers = firstSales.Count(first => ReportRules.IsNewCustomer(first, range.PrimaryStartUtc));
+
+        return new DashboardInsightsDto(
+            summary.Discounts,
+            summary.RefundedOrderCount,
+            summary.RefundedAmount,
+            SalesRules.VoidRate(summary.VoidedOrderCount, finishedCount),
+            stockStatuses.Count(s => s is StockStatus.Warning or StockStatus.Critical),
+            stockStatuses.Count(s => s == StockStatus.OutOfStock),
+            awaiting,
+            linkOrders.Count,
+            linkSummary.Revenue,
+            topPromotion.Name,
+            topPromotion.Uses,
+            newCustomers,
+            customerIds.Count - newCustomers);
     }
 
     private static DateRangeInfo ComputeDateRange(GetDashboardQuery request, DateTime nowUtc, TimeZoneInfo timeZone)
@@ -148,8 +213,9 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
             .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.Product)
             .Include(o => o.OrderBundlePromotions)
+                .ThenInclude(b => b.Promotion)
             .Include(o => o.PaymentMethod)
-            .Where(o => o.CreatedAt >= start && o.CreatedAt < end)
+            .Where(o => o.CreatedAt >= start && o.CreatedAt < end && o.StatusId != OrderStatuses.PendingApproval)
             .ToListAsync(cancellationToken);
     }
 

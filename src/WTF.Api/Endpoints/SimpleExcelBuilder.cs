@@ -24,7 +24,8 @@ internal static class SimpleExcelBuilder
         IReadOnlyList<ExcelTableColumn> Columns,
         IReadOnlyList<IReadOnlyList<string>> Rows,
         IReadOnlyList<ExcelSummaryItem> SummaryItems,
-        string? GeneratedAtLabel = null);
+        string? GeneratedAtLabel = null,
+        bool HasTotalRow = false);
 
     public static byte[] Build(ExcelDocument document)
     {
@@ -86,6 +87,12 @@ internal static class SimpleExcelBuilder
                 if (rowIndex % 2 == 1)
                 {
                     cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#F9FAFB");
+                }
+
+                if (document.HasTotalRow && rowIndex == document.Rows.Count - 1)
+                {
+                    cell.Style.Font.Bold = true;
+                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#E5E7EB");
                 }
 
                 var align = document.Columns[colIndex].Align;

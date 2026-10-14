@@ -8,4 +8,5 @@ public record DashboardDto(
     List<HourlyRevenuePointDto> HourlyRevenue,
     List<PaymentMethodBreakdownDto> PaymentMethods,
     string ComparisonLabel,
-    List<DailyRevenuePointDto>? DailyRevenue);
+    List<DailyRevenuePointDto>? DailyRevenue,
+    DashboardInsightsDto? Insights = null);

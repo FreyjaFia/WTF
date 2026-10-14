@@ -35,7 +35,7 @@ public sealed class GetHourlySalesReportHandler(WTFDbContext db, IHttpContextAcc
             .Where(o =>
                 o.CreatedAt >= fromUtc
                 && o.CreatedAt < toExclusiveUtc
-                && o.StatusId == OrderStatuses.Completed
+                && (o.StatusId == OrderStatuses.Completed || o.StatusId == OrderStatuses.Refunded)
                 && (source == null || o.Source == source))
             .ToListAsync(cancellationToken);
 
@@ -59,7 +59,10 @@ public sealed class GetHourlySalesReportHandler(WTFDbContext db, IHttpContextAcc
                 return new HourlySalesReportRowDto(
                     hour,
                     row?.Summary.CompletedOrderCount ?? 0,
-                    row?.Summary.Revenue ?? 0m);
+                    row?.Summary.Revenue ?? 0m,
+                    row?.Summary.GrossSales ?? 0m,
+                    row?.Summary.Discounts ?? 0m,
+                    row?.Summary.RefundedAmount ?? 0m);
             })
             .ToList();
     }

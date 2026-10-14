@@ -55,7 +55,12 @@ public sealed class GetDailySalesReportHandler(WTFDbContext db, IHttpContextAcce
                     summary.CompletedOrderCount,
                     summary.AverageOrderValue,
                     summary.Tips,
-                    summary.VoidedOrderCount);
+                    summary.VoidedOrderCount,
+                    summary.RefundedOrderCount,
+                    summary.RefundedAmount,
+                    summary.GrossSales,
+                    summary.NetSales,
+                    summary.Discounts);
             })
             .ToList();
     }

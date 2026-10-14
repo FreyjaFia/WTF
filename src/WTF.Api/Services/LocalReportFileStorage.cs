@@ -2,9 +2,8 @@ namespace WTF.Api.Services;
 
 public sealed class LocalReportFileStorage(IWebHostEnvironment env) : IReportFileStorage
 {
-    private readonly string _webRootPath = !string.IsNullOrWhiteSpace(env.WebRootPath)
-        ? env.WebRootPath
-        : Path.Combine(env.ContentRootPath, "wwwroot");
+    // Outside wwwroot on purpose: reports hold customer names and void reasons and must never be served as static files.
+    private readonly string _webRootPath = Path.Combine(env.ContentRootPath, "App_Data");
 
     public async Task SaveAsync(
         string relativePath,
@@ -72,7 +71,7 @@ public sealed class LocalReportFileStorage(IWebHostEnvironment env) : IReportFil
         }
 
         var normalized = relativePath.Replace('\\', '/').TrimStart('/');
-        if (normalized.Contains("..", StringComparison.Ordinal))
+        if (normalized.Contains("..", StringComparison.Ordinal) || Path.IsPathRooted(normalized))
         {
             throw new InvalidOperationException("Invalid report file path.");
         }

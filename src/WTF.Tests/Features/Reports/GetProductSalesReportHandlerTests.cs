@@ -206,7 +206,7 @@ public class GetProductSalesReportHandlerTests
     }
 
     [Fact]
-    public async Task Handle_NonCompletedOrdersAndOtherPromotionTypes_AreExcluded()
+    public async Task Handle_RefundedOrdersCountOnlyAsGrossAndRefunded_OthersAreExcluded()
     {
         await using (var db = TestDb.Create(_dbName))
         {
@@ -229,9 +229,18 @@ public class GetProductSalesReportHandlerTests
 
         var rows = await Handler().Handle(Query(), default);
 
-        var row = rows.ShouldHaveSingleItem();
-        row.ProductName.ShouldBe("Burger");
+        rows.Count.ShouldBe(2);
+        var row = rows.Single(r => r.ProductName == "Burger");
         row.QuantitySold.ShouldBe(1);
+        row.Revenue.ShouldBe(100m);
+        row.RefundedAmount.ShouldBe(500m);
+        row.GrossSales.ShouldBe(600m);
+        row.Discounts.ShouldBe(0m);
+        var combo = rows.Single(r => r.ProductName == "Combo");
+        combo.QuantitySold.ShouldBe(0);
+        combo.Revenue.ShouldBe(0m);
+        combo.RefundedAmount.ShouldBe(250m);
+        combo.GrossSales.ShouldBe(250m);
     }
 
     [Fact]

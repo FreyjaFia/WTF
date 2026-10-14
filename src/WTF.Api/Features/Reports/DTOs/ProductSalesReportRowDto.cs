@@ -7,5 +7,9 @@ public sealed record ProductSalesReportRowDto(
     string? SubCategoryName,
     int QuantitySold,
     decimal Revenue,
-    decimal RevenuePercent
+    decimal RevenuePercent,
+    bool IsAddOn = false,
+    decimal GrossSales = 0m,
+    decimal Discounts = 0m,
+    decimal RefundedAmount = 0m
 );

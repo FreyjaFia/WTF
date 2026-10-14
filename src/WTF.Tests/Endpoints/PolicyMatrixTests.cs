@@ -33,6 +33,7 @@ public class PolicyMatrixTests : IDisposable
         [AppPolicies.StockMovementsRead] = [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.StockManager],
         [AppPolicies.StockMovementsWrite] = [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.StockManager],
         [AppPolicies.DashboardRead] = [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer],
+        [AppPolicies.ReportsGenerate] = [AppRoles.SuperAdmin, AppRoles.Admin],
         [AppPolicies.ReportsRead] = [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer],
     };
 
@@ -114,7 +115,7 @@ public class PolicyMatrixTests : IDisposable
     [Fact]
     public void WritePolicies_NeverAdmitAdminViewer()
     {
-        Expected.Where(p => p.Key.EndsWith("Write", StringComparison.Ordinal) || p.Key == AppPolicies.OrdersOverride)
+        Expected.Where(p => p.Key.EndsWith("Write", StringComparison.Ordinal) || p.Key == AppPolicies.OrdersOverride || p.Key == AppPolicies.ReportsGenerate)
             .ShouldAllBe(p => !p.Value.Contains(AppRoles.AdminViewer));
     }
 }

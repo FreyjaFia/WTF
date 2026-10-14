@@ -18,6 +18,7 @@ public sealed record GetProductSalesReportQuery : IRequest<List<ProductSalesRepo
     public DateTime? ToDate { get; init; }
     public int? CategoryId { get; init; }
     public int? SubCategoryId { get; init; }
+    public bool? SplitAddOns { get; init; }
     /// <summary>Only orders that came from this source: the shop itself or a customer ordering link. Null means all.</summary>
     public OrderSourceEnum? Source { get; init; }
 }
@@ -32,6 +33,7 @@ public sealed class GetProductSalesReportHandler(
     private const int FixedBundlePromotionTypeId = 1;
     private const int MixMatchPromotionTypeId = 2;
     private const string BundleCategoryName = "Promotions";
+    private const string AddOnCategoryName = "Add-ons";
 
     public async Task<List<ProductSalesReportRowDto>> Handle(GetProductSalesReportQuery request, CancellationToken cancellationToken)
     {
@@ -65,7 +67,7 @@ public sealed class GetProductSalesReportHandler(
                     && oi.BundlePromotionId == null
                     && oi.Order.CreatedAt >= fromUtc
                     && oi.Order.CreatedAt < toExclusiveUtc
-                    && oi.Order.StatusId == OrderStatuses.Completed
+                    && (oi.Order.StatusId == OrderStatuses.Completed || oi.Order.StatusId == OrderStatuses.Refunded)
                     && (source == null || oi.Order.Source == source));
 
             if (request.CategoryId.HasValue && request.CategoryId.Value != PromotionsCategoryFilterId)
@@ -83,34 +85,47 @@ public sealed class GetProductSalesReportHandler(
 
         var overridePrices = await AddOnPriceLookup.ForParentItemsAsync(db, parentItems, cancellationToken);
 
-        var productRows = parentItems
-            .Select(parentItem => new
-            {
-                ParentItem = parentItem,
-                Revenue = OrderMetrics.ComputeParentItemTotal(
-                    parentItem,
-                    parentItem.InverseParentOrderItem.Where(child => child.BundlePromotionId == null),
-                    overridePrices)
-            })
-            .GroupBy(oi => new
-            {
-                oi.ParentItem.ProductId,
-                oi.ParentItem.Product.Name,
-                CategoryName = oi.ParentItem.Product.Category.Name,
-                SubCategoryName = oi.ParentItem.Product.SubCategory != null ? oi.ParentItem.Product.SubCategory.Name : null
-            })
-            .Select(g => new
-            {
-                g.Key.ProductId,
-                ProductName = g.Key.Name,
-                g.Key.CategoryName,
-                g.Key.SubCategoryName,
-                QuantitySold = g.Sum(oi => oi.ParentItem.Quantity),
-                Revenue = g.Sum(oi => oi.Revenue)
-            })
-            .ToList();
+        var splitAddOns = request.SplitAddOns == true;
+        var lines = new List<SalesLine>();
 
-        var bundleRows = new List<(Guid ProductId, string ProductName, string CategoryName, string? SubCategoryName, int QuantitySold, decimal Revenue)>();
+        foreach (var parent in parentItems)
+        {
+            var addOns = parent.InverseParentOrderItem.Where(child => child.BundlePromotionId == null).ToList();
+            var parentAddOns = splitAddOns ? [] : addOns;
+            var total = OrderMetrics.ComputeParentItemTotal(parent, parentAddOns, overridePrices);
+            var gross = total + OrderMetrics.ComputeParentItemDiscount(parent);
+            lines.Add(SalesLine.From(
+                parent.ProductId,
+                parent.Product.Name,
+                parent.Product.Category.Name,
+                parent.Product.SubCategory?.Name,
+                parent.Quantity,
+                gross,
+                gross - total,
+                total,
+                parent.Order.StatusId));
+
+            if (!splitAddOns)
+            {
+                continue;
+            }
+
+            foreach (var addOn in addOns)
+            {
+                var addOnTotal = OrderMetrics.ComputeAddOnTotal(parent, addOn, overridePrices);
+                lines.Add(SalesLine.From(
+                    addOn.ProductId,
+                    addOn.Product.Name,
+                    AddOnCategoryName,
+                    null,
+                    addOn.Quantity * parent.Quantity,
+                    addOnTotal,
+                    0m,
+                    addOnTotal,
+                    parent.Order.StatusId));
+            }
+        }
+
         if (includePromotions)
         {
             var bundleQuery = db.OrderBundlePromotions
@@ -120,7 +135,7 @@ public sealed class GetProductSalesReportHandler(
                 .Where(obp =>
                     obp.Order.CreatedAt >= fromUtc
                     && obp.Order.CreatedAt < toExclusiveUtc
-                    && obp.Order.StatusId == OrderStatuses.Completed
+                    && (obp.Order.StatusId == OrderStatuses.Completed || obp.Order.StatusId == OrderStatuses.Refunded)
                     && (source == null || obp.Order.Source == source)
                     && (obp.Promotion.TypeId == FixedBundlePromotionTypeId
                         || obp.Promotion.TypeId == MixMatchPromotionTypeId));
@@ -130,53 +145,81 @@ public sealed class GetProductSalesReportHandler(
                 bundleQuery = bundleQuery.Where(obp => obp.Promotion.TypeId == promotionTypeFilter.Value);
             }
 
-            var groupedBundleRows = await bundleQuery
-                .GroupBy(obp => new { obp.PromotionId, obp.Promotion.Name, obp.Promotion.TypeId })
-                .Select(g => new
-                {
-                    ProductId = g.Key.PromotionId,
-                    ProductName = g.Key.Name,
-                    PromotionTypeId = g.Key.TypeId,
-                    QuantitySold = g.Sum(x => x.Quantity),
-                    Revenue = g.Sum(x => x.UnitPrice * x.Quantity)
-                })
-                .ToListAsync(cancellationToken);
-
-            bundleRows = groupedBundleRows
-                .Select(x => (
-                    x.ProductId,
-                    x.ProductName,
+            var bundles = await bundleQuery.ToListAsync(cancellationToken);
+            lines.AddRange(bundles.Select(bundle =>
+            {
+                var bundleTotal = bundle.UnitPrice * bundle.Quantity;
+                return SalesLine.From(
+                    bundle.PromotionId,
+                    bundle.Promotion.Name,
                     BundleCategoryName,
-                    (string?)GetPromotionSubCategoryLabel(x.PromotionTypeId),
-                    x.QuantitySold,
-                    x.Revenue))
-                .ToList();
+                    GetPromotionSubCategoryLabel(bundle.Promotion.TypeId),
+                    bundle.Quantity,
+                    bundleTotal,
+                    0m,
+                    bundleTotal,
+                    bundle.Order.StatusId);
+            }));
         }
 
-        var grouped = productRows
-            .Select(row => (
-                row.ProductId,
-                row.ProductName,
-                row.CategoryName,
-                row.SubCategoryName,
-                row.QuantitySold,
-                row.Revenue))
-            .Concat(bundleRows)
-            .OrderByDescending(r => r.Revenue)
+        var grouped = lines
+            .GroupBy(line => (line.ProductId, line.Name, line.CategoryName, line.SubCategoryName))
+            .Select(g => (
+                g.Key.ProductId,
+                g.Key.Name,
+                g.Key.CategoryName,
+                g.Key.SubCategoryName,
+                Quantity: g.Sum(l => l.Quantity),
+                Gross: g.Sum(l => l.Gross),
+                Discount: g.Sum(l => l.Discount),
+                Refunded: g.Sum(l => l.Refunded),
+                Net: g.Sum(l => l.Net)))
+            .OrderByDescending(r => r.Net)
             .ToList();
 
-        var totalRevenue = grouped.Sum(row => row.Revenue);
+        var totalRevenue = grouped.Sum(row => row.Net);
 
         return grouped
             .Select(row => new ProductSalesReportRowDto(
                 row.ProductId,
-                row.ProductName,
+                row.Name,
                 row.CategoryName,
                 row.SubCategoryName,
-                row.QuantitySold,
-                row.Revenue,
-                SalesRules.PercentOfTotal(row.Revenue, totalRevenue)))
+                row.Quantity,
+                row.Net,
+                SalesRules.PercentOfTotal(row.Net, totalRevenue),
+                row.CategoryName == AddOnCategoryName,
+                row.Gross,
+                row.Discount,
+                row.Refunded))
             .ToList();
+    }
+
+    private sealed record SalesLine(
+        Guid ProductId,
+        string Name,
+        string CategoryName,
+        string? SubCategoryName,
+        int Quantity,
+        decimal Gross,
+        decimal Discount,
+        decimal Refunded,
+        decimal Net)
+    {
+        // A refunded order counts as gross and discount but not as quantity sold or net; its value shows under Refunded.
+        public static SalesLine From(
+            Guid productId,
+            string name,
+            string categoryName,
+            string? subCategoryName,
+            int quantity,
+            decimal gross,
+            decimal discount,
+            decimal total,
+            int statusId) =>
+            statusId == OrderStatuses.Refunded
+                ? new SalesLine(productId, name, categoryName, subCategoryName, 0, gross, discount, total, 0m)
+                : new SalesLine(productId, name, categoryName, subCategoryName, quantity, gross, discount, 0m, total);
     }
 
     private static int? ResolvePromotionTypeFilter(int? subCategoryId)

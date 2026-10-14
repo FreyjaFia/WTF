@@ -43,7 +43,7 @@ public sealed class GetStaffPerformanceReportHandler(
             .Where(o =>
                 o.CreatedAt >= fromUtc
                 && o.CreatedAt < toExclusiveUtc
-                && o.StatusId == OrderStatuses.Completed
+                && (o.StatusId == OrderStatuses.Completed || o.StatusId == OrderStatuses.Refunded)
                 && (source == null || o.Source == source));
 
         if (request.StaffId.HasValue)
@@ -80,7 +80,10 @@ public sealed class GetStaffPerformanceReportHandler(
                 row.Summary.CompletedOrderCount,
                 row.Summary.Revenue,
                 row.Summary.AverageOrderValue,
-                row.Summary.Tips))
+                row.Summary.Tips,
+                row.Summary.GrossSales,
+                row.Summary.Discounts,
+                row.Summary.RefundedAmount))
             .ToList();
     }
 }

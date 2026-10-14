@@ -46,6 +46,8 @@ public static class AppAuthorizationExtensions
                 policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.StockManager))
             .AddPolicy(AppPolicies.DashboardRead, policy =>
                 policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer))
+            .AddPolicy(AppPolicies.ReportsGenerate, policy =>
+                policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin))
             .AddPolicy(AppPolicies.ReportsRead, policy =>
                 policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer));
     }

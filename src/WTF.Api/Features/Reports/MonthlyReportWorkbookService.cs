@@ -2,6 +2,7 @@ using ClosedXML.Excel;
 using MediatR;
 using System.Globalization;
 using WTF.Api.Common.Time;
+using WTF.Api.Endpoints;
 using WTF.Api.Features.Reports.DTOs;
 using WTF.Api.Features.Reports.Enums;
 using WTF.Api.Services;
@@ -42,12 +43,13 @@ public sealed class MonthlyReportWorkbookService(
 {
     private sealed record WorksheetSummaryItem(string Label, string Value);
 
+    private static readonly SemaphoreSlim GenerationLock = new(1, 1);
+
     private const string CompanyName = "Wake.Taste.Focus by Faith";
     private const string ReportsFolder = "reports/monthly";
     private const string FileNameFormat = "WTF-Monthly-Reports-{0:0000}-{1:00}.xlsx";
     private const string HeaderTimeZone = "X-TimeZone";
     private const string DefaultSchedulerTimeZone = "Asia/Manila";
-    private const string CurrencyPrefix = "PHP ";
 
     public async Task<MonthlyReportWorkbookStatusDto> GenerateAsync(
         int year,
@@ -61,7 +63,14 @@ public sealed class MonthlyReportWorkbookService(
         var fromDate = new DateTime(year, month, 1);
         var toDate = fromDate.AddMonths(1).AddDays(-1);
 
-        return await GenerateForRangeAsync(
+        if (!await GenerationLock.WaitAsync(0, cancellationToken))
+        {
+            throw new InvalidOperationException("A workbook is already being generated. Try again in a moment.");
+        }
+
+        try
+        {
+            return await GenerateForRangeAsync(
             year,
             month,
             timeZone,
@@ -69,6 +78,11 @@ public sealed class MonthlyReportWorkbookService(
             toDate,
             null,
             cancellationToken);
+        }
+        finally
+        {
+            GenerationLock.Release();
+        }
     }
 
     public async Task<MonthlyReportWorkbookStatusDto> GenerateThroughDateAsync(
@@ -90,7 +104,10 @@ public sealed class MonthlyReportWorkbookService(
             toDate = fromDate;
         }
 
-        return await GenerateForRangeAsync(
+        await GenerationLock.WaitAsync(cancellationToken);
+        try
+        {
+            return await GenerateForRangeAsync(
             year,
             month,
             timeZone,
@@ -98,6 +115,11 @@ public sealed class MonthlyReportWorkbookService(
             toDate,
             generatedAtLocalOverride,
             cancellationToken);
+        }
+        finally
+        {
+            GenerationLock.Release();
+        }
     }
 
     private async Task<MonthlyReportWorkbookStatusDto> GenerateForRangeAsync(
@@ -109,56 +131,21 @@ public sealed class MonthlyReportWorkbookService(
         DateTime? generatedAtLocalOverride,
         CancellationToken cancellationToken)
     {
-        var dailyRows = await ExecuteWithTimeZoneAsync(
-            timeZone.Id,
-            () => sender.Send(
-                new GetDailySalesReportQuery
-                {
-                    FromDate = fromDate,
-                    ToDate = toDate,
-                    GroupBy = ReportGroupByEnum.Day
-                },
-                cancellationToken));
+        Task<List<T>> FetchAsync<T>(IRequest<List<T>> query) =>
+            ExecuteWithTimeZoneAsync(timeZone.Id, () => sender.Send(query, cancellationToken));
 
-        var productRows = await ExecuteWithTimeZoneAsync(
-            timeZone.Id,
-            () => sender.Send(
-                new GetProductSalesReportQuery
-                {
-                    FromDate = fromDate,
-                    ToDate = toDate
-                },
-                cancellationToken));
-
-        var paymentRows = await ExecuteWithTimeZoneAsync(
-            timeZone.Id,
-            () => sender.Send(
-                new GetPaymentsReportQuery
-                {
-                    FromDate = fromDate,
-                    ToDate = toDate
-                },
-                cancellationToken));
-
-        var hourlyRows = await ExecuteWithTimeZoneAsync(
-            timeZone.Id,
-            () => sender.Send(
-                new GetHourlySalesReportQuery
-                {
-                    FromDate = fromDate,
-                    ToDate = toDate
-                },
-                cancellationToken));
-
-        var staffRows = await ExecuteWithTimeZoneAsync(
-            timeZone.Id,
-            () => sender.Send(
-                new GetStaffPerformanceReportQuery
-                {
-                    FromDate = fromDate,
-                    ToDate = toDate
-                },
-                cancellationToken));
+        var dailyRows = await FetchAsync(new GetDailySalesReportQuery { FromDate = fromDate, ToDate = toDate, GroupBy = ReportGroupByEnum.Day });
+        var closeRows = await FetchAsync(new GetDailyCloseReportQuery { FromDate = fromDate, ToDate = toDate });
+        var categoryRows = await FetchAsync(new GetCategorySalesReportQuery { FromDate = fromDate, ToDate = toDate });
+        var productRows = await FetchAsync(new GetProductSalesReportQuery { FromDate = fromDate, ToDate = toDate });
+        var promotionRows = await FetchAsync(new GetPromotionPerformanceReportQuery { FromDate = fromDate, ToDate = toDate });
+        var paymentRows = await FetchAsync(new GetPaymentsReportQuery { FromDate = fromDate, ToDate = toDate });
+        var hourlyRows = await FetchAsync(new GetHourlySalesReportQuery { FromDate = fromDate, ToDate = toDate });
+        var staffRows = await FetchAsync(new GetStaffPerformanceReportQuery { FromDate = fromDate, ToDate = toDate });
+        var customerRows = await FetchAsync(new GetCustomersReportQuery { FromDate = fromDate, ToDate = toDate });
+        var linkRows = await FetchAsync(new GetCustomerLinkReportQuery { FromDate = fromDate, ToDate = toDate });
+        var voidRows = await FetchAsync(new GetVoidedOrdersReportQuery { FromDate = fromDate, ToDate = toDate });
+        var stockRows = await FetchAsync(new GetStockStatusReportQuery());
 
         var generatedAtLocal = generatedAtLocalOverride
             ?? TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, timeZone);
@@ -168,15 +155,23 @@ public sealed class MonthlyReportWorkbookService(
                 timeZone),
             TimeSpan.Zero);
         var generatedAtLabel = $"{generatedAtLocal.ToString("MMMM d, yyyy h:mm tt", CultureInfo.InvariantCulture)} {timeZone.Id}";
-        var workbookBytes = BuildWorkbook(
-            fromDate,
-            toDate,
-            generatedAtLabel,
-            dailyRows,
-            productRows,
-            paymentRows,
-            hourlyRows,
-            staffRows);
+        using var workbook = new XLWorkbook();
+        AddTableSheet(workbook, ReportTables.DailySales(ReportGroupByEnum.Day), dailyRows, fromDate, toDate, generatedAtLabel);
+        AddTableSheet(workbook, ReportTables.DailyClose, closeRows, fromDate, toDate, generatedAtLabel);
+        AddTableSheet(workbook, ReportTables.CategorySales, categoryRows, fromDate, toDate, generatedAtLabel);
+        AddTableSheet(workbook, ReportTables.ProductSales, productRows, fromDate, toDate, generatedAtLabel);
+        AddTableSheet(workbook, ReportTables.Promotions, promotionRows, fromDate, toDate, generatedAtLabel);
+        AddTableSheet(workbook, ReportTables.Payments, paymentRows, fromDate, toDate, generatedAtLabel);
+        AddTableSheet(workbook, ReportTables.Hourly, hourlyRows, fromDate, toDate, generatedAtLabel);
+        AddTableSheet(workbook, ReportTables.Staff, staffRows, fromDate, toDate, generatedAtLabel);
+        AddTableSheet(workbook, ReportTables.Customers, customerRows, fromDate, toDate, generatedAtLabel);
+        AddTableSheet(workbook, ReportTables.CustomerLinks, linkRows, fromDate, toDate, generatedAtLabel);
+        AddTableSheet(workbook, ReportTables.Voids, voidRows, fromDate, toDate, generatedAtLabel);
+        AddTableSheet(workbook, ReportTables.StockStatus, stockRows, fromDate, toDate, generatedAtLabel, "Stock levels as of the time this workbook was generated");
+
+        using var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        var workbookBytes = stream.ToArray();
 
         var fileName = BuildFileName(year, month);
         var relativePath = BuildRelativePath(year, month);
@@ -278,111 +273,26 @@ public sealed class MonthlyReportWorkbookService(
         }
     }
 
-    private static byte[] BuildWorkbook(
+    private static void AddTableSheet<T>(
+        XLWorkbook workbook,
+        ReportTable<T> table,
+        IReadOnlyList<T> rows,
         DateTime fromDate,
         DateTime toDate,
         string generatedAtLabel,
-        IReadOnlyList<DailySalesReportRowDto> dailyRows,
-        IReadOnlyList<ProductSalesReportRowDto> productRows,
-        IReadOnlyList<PaymentsReportRowDto> paymentRows,
-        IReadOnlyList<HourlySalesReportRowDto> hourlyRows,
-        IReadOnlyList<StaffPerformanceReportRowDto> staffRows)
-    {
-        using var workbook = new XLWorkbook();
-
+        string? subtitle = null) =>
         AddSheet(
             workbook,
-            "Daily Sales Summary",
-            "Daily Sales Summary",
+            table.Title,
+            table.Title,
             fromDate,
             toDate,
             generatedAtLabel,
-            ["Date", "Revenue", "Orders", "Avg/Order", "Tips", "Void/Cancelled"],
-            dailyRows.Select(row => new[]
-            {
-                FormatDailyPeriodLabel(row.PeriodStart),
-                FormatMoney(row.TotalRevenue),
-                row.OrderCount.ToString("N0", CultureInfo.InvariantCulture),
-                FormatMoney(row.AverageOrderValue),
-                FormatMoney(row.TipsTotal),
-                row.VoidCancelledCount.ToString("N0", CultureInfo.InvariantCulture)
-            }),
-            BuildDailySalesSummary(dailyRows));
-
-        AddSheet(
-            workbook,
-            "Product Sales Breakdown",
-            "Product Sales Breakdown",
-            fromDate,
-            toDate,
-            generatedAtLabel,
-            ["Product", "Category", "Subcategory/Type", "Qty", "Revenue", "Revenue %"],
-            productRows.Select(row => new[]
-            {
-                row.ProductName,
-                row.CategoryName,
-                string.IsNullOrWhiteSpace(row.SubCategoryName) ? "-" : row.SubCategoryName!,
-                row.QuantitySold.ToString("N0", CultureInfo.InvariantCulture),
-                FormatMoney(row.Revenue),
-                $"{row.RevenuePercent:N2}%"
-            }),
-            BuildProductSalesSummary(productRows));
-
-        AddSheet(
-            workbook,
-            "Payment Method Breakdown",
-            "Payment Method Breakdown",
-            fromDate,
-            toDate,
-            generatedAtLabel,
-            ["Payment Method", "Orders", "Amount", "Total %"],
-            paymentRows.Select(row => new[]
-            {
-                row.PaymentMethod,
-                row.OrderCount.ToString("N0", CultureInfo.InvariantCulture),
-                FormatMoney(row.TotalAmount),
-                $"{row.TotalPercent:N2}%"
-            }),
-            BuildPaymentsSummary(paymentRows));
-
-        AddSheet(
-            workbook,
-            "Hourly Sales Distribution",
-            "Hourly Sales Distribution",
-            fromDate,
-            toDate,
-            generatedAtLabel,
-            ["Hour Range", "Orders", "Revenue"],
-            hourlyRows.Select(row => new[]
-            {
-                $"{row.Hour:00}:00 - {((row.Hour + 1) % 24):00}:00",
-                row.OrderCount.ToString("N0", CultureInfo.InvariantCulture),
-                FormatMoney(row.Revenue)
-            }),
-            BuildHourlySalesSummary(hourlyRows));
-
-        AddSheet(
-            workbook,
-            "Staff Performance",
-            "Staff Performance",
-            fromDate,
-            toDate,
-            generatedAtLabel,
-            ["Staff", "Orders", "Revenue", "Avg/Order", "Tips"],
-            staffRows.Select(row => new[]
-            {
-                row.StaffName,
-                row.OrderCount.ToString("N0", CultureInfo.InvariantCulture),
-                FormatMoney(row.TotalRevenue),
-                FormatMoney(row.AverageOrderValue),
-                FormatMoney(row.TipsReceived)
-            }),
-            BuildStaffPerformanceSummary(staffRows));
-
-        using var stream = new MemoryStream();
-        workbook.SaveAs(stream);
-        return stream.ToArray();
-    }
+            table.Columns.Select(column => column.Header).ToList(),
+            table.BuildRows(rows),
+            table.Summary(rows).Select(item => new WorksheetSummaryItem(item.Label, item.Value)).ToList(),
+            subtitle,
+            table.HasTotalRow && rows.Count > 0);
 
     private static void AddSheet(
         XLWorkbook workbook,
@@ -393,7 +303,9 @@ public sealed class MonthlyReportWorkbookService(
         string generatedAtLabel,
         IReadOnlyList<string> headers,
         IEnumerable<IReadOnlyList<string>> rows,
-        IReadOnlyList<WorksheetSummaryItem>? summaryItems = null)
+        IReadOnlyList<WorksheetSummaryItem>? summaryItems = null,
+        string? subtitle = null,
+        bool hasTotalRow = false)
     {
         var worksheet = workbook.Worksheets.Add(worksheetName);
 
@@ -407,7 +319,7 @@ public sealed class MonthlyReportWorkbookService(
         worksheet.Cell(2, 1).Style.Font.FontSize = 14;
         worksheet.Cell(2, 1).Style.Font.FontColor = XLColor.Black;
 
-        worksheet.Cell(3, 1).Value = $"Date Range: {fromDate:MMMM dd, yyyy} - {toDate:MMMM dd, yyyy}";
+        worksheet.Cell(3, 1).Value = subtitle ?? $"Date Range: {fromDate:MMMM dd, yyyy} - {toDate:MMMM dd, yyyy}";
         worksheet.Cell(3, 1).Style.Font.FontSize = 10;
         worksheet.Cell(3, 1).Style.Font.FontColor = XLColor.FromHtml("#4B5563");
 
@@ -427,6 +339,7 @@ public sealed class MonthlyReportWorkbookService(
         }
 
         var currentRow = headerRow + 1;
+        var lastDataRow = 0;
         foreach (var row in rows)
         {
             for (var columnIndex = 0; columnIndex < row.Count; columnIndex++)
@@ -434,7 +347,16 @@ public sealed class MonthlyReportWorkbookService(
                 worksheet.Cell(currentRow, columnIndex + 1).Value = row[columnIndex];
             }
 
+            lastDataRow = currentRow;
+
             currentRow++;
+        }
+
+        if (hasTotalRow && lastDataRow > headerRow)
+        {
+            var totalStyle = worksheet.Range(lastDataRow, 1, lastDataRow, headers.Count).Style;
+            totalStyle.Font.Bold = true;
+            totalStyle.Fill.BackgroundColor = XLColor.FromHtml("#E5E7EB");
         }
 
         if (currentRow > headerRow + 1)
@@ -470,81 +392,6 @@ public sealed class MonthlyReportWorkbookService(
         worksheet.Columns(1, headers.Count).AdjustToContents();
     }
 
-    private static IReadOnlyList<WorksheetSummaryItem> BuildDailySalesSummary(
-        IReadOnlyList<DailySalesReportRowDto> rows)
-    {
-        var totalRevenue = rows.Sum(r => r.TotalRevenue);
-        var totalOrders = rows.Sum(r => r.OrderCount);
-        var totalTips = rows.Sum(r => r.TipsTotal);
-        var totalVoidCancelled = rows.Sum(r => r.VoidCancelledCount);
-        var averageOrder = totalOrders > 0 ? totalRevenue / totalOrders : 0m;
-
-        return
-        [
-            new WorksheetSummaryItem("Total Revenue", FormatMoney(totalRevenue)),
-            new WorksheetSummaryItem("Total Orders", totalOrders.ToString("N0", CultureInfo.InvariantCulture)),
-            new WorksheetSummaryItem("Average Order Value", FormatMoney(averageOrder)),
-            new WorksheetSummaryItem("Total Tips", FormatMoney(totalTips)),
-            new WorksheetSummaryItem("Void/Cancelled", totalVoidCancelled.ToString("N0", CultureInfo.InvariantCulture))
-        ];
-    }
-
-    private static IReadOnlyList<WorksheetSummaryItem> BuildProductSalesSummary(
-        IReadOnlyList<ProductSalesReportRowDto> rows)
-    {
-        var totalRevenue = rows.Sum(r => r.Revenue);
-        var totalQuantity = rows.Sum(r => r.QuantitySold);
-
-        return
-        [
-            new WorksheetSummaryItem("Total Revenue", FormatMoney(totalRevenue)),
-            new WorksheetSummaryItem("Total Quantity", totalQuantity.ToString("N0", CultureInfo.InvariantCulture))
-        ];
-    }
-
-    private static IReadOnlyList<WorksheetSummaryItem> BuildPaymentsSummary(
-        IReadOnlyList<PaymentsReportRowDto> rows)
-    {
-        var totalAmount = rows.Sum(r => r.TotalAmount);
-        var totalOrders = rows.Sum(r => r.OrderCount);
-
-        return
-        [
-            new WorksheetSummaryItem("Total Amount", FormatMoney(totalAmount)),
-            new WorksheetSummaryItem("Total Orders", totalOrders.ToString("N0", CultureInfo.InvariantCulture))
-        ];
-    }
-
-    private static IReadOnlyList<WorksheetSummaryItem> BuildHourlySalesSummary(
-        IReadOnlyList<HourlySalesReportRowDto> rows)
-    {
-        var totalRevenue = rows.Sum(r => r.Revenue);
-        var totalOrders = rows.Sum(r => r.OrderCount);
-
-        return
-        [
-            new WorksheetSummaryItem("Total Revenue", FormatMoney(totalRevenue)),
-            new WorksheetSummaryItem("Total Orders", totalOrders.ToString("N0", CultureInfo.InvariantCulture))
-        ];
-    }
-
-    private static IReadOnlyList<WorksheetSummaryItem> BuildStaffPerformanceSummary(
-        IReadOnlyList<StaffPerformanceReportRowDto> rows)
-    {
-        var totalRevenue = rows.Sum(r => r.TotalRevenue);
-        var totalOrders = rows.Sum(r => r.OrderCount);
-        var totalTips = rows.Sum(r => r.TipsReceived);
-        var averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0m;
-
-        return
-        [
-            new WorksheetSummaryItem("Total Revenue", FormatMoney(totalRevenue)),
-            new WorksheetSummaryItem("Total Orders", totalOrders.ToString("N0", CultureInfo.InvariantCulture)),
-            new WorksheetSummaryItem("Average Order Value", FormatMoney(averageOrderValue)),
-            new WorksheetSummaryItem("Total Tips", FormatMoney(totalTips))
-        ];
-    }
-
     private static string BuildFileName(int year, int month)
     {
         return string.Format(CultureInfo.InvariantCulture, FileNameFormat, year, month);
@@ -554,17 +401,5 @@ public sealed class MonthlyReportWorkbookService(
     {
         var folder = $"{ReportsFolder}/{year:0000}-{month:00}";
         return $"{folder}/{BuildFileName(year, month)}";
-    }
-
-    private static string FormatMoney(decimal amount)
-    {
-        return $"{CurrencyPrefix}{amount.ToString("N2", CultureInfo.InvariantCulture)}";
-    }
-
-    private static string FormatDailyPeriodLabel(DateTime periodStart)
-    {
-        var dateLabel = periodStart.ToString("MMM dd, yyyy", CultureInfo.InvariantCulture);
-        var dayLabel = periodStart.ToString("ddd", CultureInfo.InvariantCulture);
-        return $"{dateLabel} ({dayLabel})";
     }
 }

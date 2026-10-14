@@ -416,3 +416,6 @@ Thumbs.db
 
 # Ignore the stale image cleanup run record written under wwwroot
 src/WTF.Api/wwwroot/system/**
+
+# Ignore generated files kept out of the web root (monthly workbooks, chat images)
+src/WTF.Api/App_Data/**

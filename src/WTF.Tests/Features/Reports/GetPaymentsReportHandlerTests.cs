@@ -68,7 +68,7 @@ public class GetPaymentsReportHandlerTests
     }
 
     [Fact]
-    public async Task Handle_NonCompletedOrders_AreExcluded()
+    public async Task Handle_RefundedOrdersShowAsRefundedAmount_PendingAndCancelledAreExcluded()
     {
         await using (var db = TestDb.Create(_dbName))
         {
@@ -84,9 +84,15 @@ public class GetPaymentsReportHandlerTests
 
         var rows = await Handler().Handle(Query(new DateTime(2026, 3, 10), new DateTime(2026, 3, 10)), default);
 
-        var row = rows.ShouldHaveSingleItem();
-        row.PaymentMethod.ShouldBe("Cash");
+        rows.Count.ShouldBe(2);
+        var row = rows.Single(r => r.PaymentMethod == "Cash");
         row.TotalAmount.ShouldBe(100m);
+        row.OrderCount.ShouldBe(1);
+        var card = rows.Single(r => r.PaymentMethod == "Card");
+        card.OrderCount.ShouldBe(0);
+        card.TotalAmount.ShouldBe(0m);
+        card.RefundedAmount.ShouldBe(900m);
+        card.GrossSales.ShouldBe(900m);
     }
 
     [Fact]

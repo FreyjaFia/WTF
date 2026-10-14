@@ -2,6 +2,7 @@ using ClosedXML.Excel;
 using MediatR;
 using Microsoft.AspNetCore.Http;
 using NSubstitute;
+using WTF.Api.Endpoints;
 using WTF.Api.Features.Reports;
 using WTF.Api.Features.Reports.DTOs;
 using WTF.Api.Features.Reports.Enums;
@@ -17,16 +18,49 @@ public class MonthlyReportWorkbookServiceTests
     private readonly List<(string Query, DateTime? From, DateTime? To, string? TimeZone)> _calls = [];
 
     private List<DailySalesReportRowDto> _daily = [];
+    private List<DailyCloseReportRowDto> _close = [];
+    private List<CategorySalesReportRowDto> _categories = [];
     private List<ProductSalesReportRowDto> _products = [];
+    private List<PromotionPerformanceReportRowDto> _promotions = [];
     private List<PaymentsReportRowDto> _payments = [];
     private List<HourlySalesReportRowDto> _hourly = [];
     private List<StaffPerformanceReportRowDto> _staff = [];
+    private List<CustomerReportRowDto> _customers = [];
+    private List<CustomerLinkReportRowDto> _links = [];
+    private List<VoidedOrderReportRowDto> _voids = [];
+    private List<StockStatusReportRowDto> _stock = [];
+
+    private static readonly string[] SheetNames =
+    [
+        "Daily Sales Summary",
+        "Daily Close",
+        "Sales by Category",
+        "Product Sales Breakdown",
+        "Promotions Performance",
+        "Payment Method Breakdown",
+        "Hourly Sales Distribution",
+        "Staff Performance",
+        "Customers",
+        "Customer Link Orders",
+        "Voids and Refunds",
+        "Stock Status"
+    ];
 
     private MonthlyReportWorkbookService Create(IHttpContextAccessor? accessor = null)
     {
         accessor ??= TestRequest.None();
 
         string? Tz() => accessor.HttpContext?.Request.Headers["X-TimeZone"].ToString();
+
+        void Wire<TQuery, TRow>(List<TRow> Rows, Func<TQuery, (DateTime?, DateTime?)> range)
+            where TQuery : IRequest<List<TRow>> =>
+            _sender.Send((IRequest<List<TRow>>)Arg.Any<TQuery>(), Arg.Any<CancellationToken>()).Returns(ci =>
+            {
+                var q = ci.Arg<TQuery>();
+                var (from, to) = range(q);
+                _calls.Add((typeof(TQuery).Name, from, to, Tz()));
+                return Task.FromResult(Rows);
+            });
 
         _sender.Send(Arg.Any<GetDailySalesReportQuery>(), Arg.Any<CancellationToken>()).Returns(ci =>
         {
@@ -35,30 +69,17 @@ public class MonthlyReportWorkbookServiceTests
             q.GroupBy.ShouldBe(ReportGroupByEnum.Day);
             return Task.FromResult(_daily);
         });
-        _sender.Send(Arg.Any<GetProductSalesReportQuery>(), Arg.Any<CancellationToken>()).Returns(ci =>
-        {
-            var q = ci.Arg<GetProductSalesReportQuery>();
-            _calls.Add((nameof(GetProductSalesReportQuery), q.FromDate, q.ToDate, Tz()));
-            return Task.FromResult(_products);
-        });
-        _sender.Send(Arg.Any<GetPaymentsReportQuery>(), Arg.Any<CancellationToken>()).Returns(ci =>
-        {
-            var q = ci.Arg<GetPaymentsReportQuery>();
-            _calls.Add((nameof(GetPaymentsReportQuery), q.FromDate, q.ToDate, Tz()));
-            return Task.FromResult(_payments);
-        });
-        _sender.Send(Arg.Any<GetHourlySalesReportQuery>(), Arg.Any<CancellationToken>()).Returns(ci =>
-        {
-            var q = ci.Arg<GetHourlySalesReportQuery>();
-            _calls.Add((nameof(GetHourlySalesReportQuery), q.FromDate, q.ToDate, Tz()));
-            return Task.FromResult(_hourly);
-        });
-        _sender.Send(Arg.Any<GetStaffPerformanceReportQuery>(), Arg.Any<CancellationToken>()).Returns(ci =>
-        {
-            var q = ci.Arg<GetStaffPerformanceReportQuery>();
-            _calls.Add((nameof(GetStaffPerformanceReportQuery), q.FromDate, q.ToDate, Tz()));
-            return Task.FromResult(_staff);
-        });
+        Wire<GetDailyCloseReportQuery, DailyCloseReportRowDto>(_close, q => (q.FromDate, q.ToDate));
+        Wire<GetCategorySalesReportQuery, CategorySalesReportRowDto>(_categories, q => (q.FromDate, q.ToDate));
+        Wire<GetProductSalesReportQuery, ProductSalesReportRowDto>(_products, q => (q.FromDate, q.ToDate));
+        Wire<GetPromotionPerformanceReportQuery, PromotionPerformanceReportRowDto>(_promotions, q => (q.FromDate, q.ToDate));
+        Wire<GetPaymentsReportQuery, PaymentsReportRowDto>(_payments, q => (q.FromDate, q.ToDate));
+        Wire<GetHourlySalesReportQuery, HourlySalesReportRowDto>(_hourly, q => (q.FromDate, q.ToDate));
+        Wire<GetStaffPerformanceReportQuery, StaffPerformanceReportRowDto>(_staff, q => (q.FromDate, q.ToDate));
+        Wire<GetCustomersReportQuery, CustomerReportRowDto>(_customers, q => (q.FromDate, q.ToDate));
+        Wire<GetCustomerLinkReportQuery, CustomerLinkReportRowDto>(_links, q => (q.FromDate, q.ToDate));
+        Wire<GetVoidedOrdersReportQuery, VoidedOrderReportRowDto>(_voids, q => (q.FromDate, q.ToDate));
+        Wire<GetStockStatusReportQuery, StockStatusReportRowDto>(_stock, _ => (null, null));
 
         return new MonthlyReportWorkbookService(_sender, accessor, _storage);
     }
@@ -152,15 +173,9 @@ public class MonthlyReportWorkbookServiceTests
     {
         await Create().GenerateAsync(year, month, "Asia/Manila", CancellationToken.None);
 
-        _calls.Select(c => c.Query).ShouldBe(
-        [
-            nameof(GetDailySalesReportQuery),
-            nameof(GetProductSalesReportQuery),
-            nameof(GetPaymentsReportQuery),
-            nameof(GetHourlySalesReportQuery),
-            nameof(GetStaffPerformanceReportQuery)
-        ]);
-        _calls.ShouldAllBe(c => c.From == new DateTime(year, month, 1) && c.To == new DateTime(year, month, lastDay));
+        _calls.Count.ShouldBe(12);
+        _calls.Select(c => c.Query).Distinct().Count().ShouldBe(12);
+        _calls.Where(c => c.Query != nameof(GetStockStatusReportQuery)).ShouldAllBe(c => c.From == new DateTime(year, month, 1) && c.To == new DateTime(year, month, lastDay));
     }
 
     [Fact]
@@ -195,7 +210,7 @@ public class MonthlyReportWorkbookServiceTests
     {
         await Create().GenerateAsync(2026, 3, requested, CancellationToken.None);
 
-        _calls.Count.ShouldBe(5);
+        _calls.Count.ShouldBe(12);
         _calls.ShouldAllBe(c => c.TimeZone == expectedHeader);
     }
 
@@ -300,7 +315,7 @@ public class MonthlyReportWorkbookServiceTests
         await Create().GenerateThroughDateAsync(
             2026, 3, new DateTime(2026, 3, 14, 18, 45, 0), "Asia/Manila", null, CancellationToken.None);
 
-        _calls.ShouldAllBe(c => c.From == new DateTime(2026, 3, 1) && c.To == new DateTime(2026, 3, 14));
+        _calls.Where(c => c.Query != nameof(GetStockStatusReportQuery)).ShouldAllBe(c => c.From == new DateTime(2026, 3, 1) && c.To == new DateTime(2026, 3, 14));
     }
 
     [Fact]
@@ -309,7 +324,7 @@ public class MonthlyReportWorkbookServiceTests
         await Create().GenerateThroughDateAsync(
             2026, 3, new DateTime(2026, 2, 20), "Asia/Manila", null, CancellationToken.None);
 
-        _calls.ShouldAllBe(c => c.From == new DateTime(2026, 3, 1) && c.To == new DateTime(2026, 3, 1));
+        _calls.Where(c => c.Query != nameof(GetStockStatusReportQuery)).ShouldAllBe(c => c.From == new DateTime(2026, 3, 1) && c.To == new DateTime(2026, 3, 1));
     }
 
     [Fact]
@@ -319,7 +334,7 @@ public class MonthlyReportWorkbookServiceTests
         await Create().GenerateThroughDateAsync(
             2026, 3, new DateTime(2026, 4, 10), "Asia/Manila", null, CancellationToken.None);
 
-        _calls.ShouldAllBe(c => c.To == new DateTime(2026, 4, 10));
+        _calls.Where(c => c.Query != nameof(GetStockStatusReportQuery)).ShouldAllBe(c => c.To == new DateTime(2026, 4, 10));
     }
 
     [Fact]
@@ -360,47 +375,95 @@ public class MonthlyReportWorkbookServiceTests
 
     private void SeedSampleRows()
     {
+        // gross - discounts - refunded = net on every row
         _daily =
         [
-            new(new DateTime(2026, 3, 1), 1500m, 3, 500m, 50m, 1),
-            new(new DateTime(2026, 3, 2), 2500.5m, 2, 1250.25m, 0m, 0)
+            new(new DateTime(2026, 3, 1), 1500m, 3, 500m, 50m, 1, 1, 100m, 1700m, 1500m, 100m),
+            new(new DateTime(2026, 3, 2), 2500.5m, 2, 1250.25m, 0m, 0, 0, 0m, 2500.5m, 2500.5m, 0m)
         ];
+        _close =
+        [
+            new("Sales", "Net sales", null, 5, 4000.5m),
+            new("Payments", "Cash", "Tips PHP 50.00", 4, 3000m)
+        ];
+        _categories = [new("Food", 1203, 4300m, 100m, 100m, 4100m, 100m)];
         _products =
         [
-            new(Guid.NewGuid(), "Latte", "Coffee", "Hot", 1200, 4000m, 62.5m),
-            new(Guid.NewGuid(), "Croissant", "Pastry", null, 3, 100m, 1.5m)
+            new(Guid.NewGuid(), "Latte", "Coffee", "Hot", 1200, 4000m, 62.5m, false, 4100m, 50m, 50m),
+            new(Guid.NewGuid(), "Croissant", "Pastry", null, 3, 100m, 1.5m, false, 100m, 0m, 0m)
         ];
+        _promotions = [new("20% off", "Discounted Product", 4, 320m, 80m)];
         _payments =
         [
-            new("Cash", 4, 3000m, 75m),
-            new("GCash", 1, 1000.5m, 25m)
+            new("Cash", 4, 3000m, 75m, 3200m, 100m, 100m),
+            new("GCash", 1, 1000.5m, 25m, 1000.5m, 0m, 0m)
         ];
         _hourly =
         [
-            new(9, 2, 800m),
-            new(23, 1, 200m)
+            new(9, 2, 800m, 800m, 0m, 0m),
+            new(23, 1, 200m, 250m, 50m, 0m)
         ];
         _staff =
         [
-            new(Guid.NewGuid(), "Ana Cruz", 5, 4000m, 800m, 50m)
+            new(Guid.NewGuid(), "Ana Cruz", 5, 4000m, 800m, 50m, 4100m, 50m, 50m)
         ];
+        _customers = [new(Guid.NewGuid(), "Maria Santos", 2, 150m, 75m, new DateTime(2026, 3, 10, 12, 0, 0), true, 50)];
+        _links = [new(Guid.NewGuid(), "Maria Santos", 3, 1, 1, 1, 1, 2, 100m, 10d, 15d, "Sold out")];
+        _voids = [new(Guid.NewGuid(), 1001, new DateTime(2026, 3, 10, 12, 0, 0), new DateTime(2026, 3, 10, 14, 0, 0), "Refunded", "Ana Cruz", "Ben Reyes", 90m, "Wrong item", 25m)];
+        _stock = [new(Guid.NewGuid(), "Milk", "l", 15m, 20m, 5m, "Warning", 10m, 150m)];
+    }
+
+    private async Task<XLWorkbook> GenerateSampleAsync(int month = 3)
+    {
+        SeedSampleRows();
+        await Create().GenerateAsync(2026, month, "Asia/Manila", CancellationToken.None);
+        return Open(_storage.Saves.Last().Data);
+    }
+
+    private static int RowOf(IXLWorksheet ws, string label)
+    {
+        for (var row = 1; row <= ws.LastRowUsed()!.RowNumber(); row++)
+        {
+            if (Text(ws, row, 1) == label)
+            {
+                return row;
+            }
+        }
+
+        return -1;
+    }
+
+    private static string[] Row(IXLWorksheet ws, int row, int columns) =>
+        Enumerable.Range(1, columns).Select(c => Text(ws, row, c)).ToArray();
+
+    [Fact]
+    public async Task GenerateAsync_Workbook_HasTwelveSheetsInOrder()
+    {
+        using var wb = await GenerateSampleAsync();
+
+        wb.Worksheets.Select(w => w.Name).ShouldBe(SheetNames);
     }
 
     [Fact]
-    public async Task GenerateAsync_Workbook_HasFiveSheetsInOrder()
+    public async Task GenerateAsync_EverySheet_UsesTheSameHeadersAsTheReportTable()
     {
-        SeedSampleRows();
-        await Create().GenerateAsync(2026, 3, "Asia/Manila", CancellationToken.None);
+        using var wb = await GenerateSampleAsync();
 
-        using var wb = Open(_storage.Saves.Single().Data);
-        wb.Worksheets.Select(w => w.Name).ShouldBe(
-        [
-            "Daily Sales Summary",
-            "Product Sales Breakdown",
-            "Payment Method Breakdown",
-            "Hourly Sales Distribution",
-            "Staff Performance"
-        ]);
+        void Check<T>(ReportTable<T> table) =>
+            Row(wb.Worksheet(table.Title), 6, table.Columns.Count).ShouldBe(table.Columns.Select(c => c.Header).ToArray());
+
+        Check(ReportTables.DailySales(ReportGroupByEnum.Day));
+        Check(ReportTables.DailyClose);
+        Check(ReportTables.CategorySales);
+        Check(ReportTables.ProductSales);
+        Check(ReportTables.Promotions);
+        Check(ReportTables.Payments);
+        Check(ReportTables.Hourly);
+        Check(ReportTables.Staff);
+        Check(ReportTables.Customers);
+        Check(ReportTables.CustomerLinks);
+        Check(ReportTables.Voids);
+        Check(ReportTables.StockStatus);
     }
 
     [Fact]
@@ -418,86 +481,248 @@ public class MonthlyReportWorkbookServiceTests
     }
 
     [Fact]
-    public async Task GenerateAsync_DailySheet_FormatsRowsAndSummary()
+    public async Task GenerateAsync_StockSheet_SaysItIsAsOfGenerationInsteadOfShowingARange()
     {
-        SeedSampleRows();
-        await Create().GenerateAsync(2026, 3, "Asia/Manila", CancellationToken.None);
+        using var wb = await GenerateSampleAsync();
 
-        using var wb = Open(_storage.Saves.Single().Data);
-        var ws = wb.Worksheet("Daily Sales Summary");
-        new[] { 1, 2, 3, 4, 5, 6 }.Select(c => Text(ws, 6, c)).ShouldBe(
-            ["Date", "Revenue", "Orders", "Avg/Order", "Tips", "Void/Cancelled"]);
-        new[] { 1, 2, 3, 4, 5, 6 }.Select(c => Text(ws, 7, c)).ShouldBe(
-            ["Mar 01, 2026 (Sun)", "PHP 1,500.00", "3", "PHP 500.00", "PHP 50.00", "1"]);
-        Text(ws, 8, 2).ShouldBe("PHP 2,500.50");
-
-        // Rows 7-8, blank row 9, "Summary" row 10, items from row 11.
-        Text(ws, 10, 1).ShouldBe("Summary");
-        Text(ws, 11, 1).ShouldBe("Total Revenue");
-        Text(ws, 11, 2).ShouldBe("PHP 4,000.50");
-        Text(ws, 12, 2).ShouldBe("5");
-        Text(ws, 13, 1).ShouldBe("Average Order Value");
-        Text(ws, 13, 2).ShouldBe("PHP 800.10"); // 4000.50 / 5
-        Text(ws, 14, 2).ShouldBe("PHP 50.00");
-        Text(ws, 15, 2).ShouldBe("1");
+        Text(wb.Worksheet("Stock Status"), 3, 1).ShouldBe("Stock levels as of the time this workbook was generated");
+        Text(wb.Worksheet("Daily Sales Summary"), 3, 1).ShouldStartWith("Date Range: ");
     }
 
     [Fact]
-    public async Task GenerateAsync_ProductSheet_ShowsDashForMissingSubcategoryAndFormatsNumbers()
+    public async Task GenerateAsync_DailySheet_ShowsStepColumnsLongLabelsAndATotalRow()
     {
-        SeedSampleRows();
-        await Create().GenerateAsync(2026, 3, "Asia/Manila", CancellationToken.None);
+        using var wb = await GenerateSampleAsync();
 
-        using var wb = Open(_storage.Saves.Single().Data);
+        var ws = wb.Worksheet("Daily Sales Summary");
+        Row(ws, 6, 9).ShouldBe(
+            ["Period", "Gross Sales", "Discounts", "Refunded", "Net Sales", "Orders", "Avg/Order", "Tips", "Void/Cancelled"]);
+        Row(ws, 7, 9).ShouldBe(
+            ["March 01, 2026 (Sun)", "PHP 1,700.00", "PHP 100.00", "PHP 100.00", "PHP 1,500.00", "3", "PHP 500.00", "PHP 50.00", "1"]);
+        Text(ws, 8, 5).ShouldBe("PHP 2,500.50");
+
+        // The Total row follows the data rows: sums, and the average is total net over total orders.
+        Row(ws, 9, 9).ShouldBe(
+            ["Total", "PHP 4,200.50", "PHP 100.00", "PHP 100.00", "PHP 4,000.50", "5", "PHP 800.10", "PHP 50.00", "1"]);
+    }
+
+    [Fact]
+    public async Task GenerateAsync_TotalRow_IsBoldOnEverySheetThatHasOne_AndTheRowsAboveAreNot()
+    {
+        using var wb = await GenerateSampleAsync();
+
+        var sheets = new Dictionary<string, int>
+        {
+            ["Daily Sales Summary"] = 2,
+            ["Sales by Category"] = 1,
+            ["Product Sales Breakdown"] = 2,
+            ["Promotions Performance"] = 1,
+            ["Payment Method Breakdown"] = 2,
+            ["Hourly Sales Distribution"] = 2,
+            ["Staff Performance"] = 1,
+            ["Customers"] = 1,
+            ["Customer Link Orders"] = 1,
+            ["Voids and Refunds"] = 1,
+            ["Stock Status"] = 1,
+        };
+        foreach (var (name, dataRows) in sheets)
+        {
+            var ws = wb.Worksheet(name);
+            var total = 6 + dataRows + 1;
+            Text(ws, total, 1).ShouldBe("Total", name);
+            ws.Cell(total, 1).Style.Font.Bold.ShouldBeTrue(name);
+            ws.Cell(total - 1, 1).Style.Font.Bold.ShouldBeFalse(name);
+        }
+    }
+
+    [Fact]
+    public async Task GenerateAsync_DailyCloseSheet_HasNoTotalRow()
+    {
+        using var wb = await GenerateSampleAsync();
+
+        var ws = wb.Worksheet("Daily Close");
+        RowOf(ws, "Total").ShouldBe(-1);
+        ws.Cell(7, 1).Style.Font.Bold.ShouldBeFalse();
+        ws.Cell(8, 1).Style.Font.Bold.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task GenerateAsync_ProductSheet_CallsTheSubcategoryColumnSubcategoryType()
+    {
+        using var wb = await GenerateSampleAsync();
+
+        Text(wb.Worksheet("Product Sales Breakdown"), 6, 3).ShouldBe("Subcategory/Type");
+        ReportTables.ProductSales.Columns[2].Header.ShouldBe("Subcategory/Type");
+    }
+
+    [Fact]
+    public async Task GenerateAsync_DailySheet_TotalRowFollowsTheStepIdentity()
+    {
+        using var wb = await GenerateSampleAsync();
+
+        var ws = wb.Worksheet("Daily Sales Summary");
+        decimal Money(int col) => decimal.Parse(Text(ws, 9, col).Replace("PHP ", string.Empty).Replace(",", string.Empty));
+
+        (Money(2) - Money(3) - Money(4)).ShouldBe(Money(5));
+    }
+
+    [Fact]
+    public async Task GenerateAsync_DailySheet_SummaryRepeatsTheTotals()
+    {
+        using var wb = await GenerateSampleAsync();
+
+        var ws = wb.Worksheet("Daily Sales Summary");
+        var summary = RowOf(ws, "Summary");
+        summary.ShouldBeGreaterThan(9);
+        Text(ws, RowOf(ws, "Gross Sales"), 2).ShouldBe("PHP 4,200.50");
+        Text(ws, RowOf(ws, "Net Sales"), 2).ShouldBe("PHP 4,000.50");
+        Text(ws, RowOf(ws, "Average Order Value"), 2).ShouldBe("PHP 800.10");
+    }
+
+    [Fact]
+    public async Task GenerateAsync_ProductSheet_ShowsDashForMissingSubcategoryStepColumnsAndTotal()
+    {
+        using var wb = await GenerateSampleAsync();
+
         var ws = wb.Worksheet("Product Sales Breakdown");
-        new[] { 1, 2, 3, 4, 5, 6 }.Select(c => Text(ws, 7, c)).ShouldBe(
-            ["Latte", "Coffee", "Hot", "1,200", "PHP 4,000.00", "62.50%"]);
+        Row(ws, 7, 9).ShouldBe(
+            ["Latte", "Coffee", "Hot", "1,200", "PHP 4,100.00", "PHP 50.00", "PHP 50.00", "PHP 4,000.00", "62.50%"]);
         Text(ws, 8, 3).ShouldBe("-");
-        Text(ws, 11, 2).ShouldBe("PHP 4,100.00");
-        Text(ws, 12, 2).ShouldBe("1,203");
+        Text(ws, 9, 1).ShouldBe("Total");
+        Text(ws, 9, 4).ShouldBe("1,203");
+        Text(ws, 9, 8).ShouldBe("PHP 4,100.00");
     }
 
     [Fact]
     public async Task GenerateAsync_PaymentsHourlyAndStaffSheets_ShowRowsAndTotals()
     {
-        SeedSampleRows();
-        await Create().GenerateAsync(2026, 3, "Asia/Manila", CancellationToken.None);
-
-        using var wb = Open(_storage.Saves.Single().Data);
+        using var wb = await GenerateSampleAsync();
 
         var pay = wb.Worksheet("Payment Method Breakdown");
-        new[] { 1, 2, 3, 4 }.Select(c => Text(pay, 7, c)).ShouldBe(["Cash", "4", "PHP 3,000.00", "75.00%"]);
-        Text(pay, 11, 2).ShouldBe("PHP 4,000.50");
-        Text(pay, 12, 2).ShouldBe("5");
+        Row(pay, 7, 7).ShouldBe(["Cash", "4", "PHP 3,200.00", "PHP 100.00", "PHP 100.00", "PHP 3,000.00", "75.00%"]);
+        Row(pay, 9, 7).ShouldBe(["Total", "5", "PHP 4,200.50", "PHP 100.00", "PHP 100.00", "PHP 4,000.50", "100.00%"]);
 
         var hourly = wb.Worksheet("Hourly Sales Distribution");
         Text(hourly, 7, 1).ShouldBe("09:00 - 10:00");
         Text(hourly, 8, 1).ShouldBe("23:00 - 00:00"); // hour 23 wraps to 00:00
-        Text(hourly, 11, 2).ShouldBe("PHP 1,000.00");
+        Row(hourly, 9, 6).ShouldBe(["Total", "3", "PHP 1,050.00", "PHP 50.00", "PHP 0.00", "PHP 1,000.00"]);
 
         var staff = wb.Worksheet("Staff Performance");
-        new[] { 1, 2, 3, 4, 5 }.Select(c => Text(staff, 7, c)).ShouldBe(
-            ["Ana Cruz", "5", "PHP 4,000.00", "PHP 800.00", "PHP 50.00"]);
-        Text(staff, 10, 1).ShouldBe("Total Revenue");
-        Text(staff, 12, 2).ShouldBe("PHP 800.00");
+        Row(staff, 7, 8).ShouldBe(["Ana Cruz", "5", "PHP 4,100.00", "PHP 50.00", "PHP 50.00", "PHP 4,000.00", "PHP 800.00", "PHP 50.00"]);
+        Row(staff, 8, 8).ShouldBe(["Total", "5", "PHP 4,100.00", "PHP 50.00", "PHP 50.00", "PHP 4,000.00", "PHP 800.00", "PHP 50.00"]);
     }
 
     [Fact]
-    public async Task GenerateAsync_NoData_ProducesSheetsWithZeroTotalsAndNoDivisionByZero()
+    public async Task GenerateAsync_NewSheets_ShowTheirRows()
+    {
+        using var wb = await GenerateSampleAsync();
+
+        Row(wb.Worksheet("Daily Close"), 7, 5).ShouldBe(["Sales", "Net sales", "-", "5", "PHP 4,000.50"]);
+        Text(wb.Worksheet("Daily Close"), 9, 1).ShouldNotBe("Total"); // section rows are not summable
+
+        var category = wb.Worksheet("Sales by Category");
+        Text(category, 7, 1).ShouldBe("Food");
+        Text(category, 8, 1).ShouldBe("Total");
+
+        var promo = wb.Worksheet("Promotions Performance");
+        Text(promo, 7, 1).ShouldBe("20% off");
+
+        Row(wb.Worksheet("Customers"), 7, 8).ShouldContain("Maria Santos");
+        Row(wb.Worksheet("Customer Link Orders"), 7, 6).ShouldContain("Maria Santos");
+        Row(wb.Worksheet("Voids and Refunds"), 7, 6).ShouldContain("#1001");
+        Row(wb.Worksheet("Stock Status"), 7, 5).ShouldContain("Milk");
+    }
+
+    [Fact]
+    public async Task GenerateAsync_NoData_ProducesSheetsWithoutATotalRowAndZeroSummaries()
     {
         await Create().GenerateAsync(2026, 3, "Asia/Manila", CancellationToken.None);
 
         using var wb = Open(_storage.Saves.Single().Data);
+        wb.Worksheets.Count.ShouldBe(12);
         var ws = wb.Worksheet("Daily Sales Summary");
-        Text(ws, 6, 1).ShouldBe("Date");
-        // No data rows: blank row 7, "Summary" at row 8, items from row 9.
-        Text(ws, 8, 1).ShouldBe("Summary");
-        Text(ws, 9, 2).ShouldBe("PHP 0.00");
-        Text(ws, 10, 2).ShouldBe("0");
-        Text(ws, 11, 2).ShouldBe("PHP 0.00");
+        Text(ws, 6, 1).ShouldBe("Period");
+        Text(ws, 7, 1).ShouldNotBe("Total");
+        Text(ws, RowOf(ws, "Gross Sales"), 2).ShouldBe("PHP 0.00");
+        Text(ws, RowOf(ws, "Total Orders"), 2).ShouldBe("0");
+        Text(ws, RowOf(ws, "Average Order Value"), 2).ShouldBe("PHP 0.00");
+        Text(wb.Worksheet("Staff Performance"), 7, 1).ShouldNotBe("Total");
+    }
 
-        var staff = wb.Worksheet("Staff Performance");
-        Text(staff, 11, 2).ShouldBe("PHP 0.00");
+    // ---- generation lock ---------------------------------------------------------------------
+
+    [Fact]
+    public async Task GenerateAsync_WhileAnotherManualRunIsGoing_ThrowsAndLeavesTheFirstRunAlone()
+    {
+        var started = new TaskCompletionSource();
+        var release = new TaskCompletionSource();
+        var first = Create();
+        _sender.Send(Arg.Any<GetStockStatusReportQuery>(), Arg.Any<CancellationToken>()).Returns(async _ =>
+        {
+            started.SetResult();
+            await release.Task;
+            return _stock;
+        });
+        var running = first.GenerateAsync(2026, 3, "Asia/Manila", CancellationToken.None);
+        await started.Task;
+
+        var second = await Should.ThrowAsync<InvalidOperationException>(() =>
+            Create().GenerateAsync(2026, 3, "Asia/Manila", CancellationToken.None));
+        release.SetResult();
+        var status = await running;
+
+        second.Message.ShouldContain("already being generated");
+        status.Exists.ShouldBeTrue();
+        _storage.Saves.Count.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task GenerateAsync_ReleasesTheLockAfterAFailure()
+    {
+        var service = Create();
+        _sender.Send(Arg.Any<GetPaymentsReportQuery>(), Arg.Any<CancellationToken>())
+            .Returns<Task<List<PaymentsReportRowDto>>>(_ => throw new InvalidOperationException("boom"));
+        await Should.ThrowAsync<InvalidOperationException>(() =>
+            service.GenerateAsync(2026, 3, "Asia/Manila", CancellationToken.None));
+
+        var status = await Create().GenerateAsync(2026, 3, "Asia/Manila", CancellationToken.None);
+
+        status.Exists.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task GenerateAsync_ReleasesTheLockAfterSuccess()
+    {
+        await Create().GenerateAsync(2026, 3, "Asia/Manila", CancellationToken.None);
+
+        var status = await Create().GenerateAsync(2026, 4, "Asia/Manila", CancellationToken.None);
+
+        status.Month.ShouldBe(4);
+    }
+
+    [Fact]
+    public async Task GenerateThroughDateAsync_WaitsForARunningGenerationInsteadOfFailing()
+    {
+        var started = new TaskCompletionSource();
+        var release = new TaskCompletionSource();
+        var first = Create();
+        _sender.Send(Arg.Any<GetStockStatusReportQuery>(), Arg.Any<CancellationToken>()).Returns(async _ =>
+        {
+            started.TrySetResult();
+            await release.Task;
+            return _stock;
+        });
+        var running = first.GenerateAsync(2026, 3, "Asia/Manila", CancellationToken.None);
+        await started.Task;
+
+        var scheduled = Create().GenerateThroughDateAsync(2026, 3, new DateTime(2026, 3, 14), "Asia/Manila", null, CancellationToken.None);
+        await Task.Delay(100);
+        scheduled.IsCompleted.ShouldBeFalse();
+        release.SetResult();
+        await running;
+        await scheduled;
+
+        _storage.Saves.Count.ShouldBe(2);
     }
 
     // ---- fake storage ------------------------------------------------------------------------

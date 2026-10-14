@@ -6,5 +6,8 @@ public sealed record StaffPerformanceReportRowDto(
     int OrderCount,
     decimal TotalRevenue,
     decimal AverageOrderValue,
-    decimal TipsReceived
+    decimal TipsReceived,
+    decimal GrossSales = 0m,
+    decimal Discounts = 0m,
+    decimal RefundedAmount = 0m
 );

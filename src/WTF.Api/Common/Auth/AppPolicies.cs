@@ -22,4 +22,5 @@ public static class AppPolicies
     public const string StockMovementsWrite = "StockMovementsWrite";
     public const string DashboardRead = "DashboardRead";
     public const string ReportsRead = "ReportsRead";
+    public const string ReportsGenerate = "ReportsGenerate";
 }

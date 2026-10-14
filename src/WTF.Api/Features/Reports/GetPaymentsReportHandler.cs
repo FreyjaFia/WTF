@@ -38,7 +38,7 @@ public sealed class GetPaymentsReportHandler(
             .Where(o =>
                 o.CreatedAt >= fromUtc
                 && o.CreatedAt < toExclusiveUtc
-                && o.StatusId == OrderStatuses.Completed
+                && (o.StatusId == OrderStatuses.Completed || o.StatusId == OrderStatuses.Refunded)
                 && (source == null || o.Source == source))
             .ToListAsync(cancellationToken);
 
@@ -61,7 +61,10 @@ public sealed class GetPaymentsReportHandler(
                 row.PaymentMethod,
                 row.Summary.CompletedOrderCount,
                 row.Summary.Revenue,
-                SalesRules.PercentOfTotal(row.Summary.Revenue, grandTotal)))
+                SalesRules.PercentOfTotal(row.Summary.Revenue, grandTotal),
+                row.Summary.GrossSales,
+                row.Summary.Discounts,
+                row.Summary.RefundedAmount))
             .ToList();
     }
 }
