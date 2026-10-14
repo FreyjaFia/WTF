@@ -237,6 +237,40 @@ public class CreateOrderHandlerTests
 
     // ---------- payment ----------
 
+    [Theory]
+    [InlineData(700, 10, 61)]   // the tip is part of what the customer hands over: 700 - (629 + 10) would be 61 on a 629 order
+    [InlineData(700, null, 71)]
+    [InlineData(639, 10, 0)]
+    [InlineData(629, 10, 0)]    // cash that falls short never produces negative change
+    public async Task Handle_CashPayment_ChangeIsWorkedOutFromTheTotalAndTheTip_NotTrustedFromTheApp(
+        int received, int? tip, int expectedChange)
+    {
+        var pizza = await SeedProduct("Pizza", 629m);
+        var cmd = Cmd(OrderStatusEnum.Completed, Line(pizza)) with
+        {
+            PaymentMethod = PaymentMethodEnum.Cash,
+            AmountReceived = (decimal)received,
+            Tips = tip.HasValue ? (decimal)tip.Value : null,
+            ChangeAmount = 9999m   // whatever the app sent is ignored
+        };
+
+        var dto = await Handler().Handle(cmd, CancellationToken.None);
+
+        dto.ChangeAmount.ShouldBe((decimal)expectedChange);
+        (await LoadOrder(dto.Id)).ChangeAmount.ShouldBe((decimal)expectedChange);
+    }
+
+    [Fact]
+    public async Task Handle_NoAmountReceived_LeavesTheChangeAlone()
+    {
+        var pizza = await SeedProduct("Pizza", 100m);
+
+        var dto = await Handler().Handle(
+            Cmd(OrderStatusEnum.Completed, Line(pizza)) with { PaymentMethod = PaymentMethodEnum.GCash }, CancellationToken.None);
+
+        dto.ChangeAmount.ShouldBeNull();
+    }
+
     [Fact]
     public async Task Handle_PaymentFields_ArePersisted()
     {

@@ -6,7 +6,7 @@
   (cancel)="onDialogCancel($event)"
 >
   <div
-    class="modal-box checkout-shell relative flex max-h-[92vh] w-[calc(100%-2rem)] max-w-lg app-dialog animate-[modal-pop_0.2s_ease-out] flex-col overflow-hidden rounded-2xl p-0 shadow-2xl"
+    class="modal-box checkout-shell app-dialog relative flex max-h-[92vh] w-[calc(100%-2rem)] max-w-lg animate-[modal-pop_0.2s_ease-out] flex-col overflow-hidden rounded-2xl p-0 shadow-2xl"
   >
     <!-- Header -->
     <div class="shrink-0 border-b border-gray-100 px-6 pt-6 pb-4">
@@ -17,7 +17,7 @@
         </div>
         <div class="shrink-0 text-right">
           <p class="text-xs text-gray-400">Total</p>
-          <p class="text-lg font-bold text-brand-ink" data-checkout-total>
+          <p class="text-brand-ink text-lg font-bold" data-checkout-total>
             <app-icon
               name="icon-peso"
               [class]="'inline h-3 w-3 align-[-0.125em]'"
@@ -147,7 +147,7 @@
                   name="icon-peso"
                   [class]="'inline h-3 w-3 align-[-0.125em]'"
                   [fill]="'currentColor'"
-                />{{ totalPrice() | number: '1.2-2' }}.
+                />{{ amountDueValue() | number: '1.2-2' }}.
               </p>
             }
           </div>

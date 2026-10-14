@@ -124,7 +124,7 @@ public class UpdateOrderHandlerTests
 
         dto!.PaymentMethod.ShouldBe(PaymentMethodEnum.GCash);
         dto.AmountReceived.ShouldBe(500m);
-        dto.ChangeAmount.ShouldBe(300m);
+        dto.ChangeAmount.ShouldBe(280m);   // 500 - (200 + 20); the 300 the app sent is ignored
         dto.Tips.ShouldBe(20m);
         dto.Note.ShouldBe("thanks");
         dto.UpdatedAt.ShouldNotBeNull();

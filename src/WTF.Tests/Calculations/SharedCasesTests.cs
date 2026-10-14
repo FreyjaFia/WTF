@@ -43,13 +43,16 @@ public class SharedCasesTests
 
     private sealed record PercentCase(string Name, decimal Part, decimal Total, decimal Expected);
 
+    private sealed record CashCase(string Name, decimal Total, decimal? Tips, decimal Received, decimal ExpectedDue, decimal ExpectedChange);
+
     private sealed record Cases(
         List<OrderCase> OrderTotals,
         List<DiscountCase> DiscountedUnitPrice,
         List<LabelCase> PromoLabels,
         List<BestDiscountCase> BestDiscount,
         List<AverageCase> Average,
-        List<PercentCase> PercentOfTotal);
+        List<PercentCase> PercentOfTotal,
+        List<CashCase> CashPayment);
 
     private static readonly Lazy<Cases> Loaded = new(() =>
     {
@@ -70,6 +73,8 @@ public class SharedCasesTests
     public static IEnumerable<object[]> AverageCaseNames() => Loaded.Value.Average.Select(c => new object[] { c.Name });
 
     public static IEnumerable<object[]> PercentCaseNames() => Loaded.Value.PercentOfTotal.Select(c => new object[] { c.Name });
+
+    public static IEnumerable<object[]> CashCaseNames() => Loaded.Value.CashPayment.Select(c => new object[] { c.Name });
 
     /// <summary>A stable id for a name in the file, so "cheese" is the same add-on in the cart and in the rule.</summary>
     private static Guid IdFor(string name) => new(MD5.HashData(Encoding.UTF8.GetBytes(name)));
@@ -143,6 +148,17 @@ public class SharedCasesTests
             lines.Select(l => OrderMetrics.ComputeParentItemTotal(l.Parent, l.Children, NoOverrides))
                 .ShouldBe(orderCase.ExpectedLineTotals);
         }
+    }
+
+    [Theory]
+    [MemberData(nameof(CashCaseNames))]
+    public void CashPayment_MatchesTheSharedCase(string name)
+    {
+        var c = Loaded.Value.CashPayment.Single(x => x.Name == name);
+
+        CashPayment.AmountDue(c.Total, c.Tips).ShouldBe(c.ExpectedDue);
+        CashPayment.Change(c.Received, c.Total, c.Tips).ShouldBe(c.ExpectedChange);
+        CashPayment.ChangeToGive(c.Received, c.Total, c.Tips).ShouldBe(Math.Max(0m, c.ExpectedChange));
     }
 
     [Theory]

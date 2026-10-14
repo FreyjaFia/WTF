@@ -14,6 +14,7 @@ using WTF.Api.Features.Promotions.DTOs;
 using WTF.Api.Hubs;
 using WTF.Api.Services;
 using WTF.Calculations.Orders;
+using WTF.Calculations.Sales;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 
@@ -495,6 +496,14 @@ public class CreateOrderHandler(
         var overridePrices = await AddOnPriceLookup.ForOrdersAsync(db, [orderWithTotals], cancellationToken);
 
         var totalAmount = OrderMetrics.ComputeOrderTotal(orderWithTotals, overridePrices);
+
+        // Cash: the cashier gives back the cash minus the total and the tip, so the change is worked out here instead of
+        // trusted from the app (an order queued offline by an older version used the total alone).
+        if (order.AmountReceived.HasValue)
+        {
+            order.ChangeAmount = CashPayment.ChangeToGive(order.AmountReceived.Value, totalAmount, order.Tips);
+            await db.SaveChangesAsync(cancellationToken);
+        }
 
         await dashboardHub.Clients.Group(HubNames.Groups.DashboardViewers)
             .SendAsync(HubNames.Events.DashboardUpdated, cancellationToken);

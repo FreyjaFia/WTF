@@ -14,7 +14,7 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { ModalStackService } from '@core/services';
 import { IconComponent } from '@shared/components';
 import { PaymentMethodEnum } from '@shared/models';
-import { roundMoney, subtractMoney } from '@shared/calculations';
+import { amountDue, cashChange } from '@shared/calculations';
 
 export interface CheckoutPrefill {
   paymentMethod?: PaymentMethodEnum | null;
@@ -57,6 +57,10 @@ export class CheckoutModal {
   protected readonly change = signal<number>(0);
   private readonly selectedPaymentMethod = signal<PaymentMethodEnum>(PaymentMethodEnum.Cash);
   private readonly amountReceivedValue = signal<number | null>(null);
+  private readonly tipsValue = signal<number | null>(null);
+
+  /** What the customer has to hand over: the total plus the tip. Change is worked out from this. */
+  protected readonly amountDueValue = computed(() => amountDue(this.totalPrice(), this.tipsValue()));
   protected readonly isCash = computed(
     () => this.selectedPaymentMethod() === PaymentMethodEnum.Cash,
   );
@@ -78,7 +82,7 @@ export class CheckoutModal {
   });
   protected readonly paymentStatusAmount = computed(() => {
     if (!this.hasAmountReceivedInput()) {
-      return this.totalPrice();
+      return this.amountDueValue();
     }
     return this.change() < 0 ? -this.change() : this.change();
   });
@@ -117,7 +121,8 @@ export class CheckoutModal {
       this.calculateChange();
     });
 
-    this.paymentForm.get('tips')?.valueChanges.subscribe(() => {
+    this.paymentForm.get('tips')?.valueChanges.subscribe((value) => {
+      this.tipsValue.set(value ?? null);
       this.calculateChange();
     });
 
@@ -164,13 +169,13 @@ export class CheckoutModal {
     this.paymentForm.get('paymentMethod')?.setValue(method);
   }
 
-  /** Fills in exactly the total, for a customer who pays the exact amount. */
+  /** Fills in exactly what is due (the total and any tip), for a customer who pays the exact amount. */
   protected useExactAmount(): void {
     if (this.isBusy()) {
       return;
     }
 
-    this.paymentForm.get('amountReceived')?.setValue(roundMoney(this.totalPrice()));
+    this.paymentForm.get('amountReceived')?.setValue(this.amountDueValue());
   }
 
   protected calculateChange(): void {
@@ -179,7 +184,7 @@ export class CheckoutModal {
 
     if (paymentMethod === PaymentMethodEnum.Cash) {
       if (amountReceived !== null && amountReceived !== undefined) {
-        const calculatedChange = subtractMoney(amountReceived, this.totalPrice());
+        const calculatedChange = cashChange(amountReceived, this.totalPrice(), this.tipsValue());
         this.change.set(calculatedChange);
       } else {
         // Initial neutral state before user enters a cash amount
@@ -241,6 +246,7 @@ export class CheckoutModal {
     });
     this.selectedPaymentMethod.set(PaymentMethodEnum.Cash);
     this.amountReceivedValue.set(null);
+    this.tipsValue.set(null);
     this.change.set(0);
   }
 }

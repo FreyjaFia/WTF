@@ -743,5 +743,63 @@
       "total": 0,
       "expected": 0
     }
+  ],
+  "cashPayment": [
+    {
+      "name": "no tip: change is cash minus the total",
+      "total": 629,
+      "tips": null,
+      "received": 700,
+      "expectedDue": 629,
+      "expectedChange": 71
+    },
+    {
+      "name": "a tip is part of what is handed over",
+      "total": 629,
+      "tips": 10,
+      "received": 700,
+      "expectedDue": 639,
+      "expectedChange": 61
+    },
+    {
+      "name": "exact amount with a tip",
+      "total": 629,
+      "tips": 10,
+      "received": 639,
+      "expectedDue": 639,
+      "expectedChange": 0
+    },
+    {
+      "name": "cash covers the total but not the tip",
+      "total": 629,
+      "tips": 10,
+      "received": 629,
+      "expectedDue": 639,
+      "expectedChange": -10
+    },
+    {
+      "name": "cash falls short of the total",
+      "total": 629,
+      "tips": null,
+      "received": 600,
+      "expectedDue": 629,
+      "expectedChange": -29
+    },
+    {
+      "name": "cents add up exactly",
+      "total": 0.1,
+      "tips": 0.2,
+      "received": 1,
+      "expectedDue": 0.3,
+      "expectedChange": 0.7
+    },
+    {
+      "name": "a zero tip changes nothing",
+      "total": 100,
+      "tips": 0,
+      "received": 150,
+      "expectedDue": 100,
+      "expectedChange": 50
+    }
   ]
 }

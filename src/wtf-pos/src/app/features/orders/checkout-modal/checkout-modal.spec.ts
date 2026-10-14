@@ -21,6 +21,7 @@ interface Internals {
   onDialogCancel: (e: Event) => void;
   choosePayment: (m: PaymentMethodEnum) => void;
   useExactAmount: () => void;
+  amountDueValue: () => number;
 }
 
 describe('CheckoutModal', () => {
@@ -70,7 +71,7 @@ describe('CheckoutModal', () => {
     expect(t.paymentForm.get('paymentMethod').value).toBe(PaymentMethodEnum.Cash);
     expect(t.paymentForm.get('amountReceived').value).toBe(150);
     expect(t.paymentForm.get('tips').value).toBe(10);
-    expect(t.change()).toBe(50);
+    expect(t.change()).toBe(40); // 150 - (100 + 10)
     expect(t.isConfirmDisabled()).toBe(false);
   });
 
@@ -102,6 +103,78 @@ describe('CheckoutModal', () => {
     expect(t.paymentStatusLabel()).toBe('Change Due:');
     expect(t.paymentStatusAmount()).toBe(50);
     expect(t.isConfirmDisabled()).toBe(false);
+  });
+
+  describe('a tip is part of what the customer hands over', () => {
+    const setTip = (v: number | null) => t.paymentForm.get('tips').setValue(v);
+    const el = () => fixture.nativeElement as HTMLElement;
+
+    it('adds the tip to what is due', () => {
+      cmp.triggerOpen();
+      expect(t.amountDueValue()).toBe(100);
+      setTip(10);
+      expect(t.amountDueValue()).toBe(110);
+      expect(t.paymentStatusAmount()).toBe(110); // nothing entered yet: shows the amount due
+    });
+
+    it('gives back the cash minus the total and the tip', () => {
+      cmp.triggerOpen();
+      setTip(10);
+      setAmount(200);
+      expect(t.change()).toBe(90);
+      expect(t.paymentStatusAmount()).toBe(90);
+    });
+
+    it('is short when the cash covers the total but not the tip', () => {
+      cmp.triggerOpen();
+      setTip(10);
+      setAmount(100);
+      expect(t.change()).toBe(-10);
+      expect(t.hasInsufficientCash()).toBe(true);
+      expect(t.paymentStatusLabel()).toBe('Amount Owed:');
+      expect(t.paymentStatusAmount()).toBe(10);
+      expect(t.isConfirmDisabled()).toBe(true);
+    });
+
+    it('works the change out again when the tip changes after the cash is entered', () => {
+      cmp.triggerOpen();
+      setAmount(150);
+      expect(t.change()).toBe(50);
+      setTip(20);
+      expect(t.change()).toBe(30);
+      setTip(null);
+      expect(t.change()).toBe(50);
+    });
+
+    it('fills the exact amount with the tip included', () => {
+      cmp.triggerOpen();
+      setTip(10);
+      (
+        [...el().querySelectorAll('button')].find(
+          (b) => b.textContent?.trim() === 'Exact amount',
+        ) as HTMLButtonElement
+      ).click();
+      fixture.detectChanges();
+
+      expect(t.paymentForm.get('amountReceived').value).toBe(110);
+      expect(t.change()).toBe(0);
+      expect(t.isConfirmDisabled()).toBe(false);
+    });
+
+    it('asks for the total plus the tip in the insufficient payment message', () => {
+      cmp.triggerOpen();
+      setTip(10);
+      setAmount(105);
+      fixture.detectChanges();
+      expect(el().querySelector('[role="alert"]')!.textContent).toContain('110.00');
+    });
+
+    it('forgets the tip when the dialog is opened again', () => {
+      cmp.triggerOpen();
+      setTip(10);
+      cmp.triggerOpen();
+      expect(t.amountDueValue()).toBe(100);
+    });
   });
 
   it('exact payment gives zero change and enables confirm', () => {
@@ -142,7 +215,7 @@ describe('CheckoutModal', () => {
     t.paymentForm.get('tips').setValue(5);
     t.confirmOrder();
     expect(emitted).toEqual([
-      { paymentMethod: PaymentMethodEnum.Cash, amountReceived: 150, changeAmount: 50, tips: 5 },
+      { paymentMethod: PaymentMethodEnum.Cash, amountReceived: 150, changeAmount: 45, tips: 5 },
     ]);
   });
 
@@ -218,7 +291,9 @@ describe('CheckoutModal', () => {
     const el = () => fixture.nativeElement as HTMLElement;
     const text = () => el().textContent ?? '';
     const radio = (label: string) =>
-      [...el().querySelectorAll('[role="radio"]')].find((r) => r.textContent?.trim() === label) as HTMLButtonElement;
+      [...el().querySelectorAll('[role="radio"]')].find(
+        (r) => r.textContent?.trim() === label,
+      ) as HTMLButtonElement;
 
     it('is a rounded card with a header showing the total', () => {
       const box = el().querySelector('.modal-box') as HTMLElement;
@@ -226,12 +301,16 @@ describe('CheckoutModal', () => {
       expect(box.className).toContain('max-w-lg');
       expect(box.className).toContain('modal-pop');
       expect(el().querySelector('h3')!.textContent).toContain('Checkout');
-      expect((el().querySelector('[data-checkout-total]') as HTMLElement).textContent).toContain('100.00');
+      expect((el().querySelector('[data-checkout-total]') as HTMLElement).textContent).toContain(
+        '100.00',
+      );
     });
 
     it('shows the total from the input as it changes', () => {
       setInput('totalPrice', 250.5);
-      expect((el().querySelector('[data-checkout-total]') as HTMLElement).textContent).toContain('250.50');
+      expect((el().querySelector('[data-checkout-total]') as HTMLElement).textContent).toContain(
+        '250.50',
+      );
     });
 
     it('no longer has the order summary or a View Order button', () => {
@@ -284,7 +363,11 @@ describe('CheckoutModal', () => {
 
     it('fills in the exact amount with one tap and enables confirm', () => {
       cmp.triggerOpen();
-      (([...el().querySelectorAll('button')].find((b) => b.textContent?.trim() === 'Exact amount')) as HTMLButtonElement).click();
+      (
+        [...el().querySelectorAll('button')].find(
+          (b) => b.textContent?.trim() === 'Exact amount',
+        ) as HTMLButtonElement
+      ).click();
       fixture.detectChanges();
 
       expect((el().querySelector('#amountReceived') as HTMLInputElement).value).toBe('100');
@@ -345,7 +428,9 @@ describe('CheckoutModal', () => {
     });
 
     it('has Cancel and Confirm & Pay in the footer', () => {
-      const labels = [...el().querySelectorAll('.border-t button')].map((b) => b.textContent?.trim());
+      const labels = [...el().querySelectorAll('.border-t button')].map((b) =>
+        b.textContent?.trim(),
+      );
       expect(labels).toEqual(['Cancel', 'Confirm & Pay']);
     });
 

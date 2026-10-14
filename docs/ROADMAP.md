@@ -736,10 +736,17 @@ database) and compared every figure with the answer worked out by hand, using th
 - **Bug found and fixed:** an order queued while offline showed its list-price total in the Orders list (285.00) instead
   of the total with promotions (273.00) that the cart and receipt showed. Queued orders now store the total worked out
   at queue time (`PendingOrder.previewTotal`); the list shows it.
-- **Open question (not changed):** the POS checkout and the customer link treat tips differently. The customer link
-  adds the tip to what must be paid, so change = cash - (total + tip). The POS checkout leaves the tip out, so change =
-  cash - total, and the order details then show "Total Paid" without the tip. If a customer hands over 700 for a 629
-  order and leaves a 10 tip, the POS tells the cashier to give 71 back, not 61. Decide which rule the shop wants.
+- **Tips in cash payments (decided and done):** the POS checkout and the customer link used to differ. The customer link
+  added the tip to what must be paid; the POS left it out, so for 700 handed over on a 629 order with a 10 tip it told
+  the cashier to give back 71 instead of 61. Both now follow the real cash workflow: a tip is part of what the customer
+  hands over, so amount due = total + tip and change = cash - (total + tip). `CashPayment` (API) and `cash-payment.ts`
+  (Angular) run the same shared cases; the POS dialog's "Exact amount" and "insufficient payment" use the amount due,
+  and the server works the change out itself when an order is created or updated (it no longer trusts the app's figure,
+  which also corrects an order queued offline by an older version). Orders saved before this keep their old change.
+- **GCash tips (open):** the POS offers a tip only for cash; the customer link offers it for both. Since nobody checks
+  the amount sent, a GCash tip would be recorded, not verified. Proposed: allow it at the POS too, show the amount to
+  send (total + tip), and later split tips by payment method in the Payments report so GCash tips can be reconciled
+  against the GCash statement.
 - Observed, not changed: opening `/orders/editor` directly in a browser with an empty local cache shows "No products
   found" until you navigate inside the app or press refresh (the catalog loads on in-app navigation). A completed order
   that has no stored promotion (older orders) still shows a "best guess" promo discount line from today's promotions,
