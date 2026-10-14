@@ -73,7 +73,7 @@ interface Internals {
   editPendingOrder: (id: string) => void;
   syncPendingOrders: () => void;
   getPendingItemCount: (c: CartItemDto[]) => string;
-  getPendingTotal: (c: CartItemDto[]) => number;
+  getPendingTotal: (p: { cartSnapshot: CartItemDto[]; previewTotal?: number | null }) => number;
   getOrderStatusVariant: (s?: OrderStatusEnum | null) => string;
   getOrderStatusLabel: (s?: OrderStatusEnum | null) => string;
   isSortActive: (c: string) => boolean;
@@ -735,7 +735,9 @@ describe('OrderList', () => {
         { productId: 'p', name: 'P', price: 10, qty: 2, addOns: [{ addOnId: 'a', name: 'A', price: 5 }] },
         { productId: 'q', name: 'Q', price: 20, qty: 1 },
       ];
-      expect(t.getPendingTotal(cart)).toBe(50);
+      expect(t.getPendingTotal({ cartSnapshot: cart })).toBe(50);
+      // The total stored when the order was queued (promotions applied) wins over the list-price snapshot.
+      expect(t.getPendingTotal({ cartSnapshot: cart, previewTotal: 38 })).toBe(38);
       expect(t.getPendingItemCount(cart)).toBe('3 items');
       expect(t.getPendingItemCount([cart[1]])).toBe('1 item');
     });

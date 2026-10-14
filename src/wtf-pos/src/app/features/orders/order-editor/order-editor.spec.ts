@@ -1475,6 +1475,7 @@ describe('OrderEditor', () => {
         expect.objectContaining({ status: OrderStatusEnum.Pending, customerId: 'c1' }),
         t.cart(),
         'Jane Doe',
+        expect.any(Number),
       );
       await settle();
       expect(alert['info']).toHaveBeenCalledWith(
@@ -2335,6 +2336,7 @@ describe('OrderEditor', () => {
         expect.objectContaining({ status: OrderStatusEnum.Pending, customerId: 'c1' }),
         t.cart(),
         'Jane Doe',
+        expect.any(Number),
       );
       await settle();
       expect(alert['info']).toHaveBeenCalledWith('Order OFF-1 updated offline.');

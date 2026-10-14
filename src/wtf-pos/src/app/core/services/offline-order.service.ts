@@ -79,6 +79,7 @@ export class OfflineOrderService {
     command: CreateOrderCommand,
     cartSnapshot: CartItemDto[],
     customerName: string | null,
+    previewTotal: number | null = null,
   ): Promise<string> {
     const today = this.getTodayString();
     this.localCounter++;
@@ -93,6 +94,7 @@ export class OfflineOrderService {
       localId,
       command,
       cartSnapshot,
+      previewTotal,
       customerName,
       createdAt: new Date().toISOString(),
       status: 'pending',
@@ -120,6 +122,7 @@ export class OfflineOrderService {
     command: CreateOrderCommand,
     cartSnapshot: CartItemDto[],
     customerName: string | null,
+    previewTotal: number | null = null,
   ): Promise<void> {
     const existing = await db.pendingOrders.where('localId').equals(localId).first();
 
@@ -130,6 +133,7 @@ export class OfflineOrderService {
     await (db.pendingOrders as import('dexie').Table).update(existing.id!, {
       command,
       cartSnapshot,
+      previewTotal,
       customerName,
       status: 'pending',
       errorMessage: null,

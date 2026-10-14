@@ -45,6 +45,7 @@ import {
 } from '@shared/models';
 import { debounceTime, Subscription } from 'rxjs';
 import { cartTotal } from '@shared/calculations';
+import type { PendingOrder } from '@core/services/db';
 
 type SortColumn = 'orderNumber' | 'date' | 'totalAmount';
 type SortDirection = 'asc' | 'desc';
@@ -653,8 +654,8 @@ export class OrderList implements OnInit, OnDestroy {
     return count === 1 ? '1 item' : `${count} items`;
   }
 
-  protected getPendingTotal(cartSnapshot: CartItemDto[]): number {
-    return cartTotal(cartSnapshot);
+  protected getPendingTotal(pending: Pick<PendingOrder, 'cartSnapshot' | 'previewTotal'>): number {
+    return pending.previewTotal ?? cartTotal(pending.cartSnapshot);
   }
 
   protected getOrderStatusVariant(

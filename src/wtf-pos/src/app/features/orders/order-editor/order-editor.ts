@@ -2222,7 +2222,7 @@ export class OrderEditor implements OnInit, OnDestroy {
 
   private queueOfflineOrder(command: CreateOrderCommand): void {
     this.offlineOrder
-      .queue(command, this.cart(), this.selectedCustomerName())
+      .queue(command, this.cart(), this.selectedCustomerName(), this.totalPrice())
       .then((localId) => {
         this.isSavingOrder.set(false);
         this.skipGuard = true;
@@ -2268,7 +2268,7 @@ export class OrderEditor implements OnInit, OnDestroy {
     };
 
     this.offlineOrder
-      .update(this.offlineLocalId, command, this.cart(), this.selectedCustomerName())
+      .update(this.offlineLocalId, command, this.cart(), this.selectedCustomerName(), this.totalPrice())
       .then(() => {
         this.isSavingOrder.set(false);
         this.skipGuard = true;

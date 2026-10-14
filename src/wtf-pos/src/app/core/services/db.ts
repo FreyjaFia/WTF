@@ -36,6 +36,11 @@ export interface PendingOrder {
   localId: string;
   command: CreateOrderCommand;
   cartSnapshot: CartItemDto[];
+  /**
+   * What the order comes to with promotions applied, worked out when it was queued. The snapshot holds list prices
+   * (the editor applies promotions again when it reopens the cart), so it cannot give this total on its own.
+   */
+  previewTotal?: number | null;
   customerName: string | null;
   createdAt: string;
   status: 'pending' | 'syncing' | 'failed';
