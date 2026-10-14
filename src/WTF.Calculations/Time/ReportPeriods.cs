@@ -16,6 +16,11 @@ public static class ReportPeriods
     public static int LocalHour(DateTime createdAtUtc, TimeZoneInfo timeZone) =>
         TimeZoneInfo.ConvertTimeFromUtc(ReportDateRange.EnsureUtcDate(createdAtUtc), timeZone).Hour;
 
+    public static DateTime LocalDateTime(DateTime createdAtUtc, TimeZoneInfo timeZone) =>
+        DateTime.SpecifyKind(
+            TimeZoneInfo.ConvertTimeFromUtc(ReportDateRange.EnsureUtcDate(createdAtUtc), timeZone),
+            DateTimeKind.Unspecified);
+
     /// <summary>The first local day of the day, Monday-based week or month that contains the order.</summary>
     public static DateTime PeriodStart(DateTime createdAtUtc, ReportPeriod period, TimeZoneInfo timeZone)
     {
