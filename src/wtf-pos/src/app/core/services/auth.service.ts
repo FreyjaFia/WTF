@@ -369,6 +369,10 @@ export class AuthService {
     return this.hasAnyRole(AppRoleGroups.OrderLinksWrite);
   }
 
+  public canGenerateReports(): boolean {
+    return this.hasAnyRole(AppRoleGroups.ReportsGenerate);
+  }
+
   public canOverrideOrders(): boolean {
     return this.hasAnyRole(AppRoleGroups.OrdersOverride);
   }

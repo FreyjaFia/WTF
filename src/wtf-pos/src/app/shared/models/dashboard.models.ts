@@ -15,6 +15,23 @@ export interface DashboardDto {
   paymentMethods: PaymentMethodBreakdownDto[];
   comparisonLabel: string;
   dailyRevenue: DailyRevenuePointDto[] | null;
+  insights?: DashboardInsightsDto | null;
+}
+
+export interface DashboardInsightsDto {
+  discounts: number;
+  refundedCount: number;
+  refundedAmount: number;
+  voidRate: number;
+  lowStockCount: number;
+  outOfStockCount: number;
+  awaitingApprovalCount: number;
+  customerLinkOrders: number;
+  customerLinkRevenue: number;
+  topPromotionName: string | null;
+  topPromotionUses: number;
+  newCustomers: number;
+  returningCustomers: number;
 }
 
 export interface DailySummaryDto {

@@ -526,4 +526,82 @@ describe('Dashboard', () => {
       expect(fixture.nativeElement.querySelector('[data-filter-count]').textContent.trim()).toBe('1');
     });
   });
+
+  describe('insights', () => {
+    const insights = {
+      discounts: 40,
+      refundedCount: 1,
+      refundedAmount: 50,
+      voidRate: 40,
+      lowStockCount: 2,
+      outOfStockCount: 1,
+      awaitingApprovalCount: 3,
+      customerLinkOrders: 4,
+      customerLinkRevenue: 250.5,
+      topPromotionName: 'Combo',
+      topPromotionUses: 7,
+      newCustomers: 2,
+      returningCustomers: 5,
+    };
+
+    const tiles = (fixture: { nativeElement: unknown }): HTMLAnchorElement[] =>
+      Array.from(
+        (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLAnchorElement>(
+          '[data-dashboard-insights] a',
+        ),
+      );
+
+    it('shows seven tiles with the figures from the API', () => {
+      service.getDashboard.mockReturnValue(of(makeDashboard({ insights })));
+      const { fixture } = create();
+
+      const text = tiles(fixture).map((tile) => tile.textContent?.replace(/\s+/g, ' ').trim());
+      expect(text.length).toBe(7);
+      expect(text[0]).toContain('PHP 50.00');
+      expect(text[0]).toContain('1 refunded');
+      expect(text[0]).toContain('PHP 40.00 discounts');
+      expect(text[1]).toContain('40%');
+      expect(text[2]).toContain('3 to restock');
+      expect(text[2]).toContain('1 out, 2 low');
+      expect(text[3]).toContain('3');
+      expect(text[4]).toContain('4');
+      expect(text[4]).toContain('Without awaiting approval, PHP 250.50 sold');
+      expect(text[5]).toContain('Combo');
+      expect(text[5]).toContain('7 uses');
+      expect(text[6]).toContain('2 new, 5 returning');
+    });
+
+    it('links each tile to its report, and awaiting approval to the orders list', () => {
+      service.getDashboard.mockReturnValue(of(makeDashboard({ insights })));
+      const { fixture } = create();
+
+      const hrefs = tiles(fixture).map((tile) => tile.getAttribute('href'));
+      expect(hrefs).toEqual([
+        '/management/reports?report=daily-sales',
+        '/management/reports?report=voids',
+        '/management/reports?report=stock-status',
+        expect.stringContaining('/orders'),
+        '/management/reports?report=customer-links',
+        '/management/reports?report=promotions',
+        '/management/reports?report=customers',
+      ]);
+    });
+
+    it('says None yet when no promotion was used', () => {
+      service.getDashboard.mockReturnValue(
+        of(makeDashboard({ insights: { ...insights, topPromotionName: null, topPromotionUses: 0 } })),
+      );
+      const { fixture } = create();
+
+      expect(tiles(fixture)[5].textContent).toContain('None yet');
+    });
+
+    it('shows no tiles when the API sent no insights', () => {
+      service.getDashboard.mockReturnValue(of(makeDashboard()));
+      const { fixture, vm } = create();
+
+      expect(vm['insights']()).toBeNull();
+      expect(tiles(fixture)).toEqual([]);
+    });
+  });
 });

@@ -87,6 +87,7 @@ export class Dashboard implements OnInit, OnDestroy {
     { value: 'custom', label: 'Custom Range' },
   ];
   protected readonly routes = AppRoutes;
+  protected readonly insights = computed(() => this.dashboard()?.insights ?? null);
 
   protected readonly greeting = GREETINGS[Math.floor(Math.random() * GREETINGS.length)];
 

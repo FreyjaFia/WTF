@@ -4,18 +4,10 @@ import { HttpErrorMessages, ServiceErrorMessages } from '@core/messages';
 import { ConnectivityService } from '@core/services';
 import { environment } from '@environments/environment.development';
 import {
-  DailySalesReportQuery,
-  DailySalesReportRowDto,
-  HourlySalesReportQuery,
-  HourlySalesReportRowDto,
   MonthlyReportWorkbookStatusDto,
-  PaymentsReportQuery,
-  PaymentsReportRowDto,
-  ProductSalesReportQuery,
-  ProductSalesReportRowDto,
-  ReportSource,
-  StaffPerformanceReportQuery,
-  StaffPerformanceReportRowDto,
+  ReportExportOptions,
+  ReportQuery,
+  ReportType,
 } from '@shared/models';
 import { Observable, catchError, throwError } from 'rxjs';
 import { extractHttpErrorMessage } from './http-error-message';
@@ -23,16 +15,7 @@ import { extractHttpErrorMessage } from './http-error-message';
 @Injectable({ providedIn: 'root' })
 export class ReportsService {
   private static readonly MSG_NETWORK_UNAVAILABLE = HttpErrorMessages.NetworkUnavailable;
-  private static readonly MSG_FETCH_DAILY_SALES_FAILED =
-    ServiceErrorMessages.Report.FetchDailySalesFailed;
-  private static readonly MSG_FETCH_PRODUCT_SALES_FAILED =
-    ServiceErrorMessages.Report.FetchProductSalesFailed;
-  private static readonly MSG_FETCH_PAYMENTS_FAILED =
-    ServiceErrorMessages.Report.FetchPaymentsFailed;
-  private static readonly MSG_FETCH_HOURLY_SALES_FAILED =
-    ServiceErrorMessages.Report.FetchHourlySalesFailed;
-  private static readonly MSG_FETCH_STAFF_PERFORMANCE_FAILED =
-    ServiceErrorMessages.Report.FetchStaffPerformanceFailed;
+  private static readonly MSG_FETCH_REPORT_FAILED = ServiceErrorMessages.Report.FetchReportFailed;
   private static readonly MSG_DOWNLOAD_EXCEL_FAILED =
     ServiceErrorMessages.Report.DownloadExcelFailed;
   private static readonly MSG_DOWNLOAD_PDF_FAILED = ServiceErrorMessages.Report.DownloadPdfFailed;
@@ -48,110 +31,40 @@ export class ReportsService {
   private readonly connectivity = inject(ConnectivityService);
   private readonly baseUrl = `${environment.apiUrl}/reports`;
 
-  public getDailySalesReport(query: DailySalesReportQuery): Observable<DailySalesReportRowDto[]> {
+  public getReport<T>(type: ReportType, query: ReportQuery): Observable<T[]> {
     return this.http
-      .get<DailySalesReportRowDto[]>(`${this.baseUrl}/daily-sales`, {
-        params: this.buildDailySalesParams(query),
-      })
+      .get<T[]>(`${this.baseUrl}/${type}`, { params: this.buildParams(query) })
       .pipe(
-        catchError((error: HttpErrorResponse) => {
-          return this.buildError(ReportsService.MSG_FETCH_DAILY_SALES_FAILED, error);
-        }),
+        catchError((error: HttpErrorResponse) =>
+          this.buildError(ReportsService.MSG_FETCH_REPORT_FAILED, error),
+        ),
       );
   }
 
-  public getProductSalesReport(
-    query: ProductSalesReportQuery,
-  ): Observable<ProductSalesReportRowDto[]> {
-    return this.http
-      .get<ProductSalesReportRowDto[]>(`${this.baseUrl}/product-sales`, {
-        params: this.buildProductSalesParams(query),
-      })
-      .pipe(
-        catchError((error: HttpErrorResponse) => {
-          return this.buildError(ReportsService.MSG_FETCH_PRODUCT_SALES_FAILED, error);
-        }),
-      );
+  public downloadReportExcel(
+    type: ReportType,
+    query: ReportQuery,
+    options: ReportExportOptions = {},
+  ): Observable<Blob> {
+    return this.download(
+      type,
+      this.buildParams(query, options),
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      ReportsService.MSG_DOWNLOAD_EXCEL_FAILED,
+    );
   }
 
-  public getPaymentsReport(query: PaymentsReportQuery): Observable<PaymentsReportRowDto[]> {
-    return this.http
-      .get<PaymentsReportRowDto[]>(`${this.baseUrl}/payments`, {
-        params: this.buildPaymentsParams(query),
-      })
-      .pipe(
-        catchError((error: HttpErrorResponse) => {
-          return this.buildError(ReportsService.MSG_FETCH_PAYMENTS_FAILED, error);
-        }),
-      );
-  }
-
-  public getHourlySalesReport(
-    query: HourlySalesReportQuery,
-  ): Observable<HourlySalesReportRowDto[]> {
-    return this.http
-      .get<HourlySalesReportRowDto[]>(`${this.baseUrl}/hourly`, {
-        params: this.buildHourlySalesParams(query),
-      })
-      .pipe(
-        catchError((error: HttpErrorResponse) => {
-          return this.buildError(ReportsService.MSG_FETCH_HOURLY_SALES_FAILED, error);
-        }),
-      );
-  }
-
-  public getStaffPerformanceReport(
-    query: StaffPerformanceReportQuery,
-  ): Observable<StaffPerformanceReportRowDto[]> {
-    return this.http
-      .get<StaffPerformanceReportRowDto[]>(`${this.baseUrl}/staff`, {
-        params: this.buildStaffPerformanceParams(query),
-      })
-      .pipe(
-        catchError((error: HttpErrorResponse) => {
-          return this.buildError(ReportsService.MSG_FETCH_STAFF_PERFORMANCE_FAILED, error);
-        }),
-      );
-  }
-
-  public downloadDailySalesExcel(query: DailySalesReportQuery): Observable<Blob> {
-    return this.downloadExcel('/daily-sales', this.buildDailySalesParams(query));
-  }
-
-  public downloadProductSalesExcel(query: ProductSalesReportQuery): Observable<Blob> {
-    return this.downloadExcel('/product-sales', this.buildProductSalesParams(query));
-  }
-
-  public downloadPaymentsExcel(query: PaymentsReportQuery): Observable<Blob> {
-    return this.downloadExcel('/payments', this.buildPaymentsParams(query));
-  }
-
-  public downloadHourlySalesExcel(query: HourlySalesReportQuery): Observable<Blob> {
-    return this.downloadExcel('/hourly', this.buildHourlySalesParams(query));
-  }
-
-  public downloadStaffPerformanceExcel(query: StaffPerformanceReportQuery): Observable<Blob> {
-    return this.downloadExcel('/staff', this.buildStaffPerformanceParams(query));
-  }
-
-  public downloadDailySalesPdf(query: DailySalesReportQuery): Observable<Blob> {
-    return this.downloadPdf('/daily-sales', this.buildDailySalesParams(query));
-  }
-
-  public downloadProductSalesPdf(query: ProductSalesReportQuery): Observable<Blob> {
-    return this.downloadPdf('/product-sales', this.buildProductSalesParams(query));
-  }
-
-  public downloadPaymentsPdf(query: PaymentsReportQuery): Observable<Blob> {
-    return this.downloadPdf('/payments', this.buildPaymentsParams(query));
-  }
-
-  public downloadHourlySalesPdf(query: HourlySalesReportQuery): Observable<Blob> {
-    return this.downloadPdf('/hourly', this.buildHourlySalesParams(query));
-  }
-
-  public downloadStaffPerformancePdf(query: StaffPerformanceReportQuery): Observable<Blob> {
-    return this.downloadPdf('/staff', this.buildStaffPerformanceParams(query));
+  public downloadReportPdf(
+    type: ReportType,
+    query: ReportQuery,
+    options: ReportExportOptions = {},
+  ): Observable<Blob> {
+    return this.download(
+      type,
+      this.buildParams(query, options),
+      'application/pdf',
+      ReportsService.MSG_DOWNLOAD_PDF_FAILED,
+    );
   }
 
   public getMonthlyWorkbookStatus(
@@ -200,84 +113,44 @@ export class ReportsService {
       );
   }
 
-  private downloadExcel(path: string, params: HttpParams): Observable<Blob> {
+  private download(
+    type: ReportType,
+    params: HttpParams,
+    accept: string,
+    failureMessage: string,
+  ): Observable<Blob> {
     return this.http
-      .get(`${this.baseUrl}${path}`, {
+      .get(`${this.baseUrl}/${type}`, {
         params,
         responseType: 'blob',
-        headers: new HttpHeaders({
-          Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        }),
+        headers: new HttpHeaders({ Accept: accept }),
       })
-      .pipe(
-        catchError((error: HttpErrorResponse) => {
-          return this.buildError(ReportsService.MSG_DOWNLOAD_EXCEL_FAILED, error);
-        }),
-      );
+      .pipe(catchError((error: HttpErrorResponse) => this.buildError(failureMessage, error)));
   }
 
-  private downloadPdf(path: string, params: HttpParams): Observable<Blob> {
-    return this.http
-      .get(`${this.baseUrl}${path}`, {
-        params,
-        responseType: 'blob',
-        headers: new HttpHeaders({
-          Accept: 'application/pdf',
-        }),
-      })
-      .pipe(
-        catchError((error: HttpErrorResponse) => {
-          return this.buildError(ReportsService.MSG_DOWNLOAD_PDF_FAILED, error);
-        }),
-      );
-  }
+  private buildParams(query: ReportQuery, options: ReportExportOptions = {}): HttpParams {
+    const values: Record<string, string | number | boolean | undefined> = {
+      fromDate: query.fromDate,
+      toDate: query.toDate,
+      source: query.source,
+      groupBy: query.groupBy,
+      categoryId: query.categoryId,
+      subCategoryId: query.subCategoryId,
+      staffId: query.staffId,
+      splitAddOns: query.splitAddOns ? true : undefined,
+      search: options.search?.trim() ? options.search.trim() : undefined,
+      sortBy: options.sortBy,
+      sortDir: options.sortBy ? options.sortDir : undefined,
+    };
 
-  private buildDailySalesParams(query: DailySalesReportQuery): HttpParams {
-    let params = this.buildBaseDateRangeParams(query.fromDate, query.toDate, query.source);
-    if (query.groupBy) {
-      params = params.set('groupBy', query.groupBy);
+    let params = new HttpParams();
+    for (const [key, value] of Object.entries(values)) {
+      if (value !== undefined) {
+        params = params.set(key, value);
+      }
     }
 
     return params;
-  }
-
-  private buildProductSalesParams(query: ProductSalesReportQuery): HttpParams {
-    let params = this.buildBaseDateRangeParams(query.fromDate, query.toDate, query.source);
-    if (query.categoryId !== undefined) {
-      params = params.set('categoryId', query.categoryId);
-    }
-
-    if (query.subCategoryId !== undefined) {
-      params = params.set('subCategoryId', query.subCategoryId);
-    }
-
-    return params;
-  }
-
-  private buildPaymentsParams(query: PaymentsReportQuery): HttpParams {
-    return this.buildBaseDateRangeParams(query.fromDate, query.toDate, query.source);
-  }
-
-  private buildHourlySalesParams(query: HourlySalesReportQuery): HttpParams {
-    return this.buildBaseDateRangeParams(query.fromDate, query.toDate, query.source);
-  }
-
-  private buildStaffPerformanceParams(query: StaffPerformanceReportQuery): HttpParams {
-    let params = this.buildBaseDateRangeParams(query.fromDate, query.toDate, query.source);
-    if (query.staffId) {
-      params = params.set('staffId', query.staffId);
-    }
-
-    return params;
-  }
-
-  private buildBaseDateRangeParams(
-    fromDate: string,
-    toDate: string,
-    source?: ReportSource,
-  ): HttpParams {
-    const params = new HttpParams().set('fromDate', fromDate).set('toDate', toDate);
-    return source === undefined ? params : params.set('source', source);
   }
 
   private buildMonthlyWorkbookParams(year: number, month: number): HttpParams {

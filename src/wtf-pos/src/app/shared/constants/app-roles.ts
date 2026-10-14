@@ -32,6 +32,7 @@ export const AppRoleGroups = {
   PromotionsRead: [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer],
   PromotionsWrite: [AppRoles.SuperAdmin, AppRoles.Admin],
   ReportsRead: [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer],
+  ReportsGenerate: [AppRoles.SuperAdmin, AppRoles.Admin],
   AuditRead: [AppRoles.SuperAdmin],
   SchemaScriptHistoryRead: [AppRoles.SuperAdmin],
   OrdersRead: [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.Cashier],

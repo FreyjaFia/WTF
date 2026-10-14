@@ -65,6 +65,7 @@ describe('app roles vs the API policies', () => {
     PromotionsRead: ['SuperAdmin', 'Admin', 'AdminViewer'],
     PromotionsWrite: ['SuperAdmin', 'Admin'],
     ReportsRead: ['SuperAdmin', 'Admin', 'AdminViewer'],
+    ReportsGenerate: ['SuperAdmin', 'Admin'],
     AuditRead: ['SuperAdmin'],
     SchemaScriptHistoryRead: ['SuperAdmin'],
     OrdersRead: ['SuperAdmin', 'Admin', 'AdminViewer', 'Cashier'],

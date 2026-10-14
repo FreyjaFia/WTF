@@ -374,6 +374,7 @@ describe('AuthService session', () => {
       ],
       ['canWriteOrders', (a) => a.canWriteOrders(), ['SuperAdmin', 'Admin', 'Cashier']],
       ['canOverrideOrders', (a) => a.canOverrideOrders(), ['SuperAdmin', 'Admin']],
+      ['canGenerateReports', (a) => a.canGenerateReports(), ['SuperAdmin', 'Admin']],
       [
         'canReadItems',
         (a) => a.canReadItems(),

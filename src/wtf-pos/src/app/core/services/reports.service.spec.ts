@@ -1,5 +1,6 @@
 import { HttpErrorMessages, ServiceErrorMessages } from '@core/messages';
 import { environment } from '@environments/environment.development';
+import { ReportType } from '@shared/models';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { capture, failNetwork, failWith, setupHttpService } from '../../testing/service-testing';
 import { ReportsService } from './reports.service';
@@ -12,119 +13,152 @@ describe('ReportsService', () => {
   const xlsx = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
   const msgs = ServiceErrorMessages.Report;
 
-  describe('JSON reports', () => {
-    it('daily sales adds groupBy only when provided', () => {
-      const { service, http } = setupHttpService(ReportsService);
-      service.getDailySalesReport({ ...range, groupBy: 'month' } as never).subscribe();
-      service.getDailySalesReport(range as never).subscribe();
+  const types: ReportType[] = [
+    'daily-close',
+    'daily-sales',
+    'payments',
+    'hourly',
+    'product-sales',
+    'promotions',
+    'staff',
+    'customers',
+    'voids',
+    'customer-links',
+    'stock-status',
+  ];
 
-      const requests = http.match((r) => r.url === `${base}/daily-sales`);
-      expect(requests).toHaveLength(2);
-      expect(requests[0].request.params.get('fromDate')).toBe('2025-01-01');
-      expect(requests[0].request.params.get('toDate')).toBe('2025-01-31');
-      expect(requests[0].request.params.get('groupBy')).toBe('month');
-      expect(requests[1].request.params.has('groupBy')).toBe(false);
+  describe('getReport', () => {
+    it.each(types)('%s asks its own endpoint with the date range', (type) => {
+      const { service, http } = setupHttpService(ReportsService);
+      service.getReport(type, range).subscribe();
+
+      const req = http.expectOne((r) => r.url === `${base}/${type}`);
+      expect(req.request.method).toBe('GET');
+      expect(req.request.params.get('fromDate')).toBe('2025-01-01');
+      expect(req.request.params.get('toDate')).toBe('2025-01-31');
+      req.flush([]);
     });
 
-    it('product sales passes category filters, including empty-string ids', () => {
+    it('returns the rows the API sends', () => {
       const { service, http } = setupHttpService(ReportsService);
-      service.getProductSalesReport({ ...range, categoryId: '1', subCategoryId: '' } as never).subscribe();
+      const result = capture(service.getReport<{ paymentMethod: string }>('payments', range));
+
+      http.expectOne((r) => r.url === `${base}/payments`).flush([{ paymentMethod: 'Cash' }]);
+
+      expect(result.value).toEqual([{ paymentMethod: 'Cash' }]);
+    });
+
+    it('sends only the filters that are set', () => {
+      const { service, http } = setupHttpService(ReportsService);
+      service.getReport('product-sales', range).subscribe();
 
       const req = http.expectOne((r) => r.url === `${base}/product-sales`);
-      expect(req.request.params.get('categoryId')).toBe('1');
-      expect(req.request.params.get('subCategoryId')).toBe('');
+      for (const key of ['source', 'groupBy', 'categoryId', 'subCategoryId', 'staffId', 'splitAddOns', 'search', 'sortBy', 'sortDir']) {
+        expect(req.request.params.has(key)).toBe(false);
+      }
       req.flush([]);
     });
 
-    it('product sales omits undefined category filters', () => {
+    it('sends every filter that is set, including source 0 (shop orders)', () => {
       const { service, http } = setupHttpService(ReportsService);
-      service.getProductSalesReport(range as never).subscribe();
+      service
+        .getReport('daily-sales', {
+          ...range,
+          source: 0,
+          groupBy: 'Month',
+          categoryId: 2,
+          subCategoryId: 3,
+          staffId: 's1',
+          splitAddOns: true,
+        })
+        .subscribe();
+
+      const params = http.expectOne((r) => r.url === `${base}/daily-sales`).request.params;
+      expect(params.get('source')).toBe('0');
+      expect(params.get('groupBy')).toBe('Month');
+      expect(params.get('categoryId')).toBe('2');
+      expect(params.get('subCategoryId')).toBe('3');
+      expect(params.get('staffId')).toBe('s1');
+      expect(params.get('splitAddOns')).toBe('true');
+    });
+
+    it('leaves splitAddOns out when it is false', () => {
+      const { service, http } = setupHttpService(ReportsService);
+      service.getReport('product-sales', { ...range, splitAddOns: false }).subscribe();
 
       const req = http.expectOne((r) => r.url === `${base}/product-sales`);
-      expect(req.request.params.has('categoryId')).toBe(false);
-      expect(req.request.params.has('subCategoryId')).toBe(false);
+      expect(req.request.params.has('splitAddOns')).toBe(false);
+    });
+
+    it('works without dates for reports that take none', () => {
+      const { service, http } = setupHttpService(ReportsService);
+      service.getReport('stock-status', {}).subscribe();
+
+      const req = http.expectOne((r) => r.url === `${base}/stock-status`);
+      expect(req.request.params.keys()).toEqual([]);
       req.flush([]);
     });
+  });
 
-    it.each([
-      ['daily-sales', (s: ReportsService) => s.getDailySalesReport({ ...range, source: 1 } as never)],
-      ['product-sales', (s: ReportsService) => s.getProductSalesReport({ ...range, source: 1 } as never)],
-      ['payments', (s: ReportsService) => s.getPaymentsReport({ ...range, source: 1 } as never)],
-      ['hourly', (s: ReportsService) => s.getHourlySalesReport({ ...range, source: 1 } as never)],
-      ['staff', (s: ReportsService) => s.getStaffPerformanceReport({ ...range, source: 1 } as never)],
-    ])('%s report sends the source when one is chosen', (path, call) => {
+  describe('downloads', () => {
+    it.each(types)('Excel for %s is a blob with the xlsx Accept header', (type) => {
       const { service, http } = setupHttpService(ReportsService);
-      (call(service) as { subscribe: () => unknown }).subscribe();
+      service.downloadReportExcel(type, range).subscribe();
 
-      const req = http.expectOne((r) => r.url === `${base}/${path}`);
-      expect(req.request.params.get('source')).toBe('1');
-      req.flush([]);
+      const req = http.expectOne((r) => r.url === `${base}/${type}`);
+      expect(req.request.responseType).toBe('blob');
+      expect(req.request.headers.get('Accept')).toBe(xlsx);
+      req.flush(new Blob(['x']));
     });
 
-    it('sends the shop source (0) and leaves it out for all orders', () => {
+    it.each(types)('PDF for %s is a blob with the pdf Accept header', (type) => {
       const { service, http } = setupHttpService(ReportsService);
-      service.getPaymentsReport({ ...range, source: 0 } as never).subscribe();
-      service.getPaymentsReport(range as never).subscribe();
+      service.downloadReportPdf(type, range).subscribe();
 
-      const requests = http.match((r) => r.url === `${base}/payments`);
-      expect(requests[0].request.params.get('source')).toBe('0');
-      expect(requests[1].request.params.has('source')).toBe(false);
+      const req = http.expectOne((r) => r.url === `${base}/${type}`);
+      expect(req.request.responseType).toBe('blob');
+      expect(req.request.headers.get('Accept')).toBe('application/pdf');
+      req.flush(new Blob(['x']));
     });
 
-    it('exports carry the source too', () => {
+    it('passes the on-screen search and sort so the file matches the table', () => {
       const { service, http } = setupHttpService(ReportsService);
-      service.downloadDailySalesExcel({ ...range, source: 1 } as never).subscribe();
-      service.downloadDailySalesPdf({ ...range, source: 0 } as never).subscribe();
+      service
+        .downloadReportExcel('payments', range, { search: '  cash ', sortBy: 'totalAmount', sortDir: 'desc' })
+        .subscribe();
+
+      const params = http.expectOne((r) => r.url === `${base}/payments`).request.params;
+      expect(params.get('search')).toBe('cash');
+      expect(params.get('sortBy')).toBe('totalAmount');
+      expect(params.get('sortDir')).toBe('desc');
+    });
+
+    it('drops a blank search and a direction without a column', () => {
+      const { service, http } = setupHttpService(ReportsService);
+      service.downloadReportPdf('payments', range, { search: '   ', sortDir: 'asc' }).subscribe();
+
+      const params = http.expectOne((r) => r.url === `${base}/payments`).request.params;
+      expect(params.has('search')).toBe(false);
+      expect(params.has('sortBy')).toBe(false);
+      expect(params.has('sortDir')).toBe(false);
+    });
+
+    it('carries the source on exports too', () => {
+      const { service, http } = setupHttpService(ReportsService);
+      service.downloadReportExcel('daily-sales', { ...range, source: 1 }).subscribe();
+      service.downloadReportPdf('daily-sales', { ...range, source: 0 }).subscribe();
 
       const requests = http.match((r) => r.url === `${base}/daily-sales`);
       expect(requests.map((r) => r.request.params.get('source'))).toEqual(['1', '0']);
     });
 
-    it('staff performance adds staffId only when set', () => {
+    it('getReport never sends search or sort', () => {
       const { service, http } = setupHttpService(ReportsService);
-      service.getStaffPerformanceReport({ ...range, staffId: 's1' } as never).subscribe();
-      service.getStaffPerformanceReport({ ...range, staffId: '' } as never).subscribe();
+      service.getReport('payments', range).subscribe();
 
-      const [withStaff, without] = http.match((r) => r.url === `${base}/staff`);
-      expect(withStaff.request.params.get('staffId')).toBe('s1');
-      expect(without.request.params.has('staffId')).toBe(false);
-    });
-
-    it('payments and hourly hit their own endpoints with the date range', () => {
-      const { service, http } = setupHttpService(ReportsService);
-      service.getPaymentsReport(range as never).subscribe();
-      service.getHourlySalesReport(range as never).subscribe();
-
-      const payments = http.expectOne((r) => r.url === `${base}/payments`);
-      const hourly = http.expectOne((r) => r.url === `${base}/hourly`);
-      expect(payments.request.params.get('fromDate')).toBe('2025-01-01');
-      expect(hourly.request.params.get('toDate')).toBe('2025-01-31');
-    });
-  });
-
-  describe('downloads', () => {
-    const cases = [
-      ['downloadDailySalesExcel', '/daily-sales', xlsx],
-      ['downloadProductSalesExcel', '/product-sales', xlsx],
-      ['downloadPaymentsExcel', '/payments', xlsx],
-      ['downloadHourlySalesExcel', '/hourly', xlsx],
-      ['downloadStaffPerformanceExcel', '/staff', xlsx],
-      ['downloadDailySalesPdf', '/daily-sales', 'application/pdf'],
-      ['downloadProductSalesPdf', '/product-sales', 'application/pdf'],
-      ['downloadPaymentsPdf', '/payments', 'application/pdf'],
-      ['downloadHourlySalesPdf', '/hourly', 'application/pdf'],
-      ['downloadStaffPerformancePdf', '/staff', 'application/pdf'],
-    ] as const;
-
-    it.each(cases)('%s requests %s as a blob with Accept %s', (method, path, accept) => {
-      const { service, http } = setupHttpService(ReportsService);
-      (service[method] as (q: never) => { subscribe: () => void })(range as never).subscribe();
-
-      const req = http.expectOne((r) => r.url === `${base}${path}`);
-      expect(req.request.responseType).toBe('blob');
-      expect(req.request.headers.get('Accept')).toBe(accept);
-      expect(req.request.params.get('fromDate')).toBe('2025-01-01');
-      req.flush(new Blob(['x']));
+      const params = http.expectOne((r) => r.url === `${base}/payments`).request.params;
+      expect(params.has('search')).toBe(false);
+      expect(params.has('sortBy')).toBe(false);
     });
   });
 
@@ -157,7 +191,7 @@ describe('ReportsService', () => {
   describe('error mapping', () => {
     it('network loss re-checks connectivity', () => {
       const { service, http, connectivity } = setupHttpService(ReportsService);
-      const result = capture(service.getPaymentsReport(range as never));
+      const result = capture(service.getReport('payments', range));
 
       failNetwork(http.expectOne((r) => r.url === `${base}/payments`));
 
@@ -167,32 +201,30 @@ describe('ReportsService', () => {
 
     it('501 means PDF is not available, even with a server message', () => {
       const { service, http } = setupHttpService(ReportsService);
-      const result = capture(service.downloadDailySalesPdf(range as never));
+      const result = capture(service.downloadReportPdf('daily-sales', range));
 
       failWith(http.expectOne((r) => r.url === `${base}/daily-sales`), 501, new Blob([]));
 
       expect(result.error).toBe(msgs.PdfNotAvailable);
     });
 
-    it('server message beats the per-report fallback', () => {
+    it('server message beats the fallback', () => {
       const { service, http } = setupHttpService(ReportsService);
-      const result = capture(service.getHourlySalesReport(range as never));
+      const result = capture(service.getReport('hourly', range));
 
       failWith(http.expectOne((r) => r.url === `${base}/hourly`), 400, { message: 'Bad range' });
 
       expect(result.error).toBe('Bad range');
     });
 
-    it('falls back to a per-report message', () => {
+    it('falls back to a message per kind of call', () => {
       const { service, http } = setupHttpService(ReportsService);
-      const daily = capture(service.getDailySalesReport(range as never));
-      failWith(http.expectOne((r) => r.url === `${base}/daily-sales`), 500);
-      const product = capture(service.getProductSalesReport(range as never));
-      failWith(http.expectOne((r) => r.url === `${base}/product-sales`), 500);
-      const staff = capture(service.getStaffPerformanceReport(range as never));
-      failWith(http.expectOne((r) => r.url === `${base}/staff`), 500);
-      const excel = capture(service.downloadPaymentsExcel(range as never));
+      const fetch = capture(service.getReport('voids', range));
+      failWith(http.expectOne((r) => r.url === `${base}/voids`), 500);
+      const excel = capture(service.downloadReportExcel('payments', range));
       failWith(http.expectOne((r) => r.url === `${base}/payments`), 500, new Blob([]));
+      const pdf = capture(service.downloadReportPdf('staff', range));
+      failWith(http.expectOne((r) => r.url === `${base}/staff`), 500, new Blob([]));
       const status = capture(service.getMonthlyWorkbookStatus(2025, 1));
       failWith(http.expectOne((r) => r.url === `${base}/monthly-workbook/status`), 500);
       const generate = capture(service.generateMonthlyWorkbook(2025, 1));
@@ -200,10 +232,9 @@ describe('ReportsService', () => {
       const download = capture(service.downloadMonthlyWorkbook(2025, 1));
       failWith(http.expectOne((r) => r.url === `${base}/monthly-workbook/download`), 500, new Blob([]));
 
-      expect(daily.error).toBe(msgs.FetchDailySalesFailed);
-      expect(product.error).toBe(msgs.FetchProductSalesFailed);
-      expect(staff.error).toBe(msgs.FetchStaffPerformanceFailed);
+      expect(fetch.error).toBe(msgs.FetchReportFailed);
       expect(excel.error).toBe(msgs.DownloadExcelFailed);
+      expect(pdf.error).toBe(msgs.DownloadPdfFailed);
       expect(status.error).toBe(msgs.FetchMonthlyWorkbookStatusFailed);
       expect(generate.error).toBe(msgs.GenerateMonthlyWorkbookFailed);
       expect(download.error).toBe(msgs.DownloadMonthlyWorkbookFailed);

@@ -1,63 +1,61 @@
 import { CommonModule } from '@angular/common';
-import { FilterButtonComponent } from '@shared/components/filter-button/filter-button';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
-import { map, startWith } from 'rxjs';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { ActivatedRoute } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Capacitor } from '@capacitor/core';
 import { HttpErrorMessages } from '@core/messages';
-import { AlertService, FileDownloadService, ReportsService, UserService } from '@core/services';
 import {
-  SideDrawerComponent,
-  IconComponent,
+  AlertService,
+  AuthService,
+  FileDownloadService,
+  ReportsService,
+  UserService,
+} from '@core/services';
+import {
+  AreaChartComponent,
+  BarChartComponent,
   ConnectionErrorComponent,
+  DonutChartComponent,
+  DonutSegment,
+  IconComponent,
   PullToRefreshComponent,
   SearchInputComponent,
+  SideDrawerComponent,
+  SortHeaderComponent,
 } from '@shared/components';
+import { FilterButtonComponent } from '@shared/components/filter-button/filter-button';
 import {
-  DailySalesReportQuery,
-  DailySalesReportRowDto,
-  HourlySalesReportQuery,
-  HourlySalesReportRowDto,
   MonthlyReportWorkbookStatusDto,
-  PaymentsReportQuery,
-  PaymentsReportRowDto,
   PRODUCT_SUB_CATEGORY_LABELS,
   ProductCategoryEnum,
-  ProductSalesReportQuery,
-  ProductSalesReportRowDto,
   ProductSubCategoryEnum,
   ReportGroupBy,
+  ReportQuery,
+  ReportSortDirection,
   ReportSource,
   ReportType,
-  StaffPerformanceReportQuery,
-  StaffPerformanceReportRowDto,
   UserDto,
 } from '@shared/models';
-import { average, sumAmounts } from '@shared/calculations';
-
-const ReportTypes = {
-  DailySales: 'daily-sales',
-  ProductSales: 'product-sales',
-  Payments: 'payments',
-  Hourly: 'hourly',
-  Staff: 'staff',
-} as const satisfies Record<string, ReportType>;
-
-const DatePresets = {
-  Today: 'today',
-  Yesterday: 'yesterday',
-  ThisWeek: 'this-week',
-  ThisMonth: 'this-month',
-  LastMonth: 'last-month',
-  Custom: 'custom',
-} as const;
-
-const ReportGroupByValues = {
-  Day: 'Day',
-  Week: 'Week',
-  Month: 'Month',
-} as const satisfies Record<string, ReportGroupBy>;
+import { map, startWith } from 'rxjs';
+import {
+  DATE_PRESET_OPTIONS,
+  DatePreset,
+  DatePresets,
+  resolveDatePreset,
+} from './report-date-presets';
+import {
+  ChartPoint,
+  findReportDefinition,
+  periodHeader,
+  REPORT_DEFINITIONS,
+  REPORT_GROUPS,
+  ReportContext,
+  ReportDefinition,
+  ReportFilterKind,
+  ReportRow,
+} from './report-definitions';
+import { buildCsv, cellText, filterAndSortRows, totalCells } from './report-table';
 
 const ReportPageTabs = {
   Reports: 'reports',
@@ -71,37 +69,9 @@ const PromotionsReportCategoryFilterId = -1;
 const FixedBundleReportTypeFilterId = -101;
 const MixMatchReportTypeFilterId = -102;
 
-type DatePreset = (typeof DatePresets)[keyof typeof DatePresets];
-type ReportPageTab = (typeof ReportPageTabs)[keyof typeof ReportPageTabs];
-type SortDirection = 'asc' | 'desc';
-type DailySortKey =
-  | 'periodStart'
-  | 'totalRevenue'
-  | 'orderCount'
-  | 'averageOrderValue'
-  | 'tipsTotal'
-  | 'voidCancelledCount';
-type ProductSortKey =
-  | 'productName'
-  | 'categoryName'
-  | 'subCategoryName'
-  | 'quantitySold'
-  | 'revenue'
-  | 'revenuePercent';
-type PaymentsSortKey = 'paymentMethod' | 'orderCount' | 'totalAmount' | 'totalPercent';
-type HourlySortKey = 'hour' | 'orderCount' | 'revenue';
-type StaffSortKey =
-  | 'staffName'
-  | 'orderCount'
-  | 'totalRevenue'
-  | 'averageOrderValue'
-  | 'tipsReceived';
+const DONUT_COLORS = ['#4f46e5', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
-interface DateRangeValue {
-  fromDate: string;
-  toDate: string;
-  source?: ReportSource;
-}
+type ReportPageTab = (typeof ReportPageTabs)[keyof typeof ReportPageTabs];
 
 interface EnumFilterOption<T extends number> {
   value: T;
@@ -129,6 +99,10 @@ interface MonthOption {
     IconComponent,
     SideDrawerComponent,
     SearchInputComponent,
+    SortHeaderComponent,
+    AreaChartComponent,
+    BarChartComponent,
+    DonutChartComponent,
   ],
   templateUrl: './reports.html',
   host: { class: 'flex-1 min-h-0' },
@@ -138,18 +112,18 @@ export class ReportsComponent implements OnInit {
   private readonly fileDownload = inject(FileDownloadService);
   private readonly userService = inject(UserService);
   private readonly alertService = inject(AlertService);
+  protected readonly canGenerate = inject(AuthService).canGenerateReports();
   private readonly formBuilder = inject(FormBuilder);
+  private readonly route = inject(ActivatedRoute);
 
-  protected readonly dailyReports = signal<DailySalesReportRowDto[]>([]);
-  protected readonly productReports = signal<ProductSalesReportRowDto[]>([]);
-  protected readonly paymentsReports = signal<PaymentsReportRowDto[]>([]);
-  protected readonly hourlyReports = signal<HourlySalesReportRowDto[]>([]);
-  protected readonly staffReports = signal<StaffPerformanceReportRowDto[]>([]);
+  protected readonly selectedType = signal<ReportType | null>(null);
+  protected readonly rows = signal<ReportRow[]>([]);
   protected readonly isLoading = signal(false);
   protected readonly connectionFailed = signal(false);
   protected readonly isRefreshing = signal(false);
   protected readonly isDownloadingExcel = signal(false);
   protected readonly isDownloadingPdf = signal(false);
+  protected readonly isDownloadingCsv = signal(false);
   protected readonly isGeneratingMonthlyWorkbook = signal(false);
   protected readonly isDownloadingMonthlyWorkbook = signal(false);
   protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
@@ -158,10 +132,12 @@ export class ReportsComponent implements OnInit {
   protected readonly staffOptions = signal<StaffFilterOption[]>([]);
   protected readonly monthlyWorkbookStatus = signal<MonthlyReportWorkbookStatusDto | null>(null);
   protected readonly activeTab = signal<ReportPageTab>(ReportPageTabs.Reports);
-  protected readonly reportTypes = ReportTypes;
+  protected readonly sortKey = signal<string | null>(null);
+  protected readonly sortDirection = signal<ReportSortDirection>('asc');
   protected readonly reportPageTabs = ReportPageTabs;
   protected readonly datePresets = DatePresets;
-  protected readonly reportGroupByValues = ReportGroupByValues;
+  protected readonly datePresetOptions = DATE_PRESET_OPTIONS;
+  protected readonly donutColors = DONUT_COLORS;
   protected readonly monthOptions: readonly MonthOption[] = [
     { value: 1, label: 'January' },
     { value: 2, label: 'February' },
@@ -176,25 +152,15 @@ export class ReportsComponent implements OnInit {
     { value: 11, label: 'November' },
     { value: 12, label: 'December' },
   ];
-  protected readonly reportTypeOptions: readonly ReportType[] = [
-    this.reportTypes.DailySales,
-    this.reportTypes.ProductSales,
-    this.reportTypes.Payments,
-    this.reportTypes.Hourly,
-    this.reportTypes.Staff,
-  ];
-  protected readonly datePresetOptions: readonly { value: DatePreset; label: string }[] = [
-    { value: this.datePresets.Today, label: 'Today' },
-    { value: this.datePresets.Yesterday, label: 'Yesterday' },
-    { value: this.datePresets.ThisWeek, label: 'This Week' },
-    { value: this.datePresets.ThisMonth, label: 'This Month' },
-    { value: this.datePresets.LastMonth, label: 'Last Month' },
-    { value: this.datePresets.Custom, label: 'Custom Range' },
-  ];
   protected readonly groupByOptions: readonly { value: ReportGroupBy; label: string }[] = [
-    { value: this.reportGroupByValues.Day, label: 'Day' },
-    { value: this.reportGroupByValues.Week, label: 'Week' },
-    { value: this.reportGroupByValues.Month, label: 'Month' },
+    { value: 'Day', label: 'Day' },
+    { value: 'Week', label: 'Week' },
+    { value: 'Month', label: 'Month' },
+  ];
+  protected readonly sourceOptions: readonly { value: ReportSource | null; label: string }[] = [
+    { value: null, label: 'All Orders' },
+    { value: 0, label: 'Shop Orders' },
+    { value: 1, label: 'Customer Link Orders' },
   ];
   protected readonly categoryOptions: readonly EnumFilterOption<number>[] = [
     { value: ProductCategoryEnum.Drink, label: 'Drink' },
@@ -220,32 +186,16 @@ export class ReportsComponent implements OnInit {
       value: ProductSubCategoryEnum.Retail,
       label: PRODUCT_SUB_CATEGORY_LABELS[ProductSubCategoryEnum.Retail],
     },
-    {
-      value: FixedBundleReportTypeFilterId,
-      label: 'Fixed Bundle',
-    },
-    {
-      value: MixMatchReportTypeFilterId,
-      label: 'Mix & Match',
-    },
+    { value: FixedBundleReportTypeFilterId, label: 'Fixed Bundle' },
+    { value: MixMatchReportTypeFilterId, label: 'Mix & Match' },
   ];
-
-  protected readonly dailySortKey = signal<DailySortKey>('periodStart');
-  protected readonly dailySortDirection = signal<SortDirection>('desc');
-  protected readonly productSortKey = signal<ProductSortKey>('revenue');
-  protected readonly productSortDirection = signal<SortDirection>('desc');
-  protected readonly paymentsSortKey = signal<PaymentsSortKey>('totalAmount');
-  protected readonly paymentsSortDirection = signal<SortDirection>('desc');
-  protected readonly hourlySortKey = signal<HourlySortKey>('hour');
-  protected readonly hourlySortDirection = signal<SortDirection>('asc');
-  protected readonly staffSortKey = signal<StaffSortKey>('totalRevenue');
-  protected readonly staffSortDirection = signal<SortDirection>('desc');
+  protected readonly catalog = REPORT_GROUPS.map((section) => ({
+    ...section,
+    reports: REPORT_DEFINITIONS.filter((definition) => definition.group === section.group),
+  })).filter((section) => section.reports.length > 0);
 
   protected readonly reportForm = this.formBuilder.group({
-    reportType: this.formBuilder.control<ReportType>(this.reportTypes.DailySales, {
-      validators: [Validators.required],
-    }),
-    preset: this.formBuilder.control<DatePreset>(this.datePresets.ThisMonth, {
+    preset: this.formBuilder.control<DatePreset>(DatePresets.ThisMonth, {
       validators: [Validators.required],
     }),
     fromDate: this.formBuilder.control<string>('', { validators: [Validators.required] }),
@@ -258,133 +208,15 @@ export class ReportsComponent implements OnInit {
       validators: [Validators.required],
       nonNullable: true,
     }),
-    groupBy: this.formBuilder.control<ReportGroupBy>(this.reportGroupByValues.Day, {
+    groupBy: this.formBuilder.control<ReportGroupBy>('Day', {
       validators: [Validators.required],
     }),
     categoryId: this.formBuilder.control<number | null>(null),
     subCategoryId: this.formBuilder.control<number | null>(null),
     staffId: this.formBuilder.control<string | null>(null),
     source: this.formBuilder.control<ReportSource | null>(null),
+    splitAddOns: this.formBuilder.control<boolean>(false, { nonNullable: true }),
   });
-
-  protected readonly selectedReportType = toSignal(
-    this.reportForm.controls.reportType.valueChanges,
-    {
-      initialValue: this.reportForm.controls.reportType.value,
-    },
-  );
-
-  protected readonly filteredDailyReports = computed(() => {
-    const term = this.searchTerm().trim().toLowerCase();
-    const sortKey = this.dailySortKey();
-    const direction = this.dailySortDirection();
-    const source = this.dailyReports();
-
-    const filtered = term
-      ? source.filter((row) =>
-          this.matchesSearch(term, [
-            this.formatDateSafe(row.periodStart),
-            row.totalRevenue,
-            row.orderCount,
-            row.averageOrderValue,
-            row.tipsTotal,
-            row.voidCancelledCount,
-          ]),
-        )
-      : source;
-
-    return this.sortRows(filtered, sortKey, direction);
-  });
-
-  protected readonly filteredProductReports = computed(() => {
-    const term = this.searchTerm().trim().toLowerCase();
-    const sortKey = this.productSortKey();
-    const direction = this.productSortDirection();
-    const source = this.productReports();
-
-    const filtered = term
-      ? source.filter((row) =>
-          this.matchesSearch(term, [
-            row.productName,
-            row.categoryName,
-            row.subCategoryName ?? '',
-            row.quantitySold,
-            row.revenue,
-            row.revenuePercent,
-          ]),
-        )
-      : source;
-
-    return this.sortRows(filtered, sortKey, direction);
-  });
-
-  protected readonly filteredPaymentsReports = computed(() => {
-    const term = this.searchTerm().trim().toLowerCase();
-    const sortKey = this.paymentsSortKey();
-    const direction = this.paymentsSortDirection();
-    const source = this.paymentsReports();
-
-    const filtered = term
-      ? source.filter((row) =>
-          this.matchesSearch(term, [
-            row.paymentMethod,
-            row.orderCount,
-            row.totalAmount,
-            row.totalPercent,
-          ]),
-        )
-      : source;
-
-    return this.sortRows(filtered, sortKey, direction);
-  });
-
-  protected readonly filteredHourlyReports = computed(() => {
-    const term = this.searchTerm().trim().toLowerCase();
-    const sortKey = this.hourlySortKey();
-    const direction = this.hourlySortDirection();
-    const source = this.hourlyReports();
-
-    const filtered = term
-      ? source.filter((row) =>
-          this.matchesSearch(term, [
-            this.toHourLabel(row.hour),
-            row.hour,
-            row.orderCount,
-            row.revenue,
-          ]),
-        )
-      : source;
-
-    return this.sortRows(filtered, sortKey, direction);
-  });
-
-  protected readonly filteredStaffReports = computed(() => {
-    const term = this.searchTerm().trim().toLowerCase();
-    const sortKey = this.staffSortKey();
-    const direction = this.staffSortDirection();
-    const source = this.staffReports();
-
-    const filtered = term
-      ? source.filter((row) =>
-          this.matchesSearch(term, [
-            row.staffName,
-            row.orderCount,
-            row.totalRevenue,
-            row.averageOrderValue,
-            row.tipsReceived,
-          ]),
-        )
-      : source;
-
-    return this.sortRows(filtered, sortKey, direction);
-  });
-
-  public ngOnInit(): void {
-    this.applyPreset(this.datePresets.ThisMonth);
-    this.loadStaffOptions();
-    this.loadReport();
-    this.loadMonthlyWorkbookStatus();
-  }
 
   private readonly reportFormValue = toSignal(
     this.reportForm.valueChanges.pipe(
@@ -394,15 +226,92 @@ export class ReportsComponent implements OnInit {
     { initialValue: this.reportForm.getRawValue() },
   );
 
-  /** Filters changed from their defaults: the date range, category, sub-category and staff. */
-  protected readonly activeFilterCount = computed(
-    () =>
-      (this.reportFormValue().preset !== this.datePresets.ThisMonth ? 1 : 0) +
-      (this.reportFormValue().categoryId != null ? 1 : 0) +
-      (this.reportFormValue().subCategoryId != null ? 1 : 0) +
-      (this.reportFormValue().staffId != null ? 1 : 0) +
-      (this.reportFormValue().source != null ? 1 : 0),
+  protected readonly definition = computed<ReportDefinition | null>(() => {
+    const type = this.selectedType();
+    return type ? findReportDefinition(type) : null;
+  });
+
+  protected readonly context = computed<ReportContext>(() => ({
+    groupBy: this.reportFormValue().groupBy ?? 'Day',
+  }));
+
+  protected readonly visibleRows = computed(() => {
+    const definition = this.definition();
+    if (!definition) {
+      return [];
+    }
+
+    return filterAndSortRows(
+      this.rows(),
+      definition,
+      this.context(),
+      this.searchTerm(),
+      this.sortKey(),
+      this.sortDirection(),
+    );
+  });
+
+  protected readonly totalRow = computed(() => {
+    const definition = this.definition();
+    return definition ? totalCells(this.visibleRows(), definition) : null;
+  });
+
+  protected readonly totals = computed(() => this.definition()?.totals(this.visibleRows()) ?? []);
+
+  protected readonly chartPoints = computed<ChartPoint[]>(
+    () => this.definition()?.chart?.points(this.visibleRows(), this.context()) ?? [],
   );
+
+  protected readonly donutSegments = computed<DonutSegment[]>(() =>
+    this.chartPoints().map((point, index) => ({
+      label: point.label,
+      value: point.value,
+      color: DONUT_COLORS[index % DONUT_COLORS.length],
+    })),
+  );
+
+  protected readonly activeFilterCount = computed(() => {
+    const value = this.reportFormValue();
+    return (
+      (value.preset !== DatePresets.ThisMonth ? 1 : 0) +
+      (value.categoryId != null ? 1 : 0) +
+      (value.subCategoryId != null ? 1 : 0) +
+      (value.staffId != null ? 1 : 0) +
+      (value.source != null ? 1 : 0) +
+      (value.splitAddOns ? 1 : 0) +
+      (value.groupBy !== 'Day' ? 1 : 0)
+    );
+  });
+
+  public ngOnInit(): void {
+    this.applyPreset(DatePresets.ThisMonth);
+    this.loadStaffOptions();
+    this.loadMonthlyWorkbookStatus();
+
+    const requested = this.route.snapshot.queryParamMap.get('report');
+    const match = REPORT_DEFINITIONS.find((definition) => definition.type === requested);
+    if (match) {
+      this.openReport(match.type);
+    }
+  }
+
+  protected openReport(type: ReportType): void {
+    const definition = findReportDefinition(type);
+    this.selectedType.set(type);
+    this.searchTerm.set('');
+    this.rows.set([]);
+    this.sortKey.set(definition.defaultSort?.key ?? null);
+    this.sortDirection.set(definition.defaultSort?.direction ?? 'asc');
+    this.isFiltersOpen.set(false);
+    this.loadReport();
+  }
+
+  protected backToCatalog(): void {
+    this.selectedType.set(null);
+    this.rows.set([]);
+    this.isFiltersOpen.set(false);
+    this.connectionFailed.set(false);
+  }
 
   protected openFilters(): void {
     this.isFiltersOpen.set(true);
@@ -415,17 +324,17 @@ export class ReportsComponent implements OnInit {
   protected selectTab(tab: ReportPageTab): void {
     this.activeTab.set(tab);
     this.isFiltersOpen.set(false);
-    if (tab === this.reportPageTabs.MonthlyWorkbook) {
+    if (tab === ReportPageTabs.MonthlyWorkbook) {
       this.loadMonthlyWorkbookStatus();
     }
   }
 
   protected isReportsTabActive(): boolean {
-    return this.activeTab() === this.reportPageTabs.Reports;
+    return this.activeTab() === ReportPageTabs.Reports;
   }
 
   protected isMonthlyWorkbookTabActive(): boolean {
-    return this.activeTab() === this.reportPageTabs.MonthlyWorkbook;
+    return this.activeTab() === ReportPageTabs.MonthlyWorkbook;
   }
 
   protected onPresetChanged(event: Event): void {
@@ -434,30 +343,16 @@ export class ReportsComponent implements OnInit {
     this.loadReport();
   }
 
-  protected onReportTypeChanged(): void {
-    this.searchTerm.set('');
-    this.loadReport();
-  }
-
-  protected onGroupByChanged(): void {
-    this.loadReport();
-  }
-
   protected onDateChanged(): void {
-    if (this.reportForm.controls.preset.value !== this.datePresets.Custom) {
-      this.reportForm.controls.preset.setValue(this.datePresets.Custom);
+    if (this.reportForm.controls.preset.value !== DatePresets.Custom) {
+      this.reportForm.controls.preset.setValue(DatePresets.Custom);
     }
 
     this.loadReport();
   }
 
-  protected onAdvancedFilterChanged(): void {
+  protected onFilterChanged(): void {
     this.loadReport();
-  }
-
-  protected onSearchChanged(event: Event): void {
-    const target = event.target as HTMLInputElement;
-    this.searchTerm.set(target.value);
   }
 
   protected refresh(): void {
@@ -466,332 +361,54 @@ export class ReportsComponent implements OnInit {
     this.loadMonthlyWorkbookStatus();
   }
 
-  protected toggleDailySort(column: DailySortKey): void {
-    this.toggleSortState(column, this.dailySortKey, this.dailySortDirection);
+  protected hasFilter(kind: ReportFilterKind): boolean {
+    return this.definition()?.filters.includes(kind) === true;
   }
 
-  protected toggleProductSort(column: ProductSortKey): void {
-    this.toggleSortState(column, this.productSortKey, this.productSortDirection);
+  protected sortBy(key: string): void {
+    if (this.sortKey() === key) {
+      this.sortDirection.set(this.sortDirection() === 'asc' ? 'desc' : 'asc');
+      return;
+    }
+
+    this.sortKey.set(key);
+    this.sortDirection.set('asc');
   }
 
-  protected togglePaymentsSort(column: PaymentsSortKey): void {
-    this.toggleSortState(column, this.paymentsSortKey, this.paymentsSortDirection);
+  protected headerOf(key: string, fallback: string): string {
+    return key === 'periodStart' && this.selectedType() === 'daily-sales'
+      ? periodHeader(this.context().groupBy)
+      : fallback;
   }
 
-  protected toggleHourlySort(column: HourlySortKey): void {
-    this.toggleSortState(column, this.hourlySortKey, this.hourlySortDirection);
-  }
-
-  protected toggleStaffSort(column: StaffSortKey): void {
-    this.toggleSortState(column, this.staffSortKey, this.staffSortDirection);
-  }
-
-  protected isSorted(column: string): boolean {
-    const reportType = this.selectedReportType();
-    if (reportType === this.reportTypes.DailySales) {
-      return this.dailySortKey() === column;
-    }
-
-    if (reportType === this.reportTypes.ProductSales) {
-      return this.productSortKey() === column;
-    }
-
-    if (reportType === this.reportTypes.Payments) {
-      return this.paymentsSortKey() === column;
-    }
-
-    if (reportType === this.reportTypes.Hourly) {
-      return this.hourlySortKey() === column;
-    }
-
-    return this.staffSortKey() === column;
-  }
-
-  protected getSortDirection(column: string): SortDirection {
-    const reportType = this.selectedReportType();
-    if (reportType === this.reportTypes.DailySales && this.dailySortKey() === column) {
-      return this.dailySortDirection();
-    }
-
-    if (reportType === this.reportTypes.ProductSales && this.productSortKey() === column) {
-      return this.productSortDirection();
-    }
-
-    if (reportType === this.reportTypes.Payments && this.paymentsSortKey() === column) {
-      return this.paymentsSortDirection();
-    }
-
-    if (reportType === this.reportTypes.Hourly && this.hourlySortKey() === column) {
-      return this.hourlySortDirection();
-    }
-
-    if (reportType === this.reportTypes.Staff && this.staffSortKey() === column) {
-      return this.staffSortDirection();
-    }
-
-    return 'asc';
+  protected textOf(row: ReportRow, key: string): string {
+    const column = this.definition()?.columns.find((candidate) => candidate.key === key);
+    return column ? cellText(row, column, this.context()) : '';
   }
 
   protected downloadExcel(): void {
-    if (this.isActionBusy()) {
-      return;
-    }
-
-    const reportType = this.selectedReportType();
-    if (!reportType) {
-      return;
-    }
-
-    this.isDownloadingExcel.set(true);
-    const onSuccess = (blob: Blob, fileName: string): void => {
-      void this.fileDownload
-        .saveBlob(
-          blob,
-          fileName,
-          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        )
-        .finally(() => this.isDownloadingExcel.set(false));
-    };
-    const onError = (error: Error): void => {
-      this.isDownloadingExcel.set(false);
-      this.alertService.error(error.message);
-    };
-
-    if (reportType === this.reportTypes.DailySales) {
-      const query = this.buildDailySalesQuery();
-      if (!query) {
-        this.isDownloadingExcel.set(false);
-        return;
-      }
-
-      this.reportsService.downloadDailySalesExcel(query).subscribe({
-        next: (blob) =>
-          onSuccess(
-            blob,
-            this.buildRangeExportFileName(
-              'Daily Sales Summary',
-              query.fromDate,
-              query.toDate,
-              'xlsx',
-            ),
-          ),
-        error: onError,
-      });
-      return;
-    }
-
-    if (reportType === this.reportTypes.ProductSales) {
-      const query = this.buildProductSalesQuery();
-      if (!query) {
-        this.isDownloadingExcel.set(false);
-        return;
-      }
-
-      this.reportsService.downloadProductSalesExcel(query).subscribe({
-        next: (blob) =>
-          onSuccess(
-            blob,
-            this.buildRangeExportFileName(
-              'Product Sales Breakdown',
-              query.fromDate,
-              query.toDate,
-              'xlsx',
-            ),
-          ),
-        error: onError,
-      });
-      return;
-    }
-
-    if (reportType === this.reportTypes.Payments) {
-      const query = this.buildPaymentsQuery();
-      if (!query) {
-        this.isDownloadingExcel.set(false);
-        return;
-      }
-
-      this.reportsService.downloadPaymentsExcel(query).subscribe({
-        next: (blob) =>
-          onSuccess(
-            blob,
-            this.buildRangeExportFileName(
-              'Payment Method Breakdown',
-              query.fromDate,
-              query.toDate,
-              'xlsx',
-            ),
-          ),
-        error: onError,
-      });
-      return;
-    }
-
-    if (reportType === this.reportTypes.Hourly) {
-      const query = this.buildHourlySalesQuery();
-      if (!query) {
-        this.isDownloadingExcel.set(false);
-        return;
-      }
-
-      this.reportsService.downloadHourlySalesExcel(query).subscribe({
-        next: (blob) =>
-          onSuccess(
-            blob,
-            this.buildRangeExportFileName(
-              'Hourly Sales Distribution',
-              query.fromDate,
-              query.toDate,
-              'xlsx',
-            ),
-          ),
-        error: onError,
-      });
-      return;
-    }
-
-    const query = this.buildStaffPerformanceQuery();
-    if (!query) {
-      this.isDownloadingExcel.set(false);
-      return;
-    }
-
-    this.reportsService.downloadStaffPerformanceExcel(query).subscribe({
-      next: (blob) =>
-        onSuccess(
-          blob,
-          this.buildRangeExportFileName('Staff Performance', query.fromDate, query.toDate, 'xlsx'),
-        ),
-      error: onError,
-    });
+    this.downloadFile('excel');
   }
 
   protected downloadPdf(): void {
-    if (this.isActionBusy()) {
+    this.downloadFile('pdf');
+  }
+
+  protected downloadCsv(): void {
+    const definition = this.definition();
+    if (!definition || this.isActionBusy()) {
       return;
     }
 
-    const reportType = this.selectedReportType();
-    if (!reportType) {
-      return;
-    }
-
-    this.isDownloadingPdf.set(true);
-    const onSuccess = (blob: Blob, fileName: string): void => {
-      void this.fileDownload
-        .saveBlob(blob, fileName, 'application/pdf')
-        .finally(() => this.isDownloadingPdf.set(false));
-    };
-    const onError = (error: Error): void => {
-      this.isDownloadingPdf.set(false);
-      this.alertService.error(error.message);
-    };
-
-    if (reportType === this.reportTypes.DailySales) {
-      const query = this.buildDailySalesQuery();
-      if (!query) {
-        this.isDownloadingPdf.set(false);
-        return;
-      }
-
-      this.reportsService.downloadDailySalesPdf(query).subscribe({
-        next: (blob) =>
-          onSuccess(
-            blob,
-            this.buildRangeExportFileName(
-              'Daily Sales Summary',
-              query.fromDate,
-              query.toDate,
-              'pdf',
-            ),
-          ),
-        error: onError,
-      });
-      return;
-    }
-
-    if (reportType === this.reportTypes.ProductSales) {
-      const query = this.buildProductSalesQuery();
-      if (!query) {
-        this.isDownloadingPdf.set(false);
-        return;
-      }
-
-      this.reportsService.downloadProductSalesPdf(query).subscribe({
-        next: (blob) =>
-          onSuccess(
-            blob,
-            this.buildRangeExportFileName(
-              'Product Sales Breakdown',
-              query.fromDate,
-              query.toDate,
-              'pdf',
-            ),
-          ),
-        error: onError,
-      });
-      return;
-    }
-
-    if (reportType === this.reportTypes.Payments) {
-      const query = this.buildPaymentsQuery();
-      if (!query) {
-        this.isDownloadingPdf.set(false);
-        return;
-      }
-
-      this.reportsService.downloadPaymentsPdf(query).subscribe({
-        next: (blob) =>
-          onSuccess(
-            blob,
-            this.buildRangeExportFileName(
-              'Payment Method Breakdown',
-              query.fromDate,
-              query.toDate,
-              'pdf',
-            ),
-          ),
-        error: onError,
-      });
-      return;
-    }
-
-    if (reportType === this.reportTypes.Hourly) {
-      const query = this.buildHourlySalesQuery();
-      if (!query) {
-        this.isDownloadingPdf.set(false);
-        return;
-      }
-
-      this.reportsService.downloadHourlySalesPdf(query).subscribe({
-        next: (blob) =>
-          onSuccess(
-            blob,
-            this.buildRangeExportFileName(
-              'Hourly Sales Distribution',
-              query.fromDate,
-              query.toDate,
-              'pdf',
-            ),
-          ),
-        error: onError,
-      });
-      return;
-    }
-
-    const query = this.buildStaffPerformanceQuery();
-    if (!query) {
-      this.isDownloadingPdf.set(false);
-      return;
-    }
-
-    this.reportsService.downloadStaffPerformancePdf(query).subscribe({
-      next: (blob) =>
-        onSuccess(
-          blob,
-          this.buildRangeExportFileName('Staff Performance', query.fromDate, query.toDate, 'pdf'),
-        ),
-      error: onError,
-    });
+    this.isDownloadingCsv.set(true);
+    const csv = buildCsv(this.visibleRows(), definition, this.context());
+    void this.fileDownload
+      .saveBlob(
+        new Blob(['﻿', csv], { type: 'text/csv;charset=utf-8' }),
+        this.buildExportFileName(definition, 'csv'),
+        'text/csv',
+      )
+      .finally(() => this.isDownloadingCsv.set(false));
   }
 
   protected onMonthlyWorkbookFilterChanged(): void {
@@ -872,12 +489,7 @@ export class ReportsComponent implements OnInit {
   }
 
   protected isReportExportBusy(): boolean {
-    return (
-      this.isGeneratingMonthlyWorkbook() ||
-      this.isDownloadingMonthlyWorkbook() ||
-      this.isDownloadingExcel() ||
-      this.isDownloadingPdf()
-    );
+    return this.isActionBusy();
   }
 
   protected isMonthlyWorkbookDownloadDisabled(): boolean {
@@ -902,320 +514,76 @@ export class ReportsComponent implements OnInit {
     return `Last generated: ${this.formatGeneratedAt(generated)}`;
   }
 
-  private formatGeneratedAt(date: Date): string {
-    const parts = new Intl.DateTimeFormat('en-US', {
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    }).formatToParts(date);
-
-    const month = parts.find((part) => part.type === 'month')?.value ?? '';
-    const day = parts.find((part) => part.type === 'day')?.value ?? '';
-    const year = parts.find((part) => part.type === 'year')?.value ?? '';
-    const hour = parts.find((part) => part.type === 'hour')?.value ?? '';
-    const minute = parts.find((part) => part.type === 'minute')?.value ?? '';
-    const dayPeriod = parts.find((part) => part.type === 'dayPeriod')?.value ?? '';
-
-    return `${month} ${day}, ${year} ${hour}:${minute} ${dayPeriod}`.trim();
-  }
-
-  protected getReportTypeLabel(type: ReportType): string {
-    switch (type) {
-      case ReportTypes.DailySales:
-        return 'Daily Sales Summary';
-      case ReportTypes.ProductSales:
-        return 'Product Sales Breakdown';
-      case ReportTypes.Payments:
-        return 'Payment Method Breakdown';
-      case ReportTypes.Hourly:
-        return 'Hourly Sales Distribution';
-      case ReportTypes.Staff:
-        return 'Staff Performance';
+  private downloadFile(kind: 'excel' | 'pdf'): void {
+    const definition = this.definition();
+    if (!definition || this.isActionBusy()) {
+      return;
     }
-  }
 
-  protected isDailySalesReport(): boolean {
-    return this.selectedReportType() === this.reportTypes.DailySales;
-  }
+    const query = this.buildQuery(definition);
+    if (!query) {
+      return;
+    }
 
-  protected isProductSalesReport(): boolean {
-    return this.selectedReportType() === this.reportTypes.ProductSales;
-  }
-
-  protected isPaymentsReport(): boolean {
-    return this.selectedReportType() === this.reportTypes.Payments;
-  }
-
-  protected isHourlyReport(): boolean {
-    return this.selectedReportType() === this.reportTypes.Hourly;
-  }
-
-  protected isStaffReport(): boolean {
-    return this.selectedReportType() === this.reportTypes.Staff;
-  }
-
-  protected showGroupByFilter(): boolean {
-    return this.isDailySalesReport();
-  }
-
-  protected showProductFilters(): boolean {
-    return this.isProductSalesReport();
-  }
-
-  protected readonly sourceOptions: readonly { value: ReportSource | null; label: string }[] = [
-    { value: null, label: 'All Orders' },
-    { value: 0, label: 'Shop Orders' },
-    { value: 1, label: 'Customer Link Orders' },
-  ];
-
-  protected showStaffFilter(): boolean {
-    return this.isStaffReport();
-  }
-
-  protected getDailyTotals(): DailySalesReportRowDto {
-    const rows = this.filteredDailyReports();
-    const totalRevenue = sumAmounts(rows.map((row) => row.totalRevenue));
-    const orderCount = rows.reduce((sum, row) => sum + row.orderCount, 0);
-    const averageOrderValue = average(totalRevenue, orderCount);
-    const tipsTotal = sumAmounts(rows.map((row) => row.tipsTotal));
-    const voidCancelledCount = rows.reduce((sum, row) => sum + row.voidCancelledCount, 0);
-
-    return {
-      periodStart: 'TOTAL',
-      totalRevenue,
-      orderCount,
-      averageOrderValue,
-      tipsTotal,
-      voidCancelledCount,
+    const busy = kind === 'excel' ? this.isDownloadingExcel : this.isDownloadingPdf;
+    const options = {
+      search: this.searchTerm(),
+      sortBy: this.sortKey() ?? undefined,
+      sortDir: this.sortDirection(),
     };
-  }
+    const request =
+      kind === 'excel'
+        ? this.reportsService.downloadReportExcel(definition.type, query, options)
+        : this.reportsService.downloadReportPdf(definition.type, query, options);
 
-  protected getProductTotals(): { quantitySold: number; revenue: number } {
-    const rows = this.filteredProductReports();
-    return {
-      quantitySold: rows.reduce((sum, row) => sum + row.quantitySold, 0),
-      revenue: sumAmounts(rows.map((row) => row.revenue)),
-    };
-  }
-
-  protected getPaymentsTotals(): { orderCount: number; totalAmount: number } {
-    const rows = this.filteredPaymentsReports();
-    return {
-      orderCount: rows.reduce((sum, row) => sum + row.orderCount, 0),
-      totalAmount: sumAmounts(rows.map((row) => row.totalAmount)),
-    };
-  }
-
-  protected getHourlyTotals(): { orderCount: number; revenue: number } {
-    const rows = this.filteredHourlyReports();
-    return {
-      orderCount: rows.reduce((sum, row) => sum + row.orderCount, 0),
-      revenue: sumAmounts(rows.map((row) => row.revenue)),
-    };
-  }
-
-  protected getStaffTotals(): {
-    orderCount: number;
-    revenue: number;
-    averageOrderValue: number;
-    tipsReceived: number;
-  } {
-    const rows = this.filteredStaffReports();
-    const orderCount = rows.reduce((sum, row) => sum + row.orderCount, 0);
-    const revenue = sumAmounts(rows.map((row) => row.totalRevenue));
-    return {
-      orderCount,
-      revenue,
-      averageOrderValue: average(revenue, orderCount),
-      tipsReceived: sumAmounts(rows.map((row) => row.tipsReceived)),
-    };
-  }
-
-  protected toHourLabel(hour: number): string {
-    if (hour === 0) {
-      return '12 AM';
-    }
-
-    if (hour < 12) {
-      return `${hour} AM`;
-    }
-
-    if (hour === 12) {
-      return '12 PM';
-    }
-
-    return `${hour - 12} PM`;
-  }
-
-  protected getDailyPeriodHeaderLabel(): string {
-    const groupBy = this.reportForm.controls.groupBy.value;
-    if (groupBy === this.reportGroupByValues.Week) {
-      return 'Week';
-    }
-
-    if (groupBy === this.reportGroupByValues.Month) {
-      return 'Month';
-    }
-
-    return 'Date';
-  }
-
-  protected getDailyPeriodLabel(periodStart: string): string {
-    const periodDate = new Date(periodStart);
-    if (Number.isNaN(periodDate.getTime())) {
-      return periodStart;
-    }
-
-    const groupBy = this.reportForm.controls.groupBy.value;
-    if (groupBy === this.reportGroupByValues.Week) {
-      const endDate = new Date(periodDate);
-      endDate.setDate(periodDate.getDate() + 6);
-
-      const startLabel = periodDate.toLocaleDateString(undefined, {
-        month: 'long',
-        day: 'numeric',
-      });
-      const endLabel = endDate.toLocaleDateString(undefined, {
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric',
-      });
-      return `${startLabel} - ${endLabel}`;
-    }
-
-    if (groupBy === this.reportGroupByValues.Month) {
-      return periodDate.toLocaleDateString(undefined, {
-        month: 'long',
-        year: 'numeric',
-      });
-    }
-
-    const dateLabel = periodDate.toLocaleDateString(undefined, {
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric',
+    busy.set(true);
+    request.subscribe({
+      next: (blob) => {
+        void this.fileDownload
+          .saveBlob(
+            blob,
+            this.buildExportFileName(definition, kind === 'excel' ? 'xlsx' : 'pdf'),
+            kind === 'excel'
+              ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+              : 'application/pdf',
+          )
+          .finally(() => busy.set(false));
+      },
+      error: (error: Error) => {
+        busy.set(false);
+        this.alertService.error(error.message);
+      },
     });
-    const dayLabel = periodDate.toLocaleDateString(undefined, {
-      weekday: 'short',
-    });
-    return `${dateLabel} (${dayLabel})`;
   }
 
   private loadReport(): void {
-    const reportType = this.selectedReportType();
-    if (!reportType) {
+    const definition = this.definition();
+    if (!definition) {
+      this.finishLoading();
       return;
     }
 
-    this.isLoading.set(true);
-    this.connectionFailed.set(false);
-
-    if (reportType === this.reportTypes.DailySales) {
-      const query = this.buildDailySalesQuery();
-      if (!query) {
-        this.finishLoading();
-        return;
-      }
-
-      this.reportsService.getDailySalesReport(query).subscribe({
-        next: (rows) => {
-          this.dailyReports.set(rows);
-          this.finishLoading();
-        },
-        error: (error: Error) => {
-          this.connectionFailed.set(error.message === HttpErrorMessages.NetworkUnavailable);
-          this.alertService.error(error.message);
-          this.dailyReports.set([]);
-          this.finishLoading();
-        },
-      });
-      return;
-    }
-
-    if (reportType === this.reportTypes.ProductSales) {
-      const query = this.buildProductSalesQuery();
-      if (!query) {
-        this.finishLoading();
-        return;
-      }
-
-      this.reportsService.getProductSalesReport(query).subscribe({
-        next: (rows) => {
-          this.productReports.set(rows);
-          this.finishLoading();
-        },
-        error: (error: Error) => {
-          this.connectionFailed.set(error.message === HttpErrorMessages.NetworkUnavailable);
-          this.alertService.error(error.message);
-          this.productReports.set([]);
-          this.finishLoading();
-        },
-      });
-      return;
-    }
-
-    if (reportType === this.reportTypes.Payments) {
-      const query = this.buildPaymentsQuery();
-      if (!query) {
-        this.finishLoading();
-        return;
-      }
-
-      this.reportsService.getPaymentsReport(query).subscribe({
-        next: (rows) => {
-          this.paymentsReports.set(rows);
-          this.finishLoading();
-        },
-        error: (error: Error) => {
-          this.connectionFailed.set(error.message === HttpErrorMessages.NetworkUnavailable);
-          this.alertService.error(error.message);
-          this.paymentsReports.set([]);
-          this.finishLoading();
-        },
-      });
-      return;
-    }
-
-    if (reportType === this.reportTypes.Hourly) {
-      const query = this.buildHourlySalesQuery();
-      if (!query) {
-        this.finishLoading();
-        return;
-      }
-
-      this.reportsService.getHourlySalesReport(query).subscribe({
-        next: (rows) => {
-          this.hourlyReports.set(rows);
-          this.finishLoading();
-        },
-        error: (error: Error) => {
-          this.connectionFailed.set(error.message === HttpErrorMessages.NetworkUnavailable);
-          this.alertService.error(error.message);
-          this.hourlyReports.set([]);
-          this.finishLoading();
-        },
-      });
-      return;
-    }
-
-    const query = this.buildStaffPerformanceQuery();
+    const query = this.buildQuery(definition);
     if (!query) {
       this.finishLoading();
       return;
     }
 
-    this.reportsService.getStaffPerformanceReport(query).subscribe({
+    this.isLoading.set(true);
+    this.connectionFailed.set(false);
+    this.reportsService.getReport<ReportRow>(definition.type, query).subscribe({
       next: (rows) => {
-        this.staffReports.set(rows);
+        if (this.selectedType() !== definition.type) {
+          return;
+        }
+
+        this.rows.set(rows);
         this.finishLoading();
       },
       error: (error: Error) => {
         this.connectionFailed.set(error.message === HttpErrorMessages.NetworkUnavailable);
         this.alertService.error(error.message);
-        this.staffReports.set([]);
+        this.rows.set([]);
         this.finishLoading();
       },
     });
@@ -1226,6 +594,54 @@ export class ReportsComponent implements OnInit {
     this.isRefreshing.set(false);
   }
 
+  private buildQuery(definition: ReportDefinition): ReportQuery | null {
+    const form = this.reportForm.getRawValue();
+    const query: ReportQuery = {};
+
+    if (definition.usesDateRange) {
+      if (!form.fromDate || !form.toDate) {
+        this.alertService.error('Please select report filters first.');
+        return null;
+      }
+
+      if (form.fromDate > form.toDate) {
+        this.alertService.error('From date must be earlier than or equal to To date.');
+        return null;
+      }
+
+      query.fromDate = form.fromDate;
+      query.toDate = form.toDate;
+    }
+
+    if (definition.usesSource && form.source !== null) {
+      query.source = form.source;
+    }
+
+    if (this.hasFilter('groupBy')) {
+      query.groupBy = form.groupBy ?? 'Day';
+    }
+
+    if (this.hasFilter('productCategory')) {
+      if (form.categoryId !== null) {
+        query.categoryId = form.categoryId;
+      }
+
+      if (form.subCategoryId !== null) {
+        query.subCategoryId = form.subCategoryId;
+      }
+
+      if (form.splitAddOns) {
+        query.splitAddOns = true;
+      }
+    }
+
+    if (this.hasFilter('staff') && form.staffId?.trim()) {
+      query.staffId = form.staffId.trim();
+    }
+
+    return query;
+  }
+
   private loadMonthlyWorkbookStatus(): void {
     const filter = this.getMonthlyWorkbookFilterOrShowError(false);
     if (!filter) {
@@ -1234,100 +650,9 @@ export class ReportsComponent implements OnInit {
     }
 
     this.reportsService.getMonthlyWorkbookStatus(filter.year, filter.month).subscribe({
-      next: (status) => {
-        this.monthlyWorkbookStatus.set(status);
-      },
-      error: () => {
-        this.monthlyWorkbookStatus.set(null);
-      },
+      next: (status) => this.monthlyWorkbookStatus.set(status),
+      error: () => this.monthlyWorkbookStatus.set(null),
     });
-  }
-
-  private buildDailySalesQuery(): DailySalesReportQuery | null {
-    const range = this.getDateRangeOrShowError();
-    if (!range) {
-      return null;
-    }
-
-    const groupBy = this.reportForm.controls.groupBy.value;
-    if (!groupBy) {
-      this.alertService.error('Group by is required for Daily Sales report.');
-      return null;
-    }
-
-    return { ...range, groupBy };
-  }
-
-  private buildProductSalesQuery(): ProductSalesReportQuery | null {
-    const range = this.getDateRangeOrShowError();
-    if (!range) {
-      return null;
-    }
-
-    const query: ProductSalesReportQuery = { ...range };
-    const categoryId = this.reportForm.controls.categoryId.value;
-    const subCategoryId = this.reportForm.controls.subCategoryId.value;
-
-    if (categoryId !== null) {
-      query.categoryId = categoryId;
-    }
-
-    if (subCategoryId !== null) {
-      query.subCategoryId = subCategoryId;
-    }
-
-    return query;
-  }
-
-  private buildPaymentsQuery(): PaymentsReportQuery | null {
-    const range = this.getDateRangeOrShowError();
-    if (!range) {
-      return null;
-    }
-
-    return { ...range };
-  }
-
-  private buildHourlySalesQuery(): HourlySalesReportQuery | null {
-    const range = this.getDateRangeOrShowError();
-    if (!range) {
-      return null;
-    }
-
-    return { ...range };
-  }
-
-  private buildStaffPerformanceQuery(): StaffPerformanceReportQuery | null {
-    const range = this.getDateRangeOrShowError();
-    if (!range) {
-      return null;
-    }
-
-    const query: StaffPerformanceReportQuery = { ...range };
-    const staffId = this.reportForm.controls.staffId.value;
-    if (staffId && staffId.trim()) {
-      query.staffId = staffId.trim();
-    }
-
-    return query;
-  }
-
-  private getDateRangeOrShowError(): DateRangeValue | null {
-    const fromDate = this.reportForm.controls.fromDate.value;
-    const toDate = this.reportForm.controls.toDate.value;
-
-    if (!fromDate || !toDate) {
-      this.alertService.error('Please select report filters first.');
-      return null;
-    }
-
-    if (fromDate > toDate) {
-      this.alertService.error('From date must be earlier than or equal to To date.');
-      return null;
-    }
-
-    const source = this.reportForm.controls.source.value;
-    return source === null ? { fromDate, toDate } : { fromDate, toDate, source };
   }
 
   private getMonthlyWorkbookFilterOrShowError(
@@ -1367,6 +692,7 @@ export class ReportsComponent implements OnInit {
     return (
       this.isDownloadingExcel() ||
       this.isDownloadingPdf() ||
+      this.isDownloadingCsv() ||
       this.isGeneratingMonthlyWorkbook() ||
       this.isDownloadingMonthlyWorkbook()
     );
@@ -1376,109 +702,41 @@ export class ReportsComponent implements OnInit {
     return `WTF-Monthly-Reports-${year}-${String(month).padStart(2, '0')}.xlsx`;
   }
 
-  private buildRangeExportFileName(
-    reportName: string,
-    fromDate: string,
-    toDate: string,
-    extension: 'xlsx' | 'pdf',
+  private buildExportFileName(
+    definition: ReportDefinition,
+    extension: 'xlsx' | 'pdf' | 'csv',
   ): string {
-    const normalizedReportName = reportName
+    const name = definition.title
       .trim()
       .replace(/\s+/g, '-')
       .replace(/[^A-Za-z0-9-]/g, '');
+    const form = this.reportForm.getRawValue();
+    const range = definition.usesDateRange
+      ? `${(form.fromDate ?? '').replaceAll('-', '')}-${(form.toDate ?? '').replaceAll('-', '')}`
+      : new Date().toISOString().slice(0, 10).replaceAll('-', '');
+    return `WTF-${name}-${range}.${extension}`;
+  }
 
-    return `WTF-${normalizedReportName}-${fromDate.replaceAll('-', '')}-${toDate.replaceAll('-', '')}.${extension}`;
+  private formatGeneratedAt(date: Date): string {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    }).formatToParts(date);
+
+    const part = (type: string): string => parts.find((p) => p.type === type)?.value ?? '';
+    return `${part('month')} ${part('day')}, ${part('year')} ${part('hour')}:${part('minute')} ${part('dayPeriod')}`.trim();
   }
 
   private applyPreset(preset: DatePreset): void {
     this.reportForm.controls.preset.setValue(preset);
-
-    const today = new Date();
-    let fromDate = new Date(today);
-    let toDate = new Date(today);
-
-    if (preset === this.datePresets.Yesterday) {
-      fromDate.setDate(today.getDate() - 1);
-      toDate.setDate(today.getDate() - 1);
-    } else if (preset === this.datePresets.ThisWeek) {
-      const dayOfWeek = (today.getDay() + 6) % 7;
-      fromDate.setDate(today.getDate() - dayOfWeek);
-    } else if (preset === this.datePresets.ThisMonth) {
-      fromDate = new Date(today.getFullYear(), today.getMonth(), 1);
-    } else if (preset === this.datePresets.LastMonth) {
-      fromDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-      toDate = new Date(today.getFullYear(), today.getMonth(), 0);
-    } else if (preset === this.datePresets.Custom) {
-      return;
+    const range = resolveDatePreset(preset, new Date());
+    if (range) {
+      this.reportForm.patchValue(range);
     }
-
-    this.reportForm.patchValue({
-      fromDate: this.toDateInputValue(fromDate),
-      toDate: this.toDateInputValue(toDate),
-    });
-  }
-
-  private toDateInputValue(date: Date): string {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
-
-  private formatDateSafe(value: string): string {
-    const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) {
-      return value;
-    }
-
-    return parsed.toISOString();
-  }
-
-  private matchesSearch(term: string, values: (string | number)[]): boolean {
-    return values.some((value) => String(value).toLowerCase().includes(term));
-  }
-
-  private sortRows<T>(rows: readonly T[], key: keyof T, direction: SortDirection): T[] {
-    return [...rows].sort((a, b) => {
-      const aValue = a[key];
-      const bValue = b[key];
-
-      if (typeof aValue === 'number' && typeof bValue === 'number') {
-        return direction === 'asc' ? aValue - bValue : bValue - aValue;
-      }
-
-      const aDate = Date.parse(String(aValue));
-      const bDate = Date.parse(String(bValue));
-      if (!Number.isNaN(aDate) && !Number.isNaN(bDate)) {
-        return direction === 'asc' ? aDate - bDate : bDate - aDate;
-      }
-
-      const aText = String(aValue ?? '').toLowerCase();
-      const bText = String(bValue ?? '').toLowerCase();
-      if (aText < bText) {
-        return direction === 'asc' ? -1 : 1;
-      }
-
-      if (aText > bText) {
-        return direction === 'asc' ? 1 : -1;
-      }
-
-      return 0;
-    });
-  }
-
-  private toggleSortState<T extends string>(
-    column: T,
-    keySignal: { (): T; set(value: T): void },
-    directionSignal: { (): SortDirection; set(value: SortDirection): void },
-  ): void {
-    if (keySignal() === column) {
-      directionSignal.set(directionSignal() === 'asc' ? 'desc' : 'asc');
-      return;
-    }
-
-    keySignal.set(column);
-    directionSignal.set('asc');
   }
 
   private loadStaffOptions(): void {
@@ -1487,25 +745,16 @@ export class ReportsComponent implements OnInit {
         this.staffOptions.set(
           users
             .filter((user) => user.username !== CUSTOMER_LINK_USERNAME)
-            .map((user) => ({
-              id: user.id,
-              name: this.toStaffDisplayName(user),
-            }))
+            .map((user) => ({ id: user.id, name: this.toStaffDisplayName(user) }))
             .sort((a, b) => a.name.localeCompare(b.name)),
         );
       },
-      error: () => {
-        this.staffOptions.set([]);
-      },
+      error: () => this.staffOptions.set([]),
     });
   }
 
   private toStaffDisplayName(user: UserDto): string {
     const fullName = `${user.firstName} ${user.lastName}`.trim();
-    if (fullName.length > 0) {
-      return `${fullName} (${user.username})`;
-    }
-
-    return user.username;
+    return fullName.length > 0 ? `${fullName} (${user.username})` : user.username;
   }
 }
