@@ -357,3 +357,8 @@ body {
     transform: none;
   }
 }
+
+/* A closed side panel waits just off-screen; its shadow would otherwise bleed onto the right edge of the page. */
+.app-drawer-panel.translate-x-full {
+  box-shadow: none;
+}
