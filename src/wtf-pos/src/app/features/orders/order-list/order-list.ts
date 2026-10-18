@@ -104,6 +104,11 @@ export class OrderList implements OnInit, OnDestroy {
   protected readonly orders = signal<OrderDto[]>([]);
   /** Orders customers placed through their link, waiting for staff to accept or reject them. Oldest first. */
   protected readonly awaitingOrders = signal<OrderDto[]>([]);
+  /** Offline orders held for an Admin (prices or menu changed before they synced). Oldest first. */
+  protected readonly heldOrders = signal<OrderDto[]>([]);
+  protected readonly isHeldExpanded = signal(true);
+  protected readonly orderToRejectHeld = signal<OrderDto | null>(null);
+  protected readonly canReviewHeld = computed(() => this.authService.canOverrideOrders());
   /** The order whose chat is open in the side panel. */
   protected readonly chatOrder = signal<OrderDto | null>(null);
   /** The waiting order an accept or reject request is running for. */
@@ -305,6 +310,7 @@ export class OrderList implements OnInit, OnDestroy {
     this.ordersCache.set([]);
     this.orders.set([]);
     this.loadAwaitingOrders();
+    this.loadHeldOrders();
 
     this.orderService
       .getOrdersPaged({
@@ -567,6 +573,8 @@ export class OrderList implements OnInit, OnDestroy {
         return 'error';
       case OrderStatusEnum.PendingApproval:
         return 'amber';
+      case OrderStatusEnum.PendingReview:
+        return 'amber';
       default:
         return 'info';
     }
@@ -576,6 +584,8 @@ export class OrderList implements OnInit, OnDestroy {
     switch (status) {
       case OrderStatusEnum.PendingApproval:
         return 'Awaiting approval';
+      case OrderStatusEnum.PendingReview:
+        return 'Needs review';
       case OrderStatusEnum.Pending:
         return 'Pending';
       case OrderStatusEnum.Completed:
@@ -770,6 +780,12 @@ export class OrderList implements OnInit, OnDestroy {
 
     this.orderService.getOrder(orderId).subscribe({
       next: (order) => {
+        // A held offline order belongs in the review banner, never in the normal list.
+        if (order.status === OrderStatusEnum.PendingReview) {
+          this.upsertHeld(order);
+          return;
+        }
+
         // An order waiting for approval belongs in the banner, never in the normal list.
         if (order.status === OrderStatusEnum.PendingApproval) {
           this.upsertAwaiting(order);
@@ -777,6 +793,7 @@ export class OrderList implements OnInit, OnDestroy {
         }
 
         this.removeAwaiting(order.id);
+        this.removeHeld(order.id);
         this.mergeIntoList(order);
       },
       error: () => {
@@ -895,6 +912,101 @@ export class OrderList implements OnInit, OnDestroy {
         this.orderToReject.set(null);
         this.alertService.error(err.message);
         this.loadAwaitingOrders();
+      },
+    });
+  }
+
+  // --- offline orders held for review ---
+
+  protected loadHeldOrders(): void {
+    if (!this.connectivity.isOnline() || !this.canReviewHeld()) {
+      return;
+    }
+
+    this.orderService.getHeldOrders().subscribe({
+      next: (orders) => this.heldOrders.set(this.oldestFirst(orders)),
+      error: () => {
+        // The banner is a background extra; the main list reports its own errors.
+      },
+    });
+  }
+
+  private upsertHeld(order: OrderDto): void {
+    if (!this.canReviewHeld()) {
+      return;
+    }
+
+    const rest = this.heldOrders().filter((o) => o.id !== order.id);
+    this.heldOrders.set(this.oldestFirst([...rest, order]));
+  }
+
+  private removeHeld(orderId: string): void {
+    if (this.heldOrders().some((o) => o.id === orderId)) {
+      this.heldOrders.set(this.heldOrders().filter((o) => o.id !== orderId));
+    }
+  }
+
+  protected reasonsOf(order: OrderDto): string[] {
+    return (order.reviewReasons ?? '').split('\n').filter((reason) => reason.trim().length > 0);
+  }
+
+  protected approveHeld(order: OrderDto): void {
+    if (this.decidingOrderId() || !this.canReviewHeld()) {
+      return;
+    }
+
+    this.decidingOrderId.set(order.id);
+    this.orderService.approveHeldOrder(order.id).subscribe({
+      next: (updated) => {
+        this.decidingOrderId.set(null);
+        this.removeHeld(order.id);
+        this.mergeIntoList(updated);
+        this.alertService.success(`Order #${order.orderNumber} approved.`);
+      },
+      error: (err) => {
+        this.decidingOrderId.set(null);
+        this.alertService.error(err.message);
+        this.loadHeldOrders();
+      },
+    });
+  }
+
+  protected askRejectHeld(order: OrderDto): void {
+    if (this.decidingOrderId() || !this.canReviewHeld()) {
+      return;
+    }
+
+    this.orderToRejectHeld.set(order);
+  }
+
+  protected cancelRejectHeld(): void {
+    if (this.decidingOrderId()) {
+      return;
+    }
+
+    this.orderToRejectHeld.set(null);
+  }
+
+  protected confirmRejectHeld(reason: string): void {
+    const order = this.orderToRejectHeld();
+    if (!order || this.decidingOrderId() || !this.canReviewHeld()) {
+      return;
+    }
+
+    this.decidingOrderId.set(order.id);
+    this.orderService.rejectHeldOrder(order.id, reason).subscribe({
+      next: (updated) => {
+        this.decidingOrderId.set(null);
+        this.orderToRejectHeld.set(null);
+        this.removeHeld(order.id);
+        this.mergeIntoList(updated);
+        this.alertService.success(`Order #${order.orderNumber} rejected.`);
+      },
+      error: (err) => {
+        this.decidingOrderId.set(null);
+        this.orderToRejectHeld.set(null);
+        this.alertService.error(err.message);
+        this.loadHeldOrders();
       },
     });
   }

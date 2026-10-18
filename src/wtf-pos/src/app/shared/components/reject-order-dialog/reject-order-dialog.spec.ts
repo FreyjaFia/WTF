@@ -37,6 +37,16 @@ describe('RejectOrderDialogComponent', () => {
     expect(el().textContent).toContain('The customer will see your reason');
   });
 
+  it('shows another hint when the caller gives one', () => {
+    fixture = TestBed.createComponent(RejectOrderDialogComponent);
+    fixture.componentRef.setInput('orderNumber', 1);
+    fixture.componentRef.setInput('hint', 'It is kept on the order.');
+    fixture.detectChanges();
+
+    expect(el().textContent).toContain('It is kept on the order.');
+    expect(el().textContent).not.toContain('The customer will see your reason');
+  });
+
   it('asks for a reason and does not confirm without one', () => {
     const { confirmed } = setup();
     button('Reject Order').click();

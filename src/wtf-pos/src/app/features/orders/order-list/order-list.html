@@ -321,6 +321,93 @@
     </div>
   }
 
+  <!-- Offline orders held for an Admin: the prices or the menu changed before they synced -->
+  @if (isOnline() && canReviewHeld() && heldOrders().length > 0) {
+    <div class="mb-4 shrink-0 rounded-xl border border-amber-200 bg-amber-50 p-4" data-held-orders>
+      <button
+        type="button"
+        class="flex w-full items-center gap-2 text-left"
+        [class.mb-3]="isHeldExpanded()"
+        [attr.aria-expanded]="isHeldExpanded()"
+        (click)="isHeldExpanded.set(!isHeldExpanded())"
+      >
+        <div
+          class="flex h-6 w-6 items-center justify-center rounded-full bg-amber-400 text-xs font-bold text-white"
+        >
+          {{ heldOrders().length }}
+        </div>
+        <span class="text-sm font-semibold text-amber-800">Offline orders needing review</span>
+        <app-icon
+          [name]="isHeldExpanded() ? 'icon-chevron-up' : 'icon-chevron-down'"
+          [class]="'ml-auto h-4 w-4 text-amber-800'"
+          [fill]="'currentColor'"
+        />
+      </button>
+      <div class="max-h-[40vh] space-y-2 overflow-y-auto" [class.hidden]="!isHeldExpanded()">
+        @for (held of heldOrders(); track held.id) {
+          <div class="rounded-lg bg-surface px-3 py-3 shadow-sm">
+            <div
+              class="flex cursor-pointer flex-col gap-1 rounded-md transition-colors hover:bg-gray-50"
+              role="button"
+              tabindex="0"
+              [attr.aria-label]="'Open order ' + held.orderNumber"
+              (click)="openAwaitingOrder(held)"
+              (keydown.enter)="openAwaitingOrder(held)"
+            >
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <div class="flex items-center gap-2">
+                  <span class="text-sm font-semibold text-gray-900">#{{ held.orderNumber }}</span>
+                  <span class="text-sm text-gray-700">{{ held.customerName || 'Walk-in' }}</span>
+                </div>
+                <span class="text-base font-semibold whitespace-nowrap text-gray-950 lg:text-lg">
+                  <span class="text-sm opacity-70 lg:text-base"
+                    ><app-icon
+                      name="icon-peso"
+                      [class]="'inline h-3 w-3 align-[-0.125em]'"
+                      [fill]="'currentColor'" /></span
+                  >{{ held.totalAmount | number: '1.2-2' }}
+                </span>
+              </div>
+              <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-gray-500">
+                <span>Sold {{ held.createdAt | date: 'd MMM, h:mm a' }}</span>
+                <span>&middot; {{ getItemsText(held) }}</span>
+              </div>
+              <ul class="mt-1 list-disc space-y-0.5 ps-5 text-xs text-amber-900">
+                @for (reason of reasonsOf(held); track reason) {
+                  <li>{{ reason }}</li>
+                }
+              </ul>
+            </div>
+
+            <div class="mt-3 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                class="app-btn app-btn-outline-danger app-btn-sm"
+                [disabled]="decidingOrderId() !== null"
+                (click)="askRejectHeld(held)"
+              >
+                Reject
+              </button>
+              <button
+                type="button"
+                class="app-btn app-btn-primary app-btn-sm"
+                [disabled]="decidingOrderId() !== null"
+                (click)="approveHeld(held)"
+              >
+                @if (decidingOrderId() === held.id && !orderToRejectHeld()) {
+                  <span class="loading loading-spinner loading-xs"></span>
+                  Approving...
+                } @else {
+                  Approve
+                }
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
   <!-- Orders List -->
   @if (!isLoading()) {
     <!-- Pending Offline Orders -->
@@ -677,5 +764,15 @@
     [isBusy]="decidingOrderId() !== null"
     (confirmed)="confirmRejectAwaiting($event)"
     (cancelled)="cancelRejectAwaiting()"
+  />
+}
+
+@if (orderToRejectHeld(); as target) {
+  <app-reject-order-dialog
+    [orderNumber]="target.orderNumber"
+    [isBusy]="decidingOrderId() !== null"
+    hint="The reason is saved on the order and shows in the Voids and Refunds report."
+    (confirmed)="confirmRejectHeld($event)"
+    (cancelled)="cancelRejectHeld()"
   />
 }

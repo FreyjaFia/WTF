@@ -17,6 +17,7 @@ export const MAX_REJECT_REASON_LENGTH = 500;
 export class RejectOrderDialogComponent {
   public readonly orderNumber = input.required<number>();
   public readonly isBusy = input(false);
+  public readonly hint = input('The customer will see your reason on their order.');
 
   /** Emits the trimmed reason once it is not empty. */
   public readonly confirmed = output<string>();

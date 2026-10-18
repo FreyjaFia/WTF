@@ -117,8 +117,19 @@ export class OrderDetails implements OnInit {
   protected readonly isAwaitingApproval = computed(
     () => this.order()?.status === OrderStatusEnum.PendingApproval,
   );
+  /** An offline order held because its prices or the menu changed before it synced. Admins approve or reject it. */
+  protected readonly isHeldForReview = computed(
+    () => this.order()?.status === OrderStatusEnum.PendingReview,
+  );
+  protected readonly canReviewHeld = computed(
+    () => this.isHeldForReview() && this.authService.canOverrideOrders(),
+  );
+  protected readonly reviewReasons = computed(() =>
+    (this.order()?.reviewReasons ?? '').split('\n').filter((reason) => reason.trim().length > 0),
+  );
   protected readonly canDecide = computed(
-    () => this.isAwaitingApproval() && this.authService.canWriteOrders(),
+    () =>
+      (this.isAwaitingApproval() && this.authService.canWriteOrders()) || this.canReviewHeld(),
   );
   protected readonly isDeciding = signal(false);
   protected readonly showRejectDialog = signal(false);
@@ -320,6 +331,8 @@ export class OrderDetails implements OnInit {
     switch (status) {
       case OrderStatusEnum.PendingApproval:
         return 'amber';
+      case OrderStatusEnum.PendingReview:
+        return 'amber';
       case OrderStatusEnum.Pending:
         return 'warning';
       case OrderStatusEnum.Completed:
@@ -337,6 +350,8 @@ export class OrderDetails implements OnInit {
     switch (status) {
       case OrderStatusEnum.PendingApproval:
         return 'Awaiting approval';
+      case OrderStatusEnum.PendingReview:
+        return 'Needs review';
       case OrderStatusEnum.Pending:
         return 'Pending';
       case OrderStatusEnum.Completed:
@@ -358,12 +373,16 @@ export class OrderDetails implements OnInit {
       return;
     }
 
+    const held = this.isHeldForReview();
     this.isDeciding.set(true);
-    this.orderService.approveOrder(current.id).subscribe({
+    const request$ = held
+      ? this.orderService.approveHeldOrder(current.id)
+      : this.orderService.approveOrder(current.id);
+    request$.subscribe({
       next: (updated) => {
         this.isDeciding.set(false);
         this.order.set(updated);
-        this.alertService.success(`Order #${current.orderNumber} accepted.`);
+        this.alertService.success(`Order #${current.orderNumber} ${held ? 'approved' : 'accepted'}.`);
       },
       error: (err) => {
         this.isDeciding.set(false);
@@ -393,7 +412,10 @@ export class OrderDetails implements OnInit {
     }
 
     this.isDeciding.set(true);
-    this.orderService.rejectOrder(current.id, reason).subscribe({
+    const request$ = this.isHeldForReview()
+      ? this.orderService.rejectHeldOrder(current.id, reason)
+      : this.orderService.rejectOrder(current.id, reason);
+    request$.subscribe({
       next: (updated) => {
         this.isDeciding.set(false);
         this.showRejectDialog.set(false);

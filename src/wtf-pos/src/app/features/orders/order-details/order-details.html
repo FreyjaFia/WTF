@@ -107,6 +107,53 @@
             }
           </div>
 
+          @if (isHeldForReview()) {
+            <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3" data-held-order>
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <p class="text-xs font-semibold tracking-wide text-amber-800 uppercase">
+                  Needs review
+                </p>
+                @if (canReviewHeld()) {
+                  <div class="flex items-center gap-2">
+                    <button
+                      type="button"
+                      class="app-btn app-btn-outline-danger app-btn-sm"
+                      [disabled]="isDeciding()"
+                      (click)="askRejectOrder()"
+                    >
+                      Reject
+                    </button>
+                    <button
+                      type="button"
+                      class="app-btn app-btn-primary app-btn-sm"
+                      [disabled]="isDeciding()"
+                      (click)="approveOrder()"
+                    >
+                      @if (isDeciding() && !showRejectDialog()) {
+                        <span class="loading loading-spinner loading-xs"></span>
+                        Approving...
+                      } @else {
+                        Approve
+                      }
+                    </button>
+                  </div>
+                }
+              </div>
+              <p class="mt-2 text-sm text-gray-700">
+                This order was sold offline. The prices or the menu changed before it synced, so it
+                does not count as a sale until an Admin approves it at the prices the customer was quoted.
+              </p>
+              <ul class="mt-2 list-disc space-y-0.5 ps-5 text-sm text-gray-900">
+                @for (reason of reviewReasons(); track reason) {
+                  <li>{{ reason }}</li>
+                }
+              </ul>
+              @if (!canReviewHeld()) {
+                <p class="mt-2 text-xs text-gray-500">An Admin has to approve or reject it.</p>
+              }
+            </div>
+          }
+
           @if (isOnlineOrder()) {
             <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3" data-online-order>
               <div class="flex flex-wrap items-center justify-between gap-2">
@@ -619,6 +666,11 @@
   <app-reject-order-dialog
     [orderNumber]="target.orderNumber"
     [isBusy]="isDeciding()"
+    [hint]="
+      isHeldForReview()
+        ? 'The reason is saved on the order and shows in the Voids and Refunds report.'
+        : 'The customer will see your reason on their order.'
+    "
     (confirmed)="confirmRejectOrder($event)"
     (cancelled)="cancelRejectOrder()"
   />

@@ -113,6 +113,8 @@ describe('OrderDetails', () => {
     voidOrder: ReturnType<typeof vi.fn>;
     approveOrder: ReturnType<typeof vi.fn>;
     rejectOrder: ReturnType<typeof vi.fn>;
+    approveHeldOrder: ReturnType<typeof vi.fn>;
+    rejectHeldOrder: ReturnType<typeof vi.fn>;
   };
   let alert: Record<string, ReturnType<typeof vi.fn>>;
   let catalog: {
@@ -159,6 +161,8 @@ describe('OrderDetails', () => {
       voidOrder: vi.fn(),
       approveOrder: vi.fn(),
       rejectOrder: vi.fn(),
+      approveHeldOrder: vi.fn(),
+      rejectHeldOrder: vi.fn(),
     };
     alert = {
       error: vi.fn(),
@@ -793,6 +797,97 @@ describe('OrderDetails', () => {
       await create(makeOrder({ status: OrderStatusEnum.Cancelled }));
       t.confirmRefund();
       expect(orderService.voidOrder).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('offline orders held for review', () => {
+    const held = (over: Partial<OrderDto> = {}) =>
+      makeOrder({
+        orderNumber: 21,
+        status: OrderStatusEnum.PendingReview,
+        totalAmount: 150,
+        reviewReasons: 'Latte now costs 160.00, quoted 150.00.\nOat Milk is inactive.',
+        ...over,
+      });
+
+    const el = () => fixture.nativeElement as HTMLElement;
+    const box = () => el().querySelector('[data-held-order]') as HTMLElement | null;
+    const button = (label: string) =>
+      [...(box()?.querySelectorAll('button') ?? [])].find((b) =>
+        b.textContent?.trim().startsWith(label),
+      ) as HTMLButtonElement | undefined;
+    const held$ = () =>
+      t as unknown as {
+        canReviewHeld: () => boolean;
+        approveOrder: () => void;
+        askRejectOrder: () => void;
+        confirmRejectOrder: (reason: string) => void;
+        getStatusLabel: (status: OrderStatusEnum) => string;
+        getStatusVariant: (status: OrderStatusEnum) => string;
+      };
+
+    it('shows why it is held and what an Admin can do', async () => {
+      await create(held());
+
+      expect(box()!.textContent).toContain('Needs review');
+      expect(box()!.textContent).toContain('Latte now costs 160.00, quoted 150.00.');
+      expect(box()!.textContent).toContain('Oat Milk is inactive.');
+      expect(button('Approve')).toBeDefined();
+      expect(button('Reject')).toBeDefined();
+      expect(held$().getStatusLabel(OrderStatusEnum.PendingReview)).toBe('Needs review');
+      expect(held$().getStatusVariant(OrderStatusEnum.PendingReview)).toBe('amber');
+    });
+
+    it('has no box on an ordinary order', async () => {
+      await create(makeOrder({ status: OrderStatusEnum.Completed }));
+
+      expect(box()).toBeNull();
+    });
+
+    it('leaves the decision to an Admin: others see the reasons but no buttons', async () => {
+      canOverride.mockReturnValue(false);
+      await create(held());
+
+      expect(box()!.textContent).toContain('An Admin has to approve or reject it.');
+      expect(button('Approve')).toBeUndefined();
+      expect(button('Reject')).toBeUndefined();
+      expect(held$().canReviewHeld()).toBe(false);
+      held$().approveOrder();
+      expect(orderService.approveHeldOrder).not.toHaveBeenCalled();
+    });
+
+    it('approves it and shows the completed order', async () => {
+      orderService.approveHeldOrder.mockReturnValue(
+        of(makeOrder({ orderNumber: 21, status: OrderStatusEnum.Completed })),
+      );
+      await create(held());
+
+      button('Approve')!.click();
+      fixture.detectChanges();
+
+      expect(orderService.approveHeldOrder).toHaveBeenCalledWith('o1');
+      expect(orderService.approveOrder).not.toHaveBeenCalled();
+      expect(alert['success']).toHaveBeenCalledWith('Order #21 approved.');
+      expect(box()).toBeNull();
+    });
+
+    it('rejects it with a reason, through the held-order endpoint', async () => {
+      orderService.rejectHeldOrder.mockReturnValue(
+        of(makeOrder({ orderNumber: 21, status: OrderStatusEnum.Cancelled })),
+      );
+      await create(held());
+
+      held$().askRejectOrder();
+      fixture.detectChanges();
+      expect(el().querySelector('app-reject-order-dialog')!.textContent).toContain(
+        'Voids and Refunds report',
+      );
+      held$().confirmRejectOrder('Wrong price');
+      fixture.detectChanges();
+
+      expect(orderService.rejectHeldOrder).toHaveBeenCalledWith('o1', 'Wrong price');
+      expect(orderService.rejectOrder).not.toHaveBeenCalled();
+      expect(alert['success']).toHaveBeenCalledWith('Order #21 rejected.');
     });
   });
 

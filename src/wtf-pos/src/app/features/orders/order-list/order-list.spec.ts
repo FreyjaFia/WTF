@@ -105,10 +105,14 @@ describe('OrderList', () => {
     getOrdersPaged: ReturnType<typeof vi.fn>;
     getOrder: ReturnType<typeof vi.fn>;
     getAwaitingOrders: ReturnType<typeof vi.fn>;
+    getHeldOrders: ReturnType<typeof vi.fn>;
+    approveHeldOrder: ReturnType<typeof vi.fn>;
+    rejectHeldOrder: ReturnType<typeof vi.fn>;
     approveOrder: ReturnType<typeof vi.fn>;
     rejectOrder: ReturnType<typeof vi.fn>;
   };
   let canWrite: boolean;
+  let canOverride: boolean;
   let alert: {
     error: ReturnType<typeof vi.fn>;
     success: ReturnType<typeof vi.fn>;
@@ -163,6 +167,7 @@ describe('OrderList', () => {
       },
     );
     canWrite = true;
+    canOverride = true;
     isOnline = signal(true);
     pendingOrders = signal<unknown[]>([]);
     isSyncing = signal(false);
@@ -171,6 +176,9 @@ describe('OrderList', () => {
       getOrdersPaged: vi.fn().mockReturnValue(of(page([]))),
       getOrder: vi.fn(),
       getAwaitingOrders: vi.fn().mockReturnValue(of([])),
+      getHeldOrders: vi.fn().mockReturnValue(of([])),
+      approveHeldOrder: vi.fn(),
+      rejectHeldOrder: vi.fn(),
       approveOrder: vi.fn(),
       rejectOrder: vi.fn(),
     };
@@ -193,7 +201,10 @@ describe('OrderList', () => {
       providers: [
         provideRouter([]),
         { provide: OrderService, useValue: orderService },
-        { provide: AuthService, useValue: { canWriteOrders: () => canWrite } },
+        {
+          provide: AuthService,
+          useValue: { canWriteOrders: () => canWrite, canOverrideOrders: () => canOverride },
+        },
         { provide: AlertService, useValue: alert },
         { provide: ListStateService, useValue: listState },
         { provide: ConnectivityService, useValue: { isOnline } },
@@ -794,6 +805,157 @@ describe('OrderList', () => {
     });
   });
 
+  describe('offline orders held for review', () => {
+    const el = () => fixture.nativeElement as HTMLElement;
+    const banner = () => el().querySelector('[data-held-orders]') as HTMLElement | null;
+    const buttons = (label: string) =>
+      [...(banner()?.querySelectorAll('button') ?? [])].filter((b) =>
+        b.textContent?.trim().startsWith(label),
+      ) as HTMLButtonElement[];
+    const held = (id: string, over: Partial<OrderDto> = {}): OrderDto =>
+      makeOrder(id, {
+        orderNumber: 21,
+        status: OrderStatusEnum.PendingReview,
+        totalAmount: 150,
+        reviewReasons: 'Latte now costs 160.00, quoted 150.00.\nOat Milk is inactive.',
+        ...over,
+      });
+
+    it('shows an Admin the held orders, oldest first, with every reason and the quoted total', () => {
+      orderService.getHeldOrders.mockReturnValue(
+        of([
+          held('o2', { orderNumber: 22, createdAt: '2026-10-11T10:00:00Z' }),
+          held('o1', { orderNumber: 21, createdAt: '2026-10-11T09:00:00Z' }),
+        ]),
+      );
+      init();
+
+      const text = banner()!.textContent ?? '';
+      expect(text).toContain('Offline orders needing review');
+      expect(text.indexOf('#21')).toBeLessThan(text.indexOf('#22'));
+      expect(text).toContain('Latte now costs 160.00, quoted 150.00.');
+      expect(text).toContain('Oat Milk is inactive.');
+      expect(text).toContain('150.00');
+    });
+
+    it('shows nothing, and does not ask, for staff who are not Admins', () => {
+      canOverride = false;
+      orderService.getHeldOrders.mockReturnValue(of([held('o1')]));
+      init();
+
+      expect(banner()).toBeNull();
+      expect(orderService.getHeldOrders).not.toHaveBeenCalled();
+    });
+
+    it('does not ask while offline', () => {
+      isOnline.set(false);
+      init();
+      expect(orderService.getHeldOrders).not.toHaveBeenCalled();
+    });
+
+    it('tolerates the request failing', () => {
+      orderService.getHeldOrders.mockReturnValue(throwError(() => new Error('x')));
+      init();
+
+      expect(banner()).toBeNull();
+      expect(alert.error).not.toHaveBeenCalled();
+    });
+
+    it('approves: sends the approval, takes it off the banner, files it in the list and says so', () => {
+      orderService.getHeldOrders.mockReturnValue(of([held('o1', { orderNumber: 21 })]));
+      orderService.approveHeldOrder.mockReturnValue(
+        of(makeOrder('o1', { orderNumber: 21, status: OrderStatusEnum.Completed })),
+      );
+      init();
+
+      buttons('Approve')[0].click();
+      fixture.detectChanges();
+
+      expect(orderService.approveHeldOrder).toHaveBeenCalledWith('o1');
+      expect(banner()).toBeNull();
+      expect(t.ordersCache()[0]).toMatchObject({ id: 'o1', status: OrderStatusEnum.Completed });
+      expect(alert.success).toHaveBeenCalledWith('Order #21 approved.');
+    });
+
+    it('blocks both buttons while the answer is being sent', () => {
+      orderService.getHeldOrders.mockReturnValue(of([held('o1')]));
+      orderService.approveHeldOrder.mockReturnValue(new Subject());
+      init();
+
+      buttons('Approve')[0].click();
+      fixture.detectChanges();
+
+      expect(banner()!.textContent).toContain('Approving...');
+      expect(buttons('Reject')[0].disabled).toBe(true);
+      buttons('Approving')[0].click();
+      expect(orderService.approveHeldOrder).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows the error and refreshes the banner when it cannot be approved', () => {
+      orderService.getHeldOrders.mockReturnValue(of([held('o1')]));
+      orderService.approveHeldOrder.mockReturnValue(throwError(() => new Error('Not waiting.')));
+      init();
+      orderService.getHeldOrders.mockClear();
+      orderService.getHeldOrders.mockReturnValue(of([]));
+
+      buttons('Approve')[0].click();
+      fixture.detectChanges();
+
+      expect(alert.error).toHaveBeenCalledWith('Not waiting.');
+      expect(orderService.getHeldOrders).toHaveBeenCalledTimes(1);
+      expect(banner()).toBeNull();
+    });
+
+    it('rejects through the reason dialog, which says where the reason is kept', () => {
+      orderService.getHeldOrders.mockReturnValue(of([held('o1', { orderNumber: 21 })]));
+      orderService.rejectHeldOrder.mockReturnValue(
+        of(makeOrder('o1', { orderNumber: 21, status: OrderStatusEnum.Cancelled })),
+      );
+      init();
+
+      buttons('Reject')[0].click();
+      fixture.detectChanges();
+      const dialog = el().querySelector('app-reject-order-dialog') as HTMLElement;
+      expect(dialog.textContent).toContain('Voids and Refunds report');
+      expect(dialog.textContent).not.toContain('The customer will see');
+
+      const area = dialog.querySelector('textarea') as HTMLTextAreaElement;
+      area.value = 'Wrong price';
+      area.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+      ([...dialog.querySelectorAll('button')].find((b) =>
+        b.textContent?.includes('Reject Order'),
+      ) as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(orderService.rejectHeldOrder).toHaveBeenCalledWith('o1', 'Wrong price');
+      expect(banner()).toBeNull();
+      expect(alert.success).toHaveBeenCalledWith('Order #21 rejected.');
+    });
+
+    it('puts an order that a live update says is held in the banner, not in the list', () => {
+      init();
+      orderService.getOrder.mockReturnValue(of(held('o9', { orderNumber: 29 })));
+
+      hubUpdates.next('o9');
+      fixture.detectChanges();
+
+      expect(banner()!.textContent).toContain('#29');
+      expect(t.ordersCache().map((o) => o.id)).not.toContain('o9');
+    });
+
+    it('takes an order off the banner when a live update says it was decided', () => {
+      orderService.getHeldOrders.mockReturnValue(of([held('o1')]));
+      init();
+      orderService.getOrder.mockReturnValue(of(makeOrder('o1', { status: OrderStatusEnum.Completed })));
+
+      hubUpdates.next('o1');
+      fixture.detectChanges();
+
+      expect(banner()).toBeNull();
+    });
+  });
+
   describe('orders awaiting approval', () => {
     const waiting = (id: string, over: Partial<OrderDto> = {}): OrderDto =>
       makeOrder(id, {
@@ -1140,7 +1302,10 @@ describe('OrderList', () => {
           providers: [
             provideRouter([]),
             { provide: OrderService, useValue: orderService },
-            { provide: AuthService, useValue: { canWriteOrders: () => false } },
+            {
+              provide: AuthService,
+              useValue: { canWriteOrders: () => false, canOverrideOrders: () => false },
+            },
             { provide: AlertService, useValue: alert },
             { provide: ListStateService, useValue: listState },
             { provide: ConnectivityService, useValue: { isOnline } },
