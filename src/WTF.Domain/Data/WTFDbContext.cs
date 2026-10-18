@@ -540,6 +540,8 @@ public partial class WTFDbContext : DbContext
         {
             entity.HasIndex(e => e.BundlePromotionId, "IX_OrderItems_BundlePromotionId");
 
+            entity.HasIndex(e => e.DiscountPromotionId, "IX_OrderItems_DiscountPromotionId").HasFilter("([DiscountPromotionId] IS NOT NULL)");
+
             entity.HasIndex(e => e.OrderId, "IX_OrderItems_OrderId");
 
             entity.HasIndex(e => new { e.OrderId, e.SortOrder }, "IX_OrderItems_OrderId_SortOrder");
@@ -557,9 +559,13 @@ public partial class WTFDbContext : DbContext
                 .HasMaxLength(100)
                 .IsUnicode(false);
 
-            entity.HasOne(d => d.BundlePromotion).WithMany(p => p.OrderItems)
+            entity.HasOne(d => d.BundlePromotion).WithMany(p => p.OrderItemBundlePromotions)
                 .HasForeignKey(d => d.BundlePromotionId)
                 .HasConstraintName("FK_OrderItems_BundlePromotion");
+
+            entity.HasOne(d => d.DiscountPromotion).WithMany(p => p.OrderItemDiscountPromotions)
+                .HasForeignKey(d => d.DiscountPromotionId)
+                .HasConstraintName("FK_OrderItems_DiscountPromotion");
 
             entity.HasOne(d => d.Order).WithMany(p => p.OrderItems)
                 .HasForeignKey(d => d.OrderId)
@@ -776,8 +782,10 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("(getutcdate())", "DF_Promotions_CreatedAt")
                 .HasColumnType("datetime");
+            entity.Property(e => e.EndTime).HasPrecision(0);
             entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_Promotions_IsActive");
             entity.Property(e => e.Name).HasMaxLength(100);
+            entity.Property(e => e.StartTime).HasPrecision(0);
             entity.Property(e => e.UpdatedAt).HasColumnType("datetime");
 
             entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.PromotionCreatedByNavigations)

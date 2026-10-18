@@ -22,6 +22,14 @@ public partial class Promotion
 
     public Guid? UpdatedBy { get; set; }
 
+    public byte? DaysOfWeek { get; set; }
+
+    public TimeOnly? StartTime { get; set; }
+
+    public TimeOnly? EndTime { get; set; }
+
+    public int? MaxRedemptions { get; set; }
+
     public virtual User CreatedByNavigation { get; set; } = null!;
 
     public virtual ICollection<DiscountedProductPromotion> DiscountedProductPromotions { get; set; } = new List<DiscountedProductPromotion>();
@@ -32,7 +40,9 @@ public partial class Promotion
 
     public virtual ICollection<OrderBundlePromotion> OrderBundlePromotions { get; set; } = new List<OrderBundlePromotion>();
 
-    public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
+    public virtual ICollection<OrderItem> OrderItemBundlePromotions { get; set; } = new List<OrderItem>();
+
+    public virtual ICollection<OrderItem> OrderItemDiscountPromotions { get; set; } = new List<OrderItem>();
 
     public virtual PromotionImage? PromotionImage { get; set; }
 

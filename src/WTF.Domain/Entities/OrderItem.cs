@@ -24,7 +24,11 @@ public partial class OrderItem
 
     public string? PromoLabel { get; set; }
 
+    public Guid? DiscountPromotionId { get; set; }
+
     public virtual Promotion? BundlePromotion { get; set; }
+
+    public virtual Promotion? DiscountPromotion { get; set; }
 
     public virtual ICollection<OrderItem> InverseParentOrderItem { get; set; } = new List<OrderItem>();
 
