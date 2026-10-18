@@ -74,7 +74,8 @@ public class CreateOrderHandlerTests
         await db.SaveChangesAsync();
     }
 
-    private async Task<Guid> SeedBundle(decimal price, bool mixMatch = false, bool active = true, DateTime? start = null, DateTime? end = null, string name = "Bundle")
+    private async Task<Guid> SeedBundle(decimal price, bool mixMatch = false, bool active = true, DateTime? start = null, DateTime? end = null, string name = "Bundle",
+        (Guid ProductId, int Quantity)[]? items = null, (Guid AddOnId, int Quantity)? addOnOnFirstItem = null, int maxSelections = 0)
     {
         await using var db = TestDb.Create(_dbName);
         var promo = new Promotion
@@ -89,9 +90,42 @@ public class CreateOrderHandlerTests
             CreatedBy = _userId
         };
         if (mixMatch)
-            promo.MixMatchPromotion = new MixMatchPromotion { PromotionId = promo.Id, RequiredQuantity = 2, BundlePrice = price };
+        {
+            promo.MixMatchPromotion = new MixMatchPromotion
+            {
+                PromotionId = promo.Id,
+                RequiredQuantity = 2,
+                BundlePrice = price,
+                MaxSelectionsPerOrder = maxSelections > 0 ? maxSelections : null
+            };
+            foreach (var (productId, _) in items ?? [])
+            {
+                var product = new MixMatchPromotionProduct { Id = Guid.NewGuid(), ProductId = productId };
+                if (addOnOnFirstItem.HasValue && productId == items![0].ProductId)
+                {
+                    product.MixMatchPromotionProductAddOns.Add(new MixMatchPromotionProductAddOn
+                    { Id = Guid.NewGuid(), AddOnProductId = addOnOnFirstItem.Value.AddOnId, Quantity = addOnOnFirstItem.Value.Quantity });
+                }
+
+                promo.MixMatchPromotion.MixMatchPromotionProducts.Add(product);
+            }
+        }
         else
+        {
             promo.FixedBundlePromotion = new FixedBundlePromotion { PromotionId = promo.Id, BundlePrice = price };
+            foreach (var (productId, quantity) in items ?? [])
+            {
+                var item = new FixedBundlePromotionItem { Id = Guid.NewGuid(), ProductId = productId, Quantity = quantity };
+                if (addOnOnFirstItem.HasValue && productId == items![0].ProductId)
+                {
+                    item.FixedBundlePromotionItemAddOns.Add(new FixedBundlePromotionItemAddOn
+                    { Id = Guid.NewGuid(), AddOnProductId = addOnOnFirstItem.Value.AddOnId, Quantity = addOnOnFirstItem.Value.Quantity });
+                }
+
+                promo.FixedBundlePromotion.FixedBundlePromotionItems.Add(item);
+            }
+        }
+
         db.Promotions.Add(promo);
         await db.SaveChangesAsync();
         return promo.Id;
@@ -850,8 +884,8 @@ public class CreateOrderHandlerTests
     {
         var pizza = await SeedProduct("Pizza", 100m);
         var drink = await SeedProduct("Drink", 40m);
-        var bundle = await SeedBundle(120m, name: "Combo");
-        var cmd = Cmd(OrderStatusEnum.Pending, Line(pizza, 1, bundle), Line(drink, 1, bundle), Line(drink)) with
+        var bundle = await SeedBundle(120m, name: "Combo", items: [(pizza, 1), (drink, 1)]);
+        var cmd = Cmd(OrderStatusEnum.Pending, Line(pizza, 2, bundle), Line(drink, 2, bundle), Line(drink)) with
         {
             BundlePromotions = [new OrderBundlePromotionRequestDto(bundle, 2)]
         };
@@ -873,7 +907,7 @@ public class CreateOrderHandlerTests
     public async Task Handle_MixMatchBundle_UsesMixMatchPrice()
     {
         var pizza = await SeedProduct("Pizza", 100m);
-        var bundle = await SeedBundle(150m, mixMatch: true);
+        var bundle = await SeedBundle(150m, mixMatch: true, items: [(pizza, 1)]);
         var cmd = Cmd(OrderStatusEnum.Completed, Line(pizza, 2, bundle)) with
         {
             BundlePromotions = [new OrderBundlePromotionRequestDto(bundle, 1)]
@@ -891,7 +925,7 @@ public class CreateOrderHandlerTests
         var pizza = await SeedProduct("Pizza", 100m);
         var cheese = await SeedProduct("Cheese", 20m, isAddOn: true);
         await Link(pizza, cheese);
-        var bundle = await SeedBundle(120m);
+        var bundle = await SeedBundle(120m, items: [(pizza, 1)], addOnOnFirstItem: (cheese, 1));
         var cmd = Cmd(OrderStatusEnum.Pending, Line(pizza, 1, bundle, null, AddOn(cheese))) with
         {
             BundlePromotions = [new OrderBundlePromotionRequestDto(bundle, 1)]
@@ -1023,7 +1057,7 @@ public class CreateOrderHandlerTests
     {
         var pizza = await SeedProduct("Pizza", 100m);
         // Starts 10 Jun 16:00 UTC = 11 Jun 00:00 in Manila. An order at 10 Jun 17:00 UTC is 11 Jun 01:00 locally.
-        var bundle = await SeedBundle(120m, start: new DateTime(2026, 6, 10, 16, 0, 0, DateTimeKind.Utc));
+        var bundle = await SeedBundle(120m, start: new DateTime(2026, 6, 10, 16, 0, 0, DateTimeKind.Utc), items: [(pizza, 1)]);
         var cmd = Cmd(OrderStatusEnum.Pending, Line(pizza, 1, bundle)) with
         {
             BundlePromotions = [new OrderBundlePromotionRequestDto(bundle, 1)],
@@ -1039,7 +1073,7 @@ public class CreateOrderHandlerTests
     public async Task Handle_BundleEndedLocallyButNotInUtc_ThrowsOnlyWithTimeZoneHeader()
     {
         var pizza = await SeedProduct("Pizza", 100m);
-        var bundle = await SeedBundle(120m, end: new DateTime(2026, 6, 10, 10, 0, 0, DateTimeKind.Utc));
+        var bundle = await SeedBundle(120m, end: new DateTime(2026, 6, 10, 10, 0, 0, DateTimeKind.Utc), items: [(pizza, 1)]);
         var cmd = Cmd(OrderStatusEnum.Pending, Line(pizza, 1, bundle)) with
         {
             BundlePromotions = [new OrderBundlePromotionRequestDto(bundle, 1)],
@@ -1054,7 +1088,7 @@ public class CreateOrderHandlerTests
     public async Task Handle_NegativeBundlePrice_Throws()
     {
         var pizza = await SeedProduct("Pizza", 100m);
-        var bundle = await SeedBundle(-5m);
+        var bundle = await SeedBundle(-5m, items: [(pizza, 1)]);
         var cmd = Cmd(OrderStatusEnum.Pending, Line(pizza, 1, bundle)) with
         {
             BundlePromotions = [new OrderBundlePromotionRequestDto(bundle, 1)]
@@ -1063,6 +1097,114 @@ public class CreateOrderHandlerTests
         var ex = await Should.ThrowAsync<InvalidOperationException>(() => Handler().Handle(cmd, CancellationToken.None));
 
         ex.Message.ShouldContain("negative");
+    }
+
+    // ---------- bundle contents ----------
+
+    private async Task<string> BundleErrorAsync(Guid bundle, int bundleQuantity, params OrderItemRequestDto[] lines)
+    {
+        var cmd = Cmd(OrderStatusEnum.Pending, lines) with
+        {
+            BundlePromotions = [new OrderBundlePromotionRequestDto(bundle, bundleQuantity)]
+        };
+
+        var ex = await Should.ThrowAsync<InvalidOperationException>(() => Handler().Handle(cmd, CancellationToken.None));
+        return ex.Message;
+    }
+
+    [Fact]
+    public async Task Handle_FixedBundleWithTooFewItems_ThrowsNamingTheProduct()
+    {
+        var pizza = await SeedProduct("Pizza", 100m);
+        var bundle = await SeedBundle(120m, name: "Combo", items: [(pizza, 1)]);
+
+        (await BundleErrorAsync(bundle, 2, Line(pizza, 1, bundle))).ShouldBe("Bundle 'Combo' needs 2 x Pizza, but the order has 1.");
+    }
+
+    [Fact]
+    public async Task Handle_FixedBundleWithAnotherProduct_Throws()
+    {
+        var pizza = await SeedProduct("Pizza", 100m);
+        var drink = await SeedProduct("Drink", 40m);
+        var bundle = await SeedBundle(120m, name: "Combo", items: [(pizza, 1)]);
+
+        (await BundleErrorAsync(bundle, 1, Line(pizza, 1, bundle), Line(drink, 1, bundle))).ShouldBe("Bundle 'Combo' does not include Drink.");
+    }
+
+    [Fact]
+    public async Task Handle_FixedBundleMissingAProduct_Throws()
+    {
+        var pizza = await SeedProduct("Pizza", 100m);
+        var drink = await SeedProduct("Drink", 40m);
+        var bundle = await SeedBundle(120m, name: "Combo", items: [(pizza, 1), (drink, 1)]);
+
+        (await BundleErrorAsync(bundle, 1, Line(pizza, 1, bundle))).ShouldBe("Bundle 'Combo' needs 1 x Drink, but the order has 0.");
+    }
+
+    [Fact]
+    public async Task Handle_BundleWithNoItemsInIt_Throws()
+    {
+        var pizza = await SeedProduct("Pizza", 100m);
+        var bundle = await SeedBundle(120m, name: "Combo", items: [(pizza, 1)]);
+
+        (await BundleErrorAsync(bundle, 1, Line(pizza))).ShouldBe("Bundle 'Combo' needs 1 x Pizza, but the order has 0.");
+    }
+
+    [Fact]
+    public async Task Handle_FixedBundleAddOnsDiffer_Throws()
+    {
+        var pizza = await SeedProduct("Pizza", 100m);
+        var cheese = await SeedProduct("Cheese", 20m, isAddOn: true);
+        await Link(pizza, cheese);
+        var bundle = await SeedBundle(120m, name: "Combo", items: [(pizza, 1)], addOnOnFirstItem: (cheese, 1));
+
+        (await BundleErrorAsync(bundle, 1, Line(pizza, 1, bundle))).ShouldBe("Bundle 'Combo': the add-ons on Pizza do not match the bundle.");
+    }
+
+    [Fact]
+    public async Task Handle_MixMatchWithTooFewItems_Throws()
+    {
+        var pizza = await SeedProduct("Pizza", 100m);
+        var drink = await SeedProduct("Drink", 40m);
+        var bundle = await SeedBundle(150m, name: "Mix", mixMatch: true, items: [(pizza, 1), (drink, 1)]);
+
+        (await BundleErrorAsync(bundle, 1, Line(pizza, 1, bundle))).ShouldBe("Bundle 'Mix' needs 2 items, but the order has 1.");
+    }
+
+    [Fact]
+    public async Task Handle_MixMatchWithAProductThatIsNotInIt_Throws()
+    {
+        var pizza = await SeedProduct("Pizza", 100m);
+        var drink = await SeedProduct("Drink", 40m);
+        var bundle = await SeedBundle(150m, name: "Mix", mixMatch: true, items: [(pizza, 1)]);
+
+        (await BundleErrorAsync(bundle, 1, Line(pizza, 1, bundle), Line(drink, 1, bundle))).ShouldBe("Bundle 'Mix' does not include Drink.");
+    }
+
+    [Fact]
+    public async Task Handle_MixMatchOverTheMaximumPerProduct_Throws()
+    {
+        var pizza = await SeedProduct("Pizza", 100m);
+        var drink = await SeedProduct("Drink", 40m);
+        var bundle = await SeedBundle(150m, name: "Mix", mixMatch: true, items: [(pizza, 1), (drink, 1)], maxSelections: 1);
+
+        (await BundleErrorAsync(bundle, 1, Line(pizza, 2, bundle))).ShouldBe("Bundle 'Mix' allows at most 1 x Pizza, but the order has 2.");
+    }
+
+    [Fact]
+    public async Task Handle_MixMatchScalesWithTheBundleQuantity()
+    {
+        var pizza = await SeedProduct("Pizza", 100m);
+        var drink = await SeedProduct("Drink", 40m);
+        var bundle = await SeedBundle(150m, mixMatch: true, items: [(pizza, 1), (drink, 1)], maxSelections: 2);
+        var cmd = Cmd(OrderStatusEnum.Pending, Line(pizza, 2, bundle), Line(drink, 2, bundle)) with
+        {
+            BundlePromotions = [new OrderBundlePromotionRequestDto(bundle, 2)]
+        };
+
+        var dto = await Handler().Handle(cmd, CancellationToken.None);
+
+        dto.TotalAmount.ShouldBe(300m);
     }
 
     // ---------- notifications / audit ----------

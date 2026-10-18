@@ -403,9 +403,9 @@ public class UpdateOrderHandlerTests
     public async Task Handle_FixedBundleWithLines_SavesBundleAndCountsItsPrice()
     {
         var burger = _data.AddProduct("Burger", 100);
-        var promoId = _data.AddFixedBundle("Combo", 150m);
+        var promoId = _data.AddFixedBundle("Combo", 150m, productId: burger);
         var orderId = _data.AddOrder();
-        var item = new OrderItemRequestDto(burger, 1, [], null, promoId);
+        var item = new OrderItemRequestDto(burger, 2, [], null, promoId);
 
         var dto = await Handler().Handle(
             Cmd(orderId, null, [item], bundles: [new OrderBundlePromotionRequestDto(promoId, 2)]), CancellationToken.None);
@@ -492,6 +492,49 @@ public class UpdateOrderHandlerTests
             Handler().Handle(Cmd(orderId, null, [Line(burger)], bundles: [new OrderBundlePromotionRequestDto(Guid.NewGuid(), 1)]), CancellationToken.None));
 
         ex.Message.ShouldBe("One or more bundle promotions are invalid.");
+    }
+
+    [Fact]
+    public async Task Handle_OverrideKeepsAnEndedBundleAtThePriceItWasSoldFor()
+    {
+        var burger = _data.AddProduct("Burger", 100);
+        var promoId = _data.AddFixedBundle("Combo", 150m, isActive: false, productId: burger);
+        var orderId = _data.AddOrder(OrderStatusEnum.Completed);
+        await using (var db = _data.Open())
+        {
+            db.OrderBundlePromotions.Add(new WTF.Domain.Entities.OrderBundlePromotion
+            {
+                Id = Guid.NewGuid(),
+                OrderId = orderId,
+                PromotionId = promoId,
+                Quantity = 1,
+                UnitPrice = 120m,
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var item = new OrderItemRequestDto(burger, 1, [], null, promoId);
+        var dto = await Handler().Handle(
+            Cmd(orderId, null, [item], OrderStatusEnum.Completed, "fix the note", isOverride: true,
+                bundles: [new OrderBundlePromotionRequestDto(promoId, 1)]),
+            CancellationToken.None);
+
+        dto!.BundlePromotions!.Single().UnitPrice.ShouldBe(120m);
+    }
+
+    [Fact]
+    public async Task Handle_OverrideAddingAnEndedBundle_StillThrows()
+    {
+        var burger = _data.AddProduct("Burger", 100);
+        var promoId = _data.AddFixedBundle("Combo", 150m, isActive: false, productId: burger);
+        var orderId = _data.AddOrder(OrderStatusEnum.Completed);
+
+        var ex = await Should.ThrowAsync<InvalidOperationException>(() => Handler().Handle(
+            Cmd(orderId, null, [new OrderItemRequestDto(burger, 1, [], null, promoId)], OrderStatusEnum.Completed, "add combo",
+                isOverride: true, bundles: [new OrderBundlePromotionRequestDto(promoId, 1)]),
+            CancellationToken.None));
+
+        ex.Message.ShouldContain("Bundle promotion 'Combo' is inactive");
     }
 
     [Fact]

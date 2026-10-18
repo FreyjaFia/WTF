@@ -196,7 +196,7 @@ public class UpdateOrderDatabaseTests
 
         await using (var db = database.CreateContext())
         {
-            var cmd = Cmd(orderId, [Line(burger.Id)]) with
+            var cmd = Cmd(orderId, [new OrderItemRequestDto(burger.Id, 2, [], null, newPromo)]) with
             {
                 BundlePromotions = [new OrderBundlePromotionRequestDto(newPromo, 2)],
             };

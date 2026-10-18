@@ -135,10 +135,16 @@ internal sealed class OrderSeed(string dbName)
         return id;
     }
 
-    public Guid AddFixedBundle(string name, decimal bundlePrice, bool isActive = true, DateTime? start = null, DateTime? end = null)
+    public Guid AddFixedBundle(string name, decimal bundlePrice, bool isActive = true, DateTime? start = null, DateTime? end = null, Guid? productId = null)
     {
         using var db = Open();
         var id = Guid.NewGuid();
+        var bundle = new FixedBundlePromotion { PromotionId = id, BundlePrice = bundlePrice };
+        if (productId.HasValue)
+        {
+            bundle.FixedBundlePromotionItems.Add(new FixedBundlePromotionItem { Id = Guid.NewGuid(), ProductId = productId.Value, Quantity = 1 });
+        }
+
         db.Promotions.Add(new Promotion
         {
             Id = id,
@@ -149,7 +155,7 @@ internal sealed class OrderSeed(string dbName)
             EndDate = end,
             CreatedAt = DateTime.UtcNow,
             CreatedBy = Guid.NewGuid(),
-            FixedBundlePromotion = new FixedBundlePromotion { PromotionId = id, BundlePrice = bundlePrice },
+            FixedBundlePromotion = bundle,
         });
         db.SaveChanges();
         return id;

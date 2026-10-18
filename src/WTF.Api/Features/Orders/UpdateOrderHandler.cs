@@ -195,72 +195,14 @@ public class UpdateOrderHandler(
             throw new InvalidOperationException("One or more selected products/add-ons were not found.");
         }
 
-        var requestedBundlePromotions = request.BundlePromotions
-            .GroupBy(b => b.PromotionId)
-            .Select(group =>
-            {
-                if (group.Count() > 1)
-                {
-                    throw new InvalidOperationException("Duplicate bundle promotions are not allowed.");
-                }
-
-                var entry = group.Single();
-                if (entry.Quantity <= 0)
-                {
-                    throw new InvalidOperationException("Bundle promotion quantity must be greater than zero.");
-                }
-
-                return entry;
-            })
-            .ToList();
-
-        var bundlePromotionIds = requestedBundlePromotions.Select(b => b.PromotionId).ToHashSet();
-        foreach (var item in request.Items)
-        {
-            if (item.BundlePromotionId.HasValue && !bundlePromotionIds.Contains(item.BundlePromotionId.Value))
-            {
-                throw new InvalidOperationException("Order item references an unknown bundle promotion.");
-            }
-        }
-
-        Dictionary<Guid, decimal> bundlePriceByPromotionId = [];
-        if (requestedBundlePromotions.Count > 0)
-        {
-            var timeZone = RequestTimeZone.ResolveFromRequest(httpContextAccessor);
-            var referenceUtc = DateTime.UtcNow;
-
-            var bundlePromotionEntities = await db.Promotions
-                .Where(p =>
-                    bundlePromotionIds.Contains(p.Id)
-                    && (p.FixedBundlePromotion != null || p.MixMatchPromotion != null))
-                .Include(p => p.FixedBundlePromotion)
-                .Include(p => p.MixMatchPromotion)
-                .ToListAsync(cancellationToken);
-
-            if (bundlePromotionEntities.Count != requestedBundlePromotions.Count)
-            {
-                throw new InvalidOperationException("One or more bundle promotions are invalid.");
-            }
-
-            foreach (var promotion in bundlePromotionEntities)
-            {
-                if (!PromotionPricing.IsPromotionActiveOnLocalDate(promotion, referenceUtc, timeZone))
-                {
-                    throw new InvalidOperationException($"Bundle promotion '{promotion.Name}' is inactive or outside its active date range.");
-                }
-            }
-
-            bundlePriceByPromotionId = bundlePromotionEntities.ToDictionary(
-                p => p.Id,
-                p => p.FixedBundlePromotion != null
-                    ? p.FixedBundlePromotion.BundlePrice
-                    : p.MixMatchPromotion!.BundlePrice);
-
-            if (bundlePriceByPromotionId.Values.Any(price => price < 0))
-            {
-                throw new InvalidOperationException("The bundle price cannot be negative.");
-            }
-        }
+        var bundlePriceByPromotionId = await BundlePromotionResolver.ResolveAsync(
+            db,
+            request.BundlePromotions,
+            request.Items,
+            DateTime.UtcNow,
+            RequestTimeZone.ResolveFromRequest(httpContextAccessor),
+            request.IsOverride ? order.OrderBundlePromotions.ToDictionary(b => b.PromotionId, b => b.UnitPrice) : null,
+            cancellationToken);
 
         OrderInputValidation.EnsureLengths(
             request.SpecialInstructions, request.Note?.Trim(), request.Items, request.OverrideReason?.Trim());
@@ -433,9 +375,9 @@ public class UpdateOrderHandler(
         db.OrderItems.RemoveRange(order.OrderItems);
         db.OrderBundlePromotions.RemoveRange(order.OrderBundlePromotions);
 
-        if (requestedBundlePromotions.Count > 0)
+        if (request.BundlePromotions.Count > 0)
         {
-            var orderBundlePromotions = requestedBundlePromotions.Select(bundle => new OrderBundlePromotion
+            var orderBundlePromotions = request.BundlePromotions.Select(bundle => new OrderBundlePromotion
             {
                 OrderId = order.Id,
                 PromotionId = bundle.PromotionId,
