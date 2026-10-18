@@ -18,7 +18,9 @@
       ],
       "bundles": [],
       "expectedTotal": 200,
-      "expectedLineTotals": [200]
+      "expectedLineTotals": [
+        200
+      ]
     },
     {
       "name": "add-ons are added to each item and multiplied by the line quantity",
@@ -40,7 +42,9 @@
       ],
       "bundles": [],
       "expectedTotal": 360,
-      "expectedLineTotals": [360]
+      "expectedLineTotals": [
+        360
+      ]
     },
     {
       "name": "an add-on quantity above one multiplies its price",
@@ -58,7 +62,9 @@
       ],
       "bundles": [],
       "expectedTotal": 130,
-      "expectedLineTotals": [130]
+      "expectedLineTotals": [
+        130
+      ]
     },
     {
       "name": "cents add up exactly (0.10 + 0.20 is 0.30, not 0.30000000000000004)",
@@ -76,7 +82,10 @@
       ],
       "bundles": [],
       "expectedTotal": 0.3,
-      "expectedLineTotals": [0.1, 0.2]
+      "expectedLineTotals": [
+        0.1,
+        0.2
+      ]
     },
     {
       "name": "three of an odd price",
@@ -89,7 +98,9 @@
       ],
       "bundles": [],
       "expectedTotal": 99.99,
-      "expectedLineTotals": [99.99]
+      "expectedLineTotals": [
+        99.99
+      ]
     },
     {
       "name": "a bundle is sold at its own price and the items inside add nothing",
@@ -168,7 +179,11 @@
         }
       ],
       "expectedTotal": 863.49,
-      "expectedLineTotals": [270, 95.5, 298]
+      "expectedLineTotals": [
+        270,
+        95.5,
+        298
+      ]
     },
     {
       "name": "a free line (price 0) with a paid add-on",
@@ -186,7 +201,9 @@
       ],
       "bundles": [],
       "expectedTotal": 40,
-      "expectedLineTotals": [40]
+      "expectedLineTotals": [
+        40
+      ]
     }
   ],
   "discountedUnitPrice": [
@@ -297,6 +314,48 @@
     }
   ],
   "promoLabels": [
+    {
+      "name": "amount smaller than the price shows the amount",
+      "fixedPrice": 5,
+      "percentOff": null,
+      "basePrice": 120,
+      "expected": "Promo -₱5.00"
+    },
+    {
+      "name": "amount equal to the price is free",
+      "fixedPrice": 120,
+      "percentOff": null,
+      "basePrice": 120,
+      "expected": "Free"
+    },
+    {
+      "name": "amount above the price is free, not the amount set",
+      "fixedPrice": 150,
+      "percentOff": null,
+      "basePrice": 120,
+      "expected": "Free"
+    },
+    {
+      "name": "no price known keeps the amount",
+      "fixedPrice": 150,
+      "percentOff": null,
+      "basePrice": null,
+      "expected": "Promo -₱150.00"
+    },
+    {
+      "name": "percentage keeps its label even at 100 percent",
+      "fixedPrice": null,
+      "percentOff": 100,
+      "basePrice": 120,
+      "expected": "Promo -100%"
+    },
+    {
+      "name": "free needs a price above zero",
+      "fixedPrice": 5,
+      "percentOff": null,
+      "basePrice": 0,
+      "expected": "Promo -₱5.00"
+    },
     {
       "name": "fixed amount",
       "fixedPrice": 5,
@@ -442,7 +501,7 @@
       "expected": null
     },
     {
-      "name": "a rule with no required add-ons never applies",
+      "name": "a rule with no required add-ons applies to the plain product",
       "basePrice": 100,
       "cartAddOns": [],
       "rules": [
@@ -452,7 +511,177 @@
           "requiredAddOns": []
         }
       ],
+      "expected": {
+        "price": 90,
+        "label": "Promo -10%"
+      }
+    },
+    {
+      "name": "a rule with no required add-ons does not apply once the item has an add-on",
+      "basePrice": 100,
+      "cartAddOns": [
+        {
+          "id": "cheese",
+          "quantity": 1
+        }
+      ],
+      "rules": [
+        {
+          "fixedPrice": null,
+          "percentOff": 10,
+          "requiredAddOns": []
+        }
+      ],
       "expected": null
+    },
+    {
+      "name": "a plain-product rule and an add-on rule each apply to their own item",
+      "basePrice": 100,
+      "cartAddOns": [
+        {
+          "id": "cheese",
+          "quantity": 1
+        }
+      ],
+      "rules": [
+        {
+          "fixedPrice": null,
+          "percentOff": 50,
+          "requiredAddOns": []
+        },
+        {
+          "fixedPrice": null,
+          "percentOff": 10,
+          "requiredAddOns": [
+            {
+              "id": "cheese",
+              "quantity": 1
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "price": 90,
+        "label": "Promo -10%"
+      }
+    },
+    {
+      "name": "a rule with enough uses left for the quantity applies",
+      "basePrice": 100,
+      "quantity": 3,
+      "cartAddOns": [
+        {
+          "id": "cheese",
+          "quantity": 1
+        }
+      ],
+      "rules": [
+        {
+          "fixedPrice": null,
+          "percentOff": 10,
+          "requiredAddOns": [
+            {
+              "id": "cheese",
+              "quantity": 1
+            }
+          ],
+          "remaining": 5
+        }
+      ],
+      "expected": {
+        "price": 90,
+        "label": "Promo -10%"
+      }
+    },
+    {
+      "name": "a rule with exactly the uses left for the quantity applies",
+      "basePrice": 100,
+      "quantity": 3,
+      "cartAddOns": [
+        {
+          "id": "cheese",
+          "quantity": 1
+        }
+      ],
+      "rules": [
+        {
+          "fixedPrice": null,
+          "percentOff": 10,
+          "requiredAddOns": [
+            {
+              "id": "cheese",
+              "quantity": 1
+            }
+          ],
+          "remaining": 3
+        }
+      ],
+      "expected": {
+        "price": 90,
+        "label": "Promo -10%"
+      }
+    },
+    {
+      "name": "a rule with too few uses left for the quantity is skipped",
+      "basePrice": 100,
+      "quantity": 3,
+      "cartAddOns": [
+        {
+          "id": "cheese",
+          "quantity": 1
+        }
+      ],
+      "rules": [
+        {
+          "fixedPrice": null,
+          "percentOff": 10,
+          "requiredAddOns": [
+            {
+              "id": "cheese",
+              "quantity": 1
+            }
+          ],
+          "remaining": 2
+        }
+      ],
+      "expected": null
+    },
+    {
+      "name": "an exhausted rule is skipped and the next rule applies",
+      "basePrice": 100,
+      "cartAddOns": [
+        {
+          "id": "cheese",
+          "quantity": 1
+        }
+      ],
+      "rules": [
+        {
+          "fixedPrice": null,
+          "percentOff": 50,
+          "requiredAddOns": [
+            {
+              "id": "cheese",
+              "quantity": 1
+            }
+          ],
+          "remaining": 0
+        },
+        {
+          "fixedPrice": null,
+          "percentOff": 10,
+          "requiredAddOns": [
+            {
+              "id": "cheese",
+              "quantity": 1
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "price": 90,
+        "label": "Promo -10%"
+      }
     },
     {
       "name": "the same add-on listed twice in the cart is added up",
@@ -800,6 +1029,168 @@
       "received": 150,
       "expectedDue": 100,
       "expectedChange": 50
+    }
+  ],
+  "scheduleOpen": [
+    {
+      "name": "no schedule is always open",
+      "daysOfWeek": null,
+      "startTime": null,
+      "endTime": null,
+      "local": "2026-06-10T03:00:00",
+      "expected": true
+    },
+    {
+      "name": "a weekday inside the mask is open",
+      "daysOfWeek": 8,
+      "startTime": null,
+      "endTime": null,
+      "local": "2026-06-10T12:00:00",
+      "expected": true
+    },
+    {
+      "name": "a weekday outside the mask is closed",
+      "daysOfWeek": 2,
+      "startTime": null,
+      "endTime": null,
+      "local": "2026-06-10T12:00:00",
+      "expected": false
+    },
+    {
+      "name": "several weekdays",
+      "daysOfWeek": 14,
+      "startTime": null,
+      "endTime": null,
+      "local": "2026-06-10T12:00:00",
+      "expected": true
+    },
+    {
+      "name": "Sunday is bit 1",
+      "daysOfWeek": 1,
+      "startTime": null,
+      "endTime": null,
+      "local": "2026-06-14T12:00:00",
+      "expected": true
+    },
+    {
+      "name": "Saturday is bit 64",
+      "daysOfWeek": 64,
+      "startTime": null,
+      "endTime": null,
+      "local": "2026-06-13T12:00:00",
+      "expected": true
+    },
+    {
+      "name": "Sunday is not in a Saturday mask",
+      "daysOfWeek": 64,
+      "startTime": null,
+      "endTime": null,
+      "local": "2026-06-14T12:00:00",
+      "expected": false
+    },
+    {
+      "name": "every day mask is always open",
+      "daysOfWeek": 127,
+      "startTime": null,
+      "endTime": null,
+      "local": "2026-06-11T12:00:00",
+      "expected": true
+    },
+    {
+      "name": "just before the window opens",
+      "daysOfWeek": null,
+      "startTime": "14:00",
+      "endTime": "17:00",
+      "local": "2026-06-10T13:59:59",
+      "expected": false
+    },
+    {
+      "name": "the window start is included",
+      "daysOfWeek": null,
+      "startTime": "14:00",
+      "endTime": "17:00",
+      "local": "2026-06-10T14:00:00",
+      "expected": true
+    },
+    {
+      "name": "inside the window",
+      "daysOfWeek": null,
+      "startTime": "14:00",
+      "endTime": "17:00",
+      "local": "2026-06-10T16:59:59",
+      "expected": true
+    },
+    {
+      "name": "the window end is not included",
+      "daysOfWeek": null,
+      "startTime": "14:00",
+      "endTime": "17:00",
+      "local": "2026-06-10T17:00:00",
+      "expected": false
+    },
+    {
+      "name": "a window past midnight, before midnight",
+      "daysOfWeek": null,
+      "startTime": "22:00",
+      "endTime": "02:00",
+      "local": "2026-06-10T23:30:00",
+      "expected": true
+    },
+    {
+      "name": "a window past midnight, after midnight",
+      "daysOfWeek": null,
+      "startTime": "22:00",
+      "endTime": "02:00",
+      "local": "2026-06-10T01:59:00",
+      "expected": true
+    },
+    {
+      "name": "a window past midnight, its end is not included",
+      "daysOfWeek": null,
+      "startTime": "22:00",
+      "endTime": "02:00",
+      "local": "2026-06-10T02:00:00",
+      "expected": false
+    },
+    {
+      "name": "a window past midnight, the afternoon is closed",
+      "daysOfWeek": null,
+      "startTime": "22:00",
+      "endTime": "02:00",
+      "local": "2026-06-10T12:00:00",
+      "expected": false
+    },
+    {
+      "name": "the right day and the right hour",
+      "daysOfWeek": 8,
+      "startTime": "14:00",
+      "endTime": "17:00",
+      "local": "2026-06-10T15:00:00",
+      "expected": true
+    },
+    {
+      "name": "the right day at the wrong hour",
+      "daysOfWeek": 8,
+      "startTime": "14:00",
+      "endTime": "17:00",
+      "local": "2026-06-10T18:00:00",
+      "expected": false
+    },
+    {
+      "name": "the wrong day at the right hour",
+      "daysOfWeek": 8,
+      "startTime": "14:00",
+      "endTime": "17:00",
+      "local": "2026-06-11T15:00:00",
+      "expected": false
+    },
+    {
+      "name": "only one time given is ignored",
+      "daysOfWeek": null,
+      "startTime": "14:00",
+      "endTime": null,
+      "local": "2026-06-10T03:00:00",
+      "expected": true
     }
   ]
 }

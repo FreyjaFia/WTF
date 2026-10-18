@@ -15,9 +15,9 @@ public class AddOnMatchingTests
 
     [Theory]
     [MemberData(nameof(ImplementationNames))]
-    public void SatisfiesExactAddOns_NoRequiredAddOns_ReturnsFalse(string implementation)
+    public void SatisfiesExactAddOns_NoRequiredAddOns_MatchesOnlyAnItemWithNoAddOns(string implementation)
     {
-        SatisfiesExact(implementation, [], []).ShouldBeFalse();
+        SatisfiesExact(implementation, [], []).ShouldBeTrue();
         SatisfiesExact(implementation, [(AddOnA, 1)], []).ShouldBeFalse();
     }
 
@@ -161,11 +161,10 @@ public class AddOnMatchingTests
     }
 
     [Fact]
-    public void GetDiscountedUnitPrice_RuleWithoutAddOns_NeverApplies()
+    public void GetDiscountedUnitPrice_RuleWithoutAddOns_IsForThePlainProduct()
     {
-        // Pins current behaviour: SatisfiesExactAddOns returns false for an empty requirement list,
-        // so a discounted-product rule with no add-ons can never match (even a cart with no add-ons).
-        GetDiscounted(100m, [], new RuleSpec(null, 10m)).ShouldBeNull();
+        GetDiscounted(100m, [], new RuleSpec(null, 10m))!.Value.Price.ShouldBe(90m);
+        GetDiscounted(100m, [(AddOnA, 1)], new RuleSpec(null, 10m)).ShouldBeNull();
     }
 
     [Fact]

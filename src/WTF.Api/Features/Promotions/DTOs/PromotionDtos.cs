@@ -21,7 +21,8 @@ public sealed record PromotionListItemDto(
     DateTime CreatedAt,
     Guid CreatedBy,
     DateTime? UpdatedAt,
-    Guid? UpdatedBy);
+    Guid? UpdatedBy,
+    PromotionScheduleDto? Schedule = null);
 
 public sealed record FixedBundleItemAddOnDto(
     Guid? Id,
@@ -46,7 +47,8 @@ public sealed record FixedBundlePromotionDto(
     DateTime? UpdatedAt,
     Guid? UpdatedBy,
     decimal BundlePrice,
-    List<FixedBundleItemDto> Items);
+    List<FixedBundleItemDto> Items,
+    PromotionScheduleDto? Schedule = null);
 
 public sealed record MixMatchItemAddOnDto(
     Guid? Id,
@@ -72,7 +74,8 @@ public sealed record MixMatchPromotionDto(
     int RequiredQuantity,
     int? MaxSelectionsPerOrder,
     decimal BundlePrice,
-    List<MixMatchItemDto> Items);
+    List<MixMatchItemDto> Items,
+    PromotionScheduleDto? Schedule = null);
 
 public sealed record DiscountedProductAddOnDto(
     Guid? Id,
@@ -97,7 +100,23 @@ public sealed record DiscountedProductPromotionDto(
     Guid CreatedBy,
     DateTime? UpdatedAt,
     Guid? UpdatedBy,
-    List<DiscountedProductItemDto> Items);
+    List<DiscountedProductItemDto> Items,
+    PromotionScheduleDto? Schedule = null);
+
+// What a promotion runs on: the weekdays (bit mask, Sunday = 1), the daily window and the usage limit. Redemptions is
+// how many uses it has had so far.
+public sealed record PromotionScheduleRequest(
+    byte? DaysOfWeek,
+    string? StartTime,
+    string? EndTime,
+    int? MaxRedemptions);
+
+public sealed record PromotionScheduleDto(
+    byte? DaysOfWeek,
+    string? StartTime,
+    string? EndTime,
+    int? MaxRedemptions,
+    int Redemptions);
 
 public sealed record PromotionImageDto(
     Guid PromotionId,

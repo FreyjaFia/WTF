@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using WTF.Api.Common.Extensions;
+using WTF.Api.Common.Orders;
 using WTF.Api.Features.Promotions.DTOs;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
@@ -24,6 +25,8 @@ public sealed class GetMixMatchPromotionsHandler(WTFDbContext db, IHttpContextAc
             .ThenBy(x => x.Name)
             .ToListAsync(cancellationToken);
 
+        var used = await PromotionUsage.CountAsync(db, [.. promotions.Select(x => x.Id)], null, cancellationToken);
+
         return [.. promotions.Select(x => new PromotionListItemDto(
             x.Id,
             x.Name,
@@ -38,7 +41,8 @@ public sealed class GetMixMatchPromotionsHandler(WTFDbContext db, IHttpContextAc
             x.CreatedAt,
             x.CreatedBy,
             x.UpdatedAt,
-            x.UpdatedBy))];
+            x.UpdatedBy,
+            PromotionScheduleMapping.ToDto(x, used[x.Id])))];
     }
 }
 
@@ -58,9 +62,13 @@ public sealed class GetMixMatchPromotionByIdHandler(WTFDbContext db, IHttpContex
                 .ThenInclude(x => x.Image)
             .FirstOrDefaultAsync(cancellationToken);
 
-        return promo?.MixMatchPromotion is null
-            ? null
-            : MixMatchMapping.ToDto(promo, httpContextAccessor);
+        if (promo?.MixMatchPromotion is null)
+        {
+            return null;
+        }
+
+        var used = (await PromotionUsage.CountAsync(db, [promo.Id], null, cancellationToken))[promo.Id];
+        return MixMatchMapping.ToDto(promo, httpContextAccessor, used);
     }
 }
 
@@ -76,6 +84,7 @@ public record CreateMixMatchPromotionCommand : IRequest<MixMatchPromotionDto>
     public bool IsActive { get; init; } = true;
     public DateTime? StartDate { get; init; }
     public DateTime? EndDate { get; init; }
+    public PromotionScheduleRequest? Schedule { get; init; }
     public int RequiredQuantity { get; init; }
     public int? MaxSelectionsPerOrder { get; init; }
     public decimal BundlePrice { get; init; }
@@ -89,6 +98,7 @@ public sealed class CreateMixMatchPromotionHandler(WTFDbContext db, IHttpContext
     {
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
         MixMatchValidation.EnsureValid(request);
+        PromotionScheduleMapping.EnsureValid(request.Schedule);
         await PromotionProductValidation.EnsureUsableAsync(
             db,
             request.Items.Select(i => i.ProductId),
@@ -96,6 +106,10 @@ public sealed class CreateMixMatchPromotionHandler(WTFDbContext db, IHttpContext
             request.IsActive,
             cancellationToken);
         await MixMatchValidation.EnsureItemsAreLinkedAsync(db, request.Items, cancellationToken);
+        await PromotionAddOnRules.EnsureRequiredTypesAsync(
+            db,
+            [.. request.Items.Select(i => (i.ProductId, (IReadOnlyCollection<Guid>)[.. i.AddOns.Select(a => a.AddOnProductId)]))],
+            cancellationToken);
 
         var promo = new Promotion
         {
@@ -108,6 +122,7 @@ public sealed class CreateMixMatchPromotionHandler(WTFDbContext db, IHttpContext
             CreatedBy = userId,
             MixMatchPromotion = MixMatchMapping.BuildMixMatch(request)
         };
+        PromotionScheduleMapping.Apply(promo, request.Schedule);
 
         db.Promotions.Add(promo);
         await db.SaveChangesAsync(cancellationToken);
@@ -128,6 +143,7 @@ public record UpdateMixMatchPromotionCommand : IRequest<MixMatchPromotionDto?>
     public bool IsActive { get; init; } = true;
     public DateTime? StartDate { get; init; }
     public DateTime? EndDate { get; init; }
+    public PromotionScheduleRequest? Schedule { get; init; }
     public int RequiredQuantity { get; init; }
     public int? MaxSelectionsPerOrder { get; init; }
     public decimal BundlePrice { get; init; }
@@ -141,6 +157,7 @@ public sealed class UpdateMixMatchPromotionHandler(WTFDbContext db, IHttpContext
     {
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
         MixMatchValidation.EnsureValid(request);
+        PromotionScheduleMapping.EnsureValid(request.Schedule);
         await PromotionProductValidation.EnsureUsableAsync(
             db,
             request.Items.Select(i => i.ProductId),
@@ -148,6 +165,10 @@ public sealed class UpdateMixMatchPromotionHandler(WTFDbContext db, IHttpContext
             request.IsActive,
             cancellationToken);
         await MixMatchValidation.EnsureItemsAreLinkedAsync(db, request.Items, cancellationToken);
+        await PromotionAddOnRules.EnsureRequiredTypesAsync(
+            db,
+            [.. request.Items.Select(i => (i.ProductId, (IReadOnlyCollection<Guid>)[.. i.AddOns.Select(a => a.AddOnProductId)]))],
+            cancellationToken);
 
         var promo = await db.Promotions
             .Where(x => x.Id == request.PromotionId && x.TypeId == PromotionTypeIds.MixMatch)
@@ -169,6 +190,7 @@ public sealed class UpdateMixMatchPromotionHandler(WTFDbContext db, IHttpContext
         promo.EndDate = request.EndDate;
         promo.UpdatedAt = DateTime.UtcNow;
         promo.UpdatedBy = userId;
+        PromotionScheduleMapping.Apply(promo, request.Schedule);
 
         db.MixMatchPromotionProductAddOns.RemoveRange(
             promo.MixMatchPromotion.MixMatchPromotionProducts.SelectMany(x => x.MixMatchPromotionProductAddOns));
@@ -185,7 +207,8 @@ public sealed class UpdateMixMatchPromotionHandler(WTFDbContext db, IHttpContext
         }
 
         await db.SaveChangesAsync(cancellationToken);
-        return MixMatchMapping.ToDto(promo, httpContextAccessor);
+        var used = (await PromotionUsage.CountAsync(db, [promo.Id], null, cancellationToken))[promo.Id];
+        return MixMatchMapping.ToDto(promo, httpContextAccessor, used);
     }
 }
 

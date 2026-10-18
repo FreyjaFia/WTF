@@ -10,7 +10,6 @@ using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Features.Products.Enums;
-using WTF.Api.Features.Promotions.DTOs;
 using WTF.Api.Hubs;
 using WTF.Api.Services;
 using WTF.Calculations.Orders;
@@ -308,30 +307,17 @@ public class CreateOrderHandler(
 
         var shouldCapturePrice = held || request.Status == OrderStatusEnum.Completed || request.Status == OrderStatusEnum.Cancelled;
         Dictionary<Guid, List<PromotionPricing.DiscountedRule>> discountedRulesByProductId = [];
+        DiscountBudget? discountBudget = null;
         if (shouldCapturePrice && !held)
         {
-            var timeZone = RequestTimeZone.ResolveFromRequest(httpContextAccessor);
-            var referenceUtc = request.CreatedAt?.ToUniversalTime() ?? DateTime.UtcNow;
-
-            var discountedPromotions = await db.Promotions
-                .Where(p => p.TypeId == PromotionTypeIds.DiscountedProduct)
-                .Include(p => p.DiscountedProductPromotions)
-                    .ThenInclude(d => d.DiscountedProductPromotionAddOns)
-                .ToListAsync(cancellationToken);
-
-            discountedRulesByProductId = discountedPromotions
-                .Where(p => PromotionPricing.IsPromotionActiveOnLocalDate(p, referenceUtc, timeZone))
-                .SelectMany(p => p.DiscountedProductPromotions)
-                .GroupBy(d => d.ProductId)
-                .ToDictionary(
-                    g => g.Key,
-                    g => g.Select(d => new PromotionPricing.DiscountedRule(
-                        d.FixedPrice,
-                        d.PercentOff,
-                        d.DiscountedProductPromotionAddOns
-                            .Select(a => (a.AddOnProductId, a.Quantity))
-                            .ToList()))
-                        .ToList());
+            var loaded = await DiscountRuleLoader.LoadAsync(
+                db,
+                request.CreatedAt?.ToUniversalTime() ?? DateTime.UtcNow,
+                RequestTimeZone.ResolveFromRequest(httpContextAccessor),
+                null,
+                cancellationToken);
+            discountedRulesByProductId = loaded.RulesByProductId;
+            discountBudget = loaded.Budget;
         }
 
         // Add order items with parent-child relationships
@@ -340,13 +326,17 @@ public class CreateOrderHandler(
             var item = request.Items[itemIndex];
             var product = await db.Products.FindAsync([item.ProductId], cancellationToken) ?? throw new InvalidOperationException($"Product with ID {item.ProductId} not found.");
             var basePrice = product.Price;
-            var appliedDiscount = shouldCapturePrice && !held
+            // A line inside a bundle is sold at the bundle's price, so no discount applies to it.
+            var appliedDiscount = shouldCapturePrice && !held && !item.BundlePromotionId.HasValue
                 ? PromotionPricing.GetDiscountedUnitPrice(
                     basePrice,
                     item.ProductId,
                     item.AddOns.Select(a => (a.ProductId, a.Quantity)),
-                    discountedRulesByProductId)
+                    discountedRulesByProductId,
+                    item.Quantity,
+                    discountBudget)
                 : null;
+            discountBudget?.Use(appliedDiscount?.PromotionId, item.Quantity);
             var discountedPrice = appliedDiscount?.Price;
             var addOnPrices = new List<(OrderItemRequestDto AddOn, decimal Price)>();
             foreach (var addOn in item.AddOns)
@@ -396,6 +386,7 @@ public class CreateOrderHandler(
                 orderItem.Price = discountedPrice ?? basePrice;
                 orderItem.OriginalPrice = basePrice;
                 orderItem.PromoLabel = appliedDiscount?.Label;
+                orderItem.DiscountPromotionId = appliedDiscount?.PromotionId;
             }
 
             db.OrderItems.Add(orderItem);

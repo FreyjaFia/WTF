@@ -6,7 +6,7 @@ namespace WTF.Api.Features.Promotions;
 
 internal static class MixMatchMapping
 {
-    public static MixMatchPromotionDto ToDto(Promotion promo, IHttpContextAccessor? httpContextAccessor)
+    public static MixMatchPromotionDto ToDto(Promotion promo, IHttpContextAccessor? httpContextAccessor, int redemptions = 0)
     {
         var mixMatch = promo.MixMatchPromotion!;
         return new MixMatchPromotionDto(
@@ -33,7 +33,8 @@ internal static class MixMatchMapping
                         .Select(addOn => new MixMatchItemAddOnDto(
                             addOn.Id,
                             addOn.AddOnProductId,
-                            addOn.Quantity))]))]);
+                            addOn.Quantity))]))],
+            PromotionScheduleMapping.ToDto(promo, redemptions));
     }
 
     public static MixMatchPromotion BuildMixMatch(CreateMixMatchPromotionCommand request)

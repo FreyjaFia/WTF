@@ -49,12 +49,12 @@ internal static class DiscountedProductValidation
 
             if (!hasFixed && !hasPercent)
             {
-                throw new InvalidOperationException("Each discounted product must have a fixed price or percent discount.");
+                throw new InvalidOperationException("Each discounted product must have an amount off or a percent discount.");
             }
 
             if (hasFixed && hasPercent)
             {
-                throw new InvalidOperationException("Choose either a fixed price or percent discount, not both.");
+                throw new InvalidOperationException("Choose either an amount off or a percent discount, not both.");
             }
 
             if (item.PercentOff.HasValue && item.PercentOff.Value <= 0)
@@ -69,12 +69,7 @@ internal static class DiscountedProductValidation
 
             if (item.FixedPrice.HasValue && item.FixedPrice.Value <= 0)
             {
-                throw new InvalidOperationException("Fixed price must be greater than zero.");
-            }
-
-            if (addOns.Count == 0)
-            {
-                throw new InvalidOperationException("Select at least one required add-on for each discounted product.");
+                throw new InvalidOperationException("Amount off must be greater than zero.");
             }
 
             foreach (var addOn in addOns)

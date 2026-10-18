@@ -74,7 +74,7 @@ public class DiscountedProductValidationTests
     {
         Should.Throw<InvalidOperationException>(() =>
                 DiscountedProductValidation.EnsureValid("Promo", null, null, [Item(null, null)]))
-            .Message.ShouldBe("Each discounted product must have a fixed price or percent discount.");
+            .Message.ShouldBe("Each discounted product must have an amount off or a percent discount.");
     }
 
     [Fact]
@@ -82,7 +82,7 @@ public class DiscountedProductValidationTests
     {
         Should.Throw<InvalidOperationException>(() =>
                 DiscountedProductValidation.EnsureValid("Promo", null, null, [Item(0m, 0m)]))
-            .Message.ShouldBe("Each discounted product must have a fixed price or percent discount.");
+            .Message.ShouldBe("Each discounted product must have an amount off or a percent discount.");
     }
 
     [Fact]
@@ -90,7 +90,7 @@ public class DiscountedProductValidationTests
     {
         Should.Throw<InvalidOperationException>(() =>
                 DiscountedProductValidation.EnsureValid("Promo", null, null, [Item(10m, 10m)]))
-            .Message.ShouldBe("Choose either a fixed price or percent discount, not both.");
+            .Message.ShouldBe("Choose either an amount off or a percent discount, not both.");
     }
 
     [Fact]
@@ -102,12 +102,11 @@ public class DiscountedProductValidationTests
     }
 
     [Fact]
-    public void EnsureValid_NoAddOns_Throws()
+    public void EnsureValid_NoAddOns_IsAPlainProductRule()
     {
         List<CreateDiscountedProductItemRequestDto> items = [new(Guid.NewGuid(), 10m, null, [])];
 
-        Should.Throw<InvalidOperationException>(() => DiscountedProductValidation.EnsureValid("Promo", null, null, items))
-            .Message.ShouldBe("Select at least one required add-on for each discounted product.");
+        Should.NotThrow(() => DiscountedProductValidation.EnsureValid("Promo", null, null, items));
     }
 
     [Fact]

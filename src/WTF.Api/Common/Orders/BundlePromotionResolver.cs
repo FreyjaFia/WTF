@@ -16,7 +16,8 @@ internal static class BundlePromotionResolver
         TimeZoneInfo timeZone,
         IReadOnlyDictionary<Guid, decimal>? savedUnitPrices,
         CancellationToken cancellationToken,
-        List<string>? problems = null)
+        List<string>? problems = null,
+        Guid? exceptOrderId = null)
     {
         EnsureStructure(bundles, items);
 
@@ -45,6 +46,9 @@ internal static class BundlePromotionResolver
         }
 
         var promotions = await LoadPromotionsAsync(db, checkedIds, cancellationToken);
+
+        var used = await PromotionUsage.CountAsync(
+            db, [.. promotions.Where(p => p.MaxRedemptions.HasValue).Select(p => p.Id)], exceptOrderId, cancellationToken);
 
         var productIds = promotions
             .SelectMany(p => p.FixedBundlePromotion?.FixedBundlePromotionItems.Select(i => i.ProductId) ?? [])
@@ -82,6 +86,17 @@ internal static class BundlePromotionResolver
                 if (problem is null && price < 0)
                 {
                     problem = "The bundle price cannot be negative.";
+                }
+
+                if (problem is null && promotion.MaxRedemptions.HasValue)
+                {
+                    var left = promotion.MaxRedemptions.Value - used[promotion.Id];
+                    if (quantity > left)
+                    {
+                        problem = left <= 0
+                            ? $"Bundle promotion '{promotion.Name}' has no uses left."
+                            : $"Bundle promotion '{promotion.Name}' has only {left} left.";
+                    }
                 }
             }
 

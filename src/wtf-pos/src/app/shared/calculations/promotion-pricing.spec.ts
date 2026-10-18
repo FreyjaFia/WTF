@@ -21,6 +21,7 @@ interface LabelCase {
   name: string;
   fixedPrice: number | null;
   percentOff: number | null;
+  basePrice?: number | null;
   expected: string | null;
 }
 
@@ -32,7 +33,9 @@ interface BestDiscountCase {
     fixedPrice: number | null;
     percentOff: number | null;
     requiredAddOns: { id: string; quantity: number }[];
+    remaining?: number | null;
   }[];
+  quantity?: number;
   expected: { price: number; label: string } | null;
 }
 
@@ -49,7 +52,7 @@ describe('promotion pricing: the cases shared with the API', () => {
   it.each((cases.promoLabels as LabelCase[]).map((c) => [c.name, c] as const))(
     'promo label: %s',
     (_name, c) => {
-      expect(formatPromoLabel({ fixedPrice: c.fixedPrice, percentOff: c.percentOff })).toBe(
+      expect(formatPromoLabel({ fixedPrice: c.fixedPrice, percentOff: c.percentOff }, c.basePrice)).toBe(
         c.expected,
       );
     },
@@ -61,12 +64,13 @@ describe('promotion pricing: the cases shared with the API', () => {
       const rules: DiscountRule[] = c.rules.map((rule) => ({
         fixedPrice: rule.fixedPrice,
         percentOff: rule.percentOff,
+        remaining: rule.remaining,
         addOns: rule.requiredAddOns.map((a) => ({ addOnProductId: a.id, quantity: a.quantity })),
       }));
       // The cart lists one id per add-on, repeated for its quantity.
       const cartIds = c.cartAddOns.flatMap((a) => Array.from({ length: a.quantity }, () => a.id));
 
-      const best = findBestDiscount(c.basePrice, cartIds, rules);
+      const best = findBestDiscount(c.basePrice, cartIds, rules, c.quantity ?? 1);
 
       if (c.expected === null) {
         expect(best).toBeNull();
@@ -89,12 +93,12 @@ describe('promotion pricing: pieces', () => {
     );
   });
 
-  it('matches the add-ons exactly and never when none are required', () => {
+  it('matches the add-ons exactly; a rule with none is for the plain item only', () => {
     const counts = countAddOns(['a', 'a']);
     expect(satisfiesExactAddOns(counts, [{ addOnProductId: 'a', quantity: 2 }])).toBe(true);
     expect(satisfiesExactAddOns(counts, [{ addOnProductId: 'a', quantity: 1 }])).toBe(false);
     expect(satisfiesExactAddOns(counts, [])).toBe(false);
-    expect(satisfiesExactAddOns(new Map(), [])).toBe(false);
+    expect(satisfiesExactAddOns(new Map(), [])).toBe(true);
   });
 
   it('an add-on with a zero count does not block a match', () => {

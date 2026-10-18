@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using WTF.Api.Common.Extensions;
+using WTF.Api.Common.Orders;
 using WTF.Api.Features.Promotions.DTOs;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
@@ -24,6 +25,8 @@ public sealed class GetFixedBundlePromotionsHandler(WTFDbContext db, IHttpContex
             .ThenBy(x => x.Name)
             .ToListAsync(cancellationToken);
 
+        var used = await PromotionUsage.CountAsync(db, [.. promotions.Select(x => x.Id)], null, cancellationToken);
+
         return [.. promotions.Select(x => new PromotionListItemDto(
                 x.Id,
                 x.Name,
@@ -38,7 +41,8 @@ public sealed class GetFixedBundlePromotionsHandler(WTFDbContext db, IHttpContex
                 x.CreatedAt,
                 x.CreatedBy,
                 x.UpdatedAt,
-                x.UpdatedBy))];
+                x.UpdatedBy,
+                PromotionScheduleMapping.ToDto(x, used[x.Id])))];
     }
 }
 
@@ -63,7 +67,8 @@ public sealed class GetFixedBundlePromotionByIdHandler(WTFDbContext db, IHttpCon
             return null;
         }
 
-        return FixedBundleMapping.ToDto(promo, httpContextAccessor);
+        var used = (await PromotionUsage.CountAsync(db, [promo.Id], null, cancellationToken))[promo.Id];
+        return FixedBundleMapping.ToDto(promo, httpContextAccessor, used);
     }
 }
 
@@ -76,6 +81,7 @@ public record CreateFixedBundlePromotionCommand : IRequest<FixedBundlePromotionD
     public bool IsActive { get; init; } = true;
     public DateTime? StartDate { get; init; }
     public DateTime? EndDate { get; init; }
+    public PromotionScheduleRequest? Schedule { get; init; }
 
     [Range(0, 999999.99)]
     public decimal BundlePrice { get; init; }
@@ -100,6 +106,7 @@ public sealed class CreateFixedBundlePromotionHandler(WTFDbContext db, IHttpCont
     {
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
         FixedBundleValidation.EnsureValid(request.Name, request.StartDate, request.EndDate, request.Items);
+        PromotionScheduleMapping.EnsureValid(request.Schedule);
         FixedBundleValidation.EnsureBundlePrice(request.BundlePrice);
         await PromotionProductValidation.EnsureUsableAsync(
             db,
@@ -108,6 +115,10 @@ public sealed class CreateFixedBundlePromotionHandler(WTFDbContext db, IHttpCont
             request.IsActive,
             cancellationToken);
         await FixedBundleValidation.EnsureAddOnsAreLinkedToBundleItemsAsync(db, request.Items, cancellationToken);
+        await PromotionAddOnRules.EnsureRequiredTypesAsync(
+            db,
+            [.. request.Items.Select(i => (i.ProductId, (IReadOnlyCollection<Guid>)[.. (i.AddOns ?? []).Select(a => a.AddOnProductId)]))],
+            cancellationToken);
 
         var promo = new Promotion
         {
@@ -119,6 +130,7 @@ public sealed class CreateFixedBundlePromotionHandler(WTFDbContext db, IHttpCont
             CreatedAt = DateTime.UtcNow,
             CreatedBy = userId
         };
+        PromotionScheduleMapping.Apply(promo, request.Schedule);
 
         var fixedBundle = new FixedBundlePromotion
         {
@@ -166,6 +178,7 @@ public record UpdateFixedBundlePromotionCommand : IRequest<FixedBundlePromotionD
     public bool IsActive { get; init; } = true;
     public DateTime? StartDate { get; init; }
     public DateTime? EndDate { get; init; }
+    public PromotionScheduleRequest? Schedule { get; init; }
 
     [Range(0, 999999.99)]
     public decimal BundlePrice { get; init; }
@@ -181,6 +194,7 @@ public sealed class UpdateFixedBundlePromotionHandler(WTFDbContext db, IHttpCont
     {
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
         FixedBundleValidation.EnsureValid(request.Name, request.StartDate, request.EndDate, request.Items);
+        PromotionScheduleMapping.EnsureValid(request.Schedule);
         FixedBundleValidation.EnsureBundlePrice(request.BundlePrice);
         await PromotionProductValidation.EnsureUsableAsync(
             db,
@@ -189,6 +203,10 @@ public sealed class UpdateFixedBundlePromotionHandler(WTFDbContext db, IHttpCont
             request.IsActive,
             cancellationToken);
         await FixedBundleValidation.EnsureAddOnsAreLinkedToBundleItemsAsync(db, request.Items, cancellationToken);
+        await PromotionAddOnRules.EnsureRequiredTypesAsync(
+            db,
+            [.. request.Items.Select(i => (i.ProductId, (IReadOnlyCollection<Guid>)[.. (i.AddOns ?? []).Select(a => a.AddOnProductId)]))],
+            cancellationToken);
 
         var promo = await db.Promotions
             .Where(x => x.Id == request.PromotionId && x.TypeId == PromotionTypeIds.FixedBundle)
@@ -210,6 +228,7 @@ public sealed class UpdateFixedBundlePromotionHandler(WTFDbContext db, IHttpCont
         promo.EndDate = request.EndDate;
         promo.UpdatedAt = DateTime.UtcNow;
         promo.UpdatedBy = userId;
+        PromotionScheduleMapping.Apply(promo, request.Schedule);
         promo.FixedBundlePromotion.BundlePrice = request.BundlePrice;
 
         db.FixedBundlePromotionItemAddOns.RemoveRange(
@@ -239,7 +258,8 @@ public sealed class UpdateFixedBundlePromotionHandler(WTFDbContext db, IHttpCont
         }
 
         await db.SaveChangesAsync(cancellationToken);
-        return FixedBundleMapping.ToDto(promo, httpContextAccessor);
+        var used = (await PromotionUsage.CountAsync(db, [promo.Id], null, cancellationToken))[promo.Id];
+        return FixedBundleMapping.ToDto(promo, httpContextAccessor, used);
     }
 }
 

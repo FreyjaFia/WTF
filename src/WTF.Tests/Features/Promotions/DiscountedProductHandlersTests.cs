@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using WTF.Api.Features.Promotions;
 using WTF.Api.Features.Promotions.DTOs;
+using WTF.Api.Features.Promotions;
 using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Features.Promotions;
@@ -22,6 +22,30 @@ public class DiscountedProductHandlersTests : IAsyncLifetime
     }
 
     public Task DisposeAsync() => Task.CompletedTask;
+
+    [Fact]
+    public async Task Create_RuleWithoutAddOnsForAProductThatNeedsASize_Throws()
+    {
+        await using (var db = TestDb.Create(_dbName))
+        {
+            db.ProductAddOns.Add(new WTF.Domain.Entities.ProductAddOn { ProductId = _burger, AddOnId = _cheese, AddOnTypeId = 1, IsActive = true });
+            await db.SaveChangesAsync();
+        }
+
+        var ex = await Should.ThrowAsync<InvalidOperationException>(() =>
+            Create().Handle(Cmd(Item(_burger, 5m, null)), CancellationToken.None));
+
+        ex.Message.ShouldContain("exactly one Size add-on");
+        (await Create().Handle(Cmd(Item(_burger, 5m, null, _cheese)), CancellationToken.None)).Items.Single().AddOns.Count.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task Create_WithASchedule_SavesIt()
+    {
+        var dto = await Create().Handle(Cmd(Item(_fries, null, 10m)) with { Schedule = new PromotionScheduleRequest(65, "15:00", "17:00", 20) }, CancellationToken.None);
+
+        dto.Schedule.ShouldBe(new PromotionScheduleDto(65, "15:00", "17:00", 20, 0));
+    }
 
     [Fact]
     public async Task Create_InactiveProduct_ThrowsNamingIt()
@@ -151,12 +175,11 @@ public class DiscountedProductHandlersTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Create_NoAddOns_ThrowsRequiredAddOnMessage()
+    public async Task Create_NoAddOnsForAPlainProduct_Saves()
     {
-        var ex = await Should.ThrowAsync<InvalidOperationException>(() =>
-            Create().Handle(Cmd(Item(_burger, 5m, null)), CancellationToken.None));
+        var dto = await Create().Handle(Cmd(Item(_burger, 5m, null)), CancellationToken.None);
 
-        ex.Message.ShouldContain("at least one required add-on");
+        dto.Items.Single().AddOns.ShouldBeEmpty();
     }
 
     [Fact]

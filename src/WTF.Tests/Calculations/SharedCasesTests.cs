@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
+using System.Text;
 using WTF.Calculations.Orders;
 using WTF.Calculations.Sales;
 using WTF.Domain.Entities;
@@ -28,20 +28,22 @@ public class SharedCasesTests
 
     private sealed record DiscountCase(string Name, decimal BasePrice, decimal? FixedPrice, decimal? PercentOff, decimal? Expected);
 
-    private sealed record LabelCase(string Name, decimal? FixedPrice, decimal? PercentOff, string? Expected);
+    private sealed record LabelCase(string Name, decimal? FixedPrice, decimal? PercentOff, decimal? BasePrice, string? Expected);
 
     private sealed record IdQuantity(string Id, int Quantity);
 
-    private sealed record RuleCase(decimal? FixedPrice, decimal? PercentOff, List<IdQuantity> RequiredAddOns);
+    private sealed record RuleCase(decimal? FixedPrice, decimal? PercentOff, List<IdQuantity> RequiredAddOns, int? Remaining = null);
 
     private sealed record ExpectedDiscount(decimal Price, string? Label);
 
     private sealed record BestDiscountCase(
-        string Name, decimal BasePrice, List<IdQuantity> CartAddOns, List<RuleCase> Rules, ExpectedDiscount? Expected);
+        string Name, decimal BasePrice, List<IdQuantity> CartAddOns, List<RuleCase> Rules, ExpectedDiscount? Expected, int? Quantity = null);
 
     private sealed record AverageCase(string Name, decimal Amount, int Count, decimal Expected);
 
     private sealed record PercentCase(string Name, decimal Part, decimal Total, decimal Expected);
+
+    private sealed record ScheduleCase(string Name, byte? DaysOfWeek, string? StartTime, string? EndTime, string Local, bool Expected);
 
     private sealed record CashCase(string Name, decimal Total, decimal? Tips, decimal Received, decimal ExpectedDue, decimal ExpectedChange);
 
@@ -52,7 +54,8 @@ public class SharedCasesTests
         List<BestDiscountCase> BestDiscount,
         List<AverageCase> Average,
         List<PercentCase> PercentOfTotal,
-        List<CashCase> CashPayment);
+        List<CashCase> CashPayment,
+        List<ScheduleCase> ScheduleOpen);
 
     private static readonly Lazy<Cases> Loaded = new(() =>
     {
@@ -69,6 +72,8 @@ public class SharedCasesTests
     public static IEnumerable<object[]> LabelCaseNames() => Loaded.Value.PromoLabels.Select(c => new object[] { c.Name });
 
     public static IEnumerable<object[]> BestDiscountCaseNames() => Loaded.Value.BestDiscount.Select(c => new object[] { c.Name });
+
+    public static IEnumerable<object[]> ScheduleCaseNames() => Loaded.Value.ScheduleOpen.Select(c => new object[] { c.Name });
 
     public static IEnumerable<object[]> AverageCaseNames() => Loaded.Value.Average.Select(c => new object[] { c.Name });
 
@@ -194,7 +199,20 @@ public class SharedCasesTests
     {
         var c = Loaded.Value.PromoLabels.Single(x => x.Name == name);
 
-        PromotionLabelFormatter.Format(c.FixedPrice, c.PercentOff).ShouldBe(c.Expected);
+        PromotionLabelFormatter.Format(c.FixedPrice, c.PercentOff, c.BasePrice).ShouldBe(c.Expected);
+    }
+
+    [Theory]
+    [MemberData(nameof(ScheduleCaseNames))]
+    public void ScheduleOpen_MatchesTheSharedCase(string name)
+    {
+        var c = Loaded.Value.ScheduleOpen.Single(x => x.Name == name);
+
+        PromotionSchedule.IsOpen(
+            c.DaysOfWeek,
+            c.StartTime is null ? null : TimeOnly.Parse(c.StartTime),
+            c.EndTime is null ? null : TimeOnly.Parse(c.EndTime),
+            DateTime.Parse(c.Local, System.Globalization.CultureInfo.InvariantCulture)).ShouldBe(c.Expected);
     }
 
     [Theory]
@@ -203,19 +221,28 @@ public class SharedCasesTests
     {
         var c = Loaded.Value.BestDiscount.Single(x => x.Name == name);
         var productId = Guid.NewGuid();
+        // A rule with a usage limit is a promotion of its own, so the budget knows how many uses it has left.
+        var promotionIds = c.Rules.Select(_ => Guid.NewGuid()).ToList();
         var rules = new Dictionary<Guid, List<PromotionPricing.DiscountedRule>>
         {
-            [productId] = [.. c.Rules.Select(r => new PromotionPricing.DiscountedRule(
+            [productId] = [.. c.Rules.Select((r, index) => new PromotionPricing.DiscountedRule(
                 r.FixedPrice,
                 r.PercentOff,
-                [.. r.RequiredAddOns.Select(a => (IdFor(a.Id), a.Quantity))]))],
+                [.. r.RequiredAddOns.Select(a => (IdFor(a.Id), a.Quantity))],
+                promotionIds[index]))],
         };
+        var remaining = c.Rules
+            .Select((r, index) => (Id: promotionIds[index], r.Remaining))
+            .Where(x => x.Remaining.HasValue)
+            .ToDictionary(x => x.Id, x => x.Remaining!.Value);
 
         var result = PromotionPricing.GetDiscountedUnitPrice(
             c.BasePrice,
             productId,
             c.CartAddOns.Select(a => (IdFor(a.Id), a.Quantity)),
-            rules);
+            rules,
+            c.Quantity ?? 1,
+            new DiscountBudget(remaining));
 
         if (c.Expected is null)
         {

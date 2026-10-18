@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Orders;
-using WTF.Api.Features.Promotions.DTOs;
 using WTF.Calculations.Orders;
 using WTF.Domain.Data;
 
@@ -123,21 +122,8 @@ internal static class OfflineOrderReview
             .Where(o => o.IsActive && parentIds.Contains(o.ProductId))
             .ToDictionaryAsync(o => (o.ProductId, o.AddOnId), o => o.Price, cancellationToken);
 
-        var discountedPromotions = await db.Promotions
-            .Where(p => p.TypeId == PromotionTypeIds.DiscountedProduct)
-            .Include(p => p.DiscountedProductPromotions)
-                .ThenInclude(d => d.DiscountedProductPromotionAddOns)
-            .ToListAsync(cancellationToken);
-        var rulesByProductId = discountedPromotions
-            .Where(p => PromotionPricing.IsPromotionActiveOnLocalDate(p, createdAt, timeZone))
-            .SelectMany(p => p.DiscountedProductPromotions)
-            .GroupBy(d => d.ProductId)
-            .ToDictionary(
-                g => g.Key,
-                g => g.Select(d => new PromotionPricing.DiscountedRule(
-                    d.FixedPrice,
-                    d.PercentOff,
-                    [.. d.DiscountedProductPromotionAddOns.Select(a => (a.AddOnProductId, a.Quantity))])).ToList());
+        var loaded = await DiscountRuleLoader.LoadAsync(db, createdAt, timeZone, null, cancellationToken);
+        var rulesByProductId = loaded.RulesByProductId;
 
         foreach (var item in command.Items)
         {
@@ -146,15 +132,19 @@ internal static class OfflineOrderReview
                 continue;
             }
 
-            if (item.QuotedPrice.HasValue && !item.BundlePromotionId.HasValue)
+            if (!item.BundlePromotionId.HasValue)
             {
                 var discounted = PromotionPricing.GetDiscountedUnitPrice(
                     product.Price,
                     item.ProductId,
                     item.AddOns.Select(a => (a.ProductId, a.Quantity)),
-                    rulesByProductId);
+                    rulesByProductId,
+                    item.Quantity,
+                    loaded.Budget);
+                loaded.Budget.Use(discounted?.PromotionId, item.Quantity);
+
                 var current = discounted?.Price ?? product.Price;
-                if (current != item.QuotedPrice.Value)
+                if (item.QuotedPrice.HasValue && current != item.QuotedPrice.Value)
                 {
                     reasons.Add($"{product.Name} now costs {current:0.00}, quoted {item.QuotedPrice.Value:0.00}.");
                 }

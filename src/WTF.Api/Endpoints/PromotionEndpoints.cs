@@ -195,9 +195,16 @@ public static class PromotionEndpoints
             .RequireAuthorization(AppPolicies.PromotionsWrite);
 
         posGroup.MapGet("/discounted-products",
-            async (DateTime? evaluatedAtUtc, ISender sender) =>
+            async (DateTime? evaluatedAtUtc, bool? all, ISender sender) =>
             {
-                var result = await sender.Send(new GetActiveDiscountedProductPromotionsQuery(evaluatedAtUtc));
+                var result = await sender.Send(new GetActiveDiscountedProductPromotionsQuery(evaluatedAtUtc, all ?? false));
+                return Results.Ok(result);
+            });
+
+        posGroup.MapGet("/bundles",
+            async (ISender sender) =>
+            {
+                var result = await sender.Send(new GetPosBundlesQuery());
                 return Results.Ok(result);
             });
 

@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using WTF.Api.Common.Extensions;
+using WTF.Api.Common.Orders;
 using WTF.Api.Common.Time;
 using WTF.Api.Features.Promotions.DTOs;
 using WTF.Calculations.Orders;
@@ -26,6 +27,8 @@ public sealed class GetDiscountedProductPromotionsHandler(WTFDbContext db, IHttp
             .ThenBy(x => x.Name)
             .ToListAsync(cancellationToken);
 
+        var used = await PromotionUsage.CountAsync(db, [.. promotions.Select(x => x.Id)], null, cancellationToken);
+
         return [.. promotions.Select(x => new PromotionListItemDto(
             x.Id,
             x.Name,
@@ -40,11 +43,14 @@ public sealed class GetDiscountedProductPromotionsHandler(WTFDbContext db, IHttp
             x.CreatedAt,
             x.CreatedBy,
             x.UpdatedAt,
-            x.UpdatedBy))];
+            x.UpdatedBy,
+            PromotionScheduleMapping.ToDto(x, used[x.Id])))];
     }
 }
 
-public record GetActiveDiscountedProductPromotionsQuery(DateTime? EvaluatedAtUtc) : IRequest<List<DiscountedProductPromotionDto>>;
+// All = every active promotion whatever the date, weekday or hour, for the POS to keep offline and judge itself.
+public record GetActiveDiscountedProductPromotionsQuery(DateTime? EvaluatedAtUtc, bool All = false)
+    : IRequest<List<DiscountedProductPromotionDto>>;
 
 public sealed class GetActiveDiscountedProductPromotionsHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor)
     : IRequestHandler<GetActiveDiscountedProductPromotionsQuery, List<DiscountedProductPromotionDto>>
@@ -63,12 +69,16 @@ public sealed class GetActiveDiscountedProductPromotionsHandler(WTFDbContext db,
             .OrderBy(x => x.Name)
             .ToListAsync(cancellationToken);
 
-        // Same rule the order is saved with: start and end are calendar days in the shop's time zone.
-        var promotions = scheduled.Where(x => PromotionPricing.IsPromotionActiveOnLocalDate(x, now, timeZone));
-
-        return [.. promotions
+        // Same rule the order is saved with: dates, weekdays and hours are the shop's local time.
+        var promotions = (request.All
+                ? scheduled
+                : scheduled.Where(x => PromotionPricing.IsPromotionActiveOnLocalDate(x, now, timeZone)))
             .Where(x => x.DiscountedProductPromotions.Count > 0)
-            .Select(x => DiscountedProductMapping.ToDto(x, httpContextAccessor))];
+            .ToList();
+
+        var used = await PromotionUsage.CountAsync(db, [.. promotions.Select(x => x.Id)], null, cancellationToken);
+
+        return [.. promotions.Select(x => DiscountedProductMapping.ToDto(x, httpContextAccessor, used[x.Id]))];
     }
 }
 
@@ -92,7 +102,8 @@ public sealed class GetDiscountedProductPromotionByIdHandler(WTFDbContext db, IH
             return null;
         }
 
-        return DiscountedProductMapping.ToDto(promo, httpContextAccessor);
+        var used = (await PromotionUsage.CountAsync(db, [promo.Id], null, cancellationToken))[promo.Id];
+        return DiscountedProductMapping.ToDto(promo, httpContextAccessor, used);
     }
 }
 
@@ -105,6 +116,7 @@ public record CreateDiscountedProductPromotionCommand : IRequest<DiscountedProdu
     public bool IsActive { get; init; } = true;
     public DateTime? StartDate { get; init; }
     public DateTime? EndDate { get; init; }
+    public PromotionScheduleRequest? Schedule { get; init; }
 
     [MinLength(1)]
     public List<CreateDiscountedProductItemRequestDto> Items { get; init; } = [];
@@ -127,6 +139,7 @@ public sealed class CreateDiscountedProductPromotionHandler(WTFDbContext db, IHt
     {
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
         DiscountedProductValidation.EnsureValid(request.Name, request.StartDate, request.EndDate, request.Items);
+        PromotionScheduleMapping.EnsureValid(request.Schedule);
         await PromotionProductValidation.EnsureUsableAsync(
             db,
             request.Items.Select(i => i.ProductId),
@@ -134,6 +147,10 @@ public sealed class CreateDiscountedProductPromotionHandler(WTFDbContext db, IHt
             request.IsActive,
             cancellationToken);
         await DiscountedProductValidation.EnsureAddOnsAreLinkedAsync(db, request.Items, cancellationToken);
+        await PromotionAddOnRules.EnsureRequiredTypesAsync(
+            db,
+            [.. request.Items.Select(i => (i.ProductId, (IReadOnlyCollection<Guid>)[.. (i.AddOns ?? []).Select(a => a.AddOnProductId)]))],
+            cancellationToken);
 
         var promo = new Promotion
         {
@@ -145,6 +162,7 @@ public sealed class CreateDiscountedProductPromotionHandler(WTFDbContext db, IHt
             CreatedAt = DateTime.UtcNow,
             CreatedBy = userId
         };
+        PromotionScheduleMapping.Apply(promo, request.Schedule);
 
         foreach (var item in request.Items ?? [])
         {
@@ -186,6 +204,7 @@ public record UpdateDiscountedProductPromotionCommand : IRequest<DiscountedProdu
     public bool IsActive { get; init; } = true;
     public DateTime? StartDate { get; init; }
     public DateTime? EndDate { get; init; }
+    public PromotionScheduleRequest? Schedule { get; init; }
 
     [MinLength(1)]
     public List<CreateDiscountedProductItemRequestDto> Items { get; init; } = [];
@@ -198,6 +217,7 @@ public sealed class UpdateDiscountedProductPromotionHandler(WTFDbContext db, IHt
     {
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
         DiscountedProductValidation.EnsureValid(request.Name, request.StartDate, request.EndDate, request.Items);
+        PromotionScheduleMapping.EnsureValid(request.Schedule);
         await PromotionProductValidation.EnsureUsableAsync(
             db,
             request.Items.Select(i => i.ProductId),
@@ -205,6 +225,10 @@ public sealed class UpdateDiscountedProductPromotionHandler(WTFDbContext db, IHt
             request.IsActive,
             cancellationToken);
         await DiscountedProductValidation.EnsureAddOnsAreLinkedAsync(db, request.Items, cancellationToken);
+        await PromotionAddOnRules.EnsureRequiredTypesAsync(
+            db,
+            [.. request.Items.Select(i => (i.ProductId, (IReadOnlyCollection<Guid>)[.. (i.AddOns ?? []).Select(a => a.AddOnProductId)]))],
+            cancellationToken);
 
         var promo = await db.Promotions
             .Where(x => x.Id == request.PromotionId && x.TypeId == PromotionTypeIds.DiscountedProduct)
@@ -225,6 +249,7 @@ public sealed class UpdateDiscountedProductPromotionHandler(WTFDbContext db, IHt
         promo.EndDate = request.EndDate;
         promo.UpdatedAt = DateTime.UtcNow;
         promo.UpdatedBy = userId;
+        PromotionScheduleMapping.Apply(promo, request.Schedule);
 
         db.DiscountedProductPromotionAddOns.RemoveRange(
             promo.DiscountedProductPromotions.SelectMany(x => x.DiscountedProductPromotionAddOns));
@@ -254,7 +279,8 @@ public sealed class UpdateDiscountedProductPromotionHandler(WTFDbContext db, IHt
         }
 
         await db.SaveChangesAsync(cancellationToken);
-        return DiscountedProductMapping.ToDto(promo, httpContextAccessor);
+        var used = (await PromotionUsage.CountAsync(db, [promo.Id], null, cancellationToken))[promo.Id];
+        return DiscountedProductMapping.ToDto(promo, httpContextAccessor, used);
     }
 }
 

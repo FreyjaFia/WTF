@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using WTF.Api.Features.Promotions;
 using WTF.Api.Features.Promotions.DTOs;
+using WTF.Api.Features.Promotions;
 using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Features.Promotions;
@@ -128,6 +128,135 @@ public class FixedBundleHandlersTests : IAsyncLifetime
             Create().Handle(Cmd(_burger, 1, Guid.NewGuid()), CancellationToken.None));
 
         ex.Message.ShouldBe("One or more promotion products or add-ons do not exist.");
+    }
+
+    private async Task LinkAsync(Guid product, Guid addOn, int type)
+    {
+        await using var db = TestDb.Create(_dbName);
+        db.ProductAddOns.Add(new WTF.Domain.Entities.ProductAddOn { ProductId = product, AddOnId = addOn, AddOnTypeId = type, IsActive = true });
+        await db.SaveChangesAsync();
+    }
+
+    private static PromotionScheduleRequest Schedule(byte? days = null, string? start = null, string? end = null, int? max = null) =>
+        new(days, start, end, max);
+
+    [Fact]
+    public async Task Create_WithASchedule_SavesItAndReturnsIt()
+    {
+        var dto = await Create().Handle(Cmd(_burger) with { Schedule = Schedule(10, "14:00", "17:30", 50) }, CancellationToken.None);
+
+        dto.Schedule.ShouldBe(new PromotionScheduleDto(10, "14:00", "17:30", 50, 0));
+        await using var db = TestDb.Create(_dbName);
+        var saved = await db.Promotions.SingleAsync();
+        saved.DaysOfWeek.ShouldBe((byte)10);
+        saved.StartTime.ShouldBe(new TimeOnly(14, 0));
+        saved.EndTime.ShouldBe(new TimeOnly(17, 30));
+        saved.MaxRedemptions.ShouldBe(50);
+    }
+
+    [Fact]
+    public async Task Create_AllSevenDays_IsSavedAsEveryDay()
+    {
+        await Create().Handle(Cmd(_burger) with { Schedule = Schedule(127) }, CancellationToken.None);
+
+        await using var db = TestDb.Create(_dbName);
+        (await db.Promotions.SingleAsync()).DaysOfWeek.ShouldBeNull();
+    }
+
+    [Theory]
+    [InlineData(0, null, null, null, "Pick at least one day")]
+    [InlineData(128, null, null, null, "Pick at least one day")]
+    [InlineData(null, "14:00", null, null, "Set both a start time and an end time")]
+    [InlineData(null, null, "17:00", null, "Set both a start time and an end time")]
+    [InlineData(null, "14:00", "14:00", null, "cannot be the same")]
+    [InlineData(null, "25:00", "17:00", null, "Times must look like 14:30")]
+    [InlineData(null, "14:00", "five", null, "Times must look like 14:30")]
+    [InlineData(null, null, null, 0, "The usage limit must be between")]
+    [InlineData(null, null, null, 1000001, "The usage limit must be between")]
+    public async Task Create_WithAnInvalidSchedule_ThrowsAClearMessage(int? days, string? start, string? end, int? max, string message)
+    {
+        var request = Schedule(days is null ? null : (byte)days, start, end, max);
+
+        var ex = await Should.ThrowAsync<InvalidOperationException>(() =>
+            Create().Handle(Cmd(_burger) with { Schedule = request }, CancellationToken.None));
+
+        ex.Message.ShouldContain(message);
+        await using var db = TestDb.Create(_dbName);
+        (await db.Promotions.CountAsync()).ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task Update_WithoutASchedule_KeepsTheOldOne_AndEmptyFieldsClearIt()
+    {
+        var created = await Create().Handle(Cmd(_burger) with { Schedule = Schedule(2, "09:00", "11:00", 5) }, CancellationToken.None);
+        var update = new UpdateFixedBundlePromotionCommand
+        {
+            PromotionId = created.Id,
+            Name = "Combo",
+            BundlePrice = 10m,
+            Items = [new(_burger, 1, [])]
+        };
+
+        await Update().Handle(update, CancellationToken.None);
+        await using (var db = TestDb.Create(_dbName))
+        {
+            var kept = await db.Promotions.SingleAsync();
+            kept.DaysOfWeek.ShouldBe((byte)2);
+            kept.MaxRedemptions.ShouldBe(5);
+        }
+
+        await Update().Handle(update with { Schedule = Schedule() }, CancellationToken.None);
+        await using var check = TestDb.Create(_dbName);
+        var cleared = await check.Promotions.SingleAsync();
+        cleared.DaysOfWeek.ShouldBeNull();
+        cleared.StartTime.ShouldBeNull();
+        cleared.MaxRedemptions.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task Create_ProductWithARequiredSize_NeedsExactlyOneInThePromotion()
+    {
+        await LinkAsync(_burger, _cheese, 1);
+        await LinkAsync(_burger, _bacon, 1);
+
+        var none = await Should.ThrowAsync<InvalidOperationException>(() => Create().Handle(Cmd(_burger), CancellationToken.None));
+        var two = await Should.ThrowAsync<InvalidOperationException>(() => Create().Handle(Cmd(_burger, 1, _cheese, _bacon), CancellationToken.None));
+        var dto = await Create().Handle(Cmd(_burger, 1, _cheese), CancellationToken.None);
+
+        none.Message.ShouldBe("Burger needs exactly one Size add-on in this promotion, because every order for it has one.");
+        two.Message.ShouldBe(none.Message);
+        dto.Items.Single().AddOns.Count.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task Create_ProductWithARequiredFlavor_NeedsOne()
+    {
+        await LinkAsync(_burger, _cheese, 2);
+
+        var ex = await Should.ThrowAsync<InvalidOperationException>(() => Create().Handle(Cmd(_burger), CancellationToken.None));
+
+        ex.Message.ShouldContain("exactly one Flavor add-on");
+    }
+
+    [Fact]
+    public async Task Create_ProductWithOnlyOptionalAddOns_MayListNone()
+    {
+        await LinkAsync(_burger, _cheese, 4);
+
+        var dto = await Create().Handle(Cmd(_burger), CancellationToken.None);
+
+        dto.Items.Single().AddOns.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task Create_TwoSaucesOnOneProduct_Throws()
+    {
+        await LinkAsync(_burger, _cheese, 5);
+        await LinkAsync(_burger, _bacon, 5);
+
+        var ex = await Should.ThrowAsync<InvalidOperationException>(() => Create().Handle(Cmd(_burger, 1, _cheese, _bacon), CancellationToken.None));
+
+        ex.Message.ShouldBe("Burger can have at most one Sauce add-on in this promotion.");
     }
 
     private CreateFixedBundlePromotionHandler Create() => new(TestDb.Create(_dbName), TestRequest.As(_userId));

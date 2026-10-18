@@ -3,9 +3,9 @@ using Microsoft.EntityFrameworkCore;
 using NSubstitute;
 using WTF.Api.Common.Auth;
 using WTF.Api.Features.Audit.Enums;
-using WTF.Api.Features.Orders;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
+using WTF.Api.Features.Orders;
 using WTF.Api.Features.Products.Enums;
 using WTF.Api.Features.Promotions.DTOs;
 using WTF.Api.Hubs;
@@ -75,7 +75,8 @@ public class CreateOrderHandlerTests
     }
 
     private async Task<Guid> SeedBundle(decimal price, bool mixMatch = false, bool active = true, DateTime? start = null, DateTime? end = null, string name = "Bundle",
-        (Guid ProductId, int Quantity)[]? items = null, (Guid AddOnId, int Quantity)? addOnOnFirstItem = null, int maxSelections = 0)
+        (Guid ProductId, int Quantity)[]? items = null, (Guid AddOnId, int Quantity)? addOnOnFirstItem = null, int maxSelections = 0,
+        byte? days = null, TimeOnly? startTime = null, TimeOnly? endTime = null, int? maxRedemptions = null)
     {
         await using var db = TestDb.Create(_dbName);
         var promo = new Promotion
@@ -86,6 +87,10 @@ public class CreateOrderHandlerTests
             IsActive = active,
             StartDate = start,
             EndDate = end,
+            DaysOfWeek = days,
+            StartTime = startTime,
+            EndTime = endTime,
+            MaxRedemptions = maxRedemptions,
             CreatedAt = Now,
             CreatedBy = _userId
         };
@@ -132,7 +137,8 @@ public class CreateOrderHandlerTests
     }
 
     private async Task<Guid> SeedDiscount(Guid productId, decimal? fixedPrice, decimal? percent, (Guid AddOn, int Qty)[]? required = null,
-        bool active = true, DateTime? start = null, DateTime? end = null)
+        bool active = true, DateTime? start = null, DateTime? end = null,
+        byte? days = null, TimeOnly? startTime = null, TimeOnly? endTime = null, int? maxRedemptions = null)
     {
         await using var db = TestDb.Create(_dbName);
         var promo = new Promotion
@@ -143,6 +149,10 @@ public class CreateOrderHandlerTests
             IsActive = active,
             StartDate = start,
             EndDate = end,
+            DaysOfWeek = days,
+            StartTime = startTime,
+            EndTime = endTime,
+            MaxRedemptions = maxRedemptions,
             CreatedAt = Now,
             CreatedBy = _userId
         };
@@ -453,6 +463,43 @@ public class CreateOrderHandlerTests
 
         dto.Items.Single().Price.ShouldBe(0m);
         dto.Items.Single().OriginalPrice.ShouldBe(50m);
+        dto.Items.Single().PromoLabel.ShouldBe("Free");
+    }
+
+    [Fact]
+    public async Task Handle_AmountOffEqualToThePrice_IsLabelledFree()
+    {
+        var pizza = await SeedProduct("Pizza", 50m);
+        await SeedDiscount(pizza, 50m, null);
+
+        var dto = await Handler().Handle(Cmd(OrderStatusEnum.Completed, Line(pizza)), CancellationToken.None);
+
+        dto.Items.Single().Price.ShouldBe(0m);
+        dto.Items.Single().PromoLabel.ShouldBe("Free");
+    }
+
+    [Fact]
+    public async Task Handle_AmountOffBelowThePrice_ShowsTheRealAmount()
+    {
+        var pizza = await SeedProduct("Pizza", 50m);
+        await SeedDiscount(pizza, 49.99m, null);
+
+        var dto = await Handler().Handle(Cmd(OrderStatusEnum.Completed, Line(pizza)), CancellationToken.None);
+
+        dto.Items.Single().Price.ShouldBe(0.01m);
+        dto.Items.Single().PromoLabel.ShouldBe("Promo -₱49.99");
+    }
+
+    [Fact]
+    public async Task Handle_HundredPercentOff_KeepsThePercentLabel()
+    {
+        var pizza = await SeedProduct("Pizza", 50m);
+        await SeedDiscount(pizza, null, 100m);
+
+        var dto = await Handler().Handle(Cmd(OrderStatusEnum.Completed, Line(pizza)), CancellationToken.None);
+
+        dto.Items.Single().Price.ShouldBe(0m);
+        dto.Items.Single().PromoLabel.ShouldBe("Promo -100%");
     }
 
     [Fact]
@@ -1097,6 +1144,188 @@ public class CreateOrderHandlerTests
         var ex = await Should.ThrowAsync<InvalidOperationException>(() => Handler().Handle(cmd, CancellationToken.None));
 
         ex.Message.ShouldContain("negative");
+    }
+
+    // ---------- weekdays, hours and usage limits ----------
+
+    // 10 Jun 2026 12:00 UTC is a Wednesday, 20:00 in Manila.
+    private async Task<OrderDto> PlaceAsync(CreateOrderCommand cmd, string? timeZone = null) =>
+        await Handler(timeZone).Handle(cmd, CancellationToken.None);
+
+    private static CreateOrderCommand BundleOrder(Guid product, Guid bundle, int quantity, DateTime? at = null) =>
+        Cmd(OrderStatusEnum.Pending, Line(product, quantity, bundle)) with
+        {
+            BundlePromotions = [new OrderBundlePromotionRequestDto(bundle, quantity)],
+            CreatedAt = at
+        };
+
+    [Fact]
+    public async Task Handle_BundleOutsideItsDailyWindow_ThrowsAndInsideItWorks()
+    {
+        var pizza = await SeedProduct("Pizza", 100m);
+        var bundle = await SeedBundle(80m, items: [(pizza, 1)], startTime: new TimeOnly(14, 0), endTime: new TimeOnly(17, 0));
+
+        // 12:00 UTC is 20:00 in Manila: closed. 07:00 UTC is 15:00 there: open.
+        await Should.ThrowAsync<InvalidOperationException>(() => PlaceAsync(BundleOrder(pizza, bundle, 1, Now), "Asia/Manila"));
+        var dto = await PlaceAsync(BundleOrder(pizza, bundle, 1, Now.AddHours(-5)), "Asia/Manila");
+
+        dto.TotalAmount.ShouldBe(80m);
+    }
+
+    [Theory]
+    [InlineData(14, 0, false)]
+    [InlineData(14, 1, true)]
+    [InlineData(16, 59, true)]
+    [InlineData(17, 0, false)]
+    public async Task Handle_BundleWindowStartsIncludedAndEndsExcluded(int hour, int minute, bool open)
+    {
+        var pizza = await SeedProduct("Pizza", 100m);
+        var bundle = await SeedBundle(80m, items: [(pizza, 1)], startTime: new TimeOnly(14, 1), endTime: new TimeOnly(17, 0));
+        var at = new DateTime(2026, 6, 10, hour, minute, 0, DateTimeKind.Utc);
+
+        if (open)
+        {
+            (await PlaceAsync(BundleOrder(pizza, bundle, 1, at))).TotalAmount.ShouldBe(80m);
+        }
+        else
+        {
+            await Should.ThrowAsync<InvalidOperationException>(() => PlaceAsync(BundleOrder(pizza, bundle, 1, at)));
+        }
+    }
+
+    [Fact]
+    public async Task Handle_BundleWindowPastMidnight_CoversBothSidesOfIt()
+    {
+        var pizza = await SeedProduct("Pizza", 100m);
+        var bundle = await SeedBundle(80m, items: [(pizza, 1)], startTime: new TimeOnly(22, 0), endTime: new TimeOnly(2, 0));
+
+        (await PlaceAsync(BundleOrder(pizza, bundle, 1, new DateTime(2026, 6, 10, 23, 0, 0, DateTimeKind.Utc)))).TotalAmount.ShouldBe(80m);
+        (await PlaceAsync(BundleOrder(pizza, bundle, 1, new DateTime(2026, 6, 11, 1, 59, 0, DateTimeKind.Utc)))).TotalAmount.ShouldBe(80m);
+        await Should.ThrowAsync<InvalidOperationException>(() =>
+            PlaceAsync(BundleOrder(pizza, bundle, 1, new DateTime(2026, 6, 11, 2, 0, 0, DateTimeKind.Utc))));
+        await Should.ThrowAsync<InvalidOperationException>(() =>
+            PlaceAsync(BundleOrder(pizza, bundle, 1, new DateTime(2026, 6, 10, 12, 0, 0, DateTimeKind.Utc))));
+    }
+
+    [Fact]
+    public async Task Handle_BundleOnOtherWeekdays_Throws()
+    {
+        var pizza = await SeedProduct("Pizza", 100m);
+        var mondaysOnly = await SeedBundle(80m, name: "Mondays", items: [(pizza, 1)], days: 2);
+        var wednesdaysOnly = await SeedBundle(80m, name: "Wednesdays", items: [(pizza, 1)], days: 8);
+
+        await Should.ThrowAsync<InvalidOperationException>(() => PlaceAsync(BundleOrder(pizza, mondaysOnly, 1, Now)));
+        (await PlaceAsync(BundleOrder(pizza, wednesdaysOnly, 1, Now))).TotalAmount.ShouldBe(80m);
+    }
+
+    [Fact]
+    public async Task Handle_DiscountOutsideItsHours_IsNotApplied()
+    {
+        var pizza = await SeedProduct("Pizza", 100m);
+        await SeedDiscount(pizza, null, 20m, startTime: new TimeOnly(14, 0), endTime: new TimeOnly(17, 0));
+
+        var closed = await PlaceAsync(Cmd(OrderStatusEnum.Completed, Line(pizza)) with { CreatedAt = new DateTime(2026, 6, 10, 20, 0, 0, DateTimeKind.Utc) });
+        var open = await PlaceAsync(Cmd(OrderStatusEnum.Completed, Line(pizza)) with { CreatedAt = new DateTime(2026, 6, 10, 15, 0, 0, DateTimeKind.Utc) });
+
+        closed.TotalAmount.ShouldBe(100m);
+        open.TotalAmount.ShouldBe(80m);
+    }
+
+    [Fact]
+    public async Task Handle_BundleStopsAtItsUsageLimit_AndNamesWhatIsLeft()
+    {
+        var pizza = await SeedProduct("Pizza", 100m);
+        var bundle = await SeedBundle(80m, name: "Limited", items: [(pizza, 1)], maxRedemptions: 3);
+
+        await PlaceAsync(BundleOrder(pizza, bundle, 2));
+        var tooMany = await Should.ThrowAsync<InvalidOperationException>(() => PlaceAsync(BundleOrder(pizza, bundle, 2)));
+        tooMany.Message.ShouldBe("Bundle promotion 'Limited' has only 1 left.");
+
+        await PlaceAsync(BundleOrder(pizza, bundle, 1));
+        var none = await Should.ThrowAsync<InvalidOperationException>(() => PlaceAsync(BundleOrder(pizza, bundle, 1)));
+        none.Message.ShouldBe("Bundle promotion 'Limited' has no uses left.");
+    }
+
+    [Fact]
+    public async Task Handle_VoidedOrderGivesItsBundleUsesBack()
+    {
+        var pizza = await SeedProduct("Pizza", 100m);
+        var bundle = await SeedBundle(80m, items: [(pizza, 1)], maxRedemptions: 2);
+        var first = await PlaceAsync(BundleOrder(pizza, bundle, 2));
+        await Should.ThrowAsync<InvalidOperationException>(() => PlaceAsync(BundleOrder(pizza, bundle, 1)));
+
+        await using (var db = TestDb.Create(_dbName))
+        {
+            (await db.Orders.SingleAsync(o => o.Id == first.Id)).StatusId = (int)OrderStatusEnum.Cancelled;
+            await db.SaveChangesAsync();
+        }
+
+        (await PlaceAsync(BundleOrder(pizza, bundle, 2))).TotalAmount.ShouldBe(160m);
+    }
+
+    [Fact]
+    public async Task Handle_DiscountUsesAreCountedPerItem_ThenItStopsApplying()
+    {
+        var pizza = await SeedProduct("Pizza", 100m);
+        await SeedDiscount(pizza, 30m, null, maxRedemptions: 3);
+
+        var first = await PlaceAsync(Cmd(OrderStatusEnum.Completed, Line(pizza, 2)));
+        var tooMany = await PlaceAsync(Cmd(OrderStatusEnum.Completed, Line(pizza, 2)));
+        var last = await PlaceAsync(Cmd(OrderStatusEnum.Completed, Line(pizza, 1)));
+        var spent = await PlaceAsync(Cmd(OrderStatusEnum.Completed, Line(pizza, 1)));
+
+        first.TotalAmount.ShouldBe(140m);
+        tooMany.TotalAmount.ShouldBe(200m);
+        last.TotalAmount.ShouldBe(70m);
+        spent.TotalAmount.ShouldBe(100m);
+        (await LoadOrder(first.Id)).OrderItems.Single().DiscountPromotionId.ShouldNotBeNull();
+        (await LoadOrder(spent.Id)).OrderItems.Single().DiscountPromotionId.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task Handle_TwoLinesShareOneDiscountsRemainingUses()
+    {
+        var pizza = await SeedProduct("Pizza", 100m);
+        await SeedDiscount(pizza, 30m, null, maxRedemptions: 3);
+
+        var dto = await PlaceAsync(Cmd(OrderStatusEnum.Completed, Line(pizza, 2, null, "a"), Line(pizza, 2, null, "b")));
+
+        // The first line takes 2 of the 3 uses; the second line needs 2 and gets none.
+        dto.Items.Select(i => i.Price).ShouldBe([70m, 100m]);
+    }
+
+    [Fact]
+    public async Task Handle_DiscountRuleWithoutAddOns_IsForThePlainProductOnly()
+    {
+        var pizza = await SeedProduct("Pizza", 100m);
+        var cheese = await SeedProduct("Cheese", 20m, isAddOn: true);
+        await Link(pizza, cheese);
+        await SeedDiscount(pizza, null, 10m);
+
+        var plain = await PlaceAsync(Cmd(OrderStatusEnum.Completed, Line(pizza)));
+        var withCheese = await PlaceAsync(Cmd(OrderStatusEnum.Completed, Line(pizza, 1, null, null, AddOn(cheese))));
+
+        plain.Items.Single().Price.ShouldBe(90m);
+        withCheese.Items.Single().Price.ShouldBe(100m);
+    }
+
+    [Fact]
+    public async Task Handle_DiscountDoesNotPriceTheItemsInsideABundle()
+    {
+        var pizza = await SeedProduct("Pizza", 100m);
+        var bundle = await SeedBundle(80m, items: [(pizza, 1)]);
+        await SeedDiscount(pizza, null, 50m);
+
+        var dto = await PlaceAsync(Cmd(OrderStatusEnum.Completed, Line(pizza, 1, bundle)) with
+        {
+            BundlePromotions = [new OrderBundlePromotionRequestDto(bundle, 1)]
+        });
+
+        var child = (await LoadOrder(dto.Id)).OrderItems.Single();
+        child.Price.ShouldBe(100m);
+        child.PromoLabel.ShouldBeNull();
+        child.DiscountPromotionId.ShouldBeNull();
+        dto.TotalAmount.ShouldBe(80m);
     }
 
     // ---------- bundle contents ----------

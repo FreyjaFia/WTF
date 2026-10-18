@@ -35,21 +35,24 @@ public static class PromotionPricing
             return false;
         }
 
-        return true;
+        return PromotionSchedule.IsOpen(promotion.DaysOfWeek, promotion.StartTime, promotion.EndTime, localNow);
     }
 
     public sealed record DiscountedRule(
         decimal? FixedPrice,
         decimal? PercentOff,
-        List<(Guid AddOnProductId, int Quantity)> RequiredAddOns);
+        List<(Guid AddOnProductId, int Quantity)> RequiredAddOns,
+        Guid? PromotionId = null);
 
-    public sealed record AppliedDiscount(decimal Price, string? Label);
+    public sealed record AppliedDiscount(decimal Price, string? Label, Guid? PromotionId = null);
 
     public static AppliedDiscount? GetDiscountedUnitPrice(
         decimal basePrice,
         Guid productId,
         IEnumerable<(Guid AddOnProductId, int Quantity)> cartAddOns,
-        Dictionary<Guid, List<DiscountedRule>> rulesByProductId)
+        Dictionary<Guid, List<DiscountedRule>> rulesByProductId,
+        int quantity = 1,
+        DiscountBudget? budget = null)
     {
         if (!rulesByProductId.TryGetValue(productId, out var rules) || rules.Count == 0)
         {
@@ -68,6 +71,12 @@ public static class PromotionPricing
                 continue;
             }
 
+            // A promotion with a usage limit only discounts the items it has uses left for.
+            if (budget is not null && !budget.CanUse(rule.PromotionId, quantity))
+            {
+                continue;
+            }
+
             var discounted = CalculateDiscountedUnitPrice(basePrice, rule.FixedPrice, rule.PercentOff);
             if (!discounted.HasValue)
             {
@@ -78,7 +87,8 @@ public static class PromotionPricing
             {
                 best = new AppliedDiscount(
                     discounted.Value,
-                    PromotionLabelFormatter.Format(rule.FixedPrice, rule.PercentOff));
+                    PromotionLabelFormatter.Format(rule.FixedPrice, rule.PercentOff, basePrice),
+                    rule.PromotionId);
             }
         }
 
@@ -89,12 +99,8 @@ public static class PromotionPricing
         Dictionary<Guid, int> addOnMap,
         IEnumerable<(Guid AddOnProductId, int Quantity)> requiredAddOns)
     {
+        // A rule that lists no add-ons is for the plain product: it applies only when the item has no add-ons at all.
         var required = requiredAddOns.ToList();
-        if (required.Count == 0)
-        {
-            return false;
-        }
-
         var requiredSet = required.Select(x => x.AddOnProductId).ToHashSet();
         foreach (var (addOnProductId, quantity) in required)
         {

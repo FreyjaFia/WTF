@@ -11,7 +11,6 @@ using WTF.Api.Features.Conversations;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Features.Products.Enums;
-using WTF.Api.Features.Promotions.DTOs;
 using WTF.Api.Hubs;
 using WTF.Api.Services;
 using WTF.Calculations.Orders;
@@ -202,7 +201,8 @@ public class UpdateOrderHandler(
             DateTime.UtcNow,
             RequestTimeZone.ResolveFromRequest(httpContextAccessor),
             request.IsOverride ? order.OrderBundlePromotions.ToDictionary(b => b.PromotionId, b => b.UnitPrice) : null,
-            cancellationToken);
+            cancellationToken,
+            exceptOrderId: order.Id);
 
         OrderInputValidation.EnsureLengths(
             request.SpecialInstructions, request.Note?.Trim(), request.Items, request.OverrideReason?.Trim());
@@ -263,30 +263,19 @@ public class UpdateOrderHandler(
 
         var shouldCapturePrice = newStatus == OrderStatusEnum.Completed || newStatus == OrderStatusEnum.Cancelled;
         Dictionary<Guid, List<PromotionPricing.DiscountedRule>> discountedRulesByProductId = [];
+        DiscountBudget? discountBudget = null;
         if (shouldCapturePrice)
         {
-            var timeZone = RequestTimeZone.ResolveFromRequest(httpContextAccessor);
-            var referenceUtc = DateTime.UtcNow;
+            var loaded = await DiscountRuleLoader.LoadAsync(
+                db,
+                DateTime.UtcNow,
+                RequestTimeZone.ResolveFromRequest(httpContextAccessor),
+                order.Id,
+                cancellationToken);
+            discountedRulesByProductId = loaded.RulesByProductId;
 
-            var discountedPromotions = await db.Promotions
-                .Where(p => p.TypeId == PromotionTypeIds.DiscountedProduct)
-                .Include(p => p.DiscountedProductPromotions)
-                    .ThenInclude(d => d.DiscountedProductPromotionAddOns)
-                .ToListAsync(cancellationToken);
-
-            discountedRulesByProductId = discountedPromotions
-                .Where(p => PromotionPricing.IsPromotionActiveOnLocalDate(p, referenceUtc, timeZone))
-                .SelectMany(p => p.DiscountedProductPromotions)
-                .GroupBy(d => d.ProductId)
-                .ToDictionary(
-                    g => g.Key,
-                    g => g.Select(d => new PromotionPricing.DiscountedRule(
-                        d.FixedPrice,
-                        d.PercentOff,
-                        d.DiscountedProductPromotionAddOns
-                            .Select(a => (a.AddOnProductId, a.Quantity))
-                            .ToList()))
-                        .ToList());
+            // Correcting a completed order never takes a use away from, or adds one to, a promotion's limit.
+            discountBudget = isOverride ? null : loaded.Budget;
         }
 
         var pricedItems = new List<(
@@ -301,13 +290,17 @@ public class UpdateOrderHandler(
             var item = request.Items[itemIndex];
             var product = await db.Products.FindAsync([item.ProductId], cancellationToken) ?? throw new InvalidOperationException($"Product with ID {item.ProductId} not found.");
             var basePrice = product.Price;
-            var appliedDiscount = shouldCapturePrice
+            // A line inside a bundle is sold at the bundle's price, so no discount applies to it.
+            var appliedDiscount = shouldCapturePrice && !item.BundlePromotionId.HasValue
                 ? PromotionPricing.GetDiscountedUnitPrice(
                     basePrice,
                     item.ProductId,
                     item.AddOns.Select(a => (a.ProductId, a.Quantity)),
-                    discountedRulesByProductId)
+                    discountedRulesByProductId,
+                    item.Quantity,
+                    discountBudget)
                 : null;
+            discountBudget?.Use(appliedDiscount?.PromotionId, item.Quantity);
             var discountedPrice = appliedDiscount?.Price;
             var addOnPrices = new List<(OrderItemRequestDto AddOn, decimal Price)>();
             foreach (var addOn in item.AddOns)
@@ -340,7 +333,7 @@ public class UpdateOrderHandler(
 
         // An override keeps the prices the customer already paid for lines that are still on the
         // order (same product and bundle), so later promo changes do not reprice them.
-        var priceSnapshots = new Dictionary<(Guid ProductId, Guid? BundleId), Queue<(decimal? Price, decimal? OriginalPrice, string? PromoLabel)>>();
+        var priceSnapshots = new Dictionary<(Guid ProductId, Guid? BundleId), Queue<(decimal? Price, decimal? OriginalPrice, string? PromoLabel, Guid? DiscountPromotionId)>>();
         var addOnPriceSnapshots = new Dictionary<(Guid ParentProductId, Guid AddOnId), decimal>();
         if (isOverride)
         {
@@ -352,11 +345,11 @@ public class UpdateOrderHandler(
                 var key = (parent.ProductId, parent.BundlePromotionId);
                 if (!priceSnapshots.TryGetValue(key, out var queue))
                 {
-                    queue = new Queue<(decimal?, decimal?, string?)>();
+                    queue = new Queue<(decimal?, decimal?, string?, Guid?)>();
                     priceSnapshots[key] = queue;
                 }
 
-                queue.Enqueue((parent.Price, parent.OriginalPrice, parent.PromoLabel));
+                queue.Enqueue((parent.Price, parent.OriginalPrice, parent.PromoLabel, parent.DiscountPromotionId));
 
                 foreach (var child in order.OrderItems.Where(oi => oi.ParentOrderItemId == parent.Id && oi.Price.HasValue))
                 {
@@ -420,6 +413,7 @@ public class UpdateOrderHandler(
                 newItem.Price = discountedPrice ?? product.Price;
                 newItem.OriginalPrice = product.Price;
                 newItem.PromoLabel = appliedDiscount?.Label;
+                newItem.DiscountPromotionId = appliedDiscount?.PromotionId;
 
                 if (isOverride
                     && priceSnapshots.TryGetValue((item.ProductId, item.BundlePromotionId), out var snapshots)
@@ -429,6 +423,7 @@ public class UpdateOrderHandler(
                     newItem.Price = snapshot.Price ?? newItem.Price;
                     newItem.OriginalPrice = snapshot.OriginalPrice;
                     newItem.PromoLabel = snapshot.PromoLabel;
+                    newItem.DiscountPromotionId = snapshot.DiscountPromotionId;
                 }
             }
 

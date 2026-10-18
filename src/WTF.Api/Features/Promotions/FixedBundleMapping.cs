@@ -6,7 +6,7 @@ namespace WTF.Api.Features.Promotions;
 
 internal static class FixedBundleMapping
 {
-    public static FixedBundlePromotionDto ToDto(Promotion promo, IHttpContextAccessor? httpContextAccessor)
+    public static FixedBundlePromotionDto ToDto(Promotion promo, IHttpContextAccessor? httpContextAccessor, int redemptions = 0)
     {
         var fixedBundle = promo.FixedBundlePromotion!;
         return new FixedBundlePromotionDto(
@@ -32,6 +32,7 @@ internal static class FixedBundleMapping
                         .Select(addOn => new FixedBundleItemAddOnDto(
                             addOn.Id,
                             addOn.AddOnProductId,
-                            addOn.Quantity))]))]);
+                            addOn.Quantity))]))],
+            PromotionScheduleMapping.ToDto(promo, redemptions));
     }
 }

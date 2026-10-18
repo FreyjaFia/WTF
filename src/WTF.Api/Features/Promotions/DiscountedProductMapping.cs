@@ -6,7 +6,7 @@ namespace WTF.Api.Features.Promotions;
 
 internal static class DiscountedProductMapping
 {
-    public static DiscountedProductPromotionDto ToDto(Promotion promo, IHttpContextAccessor? httpContextAccessor)
+    public static DiscountedProductPromotionDto ToDto(Promotion promo, IHttpContextAccessor? httpContextAccessor, int redemptions = 0)
     {
         return new DiscountedProductPromotionDto(
             promo.Id,
@@ -31,6 +31,7 @@ internal static class DiscountedProductMapping
                         .Select(addOn => new DiscountedProductAddOnDto(
                             addOn.Id,
                             addOn.AddOnProductId,
-                            addOn.Quantity))]))]);
+                            addOn.Quantity))]))],
+            PromotionScheduleMapping.ToDto(promo, redemptions));
     }
 }

@@ -14,8 +14,10 @@ export interface DiscountRuleAddOn {
 export interface DiscountRule {
   fixedPrice?: number | null;
   percentOff?: number | null;
-  /** The add-ons the item must have, exactly (no more, no fewer). A rule with none never applies. */
+  /** The add-ons the item must have, exactly (no more, no fewer). A rule with none is for the plain product. */
   addOns: readonly DiscountRuleAddOn[];
+  /** How many more items the promotion can discount (its usage limit). Missing means no limit. */
+  remaining?: number | null;
 }
 
 /** Counts how many of each add-on a cart item has. Pass one id per add-on, repeated for quantity. */
@@ -33,10 +35,6 @@ export function satisfiesExactAddOns(
   addOnCounts: ReadonlyMap<string, number>,
   requiredAddOns: readonly DiscountRuleAddOn[],
 ): boolean {
-  if (requiredAddOns.length === 0) {
-    return false;
-  }
-
   const requiredIds = new Set(requiredAddOns.map((required) => required.addOnProductId));
   for (const required of requiredAddOns) {
     if ((addOnCounts.get(required.addOnProductId) ?? 0) !== required.quantity) {
@@ -81,11 +79,17 @@ export function calculateDiscountedUnitPrice(
   return null;
 }
 
-/** The label saved with a discounted line, for example "Promo -10%" or "Promo -₱5.00". */
+/** The label saved with a discounted line, for example "Promo -10%", "Promo -₱5.00" or "Free". */
 export function formatPromoLabel(
   rule: Pick<DiscountRule, 'fixedPrice' | 'percentOff'>,
+  basePrice?: number | null,
 ): string | null {
   if (rule.fixedPrice != null && rule.fixedPrice > 0) {
+    // An amount that covers the whole price reads "Free", not the amount set on the promotion.
+    if (basePrice != null && basePrice > 0 && rule.fixedPrice >= basePrice) {
+      return 'Free';
+    }
+
     const amount = rule.fixedPrice.toLocaleString('en-PH', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
@@ -105,19 +109,25 @@ export function formatPromoLabel(
 }
 
 /**
- * Of the rules for this product whose add-ons match the item exactly, the one with the lowest price. The first rule
- * wins a tie. Null when none applies.
+ * Of the rules for this product whose add-ons match the item exactly and that have uses left for the quantity, the one
+ * with the lowest price. The first rule wins a tie. Null when none applies.
  */
 export function findBestDiscount<TRule extends DiscountRule>(
   basePrice: number,
   addOnIds: Iterable<string>,
   rules: readonly TRule[],
+  quantity = 1,
 ): { rule: TRule; price: number } | null {
   const addOnCounts = countAddOns(addOnIds);
   let best: { rule: TRule; price: number } | null = null;
 
   for (const rule of rules) {
     if (!satisfiesExactAddOns(addOnCounts, rule.addOns)) {
+      continue;
+    }
+
+    // A promotion with a usage limit only discounts the items it has uses left for.
+    if (rule.remaining != null && rule.remaining < quantity) {
       continue;
     }
 
