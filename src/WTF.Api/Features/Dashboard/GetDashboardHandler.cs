@@ -80,7 +80,7 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
         var finishedCount = summary.CompletedOrderCount + summary.VoidedOrderCount;
 
         var linkSource = (byte)OrderSourceEnum.CustomerLink;
-        var linkOrders = primaryOrders.Where(o => o.Source == linkSource && o.StatusId != OrderStatuses.PendingApproval).ToList();
+        var linkOrders = primaryOrders.Where(o => o.Source == linkSource && !OrderStatuses.Unconfirmed.Contains(o.StatusId)).ToList();
         var linkSummary = SalesRules.Summarize(linkOrders, addOnOverridePrices);
 
         var awaiting = await db.Orders.CountAsync(o => o.StatusId == OrderStatuses.PendingApproval, cancellationToken);
@@ -215,7 +215,7 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
             .Include(o => o.OrderBundlePromotions)
                 .ThenInclude(b => b.Promotion)
             .Include(o => o.PaymentMethod)
-            .Where(o => o.CreatedAt >= start && o.CreatedAt < end && o.StatusId != OrderStatuses.PendingApproval)
+            .Where(o => o.CreatedAt >= start && o.CreatedAt < end && !OrderStatuses.Unconfirmed.Contains(o.StatusId))
             .ToListAsync(cancellationToken);
     }
 
@@ -395,7 +395,7 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
                 .ThenInclude(oi => oi.Product)
             .Include(o => o.OrderBundlePromotions)
             .Where(o => o.CreatedAt >= range.PrimaryStartUtc && o.CreatedAt < range.PrimaryEndUtc)
-            .Where(o => o.StatusId != (int)OrderStatusEnum.PendingApproval)
+            .Where(o => !OrderStatuses.Unconfirmed.Contains(o.StatusId))
             .OrderByDescending(o => o.CreatedAt)
             .Take(5)
             .ToListAsync(cancellationToken);

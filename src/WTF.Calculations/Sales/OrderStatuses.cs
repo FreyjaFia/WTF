@@ -11,4 +11,7 @@ public static class OrderStatuses
     public const int Cancelled = 3;
     public const int Refunded = 4;
     public const int PendingApproval = 5;
+    public const int PendingReview = 6;
+
+    public static readonly int[] Unconfirmed = [PendingApproval, PendingReview];
 }

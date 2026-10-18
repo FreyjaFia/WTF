@@ -7,5 +7,6 @@ public enum OrderStatusEnum
     Completed = 2,
     Cancelled = 3,
     Refunded = 4,
-    PendingApproval = 5
+    PendingApproval = 5,
+    PendingReview = 6
 }

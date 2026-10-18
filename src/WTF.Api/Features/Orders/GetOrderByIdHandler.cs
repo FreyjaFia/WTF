@@ -114,7 +114,10 @@ public class GetOrderByIdHandler(WTFDbContext db) : IRequestHandler<GetOrderById
             order.ContactNumber,
             order.RejectionReason,
             order.AcceptedAt,
-            order.ReadyAt
+            order.ReadyAt,
+            order.ReviewReasons,
+            order.QuotedTotal,
+            order.OfflineLocalId
         );
     }
 }

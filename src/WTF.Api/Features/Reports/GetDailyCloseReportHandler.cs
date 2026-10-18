@@ -45,7 +45,7 @@ public sealed class GetDailyCloseReportHandler(
             .Where(o =>
                 o.CreatedAt >= fromUtc
                 && o.CreatedAt < toExclusiveUtc
-                && o.StatusId != OrderStatuses.PendingApproval
+                && !OrderStatuses.Unconfirmed.Contains(o.StatusId)
                 && (source == null || o.Source == source))
             .ToReportListAsync(cancellationToken);
 

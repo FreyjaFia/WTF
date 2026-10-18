@@ -44,6 +44,9 @@ public record CreateOrderCommand : IRequest<OrderDto>
 
     public DateTime? CreatedAt { get; init; }
 
+    // The POS queue number of an order sold offline. The server uses it to recognize an order it already saved.
+    public string? OfflineLocalId { get; init; }
+
     // The fields below are set by the server only (for orders placed through a customer ordering link). They are never
     // read from a request body, so a signed-in caller cannot claim another user, a source or a link.
 
@@ -65,6 +68,10 @@ public record CreateOrderCommand : IRequest<OrderDto>
 
     [JsonIgnore]
     public string? ContactNumber { get; init; }
+
+    // Why an offline order is held for an Admin. Set by the sync handler only; never read from a request body.
+    [JsonIgnore]
+    public IReadOnlyList<string>? HeldReasons { get; init; }
 }
 
 public class CreateOrderHandler(
@@ -78,11 +85,17 @@ public class CreateOrderHandler(
     public async Task<OrderDto> Handle(CreateOrderCommand request, CancellationToken cancellationToken)
     {
         var userId = request.ActorUserId ?? httpContextAccessor.HttpContext!.User.GetUserId();
+        var held = request.HeldReasons is { Count: > 0 };
 
         // Orders waiting for approval only come from a customer's ordering link; staff cannot create one.
         if (request.Status == OrderStatusEnum.PendingApproval && request.Source != OrderSourceEnum.CustomerLink)
         {
             throw new InvalidOperationException("An order cannot be created as waiting for approval.");
+        }
+
+        if (request.Status == OrderStatusEnum.PendingReview)
+        {
+            throw new InvalidOperationException("An order cannot be created as waiting for review.");
         }
 
         if (request.Items.Count == 0 && request.BundlePromotions.Count == 0)
@@ -91,7 +104,17 @@ public class CreateOrderHandler(
         }
 
         OrderInputValidation.EnsureLengths(request.SpecialInstructions, request.Note?.Trim(), request.Items);
-        await OrderInputValidation.EnsureCustomerAsync(db, request.CustomerId, cancellationToken);
+        if (held)
+        {
+            if (request.CustomerId.HasValue && !await db.Customers.AnyAsync(c => c.Id == request.CustomerId.Value, cancellationToken))
+            {
+                throw new InvalidOperationException("The customer was not found.");
+            }
+        }
+        else
+        {
+            await OrderInputValidation.EnsureCustomerAsync(db, request.CustomerId, cancellationToken);
+        }
 
         // Validate no nested add-ons and add-on type rules
         foreach (var item in request.Items)
@@ -109,6 +132,12 @@ public class CreateOrderHandler(
             if (item.AddOns.Any(addOn => addOn.AddOns?.Count > 0))
             {
                 throw new InvalidOperationException("Nested add-ons are not allowed. Add-ons cannot have their own add-ons.");
+            }
+
+            // A held order records what was sold at the till: the catalog rules below may have changed since.
+            if (held)
+            {
+                continue;
             }
 
             var addOnIds = item.AddOns.Select(addOn => addOn.ProductId).ToList();
@@ -211,7 +240,7 @@ public class CreateOrderHandler(
             .OrderBy(x => x)
             .ToList();
 
-        if (inactiveProductNames.Count > 0)
+        if (inactiveProductNames.Count > 0 && !held)
         {
             throw new InvalidOperationException(
                 $"Cannot save order with inactive products/add-ons: {string.Join(", ", inactiveProductNames)}.");
@@ -222,14 +251,16 @@ public class CreateOrderHandler(
             throw new InvalidOperationException("One or more selected products/add-ons were not found.");
         }
 
-        var bundlePriceByPromotionId = await BundlePromotionResolver.ResolveAsync(
-            db,
-            request.BundlePromotions,
-            request.Items,
-            request.CreatedAt?.ToUniversalTime() ?? DateTime.UtcNow,
-            RequestTimeZone.ResolveFromRequest(httpContextAccessor),
-            null,
-            cancellationToken);
+        var bundlePriceByPromotionId = held
+            ? await BundlePromotionResolver.ResolveHeldAsync(db, request.BundlePromotions, request.Items, cancellationToken)
+            : await BundlePromotionResolver.ResolveAsync(
+                db,
+                request.BundlePromotions,
+                request.Items,
+                request.CreatedAt?.ToUniversalTime() ?? DateTime.UtcNow,
+                RequestTimeZone.ResolveFromRequest(httpContextAccessor),
+                null,
+                cancellationToken);
 
         // Several orders can be created inside one transaction (the offline sync batch opens it around them all so
         // a failed order undoes the ones before it). SQL Server does not allow a second transaction on a connection
@@ -245,7 +276,7 @@ public class CreateOrderHandler(
             CustomerId = request.CustomerId,
             SpecialInstructions = request.SpecialInstructions,
             Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim(),
-            StatusId = (int)request.Status,
+            StatusId = held ? (int)OrderStatusEnum.PendingReview : (int)request.Status,
             PaymentMethodId = request.PaymentMethod.HasValue ? (int)request.PaymentMethod.Value : null,
             AmountReceived = request.AmountReceived,
             ChangeAmount = request.ChangeAmount,
@@ -254,7 +285,9 @@ public class CreateOrderHandler(
             OrderLinkId = request.OrderLinkId,
             FulfillmentType = request.FulfillmentType.HasValue ? (byte)request.FulfillmentType.Value : null,
             DeliveryAddress = request.DeliveryAddress,
-            ContactNumber = request.ContactNumber
+            ContactNumber = request.ContactNumber,
+            OfflineLocalId = request.OfflineLocalId,
+            ReviewReasons = held ? OfflineOrderReview.JoinReasons(request.HeldReasons!) : null
         };
 
         db.Orders.Add(order);
@@ -273,9 +306,9 @@ public class CreateOrderHandler(
             db.OrderBundlePromotions.AddRange(orderBundlePromotions);
         }
 
-        var shouldCapturePrice = request.Status == OrderStatusEnum.Completed || request.Status == OrderStatusEnum.Cancelled;
+        var shouldCapturePrice = held || request.Status == OrderStatusEnum.Completed || request.Status == OrderStatusEnum.Cancelled;
         Dictionary<Guid, List<PromotionPricing.DiscountedRule>> discountedRulesByProductId = [];
-        if (shouldCapturePrice)
+        if (shouldCapturePrice && !held)
         {
             var timeZone = RequestTimeZone.ResolveFromRequest(httpContextAccessor);
             var referenceUtc = request.CreatedAt?.ToUniversalTime() ?? DateTime.UtcNow;
@@ -307,7 +340,7 @@ public class CreateOrderHandler(
             var item = request.Items[itemIndex];
             var product = await db.Products.FindAsync([item.ProductId], cancellationToken) ?? throw new InvalidOperationException($"Product with ID {item.ProductId} not found.");
             var basePrice = product.Price;
-            var appliedDiscount = shouldCapturePrice
+            var appliedDiscount = shouldCapturePrice && !held
                 ? PromotionPricing.GetDiscountedUnitPrice(
                     basePrice,
                     item.ProductId,
@@ -324,12 +357,14 @@ public class CreateOrderHandler(
                     .Where(o => o.ProductId == item.ProductId && o.AddOnId == addOn.ProductId && o.IsActive)
                     .Select(o => (decimal?)o.Price)
                     .FirstOrDefaultAsync(cancellationToken);
-                addOnPrices.Add((addOn, addOnOverridePrice ?? addOnProduct.Price));
+                addOnPrices.Add((addOn, held
+                    ? OfflineOrderReview.QuotedPriceOrThrow(addOn.QuotedPrice, addOnProduct.Name)
+                    : addOnOverridePrice ?? addOnProduct.Price));
             }
 
             var finalUnitPrice = (discountedPrice ?? basePrice)
                 + addOnPrices.Sum(addOn => addOn.Price * addOn.AddOn.Quantity);
-            if (!item.BundlePromotionId.HasValue && finalUnitPrice < 0)
+            if (!held && !item.BundlePromotionId.HasValue && finalUnitPrice < 0)
             {
                 throw new InvalidOperationException($"The final unit price for '{product.Name}' cannot be negative.");
             }
@@ -346,8 +381,17 @@ public class CreateOrderHandler(
                 BundlePromotionId = item.BundlePromotionId
             };
 
-            // Capture price if order is Completed or Cancelled
-            if (shouldCapturePrice)
+            // Capture price if order is Completed or Cancelled. A held order keeps the prices it was quoted offline.
+            if (held)
+            {
+                var quoted = item.BundlePromotionId.HasValue
+                    ? item.QuotedPrice ?? basePrice
+                    : OfflineOrderReview.QuotedPriceOrThrow(item.QuotedPrice, product.Name);
+                orderItem.Price = quoted;
+                orderItem.OriginalPrice = item.QuotedOriginalPrice ?? quoted;
+                orderItem.PromoLabel = item.QuotedPromoLabel;
+            }
+            else if (shouldCapturePrice)
             {
                 orderItem.Price = discountedPrice ?? basePrice;
                 orderItem.OriginalPrice = basePrice;
@@ -373,7 +417,7 @@ public class CreateOrderHandler(
                 };
 
                 // Capture price if order is Completed or Cancelled
-                if (request.Status == OrderStatusEnum.Completed || request.Status == OrderStatusEnum.Cancelled)
+                if (shouldCapturePrice)
                 {
                     addOnOrderItem.Price = effectiveAddOnPrice;
                 }
@@ -439,6 +483,12 @@ public class CreateOrderHandler(
 
         var totalAmount = OrderMetrics.ComputeOrderTotal(orderWithTotals, overridePrices);
 
+        if (held)
+        {
+            order.QuotedTotal = totalAmount;
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
         // Cash: the cashier gives back the cash minus the total and the tip, so the change is worked out here instead of
         // trusted from the app (an order queued offline by an older version used the total alone).
         if (order.AmountReceived.HasValue)
@@ -455,7 +505,7 @@ public class CreateOrderHandler(
         await conversationNotifier.OrderChangedAsync(order, null, cancellationToken);
 
         await auditService.LogAsync(
-            action: AuditAction.OrderCreated,
+            action: held ? AuditAction.OrderHeldForReview : AuditAction.OrderCreated,
             entityType: AuditEntityType.Order,
             entityId: order.Id.ToString(),
             newValues: new
@@ -465,7 +515,8 @@ public class CreateOrderHandler(
                 order.CustomerId,
                 Source = request.Source.ToString(),
                 ItemCount = items.Count,
-                totalAmount
+                totalAmount,
+                Reasons = request.HeldReasons
             },
             userId: userId,
             cancellationToken: cancellationToken);
@@ -499,7 +550,10 @@ public class CreateOrderHandler(
             }
             else
             {
-                await pushNotifications.SendOrderCreatedAsync(order, totalAmount, userId, cancellationToken);
+                if (!held)
+                {
+                    await pushNotifications.SendOrderCreatedAsync(order, totalAmount, userId, cancellationToken);
+                }
             }
         }
 
@@ -525,7 +579,10 @@ public class CreateOrderHandler(
             Source: request.Source,
             FulfillmentType: request.FulfillmentType,
             DeliveryAddress: request.DeliveryAddress,
-            ContactNumber: request.ContactNumber
+            ContactNumber: request.ContactNumber,
+            ReviewReasons: order.ReviewReasons,
+            QuotedTotal: order.QuotedTotal,
+            OfflineLocalId: order.OfflineLocalId
         );
     }
 }

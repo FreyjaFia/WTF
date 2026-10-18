@@ -7,6 +7,8 @@ namespace WTF.Api.Endpoints;
 
 public record RejectOrderRequest(string Reason);
 
+public record SyncOfflineOrdersRequest(List<CreateOrderCommand> Orders);
+
 public static class OrderEndpoints
 {
     public static IEndpointRouteBuilder MapOrders(this IEndpointRouteBuilder app)
@@ -80,6 +82,15 @@ public static class OrderEndpoints
             })
             .RequireAuthorization(AppPolicies.OrdersWrite);
 
+        // POST /api/orders/sync - Sync orders sold offline: each one gets its own result, and a changed catalog holds an order for review
+        orderGroup.MapPost("/sync",
+            async (SyncOfflineOrdersRequest request, ISender sender) =>
+            {
+                var result = await sender.Send(new SyncOfflineOrdersCommand(request.Orders));
+                return Results.Ok(result);
+            })
+            .RequireAuthorization(AppPolicies.OrdersWrite);
+
         // PUT /api/orders/{id} - Update order
         orderGroup.MapPut("/{id:guid}",
             async (Guid id, UpdateOrderCommand command, ISender sender) =>
@@ -134,6 +145,24 @@ public static class OrderEndpoints
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             })
             .RequireAuthorization(AppPolicies.OrdersWrite);
+
+        // POST /api/orders/{id}/review/approve - An Admin approves a held offline order (-> Completed at the quoted prices)
+        orderGroup.MapPost("/{id:guid}/review/approve",
+            async (Guid id, ISender sender) =>
+            {
+                var result = await sender.Send(new ApproveHeldOrderCommand(id));
+                return result is not null ? Results.Ok(result) : Results.NotFound();
+            })
+            .RequireAuthorization(AppPolicies.OrdersOverride);
+
+        // POST /api/orders/{id}/review/reject - An Admin turns down a held offline order (reason required)
+        orderGroup.MapPost("/{id:guid}/review/reject",
+            async (Guid id, RejectOrderRequest request, ISender sender) =>
+            {
+                var result = await sender.Send(new RejectHeldOrderCommand(id, request.Reason));
+                return result is not null ? Results.Ok(result) : Results.NotFound();
+            })
+            .RequireAuthorization(AppPolicies.OrdersOverride);
 
         // PATCH /api/orders/{id}/void - Void order (Pending -> Cancelled, Completed -> Refunded)
         orderGroup.MapPatch("/{id:guid}/void",

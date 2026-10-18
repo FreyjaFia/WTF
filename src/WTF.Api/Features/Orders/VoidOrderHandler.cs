@@ -44,6 +44,11 @@ public class VoidOrderHandler(
             throw new InvalidOperationException("This order is waiting for approval. Accept or reject it instead.");
         }
 
+        if (currentStatus == OrderStatusEnum.PendingReview)
+        {
+            throw new InvalidOperationException("This order is waiting for an Admin to review it. Approve or reject it instead.");
+        }
+
         if (currentStatus == OrderStatusEnum.Cancelled || currentStatus == OrderStatusEnum.Refunded)
         {
             throw new InvalidOperationException("Order has already been voided.");

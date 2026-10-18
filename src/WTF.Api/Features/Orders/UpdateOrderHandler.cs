@@ -221,6 +221,16 @@ public class UpdateOrderHandler(
             throw new InvalidOperationException("An order cannot be set to waiting for approval.");
         }
 
+        if (newStatus == OrderStatusEnum.PendingReview)
+        {
+            throw new InvalidOperationException("An order cannot be set to waiting for review.");
+        }
+
+        if (oldStatus == OrderStatusEnum.PendingReview)
+        {
+            throw new InvalidOperationException("This order is waiting for an Admin to review it. Approve or reject it first.");
+        }
+
         if (oldStatus == OrderStatusEnum.PendingApproval)
         {
             throw new InvalidOperationException("This order is waiting for approval. Accept or reject it first.");

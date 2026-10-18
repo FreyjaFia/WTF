@@ -5,6 +5,7 @@ using WTF.Api.Common.Orders;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Calculations.Orders;
+using WTF.Calculations.Sales;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Orders;
@@ -45,8 +46,8 @@ public sealed class GetPagedOrdersHandler(WTFDbContext db)
         }
         else
         {
-            // Orders waiting for staff approval are not part of the normal list: they only come back when asked for.
-            baseQuery = baseQuery.Where(o => o.StatusId != (int)OrderStatusEnum.PendingApproval);
+            // Orders waiting for staff (approval or review) are not part of the normal list: they only come back when asked for.
+            baseQuery = baseQuery.Where(o => !OrderStatuses.Unconfirmed.Contains(o.StatusId));
 
             if (request.ExcludeFinalized)
             {
@@ -170,7 +171,10 @@ public sealed class GetPagedOrdersHandler(WTFDbContext db)
                 o.ContactNumber,
                 o.RejectionReason,
                 o.AcceptedAt,
-                o.ReadyAt);
+                o.ReadyAt,
+                o.ReviewReasons,
+                o.QuotedTotal,
+                o.OfflineLocalId);
         }).ToList();
 
         return new PagedResultDto<OrderDto>(items, page, pageSize, totalCount);

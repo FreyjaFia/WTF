@@ -5,4 +5,7 @@ public record OrderItemRequestDto(
     int Quantity,
     List<OrderItemRequestDto> AddOns,
     string? SpecialInstructions,
-    Guid? BundlePromotionId);
+    Guid? BundlePromotionId,
+    decimal? QuotedPrice = null,
+    decimal? QuotedOriginalPrice = null,
+    string? QuotedPromoLabel = null);

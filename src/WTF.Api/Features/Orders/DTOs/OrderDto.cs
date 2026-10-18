@@ -16,4 +16,7 @@ public record OrderDto(
     string? ContactNumber = null,
     string? RejectionReason = null,
     DateTime? AcceptedAt = null,
-    DateTime? ReadyAt = null);
+    DateTime? ReadyAt = null,
+    string? ReviewReasons = null,
+    decimal? QuotedTotal = null,
+    string? OfflineLocalId = null);
