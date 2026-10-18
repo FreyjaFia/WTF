@@ -208,6 +208,7 @@ export class ReportsComponent implements OnInit {
       validators: [Validators.required],
       nonNullable: true,
     }),
+    workbookSource: this.formBuilder.control<ReportSource | null>(null),
     groupBy: this.formBuilder.control<ReportGroupBy>('Day', {
       validators: [Validators.required],
     }),
@@ -426,7 +427,7 @@ export class ReportsComponent implements OnInit {
     }
 
     this.isGeneratingMonthlyWorkbook.set(true);
-    this.reportsService.generateMonthlyWorkbook(filter.year, filter.month).subscribe({
+    this.reportsService.generateMonthlyWorkbook(filter.year, filter.month, filter.source).subscribe({
       next: (status) => {
         this.isGeneratingMonthlyWorkbook.set(false);
         this.monthlyWorkbookStatus.set(status);
@@ -450,7 +451,7 @@ export class ReportsComponent implements OnInit {
     }
 
     this.isDownloadingMonthlyWorkbook.set(true);
-    this.reportsService.getMonthlyWorkbookStatus(filter.year, filter.month).subscribe({
+    this.reportsService.getMonthlyWorkbookStatus(filter.year, filter.month, filter.source).subscribe({
       next: (status) => {
         this.monthlyWorkbookStatus.set(status);
         if (!status.exists) {
@@ -459,7 +460,7 @@ export class ReportsComponent implements OnInit {
           return;
         }
 
-        this.reportsService.downloadMonthlyWorkbook(filter.year, filter.month).subscribe({
+        this.reportsService.downloadMonthlyWorkbook(filter.year, filter.month, filter.source).subscribe({
           next: (blob) => {
             const fileName =
               status.fileName || this.buildMonthlyWorkbookFileName(filter.year, filter.month);
@@ -649,7 +650,7 @@ export class ReportsComponent implements OnInit {
       return;
     }
 
-    this.reportsService.getMonthlyWorkbookStatus(filter.year, filter.month).subscribe({
+    this.reportsService.getMonthlyWorkbookStatus(filter.year, filter.month, filter.source).subscribe({
       next: (status) => this.monthlyWorkbookStatus.set(status),
       error: () => this.monthlyWorkbookStatus.set(null),
     });
@@ -657,9 +658,10 @@ export class ReportsComponent implements OnInit {
 
   private getMonthlyWorkbookFilterOrShowError(
     showError = true,
-  ): { year: number; month: number } | null {
+  ): { year: number; month: number; source: ReportSource | null } | null {
     const year = this.reportForm.controls.workbookYear.value;
     const month = this.reportForm.controls.workbookMonth.value;
+    const source = this.reportForm.controls.workbookSource.value;
 
     if (!year || !month) {
       if (showError) {
@@ -685,7 +687,7 @@ export class ReportsComponent implements OnInit {
       return null;
     }
 
-    return { year, month };
+    return { year, month, source };
   }
 
   private isActionBusy(): boolean {

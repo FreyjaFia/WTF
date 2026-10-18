@@ -7,6 +7,7 @@ import {
   MonthlyReportWorkbookStatusDto,
   ReportExportOptions,
   ReportQuery,
+  ReportSource,
   ReportType,
 } from '@shared/models';
 import { Observable, catchError, throwError } from 'rxjs';
@@ -70,10 +71,11 @@ export class ReportsService {
   public getMonthlyWorkbookStatus(
     year: number,
     month: number,
+    source: ReportSource | null = null,
   ): Observable<MonthlyReportWorkbookStatusDto> {
     return this.http
       .get<MonthlyReportWorkbookStatusDto>(`${this.baseUrl}/monthly-workbook/status`, {
-        params: this.buildMonthlyWorkbookParams(year, month),
+        params: this.buildMonthlyWorkbookParams(year, month, source),
       })
       .pipe(
         catchError((error: HttpErrorResponse) => {
@@ -85,10 +87,11 @@ export class ReportsService {
   public generateMonthlyWorkbook(
     year: number,
     month: number,
+    source: ReportSource | null = null,
   ): Observable<MonthlyReportWorkbookStatusDto> {
     return this.http
       .post<MonthlyReportWorkbookStatusDto>(`${this.baseUrl}/monthly-workbook/generate`, null, {
-        params: this.buildMonthlyWorkbookParams(year, month),
+        params: this.buildMonthlyWorkbookParams(year, month, source),
       })
       .pipe(
         catchError((error: HttpErrorResponse) => {
@@ -97,10 +100,14 @@ export class ReportsService {
       );
   }
 
-  public downloadMonthlyWorkbook(year: number, month: number): Observable<Blob> {
+  public downloadMonthlyWorkbook(
+    year: number,
+    month: number,
+    source: ReportSource | null = null,
+  ): Observable<Blob> {
     return this.http
       .get(`${this.baseUrl}/monthly-workbook/download`, {
-        params: this.buildMonthlyWorkbookParams(year, month),
+        params: this.buildMonthlyWorkbookParams(year, month, source),
         responseType: 'blob',
         headers: new HttpHeaders({
           Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -153,8 +160,13 @@ export class ReportsService {
     return params;
   }
 
-  private buildMonthlyWorkbookParams(year: number, month: number): HttpParams {
-    return new HttpParams().set('year', year).set('month', month);
+  private buildMonthlyWorkbookParams(
+    year: number,
+    month: number,
+    source: ReportSource | null,
+  ): HttpParams {
+    const params = new HttpParams().set('year', year).set('month', month);
+    return source === null ? params : params.set('source', source);
   }
 
   private buildError(message: string, error: HttpErrorResponse): Observable<never> {

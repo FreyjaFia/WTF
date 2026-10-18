@@ -178,6 +178,20 @@ describe('ReportsService', () => {
       expect(generate.request.params.get('month')).toBe('3');
     });
 
+    it('sends the source only when one is chosen', () => {
+      const { service, http } = setupHttpService(ReportsService);
+      service.getMonthlyWorkbookStatus(2025, 3, 1).subscribe();
+      service.generateMonthlyWorkbook(2025, 3).subscribe();
+      service.downloadMonthlyWorkbook(2025, 3, 0).subscribe();
+
+      const status = http.expectOne((r) => r.url === `${base}/monthly-workbook/status`);
+      const generate = http.expectOne((r) => r.url === `${base}/monthly-workbook/generate`);
+      const download = http.expectOne((r) => r.url === `${base}/monthly-workbook/download`);
+      expect(status.request.params.get('source')).toBe('1');
+      expect(generate.request.params.has('source')).toBe(false);
+      expect(download.request.params.get('source')).toBe('0');
+    });
+
     it('download requests an xlsx blob', () => {
       const { service, http } = setupHttpService(ReportsService);
       service.downloadMonthlyWorkbook(2025, 3).subscribe();

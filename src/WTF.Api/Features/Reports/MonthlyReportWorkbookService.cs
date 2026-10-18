@@ -3,6 +3,7 @@ using MediatR;
 using System.Globalization;
 using WTF.Api.Common.Time;
 using WTF.Api.Endpoints;
+using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Features.Reports.DTOs;
 using WTF.Api.Features.Reports.Enums;
 using WTF.Api.Services;
@@ -15,7 +16,8 @@ public interface IMonthlyReportWorkbookService
         int year,
         int month,
         string? requestedTimeZoneId,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken,
+        OrderSourceEnum? source = null);
 
     Task<MonthlyReportWorkbookStatusDto> GenerateThroughDateAsync(
         int year,
@@ -23,17 +25,20 @@ public interface IMonthlyReportWorkbookService
         DateTime throughDateLocal,
         string? requestedTimeZoneId,
         DateTime? generatedAtLocalOverride,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken,
+        OrderSourceEnum? source = null);
 
     Task<MonthlyReportWorkbookStatusDto> GetStatusAsync(
         int year,
         int month,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken,
+        OrderSourceEnum? source = null);
 
     Task<(byte[] Data, string FileName)?> GetFileAsync(
         int year,
         int month,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken,
+        OrderSourceEnum? source = null);
 }
 
 public sealed class MonthlyReportWorkbookService(
@@ -55,7 +60,8 @@ public sealed class MonthlyReportWorkbookService(
         int year,
         int month,
         string? requestedTimeZoneId,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        OrderSourceEnum? source = null)
     {
         ValidateMonth(year, month);
         var timeZone = RequestTimeZone.Resolve(
@@ -77,7 +83,8 @@ public sealed class MonthlyReportWorkbookService(
             fromDate,
             toDate,
             null,
-            cancellationToken);
+            cancellationToken,
+            source);
         }
         finally
         {
@@ -91,7 +98,8 @@ public sealed class MonthlyReportWorkbookService(
         DateTime throughDateLocal,
         string? requestedTimeZoneId,
         DateTime? generatedAtLocalOverride,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        OrderSourceEnum? source = null)
     {
         ValidateMonth(year, month);
         var timeZone = RequestTimeZone.Resolve(
@@ -114,7 +122,8 @@ public sealed class MonthlyReportWorkbookService(
             fromDate,
             toDate,
             generatedAtLocalOverride,
-            cancellationToken);
+            cancellationToken,
+            source);
         }
         finally
         {
@@ -129,22 +138,23 @@ public sealed class MonthlyReportWorkbookService(
         DateTime fromDate,
         DateTime toDate,
         DateTime? generatedAtLocalOverride,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        OrderSourceEnum? source)
     {
         Task<List<T>> FetchAsync<T>(IRequest<List<T>> query) =>
             ExecuteWithTimeZoneAsync(timeZone.Id, () => sender.Send(query, cancellationToken));
 
-        var dailyRows = await FetchAsync(new GetDailySalesReportQuery { FromDate = fromDate, ToDate = toDate, GroupBy = ReportGroupByEnum.Day });
-        var closeRows = await FetchAsync(new GetDailyCloseReportQuery { FromDate = fromDate, ToDate = toDate });
-        var categoryRows = await FetchAsync(new GetCategorySalesReportQuery { FromDate = fromDate, ToDate = toDate });
-        var productRows = await FetchAsync(new GetProductSalesReportQuery { FromDate = fromDate, ToDate = toDate });
-        var promotionRows = await FetchAsync(new GetPromotionPerformanceReportQuery { FromDate = fromDate, ToDate = toDate });
-        var paymentRows = await FetchAsync(new GetPaymentsReportQuery { FromDate = fromDate, ToDate = toDate });
-        var hourlyRows = await FetchAsync(new GetHourlySalesReportQuery { FromDate = fromDate, ToDate = toDate });
-        var staffRows = await FetchAsync(new GetStaffPerformanceReportQuery { FromDate = fromDate, ToDate = toDate });
-        var customerRows = await FetchAsync(new GetCustomersReportQuery { FromDate = fromDate, ToDate = toDate });
+        var dailyRows = await FetchAsync(new GetDailySalesReportQuery { FromDate = fromDate, ToDate = toDate, GroupBy = ReportGroupByEnum.Day, Source = source });
+        var closeRows = await FetchAsync(new GetDailyCloseReportQuery { FromDate = fromDate, ToDate = toDate, Source = source });
+        var categoryRows = await FetchAsync(new GetCategorySalesReportQuery { FromDate = fromDate, ToDate = toDate, Source = source });
+        var productRows = await FetchAsync(new GetProductSalesReportQuery { FromDate = fromDate, ToDate = toDate, Source = source });
+        var promotionRows = await FetchAsync(new GetPromotionPerformanceReportQuery { FromDate = fromDate, ToDate = toDate, Source = source });
+        var paymentRows = await FetchAsync(new GetPaymentsReportQuery { FromDate = fromDate, ToDate = toDate, Source = source });
+        var hourlyRows = await FetchAsync(new GetHourlySalesReportQuery { FromDate = fromDate, ToDate = toDate, Source = source });
+        var staffRows = await FetchAsync(new GetStaffPerformanceReportQuery { FromDate = fromDate, ToDate = toDate, Source = source });
+        var customerRows = await FetchAsync(new GetCustomersReportQuery { FromDate = fromDate, ToDate = toDate, Source = source });
         var linkRows = await FetchAsync(new GetCustomerLinkReportQuery { FromDate = fromDate, ToDate = toDate });
-        var voidRows = await FetchAsync(new GetVoidedOrdersReportQuery { FromDate = fromDate, ToDate = toDate });
+        var voidRows = await FetchAsync(new GetVoidedOrdersReportQuery { FromDate = fromDate, ToDate = toDate, Source = source });
         var stockRows = await FetchAsync(new GetStockStatusReportQuery());
 
         var generatedAtLocal = generatedAtLocalOverride
@@ -165,7 +175,11 @@ public sealed class MonthlyReportWorkbookService(
         AddTableSheet(workbook, ReportTables.Hourly, hourlyRows, fromDate, toDate, generatedAtLabel);
         AddTableSheet(workbook, ReportTables.Staff, staffRows, fromDate, toDate, generatedAtLabel);
         AddTableSheet(workbook, ReportTables.Customers, customerRows, fromDate, toDate, generatedAtLabel);
-        AddTableSheet(workbook, ReportTables.CustomerLinks, linkRows, fromDate, toDate, generatedAtLabel);
+        if (source != OrderSourceEnum.Pos)
+        {
+            AddTableSheet(workbook, ReportTables.CustomerLinks, linkRows, fromDate, toDate, generatedAtLabel);
+        }
+
         AddTableSheet(workbook, ReportTables.Voids, voidRows, fromDate, toDate, generatedAtLabel);
         AddTableSheet(workbook, ReportTables.StockStatus, stockRows, fromDate, toDate, generatedAtLabel, "Stock levels as of the time this workbook was generated");
 
@@ -173,8 +187,8 @@ public sealed class MonthlyReportWorkbookService(
         workbook.SaveAs(stream);
         var workbookBytes = stream.ToArray();
 
-        var fileName = BuildFileName(year, month);
-        var relativePath = BuildRelativePath(year, month);
+        var fileName = BuildFileName(year, month, source);
+        var relativePath = BuildRelativePath(year, month, source);
         await storage.SaveAsync(
             relativePath,
             workbookBytes,
@@ -182,17 +196,18 @@ public sealed class MonthlyReportWorkbookService(
             generatedAtUtc,
             cancellationToken);
 
-        return await GetStatusAsync(year, month, cancellationToken);
+        return await GetStatusAsync(year, month, cancellationToken, source);
     }
 
     public async Task<MonthlyReportWorkbookStatusDto> GetStatusAsync(
         int year,
         int month,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        OrderSourceEnum? source = null)
     {
         ValidateMonth(year, month);
-        var fileName = BuildFileName(year, month);
-        var relativePath = BuildRelativePath(year, month);
+        var fileName = BuildFileName(year, month, source);
+        var relativePath = BuildRelativePath(year, month, source);
         var fileInfo = await storage.GetInfoAsync(relativePath, cancellationToken);
 
         return new MonthlyReportWorkbookStatusDto(
@@ -207,11 +222,12 @@ public sealed class MonthlyReportWorkbookService(
     public async Task<(byte[] Data, string FileName)?> GetFileAsync(
         int year,
         int month,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        OrderSourceEnum? source = null)
     {
         ValidateMonth(year, month);
-        var fileName = BuildFileName(year, month);
-        var relativePath = BuildRelativePath(year, month);
+        var fileName = BuildFileName(year, month, source);
+        var relativePath = BuildRelativePath(year, month, source);
         var bytes = await storage.ReadAllBytesAsync(relativePath, cancellationToken);
         if (bytes is null)
         {
@@ -392,14 +408,15 @@ public sealed class MonthlyReportWorkbookService(
         worksheet.Columns(1, headers.Count).AdjustToContents();
     }
 
-    private static string BuildFileName(int year, int month)
+    private static string BuildFileName(int year, int month, OrderSourceEnum? source)
     {
-        return string.Format(CultureInfo.InvariantCulture, FileNameFormat, year, month);
+        var name = string.Format(CultureInfo.InvariantCulture, FileNameFormat, year, month);
+        return source is null ? name : name.Replace(".xlsx", $"-{source}.xlsx", StringComparison.Ordinal);
     }
 
-    private static string BuildRelativePath(int year, int month)
+    private static string BuildRelativePath(int year, int month, OrderSourceEnum? source)
     {
         var folder = $"{ReportsFolder}/{year:0000}-{month:00}";
-        return $"{folder}/{BuildFileName(year, month)}";
+        return $"{folder}/{BuildFileName(year, month, source)}";
     }
 }

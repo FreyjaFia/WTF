@@ -202,7 +202,7 @@ describe('ReportsComponent', () => {
       expect(field('workbookMonth').value).toBe(3);
       expect(users.getUsers).toHaveBeenCalledWith({ isActive: true });
       expect(t.staffOptions().map((s) => s.name)).toEqual(['Amy A (aa)', 'noname', 'Zed Z (zz)']);
-      expect(reports['getMonthlyWorkbookStatus']).toHaveBeenCalledWith(2026, 3);
+      expect(reports['getMonthlyWorkbookStatus']).toHaveBeenCalledWith(2026, 3, null);
       expect(t.monthlyWorkbookStatus()?.fileName).toBe('WB.xlsx');
     });
 
@@ -672,19 +672,28 @@ describe('ReportsComponent', () => {
       t.selectTab('monthly-workbook');
     });
 
+    it('asks for the chosen source when it checks and generates', () => {
+      field('workbookSource').setValue(0);
+      t.onMonthlyWorkbookFilterChanged();
+      t.generateMonthlyWorkbook();
+
+      expect(reports['getMonthlyWorkbookStatus']).toHaveBeenLastCalledWith(2026, 3, 0);
+      expect(reports['generateMonthlyWorkbook']).toHaveBeenCalledWith(2026, 3, 0);
+    });
+
     it('checks the status when its tab opens or the month changes', () => {
-      expect(reports['getMonthlyWorkbookStatus']).toHaveBeenCalledWith(2026, 3);
+      expect(reports['getMonthlyWorkbookStatus']).toHaveBeenCalledWith(2026, 3, null);
 
       field('workbookMonth').setValue(2);
       t.onMonthlyWorkbookFilterChanged();
 
-      expect(reports['getMonthlyWorkbookStatus']).toHaveBeenLastCalledWith(2026, 2);
+      expect(reports['getMonthlyWorkbookStatus']).toHaveBeenLastCalledWith(2026, 2, null);
     });
 
     it('generates the workbook', () => {
       t.generateMonthlyWorkbook();
 
-      expect(reports['generateMonthlyWorkbook']).toHaveBeenCalledWith(2026, 3);
+      expect(reports['generateMonthlyWorkbook']).toHaveBeenCalledWith(2026, 3, null);
       expect(t.monthlyWorkbookStatus()?.fileName).toBe('Gen.xlsx');
       expect(alert['success']).toHaveBeenCalledWith('Monthly workbook generated: Gen.xlsx');
       expect(t.isGeneratingMonthlyWorkbook()).toBe(false);
@@ -703,7 +712,7 @@ describe('ReportsComponent', () => {
       t.downloadMonthlyWorkbook();
       await settle();
 
-      expect(reports['downloadMonthlyWorkbook']).toHaveBeenCalledWith(2026, 3);
+      expect(reports['downloadMonthlyWorkbook']).toHaveBeenCalledWith(2026, 3, null);
       expect(fileDownload.saveBlob).toHaveBeenCalledWith(
         blob,
         'WB.xlsx',

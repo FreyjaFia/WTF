@@ -175,7 +175,7 @@ public static class ReportEndpoints
         reportsGroup.MapGet("/monthly-workbook/status",
             async ([AsParameters] MonthlyWorkbookRequest request, IMonthlyReportWorkbookService workbookService, CancellationToken cancellationToken) =>
             {
-                var validation = ValidateMonthRequest(request.Year, request.Month);
+                var validation = ValidateMonthRequest(request.Year, request.Month, request.Source);
                 if (validation is not null)
                 {
                     return validation;
@@ -184,7 +184,8 @@ public static class ReportEndpoints
                 var status = await workbookService.GetStatusAsync(
                     request.Year,
                     request.Month,
-                    cancellationToken);
+                    cancellationToken,
+                    request.Source);
 
                 return Results.Ok(status);
             });
@@ -192,7 +193,7 @@ public static class ReportEndpoints
         reportsGroup.MapPost("/monthly-workbook/generate",
             async (HttpContext httpContext, [AsParameters] MonthlyWorkbookRequest request, IMonthlyReportWorkbookService workbookService, CancellationToken cancellationToken) =>
             {
-                var validation = ValidateMonthRequest(request.Year, request.Month);
+                var validation = ValidateMonthRequest(request.Year, request.Month, request.Source);
                 if (validation is not null)
                 {
                     return validation;
@@ -203,7 +204,8 @@ public static class ReportEndpoints
                     request.Year,
                     request.Month,
                     requestedTimeZone,
-                    cancellationToken);
+                    cancellationToken,
+                    request.Source);
 
                 return Results.Ok(status);
             })
@@ -212,7 +214,7 @@ public static class ReportEndpoints
         reportsGroup.MapGet("/monthly-workbook/download",
             async ([AsParameters] MonthlyWorkbookRequest request, IMonthlyReportWorkbookService workbookService, CancellationToken cancellationToken) =>
             {
-                var validation = ValidateMonthRequest(request.Year, request.Month);
+                var validation = ValidateMonthRequest(request.Year, request.Month, request.Source);
                 if (validation is not null)
                 {
                     return validation;
@@ -221,7 +223,8 @@ public static class ReportEndpoints
                 var file = await workbookService.GetFileAsync(
                     request.Year,
                     request.Month,
-                    cancellationToken);
+                    cancellationToken,
+                    request.Source);
 
                 if (file is null)
                 {
@@ -257,7 +260,7 @@ public static class ReportEndpoints
         return null;
     }
 
-    private static IResult? ValidateMonthRequest(int year, int month)
+    private static IResult? ValidateMonthRequest(int year, int month, OrderSourceEnum? source)
     {
         if (year < 2000 || year > 2100)
         {
@@ -267,6 +270,11 @@ public static class ReportEndpoints
         if (month is < 1 or > 12)
         {
             return Results.BadRequest("month must be between 1 and 12.");
+        }
+
+        if (source.HasValue && !Enum.IsDefined(source.Value))
+        {
+            return Results.BadRequest("source must be Pos or CustomerLink.");
         }
 
         return null;
@@ -404,5 +412,7 @@ public static class ReportEndpoints
         public int Year { get; init; }
 
         public int Month { get; init; }
+
+        public OrderSourceEnum? Source { get; init; }
     }
 }

@@ -3,6 +3,7 @@ using MediatR;
 using Microsoft.AspNetCore.Http;
 using NSubstitute;
 using WTF.Api.Endpoints;
+using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Features.Reports;
 using WTF.Api.Features.Reports.DTOs;
 using WTF.Api.Features.Reports.Enums;
@@ -17,6 +18,7 @@ public class MonthlyReportWorkbookServiceTests
     private readonly ISender _sender = Substitute.For<ISender>();
     private readonly List<(string Query, DateTime? From, DateTime? To, string? TimeZone)> _calls = [];
 
+    private OrderSourceEnum? _dailySource;
     private List<DailySalesReportRowDto> _daily = [];
     private List<DailyCloseReportRowDto> _close = [];
     private List<CategorySalesReportRowDto> _categories = [];
@@ -66,6 +68,7 @@ public class MonthlyReportWorkbookServiceTests
         {
             var q = ci.Arg<GetDailySalesReportQuery>();
             _calls.Add((nameof(GetDailySalesReportQuery), q.FromDate, q.ToDate, Tz()));
+            _dailySource = q.Source;
             q.GroupBy.ShouldBe(ReportGroupByEnum.Day);
             return Task.FromResult(_daily);
         });
@@ -189,6 +192,44 @@ public class MonthlyReportWorkbookServiceTests
         status.Exists.ShouldBeTrue();
         status.FileName.ShouldBe("WTF-Monthly-Reports-2026-03.xlsx");
         status.SizeBytes.ShouldBe(saved.Data.Length);
+    }
+
+    [Fact]
+    public async Task GenerateAsync_ShopOrdersOnly_UsesItsOwnFileAndSkipsTheCustomerLinkSheet()
+    {
+        var status = await Create().GenerateAsync(2026, 3, "Asia/Manila", CancellationToken.None, OrderSourceEnum.Pos);
+
+        _dailySource.ShouldBe(OrderSourceEnum.Pos);
+        status.FileName.ShouldBe("WTF-Monthly-Reports-2026-03-Pos.xlsx");
+        _storage.Files.Keys.ShouldBe(["reports/monthly/2026-03/WTF-Monthly-Reports-2026-03-Pos.xlsx"]);
+
+        using var wb = new XLWorkbook(new MemoryStream(_storage.Saves.Single().Data));
+        wb.Worksheets.Select(w => w.Name).ShouldBe(SheetNames.Where(n => n != "Customer Link Orders"));
+    }
+
+    [Fact]
+    public async Task GenerateAsync_CustomerLinkOrdersOnly_KeepsAllSheetsInItsOwnFile()
+    {
+        var status = await Create().GenerateAsync(2026, 3, "Asia/Manila", CancellationToken.None, OrderSourceEnum.CustomerLink);
+
+        _dailySource.ShouldBe(OrderSourceEnum.CustomerLink);
+        status.FileName.ShouldBe("WTF-Monthly-Reports-2026-03-CustomerLink.xlsx");
+
+        using var wb = new XLWorkbook(new MemoryStream(_storage.Saves.Single().Data));
+        wb.Worksheets.Count.ShouldBe(12);
+    }
+
+    [Fact]
+    public async Task GetStatusAsync_BySource_ChecksThatSourcesFileOnly()
+    {
+        _storage.Files["reports/monthly/2026-03/WTF-Monthly-Reports-2026-03.xlsx"] = ([1, 2, 3], DateTimeOffset.UtcNow);
+
+        var all = await Create().GetStatusAsync(2026, 3, CancellationToken.None);
+        var shop = await Create().GetStatusAsync(2026, 3, CancellationToken.None, OrderSourceEnum.Pos);
+
+        all.Exists.ShouldBeTrue();
+        shop.Exists.ShouldBeFalse();
+        shop.FileName.ShouldBe("WTF-Monthly-Reports-2026-03-Pos.xlsx");
     }
 
     [Fact]

@@ -565,6 +565,21 @@
             }
           </select>
         </label>
+
+        <label
+          class="bg-surface flex min-w-0 flex-col gap-1 rounded-lg px-3 py-2 ring-1 ring-gray-200 transition-colors focus-within:ring-2 focus-within:ring-gray-300"
+        >
+          <span class="text-[11px] font-semibold tracking-wide text-gray-500 uppercase">Source</span>
+          <select
+            class="focus:caret-brand w-full bg-transparent px-3 text-sm text-gray-700 focus:outline-none"
+            formControlName="workbookSource"
+            (change)="onMonthlyWorkbookFilterChanged()"
+          >
+            @for (sourceOption of sourceOptions; track sourceOption.label) {
+              <option [ngValue]="sourceOption.value">{{ sourceOption.label }}</option>
+            }
+          </select>
+        </label>
       </form>
 
       <div class="mt-4 flex flex-wrap items-center gap-2">
