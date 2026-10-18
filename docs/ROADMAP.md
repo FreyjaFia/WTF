@@ -583,7 +583,7 @@ analysis that can be exported and shared.
 | 1     | Core Reports + Export UX                 | [Completed]  |
 | 2     | Monthly Workbook Automation              | [Completed]  |
 | 3     | Central Calculator + Report Consistency  | [Completed]  |
-| 4     | Report Page Rework + New Reports         | [Implemented, being verified] |
+| 4     | Report Page Rework + New Reports         | [Implemented, checked] |
 
 ### Phase 1 - Core Reports + Export UX [Completed]
 
@@ -773,13 +773,31 @@ database) and compared every figure with the answer worked out by hand, using th
   each line's total in the browser (now with the shared calculator, so it cannot drift from the API). Showing a
   server-provided line total would need a new field on `OrderItemDto`.
 
-### Phase 4 - Report Page Rework + New Reports [Implemented, being verified]
+### Phase 4 - Report Page Rework + New Reports [Implemented, checked]
 
-**Built (Oct 2026):** exports follow the on-screen search and sort (`search`, `sortBy`, `sortDir`; totals over the remaining rows); daily sales shows gross sales, refunded and net sales (`SalesSummary.RefundedAmount/GrossSales/NetSales`); product report can list add-ons as separate rows (`splitAddOns`); the page is a report catalog (Sales, Products, Staff, Customers, Operations, Inventory) driven by one definition per report (`report-definitions.ts`) and one generic table with the shared sort header, charts, CSV and more date presets; new reports: Daily Close (Z-report), Voids and Refunds (with reason), Promotions Performance, Customer Link Orders, Customers, Stock Status. Report ranges are capped at 366 days and exports at 50,000 rows. New math lives in `WTF.Calculations` (`ReportRules`, `StockRules`, `SalesRules.VoidRate`). Not done: monthly workbook still ignores the source filter, weekday x hour heatmap, add-on attach rate, purchases and theoretical usage reports, upgrades listed in step 4, server-side row limits in the handlers.
+**Built (Oct 2026):** exports follow the on-screen search and sort (`search`, `sortBy`, `sortDir`; totals over the remaining rows); daily sales shows gross sales, refunded and net sales (`SalesSummary.RefundedAmount/GrossSales/NetSales`); product report can list add-ons as separate rows (`splitAddOns`); the page is a report catalog (Sales, Products, Staff, Customers, Operations, Inventory) driven by one definition per report (`report-definitions.ts`) and one generic table with the shared sort header, charts, CSV and more date presets; new reports: Daily Close (Z-report), Voids and Refunds (with reason), Promotions Performance, Customer Link Orders, Customers, Stock Status. Report ranges are capped at 366 days and exports at 50,000 rows. New math lives in `WTF.Calculations` (`ReportRules`, `StockRules`, `SalesRules.VoidRate`). Not done: see "Still open" at the end of Round 2.
 
 The original findings and plan follow.
 
 **Round 2 (Oct 2026):** every sales table now shows its steps in order, gross (list price x quantity, add-ons included) - discount (OriginalPrice vs Price) - refunded = net, with a Total row that equals the sum of the rows on screen, Excel, PDF and CSV (not on Daily Close, whose sections mix different measures). Applies to daily sales, product, the new Sales by Category, payments, hourly and staff. Refunded orders now feed those reports (quantity and order counts stay completed-only); a bundle's price is both its gross and net (no discount is attributed); tips and the average order value stay outside the identity (tips are order-level). The math is in `OrderMetrics.ComputeOrderBreakdown` and `SalesSummary.Discounts/GrossSales`. Layout: below 1280 px the reports show cards (two columns from tablet width), the table starts at 1280 px with low-value columns hidden until 1536 px; the report header is a compact back button, title, filters and refresh, with search and Excel/PDF/CSV below. The monthly workbook now has 12 sheets built from the same report tables (adds Daily Close, Sales by Category, Promotions, Customers, Customer Link Orders, Voids and Refunds, Stock Status). The dashboard has an insights row (refunds and discounts, void rate, stock to restock, awaiting approval, customer link orders, top promotion, new vs returning customers) that links to the matching report (`/management/reports?report=<slug>`).
+
+**Still open (after Round 2):**
+
+- Weekday x hour heatmap and add-on attach rate (add-on performance) reports.
+- Inventory reports: purchases (stock-in with cost) and theoretical usage and margin.
+- Step 4 upgrades not built: pending count and previous-period comparison, best and worst day (daily); cumulative share, active products with no sales (product); source split (payments); average per day, peak hour, hide closed hours (hourly); voids per staff, items per order (staff). Refunded amount and net sales for the daily report are done (Round 2).
+- Report handlers still load full order graphs into memory; they now refuse a range over 100,000 rows with a clear message, but a lighter query is still to do.
+- Not yet checked: the contents of the Excel/PDF/CSV exports (the workbook files were generated and downloaded per source, but not opened).
+
+**Round 3 (18 Oct 2026):** the monthly workbook takes an optional source (`source` on status, generate and download; its own file per source, `...-Pos.xlsx` and `...-CustomerLink.xlsx`; the shop-only file leaves out the Customer Link Orders sheet; the scheduler still builds the all-orders file). The Monthly Workbook tab has a Source select. Report handlers refuse more than 100,000 rows (`ReportQueryLimits`). Payments report has a Tips column (tips per method). Chart y-axes no longer repeat a label when the maximum is tiny (`chartTickCount`). The closed Filters drawer no longer casts a shadow on the right edge of the page. The cafe style's awning stripe is painted over the top edge instead of taking 7px of layout, so the header and page start at the same place in both styles.
+
+**Checked in the running app (18 Oct 2026):** API and Angular app against a throwaway LocalDB database (never the real `WTF` database) with five hand-countable orders: today two completed (2 Latte at 150 with a 10 tip, cash; Croissant 120 + Latte 150, GCash), one refunded (Latte 150), one cancelled; yesterday one completed (2 Croissant, 240). Everything matched the hand-worked answer:
+
+- Daily sales API: today revenue 570, 2 orders, average 285, tips 10, 2 voided (1 refunded, 150), gross 720, net 570; yesterday 240.
+- Payments: cash 300 (gross 450, refunded 150), GCash 270; 52.6% / 47.4%.
+- Product sales: Latte 3 sold, revenue 450, gross 600, refunded 150; Croissant 1, revenue 120.
+- Screens: Daily Sales Summary tiles over the 7-day default (gross 960, refunded 150, net 810, 3 orders, average 270, tips 10), the net sales chart, the report catalog page and Daily Close (same figures). The catalog lists all six groups.
+- Layout sweep (headless browser, Asia/Manila): the dashboard, orders, items, products, customers, the report catalog and six reports (daily, close, payments, products, voids, stock), plus the Monthly Workbook tab, at desktop (1440), tablet (820) and phone (390), in the default and cafe styles. No horizontal overflow, no page errors, and the header and page titles sit at the same position in both styles. Figures matched the hand-worked seed (dashboard: 570 sales, 4 orders, 285 average, +138% vs yesterday, void rate 50%, 1 low-stock item; stock status Warning for 3 L against a warning level of 5).
 
 
 Findings from a review of the reports page and handlers (Oct 2026). Build the shared pieces first, then the reports.
@@ -815,7 +833,7 @@ Findings from a review of the reports page and handlers (Oct 2026). Build the sh
 3. Inventory reports: stock status (warning, critical, out of stock, stock value), purchases (stock-in with cost), and
    theoretical usage and margin (sales x `ProductItemLink.QuantityPerSale` x item cost; works without order-time stock
    deduction). Actual vs theoretical usage needs order-time stock deduction (see Inventory).
-4. Upgrades to existing reports: daily (refunded amount, net sales, pending count, previous-period comparison, best and
+4. Upgrades to existing reports: daily (pending count, previous-period comparison, best and
    worst day); product (add-on toggle, category rollup, cumulative share, active products with no sales); payments (source
    split, tips per method); hourly (average per day, peak hour, hide closed hours); staff (voids per staff, items per order).
 
@@ -1971,10 +1989,12 @@ service/component, snapshots updated in the same change).
 
 ---
 
-## Button States & Text Audit [Planned]
+## Button States & Text Audit [Partly done]
 
 A cleanup pass over every button in the app, following `docs/BUTTONS.md` and the
 `button-conventions.spec.ts` rules. To be reviewed before work starts.
+
+**First pass (18 Oct 2026):** a script scanned every template. Every save, delete, restore, download, sync and generate button already has a disabled state and a spinner, directly or through `app-confirm-dialog`'s busy state; loading texts follow one pattern (Saving..., Deleting..., Restoring..., Downloading...); the only dialogs without a busy state are the synchronous ones (discard, leave, log out). No layout wrapping or overflow was found in the browser sweep. Still open: editor pages can be opened by URL for inactive records (no route guard yet), and "Updating Order..." vs "Saving Order..." vs "Processing Order..." could be unified.
 
 ### Audit checklist
 
