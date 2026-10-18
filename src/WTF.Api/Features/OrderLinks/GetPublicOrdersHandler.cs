@@ -16,7 +16,7 @@ public record GetPublicOrderQuery(string Token, Guid OrderId) : IRequest<PublicO
 /// My orders. A customer sees the orders they placed through any of their links (so a regenerated link keeps the
 /// history), never POS orders and never another customer's orders.
 /// </summary>
-public class GetPublicOrdersHandler(WTFDbContext db)
+public class GetPublicOrdersHandler(WTFDbContext db, IHttpContextAccessor? httpContextAccessor = null)
     : IRequestHandler<GetPublicOrdersQuery, PagedResultDto<PublicOrderDto>?>,
       IRequestHandler<GetPublicOrderQuery, PublicOrderDto?>
 {
@@ -48,7 +48,7 @@ public class GetPublicOrdersHandler(WTFDbContext db)
             .ToListAsync(cancellationToken);
 
         return new PagedResultDto<PublicOrderDto>(
-            await PublicOrderMapping.ToDtosAsync(db, orders, cancellationToken), page, pageSize, total);
+            await PublicOrderMapping.ToDtosAsync(db, orders, httpContextAccessor, cancellationToken), page, pageSize, total);
     }
 
     public async Task<PublicOrderDto?> Handle(GetPublicOrderQuery request, CancellationToken cancellationToken)
@@ -71,7 +71,7 @@ public class GetPublicOrdersHandler(WTFDbContext db)
             return null;
         }
 
-        return (await PublicOrderMapping.ToDtosAsync(db, [order], cancellationToken))[0];
+        return (await PublicOrderMapping.ToDtosAsync(db, [order], httpContextAccessor, cancellationToken))[0];
     }
 
     private IQueryable<WTF.Domain.Entities.Order> OwnOrders(Guid customerId) =>

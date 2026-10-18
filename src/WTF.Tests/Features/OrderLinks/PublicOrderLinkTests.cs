@@ -1,9 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using System.Reflection;
-using WTF.Api.Features.OrderLinks;
 using WTF.Api.Features.OrderLinks.DTOs;
+using WTF.Api.Features.OrderLinks;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Features.Products.Enums;
+using WTF.Api.Features.Promotions.DTOs;
 using WTF.Domain.Entities;
 using WTF.Tests.Infrastructure;
 
@@ -453,8 +454,79 @@ public class PublicOrderLinkTests
         result.Items.Select(o => o.Id).ShouldBe([newer.Id, older.Id]);
     }
 
+    private async Task AddDiscountAsync(Guid productId, decimal? amountOff, decimal? percent, bool active = true)
+    {
+        var promo = new Promotion
+        {
+            Id = Guid.NewGuid(),
+            Name = "Disc",
+            TypeId = PromotionTypeIds.DiscountedProduct,
+            IsActive = active,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = _staffId
+        };
+        promo.DiscountedProductPromotions.Add(new DiscountedProductPromotion
+        {
+            Id = Guid.NewGuid(),
+            PromotionId = promo.Id,
+            ProductId = productId,
+            FixedPrice = amountOff,
+            PercentOff = percent
+        });
+        await TestDb.SaveAsync(_db, promo);
+    }
+
+    [Fact]
+    public async Task Orders_WaitingOrder_ShowsTheDiscountedLineAndTotal()
+    {
+        var ana = await AddCustomerAsync();
+        var link = await AddLinkAsync(ana.Id);
+        var latte = await AddProductAsync("Latte", 150m);
+        await AddDiscountAsync(latte.Id, 30m, null);
+        var order = await AddOrderAsync(ana.Id, linkId: link.Id);
+        await AddLineAsync(order.Id, latte.Id, 2);
+
+        var result = await Orders().Handle(new GetPublicOrdersQuery(link.Token), CancellationToken.None);
+        var single = await Orders().Handle(new GetPublicOrderQuery(link.Token, order.Id), CancellationToken.None);
+
+        result!.Items.Single().Total.ShouldBe(240m);
+        result.Items.Single().Items.Single().UnitPrice.ShouldBe(120m);
+        single!.Total.ShouldBe(240m);
+    }
+
+    [Fact]
+    public async Task Orders_RejectedOrder_ShowsTheListPrice()
+    {
+        var ana = await AddCustomerAsync();
+        var link = await AddLinkAsync(ana.Id);
+        var latte = await AddProductAsync("Latte", 150m);
+        await AddDiscountAsync(latte.Id, 30m, null);
+        var order = await AddOrderAsync(ana.Id, status: OrderStatusEnum.Cancelled, rejectionReason: "Closed", linkId: link.Id);
+        await AddLineAsync(order.Id, latte.Id, 1);
+
+        var single = await Orders().Handle(new GetPublicOrderQuery(link.Token, order.Id), CancellationToken.None);
+
+        single!.Total.ShouldBe(150m);
+    }
+
+    [Fact]
+    public async Task Orders_InactiveDiscount_ShowsTheListPrice()
+    {
+        var ana = await AddCustomerAsync();
+        var link = await AddLinkAsync(ana.Id);
+        var latte = await AddProductAsync("Latte", 150m);
+        await AddDiscountAsync(latte.Id, 30m, null, active: false);
+        var order = await AddOrderAsync(ana.Id, linkId: link.Id);
+        await AddLineAsync(order.Id, latte.Id, 1);
+
+        var single = await Orders().Handle(new GetPublicOrderQuery(link.Token, order.Id), CancellationToken.None);
+
+        single!.Total.ShouldBe(150m);
+    }
+
     [Fact]
     public async Task Orders_ArePaged()
+
     {
         var ana = await AddCustomerAsync();
         var link = await AddLinkAsync(ana.Id);

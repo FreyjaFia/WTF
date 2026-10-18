@@ -38,16 +38,21 @@ public static class PublicOrderMapping
 
     /// <summary>Loads everything the mapping needs for these orders in one extra query and builds the DTOs.</summary>
     public static async Task<List<PublicOrderDto>> ToDtosAsync(
-        WTFDbContext db, IReadOnlyList<Order> orders, CancellationToken cancellationToken)
+        WTFDbContext db,
+        IReadOnlyList<Order> orders,
+        IHttpContextAccessor? httpContextAccessor,
+        CancellationToken cancellationToken)
     {
         // Orders that are not completed yet store no prices, so add-on prices come from the current overrides.
         var overridePrices = await AddOnPriceLookup.ForOrdersAsync(db, orders, cancellationToken);
+        var previewPrices = await PendingOrderPreview.LoadAsync(db, orders, httpContextAccessor, cancellationToken);
 
-        return [.. orders.Select(order => ToDto(order, overridePrices))];
+        return [.. orders.Select(order => ToDto(order, overridePrices, previewPrices))];
     }
 
     private static PublicOrderDto ToDto(
-        Order order, IReadOnlyDictionary<(Guid ProductId, Guid AddOnId), decimal> overridePrices)
+        Order order, IReadOnlyDictionary<(Guid ProductId, Guid AddOnId), decimal> overridePrices,
+        IReadOnlyDictionary<Guid, decimal> previewPrices)
     {
         var (label, kind) = StatusOf(order.StatusId, order.RejectionReason, order.ReadyAt, order.FulfillmentType);
 
@@ -58,7 +63,7 @@ public static class PublicOrderMapping
             .Select(parent => new PublicOrderItemDto(
                 parent.Product.Name,
                 parent.Quantity,
-                parent.Price ?? parent.Product.Price,
+                parent.Price ?? (previewPrices.TryGetValue(parent.Id, out var previewPrice) ? previewPrice : parent.Product.Price),
                 [.. order.OrderItems
                     .Where(child => child.ParentOrderItemId == parent.Id && child.BundlePromotionId == null)
                     .OrderBy(child => child.SortOrder)
@@ -81,7 +86,7 @@ public static class PublicOrderMapping
             kind,
             order.RejectionReason,
             items,
-            OrderMetrics.ComputeOrderTotal(order, overridePrices),
+            OrderMetrics.ComputeOrderTotal(order, overridePrices, previewPrices),
             order.FulfillmentType.HasValue ? ((FulfillmentTypeEnum)order.FulfillmentType.Value).ToString() : null,
             order.DeliveryAddress,
             order.ContactNumber,

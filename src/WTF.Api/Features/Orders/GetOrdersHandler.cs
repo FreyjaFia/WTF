@@ -14,7 +14,7 @@ public record GetOrdersQuery(
     Guid? CustomerId = null,
     bool ExcludeFinalized = false) : IRequest<List<OrderDto>>;
 
-public class GetOrdersHandler(WTFDbContext db) : IRequestHandler<GetOrdersQuery, List<OrderDto>>
+public class GetOrdersHandler(WTFDbContext db, IHttpContextAccessor? httpContextAccessor = null) : IRequestHandler<GetOrdersQuery, List<OrderDto>>
 {
     public async Task<List<OrderDto>> Handle(GetOrdersQuery request, CancellationToken cancellationToken)
     {
@@ -58,6 +58,8 @@ public class GetOrdersHandler(WTFDbContext db) : IRequestHandler<GetOrdersQuery,
             db,
             orders.SelectMany(o => o.OrderItems.Where(oi => oi.ParentOrderItemId == null)),
             cancellationToken);
+
+        var previewPrices = await PendingOrderPreview.LoadAsync(db, orders, httpContextAccessor, cancellationToken);
 
         return [.. orders.Select(o =>
         {
@@ -111,7 +113,7 @@ public class GetOrdersHandler(WTFDbContext db) : IRequestHandler<GetOrdersQuery,
                     obp.UnitPrice))
                 .ToList();
 
-            var totalAmount = OrderMetrics.ComputeOrderTotal(o, overridePrices);
+            var totalAmount = OrderMetrics.ComputeOrderTotal(o, overridePrices, previewPrices);
 
             return new OrderDto(
                 o.Id,

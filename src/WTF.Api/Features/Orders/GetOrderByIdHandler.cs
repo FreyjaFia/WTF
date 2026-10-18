@@ -10,7 +10,7 @@ namespace WTF.Api.Features.Orders;
 
 public record GetOrderByIdQuery(Guid Id) : IRequest<OrderDto?>;
 
-public class GetOrderByIdHandler(WTFDbContext db) : IRequestHandler<GetOrderByIdQuery, OrderDto?>
+public class GetOrderByIdHandler(WTFDbContext db, IHttpContextAccessor? httpContextAccessor = null) : IRequestHandler<GetOrderByIdQuery, OrderDto?>
 {
     public async Task<OrderDto?> Handle(GetOrderByIdQuery request, CancellationToken cancellationToken)
     {
@@ -37,6 +37,7 @@ public class GetOrderByIdHandler(WTFDbContext db) : IRequestHandler<GetOrderById
             .ThenBy(oi => oi.Id)
             .ToList();
         var overridePrices = await AddOnPriceLookup.ForParentItemsAsync(db, parentItems, cancellationToken);
+        var previewPrices = await PendingOrderPreview.LoadAsync(db, [order], httpContextAccessor, cancellationToken);
 
         var items = parentItems
             .Select(oi =>
@@ -85,7 +86,7 @@ public class GetOrderByIdHandler(WTFDbContext db) : IRequestHandler<GetOrderById
                 obp.UnitPrice))
             .ToList();
 
-        var totalAmount = OrderMetrics.ComputeOrderTotal(order, overridePrices);
+        var totalAmount = OrderMetrics.ComputeOrderTotal(order, overridePrices, previewPrices);
 
         return new OrderDto(
             order.Id,

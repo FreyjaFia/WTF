@@ -401,10 +401,11 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
             .ToListAsync(cancellationToken);
 
         var recentOverridePrices = await AddOnPriceLookup.ForOrdersAsync(db, recentOrderEntities, cancellationToken);
+        var recentPreviewPrices = await PendingOrderPreview.LoadAsync(db, recentOrderEntities, httpContextAccessor, cancellationToken);
 
         return recentOrderEntities.Select(o =>
         {
-            var total = OrderMetrics.ComputeOrderTotal(o, recentOverridePrices);
+            var total = OrderMetrics.ComputeOrderTotal(o, recentOverridePrices, recentPreviewPrices);
             return new RecentOrderDto(o.Id, o.OrderNumber, o.CreatedAt, total, o.StatusId, o.Status.Name);
         }).ToList();
     }

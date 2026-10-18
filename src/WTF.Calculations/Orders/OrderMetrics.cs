@@ -6,14 +6,16 @@ public static class OrderMetrics
 {
     public static decimal ComputeOrderTotal(
         Order order,
-        IReadOnlyDictionary<(Guid ProductId, Guid AddOnId), decimal> addOnOverridePrices)
+        IReadOnlyDictionary<(Guid ProductId, Guid AddOnId), decimal> addOnOverridePrices,
+        IReadOnlyDictionary<Guid, decimal>? previewUnitPrices = null)
     {
         var regularTotal = order.OrderItems
             .Where(oi => oi.ParentOrderItemId == null && oi.BundlePromotionId == null)
             .Sum(parent => ComputeParentItemTotal(
                 parent,
                 order.OrderItems.Where(child => child.ParentOrderItemId == parent.Id && child.BundlePromotionId == null),
-                addOnOverridePrices));
+                addOnOverridePrices,
+                previewUnitPrices));
 
         var bundleTotal = order.OrderBundlePromotions.Sum(bundle => bundle.UnitPrice * bundle.Quantity);
         return regularTotal + bundleTotal;
@@ -22,9 +24,12 @@ public static class OrderMetrics
     public static decimal ComputeParentItemTotal(
         OrderItem parentItem,
         IEnumerable<OrderItem> addOnItems,
-        IReadOnlyDictionary<(Guid ProductId, Guid AddOnId), decimal> addOnOverridePrices)
+        IReadOnlyDictionary<(Guid ProductId, Guid AddOnId), decimal> addOnOverridePrices,
+        IReadOnlyDictionary<Guid, decimal>? previewUnitPrices = null)
     {
-        var parentUnitPrice = parentItem.Price ?? parentItem.Product.Price;
+        // An order that is not completed yet has no saved price: use the discounted price it would get today, if any.
+        var parentUnitPrice = parentItem.Price
+            ?? (previewUnitPrices is not null && previewUnitPrices.TryGetValue(parentItem.Id, out var preview) ? preview : parentItem.Product.Price);
         var addOnPerUnit = addOnItems.Sum(child => AddOnUnitPrice(parentItem, child, addOnOverridePrices) * child.Quantity);
 
         return (parentUnitPrice + addOnPerUnit) * parentItem.Quantity;

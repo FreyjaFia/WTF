@@ -2,9 +2,9 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
 using WTF.Api.Features.OrderLinks.DTOs;
-using WTF.Api.Features.Orders;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
+using WTF.Api.Features.Orders;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Features.OrderLinks;
@@ -39,7 +39,8 @@ public class SubmitPublicOrderHandler(
     WTFDbContext db,
     ISender sender,
     ILogger<SubmitPublicOrderHandler> logger,
-    TimeProvider timeProvider) : IRequestHandler<SubmitPublicOrderCommand, PublicOrderDto?>
+    TimeProvider timeProvider,
+    IHttpContextAccessor? httpContextAccessor = null) : IRequestHandler<SubmitPublicOrderCommand, PublicOrderDto?>
 {
     public const string SystemUsername = "customer-link";
 
@@ -200,7 +201,7 @@ public class SubmitPublicOrderHandler(
             .AsSplitQuery()
             .FirstAsync(cancellationToken);
 
-        return (await PublicOrderMapping.ToDtosAsync(db, [order], cancellationToken))[0];
+        return (await PublicOrderMapping.ToDtosAsync(db, [order], httpContextAccessor, cancellationToken))[0];
     }
 
     private sealed record Line(Guid ProductId, int Quantity, List<PublicOrderAddOnRequest> AddOns, string? SpecialInstructions);

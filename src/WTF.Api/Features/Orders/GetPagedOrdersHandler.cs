@@ -19,7 +19,7 @@ public sealed record GetPagedOrdersQuery(
     int PageSize = 20,
     OrderSourceEnum? Source = null) : IRequest<PagedResultDto<OrderDto>>;
 
-public sealed class GetPagedOrdersHandler(WTFDbContext db)
+public sealed class GetPagedOrdersHandler(WTFDbContext db, IHttpContextAccessor? httpContextAccessor = null)
     : IRequestHandler<GetPagedOrdersQuery, PagedResultDto<OrderDto>>
 {
     public async Task<PagedResultDto<OrderDto>> Handle(GetPagedOrdersQuery request, CancellationToken cancellationToken)
@@ -91,6 +91,7 @@ public sealed class GetPagedOrdersHandler(WTFDbContext db)
             db,
             orders.SelectMany(o => o.OrderItems.Where(oi => oi.ParentOrderItemId == null)),
             cancellationToken);
+        var previewPrices = await PendingOrderPreview.LoadAsync(db, orders, httpContextAccessor, cancellationToken);
 
         var items = orders.Select(o =>
         {
@@ -142,7 +143,7 @@ public sealed class GetPagedOrdersHandler(WTFDbContext db)
                     obp.UnitPrice))
                 .ToList();
 
-            var totalAmount = OrderMetrics.ComputeOrderTotal(o, overridePrices);
+            var totalAmount = OrderMetrics.ComputeOrderTotal(o, overridePrices, previewPrices);
 
             return new OrderDto(
                 o.Id,
