@@ -1206,6 +1206,24 @@ Planned implementation slices:
 - Reporting review to ensure bundled child add-on selections are represented consistently where needed.
 
 
+### Promotions Audit (18 Oct 2026)
+
+Audited the API and the screens, and reproduced each bug on a throwaway database.
+
+**Fixed (server, checked by hand on a throwaway database and by tests)**
+
+- **Bundle contents are checked when an order is saved** (`WTF.Calculations/Orders/BundleRules`, used through `WTF.Api/Common/Orders/BundlePromotionResolver` by both the create and the update handler, replacing two copies). A fixed bundle needs exactly its products, at its quantity times the bundle quantity, with exactly its add-ons. A mix & match needs its required count times the bundle quantity, only listed products, and no product above the per-order maximum times the bundle quantity. A mismatch is a 400 that names the bundle and the product. Before this, a "2 Lattes" bundle with one Croissant in it was billed at the bundle price.
+- **A completed order can still be corrected after its bundle ends.** In the override flow a bundle already on the order keeps the price it was sold at and is not re-checked. Adding an ended bundle to an order is still refused.
+- **Promotion save validation:** products and add-ons must exist (a missing one used to be a 500), be active, and an add-on cannot be the sold product; a fixed bundle cannot list a product twice (was a 500) or have a negative price; names over 100 characters give a 400 (was a 500). An inactive promotion may still list products that have been deactivated since (`PromotionProductValidation`).
+
+**Open (in this order)**
+
+1. **Offline orders that meet a changed catalog.** Plan decided: a synced offline order whose products, prices or promotions changed is held as `PendingReview` for an Admin to approve or reject, with the reasons listed on the order. Orders sync one at a time inside a batch request, each with its own result, and `OfflineLocalId` makes a retried sync return the saved order instead of a duplicate. The POS must queue each line's quoted price. The script `tools/sql/20261018_add_order_review_holds.sql` (status 6, `ReviewReasons`, `QuotedTotal`, `OfflineLocalId`) and the scaffolded columns are done; nothing uses them yet. Until this lands, an offline order made with a stale bundle fails its batch of 5 with the server's message.
+2. **Status on the screens.** The list and details show "Active" for an expired or not-yet-started promotion and show no dates or price. They need a scheduled, active, ended or inactive state.
+3. **Editor shows a blank name** for a bundle product that was deactivated since.
+4. **No audit entries** for promotion create, update, delete and restore.
+5. Smaller: three copies of the add-on grouping method in `promotion-editor.ts`; the list subtitle leaves out discounted products; no inline check for end before start or a negative price; the date pickers use the browser's time zone while the server uses Asia/Manila.
+
 ---
 
 ## Automated Testing Plan [Mostly Completed]
