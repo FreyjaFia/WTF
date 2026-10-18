@@ -303,6 +303,9 @@ describe('OrderEditor', () => {
     customers: ReturnType<typeof signal<CustomerDto[]>>;
     bundlePromotions: ReturnType<typeof signal<PromotionListItemDto[]>>;
     getAddOnsForProduct: ReturnType<typeof vi.fn>;
+    getFixedBundle: ReturnType<typeof vi.fn>;
+    getMixMatch: ReturnType<typeof vi.fn>;
+    discountedPromotions: ReturnType<typeof vi.fn>;
   };
   let modalStack: ModalStackService;
   let selectorOpen: ReturnType<typeof vi.spyOn>;
@@ -435,6 +438,9 @@ describe('OrderEditor', () => {
       customers: signal<CustomerDto[]>([customerJane]),
       bundlePromotions: signal<PromotionListItemDto[]>([]),
       getAddOnsForProduct: vi.fn().mockReturnValue([]),
+      getFixedBundle: vi.fn().mockReturnValue(undefined),
+      getMixMatch: vi.fn().mockReturnValue(undefined),
+      discountedPromotions: vi.fn().mockReturnValue([]),
     };
 
     queryParams$ = new BehaviorSubject<ParamMap>(convertToParamMap({}));
@@ -712,11 +718,10 @@ describe('OrderEditor', () => {
       await start();
       t.addToCart(P_LATTE);
       expect(selectorOpen).toHaveBeenCalledWith(P_LATTE, {
-        promoLabel: expect.stringContaining('Promo -'),
         promoRules: [{ fixedPrice: 10, percentOff: null, addOns: [] }],
       });
       t.addToCart(P_COLA);
-      expect(selectorOpen).toHaveBeenLastCalledWith(P_COLA, { promoLabel: null, promoRules: [] });
+      expect(selectorOpen).toHaveBeenLastCalledWith(P_COLA, { promoRules: [] });
     });
 
     it('is blocked without write permission or while busy', async () => {
@@ -883,7 +888,7 @@ describe('OrderEditor', () => {
   });
 
   describe('promotions and totals', () => {
-    const promos = (items: object[]): DiscountedProductPromotionDto[] => [
+    const promos = (items: object[], extra: object = {}): DiscountedProductPromotionDto[] => [
       {
         id: 'd',
         name: 'D',
@@ -891,6 +896,7 @@ describe('OrderEditor', () => {
         startDate: null,
         endDate: null,
         items: items as DiscountedProductPromotionDto['items'],
+        ...extra,
       },
     ];
 
@@ -953,6 +959,64 @@ describe('OrderEditor', () => {
       const l = line({ addOns: [shotAddOn()] });
       expect(t.getDiscountedUnitPrice(l)).toBe(66.67);
       expect(t.getDiscountedPromoLabel(l)).toBe('Promo -33.33%');
+    });
+
+    it('a rule with no add-ons is for the plain product only', async () => {
+      promotionService['getActiveDiscountedProductPromotions'].mockReturnValue(
+        of(promos([{ productId: 'latte', percentOff: 20, addOns: [] }])),
+      );
+      await start();
+
+      expect(t.getDiscountedUnitPrice(line())).toBe(80);
+      expect(t.getDiscountedUnitPrice(line({ addOns: [shotAddOn()] }))).toBeNull();
+    });
+
+    it('a promotion with a usage limit only discounts the items it has uses left for', async () => {
+      promotionService['getActiveDiscountedProductPromotions'].mockReturnValue(
+        of(
+          promos([{ productId: 'latte', percentOff: 20, addOns: [] }], {
+            schedule: { daysOfWeek: null, startTime: null, endTime: null, maxRedemptions: 3, redemptions: 1 },
+          }),
+        ),
+      );
+      await start();
+
+      expect(t.getDiscountedUnitPrice(line({ qty: 2 }))).toBe(80);
+      expect(t.getDiscountedUnitPrice(line({ qty: 3 }))).toBeNull();
+    });
+
+    it('a promotion with no uses left discounts nothing', async () => {
+      promotionService['getActiveDiscountedProductPromotions'].mockReturnValue(
+        of(
+          promos([{ productId: 'latte', percentOff: 20, addOns: [] }], {
+            schedule: { daysOfWeek: null, startTime: null, endTime: null, maxRedemptions: 5, redemptions: 5 },
+          }),
+        ),
+      );
+      await start();
+
+      expect(t.getDiscountedUnitPrice(line())).toBeNull();
+    });
+
+    it('a promotion is only on during its weekdays and hours', async () => {
+      const today = new Date().getDay();
+      const otherDay = 1 << ((today + 1) % 7);
+      const thisDay = 1 << today;
+      promotionService['getActiveDiscountedProductPromotions'].mockReturnValue(
+        of([
+          ...promos([{ productId: 'latte', percentOff: 50, addOns: [] }], {
+            id: 'other-day',
+            schedule: { daysOfWeek: otherDay, startTime: null, endTime: null, maxRedemptions: null, redemptions: 0 },
+          }),
+          ...promos([{ productId: 'latte', percentOff: 10, addOns: [] }], {
+            id: 'today',
+            schedule: { daysOfWeek: thisDay, startTime: null, endTime: null, maxRedemptions: null, redemptions: 0 },
+          }),
+        ]),
+      );
+      await start();
+
+      expect(t.getDiscountedUnitPrice(line())).toBe(90);
     });
 
     it('checkoutCartItems carries promo label/discount and discounted price', async () => {
@@ -1031,9 +1095,61 @@ describe('OrderEditor', () => {
     it('rejects inactive-window promotions', () => {
       t.addBundlePromotionToCart(bundlePromo({ endDate: '2000-01-01T00:00:00Z' }));
       expect(alert['error']).toHaveBeenCalledWith(
-        'This bundle promotion is not active in your local timezone.',
+        'This bundle promotion is not available right now.',
       );
       expect(promotionService['getFixedBundle']).not.toHaveBeenCalled();
+    });
+
+    it('opens a bundle from the saved catalog without asking the server', () => {
+      catalog.getFixedBundle.mockReturnValue(fixedBundleDto());
+
+      t.addBundlePromotionToCart(bundlePromo());
+
+      expect(promotionService['getFixedBundle']).not.toHaveBeenCalled();
+      expect(selectorOpen).toHaveBeenCalled();
+    });
+
+    it('opens a mix and match from the saved catalog without asking the server', () => {
+      catalog.getMixMatch.mockReturnValue(mixMatchDto());
+
+      t.addBundlePromotionToCart(bundlePromo({ id: 'm1', typeId: PromotionTypeEnum.MixMatch }));
+
+      expect(promotionService['getMixMatchPromotion']).not.toHaveBeenCalled();
+      expect(selectorOpen).toHaveBeenCalled();
+    });
+
+    it('does not open a bundle that is closed today or at this hour', () => {
+      const closedDay = 1 << ((new Date().getDay() + 1) % 7);
+
+      t.addBundlePromotionToCart(
+        bundlePromo({ schedule: { daysOfWeek: closedDay, startTime: null, endTime: null, maxRedemptions: null, redemptions: 0 } }),
+      );
+
+      expect(alert['error']).toHaveBeenCalledWith('This bundle promotion is not available right now.');
+      expect(selectorOpen).not.toHaveBeenCalled();
+    });
+
+    it('does not open a bundle with no uses left', () => {
+      t.addBundlePromotionToCart(
+        bundlePromo({ schedule: { daysOfWeek: null, startTime: null, endTime: null, maxRedemptions: 2, redemptions: 2 } }),
+      );
+
+      expect(alert['error']).toHaveBeenCalledWith('This bundle promotion has no uses left.');
+      expect(selectorOpen).not.toHaveBeenCalled();
+    });
+
+    it('hides a bundle with no uses left from the Bundles tab', () => {
+      catalog.bundlePromotions.set([
+        bundlePromo({ id: 'open', name: 'Open' }),
+        bundlePromo({
+          id: 'spent',
+          name: 'Spent',
+          schedule: { daysOfWeek: null, startTime: null, endTime: null, maxRedemptions: 1, redemptions: 1 },
+        }),
+      ]);
+      TestBed.tick();
+
+      expect(t.filteredBundlePromotions().map((p) => p.id)).toEqual(['open']);
     });
 
     it('fixed bundle opens selector and then adds a bundle line', () => {

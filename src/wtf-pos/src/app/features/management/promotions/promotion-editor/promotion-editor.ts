@@ -12,12 +12,22 @@ import {
   MixMatchPromotionDto,
   FixedBundlePromotionDto,
   ProductDto,
+  PromotionScheduleDto,
 } from '@shared/models';
 import { AppRoutes } from '@shared/constants/app-routes';
+import { EVERY_DAY, WEEKDAY_BITS } from '@shared/calculations';
 import { forkJoin } from 'rxjs';
 
 type PromoEditorType = 'fixed-bundle' | 'mix-match' | 'discounted-product';
 type DiscountedProductDiscountType = 'fixed' | 'percent';
+
+// The schedule as the form holds it: the times are "HH:mm" or empty, the days are a mask (null = every day).
+interface ScheduleState {
+  daysOfWeek: number | null;
+  startTime: string;
+  endTime: string;
+  maxRedemptions: number | null;
+}
 
 @Component({
   selector: 'app-promotion-editor',
@@ -53,6 +63,14 @@ export class PromotionEditorComponent implements OnInit {
   protected readonly showAllBundleItems = signal(false);
   protected readonly bundleItemQuantityDraft = signal<Record<string, string>>({});
   protected readonly showDiscardModal = signal(false);
+  protected readonly weekdayOptions = WEEKDAY_BITS;
+  protected readonly schedule = signal<ScheduleState>({
+    daysOfWeek: null,
+    startTime: '',
+    endTime: '',
+    maxRedemptions: null,
+  });
+  protected readonly redemptions = signal(0);
   private promotionId: string | null = null;
   private initialEditorSnapshot = '';
   private pendingDeactivateResolve: ((value: boolean) => void) | null = null;
@@ -89,6 +107,22 @@ export class PromotionEditorComponent implements OnInit {
   protected readonly discountedProductDiscountType = signal<DiscountedProductDiscountType>('fixed');
   protected readonly discountedProductFixedPrice = signal<number | null>(null);
   protected readonly discountedProductPercentOff = signal<number | null>(null);
+  protected readonly amountOffWarning = computed(() => {
+    const amount = this.discountedProductFixedPrice();
+    if (this.discountedProductDiscountType() !== 'fixed' || !amount) {
+      return null;
+    }
+
+    const covered = this.discountedProduct()
+      .items.map((item) => this.products().find((product) => product.id === item.productId))
+      .filter((product) => product && product.price > 0 && product.price <= amount)
+      .map((product) => product!.name);
+    if (covered.length === 0) {
+      return null;
+    }
+
+    return `The amount off is the same as or more than the price of ${covered.join(', ')}, so ${covered.length === 1 ? 'it' : 'they'} would be free.`;
+  });
 
   // Mirrors promotionId so isEditMode reacts when a create turns into an edit.
   private readonly editingPromotionId = signal<string | null>(null);
@@ -139,6 +173,7 @@ export class PromotionEditorComponent implements OnInit {
         next: ({ products, promo }) => {
           this.products.set(products);
           this.lastUpdatedAt.set(promo.updatedAt ?? promo.createdAt ?? null);
+          this.loadSchedule(promo.schedule);
           this.mixMatch.set({
             name: promo.name,
             isActive: promo.isActive,
@@ -174,6 +209,7 @@ export class PromotionEditorComponent implements OnInit {
         next: ({ products, promo }) => {
           this.products.set(products);
           this.lastUpdatedAt.set(promo.updatedAt ?? promo.createdAt ?? null);
+          this.loadSchedule(promo.schedule);
           this.discountedProduct.set({
             name: promo.name,
             isActive: promo.isActive,
@@ -212,6 +248,7 @@ export class PromotionEditorComponent implements OnInit {
       next: ({ products, promo }) => {
         this.products.set(products);
         this.lastUpdatedAt.set(promo.updatedAt ?? promo.createdAt ?? null);
+        this.loadSchedule(promo.schedule);
         this.fixedBundle.set({
           name: promo.name,
           isActive: promo.isActive,
@@ -717,6 +754,42 @@ export class PromotionEditorComponent implements OnInit {
     }));
   }
 
+  protected isDaySelected(bit: number): boolean {
+    const days = this.schedule().daysOfWeek;
+    return days == null || (days & bit) !== 0;
+  }
+
+  // Every day selected is stored as no restriction. The last selected day cannot be switched off.
+  protected toggleDay(bit: number): void {
+    const next = (this.schedule().daysOfWeek ?? EVERY_DAY) ^ bit;
+    if (next === 0) {
+      return;
+    }
+
+    this.schedule.update((state) => ({ ...state, daysOfWeek: next === EVERY_DAY ? null : next }));
+  }
+
+  protected setScheduleTime(field: 'startTime' | 'endTime', value: string): void {
+    this.schedule.update((state) => ({ ...state, [field]: value ?? '' }));
+  }
+
+  protected setMaxRedemptions(value: number | string | null): void {
+    const parsed = value === null || value === '' ? null : Number(value);
+    this.schedule.update((state) => ({
+      ...state,
+      maxRedemptions: parsed !== null && Number.isFinite(parsed) ? parsed : null,
+    }));
+  }
+
+  protected clearSchedule(): void {
+    this.schedule.set({ daysOfWeek: null, startTime: '', endTime: '', maxRedemptions: null });
+  }
+
+  protected hasSchedule(): boolean {
+    const state = this.schedule();
+    return state.daysOfWeek !== null || !!state.startTime || !!state.endTime || state.maxRedemptions !== null;
+  }
+
   protected removeMixMatchItem(index: number): void {
     this.mixMatch.update((value) => ({
       ...value,
@@ -892,7 +965,7 @@ export class PromotionEditorComponent implements OnInit {
   }
 
   private saveFixedBundle(): void {
-    const payload = this.fixedBundle();
+    const payload = { ...this.fixedBundle(), schedule: this.schedulePayload() };
     if (this.promotionId) {
       this.promotionService.updateFixedBundle({ id: this.promotionId, ...payload }).subscribe({
         next: (saved) => this.onPromotionSaved(saved.id, saved.imageUrl ?? null, 'Fixed bundle updated.'),
@@ -908,7 +981,7 @@ export class PromotionEditorComponent implements OnInit {
   }
 
   private saveMixMatch(): void {
-    const payload = this.mixMatch();
+    const payload = { ...this.mixMatch(), schedule: this.schedulePayload() };
     if (this.promotionId) {
       this.promotionService.updateMixMatch({ id: this.promotionId, ...payload }).subscribe({
         next: (saved) => this.onPromotionSaved(saved.id, saved.imageUrl ?? null, 'Mix & Match promotion updated.'),
@@ -935,6 +1008,7 @@ export class PromotionEditorComponent implements OnInit {
     const percentOff = this.discountedProductPercentOff();
     const normalized = {
       ...payload,
+      schedule: this.schedulePayload(),
       items: payload.items.map((item) => ({
         ...item,
         fixedPrice: discountType === 'fixed' ? fixedPrice : null,
@@ -996,6 +1070,47 @@ export class PromotionEditorComponent implements OnInit {
     this.alertService.error(err.message);
   }
 
+  private loadSchedule(schedule: PromotionScheduleDto | null | undefined): void {
+    this.schedule.set({
+      daysOfWeek: schedule?.daysOfWeek ?? null,
+      startTime: schedule?.startTime ?? '',
+      endTime: schedule?.endTime ?? '',
+      maxRedemptions: schedule?.maxRedemptions ?? null,
+    });
+    this.redemptions.set(schedule?.redemptions ?? 0);
+  }
+
+  private schedulePayload(): PromotionScheduleDto {
+    const state = this.schedule();
+    return {
+      daysOfWeek: state.daysOfWeek,
+      startTime: state.startTime || null,
+      endTime: state.endTime || null,
+      maxRedemptions: state.maxRedemptions,
+      redemptions: this.redemptions(),
+    };
+  }
+
+  private validateSchedule(): boolean {
+    const state = this.schedule();
+    if (!state.startTime !== !state.endTime) {
+      this.alertService.error('Set both a start time and an end time, or neither.');
+      return false;
+    }
+
+    if (state.startTime && state.startTime === state.endTime) {
+      this.alertService.error('The start time and the end time cannot be the same.');
+      return false;
+    }
+
+    if (state.maxRedemptions !== null && (!Number.isInteger(state.maxRedemptions) || state.maxRedemptions < 1)) {
+      this.alertService.error('The usage limit must be a whole number of 1 or more.');
+      return false;
+    }
+
+    return true;
+  }
+
   private snapshotEditorState(): void {
     this.initialEditorSnapshot = this.serializeEditorState();
   }
@@ -1019,6 +1134,7 @@ export class PromotionEditorComponent implements OnInit {
         percentOff: this.discountedProductPercentOff(),
         discountType: this.discountedProductDiscountType(),
       },
+      schedule: this.schedule(),
       currentImageUrl: this.currentImageUrl(),
       hasPendingImage: !!this.selectedFile(),
     });
@@ -1069,6 +1185,10 @@ export class PromotionEditorComponent implements OnInit {
   }
 
   private validateBeforeSave(): boolean {
+    if (!this.validateSchedule()) {
+      return false;
+    }
+
     if (this.type() === 'fixed-bundle') {
       const payload = this.fixedBundle();
       if (!payload.name.trim()) {
@@ -1121,12 +1241,12 @@ export class PromotionEditorComponent implements OnInit {
         this.discountedProductPercentOff() != null && this.discountedProductPercentOff()! > 0;
 
       if (!hasFixed && !hasPercent) {
-        this.alertService.error('Set a fixed price or percent discount.');
+        this.alertService.error('Set an amount off or a percent discount.');
         return false;
       }
 
       if (hasFixed && hasPercent) {
-        this.alertService.error('Choose either fixed price or percent discount, not both.');
+        this.alertService.error('Choose either an amount off or a percent discount, not both.');
         return false;
       }
 
@@ -1143,11 +1263,6 @@ export class PromotionEditorComponent implements OnInit {
       for (const item of payload.items) {
         if (!item.productId) {
           this.alertService.error('Each discounted item must have a product.');
-          return false;
-        }
-
-        if (item.addOns.length === 0) {
-          this.alertService.error('Select at least one required add-on for each product.');
           return false;
         }
 

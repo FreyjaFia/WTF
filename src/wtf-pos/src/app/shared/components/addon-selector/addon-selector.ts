@@ -51,7 +51,6 @@ export class AddonSelectorComponent {
   protected readonly scaleRequiredSelectionByQuantity = signal(false);
   protected readonly customMaxSelectionPerOption = signal<number | null>(null);
   protected readonly subtitleText = signal('Customize your order');
-  protected readonly promoLabel = signal<string | null>(null);
   protected readonly promoRules = signal<
     { fixedPrice?: number | null; percentOff?: number | null; addOns: { addOnProductId: string; quantity: number }[] }[]
   >([]);
@@ -178,7 +177,7 @@ export class AddonSelectorComponent {
       this.selectedAddOns().map((addOn) => addOn.addOnId),
       this.promoRules(),
     );
-    return best ? formatPromoLabel(best.rule) : null;
+    return best ? formatPromoLabel(best.rule, this.product()?.price) : null;
   });
 
   public open(
@@ -193,7 +192,6 @@ export class AddonSelectorComponent {
       scaleRequiredSelectionByQuantity?: boolean;
       maxSelectionPerOption?: number | null;
       subtitleText?: string;
-      promoLabel?: string | null;
       promoRules?: {
         fixedPrice?: number | null;
         percentOff?: number | null;
@@ -211,7 +209,6 @@ export class AddonSelectorComponent {
     this.scaleRequiredSelectionByQuantity.set(!!options?.scaleRequiredSelectionByQuantity);
     this.customMaxSelectionPerOption.set(options?.maxSelectionPerOption ?? null);
     this.subtitleText.set(options?.subtitleText ?? 'Customize your order');
-    this.promoLabel.set(options?.promoLabel ?? null);
     this.promoRules.set(options?.promoRules ?? []);
     this.isOpen.set(true);
     this.modalStackId = this.modalStack.push(() => this.close());
@@ -610,7 +607,6 @@ export class AddonSelectorComponent {
     this.scaleRequiredSelectionByQuantity.set(false);
     this.customMaxSelectionPerOption.set(null);
     this.subtitleText.set('Customize your order');
-    this.promoLabel.set(null);
     this.promoRules.set([]);
     this.specialInstructions.set('');
     this.editingIndex.set(null);

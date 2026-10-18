@@ -4,6 +4,8 @@ import type {
   CreateOrderCommand,
   CustomerDto,
   DiscountedProductPromotionDto,
+  FixedBundlePromotionDto,
+  MixMatchPromotionDto,
   PromotionListItemDto,
   ProductDto,
 } from '@shared/models';
@@ -25,6 +27,9 @@ export interface CachedCatalog {
   bundlePromotions: PromotionListItemDto[];
   /** The discount promotions that were active at the last sync, so an offline cart prices them like an online one. */
   discountedPromotions?: DiscountedProductPromotionDto[];
+  /** The bundles with their items, so a bundle can be opened and sold offline. */
+  fixedBundles?: FixedBundlePromotionDto[];
+  mixMatchPromotions?: MixMatchPromotionDto[];
   syncedAt: string;
 }
 

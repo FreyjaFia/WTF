@@ -4,6 +4,16 @@ export enum PromotionTypeEnum {
   DiscountedProduct = 3,
 }
 
+/** When a promotion runs and how often it was used: the API's `PromotionScheduleDto`. */
+export interface PromotionScheduleDto {
+  /** Bit mask of the days, Sunday = 1 ... Saturday = 64. Missing means every day. */
+  daysOfWeek: number | null;
+  startTime: string | null;
+  endTime: string | null;
+  maxRedemptions: number | null;
+  redemptions: number;
+}
+
 export interface PromotionListItemDto {
   id: string;
   name: string;
@@ -19,6 +29,7 @@ export interface PromotionListItemDto {
   createdBy?: string;
   updatedAt?: string | null;
   updatedBy?: string | null;
+  schedule?: PromotionScheduleDto | null;
 }
 
 export interface FixedBundleItemAddOnDto {
@@ -47,6 +58,7 @@ export interface FixedBundlePromotionDto {
   updatedBy?: string | null;
   bundlePrice: number;
   items: FixedBundleItemDto[];
+  schedule?: PromotionScheduleDto | null;
 }
 
 export interface MixMatchItemAddOnDto {
@@ -76,6 +88,7 @@ export interface MixMatchPromotionDto {
   maxSelectionsPerOrder: number | null;
   bundlePrice: number;
   items: MixMatchItemDto[];
+  schedule?: PromotionScheduleDto | null;
 }
 
 export interface DiscountedProductAddOnDto {
@@ -104,6 +117,13 @@ export interface DiscountedProductPromotionDto {
   updatedAt?: string | null;
   updatedBy?: string | null;
   items: DiscountedProductItemDto[];
+  schedule?: PromotionScheduleDto | null;
+}
+
+/** Every active bundle with its items, for whoever sells at the POS. */
+export interface PosBundlesDto {
+  fixedBundles: FixedBundlePromotionDto[];
+  mixMatch: MixMatchPromotionDto[];
 }
 
 export interface PromotionImageDto {

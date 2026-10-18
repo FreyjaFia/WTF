@@ -254,6 +254,96 @@
                 </div>
               </div>
 
+              <div class="space-y-4 border-t border-gray-100 pt-4" data-schedule>
+                <div class="flex items-center justify-between gap-2">
+                  <p class="text-xs font-semibold tracking-wider text-gray-400 uppercase">
+                    Schedule &amp; Limit
+                  </p>
+                  @if (hasSchedule()) {
+                    <button
+                      type="button"
+                      class="app-btn app-btn-ghost app-btn-sm"
+                      [disabled]="isBusy()"
+                      (click)="clearSchedule()"
+                    >
+                      Clear
+                    </button>
+                  }
+                </div>
+
+                <div>
+                  <div class="mb-2 block text-sm font-semibold text-gray-900">Days</div>
+                  <div class="flex flex-wrap gap-2" role="group" aria-label="Days it runs on">
+                    @for (day of weekdayOptions; track day.bit) {
+                      <button
+                        type="button"
+                        class="app-btn app-btn-sm"
+                        [class.app-btn-primary]="isDaySelected(day.bit)"
+                        [class.app-btn-secondary]="!isDaySelected(day.bit)"
+                        [attr.aria-pressed]="isDaySelected(day.bit)"
+                        [attr.aria-label]="day.long"
+                        (click)="toggleDay(day.bit)"
+                      >
+                        {{ day.short }}
+                      </button>
+                    }
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <div>
+                    <label for="promotionStartTime" class="mb-2 block text-sm font-semibold text-gray-900"
+                      >Starts at</label
+                    >
+                    <input
+                      id="promotionStartTime"
+                      class="input input-bordered w-full"
+                      type="time"
+                      [ngModel]="schedule().startTime"
+                      (ngModelChange)="setScheduleTime('startTime', $event)"
+                    />
+                  </div>
+                  <div>
+                    <label for="promotionEndTime" class="mb-2 block text-sm font-semibold text-gray-900"
+                      >Ends at</label
+                    >
+                    <input
+                      id="promotionEndTime"
+                      class="input input-bordered w-full"
+                      type="time"
+                      [ngModel]="schedule().endTime"
+                      (ngModelChange)="setScheduleTime('endTime', $event)"
+                    />
+                  </div>
+                </div>
+                <p class="-mt-2 text-xs text-gray-500">
+                  Leave the times empty to run all day. An end time earlier than the start time runs past midnight.
+                  Days and hours follow the shop's local time.
+                </p>
+
+                <div class="max-w-xs">
+                  <label for="promotionMaxRedemptions" class="mb-2 block text-sm font-semibold text-gray-900"
+                    >Usage limit</label
+                  >
+                  <input
+                    id="promotionMaxRedemptions"
+                    class="input input-bordered w-full"
+                    type="number"
+                    min="1"
+                    step="1"
+                    placeholder="No limit"
+                    [ngModel]="schedule().maxRedemptions"
+                    (ngModelChange)="setMaxRedemptions($event)"
+                  />
+                  <p class="mt-1 text-xs text-gray-500">
+                    A bundle counts each time it is sold; a discount counts each discounted item.
+                    @if (isEditMode() && redemptions() > 0) {
+                      Used {{ redemptions() }} so far.
+                    }
+                  </p>
+                </div>
+              </div>
+
               @if (type() === 'fixed-bundle') {
                 <div class="max-w-xs">
                   <div class="mb-2 block text-sm font-semibold text-gray-900">Bundle Price</div>
@@ -311,7 +401,7 @@
                   </div>
                   <div>
                     <div class="mb-2 block text-sm font-semibold text-gray-900">
-                      Max Selections / Order
+                      Max per Product
                     </div>
                     <input
                       class="input input-bordered w-full"
@@ -331,14 +421,14 @@
                       [ngModel]="discountedProductDiscountType()"
                       (ngModelChange)="setDiscountedProductDiscountType($event)"
                     >
-                      <option value="fixed">Fixed Price</option>
+                      <option value="fixed">Amount Off</option>
                       <option value="percent">Percent Off</option>
                     </select>
                   </div>
                   <div>
                     <div class="mb-2 block text-sm font-semibold text-gray-900">
                       {{
-                        discountedProductDiscountType() === 'fixed' ? 'Fixed Price' : 'Percent Off'
+                        discountedProductDiscountType() === 'fixed' ? 'Amount Off' : 'Percent Off'
                       }}
                     </div>
                     <label
@@ -370,6 +460,9 @@
                         "
                       />
                     </label>
+                    @if (amountOffWarning(); as warning) {
+                      <p class="mt-1.5 text-xs font-medium text-amber-700" data-amount-off-warning>{{ warning }}</p>
+                    }
                   </div>
                 </div>
               }
@@ -835,6 +928,12 @@
                   <p class="mt-1 text-xs text-gray-300">
                     Use Manage Items to select products and add-ons
                   </p>
+                  @if (type() === 'discounted-product') {
+                    <p class="mt-2 max-w-sm text-xs text-gray-400">
+                      Add-ons are optional. A product listed with no add-ons is discounted only when it is ordered plain. A
+                      product with a required size or flavor must list it here.
+                    </p>
+                  }
                 </div>
               }
 

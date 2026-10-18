@@ -358,7 +358,6 @@ describe('AddonSelectorComponent', () => {
     it('applies a fixed discount to the base price when add-ons match exactly', () => {
       const { cmp, i } = setup([toppingG]);
       cmp.open(MAIN, {
-        promoLabel: 'Deal',
         promoRules: [{ fixedPrice: 30, addOns: flavorOnly('b') }],
       });
       expect(i.unitPrice()).toBe(100);
@@ -389,6 +388,34 @@ describe('AddonSelectorComponent', () => {
       i.decrementOption(toppingG, BOBA, evt());
       i.incrementOption(toppingG, CHEESE, evt());
       expect(i.activePromoLabel()).toBeNull();
+    });
+
+    it('an amount off that covers the whole price reads Free', () => {
+      const { cmp, i } = setup([toppingG]);
+      cmp.open(MAIN, { promoRules: [{ fixedPrice: 150, addOns: [] }] });
+      expect(i.activePromoLabel()).toBe('Free');
+      expect(i.unitPrice()).toBe(0);
+    });
+
+    it('an amount off below the price shows the amount', () => {
+      const { cmp, i } = setup([toppingG]);
+      cmp.open(MAIN, { promoRules: [{ fixedPrice: 99.5, addOns: [] }] });
+      expect(i.activePromoLabel()).toBe('Promo -₱99.50');
+    });
+
+    it('a rule with no add-ons is for the plain product only', () => {
+      const { cmp, i } = setup([toppingG]);
+      cmp.open(MAIN, { promoRules: [{ percentOff: 10, addOns: [] }] });
+      expect(i.unitPrice()).toBe(90);
+      i.incrementOption(toppingG, BOBA, evt());
+      expect(i.activePromoLabel()).toBeNull();
+    });
+
+    it('shows no promo label before the selection matches', () => {
+      const { cmp, i } = setup([toppingG]);
+      cmp.open(MAIN, { promoRules: [{ percentOff: 20, addOns: flavorOnly('b') }] });
+      expect(i.activePromoLabel()).toBeNull();
+      expect(i.unitPrice()).toBe(100);
     });
 
     it('never discounts below zero and ignores rules without required add-ons', () => {

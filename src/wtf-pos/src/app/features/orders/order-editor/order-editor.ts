@@ -82,8 +82,10 @@ import {
   cartTotal,
   findBestDiscount,
   formatPromoLabel,
+  isScheduleOpen,
   lineTotal,
   lineUnitSubtotal,
+  usesLeft,
   addMoney,
   promoDiscount,
 } from '@shared/calculations';
@@ -541,8 +543,8 @@ export class OrderEditor implements OnInit, OnDestroy {
 
   protected readonly filteredBundlePromotions = computed(() => {
     const term = this.catalogSearchTerm().trim().toLowerCase();
-    let items = this.bundlePromotions().filter((promo) =>
-      this.isPromotionActiveInUserTimezone(promo),
+    let items = this.bundlePromotions().filter(
+      (promo) => this.isPromotionActiveInUserTimezone(promo) && usesLeft(promo.schedule) !== 0,
     );
 
     if (term) {
@@ -1197,7 +1199,6 @@ export class OrderEditor implements OnInit, OnDestroy {
 
     // If the product is an add-on-capable product, open the add-on selector
     this.addonSelector().open(p, {
-      promoLabel: this.getPromoLabelForProduct(p.id),
       promoRules: this.getPromoRulesForProduct(p.id),
     });
   }
@@ -1208,24 +1209,28 @@ export class OrderEditor implements OnInit, OnDestroy {
     }
 
     if (!this.isPromotionActiveInUserTimezone(promo)) {
-      this.alertService.error('This bundle promotion is not active in your local timezone.');
+      this.alertService.error('This bundle promotion is not available right now.');
       return;
     }
 
+    if (usesLeft(promo.schedule) === 0) {
+      this.alertService.error('This bundle promotion has no uses left.');
+      return;
+    }
+
+    // The saved catalog has every active bundle with its items, so a bundle opens for any role and offline.
+    const cachedMixMatch =
+      promo.typeId === PromotionTypeEnum.MixMatch ? this.catalogCache.getMixMatch(promo.id) : undefined;
+    const cachedFixed =
+      promo.typeId === PromotionTypeEnum.MixMatch ? undefined : this.catalogCache.getFixedBundle(promo.id);
     const request$ =
       promo.typeId === PromotionTypeEnum.MixMatch
-        ? this.promotionService
-            .getMixMatchPromotion(promo.id)
-            .pipe(
-              switchMap((mixMatch) => of(this.toBundlePromotionSelectionFromMixMatch(mixMatch))),
-            )
-        : this.promotionService
-            .getFixedBundle(promo.id)
-            .pipe(
-              switchMap((fixedBundle) =>
-                of(this.toBundlePromotionSelectionFromFixedBundle(fixedBundle)),
-              ),
-            );
+        ? (cachedMixMatch ? of(cachedMixMatch) : this.promotionService.getMixMatchPromotion(promo.id)).pipe(
+            switchMap((mixMatch) => of(this.toBundlePromotionSelectionFromMixMatch(mixMatch))),
+          )
+        : (cachedFixed ? of(cachedFixed) : this.promotionService.getFixedBundle(promo.id)).pipe(
+            switchMap((fixedBundle) => of(this.toBundlePromotionSelectionFromFixedBundle(fixedBundle))),
+          );
 
     request$.subscribe({
       next: (bundle) => this.openBundleSelector(bundle),
@@ -1387,23 +1392,13 @@ export class OrderEditor implements OnInit, OnDestroy {
       return null;
     }
 
-    return formatPromoLabel(best.entry);
+    return formatPromoLabel(best.entry, item.price);
   }
 
-  private getPromoLabelForProduct(productId: string): string | null {
-    const entries = this.discountedProductPromotions()
-      .flatMap((promo) => promo.items)
-      .filter((entry) => entry.productId === productId);
-    if (entries.length === 0) {
-      return null;
-    }
-
-    const label = formatPromoLabel(entries[0]);
-    if (!label) {
-      return null;
-    }
-
-    return label;
+  // The promotions that are on at this moment (dates, weekdays and hours in this device's time zone, which the API gets
+  // in the X-TimeZone header). The saved list also holds the ones that are off right now.
+  private liveDiscountedPromotions(): DiscountedProductPromotionDto[] {
+    return this.discountedProductPromotions().filter((promo) => this.isPromotionActiveInUserTimezone(promo));
   }
 
   private getPromoRulesForProduct(productId: string): {
@@ -1411,7 +1406,7 @@ export class OrderEditor implements OnInit, OnDestroy {
     percentOff?: number | null;
     addOns: { addOnProductId: string; quantity: number }[];
   }[] {
-    return this.discountedProductPromotions()
+    return this.liveDiscountedPromotions()
       .flatMap((promo) => promo.items)
       .filter((entry) => entry.productId === productId)
       .map((entry) => ({
@@ -1428,8 +1423,11 @@ export class OrderEditor implements OnInit, OnDestroy {
       return null;
     }
 
-    const rules = this.discountedProductPromotions()
-      .flatMap((promo) => promo.items)
+    // A promotion with a usage limit only discounts the items it has uses left for.
+    const rules = this.liveDiscountedPromotions()
+      .flatMap((promo) =>
+        promo.items.map((entry) => ({ ...entry, remaining: usesLeft(promo.schedule) })),
+      )
       .filter((entry) => entry.productId === item.productId);
     if (rules.length === 0) {
       return null;
@@ -1439,6 +1437,7 @@ export class OrderEditor implements OnInit, OnDestroy {
       item.price,
       (item.addOns ?? []).map((addOn) => addOn.addOnId),
       rules,
+      Math.max(1, item.qty),
     );
     return best ? { entry: best.rule, price: best.price } : null;
   }
@@ -1709,7 +1708,6 @@ export class OrderEditor implements OnInit, OnDestroy {
       addOns: item.addOns ?? [],
       specialInstructions: item.specialInstructions ?? null,
       editIndex: index,
-      promoLabel: this.getPromoLabelForProduct(item.productId),
       promoRules: this.getPromoRulesForProduct(item.productId),
     });
   }
@@ -2566,7 +2564,7 @@ export class OrderEditor implements OnInit, OnDestroy {
 
   private loadDiscountedProductPromotions(): void {
     this.isLoadingDiscountedPromotions.set(true);
-    this.promotionService.getActiveDiscountedProductPromotions().subscribe({
+    this.promotionService.getActiveDiscountedProductPromotions(true).subscribe({
       next: (promos) => {
         this.discountedProductPromotions.set(promos);
         this.isLoadingDiscountedPromotions.set(false);
@@ -2579,7 +2577,7 @@ export class OrderEditor implements OnInit, OnDestroy {
     });
   }
 
-  private isPromotionActiveInUserTimezone(promo: PromotionListItemDto): boolean {
+  private isPromotionActiveInUserTimezone(promo: Pick<PromotionListItemDto, 'isActive' | 'startDate' | 'endDate' | 'schedule'>): boolean {
     if (!promo.isActive) {
       return false;
     }
@@ -2605,7 +2603,7 @@ export class OrderEditor implements OnInit, OnDestroy {
       return false;
     }
 
-    return true;
+    return isScheduleOpen(promo.schedule, nowLocal);
   }
 
   private toLocalDateNumber(value: Date): number {
@@ -2680,7 +2678,7 @@ export class OrderEditor implements OnInit, OnDestroy {
         ...(withQuotes && {
           quotedPrice: best?.price ?? line.price,
           quotedOriginalPrice: line.price,
-          quotedPromoLabel: best ? formatPromoLabel(best.entry) : null,
+          quotedPromoLabel: best ? formatPromoLabel(best.entry, line.price) : null,
         }),
       });
     }

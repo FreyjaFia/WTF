@@ -659,7 +659,7 @@ export class OrderDetails implements OnInit {
         const promo = this.getBestDiscountedPromo(cartItem);
         if (promo) {
           const discount = promoDiscount(cartItem.price, promo.price, cartItem.qty);
-          cartItem.promoLabel = formatPromoLabel(promo.entry);
+          cartItem.promoLabel = formatPromoLabel(promo.entry, cartItem.price);
           cartItem.promoDiscount = discount > 0 ? discount : null;
         }
       }

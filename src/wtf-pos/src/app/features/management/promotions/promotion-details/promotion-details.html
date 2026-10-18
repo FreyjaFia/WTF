@@ -144,7 +144,7 @@
                       <p class="text-sm font-semibold text-gray-800">{{ mixMatch()!.requiredQuantity }}</p>
                     </div>
                     <div>
-                      <p class="mb-1 text-xs font-medium text-gray-400">Max Selections / Order</p>
+                      <p class="mb-1 text-xs font-medium text-gray-400">Max per Product</p>
                       <p class="text-sm font-semibold text-gray-800">{{ mixMatch()!.maxSelectionsPerOrder ?? 'Not set' }}</p>
                     </div>
                   }
@@ -153,7 +153,7 @@
                       <p class="mb-1 text-xs font-medium text-gray-400">Discount Type</p>
                       <p class="text-sm font-semibold text-gray-800">
                         @if ((getDiscountedPrimaryItem()?.fixedPrice ?? null) !== null) {
-                          Fixed Price
+                          Amount Off
                         } @else {
                           Percent Off
                         }
@@ -186,6 +186,24 @@
                                 ? (discountedProduct()!.endDate | date: 'd MMM y')
                                 : 'Not set')
                       }}
+                    </p>
+                  </div>
+                  <div>
+                    <p class="mb-1 text-xs font-medium text-gray-400">Days</p>
+                    <p class="text-sm font-semibold text-gray-800" data-schedule-days>
+                      {{ describeDays(schedule()?.daysOfWeek) }}
+                    </p>
+                  </div>
+                  <div>
+                    <p class="mb-1 text-xs font-medium text-gray-400">Hours</p>
+                    <p class="text-sm font-semibold text-gray-800" data-schedule-hours>
+                      {{ describeWindow(schedule()) }}
+                    </p>
+                  </div>
+                  <div>
+                    <p class="mb-1 text-xs font-medium text-gray-400">Usage</p>
+                    <p class="text-sm font-semibold text-gray-800" data-schedule-usage>
+                      {{ describeLimit(schedule()) }}
                     </p>
                   </div>
                 </div>

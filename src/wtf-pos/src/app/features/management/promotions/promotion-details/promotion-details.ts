@@ -18,6 +18,7 @@ import {
   FixedBundlePromotionDto,
   ProductDto,
 } from '@shared/models';
+import { describeDays, describeLimit, describeWindow } from '@shared/calculations';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { forkJoin, of, switchMap } from 'rxjs';
 
@@ -45,6 +46,12 @@ export class PromotionDetailsComponent implements OnInit {
   protected readonly mixMatch = signal<MixMatchPromotionDto | null>(null);
   protected readonly discountedProduct = signal<DiscountedProductPromotionDto | null>(null);
   protected readonly type = signal<PromotionDetailsType>('fixed-bundle');
+  protected readonly describeDays = describeDays;
+  protected readonly describeWindow = describeWindow;
+  protected readonly describeLimit = describeLimit;
+  protected readonly schedule = computed(
+    () => this.fixedBundle()?.schedule ?? this.mixMatch()?.schedule ?? this.discountedProduct()?.schedule ?? null,
+  );
   protected readonly showAllBundleItems = signal(false);
   protected readonly showDeleteModal = signal(false);
   protected readonly isDeleting = signal(false);

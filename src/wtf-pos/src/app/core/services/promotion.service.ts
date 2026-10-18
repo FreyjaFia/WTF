@@ -7,6 +7,7 @@ import {
   DiscountedProductPromotionDto,
   FixedBundlePromotionDto,
   MixMatchPromotionDto,
+  PosBundlesDto,
   PromotionImageDto,
   PromotionListItemDto,
 } from '@shared/models';
@@ -131,9 +132,19 @@ export class PromotionService {
       .pipe(catchError((error) => this.handleError(error)));
   }
 
-  public getActiveDiscountedProductPromotions(): Observable<DiscountedProductPromotionDto[]> {
+  /** `all` keeps the promotions that are not on right now (another weekday or hour), for the POS to judge itself and keep offline. */
+  public getActiveDiscountedProductPromotions(all = false): Observable<DiscountedProductPromotionDto[]> {
+    const url = `${this.posBaseUrl}/discounted-products`;
+
     return this.http
-      .get<DiscountedProductPromotionDto[]>(`${this.posBaseUrl}/discounted-products`)
+      .get<DiscountedProductPromotionDto[]>(all ? `${url}?all=true` : url)
+      .pipe(catchError((error) => this.handleError(error)));
+  }
+
+  /** Every active bundle with its items. Open to every role that sells, unlike the management endpoints. */
+  public getPosBundles(): Observable<PosBundlesDto> {
+    return this.http
+      .get<PosBundlesDto>(`${this.posBaseUrl}/bundles`)
       .pipe(catchError((error) => this.handleError(error)));
   }
 

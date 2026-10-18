@@ -3,7 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { environment } from '@environments/environment.development';
-import { ProductDto } from '@shared/models';
+import { ProductDto, PromotionTypeEnum } from '@shared/models';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CatalogCacheService } from './catalog-cache.service';
 import { ConnectivityService } from './connectivity.service';
@@ -36,16 +36,16 @@ describe('CatalogCacheService', () => {
     products?: ProductDto[];
     customers?: unknown[];
     addOns?: Record<string, unknown[]>;
-    fixed?: unknown[] | 'fail';
-    mix?: unknown[] | 'fail';
+    fixed?: unknown[];
+    mix?: unknown[];
+    bundlesFail?: boolean;
     discounted?: unknown[];
     catalogFails?: boolean;
   } = {}): Promise<void> {
     await settle();
     const catalog = http.expectOne(`${api}/sync/pos-catalog`);
-    const fixed = http.expectOne(`${api}/management/promotions/fixed-bundles`);
-    const mix = http.expectOne(`${api}/management/promotions/mix-match`);
-    const discounted = http.expectOne(`${api}/pos/promotions/discounted-products`);
+    const bundles = http.expectOne(`${api}/pos/promotions/bundles`);
+    const discounted = http.expectOne(`${api}/pos/promotions/discounted-products?all=true`);
 
     if (options.catalogFails) {
       catalog.flush('x', { status: 500, statusText: 'err' });
@@ -57,15 +57,10 @@ describe('CatalogCacheService', () => {
         syncedAt: '2025-01-01T00:00:00Z',
       });
     }
-    if (options.fixed === 'fail') {
-      fixed.flush('x', { status: 500, statusText: 'err' });
+    if (options.bundlesFail) {
+      bundles.flush('x', { status: 500, statusText: 'err' });
     } else {
-      fixed.flush(options.fixed ?? []);
-    }
-    if (options.mix === 'fail') {
-      mix.flush('x', { status: 500, statusText: 'err' });
-    } else {
-      mix.flush(options.mix ?? []);
+      bundles.flush({ fixedBundles: options.fixed ?? [], mixMatch: options.mix ?? [] });
     }
     discounted.flush(options.discounted ?? []);
     await settle();
@@ -133,8 +128,16 @@ describe('CatalogCacheService', () => {
       expect(service.customers()).toEqual([{ id: 'c1' }]);
       expect(service.getAddOnsForProduct('p1')).toEqual([{ id: 'g' }]);
       expect(service.getAddOnsForProduct('missing')).toEqual([]);
-      expect(service.bundlePromotions()).toEqual([{ id: 'f1' }, { id: 'm1' }]);
-      expect(stored?.bundlePromotions).toEqual([{ id: 'f1' }, { id: 'm1' }]);
+      expect(service.bundlePromotions().map((b) => [b.id, b.typeId])).toEqual([
+        ['f1', PromotionTypeEnum.FixedBundle],
+        ['m1', PromotionTypeEnum.MixMatch],
+      ]);
+      expect(stored?.bundlePromotions.map((b) => b.id)).toEqual(['f1', 'm1']);
+      expect(service.getFixedBundle('f1')).toEqual({ id: 'f1' });
+      expect(service.getMixMatch('m1')).toEqual({ id: 'm1' });
+      expect(service.getFixedBundle('m1')).toBeUndefined();
+      expect(stored?.fixedBundles).toEqual([{ id: 'f1' }]);
+      expect(stored?.mixMatchPromotions).toEqual([{ id: 'm1' }]);
       expect(imageCache.cacheImages).toHaveBeenCalled();
     });
 
@@ -186,15 +189,26 @@ describe('CatalogCacheService', () => {
       expect(service.discountedPromotions()).toEqual([]);
     });
 
-    it('still loads when one bundle-promotion request fails', async () => {
+    it('still loads the products when the bundle request fails', async () => {
       const service = create();
       const done = service.load();
 
-      await answerSync({ products: [prod('p1', 1)], fixed: 'fail', mix: [{ id: 'm1' }] });
+      await answerSync({ products: [prod('p1', 1)], bundlesFail: true });
       await done;
 
       expect(service.products()).toHaveLength(1);
-      expect(service.bundlePromotions()).toEqual([{ id: 'm1' }]);
+      expect(service.bundlePromotions()).toEqual([]);
+    });
+
+    it('keeps the schedule and the uses of a bundle on its list entry', async () => {
+      const service = create();
+      const done = service.load();
+      const schedule = { daysOfWeek: 8, startTime: '14:00', endTime: '17:00', maxRedemptions: 5, redemptions: 2 };
+
+      await answerSync({ products: [prod('p1', 1)], fixed: [{ id: 'f1', name: 'Combo', isActive: true, bundlePrice: 99, schedule }] });
+      await done;
+
+      expect(service.bundlePromotions()[0]).toMatchObject({ name: 'Combo', bundlePrice: 99, schedule });
     });
 
     it('falls back to the cached catalog when the API fails', async () => {
