@@ -84,6 +84,7 @@ export interface PaymentsReportRowDto {
   grossSales: number;
   discounts: number;
   refundedAmount: number;
+  tips: number;
 }
 
 export interface HourlySalesReportRowDto {

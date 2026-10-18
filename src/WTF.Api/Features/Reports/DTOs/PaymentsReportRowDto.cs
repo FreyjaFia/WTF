@@ -7,5 +7,6 @@ public sealed record PaymentsReportRowDto(
     decimal TotalPercent,
     decimal GrossSales = 0m,
     decimal Discounts = 0m,
-    decimal RefundedAmount = 0m
+    decimal RefundedAmount = 0m,
+    decimal Tips = 0m
 );

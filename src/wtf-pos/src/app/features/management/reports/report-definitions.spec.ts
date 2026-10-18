@@ -130,8 +130,8 @@ describe('report definitions', () => {
 
     it('payments adds the amounts and orders', () => {
       const totals = totalsOf('payments', [
-        { paymentMethod: 'Cash', orderCount: 2, totalAmount: 150.1, totalPercent: 30 },
-        { paymentMethod: 'GCash', orderCount: 1, totalAmount: 349.9, totalPercent: 70 },
+        { paymentMethod: 'Cash', orderCount: 2, totalAmount: 150.1, totalPercent: 30, tips: 0 },
+        { paymentMethod: 'GCash', orderCount: 1, totalAmount: 349.9, totalPercent: 70, tips: 0 },
       ]);
 
       expect(totals['Total Amount']).toBe(500);

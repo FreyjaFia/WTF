@@ -612,7 +612,7 @@ describe('ReportsComponent', () => {
         reader.onload = () => resolve(String(reader.result));
         reader.readAsText(saved);
       });
-      expect(text).toContain('Payment Method,Orders,Gross,Discount,Refunded,Net,Net %');
+      expect(text).toContain('Payment Method,Orders,Gross,Discount,Refunded,Net,Tips,Net %');
       expect(text).toContain('GCash,1,');
       expect(text).not.toContain('Cash,3');
       expect(text).toContain('Total,1,')

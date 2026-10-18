@@ -64,7 +64,8 @@ public sealed class GetPaymentsReportHandler(
                 SalesRules.PercentOfTotal(row.Summary.Revenue, grandTotal),
                 row.Summary.GrossSales,
                 row.Summary.Discounts,
-                row.Summary.RefundedAmount))
+                row.Summary.RefundedAmount,
+                row.Summary.Tips))
             .ToList();
     }
 }

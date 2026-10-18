@@ -16,9 +16,9 @@ describe('report table helpers', () => {
   const column = (key: string) => payments.columns.find((c) => c.key === key)!;
 
   const rows = [
-    { paymentMethod: 'Cash', orderCount: 2, totalAmount: 150, totalPercent: 30 },
-    { paymentMethod: 'GCash', orderCount: 1, totalAmount: 350, totalPercent: 70 },
-    { paymentMethod: 'Card', orderCount: 5, totalAmount: 90, totalPercent: 18 },
+    { paymentMethod: 'Cash', orderCount: 2, totalAmount: 150, totalPercent: 30, tips: 0 },
+    { paymentMethod: 'GCash', orderCount: 1, totalAmount: 350, totalPercent: 70, tips: 0 },
+    { paymentMethod: 'Card', orderCount: 5, totalAmount: 90, totalPercent: 18, tips: 0 },
   ];
   const methods = (result: { paymentMethod?: unknown }[]) => result.map((r) => r.paymentMethod);
 
@@ -137,17 +137,17 @@ describe('report table helpers', () => {
   });
 
   describe('buildCsv', () => {
-    const header = 'Payment Method,Orders,Gross,Discount,Refunded,Net,Net %';
+    const header = 'Payment Method,Orders,Gross,Discount,Refunded,Net,Tips,Net %';
 
     it('writes a header, one line per row and a Total line, with CRLF line ends', () => {
       const csv = buildCsv(
-        [{ paymentMethod: 'Cash', orderCount: 2, grossSales: 200, discounts: 30, refundedAmount: 20, totalAmount: 150, totalPercent: 100 }],
+        [{ paymentMethod: 'Cash', orderCount: 2, grossSales: 200, discounts: 30, refundedAmount: 20, totalAmount: 150, totalPercent: 100, tips: 0 }],
         payments,
         context,
       );
 
       expect(csv).toBe(
-        `${header}\r\nCash,2,200.00,30.00,20.00,150.00,100.00%\r\nTotal,2,200.00,30.00,20.00,150.00,100.00%`,
+        `${header}\r\nCash,2,200.00,30.00,20.00,150.00,0.00,100.00%\r\nTotal,2,200.00,30.00,20.00,150.00,0.00,100.00%`,
       );
     });
 
@@ -157,7 +157,7 @@ describe('report table helpers', () => {
 
     it('quotes commas, quotes and line breaks', () => {
       const csv = buildCsv(
-        [{ paymentMethod: 'A, "B"\nC', orderCount: 1, totalAmount: 1, totalPercent: 1 }],
+        [{ paymentMethod: 'A, "B"\nC', orderCount: 1, totalAmount: 1, totalPercent: 1, tips: 0 }],
         payments,
         context,
       );
@@ -167,7 +167,7 @@ describe('report table helpers', () => {
 
     it('quotes numbers that contain a thousands comma', () => {
       const csv = buildCsv(
-        [{ paymentMethod: 'Cash', orderCount: 1, totalAmount: 1234.5, totalPercent: 1 }],
+        [{ paymentMethod: 'Cash', orderCount: 1, totalAmount: 1234.5, totalPercent: 1, tips: 0 }],
         payments,
         context,
       );
@@ -178,10 +178,10 @@ describe('report table helpers', () => {
     it('prefixes text that a spreadsheet would run as a formula', () => {
       const csv = buildCsv(
         [
-          { paymentMethod: '=HYPERLINK("http://x")', orderCount: 1, totalAmount: 1, totalPercent: 1 },
-          { paymentMethod: '+1', orderCount: 1, totalAmount: 1, totalPercent: 1 },
-          { paymentMethod: '-cmd', orderCount: 1, totalAmount: 1, totalPercent: 1 },
-          { paymentMethod: '@SUM(A1)', orderCount: 1, totalAmount: 1, totalPercent: 1 },
+          { paymentMethod: '=HYPERLINK("http://x")', orderCount: 1, totalAmount: 1, totalPercent: 1, tips: 0 },
+          { paymentMethod: '+1', orderCount: 1, totalAmount: 1, totalPercent: 1, tips: 0 },
+          { paymentMethod: '-cmd', orderCount: 1, totalAmount: 1, totalPercent: 1, tips: 0 },
+          { paymentMethod: '@SUM(A1)', orderCount: 1, totalAmount: 1, totalPercent: 1, tips: 0 },
         ],
         payments,
         context,
@@ -196,17 +196,17 @@ describe('report table helpers', () => {
 
     it('writes the missing-value dash as a plain dash, not a quoted one', () => {
       const csv = buildCsv(
-        [{ paymentMethod: 'Cash', orderCount: 1, grossSales: null, discounts: undefined, refundedAmount: '', totalAmount: 5, totalPercent: 5 }],
+        [{ paymentMethod: 'Cash', orderCount: 1, grossSales: null, discounts: undefined, refundedAmount: '', totalAmount: 5, totalPercent: 5, tips: 0 }],
         payments,
         context,
       );
 
-      expect(csv.split('\r\n')[1]).toBe('Cash,1,-,-,-,5.00,5.00%');
+      expect(csv.split('\r\n')[1]).toBe('Cash,1,-,-,-,5.00,0.00,5.00%');
     });
 
     it('still guards text that starts with a dash and more', () => {
       const csv = buildCsv(
-        [{ paymentMethod: '-1+1', orderCount: 1, totalAmount: 5, totalPercent: 5 }],
+        [{ paymentMethod: '-1+1', orderCount: 1, totalAmount: 5, totalPercent: 5, tips: 0 }],
         payments,
         context,
       );
@@ -234,8 +234,8 @@ describe('report total rows', () => {
   const money = (x: number) => x.toLocaleString('en-US', { minimumFractionDigits: 2 });
 
   const rows = [
-    { paymentMethod: 'Cash', orderCount: 2, grossSales: 200, discounts: 30, refundedAmount: 20, totalAmount: 150, totalPercent: 60 },
-    { paymentMethod: 'GCash', orderCount: 1, grossSales: 100, discounts: 0, refundedAmount: 0, totalAmount: 100, totalPercent: 40 },
+    { paymentMethod: 'Cash', orderCount: 2, grossSales: 200, discounts: 30, refundedAmount: 20, totalAmount: 150, totalPercent: 60, tips: 0 },
+    { paymentMethod: 'GCash', orderCount: 1, grossSales: 100, discounts: 0, refundedAmount: 0, totalAmount: 100, totalPercent: 40, tips: 0 },
   ];
 
   it('has a total row for reports with summable columns', () => {
@@ -257,7 +257,7 @@ describe('report total rows', () => {
   it('labels the first column Total and sums every summable column', () => {
     const cells = totalCells(rows, payments)!;
 
-    expect(cells).toEqual(['Total', '3', '300.00', '30.00', '20.00', '250.00', '100.00%']);
+    expect(cells).toEqual(['Total', '3', '300.00', '30.00', '20.00', '250.00', '0.00', '100.00%']);
   });
 
   it('keeps gross - discount - refunded = net in the total, as in each row', () => {

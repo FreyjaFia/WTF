@@ -88,6 +88,7 @@ internal static class ReportTables
             new("discounts", "Discount", r => Money(r.Discounts), r => r.Discounts, true, 1.3f, rows => Money(rows.Sum(r => r.Discounts))),
             new("refundedAmount", "Refunded", r => Money(r.RefundedAmount), r => r.RefundedAmount, true, 1.3f, rows => Money(rows.Sum(r => r.RefundedAmount))),
             new("totalAmount", "Net", r => Money(r.TotalAmount), r => r.TotalAmount, true, 1.4f, rows => Money(rows.Sum(r => r.TotalAmount))),
+            new("tips", "Tips", r => Money(r.Tips), r => r.Tips, true, 1f, rows => Money(rows.Sum(r => r.Tips))),
             new("totalPercent", "Net %", r => Percent(r.TotalPercent), r => r.TotalPercent, true, 0.9f, rows => Percent(rows.Sum(r => r.TotalPercent)))
         ],
         rows =>
@@ -96,7 +97,8 @@ internal static class ReportTables
             ("Discounts", Money(rows.Sum(r => r.Discounts))),
             ("Refunded", Money(rows.Sum(r => r.RefundedAmount))),
             ("Net Amount", Money(rows.Sum(r => r.TotalAmount))),
-            ("Total Orders", Number(rows.Sum(r => r.OrderCount)))
+            ("Total Orders", Number(rows.Sum(r => r.OrderCount))),
+            ("Total Tips", Money(rows.Sum(r => r.Tips)))
         ]);
 
     public static readonly ReportTable<HourlySalesReportRowDto> Hourly = new(

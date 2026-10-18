@@ -640,8 +640,8 @@ public class MonthlyReportWorkbookServiceTests
         using var wb = await GenerateSampleAsync();
 
         var pay = wb.Worksheet("Payment Method Breakdown");
-        Row(pay, 7, 7).ShouldBe(["Cash", "4", "PHP 3,200.00", "PHP 100.00", "PHP 100.00", "PHP 3,000.00", "75.00%"]);
-        Row(pay, 9, 7).ShouldBe(["Total", "5", "PHP 4,200.50", "PHP 100.00", "PHP 100.00", "PHP 4,000.50", "100.00%"]);
+        Row(pay, 7, 8).ShouldBe(["Cash", "4", "PHP 3,200.00", "PHP 100.00", "PHP 100.00", "PHP 3,000.00", "PHP 0.00", "75.00%"]);
+        Row(pay, 9, 8).ShouldBe(["Total", "5", "PHP 4,200.50", "PHP 100.00", "PHP 100.00", "PHP 4,000.50", "PHP 0.00", "100.00%"]);
 
         var hourly = wb.Worksheet("Hourly Sales Distribution");
         Text(hourly, 7, 1).ShouldBe("09:00 - 10:00");

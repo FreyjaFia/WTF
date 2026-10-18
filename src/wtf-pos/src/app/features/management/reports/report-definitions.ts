@@ -291,6 +291,7 @@ const payments: ReportDefinition = {
     STEP_DISCOUNT,
     STEP_REFUNDED,
     { key: 'totalAmount', header: 'Net', format: 'money', align: 'end' },
+    { key: 'tips', header: 'Tips', format: 'money', align: 'end' },
     { key: 'totalPercent', header: 'Net %', format: 'percent', align: 'end' },
   ],
   defaultSort: { key: 'totalAmount', direction: 'desc' },
@@ -301,6 +302,7 @@ const payments: ReportDefinition = {
     const rows = rowsOf<PaymentsReportRowDto>(all);
     return [
       { label: 'Total Amount', value: sum(rows, (row) => row.totalAmount), format: 'money' },
+      { label: 'Tips', value: sum(rows, (row) => row.tips), format: 'money' },
       { label: 'Orders', value: count(rows, (row) => row.orderCount), format: 'integer' },
     ];
   },
@@ -727,6 +729,7 @@ const SUM_KEYS = new Set([
   'revenue',
   'revenuePercent',
   'totalAmount',
+  'tips',
   'totalPercent',
   'totalRevenue',
   'tipsReceived',

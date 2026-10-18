@@ -167,8 +167,8 @@ public class ReportTableTests : IDisposable
         var table = ReportTables.Payments;
         IReadOnlyList<PaymentsReportRowDto> rows =
         [
-            new("Cash", 2, 150m, 60m, 200m, 30m, 20m),
-            new("GCash", 1, 350m, 40m, 350m, 0m, 0m),
+            new("Cash", 2, 150m, 60m, 200m, 30m, 20m, 5m),
+            new("GCash", 1, 350m, 40m, 350m, 0m, 0m, 7m),
         ];
 
         var all = table.BuildRows(rows);
@@ -182,7 +182,8 @@ public class ReportTableTests : IDisposable
         total[3].ShouldBe("PHP 30.00");
         total[4].ShouldBe("PHP 20.00");
         total[5].ShouldBe("PHP 500.00");
-        total[6].ShouldBe("100.00%");
+        total[6].ShouldBe("PHP 12.00");
+        total[7].ShouldBe("100.00%");
     }
 
     [Fact]
