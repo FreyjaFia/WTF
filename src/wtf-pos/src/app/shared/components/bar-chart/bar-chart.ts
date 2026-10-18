@@ -1,4 +1,5 @@
 import { Component, computed, input } from '@angular/core';
+import { chartTickCount } from '../chart-ticks';
 
 export interface BarChartPoint {
   label: string;
@@ -47,7 +48,7 @@ export class BarChartComponent {
     const points = this.data();
     const maxVal = Math.max(...(points?.map((p) => p.value) ?? [0]), 1);
     const chartH = this.height - this.padding.top - this.padding.bottom;
-    const lineCount = 4;
+    const lineCount = chartTickCount(points?.map((p) => p.value) ?? []);
     const lines: { y: number; label: string }[] = [];
 
     for (let i = 0; i <= lineCount; i++) {

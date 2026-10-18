@@ -1,4 +1,5 @@
 import { Component, computed, input } from '@angular/core';
+import { chartTickCount } from '../chart-ticks';
 
 export interface AreaChartPoint {
   label: string;
@@ -91,7 +92,7 @@ export class AreaChartComponent {
     const pts = this.data();
     const maxVal = Math.max(...(pts?.map((p) => p.value) ?? [0]), 1);
     const chartH = this.height - this.padding.top - this.padding.bottom;
-    const lineCount = 4;
+    const lineCount = chartTickCount(pts?.map((p) => p.value) ?? []);
     const lines: { y: number; label: string }[] = [];
 
     for (let i = 0; i <= lineCount; i++) {
