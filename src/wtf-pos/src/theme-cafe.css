@@ -101,8 +101,21 @@
 [data-theme='cafe'] .app-shell {
   background-color: var(--shell-bg);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72' viewBox='0 0 72 72'%3E%3Cg fill='none' stroke='%23b4532a' stroke-opacity='.07' stroke-width='1.4'%3E%3Cellipse cx='14' cy='16' rx='6' ry='4' transform='rotate(-30 14 16)'/%3E%3Cpath d='M9.5 18.5c3-1 5-3 9-5' transform='rotate(0)'/%3E%3Cellipse cx='50' cy='46' rx='6' ry='4' transform='rotate(25 50 46)'/%3E%3Cpath d='M45.5 47.5c3-1 5-2 9-5'/%3E%3C/g%3E%3C/svg%3E");
-  border-top: 7px solid transparent;
-  border-image: repeating-linear-gradient(90deg, #b4532a 0 16px, #f7ead6 16px 32px) 7 / 7px 0 0 0 stretch;
+  position: relative;
+}
+
+/* The awning is painted over the top edge instead of taking 7px of layout, so the header, sidebar and
+   page start at the same place in both styles and nothing jumps when the style changes. */
+[data-theme='cafe'] .app-shell::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 7px;
+  z-index: 30;
+  pointer-events: none;
+  background: repeating-linear-gradient(90deg, #b4532a 0 16px, #f7ead6 16px 32px);
 }
 
 [data-theme='cafe'] :is(h1, h2, h3, h4, .card-title) {
