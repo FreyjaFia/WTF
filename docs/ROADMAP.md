@@ -6,7 +6,7 @@ and human developers.
 
 ---
 
-## Offline Feature (Phases 1-5)
+## Offline Feature (Phases 1-6)
 
 Enable the POS app to function without a network connection.
 
@@ -17,6 +17,7 @@ Enable the POS app to function without a network connection.
 | 3     | Offline Order Queue           | [Completed] |
 | 4     | Edit Pending Offline Orders   | [Completed] |
 | 5     | Batch Sync & Advanced Offline | [Completed] |
+| 6     | Offline orders meet a changed catalog | [Completed] |
 
 ### Phase 1 - Connectivity & Cart Persistence [Completed]
 
@@ -84,6 +85,19 @@ Enable the POS app to function without a network connection.
 - **IndexedDB storage management** - clear old cached images
   (`images` table now stores `cachedAt`; cleanup removes stale entries and
   trims cache size by oldest-first policy).
+
+### Phase 6 - Offline orders meet a changed catalog [Completed]
+
+An order sold offline is a sale that already happened, so the server never reprices or rejects it behind the customer's back. When it syncs and the menu moved on, an Admin decides.
+
+- **What is held.** A Completed offline order is held as `PendingReview` (status 6) when, compared with today's catalog: a product or add-on is inactive, a line or add-on price differs from the price the POS quoted (this also catches a changed or ended discount), a bundle is inactive, ended, no longer matches its rules or costs something else, or the customer is inactive (`OfflineOrderReview`). An open (Pending) offline order is never held: it is priced when it completes.
+- **What is saved.** The order is saved exactly as quoted: line prices, add-on prices, bundle price, tips and change. The reasons are listed on the order (`ReviewReasons`, one per line) with the quoted total (`QuotedTotal`). A held order is not a sale: the dashboard, the reports and the normal order lists leave it out (`OrderStatuses.Unconfirmed` is the one list of statuses that are not sales yet), it cannot be edited or voided, and nothing is deducted from stock.
+- **Admin decision** (SuperAdmin and Admin, the `OrdersOverride` policy). `POST /api/orders/{id}/review/approve` makes it Completed at the quoted prices; `POST /api/orders/{id}/review/reject` (reason required) cancels it and puts the reason in `Note`, so it shows in the Voids and Refunds report. Both are audited (`OrderHeldForReview`, `OrderReviewApproved`, `OrderReviewRejected`). The Orders list has an "Offline orders needing review" banner for Admins, and order details has a "Needs review" box with the same buttons.
+- **Sync protocol.** `POST /api/orders/sync` replaces the all-or-nothing batch for the POS: each order is saved in its own transaction and gets its own result (`OfflineSyncResultDto`: saved, held with reasons, or an error), so one bad order no longer fails the other four. The old `POST /api/orders/batch` stays for older apps.
+- **No duplicates.** Every queued order is sent with a key of its queue number plus a per-device id (`OfflineLocalId`, unique index `UX_Orders_OfflineLocalId`). A sync that is sent twice (a timeout, then Sync Now) returns the saved order instead of saving it again. The device id is part of the key because queue numbers restart on every device.
+- **POS.** An order queued offline carries each line's quoted price, the original price and promo label, each add-on's price and each bundle's price. The discount promotions are now saved with the catalog (`CatalogCacheService.discountedPromotions`), so an offline cart prices discounts like an online one; before, an offline sale got no discount and the server applied it at sync.
+- **Checked in the running app** (throwaway database): a Cashier sold a Latte offline at 150 with the API stopped, the price was changed to 160, the API came back, the POS synced by itself, the order was held with "Latte now costs 160.00, quoted 150.00.", the Cashier saw no banner and could not approve (403), the Admin approved it from the banner, and it became Completed at 150.00 (and counted in the daily sales only from then on). Also checked by API: a retried sync returns the same order, a bad order does not stop the next one, reject needs a reason and shows as Cancelled.
+
 
 ---
 
@@ -1216,13 +1230,27 @@ Audited the API and the screens, and reproduced each bug on a throwaway database
 - **A completed order can still be corrected after its bundle ends.** In the override flow a bundle already on the order keeps the price it was sold at and is not re-checked. Adding an ended bundle to an order is still refused.
 - **Promotion save validation:** products and add-ons must exist (a missing one used to be a 500), be active, and an add-on cannot be the sold product; a fixed bundle cannot list a product twice (was a 500) or have a negative price; names over 100 characters give a 400 (was a 500). An inactive promotion may still list products that have been deactivated since (`PromotionProductValidation`).
 
-**Open (in this order)**
+**Done after the audit:** the offline flow (see Offline Phase 6).
 
-1. **Offline orders that meet a changed catalog.** Plan decided: a synced offline order whose products, prices or promotions changed is held as `PendingReview` for an Admin to approve or reject, with the reasons listed on the order. Orders sync one at a time inside a batch request, each with its own result, and `OfflineLocalId` makes a retried sync return the saved order instead of a duplicate. The POS must queue each line's quoted price. The script `tools/sql/20261018_add_order_review_holds.sql` (status 6, `ReviewReasons`, `QuotedTotal`, `OfflineLocalId`) and the scaffolded columns are done; nothing uses them yet. Until this lands, an offline order made with a stale bundle fails its batch of 5 with the server's message.
-2. **Status on the screens.** The list and details show "Active" for an expired or not-yet-started promotion and show no dates or price. They need a scheduled, active, ended or inactive state.
-3. **Editor shows a blank name** for a bundle product that was deactivated since.
-4. **No audit entries** for promotion create, update, delete and restore.
-5. Smaller: three copies of the add-on grouping method in `promotion-editor.ts`; the list subtitle leaves out discounted products; no inline check for end before start or a negative price; the date pickers use the browser's time zone while the server uses Asia/Manila.
+**Review of the three promotion types (18 Oct 2026)**
+
+What each type has today: Fixed Bundle (price, products with quantity and add-ons, start and end day), Mix & Match (price, required count, products with add-ons, a per-product maximum, start and end day), Discounted Product (amount off or percent off, exact required add-ons, start and end day). Findings, checked in the running app unless marked:
+
+1. **Cashiers cannot sell bundles.** The POS loads bundles from `/api/management/promotions/fixed-bundles` and `/mix-match`, which need `PromotionsRead` (SuperAdmin, Admin, AdminViewer). A Cashier gets 403 on both, so the Bundles tab is missing. Fix: POS endpoints under `OrdersWrite` that return the active bundles with their items.
+2. **Bundles cannot be added offline.** The list is cached but opening a bundle fetches its items from the API. The same POS endpoint should be cached with the catalog.
+3. **A bundle can be saved that can never be sold.** If a product has a required Size or Flavor add-on and the bundle does not list one, the save succeeds and every order is refused ("A size selection is required"). The save should check the required add-on types per product (Fixed Bundle, Mix & Match and Discounted Product).
+4. **Discounted Product cannot discount a plain product.** It needs at least one add-on and only applies when the cart has exactly those add-ons, so "20% off all Lattes" needs one promotion per add-on combination. (By design today; decide if a "no add-on needed" mode is wanted.)
+5. **Missing properties for common promotions:** no time-of-day or weekday window (happy hour), no usage limit or stock, no minimum spend. These are the planned Phase 2+ promotion types.
+6. **Naming:** the Discounted Product "fixed price" is an amount taken off the price (`price - fixedPrice`); Mix & Match "max selections per order" is a maximum per product, multiplied by the bundle quantity.
+7. **A discounted-product promotion also prices the products inside a bundle line** (stored `Price` and `PromoLabel` on the child lines). The totals ignore those lines, but the stored label can mislead. Not checked on screen.
+
+**Still open from the audit**
+
+- Status on the screens: the list and details show "Active" for an expired or not-yet-started promotion and show no dates or price.
+- The editor shows a blank name for a bundle product that was deactivated since.
+- No audit entries for promotion create, update, delete and restore.
+- Smaller: three copies of the add-on grouping method in `promotion-editor.ts`; the list subtitle leaves out discounted products; no inline check for end before start or a negative price; the date pickers use the browser's time zone while the server uses Asia/Manila.
+- A product that is sold offline and deactivated before sync is held; a hard-deleted product or a product the server cannot find is still a per-order error (the order stays in the queue with the message).
 
 ---
 
