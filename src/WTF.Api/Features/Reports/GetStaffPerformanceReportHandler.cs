@@ -51,7 +51,7 @@ public sealed class GetStaffPerformanceReportHandler(
             query = query.Where(o => o.CreatedBy == request.StaffId.Value);
         }
 
-        var orders = await query.ToListAsync(cancellationToken);
+        var orders = await query.ToReportListAsync(cancellationToken);
         var overridePrices = await AddOnPriceLookup.ForOrdersAsync(db, orders, cancellationToken);
 
         var grouped = orders

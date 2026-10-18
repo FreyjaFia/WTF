@@ -47,7 +47,7 @@ public sealed class GetDailyCloseReportHandler(
                 && o.CreatedAt < toExclusiveUtc
                 && o.StatusId != OrderStatuses.PendingApproval
                 && (source == null || o.Source == source))
-            .ToListAsync(cancellationToken);
+            .ToReportListAsync(cancellationToken);
 
         var overridePrices = await AddOnPriceLookup.ForOrdersAsync(db, orders, cancellationToken);
         var summary = SalesRules.Summarize(orders, overridePrices);

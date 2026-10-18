@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using WTF.Api.Common.Orders;
 using WTF.Api.Common.Time;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Features.Reports.DTOs;
@@ -41,7 +42,7 @@ public sealed class GetPromotionPerformanceReportHandler(
                 && oi.Order.StatusId == OrderStatuses.Completed
                 && (source == null || oi.Order.Source == source))
             .Select(oi => new { oi.PromoLabel, oi.Quantity, oi.Price, oi.OriginalPrice })
-            .ToListAsync(cancellationToken);
+            .ToReportListAsync(cancellationToken);
 
         var rows = discountedLines
             .GroupBy(line => line.PromoLabel!)
@@ -69,7 +70,7 @@ public sealed class GetPromotionPerformanceReportHandler(
                 Uses = g.Sum(x => x.Quantity),
                 Revenue = g.Sum(x => x.UnitPrice * x.Quantity)
             })
-            .ToListAsync(cancellationToken);
+            .ToReportListAsync(cancellationToken);
 
         rows.AddRange(bundles.Select(b => new PromotionPerformanceReportRowDto(
             b.Name,

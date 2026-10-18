@@ -44,7 +44,7 @@ public sealed class GetVoidedOrdersReportHandler(
             .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.Product)
             .Include(o => o.OrderBundlePromotions)
-            .ToListAsync(cancellationToken);
+            .ToReportListAsync(cancellationToken);
 
         var finishedPerStaff = await finished
             .GroupBy(o => o.CreatedBy)

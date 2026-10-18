@@ -35,7 +35,7 @@ public sealed class GetCustomerLinkReportHandler(
                 .ThenInclude(oi => oi.Product)
             .Include(o => o.OrderBundlePromotions)
             .Where(o => o.CreatedAt >= fromUtc && o.CreatedAt < toExclusiveUtc && o.Source == linkSource)
-            .ToListAsync(cancellationToken);
+            .ToReportListAsync(cancellationToken);
 
         var overridePrices = await AddOnPriceLookup.ForOrdersAsync(db, orders, cancellationToken);
 

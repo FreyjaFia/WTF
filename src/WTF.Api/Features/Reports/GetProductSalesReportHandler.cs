@@ -80,7 +80,7 @@ public sealed class GetProductSalesReportHandler(
                 query = query.Where(oi => oi.Product.SubCategoryId == productSubCategoryFilter.Value);
             }
 
-            parentItems = await query.ToListAsync(cancellationToken);
+            parentItems = await query.ToReportListAsync(cancellationToken);
         }
 
         var overridePrices = await AddOnPriceLookup.ForParentItemsAsync(db, parentItems, cancellationToken);
@@ -145,7 +145,7 @@ public sealed class GetProductSalesReportHandler(
                 bundleQuery = bundleQuery.Where(obp => obp.Promotion.TypeId == promotionTypeFilter.Value);
             }
 
-            var bundles = await bundleQuery.ToListAsync(cancellationToken);
+            var bundles = await bundleQuery.ToReportListAsync(cancellationToken);
             lines.AddRange(bundles.Select(bundle =>
             {
                 var bundleTotal = bundle.UnitPrice * bundle.Quantity;

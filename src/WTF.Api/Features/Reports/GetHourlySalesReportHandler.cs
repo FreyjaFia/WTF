@@ -37,7 +37,7 @@ public sealed class GetHourlySalesReportHandler(WTFDbContext db, IHttpContextAcc
                 && o.CreatedAt < toExclusiveUtc
                 && (o.StatusId == OrderStatuses.Completed || o.StatusId == OrderStatuses.Refunded)
                 && (source == null || o.Source == source))
-            .ToListAsync(cancellationToken);
+            .ToReportListAsync(cancellationToken);
 
         var overridePrices = await AddOnPriceLookup.ForOrdersAsync(db, orders, cancellationToken);
 

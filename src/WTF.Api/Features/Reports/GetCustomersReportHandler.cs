@@ -39,7 +39,7 @@ public sealed class GetCustomersReportHandler(
                 && o.CreatedAt < toExclusiveUtc
                 && o.StatusId == OrderStatuses.Completed
                 && (source == null || o.Source == source))
-            .ToListAsync(cancellationToken);
+            .ToReportListAsync(cancellationToken);
 
         var customerIds = orders.Select(o => o.CustomerId!.Value).Distinct().ToList();
 

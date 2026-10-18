@@ -36,7 +36,7 @@ public sealed class GetDailySalesReportHandler(WTFDbContext db, IHttpContextAcce
             .Include(o => o.OrderBundlePromotions)
             .Where(o => o.CreatedAt >= fromUtc && o.CreatedAt < toExclusiveUtc
                 && (source == null || o.Source == source))
-            .ToListAsync(cancellationToken);
+            .ToReportListAsync(cancellationToken);
 
         var overridePrices = await AddOnPriceLookup.ForOrdersAsync(db, orders, cancellationToken);
 
