@@ -462,6 +462,10 @@ public partial class WTFDbContext : DbContext
 
             entity.HasIndex(e => e.OrderNumber, "UQ_Orders_OrderNumber").IsUnique();
 
+            entity.HasIndex(e => e.OfflineLocalId, "UX_Orders_OfflineLocalId")
+                .IsUnique()
+                .HasFilter("([OfflineLocalId] IS NOT NULL)");
+
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
             entity.Property(e => e.AmountReceived).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.ChangeAmount).HasColumnType("decimal(10, 2)");
@@ -471,9 +475,14 @@ public partial class WTFDbContext : DbContext
                 .HasColumnType("datetime");
             entity.Property(e => e.DeliveryAddress).HasMaxLength(300);
             entity.Property(e => e.Note).HasMaxLength(500);
+            entity.Property(e => e.OfflineLocalId)
+                .HasMaxLength(40)
+                .IsUnicode(false);
             entity.Property(e => e.OrderNumber).HasDefaultValueSql("(NEXT VALUE FOR [dbo].[OrderNumberSeq])", "DF_Orders_OrderNumber_DEFAULT");
             entity.Property(e => e.OverrideReason).HasMaxLength(500);
+            entity.Property(e => e.QuotedTotal).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.RejectionReason).HasMaxLength(500);
+            entity.Property(e => e.ReviewReasons).HasMaxLength(1000);
             entity.Property(e => e.SpecialInstructions)
                 .HasMaxLength(100)
                 .IsUnicode(false);

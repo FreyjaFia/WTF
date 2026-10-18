@@ -50,6 +50,12 @@ public partial class Order
 
     public DateTime? ReadyAt { get; set; }
 
+    public string? ReviewReasons { get; set; }
+
+    public decimal? QuotedTotal { get; set; }
+
+    public string? OfflineLocalId { get; set; }
+
     public virtual Conversation? Conversation { get; set; }
 
     public virtual User CreatedByNavigation { get; set; } = null!;
