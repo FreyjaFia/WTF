@@ -9,6 +9,27 @@ internal static class PromotionSeed
 {
     public static readonly DateTime Now = new(2026, 6, 15, 12, 0, 0, DateTimeKind.Utc);
 
+    public static async Task SeedProductsAsync(WTFDbContext db, Guid createdBy, params (Guid Id, string Name, bool IsAddOn)[] products)
+    {
+        foreach (var (id, name, isAddOn) in products)
+        {
+            db.Products.Add(new Product
+            {
+                Id = id,
+                Name = name,
+                Code = name.ToUpperInvariant(),
+                Price = 10m,
+                CategoryId = 1,
+                IsAddOn = isAddOn,
+                IsActive = true,
+                CreatedAt = Now,
+                CreatedBy = createdBy
+            });
+        }
+
+        await db.SaveChangesAsync();
+    }
+
     public static async Task LinkAddOnAsync(WTFDbContext db, Guid productId, Guid addOnId, bool isActive = true)
     {
         db.ProductAddOns.Add(new ProductAddOn { ProductId = productId, AddOnId = addOnId, IsActive = isActive });

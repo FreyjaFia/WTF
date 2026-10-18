@@ -5,7 +5,7 @@ using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Features.Promotions;
 
-public class DiscountedProductHandlersTests
+public class DiscountedProductHandlersTests : IAsyncLifetime
 {
     private readonly Guid _userId = Guid.NewGuid();
     private readonly string _dbName = TestDb.NewName();
@@ -13,6 +13,51 @@ public class DiscountedProductHandlersTests
     private readonly Guid _fries = Guid.NewGuid();
     private readonly Guid _cheese = Guid.NewGuid();
     private readonly Guid _bacon = Guid.NewGuid();
+
+    public async Task InitializeAsync()
+    {
+        await using var db = TestDb.Create(_dbName);
+        await PromotionSeed.SeedProductsAsync(
+            db, _userId, (_burger, "Burger", false), (_fries, "Fries", false), (_cheese, "Cheese", true), (_bacon, "Bacon", true));
+    }
+
+    public Task DisposeAsync() => Task.CompletedTask;
+
+    [Fact]
+    public async Task Create_InactiveProduct_ThrowsNamingIt()
+    {
+        await LinkAsync(_burger, _cheese);
+        await using (var db = TestDb.Create(_dbName))
+        {
+            (await db.Products.SingleAsync(x => x.Id == _burger)).IsActive = false;
+            await db.SaveChangesAsync();
+        }
+
+        var ex = await Should.ThrowAsync<InvalidOperationException>(() =>
+            Create().Handle(Cmd(Item(_burger, 5m, null, _cheese)), CancellationToken.None));
+
+        ex.Message.ShouldBe("Inactive products cannot be used in a promotion: Burger.");
+    }
+
+    [Fact]
+    public async Task Create_UnknownProduct_ThrowsAClearError()
+    {
+        var ex = await Should.ThrowAsync<InvalidOperationException>(() =>
+            Create().Handle(Cmd(Item(Guid.NewGuid(), 5m, null, _cheese)), CancellationToken.None));
+
+        ex.Message.ShouldBe("One or more promotion products or add-ons do not exist.");
+    }
+
+    [Fact]
+    public async Task Create_NameLongerThan100_Throws()
+    {
+        await LinkAsync(_burger, _cheese);
+
+        var ex = await Should.ThrowAsync<InvalidOperationException>(() =>
+            Create().Handle(Cmd(Item(_burger, 5m, null, _cheese)) with { Name = new string('x', 101) }, CancellationToken.None));
+
+        ex.Message.ShouldBe("Promotion name must be 100 characters or fewer.");
+    }
 
     private CreateDiscountedProductPromotionHandler Create() => new(TestDb.Create(_dbName), TestRequest.As(_userId));
     private UpdateDiscountedProductPromotionHandler Update() => new(TestDb.Create(_dbName), TestRequest.As(_userId));

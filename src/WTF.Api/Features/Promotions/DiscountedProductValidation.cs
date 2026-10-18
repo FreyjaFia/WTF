@@ -16,6 +16,8 @@ internal static class DiscountedProductValidation
             throw new InvalidOperationException("Promotion name is required.");
         }
 
+        PromotionProductValidation.EnsureNameLength(name);
+
         if (endAtUtc.HasValue && startAtUtc.HasValue && endAtUtc.Value < startAtUtc.Value)
         {
             throw new InvalidOperationException("End date cannot be earlier than start date.");

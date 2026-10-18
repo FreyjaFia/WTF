@@ -5,7 +5,7 @@ using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Features.Promotions;
 
-public class MixMatchHandlersTests
+public class MixMatchHandlersTests : IAsyncLifetime
 {
     private readonly Guid _userId = Guid.NewGuid();
     private readonly string _dbName = TestDb.NewName();
@@ -13,6 +13,50 @@ public class MixMatchHandlersTests
     private readonly Guid _tea = Guid.NewGuid();
     private readonly Guid _milk = Guid.NewGuid();
     private readonly Guid _sugar = Guid.NewGuid();
+
+    public async Task InitializeAsync()
+    {
+        await using var db = TestDb.Create(_dbName);
+        await PromotionSeed.SeedProductsAsync(
+            db, _userId, (_coffee, "Coffee", false), (_tea, "Tea", false), (_milk, "Milk", true), (_sugar, "Sugar", true));
+    }
+
+    public Task DisposeAsync() => Task.CompletedTask;
+
+    [Fact]
+    public async Task Create_UnknownProduct_ThrowsAClearErrorAndSavesNothing()
+    {
+        var ex = await Should.ThrowAsync<InvalidOperationException>(() =>
+            Create().Handle(Cmd(Item(Guid.NewGuid())), CancellationToken.None));
+
+        ex.Message.ShouldBe("One or more promotion products or add-ons do not exist.");
+        await using var db = TestDb.Create(_dbName);
+        (await db.Promotions.CountAsync()).ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task Create_InactiveProduct_ThrowsNamingIt()
+    {
+        await using (var db = TestDb.Create(_dbName))
+        {
+            (await db.Products.SingleAsync(x => x.Id == _tea)).IsActive = false;
+            await db.SaveChangesAsync();
+        }
+
+        var ex = await Should.ThrowAsync<InvalidOperationException>(() =>
+            Create().Handle(Cmd(Item(_coffee), Item(_tea)), CancellationToken.None));
+
+        ex.Message.ShouldBe("Inactive products cannot be used in a promotion: Tea.");
+    }
+
+    [Fact]
+    public async Task Create_NameLongerThan100_Throws()
+    {
+        var ex = await Should.ThrowAsync<InvalidOperationException>(() =>
+            Create().Handle(Cmd(Item(_coffee)) with { Name = new string('x', 101) }, CancellationToken.None));
+
+        ex.Message.ShouldBe("Promotion name must be 100 characters or fewer.");
+    }
 
     private CreateMixMatchPromotionHandler Create() => new(TestDb.Create(_dbName), TestRequest.As(_userId));
     private UpdateMixMatchPromotionHandler Update() => new(TestDb.Create(_dbName), TestRequest.As(_userId));

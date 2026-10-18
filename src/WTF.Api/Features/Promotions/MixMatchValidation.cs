@@ -43,6 +43,8 @@ internal static class MixMatchValidation
             throw new InvalidOperationException("Promotion name is required.");
         }
 
+        PromotionProductValidation.EnsureNameLength(name);
+
         if (endDate.HasValue && startDate.HasValue && endDate.Value < startDate.Value)
         {
             throw new InvalidOperationException("End date cannot be earlier than start date.");

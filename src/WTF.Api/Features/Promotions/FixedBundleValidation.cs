@@ -16,6 +16,8 @@ internal static class FixedBundleValidation
             throw new InvalidOperationException("Promotion name is required.");
         }
 
+        PromotionProductValidation.EnsureNameLength(name);
+
         if (endAtUtc.HasValue && startAtUtc.HasValue && endAtUtc.Value < startAtUtc.Value)
         {
             throw new InvalidOperationException("End date cannot be earlier than start date.");
@@ -24,6 +26,11 @@ internal static class FixedBundleValidation
         if (items.Count == 0)
         {
             throw new InvalidOperationException("At least one bundle item is required.");
+        }
+
+        if (items.Select(x => x.ProductId).Distinct().Count() != items.Count)
+        {
+            throw new InvalidOperationException("Each bundle product can only be listed once.");
         }
 
         foreach (var item in items)
@@ -43,25 +50,11 @@ internal static class FixedBundleValidation
         }
     }
 
-    public static async Task EnsureProductsExistAsync(
-        WTFDbContext db,
-        List<CreateFixedBundlePromotionItemRequestDto> items,
-        CancellationToken cancellationToken)
+    public static void EnsureBundlePrice(decimal bundlePrice)
     {
-        var requested = items
-            .Select(item => item.ProductId)
-            .Concat(items.SelectMany(item => (item.AddOns ?? []).Select(addOn => addOn.AddOnProductId)))
-            .Distinct()
-            .ToList();
-
-        var existing = await db.Products
-            .Where(p => requested.Contains(p.Id))
-            .Select(p => p.Id)
-            .ToListAsync(cancellationToken);
-
-        if (existing.Count != requested.Count)
+        if (bundlePrice < 0)
         {
-            throw new InvalidOperationException("One or more bundle products do not exist.");
+            throw new InvalidOperationException("Bundle price must be greater than or equal to zero.");
         }
     }
 

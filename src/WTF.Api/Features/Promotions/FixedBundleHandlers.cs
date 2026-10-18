@@ -100,7 +100,13 @@ public sealed class CreateFixedBundlePromotionHandler(WTFDbContext db, IHttpCont
     {
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
         FixedBundleValidation.EnsureValid(request.Name, request.StartDate, request.EndDate, request.Items);
-        await FixedBundleValidation.EnsureProductsExistAsync(db, request.Items, cancellationToken);
+        FixedBundleValidation.EnsureBundlePrice(request.BundlePrice);
+        await PromotionProductValidation.EnsureUsableAsync(
+            db,
+            request.Items.Select(i => i.ProductId),
+            request.Items.SelectMany(i => (i.AddOns ?? []).Select(a => a.AddOnProductId)),
+            request.IsActive,
+            cancellationToken);
         await FixedBundleValidation.EnsureAddOnsAreLinkedToBundleItemsAsync(db, request.Items, cancellationToken);
 
         var promo = new Promotion
@@ -175,7 +181,13 @@ public sealed class UpdateFixedBundlePromotionHandler(WTFDbContext db, IHttpCont
     {
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
         FixedBundleValidation.EnsureValid(request.Name, request.StartDate, request.EndDate, request.Items);
-        await FixedBundleValidation.EnsureProductsExistAsync(db, request.Items, cancellationToken);
+        FixedBundleValidation.EnsureBundlePrice(request.BundlePrice);
+        await PromotionProductValidation.EnsureUsableAsync(
+            db,
+            request.Items.Select(i => i.ProductId),
+            request.Items.SelectMany(i => (i.AddOns ?? []).Select(a => a.AddOnProductId)),
+            request.IsActive,
+            cancellationToken);
         await FixedBundleValidation.EnsureAddOnsAreLinkedToBundleItemsAsync(db, request.Items, cancellationToken);
 
         var promo = await db.Promotions

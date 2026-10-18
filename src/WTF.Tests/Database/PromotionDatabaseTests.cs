@@ -60,7 +60,7 @@ public class PromotionDatabaseTests
         {
             var ex = await Should.ThrowAsync<InvalidOperationException>(() => Update(db, user.Id).Handle(
                 Cmd(promo, new CreateFixedBundlePromotionItemRequestDto(Guid.NewGuid(), 1, [])), CancellationToken.None));
-            ex.Message.ShouldBe("One or more bundle products do not exist.");
+            ex.Message.ShouldBe("One or more promotion products or add-ons do not exist.");
         }
 
         await using var check = database.CreateContext();

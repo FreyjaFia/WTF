@@ -89,6 +89,12 @@ public sealed class CreateMixMatchPromotionHandler(WTFDbContext db, IHttpContext
     {
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
         MixMatchValidation.EnsureValid(request);
+        await PromotionProductValidation.EnsureUsableAsync(
+            db,
+            request.Items.Select(i => i.ProductId),
+            request.Items.SelectMany(i => i.AddOns.Select(a => a.AddOnProductId)),
+            request.IsActive,
+            cancellationToken);
         await MixMatchValidation.EnsureItemsAreLinkedAsync(db, request.Items, cancellationToken);
 
         var promo = new Promotion
@@ -135,6 +141,12 @@ public sealed class UpdateMixMatchPromotionHandler(WTFDbContext db, IHttpContext
     {
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
         MixMatchValidation.EnsureValid(request);
+        await PromotionProductValidation.EnsureUsableAsync(
+            db,
+            request.Items.Select(i => i.ProductId),
+            request.Items.SelectMany(i => i.AddOns.Select(a => a.AddOnProductId)),
+            request.IsActive,
+            cancellationToken);
         await MixMatchValidation.EnsureItemsAreLinkedAsync(db, request.Items, cancellationToken);
 
         var promo = await db.Promotions

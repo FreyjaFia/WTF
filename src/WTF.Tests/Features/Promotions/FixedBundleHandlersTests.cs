@@ -37,13 +37,86 @@ public class FixedBundleHandlersTests : IAsyncLifetime
 
     public Task DisposeAsync() => Task.CompletedTask;
 
+    private async Task SetProductAsync(Guid id, bool? isActive = null, bool? isAddOn = null)
+    {
+        await using var db = TestDb.Create(_dbName);
+        var product = await db.Products.SingleAsync(x => x.Id == id);
+        product.IsActive = isActive ?? product.IsActive;
+        product.IsAddOn = isAddOn ?? product.IsAddOn;
+        await db.SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task Create_SameProductTwice_ThrowsAClearError()
+    {
+        var cmd = new CreateFixedBundlePromotionCommand
+        {
+            Name = "Combo",
+            BundlePrice = 10m,
+            Items = [new(_burger, 1, []), new(_burger, 2, [])]
+        };
+
+        var ex = await Should.ThrowAsync<InvalidOperationException>(() => Create().Handle(cmd, CancellationToken.None));
+
+        ex.Message.ShouldBe("Each bundle product can only be listed once.");
+    }
+
+    [Fact]
+    public async Task Create_NegativeBundlePrice_Throws()
+    {
+        var ex = await Should.ThrowAsync<InvalidOperationException>(() =>
+            Create().Handle(Cmd(_burger) with { BundlePrice = -5m }, CancellationToken.None));
+
+        ex.Message.ShouldBe("Bundle price must be greater than or equal to zero.");
+    }
+
+    [Fact]
+    public async Task Create_NameLongerThan100_Throws()
+    {
+        var ex = await Should.ThrowAsync<InvalidOperationException>(() =>
+            Create().Handle(Cmd(_burger) with { Name = new string('x', 101) }, CancellationToken.None));
+
+        ex.Message.ShouldBe("Promotion name must be 100 characters or fewer.");
+    }
+
+    [Fact]
+    public async Task Create_InactiveProduct_ThrowsNamingIt()
+    {
+        await SetProductAsync(_burger, isActive: false);
+
+        var ex = await Should.ThrowAsync<InvalidOperationException>(() => Create().Handle(Cmd(_burger), CancellationToken.None));
+
+        ex.Message.ShouldBe("Inactive products cannot be used in a promotion: Burger.");
+    }
+
+    [Fact]
+    public async Task Create_InactiveProductInAnInactivePromotion_IsAllowed()
+    {
+        await SetProductAsync(_burger, isActive: false);
+
+        await Create().Handle(Cmd(_burger) with { IsActive = false }, CancellationToken.None);
+
+        await using var db = TestDb.Create(_dbName);
+        (await db.Promotions.CountAsync()).ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task Create_AddOnAsTheBundleProduct_Throws()
+    {
+        await SetProductAsync(_cheese, isAddOn: true);
+
+        var ex = await Should.ThrowAsync<InvalidOperationException>(() => Create().Handle(Cmd(_cheese), CancellationToken.None));
+
+        ex.Message.ShouldBe("Add-ons cannot be sold as promotion products: Cheese.");
+    }
+
     [Fact]
     public async Task Create_UnknownProduct_ThrowsAClearErrorAndSavesNothing()
     {
         var ex = await Should.ThrowAsync<InvalidOperationException>(() =>
             Create().Handle(Cmd(Guid.NewGuid()), CancellationToken.None));
 
-        ex.Message.ShouldBe("One or more bundle products do not exist.");
+        ex.Message.ShouldBe("One or more promotion products or add-ons do not exist.");
         await using var db = TestDb.Create(_dbName);
         (await db.Promotions.CountAsync()).ShouldBe(0);
     }
@@ -54,7 +127,7 @@ public class FixedBundleHandlersTests : IAsyncLifetime
         var ex = await Should.ThrowAsync<InvalidOperationException>(() =>
             Create().Handle(Cmd(_burger, 1, Guid.NewGuid()), CancellationToken.None));
 
-        ex.Message.ShouldBe("One or more bundle products do not exist.");
+        ex.Message.ShouldBe("One or more promotion products or add-ons do not exist.");
     }
 
     private CreateFixedBundlePromotionHandler Create() => new(TestDb.Create(_dbName), TestRequest.As(_userId));

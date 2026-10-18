@@ -127,6 +127,12 @@ public sealed class CreateDiscountedProductPromotionHandler(WTFDbContext db, IHt
     {
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
         DiscountedProductValidation.EnsureValid(request.Name, request.StartDate, request.EndDate, request.Items);
+        await PromotionProductValidation.EnsureUsableAsync(
+            db,
+            request.Items.Select(i => i.ProductId),
+            request.Items.SelectMany(i => (i.AddOns ?? []).Select(a => a.AddOnProductId)),
+            request.IsActive,
+            cancellationToken);
         await DiscountedProductValidation.EnsureAddOnsAreLinkedAsync(db, request.Items, cancellationToken);
 
         var promo = new Promotion
@@ -192,6 +198,12 @@ public sealed class UpdateDiscountedProductPromotionHandler(WTFDbContext db, IHt
     {
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
         DiscountedProductValidation.EnsureValid(request.Name, request.StartDate, request.EndDate, request.Items);
+        await PromotionProductValidation.EnsureUsableAsync(
+            db,
+            request.Items.Select(i => i.ProductId),
+            request.Items.SelectMany(i => (i.AddOns ?? []).Select(a => a.AddOnProductId)),
+            request.IsActive,
+            cancellationToken);
         await DiscountedProductValidation.EnsureAddOnsAreLinkedAsync(db, request.Items, cancellationToken);
 
         var promo = await db.Promotions
