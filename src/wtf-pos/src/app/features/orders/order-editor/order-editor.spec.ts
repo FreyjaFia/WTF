@@ -1501,6 +1501,54 @@ describe('OrderEditor', () => {
       expect(t.isSavingOrder()).toBe(false);
     });
 
+    it('quotes every price when it queues the order offline, so the server can tell what changed', async () => {
+      isOnline.set(false);
+      t.onOrderSaved();
+
+      const queued = offline['queue'].mock.calls[0][0];
+      expect(queued.items).toEqual([
+        {
+          productId: 'latte',
+          quantity: 2,
+          addOns: [{ productId: 'shot', quantity: 2, addOns: [], bundlePromotionId: null, quotedPrice: 20 }],
+          specialInstructions: 'hot',
+          bundlePromotionId: null,
+          quotedPrice: 100,
+          quotedOriginalPrice: 100,
+          quotedPromoLabel: null,
+        },
+        {
+          productId: 'chips',
+          quantity: 4,
+          addOns: [],
+          specialInstructions: 'cut',
+          bundlePromotionId: 'b1',
+          quotedPrice: 30,
+        },
+        {
+          productId: 'latte',
+          quantity: 2,
+          addOns: [{ productId: 'shot', quantity: 1, addOns: [], bundlePromotionId: null, quotedPrice: 20 }],
+          specialInstructions: 'cut',
+          bundlePromotionId: 'b1',
+          quotedPrice: 100,
+        },
+        { productId: 'cola', quantity: 4, addOns: [], specialInstructions: null, bundlePromotionId: 'm1', quotedPrice: 50 },
+      ]);
+      expect(queued.bundlePromotions).toEqual([
+        { promotionId: 'b1', quantity: 2, quotedUnitPrice: 150 },
+        { promotionId: 'm1', quantity: 3, quotedUnitPrice: 200 },
+      ]);
+      await settle();
+    });
+
+    it('sends no quoted prices when the order goes straight to the server', () => {
+      t.onOrderSaved();
+
+      const cmd = orderService['createOrder'].mock.calls[0][0];
+      expect(JSON.stringify(cmd)).not.toContain('quoted');
+    });
+
     it('offline queue failure alerts and unlocks', async () => {
       isOnline.set(false);
       offline['queue'].mockRejectedValue(new Error('idb'));

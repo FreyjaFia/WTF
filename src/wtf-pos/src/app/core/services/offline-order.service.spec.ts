@@ -70,6 +70,17 @@ class FakeTable {
   }
 }
 
+/** What the server answers for orders it saved: one result per order, matched by the queue number it was sent. */
+const saved = (batch: { offlineLocalId?: string }[], status = 2) =>
+  batch.map((c) => ({
+    offlineLocalId: c.offlineLocalId,
+    orderId: 'srv',
+    orderNumber: 1,
+    status,
+    reasons: [] as string[],
+    error: null,
+  }));
+
 const command = (tag = 'a') => ({ note: tag }) as unknown as CreateOrderCommand;
 const cart = [] as CartItemDto[];
 
@@ -109,12 +120,14 @@ describe('OfflineOrderService', () => {
     table = new FakeTable();
     Object.defineProperty(db, 'pendingOrders', { value: table, configurable: true, writable: true });
     online = signal(false);
-    createBatch = vi.fn(() => of([]) as Observable<unknown>);
+    createBatch = vi.fn(
+      (batch: { offlineLocalId?: string }[]) => of(saved(batch)) as Observable<unknown>,
+    );
     alerts = { success: vi.fn(), warning: vi.fn() };
     TestBed.configureTestingModule({
       providers: [
         { provide: ConnectivityService, useValue: { isOnline: online } },
-        { provide: OrderService, useValue: { createOrdersBatch: createBatch } },
+        { provide: OrderService, useValue: { syncOfflineOrders: createBatch } },
         { provide: AlertService, useValue: alerts },
       ],
     });
@@ -349,7 +362,7 @@ describe('OfflineOrderService', () => {
     it('succeeds when a retry works', async () => {
       createBatch
         .mockImplementationOnce(() => throwError(() => new Error('blip')))
-        .mockImplementation(() => of([]));
+        .mockImplementation((batch: { offlineLocalId?: string }[]) => of(saved(batch)));
       const service = await create([{ localId: 'a' }]);
       online.set(true);
 
@@ -363,8 +376,8 @@ describe('OfflineOrderService', () => {
     });
 
     it('reports both outcomes when one batch fails and another succeeds', async () => {
-      createBatch.mockImplementation((batch: unknown[]) =>
-        batch.length === 5 ? of([]) : throwError(() => new Error('bad')),
+      createBatch.mockImplementation((batch: { offlineLocalId?: string }[]) =>
+        batch.length === 5 ? of(saved(batch)) : throwError(() => new Error('bad')),
       );
       const seed = Array.from({ length: 7 }, (_, i) => ({
         localId: `o${i}`,
@@ -390,9 +403,9 @@ describe('OfflineOrderService', () => {
       }));
       const service = await create(seed);
       online.set(true);
-      createBatch.mockImplementation(() => {
+      createBatch.mockImplementation((batch: { offlineLocalId?: string }[]) => {
         online.set(false);
-        return of([]);
+        return of(saved(batch));
       });
 
       await service.syncAll();
@@ -410,6 +423,92 @@ describe('OfflineOrderService', () => {
       await Promise.all([first, second]);
 
       expect(createBatch).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('the result the server gives for each order', () => {
+    beforeEach(() => localStorage.setItem('token', 'tok'));
+
+    const seed3 = [
+      { localId: 'a', createdAt: '2025-01-01T00:00:01.000Z' },
+      { localId: 'b', createdAt: '2025-01-01T00:00:02.000Z' },
+      { localId: 'c', createdAt: '2025-01-01T00:00:03.000Z' },
+    ];
+
+    it('sends each order with its queue number plus this device, the same one every time', async () => {
+      const service = await create([{ localId: 'a' }]);
+      online.set(true);
+
+      await service.syncAll();
+      const first = (createBatch.mock.calls[0][0] as { offlineLocalId: string }[])[0].offlineLocalId;
+
+      expect(first).toMatch(/^a-[0-9a-f]{8}$/);
+      expect(localStorage.getItem('wtf-device-id')).toBe(first.slice(2));
+    });
+
+    it('keeps only the order that failed, with its own message, and removes the ones that saved', async () => {
+      createBatch.mockImplementation((batch: { offlineLocalId?: string }[]) =>
+        of(
+          saved(batch).map((result, index) =>
+            index === 1 ? { ...result, orderId: null, error: 'Latte is not sold here.' } : result,
+          ),
+        ),
+      );
+      const service = await create(seed3);
+      online.set(true);
+
+      await service.syncAll();
+
+      expect(table.rows.map((r) => r.localId)).toEqual(['b']);
+      expect(table.rows[0]).toMatchObject({
+        status: 'failed',
+        errorMessage: 'Latte is not sold here.',
+        retryCount: 1,
+      });
+      expect(alerts.success).toHaveBeenCalledWith('2 offline orders synced successfully.');
+      expect(alerts.warning).toHaveBeenCalledWith('1 order failed to sync. Check pending orders.');
+    });
+
+    it('removes an order the server held for review and tells the cashier', async () => {
+      createBatch.mockImplementation((batch: { offlineLocalId?: string }[]) => of(saved(batch, 6)));
+      const service = await create([{ localId: 'a' }]);
+      online.set(true);
+
+      await service.syncAll();
+
+      expect(table.rows).toEqual([]);
+      expect(alerts.success).not.toHaveBeenCalled();
+      expect(alerts.warning).toHaveBeenCalledWith(
+        '1 order synced but is waiting for an Admin to review it: the price or the menu changed since the sale.',
+      );
+    });
+
+    it('counts saved and held orders separately', async () => {
+      createBatch.mockImplementation((batch: { offlineLocalId?: string }[]) =>
+        of(saved(batch).map((result, index) => (index === 0 ? { ...result, status: 6 } : result))),
+      );
+      const service = await create(seed3);
+      online.set(true);
+
+      await service.syncAll();
+
+      expect(alerts.success).toHaveBeenCalledWith('2 offline orders synced successfully.');
+      expect(alerts.warning).toHaveBeenCalledWith(
+        '1 order synced but is waiting for an Admin to review it: the price or the menu changed since the sale.',
+      );
+    });
+
+    it('fails an order the server sent no result for', async () => {
+      createBatch.mockImplementation(() => of([]));
+      const service = await create([{ localId: 'a' }]);
+      online.set(true);
+
+      await service.syncAll();
+
+      expect(table.rows[0]).toMatchObject({
+        status: 'failed',
+        errorMessage: OfflineOrderService.NO_RESULT_MESSAGE,
+      });
     });
   });
 
@@ -466,7 +565,7 @@ describe('OfflineOrderService', () => {
       expect(service.isSyncing()).toBe(false);
     });
 
-    it('does not ask again after a timeout, because the order may already be saved', async () => {
+    it('does not ask again by itself after a timeout (Sync Now is safe: the server keeps one copy)', async () => {
       createBatch.mockImplementation(() => new Observable(() => undefined));
       const service = await create([{ localId: 'a' }]);
       online.set(true);
@@ -486,7 +585,7 @@ describe('OfflineOrderService', () => {
       await vi.advanceTimersByTimeAsync(OfflineOrderService.SYNC_REQUEST_TIMEOUT_MS + 10);
       await done;
 
-      createBatch.mockImplementation(() => of([]));
+      createBatch.mockImplementation((batch: { offlineLocalId?: string }[]) => of(saved(batch)));
       done = service.syncAll();
       await vi.advanceTimersByTimeAsync(0);
       await done;

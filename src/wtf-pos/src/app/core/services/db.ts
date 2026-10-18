@@ -3,6 +3,7 @@ import type {
   AddOnGroupDto,
   CreateOrderCommand,
   CustomerDto,
+  DiscountedProductPromotionDto,
   PromotionListItemDto,
   ProductDto,
 } from '@shared/models';
@@ -22,6 +23,8 @@ export interface CachedCatalog {
   addOnsByProductId: Record<string, AddOnGroupDto[]>;
   customers: CustomerDto[];
   bundlePromotions: PromotionListItemDto[];
+  /** The discount promotions that were active at the last sync, so an offline cart prices them like an online one. */
+  discountedPromotions?: DiscountedProductPromotionDto[];
   syncedAt: string;
 }
 

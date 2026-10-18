@@ -6,6 +6,8 @@ export enum OrderStatusEnum {
   Refunded = 4,
   /** Placed by a customer through their ordering link and waiting for staff to accept or reject it. */
   PendingApproval = 5,
+  /** An order sold offline whose prices or menu changed before it synced: an Admin approves or rejects it. */
+  PendingReview = 6,
 }
 
 /** Where an order came from. */
@@ -31,11 +33,16 @@ export interface OrderItemRequestDto {
   addOns: OrderItemRequestDto[];
   specialInstructions?: string | null;
   bundlePromotionId?: string | null;
+  /** Offline orders only: the unit price the customer was quoted, so the server can tell when it changed. */
+  quotedPrice?: number | null;
+  quotedOriginalPrice?: number | null;
+  quotedPromoLabel?: string | null;
 }
 
 export interface OrderBundlePromotionRequestDto {
   promotionId: string;
   quantity: number;
+  quotedUnitPrice?: number | null;
 }
 
 export interface OrderItemDto {
@@ -92,6 +99,11 @@ export interface OrderDto {
   acceptedAt?: string | null;
   /** When staff marked a customer link order ready for pickup or delivery. */
   readyAt?: string | null;
+  /** Why an offline order is held for an Admin, one reason per line. */
+  reviewReasons?: string | null;
+  /** The total the customer was quoted when the order was sold offline. */
+  quotedTotal?: number | null;
+  offlineLocalId?: string | null;
 }
 
 export interface OrderHistoryDto {
@@ -115,6 +127,8 @@ export interface OrderHistoryDto {
 
 export interface CreateOrderCommand {
   customerId?: string | null;
+  /** Offline orders only: the queue number plus the device, so a sync that is sent twice saves the order once. */
+  offlineLocalId?: string | null;
   items: OrderItemRequestDto[];
   bundlePromotions?: OrderBundlePromotionRequestDto[];
   specialInstructions?: string | null;
@@ -125,6 +139,16 @@ export interface CreateOrderCommand {
   tips?: number | null;
   createdAt?: string | null;
   note?: string | null;
+}
+
+/** What the server did with one offline order. */
+export interface OfflineSyncResultDto {
+  offlineLocalId: string | null;
+  orderId: string | null;
+  orderNumber: number | null;
+  status: OrderStatusEnum | null;
+  reasons: string[];
+  error: string | null;
 }
 
 export interface UpdateOrderCommand {

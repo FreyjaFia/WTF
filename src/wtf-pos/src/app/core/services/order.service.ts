@@ -5,6 +5,7 @@ import { ConnectivityService } from '@core/services';
 import { environment } from '@environments/environment.development';
 import {
   CreateOrderCommand,
+  OfflineSyncResultDto,
   OrderDto,
   OrderHistoryDto,
   OrderSourceEnum,
@@ -130,6 +131,15 @@ export class OrderService {
     }).pipe(map((result) => result.items));
   }
 
+  /** Offline orders held for an Admin because the prices or the menu changed before they synced. */
+  public getHeldOrders(): Observable<OrderDto[]> {
+    return this.getOrdersPaged({
+      status: OrderStatusEnum.PendingReview,
+      page: 1,
+      pageSize: 50,
+    }).pipe(map((result) => result.items));
+  }
+
   public getActiveOrders(query?: { customerId?: string | null }): Observable<OrderDto[]> {
     let params = new HttpParams();
 
@@ -194,6 +204,25 @@ export class OrderService {
         );
       }),
     );
+  }
+
+  /** Sends orders sold offline. Each gets its own result, so one bad order does not stop the others. */
+  public syncOfflineOrders(commands: CreateOrderCommand[]): Observable<OfflineSyncResultDto[]> {
+    return this.http
+      .post<OfflineSyncResultDto[]>(`${this.baseUrl}/sync`, { orders: commands })
+      .pipe(
+        catchError((error: HttpErrorResponse) => {
+          console.error('Error syncing offline orders:', error);
+          return throwError(
+            () =>
+              new Error(
+                this.getErrorMessage(error, OrderService.MSG_SYNC_ORDERS_FAILED, {
+                  badRequest: OrderService.MSG_INVALID_ORDER_BATCH_DATA,
+                }),
+              ),
+          );
+        }),
+      );
   }
 
   public createOrdersBatch(commands: CreateOrderCommand[]): Observable<OrderDto[]> {
@@ -272,6 +301,42 @@ export class OrderService {
           () =>
             new Error(
               this.getErrorMessage(error, OrderService.MSG_APPROVE_ORDER_FAILED, {
+                notFound: OrderService.MSG_ORDER_NOT_FOUND,
+                badRequest: OrderService.MSG_ORDER_NOT_WAITING,
+              }),
+            ),
+        );
+      }),
+    );
+  }
+
+  /** An Admin approves a held offline order: it becomes Completed at the prices the customer was quoted. */
+  public approveHeldOrder(id: string): Observable<OrderDto> {
+    return this.http.post<OrderDto>(`${this.baseUrl}/${id}/review/approve`, {}).pipe(
+      catchError((error: HttpErrorResponse) => {
+        console.error('Error approving held order:', error);
+        return throwError(
+          () =>
+            new Error(
+              this.getErrorMessage(error, OrderService.MSG_APPROVE_ORDER_FAILED, {
+                notFound: OrderService.MSG_ORDER_NOT_FOUND,
+                badRequest: OrderService.MSG_ORDER_NOT_WAITING,
+              }),
+            ),
+        );
+      }),
+    );
+  }
+
+  /** An Admin turns down a held offline order; the reason is required. */
+  public rejectHeldOrder(id: string, reason: string): Observable<OrderDto> {
+    return this.http.post<OrderDto>(`${this.baseUrl}/${id}/review/reject`, { reason }).pipe(
+      catchError((error: HttpErrorResponse) => {
+        console.error('Error rejecting held order:', error);
+        return throwError(
+          () =>
+            new Error(
+              this.getErrorMessage(error, OrderService.MSG_REJECT_ORDER_FAILED, {
                 notFound: OrderService.MSG_ORDER_NOT_FOUND,
                 badRequest: OrderService.MSG_ORDER_NOT_WAITING,
               }),

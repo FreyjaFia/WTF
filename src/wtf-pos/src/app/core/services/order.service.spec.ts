@@ -111,6 +111,83 @@ describe('OrderService', () => {
     expect(http.expectOne(`${base}/5/void`).request.body).toEqual({ note: null });
   });
 
+  describe('offline orders', () => {
+    it('sends the queue to the sync endpoint and returns one result per order', () => {
+      const { service, http } = setupHttpService(OrderService);
+      const result = capture(service.syncOfflineOrders([{ offlineLocalId: 'a-1' }] as never));
+
+      const req = http.expectOne(`${base}/sync`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({ orders: [{ offlineLocalId: 'a-1' }] });
+      req.flush([{ offlineLocalId: 'a-1', orderId: 'o1', status: 6, reasons: ['x'], error: null }]);
+
+      expect(result.value).toEqual([
+        { offlineLocalId: 'a-1', orderId: 'o1', status: 6, reasons: ['x'], error: null },
+      ]);
+    });
+
+    it('prefers the server message when the sync fails, and handles a lost connection', () => {
+      const { service, http, connectivity } = setupHttpService(OrderService);
+      const bad = capture(service.syncOfflineOrders([] as never));
+      failWith(http.expectOne(`${base}/sync`), 400, { message: 'Bad batch.' });
+      const down = capture(service.syncOfflineOrders([] as never));
+      failNetwork(http.expectOne(`${base}/sync`));
+
+      expect(bad.error).toBe('Bad batch.');
+      expect(down.error).toBe(HttpErrorMessages.NetworkUnavailable);
+      expect(connectivity.checkNow).toHaveBeenCalled();
+    });
+
+    it('lists the held orders with the PendingReview status', () => {
+      const { service, http } = setupHttpService(OrderService);
+      const result = capture(service.getHeldOrders());
+
+      const req = http.expectOne((r) => r.url === `${base}/paged`);
+      expect(req.request.params.get('status')).toBe(String(OrderStatusEnum.PendingReview));
+      expect(req.request.params.get('pageSize')).toBe('50');
+      req.flush({ items: [{ id: 'o1' }], page: 1, pageSize: 50, totalCount: 1 });
+
+      expect(result.value).toEqual([{ id: 'o1' }]);
+    });
+
+    it('approves a held order with a POST to review/approve', () => {
+      const { service, http } = setupHttpService(OrderService);
+      const result = capture(service.approveHeldOrder('7'));
+
+      const req = http.expectOne(`${base}/7/review/approve`);
+      expect(req.request.method).toBe('POST');
+      req.flush({ id: '7', status: OrderStatusEnum.Completed });
+
+      expect(result.value).toMatchObject({ id: '7', status: OrderStatusEnum.Completed });
+    });
+
+    it('rejects a held order with the reason', () => {
+      const { service, http } = setupHttpService(OrderService);
+      const result = capture(service.rejectHeldOrder('7', 'Wrong price'));
+
+      const req = http.expectOne(`${base}/7/review/reject`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({ reason: 'Wrong price' });
+      req.flush({ id: '7', status: OrderStatusEnum.Cancelled });
+
+      expect(result.value).toMatchObject({ id: '7', status: OrderStatusEnum.Cancelled });
+    });
+
+    it('maps the failures of approve and reject', () => {
+      const { service, http } = setupHttpService(OrderService);
+      const approve = capture(service.approveHeldOrder('1'));
+      failWith(http.expectOne(`${base}/1/review/approve`), 400);
+      const reject = capture(service.rejectHeldOrder('1', 'x'));
+      failWith(http.expectOne(`${base}/1/review/reject`), 404);
+      const approve500 = capture(service.approveHeldOrder('1'));
+      failWith(http.expectOne(`${base}/1/review/approve`), 500);
+
+      expect(approve.error).toBe(msgs.OrderNotWaiting);
+      expect(reject.error).toBe(msgs.OrderNotFound);
+      expect(approve500.error).toBe(msgs.ApproveOrderFailed);
+    });
+  });
+
   describe('orders waiting for approval', () => {
     it('lists them with the PendingApproval status and returns just the orders', () => {
       const { service, http } = setupHttpService(OrderService);

@@ -38,12 +38,14 @@ describe('CatalogCacheService', () => {
     addOns?: Record<string, unknown[]>;
     fixed?: unknown[] | 'fail';
     mix?: unknown[] | 'fail';
+    discounted?: unknown[];
     catalogFails?: boolean;
   } = {}): Promise<void> {
     await settle();
     const catalog = http.expectOne(`${api}/sync/pos-catalog`);
     const fixed = http.expectOne(`${api}/management/promotions/fixed-bundles`);
     const mix = http.expectOne(`${api}/management/promotions/mix-match`);
+    const discounted = http.expectOne(`${api}/pos/promotions/discounted-products`);
 
     if (options.catalogFails) {
       catalog.flush('x', { status: 500, statusText: 'err' });
@@ -65,6 +67,7 @@ describe('CatalogCacheService', () => {
     } else {
       mix.flush(options.mix ?? []);
     }
+    discounted.flush(options.discounted ?? []);
     await settle();
   }
 
@@ -133,6 +136,54 @@ describe('CatalogCacheService', () => {
       expect(service.bundlePromotions()).toEqual([{ id: 'f1' }, { id: 'm1' }]);
       expect(stored?.bundlePromotions).toEqual([{ id: 'f1' }, { id: 'm1' }]);
       expect(imageCache.cacheImages).toHaveBeenCalled();
+    });
+
+    it('keeps the active discounts with the catalog, so they are there offline', async () => {
+      const service = create();
+      const done = service.load();
+
+      await answerSync({ products: [prod('p1', 10)], discounted: [{ id: 'd1' }] });
+      await done;
+
+      expect(service.discountedPromotions()).toEqual([{ id: 'd1' }]);
+      expect(stored?.discountedPromotions).toEqual([{ id: 'd1' }]);
+    });
+
+    it('reads the discounts back from the saved catalog when the API fails', async () => {
+      stored = {
+        id: 1,
+        products: [prod('cached', 5)],
+        customers: [],
+        addOnsByProductId: {},
+        bundlePromotions: [],
+        discountedPromotions: [{ id: 'd9' }],
+        syncedAt: 'x',
+      } as never;
+      const service = create();
+      const done = service.load();
+
+      await answerSync({ catalogFails: true });
+      await done;
+
+      expect(service.discountedPromotions()).toEqual([{ id: 'd9' }]);
+    });
+
+    it('has no discounts from a catalog saved before they were kept', async () => {
+      stored = {
+        id: 1,
+        products: [prod('cached', 5)],
+        customers: [],
+        addOnsByProductId: {},
+        bundlePromotions: [],
+        syncedAt: 'x',
+      } as never;
+      const service = create();
+      const done = service.load();
+
+      await answerSync({ catalogFails: true });
+      await done;
+
+      expect(service.discountedPromotions()).toEqual([]);
     });
 
     it('still loads when one bundle-promotion request fails', async () => {

@@ -59,6 +59,7 @@ import {
   CartItemDto,
   CreateOrderCommand,
   CustomerDto,
+  OrderBundlePromotionRequestDto,
   OrderDto,
   OrderItemRequestDto,
   FulfillmentTypeEnum,
@@ -1743,6 +1744,8 @@ export class OrderEditor implements OnInit, OnDestroy {
     switch (status) {
       case OrderStatusEnum.PendingApproval:
         return 'amber';
+      case OrderStatusEnum.PendingReview:
+        return 'amber';
       case OrderStatusEnum.Pending:
         return 'warning';
       case OrderStatusEnum.Completed:
@@ -1760,6 +1763,8 @@ export class OrderEditor implements OnInit, OnDestroy {
     switch (status) {
       case OrderStatusEnum.PendingApproval:
         return 'Awaiting approval';
+      case OrderStatusEnum.PendingReview:
+        return 'Needs review';
       case OrderStatusEnum.Pending:
         return 'Pending';
       case OrderStatusEnum.Completed:
@@ -2214,10 +2219,11 @@ export class OrderEditor implements OnInit, OnDestroy {
 
     this.isSavingOrder.set(true);
 
+    const offline = !this.connectivity.isOnline();
     const command: CreateOrderCommand = {
       customerId: this.selectedCustomerId(),
-      items: this.buildOrderItemsFromCart(),
-      bundlePromotions: this.buildBundlePromotionsFromCart(),
+      items: this.buildOrderItemsFromCart(offline),
+      bundlePromotions: this.buildBundlePromotionsFromCart(offline),
       specialInstructions: this.orderSpecialInstructions().trim() || null,
       status,
       ...(event && {
@@ -2282,8 +2288,8 @@ export class OrderEditor implements OnInit, OnDestroy {
 
     const command: CreateOrderCommand = {
       customerId: this.selectedCustomerId(),
-      items: this.buildOrderItemsFromCart(),
-      bundlePromotions: this.buildBundlePromotionsFromCart(),
+      items: this.buildOrderItemsFromCart(true),
+      bundlePromotions: this.buildBundlePromotionsFromCart(true),
       specialInstructions: this.orderSpecialInstructions().trim() || null,
       status,
       ...(event && {
@@ -2566,7 +2572,8 @@ export class OrderEditor implements OnInit, OnDestroy {
         this.isLoadingDiscountedPromotions.set(false);
       },
       error: () => {
-        this.discountedProductPromotions.set([]);
+        // Offline (or the call failed): use the discounts saved with the catalog, so the cart prices them as before.
+        this.discountedProductPromotions.set(this.catalogCache.discountedPromotions());
         this.isLoadingDiscountedPromotions.set(false);
       },
     });
@@ -2609,26 +2616,31 @@ export class OrderEditor implements OnInit, OnDestroy {
     return value.getFullYear() * 10000 + (value.getMonth() + 1) * 100 + value.getDate();
   }
 
-  private groupAddOns(addOns?: CartAddOnDto[]): OrderItemRequestDto[] {
+  // withQuotes: an order queued offline carries the prices the customer was quoted, so the server can tell when the menu changed.
+  private groupAddOns(addOns?: CartAddOnDto[], withQuotes = false): OrderItemRequestDto[] {
     if (!addOns || addOns.length === 0) {
       return [];
     }
 
-    const grouped = new Map<string, number>();
+    const grouped = new Map<string, { quantity: number; price: number }>();
 
     for (const ao of addOns) {
-      grouped.set(ao.addOnId, (grouped.get(ao.addOnId) ?? 0) + 1);
+      grouped.set(ao.addOnId, {
+        quantity: (grouped.get(ao.addOnId)?.quantity ?? 0) + 1,
+        price: ao.price,
+      });
     }
 
-    return Array.from(grouped.entries()).map(([productId, quantity]) => ({
+    return Array.from(grouped.entries()).map(([productId, { quantity, price }]) => ({
       productId,
       quantity,
       addOns: [],
       bundlePromotionId: null,
+      ...(withQuotes && { quotedPrice: price }),
     }));
   }
 
-  private buildOrderItemsFromCart(): OrderItemRequestDto[] {
+  private buildOrderItemsFromCart(withQuotes = false): OrderItemRequestDto[] {
     const items: OrderItemRequestDto[] = [];
     const promotionTypeById = new Map(
       this.bundlePromotions().map((promo) => [promo.id, promo.typeId]),
@@ -2648,29 +2660,36 @@ export class OrderEditor implements OnInit, OnDestroy {
               promotionType === PromotionTypeEnum.MixMatch
                 ? Math.max(1, bundleItem.qty)
                 : Math.max(1, line.qty) * Math.max(1, bundleItem.qty),
-            addOns: this.groupAddOns(bundleItem.addOns),
+            addOns: this.groupAddOns(bundleItem.addOns, withQuotes),
             specialInstructions: line.specialInstructions || null,
             bundlePromotionId: line.bundlePromotionId ?? null,
+            ...(withQuotes && { quotedPrice: bundleItem.price }),
           });
         }
 
         continue;
       }
 
+      const best = withQuotes ? this.getBestDiscountedPromo(line) : null;
       items.push({
         productId: line.productId,
         quantity: line.qty,
-        addOns: this.groupAddOns(line.addOns),
+        addOns: this.groupAddOns(line.addOns, withQuotes),
         specialInstructions: line.specialInstructions || null,
         bundlePromotionId: null,
+        ...(withQuotes && {
+          quotedPrice: best?.price ?? line.price,
+          quotedOriginalPrice: line.price,
+          quotedPromoLabel: best ? formatPromoLabel(best.entry) : null,
+        }),
       });
     }
 
     return items;
   }
 
-  private buildBundlePromotionsFromCart(): { promotionId: string; quantity: number }[] {
-    const grouped = new Map<string, { promotionId: string; quantity: number }>();
+  private buildBundlePromotionsFromCart(withQuotes = false): OrderBundlePromotionRequestDto[] {
+    const grouped = new Map<string, OrderBundlePromotionRequestDto>();
 
     for (const line of this.cart()) {
       if (!line.bundlePromotionId || !(line.bundleItems?.length ?? 0)) {
@@ -2686,6 +2705,7 @@ export class OrderEditor implements OnInit, OnDestroy {
       grouped.set(line.bundlePromotionId, {
         promotionId: line.bundlePromotionId,
         quantity: Math.max(1, line.qty),
+        ...(withQuotes && { quotedUnitPrice: line.price }),
       });
     }
 

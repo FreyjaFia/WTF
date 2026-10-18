@@ -1,6 +1,11 @@
 import { effect, inject, Injectable, signal } from '@angular/core';
 import { AlertService, ConnectivityService, OrderService } from '@core/services';
-import { CartItemDto, CreateOrderCommand } from '@shared/models';
+import {
+  CartItemDto,
+  CreateOrderCommand,
+  OfflineSyncResultDto,
+  OrderStatusEnum,
+} from '@shared/models';
 import { firstValueFrom, timeout } from 'rxjs';
 import { db } from './db';
 import type { PendingOrder } from './db';
@@ -8,13 +13,16 @@ import type { PendingOrder } from './db';
 @Injectable({ providedIn: 'root' })
 export class OfflineOrderService {
   private static readonly COUNTER_KEY = 'wtf-offline-counter';
+  private static readonly DEVICE_KEY = 'wtf-device-id';
   private static readonly SYNC_BATCH_SIZE = 5;
   private static readonly MAX_SYNC_ATTEMPTS = 3;
   private static readonly INITIAL_BACKOFF_MS = 500;
   /** A batch request that gets no answer for this long is given up on, so a hung server cannot leave orders syncing. */
   public static readonly SYNC_REQUEST_TIMEOUT_MS = 60_000;
   public static readonly TIMED_OUT_MESSAGE =
-    'The server took too long to answer. Check the orders list before syncing again, in case the order already went through.';
+    'The server took too long to answer. Press Sync Now to try again: an order that already went through is not saved twice.';
+  public static readonly NO_RESULT_MESSAGE =
+    'The server sent no result for this order. Press Sync Now to try again.';
 
   private readonly connectivity = inject(ConnectivityService);
   private readonly orderService = inject(OrderService);
@@ -191,6 +199,7 @@ export class OfflineOrderService {
 
       let successCount = 0;
       let failCount = 0;
+      let heldCount = 0;
 
       for (const batch of batches) {
         if (!this.connectivity.isOnline()) {
@@ -204,16 +213,18 @@ export class OfflineOrderService {
         await this.loadPendingOrders();
 
         try {
-          await this.retryWithBackoff(() =>
+          const results = await this.retryWithBackoff(() =>
             firstValueFrom(
               this.orderService
-                .createOrdersBatch(batch.map((order) => this.buildBatchCommand(order)))
+                .syncOfflineOrders(batch.map((order) => this.buildBatchCommand(order)))
                 .pipe(timeout(OfflineOrderService.SYNC_REQUEST_TIMEOUT_MS)),
             ),
           );
 
-          await db.pendingOrders.bulkDelete(batchIds);
-          successCount += batch.length;
+          const outcome = await this.applySyncResults(batch, results);
+          successCount += outcome.saved;
+          heldCount += outcome.held;
+          failCount += outcome.failed;
         } catch (err: unknown) {
           const message =
             this.isTimeout(err)
@@ -241,6 +252,12 @@ export class OfflineOrderService {
       if (successCount > 0) {
         this.alertService.success(
           `${successCount} offline order${successCount > 1 ? 's' : ''} synced successfully.`,
+        );
+      }
+
+      if (heldCount > 0) {
+        this.alertService.warning(
+          `${heldCount} order${heldCount > 1 ? 's' : ''} synced but ${heldCount > 1 ? 'are' : 'is'} waiting for an Admin to review ${heldCount > 1 ? 'them' : 'it'}: the price or the menu changed since the sale.`,
         );
       }
 
@@ -320,9 +337,74 @@ export class OfflineOrderService {
     return db.pendingOrders.count();
   }
 
+  private async applySyncResults(
+    batch: PendingOrder[],
+    results: OfflineSyncResultDto[],
+  ): Promise<{ saved: number; held: number; failed: number }> {
+    const resultByKey = new Map(results.map((result) => [result.offlineLocalId, result]));
+    const doneIds: number[] = [];
+    const failed: { key: number; changes: Partial<PendingOrder> }[] = [];
+    let held = 0;
+
+    for (const order of batch) {
+      const result = resultByKey.get(this.serverKey(order));
+
+      if (result && !result.error && result.orderId) {
+        doneIds.push(order.id!);
+
+        if (result.status === OrderStatusEnum.PendingReview) {
+          held++;
+        }
+
+        continue;
+      }
+
+      failed.push({
+        key: order.id!,
+        changes: {
+          status: 'failed',
+          errorMessage: result?.error ?? OfflineOrderService.NO_RESULT_MESSAGE,
+          retryCount: order.retryCount + 1,
+        },
+      });
+    }
+
+    await db.pendingOrders.bulkDelete(doneIds);
+
+    if (failed.length > 0) {
+      await (db.pendingOrders as import('dexie').Table).bulkUpdate(failed);
+    }
+
+    return { saved: doneIds.length - held, held, failed: failed.length };
+  }
+
+  // Queue numbers restart on every device, so the server key adds the device: two tablets cannot clash.
+  private serverKey(order: PendingOrder): string {
+    return `${order.localId}-${this.deviceId()}`;
+  }
+
+  private deviceId(): string {
+    try {
+      const saved = localStorage.getItem(OfflineOrderService.DEVICE_KEY);
+
+      if (saved) {
+        return saved;
+      }
+
+      const bytes = crypto.getRandomValues(new Uint8Array(4));
+      const id = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+      localStorage.setItem(OfflineOrderService.DEVICE_KEY, id);
+
+      return id;
+    } catch {
+      return 'nodevice';
+    }
+  }
+
   private buildBatchCommand(order: PendingOrder): CreateOrderCommand {
     return {
       ...order.command,
+      offlineLocalId: this.serverKey(order),
       createdAt: new Date(order.createdAt).toISOString(),
     };
   }
