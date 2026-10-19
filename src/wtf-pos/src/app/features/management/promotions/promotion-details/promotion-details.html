@@ -206,6 +206,14 @@
                       {{ describeLimit(schedule()) }}
                     </p>
                   </div>
+                  @if (schedule()?.maxPerOrder) {
+                    <div>
+                      <p class="mb-1 text-xs font-medium text-gray-400">Per order</p>
+                      <p class="text-sm font-semibold text-gray-800" data-schedule-per-order>
+                        Up to {{ schedule()?.maxPerOrder }}
+                      </p>
+                    </div>
+                  }
                 </div>
               </div>
             </div>

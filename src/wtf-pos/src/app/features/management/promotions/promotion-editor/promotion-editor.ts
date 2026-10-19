@@ -27,6 +27,7 @@ interface ScheduleState {
   startTime: string;
   endTime: string;
   maxRedemptions: number | null;
+  maxPerOrder: number | null;
 }
 
 @Component({
@@ -69,6 +70,7 @@ export class PromotionEditorComponent implements OnInit {
     startTime: '',
     endTime: '',
     maxRedemptions: null,
+    maxPerOrder: null,
   });
   protected readonly redemptions = signal(0);
   private promotionId: string | null = null;
@@ -781,13 +783,21 @@ export class PromotionEditorComponent implements OnInit {
     }));
   }
 
+  protected setMaxPerOrder(value: number | string | null): void {
+    const parsed = value === null || value === '' ? null : Number(value);
+    this.schedule.update((state) => ({
+      ...state,
+      maxPerOrder: parsed !== null && Number.isFinite(parsed) ? parsed : null,
+    }));
+  }
+
   protected clearSchedule(): void {
-    this.schedule.set({ daysOfWeek: null, startTime: '', endTime: '', maxRedemptions: null });
+    this.schedule.set({ daysOfWeek: null, startTime: '', endTime: '', maxRedemptions: null, maxPerOrder: null });
   }
 
   protected hasSchedule(): boolean {
     const state = this.schedule();
-    return state.daysOfWeek !== null || !!state.startTime || !!state.endTime || state.maxRedemptions !== null;
+    return state.daysOfWeek !== null || !!state.startTime || !!state.endTime || state.maxRedemptions !== null || state.maxPerOrder !== null;
   }
 
   protected removeMixMatchItem(index: number): void {
@@ -1076,6 +1086,7 @@ export class PromotionEditorComponent implements OnInit {
       startTime: schedule?.startTime ?? '',
       endTime: schedule?.endTime ?? '',
       maxRedemptions: schedule?.maxRedemptions ?? null,
+      maxPerOrder: schedule?.maxPerOrder ?? null,
     });
     this.redemptions.set(schedule?.redemptions ?? 0);
   }
@@ -1087,6 +1098,7 @@ export class PromotionEditorComponent implements OnInit {
       startTime: state.startTime || null,
       endTime: state.endTime || null,
       maxRedemptions: state.maxRedemptions,
+      maxPerOrder: state.maxPerOrder,
       redemptions: this.redemptions(),
     };
   }
@@ -1105,6 +1117,11 @@ export class PromotionEditorComponent implements OnInit {
 
     if (state.maxRedemptions !== null && (!Number.isInteger(state.maxRedemptions) || state.maxRedemptions < 1)) {
       this.alertService.error('The usage limit must be a whole number of 1 or more.');
+      return false;
+    }
+
+    if (state.maxPerOrder !== null && (!Number.isInteger(state.maxPerOrder) || state.maxPerOrder < 1)) {
+      this.alertService.error('The limit per order must be a whole number of 1 or more.');
       return false;
     }
 

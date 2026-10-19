@@ -342,6 +342,29 @@
                     }
                   </p>
                 </div>
+
+                <div class="max-w-xs">
+                  <label for="promotionMaxPerOrder" class="mb-2 block text-sm font-semibold text-gray-900"
+                    >Limit per order</label
+                  >
+                  <input
+                    id="promotionMaxPerOrder"
+                    class="input input-bordered w-full"
+                    type="number"
+                    min="1"
+                    step="1"
+                    placeholder="No limit"
+                    [ngModel]="schedule().maxPerOrder"
+                    (ngModelChange)="setMaxPerOrder($event)"
+                  />
+                  <p class="mt-1 text-xs text-gray-500">
+                    @if (type() === 'discounted-product') {
+                      The most items one order gets at this price. Any more are charged the full price.
+                    } @else {
+                      The most of this bundle one order can buy.
+                    }
+                  </p>
+                </div>
               </div>
 
               @if (type() === 'fixed-bundle') {

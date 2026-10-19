@@ -928,6 +928,7 @@ describe('PromotionEditorComponent', () => {
       c.setScheduleTime('startTime', '14:00');
       c.setScheduleTime('endTime', '17:30');
       c.setMaxRedemptions('50');
+      c.setMaxPerOrder('3');
 
       c.save();
 
@@ -936,8 +937,22 @@ describe('PromotionEditorComponent', () => {
         startTime: '14:00',
         endTime: '17:30',
         maxRedemptions: 50,
+        maxPerOrder: 3,
         redemptions: 0,
       });
+    });
+
+    it('refuses a limit per order that is not a whole number of 1 or more', () => {
+      c.setMaxPerOrder(0);
+
+      c.save();
+
+      expect(promos['createFixedBundle']).not.toHaveBeenCalled();
+
+      c.setMaxPerOrder(1.5);
+      c.save();
+
+      expect(promos['createFixedBundle']).not.toHaveBeenCalled();
     });
 
     it('a window past midnight is allowed', () => {
@@ -954,11 +969,12 @@ describe('PromotionEditorComponent', () => {
       c.setScheduleTime('startTime', '14:00');
       c.setScheduleTime('endTime', '17:00');
       c.setMaxRedemptions(5);
+      c.setMaxPerOrder(2);
 
       c.clearSchedule();
 
       expect(c.hasSchedule()).toBe(false);
-      expect(c.schedule()).toEqual({ daysOfWeek: null, startTime: '', endTime: '', maxRedemptions: null });
+      expect(c.schedule()).toEqual({ daysOfWeek: null, startTime: '', endTime: '', maxRedemptions: null, maxPerOrder: null });
     });
 
   });
@@ -969,12 +985,12 @@ describe('PromotionEditorComponent', () => {
       promos['getFixedBundle'].mockReturnValue(
         of({
           ...FIXED,
-          schedule: { daysOfWeek: 10, startTime: '14:00', endTime: '17:00', maxRedemptions: 50, redemptions: 7 },
+          schedule: { daysOfWeek: 10, startTime: '14:00', endTime: '17:00', maxRedemptions: 50, maxPerOrder: 2, redemptions: 7 },
         }),
       );
       fixture.detectChanges();
 
-      expect(c.schedule()).toEqual({ daysOfWeek: 10, startTime: '14:00', endTime: '17:00', maxRedemptions: 50 });
+      expect(c.schedule()).toEqual({ daysOfWeek: 10, startTime: '14:00', endTime: '17:00', maxRedemptions: 50, maxPerOrder: 2 });
       expect(c.redemptions()).toBe(7);
       expect(c.isDaySelected(2)).toBe(true);
       expect(c.isDaySelected(8)).toBe(true);
@@ -1026,7 +1042,7 @@ describe('PromotionEditorComponent', () => {
         endDate: null,
         bundlePrice: 99,
         items: [{ productId: 'p1', quantity: 1, addOns: [{ addOnProductId: 'a1', quantity: 2 }] }],
-        schedule: { daysOfWeek: null, startTime: null, endTime: null, maxRedemptions: null, redemptions: 0 },
+        schedule: { daysOfWeek: null, startTime: null, endTime: null, maxRedemptions: null, maxPerOrder: null, redemptions: 0 },
       });
       expect(alerts['success']).toHaveBeenCalledWith('Fixed bundle created.');
       expect(router.navigateByUrl).toHaveBeenCalledWith(
@@ -1066,7 +1082,7 @@ describe('PromotionEditorComponent', () => {
         maxSelectionsPerOrder: null,
         bundlePrice: 0,
         items: [{ productId: 'p1', addOns: [] }],
-        schedule: { daysOfWeek: null, startTime: null, endTime: null, maxRedemptions: null, redemptions: 0 },
+        schedule: { daysOfWeek: null, startTime: null, endTime: null, maxRedemptions: null, maxPerOrder: null, redemptions: 0 },
       });
       expect(alerts['success']).toHaveBeenCalledWith('Mix & Match promotion created.');
       expect(router.navigateByUrl).toHaveBeenCalledWith(
