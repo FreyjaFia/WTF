@@ -781,6 +781,34 @@ database) and compared every figure with the answer worked out by hand, using th
 - Root `CLAUDE.md` for Claude Code (shares `.github/copilot-instructions.md` and this roadmap): run the C# cleanup on
   every edited `.cs` file, put calculations in the two calculator folders, how to run the tests.
 
+**Shared line breakdown (19 Oct 2026)**
+
+- The "+ and -" list under an order line is built in one place: `shared/calculations/line-breakdown.ts`
+  (`buildLineBreakdown`, `breakdownOfCartItem`, `groupAddOns`, `addOnDetail`, `countedName`, `listUnitPriceOf`,
+  `formatPeso`), all in whole cents, and drawn by `app-line-breakdown` (`card` variant for screens, `receipt` variant
+  with inline styles for the off-screen receipt image). The rows always add up: base + add-ons - discount = line total.
+- Wording (amount first, so the maths on a row can be checked): base row `Price · ₱150.00 each` (a plain line of several
+  items gets this row too, a single item gets none), an add-on that is one per item reads `₱30.00 each`, several per
+  item read `₱40.00 × 4 (2 per item)`, several on a single item `₱40.00 × 2`, a free add-on shows no detail. The discount
+  row is just `Discount` with the amount; the promo name is the green pill under the product name (order details and the
+  downloaded summary, like the carts). Long names wrap with a hanging indent and the amounts stay on the far right.
+- Used by the order editor cart, order details, the downloaded summary, the customer cart and customer My orders. The
+  three copies of `getGroupedAddOns` / `getGroupedBundleItemAddOns` and the "(PHP x / unit)" footer are gone (bundle
+  child add-ons use the `addOnLabels` pipe). The summary shows the quantity in front of each name (`2x Latte`).
+- Order details shows the order note in its own "Order note" box (it was only on the summary before) and keeps each
+  product's note under its line.
+- A waiting order (no stored prices) shows the promotion guess in its breakdown, so its line total matches the order
+  total the server works out (`PendingOrderPreview`). A limited promotion marks the lines it covers
+  (`discountPromotionId`), so the other lines of a waiting order are not guessed (before, a part-covered order showed the
+  promotion on every line and its lines did not add up to the total).
+- `CartItemDto.originalPrice` carries the list price; `PublicCartAddOn.type` lets the customer cart sort like the staff
+  screens.
+- Checked in the running app on a throwaway database (several add-ons and quantities, a promotion on part of a line, a
+  negative-priced add-on, long names, notes): order details, the downloaded summary, the customer cart and My orders.
+  Not checked: the editor cart for every case, and the customer pages at phone width.
+- Known limit: customer My orders gets only `unitPrice` from the API, so it shows add-ons but no promotion row, and it
+  does not know add-on types, so it sorts them by name. The Orders list "Awaiting approval" card still says only "N items".
+
 **Still open**
 
 - Saved orders on the details and list screens show the server's `totalAmount` for the whole order but still work out
