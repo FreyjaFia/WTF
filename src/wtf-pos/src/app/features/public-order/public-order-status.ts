@@ -171,3 +171,67 @@ export function publicTimeline(order: PublicOrderDto): TimelineStep[] {
 function skippedAt(steps: TimelineStep[], index: number): string | null {
   return steps.slice(index + 1).find((step) => step.at)?.at ?? null;
 }
+
+export interface StatusAccent {
+  /** The thin strip on top of the order card. */
+  strip: string;
+  panel: string;
+  title: string;
+  divider: string;
+  total: string;
+}
+
+/** The colors of an order for each status, the same scheme as the shop screen so the two sides look alike. */
+export function publicStatusAccent(kind: PublicOrderStatusKind): StatusAccent {
+  switch (kind) {
+    case 'waiting':
+      return {
+        strip: 'bg-amber-400',
+        panel: 'border-amber-200 bg-amber-50/50',
+        title: 'text-amber-700',
+        divider: 'border-amber-300',
+        total: 'text-gray-900',
+      };
+    case 'accepted':
+      return {
+        strip: 'bg-sky-400',
+        panel: 'border-sky-200 bg-sky-50/50',
+        title: 'text-sky-700',
+        divider: 'border-sky-300',
+        total: 'text-gray-900',
+      };
+    case 'ready':
+      return {
+        strip: 'bg-orange-400',
+        panel: 'border-orange-200 bg-orange-50/50',
+        title: 'text-orange-700',
+        divider: 'border-orange-300',
+        total: 'text-gray-900',
+      };
+    case 'completed':
+      return {
+        strip: 'bg-emerald-500',
+        panel: 'border-emerald-200 bg-emerald-50/50',
+        title: 'text-emerald-700',
+        divider: 'border-emerald-300',
+        total: 'text-emerald-700',
+      };
+    case 'rejected':
+    case 'refunded':
+      return {
+        strip: 'bg-red-500',
+        panel: 'border-red-200 bg-red-50/50',
+        title: 'text-red-700',
+        divider: 'border-red-300',
+        total: 'text-red-600',
+      };
+    default:
+      return {
+        strip: 'bg-slate-300',
+        panel: 'border-slate-200 bg-slate-50/70',
+        title: 'text-slate-700',
+        divider: 'border-slate-300',
+        total: 'text-slate-700',
+      };
+  }
+}

@@ -63,7 +63,8 @@
         <div style="display: flex; justify-content: space-between; align-items: flex-start">
           <div style="flex: 1; min-width: 0">
             <div style="font-size: 14px; font-weight: 600">
-              {{ item.qty }}x {{ item.name }}
+              <span style="color: var(--color-gray-500, #6b7280)">{{ item.qty }}x</span>
+              {{ item.name }}
             </div>
             @if (item.promoLabel) {
               <div

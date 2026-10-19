@@ -134,8 +134,8 @@ export class OrderList implements OnInit, OnDestroy {
   protected readonly isSyncingOffline = this.offlineOrderService.isSyncing;
   protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
   protected readonly isFiltersOpen = signal(false);
-  protected readonly isAwaitingExpanded = signal(true);
-  protected readonly isPendingExpanded = signal(true);
+  protected readonly isAwaitingExpanded = signal(false);
+  protected readonly isPendingExpanded = signal(false);
   protected readonly sortColumn = signal<SortColumn | null>(null);
   protected readonly sortDirection = signal<SortDirection>('desc');
   protected readonly selectedStatuses = signal<OrderStatusEnum[]>([]);

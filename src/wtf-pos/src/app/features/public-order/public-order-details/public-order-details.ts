@@ -7,6 +7,7 @@ import { LineBreakdownComponent } from '@shared/components/line-breakdown/line-b
 import { PublicOrderDto } from '@shared/models';
 import {
   publicStatusNote,
+  publicStatusAccent,
   publicStatusNoteClass,
   publicStatusVariant,
   publicTimeline,
@@ -42,6 +43,7 @@ export class PublicOrderDetailsComponent {
 
   protected readonly variant = publicStatusVariant;
   protected readonly note = computed(() => publicStatusNote(this.order()));
+  protected readonly accent = computed(() => publicStatusAccent(this.order().statusKind));
   protected readonly noteClass = computed(() => publicStatusNoteClass(this.order().statusKind));
 
   protected readonly timeline = computed(() => publicTimeline(this.order()));

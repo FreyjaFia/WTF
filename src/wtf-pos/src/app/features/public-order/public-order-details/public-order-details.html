@@ -1,5 +1,5 @@
 <div class="flex flex-col" data-order-details>
-  <div class="mb-4 flex items-start gap-2 sm:mb-6">
+  <div class="sticky top-0 z-20 mb-2 flex items-start gap-2 bg-surface pb-3 sm:mb-3">
     <button
       type="button"
       class="app-btn app-btn-ghost mt-0.5 p-2"
@@ -15,247 +15,176 @@
   </div>
 
   <div class="space-y-4 pb-4">
-    <div class="rounded-xl bg-surface p-4 shadow-lg sm:p-5">
-      <div class="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 class="text-lg font-semibold text-gray-900">#{{ order().orderNumber }}</h2>
-          <p class="text-sm text-gray-500">{{ order().createdAt | date: 'd MMM y, h:mm a' }}</p>
-        </div>
-        <app-badge [variant]="variant(order().statusKind)">{{ order().statusLabel }}</app-badge>
-      </div>
-
-      <p class="mt-4 rounded-xl px-4 py-3 text-sm" [class]="noteClass()" data-status-note>
-        {{ note() }}
-      </p>
-
-      <div class="mt-4 space-y-1.5 text-sm">
-        @if (order().fulfillmentType) {
-          <div class="flex items-start justify-between gap-3">
-            <span class="text-gray-500">Handover</span>
-            <span class="text-right text-gray-900">{{ order().fulfillmentType }}</span>
+    <!-- Hero: the order, its total, and a plain sentence on where it stands -->
+    <section class="overflow-hidden rounded-2xl bg-surface shadow-lg">
+      <div class="h-1.5 w-full" [class]="accent().strip"></div>
+      <div class="p-4 sm:p-6">
+        <div class="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
+          <div class="min-w-0">
+            <div class="flex flex-wrap items-center gap-2">
+              <h2 class="text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
+                #{{ order().orderNumber }}
+              </h2>
+              <app-badge [variant]="variant(order().statusKind)">{{ order().statusLabel }}</app-badge>
+            </div>
+            <p class="mt-1 text-sm text-gray-500">
+              {{ order().createdAt | date: 'EEE, d MMM y · h:mm a' }}
+              <span class="mx-1 text-gray-300">·</span>
+              {{ itemCount() }} {{ itemCount() === 1 ? 'item' : 'items' }}
+            </p>
           </div>
-        }
-        @if (order().deliveryAddress) {
-          <div class="flex items-start justify-between gap-3">
-            <span class="text-gray-500">Address</span>
-            <span class="text-right wrap-break-word text-gray-900">{{
-              order().deliveryAddress
-            }}</span>
+          <div class="text-left sm:text-right">
+            <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Order total</p>
+            <p class="text-3xl font-bold tracking-tight text-gray-900 tabular-nums sm:text-4xl">
+              <app-icon
+                name="icon-peso"
+                [class]="'inline h-5 w-5 align-[-0.1em] sm:h-6 sm:w-6'"
+                [fill]="'currentColor'"
+              />{{ order().total | number: '1.2-2' }}
+            </p>
           </div>
-        }
-        @if (order().contactNumber) {
-          <div class="flex items-start justify-between gap-3">
-            <span class="text-gray-500">Contact</span>
-            <span class="text-right text-gray-900">{{ order().contactNumber }}</span>
-          </div>
-        }
-      </div>
-
-      @if (order().specialInstructions) {
-        <div class="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
-          <p class="text-xs font-semibold tracking-wide text-amber-700 uppercase">Note</p>
-          <p class="mt-1 text-sm text-amber-900">{{ order().specialInstructions }}</p>
         </div>
-      }
-    </div>
 
-    <div class="rounded-xl bg-surface p-4 shadow-lg sm:p-5" data-chat-card>
-      <div class="flex items-center justify-between gap-3">
-        <div class="min-w-0">
-          <h3 class="text-sm font-semibold text-gray-900">Chat with the shop</h3>
-          <p class="text-xs text-gray-500">
-            @if (unread() > 0) {
-              The shop wrote to you.
-            } @else if (
-              order().statusKind === 'waiting' ||
-              order().statusKind === 'accepted' ||
-              order().statusKind === 'ready'
-            ) {
-              Ask about your order, for example the time or the address.
-            } @else {
-              This order is finished. You can still read the messages.
-            }
-          </p>
-        </div>
-        <button
-          type="button"
-          class="app-btn app-btn-secondary app-btn-sm shrink-0 gap-2"
-          data-chat-button
-          (click)="chat.emit()"
+        <p
+          class="mt-4 rounded-xl px-4 py-3 text-sm font-medium"
+          [class]="noteClass()"
+          data-status-note
         >
-          <app-icon name="icon-chat" [class]="'h-4 w-4'" [fill]="'currentColor'" />
-          Chat
-          @if (unread() > 0) {
-            <span
-              class="flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] leading-none font-bold text-white"
-              data-chat-unread
-              >{{ unread() }}</span
-            >
-          }
-        </button>
+          {{ note() }}
+        </p>
       </div>
-    </div>
+    </section>
 
-    <div class="rounded-xl bg-surface p-4 shadow-lg sm:p-5" data-timeline>
-      <div class="mb-3 text-xs font-semibold tracking-wide text-gray-500 uppercase">Progress</div>
-      <ol class="flex flex-col md:flex-row">
-        @for (step of timeline(); track step.key; let last = $last) {
-          <li
-            class="relative flex gap-3 pb-5 last:pb-0 md:flex-1 md:flex-col md:items-center md:gap-2 md:pb-0 md:text-center"
-            [attr.data-step]="step.key"
-            [attr.data-state]="step.state"
-          >
-            @if (!last) {
-              <!-- Line to the next step: down on phones, across on wide screens -->
-              <span
-                class="absolute top-6 bottom-0 left-3 -ml-px w-0.5 md:top-3 md:right-[-50%] md:bottom-auto md:left-1/2 md:ml-0 md:h-0.5 md:w-auto"
-                [class]="step.state === 'done' ? 'bg-emerald-400' : 'bg-gray-200'"
-              ></span>
-            }
-            <span
-              class="relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-white"
-              [class]="
-                step.state === 'done'
-                  ? 'border-emerald-500 bg-emerald-500'
-                  : step.state === 'current'
-                    ? 'border-amber-400 bg-surface'
-                    : step.state === 'stopped'
-                      ? 'border-red-500 bg-red-500'
-                      : 'border-gray-300 bg-surface'
-              "
-            >
-              @if (step.state === 'done') {
-                <svg viewBox="0 0 20 20" class="h-3.5 w-3.5" fill="currentColor" aria-hidden="true">
-                  <path
-                    fill-rule="evenodd"
-                    d="M16.7 5.3a1 1 0 0 1 0 1.4l-7.5 7.5a1 1 0 0 1-1.4 0L3.3 9.7a1 1 0 1 1 1.4-1.4l3.8 3.8 6.8-6.8a1 1 0 0 1 1.4 0Z"
-                    clip-rule="evenodd"
-                  />
-                </svg>
-              } @else if (step.state === 'stopped') {
-                <span class="text-xs leading-none font-bold">!</span>
-              } @else if (step.state === 'current') {
-                <span class="h-2 w-2 animate-pulse rounded-full bg-amber-400"></span>
-              }
-            </span>
-            <div class="-mt-0.5 min-w-0 flex-1 md:mt-0 md:flex-none md:px-2">
-              <p
-                class="text-sm"
-                [class]="
-                  step.state === 'upcoming'
-                    ? 'text-gray-400'
-                    : step.state === 'stopped'
-                      ? 'font-semibold text-red-700'
-                      : 'font-semibold text-gray-900'
-                "
-              >
-                {{ step.label }}
+    <div class="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_21rem]">
+      <div class="space-y-4">
+        <div class="rounded-2xl bg-surface p-4 shadow-lg sm:p-5" data-chat-card>
+          <div class="flex items-center justify-between gap-3">
+            <div class="min-w-0">
+              <h3 class="text-sm font-semibold text-gray-900">Chat with the shop</h3>
+              <p class="text-xs text-gray-500">
+                @if (unread() > 0) {
+                  The shop wrote to you.
+                } @else if (
+                  order().statusKind === 'waiting' ||
+                  order().statusKind === 'accepted' ||
+                  order().statusKind === 'ready'
+                ) {
+                  Ask about your order, for example the time or the address.
+                } @else {
+                  This order is finished. You can still read the messages.
+                }
               </p>
-              @if (step.at) {
-                <p class="text-xs text-gray-500">{{ step.at | date: 'd MMM, h:mm a' }}</p>
-              } @else if (step.hint) {
-                <p
-                  class="text-xs"
-                  [class]="
-                    step.state === 'current' ? 'font-medium text-amber-700' : 'text-gray-400'
-                  "
-                  data-step-hint
+            </div>
+            <button
+              type="button"
+              class="app-btn app-btn-secondary app-btn-sm shrink-0 gap-2"
+              data-chat-button
+              (click)="chat.emit()"
+            >
+              <app-icon name="icon-chat" [class]="'h-4 w-4'" [fill]="'currentColor'" />
+              Chat
+              @if (unread() > 0) {
+                <span
+                  class="flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] leading-none font-bold text-white"
+                  data-chat-unread
+                  >{{ unread() }}</span
                 >
-                  {{ step.hint }}
-                </p>
               }
-            </div>
-          </li>
-        }
-      </ol>
-    </div>
-
-    <div class="rounded-xl bg-surface p-4 shadow-lg sm:p-5">
-      <div class="grid gap-4 md:grid-cols-3">
-        <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
-          <div class="mb-3 text-xs font-semibold tracking-wide text-slate-700 uppercase">
-            Payment Summary
+            </button>
           </div>
-          <dl class="space-y-2 text-sm">
-            <div class="flex items-center justify-between">
-              <dt class="text-gray-600">Method</dt>
-              <dd class="font-medium text-gray-900">{{ order().paymentMethod || 'Not set' }}</dd>
-            </div>
-            <div class="flex items-center justify-between">
-              <dt class="text-gray-600">Items</dt>
-              <dd class="font-medium text-gray-900">{{ itemCount() }}</dd>
-            </div>
-            <div class="flex items-center justify-between">
-              <dt class="text-gray-600">Order total</dt>
-              <dd class="font-medium text-gray-900">
-                <app-icon
-                  name="icon-peso"
-                  [class]="'inline h-3 w-3 align-[-0.125em]'"
-                  [fill]="'currentColor'"
-                />{{ order().total | number: '1.2-2' }}
-              </dd>
-            </div>
-            @if (order().tips) {
-              <div class="flex items-center justify-between">
-                <dt class="text-gray-600">Tip</dt>
-                <dd class="font-medium text-gray-900">
-                  <app-icon
-                    name="icon-peso"
-                    [class]="'inline h-3 w-3 align-[-0.125em]'"
-                    [fill]="'currentColor'"
-                  />{{ order().tips | number: '1.2-2' }}
-                </dd>
-              </div>
-            }
-            @if (order().amountReceived) {
-              <div class="flex items-center justify-between">
-                <dt class="text-gray-600">You will pay</dt>
-                <dd class="font-medium text-gray-900">
-                  <app-icon
-                    name="icon-peso"
-                    [class]="'inline h-3 w-3 align-[-0.125em]'"
-                    [fill]="'currentColor'"
-                  />{{ order().amountReceived | number: '1.2-2' }}
-                </dd>
-              </div>
-              <div class="flex items-center justify-between">
-                <dt class="text-gray-600">Change</dt>
-                <dd class="font-medium text-gray-900">
-                  <app-icon
-                    name="icon-peso"
-                    [class]="'inline h-3 w-3 align-[-0.125em]'"
-                    [fill]="'currentColor'"
-                  />{{ change() | number: '1.2-2' }}
-                </dd>
-              </div>
-            }
-            <div class="mt-2 flex items-center justify-between border-t border-slate-200 pt-2">
-              <dt class="font-semibold text-gray-700">To pay</dt>
-              <dd class="font-semibold text-gray-900">
-                <app-icon
-                  name="icon-peso"
-                  [class]="'inline h-3 w-3 align-[-0.125em]'"
-                  [fill]="'currentColor'"
-                />{{ amountDue() | number: '1.2-2' }}
-              </dd>
-            </div>
-          </dl>
         </div>
 
-        <div class="md:col-span-2">
-          <div class="mb-2 text-xs font-semibold tracking-wide text-gray-500 uppercase">
-            Item Breakdown
-          </div>
-          <div class="space-y-2 rounded-xl border border-gray-200 bg-surface p-3">
+        <div class="rounded-2xl bg-surface p-4 shadow-lg sm:p-5" data-timeline>
+          <h3 class="mb-4 text-xs font-semibold tracking-wide text-gray-500 uppercase">Progress</h3>
+          <ol class="flex flex-col md:flex-row">
+            @for (step of timeline(); track step.key; let last = $last) {
+              <li
+                class="relative flex gap-3 pb-5 last:pb-0 md:flex-1 md:flex-col md:items-center md:gap-2 md:pb-0 md:text-center"
+                [attr.data-step]="step.key"
+                [attr.data-state]="step.state"
+              >
+                @if (!last) {
+                  <!-- Line to the next step: down on phones, across on wide screens -->
+                  <span
+                    class="absolute top-6 bottom-0 left-3 -ml-px w-0.5 md:top-3 md:right-[-50%] md:bottom-auto md:left-1/2 md:ml-0 md:h-0.5 md:w-auto"
+                    [class]="step.state === 'done' ? 'bg-emerald-400' : 'bg-gray-200'"
+                  ></span>
+                }
+                <span
+                  class="relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-white"
+                  [class]="
+                    step.state === 'done'
+                      ? 'border-emerald-500 bg-emerald-500'
+                      : step.state === 'current'
+                        ? 'border-amber-400 bg-surface ring-4 ring-amber-100'
+                        : step.state === 'stopped'
+                          ? 'border-red-500 bg-red-500'
+                          : 'border-gray-300 bg-surface'
+                  "
+                >
+                  @if (step.state === 'done') {
+                    <svg viewBox="0 0 20 20" class="h-3.5 w-3.5" fill="currentColor" aria-hidden="true">
+                      <path
+                        fill-rule="evenodd"
+                        d="M16.7 5.3a1 1 0 0 1 0 1.4l-7.5 7.5a1 1 0 0 1-1.4 0L3.3 9.7a1 1 0 1 1 1.4-1.4l3.8 3.8 6.8-6.8a1 1 0 0 1 1.4 0Z"
+                        clip-rule="evenodd"
+                      />
+                    </svg>
+                  } @else if (step.state === 'stopped') {
+                    <span class="text-xs leading-none font-bold">!</span>
+                  } @else if (step.state === 'current') {
+                    <span class="h-2 w-2 animate-pulse rounded-full bg-amber-400"></span>
+                  }
+                </span>
+                <div class="-mt-0.5 min-w-0 flex-1 md:mt-0 md:flex-none md:px-2">
+                  <p
+                    class="text-sm"
+                    [class]="
+                      step.state === 'upcoming'
+                        ? 'text-gray-400'
+                        : step.state === 'stopped'
+                          ? 'font-semibold text-red-700'
+                          : 'font-semibold text-gray-900'
+                    "
+                  >
+                    {{ step.label }}
+                  </p>
+                  @if (step.at) {
+                    <p class="text-xs text-gray-500">{{ step.at | date: 'd MMM, h:mm a' }}</p>
+                  } @else if (step.hint) {
+                    <p
+                      class="text-xs"
+                      [class]="
+                        step.state === 'current' ? 'font-medium text-amber-700' : 'text-gray-400'
+                      "
+                      data-step-hint
+                    >
+                      {{ step.hint }}
+                    </p>
+                  }
+                </div>
+              </li>
+            }
+          </ol>
+        </div>
+
+        <section class="rounded-2xl bg-surface p-4 shadow-lg sm:p-5">
+          <h3 class="mb-3 text-sm font-semibold text-gray-900">
+            Your items
+            <span class="ms-1 font-normal text-gray-500">({{ itemCount() }})</span>
+          </h3>
+          <ul class="divide-y divide-gray-100">
             @for (item of order().items; track $index) {
-              <div class="rounded-lg border border-gray-100 p-3">
+              <li class="py-3 first:pt-0 last:pb-0">
                 <div class="grid grid-cols-[2.5rem_minmax(0,1fr)_auto] gap-x-3">
-                  <div class="row-span-2 flex h-10 w-10 shrink-0 items-start justify-center pt-0.5">
+                  <div
+                    class="row-span-2 flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gray-50"
+                  >
                     <app-avatar [label]="item.name" [size]="32" />
                   </div>
                   <div class="min-w-0">
-                    <div class="text-sm font-medium text-gray-900">
-                      {{ item.quantity }}x {{ item.name }}
+                    <div class="text-sm font-semibold text-gray-900">
+                      <span class="text-gray-500">{{ item.quantity }}x</span> {{ item.name }}
                     </div>
                     @if (promoLabelOf(item); as promoLabel) {
                       <div
@@ -265,7 +194,7 @@
                       </div>
                     }
                   </div>
-                  <div class="text-right text-sm font-semibold text-gray-900">
+                  <div class="text-right text-sm font-semibold text-gray-900 tabular-nums">
                     <app-icon
                       name="icon-peso"
                       [class]="'inline h-3 w-3 align-[-0.125em]'"
@@ -278,16 +207,135 @@
                     </div>
                   }
                   @if (item.specialInstructions) {
-                    <div class="col-span-2 col-start-2 mt-1 text-xs wrap-break-word text-gray-400 italic">
+                    <div
+                      class="col-span-2 col-start-2 mt-1.5 rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-xs wrap-break-word text-gray-600 italic"
+                    >
                       {{ item.specialInstructions }}
                     </div>
                   }
                 </div>
+              </li>
+            }
+          </ul>
+
+          @if (order().specialInstructions) {
+            <div class="mt-4 rounded-xl border border-gray-200 bg-gray-50 p-3">
+              <p class="mb-1 text-xs font-semibold tracking-wide text-gray-500 uppercase">Order note</p>
+              <p class="text-sm wrap-break-word text-gray-700 italic">{{ order().specialInstructions }}</p>
+            </div>
+          }
+        </section>
+      </div>
+
+      <aside class="space-y-4 lg:sticky lg:top-16">
+        @if (order().fulfillmentType || order().deliveryAddress || order().contactNumber) {
+          <section class="rounded-2xl bg-surface p-4 shadow-lg sm:p-5">
+            <h3 class="mb-3 text-xs font-semibold tracking-wide text-gray-500 uppercase">
+              How it gets to you
+            </h3>
+            <div class="space-y-2 text-sm">
+              @if (order().fulfillmentType) {
+                <div class="flex items-start justify-between gap-3">
+                  <span class="text-gray-500">Handover</span>
+                  <span class="text-right font-medium text-gray-900">{{
+                    order().fulfillmentType
+                  }}</span>
+                </div>
+              }
+              @if (order().deliveryAddress) {
+                <div class="flex items-start justify-between gap-3">
+                  <span class="text-gray-500">Address</span>
+                  <span class="text-right wrap-break-word text-gray-900">{{
+                    order().deliveryAddress
+                  }}</span>
+                </div>
+              }
+              @if (order().contactNumber) {
+                <div class="flex items-start justify-between gap-3">
+                  <span class="text-gray-500">Contact</span>
+                  <span class="text-right text-gray-900">{{ order().contactNumber }}</span>
+                </div>
+              }
+            </div>
+          </section>
+        }
+
+        <section class="rounded-2xl border p-4 sm:p-5" [class]="accent().panel">
+          <h3
+            class="mb-3 text-xs font-semibold tracking-wide uppercase"
+            [class]="accent().title"
+          >
+            Payment Summary
+          </h3>
+          <dl class="space-y-2 text-sm">
+            <div class="flex items-center justify-between">
+              <dt class="text-gray-600">Method</dt>
+              <dd class="font-medium text-gray-900">{{ order().paymentMethod || 'Not set' }}</dd>
+            </div>
+            <div class="flex items-center justify-between">
+              <dt class="text-gray-600">Items</dt>
+              <dd class="font-medium text-gray-900">{{ itemCount() }}</dd>
+            </div>
+            <div class="flex items-center justify-between">
+              <dt class="text-gray-600">Order total</dt>
+              <dd class="font-medium text-gray-900 tabular-nums">
+                <app-icon
+                  name="icon-peso"
+                  [class]="'inline h-3 w-3 align-[-0.125em]'"
+                  [fill]="'currentColor'"
+                />{{ order().total | number: '1.2-2' }}
+              </dd>
+            </div>
+            @if (order().tips) {
+              <div class="flex items-center justify-between">
+                <dt class="text-gray-600">Tip</dt>
+                <dd class="font-medium text-gray-900 tabular-nums">
+                  <app-icon
+                    name="icon-peso"
+                    [class]="'inline h-3 w-3 align-[-0.125em]'"
+                    [fill]="'currentColor'"
+                  />{{ order().tips | number: '1.2-2' }}
+                </dd>
               </div>
             }
-          </div>
-        </div>
-      </div>
+            @if (order().amountReceived) {
+              <div class="flex items-center justify-between">
+                <dt class="text-gray-600">You will pay</dt>
+                <dd class="font-medium text-gray-900 tabular-nums">
+                  <app-icon
+                    name="icon-peso"
+                    [class]="'inline h-3 w-3 align-[-0.125em]'"
+                    [fill]="'currentColor'"
+                  />{{ order().amountReceived | number: '1.2-2' }}
+                </dd>
+              </div>
+              <div class="flex items-center justify-between">
+                <dt class="text-gray-600">Change</dt>
+                <dd class="font-medium text-gray-900 tabular-nums">
+                  <app-icon
+                    name="icon-peso"
+                    [class]="'inline h-3 w-3 align-[-0.125em]'"
+                    [fill]="'currentColor'"
+                  />{{ change() | number: '1.2-2' }}
+                </dd>
+              </div>
+            }
+            <div
+              class="mt-2 flex items-baseline justify-between border-t border-dashed pt-3"
+              [class]="accent().divider"
+            >
+              <dt class="font-semibold text-gray-700">To pay</dt>
+              <dd class="text-xl font-bold tabular-nums" [class]="accent().total">
+                <app-icon
+                  name="icon-peso"
+                  [class]="'inline h-4 w-4 align-[-0.1em]'"
+                  [fill]="'currentColor'"
+                />{{ amountDue() | number: '1.2-2' }}
+              </dd>
+            </div>
+          </dl>
+        </section>
+      </aside>
     </div>
   </div>
 </div>

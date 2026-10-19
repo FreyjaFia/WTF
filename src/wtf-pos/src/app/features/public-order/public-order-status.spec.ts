@@ -5,6 +5,7 @@ import {
   publicStatusNoteClass,
   publicStatusVariant,
   publicTimeline,
+  publicStatusAccent,
 } from './public-order-status';
 
 const make = (over: Partial<PublicOrderDto> = {}): PublicOrderDto => ({
@@ -185,5 +186,28 @@ describe('ready status styling', () => {
   it('has its own badge color and note color', () => {
     expect(publicStatusVariant('ready')).toBe('warning');
     expect(publicStatusNoteClass('ready')).toContain('orange');
+  });
+});
+
+describe('publicStatusAccent', () => {
+  const kinds = ['waiting', 'accepted', 'ready', 'completed', 'rejected', 'cancelled', 'refunded'] as const;
+
+  it('gives every status its own strip color, with rejected and refunded both red', () => {
+    const strips = Object.fromEntries(kinds.map((kind) => [kind, publicStatusAccent(kind).strip]));
+    expect(strips).toEqual({
+      waiting: 'bg-amber-400',
+      accepted: 'bg-sky-400',
+      ready: 'bg-orange-400',
+      completed: 'bg-emerald-500',
+      rejected: 'bg-red-500',
+      cancelled: 'bg-slate-300',
+      refunded: 'bg-red-500',
+    });
+  });
+
+  it('colors the payment panel and its total to match', () => {
+    expect(publicStatusAccent('refunded').panel).toContain('red');
+    expect(publicStatusAccent('refunded').total).toBe('text-red-600');
+    expect(publicStatusAccent('completed').total).toBe('text-emerald-700');
   });
 });

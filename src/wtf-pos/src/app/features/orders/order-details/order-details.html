@@ -1,5 +1,5 @@
 <div class="flex h-full flex-col">
-  <div class="mb-4 flex items-start gap-2 sm:mb-6">
+  <div class="mb-4 flex items-start gap-2 sm:mb-5">
     <button
       type="button"
       class="app-btn app-btn-ghost mt-0.5 p-2"
@@ -30,338 +30,424 @@
   @if (!isLoading() && order(); as currentOrder) {
     <app-pull-to-refresh [refreshing]="isRefreshing()" (refreshTriggered)="refresh()">
       <div class="space-y-4 pb-4">
-        <div class="rounded-xl bg-surface p-4 shadow-lg sm:p-5">
-          <div class="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h2 class="text-lg font-semibold text-gray-900">#{{ currentOrder.orderNumber }}</h2>
-              <p class="text-sm text-gray-500">
-                {{ getOrderDate(currentOrder) | date: 'd MMM y, h:mm a' }}
-              </p>
-            </div>
-            <div class="flex flex-wrap items-center justify-end gap-2">
-              <app-badge [variant]="getStatusVariant(currentOrder.status)">
-                {{ getStatusLabel(currentOrder.status) }}
-              </app-badge>
-              @if (currentOrder.overriddenAt) {
-                <app-badge variant="amber">Overridden</app-badge>
-              }
-            </div>
-          </div>
+        <!-- Hero: who, when, how much, and what can be done -->
+        <section class="overflow-hidden rounded-2xl bg-surface shadow-lg">
+          <div
+            class="h-1.5 w-full"
+            [class.bg-emerald-500]="isCompleted()"
+            [class.bg-red-500]="isRefunded()"
+            [class.bg-amber-400]="isAwaitingApproval() || isHeldForReview()"
+            [class.bg-slate-300]="isCancelled()"
+            [class.bg-sky-400]="
+              !isCompleted() &&
+              !isRefunded() &&
+              !isCancelled() &&
+              !isAwaitingApproval() &&
+              !isHeldForReview()
+            "
+          ></div>
+          <div class="p-4 sm:p-6">
+            <div class="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
+              <div class="min-w-0">
+                <div class="flex flex-wrap items-center gap-2">
+                  <h2 class="text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
+                    #{{ currentOrder.orderNumber }}
+                  </h2>
+                  <app-badge [variant]="getStatusVariant(currentOrder.status)">
+                    {{ getStatusLabel(currentOrder.status) }}
+                  </app-badge>
+                  @if (currentOrder.overriddenAt) {
+                    <app-badge variant="amber">Overridden</app-badge>
+                  }
+                </div>
+                <p class="mt-1 text-sm text-gray-500">
+                  {{ getOrderDate(currentOrder) | date: 'EEE, d MMM y · h:mm a' }}
+                </p>
+              </div>
 
-          <div class="mt-3 flex flex-wrap items-center gap-2">
-            @if (isOnlineOrder()) {
-              <button
-                type="button"
-                class="app-btn app-btn-secondary app-btn-sm gap-2"
-                data-chat-button
-                (click)="openChat()"
-              >
-                <app-icon name="icon-chat" [class]="'h-4 w-4'" [fill]="'currentColor'" />
-                Chat
-                @if (chatUnread() > 0) {
-                  <span
-                    class="flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] leading-none font-bold text-white"
-                    data-chat-unread
-                    >{{ chatUnread() }}</span
-                  >
-                }
-              </button>
-            }
-            <button
-              type="button"
-              class="app-btn app-btn-secondary app-btn-sm"
-              (click)="downloadOrderImage(receipt)"
-              [disabled]="isDownloadingReceipt() || isRefunding()"
-            >
-              @if (isDownloadingReceipt()) {
-                <span class="loading loading-spinner loading-xs"></span>
-                Downloading...
-              } @else {
-                <app-icon name="icon-download" [class]="'h-4 w-4'" [fill]="'currentColor'" />
-                Download order summary
-              }
-            </button>
-            @if (canOverride()) {
-              <button
-                type="button"
-                class="app-btn app-btn-outline-warning app-btn-sm"
-                (click)="openOverrideEditor()"
-                [disabled]="isRefunding()"
-              >
-                Override Order
-              </button>
-            }
-            <app-order-receipt #receipt [data]="receiptData()" />
-            @if (canRefund()) {
-              <div class="ms-auto flex items-center gap-2">
-                <span class="text-[11px] text-gray-400">Requires confirmation</span>
-                <button
-                  type="button"
-                  class="app-btn app-btn-outline-danger app-btn-sm"
-                  (click)="openRefundModal()"
-                  [disabled]="isRefunding()"
+              <div class="text-left sm:text-right">
+                <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase">
+                  {{ isRefunded() ? 'Refunded' : 'Order total' }}
+                </p>
+                <p
+                  class="text-3xl font-bold tracking-tight tabular-nums sm:text-4xl"
+                  [class.text-gray-900]="!isRefunded() && !isCancelled()"
+                  [class.text-red-600]="isRefunded()"
+                  [class.text-gray-400]="isCancelled()"
+                  [class.line-through]="isCancelled()"
                 >
-                  Refund Order
-                </button>
-              </div>
-            }
-          </div>
-
-          @if (isHeldForReview()) {
-            <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3" data-held-order>
-              <div class="flex flex-wrap items-center justify-between gap-2">
-                <p class="text-xs font-semibold tracking-wide text-amber-800 uppercase">
-                  Needs review
-                </p>
-                @if (canReviewHeld()) {
-                  <div class="flex items-center gap-2">
-                    <button
-                      type="button"
-                      class="app-btn app-btn-outline-danger app-btn-sm"
-                      [disabled]="isDeciding()"
-                      (click)="askRejectOrder()"
-                    >
-                      Reject
-                    </button>
-                    <button
-                      type="button"
-                      class="app-btn app-btn-primary app-btn-sm"
-                      [disabled]="isDeciding()"
-                      (click)="approveOrder()"
-                    >
-                      @if (isDeciding() && !showRejectDialog()) {
-                        <span class="loading loading-spinner loading-xs"></span>
-                        Approving...
-                      } @else {
-                        Approve
-                      }
-                    </button>
-                  </div>
-                }
-              </div>
-              <p class="mt-2 text-sm text-gray-700">
-                This order was sold offline. The prices or the menu changed before it synced, so it
-                does not count as a sale until an Admin approves it at the prices the customer was quoted.
-              </p>
-              <ul class="mt-2 list-disc space-y-0.5 ps-5 text-sm text-gray-900">
-                @for (reason of reviewReasons(); track reason) {
-                  <li>{{ reason }}</li>
-                }
-              </ul>
-              @if (!canReviewHeld()) {
-                <p class="mt-2 text-xs text-gray-500">An Admin has to approve or reject it.</p>
-              }
-            </div>
-          }
-
-          @if (isOnlineOrder()) {
-            <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3" data-online-order>
-              <div class="flex flex-wrap items-center justify-between gap-2">
-                <p class="text-xs font-semibold tracking-wide text-amber-800 uppercase">
-                  Online order
-                </p>
-                @if (canDecide()) {
-                  <div class="flex items-center gap-2">
-                    <button
-                      type="button"
-                      class="app-btn app-btn-outline-danger app-btn-sm"
-                      [disabled]="isDeciding()"
-                      (click)="askRejectOrder()"
-                    >
-                      Reject
-                    </button>
-                    <button
-                      type="button"
-                      class="app-btn app-btn-primary app-btn-sm"
-                      [disabled]="isDeciding()"
-                      (click)="approveOrder()"
-                    >
-                      @if (isDeciding() && !showRejectDialog()) {
-                        <span class="loading loading-spinner loading-xs"></span>
-                        Accepting...
-                      } @else {
-                        Accept
-                      }
-                    </button>
-                  </div>
-                }
-              </div>
-              <div class="mt-3 space-y-1.5 text-sm text-gray-700">
-                @if (currentOrder.fulfillmentType != null) {
-                  <div class="grid grid-cols-[8.5rem_1fr] items-start gap-3">
-                    <span class="text-gray-500">Handover</span>
-                    <span class="text-gray-900">{{
-                      isDelivery() ? 'Delivery' : 'Pickup'
-                    }}</span>
-                  </div>
-                }
-                @if (isDelivery() && currentOrder.deliveryAddress) {
-                  <div class="grid grid-cols-[8.5rem_1fr] items-start gap-3">
-                    <span class="text-gray-500">Address</span>
-                    <span class="wrap-break-word text-gray-900">{{
-                      currentOrder.deliveryAddress
-                    }}</span>
-                  </div>
-                }
-                @if (currentOrder.contactNumber) {
-                  <div class="grid grid-cols-[8.5rem_1fr] items-start gap-3">
-                    <span class="text-gray-500">Contact</span>
-                    <span class="text-gray-900">{{ currentOrder.contactNumber }}</span>
-                  </div>
-                }
-                @if (isAwaitingApproval() && currentOrder.paymentMethod === 1) {
-                  <div class="grid grid-cols-[8.5rem_1fr] items-start gap-3">
-                    <span class="text-gray-500">Customer will pay</span>
-                    <span class="text-gray-900">
-                      <app-icon
-                        name="icon-peso"
-                        [class]="'inline h-3 w-3 align-[-0.125em]'"
-                        [fill]="'currentColor'"
-                      />{{ currentOrder.amountReceived | number: '1.2-2' }}
-                      @if (currentOrder.changeAmount != null) {
-                        <span class="text-xs text-gray-500">
-                          (change
-                          <app-icon
-                            name="icon-peso"
-                            [class]="'inline h-2.5 w-2.5 align-[-0.125em]'"
-                            [fill]="'currentColor'"
-                          />{{ currentOrder.changeAmount | number: '1.2-2' }})
-                        </span>
-                      }
-                    </span>
-                  </div>
-                }
-                @if (isOnlineOrder() && currentOrder.tips) {
-                  <div class="grid grid-cols-[8.5rem_1fr] items-start gap-3">
-                    <span class="text-gray-500">Tip</span>
-                    <span class="font-medium text-emerald-700">
-                      <app-icon
-                        name="icon-peso"
-                        [class]="'inline h-3 w-3 align-[-0.125em]'"
-                        [fill]="'currentColor'"
-                      />{{ currentOrder.tips | number: '1.2-2' }}
-                    </span>
-                  </div>
-                }
-                @if (currentOrder.rejectionReason) {
-                  <div class="grid grid-cols-[8.5rem_1fr] items-start gap-3">
-                    <span class="text-gray-500">Rejected because</span>
-                    <span class="wrap-break-word text-red-700">{{
-                      currentOrder.rejectionReason
-                    }}</span>
-                  </div>
-                }
-              </div>
-
-            </div>
-          }
-
-          <div class="mt-4 rounded-xl border border-gray-200 bg-surface p-3 shadow-sm md:hidden">
-            <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Order Info</p>
-            <div class="mt-2 space-y-1.5 text-sm text-gray-700">
-              <div class="flex items-start justify-between gap-3">
-                <span class="text-gray-500">Date</span>
-                <span class="text-right text-gray-900">{{
-                  getOrderDate(currentOrder) | date: 'd MMM y, h:mm a'
-                }}</span>
-              </div>
-              <div class="flex items-start justify-between gap-3">
-                <span class="text-gray-500">Customer</span>
-                <span class="text-right text-gray-900">{{
-                  currentOrder.customerName || 'Walk-in'
-                }}</span>
-              </div>
-              <div class="flex items-start justify-between gap-3">
-                <span class="text-gray-500">Items</span>
-                <span class="text-right text-gray-900">{{ itemCount() }}</span>
-              </div>
-              <div class="flex items-start justify-between gap-3">
-                <span class="text-gray-500">Payment</span>
-                <span class="text-right text-gray-900">{{
-                  getPaymentMethodLabel(currentOrder.paymentMethod)
-                }}</span>
-              </div>
-              <div
-                class="mt-1 flex items-start justify-between gap-3 border-t border-gray-100 pt-2"
-              >
-                <span class="font-semibold text-gray-700">Total</span>
-                <span class="text-right font-semibold text-gray-900">
                   <app-icon
                     name="icon-peso"
-                    [class]="'inline h-3 w-3 align-[-0.125em]'"
+                    [class]="'inline h-5 w-5 align-[-0.1em] sm:h-6 sm:w-6'"
                     [fill]="'currentColor'"
-                  />
-                  {{ currentOrder.totalAmount | number: '1.2-2' }}
-                </span>
+                  />{{ currentOrder.totalAmount | number: '1.2-2' }}
+                </p>
               </div>
             </div>
-          </div>
 
-          <div
-            class="mt-4 hidden rounded-lg border border-gray-100 bg-gray-50 px-4 py-3 text-sm text-gray-700 md:block"
-          >
-            <span class="font-semibold text-gray-900">Order Info:</span>
-            {{ getOrderDate(currentOrder) | date: 'd MMM y, h:mm a' }}
-            <span class="mx-2 text-gray-400">|</span>
-            {{ currentOrder.customerName || 'Walk-in' }}
-            <span class="mx-2 text-gray-400">|</span>
-            {{ itemCount() }} items
-            <span class="mx-2 text-gray-400">|</span>
-            {{ getPaymentMethodLabel(currentOrder.paymentMethod) }}
-            <span class="mx-2 text-gray-400">|</span>
-            <span class="font-semibold text-gray-900">
-              Total:
-              <app-icon
-                name="icon-peso"
-                [class]="'inline h-3 w-3 align-[-0.125em]'"
-                [fill]="'currentColor'"
-              />
-              {{ currentOrder.totalAmount | number: '1.2-2' }}
-            </span>
-          </div>
+            <dl class="mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-xl bg-gray-100 text-sm xl:grid-cols-4">
+              <div class="bg-surface px-3 py-2.5">
+                <dt class="text-[11px] font-semibold tracking-wide text-gray-500 uppercase">Customer</dt>
+                <dd class="mt-0.5 truncate font-medium text-gray-900">
+                  {{ currentOrder.customerName || 'Walk-in' }}
+                </dd>
+              </div>
+              <div class="bg-surface px-3 py-2.5">
+                <dt class="text-[11px] font-semibold tracking-wide text-gray-500 uppercase">Items</dt>
+                <dd class="mt-0.5 font-medium text-gray-900">{{ itemCount() }}</dd>
+              </div>
+              <div class="bg-surface px-3 py-2.5">
+                <dt class="text-[11px] font-semibold tracking-wide text-gray-500 uppercase">Payment</dt>
+                <dd class="mt-0.5 font-medium text-gray-900">
+                  {{ getPaymentMethodLabel(currentOrder.paymentMethod) }}
+                </dd>
+              </div>
+              <div class="bg-surface px-3 py-2.5">
+                <dt class="text-[11px] font-semibold tracking-wide text-gray-500 uppercase">Source</dt>
+                <dd class="mt-0.5 font-medium text-gray-900">
+                  {{ isOnlineOrder() ? 'Customer link' : 'Shop' }}
+                </dd>
+              </div>
+            </dl>
 
-          @if (currentOrder.note?.trim()) {
-            <div class="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
-              <p class="text-xs font-semibold tracking-wide text-amber-700 uppercase">Note</p>
-              <p class="mt-1 text-sm text-amber-900">{{ currentOrder.note }}</p>
-            </div>
-          }
-
-          @if (currentOrder.overrideReason?.trim()) {
-            <div class="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
-              <p class="text-xs font-semibold tracking-wide text-amber-700 uppercase">
-                Overridden
-                @if (currentOrder.overriddenAt) {
-                  <span class="font-normal tracking-normal normal-case">
-                    on {{ currentOrder.overriddenAt | date: 'd MMM y, h:mm a' }}
-                  </span>
+            <div class="mt-4 flex flex-wrap items-center gap-2">
+              @if (isOnlineOrder()) {
+                <button
+                  type="button"
+                  class="app-btn app-btn-secondary app-btn-sm gap-2"
+                  data-chat-button
+                  (click)="openChat()"
+                >
+                  <app-icon name="icon-chat" [class]="'h-4 w-4'" [fill]="'currentColor'" />
+                  Chat
+                  @if (chatUnread() > 0) {
+                    <span
+                      class="flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] leading-none font-bold text-white"
+                      data-chat-unread
+                      >{{ chatUnread() }}</span
+                    >
+                  }
+                </button>
+              }
+              <button
+                type="button"
+                class="app-btn app-btn-secondary app-btn-sm"
+                (click)="downloadOrderImage(receipt)"
+                [disabled]="isDownloadingReceipt() || isRefunding()"
+              >
+                @if (isDownloadingReceipt()) {
+                  <span class="loading loading-spinner loading-xs"></span>
+                  Downloading...
+                } @else {
+                  <app-icon name="icon-download" [class]="'h-4 w-4'" [fill]="'currentColor'" />
+                  Download order summary
                 }
-              </p>
-              <p class="mt-1 text-sm text-amber-900">{{ currentOrder.overrideReason }}</p>
+              </button>
+              @if (canOverride()) {
+                <button
+                  type="button"
+                  class="app-btn app-btn-outline-warning app-btn-sm"
+                  (click)="openOverrideEditor()"
+                  [disabled]="isRefunding()"
+                >
+                  Override Order
+                </button>
+              }
+              <app-order-receipt #receipt [data]="receiptData()" />
+              @if (canRefund()) {
+                <div class="ms-auto flex items-center gap-2">
+                  <span class="text-[11px] text-gray-400">Requires confirmation</span>
+                  <button
+                    type="button"
+                    class="app-btn app-btn-outline-danger app-btn-sm"
+                    (click)="openRefundModal()"
+                    [disabled]="isRefunding()"
+                  >
+                    Refund Order
+                  </button>
+                </div>
+              }
             </div>
-          }
-        </div>
+          </div>
+        </section>
 
-        <div class="rounded-xl bg-surface p-4 shadow-lg sm:p-5">
-          <div class="grid gap-4 md:grid-cols-3">
-            <div
-              class="rounded-xl p-4"
-              [class.border]="true"
+        @if (isHeldForReview()) {
+          <section
+            class="rounded-2xl border border-amber-200 bg-amber-50 p-4 sm:p-5"
+            data-held-order
+          >
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <p class="text-xs font-semibold tracking-wide text-amber-800 uppercase">
+                Needs review
+              </p>
+              @if (canReviewHeld()) {
+                <div class="flex items-center gap-2">
+                  <button
+                    type="button"
+                    class="app-btn app-btn-outline-danger app-btn-sm"
+                    [disabled]="isDeciding()"
+                    (click)="askRejectOrder()"
+                  >
+                    Reject
+                  </button>
+                  <button
+                    type="button"
+                    class="app-btn app-btn-primary app-btn-sm"
+                    [disabled]="isDeciding()"
+                    (click)="approveOrder()"
+                  >
+                    @if (isDeciding() && !showRejectDialog()) {
+                      <span class="loading loading-spinner loading-xs"></span>
+                      Approving...
+                    } @else {
+                      Approve
+                    }
+                  </button>
+                </div>
+              }
+            </div>
+            <p class="mt-2 text-sm text-gray-700">
+              This order was sold offline. The prices or the menu changed before it synced, so it
+              does not count as a sale until an Admin approves it at the prices the customer was quoted.
+            </p>
+            <ul class="mt-2 list-disc space-y-0.5 ps-5 text-sm text-gray-900">
+              @for (reason of reviewReasons(); track reason) {
+                <li>{{ reason }}</li>
+              }
+            </ul>
+            @if (!canReviewHeld()) {
+              <p class="mt-2 text-xs text-gray-500">An Admin has to approve or reject it.</p>
+            }
+          </section>
+        }
+
+        @if (isOnlineOrder()) {
+          <section
+            class="rounded-2xl border border-amber-200 bg-amber-50 p-4 sm:p-5"
+            data-online-order
+          >
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <p class="text-xs font-semibold tracking-wide text-amber-800 uppercase">
+                Online order
+              </p>
+              @if (canDecide()) {
+                <div class="flex items-center gap-2">
+                  <button
+                    type="button"
+                    class="app-btn app-btn-outline-danger app-btn-sm"
+                    [disabled]="isDeciding()"
+                    (click)="askRejectOrder()"
+                  >
+                    Reject
+                  </button>
+                  <button
+                    type="button"
+                    class="app-btn app-btn-primary app-btn-sm"
+                    [disabled]="isDeciding()"
+                    (click)="approveOrder()"
+                  >
+                    @if (isDeciding() && !showRejectDialog()) {
+                      <span class="loading loading-spinner loading-xs"></span>
+                      Accepting...
+                    } @else {
+                      Accept
+                    }
+                  </button>
+                </div>
+              }
+            </div>
+            <div class="mt-3 space-y-1.5 text-sm text-gray-700">
+              @if (currentOrder.fulfillmentType != null) {
+                <div class="grid grid-cols-[8.5rem_1fr] items-start gap-3">
+                  <span class="text-gray-500">Handover</span>
+                  <span class="text-gray-900">{{ isDelivery() ? 'Delivery' : 'Pickup' }}</span>
+                </div>
+              }
+              @if (isDelivery() && currentOrder.deliveryAddress) {
+                <div class="grid grid-cols-[8.5rem_1fr] items-start gap-3">
+                  <span class="text-gray-500">Address</span>
+                  <span class="wrap-break-word text-gray-900">{{
+                    currentOrder.deliveryAddress
+                  }}</span>
+                </div>
+              }
+              @if (currentOrder.contactNumber) {
+                <div class="grid grid-cols-[8.5rem_1fr] items-start gap-3">
+                  <span class="text-gray-500">Contact</span>
+                  <span class="text-gray-900">{{ currentOrder.contactNumber }}</span>
+                </div>
+              }
+              @if (isAwaitingApproval() && currentOrder.paymentMethod === 1) {
+                <div class="grid grid-cols-[8.5rem_1fr] items-start gap-3">
+                  <span class="text-gray-500">Customer will pay</span>
+                  <span class="text-gray-900">
+                    <app-icon
+                      name="icon-peso"
+                      [class]="'inline h-3 w-3 align-[-0.125em]'"
+                      [fill]="'currentColor'"
+                    />{{ currentOrder.amountReceived | number: '1.2-2' }}
+                    @if (currentOrder.changeAmount != null) {
+                      <span class="text-xs text-gray-500">
+                        (change
+                        <app-icon
+                          name="icon-peso"
+                          [class]="'inline h-2.5 w-2.5 align-[-0.125em]'"
+                          [fill]="'currentColor'"
+                        />{{ currentOrder.changeAmount | number: '1.2-2' }})
+                      </span>
+                    }
+                  </span>
+                </div>
+              }
+              @if (isOnlineOrder() && currentOrder.tips) {
+                <div class="grid grid-cols-[8.5rem_1fr] items-start gap-3">
+                  <span class="text-gray-500">Tip</span>
+                  <span class="font-medium text-emerald-700">
+                    <app-icon
+                      name="icon-peso"
+                      [class]="'inline h-3 w-3 align-[-0.125em]'"
+                      [fill]="'currentColor'"
+                    />{{ currentOrder.tips | number: '1.2-2' }}
+                  </span>
+                </div>
+              }
+              @if (currentOrder.rejectionReason) {
+                <div class="grid grid-cols-[8.5rem_1fr] items-start gap-3">
+                  <span class="text-gray-500">Rejected because</span>
+                  <span class="wrap-break-word text-red-700">{{
+                    currentOrder.rejectionReason
+                  }}</span>
+                </div>
+              }
+            </div>
+          </section>
+        }
+
+        <div class="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_21rem]">
+          <!-- Items -->
+          <section class="rounded-2xl bg-surface p-4 shadow-lg sm:p-5">
+            <div class="mb-3 flex items-center justify-between gap-2">
+              <h3 class="text-sm font-semibold text-gray-900">
+                Items
+                <span class="ms-1 font-normal text-gray-500">({{ itemCount() }})</span>
+              </h3>
+              <span class="sr-only">Item Breakdown</span>
+            </div>
+
+            <ul class="divide-y divide-gray-100">
+              @for (c of detailItems(); track $index) {
+                <li class="py-3 first:pt-0 last:pb-0">
+                  <div class="grid grid-cols-[2.5rem_minmax(0,1fr)_auto] gap-x-3">
+                    <div
+                      class="row-span-2 flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gray-50"
+                    >
+                      @if (c.imageUrl; as imageUrl) {
+                        <img [src]="imageUrl" [alt]="c.name" class="h-8 w-8 object-contain" />
+                      } @else {
+                        <app-avatar [label]="c.name" [size]="32" />
+                      }
+                    </div>
+                    <div class="min-w-0">
+                      <div class="text-sm font-semibold text-gray-900">
+                        <span class="text-gray-500">{{ c.qty }}x</span> {{ c.name }}
+                      </div>
+                      @if (c.promoLabel) {
+                        <div
+                          class="mt-1 inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap text-emerald-700"
+                        >
+                          {{ c.promoLabel }}
+                        </div>
+                      }
+                    </div>
+                    <div class="text-right text-sm font-semibold text-gray-900 tabular-nums">
+                      <app-icon
+                        name="icon-peso"
+                        [class]="'inline h-3 w-3 align-[-0.125em]'"
+                        [fill]="'currentColor'"
+                      />{{ getItemTotal(c) | number: '1.2-2' }}
+                    </div>
+                    @if (!c.bundlePromotionId && !c.bundleItems?.length && getBreakdown(c).rows.length > 0) {
+                      <div class="col-span-2 mt-1">
+                        <app-line-breakdown [breakdown]="getBreakdown(c)" />
+                      </div>
+                    }
+                    @if (c.specialInstructions) {
+                      <div
+                        class="col-span-2 col-start-2 mt-1.5 rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-xs wrap-break-word text-gray-600 italic"
+                      >
+                        {{ c.specialInstructions }}
+                      </div>
+                    }
+                  </div>
+
+                  @if (c.bundleItems?.length) {
+                    <div class="mt-1 space-y-1 pl-13">
+                      @for (
+                        bundleItem of getSortedBundleItems(c);
+                        track bundleItem.productId + '-' + $index
+                      ) {
+                        <div class="text-xs text-gray-500">
+                          <div class="grid grid-cols-[1fr_auto] items-center gap-3">
+                            <div class="truncate">
+                              {{
+                                getBundleChildTotalQuantity(c, bundleItem) > 1
+                                  ? '+ ' +
+                                    getBundleChildTotalQuantity(c, bundleItem) +
+                                    'x ' +
+                                    bundleItem.name
+                                  : '+ ' + bundleItem.name
+                              }}
+                            </div>
+                          </div>
+                          @if (bundleItem.addOns?.length) {
+                            <div class="mt-0.5 ml-5 space-y-0.5">
+                              @for (label of bundleItem.addOns | addOnLabels; track $index) {
+                                <div class="flex items-center gap-1.5 text-[11px] text-gray-400">
+                                  <span
+                                    class="inline-block h-1 w-1 shrink-0 rounded-full bg-gray-300"
+                                  ></span>
+                                  <span class="min-w-0 wrap-break-word">{{ label }}</span>
+                                </div>
+                              }
+                            </div>
+                          }
+                        </div>
+                      }
+                    </div>
+                  }
+                </li>
+              }
+            </ul>
+
+            @if (order()?.specialInstructions?.trim(); as orderNote) {
+              <div class="mt-4 rounded-xl border border-gray-200 bg-gray-50 p-3">
+                <p class="mb-1 text-xs font-semibold tracking-wide text-gray-500 uppercase">
+                  Order note
+                </p>
+                <p class="text-sm wrap-break-word text-gray-700 italic">{{ orderNote }}</p>
+              </div>
+            }
+          </section>
+
+          <!-- Payment and notes -->
+          <aside class="space-y-4 lg:sticky lg:top-2">
+            <section
+              class="rounded-2xl border p-4 sm:p-5"
               [class.border-emerald-200]="isCompleted()"
               [class.bg-emerald-50/50]="isCompleted()"
-              [class.border-amber-200]="isRefunded()"
-              [class.bg-amber-50/50]="isRefunded()"
-              [class.border-slate-200]="isCancelled()"
-              [class.bg-slate-50/70]="isCancelled()"
+              [class.border-red-200]="isRefunded()"
+              [class.bg-red-50/50]="isRefunded()"
+              [class.border-slate-200]="!isCompleted() && !isRefunded()"
+              [class.bg-slate-50/70]="!isCompleted() && !isRefunded()"
             >
-              <div
+              <h3
                 class="mb-3 text-xs font-semibold tracking-wide uppercase"
                 [class.text-emerald-700]="isCompleted()"
-                [class.text-amber-700]="isRefunded()"
-                [class.text-slate-700]="isCancelled()"
+                [class.text-red-700]="isRefunded()"
+                [class.text-slate-700]="!isCompleted() && !isRefunded()"
               >
                 Payment Summary
-              </div>
+              </h3>
               <div class="space-y-2 text-sm">
                 <div class="flex items-center justify-between">
                   <span class="text-gray-600">Method</span>
@@ -385,7 +471,7 @@
                   <span class="text-gray-600">{{
                     isRefunded() ? 'Original Amount' : 'Amount Paid'
                   }}</span>
-                  <span class="font-medium text-gray-900"
+                  <span class="font-medium text-gray-900 tabular-nums"
                     ><app-icon
                       name="icon-peso"
                       [class]="'inline h-3 w-3 align-[-0.125em]'"
@@ -395,7 +481,7 @@
                 </div>
                 <div class="flex items-center justify-between">
                   <span class="text-gray-600">{{ isRefunded() ? 'Original Tips' : 'Tips' }}</span>
-                  <span class="font-medium text-gray-900"
+                  <span class="font-medium text-gray-900 tabular-nums"
                     ><app-icon
                       name="icon-peso"
                       [class]="'inline h-3 w-3 align-[-0.125em]'"
@@ -407,7 +493,7 @@
                   <span class="text-gray-600">{{
                     isRefunded() ? 'Original Change' : 'Change'
                   }}</span>
-                  <span class="font-medium text-gray-900"
+                  <span class="font-medium text-gray-900 tabular-nums"
                     ><app-icon
                       name="icon-peso"
                       [class]="'inline h-3 w-3 align-[-0.125em]'"
@@ -416,22 +502,22 @@
                   >
                 </div>
                 <div
-                  class="mt-2 flex items-center justify-between border-t pt-2"
-                  [class.border-emerald-100]="isCompleted()"
-                  [class.border-amber-100]="isRefunded()"
-                  [class.border-slate-200]="isCancelled()"
+                  class="mt-2 flex items-baseline justify-between border-t border-dashed pt-3"
+                  [class.border-emerald-300]="isCompleted()"
+                  [class.border-red-300]="isRefunded()"
+                  [class.border-slate-300]="!isCompleted() && !isRefunded()"
                 >
                   <span class="font-semibold text-gray-700">{{
                     isRefunded() ? 'Total Refunded' : 'Total Paid'
                   }}</span>
                   <span
-                    class="font-semibold"
+                    class="text-xl font-bold tabular-nums"
                     [class.text-emerald-700]="isCompleted()"
                     [class.text-red-600]="isRefunded()"
-                    [class.text-slate-700]="isCancelled()"
+                    [class.text-slate-700]="!isCompleted() && !isRefunded()"
                     ><app-icon
                       name="icon-peso"
-                      [class]="'inline h-3 w-3 align-[-0.125em]'"
+                      [class]="'inline h-4 w-4 align-[-0.1em]'"
                       [fill]="'currentColor'"
                     />{{
                       (isRefunded() ? paymentOrderTotal() : paymentTotalPaid()) | number: '1.2-2'
@@ -439,123 +525,29 @@
                   >
                 </div>
               </div>
-            </div>
+            </section>
 
-            <div class="md:col-span-2">
-              <div
-                class="mb-2 flex items-center gap-2 text-xs font-semibold tracking-wide text-gray-500 uppercase"
-              >
-                <span>Item Breakdown</span>
-                @if (isRefunded()) {
-                  <span
-                    class="rounded bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-600"
-                  >
-                    Refunded
-                  </span>
-                } @else if (isCompleted()) {
-                  <span
-                    class="rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700"
-                  >
-                    Completed
-                  </span>
-                } @else if (isCancelled()) {
-                  <span
-                    class="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700"
-                  >
-                    Cancelled
-                  </span>
-                }
-              </div>
-              <div
-                class="max-h-64 space-y-2 overflow-y-auto rounded-xl border border-gray-200 bg-surface p-3"
-              >
-                @for (c of detailItems(); track $index) {
-                  <div class="rounded-lg border border-gray-100 p-3">
-                    <div class="grid grid-cols-[2.5rem_minmax(0,1fr)_auto] gap-x-3">
-                      <div class="row-span-2 flex h-10 w-10 shrink-0 items-start justify-center pt-0.5">
-                        @if (c.imageUrl; as imageUrl) {
-                          <img [src]="imageUrl" [alt]="c.name" class="h-8 w-8 object-contain" />
-                        } @else {
-                          <app-avatar [label]="c.name" [size]="32" />
-                        }
-                      </div>
-                      <div class="min-w-0">
-                        <div class="text-sm font-medium text-gray-900">{{ c.qty }}x {{ c.name }}</div>
-                        @if (c.promoLabel) {
-                          <div
-                            class="mt-1 inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap text-emerald-700"
-                          >
-                            {{ c.promoLabel }}
-                          </div>
-                        }
-                      </div>
-                      <div class="text-right text-sm font-semibold text-gray-900">
-                        <app-icon
-                          name="icon-peso"
-                          [class]="'inline h-3 w-3 align-[-0.125em]'"
-                          [fill]="'currentColor'"
-                        />{{ getItemTotal(c) | number: '1.2-2' }}
-                      </div>
-                      @if (!c.bundlePromotionId && !c.bundleItems?.length && getBreakdown(c).rows.length > 0) {
-                        <div class="col-span-2 mt-1">
-                          <app-line-breakdown [breakdown]="getBreakdown(c)" />
-                        </div>
-                      }
-                      @if (c.specialInstructions) {
-                        <div class="col-span-2 col-start-2 mt-1 text-xs wrap-break-word text-gray-500 italic">
-                          {{ c.specialInstructions }}
-                        </div>
-                      }
-                    </div>
+            @if (currentOrder.note?.trim()) {
+              <section class="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                <p class="mb-1 text-xs font-semibold tracking-wide text-gray-500 uppercase">Note</p>
+                <p class="text-sm wrap-break-word text-gray-700 italic">{{ currentOrder.note }}</p>
+              </section>
+            }
 
-                    @if (c.bundleItems?.length) {
-                      <div class="space-y-1 pl-13">
-                        @for (
-                          bundleItem of getSortedBundleItems(c);
-                          track bundleItem.productId + '-' + $index
-                        ) {
-                          <div class="text-xs text-gray-500">
-                            <div class="grid grid-cols-[1fr_auto] items-center gap-3">
-                              <div class="truncate">
-                                {{
-                                  getBundleChildTotalQuantity(c, bundleItem) > 1
-                                    ? '+ ' +
-                                      getBundleChildTotalQuantity(c, bundleItem) +
-                                      'x ' +
-                                      bundleItem.name
-                                    : '+ ' + bundleItem.name
-                                }}
-                              </div>
-                            </div>
-                            @if (bundleItem.addOns?.length) {
-                              <div class="mt-0.5 ml-5 space-y-0.5">
-                                @for (label of bundleItem.addOns | addOnLabels; track $index) {
-                                  <div class="flex items-center gap-1.5 text-[11px] text-gray-400">
-                                    <span
-                                      class="inline-block h-1 w-1 shrink-0 rounded-full bg-gray-300"
-                                    ></span>
-                                    <span class="min-w-0 wrap-break-word">{{ label }}</span>
-                                  </div>
-                                }
-                              </div>
-                            }
-                          </div>
-                        }
-                      </div>
-                    }
-                  </div>
-                }
-              </div>
-              @if (order()?.specialInstructions?.trim(); as orderNote) {
-                <div class="mt-3 rounded-xl border border-gray-200 bg-surface p-3">
-                  <p class="mb-1 text-xs font-semibold tracking-wide text-gray-500 uppercase">
-                    Order note
-                  </p>
-                  <p class="text-sm wrap-break-word text-gray-700 italic">{{ orderNote }}</p>
-                </div>
-              }
-            </div>
-          </div>
+            @if (currentOrder.overrideReason?.trim()) {
+              <section class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+                <p class="text-xs font-semibold tracking-wide text-amber-700 uppercase">
+                  Overridden
+                  @if (currentOrder.overriddenAt) {
+                    <span class="font-normal tracking-normal normal-case">
+                      on {{ currentOrder.overriddenAt | date: 'd MMM y, h:mm a' }}
+                    </span>
+                  }
+                </p>
+                <p class="mt-1 text-sm text-amber-900">{{ currentOrder.overrideReason }}</p>
+              </section>
+            }
+          </aside>
         </div>
       </div>
     </app-pull-to-refresh>
