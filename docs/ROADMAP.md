@@ -18,6 +18,7 @@ Enable the POS app to function without a network connection.
 | 4     | Edit Pending Offline Orders   | [Completed] |
 | 5     | Batch Sync & Advanced Offline | [Completed] |
 | 6     | Offline orders meet a changed catalog | [Completed] |
+| 7     | Offline sync rework: judge at sale time, stock and limits | [Planned] |
 
 ### Phase 1 - Connectivity & Cart Persistence [Completed]
 
@@ -97,6 +98,119 @@ An order sold offline is a sale that already happened, so the server never repri
 - **No duplicates.** Every queued order is sent with a key of its queue number plus a per-device id (`OfflineLocalId`, unique index `UX_Orders_OfflineLocalId`). A sync that is sent twice (a timeout, then Sync Now) returns the saved order instead of saving it again. The device id is part of the key because queue numbers restart on every device.
 - **POS.** An order queued offline carries each line's quoted price, the original price and promo label, each add-on's price and each bundle's price. The discount promotions are now saved with the catalog (`CatalogCacheService.discountedPromotions`), so an offline cart prices discounts like an online one; before, an offline sale got no discount and the server applied it at sync.
 - **Checked in the running app** (throwaway database): a Cashier sold a Latte offline at 150 with the API stopped, the price was changed to 160, the API came back, the POS synced by itself, the order was held with "Latte now costs 160.00, quoted 150.00.", the Cashier saw no banner and could not approve (403), the Admin approved it from the banner, and it became Completed at 150.00 (and counted in the daily sales only from then on). Also checked by API: a retried sync returns the same order, a bad order does not stop the next one, reject needs a reason and shows as Cancelled.
+
+### Phase 7 - Offline sync rework: judge at sale time, stock and limits [Planned, added 20 Oct 2026]
+
+Phase 6 holds an offline sale whenever **today's** catalog differs from what the POS quoted. That is safe but too eager, and
+it has gaps. Examples it gets wrong or does not cover: a price that changed *after* the sale was made is still held (the
+device was right at the time); a promotion that ended or ran out after the sale is held; a promotion that ran out while the
+device was offline lets the sale through at the quoted price but, when an Admin approves it later, takes no use; and an item
+that ran out of stock is not considered at all. The principle stays: **a sale that already happened is never repriced or
+rejected behind the customer's back.** This phase makes the check smarter, so Admins only see the sales that need a decision.
+
+**1. Judge against the catalog as it was when the sale was made**
+
+- The device already sends the time of the sale (`createdAt`). It also sends `catalogSyncedAt`, the time of its last catalog
+  update (new field, saved on the order for audit).
+- Keep a change log of what moves in the catalog: product and add-on price, active flag, promotion dates and rules, bundle
+  price and items, `CatalogChangeLog` (entity, id, field, old value, new value, effective-from, changed by). The existing
+  audit rows are not enough (they are not queryable by sale time), so this is a small dedicated table written by the same
+  handlers that change those records.
+- At sync, a difference only counts if it **took effect before the sale and after the device's last catalog update**: the
+  device could not have known about it, and the shop's price was already different when the customer paid. A change made
+  *after* the sale is not a conflict (no hold, no note). This removes most false holds: a price edited at 18:00 does not hold
+  a 14:00 offline sale.
+- Where it cannot tell (no change log yet for old data, or a missing `catalogSyncedAt` from an older app), it falls back to
+  today's behavior (compare with the current catalog).
+
+**2. Promotion limits and ended promotions**
+
+- Evaluate a promotion's schedule and end date at the **time of the sale**, not at sync time. A sale made inside the window
+  keeps its discount even if the promotion ended before the sync (no hold).
+- **Limits used up while offline.** Uses are a shared pool the offline device cannot see. The sale was quoted and charged, so
+  it is honored: it takes a use even when the pool is empty, and the promotion shows an **over limit** count (new
+  `Promotions.OverLimitUses`, shown on the details page, in the Promotions Performance report and in the usage text, e.g.
+  "52 of 50 used, 2 over limit from offline sales"). Nothing is held for this alone; it becomes an informational note.
+- **Fix the known gap:** the quote carries the promotion id per line (`DiscountPromotionId`, `BundlePromotionId`), so an
+  approved held sale takes its uses like any other sale. An Admin sees "uses this promotion: 1 use" in the review box.
+- **Two sales and one use left** (an offline sale and an online one racing for the last use): the sale made *first* has the
+  stronger claim, but the earlier-synced one is already final. Rule: never undo a saved sale; the later-synced one is honored
+  and counted as over limit, as above. Document it on the promotion page so owners know a limit is "about", not a hard wall,
+  when registers are offline.
+- **Prevention at the register.** A promotion can be marked **not available offline** (`Promotions.AllowOffline`, default on for
+  unlimited promotions and off for promotions with a usage limit). A limited promotion then shows as "needs connection" on the
+  Promos tab when the device is offline, so the shop never promises a use it cannot check. Tick it on for a limited promotion
+  the owner accepts the risk for (over limit is counted).
+- A limit **per order** (`MaxPerOrder`) is local arithmetic and still works offline; a device that quotes a different number
+  of covered items than the server works out is held, as in Phase 6.
+
+**3. Stock**
+
+- An item that has run out **never blocks or holds an offline sale**: the goods were already handed to the customer. At sync,
+  deduction runs as usual and the balance may go negative, even for items set to block sales (blocking only applies to a sale
+  being made while online). The order is saved normally and a **stock warning** note is added to it (informational, not a
+  hold) and to the item (shows in the item's movement history and the next count suggestion, see Inventory Phase 7).
+- A held order deducts stock only when approved (it is not a sale until then); a rejected one that was already handed over
+  is treated as waste by the same "void asks what happens to the stock" rule (Inventory Phase 5).
+- The POS shows "stock last updated" on a low-stock warning when offline, so a cashier knows the count may be old.
+
+**4. Make the review smarter (fewer, clearer decisions)**
+
+- **Structured reasons.** Replace the free-text lines in `ReviewReasons` with rows in `OrderReviewReasons` (order, line, code,
+  expected value, quoted value, severity, text). Codes: `PriceChanged`, `AddOnPriceChanged`, `ProductInactive`,
+  `PromotionEnded` (only if it ended before the sale), `PromotionOverLimit`, `BundleChanged`, `CustomerInactive`,
+  `StockShortfall`, `UnknownProduct`. Severity: **Hold** (needs a decision) or **Note** (saved, informational).
+- **Policy settings** (`OfflineSyncPolicy`, per shop later per tenant; the default equals today's behavior): per code, hold or
+  note; a price-difference tolerance (for example notes only up to PHP 5 per line); and an optional **auto-approve** for
+  reasons that are only notes. Every auto-approval is audited (`OfflineOrderAutoApproved`) with the reasons.
+- **Admin actions** on a held order, beside Approve and Reject: *Approve at quoted* (honor, today's approve), *Approve and
+  record the difference* (keeps the quoted price but saves the difference to the shop as an adjustment line so reports show
+  what honoring the quote cost), and *Reject* (reason required; the sale is cancelled and, if goods were handed over, stock
+  is treated as waste). **Bulk approve** with filters (by reason, by branch, by cashier, by date) and a count preview.
+- **Aging and alerts.** A held order older than a set number of days is flagged; a daily push or the dashboard insight lists
+  how many are waiting and their total value. Today an unanswered hold sits quietly.
+- **Cashier feedback.** After a sync the POS shows each queued order's result on the device (saved, saved with a note, sent
+  for review, could not sync) in plain words, so the cashier is not left guessing. The cashier still cannot approve.
+- **Orders that cannot be saved** (a hard-deleted or unknown product, bad data): today the order stays in the queue with a
+  message and blocks nothing else. Add an **Unsynced orders** screen (Admin) showing the quoted order, the error, and the
+  choices: fix and retry, save as a note-only record with the quoted lines (for the cash drawer), or discard with a reason.
+  Nothing is dropped silently.
+
+**5. Money must still add up while an order is held**
+
+- A held offline sale already has cash in the drawer. The **Daily Close** gets a line "Offline sales held for review" (count and
+  amount) so the drawer reconciles with the sales shown, and the dashboard shows the same. Held orders remain excluded from
+  revenue, sales counts and reports until approved (as in Phase 6), but they are visible next to them.
+- The report that counts discounts and refunds notes the cost of honored quotes (the difference recorded in Admin actions).
+
+**6. Branches, tenants, cashless**
+
+- A queued order carries its branch (see Multiple Branches) and syncs into it; the change log and the policy are per tenant.
+- A cashless payment cannot be verified offline (Cashless Payments): an offline "GCash" sale is the unverified fallback and is
+  held or flagged for payment confirmation by the same review, with its own reason `PaymentUnverified`.
+
+**Data changes** (script under `tools/sql`, then rescaffold): `CatalogChangeLog`; `OrderReviewReasons`; on `Orders`:
+`CatalogSyncedAt`; on `Promotions`: `OverLimitUses`, `AllowOffline`; `OfflineSyncPolicy` settings; audit actions
+`OfflineOrderAutoApproved`, `OfflineSyncPolicyChanged`. Existing `ReviewReasons` text stays for old orders.
+
+**Calculations.** Which reasons apply, tolerance checks and the over-limit count are decisions about money and sales, so the
+rules go into `WTF.Calculations` (`OfflineOrderReview` already lives with the order review; extend it) with shared sample
+cases for the POS side where it quotes.
+
+**Tests and checks.** Unit and handler tests for each code: price changed before vs after the sale, promotion ended before vs
+after, over-limit use, stock shortfall (saved with a note, never held), tolerance, policy hold vs note, auto-approve audit,
+bulk approve, reject of a handed-over sale writes waste, unsynced orders screen, Daily Close line. Then the same kind of
+hand-checked run on a throwaway database as Phase 6 (never the real `WTF` database): API stopped, change the price at a time
+before and after a sale, end a promotion, use up a limit with an online sale while the POS is offline, run out of stock; bring
+the API back and check what is held, noted, approved and what the reports, the drawer line and the stock show.
+
+**Open questions**
+
+- Honor an offline quote even when a limited promotion is over its limit (assumed yes, counted as over limit)? Or hold those for
+  a decision as today?
+- Should price differences below a small tolerance never bother an Admin (assumed yes, set by the owner)?
+- Is "approve and record the difference" wanted, or is honoring the quote with no extra line enough?
+- How long may a held order wait before it is flagged?
 
 
 ---
@@ -291,7 +405,8 @@ and 3 (consumables) build on it, so it should land first and stay generic.
 
 - `VoidOrderHandler`: a Completed order voided to Refunded restores the stock
   that order deducted. A Pending order voided to Cancelled never deducted
-  anything, so it restores nothing.
+  anything, so it restores nothing. A drink that was already made cannot go back on the shelf: the void asks what
+  happens to the stock (see Phase 5, "Void asks what happens to the stock").
 - Restore from the original deduction movements, not by re-reading the
   product links, so link edits made after the sale do not change what is put
   back. Write the restore as new movement rows (positive delta), never by
@@ -434,6 +549,188 @@ and 3 (consumables) build on it, so it should land first and stay generic.
 - Show warning and critical indicators in Management and POS where useful.
 - Prevent duplicate alert noise by tracking last notification state.
 
+### Phases 5-9 - Waste, Costing, Counts, Purchasing and Profit [Planned, added 20 Oct 2026]
+
+What the foundation above still lacks to answer "what did we really earn?": a way to record loss, a cost for every unit,
+recipes that turn a sale into ingredient usage, a way to compare the recipe with what the shelf says, and expenses.
+
+| Phase | Name                                     | Needs first            |
+| ----- | ---------------------------------------- | ---------------------- |
+| 5     | Waste and spoilage                       | Order-time deduction   |
+| 6     | Costing and recipes                      | Order-time deduction   |
+| 7     | Stock counts and variance                | Phase 6                |
+| 8     | Suppliers, receiving and reordering      | Phase 1 stock-in       |
+| 9     | Profit and margin reports                | Phases 5, 6 and 7      |
+
+Recommended order: finish order-time deduction, then 5 (small, quick value), 6, 7, 9, with 8 whenever purchasing pain
+shows up. Stock transfers between branches are under "Multiple Branches" (Phase 1 there).
+
+#### Phase 5 - Waste and spoilage [Planned]
+
+Stock in adds; sales deduct; **waste** is stock that left without a sale. Today there is no way to say so, so a spilled
+litre of milk can only be hidden inside an "adjustment". Waste is a different thing from an adjustment: waste is a known loss
+with a reason, an adjustment fixes an unknown difference found on a count (Phase 7). Reports must tell them apart.
+
+- **Waste entry.** New movement type `Waste` (negative delta, before and after, user, time, note, and the unit cost at that
+  moment). Reasons, in a list the owner can edit: Expired or spoiled, Spilled or dropped, Wrong order or remade, Quality
+  failed (bad shot, burnt), Staff meal, Sample or tasting, Breakage, Other (note required). Fast entry from the POS and the
+  item page (phone first: item, quantity, reason, done), optional photo for large amounts, and a limit above which an Admin
+  must confirm (a setting).
+- **Waste of a made product.** Wasting "1 Latte (remade)" deducts what the recipe uses (Phase 6), in one transaction, as
+  several `Waste` movements that share one reference. Wasting a raw item (a bottle of milk) deducts the item itself.
+- **Void asks what happens to the stock.** When a Completed order is refunded, the voider chooses per line: *Returned to
+  stock* (retail items, sealed goods: restores the quantity as `SaleVoid`, as planned) or *Not returned / was made* (writes
+  `Waste` with the reason "Refunded, not resaleable"). The default is Returned for retail products and Not returned for
+  made products. Without this, voiding a made latte would put its milk back on the shelf and inflate the balance.
+- **Comps and staff meals.** A free order given to staff or a customer is a sale at a zero price today. Add an order
+  "reason for free" (Staff meal, Complaint, Marketing, Owner) so the cost shows as expense, not as lost revenue, and so
+  nobody can zero a sale without a trace. (Ties to "Manual discount with a reason" in the promotion ideas.)
+- **Waste report** (Reports > Inventory): by reason, item, product, staff, day and branch, with quantity, cost value, and
+  waste as a share of usage. Top wasted items, and a trend line so a rise is visible. Daily Close gets a waste line.
+- Audit `StockWasted`; AdminViewer cannot enter waste; the ledger is never edited (a wrong entry is reversed by a new
+  `WasteReversed` movement with a reason).
+- Tests: waste lowers the balance and records the cost at that moment; wasting a product writes one movement per
+  ingredient and rolls back together; refund with Returned vs Not returned; the report totals; roles.
+
+#### Phase 6 - Costing and recipes [Planned]
+
+Goal: know what each product **costs** to make, so profit can be worked out. Builds on `ProductItemLink`
+(product, item, `QuantityPerSale`), which already is a one-level recipe; this phase makes it complete and adds cost.
+
+**Cost per unit (`Items`)**
+
+- Keep the cost **per base unit** (per ml, per g, per piece), derived from the stock-in cost and `UnitsPerStockUnit` (a
+  1 L bottle at PHP 150 is PHP 0.15 per ml). Show both in the item page.
+- **Method: moving weighted average.** Each stock-in recomputes `AverageCost` = (value on hand + value received) / (quantity
+  on hand + quantity received). Simple, fair when prices change, and needs no batch tracking. (Alternatives, not chosen for
+  now: last purchase price, which jumps around; FIFO, which needs lots; revisit with expiry tracking in Phase 8.)
+- **Every movement keeps the unit cost it happened at** (`StockMovements.UnitCost`). A sale on Tuesday keeps Tuesday's cost
+  even if milk costs more on Friday, so past profit never changes by itself. Cost of goods sold (COGS) = sum of the sale
+  movements' quantity x unit cost.
+- **Yield and trim.** An item can have a usable percentage (a fruit that is 80% usable after peeling): the cost per usable
+  unit is cost / yield. Stored as `YieldPercent` (default 100).
+
+**Recipe (`ProductItemLink` grows into a recipe line)**
+
+- Each line: item, quantity in the item's base unit, and an optional **allowance %** (for known, small, unavoidable loss like
+  the spill that always happens when pouring). Total used per sale = quantity x (1 + allowance).
+- **Size-aware recipes.** Size is an add-on in this app, so a recipe line can be "per size": the Large size add-on carries
+  its own cup and lid links, and a base-product line can scale by a multiplier tied to the chosen size (Large uses 1.5x the
+  milk). Rule of thumb: things that change with size are linked to the size add-on; things that never change stay on the
+  product. (This is the "size cups stay linked to the Size add-on" rule, extended.)
+- **Add-ons replace or add.** An oat milk add-on can *replace* the recipe's dairy milk (deduct oat, not dairy) or *add* an
+  extra (extra shot). A line gets a mode: Add (default) or Replace item X. Without Replace the cashier selling oat milk would
+  still deduct dairy.
+- **Prepared items (sub-recipes).** Syrup made from sugar and water, cold brew batch, espresso from beans, whipped cream: an
+  item can be marked *prepared* with its own recipe and a yield ("this batch makes 4 L"). A **Produce batch** action
+  consumes the ingredients, adds the prepared item to stock at the batch's cost per ml, and writes both movements together.
+  Sales then deduct the prepared item. Without this, "1 espresso shot" has no honest cost.
+- **Supplies not worth tracking exactly** (ice, water, napkins, straws, stirrers): instead of an item per piece, a
+  **supplies allowance** per product or per order (for example PHP 2 per drink), counted into cost without stock movements.
+- **Recipe editor** on the product page (product editor "Track inventory" flow from Phase 1): add ingredient lines, see the
+  live **cost, price, margin PHP and margin %**, warning when the margin is below a target. A copy-from-product button
+  (Large Latte from Regular Latte) and a CSV import for opening setup. Cost shown only to roles with inventory rights, never
+  on the customer link or the cashier's POS (a setting).
+- **Where the maths lives.** `WTF.Calculations` gets `CostRules` (cost per unit, weighted average, yield, recipe cost per
+  size and add-on replacement) and `MarginRules` (margin, markup, price for a target margin). The Angular recipe editor shows
+  a live preview through `shared/calculations`, using the same shared cases in `calculation-cases.json`, in whole cents
+  (costs per ml need more decimals: store cost as a decimal with 4-6 places and round only at totals).
+- **Deduction uses the recipe.** The order-time stock service (Phase 1 plan) sums recipe lines per item, applies allowances
+  and replacements, then deducts. Because the recipe is a standard, this is the **theoretical** usage (see Phase 7).
+- Tests: weighted average over several stock-ins, a sale keeps its own cost after a later price change, yield, allowance,
+  size multiplier, Replace mode, prepared item batch, supplies allowance, rounding, and the editor preview equals the API.
+
+#### Phase 7 - Stock counts and variance (when real life differs from the recipe) [Planned]
+
+The recipe says a latte uses 180 ml of milk. Real baristas pour 195 on some, 170 on others, and some milk is spilled. **The
+system should not pretend the recipe is exact.** It should treat the recipe as the standard, measure the real balance by
+counting, and show the difference as **variance**, so you can tell a wrong recipe from waste from loss.
+
+- **Three numbers per item and period:** *Theoretical usage* (what the sales and recipes say should have been used), *Recorded
+  waste* (Phase 5), and *Actual usage* (opening count + received - closing count). **Variance = actual - theoretical -
+  recorded waste.** A small steady variance is normal; a large or growing one needs a look.
+- **Stock count (stocktake).** A count session for a branch, a storage area or a list of items: the counter enters what is
+  physically there (in stock units with fractions: "2.5 cartons"), the system shows the expected balance, and on closing it
+  writes `CountAdjustment` movements for the differences (so it is the same ledger and audit as adjustments, with the reason
+  "Count"). Options: blind count (the counter does not see the expected number), cycle counts (a few key items daily: milk,
+  beans, cups), full count monthly, and a count sheet that works on a phone and offline. Counts above a tolerance need an
+  Admin to approve before posting.
+- **Opening a period.** A closed count becomes the new opening balance for that item, so variance is measured period to
+  period. Month-end can lock a period (no backdated movements; corrections are new movements dated today).
+- **Variance report** (Reports > Inventory): per item and period, theoretical, waste, actual, variance in quantity, in PHP
+  and in percent, with a tolerance setting per item (for example 5%) that flags the outliers. Sorted by PHP so the milk
+  and beans surface before the napkins. Filter by branch and by shift/day when counts are daily.
+- **Reading the pattern** (shown as hints in the report, not automatic changes):
+  - Steady positive variance on one item, spread over all days: the recipe is too low. Suggest "average real use per drink
+    is 195 ml; recipe says 180" and offer to update the recipe or the allowance (an Admin action, audited, with the old
+    value kept).
+  - Spikes on certain days or staff: pouring habits, spoilage or loss; follow up with training or a closer count.
+  - Negative variance (more stock than expected): missing sales entries, a recipe too high, or an unrecorded stock-in.
+- **Why not force the recipe to match.** Changing the recipe after every count would hide waste. The standard stays the
+  standard; the **allowance %** (Phase 6) captures the normal, unavoidable overuse, and variance shows what is left.
+- **Negative stock.** Items that allow negative balances (the Phase 1 setting) are corrected by the next count, with the
+  counts showing exactly how far off the sales-based balance was.
+- Tests: variance maths with waste and receipts in the period, a count writes the right adjustment, blind count hides the
+  expected, a period lock refuses backdating, tolerance flags, the recipe suggestion, roles.
+
+#### Phase 8 - Suppliers, receiving and reordering [Planned]
+
+- **Suppliers** (name, contact, lead time, payment terms, notes) and an item can have several suppliers with a preferred one
+  and its pack size and price. Supplier price history shows creeping costs.
+- **Receiving instead of bare stock-in.** A receipt has a supplier, invoice number, date, lines (item, quantity in pack
+  units, cost, expiry date for perishable items), and a total that can be checked against the invoice. It writes the same
+  `AddStock` movements, so the ledger does not change; photo of the invoice optional (private storage, like chat images).
+- **Purchase orders (optional).** Draft an order to a supplier from the reorder list, mark it sent, receive against it
+  (partial receipts), and see what is still on its way.
+- **Reorder levels.** Beside the warning and critical levels: a *par level* (target to hold) and *days of cover* (on hand
+  divided by average daily usage, from recent sales). The **reorder list** shows what is below par, with a suggested
+  quantity (par - on hand - on order, rounded up to the pack size), grouped by supplier, and exportable or copyable to send.
+- **Expiry and lots.** For perishables, receiving records an expiry date; usage takes the earliest expiry first (FEFO); an
+  "expiring soon" list and an alert (Phase 4 notifications); expired stock is written off as `Waste` with reason Expired in
+  one click. With lots, FIFO costing becomes possible, but weighted average stays the default.
+- **Returns to supplier** (a negative receipt with a reason and credit note reference).
+- **Barcode scanning** at receiving and counting (the barcode field exists; camera scanning on the phone).
+- **Units and storage.** Keep unit conversions per item (bottle to ml, carton to bottles), optional storage area (bar, back
+  room, freezer) to organise counts, and an item category (dairy, dry goods, packaging, retail) for filters and reports.
+- Tests: weighted average after a receipt with different pack prices, FEFO order, par/reorder maths, partial receipts,
+  expiry write-off, roles.
+
+#### Phase 9 - Profit and margin reports [Planned]
+
+"Net income" needs more than stock: it needs sales, cost of goods sold, waste, discounts and the **running costs** of the
+shop. The POS can answer part of it honestly; the rest needs an expenses record. It is **management reporting, not
+accounting or tax filing** (the app still stores no tax); the accountant's books stay the official ones.
+
+- **Gross profit report** (Reports > Sales, owner level): Sales (net of discounts and refunds, already defined) minus **COGS
+  from recipes** (theoretical) = *theoretical gross profit*; minus recorded waste minus count variance = *actual gross
+  profit*. Both lines are shown, because the gap between them is the lesson (Phase 7). By day, week, month, branch, source.
+- **Product margin report:** price, recipe cost, margin PHP and %, units sold, total profit; sortable. **Category rollup.**
+  Products with no recipe are listed as "cost unknown" instead of counted as free (so profit is never overstated).
+- **Menu engineering** view: popularity against margin in four groups (Stars: high both; Plowhorses: popular, low margin;
+  Puzzles: high margin, unpopular; Dogs: neither), to decide what to promote, reprice or drop.
+- **Price guidance.** In the product editor: the price needed for a target margin (cost / (1 - target)), and an alert on the
+  dashboard when an ingredient's cost rises and a product's margin falls below its target. Ties to the promotion guardrail
+  "warn when a discount sells below cost".
+- **Expenses (new, small).** `Expenses` (date, branch, category [Rent, Salaries, Utilities, Supplies, Marketing, Delivery,
+  Payment fees, Other], amount, note, optional receipt photo, recurring option) entered by Admin roles. Provider fees from
+  cashless payments (Cashless Payments Phase 1) flow in automatically. The **Profit and loss summary** = actual gross
+  profit - expenses = *operating profit* for the period, with the percentages of sales. Label it clearly as an estimate.
+- **Dashboard tiles** (owner only): gross margin %, waste %, top variance item, stock value, items below par.
+- **Calculations:** `WTF.Calculations` (`ProfitRules`: gross profit, margin, operating profit, shares), shared cases for the
+  Angular preview; the Reports catalog gets a new group, **Profit**, driven by report definitions like the others; exports
+  (Excel, PDF, CSV) and the monthly workbook get the sheets.
+- Tests: hand-worked examples (sales, recipe costs, waste, variance, expense) on a throwaway database checked on screen, as
+  for the other reports; unknown-cost products excluded or flagged; refunds reduce sales but waste records cost.
+
+**Inventory open questions**
+
+- Does the shop weigh and measure when preparing, or pour by eye? (Decides how small the allowances are and whether daily
+  counts of milk and beans are realistic.)
+- Which items should be counted daily, weekly and monthly?
+- Are made-to-order drinks the main product, or is retail (bottled goods) bigger? (Retail mostly needs Phases 5 and 8.)
+- Who may enter waste, approve counts and see costs? (Assumed: Cashier enters waste; Admin approves counts and sees costs.)
+- Will expenses be entered in the app, or only imported from the accountant monthly?
+
 ### Backend Notes
 
 - Prefer a stock movement ledger over directly editing quantities without
@@ -453,6 +750,78 @@ and 3 (consumables) build on it, so it should land first and stay generic.
   cost, notes, and optional supplier/merchant details.
 - For mobile/tablet management screens, follow the existing responsive
   table/card pattern used by audit logs, reports, and promotions.
+
+---
+
+## Drink Recipe Guide (barista guide) [Nice to have, planned]
+
+A guide inside the POS that shows staff **how to make** each drink the shop's way, so a new barista can make a Spanish Latte
+the same as the owner does. It is different from the inventory recipe (which says *what and how much is used* so stock and
+cost work); the guide says *how to prepare it*. They share one source of truth for the ingredient list, so they cannot
+disagree.
+
+### What a guide holds (per product, and per size where it differs)
+
+- **Ingredients and amounts**, read from the inventory recipe (Inventory Phase 6): item, quantity, unit. Amounts follow the
+  chosen size and add-ons (Large, oat milk instead of dairy, extra shot), so the guide for "Large Oat Latte" is right.
+  Until the inventory recipe exists, the guide has its own ingredient list, which is replaced by the shared one later (a
+  migration step, not two lists forever).
+- **Steps**: ordered, short text, optional photo or short video per step, a timer where it matters (shot time, steep time).
+- **Standards**: cup and lid, glass or ice, target volume and temperature, shot time or yield, garnish, how it should look.
+- **Notes and warnings**: common mistakes, "stir before serving", **allergens and dietary tags** (dairy, nuts, gluten,
+  vegan), caffeine level.
+- **Prepared items** (syrups, batches) get their own guide, linked from the drinks that use them ("Brown sugar syrup: see
+  recipe").
+- A **hero photo** of the finished drink (the product image can be reused).
+
+### Where staff see it
+
+- **Order editor and Orders list:** a "Recipe" button on a cart line or order line opens the guide for that exact item with
+  its add-ons and size. Useful when the order is in front of the barista.
+- **Product card:** a small book icon (or long press) on the POS menu opens the guide before ordering.
+- **Search:** a "Recipes" page listing every drink with search, category filter and tags (hot, iced, blended), usable as a
+  training reference.
+- **Training mode (later):** a side-by-side quick check or quiz ("what goes in a Spanish Latte?"), and a "new/changed
+  recipe" badge so staff notice a changed guide. Mark as read per user.
+- **Kitchen ticket (with Printing):** an optional line with the key steps or a recipe code for a busy bar.
+- **Not on the customer link** by default. A setting may show the ingredient and allergen list publicly, because customers
+  care about allergens.
+
+### Data and editing
+
+- Tables: `RecipeGuides` (product or add-on, optional size, hero image, notes, standards, version, active) and
+  `RecipeGuideSteps` (order, text, image, timer seconds). Soft delete and restore like the other management records.
+- **Editing is Admin and above**; everyone who can take orders can read. Keep a version history (who changed what and when,
+  the previous version kept) so a bad edit can be undone and so staff can see what changed. Audit `RecipeGuideUpdated`.
+- Images and videos use the existing image storage (add the guide images to `ImageReferences.ReferencingEntities` so Stale
+  Image Cleanup keeps them; its test fails otherwise). Keep videos short and small (compress, size cap), or link to a video
+  instead of storing it.
+- **Offline:** the guide is part of the POS catalog cache (Dexie `catalog`) with its images in the image cache, so it works
+  without a connection like the rest of the catalog. Add the guides to `GET /api/sync/pos-catalog` or a lighter separate
+  sync endpoint, refreshed with the periodic catalog refresh; keep the payload small (text and compressed photos only).
+- **Multi-tenant and branches:** guides belong to the tenant and are shared by its branches; a branch may later have its own
+  variation (a different machine, a different syrup brand).
+- **Printing:** a printable recipe card (PDF) per drink or per category, for the bar wall.
+
+### Phases
+
+| Phase | Content |
+| ----- | ------- |
+| G1    | Guide per product: ingredients (own list), steps (text), standards, allergens; Recipe button in the editor; Recipes page; Admin editor; offline cache |
+| G2    | Photos per step, hero image, timers, versions and "changed" badge, printable cards |
+| G3    | Ingredients read from the inventory recipe and follow size/add-ons; training mode; optional public allergen info |
+
+### Tests
+
+Guide opens for the right product, size and add-ons; amounts follow the size; Cashier can read but not edit; Admin edit keeps
+the old version; images survive Stale Image Cleanup; offline open from the cache; the editor refuses an empty step; specs
+for the service, the editor and the Recipes page.
+
+### Open questions
+
+- Who writes the guides (the owner, head barista), and are step photos or videos realistic for them to produce?
+- Should the guide be visible to every role including Cashier, or only to kitchen/bar staff?
+- Is it also a training tool (quiz, sign-off), or only a reference?
 
 ---
 
@@ -886,6 +1255,493 @@ New report math goes into `WTF.Calculations`, not into handlers. Tax and VAT can
 
 ---
 
+## Multiple Branches, Branding and Selling to Other Stores [Planned, design decided]
+
+Three related goals, planned together because they all need the same foundation: the app must know **which shop** and
+**which branch** a request belongs to. Today it knows neither. There is one database, one set of users, one catalog, one
+inventory, and the shop's name, logo, currency (PHP), time zone (`Asia/Manila`) and hosts are written in code and in
+`appsettings.json`.
+
+| Phase | Name                                   | Status    |
+| ----- | -------------------------------------- | --------- |
+| 1     | Branches inside one shop               | [Planned] |
+| 2     | Branding settings (white label)        | [Planned] |
+| 3     | Selling to other stores (multi-tenant) | [Planned] |
+
+### Terms
+
+- **Tenant** (a shop, the customer who buys the app): owns its own users, catalog, customers, promotions and settings.
+- **Branch** (a location of one tenant): owns its own stock, orders, cash and staff assignments.
+- **White label**: the buyer's own name, logo, colors and address on the app, receipts, customer link page and emails,
+  with no "WTF" showing. ("White labeling" is the right term.)
+
+### Decision: one shared app and database, tenants separated by a `TenantId` (not one isolated install per store)
+
+Options compared:
+
+| | Shared app + one database, `TenantId` on every row (chosen) | Database per tenant | Fully isolated install per store |
+| --- | --- | --- | --- |
+| Cost per store | lowest | low to medium | highest (a server, a database, a deploy each) |
+| Releasing a fix | once, everyone gets it | once, plus a migration run per database | once per store; stores drift onto old versions |
+| Data separation | by code (a missed filter leaks data) | strong | strongest |
+| Onboarding a new store | a row and an invite | script that creates a database | a full deployment |
+| Fits this codebase | needs `TenantId` everywhere (large but mechanical) | needs a connection per request | nothing to change, but does not scale |
+
+Why shared: the hosting is MonsterASP shared hosting with `tools/sql` scripts run by CI on tag builds; running a copy per
+store would multiply every release and every SQL script by the number of stores. Isolated installs are only worth it for
+one large buyer who demands it (see "Escape hatch").
+
+**Safety net for the shared model (required, not optional):** a global EF Core query filter on `TenantId` for every
+tenant-owned entity, and `TenantId` set in one place on save (`SaveChanges` override), so a handler cannot forget it. A
+test fails if an entity that has `TenantId` is missing the filter, and a database test proves tenant A never reads tenant B
+in each area (orders, customers, items, reports, images, chat, audit log). Cross-tenant leaks are the one risk that would
+end the business, so this test is the gate for Phase 3.
+
+### Decision: subdomains for addressing, custom domains later
+
+- Each store gets `{slug}.<our domain>` (for example `moonbrew.wtfpos.app`). The API reads the host, resolves the
+  tenant, and puts it on the request. One certificate (wildcard) covers all of them. Needs a domain we own and a wildcard
+  DNS record; MonsterASP shared hosting may not offer wildcard bindings, so check the plan before promising this
+  (fallback: a path or header such as `/t/{slug}`, or a hosting move).
+- The customer ordering link keeps the same tail (`/shop/:token`) under the store's subdomain. The token already names the
+  customer, so the tenant also comes from the link, never from anything the visitor types.
+- Custom domain per store (`order.theircafe.com`) is a paid extra for later: a `TenantDomains` table (host to tenant) and
+  automatic certificates. Do not build it first.
+- The Android app is a single app with a "shop code" (or the subdomain) entered at first login, stored on the device. One
+  APK for everyone. A store-branded APK (own name and icon on the Play Store) is a separate paid tier, because it needs its
+  own build and store listing (see Phase 2).
+
+### Phase 1 - Branches inside one shop [Planned]
+
+Goal: one owner, several locations, with their own stock, orders and staff, and reports that can show one branch or all.
+
+**Data model** (`tools/sql/<date>_add_branches.sql`, idempotent, then `tools/dbsync.bat`)
+
+- `Branches`: `Id`, `Name`, `Code` (short, used in order labels), `Address`, `Phone`, `TimeZone`, `IsActive`, audit columns.
+  Soft delete like the rest of the app. The existing data becomes the first branch ("Main"), created by the script.
+- `UserBranches` (user to branch, many to many) plus `Users.DefaultBranchId`. SuperAdmin and Admin see every branch; a
+  Cashier works in the branches they are assigned to.
+- `BranchId` (required, backfilled to Main) on: `Orders`, `StockMovements`, `OrderLinks` (a link orders from one branch),
+  `AuditLog` (optional filter), and the cash/shift records when they exist.
+- **Shared across branches** (one catalog, edited once): products, categories, add-ons, promotions, customers, loyalty,
+  images. **Per branch:** orders, inventory quantities, stock movements, order numbers, staff assignments, receipt header.
+- Optional later: per-branch price override or "not sold here" flag on a product (`ProductBranches`). Not in the first
+  cut; ask before building, because it changes how every price and the offline catalog are worked out.
+
+**Inventory.** `Items` stay shared as a definition (name, unit, SKU), but `CurrentQuantity` moves to `ItemBranchStock`
+(`ItemId`, `BranchId`, `CurrentQuantity`, warning and critical levels, `AllowNegativeStock`). Stock movements carry the
+branch. Add a **stock transfer** (movement pair `TransferOut` and `TransferIn` with one reference id, in one transaction).
+This must land before or together with the order-time deduction plan, so deduction is written branch-aware once and not
+reworked: `IOrderStockService` takes the order's `BranchId`.
+
+**Request context.** A `ICurrentBranch` service (like `HttpContext.User.GetUserId()`): the POS sends the active branch in
+a header (`X-Branch-Id`) chosen at login and switchable from the header menu; the API checks the user is assigned to it.
+Handlers use `ICurrentBranch`, never a branch id from the body for writes. The public customer link takes its branch from
+the link.
+
+**Order numbers.** `OrderNumberSeq` is one global sequence. Keep it global (unique, simple); show a branch prefix on
+screens and receipts (`MNL-1042`) from `Branch.Code`. Offline order numbers (`OFF-YYMMDD-###`) gain the branch code, and
+`OfflineLocalId` stays unique per device.
+
+**Calculations (`WTF.Calculations`).** No arithmetic changes, but the report layer needs a branch filter and a branch
+breakdown. New math (for example sales per branch, share of total, transfers in and out) goes into `ReportRules` and
+`StockRules`, with the shared cases kept in step on the Angular side. `ReportPeriods` already takes a time zone; make it
+use the **branch's** time zone, so the "shop day" is right for a branch in another zone.
+
+**Reports and dashboard.** A branch picker (All branches / one branch) on the dashboard and every report, remembered like
+the other filters, and a "by branch" report (sales, orders, average, voids, low stock per branch). The Daily Close (Z-report)
+is per branch. The monthly workbook gets a branch option, like the source option (its own file per branch).
+
+**Authorization.** New policy `BranchesManage` (SuperAdmin, Admin). Every order, stock and report handler checks the
+caller may use the requested branch. Add to `RouteTableTests` and `PolicyMatrixTests`.
+
+**Offline.** The device stores its branch in the cart and queue records; a queued order syncs to the branch it was sold in,
+even if the user switched branch afterwards. The sync review (Offline Phase 6) is unchanged. Catalog cache is shared; the
+stock cache (when POS stock warnings arrive) is per branch.
+
+**Customer link.** Pickup happens at a branch: the link (or the order) names the branch, delivery too. A customer who can
+order from several branches picks one at checkout (list of active branches). Staff alerts and the "Awaiting approval"
+banner go to staff of that branch only.
+
+**Tests.** A branch cannot be read or written by a user who is not assigned to it; backfill puts all old rows in Main;
+transfers move stock in one transaction and refuse a negative result when blocking is on; reports for one branch plus the
+others add up to "All"; order numbers stay unique; the offline sync saves into the branch it was queued in.
+
+### Phase 2 - Branding settings (white label) [Planned]
+
+Goal: the buyer sees their own name and look everywhere, with nothing hardcoded.
+
+**What becomes a setting** (`TenantSettings`, one row per tenant; `BranchSettings` for the per-branch parts):
+
+- Identity: shop name, short name, tagline, logo (light and dark), favicon, receipt logo, address, phone, email.
+- Colors: a primary and an accent color (and the DaisyUI theme name to start from). The app already has a default and a
+  cafe style; the new theme is generated from the two colors, so contrast is checked automatically (reject a pair that
+  fails accessible contrast).
+- Locale: currency code and symbol, decimal places, time zone, date format, week start. Today `Asia/Manila`, PHP and the
+  peso sign are scattered through code (about 290 occurrences in 80 files, mostly tests); they move behind one
+  `ShopLocale` (API) and one `locale` provider (Angular) so a new shop can use another currency. `money.ts` and
+  `Money` already work in whole minor units; only the symbol and the number of decimals become settings.
+- Receipt text: header lines, footer message, optional tax/registration number line (display only; the app does not compute
+  tax, see the reports section).
+- Customer link page: header name, logo, welcome line, contact info, order rules text.
+- Push and email wording that now says "WTF".
+
+**How it reaches the app.** A public, cached, no-auth `GET /api/public/brand` (resolved from the host) returns the name,
+logo URLs, colors and locale. The Angular app loads it before first paint, sets CSS variables for the theme, the page title
+and favicon, and exposes it through a `BrandService`. The customer link page loads it the same way, so a customer never
+sees another store's brand. Fallback: the default WTF brand when nothing is set (and for the development host).
+
+**Where "WTF" is allowed to stay.** A small "Powered by WTF POS" line on the customer link page and the login screen for the
+standard plan; removable on a higher plan (a feature flag on the tenant). Decide this pricing question before building.
+
+**The Android app.**
+
+- Standard: one shared app; after the shop code is entered, it takes the name, logo and colors from the brand endpoint.
+  The launcher icon and the app name in the Android list stay "WTF POS", because those are fixed at build time.
+- Premium (optional): a branded build per store (own name, icon, splash, package id, and its own Play Store listing). Needs a
+  build pipeline that takes a tenant brand file and produces a signed APK or AAB. It is real ongoing work (store
+  accounts, review, updates per store), so price it as a separate service, not a toggle. The auto-update check
+  (`UpdateService`, GitHub Releases) is tied to our repository and would need a per-store release source.
+
+**Images.** Brand images use the existing image storage, in a folder per tenant (`images/{tenantId}/...`). Stale Image
+Cleanup must treat the tenant brand rows as in use (add them to `ImageReferences.ReferencingEntities`; its test fails
+otherwise).
+
+**Tests.** Brand falls back to defaults; a color pair with poor contrast is refused; the brand endpoint is anonymous but
+returns nothing private; currency and decimals change the totals shown and the export headers; receipts and the customer
+page render the brand; no "WTF" string remains in templates except through the brand (a test greps the templates).
+
+### Phase 3 - Selling to other stores (multi-tenant) [Planned]
+
+Goal: a second, third and tenth shop can sign up (or be set up by us) and run on the same deployment, without seeing each
+other.
+
+**Data model**
+
+- `Tenants` (`Id`, `Name`, `Slug` (unique, lowercase, reserved words blocked), `Status` (Trial, Active, Suspended,
+  Cancelled), `Plan`, `TrialEndsAt`, created and updated columns) and `TenantDomains` (host to tenant, for custom domains
+  later).
+- `TenantId` on every tenant-owned table (users, roles assignments if stored per tenant, branches, products, categories,
+  subcategories, add-on types, product add-ons and overrides, promotions and all rule tables, customers, loyalty, items,
+  stock movements, orders and children, order links, conversations and messages, images, audit log, report and workbook
+  files). Written as a script that adds the column, backfills the current data to a first tenant (the WTF shop itself), then
+  makes it required and adds the global query filter. Child tables that always travel with a parent can inherit the parent's
+  tenant, but keep `TenantId` on anything queried on its own (orders, items, customers, audit log, images, messages).
+- **Unique rules become per tenant:** product names, SKU, barcode, usernames or emails, customer numbers, link tokens stay
+  globally unique (they are secrets), promotion names. Every unique index that is not a secret gets `TenantId` in it.
+- **Users:** a user belongs to one tenant (simplest). Login takes the tenant from the host (or shop code on Android). The same
+  email can exist in two shops. A user who works for two shops is two accounts for now.
+- **Roles:** the existing roles (SuperAdmin, Admin, Cashier, AdminViewer) become per tenant. A new platform role,
+  `PlatformAdmin` (us), lives outside any tenant and can create and suspend tenants and look into one for support, with
+  every such access audited. Never reuse the tenant `SuperAdmin` for that.
+
+**Request pipeline.** Tenant resolution middleware (host to tenant; unknown host is a 404 that reveals nothing; a suspended
+tenant gets a clear "account suspended" page and its API calls are refused except for the owner billing page). The tenant id
+is also put in the JWT and checked against the host on every request (a token from shop A is refused on shop B's host).
+An `ICurrentTenant` service feeds the query filter, the audit service, storage paths and the rate limiter.
+
+**Per-tenant everything that is global today** (each is an item to review, and a test):
+
+- Background jobs: the monthly workbook scheduler, stale image cleanup and chat message expiry loop over tenants and run
+  each in the tenant's own time zone and settings, and one tenant's failure never stops the others.
+- Storage: the blob container, report folder and chat image container are shared, with a `{tenantId}/` prefix; the cleanup
+  jobs only look at the tenant they are running for.
+- Rate limits and `PromotionLimitGate`: partitioned by tenant so one busy shop cannot slow another; the gate key includes
+  the tenant (it is one lock per process today).
+- SignalR: groups are prefixed by tenant (`DashboardViewers`, staff and customer order hubs), and the hub checks the tenant
+  on connect.
+- Push notifications: recipients are chosen within the tenant only; FCM and Huawei credentials stay ours (one app), with the
+  shop name in the title from the brand.
+- Order number sequence: one global sequence still works (unique); decide whether a shop may see its own count starting at 1
+  (a `TenantOrderCounter` table with a lock) because a new shop seeing order 48,213 on day one looks odd. Recommended: a
+  per-tenant counter.
+- Audit log, schema script history and SuperAdmin-only pages: the tenant SuperAdmin sees only their own audit log; the
+  schema script history and system pages move to `PlatformAdmin`.
+- Customer link tokens and the loyalty redirect: tokens remain global secrets, but the lookup also sets the tenant.
+- CORS: the "AllowUI" policy accepts `*.<our domain>` and registered custom domains, not a fixed list.
+
+**Onboarding and billing**
+
+- A `PlatformAdmin` page (a separate small area of the app, or a separate admin site) to create a tenant, pick the slug and
+  plan, create the first SuperAdmin, load starter data (a few categories, one branch, sample products, optional), suspend
+  and export. Self-service sign-up is a later step; start with us creating each store by hand while there are few.
+- Plans and limits (decide the pricing first): number of branches, number of users, optional features (branding removal,
+  chat images, customer links, inventory, branded Android app) as flags on the tenant, checked server side by one
+  `ITenantFeatures` service and mirrored in the UI.
+- Payment: start with manual invoicing; add a payment provider only when there are enough stores to justify it (subscription
+  billing handles card data, so it must go through the provider's hosted checkout, never our own forms).
+- Data export on request (their orders, customers, products as files) and a deletion procedure when a store leaves.
+  Also required for privacy law (the Philippines Data Privacy Act, and similar elsewhere): a data processing agreement,
+  a privacy notice for the customer link page, and clear retention (chat expiry already exists).
+
+**Escape hatch: a fully isolated install.** If one buyer insists (own server, own database, their own legal control), deploy
+the same code as a single-tenant instance: one tenant row, their own host and database, same release. This works because the
+app always runs with a current tenant, even when there is only one. Keep this possible; do not build a separate fork.
+
+**Security and risks**
+
+- The `TenantId` filter is the whole separation; guard it as described above (filter on every entity, tests per area, no
+  `IgnoreQueryFilters` outside platform code, and a review rule for raw SQL, which bypasses filters).
+- Never trust a tenant id from the body, query string or headers for writes; it comes only from the host and the token.
+- Reports and exports (Excel, PDF, CSV, the workbook) must be built from tenant-filtered queries and saved under the tenant's
+  folder; a test downloads one tenant's file with another tenant's login and expects a 404.
+- Back up and restore per tenant is harder in a shared database: plan the export tool before the first paying store.
+- Support access (`PlatformAdmin` reading a tenant's data) is audited and visible to the tenant.
+
+**Pricing and plans (to decide before onboarding a paid store)**
+
+- **Charge per branch per month, not per user.** Cafes share logins and hire part-timers; per-user pricing pushes owners to
+  share one cashier account, which defeats the audit log, voids and per-staff reports. Our costs grow with orders, storage
+  (images, chat photos) and support, not with user count. Include a generous user count (for example 10, or unlimited) in
+  every plan. A branch is also what an owner can see and predict.
+- **Plan shape (sketch, numbers to be set after market research):**
+
+  | Plan | For | Includes |
+  | --- | --- | --- |
+  | Starter | one branch | POS, orders, basic reports, offline mode |
+  | Pro | one or more branches | adds inventory, promotions, customer ordering links and chat, all reports and the monthly workbook |
+  | Business | chains | adds multi-branch reports, stock transfers, removal of "Powered by", priority support |
+
+  Price per branch per month, with a discount for paying yearly. Separate add-ons: branded Android app (setup fee plus
+  yearly fee), custom domain, data migration or setup help, and cashless payment fees (see Cashless Payments).
+- **Implementation.** Plans are feature flags on the tenant, checked by one `ITenantFeatures` service and mirrored in the
+  UI. Gate only the few features the plans actually differ on; do not scatter checks. Branch count is a hard limit checked
+  when a branch is created.
+- **To research before setting numbers:** current Philippine POS competitors and any free tiers (a free tier sets the ceiling
+  for small shops), our real cost per store (hosting, storage, push, support time), and payment-provider fees.
+- **Pilot first.** The first outside store runs at a discount in exchange for feedback; set the price list after that.
+- **Collecting money.** Start with manual invoicing (bank or e-wallet transfer). Add subscription billing only when there are
+  enough stores, and only through the provider's hosted checkout (never our own card forms).
+- **Open decisions:** is "Powered by" removal a paid feature, is a free trial offered (length), what happens to a suspended
+  store's data and for how long (read-only period, then export, then deletion).
+
+**Order of work (do not skip ahead)**
+
+1. Decide the commercial questions: who the first buyers are, price and plans, whether branding removal is paid, whether a
+   branded Android app is offered, and which domain the subdomains live under (check that the host allows wildcards).
+2. Phase 1 (branches) first. It is useful to the current shop on its own and teaches the codebase to carry a "where" on every
+   row; the `TenantId` work is the same pattern one level up, so it is cheaper afterward.
+3. Phase 2 (branding settings and locale) next: it is mostly settings and removing hardcoded strings, and it needs no tenant
+   separation, so it can ship before any second store exists.
+4. Phase 3 in this order: tenants table and middleware, `TenantId` and filters with the leak tests, per-tenant jobs and
+   storage, then the platform admin page, then onboarding the first outside store as a pilot at a discount.
+5. Only after a pilot has run a few weeks: custom domains, branded Android builds, self-service sign-up, payments.
+
+**Open questions for the owner**
+
+- Is a branch allowed to have its own prices or its own menu, or is the catalog always the same everywhere?
+- Do branches share one cash drawer concept, or does each branch close its own day (assumed: each branch closes its own day)?
+- Should customers be shared across branches (assumed yes, with loyalty points usable at any branch)?
+- Should one login be able to work for two different shops (assumed no)?
+- Is the app sold as a subscription run by us (assumed), or as a one-time install for the buyer to host (this changes the
+  isolated-install option from escape hatch to the main product)?
+
+---
+
+## POS Checkout Discounts: Senior Citizen / PWD [Planned, confirm the rules first]
+
+Moved here from the promotion ideas. A senior citizen / person-with-disability discount is **not a promotion**: it is set by
+law, it belongs to a person (not to a product or a date), the cashier applies it at the register after checking an ID, and the
+shop must keep records of it. So it is a checkout discount type with its own rules, ID capture, receipt wording and report.
+
+**Check before building (written from memory of the Philippine rules, not verified).** Ask the shop's accountant or the BIR
+for the current rules on: the rate (20%), the VAT exemption for VAT-registered shops, which purchases qualify (food and
+drinks for the person's own use), whether a group order is discounted only for the senior/PWD's own items, whether it may be
+combined with a store promotion (usually the person takes the better of the two, not both), what the receipt and the sales
+record must show, and how the shop claims the discount back as a deduction. The design below is made so each of these is a
+setting or a small rule, not a rewrite.
+
+### How it works at the register
+
+1. In the cart, the cashier chooses **Senior / PWD discount** and picks which lines (and how many of a line) are for the
+   senior or PWD. Splitting a line works like the part-covered promotion lines: 3 Lattes, 1 for the senior, becomes a
+   discounted line of 1 and a normal line of 2. The default is "all items" for a one-person order.
+2. The cashier enters the type (Senior / PWD), the ID number and the name on the ID (the ID is shown, not photographed).
+   Both are required; the screen reminds the cashier to check the ID.
+3. The cart shows the discount as its own row, separate from promotions, and the totals update live (it must also work
+   offline: the arithmetic is local).
+4. The order is saved with the discount; the server recomputes it (the API is the authority) and refuses a missing ID.
+
+### Calculation (in `WTF.Calculations`, mirrored in `shared/calculations`, shared cases in `calculation-cases.json`)
+
+- New `SeniorPwdDiscount` rule class with whole-cent maths like the rest. Settings: the discount rate (default 20%), the VAT
+  rate (12%), and whether the branch/shop is **VAT-registered**.
+- VAT-registered shop (as commonly applied): VAT is removed from the covered amount first, then the discount is taken on
+  the VAT-exclusive amount: `net = amount / 1.12`, `discount = net x 20%`, `amount due = net - discount`. Non-VAT shop: the
+  discount is taken on the price as charged (`discount = amount x 20%`). Round half up to the centavo, per line, and the
+  lines must add up to the order total.
+- Combining with promotions: the line gets the better of the promotion or the senior/PWD discount for the covered items,
+  never both, unless the accountant says otherwise (a setting). This is one of the stacking rules (see "Promotion Ideas
+  for Later").
+- Tips and add-ons: add-ons on a covered item are covered; tips never are. Bundles: covered only if the rule is confirmed
+  for bundles (otherwise block it and say why).
+- Reports keep the statutory discount **separate** from promotion discounts (their own column), so the existing gross -
+  discount - refunded = net table stays honest, and the VAT-exempt amount can be shown.
+
+### Data (script under `tools/sql`, then rescaffold)
+
+- `OrderSeniorPwdDiscounts`: `OrderId`, `Type` (Senior/PWD), `IdNumber`, `CustomerName`, `CoveredAmount`, `VatExemptAmount`,
+  `DiscountAmount`, `RecordedBy`, `CreatedAt`; and a nullable `OrderItems.SeniorPwdDiscountId` so covered lines are known.
+  Append-only, like audit data: a correction is a new order override with a reason.
+- Settings (until Branding Phase 2 exists, plain app settings): discount rate, VAT rate, VAT-registered yes/no, TIN and
+  business address for the receipt. With branches/tenants these become per-branch/tenant settings.
+- Privacy: an ID number and name are personal data. Store only these two fields, show the ID masked in lists (last 4
+  characters) and in reports shown on screen, show it in full only on the receipt copy and the claim export, restrict the
+  export to Admin and above, and include it in the retention rules (it is tax-record data, so it may need to be kept for
+  years; ask the accountant).
+
+### Receipt, reports and audit
+
+- **Receipt and order summary:** a Senior/PWD block with the type, name, ID number, the VAT-exempt amount, the discount, and
+  a signature line, as the rules require (confirm the exact wording).
+- **Senior/PWD report** (Reports > Sales): per day or month, one row per order: date, order number, type, name, ID number,
+  gross covered amount, VAT-exempt amount, discount, net; totals row; Excel, PDF and CSV like the others, and a sheet in
+  the monthly workbook. It is what the accountant needs to claim the discount.
+- **Daily Close (Z-report)** gets a line for the day's senior/PWD discounts and VAT-exempt sales.
+- **Audit:** `SeniorPwdDiscountApplied` with the order, type and amount (ID number masked in the audit text); voiding or
+  refunding the order reverses the discount in reports.
+- **Roles:** Cashier and above can apply it (policy to be added to `PolicyMatrixTests`); removing or editing it on a
+  completed order needs the existing Admin override with a reason. AdminViewer cannot.
+
+### Not in the first version
+
+- Online (customer link) orders: the ID must be checked in person, so the discount is not offered on the link. An order
+  placed online can have it applied at pickup by staff before completing, if the shop wants (it goes through the same
+  cashier action).
+- Other statutory or ID-based discounts (solo parent, national athletes, others the law may add): the same design works with
+  a new "type" and rate; add them only when asked, with the legal check.
+- Tax invoices and VAT reporting beyond the exempt amount: the app still stores no tax (see the Reporting notes). This
+  feature adds the minimum, the VAT-exempt amount per covered sale; a full VAT split needs its own decision.
+
+### Tests
+
+- Shared cases for both sides: VAT-registered and non-VAT, one item, several items, a part-covered line, an add-on, a
+  tip, a promotion on the same line (better one wins), rounding to the centavo, lines adding up to the total.
+- A missing or blank ID is refused; the server recomputes a total the POS got wrong (`expectedTotal` check); a covered line
+  voided or refunded reverses the amounts; the offline queue stores the discount and the sync saves the same numbers.
+- The report: totals equal the sum of rows on screen, Excel and CSV; ID masked where it should be; Cashier cannot export.
+- Check by hand on a throwaway database with a worked example before release (for instance a 100.00 item for a VAT-registered
+  shop: net 89.29, discount 17.86, amount due 71.43), plus a screen check of the receipt and the report.
+
+### Open questions
+
+- Is the shop VAT-registered (changes the formula and the receipt), and does it issue official receipts?
+- Does the accountant want the ID number on the receipt, on the report only, or both?
+- Is the discount allowed on bundles, and may it combine with a store promotion?
+- Does the shop want a daily cap or a per-customer limit on its own (some shops add one)?
+
+---
+
+## Cashless Payments (verified e-wallet and QR) [Planned, needs research]
+
+Today GCash is only a **label**. The cashier or the customer says "GCash", the order records it, and nobody (not the app,
+not the API) checks that the money arrived. For a customer-link order the customer picks GCash and the shop trusts it.
+"True cashless" means the app **knows** a payment succeeded, from the payment provider, before an order counts as paid.
+
+| Phase | Name                                      | Status    |
+| ----- | ----------------------------------------- | --------- |
+| 1     | Payment records and reconciliation        | [Planned] |
+| 2     | Dynamic QR at the POS (confirmed by webhook) | [Planned] |
+| 3     | Online payment on the customer link       | [Planned] |
+| 4     | Refunds, tips and multi-tenant payouts    | [Planned] |
+
+### Decision: use a licensed payment provider, never handle money or card data ourselves
+
+- Pick an aggregator that offers GCash, Maya, QR Ph and cards through one API, with hosted checkout pages and webhooks.
+  Candidates to compare (verify current availability, fees, settlement time, onboarding rules and refund support before
+  choosing): PayMongo, Xendit, Maya Business, and a direct GCash for Business account. Do not assume any of these
+  details from this document.
+- Card numbers, e-wallet credentials and bank details never touch our servers or logs: the customer pays on the provider's
+  page or their own app, and we receive a signed notification. This keeps us out of the heaviest compliance scope.
+- Keep a `IPaymentProvider` interface (create payment, get status, refund, verify webhook) with one implementation, so the
+  provider can be changed or a second one added without touching order code.
+
+### Phase 1 - Payment records and reconciliation [Planned]
+
+- New `OrderPayments` table (`OrderId`, `Method`, `Provider`, `ProviderReference`, `Amount`, `Tip`, `Status`
+  [Pending, Succeeded, Failed, Expired, Refunded, PartiallyRefunded], `CreatedAt`, `PaidAt`, `RawEventId`). An order has
+  one or more payments (split payment is a later option). `Orders.PaymentMethodId` stays for old data and for cash.
+- **Money rule:** an order paid by e-wallet counts as a sale only when a payment is `Succeeded`. Add this to
+  `WTF.Calculations` (`SalesRules`/a new `PaymentRules`) with shared Angular cases, not in a handler. Cash behaves as today.
+- **Reconciliation report** (Reports > Operations): per day and per method, sales recorded vs payments confirmed by the
+  provider, with the unmatched ones listed (recorded as GCash but never confirmed, confirmed but no order). This is useful
+  even before the full integration, to catch honest mistakes and theft with manually recorded GCash.
+- **Manual GCash stays as a fallback** (internet down, provider down) marked "unverified"; those payments show in the
+  reconciliation list until someone confirms them against the statement, and the confirmation is audited (`PaymentConfirmed`).
+- **Calculations:** amount due = total + tip (already decided for cash). Fees charged by the provider are stored per payment
+  (`ProviderFee`) so net takings can be reported; the arithmetic goes in `WTF.Calculations`.
+- Tests: status transitions, a sale not counted until `Succeeded`, duplicates ignored, the report totals.
+
+### Phase 2 - Dynamic QR at the POS [Planned]
+
+- At checkout, choosing GCash/Maya/QR Ph asks the provider for a **dynamic QR for the exact amount** (total + tip) and shows
+  it full screen for the customer to scan. The payment starts `Pending`.
+- **The webhook is the proof.** `POST /api/payments/webhook/{provider}` (anonymous route, so it goes in the route snapshot
+  tests): verify the provider's signature on the raw body, reject old timestamps, store the event id and ignore a repeat
+  (idempotent), then mark the payment `Succeeded` and complete the order in one transaction (through the shared order path,
+  so stock, promotion usage and audit behave as for any sale). Never trust the browser or the app saying "paid".
+- The POS screen updates by SignalR (and a polling fallback) when the webhook arrives; the cashier sees "Paid" and the order
+  completes. A QR expires after a few minutes; the cashier can regenerate it or switch to cash.
+- **Offline:** a dynamic QR cannot be created offline. Cashless is unavailable offline except the manual "unverified GCash"
+  fallback described above (which the offline sync review flags). Show clearly in the checkout when cashless is unavailable.
+- A static store QR (one code, customer types the amount) is **not** verifiable per order; do not treat it as cashless.
+- Race cases to test: webhook arrives before the app polls, twice, late after the order was cancelled (auto-refund or hold for
+  review), the amount differs from the order total (hold, never auto-complete), and expired QR paid anyway.
+- Staff roles: cashiers can take payments; confirming an unverified payment and refunds need Admin (`PaymentsManage` policy,
+  add to `PolicyMatrixTests`).
+
+### Phase 3 - Online payment on the customer link [Planned]
+
+- At checkout, the customer pays inside the flow (hosted payment page or e-wallet redirect). The order is created as
+  `PendingApproval` as today, with a `Pending` payment; the shop approves, and a payment confirmed before approval is held.
+  Decide: charge at order time (refund if rejected) or at acceptance (authorize and capture); the first is simpler, the second
+  avoids refunds. Confirm what the provider supports before deciding.
+- Rejecting a paid order **refunds automatically** (Phase 4); the customer's My orders shows "Payment received / refunded".
+- Public routes get the same hardening as the rest of the public page: link check, rate limits, 404 for invalid state, no
+  provider secrets or other customers' payments in any response. The server recomputes the amount; the client never sends it.
+- Cash and "pay at pickup" remain options per branch.
+
+### Phase 4 - Refunds, tips and multi-tenant payouts [Planned]
+
+- **Refunds.** Voiding or rejecting a paid order starts a provider refund (full or partial), recorded on `OrderPayments`,
+  audited, and shown on the order and in the Voids and Refunds report. If the provider refund fails, the order stays in a
+  "refund pending" state for staff to resolve. Note the provider may not support refunds for every method.
+- **Tips.** Resolves the open "GCash tips" item (Sales Reporting Phase 3): the tip is part of the amount sent, paid with the
+  order, and the Payments report splits tips by method so they reconcile against the provider payout.
+- **Settlement report.** Provider payouts arrive net of fees, days later, in batches. Import the provider's settlement list
+  (or fetch it by API) and match payouts to payments, so the owner sees money expected vs money received.
+- **Multi-tenant money (decide before selling cashless to other stores).** Two models:
+  1. **Each store has its own provider account** (their business, their verification, money goes straight to them). We store
+     only their API keys, encrypted, per tenant (key vault or encrypted column, never in logs or plain settings). Least risk
+     for us; the store does the paperwork.
+  2. **We collect for all stores** (sub-merchants or a marketplace account), then pay them out. Smoother for the store but
+     it can make us a regulated payments intermediary; needs legal advice and the provider's platform product. Do not start
+     here.
+  Recommended: model 1. Webhooks then need a per-tenant endpoint or secret (`/api/payments/webhook/{provider}/{tenantKey}`)
+  so the tenant comes from the verified route, not the payload.
+- **Per branch:** each branch may have its own QR/terminal reference so settlement can be reported per branch.
+
+### Risks and rules
+
+- Never mark an order paid from client input; only a verified webhook (or an audited manual confirmation) does.
+- Store provider secrets encrypted and per tenant; rotate on staff or owner change; never return them to the browser.
+- Log payment events without personal or card data; keep the raw webhook body for a limited time for disputes.
+- Provider downtime must not stop the shop: cash and the unverified fallback stay available, and an outage banner explains.
+- Check the legal side: receipts for e-wallet sales, provider terms for refunds and chargebacks, and the Data Privacy Act for
+  stored payer details (store only what the provider gives and the shop needs).
+- Real tests need the provider's sandbox: a separate `Sandbox` configuration used by the throwaway-database checks, with the
+  provider's published test numbers only (never real accounts).
+
+### Open questions
+
+- Which provider (fees, settlement time, onboarding, support for dynamic QR and refunds), and does the owner already have a
+  GCash for Business or bank account to start from?
+- Charge the provider fee to the shop (assumed) or add a convenience fee for the customer?
+- Is cashless at the POS or on the customer link the first priority? (Recommended order above: record and reconcile, then
+  POS QR, then the customer link.)
+
+---
+
 ## Receipt & Kitchen Printing Feature [Planned]
 
 Bluetooth/USB thermal printer integration for customer receipts and
@@ -1250,6 +2106,94 @@ Planned implementation slices:
 - Order persistence mapping for selected bundled child add-ons.
 - Reporting review to ensure bundled child add-on selections are represented consistently where needed.
 
+
+### Promotion Ideas for Later (20 Oct 2026) [Ideas, none started]
+
+Ideas beyond the three types that exist (Fixed Bundle, Mix & Match, Discounted Product). The older "Phase 2+" table above
+already lists percentage/category discounts, spend thresholds, add-on upsell, free size upgrade; they are included here with
+a rough value and effort. Schedule (days and hours), usage limits (`MaxRedemptions`) and `MaxPerOrder` already exist for all
+three types and are reused by every idea below.
+
+**What every new type must bring** (the checklist from the audit, so none is half built)
+
+1. The arithmetic in `WTF.Calculations` and in `shared/calculations`, with sample answers in `calculation-cases.json`.
+2. Validation when the promotion is saved (products and add-ons exist, active, required add-ons satisfiable).
+3. Pricing when an order is saved (create, update, offline sync review, pending-order preview) and the `expectedTotal` check.
+4. The Promos tab, the cart label, order details, receipt, and the customer link page (`PublicCatalogDto.Deals`).
+5. Offline: saved in the catalog cache; sync review holds a sale when the quote no longer matches.
+6. Reports: discount given per promotion (`OrderItem.OriginalPrice` vs `Price`, `DiscountPromotionId`), uses, voids giving uses back.
+7. Audit entries for create, update, delete and restore (still missing for the existing types).
+
+**Prerequisite: stacking rules.** Today one discount per line and bundle lines are left alone. Before adding a third or
+fourth type, define what happens when two apply: a priority per promotion, "best price wins" as the default, an optional
+"cannot combine" flag, and an order-level cap (a discount never goes below zero and never above a set share of the order).
+This is the "shared `PromoEngine` orchestrator" the notes above say to build when several types are live; do it first.
+
+| # | Idea | What it does | Value | Effort / notes |
+| - | ---- | ------------ | ----- | -------------- |
+| 1 | **Multi-buy** | 3 for PHP 200, 2nd item 50% off, buy 2 get the cheapest free, buy 5 get 1 free | High | Medium. Same product (or category) across lines; pairs with `MaxPerOrder`. Lines are split like the part-covered lines already are |
+| 2 | **Category / sub-category discount** | 10% off all Non-Coffee, PHP 20 off any pastry | High | Low to medium. Like Discounted Product but the rule targets a category; the list of covered products changes as the menu does |
+| 3 | **Order amount discount** | Spend 500 get 50 off, or spend 400 get a free drink | High | Medium. Needs a minimum spend, which was left out of the first version on purpose; define whether it uses the total before or after other discounts, and how tips and delivery are treated |
+| 4 | **Combo slots** | Any drink + any pastry for 199 (one slot per category) | High | Medium. Decided: built as a multi-slot Mix & Match, each slot with its own list, category or sub-category (see Decisions below); the bundle machinery (child lines, add-on rules) is reused |
+| 5 | **Free size upgrade / add-on upsell** | Large for the price of Regular, free oat milk with a pastry | Medium | Medium. A discount on a Size or add-on line, only when the add-on matches; reuses the exact add-on matching rules |
+| 6 | **Coupon codes** | Typed code, single use or limited, optional per customer or expiry; on the customer link too | High | Medium. Decided: a "requires a code" setting on any promotion, not a new type. A `PromotionCodes` table with its own redemptions; must be rate limited on the public page against guessing |
+| 7 | **Loyalty rewards** | Redeem points for a free drink or a discount, stamp card (buy 9, 10th free), birthday treat, nth visit | High | Medium to high. Decided: its own feature on top of promotions (Rewards tab). Loyalty points already exist; this spends them. Needs a points ledger entry per redemption and care that a refund returns the points |
+| 8 | **Customer-based pricing** | First order discount on the customer link, returning-customer deal, staff/employee price | Medium | Low. A promotion with an audience (everyone, new, returning, listed customers or a customer group); "new" uses the order history |
+| 9 | **Senior citizen / PWD discount** | Moved to its own section, "POS Checkout Discounts (Senior Citizen / PWD)" below. It is a statutory discount applied at the register, not a marketing promotion | | |
+| 10 | **Manual discount with reason** | A cashier or manager applies a discount to a line or the order (spoilage, complaint, goodwill) | High | Low to medium. Role-limited (cashier up to a set percent, larger needs an Admin PIN or approval), reason required, audited, shown in reports as a separate line from promotions |
+| 11 | **Payment-method promo** | 5% off when paying with GCash/QR | Medium | Low once Cashless Payments exist. The discount is decided at checkout; do not offer it for the unverified GCash fallback |
+| 12 | **Pickup / delivery incentives** | Free delivery over a set amount, off-peak pickup discount, pre-order discount | Medium | Low to medium. Customer link only; delivery has no fee in the app today, so a fee needs designing first |
+| 13 | **Reusable cup / bring-your-own** | PHP 10 off with your own cup | Medium | Low. Already close to a negative-priced add-on; make it a labelled promo with a limit per day so it cannot be abused |
+| 14 | **Clearance by stock** | Discount a product automatically when its linked item is at the warning level or near expiry | Medium | High. Needs order-time stock deduction and expiry dates first; list as a later add-on to Inventory |
+| 15 | **Gift cards / prepaid credit** | Sell a card, spend the balance later | Medium | High. Not a discount but a payment method with a balance; needs a ledger, refunds and fraud checks. Consider after Cashless Payments |
+| 16 | **Referral** | Customer link: share a code, both get a reward | Low to medium | High. Needs coupon codes and customer identity first |
+
+**Decisions (20 Oct 2026)**
+
+- **Coupon codes (#6) are a requirement on any promotion, not a new promotion type.** A promotion gets an optional "requires
+  a code" setting. A `PromotionCodes` table holds the codes (single use, limited uses, per customer, expiry) and a
+  `PromotionCodeRedemptions` table records each use. A code unlocks a promotion that is otherwise hidden, so it works with
+  every existing and future type and is the easiest way to run a campaign (flyers, social posts, referrals later). Rules:
+  - The server checks the code when an order is saved; the POS and the customer link only send what was typed.
+  - Redemptions are held from the moment an order is saved and given back when it is cancelled, rejected or refunded, like
+    usage limits today (`DiscountBudget`).
+  - On the public page the code box is rate limited per address and per link, with the same answer for a wrong, expired or
+    used-up code, so codes cannot be guessed.
+  - A code never appears in the customer's `Deals` list until it is entered.
+  - Offline: a code cannot be checked offline, so an offline sale with a code is held for review by the sync, like other
+    changed-catalog cases, or the POS refuses codes while offline (decide).
+- **Combo slots (#4) are a multi-slot Mix & Match, not a new type.** A Mix & Match promotion gets several **slots**; each slot
+  has its own source (a product list, a category or a sub-category) and a count, plus the bundle price. Example: Drink slot
+  (Coffee sub-category, 1) + Pastry slot (Snacks sub-category, 1) for 199. Today's Mix & Match is the one-slot case, so
+  existing promotions keep working (a script turns each into one slot). Reuses the bundle machinery (child lines, add-on
+  rules, `MaxPerOrder`, usage limits, offline catalog, `BundleRules` checks). Work to do: slots in the editor and the bundle
+  picker, `BundleRules` checking each slot, and a category/sub-category source that follows the menu as it changes (a product
+  added to the sub-category joins the slot at once).
+- **Loyalty rewards (#7) are their own feature that builds on promotions.** A promotion is a rule on products; a reward is
+  something a customer spends points on. It needs a points balance, a ledger (earned, redeemed, returned) and refund handling,
+  none of which belong in the promotion tables. It reuses promotion pricing: redeeming attaches a hidden discounted-product
+  or bundle rule to the order, so totals, labels, receipts and reports come from code that already exists. In the UI it shows
+  as a Rewards tab next to Promos; the reward rules are edited under Management > Loyalty. Includes stamp cards (buy 9, the
+  10th free), a birthday treat and nth-visit rewards. Plan it as a separate section when it is started.
+
+**Suggested order (value over effort):** stacking rules and the engine; manual discount with reason (#10); senior/PWD (own
+section above, confirm the rules first); coupon codes as a promotion requirement (#6); category discount (#2); multi-buy
+(#1); multi-slot Mix & Match (#4); order amount (#3); loyalty rewards (#7); the rest on demand.
+
+**Guardrails to build once and apply to every type**
+
+- A promotion can be saved as a draft or in "preview" and shown to staff only, before it goes live.
+- A report of what each promotion cost (discount given, uses, revenue on the promoted lines) so an owner can end one that
+  loses money. A warning in the editor when the discount makes a product sell below its linked item cost (when cost exists).
+- A simulator on the promotion page: pick a cart, see the price each active promotion would give and which wins.
+- Per-promotion audit entries and an "ended" status that the list and details actually show (still open from the audit).
+
+**Open questions**
+
+- Should discounts ever stack by default, or is "best single discount per line" the rule for good?
+- Is the senior/PWD discount required for the shop's registration (ask the accountant), and does the shop issue VAT receipts?
+- Who may give a manual discount, and up to how much without approval?
+- Are coupon codes wanted on the customer link, and should one customer be able to use the same code twice?
 
 ### Promotions Audit (18 Oct 2026)
 
