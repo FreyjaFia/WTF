@@ -12,6 +12,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
+import { appVersion } from '@environments/version';
 import { filter, Subscription } from 'rxjs';
 import { AlertService } from '@core/services/alert.service';
 import { ConnectivityService } from '@core/services/connectivity.service';
@@ -152,6 +153,7 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
   private readonly sidebarHost = viewChild<ElementRef<HTMLElement>>('sidebarHost');
   private resizeObserver: ResizeObserver | null = null;
 
+  protected readonly appVersion = appVersion;
   protected token = '';
   private loadedAt = 0;
   private pollTimer: ReturnType<typeof setInterval> | null = null;

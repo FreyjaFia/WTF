@@ -1,6 +1,7 @@
 import { signal, type WritableSignal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter, Router } from '@angular/router';
+import { appVersion } from '@environments/version';
 import { AlertService } from '@core/services/alert.service';
 import { ConnectivityService } from '@core/services/connectivity.service';
 import { PublicOrderHubService } from '@core/services/public-order-hub.service';
@@ -844,6 +845,14 @@ describe('PublicOrderComponent', () => {
       service.getLink.mockReturnValue(throwError(() => new PublicLinkInvalidError()));
       c.loadMenu(true);
       expect(c.state()).toBe('invalid');
+    });
+  });
+
+  describe('header', () => {
+    it('shows the app version next to Ordering, like the POS shows it next to POS', () => {
+      setup();
+
+      expect(el().textContent).toContain(`v${appVersion}`);
     });
   });
 
