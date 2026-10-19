@@ -134,3 +134,20 @@ export interface AdjustItemStockDto {
   reason: string;
   notes?: string | null;
 }
+
+export type ProductCoverageStatus = 'Covered' | 'Partial' | 'Missing';
+
+export interface ProductCoverageDto {
+  productId: string;
+  name: string;
+  code: string;
+  status: ProductCoverageStatus;
+  missingOptions: string[];
+}
+
+export interface StockCoverageDto {
+  covered: number;
+  partial: number;
+  missing: number;
+  products: ProductCoverageDto[];
+}

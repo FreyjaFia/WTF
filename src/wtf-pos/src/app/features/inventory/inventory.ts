@@ -48,6 +48,13 @@ export class InventoryComponent {
       ariaLabel: 'Stock In',
       canShow: () => this.canReadStockMovements(),
     },
+    {
+      label: 'Coverage',
+      route: 'coverage',
+      path: AppRoutes.InventoryCoverage,
+      ariaLabel: 'Stock coverage',
+      canShow: () => this.canReadItems(),
+    },
   ];
   private readonly activeSignals = new Map<string, ReturnType<typeof routerIsActive>>();
 

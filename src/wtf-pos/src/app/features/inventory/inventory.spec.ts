@@ -29,6 +29,7 @@ describe('InventoryComponent', () => {
             children: [
               { path: 'items', component: ItemsStub },
               { path: 'stock-in', component: StockStub },
+              { path: 'coverage', component: StockStub },
             ],
           },
         ]),
@@ -62,16 +63,18 @@ describe('InventoryComponent', () => {
     vi.useRealTimers();
   });
 
-  it('renders both tabs with links when the user can read items and stock', async () => {
+  it('renders every tab with links when the user can read items and stock', async () => {
     const { el } = await setup();
     const rendered = tabs(el);
     expect(rendered.map((t) => t.getAttribute('data-inventory-tab'))).toEqual([
       'items',
       'stock-in',
+      'coverage',
     ]);
     expect(rendered.map((t) => t.getAttribute('href'))).toEqual([
       '/inventory/items',
       '/inventory/stock-in',
+      '/inventory/coverage',
     ]);
   });
 
@@ -79,6 +82,12 @@ describe('InventoryComponent', () => {
     perms = { items: false, stock: true };
     const { el } = await setup('/inventory/stock-in');
     expect(tabs(el).map((t) => t.getAttribute('data-inventory-tab'))).toEqual(['stock-in']);
+  });
+
+  it('shows the coverage tab only to roles that can read items', async () => {
+    perms = { items: true, stock: false };
+    const { el } = await setup();
+    expect(tabs(el).map((t) => t.getAttribute('data-inventory-tab'))).toEqual(['items', 'coverage']);
   });
 
   it('renders no tabs without any permission', async () => {
@@ -89,7 +98,7 @@ describe('InventoryComponent', () => {
 
   it('marks only the active route as selected', async () => {
     const { el } = await setup('/inventory/items');
-    expect(tabs(el).map((t) => t.getAttribute('aria-selected'))).toEqual(['true', 'false']);
+    expect(tabs(el).map((t) => t.getAttribute('aria-selected'))).toEqual(['true', 'false', 'false']);
   });
 
   it('updates the selected tab after navigation and shows the routed page', async () => {
@@ -97,7 +106,7 @@ describe('InventoryComponent', () => {
     expect(el.textContent).toContain('items page');
     await harness.navigateByUrl('/inventory/stock-in');
     harness.detectChanges();
-    expect(tabs(el).map((t) => t.getAttribute('aria-selected'))).toEqual(['false', 'true']);
+    expect(tabs(el).map((t) => t.getAttribute('aria-selected'))).toEqual(['false', 'true', 'false']);
     expect(el.textContent).toContain('stock page');
   });
 

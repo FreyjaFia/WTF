@@ -1,0 +1,98 @@
+<div class="flex h-full flex-col pt-4 md:pt-0">
+  <div class="mb-4 flex shrink-0 flex-wrap items-start justify-between gap-3 sm:mb-6">
+    <div>
+      <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Stock Coverage</h1>
+      <p class="text-xs text-gray-500 sm:text-sm">
+        Which products take stock when they are sold, and which would not
+      </p>
+    </div>
+    <div class="flex items-center gap-2">
+      <select
+        class="select select-bordered select-sm outline-transparent"
+        aria-label="Show"
+        [value]="filter()"
+        (change)="setFilter($any($event.target).value)"
+      >
+        <option value="attention">Needs attention</option>
+        <option value="all">All products</option>
+      </select>
+      <button
+        type="button"
+        class="app-btn app-btn-secondary app-btn-sm"
+        [disabled]="isLoading()"
+        (click)="load()"
+      >
+        {{ isLoading() ? 'Refreshing...' : 'Refresh' }}
+      </button>
+    </div>
+  </div>
+
+  @if (coverage(); as summary) {
+    <div class="mb-4 grid shrink-0 grid-cols-3 gap-2 sm:gap-3" data-testid="coverage-summary">
+      <div class="rounded-xl bg-surface p-3 shadow">
+        <p class="text-xs font-semibold tracking-wider text-gray-400 uppercase">Take stock</p>
+        <p class="text-2xl font-bold text-green-700">{{ summary.covered }}</p>
+      </div>
+      <div class="rounded-xl bg-surface p-3 shadow">
+        <p class="text-xs font-semibold tracking-wider text-gray-400 uppercase">Partly</p>
+        <p class="text-2xl font-bold text-orange-600">{{ summary.partial }}</p>
+      </div>
+      <div class="rounded-xl bg-surface p-3 shadow">
+        <p class="text-xs font-semibold tracking-wider text-gray-400 uppercase">Take none</p>
+        <p class="text-2xl font-bold text-red-600">{{ summary.missing }}</p>
+      </div>
+    </div>
+  }
+
+  @if (isLoading() && !coverage()) {
+    <div class="flex justify-center py-8">
+      <span class="loading loading-spinner loading-lg"></span>
+    </div>
+  }
+
+  @if (coverage()) {
+    <div class="min-h-0 flex-1 overflow-y-auto pb-4">
+      @if (rows().length === 0) {
+        <div class="rounded-xl bg-surface p-8 text-center shadow">
+          <p class="text-lg font-semibold text-gray-700">
+            {{ filter() === 'all' ? 'No products yet' : 'Every product takes stock' }}
+          </p>
+          <p class="text-sm text-gray-500">
+            {{
+              filter() === 'all'
+                ? 'Add products to see how they use stock.'
+                : 'Nothing needs attention right now.'
+            }}
+          </p>
+        </div>
+      }
+
+      <ul class="space-y-2">
+        @for (product of rows(); track product.productId) {
+          <li
+            class="flex flex-wrap items-start justify-between gap-3 rounded-xl bg-surface p-4 shadow"
+            data-testid="coverage-row"
+          >
+            <div class="min-w-0">
+              <p class="font-semibold wrap-break-word text-gray-900">{{ product.name }}</p>
+              <p class="font-mono text-xs text-gray-400">{{ product.code }}</p>
+              @if (product.missingOptions.length > 0) {
+                <p class="mt-1 text-xs text-gray-600" data-testid="missing-options">
+                  Not linked to stock: {{ product.missingOptions.join(', ') }}
+                </p>
+              }
+            </div>
+            <div class="flex shrink-0 items-center gap-3">
+              <app-badge [variant]="badgeVariant(product.status)">
+                {{ statusLabel(product.status) }}
+              </app-badge>
+              @if (productLink(product); as link) {
+                <a class="app-btn app-btn-link" [routerLink]="link">{{ linkLabel() }}</a>
+              }
+            </div>
+          </li>
+        }
+      </ul>
+    </div>
+  }
+</div>

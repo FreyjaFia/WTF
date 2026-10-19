@@ -57,6 +57,17 @@ describe('InventoryService', () => {
     expect(req.request.method).toBe('GET');
   });
 
+  it('asks for the stock coverage of the products', () => {
+    const { service, http } = setupHttpService(InventoryService);
+    const result = capture(service.getStockCoverage());
+
+    const req = http.expectOne(`${base}/coverage`);
+    expect(req.request.method).toBe('GET');
+    req.flush({ covered: 1, partial: 0, missing: 0, products: [] });
+
+    expect(result.value).toEqual({ covered: 1, partial: 0, missing: 0, products: [] });
+  });
+
   it('links a product to an item with the quantity taken per sale', () => {
     const { service, http } = setupHttpService(InventoryService);
     service.linkProductToItem('p1', 'i1', 200).subscribe();

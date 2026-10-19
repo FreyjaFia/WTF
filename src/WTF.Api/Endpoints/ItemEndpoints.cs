@@ -20,6 +20,14 @@ public static class ItemEndpoints
             })
             .RequireAuthorization(AppPolicies.ItemsRead);
 
+        itemGroup.MapGet("/coverage",
+            async (ISender sender) =>
+            {
+                var result = await sender.Send(new GetStockCoverageQuery());
+                return Results.Ok(result);
+            })
+            .RequireAuthorization(AppPolicies.ItemsRead);
+
         itemGroup.MapGet("/{id:guid}",
             async (Guid id, ISender sender) =>
             {

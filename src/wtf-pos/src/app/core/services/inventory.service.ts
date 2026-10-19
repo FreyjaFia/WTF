@@ -11,6 +11,7 @@ import {
   PagedStockMovementsDto,
   ProductItemLinkAssignmentDto,
   ProductItemLinkDto,
+  StockCoverageDto,
   UpdateItemDto,
 } from '@shared/models';
 import { Observable, throwError } from 'rxjs';
@@ -95,6 +96,12 @@ export class InventoryService {
     return this.http
       .get<PagedStockMovementsDto>(`${this.baseUrl}/${itemId}/movements`, { params })
       .pipe(catchError((error) => this.handleError(error, 'Unable to fetch stock history.')));
+  }
+
+  public getStockCoverage(): Observable<StockCoverageDto> {
+    return this.http
+      .get<StockCoverageDto>(`${this.baseUrl}/coverage`)
+      .pipe(catchError((error) => this.handleError(error, 'Unable to fetch stock coverage.')));
   }
 
   public getOrderStockMovements(orderId: string): Observable<OrderStockMovementDto[]> {

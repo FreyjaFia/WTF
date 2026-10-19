@@ -9,6 +9,7 @@ import { ItemDetailsComponent } from '@features/inventory/items/item-details/ite
 import { ItemEditorComponent } from '@features/inventory/items/item-editor/item-editor';
 import { ItemListComponent } from '@features/inventory/items/item-list/item-list';
 import { ItemsComponent } from '@features/inventory/items/items';
+import { StockCoverageComponent } from '@features/inventory/stock-coverage/stock-coverage';
 import { StockInComponent } from '@features/inventory/stock-in/stock-in';
 import { Login } from '@features/login/login';
 import { AuditLogsComponent } from '@features/management/audit-logs/audit-logs';
@@ -152,6 +153,12 @@ export const routes: Routes = [
             component: StockInComponent,
             canActivate: [roleGuard],
             data: { roles: AppRoleGroups.StockMovementsRead },
+          },
+          {
+            path: 'coverage',
+            component: StockCoverageComponent,
+            canActivate: [roleGuard],
+            data: { roles: AppRoleGroups.ItemsRead },
           },
         ],
       },

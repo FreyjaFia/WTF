@@ -35,6 +35,7 @@ public class RouteTableTests : IDisposable
         "GET /api/dashboard/ => DashboardRead",
         "GET /api/health => anonymous",
         "GET /api/items/ => ItemsRead",
+        "GET /api/items/coverage => ItemsRead",
         "POST /api/items/ => ItemsWrite",
         "POST /api/items/product-links => ItemsWrite",
         "DELETE /api/items/{id:guid} => ItemsWrite",

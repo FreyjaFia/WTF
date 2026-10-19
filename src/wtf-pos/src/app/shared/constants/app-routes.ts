@@ -14,6 +14,7 @@ export const AppRoutes = {
   InventoryItemDetailsById: (itemId: string) => `/inventory/items/details/${itemId}`,
   InventoryItemsEditById: (itemId: string) => `/inventory/items/edit/${itemId}`,
   InventoryStockIn: '/inventory/stock-in',
+  InventoryCoverage: '/inventory/coverage',
   ManagementRoot: '/management',
   ManagementProducts: '/management/products',
   ManagementProductsNew: '/management/products/new',
