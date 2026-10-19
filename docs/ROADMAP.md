@@ -596,21 +596,45 @@ sale and the check against the total required quantity already worked from Phase
   "enough for 49 sales", then "enough for 1 sale" after changing the quantity to 6000; the product editor read
   "enough for 1 sale" at 6000 and the below-zero warning at 20000.
 
-### Phase 3 - Consumables and Required Product Usage [Planned]
+### Phase 3 - Consumables and Required Product Usage [Partially completed, 21 Oct 2026]
 
 - Treat cups, lids, sleeves, milk, syrups, and other consumables as
   inventory items.
 - Link products and required add-ons to consumables.
 - Deduct consumables automatically when an order is completed.
 - Support multiple required consumables per product or add-on selection.
-- Progress: linking items to products and add-ons works from the item editor.
-  Order-time deduction is currently disabled (see Phase 1 Remaining). Size cups
-  are meant to be linked to the Size add-on (not the base product) to avoid
-  double deduction once deduction returns.
 - Example:
   - regular drink deducts `1 Regular Cup`
   - large drink deducts `1 Large Cup`
   - selected oat milk add-on deducts oat milk stock if configured
+
+Built (21 Oct 2026):
+
+- Consumables are plain items; linking them to products and add-ons, several links per product or add-on, and the deduction
+  when an order completes all work (Phase 1). Size cups go on the Size add-ons when the sizes use different cups, or on the
+  product when every size uses the same item; never both, or a cup is taken twice.
+- **Stock coverage check** (`GET /api/items/coverage`, `ItemsRead`; the Inventory > Coverage tab). It lists every active
+  product (add-ons excluded) as *Takes stock*, *Some options missing* or *Takes no stock*, so a drink with no cup linked is
+  visible. The rule (`StockCoverageRules` in `WTF.Calculations`): a product is covered when it has an active link to an active
+  item, or when every option of one required add-on group (Size, Flavor) has one; it is partial when a required group has
+  some options linked and others not (the unlinked ones, for example "Size: Jumbo", would sell without taking stock); it
+  takes no stock when nothing is linked anywhere. Optional add-on types (Topping, Extra, Sauce) are ignored. The list shows
+  products that need attention first and links to the product editor ("Set up stock") for roles that can write products.
+
+Not built, on purpose:
+
+- **Nothing is enforced.** A product with no stock link still sells; the check only shows the gap. Refusing such a sale, or
+  marking a product as "must take stock", is a decision for the owner (retail goods, services and untracked items exist).
+- **Replace mode and size-aware amounts** (oat milk replacing dairy, a large drink using 1.5x the milk) belong to Phase 6
+  (recipes); until then an add-on only adds.
+- **No item types, and no "required items" list (decided 21 Oct 2026).** The check does not know what an item is and should
+  not (no cup, lid or milk types). Letting the owner say "this drink must have a lid" was considered (a small table of
+  required items per product, shown only in Coverage) and skipped: the Phase 6 recipe says which items a product uses, so a
+  second list would only have to be merged into it later. Until recipes exist, Coverage shows products with no stock link
+  and Size or Flavor options left unlinked, and nothing more.
+- **Checked in the running app** (throwaway database): Latte with Regular linked and Jumbo not read "Some options missing,
+  Size: Jumbo"; Water read "Takes no stock"; Mocha (both sizes linked) and Beans read "Takes stock" (counts 2, 1, 1). After
+  linking Jumbo to a cup and refreshing, Latte left the list (counts 3, 0, 1).
 
 ### Phase 4 - Inventory Alerts and Notifications [Planned]
 
