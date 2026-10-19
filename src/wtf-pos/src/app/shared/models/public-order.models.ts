@@ -64,6 +64,7 @@ export interface PublicOrderAddOnDto {
   name: string;
   quantity: number;
   unitPrice: number;
+  type?: number | null;
 }
 
 export interface PublicOrderItemDto {
@@ -72,6 +73,8 @@ export interface PublicOrderItemDto {
   unitPrice: number;
   addOns: PublicOrderAddOnDto[];
   specialInstructions?: string | null;
+  originalPrice?: number | null;
+  promoLabel?: string | null;
 }
 
 export interface PublicOrderDto {

@@ -11,7 +11,14 @@ import {
   publicStatusVariant,
   publicTimeline,
 } from '../public-order-status';
-import { addMoney, buildLineBreakdown, LineBreakdown, subtractMoney } from '@shared/calculations';
+import {
+  addMoney,
+  buildLineBreakdown,
+  fromCents,
+  LineBreakdown,
+  subtractMoney,
+  toCents,
+} from '@shared/calculations';
 
 /**
  * One of the customer's orders on the public page, laid out like the order details the shop staff see. It is its own
@@ -52,16 +59,29 @@ export class PublicOrderDetailsComponent {
   });
 
   protected getBreakdown(item: PublicOrderDto['items'][number]): LineBreakdown {
+    const listUnitPrice = item.originalPrice ?? item.unitPrice;
+    const discountCents = (toCents(listUnitPrice) - toCents(item.unitPrice)) * item.quantity;
+
     return buildLineBreakdown({
       qty: item.quantity,
-      listUnitPrice: item.unitPrice,
+      listUnitPrice,
       addOns: item.addOns.map((addOn, index) => ({
         addOnId: `${addOn.name}-${index}`,
         name: addOn.name,
         price: addOn.unitPrice,
         quantity: addOn.quantity,
+        addOnType: addOn.type,
       })),
+      discount:
+        discountCents > 0 ? { amount: fromCents(discountCents), label: item.promoLabel } : null,
+      showPlainBase: true,
     });
+  }
+
+  protected promoLabelOf(item: PublicOrderDto['items'][number]): string | null {
+    return this.getBreakdown(item).rows.some((row) => row.kind === 'discount')
+      ? (item.promoLabel ?? null)
+      : null;
   }
 
   protected lineTotal(item: PublicOrderDto['items'][number]): number {

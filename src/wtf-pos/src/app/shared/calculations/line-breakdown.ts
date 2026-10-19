@@ -41,6 +41,8 @@ export interface BreakdownInput {
   listUnitPrice: number;
   addOns?: readonly BreakdownAddOn[] | null;
   discount?: BreakdownDiscount | null;
+  /** A plain line of several items still gets its unit price row, so details and summaries read the same on every line. */
+  showPlainBase?: boolean;
 }
 
 export type BreakdownRowKind = 'base' | 'addOn' | 'discount';
@@ -176,7 +178,7 @@ export function buildLineBreakdown(input: BreakdownInput): LineBreakdown {
   const totalCents =
     baseCents + modifiers.reduce((sum, row) => sum + toCents(row.amount), 0);
 
-  if (modifiers.length === 0) {
+  if (modifiers.length === 0 && !(input.showPlainBase && qty > 1)) {
     return { rows: [], total: fromCents(totalCents) };
   }
 
@@ -197,28 +199,11 @@ export function buildLineBreakdown(input: BreakdownInput): LineBreakdown {
 export function breakdownOfCartItem(
   item: Pick<CartItemDto, 'qty' | 'price' | 'originalPrice' | 'addOns' | 'promoDiscount' | 'promoLabel'>,
 ): LineBreakdown {
-  const input: BreakdownInput = {
+  return buildLineBreakdown({
     qty: item.qty,
     listUnitPrice: item.originalPrice ?? item.price,
     addOns: item.addOns,
     discount: item.promoDiscount ? { amount: item.promoDiscount, label: item.promoLabel } : null,
-  };
-  const breakdown = buildLineBreakdown(input);
-
-  // A plain line of several items still shows its unit price, in the same row style as every other line.
-  if (breakdown.rows.length === 0 && input.qty > 1) {
-    return {
-      rows: [
-        {
-          kind: 'base',
-          label: 'Price',
-          detail: `${formatPeso(input.listUnitPrice)} each`,
-          amount: breakdown.total,
-        },
-      ],
-      total: breakdown.total,
-    };
-  }
-
-  return breakdown;
+    showPlainBase: true,
+  });
 }

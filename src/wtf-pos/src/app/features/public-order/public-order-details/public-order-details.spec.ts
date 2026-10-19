@@ -54,7 +54,7 @@ describe('PublicOrderDetailsComponent', () => {
 
   it('lists each item with its add-ons, notes and the price of the whole line', () => {
     setup();
-    expect(text()).toContain('2× Latte');
+    expect(text()).toContain('2x Latte');
     expect(text()).toContain('Large');
     expect(text()).toContain('₱30.00 × 4 (2 per item)');
     expect(text()).toContain('₱300.00');
@@ -62,6 +62,38 @@ describe('PublicOrderDetailsComponent', () => {
     expect(text()).toContain('less ice');
     // (150 + 2 x 30) x 2
     expect(text()).toContain('420.00');
+  });
+
+  it('shows the promotion pill and a discount row that keeps the rows adding up, and sorts add-ons by type', () => {
+    setup(
+      make({
+        items: [
+          {
+            name: 'Latte',
+            quantity: 3,
+            unitPrice: 120,
+            originalPrice: 150,
+            promoLabel: 'Promo -₱30.00',
+            addOns: [
+              { name: 'Extra shot', quantity: 1, unitPrice: 40, type: 4 },
+              { name: 'Large', quantity: 1, unitPrice: 30, type: 1 },
+            ],
+          },
+        ],
+      }),
+    );
+    const flat = text().replace(/\s+/g, ' ');
+    expect(flat).toContain('Promo -₱30.00');
+    expect(flat).toContain('Discount');
+    expect(flat).toContain('− ₱90.00');
+    expect(flat.indexOf('Large')).toBeLessThan(flat.indexOf('Extra shot'));
+  });
+
+  it('gives a plain line of several items its unit price, and no pill without a promotion', () => {
+    setup(make({ items: [{ name: 'Croissant', quantity: 2, unitPrice: 120, addOns: [] }] }));
+    const flat = text().replace(/\s+/g, ' ');
+    expect(flat).toContain('₱120.00 each');
+    expect(flat).not.toContain('Promo');
   });
 
   it('shows how it is handed over and how to reach the customer', () => {

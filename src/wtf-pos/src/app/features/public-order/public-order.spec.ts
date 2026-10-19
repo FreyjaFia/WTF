@@ -2222,7 +2222,7 @@ describe('PublicOrderComponent', () => {
       (el().querySelectorAll('[data-order-row]')[1] as HTMLElement).click();
       fixture.detectChanges();
       expect(el().querySelector('[data-order-details]')).not.toBeNull();
-      expect(text()).toContain('2× Latte');
+      expect(text()).toContain('2x Latte');
       expect(text()).toContain('+ Large');
       expect(text()).toContain('less ice');
       expect(text()).toContain('360.00');
