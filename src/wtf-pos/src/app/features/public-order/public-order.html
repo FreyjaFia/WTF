@@ -588,31 +588,9 @@
                                 </div>
                               </div>
 
-                              @if (line.addOns.length > 0) {
-                                <div class="mt-2 ml-19 space-y-1 border-t border-gray-200 pt-2">
-                                  @for (addOn of line.addOns; track addOn.id) {
-                                    <div
-                                      class="flex items-center justify-between text-xs text-gray-500"
-                                    >
-                                      <span class="flex min-w-0 flex-1 items-center gap-1.5 pr-2">
-                                        <span
-                                          class="inline-block h-1 w-1 shrink-0 rounded-full bg-gray-400"
-                                        ></span>
-                                        <span class="min-w-0 wrap-break-word">{{
-                                          addOn.quantity > 1
-                                            ? addOn.quantity + 'x ' + addOn.name + ' (per unit)'
-                                            : addOn.name
-                                        }}</span>
-                                      </span>
-                                      <span class="shrink-0">
-                                        +<app-icon
-                                          name="icon-peso"
-                                          [class]="'inline h-3 w-3 align-[-0.125em]'"
-                                          [fill]="'currentColor'"
-                                        />{{ addOn.price * addOn.quantity | number: '1.2-2' }}
-                                      </span>
-                                    </div>
-                                  }
+                              @if (line.addOns.length > 0 || lineDiscount(line)) {
+                                <div class="mt-2 ml-19 border-t border-gray-200 pt-2">
+                                  <app-line-breakdown [breakdown]="getBreakdown(line)" />
                                 </div>
                               }
 
@@ -621,17 +599,6 @@
                                   class="mt-2 ml-19 text-xs wrap-break-word text-gray-500 italic"
                                 >
                                   {{ line.specialInstructions }}
-                                </div>
-                              }
-                              @if (line.addOns.length > 0 && !lineDiscount(line)?.note) {
-                                <div
-                                  class="mt-1 ml-19 pt-0.5 text-right text-[11px] text-gray-400 italic"
-                                >
-                                  (<app-icon
-                                    name="icon-peso"
-                                    [class]="'inline h-2.5 w-2.5 align-[-0.125em]'"
-                                    [fill]="'currentColor'"
-                                  />{{ unitPrice(line) | number: '1.2-2' }} / unit)
                                 </div>
                               }
                             </div>

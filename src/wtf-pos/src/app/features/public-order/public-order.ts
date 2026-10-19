@@ -21,6 +21,7 @@ import { EnvelopeComponent } from '@shared/components/envelope/envelope';
 import { AvatarComponent } from '@shared/components/avatar/avatar';
 import { CartDrawerComponent } from '@shared/components/cart-drawer/cart-drawer';
 import { IconComponent } from '@shared/components/icons/icon/icon';
+import { LineBreakdownComponent } from '@shared/components/line-breakdown/line-breakdown';
 import { SearchInputComponent } from '@shared/components/search-input/search-input';
 import { ThemeSwitcherComponent } from '@shared/components/theme-switcher/theme-switcher';
 import { PublicChatComponent } from './public-chat/public-chat';
@@ -49,6 +50,8 @@ import {
 import {
   addOnsTotal,
   buildDeals,
+  buildLineBreakdown,
+  LineBreakdown,
   Deal,
   DiscountAllowance,
   DiscountMatch,
@@ -58,6 +61,7 @@ import {
   formatPromoLabel,
   fromCents,
   priceWithAddOns,
+  promoDiscount,
   sumAmounts,
   toCents,
 } from '@shared/calculations';
@@ -120,6 +124,7 @@ const CATEGORY_LABELS: Record<number, string> = {
     CartDrawerComponent,
     EnvelopeComponent,
     IconComponent,
+    LineBreakdownComponent,
     LinkInvalidComponent,
     NgTemplateOutlet,
     PublicAddonPickerComponent,
@@ -922,6 +927,27 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
   protected readonly hasLimitedDiscount = computed(() =>
     this.cart().some((line) => this.lineDiscount(line)?.limited),
   );
+
+  protected getBreakdown(line: PublicCartLine): LineBreakdown {
+    const discount = this.lineDiscount(line);
+    return buildLineBreakdown({
+      qty: line.quantity,
+      listUnitPrice: line.price,
+      addOns: line.addOns.map((addOn) => ({
+        addOnId: addOn.id,
+        name: addOn.name,
+        price: addOn.price,
+        quantity: addOn.quantity,
+        addOnType: addOn.type,
+      })),
+      discount: discount
+        ? {
+            amount: promoDiscount(line.price, discount.price, discount.quantity),
+            label: discount.label,
+          }
+        : null,
+    });
+  }
 
   protected unitPrice(line: PublicCartLine): number {
     return priceWithAddOns(this.lineDiscount(line)?.price ?? line.price, line.addOns);

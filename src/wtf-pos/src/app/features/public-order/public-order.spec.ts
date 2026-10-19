@@ -1501,8 +1501,10 @@ describe('PublicOrderComponent', () => {
       expect(c.cartTotal()).toBe((150 + 80) * 2 + (150 + 120));
       c.openCart();
       fixture.detectChanges();
-      expect(text()).toContain('2x Extra shot (per unit)');
-      expect(text()).toContain('3x Extra shot (per unit)');
+      expect(text()).toContain('₱40.00 × 4 (2 per item)');
+      expect(text()).toContain('₱40.00 × 3');
+      expect(text()).toContain('₱160.00');
+      expect(text()).toContain('₱120.00');
     });
 
     it('has a drag handle so the bottom sheet can be dragged down, only below the wide layout', () => {
@@ -1535,7 +1537,7 @@ describe('PublicOrderComponent', () => {
       expect(el().querySelector('.sticky.bottom-0')!.textContent).toContain('Total');
     });
 
-    it('lists add-ons under the item with their prices and a per unit subtotal', () => {
+    it('lists add-ons under the item as a price breakdown that adds up to the line', () => {
       setup();
       c.openProduct(c.products()[0]);
       c.onPicked({
@@ -1551,10 +1553,13 @@ describe('PublicOrderComponent', () => {
 
       const card = el().querySelector('[aria-label="Edit Latte"]') as HTMLElement;
       expect(card.textContent).toContain('Large');
-      expect(card.textContent).toContain('2x Extra shot (per unit)');
-      expect(card.textContent).toContain('80.00');
+      expect(card.textContent).toContain('Price');
+      expect(card.textContent).toContain('₱150.00');
+      expect(card.textContent).toContain('₱40.00 × 2');
+      expect(card.textContent).toContain('₱80.00');
       expect(card.textContent).toContain('less ice');
-      expect(card.textContent).toContain('260.00 / unit');
+      expect(card.textContent).not.toContain('/ unit');
+      expect(c.unitPrice(c.cart()[0])).toBe(260);
     });
 
     it('shows a no-cost add-on in the cart as +0.00, like the shop cart, and a paid one with its price', () => {
@@ -1573,7 +1578,7 @@ describe('PublicOrderComponent', () => {
 
       const rows = [
         ...(el().querySelector('[aria-label="Edit Latte"]') as HTMLElement).querySelectorAll(
-          '.border-t > div',
+          '[role="listitem"]',
         ),
       ];
       const regular = rows.find((r) => r.textContent?.includes('Regular')) as HTMLElement;

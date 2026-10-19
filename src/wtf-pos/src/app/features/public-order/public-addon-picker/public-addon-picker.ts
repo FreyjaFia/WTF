@@ -114,6 +114,7 @@ export class PublicAddonPickerComponent implements OnInit {
           name: option.name,
           price: option.price,
           quantity: selected[group.type][option.id],
+          type: group.type,
         })),
     );
   });

@@ -148,7 +148,7 @@ describe('PublicAddonPickerComponent', () => {
     c.confirm();
 
     expect(confirmed).toHaveBeenCalledWith({
-      addOns: [{ id: 's-l', name: 'Large', price: 30, quantity: 1 }],
+      addOns: [{ id: 's-l', name: 'Large', price: 30, quantity: 1, type: 1 }],
       quantity: 3,
       specialInstructions: 'less ice',
     });
@@ -311,8 +311,8 @@ describe('PublicAddonPickerComponent', () => {
       c.confirm();
 
       expect(confirmed.mock.calls[0][0].addOns).toEqual([
-        { id: 's-r', name: 'Regular', price: 0, quantity: 1 },
-        { id: 'e-1', name: 'Extra shot', price: 40, quantity: 2 },
+        { id: 's-r', name: 'Regular', price: 0, quantity: 1, type: 1 },
+        { id: 'e-1', name: 'Extra shot', price: 40, quantity: 2, type: 4 },
       ]);
     });
 
@@ -476,7 +476,7 @@ describe('PublicAddonPickerComponent', () => {
       c.confirm();
 
       expect(confirmed).toHaveBeenCalledWith({
-        addOns: [{ id: 's-r', name: 'Regular', price: 0, quantity: 1 }],
+        addOns: [{ id: 's-r', name: 'Regular', price: 0, quantity: 1, type: 1 }],
         quantity: 1,
         specialInstructions: null,
       });

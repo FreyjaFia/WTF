@@ -55,8 +55,10 @@ describe('PublicOrderDetailsComponent', () => {
   it('lists each item with its add-ons, notes and the price of the whole line', () => {
     setup();
     expect(text()).toContain('2× Latte');
-    expect(text()).toContain('+ Large');
-    expect(text()).toContain('×2');
+    expect(text()).toContain('Large');
+    expect(text()).toContain('₱30.00 × 4 (2 per item)');
+    expect(text()).toContain('₱300.00');
+    expect(text()).not.toContain('×2');
     expect(text()).toContain('less ice');
     // (150 + 2 x 30) x 2
     expect(text()).toContain('420.00');

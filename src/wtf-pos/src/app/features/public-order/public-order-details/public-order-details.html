@@ -258,14 +258,9 @@
                       <div class="text-sm font-medium text-gray-900">
                         {{ item.quantity }}&times; {{ item.name }}
                       </div>
-                      @for (addOn of item.addOns; track $index) {
-                        <div class="text-xs text-gray-500">
-                          + {{ addOn.name }}
-                          @if (addOn.quantity > 1) {
-                            &times;{{ addOn.quantity }}
-                          }
-                        </div>
-                      }
+                      <div class="mt-1">
+                        <app-line-breakdown [breakdown]="getBreakdown(item)" />
+                      </div>
                       @if (item.specialInstructions) {
                         <div class="text-xs text-gray-400 italic">
                           {{ item.specialInstructions }}
