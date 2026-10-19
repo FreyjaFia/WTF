@@ -3,6 +3,7 @@ import { Component, computed, input, output } from '@angular/core';
 import { AvatarComponent } from '@shared/components/avatar/avatar';
 import { BadgeComponent } from '@shared/components/badge/badge';
 import { IconComponent } from '@shared/components/icons/icon/icon';
+import { LineBreakdownComponent } from '@shared/components/line-breakdown/line-breakdown';
 import { PublicOrderDto } from '@shared/models';
 import {
   publicStatusNote,
@@ -10,7 +11,7 @@ import {
   publicStatusVariant,
   publicTimeline,
 } from '../public-order-status';
-import { addMoney, extendedPrice, priceWithAddOns, subtractMoney } from '@shared/calculations';
+import { addMoney, buildLineBreakdown, LineBreakdown, subtractMoney } from '@shared/calculations';
 
 /**
  * One of the customer's orders on the public page, laid out like the order details the shop staff see. It is its own
@@ -18,7 +19,7 @@ import { addMoney, extendedPrice, priceWithAddOns, subtractMoney } from '@shared
  */
 @Component({
   selector: 'app-public-order-details',
-  imports: [AvatarComponent, BadgeComponent, DatePipe, DecimalPipe, IconComponent],
+  imports: [AvatarComponent, BadgeComponent, DatePipe, DecimalPipe, IconComponent, LineBreakdownComponent],
   templateUrl: './public-order-details.html',
   host: { class: 'block' },
 })
@@ -50,11 +51,20 @@ export class PublicOrderDetailsComponent {
     return amountReceived ? Math.max(0, subtractMoney(amountReceived, this.amountDue())) : null;
   });
 
+  protected getBreakdown(item: PublicOrderDto['items'][number]): LineBreakdown {
+    return buildLineBreakdown({
+      qty: item.quantity,
+      listUnitPrice: item.unitPrice,
+      addOns: item.addOns.map((addOn, index) => ({
+        addOnId: `${addOn.name}-${index}`,
+        name: addOn.name,
+        price: addOn.unitPrice,
+        quantity: addOn.quantity,
+      })),
+    });
+  }
+
   protected lineTotal(item: PublicOrderDto['items'][number]): number {
-    const unit = priceWithAddOns(
-      item.unitPrice,
-      item.addOns.map((addOn) => ({ price: addOn.unitPrice, quantity: addOn.quantity })),
-    );
-    return extendedPrice(unit, item.quantity);
+    return this.getBreakdown(item).total;
   }
 }

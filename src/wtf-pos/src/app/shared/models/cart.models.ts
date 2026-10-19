@@ -25,6 +25,8 @@ export interface CartItemDto {
   imageUrl?: string | null;
   addOns?: CartAddOnDto[];
   specialInstructions?: string | null;
+  // The list price of one item when a promotion changed `price`; the breakdown starts from it.
+  originalPrice?: number | null;
   promoLabel?: string | null;
   promoDiscount?: number | null;
   bundlePromotionId?: string | null;

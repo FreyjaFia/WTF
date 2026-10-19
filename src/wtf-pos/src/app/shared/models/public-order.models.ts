@@ -137,6 +137,8 @@ export interface PublicCartAddOn {
   price: number;
   /** How many of this add-on per item (toppings and extras can be added more than once). */
   quantity: number;
+  /** AddOnTypeEnum, used to list Size, Flavor and the rest in the same order as everywhere else. */
+  type?: number;
 }
 
 export interface PublicCartLine {

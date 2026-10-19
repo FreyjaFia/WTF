@@ -1,0 +1,41 @@
+@if (rows().length > 0) {
+  @if (variant() === 'receipt') {
+    <div style="margin-top: 6px; padding-left: 12px">
+      @for (row of rows(); track $index) {
+        <div
+          style="display: flex; justify-content: space-between; font-size: 12px; margin-top: 2px"
+          [style.color]="receiptRowColor[row.kind]"
+          [style.font-weight]="row.kind === 'discount' ? 600 : 400"
+        >
+          <span>
+            <span style="display: inline-block; width: 10px">{{ row.sign }}</span>
+            {{ row.label }}
+            @if (row.detail) {
+              <span style="color: var(--color-gray-400)"> · {{ row.detail }}</span>
+            }
+          </span>
+          <span style="white-space: nowrap; margin-left: 12px">{{ row.sign }} {{ row.text }}</span>
+        </div>
+      }
+    </div>
+  } @else {
+    <div class="space-y-1 text-xs" role="list" aria-label="Price breakdown">
+      @for (row of rows(); track $index) {
+        <div
+          role="listitem"
+          class="grid grid-cols-[1fr_auto] items-baseline gap-3"
+          [class]="cardRowClass[row.kind]"
+        >
+          <div class="min-w-0 wrap-break-word">
+            <span class="inline-block w-2.5" aria-hidden="true">{{ row.sign }}</span>
+            {{ row.label }}
+            @if (row.detail) {
+              <span class="font-normal text-gray-400"> · {{ row.detail }}</span>
+            }
+          </div>
+          <div class="shrink-0 text-right tabular-nums">{{ row.sign }} {{ row.text }}</div>
+        </div>
+      }
+    </div>
+  }
+}
