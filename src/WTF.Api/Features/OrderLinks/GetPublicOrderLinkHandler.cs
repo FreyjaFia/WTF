@@ -77,6 +77,10 @@ public class GetPublicOrderLinkHandler(WTFDbContext db, IHttpContextAccessor htt
 
         var shown = products.Select(p => p.Id).ToHashSet();
 
+        // Rules of one promotion share its limits, so the page needs to know which belong together. An opaque key, never
+        // the promotion's id.
+        var groupKeys = new Dictionary<Guid, string>();
+
         return [.. loaded.RulesByProductId
             .Where(pair => shown.Contains(pair.Key))
             .SelectMany(pair => pair.Value.Select(rule => (ProductId: pair.Key, Rule: rule)))
@@ -87,7 +91,11 @@ public class GetPublicOrderLinkHandler(WTFDbContext db, IHttpContextAccessor htt
                 x.Rule.FixedPrice,
                 x.Rule.PercentOff,
                 [.. x.Rule.RequiredAddOns.Select(a => new PublicDealAddOnDto(a.AddOnProductId, a.Quantity))],
-                x.Remaining))];
+                x.Remaining,
+                x.Rule.MaxPerOrder,
+                x.Rule.PromotionId is { } promotionId
+                    ? groupKeys.TryGetValue(promotionId, out var key) ? key : groupKeys[promotionId] = $"g{groupKeys.Count}"
+                    : null))];
     }
 
     private static PublicProductDto ToPublic(ProductDto product) => new(

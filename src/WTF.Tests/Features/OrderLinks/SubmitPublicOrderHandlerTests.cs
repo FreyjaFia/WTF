@@ -4,9 +4,9 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.OrderLinks;
+using WTF.Api.Features.Orders;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
-using WTF.Api.Features.Orders;
 using WTF.Api.Features.Products.Enums;
 using WTF.Api.Features.Promotions.DTOs;
 using WTF.Api.Services;
@@ -164,12 +164,13 @@ public class SubmitPublicOrderHandlerTests
             amount, instructions, tips);
 
     private async Task AddDiscountAsync(Guid productId, decimal? amountOff, decimal? percent, Guid[]? addOns = null,
-        bool active = true, int? maxRedemptions = null)
+        bool active = true, int? maxRedemptions = null, int? maxPerOrder = null)
     {
         var promo = new Promotion
         {
             Id = Guid.NewGuid(),
             Name = "Disc",
+            MaxPerOrder = maxPerOrder,
             TypeId = PromotionTypeIds.DiscountedProduct,
             IsActive = active,
             MaxRedemptions = maxRedemptions,
@@ -247,12 +248,33 @@ public class SubmitPublicOrderHandlerTests
     }
 
     [Fact]
-    public async Task Discount_WithFewerUsesLeftThanTheQuantity_IsNotApplied()
+    public async Task Discount_WithFewerUsesLeftThanTheQuantity_CoversOnlyTheUsesLeft()
     {
         await AddDiscountAsync(_croissant.Id, null, 50m, maxRedemptions: 1);
 
-        (await Submit(Request(Items(_croissant, 2))))!.Total.ShouldBe(240m);
-        (await Submit(Request(Items(_croissant, 1))))!.Total.ShouldBe(60m);
+        (await Submit(Request(Items(_croissant, 2))))!.Total.ShouldBe(60m + 120m);
+        // The first order is waiting and holds the only use.
+        (await Submit(Request(Items(_croissant, 1))))!.Total.ShouldBe(120m);
+    }
+
+    [Fact]
+    public async Task Discount_WithALimitPerOrder_ChargesTheRestFullPrice()
+    {
+        await AddDiscountAsync(_croissant.Id, null, 50m, maxPerOrder: 2);
+
+        (await Submit(Request(Items(_croissant, 5), amount: 1000)))!.Total.ShouldBe(2 * 60m + 3 * 120m);
+    }
+
+    [Fact]
+    public async Task Discount_WithALimitPerOrder_ARefusalExplainsTheLimit()
+    {
+        await AddDiscountAsync(_croissant.Id, null, 50m, maxPerOrder: 2);
+
+        var ex = await Should.ThrowAsync<InvalidOperationException>(
+            () => Submit(Request(Items(_croissant, 5), amount: 1000) with { ExpectedTotal = 5 * 60m }));
+
+        ex.Message.ShouldContain("limit 2 per order");
+        ex.Message.ShouldContain("480.00");
     }
 
     [Fact]

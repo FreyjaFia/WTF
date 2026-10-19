@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using System.Reflection;
-using WTF.Api.Features.OrderLinks.DTOs;
 using WTF.Api.Features.OrderLinks;
+using WTF.Api.Features.OrderLinks.DTOs;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Features.Products.Enums;
 using WTF.Api.Features.Promotions.DTOs;
@@ -525,12 +525,13 @@ public class PublicOrderLinkTests
     }
 
     private async Task<Guid> AddDealAsync(Guid productId, decimal? amountOff, decimal? percent, Guid[]? addOns = null,
-        bool active = true, DateTime? end = null, byte? days = null, int? maxRedemptions = null)
+        bool active = true, DateTime? end = null, byte? days = null, int? maxRedemptions = null, int? maxPerOrder = null)
     {
         var promo = new Promotion
         {
             Id = Guid.NewGuid(),
             Name = "Secret internal name",
+            MaxPerOrder = maxPerOrder,
             TypeId = PromotionTypeIds.DiscountedProduct,
             IsActive = active,
             EndDate = end,
@@ -568,6 +569,27 @@ public class PublicOrderLinkTests
         deal.AddOns.ShouldHaveSingleItem().AddOnProductId.ShouldBe(small.Id);
         deal.Remaining.ShouldBeNull();
         System.Text.Json.JsonSerializer.Serialize(dto.Catalog).ShouldNotContain("Secret internal name");
+    }
+
+    [Fact]
+    public async Task OpenLink_ShowsTheLimitPerOrder_AndAnOpaqueKeyPerPromotion()
+    {
+        var customer = await AddCustomerAsync();
+        var link = await AddLinkAsync(customer.Id);
+        var latte = await AddProductAsync("Latte", 150);
+        var croissant = await AddProductAsync("Croissant", 120);
+        var promo = await AddDealAsync(latte.Id, null, 10m, maxPerOrder: 2);
+        await AddDealAsync(croissant.Id, null, 10m);
+
+        var deals = (await OpenLink(link.Token))!.Catalog.Deals;
+
+        var limited = deals.Single(d => d.ProductId == latte.Id);
+        limited.MaxPerOrder.ShouldBe(2);
+        var plain = deals.Single(d => d.ProductId == croissant.Id);
+        plain.MaxPerOrder.ShouldBeNull();
+        limited.GroupKey.ShouldNotBeNullOrEmpty();
+        limited.GroupKey.ShouldNotBe(plain.GroupKey);
+        limited.GroupKey.ShouldNotContain(promo.ToString());
     }
 
     [Fact]

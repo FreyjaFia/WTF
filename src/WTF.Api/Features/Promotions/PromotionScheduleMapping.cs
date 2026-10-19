@@ -39,6 +39,11 @@ internal static class PromotionScheduleMapping
         {
             throw new InvalidOperationException($"The usage limit must be between 1 and {MaxRedemptionsLimit:N0}.");
         }
+
+        if (request.MaxPerOrder is { } perOrder && (perOrder < 1 || perOrder > MaxRedemptionsLimit))
+        {
+            throw new InvalidOperationException($"The limit per order must be between 1 and {MaxRedemptionsLimit:N0}.");
+        }
     }
 
     // A request without a schedule leaves the promotion as it is; one with empty fields clears it.
@@ -53,6 +58,7 @@ internal static class PromotionScheduleMapping
         promotion.StartTime = ParseTime(request.StartTime);
         promotion.EndTime = ParseTime(request.EndTime);
         promotion.MaxRedemptions = request.MaxRedemptions;
+        promotion.MaxPerOrder = request.MaxPerOrder;
     }
 
     public static PromotionScheduleDto ToDto(Promotion promotion, int redemptions)
@@ -62,7 +68,8 @@ internal static class PromotionScheduleMapping
             promotion.StartTime?.ToString("HH:mm", CultureInfo.InvariantCulture),
             promotion.EndTime?.ToString("HH:mm", CultureInfo.InvariantCulture),
             promotion.MaxRedemptions,
-            redemptions);
+            redemptions,
+            promotion.MaxPerOrder);
     }
 
     private static TimeOnly? ParseTime(string? text)

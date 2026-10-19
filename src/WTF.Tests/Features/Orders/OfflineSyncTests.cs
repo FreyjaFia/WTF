@@ -3,9 +3,9 @@ using Microsoft.EntityFrameworkCore;
 using NSubstitute;
 using WTF.Api.Common.Auth;
 using WTF.Api.Features.Audit.Enums;
+using WTF.Api.Features.Orders;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
-using WTF.Api.Features.Orders;
 using WTF.Api.Features.Promotions.DTOs;
 using WTF.Api.Services;
 using WTF.Domain.Entities;
@@ -73,7 +73,7 @@ public class OfflineSyncTests
 
     // ---- limited promotions and the offline sync ----
 
-    private async Task<Guid> SeedLimitedDiscount(Guid productId, int maxRedemptions, decimal percent = 50m)
+    private async Task<Guid> SeedLimitedDiscount(Guid productId, int maxRedemptions, decimal percent = 50m, int? maxPerOrder = null)
     {
         await using var db = TestDb.Create(_dbName);
         var promo = new Promotion
@@ -83,6 +83,7 @@ public class OfflineSyncTests
             TypeId = PromotionTypeIds.DiscountedProduct,
             IsActive = true,
             MaxRedemptions = maxRedemptions,
+            MaxPerOrder = maxPerOrder,
             CreatedAt = Now,
             CreatedBy = _userId
         };
@@ -121,6 +122,32 @@ public class OfflineSyncTests
         saved.OrderItems.Single().Price.ShouldBe(50m);
         saved.OrderItems.Single().DiscountPromotionId.ShouldBe(promo);
         (await DiscountUses(promo)).ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task Sync_ASaleSplitByALimitPerOrder_IsSavedAsQuotedAndUsesOnlyTheDiscountedItems()
+    {
+        var croissant = await SeedProduct("Croissant", 100m);
+        var promo = await SeedLimitedDiscount(croissant, 10, maxPerOrder: 2);
+
+        var result = await SyncOne(Order("OFF-20-aaaa", OrderStatusEnum.Completed, Line(croissant, 2, 50m), Line(croissant, 1, 100m)));
+
+        result.Status.ShouldBe(OrderStatusEnum.Completed);
+        result.Reasons.ShouldBeEmpty();
+        (await DiscountUses(promo)).ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task Sync_ALineQuotedAtOnePriceButNowCoveredInPart_IsHeld()
+    {
+        var croissant = await SeedProduct("Croissant", 100m);
+        var promo = await SeedLimitedDiscount(croissant, 10, maxPerOrder: 2);
+
+        var result = await SyncOne(Order("OFF-21-aaaa", OrderStatusEnum.Completed, Line(croissant, 3, 50m)));
+
+        result.Status.ShouldBe(OrderStatusEnum.PendingReview);
+        result.Reasons.ShouldBe(["Croissant: the promotion now covers only 2 of 3."]);
+        (await DiscountUses(promo)).ShouldBe(0);
     }
 
     [Fact]

@@ -52,7 +52,7 @@ public static class PublicOrderMapping
 
     private static PublicOrderDto ToDto(
         Order order, IReadOnlyDictionary<(Guid ProductId, Guid AddOnId), decimal> overridePrices,
-        IReadOnlyDictionary<Guid, decimal> previewPrices)
+        IReadOnlyDictionary<Guid, PreviewDiscount> previewPrices)
     {
         var (label, kind) = StatusOf(order.StatusId, order.RejectionReason, order.ReadyAt, order.FulfillmentType);
 
@@ -60,10 +60,9 @@ public static class PublicOrderMapping
             .Where(oi => oi.ParentOrderItemId == null && oi.BundlePromotionId == null)
             .OrderBy(oi => oi.SortOrder)
             .ThenBy(oi => oi.Id)
-            .Select(parent => new PublicOrderItemDto(
-                parent.Product.Name,
-                parent.Quantity,
-                parent.Price ?? (previewPrices.TryGetValue(parent.Id, out var previewPrice) ? previewPrice : parent.Product.Price),
+            .SelectMany(parent =>
+            {
+                List<PublicOrderAddOnDto> AddOns() =>
                 [.. order.OrderItems
                     .Where(child => child.ParentOrderItemId == parent.Id && child.BundlePromotionId == null)
                     .OrderBy(child => child.SortOrder)
@@ -74,8 +73,34 @@ public static class PublicOrderMapping
                         child.Price
                             ?? (overridePrices.TryGetValue((parent.ProductId, child.ProductId), out var price)
                                 ? price
-                                : child.Product.Price)))],
-                parent.SpecialInstructions))
+                                : child.Product.Price)))];
+
+                // A pending order whose discount covers only part of a line shows two rows: the discounted items and the rest.
+                if (parent.Price is null && previewPrices.TryGetValue(parent.Id, out var preview))
+                {
+                    var discounted = Math.Clamp(preview.Quantity, 0, parent.Quantity);
+                    var rows = new List<PublicOrderItemDto>();
+                    if (discounted > 0)
+                    {
+                        rows.Add(new PublicOrderItemDto(parent.Product.Name, discounted, preview.UnitPrice, AddOns(), parent.SpecialInstructions));
+                    }
+
+                    if (discounted < parent.Quantity)
+                    {
+                        rows.Add(new PublicOrderItemDto(
+                            parent.Product.Name, parent.Quantity - discounted, parent.Product.Price, AddOns(), parent.SpecialInstructions));
+                    }
+
+                    return rows;
+                }
+
+                return [new PublicOrderItemDto(
+                    parent.Product.Name,
+                    parent.Quantity,
+                    parent.Price ?? parent.Product.Price,
+                    AddOns(),
+                    parent.SpecialInstructions)];
+            })
             .ToList();
 
         return new PublicOrderDto(

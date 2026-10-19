@@ -2,12 +2,16 @@ using WTF.Domain.Entities;
 
 namespace WTF.Calculations.Orders;
 
+// A discount a pending order would get today: its unit price and how many items of the line it covers (a limit can cover
+// only part of a line; the rest pays the list price).
+public readonly record struct PreviewDiscount(decimal UnitPrice, int Quantity);
+
 public static class OrderMetrics
 {
     public static decimal ComputeOrderTotal(
         Order order,
         IReadOnlyDictionary<(Guid ProductId, Guid AddOnId), decimal> addOnOverridePrices,
-        IReadOnlyDictionary<Guid, decimal>? previewUnitPrices = null)
+        IReadOnlyDictionary<Guid, PreviewDiscount>? previewDiscounts = null)
     {
         var regularTotal = order.OrderItems
             .Where(oi => oi.ParentOrderItemId == null && oi.BundlePromotionId == null)
@@ -15,7 +19,7 @@ public static class OrderMetrics
                 parent,
                 order.OrderItems.Where(child => child.ParentOrderItemId == parent.Id && child.BundlePromotionId == null),
                 addOnOverridePrices,
-                previewUnitPrices));
+                previewDiscounts));
 
         var bundleTotal = order.OrderBundlePromotions.Sum(bundle => bundle.UnitPrice * bundle.Quantity);
         return regularTotal + bundleTotal;
@@ -25,12 +29,19 @@ public static class OrderMetrics
         OrderItem parentItem,
         IEnumerable<OrderItem> addOnItems,
         IReadOnlyDictionary<(Guid ProductId, Guid AddOnId), decimal> addOnOverridePrices,
-        IReadOnlyDictionary<Guid, decimal>? previewUnitPrices = null)
+        IReadOnlyDictionary<Guid, PreviewDiscount>? previewDiscounts = null)
     {
-        // An order that is not completed yet has no saved price: use the discounted price it would get today, if any.
-        var parentUnitPrice = parentItem.Price
-            ?? (previewUnitPrices is not null && previewUnitPrices.TryGetValue(parentItem.Id, out var preview) ? preview : parentItem.Product.Price);
         var addOnPerUnit = addOnItems.Sum(child => AddOnUnitPrice(parentItem, child, addOnOverridePrices) * child.Quantity);
+
+        // An order that is not completed yet has no saved price: use the discount it would get today, if any.
+        if (parentItem.Price is null && previewDiscounts is not null && previewDiscounts.TryGetValue(parentItem.Id, out var preview))
+        {
+            var discounted = Math.Clamp(preview.Quantity, 0, parentItem.Quantity);
+            return (preview.UnitPrice + addOnPerUnit) * discounted
+                + (parentItem.Product.Price + addOnPerUnit) * (parentItem.Quantity - discounted);
+        }
+
+        var parentUnitPrice = parentItem.Price ?? parentItem.Product.Price;
 
         return (parentUnitPrice + addOnPerUnit) * parentItem.Quantity;
     }

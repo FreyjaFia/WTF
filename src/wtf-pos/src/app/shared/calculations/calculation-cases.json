@@ -662,7 +662,7 @@
       }
     },
     {
-      "name": "a rule with too few uses left for the quantity is skipped",
+      "name": "a rule with too few uses left covers only the uses it has",
       "basePrice": 100,
       "quantity": 3,
       "cartAddOns": [
@@ -684,7 +684,94 @@
           "remaining": 2
         }
       ],
-      "expected": null
+      "expected": {
+        "price": 90,
+        "label": "Promo -10%",
+        "discountedQuantity": 2
+      }
+    },
+    {
+      "name": "a limit per order covers only that many items",
+      "basePrice": 100,
+      "quantity": 5,
+      "cartAddOns": [],
+      "rules": [
+        {
+          "fixedPrice": null,
+          "percentOff": 50,
+          "requiredAddOns": [],
+          "maxPerOrder": 3
+        }
+      ],
+      "expected": {
+        "price": 50,
+        "label": "Promo -50%",
+        "discountedQuantity": 3
+      }
+    },
+    {
+      "name": "the smaller of the uses left and the limit per order wins",
+      "basePrice": 100,
+      "quantity": 5,
+      "cartAddOns": [],
+      "rules": [
+        {
+          "fixedPrice": null,
+          "percentOff": 50,
+          "requiredAddOns": [],
+          "remaining": 2,
+          "maxPerOrder": 4
+        }
+      ],
+      "expected": {
+        "price": 50,
+        "label": "Promo -50%",
+        "discountedQuantity": 2
+      }
+    },
+    {
+      "name": "a limit per order that is not reached discounts every item",
+      "basePrice": 100,
+      "quantity": 2,
+      "cartAddOns": [],
+      "rules": [
+        {
+          "fixedPrice": null,
+          "percentOff": 50,
+          "requiredAddOns": [],
+          "remaining": 9,
+          "maxPerOrder": 4
+        }
+      ],
+      "expected": {
+        "price": 50,
+        "label": "Promo -50%",
+        "discountedQuantity": 2
+      }
+    },
+    {
+      "name": "the rule that saves more on the whole line wins even if it covers fewer items",
+      "basePrice": 100,
+      "quantity": 4,
+      "cartAddOns": [],
+      "rules": [
+        {
+          "fixedPrice": null,
+          "percentOff": 50,
+          "requiredAddOns": [],
+          "maxPerOrder": 1
+        },
+        {
+          "fixedPrice": null,
+          "percentOff": 20,
+          "requiredAddOns": []
+        }
+      ],
+      "expected": {
+        "price": 80,
+        "label": "Promo -20%",
+        "discountedQuantity": 4
+      }
     },
     {
       "name": "an exhausted rule is skipped and the next rule applies",

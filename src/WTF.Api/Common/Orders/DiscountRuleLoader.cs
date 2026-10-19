@@ -33,9 +33,13 @@ internal static class DiscountRuleLoader
 
         var limited = live.Where(p => p.MaxRedemptions.HasValue).ToList();
         var used = await PromotionUsage.CountAsync(db, [.. limited.Select(p => p.Id)], exceptOrderId, cancellationToken);
-        var budget = new DiscountBudget(limited.ToDictionary(
+        var pool = limited.ToDictionary(
             p => p.Id,
-            p => Math.Max(0, p.MaxRedemptions!.Value - used[p.Id])));
+            p => Math.Max(0, p.MaxRedemptions!.Value - used[p.Id]));
+        var perOrder = live
+            .Where(p => p.MaxPerOrder.HasValue)
+            .ToDictionary(p => p.Id, p => p.MaxPerOrder!.Value);
+        var budget = new DiscountBudget(pool, perOrder);
 
         var rules = live
             .SelectMany(p => p.DiscountedProductPromotions.Select(d => (Promotion: p, Rule: d)))
@@ -46,7 +50,8 @@ internal static class DiscountRuleLoader
                     x.Rule.FixedPrice,
                     x.Rule.PercentOff,
                     [.. x.Rule.DiscountedProductPromotionAddOns.Select(a => (a.AddOnProductId, a.Quantity))],
-                    x.Promotion.Id)).ToList());
+                    x.Promotion.Id,
+                    x.Promotion.MaxPerOrder)).ToList());
 
         return new Loaded(rules, budget);
     }

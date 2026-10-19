@@ -88,6 +88,12 @@ internal static class BundlePromotionResolver
                     problem = "The bundle price cannot be negative.";
                 }
 
+                // A bundle is one unit, so more than the limit per order cannot be charged "the rest at full price": refuse.
+                if (problem is null && promotion.MaxPerOrder.HasValue && quantity > promotion.MaxPerOrder.Value)
+                {
+                    problem = $"Bundle promotion '{promotion.Name}' can be bought up to {promotion.MaxPerOrder.Value} per order.";
+                }
+
                 if (problem is null && promotion.MaxRedemptions.HasValue)
                 {
                     var left = promotion.MaxRedemptions.Value - used[promotion.Id];

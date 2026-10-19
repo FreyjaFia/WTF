@@ -307,7 +307,7 @@ public class UpdateOrderHandler(
                     item.Quantity,
                     discountBudget)
                 : null;
-            discountBudget?.Use(appliedDiscount?.PromotionId, item.Quantity);
+            discountBudget?.Use(appliedDiscount?.PromotionId, appliedDiscount?.DiscountedQuantity ?? 0);
             var discountedPrice = appliedDiscount?.Price;
             var addOnPrices = new List<(OrderItemRequestDto AddOn, decimal Price)>();
             foreach (var addOn in item.AddOns)
@@ -335,7 +335,13 @@ public class UpdateOrderHandler(
         {
             var serverTotal = pricedItems
                 .Where(p => !p.Item.BundlePromotionId.HasValue)
-                .Sum(p => ((p.DiscountedPrice ?? p.Product.Price) + p.AddOnPrices.Sum(a => a.Price * a.AddOn.Quantity)) * p.Item.Quantity)
+                .Sum(p =>
+                {
+                    var addOns = p.AddOnPrices.Sum(a => a.Price * a.AddOn.Quantity);
+                    var discounted = p.AppliedDiscount?.DiscountedQuantity ?? 0;
+                    return ((p.DiscountedPrice ?? p.Product.Price) + addOns) * discounted
+                        + (p.Product.Price + addOns) * (p.Item.Quantity - discounted);
+                })
                 + request.BundlePromotions.Sum(b => bundlePriceByPromotionId[b.PromotionId] * b.Quantity);
             OrderTotalCheck.EnsureUnchanged(request.ExpectedTotal, serverTotal);
         }
@@ -407,73 +413,85 @@ public class UpdateOrderHandler(
             db.OrderBundlePromotions.AddRange(orderBundlePromotions);
         }
 
+        var sortOrder = 0;
         for (var itemIndex = 0; itemIndex < pricedItems.Count; itemIndex++)
         {
             var (item, product, discountedPrice, appliedDiscount, addOnPrices) = pricedItems[itemIndex];
-            var newItem = new OrderItem
-            {
-                Id = Guid.NewGuid(),
-                OrderId = order.Id,
-                ProductId = item.ProductId,
-                Quantity = item.Quantity,
-                SpecialInstructions = item.SpecialInstructions,
-                Price = null,
-                SortOrder = itemIndex,
-                ParentOrderItemId = null,
-                BundlePromotionId = item.BundlePromotionId
-            };
+            // A limit can cover only part of a line (the uses left, or the most one order may have): the discounted
+            // items and the rest become two lines, the rest at full price.
+            (int Quantity, bool Discounted)[] segments = appliedDiscount is { IsPartial: true }
+                ? [(appliedDiscount.DiscountedQuantity, true), (item.Quantity - appliedDiscount.DiscountedQuantity, false)]
+                : [(item.Quantity, appliedDiscount is not null)];
 
-            // Capture price snapshot when order is Completed or Cancelled
-            if (shouldCapturePrice)
+            foreach (var segment in segments)
             {
-                newItem.Price = discountedPrice ?? product.Price;
-                newItem.OriginalPrice = product.Price;
-                newItem.PromoLabel = appliedDiscount?.LabelWith(addOnPrices.Sum(addOn => addOn.Price * addOn.AddOn.Quantity));
-                newItem.DiscountPromotionId = appliedDiscount?.PromotionId;
-
-                if (isOverride
-                    && priceSnapshots.TryGetValue((item.ProductId, item.BundlePromotionId), out var snapshots)
-                    && snapshots.Count > 0)
-                {
-                    var snapshot = snapshots.Dequeue();
-                    newItem.Price = snapshot.Price ?? newItem.Price;
-                    newItem.OriginalPrice = snapshot.OriginalPrice;
-                    newItem.PromoLabel = snapshot.PromoLabel;
-                    newItem.DiscountPromotionId = snapshot.DiscountPromotionId;
-                }
-            }
-            else if (reservesDiscount)
-            {
-                newItem.DiscountPromotionId = appliedDiscount?.PromotionId;
-            }
-
-            db.OrderItems.Add(newItem);
-
-            foreach (var (addOn, effectiveAddOnPrice) in addOnPrices)
-            {
-                var addOnItem = new OrderItem
+                var newItem = new OrderItem
                 {
                     Id = Guid.NewGuid(),
                     OrderId = order.Id,
-                    ProductId = addOn.ProductId,
-                    Quantity = addOn.Quantity,
-                    SpecialInstructions = addOn.SpecialInstructions,
+                    ProductId = item.ProductId,
+                    Quantity = segment.Quantity,
+                    SpecialInstructions = item.SpecialInstructions,
                     Price = null,
-                    SortOrder = 0,
-                    ParentOrderItemId = newItem.Id,
+                    SortOrder = sortOrder++,
+                    ParentOrderItemId = null,
                     BundlePromotionId = item.BundlePromotionId
                 };
 
-                // Capture price if order is Completed or Cancelled
-                if (newStatus == OrderStatusEnum.Completed || newStatus == OrderStatusEnum.Cancelled)
+                // Capture price snapshot when order is Completed or Cancelled
+                if (shouldCapturePrice)
                 {
-                    addOnItem.Price = isOverride
-                        && addOnPriceSnapshots.TryGetValue((item.ProductId, addOn.ProductId), out var paidAddOnPrice)
-                            ? paidAddOnPrice
-                            : effectiveAddOnPrice;
+                    newItem.Price = segment.Discounted ? discountedPrice ?? product.Price : product.Price;
+                    newItem.OriginalPrice = product.Price;
+                    newItem.PromoLabel = segment.Discounted
+                        ? appliedDiscount?.LabelWith(addOnPrices.Sum(addOn => addOn.Price * addOn.AddOn.Quantity))
+                        : null;
+                    newItem.DiscountPromotionId = segment.Discounted ? appliedDiscount?.PromotionId : null;
+
+                    if (isOverride
+                        && priceSnapshots.TryGetValue((item.ProductId, item.BundlePromotionId), out var snapshots)
+                        && snapshots.Count > 0)
+                    {
+                        var snapshot = snapshots.Dequeue();
+                        newItem.Price = snapshot.Price ?? newItem.Price;
+                        newItem.OriginalPrice = snapshot.OriginalPrice;
+                        newItem.PromoLabel = snapshot.PromoLabel;
+                        newItem.DiscountPromotionId = snapshot.DiscountPromotionId;
+                    }
+                }
+                else if (reservesDiscount)
+                {
+                    newItem.DiscountPromotionId = segment.Discounted ? appliedDiscount?.PromotionId : null;
                 }
 
-                db.OrderItems.Add(addOnItem);
+                db.OrderItems.Add(newItem);
+
+                foreach (var (addOn, effectiveAddOnPrice) in addOnPrices)
+                {
+                    var addOnItem = new OrderItem
+                    {
+                        Id = Guid.NewGuid(),
+                        OrderId = order.Id,
+                        ProductId = addOn.ProductId,
+                        Quantity = addOn.Quantity,
+                        SpecialInstructions = addOn.SpecialInstructions,
+                        Price = null,
+                        SortOrder = 0,
+                        ParentOrderItemId = newItem.Id,
+                        BundlePromotionId = item.BundlePromotionId
+                    };
+
+                    // Capture price if order is Completed or Cancelled
+                    if (newStatus == OrderStatusEnum.Completed || newStatus == OrderStatusEnum.Cancelled)
+                    {
+                        addOnItem.Price = isOverride
+                            && addOnPriceSnapshots.TryGetValue((item.ProductId, addOn.ProductId), out var paidAddOnPrice)
+                                ? paidAddOnPrice
+                                : effectiveAddOnPrice;
+                    }
+
+                    db.OrderItems.Add(addOnItem);
+                }
             }
         }
 

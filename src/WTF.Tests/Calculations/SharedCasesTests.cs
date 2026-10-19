@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
-using System.Text.Json;
 using System.Text;
+using System.Text.Json;
 using WTF.Calculations.Orders;
 using WTF.Calculations.Sales;
 using WTF.Domain.Entities;
@@ -32,9 +32,9 @@ public class SharedCasesTests
 
     private sealed record IdQuantity(string Id, int Quantity);
 
-    private sealed record RuleCase(decimal? FixedPrice, decimal? PercentOff, List<IdQuantity> RequiredAddOns, int? Remaining = null);
+    private sealed record RuleCase(decimal? FixedPrice, decimal? PercentOff, List<IdQuantity> RequiredAddOns, int? Remaining = null, int? MaxPerOrder = null);
 
-    private sealed record ExpectedDiscount(decimal Price, string? Label);
+    private sealed record ExpectedDiscount(decimal Price, string? Label, int? DiscountedQuantity = null);
 
     private sealed record BestDiscountCase(
         string Name, decimal BasePrice, List<IdQuantity> CartAddOns, List<RuleCase> Rules, ExpectedDiscount? Expected, int? Quantity = null);
@@ -229,12 +229,17 @@ public class SharedCasesTests
                 r.FixedPrice,
                 r.PercentOff,
                 [.. r.RequiredAddOns.Select(a => (IdFor(a.Id), a.Quantity))],
-                promotionIds[index]))],
+                promotionIds[index],
+                r.MaxPerOrder))],
         };
         var remaining = c.Rules
             .Select((r, index) => (Id: promotionIds[index], r.Remaining))
             .Where(x => x.Remaining.HasValue)
             .ToDictionary(x => x.Id, x => x.Remaining!.Value);
+        var perOrder = c.Rules
+            .Select((r, index) => (Id: promotionIds[index], r.MaxPerOrder))
+            .Where(x => x.MaxPerOrder.HasValue)
+            .ToDictionary(x => x.Id, x => x.MaxPerOrder!.Value);
 
         var result = PromotionPricing.GetDiscountedUnitPrice(
             c.BasePrice,
@@ -242,7 +247,7 @@ public class SharedCasesTests
             c.CartAddOns.Select(a => (IdFor(a.Id), a.Quantity)),
             rules,
             c.Quantity ?? 1,
-            new DiscountBudget(remaining));
+            new DiscountBudget(remaining, perOrder));
 
         if (c.Expected is null)
         {
@@ -253,5 +258,6 @@ public class SharedCasesTests
         result.ShouldNotBeNull();
         result.Price.ShouldBe(c.Expected.Price);
         result.Label.ShouldBe(c.Expected.Label);
+        result.DiscountedQuantity.ShouldBe(c.Expected.DiscountedQuantity ?? c.Quantity ?? 1);
     }
 }

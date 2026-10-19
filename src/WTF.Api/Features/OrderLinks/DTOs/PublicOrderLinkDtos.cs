@@ -25,7 +25,9 @@ public record PublicDealDto(
     decimal? AmountOff,
     decimal? PercentOff,
     List<PublicDealAddOnDto> AddOns,
-    int? Remaining
+    int? Remaining,
+    int? MaxPerOrder = null,
+    string? GroupKey = null
 );
 
 public record PublicCatalogDto(

@@ -141,12 +141,20 @@ internal static class OfflineOrderReview
                     rulesByProductId,
                     item.Quantity,
                     loaded.Budget);
-                loaded.Budget.Use(discounted?.PromotionId, item.Quantity);
+                loaded.Budget.Use(discounted?.PromotionId, discounted?.DiscountedQuantity ?? 0);
 
-                var current = discounted?.Price ?? product.Price;
-                if (item.QuotedPrice.HasValue && current != item.QuotedPrice.Value)
+                if (discounted is { IsPartial: true } && item.QuotedPrice.HasValue)
                 {
-                    reasons.Add($"{product.Name} now costs {current:0.00}, quoted {item.QuotedPrice.Value:0.00}.");
+                    // A limit now covers only part of the line, so no single quoted price can match it.
+                    reasons.Add($"{product.Name}: the promotion now covers only {discounted.DiscountedQuantity} of {item.Quantity}.");
+                }
+                else
+                {
+                    var current = discounted?.Price ?? product.Price;
+                    if (item.QuotedPrice.HasValue && current != item.QuotedPrice.Value)
+                    {
+                        reasons.Add($"{product.Name} now costs {current:0.00}, quoted {item.QuotedPrice.Value:0.00}.");
+                    }
                 }
             }
 

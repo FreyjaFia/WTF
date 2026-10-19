@@ -109,14 +109,16 @@ public sealed record PromotionScheduleRequest(
     byte? DaysOfWeek,
     string? StartTime,
     string? EndTime,
-    int? MaxRedemptions);
+    int? MaxRedemptions,
+    int? MaxPerOrder = null);
 
 public sealed record PromotionScheduleDto(
     byte? DaysOfWeek,
     string? StartTime,
     string? EndTime,
     int? MaxRedemptions,
-    int Redemptions);
+    int Redemptions,
+    int? MaxPerOrder = null);
 
 public sealed record PromotionImageDto(
     Guid PromotionId,

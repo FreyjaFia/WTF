@@ -4,9 +4,9 @@ using System.Text.RegularExpressions;
 using WTF.Api.Common.Orders;
 using WTF.Api.Common.Time;
 using WTF.Api.Features.OrderLinks.DTOs;
+using WTF.Api.Features.Orders;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
-using WTF.Api.Features.Orders;
 using WTF.Calculations.Orders;
 using WTF.Domain.Data;
 
@@ -107,11 +107,11 @@ public class SubmitPublicOrderHandler(
         // The total the customer is told, and the uses the order then holds, must come from the same view of the promotion uses.
         using var gate = await PromotionLimitGate.EnterAsync(cancellationToken);
 
-        var total = await ComputeTotalAsync(lines, cancellationToken);
+        var (total, limitNotes) = await ComputeTotalAsync(lines, cancellationToken);
 
         // The page showed a total built from the promotions it knew. If one ran out or changed since, the customer is asked to
         // look again instead of being charged a total they never saw.
-        OrderTotalCheck.EnsureUnchanged(request.ExpectedTotal, total);
+        OrderTotalCheck.EnsureUnchanged(request.ExpectedTotal, total, limitNotes);
 
         // An optional tip for the shop, on top of the total. Zero is the same as none.
         var tip = Math.Round(request.Tips ?? 0m, 2, MidpointRounding.AwayFromZero);
@@ -297,7 +297,7 @@ public class SubmitPublicOrderHandler(
     /// The price the customer will see, from today's catalog: product price plus each add-on at the price set for that
     /// product, less the discounted-product promotions on right now. The shop prices the order again when it completes it.
     /// </summary>
-    private async Task<decimal> ComputeTotalAsync(List<Line> lines, CancellationToken cancellationToken)
+    private async Task<(decimal Total, List<string> LimitNotes)> ComputeTotalAsync(List<Line> lines, CancellationToken cancellationToken)
     {
         var parentIds = lines.Select(l => l.ProductId).Distinct().ToList();
         var addOnIds = lines.SelectMany(l => l.AddOns.Select(a => a.ProductId)).Distinct().ToList();
@@ -305,7 +305,7 @@ public class SubmitPublicOrderHandler(
 
         var products = await db.Products
             .Where(p => ids.Contains(p.Id))
-            .Select(p => new { p.Id, p.Price, p.IsActive, p.IsAddOn })
+            .Select(p => new { p.Id, p.Name, p.Price, p.IsActive, p.IsAddOn })
             .ToDictionaryAsync(p => p.Id, cancellationToken);
 
         const string unavailable = "Some items are no longer available. Please refresh the menu and try again.";
@@ -333,23 +333,74 @@ public class SubmitPublicOrderHandler(
             null,
             cancellationToken);
 
-        return lines.Sum(line =>
+        var total = 0m;
+        var notes = new List<string>();
+        foreach (var line in lines)
         {
             var addOnPerUnit = line.AddOns.Sum(a =>
                 (overrides.TryGetValue((line.ProductId, a.ProductId), out var price) ? price : products[a.ProductId].Price)
                 * a.Quantity);
+            var product = products[line.ProductId];
+            var addOns = line.AddOns.Select(a => (a.ProductId, a.Quantity)).ToList();
 
-            // The discount the shop will apply when it completes the order, with the promotions on right now.
+            // What stops a limited promotion from covering this whole line, taken before the line uses any of it.
+            var limited = FindLimitedRule(loaded, line.ProductId, addOns, line.Quantity);
+
+            // The discount the shop will apply when it completes the order, with the promotions on right now. A limit
+            // can cover only part of a line; the rest is charged full price.
             var applied = PromotionPricing.GetDiscountedUnitPrice(
-                products[line.ProductId].Price,
-                line.ProductId,
-                line.AddOns.Select(a => (a.ProductId, a.Quantity)),
-                loaded.RulesByProductId,
-                line.Quantity,
-                loaded.Budget);
-            loaded.Budget.Use(applied?.PromotionId, line.Quantity);
+                product.Price, line.ProductId, addOns, loaded.RulesByProductId, line.Quantity, loaded.Budget);
+            var discounted = applied?.DiscountedQuantity ?? 0;
 
-            return ((applied?.Price ?? products[line.ProductId].Price) + addOnPerUnit) * line.Quantity;
-        });
+            if (limited is not null && discounted < line.Quantity && (applied is null || applied.PromotionId == limited.PromotionId))
+            {
+                notes.Add(LimitNote(product.Name, line.Quantity, discounted, limited, loaded.Budget));
+            }
+
+            loaded.Budget.Use(applied?.PromotionId, discounted);
+
+            total += ((applied?.Price ?? product.Price) + addOnPerUnit) * discounted
+                + (product.Price + addOnPerUnit) * (line.Quantity - discounted);
+        }
+
+        return (total, notes);
+    }
+
+    // The rule for this line (exact add-ons) that a limit keeps from covering all of it, if any.
+    private static PromotionPricing.DiscountedRule? FindLimitedRule(
+        DiscountRuleLoader.Loaded loaded, Guid productId, List<(Guid AddOnProductId, int Quantity)> addOns, int quantity)
+    {
+        if (!loaded.RulesByProductId.TryGetValue(productId, out var rules))
+        {
+            return null;
+        }
+
+        var addOnMap = addOns.GroupBy(a => a.AddOnProductId).ToDictionary(g => g.Key, g => g.Sum(a => a.Quantity));
+
+        return rules.FirstOrDefault(rule =>
+            PromotionPricing.SatisfiesExactAddOns(addOnMap, rule.RequiredAddOns)
+            && loaded.Budget.Available(rule.PromotionId) is { } available
+            && available < quantity);
+    }
+
+    private static string LimitNote(
+        string productName, int quantity, int discounted, PromotionPricing.DiscountedRule rule, DiscountBudget budget)
+    {
+        var reasons = new List<string>();
+        if (budget.Remaining(rule.PromotionId) is { } left && left < quantity)
+        {
+            reasons.Add(left == 0 ? "no uses left" : $"only {left} use{(left == 1 ? string.Empty : "s")} left");
+        }
+
+        if (rule.MaxPerOrder is { } perOrder && perOrder < quantity)
+        {
+            reasons.Add($"limit {perOrder} per order");
+        }
+
+        var why = reasons.Count > 0 ? string.Join(", ", reasons) : "its limit";
+
+        return discounted == 0
+            ? $"{productName}: the promotion can no longer be applied ({why})."
+            : $"{productName}: the promotion covers only {discounted} of {quantity} ({why}); the rest is charged full price.";
     }
 }

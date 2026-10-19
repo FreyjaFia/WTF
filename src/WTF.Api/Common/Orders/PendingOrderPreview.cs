@@ -11,7 +11,7 @@ internal static class PendingOrderPreview
     // An order that is not completed yet saves no prices; they are fixed when it completes. This works out the discounted
     // unit price each of its plain lines would get with the promotions that are on right now, so a list shows the same
     // total as the cart. Keyed by order line id; lines that get no discount are left out.
-    public static async Task<IReadOnlyDictionary<Guid, decimal>> LoadAsync(
+    public static async Task<IReadOnlyDictionary<Guid, PreviewDiscount>> LoadAsync(
         WTFDbContext db,
         IEnumerable<Order> orders,
         IHttpContextAccessor? httpContextAccessor,
@@ -22,7 +22,7 @@ internal static class PendingOrderPreview
             .ToList();
         if (unpriced.Count == 0)
         {
-            return new Dictionary<Guid, decimal>();
+            return new Dictionary<Guid, PreviewDiscount>();
         }
 
         var timeZone = httpContextAccessor is null
@@ -30,7 +30,7 @@ internal static class PendingOrderPreview
             : RequestTimeZone.ResolveFromRequest(httpContextAccessor);
         var loaded = await DiscountRuleLoader.LoadAsync(db, DateTime.UtcNow, timeZone, null, cancellationToken);
 
-        var prices = new Dictionary<Guid, decimal>();
+        var prices = new Dictionary<Guid, PreviewDiscount>();
         if (loaded.RulesByProductId.Count == 0)
         {
             return prices;
@@ -47,7 +47,8 @@ internal static class PendingOrderPreview
             }
 
             foreach (var parent in order.OrderItems
-                .Where(oi => oi.ParentOrderItemId == null && oi.BundlePromotionId == null && oi.Price == null))
+                .Where(oi => oi.ParentOrderItemId == null && oi.BundlePromotionId == null && oi.Price == null)
+                .OrderBy(oi => oi.SortOrder))
             {
                 var addOns = order.OrderItems
                     .Where(child => child.ParentOrderItemId == parent.Id)
@@ -60,8 +61,8 @@ internal static class PendingOrderPreview
                     continue;
                 }
 
-                budget.Use(applied.PromotionId, parent.Quantity);
-                prices[parent.Id] = applied.Price;
+                budget.Use(applied.PromotionId, applied.DiscountedQuantity);
+                prices[parent.Id] = new PreviewDiscount(applied.Price, applied.DiscountedQuantity);
             }
         }
 

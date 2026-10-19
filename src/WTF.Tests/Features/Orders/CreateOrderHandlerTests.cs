@@ -3,9 +3,9 @@ using Microsoft.EntityFrameworkCore;
 using NSubstitute;
 using WTF.Api.Common.Auth;
 using WTF.Api.Features.Audit.Enums;
+using WTF.Api.Features.Orders;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
-using WTF.Api.Features.Orders;
 using WTF.Api.Features.Products.Enums;
 using WTF.Api.Features.Promotions.DTOs;
 using WTF.Api.Hubs;
@@ -76,13 +76,14 @@ public class CreateOrderHandlerTests
 
     private async Task<Guid> SeedBundle(decimal price, bool mixMatch = false, bool active = true, DateTime? start = null, DateTime? end = null, string name = "Bundle",
         (Guid ProductId, int Quantity)[]? items = null, (Guid AddOnId, int Quantity)? addOnOnFirstItem = null, int maxSelections = 0,
-        byte? days = null, TimeOnly? startTime = null, TimeOnly? endTime = null, int? maxRedemptions = null)
+        byte? days = null, TimeOnly? startTime = null, TimeOnly? endTime = null, int? maxRedemptions = null, int? maxPerOrder = null)
     {
         await using var db = TestDb.Create(_dbName);
         var promo = new Promotion
         {
             Id = Guid.NewGuid(),
             Name = name,
+            MaxPerOrder = maxPerOrder,
             TypeId = mixMatch ? PromotionTypeIds.MixMatch : PromotionTypeIds.FixedBundle,
             IsActive = active,
             StartDate = start,
@@ -138,13 +139,14 @@ public class CreateOrderHandlerTests
 
     private async Task<Guid> SeedDiscount(Guid productId, decimal? fixedPrice, decimal? percent, (Guid AddOn, int Qty)[]? required = null,
         bool active = true, DateTime? start = null, DateTime? end = null,
-        byte? days = null, TimeOnly? startTime = null, TimeOnly? endTime = null, int? maxRedemptions = null)
+        byte? days = null, TimeOnly? startTime = null, TimeOnly? endTime = null, int? maxRedemptions = null, int? maxPerOrder = null)
     {
         await using var db = TestDb.Create(_dbName);
         var promo = new Promotion
         {
             Id = Guid.NewGuid(),
             Name = "Disc",
+            MaxPerOrder = maxPerOrder,
             TypeId = PromotionTypeIds.DiscountedProduct,
             IsActive = active,
             StartDate = start,
@@ -1305,10 +1307,13 @@ public class CreateOrderHandlerTests
         var spent = await PlaceAsync(Cmd(OrderStatusEnum.Completed, Line(pizza, 1)));
 
         first.TotalAmount.ShouldBe(140m);
-        tooMany.TotalAmount.ShouldBe(200m);
-        last.TotalAmount.ShouldBe(70m);
+        // One use was left: one of the two items gets it, the other pays the full price.
+        tooMany.TotalAmount.ShouldBe(70m + 100m);
+        last.TotalAmount.ShouldBe(100m);
         spent.TotalAmount.ShouldBe(100m);
         (await LoadOrder(first.Id)).OrderItems.Single().DiscountPromotionId.ShouldNotBeNull();
+        (await LoadOrder(tooMany.Id)).OrderItems.OrderBy(i => i.SortOrder).Select(i => (i.Quantity, i.Price))
+            .ShouldBe([(1, 70m), (1, 100m)]);
         (await LoadOrder(spent.Id)).OrderItems.Single().DiscountPromotionId.ShouldBeNull();
     }
 
@@ -1320,8 +1325,66 @@ public class CreateOrderHandlerTests
 
         var dto = await PlaceAsync(Cmd(OrderStatusEnum.Completed, Line(pizza, 2, null, "a"), Line(pizza, 2, null, "b")));
 
-        // The first line takes 2 of the 3 uses; the second line needs 2 and gets none.
-        dto.Items.Select(i => i.Price).ShouldBe([70m, 100m]);
+        // The first line takes 2 of the 3 uses; the second line needs 2, gets the last one and pays full price for the other.
+        dto.Items.Select(i => (i.Quantity, i.Price)).ShouldBe([(2, 70m), (1, 70m), (1, 100m)]);
+    }
+
+    [Fact]
+    public async Task Handle_LimitPerOrder_DiscountsOnlyThatManyAndChargesTheRestFullPrice()
+    {
+        var pizza = await SeedProduct("Pizza", 100m);
+        await SeedDiscount(pizza, 30m, null, maxPerOrder: 2);
+
+        var dto = await PlaceAsync(Cmd(OrderStatusEnum.Completed, Line(pizza, 5)));
+
+        dto.TotalAmount.ShouldBe(2 * 70m + 3 * 100m);
+        var lines = (await LoadOrder(dto.Id)).OrderItems.OrderBy(i => i.SortOrder).ToList();
+        lines.Select(i => (i.Quantity, i.Price)).ShouldBe([(2, 70m), (3, 100m)]);
+        lines[0].PromoLabel.ShouldBe("Promo -₱30.00");
+        lines[0].DiscountPromotionId.ShouldNotBeNull();
+        lines[1].PromoLabel.ShouldBeNull();
+        lines[1].DiscountPromotionId.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task Handle_LimitPerOrder_IsPerOrder_SoTheNextOrderGetsItAgain()
+    {
+        var pizza = await SeedProduct("Pizza", 100m);
+        await SeedDiscount(pizza, 30m, null, maxPerOrder: 1);
+
+        (await PlaceAsync(Cmd(OrderStatusEnum.Completed, Line(pizza, 2)))).TotalAmount.ShouldBe(70m + 100m);
+        (await PlaceAsync(Cmd(OrderStatusEnum.Completed, Line(pizza, 2)))).TotalAmount.ShouldBe(70m + 100m);
+    }
+
+    [Fact]
+    public async Task Handle_LimitPerOrder_IsSharedByTheLinesOfOneOrder()
+    {
+        var pizza = await SeedProduct("Pizza", 100m);
+        await SeedDiscount(pizza, 30m, null, maxPerOrder: 3);
+
+        var dto = await PlaceAsync(Cmd(OrderStatusEnum.Completed, Line(pizza, 2, null, "a"), Line(pizza, 2, null, "b")));
+
+        dto.Items.Select(i => (i.Quantity, i.Price)).ShouldBe([(2, 70m), (1, 70m), (1, 100m)]);
+    }
+
+    [Fact]
+    public async Task Handle_LimitPerOrderAndUsesLeft_TheSmallerOneApplies()
+    {
+        var pizza = await SeedProduct("Pizza", 100m);
+        await SeedDiscount(pizza, 30m, null, maxRedemptions: 2, maxPerOrder: 4);
+
+        (await PlaceAsync(Cmd(OrderStatusEnum.Completed, Line(pizza, 5)))).TotalAmount.ShouldBe(2 * 70m + 3 * 100m);
+    }
+
+    [Fact]
+    public async Task Handle_BundleAboveItsLimitPerOrder_IsRefused()
+    {
+        var pizza = await SeedProduct("Pizza", 100m);
+        var bundle = await SeedBundle(80m, name: "Combo", items: [(pizza, 1)], maxPerOrder: 2);
+
+        (await Should.ThrowAsync<InvalidOperationException>(() => PlaceAsync(BundleOrder(pizza, bundle, 3))))
+            .Message.ShouldBe("Bundle promotion 'Combo' can be bought up to 2 per order.");
+        (await PlaceAsync(BundleOrder(pizza, bundle, 2))).TotalAmount.ShouldBe(160m);
     }
 
     [Fact]

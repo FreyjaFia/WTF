@@ -42,7 +42,8 @@ public static class PromotionPricing
         decimal? FixedPrice,
         decimal? PercentOff,
         List<(Guid AddOnProductId, int Quantity)> RequiredAddOns,
-        Guid? PromotionId = null);
+        Guid? PromotionId = null,
+        int? MaxPerOrder = null);
 
     public sealed record AppliedDiscount(
         decimal Price,
@@ -50,8 +51,13 @@ public static class PromotionPricing
         Guid? PromotionId = null,
         decimal? FixedPrice = null,
         decimal? PercentOff = null,
-        decimal BasePrice = 0m)
+        decimal BasePrice = 0m,
+        int DiscountedQuantity = 1,
+        int RequestedQuantity = 1)
     {
+        // A limit can cover only part of a line: the rest is charged full price.
+        public bool IsPartial => DiscountedQuantity < RequestedQuantity;
+
         // The label for a line whose add-ons cost this much per item (Label assumes none).
         public string? LabelWith(decimal addOnsPerUnit) =>
             PromotionLabelFormatter.Format(FixedPrice, PercentOff, BasePrice, addOnsPerUnit);
@@ -82,11 +88,15 @@ public static class PromotionPricing
                 continue;
             }
 
-            // A promotion with a usage limit only discounts the items it has uses left for.
-            if (budget is not null && !budget.CanUse(rule.PromotionId, quantity))
+            // A limited promotion discounts only as many items as this order can still take (uses left, and the most one
+            // order may have); a line above that pays full price for the rest.
+            var available = budget?.Available(rule.PromotionId);
+            if (available == 0)
             {
                 continue;
             }
+
+            var discountedQuantity = available is null ? quantity : Math.Min(quantity, available.Value);
 
             var discounted = CalculateDiscountedUnitPrice(basePrice, rule.FixedPrice, rule.PercentOff);
             if (!discounted.HasValue)
@@ -94,7 +104,10 @@ public static class PromotionPricing
                 continue;
             }
 
-            if (best is null || discounted.Value < best.Price)
+            // The rule that saves the most on this line wins; at the same saving the lower price does.
+            var saving = (basePrice - discounted.Value) * discountedQuantity;
+            var bestSaving = best is null ? -1m : (basePrice - best.Price) * best.DiscountedQuantity;
+            if (best is null || saving > bestSaving || (saving == bestSaving && discounted.Value < best.Price))
             {
                 best = new AppliedDiscount(
                     discounted.Value,
@@ -102,7 +115,9 @@ public static class PromotionPricing
                     rule.PromotionId,
                     rule.FixedPrice,
                     rule.PercentOff,
-                    basePrice);
+                    basePrice,
+                    discountedQuantity,
+                    quantity);
             }
         }
 

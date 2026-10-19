@@ -1,11 +1,11 @@
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Auth;
-using WTF.Api.Features.OrderLinks.DTOs;
 using WTF.Api.Features.OrderLinks;
+using WTF.Api.Features.OrderLinks.DTOs;
+using WTF.Api.Features.Orders;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
-using WTF.Api.Features.Orders;
 using WTF.Api.Features.Promotions.DTOs;
 using WTF.Api.Hubs;
 using WTF.Api.Services;
@@ -44,7 +44,7 @@ public class DiscountReservationTests
     private static UpdateOrderCommand Change(Guid id, OrderStatusEnum status, params OrderItemRequestDto[] items) =>
         new() { Id = id, Status = status, Items = [.. items] };
 
-    private Guid Limited(Guid productId, int maxRedemptions, decimal percent = 50m)
+    private Guid Limited(Guid productId, int maxRedemptions, decimal percent = 50m, int? maxPerOrder = null)
     {
         using var db = _data.Open();
         var promo = new Promotion
@@ -54,6 +54,7 @@ public class DiscountReservationTests
             TypeId = PromotionTypeIds.DiscountedProduct,
             IsActive = true,
             MaxRedemptions = maxRedemptions,
+            MaxPerOrder = maxPerOrder,
             CreatedAt = DateTime.UtcNow,
             CreatedBy = _userId
         };
@@ -107,11 +108,26 @@ public class DiscountReservationTests
         var third = await Create().Handle(New(OrderStatusEnum.Pending, Line(croissant, 1)), CancellationToken.None);
 
         (await Lines(first.Id)).Single().DiscountPromotionId.ShouldNotBeNull();
-        (await Lines(second.Id)).Single().DiscountPromotionId.ShouldBeNull("only 1 use was left, the line needs 2");
-        (await Lines(third.Id)).Single().DiscountPromotionId.ShouldNotBeNull();
+        // Only 1 use was left for the second order: it covers one item and the other pays the full price.
+        (await Lines(second.Id)).Select(l => (l.Quantity, l.DiscountPromotionId.HasValue)).ShouldBe([(1, true), (1, false)]);
+        (await Lines(third.Id)).Single().DiscountPromotionId.ShouldBeNull("nothing is left for the third order");
         (await TotalOf(first.Id)).ShouldBe(100m);
-        (await TotalOf(second.Id)).ShouldBe(200m);
-        (await TotalOf(third.Id)).ShouldBe(50m);
+        (await TotalOf(second.Id)).ShouldBe(50m + 100m);
+        (await TotalOf(third.Id)).ShouldBe(100m);
+    }
+
+    [Fact]
+    public async Task APendingOrder_HoldsOnlyUpToTheLimitPerOrder()
+    {
+        var croissant = _data.AddProduct("Croissant", 100);
+        Limited(croissant, 10, maxPerOrder: 2);
+
+        var first = await Create().Handle(New(OrderStatusEnum.Pending, Line(croissant, 5)), CancellationToken.None);
+        var second = await Create().Handle(New(OrderStatusEnum.Pending, Line(croissant, 1)), CancellationToken.None);
+
+        (await Lines(first.Id)).Select(l => (l.Quantity, l.DiscountPromotionId.HasValue)).ShouldBe([(2, true), (3, false)]);
+        (await TotalOf(first.Id)).ShouldBe(2 * 50m + 3 * 100m);
+        (await TotalOf(second.Id)).ShouldBe(50m);
     }
 
     [Fact]
@@ -162,7 +178,7 @@ public class DiscountReservationTests
     }
 
     [Fact]
-    public async Task AnEditThatNoLongerFits_LosesTheReservation()
+    public async Task AnEditAboveWhatIsLeft_ReservesOnlyTheUsesThatFit()
     {
         var croissant = _data.AddProduct("Croissant", 100);
         Limited(croissant, 3);
@@ -170,8 +186,9 @@ public class DiscountReservationTests
 
         await Update().Handle(Change(order.Id, OrderStatusEnum.Pending, Line(croissant, 4)), CancellationToken.None);
 
-        (await Lines(order.Id)).Single().DiscountPromotionId.ShouldBeNull();
-        (await TotalOf(order.Id)).ShouldBe(400m);
+        // The order gives back the use it held, so 3 are available: 3 items at 50 and one at 100.
+        (await Lines(order.Id)).Select(l => (l.Quantity, l.DiscountPromotionId.HasValue)).ShouldBe([(3, true), (1, false)]);
+        (await TotalOf(order.Id)).ShouldBe(3 * 50m + 100m);
     }
 
     [Fact]

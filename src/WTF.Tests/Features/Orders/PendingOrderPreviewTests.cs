@@ -1,6 +1,6 @@
 using WTF.Api.Features.Dashboard;
-using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Features.Orders;
+using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Features.Products.Enums;
 using WTF.Api.Features.Promotions.DTOs;
 using WTF.Domain.Entities;
@@ -222,7 +222,7 @@ public class PendingOrderPreviewTests
     }
 
     [Fact]
-    public async Task UsageLimit_SkipsALineThatNeedsMoreThanIsLeft()
+    public async Task UsageLimit_CoversOnlyTheItemsItHasUsesFor()
     {
         var m = Menu();
         var promo = Discount(m.Product, null, 50m, maxRedemptions: 3);
@@ -237,8 +237,8 @@ public class PendingOrderPreviewTests
         var two = PendingOrder(m.Product, 2);
         var one = PendingOrder(m.Product, 1);
 
-        // One use is left: two items do not fit, one does.
-        (await TotalOf(two)).ShouldBe(240m);
+        // One use is left: two items get it for one and pay the full price for the other.
+        (await TotalOf(two)).ShouldBe(60m + 120m);
         (await TotalOf(one)).ShouldBe(60m);
     }
 

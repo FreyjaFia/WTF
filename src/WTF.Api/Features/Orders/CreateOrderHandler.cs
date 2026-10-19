@@ -333,6 +333,7 @@ public class CreateOrderHandler(
         }
 
         // Add order items with parent-child relationships
+        var sortOrder = 0;
         for (var itemIndex = 0; itemIndex < request.Items.Count; itemIndex++)
         {
             var item = request.Items[itemIndex];
@@ -348,7 +349,7 @@ public class CreateOrderHandler(
                     item.Quantity,
                     discountBudget)
                 : null;
-            discountBudget?.Use(appliedDiscount?.PromotionId, item.Quantity);
+            discountBudget?.Use(appliedDiscount?.PromotionId, appliedDiscount?.DiscountedQuantity ?? 0);
             var discountedPrice = appliedDiscount?.Price;
             var addOnPrices = new List<(OrderItemRequestDto AddOn, decimal Price)>();
             foreach (var addOn in item.AddOns)
@@ -371,65 +372,76 @@ public class CreateOrderHandler(
                 throw new InvalidOperationException($"The final unit price for '{product.Name}' cannot be negative.");
             }
 
-            var orderItem = new OrderItem
-            {
-                OrderId = order.Id,
-                ProductId = item.ProductId,
-                Quantity = item.Quantity,
-                SpecialInstructions = item.SpecialInstructions,
-                Price = null,
-                SortOrder = itemIndex,
-                ParentOrderItemId = null,
-                BundlePromotionId = item.BundlePromotionId
-            };
+            // A limit can cover only part of a line (the uses left, or the most one order may have): the discounted
+            // items and the rest become two lines, the rest at full price.
+            (int Quantity, bool Discounted)[] segments = appliedDiscount is { IsPartial: true }
+                ? [(appliedDiscount.DiscountedQuantity, true), (item.Quantity - appliedDiscount.DiscountedQuantity, false)]
+                : [(item.Quantity, appliedDiscount is not null)];
 
-            // Capture price if order is Completed or Cancelled. A held order keeps the prices it was quoted offline.
-            if (held)
+            foreach (var segment in segments)
             {
-                var quoted = item.BundlePromotionId.HasValue
-                    ? item.QuotedPrice ?? basePrice
-                    : OfflineOrderReview.QuotedPriceOrThrow(item.QuotedPrice, product.Name);
-                orderItem.Price = quoted;
-                orderItem.OriginalPrice = item.QuotedOriginalPrice ?? quoted;
-                orderItem.PromoLabel = item.QuotedPromoLabel;
-            }
-            else if (shouldCapturePrice)
-            {
-                orderItem.Price = discountedPrice ?? basePrice;
-                orderItem.OriginalPrice = basePrice;
-                orderItem.PromoLabel = appliedDiscount?.LabelWith(addOnPrices.Sum(addOn => addOn.Price * addOn.AddOn.Quantity));
-                orderItem.DiscountPromotionId = appliedDiscount?.PromotionId;
-            }
-            else if (reservesDiscount)
-            {
-                orderItem.DiscountPromotionId = appliedDiscount?.PromotionId;
-            }
-
-            db.OrderItems.Add(orderItem);
-            await db.SaveChangesAsync(cancellationToken);
-
-            // Add child items (add-ons)
-            foreach (var (addOn, effectiveAddOnPrice) in addOnPrices)
-            {
-                var addOnOrderItem = new OrderItem
+                var orderItem = new OrderItem
                 {
                     OrderId = order.Id,
-                    ProductId = addOn.ProductId,
-                    Quantity = addOn.Quantity,
-                    SpecialInstructions = addOn.SpecialInstructions,
+                    ProductId = item.ProductId,
+                    Quantity = segment.Quantity,
+                    SpecialInstructions = item.SpecialInstructions,
                     Price = null,
-                    SortOrder = 0,
-                    ParentOrderItemId = orderItem.Id,
+                    SortOrder = sortOrder++,
+                    ParentOrderItemId = null,
                     BundlePromotionId = item.BundlePromotionId
                 };
 
-                // Capture price if order is Completed or Cancelled
-                if (shouldCapturePrice)
+                // Capture price if order is Completed or Cancelled. A held order keeps the prices it was quoted offline.
+                if (held)
                 {
-                    addOnOrderItem.Price = effectiveAddOnPrice;
+                    var quoted = item.BundlePromotionId.HasValue
+                        ? item.QuotedPrice ?? basePrice
+                        : OfflineOrderReview.QuotedPriceOrThrow(item.QuotedPrice, product.Name);
+                    orderItem.Price = quoted;
+                    orderItem.OriginalPrice = item.QuotedOriginalPrice ?? quoted;
+                    orderItem.PromoLabel = item.QuotedPromoLabel;
+                }
+                else if (shouldCapturePrice)
+                {
+                    orderItem.Price = segment.Discounted ? discountedPrice ?? basePrice : basePrice;
+                    orderItem.OriginalPrice = basePrice;
+                    orderItem.PromoLabel = segment.Discounted
+                        ? appliedDiscount?.LabelWith(addOnPrices.Sum(addOn => addOn.Price * addOn.AddOn.Quantity))
+                        : null;
+                    orderItem.DiscountPromotionId = segment.Discounted ? appliedDiscount?.PromotionId : null;
+                }
+                else if (reservesDiscount)
+                {
+                    orderItem.DiscountPromotionId = segment.Discounted ? appliedDiscount?.PromotionId : null;
                 }
 
-                db.OrderItems.Add(addOnOrderItem);
+                db.OrderItems.Add(orderItem);
+                await db.SaveChangesAsync(cancellationToken);
+
+                // Add child items (add-ons)
+                foreach (var (addOn, effectiveAddOnPrice) in addOnPrices)
+                {
+                    var addOnOrderItem = new OrderItem
+                    {
+                        OrderId = order.Id,
+                        ProductId = addOn.ProductId,
+                        Quantity = addOn.Quantity,
+                        SpecialInstructions = addOn.SpecialInstructions,
+                        Price = null,
+                        SortOrder = 0,
+                        ParentOrderItemId = orderItem.Id,
+                        BundlePromotionId = item.BundlePromotionId
+                    };
+
+                    // Capture price if order is Completed or Cancelled
+                    if (shouldCapturePrice)
+                    {
+                        addOnOrderItem.Price = effectiveAddOnPrice;
+                    }
+
+                    db.OrderItems.Add(addOnOrderItem);
+                }
             }
         }
 
