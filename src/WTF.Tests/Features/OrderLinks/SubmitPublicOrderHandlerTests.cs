@@ -4,10 +4,11 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.OrderLinks;
-using WTF.Api.Features.Orders;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
+using WTF.Api.Features.Orders;
 using WTF.Api.Features.Products.Enums;
+using WTF.Api.Features.Promotions.DTOs;
 using WTF.Api.Services;
 using WTF.Domain.Entities;
 using WTF.Tests.Infrastructure;
@@ -162,7 +163,192 @@ public class SubmitPublicOrderHandlerTests
         new(items ?? [new PublicOrderItemRequest(_latte.Id, 1, null, null)], fulfillment, address, contact, payment,
             amount, instructions, tips);
 
+    private async Task AddDiscountAsync(Guid productId, decimal? amountOff, decimal? percent, Guid[]? addOns = null,
+        bool active = true, int? maxRedemptions = null)
+    {
+        var promo = new Promotion
+        {
+            Id = Guid.NewGuid(),
+            Name = "Disc",
+            TypeId = PromotionTypeIds.DiscountedProduct,
+            IsActive = active,
+            MaxRedemptions = maxRedemptions,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = _staffId
+        };
+        var rule = new DiscountedProductPromotion { Id = Guid.NewGuid(), PromotionId = promo.Id, ProductId = productId, FixedPrice = amountOff, PercentOff = percent };
+        foreach (var addOn in addOns ?? [])
+        {
+            rule.DiscountedProductPromotionAddOns.Add(new DiscountedProductPromotionAddOn { Id = Guid.NewGuid(), DiscountedProductPromotionId = rule.Id, AddOnProductId = addOn, Quantity = 1 });
+        }
+
+        promo.DiscountedProductPromotions.Add(rule);
+        await TestDb.SaveAsync(_db, promo);
+    }
+
+    private List<PublicOrderItemRequest> Items(Product product, int qty = 1, params Product[] addOns) =>
+        [new PublicOrderItemRequest(product.Id, qty, [.. addOns.Select(a => new PublicOrderAddOnRequest(a.Id, 1))], null)];
+
+    [Fact]
+    public async Task Discount_LowersTheTotalTheCashHasToCover()
+    {
+        await AddDiscountAsync(_croissant.Id, null, 10m);
+
+        var accepted = await Submit(Request(Items(_croissant), amount: 108));
+
+        accepted.ShouldNotBeNull();
+        accepted.Total.ShouldBe(108m);
+        await Should.ThrowAsync<InvalidOperationException>(() => Submit(Request(Items(_croissant), amount: 107.99m)));
+    }
+
+    [Fact]
+    public async Task Discount_RefusalMessage_NamesTheDiscountedTotal()
+    {
+        await AddDiscountAsync(_croissant.Id, null, 10m);
+
+        var ex = await Should.ThrowAsync<InvalidOperationException>(() => Submit(Request(Items(_croissant), amount: 50)));
+
+        ex.Message.ShouldContain("108.00");
+    }
+
+    [Fact]
+    public async Task Discount_ThatNeedsAnAddOn_OnlyAppliesWithExactlyThatAddOn()
+    {
+        var size = await AddAddOnAsync(_latte, "Small", 0, AddOnTypeEnum.Size);
+        var shot = await AddAddOnAsync(_latte, "Shot", 25);
+        await AddDiscountAsync(_latte.Id, 40m, null, [size.Id]);
+
+        var matching = await Submit(Request(Items(_latte, 1, size)));
+        var extra = await Submit(Request(Items(_latte, 1, size, shot)));
+
+        matching!.Total.ShouldBe(110m);
+        extra!.Total.ShouldBe(175m);
+    }
+
+    [Fact]
+    public async Task PlainProductDiscount_DoesNotApplyToTheProductWithAddOns()
+    {
+        var shot = await AddAddOnAsync(_croissant, "Shot", 25);
+        await AddDiscountAsync(_croissant.Id, null, 50m);
+
+        (await Submit(Request(Items(_croissant))))!.Total.ShouldBe(60m);
+        (await Submit(Request(Items(_croissant, 1, shot))))!.Total.ShouldBe(145m);
+    }
+
+    [Fact]
+    public async Task Discount_AmountOffAboveThePrice_MakesTheItemFreeButNotItsAddOns()
+    {
+        var shot = await AddAddOnAsync(_croissant, "Shot", 25);
+        await AddDiscountAsync(_croissant.Id, 500m, null, [shot.Id]);
+
+        var dto = await Submit(Request(Items(_croissant, 2, shot), amount: 50));
+
+        dto!.Total.ShouldBe(50m);
+    }
+
+    [Fact]
+    public async Task Discount_WithFewerUsesLeftThanTheQuantity_IsNotApplied()
+    {
+        await AddDiscountAsync(_croissant.Id, null, 50m, maxRedemptions: 1);
+
+        (await Submit(Request(Items(_croissant, 2))))!.Total.ShouldBe(240m);
+        (await Submit(Request(Items(_croissant, 1))))!.Total.ShouldBe(60m);
+    }
+
+    [Fact]
+    public async Task InactiveDiscount_IsIgnored()
+    {
+        await AddDiscountAsync(_croissant.Id, null, 50m, active: false);
+
+        (await Submit(Request(Items(_croissant))))!.Total.ShouldBe(120m);
+    }
+
+    [Fact]
+    public async Task Discount_WithATip_CashMustCoverTheDiscountedTotalPlusTheTip()
+    {
+        await AddDiscountAsync(_croissant.Id, null, 10m);
+
+        await Should.ThrowAsync<InvalidOperationException>(() => Submit(Request(Items(_croissant), amount: 108, tips: 10)));
+        (await Submit(Request(Items(_croissant), amount: 118, tips: 10)))!.Total.ShouldBe(108m);
+    }
+
+    [Fact]
+    public async Task Discount_ChangeSavedWithTheOrder_IsWorkedOutFromTheDiscountedTotal()
+    {
+        await AddDiscountAsync(_croissant.Id, null, 10m);
+
+        var dto = await Submit(Request(Items(_croissant, 2), amount: 1000, tips: 4));
+
+        dto!.Total.ShouldBe(216m);
+        await using var db = TestDb.Create(_db);
+        var saved = await db.Orders.SingleAsync(o => o.Id == dto.Id);
+        saved.ChangeAmount.ShouldBe(1000m - 216m - 4m);
+    }
+
+    [Fact]
+    public async Task ExpectedTotal_MatchingTheServersTotal_PlacesTheOrder()
+    {
+        await AddDiscountAsync(_croissant.Id, null, 10m);
+
+        var dto = await Submit(Request(Items(_croissant, 2), amount: 300) with { ExpectedTotal = 216m });
+
+        dto!.Total.ShouldBe(216m);
+    }
+
+    [Fact]
+    public async Task ExpectedTotal_FromAnOlderPage_IsOptional()
+    {
+        (await Submit(Request(Items(_croissant), amount: 300)))!.Total.ShouldBe(120m);
+    }
+
+    [Theory]
+    [InlineData(108.0)]
+    [InlineData(119.99)]
+    [InlineData(120.01)]
+    public async Task ExpectedTotal_ThatDiffers_RefusesTheOrderAndCreatesNothing(double expected)
+    {
+        // The page showed a discount that has run out since: the shop asks the customer to look again.
+        var ex = await Should.ThrowAsync<InvalidOperationException>(() =>
+            Submit(Request(Items(_croissant), amount: 500) with { ExpectedTotal = (decimal)expected }));
+
+        ex.Message.ShouldContain("The total changed to PHP 120.00");
+        (await OrderCountAsync()).ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task ADiscountThatRanOutBetweenCartAndPlaceOrder_IsRefusedInsteadOfChargedFullPrice()
+    {
+        await AddDiscountAsync(_croissant.Id, null, 10m, maxRedemptions: 1);
+        var waiting = await Submit(Request(Items(_croissant), amount: 108) with { ExpectedTotal = 108m });
+        waiting!.Total.ShouldBe(108m);
+
+        // A second customer's page still shows 108: the first order holds the only use.
+        var ex = await Should.ThrowAsync<InvalidOperationException>(() =>
+            Submit(Request(Items(_croissant), amount: 200) with { ExpectedTotal = 108m }));
+
+        ex.Message.ShouldContain("PHP 120.00");
+    }
+
+    [Fact]
+    public async Task AWaitingOrder_HoldsItsDiscountUseUntilItIsRejected()
+    {
+        await AddDiscountAsync(_croissant.Id, null, 10m, maxRedemptions: 1);
+        var first = await Submit(Request(Items(_croissant), amount: 108));
+        (await Submit(Request(Items(_croissant), amount: 120)))!.Total.ShouldBe(120m);
+
+        await using (var db = TestDb.Create(_db))
+        {
+            db.Orders.Single(o => o.Id == first!.Id).StatusId = (int)OrderStatusEnum.Cancelled;
+            await db.SaveChangesAsync();
+        }
+
+        (await Submit(Request(Items(_croissant), amount: 108)))!.Total.ShouldBe(108m);
+    }
+
     private async Task<int> OrderCountAsync()
+
+
+
     {
         await using var db = TestDb.Create(_db);
         return await db.Orders.CountAsync();

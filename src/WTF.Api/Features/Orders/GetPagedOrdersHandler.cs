@@ -131,7 +131,8 @@ public sealed class GetPagedOrdersHandler(WTFDbContext db, IHttpContextAccessor?
                         oi.SpecialInstructions,
                         oi.BundlePromotionId,
                         oi.OriginalPrice,
-                        oi.PromoLabel);
+                        oi.PromoLabel,
+                oi.DiscountPromotionId);
                 })
                 .ToList();
 

@@ -38,8 +38,14 @@ internal static class PendingOrderPreview
 
         foreach (var order in unpriced)
         {
-            // Each order is judged on its own: nothing is used up until an order really completes.
+            // Each order is judged on its own. Uses it already holds (reserved when it was saved) are not gone for it, so give
+            // them back; uses held by other orders stay taken.
             var budget = loaded.Budget.Clone();
+            foreach (var held in order.OrderItems.Where(oi => oi.ParentOrderItemId == null && oi.DiscountPromotionId != null))
+            {
+                budget.Return(held.DiscountPromotionId, held.Quantity);
+            }
+
             foreach (var parent in order.OrderItems
                 .Where(oi => oi.ParentOrderItemId == null && oi.BundlePromotionId == null && oi.Price == null))
             {

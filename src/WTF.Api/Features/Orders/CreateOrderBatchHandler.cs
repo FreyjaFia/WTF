@@ -1,4 +1,5 @@
 using MediatR;
+using WTF.Api.Common.Orders;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Domain.Data;
 
@@ -16,13 +17,14 @@ public class CreateOrderBatchHandler(WTFDbContext db, ISender sender)
             return [];
         }
 
+        using var gate = await PromotionLimitGate.EnterAsync(cancellationToken);
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
 
         var results = new List<OrderDto>(request.Orders.Count);
 
         foreach (var order in request.Orders)
         {
-            var result = await sender.Send(order, cancellationToken);
+            var result = await sender.Send(order with { GateHeld = true }, cancellationToken);
             results.Add(result);
         }
 

@@ -46,6 +46,14 @@ public record CreateOrderCommand : IRequest<OrderDto>
     // The POS queue number of an order sold offline. The server uses it to recognize an order it already saved.
     public string? OfflineLocalId { get; init; }
 
+    // The total the register showed and collected against. When it is set and the server works out another total (a price or a
+    // promotion moved meanwhile), a finished sale is refused so the cashier can review it.
+    public decimal? ExpectedTotal { get; init; }
+
+    // True when the caller already holds the promotion gate (offline sync, batch, customer submit).
+    [JsonIgnore]
+    public bool GateHeld { get; init; }
+
     // The fields below are set by the server only (for orders placed through a customer ordering link). They are never
     // read from a request body, so a signed-in caller cannot claim another user, a source or a link.
 
@@ -83,6 +91,8 @@ public class CreateOrderHandler(
 {
     public async Task<OrderDto> Handle(CreateOrderCommand request, CancellationToken cancellationToken)
     {
+        using var gate = request.GateHeld ? null : await PromotionLimitGate.EnterAsync(cancellationToken);
+
         var userId = request.ActorUserId ?? httpContextAccessor.HttpContext!.User.GetUserId();
         var held = request.HeldReasons is { Count: > 0 };
 
@@ -306,9 +316,11 @@ public class CreateOrderHandler(
         }
 
         var shouldCapturePrice = held || request.Status == OrderStatusEnum.Completed || request.Status == OrderStatusEnum.Cancelled;
+        // A pending or waiting order saves no price yet, but it holds the use of a limited discount from the moment it is saved.
+        var reservesDiscount = !held && request.Status is OrderStatusEnum.Pending or OrderStatusEnum.PendingApproval;
         Dictionary<Guid, List<PromotionPricing.DiscountedRule>> discountedRulesByProductId = [];
         DiscountBudget? discountBudget = null;
-        if (shouldCapturePrice && !held)
+        if ((shouldCapturePrice || reservesDiscount) && !held)
         {
             var loaded = await DiscountRuleLoader.LoadAsync(
                 db,
@@ -327,7 +339,7 @@ public class CreateOrderHandler(
             var product = await db.Products.FindAsync([item.ProductId], cancellationToken) ?? throw new InvalidOperationException($"Product with ID {item.ProductId} not found.");
             var basePrice = product.Price;
             // A line inside a bundle is sold at the bundle's price, so no discount applies to it.
-            var appliedDiscount = shouldCapturePrice && !held && !item.BundlePromotionId.HasValue
+            var appliedDiscount = (shouldCapturePrice || reservesDiscount) && !held && !item.BundlePromotionId.HasValue
                 ? PromotionPricing.GetDiscountedUnitPrice(
                     basePrice,
                     item.ProductId,
@@ -385,7 +397,11 @@ public class CreateOrderHandler(
             {
                 orderItem.Price = discountedPrice ?? basePrice;
                 orderItem.OriginalPrice = basePrice;
-                orderItem.PromoLabel = appliedDiscount?.Label;
+                orderItem.PromoLabel = appliedDiscount?.LabelWith(addOnPrices.Sum(addOn => addOn.Price * addOn.AddOn.Quantity));
+                orderItem.DiscountPromotionId = appliedDiscount?.PromotionId;
+            }
+            else if (reservesDiscount)
+            {
                 orderItem.DiscountPromotionId = appliedDiscount?.PromotionId;
             }
 
@@ -449,7 +465,8 @@ public class CreateOrderHandler(
                 oi.SpecialInstructions,
                 oi.BundlePromotionId,
                 oi.OriginalPrice,
-                oi.PromoLabel
+                oi.PromoLabel,
+                oi.DiscountPromotionId
             ))
             .ToListAsync(cancellationToken);
 
@@ -472,7 +489,15 @@ public class CreateOrderHandler(
 
         var overridePrices = await AddOnPriceLookup.ForOrdersAsync(db, [orderWithTotals], cancellationToken);
 
-        var totalAmount = OrderMetrics.ComputeOrderTotal(orderWithTotals, overridePrices);
+        // A pending order saves no prices yet, so its total (and the change worked out from it) uses the discounts that are on.
+        var previewPrices = await PendingOrderPreview.LoadAsync(db, [orderWithTotals], httpContextAccessor, cancellationToken);
+
+        var totalAmount = OrderMetrics.ComputeOrderTotal(orderWithTotals, overridePrices, previewPrices);
+
+        if (!held && request.Status == OrderStatusEnum.Completed)
+        {
+            OrderTotalCheck.EnsureUnchanged(request.ExpectedTotal, totalAmount);
+        }
 
         if (held)
         {
@@ -516,6 +541,8 @@ public class CreateOrderHandler(
         {
             await ownTransaction.CommitAsync(cancellationToken);
         }
+
+        gate?.Dispose();
 
         if (request.Source == OrderSourceEnum.CustomerLink)
         {

@@ -100,7 +100,8 @@ public class GetOrdersHandler(WTFDbContext db, IHttpContextAccessor? httpContext
                         oi.SpecialInstructions,
                         oi.BundlePromotionId,
                         oi.OriginalPrice,
-                        oi.PromoLabel
+                        oi.PromoLabel,
+                oi.DiscountPromotionId
                     );
                 })
                 .ToList();

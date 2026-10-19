@@ -452,7 +452,37 @@ public class CreateOrderHandlerTests
     }
 
     [Fact]
+    public async Task Handle_AmountOffAbovePrice_WithAddOnsStillCharged_LabelsThePriceTakenOffNotFree()
+    {
+        var pizza = await SeedProduct("Pizza", 50m);
+        var cheese = await SeedProduct("Cheese", 20m, isAddOn: true);
+        await Link(pizza, cheese);
+        await SeedDiscount(pizza, 80m, null, [(cheese, 1)]);
+
+        var dto = await Handler().Handle(Cmd(OrderStatusEnum.Completed, Line(pizza, 1, null, null, AddOn(cheese))), CancellationToken.None);
+
+        dto.Items.Single().Price.ShouldBe(0m);
+        dto.Items.Single().PromoLabel.ShouldBe("Promo -₱50.00");
+        dto.TotalAmount.ShouldBe(20m);
+    }
+
+    [Fact]
+    public async Task Handle_AmountOffEqualToThePrice_AndAnAddOnWithAnOverridePrice_LabelsThePriceTakenOff()
+    {
+        var pizza = await SeedProduct("Pizza", 50m);
+        var cheese = await SeedProduct("Cheese", 0m, isAddOn: true);
+        await Link(pizza, cheese, overridePrice: 15m);
+        await SeedDiscount(pizza, 50m, null, [(cheese, 1)]);
+
+        var dto = await Handler().Handle(Cmd(OrderStatusEnum.Completed, Line(pizza, 1, null, null, AddOn(cheese))), CancellationToken.None);
+
+        dto.Items.Single().PromoLabel.ShouldBe("Promo -₱50.00");
+        dto.TotalAmount.ShouldBe(15m);
+    }
+
+    [Fact]
     public async Task Handle_DiscountExceedingPrice_ClampsPriceToZero()
+
     {
         var pizza = await SeedProduct("Pizza", 50m);
         var cheese = await SeedProduct("Cheese", 0m, isAddOn: true);
@@ -503,7 +533,7 @@ public class CreateOrderHandlerTests
     }
 
     [Fact]
-    public async Task Handle_PendingOrderWithDiscountedProduct_DoesNotApplyDiscount()
+    public async Task Handle_PendingOrderWithDiscountedProduct_SavesNoPriceButShowsTheDiscountedTotal()
     {
         var pizza = await SeedProduct("Pizza", 100m);
         var cheese = await SeedProduct("Cheese", 20m, isAddOn: true);
@@ -514,7 +544,7 @@ public class CreateOrderHandlerTests
 
         dto.Items.Single().Price.ShouldBeNull();
         dto.Items.Single().PromoLabel.ShouldBeNull();
-        dto.TotalAmount.ShouldBe(120m);
+        dto.TotalAmount.ShouldBe(90m);
     }
 
     [Fact]

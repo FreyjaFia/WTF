@@ -45,6 +45,9 @@ public record UpdateOrderCommand : IRequest<OrderDto?>
 
     public decimal? Tips { get; init; }
 
+    // The total the register showed and collected against; see CreateOrderCommand.ExpectedTotal.
+    public decimal? ExpectedTotal { get; init; }
+
     /// <summary>Why a completed order is being corrected. Only used by the override endpoint.</summary>
     public string? OverrideReason { get; init; }
 
@@ -66,6 +69,8 @@ public class UpdateOrderHandler(
 {
     public async Task<OrderDto?> Handle(UpdateOrderCommand request, CancellationToken cancellationToken)
     {
+        using var gate = await PromotionLimitGate.EnterAsync(cancellationToken);
+
         var order = await db.Orders
             .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.Product)
@@ -262,9 +267,11 @@ public class UpdateOrderHandler(
         }
 
         var shouldCapturePrice = newStatus == OrderStatusEnum.Completed || newStatus == OrderStatusEnum.Cancelled;
+        // An order that stays pending saves no price yet, but it holds the use of a limited discount while it waits.
+        var reservesDiscount = !isOverride && newStatus == OrderStatusEnum.Pending;
         Dictionary<Guid, List<PromotionPricing.DiscountedRule>> discountedRulesByProductId = [];
         DiscountBudget? discountBudget = null;
-        if (shouldCapturePrice)
+        if (shouldCapturePrice || reservesDiscount)
         {
             var loaded = await DiscountRuleLoader.LoadAsync(
                 db,
@@ -291,7 +298,7 @@ public class UpdateOrderHandler(
             var product = await db.Products.FindAsync([item.ProductId], cancellationToken) ?? throw new InvalidOperationException($"Product with ID {item.ProductId} not found.");
             var basePrice = product.Price;
             // A line inside a bundle is sold at the bundle's price, so no discount applies to it.
-            var appliedDiscount = shouldCapturePrice && !item.BundlePromotionId.HasValue
+            var appliedDiscount = (shouldCapturePrice || reservesDiscount) && !item.BundlePromotionId.HasValue
                 ? PromotionPricing.GetDiscountedUnitPrice(
                     basePrice,
                     item.ProductId,
@@ -322,6 +329,15 @@ public class UpdateOrderHandler(
             }
 
             pricedItems.Add((item, product, discountedPrice, appliedDiscount, addOnPrices));
+        }
+
+        if (!isOverride && newStatus == OrderStatusEnum.Completed)
+        {
+            var serverTotal = pricedItems
+                .Where(p => !p.Item.BundlePromotionId.HasValue)
+                .Sum(p => ((p.DiscountedPrice ?? p.Product.Price) + p.AddOnPrices.Sum(a => a.Price * a.AddOn.Quantity)) * p.Item.Quantity)
+                + request.BundlePromotions.Sum(b => bundlePriceByPromotionId[b.PromotionId] * b.Quantity);
+            OrderTotalCheck.EnsureUnchanged(request.ExpectedTotal, serverTotal);
         }
 
         object oldValues = new
@@ -412,7 +428,7 @@ public class UpdateOrderHandler(
             {
                 newItem.Price = discountedPrice ?? product.Price;
                 newItem.OriginalPrice = product.Price;
-                newItem.PromoLabel = appliedDiscount?.Label;
+                newItem.PromoLabel = appliedDiscount?.LabelWith(addOnPrices.Sum(addOn => addOn.Price * addOn.AddOn.Quantity));
                 newItem.DiscountPromotionId = appliedDiscount?.PromotionId;
 
                 if (isOverride
@@ -425,6 +441,10 @@ public class UpdateOrderHandler(
                     newItem.PromoLabel = snapshot.PromoLabel;
                     newItem.DiscountPromotionId = snapshot.DiscountPromotionId;
                 }
+            }
+            else if (reservesDiscount)
+            {
+                newItem.DiscountPromotionId = appliedDiscount?.PromotionId;
             }
 
             db.OrderItems.Add(newItem);
@@ -465,6 +485,7 @@ public class UpdateOrderHandler(
                 cancellationToken);
 
         await db.SaveChangesAsync(cancellationToken);
+        gate.Dispose();
         await conversationNotifier.OrderChangedAsync(order, chat, cancellationToken);
 
         var items = await db.OrderItems
@@ -496,7 +517,8 @@ public class UpdateOrderHandler(
                 oi.SpecialInstructions,
                 oi.BundlePromotionId,
                 oi.OriginalPrice,
-                oi.PromoLabel
+                oi.PromoLabel,
+                oi.DiscountPromotionId
             ))
             .ToListAsync(cancellationToken);
 
@@ -519,7 +541,10 @@ public class UpdateOrderHandler(
 
         var overridePrices = await AddOnPriceLookup.ForOrdersAsync(db, [orderWithTotals], cancellationToken);
 
-        var totalAmount = OrderMetrics.ComputeOrderTotal(orderWithTotals, overridePrices);
+        // A pending order saves no prices yet, so its total (and the change worked out from it) uses the discounts that are on.
+        var previewPrices = await PendingOrderPreview.LoadAsync(db, [orderWithTotals], httpContextAccessor, cancellationToken);
+
+        var totalAmount = OrderMetrics.ComputeOrderTotal(orderWithTotals, overridePrices, previewPrices);
 
         // Cash: the cashier gives back the cash minus the total and the tip, so the change is worked out here instead of
         // trusted from the app (an order queued offline by an older version used the total alone).

@@ -140,7 +140,8 @@ public class VoidOrderHandler(
                 oi.SpecialInstructions,
                 oi.BundlePromotionId,
                 oi.OriginalPrice,
-                oi.PromoLabel
+                oi.PromoLabel,
+                oi.DiscountPromotionId
             ))
             .ToListAsync(cancellationToken);
 

@@ -3,9 +3,9 @@ using Microsoft.EntityFrameworkCore;
 using NSubstitute;
 using WTF.Api.Common.Auth;
 using WTF.Api.Features.Audit.Enums;
-using WTF.Api.Features.Orders;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
+using WTF.Api.Features.Orders;
 using WTF.Api.Features.Promotions.DTOs;
 using WTF.Api.Services;
 using WTF.Domain.Entities;
@@ -69,6 +69,165 @@ public class OfflineSyncTests
     {
         var results = await SyncHandler().Handle(new SyncOfflineOrdersCommand([order]), CancellationToken.None);
         return results.Single();
+    }
+
+    // ---- limited promotions and the offline sync ----
+
+    private async Task<Guid> SeedLimitedDiscount(Guid productId, int maxRedemptions, decimal percent = 50m)
+    {
+        await using var db = TestDb.Create(_dbName);
+        var promo = new Promotion
+        {
+            Id = Guid.NewGuid(),
+            Name = "Limited",
+            TypeId = PromotionTypeIds.DiscountedProduct,
+            IsActive = true,
+            MaxRedemptions = maxRedemptions,
+            CreatedAt = Now,
+            CreatedBy = _userId
+        };
+        promo.DiscountedProductPromotions.Add(new DiscountedProductPromotion
+        {
+            Id = Guid.NewGuid(),
+            PromotionId = promo.Id,
+            ProductId = productId,
+            PercentOff = percent
+        });
+        db.Promotions.Add(promo);
+        await db.SaveChangesAsync();
+        return promo.Id;
+    }
+
+    private async Task<int> DiscountUses(Guid promotionId)
+    {
+        await using var db = TestDb.Create(_dbName);
+        var counted = new[] { (int)OrderStatusEnum.Pending, (int)OrderStatusEnum.Completed, (int)OrderStatusEnum.PendingApproval, (int)OrderStatusEnum.PendingReview };
+        return await db.OrderItems
+            .Where(i => i.DiscountPromotionId == promotionId && counted.Contains(i.Order.StatusId))
+            .SumAsync(i => i.Quantity);
+    }
+
+    [Fact]
+    public async Task Sync_ADiscountedSaleWhileAUseIsFree_IsSavedAndUsesIt()
+    {
+        var croissant = await SeedProduct("Croissant", 100m);
+        var promo = await SeedLimitedDiscount(croissant, 1);
+
+        var result = await SyncOne(Order("OFF-10-aaaa", OrderStatusEnum.Completed, Line(croissant, 1, 50m)));
+
+        result.Status.ShouldBe(OrderStatusEnum.Completed);
+        result.Reasons.ShouldBeEmpty();
+        var saved = await LoadOrder(result.OrderId!.Value);
+        saved.OrderItems.Single().Price.ShouldBe(50m);
+        saved.OrderItems.Single().DiscountPromotionId.ShouldBe(promo);
+        (await DiscountUses(promo)).ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task Sync_ADiscountedSaleAfterThePromotionRanOut_IsHeldAtTheQuotedPriceAndTakesNoUse()
+    {
+        var croissant = await SeedProduct("Croissant", 100m);
+        var promo = await SeedLimitedDiscount(croissant, 1);
+        await SyncOne(Order("OFF-11-aaaa", OrderStatusEnum.Completed, Line(croissant, 1, 50m)));
+
+        var late = await SyncOne(Order("OFF-12-aaaa", OrderStatusEnum.Completed, Line(croissant, 1, 50m)));
+
+        late.Status.ShouldBe(OrderStatusEnum.PendingReview);
+        late.Reasons.ShouldBe(["Croissant now costs 100.00, quoted 50.00."]);
+        var saved = await LoadOrder(late.OrderId!.Value);
+        saved.OrderItems.Single().Price.ShouldBe(50m, "the customer paid the quoted price");
+        (await DiscountUses(promo)).ShouldBe(1, "a held order does not take a use the promotion no longer has");
+    }
+
+    [Fact]
+    public async Task Sync_TwoOrdersInOneRequest_ShareTheLastUse()
+    {
+        var croissant = await SeedProduct("Croissant", 100m);
+        var promo = await SeedLimitedDiscount(croissant, 1);
+
+        var results = await SyncHandler().Handle(
+            new SyncOfflineOrdersCommand(
+            [
+                Order("OFF-13-aaaa", OrderStatusEnum.Completed, Line(croissant, 1, 50m)),
+                Order("OFF-14-aaaa", OrderStatusEnum.Completed, Line(croissant, 1, 50m)),
+            ]),
+            CancellationToken.None);
+
+        results[0].Status.ShouldBe(OrderStatusEnum.Completed);
+        results[1].Status.ShouldBe(OrderStatusEnum.PendingReview);
+        (await DiscountUses(promo)).ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task Sync_ASaleQuotedAtFullPriceWhileThePromotionIsOn_IsHeldSoTheCustomerCanBeRefunded()
+    {
+        var croissant = await SeedProduct("Croissant", 100m);
+        await SeedLimitedDiscount(croissant, 5);
+
+        var result = await SyncOne(Order("OFF-15-aaaa", OrderStatusEnum.Completed, Line(croissant, 1, 100m)));
+
+        result.Status.ShouldBe(OrderStatusEnum.PendingReview);
+        result.Reasons.ShouldBe(["Croissant now costs 50.00, quoted 100.00."]);
+    }
+
+    [Fact]
+    public async Task Sync_AnOpenOfflineOrder_HoldsAUseLikeAnyOtherOpenOrder()
+    {
+        var croissant = await SeedProduct("Croissant", 100m);
+        var promo = await SeedLimitedDiscount(croissant, 1);
+
+        var open = await SyncOne(Order("OFF-16-aaaa", OrderStatusEnum.Pending, Line(croissant, 1, null)));
+
+        open.Status.ShouldBe(OrderStatusEnum.Pending);
+        var saved = await LoadOrder(open.OrderId!.Value);
+        saved.OrderItems.Single().Price.ShouldBeNull();
+        saved.OrderItems.Single().DiscountPromotionId.ShouldBe(promo);
+
+        var after = await SyncOne(Order("OFF-17-aaaa", OrderStatusEnum.Completed, Line(croissant, 1, 50m)));
+        after.Status.ShouldBe(OrderStatusEnum.PendingReview);
+    }
+
+    [Fact]
+    public async Task Sync_AnOrderSentTwice_IsNotCountedTwice()
+    {
+        var croissant = await SeedProduct("Croissant", 100m);
+        var promo = await SeedLimitedDiscount(croissant, 3);
+        var order = Order("OFF-18-aaaa", OrderStatusEnum.Completed, Line(croissant, 2, 50m));
+
+        var first = await SyncOne(order);
+        var again = await SyncOne(order);
+
+        again.OrderId.ShouldBe(first.OrderId);
+        (await DiscountUses(promo)).ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task Sync_RacingALiveSaleForTheLastUse_GivesTheUseToExactlyOne()
+    {
+        var croissant = await SeedProduct("Croissant", 100m);
+        var promo = await SeedLimitedDiscount(croissant, 1);
+
+        var offline = SyncOne(Order("OFF-19-aaaa", OrderStatusEnum.Completed, Line(croissant, 1, 50m)));
+        var live = new CreateOrderHandler(
+                TestDb.Create(_dbName), TestRequest.As(_userId, AppRoles.Admin), TestFakes.Hub(), _audit, TestFakes.Push(), TestFakes.Conversations())
+            .Handle(new CreateOrderCommand { Status = OrderStatusEnum.Completed, Items = [Line(croissant, 1, null)] }, CancellationToken.None);
+        await Task.WhenAll(offline, live);
+
+        (await DiscountUses(promo)).ShouldBe(1, "never over the limit, whichever sale got there first");
+        var winnerWasLive = (await live).TotalAmount == 50m;
+        (await offline).Status.ShouldBe(winnerWasLive ? OrderStatusEnum.PendingReview : OrderStatusEnum.Completed);
+    }
+
+    [Fact]
+    public async Task Create_ASaleHeldForReviewWithoutQuotes_IsStillRefused()
+    {
+        // The review path only runs inside the sync; nobody can create a held order directly.
+        var croissant = await SeedProduct("Croissant", 100m);
+        var command = new CreateOrderCommand { Status = OrderStatusEnum.PendingReview, Items = [Line(croissant, 1, 50m)] };
+        var handler = new CreateOrderHandler(
+            TestDb.Create(_dbName), TestRequest.As(_userId, AppRoles.Admin), TestFakes.Hub(), _audit, TestFakes.Push(), TestFakes.Conversations());
+
+        await Should.ThrowAsync<InvalidOperationException>(() => handler.Handle(command, CancellationToken.None));
     }
 
     [Fact]

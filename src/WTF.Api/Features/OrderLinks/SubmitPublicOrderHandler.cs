@@ -1,10 +1,13 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
+using WTF.Api.Common.Orders;
+using WTF.Api.Common.Time;
 using WTF.Api.Features.OrderLinks.DTOs;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Features.Orders;
+using WTF.Calculations.Orders;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Features.OrderLinks;
@@ -26,7 +29,8 @@ public record SubmitPublicOrderRequest(
     PaymentMethodEnum PaymentMethod,
     decimal? AmountReceived,
     string? SpecialInstructions,
-    decimal? Tips = null);
+    decimal? Tips = null,
+    decimal? ExpectedTotal = null);
 
 public record SubmitPublicOrderCommand(string Token, SubmitPublicOrderRequest Request) : IRequest<PublicOrderDto?>;
 
@@ -100,7 +104,14 @@ public class SubmitPublicOrderHandler(
             ? null
             : request.SpecialInstructions.Trim();
 
+        // The total the customer is told, and the uses the order then holds, must come from the same view of the promotion uses.
+        using var gate = await PromotionLimitGate.EnterAsync(cancellationToken);
+
         var total = await ComputeTotalAsync(lines, cancellationToken);
+
+        // The page showed a total built from the promotions it knew. If one ran out or changed since, the customer is asked to
+        // look again instead of being charged a total they never saw.
+        OrderTotalCheck.EnsureUnchanged(request.ExpectedTotal, total);
 
         // An optional tip for the shop, on top of the total. Zero is the same as none.
         var tip = Math.Round(request.Tips ?? 0m, 2, MidpointRounding.AwayFromZero);
@@ -181,6 +192,7 @@ public class SubmitPublicOrderHandler(
                 null))],
             SpecialInstructions = instructions,
             Status = OrderStatusEnum.PendingApproval,
+            GateHeld = true,
             PaymentMethod = request.PaymentMethod,
             AmountReceived = amountReceived,
             ChangeAmount = change,
@@ -283,7 +295,7 @@ public class SubmitPublicOrderHandler(
 
     /// <summary>
     /// The price the customer will see, from today's catalog: product price plus each add-on at the price set for that
-    /// product. Discounted-product promotions are applied by the shop when the order is completed.
+    /// product, less the discounted-product promotions on right now. The shop prices the order again when it completes it.
     /// </summary>
     private async Task<decimal> ComputeTotalAsync(List<Line> lines, CancellationToken cancellationToken)
     {
@@ -314,13 +326,30 @@ public class SubmitPublicOrderHandler(
                 .Where(o => o.IsActive && parentIds.Contains(o.ProductId) && addOnIds.Contains(o.AddOnId))
                 .ToDictionaryAsync(o => (o.ProductId, o.AddOnId), o => o.Price, cancellationToken);
 
+        var loaded = await DiscountRuleLoader.LoadAsync(
+            db,
+            DateTime.UtcNow,
+            httpContextAccessor is null ? TimeZoneInfo.Utc : RequestTimeZone.ResolveFromRequest(httpContextAccessor),
+            null,
+            cancellationToken);
+
         return lines.Sum(line =>
         {
             var addOnPerUnit = line.AddOns.Sum(a =>
                 (overrides.TryGetValue((line.ProductId, a.ProductId), out var price) ? price : products[a.ProductId].Price)
                 * a.Quantity);
 
-            return (products[line.ProductId].Price + addOnPerUnit) * line.Quantity;
+            // The discount the shop will apply when it completes the order, with the promotions on right now.
+            var applied = PromotionPricing.GetDiscountedUnitPrice(
+                products[line.ProductId].Price,
+                line.ProductId,
+                line.AddOns.Select(a => (a.ProductId, a.Quantity)),
+                loaded.RulesByProductId,
+                line.Quantity,
+                loaded.Budget);
+            loaded.Budget.Use(applied?.PromotionId, line.Quantity);
+
+            return ((applied?.Price ?? products[line.ProductId].Price) + addOnPerUnit) * line.Quantity;
         });
     }
 }
