@@ -31,7 +31,8 @@ import { PublicOrdersComponent } from './public-orders/public-orders';
 import {
   ConversationListDto,
   ConversationSummaryDto,
-  ProductCategoryEnum,
+  PRODUCT_SUB_CATEGORY_LABELS,
+  ProductSubCategoryEnum,
   PublicAddOnGroupDto,
   PublicCartAddOn,
   PublicCartLine,
@@ -99,12 +100,13 @@ const CART_STORAGE_PREFIX = 'wtf.public-cart.';
 /** How long a tab-click scroll is allowed to glide before scroll events move the highlight again. */
 export const PROGRAMMATIC_SCROLL_MS = 700;
 
-const CATEGORY_LABELS: Record<number, string> = {
-  [ProductCategoryEnum.Drink]: 'Drinks',
-  [ProductCategoryEnum.Food]: 'Food',
-  [ProductCategoryEnum.Dessert]: 'Desserts',
-  [ProductCategoryEnum.Other]: 'Other',
-};
+/** The same groups, in the same order, as the shop's own order screen (which also hides a product with none). */
+const SUB_CATEGORY_IDS = [
+  ProductSubCategoryEnum.Coffee,
+  ProductSubCategoryEnum.NonCoffee,
+  ProductSubCategoryEnum.Snacks,
+  ProductSubCategoryEnum.Retail,
+];
 
 /**
  * The page a customer opens from their personal ordering link. They are not signed in.
@@ -285,23 +287,21 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
     return term ? deals.filter((deal) => deal.title.toLowerCase().includes(term)) : deals;
   });
 
-  /** Promos first (when there are any), then one section per category that still has a matching product. */
+  /** Promos first (when there are any), then one section per sub-category that still has a matching product. */
   protected readonly sections = computed<MenuSection[]>(() => {
     const products = this.filteredProducts();
     const deals = this.filteredDeals();
-    const categories = Object.keys(CATEGORY_LABELS)
-      .map(Number)
-      .map((id) => ({
-        id,
-        label: CATEGORY_LABELS[id],
-        products: products.filter((p) => p.category === id),
-        deals: [] as Deal[],
-      }))
-      .filter((section) => section.products.length > 0);
+    const categories: MenuSection[] = SUB_CATEGORY_IDS.map((id) => ({
+      id,
+      label: PRODUCT_SUB_CATEGORY_LABELS[id],
+      products: products.filter((p) => p.subCategory === id),
+      deals: [] as Deal[],
+    }));
+    const shown = categories.filter((section) => section.products.length > 0);
 
     return deals.length > 0
-      ? [{ id: PROMO_SECTION_ID, label: 'Promos', products: [], deals }, ...categories]
-      : categories;
+      ? [{ id: PROMO_SECTION_ID, label: 'Promos', products: [], deals }, ...shown]
+      : shown;
   });
 
   /** The highlighted tab, falling back to the first section when the chosen one is not shown. */

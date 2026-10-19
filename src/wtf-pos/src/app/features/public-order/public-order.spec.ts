@@ -28,6 +28,7 @@ const product = (id: string, name: string, price: number, category = 1): PublicP
   description: `${name} desc`,
   price,
   category,
+  subCategory: category,
   addOnCount: 0,
 });
 
@@ -198,7 +199,7 @@ describe('PublicOrderComponent', () => {
     it('shows a Promos section first, with a card for each discount', () => {
       setup({ link: withDeals(smallLatteDeal, plainCroissantDeal) });
 
-      expect(c.sections().map((s: SectionView) => s.label)).toEqual(['Promos', 'Drinks', 'Food', 'Desserts']);
+      expect(c.sections().map((s: SectionView) => s.label)).toEqual(['Promos', 'Coffee', 'Non-Coffee', 'Snacks']);
       const promos = c.sections()[0];
       expect(promos.products).toEqual([]);
       expect(promos.deals.map((d: DealView) => [d.title, d.price, d.listPrice, d.label])).toEqual([
@@ -211,7 +212,7 @@ describe('PublicOrderComponent', () => {
 
     it('has no Promos section when there are no discounts, or an older server sends none', () => {
       setup();
-      expect(c.sections().map((s: SectionView) => s.label)).toEqual(['Drinks', 'Food', 'Desserts']);
+      expect(c.sections().map((s: SectionView) => s.label)).toEqual(['Coffee', 'Non-Coffee', 'Snacks']);
       expect(el().querySelectorAll('[data-promo-deal]').length).toBe(0);
     });
 
@@ -237,7 +238,7 @@ describe('PublicOrderComponent', () => {
 
       c.search.set('croiss');
 
-      expect(c.sections().map((s: SectionView) => s.label)).toEqual(['Promos', 'Food']);
+      expect(c.sections().map((s: SectionView) => s.label)).toEqual(['Promos', 'Non-Coffee']);
       expect(c.sections()[0].deals.map((d: DealView) => d.title)).toEqual(['Croissant']);
       c.search.set('latte');
       expect(c.sections()[0].deals.map((d: DealView) => d.title)).toEqual(['Latte + Regular']);
@@ -1011,14 +1012,14 @@ describe('PublicOrderComponent', () => {
 
     it('has one underlined tab and one titled section per category that has products', () => {
       setup();
-      expect(tabs().map((t) => t.textContent?.trim())).toEqual(['Drinks', 'Food', 'Desserts']);
+      expect(tabs().map((t) => t.textContent?.trim())).toEqual(['Coffee', 'Non-Coffee', 'Snacks']);
       expect(c.sections().map((x: { label: string }) => x.label)).toEqual([
-        'Drinks',
-        'Food',
-        'Desserts',
+        'Coffee',
+        'Non-Coffee',
+        'Snacks',
       ]);
-      expect(el().querySelector('#category-1 h3')?.textContent).toContain('Drinks');
-      expect(el().querySelector('#category-2 h3')?.textContent).toContain('Food');
+      expect(el().querySelector('#category-1 h3')?.textContent).toContain('Coffee');
+      expect(el().querySelector('#category-2 h3')?.textContent).toContain('Non-Coffee');
       expect(
         el().querySelector('[aria-label="Menu categories"]')!.parentElement!.className,
       ).toContain('border-b');
@@ -1037,6 +1038,34 @@ describe('PublicOrderComponent', () => {
       });
       expect(c.sections().length).toBe(1);
       expect(tabs().length).toBe(1);
+    });
+
+    it('groups by sub-category like the shop screen, with Retail last', () => {
+      setup({
+        link: of(
+          link({
+            products: [product('r', 'Mug', 300, 4), product('c', 'Latte', 150, 1), product('s', 'Cake', 200, 3)],
+          }),
+        ),
+      });
+      expect(c.sections().map((x: { label: string }) => x.label)).toEqual(['Coffee', 'Snacks', 'Retail']);
+    });
+
+    it('hides a product with no sub-category, as the shop screen does', () => {
+      setup({
+        link: of(
+          link({
+            products: [
+              product('c', 'Latte', 150, 1),
+              { ...product('n', 'Mystery', 50), subCategory: null },
+              { ...product('u', 'Unknown', 60), subCategory: 42 },
+            ],
+          }),
+        ),
+      });
+      const sections = c.sections() as { label: string; products: { name: string }[] }[];
+      expect(sections.map((x) => x.label)).toEqual(['Coffee']);
+      expect(sections.flatMap((x) => x.products.map((p) => p.name))).toEqual(['Latte']);
     });
 
     it('drops tabs and sections that have no match for the search', () => {
