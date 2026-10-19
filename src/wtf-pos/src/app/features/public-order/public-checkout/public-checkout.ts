@@ -24,6 +24,10 @@ export interface PublicCheckoutForm {
   /** An optional tip for the shop, on top of the total. */
   tips: number | null;
   specialInstructions: string | null;
+  /** The customer chose to keep a changed contact number as their number on file. */
+  saveContactNumber: boolean;
+  /** The customer chose to keep a changed delivery address as their address on file. */
+  saveAddress: boolean;
 }
 
 /** How the cash amount compares with what is to be paid. */
@@ -68,6 +72,8 @@ export class PublicCheckoutComponent implements OnInit, OnDestroy {
   protected readonly amount = signal('');
   protected readonly tip = signal('');
   protected readonly instructions = signal('');
+  /** One tick keeps whatever changed: the number, the address, or both. */
+  protected readonly saveDetails = signal(false);
   /** Errors are shown only after the first attempt to place the order. */
   protected readonly attempted = signal(false);
   /** True for a moment after the Place Order button was let go before it filled. */
@@ -135,6 +141,32 @@ export class PublicCheckoutComponent implements OnInit, OnDestroy {
     }
 
     return null;
+  });
+
+  /** A usable number that differs from the one on file: only then is the customer asked to keep it. */
+  protected readonly contactChanged = computed(
+    () =>
+      !this.contactError() && this.contact().trim() !== (this.defaultContact() ?? '').trim(),
+  );
+
+  protected readonly addressChanged = computed(
+    () =>
+      this.isDelivery() &&
+      !this.addressError() &&
+      this.address().trim() !== (this.defaultAddress() ?? '').trim(),
+  );
+
+  protected readonly detailsChanged = computed(() => this.contactChanged() || this.addressChanged());
+
+  /** What the tick box says it will keep. */
+  protected readonly saveLabel = computed(() => {
+    const what =
+      this.contactChanged() && this.addressChanged()
+        ? 'number and address'
+        : this.addressChanged()
+          ? 'address'
+          : 'number';
+    return `Save my new ${what} for next time`;
   });
 
   protected readonly tipError = computed<string | null>(() => {
@@ -255,6 +287,8 @@ export class PublicCheckoutComponent implements OnInit, OnDestroy {
       amountReceived: this.isCash() ? this.amountValue() : null,
       tips: tip > 0 ? tip : null,
       specialInstructions: this.instructions().trim() || null,
+      saveContactNumber: this.contactChanged() && this.saveDetails(),
+      saveAddress: this.addressChanged() && this.saveDetails(),
     });
   }
 

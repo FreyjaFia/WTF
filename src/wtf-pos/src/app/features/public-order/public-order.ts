@@ -1117,7 +1117,26 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
       tips: form.tips,
       specialInstructions: form.specialInstructions,
       expectedTotal: this.cartTotal(),
+      saveContactNumber: form.saveContactNumber,
+      saveAddress: form.saveAddress,
     };
+  }
+
+  /** The server kept what the customer chose to keep; show the same on the next checkout so it is not asked again. */
+  private rememberSavedDetails(form: PublicCheckoutForm): void {
+    if (!form.saveContactNumber && !form.saveAddress) {
+      return;
+    }
+
+    this.link.update((link) =>
+      link
+        ? {
+            ...link,
+            contactNumber: form.saveContactNumber ? form.contactNumber : link.contactNumber,
+            address: form.saveAddress ? (form.deliveryAddress ?? link.address) : link.address,
+          }
+        : link,
+    );
   }
 
   protected placeOrder(form: PublicCheckoutForm): void {
@@ -1137,6 +1156,7 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
       next: (order) => {
         this.isPlacingOrder.set(false);
         this.checkoutOpen.set(false);
+        this.rememberSavedDetails(form);
         this.cart.set([]);
         this.cartOpen.set(false);
         this.alerts.success(

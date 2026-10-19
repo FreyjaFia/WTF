@@ -104,6 +104,20 @@
         }
       </div>
 
+      @if (detailsChanged()) {
+        <label class="flex cursor-pointer items-center gap-2 text-sm leading-5 text-gray-600">
+          <input
+            type="checkbox"
+            class="checkbox checkbox-sm shrink-0"
+            data-save-details
+            [checked]="saveDetails()"
+            [disabled]="isBusy()"
+            (change)="saveDetails.set($any($event.target).checked)"
+          />
+          <span>{{ saveLabel() }}</span>
+        </label>
+      }
+
       <fieldset>
         <legend class="mb-2 text-xs font-semibold tracking-wider text-gray-400 uppercase">
           Payment

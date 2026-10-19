@@ -130,6 +130,10 @@ export interface SubmitPublicOrderRequest {
   specialInstructions?: string | null;
   /** The total the page showed. The shop refuses the order if its own total came out different. */
   expectedTotal?: number | null;
+  /** Keep this contact number as the customer's number on file (asked only when it differs from it). */
+  saveContactNumber?: boolean;
+  /** Keep this delivery address as the customer's address on file (asked only when it differs from it). */
+  saveAddress?: boolean;
 }
 
 /** A line in the customer's cart. The cart lives in memory only and is never saved on the device. */

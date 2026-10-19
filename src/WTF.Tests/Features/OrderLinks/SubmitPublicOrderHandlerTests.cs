@@ -471,6 +471,77 @@ public class SubmitPublicOrderHandlerTests
         (await db.Orders.SingleAsync()).DeliveryAddress.ShouldBeNull();
     }
 
+    private Task<WTF.Api.Features.OrderLinks.DTOs.PublicOrderDto?> SubmitWithAudit(SubmitPublicOrderRequest request) =>
+        new SubmitPublicOrderHandler(
+                TestDb.Create(_db), RealSender(), NullLogger<SubmitPublicOrderHandler>.Instance,
+                TimeProvider.System, null, _audit)
+            .Handle(new SubmitPublicOrderCommand(_link.Token, request), CancellationToken.None);
+
+    [Fact]
+    public async Task Submit_SaveContactNumber_KeepsTheNumberOnTheCustomerAndAudits()
+    {
+        await SubmitWithAudit(Request(contact: "0999 888 7777") with { SaveContactNumber = true });
+
+        await using var db = TestDb.Create(_db);
+        var customer = await db.Customers.SingleAsync();
+        customer.ContactNumber.ShouldBe("0999 888 7777");
+        customer.UpdatedBy.ShouldBe(_systemUserId);
+        await _audit.Received(1).LogAsync(
+            AuditAction.CustomerUpdated, AuditEntityType.Customer, _customer.Id.ToString(),
+            Arg.Any<object?>(), Arg.Any<object?>(), _systemUserId, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Submit_SaveAddress_KeepsTheDeliveryAddressOnTheCustomer()
+    {
+        await SubmitWithAudit(
+            Request(fulfillment: FulfillmentTypeEnum.Delivery, address: "9 New St") with { SaveAddress = true });
+
+        await using var db = TestDb.Create(_db);
+        (await db.Customers.SingleAsync()).Address.ShouldBe("9 New St");
+    }
+
+    [Fact]
+    public async Task Submit_SaveAddress_OnPickupHasNoAddressToKeep()
+    {
+        await SubmitWithAudit(
+            Request(fulfillment: FulfillmentTypeEnum.Pickup, address: "9 New St") with { SaveAddress = true });
+
+        await using var db = TestDb.Create(_db);
+        (await db.Customers.SingleAsync()).Address.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task Submit_WithoutTheSaveFlags_LeavesTheCustomerAlone()
+    {
+        await SubmitWithAudit(
+            Request(fulfillment: FulfillmentTypeEnum.Delivery, address: "9 New St", contact: "0999 888 7777"));
+
+        await using var db = TestDb.Create(_db);
+        var customer = await db.Customers.SingleAsync();
+        customer.ContactNumber.ShouldBeNull();
+        customer.Address.ShouldBeNull();
+        await _audit.DidNotReceive().LogAsync(
+            AuditAction.CustomerUpdated, Arg.Any<AuditEntityType>(), Arg.Any<string>(),
+            Arg.Any<object?>(), Arg.Any<object?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Submit_SaveContactNumber_WhenUnchanged_WritesNoAuditEntry()
+    {
+        await using (var db = TestDb.Create(_db))
+        {
+            (await db.Customers.SingleAsync()).ContactNumber = "0917 123 4567";
+            await db.SaveChangesAsync();
+        }
+
+        await SubmitWithAudit(Request(contact: "0917 123 4567") with { SaveContactNumber = true });
+
+        await _audit.DidNotReceive().LogAsync(
+            AuditAction.CustomerUpdated, Arg.Any<AuditEntityType>(), Arg.Any<string>(),
+            Arg.Any<object?>(), Arg.Any<object?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
+    }
+
     [Fact]
     public async Task Submit_AuditsTheOrderAsCreatedBySystemUserAndAlertsStaff()
     {

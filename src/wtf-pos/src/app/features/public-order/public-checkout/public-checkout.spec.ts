@@ -221,6 +221,135 @@ describe('PublicCheckoutComponent', () => {
     });
   });
 
+  describe('keeping a changed number or address', () => {
+    const box = () => el().querySelector('[data-save-details]') as HTMLInputElement | null;
+    const tick = () => {
+      box()!.click();
+      fixture.detectChanges();
+    };
+    const toDelivery = () => {
+      button('Delivery')!.click();
+      fixture.detectChanges();
+    };
+
+    it('does not ask while everything is the same as on file', () => {
+      setup({ address: '5 Side St', contact: '0917 123 4567' });
+      toDelivery();
+
+      expect(box()).toBeNull();
+    });
+
+    it('does not ask for a blank or invalid number', () => {
+      setup({ contact: '0917 123 4567' });
+      type('checkout-contact', '12');
+
+      expect(box()).toBeNull();
+    });
+
+    it('asks once the number differs, and says it is the number', () => {
+      setup({ contact: '0917 123 4567' });
+      type('checkout-contact', '0999 888 7777');
+
+      expect(box()).not.toBeNull();
+      expect(text()).toContain('Save my new number for next time');
+    });
+
+    it('asks to save a number when none is on file', () => {
+      setup();
+      type('checkout-contact', '0999 888 7777');
+
+      expect(box()).not.toBeNull();
+    });
+
+    it('asks about the address, only for a delivery', () => {
+      setup({ address: '5 Side St', contact: '0917 123 4567' });
+      toDelivery();
+      type('checkout-address', '9 New St');
+
+      expect(text()).toContain('Save my new address for next time');
+      button('Pickup')!.click();
+      fixture.detectChanges();
+      expect(box()).toBeNull();
+    });
+
+    it('is one box for both when both changed', () => {
+      setup({ address: '5 Side St', contact: '0917 123 4567' });
+      toDelivery();
+      type('checkout-address', '9 New St');
+      type('checkout-contact', '0999 888 7777');
+
+      expect(el().querySelectorAll('[data-save-details]').length).toBe(1);
+      expect(text()).toContain('Save my new number and address for next time');
+    });
+
+    it('stops asking when the value is changed back', () => {
+      setup({ contact: '0917 123 4567' });
+      type('checkout-contact', '0999 888 7777');
+      type('checkout-contact', ' 0917 123 4567 ');
+
+      expect(box()).toBeNull();
+    });
+
+    it('starts as no', () => {
+      setup({ contact: '0917 123 4567' });
+      type('checkout-contact', '0999 888 7777');
+      type('checkout-amount', '500');
+      hold();
+
+      expect(lastForm().saveContactNumber).toBe(false);
+      expect(lastForm().saveAddress).toBe(false);
+    });
+
+    it('keeps only what changed when ticked', () => {
+      setup({ address: '5 Side St', contact: '0917 123 4567' });
+      toDelivery();
+      type('checkout-address', '9 New St');
+      type('checkout-amount', '500');
+      tick();
+      hold();
+
+      expect(lastForm().saveAddress).toBe(true);
+      expect(lastForm().saveContactNumber).toBe(false);
+    });
+
+    it('keeps both when both changed and it is ticked', () => {
+      setup({ address: '5 Side St', contact: '0917 123 4567' });
+      toDelivery();
+      type('checkout-address', '9 New St');
+      type('checkout-contact', '0999 888 7777');
+      type('checkout-amount', '500');
+      tick();
+      hold();
+
+      expect(lastForm().saveAddress).toBe(true);
+      expect(lastForm().saveContactNumber).toBe(true);
+    });
+
+    it('never keeps a value that is back to the one on file', () => {
+      setup({ contact: '0917 123 4567' });
+      type('checkout-contact', '0999 888 7777');
+      tick();
+      type('checkout-contact', '0917 123 4567');
+      type('checkout-amount', '500');
+      hold();
+
+      expect(lastForm().saveContactNumber).toBe(false);
+    });
+
+    it('never keeps an address for a pickup', () => {
+      setup({ address: '5 Side St', contact: '0917 123 4567' });
+      toDelivery();
+      type('checkout-address', '9 New St');
+      tick();
+      button('Pickup')!.click();
+      fixture.detectChanges();
+      type('checkout-amount', '500');
+      hold();
+
+      expect(lastForm().saveAddress).toBe(false);
+    });
+  });
+
   describe('payment', () => {
     it('needs a cash amount that covers the total', () => {
       setup({ total: 360 });
@@ -702,6 +831,8 @@ describe('PublicCheckoutComponent', () => {
         amountReceived: 500,
         tips: null,
         specialInstructions: 'Call me',
+        saveContactNumber: false,
+        saveAddress: false,
       });
     });
 

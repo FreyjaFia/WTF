@@ -991,6 +991,8 @@ describe('PublicOrderComponent', () => {
         amountReceived: 500,
         tips: 0,
         specialInstructions: null,
+        saveContactNumber: false,
+        saveAddress: false,
       });
       expect(service.createOrder).not.toHaveBeenCalled();
       expect(c.checkoutError()).toContain("You're offline");
@@ -1811,6 +1813,8 @@ describe('PublicOrderComponent', () => {
       paymentMethod: 1,
       amountReceived: 500,
       specialInstructions: null,
+      saveContactNumber: false,
+      saveAddress: false,
       ...over,
     });
     const placed = (over: Record<string, unknown> = {}) => ({
@@ -1949,6 +1953,8 @@ describe('PublicOrderComponent', () => {
           amountReceived: 500,
           specialInstructions: 'Ring',
           expectedTotal: 480,
+          saveContactNumber: false,
+          saveAddress: false,
         });
         // The only amount in it is the total the customer saw, which the shop compares with its own; it never sets a price.
         const { expectedTotal, ...withoutTotal } = request;
@@ -1995,6 +2001,51 @@ describe('PublicOrderComponent', () => {
           'Your order #1042 was sent. The shop will confirm it shortly.',
         );
         expect(text()).toContain('#1042');
+      });
+
+      it('sends what the customer chose to keep, and remembers it for the next checkout', () => {
+        setup();
+        fillCart();
+        c.openCheckout();
+        service.createOrder.mockReturnValue(of(placed()));
+
+        c.placeOrder(
+          form({
+            fulfillment: 1,
+            deliveryAddress: '9 New St',
+            contactNumber: '0999 888 7777',
+            saveContactNumber: true,
+            saveAddress: true,
+          }),
+        );
+
+        expect(service.createOrder).toHaveBeenCalledWith(
+          'tok-1',
+          expect.objectContaining({ saveContactNumber: true, saveAddress: true }),
+        );
+        expect(c.link()).toEqual(
+          expect.objectContaining({ contactNumber: '0999 888 7777', address: '9 New St' }),
+        );
+      });
+
+      it('leaves the details on file alone when nothing was chosen to keep', () => {
+        setup();
+        fillCart();
+        c.openCheckout();
+        service.createOrder.mockReturnValue(of(placed()));
+        const before = c.link();
+
+        c.placeOrder(
+          form({
+            fulfillment: 1,
+            deliveryAddress: '9 New St',
+            contactNumber: '0999 888 7777',
+            saveContactNumber: false,
+            saveAddress: false,
+          }),
+        );
+
+        expect(c.link()).toBe(before);
       });
 
       it('locks the checkout while it is being sent and ignores repeats', () => {

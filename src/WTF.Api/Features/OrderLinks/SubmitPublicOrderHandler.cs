@@ -3,10 +3,12 @@ using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
 using WTF.Api.Common.Orders;
 using WTF.Api.Common.Time;
+using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.OrderLinks.DTOs;
 using WTF.Api.Features.Orders;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
+using WTF.Api.Services;
 using WTF.Calculations.Orders;
 using WTF.Domain.Data;
 
@@ -30,7 +32,9 @@ public record SubmitPublicOrderRequest(
     decimal? AmountReceived,
     string? SpecialInstructions,
     decimal? Tips = null,
-    decimal? ExpectedTotal = null);
+    decimal? ExpectedTotal = null,
+    bool SaveContactNumber = false,
+    bool SaveAddress = false);
 
 public record SubmitPublicOrderCommand(string Token, SubmitPublicOrderRequest Request) : IRequest<PublicOrderDto?>;
 
@@ -44,7 +48,8 @@ public class SubmitPublicOrderHandler(
     ISender sender,
     ILogger<SubmitPublicOrderHandler> logger,
     TimeProvider timeProvider,
-    IHttpContextAccessor? httpContextAccessor = null) : IRequestHandler<SubmitPublicOrderCommand, PublicOrderDto?>
+    IHttpContextAccessor? httpContextAccessor = null,
+    IAuditService? auditService = null) : IRequestHandler<SubmitPublicOrderCommand, PublicOrderDto?>
 {
     public const string SystemUsername = "customer-link";
 
@@ -205,6 +210,9 @@ public class SubmitPublicOrderHandler(
             ContactNumber = contact
         }, cancellationToken);
 
+        await SaveCustomerDetailsAsync(
+            access.Customer.Id, request, contact, address, systemUserId.Value, cancellationToken);
+
         var order = await db.Orders
             .AsNoTracking()
             .Where(o => o.Id == created.Id)
@@ -214,6 +222,75 @@ public class SubmitPublicOrderHandler(
             .FirstAsync(cancellationToken);
 
         return (await PublicOrderMapping.ToDtosAsync(db, [order], httpContextAccessor, cancellationToken))[0];
+    }
+
+    /// <summary>
+    /// When the customer asked for it, keeps the number and/or delivery address they just used as their details. A failure
+    /// here never undoes the order: it is already placed.
+    /// </summary>
+    private async Task SaveCustomerDetailsAsync(
+        Guid customerId,
+        SubmitPublicOrderRequest request,
+        string contact,
+        string? address,
+        Guid systemUserId,
+        CancellationToken cancellationToken)
+    {
+        var saveContact = request.SaveContactNumber;
+        var saveAddress = request.SaveAddress && address is not null;
+        if (!saveContact && !saveAddress)
+        {
+            return;
+        }
+
+        try
+        {
+            var customer = await db.Customers.FirstOrDefaultAsync(c => c.Id == customerId, cancellationToken);
+            if (customer is null)
+            {
+                return;
+            }
+
+            var oldValues = new { customer.Address, customer.ContactNumber };
+            var changed = false;
+
+            if (saveContact && customer.ContactNumber != contact)
+            {
+                customer.ContactNumber = contact;
+                changed = true;
+            }
+
+            if (saveAddress && customer.Address != address)
+            {
+                customer.Address = address;
+                changed = true;
+            }
+
+            if (!changed)
+            {
+                return;
+            }
+
+            customer.UpdatedAt = timeProvider.GetUtcNow().UtcDateTime;
+            customer.UpdatedBy = systemUserId;
+            await db.SaveChangesAsync(cancellationToken);
+
+            if (auditService is not null)
+            {
+                await auditService.LogAsync(
+                    action: AuditAction.CustomerUpdated,
+                    entityType: AuditEntityType.Customer,
+                    entityId: customer.Id.ToString(),
+                    oldValues: oldValues,
+                    newValues: new { customer.Address, customer.ContactNumber },
+                    userId: systemUserId,
+                    cancellationToken: cancellationToken);
+            }
+        }
+        catch (DbUpdateException ex)
+        {
+            logger.LogWarning(ex, "Could not save the details of customer {CustomerId} after an order.", customerId);
+        }
     }
 
     private sealed record Line(Guid ProductId, int Quantity, List<PublicOrderAddOnRequest> AddOns, string? SpecialInstructions);
