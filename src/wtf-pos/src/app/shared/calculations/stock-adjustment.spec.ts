@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import cases from './calculation-cases.json';
-import { adjustmentDelta } from './stock-adjustment';
+import { adjustmentDelta, salesCovered } from './stock-adjustment';
+
+interface SalesCoveredCase {
+  name: string;
+  balance: number;
+  perSale: number;
+  expected: number;
+}
 
 interface AdjustmentCase {
   name: string;
@@ -14,6 +21,13 @@ describe('stock adjustment: the cases shared with the API', () => {
     'adjustment delta: %s',
     (_name, c) => {
       expect(adjustmentDelta(c.shown, c.counted)).toBeCloseTo(c.expected, 3);
+    },
+  );
+
+  it.each((cases.salesCovered as SalesCoveredCase[]).map((c) => [c.name, c] as const))(
+    'sales covered: %s',
+    (_name, c) => {
+      expect(salesCovered(c.balance, c.perSale)).toBe(c.expected);
     },
   );
 });

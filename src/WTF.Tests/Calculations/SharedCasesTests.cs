@@ -48,6 +48,8 @@ public class SharedCasesTests
 
     private sealed record AdjustmentCase(string Name, decimal Shown, decimal Counted, decimal Expected);
 
+    private sealed record SalesCoveredCase(string Name, decimal Balance, decimal PerSale, int Expected);
+
     private sealed record CashCase(string Name, decimal Total, decimal? Tips, decimal Received, decimal ExpectedDue, decimal ExpectedChange);
 
     private sealed record Cases(
@@ -59,7 +61,8 @@ public class SharedCasesTests
         List<PercentCase> PercentOfTotal,
         List<CashCase> CashPayment,
         List<ScheduleCase> ScheduleOpen,
-        List<AdjustmentCase> StockAdjustment);
+        List<AdjustmentCase> StockAdjustment,
+        List<SalesCoveredCase> SalesCovered);
 
     private static readonly Lazy<Cases> Loaded = new(() =>
     {
@@ -86,6 +89,8 @@ public class SharedCasesTests
     public static IEnumerable<object[]> CashCaseNames() => Loaded.Value.CashPayment.Select(c => new object[] { c.Name });
 
     public static IEnumerable<object[]> AdjustmentCaseNames() => Loaded.Value.StockAdjustment.Select(c => new object[] { c.Name });
+
+    public static IEnumerable<object[]> SalesCoveredCaseNames() => Loaded.Value.SalesCovered.Select(c => new object[] { c.Name });
 
     /// <summary>A stable id for a name in the file, so "cheese" is the same add-on in the cart and in the rule.</summary>
     private static Guid IdFor(string name) => new(MD5.HashData(Encoding.UTF8.GetBytes(name)));
@@ -170,6 +175,15 @@ public class SharedCasesTests
         CashPayment.AmountDue(c.Total, c.Tips).ShouldBe(c.ExpectedDue);
         CashPayment.Change(c.Received, c.Total, c.Tips).ShouldBe(c.ExpectedChange);
         CashPayment.ChangeToGive(c.Received, c.Total, c.Tips).ShouldBe(Math.Max(0m, c.ExpectedChange));
+    }
+
+    [Theory]
+    [MemberData(nameof(SalesCoveredCaseNames))]
+    public void SalesCovered_MatchesTheSharedCase(string name)
+    {
+        var c = Loaded.Value.SalesCovered.Single(x => x.Name == name);
+
+        StockRules.SalesCovered(c.Balance, c.PerSale).ShouldBe(c.Expected);
     }
 
     [Theory]

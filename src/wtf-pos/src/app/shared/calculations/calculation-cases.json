@@ -1345,5 +1345,15 @@
       "counted": 1.2346,
       "expected": -1.265
     }
+  ],
+  "salesCovered": [
+    { "name": "a box of 6 against 10 litres", "balance": 10000, "perSale": 6000, "expected": 1 },
+    { "name": "one latte against 9,800 ml", "balance": 9800, "perSale": 200, "expected": 49 },
+    { "name": "exactly enough for one sale", "balance": 200, "perSale": 200, "expected": 1 },
+    { "name": "not quite enough", "balance": 199.999, "perSale": 200, "expected": 0 },
+    { "name": "an empty balance covers nothing", "balance": 0, "perSale": 200, "expected": 0 },
+    { "name": "a negative balance covers nothing", "balance": -50, "perSale": 200, "expected": 0 },
+    { "name": "no quantity per sale covers nothing", "balance": 100, "perSale": 0, "expected": 0 },
+    { "name": "fractions of a unit", "balance": 2.5, "perSale": 0.5, "expected": 5 }
   ]
 }

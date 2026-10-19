@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { AlertService, InventoryService, ModalStackService, ProductService } from '@core/services';
 import { AvatarComponent } from '@shared/components/avatar/avatar';
 import { IconComponent } from '@shared/components/icons/icon/icon';
+import { salesCovered } from '@shared/calculations';
 import { getInventoryUnitAbbreviation } from '@shared/constants/inventory-units';
 import {
   ItemDto,
@@ -55,13 +56,20 @@ export class ProductItemLinksSelectorComponent {
   protected readonly searchTerm = signal('');
   protected readonly selectedFilter = signal<'all' | 'products' | 'addons'>('all');
   protected readonly unitName = signal('');
+  protected readonly currentQuantity = signal(0);
   protected readonly unitAbbreviation = computed(() =>
     getInventoryUnitAbbreviation(this.unitName()),
   );
 
-  public open(itemId: string, currentLinks: ProductItemLinkDto[], unitName: string): void {
+  public open(
+    itemId: string,
+    currentLinks: ProductItemLinkDto[],
+    unitName: string,
+    currentQuantity = 0,
+  ): void {
     this.itemId = itemId;
     this.unitName.set(unitName);
+    this.currentQuantity.set(currentQuantity);
     this.initialLinks = currentLinks.filter((link) => link.isActive);
     this.rememberedQuantities = new Map(
       currentLinks.filter((link) => !link.isActive).map((link) => [link.productId, link.quantityPerSale]),
@@ -95,6 +103,7 @@ export class ProductItemLinksSelectorComponent {
     this.rememberedQuantities = new Map();
     this.allProducts.set([]);
     this.unitName.set('');
+    this.currentQuantity.set(0);
 
     const modal = document.querySelector('#product-item-links-modal') as HTMLDialogElement;
     if (modal) {
@@ -105,6 +114,16 @@ export class ProductItemLinksSelectorComponent {
       this.modalStack.remove(this.modalStackId);
       this.modalStackId = null;
     }
+  }
+
+  protected stockImpact(row: LinkedProductRow): string {
+    const unit = this.unitAbbreviation();
+    const covered = salesCovered(this.currentQuantity(), row.quantityPerSale);
+    const sales = covered === 1 ? '1 sale' : `${covered} sales`;
+
+    return covered > 0
+      ? `1 sale takes ${row.quantityPerSale} ${unit}. In stock now: enough for ${sales}.`
+      : `1 sale takes ${row.quantityPerSale} ${unit}. In stock now: not enough for one sale.`;
   }
 
   protected onSearchInput(event: Event): void {

@@ -18,7 +18,12 @@ describe('ProductEditorComponent: track inventory', () => {
       getProducts: vi.fn(() => of([])),
     };
     const inventory = {
-      getInventoryItems: vi.fn(() => of([{ id: 'milk', name: '1L Oat Milk' }])),
+      getInventoryItems: vi.fn(() =>
+        of([
+          { id: 'milk', name: '1L Oat Milk', unitName: 'milliliter', currentQuantity: 9800, allowNegativeStock: true },
+          { id: 'cup', name: 'Large Cup', unitName: 'piece', currentQuantity: 1, allowNegativeStock: false },
+        ]),
+      ),
       createInventoryItem: vi.fn(() => of({ id: 'own-item' })),
       linkProductToItem: vi.fn(() => of({})),
     };
@@ -108,5 +113,53 @@ describe('ProductEditorComponent: track inventory', () => {
     expect(alerts.error).toHaveBeenCalledWith(expect.stringContaining('stock setup failed: Item not found.'));
     expect(alerts.successCreated).toHaveBeenCalledWith('Product');
     expect(navigate).toHaveBeenCalled();
+  });
+
+  describe('stock impact preview', () => {
+    const preview = (fixture: { detectChanges: () => void; nativeElement: HTMLElement }) => {
+      fixture.detectChanges();
+      return fixture.nativeElement.querySelector('[data-testid="stock-impact"]')?.textContent?.trim() ?? null;
+    };
+
+    it('shows nothing while no stock tracking is chosen', () => {
+      const { fixture } = setup();
+      expect(preview(fixture)).toBeNull();
+    });
+
+    it('shows how many sales the starting stock covers for an own item', () => {
+      const { fixture, c } = setup();
+      c.setStockMode('own');
+      c.stockForm.patchValue({ startingQuantity: 12 });
+      expect(preview(fixture)).toBe('Each sale takes 1 piece. The starting stock covers 12 sales.');
+    });
+
+    it('shows what one sale takes from an existing item and how many sales are covered', () => {
+      const { fixture, c } = setup();
+      c.setStockMode('existing');
+      c.stockForm.patchValue({ existingItemId: 'milk', quantityPerSale: 6000 });
+      expect(preview(fixture)).toBe(
+        'Each sale takes 6000 ml. 1L Oat Milk has 9800 ml in stock, enough for 1 sale.',
+      );
+    });
+
+    it('warns that a short item will go below zero and warn', () => {
+      const { fixture, c } = setup();
+      c.setStockMode('existing');
+      c.stockForm.patchValue({ existingItemId: 'milk', quantityPerSale: 20000 });
+      expect(preview(fixture)).toContain('it will go below zero and warn');
+    });
+
+    it('warns that a blocking item will refuse online sales until stock is added', () => {
+      const { fixture, c } = setup();
+      c.setStockMode('existing');
+      c.stockForm.patchValue({ existingItemId: 'cup', quantityPerSale: 2 });
+      expect(preview(fixture)).toContain('online sales of this product will be refused');
+    });
+
+    it('shows nothing until an item is chosen', () => {
+      const { fixture, c } = setup();
+      c.setStockMode('existing');
+      expect(preview(fixture)).toBeNull();
+    });
   });
 });

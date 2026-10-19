@@ -117,6 +117,17 @@ public static class StockRules
         return returnedWeight >= totalWeight ? quantity : Round(quantity * returnedWeight / totalWeight);
     }
 
+    // How many whole sales the balance covers when each sale takes `quantityPerSale`. Zero for an empty or negative balance.
+    public static int SalesCovered(decimal balance, decimal quantityPerSale)
+    {
+        if (quantityPerSale <= 0m || balance <= 0m)
+        {
+            return 0;
+        }
+
+        return (int)Math.Floor(Round(balance) / Round(quantityPerSale));
+    }
+
     public static decimal AdjustmentDelta(decimal currentQuantity, decimal countedQuantity) =>
         Round(countedQuantity - currentQuantity);
 

@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, OnInit, signal, ViewChild } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
@@ -33,7 +34,9 @@ import {
   UpdateProductAddOnPriceOverrideDto,
   UpdateProductDto,
 } from '@shared/models';
+import { salesCovered } from '@shared/calculations';
 import { AppRoutes } from '@shared/constants/app-routes';
+import { getInventoryUnitAbbreviation } from '@shared/constants/inventory-units';
 import { Observable, of, switchMap } from 'rxjs';
 
 export type StockTrackingMode = 'none' | 'own' | 'existing';
@@ -112,6 +115,42 @@ export class ProductEditorComponent implements OnInit {
     criticalQuantity: new FormControl<number | null>(null, [Validators.min(0)]),
     existingItemId: new FormControl('', { nonNullable: true }),
     quantityPerSale: new FormControl<number | null>(1, [Validators.min(0.001)]),
+  });
+
+  private readonly stockValues = toSignal(this.stockForm.valueChanges, {
+    initialValue: this.stockForm.getRawValue(),
+  });
+
+  // What one sale would take and how many sales the stock covers, before anything is saved.
+  protected readonly stockImpact = computed<string | null>(() => {
+    const values = this.stockValues();
+    const sales = (count: number): string => (count === 1 ? '1 sale' : `${count} sales`);
+
+    if (this.stockMode() === 'own') {
+      const covered = salesCovered(Number(values.startingQuantity ?? 0), 1);
+      return `Each sale takes 1 piece. The starting stock covers ${sales(covered)}.`;
+    }
+
+    if (this.stockMode() !== 'existing') {
+      return null;
+    }
+
+    const item = this.stockItems().find((candidate) => candidate.id === values.existingItemId);
+    const perSale = Number(values.quantityPerSale ?? 0);
+    if (!item || perSale <= 0) {
+      return null;
+    }
+
+    const unit = getInventoryUnitAbbreviation(item.unitName);
+    const covered = salesCovered(item.currentQuantity, perSale);
+    const stock = `${item.name} has ${item.currentQuantity} ${unit} in stock`;
+    if (covered > 0) {
+      return `Each sale takes ${perSale} ${unit}. ${stock}, enough for ${sales(covered)}.`;
+    }
+
+    return item.allowNegativeStock
+      ? `Each sale takes ${perSale} ${unit}. ${stock}, not enough for one sale: it will go below zero and warn.`
+      : `Each sale takes ${perSale} ${unit}. ${stock}, not enough for one sale: online sales of this product will be refused until stock is added.`;
   });
 
   protected readonly sortedAssignedAddOns = computed(() =>

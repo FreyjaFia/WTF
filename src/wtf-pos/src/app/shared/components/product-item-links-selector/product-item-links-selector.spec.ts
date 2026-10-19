@@ -21,6 +21,7 @@ interface Internals {
   availableProducts(): ProductDto[];
   linkedProducts: { (): Row[]; set(v: Row[]): void };
   unitAbbreviation(): string;
+  stockImpact(row: Row): string;
   filteredAvailableProducts: ProductDto[];
   getSelectedCount(): number;
   onSearchInput(e: unknown): void;
@@ -350,6 +351,34 @@ describe('ProductItemLinksSelectorComponent', () => {
       expect(stack.remove).toHaveBeenCalledWith(4);
       i.closeModal();
       expect(stack.remove).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('stock impact', () => {
+    it('says what one sale takes and how many sales the stock covers', () => {
+      const { fixture, cmp, i, el } = setup();
+      cmp.open('item1', [link('a', 200), link('b', 6000)], 'milliliter', 9800);
+      fixture.detectChanges();
+
+      const [first, second] = i.linkedProducts();
+      expect(i.stockImpact(first)).toBe('1 sale takes 200 ml. In stock now: enough for 49 sales.');
+      expect(i.stockImpact(second)).toBe('1 sale takes 6000 ml. In stock now: enough for 1 sale.');
+      expect(el.querySelectorAll('[data-testid="stock-impact"]').length).toBe(2);
+    });
+
+    it('says so when the stock is not enough for one sale', () => {
+      const { cmp, i } = setup();
+      cmp.open('item1', [link('a', 200)], 'milliliter', 150);
+      expect(i.stockImpact(i.linkedProducts()[0])).toBe(
+        '1 sale takes 200 ml. In stock now: not enough for one sale.',
+      );
+    });
+
+    it('follows the quantity as it is edited', () => {
+      const { cmp, i } = setup();
+      cmp.open('item1', [link('a', 200)], 'milliliter', 1000);
+      i.onQuantityChange('a', 500);
+      expect(i.stockImpact(i.linkedProducts()[0])).toContain('enough for 2 sales');
     });
   });
 });

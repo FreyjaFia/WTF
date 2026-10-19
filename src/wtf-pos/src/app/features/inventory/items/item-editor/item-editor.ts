@@ -51,6 +51,7 @@ export class ItemEditorComponent implements OnInit {
     this.productLinks().filter((link) => link.isActive),
   );
   protected readonly savedUnitName = signal('');
+  private readonly savedQuantity = signal(0);
   protected readonly savedUnitAbbreviation = computed(() =>
     getInventoryUnitAbbreviation(this.savedUnitName()),
   );
@@ -257,6 +258,7 @@ export class ItemEditorComponent implements OnInit {
         this.priceHistory.set(item.priceHistory || []);
         this.productLinks.set(item.productLinks || []);
         this.savedUnitName.set(item.unitName);
+        this.savedQuantity.set(item.currentQuantity);
         this.syncUnitsPerStockUnitState();
         this.inventoryForm.markAsPristine();
         this.isLoading.set(false);
@@ -351,7 +353,12 @@ export class ItemEditorComponent implements OnInit {
       return;
     }
 
-    this.productItemLinksSelector.open(this.itemId, this.productLinks(), this.savedUnitName());
+    this.productItemLinksSelector.open(
+      this.itemId,
+      this.productLinks(),
+      this.savedUnitName(),
+      this.savedQuantity(),
+    );
 
     modal.showModal();
     this.productItemLinksSelector.registerOnStack();
