@@ -281,7 +281,7 @@ Implemented:
 - Stock movement ledger implemented for initial stock and stock-in movements.
   Sale deduction movements were removed from order creation for now.
 - Product inventory links support configurable quantity per sale.
-- Order creation no longer deducts inventory or blocks orders on low stock.
+- Order creation deducts stock when a sale completes (see "Done (21 Oct 2026)" below); it blocks only items set to block.
 - Inventory audit actions/entity types added for item create/update/delete,
   stock-in, and product-inventory linking.
 - Frontend inventory module added:
@@ -348,15 +348,69 @@ Implemented:
     `UpdateProductHandler` blocks turning an add-on into a regular product
     while it has active links.
 
+Done (21 Oct 2026, order-time stock and the inventory screens):
+
+- **Schema** (`tools/sql/20261021_add_order_time_stock_deduction.sql`, run it before deploying the API):
+  `Items.AllowNegativeStock` (default on), `StockMovements.ProductId` (FK), `OrderItemId` (a snapshot, no FK, lines are
+  rebuilt on edit), the index on `(ReferenceType, ReferenceId)`, new movement types `Sale`, `SaleVoid`,
+  `Waste` and `Adjustment`, and the table checks that kept balances at zero or above are dropped (a balance may go negative).
+- **One service for all of it:** `IOrderStockService` (`DeductForOrderAsync`, `RestoreForOrderAsync`, in
+  `Features/Inventory`) and `StockBalance`, the one place a balance changes. The arithmetic is in
+  `WTF.Calculations/Inventory/StockRules` (`Requirements`, `Reconcile`, `Shortfall`, `ReturnedShare`, `AdjustmentDelta`).
+- **Wired in:** create (as Completed), update (Pending to Completed, and the Admin override as a net difference), the
+  offline sync and old batch (never refused for stock), approving a held offline order, and void. Pending, waiting and
+  cancelled orders take nothing. A sale takes the quantity of every active link, add-on lines included (an add-on's
+  quantity is per unit of its parent), summed per item and product before the check.
+- **Stock adjustment** (`POST /api/items/{id}/stock/adjust`, `StockMovementsWrite`): counted quantity or plus/minus,
+  required reason (Count correction, Damaged or spoiled, Lost, Other with a note), audited as `ItemStockAdjusted`.
+- **Reading it back:** `GET /api/items/{id}/movements` (paged, by type) and `GET /api/orders/{id}/stock-movements`
+  (`StockMovementsRead`). Audit actions `OrderStockDeducted`, `OrderStockRestored`, `ItemStockAdjusted`.
+- **Screens:** Stock In page (real form, an item can be preselected from the list), stock history on item details
+  (type filter, load more, order number as a link) with an Adjust Stock dialog, the "Allow sales below zero" switch on the
+  item editor, the "Track inventory" card in the product editor (no tracking, own item, deduct from an existing item), a
+  Stock movements box on order details, the stock choice per line in the refund dialog, and the stock warning in the POS
+  completion flow and after an offline sync.
+
+Decisions made:
+
+- **No BranchId on stock movements yet.** The branch design (per-branch balances, transfers) is still open, so the column
+  is left to the branches feature (Multiple Branches, Phase 1), which adds it with the rest of the branch model.
+- **The balance changes with one guarded UPDATE** (`UPDATE ... OUTPUT`), not a rowversion: two registers, a stock-in and an
+  adjustment can never overwrite each other. A blocking item is refused by the `WHERE` of that statement. There is no table
+  check for it, because an offline sale is honored whatever the balance.
+- **Movements are written per item and product** (and per line when one line caused it), so usage per product stays
+  accurate after link edits. The check and the deduction use the sum per item.
+- **Edits write the difference only:** more needed is a `Sale` row, less needed is a `SaleVoid` row. Correcting an order
+  made before stock tracking started (no movements, older than the first sale movement) deducts nothing.
+- **Void:** a refunded sale is always restored from its original movements (`SaleVoid`). A line the voider marks "Not
+  returned / was made" also writes a `Waste` row of the same quantity ("Refunded, not resaleable"), so the balance stays
+  down but the quantity leaves the sales usage. A line that goes back to the shelf writes only the `SaleVoid`. The refund
+  dialog defaults to not returned for everything except retail products; a Pending order voided to Cancelled restores
+  nothing. The full waste screens and reasons stay in Phase 5.
+- **The refund dialog only asks about lines that took stock.** `OrderDto.StockLineIds` lists the lines of a completed order
+  whose product (or one of its add-ons) has a `Sale` movement; an order with none (untracked products, or made before stock
+  tracking) skips the question and refunds as before.
+- **Stock warnings are not stored on the order.** The create and update responses and the sync result carry
+  `stockWarnings` (below zero, or at a warning or critical level) and the POS shows them once; a sale that went below zero
+  has the note "Balance went below zero" on its movement and shows in the item history. A held offline order takes its
+  stock only when an Admin approves it (never refused).
+- **Turning "Allow sales below zero" off** is refused while the balance is negative (count and correct it first).
+- **Stock-in now uses the same guarded update**, so it is safe next to sales.
+
+Checked in the running app (throwaway LocalDB database, API on 5282, built-in browser): Oat Milk 10,000 ml and a Latte
+linked at 200 ml. Sell 3 (9,400), sell 1 (9,200), void the 1 as not returned (balance stays 9,200; history Sale,
+SaleVoid, Waste), void the 3 returned (9,800), then a count of 9,000 from the dialog (difference -800, history row, 9,000),
+and a 2-latte sale refunded as returned (8,600 back to 9,000). Also by API: a blocking cup refused an online sale (400
+naming the cup and the shortfall, nothing saved), a warn-only syrup went to -50 with a warning, an offline sale of 3 on
+the blocking cup (2 in stock) synced with a warning and left -1, and an adjustment lifted it to 0. The item history, the
+order details box and the refund dialog showed the same figures. Not checked in the running app: the POS completion
+alert for a sale made in the order editor, the Android build, and the stock-in form submit.
+
 Remaining:
 
-- Complete the stock-in workflow UI beyond the placeholder page.
-- Add product editor inventory setup/linking UI (linking is currently only
-  available from the item editor).
-- Expose stock movement history and adjustment/correction workflows in the UI.
 - Review report/dashboard inventory impacts after real usage data exists.
-- Re-introduce order-time stock handling, currently removed. Detailed plan
-  below.
+- Show "stock last updated" on a POS low-stock warning when offline (Offline Phase 7).
+- Per-item blocking can be switched on in the item editor now; it only matters once real stock counts exist.
 - Remaining hard deletes (decision pending): promotion child rows (rules and
   bundle items are deleted and recreated on every promotion save), order lines
   (deleted and rebuilt when an order is edited), and replaced or removed images
