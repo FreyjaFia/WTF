@@ -805,9 +805,12 @@ database) and compared every figure with the answer worked out by hand, using th
   screens.
 - Checked in the running app on a throwaway database (several add-ons and quantities, a promotion on part of a line, a
   negative-priced add-on, long names, notes): order details, the downloaded summary, the customer cart and My orders.
-  Not checked: the editor cart for every case, and the customer pages at phone width.
-- Known limit: customer My orders gets only `unitPrice` from the API, so it shows add-ons but no promotion row, and it
-  does not know add-on types, so it sorts them by name. The Orders list "Awaiting approval" card still says only "N items".
+  - Customer My orders now gets the promotion and add-on type from the API (`PublicOrderItemDto.OriginalPrice` and
+  `PromoLabel`, `PublicOrderAddOnDto.Type`): a saved order sends what was stored on its line, a waiting order the promotion it
+  would get today (`PreviewDiscount.Label`). So it shows the same promo pill, `Discount` row and Size-first add-on order as the
+  staff screens, and a plain line of several items gets its `Price · ₱120.00 each` row there too (`showPlainBase`).
+- Checked in the running app: My orders at phone width (promo line, discount row, three lines adding up to 560). Still not
+  checked: the editor cart for every case. The Orders list Awaiting approval card still says only "N items" on purpose.
 
 **Still open**
 
