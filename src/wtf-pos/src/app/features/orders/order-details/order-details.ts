@@ -38,6 +38,7 @@ import {
   PromotionTypeEnum,
 } from '@shared/models';
 import {
+  addOnsTotal,
   findBestDiscount,
   formatPromoLabel,
   lineTotal,
@@ -659,7 +660,7 @@ export class OrderDetails implements OnInit {
         const promo = this.getBestDiscountedPromo(cartItem);
         if (promo) {
           const discount = promoDiscount(cartItem.price, promo.price, cartItem.qty);
-          cartItem.promoLabel = formatPromoLabel(promo.entry, cartItem.price);
+          cartItem.promoLabel = formatPromoLabel(promo.entry, cartItem.price, addOnsTotal(cartItem.addOns));
           cartItem.promoDiscount = discount > 0 ? discount : null;
         }
       }

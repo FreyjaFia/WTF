@@ -101,7 +101,7 @@
                 ></span>
               </button>
             }
-            @if (filteredBundlePromotions().length > 0) {
+            @if (hasPromos()) {
               <button
                 type="button"
                 role="tab"
@@ -112,7 +112,7 @@
                 (click)="selectCatalogTab('bundles')"
               >
                 <span class="relative" [class.text-gray-900]="activeCatalogTab() === 'bundles'">
-                  Bundles
+                  Promos
                 </span>
                 <span
                   class="absolute right-2 -bottom-2 left-2 h-0.5 rounded-full bg-gray-700 transition-opacity"
@@ -242,11 +242,11 @@
               <div class="flex justify-center py-8">
                 <span class="loading loading-spinner loading-lg"></span>
               </div>
-            } @else if (filteredBundlePromotions().length === 0) {
+            } @else if (!hasPromos()) {
               <div class="flex flex-1 flex-col items-center justify-center text-center opacity-60">
                 <app-icon name="icon-promotion" [class]="'mb-3 h-12 w-12'" />
-                <div class="text-sm font-medium">No bundles found</div>
-                <div class="text-xs">Try adjusting your filters or add a new bundle</div>
+                <div class="text-sm font-medium">No promos found</div>
+                <div class="text-xs">Try adjusting your search</div>
               </div>
             } @else {
               <div
@@ -300,6 +300,62 @@
                               [class]="'inline h-3 w-3 align-[-0.125em]'"
                               [fill]="'currentColor'" /></span
                           >{{ promo.bundlePrice ?? 0 | number: '1.2-2' }}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                }
+                @for (deal of filteredDeals(); track deal.key) {
+                  <div
+                    class="card flex min-h-60 flex-col overflow-hidden rounded-xl bg-surface shadow-lg transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl"
+                    [class.cursor-pointer]="!isReadOnly() && canManageOrderActions()"
+                    [class.cursor-default]="isReadOnly() || !canManageOrderActions()"
+                    [class.opacity-50]="isReadOnly() || !canManageOrderActions()"
+                    [class.pointer-events-none]="isReadOnly() || !canManageOrderActions()"
+                    role="button"
+                    tabindex="0"
+                    data-promo-deal
+                    (click)="!isReadOnly() && canManageOrderActions() && addDealToCart(deal)"
+                    (keydown.enter)="!isReadOnly() && canManageOrderActions() && addDealToCart(deal)"
+                    (keydown.space)="!isReadOnly() && canManageOrderActions() && addDealToCart(deal)"
+                  >
+                    <figure class="flex h-32 shrink-0 items-center justify-center">
+                      @if (deal.imageUrl) {
+                        <img
+                          [src]="deal.imageUrl"
+                          [alt]="deal.productName"
+                          class="h-24 w-24 object-contain"
+                        />
+                      } @else {
+                        <app-avatar [label]="deal.productName" [size]="56" />
+                      }
+                    </figure>
+                    <div class="card-body flex flex-1 flex-col justify-between p-4">
+                      <div class="space-y-1.5">
+                        <h3
+                          class="card-title text-base leading-snug font-semibold wrap-break-word text-gray-800"
+                        >
+                          {{ deal.title }}
+                        </h3>
+                        @if (deal.label) {
+                          <span
+                            class="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap text-emerald-700"
+                          >
+                            {{ deal.label }}
+                          </span>
+                        }
+                      </div>
+                      <div class="card-actions mt-auto items-baseline justify-start gap-2">
+                        <div class="text-lg font-bold text-gray-950">
+                          <span class="text-base opacity-70"
+                            ><app-icon
+                              name="icon-peso"
+                              [class]="'inline h-3 w-3 align-[-0.125em]'"
+                              [fill]="'currentColor'" /></span
+                          >{{ deal.price | number: '1.2-2' }}
+                        </div>
+                        <div class="text-xs text-gray-400 line-through">
+                          {{ deal.listPrice | number: '1.2-2' }}
                         </div>
                       </div>
                     </div>
@@ -568,7 +624,7 @@
                         {{ c.name }}
                         @if (getDiscountedPromoLabel(c)) {
                           <div
-                            class="mt-1 inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700"
+                            class="mt-1 inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap text-emerald-700"
                           >
                             {{ getDiscountedPromoLabel(c) }}
                           </div>

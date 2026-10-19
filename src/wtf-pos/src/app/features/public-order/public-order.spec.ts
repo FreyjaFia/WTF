@@ -80,6 +80,19 @@ const order = (
   ...over,
 });
 
+interface DealView {
+  title: string;
+  price: number;
+  listPrice: number;
+  label: string | null;
+}
+
+interface SectionView {
+  label: string;
+  products: unknown[];
+  deals: DealView[];
+}
+
 describe('PublicOrderComponent', () => {
   let fixture: ComponentFixture<PublicOrderComponent>;
   let c: Internals;
@@ -170,6 +183,201 @@ describe('PublicOrderComponent', () => {
     sessionStorage.clear();
     vi.useRealTimers();
     vi.restoreAllMocks();
+  });
+
+  describe('promos', () => {
+    const smallLatteDeal = {
+      productId: 'latte',
+      amountOff: 40,
+      addOns: [{ addOnProductId: 's-r', quantity: 1 }],
+    };
+    const plainCroissantDeal = { productId: 'croissant', percentOff: 10, addOns: [] };
+    const withDeals = (...deals: object[]) => of(link({ deals: deals as never }));
+
+    it('shows a Promos section first, with a card for each discount', () => {
+      setup({ link: withDeals(smallLatteDeal, plainCroissantDeal) });
+
+      expect(c.sections().map((s: SectionView) => s.label)).toEqual(['Promos', 'Drinks', 'Food', 'Desserts']);
+      const promos = c.sections()[0];
+      expect(promos.products).toEqual([]);
+      expect(promos.deals.map((d: DealView) => [d.title, d.price, d.listPrice, d.label])).toEqual([
+        ['Croissant', 108, 120, 'Promo -10%'],
+        ['Latte + Regular', 110, 150, 'Promo -₱40.00'],
+      ]);
+      expect(el().querySelectorAll('[data-promo-deal]').length).toBe(2);
+      expect(el().querySelector('#category--1')).not.toBeNull();
+    });
+
+    it('has no Promos section when there are no discounts, or an older server sends none', () => {
+      setup();
+      expect(c.sections().map((s: SectionView) => s.label)).toEqual(['Drinks', 'Food', 'Desserts']);
+      expect(el().querySelectorAll('[data-promo-deal]').length).toBe(0);
+    });
+
+    it('leaves out a discount for a product that is not on the menu, or whose add-on is gone', () => {
+      setup({
+        link: withDeals(
+          { productId: 'ghost', percentOff: 10, addOns: [] },
+          { productId: 'latte', amountOff: 10, addOns: [{ addOnProductId: 'nope', quantity: 1 }] },
+        ),
+      });
+
+      expect(c.sections().map((s: SectionView) => s.label)).not.toContain('Promos');
+    });
+
+    it('a discount with no uses left is not shown', () => {
+      setup({ link: withDeals({ ...plainCroissantDeal, remaining: 0 }) });
+
+      expect(c.sections().map((s: SectionView) => s.label)).not.toContain('Promos');
+    });
+
+    it('the search narrows the promo cards by their title', () => {
+      setup({ link: withDeals(smallLatteDeal, plainCroissantDeal) });
+
+      c.search.set('croiss');
+
+      expect(c.sections().map((s: SectionView) => s.label)).toEqual(['Promos', 'Food']);
+      expect(c.sections()[0].deals.map((d: DealView) => d.title)).toEqual(['Croissant']);
+      c.search.set('latte');
+      expect(c.sections()[0].deals.map((d: DealView) => d.title)).toEqual(['Latte + Regular']);
+      c.search.set('zzz');
+      expect(c.sections()).toEqual([]);
+    });
+
+    it('a promo card opens the picker with its add-ons already chosen', () => {
+      setup({ link: withDeals(smallLatteDeal) });
+
+      c.openDeal(c.sections()[0].deals[0]);
+
+      expect(c.pickerProduct()?.id).toBe('latte');
+      expect(c.pickerStart()).toEqual([{ id: 's-r', name: 'Regular', price: 0, quantity: 1 }]);
+      expect(c.pickerInitial()).toBeNull();
+      expect(c.pickerRules()).toHaveLength(1);
+      c.closePicker();
+      expect(c.pickerStart()).toBeNull();
+    });
+
+    it('prices the cart with the discount that matches the add-ons, and only then', () => {
+      setup({ link: withDeals(smallLatteDeal) });
+      const latte = c.products()[0];
+
+      c.openProduct(latte);
+      c.onPicked({
+        addOns: [{ id: 's-r', name: 'Regular', price: 0, quantity: 1 }],
+        quantity: 2,
+        specialInstructions: null,
+      });
+      c.openProduct(latte);
+      c.onPicked({
+        addOns: [{ id: 's-l', name: 'Large', price: 30, quantity: 1 }],
+        quantity: 1,
+        specialInstructions: null,
+      });
+
+      const [matching, other] = c.cart();
+      expect(c.lineDiscount(matching)).toMatchObject({ price: 110, label: 'Promo -₱40.00' });
+      expect(c.unitPrice(matching)).toBe(110);
+      expect(c.lineTotal(matching)).toBe(220);
+      expect(c.lineDiscount(other)).toBeNull();
+      expect(c.unitPrice(other)).toBe(180);
+      expect(c.cartTotal()).toBe(400);
+    });
+
+    it('a rule with no add-ons only discounts the plain product', () => {
+      setup({ link: withDeals(plainCroissantDeal) });
+      const croissant = c.products()[1];
+
+      c.openProduct(croissant);
+      c.onPicked({ addOns: [], quantity: 1, specialInstructions: null });
+      c.openProduct(croissant);
+      c.onPicked({
+        addOns: [{ id: 'x', name: 'Extra', price: 10, quantity: 1 }],
+        quantity: 1,
+        specialInstructions: null,
+      });
+
+      expect(c.cart().map((l: unknown) => c.unitPrice(l))).toEqual([108, 130]);
+    });
+
+    it('an amount off that covers the price makes the item free', () => {
+      setup({ link: withDeals({ productId: 'croissant', amountOff: 500, addOns: [] }) });
+
+      addCroissant();
+
+      expect(c.lineDiscount(c.cart()[0])).toMatchObject({ price: 0, label: 'Free' });
+      expect(c.cartTotal()).toBe(0);
+    });
+
+    it('an amount off above the price shows the price taken off while an add-on is charged, and Free when it is not', () => {
+      setup({
+        link: withDeals(
+          { productId: 'latte', amountOff: 500, addOns: [{ addOnProductId: 's-l', quantity: 1 }] },
+          { productId: 'latte', amountOff: 500, addOns: [{ addOnProductId: 's-r', quantity: 1 }] },
+        ),
+      });
+      const latte = c.products()[0];
+
+      c.openProduct(latte);
+      c.onPicked({ addOns: [{ id: 's-l', name: 'Large', price: 30, quantity: 1 }], quantity: 1, specialInstructions: null });
+      c.openProduct(latte);
+      c.onPicked({ addOns: [{ id: 's-r', name: 'Regular', price: 0, quantity: 1 }], quantity: 1, specialInstructions: null });
+
+      const [large, regular] = c.cart();
+      expect(c.lineDiscount(large)).toMatchObject({ price: 0, label: 'Promo -₱150.00' });
+      expect(c.unitPrice(large)).toBe(30);
+      expect(c.lineDiscount(regular)).toMatchObject({ price: 0, label: 'Free' });
+      expect(c.unitPrice(regular)).toBe(0);
+      expect(c.sections()[0].deals.map((d: DealView) => [d.title, d.label])).toEqual([
+        ['Latte + Large', 'Promo -₱150.00'],
+        ['Latte + Regular', 'Free'],
+      ]);
+    });
+
+    it('a promotion with a usage limit skips a line that needs more uses than are left', () => {
+      setup({ link: withDeals({ ...plainCroissantDeal, remaining: 1 }) });
+      const croissant = c.products()[1];
+
+      c.openProduct(croissant);
+      c.onPicked({ addOns: [], quantity: 1, specialInstructions: null });
+      expect(c.cartTotal()).toBe(108);
+      expect(c.hasLimitedDiscount()).toBe(true);
+
+      c.changeQuantity(c.cart()[0].key, 1);
+
+      expect(c.lineDiscount(c.cart()[0])).toBeNull();
+      expect(c.cartTotal()).toBe(240);
+      expect(c.hasLimitedDiscount()).toBe(false);
+    });
+
+    it('the cart says a limited discount is confirmed by the shop, an unlimited one does not', () => {
+      setup({ link: withDeals({ ...plainCroissantDeal, remaining: 5 }) });
+      addCroissant();
+      c.openCart();
+      fixture.detectChanges();
+
+      expect(el().querySelector('[data-limited-note]')?.textContent).toContain('limited uses');
+      expect(el().querySelector('[data-line-promo]')?.textContent).toContain('Promo -10%');
+    });
+
+    it('an unlimited discount shows its label but no note', () => {
+      setup({ link: withDeals(plainCroissantDeal) });
+      addCroissant();
+      c.openCart();
+      fixture.detectChanges();
+
+      expect(el().querySelector('[data-limited-note]')).toBeNull();
+      expect(el().querySelector('[data-line-promo]')).not.toBeNull();
+    });
+
+    it('a cart with no discount shows no promo label or note', () => {
+      setup();
+      addCroissant();
+      c.openCart();
+      fixture.detectChanges();
+
+      expect(el().querySelector('[data-line-promo]')).toBeNull();
+      expect(el().querySelector('[data-limited-note]')).toBeNull();
+    });
   });
 
   describe('keeping the order on reload', () => {
@@ -1661,8 +1869,12 @@ describe('PublicOrderComponent', () => {
           paymentMethod: 1,
           amountReceived: 500,
           specialInstructions: 'Ring',
+          expectedTotal: 480,
         });
-        expect(JSON.stringify(request)).not.toMatch(/price|total/i);
+        // The only amount in it is the total the customer saw, which the shop compares with its own; it never sets a price.
+        const { expectedTotal, ...withoutTotal } = request;
+        expect(expectedTotal).toBe(480);
+        expect(JSON.stringify(withoutTotal)).not.toMatch(/price|total/i);
       });
     });
 
@@ -1745,6 +1957,67 @@ describe('PublicOrderComponent', () => {
         expect(c.isPlacingOrder()).toBe(false);
         expect(c.checkoutError()).toContain('at least the order total');
         expect(checkout()!.textContent).toContain('at least the order total');
+        expect(service.getLink).toHaveBeenCalledTimes(1);
+      });
+
+      it('sends the total the customer saw, so the shop can refuse the order if it came out different', () => {
+        setup({
+          link: of(
+            link({ deals: [{ productId: 'croissant', percentOff: 10, addOns: [] }] as never }),
+          ),
+        });
+        addCroissant();
+        addCroissant();
+
+        const request = c.buildOrderRequest(form());
+
+        expect(request.expectedTotal).toBe(216);
+        expect(c.cartTotal()).toBe(216);
+      });
+
+      it('sends the list-price total when nothing is discounted', () => {
+        setup();
+        fillCart();
+
+        expect(c.buildOrderRequest(form()).expectedTotal).toBe(480);
+      });
+
+      it('keeps the checkout open, shows the new total and loads the menu again when the total changed', () => {
+        setup({
+          link: of(
+            link({ deals: [{ productId: 'croissant', percentOff: 10, addOns: [], remaining: 1 }] as never }),
+          ),
+        });
+        addCroissant();
+        c.openCheckout();
+        service.createOrder.mockReturnValue(
+          throwError(
+            () =>
+              new Error(
+                'The total changed to PHP 120.00 while you were checking out (it was PHP 108.00), because a price or a promotion changed. Please review the order and try again.',
+              ),
+          ),
+        );
+        // The discount has been used up by someone else: the fresh menu no longer lists it.
+        service.getLink.mockReturnValue(of(link()));
+
+        c.placeOrder(form({ amountReceived: 200 }));
+
+        expect(c.checkoutOpen()).toBe(true);
+        expect(c.checkoutError()).toContain('The total changed to PHP 120.00');
+        expect(service.getLink).toHaveBeenCalledTimes(2);
+        expect(c.cartTotal()).toBe(120);
+        expect(c.cart().length).toBe(1);
+      });
+
+      it('does not reload the menu for another refusal', () => {
+        setup();
+        addCroissant();
+        c.openCheckout();
+        service.createOrder.mockReturnValue(throwError(() => new Error('Please enter a valid contact number.')));
+
+        c.placeOrder(form());
+
         expect(service.getLink).toHaveBeenCalledTimes(1);
       });
 

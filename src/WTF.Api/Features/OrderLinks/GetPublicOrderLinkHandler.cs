@@ -1,6 +1,8 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
+using WTF.Api.Common.Orders;
+using WTF.Api.Common.Time;
 using WTF.Api.Features.OrderLinks.DTOs;
 using WTF.Api.Features.Products.DTOs;
 using WTF.Api.Features.Sync;
@@ -35,6 +37,8 @@ public class GetPublicOrderLinkHandler(WTFDbContext db, IHttpContextAccessor htt
         var addOns = await PosCatalogLoader.LoadAddOnsByProductIdAsync(
             db, httpContextAccessor, products, cancellationToken);
 
+        var deals = await LoadDealsAsync(products, cancellationToken);
+
         // The customer's own profile picture, so the page can show who it is ordering for.
         var imageUrl = await db.CustomerImages
             .Where(ci => ci.CustomerId == access.Customer.Id)
@@ -54,7 +58,36 @@ public class GetPublicOrderLinkHandler(WTFDbContext db, IHttpContextAccessor htt
                     pair => pair.Value
                         .Select(group => new PublicAddOnGroupDto(
                             (int)group.Type, group.DisplayName, [.. group.Options.Select(ToPublic)]))
-                        .ToList())));
+                        .ToList()),
+                deals));
+    }
+
+
+    // The discounts that are on right now, so the customer's cart can show the price the shop will charge. Only for
+    // products the page can actually show, and never one that has run out of uses.
+    private async Task<List<PublicDealDto>> LoadDealsAsync(
+        List<ProductDto> products, CancellationToken cancellationToken)
+    {
+        var loaded = await DiscountRuleLoader.LoadAsync(
+            db,
+            DateTime.UtcNow,
+            RequestTimeZone.ResolveFromRequest(httpContextAccessor),
+            null,
+            cancellationToken);
+
+        var shown = products.Select(p => p.Id).ToHashSet();
+
+        return [.. loaded.RulesByProductId
+            .Where(pair => shown.Contains(pair.Key))
+            .SelectMany(pair => pair.Value.Select(rule => (ProductId: pair.Key, Rule: rule)))
+            .Select(x => (x.ProductId, x.Rule, Remaining: loaded.Budget.Remaining(x.Rule.PromotionId)))
+            .Where(x => x.Remaining != 0)
+            .Select(x => new PublicDealDto(
+                x.ProductId,
+                x.Rule.FixedPrice,
+                x.Rule.PercentOff,
+                [.. x.Rule.RequiredAddOns.Select(a => new PublicDealAddOnDto(a.AddOnProductId, a.Quantity))],
+                x.Remaining))];
     }
 
     private static PublicProductDto ToPublic(ProductDto product) => new(

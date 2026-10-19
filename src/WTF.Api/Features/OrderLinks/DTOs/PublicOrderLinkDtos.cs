@@ -16,9 +16,22 @@ public record PublicProductDto(
 
 public record PublicAddOnGroupDto(int Type, string DisplayName, List<PublicProductDto> Options);
 
+public record PublicDealAddOnDto(Guid AddOnProductId, int Quantity);
+
+// A discount that is on right now, for the customer's cart: the product, the exact add-ons it needs, and what comes off.
+// No promotion id or name. Remaining is how many more items it can discount, or null when it has no usage limit.
+public record PublicDealDto(
+    Guid ProductId,
+    decimal? AmountOff,
+    decimal? PercentOff,
+    List<PublicDealAddOnDto> AddOns,
+    int? Remaining
+);
+
 public record PublicCatalogDto(
     List<PublicProductDto> Products,
-    Dictionary<Guid, List<PublicAddOnGroupDto>> AddOnsByProductId
+    Dictionary<Guid, List<PublicAddOnGroupDto>> AddOnsByProductId,
+    List<PublicDealDto> Deals
 );
 
 public record PublicOrderLinkDto(

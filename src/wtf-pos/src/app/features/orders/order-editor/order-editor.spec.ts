@@ -109,6 +109,9 @@ interface Editor {
   productsBySubCategory: () => Record<number, ProductDto[]>;
   visibleSubCategoryTabs: () => { id: ProductSubCategoryEnum }[];
   filteredBundlePromotions: () => PromotionListItemDto[];
+  filteredDeals: () => { title: string; price: number; listPrice: number; label: string | null }[];
+  hasPromos: () => boolean;
+  addDealToCart: (d: unknown) => void;
   filterForm: { controls: { searchTerm: { setValue: (v: string) => void } } };
   itemCount: () => number;
   totalPrice: () => number;
@@ -701,6 +704,164 @@ describe('OrderEditor', () => {
     });
   });
 
+  describe('promo deals', () => {
+    const SIZE_SMALL: ProductDto = product({ id: 'small', name: 'Small', price: 0, isAddOn: true });
+    const group = {
+      type: AddOnTypeEnum.Size,
+      displayName: 'Size',
+      options: [{ ...SIZE_SMALL, overridePrice: 5 }],
+    };
+    const promo = (items: object[], extra: object = {}) => [
+      {
+        id: 'd',
+        name: 'D',
+        isActive: true,
+        startDate: null,
+        endDate: null,
+        items,
+        ...extra,
+      },
+    ];
+
+    const latteWithSmall = () =>
+      promotionService['getActiveDiscountedProductPromotions'].mockReturnValue(
+        of(promo([{ productId: 'latte', fixedPrice: 30, addOns: [{ addOnProductId: 'small', quantity: 1 }] }])),
+      );
+
+    beforeEach(() => {
+      catalog.getAddOnsForProduct.mockImplementation((id: string) => (id === 'latte' ? [group] : []));
+    });
+
+    it('turns a rule into a card: the product with the add-ons the rule needs, priced as it will be charged', async () => {
+      latteWithSmall();
+      await start();
+      TestBed.tick();
+
+      const deal = t.filteredDeals().at(0)!;
+      expect(t.filteredDeals().length).toBe(1);
+      expect(deal.title).toBe('Latte + Small');
+      expect(deal.listPrice).toBe(105);
+      expect(deal.price).toBe(75);
+      expect(deal.label).toBe('Promo -₱30.00');
+    });
+
+    it('shows a plain-product rule as the product alone', async () => {
+      promotionService['getActiveDiscountedProductPromotions'].mockReturnValue(
+        of(promo([{ productId: 'latte', percentOff: 10, addOns: [] }])),
+      );
+      await start();
+      TestBed.tick();
+
+      expect(t.filteredDeals().map((d) => [d.title, d.price, d.listPrice])).toEqual([['Latte', 90, 100]]);
+    });
+
+    it('a promo with an amount off that covers the price reads Free', async () => {
+      promotionService['getActiveDiscountedProductPromotions'].mockReturnValue(
+        of(promo([{ productId: 'latte', fixedPrice: 500, addOns: [] }])),
+      );
+      await start();
+      TestBed.tick();
+
+      expect(t.filteredDeals().at(0)!.label).toBe('Free');
+      expect(t.filteredDeals().at(0)!.price).toBe(0);
+    });
+
+    it('leaves out a rule whose add-on is no longer offered for the product', async () => {
+      promotionService['getActiveDiscountedProductPromotions'].mockReturnValue(
+        of(promo([{ productId: 'latte', fixedPrice: 30, addOns: [{ addOnProductId: 'gone', quantity: 1 }] }])),
+      );
+      await start();
+      TestBed.tick();
+
+      expect(t.filteredDeals()).toEqual([]);
+    });
+
+    it('leaves out a promotion that has no uses left or is closed today', async () => {
+      const closed = 1 << ((new Date().getDay() + 1) % 7);
+      promotionService['getActiveDiscountedProductPromotions'].mockReturnValue(
+        of([
+          ...promo([{ productId: 'latte', percentOff: 10, addOns: [] }], {
+            id: 'spent',
+            schedule: { daysOfWeek: null, startTime: null, endTime: null, maxRedemptions: 1, redemptions: 1 },
+          }),
+          ...promo([{ productId: 'latte', percentOff: 20, addOns: [] }], {
+            id: 'closed',
+            schedule: { daysOfWeek: closed, startTime: null, endTime: null, maxRedemptions: null, redemptions: 0 },
+          }),
+        ]),
+      );
+      await start();
+      TestBed.tick();
+
+      expect(t.filteredDeals()).toEqual([]);
+      expect(t.hasPromos()).toBe(false);
+    });
+
+    it('the Promos tab appears for deals alone, and the search narrows the cards', async () => {
+      latteWithSmall();
+      await start();
+      TestBed.tick();
+
+      expect(t.filteredBundlePromotions()).toEqual([]);
+      expect(t.hasPromos()).toBe(true);
+      t.selectCatalogTab('bundles');
+      expect(t.activeCatalogTab()).toBe('bundles');
+
+      vi.useFakeTimers();
+      try {
+        t.filterForm.controls.searchTerm.setValue('zzz');
+        vi.advanceTimersByTime(300);
+        expect(t.filteredDeals()).toEqual([]);
+        t.filterForm.controls.searchTerm.setValue('latte');
+        vi.advanceTimersByTime(300);
+        expect(t.filteredDeals().length).toBe(1);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('tapping a card opens the selector with the add-ons already chosen and the discount rules', async () => {
+      latteWithSmall();
+      await start();
+      TestBed.tick();
+
+      t.addDealToCart(t.filteredDeals().at(0)!);
+
+      expect(selectorOpen).toHaveBeenCalledTimes(1);
+      const [prod, options] = selectorOpen.mock.calls.at(-1) as [
+        ProductDto,
+        { addOns: { addOnId: string; addOnType: number }[]; promoRules: unknown[] },
+      ];
+      expect(prod.id).toBe('latte');
+      expect(options.addOns).toEqual([
+        { addOnId: 'small', name: 'Small', price: 5, addOnType: AddOnTypeEnum.Size },
+      ]);
+      expect(options.promoRules).toHaveLength(1);
+    });
+
+    it('does nothing for a read-only order', async () => {
+      latteWithSmall();
+      canWrite = false;
+      await start();
+      TestBed.tick();
+
+      t.addDealToCart(t.filteredDeals().at(0)!);
+
+      expect(selectorOpen).not.toHaveBeenCalled();
+    });
+
+    it('bundles and deals share the tab', async () => {
+      latteWithSmall();
+      catalog.bundlePromotions.set([bundlePromo()]);
+      await start();
+      TestBed.tick();
+
+      expect(t.filteredBundlePromotions().length).toBe(1);
+      expect(t.filteredDeals().length).toBe(1);
+      expect(t.hasPromos()).toBe(true);
+    });
+  });
+
   describe('adding to cart', () => {
     it('addToCart opens the add-on selector with promo info', async () => {
       promotionService['getActiveDiscountedProductPromotions'].mockReturnValue(
@@ -718,7 +879,7 @@ describe('OrderEditor', () => {
       await start();
       t.addToCart(P_LATTE);
       expect(selectorOpen).toHaveBeenCalledWith(P_LATTE, {
-        promoRules: [{ fixedPrice: 10, percentOff: null, addOns: [] }],
+        promoRules: [{ fixedPrice: 10, percentOff: null, addOns: [], remaining: null }],
       });
       t.addToCart(P_COLA);
       expect(selectorOpen).toHaveBeenLastCalledWith(P_COLA, { promoRules: [] });
@@ -887,6 +1048,197 @@ describe('OrderEditor', () => {
     });
   });
 
+  describe('protecting a sale from changes made meanwhile', () => {
+    const percent = (extra: object = {}) => [
+      {
+        id: 'd',
+        name: 'D',
+        isActive: true,
+        startDate: null,
+        endDate: null,
+        items: [{ productId: 'latte', percentOff: 50, addOns: [] }],
+        ...extra,
+      },
+    ];
+    const askedServer = () => promotionService['getActiveDiscountedProductPromotions'];
+
+    it('a cart without promotions opens checkout straight away, without asking the shop', async () => {
+      await start();
+      withCart([line({ productId: 'cola', name: 'Cola', price: 50 })]);
+      const calls = askedServer().mock.calls.length;
+
+      t.checkout();
+
+      expect(checkoutOpen).toHaveBeenCalledTimes(1);
+      expect(askedServer().mock.calls.length).toBe(calls);
+    });
+
+    it('a cart with a promotion asks the shop again, and opens checkout when the total is the same', async () => {
+      askedServer().mockReturnValue(of(percent()));
+      await start();
+      withCart([line({ qty: 2 })]);
+      const calls = askedServer().mock.calls.length;
+
+      t.checkout();
+
+      expect(askedServer().mock.calls.length).toBe(calls + 1);
+      expect(checkoutOpen).toHaveBeenCalledTimes(1);
+      expect(alert['error']).not.toHaveBeenCalled();
+    });
+
+    it('stops with a message when the promotion ran out meanwhile, and shows the new total', async () => {
+      askedServer().mockReturnValue(of(percent()));
+      await start();
+      withCart([line({ qty: 2 })]);
+      expect(t.totalPrice()).toBe(100);
+      askedServer().mockReturnValue(
+        of(percent({ schedule: { daysOfWeek: null, startTime: null, endTime: null, maxRedemptions: 5, redemptions: 5 } })),
+      );
+
+      t.checkout();
+
+      expect(checkoutOpen).not.toHaveBeenCalled();
+      expect(t.totalPrice()).toBe(200);
+      expect(alert['error']).toHaveBeenCalledWith(
+        'A promotion changed while you were ordering. The total is now PHP 200.00 (it was PHP 100.00). Please review the order.',
+      );
+    });
+
+    it('a plain cart does not ask again, so a promotion that starts meanwhile is caught by the server total check instead', async () => {
+      await start();
+      withCart([line({ qty: 2 })]);
+      askedServer().mockReturnValue(of(percent()));
+      const calls = askedServer().mock.calls.length;
+
+      t.checkout();
+
+      expect(askedServer().mock.calls.length).toBe(calls);
+      expect(checkoutOpen).toHaveBeenCalledTimes(1);
+      t.onOrderConfirmed(cash);
+      expect(orderService['createOrder'].mock.calls.at(-1)?.[0].expectedTotal).toBe(200);
+    });
+
+    it('goes on to checkout when the shop cannot be asked, because the server checks the total when the sale is saved', async () => {
+      askedServer().mockReturnValue(of(percent()));
+      await start();
+      withCart([line()]);
+      askedServer().mockReturnValue(throwError(() => new Error('down')));
+
+      t.checkout();
+
+      expect(checkoutOpen).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not ask the shop while offline', async () => {
+      askedServer().mockReturnValue(of(percent()));
+      await start();
+      withCart([line()]);
+      isOnline.set(false);
+      const calls = askedServer().mock.calls.length;
+
+      t.checkout();
+
+      expect(askedServer().mock.calls.length).toBe(calls);
+      expect(checkoutOpen).toHaveBeenCalledTimes(1);
+    });
+
+    it('a finished sale sends the total the cashier saw; an open order and an offline sale do not', async () => {
+      askedServer().mockReturnValue(of(percent()));
+      await start();
+      withCart([line({ qty: 2 })]);
+
+      t.onOrderConfirmed(cash);
+      expect(orderService['createOrder'].mock.calls[0][0].expectedTotal).toBe(100);
+
+      orderService['createOrder'].mockClear();
+      t.onOrderSaved();
+      expect(orderService['createOrder'].mock.calls[0][0]).not.toHaveProperty('expectedTotal');
+    });
+
+    it('an offline sale is never checked against the server total', async () => {
+      await start();
+      withCart([line()]);
+      isOnline.set(false);
+
+      t.onOrderConfirmed(cash);
+
+      const queued = offline['queue'].mock.calls.at(-1)?.[0] as Record<string, unknown>;
+      expect(queued).not.toHaveProperty('expectedTotal');
+    });
+
+    it('when the server says the total changed, the message is shown and the promotions are loaded again', async () => {
+      await start();
+      withCart([line()]);
+      orderService['createOrder'].mockReturnValue(
+        throwError(() => new Error('The total changed to PHP 150.00 while you were checking out.')),
+      );
+      const calls = askedServer().mock.calls.length;
+
+      t.onOrderConfirmed(cash);
+
+      expect(alert['error']).toHaveBeenCalledWith(expect.stringContaining('The total changed to PHP 150.00'));
+      expect(askedServer().mock.calls.length).toBe(calls + 1);
+      expect(t.isSavingOrder()).toBe(false);
+    });
+
+    it('another save error does not reload the promotions', async () => {
+      await start();
+      withCart([line()]);
+      orderService['createOrder'].mockReturnValue(throwError(() => new Error('boom')));
+      const calls = askedServer().mock.calls.length;
+
+      t.onOrderConfirmed(cash);
+
+      expect(askedServer().mock.calls.length).toBe(calls);
+    });
+
+    describe('an open order that already holds uses of a limited promotion', () => {
+      const limited = (maxRedemptions: number, redemptions: number) =>
+        percent({ schedule: { daysOfWeek: null, startTime: null, endTime: null, maxRedemptions, redemptions } });
+      const held = (discountPromotionId: string | null) =>
+        order({
+          status: OrderStatusEnum.Pending,
+          items: [
+            { id: 'i1', productId: 'latte', productName: 'Latte', quantity: 2, price: null, addOns: [], discountPromotionId },
+          ],
+        });
+
+      it('keeps its own uses when it holds every one, so its discount does not disappear while it is edited', async () => {
+        askedServer().mockReturnValue(of(limited(2, 2)));
+        await start();
+        t.currentOrder.set(held('d'));
+
+        expect(t.getDiscountedUnitPrice(line({ qty: 2 }))).toBe(50);
+        expect(t.getDiscountedUnitPrice(line({ qty: 3 }))).toBeNull();
+      });
+
+      it('an order that does not hold a use cannot take one that is gone', async () => {
+        askedServer().mockReturnValue(of(limited(2, 2)));
+        await start();
+        t.currentOrder.set(held(null));
+
+        expect(t.getDiscountedUnitPrice(line({ qty: 1 }))).toBeNull();
+      });
+
+      it('uses held by other orders stay taken', async () => {
+        askedServer().mockReturnValue(of(limited(5, 4)));
+        await start();
+        t.currentOrder.set(held('d'));
+
+        expect(t.getDiscountedUnitPrice(line({ qty: 3 }))).toBe(50);
+        expect(t.getDiscountedUnitPrice(line({ qty: 4 }))).toBeNull();
+      });
+
+      it('only an open order counts: a finished order has nothing held', async () => {
+        askedServer().mockReturnValue(of(limited(2, 2)));
+        await start();
+        t.currentOrder.set({ ...held('d'), status: OrderStatusEnum.Completed });
+
+        expect(t.getDiscountedUnitPrice(line({ qty: 1 }))).toBeNull();
+      });
+    });
+  });
+
   describe('promotions and totals', () => {
     const promos = (items: object[], extra: object = {}): DiscountedProductPromotionDto[] => [
       {
@@ -908,6 +1260,20 @@ describe('OrderEditor', () => {
       expect(t.getDiscountedUnitPrice(l)).toBeNull();
       expect(t.getDiscountedAmount(l)).toBe(0);
       expect(t.getDiscountedPromoLabel(l)).toBeNull();
+    });
+
+    it('an amount off above the price labels the price taken off while an add-on is charged, and Free when nothing is', async () => {
+      promotionService['getActiveDiscountedProductPromotions'].mockReturnValue(
+        of(promos([{ productId: 'latte', fixedPrice: 500, addOns: [{ addOnProductId: 'shot', quantity: 1 }] }])),
+      );
+      await start();
+      const charged = line({ addOns: [shotAddOn()] });
+
+      expect(t.getDiscountedUnitPrice(charged)).toBe(0);
+      expect(t.getDiscountedPromoLabel(charged)).toBe('Promo -₱100.00');
+
+      const free = line({ addOns: [{ ...shotAddOn(), price: 0 }] });
+      expect(t.getDiscountedPromoLabel(free)).toBe('Free');
     });
 
     it('bundle line total is qty * bundle price, ignoring child prices', async () => {

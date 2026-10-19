@@ -397,6 +397,14 @@ describe('AddonSelectorComponent', () => {
       expect(i.unitPrice()).toBe(0);
     });
 
+    it('an amount off above the price shows the price taken off while an add-on is charged', () => {
+      const { cmp, i } = setup([toppingG]);
+      cmp.open(MAIN, { promoRules: [{ fixedPrice: 500, addOns: flavorOnly('b') }] });
+      i.incrementOption(toppingG, BOBA, evt());
+      expect(i.activePromoLabel()).toBe('Promo -₱100.00');
+      expect(i.unitPrice()).toBe(10);
+    });
+
     it('an amount off below the price shows the amount', () => {
       const { cmp, i } = setup([toppingG]);
       cmp.open(MAIN, { promoRules: [{ fixedPrice: 99.5, addOns: [] }] });

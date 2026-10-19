@@ -52,7 +52,12 @@ export class AddonSelectorComponent {
   protected readonly customMaxSelectionPerOption = signal<number | null>(null);
   protected readonly subtitleText = signal('Customize your order');
   protected readonly promoRules = signal<
-    { fixedPrice?: number | null; percentOff?: number | null; addOns: { addOnProductId: string; quantity: number }[] }[]
+    {
+      fixedPrice?: number | null;
+      percentOff?: number | null;
+      addOns: { addOnProductId: string; quantity: number }[];
+      remaining?: number | null;
+    }[]
   >([]);
 
   // Selections: key = group type, value = map of optionId â†’ quantity
@@ -177,7 +182,7 @@ export class AddonSelectorComponent {
       this.selectedAddOns().map((addOn) => addOn.addOnId),
       this.promoRules(),
     );
-    return best ? formatPromoLabel(best.rule, this.product()?.price) : null;
+    return best ? formatPromoLabel(best.rule, this.product()?.price, this.addOnTotal()) : null;
   });
 
   public open(
@@ -196,6 +201,7 @@ export class AddonSelectorComponent {
         fixedPrice?: number | null;
         percentOff?: number | null;
         addOns: { addOnProductId: string; quantity: number }[];
+        remaining?: number | null;
       }[];
     },
   ): void {

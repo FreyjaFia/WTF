@@ -336,6 +336,145 @@ describe('PublicAddonPickerComponent', () => {
     }
   });
 
+  describe('promos', () => {
+    const smallOnly = [{ fixedPrice: 40, addOns: [{ addOnProductId: 's-r', quantity: 1 }] }];
+
+    function setupWith(extra: { startWith?: unknown; rules?: unknown }, groups = [SIZE, EXTRA]) {
+      fixture = TestBed.createComponent(PublicAddonPickerComponent);
+      fixture.componentRef.setInput('product', PRODUCT);
+      fixture.componentRef.setInput('groups', groups);
+      if (extra.startWith) {
+        fixture.componentRef.setInput('startWith', extra.startWith);
+      }
+      if (extra.rules) {
+        fixture.componentRef.setInput('rules', extra.rules);
+      }
+      c = internals(fixture.componentInstance);
+      fixture.detectChanges();
+    }
+
+    it('starts with the add-ons a deal card chose, as a new item and not an edit', () => {
+      setupWith({ startWith: [{ id: 's-r', name: 'Regular', price: 0, quantity: 1 }] });
+
+      expect(c.isSelected(1, 's-r')).toBe(true);
+      expect(c.selectedAddOns().map((a: { id: string }) => a.id)).toEqual(['s-r']);
+      expect(c.isEditing()).toBe(false);
+      expect(c.quantity()).toBe(1);
+      expect(c.validationError()).toBeNull();
+    });
+
+    it('drops a starting add-on that is no longer offered for the product', () => {
+      setupWith({ startWith: [{ id: 'gone', name: 'Gone', price: 0, quantity: 1 }] });
+
+      expect(c.selectedAddOns()).toEqual([]);
+    });
+
+    it('shows no discount until the choices match the rule', () => {
+      setupWith({ rules: smallOnly });
+
+      expect(c.discount()).toBeNull();
+      expect(c.unitPrice()).toBe(100);
+      expect(text()).not.toContain('Promo');
+    });
+
+    it('lowers the price and shows the label when the add-ons match exactly', () => {
+      setupWith({ rules: smallOnly });
+
+      c.toggle(1, 's-r');
+
+      expect(c.discount()).toEqual({ price: 60, label: 'Promo -₱40.00' });
+      expect(c.unitPrice()).toBe(60);
+      expect(c.total()).toBe(60);
+      fixture.detectChanges();
+      expect(text()).toContain('Promo -₱40.00');
+    });
+
+    it('stops discounting when another add-on is added, and again when it is removed', () => {
+      setupWith({ rules: smallOnly });
+
+      c.toggle(1, 's-r');
+      c.toggle(4, 'e-1');
+      expect(c.discount()).toBeNull();
+      expect(c.unitPrice()).toBe(140);
+
+      c.toggle(4, 'e-1');
+      expect(c.unitPrice()).toBe(60);
+    });
+
+    it('choosing another size takes the discount away', () => {
+      setupWith({ rules: smallOnly });
+
+      c.toggle(1, 's-r');
+      c.toggle(1, 's-l');
+
+      expect(c.discount()).toBeNull();
+      expect(c.unitPrice()).toBe(130);
+    });
+
+    it('a deal card start gets the discount straight away', () => {
+      setupWith({
+        startWith: [{ id: 's-r', name: 'Regular', price: 0, quantity: 1 }],
+        rules: smallOnly,
+      });
+
+      expect(c.unitPrice()).toBe(60);
+    });
+
+    it('an amount off that covers the price shows the price taken off while an add-on is still charged', () => {
+      setupWith({ rules: [{ fixedPrice: 500, addOns: [{ addOnProductId: 's-l', quantity: 1 }] }] });
+
+      c.toggle(1, 's-l');
+
+      expect(c.discount()).toEqual({ price: 0, label: 'Promo -₱100.00' });
+      expect(c.unitPrice()).toBe(30);
+    });
+
+    it('an amount off that covers the price reads Free when the add-ons cost nothing', () => {
+      setupWith({ rules: [{ fixedPrice: 500, addOns: [{ addOnProductId: 's-r', quantity: 1 }] }] });
+
+      c.toggle(1, 's-r');
+
+      expect(c.discount()).toEqual({ price: 0, label: 'Free' });
+      expect(c.unitPrice()).toBe(0);
+    });
+
+    it('a plain-product rule that covers the price reads Free', () => {
+      setupWith({ rules: [{ fixedPrice: 500, addOns: [] }] }, [EXTRA]);
+
+      expect(c.discount()).toEqual({ price: 0, label: 'Free' });
+    });
+
+    it('a rule with no add-ons applies to the plain product only', () => {
+      setupWith({ rules: [{ percentOff: 10, addOns: [] }] }, [EXTRA]);
+
+      expect(c.unitPrice()).toBe(90);
+      c.toggle(4, 'e-1');
+      expect(c.unitPrice()).toBe(140);
+    });
+
+    it('a limited promotion with fewer uses than the quantity does not apply', () => {
+      setupWith({ rules: [{ percentOff: 10, addOns: [], remaining: 1 }] }, [EXTRA]);
+
+      expect(c.unitPrice()).toBe(90);
+      c.changeQuantity(1);
+      expect(c.unitPrice()).toBe(100);
+    });
+
+    it('confirming sends the add-ons and no price', () => {
+      setupWith({ startWith: [{ id: 's-r', name: 'Regular', price: 0, quantity: 1 }], rules: smallOnly });
+      const confirmed = vi.fn();
+      fixture.componentInstance.confirmed.subscribe(confirmed);
+
+      c.confirm();
+
+      expect(confirmed).toHaveBeenCalledWith({
+        addOns: [{ id: 's-r', name: 'Regular', price: 0, quantity: 1 }],
+        quantity: 1,
+        specialInstructions: null,
+      });
+    });
+  });
+
   describe('editing an item already in the cart', () => {
     it('starts from the saved choices and says Update Item', () => {
       setup([SIZE, EXTRA], {

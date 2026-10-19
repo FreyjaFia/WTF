@@ -58,6 +58,8 @@ export interface OrderItemDto {
   originalPrice?: number | null;
   /** Label of the promotion applied to the line when its price was saved. */
   promoLabel?: string | null;
+  /** The limited discount this line holds a use of while the order waits (its price is not saved yet). */
+  discountPromotionId?: string | null;
 }
 
 export interface OrderBundlePromotionDto {
@@ -139,6 +141,8 @@ export interface CreateOrderCommand {
   tips?: number | null;
   createdAt?: string | null;
   note?: string | null;
+  /** The total the register showed. The server refuses a finished sale whose total came out different. */
+  expectedTotal?: number | null;
 }
 
 /** What the server did with one offline order. */
@@ -165,4 +169,6 @@ export interface UpdateOrderCommand {
   note?: string | null;
   /** Required when correcting a completed order through the override endpoint. */
   overrideReason?: string | null;
+  /** The total the register showed. The server refuses a finished sale whose total came out different. */
+  expectedTotal?: number | null;
 }

@@ -79,8 +79,11 @@ import {
   PRODUCT_SUB_CATEGORY_LABELS,
 } from '@shared/models';
 import {
+  addOnsTotal,
   cartTotal,
   findBestDiscount,
+  buildDeals,
+  Deal,
   formatPromoLabel,
   isScheduleOpen,
   lineTotal,
@@ -257,6 +260,24 @@ export class OrderEditor implements OnInit, OnDestroy {
   protected readonly offlineOrderStatus = signal<OrderStatusEnum | null>(null);
   protected readonly showDiscardOrderModal = signal(false);
   protected readonly currentOrder = signal<OrderDto | null>(null);
+
+  // The uses of limited discounts that the order being edited already holds. They are not gone for it: saving the order
+  // again moves them, so the cart may keep using them.
+  private readonly ownHeldUses = computed(() => {
+    const held = new Map<string, number>();
+    const order = this.currentOrder();
+    if (order?.status !== OrderStatusEnum.Pending) {
+      return held;
+    }
+
+    for (const line of order.items) {
+      if (line.discountPromotionId) {
+        held.set(line.discountPromotionId, (held.get(line.discountPromotionId) ?? 0) + line.quantity);
+      }
+    }
+
+    return held;
+  });
   protected offlineLocalId: string | null = null;
   private discardOrderModalStackId: number | null = null;
   private offlineEditSyncLockActive = false;
@@ -554,6 +575,39 @@ export class OrderEditor implements OnInit, OnDestroy {
     return [...items].sort((a, b) => a.name.localeCompare(b.name));
   });
 
+  // The discounts a customer can pick as a card: the product with exactly the add-ons a rule needs, priced as it will be
+  // charged. They sit next to the bundles on the Promos tab.
+  protected readonly promoDeals = computed<Deal[]>(() => {
+    const catalogProducts = this.catalogCache.products();
+    const sources = this.liveDiscountedPromotions().flatMap((promo) =>
+      promo.items.map((entry) => ({ ...entry, remaining: this.discountUsesLeft(promo) })),
+    );
+
+    return buildDeals(
+      sources,
+      (productId) => catalogProducts.find((p) => p.id === productId && p.isActive),
+      (productId, addOnId) => {
+        const option = this.catalogCache
+          .getAddOnsForProduct(productId)
+          .flatMap((group) => group.options)
+          .find((o) => o.id === addOnId);
+        return option
+          ? { id: option.id, name: option.name, price: option.overridePrice ?? option.price }
+          : undefined;
+      },
+    );
+  });
+
+  protected readonly filteredDeals = computed(() => {
+    const term = this.catalogSearchTerm().trim().toLowerCase();
+    const deals = this.promoDeals();
+    return term ? deals.filter((deal) => deal.title.toLowerCase().includes(term)) : deals;
+  });
+
+  protected readonly hasPromos = computed(
+    () => this.filteredBundlePromotions().length > 0 || this.filteredDeals().length > 0,
+  );
+
   protected selectSubCategoryTab(tab: ProductSubCategoryEnum): void {
     if (this.productsBySubCategory()[tab].length === 0) {
       return;
@@ -565,7 +619,7 @@ export class OrderEditor implements OnInit, OnDestroy {
   }
 
   protected selectCatalogTab(tab: 'products' | 'bundles'): void {
-    if (tab === 'bundles' && this.filteredBundlePromotions().length === 0) {
+    if (tab === 'bundles' && !this.hasPromos()) {
       return;
     }
 
@@ -1203,6 +1257,36 @@ export class OrderEditor implements OnInit, OnDestroy {
     });
   }
 
+  // A deal card is the product with exactly the add-ons its promotion needs already chosen; the customer can still
+  // change them, and the discount shows as long as they match.
+  protected addDealToCart(deal: Deal): void {
+    if (!this.canManageOrderActions() || this.isOrderRequestBusy() || this.isReadOnly()) {
+      return;
+    }
+
+    const product = this.catalogCache.products().find((p) => p.id === deal.productId);
+    if (!product) {
+      this.alertService.error('This promo is not available right now.');
+      return;
+    }
+
+    const groups = this.catalogCache.getAddOnsForProduct(product.id);
+    const addOns: CartAddOnDto[] = deal.addOns.flatMap((addOn) => {
+      const type = groups.find((group) => group.options.some((o) => o.id === addOn.id))?.type;
+      return Array.from({ length: addOn.quantity }, () => ({
+        addOnId: addOn.id,
+        name: addOn.name,
+        price: addOn.price,
+        addOnType: type,
+      }));
+    });
+
+    this.addonSelector().open(product, {
+      addOns,
+      promoRules: this.getPromoRulesForProduct(product.id),
+    });
+  }
+
   protected addBundlePromotionToCart(promo: PromotionListItemDto): void {
     if (!this.canManageOrderActions() || this.isOrderRequestBusy() || this.isReadOnly()) {
       return;
@@ -1392,7 +1476,7 @@ export class OrderEditor implements OnInit, OnDestroy {
       return null;
     }
 
-    return formatPromoLabel(best.entry, item.price);
+    return formatPromoLabel(best.entry, item.price, addOnsTotal(item.addOns));
   }
 
   // The promotions that are on at this moment (dates, weekdays and hours in this device's time zone, which the API gets
@@ -1401,18 +1485,28 @@ export class OrderEditor implements OnInit, OnDestroy {
     return this.discountedProductPromotions().filter((promo) => this.isPromotionActiveInUserTimezone(promo));
   }
 
+  // What a discount can still take for this order: the uses nobody holds, plus the ones this order already holds.
+  private discountUsesLeft(promo: DiscountedProductPromotionDto): number | null {
+    const left = usesLeft(promo.schedule);
+    return left === null ? null : left + (this.ownHeldUses().get(promo.id) ?? 0);
+  }
+
   private getPromoRulesForProduct(productId: string): {
     fixedPrice?: number | null;
     percentOff?: number | null;
     addOns: { addOnProductId: string; quantity: number }[];
+    remaining?: number | null;
   }[] {
     return this.liveDiscountedPromotions()
-      .flatMap((promo) => promo.items)
-      .filter((entry) => entry.productId === productId)
-      .map((entry) => ({
+      .flatMap((promo) =>
+        promo.items.map((entry) => ({ entry, remaining: this.discountUsesLeft(promo) })),
+      )
+      .filter(({ entry }) => entry.productId === productId)
+      .map(({ entry, remaining }) => ({
         fixedPrice: entry.fixedPrice ?? null,
         percentOff: entry.percentOff ?? null,
         addOns: entry.addOns,
+        remaining,
       }));
   }
 
@@ -1426,7 +1520,7 @@ export class OrderEditor implements OnInit, OnDestroy {
     // A promotion with a usage limit only discounts the items it has uses left for.
     const rules = this.liveDiscountedPromotions()
       .flatMap((promo) =>
-        promo.items.map((entry) => ({ ...entry, remaining: usesLeft(promo.schedule) })),
+        promo.items.map((entry) => ({ ...entry, remaining: this.discountUsesLeft(promo) })),
       )
       .filter((entry) => entry.productId === item.productId);
     if (rules.length === 0) {
@@ -2113,6 +2207,51 @@ export class OrderEditor implements OnInit, OnDestroy {
       return;
     }
 
+    // A promotion may have changed or run out since the cart was built: ask the shop again before taking payment, and stop
+    // if the total moved. (The server checks the same total again when the sale is saved.)
+    if (this.connectivity.isOnline() && this.cartUsesPromotions()) {
+      this.verifyPromotionsThenCheckout();
+      return;
+    }
+
+    this.openCheckoutModal();
+  }
+
+  private cartUsesPromotions(): boolean {
+    return this.cart().some(
+      (line) =>
+        !!line.bundlePromotionId || !!line.bundleItems?.length || this.getDiscountedUnitPrice(line) !== null,
+    );
+  }
+
+  private verifyPromotionsThenCheckout(): void {
+    const before = this.totalPrice();
+    this.promotionService.getActiveDiscountedProductPromotions(true).subscribe({
+      next: (promos) => {
+        this.discountedProductPromotions.set(promos);
+        const after = this.totalPrice();
+        if (after !== before) {
+          this.alertService.error(
+            `A promotion changed while you were ordering. The total is now PHP ${after.toFixed(2)} (it was PHP ${before.toFixed(2)}). Please review the order.`,
+          );
+          return;
+        }
+
+        this.openCheckoutModal();
+      },
+      // Could not ask: go on, the server checks the total when the sale is saved.
+      error: () => this.openCheckoutModal(),
+    });
+  }
+
+  private refreshPromotionsAfterChangedTotal(message: unknown): void {
+    if (typeof message === 'string' && message.includes('The total changed')) {
+      this.loadDiscountedProductPromotions();
+      this.loadBundlePromotions();
+    }
+  }
+
+  private openCheckoutModal(): void {
     // A customer's own order already says how they chose to pay: show that instead of an empty form.
     const placed = this.currentOrder();
     this.checkoutModal().triggerOpen(
@@ -2224,6 +2363,7 @@ export class OrderEditor implements OnInit, OnDestroy {
       bundlePromotions: this.buildBundlePromotionsFromCart(offline),
       specialInstructions: this.orderSpecialInstructions().trim() || null,
       status,
+      ...(!offline && status === OrderStatusEnum.Completed && { expectedTotal: this.totalPrice() }),
       ...(event && {
         paymentMethod: event.paymentMethod,
         amountReceived: event.amountReceived ?? null,
@@ -2247,6 +2387,7 @@ export class OrderEditor implements OnInit, OnDestroy {
       error: (err) => {
         this.isSavingOrder.set(false);
         this.alertService.error(err.message || this.alertService.getCreateErrorMessage('order'));
+        this.refreshPromotionsAfterChangedTotal(err?.message);
       },
     });
   }
@@ -2337,6 +2478,7 @@ export class OrderEditor implements OnInit, OnDestroy {
       bundlePromotions: this.buildBundlePromotionsFromCart(),
       specialInstructions: this.orderSpecialInstructions().trim() || null,
       status,
+      ...(status === OrderStatusEnum.Completed && { expectedTotal: this.totalPrice() }),
       ...(event && {
         paymentMethod: event.paymentMethod,
         amountReceived: event.amountReceived ?? null,
@@ -2356,6 +2498,7 @@ export class OrderEditor implements OnInit, OnDestroy {
         this.isSavingOrder.set(false);
         const message = err?.message || this.alertService.getUpdateErrorMessage('order');
         this.alertService.error(message);
+        this.refreshPromotionsAfterChangedTotal(message);
         if (
           typeof message === 'string' &&
           message.toLowerCase().includes('order is already') &&
@@ -2462,7 +2605,7 @@ export class OrderEditor implements OnInit, OnDestroy {
 
   private ensureVisibleCatalogTab(): void {
     if (this.activeCatalogTab() === 'bundles') {
-      if (this.filteredBundlePromotions().length > 0) {
+      if (this.hasPromos()) {
         return;
       }
 
@@ -2541,7 +2684,7 @@ export class OrderEditor implements OnInit, OnDestroy {
 
   private getVisibleCatalogScrollSections(): { tab: CatalogScrollTab; sectionId: string }[] {
     if (this.activeCatalogTab() === 'bundles') {
-      return this.filteredBundlePromotions().length > 0
+      return this.hasPromos()
         ? [{ tab: 'bundles', sectionId: 'catalog-bundles' }]
         : [];
     }
@@ -2678,7 +2821,7 @@ export class OrderEditor implements OnInit, OnDestroy {
         ...(withQuotes && {
           quotedPrice: best?.price ?? line.price,
           quotedOriginalPrice: line.price,
-          quotedPromoLabel: best ? formatPromoLabel(best.entry, line.price) : null,
+          quotedPromoLabel: best ? formatPromoLabel(best.entry, line.price, addOnsTotal(line.addOns)) : null,
         }),
       });
     }

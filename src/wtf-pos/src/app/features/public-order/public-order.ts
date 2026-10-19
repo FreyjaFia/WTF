@@ -32,6 +32,7 @@ import {
   ConversationSummaryDto,
   ProductCategoryEnum,
   PublicAddOnGroupDto,
+  PublicCartAddOn,
   PublicCartLine,
   PublicOrderDto,
   PublicOrderLinkDto,
@@ -45,10 +46,30 @@ import {
   PublicAddonPickerComponent,
   PublicAddonPickerResult,
 } from './public-addon-picker/public-addon-picker';
-import { extendedPrice, priceWithAddOns, sumAmounts } from '@shared/calculations';
+import {
+  addOnsTotal,
+  buildDeals,
+  Deal,
+  DiscountRule,
+  extendedPrice,
+  findBestDiscount,
+  formatPromoLabel,
+  priceWithAddOns,
+  sumAmounts,
+} from '@shared/calculations';
 
 type LoadState = 'loading' | 'ready' | 'invalid' | 'error';
 type Tab = 'menu' | 'orders';
+
+/** The Promos section sits before the categories and uses this id in the tab strip and the section anchors. */
+export const PROMO_SECTION_ID = -1;
+
+interface MenuSection {
+  id: number;
+  label: string;
+  products: PublicProductDto[];
+  deals: Deal[];
+}
 
 /** Re-load the menu when the page comes back into view after this long. */
 export const MENU_STALE_AFTER_MS = 60_000;
@@ -139,6 +160,8 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
   protected readonly pickerProduct = signal<PublicProductDto | null>(null);
   /** The cart line being edited in the picker, or null when adding a new item. */
   protected readonly editingKey = signal<string | null>(null);
+  /** Add-ons a deal card starts the picker with (a new item, not an edit). */
+  protected readonly pickerStart = signal<PublicCartAddOn[] | null>(null);
   protected readonly checkoutOpen = signal(false);
   protected readonly isPlacingOrder = signal(false);
   /** What the server said about the last attempt to place the order, shown in the checkout. */
@@ -184,6 +207,46 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
 
   protected readonly products = computed(() => this.link()?.catalog.products ?? []);
 
+  /** The discount rules that are on, by product, in the shape the shared price calculator reads. */
+  private readonly dealRulesByProduct = computed(() => {
+    const rules = new Map<string, (DiscountRule & { remaining: number | null })[]>();
+    for (const deal of this.link()?.catalog.deals ?? []) {
+      rules.set(deal.productId, [
+        ...(rules.get(deal.productId) ?? []),
+        {
+          fixedPrice: deal.amountOff ?? null,
+          percentOff: deal.percentOff ?? null,
+          addOns: deal.addOns,
+          remaining: deal.remaining ?? null,
+        },
+      ]);
+    }
+    return rules;
+  });
+
+  /** Discounts shown as cards: the product with the add-ons the discount needs, priced as the shop will charge it. */
+  protected readonly deals = computed<Deal[]>(() => {
+    const catalog = this.link()?.catalog;
+    if (!catalog) {
+      return [];
+    }
+
+    return buildDeals(
+      (catalog.deals ?? []).map((deal) => ({
+        productId: deal.productId,
+        fixedPrice: deal.amountOff,
+        percentOff: deal.percentOff,
+        addOns: deal.addOns,
+        remaining: deal.remaining,
+      })),
+      (productId) => catalog.products.find((p) => p.id === productId),
+      (productId, addOnId) =>
+        (catalog.addOnsByProductId[productId] ?? [])
+          .flatMap((group) => group.options)
+          .find((option) => option.id === addOnId),
+    );
+  });
+
   protected readonly filteredProducts = computed(() => {
     const term = this.search().trim().toLowerCase();
 
@@ -195,18 +258,29 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
     );
   });
 
-  /** One section per category that still has a matching product, in the shop's order. */
-  protected readonly sections = computed(() => {
-    const products = this.filteredProducts();
+  protected readonly filteredDeals = computed(() => {
+    const term = this.search().trim().toLowerCase();
+    const deals = this.deals();
+    return term ? deals.filter((deal) => deal.title.toLowerCase().includes(term)) : deals;
+  });
 
-    return Object.keys(CATEGORY_LABELS)
+  /** Promos first (when there are any), then one section per category that still has a matching product. */
+  protected readonly sections = computed<MenuSection[]>(() => {
+    const products = this.filteredProducts();
+    const deals = this.filteredDeals();
+    const categories = Object.keys(CATEGORY_LABELS)
       .map(Number)
       .map((id) => ({
         id,
         label: CATEGORY_LABELS[id],
         products: products.filter((p) => p.category === id),
+        deals: [] as Deal[],
       }))
       .filter((section) => section.products.length > 0);
+
+    return deals.length > 0
+      ? [{ id: PROMO_SECTION_ID, label: 'Promos', products: [], deals }, ...categories]
+      : categories;
   });
 
   /** The highlighted tab, falling back to the first section when the chosen one is not shown. */
@@ -609,8 +683,20 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
     this.pickerProduct.set(product);
   }
 
+  /** A deal card opens the picker with the add-ons its discount needs already chosen. */
+  protected openDeal(deal: Deal): void {
+    const product = this.products().find((p) => p.id === deal.productId);
+    if (!product) {
+      return;
+    }
+
+    this.pickerStart.set(deal.addOns.map((a) => ({ id: a.id, name: a.name, price: a.price, quantity: a.quantity })));
+    this.pickerProduct.set(product);
+  }
+
   protected closePicker(): void {
     this.pickerProduct.set(null);
+    this.pickerStart.set(null);
     this.editingKey.set(null);
   }
 
@@ -632,6 +718,7 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
     const product = this.pickerProduct();
     const editing = this.editingKey();
     this.pickerProduct.set(null);
+    this.pickerStart.set(null);
     this.editingKey.set(null);
 
     if (!product) {
@@ -757,8 +844,43 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
     });
   }
 
+  protected readonly pickerRules = computed(() => {
+    const product = this.pickerProduct();
+    return product ? (this.dealRulesByProduct().get(product.id) ?? []) : [];
+  });
+
+  /** The price a cart line really costs per item before add-ons, when a discount applies to it. */
+  protected lineDiscount(
+    line: PublicCartLine,
+  ): { price: number; label: string | null; limited: boolean } | null {
+    const rules = this.dealRulesByProduct().get(line.productId);
+    if (!rules) {
+      return null;
+    }
+
+    const best = findBestDiscount(
+      line.price,
+      line.addOns.flatMap((addOn) => Array.from({ length: addOn.quantity }, () => addOn.id)),
+      rules,
+      line.quantity,
+    );
+
+    return best
+      ? {
+          price: best.price,
+          label: formatPromoLabel(best.rule, line.price, addOnsTotal(line.addOns)),
+          limited: best.rule.remaining != null,
+        }
+      : null;
+  }
+
+  /** True when a discount in the cart has a usage limit, so the shop confirms the price when it accepts the order. */
+  protected readonly hasLimitedDiscount = computed(() =>
+    this.cart().some((line) => this.lineDiscount(line)?.limited),
+  );
+
   protected unitPrice(line: PublicCartLine): number {
-    return priceWithAddOns(line.price, line.addOns);
+    return priceWithAddOns(this.lineDiscount(line)?.price ?? line.price, line.addOns);
   }
 
   protected lineTotal(line: PublicCartLine): number {
@@ -888,6 +1010,7 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
       amountReceived: form.amountReceived,
       tips: form.tips,
       specialInstructions: form.specialInstructions,
+      expectedTotal: this.cartTotal(),
     };
   }
 
@@ -932,7 +1055,7 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
         this.checkoutError.set(err.message);
 
         // An item that is no longer sold or a changed price: bring the menu and the cart up to date underneath.
-        if (/no longer available/i.test(err.message)) {
+        if (/no longer available|The total changed/i.test(err.message)) {
           this.loadMenu(true);
         }
       },

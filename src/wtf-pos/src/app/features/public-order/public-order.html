@@ -262,6 +262,60 @@
                               <div
                                 class="grid grid-cols-1 gap-4 sm:grid-cols-[repeat(auto-fill,minmax(220px,1fr))]"
                               >
+                                @for (deal of section.deals; track deal.key) {
+                                  <div
+                                    class="card flex min-h-60 cursor-pointer flex-col overflow-hidden rounded-xl bg-surface shadow-lg transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl"
+                                    role="button"
+                                    tabindex="0"
+                                    data-promo-deal
+                                    (click)="openDeal(deal)"
+                                    (keydown.enter)="openDeal(deal)"
+                                    (keydown.space)="$event.preventDefault(); openDeal(deal)"
+                                  >
+                                    <figure class="flex h-32 shrink-0 items-center justify-center">
+                                      @if (deal.imageUrl) {
+                                        <img
+                                          [src]="deal.imageUrl"
+                                          [alt]="deal.productName"
+                                          class="h-24 w-24 object-contain"
+                                        />
+                                      } @else {
+                                        <app-avatar [label]="deal.productName" [size]="56" />
+                                      }
+                                    </figure>
+                                    <div class="card-body flex flex-1 flex-col justify-between p-4">
+                                      <div class="space-y-1.5">
+                                        <h2
+                                          class="card-title text-base leading-snug font-semibold wrap-break-word text-gray-800"
+                                        >
+                                          {{ deal.title }}
+                                        </h2>
+                                        @if (deal.label) {
+                                          <span
+                                            class="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap text-emerald-700"
+                                          >
+                                            {{ deal.label }}
+                                          </span>
+                                        }
+                                      </div>
+                                      <div
+                                        class="card-actions mt-auto items-baseline justify-start gap-2"
+                                      >
+                                        <div class="text-lg font-bold text-gray-950">
+                                          <span class="text-base opacity-70"
+                                            ><app-icon
+                                              name="icon-peso"
+                                              [class]="'inline h-3 w-3 align-[-0.125em]'"
+                                              [fill]="'currentColor'" /></span
+                                          >{{ deal.price | number: '1.2-2' }}
+                                        </div>
+                                        <div class="text-xs text-gray-400 line-through">
+                                          {{ deal.listPrice | number: '1.2-2' }}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                }
                                 @for (product of section.products; track product.id) {
                                   <div
                                     class="card flex min-h-60 cursor-pointer flex-col overflow-hidden rounded-xl bg-surface shadow-lg transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl"
@@ -444,14 +498,40 @@
                                   <div class="flex items-start justify-between gap-4 sm:gap-6">
                                     <div class="min-w-0 flex-1 text-sm font-semibold text-gray-900">
                                       {{ line.name }}
+                                      @if (lineDiscount(line); as discount) {
+                                        @if (discount.label) {
+                                          <div>
+                                            <span
+                                              class="mt-1 inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap text-emerald-700"
+                                              data-line-promo
+                                            >
+                                              {{ discount.label }}
+                                            </span>
+                                          </div>
+                                        }
+                                      }
                                     </div>
-                                    <div class="shrink-0 text-sm text-gray-500">
-                                      <span class="text-xs opacity-60"
-                                        ><app-icon
-                                          name="icon-peso"
-                                          [class]="'inline h-3 w-3 align-[-0.125em]'"
-                                          [fill]="'currentColor'" /></span
-                                      >{{ line.price | number: '1.2-2' }}
+                                    <div class="shrink-0 text-right text-sm text-gray-500">
+                                      @if (lineDiscount(line); as discount) {
+                                        <div class="text-xs text-gray-400 line-through">
+                                          {{ line.price | number: '1.2-2' }}
+                                        </div>
+                                        <div class="text-gray-900">
+                                          <span class="text-xs opacity-60"
+                                            ><app-icon
+                                              name="icon-peso"
+                                              [class]="'inline h-3 w-3 align-[-0.125em]'"
+                                              [fill]="'currentColor'" /></span
+                                          >{{ discount.price | number: '1.2-2' }}
+                                        </div>
+                                      } @else {
+                                        <span class="text-xs opacity-60"
+                                          ><app-icon
+                                            name="icon-peso"
+                                            [class]="'inline h-3 w-3 align-[-0.125em]'"
+                                            [fill]="'currentColor'" /></span
+                                        >{{ line.price | number: '1.2-2' }}
+                                      }
                                     </div>
                                   </div>
                                   <div class="flex items-center justify-between">
@@ -561,6 +641,11 @@
                           >{{ cartTotal() | number: '1.2-2' }}
                         </span>
                       </div>
+                      @if (hasLimitedDiscount()) {
+                        <p class="mt-1 text-[11px] text-gray-400" data-limited-note>
+                          A discount with limited uses is confirmed when the shop accepts your order.
+                        </p>
+                      }
                       <button
                         type="button"
                         class="app-btn app-btn-primary app-btn-lg mt-3 w-full"
@@ -687,6 +772,8 @@
         [product]="product"
         [groups]="pickerGroups()"
         [initial]="pickerInitial()"
+        [startWith]="pickerStart()"
+        [rules]="pickerRules()"
         (confirmed)="onPicked($event)"
         (cancelled)="closePicker()"
       />

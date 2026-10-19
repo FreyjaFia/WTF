@@ -9,7 +9,14 @@ import {
   PublicCartAddOn,
   PublicProductDto,
 } from '@shared/models';
-import { addOnsTotal, extendedPrice, priceWithAddOns } from '@shared/calculations';
+import {
+  addOnsTotal,
+  DiscountRule,
+  extendedPrice,
+  findBestDiscount,
+  formatPromoLabel,
+  priceWithAddOns,
+} from '@shared/calculations';
 
 export interface PublicAddonPickerResult {
   addOns: PublicCartAddOn[];
@@ -37,6 +44,12 @@ export class PublicAddonPickerComponent implements OnInit {
   /** Starting choices when an item already in the cart is being edited. */
   public readonly initial = input<PublicAddonPickerResult | null>(null);
 
+  /** Add-ons to start with for a new item (a deal card), without making it an edit. */
+  public readonly startWith = input<readonly PublicCartAddOn[] | null>(null);
+
+  /** The discounts that are on for this product. The one whose add-ons match the choices lowers the price. */
+  public readonly rules = input<readonly (DiscountRule & { remaining?: number | null })[]>([]);
+
   public readonly confirmed = output<PublicAddonPickerResult>();
   public readonly cancelled = output<void>();
 
@@ -51,7 +64,11 @@ export class PublicAddonPickerComponent implements OnInit {
   protected readonly isEditing = computed(() => this.initial() !== null);
 
   public ngOnInit(): void {
-    const initial = this.initial();
+    const initial =
+      this.initial() ??
+      (this.startWith()
+        ? { addOns: [...this.startWith()!], quantity: 1, specialInstructions: null }
+        : null);
     if (!initial) {
       return;
     }
@@ -102,8 +119,24 @@ export class PublicAddonPickerComponent implements OnInit {
   /** What the chosen add-ons add to the price of one item. */
   protected readonly addOnTotal = computed(() => addOnsTotal(this.selectedAddOns()));
 
+  /** The best discount whose add-ons match the choices exactly, or null. */
+  protected readonly discount = computed(() => {
+    const best = findBestDiscount(
+      this.product().price,
+      this.selectedAddOns().flatMap((addOn) =>
+        Array.from({ length: addOn.quantity }, () => addOn.id),
+      ),
+      this.rules(),
+      this.quantity(),
+    );
+
+    return best
+      ? { price: best.price, label: formatPromoLabel(best.rule, this.product().price, this.addOnTotal()) }
+      : null;
+  });
+
   protected readonly unitPrice = computed(() =>
-    priceWithAddOns(this.product().price, this.selectedAddOns()),
+    priceWithAddOns(this.discount()?.price ?? this.product().price, this.selectedAddOns()),
   );
 
   protected readonly total = computed(() => extendedPrice(this.unitPrice(), this.quantity()));

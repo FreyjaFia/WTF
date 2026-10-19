@@ -524,8 +524,105 @@ public class PublicOrderLinkTests
         single!.Total.ShouldBe(150m);
     }
 
+    private async Task<Guid> AddDealAsync(Guid productId, decimal? amountOff, decimal? percent, Guid[]? addOns = null,
+        bool active = true, DateTime? end = null, byte? days = null, int? maxRedemptions = null)
+    {
+        var promo = new Promotion
+        {
+            Id = Guid.NewGuid(),
+            Name = "Secret internal name",
+            TypeId = PromotionTypeIds.DiscountedProduct,
+            IsActive = active,
+            EndDate = end,
+            DaysOfWeek = days,
+            MaxRedemptions = maxRedemptions,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = _staffId
+        };
+        var rule = new DiscountedProductPromotion { Id = Guid.NewGuid(), PromotionId = promo.Id, ProductId = productId, FixedPrice = amountOff, PercentOff = percent };
+        foreach (var addOn in addOns ?? [])
+        {
+            rule.DiscountedProductPromotionAddOns.Add(new DiscountedProductPromotionAddOn { Id = Guid.NewGuid(), DiscountedProductPromotionId = rule.Id, AddOnProductId = addOn, Quantity = 1 });
+        }
+
+        promo.DiscountedProductPromotions.Add(rule);
+        await TestDb.SaveAsync(_db, promo);
+        return promo.Id;
+    }
+
+    [Fact]
+    public async Task OpenLink_ListsTheDiscountsThatAreOn_WithoutPromotionIdsOrNames()
+    {
+        var customer = await AddCustomerAsync();
+        var link = await AddLinkAsync(customer.Id);
+        var latte = await AddProductAsync("Latte", 150);
+        var small = await AddProductAsync("Small", 0, addOn: true);
+        await AddDealAsync(latte.Id, 30m, null, [small.Id]);
+
+        var dto = await OpenLink(link.Token);
+
+        var deal = dto!.Catalog.Deals.ShouldHaveSingleItem();
+        deal.ProductId.ShouldBe(latte.Id);
+        deal.AmountOff.ShouldBe(30m);
+        deal.PercentOff.ShouldBeNull();
+        deal.AddOns.ShouldHaveSingleItem().AddOnProductId.ShouldBe(small.Id);
+        deal.Remaining.ShouldBeNull();
+        System.Text.Json.JsonSerializer.Serialize(dto.Catalog).ShouldNotContain("Secret internal name");
+    }
+
+    [Fact]
+    public async Task OpenLink_LeavesOutInactiveEndedAndClosedDiscounts()
+    {
+        var customer = await AddCustomerAsync();
+        var link = await AddLinkAsync(customer.Id);
+        var latte = await AddProductAsync("Latte", 150);
+        var closedToday = (byte)(1 << (((int)DateTime.UtcNow.DayOfWeek + 1) % 7));
+        await AddDealAsync(latte.Id, null, 10m, active: false);
+        await AddDealAsync(latte.Id, null, 10m, end: DateTime.UtcNow.AddDays(-2));
+        await AddDealAsync(latte.Id, null, 10m, days: closedToday);
+
+        (await OpenLink(link.Token))!.Catalog.Deals.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task OpenLink_LeavesOutDiscountsForProductsThatAreNotSold()
+    {
+        var customer = await AddCustomerAsync();
+        var link = await AddLinkAsync(customer.Id);
+        var retired = await AddProductAsync("Retired", 99, active: false);
+        await AddDealAsync(retired.Id, null, 50m);
+
+        (await OpenLink(link.Token))!.Catalog.Deals.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task OpenLink_ShowsUsesLeft_AndHidesAnExhaustedDiscount()
+    {
+        var customer = await AddCustomerAsync();
+        var link = await AddLinkAsync(customer.Id);
+        var latte = await AddProductAsync("Latte", 150);
+        var croissant = await AddProductAsync("Croissant", 120);
+        var promo = await AddDealAsync(latte.Id, null, 10m, maxRedemptions: 3);
+        var spent = await AddDealAsync(croissant.Id, null, 10m, maxRedemptions: 1);
+        var done = await AddOrderAsync(customer.Id, OrderSourceEnum.Pos, OrderStatusEnum.Completed);
+        var l1 = await AddLineAsync(done.Id, latte.Id, 2, price: 135);
+        var l2 = await AddLineAsync(done.Id, croissant.Id, 1, price: 108);
+        await using (var db = TestDb.Create(_db))
+        {
+            db.OrderItems.Single(i => i.Id == l1.Id).DiscountPromotionId = promo;
+            db.OrderItems.Single(i => i.Id == l2.Id).DiscountPromotionId = spent;
+            await db.SaveChangesAsync();
+        }
+
+        var deal = (await OpenLink(link.Token))!.Catalog.Deals.ShouldHaveSingleItem();
+
+        deal.ProductId.ShouldBe(latte.Id);
+        deal.Remaining.ShouldBe(1);
+    }
+
     [Fact]
     public async Task Orders_ArePaged()
+
 
     {
         var ana = await AddCustomerAsync();

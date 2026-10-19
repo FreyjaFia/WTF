@@ -19,9 +19,21 @@ export interface PublicAddOnGroupDto {
   options: PublicProductDto[];
 }
 
+/** A discount that is on right now: the product, the exact add-ons it needs and what comes off. */
+export interface PublicDealDto {
+  productId: string;
+  amountOff?: number | null;
+  percentOff?: number | null;
+  addOns: { addOnProductId: string; quantity: number }[];
+  /** How many more items it can discount, or null when it has no usage limit. */
+  remaining?: number | null;
+}
+
 export interface PublicCatalogDto {
   products: PublicProductDto[];
   addOnsByProductId: Record<string, PublicAddOnGroupDto[]>;
+  /** Missing when talking to an older server. */
+  deals?: PublicDealDto[];
 }
 
 export interface PublicOrderLinkDto {
@@ -109,6 +121,8 @@ export interface SubmitPublicOrderRequest {
   /** An optional tip for the shop, on top of the total. */
   tips?: number | null;
   specialInstructions?: string | null;
+  /** The total the page showed. The shop refuses the order if its own total came out different. */
+  expectedTotal?: number | null;
 }
 
 /** A line in the customer's cart. The cart lives in memory only and is never saved on the device. */
