@@ -7,6 +7,7 @@ import {
   AuthService,
   CatalogCacheService,
   ConversationInboxService,
+  InventoryService,
   OrderService,
   PromotionService,
   SignalRService,
@@ -32,9 +33,11 @@ import {
   DiscountedProductPromotionDto,
   FulfillmentTypeEnum,
   OrderDto,
+  OrderStockMovementDto,
   OrderSourceEnum,
   OrderStatusEnum,
   PaymentMethodEnum,
+  ProductSubCategoryEnum,
   PromotionTypeEnum,
 } from '@shared/models';
 import {
@@ -80,6 +83,7 @@ export class OrderDetails implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly promotionService = inject(PromotionService);
   private readonly inbox = inject(ConversationInboxService);
+  private readonly inventoryService = inject(InventoryService);
   private readonly signalR = inject(SignalRService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -99,6 +103,23 @@ export class OrderDetails implements OnInit {
   protected readonly showRefundModal = signal(false);
   protected readonly refundNote = signal('');
   protected readonly showRefundNoteError = signal(false);
+  protected readonly notReturnedLineIds = signal<ReadonlySet<string>>(new Set());
+  protected readonly stockMovements = signal<OrderStockMovementDto[]>([]);
+
+  // Only lines whose product took stock matter when refunding; an order without any skips the question.
+  private readonly stockLines = computed(() => {
+    const ids = new Set(this.order()?.stockLineIds ?? []);
+    return (this.order()?.items ?? []).filter((item) => ids.has(item.id));
+  });
+  protected readonly showStockMovements = signal(false);
+
+  protected readonly refundLines = computed(() =>
+    this.stockLines().map((item) => ({
+      id: item.id,
+      name: item.productName,
+      quantity: item.quantity,
+    })),
+  );
 
   protected readonly itemCount = computed(() => {
     const current = this.order();
@@ -285,6 +306,7 @@ export class OrderDetails implements OnInit {
     }
 
     this.refundNote.set(this.order()?.note ?? '');
+    this.notReturnedLineIds.set(this.defaultNotReturnedLines());
     this.showRefundNoteError.set(false);
     this.showRefundModal.set(true);
   }
@@ -292,6 +314,25 @@ export class OrderDetails implements OnInit {
   protected dismissRefundModal(): void {
     this.showRefundModal.set(false);
     this.showRefundNoteError.set(false);
+  }
+
+  protected toggleStockMovements(): void {
+    this.showStockMovements.update((open) => !open);
+  }
+
+  protected isLineReturned(lineId: string): boolean {
+    return !this.notReturnedLineIds().has(lineId);
+  }
+
+  protected setLineReturned(lineId: string, returned: boolean): void {
+    const next = new Set(this.notReturnedLineIds());
+    if (returned) {
+      next.delete(lineId);
+    } else {
+      next.add(lineId);
+    }
+
+    this.notReturnedLineIds.set(next);
   }
 
   protected onRefundNoteInput(event: Event): void {
@@ -316,12 +357,13 @@ export class OrderDetails implements OnInit {
     }
 
     this.isRefunding.set(true);
-    this.orderService.voidOrder(current.id, note).subscribe({
+    this.orderService.voidOrder(current.id, note, [...this.notReturnedLineIds()]).subscribe({
       next: (updated) => {
         this.isRefunding.set(false);
         this.showRefundModal.set(false);
         this.showRefundNoteError.set(false);
         this.order.set(updated);
+        this.loadStockMovements(updated.id);
         this.alertService.success('Order has been refunded');
       },
       error: (err: Error) => {
@@ -689,6 +731,33 @@ export class OrderDetails implements OnInit {
       .toLowerCase();
   }
 
+  protected canReadStock(): boolean {
+    return this.authService.canReadStockMovements();
+  }
+
+  // A made drink cannot go back on the shelf, so only retail goods default to returned.
+  private defaultNotReturnedLines(): ReadonlySet<string> {
+    const retailIds = new Set(
+      this.catalogCache
+        .products()
+        .filter((product) => product.subCategory === ProductSubCategoryEnum.Retail)
+        .map((product) => product.id),
+    );
+    const items = this.stockLines();
+    return new Set(items.filter((item) => !retailIds.has(item.productId)).map((item) => item.id));
+  }
+
+  private loadStockMovements(orderId: string): void {
+    if (!this.canReadStock()) {
+      return;
+    }
+
+    this.inventoryService.getOrderStockMovements(orderId).subscribe({
+      next: (movements) => this.stockMovements.set(movements),
+      error: () => this.stockMovements.set([]),
+    });
+  }
+
   private loadOrder(silent = false): void {
     const orderId = this.route.snapshot.paramMap.get('id');
     if (!orderId) {
@@ -705,6 +774,7 @@ export class OrderDetails implements OnInit {
         this.order.set(order);
         this.isLoading.set(false);
         this.isRefreshing.set(false);
+        this.loadStockMovements(order.id);
       },
       error: (err: Error) => {
         if (silent) {

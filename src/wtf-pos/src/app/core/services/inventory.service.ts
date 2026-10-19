@@ -4,9 +4,13 @@ import { ConnectivityService } from '@core/services/connectivity.service';
 import { environment } from '@environments/environment.development';
 import {
   AddItemStockDto,
+  AdjustItemStockDto,
   CreateItemDto,
   ItemDto,
+  OrderStockMovementDto,
+  PagedStockMovementsDto,
   ProductItemLinkAssignmentDto,
+  ProductItemLinkDto,
   UpdateItemDto,
 } from '@shared/models';
 import { Observable, throwError } from 'rxjs';
@@ -65,6 +69,48 @@ export class InventoryService {
     return this.http
       .post<ItemDto>(`${this.baseUrl}/${payload.itemId}/stock`, payload)
       .pipe(catchError((error) => this.handleError(error, 'Unable to add stock.')));
+  }
+
+  public adjustStock(payload: AdjustItemStockDto): Observable<ItemDto> {
+    return this.http
+      .post<ItemDto>(`${this.baseUrl}/${payload.itemId}/stock/adjust`, payload)
+      .pipe(catchError((error) => this.handleError(error, 'Unable to adjust stock.')));
+  }
+
+  public getItemMovements(
+    itemId: string,
+    query?: { type?: string | null; page?: number; pageSize?: number },
+  ): Observable<PagedStockMovementsDto> {
+    let params = new HttpParams();
+    if (query?.type) {
+      params = params.set('type', query.type);
+    }
+    if (query?.page) {
+      params = params.set('page', String(query.page));
+    }
+    if (query?.pageSize) {
+      params = params.set('pageSize', String(query.pageSize));
+    }
+
+    return this.http
+      .get<PagedStockMovementsDto>(`${this.baseUrl}/${itemId}/movements`, { params })
+      .pipe(catchError((error) => this.handleError(error, 'Unable to fetch stock history.')));
+  }
+
+  public getOrderStockMovements(orderId: string): Observable<OrderStockMovementDto[]> {
+    return this.http
+      .get<OrderStockMovementDto[]>(`${environment.apiUrl}/orders/${orderId}/stock-movements`)
+      .pipe(catchError((error) => this.handleError(error, 'Unable to fetch the stock movements.')));
+  }
+
+  public linkProductToItem(
+    productId: string,
+    itemId: string,
+    quantityPerSale: number,
+  ): Observable<ProductItemLinkDto> {
+    return this.http
+      .post<ProductItemLinkDto>(`${this.baseUrl}/product-links`, { productId, itemId, quantityPerSale })
+      .pipe(catchError((error) => this.handleError(error, 'Unable to link the product to stock.')));
   }
 
   public assignProductItemLinks(

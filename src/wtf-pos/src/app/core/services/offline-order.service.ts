@@ -345,12 +345,15 @@ export class OfflineOrderService {
     const doneIds: number[] = [];
     const failed: { key: number; changes: Partial<PendingOrder> }[] = [];
     let held = 0;
+    const stockWarnings = new Set<string>();
 
     for (const order of batch) {
       const result = resultByKey.get(this.serverKey(order));
 
       if (result && !result.error && result.orderId) {
         doneIds.push(order.id!);
+
+        result.stockWarnings?.forEach((warning) => stockWarnings.add(warning));
 
         if (result.status === OrderStatusEnum.PendingReview) {
           held++;
@@ -370,6 +373,12 @@ export class OfflineOrderService {
     }
 
     await db.pendingOrders.bulkDelete(doneIds);
+
+    if (stockWarnings.size > 0) {
+      this.alertService.warning(
+        `Stock after the synced sales: ${[...stockWarnings].join(' ')} The sales were saved as made.`,
+      );
+    }
 
     if (failed.length > 0) {
       await (db.pendingOrders as import('dexie').Table).bulkUpdate(failed);

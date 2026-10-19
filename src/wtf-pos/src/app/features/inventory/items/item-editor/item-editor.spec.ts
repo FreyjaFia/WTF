@@ -27,6 +27,7 @@ function makeItem(overrides: Partial<ItemDto> = {}): ItemDto {
     warningQuantity: 50,
     criticalQuantity: 10,
     isActive: true,
+    allowNegativeStock: true,
     createdAt: '2026-01-01T00:00:00Z',
     createdBy: 'u',
     updatedAt: '2026-02-01T00:00:00Z',
@@ -137,6 +138,7 @@ describe('ItemEditorComponent', () => {
         costPrice: 2.5,
         warningQuantity: null,
         criticalQuantity: null,
+        allowNegativeStock: true,
         isActive: true,
       });
       expect(alerts.success).toHaveBeenCalledWith('Item created.');
@@ -300,6 +302,7 @@ describe('ItemEditorComponent', () => {
         costPrice: 5,
         warningQuantity: 50,
         criticalQuantity: 10,
+        allowNegativeStock: true,
         isActive: true,
       });
       expect(form.dirty).toBe(false);
@@ -387,6 +390,7 @@ describe('ItemEditorComponent', () => {
         costPrice: 5,
         warningQuantity: 50,
         criticalQuantity: 10,
+        allowNegativeStock: true,
         isActive: true,
       });
       expect(inventory.createInventoryItem).not.toHaveBeenCalled();

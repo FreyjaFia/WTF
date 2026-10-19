@@ -6,11 +6,93 @@
     </div>
   </div>
 
-  <div class="rounded-lg bg-surface p-8 text-center shadow-lg">
-    <div class="mb-3 flex justify-center">
-      <app-icon name="icon-inventory" [class]="'h-12 w-12 opacity-60'" />
+  <form
+    class="card max-w-xl rounded-xl bg-surface shadow-lg"
+    [formGroup]="form"
+    (ngSubmit)="save()"
+    novalidate
+  >
+    <div class="card-body space-y-4">
+      @if (isLoading()) {
+        <div class="flex justify-center py-4">
+          <span class="loading loading-spinner"></span>
+        </div>
+      } @else {
+        <div>
+          <label for="stock-in-item" class="mb-1 block text-xs font-semibold text-gray-500">Item</label>
+          <select
+            id="stock-in-item"
+            class="select select-bordered w-full outline-transparent"
+            formControlName="itemId"
+          >
+            <option value="" disabled>Choose an item</option>
+            @for (item of items(); track item.id) {
+              <option [value]="item.id">{{ item.name }}</option>
+            }
+          </select>
+          @if (form.controls.itemId.touched && form.controls.itemId.invalid) {
+            <p class="mt-1 text-sm text-red-600" role="alert">Choose the item that arrived.</p>
+          }
+          @if (selectedItem(); as item) {
+            <p class="mt-1 text-xs text-gray-500">
+              In stock now: {{ item.currentQuantity }} {{ unitLabel() }}
+            </p>
+          }
+        </div>
+
+        <div>
+          <label for="stock-in-quantity" class="mb-1 block text-xs font-semibold text-gray-500">
+            Quantity received {{ unitLabel() ? '(' + unitLabel() + ')' : '' }}
+          </label>
+          <input
+            id="stock-in-quantity"
+            type="number"
+            step="any"
+            class="input input-bordered w-full outline-transparent"
+            formControlName="quantity"
+          />
+          @if (form.controls.quantity.touched && form.controls.quantity.invalid) {
+            <p class="mt-1 text-sm text-red-600" role="alert">Enter a quantity above zero.</p>
+          }
+        </div>
+
+        <div>
+          <label for="stock-in-cost" class="mb-1 block text-xs font-semibold text-gray-500">
+            Cost per unit (optional)
+          </label>
+          <input
+            id="stock-in-cost"
+            type="number"
+            step="any"
+            class="input input-bordered w-full outline-transparent"
+            formControlName="unitCost"
+          />
+        </div>
+
+        <div>
+          <label for="stock-in-notes" class="mb-1 block text-xs font-semibold text-gray-500">
+            Note (optional)
+          </label>
+          <textarea
+            id="stock-in-notes"
+            class="textarea textarea-bordered w-full outline-transparent"
+            rows="2"
+            maxlength="500"
+            formControlName="notes"
+          ></textarea>
+        </div>
+
+        <div class="flex justify-end">
+          <button type="submit" class="app-btn app-btn-primary app-btn-md px-6" [disabled]="isSaving()">
+            @if (isSaving()) {
+              <span class="loading loading-spinner loading-xs"></span>
+              Saving...
+            } @else {
+              Add Stock
+            }
+          </button>
+        </div>
+      }
     </div>
-    <p class="text-lg font-semibold text-gray-700">Stock In coming soon</p>
-    <p class="text-sm text-gray-500">This page will handle adding stock quantities later.</p>
-  </div>
+  </form>
 </div>

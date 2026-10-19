@@ -2128,13 +2128,14 @@ export class OrderEditor implements OnInit, OnDestroy {
     };
 
     this.orderService.overrideOrder(command).subscribe({
-      next: () => {
+      next: (saved) => {
         this.isSavingOrder.set(false);
         this.showOverrideModal.set(false);
         this.removeStackId('overrideOrder');
         this.skipGuard = true;
         this.cartPersistence.clear();
         this.alertService.success('Order has been overridden');
+        this.showStockWarnings(saved);
         this.router.navigateByUrl(AppRoutes.OrderDetailsById(order.id));
       },
       error: (err: Error) => {
@@ -2370,10 +2371,11 @@ export class OrderEditor implements OnInit, OnDestroy {
     }
 
     this.orderService.createOrder(command).subscribe({
-      next: () => {
+      next: (saved) => {
         this.isSavingOrder.set(false);
         this.skipGuard = true;
         this.cartPersistence.clear();
+        this.showStockWarnings(saved);
         this.router.navigateByUrl(AppRoutes.OrdersList);
       },
       error: (err) => {
@@ -2382,6 +2384,12 @@ export class OrderEditor implements OnInit, OnDestroy {
         this.refreshPromotionsAfterChangedTotal(err?.message);
       },
     });
+  }
+
+  private showStockWarnings(order: OrderDto): void {
+    for (const warning of order.stockWarnings ?? []) {
+      this.alertService.warning(warning);
+    }
   }
 
   private queueOfflineOrder(command: CreateOrderCommand): void {
@@ -2480,10 +2488,11 @@ export class OrderEditor implements OnInit, OnDestroy {
     };
 
     this.orderService.updateOrder(command).subscribe({
-      next: () => {
+      next: (saved) => {
         this.isSavingOrder.set(false);
         this.skipGuard = true;
         this.cartPersistence.clear();
+        this.showStockWarnings(saved);
         this.router.navigateByUrl(AppRoutes.OrdersList);
       },
       error: (err) => {

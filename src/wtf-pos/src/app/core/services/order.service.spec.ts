@@ -105,10 +105,10 @@ describe('OrderService', () => {
     service.voidOrder('4', 'wrong order').subscribe();
     const voided = http.expectOne(`${base}/4/void`);
     expect(voided.request.method).toBe('PATCH');
-    expect(voided.request.body).toEqual({ note: 'wrong order' });
+    expect(voided.request.body).toEqual({ note: 'wrong order', notReturnedLineIds: [] });
 
     service.voidOrder('5').subscribe();
-    expect(http.expectOne(`${base}/5/void`).request.body).toEqual({ note: null });
+    expect(http.expectOne(`${base}/5/void`).request.body).toEqual({ note: null, notReturnedLineIds: [] });
   });
 
   describe('offline orders', () => {

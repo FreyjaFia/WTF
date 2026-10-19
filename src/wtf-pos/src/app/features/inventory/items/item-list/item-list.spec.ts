@@ -28,6 +28,7 @@ function makeItem(overrides: Partial<ItemDto> = {}): ItemDto {
     warningQuantity: 50,
     criticalQuantity: 10,
     isActive: true,
+    allowNegativeStock: true,
     createdAt: '2026-01-01T00:00:00Z',
     createdBy: 'u',
     priceHistory: [],

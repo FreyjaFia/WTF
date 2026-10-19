@@ -2,7 +2,13 @@ import { CommonModule } from '@angular/common';
 import { Component, computed, inject, OnInit, signal, ViewChild } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { AlertService, ModalStackService, ProductService } from '@core/services';
+import {
+  AlertService,
+  AuthService,
+  InventoryService,
+  ModalStackService,
+  ProductService,
+} from '@core/services';
 import {
   AddonsSwapperComponent,
   AvatarComponent,
@@ -17,6 +23,7 @@ import {
   AddOnProductAssignmentDto,
   CreateProductAddOnPriceOverrideDto,
   CreateProductDto,
+  ItemDto,
   PRODUCT_SUB_CATEGORY_LABELS,
   ProductAddOnAssignmentDto,
   ProductAddOnPriceOverrideDto,
@@ -27,6 +34,9 @@ import {
   UpdateProductDto,
 } from '@shared/models';
 import { AppRoutes } from '@shared/constants/app-routes';
+import { Observable, of, switchMap } from 'rxjs';
+
+export type StockTrackingMode = 'none' | 'own' | 'existing';
 
 @Component({
   selector: 'app-product-editor',
@@ -51,6 +61,8 @@ export class ProductEditorComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly alertService = inject(AlertService);
   private readonly modalStack = inject(ModalStackService);
+  private readonly inventoryService = inject(InventoryService);
+  private readonly authService = inject(AuthService);
 
   @ViewChild(AddonsSwapperComponent) private addonsSwapper!: AddonsSwapperComponent;
   @ViewChild(ProductsSwapperComponent) private productsSwapper!: ProductsSwapperComponent;
@@ -88,6 +100,19 @@ export class ProductEditorComponent implements OnInit {
   protected readonly lastUpdatedAt = signal<string | null>(null);
   protected readonly showAllAddOns = signal(false);
   protected readonly showAllLinked = signal(false);
+
+  protected readonly stockMode = signal<StockTrackingMode>('none');
+  protected readonly stockItems = signal<ItemDto[]>([]);
+  protected readonly canTrackStock = computed(() => this.authService.canWriteItems());
+
+  protected readonly stockForm = new FormGroup({
+    startingQuantity: new FormControl<number | null>(null, [Validators.min(0)]),
+    costPrice: new FormControl<number | null>(null, [Validators.min(0)]),
+    warningQuantity: new FormControl<number | null>(null, [Validators.min(0)]),
+    criticalQuantity: new FormControl<number | null>(null, [Validators.min(0)]),
+    existingItemId: new FormControl('', { nonNullable: true }),
+    quantityPerSale: new FormControl<number | null>(1, [Validators.min(0.001)]),
+  });
 
   protected readonly sortedAssignedAddOns = computed(() =>
     [...this.assignedAddOns()]
@@ -162,6 +187,13 @@ export class ProductEditorComponent implements OnInit {
       this.loadProduct(id);
       this.productForm.controls.isAddOn.disable();
       this.productForm.controls.code.disable();
+    }
+
+    if (this.canTrackStock()) {
+      this.inventoryService.getInventoryItems({ isActive: true }).subscribe({
+        next: (items) => this.stockItems.set(items),
+        error: () => this.stockItems.set([]),
+      });
     }
 
     this.productForm.controls.isAddOn.valueChanges.subscribe((isAddOn) => {
@@ -243,7 +275,7 @@ export class ProductEditorComponent implements OnInit {
       };
 
       this.productService.updateProduct(updateDto).subscribe({
-        next: () => {
+        next: () => this.setUpStock(this.productId!, updateDto.name).subscribe(() => {
           // If there's a file selected, upload it after updating the product
           if (this.selectedFile()) {
             this.uploadImage();
@@ -253,7 +285,7 @@ export class ProductEditorComponent implements OnInit {
             this.alertService.successUpdated('Product');
             this.navigateToDetails(this.productId!);
           }
-        },
+        }),
         error: (err) => {
           this.alertService.error(err.message);
           this.isSaving.set(false);
@@ -266,23 +298,72 @@ export class ProductEditorComponent implements OnInit {
       };
 
       this.productService.createProduct(createDto).subscribe({
-        next: (createdProduct) => {
-          // If there's a file selected, upload it after creating the product
-          if (this.selectedFile()) {
-            this.uploadImage(createdProduct.id);
-          } else {
-            this.isSaving.set(false);
-            this.skipGuard = true;
-            this.alertService.successCreated('Product');
-            this.navigateToDetails(createdProduct.id);
-          }
-        },
+        next: (createdProduct) =>
+          this.setUpStock(createdProduct.id, createDto.name).subscribe(() => {
+            // If there's a file selected, upload it after creating the product
+            if (this.selectedFile()) {
+              this.uploadImage(createdProduct.id);
+            } else {
+              this.isSaving.set(false);
+              this.skipGuard = true;
+              this.alertService.successCreated('Product');
+              this.navigateToDetails(createdProduct.id);
+            }
+          }),
         error: (err) => {
           this.alertService.error(err.message);
           this.isSaving.set(false);
         },
       });
     }
+  }
+
+  protected setStockMode(mode: StockTrackingMode): void {
+    this.stockMode.set(mode);
+  }
+
+  // The product is already saved when this runs, so a failure here only reports itself and the save carries on.
+  private setUpStock(productId: string, productName: string): Observable<unknown> {
+    const mode = this.stockMode();
+    const value = this.stockForm.getRawValue();
+    let setup: Observable<unknown> = of(null);
+
+    if (mode === 'own') {
+      setup = this.inventoryService
+        .createInventoryItem({
+          name: productName,
+          unitName: 'piece',
+          startingQuantity: Number(value.startingQuantity ?? 0),
+          costPrice: value.costPrice,
+          warningQuantity: value.warningQuantity,
+          criticalQuantity: value.criticalQuantity,
+          isActive: true,
+        })
+        .pipe(switchMap((item) => this.inventoryService.linkProductToItem(productId, item.id, 1)));
+    } else if (mode === 'existing' && value.existingItemId) {
+      setup = this.inventoryService.linkProductToItem(
+        productId,
+        value.existingItemId,
+        Number(value.quantityPerSale ?? 1),
+      );
+    }
+
+    return new Observable((subscriber) => {
+      setup.subscribe({
+        next: () => undefined,
+        error: (err: Error) => {
+          this.alertService.error(
+            `The product was saved, but its stock setup failed: ${err.message} You can link it from the item page.`,
+          );
+          subscriber.next(null);
+          subscriber.complete();
+        },
+        complete: () => {
+          subscriber.next(null);
+          subscriber.complete();
+        },
+      });
+    });
   }
 
   protected onFileSelected(event: Event): void {

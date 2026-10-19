@@ -1,0 +1,89 @@
+<app-confirm-dialog
+  variant="success"
+  icon="icon-inventory"
+  heading="Adjust Stock"
+  confirmLabel="Save Adjustment"
+  busyLabel="Saving..."
+  [isBusy]="isBusy()"
+  (confirmed)="submit()"
+  (cancelled)="cancelled.emit()"
+>
+  Correct the balance of
+  <span class="font-medium text-gray-700">{{ item().name }}</span> after a count. Old movements are
+  never changed; this adds a new one.
+  <div dialogExtra class="mt-4 space-y-3 text-left" [formGroup]="form">
+    <p class="text-sm text-gray-600">
+      Balance now:
+      <span class="font-semibold text-gray-800">{{ item().currentQuantity }} {{ unit() }}</span>
+    </p>
+
+    <div class="flex gap-4 text-sm" role="radiogroup" aria-label="How to adjust">
+      <label class="flex items-center gap-2">
+        <input
+          type="radio"
+          class="radio radio-sm"
+          name="adjust-mode"
+          [checked]="mode() === 'count'"
+          (change)="setMode('count')"
+        />
+        I counted
+      </label>
+      <label class="flex items-center gap-2">
+        <input
+          type="radio"
+          class="radio radio-sm"
+          name="adjust-mode"
+          [checked]="mode() === 'change'"
+          (change)="setMode('change')"
+        />
+        Plus / minus
+      </label>
+    </div>
+
+    <div>
+      <label for="adjust-quantity" class="mb-1 block text-xs font-semibold text-gray-500">
+        {{ mode() === 'count' ? 'Counted quantity (' + unit() + ')' : 'Change (' + unit() + ', negative removes)' }}
+      </label>
+      <input
+        id="adjust-quantity"
+        type="number"
+        step="any"
+        class="input input-bordered w-full outline-transparent"
+        formControlName="quantity"
+      />
+      @if (difference() !== null) {
+        <p class="mt-1 text-xs text-gray-500" data-testid="difference">
+          Difference: {{ difference()! > 0 ? '+' : '' }}{{ difference() }} {{ unit() }}
+        </p>
+      }
+    </div>
+
+    <div>
+      <label for="adjust-reason" class="mb-1 block text-xs font-semibold text-gray-500">Reason</label>
+      <select
+        id="adjust-reason"
+        class="select select-bordered w-full outline-transparent"
+        formControlName="reason"
+      >
+        @for (reason of reasons; track reason) {
+          <option [value]="reason">{{ reason }}</option>
+        }
+      </select>
+    </div>
+
+    <div>
+      <label for="adjust-notes" class="mb-1 block text-xs font-semibold text-gray-500">Note</label>
+      <textarea
+        id="adjust-notes"
+        class="textarea textarea-bordered w-full outline-transparent"
+        rows="2"
+        maxlength="500"
+        formControlName="notes"
+      ></textarea>
+    </div>
+
+    @if (error(); as message) {
+      <p class="text-sm text-red-600" role="alert">{{ message }}</p>
+    }
+  </div>
+</app-confirm-dialog>

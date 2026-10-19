@@ -13,6 +13,7 @@ export interface ItemDto {
   warningQuantity?: number | null;
   criticalQuantity?: number | null;
   isActive: boolean;
+  allowNegativeStock: boolean;
   createdAt: string;
   createdBy: string;
   updatedAt?: string | null;
@@ -56,6 +57,29 @@ export interface StockMovementDto {
   createdAt: string;
   createdBy: string;
   createdByName: string;
+  productId?: string | null;
+  productName?: string | null;
+  orderNumber?: number | null;
+}
+
+export interface PagedStockMovementsDto {
+  items: StockMovementDto[];
+  totalCount: number;
+}
+
+export interface OrderStockMovementDto {
+  id: string;
+  itemId: string;
+  itemName: string;
+  unitName: string;
+  productId?: string | null;
+  productName?: string | null;
+  movementType: string;
+  quantityDelta: number;
+  quantityBefore: number;
+  quantityAfter: number;
+  notes?: string | null;
+  createdAt: string;
 }
 
 export interface CreateItemDto {
@@ -69,6 +93,7 @@ export interface CreateItemDto {
   costPrice?: number | null;
   warningQuantity?: number | null;
   criticalQuantity?: number | null;
+  allowNegativeStock?: boolean;
   isActive: boolean;
 }
 
@@ -83,6 +108,7 @@ export interface UpdateItemDto {
   costPrice?: number | null;
   warningQuantity?: number | null;
   criticalQuantity?: number | null;
+  allowNegativeStock?: boolean;
   isActive: boolean;
 }
 
@@ -90,5 +116,21 @@ export interface AddItemStockDto {
   itemId: string;
   quantity: number;
   unitCost?: number | null;
+  notes?: string | null;
+}
+
+export const STOCK_ADJUSTMENT_REASONS = [
+  'Count correction',
+  'Damaged or spoiled',
+  'Lost',
+  'Other',
+] as const;
+
+export interface AdjustItemStockDto {
+  itemId: string;
+  countedQuantity?: number | null;
+  expectedQuantity?: number | null;
+  quantityChange?: number | null;
+  reason: string;
   notes?: string | null;
 }

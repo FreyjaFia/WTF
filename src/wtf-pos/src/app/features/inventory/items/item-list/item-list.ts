@@ -206,9 +206,14 @@ export class ItemListComponent implements OnInit {
     this.router.navigateByUrl(AppRoutes.InventoryItemDetailsById(itemId));
   }
 
-  protected navigateToStockIn(): void {
+  protected navigateToStockIn(item?: ItemDto): void {
     if (!this.canWriteStockMovements()) {
       this.alertService.errorUnauthorized();
+      return;
+    }
+
+    if (item) {
+      this.router.navigate([AppRoutes.InventoryStockIn], { queryParams: { itemId: item.id } });
       return;
     }
 

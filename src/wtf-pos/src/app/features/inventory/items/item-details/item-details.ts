@@ -2,17 +2,45 @@ import { CommonModule } from '@angular/common';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AlertService, AuthService, InventoryService, ModalStackService } from '@core/services';
-import { BadgeComponent, IconComponent, PriceHistoryDrawerComponent } from '@shared/components';
+import {
+  BadgeComponent,
+  IconComponent,
+  PriceHistoryDrawerComponent,
+  StockAdjustDialogComponent,
+} from '@shared/components';
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { getInventoryUnitAbbreviation } from '@shared/constants/inventory-units';
-import { ItemDto, ItemPriceHistoryDto } from '@shared/models';
+import {
+  AdjustItemStockDto,
+  ItemDto,
+  ItemPriceHistoryDto,
+  StockMovementDto,
+} from '@shared/models';
 
 type StockStatus = 'ok' | 'warning' | 'critical';
 
+const MOVEMENT_PAGE_SIZE = 25;
+
+const MOVEMENT_TYPE_LABELS: Record<string, string> = {
+  AddStock: 'Stock in',
+  Sale: 'Sale',
+  SaleVoid: 'Sale returned',
+  Waste: 'Waste',
+  Adjustment: 'Adjustment',
+};
+
 @Component({
   selector: 'app-item-details',
-  imports: [CommonModule, RouterLink, IconComponent, BadgeComponent, PriceHistoryDrawerComponent, ConfirmDialogComponent],
+  imports: [
+    CommonModule,
+    RouterLink,
+    IconComponent,
+    BadgeComponent,
+    PriceHistoryDrawerComponent,
+    ConfirmDialogComponent,
+    StockAdjustDialogComponent,
+  ],
   templateUrl: './item-details.html',
   host: { class: 'block h-full' },
 })
@@ -33,6 +61,13 @@ export class ItemDetailsComponent implements OnInit {
   protected readonly isDeleting = signal(false);
   protected readonly showRestoreModal = signal(false);
   protected readonly isRestoring = signal(false);
+  protected readonly movements = signal<StockMovementDto[]>([]);
+  protected readonly movementsTotal = signal(0);
+  protected readonly movementType = signal<string>('');
+  protected readonly isLoadingMovements = signal(false);
+  protected readonly showAdjustModal = signal(false);
+  protected readonly isAdjusting = signal(false);
+  protected readonly movementTypes = Object.keys(MOVEMENT_TYPE_LABELS);
   private modalStackId: number | null = null;
 
   public ngOnInit(): void {
@@ -196,6 +231,68 @@ export class ItemDetailsComponent implements OnInit {
     return this.authService.canWriteItems();
   }
 
+  protected canReadStock(): boolean {
+    return this.authService.canReadStockMovements();
+  }
+
+  protected canWriteStock(): boolean {
+    return this.authService.canWriteStockMovements();
+  }
+
+  protected movementLabel(type: string): string {
+    return MOVEMENT_TYPE_LABELS[type] ?? type;
+  }
+
+  protected filterMovements(type: string): void {
+    this.movementType.set(type);
+    this.loadMovements(true);
+  }
+
+  protected loadMoreMovements(): void {
+    this.loadMovements(false);
+  }
+
+  protected adjustStock(): void {
+    if (!this.canWriteStock()) {
+      this.alertService.errorUnauthorized();
+      return;
+    }
+
+    this.showAdjustModal.set(true);
+    this.modalStackId = this.modalStack.push(() => this.cancelAdjust());
+  }
+
+  protected cancelAdjust(): void {
+    if (this.isAdjusting()) {
+      return;
+    }
+
+    this.showAdjustModal.set(false);
+    this.removeFromStack();
+  }
+
+  protected confirmAdjust(payload: AdjustItemStockDto): void {
+    if (this.isAdjusting()) {
+      return;
+    }
+
+    this.isAdjusting.set(true);
+    this.inventoryService.adjustStock(payload).subscribe({
+      next: (item) => {
+        this.isAdjusting.set(false);
+        this.showAdjustModal.set(false);
+        this.removeFromStack();
+        this.item.set(item);
+        this.alertService.success('Stock adjusted.');
+        this.loadMovements(true);
+      },
+      error: (err) => {
+        this.isAdjusting.set(false);
+        this.alertService.error(err.message);
+      },
+    });
+  }
+
   protected openPriceHistory(): void {
     this.isHistoryOpen.set(true);
   }
@@ -211,12 +308,40 @@ export class ItemDetailsComponent implements OnInit {
         this.item.set(item);
         this.priceHistory.set(item.priceHistory || []);
         this.isLoading.set(false);
+        this.loadMovements(true);
       },
       error: (err) => {
         this.alertService.error(err.message);
         this.isLoading.set(false);
       },
     });
+  }
+
+  private loadMovements(reset: boolean): void {
+    const item = this.item();
+    if (!item || !this.canReadStock()) {
+      return;
+    }
+
+    const page = reset ? 1 : Math.floor(this.movements().length / MOVEMENT_PAGE_SIZE) + 1;
+    this.isLoadingMovements.set(true);
+    this.inventoryService
+      .getItemMovements(item.id, {
+        type: this.movementType() || null,
+        page,
+        pageSize: MOVEMENT_PAGE_SIZE,
+      })
+      .subscribe({
+        next: (result) => {
+          this.movements.set(reset ? result.items : [...this.movements(), ...result.items]);
+          this.movementsTotal.set(result.totalCount);
+          this.isLoadingMovements.set(false);
+        },
+        error: (err) => {
+          this.alertService.error(err.message);
+          this.isLoadingMovements.set(false);
+        },
+      });
   }
 
   private removeFromStack(): void {

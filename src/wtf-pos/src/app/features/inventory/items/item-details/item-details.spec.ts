@@ -22,6 +22,7 @@ function makeItem(overrides: Partial<ItemDto> = {}): ItemDto {
     warningQuantity: 50,
     criticalQuantity: 10,
     isActive: true,
+    allowNegativeStock: true,
     createdAt: '2026-01-01T00:00:00Z',
     createdBy: 'u',
     priceHistory: [],
@@ -36,15 +37,22 @@ describe('ItemDetailsComponent', () => {
     getInventoryItem: ReturnType<typeof vi.fn>;
     deleteInventoryItem: ReturnType<typeof vi.fn>;
     restoreInventoryItem: ReturnType<typeof vi.fn>;
+    getItemMovements: ReturnType<typeof vi.fn>;
+    adjustStock: ReturnType<typeof vi.fn>;
   };
   let alerts: {
     error: ReturnType<typeof vi.fn>;
     errorUnauthorized: ReturnType<typeof vi.fn>;
     successDeleted: ReturnType<typeof vi.fn>;
     successRestored: ReturnType<typeof vi.fn>;
+    success: ReturnType<typeof vi.fn>;
     getDeleteErrorMessage: ReturnType<typeof vi.fn>;
   };
-  let auth: { canWriteItems: ReturnType<typeof vi.fn> };
+  let auth: {
+    canWriteItems: ReturnType<typeof vi.fn>;
+    canReadStockMovements: ReturnType<typeof vi.fn>;
+    canWriteStockMovements: ReturnType<typeof vi.fn>;
+  };
   let navigate: ReturnType<typeof vi.fn>;
 
   function create(id: string | null = 'i1') {
@@ -71,15 +79,22 @@ describe('ItemDetailsComponent', () => {
       getInventoryItem: vi.fn(() => of(makeItem())),
       deleteInventoryItem: vi.fn(() => of(undefined)),
       restoreInventoryItem: vi.fn(() => of(undefined)),
+      getItemMovements: vi.fn(() => of({ items: [], totalCount: 0 })),
+      adjustStock: vi.fn(() => of(makeItem({ currentQuantity: 7 }))),
     };
     alerts = {
       error: vi.fn(),
       errorUnauthorized: vi.fn(),
       successDeleted: vi.fn(),
       successRestored: vi.fn(),
+      success: vi.fn(),
       getDeleteErrorMessage: vi.fn((e: string) => `Failed to delete ${e}`),
     };
-    auth = { canWriteItems: vi.fn(() => true) };
+    auth = {
+      canWriteItems: vi.fn(() => true),
+      canReadStockMovements: vi.fn(() => true),
+      canWriteStockMovements: vi.fn(() => true),
+    };
   });
 
   describe('loading', () => {
@@ -332,6 +347,101 @@ describe('ItemDetailsComponent', () => {
       expect(alerts.error).toHaveBeenCalledWith('nope');
       expect(vm['isRestoring']()).toBe(false);
       expect(vm['showRestoreModal']()).toBe(true);
+    });
+  });
+
+  describe('stock history and adjustment', () => {
+    const movement = {
+      id: 'm1',
+      itemId: 'i1',
+      movementType: 'Sale',
+      quantityDelta: -600,
+      quantityBefore: 10000,
+      quantityAfter: 9400,
+      createdAt: '2026-10-20T08:00:00Z',
+      createdBy: 'u',
+      createdByName: 'Una User',
+      productName: 'Latte',
+      orderNumber: 1042,
+      referenceType: 'Order',
+      referenceId: 'o1',
+    };
+
+    it('lists the movements with the order number as a link on sale rows', () => {
+      inventory.getItemMovements.mockReturnValue(of({ items: [movement], totalCount: 1 }));
+      const { fixture } = create();
+      const el = fixture.nativeElement as HTMLElement;
+      fixture.detectChanges();
+
+      const row = el.querySelector('[data-testid="movement-row"]') as HTMLElement;
+      expect(row.textContent).toContain('Sale');
+      expect(row.textContent).toContain('Order #1042');
+      expect(row.querySelector('a')?.getAttribute('href')).toBe('/orders/details/o1');
+      expect(row.textContent).toContain('-600');
+    });
+
+    it('filters by type and asks the server for the first page again', () => {
+      const { vm } = create();
+      vm['filterMovements']('Waste');
+      expect(inventory.getItemMovements).toHaveBeenLastCalledWith('i1', {
+        type: 'Waste',
+        page: 1,
+        pageSize: 25,
+      });
+    });
+
+    it('loads the next page and appends it', () => {
+      const first = Array.from({ length: 25 }, (_, i) => ({ ...movement, id: `m${i}` }));
+      inventory.getItemMovements.mockReturnValueOnce(of({ items: first, totalCount: 30 }));
+      const { vm } = create();
+      inventory.getItemMovements.mockReturnValueOnce(
+        of({ items: [{ ...movement, id: 'm25' }], totalCount: 30 }),
+      );
+      vm['loadMoreMovements']();
+      expect(inventory.getItemMovements).toHaveBeenLastCalledWith('i1', {
+        type: null,
+        page: 2,
+        pageSize: 25,
+      });
+      expect((vm['movements']() as unknown[]).length).toBe(26);
+    });
+
+    it('hides the history from roles that cannot read stock movements', () => {
+      auth.canReadStockMovements.mockReturnValue(false);
+      const { fixture } = create();
+      expect(inventory.getItemMovements).not.toHaveBeenCalled();
+      expect((fixture.nativeElement as HTMLElement).querySelector('[data-testid="stock-history"]')).toBeNull();
+    });
+
+    it('adjusts the stock, updates the item and reloads the history', () => {
+      const { vm } = create();
+      vm['adjustStock']();
+      expect(vm['showAdjustModal']()).toBe(true);
+
+      vm['confirmAdjust']({ itemId: 'i1', countedQuantity: 7, expectedQuantity: 100, reason: 'Lost' });
+
+      expect(inventory.adjustStock).toHaveBeenCalled();
+      expect(vm['showAdjustModal']()).toBe(false);
+      expect((vm['item']() as ItemDto).currentQuantity).toBe(7);
+      expect(alerts.success).toHaveBeenCalledWith('Stock adjusted.');
+    });
+
+    it('keeps the dialog open and shows the server message when adjusting fails', () => {
+      inventory.adjustStock.mockReturnValue(throwError(() => new Error('Not allowed')));
+      const { vm } = create();
+      vm['adjustStock']();
+      vm['confirmAdjust']({ itemId: 'i1', quantityChange: -5, reason: 'Lost' });
+      expect(alerts.error).toHaveBeenCalledWith('Not allowed');
+      expect(vm['showAdjustModal']()).toBe(true);
+      expect(vm['isAdjusting']()).toBe(false);
+    });
+
+    it('refuses to open the dialog without permission', () => {
+      auth.canWriteStockMovements.mockReturnValue(false);
+      const { vm } = create();
+      vm['adjustStock']();
+      expect(alerts.errorUnauthorized).toHaveBeenCalled();
+      expect(vm['showAdjustModal']()).toBe(false);
     });
   });
 });

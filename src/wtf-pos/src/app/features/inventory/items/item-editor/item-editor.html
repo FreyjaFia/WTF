@@ -315,6 +315,22 @@
                   />
                 </div>
 
+                <div class="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-3">
+                  <div>
+                    <span class="text-sm font-medium text-gray-900">Allow sales below zero</span>
+                    <p class="text-xs text-gray-500">
+                      Off: an online sale that needs more than is in stock is refused. On: it goes
+                      through and the balance warns.
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    formControlName="allowNegativeStock"
+                    class="toggle toggle-neutral toggle-sm"
+                    aria-label="Allow sales below zero"
+                  />
+                </div>
+
                 <div class="rounded-xl bg-gray-50 px-4 py-3 text-sm text-gray-600">
                   <p class="font-semibold text-gray-900">SKU vs Barcode</p>
                   <p class="mt-1 text-xs leading-relaxed">

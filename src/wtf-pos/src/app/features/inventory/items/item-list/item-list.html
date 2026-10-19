@@ -261,7 +261,7 @@
                         @if (canWriteStockMovements()) {
                           <button
                             type="button"
-                            (click)="navigateToStockIn(); $event.stopPropagation()"
+                            (click)="navigateToStockIn(item); $event.stopPropagation()"
                             class="app-menu-item"
                           >
                             <app-icon name="icon-plus" [class]="'h-4 w-4 text-gray-600'" />

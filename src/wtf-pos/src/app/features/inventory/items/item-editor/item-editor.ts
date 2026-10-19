@@ -86,6 +86,7 @@ export class ItemEditorComponent implements OnInit {
     costPrice: new FormControl<number | null>(null, [Validators.min(0)]),
     warningQuantity: new FormControl<number | null>(null, [Validators.min(0)]),
     criticalQuantity: new FormControl<number | null>(null, [Validators.min(0)]),
+    allowNegativeStock: new FormControl(true, { nonNullable: true }),
     isActive: new FormControl(true, { nonNullable: true }),
   });
 
@@ -131,6 +132,7 @@ export class ItemEditorComponent implements OnInit {
           costPrice: value.costPrice,
           warningQuantity: value.warningQuantity,
           criticalQuantity: value.criticalQuantity,
+          allowNegativeStock: value.allowNegativeStock,
           isActive: value.isActive,
         })
         .subscribe({
@@ -152,6 +154,7 @@ export class ItemEditorComponent implements OnInit {
         costPrice: value.costPrice,
         warningQuantity: value.warningQuantity,
         criticalQuantity: value.criticalQuantity,
+        allowNegativeStock: value.allowNegativeStock,
         isActive: value.isActive,
       })
       .subscribe({
@@ -244,6 +247,7 @@ export class ItemEditorComponent implements OnInit {
             costPrice: item.costPrice ?? null,
             warningQuantity: item.warningQuantity ?? null,
             criticalQuantity: item.criticalQuantity ?? null,
+            allowNegativeStock: item.allowNegativeStock,
             isActive: item.isActive,
           },
           { emitEvent: false },

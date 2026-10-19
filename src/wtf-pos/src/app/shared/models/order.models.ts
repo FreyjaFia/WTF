@@ -106,6 +106,10 @@ export interface OrderDto {
   /** The total the customer was quoted when the order was sold offline. */
   quotedTotal?: number | null;
   offlineLocalId?: string | null;
+  /** Set when the sale took an item below zero or low: shown to the cashier once, not stored on the order. */
+  stockWarnings?: string[] | null;
+  /** The lines whose product took stock, so a refund only asks what happens to those. */
+  stockLineIds?: string[] | null;
 }
 
 export interface OrderHistoryDto {
@@ -153,6 +157,7 @@ export interface OfflineSyncResultDto {
   status: OrderStatusEnum | null;
   reasons: string[];
   error: string | null;
+  stockWarnings?: string[] | null;
 }
 
 export interface UpdateOrderCommand {

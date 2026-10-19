@@ -275,8 +275,14 @@ export class OrderService {
     );
   }
 
-  public voidOrder(id: string, note?: string | null): Observable<OrderDto> {
-    return this.http.patch<OrderDto>(`${this.baseUrl}/${id}/void`, { note: note ?? null }).pipe(
+  public voidOrder(
+    id: string,
+    note?: string | null,
+    notReturnedLineIds: string[] = [],
+  ): Observable<OrderDto> {
+    return this.http
+      .patch<OrderDto>(`${this.baseUrl}/${id}/void`, { note: note ?? null, notReturnedLineIds })
+      .pipe(
       catchError((error: HttpErrorResponse) => {
         console.error('Error voiding order:', error);
         return throwError(

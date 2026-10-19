@@ -483,6 +483,28 @@ describe('OfflineOrderService', () => {
       );
     });
 
+    it('tells the cashier once when synced sales took an item below zero', async () => {
+      createBatch.mockImplementation((batch: { offlineLocalId?: string }[]) =>
+        of(
+          saved(batch).map((result) => ({
+            ...result,
+            stockWarnings: ['Oat Milk is below zero: -200 ml. Count it and correct the stock.'],
+          })),
+        ),
+      );
+      const service = await create(seed3);
+      online.set(true);
+
+      await service.syncAll();
+
+      expect(table.rows).toEqual([]);
+      const stockAlerts = alerts.warning.mock.calls.filter((call) =>
+        String(call[0]).startsWith('Stock after the synced sales'),
+      );
+      expect(stockAlerts.length).toBe(1);
+      expect(stockAlerts[0][0]).toContain('Oat Milk is below zero');
+    });
+
     it('counts saved and held orders separately', async () => {
       createBatch.mockImplementation((batch: { offlineLocalId?: string }[]) =>
         of(saved(batch).map((result, index) => (index === 0 ? { ...result, status: 6 } : result))),

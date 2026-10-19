@@ -61,7 +61,7 @@
                   }
                 </div>
                 <p class="mt-1 text-sm text-gray-500">
-                  {{ getOrderDate(currentOrder) | date: 'EEE, d MMM y · h:mm a' }}
+                  {{ getOrderDate(currentOrder) | date: 'EEE, d MMM y Â· h:mm a' }}
                 </p>
               </div>
 
@@ -427,6 +427,53 @@
                 <p class="text-sm wrap-break-word text-gray-700 italic">{{ orderNote }}</p>
               </div>
             }
+
+            @if (stockMovements().length > 0) {
+              <div class="mt-4 rounded-xl border border-gray-200 bg-white p-3" data-testid="stock-movements">
+                <button
+                  type="button"
+                  class="flex w-full items-center justify-between text-xs font-semibold tracking-wide text-gray-500 uppercase"
+                  [attr.aria-expanded]="showStockMovements()"
+                  (click)="toggleStockMovements()"
+                >
+                  <span>Stock movements ({{ stockMovements().length }})</span>
+                  <span aria-hidden="true">{{ showStockMovements() ? '−' : '+' }}</span>
+                </button>
+                @if (showStockMovements()) {
+                <ul class="mt-2 divide-y divide-gray-100">
+                  @for (movement of stockMovements(); track movement.id) {
+                    <li class="flex items-start justify-between gap-3 py-2 text-sm">
+                      <div class="min-w-0">
+                        <p class="font-medium text-gray-800">{{ movement.itemName }}</p>
+                        <p class="text-xs text-gray-500">
+                          {{ movement.movementType }}
+                          @if (movement.productName) {
+                            &middot; {{ movement.productName }}
+                          }
+                          @if (movement.notes) {
+                            &middot; {{ movement.notes }}
+                          }
+                        </p>
+                      </div>
+                      <div class="shrink-0 text-right">
+                        <p
+                          class="font-semibold"
+                          [class]="movement.quantityDelta < 0 ? 'text-red-600' : 'text-green-600'"
+                        >
+                          {{ movement.quantityDelta > 0 ? '+' : '' }}{{ movement.quantityDelta | number: '1.0-3' }}
+                          {{ movement.unitName }}
+                        </p>
+                        <p class="text-xs text-gray-400">
+                          {{ movement.quantityBefore | number: '1.0-3' }} &rarr;
+                          {{ movement.quantityAfter | number: '1.0-3' }}
+                        </p>
+                      </div>
+                    </li>
+                  }
+                </ul>
+                }
+              </div>
+            }
           </section>
 
           <!-- Payment and notes -->
@@ -569,7 +616,33 @@
     <span class="font-medium text-gray-700">#{{ currentOrder.orderNumber }}</span
     >?
 
-    <div dialogExtra class="mt-4">
+    <div dialogExtra class="mt-4 space-y-4">
+      @if (refundLines().length > 0) {
+      <div data-testid="refund-stock">
+        <p class="mb-1 text-xs font-semibold tracking-wide text-gray-600 uppercase">
+          What happens to the stock?
+        </p>
+        <p class="mb-2 text-xs text-gray-500">
+          Only matters for items linked to stock. A drink that was already made cannot go back on the shelf.
+        </p>
+        @for (line of refundLines(); track line.id) {
+          <div class="flex flex-col gap-1 py-2 text-left text-sm">
+            <span class="min-w-0 font-medium wrap-break-word">{{ line.quantity }}x {{ line.name }}</span>
+            <select
+              class="select select-bordered select-sm w-full outline-transparent"
+              [attr.aria-label]="'Stock for ' + line.name"
+              [value]="isLineReturned(line.id) ? 'returned' : 'made'"
+              (change)="setLineReturned(line.id, $any($event.target).value === 'returned')"
+            >
+              <option value="returned">Returned to stock</option>
+              <option value="made">Not returned / was made</option>
+            </select>
+          </div>
+        }
+      </div>
+      }
+
+      <div>
       <label
         for="refund-note"
         class="mb-1 block text-xs font-semibold tracking-wide text-gray-600 uppercase"
@@ -587,6 +660,7 @@
       @if (showRefundNoteError()) {
         <p class="mt-1 text-xs text-red-600">Refund note is required.</p>
       }
+      </div>
     </div>
   </app-confirm-dialog>
 }

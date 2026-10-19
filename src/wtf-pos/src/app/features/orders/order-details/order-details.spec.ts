@@ -7,6 +7,7 @@ import {
   CatalogCacheService,
   ConversationInboxService,
   ConversationService,
+  InventoryService,
   OrderService,
   PromotionService,
   SignalRService,
@@ -23,6 +24,7 @@ import {
   OrderSourceEnum,
   OrderStatusEnum,
   PaymentMethodEnum,
+  ProductSubCategoryEnum,
   PromotionTypeEnum,
 } from '@shared/models';
 import { BehaviorSubject, Observable, Subject, of, throwError } from 'rxjs';
@@ -36,7 +38,9 @@ interface Internals {
   isDownloadingReceipt: () => boolean;
   isRefunding: () => boolean;
   showRefundModal: () => boolean;
-  refundNote: () => string;
+  refundNote: { (): string; set: (value: string) => void };
+  isLineReturned: (lineId: string) => boolean;
+  setLineReturned: (lineId: string, returned: boolean) => void;
   showRefundNoteError: () => boolean;
   itemCount: () => number;
   canRefund: () => boolean;
@@ -123,6 +127,8 @@ describe('OrderDetails', () => {
   };
   let promotions: { getActiveDiscountedProductPromotions: ReturnType<typeof vi.fn> };
   let paramId: string | null;
+  let canReadStock: boolean;
+  let inventory: { getOrderStockMovements: ReturnType<typeof vi.fn> };
   let queryParams$: BehaviorSubject<ParamMap>;
   let unreadByOrder: Record<string, number>;
   let inbox: { unreadFor: ReturnType<typeof vi.fn> };
@@ -154,6 +160,8 @@ describe('OrderDetails', () => {
     paramId = 'o1';
     canOverride = vi.fn().mockReturnValue(true);
     canWrite = true;
+    canReadStock = false;
+    inventory = { getOrderStockMovements: vi.fn().mockReturnValue(of([])) };
     orderService = {
       getOrder: vi.fn(),
       voidOrder: vi.fn(),
@@ -217,9 +225,14 @@ describe('OrderDetails', () => {
         { provide: AlertService, useValue: alert },
         {
           provide: AuthService,
-          useValue: { canOverrideOrders: canOverride, canWriteOrders: () => canWrite },
+          useValue: {
+            canOverrideOrders: canOverride,
+            canWriteOrders: () => canWrite,
+            canReadStockMovements: () => canReadStock,
+          },
         },
         { provide: CatalogCacheService, useValue: catalog },
+        { provide: InventoryService, useValue: inventory },
         { provide: PromotionService, useValue: promotions },
       ],
     });
@@ -799,11 +812,110 @@ describe('OrderDetails', () => {
       orderService.voidOrder.mockReturnValue(of(updated));
       t.openRefundModal();
       t.confirmRefund();
-      expect(orderService.voidOrder).toHaveBeenCalledWith('o1', 'damaged');
+      expect(orderService.voidOrder).toHaveBeenCalledWith('o1', 'damaged', expect.any(Array));
       expect(t.order()).toBe(updated);
       expect(t.showRefundModal()).toBe(false);
       expect(t.isRefunding()).toBe(false);
       expect(alert['success']).toHaveBeenCalledWith('Order has been refunded');
+    });
+
+    it('offers the stock choice per line: made drinks are not returned, retail goods are', async () => {
+      catalog.products.set([
+        { id: 'p1', subCategory: ProductSubCategoryEnum.Coffee },
+        { id: 'p2', subCategory: ProductSubCategoryEnum.Retail },
+      ]);
+      await create(
+        makeOrder({
+          items: [
+            { id: 'l1', productId: 'p1', productName: 'Latte', quantity: 1, addOns: [] },
+            { id: 'l2', productId: 'p2', productName: 'Beans', quantity: 1, addOns: [] },
+          ] as never,
+          stockLineIds: ['l1', 'l2'],
+        }),
+      );
+      t.openRefundModal();
+
+      expect(t.isLineReturned('l1')).toBe(false);
+      expect(t.isLineReturned('l2')).toBe(true);
+
+      t.setLineReturned('l1', true);
+      t.setLineReturned('l2', false);
+      orderService.voidOrder.mockReturnValue(of(makeOrder({ status: OrderStatusEnum.Refunded })));
+      t.refundNote.set('wrong');
+      t.confirmRefund();
+
+      expect(orderService.voidOrder).toHaveBeenCalledWith('o1', 'wrong', ['l2']);
+    });
+
+    it('only asks about the lines whose product took stock', async () => {
+      await create(
+        makeOrder({
+          items: [
+            { id: 'l1', productId: 'p1', productName: 'Latte', quantity: 1, addOns: [] },
+            { id: 'l2', productId: 'p2', productName: 'Water', quantity: 1, addOns: [] },
+          ] as never,
+          stockLineIds: ['l1'],
+        }),
+      );
+      t.openRefundModal();
+      fixture.detectChanges();
+
+      const section = (fixture.nativeElement as HTMLElement).querySelector('[data-testid="refund-stock"]');
+      expect(section?.textContent).toContain('Latte');
+      expect(section?.textContent).not.toContain('Water');
+
+      orderService.voidOrder.mockReturnValue(of(makeOrder({ status: OrderStatusEnum.Refunded })));
+      t.refundNote.set('wrong');
+      t.confirmRefund();
+      expect(orderService.voidOrder).toHaveBeenCalledWith('o1', 'wrong', ['l1']);
+    });
+
+    it('skips the stock question when no line took stock', async () => {
+      await create(makeOrder({ stockLineIds: [] }));
+      t.openRefundModal();
+      fixture.detectChanges();
+
+      expect((fixture.nativeElement as HTMLElement).querySelector('[data-testid="refund-stock"]')).toBeNull();
+
+      orderService.voidOrder.mockReturnValue(of(makeOrder({ status: OrderStatusEnum.Refunded })));
+      t.refundNote.set('wrong');
+      t.confirmRefund();
+      expect(orderService.voidOrder).toHaveBeenCalledWith('o1', 'wrong', []);
+    });
+
+    it('lists the stock movements an order caused for roles that may read them', async () => {
+      canReadStock = true;
+      inventory.getOrderStockMovements.mockReturnValue(
+        of([
+          {
+            id: 'm1',
+            itemId: 'i1',
+            itemName: 'Oat Milk',
+            unitName: 'ml',
+            movementType: 'Sale',
+            quantityDelta: -600,
+            quantityBefore: 10000,
+            quantityAfter: 9400,
+            createdAt: '2026-10-20T08:00:00Z',
+          },
+        ]),
+      );
+      await create(makeOrder({}));
+
+      const card = (fixture.nativeElement as HTMLElement).querySelector('[data-testid="stock-movements"]');
+      expect(inventory.getOrderStockMovements).toHaveBeenCalledWith('o1');
+      expect(card?.textContent).toContain('Stock movements (1)');
+      expect(card?.textContent).not.toContain('Oat Milk');
+
+      (card?.querySelector('button') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(card?.textContent).toContain('Oat Milk');
+      expect(card?.textContent).toContain('-600');
+    });
+
+    it('does not ask for stock movements without the permission', async () => {
+      await create(makeOrder({}));
+      expect(inventory.getOrderStockMovements).not.toHaveBeenCalled();
     });
 
     it('surfaces refund errors and keeps modal open', async () => {
