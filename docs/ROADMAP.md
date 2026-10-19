@@ -1704,7 +1704,7 @@ Customer details page (`app/features/management/customers/customer-details/`):
   (`app/shared/models/customer.models.ts`).
 - Role group `AppRoleGroups.OrderLinksWrite` in `app/shared/constants/app-roles.ts`.
 
-Public page (`/order/:token`):
+Public page (`/shop/:token` (links sent as `/order/:token` before still redirect to it)): the menu is `/shop/:token`, the order list `/shop/:token/orders` and one order `/shop/:token/orders/:id` (same page, so Back, Refresh and shared links work). The old `/order/:token` redirects.
 
 - Route placed in `app/app.routes.ts` between `login` and the layout shell, no guards; add it to
   `app/shared/constants/app-routes.ts`. `app.routes.spec.ts` requires the first route to be the
@@ -1858,7 +1858,7 @@ disable links; an AdminViewer cannot; an order-link token returns 404 on the loy
 
 #### Phase 2 - Public validation, ordering page and My orders [Completed]
 
-Implemented: `OrderLinkAccess` (the shared token check, ordinal token compare), `GET /api/public/order-links/{token}` (+ `/orders`, `/orders/{id}`), `PublicCatalogDto` built from the loaders now shared with the POS sync (`PosCatalogLoader`), `LastUsedAt` (written at most once a minute), `order-link-policy` (per IP) plus a per-token global limiter, `Cache-Control: no-store`, the `/order/:token` page (menu, search, categories, own add-on picker, in-memory cart, My orders with a 30 s poll), the invalid-link page and the `/public/` interceptor exclusion. The cart has no checkout yet (Phase 3). Verified harmless for a logged-out visitor: push registration only runs after login, the offline queue only syncs when authenticated, and the update banner only offers a web refresh.
+Implemented: `OrderLinkAccess` (the shared token check, ordinal token compare), `GET /api/public/order-links/{token}` (+ `/orders`, `/orders/{id}`), `PublicCatalogDto` built from the loaders now shared with the POS sync (`PosCatalogLoader`), `LastUsedAt` (written at most once a minute), `order-link-policy` (per IP) plus a per-token global limiter, `Cache-Control: no-store`, the `/shop/:token` page (menu, search, categories, own add-on picker, in-memory cart, My orders with a 30 s poll), the invalid-link page and the `/public/` interceptor exclusion. The cart has no checkout yet (Phase 3). Verified harmless for a logged-out visitor: push registration only runs after login, the offline queue only syncs when authenticated, and the update banner only offers a web refresh.
 
 - `GET /api/public/order-links/{token}` with the shared token check, `PublicCatalogDto` (extract
   the loaders from `GetPosCatalogHandler`), `LastUsedAt`, `order-link-policy`.
@@ -2081,6 +2081,15 @@ service/component, snapshots updated in the same change).
   missing from the dashboard and report totals.
 - Manual, phase 5: chat from both sides in two browsers, revoke the link while connected, check
   unread badges and the staff push.
+
+### Order details redesign and public page addresses (19 Oct 2026)
+
+- **Order details (POS and public) share one layout.** A top card with a status-colored strip, the order number and status badge, a large total and the plain facts (customer, items, payment, source on the POS; the status sentence on the public page). Below it, the items on the left (a plain list, no inner scroll box) and the payment summary on the right, which stays in view on wide screens. Notes use one gray "Order note" style, also for a line's own instructions; only warnings (needs review, online order, overridden) stay amber. The "2x" in front of a name is gray, also on the downloaded order summary.
+- **Status colors.** One scheme on both sides: waiting amber, accepted blue, ready orange, completed green, rejected and refunded red, cancelled gray. The POS uses it through the order's status; the public page takes it from `publicStatusAccent` in `public-order-status.ts`. A refunded order is red (it was orange).
+- **The heading stays put.** On the POS the heading is outside the scrolling area; on the public page it is sticky at the top of it, and the payment panel sticks just under it.
+- **Public page addresses.** The page moved from `/order/:token` to `/shop/:token`, with the menu, the order list and one order as child routes (`/shop/:token`, `/shop/:token/orders`, `/shop/:token/orders/:id`) of the same page, so Back, Refresh and a shared link work, and tapping My orders returns to the list. The page reads its tab and open order from the address (`PublicOrderComponent.syncFromUrl`); `selectTab`, `openOrder` and `closeOrder` change the address. Old `/order/:token` links redirect, so nothing sent so far breaks. The database stores only the token, so no script was needed.
+- **Orders list.** The "Awaiting approval" and the offline sync sections start collapsed ("Needs review" stays open).
+- **Checked in the running app** (throwaway database, 20 products in one order, 30 more orders over many dates): both details pages at desktop, tablet and phone widths, the sticky heading, the deep link to an order, the Back button, and the date groups of My orders.
 
 ---
 
