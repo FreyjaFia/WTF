@@ -12,6 +12,8 @@ export interface PromotionScheduleDto {
   endTime: string | null;
   maxRedemptions: number | null;
   redemptions: number;
+  /** The most one order can get at the promotion's price. Missing means no limit per order. */
+  maxPerOrder?: number | null;
 }
 
 export interface PromotionListItemDto {

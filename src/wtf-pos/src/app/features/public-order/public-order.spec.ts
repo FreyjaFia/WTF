@@ -333,7 +333,7 @@ describe('PublicOrderComponent', () => {
       ]);
     });
 
-    it('a promotion with a usage limit skips a line that needs more uses than are left', () => {
+    it('a promotion with a usage limit covers only the items it has uses left for', () => {
       setup({ link: withDeals({ ...plainCroissantDeal, remaining: 1 }) });
       const croissant = c.products()[1];
 
@@ -344,9 +344,13 @@ describe('PublicOrderComponent', () => {
 
       c.changeQuantity(c.cart()[0].key, 1);
 
-      expect(c.lineDiscount(c.cart()[0])).toBeNull();
-      expect(c.cartTotal()).toBe(240);
-      expect(c.hasLimitedDiscount()).toBe(false);
+      // One use is left for two items: one gets the price, the other pays the list price.
+      expect(c.lineDiscount(c.cart()[0])).toMatchObject({
+        quantity: 1,
+        note: 'Promo on 1 (only 1 left); the other 1 at full price.',
+      });
+      expect(c.cartTotal()).toBe(108 + 120);
+      expect(c.hasLimitedDiscount()).toBe(true);
     });
 
     it('the cart says a limited discount is confirmed by the shop, an unlimited one does not', () => {

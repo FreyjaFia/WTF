@@ -7,7 +7,9 @@ import {
   extendedPrice,
   findBestDiscount,
   formatPromoLabel,
+  fromCents,
   priceWithAddOns,
+  toCents,
 } from '@shared/calculations';
 import { IconComponent } from '@shared/components/icons/icon/icon';
 import {
@@ -57,6 +59,7 @@ export class AddonSelectorComponent {
       percentOff?: number | null;
       addOns: { addOnProductId: string; quantity: number }[];
       remaining?: number | null;
+      maxPerOrder?: number | null;
     }[]
   >([]);
 
@@ -175,7 +178,21 @@ export class AddonSelectorComponent {
     return priceWithAddOns(discountedBase ?? basePrice, this.selectedAddOns());
   });
 
-  protected readonly totalPrice = computed(() => extendedPrice(this.unitPrice(), this.productQuantity()));
+  protected readonly totalPrice = computed(() => {
+    const quantity = this.productQuantity();
+    const basePrice = this.product()?.price ?? 0;
+    const addOns = this.selectedAddOns();
+    const best = findBestDiscount(basePrice, addOns.map((addOn) => addOn.addOnId), this.promoRules(), quantity);
+    if (!best) {
+      return extendedPrice(this.unitPrice(), quantity);
+    }
+
+    // A limit can cover only some of the items; the rest pay the list price.
+    const cents =
+      toCents(priceWithAddOns(best.price, addOns)) * best.quantity +
+      toCents(priceWithAddOns(basePrice, addOns)) * (quantity - best.quantity);
+    return fromCents(cents);
+  });
   protected readonly activePromoLabel = computed(() => {
     const best = findBestDiscount(
       this.product()?.price ?? 0,
@@ -202,6 +219,7 @@ export class AddonSelectorComponent {
         percentOff?: number | null;
         addOns: { addOnProductId: string; quantity: number }[];
         remaining?: number | null;
+        maxPerOrder?: number | null;
       }[];
     },
   ): void {

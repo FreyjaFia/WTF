@@ -80,13 +80,17 @@ import {
 } from '@shared/models';
 import {
   addOnsTotal,
+  allocateDiscounts,
   cartTotal,
+  DiscountMatch,
+  DiscountRule,
+  discountedLineTotal,
   findBestDiscount,
+  LineDiscount,
   buildDeals,
   Deal,
   formatPromoLabel,
   isScheduleOpen,
-  lineTotal,
   lineUnitSubtotal,
   usesLeft,
   addMoney,
@@ -94,6 +98,8 @@ import {
 } from '@shared/calculations';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { debounceTime, forkJoin, of, switchMap } from 'rxjs';
+
+type CartDiscountRule = DiscountedProductItemDto & DiscountRule;
 import { CheckoutModal } from '../checkout-modal/checkout-modal';
 
 interface BundleItemSource {
@@ -480,7 +486,7 @@ export class OrderEditor implements OnInit, OnDestroy {
   });
 
   protected itemCount = () => this.cart().reduce((s, i) => s + i.qty, 0);
-  protected totalPrice = () => cartTotal(this.cart(), (line) => this.getDiscountedUnitPrice(line));
+  protected totalPrice = () => cartTotal(this.cart(), (line) => this.getLineDiscount(line));
 
   protected getNameParts(name: string): { text: string; isMatch: boolean }[] {
     const term = this.filterForm.controls.searchTerm.value?.trim();
@@ -522,16 +528,21 @@ export class OrderEditor implements OnInit, OnDestroy {
   });
 
   protected readonly checkoutCartItems = computed<CartItemDto[]>(() =>
-    this.cart().map((item) => {
-      const discountedBase = this.getDiscountedUnitPrice(item);
-      const promoDiscount =
-        discountedBase != null ? Math.max(0, item.price - discountedBase) * item.qty : 0;
-      return {
+    this.cart().flatMap((item) => {
+      const discount = this.getLineDiscount(item);
+      if (!discount) {
+        return [{ ...item, promoLabel: null, promoDiscount: null }];
+      }
+
+      const discounted: CartItemDto = {
         ...item,
+        qty: discount.quantity,
         promoLabel: this.getDiscountedPromoLabel(item),
-        promoDiscount: promoDiscount > 0 ? promoDiscount : null,
-        price: discountedBase ?? item.price,
+        promoDiscount: promoDiscount(item.price, discount.price, discount.quantity) || null,
+        price: discount.price,
       };
+      const rest = item.qty - discount.quantity;
+      return rest > 0 ? [discounted, { ...item, qty: rest }] : [discounted];
     }),
   );
 
@@ -1006,6 +1017,21 @@ export class OrderEditor implements OnInit, OnDestroy {
         continue;
       }
 
+      // An open order that was saved with one line split in two (a limit covered only part of it) is one line again here;
+      // the discount is worked out again for the whole line.
+      const sameLine = order.status === OrderStatusEnum.Pending
+        ? regularItems.find(
+            (existing) =>
+              existing.productId === item.productId &&
+              (existing.specialInstructions ?? null) === (item.specialInstructions ?? null) &&
+              (existing.addOns ?? []).map((a) => a.addOnId).sort().join() === expandedAddOns.map((a) => a.addOnId).sort().join(),
+          )
+        : undefined;
+      if (sameLine) {
+        sameLine.qty += item.quantity;
+        continue;
+      }
+
       regularItems.push({
         productId: item.productId,
         name: '',
@@ -1434,12 +1460,32 @@ export class OrderEditor implements OnInit, OnDestroy {
     return this.getBestDiscountedPromo(item)?.price ?? null;
   }
 
+  protected getLineDiscount(item: CartItemDto): LineDiscount | null {
+    const best = this.getBestDiscountedPromo(item);
+    return best ? { price: best.price, quantity: best.quantity } : null;
+  }
+
   protected getUnitSubtotal(item: CartItemDto): number {
     return lineUnitSubtotal(item, this.getDiscountedUnitPrice(item));
   }
 
   protected getLineTotal(item: CartItemDto): number {
-    return lineTotal(item, this.getDiscountedUnitPrice(item));
+    return discountedLineTotal(item, this.getLineDiscount(item));
+  }
+
+  protected getPartialDiscountNote(item: CartItemDto): string | null {
+    const best = this.getBestDiscountedPromo(item);
+    if (!best || best.quantity >= best.requested) {
+      return null;
+    }
+
+    const rest = best.requested - best.quantity;
+    const perOrder = best.rule.maxPerOrder;
+    const reason =
+      perOrder != null && (best.rule.remaining == null || perOrder <= best.rule.remaining)
+        ? `limit of ${perOrder} per order`
+        : `only ${best.quantity} left`;
+    return `Promo on ${best.quantity} (${reason}); the other ${rest} at full price.`;
   }
 
   private validateCartUnitPrices(): boolean {
@@ -1467,7 +1513,7 @@ export class OrderEditor implements OnInit, OnDestroy {
       return 0;
     }
 
-    return promoDiscount(item.price, discountedBase, Math.max(1, item.qty));
+    return promoDiscount(item.price, discountedBase, this.getLineDiscount(item)?.quantity ?? 0);
   }
 
   protected getDiscountedPromoLabel(item: CartItemDto): string | null {
@@ -1476,7 +1522,7 @@ export class OrderEditor implements OnInit, OnDestroy {
       return null;
     }
 
-    return formatPromoLabel(best.entry, item.price, addOnsTotal(item.addOns));
+    return formatPromoLabel(best.rule, item.price, addOnsTotal(item.addOns));
   }
 
   // The promotions that are on at this moment (dates, weekdays and hours in this device's time zone, which the API gets
@@ -1496,44 +1542,56 @@ export class OrderEditor implements OnInit, OnDestroy {
     percentOff?: number | null;
     addOns: { addOnProductId: string; quantity: number }[];
     remaining?: number | null;
+    maxPerOrder?: number | null;
   }[] {
-    return this.liveDiscountedPromotions()
-      .flatMap((promo) =>
-        promo.items.map((entry) => ({ entry, remaining: this.discountUsesLeft(promo) })),
-      )
-      .filter(({ entry }) => entry.productId === productId)
-      .map(({ entry, remaining }) => ({
-        fixedPrice: entry.fixedPrice ?? null,
-        percentOff: entry.percentOff ?? null,
-        addOns: entry.addOns,
-        remaining,
-      }));
+    return this.discountRulesFor(productId).map((rule) => ({
+      fixedPrice: rule.fixedPrice ?? null,
+      percentOff: rule.percentOff ?? null,
+      addOns: rule.addOns,
+      remaining: rule.remaining,
+      maxPerOrder: rule.maxPerOrder,
+    }));
   }
 
-  private getBestDiscountedPromo(
-    item: CartItemDto,
-  ): { entry: DiscountedProductItemDto; price: number } | null {
+  private getBestDiscountedPromo(item: CartItemDto): DiscountMatch<CartDiscountRule> | null {
     if (item.bundleItems?.length || item.bundlePromotionId) {
       return null;
     }
 
-    // A promotion with a usage limit only discounts the items it has uses left for.
-    const rules = this.liveDiscountedPromotions()
-      .flatMap((promo) =>
-        promo.items.map((entry) => ({ ...entry, remaining: this.discountUsesLeft(promo) })),
-      )
-      .filter((entry) => entry.productId === item.productId);
-    if (rules.length === 0) {
-      return null;
+    const lines = this.cart();
+    if (!lines.includes(item)) {
+      return findBestDiscount(item.price, this.addOnIdsOf(item), this.discountRulesFor(item.productId), Math.max(1, item.qty));
     }
 
-    const best = findBestDiscount(
-      item.price,
-      (item.addOns ?? []).map((addOn) => addOn.addOnId),
-      rules,
-      Math.max(1, item.qty),
+    // Lines share what a promotion can still discount in this order, so each line is judged after the ones above it.
+    const matches = allocateDiscounts(
+      lines.map((line) => ({
+        productId: line.productId,
+        basePrice: line.price,
+        addOnIds: this.addOnIdsOf(line),
+        quantity: Math.max(1, line.qty),
+        eligible: !line.bundleItems?.length && !line.bundlePromotionId,
+      })),
+      (productId) => this.discountRulesFor(productId),
     );
-    return best ? { entry: best.rule, price: best.price } : null;
+    return matches[lines.indexOf(item)];
+  }
+
+  private addOnIdsOf(item: CartItemDto): string[] {
+    return (item.addOns ?? []).map((addOn) => addOn.addOnId);
+  }
+
+  private discountRulesFor(productId: string): CartDiscountRule[] {
+    return this.liveDiscountedPromotions().flatMap((promo) =>
+      promo.items
+        .filter((entry) => entry.productId === productId)
+        .map((entry) => ({
+          ...entry,
+          remaining: this.discountUsesLeft(promo),
+          maxPerOrder: promo.schedule?.maxPerOrder ?? null,
+          promotionKey: promo.id,
+        })),
+    );
   }
 
   protected getBundleChildTotalQuantity(
@@ -2812,17 +2870,25 @@ export class OrderEditor implements OnInit, OnDestroy {
       }
 
       const best = withQuotes ? this.getBestDiscountedPromo(line) : null;
-      items.push({
-        productId: line.productId,
-        quantity: line.qty,
-        addOns: this.groupAddOns(line.addOns, withQuotes),
-        specialInstructions: line.specialInstructions || null,
-        bundlePromotionId: null,
-        ...(withQuotes && {
-          quotedPrice: best?.price ?? line.price,
-          quotedOriginalPrice: line.price,
-          quotedPromoLabel: best ? formatPromoLabel(best.entry, line.price, addOnsTotal(line.addOns)) : null,
-        }),
+      // A line only part covered by a limit is sent as two lines when it carries quotes (an offline sale), as the shop saves it.
+      const covered = best ? best.quantity : 0;
+      const segments = best && covered < line.qty ? [covered, line.qty - covered] : [line.qty];
+      segments.forEach((quantity, index) => {
+        const discounted = !!best && index === 0;
+        items.push({
+          productId: line.productId,
+          quantity,
+          addOns: this.groupAddOns(line.addOns, withQuotes),
+          specialInstructions: line.specialInstructions || null,
+          bundlePromotionId: null,
+          ...(withQuotes && {
+            quotedPrice: discounted ? best.price : line.price,
+            quotedOriginalPrice: line.price,
+            quotedPromoLabel: discounted
+              ? formatPromoLabel(best.rule, line.price, addOnsTotal(line.addOns))
+              : null,
+          }),
+        });
       });
     }
 

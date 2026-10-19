@@ -452,12 +452,20 @@ describe('PublicAddonPickerComponent', () => {
       expect(c.unitPrice()).toBe(140);
     });
 
-    it('a limited promotion with fewer uses than the quantity does not apply', () => {
+    it('a limited promotion with fewer uses than the quantity covers only the uses it has', () => {
       setupWith({ rules: [{ percentOff: 10, addOns: [], remaining: 1 }] }, [EXTRA]);
 
-      expect(c.unitPrice()).toBe(90);
+      expect(c.total()).toBe(90);
       c.changeQuantity(1);
-      expect(c.unitPrice()).toBe(100);
+      expect(c.total()).toBe(90 + 100);
+    });
+
+    it('a limit per order covers only that many items', () => {
+      setupWith({ rules: [{ percentOff: 50, addOns: [], maxPerOrder: 2 }] }, [EXTRA]);
+
+      c.changeQuantity(3);
+
+      expect(c.total()).toBe(2 * 50 + 2 * 100);
     });
 
     it('confirming sends the add-ons and no price', () => {

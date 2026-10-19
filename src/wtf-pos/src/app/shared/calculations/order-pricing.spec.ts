@@ -4,6 +4,7 @@ import {
   PricedLine,
   addOnsTotal,
   cartTotal,
+  discountedLineTotal,
   extendedPrice,
   isBundleLine,
   lineTotal,
@@ -95,7 +96,17 @@ describe('order pricing: pieces', () => {
       { qty: 1, price: 100 },
       { qty: 2, price: 50 },
     ];
-    expect(cartTotal(lines, (line) => (line.price === 100 ? 80 : null))).toBe(180);
+    expect(cartTotal(lines, (line) => (line.price === 100 ? { price: 80, quantity: 1 } : null))).toBe(180);
+  });
+
+  it('a discount that covers only part of a line charges the rest at the list price', () => {
+    const line: PricedLine = { qty: 5, price: 100, addOns: [{ price: 10 }] };
+    // 2 items at 50 + 10 add-on, 3 items at 100 + 10 add-on
+    expect(discountedLineTotal(line, { price: 50, quantity: 2 })).toBe(2 * 60 + 3 * 110);
+    expect(discountedLineTotal(line, { price: 50, quantity: 9 })).toBe(5 * 60);
+    expect(discountedLineTotal(line, { price: 50, quantity: 0 })).toBe(5 * 110);
+    expect(discountedLineTotal(line, null)).toBe(5 * 110);
+    expect(discountedLineTotal({ qty: 2, price: 150, bundleItems: [{}] }, { price: 1, quantity: 2 })).toBe(300);
   });
 
   it('an unpriced saved line counts as 0', () => {

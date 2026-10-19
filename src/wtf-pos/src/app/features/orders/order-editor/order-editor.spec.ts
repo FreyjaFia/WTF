@@ -139,6 +139,9 @@ interface Editor {
     editIndex?: number | null;
   }) => void;
   getDiscountedUnitPrice: (i: CartItemDto) => number | null;
+  getLineDiscount: (item: CartItemDto) => { price: number; quantity: number } | null;
+  getPartialDiscountNote: (item: CartItemDto) => string | null;
+  buildOrderItemsFromCart: (withQuotes?: boolean) => Record<string, unknown>[];
   getUnitSubtotal: (i: CartItemDto) => number;
   getLineTotal: (i: CartItemDto) => number;
   getDiscountedAmount: (i: CartItemDto) => number;
@@ -879,7 +882,7 @@ describe('OrderEditor', () => {
       await start();
       t.addToCart(P_LATTE);
       expect(selectorOpen).toHaveBeenCalledWith(P_LATTE, {
-        promoRules: [{ fixedPrice: 10, percentOff: null, addOns: [], remaining: null }],
+        promoRules: [{ fixedPrice: 10, percentOff: null, addOns: [], remaining: null, maxPerOrder: null }],
       });
       t.addToCart(P_COLA);
       expect(selectorOpen).toHaveBeenLastCalledWith(P_COLA, { promoRules: [] });
@@ -1209,7 +1212,8 @@ describe('OrderEditor', () => {
         t.currentOrder.set(held('d'));
 
         expect(t.getDiscountedUnitPrice(line({ qty: 2 }))).toBe(50);
-        expect(t.getDiscountedUnitPrice(line({ qty: 3 }))).toBeNull();
+        // A third item has no use to take, so it pays the list price.
+        expect(t.getLineDiscount(line({ qty: 3 }))).toEqual({ price: 50, quantity: 2 });
       });
 
       it('an order that does not hold a use cannot take one that is gone', async () => {
@@ -1226,7 +1230,7 @@ describe('OrderEditor', () => {
         t.currentOrder.set(held('d'));
 
         expect(t.getDiscountedUnitPrice(line({ qty: 3 }))).toBe(50);
-        expect(t.getDiscountedUnitPrice(line({ qty: 4 }))).toBeNull();
+        expect(t.getLineDiscount(line({ qty: 4 }))).toEqual({ price: 50, quantity: 3 });
       });
 
       it('only an open order counts: a finished order has nothing held', async () => {
@@ -1348,7 +1352,73 @@ describe('OrderEditor', () => {
       await start();
 
       expect(t.getDiscountedUnitPrice(line({ qty: 2 }))).toBe(80);
-      expect(t.getDiscountedUnitPrice(line({ qty: 3 }))).toBeNull();
+      // Two uses are left for three items: two get the price, the third pays the list price.
+      expect(t.getLineDiscount(line({ qty: 3 }))).toEqual({ price: 80, quantity: 2 });
+      expect(t.getLineTotal(line({ qty: 3 }))).toBe(2 * 80 + 100);
+      expect(t.getPartialDiscountNote(line({ qty: 3 }))).toBe('Promo on 2 (only 2 left); the other 1 at full price.');
+      expect(t.getPartialDiscountNote(line({ qty: 2 }))).toBeNull();
+    });
+
+    it('a limit per order covers only that many items and says so', async () => {
+      promotionService['getActiveDiscountedProductPromotions'].mockReturnValue(
+        of(
+          promos([{ productId: 'latte', percentOff: 50, addOns: [] }], {
+            schedule: { daysOfWeek: null, startTime: null, endTime: null, maxRedemptions: null, maxPerOrder: 2, redemptions: 0 },
+          }),
+        ),
+      );
+      await start();
+      const only = line({ qty: 5 });
+      withCart([only]);
+
+      expect(t.getLineDiscount(only)).toEqual({ price: 50, quantity: 2 });
+      expect(t.getLineTotal(only)).toBe(2 * 50 + 3 * 100);
+      expect(t.totalPrice()).toBe(2 * 50 + 3 * 100);
+      expect(t.getDiscountedAmount(only)).toBe(100);
+      expect(t.getPartialDiscountNote(only)).toBe('Promo on 2 (limit of 2 per order); the other 3 at full price.');
+      const items = t.checkoutCartItems();
+      expect(items.map((i: { qty: number; price: number }) => [i.qty, i.price])).toEqual([
+        [2, 50],
+        [3, 100],
+      ]);
+    });
+
+    it('the lines of one order share what a promotion can discount', async () => {
+      promotionService['getActiveDiscountedProductPromotions'].mockReturnValue(
+        of(
+          promos([{ productId: 'latte', percentOff: 50, addOns: [] }], {
+            schedule: { daysOfWeek: null, startTime: null, endTime: null, maxRedemptions: null, maxPerOrder: 3, redemptions: 0 },
+          }),
+        ),
+      );
+      await start();
+      const a = line({ qty: 2, specialInstructions: 'a' });
+      const b = line({ qty: 2, specialInstructions: 'b' });
+      withCart([a, b]);
+
+      expect(t.getLineDiscount(a)).toEqual({ price: 50, quantity: 2 });
+      expect(t.getLineDiscount(b)).toEqual({ price: 50, quantity: 1 });
+      expect(t.totalPrice()).toBe(3 * 50 + 100);
+    });
+
+    it('an offline sale sends a part-covered line as two lines with their own quotes', async () => {
+      promotionService['getActiveDiscountedProductPromotions'].mockReturnValue(
+        of(
+          promos([{ productId: 'latte', percentOff: 50, addOns: [] }], {
+            schedule: { daysOfWeek: null, startTime: null, endTime: null, maxRedemptions: null, maxPerOrder: 2, redemptions: 0 },
+          }),
+        ),
+      );
+      await start();
+      withCart([line({ qty: 3 })]);
+
+      const items = t.buildOrderItemsFromCart(true);
+
+      expect(items.map((i) => [i['quantity'], i['quotedPrice'], i['quotedPromoLabel']])).toEqual([
+        [2, 50, 'Promo -50%'],
+        [1, 100, null],
+      ]);
+      expect(t.buildOrderItemsFromCart(false)).toHaveLength(1);
     });
 
     it('a promotion with no uses left discounts nothing', async () => {
@@ -2494,6 +2564,25 @@ describe('OrderEditor', () => {
           ? [{ type: AddOnTypeEnum.Extra, displayName: 'Extra', options: [{ ...P_SHOT, overridePrice: 15 }] }]
           : [],
       );
+    });
+
+    it('a line the shop saved in two parts (a limit covered only some) is one line again', async () => {
+      orderService['getOrder'].mockReturnValue(
+        of(
+          order({
+            status: OrderStatusEnum.Pending,
+            items: [
+              { id: 'i1', productId: 'latte', productName: 'Latte', quantity: 2, price: null, addOns: [], discountPromotionId: 'd' },
+              { id: 'i2', productId: 'latte', productName: 'Latte', quantity: 3, price: null, addOns: [] },
+            ],
+          }),
+        ),
+      );
+
+      await start();
+
+      expect(t.cart().length).toBe(1);
+      expect(t.cart()[0]).toMatchObject({ productId: 'latte', qty: 5 });
     });
 
     it('loads a pending order into the cart and enriches it', async () => {

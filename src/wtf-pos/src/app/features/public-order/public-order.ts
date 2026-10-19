@@ -50,16 +50,28 @@ import {
   addOnsTotal,
   buildDeals,
   Deal,
+  DiscountAllowance,
+  DiscountMatch,
   DiscountRule,
   extendedPrice,
   findBestDiscount,
   formatPromoLabel,
+  fromCents,
   priceWithAddOns,
   sumAmounts,
+  toCents,
 } from '@shared/calculations';
 
 type LoadState = 'loading' | 'ready' | 'invalid' | 'error';
 type Tab = 'menu' | 'orders';
+
+interface PublicLineDiscount {
+  price: number;
+  quantity: number;
+  label: string | null;
+  limited: boolean;
+  note: string | null;
+}
 
 /** The Promos section sits before the categories and uses this id in the tab strip and the section anchors. */
 export const PROMO_SECTION_ID = -1;
@@ -209,7 +221,7 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
 
   /** The discount rules that are on, by product, in the shape the shared price calculator reads. */
   private readonly dealRulesByProduct = computed(() => {
-    const rules = new Map<string, (DiscountRule & { remaining: number | null })[]>();
+    const rules = new Map<string, DiscountRule[]>();
     for (const deal of this.link()?.catalog.deals ?? []) {
       rules.set(deal.productId, [
         ...(rules.get(deal.productId) ?? []),
@@ -218,6 +230,8 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
           percentOff: deal.percentOff ?? null,
           addOns: deal.addOns,
           remaining: deal.remaining ?? null,
+          maxPerOrder: deal.maxPerOrder ?? null,
+          promotionKey: deal.groupKey ?? null,
         },
       ]);
     }
@@ -850,28 +864,58 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
   });
 
   /** The price a cart line really costs per item before add-ons, when a discount applies to it. */
-  protected lineDiscount(
-    line: PublicCartLine,
-  ): { price: number; label: string | null; limited: boolean } | null {
+  protected lineDiscount(line: PublicCartLine): PublicLineDiscount | null {
+    const lines = this.cart();
+    const index = lines.indexOf(line);
+    const best =
+      index >= 0
+        ? this.cartDiscounts()[index]
+        : this.bestDiscountFor(line, new DiscountAllowance());
+    if (!best) {
+      return null;
+    }
+
+    const rest = best.requested - best.quantity;
+    const perOrder = best.rule.maxPerOrder;
+    const reason =
+      perOrder != null && (best.rule.remaining == null || perOrder <= best.rule.remaining)
+        ? `limit of ${perOrder} per order`
+        : `only ${best.quantity} left`;
+    return {
+      price: best.price,
+      quantity: best.quantity,
+      label: formatPromoLabel(best.rule, line.price, addOnsTotal(line.addOns)),
+      limited: best.rule.remaining != null || best.rule.maxPerOrder != null,
+      note: rest > 0 ? `Promo on ${best.quantity} (${reason}); the other ${rest} at full price.` : null,
+    };
+  }
+
+  // Lines share what a discount can still take in this order, so each line is judged after the ones above it.
+  private readonly cartDiscounts = computed(() => {
+    const allowance = new DiscountAllowance();
+    return this.cart().map((line) => {
+      const best = this.bestDiscountFor(line, allowance);
+      if (best) {
+        allowance.use(best.rule, best.quantity);
+      }
+
+      return best;
+    });
+  });
+
+  private bestDiscountFor(line: PublicCartLine, allowance: DiscountAllowance): DiscountMatch | null {
     const rules = this.dealRulesByProduct().get(line.productId);
     if (!rules) {
       return null;
     }
 
-    const best = findBestDiscount(
+    return findBestDiscount(
       line.price,
       line.addOns.flatMap((addOn) => Array.from({ length: addOn.quantity }, () => addOn.id)),
       rules,
       line.quantity,
+      allowance,
     );
-
-    return best
-      ? {
-          price: best.price,
-          label: formatPromoLabel(best.rule, line.price, addOnsTotal(line.addOns)),
-          limited: best.rule.remaining != null,
-        }
-      : null;
   }
 
   /** True when a discount in the cart has a usage limit, so the shop confirms the price when it accepts the order. */
@@ -884,7 +928,15 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
   }
 
   protected lineTotal(line: PublicCartLine): number {
-    return extendedPrice(this.unitPrice(line), line.quantity);
+    const discount = this.lineDiscount(line);
+    if (!discount) {
+      return extendedPrice(this.unitPrice(line), line.quantity);
+    }
+
+    const cents =
+      toCents(priceWithAddOns(discount.price, line.addOns)) * discount.quantity +
+      toCents(priceWithAddOns(line.price, line.addOns)) * (line.quantity - discount.quantity);
+    return fromCents(cents);
   }
 
   protected changeQuantity(key: string, delta: number): void {

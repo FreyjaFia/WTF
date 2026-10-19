@@ -355,7 +355,11 @@
                           >{{ deal.price | number: '1.2-2' }}
                         </div>
                         <div class="text-xs text-gray-400 line-through">
-                          {{ deal.listPrice | number: '1.2-2' }}
+                          <app-icon
+                            name="icon-peso"
+                            [class]="'inline h-2.5 w-2.5 align-[-0.125em]'"
+                            [fill]="'currentColor'"
+                          />{{ deal.listPrice | number: '1.2-2' }}
                         </div>
                       </div>
                     </div>
@@ -628,6 +632,11 @@
                           >
                             {{ getDiscountedPromoLabel(c) }}
                           </div>
+                          @if (getPartialDiscountNote(c)) {
+                            <div class="mt-1 text-[11px] font-normal text-amber-700">
+                              {{ getPartialDiscountNote(c) }}
+                            </div>
+                          }
                         }
                       </div>
                       <div class="shrink-0 text-sm text-gray-500">
@@ -783,7 +792,9 @@
                     {{ c.specialInstructions }}
                   </div>
                 }
-                @if (!c.bundlePromotionId && !c.bundleItems?.length && c.addOns?.length) {
+                @if (
+                  !c.bundlePromotionId && !c.bundleItems?.length && c.addOns?.length && !getPartialDiscountNote(c)
+                ) {
                   <div class="mt-1 ml-19 pt-0.5 text-right text-[11px] text-gray-400 italic">
                     (<app-icon
                       name="icon-peso"

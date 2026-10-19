@@ -15,7 +15,9 @@ import {
   extendedPrice,
   findBestDiscount,
   formatPromoLabel,
+  fromCents,
   priceWithAddOns,
+  toCents,
 } from '@shared/calculations';
 
 export interface PublicAddonPickerResult {
@@ -120,16 +122,19 @@ export class PublicAddonPickerComponent implements OnInit {
   protected readonly addOnTotal = computed(() => addOnsTotal(this.selectedAddOns()));
 
   /** The best discount whose add-ons match the choices exactly, or null. */
-  protected readonly discount = computed(() => {
-    const best = findBestDiscount(
+  private readonly bestDiscount = computed(() =>
+    findBestDiscount(
       this.product().price,
       this.selectedAddOns().flatMap((addOn) =>
         Array.from({ length: addOn.quantity }, () => addOn.id),
       ),
       this.rules(),
       this.quantity(),
-    );
+    ),
+  );
 
+  protected readonly discount = computed(() => {
+    const best = this.bestDiscount();
     return best
       ? { price: best.price, label: formatPromoLabel(best.rule, this.product().price, this.addOnTotal()) }
       : null;
@@ -139,7 +144,19 @@ export class PublicAddonPickerComponent implements OnInit {
     priceWithAddOns(this.discount()?.price ?? this.product().price, this.selectedAddOns()),
   );
 
-  protected readonly total = computed(() => extendedPrice(this.unitPrice(), this.quantity()));
+  protected readonly total = computed(() => {
+    const discount = this.bestDiscount();
+    if (!discount) {
+      return extendedPrice(this.unitPrice(), this.quantity());
+    }
+
+    // A limit can cover only some of the items; the rest pay the list price.
+    const cents =
+      toCents(priceWithAddOns(discount.price, this.selectedAddOns())) * discount.quantity +
+      toCents(priceWithAddOns(this.product().price, this.selectedAddOns())) *
+        (this.quantity() - discount.quantity);
+    return fromCents(cents);
+  });
 
   /** Size and flavor need exactly one choice, sauce at most one (same as the shop's own ordering screen). */
   protected readonly validationError = computed<string | null>(() => {

@@ -27,6 +27,10 @@ export interface PublicDealDto {
   addOns: { addOnProductId: string; quantity: number }[];
   /** How many more items it can discount, or null when it has no usage limit. */
   remaining?: number | null;
+  /** The most one order can get at the discounted price, or null when there is no limit per order. */
+  maxPerOrder?: number | null;
+  /** Rules of one promotion share this key, so their limits are shared too. */
+  groupKey?: string | null;
 }
 
 export interface PublicCatalogDto {

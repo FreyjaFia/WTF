@@ -63,13 +63,32 @@ export function lineTotal(line: PricedLine, basePrice: number | null = null): nu
   return extendedPrice(lineUnitSubtotal(line, basePrice), line.qty);
 }
 
+/** A discount on part of a line: this many items are charged `price` as their base, the rest pay the list price. */
+export interface LineDiscount {
+  price: number;
+  quantity: number;
+}
+
+/** A line total when only `discount.quantity` of its items get the discounted base price. */
+export function discountedLineTotal(line: PricedLine, discount: LineDiscount | null): number {
+  if (!discount || isBundleLine(line)) {
+    return lineTotal(line);
+  }
+
+  const covered = Math.min(line.qty, Math.max(0, discount.quantity));
+  const cents =
+    toCents(lineUnitSubtotal(line, discount.price)) * covered +
+    toCents(lineUnitSubtotal(line)) * (line.qty - covered);
+  return fromCents(cents);
+}
+
 export function cartTotal<TLine extends PricedLine>(
   lines: readonly TLine[],
-  basePriceOf: (line: TLine) => number | null = () => null,
+  discountOf: (line: TLine) => LineDiscount | null = () => null,
 ): number {
   let cents = 0;
   for (const line of lines) {
-    cents += toCents(lineTotal(line, basePriceOf(line)));
+    cents += toCents(discountedLineTotal(line, discountOf(line)));
   }
 
   return fromCents(cents);

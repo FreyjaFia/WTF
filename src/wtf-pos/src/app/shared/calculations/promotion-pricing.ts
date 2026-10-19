@@ -18,6 +18,10 @@ export interface DiscountRule {
   addOns: readonly DiscountRuleAddOn[];
   /** How many more items the promotion can discount (its usage limit). Missing means no limit. */
   remaining?: number | null;
+  /** The most items one order may get at this promotion's price. Missing means no limit per order. */
+  maxPerOrder?: number | null;
+  /** Rules of one promotion share its limits: the same key means the same promotion. Missing, the rule stands alone. */
+  promotionKey?: string | null;
 }
 
 /** Counts how many of each add-on a cart item has. Pass one id per add-on, repeated for quantity. */
@@ -114,26 +118,67 @@ export function formatPromoLabel(
   return null;
 }
 
+/** A discount found for a line: the rule, its unit price, and how many of the requested items it covers. */
+export interface DiscountMatch<TRule extends DiscountRule = DiscountRule> {
+  rule: TRule;
+  price: number;
+  /** How many items get the discounted price. Less than `requested` when a limit covers only part of the line. */
+  quantity: number;
+  requested: number;
+}
+
 /**
- * Of the rules for this product whose add-ons match the item exactly and that have uses left for the quantity, the one
- * with the lowest price. The first rule wins a tie. Null when none applies.
+ * What the promotions can still discount for ONE order, shared by all its lines. A promotion's allowance is the smaller
+ * of the uses nobody holds yet and the most one order may take; a line takes from it.
+ */
+export class DiscountAllowance {
+  private readonly left = new Map<unknown, number>();
+
+  /** How many more items the rule's promotion can discount in this order; Infinity when nothing limits it. */
+  public available(rule: DiscountRule): number {
+    const key = this.keyOf(rule);
+    if (!this.left.has(key)) {
+      this.left.set(key, Math.min(rule.remaining ?? Infinity, rule.maxPerOrder ?? Infinity));
+    }
+
+    return Math.max(0, this.left.get(key) ?? Infinity);
+  }
+
+  public use(rule: DiscountRule, quantity: number): void {
+    const key = this.keyOf(rule);
+    this.available(rule);
+    this.left.set(key, (this.left.get(key) ?? Infinity) - quantity);
+  }
+
+  private keyOf(rule: DiscountRule): unknown {
+    return rule.promotionKey ?? rule;
+  }
+}
+
+/**
+ * Of the rules for this product whose add-ons match the item exactly, the one that saves the most on the line. A limit
+ * (uses left, the most one order may have) covers only as many items as it allows, and the rest pay the list price, so
+ * the saving is the discount per item times the items covered. At the same saving the lower price wins, then the first
+ * rule. Null when no rule applies.
  */
 export function findBestDiscount<TRule extends DiscountRule>(
   basePrice: number,
   addOnIds: Iterable<string>,
   rules: readonly TRule[],
   quantity = 1,
-): { rule: TRule; price: number } | null {
+  allowance: DiscountAllowance = new DiscountAllowance(),
+): DiscountMatch<TRule> | null {
   const addOnCounts = countAddOns(addOnIds);
-  let best: { rule: TRule; price: number } | null = null;
+  let best: DiscountMatch<TRule> | null = null;
+  let bestSavingCents = -1;
 
   for (const rule of rules) {
     if (!satisfiesExactAddOns(addOnCounts, rule.addOns)) {
       continue;
     }
 
-    // A promotion with a usage limit only discounts the items it has uses left for.
-    if (rule.remaining != null && rule.remaining < quantity) {
+    const covered = Math.min(quantity, allowance.available(rule));
+    if (covered <= 0) {
       continue;
     }
 
@@ -142,10 +187,47 @@ export function findBestDiscount<TRule extends DiscountRule>(
       continue;
     }
 
-    if (best == null || price < best.price) {
-      best = { rule, price };
+    const savingCents = (toCents(basePrice) - toCents(price)) * covered;
+    if (best == null || savingCents > bestSavingCents || (savingCents === bestSavingCents && price < best.price)) {
+      best = { rule, price, quantity: covered, requested: quantity };
+      bestSavingCents = savingCents;
     }
   }
 
   return best;
+}
+
+/** A cart line as discounts see it. */
+export interface AllocationLine {
+  productId: string;
+  basePrice: number;
+  /** One id per add-on, repeated for its quantity. */
+  addOnIds: readonly string[];
+  quantity: number;
+  /** False for lines that never get a discounted-product price (a bundle line). */
+  eligible: boolean;
+}
+
+/**
+ * Gives each line of a cart its discount, in order, sharing the promotions' allowances: a promotion that can discount
+ * 3 items covers 3 across the whole order, however many lines use it.
+ */
+export function allocateDiscounts<TRule extends DiscountRule>(
+  lines: readonly AllocationLine[],
+  rulesFor: (productId: string) => readonly TRule[],
+): (DiscountMatch<TRule> | null)[] {
+  const allowance = new DiscountAllowance();
+
+  return lines.map((line) => {
+    if (!line.eligible) {
+      return null;
+    }
+
+    const match = findBestDiscount(line.basePrice, line.addOnIds, rulesFor(line.productId), line.quantity, allowance);
+    if (match) {
+      allowance.use(match.rule, match.quantity);
+    }
+
+    return match;
+  });
 }

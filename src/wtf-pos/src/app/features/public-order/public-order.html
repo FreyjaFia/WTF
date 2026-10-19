@@ -310,7 +310,11 @@
                                           >{{ deal.price | number: '1.2-2' }}
                                         </div>
                                         <div class="text-xs text-gray-400 line-through">
-                                          {{ deal.listPrice | number: '1.2-2' }}
+                                          <app-icon
+                                            name="icon-peso"
+                                            [class]="'inline h-2.5 w-2.5 align-[-0.125em]'"
+                                            [fill]="'currentColor'"
+                                          />{{ deal.listPrice | number: '1.2-2' }}
                                         </div>
                                       </div>
                                     </div>
@@ -509,12 +513,21 @@
                                             </span>
                                           </div>
                                         }
+                                        @if (discount.note) {
+                                          <div class="mt-1 text-[11px] font-normal text-amber-700" data-line-limit-note>
+                                            {{ discount.note }}
+                                          </div>
+                                        }
                                       }
                                     </div>
                                     <div class="shrink-0 text-right text-sm text-gray-500">
                                       @if (lineDiscount(line); as discount) {
                                         <div class="text-xs text-gray-400 line-through">
-                                          {{ line.price | number: '1.2-2' }}
+                                          <app-icon
+                                            name="icon-peso"
+                                            [class]="'inline h-2.5 w-2.5 align-[-0.125em]'"
+                                            [fill]="'currentColor'"
+                                          />{{ line.price | number: '1.2-2' }}
                                         </div>
                                         <div class="text-gray-900">
                                           <span class="text-xs opacity-60"
@@ -610,7 +623,7 @@
                                   {{ line.specialInstructions }}
                                 </div>
                               }
-                              @if (line.addOns.length > 0) {
+                              @if (line.addOns.length > 0 && !lineDiscount(line)?.note) {
                                 <div
                                   class="mt-1 ml-19 pt-0.5 text-right text-[11px] text-gray-400 italic"
                                 >

@@ -27,6 +27,8 @@ export interface PromotionSchedule {
   maxRedemptions?: number | null;
   /** How many times it has been used so far. */
   redemptions?: number | null;
+  /** The most one order can get at the promotion's price. Missing means no limit per order. */
+  maxPerOrder?: number | null;
 }
 
 function secondsOfDay(time: string): number {

@@ -659,8 +659,8 @@ export class OrderDetails implements OnInit {
         // today's promotions would invent a discount that was never given.
         const promo = this.getBestDiscountedPromo(cartItem);
         if (promo) {
-          const discount = promoDiscount(cartItem.price, promo.price, cartItem.qty);
-          cartItem.promoLabel = formatPromoLabel(promo.entry, cartItem.price, addOnsTotal(cartItem.addOns));
+          const discount = promoDiscount(cartItem.price, promo.price, promo.quantity);
+          cartItem.promoLabel = formatPromoLabel(promo.rule, cartItem.price, addOnsTotal(cartItem.addOns));
           cartItem.promoDiscount = discount > 0 ? discount : null;
         }
       }
@@ -718,13 +718,15 @@ export class OrderDetails implements OnInit {
 
   private getBestDiscountedPromo(
     item: CartItemDto,
-  ): { entry: DiscountedProductItemDto; price: number } | null {
+  ): { rule: DiscountedProductItemDto; price: number; quantity: number } | null {
     if (item.bundleItems?.length || item.bundlePromotionId) {
       return null;
     }
 
     const rules = this.discountedProductPromotions()
-      .flatMap((promo) => promo.items)
+      .flatMap((promo) =>
+        promo.items.map((entry) => ({ ...entry, maxPerOrder: promo.schedule?.maxPerOrder ?? null })),
+      )
       .filter((entry) => entry.productId === item.productId);
     if (rules.length === 0) {
       return null;
@@ -734,8 +736,9 @@ export class OrderDetails implements OnInit {
       item.price,
       (item.addOns ?? []).map((addOn) => addOn.addOnId),
       rules,
+      Math.max(1, item.qty),
     );
-    return best ? { entry: best.rule, price: best.price } : null;
+    return best ? { rule: best.rule, price: best.price, quantity: best.quantity } : null;
   }
 
   private getAddOnTypeForOwner(
