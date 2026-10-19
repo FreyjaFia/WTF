@@ -28,7 +28,7 @@ public class SharedCasesTests
 
     private sealed record DiscountCase(string Name, decimal BasePrice, decimal? FixedPrice, decimal? PercentOff, decimal? Expected);
 
-    private sealed record LabelCase(string Name, decimal? FixedPrice, decimal? PercentOff, decimal? BasePrice, string? Expected);
+    private sealed record LabelCase(string Name, decimal? FixedPrice, decimal? PercentOff, decimal? BasePrice, decimal? AddOnsPerUnit, string? Expected);
 
     private sealed record IdQuantity(string Id, int Quantity);
 
@@ -199,7 +199,7 @@ public class SharedCasesTests
     {
         var c = Loaded.Value.PromoLabels.Single(x => x.Name == name);
 
-        PromotionLabelFormatter.Format(c.FixedPrice, c.PercentOff, c.BasePrice).ShouldBe(c.Expected);
+        PromotionLabelFormatter.Format(c.FixedPrice, c.PercentOff, c.BasePrice, c.AddOnsPerUnit ?? 0m).ShouldBe(c.Expected);
     }
 
     [Theory]

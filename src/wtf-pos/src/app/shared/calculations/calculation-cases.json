@@ -315,6 +315,46 @@
   ],
   "promoLabels": [
     {
+      "name": "amount above the price with add-ons still charged shows the price taken off",
+      "fixedPrice": 150,
+      "percentOff": null,
+      "basePrice": 130,
+      "addOnsPerUnit": 25,
+      "expected": "Promo -₱130.00"
+    },
+    {
+      "name": "amount equal to the price with add-ons still charged shows the price taken off",
+      "fixedPrice": 120,
+      "percentOff": null,
+      "basePrice": 120,
+      "addOnsPerUnit": 30,
+      "expected": "Promo -₱120.00"
+    },
+    {
+      "name": "amount above the price with free add-ons is still free",
+      "fixedPrice": 150,
+      "percentOff": null,
+      "basePrice": 120,
+      "addOnsPerUnit": 0,
+      "expected": "Free"
+    },
+    {
+      "name": "add-ons do not change an amount smaller than the price",
+      "fixedPrice": 40,
+      "percentOff": null,
+      "basePrice": 150,
+      "addOnsPerUnit": 25,
+      "expected": "Promo -₱40.00"
+    },
+    {
+      "name": "add-ons do not change a percentage label",
+      "fixedPrice": null,
+      "percentOff": 100,
+      "basePrice": 120,
+      "addOnsPerUnit": 25,
+      "expected": "Promo -100%"
+    },
+    {
       "name": "amount smaller than the price shows the amount",
       "fixedPrice": 5,
       "percentOff": null,

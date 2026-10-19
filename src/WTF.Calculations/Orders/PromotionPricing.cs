@@ -44,7 +44,18 @@ public static class PromotionPricing
         List<(Guid AddOnProductId, int Quantity)> RequiredAddOns,
         Guid? PromotionId = null);
 
-    public sealed record AppliedDiscount(decimal Price, string? Label, Guid? PromotionId = null);
+    public sealed record AppliedDiscount(
+        decimal Price,
+        string? Label,
+        Guid? PromotionId = null,
+        decimal? FixedPrice = null,
+        decimal? PercentOff = null,
+        decimal BasePrice = 0m)
+    {
+        // The label for a line whose add-ons cost this much per item (Label assumes none).
+        public string? LabelWith(decimal addOnsPerUnit) =>
+            PromotionLabelFormatter.Format(FixedPrice, PercentOff, BasePrice, addOnsPerUnit);
+    }
 
     public static AppliedDiscount? GetDiscountedUnitPrice(
         decimal basePrice,
@@ -88,7 +99,10 @@ public static class PromotionPricing
                 best = new AppliedDiscount(
                     discounted.Value,
                     PromotionLabelFormatter.Format(rule.FixedPrice, rule.PercentOff, basePrice),
-                    rule.PromotionId);
+                    rule.PromotionId,
+                    rule.FixedPrice,
+                    rule.PercentOff,
+                    basePrice);
             }
         }
 

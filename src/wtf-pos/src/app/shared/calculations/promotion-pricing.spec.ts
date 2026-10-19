@@ -22,6 +22,7 @@ interface LabelCase {
   fixedPrice: number | null;
   percentOff: number | null;
   basePrice?: number | null;
+  addOnsPerUnit?: number;
   expected: string | null;
 }
 
@@ -52,7 +53,7 @@ describe('promotion pricing: the cases shared with the API', () => {
   it.each((cases.promoLabels as LabelCase[]).map((c) => [c.name, c] as const))(
     'promo label: %s',
     (_name, c) => {
-      expect(formatPromoLabel({ fixedPrice: c.fixedPrice, percentOff: c.percentOff }, c.basePrice)).toBe(
+      expect(formatPromoLabel({ fixedPrice: c.fixedPrice, percentOff: c.percentOff }, c.basePrice, c.addOnsPerUnit ?? 0)).toBe(
         c.expected,
       );
     },

@@ -115,4 +115,29 @@ public class PromotionScheduleRulesTests
         budget.CanUse(null, 99).ShouldBeTrue();
         budget.Use(null, 5);
     }
+    [Fact]
+    public void Budget_Remaining_IsNullWithoutALimit_AndNeverBelowZero()
+    {
+        var limited = Guid.NewGuid();
+        var budget = new DiscountBudget(new Dictionary<Guid, int> { [limited] = 2 });
+
+        budget.Remaining(limited).ShouldBe(2);
+        budget.Remaining(Guid.NewGuid()).ShouldBeNull();
+        budget.Remaining(null).ShouldBeNull();
+        budget.Use(limited, 5);
+        budget.Remaining(limited).ShouldBe(0);
+    }
+
+    [Fact]
+    public void Budget_Clone_IsIndependentOfTheOriginal()
+    {
+        var limited = Guid.NewGuid();
+        var budget = new DiscountBudget(new Dictionary<Guid, int> { [limited] = 3 });
+
+        var copy = budget.Clone();
+        copy.Use(limited, 3);
+
+        copy.Remaining(limited).ShouldBe(0);
+        budget.Remaining(limited).ShouldBe(3);
+    }
 }

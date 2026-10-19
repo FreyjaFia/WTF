@@ -83,10 +83,16 @@ export function calculateDiscountedUnitPrice(
 export function formatPromoLabel(
   rule: Pick<DiscountRule, 'fixedPrice' | 'percentOff'>,
   basePrice?: number | null,
+  addOnsPerUnit = 0,
 ): string | null {
   if (rule.fixedPrice != null && rule.fixedPrice > 0) {
-    // An amount that covers the whole price reads "Free", not the amount set on the promotion.
+    // An amount that covers the whole price takes off the price, not the amount set on the promotion. It reads "Free"
+    // only when nothing else is left to pay; with add-ons still charged it shows what really came off.
     if (basePrice != null && basePrice > 0 && rule.fixedPrice >= basePrice) {
+      if (addOnsPerUnit > 0) {
+        return `Promo -₱${basePrice.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      }
+
       return 'Free';
     }
 
