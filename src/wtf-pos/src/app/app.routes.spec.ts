@@ -45,13 +45,20 @@ describe('app.routes', () => {
   });
 
   it('serves the public ordering page without any guard, between login and the layout shell', () => {
-    const index = routes.findIndex((r) => r.path === 'order/:token');
+    const index = routes.findIndex((r) => r.path === 'shop/:token');
     expect(index).toBeGreaterThan(routes.findIndex((r) => r.path === 'login'));
     expect(index).toBeLessThan(routes.findIndex((r) => r.path === '' && r.component));
     const route = routes[index];
     expect(route.component).toBe(PublicOrderComponent);
+    expect(route.children?.map((child) => child.path)).toEqual(['', 'orders', 'orders/:id']);
     expect(route.canActivate).toBeUndefined();
     expect(route.canActivate ?? []).not.toContain(authGuard);
+  });
+
+  it('keeps old /order links working by redirecting them to /shop', () => {
+    const legacy = routes.find((r) => r.path === 'order/:token');
+    expect(legacy?.redirectTo).toBe('shop/:token');
+    expect(legacy?.canActivate).toBeUndefined();
   });
 
   it('ends with a wildcard route rendering NotFound', () => {

@@ -3,7 +3,7 @@ export const AppRoutes = {
   Dashboard: '/dashboard',
   MyProfile: '/my-profile',
   OrdersRoot: '/orders',
-  PublicOrder: (token: string) => `/order/${token}`,
+  PublicOrder: (token: string) => `/shop/${token}`,
   OrdersList: '/orders/list',
   OrdersEditor: '/orders/editor',
   OrderEditorById: (orderId: string) => `/orders/editor/${orderId}`,

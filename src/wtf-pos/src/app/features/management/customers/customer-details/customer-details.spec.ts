@@ -479,7 +479,7 @@ describe('CustomerDetailsComponent', () => {
 
     it('builds the link address from the page origin', () => {
       setup({ customer: ENABLED });
-      expect(c.orderLinkUrl('abc')).toBe(`${window.location.origin}/order/abc`);
+      expect(c.orderLinkUrl('abc')).toBe(`${window.location.origin}/shop/abc`);
     });
 
     it('copies the full link to the clipboard', async () => {
@@ -487,7 +487,7 @@ describe('CustomerDetailsComponent', () => {
       const writeText = vi.fn().mockResolvedValue(undefined);
       vi.stubGlobal('navigator', { clipboard: { writeText } });
       await c.copyLink(LINK);
-      expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/order/tok123`);
+      expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/shop/tok123`);
       expect(alert.success).toHaveBeenCalledWith('Link copied.');
       vi.unstubAllGlobals();
     });

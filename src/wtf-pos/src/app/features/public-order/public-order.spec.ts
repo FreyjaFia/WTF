@@ -1,6 +1,6 @@
 import { signal, type WritableSignal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, provideRouter, Router } from '@angular/router';
 import { AlertService } from '@core/services/alert.service';
 import { ConnectivityService } from '@core/services/connectivity.service';
 import { PublicOrderHubService } from '@core/services/public-order-hub.service';
@@ -132,6 +132,7 @@ describe('PublicOrderComponent', () => {
     };
     TestBed.configureTestingModule({
       providers: [
+        provideRouter([{ path: '**', children: [] }]),
         { provide: PublicOrderService, useValue: service },
         { provide: AlertService, useValue: alerts },
         { provide: ConnectivityService, useValue: { isOnline: online, showReconnected: signal(false) } },
@@ -709,6 +710,19 @@ describe('PublicOrderComponent', () => {
         expect(panel().className).toContain('translate-x-full');
       });
 
+      it('goes back to the order list when My orders is tapped while an order is open', () => {
+        setup({ orders: of(PAGE) });
+        c.selectTab('orders');
+        c.openOrder('o2');
+        fixture.detectChanges();
+        expect(el().querySelector('app-public-order-details')).not.toBeNull();
+
+        c.selectTab('orders');
+        fixture.detectChanges();
+
+        expect(el().querySelector('app-public-order-details')).toBeNull();
+      });
+
       it('refreshes the badges when the shops replies were read', () => {
         setup({ orders: of(PAGE) });
         service.getOrderConversation.mockReturnValue(
@@ -829,6 +843,62 @@ describe('PublicOrderComponent', () => {
       service.getLink.mockReturnValue(throwError(() => new PublicLinkInvalidError()));
       c.loadMenu(true);
       expect(c.state()).toBe('invalid');
+    });
+  });
+
+  describe('addresses of the page', () => {
+    const PAGE = {
+      items: [order('o2', '2026-01-11T09:00:00', { orderNumber: 1002 })],
+      page: 1,
+      pageSize: 50,
+      totalCount: 1,
+    };
+
+    it('puts My orders and an open order in the address', async () => {
+      setup({ orders: of(PAGE) });
+      const router = TestBed.inject(Router);
+
+      c.selectTab('orders');
+      await fixture.whenStable();
+      expect(router.url).toBe('/shop/tok-1/orders');
+
+      c.openOrder('o2');
+      await fixture.whenStable();
+      expect(router.url).toBe('/shop/tok-1/orders/o2');
+
+      c.closeOrder();
+      await fixture.whenStable();
+      expect(router.url).toBe('/shop/tok-1/orders');
+
+      c.selectTab('menu');
+      await fixture.whenStable();
+      expect(router.url).toBe('/shop/tok-1');
+    });
+
+    it('follows the address, so the Back button goes from an order to the list', async () => {
+      setup({ orders: of(PAGE) });
+      const router = TestBed.inject(Router);
+
+      await router.navigateByUrl('/shop/tok-1/orders/o2');
+      fixture.detectChanges();
+      expect(c.tab()).toBe('orders');
+      expect(c.selectedOrderId()).toBe('o2');
+
+      await router.navigateByUrl('/shop/tok-1/orders');
+      fixture.detectChanges();
+      expect(c.tab()).toBe('orders');
+      expect(c.selectedOrderId()).toBeNull();
+
+      await router.navigateByUrl('/shop/tok-1');
+      expect(c.tab()).toBe('menu');
+    });
+
+    it('ignores addresses of another link', async () => {
+      setup({ orders: of(PAGE) });
+
+      await TestBed.inject(Router).navigateByUrl('/shop/other/orders');
+
+      expect(c.tab()).toBe('menu');
     });
   });
 

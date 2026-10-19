@@ -225,7 +225,7 @@ export class CustomerDetailsComponent implements OnInit {
     const origin = Capacitor.isNativePlatform()
       ? environment.apiUrl.replace(/\/api\/?$/, '')
       : window.location.origin;
-    return `${origin}/order/${token}`;
+    return `${origin}${AppRoutes.PublicOrder(token)}`;
   }
 
   private loadOrderLinks(customerId: string): void {

@@ -11,8 +11,8 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
+import { filter, Subscription } from 'rxjs';
 import { AlertService } from '@core/services/alert.service';
 import { ConnectivityService } from '@core/services/connectivity.service';
 import { PublicOrderHubService } from '@core/services/public-order-hub.service';
@@ -141,6 +141,7 @@ const CATEGORY_LABELS: Record<number, string> = {
 })
 export class PublicOrderComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly service = inject(PublicOrderService);
   private readonly hub = inject(PublicOrderHubService);
   private readonly alerts = inject(AlertService);
@@ -212,6 +213,7 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
     return unread;
   });
   private liveSubscriptions: Subscription[] = [];
+  private locationSubscription: Subscription | null = null;
   private liveStarted = false;
   protected readonly selectedOrder = computed(
     () => this.orders().find((order) => order.id === this.selectedOrderId()) ?? null,
@@ -375,6 +377,11 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
 
   public ngOnInit(): void {
     this.token = this.route.snapshot.paramMap.get('token') ?? '';
+    // The address says where the customer is (menu, order list, one order), so Back, Refresh and shared links work.
+    this.syncFromUrl();
+    this.locationSubscription = this.router.events
+      .pipe(filter((event) => event instanceof NavigationEnd))
+      .subscribe(() => this.syncFromUrl());
     this.loadMenu();
     this.startLive();
 
@@ -389,6 +396,7 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
   public ngOnDestroy(): void {
     this.liveSubscriptions.forEach((subscription) => subscription.unsubscribe());
     this.liveSubscriptions = [];
+    this.locationSubscription?.unsubscribe();
     this.hub.disconnect();
     document.removeEventListener('visibilitychange', this.onVisibility);
     this.resizeObserver?.disconnect();
@@ -486,7 +494,6 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
     const orderId = this.chatOrderId();
     this.closeChat();
     if (orderId) {
-      this.selectTab('orders');
       this.openOrder(orderId);
     }
   }
@@ -585,19 +592,40 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
   }
 
   protected selectTab(tab: Tab): void {
-    if (this.tab() === tab) {
+    this.goTo(tab === 'orders' ? ['orders'] : []);
+    this.applyLocation(tab, null);
+  }
+
+  private goTo(parts: string[]): void {
+    void this.router.navigate(['/shop', this.token, ...parts]);
+  }
+
+  private syncFromUrl(): void {
+    const segments = this.router.url.split(/[?#]/)[0].split('/').filter(Boolean);
+    if (segments[0] !== 'shop' || segments[1] !== this.token) {
       return;
     }
 
-    this.tab.set(tab);
-    this.selectedOrderId.set(null);
-
-    if (tab === 'menu') {
-      // Always show a fresh menu when coming back to it.
-      this.loadMenu(true);
+    if (segments[2] === 'orders') {
+      this.applyLocation('orders', segments[3] ? decodeURIComponent(segments[3]) : null);
     } else {
-      this.loadOrders();
+      this.applyLocation('menu', null);
     }
+  }
+
+  private applyLocation(tab: Tab, orderId: string | null): void {
+    if (this.tab() !== tab) {
+      this.tab.set(tab);
+
+      if (tab === 'menu') {
+        // Always show a fresh menu when coming back to it.
+        this.loadMenu(true);
+      } else {
+        this.loadOrders();
+      }
+    }
+
+    this.selectedOrderId.set(orderId);
   }
 
   // --- menu ---
@@ -1115,7 +1143,9 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
           `Your order #${order.orderNumber} was sent. The shop will confirm it shortly.`,
         );
         // Show it straight away on My orders, waiting for confirmation.
+        this.goTo(['orders']);
         this.tab.set('orders');
+        this.selectedOrderId.set(null);
         this.loadOrders();
       },
       error: (err: Error) => {
@@ -1143,10 +1173,12 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
   // --- my orders ---
 
   protected openOrder(id: string): void {
-    this.selectedOrderId.set(id);
+    this.goTo(['orders', id]);
+    this.applyLocation('orders', id);
   }
 
   protected closeOrder(): void {
+    this.goTo(['orders']);
     this.selectedOrderId.set(null);
   }
 }

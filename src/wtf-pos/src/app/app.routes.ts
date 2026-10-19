@@ -53,8 +53,20 @@ export const routes: Routes = [
   },
   {
     // Public page for customers with a personal ordering link. No sign-in, so no guards.
-    path: 'order/:token',
+    // The menu, the order list and one order are addresses of the same page, so Back, Refresh and shared links work.
+    path: 'shop/:token',
     component: PublicOrderComponent,
+    children: [
+      { path: '', children: [] },
+      { path: 'orders', children: [] },
+      { path: 'orders/:id', children: [] },
+    ],
+  },
+  {
+    // Links sent before the page moved to /shop keep working.
+    path: 'order/:token',
+    redirectTo: 'shop/:token',
+    pathMatch: 'full',
   },
   {
     path: '',
