@@ -2432,6 +2432,17 @@ describe('OrderEditor', () => {
       expect(t.isRailTriggerHovering()).toBe(false);
     });
 
+    it('has no back button on a new order, but has one when editing an existing order', () => {
+      const back = () => fixture.nativeElement.querySelector('[aria-label="Back to orders"]');
+      fixture.detectChanges();
+      expect(t.isEditMode()).toBe(false);
+      expect(back()).toBeNull();
+
+      t.isEditMode.set(true);
+      fixture.detectChanges();
+      expect(back()).not.toBeNull();
+    });
+
     it('cancel navigates to list', () => {
       t.cancel();
       expect(nav).toHaveBeenCalledWith(AppRoutes.OrdersList);

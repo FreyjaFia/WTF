@@ -8,15 +8,18 @@
 
     @if (!isEditMode() || !isLoading()) {
       <div class="mb-3 flex shrink-0 flex-nowrap items-center gap-2 sm:mb-4 sm:gap-3">
-        <button
-          type="button"
-          class="app-btn app-btn-ghost mt-0.5 p-2"
-          (click)="cancel()"
-          [disabled]="isOrderRequestBusy()"
-          aria-label="Back to orders"
-        >
-          <app-icon name="icon-back" [class]="'h-5 w-5 text-gray-600'" [fill]="'currentColor'" />
-        </button>
+        <!-- A new order has nothing to go back to: the menu already has Orders. Editing one opens from the list. -->
+        @if (isEditMode()) {
+          <button
+            type="button"
+            class="app-btn app-btn-ghost mt-0.5 p-2"
+            (click)="cancel()"
+            [disabled]="isOrderRequestBusy()"
+            aria-label="Back to orders"
+          >
+            <app-icon name="icon-back" [class]="'h-5 w-5 text-gray-600'" [fill]="'currentColor'" />
+          </button>
+        }
 
         <div
           class="flex min-w-0 flex-1 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-surface focus-within:ring-2 focus-within:ring-gray-200 md:max-w-104 md:flex-1"
