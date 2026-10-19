@@ -151,7 +151,7 @@ interface Editor {
     c: { productId: string; name: string; price: number; qty: number },
   ) => number;
   getSortedBundleItems: (i: CartItemDto) => { name: string }[];
-  getGroupedAddOns: (i: CartItemDto) => { addOnId: string; quantityPerUnit: number; lineTotal: number }[];
+  getBreakdown: (i: CartItemDto) => { rows: { kind: string; label: string; detail: string | null; amount: number }[]; total: number };
   increment: (id: string, index: number) => void;
   decrement: (id: string, index: number) => void;
   clearAll: () => void;
@@ -1304,6 +1304,13 @@ describe('OrderEditor', () => {
       expect(t.getLineTotal(l)).toBe(180);
       expect(t.getDiscountedAmount(l)).toBe(60);
       expect(t.getDiscountedPromoLabel(l)).toContain('30.00');
+      const breakdown = t.getBreakdown(l);
+      expect(breakdown.rows.map((r) => [r.kind, r.amount])).toEqual([
+        ['base', 200],
+        ['addOn', 40],
+        ['discount', -60],
+      ]);
+      expect(breakdown.total).toBe(t.getLineTotal(l));
 
       // Required add-ons must match exactly (no extra, none missing).
       expect(t.getDiscountedUnitPrice(line())).toBeNull();
@@ -1481,7 +1488,7 @@ describe('OrderEditor', () => {
       ).toBe(2);
     });
 
-    it('sorts bundle items and groups add-ons', async () => {
+    it('sorts bundle items and builds the breakdown rows', async () => {
       await start();
       const l = line({
         qty: 2,
@@ -1492,9 +1499,14 @@ describe('OrderEditor', () => {
         addOns: [shotAddOn(), shotAddOn(), { addOnId: 'n', name: 'Misc', price: -5 }],
       });
       expect(t.getSortedBundleItems(l).map((b) => b.name)).toEqual(['Alpha', '2x Zed']);
-      const groups = t.getGroupedAddOns(l);
-      expect(groups[0]).toMatchObject({ addOnId: 'shot', quantityPerUnit: 2, lineTotal: 80 });
-      expect(groups[1].lineTotal).toBe(-10);
+      const { rows, total } = t.getBreakdown(l);
+      expect(rows.map((r) => [r.kind, r.amount])).toEqual([
+        ['base', 200],
+        ['addOn', 80],
+        ['addOn', -10],
+      ]);
+      expect(rows[1].detail).toBe('₱20.00 × 4 (2 per item)');
+      expect(total).toBe(270);
     });
 
     it('rejects saving when a unit price turns negative', async () => {

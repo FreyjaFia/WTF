@@ -13,14 +13,15 @@ import { Capacitor } from '@capacitor/core';
 import { ServiceErrorMessages, SuccessMessages } from '@core/messages';
 import { AlertService, ImageDownloadService } from '@core/services';
 import {
-  ADD_ON_TYPE_ORDER,
   CartBundleItemDto,
   CartItemDto,
   OrderStatusEnum,
   PaymentMethodEnum,
   PromotionTypeEnum,
 } from '@shared/models';
-import { lineTotal, lineUnitSubtotal } from '@shared/calculations';
+import { breakdownOfCartItem, LineBreakdown, lineTotal } from '@shared/calculations';
+import { AddOnLabelsPipe } from '@shared/pipes';
+import { LineBreakdownComponent } from '../line-breakdown/line-breakdown';
 
 export interface ReceiptData {
   orderNumber?: number | null;
@@ -39,7 +40,7 @@ export interface ReceiptData {
 
 @Component({
   selector: 'app-order-receipt',
-  imports: [CommonModule],
+  imports: [CommonModule, LineBreakdownComponent, AddOnLabelsPipe],
   templateUrl: './order-receipt.html',
 })
 export class OrderReceiptComponent implements OnInit {
@@ -259,11 +260,11 @@ export class OrderReceiptComponent implements OnInit {
   });
 
   protected getItemTotal(item: CartItemDto): number {
-    return lineTotal(item);
+    return this.isBundleLine(item) ? lineTotal(item) : breakdownOfCartItem(item).total;
   }
 
-  protected getUnitSubtotal(item: CartItemDto): number {
-    return lineUnitSubtotal(item);
+  protected getBreakdown(item: CartItemDto): LineBreakdown {
+    return breakdownOfCartItem(item);
   }
 
   protected isBundleLine(item: CartItemDto): boolean {
@@ -287,90 +288,6 @@ export class OrderReceiptComponent implements OnInit {
     return [...(item.bundleItems ?? [])].sort((a, b) =>
       this.normalizeSortLabel(a.name).localeCompare(this.normalizeSortLabel(b.name)),
     );
-  }
-
-  protected getGroupedAddOns(item: CartItemDto): {
-    addOnId: string;
-    name: string;
-    price: number;
-    quantityPerUnit: number;
-    lineTotal: number;
-  }[] {
-    const grouped = new Map<
-      string,
-      { addOnId: string; name: string; price: number; quantityPerUnit: number; sortOrder: number }
-    >();
-    const lineQty = Math.max(1, item.qty);
-
-    for (const addOn of item.addOns ?? []) {
-      const key = `${addOn.addOnId}::${addOn.price}`;
-      const current = grouped.get(key);
-
-      if (current) {
-        current.quantityPerUnit += 1;
-        continue;
-      }
-
-      grouped.set(key, {
-        addOnId: addOn.addOnId,
-        name: addOn.name,
-        price: addOn.price,
-        quantityPerUnit: 1,
-        sortOrder: addOn.addOnType != null ? (ADD_ON_TYPE_ORDER[addOn.addOnType] ?? 99) : 99,
-      });
-    }
-
-    return [...grouped.values()]
-      .sort(
-        (a, b) =>
-          a.sortOrder - b.sortOrder ||
-          this.normalizeSortLabel(a.name).localeCompare(this.normalizeSortLabel(b.name)),
-      )
-      .map((entry) => ({
-        addOnId: entry.addOnId,
-        name: entry.name,
-        price: entry.price,
-        quantityPerUnit: entry.quantityPerUnit,
-        lineTotal: entry.price * entry.quantityPerUnit * lineQty,
-      }));
-  }
-
-  protected getGroupedBundleItemAddOns(bundleItem: CartBundleItemDto): {
-    addOnId: string;
-    name: string;
-    quantityPerUnit: number;
-  }[] {
-    const grouped = new Map<
-      string,
-      { addOnId: string; name: string; quantityPerUnit: number; sortOrder: number }
-    >();
-
-    for (const addOn of bundleItem.addOns ?? []) {
-      const current = grouped.get(addOn.addOnId);
-      if (current) {
-        current.quantityPerUnit += 1;
-        continue;
-      }
-
-      grouped.set(addOn.addOnId, {
-        addOnId: addOn.addOnId,
-        name: addOn.name,
-        quantityPerUnit: 1,
-        sortOrder: addOn.addOnType != null ? (ADD_ON_TYPE_ORDER[addOn.addOnType] ?? 99) : 99,
-      });
-    }
-
-    return [...grouped.values()]
-      .sort(
-        (a, b) =>
-          a.sortOrder - b.sortOrder ||
-          this.normalizeSortLabel(a.name).localeCompare(this.normalizeSortLabel(b.name)),
-      )
-      .map((entry) => ({
-        addOnId: entry.addOnId,
-        name: entry.name,
-        quantityPerUnit: entry.quantityPerUnit,
-      }));
   }
 
   public async generate(): Promise<void> {

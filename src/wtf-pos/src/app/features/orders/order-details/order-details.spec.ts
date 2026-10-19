@@ -72,12 +72,10 @@ interface Internals {
   getOrderDate: (o: OrderDto) => string;
   getOrderItemTotal: (i: OrderItemDto) => number;
   getItemTotal: (i: CartItemDto) => number;
-  getUnitSubtotal: (i: CartItemDto) => number;
+  getBreakdown: (i: CartItemDto) => { rows: { kind: string; label: string; detail: string | null; amount: number }[]; total: number };
   getBundleChildTotalQuantity: (l: CartItemDto, c: CartBundleItemDto) => number;
   getBundleChildDisplayRows: (l: CartItemDto, c: CartBundleItemDto) => number[];
   getSortedBundleItems: (i: CartItemDto) => CartBundleItemDto[];
-  getGroupedAddOns: (i: CartItemDto) => { addOnId: string; quantityPerUnit: number; lineTotal: number }[];
-  getGroupedBundleItemAddOns: (b: CartBundleItemDto) => { addOnId: string; quantityPerUnit: number }[];
   getProductImage: (id: string) => string | null;
 }
 
@@ -469,6 +467,43 @@ describe('OrderDetails', () => {
       expect(line.promoLabel).toContain('10.00');
     });
 
+    it('does not guess a promo for a waiting line the limited promotion left uncovered', async () => {
+      promotions.getActiveDiscountedProductPromotions.mockReturnValue(
+        of([
+          {
+            id: 'pr',
+            name: 'P',
+            isActive: true,
+            startDate: null,
+            endDate: null,
+            items: [{ productId: 'p1', fixedPrice: 10, addOns: [{ addOnProductId: 'a1', quantity: 1 }] }],
+          },
+        ]),
+      );
+      const addOns = [orderItem({ id: 'x', productId: 'a1', productName: 'Cheese', quantity: 1, price: 0 })];
+      await create(
+        makeOrder({
+          status: OrderStatusEnum.Pending,
+          items: [
+            orderItem({ id: 'covered', quantity: 1, addOns, discountPromotionId: 'pr' }),
+            orderItem({ id: 'rest', quantity: 1, addOns }),
+          ],
+        }),
+      );
+      const [covered, rest] = t.detailItems();
+      expect(covered.promoDiscount).toBe(10);
+      expect(rest.promoDiscount).toBeUndefined();
+    });
+
+    it('shows the order note in its own box, and no box without a note', async () => {
+      await create(makeOrder({ specialInstructions: ' Pack separately ' }));
+      expect(fixture.nativeElement.textContent).toContain('Order note');
+      expect(fixture.nativeElement.textContent).toContain('Pack separately');
+
+      await create(makeOrder({ specialInstructions: '  ' }));
+      expect(fixture.nativeElement.textContent).not.toContain('Order note');
+    });
+
     it('does not invent a promo for a finished order that has none stored', async () => {
       promotions.getActiveDiscountedProductPromotions.mockReturnValue(
         of([
@@ -613,7 +648,7 @@ describe('OrderDetails', () => {
       expect(t.getOrderItemTotal(orderItem({ price: null, quantity: 3 }))).toBe(0);
     });
 
-    it('getItemTotal and getUnitSubtotal', () => {
+    it('getItemTotal and getBreakdown', () => {
       const item: CartItemDto = {
         productId: 'p',
         name: 'P',
@@ -622,13 +657,16 @@ describe('OrderDetails', () => {
         addOns: [{ addOnId: 'a', name: 'A', price: 2 }],
       };
       expect(t.getItemTotal(item)).toBe(24);
-      expect(t.getUnitSubtotal(item)).toBe(12);
+      expect(t.getBreakdown(item).rows.map((r) => [r.kind, r.amount])).toEqual([
+        ['base', 20],
+        ['addOn', 4],
+      ]);
+      expect(t.getBreakdown(item).total).toBe(24);
       const bundle: CartItemDto = {
         ...item,
         bundleItems: [{ productId: 'c', name: 'c', price: 0, qty: 1 }],
       };
       expect(t.getItemTotal(bundle)).toBe(20);
-      expect(t.getUnitSubtotal(bundle)).toBe(10);
     });
 
     it('bundle child quantities', () => {
@@ -644,7 +682,7 @@ describe('OrderDetails', () => {
       expect(t.getBundleChildDisplayRows(line, child)).toEqual([0, 1]);
     });
 
-    it('sorts bundle items and groups add-ons', () => {
+    it('sorts bundle items and builds the breakdown rows', () => {
       const line: CartItemDto = {
         productId: 'b',
         name: 'b',
@@ -661,21 +699,10 @@ describe('OrderDetails', () => {
         ],
       };
       expect(t.getSortedBundleItems(line).map((b) => b.name)).toEqual(['Alpha', '2x Zed']);
-      const grouped = t.getGroupedAddOns(line);
-      expect(grouped.map((g) => g.addOnId)).toEqual(['s', 'a']);
-      expect(grouped[1]).toMatchObject({ quantityPerUnit: 2, lineTotal: 20 });
-      expect(
-        t.getGroupedBundleItemAddOns({
-          productId: 'c',
-          name: 'c',
-          price: 0,
-          qty: 1,
-          addOns: [
-            { addOnId: 'a', name: 'A', price: 0 },
-            { addOnId: 'a', name: 'A', price: 0 },
-          ],
-        }),
-      ).toEqual([{ addOnId: 'a', name: 'A', quantityPerUnit: 2 }]);
+      const rows = t.getBreakdown(line).rows;
+      expect(rows.map((r) => r.label)).toEqual(['Price', 'Large', 'Cheese']);
+      expect(rows[1]).toMatchObject({ amount: 2, detail: '₱1.00 each' });
+      expect(rows[2]).toMatchObject({ amount: 20, detail: '₱5.00 × 4 (2 per item)' });
     });
 
     it('labels and variants', () => {

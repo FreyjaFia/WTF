@@ -44,6 +44,7 @@ import {
   CartDrawerComponent,
   CustomerDropdownComponent,
   IconComponent,
+  LineBreakdownComponent,
   OrderChatDrawerComponent,
   OrderReceiptComponent,
   PullToRefreshComponent,
@@ -52,7 +53,6 @@ import {
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import {
   AddOnGroupDto,
-  ADD_ON_TYPE_ORDER,
   AddOnTypeEnum,
   CartAddOnDto,
   CartBundleItemDto,
@@ -81,6 +81,7 @@ import {
 import {
   addOnsTotal,
   allocateDiscounts,
+  buildLineBreakdown,
   cartTotal,
   DiscountMatch,
   DiscountRule,
@@ -91,12 +92,14 @@ import {
   Deal,
   formatPromoLabel,
   isScheduleOpen,
+  LineBreakdown,
   lineUnitSubtotal,
   usesLeft,
   addMoney,
   promoDiscount,
 } from '@shared/calculations';
 import { AppRoutes } from '@shared/constants/app-routes';
+import { AddOnLabelsPipe } from '@shared/pipes';
 import { debounceTime, forkJoin, of, switchMap } from 'rxjs';
 
 type CartDiscountRule = DiscountedProductItemDto & DiscountRule;
@@ -133,6 +136,8 @@ type CatalogScrollTab = ProductSubCategoryEnum | 'bundles';
     ReactiveFormsModule,
     FormsModule,
     IconComponent,
+    LineBreakdownComponent,
+    AddOnLabelsPipe,
     CheckoutModal,
     CartDrawerComponent,
     CustomerDropdownComponent,
@@ -539,6 +544,7 @@ export class OrderEditor implements OnInit, OnDestroy {
         qty: discount.quantity,
         promoLabel: this.getDiscountedPromoLabel(item),
         promoDiscount: promoDiscount(item.price, discount.price, discount.quantity) || null,
+        originalPrice: item.price,
         price: discount.price,
       };
       const rest = item.qty - discount.quantity;
@@ -1619,88 +1625,16 @@ export class OrderEditor implements OnInit, OnDestroy {
     );
   }
 
-  protected getGroupedAddOns(item: CartItemDto): {
-    addOnId: string;
-    name: string;
-    price: number;
-    quantityPerUnit: number;
-    lineTotal: number;
-  }[] {
-    const grouped = new Map<
-      string,
-      { addOnId: string; name: string; price: number; quantityPerUnit: number; sortOrder: number }
-    >();
-    const lineQty = Math.max(1, item.qty);
-
-    for (const addOn of item.addOns ?? []) {
-      const key = `${addOn.addOnId}::${addOn.price}`;
-      const current = grouped.get(key);
-
-      if (current) {
-        current.quantityPerUnit += 1;
-        continue;
-      }
-
-      grouped.set(key, {
-        addOnId: addOn.addOnId,
-        name: addOn.name,
-        price: addOn.price,
-        quantityPerUnit: 1,
-        sortOrder: addOn.addOnType != null ? (ADD_ON_TYPE_ORDER[addOn.addOnType] ?? 99) : 99,
-      });
-    }
-
-    return [...grouped.values()]
-      .sort(
-        (a, b) =>
-          a.sortOrder - b.sortOrder ||
-          this.normalizeSortLabel(a.name).localeCompare(this.normalizeSortLabel(b.name)),
-      )
-      .map((entry) => ({
-        addOnId: entry.addOnId,
-        name: entry.name,
-        price: entry.price,
-        quantityPerUnit: entry.quantityPerUnit,
-        lineTotal: entry.price * entry.quantityPerUnit * lineQty,
-      }));
-  }
-
-  protected getGroupedBundleItemAddOns(bundleItem: CartBundleItemDto): {
-    addOnId: string;
-    name: string;
-    quantityPerUnit: number;
-  }[] {
-    const grouped = new Map<
-      string,
-      { addOnId: string; name: string; quantityPerUnit: number; sortOrder: number }
-    >();
-
-    for (const addOn of bundleItem.addOns ?? []) {
-      const current = grouped.get(addOn.addOnId);
-      if (current) {
-        current.quantityPerUnit += 1;
-        continue;
-      }
-
-      grouped.set(addOn.addOnId, {
-        addOnId: addOn.addOnId,
-        name: addOn.name,
-        quantityPerUnit: 1,
-        sortOrder: addOn.addOnType != null ? (ADD_ON_TYPE_ORDER[addOn.addOnType] ?? 99) : 99,
-      });
-    }
-
-    return [...grouped.values()]
-      .sort(
-        (a, b) =>
-          a.sortOrder - b.sortOrder ||
-          this.normalizeSortLabel(a.name).localeCompare(this.normalizeSortLabel(b.name)),
-      )
-      .map((entry) => ({
-        addOnId: entry.addOnId,
-        name: entry.name,
-        quantityPerUnit: entry.quantityPerUnit,
-      }));
+  protected getBreakdown(item: CartItemDto): LineBreakdown {
+    return buildLineBreakdown({
+      qty: item.qty,
+      listUnitPrice: item.price,
+      addOns: item.addOns,
+      discount: {
+        amount: this.getDiscountedAmount(item),
+        label: this.getDiscountedPromoLabel(item),
+      },
+    });
   }
 
   protected increment(productId: string, index: number): void {

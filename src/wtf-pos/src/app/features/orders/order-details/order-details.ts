@@ -15,6 +15,7 @@ import {
   AvatarComponent,
   BadgeComponent,
   IconComponent,
+  LineBreakdownComponent,
   OrderChatDrawerComponent,
   OrderReceiptComponent,
   PullToRefreshComponent,
@@ -23,7 +24,6 @@ import {
 } from '@shared/components';
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import {
-  ADD_ON_TYPE_ORDER,
   AddOnTypeEnum,
   CartAddOnDto,
   CartBundleItemDto,
@@ -39,10 +39,12 @@ import {
 } from '@shared/models';
 import {
   addOnsTotal,
+  breakdownOfCartItem,
   findBestDiscount,
   formatPromoLabel,
+  isBundleLine,
+  LineBreakdown,
   lineTotal,
-  lineUnitSubtotal,
   promoDiscount,
   savedLineTotal,
   addMoney,
@@ -50,12 +52,15 @@ import {
   subtractMoney,
 } from '@shared/calculations';
 import { AppRoutes } from '@shared/constants/app-routes';
+import { AddOnLabelsPipe } from '@shared/pipes';
 
 @Component({
   selector: 'app-order-details',
   imports: [
     CommonModule,
     IconComponent,
+    LineBreakdownComponent,
+    AddOnLabelsPipe,
     BadgeComponent,
     AvatarComponent,
     PullToRefreshComponent,
@@ -453,11 +458,11 @@ export class OrderDetails implements OnInit {
   }
 
   protected getItemTotal(item: CartItemDto): number {
-    return lineTotal(item);
+    return isBundleLine(item) ? lineTotal(item) : breakdownOfCartItem(item).total;
   }
 
-  protected getUnitSubtotal(item: CartItemDto): number {
-    return lineUnitSubtotal(item);
+  protected getBreakdown(item: CartItemDto): LineBreakdown {
+    return breakdownOfCartItem(item);
   }
 
   protected getBundleChildTotalQuantity(
@@ -483,90 +488,6 @@ export class OrderDetails implements OnInit {
     return [...(item.bundleItems ?? [])].sort((a, b) =>
       this.normalizeSortLabel(a.name).localeCompare(this.normalizeSortLabel(b.name)),
     );
-  }
-
-  protected getGroupedAddOns(item: CartItemDto): {
-    addOnId: string;
-    name: string;
-    price: number;
-    quantityPerUnit: number;
-    lineTotal: number;
-  }[] {
-    const grouped = new Map<
-      string,
-      { addOnId: string; name: string; price: number; quantityPerUnit: number; sortOrder: number }
-    >();
-    const lineQty = Math.max(1, item.qty);
-
-    for (const addOn of item.addOns ?? []) {
-      const key = `${addOn.addOnId}::${addOn.price}`;
-      const current = grouped.get(key);
-
-      if (current) {
-        current.quantityPerUnit += 1;
-        continue;
-      }
-
-      grouped.set(key, {
-        addOnId: addOn.addOnId,
-        name: addOn.name,
-        price: addOn.price,
-        quantityPerUnit: 1,
-        sortOrder: addOn.addOnType != null ? (ADD_ON_TYPE_ORDER[addOn.addOnType] ?? 99) : 99,
-      });
-    }
-
-    return [...grouped.values()]
-      .sort(
-        (a, b) =>
-          a.sortOrder - b.sortOrder ||
-          this.normalizeSortLabel(a.name).localeCompare(this.normalizeSortLabel(b.name)),
-      )
-      .map((entry) => ({
-        addOnId: entry.addOnId,
-        name: entry.name,
-        price: entry.price,
-        quantityPerUnit: entry.quantityPerUnit,
-        lineTotal: entry.price * entry.quantityPerUnit * lineQty,
-      }));
-  }
-
-  protected getGroupedBundleItemAddOns(bundleItem: CartBundleItemDto): {
-    addOnId: string;
-    name: string;
-    quantityPerUnit: number;
-  }[] {
-    const grouped = new Map<
-      string,
-      { addOnId: string; name: string; quantityPerUnit: number; sortOrder: number }
-    >();
-
-    for (const addOn of bundleItem.addOns ?? []) {
-      const current = grouped.get(addOn.addOnId);
-      if (current) {
-        current.quantityPerUnit += 1;
-        continue;
-      }
-
-      grouped.set(addOn.addOnId, {
-        addOnId: addOn.addOnId,
-        name: addOn.name,
-        quantityPerUnit: 1,
-        sortOrder: addOn.addOnType != null ? (ADD_ON_TYPE_ORDER[addOn.addOnType] ?? 99) : 99,
-      });
-    }
-
-    return [...grouped.values()]
-      .sort(
-        (a, b) =>
-          a.sortOrder - b.sortOrder ||
-          this.normalizeSortLabel(a.name).localeCompare(this.normalizeSortLabel(b.name)),
-      )
-      .map((entry) => ({
-        addOnId: entry.addOnId,
-        name: entry.name,
-        quantityPerUnit: entry.quantityPerUnit,
-      }));
   }
 
   protected getProductImage(productId: string): string | null {
@@ -624,6 +545,9 @@ export class OrderDetails implements OnInit {
     >();
     const regularItems: CartItemDto[] = [];
 
+    // A limited promotion marks the lines it covers, so the other lines of a waiting order are not guessed.
+    const hasReservedDiscount = order.items.some((line) => !!line.discountPromotionId);
+
     for (const item of order.items) {
       if (item.bundlePromotionId) {
         const current = groupedBundleItems.get(item.bundlePromotionId) ?? [];
@@ -651,15 +575,17 @@ export class OrderDetails implements OnInit {
       if (item.originalPrice != null) {
         // The promotion was captured with the line, so show exactly what was applied.
         const discount = promoDiscount(item.originalPrice, cartItem.price, cartItem.qty);
+        cartItem.originalPrice = item.originalPrice;
         cartItem.promoLabel = item.promoLabel ?? null;
         cartItem.promoDiscount = discount > 0 ? discount : null;
-      } else if (!this.isFinalized(order.status)) {
+      } else if (!this.isFinalized(order.status) && (!hasReservedDiscount || !!item.discountPromotionId)) {
         // A waiting order has no stored prices yet, so show the promotion it will get from the promotions active today.
         // A finished order with no stored promotion (saved before promotions were recorded) shows none: guessing from
         // today's promotions would invent a discount that was never given.
         const promo = this.getBestDiscountedPromo(cartItem);
         if (promo) {
           const discount = promoDiscount(cartItem.price, promo.price, promo.quantity);
+          cartItem.originalPrice = cartItem.price;
           cartItem.promoLabel = formatPromoLabel(promo.rule, cartItem.price, addOnsTotal(cartItem.addOns));
           cartItem.promoDiscount = discount > 0 ? discount : null;
         }

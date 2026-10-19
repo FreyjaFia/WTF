@@ -63,17 +63,25 @@
         <div style="display: flex; justify-content: space-between; align-items: flex-start">
           <div style="flex: 1; min-width: 0">
             <div style="font-size: 14px; font-weight: 600">
-              {{ item.name }}
+              {{ item.qty }}x {{ item.name }}
             </div>
             @if (item.promoLabel) {
-              <div style="font-size: 11px; color: var(--brand-ink); margin-top: 2px">
+              <div
+                style="
+                  display: inline-block;
+                  margin-top: 4px;
+                  padding: 2px 8px;
+                  border-radius: 9999px;
+                  background: var(--color-emerald-50, #ecfdf5);
+                  color: var(--brand-ink);
+                  font-size: 11px;
+                  font-weight: 600;
+                  white-space: nowrap;
+                "
+              >
                 {{ item.promoLabel }}
               </div>
             }
-            <div style="font-size: 12px; color: var(--color-gray-400); margin-top: 2px">
-              {{ item.qty }} x <span style="color: inherit">&#8369;</span
-              >{{ item.price | number: '1.2-2' }}
-            </div>
           </div>
           <div
             style="
@@ -106,16 +114,9 @@
                 </div>
                 @if (bundleItem.addOns?.length) {
                   <div style="margin-top: 2px; padding-left: 16px">
-                    @for (
-                      addOn of getGroupedBundleItemAddOns(bundleItem);
-                      track addOn.addOnId
-                    ) {
+                    @for (label of bundleItem.addOns | addOnLabels; track $index) {
                       <div style="font-size: 11px; color: var(--color-gray-400); margin-top: 1px">
-                        {{
-                          addOn.quantityPerUnit > 1
-                            ? '+ ' + addOn.quantityPerUnit + 'x ' + addOn.name + ' (per unit)'
-                            : '+ ' + addOn.name
-                        }}
+                        + {{ label }}
                       </div>
                     }
                   </div>
@@ -124,55 +125,9 @@
             }
           </div>
         }
-        @if (item.promoDiscount) {
-          <div style="margin-top: 4px; padding-left: 12px">
-            <div
-              style="
-                display: flex;
-                justify-content: space-between;
-                font-size: 12px;
-                color: var(--brand-ink);
-                font-weight: 600;
-              "
-            >
-              <span>Promo discount</span>
-              <span
-                >-<span style="color: inherit">&#8369;</span
-                >{{ item.promoDiscount | number: '1.2-2' }}</span
-              >
-            </div>
-          </div>
+        @if (!isBundleLine(item)) {
+          <app-line-breakdown variant="receipt" [breakdown]="getBreakdown(item)" />
         }
-        @if (!isBundleLine(item) && item.addOns?.length) {
-          <div style="margin-top: 6px; padding-left: 12px">
-            @for (ao of getGroupedAddOns(item); track ao.addOnId + '-' + ao.price) {
-              <div
-                style="
-                  display: flex;
-                  justify-content: space-between;
-                  font-size: 12px;
-                  color: var(--color-gray-500);
-                  margin-top: 2px;
-                "
-              >
-                <span>{{
-                  ao.quantityPerUnit > 1
-                    ? '+ ' + ao.quantityPerUnit + 'x ' + ao.name + ' (per unit)'
-                    : '+ ' + ao.name
-                }}</span>
-                <span>
-                  @if (ao.lineTotal < 0) {
-                    (
-                  }<span style="color: inherit">&#8369;</span>{{ ao.lineTotal | number: '1.2-2' }}@if
-                    (ao.lineTotal < 0) {
-                      )
-                    }
-                </span>
-              </div>
-            }
-          </div>
-        }
-
         @if (item.specialInstructions?.trim()) {
           <div
             style="
@@ -184,20 +139,6 @@
             "
           >
             {{ item.specialInstructions }}
-          </div>
-        }
-        @if (!item.bundlePromotionId && !isBundleLine(item) && item.addOns?.length) {
-          <div
-            style="
-              margin-top: 4px;
-              text-align: right;
-              font-size: 11px;
-              color: var(--color-gray-400);
-              font-style: italic;
-            "
-          >
-            (<span style="color: inherit">&#8369;</span
-            >{{ getUnitSubtotal(item) | number: '1.2-2' }} / unit)
           </div>
         }
       </div>

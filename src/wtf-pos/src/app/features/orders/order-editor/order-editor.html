@@ -715,19 +715,12 @@
                         </div>
                         @if (bundleItem.addOns?.length) {
                           <div class="mt-0.5 ml-5 space-y-0.5">
-                            @for (
-                              addOn of getGroupedBundleItemAddOns(bundleItem);
-                              track addOn.addOnId
-                            ) {
+                            @for (label of bundleItem.addOns | addOnLabels; track $index) {
                               <div class="flex items-center gap-1.5 text-[11px] text-gray-400">
                                 <span
                                   class="inline-block h-1 w-1 shrink-0 rounded-full bg-gray-300"
                                 ></span>
-                                <span class="min-w-0 wrap-break-word">{{
-                                  addOn.quantityPerUnit > 1
-                                    ? addOn.quantityPerUnit + 'x ' + addOn.name + ' (per unit)'
-                                    : addOn.name
-                                }}</span>
+                                <span class="min-w-0 wrap-break-word">{{ label }}</span>
                               </div>
                             }
                           </div>
@@ -736,71 +729,14 @@
                     }
                   </div>
                 } @else if (c.addOns?.length || getDiscountedAmount(c) > 0) {
-                  <div class="mt-2 ml-19 space-y-1 border-t border-gray-200 pt-2">
-                    @if (getDiscountedAmount(c) > 0) {
-                      <div
-                        class="flex items-center justify-between text-xs font-semibold text-emerald-700"
-                      >
-                        <span class="flex min-w-0 flex-1 items-center gap-1.5 pr-2">
-                          <span
-                            class="inline-block h-1 w-1 shrink-0 rounded-full bg-emerald-400"
-                          ></span>
-                          <span class="min-w-0 wrap-break-word">Promo discount</span>
-                        </span>
-                        <span class="shrink-0"
-                          >-<app-icon
-                            name="icon-peso"
-                            [class]="'inline h-3 w-3 align-[-0.125em]'"
-                            [fill]="'currentColor'"
-                          />{{ getDiscountedAmount(c) | number: '1.2-2' }}</span
-                        >
-                      </div>
-                    }
-                    @for (ao of getGroupedAddOns(c); track ao.addOnId + '-' + ao.price) {
-                      <div class="flex items-center justify-between text-xs text-gray-500">
-                        <span class="flex min-w-0 flex-1 items-center gap-1.5 pr-2">
-                          <span
-                            class="inline-block h-1 w-1 shrink-0 rounded-full bg-gray-400"
-                          ></span>
-                          <span class="min-w-0 wrap-break-word">{{
-                            ao.quantityPerUnit > 1
-                              ? ao.quantityPerUnit + 'x ' + ao.name + ' (per unit)'
-                              : ao.name
-                          }}</span>
-                        </span>
-                        <span class="shrink-0">
-                          +
-                          @if (ao.lineTotal < 0) {
-                            (
-                          }
-                          <app-icon
-                            name="icon-peso"
-                            [class]="'inline h-3 w-3 align-[-0.125em]'"
-                            [fill]="'currentColor'"
-                          />{{ ao.lineTotal | number: '1.2-2' }}
-                          @if (ao.lineTotal < 0) {
-                            )
-                          }
-                        </span>
-                      </div>
-                    }
+                  <div class="mt-2 ml-19 border-t border-gray-200 pt-2">
+                    <app-line-breakdown [breakdown]="getBreakdown(c)" />
                   </div>
                 }
 
                 @if (c.specialInstructions) {
                   <div class="mt-2 ml-19 text-xs wrap-break-word text-gray-500 italic">
                     {{ c.specialInstructions }}
-                  </div>
-                }
-                @if (
-                  !c.bundlePromotionId && !c.bundleItems?.length && c.addOns?.length && !getPartialDiscountNote(c)
-                ) {
-                  <div class="mt-1 ml-19 pt-0.5 text-right text-[11px] text-gray-400 italic">
-                    (<app-icon
-                      name="icon-peso"
-                      [class]="'inline h-2.5 w-2.5 align-[-0.125em]'"
-                      [fill]="'currentColor'"
-                    />{{ getUnitSubtotal(c) | number: '1.2-2' }} / unit)
                   </div>
                 }
               </div>

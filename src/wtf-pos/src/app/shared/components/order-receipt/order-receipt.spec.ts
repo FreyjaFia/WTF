@@ -20,21 +20,14 @@ interface Internals {
   isGenerating(): boolean;
   logoDataUri: { (): string; set(v: string): void };
   getItemTotal(i: CartItemDto): number;
-  getUnitSubtotal(i: CartItemDto): number;
+  getBreakdown(i: CartItemDto): {
+    rows: { kind: string; label: string; detail: string | null; amount: number }[];
+    total: number;
+  };
   isBundleLine(i: CartItemDto): boolean;
   getBundleChildTotalQuantity(l: CartItemDto, c: CartBundleItemDto): number;
   getBundleChildDisplayRows(l: CartItemDto, c: CartBundleItemDto): number[];
   getSortedBundleItems(i: CartItemDto): CartBundleItemDto[];
-  getGroupedAddOns(i: CartItemDto): {
-    addOnId: string;
-    name: string;
-    price: number;
-    quantityPerUnit: number;
-    lineTotal: number;
-  }[];
-  getGroupedBundleItemAddOns(
-    b: CartBundleItemDto,
-  ): { addOnId: string; name: string; quantityPerUnit: number }[];
   waitForLogoRender(): Promise<void>;
 }
 
@@ -189,12 +182,21 @@ describe('OrderReceiptComponent', () => {
       expect(setup(null).i.hasPaymentInfo()).toBe(false);
     });
 
-    it('computes unit subtotal and line total including add-ons', () => {
+    it('builds the breakdown and line total including add-ons', () => {
       const { i } = setup();
       const line = item({ qty: 3, price: 100, addOns: [ao('a', 'A', 10), ao('b', 'B', -5)] });
-      expect(i.getUnitSubtotal(line)).toBe(105);
+      expect(i.getBreakdown(line).rows.map((r) => [r.kind, r.amount])).toEqual([
+        ['base', 300],
+        ['addOn', 30],
+        ['addOn', -15],
+      ]);
+      expect(i.getBreakdown(line).total).toBe(315);
       expect(i.getItemTotal(line)).toBe(315);
       expect(i.getItemTotal(item({ qty: 2 }))).toBe(200);
+      expect(i.getBreakdown(item({ qty: 2 })).rows.map((r) => [r.label, r.detail, r.amount])).toEqual([
+        ['Price', '₱100.00 each', 200],
+      ]);
+      expect(i.getBreakdown(item({ qty: 1 })).rows).toEqual([]);
     });
 
     it('detects bundle lines', () => {
@@ -258,39 +260,19 @@ describe('OrderReceiptComponent', () => {
           ao('n', 'Alpha', 1),
         ],
       });
-      expect(i.getGroupedAddOns(line)).toEqual([
-        { addOnId: 'l', name: 'Large', price: 20, quantityPerUnit: 1, lineTotal: 40 },
-        { addOnId: 's', name: 'Sugar', price: 5, quantityPerUnit: 2, lineTotal: 20 },
-        { addOnId: 's', name: 'Sugar', price: 8, quantityPerUnit: 1, lineTotal: 16 },
-        { addOnId: 'n', name: 'Alpha', price: 1, quantityPerUnit: 1, lineTotal: 2 },
+      const rows = i.getBreakdown(line).rows.slice(1);
+      expect(rows.map((r) => [r.label, r.detail, r.amount])).toEqual([
+        ['Large', '₱20.00 each', 40],
+        ['Sugar', '₱5.00 × 4 (2 per item)', 20],
+        ['Sugar', '₱8.00 each', 16],
+        ['Alpha', '₱1.00 each', 2],
       ]);
-      expect(i.getGroupedAddOns(item())).toEqual([]);
     });
 
-    it('uses a minimum line qty of 1 for grouped add-on totals', () => {
+    it('uses a minimum line qty of 1 for the add-on rows', () => {
       const { i } = setup();
-      const [g] = i.getGroupedAddOns(item({ qty: 0, addOns: [ao('a', 'A', 5)] }));
-      expect(g.lineTotal).toBe(5);
-    });
-
-    it('groups bundle child add-ons by id and sorts by type then name', () => {
-      const { i } = setup();
-      const child: CartBundleItemDto = {
-        productId: 'c',
-        name: 'C',
-        price: 0,
-        qty: 1,
-        addOns: [
-          ao('t', 'Boba', 0, AddOnTypeEnum.Topping),
-          ao('z', 'Small', 0, AddOnTypeEnum.Size),
-          ao('t', 'Boba', 0, AddOnTypeEnum.Topping),
-        ],
-      };
-      expect(i.getGroupedBundleItemAddOns(child)).toEqual([
-        { addOnId: 'z', name: 'Small', quantityPerUnit: 1 },
-        { addOnId: 't', name: 'Boba', quantityPerUnit: 2 },
-      ]);
-      expect(i.getGroupedBundleItemAddOns({ ...child, addOns: undefined })).toEqual([]);
+      const rows = i.getBreakdown(item({ qty: 0, addOns: [ao('a', 'A', 5)] })).rows;
+      expect(rows[1].amount).toBe(5);
     });
   });
 
