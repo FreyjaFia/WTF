@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Auth;
+using WTF.Api.Features.Orders;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
-using WTF.Api.Features.Orders;
 using WTF.Api.Features.Promotions.DTOs;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
@@ -17,7 +17,7 @@ namespace WTF.Tests.Database;
 public class PromotionLimitDatabaseTests
 {
     private static CreateOrderHandler Handler(WTFDbContext db, Guid userId) =>
-        new(db, TestRequest.As(userId, AppRoles.Admin, "UTC"), TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(), TestFakes.Conversations());
+        new(db, TestRequest.As(userId, AppRoles.Admin, "UTC"), TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(db));
 
     private static CreateOrderCommand Sale(Guid productId, int quantity = 1, decimal? expected = null) => new()
     {

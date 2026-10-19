@@ -1,5 +1,6 @@
 using MediatR;
 using WTF.Api.Common.Auth;
+using WTF.Api.Features.Inventory;
 using WTF.Api.Features.Orders;
 using WTF.Api.Features.Orders.Enums;
 
@@ -164,11 +165,19 @@ public static class OrderEndpoints
             })
             .RequireAuthorization(AppPolicies.OrdersOverride);
 
+        orderGroup.MapGet("/{id:guid}/stock-movements",
+            async (Guid id, ISender sender) =>
+            {
+                var result = await sender.Send(new GetOrderStockMovementsQuery(id));
+                return result is not null ? Results.Ok(result) : Results.NotFound();
+            })
+            .RequireAuthorization(AppPolicies.StockMovementsRead);
+
         // PATCH /api/orders/{id}/void - Void order (Pending -> Cancelled, Completed -> Refunded)
         orderGroup.MapPatch("/{id:guid}/void",
             async (Guid id, VoidOrderRequestDto request, ISender sender) =>
             {
-                var result = await sender.Send(new VoidOrderCommand(id, request.Note));
+                var result = await sender.Send(new VoidOrderCommand(id, request.Note, request.NotReturnedLineIds));
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             })
             .RequireAuthorization(AppPolicies.OrdersWrite);
@@ -176,5 +185,5 @@ public static class OrderEndpoints
         return app;
     }
 
-    private sealed record VoidOrderRequestDto(string? Note);
+    private sealed record VoidOrderRequestDto(string? Note, List<Guid>? NotReturnedLineIds = null);
 }

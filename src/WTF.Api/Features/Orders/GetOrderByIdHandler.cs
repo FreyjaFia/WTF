@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Orders;
+using WTF.Api.Features.Inventory;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Calculations.Orders;
@@ -89,6 +90,8 @@ public class GetOrderByIdHandler(WTFDbContext db, IHttpContextAccessor? httpCont
 
         var totalAmount = OrderMetrics.ComputeOrderTotal(order, overridePrices, previewPrices);
 
+        var stockLineIds = await LoadStockLineIdsAsync(order, parentItems, cancellationToken);
+
         return new OrderDto(
             order.Id,
             order.OrderNumber,
@@ -119,7 +122,36 @@ public class GetOrderByIdHandler(WTFDbContext db, IHttpContextAccessor? httpCont
             order.ReadyAt,
             order.ReviewReasons,
             order.QuotedTotal,
-            order.OfflineLocalId
+            order.OfflineLocalId,
+            StockLineIds: stockLineIds
         );
+    }
+
+    // The lines whose product (or one of its add-ons) took stock when the sale completed, so a refund only asks about those.
+    private async Task<List<Guid>> LoadStockLineIdsAsync(
+        WTF.Domain.Entities.Order order,
+        List<WTF.Domain.Entities.OrderItem> parentItems,
+        CancellationToken cancellationToken)
+    {
+        if (order.StatusId != (int)OrderStatusEnum.Completed)
+        {
+            return [];
+        }
+
+        var productIds = await db.StockMovements
+            .AsNoTracking()
+            .Where(m => m.ReferenceType == StockMovementTypes.OrderReference
+                        && m.ReferenceId == order.Id
+                        && m.ProductId != null
+                        && m.MovementType == StockMovementTypes.Sale)
+            .Select(m => m.ProductId!.Value)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+
+        return parentItems
+            .Where(oi => productIds.Contains(oi.ProductId)
+                         || oi.InverseParentOrderItem.Any(child => productIds.Contains(child.ProductId)))
+            .Select(oi => oi.Id)
+            .ToList();
     }
 }

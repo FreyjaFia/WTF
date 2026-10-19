@@ -345,6 +345,7 @@ public partial class WTFDbContext : DbContext
                 .HasFilter("([Sku] IS NOT NULL)");
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_Items_Id");
+            entity.Property(e => e.AllowNegativeStock).HasDefaultValue(true, "DF_Items_AllowNegativeStock");
             entity.Property(e => e.Barcode).HasMaxLength(100);
             entity.Property(e => e.CostPrice).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())", "DF_Items_CreatedAt");
@@ -918,6 +919,10 @@ public partial class WTFDbContext : DbContext
                 .HasForeignKey(d => d.ItemId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_StockMovements_Items");
+
+            entity.HasOne(d => d.Product).WithMany(p => p.StockMovements)
+                .HasForeignKey(d => d.ProductId)
+                .HasConstraintName("FK_StockMovements_Products");
         });
 
         modelBuilder.Entity<User>(entity =>

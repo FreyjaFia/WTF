@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Features.Audit.Enums;
+using WTF.Api.Features.Inventory;
 using WTF.Api.Features.Items.DTOs;
 using WTF.Api.Services;
 using WTF.Domain.Data;
@@ -38,10 +39,11 @@ public class AddItemStockHandler(
         }
 
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
-        var before = item.CurrentQuantity;
-        var after = before + request.Quantity;
 
-        item.CurrentQuantity = after;
+        await using var transaction = db.Database.CurrentTransaction is null
+            ? await db.Database.BeginTransactionAsync(cancellationToken)
+            : null;
+
         item.UpdatedAt = DateTime.UtcNow;
         item.UpdatedBy = userId;
         if (request.UnitCost.HasValue)
@@ -61,10 +63,16 @@ public class AddItemStockHandler(
             item.CostPrice = request.UnitCost;
         }
 
+        // The balance changes in one statement, so a sale completed at the same moment is never overwritten.
+        var applied = await StockBalance.ApplyAsync(db, item.Id, request.Quantity, true, cancellationToken)
+            ?? throw new InvalidOperationException("The item was not found.");
+        var before = applied.Before;
+        var after = applied.After;
+
         var movement = new StockMovement
         {
             ItemId = item.Id,
-            MovementType = "AddStock",
+            MovementType = StockMovementTypes.AddStock,
             QuantityDelta = request.Quantity,
             QuantityBefore = before,
             QuantityAfter = after,
@@ -76,6 +84,11 @@ public class AddItemStockHandler(
 
         db.StockMovements.Add(movement);
         await db.SaveChangesAsync(cancellationToken);
+
+        if (transaction is not null)
+        {
+            await transaction.CommitAsync(cancellationToken);
+        }
 
         await auditService.LogAsync(
             AuditAction.ItemStockAdded,

@@ -41,6 +41,6 @@ public class GetItemsHandler(WTFDbContext db) : IRequestHandler<GetItemsQuery, L
             .OrderBy(i => i.Name)
             .ToListAsync(cancellationToken);
 
-        return items.Select(ItemMapping.ToDto).ToList();
+        return items.Select(item => ItemMapping.ToDto(item)).ToList();
     }
 }

@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using WTF.Calculations.Inventory;
 using WTF.Calculations.Orders;
 using WTF.Calculations.Sales;
 using WTF.Domain.Entities;
@@ -45,6 +46,8 @@ public class SharedCasesTests
 
     private sealed record ScheduleCase(string Name, byte? DaysOfWeek, string? StartTime, string? EndTime, string Local, bool Expected);
 
+    private sealed record AdjustmentCase(string Name, decimal Shown, decimal Counted, decimal Expected);
+
     private sealed record CashCase(string Name, decimal Total, decimal? Tips, decimal Received, decimal ExpectedDue, decimal ExpectedChange);
 
     private sealed record Cases(
@@ -55,7 +58,8 @@ public class SharedCasesTests
         List<AverageCase> Average,
         List<PercentCase> PercentOfTotal,
         List<CashCase> CashPayment,
-        List<ScheduleCase> ScheduleOpen);
+        List<ScheduleCase> ScheduleOpen,
+        List<AdjustmentCase> StockAdjustment);
 
     private static readonly Lazy<Cases> Loaded = new(() =>
     {
@@ -80,6 +84,8 @@ public class SharedCasesTests
     public static IEnumerable<object[]> PercentCaseNames() => Loaded.Value.PercentOfTotal.Select(c => new object[] { c.Name });
 
     public static IEnumerable<object[]> CashCaseNames() => Loaded.Value.CashPayment.Select(c => new object[] { c.Name });
+
+    public static IEnumerable<object[]> AdjustmentCaseNames() => Loaded.Value.StockAdjustment.Select(c => new object[] { c.Name });
 
     /// <summary>A stable id for a name in the file, so "cheese" is the same add-on in the cart and in the rule.</summary>
     private static Guid IdFor(string name) => new(MD5.HashData(Encoding.UTF8.GetBytes(name)));
@@ -164,6 +170,15 @@ public class SharedCasesTests
         CashPayment.AmountDue(c.Total, c.Tips).ShouldBe(c.ExpectedDue);
         CashPayment.Change(c.Received, c.Total, c.Tips).ShouldBe(c.ExpectedChange);
         CashPayment.ChangeToGive(c.Received, c.Total, c.Tips).ShouldBe(Math.Max(0m, c.ExpectedChange));
+    }
+
+    [Theory]
+    [MemberData(nameof(AdjustmentCaseNames))]
+    public void StockAdjustment_MatchesTheSharedCase(string name)
+    {
+        var c = Loaded.Value.StockAdjustment.Single(x => x.Name == name);
+
+        StockRules.AdjustmentDelta(c.Shown, c.Counted).ShouldBe(c.Expected);
     }
 
     [Theory]

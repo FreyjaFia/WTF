@@ -13,6 +13,7 @@ public record ItemDto(
     decimal? WarningQuantity,
     decimal? CriticalQuantity,
     bool IsActive,
+    bool AllowNegativeStock,
     DateTime CreatedAt,
     Guid CreatedBy,
     DateTime? UpdatedAt,
@@ -34,4 +35,9 @@ public record StockMovementDto(
     string? Notes,
     DateTime CreatedAt,
     Guid CreatedBy,
-    string CreatedByName);
+    string CreatedByName,
+    Guid? ProductId = null,
+    string? ProductName = null,
+    int? OrderNumber = null);
+
+public record PagedStockMovementsDto(List<StockMovementDto> Items, int TotalCount);

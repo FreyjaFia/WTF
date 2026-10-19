@@ -15,7 +15,8 @@ public record OfflineSyncResultDto(
     int? OrderNumber,
     OrderStatusEnum? Status,
     List<string> Reasons,
-    string? Error);
+    string? Error,
+    List<string>? StockWarnings = null);
 
 public class SyncOfflineOrdersHandler(WTFDbContext db, ISender sender, IHttpContextAccessor httpContextAccessor)
     : IRequestHandler<SyncOfflineOrdersCommand, List<OfflineSyncResultDto>>
@@ -62,12 +63,12 @@ public class SyncOfflineOrdersHandler(WTFDbContext db, ISender sender, IHttpCont
                 : [];
 
             var saved = await sender.Send(
-                order with { OfflineLocalId = localId, HeldReasons = reasons.Count > 0 ? reasons : null, GateHeld = true },
+                order with { OfflineLocalId = localId, HeldReasons = reasons.Count > 0 ? reasons : null, GateHeld = true, HonorStock = true },
                 cancellationToken);
 
             await transaction.CommitAsync(cancellationToken);
 
-            return new OfflineSyncResultDto(localId, saved.Id, saved.OrderNumber, saved.Status, reasons, null);
+            return new OfflineSyncResultDto(localId, saved.Id, saved.OrderNumber, saved.Status, reasons, null, saved.StockWarnings);
         }
         catch (Exception ex) when (ex is InvalidOperationException or ArgumentException)
         {

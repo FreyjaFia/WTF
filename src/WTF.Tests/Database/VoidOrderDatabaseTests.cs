@@ -10,7 +10,7 @@ namespace WTF.Tests.Database;
 public class VoidOrderDatabaseTests
 {
     private static VoidOrderHandler Handler(WTF.Domain.Data.WTFDbContext db, Guid userId) =>
-        new(db, TestRequest.As(userId, AppRoles.Admin), TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(), TestFakes.Conversations());
+        new(db, TestRequest.As(userId, AppRoles.Admin), TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(db));
 
     [SqlFact]
     public async Task Handle_FailureWhileSaving_RollsBackStatusAndPrices()

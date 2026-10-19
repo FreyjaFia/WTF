@@ -1,3 +1,4 @@
+using WTF.Api.Features.Inventory;
 using WTF.Api.Features.Items.DTOs;
 using WTF.Domain.Entities;
 
@@ -5,7 +6,7 @@ namespace WTF.Api.Features.Items;
 
 internal static class ItemMapping
 {
-    public static ItemDto ToDto(Item item)
+    public static ItemDto ToDto(Item item, StockMovementLookups? lookups = null)
     {
         return new ItemDto(
             item.Id,
@@ -20,6 +21,7 @@ internal static class ItemMapping
             item.WarningQuantity,
             item.CriticalQuantity,
             item.IsActive,
+            item.AllowNegativeStock,
             item.CreatedAt,
             item.CreatedBy,
             item.UpdatedAt,
@@ -48,20 +50,7 @@ internal static class ItemMapping
                 .ToList(),
             item.StockMovements
                 .OrderByDescending(m => m.CreatedAt)
-                .Select(m => new StockMovementDto(
-                    m.Id,
-                    m.ItemId,
-                    m.MovementType,
-                    m.QuantityDelta,
-                    m.QuantityBefore,
-                    m.QuantityAfter,
-                    m.UnitCost,
-                    m.ReferenceType,
-                    m.ReferenceId,
-                    m.Notes,
-                    m.CreatedAt,
-                    m.CreatedBy,
-                    $"{m.CreatedByNavigation.FirstName} {m.CreatedByNavigation.LastName}".Trim()))
+                .Select(m => StockMovementMapping.ToDto(m, lookups ?? StockMovementLookups.Empty))
                 .ToList());
     }
 }

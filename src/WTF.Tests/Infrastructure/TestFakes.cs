@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.SignalR;
 using NSubstitute;
+using WTF.Api.Features.Inventory;
 using WTF.Api.Hubs;
 using WTF.Api.Services;
+using WTF.Domain.Data;
 
 namespace WTF.Tests.Infrastructure;
 
@@ -9,6 +11,8 @@ namespace WTF.Tests.Infrastructure;
 internal static class TestFakes
 {
     public static IAuditService Audit() => Substitute.For<IAuditService>();
+
+    public static IOrderStockService Stock(WTFDbContext db) => new OrderStockService(db, Audit());
 
     public static IPushNotificationService Push() => Substitute.For<IPushNotificationService>();
 

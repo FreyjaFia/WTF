@@ -18,10 +18,10 @@ public class OrderStatusChatLineTests
     private readonly IConversationNotifier _conversations = TestFakes.Conversations();
 
     private UpdateOrderHandler Update() =>
-        new(_data.Open(), TestRequest.As(_userId, AppRoles.Admin), TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(), _conversations);
+        new(_data.Open(), TestRequest.As(_userId, AppRoles.Admin), TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(), _conversations, TestFakes.Stock(_data.Open()));
 
     private VoidOrderHandler Void() =>
-        new(_data.Open(), TestRequest.As(_userId, AppRoles.Admin), TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(), _conversations);
+        new(_data.Open(), TestRequest.As(_userId, AppRoles.Admin), TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(), _conversations, TestFakes.Stock(_data.Open()));
 
     private (Guid OrderId, Guid ProductId, Guid CustomerId) AddOrder(
         OrderStatusEnum status = OrderStatusEnum.Pending, OrderSourceEnum source = OrderSourceEnum.CustomerLink)

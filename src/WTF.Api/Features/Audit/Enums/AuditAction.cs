@@ -22,6 +22,7 @@ public enum AuditAction
     ItemDeleted,
     ItemRestored,
     ItemStockAdded,
+    ItemStockAdjusted,
     ProductItemLinked,
     OrderCreated,
     OrderUpdated,
@@ -37,6 +38,8 @@ public enum AuditAction
     OrderReviewApproved,
     OrderReviewRejected,
     OrderMarkedReady,
+    OrderStockDeducted,
+    OrderStockRestored,
     ConversationStarted,
     ChatImageRejected,
     ChatImageRemoved

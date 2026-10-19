@@ -16,7 +16,7 @@ public class OfflineSyncDatabaseTests
     private static SyncOfflineOrdersHandler Handler(WTFDbContext db, Guid userId)
     {
         var accessor = TestRequest.As(userId, AppRoles.Admin);
-        var create = new CreateOrderHandler(db, accessor, TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(), TestFakes.Conversations());
+        var create = new CreateOrderHandler(db, accessor, TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(db));
         var sender = Substitute.For<ISender>();
         sender.Send(Arg.Any<IRequest<OrderDto>>(), Arg.Any<CancellationToken>())
             .Returns(call => create.Handle((CreateOrderCommand)call.Arg<IRequest<OrderDto>>(), call.Arg<CancellationToken>()));

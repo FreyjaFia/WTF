@@ -100,7 +100,7 @@ internal static class DbOrderSeed
 public class UpdateOrderDatabaseTests
 {
     private static UpdateOrderHandler Handler(WTF.Domain.Data.WTFDbContext db, Guid userId) =>
-        new(db, TestRequest.As(userId, AppRoles.Admin), TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(), TestFakes.Conversations());
+        new(db, TestRequest.As(userId, AppRoles.Admin), TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(db));
 
     private static OrderItemRequestDto Line(Guid productId, int qty = 1, string? instructions = null, params OrderItemRequestDto[] addOns) =>
         new(productId, qty, [.. addOns], instructions, null);

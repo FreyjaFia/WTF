@@ -1,5 +1,6 @@
 using MediatR;
 using WTF.Api.Common.Auth;
+using WTF.Api.Features.Inventory;
 using WTF.Api.Features.Items;
 
 namespace WTF.Api.Endpoints;
@@ -77,6 +78,27 @@ public static class ItemEndpoints
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             })
             .RequireAuthorization(AppPolicies.StockMovementsWrite);
+
+        itemGroup.MapPost("/{id:guid}/stock/adjust",
+            async (Guid id, AdjustItemStockCommand command, ISender sender) =>
+            {
+                if (id != command.ItemId)
+                {
+                    return Results.BadRequest("Item ID mismatch");
+                }
+
+                var result = await sender.Send(command);
+                return result is not null ? Results.Ok(result) : Results.NotFound();
+            })
+            .RequireAuthorization(AppPolicies.StockMovementsWrite);
+
+        itemGroup.MapGet("/{id:guid}/movements",
+            async (Guid id, string? type, int? page, int? pageSize, ISender sender) =>
+            {
+                var result = await sender.Send(new GetItemMovementsQuery(id, type, page ?? 1, pageSize ?? 25));
+                return result is not null ? Results.Ok(result) : Results.NotFound();
+            })
+            .RequireAuthorization(AppPolicies.StockMovementsRead);
 
         itemGroup.MapPost("/product-links",
             async (LinkProductItemCommand command, ISender sender) =>

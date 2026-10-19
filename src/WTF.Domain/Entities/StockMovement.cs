@@ -26,7 +26,13 @@ public partial class StockMovement
 
     public Guid CreatedBy { get; set; }
 
+    public Guid? ProductId { get; set; }
+
+    public Guid? OrderItemId { get; set; }
+
     public virtual User CreatedByNavigation { get; set; } = null!;
 
     public virtual Item Item { get; set; } = null!;
+
+    public virtual Product? Product { get; set; }
 }

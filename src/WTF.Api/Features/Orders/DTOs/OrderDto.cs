@@ -19,4 +19,6 @@ public record OrderDto(
     DateTime? ReadyAt = null,
     string? ReviewReasons = null,
     decimal? QuotedTotal = null,
-    string? OfflineLocalId = null);
+    string? OfflineLocalId = null,
+    List<string>? StockWarnings = null,
+    List<Guid>? StockLineIds = null);

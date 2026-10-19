@@ -61,7 +61,7 @@ public class OrderLinkDatabaseTests
             .Returns(async call =>
             {
                 await using var db = database.CreateContext();
-                return await new CreateOrderHandler(db, TestRequest.None(), TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(), TestFakes.Conversations())
+                return await new CreateOrderHandler(db, TestRequest.None(), TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(db))
                     .Handle((CreateOrderCommand)call.Arg<IRequest<OrderDto>>(), call.Arg<CancellationToken>());
             });
         return sender;

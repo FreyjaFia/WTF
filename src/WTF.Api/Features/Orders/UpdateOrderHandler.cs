@@ -8,6 +8,7 @@ using WTF.Api.Common.Orders;
 using WTF.Api.Common.Time;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Conversations;
+using WTF.Api.Features.Inventory;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Features.Products.Enums;
@@ -65,7 +66,8 @@ public class UpdateOrderHandler(
     IHubContext<DashboardHub> dashboardHub,
     IAuditService auditService,
     IPushNotificationService pushNotifications,
-    IConversationNotifier conversationNotifier) : IRequestHandler<UpdateOrderCommand, OrderDto?>
+    IConversationNotifier conversationNotifier,
+    IOrderStockService stockService) : IRequestHandler<UpdateOrderCommand, OrderDto?>
 {
     public async Task<OrderDto?> Handle(UpdateOrderCommand request, CancellationToken cancellationToken)
     {
@@ -396,6 +398,11 @@ public class UpdateOrderHandler(
             order.OverriddenAt = order.UpdatedAt;
         }
 
+        // The order lines are rebuilt and the stock follows them, so both succeed or fail together.
+        await using var ownTransaction = db.Database.CurrentTransaction is null
+            ? await db.Database.BeginTransactionAsync(cancellationToken)
+            : null;
+
         // Update items: remove old, add new
         db.OrderItems.RemoveRange(order.OrderItems);
         db.OrderBundlePromotions.RemoveRange(order.OrderBundlePromotions);
@@ -503,6 +510,21 @@ public class UpdateOrderHandler(
                 cancellationToken);
 
         await db.SaveChangesAsync(cancellationToken);
+
+        // A sale takes stock when the order becomes completed; a correction moves only the difference.
+        var stock = newStatus == OrderStatusEnum.Completed
+            ? await stockService.DeductForOrderAsync(
+                order.Id,
+                httpContextAccessor.HttpContext?.User.GetUserId() ?? order.CreatedBy,
+                new StockDeductionOptions(IsCorrection: isOverride),
+                cancellationToken)
+            : StockDeductionResult.None;
+
+        if (ownTransaction is not null)
+        {
+            await ownTransaction.CommitAsync(cancellationToken);
+        }
+
         gate.Dispose();
         await conversationNotifier.OrderChangedAsync(order, chat, cancellationToken);
 
@@ -651,7 +673,8 @@ public class UpdateOrderHandler(
             null,
             bundlePromotions,
             order.OverrideReason,
-            order.OverriddenAt
+            order.OverriddenAt,
+            StockWarnings: stock.Warnings
         );
     }
 

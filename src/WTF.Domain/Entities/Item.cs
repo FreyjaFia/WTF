@@ -34,6 +34,8 @@ public partial class Item
 
     public decimal? UnitsPerStockUnit { get; set; }
 
+    public bool AllowNegativeStock { get; set; }
+
     public virtual User CreatedByNavigation { get; set; } = null!;
 
     public virtual ICollection<ItemPriceHistory> ItemPriceHistories { get; set; } = new List<ItemPriceHistory>();

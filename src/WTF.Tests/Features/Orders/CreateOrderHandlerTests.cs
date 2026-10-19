@@ -27,7 +27,7 @@ public class CreateOrderHandlerTests
     private readonly IConversationNotifier _conversations = TestFakes.Conversations();
 
     private CreateOrderHandler Handler(string? timeZone = null) =>
-        new(TestDb.Create(_dbName), TestRequest.As(_userId, AppRoles.Admin, timeZone), _hub, _audit, _push, _conversations);
+        new(TestDb.Create(_dbName), TestRequest.As(_userId, AppRoles.Admin, timeZone), _hub, _audit, _push, _conversations, TestFakes.Stock(TestDb.Create(_dbName)));
 
     private static OrderItemRequestDto Line(Guid productId, int qty = 1, Guid? bundle = null, string? note = null, params OrderItemRequestDto[] addOns) =>
         new(productId, qty, [.. addOns], note, bundle);

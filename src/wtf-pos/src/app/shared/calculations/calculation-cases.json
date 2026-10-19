@@ -1319,5 +1319,31 @@
       "local": "2026-06-10T03:00:00",
       "expected": true
     }
+  ],
+  "stockAdjustment": [
+    {
+      "name": "a lower count is a negative difference",
+      "shown": 10,
+      "counted": 7,
+      "expected": -3
+    },
+    {
+      "name": "the same count changes nothing",
+      "shown": 10,
+      "counted": 10,
+      "expected": 0
+    },
+    {
+      "name": "a negative balance is lifted to the count",
+      "shown": -4,
+      "counted": 0,
+      "expected": 4
+    },
+    {
+      "name": "fractions stay to three decimals",
+      "shown": 2.5,
+      "counted": 1.2346,
+      "expected": -1.265
+    }
   ]
 }

@@ -26,7 +26,7 @@ public class OfflineSyncTests
     {
         var db = TestDb.Create(_dbName);
         var accessor = TestRequest.As(_userId, AppRoles.Admin);
-        var create = new CreateOrderHandler(db, accessor, TestFakes.Hub(), _audit, TestFakes.Push(), TestFakes.Conversations());
+        var create = new CreateOrderHandler(db, accessor, TestFakes.Hub(), _audit, TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(db));
         var sender = Substitute.For<ISender>();
         sender.Send(Arg.Any<CreateOrderCommand>(), Arg.Any<CancellationToken>())
             .Returns(call => create.Handle(call.Arg<CreateOrderCommand>(), call.Arg<CancellationToken>()));
@@ -236,7 +236,7 @@ public class OfflineSyncTests
 
         var offline = SyncOne(Order("OFF-19-aaaa", OrderStatusEnum.Completed, Line(croissant, 1, 50m)));
         var live = new CreateOrderHandler(
-                TestDb.Create(_dbName), TestRequest.As(_userId, AppRoles.Admin), TestFakes.Hub(), _audit, TestFakes.Push(), TestFakes.Conversations())
+                TestDb.Create(_dbName), TestRequest.As(_userId, AppRoles.Admin), TestFakes.Hub(), _audit, TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(TestDb.Create(_dbName)))
             .Handle(new CreateOrderCommand { Status = OrderStatusEnum.Completed, Items = [Line(croissant, 1, null)] }, CancellationToken.None);
         await Task.WhenAll(offline, live);
 
@@ -252,7 +252,7 @@ public class OfflineSyncTests
         var croissant = await SeedProduct("Croissant", 100m);
         var command = new CreateOrderCommand { Status = OrderStatusEnum.PendingReview, Items = [Line(croissant, 1, 50m)] };
         var handler = new CreateOrderHandler(
-            TestDb.Create(_dbName), TestRequest.As(_userId, AppRoles.Admin), TestFakes.Hub(), _audit, TestFakes.Push(), TestFakes.Conversations());
+            TestDb.Create(_dbName), TestRequest.As(_userId, AppRoles.Admin), TestFakes.Hub(), _audit, TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(TestDb.Create(_dbName)));
 
         await Should.ThrowAsync<InvalidOperationException>(() => handler.Handle(command, CancellationToken.None));
     }
@@ -435,7 +435,7 @@ public class OfflineSyncTests
     public async Task Create_AsWaitingForReview_IsRefused()
     {
         var latte = await SeedProduct("Latte", 150m);
-        var handler = new CreateOrderHandler(TestDb.Create(_dbName), TestRequest.As(_userId, AppRoles.Admin), TestFakes.Hub(), _audit, TestFakes.Push(), TestFakes.Conversations());
+        var handler = new CreateOrderHandler(TestDb.Create(_dbName), TestRequest.As(_userId, AppRoles.Admin), TestFakes.Hub(), _audit, TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(TestDb.Create(_dbName)));
 
         var ex = await Should.ThrowAsync<InvalidOperationException>(() =>
             handler.Handle(Order(null, OrderStatusEnum.PendingReview, Line(latte, 1, null)), CancellationToken.None));
@@ -464,7 +464,7 @@ public class OfflineSyncTests
     {
         var id = await SeedHeldOrder();
         var handler = new ApproveHeldOrderHandler(
-            TestDb.Create(_dbName), TestRequest.As(_userId, AppRoles.Admin), TestFakes.Hub(), _audit, TestFakes.Conversations(), GetSender());
+            TestDb.Create(_dbName), TestRequest.As(_userId, AppRoles.Admin), TestFakes.Hub(), _audit, TestFakes.Conversations(), GetSender(), TestFakes.Stock(TestDb.Create(_dbName)));
 
         var dto = await handler.Handle(new ApproveHeldOrderCommand(id), CancellationToken.None);
 
@@ -479,7 +479,7 @@ public class OfflineSyncTests
         var latte = await SeedProduct("Latte", 150m);
         var result = await SyncOne(Order("OFF-21-aaaa", OrderStatusEnum.Completed, Line(latte, 1, 150m)));
         var handler = new ApproveHeldOrderHandler(
-            TestDb.Create(_dbName), TestRequest.As(_userId, AppRoles.Admin), TestFakes.Hub(), _audit, TestFakes.Conversations(), GetSender());
+            TestDb.Create(_dbName), TestRequest.As(_userId, AppRoles.Admin), TestFakes.Hub(), _audit, TestFakes.Conversations(), GetSender(), TestFakes.Stock(TestDb.Create(_dbName)));
 
         var ex = await Should.ThrowAsync<InvalidOperationException>(() =>
             handler.Handle(new ApproveHeldOrderCommand(result.OrderId!.Value), CancellationToken.None));
@@ -519,7 +519,7 @@ public class OfflineSyncTests
     {
         var id = await SeedHeldOrder();
         var handler = new VoidOrderHandler(
-            TestDb.Create(_dbName), TestRequest.As(_userId, AppRoles.Admin), TestFakes.Hub(), _audit, TestFakes.Push(), TestFakes.Conversations());
+            TestDb.Create(_dbName), TestRequest.As(_userId, AppRoles.Admin), TestFakes.Hub(), _audit, TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(TestDb.Create(_dbName)));
 
         var ex = await Should.ThrowAsync<InvalidOperationException>(() =>
             handler.Handle(new VoidOrderCommand(id), CancellationToken.None));

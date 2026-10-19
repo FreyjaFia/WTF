@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using WTF.Api.Features.Inventory;
 using WTF.Api.Features.Items.DTOs;
 using WTF.Domain.Data;
 
@@ -21,6 +22,12 @@ public class GetItemByIdHandler(WTFDbContext db) : IRequestHandler<GetItemByIdQu
                 .ThenInclude(m => m.CreatedByNavigation)
             .FirstOrDefaultAsync(i => i.Id == request.Id, cancellationToken);
 
-        return item is null ? null : ItemMapping.ToDto(item);
+        if (item is null)
+        {
+            return null;
+        }
+
+        var lookups = await StockMovementMapping.LoadLookupsAsync(db, item.StockMovements, cancellationToken);
+        return ItemMapping.ToDto(item, lookups);
     }
 }

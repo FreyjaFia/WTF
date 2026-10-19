@@ -7,6 +7,7 @@ using WTF.Api.Common.Extensions;
 using WTF.Api.Common.Orders;
 using WTF.Api.Common.Time;
 using WTF.Api.Features.Audit.Enums;
+using WTF.Api.Features.Inventory;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Features.Products.Enums;
@@ -79,6 +80,10 @@ public record CreateOrderCommand : IRequest<OrderDto>
     // Why an offline order is held for an Admin. Set by the sync handler only; never read from a request body.
     [JsonIgnore]
     public IReadOnlyList<string>? HeldReasons { get; init; }
+
+    // A sale that already happened (offline sync, batch) is never refused for stock: the balance may go below zero.
+    [JsonIgnore]
+    public bool HonorStock { get; init; }
 }
 
 public class CreateOrderHandler(
@@ -87,7 +92,8 @@ public class CreateOrderHandler(
     IHubContext<DashboardHub> dashboardHub,
     IAuditService auditService,
     IPushNotificationService pushNotifications,
-    IConversationNotifier conversationNotifier) : IRequestHandler<CreateOrderCommand, OrderDto>
+    IConversationNotifier conversationNotifier,
+    IOrderStockService stockService) : IRequestHandler<CreateOrderCommand, OrderDto>
 {
     public async Task<OrderDto> Handle(CreateOrderCommand request, CancellationToken cancellationToken)
     {
@@ -525,6 +531,15 @@ public class CreateOrderHandler(
             await db.SaveChangesAsync(cancellationToken);
         }
 
+        // Stock leaves the shelf when a sale is made. A held offline sale waits for its approval; open orders take nothing yet.
+        var stock = !held && request.Status == OrderStatusEnum.Completed
+            ? await stockService.DeductForOrderAsync(
+                order.Id,
+                userId,
+                new StockDeductionOptions(BlockWhenShort: !request.HonorStock),
+                cancellationToken)
+            : StockDeductionResult.None;
+
         await dashboardHub.Clients.Group(HubNames.Groups.DashboardViewers)
             .SendAsync(HubNames.Events.DashboardUpdated, cancellationToken);
         await dashboardHub.Clients.Group(HubNames.Groups.DashboardViewers)
@@ -612,7 +627,8 @@ public class CreateOrderHandler(
             ContactNumber: request.ContactNumber,
             ReviewReasons: order.ReviewReasons,
             QuotedTotal: order.QuotedTotal,
-            OfflineLocalId: order.OfflineLocalId
+            OfflineLocalId: order.OfflineLocalId,
+            StockWarnings: stock.Warnings
         );
     }
 }

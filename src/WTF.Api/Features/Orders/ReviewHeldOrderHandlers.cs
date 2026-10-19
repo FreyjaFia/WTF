@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Features.Audit.Enums;
+using WTF.Api.Features.Inventory;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Hubs;
@@ -22,7 +23,8 @@ public class ApproveHeldOrderHandler(
     IHubContext<DashboardHub> dashboardHub,
     IAuditService auditService,
     IConversationNotifier conversationNotifier,
-    ISender sender) : IRequestHandler<ApproveHeldOrderCommand, OrderDto?>
+    ISender sender,
+    IOrderStockService stockService) : IRequestHandler<ApproveHeldOrderCommand, OrderDto?>
 {
     public async Task<OrderDto?> Handle(ApproveHeldOrderCommand request, CancellationToken cancellationToken)
     {
@@ -35,10 +37,16 @@ public class ApproveHeldOrderHandler(
         HeldOrderDecision.EnsureHeld(order, "approved");
 
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+
         order.StatusId = (int)OrderStatusEnum.Completed;
         order.UpdatedAt = DateTime.UtcNow;
         order.UpdatedBy = userId;
         await db.SaveChangesAsync(cancellationToken);
+
+        // The goods were handed over when the order was sold, so approving it takes the stock whatever the balance is.
+        await stockService.DeductForOrderAsync(order.Id, userId, new StockDeductionOptions(BlockWhenShort: false), cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
         await auditService.LogAsync(
             action: AuditAction.OrderReviewApproved,

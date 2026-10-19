@@ -24,7 +24,7 @@ public class CreateOrderBatchHandler(WTFDbContext db, ISender sender)
 
         foreach (var order in request.Orders)
         {
-            var result = await sender.Send(order with { GateHeld = true }, cancellationToken);
+            var result = await sender.Send(order with { GateHeld = true, HonorStock = true }, cancellationToken);
             results.Add(result);
         }
 

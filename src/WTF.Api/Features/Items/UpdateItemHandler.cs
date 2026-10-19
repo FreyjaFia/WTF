@@ -43,6 +43,8 @@ public record UpdateItemCommand : IRequest<ItemDto?>
     [Range(0, 999999.999)]
     public decimal? CriticalQuantity { get; init; }
 
+    public bool AllowNegativeStock { get; init; } = true;
+
     public bool IsActive { get; init; } = true;
 }
 
@@ -70,8 +72,15 @@ public class UpdateItemHandler(
             item.CostPrice,
             item.WarningQuantity,
             item.CriticalQuantity,
+            item.AllowNegativeStock,
             item.IsActive
         };
+
+        if (!request.AllowNegativeStock && item.CurrentQuantity < 0)
+        {
+            throw new InvalidOperationException(
+                "This item is below zero. Count it and correct the stock before refusing sales that would take it below zero.");
+        }
 
         await ItemValidation.ValidateUniqueSkuAndBarcode(db, request.Sku, request.Barcode, request.Id, cancellationToken);
 
@@ -97,6 +106,7 @@ public class UpdateItemHandler(
         item.CostPrice = request.CostPrice;
         item.WarningQuantity = request.WarningQuantity;
         item.CriticalQuantity = request.CriticalQuantity;
+        item.AllowNegativeStock = request.AllowNegativeStock;
         item.IsActive = request.IsActive;
         item.UpdatedAt = DateTime.UtcNow;
         item.UpdatedBy = userId;
@@ -119,6 +129,7 @@ public class UpdateItemHandler(
                 item.CostPrice,
                 item.WarningQuantity,
                 item.CriticalQuantity,
+                item.AllowNegativeStock,
                 item.IsActive
             },
             userId: userId,

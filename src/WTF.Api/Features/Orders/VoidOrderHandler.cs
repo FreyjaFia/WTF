@@ -5,6 +5,7 @@ using WTF.Api.Common.Extensions;
 using WTF.Api.Common.Orders;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Conversations;
+using WTF.Api.Features.Inventory;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Hubs;
@@ -14,7 +15,7 @@ using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Orders;
 
-public record VoidOrderCommand(Guid Id, string? Note = null) : IRequest<OrderDto?>;
+public record VoidOrderCommand(Guid Id, string? Note = null, IReadOnlyList<Guid>? NotReturnedLineIds = null) : IRequest<OrderDto?>;
 
 public class VoidOrderHandler(
     WTFDbContext db,
@@ -22,7 +23,8 @@ public class VoidOrderHandler(
     IHubContext<DashboardHub> dashboardHub,
     IAuditService auditService,
     IPushNotificationService pushNotifications,
-    IConversationNotifier conversationNotifier) : IRequestHandler<VoidOrderCommand, OrderDto?>
+    IConversationNotifier conversationNotifier,
+    IOrderStockService stockService) : IRequestHandler<VoidOrderCommand, OrderDto?>
 {
     public async Task<OrderDto?> Handle(VoidOrderCommand request, CancellationToken cancellationToken)
     {
@@ -66,6 +68,17 @@ public class VoidOrderHandler(
             throw new InvalidOperationException("Refund note is required.");
         }
 
+        var notReturnedLineIds = (request.NotReturnedLineIds ?? []).ToHashSet();
+        var lineIds = order.OrderItems.Where(oi => oi.ParentOrderItemId == null).Select(oi => oi.Id).ToHashSet();
+        if (!notReturnedLineIds.IsSubsetOf(lineIds))
+        {
+            throw new InvalidOperationException("A line that was not returned to stock is not on this order.");
+        }
+
+        await using var ownTransaction = db.Database.CurrentTransaction is null
+            ? await db.Database.BeginTransactionAsync(cancellationToken)
+            : null;
+
         // Capture price snapshot (resolve add-on overrides)
         var parentProductByOrderItemId = order.OrderItems
             .Where(oi => oi.ParentOrderItemId == null)
@@ -108,6 +121,18 @@ public class VoidOrderHandler(
             db, order, OrderChatLines.For(newStatus)!, userId, order.UpdatedAt.Value, cancellationToken);
 
         await db.SaveChangesAsync(cancellationToken);
+
+        // A pending order never took stock, so only a refunded sale gives some back (or writes it off as waste).
+        if (currentStatus == OrderStatusEnum.Completed)
+        {
+            await stockService.RestoreForOrderAsync(order.Id, userId, notReturnedLineIds, cancellationToken);
+        }
+
+        if (ownTransaction is not null)
+        {
+            await ownTransaction.CommitAsync(cancellationToken);
+        }
+
         await conversationNotifier.OrderChangedAsync(order, chat, cancellationToken);
 
         // Build response
