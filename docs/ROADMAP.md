@@ -569,7 +569,7 @@ and 3 (consumables) build on it, so it should land first and stay generic.
 5. Phases 2 and 3 then add pack/box deduct quantities and consumables on top
    of the same service and ledger.
 
-### Phase 2 - Pack, Box, and Shared Stock Selling [Planned]
+### Phase 2 - Pack, Box, and Shared Stock Selling [Completed, 21 Oct 2026]
 
 - Allow multiple products to deduct from the same inventory item.
 - Support configurable deduct quantity per product sale.
@@ -578,6 +578,23 @@ and 3 (consumables) build on it, so it should land first and stay generic.
   - `Oat Milk Box of 6` sells for `PHP850` and deducts `6`.
 - Validate stock availability using the total required quantity.
 - Show stock impact before saving product inventory mappings.
+
+What was left after Phase 1 and is now built: the stock impact preview. Sharing an item between products, the quantity per
+sale and the check against the total required quantity already worked from Phase 1 (the deduction sums per item).
+
+- **Preview.** The Manage Links dialog (item editor) shows under each linked product "1 sale takes 200 ml. In stock now:
+  enough for 49 sales." and follows the quantity as it is edited. The product editor's Track inventory card shows the same
+  for "deduct from an existing item" (and "the starting stock covers N sales" for an own item). When the stock covers no sale
+  it says what will happen: a warn-only item goes below zero and warns, a blocking item refuses online sales of the product
+  until stock is added.
+- **Maths.** `salesCovered(balance, quantityPerSale)` is a whole number of sales and is zero for an empty or negative
+  balance. It lives in `StockRules` (API) and `shared/calculations/stock-adjustment.ts` (Angular), with the shared cases
+  `salesCovered` in `calculation-cases.json` run by both test projects.
+- **Not changed.** Pack conversion when receiving stock (typing "2 cartons") stays with Phase 8; Stock In still takes the
+  base unit.
+- **Checked in the running app** (throwaway database): the Manage Links dialog for Oat Milk (9,800 ml, Latte at 200 ml) read
+  "enough for 49 sales", then "enough for 1 sale" after changing the quantity to 6000; the product editor read
+  "enough for 1 sale" at 6000 and the below-zero warning at 20000.
 
 ### Phase 3 - Consumables and Required Product Usage [Planned]
 
