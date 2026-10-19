@@ -5,3 +5,4 @@ export * from './promotion-schedule';
 export * from './sales-stats';
 export * from './cash-payment';
 export * from './deals';
+export * from './line-breakdown';

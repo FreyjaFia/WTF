@@ -23,6 +23,7 @@ export * from './filter-dropdown/filter-dropdown';
 export * from './global-alert/global-alert';
 export * from './header/header';
 export * from './hold-button/hold-button';
+export * from './line-breakdown/line-breakdown';
 export * from './icons/icon/icon';
 export * from './icons/icons-sprite/icons-sprite';
 export * from './layout/layout';
