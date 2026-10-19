@@ -62,7 +62,7 @@ internal static class PendingOrderPreview
                 }
 
                 budget.Use(applied.PromotionId, applied.DiscountedQuantity);
-                prices[parent.Id] = new PreviewDiscount(applied.Price, applied.DiscountedQuantity);
+                prices[parent.Id] = new PreviewDiscount(applied.Price, applied.DiscountedQuantity, applied.Label);
             }
         }
 

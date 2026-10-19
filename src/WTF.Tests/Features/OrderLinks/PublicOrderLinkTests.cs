@@ -98,7 +98,7 @@ public class PublicOrderLinkTests
     }
 
     private async Task<OrderItem> AddLineAsync(Guid orderId, Guid productId, int quantity = 1, decimal? price = null,
-        Guid? parentId = null)
+        Guid? parentId = null, decimal? originalPrice = null, string? promoLabel = null)
     {
         var item = new OrderItem
         {
@@ -107,7 +107,9 @@ public class PublicOrderLinkTests
             ProductId = productId,
             Quantity = quantity,
             Price = price,
-            ParentOrderItemId = parentId
+            ParentOrderItemId = parentId,
+            OriginalPrice = originalPrice,
+            PromoLabel = promoLabel
         };
         await TestDb.SaveAsync(_db, item);
         return item;
@@ -490,7 +492,10 @@ public class PublicOrderLinkTests
         var single = await Orders().Handle(new GetPublicOrderQuery(link.Token, order.Id), CancellationToken.None);
 
         result!.Items.Single().Total.ShouldBe(240m);
-        result.Items.Single().Items.Single().UnitPrice.ShouldBe(120m);
+        var line = result.Items.Single().Items.Single();
+        line.UnitPrice.ShouldBe(120m);
+        line.OriginalPrice.ShouldBe(150m, "the list price, so the page can show what the promotion took off");
+        line.PromoLabel.ShouldNotBeNullOrWhiteSpace();
         single!.Total.ShouldBe(240m);
     }
 
@@ -690,6 +695,8 @@ public class PublicOrderLinkTests
         var syrup = await AddProductAsync("Syrup", 30, addOn: true);
         await TestDb.SaveAsync(_db, new ProductAddOnPriceOverride
         { Id = Guid.NewGuid(), ProductId = latte.Id, AddOnId = syrup.Id, Price = 20, IsActive = true, CreatedAt = DateTime.UtcNow });
+        await TestDb.SaveAsync(_db, new ProductAddOn
+        { ProductId = latte.Id, AddOnId = syrup.Id, AddOnTypeId = (int)AddOnTypeEnum.Extra, IsActive = true });
         var order = await AddOrderAsync(ana.Id, linkId: link.Id);
         var parent = await AddLineAsync(order.Id, latte.Id, quantity: 2);
         await AddLineAsync(order.Id, syrup.Id, parentId: parent.Id);
@@ -707,6 +714,9 @@ public class PublicOrderLinkTests
         var addOn = item.AddOns.ShouldHaveSingleItem();
         addOn.Name.ShouldBe("Syrup");
         addOn.UnitPrice.ShouldBe(20, "the product's add-on override price");
+        addOn.Type.ShouldBe((int)AddOnTypeEnum.Extra);
+        item.OriginalPrice.ShouldBeNull();
+        item.PromoLabel.ShouldBeNull();
         dto.Total.ShouldBe((150 + 20) * 2);
         dto.FulfillmentType.ShouldBe("Delivery");
         dto.DeliveryAddress.ShouldBe("5 Side St");
@@ -723,11 +733,13 @@ public class PublicOrderLinkTests
         var link = await AddLinkAsync(ana.Id);
         var latte = await AddProductAsync("Latte", 150);
         var order = await AddOrderAsync(ana.Id, status: OrderStatusEnum.Completed);
-        await AddLineAsync(order.Id, latte.Id, quantity: 1, price: 120);
+        await AddLineAsync(order.Id, latte.Id, quantity: 1, price: 120, originalPrice: 150, promoLabel: "Promo -₱30.00");
 
         var dto = await Orders().Handle(new GetPublicOrderQuery(link.Token, order.Id), CancellationToken.None);
 
         dto!.Items.Single().UnitPrice.ShouldBe(120);
+        dto.Items.Single().OriginalPrice.ShouldBe(150);
+        dto.Items.Single().PromoLabel.ShouldBe("Promo -₱30.00");
         dto.Total.ShouldBe(120);
     }
 

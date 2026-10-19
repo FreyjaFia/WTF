@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Orders;
 using WTF.Api.Features.OrderLinks.DTOs;
 using WTF.Api.Features.Orders.Enums;
@@ -47,12 +48,37 @@ public static class PublicOrderMapping
         var overridePrices = await AddOnPriceLookup.ForOrdersAsync(db, orders, cancellationToken);
         var previewPrices = await PendingOrderPreview.LoadAsync(db, orders, httpContextAccessor, cancellationToken);
 
-        return [.. orders.Select(order => ToDto(order, overridePrices, previewPrices))];
+        var addOnTypes = await LoadAddOnTypesAsync(db, orders, cancellationToken);
+
+        return [.. orders.Select(order => ToDto(order, overridePrices, previewPrices, addOnTypes))];
+    }
+
+    // Order lines do not store the add-on type, so it comes from the product link; the customer cart sorts by it like the shop.
+    private static async Task<Dictionary<(Guid ProductId, Guid AddOnId), int?>> LoadAddOnTypesAsync(
+        WTFDbContext db, IReadOnlyList<Order> orders, CancellationToken cancellationToken)
+    {
+        var lines = orders.SelectMany(order => order.OrderItems).ToList();
+        var parentIds = lines.Where(line => line.ParentOrderItemId == null).Select(line => line.ProductId).Distinct().ToList();
+        var addOnIds = lines.Where(line => line.ParentOrderItemId != null).Select(line => line.ProductId).Distinct().ToList();
+        if (addOnIds.Count == 0)
+        {
+            return [];
+        }
+
+        var links = await db.ProductAddOns
+            .Where(link => parentIds.Contains(link.ProductId) && addOnIds.Contains(link.AddOnId))
+            .Select(link => new { link.ProductId, link.AddOnId, link.AddOnTypeId })
+            .ToListAsync(cancellationToken);
+
+        return links
+            .GroupBy(link => (link.ProductId, link.AddOnId))
+            .ToDictionary(group => group.Key, group => group.First().AddOnTypeId);
     }
 
     private static PublicOrderDto ToDto(
         Order order, IReadOnlyDictionary<(Guid ProductId, Guid AddOnId), decimal> overridePrices,
-        IReadOnlyDictionary<Guid, PreviewDiscount> previewPrices)
+        IReadOnlyDictionary<Guid, PreviewDiscount> previewPrices,
+        IReadOnlyDictionary<(Guid ProductId, Guid AddOnId), int?> addOnTypes)
     {
         var (label, kind) = StatusOf(order.StatusId, order.RejectionReason, order.ReadyAt, order.FulfillmentType);
 
@@ -73,7 +99,8 @@ public static class PublicOrderMapping
                         child.Price
                             ?? (overridePrices.TryGetValue((parent.ProductId, child.ProductId), out var price)
                                 ? price
-                                : child.Product.Price)))];
+                                : child.Product.Price),
+                        addOnTypes.GetValueOrDefault((parent.ProductId, child.ProductId))))];
 
                 // A pending order whose discount covers only part of a line shows two rows: the discounted items and the rest.
                 if (parent.Price is null && previewPrices.TryGetValue(parent.Id, out var preview))
@@ -82,7 +109,9 @@ public static class PublicOrderMapping
                     var rows = new List<PublicOrderItemDto>();
                     if (discounted > 0)
                     {
-                        rows.Add(new PublicOrderItemDto(parent.Product.Name, discounted, preview.UnitPrice, AddOns(), parent.SpecialInstructions));
+                        rows.Add(new PublicOrderItemDto(
+                            parent.Product.Name, discounted, preview.UnitPrice, AddOns(), parent.SpecialInstructions,
+                            parent.Product.Price, preview.Label));
                     }
 
                     if (discounted < parent.Quantity)
@@ -99,7 +128,9 @@ public static class PublicOrderMapping
                     parent.Quantity,
                     parent.Price ?? parent.Product.Price,
                     AddOns(),
-                    parent.SpecialInstructions)];
+                    parent.SpecialInstructions,
+                    parent.OriginalPrice,
+                    parent.PromoLabel)];
             })
             .ToList();
 

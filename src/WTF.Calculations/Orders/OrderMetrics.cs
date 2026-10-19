@@ -3,8 +3,8 @@ using WTF.Domain.Entities;
 namespace WTF.Calculations.Orders;
 
 // A discount a pending order would get today: its unit price and how many items of the line it covers (a limit can cover
-// only part of a line; the rest pays the list price).
-public readonly record struct PreviewDiscount(decimal UnitPrice, int Quantity);
+// only part of a line; the rest pays the list price) and the label the promotion would give it.
+public readonly record struct PreviewDiscount(decimal UnitPrice, int Quantity, string? Label = null);
 
 public static class OrderMetrics
 {

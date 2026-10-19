@@ -45,14 +45,16 @@ public record PublicOrderLinkDto(
     PublicCatalogDto Catalog
 );
 
-public record PublicOrderAddOnDto(string Name, int Quantity, decimal UnitPrice);
+public record PublicOrderAddOnDto(string Name, int Quantity, decimal UnitPrice, int? Type = null);
 
 public record PublicOrderItemDto(
     string Name,
     int Quantity,
     decimal UnitPrice,
     List<PublicOrderAddOnDto> AddOns,
-    string? SpecialInstructions
+    string? SpecialInstructions,
+    decimal? OriginalPrice = null,
+    string? PromoLabel = null
 );
 
 /// <summary>
