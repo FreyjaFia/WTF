@@ -6,13 +6,13 @@ import {
   ConnectivityService,
   ConversationInboxService,
   ImageCacheService,
-  StockAlertService,
+  StockAttentionService,
 } from '@core/services';
 import { describe, expect, it, vi } from 'vitest';
 import { createShellFakes, flushAsync } from '../../../testing/shell-components-testing';
 import { SidebarComponent } from './sidebar';
 
-describe('SidebarComponent: stock alerts', () => {
+describe('SidebarComponent: items that need attention', () => {
   async function setup(options: { canRead?: boolean; unread?: number } = {}) {
     const fakes = createShellFakes();
     fakes.permissions['canReadStockMovements'] = options.canRead ?? true;
@@ -25,7 +25,10 @@ describe('SidebarComponent: stock alerts', () => {
         { provide: ConversationInboxService, useValue: fakes.inbox },
         { provide: ConnectivityService, useValue: fakes.connectivity },
         { provide: ImageCacheService, useValue: fakes.imageCache },
-        { provide: StockAlertService, useValue: { unread: unread.asReadonly(), refresh } },
+        {
+          provide: StockAttentionService,
+          useValue: { count: unread.asReadonly(), urgentCount: signal(1), start: refresh, stop: vi.fn() },
+        },
       ],
     });
     const fixture = TestBed.createComponent(SidebarComponent);
@@ -43,17 +46,17 @@ describe('SidebarComponent: stock alerts', () => {
     return { fixture, el, unread, refresh, labels, vm };
   }
 
-  it('shows an Alerts link for roles that can read stock, and refreshes the count', async () => {
+  it('shows a Needs Attention link for roles that can read stock, and starts watching', async () => {
     const { labels, refresh } = await setup();
 
-    expect(labels().some((label) => label.startsWith('Alerts'))).toBe(true);
+    expect(labels().some((label) => label.startsWith('Needs Attention'))).toBe(true);
     expect(refresh).toHaveBeenCalledTimes(1);
   });
 
   it('hides the link and does not ask for the count without the permission', async () => {
     const { labels, refresh } = await setup({ canRead: false });
 
-    expect(labels().some((label) => label.startsWith('Alerts'))).toBe(false);
+    expect(labels().some((label) => label.startsWith('Needs Attention'))).toBe(false);
     expect(refresh).not.toHaveBeenCalled();
   });
 

@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, DestroyRef, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import {
@@ -7,12 +7,13 @@ import {
   AuthService,
   ConnectivityService,
   ImageCacheService,
-  StockAlertService,
+  StockAttentionService,
 } from '@core/services';
 import { appVersion } from '@environments/version';
 import { AvatarComponent } from '@shared/components/avatar/avatar';
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import { IconComponent } from '@shared/components/icons/icon/icon';
+import { NotificationBellComponent } from '@shared/components/notification-bell/notification-bell';
 import { StaffEnvelopeComponent } from '@shared/components/staff-envelope/staff-envelope';
 import { ThemeSwitcherComponent } from '@shared/components/theme-switcher/theme-switcher';
 import { AppRoutes } from '@shared/constants/app-routes';
@@ -28,6 +29,7 @@ import { filter, map } from 'rxjs';
     AvatarComponent,
     IconComponent,
     ConfirmDialogComponent,
+    NotificationBellComponent,
     StaffEnvelopeComponent,
     ThemeSwitcherComponent,
   ],
@@ -52,7 +54,8 @@ export class SidebarComponent implements OnInit, OnDestroy {
   private readonly imageCache = inject(ImageCacheService);
   private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly authLoading = inject(AuthLoadingService);
-  protected readonly stockAlerts = inject(StockAlertService);
+  protected readonly attention = inject(StockAttentionService);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected imageUrl: string | null = null;
   protected userFullName = 'User';
@@ -70,7 +73,8 @@ export class SidebarComponent implements OnInit, OnDestroy {
 
   public ngOnInit(): void {
     if (this.authService.canReadStockMovements()) {
-      this.stockAlerts.refresh();
+      this.attention.start();
+      this.destroyRef.onDestroy(() => this.attention.stop());
     }
 
     this.clockIntervalId = setInterval(() => {

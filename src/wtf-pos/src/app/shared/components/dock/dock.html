@@ -31,11 +31,13 @@
             [class]="'size-[1.2em]'"
             [fill]="'currentColor'"
           ></app-icon>
-          @if (stockAlerts.unread() > 0) {
+          @if (attention.count() > 0) {
             <span
-              class="absolute -top-1 -right-2 inline-flex min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] leading-4 font-bold text-white"
+              class="absolute -top-1 -right-2 inline-flex min-w-4 items-center justify-center rounded-full px-1 text-[10px] leading-4 font-bold text-white"
+              [class.bg-red-500]="attention.urgentCount() > 0"
+              [class.bg-amber-500]="attention.urgentCount() === 0"
               data-testid="dock-inventory-badge"
-              >{{ stockAlerts.unread() }}</span
+              >{{ attention.count() }}</span
             >
           }
         </span>

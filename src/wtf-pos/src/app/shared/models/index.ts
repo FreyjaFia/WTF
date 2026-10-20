@@ -5,6 +5,7 @@ export * from './cart.models';
 export * from './customer.models';
 export * from './dashboard.models';
 export * from './inventory.models';
+export * from './notification.models';
 export * from './price-history.models';
 export * from './order.models';
 export * from './order-link.models';

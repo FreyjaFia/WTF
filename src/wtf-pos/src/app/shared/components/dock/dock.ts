@@ -1,8 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, DestroyRef, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterModule } from '@angular/router';
-import { AuthService, StockAlertService } from '@core/services';
+import { AuthService, StockAttentionService } from '@core/services';
 import { IconComponent } from '@shared/components/icons/icon/icon';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { ordersNavSection } from '@shared/utils/orders-nav';
@@ -16,7 +16,8 @@ import { filter, map } from 'rxjs';
 export class DockComponent {
   protected readonly auth = inject(AuthService);
   protected readonly routes = AppRoutes;
-  protected readonly stockAlerts = inject(StockAlertService);
+  protected readonly attention = inject(StockAttentionService);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly router = inject(Router);
   private readonly currentUrl = toSignal(
     this.router.events.pipe(
@@ -30,7 +31,8 @@ export class DockComponent {
 
   public constructor() {
     if (this.auth.canReadStockMovements()) {
-      this.stockAlerts.refresh();
+      this.attention.start();
+      this.destroyRef.onDestroy(() => this.attention.stop());
     }
   }
 }

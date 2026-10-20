@@ -110,4 +110,52 @@ describe('StockCoverageComponent', () => {
     const { alerts } = setup({ result: throwError(() => new Error('Down')) });
     expect(alerts.error).toHaveBeenCalledWith('Down');
   });
+  it('shows how much of the menu takes stock as a percentage', () => {
+    const { el } = setup();
+
+    expect(el.querySelector('[data-testid="coverage-percent"]')?.textContent?.trim()).toBe('33%');
+    expect(el.querySelector('[data-testid="coverage-summary"]')?.textContent).toContain('of 3 products take stock');
+  });
+
+  it('counts the products to set up on the filter pill', () => {
+    const { el } = setup();
+
+    expect(el.querySelector('[data-testid="filter-attention"]')?.textContent).toContain('Needs setup (2)');
+    expect(el.querySelector('[data-testid="filter-all"]')?.textContent).toContain('All products (3)');
+  });
+
+  it('switches to every product with the pill', () => {
+    const { fixture, el } = setup();
+
+    (el.querySelector('[data-testid="filter-all"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(rows(el)).toHaveLength(3);
+    expect((el.querySelector('[data-testid="filter-all"]') as HTMLElement).getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('narrows the list by name or code', () => {
+    const { fixture, el } = setup();
+    (el.querySelector('[data-testid="filter-all"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    const input = el.querySelector('app-search-input input') as HTMLInputElement;
+    input.value = 'lat';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    expect(rows(el)).toHaveLength(1);
+    expect(rows(el)[0].textContent).toContain('Latte');
+
+    input.value = 'nothing';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    expect(el.querySelector('[data-testid="coverage-empty"]')?.textContent).toContain('No products match your search');
+  });
+
+  it('shows each missing option as its own chip', () => {
+    const { el } = setup();
+
+    expect(el.querySelector('[data-testid="missing-options"]')?.textContent).toContain('Size: Large');
+  });
 });

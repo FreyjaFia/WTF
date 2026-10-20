@@ -184,17 +184,17 @@ describe('SidebarComponent', () => {
   it('toggles the inventory and management groups', async () => {
     const { fixture, byText, el } = await setup();
     const inventoryBtn = byText('button', 'Inventory')!;
-    const group = () => el.querySelector('.max-h-40, .max-h-0') as HTMLElement;
-    expect(group().classList).toContain('max-h-40');
+    const group = () => el.querySelector('.max-h-64, .max-h-0') as HTMLElement;
+    expect(group().classList).toContain('max-h-64');
     inventoryBtn.click();
     fixture.detectChanges();
     expect(group().classList).toContain('max-h-0');
     inventoryBtn.click();
     fixture.detectChanges();
-    expect(group().classList).toContain('max-h-40');
+    expect(group().classList).toContain('max-h-64');
 
     const mgmtBtn = byText('button', 'Management')!;
-    const mgmt = () => el.querySelector('.max-h-96, .max-h-0.opacity-0:not(.max-h-40)') as HTMLElement;
+    const mgmt = () => el.querySelector('.max-h-96, .max-h-0.opacity-0:not(.max-h-64)') as HTMLElement;
     expect(el.querySelector('.max-h-96')).toBeTruthy();
     mgmtBtn.click();
     fixture.detectChanges();

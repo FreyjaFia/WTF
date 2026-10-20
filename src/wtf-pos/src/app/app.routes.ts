@@ -9,7 +9,7 @@ import { ItemDetailsComponent } from '@features/inventory/items/item-details/ite
 import { ItemEditorComponent } from '@features/inventory/items/item-editor/item-editor';
 import { ItemListComponent } from '@features/inventory/items/item-list/item-list';
 import { ItemsComponent } from '@features/inventory/items/items';
-import { StockAlertsComponent } from '@features/inventory/stock-alerts/stock-alerts';
+import { StockAttentionComponent } from '@features/inventory/stock-attention/stock-attention';
 import { StockCoverageComponent } from '@features/inventory/stock-coverage/stock-coverage';
 import { StockInComponent } from '@features/inventory/stock-in/stock-in';
 import { Login } from '@features/login/login';
@@ -34,6 +34,7 @@ import { UserEditorComponent } from '@features/management/users/user-editor/user
 import { UserListComponent } from '@features/management/users/user-list/user-list';
 import { UsersComponent } from '@features/management/users/users';
 import { NotFoundComponent } from '@features/not-found/not-found';
+import { NotificationsComponent } from '@features/notifications/notifications';
 import { OrderDetails } from '@features/orders/order-details/order-details';
 import { OrderEditor } from '@features/orders/order-editor/order-editor';
 import { OrderList } from '@features/orders/order-list/order-list';
@@ -156,10 +157,15 @@ export const routes: Routes = [
             data: { roles: AppRoleGroups.StockMovementsRead },
           },
           {
-            path: 'alerts',
-            component: StockAlertsComponent,
+            path: 'attention',
+            component: StockAttentionComponent,
             canActivate: [roleGuard],
             data: { roles: AppRoleGroups.StockMovementsRead },
+          },
+          {
+            path: 'alerts',
+            redirectTo: 'attention',
+            pathMatch: 'full',
           },
           {
             path: 'coverage',
@@ -168,6 +174,10 @@ export const routes: Routes = [
             data: { roles: AppRoleGroups.ItemsRead },
           },
         ],
+      },
+      {
+        path: 'notifications',
+        component: NotificationsComponent,
       },
       {
         path: 'my-profile',

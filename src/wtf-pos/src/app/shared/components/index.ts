@@ -27,6 +27,7 @@ export * from './line-breakdown/line-breakdown';
 export * from './icons/icon/icon';
 export * from './icons/icons-sprite/icons-sprite';
 export * from './layout/layout';
+export * from './notification-bell/notification-bell';
 export * from './offline-banner/offline-banner';
 export * from './order-chat-drawer/order-chat-drawer';
 export * from './order-receipt/order-receipt';

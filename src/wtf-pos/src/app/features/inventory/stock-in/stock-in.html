@@ -1,89 +1,175 @@
-<div class="flex h-full flex-col pt-4 md:pt-0">
-  <div class="mb-4 flex shrink-0 items-start justify-between sm:mb-6">
+<form class="flex h-full flex-col pt-4 md:pt-0" [formGroup]="form" (ngSubmit)="save()" novalidate>
+  <div class="mb-4 flex shrink-0 items-start justify-between sm:mb-5">
     <div>
       <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Stock In</h1>
-      <p class="text-xs text-gray-500 sm:text-sm">Record new incoming stock</p>
+      <p class="text-xs text-gray-500 sm:text-sm">Choose what arrived, enter how much, and add it to stock</p>
     </div>
   </div>
 
-  <form
-    class="card max-w-xl rounded-xl bg-surface shadow-lg"
-    [formGroup]="form"
-    (ngSubmit)="save()"
-    novalidate
-  >
-    <div class="card-body space-y-4">
-      @if (isLoading()) {
-        <div class="flex justify-center py-4">
-          <span class="loading loading-spinner"></span>
-        </div>
-      } @else {
-        <div>
-          <label for="stock-in-item" class="mb-1 block text-xs font-semibold text-gray-500">Item</label>
-          <select
-            id="stock-in-item"
-            class="select select-bordered w-full outline-transparent"
-            formControlName="itemId"
-          >
-            <option value="" disabled>Choose an item</option>
-            @for (item of items(); track item.id) {
-              <option [value]="item.id">{{ item.name }}</option>
-            }
-          </select>
-          @if (form.controls.itemId.touched && form.controls.itemId.invalid) {
-            <p class="mt-1 text-sm text-red-600" role="alert">Choose the item that arrived.</p>
-          }
-          @if (selectedItem(); as item) {
-            <p class="mt-1 text-xs text-gray-500">
-              In stock now: {{ item.currentQuantity }} {{ unitLabel() }}
+  @if (isLoading()) {
+    <div class="flex justify-center py-8">
+      <span class="loading loading-spinner loading-lg"></span>
+    </div>
+  } @else {
+    <div class="grid min-h-0 flex-1 gap-5 overflow-y-auto pb-4 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
+      <div class="min-w-0 space-y-6">
+        <section>
+          <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <h2 class="text-sm font-bold text-gray-900">1. What arrived?</h2>
+            <div
+              class="flex w-full min-w-0 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-surface focus-within:ring-2 focus-within:ring-gray-200 sm:w-72"
+            >
+              <app-search-input
+                [value]="search()"
+                placeholder="Search items"
+                ariaLabel="Search items"
+                (valueChange)="setSearch($event)"
+              />
+            </div>
+          </div>
+
+          @if (choices().length === 0) {
+            <p class="rounded-xl bg-surface p-6 text-center text-sm text-gray-500 shadow" data-testid="no-items">
+              No items match your search.
             </p>
           }
-        </div>
 
-        <div>
-          <label for="stock-in-quantity" class="mb-1 block text-xs font-semibold text-gray-500">
-            Quantity received {{ unitLabel() ? '(' + unitLabel() + ')' : '' }}
-          </label>
-          <input
-            id="stock-in-quantity"
-            type="number"
-            step="any"
-            class="input input-bordered w-full outline-transparent"
-            formControlName="quantity"
-          />
-          @if (form.controls.quantity.touched && form.controls.quantity.invalid) {
-            <p class="mt-1 text-sm text-red-600" role="alert">Enter a quantity above zero.</p>
+          <ul class="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3" data-testid="item-grid">
+            @for (item of choices(); track item.id) {
+              <li>
+                <button
+                  type="button"
+                  class="flex w-full cursor-pointer items-center gap-3 rounded-xl border-2 bg-surface p-3 text-left shadow-sm transition-all hover:shadow-md active:scale-[0.98]"
+                  [class]="item.id === selected()?.id ? 'border-emerald-600 bg-emerald-50/50' : 'border-transparent'"
+                  [attr.aria-pressed]="item.id === selected()?.id"
+                  data-testid="item-tile"
+                  [attr.data-level]="levelOf(item)"
+                  (click)="pick(item.id)"
+                >
+                  <span
+                    class="h-2.5 w-2.5 shrink-0 rounded-full"
+                    [class]="
+                      levelOf(item) === 'out'
+                        ? 'bg-red-600'
+                        : levelOf(item) === 'critical'
+                          ? 'bg-orange-500'
+                          : levelOf(item) === 'low'
+                            ? 'bg-amber-400'
+                            : 'bg-emerald-500'
+                    "
+                  ></span>
+                  <span class="min-w-0 flex-1">
+                    <span class="block truncate text-sm font-semibold text-gray-900">{{ item.name }}</span>
+                    <span
+                      class="block text-xs"
+                      [class]="levelOf(item) === 'ok' ? 'text-gray-500' : levelOf(item) === 'low' ? 'text-amber-700' : 'font-semibold text-red-600'"
+                    >
+                      {{ format(item.currentQuantity) }} {{ unitOf(item) }}
+                      @if (levelOf(item) === 'out') {
+                        · out
+                      } @else if (levelOf(item) === 'critical') {
+                        · critical
+                      } @else if (levelOf(item) === 'low') {
+                        · running low
+                      }
+                    </span>
+                  </span>
+                </button>
+              </li>
+            }
+          </ul>
+          @if (form.controls.itemId.touched && form.controls.itemId.invalid) {
+            <p class="mt-2 text-sm text-red-600" role="alert">Choose the item that arrived.</p>
           }
-        </div>
+        </section>
 
-        <div>
-          <label for="stock-in-cost" class="mb-1 block text-xs font-semibold text-gray-500">
-            Cost per unit (optional)
-          </label>
-          <input
-            id="stock-in-cost"
-            type="number"
-            step="any"
-            class="input input-bordered w-full outline-transparent"
-            formControlName="unitCost"
-          />
-        </div>
+        <section>
+          <h2 class="mb-3 text-sm font-bold text-gray-900">2. How much?</h2>
+          <div class="rounded-xl bg-surface p-4 shadow">
+            <label for="stock-in-quantity" class="mb-1 block text-xs font-semibold text-gray-500">
+              Quantity received {{ unit() ? '(' + unit() + ')' : '' }}
+            </label>
+            <input
+              id="stock-in-quantity"
+              type="number"
+              step="any"
+              inputmode="decimal"
+              class="input input-bordered input-lg w-full text-xl font-bold outline-transparent"
+              formControlName="quantity"
+            />
+            @if (form.controls.quantity.touched && form.controls.quantity.invalid) {
+              <p class="mt-1 text-sm text-red-600" role="alert">Enter a quantity above zero.</p>
+            }
+            @if (selected()) {
+              <div class="mt-3 flex flex-wrap gap-2">
+                @for (amount of presets(); track amount) {
+                  <button
+                    type="button"
+                    class="cursor-pointer rounded-full bg-gray-100 px-3.5 py-1.5 text-xs font-bold text-gray-700 transition-colors hover:bg-gray-200 active:scale-95"
+                    data-testid="preset"
+                    (click)="addPreset(amount)"
+                  >
+                    +{{ format(amount) }}
+                  </button>
+                }
+              </div>
+            }
+          </div>
+        </section>
 
-        <div>
-          <label for="stock-in-notes" class="mb-1 block text-xs font-semibold text-gray-500">
-            Note (optional)
-          </label>
-          <textarea
-            id="stock-in-notes"
-            class="textarea textarea-bordered w-full outline-transparent"
-            rows="2"
-            maxlength="500"
-            formControlName="notes"
-          ></textarea>
-        </div>
+        <section>
+          <h2 class="mb-3 text-sm font-bold text-gray-900">3. Details <span class="font-normal text-gray-500">(optional)</span></h2>
+          <div class="grid gap-4 rounded-xl bg-surface p-4 shadow sm:grid-cols-2">
+            <div>
+              <label for="stock-in-cost" class="mb-1 block text-xs font-semibold text-gray-500">Cost per unit</label>
+              <input
+                id="stock-in-cost"
+                type="number"
+                step="any"
+                class="input input-bordered w-full outline-transparent"
+                formControlName="unitCost"
+              />
+            </div>
+            <div class="sm:col-span-2">
+              <label for="stock-in-notes" class="mb-1 block text-xs font-semibold text-gray-500">Note</label>
+              <textarea
+                id="stock-in-notes"
+                class="textarea textarea-bordered w-full outline-transparent"
+                rows="2"
+                maxlength="500"
+                placeholder="Supplier, invoice number..."
+                formControlName="notes"
+              ></textarea>
+            </div>
+          </div>
+        </section>
+      </div>
 
-        <div class="flex justify-end">
-          <button type="submit" class="app-btn app-btn-primary app-btn-md px-6" [disabled]="isSaving()">
+      <aside class="space-y-4 lg:sticky lg:top-0">
+        <section class="rounded-xl bg-surface p-4 shadow-lg" data-testid="summary">
+          <h2 class="mb-3 text-xs font-semibold tracking-wide text-gray-500 uppercase">This delivery</h2>
+          @if (selected(); as item) {
+            <p class="text-lg leading-tight font-bold text-gray-900" data-testid="summary-item">{{ item.name }}</p>
+            <dl class="mt-3 space-y-2 text-sm">
+              <div class="flex items-baseline justify-between">
+                <dt class="text-gray-500">In stock now</dt>
+                <dd class="font-semibold text-gray-900" data-testid="in-stock-now">{{ format(item.currentQuantity) }} {{ unit() }}</dd>
+              </div>
+              <div class="flex items-baseline justify-between">
+                <dt class="text-gray-500">Receiving</dt>
+                <dd class="font-semibold text-emerald-700" data-testid="receiving">{{ receiving() > 0 ? '+' + format(receiving()) + ' ' + unit() : '—' }}</dd>
+              </div>
+              <div class="flex items-baseline justify-between border-t border-gray-100 pt-2">
+                <dt class="text-gray-500">New balance</dt>
+                <dd class="text-xl font-extrabold text-gray-900" data-testid="balance-after">
+                  {{ balanceAfter() !== null ? format(balanceAfter()!) + ' ' + unit() : '—' }}
+                </dd>
+              </div>
+            </dl>
+          } @else {
+            <p class="text-sm text-gray-500" data-testid="summary-empty">Choose an item to start.</p>
+          }
+          <button type="submit" class="app-btn app-btn-primary app-btn-md mt-4 w-full" [disabled]="isSaving()">
             @if (isSaving()) {
               <span class="loading loading-spinner loading-xs"></span>
               Saving...
@@ -91,8 +177,25 @@
               Add Stock
             }
           </button>
-        </div>
-      }
+        </section>
+
+        @if (recent().length > 0) {
+          <section class="rounded-xl bg-surface p-4 shadow" data-testid="recent">
+            <h2 class="mb-2 text-xs font-semibold tracking-wide text-gray-500 uppercase">Added just now</h2>
+            <ul class="divide-y divide-gray-100">
+              @for (entry of recent(); track $index) {
+                <li class="flex items-center justify-between gap-3 py-2">
+                  <a class="min-w-0 truncate text-sm font-semibold text-gray-900 hover:underline" [routerLink]="itemRoute(entry.itemId)">{{ entry.name }}</a>
+                  <span class="shrink-0 text-right text-xs text-gray-500">
+                    <span class="font-bold text-emerald-700">+{{ format(entry.added) }} {{ entry.unit }}</span>
+                    <span class="block">now {{ format(entry.balanceAfter) }} {{ entry.unit }}</span>
+                  </span>
+                </li>
+              }
+            </ul>
+          </section>
+        }
+      </aside>
     </div>
-  </form>
-</div>
+  }
+</form>

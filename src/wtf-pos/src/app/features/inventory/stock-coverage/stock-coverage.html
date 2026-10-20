@@ -1,45 +1,97 @@
 <div class="flex h-full flex-col pt-4 md:pt-0">
-  <div class="mb-4 flex shrink-0 flex-wrap items-start justify-between gap-3 sm:mb-6">
+  <div class="mb-4 flex shrink-0 flex-wrap items-start justify-between gap-3 sm:mb-5">
     <div>
       <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Stock Coverage</h1>
       <p class="text-xs text-gray-500 sm:text-sm">
         Which products take stock when they are sold, and which would not
       </p>
     </div>
-    <div class="flex items-center gap-2">
-      <select
-        class="select select-bordered select-sm outline-transparent"
-        aria-label="Show"
-        [value]="filter()"
-        (change)="setFilter($any($event.target).value)"
-      >
-        <option value="attention">Needs attention</option>
-        <option value="all">All products</option>
-      </select>
-      <button
-        type="button"
-        class="app-btn app-btn-secondary app-btn-sm"
-        [disabled]="isLoading()"
-        (click)="load()"
-      >
-        {{ isLoading() ? 'Refreshing...' : 'Refresh' }}
-      </button>
-    </div>
+    <button
+      type="button"
+      class="app-btn app-btn-secondary app-btn-sm"
+      [disabled]="isLoading()"
+      (click)="load()"
+    >
+      {{ isLoading() ? 'Refreshing...' : 'Refresh' }}
+    </button>
   </div>
 
   @if (coverage(); as summary) {
-    <div class="mb-4 grid shrink-0 grid-cols-3 gap-2 sm:gap-3" data-testid="coverage-summary">
-      <div class="rounded-xl bg-surface p-3 shadow">
-        <p class="text-xs font-semibold tracking-wider text-gray-400 uppercase">Take stock</p>
-        <p class="text-2xl font-bold text-green-700">{{ summary.covered }}</p>
+    <div class="mb-4 shrink-0 rounded-xl bg-surface p-4 shadow" data-testid="coverage-summary">
+      <div class="flex items-end justify-between gap-3">
+        <p class="text-sm text-gray-600">
+          <span class="text-2xl font-extrabold text-gray-900" data-testid="coverage-percent">{{
+            coveredPercent().toFixed(0)
+          }}%</span>
+          of {{ total() }} products take stock
+        </p>
+        @if (attentionCount() > 0) {
+          <p class="text-xs font-semibold text-orange-700">{{ attentionCount() }} to set up</p>
+        } @else {
+          <p class="text-xs font-semibold text-emerald-700">All set</p>
+        }
       </div>
-      <div class="rounded-xl bg-surface p-3 shadow">
-        <p class="text-xs font-semibold tracking-wider text-gray-400 uppercase">Partly</p>
-        <p class="text-2xl font-bold text-orange-600">{{ summary.partial }}</p>
+
+      <div class="mt-3 flex h-2.5 overflow-hidden rounded-full bg-gray-100" aria-hidden="true">
+        <span class="bg-emerald-500 transition-all" [style.width.%]="coveredPercent()"></span>
+        <span class="bg-orange-500 transition-all" [style.width.%]="partialPercent()"></span>
+        <span class="bg-red-500 transition-all" [style.width.%]="missingPercent()"></span>
       </div>
-      <div class="rounded-xl bg-surface p-3 shadow">
-        <p class="text-xs font-semibold tracking-wider text-gray-400 uppercase">Take none</p>
-        <p class="text-2xl font-bold text-red-600">{{ summary.missing }}</p>
+
+      <dl class="mt-3 grid grid-cols-3 gap-2 text-center">
+        <div>
+          <dt class="flex items-center justify-center gap-1 text-[11px] font-semibold tracking-wide text-gray-500 uppercase">
+            <span class="h-2 w-2 rounded-full bg-emerald-500"></span>Take stock
+          </dt>
+          <dd class="text-lg font-bold text-emerald-700" data-testid="count-covered">{{ summary.covered }}</dd>
+        </div>
+        <div>
+          <dt class="flex items-center justify-center gap-1 text-[11px] font-semibold tracking-wide text-gray-500 uppercase">
+            <span class="h-2 w-2 rounded-full bg-orange-500"></span>Partly
+          </dt>
+          <dd class="text-lg font-bold text-orange-600" data-testid="count-partial">{{ summary.partial }}</dd>
+        </div>
+        <div>
+          <dt class="flex items-center justify-center gap-1 text-[11px] font-semibold tracking-wide text-gray-500 uppercase">
+            <span class="h-2 w-2 rounded-full bg-red-500"></span>Take none
+          </dt>
+          <dd class="text-lg font-bold text-red-600" data-testid="count-missing">{{ summary.missing }}</dd>
+        </div>
+      </dl>
+    </div>
+
+    <div class="mb-3 flex shrink-0 flex-wrap items-center gap-2">
+      <div class="inline-flex rounded-full bg-gray-100 p-1" role="group" aria-label="Show">
+        <button
+          type="button"
+          class="cursor-pointer rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors"
+          [class]="filter() === 'attention' ? 'bg-surface text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'"
+          [attr.aria-pressed]="filter() === 'attention'"
+          data-testid="filter-attention"
+          (click)="setFilter('attention')"
+        >
+          Needs setup ({{ attentionCount() }})
+        </button>
+        <button
+          type="button"
+          class="cursor-pointer rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors"
+          [class]="filter() === 'all' ? 'bg-surface text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'"
+          [attr.aria-pressed]="filter() === 'all'"
+          data-testid="filter-all"
+          (click)="setFilter('all')"
+        >
+          All products ({{ total() }})
+        </button>
+      </div>
+      <div
+        class="ml-auto flex w-full min-w-0 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-surface focus-within:ring-2 focus-within:ring-gray-200 sm:w-72"
+      >
+        <app-search-input
+          [value]="search()"
+          placeholder="Search products"
+          ariaLabel="Search products"
+          (valueChange)="setSearch($event)"
+        />
       </div>
     </div>
   }
@@ -53,42 +105,60 @@
   @if (coverage()) {
     <div class="min-h-0 flex-1 overflow-y-auto pb-4">
       @if (rows().length === 0) {
-        <div class="rounded-xl bg-surface p-8 text-center shadow">
+        <div class="rounded-xl bg-surface p-8 text-center shadow" data-testid="coverage-empty">
           <p class="text-lg font-semibold text-gray-700">
-            {{ filter() === 'all' ? 'No products yet' : 'Every product takes stock' }}
+            @if (search()) {
+              No products match your search
+            } @else if (filter() === 'all') {
+              No products yet
+            } @else {
+              Every product takes stock
+            }
           </p>
           <p class="text-sm text-gray-500">
-            {{
-              filter() === 'all'
-                ? 'Add products to see how they use stock.'
-                : 'Nothing needs attention right now.'
-            }}
+            @if (search()) {
+              Try another name or code.
+            } @else if (filter() === 'all') {
+              Add products to see how they use stock.
+            } @else {
+              Nothing needs setting up right now.
+            }
           </p>
         </div>
       }
 
       <ul class="space-y-2">
         @for (product of rows(); track product.productId) {
-          <li
-            class="flex flex-wrap items-start justify-between gap-3 rounded-xl bg-surface p-4 shadow"
-            data-testid="coverage-row"
-          >
-            <div class="min-w-0">
-              <p class="font-semibold wrap-break-word text-gray-900">{{ product.name }}</p>
-              <p class="font-mono text-xs text-gray-400">{{ product.code }}</p>
-              @if (product.missingOptions.length > 0) {
-                <p class="mt-1 text-xs text-gray-600" data-testid="missing-options">
-                  Not linked to stock: {{ product.missingOptions.join(', ') }}
-                </p>
-              }
-            </div>
-            <div class="flex shrink-0 items-center gap-3">
-              <app-badge [variant]="badgeVariant(product.status)">
-                {{ statusLabel(product.status) }}
-              </app-badge>
-              @if (productLink(product); as link) {
-                <a class="app-btn app-btn-link" [routerLink]="link">{{ linkLabel() }}</a>
-              }
+          <li class="flex overflow-hidden rounded-xl bg-surface shadow" data-testid="coverage-row">
+            <span class="w-1.5 shrink-0" [class]="styleOf(product.status).bar"></span>
+            <div class="flex min-w-0 flex-1 flex-wrap items-start justify-between gap-3 p-3 sm:p-4">
+              <div class="min-w-0">
+                <p class="font-semibold wrap-break-word text-gray-900">{{ product.name }}</p>
+                <p class="font-mono text-xs text-gray-400">{{ product.code }}</p>
+                @if (product.missingOptions.length > 0) {
+                  <div class="mt-2 flex flex-wrap items-center gap-1.5" data-testid="missing-options">
+                    <span class="text-xs text-gray-500">Not linked to stock:</span>
+                    @for (option of product.missingOptions; track option) {
+                      <span class="rounded-full bg-orange-50 px-2 py-0.5 text-xs font-medium text-orange-800">{{ option }}</span>
+                    }
+                  </div>
+                }
+              </div>
+              <div class="flex shrink-0 items-center gap-3">
+                <span
+                  class="inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-bold"
+                  [class]="styleOf(product.status).badge"
+                  >{{ statusLabel(product.status) }}</span
+                >
+                @if (productLink(product); as link) {
+                  <a
+                    class="app-btn app-btn-sm"
+                    [class]="product.status === 'Covered' ? 'app-btn-secondary' : 'app-btn-primary'"
+                    [routerLink]="link"
+                    >{{ linkLabel() }}</a
+                  >
+                }
+              </div>
             </div>
           </li>
         }

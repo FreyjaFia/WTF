@@ -21,7 +21,9 @@
           <span class="relative"> {{ tab.label }} </span>
           @if (tab.badge?.(); as count) {
             <span
-              class="ml-1 inline-flex min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] leading-4 font-bold text-white"
+              class="ml-1 inline-flex min-w-4 items-center justify-center rounded-full px-1 text-[10px] leading-4 font-bold text-white"
+              [class.bg-red-500]="tab.urgent?.() ?? true"
+              [class.bg-amber-500]="!(tab.urgent?.() ?? true)"
               data-testid="tab-badge"
               >{{ count }}</span
             >

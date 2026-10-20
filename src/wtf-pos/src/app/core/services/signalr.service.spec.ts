@@ -5,7 +5,9 @@ import { SignalRService } from './signalr.service';
 
 interface FakeHub {
   handlers: Record<string, (...args: string[]) => void>;
+  reconnected?: () => void;
   on: ReturnType<typeof vi.fn>;
+  onreconnected: ReturnType<typeof vi.fn>;
   start: ReturnType<typeof vi.fn>;
   stop: ReturnType<typeof vi.fn>;
 }
@@ -40,6 +42,9 @@ vi.mock('@microsoft/signalr', () => {
         handlers: {},
         on: vi.fn((name: string, cb: (...args: string[]) => void) => {
           instance.handlers[name] = cb;
+        }),
+        onreconnected: vi.fn((cb: () => void) => {
+          instance.reconnected = cb;
         }),
         start: vi.fn(() => (hub.startImpl ? hub.startImpl() : Promise.resolve())),
         stop: vi.fn(() => (hub.stopImpl ? hub.stopImpl() : Promise.resolve())),
@@ -324,6 +329,108 @@ describe('SignalRService', () => {
       TestBed.resetTestingModule();
 
       expect(instances().every((connection) => (connection.stop as ReturnType<typeof vi.fn>).mock.calls.length === 1)).toBe(true);
+    });
+  });
+  describe('notifications hub (bell and stock)', () => {
+    it('connects to its own hub with the sign-in token, read again at every connect', () => {
+      service.startNotificationsHub();
+
+      expect(hub.builderUrl[0].url).toBe('http://localhost:5282/hubs/notifications');
+      expect(hub.builderUrl[0].options.accessTokenFactory()).toBe('jwt-token');
+      token = 'refreshed';
+      expect(hub.builderUrl[0].options.accessTokenFactory()).toBe('refreshed');
+      expect(hub.reconnect).toHaveBeenCalledTimes(1);
+      expect(instances()[0].start).toHaveBeenCalledTimes(1);
+    });
+
+    it('shares one connection between consumers and stops with the last one', () => {
+      service.startNotificationsHub();
+      service.startNotificationsHub();
+      expect(instances()).toHaveLength(1);
+
+      service.stopNotificationsHub();
+      expect(instances()[0].stop).not.toHaveBeenCalled();
+      service.stopNotificationsHub();
+      expect(instances()[0].stop).toHaveBeenCalledTimes(1);
+    });
+
+    it('says when the notifications changed', () => {
+      const next = vi.fn();
+      service.notificationsChanged.subscribe(next);
+      service.startNotificationsHub();
+
+      instances()[0].handlers['NotificationsChanged']();
+
+      expect(next).toHaveBeenCalledTimes(1);
+    });
+
+    it('says which item changed in stock', () => {
+      const next = vi.fn();
+      service.stockChanged.subscribe(next);
+      service.startNotificationsHub();
+
+      instances()[0].handlers['StockChanged']('item-1');
+
+      expect(next).toHaveBeenCalledWith('item-1');
+    });
+
+    it('tells screens to reload everything after a dropped connection comes back', () => {
+      const notifications = vi.fn();
+      const stock = vi.fn();
+      service.notificationsChanged.subscribe(notifications);
+      service.stockChanged.subscribe(stock);
+      service.startNotificationsHub();
+
+      instances()[0].reconnected?.();
+
+      expect(notifications).toHaveBeenCalledTimes(1);
+      expect(stock).toHaveBeenCalledTimes(1);
+    });
+
+    it('logs a failed start and tries again later on the same connection', async () => {
+      vi.useFakeTimers();
+      try {
+        const start = vi.fn().mockRejectedValueOnce(new Error('offline')).mockResolvedValue(undefined);
+        hub.startImpl = start;
+        service.startNotificationsHub();
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(errorSpy.mock.calls[0][0]).toBe('Notifications SignalR hub connection error:');
+        await vi.advanceTimersByTimeAsync(2000);
+
+        expect(start).toHaveBeenCalledTimes(2);
+        expect(instances()).toHaveLength(1);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('stops trying again once the hub is stopped', async () => {
+      vi.useFakeTimers();
+      try {
+        const start = vi.fn().mockRejectedValue(new Error('offline'));
+        hub.startImpl = start;
+        service.startNotificationsHub();
+        await vi.advanceTimersByTimeAsync(0);
+        service.stopNotificationsHub();
+        await vi.advanceTimersByTimeAsync(60000);
+
+        expect(start).toHaveBeenCalledTimes(1);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('logs a failed stop without throwing, and does nothing when stopping without a start', async () => {
+      service.stopNotificationsHub();
+      expect(instances()).toHaveLength(0);
+
+      hub.stopImpl = () => Promise.reject(new Error('stop failed'));
+      service.startNotificationsHub();
+      service.stopNotificationsHub();
+      await vi.waitFor(() => expect(errorSpy).toHaveBeenCalled());
+
+      expect(errorSpy.mock.calls[0][0]).toBe('Error stopping notifications hub:');
     });
   });
 });

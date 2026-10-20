@@ -1,4 +1,4 @@
-import { Component, effect, inject } from '@angular/core';
+import { Component, DestroyRef, effect, inject } from '@angular/core';
 import {
   IsActiveMatchOptions,
   Router,
@@ -6,7 +6,7 @@ import {
   RouterOutlet,
   isActive as routerIsActive,
 } from '@angular/router';
-import { AuthService, StockAlertService } from '@core/services';
+import { AuthService, StockAttentionService } from '@core/services';
 import { AppRoutes } from '@shared/constants/app-routes';
 
 interface InventoryTab {
@@ -16,6 +16,7 @@ interface InventoryTab {
   ariaLabel: string;
   canShow?: () => boolean;
   badge?: () => number;
+  urgent?: () => boolean;
 }
 
 @Component({
@@ -34,7 +35,8 @@ export class InventoryComponent {
 
   private readonly router = inject(Router);
   private readonly authService = inject(AuthService);
-  private readonly stockAlerts = inject(StockAlertService);
+  private readonly attention = inject(StockAttentionService);
+  private readonly destroyRef = inject(DestroyRef);
   protected readonly inventoryTabs: readonly InventoryTab[] = [
     {
       label: 'Items',
@@ -51,12 +53,13 @@ export class InventoryComponent {
       canShow: () => this.canReadStockMovements(),
     },
     {
-      label: 'Alerts',
-      route: 'alerts',
-      path: AppRoutes.InventoryAlerts,
-      ariaLabel: 'Stock alerts',
+      label: 'Needs Attention',
+      route: 'attention',
+      path: AppRoutes.InventoryAttention,
+      ariaLabel: 'Items that need attention',
       canShow: () => this.canReadStockMovements(),
-      badge: () => this.stockAlerts.unread(),
+      badge: () => this.attention.count(),
+      urgent: () => this.attention.urgentCount() > 0,
     },
     {
       label: 'Coverage',
@@ -70,7 +73,8 @@ export class InventoryComponent {
 
   public constructor() {
     if (this.authService.canReadStockMovements()) {
-      this.stockAlerts.refresh();
+      this.attention.start();
+      this.destroyRef.onDestroy(() => this.attention.stop());
     }
 
     effect(() => {

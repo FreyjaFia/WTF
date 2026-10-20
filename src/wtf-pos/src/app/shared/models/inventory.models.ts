@@ -152,24 +152,27 @@ export interface StockCoverageDto {
   products: ProductCoverageDto[];
 }
 
-export type StockAlertLevel = 'Warning' | 'Critical' | 'OutOfStock';
+export type StockAttentionLevel = 'Warning' | 'Critical' | 'OutOfStock';
 
-export interface StockNotificationDto {
+export interface StockAttentionItemDto {
   id: string;
-  itemId: string;
-  itemName: string;
-  status: StockAlertLevel;
-  quantity: number;
-  title: string;
-  body: string;
-  createdAt: string;
-  isRead: boolean;
+  name: string;
+  unitName: string;
+  currentQuantity: number;
+  warningQuantity: number | null;
+  criticalQuantity: number | null;
+  status: StockAttentionLevel;
+  allowNegativeStock: boolean;
+  productCount: number;
+  salesCovered: number;
 }
 
-export interface StockNotificationListDto {
-  items: StockNotificationDto[];
+export interface StockAttentionDto {
+  items: StockAttentionItemDto[];
+  outCount: number;
+  criticalCount: number;
+  warningCount: number;
   totalCount: number;
-  unreadCount: number;
 }
 
 export interface AlertRecipientDto {

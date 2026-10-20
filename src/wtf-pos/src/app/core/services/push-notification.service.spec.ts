@@ -10,7 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AlertService } from './alert.service';
 import { AuthService } from './auth.service';
 import { PushNotificationService } from './push-notification.service';
-import { StockAlertService } from './stock-alert.service';
+import { NotificationService } from './notification.service';
 
 const mocks = vi.hoisted(() => ({
   initializeApp: vi.fn(),
@@ -314,8 +314,8 @@ describe('PushNotificationService', () => {
         onMessageHandler = mocks.onMessage.mock.calls[0][1];
       });
 
-      it('refreshes the unread stock alerts when a stock alert arrives', () => {
-        const refresh = vi.spyOn(TestBed.inject(StockAlertService), 'refresh').mockImplementation(() => undefined);
+      it('refreshes the notification counts when a notification arrives', () => {
+        const refresh = vi.spyOn(TestBed.inject(NotificationService), 'refreshCounts').mockImplementation(() => undefined);
 
         onMessageHandler({
           notification: { title: 'Low stock: Milk', body: '400 ml left.' },
@@ -326,8 +326,8 @@ describe('PushNotificationService', () => {
         expect(refresh).toHaveBeenCalledTimes(1);
       });
 
-      it('opens the stock alerts list when a stock alert is clicked', () => {
-        vi.spyOn(TestBed.inject(StockAlertService), 'refresh').mockImplementation(() => undefined);
+      it('keeps the path of a stock alert so a click opens it', () => {
+        vi.spyOn(TestBed.inject(NotificationService), 'refreshCounts').mockImplementation(() => undefined);
 
         onMessageHandler({
           notification: { title: 'Low stock: Milk' },
@@ -516,8 +516,8 @@ describe('PushNotificationService', () => {
     describe('received notifications', () => {
       beforeEach(registerAndroid);
 
-      it('refreshes the unread stock alerts when a stock alert arrives', () => {
-        const refresh = vi.spyOn(TestBed.inject(StockAlertService), 'refresh').mockImplementation(() => undefined);
+      it('refreshes the notification counts when a notification arrives', () => {
+        const refresh = vi.spyOn(TestBed.inject(NotificationService), 'refreshCounts').mockImplementation(() => undefined);
 
         listener('pushNotificationReceived')({
           title: 'Low stock: Milk',

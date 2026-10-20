@@ -25,6 +25,7 @@
         }
       </div>
       <app-staff-envelope class="flex-none" align="start" />
+      <app-notification-bell class="flex-none" align="start" />
     </div>
   </div>
 
@@ -146,20 +147,24 @@
         <span class="flex items-center gap-3">
           <span class="relative">
             <app-icon name="icon-inventory-module" [class]="'h-4.5 w-4.5 text-gray-500'" />
-            @if (stockAlerts.unread() > 0 && !showInventory() && isCollapsed()) {
+            @if (attention.count() > 0 && !showInventory() && isCollapsed()) {
               <span
-                class="absolute -top-2 -right-2 inline-flex min-w-3.5 items-center justify-center rounded-full bg-red-500 px-0.5 text-[9px] leading-3.5 font-bold text-white"
+                class="absolute -top-2 -right-2 inline-flex min-w-3.5 items-center justify-center rounded-full px-0.5 text-[9px] leading-3.5 font-bold text-white"
+                [class.bg-red-500]="attention.urgentCount() > 0"
+                [class.bg-amber-500]="attention.urgentCount() === 0"
                 data-testid="sidebar-inventory-rail-badge"
-                >{{ stockAlerts.unread() > 9 ? '9+' : stockAlerts.unread() }}</span
+                >{{ attention.count() > 9 ? '9+' : attention.count() }}</span
               >
             }
           </span>
           <span [class.hidden]="isCollapsed()">Inventory</span>
-          @if (stockAlerts.unread() > 0 && !showInventory() && !isCollapsed()) {
+          @if (attention.count() > 0 && !showInventory() && !isCollapsed()) {
             <span
-              class="inline-flex min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] leading-4 font-bold text-white"
-              data-testid="sidebar-inventory-badge"
-              >{{ stockAlerts.unread() }}</span
+              class="inline-flex min-w-4 items-center justify-center rounded-full px-1 text-[10px] leading-4 font-bold text-white"
+              [class.bg-red-500]="attention.urgentCount() > 0"
+                [class.bg-amber-500]="attention.urgentCount() === 0"
+                data-testid="sidebar-inventory-badge"
+              >{{ attention.count() }}</span
             >
           }
         </span>
@@ -175,7 +180,7 @@
         [class.max-h-0]="!showInventory()"
         [class.opacity-0]="!showInventory()"
         [class.pointer-events-none]="!showInventory()"
-        [class.max-h-40]="showInventory()"
+        [class.max-h-64]="showInventory()"
         [class.opacity-100]="showInventory()"
         [class.pl-4]="!isCollapsed()"
         [class.pl-0]="isCollapsed()"
@@ -206,28 +211,32 @@
         }
         @if (authService.canReadStockMovements()) {
         <a
-          [routerLink]="routes.InventoryAlerts"
+          [routerLink]="routes.InventoryAttention"
           routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
           class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
           [class.justify-center]="isCollapsed()"
-          [attr.title]="'Stock Alerts'"
+          [attr.title]="'Needs Attention'"
         >
           <span class="relative">
             <app-icon name="icon-stock-alert" [class]="'h-4 w-4 text-gray-500'" />
-            @if (stockAlerts.unread() > 0 && isCollapsed()) {
+            @if (attention.count() > 0 && isCollapsed()) {
               <span
-                class="absolute -top-2 -right-2 inline-flex min-w-3.5 items-center justify-center rounded-full bg-red-500 px-0.5 text-[9px] leading-3.5 font-bold text-white"
+                class="absolute -top-2 -right-2 inline-flex min-w-3.5 items-center justify-center rounded-full px-0.5 text-[9px] leading-3.5 font-bold text-white"
+                [class.bg-red-500]="attention.urgentCount() > 0"
+                [class.bg-amber-500]="attention.urgentCount() === 0"
                 data-testid="sidebar-alerts-rail-badge"
-                >{{ stockAlerts.unread() > 9 ? '9+' : stockAlerts.unread() }}</span
+                >{{ attention.count() > 9 ? '9+' : attention.count() }}</span
               >
             }
           </span>
-          <span [class.hidden]="isCollapsed()">Alerts</span>
-          @if (stockAlerts.unread() > 0 && !isCollapsed()) {
+          <span [class.hidden]="isCollapsed()">Needs Attention</span>
+          @if (attention.count() > 0 && !isCollapsed()) {
             <span
-              class="ml-auto inline-flex min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] leading-4 font-bold text-white"
-              data-testid="sidebar-alerts-badge"
-              >{{ stockAlerts.unread() }}</span
+              class="ml-auto inline-flex min-w-4 items-center justify-center rounded-full px-1 text-[10px] leading-4 font-bold text-white"
+              [class.bg-red-500]="attention.urgentCount() > 0"
+                [class.bg-amber-500]="attention.urgentCount() === 0"
+                data-testid="sidebar-alerts-badge"
+              >{{ attention.count() }}</span
             >
           }
         </a>

@@ -1,0 +1,142 @@
+<div class="flex h-full flex-col pt-4 md:pt-0">
+  <div class="mb-4 flex shrink-0 flex-wrap items-start justify-between gap-3 sm:mb-5">
+    <div>
+      <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Needs Attention</h1>
+      <p class="text-xs text-gray-500 sm:text-sm" data-testid="attention-summary">
+        @if (totalCount() > 0) {
+          {{ summary() }}
+        } @else {
+          What is low right now, worst first
+        }
+      </p>
+    </div>
+  </div>
+
+  @if (hasLoaded()) {
+    <div class="mb-4 grid shrink-0 grid-cols-3 gap-2 sm:gap-3">
+      <button
+        type="button"
+        class="cursor-pointer rounded-xl p-3 text-left shadow transition-all active:scale-95 sm:p-4"
+        [class]="outCount() > 0 ? 'bg-red-600 text-white' : 'bg-surface text-gray-400'"
+        [class.ring-2]="filter() === 'OutOfStock'"
+        [class.ring-red-300]="filter() === 'OutOfStock'"
+        [attr.aria-pressed]="filter() === 'OutOfStock'"
+        data-testid="tile-out"
+        (click)="setFilter('OutOfStock')"
+      >
+        <span class="block text-2xl leading-none font-extrabold sm:text-3xl">{{ outCount() }}</span>
+        <span class="mt-1 block text-[11px] font-semibold tracking-wide uppercase sm:text-xs">Out</span>
+      </button>
+      <button
+        type="button"
+        class="cursor-pointer rounded-xl p-3 text-left shadow transition-all active:scale-95 sm:p-4"
+        [class]="criticalCount() > 0 ? 'bg-orange-500 text-white' : 'bg-surface text-gray-400'"
+        [class.ring-2]="filter() === 'Critical'"
+        [class.ring-orange-300]="filter() === 'Critical'"
+        [attr.aria-pressed]="filter() === 'Critical'"
+        data-testid="tile-critical"
+        (click)="setFilter('Critical')"
+      >
+        <span class="block text-2xl leading-none font-extrabold sm:text-3xl">{{ criticalCount() }}</span>
+        <span class="mt-1 block text-[11px] font-semibold tracking-wide uppercase sm:text-xs">Critical</span>
+      </button>
+      <button
+        type="button"
+        class="cursor-pointer rounded-xl p-3 text-left shadow transition-all active:scale-95 sm:p-4"
+        [class]="warningCount() > 0 ? 'bg-amber-100 text-amber-900' : 'bg-surface text-gray-400'"
+        [class.ring-2]="filter() === 'Warning'"
+        [class.ring-amber-300]="filter() === 'Warning'"
+        [attr.aria-pressed]="filter() === 'Warning'"
+        data-testid="tile-low"
+        (click)="setFilter('Warning')"
+      >
+        <span class="block text-2xl leading-none font-extrabold sm:text-3xl">{{ warningCount() }}</span>
+        <span class="mt-1 block text-[11px] font-semibold tracking-wide uppercase sm:text-xs">Low</span>
+      </button>
+    </div>
+  }
+
+  @if (isLoading() && !hasLoaded()) {
+    <div class="flex justify-center py-8">
+      <span class="loading loading-spinner loading-lg"></span>
+    </div>
+  }
+
+  <div class="min-h-0 flex-1 overflow-y-auto pb-4">
+    @if (hasLoaded() && totalCount() === 0) {
+      <div class="rounded-xl bg-surface p-8 text-center shadow" data-testid="all-clear">
+        <span
+          class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600"
+        >
+          <app-icon name="icon-check" [class]="'h-6 w-6'" [fill]="'currentColor'" />
+        </span>
+        <p class="text-lg font-semibold text-gray-700">All stocked up</p>
+        <p class="text-sm text-gray-500">Nothing is low right now. This list updates by itself.</p>
+      </div>
+    }
+
+    <ul class="space-y-2.5">
+      @for (item of visibleItems(); track item.id) {
+        <li>
+          <div
+            class="flex overflow-hidden rounded-xl shadow"
+            [class]="styleOf(item).tint"
+            data-testid="attention-row"
+            [attr.data-status]="item.status"
+          >
+            <span class="w-1.5 shrink-0" [class]="styleOf(item).bar"></span>
+            <div class="min-w-0 flex-1 p-3 sm:p-4">
+              <div class="flex items-start justify-between gap-3">
+                <button
+                  type="button"
+                  class="min-w-0 cursor-pointer text-left"
+                  (click)="openItem(item)"
+                >
+                  <span class="block truncate font-semibold text-gray-900">{{ item.name }}</span>
+                  <span class="block text-xs text-gray-500">{{ coverText(item) }}</span>
+                </button>
+                <span
+                  class="inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold tracking-wide uppercase"
+                  [class]="styleOf(item).badge"
+                >
+                  @if (item.status === 'OutOfStock') {
+                    <span class="h-1.5 w-1.5 animate-pulse rounded-full bg-white"></span>
+                  }
+                  {{ isNegative(item) ? 'Below zero' : styleOf(item).label }}
+                </span>
+              </div>
+
+              <div class="mt-2 flex items-end justify-between gap-3">
+                <p class="text-2xl leading-none font-extrabold text-gray-900 sm:text-3xl" data-testid="attention-quantity">
+                  {{ format(item.currentQuantity) }}
+                  <span class="text-sm font-semibold text-gray-500">{{ item.unitName }}</span>
+                </p>
+                @if (auth.canWriteStockMovements()) {
+                  <a
+                    [routerLink]="stockInRoute"
+                    [queryParams]="{ itemId: item.id }"
+                    class="app-btn app-btn-primary app-btn-sm shrink-0"
+                    data-testid="add-stock"
+                  >
+                    Add Stock
+                  </a>
+                }
+              </div>
+
+              <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-gray-200/70" aria-hidden="true">
+                <div
+                  class="h-full rounded-full transition-all duration-500"
+                  [class]="styleOf(item).fill"
+                  [style.width.%]="fillPercent(item)"
+                ></div>
+              </div>
+              @if (levelText(item)) {
+                <p class="mt-1 text-[11px] text-gray-500">{{ levelText(item) }}</p>
+              }
+            </div>
+          </div>
+        </li>
+      }
+    </ul>
+  </div>
+</div>

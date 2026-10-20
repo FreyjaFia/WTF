@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { signal } from '@angular/core';
-import { AuthService, StockAlertService } from '@core/services';
+import { AuthService, StockAttentionService } from '@core/services';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { BehaviorSubject } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
@@ -29,7 +29,7 @@ describe('DockComponent', () => {
       providers: [
         provideRouter([{ path: '**', children: [] }]),
         { provide: AuthService, useValue: fake },
-        { provide: StockAlertService, useValue: { unread: signal(0), refresh: vi.fn() } },
+        { provide: StockAttentionService, useValue: { count: signal(0), urgentCount: signal(0), start: vi.fn(), stop: vi.fn() } },
       ],
     });
     const fixture = TestBed.createComponent(DockComponent);

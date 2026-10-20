@@ -2,7 +2,7 @@ import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { AuthService, StockAlertService } from '@core/services';
+import { AuthService, StockAttentionService } from '@core/services';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { InventoryComponent } from './inventory';
 
@@ -31,7 +31,7 @@ describe('InventoryComponent', () => {
             children: [
               { path: 'items', component: ItemsStub },
               { path: 'stock-in', component: StockStub },
-              { path: 'alerts', component: StockStub },
+              { path: 'attention', component: StockStub },
               { path: 'coverage', component: StockStub },
             ],
           },
@@ -43,7 +43,7 @@ describe('InventoryComponent', () => {
             canReadStockMovements: () => perms.stock,
           },
         },
-        { provide: StockAlertService, useValue: { unread, refresh } },
+        { provide: StockAttentionService, useValue: { count: unread, urgentCount: signal(1), start: refresh, stop: vi.fn() } },
       ],
     });
   }
@@ -75,13 +75,13 @@ describe('InventoryComponent', () => {
     expect(rendered.map((t) => t.getAttribute('data-inventory-tab'))).toEqual([
       'items',
       'stock-in',
-      'alerts',
+      'attention',
       'coverage',
     ]);
     expect(rendered.map((t) => t.getAttribute('href'))).toEqual([
       '/inventory/items',
       '/inventory/stock-in',
-      '/inventory/alerts',
+      '/inventory/attention',
       '/inventory/coverage',
     ]);
   });
@@ -89,7 +89,7 @@ describe('InventoryComponent', () => {
   it('hides tabs the user cannot read', async () => {
     perms = { items: false, stock: true };
     const { el } = await setup('/inventory/stock-in');
-    expect(tabs(el).map((t) => t.getAttribute('data-inventory-tab'))).toEqual(['stock-in', 'alerts']);
+    expect(tabs(el).map((t) => t.getAttribute('data-inventory-tab'))).toEqual(['stock-in', 'attention']);
   });
 
   it('shows the coverage tab only to roles that can read items', async () => {
@@ -98,7 +98,7 @@ describe('InventoryComponent', () => {
     expect(tabs(el).map((t) => t.getAttribute('data-inventory-tab'))).toEqual(['items', 'coverage']);
   });
 
-  it('shows the unread alert count on the Alerts tab only while there are some', async () => {
+  it('shows the count of items needing attention on the Needs Attention tab only while there are some', async () => {
     const { harness, el } = await setup();
     expect(el.querySelector('[data-testid="tab-badge"]')).toBeNull();
 
@@ -107,10 +107,10 @@ describe('InventoryComponent', () => {
 
     const badge = el.querySelector('[data-testid="tab-badge"]');
     expect(badge?.textContent?.trim()).toBe('3');
-    expect(badge?.closest('a')?.getAttribute('data-inventory-tab')).toBe('alerts');
+    expect(badge?.closest('a')?.getAttribute('data-inventory-tab')).toBe('attention');
   });
 
-  it('refreshes the unread count for roles that can read stock, and not for others', async () => {
+  it('starts watching stock for roles that can read stock, and not for others', async () => {
     await setup();
     expect(refresh).toHaveBeenCalledTimes(1);
 
