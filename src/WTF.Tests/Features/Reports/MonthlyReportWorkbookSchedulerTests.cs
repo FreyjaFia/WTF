@@ -5,6 +5,7 @@ using NSubstitute;
 using System.Reflection;
 using WTF.Api.Features.Reports;
 using WTF.Api.Features.Reports.DTOs;
+using WTF.Api.Services;
 
 namespace WTF.Tests.Features.Reports;
 
@@ -52,7 +53,7 @@ public class MonthlyReportWorkbookSchedulerTests
 
     private static T Invoke<T>(string method, params object[] args)
     {
-        var info = typeof(MonthlyReportWorkbookScheduler).GetMethod(method, BindingFlags.NonPublic | BindingFlags.Static)!;
+        var info = typeof(DailyCatchUpScheduler).GetMethod(method, BindingFlags.NonPublic | BindingFlags.Static)!;
         return (T)info.Invoke(null, args)!;
     }
 

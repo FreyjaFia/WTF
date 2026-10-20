@@ -1,124 +1,66 @@
 using Microsoft.Extensions.Options;
+using WTF.Api.Services;
 
 namespace WTF.Api.Features.Reports;
 
+// Runs once a day after the run time and catches up after a cold start (see DailyCatchUpScheduler). "Ran today" is read
+// from the current month's workbook itself: it is done for today when that file was generated today.
 public sealed class MonthlyReportWorkbookScheduler(
     IServiceScopeFactory scopeFactory,
     IOptions<MonthlyReportWorkbookSchedulerOptions> options,
-    ILogger<MonthlyReportWorkbookScheduler> logger) : BackgroundService
+    ILogger<MonthlyReportWorkbookScheduler> logger) : DailyCatchUpScheduler(scopeFactory, logger)
 {
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    private readonly ILogger<MonthlyReportWorkbookScheduler> _logger = logger;
+
+    private MonthlyReportWorkbookSchedulerOptions Settings => options.Value;
+
+    protected override string JobName => "Monthly report workbook";
+    protected override bool IsEnabled => Settings.Enabled;
+    protected override string TimeZoneId => Settings.TimeZoneId;
+    protected override int RunAtHour => Settings.RunAtHour;
+    protected override int RunAtMinute => Settings.RunAtMinute;
+    protected override int RetryCount => Settings.RetryCount;
+    protected override int RetryDelayMinutes => Settings.RetryDelayMinutes;
+
+    protected override async Task<DateTimeOffset?> GetLastRunUtcAsync(IServiceProvider services, CancellationToken cancellationToken)
     {
-        var settings = options.Value;
-        if (!settings.Enabled)
-        {
-            logger.LogInformation("Monthly report workbook scheduler is disabled.");
-            return;
-        }
-
-        var timeZone = ResolveTimeZone(settings.TimeZoneId);
-        var consecutiveFailures = 0;
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            try
-            {
-                await EnsureGeneratedForTodayAsync(
-                    timeZone,
-                    settings,
-                    stoppingToken);
-
-                var delay = GetNextDelay(timeZone, settings.RunAtHour, settings.RunAtMinute);
-                logger.LogInformation(
-                    "Monthly report workbook scheduler sleeping for {Delay}. Next run at local {LocalTime}.",
-                    delay,
-                    TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow.Add(delay), timeZone));
-
-                await Task.Delay(delay, stoppingToken);
-
-                var nowLocal = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, timeZone);
-                using var scope = scopeFactory.CreateScope();
-                var service = scope.ServiceProvider.GetRequiredService<IMonthlyReportWorkbookService>();
-                await GenerateToDateAsync(
-                    service,
-                    nowLocal,
-                    timeZone,
-                    stoppingToken);
-
-                consecutiveFailures = 0;
-            }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-            {
-                logger.LogInformation("Monthly report workbook scheduler is stopping.");
-                break;
-            }
-            catch (Exception ex)
-            {
-                consecutiveFailures++;
-                logger.LogError(ex, "Failed to regenerate monthly report workbook (attempt {Attempt}).", consecutiveFailures);
-
-                // Wait before trying again instead of looping straight back. After RetryCount quick retries,
-                // give up until the next scheduled run.
-                TimeSpan wait;
-                if (consecutiveFailures <= settings.RetryCount)
-                {
-                    wait = TimeSpan.FromMinutes(Math.Max(1, settings.RetryDelayMinutes));
-                }
-                else
-                {
-                    consecutiveFailures = 0;
-                    wait = GetNextDelay(timeZone, settings.RunAtHour, settings.RunAtMinute);
-                }
-
-                try
-                {
-                    await Task.Delay(wait, stoppingToken);
-                }
-                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-                {
-                    logger.LogInformation("Monthly report workbook scheduler is stopping.");
-                    break;
-                }
-            }
-        }
-    }
-
-    private async Task EnsureGeneratedForTodayAsync(
-        TimeZoneInfo timeZone,
-        MonthlyReportWorkbookSchedulerOptions settings,
-        CancellationToken stoppingToken)
-    {
+        var timeZone = ResolveTimeZone(Settings.TimeZoneId);
         var nowLocal = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, timeZone);
-        using var scope = scopeFactory.CreateScope();
-        var service = scope.ServiceProvider.GetRequiredService<IMonthlyReportWorkbookService>();
-        var status = await service.GetStatusAsync(nowLocal.Year, nowLocal.Month, stoppingToken);
-
-        if (nowLocal.Day == 1)
-        {
-            var previousMonth = nowLocal.AddMonths(-1);
-            await GeneratePreviousMonthIfMissingAsync(
-                service,
-                previousMonth,
-                timeZone,
-                stoppingToken);
-        }
+        var service = services.GetRequiredService<IMonthlyReportWorkbookService>();
+        var status = await service.GetStatusAsync(nowLocal.Year, nowLocal.Month, cancellationToken);
 
         if (status is { Exists: true, GeneratedAtUtc: not null })
         {
-            var lastModifiedLocal = TimeZoneInfo.ConvertTime(
-                new DateTimeOffset(DateTime.SpecifyKind(status.GeneratedAtUtc.Value, DateTimeKind.Utc), TimeSpan.Zero),
-                timeZone);
+            return new DateTimeOffset(DateTime.SpecifyKind(status.GeneratedAtUtc.Value, DateTimeKind.Utc), TimeSpan.Zero);
+        }
 
-            if (lastModifiedLocal.Date == nowLocal.Date)
+        // On the 1st nothing has been completed this month yet, so the current file cannot exist. The day's work is then
+        // the previous month's file: once it exists there is nothing left to do today.
+        if (nowLocal.Day == 1)
+        {
+            var previous = nowLocal.AddMonths(-1);
+            var previousStatus = await service.GetStatusAsync(previous.Year, previous.Month, cancellationToken);
+            if (previousStatus is { Exists: true })
             {
-                return;
+                return DateTimeOffset.UtcNow;
             }
         }
 
-        await GenerateToDateAsync(
-            service,
-            nowLocal,
-            timeZone,
-            stoppingToken);
+        return null;
+    }
+
+    protected override async Task RunJobAsync(IServiceProvider services, CancellationToken cancellationToken)
+    {
+        var timeZone = ResolveTimeZone(Settings.TimeZoneId);
+        var nowLocal = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, timeZone);
+        var service = services.GetRequiredService<IMonthlyReportWorkbookService>();
+
+        if (nowLocal.Day == 1)
+        {
+            await GeneratePreviousMonthIfMissingAsync(service, nowLocal.AddMonths(-1), timeZone, cancellationToken);
+        }
+
+        await GenerateToDateAsync(service, nowLocal, timeZone, cancellationToken);
     }
 
     private async Task GeneratePreviousMonthIfMissingAsync(
@@ -143,56 +85,10 @@ public sealed class MonthlyReportWorkbookScheduler(
             timeZone.Id,
             stoppingToken);
 
-        logger.LogInformation(
+        _logger.LogInformation(
             "Monthly report workbook generated for previous month {Year}-{Month:00}.",
             previousMonthLocal.Year,
             previousMonthLocal.Month);
-    }
-
-    private static TimeSpan GetNextDelay(TimeZoneInfo timeZone, int runAtHour, int runAtMinute)
-    {
-        var nowUtc = DateTimeOffset.UtcNow;
-        var nowLocal = TimeZoneInfo.ConvertTime(nowUtc, timeZone);
-
-        var nextLocal = new DateTimeOffset(
-            nowLocal.Year,
-            nowLocal.Month,
-            nowLocal.Day,
-            runAtHour,
-            runAtMinute,
-            0,
-            nowLocal.Offset);
-
-        if (nextLocal <= nowLocal)
-        {
-            nextLocal = nextLocal.AddDays(1);
-        }
-
-        var nextUtc = nextLocal.ToUniversalTime();
-        var delay = nextUtc - nowUtc;
-        return delay <= TimeSpan.Zero ? TimeSpan.FromMinutes(1) : delay;
-    }
-
-    private static TimeZoneInfo ResolveTimeZone(string timeZoneId)
-    {
-        if (string.IsNullOrWhiteSpace(timeZoneId))
-        {
-            return TimeZoneInfo.Utc;
-        }
-
-        try
-        {
-            return TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
-        }
-        catch (TimeZoneNotFoundException)
-        {
-            if (TimeZoneInfo.TryConvertIanaIdToWindowsId(timeZoneId, out var windowsId))
-            {
-                return TimeZoneInfo.FindSystemTimeZoneById(windowsId);
-            }
-
-            return TimeZoneInfo.Utc;
-        }
     }
 
     private async Task GenerateToDateAsync(
@@ -205,7 +101,7 @@ public sealed class MonthlyReportWorkbookScheduler(
         var monthStart = new DateTime(nowLocal.Year, nowLocal.Month, 1);
         if (throughDate < monthStart)
         {
-            logger.LogInformation(
+            _logger.LogInformation(
                 "Monthly report workbook catch-up skipped (no completed days yet for {Year}-{Month:00}).",
                 nowLocal.Year,
                 nowLocal.Month);
@@ -227,8 +123,10 @@ public sealed class MonthlyReportWorkbookScheduler(
                 DateTimeKind.Unspecified),
             stoppingToken);
 
-        logger.LogInformation(
+        _logger.LogInformation(
             "Monthly report workbook regenerated through end of day {Date:yyyy-MM-dd}.",
             throughDate);
     }
+
+    private static TimeZoneInfo ResolveTimeZone(string timeZoneId) => DailyCatchUpScheduler.ResolveTimeZone(timeZoneId);
 }
