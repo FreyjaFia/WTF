@@ -663,17 +663,32 @@ Built (21 Oct 2026; script `tools/sql/20261022_add_stock_alerts.sql`, run it bef
   `POST /api/stock-notifications/read` (some ids, or all), `StockMovementsRead`. A failed push never undoes the sale; the saved
   list is the record. Push is sent when the alert is saved, inside the sale's transaction, so a sale that rolls back after that
   point (rare) could leave one push without an alert.
-- **Screens.** Inventory > Alerts (list, unread highlighted, open an alert to mark it read and go to the item, Mark All Read,
+- **Screens (replaced 21 Oct 2026, see "Needs Attention" below).** Inventory > Alerts (list, unread highlighted, open an alert to mark it read and go to the item, Mark All Read,
   Load More); the unread count on the Alerts tab and sidebar link, and on the Inventory entry when its group is closed (and on
   the Inventory item of the phone dock). The count sits on Alerts while the Inventory group is open and moves to Inventory
   when it is closed, in the wide and the narrow sidebar alike (a small number on the icon in the narrow one, "9+" above nine).
   It refreshes when the app opens, when a push arrives, and when the list is used.
-- **Not built.** No indicators in the POS (decided: not now). No SignalR push of the count, so a second device sees a new alert
-  on its next refresh or push. A global notification bell for other kinds of notifications is planned (see "Global Notifications (the bell)" below).
+- **Not built.** No indicators in the POS (decided: not now). Counts and lists now update live (see "Global Notifications (the bell)" below).
 - **Checked in the running app** (throwaway database, built-in browser): selling past the warning, critical and empty levels
   gave one alert each (3 in total, a further sale while empty added none); the list, sidebar count, Inventory count and
   phone dock count matched; opening an alert marked it read; naming only one person in the item editor sent the next alert to
   that person and not to the admin. Push is not configured on this machine, so the push itself was checked only by unit tests.
+
+
+**Needs Attention, live counts, and the Stock In and Coverage redesign (21 Oct 2026)**
+
+- **Needs Attention replaces the Alerts tab** (`GET /api/items/attention`, `StockMovementsRead`; `/inventory/attention`, and `/inventory/alerts`
+  redirects to it). An event list cannot feel urgent, because what stock people need is what is low *now*. It reads the items, not the saved
+  alerts, so an alert that was read or cleared never hides an item that is still low. Worst first (out of stock or below zero, critical, low), three
+  count tiles (out in red, critical in orange, low in amber, each a filter), and a card per item: the quantity big, a bar
+  against the low level, "Enough for N more sales, used by M products" (or "cannot be made" when empty), the levels, and **Add Stock** with the
+  item preselected. When nothing is low it says "All stocked up". The stock alert events still arrive in the bell and on the Notifications page.
+- **The counts follow the shelf.** The Inventory entry, the Needs Attention link and tab, and the phone dock show the number of items that need
+  attention (not unread alerts), red while anything is critical or out and amber when items are only low, and every screen updates by itself
+  when stock changes (`StockAttentionService`, fed by `StockChanged`). `StockAlertService` announces every change, alert or not.
+- **Stock In** is a full page, not a form in a box: "1. What arrived?" is a searchable grid of item tiles (a dot and a note for items that are out, critical or running low, those first), "2. How much?" has a big quantity box with presets (+100, +500, +1,000, +5,000 for ml and g, +1, +5, +10, +50 for pieces), and "3. Details" holds cost and note. A sticky summary on the right shows what is in stock now, what is being received and the new balance, with the Add Stock button; after saving the form clears for the next delivery and an "Added just now" list keeps the last five (it no longer jumps to the item).
+- **Stock Coverage** shows how much of the menu takes stock as one bar and a percentage, "Needs setup" and "All products" pills with counts, a
+  search box, a coloured edge per card and each missing option as a chip, with Set up stock as the main action for products that need it.
 
 
 **Additions to stock alerts (planned 21 Oct 2026, built 21 Oct 2026; script `tools/sql/20261023_add_stock_alert_reminders.sql`, run it before deploying the API)**
@@ -720,7 +735,29 @@ again, count up) instead of adding one; a recovered item that falls again starts
 run sends nothing; creating a low item and restoring a low item alert once; the real-SQL test that two runs in the same moment
 send one reminder.
 
-### Global Notifications (the bell) [Planned, not started, added 21 Oct 2026]
+### Global Notifications (the bell) [Built, 21 Oct 2026]
+
+**Built (21 Oct 2026; script `tools/sql/20261024_generalise_notifications.sql`, run it before deploying the API, then `tools/dbsync.bat`).**
+The plan below was built as written, with these details:
+
+- **One table, one producer.** `StockNotifications` became `Notifications` (`Kind`, `Severity`, `Path`, `SubjectId`, `Data` JSON; existing
+  rows became `StockAlert` rows with their read state, and the old item, level and quantity columns moved into `SubjectId`, `Severity` and
+  `Data`). `INotificationService` (`Features/Notifications`) saves a row per person, tells their open screens and sends the push (push type
+  `notification`, with `kind`, `path` and `subjectId`). `NotifyAsync` saves and announces, `AnnounceAsync` only announces (used when a
+  reminder lifts an existing row). `StockAlertService` and the reminder job call it and keep only the stock rules.
+- **API.** `GET /api/notifications` (by kind, unread only, paged; returns the total unread and the unread per kind), `GET /api/notifications/counts`,
+  `POST /api/notifications/read` (some ids, a kind, or all). Any signed-in person; a person only ever sees rows addressed to them. The
+  `/api/stock-notifications` routes are gone.
+- **Real time.** A new `NotificationHub` (`/hubs/notifications`, any signed-in person, no methods a client can call). Each person joins
+  `user-{id}` and hears `NotificationsChanged` when a row is added, lifted or read (also on their other devices); people who can read stock also
+  join `StockViewers` and hear `StockChanged` after every stock change. The app then asks the API again, so the count, the bell and the lists
+  update without a refresh; a dropped connection reloads everything when it comes back, and the counts are also reloaded every minute.
+- **App.** `app-notification-bell` beside the chat envelope (sidebar top row, phone and wide header): the unread count (99+), a panel with the
+  latest ten (an icon and colour by severity, a Reminder pill, Mark all read, See all), and a Notifications page (`/notifications`) with a filter
+  per kind, unread only, load more, and live reload. A new kind needs a label in `NOTIFICATION_KIND_LABELS` and an icon in
+  `notification-display.ts`; nothing else.
+- **Inventory Alerts became Needs Attention** (decided 21 Oct 2026): see Inventory Phase 4.
+- **Not built:** per-person mute switches, deleting old read notifications, and a second kind (they wait until one is wanted).
 
 One bell beside the chat envelope that collects every kind of notification for a person, so a new kind (stock alerts today,
 others later) does not need its own badge, page and push wiring. The bell icon (`icon-notifications`) is already in the icon
