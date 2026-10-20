@@ -547,4 +547,51 @@ public class PushNotificationServiceTests
         data.ContainsKey("type").ShouldBeFalse();
         data["path"].ShouldStartWith("/orders/editor/");
     }
+    [Fact]
+    public async Task SendStockAlertAsync_GoesOnlyToTheNamedUsers_AndOpensTheAlertsList()
+    {
+        var named = AddUser();
+        var other = AddUser();
+        var item = Guid.NewGuid();
+        AddToken(named, "named-device");
+        AddToken(other, "other-device");
+
+        await Service().SendStockAlertAsync([named], "Low stock: Milk", "400 ml left.", item, CancellationToken.None);
+
+        var call = Sends(_fcm).Single();
+        call.GetArguments()[0].ShouldBe("named-device");
+        call.GetArguments()[1].ShouldBe("Low stock: Milk");
+        var data = (IReadOnlyDictionary<string, string>)call.GetArguments()[3]!;
+        data["type"].ShouldBe("stock-alert");
+        data["path"].ShouldBe("/inventory/alerts");
+        data["itemId"].ShouldBe(item.ToString());
+        data.ContainsKey("orderId").ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task SendStockAlertAsync_SkipsInactiveTokens_AndSendsHuaweiDevicesToHuawei()
+    {
+        var user = AddUser();
+        AddToken(user, "gone", active: false);
+        AddToken(user, "hw-1", "huawei");
+
+        await Service().SendStockAlertAsync([user], "t", "b", Guid.NewGuid(), CancellationToken.None);
+
+        Sends(_fcm).ShouldBeEmpty();
+        Sends(_huawei).Count().ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task SendStockAlertAsync_NothingConfiguredOrNoRecipients_SendsNothing()
+    {
+        var user = AddUser();
+        AddToken(user, "t1");
+
+        await Service().SendStockAlertAsync([], "t", "b", Guid.NewGuid(), CancellationToken.None);
+        _fcm.IsConfigured.Returns(false);
+        _huawei.IsConfigured.Returns(false);
+        await Service().SendStockAlertAsync([user], "t", "b", Guid.NewGuid(), CancellationToken.None);
+
+        Sends(_fcm).ShouldBeEmpty();
+    }
 }

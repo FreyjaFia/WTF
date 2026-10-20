@@ -5,6 +5,8 @@ using WTF.Api.Features.Items;
 
 namespace WTF.Api.Endpoints;
 
+public record SetItemAlertRecipientsRequest(List<Guid>? UserIds);
+
 public static class ItemEndpoints
 {
     public static IEndpointRouteBuilder MapItems(this IEndpointRouteBuilder app)
@@ -107,6 +109,22 @@ public static class ItemEndpoints
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             })
             .RequireAuthorization(AppPolicies.StockMovementsRead);
+
+        itemGroup.MapGet("/{id:guid}/alert-recipients",
+            async (Guid id, ISender sender) =>
+            {
+                var result = await sender.Send(new GetItemAlertRecipientsQuery(id));
+                return result is not null ? Results.Ok(result) : Results.NotFound();
+            })
+            .RequireAuthorization(AppPolicies.ItemsRead);
+
+        itemGroup.MapPut("/{id:guid}/alert-recipients",
+            async (Guid id, SetItemAlertRecipientsRequest request, ISender sender) =>
+            {
+                var result = await sender.Send(new SetItemAlertRecipientsCommand(id, request.UserIds ?? []));
+                return result is not null ? Results.Ok(result) : Results.NotFound();
+            })
+            .RequireAuthorization(AppPolicies.ItemsWrite);
 
         itemGroup.MapPost("/product-links",
             async (LinkProductItemCommand command, ISender sender) =>

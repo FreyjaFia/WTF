@@ -36,13 +36,19 @@ public partial class Item
 
     public bool AllowNegativeStock { get; set; }
 
+    public byte LastAlertStatus { get; set; }
+
     public virtual User CreatedByNavigation { get; set; } = null!;
+
+    public virtual ICollection<ItemAlertRecipient> ItemAlertRecipients { get; set; } = new List<ItemAlertRecipient>();
 
     public virtual ICollection<ItemPriceHistory> ItemPriceHistories { get; set; } = new List<ItemPriceHistory>();
 
     public virtual ICollection<ProductItemLink> ProductItemLinks { get; set; } = new List<ProductItemLink>();
 
     public virtual ICollection<StockMovement> StockMovements { get; set; } = new List<StockMovement>();
+
+    public virtual ICollection<StockNotification> StockNotifications { get; set; } = new List<StockNotification>();
 
     public virtual User? UpdatedByNavigation { get; set; }
 }

@@ -42,6 +42,14 @@ public interface IPushNotificationService
         Guid actorUserId,
         CancellationToken cancellationToken,
         bool isOverride = false);
+
+    /// <summary>An item fell to a worse stock level. It goes to the named people only and opens the stock alerts list.</summary>
+    Task SendStockAlertAsync(
+        IReadOnlyCollection<Guid> userIds,
+        string title,
+        string body,
+        Guid itemId,
+        CancellationToken cancellationToken);
 }
 
 /// <summary>Values of the <c>type</c> field in push data, so the app can route each kind of notification.</summary>
@@ -49,6 +57,7 @@ public static class PushTypes
 {
     public const string OnlineOrder = "online-order";
     public const string OrderMessage = "order-message";
+    public const string StockAlert = "stock-alert";
 }
 
 public sealed class PushNotificationService(
@@ -180,6 +189,35 @@ public sealed class PushNotificationService(
             cancellationToken);
     }
 
+    public async Task SendStockAlertAsync(
+        IReadOnlyCollection<Guid> userIds,
+        string title,
+        string body,
+        Guid itemId,
+        CancellationToken cancellationToken)
+    {
+        if (userIds.Count == 0 || (!fcmClient.IsConfigured && !huaweiClient.IsConfigured))
+        {
+            return;
+        }
+
+        var tokens = await db.PushNotificationTokens
+            .AsNoTracking()
+            .Where(t => t.IsActive && userIds.Contains(t.UserId))
+            .Select(t => new PushTarget(t.Token, t.Platform))
+            .Distinct()
+            .ToListAsync(cancellationToken);
+
+        var data = new Dictionary<string, string>
+        {
+            ["itemId"] = itemId.ToString(),
+            ["type"] = PushTypes.StockAlert,
+            ["path"] = "/inventory/alerts"
+        };
+
+        await DeliverAsync(tokens, title, body, data, $"item {itemId}", cancellationToken);
+    }
+
     private async Task SendToOthersAsync(
         Order order,
         string title,
@@ -207,10 +245,23 @@ public sealed class PushNotificationService(
                 (joined, role) => new { joined.token, role.Name })
             .Where(x => x.Name != AppRoles.AdminViewer)
             .Where(x => x.token.UserId != actorUserId)
-            .Select(x => new { x.token.Token, x.token.Platform })
+            .Select(x => new PushTarget(x.token.Token, x.token.Platform))
             .Distinct()
             .ToListAsync(cancellationToken);
 
+        await DeliverAsync(tokens, title, body, data, $"order {order.Id}", cancellationToken);
+    }
+
+    private sealed record PushTarget(string Token, string Platform);
+
+    private async Task DeliverAsync(
+        List<PushTarget> tokens,
+        string title,
+        string body,
+        Dictionary<string, string> data,
+        string subject,
+        CancellationToken cancellationToken)
+    {
         if (tokens.Count == 0)
         {
             return;
@@ -235,7 +286,7 @@ public sealed class PushNotificationService(
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex, "Failed to send push notification for order {OrderId}.", order.Id);
+                logger.LogWarning(ex, "Failed to send push notification for {Subject}.", subject);
             }
         }
 
@@ -247,7 +298,7 @@ public sealed class PushNotificationService(
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex, "Failed to send Huawei push notification for order {OrderId}.", order.Id);
+                logger.LogWarning(ex, "Failed to send Huawei push notification for {Subject}.", subject);
             }
         }
     }

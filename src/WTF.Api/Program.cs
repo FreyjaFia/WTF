@@ -56,6 +56,7 @@ builder.Services.AddSingleton<IJwtService, JwtService>();
 builder.Services.AddScoped<IUserRoleService, UserRoleService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<IOrderStockService, OrderStockService>();
+builder.Services.AddScoped<IStockAlertService, StockAlertService>();
 builder.Services.AddSingleton<FcmAccessTokenProvider>();
 builder.Services.AddHttpClient<IFcmPushClient, FcmPushClient>();
 builder.Services.AddSingleton<HuaweiAccessTokenProvider>();
@@ -75,6 +76,10 @@ builder.Services.Configure<ChatRetentionOptions>(
     builder.Configuration.GetSection(ChatRetentionOptions.SectionName));
 builder.Services.AddScoped<IChatMessageExpiryService, ChatMessageExpiryService>();
 builder.Services.AddHostedService<ChatMessageExpiryScheduler>();
+builder.Services.Configure<StockAlertRemindersOptions>(
+    builder.Configuration.GetSection(StockAlertRemindersOptions.SectionName));
+builder.Services.AddScoped<IStockReminderService, StockReminderService>();
+builder.Services.AddHostedService<StockReminderScheduler>();
 
 if (builder.Environment.IsDevelopment())
 {

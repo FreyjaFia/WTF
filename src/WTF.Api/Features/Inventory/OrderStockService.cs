@@ -24,7 +24,7 @@ public interface IOrderStockService
         Guid orderId, Guid userId, IReadOnlySet<Guid> notReturnedLineIds, CancellationToken cancellationToken);
 }
 
-public class OrderStockService(WTFDbContext db, IAuditService auditService) : IOrderStockService
+public class OrderStockService(WTFDbContext db, IAuditService auditService, IStockAlertService stockAlerts) : IOrderStockService
 {
     private const string NotResaleableNote = "Refunded, not resaleable";
     private const string BelowZeroNote = "Balance went below zero";
@@ -105,6 +105,7 @@ public class OrderStockService(WTFDbContext db, IAuditService auditService) : IO
         }
 
         await db.SaveChangesAsync(cancellationToken);
+        await stockAlerts.EvaluateAsync(changes.Select(c => c.ItemId), cancellationToken);
 
         await auditService.LogAsync(
             AuditAction.OrderStockDeducted,
@@ -181,6 +182,7 @@ public class OrderStockService(WTFDbContext db, IAuditService auditService) : IO
         }
 
         await db.SaveChangesAsync(cancellationToken);
+        await stockAlerts.EvaluateAsync(taken.Select(t => t.ItemId), cancellationToken);
 
         await auditService.LogAsync(
             AuditAction.OrderStockRestored,
@@ -276,20 +278,20 @@ public class OrderStockService(WTFDbContext db, IAuditService auditService) : IO
             .FirstAsync(cancellationToken);
         var shortBy = StockRules.Shortfall(balance, needed);
 
-        return $"Not enough {item.Name}: this order needs {Format(needed)} {item.UnitName}, "
-               + $"{Format(Math.Max(0m, balance))} {item.UnitName} in stock (short by {Format(shortBy)} {item.UnitName}).";
+        return $"Not enough {item.Name}: this order needs {Format(needed)} {InventoryUnitLabels.Abbreviate(item.UnitName)}, "
+               + $"{Format(Math.Max(0m, balance))} {InventoryUnitLabels.Abbreviate(item.UnitName)} in stock (short by {Format(shortBy)} {InventoryUnitLabels.Abbreviate(item.UnitName)}).";
     }
 
     private static string? WarningFor(Item item, decimal after)
     {
         if (after < 0m)
         {
-            return $"{item.Name} is below zero: {Format(after)} {item.UnitName}. Count it and correct the stock.";
+            return $"{item.Name} is below zero: {Format(after)} {InventoryUnitLabels.Abbreviate(item.UnitName)}. Count it and correct the stock.";
         }
 
         return StockRules.StatusFor(after, item.WarningQuantity, item.CriticalQuantity) == StockStatus.Ok
             ? null
-            : $"{item.Name} is running low: {Format(after)} {item.UnitName} left.";
+            : $"{item.Name} is running low: {Format(after)} {InventoryUnitLabels.Abbreviate(item.UnitName)} left.";
     }
 
     private static string Format(decimal quantity) => quantity.ToString("0.###", CultureInfo.InvariantCulture);

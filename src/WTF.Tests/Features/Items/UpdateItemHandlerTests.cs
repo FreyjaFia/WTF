@@ -13,7 +13,7 @@ public class UpdateItemHandlerTests
     private readonly Guid _userId = Guid.NewGuid();
     private readonly IAuditService _audit = TestFakes.Audit();
 
-    private UpdateItemHandler Handler() => new(TestDb.Create(_db), TestRequest.As(_userId), _audit);
+    private UpdateItemHandler Handler() => new(TestDb.Create(_db), TestRequest.As(_userId), _audit, TestFakes.Alerts(TestDb.Create(_db)));
 
     [Fact]
     public async Task Handle_MissingItem_ReturnsNull()

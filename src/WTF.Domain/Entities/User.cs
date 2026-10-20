@@ -38,6 +38,10 @@ public partial class User
 
     public virtual ICollection<User> InverseUpdatedByNavigation { get; set; } = new List<User>();
 
+    public virtual ICollection<ItemAlertRecipient> ItemAlertRecipientCreatedByNavigations { get; set; } = new List<ItemAlertRecipient>();
+
+    public virtual ICollection<ItemAlertRecipient> ItemAlertRecipientUsers { get; set; } = new List<ItemAlertRecipient>();
+
     public virtual ICollection<Item> ItemCreatedByNavigations { get; set; } = new List<Item>();
 
     public virtual ICollection<ItemPriceHistory> ItemPriceHistories { get; set; } = new List<ItemPriceHistory>();
@@ -71,6 +75,8 @@ public partial class User
     public virtual ICollection<ShortLink> ShortLinks { get; set; } = new List<ShortLink>();
 
     public virtual ICollection<StockMovement> StockMovements { get; set; } = new List<StockMovement>();
+
+    public virtual ICollection<StockNotification> StockNotifications { get; set; } = new List<StockNotification>();
 
     public virtual User? UpdatedByNavigation { get; set; }
 

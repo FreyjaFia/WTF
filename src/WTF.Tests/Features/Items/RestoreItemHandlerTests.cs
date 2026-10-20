@@ -17,7 +17,7 @@ public class RestoreItemHandlerTests
     public async Task Handle_InactiveItem_ReactivatesAndAudits()
     {
         var item = await ItemSeed.Item(_db, _userId, active: false);
-        var ok = await new RestoreItemHandler(TestDb.Create(_db), TestRequest.As(_userId), _audit)
+        var ok = await new RestoreItemHandler(TestDb.Create(_db), TestRequest.As(_userId), _audit, TestFakes.Alerts(TestDb.Create(_db)))
             .Handle(new RestoreItemCommand(item.Id), CancellationToken.None);
 
         ok.ShouldBeTrue();
@@ -32,7 +32,7 @@ public class RestoreItemHandlerTests
     [Fact]
     public async Task Handle_MissingItem_ReturnsFalseWithoutAudit()
     {
-        var ok = await new RestoreItemHandler(TestDb.Create(_db), TestRequest.As(_userId), _audit)
+        var ok = await new RestoreItemHandler(TestDb.Create(_db), TestRequest.As(_userId), _audit, TestFakes.Alerts(TestDb.Create(_db)))
             .Handle(new RestoreItemCommand(Guid.NewGuid()), CancellationToken.None);
 
         ok.ShouldBeFalse();

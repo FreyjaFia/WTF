@@ -14,7 +14,7 @@ public class AdjustItemStockHandlerTests
     private readonly Guid _userId = Guid.NewGuid();
     private readonly IAuditService _audit = TestFakes.Audit();
 
-    private AdjustItemStockHandler Handler() => new(TestDb.Create(_db), TestRequest.As(_userId), _audit);
+    private AdjustItemStockHandler Handler() => new(TestDb.Create(_db), TestRequest.As(_userId), _audit, TestFakes.Alerts(TestDb.Create(_db)));
 
     private static AdjustItemStockCommand Counted(Guid itemId, decimal counted, decimal? expected = null, string reason = "Count correction", string? notes = null) =>
         new() { ItemId = itemId, CountedQuantity = counted, ExpectedQuantity = expected, Reason = reason, Notes = notes };

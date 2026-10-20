@@ -2,6 +2,7 @@ using MediatR;
 using System.ComponentModel.DataAnnotations;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Features.Audit.Enums;
+using WTF.Api.Features.Inventory;
 using WTF.Api.Features.Items.DTOs;
 using WTF.Api.Services;
 using WTF.Domain.Data;
@@ -51,7 +52,8 @@ public record CreateItemCommand : IRequest<ItemDto>
 public class CreateItemHandler(
     WTFDbContext db,
     IHttpContextAccessor httpContextAccessor,
-    IAuditService auditService) : IRequestHandler<CreateItemCommand, ItemDto>
+    IAuditService auditService,
+    IStockAlertService stockAlerts) : IRequestHandler<CreateItemCommand, ItemDto>
 {
     public async Task<ItemDto> Handle(CreateItemCommand request, CancellationToken cancellationToken)
     {
@@ -102,6 +104,13 @@ public class CreateItemHandler(
         }
 
         await transaction.CommitAsync(cancellationToken);
+
+        // An item with nothing yet is waiting for its first delivery, not running low; only starting stock already under
+        // a level is told.
+        if (request.StartingQuantity > 0)
+        {
+            await stockAlerts.EvaluateAsync([item.Id], cancellationToken);
+        }
 
         await auditService.LogAsync(
             AuditAction.ItemCreated,

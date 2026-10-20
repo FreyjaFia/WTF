@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Features.Audit.Enums;
+using WTF.Api.Features.Inventory;
 using WTF.Api.Services;
 using WTF.Domain.Data;
 
@@ -12,7 +13,8 @@ public record RestoreItemCommand(Guid Id) : IRequest<bool>;
 public class RestoreItemHandler(
     WTFDbContext db,
     IHttpContextAccessor httpContextAccessor,
-    IAuditService auditService) : IRequestHandler<RestoreItemCommand, bool>
+    IAuditService auditService,
+    IStockAlertService stockAlerts) : IRequestHandler<RestoreItemCommand, bool>
 {
     public async Task<bool> Handle(RestoreItemCommand request, CancellationToken cancellationToken)
     {
@@ -36,6 +38,9 @@ public class RestoreItemHandler(
         item.UpdatedBy = userId;
 
         await db.SaveChangesAsync(cancellationToken);
+
+        // An item restored while low is told to the people who look after it, like any other drop to that level.
+        await stockAlerts.EvaluateAsync([item.Id], cancellationToken);
 
         await auditService.LogAsync(
             AuditAction.ItemRestored,

@@ -20,7 +20,7 @@ public class OrderStockServiceTests
         _data = new OrderSeed(_db);
     }
 
-    private OrderStockService Service() => new(TestDb.Create(_db), _audit);
+    private OrderStockService Service() => new(TestDb.Create(_db), _audit, TestFakes.Alerts(TestDb.Create(_db)));
 
     private static readonly StockDeductionOptions Online = new();
 

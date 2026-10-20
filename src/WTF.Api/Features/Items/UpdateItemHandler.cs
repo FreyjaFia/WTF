@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Features.Audit.Enums;
+using WTF.Api.Features.Inventory;
 using WTF.Api.Features.Items.DTOs;
 using WTF.Api.Services;
 using WTF.Domain.Data;
@@ -51,7 +52,8 @@ public record UpdateItemCommand : IRequest<ItemDto?>
 public class UpdateItemHandler(
     WTFDbContext db,
     IHttpContextAccessor httpContextAccessor,
-    IAuditService auditService) : IRequestHandler<UpdateItemCommand, ItemDto?>
+    IAuditService auditService,
+    IStockAlertService stockAlerts) : IRequestHandler<UpdateItemCommand, ItemDto?>
 {
     public async Task<ItemDto?> Handle(UpdateItemCommand request, CancellationToken cancellationToken)
     {
@@ -112,6 +114,9 @@ public class UpdateItemHandler(
         item.UpdatedBy = userId;
 
         await db.SaveChangesAsync(cancellationToken);
+
+        // New warning or critical levels can put the item into an alert right away.
+        await stockAlerts.EvaluateAsync([item.Id], cancellationToken);
 
         await auditService.LogAsync(
             AuditAction.ItemUpdated,

@@ -115,7 +115,7 @@ public abstract class DailyCatchUpScheduler(IServiceScopeFactory scopeFactory, I
 
     private static TimeSpan Min(TimeSpan a, TimeSpan b) => a < b ? a : b;
 
-    private static TimeZoneInfo ResolveTimeZone(string timeZoneId)
+    internal static TimeZoneInfo ResolveTimeZone(string timeZoneId)
     {
         if (string.IsNullOrWhiteSpace(timeZoneId))
         {

@@ -14,7 +14,7 @@ public class ItemDatabaseTests
         "ALTER TABLE dbo.StockMovements ADD CONSTRAINT CK_Test_MaxInitial CHECK (QuantityAfter <= 100)";
 
     private static CreateItemHandler Handler(WTFDbContext db, Guid userId) =>
-        new(db, TestRequest.As(userId), TestFakes.Audit());
+        new(db, TestRequest.As(userId), TestFakes.Audit(), TestFakes.Alerts(db));
 
     private static Item Row(Guid userId, string? sku, string? barcode, string name = "Flour") => new()
     {

@@ -23,6 +23,7 @@ public enum AuditAction
     ItemRestored,
     ItemStockAdded,
     ItemStockAdjusted,
+    ItemAlertRecipientsUpdated,
     ProductItemLinked,
     OrderCreated,
     OrderUpdated,

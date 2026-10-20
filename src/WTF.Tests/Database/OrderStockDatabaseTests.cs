@@ -180,7 +180,7 @@ public class OrderStockDatabaseTests
             async () =>
             {
                 await using var db = database.CreateContext();
-                await new AddItemStockHandler(db, TestRequest.As(user.Id, AppRoles.Admin), TestFakes.Audit())
+                await new AddItemStockHandler(db, TestRequest.As(user.Id, AppRoles.Admin), TestFakes.Audit(), TestFakes.Alerts(db))
                     .Handle(new AddItemStockCommand { ItemId = milk.Id, Quantity = 50m }, CancellationToken.None);
             }
         }).Select(run => run()));

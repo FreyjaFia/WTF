@@ -28,7 +28,8 @@ public record AddItemStockCommand : IRequest<ItemDto?>
 public class AddItemStockHandler(
     WTFDbContext db,
     IHttpContextAccessor httpContextAccessor,
-    IAuditService auditService) : IRequestHandler<AddItemStockCommand, ItemDto?>
+    IAuditService auditService,
+    IStockAlertService stockAlerts) : IRequestHandler<AddItemStockCommand, ItemDto?>
 {
     public async Task<ItemDto?> Handle(AddItemStockCommand request, CancellationToken cancellationToken)
     {
@@ -84,6 +85,7 @@ public class AddItemStockHandler(
 
         db.StockMovements.Add(movement);
         await db.SaveChangesAsync(cancellationToken);
+        await stockAlerts.EvaluateAsync([item.Id], cancellationToken);
 
         if (transaction is not null)
         {

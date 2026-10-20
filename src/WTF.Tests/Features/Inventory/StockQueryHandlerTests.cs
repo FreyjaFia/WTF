@@ -35,7 +35,7 @@ public class StockQueryHandlerTests
             Status = OrderStatusEnum.Completed,
             Items = [new(latte, 2, [], null, null)]
         }, CancellationToken.None);
-        await new AddItemStockHandler(TestDb.Create(_db), TestRequest.As(_userId), TestFakes.Audit())
+        await new AddItemStockHandler(TestDb.Create(_db), TestRequest.As(_userId), TestFakes.Audit(), TestFakes.Alerts(TestDb.Create(_db)))
             .Handle(new AddItemStockCommand { ItemId = milk, Quantity = 100m }, CancellationToken.None);
 
         var handler = new GetItemMovementsHandler(TestDb.Create(_db));
@@ -81,7 +81,7 @@ public class StockQueryHandlerTests
     public async Task CreateItem_KeepsTheNegativeStockSwitch()
     {
         await ItemSeed.User(_db, _userId);
-        var handler = new CreateItemHandler(TestDb.Create(_db), TestRequest.As(_userId), TestFakes.Audit());
+        var handler = new CreateItemHandler(TestDb.Create(_db), TestRequest.As(_userId), TestFakes.Audit(), TestFakes.Alerts(TestDb.Create(_db)));
 
         var strict = await handler.Handle(new CreateItemCommand { Name = "Strict", AllowNegativeStock = false }, CancellationToken.None);
         var loose = await handler.Handle(new CreateItemCommand { Name = "Loose" }, CancellationToken.None);
@@ -95,7 +95,7 @@ public class StockQueryHandlerTests
     {
         await ItemSeed.User(_db, _userId);
         var item = await ItemSeed.Item(_db, _userId, qty: -3m);
-        var handler = new UpdateItemHandler(TestDb.Create(_db), TestRequest.As(_userId), TestFakes.Audit());
+        var handler = new UpdateItemHandler(TestDb.Create(_db), TestRequest.As(_userId), TestFakes.Audit(), TestFakes.Alerts(TestDb.Create(_db)));
 
         var ex = await Should.ThrowAsync<InvalidOperationException>(() => handler.Handle(
             new UpdateItemCommand { Id = item.Id, Name = "Flour", UnitName = "kg", AllowNegativeStock = false }, CancellationToken.None));

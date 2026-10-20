@@ -12,7 +12,9 @@ internal static class TestFakes
 {
     public static IAuditService Audit() => Substitute.For<IAuditService>();
 
-    public static IOrderStockService Stock(WTFDbContext db) => new OrderStockService(db, Audit());
+    public static IStockAlertService Alerts(WTFDbContext db) => new StockAlertService(db, Push());
+
+    public static IOrderStockService Stock(WTFDbContext db) => new OrderStockService(db, Audit(), Alerts(db));
 
     public static IPushNotificationService Push() => Substitute.For<IPushNotificationService>();
 
