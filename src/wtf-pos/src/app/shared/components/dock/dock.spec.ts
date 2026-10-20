@@ -1,9 +1,10 @@
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
-import { AuthService } from '@core/services';
+import { signal } from '@angular/core';
+import { AuthService, StockAlertService } from '@core/services';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { BehaviorSubject } from 'rxjs';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { DockComponent } from './dock';
 
 describe('DockComponent', () => {
@@ -22,11 +23,13 @@ describe('DockComponent', () => {
       canWriteOrders: () => perms.canWriteOrders ?? false,
       canReadOrders: () => perms.canReadOrders ?? false,
       canReadInventory: () => perms.canReadInventory ?? false,
+      canReadStockMovements: () => false,
     };
     TestBed.configureTestingModule({
       providers: [
         provideRouter([{ path: '**', children: [] }]),
         { provide: AuthService, useValue: fake },
+        { provide: StockAlertService, useValue: { unread: signal(0), refresh: vi.fn() } },
       ],
     });
     const fixture = TestBed.createComponent(DockComponent);

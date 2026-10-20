@@ -1,8 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { AuthService } from '@core/services';
+import { AuthService, StockAlertService } from '@core/services';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { InventoryComponent } from './inventory';
 
@@ -18,6 +18,8 @@ interface Scrollable {
 
 describe('InventoryComponent', () => {
   let perms: { items: boolean; stock: boolean };
+  let unread: ReturnType<typeof signal<number>>;
+  let refresh: ReturnType<typeof vi.fn>;
 
   function configure(): void {
     TestBed.configureTestingModule({
@@ -29,6 +31,7 @@ describe('InventoryComponent', () => {
             children: [
               { path: 'items', component: ItemsStub },
               { path: 'stock-in', component: StockStub },
+              { path: 'alerts', component: StockStub },
               { path: 'coverage', component: StockStub },
             ],
           },
@@ -40,6 +43,7 @@ describe('InventoryComponent', () => {
             canReadStockMovements: () => perms.stock,
           },
         },
+        { provide: StockAlertService, useValue: { unread, refresh } },
       ],
     });
   }
@@ -56,6 +60,8 @@ describe('InventoryComponent', () => {
 
   beforeEach(() => {
     perms = { items: true, stock: true };
+    unread = signal(0);
+    refresh = vi.fn();
     vi.useFakeTimers();
   });
 
@@ -69,11 +75,13 @@ describe('InventoryComponent', () => {
     expect(rendered.map((t) => t.getAttribute('data-inventory-tab'))).toEqual([
       'items',
       'stock-in',
+      'alerts',
       'coverage',
     ]);
     expect(rendered.map((t) => t.getAttribute('href'))).toEqual([
       '/inventory/items',
       '/inventory/stock-in',
+      '/inventory/alerts',
       '/inventory/coverage',
     ]);
   });
@@ -81,13 +89,36 @@ describe('InventoryComponent', () => {
   it('hides tabs the user cannot read', async () => {
     perms = { items: false, stock: true };
     const { el } = await setup('/inventory/stock-in');
-    expect(tabs(el).map((t) => t.getAttribute('data-inventory-tab'))).toEqual(['stock-in']);
+    expect(tabs(el).map((t) => t.getAttribute('data-inventory-tab'))).toEqual(['stock-in', 'alerts']);
   });
 
   it('shows the coverage tab only to roles that can read items', async () => {
     perms = { items: true, stock: false };
     const { el } = await setup();
     expect(tabs(el).map((t) => t.getAttribute('data-inventory-tab'))).toEqual(['items', 'coverage']);
+  });
+
+  it('shows the unread alert count on the Alerts tab only while there are some', async () => {
+    const { harness, el } = await setup();
+    expect(el.querySelector('[data-testid="tab-badge"]')).toBeNull();
+
+    unread.set(3);
+    harness.detectChanges();
+
+    const badge = el.querySelector('[data-testid="tab-badge"]');
+    expect(badge?.textContent?.trim()).toBe('3');
+    expect(badge?.closest('a')?.getAttribute('data-inventory-tab')).toBe('alerts');
+  });
+
+  it('refreshes the unread count for roles that can read stock, and not for others', async () => {
+    await setup();
+    expect(refresh).toHaveBeenCalledTimes(1);
+
+    TestBed.resetTestingModule();
+    refresh = vi.fn();
+    perms = { items: true, stock: false };
+    await setup();
+    expect(refresh).not.toHaveBeenCalled();
   });
 
   it('renders no tabs without any permission', async () => {
@@ -98,7 +129,7 @@ describe('InventoryComponent', () => {
 
   it('marks only the active route as selected', async () => {
     const { el } = await setup('/inventory/items');
-    expect(tabs(el).map((t) => t.getAttribute('aria-selected'))).toEqual(['true', 'false', 'false']);
+    expect(tabs(el).map((t) => t.getAttribute('aria-selected'))).toEqual(['true', 'false', 'false', 'false']);
   });
 
   it('updates the selected tab after navigation and shows the routed page', async () => {
@@ -106,7 +137,7 @@ describe('InventoryComponent', () => {
     expect(el.textContent).toContain('items page');
     await harness.navigateByUrl('/inventory/stock-in');
     harness.detectChanges();
-    expect(tabs(el).map((t) => t.getAttribute('aria-selected'))).toEqual(['false', 'true', 'false']);
+    expect(tabs(el).map((t) => t.getAttribute('aria-selected'))).toEqual(['false', 'true', 'false', 'false']);
     expect(el.textContent).toContain('stock page');
   });
 

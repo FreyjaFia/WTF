@@ -144,8 +144,24 @@
         (click)="toggleInventory()"
       >
         <span class="flex items-center gap-3">
-          <app-icon name="icon-inventory-module" [class]="'h-4.5 w-4.5 text-gray-500'" />
+          <span class="relative">
+            <app-icon name="icon-inventory-module" [class]="'h-4.5 w-4.5 text-gray-500'" />
+            @if (stockAlerts.unread() > 0 && !showInventory() && isCollapsed()) {
+              <span
+                class="absolute -top-2 -right-2 inline-flex min-w-3.5 items-center justify-center rounded-full bg-red-500 px-0.5 text-[9px] leading-3.5 font-bold text-white"
+                data-testid="sidebar-inventory-rail-badge"
+                >{{ stockAlerts.unread() > 9 ? '9+' : stockAlerts.unread() }}</span
+              >
+            }
+          </span>
           <span [class.hidden]="isCollapsed()">Inventory</span>
+          @if (stockAlerts.unread() > 0 && !showInventory() && !isCollapsed()) {
+            <span
+              class="inline-flex min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] leading-4 font-bold text-white"
+              data-testid="sidebar-inventory-badge"
+              >{{ stockAlerts.unread() }}</span
+            >
+          }
         </span>
         <app-icon
           name="icon-chevron-down"
@@ -188,6 +204,34 @@
           <span [class.hidden]="isCollapsed()">Stock In</span>
         </a>
         }
+        @if (authService.canReadStockMovements()) {
+        <a
+          [routerLink]="routes.InventoryAlerts"
+          routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
+          class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
+          [class.justify-center]="isCollapsed()"
+          [attr.title]="'Stock Alerts'"
+        >
+          <span class="relative">
+            <app-icon name="icon-stock-alert" [class]="'h-4 w-4 text-gray-500'" />
+            @if (stockAlerts.unread() > 0 && isCollapsed()) {
+              <span
+                class="absolute -top-2 -right-2 inline-flex min-w-3.5 items-center justify-center rounded-full bg-red-500 px-0.5 text-[9px] leading-3.5 font-bold text-white"
+                data-testid="sidebar-alerts-rail-badge"
+                >{{ stockAlerts.unread() > 9 ? '9+' : stockAlerts.unread() }}</span
+              >
+            }
+          </span>
+          <span [class.hidden]="isCollapsed()">Alerts</span>
+          @if (stockAlerts.unread() > 0 && !isCollapsed()) {
+            <span
+              class="ml-auto inline-flex min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] leading-4 font-bold text-white"
+              data-testid="sidebar-alerts-badge"
+              >{{ stockAlerts.unread() }}</span
+            >
+          }
+        </a>
+        }
         @if (authService.canReadItems()) {
         <a
           [routerLink]="routes.InventoryCoverage"
@@ -196,7 +240,7 @@
           [class.justify-center]="isCollapsed()"
           [attr.title]="'Stock Coverage'"
         >
-          <app-icon name="icon-inventory-items" [class]="'h-4 w-4 text-gray-500'" />
+          <app-icon name="icon-fact-check" [class]="'h-4 w-4 text-gray-500'" />
           <span [class.hidden]="isCollapsed()">Coverage</span>
         </a>
         }

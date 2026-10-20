@@ -25,11 +25,20 @@
 
     @if (auth.canReadInventory()) {
       <a [routerLink]="routes.InventoryRoot" [routerLinkActive]="'dock-active'">
-        <app-icon
-          name="icon-inventory-module"
-          [class]="'size-[1.2em]'"
-          [fill]="'currentColor'"
-        ></app-icon>
+        <span class="relative inline-flex">
+          <app-icon
+            name="icon-inventory-module"
+            [class]="'size-[1.2em]'"
+            [fill]="'currentColor'"
+          ></app-icon>
+          @if (stockAlerts.unread() > 0) {
+            <span
+              class="absolute -top-1 -right-2 inline-flex min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] leading-4 font-bold text-white"
+              data-testid="dock-inventory-badge"
+              >{{ stockAlerts.unread() }}</span
+            >
+          }
+        </span>
         <span class="dock-label">Inventory</span>
       </a>
     }

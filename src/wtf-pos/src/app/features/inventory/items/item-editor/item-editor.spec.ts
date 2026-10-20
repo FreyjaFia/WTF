@@ -41,11 +41,24 @@ function makeItem(overrides: Partial<ItemDto> = {}): ItemDto {
   };
 }
 
+function recipients(selected: string[] = []) {
+  return {
+    selectedUserIds: selected,
+    candidates: [
+      { userId: 'u1', name: 'Ana Admin', role: 'Admin' },
+      { userId: 'u2', name: 'Ben Stock', role: 'StockManager' },
+    ],
+    defaultDescription: 'Super Admins, Admins and Stock Managers',
+  };
+}
+
 describe('ItemEditorComponent', () => {
   let inventory: {
     getInventoryItem: ReturnType<typeof vi.fn>;
     createInventoryItem: ReturnType<typeof vi.fn>;
     updateInventoryItem: ReturnType<typeof vi.fn>;
+    getAlertRecipients: ReturnType<typeof vi.fn>;
+    setAlertRecipients: ReturnType<typeof vi.fn>;
   };
   let alerts: { error: ReturnType<typeof vi.fn>; success: ReturnType<typeof vi.fn> };
   let navigate: ReturnType<typeof vi.fn>;
@@ -75,6 +88,8 @@ describe('ItemEditorComponent', () => {
       getInventoryItem: vi.fn(() => of(makeItem())),
       createInventoryItem: vi.fn((p: { name: string }) => of(makeItem({ id: 'new', name: p.name }))),
       updateInventoryItem: vi.fn(() => of(makeItem())),
+      getAlertRecipients: vi.fn(() => of(recipients())),
+      setAlertRecipients: vi.fn((_id: string, ids: string[]) => of(recipients(ids))),
     };
     alerts = { error: vi.fn(), success: vi.fn() };
   });
@@ -508,6 +523,75 @@ describe('ItemEditorComponent', () => {
       const { vm } = create('i1');
       vm['onProductLinksSaved']({ ...makeItem(), productLinks: undefined } as unknown as ItemDto);
       expect(vm['productLinks']()).toEqual([]);
+    });
+  });
+
+  describe('stock alert recipients', () => {
+    const card = (fixture: { detectChanges: () => void; nativeElement: HTMLElement }) => {
+      fixture.detectChanges();
+      return fixture.nativeElement.querySelector('[data-testid="alert-recipients"]');
+    };
+
+    it('is not shown while creating an item', () => {
+      const { fixture } = create();
+      expect(card(fixture)).toBeNull();
+      expect(inventory.getAlertRecipients).not.toHaveBeenCalled();
+    });
+
+    it('starts on the default and says who that is', () => {
+      const { fixture } = create('i1');
+      expect(inventory.getAlertRecipients).toHaveBeenCalledWith('i1');
+      expect(card(fixture)?.textContent).toContain('Default: Super Admins, Admins and Stock Managers');
+      expect(card(fixture)?.querySelectorAll('input[type="checkbox"]').length).toBe(0);
+    });
+
+    it('shows the named people already chosen', () => {
+      inventory.getAlertRecipients.mockReturnValue(of(recipients(['u2'])));
+      const { fixture, vm } = create('i1');
+      const people = (vm as unknown as { recipientForm: { getRawValue: () => { mode: string; people: boolean[] } } })
+        .recipientForm.getRawValue();
+
+      expect(people.mode).toBe('chosen');
+      expect(people.people).toEqual([false, true]);
+      expect(card(fixture)?.querySelectorAll('input[type="checkbox"]').length).toBe(2);
+    });
+
+    it('saves the chosen people', () => {
+      const { vm } = create('i1');
+      const form = (vm as unknown as { recipientForm: { patchValue: (v: object) => void } }).recipientForm;
+      form.patchValue({ mode: 'chosen', people: [false, true] });
+      (vm as unknown as { saveAlertRecipients: () => void }).saveAlertRecipients();
+
+      expect(inventory.setAlertRecipients).toHaveBeenCalledWith('i1', ['u2']);
+      expect(alerts.success).toHaveBeenCalledWith('Alert recipients saved.');
+    });
+
+    it('sends an empty list to go back to the default', () => {
+      inventory.getAlertRecipients.mockReturnValue(of(recipients(['u1'])));
+      const { vm } = create('i1');
+      const form = (vm as unknown as { recipientForm: { patchValue: (v: object) => void } }).recipientForm;
+      form.patchValue({ mode: 'default' });
+      (vm as unknown as { saveAlertRecipients: () => void }).saveAlertRecipients();
+
+      expect(inventory.setAlertRecipients).toHaveBeenCalledWith('i1', []);
+    });
+
+    it('will not save "only these people" with nobody chosen', () => {
+      const { vm } = create('i1');
+      const form = (vm as unknown as { recipientForm: { patchValue: (v: object) => void } }).recipientForm;
+      form.patchValue({ mode: 'chosen', people: [false, false] });
+      (vm as unknown as { saveAlertRecipients: () => void }).saveAlertRecipients();
+
+      expect(inventory.setAlertRecipients).not.toHaveBeenCalled();
+      expect(alerts.error).toHaveBeenCalledWith(expect.stringContaining('Choose at least one person'));
+    });
+
+    it('shows the server message when saving fails', () => {
+      inventory.setAlertRecipients.mockReturnValue(throwError(() => new Error('Nope')));
+      const { vm } = create('i1');
+      (vm as unknown as { saveAlertRecipients: () => void }).saveAlertRecipients();
+
+      expect(alerts.error).toHaveBeenCalledWith('Nope');
     });
   });
 });

@@ -151,3 +151,35 @@ export interface StockCoverageDto {
   missing: number;
   products: ProductCoverageDto[];
 }
+
+export type StockAlertLevel = 'Warning' | 'Critical' | 'OutOfStock';
+
+export interface StockNotificationDto {
+  id: string;
+  itemId: string;
+  itemName: string;
+  status: StockAlertLevel;
+  quantity: number;
+  title: string;
+  body: string;
+  createdAt: string;
+  isRead: boolean;
+}
+
+export interface StockNotificationListDto {
+  items: StockNotificationDto[];
+  totalCount: number;
+  unreadCount: number;
+}
+
+export interface AlertRecipientDto {
+  userId: string;
+  name: string;
+  role: string;
+}
+
+export interface ItemAlertRecipientsDto {
+  selectedUserIds: string[];
+  candidates: AlertRecipientDto[];
+  defaultDescription: string;
+}

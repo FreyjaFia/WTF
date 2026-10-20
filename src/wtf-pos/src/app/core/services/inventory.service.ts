@@ -6,6 +6,7 @@ import {
   AddItemStockDto,
   AdjustItemStockDto,
   CreateItemDto,
+  ItemAlertRecipientsDto,
   ItemDto,
   OrderStockMovementDto,
   PagedStockMovementsDto,
@@ -96,6 +97,18 @@ export class InventoryService {
     return this.http
       .get<PagedStockMovementsDto>(`${this.baseUrl}/${itemId}/movements`, { params })
       .pipe(catchError((error) => this.handleError(error, 'Unable to fetch stock history.')));
+  }
+
+  public getAlertRecipients(itemId: string): Observable<ItemAlertRecipientsDto> {
+    return this.http
+      .get<ItemAlertRecipientsDto>(`${this.baseUrl}/${itemId}/alert-recipients`)
+      .pipe(catchError((error) => this.handleError(error, 'Unable to fetch the alert recipients.')));
+  }
+
+  public setAlertRecipients(itemId: string, userIds: string[]): Observable<ItemAlertRecipientsDto> {
+    return this.http
+      .put<ItemAlertRecipientsDto>(`${this.baseUrl}/${itemId}/alert-recipients`, { userIds })
+      .pipe(catchError((error) => this.handleError(error, 'Unable to save the alert recipients.')));
   }
 
   public getStockCoverage(): Observable<StockCoverageDto> {

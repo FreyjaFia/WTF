@@ -68,6 +68,28 @@ describe('InventoryService', () => {
     expect(result.value).toEqual({ covered: 1, partial: 0, missing: 0, products: [] });
   });
 
+  it('reads the alert recipients of an item', () => {
+    const { service, http } = setupHttpService(InventoryService);
+    const result = capture(service.getAlertRecipients('i1'));
+
+    const req = http.expectOne(`${base}/i1/alert-recipients`);
+    expect(req.request.method).toBe('GET');
+    req.flush({ selectedUserIds: [], candidates: [], defaultDescription: 'Admins' });
+
+    expect((result.value as { defaultDescription: string }).defaultDescription).toBe('Admins');
+  });
+
+  it('saves the alert recipients, and an empty list means the default', () => {
+    const { service, http } = setupHttpService(InventoryService);
+    service.setAlertRecipients('i1', ['u1', 'u2']).subscribe();
+    const req = http.expectOne(`${base}/i1/alert-recipients`);
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toEqual({ userIds: ['u1', 'u2'] });
+
+    service.setAlertRecipients('i1', []).subscribe();
+    expect(http.expectOne(`${base}/i1/alert-recipients`).request.body).toEqual({ userIds: [] });
+  });
+
   it('links a product to an item with the quantity taken per sale', () => {
     const { service, http } = setupHttpService(InventoryService);
     service.linkProductToItem('p1', 'i1', 200).subscribe();

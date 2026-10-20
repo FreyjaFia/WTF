@@ -19,6 +19,13 @@
           (click)="scrollInventoryTabIntoView(tab.route)"
         >
           <span class="relative"> {{ tab.label }} </span>
+          @if (tab.badge?.(); as count) {
+            <span
+              class="ml-1 inline-flex min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] leading-4 font-bold text-white"
+              data-testid="tab-badge"
+              >{{ count }}</span
+            >
+          }
           <span
             class="absolute right-2 -bottom-2 left-2 h-0.5 rounded-full bg-gray-700 transition-opacity"
             [class.opacity-100]="isActive(tab.route)"

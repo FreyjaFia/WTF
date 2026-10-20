@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, OnInit, signal, ViewChild } from '@angular/core';
-import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormArray, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AlertService, InventoryService, ModalStackService } from '@core/services';
 import {
@@ -14,7 +14,13 @@ import {
   getInventoryUnitAbbreviation,
   INVENTORY_UNIT_OPTIONS,
 } from '@shared/constants/inventory-units';
-import { ItemDto, ItemPriceHistoryDto, ProductItemLinkDto } from '@shared/models';
+import {
+  AlertRecipientDto,
+  ItemAlertRecipientsDto,
+  ItemDto,
+  ItemPriceHistoryDto,
+  ProductItemLinkDto,
+} from '@shared/models';
 
 @Component({
   selector: 'app-item-editor',
@@ -45,6 +51,14 @@ export class ItemEditorComponent implements OnInit {
   protected readonly itemName = signal('');
   protected readonly lastUpdatedAt = signal<string | null>(null);
   protected readonly isHistoryOpen = signal(false);
+  protected readonly alertCandidates = signal<AlertRecipientDto[]>([]);
+  protected readonly alertDefault = signal('');
+  protected readonly isSavingRecipients = signal(false);
+
+  protected readonly recipientForm = new FormGroup({
+    mode: new FormControl<'default' | 'chosen'>('default', { nonNullable: true }),
+    people: new FormArray<FormControl<boolean>>([]),
+  });
   protected readonly priceHistory = signal<ItemPriceHistoryDto[]>([]);
   protected readonly productLinks = signal<ProductItemLinkDto[]>([]);
   protected readonly linkedProducts = computed(() =>
@@ -259,6 +273,7 @@ export class ItemEditorComponent implements OnInit {
         this.productLinks.set(item.productLinks || []);
         this.savedUnitName.set(item.unitName);
         this.savedQuantity.set(item.currentQuantity);
+        this.loadAlertRecipients(item.id);
         this.syncUnitsPerStockUnitState();
         this.inventoryForm.markAsPristine();
         this.isLoading.set(false);
@@ -268,6 +283,54 @@ export class ItemEditorComponent implements OnInit {
         this.isLoading.set(false);
       },
     });
+  }
+
+  protected saveAlertRecipients(): void {
+    if (!this.itemId || this.isSavingRecipients()) {
+      return;
+    }
+
+    const { mode, people } = this.recipientForm.getRawValue();
+    const chosen = this.alertCandidates()
+      .filter((_, index) => people[index])
+      .map((candidate) => candidate.userId);
+    if (mode === 'chosen' && chosen.length === 0) {
+      this.alertService.error('Choose at least one person, or go back to the default.');
+      return;
+    }
+
+    this.isSavingRecipients.set(true);
+    this.inventoryService.setAlertRecipients(this.itemId, mode === 'chosen' ? chosen : []).subscribe({
+      next: (result) => {
+        this.applyAlertRecipients(result);
+        this.isSavingRecipients.set(false);
+        this.alertService.success('Alert recipients saved.');
+      },
+      error: (err) => {
+        this.alertService.error(err.message);
+        this.isSavingRecipients.set(false);
+      },
+    });
+  }
+
+  private loadAlertRecipients(itemId: string): void {
+    this.inventoryService.getAlertRecipients(itemId).subscribe({
+      next: (result) => this.applyAlertRecipients(result),
+      error: () => this.alertCandidates.set([]),
+    });
+  }
+
+  private applyAlertRecipients(result: ItemAlertRecipientsDto): void {
+    this.alertCandidates.set(result.candidates);
+    this.alertDefault.set(result.defaultDescription);
+    this.recipientForm.controls.people.clear();
+    for (const candidate of result.candidates) {
+      this.recipientForm.controls.people.push(
+        new FormControl(result.selectedUserIds.includes(candidate.userId), { nonNullable: true }),
+      );
+    }
+
+    this.recipientForm.controls.mode.setValue(result.selectedUserIds.length > 0 ? 'chosen' : 'default');
   }
 
   private afterSave(message: string, itemId: string): void {

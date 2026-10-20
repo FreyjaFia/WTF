@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AlertService } from './alert.service';
 import { AuthService } from './auth.service';
 import { PushNotificationService } from './push-notification.service';
+import { StockAlertService } from './stock-alert.service';
 
 const mocks = vi.hoisted(() => ({
   initializeApp: vi.fn(),
@@ -313,6 +314,30 @@ describe('PushNotificationService', () => {
         onMessageHandler = mocks.onMessage.mock.calls[0][1];
       });
 
+      it('refreshes the unread stock alerts when a stock alert arrives', () => {
+        const refresh = vi.spyOn(TestBed.inject(StockAlertService), 'refresh').mockImplementation(() => undefined);
+
+        onMessageHandler({
+          notification: { title: 'Low stock: Milk', body: '400 ml left.' },
+          data: { type: 'stock-alert', path: '/inventory/alerts', itemId: 'i1' },
+        });
+        onMessageHandler({ notification: { title: 'New order' }, data: { orderId: '42' } });
+
+        expect(refresh).toHaveBeenCalledTimes(1);
+      });
+
+      it('opens the stock alerts list when a stock alert is clicked', () => {
+        vi.spyOn(TestBed.inject(StockAlertService), 'refresh').mockImplementation(() => undefined);
+
+        onMessageHandler({
+          notification: { title: 'Low stock: Milk' },
+          data: { type: 'stock-alert', path: '/inventory/alerts', itemId: 'i1' },
+        });
+
+        const shown = FakeNotification.instances[0];
+        expect(shown.options).toMatchObject({ data: { type: 'stock-alert', path: '/inventory/alerts' } });
+      });
+
       it('shows a system notification with title, body and icon', () => {
         onMessageHandler({
           notification: { title: 'New order', body: 'Order #1' },
@@ -490,6 +515,19 @@ describe('PushNotificationService', () => {
 
     describe('received notifications', () => {
       beforeEach(registerAndroid);
+
+      it('refreshes the unread stock alerts when a stock alert arrives', () => {
+        const refresh = vi.spyOn(TestBed.inject(StockAlertService), 'refresh').mockImplementation(() => undefined);
+
+        listener('pushNotificationReceived')({
+          title: 'Low stock: Milk',
+          body: '400 ml left.',
+          data: { type: 'stock-alert', path: '/inventory/alerts' },
+        } as never);
+        listener('pushNotificationReceived')({ title: 'Order', data: { orderId: '7' } } as never);
+
+        expect(refresh).toHaveBeenCalledTimes(1);
+      });
 
       it('schedules a local notification routed to the order details', async () => {
         listener('pushNotificationReceived')({

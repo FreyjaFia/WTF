@@ -341,6 +341,55 @@
               </div>
             </div>
 
+            @if (isEditMode()) {
+              <div class="card rounded-xl bg-surface shadow-lg" data-testid="alert-recipients">
+                <div class="card-body space-y-3" [formGroup]="recipientForm">
+                  <h3 class="text-xs font-semibold tracking-wider text-gray-400 uppercase">
+                    Stock Alerts
+                  </h3>
+                  <p class="text-xs text-gray-500">
+                    Who is told when this item runs low, critical or out.
+                  </p>
+
+                  <div class="space-y-2 text-sm" role="radiogroup" aria-label="Who is told">
+                    <label class="flex items-center gap-2">
+                      <input type="radio" class="radio radio-sm" value="default" formControlName="mode" />
+                      Default: {{ alertDefault() }}
+                    </label>
+                    <label class="flex items-center gap-2">
+                      <input type="radio" class="radio radio-sm" value="chosen" formControlName="mode" />
+                      Only these people
+                    </label>
+                  </div>
+
+                  @if (recipientForm.controls.mode.value === 'chosen') {
+                    <ul class="ml-6 space-y-1" formArrayName="people">
+                      @for (candidate of alertCandidates(); track candidate.userId; let index = $index) {
+                        <li>
+                          <label class="flex items-center gap-2 text-sm">
+                            <input type="checkbox" class="checkbox checkbox-sm" [formControlName]="index" />
+                            <span>{{ candidate.name }}</span>
+                            <span class="text-xs text-gray-400">{{ candidate.role }}</span>
+                          </label>
+                        </li>
+                      }
+                    </ul>
+                  }
+
+                  <div class="flex justify-end">
+                    <button
+                      type="button"
+                      class="app-btn app-btn-secondary app-btn-sm"
+                      [disabled]="isSavingRecipients()"
+                      (click)="saveAlertRecipients()"
+                    >
+                      {{ isSavingRecipients() ? 'Saving...' : 'Save Recipients' }}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            }
+
             <div class="card rounded-xl bg-surface shadow-lg">
               <div class="card-body">
                 <div class="mb-1 flex items-baseline justify-between">

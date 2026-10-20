@@ -2,7 +2,13 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
-import { AuthLoadingService, AuthService, ConnectivityService, ImageCacheService } from '@core/services';
+import {
+  AuthLoadingService,
+  AuthService,
+  ConnectivityService,
+  ImageCacheService,
+  StockAlertService,
+} from '@core/services';
 import { appVersion } from '@environments/version';
 import { AvatarComponent } from '@shared/components/avatar/avatar';
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
@@ -46,6 +52,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
   private readonly imageCache = inject(ImageCacheService);
   private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly authLoading = inject(AuthLoadingService);
+  protected readonly stockAlerts = inject(StockAlertService);
 
   protected imageUrl: string | null = null;
   protected userFullName = 'User';
@@ -62,6 +69,10 @@ export class SidebarComponent implements OnInit, OnDestroy {
   private meRefreshSubscription?: { unsubscribe: () => void };
 
   public ngOnInit(): void {
+    if (this.authService.canReadStockMovements()) {
+      this.stockAlerts.refresh();
+    }
+
     this.clockIntervalId = setInterval(() => {
       this.now.set(new Date());
     }, 1000);

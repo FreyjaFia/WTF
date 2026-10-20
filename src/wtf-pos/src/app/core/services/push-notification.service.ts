@@ -15,12 +15,14 @@ import { AppRoutes } from '@shared/constants/app-routes';
 import { AlertService } from './alert.service';
 import { AuthService } from './auth.service';
 import { HuaweiPush } from './huawei-push.plugin';
+import { StockAlertService } from './stock-alert.service';
 
 type PushPlatform = 'web' | 'android' | 'huawei';
 
 /** The `type` the API sends for an order a customer placed through their link (it waits for approval). */
 export const PUSH_TYPE_ONLINE_ORDER = 'online-order';
 export const PUSH_TYPE_ORDER_MESSAGE = 'order-message';
+export const PUSH_TYPE_STOCK_ALERT = 'stock-alert';
 
 @Injectable({ providedIn: 'root' })
 export class PushNotificationService implements OnDestroy {
@@ -29,6 +31,7 @@ export class PushNotificationService implements OnDestroy {
   private readonly alerts = inject(AlertService);
   private readonly zone = inject(NgZone);
   private readonly router = inject(Router);
+  private readonly stockAlerts = inject(StockAlertService);
   private readonly baseUrl = `${environment.apiUrl}/push`;
   private loginSub: Subscription | null = null;
   private tokenSub: Subscription | null = null;
@@ -124,6 +127,7 @@ export class PushNotificationService implements OnDestroy {
 
     onMessage(messaging, (payload) => {
       this.zone.run(() => {
+        this.refreshStockAlerts(payload.data);
         const notification = payload.notification;
         if (!notification?.title || Notification.permission !== 'granted') {
           return;
@@ -212,6 +216,7 @@ export class PushNotificationService implements OnDestroy {
       });
 
       PushNotifications.addListener('pushNotificationReceived', (notification) => {
+        this.refreshStockAlerts(this.extractNotificationData(notification.data));
         void this.showLocalNotification(notification);
       });
 
@@ -308,6 +313,13 @@ export class PushNotificationService implements OnDestroy {
     return data['type'] === PUSH_TYPE_ORDER_MESSAGE && data['chat'] === 'open' && !path.includes('?')
       ? `${path}?chat=open`
       : path;
+  }
+
+  // A stock alert arriving while the app is open updates the unread count at once.
+  private refreshStockAlerts(data: Record<string, string> | undefined): void {
+    if (data?.['type'] === PUSH_TYPE_STOCK_ALERT) {
+      this.zone.run(() => this.stockAlerts.refresh());
+    }
   }
 
   private async navigateToPath(path: string): Promise<void> {
