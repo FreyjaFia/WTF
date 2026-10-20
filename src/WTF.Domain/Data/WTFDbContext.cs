@@ -52,6 +52,8 @@ public partial class WTFDbContext : DbContext
 
     public virtual DbSet<MixMatchPromotionProductAddOn> MixMatchPromotionProductAddOns { get; set; }
 
+    public virtual DbSet<Notification> Notifications { get; set; }
+
     public virtual DbSet<Order> Orders { get; set; }
 
     public virtual DbSet<OrderBundlePromotion> OrderBundlePromotions { get; set; }
@@ -91,8 +93,6 @@ public partial class WTFDbContext : DbContext
     public virtual DbSet<Status> Statuses { get; set; }
 
     public virtual DbSet<StockMovement> StockMovements { get; set; }
-
-    public virtual DbSet<StockNotification> StockNotifications { get; set; }
 
     public virtual DbSet<User> Users { get; set; }
 
@@ -479,6 +479,30 @@ public partial class WTFDbContext : DbContext
             entity.HasOne(d => d.MixMatchPromotionProduct).WithMany(p => p.MixMatchPromotionProductAddOns)
                 .HasForeignKey(d => d.MixMatchPromotionProductId)
                 .HasConstraintName("FK_MixMatchPromotionProductAddOns_Item");
+        });
+
+        modelBuilder.Entity<Notification>(entity =>
+        {
+            entity.HasIndex(e => new { e.Kind, e.SubjectId, e.UserId, e.CreatedAt }, "IX_Notifications_Kind_Subject_User_Created").IsDescending(false, false, false, true);
+
+            entity.HasIndex(e => new { e.UserId, e.Kind, e.ReadAt }, "IX_Notifications_User_Kind_Read");
+
+            entity.HasIndex(e => new { e.UserId, e.ReadAt, e.CreatedAt }, "IX_Notifications_User_Read_Created").IsDescending(false, false, true);
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_Notifications_Id");
+            entity.Property(e => e.Body).HasMaxLength(300);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())", "DF_Notifications_CreatedAt");
+            entity.Property(e => e.Kind)
+                .HasMaxLength(40)
+                .IsUnicode(false)
+                .HasDefaultValue("StockAlert", "DF_Notifications_Kind");
+            entity.Property(e => e.Path).HasMaxLength(200);
+            entity.Property(e => e.Title).HasMaxLength(150);
+
+            entity.HasOne(d => d.User).WithMany(p => p.Notifications)
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Notifications_Users");
         });
 
         modelBuilder.Entity<Order>(entity =>
@@ -951,32 +975,6 @@ public partial class WTFDbContext : DbContext
             entity.HasOne(d => d.Product).WithMany(p => p.StockMovements)
                 .HasForeignKey(d => d.ProductId)
                 .HasConstraintName("FK_StockMovements_Products");
-        });
-
-        modelBuilder.Entity<StockNotification>(entity =>
-        {
-            entity.HasIndex(e => e.ItemId, "IX_StockNotifications_ItemId");
-
-            entity.HasIndex(e => new { e.ItemId, e.UserId, e.CreatedAt }, "IX_StockNotifications_Item_User_Created").IsDescending(false, false, true);
-
-            entity.HasIndex(e => new { e.UserId, e.ReadAt, e.CreatedAt }, "IX_StockNotifications_User_Read_Created").IsDescending(false, false, true);
-
-            entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_StockNotifications_Id");
-            entity.Property(e => e.Body).HasMaxLength(300);
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())", "DF_StockNotifications_CreatedAt");
-            entity.Property(e => e.Quantity).HasColumnType("decimal(18, 3)");
-            entity.Property(e => e.ReminderCount).HasDefaultValue(0, "DF_StockNotifications_ReminderCount");
-            entity.Property(e => e.Title).HasMaxLength(150);
-
-            entity.HasOne(d => d.Item).WithMany(p => p.StockNotifications)
-                .HasForeignKey(d => d.ItemId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_StockNotifications_Items");
-
-            entity.HasOne(d => d.User).WithMany(p => p.StockNotifications)
-                .HasForeignKey(d => d.UserId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_StockNotifications_Users");
         });
 
         modelBuilder.Entity<User>(entity =>

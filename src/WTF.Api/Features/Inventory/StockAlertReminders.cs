@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using System.Text.Json;
+using WTF.Api.Features.Notifications;
 using WTF.Api.Services;
 using WTF.Calculations.Inventory;
 using WTF.Domain.Data;
@@ -47,7 +48,7 @@ public interface IStockReminderService
 // stocked stays quiet.
 public sealed class StockReminderService(
     WTFDbContext db,
-    IPushNotificationService pushNotifications,
+    INotificationService notifications,
     IReportFileStorage reportStorage,
     IOptions<StockAlertRemindersOptions> options,
     ILogger<StockReminderService> logger) : IStockReminderService
@@ -116,13 +117,13 @@ public sealed class StockReminderService(
     private async Task<int> RemindAsync(Item item, StockStatus status, DateTime dayStartUtc, bool dryRun, DateTime now, CancellationToken cancellationToken)
     {
         var recipients = await StockAlertService.ResolveRecipientsAsync(db, item.Id, cancellationToken);
-        var pushByText = new Dictionary<(string Title, string Body), List<Guid>>();
+        var announceByText = new Dictionary<(string Title, string Body), List<Guid>>();
         var sent = 0;
 
         foreach (var userId in recipients)
         {
-            var latest = await db.StockNotifications
-                .Where(n => n.ItemId == item.Id && n.UserId == userId)
+            var latest = await db.Notifications
+                .Where(n => n.Kind == NotificationKinds.StockAlert && n.SubjectId == item.Id && n.UserId == userId)
                 .OrderByDescending(n => n.CreatedAt)
                 .FirstOrDefaultAsync(cancellationToken);
 
@@ -144,44 +145,41 @@ public sealed class StockReminderService(
 
             if (latest is null)
             {
-                db.StockNotifications.Add(new StockNotification
+                var message = StockAlertMessages.Message(item, status, title, body);
+                db.Notifications.Add(new Notification
                 {
                     UserId = userId,
-                    ItemId = item.Id,
-                    Status = (byte)status,
-                    Quantity = item.CurrentQuantity,
+                    Kind = message.Kind,
+                    Severity = message.Severity,
                     Title = title,
                     Body = body,
+                    Path = message.Path,
+                    SubjectId = item.Id,
+                    Data = message.Data,
                     CreatedAt = now,
                     LastRemindedAt = now
                 });
                 await db.SaveChangesAsync(cancellationToken);
             }
-            else if (!await LiftAsync(latest, status, item.CurrentQuantity, title, body, dayStartUtc, now, cancellationToken))
+            else if (!await LiftAsync(latest, StockAlertMessages.Message(item, status, title, body), dayStartUtc, now, cancellationToken))
             {
                 continue;
             }
 
             sent++;
-            if (!pushByText.TryGetValue((title, body), out var group))
+            if (!announceByText.TryGetValue((title, body), out var group))
             {
                 group = [];
-                pushByText[(title, body)] = group;
+                announceByText[(title, body)] = group;
             }
 
             group.Add(userId);
         }
 
-        foreach (var ((title, body), users) in pushByText)
+        foreach (var ((title, body), users) in announceByText)
         {
-            try
-            {
-                await pushNotifications.SendStockAlertAsync(users, title, body, item.Id, cancellationToken);
-            }
-            catch (Exception)
-            {
-                // The saved list is the record; a failed push never stops the other reminders.
-            }
+            // Tells the open screens and the devices; a failed push never stops the other reminders.
+            await notifications.AnnounceAsync(users, StockAlertMessages.Message(item, status, title, body), cancellationToken);
         }
 
         return sent;
@@ -189,21 +187,18 @@ public sealed class StockReminderService(
 
     // One guarded UPDATE, so two runs in the same moment lift the row once.
     private async Task<bool> LiftAsync(
-        StockNotification row,
-        StockStatus status,
-        decimal quantity,
-        string title,
-        string body,
+        Notification row,
+        NotificationMessage message,
         DateTime dayStartUtc,
         DateTime now,
         CancellationToken cancellationToken)
     {
         if (!db.Database.IsRelational())
         {
-            row.Status = (byte)status;
-            row.Quantity = quantity;
-            row.Title = title;
-            row.Body = body;
+            row.Severity = message.Severity;
+            row.Title = message.Title;
+            row.Body = message.Body;
+            row.Data = message.Data;
             row.CreatedAt = now;
             row.ReadAt = null;
             row.ReminderCount++;
@@ -212,10 +207,9 @@ public sealed class StockReminderService(
             return true;
         }
 
-        var statusValue = (byte)status;
         var rows = await db.Database.ExecuteSqlInterpolatedAsync(
-            $@"UPDATE dbo.StockNotifications
-               SET Status = {statusValue}, Quantity = {quantity}, Title = {title}, Body = {body},
+            $@"UPDATE dbo.Notifications
+               SET Severity = {message.Severity}, Title = {message.Title}, Body = {message.Body}, Data = {message.Data},
                    CreatedAt = {now}, ReadAt = NULL, ReminderCount = ReminderCount + 1, LastRemindedAt = {now}
                WHERE Id = {row.Id} AND CreatedAt < {dayStartUtc}",
             cancellationToken);

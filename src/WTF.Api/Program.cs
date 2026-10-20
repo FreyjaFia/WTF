@@ -10,6 +10,7 @@ using WTF.Api.Endpoints;
 using WTF.Api.Features.Conversations;
 using WTF.Api.Features.Images;
 using WTF.Api.Features.Inventory;
+using WTF.Api.Features.Notifications;
 using WTF.Api.Features.Reports;
 using WTF.Api.Hubs;
 using WTF.Api.Services;
@@ -57,6 +58,7 @@ builder.Services.AddScoped<IUserRoleService, UserRoleService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<IOrderStockService, OrderStockService>();
 builder.Services.AddScoped<IStockAlertService, StockAlertService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddSingleton<FcmAccessTokenProvider>();
 builder.Services.AddHttpClient<IFcmPushClient, FcmPushClient>();
 builder.Services.AddSingleton<HuaweiAccessTokenProvider>();
@@ -319,6 +321,7 @@ app.UseAuthorization();
 
 app.MapHub<DashboardHub>("/hubs/dashboard");
 app.MapHub<StaffOrderHub>("/hubs/staff-orders");
+app.MapHub<NotificationHub>("/hubs/notifications");
 app.MapHub<CustomerOrderHub>("/hubs/customer-orders");
 
 app.MapAppEndpoints();

@@ -66,7 +66,7 @@ public class StockReminderServiceTests
     }
 
     private StockReminderService Reminders(StockAlertRemindersOptions? options = null) =>
-        new(TestDb.Create(_db), _push, _reports, Options.Create(options ?? new StockAlertRemindersOptions { DryRun = false }),
+        new(TestDb.Create(_db), TestFakes.Notifications(TestDb.Create(_db), _push), _reports, Options.Create(options ?? new StockAlertRemindersOptions { DryRun = false }),
             NullLogger<StockReminderService>.Instance);
 
     private async Task Alert(decimal quantity, Guid? itemId = null)
@@ -78,13 +78,13 @@ public class StockReminderServiceTests
             await db.SaveChangesAsync();
         }
 
-        await new StockAlertService(TestDb.Create(_db), _push).EvaluateAsync([itemId ?? _milk], CancellationToken.None);
+        await new StockAlertService(TestDb.Create(_db), TestFakes.Notifications(TestDb.Create(_db), _push)).EvaluateAsync([itemId ?? _milk], CancellationToken.None);
     }
 
     private async Task Backdate(int days = 1)
     {
         await using var db = TestDb.Create(_db);
-        foreach (var row in await db.StockNotifications.ToListAsync())
+        foreach (var row in await db.Notifications.ToListAsync())
         {
             row.CreatedAt = row.CreatedAt.AddDays(-days);
             row.LastRemindedAt = row.LastRemindedAt?.AddDays(-days);
@@ -93,14 +93,14 @@ public class StockReminderServiceTests
         await db.SaveChangesAsync();
     }
 
-    private async Task<List<StockNotification>> Rows()
+    private async Task<List<Notification>> Rows()
     {
         await using var db = TestDb.Create(_db);
-        return await db.StockNotifications.AsNoTracking().OrderBy(n => n.CreatedAt).ToListAsync();
+        return await db.Notifications.AsNoTracking().OrderBy(n => n.CreatedAt).ToListAsync();
     }
 
     private static int PushCount(IPushNotificationService push) =>
-        push.ReceivedCalls().Count(call => call.GetMethodInfo().Name == nameof(IPushNotificationService.SendStockAlertAsync));
+        push.ReceivedCalls().Count(call => call.GetMethodInfo().Name == nameof(IPushNotificationService.SendNotificationAsync));
 
     [Fact]
     public async Task TheNextDay_LiftsTheExistingAlertBackToTheTop_UnreadWithADayCount()
@@ -131,8 +131,8 @@ public class StockReminderServiceTests
         await Reminders().RunAsync(CancellationToken.None);
 
         var admin = (await Rows()).Last(r => r.UserId == _admin);
-        admin.Status.ShouldBe((byte)2);
-        admin.Quantity.ShouldBe(150m);
+        admin.Severity.ShouldBe((byte)2);
+        admin.Data.ShouldContain("\"quantity\":150");
         admin.Title.ShouldBe("Still low: Oat Milk");
     }
 
@@ -167,7 +167,7 @@ public class StockReminderServiceTests
         await Alert(400m);
         await using (var db = TestDb.Create(_db))
         {
-            foreach (var row in await db.StockNotifications.ToListAsync())
+            foreach (var row in await db.Notifications.ToListAsync())
             {
                 row.ReadAt = DateTime.UtcNow;
             }
@@ -255,10 +255,12 @@ public class StockReminderServiceTests
 
         await Reminders().RunAsync(CancellationToken.None);
 
-        await _push.Received(1).SendStockAlertAsync(
+        await _push.Received(1).SendNotificationAsync(
             Arg.Is<IReadOnlyCollection<Guid>>(ids => ids.Count == 2 && ids.Contains(_admin) && ids.Contains(_stockManager)),
             "Still low: Oat Milk",
             "400 ml left. The warning level is 500 ml. Day 2.",
+            $"/inventory/items/details/{_milk}",
+            "StockAlert",
             _milk,
             Arg.Any<CancellationToken>());
     }
@@ -341,7 +343,7 @@ public class StockReminderServiceTests
     {
         await Alert(400m);
         await Backdate();
-        _push.SendStockAlertAsync(default!, default!, default!, default, default).ThrowsAsyncForAnyArgs(new InvalidOperationException("boom"));
+        _push.SendNotificationAsync(default!, default!, default!, default, default!, default, default).ThrowsAsyncForAnyArgs(new InvalidOperationException("boom"));
 
         await Should.NotThrowAsync(() => Reminders().RunAsync(CancellationToken.None));
 

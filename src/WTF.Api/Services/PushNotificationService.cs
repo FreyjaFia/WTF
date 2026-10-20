@@ -43,12 +43,14 @@ public interface IPushNotificationService
         CancellationToken cancellationToken,
         bool isOverride = false);
 
-    /// <summary>An item fell to a worse stock level. It goes to the named people only and opens the stock alerts list.</summary>
-    Task SendStockAlertAsync(
+    /// <summary>Any kind of notification (see Features/Notifications). It goes to the named people only and opens <c>path</c>.</summary>
+    Task SendNotificationAsync(
         IReadOnlyCollection<Guid> userIds,
         string title,
         string body,
-        Guid itemId,
+        string? path,
+        string kind,
+        Guid? subjectId,
         CancellationToken cancellationToken);
 }
 
@@ -57,7 +59,7 @@ public static class PushTypes
 {
     public const string OnlineOrder = "online-order";
     public const string OrderMessage = "order-message";
-    public const string StockAlert = "stock-alert";
+    public const string Notification = "notification";
 }
 
 public sealed class PushNotificationService(
@@ -189,11 +191,13 @@ public sealed class PushNotificationService(
             cancellationToken);
     }
 
-    public async Task SendStockAlertAsync(
+    public async Task SendNotificationAsync(
         IReadOnlyCollection<Guid> userIds,
         string title,
         string body,
-        Guid itemId,
+        string? path,
+        string kind,
+        Guid? subjectId,
         CancellationToken cancellationToken)
     {
         if (userIds.Count == 0 || (!fcmClient.IsConfigured && !huaweiClient.IsConfigured))
@@ -210,12 +214,16 @@ public sealed class PushNotificationService(
 
         var data = new Dictionary<string, string>
         {
-            ["itemId"] = itemId.ToString(),
-            ["type"] = PushTypes.StockAlert,
-            ["path"] = "/inventory/alerts"
+            ["type"] = PushTypes.Notification,
+            ["kind"] = kind,
+            ["path"] = path ?? "/notifications"
         };
+        if (subjectId is not null)
+        {
+            data["subjectId"] = subjectId.Value.ToString();
+        }
 
-        await DeliverAsync(tokens, title, body, data, $"item {itemId}", cancellationToken);
+        await DeliverAsync(tokens, title, body, data, $"{kind} notification", cancellationToken);
     }
 
     private async Task SendToOthersAsync(

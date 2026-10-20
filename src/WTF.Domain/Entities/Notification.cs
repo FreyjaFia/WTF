@@ -1,16 +1,10 @@
 ﻿namespace WTF.Domain.Entities;
 
-public partial class StockNotification
+public partial class Notification
 {
     public Guid Id { get; set; }
 
     public Guid UserId { get; set; }
-
-    public Guid ItemId { get; set; }
-
-    public byte Status { get; set; }
-
-    public decimal Quantity { get; set; }
 
     public string Title { get; set; } = null!;
 
@@ -24,7 +18,15 @@ public partial class StockNotification
 
     public DateTime? LastRemindedAt { get; set; }
 
-    public virtual Item Item { get; set; } = null!;
+    public string Kind { get; set; } = null!;
+
+    public byte Severity { get; set; }
+
+    public string? Path { get; set; }
+
+    public Guid? SubjectId { get; set; }
+
+    public string? Data { get; set; }
 
     public virtual User User { get; set; } = null!;
 }

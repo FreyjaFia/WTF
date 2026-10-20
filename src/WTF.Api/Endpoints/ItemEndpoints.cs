@@ -22,6 +22,14 @@ public static class ItemEndpoints
             })
             .RequireAuthorization(AppPolicies.ItemsRead);
 
+        itemGroup.MapGet("/attention",
+            async (ISender sender) =>
+            {
+                var result = await sender.Send(new GetStockAttentionQuery());
+                return Results.Ok(result);
+            })
+            .RequireAuthorization(AppPolicies.StockMovementsRead);
+
         itemGroup.MapGet("/coverage",
             async (ISender sender) =>
             {

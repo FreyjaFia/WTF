@@ -48,7 +48,5 @@ public partial class Item
 
     public virtual ICollection<StockMovement> StockMovements { get; set; } = new List<StockMovement>();
 
-    public virtual ICollection<StockNotification> StockNotifications { get; set; } = new List<StockNotification>();
-
     public virtual User? UpdatedByNavigation { get; set; }
 }

@@ -39,12 +39,12 @@ public class StockAlertDatabaseTests
         {
             await using var db = database.CreateContext();
             await StockBalance.ApplyAsync(db, itemId, -100m, true, CancellationToken.None);
-            await new StockAlertService(db, TestFakes.Push()).EvaluateAsync([itemId], CancellationToken.None);
+            await new StockAlertService(db, TestFakes.Notifications(db)).EvaluateAsync([itemId], CancellationToken.None);
         }));
 
         await using var check = database.CreateContext();
-        var rows = await check.StockNotifications.Where(n => n.UserId == admin.Id).ToListAsync();
-        rows.Select(n => n.Status).Distinct().Count().ShouldBe(rows.Count);
+        var rows = await check.Notifications.Where(n => n.UserId == admin.Id).ToListAsync();
+        rows.Select(n => n.Data).Distinct().Count().ShouldBe(rows.Count);
         rows.Count.ShouldBeGreaterThan(0);
         (await check.Items.SingleAsync()).LastAlertStatus.ShouldBe((byte)3);
     }
@@ -71,12 +71,13 @@ public class StockAlertDatabaseTests
                 CreatedAt = DateTime.UtcNow,
                 CreatedBy = admin.Id,
             });
-            db.StockNotifications.Add(new StockNotification
+            db.Notifications.Add(new Notification
             {
                 UserId = admin.Id,
-                ItemId = itemId,
-                Status = 1,
-                Quantity = 400m,
+                Kind = "StockAlert",
+                Severity = 1,
+                SubjectId = itemId,
+                Data = "{\"status\":1,\"quantity\":400}",
                 Title = "Low stock: Milk",
                 Body = "400 ml left.",
                 CreatedAt = DateTime.UtcNow.AddDays(-1),
@@ -91,12 +92,12 @@ public class StockAlertDatabaseTests
         {
             await using var db = database.CreateContext();
             await new StockReminderService(
-                db, TestFakes.Push(), reports, options,
+                db, TestFakes.Notifications(db), reports, options,
                 Microsoft.Extensions.Logging.Abstractions.NullLogger<StockReminderService>.Instance).RunAsync(CancellationToken.None);
         }));
 
         await using var check = database.CreateContext();
-        var row = await check.StockNotifications.SingleAsync();
+        var row = await check.Notifications.SingleAsync();
         row.ReminderCount.ShouldBe(1);
         row.ReadAt.ShouldBeNull();
         row.Title.ShouldBe("Still low: Milk");

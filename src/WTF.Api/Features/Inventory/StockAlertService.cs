@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Auth;
-using WTF.Api.Services;
+using WTF.Api.Features.Notifications;
 using WTF.Calculations.Inventory;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
@@ -12,7 +12,7 @@ public interface IStockAlertService
     Task EvaluateAsync(IEnumerable<Guid> itemIds, CancellationToken cancellationToken);
 }
 
-public class StockAlertService(WTFDbContext db, IPushNotificationService pushNotifications) : IStockAlertService
+public class StockAlertService(WTFDbContext db, INotificationService notifications) : IStockAlertService
 {
     private static readonly string[] DefaultRecipientRoles = [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.StockManager];
 
@@ -22,6 +22,9 @@ public class StockAlertService(WTFDbContext db, IPushNotificationService pushNot
     {
         foreach (var itemId in itemIds.Distinct())
         {
+            // Every change moves what the stock screens show, alert or not.
+            await notifications.StockChangedAsync(itemId, cancellationToken);
+
             var item = await db.Items.AsNoTracking().FirstOrDefaultAsync(i => i.Id == itemId, cancellationToken);
             if (item is null || !item.IsActive)
             {
@@ -80,27 +83,7 @@ public class StockAlertService(WTFDbContext db, IPushNotificationService pushNot
         }
 
         var (title, body) = StockAlertMessages.For(item, status);
-        var now = DateTime.UtcNow;
-        db.StockNotifications.AddRange(recipients.Select(userId => new StockNotification
-        {
-            UserId = userId,
-            ItemId = item.Id,
-            Status = (byte)status,
-            Quantity = item.CurrentQuantity,
-            Title = title,
-            Body = body,
-            CreatedAt = now
-        }));
-        await db.SaveChangesAsync(cancellationToken);
-
-        try
-        {
-            await pushNotifications.SendStockAlertAsync(recipients, title, body, item.Id, cancellationToken);
-        }
-        catch (Exception)
-        {
-            // The saved list is the record; a failed push never undoes the sale that caused the alert.
-        }
+        await notifications.NotifyAsync(recipients, StockAlertMessages.Message(item, status, title, body), cancellationToken);
     }
 
     internal static async Task<List<Guid>> ResolveRecipientsAsync(WTFDbContext db, Guid itemId, CancellationToken cancellationToken)
@@ -138,6 +121,16 @@ public static class StockAlertMessages
             _ => ($"Out of stock: {item.Name}", "None left.")
         };
     }
+
+    public static NotificationMessage Message(Item item, StockStatus status, string title, string body) =>
+        new(
+            NotificationKinds.StockAlert,
+            status == StockStatus.Warning ? NotificationSeverity.Warning : NotificationSeverity.Critical,
+            title,
+            body,
+            $"/inventory/items/details/{item.Id}",
+            item.Id,
+            $"{{\"status\":{(int)status},\"quantity\":{item.CurrentQuantity.ToString(System.Globalization.CultureInfo.InvariantCulture)}}}");
 
     public static (string Title, string Body) Reminder(Item item, StockStatus status, int day)
     {

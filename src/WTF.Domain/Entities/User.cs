@@ -48,6 +48,8 @@ public partial class User
 
     public virtual ICollection<Item> ItemUpdatedByNavigations { get; set; } = new List<Item>();
 
+    public virtual ICollection<Notification> Notifications { get; set; } = new List<Notification>();
+
     public virtual ICollection<Order> OrderCreatedByNavigations { get; set; } = new List<Order>();
 
     public virtual ICollection<Order> OrderUpdatedByNavigations { get; set; } = new List<Order>();
@@ -75,8 +77,6 @@ public partial class User
     public virtual ICollection<ShortLink> ShortLinks { get; set; } = new List<ShortLink>();
 
     public virtual ICollection<StockMovement> StockMovements { get; set; } = new List<StockMovement>();
-
-    public virtual ICollection<StockNotification> StockNotifications { get; set; } = new List<StockNotification>();
 
     public virtual User? UpdatedByNavigation { get; set; }
 

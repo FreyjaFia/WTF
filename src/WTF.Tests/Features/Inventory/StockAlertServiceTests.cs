@@ -61,7 +61,7 @@ public class StockAlertServiceTests
         return user.Id;
     }
 
-    private StockAlertService Service() => new(TestDb.Create(_db), _push);
+    private StockAlertService Service() => new(TestDb.Create(_db), TestFakes.Notifications(TestDb.Create(_db), _push));
 
     private async Task SetQuantityAndEvaluate(decimal quantity, Guid? itemId = null)
     {
@@ -75,14 +75,14 @@ public class StockAlertServiceTests
         await Service().EvaluateAsync([itemId ?? _milk], CancellationToken.None);
     }
 
-    private async Task<List<StockNotification>> Notifications()
+    private async Task<List<Notification>> Notifications()
     {
         await using var db = TestDb.Create(_db);
-        return await db.StockNotifications.AsNoTracking().OrderBy(n => n.CreatedAt).ToListAsync();
+        return await db.Notifications.AsNoTracking().OrderBy(n => n.CreatedAt).ToListAsync();
     }
 
     private static int PushCount(IPushNotificationService push) =>
-        push.ReceivedCalls().Count(call => call.GetMethodInfo().Name == nameof(IPushNotificationService.SendStockAlertAsync));
+        push.ReceivedCalls().Count(call => call.GetMethodInfo().Name == nameof(IPushNotificationService.SendNotificationAsync));
 
     [Fact]
     public async Task FallingToTheWarningLevel_TellsTheStockRolesAndNobodyElse()
@@ -91,13 +91,15 @@ public class StockAlertServiceTests
 
         var rows = await Notifications();
         rows.Select(n => n.UserId).ToHashSet().ShouldBe([_superAdmin, _admin, _stockManager], ignoreOrder: true);
-        rows.ShouldAllBe(n => n.Status == 1 && n.Quantity == 400m && n.ReadAt == null);
+        rows.ShouldAllBe(n => n.Severity == 1 && n.Data!.Contains("\"quantity\":400") && n.ReadAt == null);
         rows[0].Title.ShouldBe("Low stock: Oat Milk");
         rows[0].Body.ShouldBe("400 ml left. The warning level is 500 ml.");
-        await _push.Received(1).SendStockAlertAsync(
+        await _push.Received(1).SendNotificationAsync(
             Arg.Is<IReadOnlyCollection<Guid>>(ids => ids.Count == 3 && !ids.Contains(_cashier) && !ids.Contains(_viewer) && !ids.Contains(_inactiveAdmin)),
             "Low stock: Oat Milk",
             "400 ml left. The warning level is 500 ml.",
+            $"/inventory/items/details/{_milk}",
+            "StockAlert",
             _milk,
             Arg.Any<CancellationToken>());
     }
@@ -151,7 +153,7 @@ public class StockAlertServiceTests
         await SetQuantityAndEvaluate(400m);
         await SetQuantityAndEvaluate(150m);
 
-        (await Notifications()).Count(n => n.UserId == _admin && n.Status == 2).ShouldBe(2);
+        (await Notifications()).Count(n => n.UserId == _admin && n.Severity == 2).ShouldBe(2);
     }
 
     [Fact]
@@ -196,7 +198,7 @@ public class StockAlertServiceTests
     [Fact]
     public async Task APushThatFails_DoesNotStopTheAlertBeingSaved()
     {
-        _push.SendStockAlertAsync(default!, default!, default!, default, default).ThrowsAsyncForAnyArgs(new InvalidOperationException("boom"));
+        _push.SendNotificationAsync(default!, default!, default!, default, default!, default, default).ThrowsAsyncForAnyArgs(new InvalidOperationException("boom"));
 
         await Should.NotThrowAsync(() => SetQuantityAndEvaluate(400m));
 
@@ -221,7 +223,7 @@ public class StockAlertServiceTests
         StockSeed.Link(_db, latte, _milk, 200m);
         var order = data.AddOrder(WTF.Api.Features.Orders.Enums.OrderStatusEnum.Completed);
         data.AddLine(order, latte, 4);
-        var stock = new OrderStockService(TestDb.Create(_db), TestFakes.Audit(), new StockAlertService(TestDb.Create(_db), _push));
+        var stock = new OrderStockService(TestDb.Create(_db), TestFakes.Audit(), new StockAlertService(TestDb.Create(_db), TestFakes.Notifications(TestDb.Create(_db), _push)));
 
         await stock.DeductForOrderAsync(order, _admin, new StockDeductionOptions(), CancellationToken.None);
 
