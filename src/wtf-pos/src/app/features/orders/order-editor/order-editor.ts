@@ -35,6 +35,7 @@ import {
   OrderService,
   ProductService,
   PromotionService,
+  StockLimitsService,
 } from '@core/services';
 import type { CustomerDropdownOption, ReceiptData } from '@shared/components';
 import {
@@ -97,6 +98,8 @@ import {
   usesLeft,
   addMoney,
   promoDiscount,
+  StockCartLine,
+  stockShortfalls,
 } from '@shared/calculations';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { AddOnLabelsPipe } from '@shared/pipes';
@@ -168,6 +171,7 @@ export class OrderEditor implements OnInit, OnDestroy {
   private readonly catalogCache = inject(CatalogCacheService);
   private readonly cartPersistence = inject(CartPersistenceService);
   private readonly connectivity = inject(ConnectivityService);
+  private readonly stockLimits = inject(StockLimitsService);
   private readonly offlineOrder = inject(OfflineOrderService);
   private readonly cdr = inject(ChangeDetectorRef);
 
@@ -318,6 +322,31 @@ export class OrderEditor implements OnInit, OnDestroy {
       this.isCancelled() ||
       this.isRefunded() ||
       this.isOfflineCompleted(),
+  );
+  // What the cart cannot get from items that block sales when they run short. Open orders take no stock until they
+  // complete, and an Admin's correction is judged by the server on the net change, so neither is checked here.
+  protected readonly stockMessages = computed(() => {
+    if (this.isOverrideMode() || this.isReadOnly() || !this.stockLimits.hasBlockingItems()) {
+      return [];
+    }
+
+    const items = new Map(this.stockLimits.items().map((item) => [item.id, item]));
+    return stockShortfalls(this.buildStockCartLines(), this.stockLimits.links(), this.stockLimits.items()).map(
+      (shortfall) => {
+        const item = items.get(shortfall.itemId);
+        const unit = item?.unitName ? ` ${item.unitName}` : '';
+        return {
+          itemId: shortfall.itemId,
+          lineKeys: shortfall.lineKeys,
+          text: `${item?.name ?? 'This item'}: ${Math.max(0, shortfall.balance)}${unit} left, needs ${shortfall.needed}${unit}`,
+        };
+      },
+    );
+  });
+
+  // While offline the balance may be old and an offline sale is honored when it syncs, so it only warns.
+  protected readonly stockBlocksCheckout = computed(
+    () => this.connectivity.isOnline() && this.stockMessages().length > 0,
   );
   protected readonly paymentTipsAmount = computed(() => this.currentOrder()?.tips ?? 0);
   protected readonly paymentChangeAmount = computed(() => this.currentOrder()?.changeAmount ?? 0);
@@ -905,6 +934,7 @@ export class OrderEditor implements OnInit, OnDestroy {
 
     this.loadBundlePromotions();
     this.loadDiscountedProductPromotions();
+    this.stockLimits.start();
 
     this.filterForm.valueChanges.pipe(debounceTime(300)).subscribe(() => {
       this.applyFiltersToCache();
@@ -912,6 +942,7 @@ export class OrderEditor implements OnInit, OnDestroy {
   }
 
   public ngOnDestroy(): void {
+    this.stockLimits.stop();
     this.finishQuickPayHold(false);
     if (typeof window !== 'undefined' && this.programmaticSubCategoryScrollTimeout !== null) {
       window.clearTimeout(this.programmaticSubCategoryScrollTimeout);
@@ -2200,6 +2231,27 @@ export class OrderEditor implements OnInit, OnDestroy {
       return;
     }
 
+    // Stock may have moved since the cart was built: ask the shop for the latest balances, then judge the cart. (The server
+    // refuses the sale again if another register took the stock first.)
+    if (this.connectivity.isOnline() && this.stockLimits.hasBlockingItems() && !this.isOverrideMode()) {
+      this.stockLimits.load().subscribe({
+        next: () => this.checkoutAfterStockCheck(),
+        error: () => this.checkoutAfterStockCheck(),
+      });
+      return;
+    }
+
+    this.checkoutAfterStockCheck();
+  }
+
+  private checkoutAfterStockCheck(): void {
+    if (this.stockBlocksCheckout()) {
+      this.alertService.error(
+        `Not enough stock to check out. ${this.stockMessages().map((message) => `${message.text}.`).join(' ')}`,
+      );
+      return;
+    }
+
     // A promotion may have changed or run out since the cart was built: ask the shop again before taking payment, and stop
     // if the total moved. (The server checks the same total again when the sale is saved.)
     if (this.connectivity.isOnline() && this.cartUsesPromotions()) {
@@ -2208,6 +2260,50 @@ export class OrderEditor implements OnInit, OnDestroy {
     }
 
     this.openCheckoutModal();
+  }
+
+  protected stockNotesForLine(index: number): string[] {
+    const key = String(index);
+    return this.stockMessages()
+      .filter((message) => message.lineKeys.includes(key))
+      .map((message) => message.text);
+  }
+
+  // The cart as the server will see it, with each line's place in the cart as its key. Keep in step with
+  // buildOrderItemsFromCart: a bundle takes its items (a mix and match already holds the total), a plain line its add-ons.
+  private buildStockCartLines(): StockCartLine[] {
+    const promotionTypeById = new Map(
+      this.bundlePromotions().map((promo) => [promo.id, promo.typeId]),
+    );
+    const lines: StockCartLine[] = [];
+
+    this.cart().forEach((line, index) => {
+      const key = String(index);
+      if (line.bundleItems?.length) {
+        const promotionType =
+          line.bundlePromotionTypeId ??
+          (line.bundlePromotionId ? promotionTypeById.get(line.bundlePromotionId) : null) ??
+          null;
+
+        for (const bundleItem of line.bundleItems) {
+          lines.push({
+            key,
+            productId: bundleItem.productId,
+            quantity:
+              promotionType === PromotionTypeEnum.MixMatch
+                ? Math.max(1, bundleItem.qty)
+                : Math.max(1, line.qty) * Math.max(1, bundleItem.qty),
+            addOns: this.groupAddOns(bundleItem.addOns, false),
+          });
+        }
+
+        return;
+      }
+
+      lines.push({ key, productId: line.productId, quantity: line.qty, addOns: this.groupAddOns(line.addOns, false) });
+    });
+
+    return lines;
   }
 
   private cartUsesPromotions(): boolean {

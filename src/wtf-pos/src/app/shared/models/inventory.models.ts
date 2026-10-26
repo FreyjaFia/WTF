@@ -176,6 +176,25 @@ export interface StockAttentionDto {
   totalCount: number;
 }
 
+export interface StockLimitItemDto {
+  id: string;
+  name: string;
+  unitName: string;
+  balance: number;
+}
+
+export interface StockLimitLinkDto {
+  productId: string;
+  itemId: string;
+  quantityPerSale: number;
+}
+
+export interface PosStockLimitsDto {
+  items: StockLimitItemDto[];
+  links: StockLimitLinkDto[];
+  asOf: string;
+}
+
 export interface AlertRecipientDto {
   userId: string;
   name: string;

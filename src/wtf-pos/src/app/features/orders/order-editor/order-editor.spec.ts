@@ -16,6 +16,7 @@ import {
   ProductService,
   PromotionService,
   SignalRService,
+  StockLimitsService,
 } from '@core/services';
 import { AppRoutes } from '@shared/constants/app-routes';
 import {
@@ -57,6 +58,9 @@ interface Editor {
   isEditMode: Sig<boolean>;
   isOfflineEditMode: () => boolean;
   isOverrideMode: Sig<boolean>;
+  stockMessages: () => { itemId: string; text: string; lineKeys: string[] }[];
+  stockBlocksCheckout: () => boolean;
+  stockNotesForLine: (index: number) => string[];
   isLoading: () => boolean;
   isSavingOrder: Sig<boolean>;
   isCancellingOrder: Sig<boolean>;
@@ -290,6 +294,16 @@ describe('OrderEditor', () => {
     stopStaffOrdersHub: ReturnType<typeof vi.fn>;
   };
   let isOnline: ReturnType<typeof signal<boolean>>;
+  let limitItems: ReturnType<typeof signal<{ id: string; name: string; unitName: string; balance: number }[]>>;
+  let limitLinks: ReturnType<typeof signal<{ productId: string; itemId: string; quantityPerSale: number }[]>>;
+  let stockLimits: {
+    items: typeof limitItems;
+    links: typeof limitLinks;
+    hasBlockingItems: () => boolean;
+    start: ReturnType<typeof vi.fn>;
+    stop: ReturnType<typeof vi.fn>;
+    load: ReturnType<typeof vi.fn>;
+  };
   let canWrite: boolean;
   let canOverride: boolean;
   let canCreateCustomer: boolean;
@@ -392,6 +406,16 @@ describe('OrderEditor', () => {
     params = {};
     query = {};
     isOnline = signal(true);
+    limitItems = signal([]);
+    limitLinks = signal([]);
+    stockLimits = {
+      items: limitItems,
+      links: limitLinks,
+      hasBlockingItems: () => limitItems().length > 0,
+      start: vi.fn(),
+      stop: vi.fn(),
+      load: vi.fn(() => of({ items: limitItems(), links: limitLinks(), asOf: '' })),
+    };
     canWrite = true;
     canOverride = true;
     canCreateCustomer = true;
@@ -506,6 +530,7 @@ describe('OrderEditor', () => {
         { provide: OfflineOrderService, useValue: offline },
         { provide: CatalogCacheService, useValue: catalog },
         { provide: ConnectivityService, useValue: { isOnline } },
+        { provide: StockLimitsService, useValue: stockLimits },
       ],
     });
     router = TestBed.inject(Router);
@@ -1240,6 +1265,175 @@ describe('OrderEditor', () => {
 
         expect(t.getDiscountedUnitPrice(line({ qty: 1 }))).toBeNull();
       });
+    });
+  });
+
+  describe('stock that blocks a sale', () => {
+    const blockCups = (balance: number) => {
+      limitItems.set([{ id: 'cup', name: 'Cup', unitName: 'pc', balance }]);
+      limitLinks.set([{ productId: 'latte', itemId: 'cup', quantityPerSale: 1 }]);
+    };
+    const checkoutButton = () =>
+      [...(fixture.nativeElement as HTMLElement).querySelectorAll('button')].find(
+        (b) => b.textContent?.trim() === 'Checkout',
+      ) as HTMLButtonElement;
+
+    it('starts and stops asking the shop for the balances with the screen', async () => {
+      await start();
+      expect(stockLimits.start).toHaveBeenCalledTimes(1);
+
+      fixture.destroy();
+
+      expect(stockLimits.stop).toHaveBeenCalledTimes(1);
+    });
+
+    it('says nothing and does not block when no item blocks sales', async () => {
+      await start();
+      withCart([line({ qty: 5 })]);
+
+      expect(t.stockMessages()).toEqual([]);
+      expect(t.stockBlocksCheckout()).toBe(false);
+    });
+
+    it('labels the line and blocks checkout when a blocking item cannot cover the cart', async () => {
+      blockCups(1);
+      await start();
+      withCart([line({ qty: 2 })]);
+      fixture.detectChanges();
+
+      expect(t.stockMessages().map((m) => m.text)).toEqual(['Cup: 1 pc left, needs 2 pc']);
+      expect(t.stockNotesForLine(0)).toEqual(['Cup: 1 pc left, needs 2 pc']);
+      expect(t.stockBlocksCheckout()).toBe(true);
+      expect(checkoutButton().disabled).toBe(true);
+      const banner = (fixture.nativeElement as HTMLElement).querySelector('[data-stock-banner]')?.textContent ?? '';
+      expect(banner).toContain('Not enough stock to check out');
+      expect(banner).toContain('1 item is short');
+      expect((fixture.nativeElement as HTMLElement).querySelector('[data-stock-note]')).not.toBeNull();
+    });
+
+    it('lets the sale through when the stock is exactly enough', async () => {
+      blockCups(2);
+      await start();
+      withCart([line({ qty: 2 })]);
+      fixture.detectChanges();
+
+      expect(t.stockBlocksCheckout()).toBe(false);
+      expect(checkoutButton().disabled).toBe(false);
+    });
+
+    it('does not label a line that does not use the short item', async () => {
+      blockCups(1);
+      await start();
+      withCart([line({ qty: 2 }), line({ productId: 'cola', name: 'Cola', price: 50 })]);
+
+      expect(t.stockNotesForLine(0)).toHaveLength(1);
+      expect(t.stockNotesForLine(1)).toEqual([]);
+    });
+
+    it('lists every short item under a line, and counts them in the banner', async () => {
+      limitItems.set([
+        { id: 'cup', name: 'Cup', unitName: 'pc', balance: 1 },
+        { id: 'lid', name: 'Lid', unitName: 'pc', balance: 0 },
+      ]);
+      limitLinks.set([
+        { productId: 'latte', itemId: 'cup', quantityPerSale: 1 },
+        { productId: 'latte', itemId: 'lid', quantityPerSale: 1 },
+      ]);
+      await start();
+      withCart([line({ qty: 2 })]);
+      fixture.detectChanges();
+
+      expect(t.stockNotesForLine(0)).toEqual(['Cup: 1 pc left, needs 2 pc', 'Lid: 0 pc left, needs 2 pc']);
+      const root = fixture.nativeElement as HTMLElement;
+      // The cart is drawn in the drawer and in the side panel, so each note shows once in each.
+      const shown = new Set([...root.querySelectorAll('[data-stock-note]')].map((note) => note.textContent?.trim()));
+      expect([...shown]).toEqual(['Cup: 1 pc left, needs 2 pc', 'Lid: 0 pc left, needs 2 pc']);
+      expect(root.querySelector('[data-stock-banner]')?.textContent).toContain('2 items are short');
+    });
+
+    it('asks for the latest balances at checkout and stops when the cart is still short', async () => {
+      blockCups(5);
+      await start();
+      withCart([line({ qty: 3 })]);
+      stockLimits.load.mockImplementation(() => {
+        blockCups(1);
+        return of({ items: limitItems(), links: limitLinks(), asOf: '' });
+      });
+
+      t.checkout();
+
+      expect(stockLimits.load).toHaveBeenCalledTimes(1);
+      expect(checkoutOpen).not.toHaveBeenCalled();
+      expect(alert['error']).toHaveBeenCalledWith(
+        'Not enough stock to check out. Cup: 1 pc left, needs 3 pc.',
+      );
+    });
+
+    it('opens checkout when the latest balances cover the cart', async () => {
+      blockCups(2);
+      await start();
+      withCart([line({ qty: 3 })]);
+      stockLimits.load.mockImplementation(() => {
+        blockCups(10);
+        return of({ items: limitItems(), links: limitLinks(), asOf: '' });
+      });
+
+      t.checkout();
+
+      expect(checkoutOpen).toHaveBeenCalledTimes(1);
+    });
+
+    it('goes on to checkout when the balances cannot be loaded, and the server decides', async () => {
+      blockCups(10);
+      await start();
+      withCart([line({ qty: 2 })]);
+      stockLimits.load.mockReturnValue(throwError(() => new Error('down')));
+
+      t.checkout();
+
+      expect(checkoutOpen).toHaveBeenCalledTimes(1);
+    });
+
+    it('only warns while offline, because the sale is honored when it syncs', async () => {
+      blockCups(1);
+      await start();
+      withCart([line({ qty: 2 })]);
+      isOnline.set(false);
+      fixture.detectChanges();
+
+      expect(t.stockMessages()).toHaveLength(1);
+      expect(t.stockBlocksCheckout()).toBe(false);
+      expect(checkoutButton().disabled).toBe(false);
+      expect((fixture.nativeElement as HTMLElement).querySelector('[data-stock-banner]')?.textContent).toContain(
+        'you are offline',
+      );
+
+      t.checkout();
+
+      expect(stockLimits.load).not.toHaveBeenCalled();
+      expect(checkoutOpen).toHaveBeenCalledTimes(1);
+    });
+
+    it('never blocks saving an open order', async () => {
+      blockCups(1);
+      await start();
+      withCart([line({ qty: 2 })]);
+      fixture.detectChanges();
+
+      const save = [...(fixture.nativeElement as HTMLElement).querySelectorAll('button')].find(
+        (b) => b.textContent?.trim() === 'Save',
+      ) as HTMLButtonElement;
+      expect(save.disabled).toBe(false);
+    });
+
+    it('does not judge an Admin override, which the server works out on the net change', async () => {
+      blockCups(1);
+      await start();
+      withCart([line({ qty: 2 })]);
+      t.isOverrideMode.set(true);
+
+      expect(t.stockMessages()).toEqual([]);
+      expect(t.stockBlocksCheckout()).toBe(false);
     });
   });
 

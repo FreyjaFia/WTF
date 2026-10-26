@@ -1355,5 +1355,62 @@
     { "name": "a negative balance covers nothing", "balance": -50, "perSale": 200, "expected": 0 },
     { "name": "no quantity per sale covers nothing", "balance": 100, "perSale": 0, "expected": 0 },
     { "name": "fractions of a unit", "balance": 2.5, "perSale": 0.5, "expected": 5 }
+  ],
+  "stockShortfalls": [
+    {
+      "name": "two drinks with one cup left",
+      "balances": [{ "itemId": "cup", "balance": 1 }],
+      "links": [{ "productId": "mocha", "itemId": "cup", "perSale": 1 }],
+      "lines": [{ "productId": "mocha", "quantity": 2, "addOns": [] }],
+      "expected": [{ "itemId": "cup", "needed": 2, "balance": 1, "short": 1 }]
+    },
+    {
+      "name": "exactly enough is not short",
+      "balances": [{ "itemId": "cup", "balance": 2 }],
+      "links": [{ "productId": "mocha", "itemId": "cup", "perSale": 1 }],
+      "lines": [{ "productId": "mocha", "quantity": 2, "addOns": [] }],
+      "expected": []
+    },
+    {
+      "name": "two products share one blocking item",
+      "balances": [{ "itemId": "cup", "balance": 3 }],
+      "links": [
+        { "productId": "mocha", "itemId": "cup", "perSale": 1 },
+        { "productId": "latte", "itemId": "cup", "perSale": 1 }
+      ],
+      "lines": [
+        { "productId": "mocha", "quantity": 2, "addOns": [] },
+        { "productId": "latte", "quantity": 2, "addOns": [] }
+      ],
+      "expected": [{ "itemId": "cup", "needed": 4, "balance": 3, "short": 1 }]
+    },
+    {
+      "name": "an add-on takes its item once per unit of the drink",
+      "balances": [{ "itemId": "syrup", "balance": 50 }],
+      "links": [{ "productId": "caramel", "itemId": "syrup", "perSale": 30 }],
+      "lines": [{ "productId": "latte", "quantity": 2, "addOns": [{ "productId": "caramel", "quantity": 1 }] }],
+      "expected": [{ "itemId": "syrup", "needed": 60, "balance": 50, "short": 10 }]
+    },
+    {
+      "name": "an item that does not block is never reported",
+      "balances": [],
+      "links": [{ "productId": "mocha", "itemId": "milk", "perSale": 200 }],
+      "lines": [{ "productId": "mocha", "quantity": 5, "addOns": [] }],
+      "expected": []
+    },
+    {
+      "name": "an empty or negative balance is short by everything needed",
+      "balances": [{ "itemId": "cup", "balance": -3 }],
+      "links": [{ "productId": "mocha", "itemId": "cup", "perSale": 1 }],
+      "lines": [{ "productId": "mocha", "quantity": 2, "addOns": [] }],
+      "expected": [{ "itemId": "cup", "needed": 2, "balance": -3, "short": 2 }]
+    },
+    {
+      "name": "a product with no link is ignored",
+      "balances": [{ "itemId": "cup", "balance": 0 }],
+      "links": [],
+      "lines": [{ "productId": "water", "quantity": 4, "addOns": [] }],
+      "expected": []
+    }
   ]
 }

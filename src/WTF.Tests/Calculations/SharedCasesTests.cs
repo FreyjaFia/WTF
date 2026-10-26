@@ -52,6 +52,23 @@ public class SharedCasesTests
 
     private sealed record CashCase(string Name, decimal Total, decimal? Tips, decimal Received, decimal ExpectedDue, decimal ExpectedChange);
 
+    private sealed record ShortfallBalanceCase(string ItemId, decimal Balance);
+
+    private sealed record ShortfallLinkCase(string ProductId, string ItemId, decimal PerSale);
+
+    private sealed record ShortfallAddOnCase(string ProductId, int Quantity);
+
+    private sealed record ShortfallLineCase(string ProductId, int Quantity, List<ShortfallAddOnCase> AddOns);
+
+    private sealed record ShortfallExpectedCase(string ItemId, decimal Needed, decimal Balance, decimal Short);
+
+    private sealed record StockShortfallCase(
+        string Name,
+        List<ShortfallBalanceCase> Balances,
+        List<ShortfallLinkCase> Links,
+        List<ShortfallLineCase> Lines,
+        List<ShortfallExpectedCase> Expected);
+
     private sealed record Cases(
         List<OrderCase> OrderTotals,
         List<DiscountCase> DiscountedUnitPrice,
@@ -62,7 +79,8 @@ public class SharedCasesTests
         List<CashCase> CashPayment,
         List<ScheduleCase> ScheduleOpen,
         List<AdjustmentCase> StockAdjustment,
-        List<SalesCoveredCase> SalesCovered);
+        List<SalesCoveredCase> SalesCovered,
+        List<StockShortfallCase> StockShortfalls);
 
     private static readonly Lazy<Cases> Loaded = new(() =>
     {
@@ -91,6 +109,8 @@ public class SharedCasesTests
     public static IEnumerable<object[]> AdjustmentCaseNames() => Loaded.Value.StockAdjustment.Select(c => new object[] { c.Name });
 
     public static IEnumerable<object[]> SalesCoveredCaseNames() => Loaded.Value.SalesCovered.Select(c => new object[] { c.Name });
+
+    public static IEnumerable<object[]> StockShortfallCaseNames() => Loaded.Value.StockShortfalls.Select(c => new object[] { c.Name });
 
     /// <summary>A stable id for a name in the file, so "cheese" is the same add-on in the cart and in the rule.</summary>
     private static Guid IdFor(string name) => new(MD5.HashData(Encoding.UTF8.GetBytes(name)));
@@ -184,6 +204,28 @@ public class SharedCasesTests
         var c = Loaded.Value.SalesCovered.Single(x => x.Name == name);
 
         StockRules.SalesCovered(c.Balance, c.PerSale).ShouldBe(c.Expected);
+    }
+
+    [Theory]
+    [MemberData(nameof(StockShortfallCaseNames))]
+    public void StockShortfalls_MatchTheSharedCase(string name)
+    {
+        var c = Loaded.Value.StockShortfalls.Single(x => x.Name == name);
+        var lines = new List<StockLine>();
+        foreach (var line in c.Lines)
+        {
+            var lineId = Guid.NewGuid();
+            lines.Add(new StockLine(lineId, null, IdFor(line.ProductId), line.Quantity));
+            lines.AddRange(line.AddOns.Select(addOn => new StockLine(Guid.NewGuid(), lineId, IdFor(addOn.ProductId), addOn.Quantity)));
+        }
+
+        var links = c.Links.Select(link => new StockLink(IdFor(link.ProductId), IdFor(link.ItemId), link.PerSale)).ToList();
+        var balances = c.Balances.ToDictionary(balance => IdFor(balance.ItemId), balance => balance.Balance);
+
+        var result = StockRules.Shortfalls(lines, links, balances);
+
+        result.Select(r => (r.ItemId, r.Needed, r.Balance, r.Short))
+            .ShouldBe(c.Expected.Select(e => (IdFor(e.ItemId), e.Needed, e.Balance, e.Short)).ToList());
     }
 
     [Theory]

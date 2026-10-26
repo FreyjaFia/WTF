@@ -28,6 +28,7 @@ export * from './schema-script-history.service';
 export * from './signalr.service';
 export * from './notification.service';
 export * from './stock-attention.service';
+export * from './stock-limits.service';
 export * from './theme.service';
 export * from './update.service';
 export * from './user.service';

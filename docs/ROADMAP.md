@@ -464,22 +464,34 @@ Remaining:
 - Review report/dashboard inventory impacts after real usage data exists.
 - Show "stock last updated" on a POS low-stock warning when offline (Offline Phase 7).
 - Per-item blocking can be switched on in the item editor now; it only matters once real stock counts exist.
-- **Tell the cashier before checkout when a blocking item cannot cover the cart (added 26 Oct 2026, not built).** Today a
-  blocking item (`AllowNegativeStock` off) is only enforced on the server when the sale completes: an order of 2 drinks
-  with stock for 1 is refused whole with "Not enough ... (short by N)", after the cashier has already taken payment details.
-  The POS should know sooner.
-  - The cart sums what it needs per item across all lines (the same `StockRules.Requirements` maths, mirrored in
-    `shared/calculations`, with shared cases in `calculation-cases.json`) and compares it with the balance it last saw.
-  - A line that makes a blocking item short gets an info label ("Only 1 left, this order needs 2") and the checkout button is
-    disabled with the reason, until the quantity is lowered or the line removed. A warn-only item keeps today's behavior
-    (the sale goes through, the warning shows after).
-  - The server stays the authority and still refuses at completion (another register may have taken the stock, and the
-    POS balance can be old). The label is a guide, not the check.
-  - Needs the POS to keep a per-item balance (catalog cache or a small stock endpoint) with a "stock last updated" time. When
-    offline there is nothing reliable to block on: show the same label as a warning only, because an offline sale is honored
-    at sync (Offline Phase 7).
-  - Open: block an open (Pending) order that cannot be fulfilled, or only the completing step? Assumed: only completing, since
-    stock may arrive before the drink is made.
+- **Tell the cashier before checkout when a blocking item cannot cover the cart (built 26 Oct 2026).** A blocking item
+  (`AllowNegativeStock` off) used to be enforced only on the server when the sale completed: an order of 2 drinks with stock
+  for 1 was refused whole, after the cashier had already taken payment details. Now the order editor says so first.
+  - **Data.** Cashiers cannot read stock, so `GET /api/pos/stock-limits` (`OrdersWrite`) gives the register only the active
+    items that block sales, their balances and which products take them (no costs, no warn-only items). The POS loads it when
+    the editor opens, every minute while online and right before checkout (`StockLimitsService`).
+  - **Maths.** `StockRules.Shortfalls` (API) and `stockShortfalls` (`shared/calculations/stock-limits.ts`) sum what the cart
+    needs per item across all lines (an add-on takes its item once per unit of its drink) and compare it with the balance; both
+    run the `stockShortfalls` cases in `calculation-cases.json`.
+  - **Screen.** Each cart line that uses a short item lists it under the product ("Cup Lid: 1 pc left, needs 3 pc"), a
+    two-line banner says how many items are short, and Checkout is disabled until the quantity is lowered or the line removed.
+    At checkout the latest balances are asked for again, and a refusal shows the same list.
+  - **Rules.** Online blocks. Offline only warns (the device cannot know the balance and an offline sale is honored when it
+    syncs). Saving an open order is never blocked. An Admin override of a completed order is not judged (the server works out the
+    net change). A warn-only item keeps today's behavior. The server stays the authority and still refuses at completion,
+    since another register may have taken the stock first.
+  - **Checked** on the throwaway database in the browser at phone width: 2 Mochas against 1 Blocking Cup (label, banner,
+    Checkout disabled, Save enabled; lowering to 1 cleared it), and a cart of five lines with four short items, including a
+    94-character name and one with no spaces (the unbroken name now wraps inside the cart card too). Also checked by hand: a
+    customer link order of 2 Mochas was placed (not refused at submit, nothing taken), accepted, and then showed the same label
+    with Checkout disabled when staff opened it, while the API refused to complete it; the customer's own page and My orders
+    were unchanged and show no stock. Offline (API stopped): the label turned amber, the banner read "Stock may be short (you are
+    offline)", and Checkout stayed enabled and opened. Then checked with the API really stopped (the app noticed within 45
+    seconds, no faked event): the label turned amber offline and went back to red and blocked when the API returned, without a
+    reload; an offline sale of 2 Mochas against 1 Blocking Cup was saved as OFF-261026-001 and, once the API was back, synced by
+    itself as a Completed order that took both cups (balance 1 to -1, movement noted "Balance went below zero"; the item still
+    blocks, so the next online sale of it is refused until it is counted or restocked). Five rounds of two or three registers
+    completing a sale for the last unit at the same moment gave exactly one sale and the rest refused, never below zero.
 - Remaining hard deletes (decision pending): promotion child rows (rules and
   bundle items are deleted and recreated on every promotion save), order lines
   (deleted and rebuilt when an order is edited), and replaced or removed images
@@ -1074,6 +1086,63 @@ accounting or tax filing** (the app still stores no tax); the accountant's books
 - Are made-to-order drinks the main product, or is retail (bottled goods) bigger? (Retail mostly needs Phases 5 and 8.)
 - Who may enter waste, approve counts and see costs? (Assumed: Cashier enters waste; Admin approves counts and sees costs.)
 - Will expenses be entered in the app, or only imported from the accountant monthly?
+
+### Polish pass before deploying inventory to production [Planned, added 26 Oct 2026]
+
+Inventory is built and checked on throwaway databases, not yet on the live shop. Before it goes to production, do one
+deliberate polish pass over everything built so far (Phases 1 to 4, the Needs Attention and Coverage screens, notifications,
+the delete and restore rules, the pre-checkout stock label), so the first real day does not find the rough edges. Nothing here
+is new work; it is the checklist for finishing and proving what exists.
+
+**Release steps**
+
+- Run the SQL scripts for stock in order on a copy of the live database first (`tools/sql`: order-time stock, stock alerts,
+  alert reminders, notifications), then `tools/dbsync.bat` and a build. Confirm CI runs them on the tag build in the same order
+  and that the API is deployed after them.
+- Confirm the Production settings: stock reminders on with `DryRun` off at the intended time (already so in
+  `appsettings.Production.json`), push credentials (FCM and Huawei) set, and the images and report storage reachable.
+- Run the whole test suites on CI (including the real SQL Server tests) and fix any flaky test first; the one known flake is an
+  image-preview test in the product editor that passes alone.
+- Build and try the Android app, which has never been checked for inventory: the stock-in form submit, the POS completion
+  stock warning, pull to refresh on Coverage, the bell and the Needs Attention counts.
+
+**Data and setup on the live shop**
+
+- Enter real opening counts with Stock In or an adjustment (reason Count correction), set warning and critical levels, then link
+  every product and size or flavor add-on that takes stock; use the Coverage tab until nothing important is left unlinked.
+- Switch "Allow sales below zero" off (blocking) only for items with a trusted count, and tell the staff what the red stock
+  label at checkout means. Items with no real count stay warn-only.
+- Decide who is told about each item (the item's named people, else Super Admins, Admins and Stock Managers) and check that
+  those people exist and are active.
+- Take a backup of the live database right before the first run.
+
+**Screens and wording**
+
+- Walk every inventory screen as each role (Super Admin, Admin, Stock Manager, Item Manager, Admin Viewer, Cashier) at phone,
+  tablet and desktop width, in the default and cafe styles, with long names: Items, item details and editor, Stock In, Needs
+  Attention, Coverage, the bell, order details stock box, the refund dialog, and the editor's stock label.
+- Review every message for plain words and consistency (errors, warnings, confirmations, empty states), and the "Not set" style
+  on the item details page.
+- Fix the layout between 640 and 1023 px, where the always-open sidebar leaves the content about 380 px wide and squeezes pages
+  such as item details (one letter per line for a long title). It is the app-wide layout, not inventory only.
+- Accessibility pass: focus order, labels on icon buttons, contrast of the red and amber labels, and the tap-to-expand title.
+
+**Behavior to decide or confirm**
+
+- The open choices on daily stock reminders: snooze, escalation to Admins, skipping closed days, `MaxDays`.
+- The remaining hard deletes (promotion child rows, order lines, replaced images).
+- Whether to build the three items left out on purpose: write off the remaining stock when deleting an item, a "count it" note
+  on restore, and a dependency list when deleting a product.
+- Show "stock last updated" on the POS stock label when offline (with Offline Phase 7).
+- Check the load: every register asks for stock limits once a minute and every stock screen reloads on a change; watch the API
+  on a busy day and slow the poll if needed.
+
+**Proof on a copy of the live data**
+
+- A full hand run on staging with a copy of the real catalog: sell, void with and without returning stock, offline sale and sync,
+  customer link order, stock in, adjustment, delete and restore of an item, and the daily reminder, checking each balance and
+  alert against a hand-worked answer (never the real `WTF` database).
+- A rollback plan: what to switch off first (blocking, reminders) and how to undo the scripts if the first day goes wrong.
 
 ### Backend Notes
 

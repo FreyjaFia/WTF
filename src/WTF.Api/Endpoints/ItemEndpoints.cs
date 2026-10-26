@@ -155,6 +155,14 @@ public static class ItemEndpoints
             })
             .RequireAuthorization(AppPolicies.ItemsWrite);
 
+        app.MapGet("/api/pos/stock-limits",
+            async (ISender sender) =>
+            {
+                var result = await sender.Send(new GetPosStockLimitsQuery());
+                return Results.Ok(result);
+            })
+            .RequireAuthorization(AppPolicies.OrdersWrite);
+
         return app;
     }
 }

@@ -16,6 +16,8 @@ public record StockRequirement(Guid ItemId, Guid ProductId, decimal Quantity, Gu
 
 public record StockChange(Guid ItemId, Guid ProductId, decimal Quantity, Guid? OrderLineId);
 
+public record StockShortfall(Guid ItemId, decimal Needed, decimal Balance, decimal Short);
+
 public static class StockRules
 {
     private const int QuantityDecimals = 3;
@@ -106,6 +108,25 @@ public static class StockRules
 
     public static decimal Shortfall(decimal balance, decimal quantityToTake) =>
         Math.Max(0m, Round(quantityToTake - Math.Max(0m, balance)));
+
+    // What a cart cannot get from the items that block sales when they run short, so the POS can say so before payment.
+    // `blockingBalances` holds only those items; every other item is left out. Needs are summed per item across all lines.
+    public static List<StockShortfall> Shortfalls(
+        IReadOnlyList<StockLine> lines, IReadOnlyList<StockLink> links, IReadOnlyDictionary<Guid, decimal> blockingBalances)
+    {
+        return Requirements(lines, links)
+            .Where(requirement => blockingBalances.ContainsKey(requirement.ItemId))
+            .GroupBy(requirement => requirement.ItemId)
+            .Select(group =>
+            {
+                var needed = Round(group.Sum(requirement => requirement.Quantity));
+                var balance = blockingBalances[group.Key];
+                return new StockShortfall(group.Key, needed, balance, Shortfall(balance, needed));
+            })
+            .Where(shortfall => shortfall.Short > 0m)
+            .OrderBy(shortfall => shortfall.ItemId)
+            .ToList();
+    }
 
     public static decimal ReturnedShare(decimal quantity, decimal returnedWeight, decimal totalWeight)
     {

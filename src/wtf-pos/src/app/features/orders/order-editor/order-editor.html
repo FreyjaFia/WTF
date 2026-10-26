@@ -627,7 +627,7 @@
                   </div>
                   <div class="flex min-w-0 flex-1 flex-col justify-between gap-2">
                     <div class="flex items-start justify-between gap-4 sm:gap-6">
-                      <div class="min-w-0 flex-1 text-sm font-semibold text-gray-900">
+                      <div class="min-w-0 flex-1 text-sm font-semibold wrap-anywhere text-gray-900">
                         {{ c.name }}
                         @if (getDiscountedPromoLabel(c)) {
                           <div
@@ -742,6 +742,18 @@
                     {{ c.specialInstructions }}
                   </div>
                 }
+
+                @for (stockNote of stockNotesForLine($index); track stockNote) {
+                  <div
+                    class="mt-1.5 ml-19 rounded-md px-2 py-0.5 text-[11px] wrap-break-word first:mt-2"
+                    [class]="
+                      stockBlocksCheckout() ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-800'
+                    "
+                    data-stock-note
+                  >
+                    {{ stockNote }}
+                  </div>
+                }
               </div>
             }
           </div>
@@ -751,6 +763,34 @@
       <div
         class="sticky bottom-0 shrink-0 border-t border-gray-200 bg-surface p-5 shadow-[0_-8px_24px_rgba(0,0,0,0.1)]"
       >
+        @if (stockMessages().length > 0) {
+          <div
+            class="mb-3 rounded-lg px-3 py-2 text-xs"
+            [class]="
+              stockBlocksCheckout() ? 'bg-red-50 text-red-800' : 'bg-amber-50 text-amber-900'
+            "
+            role="alert"
+            data-stock-banner
+          >
+            <p class="font-semibold">
+              {{
+                stockBlocksCheckout()
+                  ? 'Not enough stock to check out'
+                  : 'Stock may be short (you are offline)'
+              }}
+            </p>
+            <p>
+              {{ stockMessages().length }}
+              {{ stockMessages().length === 1 ? 'item is' : 'items are' }} short, marked below.
+              {{
+                stockBlocksCheckout()
+                  ? 'Lower the quantity or remove the item to continue.'
+                  : 'The shop checks the sale when you are back online.'
+              }}
+            </p>
+          </div>
+        }
+
         <div id="mobile-cart-details" class="grid xl:overflow-visible xl:opacity-100">
           <div class="min-h-0 overflow-hidden">
             <!-- Order Note Section -->
@@ -982,14 +1022,25 @@
                   type="button"
                   class="app-btn app-btn-primary app-btn-lg pointer-events-auto w-full"
                   [class.cursor-not-allowed]="
-                    cart().length === 0 || !canManageOrderActions() || isOrderRequestBusy()
+                    cart().length === 0 ||
+                    !canManageOrderActions() ||
+                    isOrderRequestBusy() ||
+                    stockBlocksCheckout()
                   "
                   [class.cursor-pointer]="
-                    !(cart().length === 0 || !canManageOrderActions() || isOrderRequestBusy())
+                    !(
+                      cart().length === 0 ||
+                      !canManageOrderActions() ||
+                      isOrderRequestBusy() ||
+                      stockBlocksCheckout()
+                    )
                   "
                   (click)="checkout()"
                   [disabled]="
-                    cart().length === 0 || !canManageOrderActions() || isOrderRequestBusy()
+                    cart().length === 0 ||
+                    !canManageOrderActions() ||
+                    isOrderRequestBusy() ||
+                    stockBlocksCheckout()
                   "
                 >
                   @if (isCheckingOut()) {
