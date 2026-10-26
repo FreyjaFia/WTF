@@ -35,11 +35,25 @@ public class OrderStockService(WTFDbContext db, IAuditService auditService, ISto
         var lines = await LoadLinesAsync(orderId, cancellationToken);
         var productIds = lines.Select(line => line.ProductId).Distinct().ToList();
 
-        var links = await db.ProductItemLinks
+        var activeLinks = await db.ProductItemLinks
             .AsNoTracking()
-            .Where(link => link.IsActive && link.Item.IsActive && productIds.Contains(link.ProductId))
-            .Select(link => new StockLink(link.ProductId, link.ItemId, link.QuantityPerSale))
+            .Where(link => link.IsActive && productIds.Contains(link.ProductId))
+            .Select(link => new { link.ProductId, link.ItemId, link.QuantityPerSale, ItemName = link.Item.Name, ItemIsActive = link.Item.IsActive })
             .ToListAsync(cancellationToken);
+
+        var links = activeLinks
+            .Where(link => link.ItemIsActive)
+            .Select(link => new StockLink(link.ProductId, link.ItemId, link.QuantityPerSale))
+            .ToList();
+
+        // An inactive item takes no part in a sale (not even its blocking setting), so say so instead of skipping it silently.
+        var skipped = activeLinks
+            .Where(link => !link.ItemIsActive)
+            .Select(link => link.ItemName)
+            .Distinct()
+            .OrderBy(name => name)
+            .Select(name => $"{name} is inactive, so this sale did not take stock from it.")
+            .ToList();
 
         var required = StockRules.Requirements(lines, links);
         var taken = await LoadTakenAsync(orderId, cancellationToken);
@@ -54,11 +68,11 @@ public class OrderStockService(WTFDbContext db, IAuditService auditService, ISto
 
         if (changes.Count == 0 || (options.IsCorrection && taken.Count == 0 && await IsBeforeStockTrackingAsync(orderId, cancellationToken)))
         {
-            return StockDeductionResult.None;
+            return new StockDeductionResult(skipped);
         }
 
         var items = await LoadItemsAsync(changes.Select(c => c.ItemId), cancellationToken);
-        var warnings = new List<string>();
+        var warnings = new List<string>(skipped);
         var written = new List<object>();
         var now = DateTime.UtcNow;
         var tick = 0;

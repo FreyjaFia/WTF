@@ -26,7 +26,7 @@ public class GetStockAttentionHandler(WTFDbContext db) : IRequestHandler<GetStoc
                 i.WarningQuantity,
                 i.CriticalQuantity,
                 i.AllowNegativeStock,
-                Links = i.ProductItemLinks.Where(l => l.IsActive).Select(l => l.QuantityPerSale).ToList()
+                Links = i.ProductItemLinks.Where(l => l.IsActive && l.Product.IsActive).Select(l => l.QuantityPerSale).ToList()
             })
             .ToListAsync(cancellationToken);
 

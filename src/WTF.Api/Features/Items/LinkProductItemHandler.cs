@@ -85,6 +85,7 @@ public class LinkProductItemHandler(
             product.Code,
             item.Id,
             link.QuantityPerSale,
-            link.IsActive);
+            link.IsActive,
+            product.IsActive);
     }
 }

@@ -83,6 +83,19 @@ public class ItemMappingTests
     }
 
     [Fact]
+    public void ToDto_LinkSaysWhetherItsProductIsStillActive()
+    {
+        var item = new Item { Id = Guid.NewGuid(), Name = "x", UnitName = "u" };
+        item.ProductItemLinks.Add(new ProductItemLink { Id = Guid.NewGuid(), IsActive = true, Product = new Product { Name = "Live", Code = "L", IsActive = true } });
+        item.ProductItemLinks.Add(new ProductItemLink { Id = Guid.NewGuid(), IsActive = true, Product = new Product { Name = "Gone", Code = "G", IsActive = false } });
+
+        var dto = ItemMapping.ToDto(item);
+
+        dto.ProductLinks.Single(l => l.ProductName == "Live").ProductIsActive.ShouldBeTrue();
+        dto.ProductLinks.Single(l => l.ProductName == "Gone").ProductIsActive.ShouldBeFalse();
+    }
+
+    [Fact]
     public void ToDto_MovementsNewestFirst()
     {
         var item = new Item { Id = Guid.NewGuid(), Name = "x", UnitName = "u" };

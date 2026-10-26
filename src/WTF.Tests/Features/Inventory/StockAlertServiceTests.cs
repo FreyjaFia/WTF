@@ -309,6 +309,20 @@ public class StockAlertServiceTests
     }
 
     [Fact]
+    public async Task ADeletedLowItem_AlertsAgainWhenItIsRestoredStillLow()
+    {
+        await SetQuantityAndEvaluate(400m);
+        (await Notifications()).Count(n => n.UserId == _admin).ShouldBe(1);
+
+        var delete = new WTF.Api.Features.Items.DeleteItemHandler(TestDb.Create(_db), TestRequest.As(_admin), TestFakes.Audit(), Service());
+        await delete.Handle(new WTF.Api.Features.Items.DeleteItemCommand(_milk), CancellationToken.None);
+        var restore = new WTF.Api.Features.Items.RestoreItemHandler(TestDb.Create(_db), TestRequest.As(_admin), TestFakes.Audit(), Service());
+        await restore.Handle(new WTF.Api.Features.Items.RestoreItemCommand(_milk), CancellationToken.None);
+
+        (await Notifications()).Count(n => n.UserId == _admin).ShouldBe(2);
+    }
+
+    [Fact]
     public async Task AStockInThatBringsTheItemBackToOk_LetsItAlertAgainLater()
     {
         await SetQuantityAndEvaluate(400m);

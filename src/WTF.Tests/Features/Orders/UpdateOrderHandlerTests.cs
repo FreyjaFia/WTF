@@ -664,6 +664,55 @@ public class UpdateOrderHandlerTests
     }
 
     [Fact]
+    public async Task Handle_OverrideKeepsAProductDeletedAfterTheSale()
+    {
+        var orderId = CompletedOrderWithBurger(out var burger);
+        await using (var db = _data.Open())
+        {
+            (await db.Products.SingleAsync(p => p.Id == burger)).IsActive = false;
+            await db.SaveChangesAsync();
+        }
+
+        var dto = await Handler().Handle(
+            Cmd(orderId, null, [Line(burger, 2)], OrderStatusEnum.Completed, "fix quantity", isOverride: true),
+            CancellationToken.None);
+
+        dto!.Items.Single().Quantity.ShouldBe(2);
+        (await LinesOf(orderId)).Single().ProductId.ShouldBe(burger);
+    }
+
+    [Fact]
+    public async Task Handle_OverrideAddingADeletedProduct_StillThrows()
+    {
+        var orderId = CompletedOrderWithBurger(out var burger);
+        var retired = _data.AddProduct("Retired", 10, isActive: false);
+
+        var ex = await Should.ThrowAsync<InvalidOperationException>(() => Handler().Handle(
+            Cmd(orderId, null, [Line(burger), Line(retired)], OrderStatusEnum.Completed, "added", isOverride: true),
+            CancellationToken.None));
+
+        ex.Message.ShouldBe("Cannot save order with inactive products/add-ons: Retired.");
+    }
+
+    [Fact]
+    public async Task Handle_PendingOrderWithADeletedProduct_StillThrows()
+    {
+        var burger = _data.AddProduct("Burger", 100);
+        var orderId = _data.AddOrder();
+        _data.AddLine(orderId, burger, 1);
+        await using (var db = _data.Open())
+        {
+            (await db.Products.SingleAsync(p => p.Id == burger)).IsActive = false;
+            await db.SaveChangesAsync();
+        }
+
+        var ex = await Should.ThrowAsync<InvalidOperationException>(() =>
+            Handler().Handle(Cmd(orderId, null, [Line(burger, 2)]), CancellationToken.None));
+
+        ex.Message.ShouldBe("Cannot save order with inactive products/add-ons: Burger.");
+    }
+
+    [Fact]
     public async Task Handle_OverrideAddingNewLine_PricesNewLineAtCurrentPrice()
     {
         var orderId = CompletedOrderWithBurger(out var burger);

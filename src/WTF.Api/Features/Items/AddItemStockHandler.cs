@@ -39,6 +39,11 @@ public class AddItemStockHandler(
             return null;
         }
 
+        if (!item.IsActive)
+        {
+            throw new InvalidOperationException("This item is inactive. Restore it before adding stock.");
+        }
+
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
 
         await using var transaction = db.Database.CurrentTransaction is null

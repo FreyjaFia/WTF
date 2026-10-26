@@ -9,7 +9,8 @@ public record ProductItemLinkDto(
     string ProductCode,
     Guid ItemId,
     decimal QuantityPerSale,
-    bool IsActive);
+    bool IsActive,
+    bool ProductIsActive = true);
 
 public record ProductItemLinkAssignmentDto(
     Guid ProductId,

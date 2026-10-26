@@ -61,6 +61,20 @@ public class GetStockAttentionHandlerTests
     }
 
     [Fact]
+    public async Task LinksOfDeletedProducts_AreNotCounted()
+    {
+        var data = new OrderSeed(_db);
+        var milk = StockSeed.Item(_db, "Milk", 450m, warning: 500m, critical: 200m);
+        StockSeed.Link(_db, data.AddProduct("Latte", 150m), milk, 200m);
+        StockSeed.Link(_db, data.AddProduct("Retired", 160m, isActive: false), milk, 50m);
+
+        var item = (await Run()).Items.Single();
+
+        item.ProductCount.ShouldBe(1);
+        item.SalesCovered.ShouldBe(2);
+    }
+
+    [Fact]
     public async Task AnItemNoProductUses_CoversNoSales_ButStillShows()
     {
         StockSeed.Item(_db, "Spare", 10m, warning: 50m);

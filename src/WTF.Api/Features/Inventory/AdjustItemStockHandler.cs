@@ -71,6 +71,11 @@ public class AdjustItemStockHandler(
             return null;
         }
 
+        if (!item.IsActive)
+        {
+            throw new InvalidOperationException("This item is inactive. Restore it before adjusting its stock.");
+        }
+
         // The difference is applied on top of the balance at the moment of saving, so sales completed while the form was open stay.
         var delta = request.QuantityChange
             ?? StockRules.AdjustmentDelta(request.ExpectedQuantity ?? item.CurrentQuantity, request.CountedQuantity!.Value);

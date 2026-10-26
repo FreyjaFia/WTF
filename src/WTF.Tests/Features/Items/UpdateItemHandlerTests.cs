@@ -3,6 +3,7 @@ using NSubstitute;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Items;
 using WTF.Api.Services;
+using WTF.Tests.Features.Inventory;
 using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Features.Items;
@@ -134,5 +135,74 @@ public class UpdateItemHandlerTests
         var dto = await Handler().Handle(
             new UpdateItemCommand { Id = item.Id, Name = "Renamed", UnitName = "kg", Sku = "MINE" }, CancellationToken.None);
         dto!.Name.ShouldBe("Renamed");
+    }
+
+    [Fact]
+    public async Task Handle_SwitchingOffAnItemStillUsedByAProduct_IsRefusedLikeDelete()
+    {
+        await ItemSeed.User(_db, _userId);
+        var item = await ItemSeed.Item(_db, _userId, name: "Cup");
+        var latte = await ItemSeed.Product(_db, _userId, "Latte", "LAT");
+        StockSeed.Link(_db, latte.Id, item.Id, 1m);
+
+        var ex = await Should.ThrowAsync<InvalidOperationException>(() => Handler().Handle(
+            new UpdateItemCommand { Id = item.Id, Name = "Cup", UnitName = "kg", IsActive = false }, CancellationToken.None));
+
+        ex.Message.ShouldContain("Latte");
+        await using var db = TestDb.Create(_db);
+        (await db.Items.SingleAsync()).IsActive.ShouldBeTrue();
+        await _audit.DidNotReceiveWithAnyArgs().LogAsync(default, default, default!);
+    }
+
+    [Fact]
+    public async Task Handle_SwitchingOffAnUnlinkedItem_ForgetsItsAlertLevelAndLogsADelete()
+    {
+        await ItemSeed.User(_db, _userId);
+        var item = await ItemSeed.Item(_db, _userId, qty: 1);
+        await using (var seed = TestDb.Create(_db))
+        {
+            (await seed.Items.SingleAsync()).LastAlertStatus = 3;
+            await seed.SaveChangesAsync();
+        }
+
+        await Handler().Handle(
+            new UpdateItemCommand { Id = item.Id, Name = "Flour", UnitName = "kg", IsActive = false }, CancellationToken.None);
+
+        await using var db = TestDb.Create(_db);
+        var saved = await db.Items.SingleAsync();
+        saved.IsActive.ShouldBeFalse();
+        saved.LastAlertStatus.ShouldBe((byte)0);
+        await _audit.Received(1).LogAsync(AuditAction.ItemDeleted, AuditEntityType.Item, item.Id.ToString(),
+            Arg.Any<object?>(), Arg.Any<object?>(), _userId, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_SwitchingAnInactiveItemBackOn_LogsARestore()
+    {
+        await ItemSeed.User(_db, _userId);
+        var item = await ItemSeed.Item(_db, _userId, active: false);
+
+        await Handler().Handle(
+            new UpdateItemCommand { Id = item.Id, Name = "Flour", UnitName = "kg", IsActive = true }, CancellationToken.None);
+
+        await using var db = TestDb.Create(_db);
+        (await db.Items.SingleAsync()).IsActive.ShouldBeTrue();
+        await _audit.Received(1).LogAsync(AuditAction.ItemRestored, AuditEntityType.Item, item.Id.ToString(),
+            Arg.Any<object?>(), Arg.Any<object?>(), _userId, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_PlainEditOfAnInactiveItem_LogsNoRestoreOrDelete()
+    {
+        await ItemSeed.User(_db, _userId);
+        var item = await ItemSeed.Item(_db, _userId, active: false);
+
+        await Handler().Handle(
+            new UpdateItemCommand { Id = item.Id, Name = "Renamed", UnitName = "kg", IsActive = false }, CancellationToken.None);
+
+        await _audit.DidNotReceive().LogAsync(AuditAction.ItemRestored, Arg.Any<AuditEntityType>(), Arg.Any<string>(),
+            Arg.Any<object?>(), Arg.Any<object?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
+        await _audit.DidNotReceive().LogAsync(AuditAction.ItemDeleted, Arg.Any<AuditEntityType>(), Arg.Any<string>(),
+            Arg.Any<object?>(), Arg.Any<object?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
     }
 }

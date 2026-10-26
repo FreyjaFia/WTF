@@ -86,7 +86,18 @@ public class UpdateItemHandler(
 
         await ItemValidation.ValidateUniqueSkuAndBarcode(db, request.Sku, request.Barcode, request.Id, cancellationToken);
 
+        var deactivating = item.IsActive && !request.IsActive;
+        var reactivating = !item.IsActive && request.IsActive;
+        if (deactivating)
+        {
+            await ItemDeactivation.EnsureNoActiveProductLinksAsync(db, item.Id, cancellationToken);
+        }
+
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
+
+        await using var transaction = db.Database.CurrentTransaction is null
+            ? await db.Database.BeginTransactionAsync(cancellationToken)
+            : null;
         if (request.CostPrice.HasValue && item.CostPrice != request.CostPrice)
         {
             db.ItemPriceHistories.Add(new ItemPriceHistory
@@ -110,6 +121,11 @@ public class UpdateItemHandler(
         item.CriticalQuantity = request.CriticalQuantity;
         item.AllowNegativeStock = request.AllowNegativeStock;
         item.IsActive = request.IsActive;
+        if (deactivating)
+        {
+            ItemDeactivation.ForgetAlertState(item);
+        }
+
         item.UpdatedAt = DateTime.UtcNow;
         item.UpdatedBy = userId;
 
@@ -117,6 +133,24 @@ public class UpdateItemHandler(
 
         // New warning or critical levels can put the item into an alert right away.
         await stockAlerts.EvaluateAsync([item.Id], cancellationToken);
+
+        if (transaction is not null)
+        {
+            await transaction.CommitAsync(cancellationToken);
+        }
+
+        // Switching the item on or off here is the same event as the delete and restore buttons, so it is logged as such too.
+        if (deactivating || reactivating)
+        {
+            await auditService.LogAsync(
+                deactivating ? AuditAction.ItemDeleted : AuditAction.ItemRestored,
+                AuditEntityType.Item,
+                item.Id.ToString(),
+                oldValues: new { IsActive = !request.IsActive },
+                newValues: new { item.IsActive },
+                userId: userId,
+                cancellationToken: cancellationToken);
+        }
 
         await auditService.LogAsync(
             AuditAction.ItemUpdated,

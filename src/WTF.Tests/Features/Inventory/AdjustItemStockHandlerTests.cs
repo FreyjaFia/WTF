@@ -30,6 +30,22 @@ public class AdjustItemStockHandlerTests
     }
 
     [Fact]
+    public async Task Handle_InactiveItem_IsRefusedAndNothingIsWritten()
+    {
+        await ItemSeed.User(_db, _userId);
+        var item = await ItemSeed.Item(_db, _userId, qty: 10, active: false);
+
+        var ex = await Should.ThrowAsync<InvalidOperationException>(
+            () => Handler().Handle(Counted(item.Id, 7m), CancellationToken.None));
+
+        ex.Message.ShouldContain("Restore it");
+        await using var db = TestDb.Create(_db);
+        (await db.Items.SingleAsync()).CurrentQuantity.ShouldBe(10m);
+        (await db.StockMovements.CountAsync()).ShouldBe(0);
+        await _audit.DidNotReceiveWithAnyArgs().LogAsync(default, default, default!);
+    }
+
+    [Fact]
     public async Task Handle_CountedQuantity_WritesAnAdjustmentMovementAndAuditsIt()
     {
         await ItemSeed.User(_db, _userId);

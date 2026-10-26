@@ -46,7 +46,8 @@ internal static class ItemMapping
                     l.Product.Code,
                     l.ItemId,
                     l.QuantityPerSale,
-                    l.IsActive))
+                    l.IsActive,
+                    l.Product.IsActive))
                 .ToList(),
             item.StockMovements
                 .OrderByDescending(m => m.CreatedAt)

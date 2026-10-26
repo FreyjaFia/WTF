@@ -74,6 +74,52 @@ public class OrderStockServiceTests
     }
 
     [Fact]
+    public async Task Deduct_LinkedItemIsInactive_TakesNothingNeverBlocksAndSaysSo()
+    {
+        var cup = StockSeed.Item(_db, "Cup", 0m, allowNegative: false, active: false);
+        var latte = _data.AddProduct("Latte", 150m);
+        StockSeed.Link(_db, latte, cup, 1m);
+        var order = _data.AddOrder(OrderStatusEnum.Completed);
+        _data.AddLine(order, latte, 2);
+
+        var result = await Deduct(order);
+
+        result.Warnings.ShouldBe(["Cup is inactive, so this sale did not take stock from it."]);
+        StockSeed.Balance(_db, cup).ShouldBe(0m);
+        StockSeed.Movements(_db, cup).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task Deduct_ActiveAndInactiveItemsOnOneProduct_TakesTheActiveOneAndWarnsAboutTheOther()
+    {
+        var cup = StockSeed.Item(_db, "Cup", 10m);
+        var lid = StockSeed.Item(_db, "Lid", 10m, active: false);
+        var latte = _data.AddProduct("Latte", 150m);
+        StockSeed.Link(_db, latte, cup, 1m);
+        StockSeed.Link(_db, latte, lid, 1m);
+        var order = _data.AddOrder(OrderStatusEnum.Completed);
+        _data.AddLine(order, latte, 3);
+
+        var result = await Deduct(order);
+
+        result.Warnings.ShouldBe(["Lid is inactive, so this sale did not take stock from it."]);
+        StockSeed.Balance(_db, cup).ShouldBe(7m);
+        StockSeed.Balance(_db, lid).ShouldBe(10m);
+    }
+
+    [Fact]
+    public async Task Deduct_InactiveItemWithTheLinkSwitchedOff_SaysNothing()
+    {
+        var cup = StockSeed.Item(_db, "Cup", 10m, active: false);
+        var latte = _data.AddProduct("Latte", 150m);
+        StockSeed.Link(_db, latte, cup, 1m, active: false);
+        var order = _data.AddOrder(OrderStatusEnum.Completed);
+        _data.AddLine(order, latte, 1);
+
+        (await Deduct(order)).Warnings.ShouldBeEmpty();
+    }
+
+    [Fact]
     public async Task Deduct_AddOnLinesAndSharedItems_AreSummedBeforeTheCheck()
     {
         var cup = StockSeed.Item(_db, "Cup", 10m, allowNegative: false);

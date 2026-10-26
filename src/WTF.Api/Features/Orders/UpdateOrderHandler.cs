@@ -183,8 +183,13 @@ public class UpdateOrderHandler(
             .Select(p => new { p.Id, p.Name, p.IsActive })
             .ToDictionaryAsync(p => p.Id, cancellationToken);
 
+        // An Admin correcting a completed order may keep a product that was deleted after the sale; only new ones are refused.
+        var productsAlreadyOnOrder = request.IsOverride
+            ? order.OrderItems.Select(oi => oi.ProductId).ToHashSet()
+            : [];
+
         var inactiveProductNames = activeProductMap.Values
-            .Where(p => !p.IsActive)
+            .Where(p => !p.IsActive && !productsAlreadyOnOrder.Contains(p.Id))
             .Select(p => p.Name)
             .Distinct()
             .OrderBy(x => x)

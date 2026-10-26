@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Features.Audit.Enums;
+using WTF.Api.Features.Inventory;
 using WTF.Api.Services;
 using WTF.Domain.Data;
 
@@ -12,7 +13,8 @@ public record DeleteItemCommand(Guid Id) : IRequest<bool>;
 public class DeleteItemHandler(
     WTFDbContext db,
     IHttpContextAccessor httpContextAccessor,
-    IAuditService auditService) : IRequestHandler<DeleteItemCommand, bool>
+    IAuditService auditService,
+    IStockAlertService stockAlerts) : IRequestHandler<DeleteItemCommand, bool>
 {
     public async Task<bool> Handle(DeleteItemCommand request, CancellationToken cancellationToken)
     {
@@ -20,6 +22,11 @@ public class DeleteItemHandler(
         if (item is null)
         {
             return false;
+        }
+
+        if (item.IsActive)
+        {
+            await ItemDeactivation.EnsureNoActiveProductLinksAsync(db, item.Id, cancellationToken);
         }
 
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
@@ -32,10 +39,14 @@ public class DeleteItemHandler(
         };
 
         item.IsActive = false;
+        ItemDeactivation.ForgetAlertState(item);
         item.UpdatedAt = DateTime.UtcNow;
         item.UpdatedBy = userId;
 
         await db.SaveChangesAsync(cancellationToken);
+
+        // The stock screens drop the item at once instead of waiting for the next refresh.
+        await stockAlerts.EvaluateAsync([item.Id], cancellationToken);
 
         await auditService.LogAsync(
             AuditAction.ItemDeleted,
