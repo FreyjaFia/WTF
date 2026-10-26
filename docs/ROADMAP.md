@@ -406,11 +406,80 @@ the blocking cup (2 in stock) synced with a warning and left -1, and an adjustme
 order details box and the refund dialog showed the same figures. Not checked in the running app: the POS completion
 alert for a sale made in the order editor, the Android build, and the stock-in form submit.
 
+Done (26 Oct 2026, deleting and restoring items safely; no schema change):
+
+- **An item still used by an active product cannot be deleted** (or switched off in the item editor): the API answers 400 with
+  "This item is still used by N product(s): ... Unlink them first". Before, deleting a blocking item silently switched its
+  blocking off, because a sale skips inactive items entirely. Links that are switched off, or that belong to a deleted
+  product, do not count (`ItemDeactivation`).
+- **Deleting an item tells the stock screens at once** (it goes through `IStockAlertService`, so the Needs Attention list and
+  the sidebar, dock and bell counts update live) and **forgets its alert level** (`LastAlertStatus` back to 0), so restoring
+  an item that is still low alerts again.
+- **Stock-in and adjustments are refused on an inactive item** ("Restore it first"); before, only the buttons were hidden.
+- **Switching an item on or off in the editor** is one transaction and is logged as `ItemRestored` / `ItemDeleted` as well as
+  `ItemUpdated`, so the audit log shows the same event as the delete and restore buttons.
+- **A sale that skips an inactive item says so**: the completion response carries the warning "Oat Milk is inactive, so this
+  sale did not take stock from it." (create, update, sync, approving a held order), where it used to skip it silently. The skip
+  itself is unchanged: a Pending order whose item is deleted before it completes takes nothing from that item.
+- **Links to deleted products are not counted**: the Needs Attention "used by N products" and "enough for N sales" ignore them,
+  the item list counts only live links, and the item details page lists active links only and marks a deleted product
+  (`ProductItemLinkDto.ProductIsActive`). The link rows stay, so restoring the product brings them back.
+- **An Admin can correct a completed order that holds a product deleted after the sale** (override flow): products already on
+  the order are not re-checked as inactive, like the ended-bundle rule. Adding a deleted product, or saving a Pending order that
+  has one, is still refused.
+- Tests: handler tests for each rule above, direct tests for the alert recipient handlers (allowed roles, audit, switching
+  people on and off, back to the default roles), and the delete-then-restore alert in `StockAlertServiceTests`.
+- **Checked by API on a throwaway database (26 Oct 2026):** deleting Oat Milk (used by Latte and Mocha) and a blocking cup
+  (used by Mocha) gave a 400 naming the products; an unlinked item with stock deleted fine; stock-in and adjust on an inactive
+  item gave a 400; deleting a critical item dropped it from Needs Attention and restoring it alerted again ("Critically low");
+  an item linked to a live and a deleted product showed "used by 1 product"; a Croissant sale linked to an inactive Sleeve
+  completed with the warning and left the Sleeve at 10; an Admin override of a completed order holding a deleted product
+  worked (quantity 1 to 2), while adding that product to another order or to a new order was refused.
+- **Checked in the browser (same database):** the refused delete of Oat Milk shows the error alert with the product names; the
+  list shows "1 linked product(s)" for Caramel Syrup (a live and a deleted product) and "2" for Oat Milk; item details lists
+  "Retired Drink (deleted product)"; deleting Lid dropped the Needs Attention count from 2 to 1 and restoring it brought it back
+  to 2 with a new alert in the bell, all without a refresh. Found and fixed on the way: the list's action menu still offered
+  "Add Stock" on an inactive item (the menu now shows only Restore), the action menu printed empty divider lines for the
+  actions it hid, and the small-screen item cards did not look like the product list: they now have the same avatar, name and
+  detail line with stock and status underneath (cost shows only when set), and the desktop table's "Not set" is smaller and
+  lighter. Checked at phone, 640 px and desktop width. Still open: from 640 px the sidebar is always open and leaves the
+  content about 380 px, which squeezes pages such as item details (the title wraps one letter per line); that is the app-wide
+  layout, not the item list.
+- **Long names (26 Oct 2026, checked at phone width with a 95-character name and one with no spaces):** the item list, item
+  details, product list and product details wrap names, SKU, barcode and codes instead of overflowing. On phones the pinned title
+  of the item and product details pages is limited to 2 lines and a tap expands it (the full name is also its tooltip on
+  desktop), so a long name no longer takes half the screen. It is one shared component, `app-page-title`, used by the details
+  and editor pages of items, products, customers, users and promotions (ten pages); a new page with a user-entered title uses it
+  too. Tap to expand checked in the browser on the product editor; the order details pages keep their fixed title.
+- **Coverage list (26 Oct 2026):** it now follows the other lists: search on its own row, the Needs setup / All products switch
+  and the refresh icon (with pull to refresh) on the right, and every row keeps its status pill and Set up stock button in
+  the same right-hand column whatever the name length (on phones the pill sits under the name). Before, a long name pushed
+  them under the title, Refresh was a text button beside the heading, and an unbroken name made the page scroll sideways.
+- **Not built, on purpose (decided 26 Oct 2026):** a "write off the remaining stock" option when deleting an item with a balance, a
+  "count it" note on restore (the balance can be stale because sales while it was deleted took nothing), and a list of open
+  orders and promotions in the product delete confirmation.
+
 Remaining:
 
 - Review report/dashboard inventory impacts after real usage data exists.
 - Show "stock last updated" on a POS low-stock warning when offline (Offline Phase 7).
 - Per-item blocking can be switched on in the item editor now; it only matters once real stock counts exist.
+- **Tell the cashier before checkout when a blocking item cannot cover the cart (added 26 Oct 2026, not built).** Today a
+  blocking item (`AllowNegativeStock` off) is only enforced on the server when the sale completes: an order of 2 drinks
+  with stock for 1 is refused whole with "Not enough ... (short by N)", after the cashier has already taken payment details.
+  The POS should know sooner.
+  - The cart sums what it needs per item across all lines (the same `StockRules.Requirements` maths, mirrored in
+    `shared/calculations`, with shared cases in `calculation-cases.json`) and compares it with the balance it last saw.
+  - A line that makes a blocking item short gets an info label ("Only 1 left, this order needs 2") and the checkout button is
+    disabled with the reason, until the quantity is lowered or the line removed. A warn-only item keeps today's behavior
+    (the sale goes through, the warning shows after).
+  - The server stays the authority and still refuses at completion (another register may have taken the stock, and the
+    POS balance can be old). The label is a guide, not the check.
+  - Needs the POS to keep a per-item balance (catalog cache or a small stock endpoint) with a "stock last updated" time. When
+    offline there is nothing reliable to block on: show the same label as a warning only, because an offline sale is honored
+    at sync (Offline Phase 7).
+  - Open: block an open (Pending) order that cannot be fulfilled, or only the completing step? Assumed: only completing, since
+    stock may arrive before the drink is made.
 - Remaining hard deletes (decision pending): promotion child rows (rules and
   bundle items are deleted and recreated on every promotion save), order lines
   (deleted and rebuilt when an order is edited), and replaced or removed images
