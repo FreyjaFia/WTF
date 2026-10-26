@@ -14,9 +14,7 @@
       </a>
       @if (item()) {
         <div class="min-w-0">
-          <h1 class="text-2xl font-bold wrap-break-word text-gray-900">
-            {{ item()!.name }}
-          </h1>
+          <app-page-title [text]="item()!.name" />
           <div class="mt-1 flex flex-wrap items-center gap-2">
             @if (item()!.isActive) {
               <app-badge variant="success">Active</app-badge>
@@ -128,15 +126,15 @@
                   Details
                 </p>
                 <div class="grid grid-cols-2 gap-x-6 gap-y-4 md:grid-cols-3">
-                  <div>
+                  <div class="min-w-0">
                     <p class="mb-1 text-xs font-medium text-gray-400">SKU</p>
-                    <p class="font-mono text-sm font-bold text-gray-800">
+                    <p class="font-mono text-sm font-bold break-all text-gray-800">
                       {{ item()!.sku || 'Not set' }}
                     </p>
                   </div>
-                  <div>
+                  <div class="min-w-0">
                     <p class="mb-1 text-xs font-medium text-gray-400">Barcode</p>
-                    <p class="font-mono text-sm font-bold text-gray-800">
+                    <p class="font-mono text-sm font-bold break-all text-gray-800">
                       {{ item()!.barcode || 'Not set' }}
                     </p>
                   </div>
@@ -214,12 +212,17 @@
                 <p class="mb-4 text-xs font-semibold tracking-wider text-gray-400 uppercase">
                   Linked Products
                 </p>
-                @if (item()!.productLinks.length > 0) {
+                @if (activeProductLinks().length > 0) {
                   <div class="space-y-2">
-                    @for (link of item()!.productLinks; track link.id) {
-                      <div class="rounded-lg bg-gray-50 px-3 py-2">
-                        <p class="text-sm font-semibold text-gray-800">{{ link.productName }}</p>
-                        <p class="font-mono text-xs text-gray-400">{{ link.productCode }}</p>
+                    @for (link of activeProductLinks(); track link.id) {
+                      <div class="min-w-0 rounded-lg bg-gray-50 px-3 py-2">
+                        <p class="text-sm font-semibold wrap-anywhere text-gray-800">
+                          {{ link.productName }}
+                          @if (link.productIsActive === false) {
+                            <span class="ml-1 text-xs font-medium text-gray-400">(deleted product)</span>
+                          }
+                        </p>
+                        <p class="font-mono text-xs break-all text-gray-400">{{ link.productCode }}</p>
                       </div>
                     }
                   </div>

@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AlertService, AuthService, ModalStackService, ProductService, PromotionService } from '@core/services';
-import { AvatarComponent, BadgeComponent, IconComponent } from '@shared/components';
+import { AvatarComponent, BadgeComponent, IconComponent, PageTitleComponent } from '@shared/components';
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import {
   ADD_ON_TYPE_ORDER,
@@ -26,7 +26,7 @@ type PromotionDetailsType = 'fixed-bundle' | 'mix-match' | 'discounted-product';
 
 @Component({
   selector: 'app-promotion-details',
-  imports: [CommonModule, IconComponent, BadgeComponent, AvatarComponent, ConfirmDialogComponent],
+  imports: [CommonModule, IconComponent, BadgeComponent, AvatarComponent, ConfirmDialogComponent, PageTitleComponent],
   templateUrl: './promotion-details.html',
   host: { class: 'block h-full' },
 })

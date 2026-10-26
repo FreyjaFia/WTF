@@ -2,14 +2,14 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AlertService, AuthService, ModalStackService, UserService } from '@core/services';
-import { AvatarComponent, BadgeComponent, IconComponent } from '@shared/components';
+import { AvatarComponent, BadgeComponent, IconComponent, PageTitleComponent } from '@shared/components';
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import { UserDto, UserRoleEnum } from '@shared/models';
 import { AppRoutes } from '@shared/constants/app-routes';
 
 @Component({
   selector: 'app-user-details',
-  imports: [CommonModule, RouterLink, IconComponent, BadgeComponent, AvatarComponent, ConfirmDialogComponent],
+  imports: [CommonModule, RouterLink, IconComponent, BadgeComponent, AvatarComponent, ConfirmDialogComponent, PageTitleComponent],
   templateUrl: './user-details.html',
   host: {
     class: 'block h-full',

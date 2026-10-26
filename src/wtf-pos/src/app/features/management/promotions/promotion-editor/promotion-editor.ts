@@ -3,7 +3,7 @@ import { Component, computed, inject, OnInit, signal, viewChild } from '@angular
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AlertService, ModalStackService, ProductService, PromotionService } from '@core/services';
-import { AvatarComponent, BundleItemSelection, BundleItemsSelectorComponent, IconComponent } from '@shared/components';
+import { AvatarComponent, BundleItemSelection, BundleItemsSelectorComponent, IconComponent, PageTitleComponent } from '@shared/components';
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import {
   ADD_ON_TYPE_ORDER,
@@ -32,7 +32,7 @@ interface ScheduleState {
 
 @Component({
   selector: 'app-promotion-editor',
-  imports: [CommonModule, FormsModule, IconComponent, AvatarComponent, BundleItemsSelectorComponent, ConfirmDialogComponent],
+  imports: [CommonModule, FormsModule, IconComponent, AvatarComponent, BundleItemsSelectorComponent, ConfirmDialogComponent, PageTitleComponent],
   templateUrl: './promotion-editor.html',
   host: { class: 'flex-1 min-h-0' },
 })

@@ -3,7 +3,7 @@ import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AlertService, CustomerService, ModalStackService } from '@core/services';
-import { AvatarComponent, IconComponent } from '@shared/components';
+import { AvatarComponent, IconComponent, PageTitleComponent } from '@shared/components';
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import { CreateCustomerDto, UpdateCustomerDto } from '@shared/models';
 import { AppRoutes } from '@shared/constants/app-routes';
@@ -16,6 +16,7 @@ import { AppRoutes } from '@shared/constants/app-routes';
     IconComponent,
     AvatarComponent,
     ConfirmDialogComponent,
+    PageTitleComponent,
   ],
   templateUrl: './customer-editor.html',
   host: { class: 'block h-full' },

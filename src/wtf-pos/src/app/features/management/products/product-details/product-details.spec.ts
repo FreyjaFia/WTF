@@ -297,6 +297,18 @@ describe('ProductDetailsComponent', () => {
     });
   });
 
+  describe('title', () => {
+    beforeEach(() => {
+      setup();
+      fixture.detectChanges();
+    });
+
+    it('shows the product name in the shared expandable title', () => {
+      const title = (fixture.nativeElement as HTMLElement).querySelector('app-page-title h1');
+      expect(title?.textContent?.trim()).toBe('Latte');
+    });
+  });
+
   describe('labels', () => {
     beforeEach(() => setup());
 

@@ -98,6 +98,24 @@ describe('ItemListComponent', () => {
     vi.useRealTimers();
   });
 
+  describe('linked product count', () => {
+    const link = (id: string, isActive: boolean, productIsActive?: boolean) =>
+      ({ id, productId: id, productName: id, productCode: id, itemId: 'x', quantityPerSale: 1, isActive, productIsActive }) as never;
+
+    it('counts only active links to products that still exist', () => {
+      const { vm } = create();
+      const item = makeItem({
+        productLinks: [link('a', true, true), link('b', false, true), link('c', true, false), link('d', true)],
+      });
+      expect(vm['linkedProductCount'](item)).toBe(2);
+    });
+
+    it('is zero for an item with no links', () => {
+      const { vm } = create();
+      expect(vm['linkedProductCount'](makeItem())).toBe(0);
+    });
+  });
+
   describe('loading', () => {
     it('requests items including inactive ones', () => {
       create();

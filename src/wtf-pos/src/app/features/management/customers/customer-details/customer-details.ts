@@ -10,7 +10,7 @@ import {
   OrderLinkService,
 } from '@core/services';
 import { environment } from '@environments/environment.development';
-import { AvatarComponent, BadgeComponent, IconComponent } from '@shared/components';
+import { AvatarComponent, BadgeComponent, IconComponent, PageTitleComponent } from '@shared/components';
 import { BadgeVariant } from '@shared/components/badge/badge';
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import { CustomerDto, OrderLinkDto, OrderLinkStatus } from '@shared/models';
@@ -18,7 +18,7 @@ import { AppRoutes } from '@shared/constants/app-routes';
 
 @Component({
   selector: 'app-customer-details',
-  imports: [CommonModule, RouterLink, IconComponent, BadgeComponent, AvatarComponent, ConfirmDialogComponent],
+  imports: [CommonModule, RouterLink, IconComponent, BadgeComponent, AvatarComponent, ConfirmDialogComponent, PageTitleComponent],
   templateUrl: './customer-details.html',
   host: {
     class: 'block h-full',

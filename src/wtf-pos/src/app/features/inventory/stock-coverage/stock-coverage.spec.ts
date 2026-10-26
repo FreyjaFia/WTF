@@ -100,7 +100,7 @@ describe('StockCoverageComponent', () => {
 
   it('refreshes on demand', () => {
     const { fixture, inventory, el } = setup();
-    ([...el.querySelectorAll('button')].find((b) => b.textContent?.includes('Refresh')) as HTMLButtonElement).click();
+    (el.querySelector('button[aria-label="Refresh coverage"]') as HTMLButtonElement).click();
     fixture.detectChanges();
 
     expect(inventory.getStockCoverage).toHaveBeenCalledTimes(2);

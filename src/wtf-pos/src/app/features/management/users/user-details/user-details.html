@@ -15,9 +15,7 @@
       </a>
       @if (user()) {
         <div class="min-w-0">
-          <h1 class="text-2xl font-bold wrap-break-word text-gray-900">
-            {{ user()!.firstName }} {{ user()!.lastName }}
-          </h1>
+          <app-page-title [text]="user()!.firstName + ' ' + user()!.lastName" />
           <div class="mt-1 flex flex-wrap items-center gap-2">
             @if (user()!.isActive) {
               <app-badge variant="success">Active</app-badge>

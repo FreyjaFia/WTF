@@ -97,6 +97,47 @@ describe('ItemDetailsComponent', () => {
     };
   });
 
+  describe('title', () => {
+    it('shows the item name in the shared expandable title', () => {
+      const { fixture } = create();
+      const title = (fixture.nativeElement as HTMLElement).querySelector('app-page-title h1');
+      expect(title?.textContent?.trim()).toBe('Coffee Beans');
+    });
+  });
+
+  describe('linked products', () => {
+    const link = (id: string, name: string, isActive: boolean, productIsActive?: boolean) =>
+      ({ id, productId: id, productName: name, productCode: id.toUpperCase(), itemId: 'i1', quantityPerSale: 1, isActive, productIsActive }) as never;
+
+    it('lists only active links, marking a deleted product', () => {
+      inventory.getInventoryItem.mockReturnValue(
+        of(
+          makeItem({
+            productLinks: [
+              link('a', 'Latte', true, true),
+              link('b', 'Unlinked', false, true),
+              link('c', 'Retired', true, false),
+            ],
+          }),
+        ),
+      );
+      const { fixture, vm } = create();
+
+      expect(vm['activeProductLinks']().map((l: { productName: string }) => l.productName)).toEqual(['Latte', 'Retired']);
+      const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+      expect(text).toContain('Latte');
+      expect(text).toContain('Retired');
+      expect(text).toContain('(deleted product)');
+      expect(text).not.toContain('Unlinked');
+    });
+
+    it('says there are none when every link is switched off', () => {
+      inventory.getInventoryItem.mockReturnValue(of(makeItem({ productLinks: [link('b', 'Unlinked', false)] })));
+      const { fixture } = create();
+      expect((fixture.nativeElement as HTMLElement).textContent).toContain('No linked products');
+    });
+  });
+
   describe('loading', () => {
     it('loads the item from the route id and renders it', () => {
       const { fixture, vm } = create('i1');

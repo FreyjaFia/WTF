@@ -1,0 +1,9 @@
+<h1
+  class="cursor-pointer text-2xl font-bold wrap-break-word text-gray-900 sm:line-clamp-none sm:cursor-auto"
+  [class.line-clamp-2]="!isExpanded()"
+  [attr.title]="text()"
+  [attr.aria-expanded]="isExpanded()"
+  (click)="toggle()"
+>
+  {{ text() }}
+</h1>

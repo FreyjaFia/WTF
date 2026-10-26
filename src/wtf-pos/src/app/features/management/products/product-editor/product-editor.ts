@@ -14,6 +14,7 @@ import {
   AddonsSwapperComponent,
   AvatarComponent,
   IconComponent,
+  PageTitleComponent,
   PriceHistoryDrawerComponent,
   ProductsSwapperComponent,
 } from '@shared/components';
@@ -49,6 +50,7 @@ export type StockTrackingMode = 'none' | 'own' | 'existing';
     IconComponent,
     AddonsSwapperComponent,
     ProductsSwapperComponent,
+    PageTitleComponent,
     PriceHistoryDrawerComponent,
     AvatarComponent,
     ConfirmDialogComponent,

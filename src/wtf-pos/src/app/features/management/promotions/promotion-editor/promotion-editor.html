@@ -12,9 +12,7 @@
         <app-icon name="icon-back" [class]="'h-5 w-5 text-gray-600'" />
       </button>
       <div class="min-w-0">
-        <h1 class="text-2xl font-bold wrap-break-word text-gray-900">
-          {{ isEditMode() ? currentPromotionName() || 'Edit Promotion' : 'New Promotion' }}
-        </h1>
+        <app-page-title [text]="isEditMode() ? currentPromotionName() || 'Edit Promotion' : 'New Promotion'" />
         @if (isEditMode() && lastUpdatedAt()) {
           <p class="mt-1 text-sm text-gray-500">
             Updated {{ lastUpdatedAt() | date: 'd MMM y, h:mm a' }}

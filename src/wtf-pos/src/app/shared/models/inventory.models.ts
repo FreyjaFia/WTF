@@ -35,6 +35,7 @@ export interface ProductItemLinkDto {
   itemId: string;
   quantityPerSale: number;
   isActive: boolean;
+  productIsActive?: boolean;
 }
 
 export interface ProductItemLinkAssignmentDto {

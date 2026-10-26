@@ -1,6 +1,8 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { Capacitor } from '@capacitor/core';
 import { AlertService, AuthService, InventoryService } from '@core/services';
+import { IconComponent, PullToRefreshComponent } from '@shared/components';
 import { SearchInputComponent } from '@shared/components/search-input/search-input';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { ProductCoverageDto, ProductCoverageStatus, StockCoverageDto } from '@shared/models';
@@ -21,7 +23,7 @@ const STATUS_STYLES: Record<ProductCoverageStatus, StatusStyle> = {
 
 @Component({
   selector: 'app-stock-coverage',
-  imports: [RouterLink, SearchInputComponent],
+  imports: [RouterLink, IconComponent, PullToRefreshComponent, SearchInputComponent],
   templateUrl: './stock-coverage.html',
   host: { class: 'flex-1 min-h-0' },
 })
@@ -32,6 +34,7 @@ export class StockCoverageComponent implements OnInit {
 
   protected readonly coverage = signal<StockCoverageDto | null>(null);
   protected readonly isLoading = signal(false);
+  protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
   protected readonly filter = signal<CoverageFilter>('attention');
   protected readonly search = signal('');
 

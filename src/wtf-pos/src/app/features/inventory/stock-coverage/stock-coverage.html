@@ -1,19 +1,9 @@
 <div class="flex h-full flex-col pt-4 md:pt-0">
-  <div class="mb-4 flex shrink-0 flex-wrap items-start justify-between gap-3 sm:mb-5">
-    <div>
-      <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Stock Coverage</h1>
-      <p class="text-xs text-gray-500 sm:text-sm">
-        Which products take stock when they are sold, and which would not
-      </p>
-    </div>
-    <button
-      type="button"
-      class="app-btn app-btn-secondary app-btn-sm"
-      [disabled]="isLoading()"
-      (click)="load()"
-    >
-      {{ isLoading() ? 'Refreshing...' : 'Refresh' }}
-    </button>
+  <div class="mb-4 flex shrink-0 flex-col gap-1 sm:mb-5">
+    <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Stock Coverage</h1>
+    <p class="text-xs text-gray-500 sm:text-sm">
+      Which products take stock when they are sold, and which would not
+    </p>
   </div>
 
   @if (coverage(); as summary) {
@@ -60,31 +50,9 @@
       </dl>
     </div>
 
-    <div class="mb-3 flex shrink-0 flex-wrap items-center gap-2">
-      <div class="inline-flex rounded-full bg-gray-100 p-1" role="group" aria-label="Show">
-        <button
-          type="button"
-          class="cursor-pointer rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors"
-          [class]="filter() === 'attention' ? 'bg-surface text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'"
-          [attr.aria-pressed]="filter() === 'attention'"
-          data-testid="filter-attention"
-          (click)="setFilter('attention')"
-        >
-          Needs setup ({{ attentionCount() }})
-        </button>
-        <button
-          type="button"
-          class="cursor-pointer rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors"
-          [class]="filter() === 'all' ? 'bg-surface text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'"
-          [attr.aria-pressed]="filter() === 'all'"
-          data-testid="filter-all"
-          (click)="setFilter('all')"
-        >
-          All products ({{ total() }})
-        </button>
-      </div>
+    <div class="mb-3 flex shrink-0 flex-col gap-2 md:flex-row md:flex-wrap md:items-center md:gap-3">
       <div
-        class="ml-auto flex w-full min-w-0 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-surface focus-within:ring-2 focus-within:ring-gray-200 sm:w-72"
+        class="mb-2 flex w-full min-w-0 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-surface focus-within:ring-2 focus-within:ring-gray-200 md:mb-0 md:max-w-104 md:flex-1"
       >
         <app-search-input
           [value]="search()"
@@ -92,6 +60,47 @@
           ariaLabel="Search products"
           (valueChange)="setSearch($event)"
         />
+      </div>
+
+      <div class="ml-auto flex items-center justify-end gap-2">
+        <div class="inline-flex rounded-full bg-gray-100 p-1" role="group" aria-label="Show">
+          <button
+            type="button"
+            class="cursor-pointer rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors"
+            [class]="filter() === 'attention' ? 'bg-surface text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'"
+            [attr.aria-pressed]="filter() === 'attention'"
+            data-testid="filter-attention"
+            (click)="setFilter('attention')"
+          >
+            Needs setup ({{ attentionCount() }})
+          </button>
+          <button
+            type="button"
+            class="cursor-pointer rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors"
+            [class]="filter() === 'all' ? 'bg-surface text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'"
+            [attr.aria-pressed]="filter() === 'all'"
+            data-testid="filter-all"
+            (click)="setFilter('all')"
+          >
+            All products ({{ total() }})
+          </button>
+        </div>
+        @if (!isAndroidPlatform) {
+          <button
+            class="app-btn app-btn-ghost pointer-events-auto z-30 p-2"
+            [class.opacity-70]="isLoading()"
+            type="button"
+            (click)="load()"
+            [disabled]="isLoading()"
+            aria-label="Refresh coverage"
+          >
+            <app-icon
+              name="icon-refresh"
+              [class]="isLoading() ? 'h-5 w-5 animate-spin text-gray-600' : 'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'"
+              [fill]="'currentColor'"
+            />
+          </button>
+        }
       </div>
     </div>
   }
@@ -103,7 +112,7 @@
   }
 
   @if (coverage()) {
-    <div class="min-h-0 flex-1 overflow-y-auto pb-4">
+    <app-pull-to-refresh [refreshing]="isLoading()" (refreshTriggered)="load()">
       @if (rows().length === 0) {
         <div class="rounded-xl bg-surface p-8 text-center shadow" data-testid="coverage-empty">
           <p class="text-lg font-semibold text-gray-700">
@@ -127,14 +136,19 @@
         </div>
       }
 
-      <ul class="space-y-2">
+      <ul class="space-y-2 pb-4">
         @for (product of rows(); track product.productId) {
           <li class="flex overflow-hidden rounded-xl bg-surface shadow" data-testid="coverage-row">
             <span class="w-1.5 shrink-0" [class]="styleOf(product.status).bar"></span>
-            <div class="flex min-w-0 flex-1 flex-wrap items-start justify-between gap-3 p-3 sm:p-4">
-              <div class="min-w-0">
-                <p class="font-semibold wrap-break-word text-gray-900">{{ product.name }}</p>
-                <p class="font-mono text-xs text-gray-400">{{ product.code }}</p>
+            <div class="flex min-w-0 flex-1 items-center gap-3 p-3 sm:p-4">
+              <div class="min-w-0 flex-1">
+                <p class="font-semibold wrap-anywhere text-gray-900">{{ product.name }}</p>
+                <p class="font-mono text-xs break-all text-gray-400">{{ product.code }}</p>
+                <span
+                  class="mt-1 inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-bold sm:hidden"
+                  [class]="styleOf(product.status).badge"
+                  >{{ statusLabel(product.status) }}</span
+                >
                 @if (product.missingOptions.length > 0) {
                   <div class="mt-2 flex flex-wrap items-center gap-1.5" data-testid="missing-options">
                     <span class="text-xs text-gray-500">Not linked to stock:</span>
@@ -146,7 +160,7 @@
               </div>
               <div class="flex shrink-0 items-center gap-3">
                 <span
-                  class="inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-bold"
+                  class="hidden rounded-full px-2.5 py-0.5 text-[11px] font-bold sm:inline-flex"
                   [class]="styleOf(product.status).badge"
                   >{{ statusLabel(product.status) }}</span
                 >
@@ -163,6 +177,6 @@
           </li>
         }
       </ul>
-    </div>
+    </app-pull-to-refresh>
   }
 </div>

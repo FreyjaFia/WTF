@@ -5,6 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { AlertService, InventoryService, ModalStackService } from '@core/services';
 import {
   IconComponent,
+  PageTitleComponent,
   PriceHistoryDrawerComponent,
   ProductItemLinksSelectorComponent,
 } from '@shared/components';
@@ -28,6 +29,7 @@ import {
     CommonModule,
     ReactiveFormsModule,
     IconComponent,
+    PageTitleComponent,
     PriceHistoryDrawerComponent,
     ProductItemLinksSelectorComponent,
     ConfirmDialogComponent,

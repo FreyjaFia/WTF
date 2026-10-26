@@ -6,6 +6,7 @@ import {
   AvatarComponent,
   BadgeComponent,
   IconComponent,
+  PageTitleComponent,
   PriceHistoryDrawerComponent,
 } from '@shared/components';
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
@@ -28,6 +29,7 @@ import { AppRoutes } from '@shared/constants/app-routes';
     IconComponent,
     BadgeComponent,
     ConfirmDialogComponent,
+    PageTitleComponent,
     PriceHistoryDrawerComponent,
     AvatarComponent,
   ],

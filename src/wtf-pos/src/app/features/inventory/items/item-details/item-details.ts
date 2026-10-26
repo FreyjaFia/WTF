@@ -1,10 +1,11 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AlertService, AuthService, InventoryService, ModalStackService } from '@core/services';
 import {
   BadgeComponent,
   IconComponent,
+  PageTitleComponent,
   PriceHistoryDrawerComponent,
   StockAdjustDialogComponent,
 } from '@shared/components';
@@ -37,6 +38,7 @@ const MOVEMENT_TYPE_LABELS: Record<string, string> = {
     RouterLink,
     IconComponent,
     BadgeComponent,
+    PageTitleComponent,
     PriceHistoryDrawerComponent,
     ConfirmDialogComponent,
     StockAdjustDialogComponent,
@@ -68,6 +70,9 @@ export class ItemDetailsComponent implements OnInit {
   protected readonly showAdjustModal = signal(false);
   protected readonly isAdjusting = signal(false);
   protected readonly movementTypes = Object.keys(MOVEMENT_TYPE_LABELS);
+  protected readonly activeProductLinks = computed(() =>
+    (this.item()?.productLinks ?? []).filter((link) => link.isActive),
+  );
   private modalStackId: number | null = null;
 
   public ngOnInit(): void {

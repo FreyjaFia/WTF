@@ -10,7 +10,7 @@ import {
 } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AlertService, AuthService, ModalStackService, UserService } from '@core/services';
-import { AvatarComponent, IconComponent } from '@shared/components';
+import { AvatarComponent, IconComponent, PageTitleComponent } from '@shared/components';
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import { CreateUserDto, UpdateUserDto, UserRoleEnum } from '@shared/models';
 import { AppRoutes } from '@shared/constants/app-routes';
@@ -28,6 +28,7 @@ const PROFILE_PASSWORD_MIN_LENGTH = 8;
     IconComponent,
     AvatarComponent,
     ConfirmDialogComponent,
+    PageTitleComponent,
   ],
   templateUrl: './user-editor.html',
   host: {

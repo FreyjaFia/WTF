@@ -11,7 +11,7 @@
       </button>
       @if (!isLoading() && (fixedBundle() || mixMatch() || discountedProduct())) {
         <div class="min-w-0">
-          <h1 class="text-2xl font-bold wrap-break-word text-gray-900">{{ promotionName() }}</h1>
+          <app-page-title [text]="promotionName()" />
           <div class="mt-1 flex flex-wrap items-center gap-2">
             @if (isActive()) {
               <app-badge variant="success">Active</app-badge>

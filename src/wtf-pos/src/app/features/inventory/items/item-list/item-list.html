@@ -133,63 +133,55 @@
               class="relative flex items-center gap-3 rounded-xl border border-gray-100 bg-surface px-4 py-3 shadow-sm transition-shadow duration-200 focus-within:z-30 hover:z-10 hover:shadow-md lg:grid lg:grid-cols-12 lg:gap-4 lg:border-0 lg:px-4 lg:py-4 lg:shadow-lg lg:hover:shadow-xl"
             >
               <a
-                class="flex min-w-0 flex-1 cursor-pointer flex-col no-underline focus:outline-none lg:col-span-10 lg:grid lg:grid-cols-10 lg:items-center lg:gap-4"
+                class="flex min-w-0 flex-1 cursor-pointer items-center gap-3 self-stretch no-underline focus:outline-none lg:col-span-10 lg:grid lg:grid-cols-10 lg:gap-4"
                 [routerLink]="routes.InventoryItemDetailsById(item.id)"
                 [attr.aria-label]="'View details for ' + item.name"
               >
-                <div class="min-w-0 text-left lg:col-span-4">
-                  <h3 class="text-sm font-semibold text-gray-900 lg:text-base">{{ item.name }}</h3>
-                  <div class="mt-0.5 flex flex-wrap gap-2 text-xs text-gray-400">
-                    @if (item.sku) {
-                      <span class="font-mono">SKU {{ item.sku }}</span>
-                    }
-                    @if (item.barcode) {
-                      <span class="font-mono">Barcode {{ item.barcode }}</span>
-                    }
-                    @if (item.productLinks.length > 0) {
-                      <span>{{ item.productLinks.length }} linked product(s)</span>
-                    }
-                  </div>
-                </div>
+                <div class="flex min-w-0 flex-1 items-center gap-3 lg:col-span-4 lg:flex-none">
+                  <app-avatar [label]="item.name" [class]="'h-10 w-10 shrink-0 lg:hidden'" />
 
-                <div class="mt-2 flex flex-wrap items-center justify-between gap-2 lg:hidden">
-                  <div>
-                    <div class="text-sm font-semibold text-gray-900">
-                      {{ getStockQuantity(item) | number: '1.0-3' }}
-                      {{ getStockUnitAbbreviation(item) }}
-                    </div>
-                    @if (shouldShowBaseQuantity(item)) {
-                      <div class="text-xs text-gray-400">
-                        {{ item.currentQuantity | number: '1.0-3' }}
-                        {{ getBaseUnitAbbreviation(item) }}
-                      </div>
-                    }
-                  </div>
-
-                  <div class="flex items-center gap-2">
-                    <div class="text-sm font-semibold text-gray-900">
+                  <div class="min-w-0 text-left">
+                    <h3 class="text-sm font-semibold wrap-break-word text-gray-900 lg:text-base">
+                      {{ item.name }}
+                    </h3>
+                    <div class="mt-0.5 flex flex-wrap gap-x-2 text-xs text-gray-400">
+                      @if (item.sku) {
+                        <span class="font-mono break-all">SKU {{ item.sku }}</span>
+                      }
+                      @if (item.barcode) {
+                        <span class="font-mono break-all">Barcode {{ item.barcode }}</span>
+                      }
+                      @if (linkedProductCount(item) > 0) {
+                        <span>{{ linkedProductCount(item) }} linked product(s)</span>
+                      }
                       @if (item.costPrice !== null && item.costPrice !== undefined) {
-                        <span class="inline-flex items-center justify-end gap-0.5">
-                          <app-icon
-                            name="icon-peso"
-                            [class]="'h-3.5 w-3.5'"
-                            [fill]="'currentColor'"
-                          />
-                          {{ item.costPrice | number: '1.2-2' }}
-                        </span>
+                        <span class="lg:hidden">Cost ₱{{ item.costPrice | number: '1.2-2' }}</span>
                       } @else {
-                        <span class="text-gray-400">Not set</span>
+                        <span class="lg:hidden">No cost</span>
                       }
                     </div>
-                    @if (!item.isActive) {
-                      <app-badge variant="error">Inactive</app-badge>
-                    } @else if (getStockStatus(item) === 'critical') {
-                      <app-badge variant="error">Critical</app-badge>
-                    } @else if (getStockStatus(item) === 'warning') {
-                      <app-badge variant="warning">Warning</app-badge>
-                    } @else {
-                      <app-badge variant="success">OK</app-badge>
-                    }
+
+                    <div class="mt-1 flex flex-wrap items-center gap-2 lg:hidden">
+                      <span class="text-sm font-semibold text-gray-900">
+                        {{ getStockQuantity(item) | number: '1.0-3' }}
+                        {{ getStockUnitAbbreviation(item) }}
+                        @if (shouldShowBaseQuantity(item)) {
+                          <span class="text-xs font-normal text-gray-400">
+                            ({{ item.currentQuantity | number: '1.0-3' }}
+                            {{ getBaseUnitAbbreviation(item) }})
+                          </span>
+                        }
+                      </span>
+                      @if (!item.isActive) {
+                        <app-badge variant="error">Inactive</app-badge>
+                      } @else if (getStockStatus(item) === 'critical') {
+                        <app-badge variant="error">Critical</app-badge>
+                      } @else if (getStockStatus(item) === 'warning') {
+                        <app-badge variant="warning">Warning</app-badge>
+                      } @else {
+                        <app-badge variant="success">OK</app-badge>
+                      }
+                    </div>
                   </div>
                 </div>
 
@@ -228,7 +220,7 @@
                       />
                       {{ item.costPrice | number: '1.2-2' }}
                     } @else {
-                      <span class="text-gray-400">Not set</span>
+                      <span class="text-sm font-medium text-gray-400">Not set</span>
                     }
                   </div>
                 </div>
@@ -257,8 +249,8 @@
                       tabindex="0"
                       class="dropdown-content menu bg-base-100 rounded-box z-50 w-52 p-2 shadow"
                     >
-                      <li>
-                        @if (canWriteStockMovements()) {
+                      @if (canWriteStockMovements() && item.isActive) {
+                        <li>
                           <button
                             type="button"
                             (click)="navigateToStockIn(item); $event.stopPropagation()"
@@ -267,10 +259,10 @@
                             <app-icon name="icon-plus" [class]="'h-4 w-4 text-gray-600'" />
                             Add Stock
                           </button>
-                        }
-                      </li>
-                      <li>
-                        @if (canWriteItems() && item.isActive) {
+                        </li>
+                      }
+                      @if (canWriteItems() && item.isActive) {
+                        <li>
                           <a
                             draggable="false"
                             [routerLink]="routes.InventoryItemsEditById(item.id)"
@@ -280,10 +272,8 @@
                             <app-icon name="icon-edit" [class]="'h-4 w-4 text-gray-600'" />
                             Edit
                           </a>
-                        }
-                      </li>
-                      <li>
-                        @if (canWriteItems() && item.isActive) {
+                        </li>
+                        <li>
                           <button
                             type="button"
                             (click)="deleteItem(item); $event.stopPropagation()"
@@ -294,7 +284,9 @@
                             <app-icon name="icon-delete" [class]="'h-4 w-4 text-red-600'" />
                             Delete
                           </button>
-                        } @else if (canWriteItems()) {
+                        </li>
+                      } @else if (canWriteItems()) {
+                        <li>
                           <button
                             type="button"
                             (click)="restoreItem(item); $event.stopPropagation()"
@@ -305,8 +297,8 @@
                             <app-icon name="icon-refresh" [class]="'h-4 w-4 text-brand-ink'" />
                             Restore
                           </button>
-                        }
-                      </li>
+                        </li>
+                      }
                     </ul>
                   </div>
                 }

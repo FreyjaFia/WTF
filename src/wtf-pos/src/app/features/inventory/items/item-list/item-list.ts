@@ -16,6 +16,7 @@ import {
 } from '@core/services';
 import type { FilterOption } from '@shared/components';
 import {
+  AvatarComponent,
   BadgeComponent,
   IconComponent,
   ConnectionErrorComponent,
@@ -48,6 +49,7 @@ type ItemSortColumn = 'name' | 'stock' | 'status' | 'cost';
     ReactiveFormsModule,
     RouterLink,
     IconComponent,
+    AvatarComponent,
     BadgeComponent,
     ConfirmDialogComponent,
     ConnectionErrorComponent,
@@ -218,6 +220,10 @@ export class ItemListComponent implements OnInit {
     }
 
     this.router.navigateByUrl(AppRoutes.InventoryStockIn);
+  }
+
+  protected linkedProductCount(item: ItemDto): number {
+    return item.productLinks.filter((link) => link.isActive && link.productIsActive !== false).length;
   }
 
   protected deleteItem(item: ItemDto): void {
