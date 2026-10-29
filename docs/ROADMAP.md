@@ -912,7 +912,7 @@ recipes that turn a sale into ingredient usage, a way to compare the recipe with
 
 | Phase | Name                                     | Needs first            |
 | ----- | ---------------------------------------- | ---------------------- |
-| 5     | Waste and spoilage                       | Order-time deduction   |
+| 5     | Waste and spoilage (built, not verified) | Order-time deduction   |
 | 6     | Costing and recipes                      | Order-time deduction   |
 | 7     | Stock counts and variance                | Phase 6                |
 | 8     | Suppliers, receiving and reordering      | Phase 1 stock-in       |
@@ -921,7 +921,110 @@ recipes that turn a sale into ingredient usage, a way to compare the recipe with
 Recommended order: finish order-time deduction, then 5 (small, quick value), 6, 7, 9, with 8 whenever purchasing pain
 shows up. Stock transfers between branches are under "Multiple Branches" (Phase 1 there).
 
-#### Phase 5 - Waste and spoilage [Planned]
+#### Phase 5 - Waste and spoilage [Built, not yet verified, 27 Oct 2026]
+
+**Built (27 Oct 2026; script `tools/sql/20261027_add_stock_waste.sql`, run it before deploying the API, then
+`tools/dbsync.bat`).** The original plan follows below; this is what exists and what is still to do.
+
+- **Schema.** `WasteReasons` (editable list, the eight reasons from the plan seeded, `Other` is a system reason that needs
+  a note), `StockWastes` (item, quantity, unit, reason, note, source POS or Inventory, status, who and when, review and
+  reverse details, `ClientRequestId` with the unique index `UX_StockWastes_ClientRequestId` so a retried request is not
+  recorded twice), `Items.WasteApprovalLimit`, movement types `Waste` and `WasteReversed`.
+- **Rules.** Recording runs the guarded balance update, a `Waste` movement (reference `StockWaste`, unit cost kept) and
+  the waste row in one transaction, then the stock alert check. A blocking item cannot go below zero; a warn-only item
+  can. Above the item's approval limit the waste is still deducted at once but marked **Pending review**; an Admin
+  confirms, disputes (no stock change) or reverses it (a `WasteReversed` movement puts the quantity back, once only).
+  Confirm, dispute and reverse use guarded UPDATEs, so two reviewers cannot both act. Admins get a notification for each
+  pending waste (`WasteReviewNotifications`). Arithmetic in `WTF.Calculations/Inventory/WasteRules` (grouping per item and
+  unit; mixed units leave the quantity blank) with shared cases in `calculation-cases.json`.
+- **API.** `POST /api/items/{id}/stock/waste` (`StockWasteWrite`), `GET /api/stock-waste`, `GET /api/stock-waste/pending-count`,
+  `POST /api/stock-waste/{id}/confirm|dispute|reverse` (`StockWasteReview`), `GET/POST/PUT /api/waste-reasons` plus
+  deactivate and restore (`WasteReasonsManage`), `GET /api/pos/waste-items` (the slim item list for the POS sheet),
+  `GET /api/reports/waste` (by item, reason, staff or day, Excel, PDF and CSV, row cap, dates in the shop's time zone and
+  `toDate` covering the whole day). Daily Close has a waste section with quantity and unit, and the monthly workbook a
+  Waste sheet (13 sheets). Audit actions for record, confirm, dispute, reverse and reason changes. Route table and policy
+  matrix snapshots updated.
+- **Screens.** Inventory > Waste (list with filters, pending review, confirm, dispute, reverse), Waste Reasons page, the
+  Record Waste dialog on item details, a quick waste sheet in the POS (online only), the approval limit on the item
+  editor, the Waste report in the Reports catalog, sidebar and routes.
+- **Decisions.** POS waste is online only (it needs the live balance and the blocking rule). Pending waste counts in the
+  reports, disputed waste is shown separately and reversed waste is left out. A Cashier records waste from the POS sheet
+  only; `/inventory/waste` needs `StockMovementsRead`. Quantity only until Phase 6 gives every unit a cost. Item Managers
+  and Admin Viewers cannot record waste. Refund waste written by the void dialog stays out of the waste report (it is
+  only `StockWastes` rows).
+- **Tests.** About 76 new .NET tests (handlers, rules, real SQL Server race tests in `StockWasteFixesDatabaseTests`,
+  shared cases, workbook) and 231 Angular tests in 9 spec files. Last full runs: .NET 2,551 passing, Angular 3,682 passing (the author's run). Re-run on 29 Oct 2026 after import: .NET 2,551 passing, Angular 3,669 passing (176 spec files, includes the 2 new login specs); the 13-test difference from 3,682 is not explained yet.
+
+**Local database:** `tools/sql/20261027_add_stock_waste.sql` was run on the local `WTF` database (`.\SQLEXPRESS`) on 29 Oct 2026 (8 reasons seeded, `StockWastes` and `Items.WasteApprovalLimit` present). CI picks it up on tag builds (it runs every `tools/sql/*.sql` in name order, and this one sorts after `20261024`).
+
+**Not built (on purpose, for later phases):** waste of a made product through its recipe (Phase 6), cost value and
+waste as a share of usage (Phase 6), the optional photo, comps and "reason for free" on orders, a per-line "what happens
+to the stock" choice beyond the existing refund dialog, and a branch column (Multiple Branches).
+
+**Next steps (in this order):**
+
+1. **Playwright end-to-end tests** [Done, 29 Oct 2026]. `src/wtf-e2e` has the fixtures, 15 page objects and specs for auth and
+   roles, orders and checkout, order details and refunds, customer link ordering, items and Stock In, stock alerts and the
+   bell, waste recording, review, reasons and the register sheet, and the waste report. 70 tests pass against a throwaway
+   LocalDB database (API on 5282, app on 4300). They found: the role guard loop, the missing Waste report, Stock Manager
+   without `ItemsRead`, the Refund button shown to every role, and Admin Viewer's empty reason filter (all fixed).
+2. **Run the 22 manual scenarios** [Done, 29 Oct 2026: all passed, no bug found; see "Checked by hand" below] (record each reason, note for Other, inactive reason and item, blocking vs warn-only,
+   alert levels, approval limit, who may review, confirm, dispute, reverse once, POS quick entry, viewer refused, reasons
+   page, refund waste kept out, waste report, Daily Close, two people wasting the last units, phone width, long names) in
+   the built-in browser on the throwaway `WTF_Phase5_Manual` database. Never the real `WTF` database.
+3. **Fix the login loop for Stock Manager and Item Manager** [Done, 29 Oct 2026]. They could not open the orders
+   screens, so the post-login route sent them back to the login page. `getPostLoginRoute` in `login.ts` now sends a Stock
+   Manager to `/inventory/attention` and an Item Manager to `/inventory/items` (2 new specs in `login.spec.ts`). The role
+   guard had the same problem: opening a page the role may not see sent these two roles to the login page, which sent them
+   back (a loop). Its fallback now ends on Needs Attention or the Items list (2 specs in `guards.spec.ts`).
+   Also found while preparing the end-to-end run: the **Waste report was not in the Reports catalog** (the service, models
+   and API existed). It now has a definition (group by item, reason, staff or day) and a filter. The shared confirm
+   dialog scrolls on short screens, and the waste screens were restyled to match the sibling lists (search box, refresh icon
+   with pull to refresh, outline Turn Off button, `bg-surface` tiles) in the default and cafe styles.
+   Three more fixes from the end-to-end run (29 Oct 2026): `GET /api/waste-reasons` has its own policy, `WasteReasonsRead`
+   (Super Admin, Admin, Admin Viewer, Stock Manager, Cashier), so Admin Viewer's reason filter is no longer empty; the Stock
+   Manager role now has `ItemsRead`, so Stock In shows its item grid (read only; item writes stay with Item Manager); and the
+   Refund Order button on order details shows only to roles that can write orders (the API already refused the rest).
+4. **Full builds and tests**: `dotnet build`, `dotnet test src/WTF.Tests` (including the real SQL tests),
+   `npx ng build --configuration=development` and `npx ng test --watch=false` in `src/wtf-pos`.
+5. **Deploy order**: run the SQL script on the target database first, then deploy the API, then the app.
+6. Change this heading to Completed once steps 1 to 4 pass, and note what was checked by hand.
+
+**Checked by hand (29 Oct 2026, throwaway `WTF_Test_*` database, API 5282, built-in browser).** Three items: Man Milk (1,000 ml,
+approval limit 100, warn 500, critical 200), Man Cup (5 pc, blocks below zero) and Man Syrup (300 ml, warn-only, a 95-character
+name). All 22 scenarios gave the hand-worked answer:
+
+- Each of the 7 reasons records; Other without a note is refused (screen and API), with a note it records.
+- Limit: 100 ml records, 101 ml goes to review; 0 and negative are refused. Blocking cup: 6 on a balance of 5 is refused and
+  nothing changes, 2 records. Warn-only syrup went to -180 and the POS dialog said "Count the item soon".
+- Roles: Cashier and Stock Manager record; Admin Viewer and Item Manager get 403; Stock Manager, Cashier and Viewer cannot
+  review (403), Admin can. Confirm twice is refused, reverse needs a reason, reverse twice is refused, reverse after a dispute
+  works and puts the quantity back.
+- Review dialogs on screen (Confirm, Dispute, Reverse): an empty note on Dispute and Reverse shows the error alert, a note
+  closes the dialog and the Needs review count drops (19 to 16). Admin Viewer sees the list with no review buttons and no tile.
+- Three registers wasting the last 3 cups at once: one succeeded, two refused, balance 0.
+- Inactive reason and inactive item are refused with a clear message.
+- Refund "not returned" of 2 lattes (400 ml): balance stayed down, a `Waste` movement "Refunded, not resaleable" was written,
+  and the waste list count and the Man Milk waste report row (261 ml) did not change.
+- Waste report by item matched the hand tally (syrup 485 ml in 10 entries, milk 261 ml in 5, cup 5 pc); the Daily Close
+  Waste section showed "5 entries, 261 ml" for the milk.
+- Alerts: Low stock (Man Milk 339 of 500), Out of stock (cup), Below zero (syrup), Waste to review (101 and 150 ml) all reached
+  the bell and Needs Attention.
+- Phone width (375 px): waste list with the long name, the POS waste sheet and dialog, the reasons page and the report: no
+  sideways scroll.
+
+Small things seen and fixed the same day: the Daily Close column is now "Orders / Entries" and its waste rows show the
+quantity and unit (as the Excel and PDF already did) instead of 0.00; the waste report shows "-" for a quantity that mixes
+units (by reason, staff or day) instead of a meaningless ml plus pc sum (the exports already showed "-"). Still open: at 640 to
+1023 px the item details title wraps one letter per line (the known layout item in the polish pass).
+
+**Follow-up polish (29 Oct 2026, checked on screen and by specs):** the five details pages (item, product, customer, user,
+promotion) stack the title above the action buttons until 1024 px, which fixes the one-letter title at 640 to 1023 px; the item
+details back arrow returns to the Waste page when opened from it (`returnUrl`, in-app paths only); "Filter by Item" is an outlined
+button; the full-width "Needs review" bar is now a small "N need review" chip, shown only to reviewers and only when something
+waits; a waiting entry says "Stock was already taken"; the Confirm, Dispute and Reverse dialogs say when to use each; the record
+dialog shows the item's approval limit before the amount goes over it. Decided: the Waste Reasons page stays Admin and Super
+Admin only.
 
 Stock in adds; sales deduct; **waste** is stock that left without a sale. Today there is no way to say so, so a spilled
 litre of milk can only be hidden inside an "adjustment". Waste is a different thing from an adjustment: waste is a known loss
@@ -2677,7 +2780,7 @@ deliberately deferred.
 | CI | **Done**: `test-api` (with a SQL Server container) and `test-frontend` run on every push and pull request; build and SQL deploy jobs depend on them. |
 | Pricing math consolidation | **Done.** One shared class, `PromotionPricing`. |
 | Calculation consolidation | **Done** (14 Oct 2026). `WTF.Calculations` holds order totals, pricing, sales rules and report periods; 1,779 API tests pass. |
-| E2E (Playwright) | Not started; optional. |
+| E2E (Playwright) | **Built** (`src/wtf-e2e`, about 570 tests in 34 files by section; runs on CI without blocking, see "CI" below). |
 
 ### Layout
 
@@ -2827,6 +2930,33 @@ Done. `.github/workflows/main.yml` has two jobs that run on every push and pull 
 The build jobs (API, frontend, Android, production and staging) and both SQL deploy jobs `need` both test jobs, so
 a failing test blocks the build and the deploy. Pull requests run only the test jobs (the build and deploy jobs are
 skipped for them). The API job also starts a SQL Server container for the real-database tests.
+
+**Browser tests (added 30 Oct 2026, not blocking).** A third job, `test-e2e`, runs the Playwright suite in `src/wtf-e2e` on its own SQL
+Server container (`run.sh`: a throwaway `WTF_E2E_*` database, the API on 5290, the app on 4300 served with its `e2e` configuration,
+4 workers and 1 retry on CI). No other job lists it in `needs` and `continue-on-error` is on, so it cannot hold up a build or a
+deploy; its report is uploaded as the `e2e-report` artifact. Plan: watch it for about a week, fix flaky tests, then add it to the
+`needs` of the build and deploy jobs (or only a small smoke subset, with the full suite nightly).
+
+**Browser test suite, state on 30 Oct 2026.** `src/wtf-e2e`: 760 tests in 34 files (one folder per app section, see its README), all
+passing in about 6 minutes on a developer PC (5 workers). It runs on a throwaway `WTF_E2E_*` database (`tools/E2eDb`, started by
+`run.ps1` or `run.sh`, which also drop the leftovers of an interrupted run), serves the app with its own Angular configuration (`e2e`,
+API on 5290), and signs each role in once (`global-setup.ts`) and reuses the session, so a test does not type the login form. No test is
+skipped. Started from the Claude Code Terminal panel it can fail to start LocalDB while another session holds the instance, so run it
+from one place at a time.
+
+Product bugs the suite found, all fixed with a regression test:
+- **Nothing enforced the validation attributes** on commands (an empty product name, a negative price or a name over the column
+  length was accepted, or gave a 500). A MediatR step (`ValidationBehavior`) now validates every request and answers 400 with the
+  message. Customer and user names (50 characters), usernames and roles are checked too.
+- **New product add-on links were saved inactive** (EF sent `false` although the column default is true), so add-ons never reached the
+  POS. Both assign handlers now set `IsActive = true` (real-database test `ProductAddOnDatabaseTests`).
+- **A stock change of 0.001 did not move the balance** (the raw SQL parameter was typed decimal(18,2)); it is decimal(18,3) now.
+- **A size, flavor or sauce could be ordered twice** through the API (`PickOneAddOnRule`, create and update).
+- **A completed cash sale with less cash than the total was saved** with change 0; a new sale is now refused (tips are left out of the
+  check so orders queued by an older offline app still sync). **Not done:** the same check when an open order is completed later
+  (`UpdateOrderHandler` saves before it works the change out, so it needs a rollback first).
+- The sidebar showed a Dashboard link to roles that cannot open it.
+- The public ordering and chat limits are per address; `RateLimiting:Multiplier` (default 1) lets the test API raise them.
 
 ---
 
