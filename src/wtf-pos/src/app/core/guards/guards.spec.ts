@@ -28,6 +28,8 @@ describe('route guards', () => {
       canReadManagement: vi.fn().mockReturnValue(false),
       canWriteOrders: vi.fn().mockReturnValue(false),
       canReadOrders: vi.fn().mockReturnValue(false),
+      canReadStockMovements: vi.fn().mockReturnValue(false),
+      canReadItems: vi.fn().mockReturnValue(false),
       hasAnyRole: vi.fn().mockReturnValue(false),
     };
     router = { navigateByUrl: vi.fn() };
@@ -140,6 +142,20 @@ describe('route guards', () => {
 
       expect(run(routeWithRoles([AppRoles.Admin]))).toBe(false);
       expect(router.navigateByUrl).toHaveBeenCalledWith(AppRoutes.Dashboard);
+    });
+
+    it('falls back to needs attention for stock managers', () => {
+      auth['canReadStockMovements'].mockReturnValue(true);
+
+      expect(run(routeWithRoles([AppRoles.Admin]))).toBe(false);
+      expect(router.navigateByUrl).toHaveBeenCalledWith(AppRoutes.InventoryAttention);
+    });
+
+    it('falls back to the items list for item managers', () => {
+      auth['canReadItems'].mockReturnValue(true);
+
+      expect(run(routeWithRoles([AppRoles.Admin]))).toBe(false);
+      expect(router.navigateByUrl).toHaveBeenCalledWith(AppRoutes.InventoryItems);
     });
 
     it('falls back to login when the user has no read access at all', () => {

@@ -178,6 +178,14 @@ export class Login implements OnInit, OnDestroy {
       return AppRoutes.Dashboard;
     }
 
-    return this.auth.canWriteOrders() ? AppRoutes.OrdersEditor : AppRoutes.OrdersList;
+    if (this.auth.canWriteOrders()) {
+      return AppRoutes.OrdersEditor;
+    }
+
+    if (this.auth.canReadOrders()) {
+      return AppRoutes.OrdersList;
+    }
+
+    return this.auth.canReadStockMovements() ? AppRoutes.InventoryAttention : AppRoutes.InventoryItems;
   }
 }

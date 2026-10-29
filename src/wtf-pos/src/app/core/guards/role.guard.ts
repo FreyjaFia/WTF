@@ -4,6 +4,22 @@ import { AuthService } from '@core/services';
 import { AppRole } from '@shared/constants/app-roles';
 import { AppRoutes } from '@shared/constants/app-routes';
 
+function fallbackRouteFor(auth: AuthService): string {
+  if (auth.canReadOrders()) {
+    return AppRoutes.OrdersList;
+  }
+
+  if (auth.canReadManagement()) {
+    return AppRoutes.Dashboard;
+  }
+
+  if (auth.canReadStockMovements()) {
+    return AppRoutes.InventoryAttention;
+  }
+
+  return auth.canReadItems() ? AppRoutes.InventoryItems : AppRoutes.Login;
+}
+
 export const roleGuard: CanActivateFn = (route) => {
   const auth = inject(AuthService);
   const router = inject(Router);
@@ -14,11 +30,6 @@ export const roleGuard: CanActivateFn = (route) => {
     return true;
   }
 
-  const fallbackRoute = auth.canReadOrders()
-    ? AppRoutes.OrdersList
-    : auth.canReadManagement()
-      ? AppRoutes.Dashboard
-      : AppRoutes.Login;
-  router.navigateByUrl(fallbackRoute);
+  router.navigateByUrl(fallbackRouteFor(auth));
   return false;
 };

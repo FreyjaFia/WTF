@@ -164,7 +164,9 @@ export class OrderDetails implements OnInit {
     () => this.order()?.fulfillmentType === FulfillmentTypeEnum.Delivery,
   );
 
-  protected readonly canRefund = computed(() => this.order()?.status === OrderStatusEnum.Completed);
+  protected readonly canRefund = computed(
+    () => this.order()?.status === OrderStatusEnum.Completed && this.authService.canWriteOrders(),
+  );
   protected readonly canOverride = computed(
     () => this.canRefund() && this.authService.canOverrideOrders(),
   );

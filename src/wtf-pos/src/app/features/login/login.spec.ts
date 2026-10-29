@@ -22,6 +22,8 @@ describe('Login', () => {
     login: ReturnType<typeof vi.fn>;
     canReadManagement: ReturnType<typeof vi.fn>;
     canWriteOrders: ReturnType<typeof vi.fn>;
+    canReadOrders: ReturnType<typeof vi.fn>;
+    canReadStockMovements: ReturnType<typeof vi.fn>;
   };
   let alerts: { error: ReturnType<typeof vi.fn> };
   let offline: { getPendingSyncCount: ReturnType<typeof vi.fn> };
@@ -61,6 +63,8 @@ describe('Login', () => {
       login: vi.fn(() => of(true)),
       canReadManagement: vi.fn(() => false),
       canWriteOrders: vi.fn(() => true),
+      canReadOrders: vi.fn(() => true),
+      canReadStockMovements: vi.fn(() => false),
     };
     alerts = { error: vi.fn() };
     offline = { getPendingSyncCount: vi.fn(() => Promise.resolve(0)) };
@@ -270,6 +274,21 @@ describe('Login', () => {
       auth.canWriteOrders.mockReturnValue(false);
       await loginAs();
       expect(navigate).toHaveBeenCalledWith(AppRoutes.OrdersList, { replaceUrl: true });
+    });
+
+    it('sends stock managers to needs attention', async () => {
+      auth.canWriteOrders.mockReturnValue(false);
+      auth.canReadOrders.mockReturnValue(false);
+      auth.canReadStockMovements.mockReturnValue(true);
+      await loginAs();
+      expect(navigate).toHaveBeenCalledWith(AppRoutes.InventoryAttention, { replaceUrl: true });
+    });
+
+    it('sends item managers to the items list', async () => {
+      auth.canWriteOrders.mockReturnValue(false);
+      auth.canReadOrders.mockReturnValue(false);
+      await loginAs();
+      expect(navigate).toHaveBeenCalledWith(AppRoutes.InventoryItems, { replaceUrl: true });
     });
   });
 
