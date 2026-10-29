@@ -176,6 +176,12 @@ describe('SidebarComponent', () => {
     expect(el.textContent).not.toContain('Management');
   });
 
+  it('offers the Dashboard only to roles that can open it', async () => {
+    const { linkLabels } = await setup(undefined, ['canReadManagement']);
+
+    expect(linkLabels().join('|')).not.toContain('Dashboard');
+  });
+
   it('hides individual items without permission', async () => {
     const { linkLabels } = await setup(undefined, ['canReadProducts']);
     expect(linkLabels().join('|')).not.toContain('Products');

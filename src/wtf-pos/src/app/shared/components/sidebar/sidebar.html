@@ -13,14 +13,14 @@
       <div class="flex min-w-0 items-center gap-2 text-2xl font-bold tracking-widest">
         <span class="text-neutral">WTF</span>
         @if (!isCollapsed()) {
-          <span class="text-xs font-normal tracking-wider text-gray-500 uppercase">POS</span>
-        }
-        @if (!isCollapsed()) {
-          <span
-            class="min-w-0 truncate text-[10px] font-semibold tracking-wide text-gray-400"
-            [title]="'v' + appVersion"
-          >
-            v{{ appVersion }}
+          <span class="flex min-w-0 flex-col leading-tight">
+            <span class="text-xs font-normal tracking-wider text-gray-500 uppercase">POS</span>
+            <span
+              class="min-w-0 truncate text-[10px] font-semibold tracking-wide text-gray-400"
+              [title]="'v' + appVersion"
+            >
+              v{{ appVersion }}
+            </span>
           </span>
         }
       </div>
@@ -98,16 +98,18 @@
 
   <nav class="flex-1 overflow-y-auto px-2.5 py-4">
     <div class="mb-3 space-y-1 border-b border-gray-200 pb-3">
-      <a
-        [routerLink]="routes.Dashboard"
-        routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
-        class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
-        [class.justify-center]="isCollapsed()"
-        [attr.title]="'Dashboard'"
-      >
-        <app-icon name="icon-dashboard" [class]="'h-4.5 w-4.5 text-gray-500'" />
-        <span [class.hidden]="isCollapsed()">Dashboard</span>
-      </a>
+      @if (authService.canReadManagement()) {
+        <a
+          [routerLink]="routes.Dashboard"
+          routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
+          class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+          [class.justify-center]="isCollapsed()"
+          [attr.title]="'Dashboard'"
+        >
+          <app-icon name="icon-dashboard" [class]="'h-4.5 w-4.5 text-gray-500'" />
+          <span [class.hidden]="isCollapsed()">Dashboard</span>
+        </a>
+      }
 
       @if (authService.canWriteOrders()) {
       <a
@@ -241,6 +243,19 @@
           }
         </a>
         }
+        @if (authService.canReadStockMovements()) {
+        <a
+          [routerLink]="routes.InventoryWaste"
+          routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
+          class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
+          [class.justify-center]="isCollapsed()"
+          [attr.title]="'Waste'"
+          data-testid="sidebar-waste-link"
+        >
+          <app-icon name="icon-delete" [class]="'h-4 w-4 text-gray-500'" />
+          <span [class.hidden]="isCollapsed()">Waste</span>
+        </a>
+        }
         @if (authService.canReadItems()) {
         <a
           [routerLink]="routes.InventoryCoverage"
@@ -341,6 +356,18 @@
           >
             <app-icon name="icon-trending-up" [class]="'h-4 w-4 text-gray-500'" />
             <span [class.hidden]="isCollapsed()">Reports</span>
+          </a>
+        }
+        @if (authService.canManageWasteReasons()) {
+          <a
+            [routerLink]="routes.ManagementWasteReasons"
+            routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
+            class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
+            [class.justify-center]="isCollapsed()"
+            [attr.title]="'Waste Reasons'"
+          >
+            <app-icon name="icon-delete" [class]="'h-4 w-4 text-gray-500'" />
+            <span [class.hidden]="isCollapsed()">Waste Reasons</span>
           </a>
         }
         @if (authService.canAccessAuditLogs()) {
