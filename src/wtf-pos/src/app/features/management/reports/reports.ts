@@ -36,6 +36,7 @@ import {
   ReportSource,
   ReportType,
   UserDto,
+  WasteReportGroupBy,
 } from '@shared/models';
 import { map, startWith } from 'rxjs';
 import {
@@ -157,6 +158,12 @@ export class ReportsComponent implements OnInit {
     { value: 'Week', label: 'Week' },
     { value: 'Month', label: 'Month' },
   ];
+  protected readonly wasteGroupByOptions: readonly { value: WasteReportGroupBy; label: string }[] = [
+    { value: 'item', label: 'Item' },
+    { value: 'reason', label: 'Reason' },
+    { value: 'staff', label: 'Staff' },
+    { value: 'day', label: 'Day' },
+  ];
   protected readonly sourceOptions: readonly { value: ReportSource | null; label: string }[] = [
     { value: null, label: 'All Orders' },
     { value: 0, label: 'Shop Orders' },
@@ -212,6 +219,7 @@ export class ReportsComponent implements OnInit {
     groupBy: this.formBuilder.control<ReportGroupBy>('Day', {
       validators: [Validators.required],
     }),
+    wasteGroupBy: this.formBuilder.control<WasteReportGroupBy>('item', { nonNullable: true }),
     categoryId: this.formBuilder.control<number | null>(null),
     subCategoryId: this.formBuilder.control<number | null>(null),
     staffId: this.formBuilder.control<string | null>(null),
@@ -620,6 +628,10 @@ export class ReportsComponent implements OnInit {
 
     if (this.hasFilter('groupBy')) {
       query.groupBy = form.groupBy ?? 'Day';
+    }
+
+    if (this.hasFilter('wasteGroupBy')) {
+      query.wasteGroupBy = form.wasteGroupBy;
     }
 
     if (this.hasFilter('productCategory')) {

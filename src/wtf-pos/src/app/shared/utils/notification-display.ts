@@ -5,6 +5,8 @@ export function notificationIcon(kind: string): string {
   switch (kind) {
     case NotificationKinds.StockAlert:
       return 'icon-stock-alert';
+    case NotificationKinds.WasteReview:
+      return 'icon-delete';
     default:
       return 'icon-notifications';
   }

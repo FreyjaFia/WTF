@@ -401,6 +401,18 @@ export class AuthService {
     return this.hasAnyRole(AppRoleGroups.StockMovementsWrite);
   }
 
+  public canWriteStockWaste(): boolean {
+    return this.hasAnyRole(AppRoleGroups.StockWasteWrite);
+  }
+
+  public canReviewStockWaste(): boolean {
+    return this.hasAnyRole(AppRoleGroups.StockWasteReview);
+  }
+
+  public canManageWasteReasons(): boolean {
+    return this.hasAnyRole(AppRoleGroups.WasteReasonsManage);
+  }
+
   public getCurrentRoleLabel(): string {
     const prioritizedRoles: readonly AppRole[] = [
       AppRoles.SuperAdmin,

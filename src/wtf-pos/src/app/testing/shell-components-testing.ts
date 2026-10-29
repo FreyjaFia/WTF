@@ -42,6 +42,9 @@ export function createShellFakes(me: Observable<FakeMe> = of({ firstName: 'Jane'
     canReadStockMovements: can('canReadStockMovements'),
     canReadUsers: can('canReadUsers'),
     canWriteOrders: can('canWriteOrders'),
+    canManageWasteReasons: can('canManageWasteReasons'),
+    canReviewStockWaste: can('canReviewStockWaste'),
+    canWriteStockWaste: can('canWriteStockWaste'),
   };
 
   const imageCache = {

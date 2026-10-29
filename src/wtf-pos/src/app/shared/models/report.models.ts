@@ -15,7 +15,10 @@ export type ReportType =
   | 'customers'
   | 'voids'
   | 'customer-links'
-  | 'stock-status';
+  | 'stock-status'
+  | 'waste';
+
+export type WasteReportGroupBy = 'item' | 'reason' | 'staff' | 'day';
 
 export type ReportSortDirection = 'asc' | 'desc';
 
@@ -29,6 +32,9 @@ export interface ReportQuery {
   subCategoryId?: number;
   staffId?: string;
   splitAddOns?: boolean;
+  wasteGroupBy?: WasteReportGroupBy;
+  itemId?: string;
+  wasteReasonId?: number;
 }
 
 /** What the on-screen table shows, so the downloaded file matches it. */
@@ -114,6 +120,10 @@ export interface DailyCloseReportRowDto {
   detail?: string | null;
   orderCount: number;
   amount: number;
+  quantity?: number | null;
+  unitName?: string | null;
+  disputedCount?: number;
+  disputedQuantity?: number | null;
 }
 
 export interface VoidedOrderReportRowDto {
@@ -173,6 +183,16 @@ export interface StockStatusReportRowDto {
   status: string;
   costPrice?: number | null;
   stockValue: number;
+}
+
+export interface WasteReportRowDto {
+  groupKey: string;
+  label: string;
+  unitName?: string | null;
+  entryCount: number;
+  quantity: number;
+  disputedCount: number;
+  disputedQuantity: number;
 }
 
 export interface MonthlyReportWorkbookStatusDto {

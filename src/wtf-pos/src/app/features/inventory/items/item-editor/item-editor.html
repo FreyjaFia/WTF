@@ -125,6 +125,10 @@
                     }
                   </div>
                 </div>
+                <p class="-mt-2 text-xs text-gray-500">
+                  SKU is your internal item code. Barcode is the scanned code printed on the product or
+                  packaging.
+                </p>
 
                 <div>
                   <label class="mb-2 block text-sm font-semibold text-gray-900" for="itemUnit">
@@ -289,6 +293,28 @@
                       class="input w-full border-transparent bg-gray-50 transition-all focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20"
                     />
                   </div>
+
+                  <div>
+                    <label
+                      class="mb-2 block text-sm font-semibold text-gray-900"
+                      for="wasteApprovalLimit"
+                    >
+                      Waste Approval Limit
+                    </label>
+                    <input
+                      id="wasteApprovalLimit"
+                      type="number"
+                      step="any"
+                      min="0"
+                      formControlName="wasteApprovalLimit"
+                      placeholder="No limit"
+                      class="input w-full border-transparent bg-gray-50 transition-all focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20"
+                    />
+                    <p class="mt-1 text-xs text-gray-500">
+                      Waste above this amount (in the base unit) needs Admin review. Leave empty for
+                      no review.
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -327,14 +353,6 @@
                     class="toggle toggle-neutral toggle-sm"
                     aria-label="Allow sales below zero"
                   />
-                </div>
-
-                <div class="rounded-xl bg-gray-50 px-4 py-3 text-sm text-gray-600">
-                  <p class="font-semibold text-gray-900">SKU vs Barcode</p>
-                  <p class="mt-1 text-xs leading-relaxed">
-                    SKU is your internal item code. Barcode is the scanned code printed on the
-                    product or packaging.
-                  </p>
                 </div>
               </div>
             </div>

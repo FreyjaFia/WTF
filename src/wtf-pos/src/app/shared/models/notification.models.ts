@@ -25,8 +25,10 @@ export interface NotificationListDto extends NotificationCountsDto {
 
 export const NotificationKinds = {
   StockAlert: 'StockAlert',
+  WasteReview: 'WasteReview',
 } as const;
 
 export const NOTIFICATION_KIND_LABELS: Record<string, string> = {
   StockAlert: 'Stock',
+  WasteReview: 'Waste',
 };

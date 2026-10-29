@@ -1,6 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
-import { AlertService, AuthService, InventoryService, ModalStackService } from '@core/services';
+import {
+  AlertService,
+  AuthService,
+  InventoryService,
+  ModalStackService,
+  StockWasteService,
+  WasteReasonService,
+} from '@core/services';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { ItemDto } from '@shared/models';
 import { of, Subject, throwError } from 'rxjs';
@@ -52,19 +59,27 @@ describe('ItemDetailsComponent', () => {
     canWriteItems: ReturnType<typeof vi.fn>;
     canReadStockMovements: ReturnType<typeof vi.fn>;
     canWriteStockMovements: ReturnType<typeof vi.fn>;
+    canWriteStockWaste: ReturnType<typeof vi.fn>;
   };
   let navigate: ReturnType<typeof vi.fn>;
 
-  function create(id: string | null = 'i1') {
+  function create(id: string | null = 'i1', returnUrl: string | null = null) {
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
         { provide: InventoryService, useValue: inventory },
         { provide: AlertService, useValue: alerts },
         { provide: AuthService, useValue: auth },
+        { provide: StockWasteService, useValue: { recordWaste: vi.fn() } },
+        { provide: WasteReasonService, useValue: { getReasons: vi.fn(() => of([])) } },
         {
           provide: ActivatedRoute,
-          useValue: { snapshot: { paramMap: convertToParamMap(id ? { id } : {}) } },
+          useValue: {
+            snapshot: {
+              paramMap: convertToParamMap(id ? { id } : {}),
+              queryParamMap: convertToParamMap(returnUrl ? { returnUrl } : {}),
+            },
+          },
         },
       ],
     });
@@ -94,6 +109,7 @@ describe('ItemDetailsComponent', () => {
       canWriteItems: vi.fn(() => true),
       canReadStockMovements: vi.fn(() => true),
       canWriteStockMovements: vi.fn(() => true),
+      canWriteStockWaste: vi.fn(() => false),
     };
   });
 
@@ -102,6 +118,26 @@ describe('ItemDetailsComponent', () => {
       const { fixture } = create();
       const title = (fixture.nativeElement as HTMLElement).querySelector('app-page-title h1');
       expect(title?.textContent?.trim()).toBe('Coffee Beans');
+    });
+  });
+
+  describe('back arrow', () => {
+    const backHref = (fixture: { nativeElement: unknown }) =>
+      (fixture.nativeElement as HTMLElement).querySelector('a[aria-label="Go back"]')?.getAttribute('href');
+
+    it('goes back to the items list by default', () => {
+      const { fixture } = create();
+      expect(backHref(fixture)).toBe('/inventory/items');
+    });
+
+    it('goes back to the page that sent the person here', () => {
+      const { fixture } = create('i1', '/inventory/waste');
+      expect(backHref(fixture)).toBe('/inventory/waste');
+    });
+
+    it('ignores a return address that leaves the app', () => {
+      const { fixture } = create('i1', '//evil.example');
+      expect(backHref(fixture)).toBe('/inventory/items');
     });
   });
 

@@ -153,6 +153,7 @@ describe('ItemEditorComponent', () => {
         costPrice: 2.5,
         warningQuantity: null,
         criticalQuantity: null,
+        wasteApprovalLimit: null,
         allowNegativeStock: true,
         isActive: true,
       });
@@ -317,6 +318,7 @@ describe('ItemEditorComponent', () => {
         costPrice: 5,
         warningQuantity: 50,
         criticalQuantity: 10,
+        wasteApprovalLimit: null,
         allowNegativeStock: true,
         isActive: true,
       });
@@ -405,6 +407,7 @@ describe('ItemEditorComponent', () => {
         costPrice: 5,
         warningQuantity: 50,
         criticalQuantity: 10,
+        wasteApprovalLimit: null,
         allowNegativeStock: true,
         isActive: true,
       });

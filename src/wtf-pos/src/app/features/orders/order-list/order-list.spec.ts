@@ -203,7 +203,7 @@ describe('OrderList', () => {
         { provide: OrderService, useValue: orderService },
         {
           provide: AuthService,
-          useValue: { canWriteOrders: () => canWrite, canOverrideOrders: () => canOverride },
+          useValue: { canWriteOrders: () => canWrite, canOverrideOrders: () => canOverride, canWriteStockWaste: () => false },
         },
         { provide: AlertService, useValue: alert },
         { provide: ListStateService, useValue: listState },
@@ -1304,7 +1304,7 @@ describe('OrderList', () => {
             { provide: OrderService, useValue: orderService },
             {
               provide: AuthService,
-              useValue: { canWriteOrders: () => false, canOverrideOrders: () => false },
+              useValue: { canWriteOrders: () => false, canOverrideOrders: () => false, canWriteStockWaste: () => false },
             },
             { provide: AlertService, useValue: alert },
             { provide: ListStateService, useValue: listState },

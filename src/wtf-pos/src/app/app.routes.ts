@@ -12,6 +12,7 @@ import { ItemsComponent } from '@features/inventory/items/items';
 import { StockAttentionComponent } from '@features/inventory/stock-attention/stock-attention';
 import { StockCoverageComponent } from '@features/inventory/stock-coverage/stock-coverage';
 import { StockInComponent } from '@features/inventory/stock-in/stock-in';
+import { WasteComponent } from '@features/inventory/waste/waste';
 import { Login } from '@features/login/login';
 import { AuditLogsComponent } from '@features/management/audit-logs/audit-logs';
 import { CustomerDetailsComponent } from '@features/management/customers/customer-details/customer-details';
@@ -33,6 +34,7 @@ import { UserDetailsComponent } from '@features/management/users/user-details/us
 import { UserEditorComponent } from '@features/management/users/user-editor/user-editor';
 import { UserListComponent } from '@features/management/users/user-list/user-list';
 import { UsersComponent } from '@features/management/users/users';
+import { WasteReasonsComponent } from '@features/management/waste-reasons/waste-reasons';
 import { NotFoundComponent } from '@features/not-found/not-found';
 import { NotificationsComponent } from '@features/notifications/notifications';
 import { OrderDetails } from '@features/orders/order-details/order-details';
@@ -159,6 +161,12 @@ export const routes: Routes = [
           {
             path: 'attention',
             component: StockAttentionComponent,
+            canActivate: [roleGuard],
+            data: { roles: AppRoleGroups.StockMovementsRead },
+          },
+          {
+            path: 'waste',
+            component: WasteComponent,
             canActivate: [roleGuard],
             data: { roles: AppRoleGroups.StockMovementsRead },
           },
@@ -366,6 +374,12 @@ export const routes: Routes = [
             component: AuditLogsComponent,
             canActivate: [roleGuard],
             data: { roles: AppRoleGroups.AuditRead },
+          },
+          {
+            path: 'waste-reasons',
+            component: WasteReasonsComponent,
+            canActivate: [roleGuard],
+            data: { roles: AppRoleGroups.WasteReasonsManage },
           },
         ],
       },

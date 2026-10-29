@@ -23,6 +23,7 @@ const ALL_TYPES = [
   'voids',
   'customer-links',
   'stock-status',
+  'waste',
   'category-sales',
 ];
 
@@ -214,6 +215,26 @@ describe('report definitions', () => {
     it('formats decimals with two places', () => {
       expect(formatDecimal(1234.5)).toBe('1,234.50');
       expect(formatDecimal(0)).toBe('0.00');
+    });
+  });
+
+  describe('waste columns', () => {
+    const context = { groupBy: 'Day' } as never;
+    const textOf = (type: 'waste' | 'daily-close', key: string, row: ReportRow): string => {
+      const column = findReportDefinition(type).columns.find((c) => c.key === key)!;
+      return column.label!(row, context);
+    };
+
+    it('shows a dash for a waste quantity that mixes units', () => {
+      expect(textOf('waste', 'quantity', { quantity: 1316, unitName: null })).toBe('-');
+      expect(textOf('waste', 'quantity', { quantity: 485, unitName: 'ml' })).toBe('485.00 ml');
+    });
+
+    it('shows waste quantity instead of 0.00 in the Daily Close amount column', () => {
+      expect(
+        textOf('daily-close', 'amount', { section: 'Waste', quantity: 261, unitName: 'ml', amount: 0 }),
+      ).toBe('261.00 ml');
+      expect(textOf('daily-close', 'amount', { section: 'Sales', amount: 570 })).toBe('570.00');
     });
   });
 });

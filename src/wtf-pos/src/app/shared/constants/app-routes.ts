@@ -16,6 +16,7 @@ export const AppRoutes = {
   InventoryStockIn: '/inventory/stock-in',
   InventoryCoverage: '/inventory/coverage',
   InventoryAttention: '/inventory/attention',
+  InventoryWaste: '/inventory/waste',
   Notifications: '/notifications',
   ManagementRoot: '/management',
   ManagementProducts: '/management/products',
@@ -47,5 +48,6 @@ export const AppRoutes = {
     `/management/promotions/discounted-products/${promoId}/edit`,
   ManagementReports: '/management/reports',
   ManagementAuditLogs: '/management/audit-logs',
+  ManagementWasteReasons: '/management/waste-reasons',
   ManagementSchemaScripts: '/management/schema-scripts',
 } as const;

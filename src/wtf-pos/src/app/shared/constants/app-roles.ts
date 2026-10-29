@@ -41,7 +41,7 @@ export const AppRoleGroups = {
   OrderLinksWrite: [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.Cashier],
   CustomersRead: [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer],
   CustomersWrite: [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.Cashier],
-  ItemsRead: [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.ItemManager],
+  ItemsRead: [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.ItemManager, AppRoles.StockManager],
   ItemsWrite: [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.ItemManager],
   StockMovementsRead: [
     AppRoles.SuperAdmin,
@@ -50,6 +50,21 @@ export const AppRoleGroups = {
     AppRoles.StockManager,
   ],
   StockMovementsWrite: [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.StockManager],
+  StockWasteWrite: [
+    AppRoles.SuperAdmin,
+    AppRoles.Admin,
+    AppRoles.StockManager,
+    AppRoles.Cashier,
+  ],
+  StockWasteReview: [AppRoles.SuperAdmin, AppRoles.Admin],
+  WasteReasonsManage: [AppRoles.SuperAdmin, AppRoles.Admin],
+  WasteReasonsRead: [
+    AppRoles.SuperAdmin,
+    AppRoles.Admin,
+    AppRoles.AdminViewer,
+    AppRoles.StockManager,
+    AppRoles.Cashier,
+  ],
 } as const satisfies Record<string, readonly AppRole[]>;
 
 export const AppRoleLabels: Record<AppRole, string> = {

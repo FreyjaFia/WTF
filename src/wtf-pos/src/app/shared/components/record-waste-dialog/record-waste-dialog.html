@@ -1,0 +1,91 @@
+<app-confirm-dialog
+  variant="danger"
+  icon="icon-delete"
+  heading="Record Waste"
+  confirmLabel="Record Waste"
+  busyLabel="Saving..."
+  [isBusy]="isBusy()"
+  (confirmed)="submit()"
+  (cancelled)="cancelled.emit()"
+>
+  Stock that left without a sale from
+  <span class="font-medium wrap-break-word text-gray-700">{{ item().name }}</span>.
+  <div dialogExtra class="mt-4 space-y-3 text-left" [formGroup]="form">
+    <div>
+      <label for="waste-quantity" class="mb-1 block text-xs font-semibold text-gray-500">
+        Quantity wasted ({{ unit() }})
+      </label>
+      <input
+        id="waste-quantity"
+        type="number"
+        step="any"
+        min="0"
+        inputmode="decimal"
+        class="input input-bordered w-full outline-transparent"
+        formControlName="quantity"
+      />
+      <p class="mt-1 text-xs text-gray-500" data-testid="waste-balance">
+        Now {{ item().currentQuantity }} {{ unit() }}
+        @if (balanceAfter() !== null) {
+          <span [class]="goesBelowZero() ? 'font-semibold text-red-600' : 'font-semibold text-gray-700'">
+            &rarr; after {{ balanceAfter() }} {{ unit() }}
+          </span>
+        }
+      </p>
+    </div>
+
+    <div>
+      <label for="waste-reason" class="mb-1 block text-xs font-semibold text-gray-500">Reason</label>
+      <select
+        id="waste-reason"
+        class="select select-bordered w-full outline-transparent"
+        formControlName="reasonId"
+        [attr.aria-busy]="isLoadingReasons()"
+      >
+        <option value="" disabled>{{ isLoadingReasons() ? 'Loading reasons...' : 'Choose a reason' }}</option>
+        @for (reason of reasons(); track reason.id) {
+          <option [value]="'' + reason.id">{{ reason.name }}</option>
+        }
+      </select>
+    </div>
+
+    <div>
+      <label for="waste-notes" class="mb-1 block text-xs font-semibold text-gray-500">
+        Note {{ selectedReason()?.requiresNote ? '(required)' : '(optional)' }}
+      </label>
+      <textarea
+        id="waste-notes"
+        class="textarea textarea-bordered w-full outline-transparent"
+        rows="2"
+        maxlength="500"
+        formControlName="notes"
+      ></textarea>
+    </div>
+
+    @if (isBlocked()) {
+      <p class="rounded-lg bg-red-50 p-2 text-xs text-red-700" data-testid="waste-blocked">
+        This item does not allow its balance below zero, so the waste cannot be more than what is in stock.
+      </p>
+    } @else if (goesBelowZero()) {
+      <p class="rounded-lg bg-amber-50 p-2 text-xs text-amber-800" data-testid="waste-below-zero">
+        The balance will go below zero. Count the item soon.
+      </p>
+    }
+
+    @if (needsReview()) {
+      <p class="rounded-lg bg-amber-50 p-2 text-xs text-amber-800" data-testid="waste-needs-review">
+        This is above the item's approval limit ({{ item().wasteApprovalLimit }} {{ unit() }}), so it will be sent
+        for review. The stock is taken now.
+      </p>
+    } @else if (item().wasteApprovalLimit) {
+      <p class="text-xs text-gray-500" data-testid="waste-limit-hint">
+        Waste above {{ item().wasteApprovalLimit }} {{ unit() }} is sent to an Admin for review. The stock is taken
+        right away.
+      </p>
+    }
+
+    @if (error(); as message) {
+      <p class="text-sm text-red-600" role="alert">{{ message }}</p>
+    }
+  </div>
+</app-confirm-dialog>

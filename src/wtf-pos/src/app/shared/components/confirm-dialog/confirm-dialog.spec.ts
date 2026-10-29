@@ -17,7 +17,7 @@ const ORIGINAL_DELETE_ITEM = `@if (showDeleteModal() && itemToDelete() && canWri
   >
     <div
       role="document"
-      class="mx-4 w-full max-w-sm app-dialog animate-[modal-pop_0.2s_ease-out] rounded-2xl bg-surface p-6 shadow-2xl"
+      class="mx-4 max-h-[90dvh] w-full max-w-sm overflow-y-auto app-dialog animate-[modal-pop_0.2s_ease-out] rounded-2xl bg-surface p-6 shadow-2xl"
       (click)="$event.stopPropagation()"
       (keydown)="$event.stopPropagation()"
     >
@@ -73,7 +73,7 @@ const ORIGINAL_DELETE_CUSTOMER = `@if (showDeleteModal() && customerToDelete()) 
   >
     <div
       role="document"
-      class="mx-4 w-full max-w-sm app-dialog animate-[modal-pop_0.2s_ease-out] rounded-2xl bg-surface p-6 shadow-2xl"
+      class="mx-4 max-h-[90dvh] w-full max-w-sm overflow-y-auto app-dialog animate-[modal-pop_0.2s_ease-out] rounded-2xl bg-surface p-6 shadow-2xl"
       (click)="$event.stopPropagation()"
       (keydown)="$event.stopPropagation()"
     >
@@ -133,7 +133,7 @@ const ORIGINAL_DISCARD = `@if (showDiscardModal()) {
   >
     <div
       role="document"
-      class="mx-4 w-full max-w-sm app-dialog animate-[modal-pop_0.2s_ease-out] rounded-2xl bg-surface p-6 shadow-2xl"
+      class="mx-4 max-h-[90dvh] w-full max-w-sm overflow-y-auto app-dialog animate-[modal-pop_0.2s_ease-out] rounded-2xl bg-surface p-6 shadow-2xl"
       (click)="$event.stopPropagation()"
       (keydown)="$event.stopPropagation()"
     >
@@ -182,7 +182,7 @@ const ORIGINAL_EXIT = `@if (visible()) {
   >
     <div
       role="document"
-      class="mx-4 w-full max-w-sm app-dialog animate-[modal-pop_0.2s_ease-out] rounded-2xl bg-surface p-6 shadow-2xl"
+      class="mx-4 max-h-[90dvh] w-full max-w-sm overflow-y-auto app-dialog animate-[modal-pop_0.2s_ease-out] rounded-2xl bg-surface p-6 shadow-2xl"
       (click)="$event.stopPropagation()"
       (keydown)="$event.stopPropagation()"
     >
@@ -233,7 +233,7 @@ const ORIGINAL_RESTORE = `<div
 >
   <div
     role="document"
-    class="mx-4 w-full max-w-sm app-dialog animate-[modal-pop_0.2s_ease-out] rounded-2xl bg-surface p-6 shadow-2xl"
+    class="mx-4 max-h-[90dvh] w-full max-w-sm overflow-y-auto app-dialog animate-[modal-pop_0.2s_ease-out] rounded-2xl bg-surface p-6 shadow-2xl"
     (click)="$event.stopPropagation()"
     (keydown)="$event.stopPropagation()"
   >
@@ -598,7 +598,7 @@ const ORIGINAL_ABANDON = `@if (showAbandonModal()) {
   >
     <div
       role="document"
-      class="mx-4 w-full max-w-sm app-dialog animate-[modal-pop_0.2s_ease-out] rounded-2xl bg-surface p-6 shadow-2xl"
+      class="mx-4 max-h-[90dvh] w-full max-w-sm overflow-y-auto app-dialog animate-[modal-pop_0.2s_ease-out] rounded-2xl bg-surface p-6 shadow-2xl"
       (click)="$event.stopPropagation()"
       (keydown)="$event.stopPropagation()"
     >
@@ -653,7 +653,7 @@ const ORIGINAL_REFUND = `@if (showRefundModal() && order(); as currentOrder) {
   >
     <div
       role="document"
-      class="mx-4 w-full max-w-sm app-dialog animate-[modal-pop_0.2s_ease-out] rounded-2xl bg-surface p-6 shadow-2xl"
+      class="mx-4 max-h-[90dvh] w-full max-w-sm overflow-y-auto app-dialog animate-[modal-pop_0.2s_ease-out] rounded-2xl bg-surface p-6 shadow-2xl"
       (click)="$event.stopPropagation()"
       (keydown)="$event.stopPropagation()"
     >

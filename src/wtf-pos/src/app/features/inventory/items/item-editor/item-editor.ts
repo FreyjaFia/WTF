@@ -103,6 +103,7 @@ export class ItemEditorComponent implements OnInit {
     costPrice: new FormControl<number | null>(null, [Validators.min(0)]),
     warningQuantity: new FormControl<number | null>(null, [Validators.min(0)]),
     criticalQuantity: new FormControl<number | null>(null, [Validators.min(0)]),
+    wasteApprovalLimit: new FormControl<number | null>(null, [Validators.min(0)]),
     allowNegativeStock: new FormControl(true, { nonNullable: true }),
     isActive: new FormControl(true, { nonNullable: true }),
   });
@@ -149,6 +150,7 @@ export class ItemEditorComponent implements OnInit {
           costPrice: value.costPrice,
           warningQuantity: value.warningQuantity,
           criticalQuantity: value.criticalQuantity,
+          wasteApprovalLimit: this.toOptionalNumber(value.wasteApprovalLimit),
           allowNegativeStock: value.allowNegativeStock,
           isActive: value.isActive,
         })
@@ -171,6 +173,7 @@ export class ItemEditorComponent implements OnInit {
         costPrice: value.costPrice,
         warningQuantity: value.warningQuantity,
         criticalQuantity: value.criticalQuantity,
+        wasteApprovalLimit: this.toOptionalNumber(value.wasteApprovalLimit),
         allowNegativeStock: value.allowNegativeStock,
         isActive: value.isActive,
       })
@@ -264,6 +267,7 @@ export class ItemEditorComponent implements OnInit {
             costPrice: item.costPrice ?? null,
             warningQuantity: item.warningQuantity ?? null,
             criticalQuantity: item.criticalQuantity ?? null,
+            wasteApprovalLimit: item.wasteApprovalLimit ?? null,
             allowNegativeStock: item.allowNegativeStock,
             isActive: item.isActive,
           },
@@ -394,9 +398,19 @@ export class ItemEditorComponent implements OnInit {
       costPrice: 'Cost price',
       warningQuantity: 'Warning level',
       criticalQuantity: 'Critical level',
+      wasteApprovalLimit: 'Waste approval limit',
     };
 
     return labels[controlName] || controlName;
+  }
+
+  private toOptionalNumber(value: number | string | null): number | null {
+    if (value === null || value === '') {
+      return null;
+    }
+
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
   }
 
   protected openPriceHistory(): void {

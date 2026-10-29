@@ -100,7 +100,7 @@ describe('NotificationsComponent', () => {
   it('filters by kind and by unread only, reloading from the first page', () => {
     const { el, service, fixture } = setup({ items: [row('a')], unread: 1 });
     const filters = [...el.querySelectorAll('[data-testid="kind-filter"]')] as HTMLButtonElement[];
-    expect(filters.map((f) => f.textContent?.replace(/\s+/g, ' ').trim())).toEqual(['All 1', 'Stock 1']);
+    expect(filters.map((f) => f.textContent?.replace(/\s+/g, ' ').trim())).toEqual(['All 1', 'Stock 1', 'Waste']);
 
     filters[1].click();
     fixture.detectChanges();

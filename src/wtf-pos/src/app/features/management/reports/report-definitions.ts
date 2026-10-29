@@ -15,6 +15,7 @@ import {
   StaffPerformanceReportRowDto,
   StockStatusReportRowDto,
   VoidedOrderReportRowDto,
+  WasteReportRowDto,
 } from '@shared/models';
 
 export type ReportRow = Record<string, unknown>;
@@ -30,7 +31,7 @@ export type ColumnFormat =
 
 export type ReportGroup = 'Sales' | 'Products' | 'Staff' | 'Customers' | 'Operations' | 'Inventory';
 
-export type ReportFilterKind = 'groupBy' | 'productCategory' | 'staff' | 'splitAddOns';
+export type ReportFilterKind = 'groupBy' | 'wasteGroupBy' | 'productCategory' | 'staff' | 'splitAddOns';
 
 export interface ReportContext {
   groupBy: ReportGroupBy;
@@ -258,8 +259,21 @@ const dailyClose: ReportDefinition = {
     { key: 'section', header: 'Section', format: 'text' },
     { key: 'label', header: 'Item', format: 'text' },
     { key: 'detail', header: 'Details', format: 'text' },
-    { key: 'orderCount', header: 'Orders', format: 'integer', align: 'end' },
-    { key: 'amount', header: 'Amount', format: 'money', align: 'end' },
+    { key: 'orderCount', header: 'Orders / Entries', format: 'integer', align: 'end' },
+    {
+      key: 'amount',
+      header: 'Amount',
+      format: 'money',
+      align: 'end',
+      label: (row) => {
+        const unit = String(row['unitName'] ?? '');
+        if (row['section'] === 'Waste' && row['quantity'] != null && unit) {
+          return `${formatDecimal(Number(row['quantity']))} ${unit}`;
+        }
+
+        return formatDecimal(Number(row['amount'] ?? 0));
+      },
+    },
   ],
   defaultSort: null,
   filters: [],
@@ -713,6 +727,40 @@ const stockStatus: ReportDefinition = {
   },
 };
 
+const waste: ReportDefinition = {
+  type: 'waste',
+  title: 'Waste',
+  description: 'Stock that left without a sale, by item, reason, staff or day',
+  group: 'Inventory',
+  icon: 'icon-delete',
+  columns: [
+    { key: 'label', header: 'Group', format: 'text' },
+    { key: 'entryCount', header: 'Entries', format: 'integer', align: 'end' },
+    {
+      key: 'quantity',
+      header: 'Quantity',
+      format: 'decimal',
+      align: 'end',
+      label: (row) =>
+        row['unitName']
+          ? `${formatDecimal(Number(row['quantity']))} ${String(row['unitName'])}`
+          : '-',
+    },
+    { key: 'disputedCount', header: 'Disputed', format: 'integer', align: 'end', lowPriority: true },
+  ],
+  defaultSort: { key: 'quantity', direction: 'desc' },
+  filters: ['wasteGroupBy'],
+  usesDateRange: true,
+  usesSource: false,
+  totals: (all) => {
+    const rows = rowsOf<WasteReportRowDto>(all);
+    return [
+      { label: 'Entries', value: sum(rows, (row) => row.entryCount), format: 'integer' },
+      { label: 'Disputed', value: sum(rows, (row) => row.disputedCount), format: 'integer' },
+    ];
+  },
+};
+
 export function formatDecimal(value: number): string {
   return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
@@ -809,6 +857,7 @@ export const REPORT_DEFINITIONS: readonly ReportDefinition[] = [
   voids,
   customerLinks,
   stockStatus,
+  waste,
 ].map(withTotals);
 
 export function findReportDefinition(type: ReportType): ReportDefinition {

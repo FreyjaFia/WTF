@@ -7,14 +7,26 @@
         <h1 class="shrink-0 text-xl font-bold text-gray-900 sm:text-2xl">Orders</h1>
         <p class="text-xs text-gray-500 sm:text-sm">Manage your store transactions.</p>
       </div>
-      <a
-        draggable="false"
-        class="app-btn app-btn-primary app-btn-sm"
-        [routerLink]="routes.OrdersEditor"
-      >
-        <app-icon name="icon-plus" [class]="'h-4 w-4'" />
-        New Order
-      </a>
+      <div class="flex min-w-0 flex-wrap items-center justify-end gap-2">
+        @if (canRecordWaste() && isOnline()) {
+          <button
+            type="button"
+            class="app-btn app-btn-secondary app-btn-sm"
+            (click)="isWasteSheetOpen.set(true)"
+          >
+            <app-icon name="icon-delete" [class]="'h-4 w-4'" />
+            Record Waste
+          </button>
+        }
+        <a
+          draggable="false"
+          class="app-btn app-btn-primary app-btn-sm"
+          [routerLink]="routes.OrdersEditor"
+        >
+          <app-icon name="icon-plus" [class]="'h-4 w-4'" />
+          New Order
+        </a>
+      </div>
     </div>
 
     <!-- Tier 2 -->
@@ -775,4 +787,8 @@
     (confirmed)="confirmRejectHeld($event)"
     (cancelled)="cancelRejectHeld()"
   />
+}
+
+@if (isWasteSheetOpen()) {
+  <app-pos-waste-sheet (closed)="isWasteSheetOpen.set(false)" />
 }

@@ -6,7 +6,7 @@ import {
   RouterOutlet,
   isActive as routerIsActive,
 } from '@angular/router';
-import { AuthService, StockAttentionService } from '@core/services';
+import { AuthService, StockAttentionService, StockWasteService } from '@core/services';
 import { AppRoutes } from '@shared/constants/app-routes';
 
 interface InventoryTab {
@@ -36,6 +36,7 @@ export class InventoryComponent {
   private readonly router = inject(Router);
   private readonly authService = inject(AuthService);
   private readonly attention = inject(StockAttentionService);
+  private readonly stockWaste = inject(StockWasteService);
   private readonly destroyRef = inject(DestroyRef);
   protected readonly inventoryTabs: readonly InventoryTab[] = [
     {
@@ -62,6 +63,15 @@ export class InventoryComponent {
       urgent: () => this.attention.urgentCount() > 0,
     },
     {
+      label: 'Waste',
+      route: 'waste',
+      path: AppRoutes.InventoryWaste,
+      ariaLabel: 'Waste',
+      canShow: () => this.canReadStockMovements(),
+      badge: () => (this.authService.canReviewStockWaste() ? this.stockWaste.pendingCount() : 0),
+      urgent: () => false,
+    },
+    {
       label: 'Coverage',
       route: 'coverage',
       path: AppRoutes.InventoryCoverage,
@@ -75,6 +85,11 @@ export class InventoryComponent {
     if (this.authService.canReadStockMovements()) {
       this.attention.start();
       this.destroyRef.onDestroy(() => this.attention.stop());
+    }
+
+    if (this.authService.canReviewStockWaste()) {
+      this.stockWaste.startPendingCount();
+      this.destroyRef.onDestroy(() => this.stockWaste.stopPendingCount());
     }
 
     effect(() => {

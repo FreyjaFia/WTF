@@ -74,10 +74,14 @@ describe('app roles vs the API policies', () => {
     OrderLinksWrite: ['SuperAdmin', 'Admin', 'Cashier'],
     CustomersRead: ['SuperAdmin', 'Admin', 'AdminViewer', 'Cashier'],
     CustomersWrite: ['SuperAdmin', 'Admin', 'Cashier'],
-    ItemsRead: ['SuperAdmin', 'Admin', 'AdminViewer', 'ItemManager'],
+    ItemsRead: ['SuperAdmin', 'Admin', 'AdminViewer', 'ItemManager', 'StockManager'],
     ItemsWrite: ['SuperAdmin', 'Admin', 'ItemManager'],
     StockMovementsRead: ['SuperAdmin', 'Admin', 'AdminViewer', 'StockManager'],
     StockMovementsWrite: ['SuperAdmin', 'Admin', 'StockManager'],
+    StockWasteWrite: ['SuperAdmin', 'Admin', 'StockManager', 'Cashier'],
+    StockWasteReview: ['SuperAdmin', 'Admin'],
+    WasteReasonsManage: ['SuperAdmin', 'Admin'],
+    WasteReasonsRead: ['SuperAdmin', 'Admin', 'AdminViewer', 'StockManager', 'Cashier'],
   };
 
   // UI-only groups have no API policy because the API has no matching area to protect.

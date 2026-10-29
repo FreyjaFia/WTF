@@ -1,0 +1,99 @@
+<div
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="pos-waste-sheet-title"
+  class="fixed inset-0 z-50 flex items-end justify-center app-backdrop bg-black/30 backdrop-blur-md sm:items-center"
+  (click)="close()"
+  (keydown.escape)="close()"
+  tabindex="0"
+>
+  <div
+    role="document"
+    class="flex max-h-[90dvh] w-full min-w-0 flex-col app-dialog rounded-t-2xl bg-surface shadow-2xl sm:mx-4 sm:max-w-2xl sm:rounded-2xl"
+    (click)="$event.stopPropagation()"
+    (keydown)="$event.stopPropagation()"
+  >
+    <div class="flex items-center gap-3 border-b border-gray-100 px-4 py-3">
+      <app-icon name="icon-delete" class="h-5 w-5 shrink-0 text-error" />
+      <div class="min-w-0 flex-1">
+        <h2 id="pos-waste-sheet-title" class="text-base font-semibold text-gray-900">Record Waste</h2>
+        <p class="text-xs text-gray-500">Pick the item that left without a sale.</p>
+      </div>
+      <button
+        type="button"
+        class="app-btn app-btn-icon"
+        aria-label="Close"
+        [disabled]="isSaving()"
+        (click)="close()"
+      >
+        <app-icon name="icon-close" class="h-5 w-5" />
+      </button>
+    </div>
+
+    <div class="px-4 pt-3">
+      <div
+        class="flex w-full min-w-0 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-surface focus-within:ring-2 focus-within:ring-gray-200"
+      >
+        <app-search-input
+          placeholder="Search items"
+          ariaLabel="Search items"
+          [value]="searchTerm()"
+          (valueChange)="searchTerm.set($event)"
+        />
+      </div>
+      @if (!isOnline()) {
+        <div role="status" class="mt-2 flex items-start gap-2 rounded-lg bg-warning/10 px-3 py-2 text-xs text-gray-700">
+          <app-icon name="icon-warning" class="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+          <span>Recording waste needs a connection. It is turned off while you are offline.</span>
+        </div>
+      }
+    </div>
+
+    <div class="min-h-0 flex-1 overflow-y-auto px-4 py-3">
+      @if (isLoading()) {
+        <div class="flex justify-center py-10">
+          <span class="loading loading-md loading-spinner text-gray-400"></span>
+        </div>
+      } @else if (loadError()) {
+        <div class="flex flex-col items-center gap-3 py-8 text-center">
+          <p class="text-sm text-error">{{ loadError() }}</p>
+          <button type="button" class="app-btn app-btn-secondary app-btn-sm" (click)="loadItems()">
+            Try Again
+          </button>
+        </div>
+      } @else if (filteredItems().length === 0) {
+        <p class="py-8 text-center text-sm text-gray-500">No items found.</p>
+      } @else {
+        <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          @for (item of filteredItems(); track item.id) {
+            <button
+              type="button"
+              class="flex min-w-0 flex-col items-start gap-1 rounded-xl border border-gray-200 bg-surface p-3 text-left transition hover:border-gray-300 hover:shadow-sm focus-visible:outline-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-gray-200 disabled:hover:shadow-none"
+              [disabled]="!isOnline()"
+              (click)="selectItem(item)"
+            >
+              <span class="w-full text-sm font-medium wrap-break-word text-gray-900">{{ item.name }}</span>
+              <span
+                class="text-xs"
+                [class.text-error]="item.currentQuantity <= 0"
+                [class.text-gray-500]="item.currentQuantity > 0"
+              >
+                {{ item.currentQuantity }} {{ unitOf(item) }} in stock
+              </span>
+            </button>
+          }
+        </div>
+      }
+    </div>
+  </div>
+</div>
+
+@if (selectedItem(); as item) {
+  <app-record-waste-dialog
+    [item]="item"
+    [source]="source"
+    [isBusy]="isSaving()"
+    (confirmed)="confirmWaste($event)"
+    (cancelled)="cancelWaste()"
+  />
+}

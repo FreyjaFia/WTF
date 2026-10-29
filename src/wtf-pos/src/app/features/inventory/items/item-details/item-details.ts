@@ -1,13 +1,21 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { AlertService, AuthService, InventoryService, ModalStackService } from '@core/services';
+import {
+  AlertService,
+  AuthService,
+  InventoryService,
+  ModalStackService,
+  StockWasteService,
+} from '@core/services';
 import {
   BadgeComponent,
   IconComponent,
   PageTitleComponent,
   PriceHistoryDrawerComponent,
+  RecordWasteDialogComponent,
   StockAdjustDialogComponent,
+  WasteItem,
 } from '@shared/components';
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import { AppRoutes } from '@shared/constants/app-routes';
@@ -16,6 +24,7 @@ import {
   AdjustItemStockDto,
   ItemDto,
   ItemPriceHistoryDto,
+  RecordStockWasteDto,
   StockMovementDto,
 } from '@shared/models';
 
@@ -28,6 +37,7 @@ const MOVEMENT_TYPE_LABELS: Record<string, string> = {
   Sale: 'Sale',
   SaleVoid: 'Sale returned',
   Waste: 'Waste',
+  WasteReversed: 'Waste reversed',
   Adjustment: 'Adjustment',
 };
 
@@ -42,6 +52,7 @@ const MOVEMENT_TYPE_LABELS: Record<string, string> = {
     PriceHistoryDrawerComponent,
     ConfirmDialogComponent,
     StockAdjustDialogComponent,
+    RecordWasteDialogComponent,
   ],
   templateUrl: './item-details.html',
   host: { class: 'block h-full' },
@@ -53,7 +64,9 @@ export class ItemDetailsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly alertService = inject(AlertService);
   private readonly modalStack = inject(ModalStackService);
+  private readonly stockWasteService = inject(StockWasteService);
   protected readonly routes = AppRoutes;
+  protected readonly backLink: string = this.resolveBackLink();
 
   protected readonly item = signal<ItemDto | null>(null);
   protected readonly isLoading = signal(false);
@@ -69,6 +82,23 @@ export class ItemDetailsComponent implements OnInit {
   protected readonly isLoadingMovements = signal(false);
   protected readonly showAdjustModal = signal(false);
   protected readonly isAdjusting = signal(false);
+  protected readonly showWasteModal = signal(false);
+  protected readonly isRecordingWaste = signal(false);
+  protected readonly wasteItem = computed<WasteItem | null>(() => {
+    const item = this.item();
+    if (!item) {
+      return null;
+    }
+
+    return {
+      id: item.id,
+      name: item.name,
+      unitName: item.unitName,
+      currentQuantity: item.currentQuantity,
+      allowNegativeStock: item.allowNegativeStock,
+      wasteApprovalLimit: item.wasteApprovalLimit ?? null,
+    };
+  });
   protected readonly movementTypes = Object.keys(MOVEMENT_TYPE_LABELS);
   protected readonly activeProductLinks = computed(() =>
     (this.item()?.productLinks ?? []).filter((link) => link.isActive),
@@ -244,6 +274,54 @@ export class ItemDetailsComponent implements OnInit {
     return this.authService.canWriteStockMovements();
   }
 
+  protected canRecordWaste(): boolean {
+    return this.authService.canWriteStockWaste();
+  }
+
+  protected recordWaste(): void {
+    if (!this.canRecordWaste()) {
+      this.alertService.errorUnauthorized();
+      return;
+    }
+
+    this.showWasteModal.set(true);
+    this.modalStackId = this.modalStack.push(() => this.cancelWaste());
+  }
+
+  protected cancelWaste(): void {
+    if (this.isRecordingWaste()) {
+      return;
+    }
+
+    this.showWasteModal.set(false);
+    this.removeFromStack();
+  }
+
+  protected confirmWaste(payload: RecordStockWasteDto): void {
+    if (this.isRecordingWaste()) {
+      return;
+    }
+
+    this.isRecordingWaste.set(true);
+    this.stockWasteService.recordWaste(payload).subscribe({
+      next: (waste) => {
+        this.isRecordingWaste.set(false);
+        this.showWasteModal.set(false);
+        this.removeFromStack();
+        this.alertService.success(
+          waste.status === 'PendingReview'
+            ? 'Waste recorded. It needs Admin review.'
+            : 'Waste recorded.',
+        );
+        this.loadItem(payload.itemId);
+      },
+      error: (err) => {
+        this.isRecordingWaste.set(false);
+        this.alertService.error(err.message);
+      },
+    });
+  }
+
   protected movementLabel(type: string): string {
     return MOVEMENT_TYPE_LABELS[type] ?? type;
   }
@@ -296,6 +374,16 @@ export class ItemDetailsComponent implements OnInit {
         this.alertService.error(err.message);
       },
     });
+  }
+
+  private resolveBackLink(): string {
+    const returnUrl = this.route.snapshot.queryParamMap?.get('returnUrl');
+    // Only in-app paths, so a crafted link cannot send the back arrow elsewhere
+    if (returnUrl && returnUrl.startsWith('/') && !returnUrl.startsWith('//')) {
+      return returnUrl;
+    }
+
+    return AppRoutes.InventoryItems;
   }
 
   protected openPriceHistory(): void {

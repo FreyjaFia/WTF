@@ -1,0 +1,187 @@
+<div class="flex h-full flex-col pt-4 md:pt-0">
+  <div class="mb-4 flex shrink-0 items-start justify-between gap-3 sm:mb-6">
+    <div class="min-w-0">
+      <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Waste Reasons</h1>
+      <p class="text-xs text-gray-500 sm:text-sm">
+        The reasons staff choose when they record waste
+      </p>
+    </div>
+    <div class="flex shrink-0 items-center gap-2">
+      @if (!isAndroid) {
+        <button
+          class="app-btn app-btn-ghost p-2"
+          [class.opacity-70]="isRefreshing()"
+          type="button"
+          (click)="refresh()"
+          [disabled]="isRefreshing()"
+          aria-label="Refresh waste reasons"
+        >
+          <app-icon
+            name="icon-refresh"
+            [class]="isRefreshing() ? 'h-5 w-5 animate-spin text-gray-600' : 'h-5 w-5 text-gray-600'"
+            [fill]="'currentColor'"
+          />
+        </button>
+      }
+      <button
+        type="button"
+        class="app-btn app-btn-primary app-btn-sm"
+        data-testid="add-waste-reason"
+        (click)="openAdd()"
+      >
+        Add Reason
+      </button>
+    </div>
+  </div>
+
+  @if (isLoading()) {
+    <div class="flex justify-center py-8">
+      <span class="loading loading-spinner loading-lg"></span>
+    </div>
+  } @else {
+    <app-pull-to-refresh [refreshing]="isRefreshing()" (refreshTriggered)="refresh()">
+      @if (sortedReasons().length === 0) {
+        <div class="rounded-lg bg-surface p-8 text-center shadow-lg">
+          <p class="text-sm text-gray-500">No waste reasons yet.</p>
+        </div>
+      } @else {
+        <ul class="space-y-2 pb-4" data-testid="waste-reason-list">
+          @for (reason of sortedReasons(); track reason.id) {
+            <li
+              class="flex flex-col gap-3 rounded-lg bg-surface p-4 shadow sm:flex-row sm:items-center"
+              [class.opacity-70]="!reason.isActive"
+            >
+              <div class="min-w-0 flex-1">
+                <p class="font-semibold wrap-break-word text-gray-900">{{ reason.name }}</p>
+                <div class="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-gray-500">
+                  <app-badge [variant]="reason.isActive ? 'success' : 'default'">
+                    {{ reason.isActive ? 'Active' : 'Inactive' }}
+                  </app-badge>
+                  @if (reason.isSystem) {
+                    <app-badge variant="info">Built-in</app-badge>
+                  }
+                  @if (reason.requiresNote) {
+                    <app-badge variant="amber">Note required</app-badge>
+                  }
+                  <span>Order {{ reason.sortOrder }}</span>
+                </div>
+              </div>
+              <div class="flex shrink-0 flex-wrap gap-2">
+                <button
+                  type="button"
+                  class="app-btn app-btn-secondary app-btn-sm"
+                  (click)="openEdit(reason)"
+                >
+                  Edit
+                </button>
+                @if (reason.isActive && !reason.isSystem) {
+                  <button
+                    type="button"
+                    class="app-btn app-btn-outline-danger app-btn-sm"
+                    (click)="openDeactivate(reason)"
+                  >
+                    Turn Off
+                  </button>
+                }
+                @if (!reason.isActive) {
+                  <button
+                    type="button"
+                    class="app-btn app-btn-accent-outline app-btn-sm"
+                    (click)="openRestore(reason)"
+                  >
+                    Restore
+                  </button>
+                }
+              </div>
+            </li>
+          }
+        </ul>
+      }
+    </app-pull-to-refresh>
+  }
+</div>
+
+@if (dialog() === 'edit') {
+  <app-confirm-dialog
+    variant="success"
+    icon="icon-edit"
+    [heading]="selected() ? 'Edit Waste Reason' : 'Add Waste Reason'"
+    [confirmLabel]="selected() ? 'Save' : 'Add Reason'"
+    busyLabel="Saving..."
+    [isBusy]="isSaving()"
+    (confirmed)="saveReason()"
+    (cancelled)="closeDialog()"
+  >
+    Staff pick this reason when stock leaves without a sale.
+    <div dialogExtra class="mt-4 space-y-3 text-left" [formGroup]="form">
+      <div>
+        <label for="waste-reason-name" class="mb-1 block text-xs font-semibold text-gray-500">
+          Name
+        </label>
+        <input
+          id="waste-reason-name"
+          type="text"
+          maxlength="60"
+          class="input input-bordered w-full outline-transparent"
+          formControlName="name"
+        />
+      </div>
+      <div>
+        <label for="waste-reason-order" class="mb-1 block text-xs font-semibold text-gray-500">
+          Sort order
+        </label>
+        <input
+          id="waste-reason-order"
+          type="number"
+          min="0"
+          step="1"
+          inputmode="numeric"
+          class="input input-bordered w-full outline-transparent"
+          formControlName="sortOrder"
+        />
+      </div>
+      <label class="flex cursor-pointer items-center gap-3">
+        <input type="checkbox" class="toggle toggle-primary" formControlName="requiresNote" />
+        <span class="text-sm text-gray-700">A note is required</span>
+      </label>
+      @if (selected()?.isSystem && selected()?.requiresNote) {
+        <p class="text-xs text-gray-500">This built-in reason always needs a note.</p>
+      }
+      @if (formError()) {
+        <p class="text-sm text-red-600" role="alert">{{ formError() }}</p>
+      }
+    </div>
+  </app-confirm-dialog>
+}
+
+@if (dialog() === 'deactivate' && selected(); as reason) {
+  <app-confirm-dialog
+    variant="danger"
+    icon="icon-delete"
+    heading="Turn Off Reason"
+    confirmLabel="Turn Off"
+    busyLabel="Turning off..."
+    [isBusy]="isSaving()"
+    (confirmed)="confirmDeactivate()"
+    (cancelled)="closeDialog()"
+  >
+    <span class="font-medium wrap-break-word text-gray-700">{{ reason.name }}</span>
+    will no longer be offered when recording waste. Past waste keeps its reason.
+  </app-confirm-dialog>
+}
+
+@if (dialog() === 'restore' && selected(); as reason) {
+  <app-confirm-dialog
+    variant="success"
+    icon="icon-refresh"
+    heading="Restore Reason"
+    confirmLabel="Restore"
+    busyLabel="Restoring..."
+    [isBusy]="isSaving()"
+    (confirmed)="confirmRestore()"
+    (cancelled)="closeDialog()"
+  >
+    <span class="font-medium wrap-break-word text-gray-700">{{ reason.name }}</span>
+    will be offered again when recording waste.
+  </app-confirm-dialog>
+}

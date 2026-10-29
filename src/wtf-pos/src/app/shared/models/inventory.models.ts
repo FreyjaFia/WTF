@@ -14,6 +14,7 @@ export interface ItemDto {
   criticalQuantity?: number | null;
   isActive: boolean;
   allowNegativeStock: boolean;
+  wasteApprovalLimit?: number | null;
   createdAt: string;
   createdBy: string;
   updatedAt?: string | null;
@@ -95,6 +96,7 @@ export interface CreateItemDto {
   warningQuantity?: number | null;
   criticalQuantity?: number | null;
   allowNegativeStock?: boolean;
+  wasteApprovalLimit?: number | null;
   isActive: boolean;
 }
 
@@ -110,6 +112,7 @@ export interface UpdateItemDto {
   warningQuantity?: number | null;
   criticalQuantity?: number | null;
   allowNegativeStock?: boolean;
+  wasteApprovalLimit?: number | null;
   isActive: boolean;
 }
 

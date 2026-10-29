@@ -8,3 +8,4 @@ export * from './deals';
 export * from './line-breakdown';
 export * from './stock-adjustment';
 export * from './stock-limits';
+export * from './waste';

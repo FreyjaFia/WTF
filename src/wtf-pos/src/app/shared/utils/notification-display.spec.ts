@@ -1,11 +1,17 @@
-import { NotificationDto } from '@shared/models';
+import { NOTIFICATION_KIND_LABELS, NotificationDto, NotificationKinds } from '@shared/models';
 import { describe, expect, it } from 'vitest';
 import { notificationIcon, reminderText, severityStyle, shortAgo } from './notification-display';
 
 describe('notification display helpers', () => {
   it('picks an icon by kind, with the bell as the fallback for kinds that have none yet', () => {
     expect(notificationIcon('StockAlert')).toBe('icon-stock-alert');
+    expect(notificationIcon('WasteReview')).toBe('icon-delete');
     expect(notificationIcon('SomethingNew')).toBe('icon-notifications');
+  });
+
+  it('labels the waste review kind for the notification filter', () => {
+    expect(NotificationKinds.WasteReview).toBe('WasteReview');
+    expect(NOTIFICATION_KIND_LABELS[NotificationKinds.WasteReview]).toBe('Waste');
   });
 
   it('gives each severity its own colours, and treats an unknown one as info', () => {

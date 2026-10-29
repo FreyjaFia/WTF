@@ -2,7 +2,7 @@ import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { AuthService, StockAttentionService } from '@core/services';
+import { AuthService, StockAttentionService, StockWasteService } from '@core/services';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { InventoryComponent } from './inventory';
 
@@ -32,6 +32,7 @@ describe('InventoryComponent', () => {
               { path: 'items', component: ItemsStub },
               { path: 'stock-in', component: StockStub },
               { path: 'attention', component: StockStub },
+              { path: 'waste', component: StockStub },
               { path: 'coverage', component: StockStub },
             ],
           },
@@ -41,9 +42,14 @@ describe('InventoryComponent', () => {
           useValue: {
             canReadItems: () => perms.items,
             canReadStockMovements: () => perms.stock,
+            canReviewStockWaste: () => false,
           },
         },
         { provide: StockAttentionService, useValue: { count: unread, urgentCount: signal(1), start: refresh, stop: vi.fn() } },
+        {
+          provide: StockWasteService,
+          useValue: { pendingCount: signal(0), startPendingCount: vi.fn(), stopPendingCount: vi.fn() },
+        },
       ],
     });
   }
@@ -76,12 +82,14 @@ describe('InventoryComponent', () => {
       'items',
       'stock-in',
       'attention',
+      'waste',
       'coverage',
     ]);
     expect(rendered.map((t) => t.getAttribute('href'))).toEqual([
       '/inventory/items',
       '/inventory/stock-in',
       '/inventory/attention',
+      '/inventory/waste',
       '/inventory/coverage',
     ]);
   });
@@ -89,7 +97,7 @@ describe('InventoryComponent', () => {
   it('hides tabs the user cannot read', async () => {
     perms = { items: false, stock: true };
     const { el } = await setup('/inventory/stock-in');
-    expect(tabs(el).map((t) => t.getAttribute('data-inventory-tab'))).toEqual(['stock-in', 'attention']);
+    expect(tabs(el).map((t) => t.getAttribute('data-inventory-tab'))).toEqual(['stock-in', 'attention', 'waste']);
   });
 
   it('shows the coverage tab only to roles that can read items', async () => {
@@ -129,7 +137,7 @@ describe('InventoryComponent', () => {
 
   it('marks only the active route as selected', async () => {
     const { el } = await setup('/inventory/items');
-    expect(tabs(el).map((t) => t.getAttribute('aria-selected'))).toEqual(['true', 'false', 'false', 'false']);
+    expect(tabs(el).map((t) => t.getAttribute('aria-selected'))).toEqual(['true', 'false', 'false', 'false', 'false']);
   });
 
   it('updates the selected tab after navigation and shows the routed page', async () => {
@@ -137,7 +145,7 @@ describe('InventoryComponent', () => {
     expect(el.textContent).toContain('items page');
     await harness.navigateByUrl('/inventory/stock-in');
     harness.detectChanges();
-    expect(tabs(el).map((t) => t.getAttribute('aria-selected'))).toEqual(['false', 'true', 'false', 'false']);
+    expect(tabs(el).map((t) => t.getAttribute('aria-selected'))).toEqual(['false', 'true', 'false', 'false', 'false']);
     expect(el.textContent).toContain('stock page');
   });
 

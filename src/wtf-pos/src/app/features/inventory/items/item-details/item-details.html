@@ -1,12 +1,12 @@
 <div class="flex h-full flex-col pt-4 md:pt-0">
   <div
-    class="mb-4 flex shrink-0 flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between"
+    class="mb-4 flex shrink-0 flex-col gap-3 sm:mb-6 lg:flex-row lg:items-center lg:justify-between"
   >
     <div class="flex min-w-0 items-start gap-4">
       <a
         draggable="false"
         class="app-btn app-btn-ghost mt-1 shrink-0 p-2"
-        [routerLink]="routes.InventoryItems"
+        [routerLink]="backLink"
         aria-label="Go back"
         title="Back"
       >
@@ -37,8 +37,19 @@
       }
     </div>
 
-    @if (item() && (canWriteItems() || canWriteStock())) {
-      <div class="flex shrink-0 justify-end gap-2">
+    @if (item() && (canWriteItems() || canWriteStock() || canRecordWaste())) {
+      <div class="flex shrink-0 flex-wrap justify-end gap-2">
+        @if (item()!.isActive && canRecordWaste()) {
+          <button
+            type="button"
+            class="app-btn app-btn-outline-danger app-btn-sm gap-2"
+            data-testid="record-waste-button"
+            (click)="recordWaste()"
+          >
+            <app-icon name="icon-delete" [class]="'h-4 w-4'" />
+            Record Waste
+          </button>
+        }
         @if (item()!.isActive && canWriteStock()) {
           <button type="button" class="app-btn app-btn-accent-outline app-btn-sm gap-2" (click)="adjustStock()">
             <app-icon name="icon-inventory" [class]="'h-4 w-4'" />
@@ -325,6 +336,15 @@
     [isBusy]="isAdjusting()"
     (confirmed)="confirmAdjust($event)"
     (cancelled)="cancelAdjust()"
+  />
+}
+
+@if (showWasteModal() && wasteItem() && canRecordWaste()) {
+  <app-record-waste-dialog
+    [item]="wasteItem()!"
+    [isBusy]="isRecordingWaste()"
+    (confirmed)="confirmWaste($event)"
+    (cancelled)="cancelWaste()"
   />
 }
 
