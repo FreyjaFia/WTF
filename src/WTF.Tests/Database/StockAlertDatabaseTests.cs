@@ -50,6 +50,40 @@ public class StockAlertDatabaseTests
     }
 
     [SqlFact]
+    public async Task ABalanceChange_KeepsAllThreeDecimals()
+    {
+        await using var database = await SqlTestDatabase.CreateAsync();
+        var admin = await SqlSeed.UserAsync(database, roleId: 1);
+        var itemId = Guid.NewGuid();
+        await using (var db = database.CreateContext())
+        {
+            db.Items.Add(new Item
+            {
+                Id = itemId,
+                Name = "Saffron",
+                UnitName = "gram",
+                CurrentQuantity = 5m,
+                AllowNegativeStock = true,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = admin.Id,
+            });
+            await db.SaveChangesAsync();
+        }
+
+        await using (var db = database.CreateContext())
+        {
+            var change = await StockBalance.ApplyAsync(db, itemId, -0.001m, false, CancellationToken.None);
+            change.ShouldNotBeNull();
+            change.Value.Before.ShouldBe(5m);
+            change.Value.After.ShouldBe(4.999m);
+        }
+
+        await using var check = database.CreateContext();
+        (await check.Items.SingleAsync()).CurrentQuantity.ShouldBe(4.999m);
+    }
+
+    [SqlFact]
     public async Task TwoReminderRunsAtTheSameMoment_LiftEachAlertOnce()
     {
         await using var database = await SqlTestDatabase.CreateAsync();

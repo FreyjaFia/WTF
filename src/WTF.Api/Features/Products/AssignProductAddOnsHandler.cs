@@ -137,7 +137,8 @@ public class AssignProductAddOnsHandler(WTFDbContext db) : IRequestHandler<Assig
             {
                 ProductId = request.ProductId,
                 AddOnId = addOn.AddOnId,
-                AddOnTypeId = (int)addOn.AddOnType
+                AddOnTypeId = (int)addOn.AddOnType,
+                IsActive = true
             });
 
         db.ProductAddOns.AddRange(newLinks);

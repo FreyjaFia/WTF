@@ -194,6 +194,8 @@ public class CreateOrderHandler(
                 throw new InvalidOperationException("One or more add-ons are not allowed for this product.");
             }
 
+            PickOneAddOnRule.Ensure(item.AddOns, productAddOns.Select(pa => (pa.AddOnId, pa.AddOnType)));
+
             var selectedByType = productAddOns
                 .GroupBy(pa => pa.AddOnType)
                 .ToDictionary(group => group.Key, group => group.Count());
@@ -515,6 +517,14 @@ public class CreateOrderHandler(
         if (!held && request.Status == OrderStatusEnum.Completed)
         {
             OrderTotalCheck.EnsureUnchanged(request.ExpectedTotal, totalAmount);
+
+            // Tips are ignored here: an order queued offline by an older app took the tip outside the cash it recorded.
+            if (request.PaymentMethod == PaymentMethodEnum.Cash
+                && request.AmountReceived.HasValue
+                && CashPayment.Change(request.AmountReceived.Value, totalAmount, null) < 0m)
+            {
+                throw new InvalidOperationException("The cash received is less than the order total.");
+            }
         }
 
         if (held)

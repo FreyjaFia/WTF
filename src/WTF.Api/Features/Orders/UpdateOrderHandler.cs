@@ -131,6 +131,8 @@ public class UpdateOrderHandler(
                 throw new InvalidOperationException("One or more add-ons are not allowed for this product.");
             }
 
+            PickOneAddOnRule.Ensure(item.AddOns, productAddOns.Select(pa => (pa.AddOnId, pa.AddOnType)));
+
             var selectedByType = productAddOns
                 .GroupBy(pa => pa.AddOnType)
                 .ToDictionary(group => group.Key, group => group.Count());

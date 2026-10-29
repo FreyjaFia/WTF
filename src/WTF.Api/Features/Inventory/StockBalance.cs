@@ -1,4 +1,6 @@
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using System.Data;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Inventory;
@@ -22,14 +24,19 @@ internal static class StockBalance
             return await ApplyTrackedAsync(db, itemId, delta, allowBelowZero, cancellationToken);
         }
 
-        var force = allowBelowZero ? 1 : 0;
-        var updated = await db.Database.SqlQuery<decimal>($"""
+        // The quantity parameter is typed decimal(18, 3) like the column. An interpolated decimal would be sent as
+        // decimal(18, 2), which silently drops the third decimal (a change of 0.001 would not move the balance).
+        var updated = await db.Database.SqlQueryRaw<decimal>(
+            """
             UPDATE dbo.Items
-            SET CurrentQuantity = CurrentQuantity + {delta}
+            SET CurrentQuantity = CurrentQuantity + @delta
             OUTPUT INSERTED.CurrentQuantity AS [Value]
-            WHERE Id = {itemId}
-              AND ({force} = 1 OR AllowNegativeStock = 1 OR {delta} >= 0 OR CurrentQuantity + {delta} >= 0)
-            """).ToListAsync(cancellationToken);
+            WHERE Id = @itemId
+              AND (@force = 1 OR AllowNegativeStock = 1 OR @delta >= 0 OR CurrentQuantity + @delta >= 0)
+            """,
+            new SqlParameter("@delta", SqlDbType.Decimal) { Precision = 18, Scale = 3, Value = delta },
+            new SqlParameter("@itemId", itemId),
+            new SqlParameter("@force", allowBelowZero ? 1 : 0)).ToListAsync(cancellationToken);
 
         if (updated.Count == 0)
         {
