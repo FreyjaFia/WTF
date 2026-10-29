@@ -6,6 +6,7 @@ using Serilog;
 using System.Text;
 using System.Threading.RateLimiting;
 using WTF.Api.Common.Auth;
+using WTF.Api.Common.Validation;
 using WTF.Api.Endpoints;
 using WTF.Api.Features.Conversations;
 using WTF.Api.Features.Images;
@@ -39,7 +40,11 @@ builder.Services.AddOpenApi();
 builder.Services.AddDbContext<WTFDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("WtfDb")));
 
-builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
+builder.Services.AddMediatR(cfg =>
+{
+    cfg.RegisterServicesFromAssembly(typeof(Program).Assembly);
+    cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
+});
 
 builder.Services.AddSignalR();
 
@@ -181,6 +186,10 @@ builder.Services.AddCors(options =>
     });
 });
 
+// Multiplies the public-link limits below. Always 1 in production; the browser test suite raises it because all its
+// workers share one caller address.
+var rateLimitMultiplier = Math.Max(1, builder.Configuration.GetValue("RateLimiting:Multiplier", 1));
+
 builder.Services.AddRateLimiter(options =>
 {
     options.AddPolicy("loyalty-policy", context =>
@@ -201,7 +210,7 @@ builder.Services.AddRateLimiter(options =>
             partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "local",
             factory: _ => new FixedWindowRateLimiterOptions
             {
-                PermitLimit = 60,
+                PermitLimit = 60 * rateLimitMultiplier,
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0
             }));
@@ -212,7 +221,7 @@ builder.Services.AddRateLimiter(options =>
             partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "local",
             factory: _ => new FixedWindowRateLimiterOptions
             {
-                PermitLimit = 10,
+                PermitLimit = 10 * rateLimitMultiplier,
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0
             }));
@@ -223,7 +232,7 @@ builder.Services.AddRateLimiter(options =>
             partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "local",
             factory: _ => new FixedWindowRateLimiterOptions
             {
-                PermitLimit = 5,
+                PermitLimit = 5 * rateLimitMultiplier,
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0
             }));
@@ -242,7 +251,7 @@ builder.Services.AddRateLimiter(options =>
             partitionKey: $"order-link:{token}",
             factory: _ => new FixedWindowRateLimiterOptions
             {
-                PermitLimit = 120,
+                PermitLimit = 120 * rateLimitMultiplier,
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0
             });

@@ -17,7 +17,9 @@ public class CreateUserHandler(WTFDbContext db, IHttpContextAccessor httpContext
     {
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
 
+        UserValidation.EnsureValidNames(request.FirstName, request.LastName);
         UserValidation.EnsureValidUsername(request.Username);
+        UserValidation.EnsureKnownRole(request.RoleId);
         UserValidation.EnsureValidPassword(request.Password);
         await UserValidation.EnsureUniqueUsernameAsync(db, request.Username, null, cancellationToken);
 

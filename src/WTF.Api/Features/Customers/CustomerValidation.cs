@@ -5,6 +5,7 @@ namespace WTF.Api.Features.Customers;
 internal static class CustomerValidation
 {
     public const int MaxContactLength = 30;
+    public const int MaxNameLength = 50;
 
     private static readonly Regex ContactPattern = new(@"^[0-9+()\-\s]+$", RegexOptions.Compiled);
 
@@ -35,6 +36,11 @@ internal static class CustomerValidation
         if (string.IsNullOrWhiteSpace(firstName) || string.IsNullOrWhiteSpace(lastName))
         {
             throw new InvalidOperationException("Customer first name and last name are required.");
+        }
+
+        if (firstName.Length > MaxNameLength || lastName.Length > MaxNameLength)
+        {
+            throw new InvalidOperationException($"Customer names can be at most {MaxNameLength} characters.");
         }
     }
 }

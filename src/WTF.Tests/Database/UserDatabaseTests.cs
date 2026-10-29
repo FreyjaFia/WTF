@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Http;
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using WTF.Api.Features.Auth;
@@ -143,16 +142,16 @@ public class UserDatabaseTests
     }
 
     [SqlFact]
-    public async Task Create_UnknownRoleId_IsRejectedByTheRoleForeignKey()
+    public async Task Create_UnknownRoleId_IsRejectedBeforeTheDatabaseIsTouched()
     {
         await using var database = await SqlTestDatabase.CreateAsync();
         var actor = await SqlSeed.UserAsync(database, "admin");
 
         await using var db = database.CreateContext();
-        var ex = await Should.ThrowAsync<DbUpdateException>(() =>
+        var ex = await Should.ThrowAsync<InvalidOperationException>(() =>
             Create(db, actor.Id).Handle(new CreateUserCommand("A", "B", "newbie", "pw-12345", (UserRoleEnum)99), CancellationToken.None));
 
-        ex.InnerException.ShouldBeOfType<SqlException>().Number.ShouldBe(547);
+        ex.Message.ShouldContain("listed roles");
     }
 
     // ---- Update ----
@@ -195,16 +194,16 @@ public class UserDatabaseTests
     }
 
     [SqlFact]
-    public async Task Update_UnknownRoleId_IsRejectedByTheRoleForeignKey()
+    public async Task Update_UnknownRoleId_IsRejectedBeforeTheDatabaseIsTouched()
     {
         await using var database = await SqlTestDatabase.CreateAsync();
         var actor = await SqlSeed.UserAsync(database, "admin");
         var target = await SqlSeed.UserAsync(database, "mine");
 
         await using var db = database.CreateContext();
-        var ex = await Should.ThrowAsync<DbUpdateException>(() =>
+        var ex = await Should.ThrowAsync<InvalidOperationException>(() =>
             Update(db, actor.Id).Handle(new UpdateUserCommand(target.Id, "A", "B", "mine", null, (UserRoleEnum)99), CancellationToken.None));
-        ex.InnerException.ShouldBeOfType<SqlException>().Number.ShouldBe(547);
+        ex.Message.ShouldContain("listed roles");
     }
 
     // ---- Search ----

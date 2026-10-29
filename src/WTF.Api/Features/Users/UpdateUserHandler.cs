@@ -32,7 +32,9 @@ public class UpdateUserHandler(WTFDbContext db, IHttpContextAccessor httpContext
         };
         var isPasswordChanged = !string.IsNullOrWhiteSpace(request.Password);
 
+        UserValidation.EnsureValidNames(request.FirstName, request.LastName);
         UserValidation.EnsureValidUsername(request.Username);
+        UserValidation.EnsureKnownRole(request.RoleId);
         UserValidation.EnsureValidPassword(request.Password, isUpdate: true);
         await UserValidation.EnsureUniqueUsernameAsync(db, request.Username, user.Id, cancellationToken);
 
