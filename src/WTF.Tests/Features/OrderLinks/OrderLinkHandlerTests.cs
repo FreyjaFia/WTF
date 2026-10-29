@@ -312,8 +312,8 @@ public class OrderLinkHandlerTests
         var links = await List().Handle(new GetOrderLinksQuery(customer.Id), CancellationToken.None);
 
         links!.Single(l => l.Id == busy.Id).OrdersCount.ShouldBe(3);
-        links.Single(l => l.Id == quiet.Id).OrdersCount.ShouldBe(0);
-        links.Single(l => l.Id == revoked.Id).OrdersCount.ShouldBe(1);
+        links!.Single(l => l.Id == quiet.Id).OrdersCount.ShouldBe(0);
+        links!.Single(l => l.Id == revoked.Id).OrdersCount.ShouldBe(1);
     }
 
     [Fact]

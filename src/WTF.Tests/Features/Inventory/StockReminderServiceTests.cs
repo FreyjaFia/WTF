@@ -132,7 +132,7 @@ public class StockReminderServiceTests
 
         var admin = (await Rows()).Last(r => r.UserId == _admin);
         admin.Severity.ShouldBe((byte)2);
-        admin.Data.ShouldContain("\"quantity\":150");
+        admin.Data!.ShouldContain("\"quantity\":150");
         admin.Title.ShouldBe("Still low: Oat Milk");
     }
 

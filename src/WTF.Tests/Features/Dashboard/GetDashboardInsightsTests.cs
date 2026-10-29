@@ -43,7 +43,7 @@ public class GetDashboardInsightsTests
     {
         var dto = await Handler().Handle(Yesterday(), default);
 
-        var insights = dto.Insights;
+        var insights = dto.Insights!;
         insights.Discounts.ShouldBe(0m);
         insights.RefundedCount.ShouldBe(0);
         insights.RefundedAmount.ShouldBe(0m);
@@ -105,7 +105,7 @@ public class GetDashboardInsightsTests
             await db.SaveChangesAsync();
         }
 
-        var insights = (await Handler().Handle(Yesterday(), default)).Insights;
+        var insights = (await Handler().Handle(Yesterday(), default)).Insights!;
 
         insights.Discounts.ShouldBe(40m);
         insights.RefundedCount.ShouldBe(1);
@@ -140,7 +140,7 @@ public class GetDashboardInsightsTests
             await db.SaveChangesAsync();
         }
 
-        return (await Handler().Handle(Yesterday(), default)).Insights.TopPromotionName;
+        return (await Handler().Handle(Yesterday(), default)).Insights!.TopPromotionName;
     }
 
     [Fact]
@@ -176,7 +176,7 @@ public class GetDashboardInsightsTests
         dto.Today.TotalRevenue.ShouldBe(100m);
         var status = dto.OrdersByStatus;
         (status.Pending + status.Completed + status.Cancelled + status.Refunded).ShouldBe(2);
-        dto.Insights.AwaitingApprovalCount.ShouldBe(1);
+        dto.Insights!.AwaitingApprovalCount.ShouldBe(1);
         dto.RecentOrders.ShouldNotContain(o => o.StatusId == PendingApproval);
     }
 
@@ -194,7 +194,7 @@ public class GetDashboardInsightsTests
             await db.SaveChangesAsync();
         }
 
-        var insights = (await Handler().Handle(Yesterday(), default)).Insights;
+        var insights = (await Handler().Handle(Yesterday(), default)).Insights!;
 
         insights.RefundedCount.ShouldBe(0);
         insights.CustomerLinkOrders.ShouldBe(0);

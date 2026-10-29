@@ -127,6 +127,4 @@ public sealed class MonthlyReportWorkbookScheduler(
             "Monthly report workbook regenerated through end of day {Date:yyyy-MM-dd}.",
             throughDate);
     }
-
-    private static TimeZoneInfo ResolveTimeZone(string timeZoneId) => DailyCatchUpScheduler.ResolveTimeZone(timeZoneId);
 }

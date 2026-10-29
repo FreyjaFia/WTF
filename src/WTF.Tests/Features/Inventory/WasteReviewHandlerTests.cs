@@ -117,7 +117,7 @@ public class WasteReviewHandlerTests
         var result = await Confirm().Handle(new ConfirmWasteCommand(Guid.NewGuid(), null), default);
 
         result.ShouldBeNull();
-        _audit.DidNotReceiveWithAnyArgs().LogAsync(default, default, default!);
+        await _audit.DidNotReceiveWithAnyArgs().LogAsync(default, default, default!);
     }
 
     [Theory]

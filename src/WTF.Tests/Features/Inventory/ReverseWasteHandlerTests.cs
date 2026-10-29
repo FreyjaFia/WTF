@@ -115,7 +115,7 @@ public class ReverseWasteHandlerTests
         var result = await Handler().Handle(new ReverseWasteCommand(Guid.NewGuid(), "mistake"), default);
 
         result.ShouldBeNull();
-        _audit.DidNotReceiveWithAnyArgs().LogAsync(default, default, default!);
+        await _audit.DidNotReceiveWithAnyArgs().LogAsync(default, default, default!);
     }
 
     [Fact]
