@@ -134,6 +134,17 @@
                   "with": "src/environments/environment.staging.ts"
                 }
               ]
+            },
+            "e2e": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.development.ts",
+                  "with": "src/environments/environment.e2e.ts"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"
@@ -146,6 +157,9 @@
             },
             "development": {
               "buildTarget": "wtf-pos:build:development"
+            },
+            "e2e": {
+              "buildTarget": "wtf-pos:build:e2e"
             }
           },
           "defaultConfiguration": "development"

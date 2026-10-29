@@ -1,0 +1,9 @@
+node_modules/
+test-results*/
+playwright-report/
+blob-report/
+.env
+.e2e-password
+.e2e-stop
+.e2e-last-run.log
+.auth/

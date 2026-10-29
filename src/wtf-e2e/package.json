@@ -1,0 +1,30 @@
+{
+    "name":  "wtf-e2e",
+    "version":  "1.0.0",
+    "description":  "Playwright end-to-end tests for the WTF API and POS",
+    "scripts":  {
+                    "test":  "playwright test",
+                    "test:auth":  "playwright test tests/auth tests/security",
+                    "test:orders":  "playwright test tests/orders",
+                    "test:inventory":  "playwright test tests/inventory",
+                    "test:waste":  "playwright test tests/inventory/waste",
+                    "test:promotions":  "playwright test tests/promotions",
+                    "test:management":  "playwright test tests/management",
+                    "test:reports":  "playwright test tests/reports tests/dashboard",
+                    "test:layout":  "playwright test tests/layout",
+                    "typecheck":  "tsc --noEmit",
+                    "report":  "playwright show-report"
+                },
+    "keywords":  [
+
+                 ],
+    "author":  "",
+    "license":  "ISC",
+    "type":  "commonjs",
+    "devDependencies":  {
+                            "@playwright/test":  "^1.64.1",
+                            "@types/node":  "^26.6.5",
+                            "typescript":  "^7.0.2"
+                        },
+    "private":  true
+}
