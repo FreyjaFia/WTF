@@ -113,6 +113,78 @@ jobs:
         working-directory: src/wtf-pos
         run: npm test -- --watch=false
 
+  # Browser tests (Playwright) against a throwaway database. Informational for now: no other job lists this one in
+  # "needs", so it cannot hold up a build or a deploy, and continue-on-error keeps a failure from failing the workflow.
+  # To make it a requirement later, add test-e2e to the "needs" of the build and deploy jobs and drop continue-on-error.
+  test-e2e:
+    name: Test E2E (browser, not blocking yet)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    continue-on-error: true
+    # The same kind of throw-away SQL Server the API tests use. The password only protects this container.
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: 'Y'
+          MSSQL_PID: Developer
+          MSSQL_SA_PASSWORD: Wtf-Test-Passw0rd!
+        ports:
+          - 1433:1433
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.x'
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            src/wtf-pos/package-lock.json
+            src/wtf-e2e/package-lock.json
+
+      - name: Install app dependencies
+        working-directory: src/wtf-pos
+        run: npm ci
+
+      - name: Install test dependencies and the browser
+        working-directory: src/wtf-e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      # run.sh builds the API, creates a WTF_E2E_* database on the container, starts the API (5290) and the app (4300),
+      # runs the tests and drops the database. It waits for the container to accept logins.
+      - name: Run browser tests
+        env:
+          E2E_SQL: Server=localhost,1433;User Id=sa;Password=Wtf-Test-Passw0rd!;TrustServerCertificate=true;Encrypt=false
+        run: bash src/wtf-e2e/run.sh
+
+      - name: Upload the test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report
+          path: |
+            src/wtf-e2e/playwright-report
+            src/wtf-e2e/test-results
+          if-no-files-found: ignore
+          retention-days: 14
+
   build-api:
     name: Build API (Production)
     runs-on: ubuntu-latest
