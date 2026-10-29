@@ -3,6 +3,7 @@ namespace WTF.Api.Features.Notifications;
 public static class NotificationKinds
 {
     public const string StockAlert = "StockAlert";
+    public const string WasteReview = "WasteReview";
 }
 
 public static class NotificationSeverity

@@ -37,13 +37,21 @@ public static class AppAuthorizationExtensions
             .AddPolicy(AppPolicies.CustomersWrite, policy =>
                 policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.Cashier))
             .AddPolicy(AppPolicies.ItemsRead, policy =>
-                policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.ItemManager))
+                policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.ItemManager, AppRoles.StockManager))
             .AddPolicy(AppPolicies.ItemsWrite, policy =>
                 policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.ItemManager))
             .AddPolicy(AppPolicies.StockMovementsRead, policy =>
                 policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.StockManager))
             .AddPolicy(AppPolicies.StockMovementsWrite, policy =>
                 policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.StockManager))
+            .AddPolicy(AppPolicies.StockWasteWrite, policy =>
+                policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.StockManager, AppRoles.Cashier))
+            .AddPolicy(AppPolicies.StockWasteReview, policy =>
+                policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin))
+            .AddPolicy(AppPolicies.WasteReasonsManage, policy =>
+                policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin))
+            .AddPolicy(AppPolicies.WasteReasonsRead, policy =>
+                policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.StockManager, AppRoles.Cashier))
             .AddPolicy(AppPolicies.DashboardRead, policy =>
                 policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer))
             .AddPolicy(AppPolicies.ReportsGenerate, policy =>

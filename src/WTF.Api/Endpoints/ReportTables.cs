@@ -1,6 +1,7 @@
 using System.Globalization;
 using WTF.Api.Features.Reports.DTOs;
 using WTF.Api.Features.Reports.Enums;
+using WTF.Calculations.Inventory;
 using WTF.Calculations.Sales;
 using static WTF.Api.Endpoints.ReportFormat;
 
@@ -155,7 +156,7 @@ internal static class ReportTables
             new("label", "Item", r => r.Label, r => r.Label, false, 2f),
             new("detail", "Details", r => r.Detail ?? "-", r => r.Detail ?? string.Empty, false, 3f),
             new("orderCount", "Orders", r => Number(r.OrderCount), r => r.OrderCount, true, 0.8f),
-            new("amount", "Amount", r => Money(r.Amount), r => r.Amount, true, 1.4f)
+            new("amount", "Amount", r => r.Quantity.HasValue ? WasteQuantity(r.Quantity.Value, r.UnitName) : Money(r.Amount), r => r.Quantity ?? r.Amount, true, 1.4f)
         ],
         rows =>
         {
@@ -267,6 +268,23 @@ internal static class ReportTables
             ("Stock Value", Money(rows.Sum(r => r.StockValue)))
         ]);
 
+    public static readonly ReportTable<WasteReportRowDto> Waste = new(
+        "Waste",
+        [
+            new("label", "Group", r => r.Label, r => r.Label, false, 2.6f),
+            new("unitName", "Unit", r => r.UnitName ?? "-", r => r.UnitName ?? string.Empty, false, 0.8f),
+            new("entryCount", "Entries", r => Number(r.EntryCount), r => r.EntryCount, true, 1f, rows => Number(rows.Sum(r => r.EntryCount))),
+            new("quantity", "Quantity", r => WasteQuantity(r.Quantity, r.UnitName), r => r.Quantity, true, 1.3f, rows => WasteTotal(rows, r => r.Quantity)),
+            new("disputedCount", "Disputed", r => Number(r.DisputedCount), r => r.DisputedCount, true, 0.9f, rows => Number(rows.Sum(r => r.DisputedCount))),
+            new("disputedQuantity", "Disputed Qty", r => WasteQuantity(r.DisputedQuantity, r.UnitName), r => r.DisputedQuantity, true, 1.2f, rows => WasteTotal(rows, r => r.DisputedQuantity))
+        ],
+        rows =>
+        [
+            ("Groups", Number(rows.Count)),
+            ("Entries", Number(rows.Sum(r => r.EntryCount))),
+            ("Disputed", Number(rows.Sum(r => r.DisputedCount)))
+        ]);
+
     public static string FormatPeriodLabel(DateTime periodStart, ReportGroupByEnum groupBy)
     {
         if (groupBy == ReportGroupByEnum.Month)
@@ -283,5 +301,29 @@ internal static class ReportTables
         var dateLabel = periodStart.ToString("MMMM dd, yyyy", CultureInfo.InvariantCulture);
         var dayLabel = periodStart.ToString("ddd", CultureInfo.InvariantCulture);
         return $"{dateLabel} ({dayLabel})";
+    }
+
+    public static string WasteQuantity(decimal quantity, string? unitName)
+    {
+        var unit = WasteRules.NormalizeUnit(unitName);
+
+        if (unit.Length == 0)
+        {
+            return "-";
+        }
+
+        return $"{quantity.ToString("N2", CultureInfo.InvariantCulture)} {unit}";
+    }
+
+    private static string WasteTotal(IReadOnlyList<WasteReportRowDto> rows, Func<WasteReportRowDto, decimal> quantity)
+    {
+        var total = WasteRules.TotalQuantity(rows.Select(r => new WasteEntry(quantity(r), r.UnitName, false)));
+
+        if (!total.HasValue || rows.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        return WasteQuantity(total.Value, rows[0].UnitName);
     }
 }

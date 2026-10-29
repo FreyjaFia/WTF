@@ -2,9 +2,11 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Orders;
 using WTF.Api.Common.Time;
+using WTF.Api.Features.Inventory.Waste;
 using WTF.Api.Features.OrderLinks;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Features.Reports.DTOs;
+using WTF.Calculations.Inventory;
 using WTF.Calculations.Orders;
 using WTF.Calculations.Sales;
 using WTF.Calculations.Time;
@@ -27,6 +29,7 @@ public sealed class GetDailyCloseReportHandler(
     public const string PaymentsSection = "Payments";
     public const string StaffSection = "Staff";
     public const string VoidsSection = "Voids";
+    public const string WasteSection = "Waste";
 
     public async Task<List<DailyCloseReportRowDto>> Handle(GetDailyCloseReportQuery request, CancellationToken cancellationToken)
     {
@@ -112,6 +115,47 @@ public sealed class GetDailyCloseReportHandler(
                     1,
                     OrderMetrics.ComputeOrderTotal(o, overridePrices));
             }));
+
+        if (source == null)
+        {
+            var wastes = await db.StockWastes
+                .AsNoTracking()
+                .Where(w =>
+                    w.CreatedAt >= fromUtc
+                    && w.CreatedAt < toExclusiveUtc
+                    && w.Status != StockWasteStatuses.Reversed)
+                .Select(w => new { w.ItemId, ItemName = w.Item.Name, w.Item.UnitName, w.Quantity, w.Status })
+                .ToListAsync(cancellationToken);
+
+            rows.AddRange(wastes
+                .GroupBy(w => w.ItemId)
+                .Select(g =>
+                {
+                    var unitName = g.First().UnitName;
+                    var summary = WasteRules.Summarize(g.Select(w =>
+                        new WasteEntry(w.Quantity, unitName, w.Status == StockWasteStatuses.Disputed)));
+                    var detail = $"{summary.EntryCount} {(summary.EntryCount == 1 ? "entry" : "entries")}, "
+                        + StockWasteMapping.FormatQuantity(summary.Quantity, unitName);
+
+                    if (summary.DisputedCount > 0)
+                    {
+                        detail += $" ({summary.DisputedCount} disputed, "
+                            + $"{StockWasteMapping.FormatQuantity(summary.DisputedQuantity, unitName)})";
+                    }
+
+                    return new DailyCloseReportRowDto(
+                        WasteSection,
+                        g.First().ItemName,
+                        detail,
+                        summary.EntryCount,
+                        0m,
+                        summary.Quantity,
+                        unitName,
+                        summary.DisputedCount,
+                        summary.DisputedQuantity);
+                })
+                .OrderBy(r => r.Label));
+        }
 
         return rows;
     }

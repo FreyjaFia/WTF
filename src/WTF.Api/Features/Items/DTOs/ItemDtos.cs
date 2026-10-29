@@ -14,6 +14,7 @@ public record ItemDto(
     decimal? CriticalQuantity,
     bool IsActive,
     bool AllowNegativeStock,
+    decimal? WasteApprovalLimit,
     DateTime CreatedAt,
     Guid CreatedBy,
     DateTime? UpdatedAt,

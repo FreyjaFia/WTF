@@ -1,6 +1,7 @@
 using MediatR;
 using WTF.Api.Common.Auth;
 using WTF.Api.Features.Inventory;
+using WTF.Api.Features.Inventory.Waste;
 using WTF.Api.Features.Items;
 
 namespace WTF.Api.Endpoints;
@@ -96,6 +97,20 @@ public static class ItemEndpoints
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             })
             .RequireAuthorization(AppPolicies.StockMovementsWrite);
+
+        itemGroup.MapPost("/{id:guid}/stock/waste",
+            async (Guid id, RecordWasteRequest request, ISender sender) =>
+            {
+                var result = await sender.Send(new RecordWasteCommand(
+                    id,
+                    request.Quantity,
+                    request.WasteReasonId,
+                    request.Notes,
+                    request.Source,
+                    request.ClientRequestId));
+                return result is not null ? Results.Ok(result) : Results.NotFound();
+            })
+            .RequireAuthorization(AppPolicies.StockWasteWrite);
 
         itemGroup.MapPost("/{id:guid}/stock/adjust",
             async (Guid id, AdjustItemStockCommand command, ISender sender) =>

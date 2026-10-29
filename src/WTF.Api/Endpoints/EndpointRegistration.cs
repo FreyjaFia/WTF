@@ -21,6 +21,7 @@ public static class EndpointRegistration
             .MapSync()
             .MapPromotions()
             .MapItems()
+            .MapStockWaste()
             .MapNotifications()
             .MapAudit()
             .MapSchemaScriptHistory()

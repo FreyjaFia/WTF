@@ -94,11 +94,15 @@ public partial class WTFDbContext : DbContext
 
     public virtual DbSet<StockMovement> StockMovements { get; set; }
 
+    public virtual DbSet<StockWaste> StockWastes { get; set; }
+
     public virtual DbSet<User> Users { get; set; }
 
     public virtual DbSet<UserImage> UserImages { get; set; }
 
     public virtual DbSet<UserRole> UserRoles { get; set; }
+
+    public virtual DbSet<WasteReason> WasteReasons { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         => optionsBuilder.UseSqlServer("Name=ConnectionStrings:WtfDb");
@@ -364,6 +368,7 @@ public partial class WTFDbContext : DbContext
                 .HasDefaultValue("piece", "DF_Items_UnitName");
             entity.Property(e => e.UnitsPerStockUnit).HasColumnType("decimal(18, 3)");
             entity.Property(e => e.WarningQuantity).HasColumnType("decimal(18, 3)");
+            entity.Property(e => e.WasteApprovalLimit).HasColumnType("decimal(18, 3)");
 
             entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.ItemCreatedByNavigations)
                 .HasForeignKey(d => d.CreatedBy)
@@ -977,6 +982,61 @@ public partial class WTFDbContext : DbContext
                 .HasConstraintName("FK_StockMovements_Products");
         });
 
+        modelBuilder.Entity<StockWaste>(entity =>
+        {
+            entity.HasIndex(e => e.CreatedAt, "IX_StockWastes_CreatedAt");
+
+            entity.HasIndex(e => new { e.ItemId, e.CreatedAt }, "IX_StockWastes_Item_Created");
+
+            entity.HasIndex(e => e.Status, "IX_StockWastes_Status");
+
+            entity.HasIndex(e => e.ClientRequestId, "UX_StockWastes_ClientRequestId")
+                .IsUnique()
+                .HasFilter("([ClientRequestId] IS NOT NULL)");
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_StockWastes_Id");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())", "DF_StockWastes_CreatedAt");
+            entity.Property(e => e.Notes).HasMaxLength(500);
+            entity.Property(e => e.Quantity).HasColumnType("decimal(18, 3)");
+            entity.Property(e => e.ReasonName).HasMaxLength(60);
+            entity.Property(e => e.ReversalReason).HasMaxLength(500);
+            entity.Property(e => e.ReviewNote).HasMaxLength(500);
+            entity.Property(e => e.Source).HasDefaultValue((byte)1, "DF_StockWastes_Source");
+            entity.Property(e => e.Status).HasDefaultValue((byte)1, "DF_StockWastes_Status");
+
+            entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.StockWasteCreatedByNavigations)
+                .HasForeignKey(d => d.CreatedBy)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_StockWastes_CreatedBy");
+
+            entity.HasOne(d => d.Item).WithMany(p => p.StockWastes)
+                .HasForeignKey(d => d.ItemId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_StockWastes_Items");
+
+            entity.HasOne(d => d.ReversalMovement).WithMany(p => p.StockWasteReversalMovements)
+                .HasForeignKey(d => d.ReversalMovementId)
+                .HasConstraintName("FK_StockWastes_ReversalMovement");
+
+            entity.HasOne(d => d.ReversedByNavigation).WithMany(p => p.StockWasteReversedByNavigations)
+                .HasForeignKey(d => d.ReversedBy)
+                .HasConstraintName("FK_StockWastes_ReversedBy");
+
+            entity.HasOne(d => d.ReviewedByNavigation).WithMany(p => p.StockWasteReviewedByNavigations)
+                .HasForeignKey(d => d.ReviewedBy)
+                .HasConstraintName("FK_StockWastes_ReviewedBy");
+
+            entity.HasOne(d => d.StockMovement).WithMany(p => p.StockWasteStockMovements)
+                .HasForeignKey(d => d.StockMovementId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_StockWastes_StockMovements");
+
+            entity.HasOne(d => d.WasteReason).WithMany(p => p.StockWastes)
+                .HasForeignKey(d => d.WasteReasonId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_StockWastes_WasteReasons");
+        });
+
         modelBuilder.Entity<User>(entity =>
         {
             entity.HasIndex(e => e.CreatedBy, "IX_Users_CreatedBy");
@@ -1044,6 +1104,23 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.Name)
                 .HasMaxLength(30)
                 .IsUnicode(false);
+        });
+
+        modelBuilder.Entity<WasteReason>(entity =>
+        {
+            entity.HasIndex(e => e.Name, "UX_WasteReasons_Name").IsUnique();
+
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())", "DF_WasteReasons_CreatedAt");
+            entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_WasteReasons_IsActive");
+            entity.Property(e => e.Name).HasMaxLength(60);
+
+            entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.WasteReasonCreatedByNavigations)
+                .HasForeignKey(d => d.CreatedBy)
+                .HasConstraintName("FK_WasteReasons_CreatedBy");
+
+            entity.HasOne(d => d.UpdatedByNavigation).WithMany(p => p.WasteReasonUpdatedByNavigations)
+                .HasForeignKey(d => d.UpdatedBy)
+                .HasConstraintName("FK_WasteReasons_UpdatedBy");
         });
         modelBuilder.HasSequence("OrderNumberSeq").StartsAt(5L);
 

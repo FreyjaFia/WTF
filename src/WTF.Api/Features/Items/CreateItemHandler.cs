@@ -44,6 +44,9 @@ public record CreateItemCommand : IRequest<ItemDto>
     [Range(0, 999999.999)]
     public decimal? CriticalQuantity { get; init; }
 
+    [Range(0, 999999.999)]
+    public decimal? WasteApprovalLimit { get; init; }
+
     public bool AllowNegativeStock { get; init; } = true;
 
     public bool IsActive { get; init; } = true;
@@ -77,6 +80,7 @@ public class CreateItemHandler(
             WarningQuantity = request.WarningQuantity,
             CriticalQuantity = request.CriticalQuantity,
             AllowNegativeStock = request.AllowNegativeStock,
+            WasteApprovalLimit = request.WasteApprovalLimit,
             IsActive = request.IsActive,
             CreatedAt = now,
             CreatedBy = userId
@@ -129,6 +133,7 @@ public class CreateItemHandler(
                 item.WarningQuantity,
                 item.CriticalQuantity,
                 item.AllowNegativeStock,
+                item.WasteApprovalLimit,
                 item.IsActive
             },
             userId: userId,

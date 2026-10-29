@@ -172,6 +172,23 @@ public static class ReportEndpoints
                 return BuildReportResponse(httpContext, result, ReportTables.StockStatus, "Current stock levels", DateTime.UtcNow.ToString("yyyyMMdd"));
             });
 
+        reportsGroup.MapGet("/waste",
+            async (HttpContext httpContext, [AsParameters] GetWasteReportQuery query, ISender sender) =>
+            {
+                var validationResult = ValidateDateRange(query.FromDate, query.ToDate);
+                if (validationResult != null)
+                {
+                    return validationResult;
+                }
+
+                if (!GetWasteReportHandler.IsValidGroupBy(query.GroupBy))
+                {
+                    return Results.BadRequest(new { message = "groupBy must be item, reason, staff or day." });
+                }
+
+                var result = await sender.Send(query);
+                return BuildReportResponse(httpContext, result, ReportTables.Waste, query.FromDate!.Value, query.ToDate!.Value, null);
+            });
         reportsGroup.MapGet("/monthly-workbook/status",
             async ([AsParameters] MonthlyWorkbookRequest request, IMonthlyReportWorkbookService workbookService, CancellationToken cancellationToken) =>
             {

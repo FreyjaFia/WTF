@@ -20,6 +20,10 @@ public static class AppPolicies
     public const string ItemsWrite = "ItemsWrite";
     public const string StockMovementsRead = "StockMovementsRead";
     public const string StockMovementsWrite = "StockMovementsWrite";
+    public const string StockWasteWrite = "StockWasteWrite";
+    public const string StockWasteReview = "StockWasteReview";
+    public const string WasteReasonsManage = "WasteReasonsManage";
+    public const string WasteReasonsRead = "WasteReasonsRead";
     public const string DashboardRead = "DashboardRead";
     public const string ReportsRead = "ReportsRead";
     public const string ReportsGenerate = "ReportsGenerate";

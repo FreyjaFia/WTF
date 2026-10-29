@@ -155,6 +155,7 @@ public sealed class MonthlyReportWorkbookService(
         var customerRows = await FetchAsync(new GetCustomersReportQuery { FromDate = fromDate, ToDate = toDate, Source = source });
         var linkRows = await FetchAsync(new GetCustomerLinkReportQuery { FromDate = fromDate, ToDate = toDate });
         var voidRows = await FetchAsync(new GetVoidedOrdersReportQuery { FromDate = fromDate, ToDate = toDate, Source = source });
+        var wasteRows = await FetchAsync(new GetWasteReportQuery { FromDate = fromDate, ToDate = toDate, GroupBy = GetWasteReportHandler.GroupByItem });
         var stockRows = await FetchAsync(new GetStockStatusReportQuery());
 
         var generatedAtLocal = generatedAtLocalOverride
@@ -181,6 +182,7 @@ public sealed class MonthlyReportWorkbookService(
         }
 
         AddTableSheet(workbook, ReportTables.Voids, voidRows, fromDate, toDate, generatedAtLabel);
+        AddTableSheet(workbook, ReportTables.Waste, wasteRows, fromDate, toDate, generatedAtLabel, "Waste from every source; disputed entries are also shown on their own");
         AddTableSheet(workbook, ReportTables.StockStatus, stockRows, fromDate, toDate, generatedAtLabel, "Stock levels as of the time this workbook was generated");
 
         using var stream = new MemoryStream();

@@ -78,7 +78,17 @@ public partial class User
 
     public virtual ICollection<StockMovement> StockMovements { get; set; } = new List<StockMovement>();
 
+    public virtual ICollection<StockWaste> StockWasteCreatedByNavigations { get; set; } = new List<StockWaste>();
+
+    public virtual ICollection<StockWaste> StockWasteReversedByNavigations { get; set; } = new List<StockWaste>();
+
+    public virtual ICollection<StockWaste> StockWasteReviewedByNavigations { get; set; } = new List<StockWaste>();
+
     public virtual User? UpdatedByNavigation { get; set; }
 
     public virtual UserImage? UserImage { get; set; }
+
+    public virtual ICollection<WasteReason> WasteReasonCreatedByNavigations { get; set; } = new List<WasteReason>();
+
+    public virtual ICollection<WasteReason> WasteReasonUpdatedByNavigations { get; set; } = new List<WasteReason>();
 }

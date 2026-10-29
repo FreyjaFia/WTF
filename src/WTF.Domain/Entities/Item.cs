@@ -38,6 +38,8 @@ public partial class Item
 
     public byte LastAlertStatus { get; set; }
 
+    public decimal? WasteApprovalLimit { get; set; }
+
     public virtual User CreatedByNavigation { get; set; } = null!;
 
     public virtual ICollection<ItemAlertRecipient> ItemAlertRecipients { get; set; } = new List<ItemAlertRecipient>();
@@ -47,6 +49,8 @@ public partial class Item
     public virtual ICollection<ProductItemLink> ProductItemLinks { get; set; } = new List<ProductItemLink>();
 
     public virtual ICollection<StockMovement> StockMovements { get; set; } = new List<StockMovement>();
+
+    public virtual ICollection<StockWaste> StockWastes { get; set; } = new List<StockWaste>();
 
     public virtual User? UpdatedByNavigation { get; set; }
 }

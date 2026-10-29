@@ -80,7 +80,13 @@ public class SharedCasesTests
         List<ScheduleCase> ScheduleOpen,
         List<AdjustmentCase> StockAdjustment,
         List<SalesCoveredCase> SalesCovered,
-        List<StockShortfallCase> StockShortfalls);
+        List<StockShortfallCase> StockShortfalls,
+        List<WasteNeedsReviewCase> WasteNeedsReview,
+        List<WasteBalanceAfterCase> WasteBalanceAfter);
+
+    private sealed record WasteNeedsReviewCase(string Name, decimal Quantity, decimal? Limit, bool Expected);
+
+    private sealed record WasteBalanceAfterCase(string Name, decimal Balance, decimal Quantity, decimal Expected);
 
     private static readonly Lazy<Cases> Loaded = new(() =>
     {
@@ -111,6 +117,10 @@ public class SharedCasesTests
     public static IEnumerable<object[]> SalesCoveredCaseNames() => Loaded.Value.SalesCovered.Select(c => new object[] { c.Name });
 
     public static IEnumerable<object[]> StockShortfallCaseNames() => Loaded.Value.StockShortfalls.Select(c => new object[] { c.Name });
+
+    public static IEnumerable<object[]> WasteNeedsReviewCaseNames() => Loaded.Value.WasteNeedsReview.Select(c => new object[] { c.Name });
+
+    public static IEnumerable<object[]> WasteBalanceAfterCaseNames() => Loaded.Value.WasteBalanceAfter.Select(c => new object[] { c.Name });
 
     /// <summary>A stable id for a name in the file, so "cheese" is the same add-on in the cart and in the rule.</summary>
     private static Guid IdFor(string name) => new(MD5.HashData(Encoding.UTF8.GetBytes(name)));
@@ -204,6 +214,24 @@ public class SharedCasesTests
         var c = Loaded.Value.SalesCovered.Single(x => x.Name == name);
 
         StockRules.SalesCovered(c.Balance, c.PerSale).ShouldBe(c.Expected);
+    }
+
+    [Theory]
+    [MemberData(nameof(WasteNeedsReviewCaseNames))]
+    public void WasteNeedsReview_MatchesTheSharedCase(string name)
+    {
+        var c = Loaded.Value.WasteNeedsReview.Single(x => x.Name == name);
+
+        WasteRules.NeedsReview(c.Quantity, c.Limit).ShouldBe(c.Expected);
+    }
+
+    [Theory]
+    [MemberData(nameof(WasteBalanceAfterCaseNames))]
+    public void WasteBalanceAfter_MatchesTheSharedCase(string name)
+    {
+        var c = Loaded.Value.WasteBalanceAfter.Single(x => x.Name == name);
+
+        WasteRules.BalanceAfter(c.Balance, c.Quantity).ShouldBe(c.Expected);
     }
 
     [Theory]

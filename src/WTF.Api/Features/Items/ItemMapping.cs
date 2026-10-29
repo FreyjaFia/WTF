@@ -22,6 +22,7 @@ internal static class ItemMapping
             item.CriticalQuantity,
             item.IsActive,
             item.AllowNegativeStock,
+            item.WasteApprovalLimit,
             item.CreatedAt,
             item.CreatedBy,
             item.UpdatedAt,

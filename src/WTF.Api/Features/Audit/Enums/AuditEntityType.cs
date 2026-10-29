@@ -10,5 +10,7 @@ public enum AuditEntityType
     ProductItemLink,
     StockMovement,
     OrderLink,
-    Conversation
+    Conversation,
+    StockWaste,
+    WasteReason
 }

@@ -43,5 +43,13 @@ public enum AuditAction
     OrderStockRestored,
     ConversationStarted,
     ChatImageRejected,
-    ChatImageRemoved
+    ChatImageRemoved,
+    StockWasted,
+    StockWasteConfirmed,
+    StockWasteDisputed,
+    StockWasteReversed,
+    WasteReasonCreated,
+    WasteReasonUpdated,
+    WasteReasonDeactivated,
+    WasteReasonRestored
 }

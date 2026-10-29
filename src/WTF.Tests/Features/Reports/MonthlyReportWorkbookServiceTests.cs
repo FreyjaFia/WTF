@@ -1,4 +1,4 @@
-using ClosedXML.Excel;
+﻿using ClosedXML.Excel;
 using MediatR;
 using Microsoft.AspNetCore.Http;
 using NSubstitute;
@@ -30,6 +30,7 @@ public class MonthlyReportWorkbookServiceTests
     private List<CustomerReportRowDto> _customers = [];
     private List<CustomerLinkReportRowDto> _links = [];
     private List<VoidedOrderReportRowDto> _voids = [];
+    private List<WasteReportRowDto> _waste = [];
     private List<StockStatusReportRowDto> _stock = [];
 
     private static readonly string[] SheetNames =
@@ -45,6 +46,7 @@ public class MonthlyReportWorkbookServiceTests
         "Customers",
         "Customer Link Orders",
         "Voids and Refunds",
+        "Waste",
         "Stock Status"
     ];
 
@@ -82,6 +84,7 @@ public class MonthlyReportWorkbookServiceTests
         Wire<GetCustomersReportQuery, CustomerReportRowDto>(_customers, q => (q.FromDate, q.ToDate));
         Wire<GetCustomerLinkReportQuery, CustomerLinkReportRowDto>(_links, q => (q.FromDate, q.ToDate));
         Wire<GetVoidedOrdersReportQuery, VoidedOrderReportRowDto>(_voids, q => (q.FromDate, q.ToDate));
+        Wire<GetWasteReportQuery, WasteReportRowDto>(_waste, q => (q.FromDate, q.ToDate));
         Wire<GetStockStatusReportQuery, StockStatusReportRowDto>(_stock, _ => (null, null));
 
         return new MonthlyReportWorkbookService(_sender, accessor, _storage);
@@ -176,8 +179,8 @@ public class MonthlyReportWorkbookServiceTests
     {
         await Create().GenerateAsync(year, month, "Asia/Manila", CancellationToken.None);
 
-        _calls.Count.ShouldBe(12);
-        _calls.Select(c => c.Query).Distinct().Count().ShouldBe(12);
+        _calls.Count.ShouldBe(13);
+        _calls.Select(c => c.Query).Distinct().Count().ShouldBe(13);
         _calls.Where(c => c.Query != nameof(GetStockStatusReportQuery)).ShouldAllBe(c => c.From == new DateTime(year, month, 1) && c.To == new DateTime(year, month, lastDay));
     }
 
@@ -216,7 +219,7 @@ public class MonthlyReportWorkbookServiceTests
         status.FileName.ShouldBe("WTF-Monthly-Reports-2026-03-CustomerLink.xlsx");
 
         using var wb = new XLWorkbook(new MemoryStream(_storage.Saves.Single().Data));
-        wb.Worksheets.Count.ShouldBe(12);
+        wb.Worksheets.Count.ShouldBe(13);
     }
 
     [Fact]
@@ -251,7 +254,7 @@ public class MonthlyReportWorkbookServiceTests
     {
         await Create().GenerateAsync(2026, 3, requested, CancellationToken.None);
 
-        _calls.Count.ShouldBe(12);
+        _calls.Count.ShouldBe(13);
         _calls.ShouldAllBe(c => c.TimeZone == expectedHeader);
     }
 
@@ -478,7 +481,7 @@ public class MonthlyReportWorkbookServiceTests
         Enumerable.Range(1, columns).Select(c => Text(ws, row, c)).ToArray();
 
     [Fact]
-    public async Task GenerateAsync_Workbook_HasTwelveSheetsInOrder()
+    public async Task GenerateAsync_Workbook_HasThirteenSheetsInOrder()
     {
         using var wb = await GenerateSampleAsync();
 
@@ -504,6 +507,7 @@ public class MonthlyReportWorkbookServiceTests
         Check(ReportTables.Customers);
         Check(ReportTables.CustomerLinks);
         Check(ReportTables.Voids);
+        Check(ReportTables.Waste);
         Check(ReportTables.StockStatus);
     }
 
@@ -680,7 +684,7 @@ public class MonthlyReportWorkbookServiceTests
         await Create().GenerateAsync(2026, 3, "Asia/Manila", CancellationToken.None);
 
         using var wb = Open(_storage.Saves.Single().Data);
-        wb.Worksheets.Count.ShouldBe(12);
+        wb.Worksheets.Count.ShouldBe(13);
         var ws = wb.Worksheet("Daily Sales Summary");
         Text(ws, 6, 1).ShouldBe("Period");
         Text(ws, 7, 1).ShouldNotBe("Total");

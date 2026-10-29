@@ -35,4 +35,8 @@ public partial class StockMovement
     public virtual Item Item { get; set; } = null!;
 
     public virtual Product? Product { get; set; }
+
+    public virtual ICollection<StockWaste> StockWasteReversalMovements { get; set; } = new List<StockWaste>();
+
+    public virtual ICollection<StockWaste> StockWasteStockMovements { get; set; } = new List<StockWaste>();
 }

@@ -1412,5 +1412,18 @@
       "lines": [{ "productId": "water", "quantity": 4, "addOns": [] }],
       "expected": []
     }
+  ],
+  "wasteNeedsReview": [
+    { "name": "no limit never needs review", "quantity": 5000, "limit": null, "expected": false },
+    { "name": "under the limit", "quantity": 400, "limit": 500, "expected": false },
+    { "name": "exactly the limit does not need review", "quantity": 500, "limit": 500, "expected": false },
+    { "name": "above the limit needs review", "quantity": 500.001, "limit": 500, "expected": true },
+    { "name": "a limit of zero reviews everything", "quantity": 0.001, "limit": 0, "expected": true }
+  ],
+  "wasteBalanceAfter": [
+    { "name": "waste lowers the balance", "balance": 10000, "quantity": 1000, "expected": 9000 },
+    { "name": "waste can take the balance below zero", "balance": 2, "quantity": 3, "expected": -1 },
+    { "name": "fractions stay to three decimals", "balance": 2.5, "quantity": 1.2346, "expected": 1.265 },
+    { "name": "a negative balance goes further down", "balance": -4, "quantity": 0.5, "expected": -4.5 }
   ]
 }

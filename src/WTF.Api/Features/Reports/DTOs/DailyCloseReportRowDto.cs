@@ -5,5 +5,9 @@ public sealed record DailyCloseReportRowDto(
     string Label,
     string? Detail,
     int OrderCount,
-    decimal Amount
+    decimal Amount,
+    decimal? Quantity = null,
+    string? UnitName = null,
+    int DisputedCount = 0,
+    decimal? DisputedQuantity = null
 );
