@@ -10,10 +10,13 @@ public record ProductItemLinkDto(
     Guid ItemId,
     decimal QuantityPerSale,
     bool IsActive,
-    bool ProductIsActive = true);
+    bool ProductIsActive = true,
+    decimal AllowancePercent = 0m);
 
 public record ProductItemLinkAssignmentDto(
     Guid ProductId,
     [Range(0.001, 999999.999)]
     decimal QuantityPerSale,
-    bool IsActive = true);
+    bool IsActive = true,
+    [Range(0, 100)]
+    decimal AllowancePercent = 0m);

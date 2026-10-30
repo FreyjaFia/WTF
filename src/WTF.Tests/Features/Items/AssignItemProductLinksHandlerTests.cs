@@ -137,4 +137,23 @@ public class AssignItemProductLinksHandlerTests
         await using var db = TestDb.Create(_db);
         (await db.ProductItemLinks.CountAsync()).ShouldBe(0);
     }
+
+    [Fact]
+    public async Task Handle_SavesTheAllowanceOnNewAndExistingLinks()
+    {
+        await ItemSeed.User(_db, _userId);
+        var item = await ItemSeed.Item(_db, _userId);
+        var latte = (await ItemSeed.Product(_db, _userId)).Id;
+        var mocha = (await ItemSeed.Product(_db, _userId, "Mocha", "MOC")).Id;
+        await AddLink(item.Id, mocha, 100m, true);
+
+        await Handler().Handle(Cmd(item.Id,
+            new ProductItemLinkAssignmentDto(latte, 200m, true, 5m),
+            new ProductItemLinkAssignmentDto(mocha, 150m, true, 2.5m)), CancellationToken.None);
+
+        await using var db = TestDb.Create(_db);
+        var links = await db.ProductItemLinks.ToListAsync();
+        links.Single(l => l.ProductId == latte).AllowancePercent.ShouldBe(5m);
+        links.Single(l => l.ProductId == mocha).AllowancePercent.ShouldBe(2.5m);
+    }
 }

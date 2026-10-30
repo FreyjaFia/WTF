@@ -13,7 +13,9 @@ internal static class StockSeed
         bool active = true,
         decimal? cost = null,
         decimal? warning = null,
-        decimal? critical = null)
+        decimal? critical = null,
+        decimal? averageCost = null,
+        decimal yieldPercent = 100m)
     {
         using var db = TestDb.Create(dbName);
         var item = new Item
@@ -25,6 +27,8 @@ internal static class StockSeed
             AllowNegativeStock = allowNegative,
             IsActive = active,
             CostPrice = cost,
+            AverageCost = averageCost,
+            YieldPercent = yieldPercent,
             WarningQuantity = warning,
             CriticalQuantity = critical,
             CreatedAt = DateTime.UtcNow,
@@ -35,7 +39,7 @@ internal static class StockSeed
         return item.Id;
     }
 
-    public static Guid Link(string dbName, Guid productId, Guid itemId, decimal quantityPerSale, bool active = true)
+    public static Guid Link(string dbName, Guid productId, Guid itemId, decimal quantityPerSale, bool active = true, decimal allowancePercent = 0m)
     {
         using var db = TestDb.Create(dbName);
         var link = new ProductItemLink
@@ -44,6 +48,7 @@ internal static class StockSeed
             ProductId = productId,
             ItemId = itemId,
             QuantityPerSale = quantityPerSale,
+            AllowancePercent = allowancePercent,
             IsActive = active,
             CreatedAt = DateTime.UtcNow,
             CreatedBy = Guid.NewGuid()

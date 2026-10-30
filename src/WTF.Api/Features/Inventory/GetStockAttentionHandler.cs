@@ -26,7 +26,7 @@ public class GetStockAttentionHandler(WTFDbContext db) : IRequestHandler<GetStoc
                 i.WarningQuantity,
                 i.CriticalQuantity,
                 i.AllowNegativeStock,
-                Links = i.ProductItemLinks.Where(l => l.IsActive && l.Product.IsActive).Select(l => l.QuantityPerSale).ToList()
+                Links = i.ProductItemLinks.Where(l => l.IsActive && l.Product.IsActive).Select(l => new { l.QuantityPerSale, l.AllowancePercent }).ToList()
             })
             .ToListAsync(cancellationToken);
 
@@ -50,7 +50,7 @@ public class GetStockAttentionHandler(WTFDbContext db) : IRequestHandler<GetStoc
                 x.Status.ToString(),
                 x.Item.AllowNegativeStock,
                 x.Item.Links.Count,
-                x.Item.Links.Count == 0 ? 0 : x.Item.Links.Min(q => StockRules.SalesCovered(x.Item.CurrentQuantity, q))))
+                x.Item.Links.Count == 0 ? 0 : x.Item.Links.Min(l => StockRules.SalesCovered(x.Item.CurrentQuantity, CostRules.EffectiveQuantity(l.QuantityPerSale, l.AllowancePercent)))))
             .ToList();
 
         return new StockAttentionDto(

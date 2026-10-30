@@ -49,7 +49,8 @@ internal static class ItemMapping
                     l.ItemId,
                     l.QuantityPerSale,
                     l.IsActive,
-                    l.Product.IsActive))
+                    l.Product.IsActive,
+                    l.AllowancePercent))
                 .ToList(),
             item.StockMovements
                 .OrderByDescending(m => m.CreatedAt)

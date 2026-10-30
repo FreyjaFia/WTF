@@ -85,6 +85,7 @@ public class AssignItemProductLinksHandler(
             if (existingByProductId.TryGetValue(link.ProductId, out var existing))
             {
                 existing.QuantityPerSale = link.QuantityPerSale;
+                existing.AllowancePercent = link.AllowancePercent;
                 existing.IsActive = link.IsActive;
                 existing.UpdatedAt = DateTime.UtcNow;
                 existing.UpdatedBy = userId;
@@ -96,6 +97,7 @@ public class AssignItemProductLinksHandler(
                 ItemId = request.ItemId,
                 ProductId = link.ProductId,
                 QuantityPerSale = link.QuantityPerSale,
+                AllowancePercent = link.AllowancePercent,
                 IsActive = link.IsActive,
                 CreatedAt = DateTime.UtcNow,
                 CreatedBy = userId
@@ -117,6 +119,7 @@ public class AssignItemProductLinksHandler(
                 {
                     link.ProductId,
                     link.QuantityPerSale,
+                    link.AllowancePercent,
                     link.IsActive
                 })
             },

@@ -190,6 +190,21 @@
                     />
                     <span class="shrink-0 text-[10px] text-gray-400">{{ unitAbbreviation() }}</span>
                   </label>
+                  <label class="input input-xs flex h-7 w-20 items-center gap-1 border-gray-200 bg-surface" title="Allowance: a known, steady loss added to every sale">
+                    <input
+                      class="w-full bg-transparent text-[10px] outline-none"
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="any"
+                      aria-label="Allowance percent"
+                      data-testid="allowance-input"
+                      [ngModel]="product.allowancePercent"
+                      (ngModelChange)="onAllowanceChange(product.productId, $event)"
+                      [ngModelOptions]="{ standalone: true }"
+                    />
+                    <span class="shrink-0 text-[10px] text-gray-400">%</span>
+                  </label>
                   <button
                     type="button"
                     class="app-btn app-btn-icon-danger p-1"

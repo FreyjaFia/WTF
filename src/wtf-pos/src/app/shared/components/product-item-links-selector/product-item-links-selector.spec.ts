@@ -13,6 +13,7 @@ interface Row {
   isAddOn: boolean;
   isActive: boolean;
   quantityPerSale: number;
+  allowancePercent: number;
 }
 
 interface Internals {
@@ -27,6 +28,7 @@ interface Internals {
   onSearchInput(e: unknown): void;
   onFilterChange(e: unknown): void;
   onQuantityChange(id: string, v: string | number): void;
+  onAllowanceChange(id: string, v: string | number | null): void;
   removeLinkedProduct(id: string): void;
   save(): void;
   closeModal(): void;
@@ -53,7 +55,7 @@ function prod(
   };
 }
 
-function link(productId: string, qty: number, isActive = true): ProductItemLinkDto {
+function link(productId: string, qty: number, isActive = true, allowancePercent?: number): ProductItemLinkDto {
   return {
     id: 'l-' + productId,
     productId,
@@ -61,6 +63,7 @@ function link(productId: string, qty: number, isActive = true): ProductItemLinkD
     productCode: 'Code-' + productId,
     itemId: 'item1',
     quantityPerSale: qty,
+    ...(allowancePercent === undefined ? {} : { allowancePercent }),
     isActive,
   };
 }
@@ -277,6 +280,86 @@ describe('ProductItemLinksSelectorComponent', () => {
     });
   });
 
+  describe('allowance', () => {
+    it('pre-fills the allowance of an existing link and treats a missing one as zero', () => {
+      const { cmp, i } = setup();
+      cmp.open('item1', [link('a', 200, true, 5), link('b', 1)], 'milliliter');
+      expect(i.linkedProducts().map((r) => [r.productId, r.allowancePercent])).toEqual([
+        ['a', 5],
+        ['b', 0],
+      ]);
+    });
+
+    it('updates the allowance of one row, treats blank as zero and keeps it between 0 and 100', () => {
+      const { cmp, i } = setup();
+      cmp.open('item1', [link('a', 1), link('b', 1)], 'piece');
+      const allowance = (id: string): number | undefined =>
+        i.linkedProducts().find((r) => r.productId === id)?.allowancePercent;
+
+      i.onAllowanceChange('a', '7.5');
+      expect(allowance('a')).toBe(7.5);
+      expect(allowance('b')).toBe(0);
+
+      i.onAllowanceChange('a', null);
+      expect(allowance('a')).toBe(0);
+      i.onAllowanceChange('a', '');
+      expect(allowance('a')).toBe(0);
+      i.onAllowanceChange('a', 250);
+      expect(allowance('a')).toBe(100);
+      i.onAllowanceChange('a', -3);
+      expect(allowance('a')).toBe(0);
+      i.onAllowanceChange('a', 'abc');
+      expect(allowance('a')).toBe(0);
+    });
+
+    it('sends the allowance when saving', () => {
+      const { cmp, i } = setup();
+      cmp.open('item1', [link('a', 200, true, 5)], 'milliliter');
+      i.onAllowanceChange('a', 10);
+      i.save();
+      expect(inventory.assignProductItemLinks).toHaveBeenCalledWith('item1', [
+        { productId: 'a', quantityPerSale: 200, allowancePercent: 10, isActive: true },
+      ]);
+    });
+
+    it('remembers the allowance of a removed row when it is linked again', () => {
+      const { fixture, cmp, i, el } = setup();
+      cmp.open('item1', [link('b', 7, true, 4)], 'piece');
+      i.removeLinkedProduct('b');
+      fixture.detectChanges();
+      const lists = el.querySelectorAll('ul');
+      lists[1].appendChild(lists[0].querySelector('[data-id="b"]') as HTMLElement);
+      i.syncSignalsWithDOM();
+      expect(i.linkedProducts()[0].allowancePercent).toBe(4);
+    });
+
+    it('remembers the allowance of an inactive link', () => {
+      const { fixture, cmp, i, el } = setup();
+      cmp.open('item1', [link('a', 5, false, 12)], 'piece');
+      fixture.detectChanges();
+      const lists = el.querySelectorAll('ul');
+      lists[1].appendChild(lists[0].querySelector('[data-id="a"]') as HTMLElement);
+      i.syncSignalsWithDOM();
+      expect(i.linkedProducts()[0].allowancePercent).toBe(12);
+    });
+
+    it('refuses an allowance outside 0 to 100', () => {
+      const { cmp, i } = setup();
+      cmp.open('item1', [link('a', 2)], 'piece');
+      i.linkedProducts.set([{ ...i.linkedProducts()[0], allowancePercent: 120 }]);
+      i.save();
+      expect(alerts.error).toHaveBeenCalledWith('Allowance must be between 0 and 100 percent.');
+      expect(inventory.assignProductItemLinks).not.toHaveBeenCalled();
+    });
+
+    it('shows an allowance input per linked row', () => {
+      const { fixture, cmp, el } = setup();
+      cmp.open('item1', [link('a', 200, true, 5)], 'milliliter');
+      fixture.detectChanges();
+      expect(el.querySelectorAll('[data-testid="allowance-input"]')).toHaveLength(1);
+    });
+  });
+
   describe('save', () => {
     it('does nothing before open', () => {
       const { i } = setup();
@@ -289,8 +372,8 @@ describe('ProductItemLinksSelectorComponent', () => {
       cmp.open('item1', [link('a', 2), link('b', 3)], 'piece');
       i.save();
       expect(inventory.assignProductItemLinks).toHaveBeenCalledWith('item1', [
-        { productId: 'a', quantityPerSale: 2, isActive: true },
-        { productId: 'b', quantityPerSale: 3, isActive: true },
+        { productId: 'a', quantityPerSale: 2, allowancePercent: 0, isActive: true },
+        { productId: 'b', quantityPerSale: 3, allowancePercent: 0, isActive: true },
       ]);
       expect(alerts.successSaved).toHaveBeenCalledWith('Product links');
       expect(saved).toHaveBeenCalledWith({ id: 'item1' });
@@ -372,6 +455,16 @@ describe('ProductItemLinksSelectorComponent', () => {
       expect(i.stockImpact(i.linkedProducts()[0])).toBe(
         '1 sale takes 200 ml. In stock now: not enough for one sale.',
       );
+    });
+
+    it('uses the quantity with its allowance', () => {
+      const { cmp, i } = setup();
+      cmp.open('item1', [link('a', 200, true, 5)], 'milliliter', 1050);
+      expect(i.stockImpact(i.linkedProducts()[0])).toBe(
+        '1 sale takes 210 ml. In stock now: enough for 5 sales.',
+      );
+      i.onAllowanceChange('a', 0);
+      expect(i.stockImpact(i.linkedProducts()[0])).toContain('takes 200 ml');
     });
 
     it('follows the quantity as it is edited', () => {

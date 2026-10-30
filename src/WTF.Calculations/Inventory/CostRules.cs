@@ -1,5 +1,9 @@
 namespace WTF.Calculations.Inventory;
 
+public record RecipeLine(decimal EffectiveQuantity, decimal? UnitCost);
+
+public record RecipeCostSummary(decimal TotalCost, int UnknownCostCount);
+
 public static class CostRules
 {
     public const int CostDecimals = 6;
@@ -35,6 +39,38 @@ public static class CostRules
 
         return Round(cost.Value / (yieldPercent / 100m));
     }
+
+    // What one sale really uses: the standard amount plus the known, steady loss (the spill that always happens).
+    public static decimal EffectiveQuantity(decimal quantityPerSale, decimal allowancePercent) =>
+        Math.Round(quantityPerSale * (1m + Math.Max(0m, allowancePercent) / 100m), 3, MidpointRounding.AwayFromZero);
+
+    public static decimal LineCost(decimal effectiveQuantity, decimal unitCost) => Round(effectiveQuantity * unitCost);
+
+    // A line with no cost yet is counted as unknown instead of free, so a recipe never looks cheaper than it is.
+    public static RecipeCostSummary RecipeCost(IEnumerable<RecipeLine> lines)
+    {
+        var total = 0m;
+        var unknown = 0;
+        foreach (var line in lines)
+        {
+            if (line.UnitCost.HasValue)
+            {
+                total += LineCost(line.EffectiveQuantity, line.UnitCost.Value);
+            }
+            else
+            {
+                unknown++;
+            }
+        }
+
+        return new RecipeCostSummary(Round(total), unknown);
+    }
+
+    public static decimal Margin(decimal price, decimal cost) => Round(price - cost);
+
+    // Margin as a share of the price; null when the price is zero, where the share means nothing.
+    public static decimal? MarginPercent(decimal price, decimal cost) =>
+        price > 0m ? Math.Round((price - cost) / price * 100m, 2, MidpointRounding.AwayFromZero) : null;
 
     // The cost a movement is recorded at: the average when there is one, otherwise the last cost entered.
     public static decimal? MovementCost(decimal? averageCost, decimal? costPrice) => averageCost ?? costPrice;

@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Features.Inventory.DTOs;
+using WTF.Calculations.Inventory;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Inventory;
@@ -25,13 +26,14 @@ public class GetPosStockLimitsHandler(WTFDbContext db) : IRequestHandler<GetPosS
         var links = await db.ProductItemLinks
             .AsNoTracking()
             .Where(link => link.IsActive && itemIds.Contains(link.ItemId))
-            .Select(link => new StockLimitLinkDto(link.ProductId, link.ItemId, link.QuantityPerSale))
+            .Select(link => new { link.ProductId, link.ItemId, link.QuantityPerSale, link.AllowancePercent })
             .ToListAsync(cancellationToken);
 
         return new PosStockLimitsDto(
             [.. items.Select(item => new StockLimitItemDto(
                 item.Id, item.Name, InventoryUnitLabels.Abbreviate(item.UnitName), item.CurrentQuantity))],
-            links,
+            [.. links.Select(link => new StockLimitLinkDto(
+                link.ProductId, link.ItemId, CostRules.EffectiveQuantity(link.QuantityPerSale, link.AllowancePercent)))],
             DateTime.UtcNow);
     }
 }

@@ -130,4 +130,24 @@ describe('InventoryService', () => {
 
     expect(result.error).toBe('Unable to fetch stock history.');
   });
+
+  it('reads the recipe cost of a product', () => {
+    const { service, http } = setupHttpService(InventoryService);
+    const result = capture(service.getProductRecipeCost('p1'));
+
+    const req = http.expectOne(`${environment.apiUrl}/products/p1/recipe-cost`);
+    expect(req.request.method).toBe('GET');
+    req.flush({ productId: 'p1', lines: [], totalCost: 0 });
+
+    expect((result.value as { productId: string }).productId).toBe('p1');
+  });
+
+  it('gives a plain message when the recipe cost cannot be read', () => {
+    const { service, http } = setupHttpService(InventoryService);
+    const result = capture(service.getProductRecipeCost('p1'));
+
+    failWith(http.expectOne(`${environment.apiUrl}/products/p1/recipe-cost`), 403);
+
+    expect(result.error).toBe('Unable to fetch the recipe cost.');
+  });
 });

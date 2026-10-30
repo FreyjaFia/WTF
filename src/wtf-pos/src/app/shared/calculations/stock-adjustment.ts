@@ -8,6 +8,11 @@ export function adjustmentDelta(shownQuantity: number, countedQuantity: number):
   );
 }
 
+export function effectiveQuantity(quantityPerSale: number, allowancePercent: number): number {
+  const allowance = Number.isFinite(allowancePercent) && allowancePercent > 0 ? allowancePercent : 0;
+  return Math.round(quantityPerSale * (1 + allowance / 100) * QUANTITY_DECIMALS) / QUANTITY_DECIMALS;
+}
+
 // How many whole sales the balance covers when each sale takes `perSale`. Zero for an empty or negative balance.
 export function salesCovered(balance: number, perSale: number): number {
   if (perSale <= 0 || balance <= 0) {

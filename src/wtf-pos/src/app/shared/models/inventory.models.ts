@@ -38,6 +38,7 @@ export interface ProductItemLinkDto {
   productCode: string;
   itemId: string;
   quantityPerSale: number;
+  allowancePercent?: number;
   isActive: boolean;
   productIsActive?: boolean;
 }
@@ -45,7 +46,31 @@ export interface ProductItemLinkDto {
 export interface ProductItemLinkAssignmentDto {
   productId: string;
   quantityPerSale: number;
+  allowancePercent?: number;
   isActive?: boolean;
+}
+
+export interface RecipeCostLineDto {
+  linkId: string;
+  itemId: string;
+  itemName: string;
+  unitName: string;
+  quantityPerSale: number;
+  allowancePercent: number;
+  effectiveQuantity: number;
+  unitCost: number | null;
+  lineCost: number | null;
+}
+
+export interface RecipeCostDto {
+  productId: string;
+  productName: string;
+  price: number;
+  lines: RecipeCostLineDto[];
+  totalCost: number;
+  unknownCostCount: number;
+  margin: number;
+  marginPercent: number | null;
 }
 
 export interface StockMovementDto {

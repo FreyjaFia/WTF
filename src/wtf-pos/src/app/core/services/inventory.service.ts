@@ -12,6 +12,7 @@ import {
   PagedStockMovementsDto,
   ProductItemLinkAssignmentDto,
   ProductItemLinkDto,
+  RecipeCostDto,
   StockCoverageDto,
   UpdateItemDto,
 } from '@shared/models';
@@ -140,6 +141,12 @@ export class InventoryService {
     return this.http
       .put<ItemDto>(`${this.baseUrl}/${itemId}/product-links`, { itemId, productLinks })
       .pipe(catchError((error) => this.handleError(error, 'Unable to update item links.')));
+  }
+
+  public getProductRecipeCost(productId: string): Observable<RecipeCostDto> {
+    return this.http
+      .get<RecipeCostDto>(`${environment.apiUrl}/products/${productId}/recipe-cost`)
+      .pipe(catchError((error) => this.handleError(error, 'Unable to fetch the recipe cost.')));
   }
 
   public deleteInventoryItem(id: string): Observable<void> {

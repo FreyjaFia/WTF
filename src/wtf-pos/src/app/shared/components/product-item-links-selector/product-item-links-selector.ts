@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { AlertService, InventoryService, ModalStackService, ProductService } from '@core/services';
 import { AvatarComponent } from '@shared/components/avatar/avatar';
 import { IconComponent } from '@shared/components/icons/icon/icon';
-import { salesCovered } from '@shared/calculations';
+import { effectiveQuantity, salesCovered } from '@shared/calculations';
 import { getInventoryUnitAbbreviation } from '@shared/constants/inventory-units';
 import {
   ItemDto,
@@ -23,6 +23,7 @@ interface LinkedProductRow {
   isAddOn: boolean;
   isActive: boolean;
   quantityPerSale: number;
+  allowancePercent: number;
 }
 
 @Component({
@@ -42,6 +43,7 @@ export class ProductItemLinksSelectorComponent {
   private itemId = '';
   private initialLinks: ProductItemLinkDto[] = [];
   private rememberedQuantities = new Map<string, number>();
+  private rememberedAllowances = new Map<string, number>();
 
   @ViewChild('availableList') private readonly availableList!: ElementRef;
   @ViewChild('assignedList') private readonly assignedList!: ElementRef;
@@ -74,6 +76,9 @@ export class ProductItemLinksSelectorComponent {
     this.rememberedQuantities = new Map(
       currentLinks.filter((link) => !link.isActive).map((link) => [link.productId, link.quantityPerSale]),
     );
+    this.rememberedAllowances = new Map(
+      currentLinks.filter((link) => !link.isActive).map((link) => [link.productId, link.allowancePercent ?? 0]),
+    );
     this.searchTerm.set('');
     this.selectedFilter.set('all');
     this.allProducts.set([]);
@@ -101,6 +106,7 @@ export class ProductItemLinksSelectorComponent {
     this.itemId = '';
     this.initialLinks = [];
     this.rememberedQuantities = new Map();
+    this.rememberedAllowances = new Map();
     this.allProducts.set([]);
     this.unitName.set('');
     this.currentQuantity.set(0);
@@ -118,12 +124,13 @@ export class ProductItemLinksSelectorComponent {
 
   protected stockImpact(row: LinkedProductRow): string {
     const unit = this.unitAbbreviation();
-    const covered = salesCovered(this.currentQuantity(), row.quantityPerSale);
+    const perSale = effectiveQuantity(row.quantityPerSale, row.allowancePercent);
+    const covered = salesCovered(this.currentQuantity(), perSale);
     const sales = covered === 1 ? '1 sale' : `${covered} sales`;
 
     return covered > 0
-      ? `1 sale takes ${row.quantityPerSale} ${unit}. In stock now: enough for ${sales}.`
-      : `1 sale takes ${row.quantityPerSale} ${unit}. In stock now: not enough for one sale.`;
+      ? `1 sale takes ${perSale} ${unit}. In stock now: enough for ${sales}.`
+      : `1 sale takes ${perSale} ${unit}. In stock now: not enough for one sale.`;
   }
 
   protected onSearchInput(event: Event): void {
@@ -178,10 +185,22 @@ export class ProductItemLinksSelectorComponent {
     );
   }
 
+  protected onAllowanceChange(productId: string, value: string | number | null): void {
+    const parsed = value === null || value === '' ? 0 : Number(value);
+    const allowance = Number.isFinite(parsed) ? Math.min(100, Math.max(0, parsed)) : 0;
+
+    this.linkedProducts.set(
+      this.linkedProducts().map((row) =>
+        row.productId === productId ? { ...row, allowancePercent: allowance } : row,
+      ),
+    );
+  }
+
   protected removeLinkedProduct(productId: string): void {
     const removed = this.linkedProducts().find((row) => row.productId === productId);
     if (removed) {
       this.rememberedQuantities.set(productId, removed.quantityPerSale);
+      this.rememberedAllowances.set(productId, removed.allowancePercent);
     }
     this.linkedProducts.set(this.linkedProducts().filter((row) => row.productId !== productId));
 
@@ -216,6 +235,7 @@ export class ProductItemLinksSelectorComponent {
     const productLinks: ProductItemLinkAssignmentDto[] = this.linkedProducts().map((row) => ({
       productId: row.productId,
       quantityPerSale: row.quantityPerSale,
+      allowancePercent: row.allowancePercent,
       isActive: true,
     }));
 
@@ -251,6 +271,7 @@ export class ProductItemLinksSelectorComponent {
             isAddOn: product?.isAddOn ?? false,
             isActive: product?.isActive ?? link.isActive,
             quantityPerSale: link.quantityPerSale,
+            allowancePercent: link.allowancePercent ?? 0,
           };
         });
 
@@ -311,6 +332,7 @@ export class ProductItemLinksSelectorComponent {
     const selectedIdSet = new Set(selectedIds);
 
     const existingQuantities = new Map(this.linkedProducts().map((row) => [row.productId, row.quantityPerSale]));
+    const existingAllowances = new Map(this.linkedProducts().map((row) => [row.productId, row.allowancePercent]));
     const selectedRowById = new Map(this.linkedProducts().map((row) => [row.productId, row]));
     const productById = new Map<string, Pick<ProductDto, 'id' | 'name' | 'code' | 'price' | 'imageUrl' | 'isAddOn' | 'isActive'>>();
 
@@ -339,6 +361,7 @@ export class ProductItemLinksSelectorComponent {
           return {
             ...row,
             quantityPerSale: existingQuantities.get(id) ?? row.quantityPerSale,
+            allowancePercent: existingAllowances.get(id) ?? row.allowancePercent,
           };
         }
 
@@ -356,6 +379,7 @@ export class ProductItemLinksSelectorComponent {
           isActive: product.isActive,
           quantityPerSale:
             existingQuantities.get(product.id) ?? this.rememberedQuantities.get(product.id) ?? 1,
+          allowancePercent: this.rememberedAllowances.get(product.id) ?? 0,
         };
       })
       .filter((row): row is LinkedProductRow => !!row);
@@ -379,6 +403,10 @@ export class ProductItemLinksSelectorComponent {
 
     if (this.linkedProducts().some((row) => row.quantityPerSale <= 0)) {
       return 'Quantity per sale must be greater than zero.';
+    }
+
+    if (this.linkedProducts().some((row) => row.allowancePercent < 0 || row.allowancePercent > 100)) {
+      return 'Allowance must be between 0 and 100 percent.';
     }
 
     return null;

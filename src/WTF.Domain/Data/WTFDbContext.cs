@@ -775,6 +775,7 @@ public partial class WTFDbContext : DbContext
             entity.HasIndex(e => new { e.ProductId, e.ItemId }, "UX_ProductItemLinks_Product_Item").IsUnique();
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_ProductItemLinks_Id");
+            entity.Property(e => e.AllowancePercent).HasColumnType("decimal(5, 2)");
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())", "DF_ProductItemLinks_CreatedAt");
             entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_ProductItemLinks_IsActive");
             entity.Property(e => e.QuantityPerSale)

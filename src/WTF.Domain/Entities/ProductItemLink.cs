@@ -20,6 +20,8 @@ public partial class ProductItemLink
 
     public Guid? UpdatedBy { get; set; }
 
+    public decimal AllowancePercent { get; set; }
+
     public virtual User CreatedByNavigation { get; set; } = null!;
 
     public virtual Item Item { get; set; } = null!;

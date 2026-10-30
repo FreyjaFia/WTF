@@ -38,12 +38,12 @@ public class OrderStockService(WTFDbContext db, IAuditService auditService, ISto
         var activeLinks = await db.ProductItemLinks
             .AsNoTracking()
             .Where(link => link.IsActive && productIds.Contains(link.ProductId))
-            .Select(link => new { link.ProductId, link.ItemId, link.QuantityPerSale, ItemName = link.Item.Name, ItemIsActive = link.Item.IsActive })
+            .Select(link => new { link.ProductId, link.ItemId, link.QuantityPerSale, link.AllowancePercent, ItemName = link.Item.Name, ItemIsActive = link.Item.IsActive })
             .ToListAsync(cancellationToken);
 
         var links = activeLinks
             .Where(link => link.ItemIsActive)
-            .Select(link => new StockLink(link.ProductId, link.ItemId, link.QuantityPerSale))
+            .Select(link => new StockLink(link.ProductId, link.ItemId, CostRules.EffectiveQuantity(link.QuantityPerSale, link.AllowancePercent)))
             .ToList();
 
         // An inactive item takes no part in a sale (not even its blocking setting), so say so instead of skipping it silently.

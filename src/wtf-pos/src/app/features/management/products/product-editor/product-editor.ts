@@ -32,6 +32,7 @@ import {
   ProductCategoryEnum,
   ProductPriceHistoryDto,
   ProductSubCategoryEnum,
+  RecipeCostDto,
   UpdateProductAddOnPriceOverrideDto,
   UpdateProductDto,
 } from '@shared/models';
@@ -109,6 +110,12 @@ export class ProductEditorComponent implements OnInit {
   protected readonly stockMode = signal<StockTrackingMode>('none');
   protected readonly stockItems = signal<ItemDto[]>([]);
   protected readonly canTrackStock = computed(() => this.authService.canWriteItems());
+
+  protected readonly canReadCosts = computed(() => this.authService.canReadInventoryCosts());
+  protected readonly recipeCost = signal<RecipeCostDto | null>(null);
+  protected readonly isRecipeCostLoading = signal(false);
+  protected readonly recipeCostFailed = signal(false);
+  protected readonly isMarginNegative = computed(() => (this.recipeCost()?.marginPercent ?? 0) < 0);
 
   protected readonly stockForm = new FormGroup({
     startingQuantity: new FormControl<number | null>(null, [Validators.min(0)]),
@@ -230,6 +237,10 @@ export class ProductEditorComponent implements OnInit {
       this.productForm.controls.code.disable();
     }
 
+    if (id && this.canReadCosts()) {
+      this.loadRecipeCost(id);
+    }
+
     if (this.canTrackStock()) {
       this.inventoryService.getInventoryItems({ isActive: true }).subscribe({
         next: (items) => this.stockItems.set(items),
@@ -247,6 +258,23 @@ export class ProductEditorComponent implements OnInit {
         this.productForm.controls.category.enable();
         this.productForm.controls.subCategory.enable();
       }
+    });
+  }
+
+  private loadRecipeCost(productId: string): void {
+    this.isRecipeCostLoading.set(true);
+    this.recipeCostFailed.set(false);
+
+    this.inventoryService.getProductRecipeCost(productId).subscribe({
+      next: (cost) => {
+        this.recipeCost.set(cost);
+        this.isRecipeCostLoading.set(false);
+      },
+      error: () => {
+        this.recipeCost.set(null);
+        this.recipeCostFailed.set(true);
+        this.isRecipeCostLoading.set(false);
+      },
     });
   }
 

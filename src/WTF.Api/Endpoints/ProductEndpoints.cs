@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using WTF.Api.Common.Auth;
+using WTF.Api.Features.Inventory;
 using WTF.Api.Features.Products;
 using WTF.Api.Services;
 
@@ -34,6 +35,15 @@ public static class ProductEndpoints
             })
             .RequireAuthorization(AppPolicies.ProductsRead)
             .WithName("GetProductById");
+
+        // GET /api/products/{id}/recipe-cost - What the product's recipe costs and the margin (cost roles only)
+        productGroup.MapGet("/{id:guid}/recipe-cost",
+            async (Guid id, ISender sender) =>
+            {
+                var result = await sender.Send(new GetProductRecipeCostQuery(id));
+                return result is not null ? Results.Ok(result) : Results.NotFound();
+            })
+            .RequireAuthorization(AppPolicies.InventoryCostsRead);
 
         // POST /api/products - Create new product
         productGroup.MapPost("/",

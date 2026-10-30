@@ -61,4 +61,32 @@ public class CostRulesTests
         CostRules.MovementCost(null, 0.20m).ShouldBe(0.20m);
         CostRules.MovementCost(null, null).ShouldBeNull();
     }
+
+    [Theory]
+    [InlineData(200, 0, 200)]
+    [InlineData(200, 5, 210)]
+    [InlineData(3, 10, 3.3)]
+    [InlineData(1, 33.33, 1.333)]
+    public void EffectiveQuantity_AddsTheAllowanceAndKeepsThreeDecimals(double quantity, double allowance, double expected)
+    {
+        CostRules.EffectiveQuantity((decimal)quantity, (decimal)allowance).ShouldBe((decimal)expected);
+    }
+
+    [Fact]
+    public void RecipeCost_AddsKnownLinesAndCountsUnknownOnes()
+    {
+        var summary = CostRules.RecipeCost([new RecipeLine(210m, 0.15m), new RecipeLine(1m, 4m), new RecipeLine(20m, null)]);
+
+        summary.TotalCost.ShouldBe(35.5m);
+        summary.UnknownCostCount.ShouldBe(1);
+    }
+
+    [Fact]
+    public void Margin_IsPriceMinusCostAndPercentOfPrice()
+    {
+        CostRules.Margin(150m, 35.5m).ShouldBe(114.5m);
+        CostRules.MarginPercent(150m, 35.5m).ShouldBe(76.33m);
+        CostRules.MarginPercent(0m, 5m).ShouldBeNull();
+        CostRules.MarginPercent(10m, 16m).ShouldBe(-60m);
+    }
 }
