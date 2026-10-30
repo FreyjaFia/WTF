@@ -63,6 +63,8 @@ public class AssignItemProductLinksHandler(
             throw new InvalidOperationException("One or more selected products were not found.");
         }
 
+        await ValidateReplacementsAsync(request.ItemId, distinctLinks, cancellationToken);
+
         var existingLinks = await db.ProductItemLinks
             .Where(link => link.ItemId == request.ItemId)
             .ToListAsync(cancellationToken);
@@ -86,6 +88,8 @@ public class AssignItemProductLinksHandler(
             {
                 existing.QuantityPerSale = link.QuantityPerSale;
                 existing.AllowancePercent = link.AllowancePercent;
+                existing.ScalesWithSize = link.ScalesWithSize;
+                existing.ReplacesItemId = link.ReplacesItemId;
                 existing.IsActive = link.IsActive;
                 existing.UpdatedAt = DateTime.UtcNow;
                 existing.UpdatedBy = userId;
@@ -98,6 +102,8 @@ public class AssignItemProductLinksHandler(
                 ProductId = link.ProductId,
                 QuantityPerSale = link.QuantityPerSale,
                 AllowancePercent = link.AllowancePercent,
+                ScalesWithSize = link.ScalesWithSize,
+                ReplacesItemId = link.ReplacesItemId,
                 IsActive = link.IsActive,
                 CreatedAt = DateTime.UtcNow,
                 CreatedBy = userId
@@ -120,6 +126,8 @@ public class AssignItemProductLinksHandler(
                     link.ProductId,
                     link.QuantityPerSale,
                     link.AllowancePercent,
+                    link.ScalesWithSize,
+                    link.ReplacesItemId,
                     link.IsActive
                 })
             },
@@ -130,12 +138,46 @@ public class AssignItemProductLinksHandler(
             .AsNoTracking()
             .Include(i => i.ItemPriceHistories)
                 .ThenInclude(h => h.UpdatedByNavigation)
-            .Include(i => i.ProductItemLinks)
+            .Include(i => i.ProductItemLinkItems)
                 .ThenInclude(l => l.Product)
+            .Include(i => i.ProductItemLinkItems)
+                .ThenInclude(l => l.ReplacesItem)
             .Include(i => i.StockMovements.OrderByDescending(m => m.CreatedAt).Take(25))
                 .ThenInclude(m => m.CreatedByNavigation)
             .FirstOrDefaultAsync(i => i.Id == request.ItemId, cancellationToken);
 
         return updatedItem is null ? null : ItemMapping.ToDto(updatedItem);
+    }
+
+    private async Task ValidateReplacementsAsync(
+        Guid itemId, List<ProductItemLinkAssignmentDto> links, CancellationToken cancellationToken)
+    {
+        var replacing = links.Where(link => link.ReplacesItemId.HasValue).ToList();
+        if (replacing.Count == 0)
+        {
+            return;
+        }
+
+        if (replacing.Any(link => link.ReplacesItemId == itemId))
+        {
+            throw new InvalidOperationException("An item cannot replace itself.");
+        }
+
+        var replacedIds = replacing.Select(link => link.ReplacesItemId!.Value).Distinct().ToList();
+        var foundItems = await db.Items.CountAsync(item => replacedIds.Contains(item.Id), cancellationToken);
+        if (foundItems != replacedIds.Count)
+        {
+            throw new InvalidOperationException("The item to replace was not found.");
+        }
+
+        var productIds = replacing.Select(link => link.ProductId).ToList();
+        var nonAddOns = await db.Products
+            .Where(product => productIds.Contains(product.Id) && !product.IsAddOn)
+            .Select(product => product.Name)
+            .ToListAsync(cancellationToken);
+        if (nonAddOns.Count > 0)
+        {
+            throw new InvalidOperationException($"Only an add-on can replace an item. {nonAddOns[0]} is not an add-on.");
+        }
     }
 }

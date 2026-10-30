@@ -25,15 +25,27 @@ public class GetPosStockLimitsHandler(WTFDbContext db) : IRequestHandler<GetPosS
         var itemIds = items.Select(item => item.Id).ToList();
         var links = await db.ProductItemLinks
             .AsNoTracking()
-            .Where(link => link.IsActive && itemIds.Contains(link.ItemId))
-            .Select(link => new { link.ProductId, link.ItemId, link.QuantityPerSale, link.AllowancePercent })
+            .Where(link => link.IsActive
+                           && (itemIds.Contains(link.ItemId) || (link.ReplacesItemId != null && itemIds.Contains(link.ReplacesItemId.Value))))
+            .Select(link => new { link.ProductId, link.ItemId, link.QuantityPerSale, link.AllowancePercent, link.ScalesWithSize, link.ReplacesItemId })
+            .ToListAsync(cancellationToken);
+
+        var sizeMultipliers = await db.Products
+            .AsNoTracking()
+            .Where(product => product.IsActive && product.RecipeMultiplier > 0m && product.RecipeMultiplier != 1m)
+            .Select(product => new SizeMultiplierDto(product.Id, product.RecipeMultiplier))
             .ToListAsync(cancellationToken);
 
         return new PosStockLimitsDto(
             [.. items.Select(item => new StockLimitItemDto(
                 item.Id, item.Name, InventoryUnitLabels.Abbreviate(item.UnitName), item.CurrentQuantity))],
             [.. links.Select(link => new StockLimitLinkDto(
-                link.ProductId, link.ItemId, CostRules.EffectiveQuantity(link.QuantityPerSale, link.AllowancePercent)))],
-            DateTime.UtcNow);
+                link.ProductId,
+                link.ItemId,
+                CostRules.EffectiveQuantity(link.QuantityPerSale, link.AllowancePercent),
+                link.ScalesWithSize,
+                link.ReplacesItemId))],
+            DateTime.UtcNow,
+            sizeMultipliers);
     }
 }

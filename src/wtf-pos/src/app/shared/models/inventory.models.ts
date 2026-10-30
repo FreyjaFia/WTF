@@ -39,6 +39,9 @@ export interface ProductItemLinkDto {
   itemId: string;
   quantityPerSale: number;
   allowancePercent?: number;
+  scalesWithSize?: boolean;
+  replacesItemId?: string | null;
+  replacesItemName?: string | null;
   isActive: boolean;
   productIsActive?: boolean;
 }
@@ -47,6 +50,8 @@ export interface ProductItemLinkAssignmentDto {
   productId: string;
   quantityPerSale: number;
   allowancePercent?: number;
+  scalesWithSize?: boolean;
+  replacesItemId?: string | null;
   isActive?: boolean;
 }
 
@@ -57,6 +62,9 @@ export interface RecipeCostLineDto {
   unitName: string;
   quantityPerSale: number;
   allowancePercent: number;
+  scalesWithSize: boolean;
+  replacesItemId: string | null;
+  replacesItemName: string | null;
   effectiveQuantity: number;
   unitCost: number | null;
   lineCost: number | null;
@@ -66,6 +74,8 @@ export interface RecipeCostDto {
   productId: string;
   productName: string;
   price: number;
+  isAddOn: boolean;
+  recipeMultiplier: number;
   lines: RecipeCostLineDto[];
   totalCost: number;
   unknownCostCount: number;
@@ -220,11 +230,19 @@ export interface StockLimitLinkDto {
   productId: string;
   itemId: string;
   quantityPerSale: number;
+  scalesWithSize?: boolean;
+  replacesItemId?: string | null;
+}
+
+export interface StockSizeMultiplierDto {
+  productId: string;
+  multiplier: number;
 }
 
 export interface PosStockLimitsDto {
   items: StockLimitItemDto[];
   links: StockLimitLinkDto[];
+  sizeMultipliers?: StockSizeMultiplierDto[];
   asOf: string;
 }
 

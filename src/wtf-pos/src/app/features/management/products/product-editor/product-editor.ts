@@ -115,6 +115,12 @@ export class ProductEditorComponent implements OnInit {
   protected readonly recipeCost = signal<RecipeCostDto | null>(null);
   protected readonly isRecipeCostLoading = signal(false);
   protected readonly recipeCostFailed = signal(false);
+  protected readonly canWriteProducts = computed(() => this.authService.canWriteProducts());
+  protected readonly multiplierControl = new FormControl<number>(1, {
+    nonNullable: true,
+    validators: [Validators.required, Validators.min(0.01), Validators.max(10)],
+  });
+  protected readonly isMultiplierSaving = signal(false);
   protected readonly isMarginNegative = computed(() => (this.recipeCost()?.marginPercent ?? 0) < 0);
 
   protected readonly stockForm = new FormGroup({
@@ -261,6 +267,26 @@ export class ProductEditorComponent implements OnInit {
     });
   }
 
+  protected saveMultiplier(): void {
+    const id = this.productId;
+    if (!id || this.multiplierControl.invalid || this.isMultiplierSaving()) {
+      return;
+    }
+
+    this.isMultiplierSaving.set(true);
+    this.inventoryService.setRecipeMultiplier(id, this.multiplierControl.value).subscribe({
+      next: () => {
+        this.isMultiplierSaving.set(false);
+        this.alertService.successSaved('Size multiplier');
+        this.loadRecipeCost(id);
+      },
+      error: (err: Error) => {
+        this.isMultiplierSaving.set(false);
+        this.alertService.error(err.message);
+      },
+    });
+  }
+
   private loadRecipeCost(productId: string): void {
     this.isRecipeCostLoading.set(true);
     this.recipeCostFailed.set(false);
@@ -268,6 +294,7 @@ export class ProductEditorComponent implements OnInit {
     this.inventoryService.getProductRecipeCost(productId).subscribe({
       next: (cost) => {
         this.recipeCost.set(cost);
+        this.multiplierControl.setValue(cost.recipeMultiplier ?? 1);
         this.isRecipeCostLoading.set(false);
       },
       error: () => {

@@ -54,7 +54,9 @@ public class SharedCasesTests
 
     private sealed record ShortfallBalanceCase(string ItemId, decimal Balance);
 
-    private sealed record ShortfallLinkCase(string ProductId, string ItemId, decimal PerSale);
+    private sealed record ShortfallLinkCase(string ProductId, string ItemId, decimal PerSale, bool ScalesWithSize = false, string? ReplacesItemId = null);
+
+    private sealed record ShortfallMultiplierCase(string ProductId, decimal Multiplier);
 
     private sealed record ShortfallAddOnCase(string ProductId, int Quantity);
 
@@ -67,7 +69,8 @@ public class SharedCasesTests
         List<ShortfallBalanceCase> Balances,
         List<ShortfallLinkCase> Links,
         List<ShortfallLineCase> Lines,
-        List<ShortfallExpectedCase> Expected);
+        List<ShortfallExpectedCase> Expected,
+        List<ShortfallMultiplierCase>? Multipliers = null);
 
     private sealed record Cases(
         List<OrderCase> OrderTotals,
@@ -244,10 +247,20 @@ public class SharedCasesTests
         {
             var lineId = Guid.NewGuid();
             lines.Add(new StockLine(lineId, null, IdFor(line.ProductId), line.Quantity));
-            lines.AddRange(line.AddOns.Select(addOn => new StockLine(Guid.NewGuid(), lineId, IdFor(addOn.ProductId), addOn.Quantity)));
+            lines.AddRange(line.AddOns.Select(addOn => new StockLine(
+                Guid.NewGuid(),
+                lineId,
+                IdFor(addOn.ProductId),
+                addOn.Quantity,
+                c.Multipliers?.SingleOrDefault(m => m.ProductId == addOn.ProductId)?.Multiplier ?? 1m)));
         }
 
-        var links = c.Links.Select(link => new StockLink(IdFor(link.ProductId), IdFor(link.ItemId), link.PerSale)).ToList();
+        var links = c.Links.Select(link => new StockLink(
+            IdFor(link.ProductId),
+            IdFor(link.ItemId),
+            link.PerSale,
+            link.ScalesWithSize,
+            link.ReplacesItemId is null ? null : IdFor(link.ReplacesItemId))).ToList();
         var balances = c.Balances.ToDictionary(balance => IdFor(balance.ItemId), balance => balance.Balance);
 
         var result = StockRules.Shortfalls(lines, links, balances);

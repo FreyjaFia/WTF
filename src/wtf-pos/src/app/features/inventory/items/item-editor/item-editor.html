@@ -460,6 +460,12 @@
                           x{{ link.quantityPerSale | number: '1.0-3' }} {{ savedUnitAbbreviation() }}@if ((link.allowancePercent ?? 0) > 0) {
                             +{{ link.allowancePercent | number: '1.0-2' }}%
                           }
+                          @if (link.scalesWithSize) {
+                            <span class="ml-1 rounded bg-gray-200 px-1.5 py-0.5 text-[10px] font-semibold text-gray-600" data-testid="scales-tag">scales with size</span>
+                          }
+                          @if (link.replacesItemId) {
+                            <span class="ml-1 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700" data-testid="replaces-tag">replaces {{ link.replacesItemName }}</span>
+                          }
                         </p>
                       </div>
                     }

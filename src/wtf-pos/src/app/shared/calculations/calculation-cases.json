@@ -1411,6 +1411,77 @@
       "links": [],
       "lines": [{ "productId": "water", "quantity": 4, "addOns": [] }],
       "expected": []
+    },
+    {
+      "name": "an add-on that replaces an item stops the drink taking it",
+      "balances": [{ "itemId": "dairy", "balance": 100 }, { "itemId": "oat", "balance": 300 }],
+      "links": [
+        { "productId": "latte", "itemId": "dairy", "perSale": 200 },
+        { "productId": "oat-addon", "itemId": "oat", "perSale": 200, "replacesItemId": "dairy" }
+      ],
+      "lines": [{ "productId": "latte", "quantity": 2, "addOns": [{ "productId": "oat-addon", "quantity": 1 }] }],
+      "expected": [{ "itemId": "oat", "needed": 400, "balance": 300, "short": 100 }]
+    },
+    {
+      "name": "without the replacing add-on the drink still takes its item",
+      "balances": [{ "itemId": "dairy", "balance": 300 }, { "itemId": "oat", "balance": 300 }],
+      "links": [
+        { "productId": "latte", "itemId": "dairy", "perSale": 200 },
+        { "productId": "oat-addon", "itemId": "oat", "perSale": 200, "replacesItemId": "dairy" }
+      ],
+      "lines": [{ "productId": "latte", "quantity": 2, "addOns": [] }],
+      "expected": [{ "itemId": "dairy", "needed": 400, "balance": 300, "short": 100 }]
+    },
+    {
+      "name": "a replaced item is not reported even when the replacing item does not block",
+      "balances": [{ "itemId": "dairy", "balance": 0 }],
+      "links": [
+        { "productId": "latte", "itemId": "dairy", "perSale": 200 },
+        { "productId": "oat-addon", "itemId": "oat", "perSale": 200, "replacesItemId": "dairy" }
+      ],
+      "lines": [{ "productId": "latte", "quantity": 1, "addOns": [{ "productId": "oat-addon", "quantity": 1 }] }],
+      "expected": []
+    },
+    {
+      "name": "a size add-on scales the recipe lines marked scales with size",
+      "balances": [{ "itemId": "milk", "balance": 500 }],
+      "multipliers": [{ "productId": "large", "multiplier": 1.5 }],
+      "links": [{ "productId": "latte", "itemId": "milk", "perSale": 200, "scalesWithSize": true }],
+      "lines": [{ "productId": "latte", "quantity": 2, "addOns": [{ "productId": "large", "quantity": 1 }] }],
+      "expected": [{ "itemId": "milk", "needed": 600, "balance": 500, "short": 100 }]
+    },
+    {
+      "name": "a line that does not scale with size is left alone by the size add-on",
+      "balances": [{ "itemId": "lid", "balance": 1 }],
+      "multipliers": [{ "productId": "large", "multiplier": 1.5 }],
+      "links": [{ "productId": "latte", "itemId": "lid", "perSale": 1 }],
+      "lines": [{ "productId": "latte", "quantity": 2, "addOns": [{ "productId": "large", "quantity": 1 }] }],
+      "expected": [{ "itemId": "lid", "needed": 2, "balance": 1, "short": 1 }]
+    },
+    {
+      "name": "the size multiplier does nothing without a size add-on",
+      "balances": [{ "itemId": "milk", "balance": 400 }],
+      "multipliers": [{ "productId": "large", "multiplier": 1.5 }],
+      "links": [{ "productId": "latte", "itemId": "milk", "perSale": 200, "scalesWithSize": true }],
+      "lines": [{ "productId": "latte", "quantity": 2, "addOns": [] }],
+      "expected": []
+    },
+    {
+      "name": "a replacing add-on that scales with size takes the bigger amount",
+      "balances": [{ "itemId": "oat", "balance": 500 }],
+      "multipliers": [{ "productId": "large", "multiplier": 1.5 }],
+      "links": [
+        { "productId": "latte", "itemId": "dairy", "perSale": 200, "scalesWithSize": true },
+        { "productId": "oat-addon", "itemId": "oat", "perSale": 200, "scalesWithSize": true, "replacesItemId": "dairy" }
+      ],
+      "lines": [
+        {
+          "productId": "latte",
+          "quantity": 2,
+          "addOns": [{ "productId": "large", "quantity": 1 }, { "productId": "oat-addon", "quantity": 1 }]
+        }
+      ],
+      "expected": [{ "itemId": "oat", "needed": 600, "balance": 500, "short": 100 }]
     }
   ],
   "wasteNeedsReview": [

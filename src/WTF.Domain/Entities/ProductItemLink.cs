@@ -22,11 +22,17 @@ public partial class ProductItemLink
 
     public decimal AllowancePercent { get; set; }
 
+    public bool ScalesWithSize { get; set; }
+
+    public Guid? ReplacesItemId { get; set; }
+
     public virtual User CreatedByNavigation { get; set; } = null!;
 
     public virtual Item Item { get; set; } = null!;
 
     public virtual Product Product { get; set; } = null!;
+
+    public virtual Item? ReplacesItem { get; set; }
 
     public virtual User? UpdatedByNavigation { get; set; }
 }

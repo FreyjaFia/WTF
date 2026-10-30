@@ -299,6 +299,7 @@ describe('OrderEditor', () => {
   let stockLimits: {
     items: typeof limitItems;
     links: typeof limitLinks;
+    sizeMultipliers: () => { productId: string; multiplier: number }[];
     hasBlockingItems: () => boolean;
     start: ReturnType<typeof vi.fn>;
     stop: ReturnType<typeof vi.fn>;
@@ -411,6 +412,7 @@ describe('OrderEditor', () => {
     stockLimits = {
       items: limitItems,
       links: limitLinks,
+      sizeMultipliers: () => [],
       hasBlockingItems: () => limitItems().length > 0,
       start: vi.fn(),
       stop: vi.fn(),

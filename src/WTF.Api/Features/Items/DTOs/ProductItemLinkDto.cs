@@ -11,7 +11,10 @@ public record ProductItemLinkDto(
     decimal QuantityPerSale,
     bool IsActive,
     bool ProductIsActive = true,
-    decimal AllowancePercent = 0m);
+    decimal AllowancePercent = 0m,
+    bool ScalesWithSize = false,
+    Guid? ReplacesItemId = null,
+    string? ReplacesItemName = null);
 
 public record ProductItemLinkAssignmentDto(
     Guid ProductId,
@@ -19,4 +22,6 @@ public record ProductItemLinkAssignmentDto(
     decimal QuantityPerSale,
     bool IsActive = true,
     [Range(0, 100)]
-    decimal AllowancePercent = 0m);
+    decimal AllowancePercent = 0m,
+    bool ScalesWithSize = false,
+    Guid? ReplacesItemId = null);

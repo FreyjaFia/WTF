@@ -36,8 +36,10 @@ public class GetItemsHandler(WTFDbContext db) : IRequestHandler<GetItemsQuery, L
         }
 
         var items = await query
-            .Include(i => i.ProductItemLinks)
+            .Include(i => i.ProductItemLinkItems)
                 .ThenInclude(l => l.Product)
+            .Include(i => i.ProductItemLinkItems)
+                .ThenInclude(l => l.ReplacesItem)
             .OrderBy(i => i.Name)
             .ToListAsync(cancellationToken);
 

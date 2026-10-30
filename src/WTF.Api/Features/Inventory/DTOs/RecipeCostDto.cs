@@ -9,7 +9,10 @@ public record RecipeCostLineDto(
     decimal AllowancePercent,
     decimal EffectiveQuantity,
     decimal? UnitCost,
-    decimal? LineCost);
+    decimal? LineCost,
+    bool ScalesWithSize = false,
+    Guid? ReplacesItemId = null,
+    string? ReplacesItemName = null);
 
 public record RecipeCostDto(
     Guid ProductId,
@@ -19,4 +22,6 @@ public record RecipeCostDto(
     decimal TotalCost,
     int UnknownCostCount,
     decimal Margin,
-    decimal? MarginPercent);
+    decimal? MarginPercent,
+    bool IsAddOn = false,
+    decimal RecipeMultiplier = 1m);

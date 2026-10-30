@@ -39,7 +39,7 @@ internal static class ItemMapping
                     h.UpdatedBy,
                     $"{h.UpdatedByNavigation.FirstName} {h.UpdatedByNavigation.LastName}".Trim()))
                 .ToList(),
-            item.ProductItemLinks
+            item.ProductItemLinkItems
                 .OrderBy(l => l.Product.Name)
                 .Select(l => new ProductItemLinkDto(
                     l.Id,
@@ -50,7 +50,10 @@ internal static class ItemMapping
                     l.QuantityPerSale,
                     l.IsActive,
                     l.Product.IsActive,
-                    l.AllowancePercent))
+                    l.AllowancePercent,
+                    l.ScalesWithSize,
+                    l.ReplacesItemId,
+                    l.ReplacesItem?.Name))
                 .ToList(),
             item.StockMovements
                 .OrderByDescending(m => m.CreatedAt)

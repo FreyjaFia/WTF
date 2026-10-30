@@ -673,6 +673,9 @@ public partial class WTFDbContext : DbContext
                 .HasMaxLength(100)
                 .IsUnicode(false);
             entity.Property(e => e.Price).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.RecipeMultiplier)
+                .HasDefaultValue(1m, "DF_Products_RecipeMultiplier")
+                .HasColumnType("decimal(6, 3)");
             entity.Property(e => e.UpdatedAt).HasColumnType("datetime");
 
             entity.HasOne(d => d.Category).WithMany(p => p.Products)
@@ -787,7 +790,7 @@ public partial class WTFDbContext : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ProductItemLinks_CreatedBy");
 
-            entity.HasOne(d => d.Item).WithMany(p => p.ProductItemLinks)
+            entity.HasOne(d => d.Item).WithMany(p => p.ProductItemLinkItems)
                 .HasForeignKey(d => d.ItemId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ProductItemLinks_Items");
@@ -796,6 +799,10 @@ public partial class WTFDbContext : DbContext
                 .HasForeignKey(d => d.ProductId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ProductItemLinks_Products");
+
+            entity.HasOne(d => d.ReplacesItem).WithMany(p => p.ProductItemLinkReplacesItems)
+                .HasForeignKey(d => d.ReplacesItemId)
+                .HasConstraintName("FK_ProductItemLinks_ReplacesItem");
 
             entity.HasOne(d => d.UpdatedByNavigation).WithMany(p => p.ProductItemLinkUpdatedByNavigations)
                 .HasForeignKey(d => d.UpdatedBy)

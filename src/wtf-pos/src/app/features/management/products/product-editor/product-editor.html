@@ -512,6 +512,16 @@
                                   (+{{ line.allowancePercent | number: '1.0-2' }}% = {{ line.effectiveQuantity | number: '1.0-3' }} {{ line.unitName }})
                                 }
                               </p>
+                              @if (line.scalesWithSize || line.replacesItemId) {
+                                <p class="mt-0.5 flex flex-wrap gap-1">
+                                  @if (line.scalesWithSize) {
+                                    <span class="rounded bg-gray-200 px-1.5 py-0.5 text-[10px] font-semibold text-gray-600" data-testid="scales-tag">scales with size</span>
+                                  }
+                                  @if (line.replacesItemId) {
+                                    <span class="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700" data-testid="replaces-tag">replaces {{ line.replacesItemName }}</span>
+                                  }
+                                </p>
+                              }
                             </div>
                             <div class="shrink-0 text-right text-xs">
                               @if (line.unitCost === null || line.lineCost === null) {
@@ -556,6 +566,45 @@
                           </dd>
                         </div>
                       </dl>
+                    }
+
+                    @if (cost.isAddOn) {
+                      @if (canWriteProducts()) {
+                        <div class="space-y-1 border-t border-gray-100 pt-3" data-testid="multiplier-editor">
+                          <label class="text-xs font-semibold text-gray-700" for="recipe-multiplier">Size multiplier</label>
+                          <div class="flex items-center gap-2">
+                            <input
+                              id="recipe-multiplier"
+                              type="number"
+                              min="0.01"
+                              max="10"
+                              step="any"
+                              class="input input-sm w-28 border-gray-200 bg-surface"
+                              data-testid="multiplier-input"
+                              [formControl]="multiplierControl"
+                            />
+                            <button
+                              type="button"
+                              class="app-btn app-btn-secondary app-btn-sm gap-2"
+                              data-testid="multiplier-save"
+                              [disabled]="isMultiplierSaving() || multiplierControl.invalid"
+                              (click)="saveMultiplier()"
+                            >
+                              @if (isMultiplierSaving()) {
+                                <span class="loading loading-spinner loading-xs"></span>
+                              }
+                              {{ isMultiplierSaving() ? 'Saving...' : 'Save' }}
+                            </button>
+                          </div>
+                          <p class="text-[11px] text-gray-500">
+                            For a size add-on such as Large: 1.5 means recipe lines marked scales with size use 1.5x.
+                          </p>
+                        </div>
+                      } @else if (cost.recipeMultiplier !== 1) {
+                        <p class="border-t border-gray-100 pt-3 text-xs text-gray-600" data-testid="multiplier-readonly">
+                          Size multiplier {{ cost.recipeMultiplier | number: '1.0-4' }}x
+                        </p>
+                      }
                     }
                   }
                 </div>

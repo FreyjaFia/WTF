@@ -28,6 +28,8 @@ public partial class Product
 
     public int? SubCategoryId { get; set; }
 
+    public decimal RecipeMultiplier { get; set; }
+
     public virtual ProductCategory Category { get; set; } = null!;
 
     public virtual User CreatedByNavigation { get; set; } = null!;

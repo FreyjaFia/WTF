@@ -205,6 +205,30 @@
                     />
                     <span class="shrink-0 text-[10px] text-gray-400">%</span>
                   </label>
+                  <label class="flex items-center gap-1 text-[10px] text-gray-500" title="Multiplied by the size add-on on the same drink">
+                    <input
+                      type="checkbox"
+                      class="checkbox checkbox-xs"
+                      data-testid="scales-input"
+                      [checked]="product.scalesWithSize"
+                      (change)="onScalesWithSizeChange(product.productId, $any($event.target).checked)"
+                    />
+                    Scales with size
+                  </label>
+                  @if (product.isAddOn) {
+                    <select
+                      class="select select-xs h-7 w-28 border-gray-200 bg-surface text-[10px]"
+                      aria-label="Replaces"
+                      data-testid="replaces-select"
+                      [value]="product.replacesItemId ?? ''"
+                      (change)="onReplacesChange(product.productId, $any($event.target).value)"
+                    >
+                      <option value="">Replaces: Nothing</option>
+                      @for (item of replaceableItems(); track item.id) {
+                        <option [value]="item.id" [selected]="item.id === product.replacesItemId">{{ item.name }}</option>
+                      }
+                    </select>
+                  }
                   <button
                     type="button"
                     class="app-btn app-btn-icon-danger p-1"

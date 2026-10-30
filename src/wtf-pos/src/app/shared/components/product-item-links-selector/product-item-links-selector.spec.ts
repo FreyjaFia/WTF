@@ -14,6 +14,8 @@ interface Row {
   isActive: boolean;
   quantityPerSale: number;
   allowancePercent: number;
+  scalesWithSize: boolean;
+  replacesItemId: string | null;
 }
 
 interface Internals {
@@ -29,6 +31,8 @@ interface Internals {
   onFilterChange(e: unknown): void;
   onQuantityChange(id: string, v: string | number): void;
   onAllowanceChange(id: string, v: string | number | null): void;
+  onScalesWithSizeChange(id: string, checked: boolean): void;
+  onReplacesChange(id: string, value: string | null): void;
   removeLinkedProduct(id: string): void;
   save(): void;
   closeModal(): void;
@@ -70,7 +74,7 @@ function link(productId: string, qty: number, isActive = true, allowancePercent?
 
 describe('ProductItemLinksSelectorComponent', () => {
   let products: { getProducts: ReturnType<typeof vi.fn> };
-  let inventory: { assignProductItemLinks: ReturnType<typeof vi.fn> };
+  let inventory: { assignProductItemLinks: ReturnType<typeof vi.fn>; getInventoryItems: ReturnType<typeof vi.fn> };
   let alerts: { error: ReturnType<typeof vi.fn>; successSaved: ReturnType<typeof vi.fn> };
   let stack: { push: ReturnType<typeof vi.fn>; remove: ReturnType<typeof vi.fn> };
 
@@ -85,7 +89,12 @@ describe('ProductItemLinksSelectorComponent', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     products = { getProducts: vi.fn().mockReturnValue(of(catalog)) };
-    inventory = { assignProductItemLinks: vi.fn().mockReturnValue(of({ id: 'item1' } as ItemDto)) };
+    inventory = {
+      assignProductItemLinks: vi.fn().mockReturnValue(of({ id: 'item1' } as ItemDto)),
+      getInventoryItems: vi.fn().mockReturnValue(
+        of([{ id: 'item1', name: 'This' }, { id: 'dairy', name: 'Dairy' }] as ItemDto[]),
+      ),
+    };
     alerts = { error: vi.fn(), successSaved: vi.fn() };
     stack = { push: vi.fn().mockReturnValue(4), remove: vi.fn() };
     TestBed.configureTestingModule({
@@ -318,7 +327,7 @@ describe('ProductItemLinksSelectorComponent', () => {
       i.onAllowanceChange('a', 10);
       i.save();
       expect(inventory.assignProductItemLinks).toHaveBeenCalledWith('item1', [
-        { productId: 'a', quantityPerSale: 200, allowancePercent: 10, isActive: true },
+        { productId: 'a', quantityPerSale: 200, allowancePercent: 10, scalesWithSize: false, replacesItemId: null, isActive: true },
       ]);
     });
 
@@ -360,6 +369,61 @@ describe('ProductItemLinksSelectorComponent', () => {
     });
   });
 
+  describe('size scaling and replacing', () => {
+    it('pre-fills both options from an existing link', () => {
+      const { cmp, i } = setup();
+      cmp.open(
+        'item1',
+        [{ ...link('a', 1), scalesWithSize: true }, { ...link('c', 1), replacesItemId: 'dairy' }],
+        'milliliter',
+      );
+      expect(i.linkedProducts().map((r) => [r.productId, r.scalesWithSize, r.replacesItemId])).toEqual([
+        ['a', true, null],
+        ['c', false, 'dairy'],
+      ]);
+    });
+
+    it('offers the replace choice for add-ons only, without the item being edited', () => {
+      const { fixture, cmp, el } = setup();
+      cmp.open('item1', [link('a', 1), link('c', 1)], 'milliliter');
+      fixture.detectChanges();
+      expect(el.querySelectorAll('[data-testid="replaces-select"]')).toHaveLength(1);
+      const options = Array.from(el.querySelectorAll('[data-testid="replaces-select"] option')).map((o) =>
+        o.textContent?.trim(),
+      );
+      expect(options).toEqual(['Replaces: Nothing', 'Dairy']);
+      expect(el.querySelectorAll('[data-testid="scales-input"]')).toHaveLength(2);
+    });
+
+    it('sends both options when saving and clears a blank replace choice', () => {
+      const { cmp, i } = setup();
+      cmp.open('item1', [link('a', 1), link('c', 2)], 'milliliter');
+      i.onScalesWithSizeChange('a', true);
+      i.onReplacesChange('c', 'dairy');
+      i.onReplacesChange('a', '');
+      i.onReplacesChange('c', '');
+      expect(i.linkedProducts().find((r) => r.productId === 'c')?.replacesItemId).toBeNull();
+      i.onReplacesChange('c', 'dairy');
+      i.save();
+      expect(inventory.assignProductItemLinks).toHaveBeenCalledWith('item1', [
+        { productId: 'a', quantityPerSale: 1, allowancePercent: 0, scalesWithSize: true, replacesItemId: null, isActive: true },
+        { productId: 'c', quantityPerSale: 2, allowancePercent: 0, scalesWithSize: false, replacesItemId: 'dairy', isActive: true },
+      ]);
+    });
+
+    it('remembers both options of a removed row when it is linked again', () => {
+      const { fixture, cmp, i, el } = setup();
+      cmp.open('item1', [{ ...link('c', 3), scalesWithSize: true, replacesItemId: 'dairy' }], 'piece');
+      i.removeLinkedProduct('c');
+      fixture.detectChanges();
+      const lists = el.querySelectorAll('ul');
+      lists[1].appendChild(lists[0].querySelector('[data-id="c"]') as HTMLElement);
+      i.syncSignalsWithDOM();
+      expect(i.linkedProducts()[0].scalesWithSize).toBe(true);
+      expect(i.linkedProducts()[0].replacesItemId).toBe('dairy');
+    });
+  });
+
   describe('save', () => {
     it('does nothing before open', () => {
       const { i } = setup();
@@ -372,8 +436,8 @@ describe('ProductItemLinksSelectorComponent', () => {
       cmp.open('item1', [link('a', 2), link('b', 3)], 'piece');
       i.save();
       expect(inventory.assignProductItemLinks).toHaveBeenCalledWith('item1', [
-        { productId: 'a', quantityPerSale: 2, allowancePercent: 0, isActive: true },
-        { productId: 'b', quantityPerSale: 3, allowancePercent: 0, isActive: true },
+        { productId: 'a', quantityPerSale: 2, allowancePercent: 0, scalesWithSize: false, replacesItemId: null, isActive: true },
+        { productId: 'b', quantityPerSale: 3, allowancePercent: 0, scalesWithSize: false, replacesItemId: null, isActive: true },
       ]);
       expect(alerts.successSaved).toHaveBeenCalledWith('Product links');
       expect(saved).toHaveBeenCalledWith({ id: 'item1' });

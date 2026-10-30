@@ -71,8 +71,8 @@ public class ItemMappingTests
     public void ToDto_LinksOrderedByProductName()
     {
         var item = new Item { Id = Guid.NewGuid(), Name = "x", UnitName = "u" };
-        item.ProductItemLinks.Add(new ProductItemLink { Id = Guid.NewGuid(), QuantityPerSale = 1, Product = new Product { Name = "Zebra", Code = "Z" } });
-        item.ProductItemLinks.Add(new ProductItemLink { Id = Guid.NewGuid(), QuantityPerSale = 2, IsActive = true, Product = new Product { Name = "Apple", Code = "A" } });
+        item.ProductItemLinkItems.Add(new ProductItemLink { Id = Guid.NewGuid(), QuantityPerSale = 1, Product = new Product { Name = "Zebra", Code = "Z" } });
+        item.ProductItemLinkItems.Add(new ProductItemLink { Id = Guid.NewGuid(), QuantityPerSale = 2, IsActive = true, Product = new Product { Name = "Apple", Code = "A" } });
 
         var dto = ItemMapping.ToDto(item);
 
@@ -86,8 +86,8 @@ public class ItemMappingTests
     public void ToDto_LinkSaysWhetherItsProductIsStillActive()
     {
         var item = new Item { Id = Guid.NewGuid(), Name = "x", UnitName = "u" };
-        item.ProductItemLinks.Add(new ProductItemLink { Id = Guid.NewGuid(), IsActive = true, Product = new Product { Name = "Live", Code = "L", IsActive = true } });
-        item.ProductItemLinks.Add(new ProductItemLink { Id = Guid.NewGuid(), IsActive = true, Product = new Product { Name = "Gone", Code = "G", IsActive = false } });
+        item.ProductItemLinkItems.Add(new ProductItemLink { Id = Guid.NewGuid(), IsActive = true, Product = new Product { Name = "Live", Code = "L", IsActive = true } });
+        item.ProductItemLinkItems.Add(new ProductItemLink { Id = Guid.NewGuid(), IsActive = true, Product = new Product { Name = "Gone", Code = "G", IsActive = false } });
 
         var dto = ItemMapping.ToDto(item);
 
