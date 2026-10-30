@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, computed, inject, OnInit, signal, ViewChild } from '@angular/core';
 import { FormArray, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { AlertService, InventoryService, ModalStackService } from '@core/services';
+import { AlertService, AuthService, InventoryService, ModalStackService } from '@core/services';
 import {
   IconComponent,
   PageTitleComponent,
@@ -40,6 +40,7 @@ import {
 export class ItemEditorComponent implements OnInit {
   private readonly inventoryService = inject(InventoryService);
   private readonly alertService = inject(AlertService);
+  private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly modalStack = inject(ModalStackService);
@@ -47,6 +48,7 @@ export class ItemEditorComponent implements OnInit {
   @ViewChild(ProductItemLinksSelectorComponent)
   private readonly productItemLinksSelector!: ProductItemLinksSelectorComponent;
 
+  protected readonly canReadCosts = signal(this.authService.canReadInventoryCosts());
   protected readonly isEditMode = signal(false);
   protected readonly isLoading = signal(false);
   protected readonly isSaving = signal(false);
@@ -101,6 +103,7 @@ export class ItemEditorComponent implements OnInit {
       validators: [Validators.min(0)],
     }),
     costPrice: new FormControl<number | null>(null, [Validators.min(0)]),
+    yieldPercent: new FormControl<number | null>(100, [Validators.min(0.01), Validators.max(100)]),
     warningQuantity: new FormControl<number | null>(null, [Validators.min(0)]),
     criticalQuantity: new FormControl<number | null>(null, [Validators.min(0)]),
     wasteApprovalLimit: new FormControl<number | null>(null, [Validators.min(0)]),
@@ -148,6 +151,7 @@ export class ItemEditorComponent implements OnInit {
           stockUnitName: value.stockUnitName || null,
           unitsPerStockUnit: value.unitsPerStockUnit,
           costPrice: value.costPrice,
+          yieldPercent: value.yieldPercent,
           warningQuantity: value.warningQuantity,
           criticalQuantity: value.criticalQuantity,
           wasteApprovalLimit: this.toOptionalNumber(value.wasteApprovalLimit),
@@ -171,6 +175,7 @@ export class ItemEditorComponent implements OnInit {
         unitsPerStockUnit: value.unitsPerStockUnit,
         startingQuantity: Number(value.startingQuantity ?? 0),
         costPrice: value.costPrice,
+        yieldPercent: value.yieldPercent,
         warningQuantity: value.warningQuantity,
         criticalQuantity: value.criticalQuantity,
         wasteApprovalLimit: this.toOptionalNumber(value.wasteApprovalLimit),
@@ -265,6 +270,7 @@ export class ItemEditorComponent implements OnInit {
             unitsPerStockUnit: item.unitsPerStockUnit ?? null,
             startingQuantity: 0,
             costPrice: item.costPrice ?? null,
+            yieldPercent: item.yieldPercent ?? 100,
             warningQuantity: item.warningQuantity ?? null,
             criticalQuantity: item.criticalQuantity ?? null,
             wasteApprovalLimit: item.wasteApprovalLimit ?? null,
@@ -396,6 +402,7 @@ export class ItemEditorComponent implements OnInit {
       unitsPerStockUnit: 'Units per stock unit',
       startingQuantity: 'Starting stock',
       costPrice: 'Cost price',
+      yieldPercent: 'Usable share',
       warningQuantity: 'Warning level',
       criticalQuantity: 'Critical level',
       wasteApprovalLimit: 'Waste approval limit',

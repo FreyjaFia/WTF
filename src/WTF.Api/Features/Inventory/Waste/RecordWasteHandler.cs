@@ -138,7 +138,7 @@ public class RecordWasteHandler(
             QuantityDelta = -quantity,
             QuantityBefore = applied.Before,
             QuantityAfter = applied.After,
-            UnitCost = item.CostPrice,
+            UnitCost = CostRules.MovementCost(item.AverageCost, item.CostPrice),
             ReferenceType = StockMovementTypes.StockWasteReference,
             ReferenceId = wasteId,
             Notes = notes is null ? reason.Name : $"{reason.Name}: {notes}",

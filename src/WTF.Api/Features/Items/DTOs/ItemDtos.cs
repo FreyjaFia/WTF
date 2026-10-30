@@ -21,7 +21,10 @@ public record ItemDto(
     Guid? UpdatedBy,
     List<ItemPriceHistoryDto> PriceHistory,
     List<ProductItemLinkDto> ProductLinks,
-    List<StockMovementDto> RecentMovements);
+    List<StockMovementDto> RecentMovements,
+    decimal? AverageCost = null,
+    decimal YieldPercent = 100m,
+    decimal? UsableCost = null);
 
 public record StockMovementDto(
     Guid Id,

@@ -243,20 +243,41 @@
                 }
 
                 <div class="grid gap-4 sm:grid-cols-3">
-                  <div>
-                    <label class="mb-2 block text-sm font-semibold text-gray-900" for="costPrice">
-                      Cost Price
-                    </label>
-                    <input
-                      id="costPrice"
-                      type="number"
-                      step="1"
-                      min="0"
-                      formControlName="costPrice"
-                      placeholder="0.00"
-                      class="input w-full border-transparent bg-gray-50 transition-all focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20"
-                    />
-                  </div>
+                  @if (canReadCosts()) {
+                    <div>
+                      <label class="mb-2 block text-sm font-semibold text-gray-900" for="costPrice">
+                        Cost Price (per {{ inventoryForm.controls.unitName.value || 'unit' }})
+                      </label>
+                      <input
+                        id="costPrice"
+                        type="number"
+                        step="any"
+                        min="0"
+                        formControlName="costPrice"
+                        placeholder="0.00"
+                        class="input w-full border-transparent bg-gray-50 transition-all focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20"
+                      />
+                    </div>
+
+                    <div>
+                      <label class="mb-2 block text-sm font-semibold text-gray-900" for="yieldPercent">
+                        Usable Share (%)
+                      </label>
+                      <input
+                        id="yieldPercent"
+                        type="number"
+                        step="any"
+                        min="0.01"
+                        max="100"
+                        formControlName="yieldPercent"
+                        placeholder="100"
+                        class="input w-full border-transparent bg-gray-50 transition-all focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20"
+                      />
+                      <p class="mt-1 text-xs text-gray-400">
+                        Less than 100 when part of what you buy is lost in preparation, such as peel.
+                      </p>
+                    </div>
+                  }
 
                   <div>
                     <label

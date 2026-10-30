@@ -1,5 +1,6 @@
 using WTF.Api.Features.Inventory;
 using WTF.Api.Features.Items.DTOs;
+using WTF.Calculations.Inventory;
 using WTF.Domain.Entities;
 
 namespace WTF.Api.Features.Items;
@@ -53,6 +54,9 @@ internal static class ItemMapping
             item.StockMovements
                 .OrderByDescending(m => m.CreatedAt)
                 .Select(m => StockMovementMapping.ToDto(m, lookups ?? StockMovementLookups.Empty))
-                .ToList());
+                .ToList(),
+            item.AverageCost,
+            item.YieldPercent,
+            CostRules.UsableCost(CostRules.MovementCost(item.AverageCost, item.CostPrice), item.YieldPercent));
     }
 }

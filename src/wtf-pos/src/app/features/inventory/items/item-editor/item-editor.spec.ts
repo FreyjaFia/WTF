@@ -151,6 +151,7 @@ describe('ItemEditorComponent', () => {
         unitsPerStockUnit: null,
         startingQuantity: 3,
         costPrice: 2.5,
+        yieldPercent: 100,
         warningQuantity: null,
         criticalQuantity: null,
         wasteApprovalLimit: null,
@@ -405,6 +406,7 @@ describe('ItemEditorComponent', () => {
         stockUnitName: 'kilogram',
         unitsPerStockUnit: 1000,
         costPrice: 5,
+        yieldPercent: 100,
         warningQuantity: 50,
         criticalQuantity: 10,
         wasteApprovalLimit: null,
@@ -414,6 +416,32 @@ describe('ItemEditorComponent', () => {
       expect(inventory.createInventoryItem).not.toHaveBeenCalled();
       expect(alerts.success).toHaveBeenCalledWith('Item updated.');
       expect(navigate).toHaveBeenCalledWith(AppRoutes.InventoryItemDetailsById('i1'));
+    });
+
+    it('sends the usable share with the update', () => {
+      inventory.getInventoryItem.mockReturnValue(of(makeItem({ yieldPercent: 80 })));
+      const { vm, form } = create('i1');
+      expect(form.controls.yieldPercent.value).toBe(80);
+      form.controls.yieldPercent.setValue(75);
+      vm['saveInventoryItem']();
+      expect(inventory.updateInventoryItem).toHaveBeenCalledWith(expect.objectContaining({ yieldPercent: 75 }));
+    });
+
+    it('refuses a usable share above 100 or at 0', () => {
+      const { form } = create('i1');
+      form.controls.yieldPercent.setValue(120);
+      expect(form.controls.yieldPercent.invalid).toBe(true);
+      form.controls.yieldPercent.setValue(0);
+      expect(form.controls.yieldPercent.invalid).toBe(true);
+      form.controls.yieldPercent.setValue(100);
+      expect(form.controls.yieldPercent.valid).toBe(true);
+    });
+
+    it('hides the cost fields from a role that cannot see costs', () => {
+      const { fixture } = create('i1');
+      const html = fixture.nativeElement as HTMLElement;
+      expect(html.querySelector('#costPrice')).toBeNull();
+      expect(html.querySelector('#yieldPercent')).toBeNull();
     });
 
     it('alerts when the update fails', () => {

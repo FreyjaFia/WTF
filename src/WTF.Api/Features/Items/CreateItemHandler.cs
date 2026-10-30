@@ -1,5 +1,6 @@
 using MediatR;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Inventory;
@@ -47,9 +48,15 @@ public record CreateItemCommand : IRequest<ItemDto>
     [Range(0, 999999.999)]
     public decimal? WasteApprovalLimit { get; init; }
 
+    [Range(0.01, 100)]
+    public decimal? YieldPercent { get; init; }
+
     public bool AllowNegativeStock { get; init; } = true;
 
     public bool IsActive { get; init; } = true;
+
+    [JsonIgnore]
+    public bool KeepCosts { get; init; }
 }
 
 public class CreateItemHandler(
@@ -67,6 +74,8 @@ public class CreateItemHandler(
 
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
 
+        var costPrice = request.KeepCosts ? null : request.CostPrice;
+
         var item = new Item
         {
             Name = request.Name.Trim(),
@@ -76,7 +85,9 @@ public class CreateItemHandler(
             StockUnitName = ItemValidation.NormalizeOptional(request.StockUnitName),
             UnitsPerStockUnit = request.UnitsPerStockUnit,
             CurrentQuantity = request.StartingQuantity,
-            CostPrice = request.CostPrice,
+            CostPrice = costPrice,
+            AverageCost = costPrice,
+            YieldPercent = request.KeepCosts ? 100m : request.YieldPercent ?? 100m,
             WarningQuantity = request.WarningQuantity,
             CriticalQuantity = request.CriticalQuantity,
             AllowNegativeStock = request.AllowNegativeStock,
@@ -98,7 +109,7 @@ public class CreateItemHandler(
                 QuantityDelta = request.StartingQuantity,
                 QuantityBefore = 0,
                 QuantityAfter = request.StartingQuantity,
-                UnitCost = request.CostPrice,
+                UnitCost = costPrice,
                 Notes = "Initial stock",
                 CreatedAt = now,
                 CreatedBy = userId

@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Inventory;
@@ -47,9 +48,15 @@ public record UpdateItemCommand : IRequest<ItemDto?>
     [Range(0, 999999.999)]
     public decimal? WasteApprovalLimit { get; init; }
 
+    [Range(0.01, 100)]
+    public decimal? YieldPercent { get; init; }
+
     public bool AllowNegativeStock { get; init; } = true;
 
     public bool IsActive { get; init; } = true;
+
+    [JsonIgnore]
+    public bool KeepCosts { get; init; }
 }
 
 public class UpdateItemHandler(
@@ -75,6 +82,8 @@ public class UpdateItemHandler(
             item.StockUnitName,
             item.UnitsPerStockUnit,
             item.CostPrice,
+            item.AverageCost,
+            item.YieldPercent,
             item.WarningQuantity,
             item.CriticalQuantity,
             item.AllowNegativeStock,
@@ -102,13 +111,14 @@ public class UpdateItemHandler(
         await using var transaction = db.Database.CurrentTransaction is null
             ? await db.Database.BeginTransactionAsync(cancellationToken)
             : null;
-        if (request.CostPrice.HasValue && item.CostPrice != request.CostPrice)
+        var costChanged = !request.KeepCosts && request.CostPrice.HasValue && item.CostPrice != request.CostPrice;
+        if (costChanged)
         {
             db.ItemPriceHistories.Add(new ItemPriceHistory
             {
                 ItemId = item.Id,
                 OldPrice = item.CostPrice,
-                NewPrice = request.CostPrice.Value,
+                NewPrice = request.CostPrice!.Value,
                 UpdatedAt = DateTime.UtcNow,
                 UpdatedBy = userId
             });
@@ -120,7 +130,18 @@ public class UpdateItemHandler(
         item.UnitName = request.UnitName.Trim();
         item.StockUnitName = ItemValidation.NormalizeOptional(request.StockUnitName);
         item.UnitsPerStockUnit = request.UnitsPerStockUnit;
-        item.CostPrice = request.CostPrice;
+        if (!request.KeepCosts)
+        {
+            // A cost typed by hand is a correction: the average starts again from it.
+            if (costChanged || !request.CostPrice.HasValue)
+            {
+                item.AverageCost = request.CostPrice;
+            }
+
+            item.CostPrice = request.CostPrice;
+            item.YieldPercent = request.YieldPercent ?? 100m;
+        }
+
         item.WarningQuantity = request.WarningQuantity;
         item.CriticalQuantity = request.CriticalQuantity;
         item.AllowNegativeStock = request.AllowNegativeStock;
@@ -171,6 +192,8 @@ public class UpdateItemHandler(
                 item.StockUnitName,
                 item.UnitsPerStockUnit,
                 item.CostPrice,
+                item.AverageCost,
+                item.YieldPercent,
                 item.WarningQuantity,
                 item.CriticalQuantity,
                 item.AllowNegativeStock,

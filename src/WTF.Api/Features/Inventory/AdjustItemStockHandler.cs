@@ -100,7 +100,7 @@ public class AdjustItemStockHandler(
             QuantityDelta = delta,
             QuantityBefore = applied.Before,
             QuantityAfter = applied.After,
-            UnitCost = item.CostPrice,
+            UnitCost = CostRules.MovementCost(item.AverageCost, item.CostPrice),
             Notes = notes is null ? reason : $"{reason}: {notes}",
             CreatedAt = DateTime.UtcNow,
             CreatedBy = userId

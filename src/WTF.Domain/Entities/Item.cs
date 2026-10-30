@@ -40,6 +40,10 @@ public partial class Item
 
     public decimal? WasteApprovalLimit { get; set; }
 
+    public decimal? AverageCost { get; set; }
+
+    public decimal YieldPercent { get; set; }
+
     public virtual User CreatedByNavigation { get; set; } = null!;
 
     public virtual ICollection<ItemAlertRecipient> ItemAlertRecipients { get; set; } = new List<ItemAlertRecipient>();

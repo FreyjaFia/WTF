@@ -183,6 +183,24 @@ describe('ItemDetailsComponent', () => {
       expect((fixture.nativeElement as HTMLElement).textContent).toContain('Coffee Beans');
     });
 
+    it('shows the average cost, and the usable cost only when part of it is lost', () => {
+      inventory.getInventoryItem.mockReturnValue(
+        of(makeItem({ averageCost: 0.175, yieldPercent: 80, usableCost: 0.21875 })),
+      );
+      const { fixture } = create('i1');
+      const html = fixture.nativeElement as HTMLElement;
+      expect(html.querySelector('[data-testid="item-average-cost"]')?.textContent).toContain('0.175');
+      expect(html.querySelector('[data-testid="item-usable-cost"]')?.textContent).toContain('0.21875');
+    });
+
+    it('shows no average or usable cost when the server sends none', () => {
+      inventory.getInventoryItem.mockReturnValue(of(makeItem({ averageCost: null, usableCost: null })));
+      const { fixture } = create('i1');
+      const html = fixture.nativeElement as HTMLElement;
+      expect(html.querySelector('[data-testid="item-average-cost"]')).toBeNull();
+      expect(html.querySelector('[data-testid="item-usable-cost"]')).toBeNull();
+    });
+
     it('does not load when the route has no id', () => {
       const { vm } = create(null);
       expect(inventory.getInventoryItem).not.toHaveBeenCalled();

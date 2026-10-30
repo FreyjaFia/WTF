@@ -7,6 +7,7 @@ using WTF.Api.Features.Inventory.Waste.DTOs;
 using WTF.Api.Features.Items;
 using WTF.Api.Features.Notifications;
 using WTF.Api.Services;
+using WTF.Calculations.Inventory;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 
@@ -93,7 +94,7 @@ public class ReverseWasteHandler(
             QuantityDelta = waste.Quantity,
             QuantityBefore = applied.Before,
             QuantityAfter = applied.After,
-            UnitCost = item.CostPrice,
+            UnitCost = CostRules.MovementCost(item.AverageCost, item.CostPrice),
             ReferenceType = StockMovementTypes.StockWasteReference,
             ReferenceId = waste.Id,
             Notes = $"Waste reversed: {reason}",

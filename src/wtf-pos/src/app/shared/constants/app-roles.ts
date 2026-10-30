@@ -43,6 +43,7 @@ export const AppRoleGroups = {
   CustomersWrite: [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.Cashier],
   ItemsRead: [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.ItemManager, AppRoles.StockManager],
   ItemsWrite: [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.ItemManager],
+  InventoryCostsRead: [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer],
   StockMovementsRead: [
     AppRoles.SuperAdmin,
     AppRoles.Admin,

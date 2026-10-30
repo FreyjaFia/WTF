@@ -6,6 +6,7 @@ using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Inventory;
 using WTF.Api.Features.Items.DTOs;
 using WTF.Api.Services;
+using WTF.Calculations.Inventory;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 
@@ -74,6 +75,11 @@ public class AddItemStockHandler(
             ?? throw new InvalidOperationException("The item was not found.");
         var before = applied.Before;
         var after = applied.After;
+
+        if (request.UnitCost.HasValue)
+        {
+            item.AverageCost = CostRules.WeightedAverage(before, item.AverageCost, request.Quantity, request.UnitCost.Value);
+        }
 
         var movement = new StockMovement
         {

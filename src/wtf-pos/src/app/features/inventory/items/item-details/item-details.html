@@ -164,6 +164,34 @@
                       <p class="text-sm font-bold text-gray-400">Not set</p>
                     }
                   </div>
+                  @if (item()!.averageCost !== null && item()!.averageCost !== undefined) {
+                    <div data-testid="item-average-cost">
+                      <p class="mb-1 text-xs font-medium text-gray-400">Average cost per {{ item()!.unitName }}</p>
+                      <p class="inline-flex items-center gap-0.5 text-sm font-bold text-gray-800">
+                        <app-icon
+                          name="icon-peso"
+                          [class]="'h-3.5 w-3.5'"
+                          [fill]="'currentColor'"
+                        />
+                        {{ item()!.averageCost | number: '1.2-6' }}
+                      </p>
+                    </div>
+                  }
+                  @if (item()!.usableCost !== null && item()!.usableCost !== undefined && item()!.yieldPercent !== 100) {
+                    <div data-testid="item-usable-cost">
+                      <p class="mb-1 text-xs font-medium text-gray-400">
+                        Cost per usable {{ item()!.unitName }} ({{ item()!.yieldPercent | number: '1.0-2' }}% usable)
+                      </p>
+                      <p class="inline-flex items-center gap-0.5 text-sm font-bold text-gray-800">
+                        <app-icon
+                          name="icon-peso"
+                          [class]="'h-3.5 w-3.5'"
+                          [fill]="'currentColor'"
+                        />
+                        {{ item()!.usableCost | number: '1.2-6' }}
+                      </p>
+                    </div>
+                  }
                 </div>
               </div>
 

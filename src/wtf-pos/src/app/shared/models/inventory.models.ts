@@ -10,6 +10,9 @@ export interface ItemDto {
   unitsPerStockUnit?: number | null;
   currentQuantity: number;
   costPrice?: number | null;
+  averageCost?: number | null;
+  yieldPercent?: number;
+  usableCost?: number | null;
   warningQuantity?: number | null;
   criticalQuantity?: number | null;
   isActive: boolean;
@@ -93,6 +96,7 @@ export interface CreateItemDto {
   unitsPerStockUnit?: number | null;
   startingQuantity: number;
   costPrice?: number | null;
+  yieldPercent?: number | null;
   warningQuantity?: number | null;
   criticalQuantity?: number | null;
   allowNegativeStock?: boolean;
@@ -109,6 +113,7 @@ export interface UpdateItemDto {
   stockUnitName?: string | null;
   unitsPerStockUnit?: number | null;
   costPrice?: number | null;
+  yieldPercent?: number | null;
   warningQuantity?: number | null;
   criticalQuantity?: number | null;
   allowNegativeStock?: boolean;

@@ -354,8 +354,9 @@ public partial class WTFDbContext : DbContext
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_Items_Id");
             entity.Property(e => e.AllowNegativeStock).HasDefaultValue(true, "DF_Items_AllowNegativeStock");
+            entity.Property(e => e.AverageCost).HasColumnType("decimal(18, 6)");
             entity.Property(e => e.Barcode).HasMaxLength(100);
-            entity.Property(e => e.CostPrice).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.CostPrice).HasColumnType("decimal(18, 6)");
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())", "DF_Items_CreatedAt");
             entity.Property(e => e.CriticalQuantity).HasColumnType("decimal(18, 3)");
             entity.Property(e => e.CurrentQuantity).HasColumnType("decimal(18, 3)");
@@ -369,6 +370,9 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.UnitsPerStockUnit).HasColumnType("decimal(18, 3)");
             entity.Property(e => e.WarningQuantity).HasColumnType("decimal(18, 3)");
             entity.Property(e => e.WasteApprovalLimit).HasColumnType("decimal(18, 3)");
+            entity.Property(e => e.YieldPercent)
+                .HasDefaultValue(100m, "DF_Items_YieldPercent")
+                .HasColumnType("decimal(5, 2)");
 
             entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.ItemCreatedByNavigations)
                 .HasForeignKey(d => d.CreatedBy)
@@ -413,8 +417,8 @@ public partial class WTFDbContext : DbContext
             entity.HasIndex(e => e.UpdatedAt, "IX_ItemPriceHistory_UpdatedAt").IsDescending();
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_ItemPriceHistory_Id");
-            entity.Property(e => e.NewPrice).HasColumnType("decimal(10, 2)");
-            entity.Property(e => e.OldPrice).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.NewPrice).HasColumnType("decimal(18, 6)");
+            entity.Property(e => e.OldPrice).HasColumnType("decimal(18, 6)");
             entity.Property(e => e.UpdatedAt)
                 .HasDefaultValueSql("(getutcdate())", "DF_ItemPriceHistory_UpdatedAt")
                 .HasColumnType("datetime");
@@ -965,7 +969,7 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.QuantityBefore).HasColumnType("decimal(18, 3)");
             entity.Property(e => e.QuantityDelta).HasColumnType("decimal(18, 3)");
             entity.Property(e => e.ReferenceType).HasMaxLength(30);
-            entity.Property(e => e.UnitCost).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.UnitCost).HasColumnType("decimal(18, 6)");
 
             entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.StockMovements)
                 .HasForeignKey(d => d.CreatedBy)

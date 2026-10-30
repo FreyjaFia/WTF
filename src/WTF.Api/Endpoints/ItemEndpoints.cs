@@ -1,4 +1,5 @@
 using MediatR;
+using System.Security.Claims;
 using WTF.Api.Common.Auth;
 using WTF.Api.Features.Inventory;
 using WTF.Api.Features.Inventory.Waste;
@@ -16,10 +17,10 @@ public static class ItemEndpoints
             .RequireAuthorization();
 
         itemGroup.MapGet("/",
-            async ([AsParameters] GetItemsQuery query, ISender sender) =>
+            async ([AsParameters] GetItemsQuery query, ISender sender, ClaimsPrincipal user) =>
             {
                 var result = await sender.Send(query);
-                return Results.Ok(result);
+                return Results.Ok(CostAccess.ForUser(result, user));
             })
             .RequireAuthorization(AppPolicies.ItemsRead);
 
@@ -40,32 +41,32 @@ public static class ItemEndpoints
             .RequireAuthorization(AppPolicies.ItemsRead);
 
         itemGroup.MapGet("/{id:guid}",
-            async (Guid id, ISender sender) =>
+            async (Guid id, ISender sender, ClaimsPrincipal user) =>
             {
                 var result = await sender.Send(new GetItemByIdQuery(id));
-                return result is not null ? Results.Ok(result) : Results.NotFound();
+                return result is not null ? Results.Ok(CostAccess.ForUser(result, user)) : Results.NotFound();
             })
             .RequireAuthorization(AppPolicies.ItemsRead)
             .WithName("GetItemById");
 
         itemGroup.MapPost("/",
-            async (CreateItemCommand command, ISender sender) =>
+            async (CreateItemCommand command, ISender sender, ClaimsPrincipal user) =>
             {
-                var result = await sender.Send(command);
-                return Results.CreatedAtRoute("GetItemById", new { id = result.Id }, result);
+                var result = await sender.Send(command with { KeepCosts = !CostAccess.CanReadCosts(user) });
+                return Results.CreatedAtRoute("GetItemById", new { id = result.Id }, CostAccess.ForUser(result, user));
             })
             .RequireAuthorization(AppPolicies.ItemsWrite);
 
         itemGroup.MapPut("/{id:guid}",
-            async (Guid id, UpdateItemCommand command, ISender sender) =>
+            async (Guid id, UpdateItemCommand command, ISender sender, ClaimsPrincipal user) =>
             {
                 if (id != command.Id)
                 {
                     return Results.BadRequest("ID mismatch");
                 }
 
-                var result = await sender.Send(command);
-                return result is not null ? Results.Ok(result) : Results.NotFound();
+                var result = await sender.Send(command with { KeepCosts = !CostAccess.CanReadCosts(user) });
+                return result is not null ? Results.Ok(CostAccess.ForUser(result, user)) : Results.NotFound();
             })
             .RequireAuthorization(AppPolicies.ItemsWrite);
 
@@ -86,7 +87,7 @@ public static class ItemEndpoints
             .RequireAuthorization(AppPolicies.ItemsWrite);
 
         itemGroup.MapPost("/{id:guid}/stock",
-            async (Guid id, AddItemStockCommand command, ISender sender) =>
+            async (Guid id, AddItemStockCommand command, ISender sender, ClaimsPrincipal user) =>
             {
                 if (id != command.ItemId)
                 {
@@ -94,7 +95,7 @@ public static class ItemEndpoints
                 }
 
                 var result = await sender.Send(command);
-                return result is not null ? Results.Ok(result) : Results.NotFound();
+                return result is not null ? Results.Ok(CostAccess.ForUser(result, user)) : Results.NotFound();
             })
             .RequireAuthorization(AppPolicies.StockMovementsWrite);
 
@@ -113,7 +114,7 @@ public static class ItemEndpoints
             .RequireAuthorization(AppPolicies.StockWasteWrite);
 
         itemGroup.MapPost("/{id:guid}/stock/adjust",
-            async (Guid id, AdjustItemStockCommand command, ISender sender) =>
+            async (Guid id, AdjustItemStockCommand command, ISender sender, ClaimsPrincipal user) =>
             {
                 if (id != command.ItemId)
                 {
@@ -121,15 +122,15 @@ public static class ItemEndpoints
                 }
 
                 var result = await sender.Send(command);
-                return result is not null ? Results.Ok(result) : Results.NotFound();
+                return result is not null ? Results.Ok(CostAccess.ForUser(result, user)) : Results.NotFound();
             })
             .RequireAuthorization(AppPolicies.StockMovementsWrite);
 
         itemGroup.MapGet("/{id:guid}/movements",
-            async (Guid id, string? type, int? page, int? pageSize, ISender sender) =>
+            async (Guid id, string? type, int? page, int? pageSize, ISender sender, ClaimsPrincipal user) =>
             {
                 var result = await sender.Send(new GetItemMovementsQuery(id, type, page ?? 1, pageSize ?? 25));
-                return result is not null ? Results.Ok(result) : Results.NotFound();
+                return result is not null ? Results.Ok(CostAccess.ForUser(result, user)) : Results.NotFound();
             })
             .RequireAuthorization(AppPolicies.StockMovementsRead);
 
@@ -158,7 +159,7 @@ public static class ItemEndpoints
             .RequireAuthorization(AppPolicies.ItemsWrite);
 
         itemGroup.MapPut("/{id:guid}/product-links",
-            async (Guid id, AssignItemProductLinksCommand command, ISender sender) =>
+            async (Guid id, AssignItemProductLinksCommand command, ISender sender, ClaimsPrincipal user) =>
             {
                 if (id != command.ItemId)
                 {
@@ -166,7 +167,7 @@ public static class ItemEndpoints
                 }
 
                 var result = await sender.Send(command);
-                return result is not null ? Results.Ok(result) : Results.NotFound();
+                return result is not null ? Results.Ok(CostAccess.ForUser(result, user)) : Results.NotFound();
             })
             .RequireAuthorization(AppPolicies.ItemsWrite);
 
