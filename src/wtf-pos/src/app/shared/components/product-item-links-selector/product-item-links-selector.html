@@ -132,80 +132,100 @@
             @for (product of linkedProducts(); track product.productId) {
               <li
                 [attr.data-id]="product.productId"
-                class="flex items-center gap-3 rounded-lg border border-gray-200 bg-surface px-3 py-2.5 text-sm font-medium text-gray-800 transition-shadow hover:shadow-sm"
+                class="rounded-lg border border-gray-200 bg-surface px-3 py-2.5 text-sm font-medium text-gray-800 transition-shadow hover:shadow-sm"
               >
-                <app-icon
-                  name="icon-grip"
-                  [class]="'drag-handle h-5 w-5 shrink-0 cursor-grab touch-none text-gray-300 hover:text-gray-500 active:cursor-grabbing'"
-                />
-                <div class="shrink-0">
-                  @if (product.imageUrl) {
-                    <img
-                      [src]="product.imageUrl"
-                      [alt]="product.name"
-                      class="h-8 w-8 rounded-full object-cover"
-                    />
-                  } @else {
-                    <app-avatar [label]="product.name" [size]="32" />
-                  }
-                </div>
-                <div class="min-w-0 flex-1">
-                  <div class="flex items-center gap-2">
-                    <span class="block truncate">{{ product.name }}</span>
-                    @if (product.isAddOn) {
-                      <span class="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-amber-700 uppercase">
-                        Add-on
-                      </span>
+                <div class="flex items-center gap-3">
+                  <app-icon
+                    name="icon-grip"
+                    [class]="'drag-handle h-5 w-5 shrink-0 cursor-grab touch-none text-gray-300 hover:text-gray-500 active:cursor-grabbing'"
+                  />
+                  <div class="shrink-0">
+                    @if (product.imageUrl) {
+                      <img
+                        [src]="product.imageUrl"
+                        [alt]="product.name"
+                        class="h-8 w-8 rounded-full object-cover"
+                      />
                     } @else {
-                      <span class="rounded bg-brand/10 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-brand-ink uppercase">
-                        Product
-                      </span>
+                      <app-avatar [label]="product.name" [size]="32" />
                     }
                   </div>
-                  <div class="mt-0.5 flex items-center justify-between gap-2">
-                    <span class="font-mono text-[10px] text-gray-400">{{ product.code }}</span>
-                    <span class="shrink-0 text-xs text-gray-500">
-                      <app-icon
-                        name="icon-peso"
-                        [class]="'inline h-3 w-3 align-[-0.125em]'"
-                        [fill]="'currentColor'"
-                      />{{ product.price | number: '1.2-2' }}
-                    </span>
+                  <div class="min-w-0 flex-1">
+                    <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                      <span class="block min-w-0 truncate">{{ product.name }}</span>
+                      @if (product.isAddOn) {
+                        <span class="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-amber-700 uppercase">
+                          Add-on
+                        </span>
+                      } @else {
+                        <span class="rounded bg-brand/10 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-brand-ink uppercase">
+                          Product
+                        </span>
+                      }
+                    </div>
+                    <div class="mt-0.5 flex items-center justify-between gap-2">
+                      <span class="truncate font-mono text-[10px] text-gray-400">{{ product.code }}</span>
+                      <span class="shrink-0 text-xs text-gray-500">
+                        <app-icon
+                          name="icon-peso"
+                          [class]="'inline h-3 w-3 align-[-0.125em]'"
+                          [fill]="'currentColor'"
+                        />{{ product.price | number: '1.2-2' }}
+                      </span>
+                    </div>
                   </div>
-                  <p class="mt-0.5 text-[10px] text-gray-500" data-testid="stock-impact">
-                    {{ stockImpact(product) }}
-                  </p>
+                  <button
+                    type="button"
+                    class="app-btn app-btn-icon-danger shrink-0 p-1"
+                    aria-label="Unlink product"
+                    (click)="removeLinkedProduct(product.productId)"
+                    [disabled]="isSaving()"
+                  >
+                    <app-icon name="icon-close" [class]="'h-3.5 w-3.5'" />
+                  </button>
                 </div>
 
-                <div class="flex shrink-0 items-center gap-2">
-                  <label class="input input-xs flex h-7 w-24 items-center gap-1 border-gray-200 bg-surface">
-                    <input
-                      class="w-full bg-transparent text-[10px] outline-none"
-                      type="number"
-                      min="0.001"
-                      step="0.001"
-                      [ngModel]="product.quantityPerSale"
-                      (ngModelChange)="onQuantityChange(product.productId, $event)"
-                      [ngModelOptions]="{ standalone: true }"
-                    />
-                    <span class="shrink-0 text-[10px] text-gray-400">{{ unitAbbreviation() }}</span>
+                <div class="mt-2 flex flex-wrap items-end gap-x-3 gap-y-2 pl-8 sm:pl-16">
+                  <label class="flex flex-col gap-0.5 text-[10px] font-semibold tracking-wide text-gray-400 uppercase">
+                    Amount per sale
+                    <span class="input input-xs flex h-7 w-24 items-center gap-1 border-gray-200 bg-surface">
+                      <input
+                        class="w-full min-w-0 bg-transparent text-[10px] font-normal text-gray-800 normal-case outline-none"
+                        type="number"
+                        min="0.001"
+                        step="0.001"
+                        [ngModel]="product.quantityPerSale"
+                        (ngModelChange)="onQuantityChange(product.productId, $event)"
+                        [ngModelOptions]="{ standalone: true }"
+                      />
+                      <span class="shrink-0 text-[10px] font-normal text-gray-400 normal-case">{{ unitAbbreviation() }}</span>
+                    </span>
                   </label>
-                  <label class="input input-xs flex h-7 w-20 items-center gap-1 border-gray-200 bg-surface" title="Allowance: a known, steady loss added to every sale">
-                    <input
-                      class="w-full bg-transparent text-[10px] outline-none"
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="any"
-                      aria-label="Allowance percent"
-                      data-testid="allowance-input"
-                      [ngModel]="product.allowancePercent"
-                      (ngModelChange)="onAllowanceChange(product.productId, $event)"
-                      [ngModelOptions]="{ standalone: true }"
-                    />
-                    <span class="shrink-0 text-[10px] text-gray-400">%</span>
+                  <label
+                    class="flex flex-col gap-0.5 text-[10px] font-semibold tracking-wide text-gray-400 uppercase"
+                    title="Allowance: a known, steady loss added to every sale"
+                  >
+                    Allowance
+                    <span class="input input-xs flex h-7 w-20 items-center gap-1 border-gray-200 bg-surface">
+                      <input
+                        class="w-full min-w-0 bg-transparent text-[10px] font-normal text-gray-800 normal-case outline-none"
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="any"
+                        aria-label="Allowance percent"
+                        data-testid="allowance-input"
+                        [ngModel]="product.allowancePercent"
+                        (ngModelChange)="onAllowanceChange(product.productId, $event)"
+                        [ngModelOptions]="{ standalone: true }"
+                      />
+                      <span class="shrink-0 text-[10px] font-normal text-gray-400 normal-case">%</span>
+                    </span>
                   </label>
-                  <label class="flex items-center gap-1 text-[10px] text-gray-500" title="Multiplied by the size add-on on the same drink">
+                  <label
+                    class="flex h-7 items-center gap-1.5 text-[11px] font-normal text-gray-600"
+                    title="Multiplied by the size add-on on the same drink"
+                  >
                     <input
                       type="checkbox"
                       class="checkbox checkbox-xs"
@@ -216,29 +236,27 @@
                     Scales with size
                   </label>
                   @if (product.isAddOn) {
-                    <select
-                      class="select select-xs h-7 w-28 border-gray-200 bg-surface text-[10px]"
-                      aria-label="Replaces"
-                      data-testid="replaces-select"
-                      [value]="product.replacesItemId ?? ''"
-                      (change)="onReplacesChange(product.productId, $any($event.target).value)"
-                    >
-                      <option value="">Replaces: Nothing</option>
-                      @for (item of replaceableItems(); track item.id) {
-                        <option [value]="item.id" [selected]="item.id === product.replacesItemId">{{ item.name }}</option>
-                      }
-                    </select>
+                    <label class="flex min-w-0 flex-col gap-0.5 text-[10px] font-semibold tracking-wide text-gray-400 uppercase">
+                      Replaces
+                      <select
+                        class="select select-xs h-7 w-full max-w-44 border-gray-200 bg-surface text-[10px] font-normal text-gray-800 normal-case"
+                        aria-label="Replaces"
+                        data-testid="replaces-select"
+                        [value]="product.replacesItemId ?? ''"
+                        (change)="onReplacesChange(product.productId, $any($event.target).value)"
+                      >
+                        <option value="">Nothing</option>
+                        @for (item of replaceableItems(); track item.id) {
+                          <option [value]="item.id" [selected]="item.id === product.replacesItemId">{{ item.name }}</option>
+                        }
+                      </select>
+                    </label>
                   }
-                  <button
-                    type="button"
-                    class="app-btn app-btn-icon-danger p-1"
-                    aria-label="Unlink product"
-                    (click)="removeLinkedProduct(product.productId)"
-                  [disabled]="isSaving()"
-                  >
-                    <app-icon name="icon-close" [class]="'h-3.5 w-3.5'" />
-                  </button>
                 </div>
+
+                <p class="mt-1.5 pl-8 text-[10px] font-normal text-gray-500 sm:pl-16" data-testid="stock-impact">
+                  {{ stockImpact(product) }}
+                </p>
               </li>
             }
 

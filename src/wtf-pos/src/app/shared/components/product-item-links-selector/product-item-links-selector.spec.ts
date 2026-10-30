@@ -391,7 +391,7 @@ describe('ProductItemLinksSelectorComponent', () => {
       const options = Array.from(el.querySelectorAll('[data-testid="replaces-select"] option')).map((o) =>
         o.textContent?.trim(),
       );
-      expect(options).toEqual(['Replaces: Nothing', 'Dairy']);
+      expect(options).toEqual(['Nothing', 'Dairy']);
       expect(el.querySelectorAll('[data-testid="scales-input"]')).toHaveLength(2);
     });
 

@@ -246,7 +246,7 @@
                   @if (canReadCosts()) {
                     <div>
                       <label class="mb-2 block text-sm font-semibold text-gray-900" for="costPrice">
-                        Cost Price (per {{ inventoryForm.controls.unitName.value || 'unit' }})
+                        Cost Price
                       </label>
                       <input
                         id="costPrice"
@@ -257,6 +257,7 @@
                         placeholder="0.00"
                         class="input w-full border-transparent bg-gray-50 transition-all focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20"
                       />
+                      <p class="mt-1 text-xs text-gray-400">Per {{ inventoryForm.controls.unitName.value || 'unit' }}</p>
                     </div>
 
                     <div>
@@ -445,7 +446,7 @@
                   <div class="space-y-2">
                     @for (link of linkedProducts(); track link.id) {
                       <div
-                        class="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2"
+                        class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-lg bg-gray-50 px-3 py-2"
                         [class.opacity-60]="!link.isActive"
                       >
                         <div class="min-w-0">
@@ -456,17 +457,19 @@
                             {{ link.productCode }}
                           </p>
                         </div>
-                        <p class="ml-3 shrink-0 text-xs font-medium text-gray-500">
-                          x{{ link.quantityPerSale | number: '1.0-3' }} {{ savedUnitAbbreviation() }}@if ((link.allowancePercent ?? 0) > 0) {
-                            +{{ link.allowancePercent | number: '1.0-2' }}%
-                          }
+                        <div class="flex min-w-0 flex-wrap items-center gap-1 text-xs font-medium text-gray-500">
+                          <span class="shrink-0">
+                            x{{ link.quantityPerSale | number: '1.0-3' }} {{ savedUnitAbbreviation() }}@if ((link.allowancePercent ?? 0) > 0) {
+                              +{{ link.allowancePercent | number: '1.0-2' }}%
+                            }
+                          </span>
                           @if (link.scalesWithSize) {
-                            <span class="ml-1 rounded bg-gray-200 px-1.5 py-0.5 text-[10px] font-semibold text-gray-600" data-testid="scales-tag">scales with size</span>
+                            <span class="rounded bg-gray-200 px-1.5 py-0.5 text-[10px] font-semibold text-gray-600" data-testid="scales-tag">scales with size</span>
                           }
                           @if (link.replacesItemId) {
-                            <span class="ml-1 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700" data-testid="replaces-tag">replaces {{ link.replacesItemName }}</span>
+                            <span class="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold wrap-break-word text-amber-700" data-testid="replaces-tag">replaces {{ link.replacesItemName }}</span>
                           }
-                        </p>
+                        </div>
                       </div>
                     }
                   </div>
