@@ -53,6 +53,7 @@ describe('ItemDetailsComponent', () => {
     successDeleted: ReturnType<typeof vi.fn>;
     successRestored: ReturnType<typeof vi.fn>;
     success: ReturnType<typeof vi.fn>;
+    warning: ReturnType<typeof vi.fn>;
     getDeleteErrorMessage: ReturnType<typeof vi.fn>;
   };
   let auth: {
@@ -60,6 +61,7 @@ describe('ItemDetailsComponent', () => {
     canReadStockMovements: ReturnType<typeof vi.fn>;
     canWriteStockMovements: ReturnType<typeof vi.fn>;
     canWriteStockWaste: ReturnType<typeof vi.fn>;
+    canReadInventoryCosts: ReturnType<typeof vi.fn>;
   };
   let navigate: ReturnType<typeof vi.fn>;
 
@@ -103,6 +105,7 @@ describe('ItemDetailsComponent', () => {
       successDeleted: vi.fn(),
       successRestored: vi.fn(),
       success: vi.fn(),
+      warning: vi.fn(),
       getDeleteErrorMessage: vi.fn((e: string) => `Failed to delete ${e}`),
     };
     auth = {
@@ -110,6 +113,7 @@ describe('ItemDetailsComponent', () => {
       canReadStockMovements: vi.fn(() => true),
       canWriteStockMovements: vi.fn(() => true),
       canWriteStockWaste: vi.fn(() => false),
+      canReadInventoryCosts: vi.fn(() => false),
     };
   });
 
@@ -191,6 +195,12 @@ describe('ItemDetailsComponent', () => {
       const html = fixture.nativeElement as HTMLElement;
       expect(html.querySelector('[data-testid="item-average-cost"]')?.textContent).toContain('0.175');
       expect(html.querySelector('[data-testid="item-usable-cost"]')?.textContent).toContain('0.21875');
+    });
+
+    it('shows a cost per unit with its real decimals', () => {
+      inventory.getInventoryItem.mockReturnValue(of(makeItem({ costPrice: 0.025 })));
+      const { fixture } = create('i1');
+      expect((fixture.nativeElement as HTMLElement).textContent).toContain('0.025');
     });
 
     it('shows no average or usable cost when the server sends none', () => {

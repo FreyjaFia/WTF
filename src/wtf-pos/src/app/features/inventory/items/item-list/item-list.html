@@ -155,7 +155,7 @@
                         <span>{{ linkedProductCount(item) }} linked product(s)</span>
                       }
                       @if (item.costPrice !== null && item.costPrice !== undefined) {
-                        <span class="lg:hidden">Cost ₱{{ item.costPrice | number: '1.2-2' }}</span>
+                        <span class="lg:hidden">Cost ₱{{ item.costPrice | number: '1.2-4' }}</span>
                       } @else {
                         <span class="lg:hidden">No cost</span>
                       }
@@ -218,7 +218,7 @@
                         [class]="'h-4 w-4 opacity-70'"
                         [fill]="'currentColor'"
                       />
-                      {{ item.costPrice | number: '1.2-2' }}
+                      {{ item.costPrice | number: '1.2-4' }}
                     } @else {
                       <span class="text-sm font-medium text-gray-400">Not set</span>
                     }
