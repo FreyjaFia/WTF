@@ -272,7 +272,13 @@ test.describe('inactive items and stock limits @stock', () => {
     expect(row.balance).toBe(4);
     expect(row.name).toBe(blocking.name);
     expect(Object.keys(row).sort()).toEqual(['balance', 'id', 'name', 'unitName']);
-    expect(limits.links).toContainEqual({ productId: drink.id, itemId: blocking.id, quantityPerSale: 2 });
+    expect(limits.links).toContainEqual({
+      productId: drink.id,
+      itemId: blocking.id,
+      quantityPerSale: 2,
+      scalesWithSize: false,
+      replacesItemId: null,
+    });
     expect(limits.links.some((link) => link.itemId === warnOnly.id)).toBe(false);
     expect(JSON.stringify(limits)).not.toContain('costPrice');
   });
