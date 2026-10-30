@@ -33,8 +33,8 @@ public sealed class GetStockStatusReportHandler(WTFDbContext db) : IRequestHandl
                 x.Item.WarningQuantity,
                 x.Item.CriticalQuantity,
                 StatusLabel(x.Status),
-                x.Item.CostPrice,
-                StockRules.StockValue(x.Item.CurrentQuantity, x.Item.CostPrice)))
+                CostRules.MovementCost(x.Item.AverageCost, x.Item.CostPrice),
+                StockRules.StockValue(x.Item.CurrentQuantity, CostRules.MovementCost(x.Item.AverageCost, x.Item.CostPrice))))
             .ToList();
     }
 
