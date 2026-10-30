@@ -1056,6 +1056,20 @@ with a reason, an adjustment fixes an unknown difference found on a count (Phase
 Goal: know what each product **costs** to make, so profit can be worked out. Builds on `ProductItemLink`
 (product, item, `QuantityPerSale`), which already is a one-level recipe; this phase makes it complete and adds cost.
 
+**Decisions (30 Oct 2026)**
+
+- **The shop weighs and measures ingredients** and sells made-to-order drinks, so recipes are a tight standard: allowances
+  default to 0% and are only set for a known, steady loss. Retail goods stay simple (one item per product, quantity 1).
+- **Who sees costs:** Super Admin and Admin (read and write), Admin Viewer (read only). Cashier, Stock Manager and Item Manager
+  never see costs or margins, on screens or in API responses (a new `InventoryCostsRead` policy; the cashier POS and the
+  customer link carry no cost fields). Stock-in keeps taking a cost price from the roles that can add stock, but they cannot
+  read costs back.
+- **Build in slices:** (1) cost per unit and weighted average on stock-in, with `UnitCost` kept on every movement; (2) recipe
+  lines with allowance, and the product editor's cost and margin preview; (3) size-aware amounts and Replace mode for add-ons;
+  (4) prepared items and Produce batch; (5) supplies allowance. Each slice ships on its own with tests and a hand check.
+
+**Slice 1 built (30 Oct 2026; script `tools/sql/20261030_add_item_costing.sql`, run it before deploying the API, then `tools/dbsync.bat`).** Costs are per base unit and now keep six decimals (`Items.CostPrice`, `StockMovements.UnitCost` and the price history were `decimal(10, 2)`). `Items.AverageCost` is the moving weighted average: a stock-in with a cost blends it with what is on hand (an empty or negative balance starts again from the delivery; a stock-in without a cost leaves it alone), and a cost typed by hand in the editor restarts it. `Items.YieldPercent` (1 to 100, default 100) gives the cost per usable unit. Sales, voids, adjustments and waste record the average (or the last cost when there is no average) on their movement. The arithmetic is `CostRules` in `WTF.Calculations`. The new policy `InventoryCostsRead` (Super Admin, Admin, Admin Viewer) decides who sees `costPrice`, `averageCost`, `usableCost`, the price history and movement costs: for every other role the item endpoints return them empty, and their saves leave cost and yield alone. The item details page shows the average and usable cost; the editor has the usable share. Not done in this slice: a live preview in the Angular editor (it shows server values), and the Reports that show costs stay with Reports roles, which already can see them.
+
 **Cost per unit (`Items`)**
 
 - Keep the cost **per base unit** (per ml, per g, per piece), derived from the stock-in cost and `UnitsPerStockUnit` (a
