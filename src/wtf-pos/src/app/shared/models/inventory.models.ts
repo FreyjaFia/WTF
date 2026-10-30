@@ -77,6 +77,7 @@ export interface RecipeCostDto {
   isAddOn: boolean;
   recipeMultiplier: number;
   lines: RecipeCostLineDto[];
+  suppliesCost: number;
   totalCost: number;
   unknownCostCount: number;
   margin: number;

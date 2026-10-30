@@ -24,4 +24,5 @@ public record RecipeCostDto(
     decimal Margin,
     decimal? MarginPercent,
     bool IsAddOn = false,
-    decimal RecipeMultiplier = 1m);
+    decimal RecipeMultiplier = 1m,
+    decimal SuppliesCost = 0m);

@@ -9,6 +9,8 @@ namespace WTF.Api.Endpoints;
 
 public record SetRecipeMultiplierRequest(decimal Multiplier);
 
+public record SetSuppliesCostRequest(decimal Amount);
+
 public static class ProductEndpoints
 {
 
@@ -55,6 +57,15 @@ public static class ProductEndpoints
                 return result ? Results.NoContent() : Results.NotFound();
             })
             .RequireAuthorization(AppPolicies.ProductsWrite);
+
+        // PUT /api/products/{id}/supplies-cost - A fixed per-sale cost for ice, straws and napkins (cost editors only)
+        productGroup.MapPut("/{id:guid}/supplies-cost",
+            async (Guid id, SetSuppliesCostRequest request, ISender sender) =>
+            {
+                var result = await sender.Send(new SetSuppliesCostCommand(id, request.Amount));
+                return result ? Results.NoContent() : Results.NotFound();
+            })
+            .RequireAuthorization(AppPolicies.InventoryCostsWrite);
 
         // POST /api/products - Create new product
         productGroup.MapPost("/",

@@ -34,7 +34,7 @@ describe('ProductEditorComponent: track inventory', () => {
         { provide: ProductService, useValue: products },
         { provide: InventoryService, useValue: inventory },
         { provide: AlertService, useValue: alerts },
-        { provide: AuthService, useValue: { canWriteItems: () => canWriteItems } },
+        { provide: AuthService, useValue: { canWriteItems: () => canWriteItems, canReadInventoryCosts: () => true } },
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } } } },
       ],
     });

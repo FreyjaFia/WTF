@@ -77,6 +77,7 @@ describe('app roles vs the API policies', () => {
     ItemsRead: ['SuperAdmin', 'Admin', 'AdminViewer', 'ItemManager', 'StockManager'],
     ItemsWrite: ['SuperAdmin', 'Admin', 'ItemManager'],
     InventoryCostsRead: ['SuperAdmin', 'Admin', 'AdminViewer'],
+    InventoryCostsWrite: ['SuperAdmin', 'Admin'],
     StockMovementsRead: ['SuperAdmin', 'Admin', 'AdminViewer', 'StockManager'],
     StockMovementsWrite: ['SuperAdmin', 'Admin', 'StockManager'],
     StockWasteWrite: ['SuperAdmin', 'Admin', 'StockManager', 'Cashier'],

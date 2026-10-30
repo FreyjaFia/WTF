@@ -380,6 +380,7 @@ describe('AuthService session', () => {
         (a) => a.canReadItems(),
         ['SuperAdmin', 'Admin', 'AdminViewer', 'ItemManager', 'StockManager'],
       ],
+      ['canWriteInventoryCosts', (a) => a.canWriteInventoryCosts(), ['SuperAdmin', 'Admin']],
       ['canWriteItems', (a) => a.canWriteItems(), ['SuperAdmin', 'Admin', 'ItemManager']],
       [
         'canReadStockMovements',

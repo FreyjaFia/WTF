@@ -174,4 +174,28 @@ describe('InventoryService', () => {
 
     expect(result.error).toBe('Unable to fetch the recipe cost.');
   });
+
+  it('saves the supplies cost of a product', () => {
+    const { service, http } = setupHttpService(InventoryService);
+    const result = capture(service.setSuppliesCost('p1', 2.5));
+
+    const req = http.expectOne(`${environment.apiUrl}/products/p1/supplies-cost`);
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toEqual({ amount: 2.5 });
+    req.flush(null, { status: 204, statusText: 'No Content' });
+
+    expect(result.error).toBeUndefined();
+  });
+
+  it('gives the server message when the supplies cost is refused', () => {
+    const { service, http } = setupHttpService(InventoryService);
+    const result = capture(service.setSuppliesCost('p1', -1));
+
+    http.expectOne(`${environment.apiUrl}/products/p1/supplies-cost`).flush(
+      { message: 'Too low.' },
+      { status: 400, statusText: 'Bad Request' },
+    );
+
+    expect(result.error).toBe('Too low.');
+  });
 });

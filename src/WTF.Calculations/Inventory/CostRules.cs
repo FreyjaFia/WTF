@@ -47,9 +47,9 @@ public static class CostRules
     public static decimal LineCost(decimal effectiveQuantity, decimal unitCost) => Round(effectiveQuantity * unitCost);
 
     // A line with no cost yet is counted as unknown instead of free, so a recipe never looks cheaper than it is.
-    public static RecipeCostSummary RecipeCost(IEnumerable<RecipeLine> lines)
+    public static RecipeCostSummary RecipeCost(IEnumerable<RecipeLine> lines, decimal suppliesCost = 0m)
     {
-        var total = 0m;
+        var total = Math.Max(0m, suppliesCost);
         var unknown = 0;
         foreach (var line in lines)
         {

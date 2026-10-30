@@ -89,4 +89,11 @@ public class CostRulesTests
         CostRules.MarginPercent(0m, 5m).ShouldBeNull();
         CostRules.MarginPercent(10m, 16m).ShouldBe(-60m);
     }
+
+    [Fact]
+    public void RecipeCost_IncludesTheSuppliesAllowance()
+    {
+        CostRules.RecipeCost([new RecipeLine(200m, 0.15m)], 2.5m).TotalCost.ShouldBe(32.5m);
+        CostRules.RecipeCost([], 1m).TotalCost.ShouldBe(1m);
+    }
 }

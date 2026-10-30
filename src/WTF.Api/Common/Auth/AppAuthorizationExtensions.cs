@@ -42,6 +42,8 @@ public static class AppAuthorizationExtensions
                 policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.ItemManager))
             .AddPolicy(AppPolicies.InventoryCostsRead, policy =>
                 policy.RequireRole(CostAccess.Roles))
+            .AddPolicy(AppPolicies.InventoryCostsWrite, policy =>
+                policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin))
             .AddPolicy(AppPolicies.StockMovementsRead, policy =>
                 policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.StockManager))
             .AddPolicy(AppPolicies.StockMovementsWrite, policy =>

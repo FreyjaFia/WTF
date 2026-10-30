@@ -155,6 +155,12 @@ export class InventoryService {
       .pipe(catchError((error) => this.handleError(error, 'Unable to save the size multiplier.')));
   }
 
+  public setSuppliesCost(productId: string, amount: number): Observable<void> {
+    return this.http
+      .put<void>(`${environment.apiUrl}/products/${productId}/supplies-cost`, { amount })
+      .pipe(catchError((error) => this.handleError(error, 'Unable to save the supplies cost.')));
+  }
+
   public deleteInventoryItem(id: string): Observable<void> {
     return this.http
       .delete<void>(`${this.baseUrl}/${id}`)

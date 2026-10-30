@@ -58,6 +58,7 @@ function makeCost(overrides: Partial<RecipeCostDto> = {}): RecipeCostDto {
         lineCost: 3,
       },
     ],
+    suppliesCost: 0,
     totalCost: 34.5,
     unknownCostCount: 0,
     margin: 115.5,
@@ -70,9 +71,9 @@ describe('ProductEditorComponent: recipe cost card', () => {
   afterEach(() => vi.restoreAllMocks());
 
   function setup(
-    options: { canReadCosts?: boolean; canWriteProducts?: boolean; cost?: RecipeCostDto; fail?: boolean; id?: string | null } = {},
+    options: { canReadCosts?: boolean; canWriteProducts?: boolean; canWriteCosts?: boolean; cost?: RecipeCostDto; fail?: boolean; id?: string | null } = {},
   ) {
-    const { canReadCosts = true, canWriteProducts = false, cost = makeCost(), fail = false, id = 'p1' } = options;
+    const { canReadCosts = true, canWriteProducts = false, canWriteCosts = false, cost = makeCost(), fail = false, id = 'p1' } = options;
     const products = {
       getProduct: vi.fn(() => of(product)),
       getProducts: vi.fn(() => of([])),
@@ -83,6 +84,7 @@ describe('ProductEditorComponent: recipe cost card', () => {
       getInventoryItems: vi.fn(() => of([])),
       getProductRecipeCost: vi.fn(() => (fail ? throwError(() => new Error('403')) : of(cost))),
       setRecipeMultiplier: vi.fn(() => of(undefined)),
+      setSuppliesCost: vi.fn(() => of(undefined)),
     };
     const alerts = { error: vi.fn(), successSaved: vi.fn() };
     TestBed.configureTestingModule({
@@ -97,6 +99,7 @@ describe('ProductEditorComponent: recipe cost card', () => {
             canWriteItems: () => false,
             canWriteProducts: () => canWriteProducts,
             canReadInventoryCosts: () => canReadCosts,
+            canWriteInventoryCosts: () => canWriteCosts,
           },
         },
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => id } } } },
@@ -257,6 +260,61 @@ describe('ProductEditorComponent: recipe cost card', () => {
       const { card } = setup({ cost: addOnCost(1) });
 
       expect(card()!.querySelector('[data-testid="multiplier-readonly"]')).toBeNull();
+    });
+  });
+
+  describe('supplies', () => {
+    it('shows the supplies row only when there is a supplies cost', () => {
+      const { card } = setup({ cost: makeCost({ suppliesCost: 2.5, totalCost: 37 }) });
+      expect(card()!.querySelector('[data-testid="recipe-supplies"]')!.textContent).toContain('2.50');
+    });
+
+    it('has no supplies row when there is no supplies cost', () => {
+      expect(setup().card()!.querySelector('[data-testid="recipe-supplies"]')).toBeNull();
+    });
+
+    it('still shows the cost when the recipe has no lines but there are supplies', () => {
+      const { card } = setup({ cost: makeCost({ lines: [], suppliesCost: 3, totalCost: 3, margin: 147, marginPercent: 98 }) });
+
+      expect(card()!.querySelector('[data-testid="recipe-empty"]')).toBeNull();
+      expect(card()!.querySelectorAll('[data-testid="recipe-line"]')).toHaveLength(0);
+      expect(card()!.querySelector('[data-testid="recipe-total"]')!.textContent).toContain('3.00');
+    });
+
+    it('hides the editor from roles that cannot write costs', () => {
+      expect(setup().card()!.querySelector('[data-testid="supplies-editor"]')).toBeNull();
+    });
+
+    it('lets a cost writer save an amount, then reloads the card', () => {
+      const { card, inventory, alerts, fixture, c } = setup({ canWriteCosts: true, cost: makeCost({ suppliesCost: 2 }) });
+      const input = card()!.querySelector('[data-testid="supplies-input"]') as HTMLInputElement;
+
+      expect(input.value).toBe('2');
+      c.suppliesControl.setValue(4.5);
+      fixture.detectChanges();
+      (card()!.querySelector('[data-testid="supplies-save"]') as HTMLButtonElement).click();
+
+      expect(inventory.setSuppliesCost).toHaveBeenCalledWith('p1', 4.5);
+      expect(inventory.getProductRecipeCost).toHaveBeenCalledTimes(2);
+      expect(alerts.successSaved).toHaveBeenCalledWith('Supplies cost');
+    });
+
+    it('refuses an amount outside 0 to 9999.99', () => {
+      const { inventory, fixture, c } = setup({ canWriteCosts: true });
+      c.suppliesControl.setValue(10000);
+      fixture.detectChanges();
+      c.saveSupplies();
+
+      expect(inventory.setSuppliesCost).not.toHaveBeenCalled();
+    });
+
+    it('shows the error when saving fails', () => {
+      const { inventory, alerts, c } = setup({ canWriteCosts: true });
+      inventory.setSuppliesCost.mockReturnValue(throwError(() => new Error('Nope')));
+      c.saveSupplies();
+
+      expect(alerts.error).toHaveBeenCalledWith('Nope');
+      expect(c.isSuppliesSaving()).toBe(false);
     });
   });
 

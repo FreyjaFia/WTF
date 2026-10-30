@@ -15,7 +15,7 @@ public class GetProductRecipeCostHandler(WTFDbContext db) : IRequestHandler<GetP
         var product = await db.Products
             .AsNoTracking()
             .Where(p => p.Id == request.ProductId)
-            .Select(p => new { p.Id, p.Name, p.Price, p.IsAddOn, p.RecipeMultiplier })
+            .Select(p => new { p.Id, p.Name, p.Price, p.IsAddOn, p.RecipeMultiplier, p.SuppliesCost })
             .FirstOrDefaultAsync(cancellationToken);
         if (product is null)
         {
@@ -64,7 +64,7 @@ public class GetProductRecipeCostHandler(WTFDbContext db) : IRequestHandler<GetP
             })
             .ToList();
 
-        var summary = CostRules.RecipeCost(lines.Select(l => new RecipeLine(l.EffectiveQuantity, l.UnitCost)));
+        var summary = CostRules.RecipeCost(lines.Select(l => new RecipeLine(l.EffectiveQuantity, l.UnitCost)), product.SuppliesCost);
 
         return new RecipeCostDto(
             product.Id,
@@ -76,6 +76,7 @@ public class GetProductRecipeCostHandler(WTFDbContext db) : IRequestHandler<GetP
             CostRules.Margin(product.Price, summary.TotalCost),
             CostRules.MarginPercent(product.Price, summary.TotalCost),
             product.IsAddOn,
-            product.RecipeMultiplier);
+            product.RecipeMultiplier,
+            product.SuppliesCost);
     }
 }

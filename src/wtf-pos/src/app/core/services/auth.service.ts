@@ -397,6 +397,10 @@ export class AuthService {
     return this.hasAnyRole(AppRoleGroups.InventoryCostsRead);
   }
 
+  public canWriteInventoryCosts(): boolean {
+    return this.hasAnyRole(AppRoleGroups.InventoryCostsWrite);
+  }
+
   public canReadStockMovements(): boolean {
     return this.hasAnyRole(AppRoleGroups.StockMovementsRead);
   }

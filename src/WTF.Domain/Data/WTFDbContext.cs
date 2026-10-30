@@ -676,6 +676,7 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.RecipeMultiplier)
                 .HasDefaultValue(1m, "DF_Products_RecipeMultiplier")
                 .HasColumnType("decimal(6, 3)");
+            entity.Property(e => e.SuppliesCost).HasColumnType("decimal(18, 6)");
             entity.Property(e => e.UpdatedAt).HasColumnType("datetime");
 
             entity.HasOne(d => d.Category).WithMany(p => p.Products)
