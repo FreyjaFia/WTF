@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Features.Inventory.DTOs;
+using WTF.Api.Features.Products.Enums;
 using WTF.Calculations.Inventory;
 using WTF.Domain.Data;
 
@@ -45,6 +46,26 @@ public class GetProductIngredientsEditHandler(WTFDbContext db) : IRequestHandler
             })
             .ToListAsync(cancellationToken);
 
+        var options = await db.ProductAddOns
+            .AsNoTracking()
+            .Where(pa => pa.ProductId == product.Id && pa.IsActive && pa.AddOn.IsActive)
+            .OrderBy(pa => pa.AddOn.RecipeMultiplier)
+            .ThenBy(pa => pa.AddOn.Price)
+            .ThenBy(pa => pa.AddOn.Name)
+            .Select(pa => new ProductIngredientAddOnOptionDto(
+                pa.AddOnId, pa.AddOn.Name, pa.AddOnTypeId == (int)AddOnTypeEnum.Size, pa.AddOn.RecipeMultiplier))
+            .ToListAsync(cancellationToken);
+        var sizes = options
+            .Where(option => option.IsSize)
+            .Select(option => new ProductIngredientSizeDto(option.ProductId, option.Name, option.RecipeMultiplier))
+            .ToList();
+
+        var sizeAmounts = await db.ProductSizeAmounts
+            .AsNoTracking()
+            .Where(a => a.ProductId == product.Id && a.IsActive)
+            .Select(a => new { a.ItemId, a.SizeProductId, a.Quantity })
+            .ToListAsync(cancellationToken);
+
         var lines = links
             .Select(l =>
             {
@@ -63,7 +84,8 @@ public class GetProductIngredientsEditHandler(WTFDbContext db) : IRequestHandler
                     l.ReplacesItemId,
                     l.ReplacesItemName,
                     unitCost,
-                    unitCost.HasValue ? CostRules.LineCost(effective, unitCost.Value) : null);
+                    unitCost.HasValue ? CostRules.LineCost(effective, unitCost.Value) : null,
+                    sizeAmounts.Where(a => a.ItemId == l.ItemId).Select(a => new ProductIngredientSizeAmountDto(a.SizeProductId, a.Quantity)).ToList());
             })
             .ToList();
 
@@ -94,6 +116,8 @@ public class GetProductIngredientsEditHandler(WTFDbContext db) : IRequestHandler
             total,
             unknown,
             margin,
-            marginPercent);
+            marginPercent,
+            sizes,
+            options);
     }
 }

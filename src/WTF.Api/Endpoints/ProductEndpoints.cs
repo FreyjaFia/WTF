@@ -50,6 +50,12 @@ public static class ProductEndpoints
             })
             .RequireAuthorization(AppPolicies.ItemsRead);
 
+        // POST /api/products/ingredients/bulk-add - Add the same ingredient lines to many products (add-only)
+        productGroup.MapPost("/ingredients/bulk-add",
+            async (BulkAddProductIngredientsCommand command, ISender sender) =>
+                Results.Ok(await sender.Send(command)))
+            .RequireAuthorization(AppPolicies.ItemsWrite);
+
         // GET /api/products/{id}/ingredients - One product's ingredient lines (costs only for the cost roles)
         productGroup.MapGet("/{id:guid}/ingredients",
             async (Guid id, ISender sender, ClaimsPrincipal user) =>
@@ -83,6 +89,15 @@ public static class ProductEndpoints
             async (Guid id, ISender sender) =>
             {
                 var result = await sender.Send(new GetProductRecipeCostQuery(id));
+                return result is not null ? Results.Ok(result) : Results.NotFound();
+            })
+            .RequireAuthorization(AppPolicies.InventoryCostsRead);
+
+        // GET /api/products/{id}/recipe-preview - What one sale with the chosen size and add-ons uses and costs (cost roles only)
+        productGroup.MapGet("/{id:guid}/recipe-preview",
+            async (Guid id, [FromQuery] Guid[]? addOnIds, ISender sender) =>
+            {
+                var result = await sender.Send(new GetProductRecipePreviewQuery(id, [.. addOnIds ?? []]));
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             })
             .RequireAuthorization(AppPolicies.InventoryCostsRead);

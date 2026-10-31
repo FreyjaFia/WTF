@@ -4,6 +4,7 @@ import { Capacitor } from '@capacitor/core';
 import { AlertService, AuthService, InventoryService } from '@core/services';
 import { IconComponent, PullToRefreshComponent } from '@shared/components';
 import { SearchInputComponent } from '@shared/components/search-input/search-input';
+import { BulkAddIngredientsComponent } from './bulk-add-ingredients/bulk-add-ingredients';
 import { formatPeso } from '@shared/calculations';
 import { AppRoutes } from '@shared/constants/app-routes';
 import {
@@ -38,7 +39,13 @@ const STATUS_STYLES: Record<ProductCoverageStatus, StatusStyle> = {
 
 @Component({
   selector: 'app-ingredients',
-  imports: [RouterLink, IconComponent, PullToRefreshComponent, SearchInputComponent],
+  imports: [
+    RouterLink,
+    IconComponent,
+    PullToRefreshComponent,
+    SearchInputComponent,
+    BulkAddIngredientsComponent,
+  ],
   templateUrl: './ingredients.html',
   host: { class: 'flex-1 min-h-0' },
 })
@@ -52,6 +59,8 @@ export class IngredientsComponent implements OnInit {
   protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
   protected readonly filter = signal<IngredientsFilter>('attention');
   protected readonly search = signal('');
+  protected readonly showAdd = signal(false);
+  protected readonly canAdd = computed(() => this.authService.canWriteItems());
 
   protected readonly total = computed(() => {
     const summary = this.data();
@@ -104,6 +113,14 @@ export class IngredientsComponent implements OnInit {
         this.isLoading.set(false);
       },
     });
+  }
+
+  protected openAdd(): void {
+    this.showAdd.set(true);
+  }
+
+  protected closeAdd(): void {
+    this.showAdd.set(false);
   }
 
   protected setFilter(value: IngredientsFilter): void {

@@ -245,6 +245,53 @@ describe('InventoryService', () => {
     expect(result.error).toBeUndefined();
   });
 
+  it('asks for the recipe preview with one add-on id per chosen option', () => {
+    const { service, http } = setupHttpService(InventoryService);
+    const result = capture(service.getProductRecipePreview('p1', ['s1', 'a2']));
+
+    const req = http.expectOne((r) => r.url === `${environment.apiUrl}/products/p1/recipe-preview`);
+    expect(req.request.method).toBe('GET');
+    expect(req.request.params.getAll('addOnIds')).toEqual(['s1', 'a2']);
+    req.flush({ productId: 'p1' });
+
+    expect(result.value).toEqual({ productId: 'p1' });
+  });
+
+  it('gives the server message when the preview is refused', () => {
+    const { service, http } = setupHttpService(InventoryService);
+    const result = capture(service.getProductRecipePreview('p1', ['x']));
+
+    http
+      .expectOne((r) => r.url === `${environment.apiUrl}/products/p1/recipe-preview`)
+      .flush({ message: 'Not an option.' }, { status: 400, statusText: 'Bad Request' });
+
+    expect(result.error).toBe('Not an option.');
+  });
+
+  it('posts the products and lines for a bulk add', () => {
+    const { service, http } = setupHttpService(InventoryService);
+    const lines = [{ itemId: 'i1', quantityPerSale: 1, allowancePercent: 0 }];
+    service.bulkAddIngredients(['p1', 'p2'], lines).subscribe();
+
+    const req = http.expectOne(`${environment.apiUrl}/products/ingredients/bulk-add`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ productIds: ['p1', 'p2'], lines });
+  });
+
+  it('gives the server message when a bulk add is refused', () => {
+    const { service, http } = setupHttpService(InventoryService);
+    const result = capture(service.bulkAddIngredients(['p1'], []));
+
+    http
+      .expectOne(`${environment.apiUrl}/products/ingredients/bulk-add`)
+      .flush(
+        { message: 'Add at least one ingredient.' },
+        { status: 400, statusText: 'Bad Request' },
+      );
+
+    expect(result.error).toBe('Add at least one ingredient.');
+  });
+
   it('gives the server message when the supplies cost is refused', () => {
     const { service, http } = setupHttpService(InventoryService);
     const result = capture(service.setSuppliesCost('p1', -1));

@@ -26,3 +26,26 @@ public record RecipeCostDto(
     bool IsAddOn = false,
     decimal RecipeMultiplier = 1m,
     decimal SuppliesCost = 0m);
+
+public record RecipePreviewLineDto(
+    Guid ItemId,
+    string ItemName,
+    string UnitName,
+    decimal Quantity,
+    decimal? UnitCost,
+    decimal? LineCost,
+    string? SourceName);
+
+public record RecipePreviewDto(
+    Guid ProductId,
+    string ProductName,
+    decimal Price,
+    List<string> AddOnNames,
+    List<RecipePreviewLineDto> Lines,
+    List<string> ReplacedItemNames,
+    decimal SuppliesCost,
+    decimal TotalCost,
+    int UnknownCostCount,
+    decimal Margin,
+    decimal? MarginPercent,
+    List<string> Warnings);

@@ -5,6 +5,8 @@ import { environment } from '@environments/environment.development';
 import {
   AddItemStockDto,
   AdjustItemStockDto,
+  BulkAddIngredientsResultDto,
+  BulkIngredientLineDto,
   CreateItemDto,
   ItemAlertRecipientsDto,
   ItemDto,
@@ -13,6 +15,7 @@ import {
   ProductItemLinkAssignmentDto,
   ProductItemLinkDto,
   RecipeCostDto,
+  RecipePreviewDto,
   ProductIngredientInputDto,
   ProductIngredientsDto,
   ProductIngredientsEditDto,
@@ -173,6 +176,29 @@ export class InventoryService {
     return this.http
       .get<RecipeCostDto>(`${environment.apiUrl}/products/${productId}/recipe-cost`)
       .pipe(catchError((error) => this.handleError(error, 'Unable to fetch the recipe cost.')));
+  }
+
+  public getProductRecipePreview(productId: string, addOnIds: string[]): Observable<RecipePreviewDto> {
+    let params = new HttpParams();
+    for (const id of addOnIds) {
+      params = params.append('addOnIds', id);
+    }
+
+    return this.http
+      .get<RecipePreviewDto>(`${environment.apiUrl}/products/${productId}/recipe-preview`, { params })
+      .pipe(catchError((error) => this.handleError(error, 'Unable to work out the preview.')));
+  }
+
+  public bulkAddIngredients(
+    productIds: string[],
+    lines: BulkIngredientLineDto[],
+  ): Observable<BulkAddIngredientsResultDto> {
+    return this.http
+      .post<BulkAddIngredientsResultDto>(`${environment.apiUrl}/products/ingredients/bulk-add`, {
+        productIds,
+        lines,
+      })
+      .pipe(catchError((error) => this.handleError(error, 'Unable to add the ingredients.')));
   }
 
   public setRecipeMultiplier(productId: string, multiplier: number): Observable<void> {

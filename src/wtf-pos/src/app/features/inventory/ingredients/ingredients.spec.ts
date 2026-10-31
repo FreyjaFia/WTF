@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { AlertService, AuthService, InventoryService } from '@core/services';
+import { AlertService, AuthService, InventoryService, ModalStackService } from '@core/services';
 import { ProductIngredientsDto, ProductIngredientsRowDto } from '@shared/models';
 import { of, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
@@ -62,6 +62,7 @@ describe('IngredientsComponent', () => {
   function setup(options: { canWrite?: boolean; canRead?: boolean; result?: unknown } = {}) {
     const inventory = {
       getProductIngredients: vi.fn().mockReturnValue(options.result ?? of(data)),
+      getInventoryItems: vi.fn().mockReturnValue(of([])),
     };
     const alerts = { error: vi.fn() };
     TestBed.configureTestingModule({
@@ -69,6 +70,7 @@ describe('IngredientsComponent', () => {
         provideRouter([]),
         { provide: InventoryService, useValue: inventory },
         { provide: AlertService, useValue: alerts },
+        { provide: ModalStackService, useValue: { push: () => 1, remove: vi.fn() } },
         {
           provide: AuthService,
           useValue: {
@@ -88,6 +90,21 @@ describe('IngredientsComponent', () => {
     (el.querySelector(`[data-testid="${testId}"]`) as HTMLButtonElement).click();
     fixture.detectChanges();
   };
+
+  it('shows the Add button to roles that can write and opens the bulk drawer', () => {
+    const { fixture, el } = setup();
+    expect(el.querySelector('[data-testid="add-ingredients"]')).not.toBeNull();
+
+    click(fixture, el, 'add-ingredients');
+
+    expect(el.querySelector('[data-testid="bulk-add"]')).not.toBeNull();
+  });
+
+  it('hides the Add button from roles that cannot write items', () => {
+    const { el } = setup({ canWrite: false });
+
+    expect(el.querySelector('[data-testid="add-ingredients"]')).toBeNull();
+  });
 
   it('shows the three counts', () => {
     const { el } = setup();

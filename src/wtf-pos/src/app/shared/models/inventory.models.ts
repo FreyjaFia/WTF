@@ -82,6 +82,7 @@ export interface RecipeCostDto {
   unknownCostCount: number;
   margin: number;
   marginPercent: number | null;
+  subCategoryName?: string | null;
 }
 
 export interface StockMovementDto {
@@ -197,6 +198,7 @@ export interface ProductIngredientsRowDto extends ProductCoverageDto {
   unknownCostCount: number;
   margin: number | null;
   marginPercent: number | null;
+  subCategoryName?: string | null;
 }
 
 export interface ProductIngredientsDto {
@@ -250,10 +252,18 @@ export interface StockSizeMultiplierDto {
   multiplier: number;
 }
 
+export interface StockLimitSizeAmountDto {
+  productId: string;
+  sizeProductId: string;
+  itemId: string;
+  quantity: number;
+}
+
 export interface PosStockLimitsDto {
   items: StockLimitItemDto[];
   links: StockLimitLinkDto[];
   sizeMultipliers?: StockSizeMultiplierDto[];
+  sizeAmounts?: StockLimitSizeAmountDto[];
   asOf: string;
 }
 
@@ -269,6 +279,24 @@ export interface ItemAlertRecipientsDto {
   defaultDescription: string;
 }
 
+export interface ProductIngredientSizeDto {
+  productId: string;
+  name: string;
+  recipeMultiplier: number;
+}
+
+export interface ProductIngredientAddOnOptionDto {
+  productId: string;
+  name: string;
+  isSize: boolean;
+  recipeMultiplier: number;
+}
+
+export interface ProductIngredientSizeAmountDto {
+  sizeProductId: string;
+  quantity: number;
+}
+
 export interface ProductIngredientLineDto {
   linkId: string;
   itemId: string;
@@ -281,6 +309,7 @@ export interface ProductIngredientLineDto {
   replacesItemName: string | null;
   unitCost: number | null;
   lineCost: number | null;
+  sizeAmounts?: ProductIngredientSizeAmountDto[];
 }
 
 export interface ProductIngredientsEditDto {
@@ -296,6 +325,8 @@ export interface ProductIngredientsEditDto {
   unknownCostCount: number;
   margin: number | null;
   marginPercent: number | null;
+  sizes?: ProductIngredientSizeDto[];
+  addOnOptions?: ProductIngredientAddOnOptionDto[];
 }
 
 export interface ProductIngredientInputDto {
@@ -304,4 +335,47 @@ export interface ProductIngredientInputDto {
   allowancePercent: number;
   scalesWithSize: boolean;
   replacesItemId: string | null;
+  sizeAmounts?: ProductIngredientSizeAmountDto[];
+}
+
+export interface RecipePreviewLineDto {
+  itemId: string;
+  itemName: string;
+  unitName: string;
+  quantity: number;
+  unitCost: number | null;
+  lineCost: number | null;
+  sourceName: string | null;
+}
+
+export interface RecipePreviewDto {
+  productId: string;
+  productName: string;
+  price: number;
+  addOnNames: string[];
+  lines: RecipePreviewLineDto[];
+  replacedItemNames: string[];
+  suppliesCost: number;
+  totalCost: number;
+  unknownCostCount: number;
+  margin: number;
+  marginPercent: number | null;
+  warnings: string[];
+}
+
+export interface BulkIngredientLineDto {
+  itemId: string;
+  quantityPerSale: number;
+  allowancePercent: number;
+}
+
+export interface BulkAddSkippedDto {
+  productId: string;
+  productName: string;
+  itemName: string;
+}
+
+export interface BulkAddIngredientsResultDto {
+  added: number;
+  skipped: BulkAddSkippedDto[];
 }

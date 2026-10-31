@@ -1,0 +1,180 @@
+<app-side-drawer
+  [isOpen]="isOpen()"
+  title="Add ingredients"
+  subtitle="Add the same ingredients to many products"
+  doneLabel="Close"
+  doneAriaLabel="Close"
+  [showOnDesktop]="true"
+  contentClass="p-0"
+  [showFooter]="false"
+  (closed)="close()"
+>
+  <div class="flex min-h-full flex-col" data-testid="bulk-add">
+    @if (result(); as done) {
+      <div class="space-y-3 p-5" data-testid="bulk-result">
+        <p class="text-sm font-semibold text-gray-900">
+          Added {{ done.added }} ingredient line(s).
+        </p>
+        @if (done.skipped.length > 0) {
+          <p class="text-xs text-gray-600">
+            {{ done.skipped.length }} already had the ingredient and were left as they are:
+          </p>
+          <ul class="space-y-1 text-xs text-gray-700" data-testid="bulk-skipped">
+            @for (skip of done.skipped; track skip.productId + skip.itemName) {
+              <li class="wrap-break-word">{{ skip.productName }}: {{ skip.itemName }}</li>
+            }
+          </ul>
+        }
+        <button type="button" class="app-btn app-btn-primary" (click)="close()">Done</button>
+      </div>
+    } @else {
+      <div class="space-y-5 p-5">
+        <section>
+          <div class="flex items-baseline justify-between">
+            <p class="text-sm font-semibold text-gray-900">1. Which products?</p>
+            <span class="text-xs text-gray-500" data-testid="bulk-count"
+              >{{ selected().size }} picked</span
+            >
+          </div>
+          <input
+            type="search"
+            class="input input-bordered input-sm mt-2 w-full"
+            placeholder="Search products"
+            aria-label="Search products"
+            data-testid="bulk-search"
+            [value]="search()"
+            (input)="setSearch($any($event.target).value)"
+          />
+          <div class="mt-2 flex gap-2">
+            <button
+              type="button"
+              class="app-btn app-btn-ghost app-btn-xs"
+              data-testid="bulk-select-shown"
+              (click)="selectShown()"
+            >
+              Pick all shown
+            </button>
+            <button
+              type="button"
+              class="app-btn app-btn-ghost app-btn-xs"
+              (click)="clearSelection()"
+            >
+              Clear
+            </button>
+          </div>
+          <ul class="mt-2 max-h-64 space-y-1 overflow-y-auto">
+            @for (group of groups(); track group.name) {
+              <li
+                class="px-2 pt-2 text-xs font-semibold tracking-wider text-gray-400 uppercase"
+                data-testid="bulk-group"
+              >
+                {{ group.name }}
+              </li>
+              @for (product of group.products; track product.productId) {
+                <li>
+                  <label
+                    class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-gray-50"
+                  >
+                    <input
+                      type="checkbox"
+                      class="checkbox checkbox-sm"
+                      data-testid="bulk-product"
+                      [checked]="isSelected(product.productId)"
+                      (change)="toggleProduct(product.productId, $any($event.target).checked)"
+                    />
+                    <span class="min-w-0 flex-1 wrap-break-word text-gray-800">{{
+                      product.name
+                    }}</span>
+                    <span class="shrink-0 text-xs text-gray-400">
+                      @if (product.ingredientCount === 0) {
+                        none yet
+                      } @else {
+                        {{ product.ingredientCount }} now
+                      }
+                    </span>
+                  </label>
+                </li>
+              }
+            }
+          </ul>
+        </section>
+
+        <section>
+          <p class="text-sm font-semibold text-gray-900">2. What do they take?</p>
+          <ul class="mt-2 space-y-2">
+            @for (group of lines.controls; track group; let i = $index) {
+              <li
+                class="flex flex-wrap items-end gap-2 rounded-lg bg-gray-50 p-2"
+                data-testid="bulk-line"
+                [formGroup]="group"
+              >
+                <span class="min-w-32 flex-1 text-sm font-medium wrap-break-word text-gray-800">{{
+                  itemName(group.controls.itemId.value)
+                }}</span>
+                <label class="flex w-24 flex-col gap-0.5 text-xs text-gray-500">
+                  Amount ({{ unitOf(group.controls.itemId.value) }})
+                  <input
+                    type="number"
+                    step="any"
+                    min="0"
+                    class="input input-bordered input-sm w-full"
+                    formControlName="quantityPerSale"
+                    data-testid="bulk-amount"
+                  />
+                </label>
+                <label class="flex w-20 flex-col gap-0.5 text-xs text-gray-500">
+                  Allowance %
+                  <input
+                    type="number"
+                    step="any"
+                    min="0"
+                    max="100"
+                    class="input input-bordered input-sm w-full"
+                    formControlName="allowancePercent"
+                  />
+                </label>
+                <button
+                  type="button"
+                  class="app-btn app-btn-ghost app-btn-xs text-red-600"
+                  (click)="removeLine(i)"
+                >
+                  Remove
+                </button>
+              </li>
+            }
+          </ul>
+          <select
+            class="select select-bordered select-sm mt-2 w-full"
+            data-testid="bulk-add-item"
+            (change)="addLine($any($event.target).value); $any($event.target).value = ''"
+          >
+            <option value="">Add an ingredient...</option>
+            @for (item of unusedItems(); track item.id) {
+              <option [value]="item.id">{{ item.name }}</option>
+            }
+          </select>
+          <p class="mt-2 text-xs text-gray-500">
+            Products that already have an ingredient keep their own amount.
+          </p>
+        </section>
+      </div>
+
+      <div class="bg-surface sticky bottom-0 mt-auto border-t border-gray-200 p-4">
+        <button
+          type="button"
+          class="app-btn app-btn-primary w-full gap-2"
+          data-testid="bulk-submit"
+          [disabled]="!canSubmit()"
+          (click)="submit()"
+        >
+          @if (isSaving()) {
+            <span class="loading loading-spinner loading-sm"></span>
+            Adding...
+          } @else {
+            Add to {{ selected().size }} product(s)
+          }
+        </button>
+      </div>
+    }
+  </div>
+</app-side-drawer>

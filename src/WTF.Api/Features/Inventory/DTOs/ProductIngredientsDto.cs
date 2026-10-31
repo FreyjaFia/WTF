@@ -11,7 +11,10 @@ public record ProductIngredientsRowDto(
     decimal? Cost,
     int UnknownCostCount,
     decimal? Margin,
-    decimal? MarginPercent);
+    decimal? MarginPercent,
+    List<ProductIngredientSizeDto>? Sizes = null,
+    List<ProductIngredientAddOnOptionDto>? AddOnOptions = null,
+    string? SubCategoryName = null);
 
 public record ProductIngredientsDto(
     int Ready,
@@ -19,6 +22,12 @@ public record ProductIngredientsDto(
     int Missing,
     bool ShowsCosts,
     List<ProductIngredientsRowDto> Products);
+
+public record ProductIngredientSizeDto(Guid ProductId, string Name, decimal RecipeMultiplier);
+
+public record ProductIngredientAddOnOptionDto(Guid ProductId, string Name, bool IsSize, decimal RecipeMultiplier);
+
+public record ProductIngredientSizeAmountDto(Guid SizeProductId, decimal Quantity);
 
 public record ProductIngredientLineDto(
     Guid LinkId,
@@ -31,7 +40,8 @@ public record ProductIngredientLineDto(
     Guid? ReplacesItemId,
     string? ReplacesItemName,
     decimal? UnitCost,
-    decimal? LineCost);
+    decimal? LineCost,
+    List<ProductIngredientSizeAmountDto>? SizeAmounts = null);
 
 public record ProductIngredientsEditDto(
     Guid ProductId,
@@ -45,4 +55,6 @@ public record ProductIngredientsEditDto(
     decimal? TotalCost,
     int UnknownCostCount,
     decimal? Margin,
-    decimal? MarginPercent);
+    decimal? MarginPercent,
+    List<ProductIngredientSizeDto>? Sizes = null,
+    List<ProductIngredientAddOnOptionDto>? AddOnOptions = null);

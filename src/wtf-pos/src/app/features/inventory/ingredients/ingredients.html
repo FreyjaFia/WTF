@@ -1,9 +1,21 @@
 <div class="flex h-full flex-col pt-4 md:pt-0">
-  <div class="mb-4 flex shrink-0 flex-col gap-1 sm:mb-5">
-    <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Ingredients &amp; Cost</h1>
-    <p class="text-xs text-gray-500 sm:text-sm">
-      What each product uses from stock when it is sold, and what that costs
-    </p>
+  <div class="mb-4 flex shrink-0 items-start justify-between gap-3 sm:mb-5">
+    <div class="flex flex-col gap-1">
+      <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Ingredients &amp; Cost</h1>
+      <p class="text-xs text-gray-500 sm:text-sm">
+        What each product uses from stock when it is sold, and what that costs
+      </p>
+    </div>
+    @if (canAdd() && data()) {
+      <button
+        type="button"
+        class="app-btn app-btn-primary app-btn-sm shrink-0"
+        data-testid="add-ingredients"
+        (click)="openAdd()"
+      >
+        + Add
+      </button>
+    }
   </div>
 
   @if (data(); as summary) {
@@ -258,3 +270,12 @@
     </app-pull-to-refresh>
   }
 </div>
+
+@if (showAdd() && data(); as summary) {
+  <app-bulk-add-ingredients
+    [isOpen]="true"
+    [products]="summary.products"
+    (closed)="closeAdd()"
+    (added)="load()"
+  />
+}

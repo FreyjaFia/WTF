@@ -21,7 +21,7 @@ public class GetProductIngredientsHandler(WTFDbContext db) : IRequestHandler<Get
         var prices = await db.Products
             .AsNoTracking()
             .Where(p => productIds.Contains(p.Id))
-            .Select(p => new { p.Id, p.Price, p.SuppliesCost })
+            .Select(p => new { p.Id, p.Price, p.SuppliesCost, SubCategoryName = p.SubCategory != null ? p.SubCategory.Name : null })
             .ToDictionaryAsync(p => p.Id, cancellationToken);
 
         var links = (await db.ProductItemLinks
@@ -64,7 +64,8 @@ public class GetProductIngredientsHandler(WTFDbContext db) : IRequestHandler<Get
                     cost,
                     unknown,
                     margin,
-                    marginPercent);
+                    marginPercent,
+                    SubCategoryName: price.SubCategoryName);
             })
             .ToList();
 

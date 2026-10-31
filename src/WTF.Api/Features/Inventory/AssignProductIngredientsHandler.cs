@@ -3,11 +3,17 @@ using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Features.Audit.Enums;
+using WTF.Api.Features.Products.Enums;
 using WTF.Api.Services;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 
 namespace WTF.Api.Features.Inventory;
+
+public record ProductSizeAmountInputDto(
+    Guid SizeProductId,
+    [Range(0.001, 999999.999)]
+    decimal Quantity);
 
 public record ProductIngredientInputDto(
     Guid ItemId,
@@ -16,7 +22,8 @@ public record ProductIngredientInputDto(
     [Range(0, 100)]
     decimal AllowancePercent = 0m,
     bool ScalesWithSize = false,
-    Guid? ReplacesItemId = null);
+    Guid? ReplacesItemId = null,
+    List<ProductSizeAmountInputDto>? SizeAmounts = null);
 
 public record AssignProductIngredientsCommand : IRequest<bool>
 {
@@ -71,6 +78,7 @@ public class AssignProductIngredientsHandler(
         }
 
         await ValidateReplacementsAsync(product.IsAddOn, lines, cancellationToken);
+        var sizeIds = await ValidateSizeAmountsAsync(product, lines, cancellationToken);
 
         var existing = await db.ProductItemLinks
             .Include(link => link.Item)
@@ -123,6 +131,8 @@ public class AssignProductIngredientsHandler(
             });
         }
 
+        await SaveSizeAmountsAsync(product.Id, lines, userId, now, cancellationToken);
+
         await db.SaveChangesAsync(cancellationToken);
 
         await auditService.LogAsync(
@@ -134,12 +144,90 @@ public class AssignProductIngredientsHandler(
                 ProductId = product.Id,
                 LineCount = lines.Count,
                 RemovedItemIds = removed.Select(link => link.ItemId),
-                Lines = lines.Select(line => new { line.ItemId, line.QuantityPerSale, line.AllowancePercent, line.ScalesWithSize, line.ReplacesItemId })
+                Lines = lines.Select(line => new { line.ItemId, line.QuantityPerSale, line.AllowancePercent, line.ScalesWithSize, line.ReplacesItemId, SizeAmounts = line.SizeAmounts ?? [] })
             },
             userId: userId,
             cancellationToken: cancellationToken);
 
         return true;
+    }
+
+    private async Task<HashSet<Guid>> ValidateSizeAmountsAsync(
+        Product product, List<ProductIngredientInputDto> lines, CancellationToken cancellationToken)
+    {
+        var amounts = lines.SelectMany(line => line.SizeAmounts ?? []).ToList();
+        if (amounts.Count == 0)
+        {
+            return [];
+        }
+
+        if (product.IsAddOn)
+        {
+            throw new InvalidOperationException("Amounts per size are set on a drink, not on an add-on.");
+        }
+
+        if (lines.Any(line => (line.SizeAmounts ?? []).GroupBy(amount => amount.SizeProductId).Any(group => group.Count() > 1)))
+        {
+            throw new InvalidOperationException("An ingredient can have only one amount per size.");
+        }
+
+        if (amounts.Any(amount => amount.Quantity <= 0))
+        {
+            throw new InvalidOperationException("The amount for a size must be greater than zero.");
+        }
+
+        var sizeIds = await db.ProductAddOns
+            .Where(pa => pa.ProductId == product.Id && pa.IsActive && pa.AddOnTypeId == (int)AddOnTypeEnum.Size)
+            .Select(pa => pa.AddOnId)
+            .ToListAsync(cancellationToken);
+        if (amounts.Any(amount => !sizeIds.Contains(amount.SizeProductId)))
+        {
+            throw new InvalidOperationException("One of the sizes is not a size of this product.");
+        }
+
+        return [.. sizeIds];
+    }
+
+    private async Task SaveSizeAmountsAsync(
+        Guid productId, List<ProductIngredientInputDto> lines, Guid userId, DateTime now, CancellationToken cancellationToken)
+    {
+        var existing = await db.ProductSizeAmounts
+            .Where(amount => amount.ProductId == productId)
+            .ToListAsync(cancellationToken);
+        var wanted = lines
+            .SelectMany(line => (line.SizeAmounts ?? []).Select(amount => (line.ItemId, amount.SizeProductId, amount.Quantity)))
+            .ToList();
+
+        foreach (var row in existing.Where(row => row.IsActive && !wanted.Any(w => w.ItemId == row.ItemId && w.SizeProductId == row.SizeProductId)))
+        {
+            row.IsActive = false;
+            row.UpdatedAt = now;
+            row.UpdatedBy = userId;
+        }
+
+        foreach (var (itemId, sizeProductId, quantity) in wanted)
+        {
+            var row = existing.FirstOrDefault(r => r.ItemId == itemId && r.SizeProductId == sizeProductId);
+            if (row is null)
+            {
+                db.ProductSizeAmounts.Add(new ProductSizeAmount
+                {
+                    ProductId = productId,
+                    SizeProductId = sizeProductId,
+                    ItemId = itemId,
+                    Quantity = quantity,
+                    IsActive = true,
+                    CreatedAt = now,
+                    CreatedBy = userId
+                });
+                continue;
+            }
+
+            row.Quantity = quantity;
+            row.IsActive = true;
+            row.UpdatedAt = now;
+            row.UpdatedBy = userId;
+        }
     }
 
     private async Task ValidateReplacementsAsync(bool isAddOn, List<ProductIngredientInputDto> lines, CancellationToken cancellationToken)
