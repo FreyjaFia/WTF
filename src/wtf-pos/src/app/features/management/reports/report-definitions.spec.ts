@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { buildCsv, cellText, filterAndSortRows } from './report-table';
 import {
   REPORT_DEFINITIONS,
   REPORT_GROUPS,
@@ -17,6 +18,7 @@ const ALL_TYPES = [
   'payments',
   'hourly',
   'product-sales',
+  'product-margin',
   'promotions',
   'staff',
   'customers',
@@ -215,6 +217,85 @@ describe('report definitions', () => {
     it('formats decimals with two places', () => {
       expect(formatDecimal(1234.5)).toBe('1,234.50');
       expect(formatDecimal(0)).toBe('0.00');
+    });
+  });
+
+  describe('product profit', () => {
+    const definition = findReportDefinition('product-margin');
+    const column = (key: string) => definition.columns.find((c) => c.key === key)!;
+    const known = { productName: 'Latte', categoryName: 'Drinks', quantitySold: 3, revenue: 450, cost: 150, grossProfit: 300, marginPercent: 66.67, costStatus: 'Known' };
+    const loss = { ...known, productName: 'Promo', revenue: 10, cost: 25, grossProfit: -15, marginPercent: -150 };
+    const partly = { ...known, productName: 'Mix', revenue: 100, cost: 30, grossProfit: null, marginPercent: null, costStatus: 'Partly known' };
+    const none = { ...known, productName: 'Water', revenue: 50, cost: null, grossProfit: null, marginPercent: null, costStatus: 'No cost' };
+
+    it('lives in the Products group with the product filters and the source', () => {
+      expect(definition.group).toBe('Products');
+      expect(definition.filters).toEqual(['productCategory']);
+      expect(definition.usesSource).toBe(true);
+      expect(definition.defaultSort).toEqual({ key: 'grossProfit', direction: 'desc' });
+      expect(definition.note).toContain('No cost');
+    });
+
+    it('has the eight columns', () => {
+      expect(definition.columns.map((c) => c.header)).toEqual(['Product', 'Category', 'Qty', 'Net', 'Cost', 'Profit', 'Margin %', 'Cost (status)']);
+    });
+
+    it('shows a dash for a missing cost, profit and margin', () => {
+      expect(cellText(none, column('cost'), { groupBy: 'Day' })).toBe('-');
+      expect(cellText(none, column('grossProfit'), { groupBy: 'Day' })).toBe('-');
+      expect(cellText(none, column('marginPercent'), { groupBy: 'Day' })).toBe('-');
+      expect(cellText(known, column('marginPercent'), { groupBy: 'Day' })).toBe('66.67%');
+    });
+
+    it('marks only a negative profit red', () => {
+      expect(column('grossProfit').cellClass!(loss)).toBe('text-red-600');
+      expect(column('grossProfit').cellClass!(known)).toBe('');
+      expect(column('grossProfit').cellClass!(none)).toBe('');
+    });
+
+    it('shows the status as a green, amber or gray pill', () => {
+      const badge = column('costStatus').badge!;
+      expect(badge(known)).toBe('success');
+      expect(badge(partly)).toBe('amber');
+      expect(badge(none)).toBe('default');
+    });
+
+    it('sorts profit descending with rows that have none last', () => {
+      const sorted = filterAndSortRows([none, loss, known, partly], definition, { groupBy: 'Day' }, '', 'grossProfit', 'desc');
+      expect(sorted.map((r) => r['productName'])).toEqual(['Latte', 'Promo', 'Water', 'Mix']);
+    });
+
+    it('searches the visible text, including the status', () => {
+      const found = filterAndSortRows([known, none], definition, { groupBy: 'Day' }, 'no cost', null, 'asc');
+      expect(found.map((r) => r['productName'])).toEqual(['Water']);
+    });
+
+    it('adds cost and profit from rows that have them and works the margin over those rows', () => {
+      const totals = definition.totals([known, partly, none]);
+      const by = Object.fromEntries(totals.map((t) => [t.label, t]));
+
+      expect(by['Net Revenue'].value).toBe(600);
+      expect(by['Cost'].value).toBe(180);
+      expect(by['Gross Profit'].value).toBe(300);
+      expect(by['Margin'].value).toBeCloseTo(66.67, 1);
+      expect(by['Margin'].unavailable).toBe(false);
+      expect(by['Rows without a full cost'].value).toBe(2);
+    });
+
+    it('has no margin when no row has a profit', () => {
+      const margin = definition.totals([partly, none]).find((t) => t.label === 'Margin')!;
+      expect(margin.unavailable).toBe(true);
+    });
+
+    it('totals the Cost, Profit and Margin columns and the CSV carries the status and total row', () => {
+      expect(column('cost').total!([known, partly, none])).toBe(180);
+      expect(column('grossProfit').total!([known, partly, none])).toBe(300);
+      expect(column('marginPercent').total!([partly, none])).toBeNull();
+
+      const csv = buildCsv([known, none], definition, { groupBy: 'Day' }).split('\r\n');
+      expect(csv[0]).toBe('Product,Category,Qty,Net,Cost,Profit,Margin %,Cost (status)');
+      expect(csv[2]).toBe('Water,Drinks,3,50.00,-,-,-,No cost');
+      expect(csv[3]).toContain('Total');
     });
   });
 

@@ -219,18 +219,20 @@
                 }
               </select>
             </label>
-            <label
-              class="bg-surface flex min-w-0 items-center gap-2 rounded-lg px-3 py-2 ring-1 ring-gray-200"
-            >
-              <input
-                type="checkbox"
-                class="checkbox checkbox-sm"
-                formControlName="splitAddOns"
-                data-split-add-ons
-                (change)="onFilterChanged()"
-              />
-              <span class="text-sm text-gray-700">Show add-ons as separate rows</span>
-            </label>
+            @if (hasFilter('splitAddOns')) {
+              <label
+                class="bg-surface flex min-w-0 items-center gap-2 rounded-lg px-3 py-2 ring-1 ring-gray-200"
+              >
+                <input
+                  type="checkbox"
+                  class="checkbox checkbox-sm"
+                  formControlName="splitAddOns"
+                  data-split-add-ons
+                  (change)="onFilterChanged()"
+                />
+                <span class="text-sm text-gray-700">Show add-ons as separate rows</span>
+              </label>
+            }
           }
 
           @if (hasFilter('staff')) {
@@ -382,17 +384,21 @@
                   <p
                     class="inline-flex w-full items-center justify-end gap-1 text-right text-sm font-semibold text-gray-900"
                   >
-                    @switch (total.format) {
-                      @case ('money') {
-                        <app-icon name="icon-peso" [class]="'h-3 w-3'" />{{
-                          total.value | number: '1.2-2'
-                        }}
-                      }
-                      @case ('percent') {
-                        {{ total.value | number: '1.2-2' }}%
-                      }
-                      @default {
-                        {{ total.value | number: '1.0-0' }}
+                    @if (total.unavailable) {
+                      -
+                    } @else {
+                      @switch (total.format) {
+                        @case ('money') {
+                          <app-icon name="icon-peso" [class]="'h-3 w-3'" />{{
+                            total.value | number: '1.2-2'
+                          }}
+                        }
+                        @case ('percent') {
+                          {{ total.value | number: '1.2-2' }}%
+                        }
+                        @default {
+                          {{ total.value | number: '1.0-0' }}
+                        }
                       }
                     }
                   </p>
@@ -438,7 +444,10 @@
                   @if (row[column.key] === null || row[column.key] === undefined) {
                     -
                   } @else {
-                    <span class="inline-flex items-center justify-end gap-1">
+                    <span
+                      class="inline-flex items-center justify-end gap-1"
+                      [class]="column.cellClass ? column.cellClass(row) : ''"
+                    >
                       <app-icon name="icon-peso" [class]="'h-3 w-3'" />{{
                         row[column.key] | number: '1.2-2'
                       }}
@@ -446,7 +455,15 @@
                   }
                 }
                 @default {
-                  {{ textOf(row, column.key) }}
+                  @if (column.badge) {
+                    <app-badge [variant]="column.badge(row)">{{
+                      textOf(row, column.key)
+                    }}</app-badge>
+                  } @else {
+                    <span [class]="column.cellClass ? column.cellClass(row) : ''">{{
+                      textOf(row, column.key)
+                    }}</span>
+                  }
                 }
               }
             </ng-template>
@@ -543,6 +560,9 @@
                 </table>
               </div>
             </div>
+            @if (current.note; as note) {
+              <p class="mt-2 text-xs text-gray-500" data-report-note>{{ note }}</p>
+            }
           }
         </app-pull-to-refresh>
       }
@@ -588,7 +608,9 @@
         <label
           class="bg-surface flex min-w-0 flex-col gap-1 rounded-lg px-3 py-2 ring-1 ring-gray-200 transition-colors focus-within:ring-2 focus-within:ring-gray-300"
         >
-          <span class="text-[11px] font-semibold tracking-wide text-gray-500 uppercase">Source</span>
+          <span class="text-[11px] font-semibold tracking-wide text-gray-500 uppercase"
+            >Source</span
+          >
           <select
             class="focus:caret-brand w-full bg-transparent px-3 text-sm text-gray-700 focus:outline-none"
             formControlName="workbookSource"

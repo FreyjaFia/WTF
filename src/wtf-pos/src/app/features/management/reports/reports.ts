@@ -24,6 +24,7 @@ import {
   SideDrawerComponent,
   SortHeaderComponent,
 } from '@shared/components';
+import { BadgeComponent } from '@shared/components/badge/badge';
 import { FilterButtonComponent } from '@shared/components/filter-button/filter-button';
 import {
   MonthlyReportWorkbookStatusDto,
@@ -104,6 +105,7 @@ interface MonthOption {
     AreaChartComponent,
     BarChartComponent,
     DonutChartComponent,
+    BadgeComponent,
   ],
   templateUrl: './reports.html',
   host: { class: 'flex-1 min-h-0' },
@@ -643,7 +645,7 @@ export class ReportsComponent implements OnInit {
         query.subCategoryId = form.subCategoryId;
       }
 
-      if (form.splitAddOns) {
+      if (this.hasFilter('splitAddOns') && form.splitAddOns) {
         query.splitAddOns = true;
       }
     }

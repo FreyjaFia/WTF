@@ -10,6 +10,7 @@ export type ReportType =
   | 'payments'
   | 'hourly'
   | 'product-sales'
+  | 'product-margin'
   | 'promotions'
   | 'staff'
   | 'customers'
@@ -70,6 +71,22 @@ export interface ProductSalesReportRowDto {
   grossSales: number;
   discounts: number;
   refundedAmount: number;
+}
+
+export type ProductCostStatus = 'Known' | 'Partly known' | 'No cost';
+
+export interface ProductMarginReportRowDto {
+  productId: string;
+  productName: string;
+  categoryName: string;
+  subCategoryName?: string | null;
+  quantitySold: number;
+  revenue: number;
+  cost: number | null;
+  grossProfit: number | null;
+  marginPercent: number | null;
+  costStatus: ProductCostStatus;
+  isAddOn: boolean;
 }
 
 export interface CategorySalesReportRowDto {

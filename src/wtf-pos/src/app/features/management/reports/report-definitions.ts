@@ -1,4 +1,4 @@
-import { average, sumAmounts } from '@shared/calculations';
+import { average, marginPercentOf, sumAmounts, summarizeProfit } from '@shared/calculations';
 import {
   CategorySalesReportRowDto,
   CustomerLinkReportRowDto,
@@ -7,6 +7,7 @@ import {
   DailySalesReportRowDto,
   HourlySalesReportRowDto,
   PaymentsReportRowDto,
+  ProductMarginReportRowDto,
   ProductSalesReportRowDto,
   PromotionPerformanceReportRowDto,
   ReportGroupBy,
@@ -31,7 +32,12 @@ export type ColumnFormat =
 
 export type ReportGroup = 'Sales' | 'Products' | 'Staff' | 'Customers' | 'Operations' | 'Inventory';
 
-export type ReportFilterKind = 'groupBy' | 'wasteGroupBy' | 'productCategory' | 'staff' | 'splitAddOns';
+export type ReportFilterKind =
+  | 'groupBy'
+  | 'wasteGroupBy'
+  | 'productCategory'
+  | 'staff'
+  | 'splitAddOns';
 
 export interface ReportContext {
   groupBy: ReportGroupBy;
@@ -44,6 +50,8 @@ export interface ReportColumn {
   align?: 'start' | 'end';
   label?: (row: ReportRow, context: ReportContext) => string;
   total?: (rows: readonly ReportRow[]) => number | null;
+  badge?: (row: ReportRow) => 'success' | 'amber' | 'default';
+  cellClass?: (row: ReportRow) => string;
   lowPriority?: boolean;
 }
 
@@ -51,6 +59,7 @@ export interface ReportTotal {
   label: string;
   value: number;
   format: 'money' | 'integer' | 'percent';
+  unavailable?: boolean;
 }
 
 export interface ChartPoint {
@@ -68,6 +77,7 @@ export interface ReportDefinition {
   type: ReportType;
   title: string;
   description: string;
+  note?: string;
   group: ReportGroup;
   icon: string;
   columns: readonly ReportColumn[];
@@ -422,6 +432,66 @@ const productSales: ReportDefinition = {
   },
 };
 
+const COST_STATUS_BADGE: Record<string, 'success' | 'amber' | 'default'> = {
+  Known: 'success',
+  'Partly known': 'amber',
+};
+
+const productMargin: ReportDefinition = {
+  type: 'product-margin',
+  title: 'Product Profit',
+  description: 'Net sales, cost and profit per product, with how far the cost can be trusted',
+  note: 'Cost comes from the stock each sale used, at the cost it had then. Products with no stock recipe show No cost instead of looking free.',
+  group: 'Products',
+  icon: 'icon-coins',
+  columns: [
+    { key: 'productName', header: 'Product', format: 'text' },
+    { key: 'categoryName', header: 'Category', format: 'text' },
+    { key: 'quantitySold', header: 'Qty', format: 'integer', align: 'end' },
+    { key: 'revenue', header: 'Net', format: 'money', align: 'end' },
+    { key: 'cost', header: 'Cost', format: 'money', align: 'end' },
+    {
+      key: 'grossProfit',
+      header: 'Profit',
+      format: 'money',
+      align: 'end',
+      cellClass: (row) => (Number(row['grossProfit']) < 0 ? 'text-red-600' : ''),
+    },
+    {
+      key: 'marginPercent',
+      header: 'Margin %',
+      format: 'percent',
+      align: 'end',
+      total: (rows) => marginPercentOf(rowsOf<ProductMarginReportRowDto>(rows)),
+    },
+    {
+      key: 'costStatus',
+      header: 'Cost (status)',
+      format: 'text',
+      badge: (row) => COST_STATUS_BADGE[String(row['costStatus'])] ?? 'default',
+    },
+  ],
+  defaultSort: { key: 'grossProfit', direction: 'desc' },
+  filters: ['productCategory'],
+  usesDateRange: true,
+  usesSource: true,
+  totals: (all) => {
+    const summary = summarizeProfit(rowsOf<ProductMarginReportRowDto>(all));
+    return [
+      { label: 'Net Revenue', value: summary.revenue, format: 'money' },
+      { label: 'Cost', value: summary.cost, format: 'money' },
+      { label: 'Gross Profit', value: summary.grossProfit, format: 'money' },
+      {
+        label: 'Margin',
+        value: summary.marginPercent ?? 0,
+        format: 'percent',
+        unavailable: summary.marginPercent === null,
+      },
+      { label: 'Rows without a full cost', value: summary.rowsWithoutFullCost, format: 'integer' },
+    ];
+  },
+};
+
 const categorySales: ReportDefinition = {
   type: 'category-sales',
   title: 'Sales by Category',
@@ -746,7 +816,13 @@ const waste: ReportDefinition = {
           ? `${formatDecimal(Number(row['quantity']))} ${String(row['unitName'])}`
           : '-',
     },
-    { key: 'disputedCount', header: 'Disputed', format: 'integer', align: 'end', lowPriority: true },
+    {
+      key: 'disputedCount',
+      header: 'Disputed',
+      format: 'integer',
+      align: 'end',
+      lowPriority: true,
+    },
   ],
   defaultSort: { key: 'quantity', direction: 'desc' },
   filters: ['wasteGroupBy'],
@@ -792,6 +868,8 @@ const SUM_KEYS = new Set([
   'pickupCount',
   'deliveryCount',
   'stockValue',
+  'cost',
+  'grossProfit',
 ]);
 
 // Columns that can be left out on narrower screens because the cards and exports still show them.
@@ -835,7 +913,11 @@ function withTotals(definition: ReportDefinition): ReportDefinition {
           : SUM_KEYS.has(column.key)
             ? (rows: readonly ReportRow[]): number => columnSum(rows, column.key)
             : undefined;
-      return { ...column, total, lowPriority: LOW_PRIORITY_KEYS.has(column.key) };
+      return {
+        ...column,
+        total: column.total ?? total,
+        lowPriority: LOW_PRIORITY_KEYS.has(column.key),
+      };
     }),
   };
 }
@@ -851,6 +933,7 @@ export const REPORT_DEFINITIONS: readonly ReportDefinition[] = [
   payments,
   hourly,
   productSales,
+  productMargin,
   promotions,
   staff,
   customers,

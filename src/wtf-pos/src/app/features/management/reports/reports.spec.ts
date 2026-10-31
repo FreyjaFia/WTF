@@ -180,8 +180,8 @@ describe('ReportsComponent', () => {
       await create();
 
       const types = t.catalog.flatMap((section) => section.reports.map((r) => r.type));
-      expect(types.length).toBe(13);
-      expect(new Set(types).size).toBe(13);
+      expect(types.length).toBe(14);
+      expect(new Set(types).size).toBe(14);
       expect(t.catalog.map((s) => s.group)).toEqual([
         'Sales',
         'Products',
@@ -306,6 +306,21 @@ describe('ReportsComponent', () => {
         categoryId: 1,
         subCategoryId: 2,
         splitAddOns: true,
+      });
+    });
+
+    it('sends category and sub category but no split add-ons for the product profit report', async () => {
+      field('categoryId').setValue(1);
+      field('subCategoryId').setValue(2);
+      field('splitAddOns').setValue(true);
+
+      await open('product-margin');
+
+      expect(reports['getReport']).toHaveBeenCalledWith('product-margin', {
+        fromDate: '2026-03-01',
+        toDate: '2026-03-15',
+        categoryId: 1,
+        subCategoryId: 2,
       });
     });
 
