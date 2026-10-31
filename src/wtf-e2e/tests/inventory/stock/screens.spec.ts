@@ -287,7 +287,7 @@ test.describe('Stock Coverage page @stock @coverage', () => {
     await expect(coverage.row(drink.name).getByTestId('missing-options')).not.toContainText(sizeA.name);
     await expect(coverage.row(drink.name).getByRole('link', { name: 'Set up stock' })).toHaveAttribute(
       'href',
-      new RegExp(`/management/products/edit/${drink.id}`),
+      new RegExp(`/inventory/ingredients/${drink.id}`),
     );
 
     // Products that already take stock only show under All products.
@@ -299,7 +299,7 @@ test.describe('Stock Coverage page @stock @coverage', () => {
     await expect(coverage.row(none.name)).toContainText('Takes no stock');
   });
 
-  test('a viewer sees the same chips but a View product link instead of Set up stock', async ({ api, signIn }) => {
+  test('a viewer sees the same chips but a View ingredients link instead of Set up stock', async ({ api, signIn }) => {
     const none = await api.products.create({ name: unique('E2E Cov View') });
 
     const page = await signIn('viewer');
@@ -308,7 +308,7 @@ test.describe('Stock Coverage page @stock @coverage', () => {
     await coverage.search.fill(none.name);
 
     await expect(coverage.row(none.name)).toContainText('Takes no stock');
-    await expect(coverage.row(none.name).getByRole('link', { name: 'View product' })).toBeVisible();
+    await expect(coverage.row(none.name).getByRole('link', { name: 'View ingredients' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Set up stock' })).toHaveCount(0);
   });
 
