@@ -50,6 +50,34 @@ public static class ProductEndpoints
             })
             .RequireAuthorization(AppPolicies.ItemsRead);
 
+        // GET /api/products/{id}/ingredients - One product's ingredient lines (costs only for the cost roles)
+        productGroup.MapGet("/{id:guid}/ingredients",
+            async (Guid id, ISender sender, ClaimsPrincipal user) =>
+            {
+                var result = await sender.Send(new GetProductIngredientsEditQuery(id, CostAccess.CanReadCosts(user)));
+                return result is not null ? Results.Ok(result) : Results.NotFound();
+            })
+            .RequireAuthorization(AppPolicies.ItemsRead);
+
+        // PUT /api/products/{id}/ingredients - Save the whole ingredient list of a product
+        productGroup.MapPut("/{id:guid}/ingredients",
+            async (Guid id, AssignProductIngredientsCommand command, ISender sender, ClaimsPrincipal user) =>
+            {
+                if (id != command.ProductId)
+                {
+                    return Results.BadRequest("Product ID mismatch");
+                }
+
+                if (!await sender.Send(command))
+                {
+                    return Results.NotFound();
+                }
+
+                var result = await sender.Send(new GetProductIngredientsEditQuery(id, CostAccess.CanReadCosts(user)));
+                return Results.Ok(result);
+            })
+            .RequireAuthorization(AppPolicies.ItemsWrite);
+
         // GET /api/products/{id}/recipe-cost - What the product's recipe costs and the margin (cost roles only)
         productGroup.MapGet("/{id:guid}/recipe-cost",
             async (Guid id, ISender sender) =>

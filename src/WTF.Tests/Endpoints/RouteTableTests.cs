@@ -125,6 +125,8 @@ public class RouteTableTests : IDisposable
         "GET /api/products/ => ProductsRead",
         "POST /api/products/ => ProductsWrite",
         "GET /api/products/ingredients => ItemsRead",
+        "GET /api/products/{id:guid}/ingredients => ItemsRead",
+        "PUT /api/products/{id:guid}/ingredients => ItemsWrite",
         "GET /api/products/addons/{addOnId:guid}/products => ProductsRead",
         "POST /api/products/addons/{addOnId:guid}/products => ProductsWrite",
         "DELETE /api/products/{id:guid} => ProductsWrite",

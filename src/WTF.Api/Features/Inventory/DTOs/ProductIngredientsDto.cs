@@ -19,3 +19,30 @@ public record ProductIngredientsDto(
     int Missing,
     bool ShowsCosts,
     List<ProductIngredientsRowDto> Products);
+
+public record ProductIngredientLineDto(
+    Guid LinkId,
+    Guid ItemId,
+    string ItemName,
+    string UnitName,
+    decimal QuantityPerSale,
+    decimal AllowancePercent,
+    bool ScalesWithSize,
+    Guid? ReplacesItemId,
+    string? ReplacesItemName,
+    decimal? UnitCost,
+    decimal? LineCost);
+
+public record ProductIngredientsEditDto(
+    Guid ProductId,
+    string Name,
+    decimal Price,
+    bool IsAddOn,
+    decimal RecipeMultiplier,
+    bool ShowsCosts,
+    decimal? SuppliesCost,
+    List<ProductIngredientLineDto> Lines,
+    decimal? TotalCost,
+    int UnknownCostCount,
+    decimal? Margin,
+    decimal? MarginPercent);
