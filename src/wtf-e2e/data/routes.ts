@@ -13,7 +13,7 @@ export const ROUTES = {
   stockIn: '/inventory/stock-in',
   attention: '/inventory/attention',
   waste: '/inventory/waste',
-  coverage: '/inventory/coverage',
+  ingredients: '/inventory/ingredients',
   products: '/management/products',
   customers: '/management/customers',
   customerDetails: (id: string): string => `/management/customers/details/${id}`,

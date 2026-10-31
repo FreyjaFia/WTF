@@ -26,13 +26,13 @@ export class CoveragePage {
   public readonly showAll: Locator;
 
   public constructor(private readonly page: Page) {
-    this.heading = page.getByRole('heading', { name: 'Stock Coverage', exact: true });
+    this.heading = page.getByRole('heading', { name: 'Ingredients & Cost', exact: true });
     this.search = page.getByPlaceholder('Search products').and(page.locator('input'));
     this.showAll = page.getByTestId('filter-all');
   }
 
   public async open(): Promise<void> {
-    await go(this.page, ROUTES.coverage);
+    await go(this.page, ROUTES.ingredients);
     await this.heading.waitFor();
     await this.showAll.waitFor();
   }
