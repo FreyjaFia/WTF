@@ -1,0 +1,74 @@
+<div class="relative w-full">
+  <button
+    type="button"
+    class="flex w-full items-center justify-between gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 text-left text-gray-700 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
+    [class]="small() ? 'h-8 text-xs' : 'h-10 text-sm'"
+    [disabled]="disabled()"
+    [attr.data-testid]="testId()"
+    [attr.aria-expanded]="isOpen()"
+    aria-haspopup="listbox"
+    (click)="toggle()"
+  >
+    <span class="min-w-0 flex-1 truncate" [class.text-gray-400]="!selectedId() && !emptyLabel()">{{
+      selectedLabel()
+    }}</span>
+    <app-icon
+      name="icon-forward"
+      [class]="'h-4 w-4 shrink-0 transition-transform ' + (isOpen() ? '-rotate-90' : 'rotate-90')"
+    />
+  </button>
+
+  @if (isOpen()) {
+    <div
+      class="bg-surface absolute top-full right-0 left-0 z-30 mt-2 rounded-lg border border-gray-200 p-2 shadow-xl"
+      role="listbox"
+    >
+      <div
+        class="mb-2 flex w-full items-center gap-2 rounded-lg bg-gray-50 px-3 py-1.5 transition-colors focus-within:bg-surface focus-within:ring-2 focus-within:ring-gray-200"
+      >
+        <app-search-input
+          [placeholder]="searchPlaceholder()"
+          [ariaLabel]="searchPlaceholder()"
+          [value]="searchTerm()"
+          [iconClass]="'h-4 w-4 shrink-0 opacity-40'"
+          [inputClass]="small() ? 'grow bg-transparent text-xs placeholder-gray-500 focus:caret-brand focus:outline-none' : 'grow bg-transparent text-sm placeholder-gray-500 focus:caret-brand focus:outline-none'"
+          (valueChange)="setSearch($event)"
+        />
+      </div>
+
+      <div class="max-h-48 overflow-y-auto">
+        @if (emptyLabel(); as empty) {
+          <button
+            type="button"
+            class="flex w-full cursor-pointer items-center rounded-md px-2 text-left text-gray-500 transition-colors hover:bg-gray-100"
+            [class]="small() ? 'py-1.5 text-xs' : 'py-2 text-sm'"
+            [attr.data-testid]="testId() + '-option'"
+            (click)="select(null)"
+          >
+            {{ empty }}
+          </button>
+        }
+
+        @for (option of filteredOptions(); track option.id) {
+          <button
+            type="button"
+            role="option"
+            class="flex w-full cursor-pointer items-center rounded-md px-2 text-left wrap-break-word transition-colors hover:bg-gray-100"
+            [class]="small() ? 'py-1.5 text-xs' : 'py-2 text-sm'"
+            [class.bg-gray-100]="option.id === selectedId()"
+            [class.font-semibold]="option.id === selectedId()"
+            [attr.aria-selected]="option.id === selectedId()"
+            [attr.data-testid]="testId() + '-option'"
+            (click)="select(option.id)"
+          >
+            {{ option.label }}
+          </button>
+        }
+
+        @if (!filteredOptions().length) {
+          <div class="px-2 text-gray-500" [class]="small() ? 'py-1.5 text-xs' : 'py-2 text-sm'">Nothing found</div>
+        }
+      </div>
+    </div>
+  }
+</div>
