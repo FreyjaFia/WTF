@@ -190,11 +190,21 @@ export interface ProductCoverageDto {
   missingOptions: string[];
 }
 
-export interface StockCoverageDto {
-  covered: number;
+export interface ProductIngredientsRowDto extends ProductCoverageDto {
+  price: number;
+  ingredientCount: number;
+  cost: number | null;
+  unknownCostCount: number;
+  margin: number | null;
+  marginPercent: number | null;
+}
+
+export interface ProductIngredientsDto {
+  ready: number;
   partial: number;
   missing: number;
-  products: ProductCoverageDto[];
+  showsCosts: boolean;
+  products: ProductIngredientsRowDto[];
 }
 
 export type StockAttentionLevel = 'Warning' | 'Critical' | 'OutOfStock';

@@ -10,7 +10,7 @@ import { ItemEditorComponent } from '@features/inventory/items/item-editor/item-
 import { ItemListComponent } from '@features/inventory/items/item-list/item-list';
 import { ItemsComponent } from '@features/inventory/items/items';
 import { StockAttentionComponent } from '@features/inventory/stock-attention/stock-attention';
-import { StockCoverageComponent } from '@features/inventory/stock-coverage/stock-coverage';
+import { IngredientsComponent } from '@features/inventory/ingredients/ingredients';
 import { StockInComponent } from '@features/inventory/stock-in/stock-in';
 import { WasteComponent } from '@features/inventory/waste/waste';
 import { Login } from '@features/login/login';
@@ -177,7 +177,12 @@ export const routes: Routes = [
           },
           {
             path: 'coverage',
-            component: StockCoverageComponent,
+            redirectTo: 'ingredients',
+            pathMatch: 'full',
+          },
+          {
+            path: 'ingredients',
+            component: IngredientsComponent,
             canActivate: [roleGuard],
             data: { roles: AppRoleGroups.ItemsRead },
           },

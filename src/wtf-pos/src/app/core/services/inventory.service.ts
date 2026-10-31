@@ -13,7 +13,7 @@ import {
   ProductItemLinkAssignmentDto,
   ProductItemLinkDto,
   RecipeCostDto,
-  StockCoverageDto,
+  ProductIngredientsDto,
   UpdateItemDto,
 } from '@shared/models';
 import { Observable, throwError } from 'rxjs';
@@ -103,7 +103,9 @@ export class InventoryService {
   public getAlertRecipients(itemId: string): Observable<ItemAlertRecipientsDto> {
     return this.http
       .get<ItemAlertRecipientsDto>(`${this.baseUrl}/${itemId}/alert-recipients`)
-      .pipe(catchError((error) => this.handleError(error, 'Unable to fetch the alert recipients.')));
+      .pipe(
+        catchError((error) => this.handleError(error, 'Unable to fetch the alert recipients.')),
+      );
   }
 
   public setAlertRecipients(itemId: string, userIds: string[]): Observable<ItemAlertRecipientsDto> {
@@ -112,10 +114,10 @@ export class InventoryService {
       .pipe(catchError((error) => this.handleError(error, 'Unable to save the alert recipients.')));
   }
 
-  public getStockCoverage(): Observable<StockCoverageDto> {
+  public getProductIngredients(): Observable<ProductIngredientsDto> {
     return this.http
-      .get<StockCoverageDto>(`${this.baseUrl}/coverage`)
-      .pipe(catchError((error) => this.handleError(error, 'Unable to fetch stock coverage.')));
+      .get<ProductIngredientsDto>(`${environment.apiUrl}/products/ingredients`)
+      .pipe(catchError((error) => this.handleError(error, 'Unable to fetch the ingredients.')));
   }
 
   public getOrderStockMovements(orderId: string): Observable<OrderStockMovementDto[]> {
@@ -130,7 +132,11 @@ export class InventoryService {
     quantityPerSale: number,
   ): Observable<ProductItemLinkDto> {
     return this.http
-      .post<ProductItemLinkDto>(`${this.baseUrl}/product-links`, { productId, itemId, quantityPerSale })
+      .post<ProductItemLinkDto>(`${this.baseUrl}/product-links`, {
+        productId,
+        itemId,
+        quantityPerSale,
+      })
       .pipe(catchError((error) => this.handleError(error, 'Unable to link the product to stock.')));
   }
 

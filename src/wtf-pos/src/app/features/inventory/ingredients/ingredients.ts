@@ -4,10 +4,17 @@ import { Capacitor } from '@capacitor/core';
 import { AlertService, AuthService, InventoryService } from '@core/services';
 import { IconComponent, PullToRefreshComponent } from '@shared/components';
 import { SearchInputComponent } from '@shared/components/search-input/search-input';
+import { formatPeso } from '@shared/calculations';
 import { AppRoutes } from '@shared/constants/app-routes';
-import { ProductCoverageDto, ProductCoverageStatus, StockCoverageDto } from '@shared/models';
+import {
+  ProductCoverageStatus,
+  ProductIngredientsDto,
+  ProductIngredientsRowDto,
+} from '@shared/models';
 
-type CoverageFilter = 'attention' | 'all';
+type IngredientsFilter = 'attention' | 'low-margin' | 'all';
+
+export const LOW_MARGIN_PERCENT = 30;
 
 interface StatusStyle {
   label: string;
@@ -16,44 +23,63 @@ interface StatusStyle {
 }
 
 const STATUS_STYLES: Record<ProductCoverageStatus, StatusStyle> = {
-  Covered: { label: 'Takes stock', bar: 'bg-emerald-500', badge: 'bg-emerald-100 text-emerald-800' },
-  Partial: { label: 'Some options missing', bar: 'bg-orange-500', badge: 'bg-orange-100 text-orange-800' },
+  Covered: {
+    label: 'Takes stock',
+    bar: 'bg-emerald-500',
+    badge: 'bg-emerald-100 text-emerald-800',
+  },
+  Partial: {
+    label: 'Some options missing',
+    bar: 'bg-orange-500',
+    badge: 'bg-orange-100 text-orange-800',
+  },
   Missing: { label: 'Takes no stock', bar: 'bg-red-500', badge: 'bg-red-100 text-red-800' },
 };
 
 @Component({
-  selector: 'app-stock-coverage',
+  selector: 'app-ingredients',
   imports: [RouterLink, IconComponent, PullToRefreshComponent, SearchInputComponent],
-  templateUrl: './stock-coverage.html',
+  templateUrl: './ingredients.html',
   host: { class: 'flex-1 min-h-0' },
 })
-export class StockCoverageComponent implements OnInit {
+export class IngredientsComponent implements OnInit {
   private readonly inventoryService = inject(InventoryService);
   private readonly authService = inject(AuthService);
   private readonly alertService = inject(AlertService);
 
-  protected readonly coverage = signal<StockCoverageDto | null>(null);
+  protected readonly data = signal<ProductIngredientsDto | null>(null);
   protected readonly isLoading = signal(false);
   protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
-  protected readonly filter = signal<CoverageFilter>('attention');
+  protected readonly filter = signal<IngredientsFilter>('attention');
   protected readonly search = signal('');
 
   protected readonly total = computed(() => {
-    const summary = this.coverage();
-    return summary ? summary.covered + summary.partial + summary.missing : 0;
+    const summary = this.data();
+    return summary ? summary.ready + summary.partial + summary.missing : 0;
   });
   protected readonly attentionCount = computed(() => {
-    const summary = this.coverage();
+    const summary = this.data();
     return summary ? summary.partial + summary.missing : 0;
   });
-  protected readonly coveredPercent = computed(() => this.percentOf(this.coverage()?.covered ?? 0));
-  protected readonly partialPercent = computed(() => this.percentOf(this.coverage()?.partial ?? 0));
-  protected readonly missingPercent = computed(() => this.percentOf(this.coverage()?.missing ?? 0));
+  protected readonly showsCosts = computed(() => this.data()?.showsCosts ?? false);
+  protected readonly lowMarginCount = computed(
+    () => (this.data()?.products ?? []).filter((product) => this.isLowMargin(product)).length,
+  );
+  protected readonly readyPercent = computed(() => this.percentOf(this.data()?.ready ?? 0));
+  protected readonly partialPercent = computed(() => this.percentOf(this.data()?.partial ?? 0));
+  protected readonly missingPercent = computed(() => this.percentOf(this.data()?.missing ?? 0));
 
-  protected readonly rows = computed<ProductCoverageDto[]>(() => {
+  protected readonly rows = computed<ProductIngredientsRowDto[]>(() => {
     const term = this.search().trim().toLowerCase();
-    return (this.coverage()?.products ?? [])
-      .filter((product) => this.filter() === 'all' || product.status !== 'Covered')
+    const filter = this.filter();
+    return (this.data()?.products ?? [])
+      .filter((product) => {
+        if (filter === 'attention') {
+          return product.status !== 'Covered';
+        }
+
+        return filter === 'low-margin' ? this.isLowMargin(product) : true;
+      })
       .filter(
         (product) =>
           !term ||
@@ -68,9 +94,9 @@ export class StockCoverageComponent implements OnInit {
 
   protected load(): void {
     this.isLoading.set(true);
-    this.inventoryService.getStockCoverage().subscribe({
-      next: (coverage) => {
-        this.coverage.set(coverage);
+    this.inventoryService.getProductIngredients().subscribe({
+      next: (data) => {
+        this.data.set(data);
         this.isLoading.set(false);
       },
       error: (err) => {
@@ -80,7 +106,7 @@ export class StockCoverageComponent implements OnInit {
     });
   }
 
-  protected setFilter(value: CoverageFilter): void {
+  protected setFilter(value: IngredientsFilter): void {
     this.filter.set(value);
   }
 
@@ -96,7 +122,15 @@ export class StockCoverageComponent implements OnInit {
     return STATUS_STYLES[status].label;
   }
 
-  protected productLink(product: ProductCoverageDto): string | null {
+  protected isLowMargin(product: ProductIngredientsRowDto): boolean {
+    return product.marginPercent !== null && product.marginPercent < LOW_MARGIN_PERCENT;
+  }
+
+  protected peso(amount: number): string {
+    return formatPeso(amount);
+  }
+
+  protected productLink(product: ProductIngredientsRowDto): string | null {
     if (this.authService.canWriteProducts()) {
       return AppRoutes.ManagementProductEditById(product.productId);
     }

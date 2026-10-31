@@ -72,10 +72,10 @@ export class InventoryComponent {
       urgent: () => false,
     },
     {
-      label: 'Coverage',
-      route: 'coverage',
-      path: AppRoutes.InventoryCoverage,
-      ariaLabel: 'Stock coverage',
+      label: 'Ingredients & Cost',
+      route: 'ingredients',
+      path: AppRoutes.InventoryIngredients,
+      ariaLabel: 'Ingredients and cost',
       canShow: () => this.canReadItems(),
     },
   ];

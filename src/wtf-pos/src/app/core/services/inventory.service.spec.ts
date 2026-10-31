@@ -57,15 +57,15 @@ describe('InventoryService', () => {
     expect(req.request.method).toBe('GET');
   });
 
-  it('asks for the stock coverage of the products', () => {
+  it('asks for the products with their ingredients and cost', () => {
     const { service, http } = setupHttpService(InventoryService);
-    const result = capture(service.getStockCoverage());
+    const result = capture(service.getProductIngredients());
 
-    const req = http.expectOne(`${base}/coverage`);
+    const req = http.expectOne(`${environment.apiUrl}/products/ingredients`);
     expect(req.request.method).toBe('GET');
-    req.flush({ covered: 1, partial: 0, missing: 0, products: [] });
+    req.flush({ ready: 1, partial: 0, missing: 0, showsCosts: true, products: [] });
 
-    expect(result.value).toEqual({ covered: 1, partial: 0, missing: 0, products: [] });
+    expect(result.value).toEqual({ ready: 1, partial: 0, missing: 0, showsCosts: true, products: [] });
   });
 
   it('reads the alert recipients of an item', () => {

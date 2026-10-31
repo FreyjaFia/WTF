@@ -1,18 +1,18 @@
 <div class="flex h-full flex-col pt-4 md:pt-0">
   <div class="mb-4 flex shrink-0 flex-col gap-1 sm:mb-5">
-    <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Stock Coverage</h1>
+    <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Ingredients &amp; Cost</h1>
     <p class="text-xs text-gray-500 sm:text-sm">
-      Which products take stock when they are sold, and which would not
+      What each product uses from stock when it is sold, and what that costs
     </p>
   </div>
 
-  @if (coverage(); as summary) {
-    <div class="mb-4 shrink-0 rounded-xl bg-surface p-4 shadow" data-testid="coverage-summary">
+  @if (data(); as summary) {
+    <div class="bg-surface mb-4 shrink-0 rounded-xl p-4 shadow" data-testid="coverage-summary">
       <div class="flex items-end justify-between gap-3">
         <p class="text-sm text-gray-600">
-          <span class="text-2xl font-extrabold text-gray-900" data-testid="coverage-percent">{{
-            coveredPercent().toFixed(0)
-          }}%</span>
+          <span class="text-2xl font-extrabold text-gray-900" data-testid="coverage-percent"
+            >{{ readyPercent().toFixed(0) }}%</span
+          >
           of {{ total() }} products take stock
         </p>
         @if (attentionCount() > 0) {
@@ -23,36 +23,50 @@
       </div>
 
       <div class="mt-3 flex h-2.5 overflow-hidden rounded-full bg-gray-100" aria-hidden="true">
-        <span class="bg-emerald-500 transition-all" [style.width.%]="coveredPercent()"></span>
+        <span class="bg-emerald-500 transition-all" [style.width.%]="readyPercent()"></span>
         <span class="bg-orange-500 transition-all" [style.width.%]="partialPercent()"></span>
         <span class="bg-red-500 transition-all" [style.width.%]="missingPercent()"></span>
       </div>
 
       <dl class="mt-3 grid grid-cols-3 gap-2 text-center">
         <div>
-          <dt class="flex items-center justify-center gap-1 text-[11px] font-semibold tracking-wide text-gray-500 uppercase">
+          <dt
+            class="flex items-center justify-center gap-1 text-[11px] font-semibold tracking-wide text-gray-500 uppercase"
+          >
             <span class="h-2 w-2 rounded-full bg-emerald-500"></span>Take stock
           </dt>
-          <dd class="text-lg font-bold text-emerald-700" data-testid="count-covered">{{ summary.covered }}</dd>
+          <dd class="text-lg font-bold text-emerald-700" data-testid="count-covered">
+            {{ summary.ready }}
+          </dd>
         </div>
         <div>
-          <dt class="flex items-center justify-center gap-1 text-[11px] font-semibold tracking-wide text-gray-500 uppercase">
+          <dt
+            class="flex items-center justify-center gap-1 text-[11px] font-semibold tracking-wide text-gray-500 uppercase"
+          >
             <span class="h-2 w-2 rounded-full bg-orange-500"></span>Partly
           </dt>
-          <dd class="text-lg font-bold text-orange-600" data-testid="count-partial">{{ summary.partial }}</dd>
+          <dd class="text-lg font-bold text-orange-600" data-testid="count-partial">
+            {{ summary.partial }}
+          </dd>
         </div>
         <div>
-          <dt class="flex items-center justify-center gap-1 text-[11px] font-semibold tracking-wide text-gray-500 uppercase">
+          <dt
+            class="flex items-center justify-center gap-1 text-[11px] font-semibold tracking-wide text-gray-500 uppercase"
+          >
             <span class="h-2 w-2 rounded-full bg-red-500"></span>Take none
           </dt>
-          <dd class="text-lg font-bold text-red-600" data-testid="count-missing">{{ summary.missing }}</dd>
+          <dd class="text-lg font-bold text-red-600" data-testid="count-missing">
+            {{ summary.missing }}
+          </dd>
         </div>
       </dl>
     </div>
 
-    <div class="mb-3 flex shrink-0 flex-col gap-2 md:flex-row md:flex-wrap md:items-center md:gap-3">
+    <div
+      class="mb-3 flex shrink-0 flex-col gap-2 md:flex-row md:flex-wrap md:items-center md:gap-3"
+    >
       <div
-        class="mb-2 flex w-full min-w-0 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-surface focus-within:ring-2 focus-within:ring-gray-200 md:mb-0 md:max-w-104 md:flex-1"
+        class="focus-within:bg-surface mb-2 flex w-full min-w-0 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:ring-2 focus-within:ring-gray-200 md:mb-0 md:max-w-104 md:flex-1"
       >
         <app-search-input
           [value]="search()"
@@ -67,7 +81,11 @@
           <button
             type="button"
             class="cursor-pointer rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors"
-            [class]="filter() === 'attention' ? 'bg-surface text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'"
+            [class]="
+              filter() === 'attention'
+                ? 'bg-surface text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            "
             [attr.aria-pressed]="filter() === 'attention'"
             data-testid="filter-attention"
             (click)="setFilter('attention')"
@@ -77,13 +95,33 @@
           <button
             type="button"
             class="cursor-pointer rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors"
-            [class]="filter() === 'all' ? 'bg-surface text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'"
+            [class]="
+              filter() === 'all'
+                ? 'bg-surface text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            "
             [attr.aria-pressed]="filter() === 'all'"
             data-testid="filter-all"
             (click)="setFilter('all')"
           >
             All products ({{ total() }})
           </button>
+          @if (summary.showsCosts) {
+            <button
+              type="button"
+              class="cursor-pointer rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors"
+              [class]="
+                filter() === 'low-margin'
+                  ? 'bg-surface text-gray-900 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              "
+              [attr.aria-pressed]="filter() === 'low-margin'"
+              data-testid="filter-low-margin"
+              (click)="setFilter('low-margin')"
+            >
+              Low margin ({{ lowMarginCount() }})
+            </button>
+          }
         </div>
         @if (!isAndroidPlatform) {
           <button
@@ -92,11 +130,15 @@
             type="button"
             (click)="load()"
             [disabled]="isLoading()"
-            aria-label="Refresh coverage"
+            aria-label="Refresh ingredients"
           >
             <app-icon
               name="icon-refresh"
-              [class]="isLoading() ? 'h-5 w-5 animate-spin text-gray-600' : 'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'"
+              [class]="
+                isLoading()
+                  ? 'h-5 w-5 animate-spin text-gray-600'
+                  : 'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'
+              "
               [fill]="'currentColor'"
             />
           </button>
@@ -105,21 +147,23 @@
     </div>
   }
 
-  @if (isLoading() && !coverage()) {
+  @if (isLoading() && !data()) {
     <div class="flex justify-center py-8">
       <span class="loading loading-spinner loading-lg"></span>
     </div>
   }
 
-  @if (coverage()) {
+  @if (data()) {
     <app-pull-to-refresh [refreshing]="isLoading()" (refreshTriggered)="load()">
       @if (rows().length === 0) {
-        <div class="rounded-xl bg-surface p-8 text-center shadow" data-testid="coverage-empty">
+        <div class="bg-surface rounded-xl p-8 text-center shadow" data-testid="coverage-empty">
           <p class="text-lg font-semibold text-gray-700">
             @if (search()) {
               No products match your search
             } @else if (filter() === 'all') {
               No products yet
+            } @else if (filter() === 'low-margin') {
+              No product has a low margin
             } @else {
               Every product takes stock
             }
@@ -129,6 +173,8 @@
               Try another name or code.
             } @else if (filter() === 'all') {
               Add products to see how they use stock.
+            } @else if (filter() === 'low-margin') {
+              Margins under 30% of the price show here.
             } @else {
               Nothing needs setting up right now.
             }
@@ -138,7 +184,7 @@
 
       <ul class="space-y-2 pb-4">
         @for (product of rows(); track product.productId) {
-          <li class="flex overflow-hidden rounded-xl bg-surface shadow" data-testid="coverage-row">
+          <li class="bg-surface flex overflow-hidden rounded-xl shadow" data-testid="coverage-row">
             <span class="w-1.5 shrink-0" [class]="styleOf(product.status).bar"></span>
             <div class="flex min-w-0 flex-1 items-center gap-3 p-3 sm:p-4">
               <div class="min-w-0 flex-1">
@@ -149,11 +195,43 @@
                   [class]="styleOf(product.status).badge"
                   >{{ statusLabel(product.status) }}</span
                 >
+                <p class="mt-1 text-xs text-gray-500" data-testid="product-facts">
+                  {{ peso(product.price) }} · {{ product.ingredientCount }}
+                  {{ product.ingredientCount === 1 ? 'ingredient' : 'ingredients' }}
+                  @if (showsCosts() && product.cost !== null) {
+                    · Cost {{ peso(product.cost) }}
+                    @if (product.margin !== null) {
+                      ·
+                      <span
+                        [class]="
+                          isLowMargin(product) ? 'font-semibold text-red-700' : 'text-gray-700'
+                        "
+                        data-testid="product-margin"
+                        >Margin {{ peso(product.margin) }}
+                        @if (product.marginPercent !== null) {
+                          ({{ product.marginPercent }}%)
+                        }
+                      </span>
+                    }
+                  }
+                  @if (showsCosts() && product.unknownCostCount > 0) {
+                    ·
+                    <span class="text-orange-700" data-testid="unknown-costs"
+                      >{{ product.unknownCostCount }} without a cost</span
+                    >
+                  }
+                </p>
                 @if (product.missingOptions.length > 0) {
-                  <div class="mt-2 flex flex-wrap items-center gap-1.5" data-testid="missing-options">
+                  <div
+                    class="mt-2 flex flex-wrap items-center gap-1.5"
+                    data-testid="missing-options"
+                  >
                     <span class="text-xs text-gray-500">Not linked to stock:</span>
                     @for (option of product.missingOptions; track option) {
-                      <span class="rounded-full bg-orange-50 px-2 py-0.5 text-xs font-medium text-orange-800">{{ option }}</span>
+                      <span
+                        class="rounded-full bg-orange-50 px-2 py-0.5 text-xs font-medium text-orange-800"
+                        >{{ option }}</span
+                      >
                     }
                   </div>
                 }

@@ -33,7 +33,7 @@ describe('InventoryComponent', () => {
               { path: 'stock-in', component: StockStub },
               { path: 'attention', component: StockStub },
               { path: 'waste', component: StockStub },
-              { path: 'coverage', component: StockStub },
+              { path: 'ingredients', component: StockStub },
             ],
           },
         ]),
@@ -83,14 +83,14 @@ describe('InventoryComponent', () => {
       'stock-in',
       'attention',
       'waste',
-      'coverage',
+      'ingredients',
     ]);
     expect(rendered.map((t) => t.getAttribute('href'))).toEqual([
       '/inventory/items',
       '/inventory/stock-in',
       '/inventory/attention',
       '/inventory/waste',
-      '/inventory/coverage',
+      '/inventory/ingredients',
     ]);
   });
 
@@ -100,10 +100,10 @@ describe('InventoryComponent', () => {
     expect(tabs(el).map((t) => t.getAttribute('data-inventory-tab'))).toEqual(['stock-in', 'attention', 'waste']);
   });
 
-  it('shows the coverage tab only to roles that can read items', async () => {
+  it('shows the ingredients tab only to roles that can read items', async () => {
     perms = { items: true, stock: false };
     const { el } = await setup();
-    expect(tabs(el).map((t) => t.getAttribute('data-inventory-tab'))).toEqual(['items', 'coverage']);
+    expect(tabs(el).map((t) => t.getAttribute('data-inventory-tab'))).toEqual(['items', 'ingredients']);
   });
 
   it('shows the count of items needing attention on the Needs Attention tab only while there are some', async () => {
