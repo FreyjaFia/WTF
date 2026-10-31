@@ -12,6 +12,8 @@ public record StockLine(Guid LineId, Guid? ParentLineId, Guid ProductId, int Qua
 
 public record StockLink(Guid ProductId, Guid ItemId, decimal QuantityPerSale, bool ScalesWithSize = false, Guid? ReplacesItemId = null);
 
+public record StockSizeAmount(Guid ProductId, Guid SizeProductId, Guid ItemId, decimal Quantity);
+
 public record StockRequirement(Guid ItemId, Guid ProductId, decimal Quantity, Guid? OrderLineId);
 
 public record StockChange(Guid ItemId, Guid ProductId, decimal Quantity, Guid? OrderLineId);
@@ -48,11 +50,15 @@ public static class StockRules
     // Add-on lines carry their quantity per unit of the parent line, so an add-on takes stock for every unit sold. The
     // quantities are summed per item and product first: one line is checked and deducted once, however many lines share it.
     //
+    // A size amount is a flat amount for one item on one drink when one size is on it: it replaces the drink's own amount for
+    // that item (and ignores the size multiplier for it), unless an add-on on the drink replaces that item.
+    //
     // A recipe follows what is on the drink. A size add-on has a RecipeMultiplier, and a link marked ScalesWithSize is
     // multiplied by the multipliers of the add-ons on the same drink (the drink's own links and the other add-ons' links
     // alike). An add-on's link may name an item it REPLACES: the drink's own link to that item is then not taken. A replaced
     // link stays in the result with a quantity of zero, so a saved order gives back what it took before the add-on was added.
-    public static List<StockRequirement> Requirements(IReadOnlyList<StockLine> lines, IReadOnlyList<StockLink> links)
+    public static List<StockRequirement> Requirements(
+        IReadOnlyList<StockLine> lines, IReadOnlyList<StockLink> links, IReadOnlyList<StockSizeAmount>? sizeAmounts = null)
     {
         var parentQuantityById = lines.ToDictionary(line => line.LineId, line => line.Quantity);
         var childrenByParent = lines.Where(line => line.ParentLineId.HasValue).ToLookup(line => line.ParentLineId!.Value);
@@ -76,6 +82,14 @@ public static class StockRules
                 .Select(link => link.ReplacesItemId!.Value)
                 .ToHashSet();
 
+            var ownSizeIds = ownChildren.Select(child => child.ProductId).ToHashSet();
+            var flat = sizeAmounts is null || ownSizeIds.Count == 0
+                ? new Dictionary<Guid, decimal>()
+                : sizeAmounts
+                    .Where(amount => amount.ProductId == line.ProductId && ownSizeIds.Contains(amount.SizeProductId))
+                    .GroupBy(amount => amount.ItemId)
+                    .ToDictionary(group => group.Key, group => group.OrderBy(amount => amount.SizeProductId).First().Quantity);
+
             foreach (var link in linksByProduct[line.ProductId])
             {
                 if (replaced.Contains(link.ItemId))
@@ -84,7 +98,19 @@ public static class StockRules
                     continue;
                 }
 
+                if (flat.Remove(link.ItemId, out var flatQuantity))
+                {
+                    parts.Add((link.ItemId, link.ProductId, flatQuantity * units, line.LineId, false));
+                    continue;
+                }
+
                 parts.Add((link.ItemId, link.ProductId, link.QuantityPerSale * (link.ScalesWithSize ? scale : 1m) * units, line.LineId, false));
+            }
+
+            // A size amount for an item the drink has no line for (a cup only the biggest size uses) adds that item.
+            foreach (var (itemId, flatQuantity) in flat.Where(entry => !replaced.Contains(entry.Key)))
+            {
+                parts.Add((itemId, line.ProductId, flatQuantity * units, line.LineId, false));
             }
         }
 
@@ -140,9 +166,10 @@ public static class StockRules
     // What a cart cannot get from the items that block sales when they run short, so the POS can say so before payment.
     // `blockingBalances` holds only those items; every other item is left out. Needs are summed per item across all lines.
     public static List<StockShortfall> Shortfalls(
-        IReadOnlyList<StockLine> lines, IReadOnlyList<StockLink> links, IReadOnlyDictionary<Guid, decimal> blockingBalances)
+        IReadOnlyList<StockLine> lines, IReadOnlyList<StockLink> links, IReadOnlyDictionary<Guid, decimal> blockingBalances,
+        IReadOnlyList<StockSizeAmount>? sizeAmounts = null)
     {
-        return Requirements(lines, links)
+        return Requirements(lines, links, sizeAmounts)
             .Where(requirement => blockingBalances.ContainsKey(requirement.ItemId))
             .GroupBy(requirement => requirement.ItemId)
             .Select(group =>

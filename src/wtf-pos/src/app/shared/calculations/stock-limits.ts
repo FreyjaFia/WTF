@@ -20,6 +20,14 @@ export interface StockSizeMultiplier {
   multiplier: number;
 }
 
+// A flat amount of one item for one drink when one size is on it; it replaces the drink's own amount for that item.
+export interface StockSizeAmount {
+  productId: string;
+  sizeProductId: string;
+  itemId: string;
+  quantity: number;
+}
+
 export interface StockCartAddOn {
   productId: string;
   quantity: number;
@@ -53,6 +61,7 @@ export function stockShortfalls(
   links: readonly StockLimitLink[],
   items: readonly Pick<StockLimitItem, 'id' | 'balance'>[],
   multipliers: readonly StockSizeMultiplier[] = [],
+  sizeAmounts: readonly StockSizeAmount[] = [],
 ): StockShortfall[] {
   const balanceByItem = new Map(items.map((item) => [item.id, item.balance]));
   const multiplierByProduct = new Map(multipliers.map((m) => [m.productId, m.multiplier]));
@@ -62,17 +71,40 @@ export function stockShortfalls(
   }
 
   const parts = new Map<string, { itemId: string; quantity: number; lineKeys: Set<string> }>();
-  const take = (productId: string, units: number, scale: number, replaced: ReadonlySet<string>, lineKey: string): void => {
+  const add = (itemId: string, productId: string, quantity: number, lineKey: string): void => {
+    const key = `${itemId}|${productId}`;
+    const part = parts.get(key) ?? { itemId, quantity: 0, lineKeys: new Set<string>() };
+    part.quantity += quantity;
+    part.lineKeys.add(lineKey);
+    parts.set(key, part);
+  };
+  const take = (
+    productId: string,
+    units: number,
+    scale: number,
+    replaced: ReadonlySet<string>,
+    lineKey: string,
+    flat: Map<string, number> = new Map<string, number>(),
+  ): void => {
     for (const link of allLinksByProduct.get(productId) ?? []) {
       if (!balanceByItem.has(link.itemId) || replaced.has(link.itemId)) {
         continue;
       }
 
-      const key = `${link.itemId}|${productId}`;
-      const part = parts.get(key) ?? { itemId: link.itemId, quantity: 0, lineKeys: new Set<string>() };
-      part.quantity += link.quantityPerSale * (link.scalesWithSize ? scale : 1) * units;
-      part.lineKeys.add(lineKey);
-      parts.set(key, part);
+      const flatQuantity = flat.get(link.itemId);
+      if (flatQuantity !== undefined) {
+        flat.delete(link.itemId);
+        add(link.itemId, productId, flatQuantity * units, lineKey);
+        continue;
+      }
+
+      add(link.itemId, productId, link.quantityPerSale * (link.scalesWithSize ? scale : 1) * units, lineKey);
+    }
+
+    for (const [itemId, flatQuantity] of flat) {
+      if (balanceByItem.has(itemId) && !replaced.has(itemId)) {
+        add(itemId, productId, flatQuantity * units, lineKey);
+      }
     }
   };
 
@@ -89,7 +121,15 @@ export function stockShortfalls(
       }
     }
 
-    take(line.productId, line.quantity, scale, replaced, line.key);
+    const flat = new Map<string, number>();
+    const ownSizeIds = new Set(addOns.map((addOn) => addOn.productId));
+    for (const amount of [...sizeAmounts].sort((a, b) => a.sizeProductId.localeCompare(b.sizeProductId))) {
+      if (amount.productId === line.productId && ownSizeIds.has(amount.sizeProductId) && !flat.has(amount.itemId)) {
+        flat.set(amount.itemId, amount.quantity);
+      }
+    }
+
+    take(line.productId, line.quantity, scale, replaced, line.key, flat);
     for (const addOn of addOns) {
       take(addOn.productId, addOn.quantity * line.quantity, scale, new Set<string>(), line.key);
     }

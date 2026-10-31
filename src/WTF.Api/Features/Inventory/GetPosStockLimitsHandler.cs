@@ -36,6 +36,12 @@ public class GetPosStockLimitsHandler(WTFDbContext db) : IRequestHandler<GetPosS
             .Select(product => new SizeMultiplierDto(product.Id, product.RecipeMultiplier))
             .ToListAsync(cancellationToken);
 
+        var sizeAmounts = await db.ProductSizeAmounts
+            .AsNoTracking()
+            .Where(amount => amount.IsActive && itemIds.Contains(amount.ItemId))
+            .Select(amount => new StockLimitSizeAmountDto(amount.ProductId, amount.SizeProductId, amount.ItemId, amount.Quantity))
+            .ToListAsync(cancellationToken);
+
         return new PosStockLimitsDto(
             [.. items.Select(item => new StockLimitItemDto(
                 item.Id, item.Name, InventoryUnitLabels.Abbreviate(item.UnitName), item.CurrentQuantity))],
@@ -46,6 +52,7 @@ public class GetPosStockLimitsHandler(WTFDbContext db) : IRequestHandler<GetPosS
                 link.ScalesWithSize,
                 link.ReplacesItemId))],
             DateTime.UtcNow,
-            sizeMultipliers);
+            sizeMultipliers,
+            sizeAmounts);
     }
 }

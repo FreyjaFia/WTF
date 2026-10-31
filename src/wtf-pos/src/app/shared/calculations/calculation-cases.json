@@ -1358,6 +1358,50 @@
   ],
   "stockShortfalls": [
     {
+      "name": "a size amount replaces the drink's own amount for that item",
+      "balances": [{ "itemId": "milk", "balance": 500 }],
+      "links": [{ "productId": "latte", "itemId": "milk", "perSale": 200 }],
+      "sizeAmounts": [{ "productId": "latte", "sizeProductId": "large", "itemId": "milk", "quantity": 300 }],
+      "lines": [{ "productId": "latte", "quantity": 2, "addOns": [{ "productId": "large", "quantity": 1 }] }],
+      "expected": [{ "itemId": "milk", "needed": 600, "balance": 500, "short": 100 }]
+    },
+    {
+      "name": "a size amount for another size is ignored",
+      "balances": [{ "itemId": "milk", "balance": 150 }],
+      "links": [{ "productId": "latte", "itemId": "milk", "perSale": 200 }],
+      "sizeAmounts": [{ "productId": "latte", "sizeProductId": "small", "itemId": "milk", "quantity": 100 }],
+      "lines": [{ "productId": "latte", "quantity": 1, "addOns": [{ "productId": "large", "quantity": 1 }] }],
+      "expected": [{ "itemId": "milk", "needed": 200, "balance": 150, "short": 50 }]
+    },
+    {
+      "name": "a size amount adds an item the drink has no link for",
+      "balances": [{ "itemId": "xl-cup", "balance": 1 }],
+      "links": [{ "productId": "latte", "itemId": "milk", "perSale": 200 }],
+      "sizeAmounts": [{ "productId": "latte", "sizeProductId": "large", "itemId": "xl-cup", "quantity": 1 }],
+      "lines": [{ "productId": "latte", "quantity": 2, "addOns": [{ "productId": "large", "quantity": 1 }] }],
+      "expected": [{ "itemId": "xl-cup", "needed": 2, "balance": 1, "short": 1 }]
+    },
+    {
+      "name": "a size amount ignores the size multiplier",
+      "balances": [{ "itemId": "milk", "balance": 100 }],
+      "links": [{ "productId": "latte", "itemId": "milk", "perSale": 100, "scalesWithSize": true }],
+      "multipliers": [{ "productId": "large", "multiplier": 1.5 }],
+      "sizeAmounts": [{ "productId": "latte", "sizeProductId": "large", "itemId": "milk", "quantity": 120 }],
+      "lines": [{ "productId": "latte", "quantity": 1, "addOns": [{ "productId": "large", "quantity": 1 }] }],
+      "expected": [{ "itemId": "milk", "needed": 120, "balance": 100, "short": 20 }]
+    },
+    {
+      "name": "an item replaced by an add-on takes nothing even with a size amount",
+      "balances": [{ "itemId": "milk", "balance": 0 }, { "itemId": "oat", "balance": 100 }],
+      "links": [
+        { "productId": "latte", "itemId": "milk", "perSale": 200 },
+        { "productId": "oat-addon", "itemId": "oat", "perSale": 200, "replacesItemId": "milk" }
+      ],
+      "sizeAmounts": [{ "productId": "latte", "sizeProductId": "large", "itemId": "milk", "quantity": 300 }],
+      "lines": [{ "productId": "latte", "quantity": 1, "addOns": [{ "productId": "large", "quantity": 1 }, { "productId": "oat-addon", "quantity": 1 }] }],
+      "expected": [{ "itemId": "oat", "needed": 200, "balance": 100, "short": 100 }]
+    },
+    {
       "name": "two drinks with one cup left",
       "balances": [{ "itemId": "cup", "balance": 1 }],
       "links": [{ "productId": "mocha", "itemId": "cup", "perSale": 1 }],

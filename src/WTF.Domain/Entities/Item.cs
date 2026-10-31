@@ -54,6 +54,8 @@ public partial class Item
 
     public virtual ICollection<ProductItemLink> ProductItemLinkReplacesItems { get; set; } = new List<ProductItemLink>();
 
+    public virtual ICollection<ProductSizeAmount> ProductSizeAmounts { get; set; } = new List<ProductSizeAmount>();
+
     public virtual ICollection<StockMovement> StockMovements { get; set; } = new List<StockMovement>();
 
     public virtual ICollection<StockWaste> StockWastes { get; set; } = new List<StockWaste>();

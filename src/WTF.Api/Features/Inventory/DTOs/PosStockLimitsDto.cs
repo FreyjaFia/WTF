@@ -7,5 +7,8 @@ public record StockLimitLinkDto(
 
 public record SizeMultiplierDto(Guid ProductId, decimal Multiplier);
 
+public record StockLimitSizeAmountDto(Guid ProductId, Guid SizeProductId, Guid ItemId, decimal Quantity);
+
 public record PosStockLimitsDto(
-    List<StockLimitItemDto> Items, List<StockLimitLinkDto> Links, DateTime AsOf, List<SizeMultiplierDto>? SizeMultipliers = null);
+    List<StockLimitItemDto> Items, List<StockLimitLinkDto> Links, DateTime AsOf, List<SizeMultiplierDto>? SizeMultipliers = null,
+    List<StockLimitSizeAmountDto>? SizeAmounts = null);

@@ -60,6 +60,10 @@ public partial class Product
 
     public virtual ICollection<ProductPriceHistory> ProductPriceHistories { get; set; } = new List<ProductPriceHistory>();
 
+    public virtual ICollection<ProductSizeAmount> ProductSizeAmountProducts { get; set; } = new List<ProductSizeAmount>();
+
+    public virtual ICollection<ProductSizeAmount> ProductSizeAmountSizeProducts { get; set; } = new List<ProductSizeAmount>();
+
     public virtual ICollection<StockMovement> StockMovements { get; set; } = new List<StockMovement>();
 
     public virtual ProductSubCategory? SubCategory { get; set; }

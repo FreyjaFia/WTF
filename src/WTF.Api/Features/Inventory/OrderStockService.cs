@@ -61,7 +61,13 @@ public class OrderStockService(WTFDbContext db, IAuditService auditService, ISto
             .Select(name => $"{name} is inactive, so this sale did not take stock from it.")
             .ToList();
 
-        var required = StockRules.Requirements(lines, links).Where(r => !inactiveItemIds.Contains(r.ItemId)).ToList();
+        var sizeAmounts = await db.ProductSizeAmounts
+            .AsNoTracking()
+            .Where(amount => amount.IsActive && productIds.Contains(amount.ProductId))
+            .Select(amount => new StockSizeAmount(amount.ProductId, amount.SizeProductId, amount.ItemId, amount.Quantity))
+            .ToListAsync(cancellationToken);
+
+        var required = StockRules.Requirements(lines, links, sizeAmounts).Where(r => !inactiveItemIds.Contains(r.ItemId)).ToList();
         var taken = await LoadTakenAsync(orderId, cancellationToken);
 
         // A product still on the order whose link has since been switched off keeps what it already took.

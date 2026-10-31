@@ -62,6 +62,8 @@ public class SharedCasesTests
 
     private sealed record ShortfallLineCase(string ProductId, int Quantity, List<ShortfallAddOnCase> AddOns);
 
+    private sealed record ShortfallSizeAmountCase(string ProductId, string SizeProductId, string ItemId, decimal Quantity);
+
     private sealed record ShortfallExpectedCase(string ItemId, decimal Needed, decimal Balance, decimal Short);
 
     private sealed record StockShortfallCase(
@@ -70,7 +72,8 @@ public class SharedCasesTests
         List<ShortfallLinkCase> Links,
         List<ShortfallLineCase> Lines,
         List<ShortfallExpectedCase> Expected,
-        List<ShortfallMultiplierCase>? Multipliers = null);
+        List<ShortfallMultiplierCase>? Multipliers = null,
+        List<ShortfallSizeAmountCase>? SizeAmounts = null);
 
     private sealed record Cases(
         List<OrderCase> OrderTotals,
@@ -294,7 +297,11 @@ public class SharedCasesTests
             link.ReplacesItemId is null ? null : IdFor(link.ReplacesItemId))).ToList();
         var balances = c.Balances.ToDictionary(balance => IdFor(balance.ItemId), balance => balance.Balance);
 
-        var result = StockRules.Shortfalls(lines, links, balances);
+        var result = StockRules.Shortfalls(
+            lines,
+            links,
+            balances,
+            c.SizeAmounts?.Select(a => new StockSizeAmount(IdFor(a.ProductId), IdFor(a.SizeProductId), IdFor(a.ItemId), a.Quantity)).ToList());
 
         result.Select(r => (r.ItemId, r.Needed, r.Balance, r.Short))
             .ShouldBe(c.Expected.Select(e => (IdFor(e.ItemId), e.Needed, e.Balance, e.Short)).ToList());

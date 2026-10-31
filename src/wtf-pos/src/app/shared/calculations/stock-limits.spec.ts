@@ -7,6 +7,7 @@ interface ShortfallCase {
   balances: { itemId: string; balance: number }[];
   links: { productId: string; itemId: string; perSale: number; scalesWithSize?: boolean; replacesItemId?: string }[];
   multipliers?: { productId: string; multiplier: number }[];
+  sizeAmounts?: { productId: string; sizeProductId: string; itemId: string; quantity: number }[];
   lines: { productId: string; quantity: number; addOns: { productId: string; quantity: number }[] }[];
   expected: { itemId: string; needed: number; balance: number; short: number }[];
 }
@@ -24,6 +25,7 @@ describe('stock shortfalls: the cases shared with the API', () => {
       })),
       c.balances.map((b) => ({ id: b.itemId, balance: b.balance })),
       c.multipliers ?? [],
+      c.sizeAmounts ?? [],
     );
 
     expect(result.map(({ itemId, needed, balance, short }) => ({ itemId, needed, balance, short }))).toEqual(

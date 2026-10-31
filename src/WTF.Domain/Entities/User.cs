@@ -62,6 +62,10 @@ public partial class User
 
     public virtual ICollection<ProductPriceHistory> ProductPriceHistories { get; set; } = new List<ProductPriceHistory>();
 
+    public virtual ICollection<ProductSizeAmount> ProductSizeAmountCreatedByNavigations { get; set; } = new List<ProductSizeAmount>();
+
+    public virtual ICollection<ProductSizeAmount> ProductSizeAmountUpdatedByNavigations { get; set; } = new List<ProductSizeAmount>();
+
     public virtual ICollection<Product> ProductUpdatedByNavigations { get; set; } = new List<Product>();
 
     public virtual ICollection<Promotion> PromotionCreatedByNavigations { get; set; } = new List<Promotion>();

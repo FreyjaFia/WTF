@@ -334,6 +334,7 @@ export class OrderEditor implements OnInit, OnDestroy {
     return stockShortfalls(this.buildStockCartLines(), this.stockLimits.links(),
       this.stockLimits.items(),
       this.stockLimits.sizeMultipliers(),
+      this.stockLimits.sizeAmounts(),
     ).map(
       (shortfall) => {
         const item = items.get(shortfall.itemId);

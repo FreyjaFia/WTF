@@ -76,6 +76,8 @@ public partial class WTFDbContext : DbContext
 
     public virtual DbSet<ProductPriceHistory> ProductPriceHistories { get; set; }
 
+    public virtual DbSet<ProductSizeAmount> ProductSizeAmounts { get; set; }
+
     public virtual DbSet<ProductSubCategory> ProductSubCategories { get; set; }
 
     public virtual DbSet<Promotion> Promotions { get; set; }
@@ -833,6 +835,42 @@ public partial class WTFDbContext : DbContext
                 .HasForeignKey(d => d.UpdatedBy)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ProductPriceHistory_UpdatedBy");
+        });
+
+        modelBuilder.Entity<ProductSizeAmount>(entity =>
+        {
+            entity.HasIndex(e => e.ItemId, "IX_ProductSizeAmounts_ItemId");
+
+            entity.HasIndex(e => new { e.ProductId, e.SizeProductId, e.ItemId }, "UX_ProductSizeAmounts_Product_Size_Item").IsUnique();
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_ProductSizeAmounts_Id");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())", "DF_ProductSizeAmounts_CreatedAt");
+            entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_ProductSizeAmounts_IsActive");
+            entity.Property(e => e.Quantity).HasColumnType("decimal(18, 3)");
+
+            entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.ProductSizeAmountCreatedByNavigations)
+                .HasForeignKey(d => d.CreatedBy)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ProductSizeAmounts_CreatedBy");
+
+            entity.HasOne(d => d.Item).WithMany(p => p.ProductSizeAmounts)
+                .HasForeignKey(d => d.ItemId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ProductSizeAmounts_Items");
+
+            entity.HasOne(d => d.Product).WithMany(p => p.ProductSizeAmountProducts)
+                .HasForeignKey(d => d.ProductId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ProductSizeAmounts_Products");
+
+            entity.HasOne(d => d.SizeProduct).WithMany(p => p.ProductSizeAmountSizeProducts)
+                .HasForeignKey(d => d.SizeProductId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ProductSizeAmounts_SizeProducts");
+
+            entity.HasOne(d => d.UpdatedByNavigation).WithMany(p => p.ProductSizeAmountUpdatedByNavigations)
+                .HasForeignKey(d => d.UpdatedBy)
+                .HasConstraintName("FK_ProductSizeAmounts_UpdatedBy");
         });
 
         modelBuilder.Entity<ProductSubCategory>(entity =>
