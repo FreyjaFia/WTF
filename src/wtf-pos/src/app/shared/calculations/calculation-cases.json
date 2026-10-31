@@ -1496,5 +1496,24 @@
     { "name": "waste can take the balance below zero", "balance": 2, "quantity": 3, "expected": -1 },
     { "name": "fractions stay to three decimals", "balance": 2.5, "quantity": 1.2346, "expected": 1.265 },
     { "name": "a negative balance goes further down", "balance": -4, "quantity": 0.5, "expected": -4.5 }
+  ],
+  "recipeCost": [
+    { "name": "cost and margin of a latte", "price": 150, "suppliesCost": 0, "lines": [
+      { "quantityPerSale": 200, "allowancePercent": 5, "unitCost": 0.15 },
+      { "quantityPerSale": 1, "allowancePercent": 0, "unitCost": 4 } ],
+      "totalCost": 35.5, "unknownCostCount": 0, "margin": 114.5, "marginPercent": 76.33 },
+    { "name": "supplies cost is added", "price": 100, "suppliesCost": 2.5, "lines": [
+      { "quantityPerSale": 10, "allowancePercent": 0, "unitCost": 1 } ],
+      "totalCost": 12.5, "unknownCostCount": 0, "margin": 87.5, "marginPercent": 87.5 },
+    { "name": "a line with no cost is unknown, not free", "price": 100, "suppliesCost": 0, "lines": [
+      { "quantityPerSale": 10, "allowancePercent": 0, "unitCost": 2 },
+      { "quantityPerSale": 5, "allowancePercent": 0, "unitCost": null } ],
+      "totalCost": 20, "unknownCostCount": 1, "margin": 80, "marginPercent": 80 },
+    { "name": "a zero price has no margin percent", "price": 0, "suppliesCost": 0, "lines": [
+      { "quantityPerSale": 1, "allowancePercent": 0, "unitCost": 3 } ],
+      "totalCost": 3, "unknownCostCount": 0, "margin": -3, "marginPercent": null },
+    { "name": "six decimal costs add up", "price": 50, "suppliesCost": 0, "lines": [
+      { "quantityPerSale": 18, "allowancePercent": 2.5, "unitCost": 0.333333 } ],
+      "totalCost": 6.149994, "unknownCostCount": 0, "margin": 43.850006, "marginPercent": 87.7 }
   ]
 }

@@ -85,7 +85,20 @@ public class SharedCasesTests
         List<SalesCoveredCase> SalesCovered,
         List<StockShortfallCase> StockShortfalls,
         List<WasteNeedsReviewCase> WasteNeedsReview,
-        List<WasteBalanceAfterCase> WasteBalanceAfter);
+        List<WasteBalanceAfterCase> WasteBalanceAfter,
+        List<RecipeCostCase> RecipeCost);
+
+    private sealed record RecipeCostLineCase(decimal QuantityPerSale, decimal AllowancePercent, decimal? UnitCost);
+
+    private sealed record RecipeCostCase(
+        string Name,
+        decimal Price,
+        decimal SuppliesCost,
+        List<RecipeCostLineCase> Lines,
+        decimal TotalCost,
+        int UnknownCostCount,
+        decimal Margin,
+        decimal? MarginPercent);
 
     private sealed record WasteNeedsReviewCase(string Name, decimal Quantity, decimal? Limit, bool Expected);
 
@@ -124,6 +137,8 @@ public class SharedCasesTests
     public static IEnumerable<object[]> WasteNeedsReviewCaseNames() => Loaded.Value.WasteNeedsReview.Select(c => new object[] { c.Name });
 
     public static IEnumerable<object[]> WasteBalanceAfterCaseNames() => Loaded.Value.WasteBalanceAfter.Select(c => new object[] { c.Name });
+
+    public static IEnumerable<object[]> RecipeCostCaseNames() => Loaded.Value.RecipeCost.Select(c => new object[] { c.Name });
 
     /// <summary>A stable id for a name in the file, so "cheese" is the same add-on in the cart and in the rule.</summary>
     private static Guid IdFor(string name) => new(MD5.HashData(Encoding.UTF8.GetBytes(name)));
@@ -235,6 +250,22 @@ public class SharedCasesTests
         var c = Loaded.Value.WasteBalanceAfter.Single(x => x.Name == name);
 
         WasteRules.BalanceAfter(c.Balance, c.Quantity).ShouldBe(c.Expected);
+    }
+
+    [Theory]
+    [MemberData(nameof(RecipeCostCaseNames))]
+    public void RecipeCost_MatchesTheSharedCase(string name)
+    {
+        var c = Loaded.Value.RecipeCost.Single(x => x.Name == name);
+
+        var summary = CostRules.RecipeCost(
+            c.Lines.Select(l => new RecipeLine(CostRules.EffectiveQuantity(l.QuantityPerSale, l.AllowancePercent), l.UnitCost)),
+            c.SuppliesCost);
+
+        summary.TotalCost.ShouldBe(c.TotalCost);
+        summary.UnknownCostCount.ShouldBe(c.UnknownCostCount);
+        CostRules.Margin(c.Price, summary.TotalCost).ShouldBe(c.Margin);
+        CostRules.MarginPercent(c.Price, summary.TotalCost).ShouldBe(c.MarginPercent);
     }
 
     [Theory]
