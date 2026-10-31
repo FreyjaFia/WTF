@@ -61,6 +61,33 @@ internal static class ReportTables
             ("Total Quantity", Number(rows.Sum(r => r.QuantitySold)))
         ]);
 
+    public static readonly ReportTable<ProductMarginReportRowDto> ProductMargin = new(
+        "Product Profit",
+        [
+            new("productName", "Product", r => r.ProductName, r => r.ProductName, false, 2.4f),
+            new("categoryName", "Category", r => r.CategoryName, r => r.CategoryName, false, 1.3f),
+            new("quantitySold", "Qty", r => Number(r.QuantitySold), r => r.QuantitySold, true, 0.7f, rows => Number(rows.Sum(r => r.QuantitySold))),
+            new("revenue", "Net", r => Money(r.Revenue), r => r.Revenue, true, 1.3f, rows => Money(rows.Sum(r => r.Revenue))),
+            new("cost", "Cost", r => r.Cost.HasValue ? Money(r.Cost.Value) : "-", r => r.Cost, true, 1.3f, rows => Money(rows.Sum(r => r.Cost ?? 0m))),
+            new("grossProfit", "Profit", r => r.GrossProfit.HasValue ? Money(r.GrossProfit.Value) : "-", r => r.GrossProfit, true, 1.3f, rows => Money(rows.Sum(r => r.GrossProfit ?? 0m))),
+            new("marginPercent", "Margin %", r => r.MarginPercent.HasValue ? Percent(r.MarginPercent.Value) : "-", r => r.MarginPercent, true, 1f),
+            new("costStatus", "Cost", r => r.CostStatus, r => r.CostStatus, false, 1.2f)
+        ],
+        rows =>
+        {
+            var known = rows.Where(r => r.GrossProfit.HasValue).ToList();
+            var knownRevenue = known.Sum(r => r.Revenue);
+            var knownProfit = known.Sum(r => r.GrossProfit ?? 0m);
+            return
+            [
+                ("Net Revenue", Money(rows.Sum(r => r.Revenue))),
+                ("Cost (rows with a cost)", Money(known.Sum(r => r.Cost ?? 0m))),
+                ("Gross Profit", Money(knownProfit)),
+                ("Margin", knownRevenue > 0m ? Percent(Math.Round(knownProfit / knownRevenue * 100m, 2, MidpointRounding.AwayFromZero)) : "-"),
+                ("Rows without a full cost", Number(rows.Count(r => !r.GrossProfit.HasValue)))
+            ];
+        });
+
     public static readonly ReportTable<CategorySalesReportRowDto> CategorySales = new(
         "Sales by Category",
         [

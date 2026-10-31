@@ -48,6 +48,19 @@ public static class ReportEndpoints
                 return BuildReportResponse(httpContext, result, ReportTables.ProductSales, query.FromDate!.Value, query.ToDate!.Value, query.Source);
             });
 
+        reportsGroup.MapGet("/product-margin",
+            async (HttpContext httpContext, [AsParameters] GetProductMarginReportQuery query, ISender sender) =>
+            {
+                var validationResult = ValidateReportFilters(query.FromDate, query.ToDate, query.Source);
+                if (validationResult != null)
+                {
+                    return validationResult;
+                }
+
+                var result = await sender.Send(query);
+                return BuildReportResponse(httpContext, result, ReportTables.ProductMargin, query.FromDate!.Value, query.ToDate!.Value, query.Source);
+            });
+
         reportsGroup.MapGet("/payments",
             async (HttpContext httpContext, [AsParameters] GetPaymentsReportQuery query, ISender sender) =>
             {

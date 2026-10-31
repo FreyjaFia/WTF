@@ -154,6 +154,7 @@ public class RouteTableTests : IDisposable
         "POST /api/reports/monthly-workbook/generate => ReportsRead+ReportsGenerate",
         "GET /api/reports/monthly-workbook/status => ReportsRead",
         "GET /api/reports/payments => ReportsRead",
+        "GET /api/reports/product-margin => ReportsRead",
         "GET /api/reports/product-sales => ReportsRead",
         "GET /api/reports/promotions => ReportsRead",
         "GET /api/reports/staff => ReportsRead",
