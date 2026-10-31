@@ -1076,6 +1076,38 @@ Goal: know what each product **costs** to make, so profit can be worked out. Bui
 
 **Slice 5 built (3 Nov 2026; script `tools/sql/20261103_add_supplies_cost.sql`, run it before deploying the API, then `tools/dbsync.bat`).** `Products.SuppliesCost` is a fixed cost per sale for ice, straws, napkins and stirrers, added to the product's recipe cost without any stock movement (`PUT /api/products/{id}/supplies-cost`, new policy `InventoryCostsWrite` for Super Admin and Admin; the Recipe cost card shows and edits it). Not built: a supplies allowance per order (one amount for the whole order), which needs a place to keep shop-wide settings.
 
+**Ingredients & Cost page (planned 31 Oct 2026, a full page instead of a card inside the product editor)**
+
+The recipe card inside the product editor is cramped, and "Recipe" reads like a how-to guide (that name stays for the Drink Recipe Guide). In the app this
+is called **Ingredients & cost**; the code and routes keep the word recipe.
+
+- **Where.** Inventory > Ingredients & Cost (`/inventory/ingredients`); the Coverage tab folds into it ("Needs setup" becomes a filter). Cost, price and margin show
+  only to the cost roles (Super Admin, Admin, Admin Viewer); Stock Manager and Item Manager see amounts only. Writing uses the existing item and product link policies.
+- **List.** One row per product: price, number of ingredients, cost, margin, status (Ready, Some options missing, Not set up). Search, filters (All, Needs setup,
+  Low margin), cards on phones. A row opens the full-page editor.
+- **Add.** A "+ Add" button opens a product picker (search, grouped by sub-category, products with no ingredients first), then one step to add ingredient lines to all
+  the ticked products at once ("Regular Cup, 1 pc" on twelve drinks). Add-only: a product that already has the ingredient is skipped and listed. One transaction, one audit entry.
+- **Full-page editor (one product).** The ingredient lines (item, amount, allowance %, add-on rows with "Replaces"), supplies cost, a sticky live cost and margin summary that
+  follows unsaved edits, copy from another product, and the size multiplier for size add-ons. The product editor keeps a read-only summary and a link here.
+- **Amounts per size (decided 31 Oct 2026).** Products do not scale evenly with size, so each size gets its own flat amounts in a grid (rows are ingredients, columns are the
+  sizes the product offers: Regular 200 ml, Large 300 ml, Jumbo 400 ml; an empty cell means the same as Regular). **This needs new storage:** a size add-on such as Large is one
+  shared product used by many drinks, so an amount on its own link would hit every drink. The amounts are kept per drink and size in a new table
+  (`ProductSizeAmounts`: product, size add-on, item, quantity), read by the same rules as every other recipe line: when the size is on the sale, that item uses the
+  size amount instead of the drink's base amount (or on top of it when the drink has no base line for it, such as a Jumbo-only cup). "Scales with size" and the
+  multiplier stay as a shortcut ("fill by 1.5") that fills the cells, and drinks that really scale evenly keep working as they do.
+- **Preview.** A size and add-on picker beside the live cost and margin shows what one sale of that combination uses and costs (Large with oat and an extra shot), with
+  the add-on prices in the margin. It saves nothing; it adds the saved lines the way a real sale does. Warnings: a size with no amounts or ingredient links set, an
+  ingredient ticked "scales with size" when no size has a multiplier.
+- **Rules and maths.** The size amounts go into `StockRules.Requirements`, the register's `stockShortfalls`, `GetPosStockLimits`, `OrderStockService`, the recipe cost and
+  the new preview, with shared cases in `calculation-cases.json` run by both test projects; the cost preview is mirrored in `shared/calculations` (whole cents, costs with six decimals).
+- **Slices, each tested and committed on its own.**
+  - **A.** The list page, read only, with Coverage folded in (new `GET /api/products/ingredients` with cost and margin per product).
+  - **B.** The full-page editor for base lines and supplies cost; the product editor's card becomes a summary and link; labels renamed.
+  - **C.** Amounts per size: schema script, rules on both sides, deduction, register limits, the grid.
+  - **D.** The size and add-on preview picker and the warnings.
+  - **E.** The "+ Add" picker and bulk add.
+  - **F.** Browser tests, hand check on a throwaway database, roadmap.
+
 **Cost per unit (`Items`)**
 
 - Keep the cost **per base unit** (per ml, per g, per piece), derived from the stock-in cost and `UnitsPerStockUnit` (a
