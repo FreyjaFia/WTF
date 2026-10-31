@@ -1174,11 +1174,13 @@ counting, and show the difference as **variance**, so you can tell a wrong recip
 - Tests: weighted average after a receipt with different pack prices, FEFO order, par/reorder maths, partial receipts,
   expiry write-off, roles.
 
-#### Phase 9 - Profit and margin reports [Planned]
+#### Phase 9 - Profit and margin reports [Partly built: Product Profit report, 1 Nov 2026]
 
 "Net income" needs more than stock: it needs sales, cost of goods sold, waste, discounts and the **running costs** of the
 shop. The POS can answer part of it honestly; the rest needs an expenses record. It is **management reporting, not
 accounting or tax filing** (the app still stores no tax); the accountant's books stay the official ones.
+
+**Built (1 Nov 2026): the Product Profit report** (Reports > Products, `GET /api/reports/product-margin`, Super Admin, Admin and Admin Viewer like every report; Excel, PDF and CSV). It takes the revenue of the product sales report (add-ons and bundles on their own rows, refunds taken out) and sets against it what the sales really cost: the cost comes from the stock movements each sale wrote (`Sale` and `SaleVoid`, quantity times the cost the item had at that moment), so it is the cost at the time of the sale and it already follows the size, the add-ons, Replace and the allowance; the per-sale supplies cost is added for each unit sold. A product sold alone and inside a bundle in one order has its cost split between the two rows by units (`ProfitRules.AllocateByUnits`). Each row says whether its cost can be trusted: **Known** (every unit sold has a cost), **Partly known** (some units were sold before stock tracking, or a movement has no cost: the cost is shown for the known part and no profit is claimed) or **No cost** (the product takes no stock and has no supplies cost: shown as "-", never as free). Profit and margin appear only for Known rows, and the totals add up only those. Not built: the monthly workbook sheet, the gross profit summary by day, week and month with waste and count variance, menu engineering and the expenses record (the rest of this phase).
 
 - **Gross profit report** (Reports > Sales, owner level): Sales (net of discounts and refunds, already defined) minus **COGS
   from recipes** (theoretical) = *theoretical gross profit*; minus recorded waste minus count variance = *actual gross
