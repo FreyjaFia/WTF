@@ -246,7 +246,7 @@ public class StockAlertServiceTests
         var handler = new WTF.Api.Features.Items.UpdateItemHandler(TestDb.Create(_db), TestRequest.As(_admin), TestFakes.Audit(), Service());
 
         await handler.Handle(
-            new WTF.Api.Features.Items.UpdateItemCommand { Id = _milk, Name = "Oat Milk", UnitName = "ml", WarningQuantity = 1500m, CriticalQuantity = 200m },
+            new WTF.Api.Features.Items.UpdateItemCommand { Id = _milk, Name = "Oat Milk", UnitName = "milliliter", WarningQuantity = 1500m, CriticalQuantity = 200m },
             CancellationToken.None);
 
         (await Notifications()).Where(n => n.UserId == _admin).Select(n => n.Title).ShouldBe(["Low stock: Oat Milk"]);

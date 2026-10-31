@@ -127,8 +127,8 @@ public class UpdateItemHandler(
         item.Name = request.Name.Trim();
         item.Sku = ItemValidation.NormalizeOptional(request.Sku);
         item.Barcode = ItemValidation.NormalizeOptional(request.Barcode);
-        item.UnitName = request.UnitName.Trim();
-        item.StockUnitName = ItemValidation.NormalizeOptional(request.StockUnitName);
+        item.UnitName = ItemValidation.NormalizeUnit(request.UnitName);
+        item.StockUnitName = ItemValidation.NormalizeOptionalUnit(request.StockUnitName);
         item.UnitsPerStockUnit = request.UnitsPerStockUnit;
         if (!request.KeepCosts)
         {

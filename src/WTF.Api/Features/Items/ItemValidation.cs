@@ -5,6 +5,12 @@ namespace WTF.Api.Features.Items;
 
 internal static class ItemValidation
 {
+    // Mirrors INVENTORY_UNIT_OPTIONS in the POS until units live in their own table (see the roadmap, "Setup lists").
+    public static readonly IReadOnlyList<string> Units =
+    [
+        "piece", "box", "pack", "case", "bottle", "carton", "cup", "lid", "sleeve", "liter", "milliliter", "kilogram", "gram"
+    ];
+
     public static async Task ValidateUniqueSkuAndBarcode(
         WTFDbContext db,
         string? sku,
@@ -35,6 +41,17 @@ internal static class ItemValidation
                 throw new InvalidOperationException("Item barcode already exists.");
             }
         }
+    }
+
+    public static string NormalizeUnit(string? value)
+    {
+        var unit = Units.FirstOrDefault(u => string.Equals(u, value?.Trim(), StringComparison.OrdinalIgnoreCase));
+        return unit ?? throw new InvalidOperationException($"Unit must be one of: {string.Join(", ", Units)}.");
+    }
+
+    public static string? NormalizeOptionalUnit(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : NormalizeUnit(value);
     }
 
     public static string? NormalizeOptional(string? value)

@@ -13,7 +13,7 @@ interface ProfitRow {
 
 test.describe('the Product Profit report @reports', () => {
   test('a sold product shows the cost its stock movements recorded', async ({ api }) => {
-    const milk = await api.items.create({ startingQuantity: 10000, unitName: 'ml', costPrice: 0.1 });
+    const milk = await api.items.create({ startingQuantity: 10000, unitName: 'milliliter', costPrice: 0.1 });
     const latte = await api.products.create({ price: 150 });
     await api.items.linkProducts(milk.id, [{ productId: latte.id, quantityPerSale: 200 }]);
     await api.orders.create({ items: [{ productId: latte.id, quantity: 2 }] });
@@ -47,7 +47,7 @@ test.describe('the Product Profit report @reports', () => {
   });
 
   test('the report opens from the catalog and shows the product with its profit', async ({ api, signIn }) => {
-    const milk = await api.items.create({ startingQuantity: 10000, unitName: 'ml', costPrice: 0.1 });
+    const milk = await api.items.create({ startingQuantity: 10000, unitName: 'milliliter', costPrice: 0.1 });
     const latte = await api.products.create({ price: 150 });
     await api.items.linkProducts(milk.id, [{ productId: latte.id, quantityPerSale: 200 }]);
     await api.orders.create({ items: [{ productId: latte.id, quantity: 2 }] });

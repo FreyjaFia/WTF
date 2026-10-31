@@ -22,7 +22,7 @@ public class ItemDatabaseTests
         Name = name,
         Sku = sku,
         Barcode = barcode,
-        UnitName = "kg",
+        UnitName = "kilogram",
         IsActive = true,
         CreatedAt = DateTime.UtcNow,
         CreatedBy = userId,
@@ -44,7 +44,7 @@ public class ItemDatabaseTests
         await using (var db = database.CreateContext())
         {
             var ex = await Should.ThrowAsync<DbUpdateException>(() => Handler(db, user.Id).Handle(
-                new CreateItemCommand { Name = "Flour", UnitName = "kg", Sku = "F-1", StartingQuantity = 500 },
+                new CreateItemCommand { Name = "Flour", UnitName = "kilogram", Sku = "F-1", StartingQuantity = 500 },
                 CancellationToken.None));
             ex.InnerException.ShouldBeOfType<SqlException>().Number.ShouldBe(547);
         }
@@ -67,14 +67,14 @@ public class ItemDatabaseTests
         await using (var db = database.CreateContext())
         {
             await Should.ThrowAsync<DbUpdateException>(() => Handler(db, user.Id).Handle(
-                new CreateItemCommand { Name = "Flour", UnitName = "kg", Sku = "F-1", StartingQuantity = 500 },
+                new CreateItemCommand { Name = "Flour", UnitName = "kilogram", Sku = "F-1", StartingQuantity = 500 },
                 CancellationToken.None));
         }
 
         await using (var db = database.CreateContext())
         {
             var dto = await Handler(db, user.Id).Handle(
-                new CreateItemCommand { Name = "Flour", UnitName = "kg", Sku = "F-1", StartingQuantity = 50 },
+                new CreateItemCommand { Name = "Flour", UnitName = "kilogram", Sku = "F-1", StartingQuantity = 50 },
                 CancellationToken.None);
             dto.Sku.ShouldBe("F-1");
         }
@@ -92,13 +92,13 @@ public class ItemDatabaseTests
         await using (var db = database.CreateContext())
         {
             await Handler(db, user.Id).Handle(
-                new CreateItemCommand { Name = "Flour", UnitName = "kg", Sku = "F-1" }, CancellationToken.None);
+                new CreateItemCommand { Name = "Flour", UnitName = "kilogram", Sku = "F-1" }, CancellationToken.None);
         }
 
         await using (var db = database.CreateContext())
         {
             var ex = await Should.ThrowAsync<InvalidOperationException>(() => Handler(db, user.Id).Handle(
-                new CreateItemCommand { Name = "Other", UnitName = "kg", Sku = "f-1" }, CancellationToken.None));
+                new CreateItemCommand { Name = "Other", UnitName = "kilogram", Sku = "f-1" }, CancellationToken.None));
             ex.Message.ShouldBe("Item SKU already exists.");
         }
     }
@@ -150,12 +150,12 @@ public class ItemDatabaseTests
         await using (var db = database.CreateContext())
         {
             await Handler(db, user.Id).Handle(
-                new CreateItemCommand { Name = "A", UnitName = "kg", Sku = " ", Barcode = " " }, CancellationToken.None);
+                new CreateItemCommand { Name = "A", UnitName = "kilogram", Sku = " ", Barcode = " " }, CancellationToken.None);
         }
 
         await using (var db = database.CreateContext())
         {
-            await Handler(db, user.Id).Handle(new CreateItemCommand { Name = "B", UnitName = "kg" }, CancellationToken.None);
+            await Handler(db, user.Id).Handle(new CreateItemCommand { Name = "B", UnitName = "kilogram" }, CancellationToken.None);
         }
 
         await using var check = database.CreateContext();
@@ -170,7 +170,7 @@ public class ItemDatabaseTests
 
         await using var dbA = database.CreateContext();
         await using var dbB = database.CreateContext();
-        var command = new CreateItemCommand { Name = "Flour", UnitName = "kg", Sku = "F-1", StartingQuantity = 5 };
+        var command = new CreateItemCommand { Name = "Flour", UnitName = "kilogram", Sku = "F-1", StartingQuantity = 5 };
 
         var results = await Task.WhenAll(
             Attempt(() => Handler(dbA, user.Id).Handle(command, CancellationToken.None)),

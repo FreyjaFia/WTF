@@ -35,7 +35,7 @@ export class ItemsApi {
   public async create(input: ItemInput = {}, role: Role = 'superadmin'): Promise<Item> {
     const body = {
       name: input.name ?? unique('E2E Item'),
-      unitName: input.unitName ?? 'pc',
+      unitName: input.unitName ?? 'piece',
       sku: null,
       startingQuantity: input.startingQuantity ?? 100,
       costPrice: input.costPrice ?? 5,

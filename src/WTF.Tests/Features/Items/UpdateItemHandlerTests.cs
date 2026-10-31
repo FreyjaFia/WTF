@@ -19,7 +19,7 @@ public class UpdateItemHandlerTests
     [Fact]
     public async Task Handle_MissingItem_ReturnsNull()
     {
-        var result = await Handler().Handle(new UpdateItemCommand { Id = Guid.NewGuid(), Name = "x", UnitName = "kg" },
+        var result = await Handler().Handle(new UpdateItemCommand { Id = Guid.NewGuid(), Name = "x", UnitName = "kilogram" },
             CancellationToken.None);
         result.ShouldBeNull();
         await _audit.DidNotReceiveWithAnyArgs().LogAsync(default, default, default!);
@@ -36,7 +36,7 @@ public class UpdateItemHandlerTests
             Id = item.Id,
             Name = " New ",
             Sku = " NEW ",
-            UnitName = "g",
+            UnitName = "gram",
             IsActive = false,
             WarningQuantity = 3
         }, CancellationToken.None);
@@ -45,7 +45,7 @@ public class UpdateItemHandlerTests
         await using var db = TestDb.Create(_db);
         var saved = await db.Items.SingleAsync();
         saved.Sku.ShouldBe("NEW");
-        saved.UnitName.ShouldBe("g");
+        saved.UnitName.ShouldBe("gram");
         saved.IsActive.ShouldBeFalse();
         saved.WarningQuantity.ShouldBe(3m);
         saved.CurrentQuantity.ShouldBe(7m); // update never touches stock
@@ -61,7 +61,7 @@ public class UpdateItemHandlerTests
         await ItemSeed.User(_db, _userId);
         var item = await ItemSeed.Item(_db, _userId, cost: 5);
 
-        await Handler().Handle(new UpdateItemCommand { Id = item.Id, Name = "Flour", UnitName = "kg", CostPrice = 8 },
+        await Handler().Handle(new UpdateItemCommand { Id = item.Id, Name = "Flour", UnitName = "kilogram", CostPrice = 8 },
             CancellationToken.None);
 
         await using var db = TestDb.Create(_db);
@@ -78,7 +78,7 @@ public class UpdateItemHandlerTests
         await ItemSeed.User(_db, _userId);
         var item = await ItemSeed.Item(_db, _userId, cost: null);
 
-        await Handler().Handle(new UpdateItemCommand { Id = item.Id, Name = "Flour", UnitName = "kg", CostPrice = 2 },
+        await Handler().Handle(new UpdateItemCommand { Id = item.Id, Name = "Flour", UnitName = "kilogram", CostPrice = 2 },
             CancellationToken.None);
 
         await using var db = TestDb.Create(_db);
@@ -91,7 +91,7 @@ public class UpdateItemHandlerTests
         await ItemSeed.User(_db, _userId);
         var item = await ItemSeed.Item(_db, _userId, cost: 5);
 
-        await Handler().Handle(new UpdateItemCommand { Id = item.Id, Name = "Flour", UnitName = "kg", CostPrice = 5 },
+        await Handler().Handle(new UpdateItemCommand { Id = item.Id, Name = "Flour", UnitName = "kilogram", CostPrice = 5 },
             CancellationToken.None);
 
         await using var db = TestDb.Create(_db);
@@ -104,7 +104,7 @@ public class UpdateItemHandlerTests
         await ItemSeed.User(_db, _userId);
         var item = await ItemSeed.Item(_db, _userId, cost: 5);
 
-        await Handler().Handle(new UpdateItemCommand { Id = item.Id, Name = "Flour", UnitName = "kg" },
+        await Handler().Handle(new UpdateItemCommand { Id = item.Id, Name = "Flour", UnitName = "kilogram" },
             CancellationToken.None);
 
         await using var db = TestDb.Create(_db);
@@ -120,7 +120,7 @@ public class UpdateItemHandlerTests
         var item = await ItemSeed.Item(_db, _userId, name: "Mine", sku: "MINE");
 
         await Should.ThrowAsync<InvalidOperationException>(() => Handler().Handle(
-            new UpdateItemCommand { Id = item.Id, Name = "Mine2", UnitName = "kg", Sku = "TAKEN" }, CancellationToken.None));
+            new UpdateItemCommand { Id = item.Id, Name = "Mine2", UnitName = "kilogram", Sku = "TAKEN" }, CancellationToken.None));
 
         await using var db = TestDb.Create(_db);
         (await db.Items.SingleAsync(i => i.Id == item.Id)).Name.ShouldBe("Mine");
@@ -133,7 +133,7 @@ public class UpdateItemHandlerTests
         var item = await ItemSeed.Item(_db, _userId, sku: "MINE");
 
         var dto = await Handler().Handle(
-            new UpdateItemCommand { Id = item.Id, Name = "Renamed", UnitName = "kg", Sku = "MINE" }, CancellationToken.None);
+            new UpdateItemCommand { Id = item.Id, Name = "Renamed", UnitName = "kilogram", Sku = "MINE" }, CancellationToken.None);
         dto!.Name.ShouldBe("Renamed");
     }
 
@@ -146,7 +146,7 @@ public class UpdateItemHandlerTests
         StockSeed.Link(_db, latte.Id, item.Id, 1m);
 
         var ex = await Should.ThrowAsync<InvalidOperationException>(() => Handler().Handle(
-            new UpdateItemCommand { Id = item.Id, Name = "Cup", UnitName = "kg", IsActive = false }, CancellationToken.None));
+            new UpdateItemCommand { Id = item.Id, Name = "Cup", UnitName = "kilogram", IsActive = false }, CancellationToken.None));
 
         ex.Message.ShouldContain("Latte");
         await using var db = TestDb.Create(_db);
@@ -166,7 +166,7 @@ public class UpdateItemHandlerTests
         }
 
         await Handler().Handle(
-            new UpdateItemCommand { Id = item.Id, Name = "Flour", UnitName = "kg", IsActive = false }, CancellationToken.None);
+            new UpdateItemCommand { Id = item.Id, Name = "Flour", UnitName = "kilogram", IsActive = false }, CancellationToken.None);
 
         await using var db = TestDb.Create(_db);
         var saved = await db.Items.SingleAsync();
@@ -183,7 +183,7 @@ public class UpdateItemHandlerTests
         var item = await ItemSeed.Item(_db, _userId, active: false);
 
         await Handler().Handle(
-            new UpdateItemCommand { Id = item.Id, Name = "Flour", UnitName = "kg", IsActive = true }, CancellationToken.None);
+            new UpdateItemCommand { Id = item.Id, Name = "Flour", UnitName = "kilogram", IsActive = true }, CancellationToken.None);
 
         await using var db = TestDb.Create(_db);
         (await db.Items.SingleAsync()).IsActive.ShouldBeTrue();
@@ -198,7 +198,7 @@ public class UpdateItemHandlerTests
         var item = await ItemSeed.Item(_db, _userId, active: false);
 
         await Handler().Handle(
-            new UpdateItemCommand { Id = item.Id, Name = "Renamed", UnitName = "kg", IsActive = false }, CancellationToken.None);
+            new UpdateItemCommand { Id = item.Id, Name = "Renamed", UnitName = "kilogram", IsActive = false }, CancellationToken.None);
 
         await _audit.DidNotReceive().LogAsync(AuditAction.ItemRestored, Arg.Any<AuditEntityType>(), Arg.Any<string>(),
             Arg.Any<object?>(), Arg.Any<object?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());

@@ -98,7 +98,7 @@ public class StockQueryHandlerTests
         var handler = new UpdateItemHandler(TestDb.Create(_db), TestRequest.As(_userId), TestFakes.Audit(), TestFakes.Alerts(TestDb.Create(_db)));
 
         var ex = await Should.ThrowAsync<InvalidOperationException>(() => handler.Handle(
-            new UpdateItemCommand { Id = item.Id, Name = "Flour", UnitName = "kg", AllowNegativeStock = false }, CancellationToken.None));
+            new UpdateItemCommand { Id = item.Id, Name = "Flour", UnitName = "kilogram", AllowNegativeStock = false }, CancellationToken.None));
 
         ex.Message.ShouldContain("below zero");
     }

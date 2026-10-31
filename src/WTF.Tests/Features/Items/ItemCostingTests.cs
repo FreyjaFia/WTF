@@ -79,7 +79,7 @@ public class ItemCostingTests
         await ItemSeed.User(_db, _userId);
 
         var dto = await Create().Handle(
-            new CreateItemCommand { Name = "Milk", UnitName = "ml", CostPrice = 0.15m, YieldPercent = 80 }, CancellationToken.None);
+            new CreateItemCommand { Name = "Milk", UnitName = "milliliter", CostPrice = 0.15m, YieldPercent = 80 }, CancellationToken.None);
 
         dto.AverageCost.ShouldBe(0.15m);
         dto.YieldPercent.ShouldBe(80m);
@@ -92,7 +92,7 @@ public class ItemCostingTests
         await ItemSeed.User(_db, _userId);
 
         var dto = await Create().Handle(
-            new CreateItemCommand { Name = "Milk", UnitName = "ml", CostPrice = 0.15m, YieldPercent = 50, KeepCosts = true },
+            new CreateItemCommand { Name = "Milk", UnitName = "milliliter", CostPrice = 0.15m, YieldPercent = 50, KeepCosts = true },
             CancellationToken.None);
 
         dto.CostPrice.ShouldBeNull();
@@ -112,7 +112,7 @@ public class ItemCostingTests
         }
 
         var dto = await Update().Handle(
-            new UpdateItemCommand { Id = item.Id, Name = "Flour", UnitName = "kg", CostPrice = 6m, YieldPercent = 90 },
+            new UpdateItemCommand { Id = item.Id, Name = "Flour", UnitName = "kilogram", CostPrice = 6m, YieldPercent = 90 },
             CancellationToken.None);
 
         dto!.CostPrice.ShouldBe(6m);
@@ -132,7 +132,7 @@ public class ItemCostingTests
         }
 
         var dto = await Update().Handle(
-            new UpdateItemCommand { Id = item.Id, Name = "Flour", UnitName = "kg", CostPrice = 4m },
+            new UpdateItemCommand { Id = item.Id, Name = "Flour", UnitName = "kilogram", CostPrice = 4m },
             CancellationToken.None);
 
         dto!.AverageCost.ShouldBe(4.5m);
@@ -152,7 +152,7 @@ public class ItemCostingTests
         }
 
         await Update().Handle(
-            new UpdateItemCommand { Id = item.Id, Name = "Flour 2", UnitName = "kg", KeepCosts = true },
+            new UpdateItemCommand { Id = item.Id, Name = "Flour 2", UnitName = "kilogram", KeepCosts = true },
             CancellationToken.None);
 
         await using var db = TestDb.Create(_db);

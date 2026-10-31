@@ -15,6 +15,30 @@ public class CreateItemHandlerTests
 
     private CreateItemHandler Handler() => new(TestDb.Create(_db), TestRequest.As(_userId), _audit, TestFakes.Alerts(TestDb.Create(_db)));
 
+    [Theory]
+    [InlineData("kg")]
+    [InlineData("ml")]
+    [InlineData("")]
+    [InlineData("pounds")]
+    public async Task Handle_UnknownUnit_IsRefused(string unit)
+    {
+        await ItemSeed.User(_db, _userId);
+
+        var ex = await Should.ThrowAsync<InvalidOperationException>(
+            () => Handler().Handle(new CreateItemCommand { Name = "Flour", UnitName = unit }, CancellationToken.None));
+
+        ex.Message.ShouldContain("Unit must be one of");
+    }
+
+    [Fact]
+    public async Task Handle_UnknownStockUnit_IsRefused()
+    {
+        await ItemSeed.User(_db, _userId);
+
+        await Should.ThrowAsync<InvalidOperationException>(() => Handler().Handle(
+            new CreateItemCommand { Name = "Flour", UnitName = "gram", StockUnitName = "sack" }, CancellationToken.None));
+    }
+
     [Fact]
     public async Task Handle_ValidItem_TrimsValuesAndSaves()
     {
@@ -24,7 +48,7 @@ public class CreateItemHandlerTests
             Name = "  Flour ",
             Sku = " F-1 ",
             Barcode = "  ",
-            UnitName = " kg ",
+            UnitName = " Kilogram ",
             StockUnitName = " ",
             CostPrice = 5
         }, CancellationToken.None);
@@ -32,7 +56,7 @@ public class CreateItemHandlerTests
         dto.Name.ShouldBe("Flour");
         dto.Sku.ShouldBe("F-1");
         dto.Barcode.ShouldBeNull();
-        dto.UnitName.ShouldBe("kg");
+        dto.UnitName.ShouldBe("kilogram");
         dto.StockUnitName.ShouldBeNull();
         dto.CreatedBy.ShouldBe(_userId);
 
@@ -47,7 +71,7 @@ public class CreateItemHandlerTests
     {
         await ItemSeed.User(_db, _userId);
         var dto = await Handler().Handle(
-            new CreateItemCommand { Name = "Flour", UnitName = "kg", StartingQuantity = 12.5m, CostPrice = 4 },
+            new CreateItemCommand { Name = "Flour", UnitName = "kilogram", StartingQuantity = 12.5m, CostPrice = 4 },
             CancellationToken.None);
 
         dto.CurrentQuantity.ShouldBe(12.5m);
@@ -68,7 +92,7 @@ public class CreateItemHandlerTests
     public async Task Handle_ZeroStartingQuantity_CreatesNoMovement()
     {
         await ItemSeed.User(_db, _userId);
-        await Handler().Handle(new CreateItemCommand { Name = "Flour", UnitName = "kg" }, CancellationToken.None);
+        await Handler().Handle(new CreateItemCommand { Name = "Flour", UnitName = "kilogram" }, CancellationToken.None);
 
         await using var db = TestDb.Create(_db);
         (await db.StockMovements.CountAsync()).ShouldBe(0);
@@ -81,7 +105,7 @@ public class CreateItemHandlerTests
         await ItemSeed.Item(_db, _userId, sku: "F-1");
 
         await Should.ThrowAsync<InvalidOperationException>(() => Handler().Handle(
-            new CreateItemCommand { Name = "Other", UnitName = "kg", Sku = "F-1" }, CancellationToken.None));
+            new CreateItemCommand { Name = "Other", UnitName = "kilogram", Sku = "F-1" }, CancellationToken.None));
 
         await using var db = TestDb.Create(_db);
         (await db.Items.CountAsync()).ShouldBe(1);
@@ -92,7 +116,7 @@ public class CreateItemHandlerTests
     public async Task Handle_ValidItem_IsAudited()
     {
         await ItemSeed.User(_db, _userId);
-        var dto = await Handler().Handle(new CreateItemCommand { Name = "Flour", UnitName = "kg" }, CancellationToken.None);
+        var dto = await Handler().Handle(new CreateItemCommand { Name = "Flour", UnitName = "kilogram" }, CancellationToken.None);
 
         await _audit.Received(1).LogAsync(AuditAction.ItemCreated, AuditEntityType.Item, dto.Id.ToString(),
             Arg.Any<object?>(), Arg.Any<object?>(), _userId, Arg.Any<CancellationToken>());

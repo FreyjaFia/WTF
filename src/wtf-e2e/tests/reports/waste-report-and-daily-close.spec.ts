@@ -53,7 +53,7 @@ test.describe('waste in the reports @reports @waste', () => {
   });
 
   test('Daily Close lists waste with its quantity and unit', async ({ api }) => {
-    const item = await api.items.create({ startingQuantity: 50, unitName: 'pc' });
+    const item = await api.items.create({ startingQuantity: 50, unitName: 'piece' });
     await api.waste.record(item.id, { quantity: 3 });
 
     const date = today();
