@@ -25,7 +25,8 @@ public class GetProductRecipePreviewHandler(WTFDbContext db) : IRequestHandler<G
             return null;
         }
 
-        var addOnIds = request.AddOnIds.Distinct().ToList();
+        var countById = request.AddOnIds.GroupBy(id => id).ToDictionary(group => group.Key, group => group.Count());
+        var addOnIds = countById.Keys.ToList();
         var options = await db.ProductAddOns
             .AsNoTracking()
             .Where(pa => pa.ProductId == product.Id && pa.IsActive && pa.AddOn.IsActive)
@@ -34,7 +35,6 @@ public class GetProductRecipePreviewHandler(WTFDbContext db) : IRequestHandler<G
                 pa.AddOnId,
                 pa.AddOn.Name,
                 pa.AddOnTypeId,
-                pa.AddOn.RecipeMultiplier,
                 Price = pa.ProductAddOnPriceOverride != null && pa.ProductAddOnPriceOverride.IsActive
                     ? pa.ProductAddOnPriceOverride.Price
                     : pa.AddOn.Price
@@ -49,21 +49,21 @@ public class GetProductRecipePreviewHandler(WTFDbContext db) : IRequestHandler<G
 
         var sizes = options
             .Where(option => option.AddOnTypeId == (int)AddOnTypeEnum.Size)
-            .Select(option => (Id: option.AddOnId, option.Name, Multiplier: option.RecipeMultiplier))
+            .Select(option => (Id: option.AddOnId, option.Name))
             .ToList();
         var parentLine = new StockLine(Guid.NewGuid(), null, product.Id, 1);
         var lines = new List<StockLine> { parentLine };
-        lines.AddRange(chosen.Select(option => new StockLine(Guid.NewGuid(), parentLine.LineId, option.AddOnId, 1, option.RecipeMultiplier)));
+        lines.AddRange(chosen.Select(option => new StockLine(Guid.NewGuid(), parentLine.LineId, option.AddOnId, countById[option.AddOnId])));
 
         var productIds = lines.Select(line => line.ProductId).Distinct().ToList();
         var activeLinks = await db.ProductItemLinks
             .AsNoTracking()
             .Where(link => link.IsActive && productIds.Contains(link.ProductId) && link.Item.IsActive)
-            .Select(link => new { link.ProductId, link.ItemId, link.QuantityPerSale, link.AllowancePercent, link.ScalesWithSize, link.ReplacesItemId })
+            .Select(link => new { link.ProductId, link.ItemId, link.QuantityPerSale, link.AllowancePercent, link.ReplacesItemId })
             .ToListAsync(cancellationToken);
         var links = activeLinks
             .Select(link => new StockLink(
-                link.ProductId, link.ItemId, CostRules.EffectiveQuantity(link.QuantityPerSale, link.AllowancePercent), link.ScalesWithSize, link.ReplacesItemId))
+                link.ProductId, link.ItemId, CostRules.EffectiveQuantity(link.QuantityPerSale, link.AllowancePercent), link.ReplacesItemId))
             .ToList();
 
         var sizeAmounts = await db.ProductSizeAmounts
@@ -109,14 +109,20 @@ public class GetProductRecipePreviewHandler(WTFDbContext db) : IRequestHandler<G
                 requirement.ProductId == product.Id ? null : names[requirement.ProductId]));
         }
 
+        costLines = costLines
+            .OrderBy(line => line.SourceName is not null)
+            .ThenBy(line => line.SourceName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(line => line.ItemName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
         var summary = CostRules.RecipeCost(costLines.Select(line => new RecipeLine(line.Quantity, line.UnitCost)), product.SuppliesCost);
-        var price = product.Price + chosen.Sum(option => option.Price);
+        var price = product.Price + chosen.Sum(option => option.Price * countById[option.AddOnId]);
 
         return new RecipePreviewDto(
             product.Id,
             product.Name,
             price,
-            chosen.Select(option => option.Name).ToList(),
+            chosen.Select(option => countById[option.AddOnId] > 1 ? $"{option.Name} x{countById[option.AddOnId]}" : option.Name).ToList(),
             costLines,
             replaced.Distinct().OrderBy(name => name).ToList(),
             product.SuppliesCost,
@@ -124,13 +130,12 @@ public class GetProductRecipePreviewHandler(WTFDbContext db) : IRequestHandler<G
             summary.UnknownCostCount,
             CostRules.Margin(price, summary.TotalCost),
             CostRules.MarginPercent(price, summary.TotalCost),
-            Warnings(sizes, chosen.Select(option => option.AddOnId).ToHashSet(), links.Any(link => link.ProductId == product.Id && link.ScalesWithSize), sizeAmounts));
+            Warnings(sizes, chosen.Select(option => option.AddOnId).ToHashSet(), sizeAmounts));
     }
 
     private static List<string> Warnings(
-        List<(Guid Id, string Name, decimal Multiplier)> sizes,
+        List<(Guid Id, string Name)> sizes,
         HashSet<Guid> chosenIds,
-        bool hasScalingLine,
         List<StockSizeAmount> sizeAmounts)
     {
         var warnings = new List<string>();
@@ -140,11 +145,6 @@ public class GetProductRecipePreviewHandler(WTFDbContext db) : IRequestHandler<G
             warnings.AddRange(sizes
                 .Where(size => chosenIds.Contains(size.Id) && sizeAmounts.All(amount => amount.SizeProductId != size.Id))
                 .Select(size => $"{size.Name} has no amounts of its own, so it uses the base amounts."));
-        }
-
-        if (hasScalingLine && sizes.Count > 0 && sizes.All(size => size.Multiplier == 1m) && sizeAmounts.Count == 0)
-        {
-            warnings.Add("An ingredient is set to scale with size, but no size has a multiplier, so it never changes.");
         }
 
         return warnings;

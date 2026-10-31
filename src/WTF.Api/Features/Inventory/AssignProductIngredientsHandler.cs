@@ -12,7 +12,7 @@ namespace WTF.Api.Features.Inventory;
 
 public record ProductSizeAmountInputDto(
     Guid SizeProductId,
-    [Range(0.001, 999999.999)]
+    [Range(0, 999999.999)]
     decimal Quantity);
 
 public record ProductIngredientInputDto(
@@ -21,7 +21,6 @@ public record ProductIngredientInputDto(
     decimal QuantityPerSale,
     [Range(0, 100)]
     decimal AllowancePercent = 0m,
-    bool ScalesWithSize = false,
     Guid? ReplacesItemId = null,
     List<ProductSizeAmountInputDto>? SizeAmounts = null);
 
@@ -109,7 +108,6 @@ public class AssignProductIngredientsHandler(
             {
                 link.QuantityPerSale = line.QuantityPerSale;
                 link.AllowancePercent = line.AllowancePercent;
-                link.ScalesWithSize = line.ScalesWithSize;
                 link.ReplacesItemId = line.ReplacesItemId;
                 link.IsActive = true;
                 link.UpdatedAt = now;
@@ -123,7 +121,6 @@ public class AssignProductIngredientsHandler(
                 ItemId = line.ItemId,
                 QuantityPerSale = line.QuantityPerSale,
                 AllowancePercent = line.AllowancePercent,
-                ScalesWithSize = line.ScalesWithSize,
                 ReplacesItemId = line.ReplacesItemId,
                 IsActive = true,
                 CreatedAt = now,
@@ -144,7 +141,7 @@ public class AssignProductIngredientsHandler(
                 ProductId = product.Id,
                 LineCount = lines.Count,
                 RemovedItemIds = removed.Select(link => link.ItemId),
-                Lines = lines.Select(line => new { line.ItemId, line.QuantityPerSale, line.AllowancePercent, line.ScalesWithSize, line.ReplacesItemId, SizeAmounts = line.SizeAmounts ?? [] })
+                Lines = lines.Select(line => new { line.ItemId, line.QuantityPerSale, line.AllowancePercent, line.ReplacesItemId, SizeAmounts = line.SizeAmounts ?? [] })
             },
             userId: userId,
             cancellationToken: cancellationToken);
@@ -171,9 +168,9 @@ public class AssignProductIngredientsHandler(
             throw new InvalidOperationException("An ingredient can have only one amount per size.");
         }
 
-        if (amounts.Any(amount => amount.Quantity <= 0))
+        if (amounts.Any(amount => amount.Quantity < 0))
         {
-            throw new InvalidOperationException("The amount for a size must be greater than zero.");
+            throw new InvalidOperationException("The amount for a size cannot be negative.");
         }
 
         var sizeIds = await db.ProductAddOns

@@ -54,9 +54,7 @@ public class SharedCasesTests
 
     private sealed record ShortfallBalanceCase(string ItemId, decimal Balance);
 
-    private sealed record ShortfallLinkCase(string ProductId, string ItemId, decimal PerSale, bool ScalesWithSize = false, string? ReplacesItemId = null);
-
-    private sealed record ShortfallMultiplierCase(string ProductId, decimal Multiplier);
+    private sealed record ShortfallLinkCase(string ProductId, string ItemId, decimal PerSale, string? ReplacesItemId = null);
 
     private sealed record ShortfallAddOnCase(string ProductId, int Quantity);
 
@@ -72,7 +70,6 @@ public class SharedCasesTests
         List<ShortfallLinkCase> Links,
         List<ShortfallLineCase> Lines,
         List<ShortfallExpectedCase> Expected,
-        List<ShortfallMultiplierCase>? Multipliers = null,
         List<ShortfallSizeAmountCase>? SizeAmounts = null);
 
     private sealed record Cases(
@@ -285,15 +282,13 @@ public class SharedCasesTests
                 Guid.NewGuid(),
                 lineId,
                 IdFor(addOn.ProductId),
-                addOn.Quantity,
-                c.Multipliers?.SingleOrDefault(m => m.ProductId == addOn.ProductId)?.Multiplier ?? 1m)));
+                addOn.Quantity)));
         }
 
         var links = c.Links.Select(link => new StockLink(
             IdFor(link.ProductId),
             IdFor(link.ItemId),
             link.PerSale,
-            link.ScalesWithSize,
             link.ReplacesItemId is null ? null : IdFor(link.ReplacesItemId))).ToList();
         var balances = c.Balances.ToDictionary(balance => IdFor(balance.ItemId), balance => balance.Balance);
 

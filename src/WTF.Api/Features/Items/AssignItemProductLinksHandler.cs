@@ -88,7 +88,6 @@ public class AssignItemProductLinksHandler(
             {
                 existing.QuantityPerSale = link.QuantityPerSale;
                 existing.AllowancePercent = link.AllowancePercent;
-                existing.ScalesWithSize = link.ScalesWithSize;
                 existing.ReplacesItemId = link.ReplacesItemId;
                 existing.IsActive = link.IsActive;
                 existing.UpdatedAt = DateTime.UtcNow;
@@ -102,7 +101,6 @@ public class AssignItemProductLinksHandler(
                 ProductId = link.ProductId,
                 QuantityPerSale = link.QuantityPerSale,
                 AllowancePercent = link.AllowancePercent,
-                ScalesWithSize = link.ScalesWithSize,
                 ReplacesItemId = link.ReplacesItemId,
                 IsActive = link.IsActive,
                 CreatedAt = DateTime.UtcNow,
@@ -126,7 +124,6 @@ public class AssignItemProductLinksHandler(
                     link.ProductId,
                     link.QuantityPerSale,
                     link.AllowancePercent,
-                    link.ScalesWithSize,
                     link.ReplacesItemId,
                     link.IsActive
                 })

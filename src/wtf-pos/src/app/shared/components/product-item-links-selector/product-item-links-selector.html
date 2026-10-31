@@ -222,35 +222,20 @@
                       <span class="shrink-0 text-[10px] font-normal text-gray-400 normal-case">%</span>
                     </span>
                   </label>
-                  <label
-                    class="flex h-7 items-center gap-1.5 text-[11px] font-normal text-gray-600"
-                    title="Multiplied by the size add-on on the same drink"
-                  >
-                    <input
-                      type="checkbox"
-                      class="checkbox checkbox-xs"
-                      data-testid="scales-input"
-                      [checked]="product.scalesWithSize"
-                      (change)="onScalesWithSizeChange(product.productId, $any($event.target).checked)"
-                    />
-                    Scales with size
-                  </label>
                   @if (product.isAddOn) {
-                    <label class="flex min-w-0 flex-col gap-0.5 text-[10px] font-semibold tracking-wide text-gray-400 uppercase">
-                      Replaces
-                      <select
-                        class="select select-xs h-7 w-full max-w-44 border-gray-200 bg-surface text-[10px] font-normal text-gray-800 normal-case"
-                        aria-label="Replaces"
-                        data-testid="replaces-select"
-                        [value]="product.replacesItemId ?? ''"
-                        (change)="onReplacesChange(product.productId, $any($event.target).value)"
-                      >
-                        <option value="">Nothing</option>
-                        @for (item of replaceableItems(); track item.id) {
-                          <option [value]="item.id" [selected]="item.id === product.replacesItemId">{{ item.name }}</option>
-                        }
-                      </select>
-                    </label>
+                    <div class="flex min-w-0 flex-col gap-0.5">
+                      <span class="text-[10px] font-semibold tracking-wide text-gray-400 uppercase">Replaces</span>
+                      <app-select-dropdown
+                        class="w-56"
+                        testId="replaces-select"
+                        [small]="true"
+                        emptyLabel="Nothing"
+                        searchPlaceholder="Search ingredients..."
+                        [options]="replaceOptions()"
+                        [selectedId]="product.replacesItemId"
+                        (selectedIdChange)="onReplacesChange(product.productId, $event)"
+                      />
+                    </div>
                   }
                 </div>
 

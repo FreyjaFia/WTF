@@ -5,8 +5,7 @@ import { StockCartLine, stockShortfalls } from './stock-limits';
 interface ShortfallCase {
   name: string;
   balances: { itemId: string; balance: number }[];
-  links: { productId: string; itemId: string; perSale: number; scalesWithSize?: boolean; replacesItemId?: string }[];
-  multipliers?: { productId: string; multiplier: number }[];
+  links: { productId: string; itemId: string; perSale: number; replacesItemId?: string }[];
   sizeAmounts?: { productId: string; sizeProductId: string; itemId: string; quantity: number }[];
   lines: { productId: string; quantity: number; addOns: { productId: string; quantity: number }[] }[];
   expected: { itemId: string; needed: number; balance: number; short: number }[];
@@ -20,11 +19,9 @@ describe('stock shortfalls: the cases shared with the API', () => {
         productId: link.productId,
         itemId: link.itemId,
         quantityPerSale: link.perSale,
-        scalesWithSize: link.scalesWithSize,
         replacesItemId: link.replacesItemId,
       })),
       c.balances.map((b) => ({ id: b.itemId, balance: b.balance })),
-      c.multipliers ?? [],
       c.sizeAmounts ?? [],
     );
 
@@ -74,45 +71,7 @@ describe('stock shortfalls: which cart lines are involved', () => {
   });
 });
 
-describe('stock shortfalls: size scaling and replacement', () => {
-  const balances = [
-    { id: 'milk', balance: 100 },
-    { id: 'oat', balance: 100 },
-  ];
-  const multipliers = [{ productId: 'large', multiplier: 1.5 }];
-
-  it('scales only the links marked scales with size', () => {
-    const links = [
-      { productId: 'latte', itemId: 'milk', quantityPerSale: 100, scalesWithSize: true },
-      { productId: 'latte', itemId: 'oat', quantityPerSale: 10 },
-    ];
-    const lines: StockCartLine[] = [{ key: 'a', productId: 'latte', quantity: 1, addOns: [{ productId: 'large', quantity: 1 }] }];
-
-    const result = stockShortfalls(lines, links, [{ id: 'milk', balance: 100 }, { id: 'oat', balance: 5 }], multipliers);
-
-    expect(result.map((r) => [r.itemId, r.needed])).toEqual([
-      ['milk', 150],
-      ['oat', 10],
-    ]);
-  });
-
-  it('scales the links of another add-on on the same line', () => {
-    const links = [{ productId: 'shot', itemId: 'milk', quantityPerSale: 40, scalesWithSize: true }];
-    const lines: StockCartLine[] = [
-      {
-        key: 'a',
-        productId: 'latte',
-        quantity: 2,
-        addOns: [{ productId: 'large', quantity: 1 }, { productId: 'shot', quantity: 1 }],
-      },
-    ];
-
-    const [result] = stockShortfalls(lines, links, balances, multipliers);
-
-    expect(result.needed).toBe(120);
-    expect(result.short).toBe(20);
-  });
-
+describe('stock shortfalls: replacement', () => {
   it('skips the drink link for a replaced item but names no line for it', () => {
     const links = [
       { productId: 'latte', itemId: 'milk', quantityPerSale: 200 },

@@ -9,7 +9,7 @@ interface IngredientsEdit {
 
 test.describe('Amounts per size and the preview @stock @ingredients', () => {
   test('an admin types a size amount, saves it and the preview uses it', async ({ api, signIn }) => {
-    const milk = await api.items.create({ unitName: 'ml', startingQuantity: 5000, costPrice: 0.1 });
+    const milk = await api.items.create({ unitName: 'milliliter', startingQuantity: 5000, costPrice: 0.1 });
     const { drink, size } = await api.products.withSize(150, 30);
     await api.items.linkProducts(milk.id, [{ productId: drink.id, quantityPerSale: 200 }]);
 
@@ -31,31 +31,14 @@ test.describe('Amounts per size and the preview @stock @ingredients', () => {
     );
     expect(saved.lines[0].sizeAmounts).toEqual([{ sizeProductId: size.id, quantity: 300 }]);
 
-    await page.getByTestId('preview-size').selectOption({ value: size.id });
+    await page.getByTestId('preview-option').filter({ hasText: size.name }).click();
     await expect(page.getByTestId('preview-cost')).toContainText('30.00');
     await expect(page.getByTestId('preview-price')).toContainText('180.00');
     await expect(page.getByTestId('preview-line').first()).toContainText('300');
   });
 
-  test('Fill uses the amount times the size multiplier and skips whole pieces', async ({ api, signIn }) => {
-    const milk = await api.items.create({ unitName: 'ml', startingQuantity: 5000, costPrice: 0.1 });
-    const cup = await api.items.create({ unitName: 'pc', startingQuantity: 100, costPrice: 4 });
-    const { drink, size } = await api.products.withSize(150, 30);
-    await api.client.json('superadmin', 'PUT', `products/${size.id}/recipe-multiplier`, { multiplier: 1.5 });
-    await api.items.linkProducts(milk.id, [{ productId: drink.id, quantityPerSale: 200 }]);
-    await api.items.linkProducts(cup.id, [{ productId: drink.id, quantityPerSale: 1 }]);
-
-    const page = await signIn('admin');
-    await page.goto(`/inventory/ingredients/${drink.id}`);
-    await page.getByTestId('fill-size').click();
-
-    const cells = page.getByTestId('size-amount');
-    const values = await cells.evaluateAll((inputs) => inputs.map((input) => (input as HTMLInputElement).value));
-    expect([...values].sort()).toEqual(['', '300']);
-  });
-
   test('a stock manager sees the grid without any cost or preview', async ({ api, signIn }) => {
-    const milk = await api.items.create({ unitName: 'ml', startingQuantity: 5000, costPrice: 0.1 });
+    const milk = await api.items.create({ unitName: 'milliliter', startingQuantity: 5000, costPrice: 0.1 });
     const { drink } = await api.products.withSize(150, 30);
     await api.items.linkProducts(milk.id, [{ productId: drink.id, quantityPerSale: 200 }]);
 

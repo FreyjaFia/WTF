@@ -18,6 +18,10 @@ import {
 } from '@shared/calculations/recipe-cost';
 import { IconComponent, PageTitleComponent } from '@shared/components';
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
+import {
+  SelectDropdownComponent,
+  SelectDropdownOption,
+} from '@shared/components/select-dropdown/select-dropdown';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { getInventoryUnitAbbreviation } from '@shared/constants/inventory-units';
 import {
@@ -33,7 +37,6 @@ type LineGroup = FormGroup<{
   itemId: FormControl<string>;
   quantityPerSale: FormControl<number>;
   allowancePercent: FormControl<number>;
-  scalesWithSize: FormControl<boolean>;
   replacesItemId: FormControl<string>;
   sizeAmounts: FormRecord<FormControl<number | null>>;
 }>;
@@ -42,10 +45,20 @@ interface LineValue {
   itemId: string;
   quantityPerSale: number;
   allowancePercent: number;
-  scalesWithSize: boolean;
   replacesItemId: string;
   sizeAmounts: Record<string, number>;
 }
+
+const MAX_PREVIEW_QUANTITY = 9;
+const PREVIEW_GROUP_ORDER = [1, 2, 5, 3, 4];
+const RADIO_TYPES = new Set([1, 2, 5]);
+const PREVIEW_GROUP_HEADERS: Record<number, string> = {
+  1: 'Sizes',
+  2: 'Flavors',
+  5: 'Sauces',
+  3: 'Toppings',
+  4: 'Extras',
+};
 
 @Component({
   selector: 'app-ingredient-editor',
@@ -55,6 +68,7 @@ interface LineValue {
     IconComponent,
     PageTitleComponent,
     ConfirmDialogComponent,
+    SelectDropdownComponent,
   ],
   templateUrl: './ingredient-editor.html',
   host: { class: 'flex-1 min-h-0' },
@@ -74,8 +88,7 @@ export class IngredientEditorComponent implements OnInit {
   protected readonly showDiscardModal = signal(false);
   protected readonly formVersion = signal(0);
   protected readonly preview = signal<RecipePreviewDto | null>(null);
-  protected readonly previewSizeId = signal('');
-  protected readonly previewAddOnIds = signal<string[]>([]);
+  protected readonly previewQuantities = signal<Record<string, number>>({});
 
   protected readonly form = new FormGroup({
     suppliesCost: new FormControl(0, {
@@ -91,12 +104,15 @@ export class IngredientEditorComponent implements OnInit {
     () => this.showsCosts() && this.authService.canWriteInventoryCosts() && this.canWrite(),
   );
   protected readonly sizes = computed(() => this.product()?.sizes ?? []);
-  protected readonly previewSizes = computed(() =>
-    (this.product()?.addOnOptions ?? []).filter((option) => option.isSize),
-  );
-  protected readonly previewExtras = computed(() =>
-    (this.product()?.addOnOptions ?? []).filter((option) => !option.isSize),
-  );
+  protected readonly previewGroups = computed(() => {
+    const options = this.product()?.addOnOptions ?? [];
+    return PREVIEW_GROUP_ORDER.map((type) => ({
+      type,
+      header: PREVIEW_GROUP_HEADERS[type],
+      isRadio: RADIO_TYPES.has(type),
+      options: options.filter((option) => (option.addOnType || (option.isSize ? 1 : 4)) === type),
+    })).filter((group) => group.options.length > 0);
+  });
   protected readonly showsSizeGrid = computed(
     () => !(this.product()?.isAddOn ?? true) && this.sizes().length > 0,
   );
@@ -181,6 +197,36 @@ export class IngredientEditorComponent implements OnInit {
     this.formVersion.update((v) => v + 1);
   }
 
+  protected readonly unusedOptions = computed<SelectDropdownOption[]>(() =>
+    this.unusedItems().map((item) => ({ id: item.id, label: item.name })),
+  );
+
+  protected itemOptionList(index: number): SelectDropdownOption[] {
+    return this.itemOptionsFor(index).map((item) => ({ id: item.id, label: item.name }));
+  }
+
+  protected replaceOptions(itemId: string): SelectDropdownOption[] {
+    return this.items()
+      .filter((item) => item.id !== itemId)
+      .map((item) => ({ id: item.id, label: item.name }));
+  }
+
+  protected changeItem(group: LineGroup, itemId: string | null): void {
+    if (!itemId) {
+      return;
+    }
+
+    group.controls.itemId.setValue(itemId);
+    group.controls.itemId.markAsDirty();
+    this.formVersion.update((v) => v + 1);
+  }
+
+  protected changeReplaces(group: LineGroup, itemId: string | null): void {
+    group.controls.replacesItemId.setValue(itemId ?? "");
+    group.controls.replacesItemId.markAsDirty();
+    this.formVersion.update((v) => v + 1);
+  }
+
   protected itemOptionsFor(index: number): ItemDto[] {
     const current = this.lines.at(index).controls.itemId.value;
     const free = new Set(this.unusedItems().map((item) => item.id));
@@ -244,38 +290,49 @@ export class IngredientEditorComponent implements OnInit {
       });
   }
 
-  protected fillSize(sizeId: string): void {
-    const multiplier =
-      this.sizes().find((size) => size.productId === sizeId)?.recipeMultiplier ?? 1;
-    for (const group of this.lines.controls) {
-      const cell = group.controls.sizeAmounts.controls[sizeId];
-      const base = Number(group.controls.quantityPerSale.value) || 0;
-      const scaled = Math.round(base * multiplier * 1000) / 1000;
-      // A whole piece (a cup, a lid) cannot be scaled by 1.5, so it keeps the drink's amount
-      const isWholePiece =
-        this.unitOf(group.controls.itemId.value) === 'pc' && !Number.isInteger(scaled);
-      if (cell && (cell.value === null || cell.value === undefined) && base > 0 && !isWholePiece) {
-        cell.setValue(scaled);
-      }
-    }
-
-    this.form.markAsDirty();
-    this.formVersion.update((v) => v + 1);
-  }
-
   protected sizeCell(group: LineGroup, sizeId: string): FormControl<number | null> {
     return group.controls.sizeAmounts.controls[sizeId];
   }
 
-  protected chooseSize(sizeId: string): void {
-    this.previewSizeId.set(sizeId);
+  protected previewQuantityOf(addOnId: string): number {
+    return this.previewQuantities()[addOnId] ?? 0;
+  }
+
+  protected selectPreviewOption(
+    group: { isRadio: boolean; options: { productId: string }[] },
+    addOnId: string,
+  ): void {
+    const wasChosen = this.previewQuantityOf(addOnId) > 0;
+    this.previewQuantities.update((all) => {
+      const next = { ...all };
+      if (group.isRadio) {
+        group.options.forEach((option) => delete next[option.productId]);
+      }
+
+      if (wasChosen) {
+        delete next[addOnId];
+      } else {
+        next[addOnId] = 1;
+      }
+
+      return next;
+    });
     this.loadPreview();
   }
 
-  protected toggleExtra(addOnId: string, on: boolean): void {
-    this.previewAddOnIds.update((ids) =>
-      on ? [...ids.filter((id) => id !== addOnId), addOnId] : ids.filter((id) => id !== addOnId),
-    );
+  protected changePreviewQuantity(addOnId: string, delta: number, event: Event): void {
+    event.stopPropagation();
+    const next = Math.min(MAX_PREVIEW_QUANTITY, Math.max(0, this.previewQuantityOf(addOnId) + delta));
+    this.previewQuantities.update((all) => {
+      const copy = { ...all };
+      if (next === 0) {
+        delete copy[addOnId];
+      } else {
+        copy[addOnId] = next;
+      }
+
+      return copy;
+    });
     this.loadPreview();
   }
 
@@ -321,10 +378,9 @@ export class IngredientEditorComponent implements OnInit {
       return;
     }
 
-    const ids = [...this.previewAddOnIds()];
-    if (this.previewSizeId()) {
-      ids.push(this.previewSizeId());
-    }
+    const ids = Object.entries(this.previewQuantities()).flatMap(([id, quantity]) =>
+      Array<string>(quantity).fill(id),
+    );
 
     this.inventoryService.getProductRecipePreview(this.productId, ids).subscribe({
       next: (result) => this.preview.set(result),
@@ -341,7 +397,6 @@ export class IngredientEditorComponent implements OnInit {
           itemId: line.itemId,
           quantityPerSale: line.quantityPerSale,
           allowancePercent: line.allowancePercent,
-          scalesWithSize: line.scalesWithSize,
           replacesItemId: line.replacesItemId ?? '',
           sizeAmounts: Object.fromEntries(
             (line.sizeAmounts ?? []).map((amount) => [amount.sizeProductId, amount.quantity]),
@@ -373,14 +428,13 @@ export class IngredientEditorComponent implements OnInit {
         nonNullable: true,
         validators: [Validators.min(0), Validators.max(100)],
       }),
-      scalesWithSize: new FormControl(value.scalesWithSize ?? false, { nonNullable: true }),
       replacesItemId: new FormControl(value.replacesItemId ?? '', { nonNullable: true }),
       sizeAmounts: new FormRecord<FormControl<number | null>>(
         Object.fromEntries(
           this.sizes().map((size) => [
             size.productId,
             new FormControl<number | null>(value.sizeAmounts?.[size.productId] ?? null, {
-              validators: [Validators.min(0.001), Validators.max(999999.999)],
+              validators: [Validators.min(0), Validators.max(999999.999)],
             }),
           ]),
         ),
@@ -396,10 +450,9 @@ export class IngredientEditorComponent implements OnInit {
         itemId: value.itemId,
         quantityPerSale: Number(value.quantityPerSale),
         allowancePercent: Number(value.allowancePercent) || 0,
-        scalesWithSize: value.scalesWithSize,
         replacesItemId: isAddOn && value.replacesItemId ? value.replacesItemId : null,
         sizeAmounts: Object.entries(value.sizeAmounts)
-          .filter(([, quantity]) => quantity !== null && Number(quantity) > 0)
+          .filter(([, quantity]) => quantity !== null && quantity !== undefined && String(quantity) !== '' && Number(quantity) >= 0)
           .map(([sizeProductId, quantity]) => ({ sizeProductId, quantity: Number(quantity) })),
       };
     });

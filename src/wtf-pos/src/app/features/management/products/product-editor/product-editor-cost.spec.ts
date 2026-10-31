@@ -27,7 +27,6 @@ function makeCost(overrides: Partial<RecipeCostDto> = {}): RecipeCostDto {
     productName: 'Latte',
     price: 150,
     isAddOn: false,
-    recipeMultiplier: 1,
     lines: [
       {
         linkId: 'l1',
@@ -36,7 +35,6 @@ function makeCost(overrides: Partial<RecipeCostDto> = {}): RecipeCostDto {
         unitName: 'ml',
         quantityPerSale: 200,
         allowancePercent: 5,
-        scalesWithSize: false,
         replacesItemId: null,
         replacesItemName: null,
         effectiveQuantity: 210,
@@ -50,7 +48,6 @@ function makeCost(overrides: Partial<RecipeCostDto> = {}): RecipeCostDto {
         unitName: 'pc',
         quantityPerSale: 1,
         allowancePercent: 0,
-        scalesWithSize: false,
         replacesItemId: null,
         replacesItemName: null,
         effectiveQuantity: 1,
@@ -83,7 +80,6 @@ describe('ProductEditorComponent: recipe cost card', () => {
     const inventory = {
       getInventoryItems: vi.fn(() => of([])),
       getProductRecipeCost: vi.fn(() => (fail ? throwError(() => new Error('403')) : of(cost))),
-      setRecipeMultiplier: vi.fn(() => of(undefined)),
       setSuppliesCost: vi.fn(() => of(undefined)),
     };
     const alerts = { error: vi.fn(), successSaved: vi.fn() };
@@ -192,75 +188,14 @@ describe('ProductEditorComponent: recipe cost card', () => {
     expect(card()!.querySelector('[data-testid="recipe-total"]')).toBeNull();
   });
 
-  it('tags lines that scale with size or replace an item', () => {
+  it('tags lines that replace an item', () => {
     const cost = makeCost();
-    cost.lines[0] = { ...cost.lines[0], scalesWithSize: true, replacesItemId: 'dairy', replacesItemName: 'Dairy Milk' };
+    cost.lines[0] = { ...cost.lines[0], replacesItemId: 'dairy', replacesItemName: 'Dairy Milk' };
     const { card } = setup({ cost });
     const lines = card()!.querySelectorAll('[data-testid="recipe-line"]');
 
-    expect(lines[0].querySelector('[data-testid="scales-tag"]')!.textContent).toContain('scales with size');
     expect(lines[0].querySelector('[data-testid="replaces-tag"]')!.textContent).toContain('replaces Dairy Milk');
-    expect(lines[1].querySelector('[data-testid="scales-tag"]')).toBeNull();
     expect(lines[1].querySelector('[data-testid="replaces-tag"]')).toBeNull();
-  });
-
-  describe('size multiplier', () => {
-    const addOnCost = (multiplier = 1.5): RecipeCostDto => makeCost({ isAddOn: true, recipeMultiplier: multiplier });
-
-    it('is not shown for a drink', () => {
-      const { card } = setup({ canWriteProducts: true });
-
-      expect(card()!.querySelector('[data-testid="multiplier-editor"]')).toBeNull();
-      expect(card()!.querySelector('[data-testid="multiplier-readonly"]')).toBeNull();
-    });
-
-    it('lets a product writer edit and save it, then reloads the card', () => {
-      const { card, inventory, alerts, fixture, c } = setup({ canWriteProducts: true, cost: addOnCost() });
-      const input = card()!.querySelector('[data-testid="multiplier-input"]') as HTMLInputElement;
-
-      expect(input.value).toBe('1.5');
-      c.multiplierControl.setValue(2);
-      fixture.detectChanges();
-      (card()!.querySelector('[data-testid="multiplier-save"]') as HTMLButtonElement).click();
-
-      expect(inventory.setRecipeMultiplier).toHaveBeenCalledWith('p1', 2);
-      expect(inventory.getProductRecipeCost).toHaveBeenCalledTimes(2);
-      expect(alerts.successSaved).toHaveBeenCalledWith('Size multiplier');
-    });
-
-    it('refuses a value outside 0.01 to 10', () => {
-      const { card, inventory, fixture, c } = setup({ canWriteProducts: true, cost: addOnCost() });
-      c.multiplierControl.setValue(11);
-      fixture.detectChanges();
-
-      expect((card()!.querySelector('[data-testid="multiplier-save"]') as HTMLButtonElement).disabled).toBe(true);
-      c.saveMultiplier();
-      expect(inventory.setRecipeMultiplier).not.toHaveBeenCalled();
-    });
-
-    it('shows the error when saving fails', () => {
-      const { inventory, alerts, c } = setup({ canWriteProducts: true, cost: addOnCost() });
-      inventory.setRecipeMultiplier.mockReturnValue(throwError(() => new Error('Nope')));
-      c.saveMultiplier();
-
-      expect(alerts.error).toHaveBeenCalledWith('Nope');
-      expect(c.isMultiplierSaving()).toBe(false);
-    });
-
-    it('shows it read-only to cost-only roles when it is not 1', () => {
-      const { card } = setup({ cost: addOnCost() });
-
-      expect(card()!.querySelector('[data-testid="multiplier-editor"]')).toBeNull();
-      expect(card()!.querySelector('[data-testid="multiplier-readonly"]')!.textContent).toContain(
-        'Size multiplier 1.5x',
-      );
-    });
-
-    it('shows nothing to cost-only roles when it is 1', () => {
-      const { card } = setup({ cost: addOnCost(1) });
-
-      expect(card()!.querySelector('[data-testid="multiplier-readonly"]')).toBeNull();
-    });
   });
 
   describe('supplies', () => {

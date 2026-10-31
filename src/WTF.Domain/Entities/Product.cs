@@ -28,8 +28,6 @@ public partial class Product
 
     public int? SubCategoryId { get; set; }
 
-    public decimal RecipeMultiplier { get; set; }
-
     public decimal SuppliesCost { get; set; }
 
     public virtual ProductCategory Category { get; set; } = null!;

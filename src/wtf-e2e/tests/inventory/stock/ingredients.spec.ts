@@ -16,7 +16,7 @@ interface IngredientsResult {
 
 test.describe('Ingredients & Cost page @stock @ingredients', () => {
   test('the list shows the ingredient count, cost and margin of a product', async ({ api }) => {
-    const milk = await api.items.create({ unitName: 'ml', startingQuantity: 5000, costPrice: 0.1 });
+    const milk = await api.items.create({ unitName: 'milliliter', startingQuantity: 5000, costPrice: 0.1 });
     const latte = await api.products.create({ price: 150 });
     await api.items.linkProducts(milk.id, [{ productId: latte.id, quantityPerSale: 200 }]);
 
@@ -30,7 +30,7 @@ test.describe('Ingredients & Cost page @stock @ingredients', () => {
   });
 
   test('a stock manager gets the counts but no costs', async ({ api }) => {
-    const milk = await api.items.create({ unitName: 'ml', startingQuantity: 5000, costPrice: 0.1 });
+    const milk = await api.items.create({ unitName: 'milliliter', startingQuantity: 5000, costPrice: 0.1 });
     const latte = await api.products.create({ price: 150 });
     await api.items.linkProducts(milk.id, [{ productId: latte.id, quantityPerSale: 200 }]);
 
@@ -48,7 +48,7 @@ test.describe('Ingredients & Cost page @stock @ingredients', () => {
   });
 
   test('the page shows the cost and margin line for an admin', async ({ api, signIn }) => {
-    const milk = await api.items.create({ unitName: 'ml', startingQuantity: 5000, costPrice: 0.1 });
+    const milk = await api.items.create({ unitName: 'milliliter', startingQuantity: 5000, costPrice: 0.1 });
     const latte = await api.products.create({ price: 150 });
     await api.items.linkProducts(milk.id, [{ productId: latte.id, quantityPerSale: 200 }]);
 
@@ -64,7 +64,7 @@ test.describe('Ingredients & Cost page @stock @ingredients', () => {
   });
 
   test('the page shows no cost to a stock manager', async ({ api, signIn }) => {
-    const milk = await api.items.create({ unitName: 'ml', startingQuantity: 5000, costPrice: 0.1 });
+    const milk = await api.items.create({ unitName: 'milliliter', startingQuantity: 5000, costPrice: 0.1 });
     const latte = await api.products.create({ price: 150 });
     await api.items.linkProducts(milk.id, [{ productId: latte.id, quantityPerSale: 200 }]);
 

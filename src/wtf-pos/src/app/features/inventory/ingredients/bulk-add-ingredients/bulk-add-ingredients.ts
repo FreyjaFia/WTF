@@ -1,9 +1,14 @@
 import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { FormArray, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AlertService, InventoryService } from '@core/services';
-import { SideDrawerComponent } from '@shared/components/side-drawer/side-drawer';
+import { SelectDropdownComponent, SelectDropdownOption } from '@shared/components/select-dropdown/select-dropdown';
+import { SearchInputComponent } from '@shared/components/search-input/search-input';
 import { getInventoryUnitAbbreviation } from '@shared/constants/inventory-units';
-import { BulkAddIngredientsResultDto, ItemDto, ProductIngredientsRowDto } from '@shared/models';
+import {
+  BulkAddIngredientsResultDto,
+  formatSubCategoryName, ItemDto,
+  ProductIngredientsRowDto,
+} from '@shared/models';
 
 type LineGroup = FormGroup<{
   itemId: FormControl<string>;
@@ -13,7 +18,7 @@ type LineGroup = FormGroup<{
 
 @Component({
   selector: 'app-bulk-add-ingredients',
-  imports: [ReactiveFormsModule, SideDrawerComponent],
+  imports: [ReactiveFormsModule, SearchInputComponent, SelectDropdownComponent],
   templateUrl: './bulk-add-ingredients.html',
 })
 export class BulkAddIngredientsComponent {
@@ -51,7 +56,7 @@ export class BulkAddIngredientsComponent {
   protected readonly groups = computed(() => {
     const byName = new Map<string, ProductIngredientsRowDto[]>();
     for (const product of this.shownProducts()) {
-      const name = product.subCategoryName || 'Other';
+      const name = formatSubCategoryName(product.subCategoryName) || 'Other';
       byName.set(name, [...(byName.get(name) ?? []), product]);
     }
 
@@ -68,6 +73,10 @@ export class BulkAddIngredientsComponent {
     const used = new Set(this.lines.controls.map((group) => group.controls.itemId.value));
     return this.items().filter((item) => !used.has(item.id));
   });
+
+  protected readonly unusedOptions = computed<SelectDropdownOption[]>(() =>
+    this.unusedItems().map((item) => ({ id: item.id, label: item.name })),
+  );
 
   protected readonly canSubmit = computed(() => {
     this.formVersion();

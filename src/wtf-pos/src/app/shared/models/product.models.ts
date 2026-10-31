@@ -21,6 +21,10 @@ export const PRODUCT_SUB_CATEGORY_LABELS: Record<ProductSubCategoryEnum, string>
   [ProductSubCategoryEnum.Retail]: 'Retail',
 };
 
+export function formatSubCategoryName(name: string | null | undefined): string {
+  return name ? name.replace(/^Non(?=[A-Z])/, 'Non-') : '';
+}
+
 export enum AddOnTypeEnum {
   Size = 1,
   Flavor = 2,

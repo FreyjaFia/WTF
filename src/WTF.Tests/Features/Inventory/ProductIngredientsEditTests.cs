@@ -75,7 +75,7 @@ public class ProductIngredientsEditTests
         var cup = StockSeed.Item(_db, "Cup", 50m);
 
         (await Assign().Handle(Cmd(latte,
-            new ProductIngredientInputDto(milk, 200m, 5m, true),
+            new ProductIngredientInputDto(milk, 200m, 5m),
             new ProductIngredientInputDto(cup, 1m)), CancellationToken.None)).ShouldBeTrue();
 
         await using var db = TestDb.Create(_db);
@@ -84,7 +84,6 @@ public class ProductIngredientsEditTests
         var milkLink = links.Single(l => l.ItemId == milk);
         milkLink.QuantityPerSale.ShouldBe(200m);
         milkLink.AllowancePercent.ShouldBe(5m);
-        milkLink.ScalesWithSize.ShouldBeTrue();
         milkLink.IsActive.ShouldBeTrue();
         await _audit.Received(1).LogAsync(
             AuditAction.ProductItemLinked, AuditEntityType.ProductItemLink, latte.ToString(),
@@ -181,13 +180,13 @@ public class ProductIngredientsEditTests
         var oat = StockSeed.Item(_db, "Oat milk", 1000m);
 
         var notAddOn = await Should.ThrowAsync<InvalidOperationException>(() =>
-            Assign().Handle(Cmd(latte, new ProductIngredientInputDto(oat, 200m, 0m, false, milk)), CancellationToken.None));
+            Assign().Handle(Cmd(latte, new ProductIngredientInputDto(oat, 200m, 0m, milk)), CancellationToken.None));
         notAddOn.Message.ShouldContain("Only an add-on");
 
         await Should.ThrowAsync<InvalidOperationException>(() =>
-            Assign().Handle(Cmd(oatAddOn, new ProductIngredientInputDto(oat, 200m, 0m, false, oat)), CancellationToken.None));
+            Assign().Handle(Cmd(oatAddOn, new ProductIngredientInputDto(oat, 200m, 0m, oat)), CancellationToken.None));
 
-        (await Assign().Handle(Cmd(oatAddOn, new ProductIngredientInputDto(oat, 200m, 0m, false, milk)), CancellationToken.None)).ShouldBeTrue();
+        (await Assign().Handle(Cmd(oatAddOn, new ProductIngredientInputDto(oat, 200m, 0m, milk)), CancellationToken.None)).ShouldBeTrue();
         (await Read(oatAddOn))!.Lines.Single().ReplacesItemName.ShouldBe("Milk");
     }
 }

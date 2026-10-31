@@ -15,7 +15,6 @@ describe('StockLimitsService', () => {
   const data = (): PosStockLimitsDto => ({
     items: [{ id: 'cup', name: 'Cup', unitName: 'pc', balance: 1 }],
     links: [{ productId: 'mocha', itemId: 'cup', quantityPerSale: 1 }],
-    sizeMultipliers: [{ productId: 'large', multiplier: 1.5 }],
     sizeAmounts: [{ productId: 'latte', sizeProductId: 'large', itemId: 'cup', quantity: 2 }],
     asOf: '2026-10-26T10:00:00Z',
   });
@@ -25,7 +24,6 @@ describe('StockLimitsService', () => {
 
     expect(service.items()).toEqual([]);
     expect(service.links()).toEqual([]);
-    expect(service.sizeMultipliers()).toEqual([]);
     expect(service.sizeAmounts()).toEqual([]);
     expect(service.asOf()).toBeNull();
     expect(service.hasBlockingItems()).toBe(false);
@@ -39,7 +37,6 @@ describe('StockLimitsService', () => {
     expect(result.error).toBeUndefined();
     expect(service.items().map((i) => i.name)).toEqual(['Cup']);
     expect(service.links()).toHaveLength(1);
-    expect(service.sizeMultipliers()).toEqual([{ productId: 'large', multiplier: 1.5 }]);
     expect(service.sizeAmounts()).toHaveLength(1);
     expect(service.asOf()).toBe('2026-10-26T10:00:00Z');
     expect(service.hasBlockingItems()).toBe(true);

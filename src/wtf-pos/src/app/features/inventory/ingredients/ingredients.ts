@@ -8,6 +8,7 @@ import { BulkAddIngredientsComponent } from './bulk-add-ingredients/bulk-add-ing
 import { formatPeso } from '@shared/calculations';
 import { AppRoutes } from '@shared/constants/app-routes';
 import {
+  formatSubCategoryName,
   ProductCoverageStatus,
   ProductIngredientsDto,
   ProductIngredientsRowDto,
@@ -59,6 +60,7 @@ export class IngredientsComponent implements OnInit {
   protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
   protected readonly filter = signal<IngredientsFilter>('attention');
   protected readonly search = signal('');
+  protected readonly subCategoryOf = formatSubCategoryName;
   protected readonly showAdd = signal(false);
   protected readonly canAdd = computed(() => this.authService.canWriteItems());
 

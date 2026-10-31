@@ -8,8 +8,6 @@ using WTF.Api.Services;
 
 namespace WTF.Api.Endpoints;
 
-public record SetRecipeMultiplierRequest(decimal Multiplier);
-
 public record SetSuppliesCostRequest(decimal Amount);
 
 public static class ProductEndpoints
@@ -101,15 +99,6 @@ public static class ProductEndpoints
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             })
             .RequireAuthorization(AppPolicies.InventoryCostsRead);
-
-        // PUT /api/products/{id}/recipe-multiplier - How much of a drink's size-scaled recipe a size add-on uses
-        productGroup.MapPut("/{id:guid}/recipe-multiplier",
-            async (Guid id, SetRecipeMultiplierRequest request, ISender sender) =>
-            {
-                var result = await sender.Send(new SetRecipeMultiplierCommand(id, request.Multiplier));
-                return result ? Results.NoContent() : Results.NotFound();
-            })
-            .RequireAuthorization(AppPolicies.ProductsWrite);
 
         // PUT /api/products/{id}/supplies-cost - A fixed per-sale cost for ice, straws and napkins (cost editors only)
         productGroup.MapPut("/{id:guid}/supplies-cost",

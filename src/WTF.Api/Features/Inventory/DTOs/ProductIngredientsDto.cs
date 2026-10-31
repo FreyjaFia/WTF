@@ -23,9 +23,9 @@ public record ProductIngredientsDto(
     bool ShowsCosts,
     List<ProductIngredientsRowDto> Products);
 
-public record ProductIngredientSizeDto(Guid ProductId, string Name, decimal RecipeMultiplier);
+public record ProductIngredientSizeDto(Guid ProductId, string Name);
 
-public record ProductIngredientAddOnOptionDto(Guid ProductId, string Name, bool IsSize, decimal RecipeMultiplier);
+public record ProductIngredientAddOnOptionDto(Guid ProductId, string Name, bool IsSize, int AddOnType = 0, decimal Price = 0m);
 
 public record ProductIngredientSizeAmountDto(Guid SizeProductId, decimal Quantity);
 
@@ -36,7 +36,6 @@ public record ProductIngredientLineDto(
     string UnitName,
     decimal QuantityPerSale,
     decimal AllowancePercent,
-    bool ScalesWithSize,
     Guid? ReplacesItemId,
     string? ReplacesItemName,
     decimal? UnitCost,
@@ -48,7 +47,6 @@ public record ProductIngredientsEditDto(
     string Name,
     decimal Price,
     bool IsAddOn,
-    decimal RecipeMultiplier,
     bool ShowsCosts,
     decimal? SuppliesCost,
     List<ProductIngredientLineDto> Lines,

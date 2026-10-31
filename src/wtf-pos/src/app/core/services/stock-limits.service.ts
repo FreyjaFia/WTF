@@ -7,7 +7,6 @@ import {
   StockLimitItemDto,
   StockLimitLinkDto,
   StockLimitSizeAmountDto,
-  StockSizeMultiplierDto,
 } from '@shared/models';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
@@ -30,7 +29,6 @@ export class StockLimitsService implements OnDestroy {
 
   public readonly items = computed<StockLimitItemDto[]>(() => this._data()?.items ?? []);
   public readonly links = computed<StockLimitLinkDto[]>(() => this._data()?.links ?? []);
-  public readonly sizeMultipliers = computed<StockSizeMultiplierDto[]>(() => this._data()?.sizeMultipliers ?? []);
   public readonly sizeAmounts = computed<StockLimitSizeAmountDto[]>(() => this._data()?.sizeAmounts ?? []);
   public readonly asOf = computed(() => this._data()?.asOf ?? null);
   public readonly hasBlockingItems = computed(() => this.items().length > 0);

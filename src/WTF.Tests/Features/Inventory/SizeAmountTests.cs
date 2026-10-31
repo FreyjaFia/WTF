@@ -104,12 +104,26 @@ public class SizeAmountTests
     }
 
     [Fact]
-    public async Task Assign_ASizeAmountOfZero_IsRefused()
+    public async Task Assign_ANegativeSizeAmount_IsRefused()
     {
         var ex = await Should.ThrowAsync<InvalidOperationException>(() =>
-            Save(_latte, Line(_milk, 200m, new ProductSizeAmountInputDto(_large, 0m))));
+            Save(_latte, Line(_milk, 200m, new ProductSizeAmountInputDto(_large, -1m))));
 
-        ex.Message.ShouldContain("greater than zero");
+        ex.Message.ShouldContain("cannot be negative");
+    }
+
+    [Fact]
+    public async Task Assign_ASizeAmountOfZero_IsSavedAndMeansNotUsedInThatSize()
+    {
+        await Save(_latte, Line(_milk, 200m), Line(_cup, 1m, new ProductSizeAmountInputDto(_large, 0m)));
+
+        var read = (await new GetProductIngredientsEditHandler(TestDb.Create(_db))
+            .Handle(new GetProductIngredientsEditQuery(_latte, true), CancellationToken.None))!;
+        read.Lines.Single(l => l.ItemId == _cup).SizeAmounts!.Single().Quantity.ShouldBe(0m);
+
+        var large = (await Preview(_large))!;
+        large.Lines.Select(l => l.ItemId).ShouldNotContain(_cup);
+        (await Preview())!.Lines.Select(l => l.ItemId).ShouldContain(_cup);
     }
 
     [Fact]
@@ -180,6 +194,21 @@ public class SizeAmountTests
         var result = (await Preview(jumbo))!;
 
         result.Warnings.ShouldContain(w => w.Contains("Jumbo") && w.Contains("base amounts"));
+    }
+
+    [Fact]
+    public async Task Preview_ARepeatedAddOnId_CountsAsItsQuantity()
+    {
+        var shot = _data.AddProduct("Extra Shot", 20m, isAddOn: true);
+        _data.AllowAddOn(_latte, shot, AddOnTypeEnum.Extra);
+        await Save(_latte, Line(_milk, 200m));
+        await Save(shot, Line(_cup, 1m));
+
+        var result = (await Preview(shot, shot))!;
+
+        result.Price.ShouldBe(190m);
+        result.AddOnNames.ShouldBe(["Extra Shot x2"]);
+        result.Lines.Single(l => l.ItemId == _cup).Quantity.ShouldBe(2m);
     }
 
     [Fact]

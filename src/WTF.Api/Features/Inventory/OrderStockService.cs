@@ -38,7 +38,7 @@ public class OrderStockService(WTFDbContext db, IAuditService auditService, ISto
         var activeLinks = await db.ProductItemLinks
             .AsNoTracking()
             .Where(link => link.IsActive && productIds.Contains(link.ProductId))
-            .Select(link => new { link.ProductId, link.ItemId, link.QuantityPerSale, link.AllowancePercent, link.ScalesWithSize, link.ReplacesItemId, ItemName = link.Item.Name, ItemIsActive = link.Item.IsActive })
+            .Select(link => new { link.ProductId, link.ItemId, link.QuantityPerSale, link.AllowancePercent, link.ReplacesItemId, ItemName = link.Item.Name, ItemIsActive = link.Item.IsActive })
             .ToListAsync(cancellationToken);
 
         // Links to inactive items stay in the list so a replacing add-on still replaces; their stock is dropped below.
@@ -47,7 +47,6 @@ public class OrderStockService(WTFDbContext db, IAuditService auditService, ISto
                 link.ProductId,
                 link.ItemId,
                 CostRules.EffectiveQuantity(link.QuantityPerSale, link.AllowancePercent),
-                link.ScalesWithSize,
                 link.ReplacesItemId))
             .ToList();
         var inactiveItemIds = activeLinks.Where(link => !link.ItemIsActive).Select(link => link.ItemId).ToHashSet();
@@ -224,7 +223,7 @@ public class OrderStockService(WTFDbContext db, IAuditService auditService, ISto
         return await db.OrderItems
             .AsNoTracking()
             .Where(oi => oi.OrderId == orderId)
-            .Select(oi => new StockLine(oi.Id, oi.ParentOrderItemId, oi.ProductId, oi.Quantity, oi.Product.RecipeMultiplier))
+            .Select(oi => new StockLine(oi.Id, oi.ParentOrderItemId, oi.ProductId, oi.Quantity))
             .ToListAsync(cancellationToken);
     }
 

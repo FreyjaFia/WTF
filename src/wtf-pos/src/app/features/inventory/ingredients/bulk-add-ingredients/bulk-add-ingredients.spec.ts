@@ -22,6 +22,7 @@ const products: ProductIngredientsRowDto[] = [
   { ...base, productId: 'p2', name: 'Mocha', ingredientCount: 2, subCategoryName: 'Coffee' },
   { ...base, productId: 'p3', name: 'Croissant', ingredientCount: 0, subCategoryName: 'Snacks' },
   { ...base, productId: 'p4', name: 'Water', ingredientCount: 0, subCategoryName: null },
+  { ...base, productId: 'p5', name: 'Iced Tea', ingredientCount: 0, subCategoryName: 'NonCoffee' },
 ];
 
 const cup = { id: 'i1', name: 'Cup', unitName: 'pc', isActive: true } as ItemDto;
@@ -73,9 +74,13 @@ describe('BulkAddIngredientsComponent', () => {
     fixture.detectChanges();
   };
   const addItem = (fixture: { detectChanges: () => void }, el: HTMLElement, id: string) => {
-    const select = el.querySelector('[data-testid="bulk-add-item"]') as HTMLSelectElement;
-    select.value = id;
-    select.dispatchEvent(new Event('change'));
+    (el.querySelector('[data-testid="bulk-add-item"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    const name = [cup, lid].find((item) => item.id === id)?.name;
+    const option = [...el.querySelectorAll('[data-testid="bulk-add-item-option"]')].find(
+      (o) => o.textContent?.trim() === name,
+    ) as HTMLButtonElement;
+    option.click();
     fixture.detectChanges();
   };
   const submit = (fixture: { detectChanges: () => void }, el: HTMLElement) => {
@@ -88,6 +93,7 @@ describe('BulkAddIngredientsComponent', () => {
 
     expect(all(el, 'bulk-group').map((g) => g.textContent?.trim())).toEqual([
       'Coffee',
+      'Non-Coffee',
       'Snacks',
       'Other',
     ]);
@@ -96,7 +102,7 @@ describe('BulkAddIngredientsComponent', () => {
   it('lists a product with no ingredients before one that has some', () => {
     const { el } = setup();
 
-    expect(all(el, 'bulk-product').length).toBe(4);
+    expect(all(el, 'bulk-product').length).toBe(5);
     const names = [...el.querySelectorAll('ul li label span.min-w-0')].map((s) =>
       s.textContent?.trim(),
     );
@@ -105,7 +111,7 @@ describe('BulkAddIngredientsComponent', () => {
 
   it('narrows the list with the search box', () => {
     const { fixture, el } = setup();
-    const search = el.querySelector('[data-testid="bulk-search"]') as HTMLInputElement;
+    const search = el.querySelector('[data-testid="bulk-search"] input') as HTMLInputElement;
     search.value = 'cro';
     search.dispatchEvent(new Event('input'));
     fixture.detectChanges();
@@ -129,7 +135,9 @@ describe('BulkAddIngredientsComponent', () => {
     const { fixture, el } = setup();
     addItem(fixture, el, 'i1');
 
-    const options = [...el.querySelectorAll('[data-testid="bulk-add-item"] option')].map((o) =>
+    (el.querySelector('[data-testid="bulk-add-item"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    const options = [...el.querySelectorAll('[data-testid="bulk-add-item-option"]')].map((o) =>
       o.textContent?.trim(),
     );
     expect(options).not.toContain('Cup');

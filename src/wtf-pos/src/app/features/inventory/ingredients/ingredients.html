@@ -9,11 +9,12 @@
     @if (canAdd() && data()) {
       <button
         type="button"
-        class="app-btn app-btn-primary app-btn-sm shrink-0"
+        class="app-btn app-btn-primary app-btn-sm shrink-0 gap-1"
         data-testid="add-ingredients"
         (click)="openAdd()"
       >
-        + Add
+        <app-icon name="icon-plus" [class]="'h-4 w-4'" />
+        Add Ingredients
       </button>
     }
   </div>
@@ -201,7 +202,12 @@
             <div class="flex min-w-0 flex-1 items-center gap-3 p-3 sm:p-4">
               <div class="min-w-0 flex-1">
                 <p class="font-semibold wrap-anywhere text-gray-900">{{ product.name }}</p>
-                <p class="font-mono text-xs break-all text-gray-400">{{ product.code }}</p>
+                <p class="text-xs wrap-anywhere text-gray-400">
+                  @if (subCategoryOf(product.subCategoryName); as sub) {
+                    <span data-testid="product-subcategory">{{ sub }}</span> ·
+                  }
+                  <span class="font-mono">{{ product.code }}</span>
+                </p>
                 <span
                   class="mt-1 inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-bold sm:hidden"
                   [class]="styleOf(product.status).badge"

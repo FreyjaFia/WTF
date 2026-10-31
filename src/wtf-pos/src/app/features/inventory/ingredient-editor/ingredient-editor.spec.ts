@@ -27,7 +27,6 @@ const latte: ProductIngredientsEditDto = {
   name: 'Latte',
   price: 150,
   isAddOn: false,
-  recipeMultiplier: 1,
   showsCosts: true,
   suppliesCost: 0,
   lines: [
@@ -38,7 +37,6 @@ const latte: ProductIngredientsEditDto = {
       unitName: 'ml',
       quantityPerSale: 200,
       allowancePercent: 5,
-      scalesWithSize: false,
       replacesItemId: null,
       replacesItemName: null,
       unitCost: 0.15,
@@ -78,8 +76,8 @@ const preview: RecipePreviewDto = {
 
 const sizedLatte: ProductIngredientsEditDto = {
   ...latte,
-  sizes: [{ productId: 's1', name: 'Large', recipeMultiplier: 1.5 }],
-  addOnOptions: [{ productId: 's1', name: 'Large', isSize: true, recipeMultiplier: 1.5 }],
+  sizes: [{ productId: 's1', name: 'Large' }],
+  addOnOptions: [{ productId: 's1', name: 'Large', isSize: true }],
 };
 
 describe('IngredientEditorComponent', () => {
@@ -114,6 +112,28 @@ describe('IngredientEditorComponent', () => {
     return { fixture, inventory, alerts, el };
   }
 
+  const choose = (
+    fixture: { detectChanges: () => void },
+    el: HTMLElement,
+    testId: string,
+    text: string,
+  ) => {
+    (el.querySelector(`[data-testid="${testId}"]`) as HTMLButtonElement).click();
+    fixture.detectChanges();
+    const option = [...el.querySelectorAll(`[data-testid="${testId}-option"]`)].find(
+      (o) => o.textContent?.trim() === text,
+    ) as HTMLButtonElement;
+    option.click();
+    fixture.detectChanges();
+  };
+  const optionTexts = (fixture: { detectChanges: () => void }, el: HTMLElement, testId: string) => {
+    (el.querySelector(`[data-testid="${testId}"]`) as HTMLButtonElement).click();
+    fixture.detectChanges();
+    return [...el.querySelectorAll(`[data-testid="${testId}-option"]`)].map((o) =>
+      o.textContent?.trim(),
+    );
+  };
+
   const setValue = (
     fixture: { detectChanges: () => void },
     el: HTMLElement,
@@ -143,10 +163,7 @@ describe('IngredientEditorComponent', () => {
 
   it('adds an ingredient and counts one with no cost as unknown', () => {
     const { fixture, el } = setup();
-    const add = el.querySelector('[data-testid="add-ingredient"]') as HTMLSelectElement;
-    add.value = 'i3';
-    add.dispatchEvent(new Event('change'));
-    fixture.detectChanges();
+    choose(fixture, el, 'add-ingredient', 'Syrup');
 
     expect(el.querySelectorAll('[data-testid="ingredient-line"]').length).toBe(2);
     expect(el.querySelector('[data-testid="unknown-costs"]')?.textContent).toContain(
@@ -155,10 +172,8 @@ describe('IngredientEditorComponent', () => {
   });
 
   it('does not offer an item that is already listed', () => {
-    const { el } = setup();
-    const options = [...el.querySelectorAll('[data-testid="add-ingredient"] option')].map((o) =>
-      o.textContent?.trim(),
-    );
+    const { fixture, el } = setup();
+    const options = optionTexts(fixture, el, 'add-ingredient');
 
     expect(options).not.toContain('Milk');
     expect(options).toContain('Cup');
@@ -184,8 +199,7 @@ describe('IngredientEditorComponent', () => {
         itemId: 'i1',
         quantityPerSale: 200,
         allowancePercent: 5,
-        scalesWithSize: false,
-        replacesItemId: null,
+          replacesItemId: null,
         sizeAmounts: [],
       },
     ]);
@@ -239,39 +253,9 @@ describe('IngredientEditorComponent', () => {
     expect(fixture.componentInstance.canDeactivate()).toBeInstanceOf(Promise);
   });
 
-  it('shows the size grid and fills a size from the amount times its multiplier', () => {
-    const { fixture, el } = setup({ product: sizedLatte });
+  it('shows the size grid', () => {
+    const { el } = setup({ product: sizedLatte });
     expect(el.querySelector('[data-testid="size-grid"]')).not.toBeNull();
-
-    (el.querySelector('[data-testid="fill-size"]') as HTMLButtonElement).click();
-    fixture.detectChanges();
-
-    const cell = el.querySelector('[data-testid="size-amount"]') as HTMLInputElement;
-    expect(cell.value).toBe('300');
-  });
-
-  it('does not scale a whole piece by a fraction when it fills a size', () => {
-    const withCup: ProductIngredientsEditDto = {
-      ...sizedLatte,
-      lines: [
-        ...sizedLatte.lines,
-        {
-          ...sizedLatte.lines[0],
-          linkId: 'l2',
-          itemId: 'i2',
-          itemName: 'Cup',
-          unitName: 'pc',
-          quantityPerSale: 1,
-        },
-      ],
-    };
-    const { fixture, el } = setup({ product: withCup });
-
-    (el.querySelector('[data-testid="fill-size"]') as HTMLButtonElement).click();
-    fixture.detectChanges();
-
-    const cells = [...el.querySelectorAll('[data-testid="size-amount"]')] as HTMLInputElement[];
-    expect(cells.map((cell) => cell.value)).toEqual(['300', '']);
   });
 
   it('sends a typed size amount when saving', () => {
@@ -292,12 +276,30 @@ describe('IngredientEditorComponent', () => {
 
   it('previews a sale with the chosen size', () => {
     const { fixture, inventory, el } = setup({ product: sizedLatte });
-    const select = el.querySelector('[data-testid="preview-size"]') as HTMLSelectElement;
-    select.value = 's1';
-    select.dispatchEvent(new Event('change'));
+    const option = el.querySelector('[data-testid="preview-option"]') as HTMLElement;
+    option.click();
     fixture.detectChanges();
 
+    expect(el.querySelector('[data-testid="preview-group"] h4')?.textContent).toContain('Sizes');
     expect(inventory.getProductRecipePreview).toHaveBeenLastCalledWith('p1', ['s1']);
     expect(el.querySelector('[data-testid="preview-cost"]')?.textContent).toContain('45.00');
+  });
+
+  it('sends an add-on once per quantity when stepped up', () => {
+    const { fixture, inventory, el } = setup({
+      product: {
+        ...sizedLatte,
+        addOnOptions: [
+          { productId: 'x1', name: 'Extra Shot', isSize: false, addOnType: 4, price: 20 },
+        ],
+      },
+    });
+    (el.querySelector('[data-testid="preview-option"]') as HTMLElement).click();
+    fixture.detectChanges();
+    (el.querySelector('[data-testid="preview-plus"]') as HTMLElement).click();
+    fixture.detectChanges();
+
+    expect(inventory.getProductRecipePreview).toHaveBeenLastCalledWith('p1', ['x1', 'x1']);
+    expect(el.querySelector('[data-testid="preview-qty"]')?.textContent).toContain('2');
   });
 });

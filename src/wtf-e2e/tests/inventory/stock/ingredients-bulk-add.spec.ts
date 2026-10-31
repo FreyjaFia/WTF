@@ -6,7 +6,7 @@ interface IngredientsEdit {
 
 test.describe('Add ingredients to many products @stock @ingredients', () => {
   test('an admin adds one ingredient to two products and one that has it is skipped', async ({ api, signIn }) => {
-    const cup = await api.items.create({ unitName: 'pc', startingQuantity: 100, costPrice: 4 });
+    const cup = await api.items.create({ unitName: 'piece', startingQuantity: 100, costPrice: 4 });
     const first = await api.products.create({ price: 100 });
     const second = await api.products.create({ price: 110 });
     const third = await api.products.create({ price: 120 });
@@ -20,7 +20,8 @@ test.describe('Add ingredients to many products @stock @ingredients', () => {
       await page.locator('label', { hasText: product.name }).getByTestId('bulk-product').check();
     }
 
-    await page.getByTestId('bulk-add-item').selectOption({ label: cup.name });
+    await page.getByTestId('bulk-add-item').click();
+    await page.getByTestId('bulk-add-item-option').filter({ hasText: cup.name }).click();
     await page.getByTestId('bulk-submit').click();
 
     await expect(page.getByTestId('bulk-result')).toContainText('Added 2');

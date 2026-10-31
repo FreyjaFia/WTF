@@ -201,12 +201,6 @@ export class InventoryService {
       .pipe(catchError((error) => this.handleError(error, 'Unable to add the ingredients.')));
   }
 
-  public setRecipeMultiplier(productId: string, multiplier: number): Observable<void> {
-    return this.http
-      .put<void>(`${environment.apiUrl}/products/${productId}/recipe-multiplier`, { multiplier })
-      .pipe(catchError((error) => this.handleError(error, 'Unable to save the size multiplier.')));
-  }
-
   public setSuppliesCost(productId: string, amount: number): Observable<void> {
     return this.http
       .put<void>(`${environment.apiUrl}/products/${productId}/supplies-cost`, { amount })

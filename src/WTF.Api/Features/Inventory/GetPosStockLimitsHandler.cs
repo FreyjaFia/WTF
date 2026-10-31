@@ -27,13 +27,7 @@ public class GetPosStockLimitsHandler(WTFDbContext db) : IRequestHandler<GetPosS
             .AsNoTracking()
             .Where(link => link.IsActive
                            && (itemIds.Contains(link.ItemId) || (link.ReplacesItemId != null && itemIds.Contains(link.ReplacesItemId.Value))))
-            .Select(link => new { link.ProductId, link.ItemId, link.QuantityPerSale, link.AllowancePercent, link.ScalesWithSize, link.ReplacesItemId })
-            .ToListAsync(cancellationToken);
-
-        var sizeMultipliers = await db.Products
-            .AsNoTracking()
-            .Where(product => product.IsActive && product.RecipeMultiplier > 0m && product.RecipeMultiplier != 1m)
-            .Select(product => new SizeMultiplierDto(product.Id, product.RecipeMultiplier))
+            .Select(link => new { link.ProductId, link.ItemId, link.QuantityPerSale, link.AllowancePercent, link.ReplacesItemId })
             .ToListAsync(cancellationToken);
 
         var sizeAmounts = await db.ProductSizeAmounts
@@ -49,10 +43,8 @@ public class GetPosStockLimitsHandler(WTFDbContext db) : IRequestHandler<GetPosS
                 link.ProductId,
                 link.ItemId,
                 CostRules.EffectiveQuantity(link.QuantityPerSale, link.AllowancePercent),
-                link.ScalesWithSize,
                 link.ReplacesItemId))],
             DateTime.UtcNow,
-            sizeMultipliers,
             sizeAmounts);
     }
 }

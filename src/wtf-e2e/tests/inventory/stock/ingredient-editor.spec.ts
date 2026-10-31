@@ -9,14 +9,15 @@ interface IngredientsEdit {
 
 test.describe('Ingredient editor page @stock @ingredients', () => {
   test('an admin adds an ingredient, sees the live cost and saves it', async ({ api, signIn }) => {
-    const milk = await api.items.create({ unitName: 'ml', startingQuantity: 5000, costPrice: 0.1 });
+    const milk = await api.items.create({ unitName: 'milliliter', startingQuantity: 5000, costPrice: 0.1 });
     const latte = await api.products.create({ price: 150 });
 
     const page = await signIn('admin');
     await page.goto(`/inventory/ingredients/${latte.id}`);
     await expect(page.getByTestId('ingredients-empty')).toBeVisible();
 
-    await page.getByTestId('add-ingredient').selectOption({ label: milk.name });
+    await page.getByTestId('add-ingredient').click();
+    await page.getByTestId('add-ingredient-option').filter({ hasText: milk.name }).click();
     await page.getByTestId('line-amount').fill('200');
     await expect(page.getByTestId('total-cost')).toContainText('20.00');
     await expect(page.getByTestId('margin')).toContainText('130.00');
@@ -42,7 +43,7 @@ test.describe('Ingredient editor page @stock @ingredients', () => {
   });
 
   test('an ingredient can be removed again and the list is saved empty', async ({ api, signIn }) => {
-    const milk = await api.items.create({ unitName: 'ml', startingQuantity: 5000, costPrice: 0.1 });
+    const milk = await api.items.create({ unitName: 'milliliter', startingQuantity: 5000, costPrice: 0.1 });
     const latte = await api.products.create({ price: 150 });
     await api.items.linkProducts(milk.id, [{ productId: latte.id, quantityPerSale: 200 }]);
 
@@ -65,7 +66,7 @@ test.describe('Ingredient editor page @stock @ingredients', () => {
   });
 
   test('a stock manager can edit the lines but sees no cost', async ({ api, signIn }) => {
-    const milk = await api.items.create({ unitName: 'ml', startingQuantity: 5000, costPrice: 0.1 });
+    const milk = await api.items.create({ unitName: 'milliliter', startingQuantity: 5000, costPrice: 0.1 });
     const latte = await api.products.create({ price: 150 });
     await api.items.linkProducts(milk.id, [{ productId: latte.id, quantityPerSale: 200 }]);
 
@@ -78,7 +79,7 @@ test.describe('Ingredient editor page @stock @ingredients', () => {
   });
 
   test('the API hides the costs from a stock manager', async ({ api }) => {
-    const milk = await api.items.create({ unitName: 'ml', startingQuantity: 5000, costPrice: 0.1 });
+    const milk = await api.items.create({ unitName: 'milliliter', startingQuantity: 5000, costPrice: 0.1 });
     const latte = await api.products.create({ price: 150 });
     await api.items.linkProducts(milk.id, [{ productId: latte.id, quantityPerSale: 200 }]);
 

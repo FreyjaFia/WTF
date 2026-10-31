@@ -11,13 +11,7 @@ export interface StockLimitLink {
   productId: string;
   itemId: string;
   quantityPerSale: number;
-  scalesWithSize?: boolean;
   replacesItemId?: string | null;
-}
-
-export interface StockSizeMultiplier {
-  productId: string;
-  multiplier: number;
 }
 
 // A flat amount of one item for one drink when one size is on it; it replaces the drink's own amount for that item.
@@ -60,11 +54,9 @@ export function stockShortfalls(
   lines: readonly StockCartLine[],
   links: readonly StockLimitLink[],
   items: readonly Pick<StockLimitItem, 'id' | 'balance'>[],
-  multipliers: readonly StockSizeMultiplier[] = [],
   sizeAmounts: readonly StockSizeAmount[] = [],
 ): StockShortfall[] {
   const balanceByItem = new Map(items.map((item) => [item.id, item.balance]));
-  const multiplierByProduct = new Map(multipliers.map((m) => [m.productId, m.multiplier]));
   const allLinksByProduct = new Map<string, StockLimitLink[]>();
   for (const link of links) {
     allLinksByProduct.set(link.productId, [...(allLinksByProduct.get(link.productId) ?? []), link]);
@@ -81,7 +73,6 @@ export function stockShortfalls(
   const take = (
     productId: string,
     units: number,
-    scale: number,
     replaced: ReadonlySet<string>,
     lineKey: string,
     flat: Map<string, number> = new Map<string, number>(),
@@ -98,7 +89,7 @@ export function stockShortfalls(
         continue;
       }
 
-      add(link.itemId, productId, link.quantityPerSale * (link.scalesWithSize ? scale : 1) * units, lineKey);
+      add(link.itemId, productId, link.quantityPerSale * units, lineKey);
     }
 
     for (const [itemId, flatQuantity] of flat) {
@@ -110,10 +101,8 @@ export function stockShortfalls(
 
   for (const line of lines) {
     const addOns = line.addOns ?? [];
-    let scale = 1;
     const replaced = new Set<string>();
     for (const addOn of addOns) {
-      scale *= multiplierByProduct.get(addOn.productId) ?? 1;
       for (const link of allLinksByProduct.get(addOn.productId) ?? []) {
         if (link.replacesItemId) {
           replaced.add(link.replacesItemId);
@@ -129,9 +118,9 @@ export function stockShortfalls(
       }
     }
 
-    take(line.productId, line.quantity, scale, replaced, line.key, flat);
+    take(line.productId, line.quantity, replaced, line.key, flat);
     for (const addOn of addOns) {
-      take(addOn.productId, addOn.quantity * line.quantity, scale, new Set<string>(), line.key);
+      take(addOn.productId, addOn.quantity * line.quantity, new Set<string>(), line.key);
     }
   }
 

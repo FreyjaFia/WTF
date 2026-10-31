@@ -122,7 +122,6 @@ public class BulkAddProductIngredientsHandler(
                 {
                     link.QuantityPerSale = line.QuantityPerSale;
                     link.AllowancePercent = line.AllowancePercent;
-                    link.ScalesWithSize = false;
                     link.ReplacesItemId = null;
                     link.IsActive = true;
                     link.UpdatedAt = now;

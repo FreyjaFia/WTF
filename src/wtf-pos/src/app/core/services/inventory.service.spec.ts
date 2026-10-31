@@ -92,7 +92,6 @@ describe('InventoryService', () => {
         itemId: 'i1',
         quantityPerSale: 200,
         allowancePercent: 5,
-        scalesWithSize: false,
         replacesItemId: null,
       },
     ];
@@ -196,32 +195,6 @@ describe('InventoryService', () => {
     req.flush({ productId: 'p1', lines: [], totalCost: 0 });
 
     expect((result.value as { productId: string }).productId).toBe('p1');
-  });
-
-  it('saves the size multiplier of an add-on', () => {
-    const { service, http } = setupHttpService(InventoryService);
-    const result = capture(service.setRecipeMultiplier('p1', 1.5));
-
-    const req = http.expectOne(`${environment.apiUrl}/products/p1/recipe-multiplier`);
-    expect(req.request.method).toBe('PUT');
-    expect(req.request.body).toEqual({ multiplier: 1.5 });
-    req.flush(null, { status: 204, statusText: 'No Content' });
-
-    expect(result.error).toBeUndefined();
-  });
-
-  it('gives the server message when the multiplier is refused', () => {
-    const { service, http } = setupHttpService(InventoryService);
-    const result = capture(service.setRecipeMultiplier('p1', 20));
-
-    http
-      .expectOne(`${environment.apiUrl}/products/p1/recipe-multiplier`)
-      .flush(
-        { message: 'Multiplier must be between 0.01 and 10.' },
-        { status: 400, statusText: 'Bad Request' },
-      );
-
-    expect(result.error).toBe('Multiplier must be between 0.01 and 10.');
   });
 
   it('gives a plain message when the recipe cost cannot be read', () => {

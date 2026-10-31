@@ -39,7 +39,6 @@ export interface ProductItemLinkDto {
   itemId: string;
   quantityPerSale: number;
   allowancePercent?: number;
-  scalesWithSize?: boolean;
   replacesItemId?: string | null;
   replacesItemName?: string | null;
   isActive: boolean;
@@ -50,7 +49,6 @@ export interface ProductItemLinkAssignmentDto {
   productId: string;
   quantityPerSale: number;
   allowancePercent?: number;
-  scalesWithSize?: boolean;
   replacesItemId?: string | null;
   isActive?: boolean;
 }
@@ -62,7 +60,6 @@ export interface RecipeCostLineDto {
   unitName: string;
   quantityPerSale: number;
   allowancePercent: number;
-  scalesWithSize: boolean;
   replacesItemId: string | null;
   replacesItemName: string | null;
   effectiveQuantity: number;
@@ -75,7 +72,6 @@ export interface RecipeCostDto {
   productName: string;
   price: number;
   isAddOn: boolean;
-  recipeMultiplier: number;
   lines: RecipeCostLineDto[];
   suppliesCost: number;
   totalCost: number;
@@ -243,13 +239,7 @@ export interface StockLimitLinkDto {
   productId: string;
   itemId: string;
   quantityPerSale: number;
-  scalesWithSize?: boolean;
   replacesItemId?: string | null;
-}
-
-export interface StockSizeMultiplierDto {
-  productId: string;
-  multiplier: number;
 }
 
 export interface StockLimitSizeAmountDto {
@@ -262,7 +252,6 @@ export interface StockLimitSizeAmountDto {
 export interface PosStockLimitsDto {
   items: StockLimitItemDto[];
   links: StockLimitLinkDto[];
-  sizeMultipliers?: StockSizeMultiplierDto[];
   sizeAmounts?: StockLimitSizeAmountDto[];
   asOf: string;
 }
@@ -282,14 +271,14 @@ export interface ItemAlertRecipientsDto {
 export interface ProductIngredientSizeDto {
   productId: string;
   name: string;
-  recipeMultiplier: number;
 }
 
 export interface ProductIngredientAddOnOptionDto {
   productId: string;
   name: string;
   isSize: boolean;
-  recipeMultiplier: number;
+  addOnType?: number;
+  price?: number;
 }
 
 export interface ProductIngredientSizeAmountDto {
@@ -304,7 +293,6 @@ export interface ProductIngredientLineDto {
   unitName: string;
   quantityPerSale: number;
   allowancePercent: number;
-  scalesWithSize: boolean;
   replacesItemId: string | null;
   replacesItemName: string | null;
   unitCost: number | null;
@@ -317,7 +305,6 @@ export interface ProductIngredientsEditDto {
   name: string;
   price: number;
   isAddOn: boolean;
-  recipeMultiplier: number;
   showsCosts: boolean;
   suppliesCost: number | null;
   lines: ProductIngredientLineDto[];
@@ -333,7 +320,6 @@ export interface ProductIngredientInputDto {
   itemId: string;
   quantityPerSale: number;
   allowancePercent: number;
-  scalesWithSize: boolean;
   replacesItemId: string | null;
   sizeAmounts?: ProductIngredientSizeAmountDto[];
 }

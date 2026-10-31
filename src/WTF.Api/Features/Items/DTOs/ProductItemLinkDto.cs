@@ -12,7 +12,6 @@ public record ProductItemLinkDto(
     bool IsActive,
     bool ProductIsActive = true,
     decimal AllowancePercent = 0m,
-    bool ScalesWithSize = false,
     Guid? ReplacesItemId = null,
     string? ReplacesItemName = null);
 
@@ -23,5 +22,4 @@ public record ProductItemLinkAssignmentDto(
     bool IsActive = true,
     [Range(0, 100)]
     decimal AllowancePercent = 0m,
-    bool ScalesWithSize = false,
     Guid? ReplacesItemId = null);

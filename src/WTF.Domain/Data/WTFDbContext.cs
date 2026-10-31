@@ -675,9 +675,6 @@ public partial class WTFDbContext : DbContext
                 .HasMaxLength(100)
                 .IsUnicode(false);
             entity.Property(e => e.Price).HasColumnType("decimal(10, 2)");
-            entity.Property(e => e.RecipeMultiplier)
-                .HasDefaultValue(1m, "DF_Products_RecipeMultiplier")
-                .HasColumnType("decimal(6, 3)");
             entity.Property(e => e.SuppliesCost).HasColumnType("decimal(18, 6)");
             entity.Property(e => e.UpdatedAt).HasColumnType("datetime");
 

@@ -22,7 +22,6 @@ public partial class ProductItemLink
 
     public decimal AllowancePercent { get; set; }
 
-    public bool ScalesWithSize { get; set; }
 
     public Guid? ReplacesItemId { get; set; }
 

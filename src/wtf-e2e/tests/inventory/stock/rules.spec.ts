@@ -276,7 +276,6 @@ test.describe('inactive items and stock limits @stock', () => {
       productId: drink.id,
       itemId: blocking.id,
       quantityPerSale: 2,
-      scalesWithSize: false,
       replacesItemId: null,
     });
     expect(limits.links.some((link) => link.itemId === warnOnly.id)).toBe(false);

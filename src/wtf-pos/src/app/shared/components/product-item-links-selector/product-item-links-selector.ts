@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { AlertService, InventoryService, ModalStackService, ProductService } from '@core/services';
 import { AvatarComponent } from '@shared/components/avatar/avatar';
 import { IconComponent } from '@shared/components/icons/icon/icon';
+import { SelectDropdownComponent, SelectDropdownOption } from '@shared/components/select-dropdown/select-dropdown';
 import { effectiveQuantity, salesCovered } from '@shared/calculations';
 import { getInventoryUnitAbbreviation } from '@shared/constants/inventory-units';
 import {
@@ -24,18 +25,16 @@ interface LinkedProductRow {
   isActive: boolean;
   quantityPerSale: number;
   allowancePercent: number;
-  scalesWithSize: boolean;
   replacesItemId: string | null;
 }
 
 interface RememberedRecipeOptions {
-  scalesWithSize: boolean;
   replacesItemId: string | null;
 }
 
 @Component({
   selector: 'app-product-item-links-selector',
-  imports: [CommonModule, FormsModule, IconComponent, AvatarComponent],
+  imports: [CommonModule, FormsModule, IconComponent, AvatarComponent, SelectDropdownComponent],
   templateUrl: './product-item-links-selector.html',
 })
 export class ProductItemLinksSelectorComponent {
@@ -93,7 +92,7 @@ export class ProductItemLinksSelectorComponent {
         .filter((link) => !link.isActive)
         .map((link) => [
           link.productId,
-          { scalesWithSize: link.scalesWithSize ?? false, replacesItemId: link.replacesItemId ?? null },
+          { replacesItemId: link.replacesItemId ?? null },
         ]),
     );
     this.searchTerm.set('');
@@ -114,11 +113,8 @@ export class ProductItemLinksSelectorComponent {
       return;
     }
 
+    // The lists stay filled while the dialog fades out; open() resets them
     this.destroySortables();
-    this.availableProducts.set([]);
-    this.linkedProducts.set([]);
-    this.searchTerm.set('');
-    this.selectedFilter.set('all');
     this.isLoading.set(false);
     this.isSaving.set(false);
     this.itemId = '';
@@ -126,10 +122,6 @@ export class ProductItemLinksSelectorComponent {
     this.rememberedQuantities = new Map();
     this.rememberedAllowances = new Map();
     this.rememberedOptions = new Map();
-    this.replaceableItems.set([]);
-    this.allProducts.set([]);
-    this.unitName.set('');
-    this.currentQuantity.set(0);
 
     const modal = document.querySelector('#product-item-links-modal') as HTMLDialogElement;
     if (modal) {
@@ -216,10 +208,8 @@ export class ProductItemLinksSelectorComponent {
     );
   }
 
-  protected onScalesWithSizeChange(productId: string, checked: boolean): void {
-    this.linkedProducts.set(
-      this.linkedProducts().map((row) => (row.productId === productId ? { ...row, scalesWithSize: checked } : row)),
-    );
+  protected replaceOptions(): SelectDropdownOption[] {
+    return this.replaceableItems().map((item) => ({ id: item.id, label: item.name }));
   }
 
   protected onReplacesChange(productId: string, value: string | null): void {
@@ -236,7 +226,6 @@ export class ProductItemLinksSelectorComponent {
       this.rememberedQuantities.set(productId, removed.quantityPerSale);
       this.rememberedAllowances.set(productId, removed.allowancePercent);
       this.rememberedOptions.set(productId, {
-        scalesWithSize: removed.scalesWithSize,
         replacesItemId: removed.replacesItemId,
       });
     }
@@ -274,7 +263,6 @@ export class ProductItemLinksSelectorComponent {
       productId: row.productId,
       quantityPerSale: row.quantityPerSale,
       allowancePercent: row.allowancePercent,
-      scalesWithSize: row.scalesWithSize,
       replacesItemId: row.isAddOn ? row.replacesItemId : null,
       isActive: true,
     }));
@@ -319,7 +307,6 @@ export class ProductItemLinksSelectorComponent {
             isActive: product?.isActive ?? link.isActive,
             quantityPerSale: link.quantityPerSale,
             allowancePercent: link.allowancePercent ?? 0,
-            scalesWithSize: link.scalesWithSize ?? false,
             replacesItemId: link.replacesItemId ?? null,
           };
         });
@@ -429,7 +416,6 @@ export class ProductItemLinksSelectorComponent {
           quantityPerSale:
             existingQuantities.get(product.id) ?? this.rememberedQuantities.get(product.id) ?? 1,
           allowancePercent: this.rememberedAllowances.get(product.id) ?? 0,
-          scalesWithSize: this.rememberedOptions.get(product.id)?.scalesWithSize ?? false,
           replacesItemId: product.isAddOn ? (this.rememberedOptions.get(product.id)?.replacesItemId ?? null) : null,
         };
       })

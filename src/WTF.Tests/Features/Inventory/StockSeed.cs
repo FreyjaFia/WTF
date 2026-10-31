@@ -39,8 +39,7 @@ internal static class StockSeed
         return item.Id;
     }
 
-    public static Guid Link(string dbName, Guid productId, Guid itemId, decimal quantityPerSale, bool active = true, decimal allowancePercent = 0m,
-        bool scalesWithSize = false, Guid? replacesItemId = null)
+    public static Guid Link(string dbName, Guid productId, Guid itemId, decimal quantityPerSale, bool active = true, decimal allowancePercent = 0m, Guid? replacesItemId = null)
     {
         using var db = TestDb.Create(dbName);
         var link = new ProductItemLink
@@ -50,7 +49,6 @@ internal static class StockSeed
             ItemId = itemId,
             QuantityPerSale = quantityPerSale,
             AllowancePercent = allowancePercent,
-            ScalesWithSize = scalesWithSize,
             ReplacesItemId = replacesItemId,
             IsActive = active,
             CreatedAt = DateTime.UtcNow,

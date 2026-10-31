@@ -55,11 +55,49 @@
       class="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-y-auto pb-6 lg:grid-cols-[minmax(0,1fr)_20rem]"
     >
       <div class="space-y-3">
+        @if (showsCosts() && summary(); as s) {
+          <div
+            class="bg-surface flex flex-wrap items-center justify-between gap-x-4 gap-y-1 rounded-xl px-4 py-3 text-sm shadow lg:hidden"
+            data-testid="cost-chip"
+          >
+            <span class="text-gray-500"
+              >Cost <b class="text-gray-900">{{ s.totalCost | number: '1.2-4' }}</b></span
+            >
+            <span class="text-gray-500"
+              >Price <b class="text-gray-900">{{ p.price | number: '1.2-2' }}</b></span
+            >
+            <span [class]="s.margin < 0 ? 'font-bold text-red-600' : 'font-bold text-emerald-700'"
+              >Margin {{ s.margin | number: '1.2-2' }}
+              @if (s.marginPercent !== null) {
+                ({{ s.marginPercent | number: '1.0-1' }}%)
+              }
+            </span>
+          </div>
+        }
+
+        @if (canWrite()) {
+          <div
+            class="bg-surface flex flex-col gap-2 rounded-xl p-4 shadow sm:flex-row sm:items-center sm:gap-3"
+          >
+            <span class="text-sm font-semibold text-gray-800">Add an ingredient</span>
+            <app-select-dropdown
+              class="flex-1"
+              testId="add-ingredient"
+              placeholder="Choose an item..."
+              searchPlaceholder="Search ingredients..."
+              [options]="unusedOptions()"
+              [selectedId]="null"
+              (selectedIdChange)="addLine($event ?? '')"
+            />
+          </div>
+        }
+
         @if (lines.length === 0) {
           <div class="bg-surface rounded-xl p-8 text-center shadow" data-testid="ingredients-empty">
             <p class="text-sm font-semibold text-gray-800">No ingredients yet</p>
             <p class="mt-1 text-xs text-gray-500">
-              Add what one sale of {{ p.name }} takes from stock.
+              Add what one sale of {{ p.name }} takes from stock. Use the box above to pick the
+              first one.
             </p>
           </div>
         }
@@ -72,18 +110,16 @@
               [formGroup]="group"
             >
               <div class="flex flex-wrap items-end gap-3">
-                <label class="flex min-w-48 flex-1 flex-col gap-1">
+                <div class="flex min-w-48 flex-1 flex-col gap-1">
                   <span class="text-xs font-semibold text-gray-500">Ingredient</span>
-                  <select
-                    class="select select-bordered w-full"
-                    formControlName="itemId"
-                    data-testid="line-item"
-                  >
-                    @for (item of itemOptionsFor(i); track item.id) {
-                      <option [value]="item.id">{{ item.name }}</option>
-                    }
-                  </select>
-                </label>
+                  <app-select-dropdown
+                    testId="line-item"
+                    searchPlaceholder="Search ingredients..."
+                    [options]="itemOptionList(i)"
+                    [selectedId]="group.controls.itemId.value"
+                    (selectedIdChange)="changeItem(group, $event)"
+                  />
+                </div>
 
                 <label class="flex w-32 flex-col gap-1">
                   <span class="text-xs font-semibold text-gray-500"
@@ -100,7 +136,7 @@
                 </label>
 
                 <label class="flex w-28 flex-col gap-1">
-                  <span class="text-xs font-semibold text-gray-500">Allowance %</span>
+                  <span class="text-xs font-semibold text-gray-500" title="Extra for a known, steady loss such as a spill">Allowance %</span>
                   <input
                     type="number"
                     step="any"
@@ -115,9 +151,9 @@
                 @if (canWrite()) {
                   <button
                     type="button"
-                    class="app-btn app-btn-ghost app-btn-sm text-red-600"
+                    class="app-btn app-btn-outline-danger app-btn-sm"
                     (click)="removeLine(i)"
-                    [attr.aria-label]="'Remove ingredient'"
+                    aria-label="Remove ingredient"
                     data-testid="remove-line"
                   >
                     Remove
@@ -126,32 +162,20 @@
               </div>
 
               <div class="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2">
-                <label class="flex items-center gap-2 text-xs text-gray-600">
-                  <input
-                    type="checkbox"
-                    class="checkbox checkbox-sm"
-                    formControlName="scalesWithSize"
-                    data-testid="line-scales"
-                  />
-                  Scales with size
-                </label>
-
                 @if (p.isAddOn) {
-                  <label class="flex items-center gap-2 text-xs text-gray-600">
+                  <div class="flex items-center gap-2 text-xs text-gray-600">
                     Replaces
-                    <select
-                      class="select select-bordered select-sm"
-                      formControlName="replacesItemId"
-                      data-testid="line-replaces"
-                    >
-                      <option value="">Nothing (adds on top)</option>
-                      @for (item of items(); track item.id) {
-                        @if (item.id !== group.controls.itemId.value) {
-                          <option [value]="item.id">{{ item.name }}</option>
-                        }
-                      }
-                    </select>
-                  </label>
+                    <app-select-dropdown
+                      class="w-56"
+                      testId="line-replaces"
+                      [small]="true"
+                      emptyLabel="Nothing (adds on top)"
+                      searchPlaceholder="Search ingredients..."
+                      [options]="replaceOptions(group.controls.itemId.value)"
+                      [selectedId]="group.controls.replacesItemId.value || null"
+                      (selectedIdChange)="changeReplaces(group, $event)"
+                    />
+                  </div>
                 }
 
                 @if (showsCosts()) {
@@ -168,27 +192,11 @@
           }
         </ul>
 
-        @if (canWrite()) {
-          <label class="bg-surface flex items-center gap-3 rounded-xl p-4 shadow">
-            <span class="text-sm font-semibold text-gray-800">Add ingredient</span>
-            <select
-              class="select select-bordered flex-1"
-              data-testid="add-ingredient"
-              (change)="addLine($any($event.target).value); $any($event.target).value = ''"
-            >
-              <option value="">Choose an item...</option>
-              @for (item of unusedItems(); track item.id) {
-                <option [value]="item.id">{{ item.name }}</option>
-              }
-            </select>
-          </label>
-        }
-
         @if (showsSizeGrid() && lines.length > 0) {
           <section class="bg-surface rounded-xl p-4 shadow" data-testid="size-grid">
             <p class="text-sm font-semibold text-gray-900">Amounts per size</p>
             <p class="mt-1 text-xs text-gray-500">
-              Leave a box empty to use the amount above. A size amount replaces it when that size is
+              Leave a box empty to use the amount above. Type 0 when a size does not use the ingredient. A size amount replaces it when that size is
               on the sale.
             </p>
 
@@ -199,20 +207,7 @@
                     <th class="py-2 pr-3 font-semibold">Ingredient</th>
                     @for (size of sizes(); track size.productId) {
                       <th class="px-1 py-2 font-semibold">
-                        <div class="flex flex-col items-start gap-1">
-                          <span>{{ size.name }}</span>
-                          @if (canWrite()) {
-                            <button
-                              type="button"
-                              class="app-btn app-btn-ghost app-btn-xs"
-                              data-testid="fill-size"
-                              [attr.data-size]="size.productId"
-                              (click)="fillSize(size.productId)"
-                            >
-                              Fill ×{{ size.recipeMultiplier }}
-                            </button>
-                          }
-                        </div>
+                        {{ size.name }}
                       </th>
                     }
                   </tr>
@@ -309,51 +304,107 @@
             }
           </div>
 
-          @if (showsPreview() && (previewSizes().length > 0 || previewExtras().length > 0)) {
+          @if (showsPreview() && previewGroups().length > 0) {
             <div class="bg-surface mt-4 space-y-3 rounded-xl p-4 shadow" data-testid="preview">
               <p class="text-sm font-semibold text-gray-900">Preview one sale</p>
               <p class="text-xs text-gray-500">
                 Works from the saved ingredients. Save first to see your changes here.
               </p>
 
-              @if (previewSizes().length > 0) {
-                <label class="flex flex-col gap-1">
-                  <span class="text-xs font-semibold text-gray-500">Size</span>
-                  <select
-                    class="select select-bordered select-sm w-full"
-                    data-testid="preview-size"
-                    (change)="chooseSize($any($event.target).value)"
-                  >
-                    <option value="">No size</option>
-                    @for (size of previewSizes(); track size.productId) {
-                      <option [value]="size.productId">{{ size.name }}</option>
-                    }
-                  </select>
-                </label>
-              }
-
-              @for (extra of previewExtras(); track extra.productId) {
-                <label class="flex items-center gap-2 text-xs text-gray-700">
-                  <input
-                    type="checkbox"
-                    class="checkbox checkbox-sm"
-                    data-testid="preview-extra"
-                    (change)="toggleExtra(extra.productId, $any($event.target).checked)"
-                  />
-                  {{ extra.name }}
-                </label>
+              @for (group of previewGroups(); track group.type) {
+                <div class="space-y-2" data-testid="preview-group">
+                  <div class="flex items-baseline justify-between">
+                    <h4 class="text-xs font-semibold tracking-wider text-gray-400 uppercase">
+                      {{ group.header }}
+                    </h4>
+                    <span class="text-xs text-gray-400">{{
+                      group.isRadio ? 'Pick one' : 'Pick many'
+                    }}</span>
+                  </div>
+                  @for (option of group.options; track option.productId) {
+                    <div
+                      role="button"
+                      tabindex="0"
+                      class="flex w-full cursor-pointer items-center gap-3 rounded-xl border px-3 py-2 text-left transition-all"
+                      [class.border-gray-900]="previewQuantityOf(option.productId) > 0"
+                      [class.border-gray-200]="previewQuantityOf(option.productId) === 0"
+                      [class.hover:bg-gray-50]="previewQuantityOf(option.productId) === 0"
+                      data-testid="preview-option"
+                      [attr.data-name]="option.name"
+                      (click)="selectPreviewOption(group, option.productId)"
+                      (keydown.enter)="selectPreviewOption(group, option.productId)"
+                      (keydown.space)="
+                        selectPreviewOption(group, option.productId); $event.preventDefault()
+                      "
+                    >
+                      <span
+                        class="flex h-5 w-5 shrink-0 items-center justify-center border-2 transition-colors"
+                        [class.rounded-full]="group.isRadio"
+                        [class.rounded]="!group.isRadio"
+                        [class.border-gray-900]="previewQuantityOf(option.productId) > 0"
+                        [class.bg-gray-900]="
+                          previewQuantityOf(option.productId) > 0 && !group.isRadio
+                        "
+                        [class.border-gray-300]="previewQuantityOf(option.productId) === 0"
+                      >
+                        @if (previewQuantityOf(option.productId) > 0) {
+                          @if (group.isRadio) {
+                            <span class="h-2.5 w-2.5 rounded-full bg-gray-900"></span>
+                          } @else {
+                            <span class="text-xs leading-none text-white">&#10003;</span>
+                          }
+                        }
+                      </span>
+                      <span class="min-w-0 flex-1 text-sm font-medium wrap-break-word text-gray-800">
+                        + {{ option.name }}
+                      </span>
+                      @if (!group.isRadio && previewQuantityOf(option.productId) > 0) {
+                        <span class="flex shrink-0 items-center gap-1.5">
+                          <button
+                            type="button"
+                            class="app-stepper-btn flex h-6 w-6 text-xs"
+                            aria-label="Decrease quantity"
+                            data-testid="preview-minus"
+                            (click)="changePreviewQuantity(option.productId, -1, $event)"
+                          >
+                            -
+                          </button>
+                          <span
+                            class="w-5 text-center text-xs font-semibold text-gray-700"
+                            data-testid="preview-qty"
+                            >{{ previewQuantityOf(option.productId) }}</span
+                          >
+                          <button
+                            type="button"
+                            class="app-stepper-btn-primary flex h-6 w-6 text-xs"
+                            aria-label="Increase quantity"
+                            data-testid="preview-plus"
+                            (click)="changePreviewQuantity(option.productId, 1, $event)"
+                          >
+                            +
+                          </button>
+                        </span>
+                      }
+                    </div>
+                  }
+                </div>
               }
 
               @if (preview(); as pv) {
+                <h4 class="text-xs font-semibold tracking-wider text-gray-400 uppercase">
+                  What this sale uses
+                </h4>
                 <ul class="space-y-1 text-xs text-gray-700" data-testid="preview-lines">
                   @for (line of pv.lines; track line.itemId + (line.sourceName ?? '')) {
                     <li class="flex justify-between gap-2" data-testid="preview-line">
                       <span class="wrap-break-word">
                         {{ line.itemName }}
+                        <span class="font-semibold">
+                          {{ line.quantity | number: '1.0-3' }} {{ line.unitName }}
+                        </span>
                         @if (line.sourceName) {
-                          <span class="text-gray-400">({{ line.sourceName }})</span>
+                          <span class="text-gray-400">from {{ line.sourceName }}</span>
                         }
-                        {{ line.quantity | number: '1.0-3' }} {{ line.unitName }}
                       </span>
                       <span>
                         @if (line.lineCost !== null) {

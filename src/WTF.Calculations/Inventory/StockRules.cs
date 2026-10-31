@@ -8,9 +8,9 @@ public enum StockStatus
     OutOfStock = 3
 }
 
-public record StockLine(Guid LineId, Guid? ParentLineId, Guid ProductId, int Quantity, decimal RecipeMultiplier = 1m);
+public record StockLine(Guid LineId, Guid? ParentLineId, Guid ProductId, int Quantity);
 
-public record StockLink(Guid ProductId, Guid ItemId, decimal QuantityPerSale, bool ScalesWithSize = false, Guid? ReplacesItemId = null);
+public record StockLink(Guid ProductId, Guid ItemId, decimal QuantityPerSale, Guid? ReplacesItemId = null);
 
 public record StockSizeAmount(Guid ProductId, Guid SizeProductId, Guid ItemId, decimal Quantity);
 
@@ -51,11 +51,9 @@ public static class StockRules
     // quantities are summed per item and product first: one line is checked and deducted once, however many lines share it.
     //
     // A size amount is a flat amount for one item on one drink when one size is on it: it replaces the drink's own amount for
-    // that item (and ignores the size multiplier for it), unless an add-on on the drink replaces that item.
+    // that item, unless an add-on on the drink replaces that item.
     //
-    // A recipe follows what is on the drink. A size add-on has a RecipeMultiplier, and a link marked ScalesWithSize is
-    // multiplied by the multipliers of the add-ons on the same drink (the drink's own links and the other add-ons' links
-    // alike). An add-on's link may name an item it REPLACES: the drink's own link to that item is then not taken. A replaced
+    // A recipe follows what is on the drink. An add-on's link may name an item it REPLACES: the drink's own link to that item is then not taken. A replaced
     // link stays in the result with a quantity of zero, so a saved order gives back what it took before the add-on was added.
     public static List<StockRequirement> Requirements(
         IReadOnlyList<StockLine> lines, IReadOnlyList<StockLink> links, IReadOnlyList<StockSizeAmount>? sizeAmounts = null)
@@ -72,10 +70,6 @@ public static class StockRules
                 : line.Quantity;
 
             var ownChildren = childrenByParent[line.LineId].ToList();
-            var scaleSource = ownChildren.Count > 0 || !line.ParentLineId.HasValue
-                ? ownChildren
-                : childrenByParent[line.ParentLineId.Value].ToList();
-            var scale = scaleSource.Aggregate(1m, (current, child) => current * (child.RecipeMultiplier > 0m ? child.RecipeMultiplier : 1m));
             var replaced = ownChildren
                 .SelectMany(child => linksByProduct[child.ProductId])
                 .Where(link => link.ReplacesItemId.HasValue)
@@ -100,17 +94,17 @@ public static class StockRules
 
                 if (flat.Remove(link.ItemId, out var flatQuantity))
                 {
-                    parts.Add((link.ItemId, link.ProductId, flatQuantity * units, line.LineId, false));
+                    parts.Add((link.ItemId, link.ProductId, flatQuantity * units, line.LineId, flatQuantity == 0m));
                     continue;
                 }
 
-                parts.Add((link.ItemId, link.ProductId, link.QuantityPerSale * (link.ScalesWithSize ? scale : 1m) * units, line.LineId, false));
+                parts.Add((link.ItemId, link.ProductId, link.QuantityPerSale * units, line.LineId, false));
             }
 
             // A size amount for an item the drink has no line for (a cup only the biggest size uses) adds that item.
             foreach (var (itemId, flatQuantity) in flat.Where(entry => !replaced.Contains(entry.Key)))
             {
-                parts.Add((itemId, line.ProductId, flatQuantity * units, line.LineId, false));
+                parts.Add((itemId, line.ProductId, flatQuantity * units, line.LineId, flatQuantity == 0m));
             }
         }
 

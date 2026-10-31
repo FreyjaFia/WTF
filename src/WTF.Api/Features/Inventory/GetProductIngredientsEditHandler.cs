@@ -18,7 +18,7 @@ public class GetProductIngredientsEditHandler(WTFDbContext db) : IRequestHandler
         var product = await db.Products
             .AsNoTracking()
             .Where(p => p.Id == request.ProductId)
-            .Select(p => new { p.Id, p.Name, p.Price, p.IsAddOn, p.RecipeMultiplier, p.SuppliesCost })
+            .Select(p => new { p.Id, p.Name, p.Price, p.IsAddOn, p.SuppliesCost })
             .FirstOrDefaultAsync(cancellationToken);
         if (product is null)
         {
@@ -40,7 +40,6 @@ public class GetProductIngredientsEditHandler(WTFDbContext db) : IRequestHandler
                 l.Item.AverageCost,
                 l.Item.CostPrice,
                 l.Item.YieldPercent,
-                l.ScalesWithSize,
                 l.ReplacesItemId,
                 ReplacesItemName = l.ReplacesItem != null ? l.ReplacesItem.Name : null
             })
@@ -49,15 +48,19 @@ public class GetProductIngredientsEditHandler(WTFDbContext db) : IRequestHandler
         var options = await db.ProductAddOns
             .AsNoTracking()
             .Where(pa => pa.ProductId == product.Id && pa.IsActive && pa.AddOn.IsActive)
-            .OrderBy(pa => pa.AddOn.RecipeMultiplier)
-            .ThenBy(pa => pa.AddOn.Price)
-            .ThenBy(pa => pa.AddOn.Name)
             .Select(pa => new ProductIngredientAddOnOptionDto(
-                pa.AddOnId, pa.AddOn.Name, pa.AddOnTypeId == (int)AddOnTypeEnum.Size, pa.AddOn.RecipeMultiplier))
+                pa.AddOnId, pa.AddOn.Name, pa.AddOnTypeId == (int)AddOnTypeEnum.Size, pa.AddOnTypeId ?? 0,
+                pa.ProductAddOnPriceOverride != null && pa.ProductAddOnPriceOverride.IsActive
+                    ? pa.ProductAddOnPriceOverride.Price
+                    : pa.AddOn.Price))
             .ToListAsync(cancellationToken);
+        options = options
+            .OrderBy(option => option.Price)
+            .ThenBy(option => option.Name)
+            .ToList();
         var sizes = options
             .Where(option => option.IsSize)
-            .Select(option => new ProductIngredientSizeDto(option.ProductId, option.Name, option.RecipeMultiplier))
+            .Select(option => new ProductIngredientSizeDto(option.ProductId, option.Name))
             .ToList();
 
         var sizeAmounts = await db.ProductSizeAmounts
@@ -80,7 +83,6 @@ public class GetProductIngredientsEditHandler(WTFDbContext db) : IRequestHandler
                     InventoryUnitLabels.Abbreviate(l.UnitName),
                     l.QuantityPerSale,
                     l.AllowancePercent,
-                    l.ScalesWithSize,
                     l.ReplacesItemId,
                     l.ReplacesItemName,
                     unitCost,
@@ -109,7 +111,6 @@ public class GetProductIngredientsEditHandler(WTFDbContext db) : IRequestHandler
             product.Name,
             product.Price,
             product.IsAddOn,
-            product.RecipeMultiplier,
             request.IncludeCosts,
             request.IncludeCosts ? product.SuppliesCost : null,
             lines,

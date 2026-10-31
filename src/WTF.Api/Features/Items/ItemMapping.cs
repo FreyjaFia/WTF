@@ -51,7 +51,6 @@ internal static class ItemMapping
                     l.IsActive,
                     l.Product.IsActive,
                     l.AllowancePercent,
-                    l.ScalesWithSize,
                     l.ReplacesItemId,
                     l.ReplacesItem?.Name))
                 .ToList(),
