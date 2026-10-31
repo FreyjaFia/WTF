@@ -72,8 +72,7 @@ describe('IngredientsComponent', () => {
         {
           provide: AuthService,
           useValue: {
-            canWriteProducts: () => options.canWrite ?? true,
-            canReadProducts: () => options.canRead ?? true,
+            canWriteItems: () => options.canWrite ?? true,
           },
         },
       ],
@@ -174,23 +173,20 @@ describe('IngredientsComponent', () => {
     );
   });
 
-  it('links to the product editor for roles that can write products', () => {
+  it('links to the ingredient editor for roles that can write items', () => {
     const { el } = setup({ canWrite: true });
     const link = rows(el)[0].querySelector('a');
 
     expect(link?.textContent).toContain('Set up stock');
-    expect(link?.getAttribute('href')).toBe('/management/products/edit/p1');
+    expect(link?.getAttribute('href')).toBe('/inventory/ingredients/p1');
   });
 
-  it('links to the product page for read-only roles, and nowhere without access', () => {
-    const readOnly = setup({ canWrite: false, canRead: true });
-    expect(rows(readOnly.el)[0].querySelector('a')?.getAttribute('href')).toBe(
-      '/management/products/details/p1',
-    );
-    TestBed.resetTestingModule();
+  it('links read-only roles to the same page with a different label', () => {
+    const readOnly = setup({ canWrite: false });
+    const link = rows(readOnly.el)[0].querySelector('a');
 
-    const none = setup({ canWrite: false, canRead: false });
-    expect(rows(none.el)[0].querySelector('a')).toBeNull();
+    expect(link?.textContent).toContain('View ingredients');
+    expect(link?.getAttribute('href')).toBe('/inventory/ingredients/p1');
   });
 
   it('says so when everything is covered', () => {

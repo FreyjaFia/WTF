@@ -65,7 +65,59 @@ describe('InventoryService', () => {
     expect(req.request.method).toBe('GET');
     req.flush({ ready: 1, partial: 0, missing: 0, showsCosts: true, products: [] });
 
-    expect(result.value).toEqual({ ready: 1, partial: 0, missing: 0, showsCosts: true, products: [] });
+    expect(result.value).toEqual({
+      ready: 1,
+      partial: 0,
+      missing: 0,
+      showsCosts: true,
+      products: [],
+    });
+  });
+
+  it('reads the ingredient lines of one product', () => {
+    const { service, http } = setupHttpService(InventoryService);
+    const result = capture(service.getProductIngredientsEdit('p1'));
+
+    const req = http.expectOne(`${environment.apiUrl}/products/p1/ingredients`);
+    expect(req.request.method).toBe('GET');
+    req.flush({ productId: 'p1', lines: [] });
+
+    expect(result.value).toEqual({ productId: 'p1', lines: [] });
+  });
+
+  it('saves the whole ingredient list of a product', () => {
+    const { service, http } = setupHttpService(InventoryService);
+    const lines = [
+      {
+        itemId: 'i1',
+        quantityPerSale: 200,
+        allowancePercent: 5,
+        scalesWithSize: false,
+        replacesItemId: null,
+      },
+    ];
+    const result = capture(service.saveProductIngredients('p1', lines));
+
+    const req = http.expectOne(`${environment.apiUrl}/products/p1/ingredients`);
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toEqual({ productId: 'p1', lines });
+    req.flush({ productId: 'p1', lines: [] });
+
+    expect(result.error).toBeUndefined();
+  });
+
+  it('gives the server message when the ingredients are refused', () => {
+    const { service, http } = setupHttpService(InventoryService);
+    const result = capture(service.saveProductIngredients('p1', []));
+
+    http
+      .expectOne(`${environment.apiUrl}/products/p1/ingredients`)
+      .flush(
+        { message: 'An ingredient can be listed only once.' },
+        { status: 400, statusText: 'Bad Request' },
+      );
+
+    expect(result.error).toBe('An ingredient can be listed only once.');
   });
 
   it('reads the alert recipients of an item', () => {
@@ -106,7 +158,8 @@ describe('InventoryService', () => {
     );
 
     failWith(http.expectOne(`${base}/i1/stock/adjust`), 400, {
-      message: 'This item does not allow a negative balance, so the adjustment would take it below zero.',
+      message:
+        'This item does not allow a negative balance, so the adjustment would take it below zero.',
     });
 
     expect(result.error).toContain('negative balance');
@@ -126,7 +179,10 @@ describe('InventoryService', () => {
     const { service, http } = setupHttpService(InventoryService);
     const result = capture(service.getItemMovements('i1'));
 
-    failWith(http.expectOne((r) => r.url === `${base}/i1/movements`), 500);
+    failWith(
+      http.expectOne((r) => r.url === `${base}/i1/movements`),
+      500,
+    );
 
     expect(result.error).toBe('Unable to fetch stock history.');
   });
@@ -158,10 +214,12 @@ describe('InventoryService', () => {
     const { service, http } = setupHttpService(InventoryService);
     const result = capture(service.setRecipeMultiplier('p1', 20));
 
-    http.expectOne(`${environment.apiUrl}/products/p1/recipe-multiplier`).flush(
-      { message: 'Multiplier must be between 0.01 and 10.' },
-      { status: 400, statusText: 'Bad Request' },
-    );
+    http
+      .expectOne(`${environment.apiUrl}/products/p1/recipe-multiplier`)
+      .flush(
+        { message: 'Multiplier must be between 0.01 and 10.' },
+        { status: 400, statusText: 'Bad Request' },
+      );
 
     expect(result.error).toBe('Multiplier must be between 0.01 and 10.');
   });
@@ -191,10 +249,9 @@ describe('InventoryService', () => {
     const { service, http } = setupHttpService(InventoryService);
     const result = capture(service.setSuppliesCost('p1', -1));
 
-    http.expectOne(`${environment.apiUrl}/products/p1/supplies-cost`).flush(
-      { message: 'Too low.' },
-      { status: 400, statusText: 'Bad Request' },
-    );
+    http
+      .expectOne(`${environment.apiUrl}/products/p1/supplies-cost`)
+      .flush({ message: 'Too low.' }, { status: 400, statusText: 'Bad Request' });
 
     expect(result.error).toBe('Too low.');
   });

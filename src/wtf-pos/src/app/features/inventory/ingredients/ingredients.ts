@@ -131,17 +131,11 @@ export class IngredientsComponent implements OnInit {
   }
 
   protected productLink(product: ProductIngredientsRowDto): string | null {
-    if (this.authService.canWriteProducts()) {
-      return AppRoutes.ManagementProductEditById(product.productId);
-    }
-
-    return this.authService.canReadProducts()
-      ? AppRoutes.ManagementProductDetailsById(product.productId)
-      : null;
+    return AppRoutes.InventoryIngredientsEditById(product.productId);
   }
 
   protected linkLabel(): string {
-    return this.authService.canWriteProducts() ? 'Set up stock' : 'View product';
+    return this.authService.canWriteItems() ? 'Set up stock' : 'View ingredients';
   }
 
   private percentOf(count: number): number {

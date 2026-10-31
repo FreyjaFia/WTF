@@ -268,3 +268,40 @@ export interface ItemAlertRecipientsDto {
   candidates: AlertRecipientDto[];
   defaultDescription: string;
 }
+
+export interface ProductIngredientLineDto {
+  linkId: string;
+  itemId: string;
+  itemName: string;
+  unitName: string;
+  quantityPerSale: number;
+  allowancePercent: number;
+  scalesWithSize: boolean;
+  replacesItemId: string | null;
+  replacesItemName: string | null;
+  unitCost: number | null;
+  lineCost: number | null;
+}
+
+export interface ProductIngredientsEditDto {
+  productId: string;
+  name: string;
+  price: number;
+  isAddOn: boolean;
+  recipeMultiplier: number;
+  showsCosts: boolean;
+  suppliesCost: number | null;
+  lines: ProductIngredientLineDto[];
+  totalCost: number | null;
+  unknownCostCount: number;
+  margin: number | null;
+  marginPercent: number | null;
+}
+
+export interface ProductIngredientInputDto {
+  itemId: string;
+  quantityPerSale: number;
+  allowancePercent: number;
+  scalesWithSize: boolean;
+  replacesItemId: string | null;
+}

@@ -17,7 +17,11 @@ function roundCost(cost: number): number {
   return Math.round(cost * COST_DECIMALS) / COST_DECIMALS;
 }
 
-export function lineCost(quantityPerSale: number, allowancePercent: number, unitCost: number): number {
+export function lineCost(
+  quantityPerSale: number,
+  allowancePercent: number,
+  unitCost: number,
+): number {
   return roundCost(effectiveQuantity(quantityPerSale, allowancePercent) * unitCost);
 }
 

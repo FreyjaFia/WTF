@@ -490,7 +490,15 @@
             @if (isEditMode() && productId && canReadCosts() && !recipeCostFailed()) {
               <div class="card rounded-xl bg-surface shadow-lg" data-testid="recipe-cost">
                 <div class="card-body space-y-3">
-                  <span class="text-sm font-semibold text-gray-900">Recipe cost</span>
+                  <div class="flex items-center justify-between gap-3">
+                    <span class="text-sm font-semibold text-gray-900">Ingredients &amp; cost</span>
+                    <a
+                      class="app-btn app-btn-link text-xs"
+                      data-testid="open-ingredients"
+                      [routerLink]="ingredientsLink()"
+                      >Open full page</a
+                    >
+                  </div>
 
                   @if (isRecipeCostLoading()) {
                     <div class="flex items-center gap-2">

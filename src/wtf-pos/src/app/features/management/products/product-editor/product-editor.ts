@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, computed, inject, OnInit, signal, ViewChild } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
   AlertService,
   AuthService,
@@ -48,6 +48,7 @@ export type StockTrackingMode = 'none' | 'own' | 'existing';
   imports: [
     CommonModule,
     ReactiveFormsModule,
+    RouterLink,
     IconComponent,
     AddonsSwapperComponent,
     ProductsSwapperComponent,
@@ -725,6 +726,10 @@ export class ProductEditorComponent implements OnInit {
       type: 'Product type',
     };
     return labels[controlName] || controlName;
+  }
+
+  protected ingredientsLink(): string {
+    return AppRoutes.InventoryIngredientsEditById(this.productId ?? '');
   }
 
   protected hasError(controlName: string): boolean {

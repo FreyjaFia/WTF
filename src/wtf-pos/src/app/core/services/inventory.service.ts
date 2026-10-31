@@ -13,7 +13,9 @@ import {
   ProductItemLinkAssignmentDto,
   ProductItemLinkDto,
   RecipeCostDto,
+  ProductIngredientInputDto,
   ProductIngredientsDto,
+  ProductIngredientsEditDto,
   UpdateItemDto,
 } from '@shared/models';
 import { Observable, throwError } from 'rxjs';
@@ -118,6 +120,24 @@ export class InventoryService {
     return this.http
       .get<ProductIngredientsDto>(`${environment.apiUrl}/products/ingredients`)
       .pipe(catchError((error) => this.handleError(error, 'Unable to fetch the ingredients.')));
+  }
+
+  public getProductIngredientsEdit(productId: string): Observable<ProductIngredientsEditDto> {
+    return this.http
+      .get<ProductIngredientsEditDto>(`${environment.apiUrl}/products/${productId}/ingredients`)
+      .pipe(catchError((error) => this.handleError(error, 'Unable to fetch the ingredients.')));
+  }
+
+  public saveProductIngredients(
+    productId: string,
+    lines: ProductIngredientInputDto[],
+  ): Observable<ProductIngredientsEditDto> {
+    return this.http
+      .put<ProductIngredientsEditDto>(`${environment.apiUrl}/products/${productId}/ingredients`, {
+        productId,
+        lines,
+      })
+      .pipe(catchError((error) => this.handleError(error, 'Unable to save the ingredients.')));
   }
 
   public getOrderStockMovements(orderId: string): Observable<OrderStockMovementDto[]> {

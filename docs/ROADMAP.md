@@ -1102,7 +1102,7 @@ is called **Ingredients & cost**; the code and routes keep the word recipe.
   the new preview, with shared cases in `calculation-cases.json` run by both test projects; the cost preview is mirrored in `shared/calculations` (whole cents, costs with six decimals).
 - **Slices, each tested and committed on its own.**
   - **A.** The list page, read only, with Coverage folded in (new `GET /api/products/ingredients` with cost and margin per product).
-  - **B.** The full-page editor for base lines and supplies cost; the product editor's card becomes a summary and link; labels renamed.
+  - **B.** The full-page editor for base lines and supplies cost; the product editor's card becomes a summary and link; labels renamed. **Built 31 Oct 2026:** `/inventory/ingredients/:productId` (`GET/PUT /api/products/{id}/ingredients`), lines with amount, allowance, scales with size and (add-ons) Replaces, a sticky live cost and margin summary from `shared/calculations/recipe-cost.ts` (shared `recipeCost` cases), supplies cost for the cost roles, unsaved-changes guard, list rows link to it, and the product editor card keeps its content with an "Open full page" link. Not yet: removing the old card controls (multiplier, supplies) from the product editor.
   - **C.** Amounts per size: schema script, rules on both sides, deduction, register limits, the grid.
   - **D.** The size and add-on preview picker and the warnings.
   - **E.** The "+ Add" picker and bulk add.

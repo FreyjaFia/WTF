@@ -1,0 +1,263 @@
+<div class="flex h-full flex-col pt-4 md:pt-0">
+  <div
+    class="bg-surface/95 sticky top-0 z-10 mb-4 flex shrink-0 flex-col gap-3 backdrop-blur-sm sm:mb-6 sm:flex-row sm:items-center sm:justify-between"
+  >
+    <div class="flex min-w-0 items-start gap-4">
+      <button
+        class="app-btn app-btn-ghost mt-1 shrink-0 p-2"
+        type="button"
+        (click)="goBack()"
+        aria-label="Go back"
+      >
+        <app-icon name="icon-back" [class]="'h-5 w-5 text-gray-600'" />
+      </button>
+      <div class="min-w-0">
+        <app-page-title [text]="product()?.name ?? 'Ingredients & Cost'" />
+        <p class="mt-1 text-sm text-gray-500">Ingredients &amp; Cost</p>
+      </div>
+    </div>
+
+    @if (canWrite() && product()) {
+      <div class="flex shrink-0 justify-end gap-2">
+        <button
+          type="button"
+          class="app-btn app-btn-secondary app-btn-sm"
+          (click)="goBack()"
+          [disabled]="isSaving()"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="app-btn app-btn-primary app-btn-sm gap-2"
+          data-testid="save-ingredients"
+          (click)="save()"
+          [disabled]="form.invalid || isSaving() || !form.dirty"
+        >
+          @if (isSaving()) {
+            <span class="loading loading-spinner loading-sm"></span>
+            Saving...
+          } @else {
+            Save
+          }
+        </button>
+      </div>
+    }
+  </div>
+
+  @if (isLoading()) {
+    <div class="flex items-center justify-center gap-2 py-12">
+      <span class="loading loading-spinner loading-md"></span>
+      <span class="text-sm text-gray-500">Loading...</span>
+    </div>
+  } @else if (product(); as p) {
+    <div class="grid min-h-0 flex-1 gap-4 overflow-y-auto pb-6 lg:grid-cols-[1fr_20rem]">
+      <div class="space-y-3">
+        @if (lines.length === 0) {
+          <div class="bg-surface rounded-xl p-8 text-center shadow" data-testid="ingredients-empty">
+            <p class="text-sm font-semibold text-gray-800">No ingredients yet</p>
+            <p class="mt-1 text-xs text-gray-500">
+              Add what one sale of {{ p.name }} takes from stock.
+            </p>
+          </div>
+        }
+
+        <ul class="space-y-3">
+          @for (group of lines.controls; track group; let i = $index) {
+            <li
+              class="bg-surface rounded-xl p-4 shadow"
+              data-testid="ingredient-line"
+              [formGroup]="group"
+            >
+              <div class="flex flex-wrap items-end gap-3">
+                <label class="flex min-w-48 flex-1 flex-col gap-1">
+                  <span class="text-xs font-semibold text-gray-500">Ingredient</span>
+                  <select
+                    class="select select-bordered w-full"
+                    formControlName="itemId"
+                    data-testid="line-item"
+                  >
+                    @for (item of itemOptionsFor(i); track item.id) {
+                      <option [value]="item.id">{{ item.name }}</option>
+                    }
+                  </select>
+                </label>
+
+                <label class="flex w-32 flex-col gap-1">
+                  <span class="text-xs font-semibold text-gray-500"
+                    >Amount ({{ unitOf(group.controls.itemId.value) }})</span
+                  >
+                  <input
+                    type="number"
+                    step="any"
+                    min="0"
+                    class="input input-bordered w-full"
+                    formControlName="quantityPerSale"
+                    data-testid="line-amount"
+                  />
+                </label>
+
+                <label class="flex w-28 flex-col gap-1">
+                  <span class="text-xs font-semibold text-gray-500">Allowance %</span>
+                  <input
+                    type="number"
+                    step="any"
+                    min="0"
+                    max="100"
+                    class="input input-bordered w-full"
+                    formControlName="allowancePercent"
+                    data-testid="line-allowance"
+                  />
+                </label>
+
+                @if (canWrite()) {
+                  <button
+                    type="button"
+                    class="app-btn app-btn-ghost app-btn-sm text-red-600"
+                    (click)="removeLine(i)"
+                    [attr.aria-label]="'Remove ingredient'"
+                    data-testid="remove-line"
+                  >
+                    Remove
+                  </button>
+                }
+              </div>
+
+              <div class="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2">
+                <label class="flex items-center gap-2 text-xs text-gray-600">
+                  <input
+                    type="checkbox"
+                    class="checkbox checkbox-sm"
+                    formControlName="scalesWithSize"
+                    data-testid="line-scales"
+                  />
+                  Scales with size
+                </label>
+
+                @if (p.isAddOn) {
+                  <label class="flex items-center gap-2 text-xs text-gray-600">
+                    Replaces
+                    <select
+                      class="select select-bordered select-sm"
+                      formControlName="replacesItemId"
+                      data-testid="line-replaces"
+                    >
+                      <option value="">Nothing (adds on top)</option>
+                      @for (item of items(); track item.id) {
+                        @if (item.id !== group.controls.itemId.value) {
+                          <option [value]="item.id">{{ item.name }}</option>
+                        }
+                      }
+                    </select>
+                  </label>
+                }
+
+                @if (showsCosts()) {
+                  <span class="ml-auto text-xs text-gray-500" data-testid="line-cost">
+                    @if (lineCostOf(i); as cost) {
+                      {{ cost | number: '1.2-4' }} per sale
+                    } @else {
+                      No cost yet
+                    }
+                  </span>
+                }
+              </div>
+            </li>
+          }
+        </ul>
+
+        @if (canWrite()) {
+          <label class="bg-surface flex items-center gap-3 rounded-xl p-4 shadow">
+            <span class="text-sm font-semibold text-gray-800">Add ingredient</span>
+            <select
+              class="select select-bordered flex-1"
+              data-testid="add-ingredient"
+              (change)="addLine($any($event.target).value); $any($event.target).value = ''"
+            >
+              <option value="">Choose an item...</option>
+              @for (item of unusedItems(); track item.id) {
+                <option [value]="item.id">{{ item.name }}</option>
+              }
+            </select>
+          </label>
+        }
+      </div>
+
+      @if (showsCosts()) {
+        <aside class="lg:sticky lg:top-0 lg:self-start" data-testid="cost-summary">
+          <div class="bg-surface space-y-3 rounded-xl p-4 shadow">
+            <p class="text-sm font-semibold text-gray-900">Cost and margin</p>
+
+            <div [formGroup]="form">
+              <label class="flex flex-col gap-1">
+                <span class="text-xs font-semibold text-gray-500"
+                  >Supplies per sale (ice, straws, napkins)</span
+                >
+                <input
+                  type="number"
+                  step="any"
+                  min="0"
+                  class="input input-bordered w-full"
+                  formControlName="suppliesCost"
+                  data-testid="supplies-cost"
+                />
+              </label>
+            </div>
+
+            @if (summary(); as s) {
+              <dl class="space-y-1 text-sm">
+                <div class="flex justify-between">
+                  <dt class="text-gray-500">Price</dt>
+                  <dd class="font-semibold text-gray-900">{{ p.price | number: '1.2-2' }}</dd>
+                </div>
+                <div class="flex justify-between">
+                  <dt class="text-gray-500">Cost</dt>
+                  <dd class="font-semibold text-gray-900" data-testid="total-cost">
+                    {{ s.totalCost | number: '1.2-4' }}
+                  </dd>
+                </div>
+                <div class="flex justify-between">
+                  <dt class="text-gray-500">Margin</dt>
+                  <dd
+                    class="font-bold"
+                    [class]="s.margin < 0 ? 'text-red-600' : 'text-emerald-700'"
+                    data-testid="margin"
+                  >
+                    {{ s.margin | number: '1.2-2' }}
+                    @if (s.marginPercent !== null) {
+                      ({{ s.marginPercent | number: '1.0-1' }}%)
+                    }
+                  </dd>
+                </div>
+              </dl>
+              @if (s.unknownCostCount > 0) {
+                <p
+                  class="rounded-lg bg-orange-50 px-3 py-2 text-xs text-orange-800"
+                  data-testid="unknown-costs"
+                >
+                  {{ s.unknownCostCount }} ingredient(s) have no cost yet, so the real cost is
+                  higher.
+                </p>
+              }
+            }
+          </div>
+        </aside>
+      }
+    </div>
+  }
+</div>
+
+@if (showDiscardModal()) {
+  <app-confirm-dialog
+    variant="warning"
+    icon="icon-back"
+    heading="Discard Changes?"
+    confirmLabel="Discard"
+    cancelLabel="Keep Editing"
+    confirmPlacement="secondary"
+    (confirmed)="confirmDiscard()"
+    (cancelled)="cancelDiscard()"
+  >
+    You have unsaved changes that will be lost if you leave this page.
+  </app-confirm-dialog>
+}
