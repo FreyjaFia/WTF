@@ -1,3 +1,4 @@
+import { HttpErrorMessages } from '@core/messages';
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -10,7 +11,7 @@ import {
   StockWasteService,
   WasteReasonService,
 } from '@core/services';
-import { IconComponent, PullToRefreshComponent, SideDrawerComponent } from '@shared/components';
+import { ConnectionErrorComponent, IconComponent, PullToRefreshComponent, SideDrawerComponent } from '@shared/components';
 import { BadgeComponent, BadgeVariant } from '@shared/components/badge/badge';
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import { FilterButtonComponent } from '@shared/components/filter-button/filter-button';
@@ -52,7 +53,7 @@ const STATUS_BARS: Record<StockWasteStatus, string> = {
 
 @Component({
   selector: 'app-waste',
-  imports: [
+  imports: [ConnectionErrorComponent, 
     BadgeComponent,
     ConfirmDialogComponent,
     DatePipe,
@@ -85,6 +86,8 @@ export class WasteComponent implements OnInit, OnDestroy {
   ];
   protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
   protected readonly isLoading = signal(false);
+  protected readonly connectionFailed = signal(false);
+  protected readonly isRefreshing = signal(false);
   protected readonly isLoadingMore = signal(false);
   protected readonly entries = signal<StockWasteDto[]>([]);
   protected readonly totalCount = signal(0);
@@ -158,8 +161,14 @@ export class WasteComponent implements OnInit, OnDestroy {
     this.removeFromStack();
   }
 
+  protected refresh(): void {
+    this.isRefreshing.set(true);
+    this.load();
+  }
+
   protected load(): void {
     this.page = 1;
+    this.connectionFailed.set(false);
     this.isLoading.set(true);
     this.stockWaste.getWaste(this.buildQuery()).subscribe({
       next: (result) => {
@@ -167,10 +176,13 @@ export class WasteComponent implements OnInit, OnDestroy {
         this.totalCount.set(result.totalCount);
         this.pendingCount.set(result.pendingCount);
         this.isLoading.set(false);
+        this.isRefreshing.set(false);
       },
       error: (err: Error) => {
+        this.connectionFailed.set(err.message === HttpErrorMessages.NetworkUnavailable);
         this.alertService.error(err.message);
         this.isLoading.set(false);
+        this.isRefreshing.set(false);
       },
     });
   }

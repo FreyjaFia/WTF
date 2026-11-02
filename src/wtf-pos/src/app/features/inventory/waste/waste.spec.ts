@@ -1,3 +1,4 @@
+import { HttpErrorMessages } from '@core/messages';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, Router } from '@angular/router';
 import {
@@ -175,6 +176,8 @@ describe('WasteComponent', () => {
       const fixture = create();
 
       const refresh = fixture.nativeElement.querySelector('button[aria-label="Refresh waste"]') as HTMLButtonElement;
+      refresh.click();
+      fixture.detectChanges();
       expect(refresh.disabled).toBe(true);
       expect(refresh.classList).toContain('opacity-70');
 
@@ -191,6 +194,14 @@ describe('WasteComponent', () => {
 
       expect(alerts.error).toHaveBeenCalledWith('Could not load waste.');
       expect(internals(fixture.componentInstance).isLoading()).toBe(false);
+    });
+
+    it('shows the connection error instead of the empty list when the network is down', () => {
+      stockWaste.getWaste.mockReturnValue(throwError(() => new Error(HttpErrorMessages.NetworkUnavailable)));
+      const fixture = create();
+
+      expect(fixture.nativeElement.querySelector('app-connection-error')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-testid="waste-empty"]')).toBeNull();
     });
 
     it('marks entries recorded at the POS', () => {

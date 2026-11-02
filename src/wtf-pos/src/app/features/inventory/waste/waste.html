@@ -25,14 +25,14 @@
           <button
             type="button"
             class="app-btn app-btn-ghost pointer-events-auto z-30 p-2"
-            [class.opacity-70]="isLoading()"
-            [disabled]="isLoading()"
+            [class.opacity-70]="isRefreshing()"
+            [disabled]="isRefreshing()"
             aria-label="Refresh waste"
-            (click)="load()"
+            (click)="refresh()"
           >
             <app-icon
               name="icon-refresh"
-              [class]="isLoading() ? 'h-5 w-5 animate-spin text-gray-600' : 'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'"
+              [class]="isRefreshing() ? 'h-5 w-5 animate-spin text-gray-600' : 'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'"
               [fill]="'currentColor'"
             />
           </button>
@@ -167,15 +167,18 @@
     </div>
   </app-side-drawer>
 
-  @if (isLoading() && entries().length === 0) {
+  @if (isLoading()) {
     <div class="flex justify-center py-8">
       <span class="loading loading-spinner loading-lg"></span>
     </div>
   }
 
-  <app-pull-to-refresh [refreshing]="isLoading()" (refreshTriggered)="load()">
+  @if (!isLoading()) {
+  <app-pull-to-refresh [refreshing]="isRefreshing()" (refreshTriggered)="refresh()">
   <div class="pb-4">
-    @if (!isLoading() && visibleEntries().length === 0) {
+    @if (connectionFailed()) {
+      <app-connection-error />
+    } @else if (!isLoading() && visibleEntries().length === 0) {
       <div class="rounded-xl bg-surface p-8 text-center shadow" data-testid="waste-empty">
         <p class="text-lg font-semibold text-gray-700">No waste found</p>
         <p class="text-sm text-gray-500">Nothing was recorded for these filters.</p>
@@ -298,6 +301,7 @@
     }
   </div>
   </app-pull-to-refresh>
+  }
 </div>
 
 @if (reviewTarget(); as target) {

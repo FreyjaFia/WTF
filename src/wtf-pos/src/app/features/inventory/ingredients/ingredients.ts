@@ -1,8 +1,9 @@
+import { HttpErrorMessages } from '@core/messages';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Capacitor } from '@capacitor/core';
 import { AlertService, AuthService, InventoryService } from '@core/services';
-import { IconComponent, PullToRefreshComponent } from '@shared/components';
+import { ConnectionErrorComponent, IconComponent, PullToRefreshComponent } from '@shared/components';
 import { SearchInputComponent } from '@shared/components/search-input/search-input';
 import { BulkAddIngredientsComponent } from './bulk-add-ingredients/bulk-add-ingredients';
 import { formatPeso } from '@shared/calculations';
@@ -40,7 +41,7 @@ const STATUS_STYLES: Record<ProductCoverageStatus, StatusStyle> = {
 
 @Component({
   selector: 'app-ingredients',
-  imports: [
+  imports: [ConnectionErrorComponent, 
     RouterLink,
     IconComponent,
     PullToRefreshComponent,
@@ -57,6 +58,8 @@ export class IngredientsComponent implements OnInit {
 
   protected readonly data = signal<ProductIngredientsDto | null>(null);
   protected readonly isLoading = signal(false);
+  protected readonly connectionFailed = signal(false);
+  protected readonly isRefreshing = signal(false);
   protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
   protected readonly filter = signal<IngredientsFilter>('attention');
   protected readonly search = signal('');
@@ -103,16 +106,25 @@ export class IngredientsComponent implements OnInit {
     this.load();
   }
 
+  protected refresh(): void {
+    this.isRefreshing.set(true);
+    this.load();
+  }
+
   protected load(): void {
+    this.connectionFailed.set(false);
     this.isLoading.set(true);
     this.inventoryService.getProductIngredients().subscribe({
       next: (data) => {
         this.data.set(data);
         this.isLoading.set(false);
+        this.isRefreshing.set(false);
       },
       error: (err) => {
+        this.connectionFailed.set(err.message === HttpErrorMessages.NetworkUnavailable);
         this.alertService.error(err.message);
         this.isLoading.set(false);
+        this.isRefreshing.set(false);
       },
     });
   }

@@ -1,7 +1,9 @@
+import { HttpErrorMessages } from '@core/messages';
 import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { AlertService, AuthService, StockAttentionService } from '@core/services';
 import { IconComponent } from '@shared/components/icons/icon/icon';
+import { ConnectionErrorComponent } from '@shared/components';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { StockAttentionItemDto, StockAttentionLevel } from '@shared/models';
 
@@ -41,7 +43,7 @@ const LEVEL_STYLES: Record<StockAttentionLevel, LevelStyle> = {
 
 @Component({
   selector: 'app-stock-attention',
-  imports: [RouterLink, IconComponent],
+  imports: [ConnectionErrorComponent, RouterLink, IconComponent],
   templateUrl: './stock-attention.html',
   host: { class: 'flex-1 min-h-0' },
 })
@@ -52,6 +54,7 @@ export class StockAttentionComponent implements OnInit, OnDestroy {
   protected readonly auth = inject(AuthService);
 
   protected readonly isLoading = signal(false);
+  protected readonly connectionFailed = signal(false);
   protected readonly filter = signal<LevelFilter>('all');
   protected readonly outCount = this.attention.outCount;
   protected readonly criticalCount = this.attention.criticalCount;
@@ -80,10 +83,12 @@ export class StockAttentionComponent implements OnInit, OnDestroy {
   public ngOnInit(): void {
     // The page listens for stock changes while it is open, so the list updates as sales happen.
     this.attention.start();
+    this.connectionFailed.set(false);
     this.isLoading.set(!this.attention.hasLoaded());
     this.attention.load().subscribe({
       next: () => this.isLoading.set(false),
       error: (err) => {
+        this.connectionFailed.set(err.message === HttpErrorMessages.NetworkUnavailable);
         this.alertService.error(err.message);
         this.isLoading.set(false);
       },

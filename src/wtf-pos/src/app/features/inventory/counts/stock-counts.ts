@@ -1,3 +1,4 @@
+import { HttpErrorMessages } from '@core/messages';
 import { DatePipe } from '@angular/common';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { Capacitor } from '@capacitor/core';
@@ -5,7 +6,7 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { Router, RouterLink } from '@angular/router';
 import { AlertService, AuthService, StockCountService } from '@core/services';
 import { BadgeComponent, BadgeVariant } from '@shared/components/badge/badge';
-import { IconComponent, PullToRefreshComponent } from '@shared/components';
+import { ConnectionErrorComponent, IconComponent, PullToRefreshComponent } from '@shared/components';
 import { AppRoutes } from '@shared/constants/app-routes';
 import {
   STOCK_COUNT_STATUS_LABELS,
@@ -27,7 +28,7 @@ const STATUS_BARS: Record<StockCountStatus, string> = {
 
 @Component({
   selector: 'app-stock-counts',
-  imports: [
+  imports: [ConnectionErrorComponent, 
     BadgeComponent,
     DatePipe,
     IconComponent,
@@ -46,6 +47,8 @@ export class StockCountsComponent implements OnInit {
 
   protected readonly counts = signal<StockCountSummaryDto[]>([]);
   protected readonly isLoading = signal(false);
+  protected readonly connectionFailed = signal(false);
+  protected readonly isRefreshing = signal(false);
   protected readonly isStarting = signal(false);
   protected readonly isFormOpen = signal(false);
   protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
@@ -84,15 +87,24 @@ export class StockCountsComponent implements OnInit {
     this.form.reset();
   }
 
+  protected refresh(): void {
+    this.isRefreshing.set(true);
+    this.load();
+  }
+
   protected load(): void {
+    this.connectionFailed.set(false);
     this.isLoading.set(true);
     this.stockCounts.getCounts().subscribe({
       next: (counts) => {
         this.counts.set(counts);
         this.isLoading.set(false);
+        this.isRefreshing.set(false);
       },
       error: (err: Error) => {
+        this.connectionFailed.set(err.message === HttpErrorMessages.NetworkUnavailable);
         this.isLoading.set(false);
+        this.isRefreshing.set(false);
         this.alertService.error(err.message);
       },
     });

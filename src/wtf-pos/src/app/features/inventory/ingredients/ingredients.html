@@ -139,16 +139,16 @@
         @if (!isAndroidPlatform) {
           <button
             class="app-btn app-btn-ghost pointer-events-auto z-30 p-2"
-            [class.opacity-70]="isLoading()"
+            [class.opacity-70]="isRefreshing()"
             type="button"
-            (click)="load()"
-            [disabled]="isLoading()"
+            (click)="refresh()"
+            [disabled]="isRefreshing()"
             aria-label="Refresh ingredients"
           >
             <app-icon
               name="icon-refresh"
               [class]="
-                isLoading()
+                isRefreshing()
                   ? 'h-5 w-5 animate-spin text-gray-600'
                   : 'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'
               "
@@ -160,15 +160,17 @@
     </div>
   }
 
-  @if (isLoading() && !data()) {
+  @if (isLoading()) {
     <div class="flex justify-center py-8">
       <span class="loading loading-spinner loading-lg"></span>
     </div>
   }
 
-  @if (data()) {
-    <app-pull-to-refresh [refreshing]="isLoading()" (refreshTriggered)="load()">
-      @if (rows().length === 0) {
+  @if ((data() || connectionFailed()) && !isLoading()) {
+    <app-pull-to-refresh [refreshing]="isRefreshing()" (refreshTriggered)="refresh()">
+      @if (connectionFailed()) {
+        <app-connection-error />
+      } @else if (rows().length === 0) {
         <div class="bg-surface rounded-xl p-8 text-center shadow" data-testid="coverage-empty">
           <p class="text-lg font-semibold text-gray-700">
             @if (search()) {
