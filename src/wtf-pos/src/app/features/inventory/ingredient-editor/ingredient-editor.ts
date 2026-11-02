@@ -127,6 +127,31 @@ export class IngredientEditorComponent implements OnInit {
     () => new Map(this.items().map((item) => [item.id, item])),
   );
 
+  protected readonly showsPreviewBox = computed(
+    () => this.showsPreview() && this.previewGroups().length > 0,
+  );
+  protected readonly chipFigures = computed(() => {
+    const pv = this.showsPreviewBox() ? this.preview() : null;
+    if (pv) {
+      return {
+        totalCost: pv.totalCost,
+        price: pv.price,
+        margin: pv.margin,
+        marginPercent: pv.marginPercent,
+      };
+    }
+
+    const base = this.summary();
+    const price = this.product()?.price ?? 0;
+    return base
+      ? { totalCost: base.totalCost, price, margin: base.margin, marginPercent: base.marginPercent }
+      : null;
+  });
+  protected readonly previewTitle = computed(() => {
+    const names = this.preview()?.addOnNames ?? [];
+    return names.length > 0 ? names.join(' + ') : 'Base recipe (no size or add-ons)';
+  });
+
   protected readonly summary = computed(() => {
     this.formVersion();
     const product = this.product();
@@ -299,6 +324,17 @@ export class IngredientEditorComponent implements OnInit {
 
   protected sizeCell(group: LineGroup, sizeId: string): FormControl<number | null> {
     return group.controls.sizeAmounts.controls[sizeId];
+  }
+
+  protected ownAmountNote(itemId: string): string | null {
+    const size = this.sizes().find((s) => this.previewQuantityOf(s.productId) > 0);
+    const group = this.lines.controls.find((g) => g.controls.itemId.value === itemId);
+    const own = size && group ? group.controls.sizeAmounts.controls[size.productId]?.value : null;
+    if (!size || !group || own === null || own === undefined || String(own) === '') {
+      return null;
+    }
+
+    return `${size.name}'s own amount, not the base ${Number(group.controls.quantityPerSale.value) || 0}`;
   }
 
   protected previewQuantityOf(addOnId: string): number {

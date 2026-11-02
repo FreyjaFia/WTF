@@ -303,6 +303,23 @@ describe('IngredientEditorComponent', () => {
     expect(el.querySelector('[data-testid="preview-qty"]')?.textContent).toContain('2');
   });
 
+  it('names what is previewed and flags a size amount that replaces the base', () => {
+    const { fixture, el } = setup({ product: sizedLatte });
+    setValue(fixture, el, 'size-amount', '350');
+    (el.querySelector('[data-testid="preview-option"]') as HTMLElement).click();
+    fixture.detectChanges();
+
+    expect(el.querySelector('[data-testid="preview-title"]')?.textContent).toContain('Large');
+    expect(el.querySelector('[data-testid="own-amount-note"]')?.textContent).toContain("Large's own amount, not the base 200");
+  });
+
+  it('shows one cost summary: the sale preview replaces the base card when sizes exist', () => {
+    const { el } = setup({ product: sizedLatte });
+
+    expect(el.querySelector('[data-testid="total-cost"]')).toBeNull();
+    expect(el.querySelector('[data-testid="preview-cost"]')).not.toBeNull();
+  });
+
   describe('live preview', () => {
     beforeEach(() => vi.useFakeTimers());
     afterEach(() => vi.useRealTimers());
