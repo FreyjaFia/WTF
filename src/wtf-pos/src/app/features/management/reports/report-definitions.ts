@@ -15,6 +15,7 @@ import {
   ReportType,
   StaffPerformanceReportRowDto,
   StockStatusReportRowDto,
+  StockVarianceReportRowDto,
   VoidedOrderReportRowDto,
   WasteReportRowDto,
 } from '@shared/models';
@@ -837,6 +838,110 @@ const waste: ReportDefinition = {
   },
 };
 
+const quantityLabel =
+  (key: string) =>
+  (row: ReportRow): string =>
+    `${formatDecimal(Number(row[key]))} ${String(row['unitName'])}`;
+
+const stockVariance: ReportDefinition = {
+  type: 'stock-variance',
+  title: 'Stock Variance',
+  description: 'What the sales say was used against what the shelf shows, from your counts',
+  group: 'Inventory',
+  icon: 'icon-assignment-turned-in',
+  columns: [
+    { key: 'itemName', header: 'Item', format: 'text' },
+    { key: 'status', header: 'Status', format: 'text' },
+    {
+      key: 'opening',
+      header: 'Opening',
+      format: 'decimal',
+      align: 'end',
+      label: quantityLabel('opening'),
+      lowPriority: true,
+    },
+    {
+      key: 'received',
+      header: 'Received',
+      format: 'decimal',
+      align: 'end',
+      label: quantityLabel('received'),
+      lowPriority: true,
+    },
+    {
+      key: 'theoreticalUsage',
+      header: 'Expected Use',
+      format: 'decimal',
+      align: 'end',
+      label: quantityLabel('theoreticalUsage'),
+    },
+    {
+      key: 'waste',
+      header: 'Waste',
+      format: 'decimal',
+      align: 'end',
+      label: quantityLabel('waste'),
+      lowPriority: true,
+    },
+    {
+      key: 'actualUsage',
+      header: 'Actual Use',
+      format: 'decimal',
+      align: 'end',
+      label: quantityLabel('actualUsage'),
+    },
+    {
+      key: 'closing',
+      header: 'Closing',
+      format: 'decimal',
+      align: 'end',
+      label: quantityLabel('closing'),
+      lowPriority: true,
+    },
+    {
+      key: 'variance',
+      header: 'Variance',
+      format: 'decimal',
+      align: 'end',
+      label: quantityLabel('variance'),
+    },
+    {
+      key: 'variancePercent',
+      header: 'Variance %',
+      format: 'decimal',
+      align: 'end',
+      label: (row) =>
+        row['variancePercent'] == null ? '-' : `${formatDecimal(Number(row['variancePercent']))}%`,
+    },
+    { key: 'varianceValue', header: 'Variance Value', format: 'money', align: 'end' },
+  ],
+  defaultSort: null,
+  filters: [],
+  usesDateRange: true,
+  usesSource: false,
+  totals: (all) => {
+    const rows = rowsOf<StockVarianceReportRowDto>(all);
+    return [
+      { label: 'Items', value: rows.length, format: 'integer' },
+      {
+        label: 'To Check',
+        value: rows.filter((row) => row.status === 'Check').length,
+        format: 'integer',
+      },
+      {
+        label: 'Not Counted',
+        value: rows.filter((row) => row.status === 'Not counted').length,
+        format: 'integer',
+      },
+      {
+        label: 'Variance Value',
+        value: sum(rows, (row) => row.varianceValue ?? 0),
+        format: 'money',
+      },
+    ];
+  },
+};
+
 export function formatDecimal(value: number): string {
   return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
@@ -941,6 +1046,7 @@ export const REPORT_DEFINITIONS: readonly ReportDefinition[] = [
   customerLinks,
   stockStatus,
   waste,
+  stockVariance,
 ].map(withTotals);
 
 export function findReportDefinition(type: ReportType): ReportDefinition {

@@ -295,6 +295,29 @@ internal static class ReportTables
             ("Stock Value", Money(rows.Sum(r => r.StockValue)))
         ]);
 
+    public static readonly ReportTable<StockVarianceReportRowDto> StockVariance = new(
+        "Stock Variance",
+        [
+            new("itemName", "Item", r => r.ItemName, r => r.ItemName, false, 2.4f),
+            new("status", "Status", r => r.Status, r => r.Status, false, 1.1f),
+            new("opening", "Opening", r => Qty(r.Opening, r.UnitName), r => r.Opening, true, 1.2f),
+            new("received", "Received", r => Qty(r.Received, r.UnitName), r => r.Received, true, 1.2f),
+            new("theoreticalUsage", "Expected Use", r => Qty(r.TheoreticalUsage, r.UnitName), r => r.TheoreticalUsage, true, 1.3f),
+            new("waste", "Waste", r => Qty(r.Waste, r.UnitName), r => r.Waste, true, 1.1f),
+            new("actualUsage", "Actual Use", r => Qty(r.ActualUsage, r.UnitName), r => r.ActualUsage, true, 1.3f),
+            new("closing", "Closing", r => Qty(r.Closing, r.UnitName), r => r.Closing, true, 1.2f),
+            new("variance", "Variance", r => Qty(r.Variance, r.UnitName), r => r.Variance, true, 1.2f),
+            new("variancePercent", "Variance %", r => r.VariancePercent.HasValue ? r.VariancePercent.Value.ToString("N1", CultureInfo.InvariantCulture) + "%" : "-", r => r.VariancePercent, true, 1f),
+            new("varianceValue", "Variance Value", r => r.VarianceValue.HasValue ? Money(r.VarianceValue.Value) : "-", r => r.VarianceValue, true, 1.3f, rows => Money(rows.Sum(r => r.VarianceValue ?? 0m)))
+        ],
+        rows =>
+        [
+            ("Items", Number(rows.Count)),
+            ("To Check", Number(rows.Count(r => r.Status == "Check"))),
+            ("Not Counted", Number(rows.Count(r => r.Status == "Not counted"))),
+            ("Variance Value", Money(rows.Sum(r => r.VarianceValue ?? 0m)))
+        ]);
+
     public static readonly ReportTable<WasteReportRowDto> Waste = new(
         "Waste",
         [
@@ -329,6 +352,9 @@ internal static class ReportTables
         var dayLabel = periodStart.ToString("ddd", CultureInfo.InvariantCulture);
         return $"{dateLabel} ({dayLabel})";
     }
+
+    private static string Qty(decimal quantity, string unitName) =>
+        $"{quantity.ToString("N2", CultureInfo.InvariantCulture)} {unitName}";
 
     public static string WasteQuantity(decimal quantity, string? unitName)
     {

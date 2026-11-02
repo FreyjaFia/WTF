@@ -180,8 +180,8 @@ describe('ReportsComponent', () => {
       await create();
 
       const types = t.catalog.flatMap((section) => section.reports.map((r) => r.type));
-      expect(types.length).toBe(14);
-      expect(new Set(types).size).toBe(14);
+      expect(types.length).toBe(15);
+      expect(new Set(types).size).toBe(15);
       expect(t.catalog.map((s) => s.group)).toEqual([
         'Sales',
         'Products',

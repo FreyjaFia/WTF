@@ -26,6 +26,7 @@ const ALL_TYPES = [
   'customer-links',
   'stock-status',
   'waste',
+  'stock-variance',
   'category-sales',
 ];
 

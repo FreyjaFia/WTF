@@ -17,7 +17,8 @@ export type ReportType =
   | 'voids'
   | 'customer-links'
   | 'stock-status'
-  | 'waste';
+  | 'waste'
+  | 'stock-variance';
 
 export type WasteReportGroupBy = 'item' | 'reason' | 'staff' | 'day';
 
@@ -200,6 +201,23 @@ export interface StockStatusReportRowDto {
   status: string;
   costPrice?: number | null;
   stockValue: number;
+}
+
+export interface StockVarianceReportRowDto {
+  itemId: string;
+  itemName: string;
+  unitName: string;
+  opening: number;
+  received: number;
+  theoreticalUsage: number;
+  waste: number;
+  corrections: number;
+  actualUsage: number;
+  closing: number;
+  variance: number;
+  variancePercent?: number | null;
+  varianceValue?: number | null;
+  status: string;
 }
 
 export interface WasteReportRowDto {

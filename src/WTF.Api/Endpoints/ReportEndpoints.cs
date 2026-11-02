@@ -202,6 +202,19 @@ public static class ReportEndpoints
                 var result = await sender.Send(query);
                 return BuildReportResponse(httpContext, result, ReportTables.Waste, query.FromDate!.Value, query.ToDate!.Value, null);
             });
+        reportsGroup.MapGet("/stock-variance",
+            async (HttpContext httpContext, [AsParameters] GetStockVarianceReportQuery query, ISender sender) =>
+            {
+                var validationResult = ValidateDateRange(query.FromDate, query.ToDate);
+                if (validationResult != null)
+                {
+                    return validationResult;
+                }
+
+                var result = await sender.Send(query);
+                return BuildReportResponse(httpContext, result, ReportTables.StockVariance, query.FromDate!.Value, query.ToDate!.Value, null);
+            });
+
         reportsGroup.MapGet("/monthly-workbook/status",
             async ([AsParameters] MonthlyWorkbookRequest request, IMonthlyReportWorkbookService workbookService, CancellationToken cancellationToken) =>
             {
