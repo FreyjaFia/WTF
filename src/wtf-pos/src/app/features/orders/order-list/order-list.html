@@ -515,7 +515,9 @@
       <app-pull-to-refresh [refreshing]="isRefreshing()" (refreshTriggered)="refresh()">
         @if (orders().length === 0) {
           <div class="rounded-lg bg-surface p-8 text-center shadow-lg">
-            <app-icon name="icon-cart" [class]="'mx-auto mb-3 h-12 w-12 text-gray-400'" />
+            <div class="mb-3 flex justify-center">
+              <app-icon name="icon-file" [class]="'h-12 w-12 opacity-60'" />
+            </div>
             <p class="text-lg font-semibold text-gray-700">No orders found</p>
             <p class="text-sm text-gray-500">Try adjusting your filters</p>
           </div>
