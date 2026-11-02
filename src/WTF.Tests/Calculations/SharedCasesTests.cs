@@ -86,7 +86,46 @@ public class SharedCasesTests
         List<StockShortfallCase> StockShortfalls,
         List<WasteNeedsReviewCase> WasteNeedsReview,
         List<WasteBalanceAfterCase> WasteBalanceAfter,
-        List<RecipeCostCase> RecipeCost);
+        List<RecipeCostCase> RecipeCost,
+        List<RecipePreviewCase> RecipePreview);
+
+    private sealed record RecipePreviewSizeAmountCase(string SizeProductId, decimal Quantity);
+
+    private sealed record RecipePreviewLineCase(
+        string ItemId,
+        decimal QuantityPerSale,
+        decimal AllowancePercent,
+        string? ReplacesItemId,
+        decimal? UnitCost,
+        List<RecipePreviewSizeAmountCase> SizeAmounts);
+
+    private sealed record RecipePreviewOptionCase(
+        string ProductId,
+        string Name,
+        bool IsSize,
+        decimal Price,
+        List<RecipePreviewLineCase> Links);
+
+    private sealed record RecipePreviewResultLineCase(string ItemId, decimal Quantity, decimal? LineCost, string? SourceName);
+
+    private sealed record RecipePreviewExpectedCase(
+        decimal Price,
+        decimal TotalCost,
+        int UnknownCostCount,
+        decimal Margin,
+        List<string> AddOnNames,
+        List<RecipePreviewResultLineCase> Lines,
+        List<string> ReplacedItemNames,
+        List<string> Warnings);
+
+    private sealed record RecipePreviewCase(
+        string Name,
+        decimal Price,
+        decimal SuppliesCost,
+        List<RecipePreviewLineCase> Lines,
+        List<RecipePreviewOptionCase> Options,
+        Dictionary<string, int> Chosen,
+        RecipePreviewExpectedCase Expected);
 
     private sealed record RecipeCostLineCase(decimal QuantityPerSale, decimal AllowancePercent, decimal? UnitCost);
 
@@ -139,6 +178,8 @@ public class SharedCasesTests
     public static IEnumerable<object[]> WasteBalanceAfterCaseNames() => Loaded.Value.WasteBalanceAfter.Select(c => new object[] { c.Name });
 
     public static IEnumerable<object[]> RecipeCostCaseNames() => Loaded.Value.RecipeCost.Select(c => new object[] { c.Name });
+
+    public static IEnumerable<object[]> RecipePreviewCaseNames() => Loaded.Value.RecipePreview.Select(c => new object[] { c.Name });
 
     /// <summary>A stable id for a name in the file, so "cheese" is the same add-on in the cart and in the rule.</summary>
     private static Guid IdFor(string name) => new(MD5.HashData(Encoding.UTF8.GetBytes(name)));
@@ -266,6 +307,71 @@ public class SharedCasesTests
         summary.UnknownCostCount.ShouldBe(c.UnknownCostCount);
         CostRules.Margin(c.Price, summary.TotalCost).ShouldBe(c.Margin);
         CostRules.MarginPercent(c.Price, summary.TotalCost).ShouldBe(c.MarginPercent);
+    }
+
+    [Theory]
+    [MemberData(nameof(RecipePreviewCaseNames))]
+    public void RecipePreview_MatchesTheSharedCase(string name)
+    {
+        var c = Loaded.Value.RecipePreview.Single(x => x.Name == name);
+        var drinkId = IdFor("drink");
+        var parent = new StockLine(Guid.NewGuid(), null, drinkId, 1);
+        var chosen = c.Options.Where(option => c.Chosen.GetValueOrDefault(option.ProductId) > 0).ToList();
+        var stockLines = new List<StockLine> { parent };
+        stockLines.AddRange(chosen.Select(option => new StockLine(Guid.NewGuid(), parent.LineId, IdFor(option.ProductId), c.Chosen[option.ProductId])));
+
+        var links = c.Lines
+            .Select(line => new StockLink(
+                drinkId, IdFor(line.ItemId), CostRules.EffectiveQuantity(line.QuantityPerSale, line.AllowancePercent),
+                line.ReplacesItemId is null ? null : IdFor(line.ReplacesItemId)))
+            .Concat(chosen.SelectMany(option => option.Links.Select(link => new StockLink(
+                IdFor(option.ProductId), IdFor(link.ItemId), CostRules.EffectiveQuantity(link.QuantityPerSale, link.AllowancePercent),
+                link.ReplacesItemId is null ? null : IdFor(link.ReplacesItemId)))))
+            .ToList();
+        var sizeAmounts = c.Lines
+            .SelectMany(line => line.SizeAmounts.Select(amount => new StockSizeAmount(drinkId, IdFor(amount.SizeProductId), IdFor(line.ItemId), amount.Quantity)))
+            .ToList();
+
+        var unitCostByItem = c.Lines.Select(line => (line.ItemId, line.UnitCost))
+            .Concat(chosen.SelectMany(option => option.Links.Select(link => (link.ItemId, link.UnitCost))))
+            .GroupBy(entry => IdFor(entry.ItemId))
+            .ToDictionary(group => group.Key, group => group.First().UnitCost);
+        var nameById = unitCostByItem.Keys.ToDictionary(id => id, id => c.Lines.Select(l => l.ItemId)
+            .Concat(chosen.SelectMany(o => o.Links.Select(l => l.ItemId))).First(itemName => IdFor(itemName) == id));
+        var sourceNames = chosen.ToDictionary(option => IdFor(option.ProductId), option => option.Name);
+
+        var required = StockRules.Requirements(stockLines, links, sizeAmounts);
+        var costLines = new List<(string ItemId, decimal Quantity, decimal? UnitCost, string? SourceName)>();
+        var replaced = new List<string>();
+        foreach (var requirement in required)
+        {
+            var itemName = nameById[requirement.ItemId];
+            if (requirement.Quantity <= 0m)
+            {
+                replaced.Add(itemName);
+                continue;
+            }
+
+            costLines.Add((itemName, requirement.Quantity, unitCostByItem[requirement.ItemId], requirement.ProductId == drinkId ? null : sourceNames[requirement.ProductId]));
+        }
+
+        costLines = costLines
+            .OrderBy(line => line.SourceName is not null)
+            .ThenBy(line => line.SourceName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(line => line.ItemId, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var summary = CostRules.RecipeCost(costLines.Select(line => new RecipeLine(line.Quantity, line.UnitCost)), c.SuppliesCost);
+        var price = c.Price + chosen.Sum(option => option.Price * c.Chosen[option.ProductId]);
+
+        price.ShouldBe(c.Expected.Price);
+        summary.TotalCost.ShouldBe(c.Expected.TotalCost);
+        summary.UnknownCostCount.ShouldBe(c.Expected.UnknownCostCount);
+        CostRules.Margin(price, summary.TotalCost).ShouldBe(c.Expected.Margin);
+        costLines
+            .Select(line => new RecipePreviewResultLineCase(
+                line.ItemId, line.Quantity, line.UnitCost.HasValue ? CostRules.LineCost(line.Quantity, line.UnitCost.Value) : null, line.SourceName))
+            .ShouldBe(c.Expected.Lines);
+        replaced.Distinct().OrderBy(itemName => itemName).ToList().ShouldBe(c.Expected.ReplacedItemNames);
     }
 
     [Theory]

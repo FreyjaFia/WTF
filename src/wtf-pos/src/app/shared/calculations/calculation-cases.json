@@ -1517,5 +1517,142 @@
     { "name": "six decimal costs add up", "price": 50, "suppliesCost": 0, "lines": [
       { "quantityPerSale": 18, "allowancePercent": 2.5, "unitCost": 0.333333 } ],
       "totalCost": 6.149994, "unknownCostCount": 0, "margin": 43.850006, "marginPercent": 87.7 }
+  ],
+  "recipePreview": [
+    {
+      "name": "the base recipe, with the allowance on the milk",
+      "price": 150, "suppliesCost": 0,
+      "lines": [
+        { "itemId": "milk", "quantityPerSale": 200, "allowancePercent": 5, "replacesItemId": null, "unitCost": 0.15, "sizeAmounts": [] },
+        { "itemId": "cup", "quantityPerSale": 1, "allowancePercent": 0, "replacesItemId": null, "unitCost": 4, "sizeAmounts": [] } ],
+      "options": [], "chosen": {},
+      "expected": {
+        "price": 150, "totalCost": 35.5, "unknownCostCount": 0, "margin": 114.5, "addOnNames": [],
+        "lines": [
+          { "itemId": "cup", "quantity": 1, "lineCost": 4, "sourceName": null },
+          { "itemId": "milk", "quantity": 210, "lineCost": 31.5, "sourceName": null } ],
+        "replacedItemNames": [], "warnings": [] }
+    },
+    {
+      "name": "a size amount replaces the base amount, the size price and supplies are added",
+      "price": 150, "suppliesCost": 2,
+      "lines": [
+        { "itemId": "milk", "quantityPerSale": 200, "allowancePercent": 5, "replacesItemId": null, "unitCost": 0.15,
+          "sizeAmounts": [{ "sizeProductId": "large", "quantity": 300 }] },
+        { "itemId": "cup", "quantityPerSale": 1, "allowancePercent": 0, "replacesItemId": null, "unitCost": 4, "sizeAmounts": [] } ],
+      "options": [{ "productId": "large", "name": "Large", "isSize": true, "price": 30, "links": [] }],
+      "chosen": { "large": 1 },
+      "expected": {
+        "price": 180, "totalCost": 51, "unknownCostCount": 0, "margin": 129, "addOnNames": ["Large"],
+        "lines": [
+          { "itemId": "cup", "quantity": 1, "lineCost": 4, "sourceName": null },
+          { "itemId": "milk", "quantity": 300, "lineCost": 45, "sourceName": null } ],
+        "replacedItemNames": [], "warnings": [] }
+    },
+    {
+      "name": "an add-on that replaces an item takes the drink's own link to it out",
+      "price": 150, "suppliesCost": 0,
+      "lines": [
+        { "itemId": "milk", "quantityPerSale": 200, "allowancePercent": 0, "replacesItemId": null, "unitCost": 0.15, "sizeAmounts": [] },
+        { "itemId": "cup", "quantityPerSale": 1, "allowancePercent": 0, "replacesItemId": null, "unitCost": 4, "sizeAmounts": [] } ],
+      "options": [{ "productId": "oat", "name": "Oat milk", "isSize": false, "price": 20, "links": [
+        { "itemId": "oatmilk", "quantityPerSale": 200, "allowancePercent": 0, "replacesItemId": "milk", "unitCost": 0.2 } ] }],
+      "chosen": { "oat": 1 },
+      "expected": {
+        "price": 170, "totalCost": 44, "unknownCostCount": 0, "margin": 126, "addOnNames": ["Oat milk"],
+        "lines": [
+          { "itemId": "cup", "quantity": 1, "lineCost": 4, "sourceName": null },
+          { "itemId": "oatmilk", "quantity": 200, "lineCost": 40, "sourceName": "Oat milk" } ],
+        "replacedItemNames": ["milk"], "warnings": [] }
+    },
+    {
+      "name": "a size amount of zero leaves the ingredient out for that size",
+      "price": 150, "suppliesCost": 0,
+      "lines": [
+        { "itemId": "milk", "quantityPerSale": 200, "allowancePercent": 0, "replacesItemId": null, "unitCost": 0.15, "sizeAmounts": [] },
+        { "itemId": "cup", "quantityPerSale": 1, "allowancePercent": 0, "replacesItemId": null, "unitCost": 4,
+          "sizeAmounts": [{ "sizeProductId": "large", "quantity": 0 }] } ],
+      "options": [{ "productId": "large", "name": "Large", "isSize": true, "price": 30, "links": [] }],
+      "chosen": { "large": 1 },
+      "expected": {
+        "price": 180, "totalCost": 30, "unknownCostCount": 0, "margin": 150, "addOnNames": ["Large"],
+        "lines": [{ "itemId": "milk", "quantity": 200, "lineCost": 30, "sourceName": null }],
+        "replacedItemNames": ["cup"], "warnings": [] }
+    },
+    {
+      "name": "a size with no amounts of its own warns when another size has them",
+      "price": 150, "suppliesCost": 0,
+      "lines": [
+        { "itemId": "milk", "quantityPerSale": 200, "allowancePercent": 0, "replacesItemId": null, "unitCost": 0.15,
+          "sizeAmounts": [{ "sizeProductId": "large", "quantity": 300 }] } ],
+      "options": [
+        { "productId": "large", "name": "Large", "isSize": true, "price": 30, "links": [] },
+        { "productId": "jumbo", "name": "Jumbo", "isSize": true, "price": 50, "links": [] } ],
+      "chosen": { "jumbo": 1 },
+      "expected": {
+        "price": 200, "totalCost": 30, "unknownCostCount": 0, "margin": 170, "addOnNames": ["Jumbo"],
+        "lines": [{ "itemId": "milk", "quantity": 200, "lineCost": 30, "sourceName": null }],
+        "replacedItemNames": [], "warnings": ["Jumbo has no amounts of its own, so it uses the base amounts."] }
+    },
+    {
+      "name": "an add-on picked twice takes its item twice and its price twice",
+      "price": 150, "suppliesCost": 0,
+      "lines": [
+        { "itemId": "cup", "quantityPerSale": 1, "allowancePercent": 0, "replacesItemId": null, "unitCost": 4, "sizeAmounts": [] } ],
+      "options": [{ "productId": "shot", "name": "Extra shot", "isSize": false, "price": 25, "links": [
+        { "itemId": "beans", "quantityPerSale": 9, "allowancePercent": 10, "replacesItemId": null, "unitCost": 1.5 } ] }],
+      "chosen": { "shot": 2 },
+      "expected": {
+        "price": 200, "totalCost": 33.7, "unknownCostCount": 0, "margin": 166.3, "addOnNames": ["Extra shot x2"],
+        "lines": [
+          { "itemId": "cup", "quantity": 1, "lineCost": 4, "sourceName": null },
+          { "itemId": "beans", "quantity": 19.8, "lineCost": 29.7, "sourceName": "Extra shot" } ],
+        "replacedItemNames": [], "warnings": [] }
+    },
+    {
+      "name": "an add-on that uses the same item as the drink gets its own line",
+      "price": 100, "suppliesCost": 0,
+      "lines": [
+        { "itemId": "milk", "quantityPerSale": 200, "allowancePercent": 0, "replacesItemId": null, "unitCost": 0.15, "sizeAmounts": [] } ],
+      "options": [{ "productId": "extramilk", "name": "Extra milk", "isSize": false, "price": 10, "links": [
+        { "itemId": "milk", "quantityPerSale": 50, "allowancePercent": 0, "replacesItemId": null, "unitCost": 0.15 } ] }],
+      "chosen": { "extramilk": 1 },
+      "expected": {
+        "price": 110, "totalCost": 37.5, "unknownCostCount": 0, "margin": 72.5, "addOnNames": ["Extra milk"],
+        "lines": [
+          { "itemId": "milk", "quantity": 200, "lineCost": 30, "sourceName": null },
+          { "itemId": "milk", "quantity": 50, "lineCost": 7.5, "sourceName": "Extra milk" } ],
+        "replacedItemNames": [], "warnings": [] }
+    },
+    {
+      "name": "replacing an item wins over a size amount for that item",
+      "price": 150, "suppliesCost": 0,
+      "lines": [
+        { "itemId": "milk", "quantityPerSale": 200, "allowancePercent": 0, "replacesItemId": null, "unitCost": 0.15,
+          "sizeAmounts": [{ "sizeProductId": "large", "quantity": 300 }] } ],
+      "options": [
+        { "productId": "large", "name": "Large", "isSize": true, "price": 30, "links": [] },
+        { "productId": "oat", "name": "Oat milk", "isSize": false, "price": 20, "links": [
+          { "itemId": "oatmilk", "quantityPerSale": 200, "allowancePercent": 0, "replacesItemId": "milk", "unitCost": 0.2 } ] } ],
+      "chosen": { "large": 1, "oat": 1 },
+      "expected": {
+        "price": 200, "totalCost": 40, "unknownCostCount": 0, "margin": 160, "addOnNames": ["Large", "Oat milk"],
+        "lines": [{ "itemId": "oatmilk", "quantity": 200, "lineCost": 40, "sourceName": "Oat milk" }],
+        "replacedItemNames": ["milk"], "warnings": [] }
+    },
+    {
+      "name": "an ingredient with no cost is unknown, not free",
+      "price": 100, "suppliesCost": 0,
+      "lines": [
+        { "itemId": "milk", "quantityPerSale": 100, "allowancePercent": 0, "replacesItemId": null, "unitCost": 0.2, "sizeAmounts": [] },
+        { "itemId": "syrup", "quantityPerSale": 30, "allowancePercent": 0, "replacesItemId": null, "unitCost": null, "sizeAmounts": [] } ],
+      "options": [], "chosen": {},
+      "expected": {
+        "price": 100, "totalCost": 20, "unknownCostCount": 1, "margin": 80, "addOnNames": [],
+        "lines": [
+          { "itemId": "milk", "quantity": 100, "lineCost": 20, "sourceName": null },
+          { "itemId": "syrup", "quantity": 30, "lineCost": null, "sourceName": null } ],
+        "replacedItemNames": [], "warnings": [] }
+    }
   ]
 }

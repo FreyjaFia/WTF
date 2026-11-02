@@ -25,7 +25,22 @@ public record ProductIngredientsDto(
 
 public record ProductIngredientSizeDto(Guid ProductId, string Name);
 
-public record ProductIngredientAddOnOptionDto(Guid ProductId, string Name, bool IsSize, int AddOnType = 0, decimal Price = 0m);
+public record ProductIngredientAddOnOptionDto(
+    Guid ProductId,
+    string Name,
+    bool IsSize,
+    int AddOnType = 0,
+    decimal Price = 0m,
+    List<ProductIngredientOptionLinkDto>? Links = null);
+
+public record ProductIngredientOptionLinkDto(
+    Guid ItemId,
+    string ItemName,
+    string UnitName,
+    decimal QuantityPerSale,
+    decimal AllowancePercent,
+    Guid? ReplacesItemId,
+    decimal? UnitCost);
 
 public record ProductIngredientSizeAmountDto(Guid SizeProductId, decimal Quantity);
 

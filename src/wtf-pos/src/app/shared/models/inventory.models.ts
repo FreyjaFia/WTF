@@ -279,6 +279,17 @@ export interface ProductIngredientAddOnOptionDto {
   isSize: boolean;
   addOnType?: number;
   price?: number;
+  links?: ProductIngredientOptionLinkDto[];
+}
+
+export interface ProductIngredientOptionLinkDto {
+  itemId: string;
+  itemName: string;
+  unitName: string;
+  quantityPerSale: number;
+  allowancePercent: number;
+  replacesItemId?: string | null;
+  unitCost?: number | null;
 }
 
 export interface ProductIngredientSizeAmountDto {
@@ -322,31 +333,6 @@ export interface ProductIngredientInputDto {
   allowancePercent: number;
   replacesItemId: string | null;
   sizeAmounts?: ProductIngredientSizeAmountDto[];
-}
-
-export interface RecipePreviewLineDto {
-  itemId: string;
-  itemName: string;
-  unitName: string;
-  quantity: number;
-  unitCost: number | null;
-  lineCost: number | null;
-  sourceName: string | null;
-}
-
-export interface RecipePreviewDto {
-  productId: string;
-  productName: string;
-  price: number;
-  addOnNames: string[];
-  lines: RecipePreviewLineDto[];
-  replacedItemNames: string[];
-  suppliesCost: number;
-  totalCost: number;
-  unknownCostCount: number;
-  margin: number;
-  marginPercent: number | null;
-  warnings: string[];
 }
 
 export interface BulkIngredientLineDto {

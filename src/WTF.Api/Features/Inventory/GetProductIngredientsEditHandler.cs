@@ -54,9 +54,44 @@ public class GetProductIngredientsEditHandler(WTFDbContext db) : IRequestHandler
                     ? pa.ProductAddOnPriceOverride.Price
                     : pa.AddOn.Price))
             .ToListAsync(cancellationToken);
+        var optionIds = options.Select(option => option.ProductId).ToList();
+        var optionLinks = await db.ProductItemLinks
+            .AsNoTracking()
+            .Where(l => optionIds.Contains(l.ProductId) && l.IsActive && l.Item.IsActive)
+            .Select(l => new
+            {
+                l.ProductId,
+                l.ItemId,
+                ItemName = l.Item.Name,
+                l.Item.UnitName,
+                l.QuantityPerSale,
+                l.AllowancePercent,
+                l.ReplacesItemId,
+                l.Item.AverageCost,
+                l.Item.CostPrice,
+                l.Item.YieldPercent
+            })
+            .ToListAsync(cancellationToken);
         options = options
             .OrderBy(option => option.Price)
             .ThenBy(option => option.Name)
+            .Select(option => option with
+            {
+                Links = optionLinks
+                    .Where(l => l.ProductId == option.ProductId)
+                    .OrderBy(l => l.ItemName)
+                    .Select(l => new ProductIngredientOptionLinkDto(
+                        l.ItemId,
+                        l.ItemName,
+                        InventoryUnitLabels.Abbreviate(l.UnitName),
+                        l.QuantityPerSale,
+                        l.AllowancePercent,
+                        l.ReplacesItemId,
+                        request.IncludeCosts
+                            ? CostRules.UsableCost(CostRules.MovementCost(l.AverageCost, l.CostPrice), l.YieldPercent)
+                            : null))
+                    .ToList()
+            })
             .ToList();
         var sizes = options
             .Where(option => option.IsSize)

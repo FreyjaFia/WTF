@@ -201,7 +201,7 @@
             </p>
 
             <div class="mt-3 overflow-x-auto">
-              <table class="w-full min-w-96 text-left text-sm">
+              <table class="w-full min-w-80 text-left text-sm">
                 <thead>
                   <tr class="text-xs text-gray-500">
                     <th class="py-2 pr-3 font-semibold">Ingredient</th>
@@ -228,7 +228,7 @@
                             type="number"
                             step="any"
                             min="0"
-                            class="input input-bordered input-sm w-24"
+                            class="input input-bordered input-sm w-20"
                             [formControl]="sizeCell(group, size.productId)"
                             [placeholder]="'' + group.controls.quantityPerSale.value"
                             data-testid="size-amount"

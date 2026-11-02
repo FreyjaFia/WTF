@@ -1,6 +1,5 @@
 import { DecimalPipe } from '@angular/common';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import {
   FormArray,
   FormControl,
@@ -17,6 +16,7 @@ import {
   recipeCost,
   RecipeCostLine,
 } from '@shared/calculations/recipe-cost';
+import { previewRecipe, RecipePreviewResult } from '@shared/calculations/recipe-preview';
 import { IconComponent, PageTitleComponent } from '@shared/components';
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import {
@@ -29,10 +29,9 @@ import {
   ItemDto,
   ProductIngredientInputDto,
   ProductIngredientsEditDto,
-  RecipePreviewDto,
 } from '@shared/models';
-import { forkJoin, Observable, of, Subscription } from 'rxjs';
-import { debounceTime, switchMap } from 'rxjs/operators';
+import { forkJoin, Observable, of } from 'rxjs';
+import { switchMap } from 'rxjs/operators';
 
 type LineGroup = FormGroup<{
   itemId: FormControl<string>;
@@ -51,7 +50,6 @@ interface LineValue {
 }
 
 const MAX_PREVIEW_QUANTITY = 9;
-const PREVIEW_DEBOUNCE_MS = 400;
 const PREVIEW_GROUP_ORDER = [1, 2, 5, 3, 4];
 const RADIO_TYPES = new Set([1, 2, 5]);
 const PREVIEW_GROUP_HEADERS: Record<number, string> = {
@@ -82,8 +80,6 @@ export class IngredientEditorComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly alertService = inject(AlertService);
   private readonly modalStack = inject(ModalStackService);
-  private readonly destroyRef = inject(DestroyRef);
-  private previewRequest: Subscription | null = null;
 
   protected readonly product = signal<ProductIngredientsEditDto | null>(null);
   protected readonly items = signal<ItemDto[]>([]);
@@ -91,7 +87,6 @@ export class IngredientEditorComponent implements OnInit {
   protected readonly isSaving = signal(false);
   protected readonly showDiscardModal = signal(false);
   protected readonly formVersion = signal(0);
-  protected readonly preview = signal<RecipePreviewDto | null>(null);
   protected readonly previewQuantities = signal<Record<string, number>>({});
 
   protected readonly form = new FormGroup({
@@ -126,6 +121,48 @@ export class IngredientEditorComponent implements OnInit {
   protected readonly itemsById = computed(
     () => new Map(this.items().map((item) => [item.id, item])),
   );
+
+  protected readonly preview = computed<RecipePreviewResult | null>(() => {
+    this.formVersion();
+    const product = this.product();
+    if (!product || !this.showsPreview()) {
+      return null;
+    }
+
+    return previewRecipe({
+      productId: product.productId,
+      productName: product.name,
+      price: product.price,
+      suppliesCost: Number(this.form.controls.suppliesCost.value) || 0,
+      lines: this.lines.controls.map((group) => {
+        const value = group.getRawValue();
+        return {
+          itemId: value.itemId,
+          itemName: this.itemNameOf(value.itemId),
+          unitName: this.unitOf(value.itemId),
+          quantityPerSale: Number(value.quantityPerSale) || 0,
+          allowancePercent: Number(value.allowancePercent) || 0,
+          replacesItemId: null,
+          unitCost: this.unitCostOf(value.itemId),
+          sizeAmounts: Object.entries(value.sizeAmounts)
+            .filter(([, quantity]) => quantity !== null && quantity !== undefined && String(quantity) !== '' && Number(quantity) >= 0)
+            .map(([sizeProductId, quantity]) => ({ sizeProductId, quantity: Number(quantity) })),
+        };
+      }),
+      options: (product.addOnOptions ?? []).map((option) => ({
+        productId: option.productId,
+        name: option.name,
+        isSize: option.isSize,
+        price: option.price ?? 0,
+        links: (option.links ?? []).map((link) => ({
+          ...link,
+          replacesItemId: link.replacesItemId ?? null,
+          unitCost: link.unitCost ?? null,
+        })),
+      })),
+      chosen: this.previewQuantities(),
+    });
+  });
 
   protected readonly showsPreviewBox = computed(
     () => this.showsPreview() && this.previewGroups().length > 0,
@@ -194,9 +231,6 @@ export class IngredientEditorComponent implements OnInit {
   public ngOnInit(): void {
     this.productId = this.route.snapshot.paramMap.get('productId') ?? '';
     this.form.valueChanges.subscribe(() => this.formVersion.update((v) => v + 1));
-    this.form.valueChanges
-      .pipe(debounceTime(PREVIEW_DEBOUNCE_MS), takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.loadPreview());
     this.load();
   }
 
@@ -313,7 +347,6 @@ export class IngredientEditorComponent implements OnInit {
           this.applyProduct(result);
           this.isSaving.set(false);
           this.alertService.success('Ingredients saved.');
-          this.loadPreview();
         },
         error: (err) => {
           this.isSaving.set(false);
@@ -360,7 +393,6 @@ export class IngredientEditorComponent implements OnInit {
 
       return next;
     });
-    this.loadPreview();
   }
 
   protected changePreviewQuantity(addOnId: string, delta: number, event: Event): void {
@@ -376,7 +408,6 @@ export class IngredientEditorComponent implements OnInit {
 
       return copy;
     });
-    this.loadPreview();
   }
 
   protected goBack(): void {
@@ -407,37 +438,12 @@ export class IngredientEditorComponent implements OnInit {
         this.items.set(items.filter((item) => item.isActive));
         this.applyProduct(product);
         this.isLoading.set(false);
-        this.loadPreview();
       },
       error: (err) => {
         this.alertService.error(err.message);
         this.isLoading.set(false);
       },
     });
-  }
-
-  private loadPreview(): void {
-    if (!this.showsPreview()) {
-      return;
-    }
-
-    const ids = Object.entries(this.previewQuantities()).flatMap(([id, quantity]) =>
-      Array<string>(quantity).fill(id),
-    );
-
-    // A newer request replaces an older one still in flight, so a slow answer never overwrites a fresh one.
-    this.previewRequest?.unsubscribe();
-    this.previewRequest = this.inventoryService
-      .previewRecipeDraft(
-        this.productId,
-        ids,
-        this.toInputs().filter((line) => line.itemId && line.quantityPerSale > 0),
-        Number(this.form.controls.suppliesCost.value) || 0,
-      )
-      .subscribe({
-        next: (result) => this.preview.set(result),
-        error: (err) => this.alertService.error(err.message),
-      });
   }
 
   private applyProduct(product: ProductIngredientsEditDto): void {
@@ -517,6 +523,13 @@ export class IngredientEditorComponent implements OnInit {
     }
 
     return this.product()?.lines.find((line) => line.itemId === itemId)?.unitCost ?? null;
+  }
+
+  private itemNameOf(itemId: string): string {
+    return (
+      this.itemsById().get(itemId)?.name ??
+      this.product()?.lines.find((line) => line.itemId === itemId)?.itemName ?? ''
+    );
   }
 
   private knownUnit(itemId: string): string {

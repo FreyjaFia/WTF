@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter } from '@angular/router';
 import { AlertService, AuthService, InventoryService, ModalStackService } from '@core/services';
-import { ItemDto, ProductIngredientsEditDto, RecipePreviewDto } from '@shared/models';
+import { ItemDto, ProductIngredientsEditDto } from '@shared/models';
 import { of, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 import { IngredientEditorComponent } from './ingredient-editor';
@@ -49,35 +49,10 @@ const latte: ProductIngredientsEditDto = {
   marginPercent: 79,
 };
 
-const preview: RecipePreviewDto = {
-  productId: 'p1',
-  productName: 'Latte',
-  price: 180,
-  addOnNames: ['Large'],
-  lines: [
-    {
-      itemId: 'i1',
-      itemName: 'Milk',
-      unitName: 'ml',
-      quantity: 300,
-      unitCost: 0.15,
-      lineCost: 45,
-      sourceName: null,
-    },
-  ],
-  replacedItemNames: [],
-  suppliesCost: 0,
-  totalCost: 45,
-  unknownCostCount: 0,
-  margin: 135,
-  marginPercent: 75,
-  warnings: [],
-} as RecipePreviewDto;
-
 const sizedLatte: ProductIngredientsEditDto = {
   ...latte,
   sizes: [{ productId: 's1', name: 'Large' }],
-  addOnOptions: [{ productId: 's1', name: 'Large', isSize: true }],
+  addOnOptions: [{ productId: 's1', name: 'Large', isSize: true, price: 30 }],
 };
 
 describe('IngredientEditorComponent', () => {
@@ -87,7 +62,6 @@ describe('IngredientEditorComponent', () => {
       getInventoryItems: vi.fn().mockReturnValue(of([milk, cup, syrup])),
       saveProductIngredients: vi.fn().mockReturnValue(of(options.product ?? latte)),
       setSuppliesCost: vi.fn().mockReturnValue(of(undefined)),
-      previewRecipeDraft: vi.fn().mockReturnValue(of(preview)),
     };
     const alerts = { error: vi.fn(), success: vi.fn() };
     TestBed.configureTestingModule({
@@ -275,22 +249,31 @@ describe('IngredientEditorComponent', () => {
   });
 
   it('previews a sale with the chosen size', () => {
-    const { fixture, inventory, el } = setup({ product: sizedLatte });
+    const { fixture, el } = setup({ product: sizedLatte });
     const option = el.querySelector('[data-testid="preview-option"]') as HTMLElement;
     option.click();
     fixture.detectChanges();
 
     expect(el.querySelector('[data-testid="preview-group"] h4')?.textContent).toContain('Sizes');
-    expect(inventory.previewRecipeDraft).toHaveBeenLastCalledWith('p1', ['s1'], expect.any(Array), expect.any(Number));
-    expect(el.querySelector('[data-testid="preview-cost"]')?.textContent).toContain('45.00');
+    expect(el.querySelector('[data-testid="preview-price"]')?.textContent).toContain('180.00');
+    expect(el.querySelector('[data-testid="preview-cost"]')?.textContent).toContain('31.50');
   });
 
-  it('sends an add-on once per quantity when stepped up', () => {
-    const { fixture, inventory, el } = setup({
+  it('counts an add-on once per quantity when stepped up', () => {
+    const { fixture, el } = setup({
       product: {
         ...sizedLatte,
         addOnOptions: [
-          { productId: 'x1', name: 'Extra Shot', isSize: false, addOnType: 4, price: 20 },
+          {
+            productId: 'x1',
+            name: 'Extra Shot',
+            isSize: false,
+            addOnType: 4,
+            price: 20,
+            links: [
+              { itemId: 'i3', itemName: 'Syrup', unitName: 'ml', quantityPerSale: 10, allowancePercent: 0, unitCost: 0.5 },
+            ],
+          },
         ],
       },
     });
@@ -299,8 +282,10 @@ describe('IngredientEditorComponent', () => {
     (el.querySelector('[data-testid="preview-plus"]') as HTMLElement).click();
     fixture.detectChanges();
 
-    expect(inventory.previewRecipeDraft).toHaveBeenLastCalledWith('p1', ['x1', 'x1'], expect.any(Array), expect.any(Number));
     expect(el.querySelector('[data-testid="preview-qty"]')?.textContent).toContain('2');
+    expect(el.querySelector('[data-testid="preview-price"]')?.textContent).toContain('190.00');
+    expect(el.querySelector('[data-testid="preview-cost"]')?.textContent).toContain('41.50');
+    expect([...el.querySelectorAll('[data-testid="preview-line"]')].some((l) => l.textContent?.includes('Syrup'))).toBe(true);
   });
 
   it('names what is previewed and flags a size amount that replaces the base', () => {
@@ -321,33 +306,23 @@ describe('IngredientEditorComponent', () => {
   });
 
   describe('live preview', () => {
-    beforeEach(() => vi.useFakeTimers());
-    afterEach(() => vi.useRealTimers());
-
-    it('sends the unsaved lines and supplies cost once typing stops', () => {
+    it('follows the unsaved lines and supplies cost at once, without asking the API', () => {
       const { fixture, inventory, el } = setup({ product: sizedLatte });
-      inventory.previewRecipeDraft.mockClear();
 
-      setValue(fixture, el, 'line-amount', '250');
+      setValue(fixture, el, 'line-amount', '300');
       setValue(fixture, el, 'supplies-cost', '2');
-      expect(inventory.previewRecipeDraft).not.toHaveBeenCalled();
-      vi.advanceTimersByTime(400);
 
-      expect(inventory.previewRecipeDraft).toHaveBeenCalledTimes(1);
-      const [productId, , lines, supplies] = inventory.previewRecipeDraft.mock.calls[0];
-      expect(productId).toBe('p1');
-      expect(lines[0].quantityPerSale).toBe(250);
-      expect(supplies).toBe(2);
+      expect(el.querySelector('[data-testid="preview-cost"]')?.textContent).toContain('49.25');
+      expect(inventory.saveProductIngredients).not.toHaveBeenCalled();
     });
 
     it('leaves out lines that have no amount yet', () => {
-      const { fixture, inventory, el } = setup({ product: sizedLatte });
-      inventory.previewRecipeDraft.mockClear();
+      const { fixture, el } = setup({ product: sizedLatte });
 
       setValue(fixture, el, 'line-amount', '');
-      vi.advanceTimersByTime(400);
 
-      expect(inventory.previewRecipeDraft.mock.calls[0][2]).toEqual([]);
+      expect(el.querySelectorAll('[data-testid="preview-line"]').length).toBe(0);
+      expect(el.querySelector('[data-testid="preview-cost"]')?.textContent).toContain('0.00');
     });
   });
 });

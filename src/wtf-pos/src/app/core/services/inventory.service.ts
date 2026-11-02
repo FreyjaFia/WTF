@@ -15,7 +15,6 @@ import {
   ProductItemLinkAssignmentDto,
   ProductItemLinkDto,
   RecipeCostDto,
-  RecipePreviewDto,
   ProductIngredientInputDto,
   ProductIngredientsDto,
   ProductIngredientsEditDto,
@@ -176,21 +175,6 @@ export class InventoryService {
     return this.http
       .get<RecipeCostDto>(`${environment.apiUrl}/products/${productId}/recipe-cost`)
       .pipe(catchError((error) => this.handleError(error, 'Unable to fetch the recipe cost.')));
-  }
-
-  public previewRecipeDraft(
-    productId: string,
-    addOnIds: string[],
-    lines: ProductIngredientInputDto[],
-    suppliesCost: number,
-  ): Observable<RecipePreviewDto> {
-    return this.http
-      .post<RecipePreviewDto>(`${environment.apiUrl}/products/${productId}/recipe-preview`, {
-        addOnIds,
-        lines,
-        suppliesCost,
-      })
-      .pipe(catchError((error) => this.handleError(error, 'Unable to work out the preview.')));
   }
 
   public bulkAddIngredients(
