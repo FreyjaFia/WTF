@@ -3,7 +3,7 @@
 #
 #   E2E_SQL='Server=localhost,1433;User Id=sa;Password=...;TrustServerCertificate=true;Encrypt=false' bash run.sh [playwright args]
 #
-# Creates WTF_E2E_<time>_<id> (src/WTF.E2eDb), starts the API on 5290 against it and the app on 4300 (the "e2e"
+# Creates WTF_E2E_<time>_<id> (src/WTF.E2E.Database), starts the API on 5290 against it and the app on 4300 (the "e2e"
 # configuration, which calls the API on 5290), runs the tests, then stops both and drops the database. Never uses the
 # real WTF database. Needs: dotnet 10, node, jq, curl, setsid (Linux).
 set -euo pipefail
@@ -35,7 +35,7 @@ cleanup() {
   stop_group "$API_PID"
   if [ -n "$DB" ]; then
     sleep 2
-    dotnet "$ROOT/src/WTF.E2eDb/bin/Release/net10.0/WTF.E2eDb.dll" drop "$DB" >/dev/null 2>&1 || true
+    dotnet "$ROOT/src/WTF.E2E.Database/bin/Release/net10.0/WTF.E2E.Database.dll" drop "$DB" >/dev/null 2>&1 || true
     echo "Dropped $DB."
   fi
 }
@@ -55,12 +55,12 @@ wait_for() {
 }
 
 echo "Building the API and the database tool..."
-dotnet build "$ROOT/src/WTF.E2eDb/WTF.E2eDb.csproj" -c Release -v q --nologo >/dev/null
+dotnet build "$ROOT/src/WTF.E2E.Database/WTF.E2E.Database.csproj" -c Release -v q --nologo >/dev/null
 
 # A run that was cut short leaves its database behind: remove those first. This also waits for a SQL Server that is
 # still starting (a container takes a while before it accepts logins).
 for ((attempt = 1; attempt <= 36; attempt++)); do
-  if dotnet "$ROOT/src/WTF.E2eDb/bin/Release/net10.0/WTF.E2eDb.dll" drop-all 2>"$LOGS/sql-wait.log"; then
+  if dotnet "$ROOT/src/WTF.E2E.Database/bin/Release/net10.0/WTF.E2E.Database.dll" drop-all 2>"$LOGS/sql-wait.log"; then
     break
   fi
   if [ "$attempt" -eq 36 ]; then
@@ -73,7 +73,7 @@ for ((attempt = 1; attempt <= 36; attempt++)); do
 done
 
 echo "Creating the throwaway database..."
-CREATED="$(dotnet "$ROOT/src/WTF.E2eDb/bin/Release/net10.0/WTF.E2eDb.dll" create | tail -n 1)"
+CREATED="$(dotnet "$ROOT/src/WTF.E2E.Database/bin/Release/net10.0/WTF.E2E.Database.dll" create | tail -n 1)"
 DB="$(echo "$CREATED" | jq -r .database)"
 CONNECTION="$(echo "$CREATED" | jq -r .connectionString)"
 echo "  $DB"

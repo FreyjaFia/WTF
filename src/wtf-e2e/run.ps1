@@ -5,7 +5,7 @@
 #   .\run.ps1 -KeepDatabase                # leave the database (and print its name) for a look afterwards
 #   .\run.ps1 -Serve                       # start the database, API and app, then wait (create .e2e-stop to shut down)
 #
-# What it does: creates WTF_E2E_<time> on LocalDB (src\WTF.E2eDb), starts the API on 5290 against it and the app on 4300
+# What it does: creates WTF_E2E_<time> on LocalDB (src\WTF.E2E.Database), starts the API on 5290 against it and the app on 4300
 # (a server already answering on a port is reused and left running), runs the tests, then stops what it started and
 # drops the database. E2E_SQL points it at another SQL Server (default: LocalDB).
 param(
@@ -124,10 +124,10 @@ try {
     }
 
     # A run that was stopped half way leaves its database behind: remove those first.
-    dotnet run --artifacts-path $artifacts --project (Join-Path $root 'src\WTF.E2eDb') -- drop-all | ForEach-Object { Write-Host $_ }
+    dotnet run --artifacts-path $artifacts --project (Join-Path $root 'src\WTF.E2E.Database') -- drop-all | ForEach-Object { Write-Host $_ }
 
     Write-Host 'Creating the throwaway database...'
-    $created = dotnet run --artifacts-path $artifacts --project (Join-Path $root 'src\WTF.E2eDb') -- create
+    $created = dotnet run --artifacts-path $artifacts --project (Join-Path $root 'src\WTF.E2E.Database') -- create
     if ($LASTEXITCODE -ne 0) { throw 'Could not create the throwaway database.' }
     $info = ($created | Select-Object -Last 1) | ConvertFrom-Json
     $database = $info.database
@@ -208,11 +208,11 @@ finally {
 
     if ($database) {
         if ($KeepDatabase) {
-            Write-Host "Database kept: $database (drop it with: dotnet run --project src\WTF.E2eDb -- drop $database)"
+            Write-Host "Database kept: $database (drop it with: dotnet run --project src\WTF.E2E.Database -- drop $database)"
         }
         else {
             Start-Sleep -Seconds 2
-            dotnet run --no-build --artifacts-path $artifacts --project (Join-Path $root 'src\WTF.E2eDb') -- drop $database | Out-Null
+            dotnet run --no-build --artifacts-path $artifacts --project (Join-Path $root 'src\WTF.E2E.Database') -- drop $database | Out-Null
             Write-Host "Dropped $database."
         }
     }

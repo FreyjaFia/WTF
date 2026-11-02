@@ -48,7 +48,7 @@ Shared code: `api/` (typed API helpers; `*-extra.ts` hold the helpers added per 
 
 Every run uses its own throwaway database, never the real `WTF` database:
 
-1. `src\WTF.E2eDb` creates `WTF_E2E_<time>_<id>` on its own LocalDB instance, `WtfE2E` (the script creates and starts it; `E2E_LOCALDB_INSTANCE` renames it, `E2E_SQL` points at another SQL Server) from the EF model, seeds
+1. `src\WTF.E2E.Database` creates `WTF_E2E_<time>_<id>` on its own LocalDB instance, `WtfE2E` (the script creates and starts it; `E2E_LOCALDB_INSTANCE` renames it, `E2E_SQL` points at another SQL Server) from the EF model, seeds
    the lookup rows, the waste reasons and the test accounts (`superadmin`, `admin`, `cashier`, `viewer`, `stockmgr`, `itemmgr`).
 2. The API starts on port 5290 against it, and the app on 4300. A server already answering on a port is reused, except that
    the API port must be free (it could point at another database).

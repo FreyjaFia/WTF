@@ -12,7 +12,7 @@
     <Project Path="src/WTF.Api/WTF.Api.csproj" />
     <Project Path="src/WTF.Calculations/WTF.Calculations.csproj" />
     <Project Path="src/WTF.Domain/WTF.Domain.csproj" />
-    <Project Path="src/WTF.E2eDb/WTF.E2eDb.csproj" />
+    <Project Path="src/WTF.E2E.Database/WTF.E2E.Database.csproj" />
     <Project Path="src/WTF.Tests/WTF.Tests.csproj" />
   </Folder>
   <Folder Name="/tools/">
