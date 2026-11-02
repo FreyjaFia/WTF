@@ -105,7 +105,7 @@ describe('WasteReasonService', () => {
     const result = capture(service.getReasons());
     failNetwork(http.expectOne((r) => r.url === url));
 
-    expect(result.error).toBe('Network unavailable. Please check your connection.');
+    expect(result.error).toBe('Unable to connect to server. Please check your connection.');
     expect(connectivity.checkNow).toHaveBeenCalledOnce();
   });
 });

@@ -83,7 +83,7 @@ describe('NotificationService', () => {
 
     const offline = capture(service.markRead());
     failNetwork(http.expectOne(`${base}/read`));
-    expect(offline.error).toBe('Network unavailable. Please check your connection.');
+    expect(offline.error).toBe('Unable to connect to server. Please check your connection.');
     expect(connectivity.checkNow).toHaveBeenCalled();
   });
 

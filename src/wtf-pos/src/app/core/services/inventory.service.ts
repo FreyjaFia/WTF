@@ -1,5 +1,6 @@
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
+import { HttpErrorMessages } from '@core/messages';
 import { ConnectivityService } from '@core/services/connectivity.service';
 import { environment } from '@environments/environment.development';
 import {
@@ -218,6 +219,6 @@ export class InventoryService {
 
   private getNetworkErrorMessage(): string {
     this.connectivity.checkNow();
-    return 'Network unavailable. Please check your connection.';
+    return HttpErrorMessages.NetworkUnavailable;
   }
 }

@@ -1,5 +1,6 @@
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { inject, Injectable, OnDestroy, signal } from '@angular/core';
+import { HttpErrorMessages } from '@core/messages';
 import { ConnectivityService } from '@core/services/connectivity.service';
 import { environment } from '@environments/environment.development';
 import {
@@ -171,7 +172,7 @@ export class StockWasteService implements OnDestroy {
 
     const message =
       error.status === 0
-        ? 'Network unavailable. Please check your connection.'
+        ? HttpErrorMessages.NetworkUnavailable
         : serverMessage || fallback;
     return throwError(() => new Error(message));
   }

@@ -63,6 +63,6 @@ describe('StockCountService', () => {
 
     const offline = capture(service.getCount('c1'));
     failNetwork(http.expectOne(`${url}/c1`));
-    expect(offline.error).toBe('Network unavailable. Please check your connection.');
+    expect(offline.error).toBe('Unable to connect to server. Please check your connection.');
   });
 });

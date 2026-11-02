@@ -1,5 +1,6 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
+import { HttpErrorMessages } from '@core/messages';
 import { ConnectivityService } from '@core/services/connectivity.service';
 import { environment } from '@environments/environment.development';
 import {
@@ -64,7 +65,7 @@ export class StockCountService {
 
     const message =
       error.status === 0
-        ? 'Network unavailable. Please check your connection.'
+        ? HttpErrorMessages.NetworkUnavailable
         : serverMessage || fallback;
     return throwError(() => new Error(message));
   }

@@ -170,7 +170,7 @@ describe('InventoryService', () => {
 
     failNetwork(http.expectOne(`${environment.apiUrl}/orders/o1/stock-movements`));
 
-    expect(result.error).toBe('Network unavailable. Please check your connection.');
+    expect(result.error).toBe('Unable to connect to server. Please check your connection.');
     expect(connectivity.checkNow).toHaveBeenCalled();
   });
 

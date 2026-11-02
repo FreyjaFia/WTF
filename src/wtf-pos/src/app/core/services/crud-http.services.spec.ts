@@ -181,7 +181,7 @@ describe('InventoryService', () => {
 
     failNetwork(http.expectOne(`${base}/1`));
 
-    expect(result.error).toBe('Network unavailable. Please check your connection.');
+    expect(result.error).toBe('Unable to connect to server. Please check your connection.');
     expect(connectivity.checkNow).toHaveBeenCalled();
   });
 });
