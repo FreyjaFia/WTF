@@ -12,5 +12,6 @@ public enum AuditEntityType
     OrderLink,
     Conversation,
     StockWaste,
-    WasteReason
+    WasteReason,
+    StockCount
 }

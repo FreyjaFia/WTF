@@ -18,6 +18,8 @@ export const AppRoutes = {
   InventoryIngredientsEditById: (productId: string) => `/inventory/ingredients/${productId}`,
   InventoryAttention: '/inventory/attention',
   InventoryWaste: '/inventory/waste',
+  InventoryCounts: '/inventory/counts',
+  InventoryCountById: (countId: string) => `/inventory/counts/${countId}`,
   Notifications: '/notifications',
   ManagementRoot: '/management',
   ManagementProducts: '/management/products',

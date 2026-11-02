@@ -51,5 +51,8 @@ public enum AuditAction
     WasteReasonCreated,
     WasteReasonUpdated,
     WasteReasonDeactivated,
-    WasteReasonRestored
+    WasteReasonRestored,
+    StockCountStarted,
+    StockCountPosted,
+    StockCountCancelled
 }

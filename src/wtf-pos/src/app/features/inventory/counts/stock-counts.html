@@ -1,0 +1,83 @@
+<div class="flex h-full flex-col overflow-y-auto pt-4 md:pt-0">
+  <div class="mb-4 shrink-0 sm:mb-6">
+    <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Stock Counts</h1>
+    <p class="text-xs text-gray-500 sm:text-sm">
+      Count what is on the shelf and correct the balances in one go
+    </p>
+  </div>
+
+  @if (auth.canWriteStockMovements()) {
+    <form
+      class="mb-6 flex flex-col gap-3 rounded-xl border border-gray-200 bg-surface p-4"
+      [formGroup]="form"
+      (ngSubmit)="start()"
+      novalidate
+    >
+      <h2 class="text-sm font-semibold text-gray-900">Start a count</h2>
+      <div class="flex flex-col gap-1">
+        <label for="count-name" class="text-xs font-medium text-gray-600">Name</label>
+        <input
+          id="count-name"
+          type="text"
+          formControlName="name"
+          maxlength="100"
+          placeholder="Weekly milk and beans"
+          class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+        />
+        @if (form.controls.name.touched && form.controls.name.invalid) {
+          <p class="text-xs text-red-600">Give the count a name.</p>
+        }
+      </div>
+      <div class="flex flex-col gap-1">
+        <label for="count-note" class="text-xs font-medium text-gray-600">Note (optional)</label>
+        <input
+          id="count-note"
+          type="text"
+          formControlName="note"
+          maxlength="500"
+          class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+        />
+      </div>
+      <label class="flex items-start gap-2 text-sm text-gray-700">
+        <input type="checkbox" formControlName="isBlind" class="mt-0.5" />
+        <span>
+          Blind count
+          <span class="block text-xs text-gray-500"
+            >Hide the expected balance from the counter until the count is posted</span
+          >
+        </span>
+      </label>
+      <div class="flex justify-end">
+        <button type="submit" class="app-btn app-btn-primary app-btn-md" [disabled]="isStarting()">
+          {{ isStarting() ? 'Starting...' : 'Start Count' }}
+        </button>
+      </div>
+    </form>
+  }
+
+  <div class="flex flex-col gap-2 pb-4" data-testid="count-list">
+    @for (count of counts(); track count.id) {
+      <a
+        [routerLink]="countRoute(count.id)"
+        class="flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-surface p-4 transition-colors hover:bg-gray-50"
+        data-testid="count-row"
+      >
+        <div class="min-w-0">
+          <p class="wrap-break-word font-semibold text-gray-900">{{ count.name }}</p>
+          <p class="text-xs text-gray-500">
+            {{ count.createdAt | date: 'MMM d, y, h:mm a' }} &middot; {{ count.createdByName }}
+            @if (count.isBlind) {
+              &middot; Blind
+            }
+          </p>
+          <p class="text-xs text-gray-500">{{ count.countedCount }} of {{ count.lineCount }} counted</p>
+        </div>
+        <app-badge [variant]="variantOf(count.status)">{{ statusLabels[count.status] }}</app-badge>
+      </a>
+    } @empty {
+      <p class="py-8 text-center text-sm text-gray-500">
+        {{ isLoading() ? 'Loading...' : 'No counts yet.' }}
+      </p>
+    }
+  </div>
+</div>

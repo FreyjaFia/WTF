@@ -32,5 +32,6 @@ export * from './stock-limits.service';
 export * from './theme.service';
 export * from './update.service';
 export * from './user.service';
+export * from './stock-count.service';
 export * from './stock-waste.service';
 export * from './waste-reason.service';

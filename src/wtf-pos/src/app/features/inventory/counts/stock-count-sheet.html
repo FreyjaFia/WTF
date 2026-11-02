@@ -1,0 +1,144 @@
+<div class="flex h-full flex-col pt-4 md:pt-0">
+  @if (count(); as current) {
+    <div class="mb-4 flex shrink-0 flex-col gap-3 sm:mb-6">
+      <a [routerLink]="listRoute" class="text-xs font-medium text-gray-500 hover:text-gray-900">&larr; All counts</a>
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <h1 class="wrap-break-word text-xl font-bold text-gray-900 sm:text-2xl">{{ current.summary.name }}</h1>
+          <p class="text-xs text-gray-500 sm:text-sm">
+            {{ countedNow() }} of {{ current.lines.length }} counted
+            @if (current.summary.isBlind && isOpen()) {
+              &middot; Blind count: the expected balance is hidden until you post
+            }
+          </p>
+          @if (current.summary.note) {
+            <p class="mt-1 text-xs text-gray-500">{{ current.summary.note }}</p>
+          }
+        </div>
+        <app-badge [variant]="statusVariants[current.summary.status]">{{ statusLabels[current.summary.status] }}</app-badge>
+      </div>
+
+      <div class="flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
+        <div
+          class="flex w-full min-w-0 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 focus-within:bg-surface focus-within:ring-2 focus-within:ring-gray-200 md:max-w-104 md:flex-1"
+        >
+          <app-search-input
+            [value]="search()"
+            placeholder="Search items"
+            ariaLabel="Search items in this count"
+            (valueChange)="search.set($event)"
+          />
+        </div>
+        @if (isOpen()) {
+          <div class="flex flex-wrap items-center justify-end gap-2 md:ml-auto">
+            <button type="button" class="app-btn app-btn-outline-danger app-btn-md" (click)="askCancel()">
+              Cancel Count
+            </button>
+            <button
+              type="button"
+              class="app-btn app-btn-secondary app-btn-md"
+              [disabled]="isSaving() || !hasUnsaved()"
+              (click)="save()"
+            >
+              {{ isSaving() ? 'Saving...' : 'Save Progress' }}
+            </button>
+            <button
+              type="button"
+              class="app-btn app-btn-primary app-btn-md"
+              [disabled]="isPosting() || countedNow() === 0"
+              (click)="askPost()"
+            >
+              Post Count
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+
+    <div class="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pb-4" data-testid="count-lines">
+      @for (line of visibleLines(); track line.itemId) {
+        <div
+          class="flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-surface p-3"
+          data-testid="count-line"
+        >
+          <div class="min-w-0">
+            <p class="wrap-break-word font-medium text-gray-900">{{ line.itemName }}</p>
+            @if (!isOpen() && line.expectedQuantity !== null) {
+              <p class="text-xs text-gray-500">
+                Expected {{ line.expectedQuantity | number: '1.0-3' }} {{ line.unitName }}
+              </p>
+            }
+          </div>
+          @if (isOpen()) {
+            <div class="flex shrink-0 items-center gap-2">
+              <input
+                type="number"
+                min="0"
+                step="any"
+                inputmode="decimal"
+                [formControl]="controlOf(line.itemId)"
+                [attr.aria-label]="'Counted quantity of ' + line.itemName"
+                class="w-28 rounded-lg border border-gray-200 px-3 py-2 text-right text-sm"
+              />
+              <span class="w-8 text-xs text-gray-500">{{ line.unitName }}</span>
+            </div>
+          } @else {
+            <div class="shrink-0 text-right">
+              <p class="text-sm font-semibold text-gray-900">
+                @if (line.countedQuantity !== null) {
+                  {{ line.countedQuantity | number: '1.0-3' }} {{ line.unitName }}
+                } @else {
+                  Not counted
+                }
+              </p>
+              @if (line.difference !== null && line.difference !== 0) {
+                <p
+                  class="text-xs font-semibold"
+                  [class.text-red-600]="line.difference < 0"
+                  [class.text-green-700]="line.difference > 0"
+                >
+                  {{ line.difference > 0 ? '+' : '' }}{{ line.difference | number: '1.0-3' }}
+                </p>
+              }
+            </div>
+          }
+        </div>
+      } @empty {
+        <p class="py-8 text-center text-sm text-gray-500">No items match.</p>
+      }
+    </div>
+  } @else {
+    <p class="py-8 text-center text-sm text-gray-500">{{ isLoading() ? 'Loading...' : '' }}</p>
+  }
+</div>
+
+@if (confirming() === 'post') {
+  <app-confirm-dialog
+    variant="warning"
+    icon="icon-warning"
+    heading="Post this count?"
+    confirmLabel="Post Count"
+    busyLabel="Posting..."
+    [isBusy]="isPosting()"
+    (confirmed)="confirmPost()"
+    (cancelled)="closeConfirm()"
+  >
+    Each counted item is corrected by the difference between what you counted and what the system showed when you
+    entered it. Sales made since are kept. Items you left empty are not touched.
+  </app-confirm-dialog>
+}
+
+@if (confirming() === 'cancel') {
+  <app-confirm-dialog
+    icon="icon-delete"
+    heading="Cancel this count?"
+    confirmLabel="Cancel Count"
+    busyLabel="Cancelling..."
+    cancelLabel="Keep Counting"
+    [isBusy]="isCancelling()"
+    (confirmed)="confirmCancel()"
+    (cancelled)="closeConfirm()"
+  >
+    The numbers entered are kept for reference but no balance changes.
+  </app-confirm-dialog>
+}

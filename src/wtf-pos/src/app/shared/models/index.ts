@@ -15,4 +15,5 @@ export * from './public-order.models';
 export * from './report.models';
 export * from './schema-script-history.models';
 export * from './user.models';
+export * from './stock-count.models';
 export * from './waste.models';

@@ -72,6 +72,13 @@ export class InventoryComponent {
       urgent: () => false,
     },
     {
+      label: 'Counts',
+      route: 'counts',
+      path: AppRoutes.InventoryCounts,
+      ariaLabel: 'Stock counts',
+      canShow: () => this.canReadStockMovements(),
+    },
+    {
       label: 'Ingredients & Cost',
       route: 'ingredients',
       path: AppRoutes.InventoryIngredients,

@@ -80,6 +80,14 @@ public partial class User
 
     public virtual ICollection<ShortLink> ShortLinks { get; set; } = new List<ShortLink>();
 
+    public virtual ICollection<StockCount> StockCountCancelledByNavigations { get; set; } = new List<StockCount>();
+
+    public virtual ICollection<StockCount> StockCountCreatedByNavigations { get; set; } = new List<StockCount>();
+
+    public virtual ICollection<StockCountLine> StockCountLines { get; set; } = new List<StockCountLine>();
+
+    public virtual ICollection<StockCount> StockCountPostedByNavigations { get; set; } = new List<StockCount>();
+
     public virtual ICollection<StockMovement> StockMovements { get; set; } = new List<StockMovement>();
 
     public virtual ICollection<StockWaste> StockWasteCreatedByNavigations { get; set; } = new List<StockWaste>();

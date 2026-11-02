@@ -13,6 +13,8 @@ import { StockAttentionComponent } from '@features/inventory/stock-attention/sto
 import { IngredientEditorComponent } from '@features/inventory/ingredient-editor/ingredient-editor';
 import { IngredientsComponent } from '@features/inventory/ingredients/ingredients';
 import { StockInComponent } from '@features/inventory/stock-in/stock-in';
+import { StockCountSheetComponent } from '@features/inventory/counts/stock-count-sheet';
+import { StockCountsComponent } from '@features/inventory/counts/stock-counts';
 import { WasteComponent } from '@features/inventory/waste/waste';
 import { Login } from '@features/login/login';
 import { AuditLogsComponent } from '@features/management/audit-logs/audit-logs';
@@ -162,6 +164,18 @@ export const routes: Routes = [
           {
             path: 'attention',
             component: StockAttentionComponent,
+            canActivate: [roleGuard],
+            data: { roles: AppRoleGroups.StockMovementsRead },
+          },
+          {
+            path: 'counts',
+            component: StockCountsComponent,
+            canActivate: [roleGuard],
+            data: { roles: AppRoleGroups.StockMovementsRead },
+          },
+          {
+            path: 'counts/:id',
+            component: StockCountSheetComponent,
             canActivate: [roleGuard],
             data: { roles: AppRoleGroups.StockMovementsRead },
           },

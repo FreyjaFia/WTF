@@ -94,6 +94,10 @@ public partial class WTFDbContext : DbContext
 
     public virtual DbSet<Status> Statuses { get; set; }
 
+    public virtual DbSet<StockCount> StockCounts { get; set; }
+
+    public virtual DbSet<StockCountLine> StockCountLines { get; set; }
+
     public virtual DbSet<StockMovement> StockMovements { get; set; }
 
     public virtual DbSet<StockWaste> StockWastes { get; set; }
@@ -997,6 +1001,53 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.Name)
                 .HasMaxLength(30)
                 .IsUnicode(false);
+        });
+
+        modelBuilder.Entity<StockCount>(entity =>
+        {
+            entity.HasIndex(e => new { e.Status, e.CreatedAt }, "IX_StockCounts_Status_CreatedAt").IsDescending(false, true);
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_StockCounts_Id");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())", "DF_StockCounts_CreatedAt");
+            entity.Property(e => e.Name).HasMaxLength(100);
+            entity.Property(e => e.Note).HasMaxLength(500);
+            entity.Property(e => e.Status).HasDefaultValue((byte)1, "DF_StockCounts_Status");
+
+            entity.HasOne(d => d.CancelledByNavigation).WithMany(p => p.StockCountCancelledByNavigations)
+                .HasForeignKey(d => d.CancelledBy)
+                .HasConstraintName("FK_StockCounts_CancelledBy");
+
+            entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.StockCountCreatedByNavigations)
+                .HasForeignKey(d => d.CreatedBy)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_StockCounts_CreatedBy");
+
+            entity.HasOne(d => d.PostedByNavigation).WithMany(p => p.StockCountPostedByNavigations)
+                .HasForeignKey(d => d.PostedBy)
+                .HasConstraintName("FK_StockCounts_PostedBy");
+        });
+
+        modelBuilder.Entity<StockCountLine>(entity =>
+        {
+            entity.HasIndex(e => new { e.CountId, e.ItemId }, "UQ_StockCountLines_CountItem").IsUnique();
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_StockCountLines_Id");
+            entity.Property(e => e.CountedQuantity).HasColumnType("decimal(18, 3)");
+            entity.Property(e => e.ExpectedQuantity).HasColumnType("decimal(18, 3)");
+
+            entity.HasOne(d => d.Count).WithMany(p => p.StockCountLines)
+                .HasForeignKey(d => d.CountId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_StockCountLines_Count");
+
+            entity.HasOne(d => d.CountedByNavigation).WithMany(p => p.StockCountLines)
+                .HasForeignKey(d => d.CountedBy)
+                .HasConstraintName("FK_StockCountLines_CountedBy");
+
+            entity.HasOne(d => d.Item).WithMany(p => p.StockCountLines)
+                .HasForeignKey(d => d.ItemId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_StockCountLines_Item");
         });
 
         modelBuilder.Entity<StockMovement>(entity =>
