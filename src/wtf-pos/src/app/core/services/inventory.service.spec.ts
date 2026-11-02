@@ -218,13 +218,14 @@ describe('InventoryService', () => {
     expect(result.error).toBeUndefined();
   });
 
-  it('asks for the recipe preview with one add-on id per chosen option', () => {
+  it('posts the draft lines, add-on ids and supplies cost for the preview', () => {
     const { service, http } = setupHttpService(InventoryService);
-    const result = capture(service.getProductRecipePreview('p1', ['s1', 'a2']));
+    const lines = [{ itemId: 'i1', quantityPerSale: 200, allowancePercent: 0, replacesItemId: null }];
+    const result = capture(service.previewRecipeDraft('p1', ['s1', 'a2'], lines, 2));
 
-    const req = http.expectOne((r) => r.url === `${environment.apiUrl}/products/p1/recipe-preview`);
-    expect(req.request.method).toBe('GET');
-    expect(req.request.params.getAll('addOnIds')).toEqual(['s1', 'a2']);
+    const req = http.expectOne(`${environment.apiUrl}/products/p1/recipe-preview`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ addOnIds: ['s1', 'a2'], lines, suppliesCost: 2 });
     req.flush({ productId: 'p1' });
 
     expect(result.value).toEqual({ productId: 'p1' });
@@ -232,10 +233,10 @@ describe('InventoryService', () => {
 
   it('gives the server message when the preview is refused', () => {
     const { service, http } = setupHttpService(InventoryService);
-    const result = capture(service.getProductRecipePreview('p1', ['x']));
+    const result = capture(service.previewRecipeDraft('p1', ['x'], [], 0));
 
     http
-      .expectOne((r) => r.url === `${environment.apiUrl}/products/p1/recipe-preview`)
+      .expectOne(`${environment.apiUrl}/products/p1/recipe-preview`)
       .flush({ message: 'Not an option.' }, { status: 400, statusText: 'Bad Request' });
 
     expect(result.error).toBe('Not an option.');

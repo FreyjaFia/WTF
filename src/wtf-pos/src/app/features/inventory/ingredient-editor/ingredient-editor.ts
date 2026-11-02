@@ -1,5 +1,6 @@
 import { DecimalPipe } from '@angular/common';
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import {
   FormArray,
   FormControl,
@@ -30,8 +31,8 @@ import {
   ProductIngredientsEditDto,
   RecipePreviewDto,
 } from '@shared/models';
-import { forkJoin, Observable, of } from 'rxjs';
-import { switchMap } from 'rxjs/operators';
+import { forkJoin, Observable, of, Subscription } from 'rxjs';
+import { debounceTime, switchMap } from 'rxjs/operators';
 
 type LineGroup = FormGroup<{
   itemId: FormControl<string>;
@@ -50,6 +51,7 @@ interface LineValue {
 }
 
 const MAX_PREVIEW_QUANTITY = 9;
+const PREVIEW_DEBOUNCE_MS = 400;
 const PREVIEW_GROUP_ORDER = [1, 2, 5, 3, 4];
 const RADIO_TYPES = new Set([1, 2, 5]);
 const PREVIEW_GROUP_HEADERS: Record<number, string> = {
@@ -80,6 +82,8 @@ export class IngredientEditorComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly alertService = inject(AlertService);
   private readonly modalStack = inject(ModalStackService);
+  private readonly destroyRef = inject(DestroyRef);
+  private previewRequest: Subscription | null = null;
 
   protected readonly product = signal<ProductIngredientsEditDto | null>(null);
   protected readonly items = signal<ItemDto[]>([]);
@@ -165,6 +169,9 @@ export class IngredientEditorComponent implements OnInit {
   public ngOnInit(): void {
     this.productId = this.route.snapshot.paramMap.get('productId') ?? '';
     this.form.valueChanges.subscribe(() => this.formVersion.update((v) => v + 1));
+    this.form.valueChanges
+      .pipe(debounceTime(PREVIEW_DEBOUNCE_MS), takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.loadPreview());
     this.load();
   }
 
@@ -382,10 +389,19 @@ export class IngredientEditorComponent implements OnInit {
       Array<string>(quantity).fill(id),
     );
 
-    this.inventoryService.getProductRecipePreview(this.productId, ids).subscribe({
-      next: (result) => this.preview.set(result),
-      error: (err) => this.alertService.error(err.message),
-    });
+    // A newer request replaces an older one still in flight, so a slow answer never overwrites a fresh one.
+    this.previewRequest?.unsubscribe();
+    this.previewRequest = this.inventoryService
+      .previewRecipeDraft(
+        this.productId,
+        ids,
+        this.toInputs().filter((line) => line.itemId && line.quantityPerSale > 0),
+        Number(this.form.controls.suppliesCost.value) || 0,
+      )
+      .subscribe({
+        next: (result) => this.preview.set(result),
+        error: (err) => this.alertService.error(err.message),
+      });
   }
 
   private applyProduct(product: ProductIngredientsEditDto): void {

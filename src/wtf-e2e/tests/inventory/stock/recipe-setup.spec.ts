@@ -153,4 +153,27 @@ test.describe('Recipe setup screens @stock @ingredients', () => {
     await expect(page.getByTestId('preview-line').filter({ hasText: cup.name })).toHaveCount(0);
     await expect(page.getByTestId('preview-line').filter({ hasText: milk.name })).toHaveCount(1);
   });
+
+  test('the preview follows unsaved edits and saves nothing', async ({ api, signIn }) => {
+    const milk = await api.items.create({ unitName: 'milliliter', startingQuantity: 5000, costPrice: 0.1 });
+    const { drink, size } = await api.products.withSize(150, 30);
+    await api.items.linkProducts(milk.id, [{ productId: drink.id, quantityPerSale: 200 }]);
+
+    const page = await signIn('admin');
+    await page.goto(`/inventory/ingredients/${drink.id}`);
+    await page.getByTestId('preview-option').filter({ hasText: size.name }).click();
+    await expect(page.getByTestId('preview-cost')).toContainText('20.00');
+
+    await page.getByTestId('line-amount').fill('300');
+    await page.getByTestId('supplies-cost').fill('2');
+    await expect(page.getByTestId('preview-cost')).toContainText('32.00');
+
+    const saved = await api.client.json<{ lines: readonly { quantityPerSale: number }[]; suppliesCost: number | null }>(
+      'superadmin',
+      'GET',
+      `products/${drink.id}/ingredients`,
+    );
+    expect(saved.lines[0].quantityPerSale).toBe(200);
+    expect(saved.suppliesCost ?? 0).toBe(0);
+  });
 });

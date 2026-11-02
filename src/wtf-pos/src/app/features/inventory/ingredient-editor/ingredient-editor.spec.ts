@@ -87,7 +87,7 @@ describe('IngredientEditorComponent', () => {
       getInventoryItems: vi.fn().mockReturnValue(of([milk, cup, syrup])),
       saveProductIngredients: vi.fn().mockReturnValue(of(options.product ?? latte)),
       setSuppliesCost: vi.fn().mockReturnValue(of(undefined)),
-      getProductRecipePreview: vi.fn().mockReturnValue(of(preview)),
+      previewRecipeDraft: vi.fn().mockReturnValue(of(preview)),
     };
     const alerts = { error: vi.fn(), success: vi.fn() };
     TestBed.configureTestingModule({
@@ -281,7 +281,7 @@ describe('IngredientEditorComponent', () => {
     fixture.detectChanges();
 
     expect(el.querySelector('[data-testid="preview-group"] h4')?.textContent).toContain('Sizes');
-    expect(inventory.getProductRecipePreview).toHaveBeenLastCalledWith('p1', ['s1']);
+    expect(inventory.previewRecipeDraft).toHaveBeenLastCalledWith('p1', ['s1'], expect.any(Array), expect.any(Number));
     expect(el.querySelector('[data-testid="preview-cost"]')?.textContent).toContain('45.00');
   });
 
@@ -299,7 +299,38 @@ describe('IngredientEditorComponent', () => {
     (el.querySelector('[data-testid="preview-plus"]') as HTMLElement).click();
     fixture.detectChanges();
 
-    expect(inventory.getProductRecipePreview).toHaveBeenLastCalledWith('p1', ['x1', 'x1']);
+    expect(inventory.previewRecipeDraft).toHaveBeenLastCalledWith('p1', ['x1', 'x1'], expect.any(Array), expect.any(Number));
     expect(el.querySelector('[data-testid="preview-qty"]')?.textContent).toContain('2');
+  });
+
+  describe('live preview', () => {
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
+    it('sends the unsaved lines and supplies cost once typing stops', () => {
+      const { fixture, inventory, el } = setup({ product: sizedLatte });
+      inventory.previewRecipeDraft.mockClear();
+
+      setValue(fixture, el, 'line-amount', '250');
+      setValue(fixture, el, 'supplies-cost', '2');
+      expect(inventory.previewRecipeDraft).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(400);
+
+      expect(inventory.previewRecipeDraft).toHaveBeenCalledTimes(1);
+      const [productId, , lines, supplies] = inventory.previewRecipeDraft.mock.calls[0];
+      expect(productId).toBe('p1');
+      expect(lines[0].quantityPerSale).toBe(250);
+      expect(supplies).toBe(2);
+    });
+
+    it('leaves out lines that have no amount yet', () => {
+      const { fixture, inventory, el } = setup({ product: sizedLatte });
+      inventory.previewRecipeDraft.mockClear();
+
+      setValue(fixture, el, 'line-amount', '');
+      vi.advanceTimersByTime(400);
+
+      expect(inventory.previewRecipeDraft.mock.calls[0][2]).toEqual([]);
+    });
   });
 });

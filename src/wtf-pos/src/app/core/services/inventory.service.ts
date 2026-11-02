@@ -178,14 +178,18 @@ export class InventoryService {
       .pipe(catchError((error) => this.handleError(error, 'Unable to fetch the recipe cost.')));
   }
 
-  public getProductRecipePreview(productId: string, addOnIds: string[]): Observable<RecipePreviewDto> {
-    let params = new HttpParams();
-    for (const id of addOnIds) {
-      params = params.append('addOnIds', id);
-    }
-
+  public previewRecipeDraft(
+    productId: string,
+    addOnIds: string[],
+    lines: ProductIngredientInputDto[],
+    suppliesCost: number,
+  ): Observable<RecipePreviewDto> {
     return this.http
-      .get<RecipePreviewDto>(`${environment.apiUrl}/products/${productId}/recipe-preview`, { params })
+      .post<RecipePreviewDto>(`${environment.apiUrl}/products/${productId}/recipe-preview`, {
+        addOnIds,
+        lines,
+        suppliesCost,
+      })
       .pipe(catchError((error) => this.handleError(error, 'Unable to work out the preview.')));
   }
 

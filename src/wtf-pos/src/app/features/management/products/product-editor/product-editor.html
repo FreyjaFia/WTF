@@ -937,39 +937,6 @@
                         </div>
                       </dl>
                     }
-
-                    @if (canWriteCosts()) {
-                      <div class="space-y-1 border-t border-gray-100 pt-3" data-testid="supplies-editor">
-                        <label class="text-xs font-semibold text-gray-700" for="recipe-supplies">Supplies (ice, straws, napkins...)</label>
-                        <div class="flex items-center gap-2">
-                          <input
-                            id="recipe-supplies"
-                            type="number"
-                            min="0"
-                            max="9999.99"
-                            step="any"
-                            class="input input-sm w-28 border-gray-200 bg-surface"
-                            data-testid="supplies-input"
-                            [formControl]="suppliesControl"
-                          />
-                          <button
-                            type="button"
-                            class="app-btn app-btn-secondary app-btn-sm gap-2"
-                            data-testid="supplies-save"
-                            [disabled]="isSuppliesSaving() || suppliesControl.invalid"
-                            (click)="saveSupplies()"
-                          >
-                            @if (isSuppliesSaving()) {
-                              <span class="loading loading-spinner loading-xs"></span>
-                            }
-                            {{ isSuppliesSaving() ? 'Saving...' : 'Save' }}
-                          </button>
-                        </div>
-                        <p class="text-[11px] text-gray-500">
-                          A fixed cost per sale for things you do not track as stock.
-                        </p>
-                      </div>
-                    }
                   }
                 </div>
               </div>

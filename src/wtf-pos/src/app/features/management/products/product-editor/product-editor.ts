@@ -117,12 +117,6 @@ export class ProductEditorComponent implements OnInit {
   protected readonly isRecipeCostLoading = signal(false);
   protected readonly recipeCostFailed = signal(false);
   protected readonly canWriteProducts = computed(() => this.authService.canWriteProducts());
-  protected readonly canWriteCosts = computed(() => this.authService.canWriteInventoryCosts());
-  protected readonly suppliesControl = new FormControl<number>(0, {
-    nonNullable: true,
-    validators: [Validators.required, Validators.min(0), Validators.max(9999.99)],
-  });
-  protected readonly isSuppliesSaving = signal(false);
   protected readonly isMarginNegative = computed(() => (this.recipeCost()?.marginPercent ?? 0) < 0);
 
   protected readonly stockForm = new FormGroup({
@@ -269,26 +263,6 @@ export class ProductEditorComponent implements OnInit {
     });
   }
 
-  protected saveSupplies(): void {
-    const id = this.productId;
-    if (!id || this.suppliesControl.invalid || this.isSuppliesSaving()) {
-      return;
-    }
-
-    this.isSuppliesSaving.set(true);
-    this.inventoryService.setSuppliesCost(id, this.suppliesControl.value).subscribe({
-      next: () => {
-        this.isSuppliesSaving.set(false);
-        this.alertService.successSaved('Supplies cost');
-        this.loadRecipeCost(id);
-      },
-      error: (err: Error) => {
-        this.isSuppliesSaving.set(false);
-        this.alertService.error(err.message);
-      },
-    });
-  }
-
   private loadRecipeCost(productId: string): void {
     this.isRecipeCostLoading.set(true);
     this.recipeCostFailed.set(false);
@@ -296,7 +270,6 @@ export class ProductEditorComponent implements OnInit {
     this.inventoryService.getProductRecipeCost(productId).subscribe({
       next: (cost) => {
         this.recipeCost.set(cost);
-        this.suppliesControl.setValue(cost.suppliesCost ?? 0);
         this.isRecipeCostLoading.set(false);
       },
       error: () => {

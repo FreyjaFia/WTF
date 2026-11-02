@@ -100,6 +100,16 @@ public static class ProductEndpoints
             })
             .RequireAuthorization(AppPolicies.InventoryCostsRead);
 
+        // POST /api/products/{id}/recipe-preview - The same answer for the unsaved lines of the open editor (cost roles only, saves nothing)
+        productGroup.MapPost("/{id:guid}/recipe-preview",
+            async (Guid id, RecipePreviewDraftRequest request, ISender sender) =>
+            {
+                var result = await sender.Send(new GetProductRecipePreviewQuery(
+                    id, [.. request.AddOnIds ?? []], request.Lines ?? [], request.SuppliesCost));
+                return result is not null ? Results.Ok(result) : Results.NotFound();
+            })
+            .RequireAuthorization(AppPolicies.InventoryCostsRead);
+
         // PUT /api/products/{id}/supplies-cost - A fixed per-sale cost for ice, straws and napkins (cost editors only)
         productGroup.MapPut("/{id:guid}/supplies-cost",
             async (Guid id, SetSuppliesCostRequest request, ISender sender) =>

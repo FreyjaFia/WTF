@@ -7,10 +7,15 @@ using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Inventory;
 
-public record GetProductRecipePreviewQuery(Guid ProductId, List<Guid> AddOnIds) : IRequest<RecipePreviewDto?>;
+public record GetProductRecipePreviewQuery(
+    Guid ProductId,
+    List<Guid> AddOnIds,
+    List<ProductIngredientInputDto>? DraftLines = null,
+    decimal? DraftSuppliesCost = null) : IRequest<RecipePreviewDto?>;
 
 // What one sale of a drink with a chosen size and add-ons would use and cost, worked out by the same rules a real sale
-// uses (StockRules.Requirements), from the saved ingredient lists. It saves and deducts nothing.
+// uses (StockRules.Requirements), from the saved ingredient lists, or from the unsaved lines of the open editor when a draft
+// is sent (it replaces this product's own lines and size amounts for the answer only). It saves and deducts nothing.
 public class GetProductRecipePreviewHandler(WTFDbContext db) : IRequestHandler<GetProductRecipePreviewQuery, RecipePreviewDto?>
 {
     public async Task<RecipePreviewDto?> Handle(GetProductRecipePreviewQuery request, CancellationToken cancellationToken)
@@ -56,21 +61,42 @@ public class GetProductRecipePreviewHandler(WTFDbContext db) : IRequestHandler<G
         lines.AddRange(chosen.Select(option => new StockLine(Guid.NewGuid(), parentLine.LineId, option.AddOnId, countById[option.AddOnId])));
 
         var productIds = lines.Select(line => line.ProductId).Distinct().ToList();
+        var draft = request.DraftLines;
         var activeLinks = await db.ProductItemLinks
             .AsNoTracking()
-            .Where(link => link.IsActive && productIds.Contains(link.ProductId) && link.Item.IsActive)
+            .Where(link => link.IsActive && productIds.Contains(link.ProductId) && link.Item.IsActive
+                && (draft == null || link.ProductId != product.Id))
             .Select(link => new { link.ProductId, link.ItemId, link.QuantityPerSale, link.AllowancePercent, link.ReplacesItemId })
             .ToListAsync(cancellationToken);
+
+        List<Guid> activeDraftItemIds = [];
+        if (draft is not null)
+        {
+            var draftItemIds = draft.Select(line => line.ItemId).Distinct().ToList();
+            activeDraftItemIds = await db.Items
+                .AsNoTracking()
+                .Where(item => item.IsActive && draftItemIds.Contains(item.Id))
+                .Select(item => item.Id)
+                .ToListAsync(cancellationToken);
+            activeLinks.AddRange(draft
+                .Where(line => activeDraftItemIds.Contains(line.ItemId))
+                .Select(line => new { ProductId = product.Id, line.ItemId, QuantityPerSale = line.QuantityPerSale, line.AllowancePercent, line.ReplacesItemId }));
+        }
         var links = activeLinks
             .Select(link => new StockLink(
                 link.ProductId, link.ItemId, CostRules.EffectiveQuantity(link.QuantityPerSale, link.AllowancePercent), link.ReplacesItemId))
             .ToList();
 
-        var sizeAmounts = await db.ProductSizeAmounts
-            .AsNoTracking()
-            .Where(amount => amount.IsActive && amount.ProductId == product.Id && amount.Item.IsActive)
-            .Select(amount => new StockSizeAmount(amount.ProductId, amount.SizeProductId, amount.ItemId, amount.Quantity))
-            .ToListAsync(cancellationToken);
+        var sizeAmounts = draft is null
+            ? await db.ProductSizeAmounts
+                .AsNoTracking()
+                .Where(amount => amount.IsActive && amount.ProductId == product.Id && amount.Item.IsActive)
+                .Select(amount => new StockSizeAmount(amount.ProductId, amount.SizeProductId, amount.ItemId, amount.Quantity))
+                .ToListAsync(cancellationToken)
+            : draft
+                .Where(line => activeDraftItemIds.Contains(line.ItemId))
+                .SelectMany(line => (line.SizeAmounts ?? []).Select(amount => new StockSizeAmount(product.Id, amount.SizeProductId, line.ItemId, amount.Quantity)))
+                .ToList();
 
         var required = StockRules.Requirements(lines, links, sizeAmounts);
         var itemIds = required.Select(r => r.ItemId).Union(activeLinks.Where(l => l.ReplacesItemId.HasValue).Select(l => l.ReplacesItemId!.Value)).Distinct().ToList();
@@ -115,7 +141,8 @@ public class GetProductRecipePreviewHandler(WTFDbContext db) : IRequestHandler<G
             .ThenBy(line => line.ItemName, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        var summary = CostRules.RecipeCost(costLines.Select(line => new RecipeLine(line.Quantity, line.UnitCost)), product.SuppliesCost);
+        var suppliesCost = request.DraftSuppliesCost is >= 0m ? request.DraftSuppliesCost.Value : product.SuppliesCost;
+        var summary = CostRules.RecipeCost(costLines.Select(line => new RecipeLine(line.Quantity, line.UnitCost)), suppliesCost);
         var price = product.Price + chosen.Sum(option => option.Price * countById[option.AddOnId]);
 
         return new RecipePreviewDto(
@@ -125,7 +152,7 @@ public class GetProductRecipePreviewHandler(WTFDbContext db) : IRequestHandler<G
             chosen.Select(option => countById[option.AddOnId] > 1 ? $"{option.Name} x{countById[option.AddOnId]}" : option.Name).ToList(),
             costLines,
             replaced.Distinct().OrderBy(name => name).ToList(),
-            product.SuppliesCost,
+            suppliesCost,
             summary.TotalCost,
             summary.UnknownCostCount,
             CostRules.Margin(price, summary.TotalCost),
@@ -150,3 +177,5 @@ public class GetProductRecipePreviewHandler(WTFDbContext db) : IRequestHandler<G
         return warnings;
     }
 }
+
+public record RecipePreviewDraftRequest(List<Guid>? AddOnIds, List<ProductIngredientInputDto>? Lines, decimal? SuppliesCost);

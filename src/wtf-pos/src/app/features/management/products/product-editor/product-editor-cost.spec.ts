@@ -215,42 +215,6 @@ describe('ProductEditorComponent: recipe cost card', () => {
       expect(card()!.querySelectorAll('[data-testid="recipe-line"]')).toHaveLength(0);
       expect(card()!.querySelector('[data-testid="recipe-total"]')!.textContent).toContain('3.00');
     });
-
-    it('hides the editor from roles that cannot write costs', () => {
-      expect(setup().card()!.querySelector('[data-testid="supplies-editor"]')).toBeNull();
-    });
-
-    it('lets a cost writer save an amount, then reloads the card', () => {
-      const { card, inventory, alerts, fixture, c } = setup({ canWriteCosts: true, cost: makeCost({ suppliesCost: 2 }) });
-      const input = card()!.querySelector('[data-testid="supplies-input"]') as HTMLInputElement;
-
-      expect(input.value).toBe('2');
-      c.suppliesControl.setValue(4.5);
-      fixture.detectChanges();
-      (card()!.querySelector('[data-testid="supplies-save"]') as HTMLButtonElement).click();
-
-      expect(inventory.setSuppliesCost).toHaveBeenCalledWith('p1', 4.5);
-      expect(inventory.getProductRecipeCost).toHaveBeenCalledTimes(2);
-      expect(alerts.successSaved).toHaveBeenCalledWith('Supplies cost');
-    });
-
-    it('refuses an amount outside 0 to 9999.99', () => {
-      const { inventory, fixture, c } = setup({ canWriteCosts: true });
-      c.suppliesControl.setValue(10000);
-      fixture.detectChanges();
-      c.saveSupplies();
-
-      expect(inventory.setSuppliesCost).not.toHaveBeenCalled();
-    });
-
-    it('shows the error when saving fails', () => {
-      const { inventory, alerts, c } = setup({ canWriteCosts: true });
-      inventory.setSuppliesCost.mockReturnValue(throwError(() => new Error('Nope')));
-      c.saveSupplies();
-
-      expect(alerts.error).toHaveBeenCalledWith('Nope');
-      expect(c.isSuppliesSaving()).toBe(false);
-    });
   });
 
   it('hides the card quietly when the costs cannot be read', () => {

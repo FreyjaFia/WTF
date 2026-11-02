@@ -276,4 +276,44 @@ public class SizeAmountTests
         amount.SizeProductId.ShouldBe(_large);
         amount.Quantity.ShouldBe(2m);
     }
+
+    private Task<WTF.Api.Features.Inventory.DTOs.RecipePreviewDto?> PreviewDraft(
+        List<ProductIngredientInputDto> draft, decimal? supplies, params Guid[] addOns) =>
+        new GetProductRecipePreviewHandler(TestDb.Create(_db))
+            .Handle(new GetProductRecipePreviewQuery(_latte, [.. addOns], draft, supplies), CancellationToken.None);
+
+    [Fact]
+    public async Task PreviewDraft_UsesTheUnsavedLinesInsteadOfTheSavedOnes()
+    {
+        await Save(_latte, Line(_milk, 200m));
+
+        var result = (await PreviewDraft([Line(_milk, 100m), Line(_cup, 1m)], null))!;
+
+        result.Lines.Select(l => (l.ItemName, l.Quantity)).ShouldBe([("Large Cup", 1m), ("Milk", 100m)], ignoreOrder: true);
+        result.TotalCost.ShouldBe(4m + 15m);
+    }
+
+    [Fact]
+    public async Task PreviewDraft_UsesTheUnsavedSizeAmountsAndSuppliesCost()
+    {
+        await Save(_latte, Line(_milk, 200m));
+
+        var result = (await PreviewDraft([Line(_milk, 200m, new ProductSizeAmountInputDto(_large, 300m))], 2m, _large))!;
+
+        result.Lines.Single().Quantity.ShouldBe(300m);
+        result.SuppliesCost.ShouldBe(2m);
+        result.TotalCost.ShouldBe(300m * 0.15m + 2m);
+    }
+
+    [Fact]
+    public async Task PreviewDraft_AnEmptyDraftMeansNoIngredients_AndSavesNothing()
+    {
+        await Save(_latte, Line(_milk, 200m));
+
+        var result = (await PreviewDraft([], null))!;
+
+        result.Lines.ShouldBeEmpty();
+        await using var db = TestDb.Create(_db);
+        (await db.ProductItemLinks.CountAsync(l => l.IsActive)).ShouldBe(1);
+    }
 }
