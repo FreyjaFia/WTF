@@ -13,6 +13,8 @@ export const ROUTES = {
   stockIn: '/inventory/stock-in',
   attention: '/inventory/attention',
   waste: '/inventory/waste',
+  counts: '/inventory/counts',
+  countById: (id: string): string => `/inventory/counts/${id}`,
   ingredients: '/inventory/ingredients',
   products: '/management/products',
   customers: '/management/customers',
@@ -42,6 +44,7 @@ export const REPORT_SLUGS: ReadonlyArray<string> = [
   'customers',
   'stock-status',
   'waste',
+  'stock-variance',
 ];
 
 export const REPORT_API_PATHS: ReadonlyArray<string> = [
@@ -58,4 +61,5 @@ export const REPORT_API_PATHS: ReadonlyArray<string> = [
   'customers',
   'stock-status',
   'waste',
+  'stock-variance',
 ];
