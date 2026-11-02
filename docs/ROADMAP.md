@@ -3006,7 +3006,7 @@ deploy; its report is uploaded as the `e2e-report` artifact. Plan: watch it for 
 `needs` of the build and deploy jobs (or only a small smoke subset, with the full suite nightly).
 
 **Browser test suite, state on 30 Oct 2026.** `src/wtf-e2e`: 760 tests in 34 files (one folder per app section, see its README), all
-passing in about 6 minutes on a developer PC (5 workers). It runs on a throwaway `WTF_E2E_*` database (`tools/E2eDb`, started by
+passing in about 6 minutes on a developer PC (5 workers). It runs on a throwaway `WTF_E2E_*` database (`src/WTF.E2eDb`, started by
 `run.ps1` or `run.sh`, which also drop the leftovers of an interrupted run), serves the app with its own Angular configuration (`e2e`,
 API on 5290), and signs each role in once (`global-setup.ts`) and reuses the session, so a test does not type the login form. No test is
 skipped. Started from the Claude Code Terminal panel it can fail to start LocalDB while another session holds the instance, so run it

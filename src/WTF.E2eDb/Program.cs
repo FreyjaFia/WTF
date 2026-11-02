@@ -8,8 +8,8 @@ using WTF.Domain.Entities;
 
 // Throwaway database for the Playwright tests (src/wtf-e2e). Never touches the real WTF database.
 //
-//   dotnet run --project tools/E2eDb -- create   prints the new database name and connection string as JSON
-//   dotnet run --project tools/E2eDb -- drop <name>
+//   dotnet run --project src/WTF.E2eDb -- create   prints the new database name and connection string as JSON
+//   dotnet run --project src/WTF.E2eDb -- drop <name>
 //
 // E2E_SQL        server connection string (default: LocalDB). The database name in it is ignored.
 // E2E_PASSWORD   password given to the six test accounts (required for create).
