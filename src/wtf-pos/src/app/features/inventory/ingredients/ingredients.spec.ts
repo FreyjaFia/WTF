@@ -263,7 +263,7 @@ describe('IngredientsComponent', () => {
     input.dispatchEvent(new Event('input'));
     fixture.detectChanges();
     expect(el.querySelector('[data-testid="coverage-empty"]')?.textContent).toContain(
-      'No products match your search',
+      'No products found',
     );
   });
 });

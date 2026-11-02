@@ -102,7 +102,7 @@ describe('WasteReasonsComponent', () => {
   it('shows the empty state when there are no reasons', () => {
     service.getReasons.mockReturnValue(of([]));
     const fixture = create();
-    expect(text(fixture)).toContain('No waste reasons yet.');
+    expect(text(fixture)).toContain('No waste reasons found');
   });
 
   it('shows a spinner while loading', () => {

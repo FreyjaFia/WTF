@@ -62,7 +62,7 @@ describe('StockCountsComponent', () => {
   it('says so when there are no counts', () => {
     const { el } = setup({ counts: [] });
 
-    expect(el.textContent).toContain('No counts yet.');
+    expect(el.textContent).toContain('No counts found');
   });
 
   it('opens the start form from the Start Count button', () => {

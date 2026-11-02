@@ -97,8 +97,11 @@
       @if (connectionFailed()) {
         <app-connection-error />
       } @else if (!isLoading() && counts().length === 0) {
-        <div class="rounded-xl bg-surface p-8 text-center shadow" data-testid="counts-empty">
-          <p class="text-lg font-semibold text-gray-700">No counts yet.</p>
+        <div class="rounded-lg bg-surface p-8 text-center shadow-lg" data-testid="counts-empty">
+          <div class="mb-3 flex justify-center">
+            <app-icon name="icon-assignment-turned-in" [class]="'h-12 w-12 opacity-60'" />
+          </div>
+          <p class="text-lg font-semibold text-gray-700">No counts found</p>
           <p class="text-sm text-gray-500">Start a count to check the shelf against the system.</p>
         </div>
       }

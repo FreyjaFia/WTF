@@ -179,9 +179,12 @@
     @if (connectionFailed()) {
       <app-connection-error />
     } @else if (!isLoading() && visibleEntries().length === 0) {
-      <div class="rounded-xl bg-surface p-8 text-center shadow" data-testid="waste-empty">
+      <div class="rounded-lg bg-surface p-8 text-center shadow-lg" data-testid="waste-empty">
+        <div class="mb-3 flex justify-center">
+          <app-icon name="icon-delete" [class]="'h-12 w-12 opacity-60'" />
+        </div>
         <p class="text-lg font-semibold text-gray-700">No waste found</p>
-        <p class="text-sm text-gray-500">Nothing was recorded for these filters.</p>
+        <p class="text-sm text-gray-500">Try adjusting your filters or record waste from an item.</p>
       </div>
     }
 
