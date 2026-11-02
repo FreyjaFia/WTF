@@ -1,9 +1,11 @@
 import { DatePipe } from '@angular/common';
 import { Component, inject, OnInit, signal } from '@angular/core';
+import { Capacitor } from '@capacitor/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AlertService, AuthService, StockCountService } from '@core/services';
 import { BadgeComponent, BadgeVariant } from '@shared/components/badge/badge';
+import { IconComponent, PullToRefreshComponent } from '@shared/components';
 import { AppRoutes } from '@shared/constants/app-routes';
 import {
   STOCK_COUNT_STATUS_LABELS,
@@ -17,9 +19,22 @@ const STATUS_VARIANTS: Record<StockCountStatus, BadgeVariant> = {
   [StockCountStatus.Cancelled]: 'default',
 };
 
+const STATUS_BARS: Record<StockCountStatus, string> = {
+  [StockCountStatus.Open]: 'bg-amber-400',
+  [StockCountStatus.Posted]: 'bg-green-500',
+  [StockCountStatus.Cancelled]: 'bg-gray-300',
+};
+
 @Component({
   selector: 'app-stock-counts',
-  imports: [BadgeComponent, DatePipe, ReactiveFormsModule, RouterLink],
+  imports: [
+    BadgeComponent,
+    DatePipe,
+    IconComponent,
+    PullToRefreshComponent,
+    ReactiveFormsModule,
+    RouterLink,
+  ],
   templateUrl: './stock-counts.html',
   host: { class: 'flex-1 min-h-0' },
 })
@@ -32,6 +47,8 @@ export class StockCountsComponent implements OnInit {
   protected readonly counts = signal<StockCountSummaryDto[]>([]);
   protected readonly isLoading = signal(false);
   protected readonly isStarting = signal(false);
+  protected readonly isFormOpen = signal(false);
+  protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
   protected readonly statusLabels = STOCK_COUNT_STATUS_LABELS;
   protected readonly form = new FormGroup({
     name: new FormControl('', {
@@ -52,6 +69,19 @@ export class StockCountsComponent implements OnInit {
 
   protected variantOf(status: StockCountStatus): BadgeVariant {
     return STATUS_VARIANTS[status];
+  }
+
+  protected statusBar(status: StockCountStatus): string {
+    return STATUS_BARS[status];
+  }
+
+  protected openForm(): void {
+    this.isFormOpen.set(true);
+  }
+
+  protected closeForm(): void {
+    this.isFormOpen.set(false);
+    this.form.reset();
   }
 
   protected load(): void {

@@ -23,6 +23,7 @@ const summary = (overrides: Partial<StockCountSummaryDto> = {}): StockCountSumma
 interface Vm {
   form: { patchValue: (value: object) => void };
   start: () => void;
+  openForm: () => void;
 }
 
 describe('StockCountsComponent', () => {
@@ -64,9 +65,20 @@ describe('StockCountsComponent', () => {
     expect(el.textContent).toContain('No counts yet.');
   });
 
-  it('hides the start form from roles that cannot write stock', () => {
+  it('opens the start form from the Start Count button', () => {
+    const { el, fixture } = setup();
+
+    expect(el.querySelector('form')).toBeNull();
+    (el.querySelector('[data-testid="open-start"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(el.querySelector('form')).not.toBeNull();
+  });
+
+  it('hides the start button from roles that cannot write stock', () => {
     const { el } = setup({ canWrite: false });
 
+    expect(el.querySelector('[data-testid="open-start"]')).toBeNull();
     expect(el.querySelector('form')).toBeNull();
   });
 

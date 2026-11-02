@@ -5,6 +5,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AlertService, AuthService, StockCountService } from '@core/services';
 import { BadgeComponent, BadgeVariant } from '@shared/components/badge/badge';
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
+import { IconComponent } from '@shared/components/icons/icon/icon';
 import { SearchInputComponent } from '@shared/components/search-input/search-input';
 import { AppRoutes } from '@shared/constants/app-routes';
 import {
@@ -27,6 +28,7 @@ const STATUS_VARIANTS: Record<StockCountStatus, BadgeVariant> = {
     BadgeComponent,
     ConfirmDialogComponent,
     DecimalPipe,
+    IconComponent,
     ReactiveFormsModule,
     RouterLink,
     SearchInputComponent,

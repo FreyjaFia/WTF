@@ -1,26 +1,36 @@
 <div class="flex h-full flex-col pt-4 md:pt-0">
   @if (count(); as current) {
     <div class="mb-4 flex shrink-0 flex-col gap-3 sm:mb-6">
-      <a [routerLink]="listRoute" class="text-xs font-medium text-gray-500 hover:text-gray-900">&larr; All counts</a>
       <div class="flex items-start justify-between gap-3">
-        <div class="min-w-0">
-          <h1 class="wrap-break-word text-xl font-bold text-gray-900 sm:text-2xl">{{ current.summary.name }}</h1>
-          <p class="text-xs text-gray-500 sm:text-sm">
-            {{ countedNow() }} of {{ current.lines.length }} counted
-            @if (current.summary.isBlind && isOpen()) {
-              &middot; Blind count: the expected balance is hidden until you post
+        <div class="flex min-w-0 items-start gap-2">
+          <a
+            draggable="false"
+            class="app-btn app-btn-ghost mt-1 shrink-0 p-2"
+            [routerLink]="listRoute"
+            aria-label="Go back"
+            title="Back"
+          >
+            <app-icon name="icon-back" [class]="'h-5 w-5 text-gray-600'" />
+          </a>
+          <div class="min-w-0">
+            <h1 class="text-xl font-bold wrap-break-word text-gray-900 sm:text-2xl">{{ current.summary.name }}</h1>
+            <p class="text-xs text-gray-500 sm:text-sm">
+              {{ countedNow() }} of {{ current.lines.length }} counted
+              @if (current.summary.isBlind && isOpen()) {
+                &middot; Blind count: the expected balance is hidden until you post
+              }
+            </p>
+            @if (current.summary.note) {
+              <p class="mt-1 text-xs text-gray-500">{{ current.summary.note }}</p>
             }
-          </p>
-          @if (current.summary.note) {
-            <p class="mt-1 text-xs text-gray-500">{{ current.summary.note }}</p>
-          }
+          </div>
         </div>
         <app-badge [variant]="statusVariants[current.summary.status]">{{ statusLabels[current.summary.status] }}</app-badge>
       </div>
 
-      <div class="flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
+      <div class="flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center md:gap-3">
         <div
-          class="flex w-full min-w-0 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 focus-within:bg-surface focus-within:ring-2 focus-within:ring-gray-200 md:max-w-104 md:flex-1"
+          class="mb-2 flex w-full min-w-0 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-surface focus-within:ring-2 focus-within:ring-gray-200 md:mb-0 md:max-w-104 md:flex-1"
         >
           <app-search-input
             [value]="search()"
@@ -30,13 +40,13 @@
           />
         </div>
         @if (isOpen()) {
-          <div class="flex flex-wrap items-center justify-end gap-2 md:ml-auto">
-            <button type="button" class="app-btn app-btn-outline-danger app-btn-md" (click)="askCancel()">
+          <div class="ml-auto flex flex-wrap items-center justify-end gap-2">
+            <button type="button" class="app-btn app-btn-outline-danger app-btn-sm" (click)="askCancel()">
               Cancel Count
             </button>
             <button
               type="button"
-              class="app-btn app-btn-secondary app-btn-md"
+              class="app-btn app-btn-secondary app-btn-sm"
               [disabled]="isSaving() || !hasUnsaved()"
               (click)="save()"
             >
@@ -44,7 +54,7 @@
             </button>
             <button
               type="button"
-              class="app-btn app-btn-primary app-btn-md"
+              class="app-btn app-btn-primary app-btn-sm"
               [disabled]="isPosting() || countedNow() === 0"
               (click)="askPost()"
             >
@@ -55,60 +65,67 @@
       </div>
     </div>
 
-    <div class="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pb-4" data-testid="count-lines">
-      @for (line of visibleLines(); track line.itemId) {
-        <div
-          class="flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-surface p-3"
-          data-testid="count-line"
-        >
-          <div class="min-w-0">
-            <p class="wrap-break-word font-medium text-gray-900">{{ line.itemName }}</p>
-            @if (!isOpen() && line.expectedQuantity !== null) {
-              <p class="text-xs text-gray-500">
-                Expected {{ line.expectedQuantity | number: '1.0-3' }} {{ line.unitName }}
-              </p>
-            }
-          </div>
-          @if (isOpen()) {
-            <div class="flex shrink-0 items-center gap-2">
-              <input
-                type="number"
-                min="0"
-                step="any"
-                inputmode="decimal"
-                [formControl]="controlOf(line.itemId)"
-                [attr.aria-label]="'Counted quantity of ' + line.itemName"
-                class="w-28 rounded-lg border border-gray-200 px-3 py-2 text-right text-sm"
-              />
-              <span class="w-8 text-xs text-gray-500">{{ line.unitName }}</span>
-            </div>
-          } @else {
-            <div class="shrink-0 text-right">
-              <p class="text-sm font-semibold text-gray-900">
-                @if (line.countedQuantity !== null) {
-                  {{ line.countedQuantity | number: '1.0-3' }} {{ line.unitName }}
-                } @else {
-                  Not counted
-                }
-              </p>
-              @if (line.difference !== null && line.difference !== 0) {
-                <p
-                  class="text-xs font-semibold"
-                  [class.text-red-600]="line.difference < 0"
-                  [class.text-green-700]="line.difference > 0"
-                >
-                  {{ line.difference > 0 ? '+' : '' }}{{ line.difference | number: '1.0-3' }}
+    <div class="min-h-0 flex-1 overflow-y-auto pb-4" data-testid="count-lines">
+      <ul class="space-y-2.5">
+        @for (line of visibleLines(); track line.itemId) {
+          <li
+            class="flex items-center justify-between gap-3 rounded-xl bg-surface p-3 shadow sm:p-4"
+            data-testid="count-line"
+          >
+            <div class="min-w-0">
+              <p class="font-semibold wrap-break-word text-gray-900">{{ line.itemName }}</p>
+              @if (!isOpen() && line.expectedQuantity !== null) {
+                <p class="text-xs text-gray-500">
+                  Expected {{ line.expectedQuantity | number: '1.0-3' }} {{ line.unitName }}
                 </p>
               }
             </div>
-          }
-        </div>
-      } @empty {
-        <p class="py-8 text-center text-sm text-gray-500">No items match.</p>
-      }
+            @if (isOpen()) {
+              <div class="flex shrink-0 items-center gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  step="any"
+                  inputmode="decimal"
+                  [formControl]="controlOf(line.itemId)"
+                  [attr.aria-label]="'Counted quantity of ' + line.itemName"
+                  class="input w-28 border-transparent bg-gray-50 text-right transition-all focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20"
+                />
+                <span class="w-8 text-xs text-gray-500">{{ line.unitName }}</span>
+              </div>
+            } @else {
+              <div class="shrink-0 text-right">
+                <p class="text-sm font-semibold text-gray-900">
+                  @if (line.countedQuantity !== null) {
+                    {{ line.countedQuantity | number: '1.0-3' }} {{ line.unitName }}
+                  } @else {
+                    Not counted
+                  }
+                </p>
+                @if (line.difference !== null && line.difference !== 0) {
+                  <p
+                    class="text-xs font-semibold"
+                    [class.text-red-600]="line.difference < 0"
+                    [class.text-green-700]="line.difference > 0"
+                  >
+                    {{ line.difference > 0 ? '+' : '' }}{{ line.difference | number: '1.0-3' }}
+                  </p>
+                }
+              </div>
+            }
+          </li>
+        } @empty {
+          <li class="rounded-xl bg-surface p-8 text-center shadow">
+            <p class="text-lg font-semibold text-gray-700">No items match</p>
+            <p class="text-sm text-gray-500">Try a different search.</p>
+          </li>
+        }
+      </ul>
     </div>
-  } @else {
-    <p class="py-8 text-center text-sm text-gray-500">{{ isLoading() ? 'Loading...' : '' }}</p>
+  } @else if (isLoading()) {
+    <div class="flex justify-center py-8">
+      <span class="loading loading-spinner loading-lg"></span>
+    </div>
   }
 </div>
 

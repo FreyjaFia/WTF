@@ -1,53 +1,83 @@
-<div class="flex h-full flex-col overflow-y-auto pt-4 md:pt-0">
-  <div class="mb-4 shrink-0 sm:mb-6">
-    <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Stock Counts</h1>
-    <p class="text-xs text-gray-500 sm:text-sm">
-      Count what is on the shelf and correct the balances in one go
-    </p>
+<div class="flex h-full flex-col pt-4 md:pt-0">
+  <div class="mb-4 flex shrink-0 flex-col gap-3 sm:mb-6">
+    <div class="flex items-start justify-between gap-3">
+      <div class="flex min-w-0 flex-col gap-1">
+        <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Stock Counts</h1>
+        <p class="text-xs text-gray-500 sm:text-sm">Count what is on the shelf and correct the balances in one go</p>
+      </div>
+      <div class="flex shrink-0 items-center gap-2">
+        @if (!isAndroidPlatform) {
+          <button
+            type="button"
+            class="app-btn app-btn-ghost pointer-events-auto z-30 p-2"
+            [class.opacity-70]="isLoading()"
+            [disabled]="isLoading()"
+            aria-label="Refresh counts"
+            (click)="load()"
+          >
+            <app-icon
+              name="icon-refresh"
+              [class]="isLoading() ? 'h-5 w-5 animate-spin text-gray-600' : 'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'"
+              [fill]="'currentColor'"
+            />
+          </button>
+        }
+        @if (auth.canWriteStockMovements() && !isFormOpen()) {
+          <button type="button" class="app-btn app-btn-primary app-btn-sm" data-testid="open-start" (click)="openForm()">
+            <app-icon name="icon-plus" [class]="'h-4 w-4'" />
+            Start Count
+          </button>
+        }
+      </div>
+    </div>
   </div>
 
-  @if (auth.canWriteStockMovements()) {
+  @if (auth.canWriteStockMovements() && isFormOpen()) {
     <form
-      class="mb-6 flex flex-col gap-3 rounded-xl border border-gray-200 bg-surface p-4"
+      class="mb-4 flex shrink-0 flex-col gap-4 rounded-xl bg-surface p-4 shadow sm:p-5"
       [formGroup]="form"
       (ngSubmit)="start()"
       novalidate
     >
       <h2 class="text-sm font-semibold text-gray-900">Start a count</h2>
-      <div class="flex flex-col gap-1">
-        <label for="count-name" class="text-xs font-medium text-gray-600">Name</label>
+      <div>
+        <label for="count-name" class="mb-1 block text-sm font-medium text-gray-700">Name</label>
         <input
           id="count-name"
           type="text"
           formControlName="name"
           maxlength="100"
           placeholder="Weekly milk and beans"
-          class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+          class="input w-full border-transparent bg-gray-50 transition-all focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20"
+          [class.input-error]="form.controls.name.touched && form.controls.name.invalid"
         />
         @if (form.controls.name.touched && form.controls.name.invalid) {
-          <p class="text-xs text-red-600">Give the count a name.</p>
+          <p class="text-error mt-2 text-sm">Give the count a name.</p>
         }
       </div>
-      <div class="flex flex-col gap-1">
-        <label for="count-note" class="text-xs font-medium text-gray-600">Note (optional)</label>
+      <div>
+        <label for="count-note" class="mb-1 block text-sm font-medium text-gray-700">Note (optional)</label>
         <input
           id="count-note"
           type="text"
           formControlName="note"
           maxlength="500"
-          class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+          class="input w-full border-transparent bg-gray-50 transition-all focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20"
         />
       </div>
-      <label class="flex items-start gap-2 text-sm text-gray-700">
-        <input type="checkbox" formControlName="isBlind" class="mt-0.5" />
+      <label class="flex cursor-pointer items-start gap-3 rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-700">
+        <input type="checkbox" formControlName="isBlind" class="checkbox checkbox-sm mt-0.5" />
         <span>
           Blind count
-          <span class="block text-xs text-gray-500"
-            >Hide the expected balance from the counter until the count is posted</span
-          >
+          <span class="block text-xs text-gray-500">
+            Hide the expected balance from the counter until the count is posted
+          </span>
         </span>
       </label>
-      <div class="flex justify-end">
+      <div class="flex justify-end gap-2">
+        <button type="button" class="app-btn app-btn-secondary app-btn-md" [disabled]="isStarting()" (click)="closeForm()">
+          Cancel
+        </button>
         <button type="submit" class="app-btn app-btn-primary app-btn-md" [disabled]="isStarting()">
           {{ isStarting() ? 'Starting...' : 'Start Count' }}
         </button>
@@ -55,29 +85,45 @@
     </form>
   }
 
-  <div class="flex flex-col gap-2 pb-4" data-testid="count-list">
-    @for (count of counts(); track count.id) {
-      <a
-        [routerLink]="countRoute(count.id)"
-        class="flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-surface p-4 transition-colors hover:bg-gray-50"
-        data-testid="count-row"
-      >
-        <div class="min-w-0">
-          <p class="wrap-break-word font-semibold text-gray-900">{{ count.name }}</p>
-          <p class="text-xs text-gray-500">
-            {{ count.createdAt | date: 'MMM d, y, h:mm a' }} &middot; {{ count.createdByName }}
-            @if (count.isBlind) {
-              &middot; Blind
-            }
-          </p>
-          <p class="text-xs text-gray-500">{{ count.countedCount }} of {{ count.lineCount }} counted</p>
+  @if (isLoading() && counts().length === 0) {
+    <div class="flex justify-center py-8">
+      <span class="loading loading-spinner loading-lg"></span>
+    </div>
+  }
+
+  <app-pull-to-refresh [refreshing]="isLoading()" (refreshTriggered)="load()">
+    <div class="pb-4">
+      @if (!isLoading() && counts().length === 0) {
+        <div class="rounded-xl bg-surface p-8 text-center shadow" data-testid="counts-empty">
+          <p class="text-lg font-semibold text-gray-700">No counts yet.</p>
+          <p class="text-sm text-gray-500">Start a count to check the shelf against the system.</p>
         </div>
-        <app-badge [variant]="variantOf(count.status)">{{ statusLabels[count.status] }}</app-badge>
-      </a>
-    } @empty {
-      <p class="py-8 text-center text-sm text-gray-500">
-        {{ isLoading() ? 'Loading...' : 'No counts yet.' }}
-      </p>
-    }
-  </div>
+      }
+
+      <ul class="space-y-2.5" data-testid="count-list">
+        @for (count of counts(); track count.id) {
+          <li class="relative overflow-hidden rounded-xl bg-surface shadow" data-testid="count-row">
+            <span class="absolute inset-y-0 left-0 w-1.5" [class]="statusBar(count.status)" aria-hidden="true"></span>
+            <a
+              [routerLink]="countRoute(count.id)"
+              draggable="false"
+              class="flex items-center justify-between gap-3 p-3 pl-5 transition-colors hover:bg-gray-50 sm:p-4 sm:pl-6"
+            >
+              <div class="min-w-0">
+                <p class="font-semibold wrap-break-word text-gray-900">{{ count.name }}</p>
+                <p class="text-xs text-gray-500">
+                  {{ count.createdAt | date: 'MMM d, y, h:mm a' }} &middot; {{ count.createdByName }}
+                  @if (count.isBlind) {
+                    &middot; Blind
+                  }
+                </p>
+                <p class="text-xs text-gray-500">{{ count.countedCount }} of {{ count.lineCount }} counted</p>
+              </div>
+              <app-badge [variant]="variantOf(count.status)">{{ statusLabels[count.status] }}</app-badge>
+            </a>
+          </li>
+        }
+      </ul>
+    </div>
+  </app-pull-to-refresh>
 </div>
