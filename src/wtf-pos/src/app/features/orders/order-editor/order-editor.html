@@ -144,9 +144,9 @@
           @if (activeCatalogTab() === 'products') {
             @if (products().length === 0) {
               <div class="flex flex-1 flex-col items-center justify-center text-center opacity-60">
-                <app-icon name="icon-search" [class]="'mb-3 h-12 w-12'" />
-                <div class="text-sm font-medium">No products found</div>
-                <div class="text-xs">Try adjusting your filters or add a new product</div>
+                <app-icon name="icon-cart" [class]="'mb-3 h-12 w-12'" />
+                <div class="text-lg font-semibold">No products found</div>
+                <div class="text-sm">Try adjusting your search or add a new product</div>
               </div>
             }
             @if (products().length > 0) {
@@ -248,8 +248,8 @@
             } @else if (!hasPromos()) {
               <div class="flex flex-1 flex-col items-center justify-center text-center opacity-60">
                 <app-icon name="icon-promotion" [class]="'mb-3 h-12 w-12'" />
-                <div class="text-sm font-medium">No promos found</div>
-                <div class="text-xs">Try adjusting your search</div>
+                <div class="text-lg font-semibold">No promos found</div>
+                <div class="text-sm">Try adjusting your search</div>
               </div>
             } @else {
               <div

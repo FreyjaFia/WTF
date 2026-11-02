@@ -252,13 +252,19 @@
                       @if (!connectivity.isOnline()) {
                         <app-public-offline-notice message="Reconnect to see the menu and place an order." />
                       } @else if (sections().length === 0) {
-                        <p class="py-12 text-center text-sm text-gray-500">
-                          @if (products().length === 0) {
-                            The menu is empty right now. Please check back soon.
-                          } @else {
-                            Nothing matches your search.
-                          }
-                        </p>
+                        <div class="py-12 text-center">
+                          <div class="mb-3 flex justify-center">
+                            <app-icon name="icon-cart" [class]="'h-12 w-12 opacity-60'" />
+                          </div>
+                          <p class="text-lg font-semibold text-gray-700">No products found</p>
+                          <p class="text-sm text-gray-500">
+                            @if (products().length === 0) {
+                              The menu is empty right now. Please check back soon.
+                            } @else {
+                              Nothing matches your search.
+                            }
+                          </p>
+                        </div>
                       } @else {
                         <div class="space-y-6 pb-4">
                           @for (section of sections(); track section.id) {
