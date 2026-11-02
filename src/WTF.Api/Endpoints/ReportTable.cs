@@ -27,6 +27,7 @@ internal sealed record ReportTable<T>(
         ["Product Sales Breakdown"] = ["subCategoryName", "revenuePercent"],
         ["Staff Performance"] = ["averageOrderValue"],
         ["Voids and Refunds"] = ["orderedAt", "voidedBy", "staffVoidRate"],
+        ["Stock Variance"] = ["opening", "received", "waste", "closing"],
         ["Customer Link Orders"] = ["awaitingCount", "pickupCount", "deliveryCount", "averageMinutesToReady"]
     };
 

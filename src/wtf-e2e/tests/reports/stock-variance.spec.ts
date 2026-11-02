@@ -3,6 +3,8 @@ import { expect, test } from '@fixtures/index';
 import { WasteReason } from '@data/enums';
 import { ROUTES } from '@data/routes';
 import { today } from '@utils/dates';
+import { captureDownload, readXlsxStrings } from '@utils/download';
+import * as fs from 'fs';
 
 interface VarianceRow {
   readonly itemId: string;
@@ -119,6 +121,42 @@ test.describe('stock variance report @reports @counts', () => {
       expect(response.status()).toBe(403);
     });
   }
+
+  test('the date filter on screen includes today and leaves out yesterday', async ({ api, signIn }) => {
+    const item = await api.items.create({ startingQuantity: 100 });
+    await count(api, item.id, 90);
+    const page = await signIn('admin');
+    await page.goto(ROUTES.report('stock-variance'));
+    await page.getByPlaceholder('Search all columns').fill(item.name);
+    await expect(page.getByText(item.name).locator('visible=true').first()).toBeVisible();
+
+    await page.getByLabel('Preset').selectOption({ label: 'Yesterday' });
+    await expect(page.getByText(item.name).locator('visible=true')).toHaveCount(0);
+
+    await page.getByLabel('Preset').selectOption({ label: 'Today' });
+    await expect(page.getByText(item.name).locator('visible=true').first()).toBeVisible();
+  });
+
+  test('Excel and CSV from the screen hold the row and its figures', async ({ api, signIn }, info) => {
+    const item = await api.items.create({ startingQuantity: 100, costPrice: 2 });
+    await count(api, item.id, 90);
+    const page = await signIn('admin');
+    await page.goto(ROUTES.report('stock-variance'));
+    await page.getByPlaceholder('Search all columns').fill(item.name);
+    const exports = page.getByRole('group', { name: 'Export' });
+
+    const excel = await captureDownload(page, info, () => exports.getByRole('button', { name: 'Excel' }).click());
+    const cells = readXlsxStrings(excel.path);
+    for (const text of ['Stock Variance', item.name, '90.00', '10.00', 'PHP 20.00', 'Check']) {
+      expect(cells, text).toContain(text);
+    }
+
+    const csv = await captureDownload(page, info, () => exports.getByRole('button', { name: 'CSV' }).click());
+    const lines = fs.readFileSync(csv.path, 'utf8').split('\n').map((line) => line.trim()).filter((line) => line);
+    expect(lines[0]).toContain('Variance Value');
+    expect(lines.filter((line) => line.includes(item.name))).toHaveLength(1);
+    expect(lines.find((line) => line.includes(item.name))).toContain('Check');
+  });
 
   test('the report fits a phone screen', async ({ api, signIn }) => {
     const name = `V${'ideunbrokenname'.repeat(5)}${Date.now().toString(36)}`.slice(0, 95);

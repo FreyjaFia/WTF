@@ -283,6 +283,13 @@ public class ReportTableTests : IDisposable
             "orderedAt", "voidedBy", "staffVoidRate");
 
     [Fact]
+    public void Pdf_StockVariance_KeepsSevenColumns_ExcelKeepsAll() =>
+        PdfOmits(
+            ReportTables.StockVariance,
+            [new StockVarianceReportRowDto(Guid.NewGuid(), "Milk", "ml", 0m, 1500m, 360m, 50m, -80m, 490m, 1010m, 80m, 22.2m, 12m, "Check")],
+            "opening", "received", "waste", "closing");
+
+    [Fact]
     public void Pdf_CustomerLinks_OmitsFourColumns_ExcelKeepsThem() =>
         PdfOmits(
             ReportTables.CustomerLinks,
