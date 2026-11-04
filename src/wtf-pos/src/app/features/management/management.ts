@@ -70,6 +70,13 @@ export class ManagementComponent {
       canShow: () => this.canAccessReports(),
     },
     {
+      label: 'Expenses',
+      route: 'expenses',
+      path: AppRoutes.ManagementExpenses,
+      ariaLabel: 'Expenses',
+      canShow: () => this.authService.canReadExpenses(),
+    },
+    {
       label: 'Waste Reasons',
       route: 'waste-reasons',
       path: AppRoutes.ManagementWasteReasons,

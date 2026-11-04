@@ -4,6 +4,7 @@ export * from './audit-log.models';
 export * from './cart.models';
 export * from './customer.models';
 export * from './dashboard.models';
+export * from './expense.models';
 export * from './inventory.models';
 export * from './notification.models';
 export * from './price-history.models';

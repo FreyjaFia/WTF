@@ -28,6 +28,7 @@ const ALL_TYPES = [
   'waste',
   'stock-variance',
   'gross-profit',
+  'profit-loss',
   'menu-engineering',
   'category-sales',
 ];
@@ -408,6 +409,68 @@ describe('report definitions', () => {
     it('totals the money columns in the table footer', () => {
       expect(column('wasteCost').total!([day('2026-03-10T00:00:00'), partly])).toBe(10);
       expect(column('actualProfit').total!([day('2026-03-10T00:00:00'), partly, none])).toBe(388);
+    });
+  });
+
+  describe('profit and loss', () => {
+    const definition = findReportDefinition('profit-loss');
+    const column = (key: string) => definition.columns.find((c) => c.key === key)!;
+    const period = (periodStart: string, overrides: Record<string, unknown> = {}): ReportRow => ({
+      periodStart,
+      netSales: 300,
+      cost: 50,
+      wasteCost: 10,
+      countVariance: 2,
+      actualProfit: 238,
+      expenses: 100,
+      operatingProfit: 138,
+      marginPercent: 46,
+      costStatus: 'Known',
+      ...overrides,
+    });
+    const rentOnly = period('2026-03-01T00:00:00', { netSales: 0, cost: 0, wasteCost: 0, countVariance: 0, actualProfit: 0, expenses: 12000, operatingProfit: -12000, marginPercent: null });
+    const none = period('2026-03-12T00:00:00', { netSales: 20, cost: 0, wasteCost: 0, countVariance: 0, actualProfit: null, expenses: 5, operatingProfit: null, marginPercent: null, costStatus: 'No cost' });
+
+    it('lives in the Sales group with the period filter and no source filter', () => {
+      expect(definition.group).toBe('Sales');
+      expect(definition.filters).toEqual(['groupBy']);
+      expect(definition.usesSource).toBe(false);
+      expect(definition.usesDateRange).toBe(true);
+    });
+
+    it('has the columns in the order the story is told', () => {
+      expect(definition.columns.map((c) => c.header)).toEqual([
+        'Date', 'Net Sales', 'Cost', 'Waste', 'Count Variance', 'Gross Profit', 'Expenses', 'Operating Profit', 'Margin %', 'Cost (status)',
+      ]);
+    });
+
+    it('shows a dash for an unknown operating profit and marks a loss red', () => {
+      expect(cellText(none, column('operatingProfit'), { groupBy: 'Day' })).toBe('-');
+      expect(column('operatingProfit').cellClass!(rentOnly)).toBe('text-red-600');
+      expect(column('operatingProfit').cellClass!(period('2026-03-10T00:00:00'))).toBe('');
+      expect(column('operatingProfit').cellClass!(none)).toBe('');
+    });
+
+    it('adds expenses and operating profit, and works the margin over periods that have a profit', () => {
+      const by = Object.fromEntries(
+        definition.totals([period('2026-03-10T00:00:00'), rentOnly, none]).map((t) => [t.label, t]),
+      );
+
+      expect(by['Net Sales'].value).toBe(320);
+      expect(by['Gross Profit'].value).toBe(238);
+      expect(by['Expenses'].value).toBe(12105);
+      expect(by['Operating Profit'].value).toBe(-11862);
+      expect(by['Margin'].value).toBeCloseTo(-3954, 0);
+      expect(by['Periods without a full cost'].value).toBe(1);
+    });
+
+    it('has no margin when no period has an operating profit', () => {
+      expect(definition.totals([none]).find((t) => t.label === 'Margin')!.unavailable).toBe(true);
+    });
+
+    it('totals the money columns in the table footer', () => {
+      expect(column('expenses').total!([period('2026-03-10T00:00:00'), rentOnly])).toBe(12100);
+      expect(column('operatingProfit').total!([period('2026-03-10T00:00:00'), rentOnly, none])).toBe(-11862);
     });
   });
 

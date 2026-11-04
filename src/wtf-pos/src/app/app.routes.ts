@@ -37,6 +37,7 @@ import { UserDetailsComponent } from '@features/management/users/user-details/us
 import { UserEditorComponent } from '@features/management/users/user-editor/user-editor';
 import { UserListComponent } from '@features/management/users/user-list/user-list';
 import { UsersComponent } from '@features/management/users/users';
+import { ExpensesComponent } from '@features/management/expenses/expenses';
 import { WasteReasonsComponent } from '@features/management/waste-reasons/waste-reasons';
 import { NotFoundComponent } from '@features/not-found/not-found';
 import { NotificationsComponent } from '@features/notifications/notifications';
@@ -401,6 +402,12 @@ export const routes: Routes = [
             component: AuditLogsComponent,
             canActivate: [roleGuard],
             data: { roles: AppRoleGroups.AuditRead },
+          },
+          {
+            path: 'expenses',
+            component: ExpensesComponent,
+            canActivate: [roleGuard],
+            data: { roles: AppRoleGroups.ExpensesRead },
           },
           {
             path: 'waste-reasons',

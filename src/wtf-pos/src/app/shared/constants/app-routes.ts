@@ -52,5 +52,6 @@ export const AppRoutes = {
   ManagementReports: '/management/reports',
   ManagementAuditLogs: '/management/audit-logs',
   ManagementWasteReasons: '/management/waste-reasons',
+  ManagementExpenses: '/management/expenses',
   ManagementSchemaScripts: '/management/schema-scripts',
 } as const;
