@@ -45,6 +45,8 @@ export const REPORT_SLUGS: ReadonlyArray<string> = [
   'stock-status',
   'waste',
   'stock-variance',
+  'gross-profit',
+  'menu-engineering',
 ];
 
 export const REPORT_API_PATHS: ReadonlyArray<string> = [
@@ -62,4 +64,6 @@ export const REPORT_API_PATHS: ReadonlyArray<string> = [
   'stock-status',
   'waste',
   'stock-variance',
+  'gross-profit',
+  'menu-engineering',
 ];
