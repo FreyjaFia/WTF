@@ -912,7 +912,7 @@ recipes that turn a sale into ingredient usage, a way to compare the recipe with
 
 | Phase | Name                                     | Needs first            |
 | ----- | ---------------------------------------- | ---------------------- |
-| 5     | Waste and spoilage (built, not verified) | Order-time deduction   |
+| 5     | Waste and spoilage (completed)           | Order-time deduction   |
 | 6     | Costing and recipes                      | Order-time deduction   |
 | 7     | Stock counts and variance                | Phase 6                |
 | 8     | Suppliers, receiving and reordering      | Phase 1 stock-in       |
@@ -921,7 +921,11 @@ recipes that turn a sale into ingredient usage, a way to compare the recipe with
 Recommended order: finish order-time deduction, then 5 (small, quick value), 6, 7, 9, with 8 whenever purchasing pain
 shows up. Stock transfers between branches are under "Multiple Branches" (Phase 1 there).
 
-#### Phase 5 - Waste and spoilage [Built, not yet verified, 27 Oct 2026]
+#### Phase 5 - Waste and spoilage [Completed, 4 Nov 2026]
+
+Closed 4 Nov 2026: `dotnet build` clean, `dotnet test` 2,752 passing (including the real SQL tests), `ng build` and `ng test`
+3,844 passing (186 spec files). The earlier 13-test difference in the Angular count is moot: the suite has grown since and
+nothing fails. Only the deploy step (run the SQL script, then the API, then the app) is left for release.
 
 **Built (27 Oct 2026; script `tools/sql/20261027_add_stock_waste.sql`, run it before deploying the API, then
 `tools/dbsync.bat`).** The original plan follows below; this is what exists and what is still to do.
@@ -988,7 +992,7 @@ to the stock" choice beyond the existing refund dialog, and a branch column (Mul
 4. **Full builds and tests**: `dotnet build`, `dotnet test src/WTF.Tests` (including the real SQL tests),
    `npx ng build --configuration=development` and `npx ng test --watch=false` in `src/wtf-pos`.
 5. **Deploy order**: run the SQL script on the target database first, then deploy the API, then the app.
-6. Change this heading to Completed once steps 1 to 4 pass, and note what was checked by hand.
+6. Change this heading to Completed once steps 1 to 4 pass, and note what was checked by hand. [Done, 4 Nov 2026]
 
 **Checked by hand (29 Oct 2026, throwaway `WTF_Test_*` database, API 5282, built-in browser).** Three items: Man Milk (1,000 ml,
 approval limit 100, warn 500, critical 200), Man Cup (5 pc, blocks below zero) and Man Syrup (300 ml, warn-only, a 95-character
@@ -1210,13 +1214,18 @@ counting, and show the difference as **variance**, so you can tell a wrong recip
 - Tests: weighted average after a receipt with different pack prices, FEFO order, par/reorder maths, partial receipts,
   expiry write-off, roles.
 
-#### Phase 9 - Profit and margin reports [Partly built: Product Profit report, 1 Nov 2026]
+#### Phase 9 - Profit and margin reports [Partly built: Product Profit 1 Nov, Gross Profit 4 Nov 2026]
 
 "Net income" needs more than stock: it needs sales, cost of goods sold, waste, discounts and the **running costs** of the
 shop. The POS can answer part of it honestly; the rest needs an expenses record. It is **management reporting, not
 accounting or tax filing** (the app still stores no tax); the accountant's books stay the official ones.
 
-**Built (1 Nov 2026): the Product Profit report** (Reports > Products, `GET /api/reports/product-margin`, Super Admin, Admin and Admin Viewer like every report; Excel, PDF and CSV). It takes the revenue of the product sales report (add-ons and bundles on their own rows, refunds taken out) and sets against it what the sales really cost: the cost comes from the stock movements each sale wrote (`Sale` and `SaleVoid`, quantity times the cost the item had at that moment), so it is the cost at the time of the sale and it already follows the size, the add-ons, Replace and the allowance; the per-sale supplies cost is added for each unit sold. A product sold alone and inside a bundle in one order has its cost split between the two rows by units (`ProfitRules.AllocateByUnits`). Each row says whether its cost can be trusted: **Known** (every unit sold has a cost), **Partly known** (some units were sold before stock tracking, or a movement has no cost: the cost is shown for the known part and no profit is claimed) or **No cost** (the product takes no stock and has no supplies cost: shown as "-", never as free). Profit and margin appear only for Known rows, and the totals add up only those. Not built: the monthly workbook sheet, the gross profit summary by day, week and month with waste and count variance, menu engineering and the expenses record (the rest of this phase).
+**Built (1 Nov 2026): the Product Profit report** (Reports > Products, `GET /api/reports/product-margin`, Super Admin, Admin and Admin Viewer like every report; Excel, PDF and CSV). It takes the revenue of the product sales report (add-ons and bundles on their own rows, refunds taken out) and sets against it what the sales really cost: the cost comes from the stock movements each sale wrote (`Sale` and `SaleVoid`, quantity times the cost the item had at that moment), so it is the cost at the time of the sale and it already follows the size, the add-ons, Replace and the allowance; the per-sale supplies cost is added for each unit sold. A product sold alone and inside a bundle in one order has its cost split between the two rows by units (`ProfitRules.AllocateByUnits`). Each row says whether its cost can be trusted: **Known** (every unit sold has a cost), **Partly known** (some units were sold before stock tracking, or a movement has no cost: the cost is shown for the known part and no profit is claimed) or **No cost** (the product takes no stock and has no supplies cost: shown as "-", never as free). Profit and margin appear only for Known rows, and the totals add up only those. Not built: price guidance, the expenses record, the profit and loss summary and the dashboard tiles (the rest of this phase).
+
+**Built (4 Nov 2026; no schema change): the Gross Profit report and two workbook sheets.** Reports > Sales > Gross Profit (`GET /api/reports/gross-profit`, `groupBy` Day, Week or Month, Excel, PDF and CSV; Super Admin, Admin and Admin Viewer). Per period: net sales (the daily sales report), cost, *Profit (recipes)* (net sales less cost), waste cost, count variance cost, *Actual profit* (recipe profit less waste less count variance) and margin on actual profit. Cost is read as the Product Profit report does (the order's `Sale` and `SaleVoid` movements at the cost they carry, plus supplies cost per unit); waste (`Waste` and `WasteReversed`) and count corrections (`Count` and `Adjustment`) are placed in the day they were recorded, valued at the cost on the movement, and a surplus found on a count raises the profit. A refunded sale adds no revenue and its movements net to what stayed gone, which the refund's waste entry carries, so the cost is not counted twice. A day with waste but no sales gets its own row. The maths is `ProfitRules.GrossProfit`, `MovementCost` and `CostStatus` in `WTF.Calculations`; the report is server-built and the screen only adds the footer totals through the existing `summarizeProfit`. **Decision:** unlike Product Profit, a period is *Partly known* (profit still shown, status badge amber) when some units sold have no cost, and only *No cost* (profit shown as "-") when none has, because a day almost always includes an untracked item such as bottled water and a column of dashes would be useless. The owner reads the status next to the number. All sources are included (waste and counts have no source). The monthly workbook now has **Product Profit and Gross Profit sheets (16 sheets)**. Tests: rules, 13 handler tests (in-memory), one real SQL Server test, PDF columns, route and policy snapshots, workbook sheets, Angular definition specs. **Checked by hand (4 Nov 2026, throwaway `WTF_E2E_*` database, API 5290, built-in browser):** Milk 10,000 ml at 0.10 per ml, a Latte at 150 taking 200 ml, an untracked Water at 20; sold 3 Lattes and 1 Water, wasted 150 ml, counted 100 ml short. Hand answer: net 470, cost 60, recipe profit 410, waste 15, count variance 10, actual profit 385, margin 81.91%, status Partly known (the Water has no cost). The API, the screen tiles, the day card and the footer total all gave exactly that, and Product Profit agreed (Latte cost 60, profit 390; Water No cost). Month and Week grouping work, a bad `groupBy` or a missing date is a 400, Super Admin, Admin and Admin Viewer read it and Cashier, Stock Manager and Item Manager get 403, Excel and PDF download, the workbook has the 16 sheets, and the page has no sideways scroll at 375 px. Not checked: the PDF text (no reader on this machine), a day with a fully known cost, and the report in the cafe style.
+
+**Built (4 Nov 2026; no schema change): the Menu Engineering report.** Reports > Products > Menu Engineering (`GET /api/reports/menu-engineering`, same filters and roles as Product Profit; Excel, PDF and CSV; a sheet in the monthly workbook, now 17 sheets). It takes the Product Profit rows (add-ons and the Promotions bundles are left out) and sorts every product with a **full cost** into **Star** (popular, high margin), **Plowhorse** (popular, low margin), **Puzzle** (high margin, unpopular) or **Dog** (neither). *Popular* means a share of the units sold of at least 70% of an even share (0.7 divided by the number of rated products); *high margin* means profit per unit at or above the average profit per unit of everything rated (total profit over total units). A product without a full cost is **Not rated** and does not move anyone else's class, so a missing recipe never makes the menu look better than it is. Rows show quantity, share, profit per unit, profit, class and cost status, Stars first. The maths is `MenuEngineeringRules` in `WTF.Calculations`; the report is server-built and the screen only counts the classes for its tiles. Tests: 6 rule tests, 4 handler tests, one real SQL Server test, route snapshot, workbook sheet, Angular definition specs. .NET 2,788 and Angular 3,867 passing, `ng build` clean. **Checked (4 Nov 2026, throwaway `WTF_E2E_*` database, real API and app):** 4 browser tests in `src/wtf-e2e/tests/reports/menu-engineering.spec.ts` (a rated product with profit per unit 130, a product with no stock is Not rated, the cashier gets 403, the report opens as Admin and shows the product and 130.00). The four classes are asserted only in the handler tests, because the browser database is shared by parallel tests and a class depends on the whole menu. Not checked: the Excel and PDF files, and a phone-width look. Not built: the dashboard view and price suggestions per class.
+
 
 - **Gross profit report** (Reports > Sales, owner level): Sales (net of discounts and refunds, already defined) minus **COGS
   from recipes** (theoretical) = *theoretical gross profit*; minus recorded waste minus count variance = *actual gross
@@ -2422,6 +2431,101 @@ general settings page).
 - On the order detail page, add "Print Receipt" and "Print Kitchen
   Ticket" buttons
 - Works for any past order, not just the current one
+
+---
+
+## Temperature (Hot / Iced) as an add-on type [Planned, added 4 Nov 2026]
+
+A drink is often sold hot or iced, and today the only ways to say so are two separate products ("Latte" and "Iced Latte") or
+a Flavor/Size trick. Two products split the sales report, the stock links and the promotions in half, and make the menu long.
+Idea: a **Temperature** add-on type (Hot, Iced, maybe Blended later) that works like Size: the cashier picks one on the drink,
+and everything that already follows add-ons (price, stock, cost, promotions, reports, the customer link) follows it too. No new
+"variant" concept is built; the add-on machinery is the variant machinery.
+
+**Why an add-on and not a separate variant feature**
+
+- Price differences already exist as add-on prices and per-product overrides (`ProductAddOns` price override): Iced +PHP 10 on
+  one drink, +0 on another.
+- Stock and cost already follow add-ons: a link on the Iced add-on takes ice, a plastic cup and a dome lid; the Hot add-on takes a
+  paper cup and a sleeve. Per-size amounts (`ProductSizeAmounts`) and Replace mode (`ReplacesItemId`) cover "Iced uses a plastic
+  cup *instead of* the paper cup".
+- Promotions already match exact add-ons ("Iced Latte, Large" for PHP 120), the receipt, the order details breakdown, the
+  Promos tab and the customer link menu all show add-ons.
+- Offline, sync review and reports already carry add-ons.
+
+**Decisions to make first**
+
+- **A new add-on type, or a rule on an existing one?** Recommended: a real `Temperature` type created through Dynamic Catalog
+  Management (add-on types with `IsRequired`, `MinSelect`, `MaxSelect`), single select, required for the products that offer it.
+  Today Size, Flavor and Sauce are hard-wired in places (`PickOneAddOnRule`, `PromotionAddOnRules`, `StockCoverageRules`, the
+  "required group" logic, `AddOnTypeEnum`). Temperature should not add a fourth hard-wired copy; do it after, or together with,
+  the dynamic add-on type work so "pick exactly one" and "required" come from the type's own rules.
+- **Required, pick one (decided).** Like Size: a product that offers Temperature must have exactly one option on every sale. A pastry
+  has no temperature and a bottled drink none; the type is required only on the products it is linked to, so linking it to a
+  product is what makes it a choice. Each option can carry a price (Iced +10).
+- **Default.** A product may mark one option as the default (usually Hot, or Iced for cold-only drinks), pre-selected in the
+  selector so a cashier on a rush taps once. Only meaningful with a required type; needs a small `IsDefault` on the product's
+  add-on link.
+- **Cold-only and hot-only drinks.** Link only the options that apply (a cold brew offers Iced only, so the choice is skipped
+  or locked). The selector hides a type with a single option and selects it.
+- **Name on tickets and receipts.** "Latte, Iced, Large" reads naturally if Temperature sorts before Size; set the sort order
+  of the types. The cart, the receipt and the kitchen ticket show it as a plain add-on line (price shown only when not zero).
+
+**What it touches (each is a check, not new machinery)**
+
+1. **Catalog and editor.** Add-on type seeded and linkable in the product editor like Size; bulk-link Hot/Iced to many drinks at
+   once (a bulk action beside "Manage Links").
+2. **Order flow.** Add-on selector shows the group with its required marker, default option and radio style; the cart,
+   order details, receipt, summary image and customer cart show it (already add-on lines). Part of `shared/calculations`
+   unchanged: add-on pricing already sums by type-agnostic rules.
+3. **Promotions.** Exact-add-on matching already works; the promotion editors must let the owner pick Temperature options, and
+   the validation "required add-on types must be listed" (`PromotionAddOnRules`) must follow the type's rule, not a list of
+   Size/Flavor. "Any temperature" for a promotion that does not care should be allowed (a way to say "this group is not part of
+   the rule") and is open in the questions below.
+4. **Inventory and cost.** Recipe lines linked to the Hot/Iced add-ons (cup, lid, sleeve, ice). The Coverage check
+   (`StockCoverageRules`) must treat Temperature as a required group: a latte with Hot linked and Iced not is "Some options
+   missing". Ingredients & Cost page: Hot and Iced columns beside the size grid (or a combined grid of size x temperature, see
+   open questions) and the Preview one sale box with a Temperature choice.
+5. **Reports.** The product sales report with `splitAddOns` already lists add-ons as rows. Add a "by temperature" view in the
+   add-on performance report (still planned under Reporting): share of hot vs iced, by hour and by day (a rainy-day check), and
+   margin per option once costs exist.
+6. **Customer link.** The picker shows the group like Size. `PublicCatalogDto` already carries add-ons and types; a default and
+   required flag come with the dynamic add-on types.
+7. **Offline.** Add-on types and links are in the catalog cache; a changed price or removed option on Iced is judged by the
+   sync review like any add-on (Offline Phase 6/7).
+8. **Migration of today's menu.** Shops that already sell "Iced Latte" as a separate product: a one-time helper that merges
+   "X" and "Iced X" into one product with Temperature, repointing the order history is NOT done (old orders keep their product);
+   the helper only creates the add-on links and deactivates the duplicate product. Optional, ask before building.
+
+**Data (script under `tools/sql`, then `tools/dbsync.bat`)**
+
+- A `Temperature` row in `AddOnTypes` (when the dynamic catalog work has made that table editable) with its Hot / Iced add-ons as
+  products flagged as add-ons, and `ProductAddOns.IsDefault` (bit, default 0). Nothing else new; no schema for variants.
+- If the dynamic add-on type work has not landed, the first cut is only the seeded type plus the hard-wired required-group
+  list gaining Temperature, then moved onto the rules later (prefer to wait).
+
+**Tests and checks**
+
+- Handler tests: a drink with a required Temperature refuses an order without one; two temperatures on one drink refused (pick
+  one); a cold-only drink needs no choice; price override on Iced applies; the default is pre-selected by the POS only.
+- Shared cases in `calculation-cases.json` for a promotion matched on "Iced + Large" and not on "Hot + Large".
+- Stock: a sale of Iced Latte takes the plastic cup and ice and not the paper cup (Replace), and Coverage flags a latte with
+  one temperature unlinked.
+- Hand check on a throwaway database: one drink, both temperatures, a price difference, a promotion on Iced only, stock for
+  each cup, the receipt, the report split and the customer link at phone width.
+
+**Open questions**
+
+- One **Temperature** group, or separate groups for the cases that really differ (Hot, Iced, Blended)? Blended often changes
+  the recipe a lot and the price too.
+- Size x Temperature amounts: is a cup per temperature enough (most shops), or does each size and temperature pair need its own
+  amounts (then the size grid becomes two-dimensional)?
+- ~~Is the temperature a price (Iced +10) in this shop?~~ **Decided 4 Nov 2026:** it can carry its own price, and it behaves like
+  Size: **required, pick exactly one** (`IsRequired`, `MinSelect = 1`, `MaxSelect = 1`) on every product that offers it. Each option
+  has an add-on price (Hot +0, Iced +10), and a per-product override (`ProductAddOns` price override) where one drink differs.
+  Price rules need no new code: add-on prices already sum into the line, show on the receipt and feed promotions and reports.
+- Should a promotion be able to say "any temperature"?
+- Do menu photos differ per temperature (the product image is per product)?
 
 ---
 
