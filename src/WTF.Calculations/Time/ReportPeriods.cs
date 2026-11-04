@@ -21,10 +21,12 @@ public static class ReportPeriods
             TimeZoneInfo.ConvertTimeFromUtc(ReportDateRange.EnsureUtcDate(createdAtUtc), timeZone),
             DateTimeKind.Unspecified);
 
-    /// <summary>The first local day of the day, Monday-based week or month that contains the order.</summary>
-    public static DateTime PeriodStart(DateTime createdAtUtc, ReportPeriod period, TimeZoneInfo timeZone)
+    public static DateTime PeriodStart(DateTime createdAtUtc, ReportPeriod period, TimeZoneInfo timeZone) =>
+        PeriodStartOfLocalDate(LocalDate(createdAtUtc, timeZone), period);
+
+    /// <summary>The first local day of the day, Monday-based week or month that contains a local calendar day.</summary>
+    public static DateTime PeriodStartOfLocalDate(DateTime localDate, ReportPeriod period)
     {
-        var localDate = LocalDate(createdAtUtc, timeZone);
 
         if (period == ReportPeriod.Week)
         {

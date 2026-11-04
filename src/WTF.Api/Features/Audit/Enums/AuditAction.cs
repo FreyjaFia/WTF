@@ -54,5 +54,9 @@ public enum AuditAction
     WasteReasonRestored,
     StockCountStarted,
     StockCountPosted,
-    StockCountCancelled
+    StockCountCancelled,
+    ExpenseCreated,
+    ExpenseUpdated,
+    ExpenseDeleted,
+    ExpenseRestored
 }

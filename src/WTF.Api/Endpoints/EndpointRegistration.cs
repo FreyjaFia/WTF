@@ -22,6 +22,7 @@ public static class EndpointRegistration
             .MapPromotions()
             .MapItems()
             .MapStockWaste()
+            .MapExpenses()
             .MapStockCounts()
             .MapNotifications()
             .MapAudit()

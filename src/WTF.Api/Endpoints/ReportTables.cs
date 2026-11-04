@@ -371,6 +371,36 @@ internal static class ReportTables
             ];
         });
 
+    public static ReportTable<ProfitLossReportRowDto> ProfitLoss(ReportGroupByEnum groupBy) => new(
+        "Profit and Loss",
+        [
+            new("periodStart", "Period", r => FormatPeriodLabel(r.PeriodStart, groupBy), r => r.PeriodStart, false, 1.7f),
+            new("netSales", "Net Sales", r => Money(r.NetSales), r => r.NetSales, true, 1.3f, rows => Money(rows.Sum(r => r.NetSales))),
+            new("cost", "Cost", r => Money(r.Cost), r => r.Cost, true, 1.2f, rows => Money(rows.Sum(r => r.Cost))),
+            new("wasteCost", "Waste", r => Money(r.WasteCost), r => r.WasteCost, true, 1.1f, rows => Money(rows.Sum(r => r.WasteCost))),
+            new("countVariance", "Count Variance", r => Money(r.CountVariance), r => r.CountVariance, true, 1.3f, rows => Money(rows.Sum(r => r.CountVariance))),
+            new("actualProfit", "Gross Profit", r => r.ActualProfit.HasValue ? Money(r.ActualProfit.Value) : "-", r => r.ActualProfit, true, 1.3f, rows => Money(rows.Sum(r => r.ActualProfit ?? 0m))),
+            new("expenses", "Expenses", r => Money(r.Expenses), r => r.Expenses, true, 1.2f, rows => Money(rows.Sum(r => r.Expenses))),
+            new("operatingProfit", "Operating Profit", r => r.OperatingProfit.HasValue ? Money(r.OperatingProfit.Value) : "-", r => r.OperatingProfit, true, 1.4f, rows => Money(rows.Sum(r => r.OperatingProfit ?? 0m))),
+            new("marginPercent", "Margin %", r => r.MarginPercent.HasValue ? Percent(r.MarginPercent.Value) : "-", r => r.MarginPercent, true, 1f),
+            new("costStatus", "Cost Status", r => r.CostStatus, r => r.CostStatus, false, 1.2f)
+        ],
+        rows =>
+        {
+            var priced = rows.Where(r => r.OperatingProfit.HasValue).ToList();
+            var pricedNet = priced.Sum(r => r.NetSales);
+            var pricedOperating = priced.Sum(r => r.OperatingProfit ?? 0m);
+            return
+            [
+                ("Net Sales", Money(rows.Sum(r => r.NetSales))),
+                ("Gross Profit", Money(rows.Sum(r => r.ActualProfit ?? 0m))),
+                ("Expenses", Money(rows.Sum(r => r.Expenses))),
+                ("Operating Profit", Money(pricedOperating)),
+                ("Margin", pricedNet > 0m ? Percent(Math.Round(pricedOperating / pricedNet * 100m, 2, MidpointRounding.AwayFromZero)) : "-"),
+                ("Periods without a full cost", Number(rows.Count(r => r.CostStatus != "Known")))
+            ];
+        });
+
     public static readonly ReportTable<WasteReportRowDto> Waste = new(
         "Waste",
         [
