@@ -580,7 +580,10 @@
                 data-testid="tile-variance"
               >
                 <p class="text-xs text-gray-500">Biggest count difference</p>
-                <p class="text-sm font-semibold wrap-break-word text-gray-900">
+                <p
+                  class="line-clamp-2 text-sm font-semibold wrap-break-word text-gray-900"
+                  [attr.title]="p.topVarianceItem"
+                >
                   {{ p.topVarianceItem ?? 'None to check' }}
                 </p>
                 <p class="text-[11px] text-gray-400">
