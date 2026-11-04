@@ -48,4 +48,44 @@ public class ProfitRulesTests
         ProfitRules.MarginPercent(10m, -6m).ShouldBe(-60m);
         ProfitRules.MarginPercent(0m, 0m).ShouldBeNull();
     }
+
+    [Theory]
+    [InlineData(-420, 0.1, 42)]
+    [InlineData(200, 0.1, -20)]
+    [InlineData(0, 5, 0)]
+    public void MovementCost_StockLeavingIsACost_AndStockComingBackGivesItBack(double delta, double unitCost, double expected)
+    {
+        ProfitRules.MovementCost((decimal)delta, (decimal)unitCost).ShouldBe((decimal)expected);
+    }
+
+    [Fact]
+    public void GrossProfit_TakesWasteAndVarianceOffTheTheoreticalProfit()
+    {
+        var summary = ProfitRules.GrossProfit(300m, 50m, 10m, 2m);
+
+        summary.TheoreticalProfit.ShouldBe(250m);
+        summary.ActualProfit.ShouldBe(238m);
+        summary.MarginPercent.ShouldBe(79.33m);
+    }
+
+    [Fact]
+    public void GrossProfit_ASurplusRaisesTheProfit_AndNoSalesHasNoMargin()
+    {
+        ProfitRules.GrossProfit(150m, 20m, 0m, -5m).ActualProfit.ShouldBe(135m);
+
+        var none = ProfitRules.GrossProfit(0m, 0m, 30m, 0m);
+        none.ActualProfit.ShouldBe(-30m);
+        none.MarginPercent.ShouldBeNull();
+    }
+
+    [Theory]
+    [InlineData(CostCoverage.Known, false, "Known")]
+    [InlineData(CostCoverage.Known, true, "Partly known")]
+    [InlineData(CostCoverage.Partly, false, "Partly known")]
+    [InlineData(CostCoverage.Unknown, false, "No cost")]
+    [InlineData(CostCoverage.Unknown, true, "No cost")]
+    public void CostStatus_NamesHowFarTheCostCanBeTrusted(CostCoverage coverage, bool unpricedLoss, string expected)
+    {
+        ProfitRules.CostStatus(coverage, unpricedLoss).ShouldBe(expected);
+    }
 }

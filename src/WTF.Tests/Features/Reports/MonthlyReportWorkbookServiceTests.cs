@@ -32,6 +32,9 @@ public class MonthlyReportWorkbookServiceTests
     private List<VoidedOrderReportRowDto> _voids = [];
     private List<WasteReportRowDto> _waste = [];
     private List<StockVarianceReportRowDto> _variance = [];
+    private List<ProductMarginReportRowDto> _margin = [];
+    private List<GrossProfitReportRowDto> _grossProfit = [];
+    private List<MenuEngineeringReportRowDto> _menu = [];
     private List<StockStatusReportRowDto> _stock = [];
 
     private static readonly string[] SheetNames =
@@ -40,6 +43,9 @@ public class MonthlyReportWorkbookServiceTests
         "Daily Close",
         "Sales by Category",
         "Product Sales Breakdown",
+        "Product Profit",
+        "Menu Engineering",
+        "Gross Profit",
         "Promotions Performance",
         "Payment Method Breakdown",
         "Hourly Sales Distribution",
@@ -88,6 +94,9 @@ public class MonthlyReportWorkbookServiceTests
         Wire<GetVoidedOrdersReportQuery, VoidedOrderReportRowDto>(_voids, q => (q.FromDate, q.ToDate));
         Wire<GetWasteReportQuery, WasteReportRowDto>(_waste, q => (q.FromDate, q.ToDate));
         Wire<GetStockVarianceReportQuery, StockVarianceReportRowDto>(_variance, q => (q.FromDate, q.ToDate));
+        Wire<GetProductMarginReportQuery, ProductMarginReportRowDto>(_margin, q => (q.FromDate, q.ToDate));
+        Wire<GetGrossProfitReportQuery, GrossProfitReportRowDto>(_grossProfit, q => (q.FromDate, q.ToDate));
+        Wire<GetMenuEngineeringReportQuery, MenuEngineeringReportRowDto>(_menu, q => (q.FromDate, q.ToDate));
         Wire<GetStockStatusReportQuery, StockStatusReportRowDto>(_stock, _ => (null, null));
 
         return new MonthlyReportWorkbookService(_sender, accessor, _storage);
@@ -182,8 +191,8 @@ public class MonthlyReportWorkbookServiceTests
     {
         await Create().GenerateAsync(year, month, "Asia/Manila", CancellationToken.None);
 
-        _calls.Count.ShouldBe(14);
-        _calls.Select(c => c.Query).Distinct().Count().ShouldBe(14);
+        _calls.Count.ShouldBe(17);
+        _calls.Select(c => c.Query).Distinct().Count().ShouldBe(17);
         _calls.Where(c => c.Query != nameof(GetStockStatusReportQuery)).ShouldAllBe(c => c.From == new DateTime(year, month, 1) && c.To == new DateTime(year, month, lastDay));
     }
 
@@ -222,7 +231,7 @@ public class MonthlyReportWorkbookServiceTests
         status.FileName.ShouldBe("WTF-Monthly-Reports-2026-03-CustomerLink.xlsx");
 
         using var wb = new XLWorkbook(new MemoryStream(_storage.Saves.Single().Data));
-        wb.Worksheets.Count.ShouldBe(14);
+        wb.Worksheets.Count.ShouldBe(17);
     }
 
     [Fact]
@@ -257,7 +266,7 @@ public class MonthlyReportWorkbookServiceTests
     {
         await Create().GenerateAsync(2026, 3, requested, CancellationToken.None);
 
-        _calls.Count.ShouldBe(14);
+        _calls.Count.ShouldBe(17);
         _calls.ShouldAllBe(c => c.TimeZone == expectedHeader);
     }
 
@@ -503,6 +512,9 @@ public class MonthlyReportWorkbookServiceTests
         Check(ReportTables.DailyClose);
         Check(ReportTables.CategorySales);
         Check(ReportTables.ProductSales);
+        Check(ReportTables.ProductMargin);
+        Check(ReportTables.MenuEngineering);
+        Check(ReportTables.GrossProfit(ReportGroupByEnum.Day));
         Check(ReportTables.Promotions);
         Check(ReportTables.Payments);
         Check(ReportTables.Hourly);
@@ -688,7 +700,7 @@ public class MonthlyReportWorkbookServiceTests
         await Create().GenerateAsync(2026, 3, "Asia/Manila", CancellationToken.None);
 
         using var wb = Open(_storage.Saves.Single().Data);
-        wb.Worksheets.Count.ShouldBe(14);
+        wb.Worksheets.Count.ShouldBe(17);
         var ws = wb.Worksheet("Daily Sales Summary");
         Text(ws, 6, 1).ShouldBe("Period");
         Text(ws, 7, 1).ShouldNotBe("Total");

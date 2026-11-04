@@ -290,6 +290,13 @@ public class ReportTableTests : IDisposable
             "opening", "received", "waste", "closing");
 
     [Fact]
+    public void Pdf_GrossProfit_OmitsCostAndMargin_ExcelKeepsThem() =>
+        PdfOmits(
+            ReportTables.GrossProfit(ReportGroupByEnum.Day),
+            [new GrossProfitReportRowDto(new DateTime(2026, 3, 10), 300m, 50m, 250m, 10m, 2m, 238m, 79.33m, "Known")],
+            "cost", "marginPercent");
+
+    [Fact]
     public void Pdf_CustomerLinks_OmitsFourColumns_ExcelKeepsThem() =>
         PdfOmits(
             ReportTables.CustomerLinks,
