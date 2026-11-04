@@ -69,6 +69,25 @@ public static class ProfitRules
 
     // A period with some units sold at an unknown cost, or a waste or count entry with no cost, is only partly known. A
     // period where nothing sold has a known cost.
+    // Waste as a share of everything the shop used: what the sales used (cost) plus what was thrown away. Null when nothing was used.
+    public static decimal? WastePercent(decimal salesCost, decimal wasteCost)
+    {
+        var used = salesCost + wasteCost;
+        return used > 0m ? Math.Round(wasteCost / used * 100m, 2, MidpointRounding.AwayFromZero) : null;
+    }
+
+    // One status for several periods: Known only when every period is, No cost only when none has a cost.
+    public static string CombineCostStatus(IEnumerable<string> statuses)
+    {
+        var list = statuses.ToList();
+        if (list.Count == 0 || list.All(s => s == "Known"))
+        {
+            return "Known";
+        }
+
+        return list.All(s => s == "No cost") ? "No cost" : "Partly known";
+    }
+
     public static string CostStatus(CostCoverage coverage, bool hasUnpricedLoss) => coverage switch
     {
         CostCoverage.Unknown => "No cost",

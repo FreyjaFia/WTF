@@ -1,10 +1,13 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using WTF.Api.Common.Auth;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Common.Orders;
 using WTF.Api.Common.Time;
 using WTF.Api.Features.Dashboard.DTOs;
 using WTF.Api.Features.Orders.Enums;
+using WTF.Api.Features.Reports;
+using WTF.Api.Features.Reports.Enums;
 using WTF.Calculations.Inventory;
 using WTF.Calculations.Orders;
 using WTF.Calculations.Sales;
@@ -57,6 +60,7 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
         var recentOrders = await ComputeRecentOrders(range, cancellationToken);
         var paymentMethods = ComputePaymentMethods(primaryOrders, overridePrices);
         var insights = await ComputeInsights(primaryOrders, range, overridePrices, cancellationToken);
+        var profit = await ComputeProfitAsync(range, cancellationToken);
 
         return new DashboardDto(
             summary,
@@ -67,7 +71,49 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
             paymentMethods,
             range.ComparisonLabel,
             dailyRevenue,
-            insights);
+            insights,
+            profit);
+    }
+
+    // The owner tiles: margin, waste, the item with the biggest count difference and what the stock is worth. They use costs,
+    // so only the roles that may read costs get them; everyone else gets null.
+    private async Task<DashboardProfitDto?> ComputeProfitAsync(DateRangeInfo range, CancellationToken cancellationToken)
+    {
+        var user = httpContextAccessor.HttpContext?.User;
+        if (user is null || !CostAccess.CanReadCosts(user))
+        {
+            return null;
+        }
+
+        var from = range.PrimaryStartLocal.Date;
+        var to = range.PrimaryEndLocal.Date.AddDays(-1);
+
+        var profitRows = await new GetGrossProfitReportHandler(db, httpContextAccessor).Handle(
+            new GetGrossProfitReportQuery { FromDate = from, ToDate = to, GroupBy = ReportGroupByEnum.Day },
+            cancellationToken);
+        var varianceRows = await new GetStockVarianceReportHandler(db, httpContextAccessor).Handle(
+            new GetStockVarianceReportQuery { FromDate = from, ToDate = to },
+            cancellationToken);
+        var stockRows = await new GetStockStatusReportHandler(db).Handle(new GetStockStatusReportQuery(), cancellationToken);
+
+        var netSales = profitRows.Sum(r => r.NetSales);
+        var actualProfit = profitRows.Sum(r => r.ActualProfit ?? 0m);
+        var wasteCost = profitRows.Sum(r => r.WasteCost);
+        var top = varianceRows
+            .Where(r => r.VarianceValue.HasValue && r.Status == "Check")
+            .OrderByDescending(r => Math.Abs(r.VarianceValue!.Value))
+            .FirstOrDefault();
+
+        return new DashboardProfitDto(
+            netSales,
+            actualProfit,
+            ProfitRules.MarginPercent(netSales, actualProfit),
+            ProfitRules.CombineCostStatus(profitRows.Select(r => r.CostStatus)),
+            wasteCost,
+            ProfitRules.WastePercent(profitRows.Sum(r => r.Cost), wasteCost),
+            top?.ItemName,
+            top?.VarianceValue,
+            stockRows.Sum(r => r.StockValue));
     }
 
     private async Task<DashboardInsightsDto> ComputeInsights(

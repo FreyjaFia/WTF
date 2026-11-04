@@ -533,6 +533,79 @@
             </div>
           }
 
+          @if (profit(); as p) {
+            <!-- Owner tiles from the profit reports; only the roles that may read costs get them -->
+            <div class="grid grid-cols-2 gap-2 md:gap-3 lg:grid-cols-4" data-dashboard-profit>
+              <a
+                class="bg-surface rounded-lg border border-gray-100 px-4 py-3 shadow-sm transition hover:shadow-md"
+                [routerLink]="routes.ManagementReports"
+                [queryParams]="{ report: 'gross-profit' }"
+                data-testid="tile-margin"
+              >
+                <p class="text-xs text-gray-500">Gross margin</p>
+                <p class="text-sm font-semibold text-gray-900">
+                  @if (p.marginPercent !== null) {
+                    {{ p.marginPercent | number: '1.0-1' }}%
+                  } @else {
+                    -
+                  }
+                </p>
+                <p class="text-[11px] text-gray-400">
+                  PHP {{ p.actualProfit | number: '1.2-2' }} actual profit
+                  @if (p.costStatus !== 'Known') {
+                    ({{ p.costStatus.toLowerCase() }})
+                  }
+                </p>
+              </a>
+              <a
+                class="bg-surface rounded-lg border border-gray-100 px-4 py-3 shadow-sm transition hover:shadow-md"
+                [routerLink]="routes.ManagementReports"
+                [queryParams]="{ report: 'waste' }"
+                data-testid="tile-waste"
+              >
+                <p class="text-xs text-gray-500">Waste</p>
+                <p class="text-sm font-semibold text-gray-900">
+                  @if (p.wastePercent !== null) {
+                    {{ p.wastePercent | number: '1.0-1' }}% of stock used
+                  } @else {
+                    -
+                  }
+                </p>
+                <p class="text-[11px] text-gray-400">PHP {{ p.wasteCost | number: '1.2-2' }} thrown away</p>
+              </a>
+              <a
+                class="bg-surface rounded-lg border border-gray-100 px-4 py-3 shadow-sm transition hover:shadow-md"
+                [routerLink]="routes.ManagementReports"
+                [queryParams]="{ report: 'stock-variance' }"
+                data-testid="tile-variance"
+              >
+                <p class="text-xs text-gray-500">Biggest count difference</p>
+                <p class="text-sm font-semibold wrap-break-word text-gray-900">
+                  {{ p.topVarianceItem ?? 'None to check' }}
+                </p>
+                <p class="text-[11px] text-gray-400">
+                  @if (p.topVarianceValue !== null) {
+                    PHP {{ p.topVarianceValue | number: '1.2-2' }} difference
+                  } @else {
+                    Counts are within tolerance
+                  }
+                </p>
+              </a>
+              <a
+                class="bg-surface rounded-lg border border-gray-100 px-4 py-3 shadow-sm transition hover:shadow-md"
+                [routerLink]="routes.ManagementReports"
+                [queryParams]="{ report: 'stock-status' }"
+                data-testid="tile-stock-value"
+              >
+                <p class="text-xs text-gray-500">Stock value</p>
+                <p class="text-sm font-semibold text-gray-900">
+                  PHP {{ p.stockValue | number: '1.2-2' }}
+                </p>
+                <p class="text-[11px] text-gray-400">On the shelf now, at cost</p>
+              </a>
+            </div>
+          }
+
           <!-- 2. Sales + Orders Trend -->
           <div class="grid grid-cols-1 gap-2 md:grid-cols-2 md:gap-3">
             <!-- Sales by Hour -->

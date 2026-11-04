@@ -604,4 +604,77 @@ describe('Dashboard', () => {
       expect(tiles(fixture)).toEqual([]);
     });
   });
+
+  describe('profit tiles', () => {
+    const profit = {
+      netSales: 300,
+      actualProfit: 243,
+      marginPercent: 81,
+      costStatus: 'Known',
+      wasteCost: 10,
+      wastePercent: 20,
+      topVarianceItem: 'Milk',
+      topVarianceValue: 7,
+      stockValue: 100,
+    };
+
+    const tiles = (fixture: { nativeElement: unknown }): HTMLAnchorElement[] =>
+      Array.from(
+        (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLAnchorElement>(
+          '[data-dashboard-profit] a',
+        ),
+      );
+
+    it('shows four tiles with the figures from the API', () => {
+      service.getDashboard.mockReturnValue(of(makeDashboard({ profit })));
+      const { fixture } = create();
+
+      const text = tiles(fixture).map((tile) => tile.textContent?.replace(/s+/g, ' ').trim());
+      expect(text.length).toBe(4);
+      expect(text[0]).toContain('81%');
+      expect(text[0]).toContain('PHP 243.00');
+      expect(text[1]).toContain('20%');
+      expect(text[2]).toContain('Milk');
+      expect(text[2]).toContain('PHP 7.00');
+      expect(text[3]).toContain('PHP 100.00');
+    });
+
+    it('notes a cost that is only partly known', () => {
+      service.getDashboard.mockReturnValue(
+        of(makeDashboard({ profit: { ...profit, costStatus: 'Partly known' } })),
+      );
+      const { fixture } = create();
+
+      expect(tiles(fixture)[0].textContent).toContain('partly known');
+    });
+
+    it('shows dashes and friendly text when there is nothing to rate', () => {
+      service.getDashboard.mockReturnValue(
+        of(
+          makeDashboard({
+            profit: {
+              ...profit,
+              marginPercent: null,
+              wastePercent: null,
+              topVarianceItem: null,
+              topVarianceValue: null,
+            },
+          }),
+        ),
+      );
+      const { fixture } = create();
+
+      const text = tiles(fixture).map((tile) => tile.textContent?.replace(/s+/g, ' ').trim());
+      expect(text[0]).toContain('-');
+      expect(text[2]).toContain('None to check');
+    });
+
+    it('shows no tiles for roles the API sent none to', () => {
+      service.getDashboard.mockReturnValue(of(makeDashboard()));
+      const { fixture, vm } = create();
+
+      expect(vm['profit']()).toBeNull();
+      expect(tiles(fixture)).toEqual([]);
+    });
+  });
 });

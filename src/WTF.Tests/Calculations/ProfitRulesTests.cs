@@ -32,6 +32,31 @@ public class ProfitRulesTests
     }
 
     [Theory]
+    [InlineData(40, 10, 20)]
+    [InlineData(0, 10, 100)]
+    [InlineData(50, 0, 0)]
+    public void WastePercent_IsTheShareOfWhatWasUsed(double salesCost, double wasteCost, double expected)
+    {
+        ProfitRules.WastePercent((decimal)salesCost, (decimal)wasteCost).ShouldBe((decimal)expected);
+    }
+
+    [Fact]
+    public void WastePercent_NothingUsedHasNoShare()
+    {
+        ProfitRules.WastePercent(0m, 0m).ShouldBeNull();
+    }
+
+    [Fact]
+    public void CombineCostStatus_KnownOnlyWhenEveryPeriodIs()
+    {
+        ProfitRules.CombineCostStatus([]).ShouldBe("Known");
+        ProfitRules.CombineCostStatus(["Known", "Known"]).ShouldBe("Known");
+        ProfitRules.CombineCostStatus(["Known", "Partly known"]).ShouldBe("Partly known");
+        ProfitRules.CombineCostStatus(["Known", "No cost"]).ShouldBe("Partly known");
+        ProfitRules.CombineCostStatus(["No cost", "No cost"]).ShouldBe("No cost");
+    }
+
+    [Theory]
     [InlineData(5, 0, CostCoverage.Known)]
     [InlineData(0, 0, CostCoverage.Known)]
     [InlineData(3, 2, CostCoverage.Partly)]

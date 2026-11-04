@@ -15,6 +15,7 @@ export interface DashboardDto {
   paymentMethods: PaymentMethodBreakdownDto[];
   comparisonLabel: string;
   dailyRevenue: DailyRevenuePointDto[] | null;
+  profit?: DashboardProfitDto | null;
   insights?: DashboardInsightsDto | null;
 }
 
@@ -32,6 +33,18 @@ export interface DashboardInsightsDto {
   topPromotionUses: number;
   newCustomers: number;
   returningCustomers: number;
+}
+
+export interface DashboardProfitDto {
+  netSales: number;
+  actualProfit: number;
+  marginPercent: number | null;
+  costStatus: string;
+  wasteCost: number;
+  wastePercent: number | null;
+  topVarianceItem: string | null;
+  topVarianceValue: number | null;
+  stockValue: number;
 }
 
 export interface DailySummaryDto {
