@@ -74,6 +74,7 @@ const MENU: ReadonlyArray<MenuCase> = [
   { name: 'Users', path: '/management/users', allowed: GROUPS.usersRead },
   { name: 'Promotions', path: '/management/promotions', allowed: GROUPS.promotionsRead },
   { name: 'Reports', path: '/management/reports', allowed: GROUPS.reportsRead },
+  { name: 'Expenses', path: '/management/expenses', allowed: GROUPS.expensesRead },
   { name: 'Waste Reasons', path: '/management/waste-reasons', allowed: GROUPS.wasteReasonsManage },
   { name: 'Audit Logs', path: '/management/audit-logs', allowed: GROUPS.auditRead },
   { name: 'Schema Scripts', path: '/management/schema-scripts', allowed: GROUPS.schemaScriptHistoryRead },

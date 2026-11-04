@@ -98,6 +98,7 @@ const ADMIN_PAGES: ReadonlyArray<PageCase> = [
   { name: 'promotions', path: () => '/management/promotions' },
   { name: 'reports', path: () => '/management/reports' },
   { name: 'waste reasons', path: () => '/management/waste-reasons' },
+  { name: 'expenses', path: () => '/management/expenses' },
   { name: 'notifications', path: () => '/notifications' },
 ];
 
