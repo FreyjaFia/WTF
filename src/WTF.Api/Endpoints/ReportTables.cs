@@ -1,4 +1,5 @@
 using System.Globalization;
+using WTF.Api.Features.Reports;
 using WTF.Api.Features.Reports.DTOs;
 using WTF.Api.Features.Reports.Enums;
 using WTF.Calculations.Inventory;
@@ -87,6 +88,27 @@ internal static class ReportTables
                 ("Rows without a full cost", Number(rows.Count(r => !r.GrossProfit.HasValue)))
             ];
         });
+
+    public static readonly ReportTable<MenuEngineeringReportRowDto> MenuEngineering = new(
+        "Menu Engineering",
+        [
+            new("productName", "Product", r => r.ProductName, r => r.ProductName, false, 2.4f),
+            new("categoryName", "Category", r => r.CategoryName, r => r.CategoryName, false, 1.3f),
+            new("quantitySold", "Qty", r => Number(r.QuantitySold), r => r.QuantitySold, true, 0.7f, rows => Number(rows.Sum(r => r.QuantitySold))),
+            new("popularityPercent", "Share %", r => r.PopularityPercent.HasValue ? Percent(r.PopularityPercent.Value) : "-", r => r.PopularityPercent, true, 1f),
+            new("unitProfit", "Profit / Unit", r => r.UnitProfit.HasValue ? Money(r.UnitProfit.Value) : "-", r => r.UnitProfit, true, 1.3f),
+            new("grossProfit", "Profit", r => r.GrossProfit.HasValue ? Money(r.GrossProfit.Value) : "-", r => r.GrossProfit, true, 1.3f, rows => Money(rows.Sum(r => r.GrossProfit ?? 0m))),
+            new("menuClass", "Class", r => r.MenuClass, r => r.MenuClass, false, 1.2f),
+            new("costStatus", "Cost", r => r.CostStatus, r => r.CostStatus, false, 1.2f)
+        ],
+        rows =>
+        [
+            ("Stars", Number(rows.Count(r => r.MenuClass == MenuEngineeringRules.Star))),
+            ("Plowhorses", Number(rows.Count(r => r.MenuClass == MenuEngineeringRules.Plowhorse))),
+            ("Puzzles", Number(rows.Count(r => r.MenuClass == MenuEngineeringRules.Puzzle))),
+            ("Dogs", Number(rows.Count(r => r.MenuClass == MenuEngineeringRules.Dog))),
+            ("Not rated (no full cost)", Number(rows.Count(r => r.MenuClass == GetMenuEngineeringReportHandler.NotRated)))
+        ]);
 
     public static readonly ReportTable<CategorySalesReportRowDto> CategorySales = new(
         "Sales by Category",
@@ -317,6 +339,37 @@ internal static class ReportTables
             ("Not Counted", Number(rows.Count(r => r.Status == "Not counted"))),
             ("Variance Value", Money(rows.Sum(r => r.VarianceValue ?? 0m)))
         ]);
+
+    public static ReportTable<GrossProfitReportRowDto> GrossProfit(ReportGroupByEnum groupBy) => new(
+        "Gross Profit",
+        [
+            new("periodStart", "Period", r => FormatPeriodLabel(r.PeriodStart, groupBy), r => r.PeriodStart, false, 1.7f),
+            new("netSales", "Net Sales", r => Money(r.NetSales), r => r.NetSales, true, 1.3f, rows => Money(rows.Sum(r => r.NetSales))),
+            new("cost", "Cost", r => Money(r.Cost), r => r.Cost, true, 1.2f, rows => Money(rows.Sum(r => r.Cost))),
+            new("theoreticalProfit", "Profit (recipes)", r => r.TheoreticalProfit.HasValue ? Money(r.TheoreticalProfit.Value) : "-", r => r.TheoreticalProfit, true, 1.4f, rows => Money(rows.Sum(r => r.TheoreticalProfit ?? 0m))),
+            new("wasteCost", "Waste", r => Money(r.WasteCost), r => r.WasteCost, true, 1.1f, rows => Money(rows.Sum(r => r.WasteCost))),
+            new("countVariance", "Count Variance", r => Money(r.CountVariance), r => r.CountVariance, true, 1.3f, rows => Money(rows.Sum(r => r.CountVariance))),
+            new("actualProfit", "Actual Profit", r => r.ActualProfit.HasValue ? Money(r.ActualProfit.Value) : "-", r => r.ActualProfit, true, 1.3f, rows => Money(rows.Sum(r => r.ActualProfit ?? 0m))),
+            new("marginPercent", "Margin %", r => r.MarginPercent.HasValue ? Percent(r.MarginPercent.Value) : "-", r => r.MarginPercent, true, 1f),
+            new("costStatus", "Cost Status", r => r.CostStatus, r => r.CostStatus, false, 1.2f)
+        ],
+        rows =>
+        {
+            var priced = rows.Where(r => r.ActualProfit.HasValue).ToList();
+            var pricedNet = priced.Sum(r => r.NetSales);
+            var pricedActual = priced.Sum(r => r.ActualProfit ?? 0m);
+            return
+            [
+                ("Net Sales", Money(rows.Sum(r => r.NetSales))),
+                ("Cost", Money(rows.Sum(r => r.Cost))),
+                ("Profit (recipes)", Money(rows.Sum(r => r.TheoreticalProfit ?? 0m))),
+                ("Waste", Money(rows.Sum(r => r.WasteCost))),
+                ("Count Variance", Money(rows.Sum(r => r.CountVariance))),
+                ("Actual Profit", Money(pricedActual)),
+                ("Margin", pricedNet > 0m ? Percent(Math.Round(pricedActual / pricedNet * 100m, 2, MidpointRounding.AwayFromZero)) : "-"),
+                ("Periods without a full cost", Number(rows.Count(r => r.CostStatus != "Known")))
+            ];
+        });
 
     public static readonly ReportTable<WasteReportRowDto> Waste = new(
         "Waste",

@@ -155,6 +155,9 @@ public sealed class MonthlyReportWorkbookService(
         var customerRows = await FetchAsync(new GetCustomersReportQuery { FromDate = fromDate, ToDate = toDate, Source = source });
         var linkRows = await FetchAsync(new GetCustomerLinkReportQuery { FromDate = fromDate, ToDate = toDate });
         var voidRows = await FetchAsync(new GetVoidedOrdersReportQuery { FromDate = fromDate, ToDate = toDate, Source = source });
+        var marginRows = await FetchAsync(new GetProductMarginReportQuery { FromDate = fromDate, ToDate = toDate, Source = source });
+        var menuRows = await FetchAsync(new GetMenuEngineeringReportQuery { FromDate = fromDate, ToDate = toDate, Source = source });
+        var grossProfitRows = await FetchAsync(new GetGrossProfitReportQuery { FromDate = fromDate, ToDate = toDate, GroupBy = ReportGroupByEnum.Day });
         var wasteRows = await FetchAsync(new GetWasteReportQuery { FromDate = fromDate, ToDate = toDate, GroupBy = GetWasteReportHandler.GroupByItem });
         var varianceRows = await FetchAsync(new GetStockVarianceReportQuery { FromDate = fromDate, ToDate = toDate });
         var stockRows = await FetchAsync(new GetStockStatusReportQuery());
@@ -172,6 +175,9 @@ public sealed class MonthlyReportWorkbookService(
         AddTableSheet(workbook, ReportTables.DailyClose, closeRows, fromDate, toDate, generatedAtLabel);
         AddTableSheet(workbook, ReportTables.CategorySales, categoryRows, fromDate, toDate, generatedAtLabel);
         AddTableSheet(workbook, ReportTables.ProductSales, productRows, fromDate, toDate, generatedAtLabel);
+        AddTableSheet(workbook, ReportTables.ProductMargin, marginRows, fromDate, toDate, generatedAtLabel, "Cost is the cost of the stock each sale used, at the cost it had then; products with no stock recipe show No cost");
+        AddTableSheet(workbook, ReportTables.MenuEngineering, menuRows, fromDate, toDate, generatedAtLabel, "Only products with a full cost are rated; popular means at least 70% of an even share of units sold, high margin means profit per unit at or above the average");
+        AddTableSheet(workbook, ReportTables.GrossProfit(ReportGroupByEnum.Day), grossProfitRows, fromDate, toDate, generatedAtLabel, "Waste and count corrections are in the day they were recorded; all sources, not only the chosen one");
         AddTableSheet(workbook, ReportTables.Promotions, promotionRows, fromDate, toDate, generatedAtLabel);
         AddTableSheet(workbook, ReportTables.Payments, paymentRows, fromDate, toDate, generatedAtLabel);
         AddTableSheet(workbook, ReportTables.Hourly, hourlyRows, fromDate, toDate, generatedAtLabel);

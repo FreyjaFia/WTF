@@ -53,4 +53,28 @@ public static class ProfitRules
 
     public static decimal? MarginPercent(decimal revenue, decimal profit) =>
         revenue > 0m ? Math.Round(profit / revenue * 100m, 2, MidpointRounding.AwayFromZero) : null;
+
+    // What a stock movement cost the shop. Stock leaving (a negative quantity) is a cost; stock coming back (a refund, a
+    // reversed waste entry) gives it back.
+    public static decimal MovementCost(decimal quantityDelta, decimal unitCost) => -quantityDelta * unitCost;
+
+    // Theoretical profit is what the sales and the recipes say; actual profit also takes off the waste and the corrections
+    // found on counts, because that stock was paid for and never sold.
+    public static GrossProfitSummary GrossProfit(decimal netSales, decimal cost, decimal waste, decimal countVariance)
+    {
+        var theoretical = Math.Round(netSales - cost, 2, MidpointRounding.AwayFromZero);
+        var actual = Math.Round(theoretical - waste - countVariance, 2, MidpointRounding.AwayFromZero);
+        return new GrossProfitSummary(theoretical, actual, MarginPercent(netSales, actual));
+    }
+
+    // A period with some units sold at an unknown cost, or a waste or count entry with no cost, is only partly known. A
+    // period where nothing sold has a known cost.
+    public static string CostStatus(CostCoverage coverage, bool hasUnpricedLoss) => coverage switch
+    {
+        CostCoverage.Unknown => "No cost",
+        CostCoverage.Partly => "Partly known",
+        _ => hasUnpricedLoss ? "Partly known" : "Known"
+    };
 }
+
+public record GrossProfitSummary(decimal TheoreticalProfit, decimal ActualProfit, decimal? MarginPercent);

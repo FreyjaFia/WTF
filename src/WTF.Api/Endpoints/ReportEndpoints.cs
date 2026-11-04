@@ -61,6 +61,19 @@ public static class ReportEndpoints
                 return BuildReportResponse(httpContext, result, ReportTables.ProductMargin, query.FromDate!.Value, query.ToDate!.Value, query.Source);
             });
 
+        reportsGroup.MapGet("/menu-engineering",
+            async (HttpContext httpContext, [AsParameters] GetMenuEngineeringReportQuery query, ISender sender) =>
+            {
+                var validationResult = ValidateReportFilters(query.FromDate, query.ToDate, query.Source);
+                if (validationResult != null)
+                {
+                    return validationResult;
+                }
+
+                var result = await sender.Send(query);
+                return BuildReportResponse(httpContext, result, ReportTables.MenuEngineering, query.FromDate!.Value, query.ToDate!.Value, query.Source);
+            });
+
         reportsGroup.MapGet("/payments",
             async (HttpContext httpContext, [AsParameters] GetPaymentsReportQuery query, ISender sender) =>
             {
@@ -202,6 +215,25 @@ public static class ReportEndpoints
                 var result = await sender.Send(query);
                 return BuildReportResponse(httpContext, result, ReportTables.Waste, query.FromDate!.Value, query.ToDate!.Value, null);
             });
+        reportsGroup.MapGet("/gross-profit",
+            async (HttpContext httpContext, [AsParameters] GetGrossProfitReportQuery query, ISender sender) =>
+            {
+                var validationResult = ValidateDateRange(query.FromDate, query.ToDate);
+                if (validationResult != null)
+                {
+                    return validationResult;
+                }
+
+                var groupBy = query.GroupBy ?? ReportGroupByEnum.Day;
+                if (!Enum.IsDefined(groupBy))
+                {
+                    return Results.BadRequest($"groupBy must be one of: {nameof(ReportGroupByEnum.Day)}, {nameof(ReportGroupByEnum.Week)}, {nameof(ReportGroupByEnum.Month)}.");
+                }
+
+                var result = await sender.Send(query);
+                return BuildReportResponse(httpContext, result, ReportTables.GrossProfit(groupBy), query.FromDate!.Value, query.ToDate!.Value, null);
+            });
+
         reportsGroup.MapGet("/stock-variance",
             async (HttpContext httpContext, [AsParameters] GetStockVarianceReportQuery query, ISender sender) =>
             {

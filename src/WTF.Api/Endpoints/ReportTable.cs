@@ -28,6 +28,7 @@ internal sealed record ReportTable<T>(
         ["Staff Performance"] = ["averageOrderValue"],
         ["Voids and Refunds"] = ["orderedAt", "voidedBy", "staffVoidRate"],
         ["Stock Variance"] = ["opening", "received", "waste", "closing"],
+        ["Gross Profit"] = ["cost", "marginPercent"],
         ["Customer Link Orders"] = ["awaitingCount", "pickupCount", "deliveryCount", "averageMinutesToReady"]
     };
 
