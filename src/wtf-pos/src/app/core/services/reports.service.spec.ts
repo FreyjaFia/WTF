@@ -20,6 +20,7 @@ describe('ReportsService', () => {
     'hourly',
     'product-sales',
     'product-margin',
+    'menu-engineering',
     'promotions',
     'staff',
     'customers',

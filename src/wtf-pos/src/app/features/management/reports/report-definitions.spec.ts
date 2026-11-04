@@ -27,6 +27,8 @@ const ALL_TYPES = [
   'stock-status',
   'waste',
   'stock-variance',
+  'gross-profit',
+  'menu-engineering',
   'category-sales',
 ];
 
@@ -221,6 +223,44 @@ describe('report definitions', () => {
     });
   });
 
+  describe('menu engineering', () => {
+    const definition = findReportDefinition('menu-engineering');
+    const row = (menuClass: string) => ({ productName: 'X', menuClass });
+
+    it('lives in the Products group with the product filters and the source', () => {
+      expect(definition.group).toBe('Products');
+      expect(definition.filters).toContain('productCategory');
+      expect(definition.usesSource).toBe(true);
+    });
+
+    it('counts the products in each class, and the unrated ones', () => {
+      const totals = totalsOf('menu-engineering', [
+        row('Star'),
+        row('Star'),
+        row('Plowhorse'),
+        row('Puzzle'),
+        row('Dog'),
+        row('Not rated'),
+      ] as never);
+
+      expect(totals).toEqual({
+        Stars: 2,
+        Plowhorses: 1,
+        Puzzles: 1,
+        Dogs: 1,
+        'Not rated (no full cost)': 1,
+      });
+    });
+
+    it('colors Stars green and Plowhorses amber', () => {
+      const badge = definition.columns.find((c) => c.key === 'menuClass')!.badge!;
+
+      expect(badge(row('Star') as never)).toBe('success');
+      expect(badge(row('Plowhorse') as never)).toBe('amber');
+      expect(badge(row('Dog') as never)).toBe('default');
+    });
+  });
+
   describe('product profit', () => {
     const definition = findReportDefinition('product-margin');
     const column = (key: string) => definition.columns.find((c) => c.key === key)!;
@@ -297,6 +337,77 @@ describe('report definitions', () => {
       expect(csv[0]).toBe('Product,Category,Qty,Net,Cost,Profit,Margin %,Cost (status)');
       expect(csv[2]).toBe('Water,Drinks,3,50.00,-,-,-,No cost');
       expect(csv[3]).toContain('Total');
+    });
+  });
+
+  describe('gross profit', () => {
+    const definition = findReportDefinition('gross-profit');
+    const column = (key: string) => definition.columns.find((c) => c.key === key)!;
+    const day = (periodStart: string, overrides: Record<string, unknown> = {}): ReportRow => ({
+      periodStart,
+      netSales: 300,
+      cost: 50,
+      theoreticalProfit: 250,
+      wasteCost: 10,
+      countVariance: 2,
+      actualProfit: 238,
+      marginPercent: 79.33,
+      costStatus: 'Known',
+      ...overrides,
+    });
+    const partly = day('2026-03-11T00:00:00', { netSales: 170, cost: 20, theoreticalProfit: 150, wasteCost: 0, countVariance: 0, actualProfit: 150, marginPercent: 88.24, costStatus: 'Partly known' });
+    const none = day('2026-03-12T00:00:00', { netSales: 20, cost: 0, theoreticalProfit: null, wasteCost: 0, countVariance: 0, actualProfit: null, marginPercent: null, costStatus: 'No cost' });
+
+    it('lives in the Sales group with the period filter and no source filter', () => {
+      expect(definition.group).toBe('Sales');
+      expect(definition.filters).toEqual(['groupBy']);
+      expect(definition.usesSource).toBe(false);
+      expect(definition.usesDateRange).toBe(true);
+    });
+
+    it('has the nine columns in the order the story is told', () => {
+      expect(definition.columns.map((c) => c.header)).toEqual([
+        'Date', 'Net Sales', 'Cost', 'Profit (recipes)', 'Waste', 'Count Variance', 'Actual Profit', 'Margin %', 'Cost (status)',
+      ]);
+    });
+
+    it('shows a dash for a missing profit and margin', () => {
+      expect(cellText(none, column('actualProfit'), { groupBy: 'Day' })).toBe('-');
+      expect(cellText(none, column('theoreticalProfit'), { groupBy: 'Day' })).toBe('-');
+      expect(cellText(none, column('marginPercent'), { groupBy: 'Day' })).toBe('-');
+      expect(cellText(day('2026-03-10T00:00:00'), column('marginPercent'), { groupBy: 'Day' })).toBe('79.33%');
+    });
+
+    it('marks only a negative actual profit red', () => {
+      const loss = day('2026-03-13T00:00:00', { actualProfit: -30 });
+      expect(column('actualProfit').cellClass!(loss)).toBe('text-red-600');
+      expect(column('actualProfit').cellClass!(day('2026-03-10T00:00:00'))).toBe('');
+      expect(column('actualProfit').cellClass!(none)).toBe('');
+    });
+
+    it('adds the money columns and works the margin over days that have a profit', () => {
+      const by = Object.fromEntries(
+        definition.totals([day('2026-03-10T00:00:00'), partly, none]).map((t) => [t.label, t]),
+      );
+
+      expect(by['Net Sales'].value).toBe(490);
+      expect(by['Cost'].value).toBe(70);
+      expect(by['Profit (recipes)'].value).toBe(400);
+      expect(by['Waste'].value).toBe(10);
+      expect(by['Count Variance'].value).toBe(2);
+      expect(by['Actual Profit'].value).toBe(388);
+      expect(by['Margin'].value).toBeCloseTo(82.55, 1);
+      expect(by['Margin'].unavailable).toBe(false);
+      expect(by['Days without a full cost'].value).toBe(2);
+    });
+
+    it('has no margin when no day has a profit', () => {
+      expect(definition.totals([none]).find((t) => t.label === 'Margin')!.unavailable).toBe(true);
+    });
+
+    it('totals the money columns in the table footer', () => {
+      expect(column('wasteCost').total!([day('2026-03-10T00:00:00'), partly])).toBe(10);
+      expect(column('actualProfit').total!([day('2026-03-10T00:00:00'), partly, none])).toBe(388);
     });
   });
 

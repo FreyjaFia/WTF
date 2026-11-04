@@ -11,6 +11,7 @@ export type ReportType =
   | 'hourly'
   | 'product-sales'
   | 'product-margin'
+  | 'menu-engineering'
   | 'promotions'
   | 'staff'
   | 'customers'
@@ -18,7 +19,8 @@ export type ReportType =
   | 'customer-links'
   | 'stock-status'
   | 'waste'
-  | 'stock-variance';
+  | 'stock-variance'
+  | 'gross-profit';
 
 export type WasteReportGroupBy = 'item' | 'reason' | 'staff' | 'day';
 
@@ -88,6 +90,21 @@ export interface ProductMarginReportRowDto {
   marginPercent: number | null;
   costStatus: ProductCostStatus;
   isAddOn: boolean;
+}
+
+export type MenuClass = 'Star' | 'Plowhorse' | 'Puzzle' | 'Dog' | 'Not rated';
+
+export interface MenuEngineeringReportRowDto {
+  productId: string;
+  productName: string;
+  categoryName: string;
+  quantitySold: number;
+  revenue: number;
+  grossProfit: number | null;
+  unitProfit: number | null;
+  popularityPercent: number | null;
+  menuClass: MenuClass;
+  costStatus: ProductCostStatus;
 }
 
 export interface CategorySalesReportRowDto {
@@ -201,6 +218,18 @@ export interface StockStatusReportRowDto {
   status: string;
   costPrice?: number | null;
   stockValue: number;
+}
+
+export interface GrossProfitReportRowDto {
+  periodStart: string;
+  netSales: number;
+  cost: number;
+  theoreticalProfit: number | null;
+  wasteCost: number;
+  countVariance: number;
+  actualProfit: number | null;
+  marginPercent: number | null;
+  costStatus: ProductCostStatus;
 }
 
 export interface StockVarianceReportRowDto {

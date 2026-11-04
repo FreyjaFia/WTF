@@ -1,10 +1,17 @@
-import { average, marginPercentOf, sumAmounts, summarizeProfit } from '@shared/calculations';
+import {
+  average,
+  marginPercentOf,
+  ProfitRow,
+  sumAmounts,
+  summarizeProfit,
+} from '@shared/calculations';
 import {
   CategorySalesReportRowDto,
   CustomerLinkReportRowDto,
   CustomerReportRowDto,
   DailyCloseReportRowDto,
   DailySalesReportRowDto,
+  GrossProfitReportRowDto,
   HourlySalesReportRowDto,
   PaymentsReportRowDto,
   ProductMarginReportRowDto,
@@ -260,6 +267,92 @@ const dailySales: ReportDefinition = {
   },
 };
 
+const grossProfit: ReportDefinition = {
+  type: 'gross-profit',
+  title: 'Gross Profit',
+  description: 'Net sales less cost, waste and count corrections, by day, week or month',
+  note: 'Profit (recipes) is what the sales and recipes say. Actual profit also takes off waste and the corrections found on counts. Waste and corrections are placed in the day they were recorded, and all sources are included. Days where some sales have no cost are marked Partly known.',
+  group: 'Sales',
+  icon: 'icon-coins',
+  columns: [
+    {
+      key: 'periodStart',
+      header: 'Date',
+      format: 'text',
+      label: (row, context) => periodLabel(String(row['periodStart']), context.groupBy),
+    },
+    { key: 'netSales', header: 'Net Sales', format: 'money', align: 'end' },
+    { key: 'cost', header: 'Cost', format: 'money', align: 'end' },
+    { key: 'theoreticalProfit', header: 'Profit (recipes)', format: 'money', align: 'end' },
+    { key: 'wasteCost', header: 'Waste', format: 'money', align: 'end' },
+    { key: 'countVariance', header: 'Count Variance', format: 'money', align: 'end' },
+    {
+      key: 'actualProfit',
+      header: 'Actual Profit',
+      format: 'money',
+      align: 'end',
+      cellClass: (row) => (Number(row['actualProfit']) < 0 ? 'text-red-600' : ''),
+    },
+    {
+      key: 'marginPercent',
+      header: 'Margin %',
+      format: 'percent',
+      align: 'end',
+      total: (rows) => marginPercentOf(profitRowsOf(rows)),
+    },
+    {
+      key: 'costStatus',
+      header: 'Cost (status)',
+      format: 'text',
+      badge: (row) => COST_STATUS_BADGE[String(row['costStatus'])] ?? 'default',
+    },
+  ],
+  defaultSort: { key: 'periodStart', direction: 'desc' },
+  filters: ['groupBy'],
+  usesDateRange: true,
+  usesSource: false,
+  totals: (all) => {
+    const rows = rowsOf<GrossProfitReportRowDto>(all);
+    const summary = summarizeProfit(profitRowsOf(all));
+    return [
+      { label: 'Net Sales', value: summary.revenue, format: 'money' },
+      { label: 'Cost', value: summary.cost, format: 'money' },
+      {
+        label: 'Profit (recipes)',
+        value: sum(rows, (row) => row.theoreticalProfit ?? 0),
+        format: 'money',
+      },
+      { label: 'Waste', value: sum(rows, (row) => row.wasteCost), format: 'money' },
+      { label: 'Count Variance', value: sum(rows, (row) => row.countVariance), format: 'money' },
+      { label: 'Actual Profit', value: summary.grossProfit, format: 'money' },
+      {
+        label: 'Margin',
+        value: summary.marginPercent ?? 0,
+        format: 'percent',
+        unavailable: summary.marginPercent === null,
+      },
+      { label: 'Days without a full cost', value: summary.rowsWithoutFullCost, format: 'integer' },
+    ];
+  },
+  chart: {
+    kind: 'area',
+    title: 'Actual profit',
+    points: (all, context) =>
+      rowsOf<GrossProfitReportRowDto>(all)
+        .slice()
+        .sort((a, b) => a.periodStart.localeCompare(b.periodStart))
+        .map((row) => ({
+          label: shortLabel(
+            parseShopLocal(row.periodStart).toLocaleDateString(undefined, {
+              month: context.groupBy === 'Month' ? 'short' : 'numeric',
+              day: context.groupBy === 'Month' ? undefined : 'numeric',
+            }),
+          ),
+          value: row.actualProfit ?? 0,
+        })),
+  },
+};
+
 const dailyClose: ReportDefinition = {
   type: 'daily-close',
   title: 'Daily Close',
@@ -489,6 +582,54 @@ const productMargin: ReportDefinition = {
         unavailable: summary.marginPercent === null,
       },
       { label: 'Rows without a full cost', value: summary.rowsWithoutFullCost, format: 'integer' },
+    ];
+  },
+};
+
+const MENU_CLASS_BADGE: Record<string, 'success' | 'amber' | 'default'> = {
+  Star: 'success',
+  Plowhorse: 'amber',
+};
+
+const menuEngineering: ReportDefinition = {
+  type: 'menu-engineering',
+  title: 'Menu Engineering',
+  description: 'Sorts the menu into Stars, Plowhorses, Puzzles and Dogs by popularity and profit per sale',
+  note: 'Popular means at least 70% of an even share of the units sold. High margin means profit per unit at or above the average. Only products with a full cost are rated. Star: keep and promote. Plowhorse: popular but earns little, consider a higher price or a cheaper recipe. Puzzle: earns well but sells little, promote it. Dog: sells little and earns little, consider dropping it.',
+  group: 'Products',
+  icon: 'icon-coins',
+  columns: [
+    { key: 'productName', header: 'Product', format: 'text' },
+    { key: 'categoryName', header: 'Category', format: 'text' },
+    { key: 'quantitySold', header: 'Qty', format: 'integer', align: 'end' },
+    { key: 'popularityPercent', header: 'Share %', format: 'percent', align: 'end' },
+    { key: 'unitProfit', header: 'Profit / Unit', format: 'money', align: 'end' },
+    { key: 'grossProfit', header: 'Profit', format: 'money', align: 'end' },
+    {
+      key: 'menuClass',
+      header: 'Class',
+      format: 'text',
+      badge: (row) => MENU_CLASS_BADGE[String(row['menuClass'])] ?? 'default',
+    },
+    {
+      key: 'costStatus',
+      header: 'Cost (status)',
+      format: 'text',
+      badge: (row) => COST_STATUS_BADGE[String(row['costStatus'])] ?? 'default',
+    },
+  ],
+  defaultSort: { key: 'grossProfit', direction: 'desc' },
+  filters: ['productCategory'],
+  usesDateRange: true,
+  usesSource: true,
+  totals: (all) => {
+    const count = (menuClass: string): number => all.filter((row) => String(row['menuClass']) === menuClass).length;
+    return [
+      { label: 'Stars', value: count('Star'), format: 'integer' },
+      { label: 'Plowhorses', value: count('Plowhorse'), format: 'integer' },
+      { label: 'Puzzles', value: count('Puzzle'), format: 'integer' },
+      { label: 'Dogs', value: count('Dog'), format: 'integer' },
+      { label: 'Not rated (no full cost)', value: count('Not rated'), format: 'integer' },
     ];
   },
 };
@@ -975,6 +1116,10 @@ const SUM_KEYS = new Set([
   'stockValue',
   'cost',
   'grossProfit',
+  'theoreticalProfit',
+  'wasteCost',
+  'countVariance',
+  'actualProfit',
 ]);
 
 // Columns that can be left out on narrower screens because the cards and exports still show them.
@@ -1027,6 +1172,16 @@ function withTotals(definition: ReportDefinition): ReportDefinition {
   };
 }
 
+// A gross profit row read as a profit row: net sales are the revenue and the actual profit is the profit.
+function profitRowsOf(rows: readonly ReportRow[]): ProfitRow[] {
+  return rowsOf<GrossProfitReportRowDto>(rows).map((row) => ({
+    revenue: row.netSales,
+    cost: row.cost,
+    grossProfit: row.actualProfit,
+    costStatus: row.costStatus,
+  }));
+}
+
 function columnSum(rows: readonly ReportRow[], key: string): number {
   return sumAmounts(rows.map((row) => Number(row[key] ?? 0)));
 }
@@ -1034,11 +1189,13 @@ function columnSum(rows: readonly ReportRow[], key: string): number {
 export const REPORT_DEFINITIONS: readonly ReportDefinition[] = [
   dailyClose,
   dailySales,
+  grossProfit,
   categorySales,
   payments,
   hourly,
   productSales,
   productMargin,
+  menuEngineering,
   promotions,
   staff,
   customers,
