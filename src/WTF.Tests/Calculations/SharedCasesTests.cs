@@ -87,6 +87,7 @@ public class SharedCasesTests
         List<WasteNeedsReviewCase> WasteNeedsReview,
         List<WasteBalanceAfterCase> WasteBalanceAfter,
         List<RecipeCostCase> RecipeCost,
+        List<PriceForTargetMarginCase> PriceForTargetMargin,
         List<RecipePreviewCase> RecipePreview);
 
     private sealed record RecipePreviewSizeAmountCase(string SizeProductId, decimal Quantity);
@@ -126,6 +127,8 @@ public class SharedCasesTests
         List<RecipePreviewOptionCase> Options,
         Dictionary<string, int> Chosen,
         RecipePreviewExpectedCase Expected);
+
+    private sealed record PriceForTargetMarginCase(string Name, decimal Cost, decimal TargetPercent, decimal? Expected);
 
     private sealed record RecipeCostLineCase(decimal QuantityPerSale, decimal AllowancePercent, decimal? UnitCost);
 
@@ -178,6 +181,8 @@ public class SharedCasesTests
     public static IEnumerable<object[]> WasteBalanceAfterCaseNames() => Loaded.Value.WasteBalanceAfter.Select(c => new object[] { c.Name });
 
     public static IEnumerable<object[]> RecipeCostCaseNames() => Loaded.Value.RecipeCost.Select(c => new object[] { c.Name });
+
+    public static IEnumerable<object[]> PriceForTargetMarginCaseNames() => Loaded.Value.PriceForTargetMargin.Select(c => new object[] { c.Name });
 
     public static IEnumerable<object[]> RecipePreviewCaseNames() => Loaded.Value.RecipePreview.Select(c => new object[] { c.Name });
 
@@ -291,6 +296,15 @@ public class SharedCasesTests
         var c = Loaded.Value.WasteBalanceAfter.Single(x => x.Name == name);
 
         WasteRules.BalanceAfter(c.Balance, c.Quantity).ShouldBe(c.Expected);
+    }
+
+    [Theory]
+    [MemberData(nameof(PriceForTargetMarginCaseNames))]
+    public void PriceForTargetMargin_MatchesTheSharedCase(string name)
+    {
+        var c = Loaded.Value.PriceForTargetMargin.Single(x => x.Name == name);
+
+        CostRules.PriceForTargetMargin(c.Cost, c.TargetPercent).ShouldBe(c.Expected);
     }
 
     [Theory]

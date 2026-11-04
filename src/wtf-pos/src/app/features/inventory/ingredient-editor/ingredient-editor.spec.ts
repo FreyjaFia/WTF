@@ -128,6 +128,28 @@ describe('IngredientEditorComponent', () => {
     expect(el.querySelector('[data-testid="margin"]')?.textContent).toContain('118.50');
   });
 
+  it('suggests the price for the wanted margin and says if the price is enough', () => {
+    localStorage.removeItem('wtf.ingredients.targetMargin');
+    const { fixture, el } = setup();
+
+    expect(el.querySelector('[data-testid="suggested-price"]')?.textContent).toContain('105.00');
+    expect(el.querySelector('[data-testid="price-gap"]')?.textContent).toContain('already reaches');
+
+    setValue(fixture, el, 'target-margin', '90');
+
+    expect(el.querySelector('[data-testid="suggested-price"]')?.textContent).toContain('315.00');
+    expect(el.querySelector('[data-testid="price-gap"]')?.textContent).toContain('165.00');
+    expect(el.querySelector('[data-testid="price-gap"]')?.textContent).toContain('too low');
+    expect(localStorage.getItem('wtf.ingredients.targetMargin')).toBe('90');
+    localStorage.removeItem('wtf.ingredients.targetMargin');
+  });
+
+  it('shows no price guidance for an add-on', () => {
+    const { el } = setup({ product: { ...latte, isAddOn: true } });
+
+    expect(el.querySelector('[data-testid="price-guidance"]')).toBeNull();
+  });
+
   it('updates the cost live when the amount changes', () => {
     const { fixture, el } = setup();
     setValue(fixture, el, 'line-amount', '100');

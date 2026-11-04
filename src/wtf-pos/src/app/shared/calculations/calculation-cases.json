@@ -1499,6 +1499,15 @@
     { "name": "fractions stay to three decimals", "balance": 2.5, "quantity": 1.2346, "expected": 1.265 },
     { "name": "a negative balance goes further down", "balance": -4, "quantity": 0.5, "expected": -4.5 }
   ],
+  "priceForTargetMargin": [
+    { "name": "a 70% margin on a cost of 40", "cost": 40, "targetPercent": 70, "expected": 133.34 },
+    { "name": "a 50% margin doubles the cost", "cost": 20, "targetPercent": 50, "expected": 40 },
+    { "name": "a target of 0 gives the cost rounded up to the centavo", "cost": 12.345, "targetPercent": 0, "expected": 12.35 },
+    { "name": "no cost needs no price", "cost": 0, "targetPercent": 70, "expected": 0 },
+    { "name": "a target of 100 cannot be met", "cost": 40, "targetPercent": 100, "expected": null },
+    { "name": "a negative target is refused", "cost": 40, "targetPercent": -5, "expected": null },
+    { "name": "a negative cost is refused", "cost": -1, "targetPercent": 50, "expected": null }
+  ],
   "recipeCost": [
     { "name": "cost and margin of a latte", "price": 150, "suppliesCost": 0, "lines": [
       { "quantityPerSale": 200, "allowancePercent": 5, "unitCost": 0.15 },

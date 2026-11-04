@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import cases from './calculation-cases.json';
-import { margin, marginPercent, recipeCost, RecipeCostLine } from './recipe-cost';
+import { margin, marginPercent, priceForTargetMargin, recipeCost, RecipeCostLine } from './recipe-cost';
 
 interface RecipeCostCase {
   name: string;
@@ -24,4 +24,19 @@ describe('recipe cost: the cases shared with the API', () => {
       expect(marginPercent(c.price, summary.totalCost)).toBe(c.marginPercent);
     },
   );
+});
+
+interface PriceForTargetMarginCase {
+  name: string;
+  cost: number;
+  targetPercent: number;
+  expected: number | null;
+}
+
+describe('price for a target margin: the cases shared with the API', () => {
+  it.each(
+    (cases.priceForTargetMargin as PriceForTargetMarginCase[]).map((c) => [c.name, c] as const),
+  )('%s', (_name, c) => {
+    expect(priceForTargetMargin(c.cost, c.targetPercent)).toBe(c.expected);
+  });
 });

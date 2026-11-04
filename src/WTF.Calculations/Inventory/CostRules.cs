@@ -72,6 +72,18 @@ public static class CostRules
     public static decimal? MarginPercent(decimal price, decimal cost) =>
         price > 0m ? Math.Round((price - cost) / price * 100m, 2, MidpointRounding.AwayFromZero) : null;
 
+    // The lowest price, in whole centavos rounded up, that still earns the target margin on a cost: cost / (1 - target).
+    // Null when the target is not between 0 and under 100, or the cost is negative.
+    public static decimal? PriceForTargetMargin(decimal cost, decimal targetPercent)
+    {
+        if (cost < 0m || targetPercent < 0m || targetPercent >= 100m)
+        {
+            return null;
+        }
+
+        return Math.Ceiling(cost * 100m * 100m / (100m - targetPercent)) / 100m;
+    }
+
     // The cost a movement is recorded at: the average when there is one, otherwise the last cost entered.
     public static decimal? MovementCost(decimal? averageCost, decimal? costPrice) => averageCost ?? costPrice;
 }

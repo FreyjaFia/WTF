@@ -1,5 +1,6 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import {
   FormArray,
   FormControl,
@@ -13,6 +14,7 @@ import { AlertService, AuthService, InventoryService, ModalStackService } from '
 import {
   margin,
   marginPercent,
+  priceForTargetMargin,
   recipeCost,
   RecipeCostLine,
 } from '@shared/calculations/recipe-cost';
@@ -31,7 +33,7 @@ import {
   ProductIngredientsEditDto,
 } from '@shared/models';
 import { forkJoin, Observable, of } from 'rxjs';
-import { switchMap } from 'rxjs/operators';
+import { startWith, switchMap } from 'rxjs/operators';
 
 type LineGroup = FormGroup<{
   itemId: FormControl<string>;
@@ -49,6 +51,8 @@ interface LineValue {
   sizeAmounts: Record<string, number>;
 }
 
+const TARGET_MARGIN_KEY = 'wtf.ingredients.targetMargin';
+const DEFAULT_TARGET_MARGIN = 70;
 const MAX_PREVIEW_QUANTITY = 9;
 const PREVIEW_GROUP_ORDER = [1, 2, 5, 3, 4];
 const RADIO_TYPES = new Set([1, 2, 5]);
@@ -59,6 +63,25 @@ const PREVIEW_GROUP_HEADERS: Record<number, string> = {
   3: 'Toppings',
   4: 'Extras',
 };
+
+function loadTargetMargin(): number {
+  try {
+    const saved = Number(localStorage.getItem(TARGET_MARGIN_KEY));
+    return saved >= 0 && saved <= 99 && localStorage.getItem(TARGET_MARGIN_KEY) !== null
+      ? saved
+      : DEFAULT_TARGET_MARGIN;
+  } catch {
+    return DEFAULT_TARGET_MARGIN;
+  }
+}
+
+function saveTargetMargin(value: number): void {
+  try {
+    localStorage.setItem(TARGET_MARGIN_KEY, String(value));
+  } catch {
+    // Storage can be blocked; the target then lasts only until the page closes.
+  }
+}
 
 @Component({
   selector: 'app-ingredient-editor',
@@ -96,6 +119,15 @@ export class IngredientEditorComponent implements OnInit {
     }),
     lines: new FormArray<LineGroup>([]),
   });
+
+  protected readonly targetMargin = new FormControl(loadTargetMargin(), {
+    nonNullable: true,
+    validators: [Validators.required, Validators.min(0), Validators.max(99)],
+  });
+  private readonly targetMarginValue = toSignal(
+    this.targetMargin.valueChanges.pipe(startWith(this.targetMargin.value)),
+    { initialValue: this.targetMargin.value },
+  );
 
   protected readonly canWrite = computed(() => this.authService.canWriteItems());
   protected readonly showsCosts = computed(() => this.product()?.showsCosts ?? false);
@@ -214,6 +246,26 @@ export class IngredientEditorComponent implements OnInit {
     };
   });
 
+  protected readonly priceGuidance = computed(() => {
+    const product = this.product();
+    const base = this.summary();
+    if (!product || !base || product.isAddOn || this.targetMargin.invalid) {
+      return null;
+    }
+
+    const suggested = priceForTargetMargin(base.totalCost, Number(this.targetMarginValue()));
+    if (suggested === null || base.totalCost <= 0) {
+      return null;
+    }
+
+    return {
+      target: Number(this.targetMarginValue()),
+      suggested,
+      difference: Math.round((suggested - product.price) * 100) / 100,
+      meetsTarget: product.price >= suggested,
+    };
+  });
+
   protected readonly unusedItems = computed(() => {
     this.formVersion();
     const used = new Set(this.lines.controls.map((group) => group.controls.itemId.value));
@@ -231,6 +283,7 @@ export class IngredientEditorComponent implements OnInit {
   public ngOnInit(): void {
     this.productId = this.route.snapshot.paramMap.get('productId') ?? '';
     this.form.valueChanges.subscribe(() => this.formVersion.update((v) => v + 1));
+    this.targetMargin.valueChanges.subscribe((value) => saveTargetMargin(value));
     this.load();
   }
 

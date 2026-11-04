@@ -47,3 +47,13 @@ export function margin(price: number, cost: number): number {
 export function marginPercent(price: number, cost: number): number | null {
   return price > 0 ? Math.round(((price - cost) / price) * 10000) / 100 : null;
 }
+
+// The lowest price, rounded up to the centavo, that still earns the target margin on a cost: cost / (1 - target).
+export function priceForTargetMargin(cost: number, targetPercent: number): number | null {
+  if (cost < 0 || targetPercent < 0 || targetPercent >= 100) {
+    return null;
+  }
+
+  const centavos = Math.round(((cost * 100 * 100) / (100 - targetPercent)) * 1_000_000) / 1_000_000;
+  return Math.ceil(centavos) / 100;
+}
