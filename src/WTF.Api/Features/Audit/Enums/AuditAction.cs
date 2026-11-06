@@ -54,5 +54,8 @@ public enum AuditAction
     WasteReasonRestored,
     StockCountStarted,
     StockCountPosted,
-    StockCountCancelled
+    StockCountCancelled,
+    CatalogCategorySaved,
+    CatalogSubCategorySaved,
+    CatalogAddOnTypeSaved
 }

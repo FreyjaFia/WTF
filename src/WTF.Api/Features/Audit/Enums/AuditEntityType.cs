@@ -13,5 +13,6 @@ public enum AuditEntityType
     Conversation,
     StockWaste,
     WasteReason,
-    StockCount
+    StockCount,
+    CatalogEntry
 }

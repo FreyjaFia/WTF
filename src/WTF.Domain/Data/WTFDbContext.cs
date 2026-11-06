@@ -876,6 +876,8 @@ public partial class WTFDbContext : DbContext
 
         modelBuilder.Entity<ProductSubCategory>(entity =>
         {
+            entity.HasOne(d => d.Category).WithMany().HasForeignKey(d => d.CategoryId).HasConstraintName("FK_ProductSubCategories_Category");
+
             entity.Property(e => e.Id).ValueGeneratedNever();
             entity.Property(e => e.Name)
                 .HasMaxLength(50)
