@@ -6,6 +6,8 @@ public partial class ProductImage
 
     public Guid ImageId { get; set; }
 
+    public Guid? TenantId { get; set; }
+
     public virtual Image Image { get; set; } = null!;
 
     public virtual Product Product { get; set; } = null!;

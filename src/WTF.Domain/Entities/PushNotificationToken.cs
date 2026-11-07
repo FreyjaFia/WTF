@@ -18,5 +18,7 @@ public partial class PushNotificationToken
 
     public DateTime LastSeenAt { get; set; }
 
+    public Guid? TenantId { get; set; }
+
     public virtual User User { get; set; } = null!;
 }

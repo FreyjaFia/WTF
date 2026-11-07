@@ -56,6 +56,8 @@ public partial class Order
 
     public string? OfflineLocalId { get; set; }
 
+    public Guid? TenantId { get; set; }
+
     public virtual Conversation? Conversation { get; set; }
 
     public virtual User CreatedByNavigation { get; set; } = null!;

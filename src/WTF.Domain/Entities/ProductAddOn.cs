@@ -10,6 +10,8 @@ public partial class ProductAddOn
 
     public bool IsActive { get; set; }
 
+    public Guid? TenantId { get; set; }
+
     public virtual Product AddOn { get; set; } = null!;
 
     public virtual AddOnType? AddOnType { get; set; }

@@ -10,6 +10,8 @@ public partial class MixMatchPromotionProductAddOn
 
     public int Quantity { get; set; }
 
+    public Guid? TenantId { get; set; }
+
     public virtual Product AddOnProduct { get; set; } = null!;
 
     public virtual MixMatchPromotionProduct MixMatchPromotionProduct { get; set; } = null!;

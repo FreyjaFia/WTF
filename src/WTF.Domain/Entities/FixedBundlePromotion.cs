@@ -6,6 +6,8 @@ public partial class FixedBundlePromotion
 
     public decimal BundlePrice { get; set; }
 
+    public Guid? TenantId { get; set; }
+
     public virtual ICollection<FixedBundlePromotionItem> FixedBundlePromotionItems { get; set; } = new List<FixedBundlePromotionItem>();
 
     public virtual Promotion Promotion { get; set; } = null!;

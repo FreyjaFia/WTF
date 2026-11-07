@@ -102,6 +102,8 @@ public partial class WTFDbContext : DbContext
 
     public virtual DbSet<StockWaste> StockWastes { get; set; }
 
+    public virtual DbSet<Tenant> Tenants { get; set; }
+
     public virtual DbSet<User> Users { get; set; }
 
     public virtual DbSet<UserImage> UserImages { get; set; }
@@ -1134,6 +1136,19 @@ public partial class WTFDbContext : DbContext
                 .HasForeignKey(d => d.WasteReasonId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_StockWastes_WasteReasons");
+        });
+
+        modelBuilder.Entity<Tenant>(entity =>
+        {
+            entity.HasIndex(e => e.Slug, "UX_Tenants_Slug").IsUnique();
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_Tenants_Id");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_Tenants_CreatedAt");
+            entity.Property(e => e.Name).HasMaxLength(100);
+            entity.Property(e => e.Slug)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.Status).HasDefaultValue((byte)2, "DF_Tenants_Status");
         });
 
         modelBuilder.Entity<User>(entity =>

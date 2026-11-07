@@ -5,6 +5,7 @@ using WTF.Api.Features.Products.Enums;
 using WTF.Api.Features.Users.Enums;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
+using WTF.Domain.Tenancy;
 
 namespace WTF.Tests.Infrastructure;
 
@@ -78,6 +79,16 @@ internal sealed class SqlTestDatabase : IAsyncDisposable
             .Options;
 
         return new SqlServerWtfDbContext(options);
+    }
+
+    public WTFDbContext CreateContext(ICurrentTenant tenant)
+    {
+        var options = new DbContextOptionsBuilder<WTFDbContext>()
+            .UseSqlServer(_connectionString)
+            .EnableSensitiveDataLogging()
+            .Options;
+
+        return new SqlServerWtfDbContext(options, tenant);
     }
 
     /// <summary>Statuses, payment methods, categories, roles and add-on types with the ids the API enums use.</summary>
@@ -191,8 +202,18 @@ internal sealed class SqlTestDatabase : IAsyncDisposable
     }
 
     /// <summary>WTFDbContext.OnConfiguring always points at the configured connection string name; use ours.</summary>
-    private sealed class SqlServerWtfDbContext(DbContextOptions<WTFDbContext> options) : WTFDbContext(options)
+    private sealed class SqlServerWtfDbContext : WTFDbContext
     {
+        public SqlServerWtfDbContext(DbContextOptions<WTFDbContext> options)
+            : base(options)
+        {
+        }
+
+        public SqlServerWtfDbContext(DbContextOptions<WTFDbContext> options, ICurrentTenant tenant)
+            : base(options, tenant)
+        {
+        }
+
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             // Intentionally empty: the provider and connection are already configured through the options.

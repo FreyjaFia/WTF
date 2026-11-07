@@ -1,11 +1,13 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using System.Text;
 using System.Threading.RateLimiting;
 using WTF.Api.Common.Auth;
+using WTF.Api.Common.Tenancy;
 using WTF.Api.Common.Validation;
 using WTF.Api.Endpoints;
 using WTF.Api.Features.Conversations;
@@ -16,6 +18,7 @@ using WTF.Api.Features.Reports;
 using WTF.Api.Hubs;
 using WTF.Api.Services;
 using WTF.Domain.Data;
+using WTF.Domain.Tenancy;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -37,8 +40,13 @@ builder.Host.UseSerilog();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
+builder.Services.Configure<TenancyOptions>(builder.Configuration.GetSection(TenancyOptions.SectionName));
+builder.Services.AddScoped<ICurrentTenant, CurrentTenant>();
+
 builder.Services.AddDbContext<WTFDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("WtfDb")));
+    options
+        .UseSqlServer(builder.Configuration.GetConnectionString("WtfDb"))
+        .ConfigureWarnings(w => w.Ignore(CoreEventId.PossibleIncorrectRequiredNavigationWithQueryFilterInteractionWarning)));
 
 builder.Services.AddMediatR(cfg =>
 {

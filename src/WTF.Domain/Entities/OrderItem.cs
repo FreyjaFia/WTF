@@ -26,6 +26,8 @@ public partial class OrderItem
 
     public Guid? DiscountPromotionId { get; set; }
 
+    public Guid? TenantId { get; set; }
+
     public virtual Promotion? BundlePromotion { get; set; }
 
     public virtual Promotion? DiscountPromotion { get; set; }

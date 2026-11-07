@@ -6,5 +6,7 @@ public partial class AddOnType
 
     public string Name { get; set; } = null!;
 
+    public Guid? TenantId { get; set; }
+
     public virtual ICollection<ProductAddOn> ProductAddOns { get; set; } = new List<ProductAddOn>();
 }

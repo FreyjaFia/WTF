@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using WTF.Domain.Data;
+using WTF.Domain.Tenancy;
 
 namespace WTF.Tests.Infrastructure;
 
@@ -29,6 +30,18 @@ internal static class TestDb
         return new InMemoryWtfDbContext(options);
     }
 
+    /// <summary>Creates a context that filters and stamps rows for <paramref name="tenant"/>, as the API does in Multi mode.</summary>
+    public static WTFDbContext Create(string name, ICurrentTenant tenant)
+    {
+        var options = new DbContextOptionsBuilder<WTFDbContext>()
+            .UseInMemoryDatabase(name)
+            .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning))
+            .EnableSensitiveDataLogging()
+            .Options;
+
+        return new InMemoryWtfDbContext(options, tenant);
+    }
+
     /// <summary>Saves entities through their own context, so the handler under test starts from clean tracking state.</summary>
     public static async Task SaveAsync(string dbName, params object[] entities)
     {
@@ -38,8 +51,18 @@ internal static class TestDb
     }
 
     /// <summary>WTFDbContext.OnConfiguring always selects SQL Server, which cannot coexist with the in-memory provider.</summary>
-    private sealed class InMemoryWtfDbContext(DbContextOptions<WTFDbContext> options) : WTFDbContext(options)
+    private sealed class InMemoryWtfDbContext : WTFDbContext
     {
+        public InMemoryWtfDbContext(DbContextOptions<WTFDbContext> options)
+            : base(options)
+        {
+        }
+
+        public InMemoryWtfDbContext(DbContextOptions<WTFDbContext> options, ICurrentTenant tenant)
+            : base(options, tenant)
+        {
+        }
+
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             // Intentionally empty: the provider is already configured through the options.

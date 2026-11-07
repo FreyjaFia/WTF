@@ -6,6 +6,8 @@ public partial class PromotionImage
 
     public Guid ImageId { get; set; }
 
+    public Guid? TenantId { get; set; }
+
     public virtual Image Image { get; set; } = null!;
 
     public virtual Promotion Promotion { get; set; } = null!;

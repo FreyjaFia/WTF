@@ -32,6 +32,8 @@ public partial class Promotion
 
     public int? MaxPerOrder { get; set; }
 
+    public Guid? TenantId { get; set; }
+
     public virtual User CreatedByNavigation { get; set; } = null!;
 
     public virtual ICollection<DiscountedProductPromotion> DiscountedProductPromotions { get; set; } = new List<DiscountedProductPromotion>();

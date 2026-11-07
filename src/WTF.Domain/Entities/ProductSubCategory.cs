@@ -6,5 +6,7 @@ public partial class ProductSubCategory
 
     public string Name { get; set; } = null!;
 
+    public Guid? TenantId { get; set; }
+
     public virtual ICollection<Product> Products { get; set; } = new List<Product>();
 }

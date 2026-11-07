@@ -18,6 +18,8 @@ public partial class Conversation
 
     public DateTime? ClosedAt { get; set; }
 
+    public Guid? TenantId { get; set; }
+
     public virtual ICollection<ConversationMessage> ConversationMessages { get; set; } = new List<ConversationMessage>();
 
     public virtual Customer Customer { get; set; } = null!;

@@ -12,6 +12,8 @@ public partial class DiscountedProductPromotion
 
     public Guid Id { get; set; }
 
+    public Guid? TenantId { get; set; }
+
     public virtual ICollection<DiscountedProductPromotionAddOn> DiscountedProductPromotionAddOns { get; set; } = new List<DiscountedProductPromotionAddOn>();
 
     public virtual Product Product { get; set; } = null!;
