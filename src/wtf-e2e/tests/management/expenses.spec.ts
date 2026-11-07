@@ -37,11 +37,14 @@ const OTHER = 8;
 // The browser tests share one database, so every test books its expenses on its own day long ago, where nothing else
 // sells or spends, and reads only that day back. A worker owns a block of 60 days, so two workers never share a day.
 let nextDay = 0;
+const daysUsed: string[] = [];
 function quietDay(): string {
   const worker = Number(process.env.TEST_WORKER_INDEX ?? 0) % 100;
   const offset = worker * 60 + (nextDay % 55);
   nextDay += 1;
-  return addDays('2005-01-01', offset);
+  const day = addDays('2005-01-01', offset);
+  daysUsed.push(day);
+  return day;
 }
 
 function addDays(date: string, days: number): string {
@@ -50,9 +53,30 @@ function addDays(date: string, days: number): string {
   return moved.toISOString().slice(0, 10);
 }
 
+// Expenses are only ever soft deleted, so a test that leaves its rows behind makes the next run on the same database
+// see them (the same quiet day is reused). Every expense a test creates is deleted again after it.
+const createdIds: string[] = [];
+
 async function create(api: Api, expenseDate: string, category: number, amount: number, note: string | null = null): Promise<Expense> {
-  return api.client.json<Expense>('admin', 'POST', 'expenses', { expenseDate, category, amount, note });
+  const saved = await api.client.json<Expense>('admin', 'POST', 'expenses', { expenseDate, category, amount, note });
+  createdIds.push(saved.id);
+  return saved;
 }
+
+test.afterEach(async ({ api }) => {
+  while (createdIds.length > 0) {
+    const id = createdIds.pop() as string;
+    await api.client.call('admin', 'DELETE', `expenses/${id}`);
+  }
+
+  // Expenses made on screen are not tracked above, so sweep what is still active on the days this test used.
+  while (daysUsed.length > 0) {
+    const day = daysUsed.pop() as string;
+    for (const expense of (await list(api, day, day)).items) {
+      await api.client.call('admin', 'DELETE', `expenses/${expense.id}`);
+    }
+  }
+});
 
 async function list(api: Api, from: string, to: string, extra: string = ''): Promise<ExpenseList> {
   return api.client.json<ExpenseList>('admin', 'GET', `expenses?fromDate=${from}&toDate=${to}${extra}`);
@@ -141,7 +165,8 @@ test.describe('expenses API @management @expenses', () => {
     expect(hidden.total).toBe(100);
 
     const shown = await list(api, day, day, '&includeDeleted=true');
-    expect(shown.items).toHaveLength(2);
+    // Deleted rows stay in the database for ever, so earlier runs may have left some on this day.
+    expect(shown.items.filter((e) => [kept.id, removed.id].includes(e.id))).toHaveLength(2);
     expect(shown.items.find((e) => e.id === removed.id)?.isActive).toBe(false);
     expect(shown.total).toBe(100);
 
@@ -324,6 +349,8 @@ test.describe('the Expenses page @management @expenses', () => {
 
   test('an admin adds, edits, deletes and restores an expense on screen', async ({ signIn }) => {
     const day = quietDay();
+    // Deleted rows stay for ever, so find this run's row by a note that no other run used.
+    const note = `Shop rent ${Date.now()}`;
     const page = await signIn('admin');
     await page.goto(ROUTES.expenses);
     await filterTo(page, day, day);
@@ -333,12 +360,12 @@ test.describe('the Expenses page @management @expenses', () => {
     await page.locator('#expense-date').fill(day);
     await page.locator('#expense-category').selectOption({ label: 'Rent' });
     await page.locator('#expense-amount').fill('1500.50');
-    await page.locator('#expense-note').fill('Shop rent');
+    await page.locator('#expense-note').fill(note);
     await page.getByRole('button', { name: 'Add Expense' }).last().click();
 
     await expect(page.getByTestId('expense-row')).toHaveCount(1);
     await expect(page.getByTestId('expense-total')).toContainText('1,500.50');
-    await expect(page.getByTestId('expense-row')).toContainText('Shop rent');
+    await expect(page.getByTestId('expense-row')).toContainText(note);
 
     await page.getByRole('button', { name: 'Expense actions' }).click();
     await page.getByRole('button', { name: 'Edit' }).click();
@@ -355,15 +382,16 @@ test.describe('the Expenses page @management @expenses', () => {
     await openFilters(page);
     await page.getByText('Show deleted').click();
     await closeFilters(page);
-    await expect(page.getByTestId('expense-row')).toHaveCount(1);
-    await expect(page.getByTestId('expense-row')).toContainText('Deleted');
+    await expect(page.getByTestId('expense-row').filter({ hasText: note })).toHaveCount(1);
+    await expect(page.getByTestId('expense-row').filter({ hasText: note })).toContainText('Deleted');
     await expect(page.getByTestId('expense-total')).toContainText('0.00');
 
-    await page.getByRole('button', { name: 'Expense actions' }).click();
+    const mine = page.getByTestId('expense-row').filter({ hasText: note });
+    await mine.getByRole('button', { name: 'Expense actions' }).click();
     await page.getByRole('button', { name: 'Restore' }).click();
     await page.getByRole('dialog').getByRole('button', { name: 'Restore' }).click();
     await expect(page.getByTestId('expense-total')).toContainText('1,600.00');
-    await page.getByRole('button', { name: 'Expense actions' }).click();
+    await mine.getByRole('button', { name: 'Expense actions' }).click();
     await expect(page.getByRole('button', { name: 'Edit' })).toBeVisible();
   });
 
