@@ -10,7 +10,7 @@ public partial class MixMatchPromotion
 
     public decimal BundlePrice { get; set; }
 
-    public Guid? TenantId { get; set; }
+    public Guid TenantId { get; set; }
 
     public virtual ICollection<MixMatchPromotionProduct> MixMatchPromotionProducts { get; set; } = new List<MixMatchPromotionProduct>();
 

@@ -8,7 +8,7 @@ public partial class MixMatchPromotionProduct
 
     public Guid ProductId { get; set; }
 
-    public Guid? TenantId { get; set; }
+    public Guid TenantId { get; set; }
 
     public virtual MixMatchPromotion MixMatchPromotion { get; set; } = null!;
 

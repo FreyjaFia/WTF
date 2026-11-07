@@ -24,7 +24,7 @@ public partial class Customer
 
     public string? ContactNumber { get; set; }
 
-    public Guid? TenantId { get; set; }
+    public Guid TenantId { get; set; }
 
     public virtual ICollection<Conversation> Conversations { get; set; } = new List<Conversation>();
 

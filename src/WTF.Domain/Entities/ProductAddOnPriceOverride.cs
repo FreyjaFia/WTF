@@ -20,7 +20,7 @@ public partial class ProductAddOnPriceOverride
 
     public Guid? UpdatedBy { get; set; }
 
-    public Guid? TenantId { get; set; }
+    public Guid TenantId { get; set; }
 
     public virtual ProductAddOn ProductAddOn { get; set; } = null!;
 }

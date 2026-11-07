@@ -8,7 +8,7 @@ public partial class Image
 
     public Guid ImageId { get; set; }
 
-    public Guid? TenantId { get; set; }
+    public Guid TenantId { get; set; }
 
     public virtual CustomerImage? CustomerImage { get; set; }
 

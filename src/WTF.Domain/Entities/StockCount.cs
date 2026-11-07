@@ -24,7 +24,7 @@ public partial class StockCount
 
     public Guid? CancelledBy { get; set; }
 
-    public Guid? TenantId { get; set; }
+    public Guid TenantId { get; set; }
 
     public virtual User? CancelledByNavigation { get; set; }
 
