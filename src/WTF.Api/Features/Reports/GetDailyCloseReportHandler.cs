@@ -86,7 +86,7 @@ public sealed class GetDailyCloseReportHandler(
             .Select(g =>
             {
                 var staff = g.First().CreatedByNavigation;
-                var name = staff.Username == SubmitPublicOrderHandler.SystemUsername
+                var name = (staff.Username == SubmitPublicOrderHandler.SystemUsername || staff.Username.StartsWith(SubmitPublicOrderHandler.SystemUsernamePrefix))
                     ? GetStaffPerformanceReportHandler.CustomerLinkLabel
                     : $"{staff.FirstName} {staff.LastName}".Trim();
                 var staffSummary = SalesRules.Summarize(g, overridePrices);

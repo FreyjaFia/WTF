@@ -1571,7 +1571,7 @@ public class CreateOrderHandlerTests
 
         var dto = await Handler().Handle(Cmd(OrderStatusEnum.Pending, Line(pizza)), CancellationToken.None);
 
-        var group = _hub.Clients.Group(HubNames.Groups.DashboardViewers);
+        var group = _hub.Clients.Group(HubNames.Groups.DashboardViewers(null));
         await group.Received(1).SendCoreAsync(HubNames.Events.DashboardUpdated, Arg.Any<object?[]>(), Arg.Any<CancellationToken>());
         await group.Received(1).SendCoreAsync(
             HubNames.Events.OrderUpdated,
@@ -1589,7 +1589,7 @@ public class CreateOrderHandlerTests
 
         await _audit.DidNotReceiveWithAnyArgs().LogAsync(default, default, default!);
         await _push.DidNotReceiveWithAnyArgs().SendOrderCreatedAsync(default!, default, default, default);
-        await _hub.Clients.Group(HubNames.Groups.DashboardViewers).DidNotReceiveWithAnyArgs().SendCoreAsync(default!, default!, default);
+        await _hub.Clients.Group(HubNames.Groups.DashboardViewers(null)).DidNotReceiveWithAnyArgs().SendCoreAsync(default!, default!, default);
     }
 
     // ---------- known gaps / bugs ----------

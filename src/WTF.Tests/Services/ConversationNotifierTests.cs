@@ -26,7 +26,7 @@ public class ConversationNotifierTests
     public ConversationNotifierTests()
     {
         var staffHub = Substitute.For<IHubContext<StaffOrderHub>>();
-        staffHub.Clients.Group(HubNames.Groups.StaffOrders).Returns(_staff);
+        staffHub.Clients.Group(HubNames.Groups.StaffOrders(null)).Returns(_staff);
 
         var customerHub = Substitute.For<IHubContext<CustomerOrderHub>>();
         customerHub.Clients.Group(HubNames.Groups.Customer(CustomerId)).Returns(_customer);

@@ -34,6 +34,6 @@ internal static class VoidedOrderKinds
             return null;
         }
 
-        return user.Username == SubmitPublicOrderHandler.SystemUsername ? null : $"{user.FirstName} {user.LastName}".Trim();
+        return (user.Username == SubmitPublicOrderHandler.SystemUsername || user.Username.StartsWith(SubmitPublicOrderHandler.SystemUsernamePrefix)) ? null : $"{user.FirstName} {user.LastName}".Trim();
     }
 }

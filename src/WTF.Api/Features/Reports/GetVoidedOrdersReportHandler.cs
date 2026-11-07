@@ -74,7 +74,7 @@ public sealed class GetVoidedOrdersReportHandler(
     }
 
     private static string StaffName(Domain.Entities.Order order) =>
-        order.CreatedByNavigation.Username == SubmitPublicOrderHandler.SystemUsername
+        (order.CreatedByNavigation.Username == SubmitPublicOrderHandler.SystemUsername || order.CreatedByNavigation.Username.StartsWith(SubmitPublicOrderHandler.SystemUsernamePrefix))
             ? GetStaffPerformanceReportHandler.CustomerLinkLabel
             : $"{order.CreatedByNavigation.FirstName} {order.CreatedByNavigation.LastName}".Trim();
 }

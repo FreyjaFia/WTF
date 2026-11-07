@@ -38,7 +38,7 @@ public class NotificationHubTests
     {
         await Hub(canSeeStock: true).OnConnectedAsync();
 
-        await _groups.Received(1).AddToGroupAsync("conn-1", HubNames.Groups.StockViewers, Arg.Any<CancellationToken>());
+        await _groups.Received(1).AddToGroupAsync("conn-1", HubNames.Groups.StockViewers(null), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -46,7 +46,7 @@ public class NotificationHubTests
     {
         await Hub(canSeeStock: false).OnConnectedAsync();
 
-        await _groups.DidNotReceive().AddToGroupAsync(Arg.Any<string>(), HubNames.Groups.StockViewers, Arg.Any<CancellationToken>());
+        await _groups.DidNotReceive().AddToGroupAsync(Arg.Any<string>(), HubNames.Groups.StockViewers(null), Arg.Any<CancellationToken>());
     }
 
     [Fact]

@@ -54,7 +54,7 @@ public class SyncOfflineOrdersHandler(WTFDbContext db, ISender sender, IHttpCont
         {
             // Judging the order against the catalog and saving it must see the same promotion uses, so another order cannot
             // take the last one in between and leave the saved price different from the one the review accepted.
-            using var gate = await PromotionLimitGate.EnterAsync(cancellationToken);
+            using var gate = await PromotionLimitGate.EnterAsync(db.StampTenantId, cancellationToken);
             await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
 
             // Only a finished sale can meet a catalog that changed afterwards; an open order is priced when it completes.

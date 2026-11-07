@@ -57,7 +57,7 @@ public class ApproveOrderHandler(
             userId: userId,
             cancellationToken: cancellationToken);
 
-        await OrderDecision.NotifyAsync(dashboardHub, order.Id, cancellationToken);
+        await OrderDecision.NotifyAsync(dashboardHub, order, cancellationToken);
         await conversationNotifier.OrderChangedAsync(order, chat, cancellationToken);
         return await sender.Send(new GetOrderByIdQuery(order.Id), cancellationToken);
     }
@@ -111,7 +111,7 @@ public class RejectOrderHandler(
             userId: userId,
             cancellationToken: cancellationToken);
 
-        await OrderDecision.NotifyAsync(dashboardHub, order.Id, cancellationToken);
+        await OrderDecision.NotifyAsync(dashboardHub, order, cancellationToken);
         await conversationNotifier.OrderChangedAsync(order, chat, cancellationToken);
         return await sender.Send(new GetOrderByIdQuery(order.Id), cancellationToken);
     }
@@ -168,7 +168,7 @@ public class MarkOrderReadyHandler(
             userId: userId,
             cancellationToken: cancellationToken);
 
-        await OrderDecision.NotifyAsync(dashboardHub, order.Id, cancellationToken);
+        await OrderDecision.NotifyAsync(dashboardHub, order, cancellationToken);
         await conversationNotifier.OrderChangedAsync(order, chat, cancellationToken);
         return await sender.Send(new GetOrderByIdQuery(order.Id), cancellationToken);
     }
@@ -185,11 +185,11 @@ internal static class OrderDecision
         }
     }
 
-    public static async Task NotifyAsync(IHubContext<DashboardHub> hub, Guid orderId, CancellationToken cancellationToken)
+    public static async Task NotifyAsync(IHubContext<DashboardHub> hub, WTF.Domain.Entities.Order order, CancellationToken cancellationToken)
     {
-        await hub.Clients.Group(HubNames.Groups.DashboardViewers)
+        await hub.Clients.Group(HubNames.Groups.DashboardViewers(order.TenantId))
             .SendAsync(HubNames.Events.DashboardUpdated, cancellationToken);
-        await hub.Clients.Group(HubNames.Groups.DashboardViewers)
-            .SendAsync(HubNames.Events.OrderUpdated, orderId, cancellationToken);
+        await hub.Clients.Group(HubNames.Groups.DashboardViewers(order.TenantId))
+            .SendAsync(HubNames.Events.OrderUpdated, order.Id, cancellationToken);
     }
 }

@@ -53,6 +53,9 @@ public class SubmitPublicOrderHandler(
 {
     public const string SystemUsername = "customer-link";
 
+    // The first tenant owns "customer-link"; every other tenant gets "customer-link.<slug>" because usernames are globally unique.
+    public const string SystemUsernamePrefix = "customer-link.";
+
     public const int MaxLines = 30;
     public const int MaxQuantity = 99;
     public const int MaxAddOnsPerLine = 20;
@@ -110,7 +113,7 @@ public class SubmitPublicOrderHandler(
             : request.SpecialInstructions.Trim();
 
         // The total the customer is told, and the uses the order then holds, must come from the same view of the promotion uses.
-        using var gate = await PromotionLimitGate.EnterAsync(cancellationToken);
+        using var gate = await PromotionLimitGate.EnterAsync(db.StampTenantId, cancellationToken);
 
         var (total, limitNotes) = await ComputeTotalAsync(lines, cancellationToken);
 
@@ -169,7 +172,7 @@ public class SubmitPublicOrderHandler(
         }
 
         var systemUserId = await db.Users
-            .Where(u => u.Username == SystemUsername)
+            .Where(u => u.Username == SystemUsername || u.Username.StartsWith(SystemUsernamePrefix))
             .Select(u => (Guid?)u.Id)
             .FirstOrDefaultAsync(cancellationToken);
         if (systemUserId == null)

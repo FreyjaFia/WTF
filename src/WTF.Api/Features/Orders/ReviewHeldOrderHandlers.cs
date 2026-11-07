@@ -57,7 +57,7 @@ public class ApproveHeldOrderHandler(
             userId: userId,
             cancellationToken: cancellationToken);
 
-        await OrderDecision.NotifyAsync(dashboardHub, order.Id, cancellationToken);
+        await OrderDecision.NotifyAsync(dashboardHub, order, cancellationToken);
         await conversationNotifier.OrderChangedAsync(order, null, cancellationToken);
         return await sender.Send(new GetOrderByIdQuery(order.Id), cancellationToken);
     }
@@ -110,7 +110,7 @@ public class RejectHeldOrderHandler(
             userId: userId,
             cancellationToken: cancellationToken);
 
-        await OrderDecision.NotifyAsync(dashboardHub, order.Id, cancellationToken);
+        await OrderDecision.NotifyAsync(dashboardHub, order, cancellationToken);
         await conversationNotifier.OrderChangedAsync(order, null, cancellationToken);
         return await sender.Send(new GetOrderByIdQuery(order.Id), cancellationToken);
     }

@@ -98,15 +98,21 @@ builder.Services.AddHostedService<StockReminderScheduler>();
 
 if (builder.Environment.IsDevelopment())
 {
-    builder.Services.AddScoped<IImageStorage, LocalImageStorage>();
-    builder.Services.AddScoped<IReportFileStorage, LocalReportFileStorage>();
-    builder.Services.AddScoped<IChatImageStore, LocalChatImageStore>();
+    builder.Services.AddScoped<LocalImageStorage>();
+    builder.Services.AddScoped<LocalReportFileStorage>();
+    builder.Services.AddScoped<LocalChatImageStore>();
+    builder.Services.AddScoped<IImageStorage>(sp => new TenantImageStorage(sp.GetRequiredService<LocalImageStorage>(), sp.GetRequiredService<ICurrentTenant>()));
+    builder.Services.AddScoped<IReportFileStorage>(sp => new TenantReportFileStorage(sp.GetRequiredService<LocalReportFileStorage>(), sp.GetRequiredService<ICurrentTenant>()));
+    builder.Services.AddScoped<IChatImageStore>(sp => new TenantChatImageStore(sp.GetRequiredService<LocalChatImageStore>(), sp.GetRequiredService<ICurrentTenant>()));
 }
 else
 {
-    builder.Services.AddScoped<IImageStorage, AzureBlobImageStorage>();
-    builder.Services.AddScoped<IReportFileStorage, AzureBlobReportFileStorage>();
-    builder.Services.AddSingleton<IChatImageStore, AzureBlobChatImageStore>();
+    builder.Services.AddScoped<AzureBlobImageStorage>();
+    builder.Services.AddScoped<AzureBlobReportFileStorage>();
+    builder.Services.AddSingleton<AzureBlobChatImageStore>();
+    builder.Services.AddScoped<IImageStorage>(sp => new TenantImageStorage(sp.GetRequiredService<AzureBlobImageStorage>(), sp.GetRequiredService<ICurrentTenant>()));
+    builder.Services.AddScoped<IReportFileStorage>(sp => new TenantReportFileStorage(sp.GetRequiredService<AzureBlobReportFileStorage>(), sp.GetRequiredService<ICurrentTenant>()));
+    builder.Services.AddScoped<IChatImageStore>(sp => new TenantChatImageStore(sp.GetRequiredService<AzureBlobChatImageStore>(), sp.GetRequiredService<ICurrentTenant>()));
 }
 
 var jwtSecretKey = builder.Configuration["Jwt:SecretKey"] ?? throw new InvalidOperationException("JWT SecretKey not configured");

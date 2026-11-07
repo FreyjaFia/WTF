@@ -223,7 +223,7 @@ public class UpdateOrderHandlerTests
 
         await Handler().Handle(Cmd(orderId, null, [Line(burger)]), CancellationToken.None);
 
-        var group = _hub.Clients.Group(HubNames.Groups.DashboardViewers);
+        var group = _hub.Clients.Group(HubNames.Groups.DashboardViewers(null));
         await group.Received(1).SendCoreAsync(HubNames.Events.DashboardUpdated, Arg.Any<object?[]>(), Arg.Any<CancellationToken>());
         await group.Received(1).SendCoreAsync(
             HubNames.Events.OrderUpdated, Arg.Is<object?[]>(a => a.Length == 1 && (Guid)a[0]! == orderId), Arg.Any<CancellationToken>());
@@ -798,7 +798,7 @@ public class UpdateOrderHandlerTests
 
         await _push.Received(1).SendOrderStatusChangedAsync(
             Arg.Is<WTF.Domain.Entities.Order>(o => o.Id == orderId), Arg.Any<decimal>(), OrderStatusEnum.Completed, _userId, Arg.Any<CancellationToken>(), true);
-        await _hub.Clients.Group(HubNames.Groups.DashboardViewers).Received(1)
+        await _hub.Clients.Group(HubNames.Groups.DashboardViewers(null)).Received(1)
             .SendCoreAsync(HubNames.Events.DashboardUpdated, Arg.Any<object?[]>(), Arg.Any<CancellationToken>());
     }
 

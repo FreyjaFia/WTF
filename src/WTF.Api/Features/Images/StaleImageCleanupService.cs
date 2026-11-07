@@ -47,7 +47,7 @@ public sealed class StaleImageCleanupService(
             .Select(c => $"images/{c.Trim().Trim('/')}/")
             .ToList();
         bool InScope(string key) =>
-            prefixes.Count == 0 || prefixes.Any(p => key.StartsWith(p, StringComparison.OrdinalIgnoreCase));
+            prefixes.Count == 0 || prefixes.Any(p => TenantStorage.StripTenant(key, "images/").StartsWith(p, StringComparison.OrdinalIgnoreCase));
 
         var files = (await imageStorage.ListAsync(cancellationToken)).Where(f => InScope(f.Key)).ToList();
         var allUrls = await db.Images.Select(i => i.ImageUrl).ToListAsync(cancellationToken);

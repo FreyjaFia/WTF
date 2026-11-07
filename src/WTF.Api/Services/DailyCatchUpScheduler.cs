@@ -1,3 +1,9 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using WTF.Api.Common.Tenancy;
+using WTF.Domain.Data;
+using WTF.Domain.Tenancy;
+
 namespace WTF.Api.Services;
 
 /// <summary>
@@ -85,15 +91,52 @@ public abstract class DailyCatchUpScheduler(IServiceScopeFactory scopeFactory, I
             return;
         }
 
-        using var scope = scopeFactory.CreateScope();
-        var last = await GetLastRunUtcAsync(scope.ServiceProvider, stoppingToken);
-        if (last is not null && TimeZoneInfo.ConvertTime(last.Value, timeZone).Date == nowLocal.Date)
+        // Each tenant has its own last run and its own data, and one tenant failing never stops the others.
+        var failures = new List<Exception>();
+        foreach (var tenantId in await ListTenantIdsAsync(stoppingToken))
         {
-            return;
+            try
+            {
+                using var scope = scopeFactory.CreateScope();
+                scope.ServiceProvider.GetService<WTFDbContext>()?.UseTenant(tenantId);
+
+                var last = await GetLastRunUtcAsync(scope.ServiceProvider, stoppingToken);
+                if (last is not null && TimeZoneInfo.ConvertTime(last.Value, timeZone).Date == nowLocal.Date)
+                {
+                    continue;
+                }
+
+                logger.LogInformation("{Job} is due for tenant {Tenant}; running now.", JobName, tenantId);
+                await RunJobAsync(scope.ServiceProvider, stoppingToken);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                logger.LogError(ex, "{Job} failed for tenant {Tenant}.", JobName, tenantId);
+                failures.Add(ex);
+            }
         }
 
-        logger.LogInformation("{Job} is due; running now.", JobName);
-        await RunJobAsync(scope.ServiceProvider, stoppingToken);
+        if (failures.Count > 0)
+        {
+            throw new AggregateException(failures);
+        }
+    }
+
+    private async Task<List<Guid>> ListTenantIdsAsync(CancellationToken cancellationToken)
+    {
+        using var scope = scopeFactory.CreateScope();
+        var tenancy = scope.ServiceProvider.GetService<IOptions<TenancyOptions>>()?.Value;
+        if (tenancy is null || !tenancy.IsMulti)
+        {
+            return [TenantDefaults.DefaultTenantId];
+        }
+
+        var db = scope.ServiceProvider.GetRequiredService<WTFDbContext>();
+        return await db.Tenants
+            .AsNoTracking()
+            .Where(t => t.Status == TenantStatus.Trial || t.Status == TenantStatus.Active)
+            .Select(t => t.Id)
+            .ToListAsync(cancellationToken);
     }
 
     internal static bool IsPastRunTime(DateTimeOffset nowLocal, int runAtHour, int runAtMinute) =>

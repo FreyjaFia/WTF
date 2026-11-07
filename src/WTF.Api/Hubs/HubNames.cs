@@ -1,22 +1,36 @@
+using WTF.Domain.Tenancy;
+
 namespace WTF.Api.Hubs;
 
 public static class HubNames
 {
     public static class Groups
     {
-        public const string DashboardViewers = "DashboardViewers";
+        /// <summary>People who may open the dashboard, of one tenant. A null or empty tenant means the first tenant.</summary>
+        public static string DashboardViewers(Guid? tenantId) => TenantGroup(tenantId, "DashboardViewers");
 
         /// <summary>Staff who can read orders: where chat messages are announced.</summary>
-        public const string StaffOrders = "StaffOrders";
+        public static string StaffOrders(Guid? tenantId) => TenantGroup(tenantId, "StaffOrders");
 
         /// <summary>People who look after stock: told when an item's stock changes.</summary>
-        public const string StockViewers = "StockViewers";
+        public static string StockViewers(Guid? tenantId) => TenantGroup(tenantId, "StockViewers");
 
         /// <summary>Every open screen of one person (any device).</summary>
         public static string User(Guid userId) => $"user-{userId}";
 
         /// <summary>Every open page of one customer, whichever of their links it came through.</summary>
         public static string Customer(Guid customerId) => $"customer-{customerId}";
+
+        public static Guid? TenantOf(System.Security.Claims.ClaimsPrincipal? user)
+        {
+            return Guid.TryParse(user?.FindFirst(TenantDefaults.ClaimType)?.Value, out var id) ? id : null;
+        }
+
+        private static string TenantGroup(Guid? tenantId, string name)
+        {
+            var id = tenantId is null || tenantId == Guid.Empty ? TenantDefaults.DefaultTenantId : tenantId.Value;
+            return $"t{id:N}:{name}";
+        }
 
         /// <summary>Every open page opened through one link, so revoking it can close exactly those.</summary>
         public static string Link(Guid linkId) => $"link-{linkId}";

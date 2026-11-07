@@ -211,7 +211,8 @@ public sealed class StockReminderService(
             $@"UPDATE dbo.Notifications
                SET Severity = {message.Severity}, Title = {message.Title}, Body = {message.Body}, Data = {message.Data},
                    CreatedAt = {now}, ReadAt = NULL, ReminderCount = ReminderCount + 1, LastRemindedAt = {now}
-               WHERE Id = {row.Id} AND CreatedAt < {dayStartUtc}",
+               WHERE Id = {row.Id} AND CreatedAt < {dayStartUtc}
+                 AND ({db.TenantFilterEnabled} = 0 OR TenantId = {db.StampTenantId})",
             cancellationToken);
 
         return rows > 0;

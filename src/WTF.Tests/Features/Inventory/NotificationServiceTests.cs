@@ -106,7 +106,7 @@ public class NotificationServiceTests
 
         await Service().StockChangedAsync(item, CancellationToken.None);
 
-        _hub.Clients.Received(1).Group(HubNames.Groups.StockViewers);
+        _hub.Clients.Received(1).Group(HubNames.Groups.StockViewers(null));
         await _client.Received(1).SendCoreAsync(
             HubNames.Events.StockChanged, Arg.Is<object?[]>(args => (Guid)args[0]! == item), Arg.Any<CancellationToken>());
     }

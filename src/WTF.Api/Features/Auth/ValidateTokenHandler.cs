@@ -5,6 +5,7 @@ using System.Security.Claims;
 using WTF.Api.Features.Auth.DTOs;
 using WTF.Api.Services;
 using WTF.Domain.Data;
+using WTF.Domain.Tenancy;
 
 namespace WTF.Api.Features.Auth;
 
@@ -32,7 +33,14 @@ public class ValidateTokenHandler(WTFDbContext db, IJwtService jwtService) : IRe
 
         var user = await db.Users
             .AsNoTracking()
+            .IgnoreQueryFilters()
             .FirstOrDefaultAsync(u => u.Id == userId && u.IsActive, cancellationToken);
+
+        var tokenTenant = principal.FindFirst(TenantDefaults.ClaimType)?.Value;
+        if (user is not null && tokenTenant is not null && !string.Equals(tokenTenant, user.TenantId.ToString(), StringComparison.OrdinalIgnoreCase))
+        {
+            return new ValidateTokenDto(false);
+        }
 
         if (user is null)
         {

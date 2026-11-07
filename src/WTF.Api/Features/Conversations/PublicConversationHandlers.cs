@@ -230,7 +230,7 @@ public class SendPublicMessageHandler(
     /// <summary>The audit log needs a user: a customer's action is recorded under the same system user as their orders.</summary>
     private Task<Guid?> SystemUserIdAsync(CancellationToken cancellationToken) =>
         db.Users.AsNoTracking()
-            .Where(u => u.Username == SubmitPublicOrderHandler.SystemUsername)
+            .Where(u => (u.Username == SubmitPublicOrderHandler.SystemUsername || u.Username.StartsWith(SubmitPublicOrderHandler.SystemUsernamePrefix)))
             .Select(u => (Guid?)u.Id)
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -381,7 +381,7 @@ public class RemovePublicMessageImageHandler(
             entityId: message.ConversationId.ToString(),
             newValues: new { order.OrderNumber, MessageId = message.Id, By = "Customer" },
             userId: await db.Users.AsNoTracking()
-                .Where(u => u.Username == SubmitPublicOrderHandler.SystemUsername)
+                .Where(u => (u.Username == SubmitPublicOrderHandler.SystemUsername || u.Username.StartsWith(SubmitPublicOrderHandler.SystemUsernamePrefix)))
                 .Select(u => (Guid?)u.Id)
                 .FirstOrDefaultAsync(cancellationToken),
             cancellationToken: cancellationToken);

@@ -2000,6 +2000,8 @@ page render the brand; no "WTF" string remains in templates except through the b
 
 ### Phase 3 - Selling to other stores (multi-tenant) [Planned]
 
+**Build status (7 Nov 2026, branch `multi-tenant-phase-1`; the build phases of the separate multi-tenant plan, not the phases of this section):** build phase 1 (Tenants table, `TenantId` columns, filters, stamping) and build phase 2 (enforcement) are done. Phase 2: `tools/sql/20261110_enforce_tenant_id.sql` makes `TenantId` required with foreign keys, per-tenant unique indexes and a per-tenant order counter (`TenantCounters`); `tenant_id` claim in the JWT (old tokens count as the first tenant for one release); hub groups, push, images, reports and chat pictures are prefixed by tenant; raw SQL is tenant-guarded; daily jobs loop over active tenants; the promotion limit gate is one lock per tenant; the POS tags queued offline orders with their shop and clears caches when the shop changes. Scripts to run on the real database, in order: `20261108_add_tenants`, `20261109_backfill_tenant_id`, `20261110_enforce_tenant_id`, then `tools/dbsync.bat`. Not run against a real SQL Server yet.
+
 Goal: a second, third and tenth shop can sign up (or be set up by us) and run on the same deployment, without seeing each
 other.
 

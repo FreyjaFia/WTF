@@ -71,7 +71,7 @@ public class UpdateOrderHandler(
 {
     public async Task<OrderDto?> Handle(UpdateOrderCommand request, CancellationToken cancellationToken)
     {
-        using var gate = await PromotionLimitGate.EnterAsync(cancellationToken);
+        using var gate = await PromotionLimitGate.EnterAsync(db.StampTenantId, cancellationToken);
 
         var order = await db.Orders
             .Include(o => o.OrderItems)
@@ -601,9 +601,9 @@ public class UpdateOrderHandler(
             await db.SaveChangesAsync(cancellationToken);
         }
 
-        await dashboardHub.Clients.Group(HubNames.Groups.DashboardViewers)
+        await dashboardHub.Clients.Group(HubNames.Groups.DashboardViewers(db.StampTenantId))
             .SendAsync(HubNames.Events.DashboardUpdated, cancellationToken);
-        await dashboardHub.Clients.Group(HubNames.Groups.DashboardViewers)
+        await dashboardHub.Clients.Group(HubNames.Groups.DashboardViewers(db.StampTenantId))
             .SendAsync(HubNames.Events.OrderUpdated, order.Id, cancellationToken);
 
         if (isOverride ||

@@ -65,7 +65,7 @@ public sealed class GetStaffPerformanceReportHandler(
             .Select(g => new
             {
                 StaffId = g.Key.CreatedBy,
-                StaffName = g.Key.Username == SubmitPublicOrderHandler.SystemUsername
+                StaffName = (g.Key.Username == SubmitPublicOrderHandler.SystemUsername || g.Key.Username.StartsWith(SubmitPublicOrderHandler.SystemUsernamePrefix))
                     ? CustomerLinkLabel
                     : $"{g.Key.FirstName} {g.Key.LastName}".Trim(),
                 Summary = SalesRules.Summarize(g, overridePrices)

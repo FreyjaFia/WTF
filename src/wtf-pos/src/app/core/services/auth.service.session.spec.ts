@@ -81,6 +81,42 @@ describe('AuthService session', () => {
       expect(refreshed).toHaveBeenCalledTimes(1);
     });
 
+    it('clears the menu, images and cart when another shop signs in on the device, and remembers the new shop', () => {
+      const clearCatalog = vi.spyOn(db.catalog, 'clear').mockResolvedValue(undefined as never);
+      const clearImages = vi.spyOn(db.images, 'clear').mockResolvedValue(undefined as never);
+      const auth = create();
+      localStorage.setItem('wtf-device-tenant', 'aaaaaaaa-0000-0000-0000-000000000001');
+      const access = makeToken({
+        exp: nowSeconds() + 3600,
+        role: AppRoles.Cashier,
+        tenant_id: 'bbbbbbbb-0000-0000-0000-000000000002',
+      });
+
+      capture(auth.login('al', 'pw'));
+      http.expectOne(`${base}/login`).flush({ accessToken: access, refreshToken: 'r1' });
+
+      expect(db.carts.clear).toHaveBeenCalled();
+      expect(clearCatalog).toHaveBeenCalled();
+      expect(clearImages).toHaveBeenCalled();
+      expect(localStorage.getItem('wtf-device-tenant')).toBe('bbbbbbbb-0000-0000-0000-000000000002');
+    });
+
+    it('keeps the local data when the same shop signs in again', () => {
+      const clearCatalog = vi.spyOn(db.catalog, 'clear').mockResolvedValue(undefined as never);
+      const auth = create();
+      localStorage.setItem('wtf-device-tenant', 'bbbbbbbb-0000-0000-0000-000000000002');
+      const access = makeToken({
+        exp: nowSeconds() + 3600,
+        role: AppRoles.Cashier,
+        tenant_id: 'bbbbbbbb-0000-0000-0000-000000000002',
+      });
+
+      capture(auth.login('al', 'pw'));
+      http.expectOne(`${base}/login`).flush({ accessToken: access, refreshToken: 'r1' });
+
+      expect(clearCatalog).not.toHaveBeenCalled();
+    });
+
     it('returns false when the response has no access token', () => {
       const auth = create();
       const result = capture(auth.login('al', 'pw'));
