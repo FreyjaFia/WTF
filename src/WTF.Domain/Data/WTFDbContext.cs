@@ -352,11 +352,11 @@ public partial class WTFDbContext : DbContext
 
             entity.HasIndex(e => e.Name, "IX_Items_Name");
 
-            entity.HasIndex(e => e.Barcode, "UX_Items_Barcode")
+            entity.HasIndex(e => new { e.TenantId, e.Barcode }, "UX_Items_Barcode")
                 .IsUnique()
                 .HasFilter("([Barcode] IS NOT NULL)");
 
-            entity.HasIndex(e => e.Sku, "UX_Items_Sku")
+            entity.HasIndex(e => new { e.TenantId, e.Sku }, "UX_Items_Sku")
                 .IsUnique()
                 .HasFilter("([Sku] IS NOT NULL)");
 
@@ -530,9 +530,9 @@ public partial class WTFDbContext : DbContext
 
             entity.HasIndex(e => e.StatusId, "IX_Orders_StatusId");
 
-            entity.HasIndex(e => e.OrderNumber, "UQ_Orders_OrderNumber").IsUnique();
+            entity.HasIndex(e => new { e.TenantId, e.OrderNumber }, "UQ_Orders_OrderNumber").IsUnique();
 
-            entity.HasIndex(e => e.OfflineLocalId, "UX_Orders_OfflineLocalId")
+            entity.HasIndex(e => new { e.TenantId, e.OfflineLocalId }, "UX_Orders_OfflineLocalId")
                 .IsUnique()
                 .HasFilter("([OfflineLocalId] IS NOT NULL)");
 
@@ -668,7 +668,7 @@ public partial class WTFDbContext : DbContext
 
             entity.HasIndex(e => e.IsAddOn, "IX_Products_IsAddOn");
 
-            entity.HasIndex(e => e.Code, "UX_Products_Code").IsUnique();
+            entity.HasIndex(e => new { e.TenantId, e.Code }, "UX_Products_Code").IsUnique();
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
             entity.Property(e => e.Code).HasMaxLength(10);
@@ -1222,7 +1222,7 @@ public partial class WTFDbContext : DbContext
 
         modelBuilder.Entity<WasteReason>(entity =>
         {
-            entity.HasIndex(e => e.Name, "UX_WasteReasons_Name").IsUnique();
+            entity.HasIndex(e => new { e.TenantId, e.Name }, "UX_WasteReasons_Name").IsUnique();
 
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())", "DF_WasteReasons_CreatedAt");
             entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_WasteReasons_IsActive");

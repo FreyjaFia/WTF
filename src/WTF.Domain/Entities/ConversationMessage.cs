@@ -30,7 +30,7 @@ public partial class ConversationMessage
 
     public DateTime? ImageRemovedAt { get; set; }
 
-    public Guid? TenantId { get; set; }
+    public Guid TenantId { get; set; }
 
     public virtual Conversation Conversation { get; set; } = null!;
 

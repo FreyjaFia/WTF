@@ -22,7 +22,7 @@ public partial class WasteReason
 
     public Guid? UpdatedBy { get; set; }
 
-    public Guid? TenantId { get; set; }
+    public Guid TenantId { get; set; }
 
     public virtual User? CreatedByNavigation { get; set; }
 

@@ -6,7 +6,7 @@ public partial class CustomerImage
 
     public Guid ImageId { get; set; }
 
-    public Guid? TenantId { get; set; }
+    public Guid TenantId { get; set; }
 
     public virtual Customer Customer { get; set; } = null!;
 

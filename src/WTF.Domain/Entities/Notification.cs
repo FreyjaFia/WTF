@@ -28,7 +28,7 @@ public partial class Notification
 
     public string? Data { get; set; }
 
-    public Guid? TenantId { get; set; }
+    public Guid TenantId { get; set; }
 
     public virtual User User { get; set; } = null!;
 }

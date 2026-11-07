@@ -30,7 +30,7 @@ public partial class Product
 
     public decimal SuppliesCost { get; set; }
 
-    public Guid? TenantId { get; set; }
+    public Guid TenantId { get; set; }
 
     public virtual ProductCategory Category { get; set; } = null!;
 

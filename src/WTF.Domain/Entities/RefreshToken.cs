@@ -14,7 +14,7 @@ public partial class RefreshToken
 
     public bool IsRevoked { get; set; }
 
-    public Guid? TenantId { get; set; }
+    public Guid TenantId { get; set; }
 
     public virtual User User { get; set; } = null!;
 }

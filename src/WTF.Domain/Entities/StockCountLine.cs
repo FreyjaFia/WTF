@@ -18,7 +18,7 @@ public partial class StockCountLine
 
     public Guid? MovementId { get; set; }
 
-    public Guid? TenantId { get; set; }
+    public Guid TenantId { get; set; }
 
     public virtual StockCount Count { get; set; } = null!;
 
