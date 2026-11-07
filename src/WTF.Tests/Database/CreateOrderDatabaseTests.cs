@@ -26,7 +26,7 @@ public class CreateOrderDatabaseTests
     };
 
     [SqlFact]
-    public async Task Handle_NewOrders_GetIncreasingOrderNumbersFromTheSequence()
+    public async Task Handle_NewOrders_GetIncreasingOrderNumbersFromTheTenantCounter()
     {
         await using var database = await SqlTestDatabase.CreateAsync();
         var user = await SqlSeed.UserAsync(database);
@@ -45,7 +45,7 @@ public class CreateOrderDatabaseTests
         await using var check = database.CreateContext();
         var numbers = await check.Orders.OrderBy(o => o.OrderNumber).Select(o => o.OrderNumber).ToListAsync();
         numbers.Count.ShouldBe(2);
-        numbers[0].ShouldBe(5); // the model starts OrderNumberSeq at 5
+        numbers[0].ShouldBe(1); // a tenant with no counter yet starts at 1
         numbers[1].ShouldBe(numbers[0] + 1);
     }
 

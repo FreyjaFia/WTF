@@ -145,6 +145,14 @@ describe('OfflineOrderService', () => {
   });
 
   describe('queue', () => {
+    it('marks a queued order with the shop that is signed in', async () => {
+      const service = await create();
+
+      await service.queue(command(), cart, null);
+
+      expect(table.rows[0].tenantId).toBe('00000000-0000-0000-0000-000000000001');
+    });
+
     it('assigns sequential local ids for today and stores a pending order', async () => {
       const service = await create();
 
@@ -247,6 +255,27 @@ describe('OfflineOrderService', () => {
 
   describe('syncAll', () => {
     beforeEach(() => localStorage.setItem('token', 'tok'));
+
+    it('sends only the orders queued for the shop that is signed in, and keeps the others waiting', async () => {
+      const encode = (value: unknown) => btoa(JSON.stringify(value)).replace(/=+$/, '');
+      localStorage.setItem(
+        'token',
+        `${encode({ alg: 'x' })}.${encode({ tenant_id: 'bbbbbbbb-0000-0000-0000-000000000002' })}.sig`,
+      );
+      const service = await create([
+        { localId: 'other-shop', tenantId: 'aaaaaaaa-0000-0000-0000-000000000001', command: command('a') },
+        { localId: 'old-order', command: command('legacy') },
+        { localId: 'mine', tenantId: 'BBBBBBBB-0000-0000-0000-000000000002', command: command('b') },
+      ]);
+      online.set(true);
+
+      await service.syncAll();
+
+      const sent = createBatch.mock.calls[0][0] as { note: string }[];
+      expect(sent.map((c) => c.note)).toEqual(['b']);
+      expect(table.rows.map((r) => r.localId).sort()).toEqual(['old-order', 'other-shop']);
+      expect(service.pendingOrders().map((o) => o.localId)).toEqual([]);
+    });
 
     it('does nothing when not authenticated', async () => {
       localStorage.removeItem('token');

@@ -83,9 +83,9 @@ public class ApproveRejectOrderHandlerTests
         await _audit.Received(1).LogAsync(
             AuditAction.OrderApproved, AuditEntityType.Order, id.ToString(),
             Arg.Any<object?>(), Arg.Any<object?>(), _staffId, Arg.Any<CancellationToken>());
-        await _hub.Clients.Group(HubNames.Groups.DashboardViewers).Received(1)
+        await _hub.Clients.Group(HubNames.Groups.DashboardViewers(null)).Received(1)
             .SendCoreAsync(HubNames.Events.OrderUpdated, Arg.Any<object?[]>(), Arg.Any<CancellationToken>());
-        await _hub.Clients.Group(HubNames.Groups.DashboardViewers).Received(1)
+        await _hub.Clients.Group(HubNames.Groups.DashboardViewers(null)).Received(1)
             .SendCoreAsync(HubNames.Events.DashboardUpdated, Arg.Any<object?[]>(), Arg.Any<CancellationToken>());
     }
 
@@ -201,7 +201,7 @@ public class ApproveRejectOrderHandlerTests
             AuditAction.OrderRejected, AuditEntityType.Order, id.ToString(),
             Arg.Any<object?>(), Arg.Is<object?>(v => v != null && v.ToString()!.Contains("Closed")),
             _staffId, Arg.Any<CancellationToken>());
-        await _hub.Clients.Group(HubNames.Groups.DashboardViewers).Received(1)
+        await _hub.Clients.Group(HubNames.Groups.DashboardViewers(null)).Received(1)
             .SendCoreAsync(HubNames.Events.OrderUpdated, Arg.Any<object?[]>(), Arg.Any<CancellationToken>());
     }
 
@@ -349,7 +349,7 @@ public class ApproveRejectOrderHandlerTests
         await _audit.Received(1).LogAsync(
             AuditAction.OrderMarkedReady, AuditEntityType.Order, id.ToString(),
             Arg.Any<object?>(), Arg.Any<object?>(), _staffId, Arg.Any<CancellationToken>());
-        await _hub.Clients.Group(HubNames.Groups.DashboardViewers).Received(1)
+        await _hub.Clients.Group(HubNames.Groups.DashboardViewers(null)).Received(1)
             .SendCoreAsync(HubNames.Events.OrderUpdated, Arg.Any<object?[]>(), Arg.Any<CancellationToken>());
     }
 

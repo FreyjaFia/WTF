@@ -11,4 +11,6 @@ public sealed class TenancyOptions
     public string Mode { get; set; } = SingleMode;
 
     public bool IsMulti => string.Equals(Mode, MultiMode, StringComparison.OrdinalIgnoreCase);
+
+    public bool LegacyTokensAreDefaultTenant { get; set; } = true;
 }

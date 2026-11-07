@@ -96,7 +96,7 @@ public class CreateOrderHandler(
 {
     public async Task<OrderDto> Handle(CreateOrderCommand request, CancellationToken cancellationToken)
     {
-        using var gate = request.GateHeld ? null : await PromotionLimitGate.EnterAsync(cancellationToken);
+        using var gate = request.GateHeld ? null : await PromotionLimitGate.EnterAsync(db.StampTenantId, cancellationToken);
 
         var userId = request.ActorUserId ?? httpContextAccessor.HttpContext!.User.GetUserId();
         var held = request.HeldReasons is { Count: > 0 };
@@ -470,9 +470,9 @@ public class CreateOrderHandler(
                 cancellationToken)
             : StockDeductionResult.None;
 
-        await dashboardHub.Clients.Group(HubNames.Groups.DashboardViewers)
+        await dashboardHub.Clients.Group(HubNames.Groups.DashboardViewers(db.StampTenantId))
             .SendAsync(HubNames.Events.DashboardUpdated, cancellationToken);
-        await dashboardHub.Clients.Group(HubNames.Groups.DashboardViewers)
+        await dashboardHub.Clients.Group(HubNames.Groups.DashboardViewers(db.StampTenantId))
             .SendAsync(HubNames.Events.OrderUpdated, order.Id, cancellationToken);
         // Staff without the dashboard permission watch the orders list through the orders hub.
         await conversationNotifier.OrderChangedAsync(order, null, cancellationToken);

@@ -17,7 +17,7 @@ public class CreateOrderBatchHandler(WTFDbContext db, ISender sender)
             return [];
         }
 
-        using var gate = await PromotionLimitGate.EnterAsync(cancellationToken);
+        using var gate = await PromotionLimitGate.EnterAsync(db.StampTenantId, cancellationToken);
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
 
         var results = new List<OrderDto>(request.Orders.Count);

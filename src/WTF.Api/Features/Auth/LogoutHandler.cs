@@ -13,12 +13,15 @@ public class LogoutHandler(WTFDbContext db, IAuditService auditService) : IReque
     public async Task<bool> Handle(LogoutCommand request, CancellationToken cancellationToken)
     {
         var refreshToken = await db.RefreshTokens
+            .IgnoreQueryFilters()
             .FirstOrDefaultAsync(rt => rt.Token == request.RefreshToken, cancellationToken);
 
         if (refreshToken is null)
         {
             return false;
         }
+
+        db.UseTenant(refreshToken.TenantId);
 
         refreshToken.IsRevoked = true;
         await db.SaveChangesAsync(cancellationToken);

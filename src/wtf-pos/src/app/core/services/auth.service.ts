@@ -7,6 +7,12 @@ import { LoginDto, MeDto } from '@shared/models';
 import { BehaviorSubject, Observable, Subject, throwError } from 'rxjs';
 import { catchError, finalize, map, shareReplay, tap } from 'rxjs/operators';
 import { db } from './db';
+import {
+  currentTenantId,
+  DEFAULT_TENANT_ID,
+  readDeviceTenantId,
+  saveDeviceTenantId,
+} from './tenant-context';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -54,6 +60,7 @@ export class AuthService {
             localStorage.setItem('refreshToken', res.refreshToken);
           }
 
+          this.clearLocalDataWhenTheShopChanged();
           this._isLoggedIn.next(true);
           this.syncRolesFromToken();
           this.tokenRefreshedSubject.next();
@@ -153,6 +160,19 @@ export class AuthService {
 
   public notifyMeUpdated(): void {
     this.meRefreshSubject.next();
+  }
+
+  private clearLocalDataWhenTheShopChanged(): void {
+    const tenantId = currentTenantId();
+    const previous = readDeviceTenantId() ?? DEFAULT_TENANT_ID;
+
+    if (previous !== tenantId) {
+      // Another shop signed in on this device: its menu, prices, images and cart must never show here.
+      // Orders still waiting to sync stay queued, marked with their own shop, and only that shop's login sends them.
+      void Promise.all([db.carts.clear(), db.catalog.clear(), db.images.clear()]);
+    }
+
+    saveDeviceTenantId(tenantId);
   }
 
   public logout(): void {

@@ -14,13 +14,13 @@ public class StaffOrderHub : Hub
 {
     public override async Task OnConnectedAsync()
     {
-        await Groups.AddToGroupAsync(Context.ConnectionId, HubNames.Groups.StaffOrders);
+        await Groups.AddToGroupAsync(Context.ConnectionId, HubNames.Groups.StaffOrders(HubNames.Groups.TenantOf(Context.User)));
         await base.OnConnectedAsync();
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        await Groups.RemoveFromGroupAsync(Context.ConnectionId, HubNames.Groups.StaffOrders);
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, HubNames.Groups.StaffOrders(HubNames.Groups.TenantOf(Context.User)));
         await base.OnDisconnectedAsync(exception);
     }
 }

@@ -217,7 +217,7 @@ public class VoidOrderHandlerTests
 
         await Handler().Handle(new VoidOrderCommand(orderId, "refund"), CancellationToken.None);
 
-        var group = _hub.Clients.Group(HubNames.Groups.DashboardViewers);
+        var group = _hub.Clients.Group(HubNames.Groups.DashboardViewers(null));
         await group.Received(1).SendCoreAsync(HubNames.Events.DashboardUpdated, Arg.Any<object?[]>(), Arg.Any<CancellationToken>());
         await group.Received(1).SendCoreAsync(
             HubNames.Events.OrderUpdated, Arg.Is<object?[]>(a => a.Length == 1 && (Guid)a[0]! == orderId), Arg.Any<CancellationToken>());

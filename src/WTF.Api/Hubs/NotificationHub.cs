@@ -21,7 +21,7 @@ public class NotificationHub(IAuthorizationService authorization) : Hub
         var stock = await authorization.AuthorizeAsync(user, AppPolicies.StockMovementsRead);
         if (stock.Succeeded)
         {
-            await Groups.AddToGroupAsync(Context.ConnectionId, HubNames.Groups.StockViewers);
+            await Groups.AddToGroupAsync(Context.ConnectionId, HubNames.Groups.StockViewers(HubNames.Groups.TenantOf(user)));
         }
 
         await base.OnConnectedAsync();

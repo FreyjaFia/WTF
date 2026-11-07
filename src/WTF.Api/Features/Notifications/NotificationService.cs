@@ -99,7 +99,7 @@ public sealed class NotificationService(
     {
         try
         {
-            await hub.Clients.Group(HubNames.Groups.StockViewers)
+            await hub.Clients.Group(HubNames.Groups.StockViewers(db.StampTenantId))
                 .SendAsync(HubNames.Events.StockChanged, itemId, cancellationToken);
         }
         catch (Exception)

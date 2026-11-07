@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using WTF.Domain.Data;
 using WTF.Domain.Entities;
 using WTF.Domain.Tenancy;
 using WTF.Tests.Infrastructure;
@@ -128,7 +127,7 @@ public class TenantIsolationTests
         db.AddOnTypes.Add(new AddOnType { Id = 1, Name = "x" });
         await db.SaveChangesAsync();
 
-        (await db.AddOnTypes.SingleAsync()).TenantId.ShouldBeNull();
+        (await db.AddOnTypes.SingleAsync()).TenantId.ShouldBe(Guid.Empty);
     }
 
     private sealed class FakeTenant(bool filterEnabled, Guid? tenantId, Guid? stampTenantId = null) : ICurrentTenant

@@ -38,6 +38,7 @@ public static class PushNotificationEndpoints
                 }
 
                 var userId = httpContext.User.GetUserId();
+                var deviceTenantId = db.StampTenantId ?? throw new InvalidOperationException("A device cannot be registered without a tenant.");
                 var now = DateTime.UtcNow;
                 var normalizedToken = request.Token.Trim();
                 var normalizedPlatform = request.Platform.Trim().ToLowerInvariant();
@@ -69,9 +70,11 @@ public static class PushNotificationEndpoints
                 }
 
                 var updated = await db.PushNotificationTokens
+                    .IgnoreQueryFilters()
                     .Where(t => t.Token == normalizedToken)
                     .ExecuteUpdateAsync(setters => setters
                         .SetProperty(t => t.UserId, userId)
+                        .SetProperty(t => t.TenantId, deviceTenantId)
                         .SetProperty(t => t.Platform, normalizedPlatform)
                         .SetProperty(t => t.DeviceId, deviceId)
                         .SetProperty(t => t.IsActive, true)
@@ -99,9 +102,11 @@ public static class PushNotificationEndpoints
                     catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
                     {
                         await db.PushNotificationTokens
+                            .IgnoreQueryFilters()
                             .Where(t => t.Token == normalizedToken)
                             .ExecuteUpdateAsync(setters => setters
                                 .SetProperty(t => t.UserId, userId)
+                                .SetProperty(t => t.TenantId, deviceTenantId)
                                 .SetProperty(t => t.Platform, normalizedPlatform)
                                 .SetProperty(t => t.DeviceId, deviceId)
                                 .SetProperty(t => t.IsActive, true)

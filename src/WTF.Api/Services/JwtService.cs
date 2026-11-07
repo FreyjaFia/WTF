@@ -4,6 +4,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using WTF.Domain.Entities;
+using WTF.Domain.Tenancy;
 
 namespace WTF.Api.Services
 {
@@ -36,6 +37,11 @@ namespace WTF.Api.Services
                 new(ClaimTypes.Role, role),
                 new("role", role)
             };
+
+            if (user.TenantId != Guid.Empty)
+            {
+                claims.Add(new Claim(TenantDefaults.ClaimType, user.TenantId.ToString()));
+            }
 
             var token = new JwtSecurityToken(
                 issuer: _issuer,

@@ -44,6 +44,8 @@ export interface CachedImage {
 export interface PendingOrder {
   id?: number;
   localId: string;
+  /** The shop the sale was made for. A queued order is only ever sent with that shop's login; none means the first shop. */
+  tenantId?: string;
   command: CreateOrderCommand;
   cartSnapshot: CartItemDto[];
   /**

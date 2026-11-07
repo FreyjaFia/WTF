@@ -20,6 +20,7 @@ public class LoginHandler(
     public async Task<LoginDto> Handle(LoginCommand request, CancellationToken cancellationToken)
     {
         var user = await db.Users
+            .IgnoreQueryFilters()
             .Include(u => u.UserImage)
                 .ThenInclude(ui => ui!.Image)
             .FirstOrDefaultAsync(u => u.Username == request.Username && u.IsActive, cancellationToken);
@@ -33,6 +34,8 @@ public class LoginHandler(
         {
             return null!;
         }
+
+        db.UseTenant(user.TenantId);
 
         var role = await userRoleService.GetRoleNameAsync(user.Id, cancellationToken);
         var accessToken = jwtService.GenerateAccessToken(user, role);

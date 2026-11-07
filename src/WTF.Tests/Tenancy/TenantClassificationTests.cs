@@ -7,13 +7,14 @@ namespace WTF.Tests.Tenancy;
 
 public class TenantClassificationTests
 {
-    // Tables shared by every tenant. A new entity must be added here on purpose, or be tenant-owned.
+    // Tables shared by every tenant (TenantCounter has a TenantId key but is never filtered: it is only read by the order number allocator). A new entity must be added here on purpose, or be tenant-owned.
     private static readonly HashSet<Type> GlobalEntities =
     [
         typeof(PaymentMethod),
         typeof(SchemaScriptHistory),
         typeof(Status),
         typeof(Tenant),
+        typeof(TenantCounter),
         typeof(UserRole),
     ];
 
@@ -48,7 +49,7 @@ public class TenantClassificationTests
     {
         using var db = TestDb.Create();
 
-        foreach (var type in GlobalEntities)
+        foreach (var type in GlobalEntities.Where(t => t != typeof(TenantCounter)))
         {
             db.Model.FindEntityType(type)!.FindProperty("TenantId").ShouldBeNull(type.Name);
         }

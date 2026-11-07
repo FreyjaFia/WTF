@@ -69,6 +69,25 @@ public class TenantIsolationDatabaseTests
         (await all.Customers.SingleAsync(c => c.FirstName == "Ana")).LastName.ShouldBe("Test");
     }
 
+    [SqlFact]
+    public async Task Multi_EachTenantNumbersItsOrdersFromOne_AndTheSameNumberIsAllowedInTwoTenants()
+    {
+        await using var database = await SqlTestDatabase.CreateAsync();
+        var user = await SqlSeed.UserAsync(database);
+
+        foreach (var tenant in new[] { TenantA, TenantB, TenantA })
+        {
+            await using var db = database.CreateContext(new Tenant(tenant));
+            db.Orders.Add(new Order { Id = Guid.NewGuid(), StatusId = 1, CreatedAt = DateTime.UtcNow, CreatedBy = user.Id });
+            await db.SaveChangesAsync();
+        }
+
+        await using var all = database.CreateContext();
+        var numbers = await all.Orders.OrderBy(o => o.CreatedAt).Select(o => new { o.TenantId, o.OrderNumber }).ToListAsync();
+        numbers.Where(n => n.TenantId == TenantA).Select(n => n.OrderNumber).ShouldBe([1, 2]);
+        numbers.Where(n => n.TenantId == TenantB).Select(n => n.OrderNumber).ShouldBe([1]);
+    }
+
     private static Customer NewCustomer(string first, Guid userId) => new()
     {
         Id = Guid.NewGuid(),

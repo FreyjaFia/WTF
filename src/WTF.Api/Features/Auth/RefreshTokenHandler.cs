@@ -14,6 +14,7 @@ public class RefreshTokenHandler(WTFDbContext db, IJwtService jwtService, IUserR
     public async Task<LoginDto?> Handle(RefreshTokenCommand request, CancellationToken cancellationToken)
     {
         var refreshToken = await db.RefreshTokens
+            .IgnoreQueryFilters()
             .Include(rt => rt.User)
                 .ThenInclude(u => u.UserImage)
                     .ThenInclude(ui => ui!.Image)
@@ -23,6 +24,8 @@ public class RefreshTokenHandler(WTFDbContext db, IJwtService jwtService, IUserR
         {
             return null;
         }
+
+        db.UseTenant(refreshToken.TenantId);
 
         refreshToken.IsRevoked = true;
 

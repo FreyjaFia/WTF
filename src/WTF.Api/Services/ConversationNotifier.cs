@@ -42,7 +42,7 @@ public sealed class ConversationNotifier(
     {
         return Safely("message", async () =>
         {
-            await staffHub.Clients.Group(HubNames.Groups.StaffOrders)
+            await staffHub.Clients.Group(HubNames.Groups.StaffOrders(order.TenantId))
                 .SendAsync(HubNames.Events.OrderMessageReceived, conversation.Id, order.Id, cancellationToken);
 
             if (order.CustomerId.HasValue)
@@ -65,7 +65,7 @@ public sealed class ConversationNotifier(
         return Safely("read", async () =>
         {
             // Other staff share the inbox, so their badges change whoever read it.
-            await staffHub.Clients.Group(HubNames.Groups.StaffOrders)
+            await staffHub.Clients.Group(HubNames.Groups.StaffOrders(order.TenantId))
                 .SendAsync(HubNames.Events.ConversationRead, conversation.Id, order.Id, cancellationToken);
 
             // When the customer read the shop's replies, their other open pages (another tab or device) clear too.
@@ -81,11 +81,11 @@ public sealed class ConversationNotifier(
     {
         return Safely("order change", async () =>
         {
-            await staffHub.Clients.Group(HubNames.Groups.StaffOrders)
+            await staffHub.Clients.Group(HubNames.Groups.StaffOrders(order.TenantId))
                 .SendAsync(HubNames.Events.OrderStatusChanged, order.Id, cancellationToken);
             if (systemMessageConversation != null)
             {
-                await staffHub.Clients.Group(HubNames.Groups.StaffOrders)
+                await staffHub.Clients.Group(HubNames.Groups.StaffOrders(order.TenantId))
                     .SendAsync(HubNames.Events.OrderMessageReceived, systemMessageConversation.Id, order.Id, cancellationToken);
             }
 

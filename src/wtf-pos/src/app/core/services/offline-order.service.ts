@@ -8,6 +8,7 @@ import {
 } from '@shared/models';
 import { firstValueFrom, timeout } from 'rxjs';
 import { db } from './db';
+import { currentTenantId, tenantOfQueuedOrder } from './tenant-context';
 import type { PendingOrder } from './db';
 
 @Injectable({ providedIn: 'root' })
@@ -100,6 +101,7 @@ export class OfflineOrderService {
 
     const pendingOrder: PendingOrder = {
       localId,
+      tenantId: currentTenantId(),
       command,
       cartSnapshot,
       previewTotal,
@@ -191,10 +193,11 @@ export class OfflineOrderService {
     this._isSyncing.set(true);
 
     try {
-      const orders = await db.pendingOrders
-        .where('status')
-        .anyOf(['pending', 'failed'])
-        .sortBy('createdAt');
+      const tenantId = currentTenantId();
+      // Orders queued for another shop wait on the device until that shop signs in again; they are never sent as this one.
+      const orders = (
+        await db.pendingOrders.where('status').anyOf(['pending', 'failed']).sortBy('createdAt')
+      ).filter((order) => tenantOfQueuedOrder(order) === tenantId);
       const batches = this.chunkOrders(orders, OfflineOrderService.SYNC_BATCH_SIZE);
 
       let successCount = 0;
@@ -291,7 +294,8 @@ export class OfflineOrderService {
 
   private async loadPendingOrders(): Promise<void> {
     const orders = await db.pendingOrders.toArray();
-    this._pendingOrders.set(orders);
+    const tenantId = currentTenantId();
+    this._pendingOrders.set(orders.filter((order) => tenantOfQueuedOrder(order) === tenantId));
     this.updateLocalCounter(orders);
   }
 
@@ -334,7 +338,8 @@ export class OfflineOrderService {
   }
 
   public async getPendingSyncCount(): Promise<number> {
-    return db.pendingOrders.count();
+    const tenantId = currentTenantId();
+    return (await db.pendingOrders.toArray()).filter((order) => tenantOfQueuedOrder(order) === tenantId).length;
   }
 
   private async applySyncResults(

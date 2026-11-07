@@ -32,11 +32,14 @@ internal static class StockBalance
             SET CurrentQuantity = CurrentQuantity + @delta
             OUTPUT INSERTED.CurrentQuantity AS [Value]
             WHERE Id = @itemId
+              AND (@filter = 0 OR TenantId = @tenant)
               AND (@force = 1 OR AllowNegativeStock = 1 OR @delta >= 0 OR CurrentQuantity + @delta >= 0)
             """,
             new SqlParameter("@delta", SqlDbType.Decimal) { Precision = 18, Scale = 3, Value = delta },
             new SqlParameter("@itemId", itemId),
-            new SqlParameter("@force", allowBelowZero ? 1 : 0)).ToListAsync(cancellationToken);
+            new SqlParameter("@force", allowBelowZero ? 1 : 0),
+            new SqlParameter("@filter", db.TenantFilterEnabled ? 1 : 0),
+            new SqlParameter("@tenant", SqlDbType.UniqueIdentifier) { Value = (object?)db.StampTenantId ?? DBNull.Value }).ToListAsync(cancellationToken);
 
         if (updated.Count == 0)
         {

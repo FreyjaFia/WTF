@@ -23,9 +23,11 @@ public static class OrderLinkAccess
             return null;
         }
 
-        var link = await db.ShortLinks.FirstOrDefaultAsync(
-            l => l.Token == token && l.TargetType == OrderLinkToken.TargetType,
-            cancellationToken);
+        var link = await db.ShortLinks
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(
+                l => l.Token == token && l.TargetType == OrderLinkToken.TargetType,
+                cancellationToken);
 
         // SQL Server compares text without regard to case by default, but tokens are case sensitive.
         if (link == null
@@ -36,6 +38,9 @@ public static class OrderLinkAccess
         {
             return null;
         }
+
+        // The link is a global secret; the tenant comes from the link row, never from the visitor.
+        db.UseTenant(link.TenantId);
 
         var customer = await db.Customers.FirstOrDefaultAsync(c => c.Id == link.TargetId.Value, cancellationToken);
         if (customer == null || !customer.IsActive || !customer.AllowOrderingLink)
