@@ -22,6 +22,8 @@ public partial class ShortLink
 
     public DateTime? LastUsedAt { get; set; }
 
+    public Guid? TenantId { get; set; }
+
     public virtual User? CreatedByNavigation { get; set; }
 
     public virtual ICollection<Order> Orders { get; set; } = new List<Order>();

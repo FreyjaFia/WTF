@@ -22,6 +22,8 @@ public partial class WasteReason
 
     public Guid? UpdatedBy { get; set; }
 
+    public Guid? TenantId { get; set; }
+
     public virtual User? CreatedByNavigation { get; set; }
 
     public virtual ICollection<StockWaste> StockWastes { get; set; } = new List<StockWaste>();

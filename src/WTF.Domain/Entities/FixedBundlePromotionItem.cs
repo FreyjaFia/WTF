@@ -10,6 +10,8 @@ public partial class FixedBundlePromotionItem
 
     public int Quantity { get; set; }
 
+    public Guid? TenantId { get; set; }
+
     public virtual FixedBundlePromotion FixedBundlePromotion { get; set; } = null!;
 
     public virtual ICollection<FixedBundlePromotionItemAddOn> FixedBundlePromotionItemAddOns { get; set; } = new List<FixedBundlePromotionItemAddOn>();

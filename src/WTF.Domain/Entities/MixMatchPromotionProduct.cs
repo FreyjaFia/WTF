@@ -8,6 +8,8 @@ public partial class MixMatchPromotionProduct
 
     public Guid ProductId { get; set; }
 
+    public Guid? TenantId { get; set; }
+
     public virtual MixMatchPromotion MixMatchPromotion { get; set; } = null!;
 
     public virtual ICollection<MixMatchPromotionProductAddOn> MixMatchPromotionProductAddOns { get; set; } = new List<MixMatchPromotionProductAddOn>();

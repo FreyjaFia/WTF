@@ -8,5 +8,7 @@ public partial class LoyaltyPoint
 
     public int Points { get; set; }
 
+    public Guid? TenantId { get; set; }
+
     public virtual Customer Customer { get; set; } = null!;
 }

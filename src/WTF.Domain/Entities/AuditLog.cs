@@ -20,5 +20,7 @@ public partial class AuditLog
 
     public DateTime Timestamp { get; set; }
 
+    public Guid? TenantId { get; set; }
+
     public virtual User User { get; set; } = null!;
 }

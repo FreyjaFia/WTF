@@ -14,6 +14,8 @@ public partial class ItemPriceHistory
 
     public Guid UpdatedBy { get; set; }
 
+    public Guid? TenantId { get; set; }
+
     public virtual Item Item { get; set; } = null!;
 
     public virtual User UpdatedByNavigation { get; set; } = null!;

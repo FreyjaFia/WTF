@@ -24,6 +24,8 @@ public partial class User
 
     public Guid? UpdatedBy { get; set; }
 
+    public Guid? TenantId { get; set; }
+
     public virtual ICollection<AuditLog> AuditLogs { get; set; } = new List<AuditLog>();
 
     public virtual ICollection<ConversationMessage> ConversationMessages { get; set; } = new List<ConversationMessage>();

@@ -12,6 +12,8 @@ public partial class OrderBundlePromotion
 
     public decimal UnitPrice { get; set; }
 
+    public Guid? TenantId { get; set; }
+
     public virtual Order Order { get; set; } = null!;
 
     public virtual Promotion Promotion { get; set; } = null!;

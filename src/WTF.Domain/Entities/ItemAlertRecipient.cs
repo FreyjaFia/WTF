@@ -14,6 +14,8 @@ public partial class ItemAlertRecipient
 
     public Guid CreatedBy { get; set; }
 
+    public Guid? TenantId { get; set; }
+
     public virtual User CreatedByNavigation { get; set; } = null!;
 
     public virtual Item Item { get; set; } = null!;
