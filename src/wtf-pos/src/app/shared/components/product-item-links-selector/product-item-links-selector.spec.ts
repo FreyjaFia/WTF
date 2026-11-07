@@ -1,6 +1,7 @@
+import { ProductCategoryEnum } from '@app/testing/catalog-ids';
 import { TestBed } from '@angular/core/testing';
 import { AlertService, InventoryService, ModalStackService, ProductService } from '@core/services';
-import { ItemDto, ProductCategoryEnum, ProductDto, ProductItemLinkDto } from '@shared/models';
+import { ItemDto, ProductDto, ProductItemLinkDto } from '@shared/models';
 import { of, Subject, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProductItemLinksSelectorComponent } from './product-item-links-selector';

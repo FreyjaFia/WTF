@@ -25,7 +25,7 @@ export const ROUTES = {
   report: (slug: string): string => `/management/reports?report=${slug}`,
   auditLogs: '/management/audit-logs',
   schemaScripts: '/management/schema-scripts',
-  wasteReasons: '/management/waste-reasons',
+  wasteReasons: '/management/setup/waste-reasons',
   expenses: '/management/expenses',
   shop: (token: string): string => `/shop/${token}`,
   shopOrders: (token: string): string => `/shop/${token}/orders`,

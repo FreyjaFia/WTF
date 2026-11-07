@@ -1,13 +1,39 @@
 <div class="flex h-full flex-col pt-4 md:pt-0">
-  <div class="mb-4 flex shrink-0 items-start justify-between gap-3 sm:mb-6">
-    <div class="min-w-0">
-      <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Waste Reasons</h1>
-      <p class="text-xs text-gray-500 sm:text-sm">
-        The reasons staff choose when they record waste
-      </p>
+  <div class="mb-4 flex shrink-0 flex-col gap-3 sm:mb-6">
+    <div class="flex items-start justify-between gap-3">
+      <div class="flex min-w-0 items-start gap-4">
+        @if (backRoute(); as back) {
+          <a
+            draggable="false"
+            class="app-btn app-btn-ghost mt-1 shrink-0 p-2"
+            [routerLink]="back"
+            aria-label="Go back"
+            title="Back"
+            data-testid="setup-back"
+          >
+            <app-icon name="icon-back" [class]="'h-5 w-5 text-gray-600'" />
+          </a>
+        }
+        <div class="flex min-w-0 flex-col gap-1">
+          <h1 class="shrink-0 text-xl font-bold text-gray-900 sm:text-2xl">Waste Reasons</h1>
+          <p class="text-xs text-gray-500 sm:text-sm">
+            The reasons staff choose when they record waste
+          </p>
+        </div>
+      </div>
+      <button
+        type="button"
+        class="app-btn app-btn-primary app-btn-sm"
+        data-testid="add-waste-reason"
+        (click)="openAdd()"
+      >
+        <app-icon name="icon-plus" [class]="'h-4 w-4'" />
+        Add Reason
+      </button>
     </div>
-    <div class="flex shrink-0 items-center gap-2">
-      @if (!isAndroid) {
+
+    @if (!isAndroid) {
+      <div class="ml-auto flex items-center justify-end gap-2">
         <button
           class="app-btn app-btn-ghost p-2"
           [class.opacity-70]="isRefreshing()"
@@ -18,20 +44,14 @@
         >
           <app-icon
             name="icon-refresh"
-            [class]="isRefreshing() ? 'h-5 w-5 animate-spin text-gray-600' : 'h-5 w-5 text-gray-600'"
+            [class]="
+              isRefreshing() ? 'h-5 w-5 animate-spin text-gray-600' : 'h-5 w-5 text-gray-600'
+            "
             [fill]="'currentColor'"
           />
         </button>
-      }
-      <button
-        type="button"
-        class="app-btn app-btn-primary app-btn-sm"
-        data-testid="add-waste-reason"
-        (click)="openAdd()"
-      >
-        Add Reason
-      </button>
-    </div>
+      </div>
+    }
   </div>
 
   @if (isLoading()) {
@@ -40,8 +60,10 @@
     </div>
   } @else {
     <app-pull-to-refresh [refreshing]="isRefreshing()" (refreshTriggered)="refresh()">
-      @if (sortedReasons().length === 0) {
-        <div class="rounded-lg bg-surface p-8 text-center shadow-lg">
+      @if (connectionFailed()) {
+        <app-connection-error />
+      } @else if (sortedReasons().length === 0) {
+        <div class="bg-surface rounded-lg p-8 text-center shadow-lg">
           <div class="mb-3 flex justify-center">
             <app-icon name="icon-tag" [class]="'h-12 w-12 opacity-60'" />
           </div>
@@ -49,57 +71,137 @@
           <p class="text-sm text-gray-500">Add a reason so waste can be recorded.</p>
         </div>
       } @else {
-        <ul class="space-y-2 pb-4" data-testid="waste-reason-list">
-          @for (reason of sortedReasons(); track reason.id) {
-            <li
-              class="flex flex-col gap-3 rounded-lg bg-surface p-4 shadow sm:flex-row sm:items-center"
-              [class.opacity-70]="!reason.isActive"
+        <div class="space-y-2 pb-4 lg:space-y-3">
+          <div
+            class="bg-surface sticky top-0 z-10 mb-2 hidden grid-cols-12 gap-4 rounded-lg px-4 py-3 lg:grid"
+          >
+            <app-sort-header
+              class="col-span-4"
+              label="Name"
+              align="start"
+              [active]="sortColumn() === 'name'"
+              [direction]="sortDirection()"
+              (sorted)="toggleSort('name')"
+            />
+            <app-sort-header
+              class="col-span-2"
+              label="Status"
+              align="center"
+              [active]="sortColumn() === 'status'"
+              [direction]="sortDirection()"
+              (sorted)="toggleSort('status')"
+            />
+            <div
+              class="col-span-3 text-center text-xs font-semibold tracking-wider text-gray-600 uppercase"
             >
-              <div class="min-w-0 flex-1">
-                <p class="font-semibold wrap-break-word text-gray-900">{{ reason.name }}</p>
-                <div class="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-gray-500">
+              Rules
+            </div>
+            <app-sort-header
+              class="col-span-2"
+              label="Order"
+              align="center"
+              [active]="sortColumn() === 'order'"
+              [direction]="sortDirection()"
+              (sorted)="toggleSort('order')"
+            />
+            <div class="col-span-1"></div>
+          </div>
+          <ul class="space-y-2 lg:space-y-3" data-testid="waste-reason-list">
+            @for (reason of sortedReasons(); track reason.id; let last = $last) {
+              <li
+                class="bg-surface relative flex items-center gap-3 rounded-xl border border-gray-100 px-4 py-3 shadow-sm transition-shadow duration-200 focus-within:z-30 hover:z-10 hover:shadow-md lg:grid lg:grid-cols-12 lg:gap-4 lg:border-0 lg:px-4 lg:py-4 lg:shadow-lg lg:hover:shadow-xl"
+                [class.opacity-70]="!reason.isActive"
+              >
+                <div class="min-w-0 flex-1 lg:col-span-4 lg:flex-none">
+                  <p class="font-semibold wrap-break-word text-gray-900">{{ reason.name }}</p>
+                  <div
+                    class="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-gray-500 lg:hidden"
+                  >
+                    <app-badge [variant]="reason.isActive ? 'success' : 'default'">
+                      {{ reason.isActive ? 'Active' : 'Inactive' }}
+                    </app-badge>
+                    @if (reason.isSystem) {
+                      <app-badge variant="info">Built-in</app-badge>
+                    }
+                    @if (reason.requiresNote) {
+                      <app-badge variant="amber">Note required</app-badge>
+                    }
+                    <span>Order {{ reason.sortOrder }}</span>
+                  </div>
+                </div>
+                <div class="hidden lg:col-span-2 lg:flex lg:justify-center">
                   <app-badge [variant]="reason.isActive ? 'success' : 'default'">
                     {{ reason.isActive ? 'Active' : 'Inactive' }}
                   </app-badge>
+                </div>
+                <div
+                  class="hidden flex-wrap items-center justify-center gap-1.5 lg:col-span-3 lg:flex"
+                >
                   @if (reason.isSystem) {
                     <app-badge variant="info">Built-in</app-badge>
                   }
                   @if (reason.requiresNote) {
                     <app-badge variant="amber">Note required</app-badge>
                   }
-                  <span>Order {{ reason.sortOrder }}</span>
                 </div>
-              </div>
-              <div class="flex shrink-0 flex-wrap gap-2">
-                <button
-                  type="button"
-                  class="app-btn app-btn-secondary app-btn-sm"
-                  (click)="openEdit(reason)"
-                >
-                  Edit
-                </button>
-                @if (reason.isActive && !reason.isSystem) {
-                  <button
-                    type="button"
-                    class="app-btn app-btn-outline-danger app-btn-sm"
-                    (click)="openDeactivate(reason)"
-                  >
-                    Turn Off
-                  </button>
-                }
-                @if (!reason.isActive) {
-                  <button
-                    type="button"
-                    class="app-btn app-btn-accent-outline app-btn-sm"
-                    (click)="openRestore(reason)"
-                  >
-                    Restore
-                  </button>
-                }
-              </div>
-            </li>
-          }
-        </ul>
+                <div class="hidden text-center text-sm text-gray-700 lg:col-span-2 lg:block">
+                  {{ reason.sortOrder }}
+                </div>
+                <div class="shrink-0 lg:col-span-1 lg:flex lg:justify-end" role="presentation">
+                  <div class="dropdown dropdown-end" [class.dropdown-top]="last">
+                    <button
+                      type="button"
+                      class="app-btn app-btn-ghost p-1.5"
+                      tabindex="0"
+                      aria-label="Reason actions"
+                    >
+                      <app-icon
+                        name="icon-ellipsis-vertical"
+                        [class]="'h-5 w-5 text-gray-600'"
+                        [fill]="'currentColor'"
+                      />
+                    </button>
+                    <ul
+                      tabindex="0"
+                      class="dropdown-content menu bg-base-100 rounded-box z-50 w-52 p-2 shadow"
+                    >
+                      <li>
+                        <button type="button" class="app-menu-item" (click)="openEdit(reason)">
+                          <app-icon name="icon-edit" [class]="'h-4 w-4 text-gray-600'" />
+                          Edit
+                        </button>
+                      </li>
+                      @if (reason.isActive && !reason.isSystem) {
+                        <li>
+                          <button
+                            type="button"
+                            class="app-menu-item-danger"
+                            (click)="openDeactivate(reason)"
+                          >
+                            <app-icon name="icon-delete" [class]="'h-4 w-4 text-red-600'" />
+                            Turn Off
+                          </button>
+                        </li>
+                      }
+                      @if (!reason.isActive) {
+                        <li>
+                          <button
+                            type="button"
+                            class="app-menu-item-success"
+                            (click)="openRestore(reason)"
+                          >
+                            <app-icon name="icon-refresh" [class]="'text-brand-ink h-4 w-4'" />
+                            Restore
+                          </button>
+                        </li>
+                      }
+                    </ul>
+                  </div>
+                </div>
+              </li>
+            }
+          </ul>
+        </div>
       }
     </app-pull-to-refresh>
   }

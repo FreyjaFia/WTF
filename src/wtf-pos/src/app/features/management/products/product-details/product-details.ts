@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { AlertService, AuthService, ModalStackService, ProductService } from '@core/services';
+import { AlertService, AuthService, CatalogLookupService, ModalStackService, ProductService } from '@core/services';
 import {
   AvatarComponent,
   BadgeComponent,
@@ -13,11 +13,8 @@ import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confir
 import {
   ADD_ON_TYPE_ORDER,
   AddOnGroupDto,
-  PRODUCT_SUB_CATEGORY_LABELS,
-  ProductCategoryEnum,
   ProductDto,
   ProductPriceHistoryDto,
-  ProductSubCategoryEnum,
 } from '@shared/models';
 import { AppRoutes } from '@shared/constants/app-routes';
 
@@ -40,6 +37,7 @@ import { AppRoutes } from '@shared/constants/app-routes';
 })
 export class ProductDetailsComponent implements OnInit {
   private readonly productService = inject(ProductService);
+  private readonly lookups = inject(CatalogLookupService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly alertService = inject(AlertService);
@@ -88,6 +86,7 @@ export class ProductDetailsComponent implements OnInit {
   );
 
   public ngOnInit(): void {
+    void this.lookups.ensureLoaded();
     const id = this.route.snapshot.paramMap.get('id');
 
     if (id) {
@@ -260,15 +259,15 @@ export class ProductDetailsComponent implements OnInit {
     });
   }
 
-  protected getProductCategoryName(category: ProductCategoryEnum): string {
-    return ProductCategoryEnum[category];
+  protected getProductCategoryName(category: number): string {
+    return this.lookups.categoryName(category) || 'Unknown';
   }
 
-  protected getSubCategoryName(subCategory?: ProductSubCategoryEnum | null): string {
+  protected getSubCategoryName(subCategory?: number | null): string {
     if (subCategory == null) {
       return 'None';
     }
-    return PRODUCT_SUB_CATEGORY_LABELS[subCategory] ?? 'Unknown';
+    return this.lookups.subCategoryName(subCategory) || 'Unknown';
   }
 
   protected openPriceHistory(): void {

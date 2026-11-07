@@ -1,8 +1,9 @@
+import { HttpErrorMessages } from '@core/messages';
 import { TestBed } from '@angular/core/testing';
 import { AlertService, ModalStackService, WasteReasonService } from '@core/services';
 import { WasteReasonDto } from '@shared/models';
 import { fakeAlert, internals } from '@app/testing/management-spec-helpers';
-import { of, Subject } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { WasteReasonsComponent } from './waste-reasons';
 
@@ -86,6 +87,25 @@ describe('WasteReasonsComponent', () => {
     expect(names).toEqual(['Other', 'Expired', 'Spilled', 'Old reason']);
   });
 
+  it('shows sortable column headers and sorts by name, then reverses', () => {
+    const fixture = create();
+    const c = internals(fixture.componentInstance);
+    const headers = Array.from(
+      fixture.nativeElement.querySelectorAll('app-sort-header') as NodeListOf<HTMLElement>,
+    ).map((h) => h.textContent?.trim());
+    expect(headers).toEqual(['Name', 'Status', 'Order']);
+
+    c.toggleSort('name');
+    expect(c.sortedReasons().map((r: WasteReasonDto) => r.name)).toEqual([
+      'Expired',
+      'Old reason',
+      'Other',
+      'Spilled',
+    ]);
+    c.toggleSort('name');
+    expect(c.sortedReasons().map((r: WasteReasonDto) => r.name)[0]).toBe('Spilled');
+  });
+
   it('shows the built-in and note-required badges', () => {
     const fixture = create();
     expect(text(fixture)).toContain('Built-in');
@@ -113,6 +133,14 @@ describe('WasteReasonsComponent', () => {
     pending.next(REASONS);
     fixture.detectChanges();
     expect((fixture.nativeElement as HTMLElement).querySelector('.loading')).toBeNull();
+  });
+
+  it('shows the connection error panel when the network is down', () => {
+    service.getReasons.mockReturnValue(
+      throwError(() => new Error(HttpErrorMessages.NetworkUnavailable)),
+    );
+    const fixture = create();
+    expect(fixture.nativeElement.querySelector('app-connection-error')).not.toBeNull();
   });
 
   it('alerts when loading fails', () => {
@@ -162,7 +190,9 @@ describe('WasteReasonsComponent', () => {
     c.openAdd();
     c.form.controls.name.setValue('   ');
     c.saveReason();
-    expect(c.formError()).toBe('Enter a name of up to 60 characters and a sort order of 0 or more.');
+    expect(c.formError()).toBe(
+      'Enter a name of up to 60 characters and a sort order of 0 or more.',
+    );
     expect(service.createReason).not.toHaveBeenCalled();
   });
 

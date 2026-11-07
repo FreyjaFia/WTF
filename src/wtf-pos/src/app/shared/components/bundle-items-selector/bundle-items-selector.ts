@@ -2,11 +2,11 @@ import { CommonModule } from '@angular/common';
 import { Component, ElementRef, ViewChild, computed, inject, output, signal } from '@angular/core';
 import { AlertService, ModalStackService, ProductService } from '@core/services';
 import { AvatarComponent } from '@shared/components/avatar/avatar';
+import { isPickOne, minimumSelection, ruleOfGroup, selectionError, selectionLabel } from '@shared/calculations';
 import { IconComponent } from '@shared/components/icons/icon/icon';
 import {
   ADD_ON_TYPE_ORDER,
   AddOnGroupDto,
-  AddOnTypeEnum,
   FixedBundleItemAddOnDto,
   ProductDto,
 } from '@shared/models';
@@ -46,7 +46,6 @@ export class BundleItemsSelectorComponent {
   protected readonly addOnGroupsByProductId = signal<Record<string, AddOnGroupDto[]>>({});
   protected readonly selectionsByProductId = signal<Record<string, Record<number, Map<string, number>>>>({});
 
-  protected readonly AddOnTypeEnum = AddOnTypeEnum;
 
   readonly confirmed = output<BundleItemSelection[]>();
 
@@ -182,52 +181,24 @@ export class BundleItemsSelectorComponent {
     this.ensureAddOnGroupsLoaded(productId);
   }
 
-  protected getSelectionRule(type: AddOnTypeEnum): string {
-    switch (type) {
-      case AddOnTypeEnum.Size:
-        return 'Required | Pick one';
-      case AddOnTypeEnum.Flavor:
-        return 'Required | Pick one';
-      case AddOnTypeEnum.Sauce:
-        return 'Optional | Pick one';
-      case AddOnTypeEnum.Topping:
-        return 'Optional | Pick many';
-      case AddOnTypeEnum.Extra:
-        return 'Optional | Pick many';
-      default:
-        return '';
-    }
+  protected getSelectionRule(group: AddOnGroupDto): string {
+    return selectionLabel(ruleOfGroup(group)).replace(' · ', ' | ');
   }
 
   protected getGroupHeader(group: AddOnGroupDto): string {
-    switch (group.type) {
-      case AddOnTypeEnum.Size:
-        return 'Sizes';
-      case AddOnTypeEnum.Flavor:
-        return 'Flavors';
-      case AddOnTypeEnum.Sauce:
-        return 'Sauces';
-      case AddOnTypeEnum.Topping:
-        return 'Toppings';
-      case AddOnTypeEnum.Extra:
-        return 'Extras';
-      default:
-        return group.displayName.endsWith('s') ? group.displayName : `${group.displayName}s`;
-    }
+    return group.displayName.endsWith('s') ? group.displayName : `${group.displayName}s`;
   }
 
-  protected isRadioGroup(type: AddOnTypeEnum): boolean {
-    return (
-      type === AddOnTypeEnum.Size || type === AddOnTypeEnum.Flavor || type === AddOnTypeEnum.Sauce
-    );
+  protected isRadioGroup(group: AddOnGroupDto): boolean {
+    return isPickOne(ruleOfGroup(group));
   }
 
-  protected isSelected(productId: string, type: AddOnTypeEnum, optionId: string): boolean {
+  protected isSelected(productId: string, type: number, optionId: string): boolean {
     const selection = this.selectionsByProductId()[productId];
     return (selection?.[type]?.get(optionId) ?? 0) > 0;
   }
 
-  protected getQuantity(productId: string, type: AddOnTypeEnum, optionId: string): number {
+  protected getQuantity(productId: string, type: number, optionId: string): number {
     const selection = this.selectionsByProductId()[productId];
     return selection?.[type]?.get(optionId) ?? 0;
   }
@@ -241,12 +212,12 @@ export class BundleItemsSelectorComponent {
     const currentByType = { ...(nextByProduct[productId] ?? {}) };
     const type = group.type;
 
-    if (this.isRadioGroup(type)) {
+    if (this.isRadioGroup(group)) {
       const current = currentByType[type];
       const currentQty = current?.get(option.id) ?? 0;
 
       if (currentQty > 0) {
-        if (type === AddOnTypeEnum.Sauce) {
+        if (minimumSelection(ruleOfGroup(group)) === 0) {
           currentByType[type] = new Map<string, number>();
         }
       } else {
@@ -512,16 +483,11 @@ export class BundleItemsSelectorComponent {
       const totalSelected = selected ? Array.from(selected.values()).reduce((sum, x) => sum + x, 0) : 0;
       const activeOptions = group.options.filter((x) => x.isActive);
 
-      if (
-        (group.type === AddOnTypeEnum.Size || group.type === AddOnTypeEnum.Flavor) &&
-        activeOptions.length > 0 &&
-        totalSelected !== 1
-      ) {
-        return `${this.getProductLabel(productId)} requires exactly one ${group.type === AddOnTypeEnum.Size ? 'size' : 'flavor'}.`;
-      }
-
-      if (group.type === AddOnTypeEnum.Sauce && totalSelected > 1) {
-        return `${this.getProductLabel(productId)} allows only one sauce.`;
+      if (activeOptions.length > 0) {
+        const error = selectionError(ruleOfGroup(group), totalSelected);
+        if (error) {
+          return `${this.getProductLabel(productId)}: ${error}`;
+        }
       }
     }
 

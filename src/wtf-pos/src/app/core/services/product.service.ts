@@ -10,7 +10,6 @@ import {
   CreateProductDto,
   ProductAddOnAssignmentDto,
   ProductAddOnPriceOverrideDto,
-  ProductCategoryEnum,
   ProductDto,
   UpdateProductAddOnPriceOverrideDto,
   UpdateProductDto,
@@ -72,7 +71,7 @@ export class ProductService {
 
   public getProducts(query?: {
     searchTerm?: string | null;
-    category?: ProductCategoryEnum | null;
+    category?: number | null;
     isAddOn?: boolean | null;
     isActive?: boolean | null;
   }): Observable<ProductDto[]> {

@@ -1,15 +1,12 @@
+import { ProductCategoryEnum, ProductSubCategoryEnum, AddOnTypeEnum } from '@app/testing/catalog-ids';
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { CatalogLookupService } from '@core/services';
+import { SEEDED_LOOKUPS } from '@app/testing/catalog-ids';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter, Router } from '@angular/router';
 import { AlertService, AuthService, ModalStackService, ProductService } from '@core/services';
 import { AppRoutes } from '@shared/constants/app-routes';
-import {
-  AddOnGroupDto,
-  AddOnTypeEnum,
-  ProductCategoryEnum,
-  ProductDto,
-  ProductSubCategoryEnum,
-} from '@shared/models';
+import { AddOnGroupDto, ProductDto } from '@shared/models';
 import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProductDetailsComponent } from './product-details';
@@ -75,6 +72,8 @@ describe('ProductDetailsComponent', () => {
       ],
     });
     router = TestBed.inject(Router);
+    vi.spyOn
+    TestBed.inject(CatalogLookupService).set(SEEDED_LOOKUPS);
     vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     fixture = TestBed.createComponent(ProductDetailsComponent);

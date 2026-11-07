@@ -1,3 +1,4 @@
+import { ProductCategoryEnum, AddOnTypeEnum } from '@app/testing/catalog-ids';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
@@ -5,14 +6,7 @@ import { ActivatedRoute, provideRouter, Router } from '@angular/router';
 import { AlertService, ModalStackService, ProductService, PromotionService } from '@core/services';
 import { BundleItemsSelectorComponent } from '@shared/components';
 import { AppRoutes } from '@shared/constants/app-routes';
-import {
-  AddOnTypeEnum,
-  DiscountedProductPromotionDto,
-  FixedBundlePromotionDto,
-  MixMatchPromotionDto,
-  ProductCategoryEnum,
-  ProductDto,
-} from '@shared/models';
+import { DiscountedProductPromotionDto, FixedBundlePromotionDto, MixMatchPromotionDto, ProductDto } from '@shared/models';
 import { of, Subject, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PromotionEditorComponent } from './promotion-editor';

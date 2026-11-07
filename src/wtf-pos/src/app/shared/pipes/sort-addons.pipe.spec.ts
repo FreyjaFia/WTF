@@ -1,4 +1,5 @@
-import { AddOnTypeEnum, CartAddOnDto } from '@shared/models';
+import { AddOnTypeEnum } from '@app/testing/catalog-ids';
+import { CartAddOnDto } from '@shared/models';
 import { describe, expect, it } from 'vitest';
 import { SortAddOnsPipe } from './sort-addons.pipe';
 

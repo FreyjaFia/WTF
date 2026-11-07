@@ -117,7 +117,7 @@
                   {{ getGroupHeader(group) }}
                 </h4>
                 <span class="text-xs text-gray-400">
-                  {{ getSelectionRule(group.type) }}
+                  {{ getSelectionRule(group) }}
                 </span>
               </div>
 
@@ -142,7 +142,7 @@
                   >
                     <!-- Radio / Checkbox indicator -->
                     <div class="shrink-0">
-                      @if (isRadioGroup(group.type)) {
+                      @if (isRadioGroup(group)) {
                         <!-- Radio circle -->
                         <div
                           class="flex h-5 w-5 items-center justify-center rounded-full border-2 transition-colors"
@@ -214,7 +214,7 @@
                       class="flex shrink-0 flex-col-reverse items-end gap-1.5 sm:flex-row sm:items-center sm:gap-3"
                     >
                       <!-- Quantity stepper for Topping/Extra -->
-                      @if (!isRadioGroup(group.type) && isSelected(group.type, option.id)) {
+                      @if (!isRadioGroup(group) && isSelected(group.type, option.id)) {
                         <div
                           class="flex shrink-0 items-center gap-1.5"
                           (click)="$event.stopPropagation()"

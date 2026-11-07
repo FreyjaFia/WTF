@@ -298,11 +298,28 @@ test.describe('the Profit and Loss report @reports @expenses', () => {
 });
 
 test.describe('the Expenses page @management @expenses', () => {
-  async function filterTo(page: import('@playwright/test').Page, from: string, to: string): Promise<void> {
+  type Page = import('@playwright/test').Page;
+
+  async function openFilters(page: Page): Promise<void> {
+    await page.getByRole('button', { name: /^Filters/ }).click();
+    await expect(page.getByRole('heading', { name: 'Expense Filters' })).toBeVisible();
+  }
+
+  async function closeFilters(page: Page): Promise<void> {
+    await page.getByRole('button', { name: 'Close filters' }).first().click();
+  }
+
+  async function fillRange(page: Page, from: string, to: string): Promise<void> {
+    await openFilters(page);
     // The end first: a range that is briefly reversed loads nothing, where an end still in the future would load too much.
     await page.locator('#expense-to').fill(to);
     await page.locator('#expense-from').fill(from);
     await page.locator('#expense-from').press('Tab');
+  }
+
+  async function filterTo(page: Page, from: string, to: string): Promise<void> {
+    await fillRange(page, from, to);
+    await closeFilters(page);
   }
 
   test('an admin adds, edits, deletes and restores an expense on screen', async ({ signIn }) => {
@@ -323,24 +340,30 @@ test.describe('the Expenses page @management @expenses', () => {
     await expect(page.getByTestId('expense-total')).toContainText('1,500.50');
     await expect(page.getByTestId('expense-row')).toContainText('Shop rent');
 
+    await page.getByRole('button', { name: 'Expense actions' }).click();
     await page.getByRole('button', { name: 'Edit' }).click();
     await page.locator('#expense-amount').fill('1600');
     await page.getByRole('button', { name: 'Save' }).click();
     await expect(page.getByTestId('expense-total')).toContainText('1,600.00');
 
+    await page.getByRole('button', { name: 'Expense actions' }).click();
     await page.getByRole('button', { name: 'Delete' }).click();
-    await page.getByRole('button', { name: 'Delete' }).last().click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click();
     await expect(page.getByText('No expenses found')).toBeVisible();
     await expect(page.getByTestId('expense-total')).toContainText('0.00');
 
+    await openFilters(page);
     await page.getByText('Show deleted').click();
+    await closeFilters(page);
     await expect(page.getByTestId('expense-row')).toHaveCount(1);
     await expect(page.getByTestId('expense-row')).toContainText('Deleted');
     await expect(page.getByTestId('expense-total')).toContainText('0.00');
 
+    await page.getByRole('button', { name: 'Expense actions' }).click();
     await page.getByRole('button', { name: 'Restore' }).click();
-    await page.getByRole('button', { name: 'Restore' }).last().click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Restore' }).click();
     await expect(page.getByTestId('expense-total')).toContainText('1,600.00');
+    await page.getByRole('button', { name: 'Expense actions' }).click();
     await expect(page.getByRole('button', { name: 'Edit' })).toBeVisible();
   });
 
@@ -383,7 +406,7 @@ test.describe('the Expenses page @management @expenses', () => {
     const page = await signIn('admin');
     await page.goto(ROUTES.expenses);
 
-    await filterTo(page, '2026-03-10', '2026-03-01');
+    await fillRange(page, '2026-03-10', '2026-03-01');
 
     await expect(page.getByTestId('expense-filter-error')).toContainText('must not be after');
   });
@@ -397,10 +420,18 @@ test.describe('the Expenses page @management @expenses', () => {
     await filterTo(page, day, day);
     await expect(page.getByTestId('expense-row')).toHaveCount(2);
 
+    await openFilters(page);
     await page.locator('#expense-filter-category').selectOption({ label: 'Utilities' });
+    await expect(page.getByRole('button', { name: 'Filters, 2 applied' })).toBeVisible();
+    await closeFilters(page);
 
     await expect(page.getByTestId('expense-row')).toHaveCount(1);
     await expect(page.getByTestId('expense-total')).toContainText('40.00');
+
+    await openFilters(page);
+    await page.getByTestId('clear-expense-category').click();
+    await closeFilters(page);
+    await expect(page.getByTestId('expense-row')).toHaveCount(2);
   });
 
   test('the admin viewer sees the expenses with no buttons to change them', async ({ api, signIn }) => {
@@ -412,8 +443,7 @@ test.describe('the Expenses page @management @expenses', () => {
 
     await expect(page.getByTestId('expense-row')).toContainText('Viewer sees me');
     await expect(page.getByTestId('add-expense')).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Edit' })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Expense actions' })).toHaveCount(0);
   });
 
   for (const role of ['cashier', 'stockmgr', 'itemmgr'] as const) {

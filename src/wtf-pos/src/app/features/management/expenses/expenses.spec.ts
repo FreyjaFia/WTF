@@ -109,6 +109,22 @@ describe('ExpensesComponent', () => {
     expect(text(fixture)).toContain('Deleted');
   });
 
+  it('shows sortable column headers and sorts by amount', () => {
+    const fixture = create();
+    const c = internals(fixture.componentInstance);
+    const headers = Array.from(
+      fixture.nativeElement.querySelectorAll('app-sort-header') as NodeListOf<HTMLElement>,
+    ).map((h) => h.textContent?.trim());
+    expect(headers).toEqual(['Date', 'Category', 'Amount']);
+
+    c.toggleSort('amount');
+    expect(c.sortedItems().map((e: ExpenseDto) => e.amount)).toEqual([50, 800.5, 12000]);
+    c.toggleSort('amount');
+    expect(c.sortedItems().map((e: ExpenseDto) => e.amount)).toEqual([12000, 800.5, 50]);
+    c.toggleSort('category');
+    expect(c.sortedItems()[0].categoryName).toBe('Rent');
+  });
+
   it('offers Edit and Delete for active expenses and Restore for deleted ones', () => {
     const fixture = create();
     expect(buttons(fixture, 'Edit')).toHaveLength(2);
@@ -147,7 +163,12 @@ describe('ExpensesComponent', () => {
   it('reloads with the chosen filters', () => {
     const fixture = create();
     const c = internals(fixture.componentInstance);
-    c.filter.patchValue({ fromDate: '2026-01-01', toDate: '2026-01-31', category: 3, includeDeleted: true });
+    c.filter.patchValue({
+      fromDate: '2026-01-01',
+      toDate: '2026-01-31',
+      category: 3,
+      includeDeleted: true,
+    });
     c.applyFilter();
     expect(service.getExpenses).toHaveBeenLastCalledWith({
       fromDate: '2026-01-01',
@@ -155,6 +176,47 @@ describe('ExpensesComponent', () => {
       category: 3,
       includeDeleted: true,
     });
+  });
+
+  it('counts the filters that differ from the default and clears them one by one', () => {
+    const fixture = create();
+    const c = internals(fixture.componentInstance);
+    expect(c.activeFilterCount()).toBe(0);
+
+    c.filter.patchValue({ category: 3, includeDeleted: true });
+    c.applyFilter();
+    expect(c.activeFilterCount()).toBe(2);
+
+    c.clearCategory();
+    expect(c.activeFilterCount()).toBe(1);
+    expect(service.getExpenses).toHaveBeenLastCalledWith(
+      expect.objectContaining({ category: null, includeDeleted: true }),
+    );
+
+    c.clearDeleted();
+    expect(c.activeFilterCount()).toBe(0);
+  });
+
+  it('clears the dates back to this month', () => {
+    const fixture = create();
+    const c = internals(fixture.componentInstance);
+    c.filter.patchValue({ fromDate: '2026-01-01', toDate: '2026-01-31' });
+    c.applyFilter();
+    expect(c.activeFilterCount()).toBe(1);
+
+    c.clearDates();
+
+    expect(c.filter.getRawValue().fromDate).toMatch(/^\d{4}-\d{2}-01$/);
+    expect(c.activeFilterCount()).toBe(0);
+  });
+
+  it('opens and closes the filter drawer', () => {
+    const fixture = create();
+    const c = internals(fixture.componentInstance);
+    c.openFilters();
+    expect(c.isFiltersOpen()).toBe(true);
+    c.closeFilters();
+    expect(c.isFiltersOpen()).toBe(false);
   });
 
   it('ignores a slow answer for an earlier filter when a newer one has been asked', () => {
@@ -278,7 +340,10 @@ describe('ExpensesComponent', () => {
 
     c.form.patchValue({ amount: 12500 });
     c.saveExpense();
-    expect(service.updateExpense).toHaveBeenCalledWith('e1', expect.objectContaining({ amount: 12500 }));
+    expect(service.updateExpense).toHaveBeenCalledWith(
+      'e1',
+      expect.objectContaining({ amount: 12500 }),
+    );
     expect(alerts.success).toHaveBeenCalledWith('Expense saved.');
   });
 

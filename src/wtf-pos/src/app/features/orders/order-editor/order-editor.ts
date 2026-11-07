@@ -27,6 +27,7 @@ import {
   AuthService,
   CartPersistenceService,
   CatalogCacheService,
+  CatalogLookupService,
   ConnectivityService,
   ConversationInboxService,
   CustomerService,
@@ -54,7 +55,6 @@ import {
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import {
   AddOnGroupDto,
-  AddOnTypeEnum,
   CartAddOnDto,
   CartBundleItemDto,
   CartItemDto,
@@ -67,7 +67,6 @@ import {
   OrderSourceEnum,
   OrderStatusEnum,
   PaymentMethodEnum,
-  ProductCategoryEnum,
   ProductDto,
   FixedBundlePromotionDto,
   MixMatchPromotionDto,
@@ -75,9 +74,9 @@ import {
   DiscountedProductPromotionDto,
   PromotionListItemDto,
   PromotionTypeEnum,
-  ProductSubCategoryEnum,
   UpdateOrderCommand,
-  PRODUCT_SUB_CATEGORY_LABELS,
+  formatSubCategoryName,
+  SYSTEM_CATALOG_IDS,
 } from '@shared/models';
 import {
   addOnsTotal,
@@ -130,7 +129,7 @@ interface BundlePromotionSelection {
   items: BundleItemSource[];
 }
 
-type CatalogScrollTab = ProductSubCategoryEnum | 'bundles';
+type CatalogScrollTab = number | 'bundles';
 
 @Component({
   selector: 'app-order-editor',
@@ -169,6 +168,7 @@ export class OrderEditor implements OnInit, OnDestroy {
   private readonly alertService = inject(AlertService);
   private readonly modalStack = inject(ModalStackService);
   private readonly catalogCache = inject(CatalogCacheService);
+  private readonly lookups = inject(CatalogLookupService);
   private readonly cartPersistence = inject(CartPersistenceService);
   private readonly connectivity = inject(ConnectivityService);
   private readonly stockLimits = inject(StockLimitsService);
@@ -245,18 +245,12 @@ export class OrderEditor implements OnInit, OnDestroy {
   });
 
   protected readonly activeCatalogTab = signal<'products' | 'bundles'>('products');
-  protected readonly ProductSubCategoryEnum = ProductSubCategoryEnum;
-  protected readonly subCategoryLabels = PRODUCT_SUB_CATEGORY_LABELS;
-  protected readonly selectedProductCategories = signal<ProductCategoryEnum[]>([]);
-  protected readonly activeSubCategoryTab = signal<ProductSubCategoryEnum>(
-    ProductSubCategoryEnum.Coffee,
+  protected readonly activeSubCategoryTab = signal<number>(0);
+  protected readonly subCategoryTabs = computed(() =>
+    this.lookups
+      .activeSubCategories()
+      .map((subCategory) => ({ id: subCategory.id, label: formatSubCategoryName(subCategory.name) })),
   );
-  protected readonly subCategoryTabs = [
-    { id: ProductSubCategoryEnum.Coffee, label: 'Coffee', icon: 'icon-coffee' },
-    { id: ProductSubCategoryEnum.NonCoffee, label: 'Non-Coffee', icon: 'icon-cold-drink' },
-    { id: ProductSubCategoryEnum.Snacks, label: 'Snacks', icon: 'icon-snacks' },
-    { id: ProductSubCategoryEnum.Retail, label: 'Retail', icon: 'icon-others' },
-  ];
   protected readonly cart = signal<CartItemDto[]>([]);
   protected readonly customers = signal<CustomerDto[]>([]);
   protected readonly products = signal<ProductDto[]>([]);
@@ -554,16 +548,6 @@ export class OrderEditor implements OnInit, OnDestroy {
     return parts;
   }
 
-  protected readonly categoryCounts = computed(() => {
-    const cache = this.productsCache();
-    return {
-      [ProductCategoryEnum.Drink]: cache.filter((p) => p.category === ProductCategoryEnum.Drink)
-        .length,
-      [ProductCategoryEnum.Food]: cache.filter((p) => p.category === ProductCategoryEnum.Food)
-        .length,
-    };
-  });
-
   protected readonly checkoutCartItems = computed<CartItemDto[]>(() =>
     this.cart().flatMap((item) => {
       const discount = this.getLineDiscount(item);
@@ -585,27 +569,21 @@ export class OrderEditor implements OnInit, OnDestroy {
   );
 
   protected readonly productsBySubCategory = computed(() => {
-    const items = this.products().filter((p) => !p.isAddOn);
+    const grouped: Record<number, ProductDto[]> = {};
+    for (const product of this.products()) {
+      if (product.isAddOn || product.subCategory == null) {
+        continue;
+      }
 
-    return {
-      [ProductSubCategoryEnum.Coffee]: items.filter(
-        (p) => p.subCategory === ProductSubCategoryEnum.Coffee,
-      ),
-      [ProductSubCategoryEnum.NonCoffee]: items.filter(
-        (p) => p.subCategory === ProductSubCategoryEnum.NonCoffee,
-      ),
-      [ProductSubCategoryEnum.Snacks]: items.filter(
-        (p) => p.subCategory === ProductSubCategoryEnum.Snacks,
-      ),
-      [ProductSubCategoryEnum.Retail]: items.filter(
-        (p) => p.subCategory === ProductSubCategoryEnum.Retail,
-      ),
-    };
+      (grouped[product.subCategory] ??= []).push(product);
+    }
+
+    return grouped;
   });
 
   protected readonly visibleSubCategoryTabs = computed(() => {
     const productsBySubCategory = this.productsBySubCategory();
-    return this.subCategoryTabs.filter((tab) => productsBySubCategory[tab.id].length > 0);
+    return this.subCategoryTabs().filter((tab) => (productsBySubCategory[tab.id]?.length ?? 0) > 0);
   });
 
   // Mirrors the search box: a plain FormControl value is not a signal, so computeds cannot react to it.
@@ -657,8 +635,8 @@ export class OrderEditor implements OnInit, OnDestroy {
     () => this.filteredBundlePromotions().length > 0 || this.filteredDeals().length > 0,
   );
 
-  protected selectSubCategoryTab(tab: ProductSubCategoryEnum): void {
-    if (this.productsBySubCategory()[tab].length === 0) {
+  protected selectSubCategoryTab(tab: number): void {
+    if ((this.productsBySubCategory()[tab]?.length ?? 0) === 0) {
       return;
     }
 
@@ -2726,7 +2704,7 @@ export class OrderEditor implements OnInit, OnDestroy {
     }
   }
 
-  private scrollToSubCategory(tab: ProductSubCategoryEnum): void {
+  private scrollToSubCategory(tab: number): void {
     if (typeof window === 'undefined') {
       return;
     }
@@ -2977,7 +2955,7 @@ export class OrderEditor implements OnInit, OnDestroy {
       code: item.productId,
       description: null,
       price: item.price,
-      category: ProductCategoryEnum.Other,
+      category: SYSTEM_CATALOG_IDS.otherCategory,
       subCategory: null,
       isAddOn: false,
       isActive: true,
@@ -3019,7 +2997,7 @@ export class OrderEditor implements OnInit, OnDestroy {
         code: bundle.id,
         description: null,
         price: bundle.bundlePrice,
-        category: ProductCategoryEnum.Other,
+        category: SYSTEM_CATALOG_IDS.otherCategory,
         subCategory: null,
         isAddOn: false,
         isActive: bundle.isActive,
@@ -3073,7 +3051,7 @@ export class OrderEditor implements OnInit, OnDestroy {
           addOnId: item.productId,
           name: option?.name ?? 'Selected item',
           price: 0,
-          addOnType: AddOnTypeEnum.Extra,
+          addOnType: SYSTEM_CATALOG_IDS.extraAddOnType,
         });
       }
     }
@@ -3098,7 +3076,7 @@ export class OrderEditor implements OnInit, OnDestroy {
 
     return [
       {
-        type: AddOnTypeEnum.Extra,
+        type: SYSTEM_CATALOG_IDS.extraAddOnType,
         displayName: 'Items',
         options,
       },

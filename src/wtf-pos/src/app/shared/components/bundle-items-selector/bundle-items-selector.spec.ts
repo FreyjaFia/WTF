@@ -1,6 +1,9 @@
+import { ProductCategoryEnum, AddOnTypeEnum, OPTIONAL_ONE, REQUIRED_ONE } from '@app/testing/catalog-ids';
+import { CatalogLookupService } from '@core/services';
+import { SEEDED_LOOKUPS } from '@app/testing/catalog-ids';
 import { TestBed } from '@angular/core/testing';
 import { AlertService, ModalStackService, ProductService } from '@core/services';
-import { AddOnGroupDto, AddOnTypeEnum, ProductCategoryEnum, ProductDto } from '@shared/models';
+import { AddOnGroupDto, ProductDto } from '@shared/models';
 import { of, Subject, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BundleItemSelection, BundleItemsSelectorComponent } from './bundle-items-selector';
@@ -22,9 +25,9 @@ interface Internals {
   save(): void;
   onSearchInput(e: unknown): void;
   setActiveProduct(id: string): void;
-  getSelectionRule(t: AddOnTypeEnum): string;
+  getSelectionRule(g: Group): string;
   getGroupHeader(g: Group): string;
-  isRadioGroup(t: AddOnTypeEnum): boolean;
+  isRadioGroup(g: Group): boolean;
   isSelected(p: string, t: AddOnTypeEnum, o: string): boolean;
   getQuantity(p: string, t: AddOnTypeEnum, o: string): number;
   toggleOption(p: string, g: Group, o: ProductDto): void;
@@ -64,12 +67,12 @@ const GONE = prod('g', 'Gone', false);
 
 const sizeG = (): Group => ({
   type: AddOnTypeEnum.Size,
-  displayName: 'Size',
+  displayName: 'Size', ...REQUIRED_ONE,
   options: [LARGE, SMALL, LARGE],
 });
 const sauceG = (): Group => ({
   type: AddOnTypeEnum.Sauce,
-  displayName: 'Sauce',
+  displayName: 'Sauce', ...OPTIONAL_ONE,
   options: [MAYO, KETCH],
 });
 const toppingG = (): Group => ({
@@ -102,6 +105,7 @@ describe('BundleItemsSelectorComponent', () => {
   });
 
   function setup() {
+    TestBed.inject(CatalogLookupService).set(SEEDED_LOOKUPS);
     const fixture = TestBed.createComponent(BundleItemsSelectorComponent);
     fixture.detectChanges();
     const cmp = fixture.componentInstance;
@@ -207,17 +211,17 @@ describe('BundleItemsSelectorComponent', () => {
   describe('option selection', () => {
     it('describes rules and headers', () => {
       const { i } = setup();
-      expect(i.getSelectionRule(AddOnTypeEnum.Size)).toBe('Required | Pick one');
-      expect(i.getSelectionRule(AddOnTypeEnum.Sauce)).toBe('Optional | Pick one');
-      expect(i.getSelectionRule(AddOnTypeEnum.Extra)).toBe('Optional | Pick many');
-      expect(i.getSelectionRule(0 as AddOnTypeEnum)).toBe('');
+      expect(i.getSelectionRule(sizeG())).toBe('Required | Pick one');
+      expect(i.getSelectionRule({ type: AddOnTypeEnum.Sauce, displayName: 'Sauce', ...OPTIONAL_ONE, options: [] })).toBe('Optional | Pick one');
+      expect(i.getSelectionRule({ type: AddOnTypeEnum.Extra, displayName: 'Extra', options: [] })).toBe('Optional | Pick many');
+      expect(i.getSelectionRule({ type: 0 as AddOnTypeEnum, displayName: 'None', options: [] })).toBe('Optional | Pick many');
       expect(i.getGroupHeader(sizeG())).toBe('Sizes');
       expect(i.getGroupHeader(toppingG())).toBe('Toppings');
       expect(i.getGroupHeader({ type: 9 as AddOnTypeEnum, displayName: 'Dip', options: [] })).toBe(
         'Dips',
       );
-      expect(i.isRadioGroup(AddOnTypeEnum.Flavor)).toBe(true);
-      expect(i.isRadioGroup(AddOnTypeEnum.Extra)).toBe(false);
+      expect(i.isRadioGroup({ type: AddOnTypeEnum.Flavor, displayName: "Flavor", ...REQUIRED_ONE, options: [] })).toBe(true);
+      expect(i.isRadioGroup({ type: AddOnTypeEnum.Extra, displayName: "Extra", options: [] })).toBe(false);
     });
 
     it('radio groups switch selection and size cannot be deselected', () => {
@@ -283,28 +287,28 @@ describe('BundleItemsSelectorComponent', () => {
       service.getProductAddOns.mockReturnValue(of([sizeG()]));
       const { cmp, i } = setup();
       cmp.open([P1], [{ productId: 'p1', addOns: [] }]);
-      expect(i.activeValidationError()).toBe('Burger requires exactly one size.');
+      expect(i.activeValidationError()).toBe('Burger: A size selection is required and must be exactly one.');
       i.toggleOption('p1', i.activeAddOnGroups()[0], SMALL);
       expect(i.activeValidationError()).toBeNull();
     });
 
     it('requires a flavor and limits sauce to one', () => {
       service.getProductAddOns.mockReturnValue(
-        of([{ type: AddOnTypeEnum.Flavor, displayName: 'Flavor', options: [MAYO] }, sauceG()]),
+        of([{ type: AddOnTypeEnum.Flavor, displayName: 'Flavor', ...REQUIRED_ONE, options: [MAYO] }, sauceG()]),
       );
       const { cmp, i } = setup();
       cmp.open([P1], [{ productId: 'p1', addOns: [] }]);
-      expect(i.activeValidationError()).toBe('Burger requires exactly one flavor.');
+      expect(i.activeValidationError()).toBe('Burger: A flavor selection is required and must be exactly one.');
       const [flavor, sauce] = i.activeAddOnGroups();
       i.toggleOption('p1', flavor, MAYO);
       i.incrementOption('p1', sauce, MAYO, evt());
       i.incrementOption('p1', sauce, KETCH, evt());
-      expect(i.activeValidationError()).toBe('Burger allows only one sauce.');
+      expect(i.activeValidationError()).toBe('Burger: A sauce selection must be at most one.');
     });
 
     it('skips size validation when all size options are inactive', () => {
       service.getProductAddOns.mockReturnValue(
-        of([{ type: AddOnTypeEnum.Size, displayName: 'Size', options: [GONE] }]),
+        of([{ type: AddOnTypeEnum.Size, displayName: 'Size', ...REQUIRED_ONE, options: [GONE] }]),
       );
       const { cmp, i } = setup();
       cmp.open([P1], [{ productId: 'p1', addOns: [] }]);
@@ -346,7 +350,7 @@ describe('BundleItemsSelectorComponent', () => {
       cmp.open([P1, P2], [{ productId: 'p1', addOns: [] }, { productId: 'p2', addOns: [] }]);
       i.save();
       expect(service.getProductAddOns).toHaveBeenCalledWith('p2');
-      expect(alerts.error).toHaveBeenCalledWith('Fries requires exactly one size.');
+      expect(alerts.error).toHaveBeenCalledWith('Fries: A size selection is required and must be exactly one.');
       expect(confirmed).not.toHaveBeenCalled();
       expect(i.activeSelectedProductId()).toBe('p2');
       expect(i.isOpen()).toBe(true);

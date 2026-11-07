@@ -3,9 +3,17 @@ import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Capacitor } from '@capacitor/core';
 import { AlertService, AuthService, ExpenseService, ModalStackService } from '@core/services';
-import { BadgeComponent, IconComponent } from '@shared/components';
+import { HttpErrorMessages } from '@core/messages';
+import {
+  BadgeComponent,
+  ConnectionErrorComponent,
+  IconComponent,
+  SideDrawerComponent,
+} from '@shared/components';
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
+import { FilterButtonComponent } from '@shared/components/filter-button/filter-button';
 import { PullToRefreshComponent } from '@shared/components/pull-to-refresh/pull-to-refresh';
+import { SortDirection, SortHeaderComponent } from '@shared/components/sort-header/sort-header';
 import { ExpenseCategoryDto, ExpenseDto, ExpenseListDto, SaveExpenseDto } from '@shared/models';
 import { Subscription } from 'rxjs';
 
@@ -13,21 +21,31 @@ type ExpenseDialog = 'edit' | 'delete' | 'restore';
 
 const NOTE_MAX_LENGTH = 200;
 
+function monthStart(today: Date): string {
+  return toDateInput(new Date(today.getFullYear(), today.getMonth(), 1));
+}
+
 function toDateInput(date: Date): string {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${date.getFullYear()}-${month}-${day}`;
 }
 
+type SortColumn = 'date' | 'category' | 'amount';
+
 @Component({
   selector: 'app-expenses',
   imports: [
+    ConnectionErrorComponent,
     DecimalPipe,
     ReactiveFormsModule,
     BadgeComponent,
     ConfirmDialogComponent,
     IconComponent,
+    FilterButtonComponent,
     PullToRefreshComponent,
+    SideDrawerComponent,
+    SortHeaderComponent,
   ],
   templateUrl: './expenses.html',
   host: { class: 'flex-1 min-h-0' },
@@ -43,7 +61,30 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   protected readonly canWrite = computed(() => this.authService.canWriteExpenses());
   protected readonly categories = signal<ExpenseCategoryDto[]>([]);
   protected readonly result = signal<ExpenseListDto>({ items: [], total: 0, byCategory: [] });
+  protected readonly sortColumn = signal<SortColumn | null>(null);
+  protected readonly sortDirection = signal<SortDirection>('asc');
+  protected readonly sortedItems = computed(() => {
+    const column = this.sortColumn();
+    const items = this.result().items;
+    if (!column) {
+      return items;
+    }
+
+    const factor = this.sortDirection() === 'asc' ? 1 : -1;
+    return [...items].sort((a, b) => {
+      const byColumn =
+        column === 'date'
+          ? a.expenseDate.localeCompare(b.expenseDate)
+          : column === 'category'
+            ? a.categoryName.localeCompare(b.categoryName)
+            : a.amount - b.amount;
+      return byColumn * factor;
+    });
+  });
+  protected readonly isFiltersOpen = signal(false);
+  protected readonly activeFilterCount = signal(0);
   protected readonly isLoading = signal(false);
+  protected readonly connectionFailed = signal(false);
   protected readonly isRefreshing = signal(false);
   protected readonly isSaving = signal(false);
   protected readonly dialog = signal<ExpenseDialog | null>(null);
@@ -80,12 +121,10 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   public ngOnInit(): void {
     const today = new Date();
     this.filter.patchValue({
-      fromDate: toDateInput(new Date(today.getFullYear(), today.getMonth(), 1)),
+      fromDate: monthStart(today),
       toDate: toDateInput(today),
     });
-    this.form.controls.category.valueChanges.subscribe((id) =>
-      this.formCategoryId.set(Number(id)),
-    );
+    this.form.controls.category.valueChanges.subscribe((id) => this.formCategoryId.set(Number(id)));
     this.expenseService.getCategories().subscribe({
       next: (categories) => this.categories.set(categories),
       error: (err: Error) => this.alertService.error(err.message),
@@ -98,13 +137,47 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     this.removeFromStack();
   }
 
+  protected toggleSort(column: SortColumn): void {
+    if (this.sortColumn() === column) {
+      this.sortDirection.set(this.sortDirection() === 'asc' ? 'desc' : 'asc');
+    } else {
+      this.sortColumn.set(column);
+      this.sortDirection.set('asc');
+    }
+  }
+
   protected refresh(): void {
     this.isRefreshing.set(true);
     this.load();
   }
 
   protected applyFilter(): void {
+    this.updateFilterCount();
     this.load();
+  }
+
+  protected openFilters(): void {
+    this.isFiltersOpen.set(true);
+  }
+
+  protected closeFilters(): void {
+    this.isFiltersOpen.set(false);
+  }
+
+  protected clearDates(): void {
+    const today = new Date();
+    this.filter.patchValue({ fromDate: monthStart(today), toDate: toDateInput(today) });
+    this.applyFilter();
+  }
+
+  protected clearCategory(): void {
+    this.filter.patchValue({ category: 0 });
+    this.applyFilter();
+  }
+
+  protected clearDeleted(): void {
+    this.filter.patchValue({ includeDeleted: false });
+    this.applyFilter();
   }
 
   protected openAdd(): void {
@@ -248,6 +321,15 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     }
   }
 
+  private updateFilterCount(): void {
+    const today = new Date();
+    const { fromDate, toDate, category, includeDeleted } = this.filter.getRawValue();
+    const datesChanged = fromDate !== monthStart(today) || toDate !== toDateInput(today);
+    this.activeFilterCount.set(
+      Number(datesChanged) + Number(Number(category) !== 0) + Number(includeDeleted),
+    );
+  }
+
   private load(): void {
     const { fromDate, toDate, category, includeDeleted } = this.filter.getRawValue();
     if (fromDate && toDate && fromDate > toDate) {
@@ -257,6 +339,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     }
 
     this.filterError.set(null);
+    this.connectionFailed.set(false);
     this.isLoading.set(!this.isRefreshing());
     this.loadSubscription?.unsubscribe();
     this.loadSubscription = this.expenseService
@@ -273,6 +356,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
           this.isRefreshing.set(false);
         },
         error: (err: Error) => {
+          this.connectionFailed.set(err.message === HttpErrorMessages.NetworkUnavailable);
           this.alertService.error(err.message);
           this.isLoading.set(false);
           this.isRefreshing.set(false);

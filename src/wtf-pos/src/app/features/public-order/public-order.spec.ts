@@ -50,6 +50,16 @@ function link(over: Partial<PublicOrderLinkDto['catalog']> = {}): PublicOrderLin
         product('cake', 'Cake', 200, 3),
       ],
       addOnsByProductId: { latte: [SIZE] },
+      lookups: {
+        categories: [],
+        subCategories: [
+          { id: 1, name: 'Coffee', sortOrder: 1, isActive: true },
+          { id: 2, name: 'NonCoffee', sortOrder: 2, isActive: true },
+          { id: 3, name: 'Snacks', sortOrder: 3, isActive: true },
+          { id: 4, name: 'Retail', sortOrder: 4, isActive: true },
+        ],
+        addOnTypes: [],
+      },
       ...over,
     },
   };

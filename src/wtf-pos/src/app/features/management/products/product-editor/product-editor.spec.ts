@@ -1,15 +1,10 @@
+import { ProductCategoryEnum, ProductSubCategoryEnum, AddOnTypeEnum } from '@app/testing/catalog-ids';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter, Router } from '@angular/router';
 import { AlertService, ModalStackService, ProductService } from '@core/services';
 import { AppRoutes } from '@shared/constants/app-routes';
-import {
-  AddOnGroupDto,
-  AddOnTypeEnum,
-  ProductCategoryEnum,
-  ProductDto,
-  ProductSubCategoryEnum,
-} from '@shared/models';
+import { AddOnGroupDto, ProductDto } from '@shared/models';
 import { of, Subject, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProductEditorComponent } from './product-editor';

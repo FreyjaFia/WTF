@@ -1,8 +1,9 @@
+import { ProductCategoryEnum } from '@app/testing/catalog-ids';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter } from '@angular/router';
 import { AlertService, AuthService, InventoryService, ProductService } from '@core/services';
-import { ProductCategoryEnum, ProductDto, RecipeCostDto } from '@shared/models';
+import { ProductDto, RecipeCostDto } from '@shared/models';
 import { of, throwError } from 'rxjs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ProductEditorComponent } from './product-editor';

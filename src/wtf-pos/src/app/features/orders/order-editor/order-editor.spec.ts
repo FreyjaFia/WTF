@@ -1,3 +1,6 @@
+import { ProductCategoryEnum, ProductSubCategoryEnum, AddOnTypeEnum } from '@app/testing/catalog-ids';
+import { CatalogLookupService } from '@core/services';
+import { SEEDED_LOOKUPS } from '@app/testing/catalog-ids';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, ParamMap, Router, convertToParamMap, provideRouter } from '@angular/router';
@@ -19,24 +22,7 @@ import {
   StockLimitsService,
 } from '@core/services';
 import { AppRoutes } from '@shared/constants/app-routes';
-import {
-  AddOnGroupDto,
-  AddOnTypeEnum,
-  CartAddOnDto,
-  CartItemDto,
-  CustomerDto,
-  DiscountedProductPromotionDto,
-  OrderDto,
-  FulfillmentTypeEnum,
-  OrderSourceEnum,
-  OrderStatusEnum,
-  PaymentMethodEnum,
-  ProductCategoryEnum,
-  ProductDto,
-  ProductSubCategoryEnum,
-  PromotionListItemDto,
-  PromotionTypeEnum,
-} from '@shared/models';
+import { AddOnGroupDto, CartAddOnDto, CartItemDto, CustomerDto, DiscountedProductPromotionDto, OrderDto, FulfillmentTypeEnum, OrderSourceEnum, OrderStatusEnum, PaymentMethodEnum, ProductDto, PromotionListItemDto, PromotionTypeEnum } from '@shared/models';
 import { BehaviorSubject, Observable, Subject, of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { OrderEditor } from './order-editor';
@@ -536,6 +522,7 @@ describe('OrderEditor', () => {
       ],
     });
     router = TestBed.inject(Router);
+    TestBed.inject(CatalogLookupService).set(SEEDED_LOOKUPS);
     nav = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
     modalStack = TestBed.inject(ModalStackService);
   });
@@ -556,10 +543,6 @@ describe('OrderEditor', () => {
         'mocha',
       ]);
       expect(t.visibleSubCategoryTabs().map((x) => x.id)).toEqual([1, 2, 3]);
-      expect(t.categoryCounts()).toEqual({
-        [ProductCategoryEnum.Drink]: 4,
-        [ProductCategoryEnum.Food]: 1,
-      });
       expect(t.customers().length).toBe(1);
       expect(t.isEditMode()).toBe(false);
     });

@@ -157,7 +157,7 @@
                       (mousedown)="$event.stopPropagation()"
                       (touchstart)="$event.stopPropagation()"
                     >
-                      @for (opt of addOnTypeOptions; track opt.value) {
+                      @for (opt of addOnTypeOptions(); track opt.value) {
                         <option [value]="opt.value" [selected]="opt.value === addon.type">
                           {{ opt.label }}
                         </option>

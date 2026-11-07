@@ -97,7 +97,7 @@ const ADMIN_PAGES: ReadonlyArray<PageCase> = [
   { name: 'user details', path: () => `/management/users/details/${seeds.userId}` },
   { name: 'promotions', path: () => '/management/promotions' },
   { name: 'reports', path: () => '/management/reports' },
-  { name: 'waste reasons', path: () => '/management/waste-reasons' },
+  { name: 'waste reasons', path: () => '/management/setup/waste-reasons' },
   { name: 'expenses', path: () => '/management/expenses' },
   { name: 'notifications', path: () => '/notifications' },
 ];

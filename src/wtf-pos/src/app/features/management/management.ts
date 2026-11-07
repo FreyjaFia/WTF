@@ -77,11 +77,11 @@ export class ManagementComponent {
       canShow: () => this.authService.canReadExpenses(),
     },
     {
-      label: 'Waste Reasons',
-      route: 'waste-reasons',
-      path: AppRoutes.ManagementWasteReasons,
-      ariaLabel: 'Waste reasons',
-      canShow: () => this.authService.canManageWasteReasons(),
+      label: 'Setup',
+      route: 'setup',
+      path: AppRoutes.ManagementSetup,
+      ariaLabel: 'Setup lists',
+      canShow: () => this.canReadProducts(),
     },
     {
       label: 'Audit',

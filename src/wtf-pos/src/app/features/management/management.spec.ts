@@ -39,7 +39,7 @@ describe('ManagementComponent', () => {
               { path: 'promotions', component: Stub },
               { path: 'reports', component: Stub },
               { path: 'expenses', component: Stub },
-              { path: 'waste-reasons', component: Stub },
+              { path: 'setup/categories', component: Stub },
               { path: 'audit-logs', component: Stub },
               { path: 'schema-scripts', component: Stub },
             ],
@@ -75,7 +75,7 @@ describe('ManagementComponent', () => {
       'promotions',
       'reports',
       'expenses',
-      'waste-reasons',
+      'setup',
       'audit-logs',
       'schema-scripts',
     ]);
@@ -89,14 +89,29 @@ describe('ManagementComponent', () => {
     perms.canReadExpenses = false;
     perms.canManageWasteReasons = false;
     const { el } = await setup('/management/products');
-    expect(routes(el)).toEqual(['products', 'customers', 'users', 'promotions', 'reports']);
+    expect(routes(el)).toEqual([
+      'products',
+      'customers',
+      'users',
+      'promotions',
+      'reports',
+      'setup',
+    ]);
   });
 
   it('hides each tab independently according to its permission', async () => {
     perms.canReadCustomers = false;
     perms.canReadPromotions = false;
     const { el } = await setup('/management/products');
-    expect(routes(el)).toEqual(['products', 'users', 'reports', 'expenses', 'waste-reasons', 'audit-logs', 'schema-scripts']);
+    expect(routes(el)).toEqual([
+      'products',
+      'users',
+      'reports',
+      'expenses',
+      'setup',
+      'audit-logs',
+      'schema-scripts',
+    ]);
   });
 
   it('renders nothing but the outlet without permissions', async () => {
@@ -129,7 +144,7 @@ describe('ManagementComponent', () => {
       'Promotions',
       'Reports',
       'Expenses',
-      'Waste reasons',
+      'Setup lists',
       'Audit Logs',
       'Schema Scripts',
     ]);

@@ -1,5 +1,5 @@
+import { AddOnTypeEnum } from '@app/testing/catalog-ids';
 import { describe, expect, it } from 'vitest';
-import { AddOnTypeEnum } from '../models/product.models';
 import {
   BreakdownAddOn,
   breakdownOfCartItem,

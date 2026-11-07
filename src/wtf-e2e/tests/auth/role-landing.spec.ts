@@ -22,7 +22,7 @@ test.describe('waste screens are limited by role @auth @waste', () => {
 
   test('item manager cannot open waste reasons', async ({ signIn }) => {
     const page = await signIn('itemmgr');
-    await page.goto('/management/waste-reasons');
+    await page.goto('/management/setup/waste-reasons');
     await expect(page).not.toHaveURL(/waste-reasons$/);
   });
 

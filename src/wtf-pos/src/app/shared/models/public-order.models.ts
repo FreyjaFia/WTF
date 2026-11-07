@@ -1,3 +1,4 @@
+import type { CatalogLookupsDto } from './catalog.models';
 // What the anonymous ordering page receives. Deliberately separate from ProductDto and OrderDto: these carry no
 // audit fields, staff names or internal ids.
 
@@ -17,6 +18,9 @@ export interface PublicAddOnGroupDto {
   type: number;
   displayName: string;
   options: PublicProductDto[];
+  isRequired?: boolean;
+  minSelect?: number;
+  maxSelect?: number;
 }
 
 /** A discount that is on right now: the product, the exact add-ons it needs and what comes off. */
@@ -38,6 +42,8 @@ export interface PublicCatalogDto {
   addOnsByProductId: Record<string, PublicAddOnGroupDto[]>;
   /** Missing when talking to an older server. */
   deals?: PublicDealDto[];
+  /** Sub-categories and add-on types with their rules; missing when talking to an older server. */
+  lookups?: CatalogLookupsDto;
 }
 
 export interface PublicOrderLinkDto {
@@ -144,7 +150,7 @@ export interface PublicCartAddOn {
   price: number;
   /** How many of this add-on per item (toppings and extras can be added more than once). */
   quantity: number;
-  /** AddOnTypeEnum, used to list Size, Flavor and the rest in the same order as everywhere else. */
+  /** The add-on type id, used to list Size, Flavor and the rest in the same order as everywhere else. */
   type?: number;
 }
 

@@ -1,16 +1,9 @@
+import { AddOnTypeEnum } from '@app/testing/catalog-ids';
 import { TestBed } from '@angular/core/testing';
 import { Capacitor } from '@capacitor/core';
 import { ServiceErrorMessages, SuccessMessages } from '@core/messages';
 import { AlertService, ImageDownloadService } from '@core/services';
-import {
-  AddOnTypeEnum,
-  CartAddOnDto,
-  CartBundleItemDto,
-  CartItemDto,
-  OrderStatusEnum,
-  PaymentMethodEnum,
-  PromotionTypeEnum,
-} from '@shared/models';
+import { CartAddOnDto, CartBundleItemDto, CartItemDto, OrderStatusEnum, PaymentMethodEnum, PromotionTypeEnum } from '@shared/models';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { OrderReceiptComponent, ReceiptData } from './order-receipt';
 

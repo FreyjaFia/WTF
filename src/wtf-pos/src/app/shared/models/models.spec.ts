@@ -1,15 +1,6 @@
+import { ProductCategoryEnum, ProductSubCategoryEnum, AddOnTypeEnum, PRODUCT_SUB_CATEGORY_LABELS } from '@app/testing/catalog-ids';
 import { describe, expect, it } from 'vitest';
-import {
-  ADD_ON_TYPE_ORDER,
-  AddOnTypeEnum,
-  OrderStatusEnum,
-  PaymentMethodEnum,
-  PRODUCT_SUB_CATEGORY_LABELS,
-  ProductCategoryEnum,
-  ProductSubCategoryEnum,
-  PromotionTypeEnum,
-  UserRoleEnum,
-} from '@shared/models';
+import { ADD_ON_TYPE_ORDER, OrderStatusEnum, PaymentMethodEnum, PromotionTypeEnum, UserRoleEnum } from '@shared/models';
 
 describe('model enums and constants', () => {
   it('keeps API-aligned enum values', () => {

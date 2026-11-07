@@ -36,3 +36,5 @@ export * from './stock-count.service';
 export * from './stock-waste.service';
 export * from './waste-reason.service';
 export * from './expense.service';
+export * from './catalog-lookup.service';
+export * from './catalog-setup.service';
