@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using NSubstitute;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Products;
-using WTF.Api.Features.Products.Enums;
 using WTF.Api.Services;
 using WTF.Domain.Entities;
 using WTF.Tests.Infrastructure;
@@ -24,7 +23,7 @@ public class UpdateProductHandlerTests
             Name = name ?? p.Name,
             Code = code ?? p.Code,
             Price = price ?? p.Price,
-            Category = ProductCategoryEnum.Drink,
+            Category = CatalogSeed.Drink,
             IsAddOn = isAddOn ?? p.IsAddOn,
             IsActive = isActive ?? p.IsActive
         };
@@ -101,8 +100,8 @@ public class UpdateProductHandlerTests
         await ProductSeed.SeedAsync(_dbName, product);
         var command = Command(product, name: "Renamed") with
         {
-            Category = (ProductCategoryEnum)category,
-            SubCategory = subCategory.HasValue ? (ProductSubCategoryEnum)subCategory.Value : null,
+            Category = (int)category,
+            SubCategory = subCategory.HasValue ? (int)subCategory.Value : null,
         };
 
         var ex = await Should.ThrowAsync<InvalidOperationException>(() => Handler().Handle(command, CancellationToken.None));

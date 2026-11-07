@@ -36,10 +36,7 @@ public class AssignProductAddOnsHandler(WTFDbContext db) : IRequestHandler<Assig
             throw new InvalidOperationException("Duplicate add-on IDs are not allowed.");
         }
 
-        if (request.AddOns.Any(addOn => !Enum.IsDefined(addOn.AddOnType)))
-        {
-            throw new InvalidOperationException("One or more add-ons have an invalid type.");
-        }
+        await ProductValidation.EnsureValidAddOnTypesAsync(db, request.AddOns.Select(a => a.AddOnType), cancellationToken);
 
         var addOnIds = request.AddOns.Select(a => a.AddOnId).ToList();
 
@@ -61,7 +58,7 @@ public class AssignProductAddOnsHandler(WTFDbContext db) : IRequestHandler<Assig
         }
 
         var requestedAddOnTypeById = request.AddOns
-            .ToDictionary(a => a.AddOnId, a => (int)a.AddOnType);
+            .ToDictionary(a => a.AddOnId, a => a.AddOnType);
 
         var existingLinks = await db.ProductAddOns
             .Where(pa => pa.ProductId == request.ProductId)
@@ -137,7 +134,7 @@ public class AssignProductAddOnsHandler(WTFDbContext db) : IRequestHandler<Assig
             {
                 ProductId = request.ProductId,
                 AddOnId = addOn.AddOnId,
-                AddOnTypeId = (int)addOn.AddOnType,
+                AddOnTypeId = addOn.AddOnType,
                 IsActive = true
             });
 

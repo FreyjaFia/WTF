@@ -1,5 +1,4 @@
 using WTF.Api.Features.Products;
-using WTF.Api.Features.Products.Enums;
 using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Features.Products;
@@ -85,10 +84,10 @@ public class GetProductsHandlerTests
     public async Task Handle_Category_FiltersByCategory()
     {
         await ProductSeed.SeedAsync(_dbName,
-            ProductSeed.NewProduct(name: "Latte", code: "L", categoryId: (int)ProductCategoryEnum.Drink),
-            ProductSeed.NewProduct(name: "Cake", code: "C", categoryId: (int)ProductCategoryEnum.Dessert));
+            ProductSeed.NewProduct(name: "Latte", code: "L", categoryId: (int)CatalogSeed.Drink),
+            ProductSeed.NewProduct(name: "Cake", code: "C", categoryId: (int)CatalogSeed.Dessert));
 
-        var result = await Handler().Handle(new GetProductsQuery { Category = ProductCategoryEnum.Dessert }, CancellationToken.None);
+        var result = await Handler().Handle(new GetProductsQuery { Category = CatalogSeed.Dessert }, CancellationToken.None);
 
         result.Select(p => p.Name).ShouldBe(["Cake"]);
     }

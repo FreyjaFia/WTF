@@ -48,6 +48,8 @@ public class SharedCasesTests
 
     private sealed record AdjustmentCase(string Name, decimal Shown, decimal Counted, decimal Expected);
 
+    private sealed record AddOnSelectionCase(string Name, string TypeName, bool IsRequired, int MinSelect, int MaxSelect, int Selected, string? ExpectedError, string ExpectedLabel);
+
     private sealed record SalesCoveredCase(string Name, decimal Balance, decimal PerSale, int Expected);
 
     private sealed record CashCase(string Name, decimal Total, decimal? Tips, decimal Received, decimal ExpectedDue, decimal ExpectedChange);
@@ -88,7 +90,8 @@ public class SharedCasesTests
         List<WasteBalanceAfterCase> WasteBalanceAfter,
         List<RecipeCostCase> RecipeCost,
         List<PriceForTargetMarginCase> PriceForTargetMargin,
-        List<RecipePreviewCase> RecipePreview);
+        List<RecipePreviewCase> RecipePreview,
+        List<AddOnSelectionCase> AddOnSelection);
 
     private sealed record RecipePreviewSizeAmountCase(string SizeProductId, decimal Quantity);
 
@@ -171,6 +174,8 @@ public class SharedCasesTests
     public static IEnumerable<object[]> CashCaseNames() => Loaded.Value.CashPayment.Select(c => new object[] { c.Name });
 
     public static IEnumerable<object[]> AdjustmentCaseNames() => Loaded.Value.StockAdjustment.Select(c => new object[] { c.Name });
+
+    public static IEnumerable<object[]> AddOnSelectionCaseNames() => Loaded.Value.AddOnSelection.Select(c => new object[] { c.Name });
 
     public static IEnumerable<object[]> SalesCoveredCaseNames() => Loaded.Value.SalesCovered.Select(c => new object[] { c.Name });
 
@@ -269,6 +274,16 @@ public class SharedCasesTests
         CashPayment.AmountDue(c.Total, c.Tips).ShouldBe(c.ExpectedDue);
         CashPayment.Change(c.Received, c.Total, c.Tips).ShouldBe(c.ExpectedChange);
         CashPayment.ChangeToGive(c.Received, c.Total, c.Tips).ShouldBe(Math.Max(0m, c.ExpectedChange));
+    }
+
+    [Theory]
+    [MemberData(nameof(AddOnSelectionCaseNames))]
+    public void AddOnSelection_MatchesTheSharedCase(string name)
+    {
+        var c = Loaded.Value.AddOnSelection.Single(x => x.Name == name);
+        var rule = new AddOnTypeRule(1, c.TypeName, c.IsRequired, c.MinSelect, c.MaxSelect);
+
+        AddOnSelectionRules.Check(rule, c.Selected).ShouldBe(c.ExpectedError);
     }
 
     [Theory]

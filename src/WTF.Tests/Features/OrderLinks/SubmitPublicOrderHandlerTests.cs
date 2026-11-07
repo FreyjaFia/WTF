@@ -7,7 +7,6 @@ using WTF.Api.Features.OrderLinks;
 using WTF.Api.Features.Orders;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
-using WTF.Api.Features.Products.Enums;
 using WTF.Api.Features.Promotions.DTOs;
 using WTF.Api.Services;
 using WTF.Domain.Entities;
@@ -83,7 +82,7 @@ public class SubmitPublicOrderHandlerTests
     };
 
     private async Task<Product> AddAddOnAsync(Product parent, string name, decimal price,
-        AddOnTypeEnum type = AddOnTypeEnum.Extra, decimal? overridePrice = null)
+        int type = CatalogSeed.Extra, decimal? overridePrice = null)
     {
         var addOn = NewProduct(name, price, addOn: true);
         await TestDb.SaveAsync(_db, addOn,
@@ -215,7 +214,7 @@ public class SubmitPublicOrderHandlerTests
     [Fact]
     public async Task Discount_ThatNeedsAnAddOn_OnlyAppliesWithExactlyThatAddOn()
     {
-        var size = await AddAddOnAsync(_latte, "Small", 0, AddOnTypeEnum.Size);
+        var size = await AddAddOnAsync(_latte, "Small", 0, CatalogSeed.Size);
         var shot = await AddAddOnAsync(_latte, "Shot", 25);
         await AddDiscountAsync(_latte.Id, 40m, null, [size.Id]);
 
@@ -714,8 +713,8 @@ public class SubmitPublicOrderHandlerTests
     [Fact]
     public async Task Submit_AProductWithASizeNeedsExactlyOne()
     {
-        var large = await AddAddOnAsync(_latte, "Large", 30, AddOnTypeEnum.Size);
-        var regular = await AddAddOnAsync(_latte, "Regular", 0, AddOnTypeEnum.Size);
+        var large = await AddAddOnAsync(_latte, "Large", 30, CatalogSeed.Size);
+        var regular = await AddAddOnAsync(_latte, "Regular", 0, CatalogSeed.Size);
 
         await ShouldRejectAsync(Request([new PublicOrderItemRequest(_latte.Id, 1, null, null)]), "size");
         await ShouldRejectAsync(

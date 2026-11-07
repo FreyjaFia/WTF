@@ -1,3 +1,4 @@
+using WTF.Api.Features.Catalog.DTOs;
 using WTF.Api.Features.Customers.DTOs;
 using WTF.Api.Features.Products.DTOs;
 
@@ -7,5 +8,6 @@ public record PosCatalogDto(
     List<ProductDto> Products,
     Dictionary<Guid, List<AddOnGroupDto>> AddOnsByProductId,
     List<CustomerDto> Customers,
-    DateTime SyncedAt
+    DateTime SyncedAt,
+    CatalogLookupsDto? Lookups = null
 );

@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Features.Products;
 using WTF.Api.Features.Products.DTOs;
-using WTF.Api.Features.Products.Enums;
 using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Database;
@@ -26,7 +25,7 @@ public class ProductAddOnDatabaseTests
                 new AssignProductAddOnsCommand
                 {
                     ProductId = drink.Id,
-                    AddOns = [new ProductAddOnAssignmentDto(extra.Id, AddOnTypeEnum.Extra)],
+                    AddOns = [new ProductAddOnAssignmentDto(extra.Id, CatalogSeed.Extra)],
                 },
                 CancellationToken.None);
             assigned.ShouldBeTrue();

@@ -11,7 +11,6 @@ using WTF.Api.Features.Conversations;
 using WTF.Api.Features.Inventory;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
-using WTF.Api.Features.Products.Enums;
 using WTF.Api.Hubs;
 using WTF.Api.Services;
 using WTF.Calculations.Orders;
@@ -92,86 +91,7 @@ public class UpdateOrderHandler(
                 throw new InvalidOperationException("Nested add-ons are not allowed. Add-ons cannot have their own add-ons.");
             }
 
-            var addOnIds = item.AddOns.Select(addOn => addOn.ProductId).ToList();
-
-            var availableTypes = await db.ProductAddOns
-                .Where(pa => pa.IsActive)
-                .Where(pa => pa.ProductId == item.ProductId)
-                .Select(pa => (AddOnTypeEnum)(pa.AddOnTypeId ?? (int)AddOnTypeEnum.Extra))
-                .Distinct()
-                .ToListAsync(cancellationToken);
-
-            if (addOnIds.Count == 0)
-            {
-                if (availableTypes.Contains(AddOnTypeEnum.Size))
-                {
-                    throw new InvalidOperationException("A size selection is required and must be exactly one.");
-                }
-
-                if (availableTypes.Contains(AddOnTypeEnum.Flavor))
-                {
-                    throw new InvalidOperationException("A flavor selection is required and must be exactly one.");
-                }
-
-                continue;
-            }
-
-            var productAddOns = await db.ProductAddOns
-                .Where(pa => pa.IsActive)
-                .Where(pa => pa.ProductId == item.ProductId && addOnIds.Contains(pa.AddOnId))
-                .Select(pa => new
-                {
-                    pa.AddOnId,
-                    AddOnType = (AddOnTypeEnum)(pa.AddOnTypeId ?? (int)AddOnTypeEnum.Extra)
-                })
-                .ToListAsync(cancellationToken);
-
-            if (productAddOns.Count != addOnIds.Count)
-            {
-                throw new InvalidOperationException("One or more add-ons are not allowed for this product.");
-            }
-
-            PickOneAddOnRule.Ensure(item.AddOns, productAddOns.Select(pa => (pa.AddOnId, pa.AddOnType)));
-
-            var selectedByType = productAddOns
-                .GroupBy(pa => pa.AddOnType)
-                .ToDictionary(group => group.Key, group => group.Count());
-
-            if (availableTypes.Contains(AddOnTypeEnum.Size))
-            {
-                var sizeCount = selectedByType.TryGetValue(AddOnTypeEnum.Size, out var count)
-                    ? count
-                    : 0;
-
-                if (sizeCount != 1)
-                {
-                    throw new InvalidOperationException("A size selection is required and must be exactly one.");
-                }
-            }
-
-            if (availableTypes.Contains(AddOnTypeEnum.Flavor))
-            {
-                var flavorCount = selectedByType.TryGetValue(AddOnTypeEnum.Flavor, out var fCount)
-                    ? fCount
-                    : 0;
-
-                if (flavorCount != 1)
-                {
-                    throw new InvalidOperationException("A flavor selection is required and must be exactly one.");
-                }
-            }
-
-            if (availableTypes.Contains(AddOnTypeEnum.Sauce))
-            {
-                var sauceCount = selectedByType.TryGetValue(AddOnTypeEnum.Sauce, out var sCount)
-                    ? sCount
-                    : 0;
-
-                if (sauceCount > 1)
-                {
-                    throw new InvalidOperationException("A sauce selection must be at most one.");
-                }
-            }
+            await AddOnTypeRuleCheck.EnsureAsync(db, item.ProductId, item.AddOns, cancellationToken);
         }
 
         var requestedProductIds = request.Items

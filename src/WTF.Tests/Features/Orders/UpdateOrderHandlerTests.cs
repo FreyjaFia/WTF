@@ -6,7 +6,6 @@ using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Orders;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
-using WTF.Api.Features.Products.Enums;
 using WTF.Api.Hubs;
 using WTF.Api.Services;
 using WTF.Tests.Infrastructure;
@@ -316,7 +315,7 @@ public class UpdateOrderHandlerTests
     {
         var shake = _data.AddProduct("Shake", 100);
         var large = _data.AddProduct("Large", 20, isAddOn: true);
-        _data.AllowAddOn(shake, large, AddOnTypeEnum.Size);
+        _data.AllowAddOn(shake, large, CatalogSeed.Size);
         var orderId = _data.AddOrder();
 
         var ex = await Should.ThrowAsync<InvalidOperationException>(() =>
@@ -331,8 +330,8 @@ public class UpdateOrderHandlerTests
         var shake = _data.AddProduct("Shake", 100);
         var choc = _data.AddProduct("Choc", 0, isAddOn: true);
         var extra = _data.AddProduct("Extra", 5, isAddOn: true);
-        _data.AllowAddOn(shake, choc, AddOnTypeEnum.Flavor);
-        _data.AllowAddOn(shake, extra, AddOnTypeEnum.Extra);
+        _data.AllowAddOn(shake, choc, CatalogSeed.Flavor);
+        _data.AllowAddOn(shake, extra, CatalogSeed.Extra);
         var orderId = _data.AddOrder();
 
         var ex = await Should.ThrowAsync<InvalidOperationException>(() =>
@@ -347,8 +346,8 @@ public class UpdateOrderHandlerTests
         var wings = _data.AddProduct("Wings", 100);
         var bbq = _data.AddProduct("BBQ", 0, isAddOn: true);
         var hot = _data.AddProduct("Hot", 0, isAddOn: true);
-        _data.AllowAddOn(wings, bbq, AddOnTypeEnum.Sauce);
-        _data.AllowAddOn(wings, hot, AddOnTypeEnum.Sauce);
+        _data.AllowAddOn(wings, bbq, CatalogSeed.Sauce);
+        _data.AllowAddOn(wings, hot, CatalogSeed.Sauce);
         var orderId = _data.AddOrder();
 
         var ex = await Should.ThrowAsync<InvalidOperationException>(() =>
@@ -362,7 +361,7 @@ public class UpdateOrderHandlerTests
     {
         var shake = _data.AddProduct("Shake", 100);
         var large = _data.AddProduct("Large", 20, isAddOn: true);
-        _data.AllowAddOn(shake, large, AddOnTypeEnum.Size);
+        _data.AllowAddOn(shake, large, CatalogSeed.Size);
         var orderId = _data.AddOrder();
 
         var dto = await Handler().Handle(Cmd(orderId, null, [Line(shake, 1, Line(large))]), CancellationToken.None);

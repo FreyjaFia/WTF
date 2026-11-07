@@ -1,3 +1,5 @@
+using WTF.Api.Features.Catalog.DTOs;
+
 namespace WTF.Api.Features.OrderLinks.DTOs;
 
 // Everything the anonymous ordering page can see. No audit fields, staff names, user ids or other customers.
@@ -14,7 +16,7 @@ public record PublicProductDto(
     int AddOnCount
 );
 
-public record PublicAddOnGroupDto(int Type, string DisplayName, List<PublicProductDto> Options);
+public record PublicAddOnGroupDto(int Type, string DisplayName, List<PublicProductDto> Options, bool IsRequired = false, int MinSelect = 0, int MaxSelect = 0);
 
 public record PublicDealAddOnDto(Guid AddOnProductId, int Quantity);
 
@@ -33,7 +35,8 @@ public record PublicDealDto(
 public record PublicCatalogDto(
     List<PublicProductDto> Products,
     Dictionary<Guid, List<PublicAddOnGroupDto>> AddOnsByProductId,
-    List<PublicDealDto> Deals
+    List<PublicDealDto> Deals,
+    CatalogLookupsDto? Lookups = null
 );
 
 public record PublicOrderLinkDto(

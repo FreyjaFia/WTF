@@ -1,12 +1,12 @@
 using Microsoft.EntityFrameworkCore;
-using WTF.Api.Features.Products.Enums;
+using WTF.Calculations.Orders;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Promotions;
 
 internal static class PromotionAddOnRules
 {
-    // An order for a product with a Size or Flavor add-on must pick exactly one of each, and at most one Sauce. A
+    // An order must follow the selection rules of each add-on type the product offers (required, minimum, maximum). A
     // promotion that lists the add-ons of a product has to follow the same rules, or no order could ever match it and
     // the promotion could be saved but never sold. A product with only optional add-ons (or none) may list none.
     public static async Task EnsureRequiredTypesAsync(
@@ -28,33 +28,45 @@ internal static class PromotionAddOnRules
             .Where(p => productIds.Contains(p.Id))
             .ToDictionaryAsync(p => p.Id, p => p.Name, cancellationToken);
 
+        var typeIds = links.Where(l => l.AddOnTypeId != null).Select(l => l.AddOnTypeId!.Value).Distinct().ToList();
+        var rules = (await db.AddOnTypes
+                .Where(t => typeIds.Contains(t.Id))
+                .Select(t => new AddOnTypeRule(t.Id, t.Name, t.IsRequired, t.MinSelect, t.MaxSelect))
+                .ToListAsync(cancellationToken))
+            .ToDictionary(r => r.Id);
+
         foreach (var (productId, addOnIds) in items)
         {
-            var typeByAddOn = links
-                .Where(x => x.ProductId == productId)
-                .GroupBy(x => x.AddOnId)
-                .ToDictionary(g => g.Key, g => (AddOnTypeEnum)(g.First().AddOnTypeId ?? (int)AddOnTypeEnum.Extra));
+            var productLinks = links.Where(x => x.ProductId == productId).ToList();
             var productName = names.TryGetValue(productId, out var name) ? name : "A product";
+            var chosenIds = addOnIds.Distinct().ToHashSet();
 
-            foreach (var required in new[] { AddOnTypeEnum.Size, AddOnTypeEnum.Flavor })
+            foreach (var rule in productLinks
+                         .Where(l => l.AddOnTypeId != null && rules.ContainsKey(l.AddOnTypeId.Value))
+                         .Select(l => rules[l.AddOnTypeId!.Value])
+                         .Distinct()
+                         .OrderBy(r => r.Id))
             {
-                if (!typeByAddOn.ContainsValue(required))
+                var chosen = productLinks
+                    .Where(l => l.AddOnTypeId == rule.Id && chosenIds.Contains(l.AddOnId))
+                    .Select(l => l.AddOnId)
+                    .Distinct()
+                    .Count();
+
+                if (AddOnSelectionRules.Check(rule, chosen) is null)
                 {
                     continue;
                 }
 
-                var chosen = addOnIds.Distinct().Count(id => typeByAddOn.TryGetValue(id, out var type) && type == required);
-                if (chosen != 1)
+                if (rule.Minimum == 1 && rule.MaxSelect == 1)
                 {
                     throw new InvalidOperationException(
-                        $"{productName} needs exactly one {required} add-on in this promotion, because every order for it has one.");
+                        $"{productName} needs exactly one {rule.Name} add-on in this promotion, because every order for it has one.");
                 }
-            }
 
-            var sauces = addOnIds.Distinct().Count(id => typeByAddOn.TryGetValue(id, out var type) && type == AddOnTypeEnum.Sauce);
-            if (sauces > 1)
-            {
-                throw new InvalidOperationException($"{productName} can have at most one Sauce add-on in this promotion.");
+                throw new InvalidOperationException(chosen > rule.Maximum
+                    ? $"{productName} can have at most {(rule.Maximum == 1 ? "one" : rule.Maximum.ToString())} {rule.Name} add-on{(rule.Maximum == 1 ? string.Empty : "s")} in this promotion."
+                    : $"{productName} needs at least {rule.Minimum} {rule.Name} add-on{(rule.Minimum == 1 ? string.Empty : "s")} in this promotion, because every order for it has them.");
             }
         }
     }

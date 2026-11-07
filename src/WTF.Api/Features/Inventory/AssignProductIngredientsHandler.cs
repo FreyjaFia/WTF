@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Features.Audit.Enums;
-using WTF.Api.Features.Products.Enums;
+using WTF.Api.Features.Catalog;
 using WTF.Api.Services;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
@@ -174,7 +174,7 @@ public class AssignProductIngredientsHandler(
         }
 
         var sizeIds = await db.ProductAddOns
-            .Where(pa => pa.ProductId == product.Id && pa.IsActive && pa.AddOnTypeId == (int)AddOnTypeEnum.Size)
+            .Where(pa => pa.ProductId == product.Id && pa.IsActive && pa.AddOnTypeId == SystemAddOnTypes.Size)
             .Select(pa => pa.AddOnId)
             .ToListAsync(cancellationToken);
         if (amounts.Any(amount => !sizeIds.Contains(amount.SizeProductId)))

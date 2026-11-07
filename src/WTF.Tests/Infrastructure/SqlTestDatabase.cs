@@ -1,7 +1,6 @@
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Features.Orders.Enums;
-using WTF.Api.Features.Products.Enums;
 using WTF.Api.Features.Users.Enums;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
@@ -90,12 +89,9 @@ internal sealed class SqlTestDatabase : IAsyncDisposable
             (id, name) => new Status { Id = id, Name = name }, skip: OrderStatusEnum.All));
         await InsertAsync(db, Named<PaymentMethodEnum, PaymentMethod>(
             (id, name) => new PaymentMethod { Id = id, Name = name }));
-        await InsertAsync(db, Named<ProductCategoryEnum, ProductCategory>(
-            (id, name) => new ProductCategory { Id = id, Name = name }));
-        await InsertAsync(db, Named<ProductSubCategoryEnum, ProductSubCategory>(
-            (id, name) => new ProductSubCategory { Id = id, Name = name }));
-        await InsertAsync(db, Named<AddOnTypeEnum, AddOnType>(
-            (id, name) => new AddOnType { Id = id, Name = name }));
+        await InsertAsync(db, CatalogSeed.Categories());
+        await InsertAsync(db, CatalogSeed.SubCategories());
+        await InsertAsync(db, CatalogSeed.AddOnTypes());
         await InsertAsync(db, Named<UserRoleEnum, UserRole>(
             (id, name) => new UserRole { Id = id, Name = name }));
     }

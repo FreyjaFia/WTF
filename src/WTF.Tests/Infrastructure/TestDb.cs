@@ -26,7 +26,24 @@ internal static class TestDb
             .EnableSensitiveDataLogging()
             .Options;
 
-        return new InMemoryWtfDbContext(options);
+        var db = new InMemoryWtfDbContext(options);
+        if (!db.ProductCategories.Any() && !db.AddOnTypes.Any())
+        {
+            db.ProductCategories.AddRange(CatalogSeed.Categories());
+            db.ProductSubCategories.AddRange(CatalogSeed.SubCategories());
+            db.AddOnTypes.AddRange(CatalogSeed.AddOnTypes());
+            db.SaveChanges();
+            db.ChangeTracker.Clear();
+        }
+
+        return db;
+    }
+
+    public static async Task SeedAddOnTypesAsync(string dbName)
+    {
+        await using var db = Create(dbName);
+        db.AddOnTypes.AddRange(CatalogSeed.AddOnTypes());
+        await db.SaveChangesAsync();
     }
 
     /// <summary>Saves entities through their own context, so the handler under test starts from clean tracking state.</summary>

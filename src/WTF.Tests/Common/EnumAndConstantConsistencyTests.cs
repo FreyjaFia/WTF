@@ -1,10 +1,10 @@
 using WTF.Api.Common.Auth;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Orders.Enums;
-using WTF.Api.Features.Products.Enums;
 using WTF.Api.Features.Promotions.DTOs;
 using WTF.Api.Features.Users.Enums;
 using WTF.Api.Hubs;
+using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Common;
 
@@ -60,12 +60,12 @@ public class EnumAndConstantConsistencyTests
     [Fact]
     public void ProductEnums_Values()
     {
-        ((int)ProductCategoryEnum.Drink).ShouldBe(1);
-        ((int)ProductCategoryEnum.Other).ShouldBe(4);
-        ((int)ProductSubCategoryEnum.Coffee).ShouldBe(1);
-        ((int)ProductSubCategoryEnum.Retail).ShouldBe(4);
-        ((int)AddOnTypeEnum.Size).ShouldBe(1);
-        ((int)AddOnTypeEnum.Sauce).ShouldBe(5);
+        ((int)CatalogSeed.Drink).ShouldBe(1);
+        ((int)CatalogSeed.Other).ShouldBe(4);
+        ((int)CatalogSeed.Coffee).ShouldBe(1);
+        ((int)CatalogSeed.Retail).ShouldBe(4);
+        ((int)CatalogSeed.Size).ShouldBe(1);
+        ((int)CatalogSeed.Sauce).ShouldBe(5);
     }
 
     [Fact]

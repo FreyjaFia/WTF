@@ -1,5 +1,4 @@
 using WTF.Api.Features.Inventory;
-using WTF.Api.Features.Products.Enums;
 using WTF.Tests.Features.Orders;
 using WTF.Tests.Infrastructure;
 
@@ -69,8 +68,8 @@ public class GetStockCoverageHandlerTests
         var latte = _data.AddProduct("Latte", 150m);
         var regular = _data.AddProduct("Regular", 0m, isAddOn: true);
         var large = _data.AddProduct("Large", 20m, isAddOn: true);
-        _data.AllowAddOn(latte, regular, AddOnTypeEnum.Size);
-        _data.AllowAddOn(latte, large, AddOnTypeEnum.Size);
+        _data.AllowAddOn(latte, regular, CatalogSeed.Size);
+        _data.AllowAddOn(latte, large, CatalogSeed.Size);
         StockSeed.Link(_db, regular, StockSeed.Item(_db, "Regular Cup", 50m), 1m);
 
         var result = await Coverage();
@@ -87,8 +86,8 @@ public class GetStockCoverageHandlerTests
         var latte = _data.AddProduct("Latte", 150m);
         var regular = _data.AddProduct("Regular", 0m, isAddOn: true);
         var large = _data.AddProduct("Large", 20m, isAddOn: true);
-        _data.AllowAddOn(latte, regular, AddOnTypeEnum.Size);
-        _data.AllowAddOn(latte, large, AddOnTypeEnum.Size);
+        _data.AllowAddOn(latte, regular, CatalogSeed.Size);
+        _data.AllowAddOn(latte, large, CatalogSeed.Size);
         StockSeed.Link(_db, regular, StockSeed.Item(_db, "Regular Cup", 50m), 1m);
         StockSeed.Link(_db, large, StockSeed.Item(_db, "Large Cup", 50m), 1m);
 
@@ -101,8 +100,8 @@ public class GetStockCoverageHandlerTests
         var latte = _data.AddProduct("Latte", 150m);
         var syrup = _data.AddProduct("Syrup", 10m, isAddOn: true);
         var extra = _data.AddProduct("Extra shot", 30m, isAddOn: true);
-        _data.AllowAddOn(latte, syrup, AddOnTypeEnum.Topping);
-        _data.AllowAddOn(latte, extra, AddOnTypeEnum.Extra);
+        _data.AllowAddOn(latte, syrup, CatalogSeed.Topping);
+        _data.AllowAddOn(latte, extra, CatalogSeed.Extra);
         StockSeed.Link(_db, syrup, StockSeed.Item(_db, "Syrup", 50m), 10m);
 
         (await Coverage()).Products.Single().Status.ShouldBe("Missing");

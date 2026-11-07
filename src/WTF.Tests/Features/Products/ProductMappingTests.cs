@@ -1,6 +1,5 @@
 using WTF.Api.Features.Products;
 using WTF.Api.Features.Products.DTOs;
-using WTF.Api.Features.Products.Enums;
 using WTF.Domain.Entities;
 
 namespace WTF.Tests.Features.Products;
@@ -50,7 +49,7 @@ public class ProductMappingTests
 
         var dto = ProductMapping.ToDto(product, "img", history, addOnCount: 3, overridePrice: 5m);
 
-        dto.SubCategory.ShouldBe((ProductSubCategoryEnum)1);
+        dto.SubCategory.ShouldBe((int)1);
         dto.AddOnCount.ShouldBe(3);
         dto.OverridePrice.ShouldBe(5m);
         dto.ImageUrl.ShouldBe("img");
@@ -60,7 +59,7 @@ public class ProductMappingTests
     [Fact]
     public void ProductDto_EffectivePrice_PrefersOverride()
     {
-        var withOverride = new ProductDto(Guid.NewGuid(), "A", "A", null, 10m, (ProductCategoryEnum)1, null, true, true,
+        var withOverride = new ProductDto(Guid.NewGuid(), "A", "A", null, 10m, (int)1, null, true, true,
             DateTime.UtcNow, Guid.NewGuid(), null, null, null, [], 0, 4m);
         var withoutOverride = withOverride with { OverridePrice = null };
 
@@ -73,7 +72,7 @@ public class ProductMappingTests
     [Fact]
     public void ProductDto_ProductCategory_ReflectsAddOnFlag()
     {
-        var dto = new ProductDto(Guid.NewGuid(), "A", "A", null, 10m, (ProductCategoryEnum)1, null, false, true,
+        var dto = new ProductDto(Guid.NewGuid(), "A", "A", null, 10m, (int)1, null, false, true,
             DateTime.UtcNow, Guid.NewGuid(), null, null, null, []);
 
         dto.ProductCategory.ShouldBe("Main Product");

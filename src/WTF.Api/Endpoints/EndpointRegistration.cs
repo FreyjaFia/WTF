@@ -9,6 +9,7 @@ public static class EndpointRegistration
         app.MapAuth()
             .MapLoyalty()
             .MapProducts()
+            .MapCatalog()
             .MapOrders()
             .MapConversations()
             .MapCustomers()

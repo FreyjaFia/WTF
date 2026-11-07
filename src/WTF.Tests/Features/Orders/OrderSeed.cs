@@ -1,5 +1,4 @@
 using WTF.Api.Features.Orders.Enums;
-using WTF.Api.Features.Products.Enums;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 using WTF.Tests.Infrastructure;
@@ -35,7 +34,7 @@ internal sealed class OrderSeed(string dbName)
         return id;
     }
 
-    public void AllowAddOn(Guid productId, Guid addOnId, AddOnTypeEnum type = AddOnTypeEnum.Extra, bool isActive = true)
+    public void AllowAddOn(Guid productId, Guid addOnId, int type = CatalogSeed.Extra, bool isActive = true)
     {
         using var db = Open();
         db.ProductAddOns.Add(new ProductAddOn

@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Http;
-using WTF.Api.Features.Products.Enums;
 using WTF.Api.Features.Sync;
 using WTF.Domain.Entities;
 using WTF.Tests.Infrastructure;
@@ -108,9 +107,9 @@ public class GetPosCatalogHandlerTests
         var shot = await AddProduct("Shot", addOn: true);
         var syrup = await AddProduct("Syrup", addOn: true);
         var off = await AddProduct("Whip", addOn: true);
-        await AddAddOn(latte.Id, shot.Id, (int)AddOnTypeEnum.Extra);
-        await AddAddOn(latte.Id, syrup.Id, (int)AddOnTypeEnum.Flavor);
-        await AddAddOn(latte.Id, off.Id, (int)AddOnTypeEnum.Extra, active: false);
+        await AddAddOn(latte.Id, shot.Id, (int)CatalogSeed.Extra);
+        await AddAddOn(latte.Id, syrup.Id, (int)CatalogSeed.Flavor);
+        await AddAddOn(latte.Id, off.Id, (int)CatalogSeed.Extra, active: false);
 
         var catalog = await Run();
 
@@ -124,13 +123,13 @@ public class GetPosCatalogHandlerTests
         var vanilla = await AddProduct("Vanilla", addOn: true);
         var shot = await AddProduct("Shot", addOn: true);
         var large = await AddProduct("Large", addOn: true);
-        await AddAddOn(latte.Id, vanilla.Id, (int)AddOnTypeEnum.Flavor);
-        await AddAddOn(latte.Id, shot.Id, (int)AddOnTypeEnum.Extra);
-        await AddAddOn(latte.Id, large.Id, (int)AddOnTypeEnum.Size);
+        await AddAddOn(latte.Id, vanilla.Id, (int)CatalogSeed.Flavor);
+        await AddAddOn(latte.Id, shot.Id, (int)CatalogSeed.Extra);
+        await AddAddOn(latte.Id, large.Id, (int)CatalogSeed.Size);
 
         var groups = (await Run()).AddOnsByProductId[latte.Id];
 
-        groups.Select(g => g.Type).ShouldBe([AddOnTypeEnum.Size, AddOnTypeEnum.Flavor, AddOnTypeEnum.Extra]);
+        groups.Select(g => g.Type).ShouldBe([CatalogSeed.Size, CatalogSeed.Flavor, CatalogSeed.Extra]);
         groups.Select(g => g.DisplayName).ShouldBe(["Size", "Flavor", "Extra"]);
         groups[0].Options.Single().Name.ShouldBe("Large");
     }
@@ -142,7 +141,7 @@ public class GetPosCatalogHandlerTests
         var shot = await AddProduct("Shot", addOn: true);
         await AddAddOn(latte.Id, shot.Id, typeId: null);
 
-        (await Run()).AddOnsByProductId[latte.Id].Single().Type.ShouldBe(AddOnTypeEnum.Extra);
+        (await Run()).AddOnsByProductId[latte.Id].Single().Type.ShouldBe(CatalogSeed.Extra);
     }
 
     [Fact]
@@ -150,7 +149,7 @@ public class GetPosCatalogHandlerTests
     {
         var latte = await AddProduct("Latte");
         var shot = await AddProduct("Shot", active: false, addOn: true);
-        await AddAddOn(latte.Id, shot.Id, (int)AddOnTypeEnum.Extra);
+        await AddAddOn(latte.Id, shot.Id, (int)CatalogSeed.Extra);
 
         (await Run()).AddOnsByProductId.ShouldNotContainKey(latte.Id);
     }
@@ -161,8 +160,8 @@ public class GetPosCatalogHandlerTests
         var latte = await AddProduct("Latte");
         var shot = await AddProduct("Shot", addOn: true, price: 30);
         var syrup = await AddProduct("Syrup", addOn: true, price: 20);
-        await AddAddOn(latte.Id, shot.Id, (int)AddOnTypeEnum.Extra, overridePrice: 10);
-        await AddAddOn(latte.Id, syrup.Id, (int)AddOnTypeEnum.Extra, overridePrice: 5, overrideActive: false);
+        await AddAddOn(latte.Id, shot.Id, (int)CatalogSeed.Extra, overridePrice: 10);
+        await AddAddOn(latte.Id, syrup.Id, (int)CatalogSeed.Extra, overridePrice: 5, overrideActive: false);
 
         var options = (await Run()).AddOnsByProductId[latte.Id].Single().Options;
 
@@ -178,7 +177,7 @@ public class GetPosCatalogHandlerTests
         // Add-ons are only loaded for catalog (non add-on, active) products.
         var latte = await AddProduct("Latte", active: false);
         var shot = await AddProduct("Shot", addOn: true);
-        await AddAddOn(latte.Id, shot.Id, (int)AddOnTypeEnum.Extra);
+        await AddAddOn(latte.Id, shot.Id, (int)CatalogSeed.Extra);
 
         (await Run()).AddOnsByProductId.ShouldBeEmpty();
     }

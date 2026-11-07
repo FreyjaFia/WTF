@@ -124,6 +124,8 @@ public partial class WTFDbContext : DbContext
             entity.ToTable("AddOnType");
 
             entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_AddOnType_CreatedAt");
+            entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_AddOnType_IsActive");
             entity.Property(e => e.Name).HasMaxLength(50);
         });
 
@@ -771,6 +773,8 @@ public partial class WTFDbContext : DbContext
         modelBuilder.Entity<ProductCategory>(entity =>
         {
             entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_ProductCategories_CreatedAt");
+            entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_ProductCategories_IsActive");
             entity.Property(e => e.Name)
                 .HasMaxLength(50)
                 .IsUnicode(false);
@@ -899,9 +903,15 @@ public partial class WTFDbContext : DbContext
         modelBuilder.Entity<ProductSubCategory>(entity =>
         {
             entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_ProductSubCategories_CreatedAt");
+            entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_ProductSubCategories_IsActive");
             entity.Property(e => e.Name)
                 .HasMaxLength(50)
                 .IsUnicode(false);
+
+            entity.HasOne(d => d.Category).WithMany(p => p.ProductSubCategories)
+                .HasForeignKey(d => d.CategoryId)
+                .HasConstraintName("FK_ProductSubCategories_Category");
         });
 
         modelBuilder.Entity<Promotion>(entity =>

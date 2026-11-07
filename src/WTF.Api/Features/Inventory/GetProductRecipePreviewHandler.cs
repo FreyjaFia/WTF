@@ -1,7 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Features.Inventory.DTOs;
-using WTF.Api.Features.Products.Enums;
+using WTF.Api.Features.Catalog;
 using WTF.Calculations.Inventory;
 using WTF.Domain.Data;
 
@@ -53,7 +53,7 @@ public class GetProductRecipePreviewHandler(WTFDbContext db) : IRequestHandler<G
         }
 
         var sizes = options
-            .Where(option => option.AddOnTypeId == (int)AddOnTypeEnum.Size)
+            .Where(option => option.AddOnTypeId == SystemAddOnTypes.Size)
             .Select(option => (Id: option.AddOnId, option.Name))
             .ToList();
         var parentLine = new StockLine(Guid.NewGuid(), null, product.Id, 1);

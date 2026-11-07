@@ -1,8 +1,8 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
+using WTF.Api.Features.Catalog;
 using WTF.Api.Features.Products.DTOs;
-using WTF.Api.Features.Products.Enums;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Products;
@@ -31,16 +31,22 @@ public class GetProductsByAddOnHandler(WTFDbContext db, IHttpContextAccessor htt
             .Select(pa => new
             {
                 pa.Product,
-                AddOnType = (AddOnTypeEnum)(pa.AddOnTypeId ?? (int)AddOnTypeEnum.Extra)
+                AddOnType = pa.AddOnTypeId ?? SystemAddOnTypes.Extra,
+                TypeName = pa.AddOnType != null ? pa.AddOnType.Name : "Extra",
+                TypeSort = pa.AddOnType != null ? pa.AddOnType.SortOrder : SystemAddOnTypes.Extra,
+                TypeRequired = pa.AddOnType != null && pa.AddOnType.IsRequired,
+                TypeMin = pa.AddOnType != null ? pa.AddOnType.MinSelect : 0,
+                TypeMax = pa.AddOnType != null ? pa.AddOnType.MaxSelect : 0
             })
             .ToListAsync(cancellationToken);
 
         // Group products by the add-on type configured on the ProductAddOn relationship
         var groups = productLinks
-            .GroupBy(x => x.AddOnType)
+            .GroupBy(x => new { x.AddOnType, x.TypeName, x.TypeSort, x.TypeRequired, x.TypeMin, x.TypeMax })
+            .OrderBy(group => group.Key.TypeSort).ThenBy(group => group.Key.AddOnType)
             .Select(group => new AddOnGroupDto(
-                group.Key,
-                group.Key.ToString(),
+                group.Key.AddOnType,
+                group.Key.TypeName,
                 [.. group.Select(item =>
                 {
                     var product = item.Product;
@@ -49,9 +55,9 @@ public class GetProductsByAddOnHandler(WTFDbContext db, IHttpContextAccessor htt
                         : null;
 
                     return ProductMapping.ToDto(product, imageUrl, new List<ProductPriceHistoryDto>());
-                })]
+                })],
+                group.Key.TypeRequired, group.Key.TypeMin, group.Key.TypeMax
             ))
-            .OrderBy(g => g.Type)
             .ToList();
 
         return groups;

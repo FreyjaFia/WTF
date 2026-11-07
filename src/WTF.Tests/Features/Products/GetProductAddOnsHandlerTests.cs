@@ -1,5 +1,4 @@
 using WTF.Api.Features.Products;
-using WTF.Api.Features.Products.Enums;
 using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Features.Products;
@@ -26,13 +25,13 @@ public class GetProductAddOnsHandlerTests
         var large = ProductSeed.NewProduct(name: "Large", code: "L", isAddOn: true);
         var xl = ProductSeed.NewProduct(name: "XL", code: "XL", isAddOn: true);
         await ProductSeed.SeedAsync(_dbName, product, shot, large, xl,
-            ProductSeed.NewLink(product.Id, shot.Id, (int)AddOnTypeEnum.Extra),
-            ProductSeed.NewLink(product.Id, large.Id, (int)AddOnTypeEnum.Size),
-            ProductSeed.NewLink(product.Id, xl.Id, (int)AddOnTypeEnum.Size));
+            ProductSeed.NewLink(product.Id, shot.Id, (int)CatalogSeed.Extra),
+            ProductSeed.NewLink(product.Id, large.Id, (int)CatalogSeed.Size),
+            ProductSeed.NewLink(product.Id, xl.Id, (int)CatalogSeed.Size));
 
         var result = await Handler().Handle(new GetProductAddOnsQuery(product.Id), CancellationToken.None);
 
-        result.Select(g => g.Type).ShouldBe([AddOnTypeEnum.Size, AddOnTypeEnum.Extra]);
+        result.Select(g => g.Type).ShouldBe([CatalogSeed.Size, CatalogSeed.Extra]);
         result[0].DisplayName.ShouldBe("Size");
         result[0].Options.Select(o => o.Name).Order().ShouldBe(["Large", "XL"]);
         result[1].Options.Select(o => o.Name).ShouldBe(["Shot"]);
@@ -47,7 +46,7 @@ public class GetProductAddOnsHandlerTests
 
         var result = await Handler().Handle(new GetProductAddOnsQuery(product.Id), CancellationToken.None);
 
-        result.ShouldHaveSingleItem().Type.ShouldBe(AddOnTypeEnum.Extra);
+        result.ShouldHaveSingleItem().Type.ShouldBe(CatalogSeed.Extra);
     }
 
     [Fact]

@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Features.Products;
 using WTF.Api.Features.Products.DTOs;
-using WTF.Api.Features.Products.Enums;
 using WTF.Domain.Entities;
 using WTF.Tests.Infrastructure;
 
@@ -42,7 +41,7 @@ public class AssignAddOnProductsHandlerTests
         await ProductSeed.SeedAsync(_dbName, addOn, product);
 
         await Should.ThrowAsync<InvalidOperationException>(() => Handler().Handle(
-            Command(addOn.Id, new AddOnProductAssignmentDto(product.Id, AddOnTypeEnum.Extra), new AddOnProductAssignmentDto(product.Id, AddOnTypeEnum.Size)), CancellationToken.None));
+            Command(addOn.Id, new AddOnProductAssignmentDto(product.Id, CatalogSeed.Extra), new AddOnProductAssignmentDto(product.Id, CatalogSeed.Size)), CancellationToken.None));
     }
 
     [Fact]
@@ -53,7 +52,7 @@ public class AssignAddOnProductsHandlerTests
         await ProductSeed.SeedAsync(_dbName, addOn, product);
 
         await Should.ThrowAsync<InvalidOperationException>(() => Handler().Handle(
-            Command(addOn.Id, new AddOnProductAssignmentDto(product.Id, (AddOnTypeEnum)0)), CancellationToken.None));
+            Command(addOn.Id, new AddOnProductAssignmentDto(product.Id, (int)0)), CancellationToken.None));
     }
 
     [Fact]
@@ -63,7 +62,7 @@ public class AssignAddOnProductsHandlerTests
         await ProductSeed.SeedAsync(_dbName, addOn);
 
         await Should.ThrowAsync<InvalidOperationException>(() => Handler().Handle(
-            Command(addOn.Id, new AddOnProductAssignmentDto(Guid.NewGuid(), AddOnTypeEnum.Extra)), CancellationToken.None));
+            Command(addOn.Id, new AddOnProductAssignmentDto(Guid.NewGuid(), CatalogSeed.Extra)), CancellationToken.None));
     }
 
     [Fact]
@@ -74,7 +73,7 @@ public class AssignAddOnProductsHandlerTests
         await ProductSeed.SeedAsync(_dbName, addOn, other);
 
         var ex = await Should.ThrowAsync<InvalidOperationException>(() => Handler().Handle(
-            Command(addOn.Id, new AddOnProductAssignmentDto(other.Id, AddOnTypeEnum.Extra)), CancellationToken.None));
+            Command(addOn.Id, new AddOnProductAssignmentDto(other.Id, CatalogSeed.Extra)), CancellationToken.None));
 
         ex.Message.ShouldContain("Syrup");
     }
@@ -88,14 +87,14 @@ public class AssignAddOnProductsHandlerTests
         await ProductSeed.SeedAsync(_dbName, addOn, p1, p2);
 
         var result = await Handler().Handle(
-            Command(addOn.Id, new AddOnProductAssignmentDto(p1.Id, AddOnTypeEnum.Extra), new AddOnProductAssignmentDto(p2.Id, AddOnTypeEnum.Sauce)), CancellationToken.None);
+            Command(addOn.Id, new AddOnProductAssignmentDto(p1.Id, CatalogSeed.Extra), new AddOnProductAssignmentDto(p2.Id, CatalogSeed.Sauce)), CancellationToken.None);
 
         result.ShouldBeTrue();
         await using var db = TestDb.Create(_dbName);
         var links = await db.ProductAddOns.Where(l => l.AddOnId == addOn.Id).ToListAsync();
         links.Count.ShouldBe(2);
-        links.Single(l => l.ProductId == p1.Id).AddOnTypeId.ShouldBe((int)AddOnTypeEnum.Extra);
-        links.Single(l => l.ProductId == p2.Id).AddOnTypeId.ShouldBe((int)AddOnTypeEnum.Sauce);
+        links.Single(l => l.ProductId == p1.Id).AddOnTypeId.ShouldBe((int)CatalogSeed.Extra);
+        links.Single(l => l.ProductId == p2.Id).AddOnTypeId.ShouldBe((int)CatalogSeed.Sauce);
     }
 
     [Fact]
@@ -108,7 +107,7 @@ public class AssignAddOnProductsHandlerTests
             ProductSeed.NewLink(p1.Id, addOn.Id), ProductSeed.NewLink(p2.Id, addOn.Id),
             ProductSeed.NewOverride(p2.Id, addOn.Id, 3m));
 
-        await Handler().Handle(Command(addOn.Id, new AddOnProductAssignmentDto(p1.Id, AddOnTypeEnum.Extra)), CancellationToken.None);
+        await Handler().Handle(Command(addOn.Id, new AddOnProductAssignmentDto(p1.Id, CatalogSeed.Extra)), CancellationToken.None);
 
         await using var db = TestDb.Create(_dbName);
         (await db.ProductAddOns.SingleAsync(l => l.ProductId == p2.Id)).IsActive.ShouldBeFalse();
@@ -122,14 +121,14 @@ public class AssignAddOnProductsHandlerTests
         var addOn = ProductSeed.NewProduct(name: "Shot", code: "S", isAddOn: true);
         var product = ProductSeed.NewProduct();
         await ProductSeed.SeedAsync(_dbName, addOn, product,
-            ProductSeed.NewLink(product.Id, addOn.Id, typeId: (int)AddOnTypeEnum.Extra, isActive: false));
+            ProductSeed.NewLink(product.Id, addOn.Id, typeId: (int)CatalogSeed.Extra, isActive: false));
 
-        await Handler().Handle(Command(addOn.Id, new AddOnProductAssignmentDto(product.Id, AddOnTypeEnum.Size)), CancellationToken.None);
+        await Handler().Handle(Command(addOn.Id, new AddOnProductAssignmentDto(product.Id, CatalogSeed.Size)), CancellationToken.None);
 
         await using var db = TestDb.Create(_dbName);
         var link = await db.ProductAddOns.SingleAsync();
         link.IsActive.ShouldBeTrue();
-        link.AddOnTypeId.ShouldBe((int)AddOnTypeEnum.Size);
+        link.AddOnTypeId.ShouldBe((int)CatalogSeed.Size);
     }
 
     [Fact]
