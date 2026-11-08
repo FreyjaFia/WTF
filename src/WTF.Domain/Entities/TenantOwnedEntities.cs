@@ -34,6 +34,10 @@ public partial class DiscountedProductPromotionAddOn : ITenantOwned
 {
 }
 
+public partial class Expense : ITenantOwned
+{
+}
+
 public partial class FixedBundlePromotion : ITenantOwned
 {
 }

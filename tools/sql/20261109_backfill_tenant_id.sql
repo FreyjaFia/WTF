@@ -19,6 +19,7 @@ INSERT INTO @tables (Name) VALUES
     ('Customers'),
     ('DiscountedProductPromotionAddOns'),
     ('DiscountedProductPromotions'),
+    ('Expenses'),
     ('FixedBundlePromotionItemAddOns'),
     ('FixedBundlePromotionItems'),
     ('FixedBundlePromotions'),

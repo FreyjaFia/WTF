@@ -25,7 +25,7 @@ public class SaveCategoryHandler(WTFDbContext db, IAuditService audit) : IReques
         ProductCategory category;
         if (request.Id is null)
         {
-            var nextId = (await db.ProductCategories.MaxAsync(c => (int?)c.Id, cancellationToken) ?? 0) + 1;
+            var nextId = (await db.ProductCategories.IgnoreQueryFilters().MaxAsync(c => (int?)c.Id, cancellationToken) ?? 0) + 1;
             category = new ProductCategory { Id = nextId, IsActive = true, CreatedAt = DateTime.UtcNow };
             db.ProductCategories.Add(category);
         }

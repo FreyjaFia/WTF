@@ -49,7 +49,7 @@ public class GetProductIngredientsEditHandler(WTFDbContext db) : IRequestHandler
             .AsNoTracking()
             .Where(pa => pa.ProductId == product.Id && pa.IsActive && pa.AddOn.IsActive)
             .Select(pa => new ProductIngredientAddOnOptionDto(
-                pa.AddOnId, pa.AddOn.Name, pa.AddOnTypeId == SystemAddOnTypes.Size, pa.AddOnTypeId ?? 0,
+                pa.AddOnId, pa.AddOn.Name, pa.AddOnType != null && pa.AddOnType.SystemKey == SystemAddOnTypes.SizeKey, pa.AddOnTypeId ?? 0,
                 pa.ProductAddOnPriceOverride != null && pa.ProductAddOnPriceOverride.IsActive
                     ? pa.ProductAddOnPriceOverride.Price
                     : pa.AddOn.Price))

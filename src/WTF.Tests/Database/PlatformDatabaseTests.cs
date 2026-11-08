@@ -78,6 +78,82 @@ public class PlatformDatabaseTests
     }
 
     [SqlFact]
+    public async Task CreateTenant_CopiesTheCatalogTemplate_WithItsOwnIds()
+    {
+        await using var database = await SqlTestDatabase.CreateAsync();
+        await using (var seed = database.CreateContext())
+        {
+            // The shared lookup seed has no shop yet; it stands for the first shop's catalog.
+            await seed.Database.ExecuteSqlRawAsync("UPDATE dbo.ProductCategories SET TenantId = '00000000-0000-0000-0000-000000000001'");
+            await seed.Database.ExecuteSqlRawAsync("UPDATE dbo.ProductSubCategories SET TenantId = '00000000-0000-0000-0000-000000000001'");
+            await seed.Database.ExecuteSqlRawAsync("UPDATE dbo.AddOnType SET TenantId = '00000000-0000-0000-0000-000000000001'");
+        }
+
+        var created = await CreateShopAsync(database, "copycat", "copy.owner");
+
+        await using var all = database.CreateContext();
+        var categories = await all.ProductCategories.Where(c => c.TenantId == created.Tenant.Id).ToListAsync();
+        categories.Select(c => c.Name).Order().ShouldBe(["Dessert", "Drink", "Food", "Other"]);
+        categories.ShouldAllBe(c => c.Id > 4);
+
+        var subCategories = await all.ProductSubCategories.Where(s => s.TenantId == created.Tenant.Id).ToListAsync();
+        subCategories.Count.ShouldBe(4);
+        var coffee = subCategories.Single(s => s.Name == "Coffee");
+        categories.Single(c => c.Id == coffee.CategoryId).Name.ShouldBe("Drink");
+
+        var types = await all.AddOnTypes.Where(t => t.TenantId == created.Tenant.Id).ToListAsync();
+        types.Count.ShouldBe(5);
+        types.Single(t => t.SystemKey == "size").Name.ShouldBe("Size");
+        types.ShouldAllBe(t => t.Id > 5);
+
+        (await all.ProductCategories.CountAsync(c => c.TenantId == TenantDefaults.DefaultTenantId)).ShouldBe(4);
+
+        // A category added later in the new shop does not collide with the first shop's ids.
+        await using var db = database.CreateContext(new FixedTenant(created.Tenant.Id));
+        var owner = await db.Users.Select(u => u.Id).FirstAsync();
+        var id = await new WTF.Api.Features.Catalog.SaveCategoryHandler(db, TestFakes.Audit())
+            .Handle(new WTF.Api.Features.Catalog.SaveCategoryCommand(null, "Merch", 9), CancellationToken.None);
+        id.ShouldBe(categories.Max(c => c.Id) + 1);
+        owner.ShouldNotBe(Guid.Empty);
+    }
+
+    [SqlFact]
+    public async Task Expenses_BelongToOneShop_AreHiddenFromOthers_AndGoWithTheShopOnDelete()
+    {
+        await using var database = await SqlTestDatabase.CreateAsync();
+        var admin = await SeedAdminAsync(database);
+        var first = await CreateShopAsync(database, "firstexp", "first.exp");
+        var second = await CreateShopAsync(database, "secondexp", "second.exp");
+        foreach (var shop in new[] { first, second })
+        {
+            await using var db = database.CreateContext(new FixedTenant(shop.Tenant.Id));
+            var userId = await db.Users.Select(u => u.Id).FirstAsync();
+            db.Expenses.Add(new Expense { Id = Guid.NewGuid(), ExpenseDate = new DateOnly(2026, 11, 1), Category = 1, Amount = 100, IsActive = true, CreatedAt = DateTime.UtcNow, CreatedBy = userId });
+            await db.SaveChangesAsync();
+        }
+
+        await using (var read = database.CreateContext(new FixedTenant(first.Tenant.Id)))
+        {
+            (await read.Expenses.CountAsync()).ShouldBe(1);
+            (await read.Expenses.SingleAsync()).TenantId.ShouldBe(first.Tenant.Id);
+        }
+
+        await using (var db = PlatformContext(database))
+        {
+            await Suspend(db, first.Tenant.Id);
+        }
+
+        await using (var db = PlatformContext(database))
+        {
+            await Delete(db, admin, first.Tenant.Id, "firstexp", AdminPassword);
+        }
+
+        await using var all = database.CreateContext();
+        (await all.Expenses.CountAsync(e => e.TenantId == first.Tenant.Id)).ShouldBe(0);
+        (await all.Expenses.CountAsync(e => e.TenantId == second.Tenant.Id)).ShouldBe(1);
+    }
+
+    [SqlFact]
     public async Task CreateTenant_RefusesATakenAddressAndAUsernameUsedByAnotherShop()
     {
         await using var database = await SqlTestDatabase.CreateAsync();

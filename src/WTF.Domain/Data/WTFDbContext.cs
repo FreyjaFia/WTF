@@ -125,10 +125,15 @@ public partial class WTFDbContext : DbContext
 
             entity.ToTable("AddOnType");
 
+            entity.HasIndex(e => new { e.TenantId, e.SystemKey }, "UX_AddOnType_SystemKey")
+                .IsUnique()
+                .HasFilter("([SystemKey] IS NOT NULL)");
+
             entity.Property(e => e.Id).ValueGeneratedNever();
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_AddOnType_CreatedAt");
             entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_AddOnType_IsActive");
             entity.Property(e => e.Name).HasMaxLength(50);
+            entity.Property(e => e.SystemKey).HasMaxLength(20).IsUnicode(false);
         });
 
         modelBuilder.Entity<AuditLog>(entity =>

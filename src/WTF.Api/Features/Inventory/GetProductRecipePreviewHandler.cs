@@ -40,6 +40,7 @@ public class GetProductRecipePreviewHandler(WTFDbContext db) : IRequestHandler<G
                 pa.AddOnId,
                 pa.AddOn.Name,
                 pa.AddOnTypeId,
+                IsSize = pa.AddOnType != null && pa.AddOnType.SystemKey == SystemAddOnTypes.SizeKey,
                 Price = pa.ProductAddOnPriceOverride != null && pa.ProductAddOnPriceOverride.IsActive
                     ? pa.ProductAddOnPriceOverride.Price
                     : pa.AddOn.Price
@@ -53,7 +54,7 @@ public class GetProductRecipePreviewHandler(WTFDbContext db) : IRequestHandler<G
         }
 
         var sizes = options
-            .Where(option => option.AddOnTypeId == SystemAddOnTypes.Size)
+            .Where(option => option.IsSize)
             .Select(option => (Id: option.AddOnId, option.Name))
             .ToList();
         var parentLine = new StockLine(Guid.NewGuid(), null, product.Id, 1);

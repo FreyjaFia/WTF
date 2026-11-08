@@ -30,7 +30,7 @@ public class SaveSubCategoryHandler(WTFDbContext db, IAuditService audit) : IReq
         ProductSubCategory subCategory;
         if (request.Id is null)
         {
-            var nextId = (await db.ProductSubCategories.MaxAsync(s => (int?)s.Id, cancellationToken) ?? 0) + 1;
+            var nextId = (await db.ProductSubCategories.IgnoreQueryFilters().MaxAsync(s => (int?)s.Id, cancellationToken) ?? 0) + 1;
             subCategory = new ProductSubCategory { Id = nextId, IsActive = true, CreatedAt = DateTime.UtcNow };
             db.ProductSubCategories.Add(subCategory);
         }

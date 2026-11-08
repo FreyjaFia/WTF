@@ -38,10 +38,10 @@ internal static class CatalogSeed
 
     public static List<AddOnType> AddOnTypes() =>
     [
-        new() { Id = Size, Name = "Size", IsRequired = true, MinSelect = 1, MaxSelect = 1, SortOrder = 1, IsActive = true, CreatedAt = DateTime.UtcNow },
+        new() { Id = Size, Name = "Size", SystemKey = "size", IsRequired = true, MinSelect = 1, MaxSelect = 1, SortOrder = 1, IsActive = true, CreatedAt = DateTime.UtcNow },
         new() { Id = Flavor, Name = "Flavor", IsRequired = true, MinSelect = 1, MaxSelect = 1, SortOrder = 2, IsActive = true, CreatedAt = DateTime.UtcNow },
         new() { Id = Topping, Name = "Topping", SortOrder = 4, IsActive = true, CreatedAt = DateTime.UtcNow },
-        new() { Id = Extra, Name = "Extra", SortOrder = 5, IsActive = true, CreatedAt = DateTime.UtcNow },
+        new() { Id = Extra, Name = "Extra", SystemKey = "extra", SortOrder = 5, IsActive = true, CreatedAt = DateTime.UtcNow },
         new() { Id = Sauce, Name = "Sauce", MaxSelect = 1, SortOrder = 3, IsActive = true, CreatedAt = DateTime.UtcNow },
     ];
 }
