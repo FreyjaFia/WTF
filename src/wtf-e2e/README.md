@@ -85,7 +85,7 @@ fail the workflow (`continue-on-error`). The report and traces are uploaded as t
 requirement, add `test-e2e` to the `needs` of the build and deploy jobs and remove `continue-on-error`.
 
 `run.sh` is the Linux/macOS twin of `run.ps1` (`E2E_SQL=<connection string> bash run.sh`); it is what CI runs. On CI
-(`CI=true`) Playwright uses 4 workers (a runner for a public repository has 4 cores) and writes an HTML report. On a PC it uses 3 workers (set `E2E_WORKERS` to change it); both retry a failed test once, and a test that passed only on the retry is listed as flaky.
+(`CI=true`) Playwright uses 4 workers (a runner for a public repository has 4 cores) and writes an HTML report. On a PC it uses 3 workers. `E2E_WORKERS` can raise that but never goes below 3. Nothing is retried: a failed test is a real failure, and tests inside a file also run side by side.
 
 ## Multi-tenant tests (tests/tenancy)
 

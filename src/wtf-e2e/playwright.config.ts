@@ -1,4 +1,6 @@
 import { defineConfig } from '@playwright/test';
+const MIN_WORKERS = 3;
+
 export default defineConfig({
   testDir: 'tests',
   globalSetup: require.resolve('./global-setup'),
@@ -6,9 +8,9 @@ export default defineConfig({
   expect: { timeout: 30_000 },
   // Every test seeds its own data and asserts only on it, so all tests can run side by side in the one throwaway
   // database, including tests of the same file. Nothing is retried: a test that fails is a real failure to fix.
-  // The suite is CPU bound, so more workers than cores only adds timeouts: 3 on a PC, 4 on CI.
+  // Never fewer than 3 workers (a standing rule, E2E_WORKERS cannot go below it): 3 on a PC, 4 on CI.
   // The expect timeout is 30 seconds because a page can take 15+ seconds to appear when the machine is busy.
-  workers: process.env.E2E_WORKERS ? Number(process.env.E2E_WORKERS) : process.env.CI ? 4 : 3,
+  workers: Math.max(MIN_WORKERS, process.env.E2E_WORKERS ? Number(process.env.E2E_WORKERS) : process.env.CI ? 4 : 3),
   fullyParallel: true,
   retries: 0,
   reporter: process.env.CI
