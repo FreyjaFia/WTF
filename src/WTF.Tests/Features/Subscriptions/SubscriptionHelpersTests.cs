@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using WTF.Api.Features.Branding;
 using WTF.Api.Features.Subscriptions;
@@ -11,7 +10,10 @@ public class SubscriptionHelpersTests
     private static readonly DateTime End = new(2026, 12, 1, 0, 0, 0, DateTimeKind.Utc);
 
     private static LeaseSigner NewSigner(string? pem = null) =>
-        new(Options.Create(new SubscriptionOptions { LeaseSigningKeyPem = pem }), NullLogger<LeaseSigner>.Instance);
+        new(Options.Create(new SubscriptionOptions { LeaseSigningKeyPem = pem ?? NewPem() }));
+
+    private static string NewPem() =>
+        System.Security.Cryptography.ECDsa.Create(System.Security.Cryptography.ECCurve.NamedCurves.nistP256).ExportPkcs8PrivateKeyPem();
 
     private static LeasePayload Payload() => new(1, Guid.NewGuid(), End.AddDays(-20), End, 7, End.AddDays(7), 7);
 
@@ -23,6 +25,18 @@ public class SubscriptionHelpersTests
 
         var lease = signer.Sign(payload);
 
+        signer.Verify(lease).ShouldBe(payload);
+    }
+
+    [Fact]
+    public void Lease_WithoutAKey_CarriesTheDatesUnsigned()
+    {
+        using var signer = new LeaseSigner(Options.Create(new SubscriptionOptions()));
+        var payload = Payload();
+
+        var lease = signer.Sign(payload);
+
+        lease.ShouldEndWith(".");
         signer.Verify(lease).ShouldBe(payload);
     }
 

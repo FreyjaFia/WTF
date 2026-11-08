@@ -23,7 +23,7 @@ export class SubscriptionService implements OnDestroy {
   public static readonly STORAGE_KEY = 'wtf-subscription-lease';
   public static readonly SEEN_KEY = 'wtf-subscription-latest-seen';
 
-  private static readonly REFRESH_MS = 15 * 60 * 1000;
+  private static readonly SHOP_TIME_ZONE = 'Asia/Manila';
   private static readonly TICK_MS = 60 * 1000;
 
   private readonly http = inject(HttpClient);
@@ -34,6 +34,7 @@ export class SubscriptionService implements OnDestroy {
   private readonly _now = signal(Date.now());
   private timers: ReturnType<typeof setInterval>[] = [];
   private started = false;
+  private refreshedOnDay: string | null = null;
   private readonly onlineHandler = (): void => this.refresh();
 
   public readonly leasePayload = this._lease.asReadonly();
@@ -93,8 +94,15 @@ export class SubscriptionService implements OnDestroy {
 
     this.started = true;
     this.refresh();
-    this.timers.push(setInterval(() => this.refresh(), SubscriptionService.REFRESH_MS));
-    this.timers.push(setInterval(() => this._now.set(Date.now()), SubscriptionService.TICK_MS));
+    this.timers.push(
+      setInterval(() => {
+        this._now.set(Date.now());
+
+        if (this.refreshedOnDay !== this.shopDay()) {
+          this.refresh();
+        }
+      }, SubscriptionService.TICK_MS),
+    );
     window.addEventListener('online', this.onlineHandler);
   }
 
@@ -103,7 +111,12 @@ export class SubscriptionService implements OnDestroy {
     window.removeEventListener('online', this.onlineHandler);
   }
 
+  public lastOnline(): string | null {
+    return this.readLatestSeen()?.toISOString() ?? null;
+  }
+
   public refresh(): void {
+    this.refreshedOnDay = this.shopDay();
     this.http.get<SubscriptionDto>(this.baseUrl).subscribe({
       next: (dto) => void this.accept(dto),
       error: () => undefined,
@@ -159,12 +172,12 @@ export class SubscriptionService implements OnDestroy {
     }
   }
 
-  // The lease is "payload.signature" (base64url). With a public key built into the app the signature is checked on the
+  // The lease is "payload.signature" (base64url); the signature is empty while the API has no signing key. With a public key built into the app the signature is checked on the
   // device, so editing the stored lease (or the device clock) cannot buy more days.
   private async verify(lease: string): Promise<LeasePayload | null> {
     const [body, signature] = lease.split('.');
 
-    if (!body || !signature) {
+    if (!body || (environment.leasePublicKey && !signature)) {
       return null;
     }
 
@@ -207,6 +220,10 @@ export class SubscriptionService implements OnDestroy {
     }
 
     return bytes;
+  }
+
+  private shopDay(): string {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: SubscriptionService.SHOP_TIME_ZONE }).format(new Date());
   }
 
   private readLatestSeen(): Date | null {

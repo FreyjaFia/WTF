@@ -114,4 +114,29 @@ describe('SubscriptionService', () => {
     expect(service.leasePayload()).toBeNull();
     expect(localStorage.getItem(SubscriptionService.STORAGE_KEY)).toBeNull();
   });
+
+  it('accepts a lease with no signature while the app has no public key', async () => {
+    vi.setSystemTime(new Date('2026-11-10T00:00:00Z'));
+    const { service, http } = setupHttpService(SubscriptionService);
+    const unsigned = dto(payload(), '2026-11-10T00:00:00Z');
+    unsigned.lease = unsigned.lease!.split('.')[0] + '.';
+    service.refresh();
+    http.expectOne(url).flush(unsigned);
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(service.leasePayload()?.periodEnd).toBe('2026-12-01T00:00:00Z');
+  });
+
+  it('refreshes once a day, not every few minutes', async () => {
+    vi.setSystemTime(new Date('2026-11-10T01:00:00Z'));
+    const { service, http } = setupHttpService(SubscriptionService);
+    service.start();
+    http.expectOne(url).flush(dto(null, '2026-11-10T01:00:00Z'));
+    await vi.advanceTimersByTimeAsync(60 * 60 * 1000);
+    http.expectNone(url);
+
+    await vi.advanceTimersByTimeAsync(24 * 60 * 60 * 1000);
+    http.expectOne(url).flush(dto(null, '2026-11-11T02:00:00Z'));
+    service.ngOnDestroy();
+  });
 });

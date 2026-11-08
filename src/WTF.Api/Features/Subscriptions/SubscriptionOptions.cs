@@ -10,8 +10,8 @@ public sealed class SubscriptionOptions
 
     public int LeaseMaxAgeDays { get; set; } = 7;
 
-    // PEM of a P-256 private key. The matching public key is built into the app, which checks the lease signature offline.
-    // Without a key the API creates a temporary one when it starts, so a lease then only lasts until the next restart.
+    // Optional PEM of a P-256 private key. Left empty, leases carry the dates unsigned and no key setup is needed; set it
+    // together with the app's leasePublicKey to have the app check a signature.
     public string? LeaseSigningKeyPem { get; set; }
 }
 
