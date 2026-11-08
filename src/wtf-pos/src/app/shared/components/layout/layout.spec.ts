@@ -1,7 +1,8 @@
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
-import { AuthService,
+import { signal } from '@angular/core';
+import { AuthService, BrandService, SubscriptionService,
   ConversationInboxService, ConnectivityService, ImageCacheService } from '@core/services';
 import { BehaviorSubject } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -64,6 +65,11 @@ describe('LayoutComponent', () => {
         provideRouter([{ path: '', component: RoutedPageComponent }]),
         { provide: AuthService, useValue: auth },
         { provide: ConversationInboxService, useValue: fakes.inbox },
+        {
+          provide: SubscriptionService,
+          useValue: { start: vi.fn(), refresh: vi.fn(), warning: signal('none'), access: signal('ok') },
+        },
+        { provide: BrandService, useValue: { load: vi.fn(), displayName: signal('WTF') } },
         { provide: ConnectivityService, useValue: fakes.connectivity },
         { provide: ImageCacheService, useValue: fakes.imageCache },
       ],

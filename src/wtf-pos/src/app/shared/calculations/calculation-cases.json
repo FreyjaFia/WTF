@@ -1664,16 +1664,27 @@
         "replacedItemNames": [], "warnings": [] }
     }
   ],
-  "addOnSelection": [
-    { "name": "Size none selected", "typeName": "Size", "isRequired": true, "minSelect": 1, "maxSelect": 1, "selected": 0, "expectedError": "A size selection is required and must be exactly one.", "expectedLabel": "Required · Pick one" },
-    { "name": "Size one selected", "typeName": "Size", "isRequired": true, "minSelect": 1, "maxSelect": 1, "selected": 1, "expectedError": null, "expectedLabel": "Required · Pick one" },
-    { "name": "Size two selected", "typeName": "Size", "isRequired": true, "minSelect": 1, "maxSelect": 1, "selected": 2, "expectedError": "A size selection is required and must be exactly one.", "expectedLabel": "Required · Pick one" },
-    { "name": "Sauce none is fine", "typeName": "Sauce", "isRequired": false, "minSelect": 0, "maxSelect": 1, "selected": 0, "expectedError": null, "expectedLabel": "Optional · Pick one" },
-    { "name": "Sauce two is too many", "typeName": "Sauce", "isRequired": false, "minSelect": 0, "maxSelect": 1, "selected": 2, "expectedError": "A sauce selection must be at most one.", "expectedLabel": "Optional · Pick one" },
-    { "name": "Topping any number", "typeName": "Topping", "isRequired": false, "minSelect": 0, "maxSelect": 0, "selected": 7, "expectedError": null, "expectedLabel": "Optional · Pick many" },
-    { "name": "Required flag alone means at least one", "typeName": "Temperature", "isRequired": true, "minSelect": 0, "maxSelect": 0, "selected": 0, "expectedError": "A temperature selection is required: choose at least 1.", "expectedLabel": "Required · Pick many" },
-    { "name": "Two to three of a kind, too few", "typeName": "Side", "isRequired": false, "minSelect": 2, "maxSelect": 3, "selected": 1, "expectedError": "A side selection is required: choose at least 2.", "expectedLabel": "Required · Pick up to 3" },
-    { "name": "Two to three of a kind, too many", "typeName": "Side", "isRequired": false, "minSelect": 2, "maxSelect": 3, "selected": 4, "expectedError": "A side selection must be at most 3.", "expectedLabel": "Required · Pick up to 3" },
-    { "name": "Two to three of a kind, in range", "typeName": "Side", "isRequired": false, "minSelect": 2, "maxSelect": 3, "selected": 3, "expectedError": null, "expectedLabel": "Required · Pick up to 3" }
+  "subscriptionWarnings": [
+    { "name": "long before the end", "periodEnd": "2026-12-01T00:00:00Z", "graceDays": 7, "now": "2026-11-01T00:00:00Z", "expectedLevel": "none", "expectedDaysLeft": 30 },
+    { "name": "eight days left is quiet", "periodEnd": "2026-12-01T00:00:00Z", "graceDays": 7, "now": "2026-11-23T00:00:00Z", "expectedLevel": "none", "expectedDaysLeft": 8 },
+    { "name": "seven days left warns", "periodEnd": "2026-12-01T00:00:00Z", "graceDays": 7, "now": "2026-11-24T00:00:00Z", "expectedLevel": "soon", "expectedDaysLeft": 7 },
+    { "name": "four days left is still soon", "periodEnd": "2026-12-01T00:00:00Z", "graceDays": 7, "now": "2026-11-27T00:00:00Z", "expectedLevel": "soon", "expectedDaysLeft": 4 },
+    { "name": "three days left is the last days", "periodEnd": "2026-12-01T00:00:00Z", "graceDays": 7, "now": "2026-11-28T00:00:00Z", "expectedLevel": "lastDays", "expectedDaysLeft": 3 },
+    { "name": "part of a day left counts as one day", "periodEnd": "2026-12-01T00:00:00Z", "graceDays": 7, "now": "2026-11-30T12:00:00Z", "expectedLevel": "lastDays", "expectedDaysLeft": 1 },
+    { "name": "the end moment starts the grace", "periodEnd": "2026-12-01T00:00:00Z", "graceDays": 7, "now": "2026-12-01T00:00:00Z", "expectedLevel": "grace", "expectedDaysLeft": 0 },
+    { "name": "inside the grace period", "periodEnd": "2026-12-01T00:00:00Z", "graceDays": 7, "now": "2026-12-07T23:59:59Z", "expectedLevel": "grace", "expectedDaysLeft": 0 },
+    { "name": "end of the grace locks", "periodEnd": "2026-12-01T00:00:00Z", "graceDays": 7, "now": "2026-12-08T00:00:00Z", "expectedLevel": "locked", "expectedDaysLeft": 0 },
+    { "name": "long after the grace", "periodEnd": "2026-12-01T00:00:00Z", "graceDays": 7, "now": "2027-02-01T00:00:00Z", "expectedLevel": "locked", "expectedDaysLeft": 0 },
+    { "name": "no grace days locks at the end", "periodEnd": "2026-12-01T00:00:00Z", "graceDays": 0, "now": "2026-12-01T00:00:00Z", "expectedLevel": "locked", "expectedDaysLeft": 0 }
+  ],
+  "subscriptionClock": [
+    { "name": "device clock set back keeps the latest seen", "deviceNow": "2026-11-10T00:00:00Z", "latestSeen": "2026-11-20T00:00:00Z", "expectedNow": "2026-11-20T00:00:00Z" },
+    { "name": "normal clock moves forward", "deviceNow": "2026-11-21T00:00:00Z", "latestSeen": "2026-11-20T00:00:00Z", "expectedNow": "2026-11-21T00:00:00Z" },
+    { "name": "nothing seen yet", "deviceNow": "2026-11-21T00:00:00Z", "latestSeen": null, "expectedNow": "2026-11-21T00:00:00Z" }
+  ],
+  "subscriptionLeaseAge": [
+    { "name": "fresh lease", "issuedAt": "2026-11-01T00:00:00Z", "now": "2026-11-05T00:00:00Z", "maxAgeDays": 7, "expected": false },
+    { "name": "exactly the maximum age", "issuedAt": "2026-11-01T00:00:00Z", "now": "2026-11-08T00:00:00Z", "maxAgeDays": 7, "expected": false },
+    { "name": "older than the maximum", "issuedAt": "2026-11-01T00:00:00Z", "now": "2026-11-08T00:00:01Z", "maxAgeDays": 7, "expected": true }
   ]
 }

@@ -2,7 +2,7 @@ import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Observable } from 'rxjs';
+import { Observable, forkJoin } from 'rxjs';
 import { PlatformService } from '@core/services';
 import { AppRoutes } from '@shared/constants/app-routes';
 import {
@@ -13,8 +13,9 @@ import {
   PlatformTenantDto,
   PlatformTenantUserDto,
 } from '@shared/models/platform.models';
+import { PlanDto, TenantSubscriptionDto } from '@shared/models/subscription.models';
 
-type DialogKind = 'create' | 'users' | 'secret' | 'delete' | 'signin' | 'status' | 'audit';
+type DialogKind = 'create' | 'users' | 'secret' | 'delete' | 'signin' | 'status' | 'audit' | 'billing';
 
 @Component({
   selector: 'app-platform-tenants',
@@ -39,6 +40,19 @@ export class PlatformTenantsComponent implements OnInit {
   protected readonly audit = signal<PlatformAuditLogDto[]>([]);
   protected readonly pendingChange = signal<'suspend' | 'resume' | 'cancel'>('suspend');
   protected readonly signInUser = signal<PlatformTenantUserDto | null>(null);
+  protected readonly plans = signal<PlanDto[]>([]);
+  protected readonly billing = signal<TenantSubscriptionDto | null>(null);
+  protected readonly billingForm = new FormGroup({
+    planId: new FormControl(0, { nonNullable: true, validators: [Validators.required] }),
+    periodEnd: new FormControl('', { nonNullable: true }),
+    graceDays: new FormControl(7, { nonNullable: true, validators: [Validators.min(0), Validators.max(60)] }),
+    discountPercent: new FormControl(0, { nonNullable: true, validators: [Validators.min(0), Validators.max(100)] }),
+    notes: new FormControl('', { nonNullable: true }),
+  });
+  protected readonly invoiceForm = new FormGroup({
+    months: new FormControl(1, { nonNullable: true, validators: [Validators.required, Validators.min(1), Validators.max(24)] }),
+    reference: new FormControl('', { nonNullable: true }),
+  });
   protected readonly previewRows = computed(() => Object.entries(this.preview()?.rowCounts ?? {}));
 
   protected readonly createForm = new FormGroup({
@@ -124,6 +138,63 @@ export class PlatformTenantsComponent implements OnInit {
       this.close();
       this.load();
     });
+  }
+
+  protected openBilling(tenant: PlatformTenantDto): void {
+    this.billing.set(null);
+    this.open('billing', tenant);
+    this.run(forkJoin([this.platform.getPlans(), this.platform.getSubscription(tenant.id)]), ([plans, sub]) => {
+      this.plans.set(plans);
+      this.applyBilling(sub);
+    });
+  }
+
+  protected saveBilling(): void {
+    const tenant = this.selected();
+
+    if (!tenant || this.billingForm.invalid || this.busy()) {
+      return;
+    }
+
+    const v = this.billingForm.getRawValue();
+
+    this.run(
+      this.platform.setSubscription(tenant.id, {
+        planId: Number(v.planId),
+        periodEnd: v.periodEnd ? new Date(v.periodEnd).toISOString() : null,
+        graceDays: Number(v.graceDays),
+        discountPercent: Number(v.discountPercent),
+        notes: v.notes || null,
+      }),
+      (sub) => {
+        this.applyBilling(sub);
+        this.load();
+      },
+    );
+  }
+
+  protected addInvoice(): void {
+    const tenant = this.selected();
+
+    if (!tenant || this.invoiceForm.invalid || this.busy()) {
+      return;
+    }
+
+    const v = this.invoiceForm.getRawValue();
+    const request = { months: Number(v.months), reference: v.reference || null, dueDate: null, notes: null };
+
+    this.run(this.platform.createInvoice(tenant.id, request), () => this.openBilling(tenant));
+  }
+
+  protected markPaid(invoiceId: string): void {
+    this.run(this.platform.markInvoicePaid(invoiceId, null), (sub) => {
+      this.applyBilling(sub);
+      this.load();
+    });
+  }
+
+  protected voidInvoice(invoiceId: string): void {
+    this.run(this.platform.voidInvoice(invoiceId), (sub) => this.applyBilling(sub));
   }
 
   protected openUsers(tenant: PlatformTenantDto): void {
@@ -221,6 +292,17 @@ export class PlatformTenantsComponent implements OnInit {
 
   protected isLive(tenant: PlatformTenantDto): boolean {
     return tenant.status === PLATFORM_STATUS.Trial || tenant.status === PLATFORM_STATUS.Active;
+  }
+
+  private applyBilling(sub: TenantSubscriptionDto): void {
+    this.billing.set(sub);
+    this.billingForm.patchValue({
+      planId: sub.planId,
+      periodEnd: sub.periodEnd.slice(0, 10),
+      graceDays: sub.graceDays,
+      discountPercent: sub.discountPercent,
+      notes: sub.notes ?? '',
+    });
   }
 
   private open(kind: DialogKind, tenant: PlatformTenantDto | null): void {

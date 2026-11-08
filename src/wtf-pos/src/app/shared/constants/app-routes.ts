@@ -53,7 +53,8 @@ export const AppRoutes = {
     `/management/promotions/discounted-products/${promoId}/edit`,
   ManagementReports: '/management/reports',
   ManagementAuditLogs: '/management/audit-logs',
-  ManagementSetup: '/management/setup',
-  ManagementExpenses: '/management/expenses',
+  ManagementWasteReasons: '/management/waste-reasons',
+  ManagementSubscription: '/management/subscription',
+  ManagementBrand: '/management/brand',
   ManagementSchemaScripts: '/management/schema-scripts',
 } as const;

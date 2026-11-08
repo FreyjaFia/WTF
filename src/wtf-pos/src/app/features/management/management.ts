@@ -84,6 +84,20 @@ export class ManagementComponent {
       canShow: () => this.canReadProducts(),
     },
     {
+      label: 'Subscription',
+      route: 'subscription',
+      path: AppRoutes.ManagementSubscription,
+      ariaLabel: 'Subscription',
+      canShow: () => this.authService.canManageSubscription(),
+    },
+    {
+      label: 'Shop',
+      route: 'brand',
+      path: AppRoutes.ManagementBrand,
+      ariaLabel: 'Shop branding',
+      canShow: () => this.authService.canManageBrand(),
+    },
+    {
       label: 'Audit',
       route: 'audit-logs',
       path: AppRoutes.ManagementAuditLogs,

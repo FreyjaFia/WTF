@@ -19,6 +19,8 @@ const ALL = [
   'canAccessSchemaScriptHistory',
   'canReadExpenses',
   'canManageWasteReasons',
+  'canManageSubscription',
+  'canManageBrand',
 ] as const;
 
 describe('ManagementComponent', () => {
@@ -38,8 +40,9 @@ describe('ManagementComponent', () => {
               { path: 'users', component: Stub },
               { path: 'promotions', component: Stub },
               { path: 'reports', component: Stub },
-              { path: 'expenses', component: Stub },
-              { path: 'setup/categories', component: Stub },
+              { path: 'waste-reasons', component: Stub },
+              { path: 'subscription', component: Stub },
+              { path: 'brand', component: Stub },
               { path: 'audit-logs', component: Stub },
               { path: 'schema-scripts', component: Stub },
             ],
@@ -74,13 +77,14 @@ describe('ManagementComponent', () => {
       'users',
       'promotions',
       'reports',
-      'expenses',
-      'setup',
+      'waste-reasons',
+      'subscription',
+      'brand',
       'audit-logs',
       'schema-scripts',
     ]);
     expect(tabs(el)[0].getAttribute('href')).toBe('/management/products');
-    expect(tabs(el)[8].getAttribute('href')).toBe('/management/schema-scripts');
+    expect(tabs(el)[9].getAttribute('href')).toBe('/management/schema-scripts');
   });
 
   it('hides audit and schema tabs for non-super admins', async () => {
@@ -88,6 +92,8 @@ describe('ManagementComponent', () => {
     perms.canAccessSchemaScriptHistory = false;
     perms.canReadExpenses = false;
     perms.canManageWasteReasons = false;
+    perms.canManageSubscription = false;
+    perms.canManageBrand = false;
     const { el } = await setup('/management/products');
     expect(routes(el)).toEqual([
       'products',
@@ -103,15 +109,7 @@ describe('ManagementComponent', () => {
     perms.canReadCustomers = false;
     perms.canReadPromotions = false;
     const { el } = await setup('/management/products');
-    expect(routes(el)).toEqual([
-      'products',
-      'users',
-      'reports',
-      'expenses',
-      'setup',
-      'audit-logs',
-      'schema-scripts',
-    ]);
+    expect(routes(el)).toEqual(['products', 'users', 'reports', 'waste-reasons', 'subscription', 'brand', 'audit-logs', 'schema-scripts']);
   });
 
   it('renders nothing but the outlet without permissions', async () => {
@@ -143,8 +141,9 @@ describe('ManagementComponent', () => {
       'Users',
       'Promotions',
       'Reports',
-      'Expenses',
-      'Setup lists',
+      'Waste reasons',
+      'Subscription',
+      'Shop branding',
       'Audit Logs',
       'Schema Scripts',
     ]);

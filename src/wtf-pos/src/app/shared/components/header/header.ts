@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
-import { AuthLoadingService, AuthService, ConnectivityService, ImageCacheService } from '@core/services';
+import { AuthLoadingService, AuthService, BrandService, ConnectivityService, ImageCacheService } from '@core/services';
 import { appVersion } from '@environments/version';
 import { AvatarComponent } from '@shared/components/avatar/avatar';
 import { IconComponent } from '@shared/components/icons/icon/icon';
@@ -26,6 +26,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
   private static readonly ME_CACHE_KEY = 'wtf_me_cache';
 
   protected readonly authService = inject(AuthService);
+  protected readonly brand = inject(BrandService);
   protected readonly router = inject(Router);
   protected readonly routes = AppRoutes;
   private readonly connectivity = inject(ConnectivityService);

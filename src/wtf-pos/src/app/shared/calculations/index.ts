@@ -10,4 +10,4 @@ export * from './stock-adjustment';
 export * from './stock-limits';
 export * from './waste';
 export * from './profit-stats';
-export * from './addon-selection';
+export * from './subscription-rules';

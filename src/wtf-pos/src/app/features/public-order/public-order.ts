@@ -14,6 +14,7 @@ import {
 import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { appVersion } from '@environments/version';
 import { filter, Subscription } from 'rxjs';
+import { BrandService } from '@core/services/brand.service';
 import { AlertService } from '@core/services/alert.service';
 import { ConnectivityService } from '@core/services/connectivity.service';
 import { PublicOrderHubService } from '@core/services/public-order-hub.service';
@@ -136,6 +137,7 @@ export const PROGRAMMATIC_SCROLL_MS = 700;
 })
 export class PublicOrderComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
+  protected readonly brand = inject(BrandService);
   private readonly router = inject(Router);
   private readonly service = inject(PublicOrderService);
   private readonly hub = inject(PublicOrderHubService);
@@ -374,6 +376,9 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
 
   public ngOnInit(): void {
     this.token = this.route.snapshot.paramMap.get('token') ?? '';
+    if (this.token) {
+      this.brand.loadPublic(this.token);
+    }
     // The address says where the customer is (menu, order list, one order), so Back, Refresh and shared links work.
     this.syncFromUrl();
     this.locationSubscription = this.router.events

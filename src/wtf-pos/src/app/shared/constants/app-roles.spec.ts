@@ -85,6 +85,8 @@ describe('app roles vs the API policies', () => {
     ExpensesRead: ['SuperAdmin', 'Admin', 'AdminViewer'],
     ExpensesWrite: ['SuperAdmin', 'Admin'],
     WasteReasonsManage: ['SuperAdmin', 'Admin'],
+    SubscriptionBilling: ['SuperAdmin', 'Admin'],
+    BrandManage: ['SuperAdmin', 'Admin'],
     WasteReasonsRead: ['SuperAdmin', 'Admin', 'AdminViewer', 'StockManager', 'Cashier'],
   };
 
