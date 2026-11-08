@@ -302,27 +302,4 @@ app always runs with a current tenant, even when there is only one. Keep this po
 
 ### Plan: block features by subscription plan [Planned, split to decide]
 
-Not built yet (9 Nov 2026). Today `Plans.Features` (comma list) and `Plans.MaxUsers` are stored, sent to the app in `GET /api/subscription`, and shown on the platform Plans page, but nothing checks them. A lapsed shop is already handled separately (reads work, writes get 402) and stays as it is.
-
-**Draft Starter/Pro split (to decide, from what the seed script already stores):**
-
-| Feature code | Covers | Starter | Pro |
-| --- | --- | --- | --- |
-| `pos`, `orders`, `offline` | order taking, order list, offline sync | yes | yes |
-| `reports` | dashboard and reports | yes | yes |
-| `inventory` | items, stock in, counts, reorder, purchase orders, receiving, suppliers, waste, stock alerts | no | yes |
-| `promotions` | promotions, coupons, bundles | no | yes |
-| `orderlinks` | customer ordering links and the public order page | no | yes |
-| `chat` | order chat | no | yes |
-| `workbook` | workbook export | no | yes |
-
-`MaxUsers`: Starter a small cap (for example 5), Pro empty (no limit). Numbers are open until the pricing research in the Plans section is done.
-
-**Draft design:**
-
-1. One `ITenantFeatures` service (API) reads the shop's plan features and `MaxUsers` (cached like `TenantStatusCache`, cleared when the plan or subscription changes). Single-shop installs and shops with no subscription row are never limited.
-2. API gate: a feature check on the endpoint groups above (one filter or policy, not scattered checks) answers 403 with a clear "not in your plan, upgrade to <plan>" message. Creating a user beyond `MaxUsers` is refused with the same kind of message. Reads of data the shop already has stay allowed only if decided; default is to refuse the whole feature.
-3. App: the sidebar, dock and Management menu hide or disable gated items, and a gated route shows a "not in your plan" screen with who to ask (renew/upgrade details for SuperAdmin and Admin). Rules live in `shared/calculations` and `WTF.Calculations` with shared cases in `calculation-cases.json`, like the subscription rules.
-4. Platform admin: change a shop's plan (exists in Billing), see the shop's limits and user count, and create, edit and retire plans (create is new; edit exists at `/platform/plans`), in the POS style with shared components, filters, dialogs and the mobile bottom bar.
-5. Tests: .NET (rules, gate, MaxUsers), Angular unit tests, and Playwright on a throwaway database via `src/wtf-e2e/run.ps1` (gated call refused, menu hidden, user cap, plan change takes effect, plan create/edit), repeated runs to prove stability.
-6. Open questions: should a downgrade with more users than the new cap block the change or only block adding users; are `reports` and `offline` really in both plans; does a retired plan stay on shops already using it (assumed yes).
+The full plan (hybrid recommendation, feature grouping, enforcement points, tenant-filter notes, phased build and open questions) moved to [block-features-by-plan](block-features-by-plan.md). Still not built (9 Nov 2026).
