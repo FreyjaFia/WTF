@@ -1686,5 +1686,17 @@
     { "name": "fresh lease", "issuedAt": "2026-11-01T00:00:00Z", "now": "2026-11-05T00:00:00Z", "maxAgeDays": 7, "expected": false },
     { "name": "exactly the maximum age", "issuedAt": "2026-11-01T00:00:00Z", "now": "2026-11-08T00:00:00Z", "maxAgeDays": 7, "expected": false },
     { "name": "older than the maximum", "issuedAt": "2026-11-01T00:00:00Z", "now": "2026-11-08T00:00:01Z", "maxAgeDays": 7, "expected": true }
+  ],
+  "addOnSelection": [
+    { "name": "Size none selected", "typeName": "Size", "isRequired": true, "minSelect": 1, "maxSelect": 1, "selected": 0, "expectedError": "A size selection is required and must be exactly one.", "expectedLabel": "Required · Pick one" },
+    { "name": "Size one selected", "typeName": "Size", "isRequired": true, "minSelect": 1, "maxSelect": 1, "selected": 1, "expectedError": null, "expectedLabel": "Required · Pick one" },
+    { "name": "Size two selected", "typeName": "Size", "isRequired": true, "minSelect": 1, "maxSelect": 1, "selected": 2, "expectedError": "A size selection is required and must be exactly one.", "expectedLabel": "Required · Pick one" },
+    { "name": "Sauce none is fine", "typeName": "Sauce", "isRequired": false, "minSelect": 0, "maxSelect": 1, "selected": 0, "expectedError": null, "expectedLabel": "Optional · Pick one" },
+    { "name": "Sauce two is too many", "typeName": "Sauce", "isRequired": false, "minSelect": 0, "maxSelect": 1, "selected": 2, "expectedError": "A sauce selection must be at most one.", "expectedLabel": "Optional · Pick one" },
+    { "name": "Topping any number", "typeName": "Topping", "isRequired": false, "minSelect": 0, "maxSelect": 0, "selected": 7, "expectedError": null, "expectedLabel": "Optional · Pick many" },
+    { "name": "Required flag alone means at least one", "typeName": "Temperature", "isRequired": true, "minSelect": 0, "maxSelect": 0, "selected": 0, "expectedError": "A temperature selection is required: choose at least 1.", "expectedLabel": "Required · Pick many" },
+    { "name": "Two to three of a kind, too few", "typeName": "Side", "isRequired": false, "minSelect": 2, "maxSelect": 3, "selected": 1, "expectedError": "A side selection is required: choose at least 2.", "expectedLabel": "Required · Pick up to 3" },
+    { "name": "Two to three of a kind, too many", "typeName": "Side", "isRequired": false, "minSelect": 2, "maxSelect": 3, "selected": 4, "expectedError": "A side selection must be at most 3.", "expectedLabel": "Required · Pick up to 3" },
+    { "name": "Two to three of a kind, in range", "typeName": "Side", "isRequired": false, "minSelect": 2, "maxSelect": 3, "selected": 3, "expectedError": null, "expectedLabel": "Required · Pick up to 3" }
   ]
 }

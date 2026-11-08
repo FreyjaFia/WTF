@@ -19,3 +19,4 @@ export * from './user.models';
 export * from './stock-count.models';
 export * from './waste.models';
 export * from './subscription.models';
+export * from './catalog.models';

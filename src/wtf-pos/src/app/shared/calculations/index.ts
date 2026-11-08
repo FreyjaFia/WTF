@@ -11,3 +11,4 @@ export * from './stock-limits';
 export * from './waste';
 export * from './profit-stats';
 export * from './subscription-rules';
+export * from './addon-selection';

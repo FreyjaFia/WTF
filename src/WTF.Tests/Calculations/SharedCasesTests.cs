@@ -94,7 +94,8 @@ public class SharedCasesTests
         List<RecipePreviewCase> RecipePreview,
         List<SubscriptionWarningCase> SubscriptionWarnings,
         List<SubscriptionClockCase> SubscriptionClock,
-        List<SubscriptionLeaseAgeCase> SubscriptionLeaseAge);
+        List<SubscriptionLeaseAgeCase> SubscriptionLeaseAge,
+        List<AddOnSelectionCase> AddOnSelection);
 
     private sealed record RecipePreviewSizeAmountCase(string SizeProductId, decimal Quantity);
 
