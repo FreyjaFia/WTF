@@ -295,6 +295,34 @@ app always runs with a current tenant, even when there is only one. Keep this po
 
 **Platform admin redesign (8 Nov 2026).** `/platform` is now a shell with a sidebar (a bottom bar on a phone, like the POS dock) and child pages: `/platform/overview` (shop counts by status, people and orders, monthly list price of active shops, shops whose payment is due or overdue, shops with no order in 30 days, recent activity), `/platform/shops` (search, a Filters drawer with status checkboxes and counts, sortable columns and card rows like the POS lists, New shop), `/platform/shops/:id` (tabs Overview with suspend, resume, cancel, export and delete; People with reset password and sign in as; Billing with subscription and invoices; Brand; Log), `/platform/plans` (edit name, price, features, user limit, offered or retired) and `/platform/log` (search and shop filter). The overview and filter arithmetic lives in `shared/calculations/platform-stats.ts` (Angular only, no API twin, so it is not in `calculation-cases.json`). Checked by hand in the browser on a throwaway database: overview totals, shop list on desktop and phone width, billing save and mark paid, brand save (confirmed through the API), plans, log, reset password and permanent delete. Sign in as was later checked by hand on the local database. Not exercised by hand: suspend and resume from the UI (covered by unit tests), plan edit save.
 
-**Multi-tenant: still lacking (8 Nov 2026).** Collected from the build notes above so nothing is lost: (1) copying a template shop, so a new shop starts with sample categories and products instead of empty; (2) the POS change-password screen when `mustChangePassword` is returned (the flag is saved and sent, nothing acts on it); (3) reports files under the shop folder are not removed by delete; (4) plan feature flags and a hard `MaxUsers` limit are stored but not enforced, and the Starter/Pro split is undecided; (5) a once-per-login warning dialog for the subscription; (6) signing the Android lease if tampering ever matters; (7) custom domains and self-service sign-up (later steps); (8) hand checks of suspend and resume from the UI and plan edit save. Phases 1 (branches) and 2 (branding settings and locale) of this file are still Planned.
+**Multi-tenant: still lacking (8 Nov 2026).** Collected from the build notes above so nothing is lost: (1) copying a template shop, so a new shop starts with sample categories and products instead of empty; (2) the POS change-password screen when `mustChangePassword` is returned (the flag is saved and sent, nothing acts on it); (3) reports files under the shop folder are not removed by delete; (4) block features by subscription plan: plan feature flags and a hard `MaxUsers` limit are stored but not enforced, the Starter/Pro split is undecided, and plans can only be edited, not created (draft plan in "Plan: block features by subscription plan" below); (5) a once-per-login warning dialog for the subscription; (6) signing the Android lease if tampering ever matters; (7) custom domains and self-service sign-up (later steps); (8) hand checks of suspend and resume from the UI and plan edit save. Phases 1 (branches) and 2 (branding settings and locale) of this file are still Planned.
 
 **Platform bug fixes (8 Nov 2026).** Eight bugs found by the tenancy specs are fixed and their specs run as normal tests (no `test.fail`, `fixme` or `skip` left in `src/wtf-e2e/tests/tenancy`): shops created together take turns on a database application lock (`sp_getapplock`) so catalog ids never collide; the customer-link account name of a long address is cut and ends with a short hash; suspend, resume and cancel are conditional updates (the loser gets a conflict message and is not logged); marking an invoice paid claims the invoice first (the second request gets "This invoice is already paid."); the tokens of a deleted shop get 401 (the tombstone marks the shop as deleted in `TenantStatusCache`); the first shop cannot be cancelled; the login screen shows the API message (for example the suspended text) on a 400; and an open session is signed out with the suspended message on the first 403 (`authInterceptor`).
+
+
+### Plan: block features by subscription plan [Planned, split to decide]
+
+Not built yet (9 Nov 2026). Today `Plans.Features` (comma list) and `Plans.MaxUsers` are stored, sent to the app in `GET /api/subscription`, and shown on the platform Plans page, but nothing checks them. A lapsed shop is already handled separately (reads work, writes get 402) and stays as it is.
+
+**Draft Starter/Pro split (to decide, from what the seed script already stores):**
+
+| Feature code | Covers | Starter | Pro |
+| --- | --- | --- | --- |
+| `pos`, `orders`, `offline` | order taking, order list, offline sync | yes | yes |
+| `reports` | dashboard and reports | yes | yes |
+| `inventory` | items, stock in, counts, reorder, purchase orders, receiving, suppliers, waste, stock alerts | no | yes |
+| `promotions` | promotions, coupons, bundles | no | yes |
+| `orderlinks` | customer ordering links and the public order page | no | yes |
+| `chat` | order chat | no | yes |
+| `workbook` | workbook export | no | yes |
+
+`MaxUsers`: Starter a small cap (for example 5), Pro empty (no limit). Numbers are open until the pricing research in the Plans section is done.
+
+**Draft design:**
+
+1. One `ITenantFeatures` service (API) reads the shop's plan features and `MaxUsers` (cached like `TenantStatusCache`, cleared when the plan or subscription changes). Single-shop installs and shops with no subscription row are never limited.
+2. API gate: a feature check on the endpoint groups above (one filter or policy, not scattered checks) answers 403 with a clear "not in your plan, upgrade to <plan>" message. Creating a user beyond `MaxUsers` is refused with the same kind of message. Reads of data the shop already has stay allowed only if decided; default is to refuse the whole feature.
+3. App: the sidebar, dock and Management menu hide or disable gated items, and a gated route shows a "not in your plan" screen with who to ask (renew/upgrade details for SuperAdmin and Admin). Rules live in `shared/calculations` and `WTF.Calculations` with shared cases in `calculation-cases.json`, like the subscription rules.
+4. Platform admin: change a shop's plan (exists in Billing), see the shop's limits and user count, and create, edit and retire plans (create is new; edit exists at `/platform/plans`), in the POS style with shared components, filters, dialogs and the mobile bottom bar.
+5. Tests: .NET (rules, gate, MaxUsers), Angular unit tests, and Playwright on a throwaway database via `src/wtf-e2e/run.ps1` (gated call refused, menu hidden, user cap, plan change takes effect, plan create/edit), repeated runs to prove stability.
+6. Open questions: should a downgrade with more users than the new cap block the change or only block adding users; are `reports` and `offline` really in both plans; does a retired plan stay on shops already using it (assumed yes).
