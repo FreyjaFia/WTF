@@ -2,7 +2,11 @@ import { ServiceErrorMessages } from '@core/messages';
 import { environment } from '@environments/environment.development';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { capture, failNetwork, failWith, setupHttpService } from '../../testing/service-testing';
-import { PublicLinkInvalidError, PublicOrderService } from './public-order.service';
+import {
+  PublicLinkInvalidError,
+  PublicOrderService,
+  PublicShopUnavailableError,
+} from './public-order.service';
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -93,6 +97,20 @@ describe('PublicOrderService', () => {
       failWith(http.expectOne(`${base}/tok/orders`), 404);
 
       expect(errors[0]).toBeInstanceOf(PublicLinkInvalidError);
+    });
+
+    it('turns a 503 with the shop contact into the shop unavailable error', () => {
+      const { service, http } = setupHttpService(PublicOrderService);
+      const errors: unknown[] = [];
+      service.createOrder('tok', request).subscribe({ error: (e) => errors.push(e) });
+
+      http
+        .expectOne(`${base}/tok/orders`)
+        .flush({ message: 'x', shopName: 'Cafe One', phone: '0917' }, { status: 503, statusText: 'Unavailable' });
+
+      expect(errors[0]).toBeInstanceOf(PublicShopUnavailableError);
+      expect((errors[0] as PublicShopUnavailableError).shopName).toBe('Cafe One');
+      expect((errors[0] as PublicShopUnavailableError).phone).toBe('0917');
     });
 
     it("shows the server's plain explanation for a 400", () => {

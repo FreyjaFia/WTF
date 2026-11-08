@@ -41,6 +41,7 @@ export const ServiceErrorMessages = {
   },
   PublicOrder: {
     LinkInvalid: 'This link is no longer valid.',
+    ShopUnavailable: "This shop can't take orders right now.",
     LoadFailed: 'Failed to load the menu. Please try again.',
     LoadOrdersFailed: 'Failed to load your orders. Please try again.',
     TooManyRequests: 'Too many requests. Please wait a moment and try again.',

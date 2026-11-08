@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.SignalR;
 using System.Collections.Concurrent;
+using WTF.Api.Common.Tenancy;
 using WTF.Api.Features.OrderLinks;
 using WTF.Domain.Data;
 
@@ -25,7 +26,16 @@ public class CustomerOrderHub(WTFDbContext db, ILogger<CustomerOrderHub> logger)
         var token = http?.Request.Query["access_token"].ToString();
         var address = http?.Connection.RemoteIpAddress?.ToString() ?? "local";
 
-        var access = await OrderLinkAccess.ResolveAsync(db, token, Context.ConnectionAborted);
+        OrderLinkAccessResult? access;
+        try
+        {
+            access = await OrderLinkAccess.ResolveAsync(db, token, Context.ConnectionAborted);
+        }
+        catch (ShopUnavailableException)
+        {
+            access = null;
+        }
+
         if (access == null)
         {
             logger.LogInformation("Customer hub connection refused: the link is not valid.");

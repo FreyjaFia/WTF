@@ -248,7 +248,7 @@ public class SubscriptionDatabaseTests
             await new CreateInvoiceHandler(db, Audit(db), clock).Handle(new CreateInvoiceCommand(other.Tenant.Id, 1, null, null, null), CancellationToken.None);
         }
 
-        var signer = new LeaseSigner(Options.Create(new SubscriptionOptions()), Microsoft.Extensions.Logging.Abstractions.NullLogger<LeaseSigner>.Instance);
+        var signer = new LeaseSigner(Options.Create(new SubscriptionOptions()));
         await using var mineDb = database.CreateContext(new FixedTenant(mine.Tenant.Id));
 
         var dto = await new GetSubscriptionHandler(mineDb, new FixedTenant(mine.Tenant.Id), signer, Options.Create(new SubscriptionOptions()), clock)
@@ -301,7 +301,15 @@ public class SubscriptionDatabaseTests
         async Task<bool> OpensAsync()
         {
             await using var db = database.CreateContext(new SwitchableTenant());
-            return await OrderLinkAccess.ResolveAsync(db, token, CancellationToken.None) is not null;
+            try
+            {
+                return await OrderLinkAccess.ResolveAsync(db, token, CancellationToken.None) is not null;
+            }
+            catch (ShopUnavailableException ex)
+            {
+                ex.ShopName.ShouldNotBeNullOrWhiteSpace();
+                return false;
+            }
         }
 
         (await OpensAsync()).ShouldBeTrue();
