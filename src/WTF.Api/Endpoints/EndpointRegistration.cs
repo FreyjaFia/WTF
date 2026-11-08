@@ -26,6 +26,7 @@ public static class EndpointRegistration
             .MapNotifications()
             .MapAudit()
             .MapSchemaScriptHistory()
+            .MapSubscriptions()
             .MapPlatform()
             .MapPing();
 

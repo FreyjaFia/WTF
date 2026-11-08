@@ -10,6 +10,7 @@ public class TenantClassificationTests
     private static readonly HashSet<Type> GlobalEntities =
     [
         typeof(PaymentMethod),
+        typeof(Plan),
         typeof(PlatformAdmin),
         typeof(PlatformAuditLog),
         typeof(TenantTombstone),
@@ -17,6 +18,8 @@ public class TenantClassificationTests
         typeof(Status),
         typeof(Tenant),
         typeof(TenantCounter),
+        typeof(TenantInvoice),
+        typeof(TenantSubscription),
         typeof(UserRole),
     ];
 
@@ -51,7 +54,7 @@ public class TenantClassificationTests
     {
         using var db = TestDb.Create();
 
-        foreach (var type in GlobalEntities.Where(t => t != typeof(TenantCounter) && t != typeof(TenantTombstone) && t != typeof(PlatformAuditLog)))
+        foreach (var type in GlobalEntities.Where(t => t != typeof(TenantCounter) && t != typeof(TenantInvoice) && t != typeof(TenantSubscription) && t != typeof(TenantTombstone) && t != typeof(PlatformAuditLog)))
         {
             db.Model.FindEntityType(type)!.FindProperty("TenantId").ShouldBeNull(type.Name);
         }

@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using WTF.Api.Features.Branding;
 using WTF.Api.Features.Conversations;
 using WTF.Api.Features.OrderLinks;
 
@@ -33,6 +34,14 @@ public static class PublicOrderLinkEndpoints
             async (string token, ISender sender) =>
             {
                 var result = await sender.Send(new GetPublicOrderLinkQuery(token));
+                return result is not null ? Results.Ok(result) : Results.NotFound();
+            });
+
+        // GET /api/public/order-links/{token}/brand - The shop's name, logo and colour for the customer page
+        group.MapGet("/brand",
+            async (string token, ISender sender) =>
+            {
+                var result = await sender.Send(new GetPublicBrandQuery(token));
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             });
 

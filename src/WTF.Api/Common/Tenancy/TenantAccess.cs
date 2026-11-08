@@ -10,6 +10,8 @@ public static class TenantAccess
     public const byte Suspended = 3;
     public const byte Cancelled = 4;
 
+    public const string SubscriptionEndedMessage = "This shop's subscription has ended. Please contact the shop owner or support to renew.";
+
     public const string SuspendedMessage = "This shop's account is suspended. Please contact support.";
 
     public static bool CanUse(byte status) => status is Trial or Active;

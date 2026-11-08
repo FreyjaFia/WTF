@@ -10,6 +10,10 @@ public static class AppAuthorizationExtensions
         return services.AddAuthorizationBuilder()
             .AddPolicy(AppPolicies.PlatformAdmin, policy =>
                 policy.RequireRole(AppRoles.PlatformAdmin))
+            .AddPolicy(AppPolicies.SubscriptionBilling, policy =>
+                policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin))
+            .AddPolicy(AppPolicies.BrandManage, policy =>
+                policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin))
             .AddPolicy(AppPolicies.ProductsRead, policy =>
                 policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.Cashier))
             .AddPolicy(AppPolicies.ProductsWrite, policy =>

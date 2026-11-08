@@ -30,6 +30,19 @@ public sealed class TenantRequestGuardMiddleware(RequestDelegate next)
             }
         }
 
+        if (Guid.TryParse(user.FindFirst(TenantDefaults.ClaimType)?.Value, out var paidTenantId)
+            && !HttpMethods.IsGet(context.Request.Method) && !HttpMethods.IsHead(context.Request.Method) && !HttpMethods.IsOptions(context.Request.Method)
+            && !context.Request.Path.StartsWithSegments("/api/auth") && !context.Request.Path.StartsWithSegments("/hubs"))
+        {
+            var db = context.RequestServices.GetRequiredService<WTFDbContext>();
+            if (await statusCache.IsLapsedAsync(db, paidTenantId, context.RequestAborted))
+            {
+                context.Response.StatusCode = StatusCodes.Status402PaymentRequired;
+                await context.Response.WriteAsJsonAsync(new { message = TenantAccess.SubscriptionEndedMessage });
+                return;
+            }
+        }
+
         if (user.FindFirst(ImpersonationClaims.By) is not null && !await AllowImpersonatedRequestAsync(context))
         {
             return;

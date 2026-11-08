@@ -30,6 +30,14 @@ public partial class WTFDbContext
 
     public virtual DbSet<TenantTombstone> TenantTombstones { get; set; }
 
+    public virtual DbSet<Plan> Plans { get; set; }
+
+    public virtual DbSet<TenantSubscription> TenantSubscriptions { get; set; }
+
+    public virtual DbSet<TenantInvoice> TenantInvoices { get; set; }
+
+    public virtual DbSet<TenantSettings> TenantSettings { get; set; }
+
     public bool TenantFilterEnabled => _currentTenant.FilterEnabled;
 
     private Guid? CurrentTenantId => _currentTenant.TenantId;
@@ -90,6 +98,63 @@ public partial class WTFDbContext
             entity.Property(e => e.Details).HasMaxLength(2000);
             entity.Property(e => e.IpAddress).HasMaxLength(64).IsUnicode(false);
             entity.Property(e => e.Timestamp).HasDefaultValueSql("(sysutcdatetime())");
+        });
+
+        modelBuilder.Entity<Plan>(entity =>
+        {
+            entity.ToTable("Plans");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.Code).IsUnique();
+            entity.Property(e => e.Code).HasMaxLength(30).IsUnicode(false);
+            entity.Property(e => e.Name).HasMaxLength(60);
+            entity.Property(e => e.MonthlyPrice).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.Features).HasMaxLength(500).IsUnicode(false);
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+        });
+
+        modelBuilder.Entity<TenantSubscription>(entity =>
+        {
+            entity.ToTable("TenantSubscriptions");
+            entity.HasKey(e => e.TenantId);
+            entity.Property(e => e.TenantId).ValueGeneratedNever();
+            entity.Property(e => e.GraceDays).HasDefaultValue(7);
+            entity.Property(e => e.DiscountPercent).HasColumnType("decimal(5, 2)");
+            entity.Property(e => e.Notes).HasMaxLength(500);
+            entity.Property(e => e.ReminderSentOn).HasColumnType("date");
+            entity.HasOne(e => e.Plan).WithMany().HasForeignKey(e => e.PlanId).OnDelete(DeleteBehavior.ClientSetNull);
+        });
+
+        modelBuilder.Entity<TenantInvoice>(entity =>
+        {
+            entity.ToTable("TenantInvoices");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.TenantId, e.CreatedAt });
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
+            entity.Property(e => e.Amount).HasColumnType("decimal(12, 2)");
+            entity.Property(e => e.Reference).HasMaxLength(100);
+            entity.Property(e => e.Notes).HasMaxLength(500);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())");
+        });
+
+        modelBuilder.Entity<TenantSettings>(entity =>
+        {
+            entity.ToTable("TenantSettings");
+            entity.HasKey(e => e.TenantId);
+            entity.Property(e => e.TenantId).ValueGeneratedNever();
+            entity.Property(e => e.ShopName).HasMaxLength(100);
+            entity.Property(e => e.ShortName).HasMaxLength(30);
+            entity.Property(e => e.Tagline).HasMaxLength(150);
+            entity.Property(e => e.LogoUrl).HasMaxLength(500).IsUnicode(false);
+            entity.Property(e => e.Address).HasMaxLength(300);
+            entity.Property(e => e.Phone).HasMaxLength(40);
+            entity.Property(e => e.Email).HasMaxLength(150);
+            entity.Property(e => e.ReceiptHeader).HasMaxLength(300);
+            entity.Property(e => e.ReceiptFooter).HasMaxLength(300);
+            entity.Property(e => e.RegistrationText).HasMaxLength(150);
+            entity.Property(e => e.PrimaryColor).HasMaxLength(9).IsUnicode(false);
+            entity.Property(e => e.TimeZone).HasMaxLength(64).IsUnicode(false);
+            entity.Property(e => e.CurrencySymbol).HasMaxLength(8);
+            entity.Property(e => e.CurrencyCode).HasMaxLength(3).IsUnicode(false);
         });
 
         modelBuilder.Entity<TenantTombstone>(entity =>

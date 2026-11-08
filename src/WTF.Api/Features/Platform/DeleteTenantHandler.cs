@@ -163,10 +163,13 @@ public class DeleteTenantHandler(
             pending = failed;
         }
 
-        await db.Database.ExecuteSqlRawAsync(
-            "DELETE FROM dbo.TenantCounters WHERE TenantId = @tenantId",
-            [new SqlParameter("tenantId", tenantId)],
-            cancellationToken);
+        foreach (var table in new[] { "TenantCounters", "TenantInvoices", "TenantSubscriptions" })
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                $"DELETE FROM dbo.{table} WHERE TenantId = @tenantId",
+                [new SqlParameter("tenantId", tenantId)],
+                cancellationToken);
+        }
     }
 
     private static bool IsForeignKeyViolation(Exception ex)

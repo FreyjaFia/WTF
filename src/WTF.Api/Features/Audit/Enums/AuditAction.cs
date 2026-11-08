@@ -54,5 +54,6 @@ public enum AuditAction
     WasteReasonRestored,
     StockCountStarted,
     StockCountPosted,
-    StockCountCancelled
+    StockCountCancelled,
+    ShopBrandUpdated
 }
