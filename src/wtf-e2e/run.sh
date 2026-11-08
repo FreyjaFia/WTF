@@ -93,8 +93,18 @@ API_PID=$!
 unset ConnectionStrings__WtfDb Platform__BootstrapUsername Platform__BootstrapPassword
 wait_for "http://localhost:$API_PORT/api/health" 120 "The API"
 
-echo "Starting the app on $APP_PORT..."
-setsid bash -c "cd '$ROOT/src/wtf-pos' && exec npx ng serve --configuration e2e --port $APP_PORT" >"$LOGS/app.log" 2>&1 &
+echo "Building the app (e2e configuration) and serving it on $APP_PORT..."
+# A built app is served as static files: much lighter for the browsers than ng serve (no compiling on request, no live
+# reload socket, bundles that gzip), and the same files for every worker. Set E2E_DEV_SERVER=1 to use ng serve instead.
+if [ -n "${E2E_DEV_SERVER:-}" ]; then
+  setsid bash -c "cd '$ROOT/src/wtf-pos' && exec npx ng serve --configuration e2e --port $APP_PORT" >"$LOGS/app.log" 2>&1 &
+else
+  (cd "$ROOT/src/wtf-pos" && npx ng build --configuration e2e --output-path "$LOGS/app-dist" >"$LOGS/app-build.log" 2>&1) || {
+    tail -n 40 "$LOGS/app-build.log"
+    exit 1
+  }
+  setsid bash -c "exec node '$ROOT/src/wtf-e2e/static-server.js' '$LOGS/app-dist/browser' $APP_PORT" >"$LOGS/app.log" 2>&1 &
+fi
 APP_PID=$!
 wait_for "http://localhost:$APP_PORT" 300 "The app"
 

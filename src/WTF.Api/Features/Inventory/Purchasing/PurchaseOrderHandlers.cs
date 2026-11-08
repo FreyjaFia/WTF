@@ -6,7 +6,6 @@ using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Inventory.Reordering;
 using WTF.Api.Features.Items;
 using WTF.Api.Services;
-using WTF.Calculations.Inventory;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 
@@ -133,8 +132,16 @@ internal static class PurchaseOrderRules
         }
     }
 
-    public static async Task<int> NextNumberAsync(WTFDbContext db, CancellationToken cancellationToken) =>
-        (await db.PurchaseOrders.MaxAsync(o => (int?)o.PoNumber, cancellationToken) ?? 0) + 1;
+    public static async Task<int> NextNumberAsync(WTFDbContext db, CancellationToken cancellationToken)
+    {
+        // Two orders created at the same moment would read the same highest number. The lock is held until the
+        // surrounding transaction ends, so the second one waits and then sees the first one's number.
+        await db.Database.ExecuteSqlRawAsync(
+            "DECLARE @result int; EXEC @result = sp_getapplock @Resource = N'PurchaseOrderNumber', @LockMode = N'Exclusive', @LockOwner = N'Transaction', @LockTimeout = 15000; IF @result < 0 THROW 50000, N'Could not reserve a purchase order number.', 1;",
+            cancellationToken);
+
+        return (await db.PurchaseOrders.MaxAsync(o => (int?)o.PoNumber, cancellationToken) ?? 0) + 1;
+    }
 
     public static PurchaseOrderLine ToLine(PurchaseOrderLineRequest line) => new()
     {

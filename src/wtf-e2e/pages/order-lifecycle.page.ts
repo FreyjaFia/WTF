@@ -8,6 +8,8 @@ export class OrderListRows {
   }
 
   public async openOrder(orderNumber: number): Promise<void> {
+    // The list shows 20 orders at a time; other tests keep adding orders, so narrow it to this one first.
+    await this.page.getByPlaceholder(/search/i).and(this.page.locator('input')).first().fill(String(orderNumber));
     await this.row(orderNumber).click();
   }
 }
