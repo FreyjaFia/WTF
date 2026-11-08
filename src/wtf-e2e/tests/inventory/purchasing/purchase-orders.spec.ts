@@ -136,7 +136,8 @@ test.describe('purchase orders @inventory @purchase-orders', () => {
     const first = await buy.createOrder(supplier.summary.id, [{ itemId: item.id, packs: 1 }]);
     const second = await buy.createOrder(supplier.summary.id, [{ itemId: item.id, packs: 1 }]);
 
-    expect(second.summary.poNumber).toBe(first.summary.poNumber + 1);
+    // Other tests create orders in the same shop at the same time, so the next number is higher, not always +1.
+    expect(second.summary.poNumber).toBeGreaterThan(first.summary.poNumber);
     const listed = await api.client.json<{ id: string }[]>('superadmin', 'GET', `purchase-orders?supplierId=${supplier.summary.id}`);
     expect(listed.map((o) => o.id).sort()).toEqual([first.summary.id, second.summary.id].sort());
     const onlyDrafts = await api.client.json<{ id: string }[]>('superadmin', 'GET', `purchase-orders?supplierId=${supplier.summary.id}&status=${PO_STATUS.sent}`);
