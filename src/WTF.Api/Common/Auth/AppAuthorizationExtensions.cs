@@ -8,6 +8,8 @@ public static class AppAuthorizationExtensions
     public static AuthorizationBuilder AddAppAuthorization(this IServiceCollection services)
     {
         return services.AddAuthorizationBuilder()
+            .AddPolicy(AppPolicies.PlatformAdmin, policy =>
+                policy.RequireRole(AppRoles.PlatformAdmin))
             .AddPolicy(AppPolicies.ProductsRead, policy =>
                 policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.Cashier))
             .AddPolicy(AppPolicies.ProductsWrite, policy =>

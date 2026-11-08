@@ -26,6 +26,8 @@ public partial class User
 
     public Guid TenantId { get; set; }
 
+    public bool MustChangePassword { get; set; }
+
     public virtual ICollection<AuditLog> AuditLogs { get; set; } = new List<AuditLog>();
 
     public virtual ICollection<ConversationMessage> ConversationMessages { get; set; } = new List<ConversationMessage>();

@@ -21,6 +21,7 @@ public class PolicyMatrixTests : IDisposable
         [AppPolicies.PromotionsRead] = [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer],
         [AppPolicies.PromotionsWrite] = [AppRoles.SuperAdmin, AppRoles.Admin],
         [AppPolicies.AuditRead] = [AppRoles.SuperAdmin],
+        [AppPolicies.PlatformAdmin] = [AppRoles.PlatformAdmin],
         [AppPolicies.SchemaScriptHistoryRead] = [AppRoles.SuperAdmin],
         [AppPolicies.OrdersRead] = [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.Cashier],
         [AppPolicies.OrdersWrite] = [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.Cashier],
@@ -115,7 +116,9 @@ public class PolicyMatrixTests : IDisposable
     [Fact]
     public void SuperAdmin_IsAllowedEverywhere()
     {
-        Expected.Values.ShouldAllBe(roles => roles.Contains(AppRoles.SuperAdmin));
+        // The platform area is outside every shop: not even a shop's SuperAdmin may enter it.
+        Expected.Where(p => p.Key != AppPolicies.PlatformAdmin).Select(p => p.Value).ShouldAllBe(roles => roles.Contains(AppRoles.SuperAdmin));
+        Expected[AppPolicies.PlatformAdmin].ShouldBe([AppRoles.PlatformAdmin]);
     }
 
     [Fact]

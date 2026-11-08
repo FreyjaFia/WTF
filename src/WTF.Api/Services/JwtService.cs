@@ -3,6 +3,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using WTF.Api.Common.Auth;
 using WTF.Domain.Entities;
 using WTF.Domain.Tenancy;
 
@@ -11,6 +12,8 @@ namespace WTF.Api.Services
     public interface IJwtService
     {
         string GenerateAccessToken(User user, string role);
+        string GeneratePlatformToken(PlatformAdmin admin, int minutes);
+        string GenerateImpersonationToken(User user, string role, Guid platformAdminId, string platformUsername, bool readOnly, int minutes);
         string GenerateRefreshToken();
         ClaimsPrincipal? ValidateToken(string token);
         Guid? GetUserIdFromToken(string token);
@@ -50,6 +53,52 @@ namespace WTF.Api.Services
                 expires: DateTime.UtcNow.AddMinutes(_accessTokenExpirationMinutes),
                 signingCredentials: credentials
             );
+
+            return new JwtSecurityTokenHandler().WriteToken(token);
+        }
+
+        public string GeneratePlatformToken(PlatformAdmin admin, int minutes)
+        {
+            var claims = new List<Claim>
+            {
+                new(JwtRegisteredClaimNames.Sub, admin.Id.ToString()),
+                new(JwtRegisteredClaimNames.UniqueName, admin.Username),
+                new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                new(ClaimTypes.Role, AppRoles.PlatformAdmin),
+                new("role", AppRoles.PlatformAdmin)
+            };
+
+            return WriteToken(claims, minutes);
+        }
+
+        public string GenerateImpersonationToken(User user, string role, Guid platformAdminId, string platformUsername, bool readOnly, int minutes)
+        {
+            var claims = new List<Claim>
+            {
+                new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+                new(JwtRegisteredClaimNames.UniqueName, user.Username),
+                new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                new(ClaimTypes.Role, role),
+                new("role", role),
+                new(TenantDefaults.ClaimType, user.TenantId.ToString()),
+                new(ImpersonationClaims.By, platformAdminId.ToString()),
+                new(ImpersonationClaims.ByName, platformUsername),
+                new(ImpersonationClaims.ReadOnly, readOnly ? "1" : "0")
+            };
+
+            return WriteToken(claims, minutes);
+        }
+
+        private string WriteToken(IEnumerable<Claim> claims, int minutes)
+        {
+            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_secretKey));
+            var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+            var token = new JwtSecurityToken(
+                issuer: _issuer,
+                audience: _audience,
+                claims: claims,
+                expires: DateTime.UtcNow.AddMinutes(minutes),
+                signingCredentials: credentials);
 
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
