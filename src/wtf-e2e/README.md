@@ -23,7 +23,8 @@ tests/
     items/         items-and-stock-in, lifecycle (delete, restore, stock rules on items), item-editor
     stock/         rules (deduction, void, override), sales-and-refunds, screens, alerts-and-bell
     waste/         recording, review, reasons, pos-sheet, edge-cases
-  tenancy/         data-isolation, suspend-resume, lapsed-subscription, customer-link-unavailable, platform-login, platform-shops, platform-billing-brand-log
+    purchasing/    suppliers, receiving, reorder, purchase-orders, layout (Inventory Phase 8)
+  tenancy/         data-isolation, purchasing-isolation, suspend-resume, lapsed-subscription, customer-link-unavailable, platform-login, platform-shops, platform-billing-brand-log
   management/      products, customers, users, screens
   reports/         all-reports, waste-report-and-daily-close
   layout/          page-layout (phone, tablet, desktop, long names)
@@ -93,7 +94,8 @@ The default shop (`wtf`) owns the test accounts; these tests make more shops thr
 A second run beside another can use its own ports, database family and stop file:
 
 ```powershell
-$env:E2E_API_PORT=5291; $env:E2E_APP_PORT=4301; $env:E2E_DB_TAG="MT"; $env:E2E_STOP_FILE="$PWD.e2e-mt-stop"; .un.ps1 -Serve
+$env:E2E_API_PORT=5291; $env:E2E_APP_PORT=4301; $env:E2E_DB_TAG="MT"; $env:E2E_STOP_FILE="$PWD.e2e-mt-stop"; .
+un.ps1 -Serve
 ```
 
 Then point `npx playwright test tests/tenancy` at it with `E2E_API_ORIGIN`, `E2E_APP_ORIGIN` and `E2E_APP_API_ORIGIN=http://localhost:5290`. `drop-all` only removes the family it is run with (`E2E_DB_TAG`).

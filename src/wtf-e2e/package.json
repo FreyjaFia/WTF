@@ -8,6 +8,7 @@
                     "test:orders":  "playwright test tests/orders",
                     "test:inventory":  "playwright test tests/inventory",
                     "test:waste":  "playwright test tests/inventory/waste",
+                    "test:purchasing":  "playwright test tests/inventory/purchasing tests/tenancy/purchasing-isolation.spec.ts",
                     "test:promotions":  "playwright test tests/promotions",
                     "test:management":  "playwright test tests/management",
                     "test:reports":  "playwright test tests/reports tests/dashboard",
