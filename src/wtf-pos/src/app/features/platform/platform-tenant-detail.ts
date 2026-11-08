@@ -281,7 +281,9 @@ export class PlatformTenantDetailComponent implements OnInit {
 
     this.run(this.platform.impersonate(tenant.id, user.id, reason, allowWrites), (result) => {
       this.platform.startImpersonation(result);
-      this.router.navigateByUrl(AppRoutes.Dashboard);
+      // A full page load, so the app reads the new shop token from scratch. Navigating inside the running app kept the
+      // platform session's empty roles, and the role guard and login guard sent each other back and forth forever.
+      this.platform.openShopApp();
     });
   }
 

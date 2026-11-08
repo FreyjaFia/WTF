@@ -180,6 +180,10 @@ export class PlatformService {
     localStorage.setItem(PlatformService.IMPERSONATION_KEY, JSON.stringify(info));
   }
 
+  public openShopApp(): void {
+    window.location.assign('/dashboard');
+  }
+
   public getImpersonation(): ImpersonationInfo | null {
     const raw = localStorage.getItem(PlatformService.IMPERSONATION_KEY);
 

@@ -20,6 +20,7 @@ const shop = (over: Partial<PlatformTenantDto>): PlatformTenantDto => ({
 });
 
 function render(tenant: PlatformTenantDto, id = 't1') {
+  const assign = vi.fn();
   const platform = {
     getTenants: vi.fn().mockReturnValue(of([tenant])),
     changeStatus: vi.fn().mockReturnValue(of(tenant)),
@@ -35,6 +36,9 @@ function render(tenant: PlatformTenantDto, id = 't1') {
     getBrand: vi.fn().mockReturnValue(
       of({ shopName: 'Moon Brew', shortName: null, tagline: null, logoUrl: null, address: null, phone: null, email: null, receiptHeader: null, receiptFooter: null, registrationText: null, primaryColor: '#112233' }),
     ),
+    impersonate: vi.fn().mockReturnValue(of({ accessToken: 't', expiresAt: 'x', username: 'moon.owner', tenantName: 'Moon Brew', readOnly: true })),
+    startImpersonation: vi.fn(),
+    openShopApp: assign,
     setBrand: vi.fn().mockImplementation((_id: string, brand: unknown) => of(brand)),
   };
   TestBed.configureTestingModule({
@@ -57,7 +61,7 @@ function render(tenant: PlatformTenantDto, id = 't1') {
     fixture.detectChanges();
   };
 
-  return { fixture, el, platform, buttonWith, tab };
+  return { fixture, el, platform, buttonWith, tab, assign };
 }
 
 describe('PlatformTenantDetailComponent', () => {
@@ -148,5 +152,24 @@ describe('PlatformTenantDetailComponent', () => {
     el.querySelector('[data-testid="brand-form"]')!.dispatchEvent(new Event('submit'));
 
     expect(platform.setBrand).toHaveBeenCalledWith('t1', expect.objectContaining({ shopName: 'Moon Brew Two', primaryColor: '#112233' }));
+  });
+});
+
+describe('PlatformTenantDetailComponent sign in as', () => {
+  it('starts the shop session and loads the dashboard as a fresh page, so the app reads the new token', () => {
+    const { fixture, el, platform, tab, assign } = render(shop({}));
+
+    tab('people');
+    el.querySelector<HTMLButtonElement>('[data-testid="people-list"] .app-btn-accent-outline')!.click();
+    fixture.detectChanges();
+    const reason = el.querySelector<HTMLInputElement>('[formControlName="reason"]')!;
+    reason.value = 'checking a report';
+    reason.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    el.querySelector('.app-dialog form')!.dispatchEvent(new Event('submit'));
+
+    expect(platform.impersonate).toHaveBeenCalledWith('t1', 'u1', 'checking a report', false);
+    expect(platform.startImpersonation).toHaveBeenCalled();
+    expect(assign).toHaveBeenCalled();
   });
 });
