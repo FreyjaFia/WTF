@@ -16,6 +16,9 @@ import { IngredientsComponent } from '@features/inventory/ingredients/ingredient
 import { StockInComponent } from '@features/inventory/stock-in/stock-in';
 import { StockCountSheetComponent } from '@features/inventory/counts/stock-count-sheet';
 import { StockCountsComponent } from '@features/inventory/counts/stock-counts';
+import { ReceivingComponent } from '@features/inventory/receiving/receiving';
+import { SupplierDetailsComponent } from '@features/inventory/suppliers/supplier-details';
+import { SuppliersComponent } from '@features/inventory/suppliers/suppliers';
 import { WasteComponent } from '@features/inventory/waste/waste';
 import { Login } from '@features/login/login';
 import { AuditLogsComponent } from '@features/management/audit-logs/audit-logs';
@@ -204,6 +207,24 @@ export const routes: Routes = [
           {
             path: 'counts/:id',
             component: StockCountSheetComponent,
+            canActivate: [roleGuard],
+            data: { roles: AppRoleGroups.StockMovementsRead },
+          },
+          {
+            path: 'receiving',
+            component: ReceivingComponent,
+            canActivate: [roleGuard],
+            data: { roles: AppRoleGroups.StockMovementsRead },
+          },
+          {
+            path: 'suppliers',
+            component: SuppliersComponent,
+            canActivate: [roleGuard],
+            data: { roles: AppRoleGroups.StockMovementsRead },
+          },
+          {
+            path: 'suppliers/:id',
+            component: SupplierDetailsComponent,
             canActivate: [roleGuard],
             data: { roles: AppRoleGroups.StockMovementsRead },
           },

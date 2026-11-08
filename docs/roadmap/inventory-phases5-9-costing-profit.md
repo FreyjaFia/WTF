@@ -285,7 +285,41 @@ counting, and show the difference as **variance**, so you can tell a wrong recip
 - Tests: variance maths with waste and receipts in the period, a count writes the right adjustment, blind count hides the
   expected, a period lock refuses backdating, tolerance flags, the recipe suggestion, roles.
 
-#### Phase 8 - Suppliers, receiving and reordering [Planned]
+#### Phase 8 - Suppliers, receiving and reordering [In progress, branch `inventory-phase-8`]
+
+**Build order (slices).** 1 Suppliers and item-supplier packs (done). 2 Receiving (done). 3 Par levels and the reorder list.
+4 Purchase orders. Expiry and lots, returns to supplier, barcode scanning, units/storage/categories follow after these four.
+
+**Slice 1 built (script `tools/sql/20261114_add_suppliers.sql`, then `tools/dbsync.bat`).**
+- **Schema.** `Suppliers` (name unique, contact, phone, email, address, lead time days, payment terms, notes, active),
+  `ItemSuppliers` (item, supplier, supplier's code, pack name, units per pack, pack price, preferred; unique per item and
+  supplier; at most one preferred per item through the filtered index `UX_ItemSuppliers_Preferred` on `ItemId, IsPreferred`),
+  `ItemSupplierPriceHistory` (every pack price change, with source Manual or Receipt).
+- **Rules.** `PurchasingRules` in `WTF.Calculations`: unit cost from pack price, units from packs, price change percent,
+  cheapest supplier. The first supplier of an item becomes preferred; asking for another preferred one moves the flag.
+  Inactive suppliers keep their links but cannot get new items.
+- **API.** `/api/suppliers` (list, get, create, update, deactivate, restore) and `/api/items/{id}/suppliers` (list, save
+  link, remove link). Reads need `StockMovementsRead`, writes `StockMovementsWrite`; pack prices and unit costs are removed
+  for roles that cannot read costs (`CostAccess`). Audit actions `SupplierCreated/Updated/Deactivated/Restored`,
+  `ItemSupplierSaved/Removed`.
+- **POS.** Inventory > Suppliers (list, add) and a supplier page (details, linked items with pack and price, link form).
+- Tests: `PurchasingRulesTests`, `SupplierDatabaseTests` (real SQL), Angular specs for the service and both screens.
+- **Tenancy.** All new tables carry `TenantId` (NOT NULL, FK to Tenants, default tenant #1), implement `ITenantOwned`
+  (so the query filter, stamping, export and delete pick them up) and the supplier name is unique per shop.
+
+**Slice 2 built (script `tools/sql/20261115_add_stock_receipts.sql`, run after the suppliers script, then dbsync).**
+- **Schema.** `StockReceipts` (supplier, received date, invoice number, invoice total typed from the paper, note,
+  `ClientRequestId` unique so a retry is not recorded twice) and `StockReceiptLines` (item, packs, units per pack, pack
+  price, units added, unit cost, the movement written). A receipt is never edited.
+- **Rules.** Recording a receipt writes one `AddStock` movement per line (reference `StockReceipt`), through the same
+  guarded balance update, cost price history and weighted average as a plain stock-in. The pack seen on a delivery is
+  remembered on the item's supplier link (first delivery creates it, a changed pack price writes history with source
+  Receipt). `PurchasingRules.LineTotal` and `InvoiceDifference` tell whether the lines match the invoice; the shared cases
+  `receiptLine` and `invoiceDifference` in `calculation-cases.json` are checked by both the API and Angular tests.
+- **API.** `/api/stock-receipts` (list, get, record); costs are removed for roles that cannot read them.
+- **POS.** Inventory > Receiving: the receipt list (tap a row for its lines) and a form with supplier, date, invoice,
+  lines that prefill from the supplier's pack, running totals and the difference from the invoice total.
+
 
 - **Suppliers** (name, contact, lead time, payment terms, notes) and an item can have several suppliers with a preferred one
   and its pack size and price. Supplier price history shows creeping costs.

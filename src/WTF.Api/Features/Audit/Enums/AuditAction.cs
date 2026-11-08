@@ -62,5 +62,12 @@ public enum AuditAction
     ExpenseUpdated,
     ExpenseDeleted,
     ExpenseRestored,
-    ShopBrandUpdated
+    ShopBrandUpdated,
+    SupplierCreated,
+    SupplierUpdated,
+    SupplierDeactivated,
+    SupplierRestored,
+    ItemSupplierSaved,
+    ItemSupplierRemoved,
+    StockReceived
 }

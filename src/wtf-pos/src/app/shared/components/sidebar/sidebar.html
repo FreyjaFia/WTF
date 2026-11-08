@@ -269,6 +269,32 @@
           <span [class.hidden]="isCollapsed()">Counts</span>
         </a>
         }
+        @if (authService.canReadStockMovements()) {
+        <a
+          [routerLink]="routes.InventoryReceiving"
+          routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
+          class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
+          [class.justify-center]="isCollapsed()"
+          [attr.title]="'Receiving'"
+          data-testid="sidebar-receiving-link"
+        >
+          <app-icon name="icon-download" [class]="'h-4 w-4 text-gray-500'" />
+          <span [class.hidden]="isCollapsed()">Receiving</span>
+        </a>
+        }
+        @if (authService.canReadStockMovements()) {
+        <a
+          [routerLink]="routes.InventorySuppliers"
+          routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
+          class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
+          [class.justify-center]="isCollapsed()"
+          [attr.title]="'Suppliers'"
+          data-testid="sidebar-suppliers-link"
+        >
+          <app-icon name="icon-box" [class]="'h-4 w-4 text-gray-500'" />
+          <span [class.hidden]="isCollapsed()">Suppliers</span>
+        </a>
+        }
         @if (authService.canReadItems()) {
         <a
           [routerLink]="routes.InventoryIngredients"

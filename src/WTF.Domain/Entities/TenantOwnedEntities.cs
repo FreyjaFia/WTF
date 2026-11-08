@@ -185,3 +185,23 @@ public partial class WasteReason : ITenantOwned
 public partial class TenantSetting : ITenantOwned
 {
 }
+
+public partial class ItemSupplier : ITenantOwned
+{
+}
+
+public partial class ItemSupplierPriceHistory : ITenantOwned
+{
+}
+
+public partial class StockReceipt : ITenantOwned
+{
+}
+
+public partial class StockReceiptLine : ITenantOwned
+{
+}
+
+public partial class Supplier : ITenantOwned
+{
+}

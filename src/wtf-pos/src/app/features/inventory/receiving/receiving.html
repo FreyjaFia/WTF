@@ -1,0 +1,179 @@
+<div class="flex h-full flex-col pt-4 md:pt-0">
+  <div class="mb-4 flex shrink-0 flex-col gap-3 sm:mb-6">
+    <div class="flex items-start justify-between gap-3">
+      <div class="flex min-w-0 flex-col gap-1">
+        <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Receiving</h1>
+        <p class="text-xs text-gray-500 sm:text-sm">Record deliveries from suppliers; each one adds stock</p>
+      </div>
+      @if (auth.canWriteStockMovements() && !isFormOpen()) {
+        <button type="button" class="app-btn app-btn-primary app-btn-sm shrink-0" data-testid="open-receipt" (click)="openForm()">
+          <app-icon name="icon-plus" [class]="'h-4 w-4'" />
+          Receive Stock
+        </button>
+      }
+    </div>
+  </div>
+
+  @if (auth.canWriteStockMovements() && isFormOpen()) {
+    <form class="mb-4 flex shrink-0 flex-col gap-4 rounded-xl bg-surface p-4 shadow sm:p-5" [formGroup]="header" (ngSubmit)="save()" novalidate data-testid="receipt-form">
+      <h2 class="text-sm font-semibold text-gray-900">New receipt</h2>
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label for="rc-supplier" class="mb-1 block text-sm font-medium text-gray-700">Supplier</label>
+          <select id="rc-supplier" formControlName="supplierId" class="select w-full bg-gray-50" (change)="chooseSupplier()" [class.select-error]="header.controls.supplierId.touched && header.controls.supplierId.invalid">
+            <option value="">Choose a supplier</option>
+            @for (supplier of suppliers(); track supplier.id) {
+              <option [value]="supplier.id">{{ supplier.name }}</option>
+            }
+          </select>
+          @if (header.controls.supplierId.touched && header.controls.supplierId.invalid) {
+            <p class="text-error mt-2 text-sm">Choose the supplier.</p>
+          }
+        </div>
+        <div>
+          <label for="rc-date" class="mb-1 block text-sm font-medium text-gray-700">Received on</label>
+          <input id="rc-date" type="date" formControlName="receivedOn" class="input w-full bg-gray-50" />
+        </div>
+        <div>
+          <label for="rc-invoice" class="mb-1 block text-sm font-medium text-gray-700">Invoice number</label>
+          <input id="rc-invoice" type="text" formControlName="invoiceNumber" maxlength="50" class="input w-full bg-gray-50" />
+        </div>
+        @if (canSeeCosts()) {
+          <div>
+            <label for="rc-total" class="mb-1 block text-sm font-medium text-gray-700">Invoice total</label>
+            <input id="rc-total" type="number" step="0.01" min="0" formControlName="invoiceTotal" class="input w-full bg-gray-50" />
+          </div>
+        }
+      </div>
+
+      <div class="flex flex-col gap-3" data-testid="receipt-lines">
+        @for (line of lines.controls; track line; let i = $index) {
+          <div class="grid gap-3 rounded-lg bg-gray-50 p-3 sm:grid-cols-6" [formGroup]="line" data-testid="receipt-line">
+            <div class="sm:col-span-6">
+              <label [attr.for]="'rl-item-' + i" class="mb-1 block text-sm font-medium text-gray-700">Item</label>
+              <select [id]="'rl-item-' + i" formControlName="itemId" class="select w-full bg-surface" (change)="chooseItem(i)">
+                <option value="">Choose an item</option>
+                @for (item of items(); track item.id) {
+                  <option [value]="item.id">{{ item.name }}</option>
+                }
+              </select>
+            </div>
+            <div class="sm:col-span-2">
+              <label [attr.for]="'rl-packs-' + i" class="mb-1 block text-sm font-medium text-gray-700">Packs received</label>
+              <input [id]="'rl-packs-' + i" type="number" step="0.001" min="0" formControlName="packs" class="input w-full bg-surface" />
+            </div>
+            <div class="sm:col-span-2">
+              <label [attr.for]="'rl-units-' + i" class="mb-1 block text-sm font-medium text-gray-700">Units in a pack</label>
+              <input [id]="'rl-units-' + i" type="number" step="0.001" min="0" formControlName="unitsPerPack" class="input w-full bg-surface" />
+            </div>
+            @if (canSeeCosts()) {
+              <div class="sm:col-span-2">
+                <label [attr.for]="'rl-price-' + i" class="mb-1 block text-sm font-medium text-gray-700">Price of a pack</label>
+                <input [id]="'rl-price-' + i" type="number" step="0.01" min="0" formControlName="packPrice" class="input w-full bg-surface" />
+              </div>
+            }
+            <div class="flex items-center justify-between gap-2 sm:col-span-6">
+              <p class="text-xs text-gray-500" data-testid="line-summary">
+                Adds {{ unitsAdded(i) | number: '1.0-3' }} {{ unitName(line.controls.itemId.value) }}
+                @if (canSeeCosts() && unitCostOf(i) !== null) {
+                  &middot; {{ unitCostOf(i) | number: '1.2-4' }} each
+                }
+                @if (canSeeCosts() && lineTotals()[i] !== null) {
+                  &middot; line total {{ lineTotals()[i] | number: '1.2-2' }}
+                }
+              </p>
+              @if (lines.length > 1) {
+                <button type="button" class="app-btn app-btn-ghost app-btn-sm" (click)="removeLine(i)">Remove</button>
+              }
+            </div>
+          </div>
+        }
+        <button type="button" class="app-btn app-btn-secondary app-btn-sm w-fit" data-testid="add-line" (click)="addLine()">Add another item</button>
+      </div>
+
+      @if (canSeeCosts() && linesTotal() !== null) {
+        <p class="text-sm text-gray-700" data-testid="receipt-total">
+          Lines total {{ linesTotal() | number: '1.2-2' }}
+          @if (difference() !== null && difference() !== 0) {
+            <span class="ml-2 font-semibold text-amber-600" data-testid="receipt-difference">
+              Invoice differs by {{ difference() | number: '1.2-2' }}
+            </span>
+          }
+        </p>
+      }
+
+      <div>
+        <label for="rc-note" class="mb-1 block text-sm font-medium text-gray-700">Note (optional)</label>
+        <input id="rc-note" type="text" formControlName="note" maxlength="500" class="input w-full bg-gray-50" />
+      </div>
+      <div class="flex justify-end gap-2">
+        <button type="button" class="app-btn app-btn-secondary app-btn-md" [disabled]="isSaving()" (click)="closeForm()">Cancel</button>
+        <button type="submit" class="app-btn app-btn-primary app-btn-md" data-testid="save-receipt" [disabled]="isSaving()">
+          {{ isSaving() ? 'Saving...' : 'Record Receipt' }}
+        </button>
+      </div>
+    </form>
+  }
+
+  @if (isLoading()) {
+    <div class="flex justify-center py-8"><span class="loading loading-spinner loading-lg"></span></div>
+  }
+
+  @if (!isLoading()) {
+    <app-pull-to-refresh [refreshing]="isRefreshing()" (refreshTriggered)="refresh()">
+      <div class="pb-4">
+        @if (connectionFailed()) {
+          <app-connection-error />
+        } @else if (receipts().length === 0) {
+          <div class="rounded-lg bg-surface p-8 text-center shadow-lg" data-testid="receipts-empty">
+            <p class="text-lg font-semibold text-gray-700">No receipts yet</p>
+            <p class="text-sm text-gray-500">Record a delivery to add stock with its invoice.</p>
+          </div>
+        }
+
+        <ul class="space-y-2.5" data-testid="receipt-list">
+          @for (receipt of receipts(); track receipt.id) {
+            <li class="overflow-hidden rounded-xl bg-surface shadow" data-testid="receipt-row">
+              <button type="button" class="flex w-full items-center justify-between gap-3 p-3 text-left transition-colors hover:bg-gray-50 sm:p-4" (click)="toggleReceipt(receipt)">
+                <div class="min-w-0">
+                  <p class="font-semibold wrap-break-word text-gray-900">
+                    {{ receipt.supplierName }}
+                    @if (receipt.invoiceNumber) { <span class="font-normal text-gray-500">&middot; {{ receipt.invoiceNumber }}</span> }
+                  </p>
+                  <p class="text-xs text-gray-500">
+                    {{ receipt.receivedOn | date: 'MMM d, y' }} &middot; {{ receipt.lineCount }} {{ receipt.lineCount === 1 ? 'item' : 'items' }} &middot; {{ receipt.createdByName }}
+                  </p>
+                </div>
+                @if (receipt.linesTotal !== null) {
+                  <span class="shrink-0 text-sm font-semibold text-gray-900">{{ receipt.linesTotal | number: '1.2-2' }}</span>
+                }
+              </button>
+              @if (expandedId() === receipt.id) {
+                <div class="border-t border-gray-100 p-3 sm:p-4" data-testid="receipt-detail">
+                  @if (expanded(); as detail) {
+                    <ul class="divide-y divide-gray-100 text-sm">
+                      @for (line of detail.lines; track line.itemId) {
+                        <li class="flex items-center justify-between gap-3 py-2">
+                          <span class="min-w-0 wrap-break-word text-gray-900">{{ line.itemName }}</span>
+                          <span class="shrink-0 text-gray-500">
+                            {{ line.packs | number: '1.0-3' }} &times; {{ line.unitsPerPack | number: '1.0-3' }} = {{ line.quantity | number: '1.0-3' }} {{ line.unitName }}
+                          </span>
+                        </li>
+                      }
+                    </ul>
+                    @if (receipt.note) { <p class="mt-2 text-xs text-gray-500">{{ receipt.note }}</p> }
+                    @if (receipt.difference) {
+                      <p class="mt-2 text-xs font-semibold text-amber-600">Invoice total differs by {{ receipt.difference | number: '1.2-2' }}</p>
+                    }
+                  } @else {
+                    <span class="loading loading-spinner loading-sm"></span>
+                  }
+                </div>
+              }
+            </li>
+          }
+        </ul>
+      </div>
+    </app-pull-to-refresh>
+  }
+</div>

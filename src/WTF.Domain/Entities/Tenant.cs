@@ -47,6 +47,10 @@ public partial class Tenant
 
     public virtual ICollection<ItemPriceHistory> ItemPriceHistories { get; set; } = new List<ItemPriceHistory>();
 
+    public virtual ICollection<ItemSupplierPriceHistory> ItemSupplierPriceHistories { get; set; } = new List<ItemSupplierPriceHistory>();
+
+    public virtual ICollection<ItemSupplier> ItemSuppliers { get; set; } = new List<ItemSupplier>();
+
     public virtual ICollection<Item> Items { get; set; } = new List<Item>();
 
     public virtual ICollection<LoyaltyPoint> LoyaltyPoints { get; set; } = new List<LoyaltyPoint>();
@@ -99,7 +103,13 @@ public partial class Tenant
 
     public virtual ICollection<StockMovement> StockMovements { get; set; } = new List<StockMovement>();
 
+    public virtual ICollection<StockReceiptLine> StockReceiptLines { get; set; } = new List<StockReceiptLine>();
+
+    public virtual ICollection<StockReceipt> StockReceipts { get; set; } = new List<StockReceipt>();
+
     public virtual ICollection<StockWaste> StockWastes { get; set; } = new List<StockWaste>();
+
+    public virtual ICollection<Supplier> Suppliers { get; set; } = new List<Supplier>();
 
     public virtual ICollection<TenantCounter> TenantCounters { get; set; } = new List<TenantCounter>();
 

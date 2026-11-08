@@ -1,0 +1,106 @@
+<div class="flex h-full flex-col pt-4 md:pt-0">
+  <div class="mb-4 flex shrink-0 flex-col gap-3 sm:mb-6">
+    <div class="flex items-start justify-between gap-3">
+      <div class="flex min-w-0 flex-col gap-1">
+        <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Suppliers</h1>
+        <p class="text-xs text-gray-500 sm:text-sm">Who you buy stock from, and what each one sells</p>
+      </div>
+      <div class="flex shrink-0 items-center gap-2">
+        @if (auth.canWriteStockMovements() && !isFormOpen()) {
+          <button type="button" class="app-btn app-btn-primary app-btn-sm" data-testid="open-new" (click)="openForm()">
+            <app-icon name="icon-plus" [class]="'h-4 w-4'" />
+            Add Supplier
+          </button>
+        }
+      </div>
+    </div>
+    <label class="flex w-fit cursor-pointer items-center gap-2 text-sm text-gray-600">
+      <input type="checkbox" class="checkbox checkbox-sm" [checked]="showInactive()" (change)="toggleInactive()" data-testid="show-inactive" />
+      Show inactive suppliers
+    </label>
+  </div>
+
+  @if (auth.canWriteStockMovements() && isFormOpen()) {
+    <form class="mb-4 flex shrink-0 flex-col gap-4 rounded-xl bg-surface p-4 shadow sm:p-5" [formGroup]="form" (ngSubmit)="create()" novalidate>
+      <h2 class="text-sm font-semibold text-gray-900">New supplier</h2>
+      <div>
+        <label for="supplier-name" class="mb-1 block text-sm font-medium text-gray-700">Name</label>
+        <input
+          id="supplier-name"
+          type="text"
+          formControlName="name"
+          maxlength="100"
+          class="input w-full border-transparent bg-gray-50 transition-all focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20"
+          [class.input-error]="form.controls.name.touched && form.controls.name.invalid"
+        />
+        @if (form.controls.name.touched && form.controls.name.invalid) {
+          <p class="text-error mt-2 text-sm">Enter the supplier's name.</p>
+        }
+      </div>
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label for="supplier-contact" class="mb-1 block text-sm font-medium text-gray-700">Contact person</label>
+          <input id="supplier-contact" type="text" formControlName="contactName" maxlength="100" class="input w-full border-transparent bg-gray-50 focus:border-brand focus:bg-surface" />
+        </div>
+        <div>
+          <label for="supplier-phone" class="mb-1 block text-sm font-medium text-gray-700">Phone</label>
+          <input id="supplier-phone" type="tel" formControlName="phone" maxlength="30" class="input w-full border-transparent bg-gray-50 focus:border-brand focus:bg-surface" />
+        </div>
+        <div>
+          <label for="supplier-lead" class="mb-1 block text-sm font-medium text-gray-700">Lead time (days)</label>
+          <input id="supplier-lead" type="number" min="0" max="365" formControlName="leadTimeDays" class="input w-full border-transparent bg-gray-50 focus:border-brand focus:bg-surface" />
+        </div>
+        <div>
+          <label for="supplier-terms" class="mb-1 block text-sm font-medium text-gray-700">Payment terms</label>
+          <input id="supplier-terms" type="text" formControlName="paymentTerms" maxlength="100" placeholder="Cash on delivery" class="input w-full border-transparent bg-gray-50 focus:border-brand focus:bg-surface" />
+        </div>
+      </div>
+      <div class="flex justify-end gap-2">
+        <button type="button" class="app-btn app-btn-secondary app-btn-md" [disabled]="isSaving()" (click)="closeForm()">Cancel</button>
+        <button type="submit" class="app-btn app-btn-primary app-btn-md" [disabled]="isSaving()">
+          {{ isSaving() ? 'Saving...' : 'Add Supplier' }}
+        </button>
+      </div>
+    </form>
+  }
+
+  @if (isLoading()) {
+    <div class="flex justify-center py-8"><span class="loading loading-spinner loading-lg"></span></div>
+  }
+
+  @if (!isLoading()) {
+    <app-pull-to-refresh [refreshing]="isRefreshing()" (refreshTriggered)="refresh()">
+      <div class="pb-4">
+        @if (connectionFailed()) {
+          <app-connection-error />
+        } @else if (suppliers().length === 0) {
+          <div class="rounded-lg bg-surface p-8 text-center shadow-lg" data-testid="suppliers-empty">
+            <p class="text-lg font-semibold text-gray-700">No suppliers yet</p>
+            <p class="text-sm text-gray-500">Add the places you buy stock from, then link the items each one sells.</p>
+          </div>
+        }
+
+        <ul class="space-y-2.5" data-testid="supplier-list">
+          @for (supplier of suppliers(); track supplier.id) {
+            <li class="overflow-hidden rounded-xl bg-surface shadow" data-testid="supplier-row">
+              <a [routerLink]="supplierRoute(supplier.id)" draggable="false" class="flex items-center justify-between gap-3 p-3 transition-colors hover:bg-gray-50 sm:p-4">
+                <div class="min-w-0">
+                  <p class="font-semibold wrap-break-word text-gray-900">{{ supplier.name }}</p>
+                  <p class="text-xs text-gray-500">
+                    @if (supplier.contactName) { {{ supplier.contactName }} &middot; }
+                    @if (supplier.phone) { {{ supplier.phone }} &middot; }
+                    @if (supplier.leadTimeDays !== null) { {{ supplier.leadTimeDays }} day lead time &middot; }
+                    {{ supplier.itemCount }} {{ supplier.itemCount === 1 ? 'item' : 'items' }}
+                  </p>
+                </div>
+                @if (!supplier.isActive) {
+                  <app-badge variant="default">Inactive</app-badge>
+                }
+              </a>
+            </li>
+          }
+        </ul>
+      </div>
+    </app-pull-to-refresh>
+  }
+</div>

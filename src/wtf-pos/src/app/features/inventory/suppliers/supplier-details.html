@@ -1,0 +1,176 @@
+<div class="flex h-full flex-col overflow-y-auto pt-4 pb-4 md:pt-0">
+  @if (isLoading()) {
+    <div class="flex justify-center py-8"><span class="loading loading-spinner loading-lg"></span></div>
+  }
+
+  @if (supplier(); as current) {
+    <div class="mb-4 flex shrink-0 items-start justify-between gap-3 sm:mb-6">
+      <div class="flex min-w-0 items-start gap-2">
+        <a draggable="false" class="app-btn app-btn-ghost mt-1 shrink-0 p-2" [routerLink]="listRoute" aria-label="Go back" title="Back">
+          <app-icon name="icon-back" [class]="'h-5 w-5 text-gray-600'" />
+        </a>
+        <div class="min-w-0">
+          <h1 class="text-xl font-bold wrap-break-word text-gray-900 sm:text-2xl" data-testid="supplier-title">{{ current.summary.name }}</h1>
+          <p class="text-xs text-gray-500 sm:text-sm">
+            {{ current.items.length }} {{ current.items.length === 1 ? 'item' : 'items' }} linked
+          </p>
+        </div>
+      </div>
+      @if (!current.summary.isActive) {
+        <app-badge variant="default">Inactive</app-badge>
+      }
+    </div>
+
+    <form class="mb-4 flex flex-col gap-4 rounded-xl bg-surface p-4 shadow sm:p-5" [formGroup]="form" (ngSubmit)="save()" novalidate>
+      <h2 class="text-sm font-semibold text-gray-900">Details</h2>
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div class="sm:col-span-2">
+          <label for="sd-name" class="mb-1 block text-sm font-medium text-gray-700">Name</label>
+          <input id="sd-name" type="text" formControlName="name" maxlength="100" class="input w-full border-transparent bg-gray-50 focus:border-brand focus:bg-surface" [class.input-error]="form.controls.name.touched && form.controls.name.invalid" />
+          @if (form.controls.name.touched && form.controls.name.invalid) {
+            <p class="text-error mt-2 text-sm">Enter the supplier's name.</p>
+          }
+        </div>
+        <div>
+          <label for="sd-contact" class="mb-1 block text-sm font-medium text-gray-700">Contact person</label>
+          <input id="sd-contact" type="text" formControlName="contactName" maxlength="100" class="input w-full border-transparent bg-gray-50 focus:border-brand focus:bg-surface" />
+        </div>
+        <div>
+          <label for="sd-phone" class="mb-1 block text-sm font-medium text-gray-700">Phone</label>
+          <input id="sd-phone" type="tel" formControlName="phone" maxlength="30" class="input w-full border-transparent bg-gray-50 focus:border-brand focus:bg-surface" />
+        </div>
+        <div>
+          <label for="sd-email" class="mb-1 block text-sm font-medium text-gray-700">Email</label>
+          <input id="sd-email" type="email" formControlName="email" maxlength="150" class="input w-full border-transparent bg-gray-50 focus:border-brand focus:bg-surface" />
+        </div>
+        <div>
+          <label for="sd-lead" class="mb-1 block text-sm font-medium text-gray-700">Lead time (days)</label>
+          <input id="sd-lead" type="number" min="0" max="365" formControlName="leadTimeDays" class="input w-full border-transparent bg-gray-50 focus:border-brand focus:bg-surface" />
+        </div>
+        <div>
+          <label for="sd-terms" class="mb-1 block text-sm font-medium text-gray-700">Payment terms</label>
+          <input id="sd-terms" type="text" formControlName="paymentTerms" maxlength="100" class="input w-full border-transparent bg-gray-50 focus:border-brand focus:bg-surface" />
+        </div>
+        <div>
+          <label for="sd-address" class="mb-1 block text-sm font-medium text-gray-700">Address</label>
+          <input id="sd-address" type="text" formControlName="address" maxlength="300" class="input w-full border-transparent bg-gray-50 focus:border-brand focus:bg-surface" />
+        </div>
+        <div class="sm:col-span-2">
+          <label for="sd-notes" class="mb-1 block text-sm font-medium text-gray-700">Notes</label>
+          <textarea id="sd-notes" rows="2" formControlName="notes" maxlength="500" class="textarea w-full border-transparent bg-gray-50 focus:border-brand focus:bg-surface"></textarea>
+        </div>
+      </div>
+      @if (auth.canWriteStockMovements()) {
+        <div class="flex flex-wrap justify-end gap-2">
+          @if (current.summary.isActive) {
+            <button type="button" class="app-btn app-btn-secondary app-btn-md" data-testid="deactivate" (click)="askDeactivate()">Deactivate</button>
+          } @else {
+            <button type="button" class="app-btn app-btn-secondary app-btn-md" data-testid="restore" (click)="restore()">Restore</button>
+          }
+          <button type="submit" class="app-btn app-btn-primary app-btn-md" data-testid="save-supplier" [disabled]="isSaving()">
+            {{ isSaving() ? 'Saving...' : 'Save' }}
+          </button>
+        </div>
+      }
+    </form>
+
+    <section class="rounded-xl bg-surface p-4 shadow sm:p-5" data-testid="supplier-items">
+      <h2 class="mb-3 text-sm font-semibold text-gray-900">Items this supplier sells</h2>
+      @if (current.items.length === 0) {
+        <p class="text-sm text-gray-500" data-testid="no-items">No items linked yet.</p>
+      }
+      <ul class="divide-y divide-gray-100">
+        @for (link of current.items; track link.linkId) {
+          <li class="flex items-center justify-between gap-3 py-2.5" data-testid="supplier-item-row">
+            <div class="min-w-0">
+              <p class="font-medium wrap-break-word text-gray-900">
+                {{ link.itemName }}
+                @if (link.isPreferred) {
+                  <app-badge variant="success">Preferred</app-badge>
+                }
+              </p>
+              <p class="text-xs text-gray-500">
+                {{ link.packName || 'Pack' }} of {{ link.unitsPerPack | number: '1.0-3' }} {{ link.unitName }}
+                @if (link.supplierItemCode) { &middot; code {{ link.supplierItemCode }} }
+                @if (canSeeCosts() && link.packPrice !== null) {
+                  &middot; {{ link.packPrice | number: '1.2-2' }} per pack
+                  @if (link.unitCost !== null) { ({{ link.unitCost | number: '1.2-4' }} per {{ link.unitName }}) }
+                }
+              </p>
+            </div>
+            @if (auth.canWriteStockMovements()) {
+              <div class="flex shrink-0 gap-1">
+                <button type="button" class="app-btn app-btn-ghost app-btn-sm" (click)="editLink(link)">Edit</button>
+                <button type="button" class="app-btn app-btn-ghost app-btn-sm" (click)="removeLink(link)">Remove</button>
+              </div>
+            }
+          </li>
+        }
+      </ul>
+
+      @if (auth.canWriteStockMovements()) {
+        <form class="mt-4 grid gap-3 rounded-lg bg-gray-50 p-3 sm:grid-cols-2" [formGroup]="linkForm" (ngSubmit)="saveLink()" novalidate data-testid="link-form">
+          <h3 class="text-sm font-semibold text-gray-900 sm:col-span-2">{{ editingLinkId() ? 'Edit link' : 'Link an item' }}</h3>
+          <div class="sm:col-span-2">
+            <label for="lf-item" class="mb-1 block text-sm font-medium text-gray-700">Item</label>
+            <select id="lf-item" formControlName="itemId" class="select w-full bg-surface" [attr.disabled]="editingLinkId() ? true : null">
+              <option value="">Choose an item</option>
+              @if (editingLinkId(); as editing) {
+                @for (item of allItems(); track item.id) {
+                  @if (item.id === editing) { <option [value]="item.id">{{ item.name }}</option> }
+                }
+              } @else {
+                @for (item of linkableItems(); track item.id) {
+                  <option [value]="item.id">{{ item.name }}</option>
+                }
+              }
+            </select>
+          </div>
+          <div>
+            <label for="lf-pack" class="mb-1 block text-sm font-medium text-gray-700">Pack name</label>
+            <input id="lf-pack" type="text" formControlName="packName" maxlength="50" placeholder="carton" class="input w-full bg-surface" />
+          </div>
+          <div>
+            <label for="lf-units" class="mb-1 block text-sm font-medium text-gray-700">Units in one pack</label>
+            <input id="lf-units" type="number" step="0.001" min="0.001" formControlName="unitsPerPack" class="input w-full bg-surface" />
+          </div>
+          @if (canSeeCosts()) {
+            <div>
+              <label for="lf-price" class="mb-1 block text-sm font-medium text-gray-700">Price of one pack</label>
+              <input id="lf-price" type="number" step="0.01" min="0" formControlName="packPrice" class="input w-full bg-surface" />
+            </div>
+          }
+          <div>
+            <label for="lf-code" class="mb-1 block text-sm font-medium text-gray-700">Supplier's code</label>
+            <input id="lf-code" type="text" formControlName="supplierItemCode" maxlength="50" class="input w-full bg-surface" />
+          </div>
+          <label class="flex cursor-pointer items-center gap-2 text-sm text-gray-700 sm:col-span-2">
+            <input type="checkbox" formControlName="isPreferred" class="checkbox checkbox-sm" />
+            Preferred supplier for this item
+          </label>
+          <div class="flex justify-end gap-2 sm:col-span-2">
+            @if (editingLinkId()) {
+              <button type="button" class="app-btn app-btn-secondary app-btn-md" (click)="resetLinkForm()">Cancel</button>
+            }
+            <button type="submit" class="app-btn app-btn-primary app-btn-md" data-testid="save-link" [disabled]="isLinking()">
+              {{ isLinking() ? 'Saving...' : editingLinkId() ? 'Save link' : 'Link item' }}
+            </button>
+          </div>
+        </form>
+      }
+    </section>
+
+    @if (confirmingDeactivate()) {
+      <app-confirm-dialog
+        variant="warning"
+        icon="icon-warning"
+        heading="Deactivate supplier?"
+        confirmLabel="Deactivate"
+        (confirmed)="deactivate()"
+        (cancelled)="cancelDeactivate()"
+      >
+        New items cannot be linked to {{ current.summary.name }} while it is inactive. Its history is kept.
+      </app-confirm-dialog>
+    }
+  }
+</div>

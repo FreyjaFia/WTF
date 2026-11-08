@@ -79,6 +79,20 @@ export class InventoryComponent {
       canShow: () => this.canReadStockMovements(),
     },
     {
+      label: 'Receiving',
+      route: 'receiving',
+      path: AppRoutes.InventoryReceiving,
+      ariaLabel: 'Receiving',
+      canShow: () => this.canReadStockMovements(),
+    },
+    {
+      label: 'Suppliers',
+      route: 'suppliers',
+      path: AppRoutes.InventorySuppliers,
+      ariaLabel: 'Suppliers',
+      canShow: () => this.canReadStockMovements(),
+    },
+    {
       label: 'Ingredients & Cost',
       route: 'ingredients',
       path: AppRoutes.InventoryIngredients,

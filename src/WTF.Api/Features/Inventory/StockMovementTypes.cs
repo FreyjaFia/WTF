@@ -13,4 +13,5 @@ public static class StockMovementTypes
     public const string OrderReference = "Order";
     public const string StockWasteReference = "StockWaste";
     public const string StockCountReference = "StockCount";
+    public const string StockReceiptReference = "StockReceipt";
 }

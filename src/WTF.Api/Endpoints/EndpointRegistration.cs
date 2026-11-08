@@ -25,6 +25,8 @@ public static class EndpointRegistration
             .MapStockWaste()
             .MapExpenses()
             .MapStockCounts()
+            .MapSuppliers()
+            .MapStockReceipts()
             .MapNotifications()
             .MapAudit()
             .MapSchemaScriptHistory()

@@ -57,6 +57,12 @@ public partial class User
 
     public virtual ICollection<ItemPriceHistory> ItemPriceHistories { get; set; } = new List<ItemPriceHistory>();
 
+    public virtual ICollection<ItemSupplier> ItemSupplierCreatedByNavigations { get; set; } = new List<ItemSupplier>();
+
+    public virtual ICollection<ItemSupplierPriceHistory> ItemSupplierPriceHistories { get; set; } = new List<ItemSupplierPriceHistory>();
+
+    public virtual ICollection<ItemSupplier> ItemSupplierUpdatedByNavigations { get; set; } = new List<ItemSupplier>();
+
     public virtual ICollection<Item> ItemUpdatedByNavigations { get; set; } = new List<Item>();
 
     public virtual ICollection<Notification> Notifications { get; set; } = new List<Notification>();
@@ -101,11 +107,17 @@ public partial class User
 
     public virtual ICollection<StockMovement> StockMovements { get; set; } = new List<StockMovement>();
 
+    public virtual ICollection<StockReceipt> StockReceipts { get; set; } = new List<StockReceipt>();
+
     public virtual ICollection<StockWaste> StockWasteCreatedByNavigations { get; set; } = new List<StockWaste>();
 
     public virtual ICollection<StockWaste> StockWasteReversedByNavigations { get; set; } = new List<StockWaste>();
 
     public virtual ICollection<StockWaste> StockWasteReviewedByNavigations { get; set; } = new List<StockWaste>();
+
+    public virtual ICollection<Supplier> SupplierCreatedByNavigations { get; set; } = new List<Supplier>();
+
+    public virtual ICollection<Supplier> SupplierUpdatedByNavigations { get; set; } = new List<Supplier>();
 
     public virtual Tenant Tenant { get; set; } = null!;
 

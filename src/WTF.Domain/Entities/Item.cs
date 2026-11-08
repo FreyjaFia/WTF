@@ -55,6 +55,8 @@ public partial class Item
 
     public virtual ICollection<ItemPriceHistory> ItemPriceHistories { get; set; } = new List<ItemPriceHistory>();
 
+    public virtual ICollection<ItemSupplier> ItemSuppliers { get; set; } = new List<ItemSupplier>();
+
     public virtual ICollection<ProductItemLink> ProductItemLinkItems { get; set; } = new List<ProductItemLink>();
 
     public virtual ICollection<ProductItemLink> ProductItemLinkReplacesItems { get; set; } = new List<ProductItemLink>();
@@ -64,6 +66,8 @@ public partial class Item
     public virtual ICollection<StockCountLine> StockCountLines { get; set; } = new List<StockCountLine>();
 
     public virtual ICollection<StockMovement> StockMovements { get; set; } = new List<StockMovement>();
+
+    public virtual ICollection<StockReceiptLine> StockReceiptLines { get; set; } = new List<StockReceiptLine>();
 
     public virtual ICollection<StockWaste> StockWastes { get; set; } = new List<StockWaste>();
 

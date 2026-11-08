@@ -1,0 +1,123 @@
+import { Component, inject, OnInit, signal } from '@angular/core';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Router, RouterLink } from '@angular/router';
+import { HttpErrorMessages } from '@core/messages';
+import { AlertService, AuthService, SupplierService } from '@core/services';
+import { ConnectionErrorComponent, IconComponent, PullToRefreshComponent } from '@shared/components';
+import { BadgeComponent } from '@shared/components/badge/badge';
+import { AppRoutes } from '@shared/constants/app-routes';
+import { SupplierSummaryDto } from '@shared/models';
+
+@Component({
+  selector: 'app-suppliers',
+  imports: [
+    BadgeComponent,
+    ConnectionErrorComponent,
+    IconComponent,
+    PullToRefreshComponent,
+    ReactiveFormsModule,
+    RouterLink,
+  ],
+  templateUrl: './suppliers.html',
+  host: { class: 'flex-1 min-h-0' },
+})
+export class SuppliersComponent implements OnInit {
+  private readonly suppliersApi = inject(SupplierService);
+  private readonly alertService = inject(AlertService);
+  private readonly router = inject(Router);
+  protected readonly auth = inject(AuthService);
+
+  protected readonly suppliers = signal<SupplierSummaryDto[]>([]);
+  protected readonly isLoading = signal(false);
+  protected readonly isRefreshing = signal(false);
+  protected readonly connectionFailed = signal(false);
+  protected readonly isSaving = signal(false);
+  protected readonly isFormOpen = signal(false);
+  protected readonly showInactive = signal(false);
+  protected readonly form = new FormGroup({
+    name: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required, Validators.maxLength(100)],
+    }),
+    contactName: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(100)] }),
+    phone: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(30)] }),
+    leadTimeDays: new FormControl<number | null>(null, [Validators.min(0), Validators.max(365)]),
+    paymentTerms: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(100)] }),
+  });
+
+  public ngOnInit(): void {
+    this.load();
+  }
+
+  protected supplierRoute(id: string): string {
+    return AppRoutes.InventorySupplierById(id);
+  }
+
+  protected openForm(): void {
+    this.isFormOpen.set(true);
+  }
+
+  protected closeForm(): void {
+    this.isFormOpen.set(false);
+    this.form.reset();
+  }
+
+  protected toggleInactive(): void {
+    this.showInactive.update((value) => !value);
+    this.load();
+  }
+
+  protected refresh(): void {
+    this.isRefreshing.set(true);
+    this.load();
+  }
+
+  protected load(): void {
+    this.connectionFailed.set(false);
+    this.isLoading.set(true);
+    this.suppliersApi.getSuppliers({ includeInactive: this.showInactive() }).subscribe({
+      next: (suppliers) => {
+        this.suppliers.set(suppliers);
+        this.isLoading.set(false);
+        this.isRefreshing.set(false);
+      },
+      error: (err: Error) => {
+        this.connectionFailed.set(err.message === HttpErrorMessages.NetworkUnavailable);
+        this.isLoading.set(false);
+        this.isRefreshing.set(false);
+        this.alertService.error(err.message);
+      },
+    });
+  }
+
+  protected create(): void {
+    this.form.markAllAsTouched();
+    if (this.form.invalid || this.isSaving()) {
+      return;
+    }
+
+    const value = this.form.getRawValue();
+    this.isSaving.set(true);
+    this.suppliersApi
+      .createSupplier({
+        name: value.name.trim(),
+        contactName: value.contactName.trim() || null,
+        phone: value.phone.trim() || null,
+        email: null,
+        address: null,
+        leadTimeDays: value.leadTimeDays,
+        paymentTerms: value.paymentTerms.trim() || null,
+        notes: null,
+      })
+      .subscribe({
+        next: (supplier) => {
+          this.isSaving.set(false);
+          void this.router.navigateByUrl(AppRoutes.InventorySupplierById(supplier.summary.id));
+        },
+        error: (err: Error) => {
+          this.isSaving.set(false);
+          this.alertService.error(err.message);
+        },
+      });
+  }
+}

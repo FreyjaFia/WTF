@@ -7,7 +7,7 @@ update its file and the status in the table below.
 | Feature | Status | File |
 | ------- | ------ | ---- |
 | Offline (phases 1-7) | Phases 1-6 completed, 7 planned (judge at sale time, stock, limits) | [offline](roadmap/offline.md) |
-| Inventory (phases 1-9, notifications, polish pass) | Phases 1-5, 7 (slices 1-2) and 9 built; 6 slices 1-3 and 5 built; 8 planned; production polish pass planned | [inventory](roadmap/inventory.md) (overview, polish pass; phases in [1](roadmap/inventory-phase1-stock.md), [2-4](roadmap/inventory-phases2-4-alerts-notifications.md), [5-9](roadmap/inventory-phases5-9-costing-profit.md)) |
+| Inventory (phases 1-9, notifications, polish pass) | Phases 1-5, 7 (slices 1-2) and 9 built; 6 slices 1-3 and 5 built; 8 in progress on branch `inventory-phase-8` (slice 1 suppliers built); production polish pass planned | [inventory](roadmap/inventory.md) (overview, polish pass; phases in [1](roadmap/inventory-phase1-stock.md), [2-4](roadmap/inventory-phases2-4-alerts-notifications.md), [5-9](roadmap/inventory-phases5-9-costing-profit.md)) |
 | Drink Recipe Guide | Nice to have, planned | [drink-recipe-guide](roadmap/drink-recipe-guide.md) |
 | Auto-Update | Completed | [auto-update](roadmap/auto-update.md) |
 | Audit Log | Completed | [audit-log](roadmap/audit-log.md) |

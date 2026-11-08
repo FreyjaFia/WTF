@@ -48,6 +48,10 @@ public partial class WTFDbContext : DbContext
 
     public virtual DbSet<ItemPriceHistory> ItemPriceHistories { get; set; }
 
+    public virtual DbSet<ItemSupplier> ItemSuppliers { get; set; }
+
+    public virtual DbSet<ItemSupplierPriceHistory> ItemSupplierPriceHistories { get; set; }
+
     public virtual DbSet<LoyaltyPoint> LoyaltyPoints { get; set; }
 
     public virtual DbSet<MixMatchPromotion> MixMatchPromotions { get; set; }
@@ -110,7 +114,13 @@ public partial class WTFDbContext : DbContext
 
     public virtual DbSet<StockMovement> StockMovements { get; set; }
 
+    public virtual DbSet<StockReceipt> StockReceipts { get; set; }
+
+    public virtual DbSet<StockReceiptLine> StockReceiptLines { get; set; }
+
     public virtual DbSet<StockWaste> StockWastes { get; set; }
+
+    public virtual DbSet<Supplier> Suppliers { get; set; }
 
     public virtual DbSet<Tenant> Tenants { get; set; }
 
@@ -592,6 +602,82 @@ public partial class WTFDbContext : DbContext
                 .HasForeignKey(d => d.UpdatedBy)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ItemPriceHistory_UpdatedBy");
+        });
+
+        modelBuilder.Entity<ItemSupplier>(entity =>
+        {
+            entity.HasIndex(e => e.SupplierId, "IX_ItemSuppliers_SupplierId");
+
+            entity.HasIndex(e => new { e.ItemId, e.SupplierId }, "UX_ItemSuppliers_Item_Supplier").IsUnique();
+
+            entity.HasIndex(e => new { e.ItemId, e.IsPreferred }, "UX_ItemSuppliers_Preferred")
+                .IsUnique()
+                .HasFilter("([IsPreferred]=(1))");
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_ItemSuppliers_Id");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())", "DF_ItemSuppliers_CreatedAt");
+            entity.Property(e => e.PackName).HasMaxLength(50);
+            entity.Property(e => e.PackPrice).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.SupplierItemCode).HasMaxLength(50);
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_ItemSuppliers_TenantId");
+            entity.Property(e => e.UnitsPerPack)
+                .HasDefaultValue(1m, "DF_ItemSuppliers_UnitsPerPack")
+                .HasColumnType("decimal(18, 3)");
+
+            entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.ItemSupplierCreatedByNavigations)
+                .HasForeignKey(d => d.CreatedBy)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ItemSuppliers_CreatedBy");
+
+            entity.HasOne(d => d.Item).WithMany(p => p.ItemSuppliers)
+                .HasForeignKey(d => d.ItemId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ItemSuppliers_Item");
+
+            entity.HasOne(d => d.Supplier).WithMany(p => p.ItemSuppliers)
+                .HasForeignKey(d => d.SupplierId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ItemSuppliers_Supplier");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.ItemSuppliers)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ItemSuppliers_Tenants");
+
+            entity.HasOne(d => d.UpdatedByNavigation).WithMany(p => p.ItemSupplierUpdatedByNavigations)
+                .HasForeignKey(d => d.UpdatedBy)
+                .HasConstraintName("FK_ItemSuppliers_UpdatedBy");
+        });
+
+        modelBuilder.Entity<ItemSupplierPriceHistory>(entity =>
+        {
+            entity.ToTable("ItemSupplierPriceHistory");
+
+            entity.HasIndex(e => new { e.ItemSupplierId, e.ChangedAt }, "IX_ItemSupplierPriceHistory_ItemSupplier_ChangedAt").IsDescending(false, true);
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_ItemSupplierPriceHistory_Id");
+            entity.Property(e => e.ChangedAt).HasDefaultValueSql("(getutcdate())", "DF_ItemSupplierPriceHistory_ChangedAt");
+            entity.Property(e => e.NewPackPrice).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.OldPackPrice).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.Source)
+                .HasMaxLength(20)
+                .HasDefaultValue("Manual", "DF_ItemSupplierPriceHistory_Source");
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_ItemSupplierPriceHistory_TenantId");
+
+            entity.HasOne(d => d.ChangedByNavigation).WithMany(p => p.ItemSupplierPriceHistories)
+                .HasForeignKey(d => d.ChangedBy)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ItemSupplierPriceHistory_ChangedBy");
+
+            entity.HasOne(d => d.ItemSupplier).WithMany(p => p.ItemSupplierPriceHistories)
+                .HasForeignKey(d => d.ItemSupplierId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ItemSupplierPriceHistory_ItemSupplier");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.ItemSupplierPriceHistories)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ItemSupplierPriceHistory_Tenants");
         });
 
         modelBuilder.Entity<LoyaltyPoint>(entity =>
@@ -1458,6 +1544,70 @@ public partial class WTFDbContext : DbContext
                 .HasConstraintName("FK_StockMovements_Tenants");
         });
 
+        modelBuilder.Entity<StockReceipt>(entity =>
+        {
+            entity.HasIndex(e => new { e.ReceivedOn, e.CreatedAt }, "IX_StockReceipts_ReceivedOn").IsDescending();
+
+            entity.HasIndex(e => e.SupplierId, "IX_StockReceipts_SupplierId");
+
+            entity.HasIndex(e => e.ClientRequestId, "UX_StockReceipts_ClientRequestId")
+                .IsUnique()
+                .HasFilter("([ClientRequestId] IS NOT NULL)");
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_StockReceipts_Id");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())", "DF_StockReceipts_CreatedAt");
+            entity.Property(e => e.InvoiceNumber).HasMaxLength(50);
+            entity.Property(e => e.InvoiceTotal).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.Note).HasMaxLength(500);
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_StockReceipts_TenantId");
+
+            entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.StockReceipts)
+                .HasForeignKey(d => d.CreatedBy)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_StockReceipts_CreatedBy");
+
+            entity.HasOne(d => d.Supplier).WithMany(p => p.StockReceipts)
+                .HasForeignKey(d => d.SupplierId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_StockReceipts_Supplier");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.StockReceipts)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_StockReceipts_Tenants");
+        });
+
+        modelBuilder.Entity<StockReceiptLine>(entity =>
+        {
+            entity.HasIndex(e => e.ItemId, "IX_StockReceiptLines_Item");
+
+            entity.HasIndex(e => e.ReceiptId, "IX_StockReceiptLines_Receipt");
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_StockReceiptLines_Id");
+            entity.Property(e => e.PackName).HasMaxLength(50);
+            entity.Property(e => e.PackPrice).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.Packs).HasColumnType("decimal(18, 3)");
+            entity.Property(e => e.Quantity).HasColumnType("decimal(18, 3)");
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_StockReceiptLines_TenantId");
+            entity.Property(e => e.UnitCost).HasColumnType("decimal(18, 6)");
+            entity.Property(e => e.UnitsPerPack).HasColumnType("decimal(18, 3)");
+
+            entity.HasOne(d => d.Item).WithMany(p => p.StockReceiptLines)
+                .HasForeignKey(d => d.ItemId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_StockReceiptLines_Item");
+
+            entity.HasOne(d => d.Receipt).WithMany(p => p.StockReceiptLines)
+                .HasForeignKey(d => d.ReceiptId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_StockReceiptLines_Receipt");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.StockReceiptLines)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_StockReceiptLines_Tenants");
+        });
+
         modelBuilder.Entity<StockWaste>(entity =>
         {
             entity.HasIndex(e => e.CreatedAt, "IX_StockWastes_CreatedAt");
@@ -1517,6 +1667,37 @@ public partial class WTFDbContext : DbContext
                 .HasForeignKey(d => d.WasteReasonId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_StockWastes_WasteReasons");
+        });
+
+        modelBuilder.Entity<Supplier>(entity =>
+        {
+            entity.HasIndex(e => new { e.TenantId, e.Name }, "UX_Suppliers_Name").IsUnique();
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_Suppliers_Id");
+            entity.Property(e => e.Address).HasMaxLength(300);
+            entity.Property(e => e.ContactName).HasMaxLength(100);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())", "DF_Suppliers_CreatedAt");
+            entity.Property(e => e.Email).HasMaxLength(150);
+            entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_Suppliers_IsActive");
+            entity.Property(e => e.Name).HasMaxLength(100);
+            entity.Property(e => e.Notes).HasMaxLength(500);
+            entity.Property(e => e.PaymentTerms).HasMaxLength(100);
+            entity.Property(e => e.Phone).HasMaxLength(30);
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_Suppliers_TenantId");
+
+            entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.SupplierCreatedByNavigations)
+                .HasForeignKey(d => d.CreatedBy)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Suppliers_CreatedBy");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.Suppliers)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Suppliers_Tenants");
+
+            entity.HasOne(d => d.UpdatedByNavigation).WithMany(p => p.SupplierUpdatedByNavigations)
+                .HasForeignKey(d => d.UpdatedBy)
+                .HasConstraintName("FK_Suppliers_UpdatedBy");
         });
 
         modelBuilder.Entity<Tenant>(entity =>

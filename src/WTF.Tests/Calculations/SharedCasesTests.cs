@@ -47,6 +47,11 @@ public class SharedCasesTests
 
     private sealed record ScheduleCase(string Name, byte? DaysOfWeek, string? StartTime, string? EndTime, string Local, bool Expected);
 
+    private sealed record ReceiptLineCase(
+        string Name, decimal Packs, decimal UnitsPerPack, decimal? PackPrice, decimal ExpectedQuantity, decimal? ExpectedUnitCost, decimal? ExpectedLineTotal);
+
+    private sealed record InvoiceDifferenceCase(string Name, decimal? InvoiceTotal, List<decimal?> LineTotals, decimal? Expected);
+
     private sealed record AdjustmentCase(string Name, decimal Shown, decimal Counted, decimal Expected);
 
     private sealed record AddOnSelectionCase(string Name, string TypeName, bool IsRequired, int MinSelect, int MaxSelect, int Selected, string? ExpectedError, string ExpectedLabel);
@@ -95,7 +100,9 @@ public class SharedCasesTests
         List<SubscriptionWarningCase> SubscriptionWarnings,
         List<SubscriptionClockCase> SubscriptionClock,
         List<SubscriptionLeaseAgeCase> SubscriptionLeaseAge,
-        List<AddOnSelectionCase> AddOnSelection);
+        List<AddOnSelectionCase> AddOnSelection,
+        List<ReceiptLineCase> ReceiptLine,
+        List<InvoiceDifferenceCase> InvoiceDifference);
 
     private sealed record RecipePreviewSizeAmountCase(string SizeProductId, decimal Quantity);
 
@@ -182,6 +189,10 @@ public class SharedCasesTests
     public static IEnumerable<object[]> PercentCaseNames() => Loaded.Value.PercentOfTotal.Select(c => new object[] { c.Name });
 
     public static IEnumerable<object[]> CashCaseNames() => Loaded.Value.CashPayment.Select(c => new object[] { c.Name });
+
+    public static IEnumerable<object[]> ReceiptLineCaseNames() => Loaded.Value.ReceiptLine.Select(c => new object[] { c.Name });
+
+    public static IEnumerable<object[]> InvoiceDifferenceCaseNames() => Loaded.Value.InvoiceDifference.Select(c => new object[] { c.Name });
 
     public static IEnumerable<object[]> AdjustmentCaseNames() => Loaded.Value.StockAdjustment.Select(c => new object[] { c.Name });
 
@@ -479,6 +490,26 @@ public class SharedCasesTests
 
         result.Select(r => (r.ItemId, r.Needed, r.Balance, r.Short))
             .ShouldBe(c.Expected.Select(e => (IdFor(e.ItemId), e.Needed, e.Balance, e.Short)).ToList());
+    }
+
+    [Theory]
+    [MemberData(nameof(ReceiptLineCaseNames))]
+    public void ReceiptLine_MatchesTheSharedCase(string name)
+    {
+        var c = Loaded.Value.ReceiptLine.Single(x => x.Name == name);
+
+        PurchasingRules.UnitsFromPacks(c.Packs, c.UnitsPerPack).ShouldBe(c.ExpectedQuantity);
+        PurchasingRules.UnitCost(c.PackPrice, c.UnitsPerPack).ShouldBe(c.ExpectedUnitCost);
+        PurchasingRules.LineTotal(c.Packs, c.PackPrice).ShouldBe(c.ExpectedLineTotal);
+    }
+
+    [Theory]
+    [MemberData(nameof(InvoiceDifferenceCaseNames))]
+    public void InvoiceDifference_MatchesTheSharedCase(string name)
+    {
+        var c = Loaded.Value.InvoiceDifference.Single(x => x.Name == name);
+
+        PurchasingRules.InvoiceDifference(c.InvoiceTotal, c.LineTotals).ShouldBe(c.Expected);
     }
 
     [Theory]

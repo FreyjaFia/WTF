@@ -1699,4 +1699,18 @@
     { "name": "Two to three of a kind, too many", "typeName": "Side", "isRequired": false, "minSelect": 2, "maxSelect": 3, "selected": 4, "expectedError": "A side selection must be at most 3.", "expectedLabel": "Required · Pick up to 3" },
     { "name": "Two to three of a kind, in range", "typeName": "Side", "isRequired": false, "minSelect": 2, "maxSelect": 3, "selected": 3, "expectedError": null, "expectedLabel": "Required · Pick up to 3" }
   ]
-}
+,
+  "receiptLine": [
+    { "name": "a carton of 12 at 840", "packs": 2, "unitsPerPack": 12, "packPrice": 840, "expectedQuantity": 24, "expectedUnitCost": 70, "expectedLineTotal": 1680 },
+    { "name": "a pack that does not divide evenly keeps six decimals", "packs": 1, "unitsPerPack": 3, "packPrice": 100, "expectedQuantity": 3, "expectedUnitCost": 33.333333, "expectedLineTotal": 100 },
+    { "name": "half a pack", "packs": 0.5, "unitsPerPack": 24, "packPrice": 600, "expectedQuantity": 12, "expectedUnitCost": 25, "expectedLineTotal": 300 },
+    { "name": "no price typed yet", "packs": 3, "unitsPerPack": 6, "packPrice": null, "expectedQuantity": 18, "expectedUnitCost": null, "expectedLineTotal": null }
+  ],
+  "invoiceDifference": [
+    { "name": "the lines match the paper", "invoiceTotal": 1700, "lineTotals": [1680, 20], "expected": 0 },
+    { "name": "the paper is higher than the lines", "invoiceTotal": 1700, "lineTotals": [1680], "expected": 20 },
+    { "name": "the paper is lower than the lines", "invoiceTotal": 1600, "lineTotals": [1680], "expected": -80 },
+    { "name": "no invoice total typed", "invoiceTotal": null, "lineTotals": [100], "expected": null },
+    { "name": "a line has no price", "invoiceTotal": 100, "lineTotals": [50, null], "expected": null },
+    { "name": "centavos add up exactly", "invoiceTotal": 0.3, "lineTotals": [0.1, 0.2], "expected": 0 }
+  ]}

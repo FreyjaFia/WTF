@@ -16,5 +16,8 @@ public enum AuditEntityType
     StockCount,
     CatalogEntry,
     Expense,
-    Shop
+    Shop,
+    Supplier,
+    ItemSupplier,
+    StockReceipt
 }
