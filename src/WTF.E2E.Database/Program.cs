@@ -4,6 +4,7 @@ using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Features.Users.Enums;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
+using WTF.Domain.Tenancy;
 
 // Throwaway database for the Playwright tests (src/wtf-e2e). Never touches the real WTF database.
 //
@@ -20,6 +21,8 @@ const string Prefix = "WTF_E2E_";
 const string DefaultServer = "Server=(localdb)\\MSSQLLocalDB;Integrated Security=true;TrustServerCertificate=true";
 
 var server = Environment.GetEnvironmentVariable("E2E_SQL") ?? DefaultServer;
+// E2E_DB_TAG (letters only, for example MT) names a separate family of databases, and drop-all only removes the family it is run with.
+var tag = Environment.GetEnvironmentVariable("E2E_DB_TAG")?.Trim();
 
 try
 {
@@ -56,7 +59,7 @@ async Task CreateAsync()
         throw new InvalidOperationException("Set E2E_PASSWORD (the password of the throwaway test accounts).");
     }
 
-    var name = Prefix + DateTime.UtcNow.ToString("yyyyMMddHHmmss") + "_" + Guid.NewGuid().ToString("N")[..6];
+    var name = Prefix + (tag is { Length: > 0 } ? tag + "_" : string.Empty) + DateTime.UtcNow.ToString("yyyyMMddHHmmss") + "_" + Guid.NewGuid().ToString("N")[..6];
     var connectionString = ConnectionStringFor(name);
 
     try
@@ -67,27 +70,28 @@ async Task CreateAsync()
 
         await InsertAsync(db, Named<OrderStatusEnum, Status>((id, n) => new Status { Id = id, Name = n }, OrderStatusEnum.All));
         await InsertAsync(db, Named<PaymentMethodEnum, PaymentMethod>((id, n) => new PaymentMethod { Id = id, Name = n }));
+        await SeedDefaultShopAsync(db);
         await InsertAsync(db, new List<ProductCategory>
         {
-            new() { Id = 1, Name = "Drink", SortOrder = 1, IsActive = true, CreatedAt = DateTime.UtcNow },
-            new() { Id = 2, Name = "Food", SortOrder = 2, IsActive = true, CreatedAt = DateTime.UtcNow },
-            new() { Id = 3, Name = "Dessert", SortOrder = 3, IsActive = true, CreatedAt = DateTime.UtcNow },
-            new() { Id = 4, Name = "Other", SortOrder = 4, IsActive = true, CreatedAt = DateTime.UtcNow },
+            new() { Id = 1, Name = "Drink", SortOrder = 1, IsActive = true, CreatedAt = DateTime.UtcNow, TenantId = TenantDefaults.DefaultTenantId },
+            new() { Id = 2, Name = "Food", SortOrder = 2, IsActive = true, CreatedAt = DateTime.UtcNow, TenantId = TenantDefaults.DefaultTenantId },
+            new() { Id = 3, Name = "Dessert", SortOrder = 3, IsActive = true, CreatedAt = DateTime.UtcNow, TenantId = TenantDefaults.DefaultTenantId },
+            new() { Id = 4, Name = "Other", SortOrder = 4, IsActive = true, CreatedAt = DateTime.UtcNow, TenantId = TenantDefaults.DefaultTenantId },
         });
         await InsertAsync(db, new List<ProductSubCategory>
         {
-            new() { Id = 1, Name = "Coffee", SortOrder = 1, IsActive = true, CategoryId = 1 },
-            new() { Id = 2, Name = "NonCoffee", SortOrder = 2, IsActive = true, CategoryId = 1 },
-            new() { Id = 3, Name = "Snacks", SortOrder = 3, IsActive = true, CategoryId = 2 },
-            new() { Id = 4, Name = "Retail", SortOrder = 4, IsActive = true, CategoryId = 4 },
+            new() { Id = 1, Name = "Coffee", SortOrder = 1, IsActive = true, CategoryId = 1, TenantId = TenantDefaults.DefaultTenantId },
+            new() { Id = 2, Name = "NonCoffee", SortOrder = 2, IsActive = true, CategoryId = 1, TenantId = TenantDefaults.DefaultTenantId },
+            new() { Id = 3, Name = "Snacks", SortOrder = 3, IsActive = true, CategoryId = 2, TenantId = TenantDefaults.DefaultTenantId },
+            new() { Id = 4, Name = "Retail", SortOrder = 4, IsActive = true, CategoryId = 4, TenantId = TenantDefaults.DefaultTenantId },
         });
         await InsertAsync(db, new List<AddOnType>
         {
-            new() { Id = 1, Name = "Size", IsRequired = true, MinSelect = 1, MaxSelect = 1, SortOrder = 1, IsActive = true, CreatedAt = DateTime.UtcNow },
-            new() { Id = 2, Name = "Flavor", IsRequired = true, MinSelect = 1, MaxSelect = 1, SortOrder = 2, IsActive = true, CreatedAt = DateTime.UtcNow },
-            new() { Id = 3, Name = "Topping", SortOrder = 4, IsActive = true, CreatedAt = DateTime.UtcNow },
-            new() { Id = 4, Name = "Extra", SortOrder = 5, IsActive = true, CreatedAt = DateTime.UtcNow },
-            new() { Id = 5, Name = "Sauce", MaxSelect = 1, SortOrder = 3, IsActive = true, CreatedAt = DateTime.UtcNow },
+            new() { Id = 1, Name = "Size", IsRequired = true, MinSelect = 1, MaxSelect = 1, SortOrder = 1, IsActive = true, CreatedAt = DateTime.UtcNow, TenantId = TenantDefaults.DefaultTenantId },
+            new() { Id = 2, Name = "Flavor", IsRequired = true, MinSelect = 1, MaxSelect = 1, SortOrder = 2, IsActive = true, CreatedAt = DateTime.UtcNow, TenantId = TenantDefaults.DefaultTenantId },
+            new() { Id = 3, Name = "Topping", SortOrder = 4, IsActive = true, CreatedAt = DateTime.UtcNow, TenantId = TenantDefaults.DefaultTenantId },
+            new() { Id = 4, Name = "Extra", SortOrder = 5, IsActive = true, CreatedAt = DateTime.UtcNow, TenantId = TenantDefaults.DefaultTenantId },
+            new() { Id = 5, Name = "Sauce", MaxSelect = 1, SortOrder = 3, IsActive = true, CreatedAt = DateTime.UtcNow, TenantId = TenantDefaults.DefaultTenantId },
         });
         await InsertAsync(db, Named<UserRoleEnum, UserRole>((id, n) => new UserRole { Id = id, Name = n }));
 
@@ -102,6 +106,38 @@ async Task CreateAsync()
     }
 
     Console.WriteLine($"{{\"database\":\"{name}\",\"connectionString\":\"{connectionString.Replace("\\", "\\\\")}\"}}");
+}
+
+static async Task SeedDefaultShopAsync(WTFDbContext db)
+{
+    // The shop every test account belongs to (same fixed id as tools/sql/20261108_add_tenants.sql), on the Pro plan.
+    var now = DateTime.UtcNow;
+    var pro = new Plan { Code = "pro", Name = "Pro", MonthlyPrice = 2500, Features = "pos,orders,reports,offline,inventory,promotions,orderlinks,chat,workbook", SortOrder = 2, IsActive = true };
+    db.Plans.Add(new Plan { Code = "starter", Name = "Starter", MonthlyPrice = 1500, Features = "pos,orders,reports,offline", SortOrder = 1, IsActive = true });
+    db.Plans.Add(pro);
+    db.Tenants.Add(new Tenant { Id = TenantDefaults.DefaultTenantId, Name = "WTF", Slug = TenantDefaults.DefaultTenantSlug, Status = 2, CreatedAt = now });
+    await db.SaveChangesAsync();
+
+    db.TenantSubscriptions.Add(new TenantSubscription
+    {
+        TenantId = TenantDefaults.DefaultTenantId,
+        PlanId = pro.Id,
+        CurrentPeriodStart = now,
+        CurrentPeriodEnd = now.AddDays(365),
+        GraceDays = 7,
+        UpdatedAt = now,
+    });
+    db.TenantSettings.Add(new TenantSetting
+    {
+        TenantId = TenantDefaults.DefaultTenantId,
+        ShopName = "WTF",
+        PrimaryColor = "#6f4e37",
+        TimeZone = "Asia/Manila",
+        CurrencySymbol = "₱",
+        CurrencyCode = "PHP",
+        CurrencyDecimals = 2,
+    });
+    await db.SaveChangesAsync();
 }
 
 static void SeedUsers(WTFDbContext db, string password)
@@ -140,6 +176,7 @@ static User NewUser(string username, string firstName, string lastName, string h
         RoleId = (int)role,
         CreatedAt = DateTime.UtcNow,
         CreatedBy = id,
+        TenantId = TenantDefaults.DefaultTenantId,
     };
 }
 
@@ -167,6 +204,7 @@ static void SeedWasteReasons(WTFDbContext db)
             SortOrder = sortOrder,
             IsSystem = isSystem,
             IsActive = true,
+            TenantId = TenantDefaults.DefaultTenantId,
         });
     }
 }
@@ -179,7 +217,9 @@ async Task DropAllAsync()
     {
         await master.OpenAsync();
         await using var list = master.CreateCommand();
-        list.CommandText = "SELECT name FROM sys.databases WHERE name LIKE 'WTF[_]E2E[_]%'";
+        list.CommandText = tag is { Length: > 0 }
+            ? "SELECT name FROM sys.databases WHERE name LIKE 'WTF[_]E2E[_]" + tag + "[_]%'"
+            : "SELECT name FROM sys.databases WHERE name LIKE 'WTF[_]E2E[_][0-9]%'";
         await using var reader = await list.ExecuteReaderAsync();
         while (await reader.ReadAsync())
         {
@@ -221,12 +261,12 @@ static async Task InsertAsync<TEntity>(WTFDbContext db, List<TEntity> rows)
 {
     var table = db.Model.FindEntityType(typeof(TEntity))!.GetTableName()!;
     var hasIdentity = await db.Database
-        .SqlQueryRaw<int>($"SELECT CAST(OBJECTPROPERTY(OBJECT_ID(N'dbo.{table}'), 'TableHasIdentity') AS int) AS [Value]")
+        .SqlQuery<int>($"SELECT CAST(OBJECTPROPERTY(OBJECT_ID(N'dbo.{table}'), 'TableHasIdentity') AS int) AS [Value]")
         .SingleAsync() == 1;
 
     if (hasIdentity)
     {
-        await db.Database.ExecuteSqlRawAsync($"SET IDENTITY_INSERT [dbo].[{table}] ON");
+        await db.Database.ExecuteSqlAsync($"SET IDENTITY_INSERT [dbo].[{table}] ON");
     }
 
     db.Set<TEntity>().AddRange(rows);
@@ -234,7 +274,7 @@ static async Task InsertAsync<TEntity>(WTFDbContext db, List<TEntity> rows)
 
     if (hasIdentity)
     {
-        await db.Database.ExecuteSqlRawAsync($"SET IDENTITY_INSERT [dbo].[{table}] OFF");
+        await db.Database.ExecuteSqlAsync($"SET IDENTITY_INSERT [dbo].[{table}] OFF");
     }
 }
 

@@ -42,11 +42,14 @@ if (-not $env:E2E_PASSWORD) {
 }
 
 $root = Resolve-Path (Join-Path $PSScriptRoot '..\..')
-$apiPort = 5290
-$appPort = 4300
-$logs = Join-Path $env:TEMP 'wtf-e2e'
+# Another run (a second agent, say) can use its own ports, database family and stop file with E2E_API_PORT, E2E_APP_PORT, E2E_DB_TAG and
+# E2E_STOP_FILE, so the two never share or drop each other's database.
+$apiPort = if ($env:E2E_API_PORT) { [int]$env:E2E_API_PORT } else { 5290 }
+$appPort = if ($env:E2E_APP_PORT) { [int]$env:E2E_APP_PORT } else { 4300 }
+$suffix = if ($env:E2E_DB_TAG) { "-$($env:E2E_DB_TAG)" } else { '' }
+$logs = Join-Path $env:TEMP "wtf-e2e$suffix"
 # Builds go to their own folder, so a dev API you have running (it locks WTF.Api's bin folder) never blocks a run.
-$artifacts = Join-Path $env:TEMP 'wtf-e2e-artifacts'
+$artifacts = Join-Path $env:TEMP "wtf-e2e-artifacts$suffix"
 New-Item -ItemType Directory -Force $logs | Out-Null
 
 $started = @()
@@ -55,7 +58,7 @@ $exitCode = 1
 
 # Everything this script prints also goes to .e2e-last-run.log (git-ignored), so the run can be followed from another
 # terminal with: Get-Content .e2e-last-run.log -Wait -Tail 40
-$runLog = Join-Path $PSScriptRoot '.e2e-last-run.log'
+$runLog = Join-Path $PSScriptRoot ".e2e-last-run$suffix.log"
 Set-Content -Path $runLog -Value "Run started $(Get-Date -Format 's')" -Encoding UTF8
 
 function Write-Host {
@@ -142,6 +145,9 @@ try {
     $env:ASPNETCORE_ENVIRONMENT = 'Development'
     # All test workers call the public ordering and chat endpoints from one address; lift those per-address limits.
     $env:RateLimiting__Multiplier = '100'
+    # The platform area (src/wtf-pos/src/app/features/platform) needs a platform admin; the API creates this one on its first start.
+    $env:Platform__BootstrapUsername = 'platformadmin'
+    $env:Platform__BootstrapPassword = $env:E2E_PASSWORD
     $api = Start-Process -FilePath 'dotnet' -PassThru -WindowStyle Hidden `
         -ArgumentList @('run', '--no-launch-profile', '--artifacts-path', "`"$artifacts`"", '--project', "`"$(Join-Path $root 'src\WTF.Api')`"", '--urls', "http://localhost:$apiPort") `
         -RedirectStandardOutput (Join-Path $logs 'api.log') -RedirectStandardError (Join-Path $logs 'api.err')
@@ -161,9 +167,16 @@ try {
         Wait-Url "http://localhost:$appPort" 300 'The app'
     }
 
+    if ($apiPort -ne 5290) {
+        # The app is built for 5290 (environment.e2e.ts); the tests send its API calls to this run's API instead.
+        $env:E2E_API_ORIGIN = "http://localhost:$apiPort"
+        $env:E2E_APP_ORIGIN = "http://localhost:$appPort"
+        $env:E2E_APP_API_ORIGIN = 'http://localhost:5290'
+    }
+
     if ($Serve) {
         # Leave the throwaway stack up so several people (or agents) can run `npx playwright test <file>` against it.
-        $stopFile = Join-Path $PSScriptRoot '.e2e-stop'
+        $stopFile = if ($env:E2E_STOP_FILE) { $env:E2E_STOP_FILE } else { Join-Path $PSScriptRoot '.e2e-stop' }
         Remove-Item $stopFile -ErrorAction SilentlyContinue
         Write-Host "READY: API http://localhost:$apiPort, app http://localhost:$appPort, database $database"
         Write-Host "Stop it by creating $stopFile"

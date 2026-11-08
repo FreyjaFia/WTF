@@ -16,3 +16,5 @@ export function testPassword(): string {
 
   return value;
 }
+
+export const PLATFORM_USERNAME: string = process.env.E2E_PLATFORM_USERNAME ?? 'platformadmin';

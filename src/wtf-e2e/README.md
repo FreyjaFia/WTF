@@ -23,6 +23,7 @@ tests/
     items/         items-and-stock-in, lifecycle (delete, restore, stock rules on items), item-editor
     stock/         rules (deduction, void, override), sales-and-refunds, screens, alerts-and-bell
     waste/         recording, review, reasons, pos-sheet, edge-cases
+  tenancy/         data-isolation, suspend-resume, lapsed-subscription, customer-link-unavailable, platform-login, platform-shops, platform-billing-brand-log
   management/      products, customers, users, screens
   reports/         all-reports, waste-report-and-daily-close
   layout/          page-layout (phone, tablet, desktop, long names)
@@ -84,3 +85,17 @@ requirement, add `test-e2e` to the `needs` of the build and deploy jobs and remo
 
 `run.sh` is the Linux/macOS twin of `run.ps1` (`E2E_SQL=<connection string> bash run.sh`); it is what CI runs. On CI
 (`CI=true`) Playwright uses 4 workers (a runner for a public repository has 4 cores) and writes an HTML report. On a PC it uses 3 workers (set `E2E_WORKERS` to change it); both retry a failed test once, and a test that passed only on the retry is listed as flaky.
+
+## Multi-tenant tests (tests/tenancy)
+
+The default shop (`wtf`) owns the test accounts; these tests make more shops through the platform API (`api/platform.ts`, `utils/tenants.ts`) and sign in as the platform admin `platformadmin` (same password as the other accounts; the API creates it on start from `Platform__BootstrapUsername`/`Platform__BootstrapPassword`, which run.ps1 sets).
+
+A second run beside another can use its own ports, database family and stop file:
+
+```powershell
+$env:E2E_API_PORT=5291; $env:E2E_APP_PORT=4301; $env:E2E_DB_TAG="MT"; $env:E2E_STOP_FILE="$PWD.e2e-mt-stop"; .un.ps1 -Serve
+```
+
+Then point `npx playwright test tests/tenancy` at it with `E2E_API_ORIGIN`, `E2E_APP_ORIGIN` and `E2E_APP_API_ORIGIN=http://localhost:5290`. `drop-all` only removes the family it is run with (`E2E_DB_TAG`).
+
+`shops created at the same moment all succeed` is marked `test.fail`: it documents an app bug (parallel shop creation collides on catalog ids). Remove the mark when it is fixed.

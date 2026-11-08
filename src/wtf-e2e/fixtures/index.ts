@@ -1,5 +1,6 @@
 import { Browser, BrowserContext, Page, test as base } from '@playwright/test';
 import { Api } from '@api/index';
+import { PlatformApi } from '@api/platform';
 import { testPassword } from '@data/env';
 import { Role, USERNAMES } from '@data/users';
 import { LoginPage } from '@pages/login.page';
@@ -18,6 +19,7 @@ export type NewContext = (options?: { width?: number; height?: number }) => Prom
 
 interface Fixtures {
   readonly api: Api;
+  readonly platform: PlatformApi;
   // A page that is already signed in (the session saved by global-setup).
   readonly signIn: SignIn;
   // A page signed in by typing the login form, for the tests that are about the login itself.
@@ -39,6 +41,9 @@ export const test = base.extend<Fixtures>({
   },
   api: async ({ request }, use) => {
     await use(new Api(request));
+  },
+  platform: async ({ request }, use) => {
+    await use(new PlatformApi(request));
   },
   // A fresh, signed-out browser context whose API calls go to the test API (closed after the test).
   newContext: async ({ browser }, use) => {

@@ -70,3 +70,12 @@ export const REPORT_API_PATHS: ReadonlyArray<string> = [
   'profit-loss',
   'menu-engineering',
 ];
+
+export const PLATFORM_ROUTES = {
+  login: '/platform/login',
+  home: '/platform',
+  shops: '/platform/shops',
+  shop: (id: string): string => `/platform/shops/${id}`,
+  plans: '/platform/plans',
+  log: '/platform/log',
+} as const;
