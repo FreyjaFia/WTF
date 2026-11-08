@@ -71,9 +71,11 @@ test.describe('managing shops from the platform @tenancy @platform', () => {
 
     await shops.search.fill(other.tenant.slug);
     await expect(shops.row(other.tenant.slug)).toBeVisible();
-    await page.getByRole('group', { name: 'Filter by status' }).getByRole('button', { name: /^Suspended/ }).click();
+    await page.getByRole('button', { name: /^Filters/ }).click();
+    await page.getByTestId('filter-status-3').check();
     await expect(shops.row(other.tenant.slug)).toBeVisible();
-    await page.getByRole('group', { name: 'Filter by status' }).getByRole('button', { name: /^Active/ }).click();
+    await page.getByTestId('filter-status-3').uncheck();
+    await page.getByTestId('filter-status-2').check();
     await expect(shops.row(other.tenant.slug)).toHaveCount(0);
   });
 
