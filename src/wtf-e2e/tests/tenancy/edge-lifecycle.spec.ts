@@ -188,8 +188,7 @@ test.describe('cancelled and deleted shops, edge cases @tenancy @edge', () => {
     expect((await stays.owner.json<{ id: string }[]>('GET', 'products')).map((row) => row.id)).toEqual([product.id]);
   });
 
-  // Known app bug: the token of a deleted shop is still accepted until it expires.
-  test.fail('the token of a deleted shop stops working at once', async ({ request, platform }) => {
+  test('the token of a deleted shop stops working at once', async ({ request, platform }) => {
     const gone = await openShop(request, platform);
     await platform.setStatus(gone.id, 'cancel');
     const deleted = await platform.call('POST', `tenants/${gone.id}/delete`, { slug: gone.slug, adminPassword: testPassword() });
@@ -212,16 +211,15 @@ test.describe('cancelled and deleted shops, edge cases @tenancy @edge', () => {
     expect((await platform.tenants()).map((tenant) => tenant.id)).toContain(shop.id);
   });
 
-  // Known app bug, left as fixme because the platform can cancel the default shop (and so lock out the original data).
-  // Running it would cancel the default shop for every other spec in the same database.
-  test.fixme('the default shop can be neither cancelled nor deleted', async ({ platform }) => {
+  test('the default shop cannot be cancelled', async ({ platform }) => {
     const wtf = (await platform.tenants()).find((tenant) => tenant.slug === 'wtf');
-    test.skip(!wtf, 'no default shop in this database');
+    expect(wtf, 'the default shop must exist in the test database').toBeTruthy();
 
     const cancel = await platform.call('POST', `tenants/${wtf!.id}/cancel`, { reason: 'E2E must be refused' });
     const remove = await platform.call('POST', `tenants/${wtf!.id}/delete`, { slug: 'wtf', adminPassword: testPassword() });
 
-    expect(cancel.ok(), 'cancelling the default shop must be refused').toBeFalsy();
+    expect(cancel.status(), 'cancelling the default shop must be refused').toBe(400);
+    expect(await cancel.text()).toContain('first shop');
     expect(remove.ok(), 'deleting the default shop must be refused').toBeFalsy();
     expect((await platform.tenants()).find((tenant) => tenant.slug === 'wtf')?.status).toBe(TENANT_STATUS.Active);
   });
@@ -288,8 +286,7 @@ test.describe('reset password and suspend, edge cases @tenancy @edge @platform',
     expect((await shop.owner.call('GET', 'products')).ok()).toBeTruthy();
   });
 
-  // Known app bug: two suspends sent at the same moment are both accepted and both logged.
-  test.fail('two suspends sent together end suspended and are logged once', async ({ request, platform }) => {
+  test('two suspends sent together end suspended and are logged once', async ({ request, platform }) => {
     const shop = await openShop(request, platform);
 
     await Promise.all([
@@ -422,8 +419,7 @@ test.describe('concurrent actions, edge cases @tenancy @edge', () => {
     expect(ok.length, 'a username must not be given to two shops').toBeLessThanOrEqual(1);
   });
 
-  // Known app bug: two payments of one invoice at the same moment can both go through.
-  test.fail('the same invoice marked paid twice at once extends the period once', async ({ request, platform }) => {
+  test('the same invoice marked paid twice at once extends the period once', async ({ request, platform }) => {
     const shop = await openShop(request, platform);
     const invoice = await platform.createInvoice(shop.id, 1);
 

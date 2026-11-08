@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Tenancy;
 using WTF.Api.Services;
 using WTF.Domain.Data;
+using WTF.Domain.Tenancy;
 
 namespace WTF.Api.Features.Platform;
 
@@ -22,6 +23,11 @@ public class SetTenantStatusHandler(WTFDbContext db, IPlatformAuditService audit
         var tenant = await db.Tenants.FirstOrDefaultAsync(t => t.Id == request.TenantId, cancellationToken)
             ?? throw new KeyNotFoundException("Shop not found.");
 
+        if (request.Change == TenantStatusChange.Cancel && tenant.Id == TenantDefaults.DefaultTenantId)
+        {
+            throw new InvalidOperationException("The first shop cannot be cancelled.");
+        }
+
         var (newStatus, action) = request.Change switch
         {
             TenantStatusChange.Suspend when tenant.Status is TenantAccess.Trial or TenantAccess.Active
@@ -34,10 +40,20 @@ public class SetTenantStatusHandler(WTFDbContext db, IPlatformAuditService audit
         };
 
         var old = tenant.Status;
-        tenant.Status = newStatus;
-        tenant.UpdatedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync(cancellationToken);
+        var changedAt = DateTime.UtcNow;
+
+        // Only the request that still finds the old status changes it, so two at the same moment cannot both win or both be logged.
+        var changed = await db.Tenants
+            .Where(t => t.Id == tenant.Id && t.Status == old)
+            .ExecuteUpdateAsync(s => s.SetProperty(t => t.Status, newStatus).SetProperty(t => t.UpdatedAt, changedAt), cancellationToken);
         statusCache.Forget(tenant.Id);
+        if (changed == 0)
+        {
+            throw new InvalidOperationException("This shop was just changed by someone else. Reload and try again.");
+        }
+
+        tenant.Status = newStatus;
+        tenant.UpdatedAt = changedAt;
 
         await audit.LogAsync(
             action,
