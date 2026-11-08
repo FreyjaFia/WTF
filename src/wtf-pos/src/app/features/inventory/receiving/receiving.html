@@ -182,7 +182,7 @@
         }
 
         @if (sortedReceipts().length > 0) {
-          <div class="sticky top-0 z-10 mb-2 hidden grid-cols-12 gap-4 rounded-xl bg-surface px-4 py-3 shadow lg:grid" data-testid="receipt-columns">
+          <div class="sticky top-0 z-10 mb-2 hidden grid-cols-12 gap-4 rounded-lg bg-surface px-4 py-3 lg:grid" data-testid="receipt-columns">
             <app-sort-header class="col-span-6" label="Receipt" align="start" [active]="sortColumn() === 'receipt'" [direction]="sortDirection()" (sorted)="toggleSort('receipt')" />
             <app-sort-header class="col-span-2" label="Received" align="center" [active]="sortColumn() === 'received'" [direction]="sortDirection()" (sorted)="toggleSort('received')" />
             <app-sort-header class="col-span-2" label="Items" align="center" [active]="sortColumn() === 'items'" [direction]="sortDirection()" (sorted)="toggleSort('items')" />
