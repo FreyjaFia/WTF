@@ -47,9 +47,7 @@ test.describe('shop addresses and owner names, edge cases @tenancy @edge @platfo
     }
   });
 
-  // Known app bug: the address is allowed up to 50 characters, but the shop's customer-link account is named
-  // "customer-link.<address>" in a 50 character column, so an address over 36 characters fails with a 500.
-  test.fail('accepts a shop address of the full 50 characters', async ({ platform }) => {
+  test('accepts a shop address of the full 50 characters', async ({ platform }) => {
     const slug = `l${'0'.repeat(30)}${Date.now().toString(36)}`.slice(0, 50);
 
     const response = await platform.call('POST', 'tenants', body({ slug }));
@@ -69,11 +67,7 @@ test.describe('shop addresses and owner names, edge cases @tenancy @edge @platfo
   test('lower-cases and trims the shop address, and then refuses the same address in capitals', async ({ platform }) => {
     const slug = uniqueSlug('case');
 
-    // Shops made at the same moment can hit the known duplicate-key bug, so that answer is retried.
-    let first = await platform.call('POST', 'tenants', body({ slug: `  ${slug.toUpperCase()}  ` }));
-    for (let attempt = 0; attempt < 5 && first.status() === 500; attempt++) {
-      first = await platform.call('POST', 'tenants', body({ slug: `  ${slug.toUpperCase()}  ` }));
-    }
+    const first = await platform.call('POST', 'tenants', body({ slug: `  ${slug.toUpperCase()}  ` }));
     expect(first.ok(), await first.text()).toBeTruthy();
     expect((await first.json()).tenant.slug).toBe(slug);
 

@@ -42,7 +42,7 @@ public partial class CreateTenantHandler(WTFDbContext db, IPlatformAuditService 
             throw new InvalidOperationException("That shop address is already taken.");
         }
 
-        var systemUsername = SubmitPublicOrderHandler.SystemUsernamePrefix + slug;
+        var systemUsername = SystemUsernameFor(slug);
         var normalized = new[] { username.ToLowerInvariant(), systemUsername };
         if (await db.Users.IgnoreQueryFilters().AnyAsync(u => normalized.Contains(u.Username.ToLower()), cancellationToken))
         {
@@ -72,6 +72,11 @@ public partial class CreateTenantHandler(WTFDbContext db, IPlatformAuditService 
         var systemId = Guid.NewGuid();
 
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+
+        // Catalog ids are picked after the highest id in use, so shops made at the same moment take turns until their transaction ends.
+        await db.Database.ExecuteSqlRawAsync(
+            "EXEC sp_getapplock @Resource = 'wtf-tenant-catalog-copy', @LockMode = 'Exclusive', @LockOwner = 'Transaction', @LockTimeout = 60000",
+            cancellationToken);
 
         db.Tenants.Add(tenant);
         await db.SaveChangesAsync(cancellationToken);
@@ -132,6 +137,21 @@ public partial class CreateTenantHandler(WTFDbContext db, IPlatformAuditService 
 
         var dto = new PlatformTenantDto(tenant.Id, name, slug, tenant.Status, PlatformTenantNames.StatusName(tenant.Status), now, 2, 0, null);
         return new CreatedTenantDto(dto, username, password);
+    }
+
+    // The username column holds 50 characters, so a long address is cut and ends with a short hash of the whole address to stay unique.
+    public static string SystemUsernameFor(string slug)
+    {
+        const int maxLength = 50;
+        var name = SubmitPublicOrderHandler.SystemUsernamePrefix + slug;
+        if (name.Length <= maxLength)
+        {
+            return name;
+        }
+
+        var hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(slug)))[..8].ToLowerInvariant();
+        var keep = maxLength - SubmitPublicOrderHandler.SystemUsernamePrefix.Length - hash.Length - 1;
+        return $"{SubmitPublicOrderHandler.SystemUsernamePrefix}{slug[..keep]}-{hash}";
     }
 
     private static void Validate(string name, string slug, string username, string firstName, string lastName)

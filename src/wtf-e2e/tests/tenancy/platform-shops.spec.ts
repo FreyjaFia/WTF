@@ -153,8 +153,6 @@ test.describe('managing shops from the platform @tenancy @platform', () => {
   });
 
   test('shops created at the same moment all succeed', async ({ platform }) => {
-    test.fail(true, 'Known app bug: the catalog copy picks ids over all shops, so parallel creates collide on a duplicate key (500).');
-
     const responses = await Promise.all([1, 2, 3, 4, 5].map(() => platform.createShopRaw()));
 
     expect(responses.map((response) => response.status())).toEqual([200, 200, 200, 200, 200]);
