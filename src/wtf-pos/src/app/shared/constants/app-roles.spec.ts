@@ -56,7 +56,7 @@ describe('app roles', () => {
 
 describe('app roles vs the API policies', () => {
   // Mirrors WTF.Api AppAuthorizationExtensions (and the .NET PolicyMatrixTests). Update both together.
-  const apiPolicies: Record<Exclude<keyof typeof AppRoleGroups, 'ManagementAccess'>, readonly string[]> = {
+  const apiPolicies: Record<Exclude<keyof typeof AppRoleGroups, 'ManagementAccess' | 'ManagementMenu' | 'SetupAccess'>, readonly string[]> = {
     DashboardRead: ['SuperAdmin', 'Admin', 'AdminViewer'],
     ProductsRead: ['SuperAdmin', 'Admin', 'AdminViewer', 'Cashier'],
     ProductsWrite: ['SuperAdmin', 'Admin'],
@@ -91,7 +91,7 @@ describe('app roles vs the API policies', () => {
   };
 
   // UI-only groups have no API policy because the API has no matching area to protect.
-  const uiOnlyGroups = ['ManagementAccess'];
+  const uiOnlyGroups = ['ManagementAccess', 'ManagementMenu', 'SetupAccess'];
 
   it('has an API policy for every UI group except the UI-only ones', () => {
     const apiBacked = Object.keys(AppRoleGroups).filter((g) => !uiOnlyGroups.includes(g));

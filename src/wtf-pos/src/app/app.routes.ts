@@ -1,9 +1,11 @@
+import { inject } from '@angular/core';
 import { Routes } from '@angular/router';
 import { authGuard } from '@core/guards/auth.guard';
 import { loginGuard } from '@core/guards/login.guard';
 import { platformGuard } from '@core/guards/platform.guard';
 import { roleGuard } from '@core/guards/role.guard';
 import { unsavedChangesGuard } from '@core/guards/unsaved-changes.guard';
+import { AuthService } from '@core/services';
 import { Dashboard } from '@features/dashboard/dashboard';
 import { InventoryComponent } from '@features/inventory/inventory';
 import { ItemDetailsComponent } from '@features/inventory/items/item-details/item-details';
@@ -47,6 +49,7 @@ import { BrandPageComponent } from '@features/management/brand/brand-page';
 import { SubscriptionPageComponent } from '@features/management/subscription/subscription-page';
 import { ExpensesComponent } from '@features/management/expenses/expenses';
 import { SetupComponent } from '@features/management/setup/setup';
+import { ShopComponent } from '@features/management/shop/shop';
 import { NotFoundComponent } from '@features/not-found/not-found';
 import { NotificationsComponent } from '@features/notifications/notifications';
 import { OrderDetails } from '@features/orders/order-details/order-details';
@@ -230,18 +233,8 @@ export const routes: Routes = [
             canActivate: [roleGuard],
             data: { roles: AppRoleGroups.StockMovementsRead },
           },
-          {
-            path: 'suppliers',
-            component: SuppliersComponent,
-            canActivate: [roleGuard],
-            data: { roles: AppRoleGroups.StockMovementsRead },
-          },
-          {
-            path: 'suppliers/:id',
-            component: SupplierDetailsComponent,
-            canActivate: [roleGuard],
-            data: { roles: AppRoleGroups.StockMovementsRead },
-          },
+          { path: 'suppliers', redirectTo: '/management/setup/suppliers', pathMatch: 'full' },
+          { path: 'suppliers/:id', redirectTo: '/management/setup/suppliers/:id', pathMatch: 'full' },
           {
             path: 'waste',
             component: WasteComponent,
@@ -287,11 +280,11 @@ export const routes: Routes = [
         path: 'management',
         component: ManagementComponent,
         canActivate: [roleGuard],
-        data: { roles: AppRoleGroups.ManagementAccess },
+        data: { roles: AppRoleGroups.ManagementMenu },
         children: [
           {
             path: '',
-            redirectTo: 'products',
+            redirectTo: () => (inject(AuthService).canReadProducts() ? 'products' : 'setup'),
             pathMatch: 'full',
           },
           {
@@ -477,7 +470,19 @@ export const routes: Routes = [
             path: 'setup',
             component: SetupComponent,
             canActivate: [roleGuard],
-            data: { roles: AppRoleGroups.ProductsRead },
+            data: { roles: AppRoleGroups.SetupAccess },
+          },
+          {
+            path: 'setup/suppliers',
+            component: SuppliersComponent,
+            canActivate: [roleGuard],
+            data: { roles: AppRoleGroups.StockMovementsRead },
+          },
+          {
+            path: 'setup/suppliers/:id',
+            component: SupplierDetailsComponent,
+            canActivate: [roleGuard],
+            data: { roles: AppRoleGroups.StockMovementsRead },
           },
           {
             path: 'setup/:kind',
@@ -485,17 +490,23 @@ export const routes: Routes = [
             canActivate: [roleGuard],
             data: { roles: AppRoleGroups.ProductsRead },
           },
+          { path: 'subscription', redirectTo: 'shop/plan', pathMatch: 'full' },
+          { path: 'brand', redirectTo: 'shop/branding', pathMatch: 'full' },
           {
-            path: 'subscription',
-            component: SubscriptionPageComponent,
-            canActivate: [roleGuard],
-            data: { roles: AppRoleGroups.SubscriptionBilling },
-          },
-          {
-            path: 'brand',
-            component: BrandPageComponent,
+            path: 'shop',
+            component: ShopComponent,
             canActivate: [roleGuard],
             data: { roles: AppRoleGroups.BrandManage },
+            children: [
+              { path: '', redirectTo: 'branding', pathMatch: 'full' },
+              { path: 'branding', component: BrandPageComponent },
+              {
+                path: 'plan',
+                component: SubscriptionPageComponent,
+                canActivate: [roleGuard],
+                data: { roles: AppRoleGroups.SubscriptionBilling },
+              },
+            ],
           },
         ],
       },

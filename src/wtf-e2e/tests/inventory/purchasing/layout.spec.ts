@@ -34,8 +34,8 @@ test.beforeAll(async ({ playwright }) => {
 });
 
 const PAGES: ReadonlyArray<{ readonly name: string; readonly path: () => string }> = [
-  { name: 'suppliers', path: () => '/inventory/suppliers' },
-  { name: 'supplier details', path: () => `/inventory/suppliers/${seeds.supplierId}` },
+  { name: 'suppliers', path: () => '/management/setup/suppliers' },
+  { name: 'supplier details', path: () => `/management/setup/suppliers/${seeds.supplierId}` },
   { name: 'reorder', path: () => '/inventory/reorder' },
   { name: 'receiving', path: () => '/inventory/receiving' },
   { name: 'purchase orders', path: () => '/inventory/purchase-orders' },

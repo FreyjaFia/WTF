@@ -167,6 +167,7 @@ describe('SidebarComponent', () => {
       'canWriteOrders',
       'canReadInventory',
       'canReadManagement',
+      'canOpenManagementMenu',
     ]);
     const labels = linkLabels().join('|');
     expect(labels).not.toContain('New Order');
@@ -177,7 +178,7 @@ describe('SidebarComponent', () => {
   });
 
   it('offers the Dashboard only to roles that can open it', async () => {
-    const { linkLabels } = await setup(undefined, ['canReadManagement']);
+    const { linkLabels } = await setup(undefined, ['canReadManagement', 'canOpenManagementMenu']);
 
     expect(linkLabels().join('|')).not.toContain('Dashboard');
   });
@@ -190,22 +191,21 @@ describe('SidebarComponent', () => {
   it('toggles the inventory and management groups', async () => {
     const { fixture, byText, el } = await setup();
     const inventoryBtn = byText('button', 'Inventory')!;
-    const group = () => el.querySelector('.max-h-64, .max-h-0') as HTMLElement;
-    expect(group().classList).toContain('max-h-64');
+    const group = () => el.querySelector('.grid[class*="grid-rows-"]') as HTMLElement;
+    expect(group().classList).toContain('grid-rows-[1fr]');
     inventoryBtn.click();
     fixture.detectChanges();
-    expect(group().classList).toContain('max-h-0');
+    expect(group().classList).toContain('grid-rows-[0fr]');
     inventoryBtn.click();
     fixture.detectChanges();
-    expect(group().classList).toContain('max-h-64');
+    expect(group().classList).toContain('grid-rows-[1fr]');
 
     const mgmtBtn = byText('button', 'Management')!;
-    const mgmt = () => el.querySelector('.max-h-96, .max-h-0.opacity-0:not(.max-h-64)') as HTMLElement;
-    expect(el.querySelector('.max-h-96')).toBeTruthy();
+    const mgmt = () => el.querySelectorAll('.grid[class*="grid-rows-"]')[1] as HTMLElement;
+    expect(mgmt().classList).toContain('grid-rows-[1fr]');
     mgmtBtn.click();
     fixture.detectChanges();
-    expect(el.querySelector('.max-h-96')).toBeNull();
-    expect(mgmt()).toBeTruthy();
+    expect(mgmt().classList).toContain('grid-rows-[0fr]');
   });
 
   it('collapses and expands the sidebar', async () => {

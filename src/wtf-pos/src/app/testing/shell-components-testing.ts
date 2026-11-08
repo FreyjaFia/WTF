@@ -36,6 +36,8 @@ export function createShellFakes(me: Observable<FakeMe> = of({ firstName: 'Jane'
     canReadInventory: can('canReadInventory'),
     canReadItems: can('canReadItems'),
     canReadManagement: can('canReadManagement'),
+    canOpenManagementMenu: can('canOpenManagementMenu'),
+    canOpenSetup: can('canOpenSetup'),
     canReadOrders: can('canReadOrders'),
     canReadProducts: can('canReadProducts'),
     canReadPromotions: can('canReadPromotions'),

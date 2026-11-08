@@ -2,7 +2,13 @@ import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorMessages } from '@core/messages';
-import { AlertService, AuthService, CatalogSetupService, WasteReasonService } from '@core/services';
+import {
+  AlertService,
+  AuthService,
+  CatalogSetupService,
+  SupplierService,
+  WasteReasonService,
+} from '@core/services';
 import { ConnectionErrorComponent } from '@shared/components';
 import { PullToRefreshComponent } from '@shared/components/pull-to-refresh/pull-to-refresh';
 import { AppRoutes } from '@shared/constants/app-routes';
@@ -31,6 +37,7 @@ export class SetupComponent implements OnInit {
   private readonly alertService = inject(AlertService);
   private readonly catalogService = inject(CatalogSetupService);
   private readonly wasteReasonService = inject(WasteReasonService);
+  private readonly supplierService = inject(SupplierService);
 
   protected readonly setupRoute = AppRoutes.ManagementSetup;
 
@@ -50,7 +57,7 @@ export class SetupComponent implements OnInit {
   protected readonly groups = computed(() => {
     const descriptions: Record<string, string> = {
       Menu: 'How products are grouped and the choices a customer can add to a drink.',
-      Inventory: 'Reasons and options used when recording stock losses.',
+      Inventory: 'Suppliers, and the reasons staff choose when they record stock losses.',
     };
     const groups: { name: string; description: string; kinds: SetupKind[] }[] = [];
     for (const kind of this.kinds()) {
@@ -121,6 +128,20 @@ export class SetupComponent implements OnInit {
             ...c,
             'waste-reasons': reasons.filter((r) => r.isActive).length,
           }));
+          done();
+        },
+        error: (err: Error) => {
+          this.onLoadError(err);
+          done();
+        },
+      });
+    }
+
+    if (this.authService.canReadStockMovements()) {
+      pending += 1;
+      this.supplierService.getSuppliers().subscribe({
+        next: (suppliers) => {
+          this.counts.update((c) => ({ ...c, suppliers: suppliers.length }));
           done();
         },
         error: (err: Error) => {

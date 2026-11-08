@@ -25,7 +25,7 @@ interface Vm {
   form: { patchValue: (value: object) => void };
   create: () => void;
   openForm: () => void;
-  toggleInactive: () => void;
+  setShowInactive: (value: boolean) => void;
 }
 
 describe('SuppliersComponent', () => {
@@ -95,13 +95,13 @@ describe('SuppliersComponent', () => {
     expect(service.createSupplier).toHaveBeenCalledWith(
       expect.objectContaining({ name: 'Farm Fresh', leadTimeDays: 3, contactName: null }),
     );
-    expect(navigate).toHaveBeenCalledWith('/inventory/suppliers/new');
+    expect(navigate).toHaveBeenCalledWith('/management/setup/suppliers/new');
   });
 
   it('asks for inactive suppliers when the box is ticked', () => {
     const { service, vm } = setup();
 
-    vm.toggleInactive();
+    vm.setShowInactive(true);
 
     expect(service.getSuppliers).toHaveBeenLastCalledWith({ includeInactive: true });
   });

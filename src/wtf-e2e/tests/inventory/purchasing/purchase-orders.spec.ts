@@ -239,7 +239,7 @@ test.describe('purchase orders @inventory @purchase-orders', () => {
     await orders.search.fill(supplier.summary.name);
     await expect(orders.row(draft.summary.poNumber)).toBeVisible();
     await expect(orders.row(draft.summary.poNumber)).not.toContainText('840');
-    await orders.filter('Sent').click();
+    await orders.filterByStatus('Sent');
     await expect(orders.row(sent.summary.poNumber)).toBeVisible();
     await expect(orders.row(draft.summary.poNumber)).toHaveCount(0);
     await orders.search.fill('zzz-no-match');

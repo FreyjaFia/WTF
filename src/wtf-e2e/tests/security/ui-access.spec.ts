@@ -34,7 +34,9 @@ const PAGES: ReadonlyArray<PageCase> = [
   { name: 'reports', path: '/management/reports', allowed: GROUPS.reportsRead },
   { name: 'audit logs', path: '/management/audit-logs', allowed: GROUPS.auditRead },
   { name: 'schema scripts', path: '/management/schema-scripts', allowed: GROUPS.schemaScriptHistoryRead },
-  { name: 'setup lists', path: '/management/setup', allowed: GROUPS.productsRead },
+  { name: 'setup lists', path: '/management/setup', allowed: GROUPS.setupAccess },
+  { name: 'suppliers', path: '/management/setup/suppliers', allowed: GROUPS.stockMovementsRead },
+  { name: 'shop', path: '/management/shop', allowed: GROUPS.shopManage },
 ];
 
 test.describe('UI: pages are open or redirected exactly per role group @security', () => {
@@ -75,7 +77,8 @@ const MENU: ReadonlyArray<MenuCase> = [
   { name: 'Promotions', path: '/management/promotions', allowed: GROUPS.promotionsRead },
   { name: 'Reports', path: '/management/reports', allowed: GROUPS.reportsRead },
   { name: 'Expenses', path: '/management/expenses', allowed: GROUPS.expensesRead },
-  { name: 'Setup', path: '/management/setup', allowed: GROUPS.productsRead },
+  { name: 'Setup', path: '/management/setup', allowed: GROUPS.setupAccess },
+  { name: 'Shop', path: '/management/shop', allowed: GROUPS.shopManage },
   { name: 'Audit Logs', path: '/management/audit-logs', allowed: GROUPS.auditRead },
   { name: 'Schema Scripts', path: '/management/schema-scripts', allowed: GROUPS.schemaScriptHistoryRead },
 ];

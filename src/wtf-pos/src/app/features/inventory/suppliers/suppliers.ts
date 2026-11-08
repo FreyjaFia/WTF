@@ -9,8 +9,10 @@ import {
   IconComponent,
   PullToRefreshComponent,
   SearchInputComponent,
+  SideDrawerComponent,
 } from '@shared/components';
 import { BadgeComponent } from '@shared/components/badge/badge';
+import { FilterButtonComponent } from '@shared/components/filter-button/filter-button';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { SupplierSummaryDto } from '@shared/models';
 
@@ -19,11 +21,13 @@ import { SupplierSummaryDto } from '@shared/models';
   imports: [
     BadgeComponent,
     ConnectionErrorComponent,
+    FilterButtonComponent,
     IconComponent,
     PullToRefreshComponent,
     ReactiveFormsModule,
     RouterLink,
     SearchInputComponent,
+    SideDrawerComponent,
   ],
   templateUrl: './suppliers.html',
   host: { class: 'flex-1 min-h-0' },
@@ -34,6 +38,7 @@ export class SuppliersComponent implements OnInit {
   private readonly router = inject(Router);
   protected readonly auth = inject(AuthService);
 
+  protected readonly setupRoute = AppRoutes.ManagementSetup;
   protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
   protected readonly search = signal('');
   protected readonly suppliers = signal<SupplierSummaryDto[]>([]);
@@ -55,6 +60,8 @@ export class SuppliersComponent implements OnInit {
   protected readonly isSaving = signal(false);
   protected readonly isFormOpen = signal(false);
   protected readonly showInactive = signal(false);
+  protected readonly isFiltersOpen = signal(false);
+  protected readonly activeFilterCount = computed(() => (this.showInactive() ? 1 : 0));
   protected readonly form = new FormGroup({
     name: new FormControl('', {
       nonNullable: true,
@@ -71,7 +78,7 @@ export class SuppliersComponent implements OnInit {
   }
 
   protected supplierRoute(id: string): string {
-    return AppRoutes.InventorySupplierById(id);
+    return AppRoutes.ManagementSupplierById(id);
   }
 
   protected openForm(): void {
@@ -83,8 +90,16 @@ export class SuppliersComponent implements OnInit {
     this.form.reset();
   }
 
-  protected toggleInactive(): void {
-    this.showInactive.update((value) => !value);
+  protected openFilters(): void {
+    this.isFiltersOpen.set(true);
+  }
+
+  protected closeFilters(): void {
+    this.isFiltersOpen.set(false);
+  }
+
+  protected setShowInactive(value: boolean): void {
+    this.showInactive.set(value);
     this.load();
   }
 
@@ -133,7 +148,7 @@ export class SuppliersComponent implements OnInit {
       .subscribe({
         next: (supplier) => {
           this.isSaving.set(false);
-          void this.router.navigateByUrl(AppRoutes.InventorySupplierById(supplier.summary.id));
+          void this.router.navigateByUrl(AppRoutes.ManagementSupplierById(supplier.summary.id));
         },
         error: (err: Error) => {
           this.isSaving.set(false);

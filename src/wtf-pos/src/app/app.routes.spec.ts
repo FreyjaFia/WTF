@@ -1,8 +1,10 @@
+import { TestBed } from '@angular/core/testing';
 import { Route } from '@angular/router';
 import { authGuard } from '@core/guards/auth.guard';
 import { loginGuard } from '@core/guards/login.guard';
 import { roleGuard } from '@core/guards/role.guard';
 import { unsavedChangesGuard } from '@core/guards/unsaved-changes.guard';
+import { AuthService } from '@core/services';
 import { NotFoundComponent } from '@features/not-found/not-found';
 import { PublicOrderComponent } from '@features/public-order/public-order';
 import { AppRoleGroups, AppRoles } from '@shared/constants/app-roles';
@@ -149,11 +151,11 @@ describe('app.routes', () => {
     }
   });
 
-  it('guards the whole Management section with ManagementAccess, on top of each area', () => {
+  it('guards the whole Management section with ManagementMenu, on top of each area', () => {
     const section = flat.find((f) => f.fullPath === 'management' && f.route.component);
     expect(section?.route.canActivate).toEqual([roleGuard]);
-    expect(section?.route.data?.['roles']).toEqual(AppRoleGroups.ManagementAccess);
-    expect(AppRoleGroups.ManagementAccess).not.toContain(AppRoles.Cashier);
+    expect(section?.route.data?.['roles']).toEqual(AppRoleGroups.ManagementMenu);
+    expect(AppRoleGroups.ManagementMenu).not.toContain(AppRoles.Cashier);
   });
 
   it('keeps the dashboard unavailable to cashiers', () => {
@@ -174,6 +176,20 @@ describe('app.routes', () => {
     };
     expectRedirect('orders', 'list');
     expectRedirect('inventory', 'items');
-    expectRedirect('management', 'products');
+  });
+
+  it('sends the Management root to Products, or to Setup for a role without product access', () => {
+    const entry = flat.find((f) => f.fullPath === 'management' && f.route.redirectTo !== undefined);
+    const redirect = entry?.route.redirectTo as () => string;
+    const resolve = (canReadProducts: boolean): string => {
+      TestBed.configureTestingModule({
+        providers: [{ provide: AuthService, useValue: { canReadProducts: () => canReadProducts } }],
+      });
+      return TestBed.runInInjectionContext(redirect);
+    };
+
+    expect(resolve(true)).toBe('products');
+    TestBed.resetTestingModule();
+    expect(resolve(false)).toBe('setup');
   });
 });

@@ -17,8 +17,10 @@ import {
   IconComponent,
   PullToRefreshComponent,
   SearchInputComponent,
+  SideDrawerComponent,
 } from '@shared/components';
 import { BadgeComponent } from '@shared/components/badge/badge';
+import { FilterButtonComponent } from '@shared/components/filter-button/filter-button';
 import { SelectDropdownComponent } from '@shared/components/select-dropdown/select-dropdown';
 import { packUnitCost, receiptLineTotal, unitsFromPacks } from '@shared/calculations';
 import {
@@ -82,11 +84,13 @@ type OrderAction = 'send' | 'cancel' | 'close';
     ConnectionErrorComponent,
     DatePipe,
     DecimalPipe,
+    FilterButtonComponent,
     IconComponent,
     PullToRefreshComponent,
     ReactiveFormsModule,
     SearchInputComponent,
     SelectDropdownComponent,
+    SideDrawerComponent,
   ],
   templateUrl: './purchase-orders.html',
   host: { class: 'flex-1 min-h-0' },
@@ -104,6 +108,8 @@ export class PurchaseOrdersComponent implements OnInit {
   protected readonly pendingAction = signal<{ action: OrderAction; order: PurchaseOrderDto } | null>(null);
   protected readonly isActing = signal(false);
   protected readonly statusFilter = signal<number | null>(null);
+  protected readonly isFiltersOpen = signal(false);
+  protected readonly activeFilterCount = computed(() => (this.statusFilter() === null ? 0 : 1));
   protected readonly orders = signal<PurchaseOrderSummaryDto[]>([]);
   protected readonly suppliers = signal<SupplierSummaryDto[]>([]);
   protected readonly items = signal<ItemDto[]>([]);
@@ -187,6 +193,14 @@ export class PurchaseOrdersComponent implements OnInit {
     control.setValue(id ?? '');
     control.markAsTouched();
     this.chooseItem(index);
+  }
+
+  protected openFilters(): void {
+    this.isFiltersOpen.set(true);
+  }
+
+  protected closeFilters(): void {
+    this.isFiltersOpen.set(false);
   }
 
   protected setFilter(status: number | null): void {

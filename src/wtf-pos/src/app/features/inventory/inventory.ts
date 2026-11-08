@@ -47,11 +47,11 @@ export class InventoryComponent {
       canShow: () => this.canReadItems(),
     },
     {
-      label: 'Stock In',
-      route: 'stock-in',
-      path: AppRoutes.InventoryStockIn,
-      ariaLabel: 'Stock In',
-      canShow: () => this.canReadStockMovements(),
+      label: 'Ingredients & Cost',
+      route: 'ingredients',
+      path: AppRoutes.InventoryIngredients,
+      ariaLabel: 'Ingredients and cost',
+      canShow: () => this.canReadItems(),
     },
     {
       label: 'Needs Attention',
@@ -61,6 +61,13 @@ export class InventoryComponent {
       canShow: () => this.canReadStockMovements(),
       badge: () => this.attention.count(),
       urgent: () => this.attention.urgentCount() > 0,
+    },
+    {
+      label: 'Stock In',
+      route: 'stock-in',
+      path: AppRoutes.InventoryStockIn,
+      ariaLabel: 'Stock In',
+      canShow: () => this.canReadStockMovements(),
     },
     {
       label: 'Waste',
@@ -86,7 +93,7 @@ export class InventoryComponent {
       canShow: () => this.canReadStockMovements(),
     },
     {
-      label: 'Orders',
+      label: 'Purchasing',
       route: 'purchase-orders',
       path: AppRoutes.InventoryPurchaseOrders,
       ariaLabel: 'Purchase orders',
@@ -98,20 +105,6 @@ export class InventoryComponent {
       path: AppRoutes.InventoryReceiving,
       ariaLabel: 'Receiving',
       canShow: () => this.canReadStockMovements(),
-    },
-    {
-      label: 'Suppliers',
-      route: 'suppliers',
-      path: AppRoutes.InventorySuppliers,
-      ariaLabel: 'Suppliers',
-      canShow: () => this.canReadStockMovements(),
-    },
-    {
-      label: 'Ingredients & Cost',
-      route: 'ingredients',
-      path: AppRoutes.InventoryIngredients,
-      ariaLabel: 'Ingredients and cost',
-      canShow: () => this.canReadItems(),
     },
   ];
   private readonly activeSignals = new Map<string, ReturnType<typeof routerIsActive>>();

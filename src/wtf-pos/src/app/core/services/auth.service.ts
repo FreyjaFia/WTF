@@ -352,6 +352,14 @@ export class AuthService {
     return this.hasAnyRole(AppRoleGroups.ManagementAccess);
   }
 
+  public canOpenManagementMenu(): boolean {
+    return this.hasAnyRole(AppRoleGroups.ManagementMenu);
+  }
+
+  public canOpenSetup(): boolean {
+    return this.hasAnyRole(AppRoleGroups.SetupAccess);
+  }
+
   public canWriteManagement(): boolean {
     return (
       this.canWriteProducts() ||

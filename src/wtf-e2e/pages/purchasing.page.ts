@@ -14,6 +14,7 @@ export class SuppliersPage {
   public readonly addButton: Locator;
   public readonly nameInput: Locator;
   public readonly showInactive: Locator;
+  public readonly filtersButton: Locator;
   public readonly empty: Locator;
 
   public constructor(private readonly page: Page) {
@@ -22,12 +23,24 @@ export class SuppliersPage {
     this.addButton = page.getByTestId('open-new');
     this.nameInput = page.locator('#supplier-name');
     this.showInactive = page.getByTestId('show-inactive');
+    this.filtersButton = page.getByRole('button', { name: /filters/i }).first();
     this.empty = page.getByTestId('suppliers-empty');
   }
 
   public async open(): Promise<void> {
     await go(this.page, ROUTES.suppliers);
     await this.heading.waitFor();
+  }
+
+  public async setShowInactive(on: boolean): Promise<void> {
+    await this.filtersButton.click();
+    await this.page.getByText('Supplier Filters').waitFor();
+    if (on) {
+      await this.showInactive.check();
+    } else {
+      await this.showInactive.uncheck();
+    }
+    await this.page.getByRole('button', { name: /close/i }).first().click();
   }
 
   public row(name: string): Locator {
@@ -196,7 +209,10 @@ export class OrdersPage {
     await this.confirm.getByRole('button', { name: label, exact: true }).click();
   }
 
-  public filter(label: string): Locator {
-    return this.page.getByTestId('status-filter').getByRole('button', { name: label, exact: true });
+  public async filterByStatus(label: string): Promise<void> {
+    await this.page.getByRole('button', { name: /filters/i }).first().click();
+    await this.page.getByText('Purchase Order Filters').waitFor();
+    await this.page.getByTestId('status-filter').getByText(label, { exact: true }).click();
+    await this.page.getByRole('button', { name: /close/i }).first().click();
   }
 }

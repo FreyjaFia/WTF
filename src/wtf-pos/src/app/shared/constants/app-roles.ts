@@ -24,6 +24,9 @@ export const AppRoleGroups = {
   // UI only (no API policy): shows the Management menu and opens the Management section. Kept apart from
   // the per-area read groups below so a role can read some data without getting the Management area.
   ManagementAccess: [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer],
+  // UI only: opens the Management shell and the menu entry. A Stock Manager gets in for Setup > Suppliers only; every tab inside checks its own read group.
+  ManagementMenu: [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.StockManager],
+  SetupAccess: [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.StockManager],
   DashboardRead: [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer],
   ProductsRead: [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer],
   ProductsWrite: [AppRoles.SuperAdmin, AppRoles.Admin],

@@ -31,7 +31,7 @@ export class SupplierDetailsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   protected readonly auth = inject(AuthService);
 
-  protected readonly listRoute = AppRoutes.InventorySuppliers;
+  protected readonly listRoute = AppRoutes.ManagementSuppliers;
   protected readonly supplier = signal<SupplierDto | null>(null);
   protected readonly allItems = signal<ItemDto[]>([]);
   protected readonly isLoading = signal(false);

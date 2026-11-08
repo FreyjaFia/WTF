@@ -38,7 +38,7 @@ describe('SubscriptionBannerComponent', () => {
   it('warns with the days left and links the owner to the details', () => {
     const { el } = setup('lastDays', 'ok');
     expect(el.textContent).toContain('ends in 3 days');
-    expect(el.querySelector('a')?.getAttribute('href')).toBe('/management/subscription');
+    expect(el.querySelector('a')?.getAttribute('href')).toBe('/management/shop/plan');
   });
 
   it('tells other roles to ask the owner', () => {

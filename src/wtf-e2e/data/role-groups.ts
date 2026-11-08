@@ -6,6 +6,9 @@ const ALL_STAFF: ReadonlyArray<Role> = ['superadmin', 'admin', 'viewer', 'cashie
 
 export const GROUPS = {
   managementAccess: ['superadmin', 'admin', 'viewer'],
+  managementMenu: ['superadmin', 'admin', 'viewer', 'stockmgr'],
+  setupAccess: ['superadmin', 'admin', 'viewer', 'stockmgr'],
+  shopManage: ['superadmin', 'admin'],
   dashboardRead: ['superadmin', 'admin', 'viewer'],
   productsRead: ['superadmin', 'admin', 'viewer'],
   productsWrite: ['superadmin', 'admin'],

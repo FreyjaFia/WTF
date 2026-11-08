@@ -178,12 +178,11 @@
       </button>
 
       <div
-        class="mt-1 mb-3 space-y-1 overflow-hidden border-b border-gray-200 pb-3 pl-4 transition-[max-height,opacity] duration-200 ease-out"
-        [class.max-h-0]="!showInventory()"
-        [class.opacity-0]="!showInventory()"
-        [class.pointer-events-none]="!showInventory()"
-        [class.max-h-64]="showInventory()"
-        [class.opacity-100]="showInventory()"
+        class="mt-1 mb-3 grid border-b border-gray-200 transition-[grid-template-rows,opacity] duration-200 ease-out"
+        [class]="showInventory() ? 'grid-rows-[1fr] pb-3 opacity-100' : 'pointer-events-none grid-rows-[0fr] opacity-0'"
+      >
+      <div
+        class="min-h-0 space-y-1 overflow-hidden"
         [class.pl-4]="!isCollapsed()"
         [class.pl-0]="isCollapsed()"
       >
@@ -199,16 +198,16 @@
           <span [class.hidden]="isCollapsed()">Items</span>
         </a>
         }
-        @if (authService.canReadStockMovements()) {
+        @if (authService.canReadItems()) {
         <a
-          [routerLink]="routes.InventoryStockIn"
+          [routerLink]="routes.InventoryIngredients"
           routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
           class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
           [class.justify-center]="isCollapsed()"
-          [attr.title]="'Stock In'"
+          [attr.title]="'Ingredients & Cost'"
         >
-          <app-icon name="icon-inventory" [class]="'h-4 w-4 text-gray-500'" />
-          <span [class.hidden]="isCollapsed()">Stock In</span>
+          <app-icon name="icon-fact-check" [class]="'h-4 w-4 text-gray-500'" />
+          <span [class.hidden]="isCollapsed()">Ingredients &amp; Cost</span>
         </a>
         }
         @if (authService.canReadStockMovements()) {
@@ -241,6 +240,18 @@
               >{{ attention.count() }}</span
             >
           }
+        </a>
+        }
+        @if (authService.canReadStockMovements()) {
+        <a
+          [routerLink]="routes.InventoryStockIn"
+          routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
+          class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
+          [class.justify-center]="isCollapsed()"
+          [attr.title]="'Stock In'"
+        >
+          <app-icon name="icon-inventory" [class]="'h-4 w-4 text-gray-500'" />
+          <span [class.hidden]="isCollapsed()">Stock In</span>
         </a>
         }
         @if (authService.canReadStockMovements()) {
@@ -288,11 +299,11 @@
           routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
           class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
           [class.justify-center]="isCollapsed()"
-          [attr.title]="'Purchase Orders'"
+          [attr.title]="'Purchasing'"
           data-testid="sidebar-purchase-orders-link"
         >
           <app-icon name="icon-assignment-turned-in" [class]="'h-4 w-4 text-gray-500'" />
-          <span [class.hidden]="isCollapsed()">Orders</span>
+          <span [class.hidden]="isCollapsed()">Purchasing</span>
         </a>
         }
         @if (authService.canReadStockMovements()) {
@@ -308,35 +319,11 @@
           <span [class.hidden]="isCollapsed()">Receiving</span>
         </a>
         }
-        @if (authService.canReadStockMovements()) {
-        <a
-          [routerLink]="routes.InventorySuppliers"
-          routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
-          class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
-          [class.justify-center]="isCollapsed()"
-          [attr.title]="'Suppliers'"
-          data-testid="sidebar-suppliers-link"
-        >
-          <app-icon name="icon-box" [class]="'h-4 w-4 text-gray-500'" />
-          <span [class.hidden]="isCollapsed()">Suppliers</span>
-        </a>
-        }
-        @if (authService.canReadItems()) {
-        <a
-          [routerLink]="routes.InventoryIngredients"
-          routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
-          class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
-          [class.justify-center]="isCollapsed()"
-          [attr.title]="'Ingredients & Cost'"
-        >
-          <app-icon name="icon-fact-check" [class]="'h-4 w-4 text-gray-500'" />
-          <span [class.hidden]="isCollapsed()">Ingredients &amp; Cost</span>
-        </a>
-        }
+      </div>
       </div>
     }
 
-    @if (authService.canReadManagement()) {
+    @if (authService.canOpenManagementMenu()) {
       <button
         type="button"
         class="flex w-full cursor-pointer items-center justify-between rounded-lg px-2.5 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50"
@@ -354,12 +341,11 @@
       </button>
 
       <div
-        class="mt-1 space-y-1 overflow-hidden pl-4 transition-[max-height,opacity] duration-200 ease-out"
-        [class.max-h-0]="!showManagement()"
-        [class.opacity-0]="!showManagement()"
-        [class.pointer-events-none]="!showManagement()"
-        [class.max-h-96]="showManagement()"
-        [class.opacity-100]="showManagement()"
+        class="mt-1 grid transition-[grid-template-rows,opacity] duration-200 ease-out"
+        [class]="showManagement() ? 'grid-rows-[1fr] opacity-100' : 'pointer-events-none grid-rows-[0fr] opacity-0'"
+      >
+      <div
+        class="min-h-0 space-y-1 overflow-hidden"
         [class.pl-4]="!isCollapsed()"
         [class.pl-0]="isCollapsed()"
       >
@@ -435,7 +421,7 @@
             <span [class.hidden]="isCollapsed()">Expenses</span>
           </a>
         }
-        @if (authService.canReadProducts()) {
+        @if (authService.canOpenSetup()) {
           <a
             [routerLink]="routes.ManagementSetup"
             routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
@@ -448,27 +434,16 @@
             <span [class.hidden]="isCollapsed()">Setup</span>
           </a>
         }
-        @if (authService.canManageSubscription()) {
+        @if (authService.canManageBrand() || authService.canManageSubscription()) {
           <a
-            [routerLink]="routes.ManagementSubscription"
+            [routerLink]="routes.ManagementShop"
             routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
             class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
             [class.justify-center]="isCollapsed()"
-            [attr.title]="'Subscription'"
+            [attr.title]="'Shop settings'"
+            data-testid="sidebar-shop-link"
           >
-            <app-icon name="icon-tag" [class]="'h-4 w-4 text-gray-500'" />
-            <span [class.hidden]="isCollapsed()">Subscription</span>
-          </a>
-        }
-        @if (authService.canManageBrand()) {
-          <a
-            [routerLink]="routes.ManagementBrand"
-            routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
-            class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
-            [class.justify-center]="isCollapsed()"
-            [attr.title]="'Shop branding'"
-          >
-            <app-icon name="icon-tag" [class]="'h-4 w-4 text-gray-500'" />
+            <app-icon name="icon-storefront" [class]="'h-4 w-4 text-gray-500'" />
             <span [class.hidden]="isCollapsed()">Shop</span>
           </a>
         }
@@ -496,6 +471,7 @@
             <span [class.hidden]="isCollapsed()">Schema Scripts</span>
           </a>
         }
+      </div>
       </div>
     }
   </nav>

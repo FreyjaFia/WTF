@@ -1,0 +1,42 @@
+<div class="flex h-full min-h-0 flex-col pt-4 md:pt-0">
+  <div class="mb-4 flex shrink-0 flex-col gap-3 sm:mb-6">
+    <div class="flex flex-col gap-1">
+      <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Shop</h1>
+      <p class="text-xs text-gray-500 sm:text-sm">Your shop's name and look, its plan and its invoices</p>
+    </div>
+    <div class="flex flex-wrap gap-2" role="tablist" aria-label="Shop sections" data-testid="shop-tabs">
+      @if (authService.canManageBrand()) {
+        <a
+          [routerLink]="brandingRoute"
+          routerLinkActive="app-btn-primary"
+          #branding="routerLinkActive"
+          role="tab"
+          class="app-btn app-btn-sm"
+          [class.app-btn-secondary]="!branding.isActive"
+          [attr.aria-selected]="branding.isActive"
+          data-testid="shop-tab-branding"
+        >
+          Branding
+        </a>
+      }
+      @if (authService.canManageSubscription()) {
+        <a
+          [routerLink]="planRoute"
+          routerLinkActive="app-btn-primary"
+          #plan="routerLinkActive"
+          role="tab"
+          class="app-btn app-btn-sm"
+          [class.app-btn-secondary]="!plan.isActive"
+          [attr.aria-selected]="plan.isActive"
+          data-testid="shop-tab-plan"
+        >
+          Plan &amp; billing
+        </a>
+      }
+    </div>
+  </div>
+
+  <div class="flex min-h-0 flex-1 flex-col">
+    <router-outlet />
+  </div>
+</div>

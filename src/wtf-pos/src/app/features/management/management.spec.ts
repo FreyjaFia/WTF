@@ -21,6 +21,7 @@ const ALL = [
   'canManageWasteReasons',
   'canManageSubscription',
   'canManageBrand',
+  'canOpenSetup',
 ] as const;
 
 describe('ManagementComponent', () => {
@@ -42,8 +43,7 @@ describe('ManagementComponent', () => {
               { path: 'reports', component: Stub },
               { path: 'expenses', component: Stub },
               { path: 'setup/categories', component: Stub },
-              { path: 'subscription', component: Stub },
-              { path: 'brand', component: Stub },
+              { path: 'shop/branding', component: Stub },
               { path: 'audit-logs', component: Stub },
               { path: 'schema-scripts', component: Stub },
             ],
@@ -80,13 +80,12 @@ describe('ManagementComponent', () => {
       'reports',
       'expenses',
       'setup',
-      'subscription',
-      'brand',
+      'shop',
       'audit-logs',
       'schema-scripts',
     ]);
     expect(tabs(el)[0].getAttribute('href')).toBe('/management/products');
-    expect(tabs(el)[10].getAttribute('href')).toBe('/management/schema-scripts');
+    expect(tabs(el)[9].getAttribute('href')).toBe('/management/schema-scripts');
   });
 
   it('hides audit and schema tabs for non-super admins', async () => {
@@ -117,8 +116,7 @@ describe('ManagementComponent', () => {
       'reports',
       'expenses',
       'setup',
-      'subscription',
-      'brand',
+      'shop',
       'audit-logs',
       'schema-scripts',
     ]);
@@ -155,8 +153,7 @@ describe('ManagementComponent', () => {
       'Reports',
       'Expenses',
       'Setup lists',
-      'Subscription',
-      'Shop branding',
+      'Shop settings',
       'Audit Logs',
       'Schema Scripts',
     ]);

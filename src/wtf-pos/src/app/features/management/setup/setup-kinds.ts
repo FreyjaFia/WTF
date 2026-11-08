@@ -1,6 +1,6 @@
 import { AuthService } from '@core/services';
 
-export type SetupKindId = 'categories' | 'subcategories' | 'addon-types' | 'waste-reasons';
+export type SetupKindId = 'categories' | 'subcategories' | 'addon-types' | 'waste-reasons' | 'suppliers';
 
 export interface SetupKind {
   readonly id: SetupKindId;
@@ -38,6 +38,13 @@ export const SETUP_KINDS: readonly SetupKind[] = [
     group: 'Inventory',
     description: 'The reasons staff choose when they record waste',
     canOpen: (auth) => auth.canManageWasteReasons(),
+  },
+  {
+    id: 'suppliers',
+    label: 'Suppliers',
+    group: 'Inventory',
+    description: 'Who you buy stock from, and what each one sells',
+    canOpen: (auth) => auth.canReadStockMovements(),
   },
 ];
 

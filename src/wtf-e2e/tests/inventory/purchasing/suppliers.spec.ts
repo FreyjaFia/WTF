@@ -110,7 +110,7 @@ test.describe('suppliers @inventory @suppliers', () => {
     await suppliers.open();
     await suppliers.search.fill(supplier.summary.name);
     await expect(suppliers.row(supplier.summary.name)).toHaveCount(0);
-    await suppliers.showInactive.check();
+    await suppliers.setShowInactive(true);
     await expect(suppliers.row(supplier.summary.name)).toContainText('Inactive');
 
     await details.open(supplier.summary.id);
@@ -169,7 +169,7 @@ test.describe('suppliers @inventory @suppliers', () => {
     await expect(suppliers.addButton).toHaveCount(0);
 
     const cashier = await signIn('cashier');
-    await cashier.goto('/inventory/suppliers');
-    await expect(cashier).not.toHaveURL(/inventory\/suppliers/);
+    await cashier.goto('/management/setup/suppliers');
+    await expect(cashier).not.toHaveURL(/setup\/suppliers/);
   });
 });

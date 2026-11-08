@@ -25,6 +25,7 @@
       </div>
 
       <div class="ml-auto flex items-center justify-end gap-2">
+        <app-filter-button [count]="activeFilterCount()" (pressed)="openFilters()" />
         @if (!isAndroidPlatform) {
           <button
             type="button"
@@ -43,13 +44,32 @@
         }
       </div>
     </div>
-    <div class="flex flex-wrap gap-2" data-testid="status-filter">
-      <button type="button" class="app-btn app-btn-sm" [class.app-btn-primary]="statusFilter() === null" [class.app-btn-secondary]="statusFilter() !== null" (click)="setFilter(null)">All</button>
-      @for (status of [statuses.Draft, statuses.Sent, statuses.PartlyReceived, statuses.Received, statuses.Cancelled]; track status) {
-        <button type="button" class="app-btn app-btn-sm" [class.app-btn-primary]="statusFilter() === status" [class.app-btn-secondary]="statusFilter() !== status" (click)="setFilter(status)">{{ statusLabel(status) }}</button>
-      }
-    </div>
   </div>
+
+<app-side-drawer
+    [isOpen]="isFiltersOpen()"
+    [title]="'Purchase Order Filters'"
+    [subtitle]="'Refine the purchase order list'"
+    [showOnDesktop]="true"
+    (closed)="closeFilters()"
+  >
+    <div class="space-y-3" data-testid="status-filter">
+      <div class="rounded-xl border border-gray-200 bg-surface p-3">
+        <div class="mb-3 flex items-center justify-between">
+          <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Status</p>
+          <button type="button" class="app-btn app-btn-secondary app-btn-xs" (click)="setFilter(null)">Clear</button>
+        </div>
+        <div class="space-y-2" role="radiogroup" aria-label="Status">
+          @for (status of [statuses.Draft, statuses.Sent, statuses.PartlyReceived, statuses.Received, statuses.Cancelled]; track status) {
+            <label class="flex cursor-pointer items-center justify-between rounded-lg bg-surface px-3 py-2 text-sm text-gray-700">
+              <span>{{ statusLabel(status) }}</span>
+              <input type="radio" name="po-status" class="radio radio-sm" [checked]="statusFilter() === status" (change)="setFilter(status)" />
+            </label>
+          }
+        </div>
+      </div>
+    </div>
+  </app-side-drawer>
 
   @if (auth.canWriteStockMovements() && isFormOpen()) {
     <form class="mb-4 flex shrink-0 flex-col gap-4 rounded-xl bg-surface p-4 shadow sm:p-5" [formGroup]="header" (ngSubmit)="save()" novalidate data-testid="order-form">
