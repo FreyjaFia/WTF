@@ -11,7 +11,7 @@
       [class.justify-between]="!isCollapsed()"
     >
       <div class="flex min-w-0 items-center gap-2 text-2xl font-bold tracking-widest">
-        <span class="text-neutral">WTF</span>
+        <span class="text-neutral">{{ brand.displayName() }}</span>
         @if (!isCollapsed()) {
           <span class="flex min-w-0 flex-col leading-tight">
             <span class="text-xs font-normal tracking-wider text-gray-500 uppercase">POS</span>
@@ -381,6 +381,30 @@
           >
             <app-icon name="icon-tag" [class]="'h-4 w-4 text-gray-500'" />
             <span [class.hidden]="isCollapsed()">Waste Reasons</span>
+          </a>
+        }
+        @if (authService.canManageSubscription()) {
+          <a
+            [routerLink]="routes.ManagementSubscription"
+            routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
+            class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
+            [class.justify-center]="isCollapsed()"
+            [attr.title]="'Subscription'"
+          >
+            <app-icon name="icon-tag" [class]="'h-4 w-4 text-gray-500'" />
+            <span [class.hidden]="isCollapsed()">Subscription</span>
+          </a>
+        }
+        @if (authService.canManageBrand()) {
+          <a
+            [routerLink]="routes.ManagementBrand"
+            routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
+            class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
+            [class.justify-center]="isCollapsed()"
+            [attr.title]="'Shop branding'"
+          >
+            <app-icon name="icon-tag" [class]="'h-4 w-4 text-gray-500'" />
+            <span [class.hidden]="isCollapsed()">Shop</span>
           </a>
         }
         @if (authService.canAccessAuditLogs()) {

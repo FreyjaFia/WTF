@@ -8,6 +8,7 @@ import {
   ConnectivityService,
   ImageCacheService,
   StockAttentionService,
+  BrandService,
 } from '@core/services';
 import { appVersion } from '@environments/version';
 import { AvatarComponent } from '@shared/components/avatar/avatar';
@@ -39,6 +40,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
   private static readonly ME_CACHE_KEY = 'wtf_me_cache';
 
   protected readonly authService = inject(AuthService);
+  protected readonly brand = inject(BrandService);
   protected readonly router = inject(Router);
   protected readonly routes = AppRoutes;
   private readonly currentUrl = toSignal(

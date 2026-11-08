@@ -1,0 +1,67 @@
+<div class="flex h-full flex-col pt-4 md:pt-0">
+  <div class="mb-4 shrink-0 sm:mb-6">
+    <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Shop</h1>
+    <p class="text-xs text-gray-500 sm:text-sm">Your shop name and colour, shown across the app</p>
+  </div>
+
+  @if (isLoading()) {
+    <div class="flex justify-center py-8"><span class="loading loading-spinner loading-lg"></span></div>
+  } @else {
+    <form class="min-h-0 flex-1 space-y-4 overflow-y-auto rounded-xl bg-white p-4 shadow" [formGroup]="form" (ngSubmit)="save()">
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <label class="flex flex-col gap-1 text-sm">
+          <span class="text-gray-700">Shop name</span>
+          <input class="input input-bordered w-full" type="text" formControlName="shopName" data-testid="brand-shopName" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm">
+          <span class="text-gray-700">Short name (shown in the menu)</span>
+          <input class="input input-bordered w-full" type="text" formControlName="shortName" data-testid="brand-shortName" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm">
+          <span class="text-gray-700">Tagline</span>
+          <input class="input input-bordered w-full" type="text" formControlName="tagline" data-testid="brand-tagline" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm">
+          <span class="text-gray-700">Logo address</span>
+          <input class="input input-bordered w-full" type="text" formControlName="logoUrl" data-testid="brand-logoUrl" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm">
+          <span class="text-gray-700">Address</span>
+          <input class="input input-bordered w-full" type="text" formControlName="address" data-testid="brand-address" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm">
+          <span class="text-gray-700">Phone</span>
+          <input class="input input-bordered w-full" type="text" formControlName="phone" data-testid="brand-phone" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm">
+          <span class="text-gray-700">Email</span>
+          <input class="input input-bordered w-full" type="text" formControlName="email" data-testid="brand-email" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm">
+          <span class="text-gray-700">Receipt header</span>
+          <input class="input input-bordered w-full" type="text" formControlName="receiptHeader" data-testid="brand-receiptHeader" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm">
+          <span class="text-gray-700">Receipt footer</span>
+          <input class="input input-bordered w-full" type="text" formControlName="receiptFooter" data-testid="brand-receiptFooter" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm">
+          <span class="text-gray-700">Registration text (receipt)</span>
+          <input class="input input-bordered w-full" type="text" formControlName="registrationText" data-testid="brand-registrationText" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm">
+          <span class="text-gray-700">Colour</span>
+          <input class="input input-bordered w-full" type="text" formControlName="primaryColor" placeholder="#6f4e37" data-testid="brand-primaryColor" />
+          @if (form.controls.primaryColor.touched && form.controls.primaryColor.invalid) {
+            <span class="text-xs text-red-600">Use a colour like #6f4e37.</span>
+          }
+        </label>
+      </div>
+      <div class="flex justify-end">
+        <button type="submit" class="app-btn app-btn-primary" [disabled]="form.invalid || isSaving()">
+          {{ isSaving() ? 'Saving...' : 'Save' }}
+        </button>
+      </div>
+    </form>
+  }
+</div>

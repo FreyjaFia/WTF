@@ -1,0 +1,50 @@
+@if (subscription.access() === 'locked' || subscription.access() === 'needsOnline') {
+  <div
+    class="fixed inset-0 z-100 flex items-center justify-center bg-black/60 p-4"
+    role="alertdialog"
+    aria-modal="true"
+    data-testid="subscription-lock"
+  >
+    <div class="w-full max-w-md rounded-xl bg-white p-6 text-center shadow-xl">
+      @if (subscription.access() === 'locked') {
+        <h2 class="text-lg font-semibold text-gray-900">Subscription ended</h2>
+        <p class="mt-2 text-sm text-gray-600">
+          This shop's subscription ended
+          @if (subscription.periodEnd(); as end) {
+            on {{ end | date: 'mediumDate' }}
+          }
+          and the grace period is over.
+          @if (canRenew()) {
+            Please settle the invoice to continue.
+          } @else {
+            Please ask the owner to renew.
+          }
+        </p>
+      } @else {
+        <h2 class="text-lg font-semibold text-gray-900">Connect to the internet</h2>
+        <p class="mt-2 text-sm text-gray-600">
+          This device has been offline too long. Connect to the internet once to keep using the app.
+        </p>
+      }
+      <p class="mt-2 text-xs text-gray-500">Orders saved on this device are kept and will sync later.</p>
+      <div class="mt-5 flex justify-center gap-3">
+        <button type="button" class="app-btn app-btn-primary" (click)="checkAgain()">Check again</button>
+        <button type="button" class="app-btn app-btn-secondary" (click)="logOut()">Log out</button>
+      </div>
+    </div>
+  </div>
+} @else if (subscription.warning() !== 'none') {
+  <div
+    class="flex flex-wrap items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white"
+    [class.bg-amber-500]="!isUrgent()"
+    [class.bg-red-600]="isUrgent()"
+    data-testid="subscription-banner"
+  >
+    <span>{{ message() }}</span>
+    @if (canRenew()) {
+      <a routerLink="/management/subscription" class="underline">View details</a>
+    } @else {
+      <span>Please ask the owner.</span>
+    }
+  </div>
+}

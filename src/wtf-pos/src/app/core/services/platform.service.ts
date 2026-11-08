@@ -11,6 +11,11 @@ import {
   PlatformTenantDto,
   PlatformTenantUserDto,
 } from '@shared/models/platform.models';
+import {
+  PlanDto,
+  SetSubscriptionRequest,
+  TenantSubscriptionDto,
+} from '@shared/models/subscription.models';
 import { environment } from '@environments/environment.development';
 import { Observable, map } from 'rxjs';
 
@@ -58,6 +63,33 @@ export class PlatformService {
     } catch {
       return false;
     }
+  }
+
+  public getPlans(): Observable<PlanDto[]> {
+    return this.http.get<PlanDto[]>(`${this.baseUrl}/plans`);
+  }
+
+  public getSubscription(tenantId: string): Observable<TenantSubscriptionDto> {
+    return this.http.get<TenantSubscriptionDto>(`${this.baseUrl}/tenants/${tenantId}/subscription`);
+  }
+
+  public setSubscription(tenantId: string, request: SetSubscriptionRequest): Observable<TenantSubscriptionDto> {
+    return this.http.put<TenantSubscriptionDto>(`${this.baseUrl}/tenants/${tenantId}/subscription`, request);
+  }
+
+  public createInvoice(
+    tenantId: string,
+    request: { months: number; reference: string | null; dueDate: string | null; notes: string | null },
+  ): Observable<unknown> {
+    return this.http.post(`${this.baseUrl}/tenants/${tenantId}/invoices`, request);
+  }
+
+  public markInvoicePaid(invoiceId: string, reference: string | null): Observable<TenantSubscriptionDto> {
+    return this.http.post<TenantSubscriptionDto>(`${this.baseUrl}/invoices/${invoiceId}/mark-paid`, { reference });
+  }
+
+  public voidInvoice(invoiceId: string): Observable<TenantSubscriptionDto> {
+    return this.http.post<TenantSubscriptionDto>(`${this.baseUrl}/invoices/${invoiceId}/void`, {});
   }
 
   public getTenants(): Observable<PlatformTenantDto[]> {

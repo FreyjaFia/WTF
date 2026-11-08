@@ -60,6 +60,8 @@ export const AppRoleGroups = {
   ],
   StockWasteReview: [AppRoles.SuperAdmin, AppRoles.Admin],
   WasteReasonsManage: [AppRoles.SuperAdmin, AppRoles.Admin],
+  SubscriptionBilling: [AppRoles.SuperAdmin, AppRoles.Admin],
+  BrandManage: [AppRoles.SuperAdmin, AppRoles.Admin],
   WasteReasonsRead: [
     AppRoles.SuperAdmin,
     AppRoles.Admin,

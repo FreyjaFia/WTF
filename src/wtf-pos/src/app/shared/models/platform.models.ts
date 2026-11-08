@@ -8,6 +8,9 @@ export interface PlatformTenantDto {
   userCount: number;
   orderCount: number;
   lastOrderAt: string | null;
+  planName?: string | null;
+  periodEnd?: string | null;
+  warning?: string | null;
 }
 
 export interface PlatformTenantUserDto {

@@ -38,6 +38,8 @@ import { UserDetailsComponent } from '@features/management/users/user-details/us
 import { UserEditorComponent } from '@features/management/users/user-editor/user-editor';
 import { UserListComponent } from '@features/management/users/user-list/user-list';
 import { UsersComponent } from '@features/management/users/users';
+import { BrandPageComponent } from '@features/management/brand/brand-page';
+import { SubscriptionPageComponent } from '@features/management/subscription/subscription-page';
 import { WasteReasonsComponent } from '@features/management/waste-reasons/waste-reasons';
 import { NotFoundComponent } from '@features/not-found/not-found';
 import { NotificationsComponent } from '@features/notifications/notifications';
@@ -419,6 +421,18 @@ export const routes: Routes = [
             component: WasteReasonsComponent,
             canActivate: [roleGuard],
             data: { roles: AppRoleGroups.WasteReasonsManage },
+          },
+          {
+            path: 'subscription',
+            component: SubscriptionPageComponent,
+            canActivate: [roleGuard],
+            data: { roles: AppRoleGroups.SubscriptionBilling },
+          },
+          {
+            path: 'brand',
+            component: BrandPageComponent,
+            canActivate: [roleGuard],
+            data: { roles: AppRoleGroups.BrandManage },
           },
         ],
       },

@@ -30,6 +30,7 @@
             {{ tenant.createdAt | date: 'mediumDate' }}
           </p>
           <div class="mt-3 flex flex-wrap gap-2">
+            <button type="button" class="app-btn app-btn-secondary app-btn-xs" (click)="openBilling(tenant)">Billing</button>
             <button type="button" class="app-btn app-btn-secondary app-btn-xs" (click)="openUsers(tenant)">People</button>
             <button type="button" class="app-btn app-btn-secondary app-btn-xs" (click)="exportShop(tenant)">Export</button>
             <button type="button" class="app-btn app-btn-secondary app-btn-xs" (click)="openAudit(tenant)">Log</button>
@@ -107,6 +108,67 @@
               <button type="button" class="app-btn app-btn-primary app-btn-md" (click)="close()">Done</button>
             </div>
           }
+        }
+        @case ('billing') {
+          <h2 class="mb-3 text-base font-semibold">Billing for {{ selected()?.name }}</h2>
+          @if (billing(); as sub) {
+            <p class="mb-3 text-sm text-gray-600" data-testid="billing-summary">
+              {{ sub.planName }}, paid until {{ sub.periodEnd | date: 'mediumDate' }}, locks
+              {{ sub.accessUntil | date: 'mediumDate' }}. Status: {{ sub.warning }}.
+            </p>
+            <form [formGroup]="billingForm" (ngSubmit)="saveBilling()" class="grid grid-cols-2 gap-3">
+              <label class="col-span-2 text-sm">Plan
+                <select formControlName="planId" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2">
+                  @for (plan of plans(); track plan.id) {
+                    <option [value]="plan.id">{{ plan.name }} ({{ plan.monthlyPrice }}/month)</option>
+                  }
+                </select>
+              </label>
+              <label class="text-sm">Paid until
+                <input formControlName="periodEnd" type="date" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+              </label>
+              <label class="text-sm">Grace days
+                <input formControlName="graceDays" type="number" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+              </label>
+              <label class="text-sm">Discount %
+                <input formControlName="discountPercent" type="number" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+              </label>
+              <label class="text-sm">Notes
+                <input formControlName="notes" type="text" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+              </label>
+              <div class="col-span-2 flex justify-end">
+                <button type="submit" class="app-btn app-btn-primary app-btn-md" [disabled]="billingForm.invalid || busy()">Save</button>
+              </div>
+            </form>
+            <h3 class="mt-4 mb-2 text-sm font-semibold">Invoices</h3>
+            <ul class="flex flex-col gap-2">
+              @for (invoice of sub.invoices; track invoice.id) {
+                <li class="flex flex-wrap items-center gap-2 rounded-lg bg-gray-50 p-3 text-sm">
+                  <span class="mr-auto">{{ invoice.months }} month(s), {{ invoice.amount }}, {{ invoice.statusName }}</span>
+                  @if (invoice.status === 1) {
+                    <button type="button" class="app-btn app-btn-accent-outline app-btn-xs" [disabled]="busy()" (click)="markPaid(invoice.id)">Mark paid</button>
+                    <button type="button" class="app-btn app-btn-outline-danger app-btn-xs" [disabled]="busy()" (click)="voidInvoice(invoice.id)">Void</button>
+                  }
+                </li>
+              } @empty {
+                <li class="text-sm text-gray-500">No invoices yet.</li>
+              }
+            </ul>
+            <form [formGroup]="invoiceForm" (ngSubmit)="addInvoice()" class="mt-3 flex flex-wrap items-end gap-2">
+              <label class="text-sm">Months
+                <input formControlName="months" type="number" class="mt-1 w-24 rounded-lg border border-gray-300 px-3 py-2" />
+              </label>
+              <label class="text-sm">Reference
+                <input formControlName="reference" type="text" class="mt-1 w-40 rounded-lg border border-gray-300 px-3 py-2" />
+              </label>
+              <button type="submit" class="app-btn app-btn-secondary app-btn-md" [disabled]="invoiceForm.invalid || busy()">New invoice</button>
+            </form>
+          } @else {
+            <div class="flex justify-center py-4"><span class="loading loading-spinner"></span></div>
+          }
+          <div class="mt-4 flex justify-end">
+            <button type="button" class="app-btn app-btn-secondary app-btn-md" (click)="close()">Close</button>
+          </div>
         }
         @case ('users') {
           <h2 class="mb-3 text-base font-semibold">People at {{ selected()?.name }}</h2>

@@ -438,6 +438,14 @@ export class AuthService {
     return this.hasAnyRole(AppRoleGroups.StockWasteReview);
   }
 
+  public canManageSubscription(): boolean {
+    return this.hasAnyRole(AppRoleGroups.SubscriptionBilling);
+  }
+
+  public canManageBrand(): boolean {
+    return this.hasAnyRole(AppRoleGroups.BrandManage);
+  }
+
   public canManageWasteReasons(): boolean {
     return this.hasAnyRole(AppRoleGroups.WasteReasonsManage);
   }

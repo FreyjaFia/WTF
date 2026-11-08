@@ -4,6 +4,7 @@ export const environment = {
   githubRepoOwner: 'FreyjaFia',
   githubRepoName: 'WTF',
   skipUpdateChecks: true,
+  leasePublicKey: '',
   firebaseConfig: {
     apiKey: 'AIzaSyBYe7fUeZHYX6efJE__4ST10D8z4Z-KXKw',
     authDomain: 'wtf-pos.firebaseapp.com',
