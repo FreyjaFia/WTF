@@ -18,7 +18,8 @@ internal static class ReceiptMapping
         return new StockReceiptSummaryDto(
             receipt.Id, receipt.SupplierId, receipt.Supplier.Name, receipt.ReceivedOn, receipt.InvoiceNumber,
             receipt.InvoiceTotal, linesTotal, PurchasingRules.InvoiceDifference(receipt.InvoiceTotal, lineTotals),
-            receipt.Note, receipt.CreatedAt, receipt.CreatedByNavigation.Username, lines.Count);
+            receipt.Note, receipt.CreatedAt, receipt.CreatedByNavigation.Username, lines.Count, receipt.PurchaseOrderId,
+            receipt.PurchaseOrder?.PoNumber);
     }
 
     public static async Task<StockReceiptDto?> LoadAsync(WTFDbContext db, Guid id, CancellationToken cancellationToken)
@@ -27,6 +28,7 @@ internal static class ReceiptMapping
             .AsNoTracking()
             .Include(r => r.Supplier)
             .Include(r => r.CreatedByNavigation)
+            .Include(r => r.PurchaseOrder)
             .Include(r => r.StockReceiptLines).ThenInclude(l => l.Item)
             .AsSplitQuery()
             .FirstOrDefaultAsync(r => r.Id == id, cancellationToken);

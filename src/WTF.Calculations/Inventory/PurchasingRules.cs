@@ -69,4 +69,28 @@ public static class PurchasingRules
 
         return Math.Round(invoiceTotal.Value - totals.Sum(total => total!.Value), 2, MidpointRounding.AwayFromZero);
     }
+
+    // Where an order stands, from the packs ordered and received on its lines: nothing in yet, some in, or all in
+    // (a line received in full or over counts as complete).
+    public static OrderProgress Progress(IEnumerable<(decimal Ordered, decimal Received)> lines)
+    {
+        var list = lines.ToList();
+        if (list.Count == 0 || list.All(l => l.Received <= 0m))
+        {
+            return OrderProgress.NothingReceived;
+        }
+
+        return list.All(l => l.Received >= l.Ordered) ? OrderProgress.Complete : OrderProgress.Partial;
+    }
+
+    // The units of an order line still to come, which the reorder list treats as already bought.
+    public static decimal UnitsOnOrder(decimal packsOrdered, decimal packsReceived, decimal unitsPerPack) =>
+        UnitsFromPacks(Math.Max(0m, packsOrdered - packsReceived), unitsPerPack);
+}
+
+public enum OrderProgress
+{
+    NothingReceived = 0,
+    Partial = 1,
+    Complete = 2
 }

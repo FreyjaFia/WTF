@@ -98,6 +98,10 @@ public partial class WTFDbContext : DbContext
 
     public virtual DbSet<PromotionImage> PromotionImages { get; set; }
 
+    public virtual DbSet<PurchaseOrder> PurchaseOrders { get; set; }
+
+    public virtual DbSet<PurchaseOrderLine> PurchaseOrderLines { get; set; }
+
     public virtual DbSet<PushNotificationToken> PushNotificationTokens { get; set; }
 
     public virtual DbSet<RefreshToken> RefreshTokens { get; set; }
@@ -1353,6 +1357,74 @@ public partial class WTFDbContext : DbContext
                 .HasConstraintName("FK_PromotionImages_Tenants");
         });
 
+        modelBuilder.Entity<PurchaseOrder>(entity =>
+        {
+            entity.HasIndex(e => new { e.Status, e.CreatedAt }, "IX_PurchaseOrders_Status_CreatedAt").IsDescending(false, true);
+
+            entity.HasIndex(e => e.SupplierId, "IX_PurchaseOrders_SupplierId");
+
+            entity.HasIndex(e => new { e.TenantId, e.PoNumber }, "UX_PurchaseOrders_Tenant_PoNumber").IsUnique();
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_PurchaseOrders_Id");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())", "DF_PurchaseOrders_CreatedAt");
+            entity.Property(e => e.Note).HasMaxLength(500);
+            entity.Property(e => e.Status).HasDefaultValue((byte)1, "DF_PurchaseOrders_Status");
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_PurchaseOrders_TenantId");
+
+            entity.HasOne(d => d.ClosedByNavigation).WithMany(p => p.PurchaseOrderClosedByNavigations)
+                .HasForeignKey(d => d.ClosedBy)
+                .HasConstraintName("FK_PurchaseOrders_ClosedBy");
+
+            entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.PurchaseOrderCreatedByNavigations)
+                .HasForeignKey(d => d.CreatedBy)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PurchaseOrders_CreatedBy");
+
+            entity.HasOne(d => d.SentByNavigation).WithMany(p => p.PurchaseOrderSentByNavigations)
+                .HasForeignKey(d => d.SentBy)
+                .HasConstraintName("FK_PurchaseOrders_SentBy");
+
+            entity.HasOne(d => d.Supplier).WithMany(p => p.PurchaseOrders)
+                .HasForeignKey(d => d.SupplierId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PurchaseOrders_Supplier");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.PurchaseOrders)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PurchaseOrders_Tenants");
+        });
+
+        modelBuilder.Entity<PurchaseOrderLine>(entity =>
+        {
+            entity.HasIndex(e => e.ItemId, "IX_PurchaseOrderLines_Item");
+
+            entity.HasIndex(e => new { e.PurchaseOrderId, e.ItemId }, "UX_PurchaseOrderLines_Order_Item").IsUnique();
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_PurchaseOrderLines_Id");
+            entity.Property(e => e.PackName).HasMaxLength(50);
+            entity.Property(e => e.PackPrice).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.PacksOrdered).HasColumnType("decimal(18, 3)");
+            entity.Property(e => e.PacksReceived).HasColumnType("decimal(18, 3)");
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_PurchaseOrderLines_TenantId");
+            entity.Property(e => e.UnitsPerPack).HasColumnType("decimal(18, 3)");
+
+            entity.HasOne(d => d.Item).WithMany(p => p.PurchaseOrderLines)
+                .HasForeignKey(d => d.ItemId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PurchaseOrderLines_Item");
+
+            entity.HasOne(d => d.PurchaseOrder).WithMany(p => p.PurchaseOrderLines)
+                .HasForeignKey(d => d.PurchaseOrderId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PurchaseOrderLines_Order");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.PurchaseOrderLines)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PurchaseOrderLines_Tenants");
+        });
+
         modelBuilder.Entity<PushNotificationToken>(entity =>
         {
             entity.HasIndex(e => e.UserId, "IX_PushNotificationTokens_UserId");
@@ -1547,6 +1619,8 @@ public partial class WTFDbContext : DbContext
 
         modelBuilder.Entity<StockReceipt>(entity =>
         {
+            entity.HasIndex(e => e.PurchaseOrderId, "IX_StockReceipts_PurchaseOrderId").HasFilter("([PurchaseOrderId] IS NOT NULL)");
+
             entity.HasIndex(e => new { e.ReceivedOn, e.CreatedAt }, "IX_StockReceipts_ReceivedOn").IsDescending();
 
             entity.HasIndex(e => e.SupplierId, "IX_StockReceipts_SupplierId");
@@ -1566,6 +1640,10 @@ public partial class WTFDbContext : DbContext
                 .HasForeignKey(d => d.CreatedBy)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_StockReceipts_CreatedBy");
+
+            entity.HasOne(d => d.PurchaseOrder).WithMany(p => p.StockReceipts)
+                .HasForeignKey(d => d.PurchaseOrderId)
+                .HasConstraintName("FK_StockReceipts_PurchaseOrder");
 
             entity.HasOne(d => d.Supplier).WithMany(p => p.StockReceipts)
                 .HasForeignKey(d => d.SupplierId)

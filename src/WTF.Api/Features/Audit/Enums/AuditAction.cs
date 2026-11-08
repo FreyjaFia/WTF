@@ -70,5 +70,10 @@ public enum AuditAction
     ItemSupplierSaved,
     ItemSupplierRemoved,
     StockReceived,
-    ItemParLevelChanged
+    ItemParLevelChanged,
+    PurchaseOrderCreated,
+    PurchaseOrderUpdated,
+    PurchaseOrderSent,
+    PurchaseOrderCancelled,
+    PurchaseOrderClosed
 }

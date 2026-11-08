@@ -22,7 +22,11 @@ public partial class StockReceipt
 
     public Guid TenantId { get; set; }
 
+    public Guid? PurchaseOrderId { get; set; }
+
     public virtual User CreatedByNavigation { get; set; } = null!;
+
+    public virtual PurchaseOrder? PurchaseOrder { get; set; }
 
     public virtual ICollection<StockReceiptLine> StockReceiptLines { get; set; } = new List<StockReceiptLine>();
 

@@ -70,4 +70,20 @@ public class PurchasingRulesTests
         PurchasingRules.InvoiceDifference(null, [100m]).ShouldBeNull();
         PurchasingRules.InvoiceDifference(100m, [50m, null]).ShouldBeNull();
     }
+
+    [Fact]
+    public void Progress_NothingPartialOrComplete()
+    {
+        PurchasingRules.Progress([(4m, 0m), (2m, 0m)]).ShouldBe(OrderProgress.NothingReceived);
+        PurchasingRules.Progress([(4m, 4m), (2m, 1m)]).ShouldBe(OrderProgress.Partial);
+        PurchasingRules.Progress([(4m, 4m), (2m, 3m)]).ShouldBe(OrderProgress.Complete);
+        PurchasingRules.Progress([]).ShouldBe(OrderProgress.NothingReceived);
+    }
+
+    [Fact]
+    public void UnitsOnOrder_IsThePacksStillToComeTimesThePackSize()
+    {
+        PurchasingRules.UnitsOnOrder(4m, 1m, 12m).ShouldBe(36m);
+        PurchasingRules.UnitsOnOrder(4m, 6m, 12m).ShouldBe(0m);
+    }
 }

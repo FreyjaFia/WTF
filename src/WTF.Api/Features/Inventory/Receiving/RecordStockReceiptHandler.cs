@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Features.Audit.Enums;
+using WTF.Api.Features.Inventory.Purchasing;
 using WTF.Api.Features.Items;
 using WTF.Api.Services;
 using WTF.Calculations.Inventory;
@@ -44,6 +45,8 @@ public record RecordStockReceiptCommand : IRequest<StockReceiptDto>
     public string? Note { get; init; }
 
     public Guid? ClientRequestId { get; init; }
+
+    public Guid? PurchaseOrderId { get; init; }
 
     [MaxLength(200)]
     public List<ReceiptLineRequest> Lines { get; init; } = [];
@@ -90,6 +93,28 @@ public class RecordStockReceiptHandler(
             throw new InvalidOperationException("This supplier is inactive. Restore it before receiving from it.");
         }
 
+        PurchaseOrder? order = null;
+        if (request.PurchaseOrderId.HasValue)
+        {
+            order = await db.PurchaseOrders.Include(o => o.PurchaseOrderLines)
+                    .FirstOrDefaultAsync(o => o.Id == request.PurchaseOrderId, cancellationToken)
+                ?? throw new InvalidOperationException("The purchase order was not found.");
+            if (!PurchaseOrderStatuses.IsOpen(order.Status))
+            {
+                throw new InvalidOperationException("This purchase order is not waiting for goods. Send it first, or it may already be closed.");
+            }
+
+            if (order.SupplierId != supplier.Id)
+            {
+                throw new InvalidOperationException("This purchase order belongs to a different supplier.");
+            }
+
+            if (request.Lines.Any(l => order.PurchaseOrderLines.All(ol => ol.ItemId != l.ItemId)))
+            {
+                throw new InvalidOperationException("Every item received must be on the purchase order.");
+            }
+        }
+
         var itemIds = request.Lines.Select(l => l.ItemId).ToList();
         if (itemIds.Distinct().Count() != itemIds.Count)
         {
@@ -127,6 +152,7 @@ public class RecordStockReceiptHandler(
         {
             SupplierId = supplier.Id,
             ReceivedOn = request.ReceivedOn,
+            PurchaseOrderId = order?.Id,
             InvoiceNumber = invoiceNumber,
             InvoiceTotal = request.InvoiceTotal,
             Note = ItemValidation.NormalizeOptional(request.Note),
@@ -201,6 +227,22 @@ public class RecordStockReceiptHandler(
             });
 
             RememberPack(links, item, supplier, line, now, userId);
+
+            if (order is not null)
+            {
+                order.PurchaseOrderLines.First(ol => ol.ItemId == item.Id).PacksReceived += line.Packs;
+            }
+        }
+
+        if (order is not null)
+        {
+            var progress = PurchasingRules.Progress(order.PurchaseOrderLines.Select(ol => (ol.PacksOrdered, ol.PacksReceived)));
+            order.Status = progress == OrderProgress.Complete ? PurchaseOrderStatuses.Received : PurchaseOrderStatuses.PartlyReceived;
+            if (progress == OrderProgress.Complete)
+            {
+                order.ClosedAt = now;
+                order.ClosedBy = userId;
+            }
         }
 
         await db.SaveChangesAsync(cancellationToken);

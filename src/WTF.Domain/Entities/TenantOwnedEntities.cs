@@ -205,3 +205,11 @@ public partial class StockReceiptLine : ITenantOwned
 public partial class Supplier : ITenantOwned
 {
 }
+
+public partial class PurchaseOrder : ITenantOwned
+{
+}
+
+public partial class PurchaseOrderLine : ITenantOwned
+{
+}

@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using WTF.Api.Features.Inventory.Purchasing;
 using WTF.Api.Features.Inventory.Receiving;
 using WTF.Api.Features.Inventory.Reordering;
 using WTF.Api.Features.Inventory.Suppliers;
@@ -45,6 +46,12 @@ public static class CostAccess
                 Lines = [.. g.Lines.Select(l => l with { PackPrice = null, EstimatedCost = null })]
             })]
         };
+
+    public static PurchaseOrderDto ForUser(PurchaseOrderDto order, ClaimsPrincipal user) =>
+        CanReadCosts(user) ? order : new PurchaseOrderDto(order.Summary with { Total = null }, [.. order.Lines.Select(l => l with { PackPrice = null, LineTotal = null })], order.ReceiptIds);
+
+    public static List<PurchaseOrderSummaryDto> ForUser(List<PurchaseOrderSummaryDto> orders, ClaimsPrincipal user) =>
+        CanReadCosts(user) ? orders : [.. orders.Select(o => o with { Total = null })];
 
     public static ItemSupplierDto Redact(ItemSupplierDto link) => link with
     {

@@ -91,6 +91,10 @@ public partial class Tenant
 
     public virtual ICollection<Promotion> Promotions { get; set; } = new List<Promotion>();
 
+    public virtual ICollection<PurchaseOrderLine> PurchaseOrderLines { get; set; } = new List<PurchaseOrderLine>();
+
+    public virtual ICollection<PurchaseOrder> PurchaseOrders { get; set; } = new List<PurchaseOrder>();
+
     public virtual ICollection<PushNotificationToken> PushNotificationTokens { get; set; } = new List<PushNotificationToken>();
 
     public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();

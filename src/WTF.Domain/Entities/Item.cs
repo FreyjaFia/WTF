@@ -65,6 +65,8 @@ public partial class Item
 
     public virtual ICollection<ProductSizeAmount> ProductSizeAmounts { get; set; } = new List<ProductSizeAmount>();
 
+    public virtual ICollection<PurchaseOrderLine> PurchaseOrderLines { get; set; } = new List<PurchaseOrderLine>();
+
     public virtual ICollection<StockCountLine> StockCountLines { get; set; } = new List<StockCountLine>();
 
     public virtual ICollection<StockMovement> StockMovements { get; set; } = new List<StockMovement>();

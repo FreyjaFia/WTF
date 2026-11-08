@@ -89,6 +89,12 @@ public partial class User
 
     public virtual ICollection<Promotion> PromotionUpdatedByNavigations { get; set; } = new List<Promotion>();
 
+    public virtual ICollection<PurchaseOrder> PurchaseOrderClosedByNavigations { get; set; } = new List<PurchaseOrder>();
+
+    public virtual ICollection<PurchaseOrder> PurchaseOrderCreatedByNavigations { get; set; } = new List<PurchaseOrder>();
+
+    public virtual ICollection<PurchaseOrder> PurchaseOrderSentByNavigations { get; set; } = new List<PurchaseOrder>();
+
     public virtual ICollection<PushNotificationToken> PushNotificationTokens { get; set; } = new List<PushNotificationToken>();
 
     public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();

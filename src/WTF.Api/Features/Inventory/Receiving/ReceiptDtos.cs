@@ -12,7 +12,9 @@ public record StockReceiptSummaryDto(
     string? Note,
     DateTime CreatedAt,
     string CreatedByName,
-    int LineCount);
+    int LineCount,
+    Guid? PurchaseOrderId,
+    int? PurchaseOrderNumber);
 
 public record StockReceiptLineDto(
     Guid ItemId,

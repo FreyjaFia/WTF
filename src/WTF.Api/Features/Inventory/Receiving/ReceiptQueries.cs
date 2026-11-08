@@ -41,6 +41,7 @@ public class GetStockReceiptsHandler(WTFDbContext db) : IRequestHandler<GetStock
             .Take(Math.Clamp(request.Take, 1, 500))
             .Include(r => r.Supplier)
             .Include(r => r.CreatedByNavigation)
+            .Include(r => r.PurchaseOrder)
             .Include(r => r.StockReceiptLines)
             .AsSplitQuery()
             .ToListAsync(cancellationToken);

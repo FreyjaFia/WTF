@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Features.Audit.Enums;
+using WTF.Api.Features.Inventory.Purchasing;
 using WTF.Api.Services;
 using WTF.Calculations.Inventory;
 using WTF.Domain.Data;
@@ -155,6 +156,18 @@ public class SetParLevelHandler(
 
 internal static class ReorderOnOrder
 {
-    public static Task<Dictionary<Guid, decimal>> LoadAsync(WTFDbContext db, List<Guid> itemIds, CancellationToken cancellationToken) =>
-        Task.FromResult(new Dictionary<Guid, decimal>());
+    // Units still to come on sent orders, so the reorder list does not ask for the same goods twice.
+    public static async Task<Dictionary<Guid, decimal>> LoadAsync(WTFDbContext db, List<Guid> itemIds, CancellationToken cancellationToken)
+    {
+        var lines = await db.PurchaseOrderLines
+            .AsNoTracking()
+            .Where(l => itemIds.Contains(l.ItemId)
+                && (l.PurchaseOrder.Status == PurchaseOrderStatuses.Sent || l.PurchaseOrder.Status == PurchaseOrderStatuses.PartlyReceived))
+            .Select(l => new { l.ItemId, l.PacksOrdered, l.PacksReceived, l.UnitsPerPack })
+            .ToListAsync(cancellationToken);
+
+        return lines
+            .GroupBy(l => l.ItemId)
+            .ToDictionary(g => g.Key, g => g.Sum(l => PurchasingRules.UnitsOnOrder(l.PacksOrdered, l.PacksReceived, l.UnitsPerPack)));
+    }
 }

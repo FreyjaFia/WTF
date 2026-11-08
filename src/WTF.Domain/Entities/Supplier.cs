@@ -36,6 +36,8 @@ public partial class Supplier
 
     public virtual ICollection<ItemSupplier> ItemSuppliers { get; set; } = new List<ItemSupplier>();
 
+    public virtual ICollection<PurchaseOrder> PurchaseOrders { get; set; } = new List<PurchaseOrder>();
+
     public virtual ICollection<StockReceipt> StockReceipts { get; set; } = new List<StockReceipt>();
 
     public virtual Tenant Tenant { get; set; } = null!;
