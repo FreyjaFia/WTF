@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using WTF.Api.Common.Tenancy;
+using WTF.Api.Features.Subscriptions;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 
@@ -41,6 +43,14 @@ public static class OrderLinkAccess
 
         // The link is a global secret; the tenant comes from the link row, never from the visitor.
         db.UseTenant(link.TenantId);
+
+        // A suspended, cancelled or lapsed shop takes no orders from its customer page.
+        if (db.TenantFilterEnabled
+            && (!await TenantAccess.IsActiveAsync(db, link.TenantId, cancellationToken)
+                || await SubscriptionStateLoader.IsLockedAsync(db, link.TenantId, now, cancellationToken)))
+        {
+            return null;
+        }
 
         var customer = await db.Customers.FirstOrDefaultAsync(c => c.Id == link.TargetId.Value, cancellationToken);
         if (customer == null || !customer.IsActive || !customer.AllowOrderingLink)

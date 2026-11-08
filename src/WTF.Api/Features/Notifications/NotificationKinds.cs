@@ -4,6 +4,7 @@ public static class NotificationKinds
 {
     public const string StockAlert = "StockAlert";
     public const string WasteReview = "WasteReview";
+    public const string Subscription = "Subscription";
 }
 
 public static class NotificationSeverity

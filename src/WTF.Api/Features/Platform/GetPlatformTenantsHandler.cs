@@ -22,6 +22,10 @@ public class GetPlatformTenantsHandler(WTFDbContext db) : IRequestHandler<GetPla
             .Select(g => new { g.Key, Count = g.Count(), Last = g.Max(o => (DateTime?)o.CreatedAt) })
             .ToDictionaryAsync(x => x.Key, x => x, cancellationToken);
 
+        var subs = await db.TenantSubscriptions.AsNoTracking().Include(s => s.Plan)
+            .ToDictionaryAsync(s => s.TenantId, cancellationToken);
+        var now = DateTime.UtcNow;
+
         return [.. tenants.Select(t => new PlatformTenantDto(
             t.Id,
             t.Name,
@@ -31,6 +35,11 @@ public class GetPlatformTenantsHandler(WTFDbContext db) : IRequestHandler<GetPla
             t.CreatedAt,
             users.GetValueOrDefault(t.Id),
             orders.TryGetValue(t.Id, out var o) ? o.Count : 0,
-            orders.TryGetValue(t.Id, out var o2) ? o2.Last : null))];
+            orders.TryGetValue(t.Id, out var o2) ? o2.Last : null,
+            subs.TryGetValue(t.Id, out var sub) ? sub.Plan.Name : null,
+            subs.TryGetValue(t.Id, out var sub2) ? sub2.CurrentPeriodEnd : null,
+            subs.TryGetValue(t.Id, out var sub3)
+                ? Subscriptions.SubscriptionNames.Warning(WTF.Calculations.Subscriptions.SubscriptionRules.WarningLevel(sub3.CurrentPeriodEnd, sub3.GraceDays, now))
+                : null))];
     }
 }

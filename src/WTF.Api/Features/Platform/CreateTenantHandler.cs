@@ -1,8 +1,10 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using System.Text.RegularExpressions;
 using WTF.Api.Common.Tenancy;
 using WTF.Api.Features.OrderLinks;
+using WTF.Api.Features.Subscriptions;
 using WTF.Api.Features.Users.Enums;
 using WTF.Api.Services;
 using WTF.Domain.Data;
@@ -16,9 +18,10 @@ public record CreateTenantCommand(
     string OwnerFirstName,
     string OwnerLastName,
     string OwnerUsername,
-    bool IsTrial = false) : IRequest<CreatedTenantDto>;
+    bool IsTrial = false,
+    string? PlanCode = null) : IRequest<CreatedTenantDto>;
 
-public partial class CreateTenantHandler(WTFDbContext db, IPlatformAuditService audit) : IRequestHandler<CreateTenantCommand, CreatedTenantDto>
+public partial class CreateTenantHandler(WTFDbContext db, IPlatformAuditService audit, IOptions<SubscriptionOptions> subscriptionOptions) : IRequestHandler<CreateTenantCommand, CreatedTenantDto>
 {
     public static readonly string[] ReservedSlugs =
         ["www", "api", "app", "admin", "platform", "shop", "static", "mail", "support", "login", "wtf", "test", "demo", "staging"];
@@ -46,6 +49,14 @@ public partial class CreateTenantHandler(WTFDbContext db, IPlatformAuditService 
             throw new InvalidOperationException("Username already exists.");
         }
 
+        var plan = request.PlanCode is { Length: > 0 } code
+            ? await db.Plans.FirstOrDefaultAsync(p => p.Code == code && p.IsActive, cancellationToken)
+            : await db.Plans.Where(p => p.IsActive).OrderByDescending(p => p.SortOrder).FirstOrDefaultAsync(cancellationToken);
+        if (plan is null && request.PlanCode is { Length: > 0 })
+        {
+            throw new InvalidOperationException("Plan not found.");
+        }
+
         var password = TemporaryPassword.Generate();
         var now = DateTime.UtcNow;
         var tenant = new Tenant
@@ -65,7 +76,25 @@ public partial class CreateTenantHandler(WTFDbContext db, IPlatformAuditService 
         db.Tenants.Add(tenant);
         await db.SaveChangesAsync(cancellationToken);
 
+        if (plan is not null)
+        {
+            // A trial runs for the trial days; a paid shop gets its first month and is then invoiced from the platform page.
+            var settings = subscriptionOptions.Value;
+            var periodEnd = request.IsTrial ? now.AddDays(settings.TrialDays) : now.AddMonths(1);
+            db.TenantSubscriptions.Add(new TenantSubscription
+            {
+                TenantId = tenant.Id,
+                PlanId = plan.Id,
+                CurrentPeriodStart = now,
+                CurrentPeriodEnd = periodEnd,
+                GraceDays = settings.DefaultGraceDays,
+                UpdatedAt = now
+            });
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
         db.UseTenant(tenant.Id);
+        await Branding.BrandDefaults.SaveAsync(db, tenant.Id, Branding.BrandDefaults.For(name), cancellationToken);
 
         // Users.CreatedBy is a required self-reference, so each first user is created by itself.
         db.Users.Add(new User

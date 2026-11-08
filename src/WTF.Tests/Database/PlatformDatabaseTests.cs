@@ -52,7 +52,7 @@ public class PlatformDatabaseTests
     private static async Task<CreatedTenantDto> CreateShopAsync(SqlTestDatabase database, string slug, string owner)
     {
         await using var db = PlatformContext(database);
-        return await new CreateTenantHandler(db, Audit(db)).Handle(
+        return await new CreateTenantHandler(db, Audit(db), Microsoft.Extensions.Options.Options.Create(new WTF.Api.Features.Subscriptions.SubscriptionOptions())).Handle(
             new CreateTenantCommand("Shop " + slug, slug, "Own", "Er", owner), CancellationToken.None);
     }
 

@@ -9,7 +9,10 @@ public record PlatformTenantDto(
     DateTime CreatedAt,
     int UserCount,
     int OrderCount,
-    DateTime? LastOrderAt);
+    DateTime? LastOrderAt,
+    string? PlanName = null,
+    DateTime? PeriodEnd = null,
+    string? Warning = null);
 
 public record PlatformTenantUserDto(Guid Id, string Username, string FirstName, string LastName, string Role, bool IsActive);
 

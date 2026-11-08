@@ -4,6 +4,7 @@ using System.Text.Json;
 using WTF.Calculations.Inventory;
 using WTF.Calculations.Orders;
 using WTF.Calculations.Sales;
+using WTF.Calculations.Subscriptions;
 using WTF.Domain.Entities;
 
 namespace WTF.Tests.Calculations;
@@ -91,7 +92,9 @@ public class SharedCasesTests
         List<RecipeCostCase> RecipeCost,
         List<PriceForTargetMarginCase> PriceForTargetMargin,
         List<RecipePreviewCase> RecipePreview,
-        List<AddOnSelectionCase> AddOnSelection);
+        List<SubscriptionWarningCase> SubscriptionWarnings,
+        List<SubscriptionClockCase> SubscriptionClock,
+        List<SubscriptionLeaseAgeCase> SubscriptionLeaseAge);
 
     private sealed record RecipePreviewSizeAmountCase(string SizeProductId, decimal Quantity);
 
@@ -145,6 +148,12 @@ public class SharedCasesTests
         decimal Margin,
         decimal? MarginPercent);
 
+    private sealed record SubscriptionWarningCase(string Name, DateTime PeriodEnd, int GraceDays, DateTime Now, string ExpectedLevel, int ExpectedDaysLeft);
+
+    private sealed record SubscriptionClockCase(string Name, DateTime DeviceNow, DateTime? LatestSeen, DateTime ExpectedNow);
+
+    private sealed record SubscriptionLeaseAgeCase(string Name, DateTime IssuedAt, DateTime Now, int MaxAgeDays, bool Expected);
+
     private sealed record WasteNeedsReviewCase(string Name, decimal Quantity, decimal? Limit, bool Expected);
 
     private sealed record WasteBalanceAfterCase(string Name, decimal Balance, decimal Quantity, decimal Expected);
@@ -180,6 +189,12 @@ public class SharedCasesTests
     public static IEnumerable<object[]> SalesCoveredCaseNames() => Loaded.Value.SalesCovered.Select(c => new object[] { c.Name });
 
     public static IEnumerable<object[]> StockShortfallCaseNames() => Loaded.Value.StockShortfalls.Select(c => new object[] { c.Name });
+
+    public static IEnumerable<object[]> SubscriptionWarningCaseNames() => Loaded.Value.SubscriptionWarnings.Select(c => new object[] { c.Name });
+
+    public static IEnumerable<object[]> SubscriptionClockCaseNames() => Loaded.Value.SubscriptionClock.Select(c => new object[] { c.Name });
+
+    public static IEnumerable<object[]> SubscriptionLeaseAgeCaseNames() => Loaded.Value.SubscriptionLeaseAge.Select(c => new object[] { c.Name });
 
     public static IEnumerable<object[]> WasteNeedsReviewCaseNames() => Loaded.Value.WasteNeedsReview.Select(c => new object[] { c.Name });
 
@@ -293,6 +308,34 @@ public class SharedCasesTests
         var c = Loaded.Value.SalesCovered.Single(x => x.Name == name);
 
         StockRules.SalesCovered(c.Balance, c.PerSale).ShouldBe(c.Expected);
+    }
+
+    [Theory]
+    [MemberData(nameof(SubscriptionWarningCaseNames))]
+    public void SubscriptionWarning_MatchesTheSharedCase(string name)
+    {
+        var c = Loaded.Value.SubscriptionWarnings.Single(x => x.Name == name);
+
+        SubscriptionRules.WarningLevel(c.PeriodEnd, c.GraceDays, c.Now).ToString().ShouldBe(c.ExpectedLevel, StringCompareShould.IgnoreCase);
+        SubscriptionRules.DaysLeft(c.PeriodEnd, c.Now).ShouldBe(c.ExpectedDaysLeft);
+    }
+
+    [Theory]
+    [MemberData(nameof(SubscriptionClockCaseNames))]
+    public void SubscriptionClock_MatchesTheSharedCase(string name)
+    {
+        var c = Loaded.Value.SubscriptionClock.Single(x => x.Name == name);
+
+        SubscriptionRules.EffectiveNow(c.DeviceNow, c.LatestSeen).ShouldBe(c.ExpectedNow);
+    }
+
+    [Theory]
+    [MemberData(nameof(SubscriptionLeaseAgeCaseNames))]
+    public void SubscriptionLeaseAge_MatchesTheSharedCase(string name)
+    {
+        var c = Loaded.Value.SubscriptionLeaseAge.Single(x => x.Name == name);
+
+        SubscriptionRules.LeaseTooOld(c.IssuedAt, c.Now, c.MaxAgeDays).ShouldBe(c.Expected);
     }
 
     [Theory]

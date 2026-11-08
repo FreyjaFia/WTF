@@ -22,6 +22,8 @@ public class PolicyMatrixTests : IDisposable
         [AppPolicies.PromotionsWrite] = [AppRoles.SuperAdmin, AppRoles.Admin],
         [AppPolicies.AuditRead] = [AppRoles.SuperAdmin],
         [AppPolicies.PlatformAdmin] = [AppRoles.PlatformAdmin],
+        [AppPolicies.SubscriptionBilling] = [AppRoles.SuperAdmin, AppRoles.Admin],
+        [AppPolicies.BrandManage] = [AppRoles.SuperAdmin, AppRoles.Admin],
         [AppPolicies.SchemaScriptHistoryRead] = [AppRoles.SuperAdmin],
         [AppPolicies.OrdersRead] = [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.Cashier],
         [AppPolicies.OrdersWrite] = [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.Cashier],

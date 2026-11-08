@@ -1,7 +1,9 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using WTF.Api.Common.Auth;
+using WTF.Api.Features.Branding;
 using WTF.Api.Features.Platform;
+using WTF.Api.Features.Subscriptions;
 
 namespace WTF.Api.Endpoints;
 
@@ -12,6 +14,14 @@ public static class PlatformEndpoints
     public record StatusRequest(string? Reason);
 
     public record ImpersonateRequest(string Reason, bool AllowWrites);
+
+    public record UpdatePlanRequest(string Name, decimal MonthlyPrice, string[] Features, int? MaxUsers, bool IsActive);
+
+    public record SetSubscriptionRequest(int PlanId, DateTime? PeriodEnd, int GraceDays, decimal DiscountPercent, string? Notes);
+
+    public record CreateInvoiceRequest(int Months, string? Reference, DateTime? DueDate, string? Notes);
+
+    public record MarkPaidRequest(string? Reference);
 
     public record DeleteRequest(string Slug, string AdminPassword);
 
@@ -62,6 +72,32 @@ public static class PlatformEndpoints
         {
             return Results.Ok(await sender.Send(new DeleteTenantCommand(id, request.Slug, request.AdminPassword)));
         });
+
+        group.MapGet("/plans", async (ISender sender) => Results.Ok(await sender.Send(new GetPlansQuery())));
+
+        group.MapPut("/plans/{id:int}", async (int id, [FromBody] UpdatePlanRequest request, ISender sender) =>
+            Results.Ok(await sender.Send(new UpdatePlanCommand(id, request.Name, request.MonthlyPrice, request.Features, request.MaxUsers, request.IsActive))));
+
+        group.MapGet("/tenants/{id:guid}/subscription", async (Guid id, ISender sender) =>
+            Results.Ok(await sender.Send(new GetTenantSubscriptionQuery(id))));
+
+        group.MapPut("/tenants/{id:guid}/subscription", async (Guid id, [FromBody] SetSubscriptionRequest request, ISender sender) =>
+            Results.Ok(await sender.Send(new SetTenantSubscriptionCommand(id, request.PlanId, request.PeriodEnd, request.GraceDays, request.DiscountPercent, request.Notes))));
+
+        group.MapPost("/tenants/{id:guid}/invoices", async (Guid id, [FromBody] CreateInvoiceRequest request, ISender sender) =>
+            Results.Ok(await sender.Send(new CreateInvoiceCommand(id, request.Months, request.Reference, request.DueDate, request.Notes))));
+
+        group.MapPost("/invoices/{invoiceId:guid}/mark-paid", async (Guid invoiceId, [FromBody] MarkPaidRequest request, ISender sender) =>
+            Results.Ok(await sender.Send(new MarkInvoicePaidCommand(invoiceId, request?.Reference))));
+
+        group.MapPost("/invoices/{invoiceId:guid}/void", async (Guid invoiceId, ISender sender) =>
+            Results.Ok(await sender.Send(new VoidInvoiceCommand(invoiceId))));
+
+        group.MapGet("/tenants/{id:guid}/brand", async (Guid id, ISender sender) =>
+            Results.Ok(await sender.Send(new GetTenantBrandQuery(id))));
+
+        group.MapPut("/tenants/{id:guid}/brand", async (Guid id, [FromBody] BrandDto brand, ISender sender) =>
+            Results.Ok(await sender.Send(new SetTenantBrandCommand(id, brand))));
 
         group.MapGet("/audit-logs", async ([AsParameters] GetPlatformAuditLogsQuery query, ISender sender) =>
             Results.Ok(await sender.Send(query)));

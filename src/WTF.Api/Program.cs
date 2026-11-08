@@ -15,6 +15,7 @@ using WTF.Api.Features.Images;
 using WTF.Api.Features.Inventory;
 using WTF.Api.Features.Notifications;
 using WTF.Api.Features.Reports;
+using WTF.Api.Features.Subscriptions;
 using WTF.Api.Hubs;
 using WTF.Api.Services;
 using WTF.Domain.Data;
@@ -98,6 +99,11 @@ builder.Services.Configure<StockAlertRemindersOptions>(
     builder.Configuration.GetSection(StockAlertRemindersOptions.SectionName));
 builder.Services.AddScoped<IStockReminderService, StockReminderService>();
 builder.Services.AddHostedService<StockReminderScheduler>();
+builder.Services.Configure<SubscriptionOptions>(builder.Configuration.GetSection(SubscriptionOptions.SectionName));
+builder.Services.AddSingleton<ILeaseSigner, LeaseSigner>();
+builder.Services.Configure<SubscriptionRemindersOptions>(builder.Configuration.GetSection(SubscriptionRemindersOptions.SectionName));
+builder.Services.AddScoped<ISubscriptionReminderService, SubscriptionReminderService>();
+builder.Services.AddHostedService<SubscriptionReminderScheduler>();
 
 if (builder.Environment.IsDevelopment())
 {

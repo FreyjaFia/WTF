@@ -14,4 +14,10 @@ public static class PlatformActions
     public const string PasswordReset = "PasswordReset";
     public const string ImpersonationStarted = "ImpersonationStarted";
     public const string ImpersonatedAction = "ImpersonatedAction";
+    public const string PlanUpdated = "PlanUpdated";
+    public const string SubscriptionUpdated = "SubscriptionUpdated";
+    public const string InvoiceCreated = "InvoiceCreated";
+    public const string InvoicePaid = "InvoicePaid";
+    public const string InvoiceVoided = "InvoiceVoided";
+    public const string BrandUpdated = "BrandUpdated";
 }
