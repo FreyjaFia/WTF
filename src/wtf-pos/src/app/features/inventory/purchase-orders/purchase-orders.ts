@@ -101,7 +101,10 @@ export class PurchaseOrdersComponent implements OnInit {
   protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
   protected readonly statuses = PurchaseOrderStatus;
   protected readonly search = signal('');
-  protected readonly pendingAction = signal<{ action: OrderAction; order: PurchaseOrderDto } | null>(null);
+  protected readonly pendingAction = signal<{
+    action: OrderAction;
+    order: PurchaseOrderDto;
+  } | null>(null);
   protected readonly isActing = signal(false);
   protected readonly statusFilter = signal<number | null>(null);
   protected readonly orders = signal<PurchaseOrderSummaryDto[]>([]);
@@ -233,7 +236,7 @@ export class PurchaseOrdersComponent implements OnInit {
   }
 
   protected chooseSupplier(): void {
-    this.loadSupplierItems(this.header.controls.supplierId.value);
+    this.loadSupplierItems(this.header.controls.supplierId.value, true);
   }
 
   protected addLine(): void {
@@ -346,7 +349,9 @@ export class PurchaseOrdersComponent implements OnInit {
     request.subscribe({
       next: () => {
         this.isSaving.set(false);
-        this.alertService.success(editing ? 'Purchase order updated.' : 'Draft purchase order saved.');
+        this.alertService.success(
+          editing ? 'Purchase order updated.' : 'Draft purchase order saved.',
+        );
         this.closeForm();
         this.expandedId.set(null);
         this.load();
@@ -450,14 +455,24 @@ export class PurchaseOrdersComponent implements OnInit {
     }
   }
 
-  private loadSupplierItems(supplierId: string): void {
+  private loadSupplierItems(supplierId: string, fillChosenLines = false): void {
     this.supplierItems.set([]);
     if (!supplierId) {
       return;
     }
 
     this.suppliersApi.getSupplier(supplierId).subscribe({
-      next: (supplier) => this.supplierItems.set(supplier.items),
+      next: (supplier) => {
+        this.supplierItems.set(supplier.items);
+        // An item picked before the supplier's pack details arrived has no pack details yet: fill them in now.
+        if (fillChosenLines) {
+          this.lines.controls.forEach((line, index) => {
+            if (line.controls.itemId.value && !line.controls.unitsPerPack.dirty) {
+              this.chooseItem(index);
+            }
+          });
+        }
+      },
       error: (err: Error) => this.alertService.error(err.message),
     });
   }
