@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard } from '@core/guards/auth.guard';
 import { loginGuard } from '@core/guards/login.guard';
+import { platformGuard } from '@core/guards/platform.guard';
 import { roleGuard } from '@core/guards/role.guard';
 import { unsavedChangesGuard } from '@core/guards/unsaved-changes.guard';
 import { Dashboard } from '@features/dashboard/dashboard';
@@ -45,6 +46,8 @@ import { OrderDetails } from '@features/orders/order-details/order-details';
 import { OrderEditor } from '@features/orders/order-editor/order-editor';
 import { OrderList } from '@features/orders/order-list/order-list';
 import { Orders } from '@features/orders/orders';
+import { PlatformLoginComponent } from '@features/platform/platform-login';
+import { PlatformTenantsComponent } from '@features/platform/platform-tenants';
 import { PublicOrderComponent } from '@features/public-order/public-order';
 import { LayoutComponent } from '@shared/components';
 import { AppRoleGroups } from '@shared/constants/app-roles';
@@ -59,6 +62,15 @@ export const routes: Routes = [
     path: 'login',
     component: Login,
     canActivate: [loginGuard],
+  },
+  {
+    path: 'platform/login',
+    component: PlatformLoginComponent,
+  },
+  {
+    path: 'platform',
+    component: PlatformTenantsComponent,
+    canActivate: [platformGuard],
   },
   {
     // Public page for customers with a personal ordering link. No sign-in, so no guards.

@@ -1,0 +1,217 @@
+<div class="mx-auto flex h-full max-w-6xl flex-col gap-4 overflow-y-auto p-4">
+  <header class="flex flex-wrap items-center gap-3">
+    <h1 class="mr-auto text-lg font-semibold text-gray-900">Platform: shops</h1>
+    <button type="button" class="app-btn app-btn-secondary app-btn-sm" (click)="openAudit(null)">Platform log</button>
+    <button type="button" class="app-btn app-btn-primary app-btn-sm" (click)="openCreate()">New shop</button>
+    <button type="button" class="app-btn app-btn-ghost app-btn-sm" (click)="signOut()">Sign out</button>
+  </header>
+
+  @if (!dialog() && error(); as message) {
+    <div class="rounded-lg bg-red-50 p-3 text-sm text-red-700" role="alert">{{ message }}</div>
+  }
+
+  @if (loading()) {
+    <p class="text-sm text-gray-500">Loading shops...</p>
+  } @else {
+    <ul class="flex flex-col gap-3">
+      @for (tenant of tenants(); track tenant.id) {
+        <li class="rounded-xl bg-surface p-4 shadow-sm" [attr.data-testid]="'shop-' + tenant.slug">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="wrap-break-word font-medium text-gray-900">{{ tenant.name }}</span>
+            <span class="text-sm text-gray-500">{{ tenant.slug }}</span>
+            <span
+              class="rounded-full px-2 py-0.5 text-xs font-medium"
+              [class]="isLive(tenant) ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'"
+              >{{ tenant.statusName }}</span
+            >
+          </div>
+          <p class="mt-1 text-sm text-gray-500">
+            {{ tenant.userCount }} people, {{ tenant.orderCount }} orders, created
+            {{ tenant.createdAt | date: 'mediumDate' }}
+          </p>
+          <div class="mt-3 flex flex-wrap gap-2">
+            <button type="button" class="app-btn app-btn-secondary app-btn-xs" (click)="openUsers(tenant)">People</button>
+            <button type="button" class="app-btn app-btn-secondary app-btn-xs" (click)="exportShop(tenant)">Export</button>
+            <button type="button" class="app-btn app-btn-secondary app-btn-xs" (click)="openAudit(tenant)">Log</button>
+            @if (isLive(tenant)) {
+              <button type="button" class="app-btn app-btn-outline-warning app-btn-xs" (click)="openStatus(tenant, 'suspend')">Suspend</button>
+            }
+            @if (tenant.status === status.Suspended) {
+              <button type="button" class="app-btn app-btn-accent-outline app-btn-xs" (click)="openStatus(tenant, 'resume')">Resume</button>
+            }
+            @if (tenant.status !== status.Cancelled) {
+              <button type="button" class="app-btn app-btn-outline-danger app-btn-xs" (click)="openStatus(tenant, 'cancel')">Cancel</button>
+            }
+            @if (canDelete(tenant)) {
+              <button type="button" class="app-btn app-btn-outline-danger app-btn-xs" (click)="openDelete(tenant)">Delete permanently</button>
+            }
+          </div>
+        </li>
+      } @empty {
+        <li class="text-sm text-gray-500">No shops yet.</li>
+      }
+    </ul>
+  }
+</div>
+
+@if (dialog(); as kind) {
+  <div class="modal modal-open" role="dialog" aria-modal="true">
+    <div class="modal-box max-h-[90vh] max-w-xl overflow-y-auto">
+      @if (error(); as message) {
+        <div class="mb-3 rounded-lg bg-red-50 p-3 text-sm text-red-700" role="alert">{{ message }}</div>
+      }
+
+      @switch (kind) {
+        @case ('create') {
+          <h2 class="mb-4 text-base font-semibold">New shop</h2>
+          <form [formGroup]="createForm" (ngSubmit)="createShop()" class="flex flex-col gap-3">
+            <label class="text-sm">Shop name
+              <input formControlName="name" type="text" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+            </label>
+            <label class="text-sm">Shop address (lowercase letters, numbers, dashes)
+              <input formControlName="slug" type="text" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+            </label>
+            <label class="text-sm">Owner first name
+              <input formControlName="ownerFirstName" type="text" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+            </label>
+            <label class="text-sm">Owner last name
+              <input formControlName="ownerLastName" type="text" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+            </label>
+            <label class="text-sm">Owner username
+              <input formControlName="ownerUsername" type="text" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+            </label>
+            <label class="flex items-center gap-2 text-sm">
+              <input formControlName="isTrial" type="checkbox" /> Start as a trial
+            </label>
+            <div class="mt-2 flex justify-end gap-2">
+              <button type="button" class="app-btn app-btn-secondary app-btn-md" (click)="close()">Cancel</button>
+              <button type="submit" class="app-btn app-btn-primary app-btn-md" [disabled]="createForm.invalid || busy()">
+                {{ busy() ? 'Creating...' : 'Create shop' }}
+              </button>
+            </div>
+          </form>
+        }
+        @case ('secret') {
+          @if (secret(); as s) {
+            <h2 class="mb-2 text-base font-semibold">{{ s.title }}</h2>
+            <p class="mb-3 text-sm text-gray-600">
+              Give this to the owner now. It is shown once, and they must choose a new password when they sign in.
+            </p>
+            <dl class="rounded-lg bg-gray-50 p-3 text-sm">
+              <dt class="text-gray-500">Username</dt>
+              <dd class="mb-2 font-mono" data-testid="secret-username">{{ s.username }}</dd>
+              <dt class="text-gray-500">One-time password</dt>
+              <dd class="font-mono" data-testid="secret-password">{{ s.password }}</dd>
+            </dl>
+            <div class="mt-4 flex justify-end">
+              <button type="button" class="app-btn app-btn-primary app-btn-md" (click)="close()">Done</button>
+            </div>
+          }
+        }
+        @case ('users') {
+          <h2 class="mb-3 text-base font-semibold">People at {{ selected()?.name }}</h2>
+          <ul class="flex flex-col gap-2">
+            @for (user of users(); track user.id) {
+              <li class="flex flex-wrap items-center gap-2 rounded-lg bg-gray-50 p-3 text-sm">
+                <span class="mr-auto wrap-break-word">{{ user.username }} ({{ user.role }}){{ user.isActive ? '' : ', off' }}</span>
+                <button type="button" class="app-btn app-btn-secondary app-btn-xs" [disabled]="busy()" (click)="resetPassword(user)">Reset password</button>
+                @if (user.isActive) {
+                  <button type="button" class="app-btn app-btn-accent-outline app-btn-xs" (click)="openSignIn(user)">Sign in as</button>
+                }
+              </li>
+            }
+          </ul>
+          <div class="mt-4 flex justify-end">
+            <button type="button" class="app-btn app-btn-secondary app-btn-md" (click)="close()">Close</button>
+          </div>
+        }
+        @case ('signin') {
+          <h2 class="mb-2 text-base font-semibold">Sign in as {{ signInUser()?.username }}</h2>
+          <p class="mb-3 text-sm text-gray-600">
+            This lasts 30 minutes, is written to the platform log, and shows a bar on every screen. It cannot change passwords or accounts.
+          </p>
+          <form [formGroup]="reasonForm" (ngSubmit)="confirmSignIn()" class="flex flex-col gap-3">
+            <label class="text-sm">Reason (at least 5 characters)
+              <input formControlName="reason" type="text" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+            </label>
+            <label class="flex items-center gap-2 text-sm">
+              <input formControlName="allowWrites" type="checkbox" /> Allow changes (every change is logged)
+            </label>
+            <div class="mt-2 flex justify-end gap-2">
+              <button type="button" class="app-btn app-btn-secondary app-btn-md" (click)="close()">Cancel</button>
+              <button type="submit" class="app-btn app-btn-primary app-btn-md" [disabled]="reasonForm.invalid || busy()">
+                {{ busy() ? 'Signing in...' : 'Sign in as this person' }}
+              </button>
+            </div>
+          </form>
+        }
+        @case ('status') {
+          <h2 class="mb-2 text-base font-semibold">
+            {{ pendingChange() === 'suspend' ? 'Suspend' : pendingChange() === 'resume' ? 'Resume' : 'Cancel' }}
+            {{ selected()?.name }}?
+          </h2>
+          @if (pendingChange() !== 'resume') {
+            <p class="mb-3 text-sm text-gray-600">Nobody in this shop can sign in or use the app until it is resumed.</p>
+          }
+          <form [formGroup]="reasonForm" (ngSubmit)="confirmStatus()" class="flex flex-col gap-3">
+            <label class="text-sm">Reason (at least 5 characters)
+              <input formControlName="reason" type="text" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+            </label>
+            <div class="mt-2 flex justify-end gap-2">
+              <button type="button" class="app-btn app-btn-secondary app-btn-md" (click)="close()">Back</button>
+              <button type="submit" class="app-btn app-btn-primary app-btn-md" [disabled]="reasonForm.invalid || busy()">
+                {{ busy() ? 'Saving...' : 'Confirm' }}
+              </button>
+            </div>
+          </form>
+        }
+        @case ('delete') {
+          <h2 class="mb-2 text-base font-semibold">Delete {{ selected()?.name }} permanently</h2>
+          <p class="mb-3 text-sm text-red-700">
+            This removes every row and file of the shop and cannot be undone. Export it first if it may be needed.
+          </p>
+          @if (preview()) {
+            <ul class="mb-3 max-h-40 overflow-y-auto rounded-lg bg-gray-50 p-3 text-sm" data-testid="delete-counts">
+              @for (row of previewRows(); track row[0]) {
+                <li>{{ row[0] }}: {{ row[1] }}</li>
+              }
+            </ul>
+          }
+          <form [formGroup]="deleteForm" (ngSubmit)="confirmDelete()" class="flex flex-col gap-3">
+            <label class="text-sm">Type the shop address ({{ selected()?.slug }})
+              <input formControlName="slug" type="text" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+            </label>
+            <label class="text-sm">Your password
+              <input formControlName="password" type="password" autocomplete="current-password" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+            </label>
+            <div class="mt-2 flex justify-end gap-2">
+              <button type="button" class="app-btn app-btn-secondary app-btn-md" (click)="close()">Cancel</button>
+              <button type="submit" class="app-btn app-btn-danger app-btn-md" [disabled]="deleteForm.invalid || busy()">
+                {{ busy() ? 'Deleting...' : 'Delete permanently' }}
+              </button>
+            </div>
+          </form>
+        }
+        @case ('audit') {
+          <h2 class="mb-3 text-base font-semibold">{{ selected() ? 'Log of ' + selected()?.name : 'Platform log' }}</h2>
+          <ul class="flex max-h-96 flex-col gap-2 overflow-y-auto text-sm">
+            @for (entry of audit(); track entry.id) {
+              <li class="rounded-lg bg-gray-50 p-2">
+                <span class="font-medium">{{ entry.action }}</span>
+                <span class="text-gray-500"> by {{ entry.username ?? 'unknown' }}, {{ entry.timestamp | date: 'short' }}</span>
+                @if (entry.details) {
+                  <div class="wrap-break-word text-gray-700">{{ entry.details }}</div>
+                }
+              </li>
+            } @empty {
+              <li class="text-gray-500">Nothing yet.</li>
+            }
+          </ul>
+          <div class="mt-4 flex justify-end">
+            <button type="button" class="app-btn app-btn-secondary app-btn-md" (click)="close()">Close</button>
+          </div>
+        }
+      }
+    </div>
+  </div>
+}

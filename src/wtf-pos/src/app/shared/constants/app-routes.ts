@@ -1,5 +1,7 @@
 export const AppRoutes = {
   Login: '/login',
+  PlatformLogin: '/platform/login',
+  PlatformRoot: '/platform',
   Dashboard: '/dashboard',
   MyProfile: '/my-profile',
   OrdersRoot: '/orders',

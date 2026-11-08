@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using WTF.Domain.Entities;
 using WTF.Domain.Tenancy;
 using WTF.Tests.Infrastructure;
@@ -11,6 +10,9 @@ public class TenantClassificationTests
     private static readonly HashSet<Type> GlobalEntities =
     [
         typeof(PaymentMethod),
+        typeof(PlatformAdmin),
+        typeof(PlatformAuditLog),
+        typeof(TenantTombstone),
         typeof(SchemaScriptHistory),
         typeof(Status),
         typeof(Tenant),
@@ -49,7 +51,7 @@ public class TenantClassificationTests
     {
         using var db = TestDb.Create();
 
-        foreach (var type in GlobalEntities.Where(t => t != typeof(TenantCounter)))
+        foreach (var type in GlobalEntities.Where(t => t != typeof(TenantCounter) && t != typeof(TenantTombstone) && t != typeof(PlatformAuditLog)))
         {
             db.Model.FindEntityType(type)!.FindProperty("TenantId").ShouldBeNull(type.Name);
         }

@@ -176,6 +176,7 @@ export class AuthService {
   }
 
   public logout(): void {
+    localStorage.removeItem('impersonation');
     localStorage.removeItem('token');
     localStorage.removeItem('refreshToken');
     this._isLoggedIn.next(false);

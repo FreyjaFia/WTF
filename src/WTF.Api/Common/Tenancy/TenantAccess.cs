@@ -22,7 +22,8 @@ public static class TenantAccess
             .Select(t => (byte?)t.Status)
             .FirstOrDefaultAsync(cancellationToken);
 
-        return status is { } value && CanUse(value);
+        // A shop with no row (tests, single-shop installs before the tenants script) is not blocked; only a known bad status is.
+        return status is not { } value || CanUse(value);
     }
 
     public static async Task EnsureActiveAsync(WTFDbContext db, Guid tenantId, CancellationToken cancellationToken)
