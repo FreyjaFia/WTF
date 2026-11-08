@@ -1,8 +1,9 @@
 import { PurchasingApi, asRole } from '@api/purchasing';
 import { expect, test } from '@fixtures/index';
-import { ReorderPage } from '@pages/purchasing.page';
+import { OrdersPage, SuggestedOrdersPage } from '@pages/purchasing.page';
+import { ROUTES } from '@data/routes';
 
-test.describe('par levels and the reorder list @inventory @reorder', () => {
+test.describe('par levels and the suggested orders view @inventory @suggested-orders', () => {
   test('an item below par is suggested in whole packs of its preferred supplier', async ({ api, signIn }) => {
     const buy = new PurchasingApi(asRole(api.client));
     const supplier = await buy.createSupplier();
@@ -16,7 +17,7 @@ test.describe('par levels and the reorder list @inventory @reorder', () => {
     expect(found?.line).toMatchObject({ onHand: 10, parLevel: 48, onOrder: 0, suggestedUnits: 48, suggestedPacks: 4 });
 
     const page = await signIn('admin');
-    const reorder = new ReorderPage(page);
+    const reorder = new SuggestedOrdersPage(page);
     await reorder.open();
     const group = reorder.group(supplier.summary.name);
     await expect(group).toBeVisible();
@@ -47,7 +48,7 @@ test.describe('par levels and the reorder list @inventory @reorder', () => {
     expect(found?.line).toMatchObject({ suggestedUnits: 7, suggestedPacks: null });
 
     const page = await signIn('admin');
-    const reorder = new ReorderPage(page);
+    const reorder = new SuggestedOrdersPage(page);
     await reorder.open();
     await expect(reorder.group('No supplier set').getByTestId('reorder-line').filter({ hasText: item.name })).toBeVisible();
     await expect(reorder.group('No supplier set').getByTestId('create-order')).toHaveCount(0);
@@ -60,7 +61,7 @@ test.describe('par levels and the reorder list @inventory @reorder', () => {
     await buy.link(item.id, supplier.summary.id);
 
     const page = await signIn('admin');
-    const reorder = new ReorderPage(page);
+    const reorder = new SuggestedOrdersPage(page);
     await reorder.open();
     await reorder.parToggle.click();
     const input = reorder.parRow(item.name).locator('input');
@@ -103,8 +104,35 @@ test.describe('par levels and the reorder list @inventory @reorder', () => {
     expect((await api.client.call('cashier', 'GET', 'reorder')).status()).toBe(403);
 
     const page = await signIn('stockmgr');
-    const reorder = new ReorderPage(page);
+    const reorder = new SuggestedOrdersPage(page);
     await reorder.open();
     await expect(reorder.group(supplier.summary.name)).not.toContainText('about');
+  });
+
+  test('Purchasing opens the suggestions through its button, and the Reorder tab is gone', async ({ signIn }) => {
+    const page = await signIn('admin');
+    await page.setViewportSize({ width: 390, height: 844 });
+    const orders = new OrdersPage(page);
+    await orders.open();
+
+    const tabs = await page.locator('a[role="tab"][data-inventory-tab]').evaluateAll((els) => els.map((el) => el.getAttribute('data-inventory-tab')));
+    expect(tabs).toEqual(['items', 'ingredients', 'attention', 'purchase-orders', 'receiving', 'stock-in', 'waste', 'counts']);
+
+    await page.getByTestId('open-suggestions').click();
+    await expect(page).toHaveURL(/\/inventory\/purchase-orders\/suggestions$/);
+    const suggested = new SuggestedOrdersPage(page);
+    await expect(suggested.heading).toBeVisible();
+    await expect(page.locator('a[role="tab"][aria-selected="true"]')).toContainText('Purchasing');
+
+    await page.getByTestId('suggestions-back').click();
+    await expect(page).toHaveURL(/\/inventory\/purchase-orders$/);
+    await expect(orders.heading).toBeVisible();
+  });
+
+  test('the old Reorder address leads to the suggestions', async ({ signIn }) => {
+    const page = await signIn('admin');
+    await page.goto(ROUTES.reorderLegacy);
+    await expect(page).toHaveURL(/\/inventory\/purchase-orders\/suggestions$/);
+    await expect(new SuggestedOrdersPage(page).heading).toBeVisible();
   });
 });

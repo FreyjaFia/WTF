@@ -4,7 +4,7 @@ import { AlertService, AuthService, PurchaseOrderService, ReorderService } from 
 import { ParLevelRowDto, ReorderListDto } from '@shared/models';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
-import { ReorderComponent } from './reorder';
+import { SuggestedOrdersComponent } from './suggested-orders';
 
 const list: ReorderListDto = {
   belowParCount: 1,
@@ -44,7 +44,7 @@ interface Vm {
   createOrder: (group: ReorderListDto['groups'][number]) => void;
 }
 
-describe('ReorderComponent', () => {
+describe('SuggestedOrdersComponent', () => {
   function setup(options: { list?: ReorderListDto; canSeeCosts?: boolean } = {}) {
     const service = {
       getReorderList: vi.fn().mockReturnValue(of(options.list ?? list)),
@@ -62,7 +62,7 @@ describe('ReorderComponent', () => {
         { provide: AuthService, useValue: { canWriteStockMovements: () => true, canReadInventoryCosts: () => options.canSeeCosts ?? true } },
       ],
     });
-    const fixture = TestBed.createComponent(ReorderComponent);
+    const fixture = TestBed.createComponent(SuggestedOrdersComponent);
     fixture.detectChanges();
     return { fixture, service, orders, router, el: fixture.nativeElement as HTMLElement, vm: fixture.componentInstance as unknown as Vm };
   }
@@ -127,6 +127,15 @@ describe('ReorderComponent', () => {
     vm.createOrder(list.groups[0]);
 
     expect(orders.createFromReorder).toHaveBeenCalledWith('s1');
+    expect(router.navigateByUrl).toHaveBeenCalledWith('/inventory/purchase-orders');
+  });
+
+  it('has a back button to Purchasing and a Suggested orders heading', () => {
+    const { el, router } = setup();
+
+    expect(el.querySelector('h1')?.textContent).toContain('Suggested orders');
+    (el.querySelector('[data-testid="suggestions-back"]') as HTMLButtonElement).click();
+
     expect(router.navigateByUrl).toHaveBeenCalledWith('/inventory/purchase-orders');
   });
 

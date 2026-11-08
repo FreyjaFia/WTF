@@ -19,7 +19,7 @@ import { StockInComponent } from '@features/inventory/stock-in/stock-in';
 import { StockCountSheetComponent } from '@features/inventory/counts/stock-count-sheet';
 import { StockCountsComponent } from '@features/inventory/counts/stock-counts';
 import { PurchaseOrdersComponent } from '@features/inventory/purchase-orders/purchase-orders';
-import { ReorderComponent } from '@features/inventory/reorder/reorder';
+import { SuggestedOrdersComponent } from '@features/inventory/purchase-orders/suggested-orders/suggested-orders';
 import { ReceivingComponent } from '@features/inventory/receiving/receiving';
 import { SupplierDetailsComponent } from '@features/inventory/suppliers/supplier-details';
 import { SuppliersComponent } from '@features/inventory/suppliers/suppliers';
@@ -217,7 +217,12 @@ export const routes: Routes = [
           },
           {
             path: 'reorder',
-            component: ReorderComponent,
+            redirectTo: 'purchase-orders/suggestions',
+            pathMatch: 'full',
+          },
+          {
+            path: 'purchase-orders/suggestions',
+            component: SuggestedOrdersComponent,
             canActivate: [roleGuard],
             data: { roles: AppRoleGroups.StockMovementsRead },
           },

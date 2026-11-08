@@ -86,21 +86,21 @@ export class SupplierDetailsPage {
   }
 }
 
-export class ReorderPage {
+export class SuggestedOrdersPage {
   public readonly heading: Locator;
   public readonly empty: Locator;
   public readonly parToggle: Locator;
   public readonly parPanel: Locator;
 
   public constructor(private readonly page: Page) {
-    this.heading = page.getByRole('heading', { name: 'Reorder', exact: true });
+    this.heading = page.getByRole('heading', { name: 'Suggested orders', exact: true });
     this.empty = page.getByTestId('reorder-empty');
     this.parToggle = page.getByTestId('toggle-par');
     this.parPanel = page.getByTestId('par-panel');
   }
 
   public async open(): Promise<void> {
-    await go(this.page, ROUTES.reorder);
+    await go(this.page, ROUTES.suggestedOrders);
     await this.heading.waitFor();
   }
 

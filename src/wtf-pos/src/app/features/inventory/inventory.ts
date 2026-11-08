@@ -63,6 +63,20 @@ export class InventoryComponent {
       urgent: () => this.attention.urgentCount() > 0,
     },
     {
+      label: 'Purchasing',
+      route: 'purchase-orders',
+      path: AppRoutes.InventoryPurchaseOrders,
+      ariaLabel: 'Purchase orders',
+      canShow: () => this.canReadStockMovements(),
+    },
+    {
+      label: 'Receiving',
+      route: 'receiving',
+      path: AppRoutes.InventoryReceiving,
+      ariaLabel: 'Receiving',
+      canShow: () => this.canReadStockMovements(),
+    },
+    {
       label: 'Stock In',
       route: 'stock-in',
       path: AppRoutes.InventoryStockIn,
@@ -83,27 +97,6 @@ export class InventoryComponent {
       route: 'counts',
       path: AppRoutes.InventoryCounts,
       ariaLabel: 'Stock counts',
-      canShow: () => this.canReadStockMovements(),
-    },
-    {
-      label: 'Reorder',
-      route: 'reorder',
-      path: AppRoutes.InventoryReorder,
-      ariaLabel: 'Reorder list',
-      canShow: () => this.canReadStockMovements(),
-    },
-    {
-      label: 'Purchasing',
-      route: 'purchase-orders',
-      path: AppRoutes.InventoryPurchaseOrders,
-      ariaLabel: 'Purchase orders',
-      canShow: () => this.canReadStockMovements(),
-    },
-    {
-      label: 'Receiving',
-      route: 'receiving',
-      path: AppRoutes.InventoryReceiving,
-      ariaLabel: 'Receiving',
       canShow: () => this.canReadStockMovements(),
     },
   ];

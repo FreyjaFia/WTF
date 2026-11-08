@@ -23,7 +23,7 @@ tests/
     items/         items-and-stock-in, lifecycle (delete, restore, stock rules on items), item-editor
     stock/         rules (deduction, void, override), sales-and-refunds, screens, alerts-and-bell
     waste/         recording, review, reasons, pos-sheet, edge-cases
-    purchasing/    suppliers, receiving, reorder, purchase-orders, layout (Inventory Phase 8)
+    purchasing/    suppliers, receiving, suggested-orders, purchase-orders, layout (Inventory Phase 8)
   tenancy/         data-isolation, purchasing-isolation, suspend-resume, lapsed-subscription, customer-link-unavailable, platform-login, platform-shops, platform-billing-brand-log
   management/      products, customers, users, screens
   reports/         all-reports, waste-report-and-daily-close

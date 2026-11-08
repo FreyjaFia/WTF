@@ -33,6 +33,8 @@ describe('InventoryComponent', () => {
               { path: 'stock-in', component: StockStub },
               { path: 'attention', component: StockStub },
               { path: 'waste', component: StockStub },
+              { path: 'purchase-orders', component: StockStub },
+              { path: 'purchase-orders/suggestions', component: StockStub },
               { path: 'ingredients', component: StockStub },
             ],
           },
@@ -64,6 +66,11 @@ describe('InventoryComponent', () => {
   const tabs = (el: HTMLElement): HTMLAnchorElement[] =>
     Array.from(el.querySelectorAll<HTMLAnchorElement>('a[role="tab"]'));
 
+  const selectedTabs = (el: HTMLElement): (string | null)[] =>
+    tabs(el)
+      .filter((t) => t.getAttribute('aria-selected') === 'true')
+      .map((t) => t.getAttribute('data-inventory-tab'));
+
   beforeEach(() => {
     perms = { items: true, stock: true };
     unread = signal(0);
@@ -82,30 +89,33 @@ describe('InventoryComponent', () => {
       'items',
       'ingredients',
       'attention',
+      'purchase-orders',
+      'receiving',
       'stock-in',
       'waste',
       'counts',
-      'reorder',
-      'purchase-orders',
-      'receiving',
     ]);
     expect(rendered.map((t) => t.getAttribute('href'))).toEqual([
       '/inventory/items',
       '/inventory/ingredients',
       '/inventory/attention',
+      '/inventory/purchase-orders',
+      '/inventory/receiving',
       '/inventory/stock-in',
       '/inventory/waste',
       '/inventory/counts',
-      '/inventory/reorder',
-      '/inventory/purchase-orders',
-      '/inventory/receiving',
     ]);
+  });
+
+  it('keeps the Purchasing tab active on the suggested orders view', async () => {
+    const { el } = await setup('/inventory/purchase-orders/suggestions');
+    expect(selectedTabs(el)).toEqual(['purchase-orders']);
   });
 
   it('hides tabs the user cannot read', async () => {
     perms = { items: false, stock: true };
     const { el } = await setup('/inventory/stock-in');
-    expect(tabs(el).map((t) => t.getAttribute('data-inventory-tab'))).toEqual(['attention', 'stock-in', 'waste', 'counts', 'reorder', 'purchase-orders', 'receiving']);
+    expect(tabs(el).map((t) => t.getAttribute('data-inventory-tab'))).toEqual(['attention', 'purchase-orders', 'receiving', 'stock-in', 'waste', 'counts']);
   });
 
   it('shows the ingredients tab only to roles that can read items', async () => {
@@ -145,7 +155,7 @@ describe('InventoryComponent', () => {
 
   it('marks only the active route as selected', async () => {
     const { el } = await setup('/inventory/items');
-    expect(tabs(el).map((t) => t.getAttribute('aria-selected'))).toEqual(['true', 'false', 'false', 'false', 'false', 'false', 'false', 'false', 'false']);
+    expect(selectedTabs(el)).toEqual(['items']);
   });
 
   it('updates the selected tab after navigation and shows the routed page', async () => {
@@ -153,14 +163,14 @@ describe('InventoryComponent', () => {
     expect(el.textContent).toContain('items page');
     await harness.navigateByUrl('/inventory/stock-in');
     harness.detectChanges();
-    expect(tabs(el).map((t) => t.getAttribute('aria-selected'))).toEqual(['false', 'false', 'false', 'true', 'false', 'false', 'false', 'false', 'false']);
+    expect(selectedTabs(el)).toEqual(['stock-in']);
     expect(el.textContent).toContain('stock page');
   });
 
   it('scrolls the active tab into view after routing', async () => {
     const { el } = await setup('/inventory/stock-in');
     const scroll = vi.fn();
-    tabs(el)[3].scrollIntoView = scroll;
+    tabs(el).find((t) => t.getAttribute('data-inventory-tab') === 'stock-in')!.scrollIntoView = scroll;
     vi.runAllTimers();
     expect(scroll).toHaveBeenCalledWith({ behavior: 'smooth', block: 'nearest', inline: 'center' });
   });

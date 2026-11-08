@@ -11,17 +11,16 @@ test.describe('sidebar navigation @layout @navigation', () => {
     const labels = await page.locator('app-sidebar nav a[title]').evaluateAll((links) =>
       links.map((link) => link.getAttribute('title')),
     );
-    const inventory = labels.slice(labels.indexOf('Items'), labels.indexOf('Receiving') + 1);
+    const inventory = labels.slice(labels.indexOf('Items'), labels.indexOf('Stock Counts') + 1);
     expect(inventory).toEqual([
       'Items',
       'Ingredients & Cost',
       'Needs Attention',
+      'Purchasing',
+      'Receiving',
       'Stock In',
       'Waste',
       'Stock Counts',
-      'Reorder',
-      'Purchasing',
-      'Receiving',
     ]);
     await expect(sidebarLink(page, 'Suppliers')).toHaveCount(0);
   });
@@ -34,7 +33,7 @@ test.describe('sidebar navigation @layout @navigation', () => {
     const scrolls = await nav.evaluate((el) => el.scrollHeight > el.clientHeight);
     expect(scrolls).toBe(true);
 
-    const last = sidebarLink(page, 'Schema Scripts');
+    const last = page.locator('app-sidebar nav a[title]').last();
     await last.scrollIntoViewIfNeeded();
     await expect(last).toBeInViewport();
 

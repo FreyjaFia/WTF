@@ -1,5 +1,6 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { Capacitor } from '@capacitor/core';
+import { Router } from '@angular/router';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormArray, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorMessages } from '@core/messages';
@@ -22,6 +23,7 @@ import {
 import { BadgeComponent } from '@shared/components/badge/badge';
 import { FilterButtonComponent } from '@shared/components/filter-button/filter-button';
 import { SelectDropdownComponent } from '@shared/components/select-dropdown/select-dropdown';
+import { AppRoutes } from '@shared/constants/app-routes';
 import { packUnitCost, receiptLineTotal, unitsFromPacks } from '@shared/calculations';
 import {
   ItemDto,
@@ -100,6 +102,7 @@ export class PurchaseOrdersComponent implements OnInit {
   private readonly suppliersApi = inject(SupplierService);
   private readonly inventory = inject(InventoryService);
   private readonly alertService = inject(AlertService);
+  private readonly router = inject(Router);
   protected readonly auth = inject(AuthService);
 
   protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
@@ -164,6 +167,10 @@ export class PurchaseOrdersComponent implements OnInit {
   public ngOnInit(): void {
     this.load();
     this.lines.valueChanges.subscribe(() => this.formTick.update((tick) => tick + 1));
+  }
+
+  protected openSuggestedOrders(): void {
+    this.router.navigateByUrl(AppRoutes.InventorySuggestedOrders);
   }
 
   protected canSeeCosts(): boolean {

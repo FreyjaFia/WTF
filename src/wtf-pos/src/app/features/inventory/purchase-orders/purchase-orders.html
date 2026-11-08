@@ -5,12 +5,15 @@
         <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Purchase Orders</h1>
         <p class="text-xs text-gray-500 sm:text-sm">What you have asked suppliers for; sent orders count as on order</p>
       </div>
-      @if (auth.canWriteStockMovements() && !isFormOpen()) {
-        <button type="button" class="app-btn app-btn-primary app-btn-sm shrink-0" data-testid="open-order" (click)="openForm()">
-          <app-icon name="icon-plus" [class]="'h-4 w-4'" />
-          New Order
-        </button>
-      }
+      <div class="flex shrink-0 items-center gap-2">
+        <button type="button" class="app-btn app-btn-secondary app-btn-sm" data-testid="open-suggestions" (click)="openSuggestedOrders()">Suggested orders</button>
+        @if (auth.canWriteStockMovements() && !isFormOpen()) {
+          <button type="button" class="app-btn app-btn-primary app-btn-sm" data-testid="open-order" (click)="openForm()">
+            <app-icon name="icon-plus" [class]="'h-4 w-4'" />
+            New Order
+          </button>
+        }
+      </div>
     </div>
     <div class="flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center md:gap-3">
       <div

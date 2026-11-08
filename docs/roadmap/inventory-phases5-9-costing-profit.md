@@ -349,7 +349,7 @@ counting, and show the difference as **variance**, so you can tell a wrong recip
   the last 28 days over the days, and days of cover is on hand over that pace.
 - **API.** `GET /api/reorder` (groups by preferred supplier, "No supplier set" last, with the estimated cost for cost
   roles only), `GET /api/reorder/par-levels`, `PUT /api/reorder/par-levels/{itemId}` (audited as `ItemParLevelChanged`).
-- **POS.** Inventory > Reorder: the list per supplier with a Copy order button (plain text for a message to the
+- **POS.** Inventory > Purchasing > Suggested orders (the old Reorder address redirects there): the list per supplier with a Copy order button (plain text for a message to the
   supplier), and a Par levels panel to set them. Not built: the "reorder list ready" notification.
 
 **Slice 4 built (script `tools/sql/20261117_add_purchase_orders.sql`, then dbsync).**
@@ -365,11 +365,11 @@ counting, and show the difference as **variance**, so you can tell a wrong recip
   list for one supplier; update a draft; send, cancel, close). Reading needs the stock read policy, writing the stock write
   policy; prices are hidden from roles that cannot read costs. A receipt can carry a `PurchaseOrderId`: the order must be
   open, from the same supplier, and the receipt may only list items on it.
-- **POS.** Inventory > Orders (list with search, status filter and badges, create and edit a draft, confirm before send,
-  cancel and close), a Create order button on each supplier group of the Reorder list, and in Receiving an "Against purchase
+- **POS.** Inventory > Purchasing (list with search, status filter and badges, create and edit a draft, confirm before send,
+  cancel and close), a Suggested orders button that opens the below-par view, a Create order button on each of its supplier groups, and in Receiving an "Against purchase
   order" choice that fills the lines with what is still to arrive. Checked in a browser on a throwaway database (Reorder to
   draft to sent to partly received, with the totals matching a hand count).
-- **Browser tests.** `src/wtf-e2e/tests/inventory/purchasing/` (suppliers, receiving, reorder, purchase-orders, layout) and
+- **Browser tests.** `src/wtf-e2e/tests/inventory/purchasing/` (suppliers, receiving, suggested-orders, purchase-orders, layout) and
   `tests/tenancy/purchasing-isolation.spec.ts` (two shops: lists, access by id, mixing records, numbering, stock). Run with
   `npm run test:purchasing` against a stack that is up. The layout test found long unbroken names stretching the page; the
   screens now use `wrap-anywhere`.

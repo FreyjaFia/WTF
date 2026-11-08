@@ -10,12 +10,12 @@ import { AppRoutes } from '@shared/constants/app-routes';
 import { ParLevelRowDto, ReorderGroupDto, ReorderListDto } from '@shared/models';
 
 @Component({
-  selector: 'app-reorder',
+  selector: 'app-suggested-orders',
   imports: [ConnectionErrorComponent, DecimalPipe, IconComponent, PullToRefreshComponent],
-  templateUrl: './reorder.html',
+  templateUrl: './suggested-orders.html',
   host: { class: 'flex-1 min-h-0' },
 })
-export class ReorderComponent implements OnInit {
+export class SuggestedOrdersComponent implements OnInit {
   private readonly reorderApi = inject(ReorderService);
   private readonly ordersApi = inject(PurchaseOrderService);
   private readonly router = inject(Router);
@@ -34,6 +34,10 @@ export class ReorderComponent implements OnInit {
 
   public ngOnInit(): void {
     this.load();
+  }
+
+  protected backToPurchasing(): void {
+    this.router.navigateByUrl(AppRoutes.InventoryPurchaseOrders);
   }
 
   protected canSeeCosts(): boolean {

@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
 import {
   AlertService,
   AuthService,
@@ -93,7 +94,9 @@ describe('PurchaseOrdersComponent', () => {
     });
     const fixture = TestBed.createComponent(PurchaseOrdersComponent);
     fixture.detectChanges();
-    return { fixture, api, el: fixture.nativeElement as HTMLElement, vm: fixture.componentInstance as unknown as Vm };
+    const router = TestBed.inject(Router);
+    const navigate = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
+    return { fixture, api, navigate, el: fixture.nativeElement as HTMLElement, vm: fixture.componentInstance as unknown as Vm };
   }
 
   it('lists orders with number, supplier, status and total', () => {
@@ -104,6 +107,14 @@ describe('PurchaseOrdersComponent', () => {
     expect(text).toContain('Metro Dairy');
     expect(text).toContain('Draft');
     expect(text).toContain('1,680.00');
+  });
+
+  it('opens the suggested orders view from its button', () => {
+    const { el, navigate } = setup();
+
+    (el.querySelector('[data-testid="open-suggestions"]') as HTMLButtonElement).click();
+
+    expect(navigate).toHaveBeenCalledWith('/inventory/purchase-orders/suggestions');
   });
 
   it('hides the new order button without write access', () => {

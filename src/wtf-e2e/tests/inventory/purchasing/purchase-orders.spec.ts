@@ -1,6 +1,6 @@
 import { PO_STATUS, PurchasingApi, asRole } from '@api/purchasing';
 import { expect, test } from '@fixtures/index';
-import { OrdersPage, ReceivingPage, ReorderPage, chooseOption } from '@pages/purchasing.page';
+import { OrdersPage, ReceivingPage, SuggestedOrdersPage, chooseOption } from '@pages/purchasing.page';
 
 test.describe('purchase orders @inventory @purchase-orders', () => {
   test('an order drafted from the reorder list is sent, partly received on the Receiving page, then closed', async ({ api, signIn }) => {
@@ -14,7 +14,7 @@ test.describe('purchase orders @inventory @purchase-orders', () => {
     await buy.setPar(syrup.id, 12);
 
     const page = await signIn('admin');
-    const reorder = new ReorderPage(page);
+    const reorder = new SuggestedOrdersPage(page);
     await reorder.open();
     await reorder.group(supplier.summary.name).getByTestId('create-order').click();
 
