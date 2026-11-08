@@ -387,28 +387,69 @@ public class SubscriptionDatabaseTests
 
         await using (var db = database.CreateContext(new FixedTenant(a.Tenant.Id)))
         {
-            var brand = BrandDefaults.For("Alpha Coffee") with { Phone = "0917", PrimaryColor = "#1A3C5E", CurrencySymbol = "$", CurrencyCode = "USD", TimeZone = "UTC" };
-            await new UpdateBrandHandler(db, new FixedTenant(a.Tenant.Id), audit).Handle(new UpdateBrandCommand(brand), CancellationToken.None);
+            var brand = BrandDefaults.For("Alpha Coffee") with { Phone = "0917", PrimaryColor = "#1A3C5E" };
+            await new UpdateBrandHandler(db, new FixedTenant(a.Tenant.Id), audit, Substitute.For<Microsoft.AspNetCore.Http.IHttpContextAccessor>()).Handle(new UpdateBrandCommand(brand), CancellationToken.None);
         }
 
         await using (var db = database.CreateContext(new FixedTenant(a.Tenant.Id)))
         {
-            var loaded = await new GetBrandHandler(db, new FixedTenant(a.Tenant.Id)).Handle(new GetBrandQuery(), CancellationToken.None);
+            var loaded = await new GetBrandHandler(db, new FixedTenant(a.Tenant.Id), Substitute.For<Microsoft.AspNetCore.Http.IHttpContextAccessor>()).Handle(new GetBrandQuery(), CancellationToken.None);
             loaded.ShopName.ShouldBe("Alpha Coffee");
             loaded.PrimaryColor.ShouldBe("#1a3c5e");
-            loaded.CurrencyCode.ShouldBe("USD");
         }
 
         await using (var db = database.CreateContext(new FixedTenant(b.Tenant.Id)))
         {
-            var loaded = await new GetBrandHandler(db, new FixedTenant(b.Tenant.Id)).Handle(new GetBrandQuery(), CancellationToken.None);
+            var loaded = await new GetBrandHandler(db, new FixedTenant(b.Tenant.Id), Substitute.For<Microsoft.AspNetCore.Http.IHttpContextAccessor>()).Handle(new GetBrandQuery(), CancellationToken.None);
             loaded.ShopName.ShouldBe("Shop beta");
-            loaded.CurrencyCode.ShouldBe("PHP");
         }
 
         await audit.Received(1).LogAsync(
             Arg.Any<WTF.Api.Features.Audit.Enums.AuditAction>(), Arg.Any<WTF.Api.Features.Audit.Enums.AuditEntityType>(), Arg.Any<string>(),
             Arg.Any<object?>(), Arg.Any<object?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
+    }
+
+    [SqlFact]
+    public async Task BrandLogo_IsUploadedReplacedAndRemoved_ForOneShopOnly()
+    {
+        await using var database = await SqlTestDatabase.CreateAsync();
+        await SeedPlansAsync(database);
+        var a = await CreateShopAsync(database, "logoa");
+        var b = await CreateShopAsync(database, "logob");
+        var audit = TestFakes.Audit();
+        var storage = Substitute.For<WTF.Api.Services.IImageStorage>();
+        var urls = new Queue<string>(["/images/brand/one.png", "/images/brand/two.png"]);
+        storage.SaveAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<byte[]>(), Arg.Any<CancellationToken>()).Returns(_ => urls.Dequeue());
+        var http = Substitute.For<Microsoft.AspNetCore.Http.IHttpContextAccessor>();
+        http.HttpContext.Returns((Microsoft.AspNetCore.Http.HttpContext?)null);
+
+        await using (var db = database.CreateContext(new FixedTenant(a.Tenant.Id)))
+        {
+            var handler = new UploadBrandLogoHandler(db, new FixedTenant(a.Tenant.Id), storage, audit, http);
+            var first = await handler.Handle(new UploadBrandLogoCommand(TestImages.Png()), CancellationToken.None);
+            first.LogoUrl.ShouldBe("/images/brand/one.png");
+            var second = await handler.Handle(new UploadBrandLogoCommand(TestImages.Png()), CancellationToken.None);
+            second.LogoUrl.ShouldBe("/images/brand/two.png");
+            await storage.Received(1).DeleteAsync("/images/brand/one.png", Arg.Any<CancellationToken>());
+        }
+
+        await using (var db = database.CreateContext(new FixedTenant(b.Tenant.Id)))
+        {
+            var other = await new GetBrandHandler(db, new FixedTenant(b.Tenant.Id), http).Handle(new GetBrandQuery(), CancellationToken.None);
+            other.LogoUrl.ShouldBeNull();
+        }
+
+        await using (var db = database.CreateContext(new FixedTenant(a.Tenant.Id)))
+        {
+            var saved = await new UpdateBrandHandler(db, new FixedTenant(a.Tenant.Id), audit, http)
+                .Handle(new UpdateBrandCommand(BrandDefaults.For("Logo A") with { LogoUrl = "https://evil.example/x.png" }), CancellationToken.None);
+            saved.LogoUrl.ShouldBe("/images/brand/two.png");
+
+            var removed = await new RemoveBrandLogoHandler(db, new FixedTenant(a.Tenant.Id), storage, audit, http)
+                .Handle(new RemoveBrandLogoCommand(), CancellationToken.None);
+            removed.LogoUrl.ShouldBeNull();
+            await storage.Received(1).DeleteAsync("/images/brand/two.png", Arg.Any<CancellationToken>());
+        }
     }
 
     [SqlFact]

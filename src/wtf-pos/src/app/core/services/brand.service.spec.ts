@@ -12,8 +12,6 @@ describe('BrandService', () => {
     address: null,
     phone: null,
     primaryColor: '#112233',
-    currencySymbol: '₱',
-    currencyDecimals: 2,
   };
 
   it('uses WTF until a brand is loaded', () => {

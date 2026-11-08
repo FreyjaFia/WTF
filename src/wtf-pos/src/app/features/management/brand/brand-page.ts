@@ -21,7 +21,6 @@ export class BrandPageComponent implements OnInit {
     shopName: ['', [Validators.required, Validators.maxLength(100)]],
     shortName: [''],
     tagline: [''],
-    logoUrl: [''],
     address: [''],
     phone: [''],
     email: [''],
@@ -29,11 +28,10 @@ export class BrandPageComponent implements OnInit {
     receiptFooter: [''],
     registrationText: [''],
     primaryColor: ['#6f4e37', [Validators.required, Validators.pattern(/^#[0-9a-fA-F]{6}$/)]],
-    timeZone: ['Asia/Manila'],
-    currencySymbol: ['₱'],
-    currencyCode: ['PHP'],
-    currencyDecimals: [2],
   });
+
+  protected readonly logoUrl = signal<string | null>(null);
+  protected readonly isUploading = signal(false);
 
   private current: BrandDto | null = null;
 
@@ -41,6 +39,7 @@ export class BrandPageComponent implements OnInit {
     this.brandService.getForEdit().subscribe({
       next: (brand) => {
         this.current = brand;
+        this.logoUrl.set(brand.logoUrl);
         this.form.patchValue(this.toForm(brand));
         this.isLoading.set(false);
       },
@@ -48,6 +47,39 @@ export class BrandPageComponent implements OnInit {
         this.alertService.error('The shop details could not be loaded.');
         this.isLoading.set(false);
       },
+    });
+  }
+
+  protected chooseLogo(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+
+    if (!file || this.isUploading()) {
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      this.alertService.error('Pick a picture under 5 MB.');
+      return;
+    }
+
+    this.isUploading.set(true);
+    this.brandService.uploadLogo(file).subscribe({
+      next: (saved) => this.logoDone(saved, 'Logo saved.'),
+      error: (err: unknown) => this.logoFailed(err),
+    });
+  }
+
+  protected removeLogo(): void {
+    if (this.isUploading()) {
+      return;
+    }
+
+    this.isUploading.set(true);
+    this.brandService.removeLogo().subscribe({
+      next: (saved) => this.logoDone(saved, 'Logo removed.'),
+      error: (err: unknown) => this.logoFailed(err),
     });
   }
 
@@ -63,7 +95,6 @@ export class BrandPageComponent implements OnInit {
       ...value,
       shortName: value.shortName || null,
       tagline: value.tagline || null,
-      logoUrl: value.logoUrl || null,
       address: value.address || null,
       phone: value.phone || null,
       email: value.email || null,
@@ -93,7 +124,6 @@ export class BrandPageComponent implements OnInit {
       shopName: brand.shopName,
       shortName: brand.shortName ?? '',
       tagline: brand.tagline ?? '',
-      logoUrl: brand.logoUrl ?? '',
       address: brand.address ?? '',
       phone: brand.phone ?? '',
       email: brand.email ?? '',
@@ -101,10 +131,19 @@ export class BrandPageComponent implements OnInit {
       receiptFooter: brand.receiptFooter ?? '',
       registrationText: brand.registrationText ?? '',
       primaryColor: brand.primaryColor,
-      timeZone: brand.timeZone,
-      currencySymbol: brand.currencySymbol,
-      currencyCode: brand.currencyCode,
-      currencyDecimals: brand.currencyDecimals,
     };
+  }
+
+  private logoDone(saved: BrandDto, message: string): void {
+    this.current = { ...(this.current ?? saved), logoUrl: saved.logoUrl };
+    this.logoUrl.set(saved.logoUrl);
+    this.isUploading.set(false);
+    this.alertService.success(message);
+  }
+
+  private logoFailed(err: unknown): void {
+    this.isUploading.set(false);
+    const message = typeof err === 'object' && err !== null ? (err as { error?: { message?: string } }).error?.message : null;
+    this.alertService.error(message ?? 'The logo could not be saved.');
   }
 }

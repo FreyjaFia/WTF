@@ -129,6 +129,8 @@ public class RouteTableTests : IDisposable
         "GET /api/subscription/invoices => SubscriptionBilling",
         "GET /api/settings/brand/ => authenticated",
         "PUT /api/settings/brand/ => BrandManage",
+        "POST /api/settings/brand/logo => BrandManage",
+        "DELETE /api/settings/brand/logo => BrandManage",
         "GET /api/public/order-links/{token}/brand => anonymous",
         "GET /api/platform/tenants => PlatformAdmin",
         "POST /api/platform/tenants => PlatformAdmin",
