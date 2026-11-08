@@ -13,6 +13,7 @@ update its file and the status in the table below.
 | Audit Log | Completed | [audit-log](roadmap/audit-log.md) |
 | Sales Reporting (phases 1-4) | Implemented, checked | [sales-reporting](roadmap/sales-reporting.md) |
 | Multiple Branches, Branding, Multi-tenant | Planned, design decided | [multiple-branches-and-tenants](roadmap/multiple-branches-and-tenants.md) |
+| Role-Based Access Control | Planned (plan written, nothing built) | [role-based-access](roadmap/role-based-access.md) |
 | Senior Citizen / PWD discount | Planned, confirm the rules first | [senior-pwd-discount](roadmap/senior-pwd-discount.md) |
 | Cashless Payments | Planned, needs research | [cashless-payments](roadmap/cashless-payments.md) |
 | Receipt and Kitchen Printing | Planned | [receipt-and-kitchen-printing](roadmap/receipt-and-kitchen-printing.md) |
@@ -29,6 +30,6 @@ update its file and the status in the table below.
 | Chat Images and Message Expiry | Completed | [chat-images-and-expiry](roadmap/chat-images-and-expiry.md) |
 
 Keywords to find the right file: stock, waste, costing, recipes, counts, variance, profit, expenses, notifications, bell,
-branches -> inventory or multiple-branches-and-tenants; promotions, coupons, bundles -> promotions; offline sync, review
+roles, permissions -> role-based-access; branches -> inventory or multiple-branches-and-tenants; promotions, coupons, bundles -> promotions; offline sync, review
 -> offline; reports, dashboard -> sales-reporting; customer link, chat -> customer-ordering-links, chat-images-and-expiry;
 add-on types, categories -> dynamic-catalog; browser or unit tests -> automated-testing.
