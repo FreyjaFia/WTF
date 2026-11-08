@@ -1,5 +1,5 @@
-<div class="app-shell flex h-full flex-col bg-surface md:flex-row">
-  <aside class="app-sidebar hidden h-full w-60 flex-none flex-col border-r border-gray-200 bg-surface md:flex" aria-label="Platform navigation">
+<div class="app-shell flex h-full flex-col bg-surface sm:flex-row">
+  <aside class="app-sidebar hidden h-full w-60 flex-none flex-col border-r border-gray-200 bg-surface sm:flex" aria-label="Platform navigation">
     <div class="border-b border-gray-200 px-3 py-4">
       <div class="flex min-w-0 items-center gap-2 text-2xl font-bold tracking-widest">
         <span class="text-neutral">WTF</span>
@@ -33,28 +33,28 @@
     </div>
   </aside>
 
-  <header class="shrink-0 border-b border-gray-200 bg-surface md:hidden">
-    <div class="flex items-center gap-3 px-4 py-3">
-      <div class="flex min-w-0 items-center gap-2 text-xl font-bold tracking-widest">
-        <span class="text-neutral">WTF</span>
-        <span class="text-xs font-normal tracking-wider text-gray-500 uppercase">Platform</span>
+  <div class="flex min-h-0 min-w-0 flex-1 flex-col">
+    <header class="shrink-0 border-b border-gray-200 bg-surface sm:hidden">
+      <div class="flex items-center gap-3 px-4 py-3">
+        <div class="flex min-w-0 items-center gap-2 text-xl font-bold tracking-widest">
+          <span class="text-neutral">WTF</span>
+          <span class="text-xs font-normal tracking-wider text-gray-500 uppercase">Platform</span>
+        </div>
+        <button type="button" class="app-btn app-btn-ghost app-btn-sm ml-auto" (click)="signOut()">Sign out</button>
       </div>
-      <button type="button" class="app-btn app-btn-ghost app-btn-sm ml-auto" (click)="signOut()">Sign out</button>
-    </div>
-    <nav class="flex gap-1 overflow-x-auto overflow-y-hidden px-3 pb-2" aria-label="Platform navigation">
+    </header>
+
+    <main class="min-h-0 flex-1 overflow-y-auto">
+      <router-outlet />
+    </main>
+
+    <nav class="dock dock-md relative z-0 shrink-0 justify-between border-t border-gray-100 pb-[env(safe-area-inset-bottom)] sm:hidden" aria-label="Platform navigation">
       @for (item of nav; track item.link) {
-        <a
-          [routerLink]="item.link"
-          routerLinkActive="bg-gray-100 text-gray-900"
-          class="shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600"
-        >
-          {{ item.label }}
+        <a [routerLink]="item.link" routerLinkActive="dock-active">
+          <app-icon [name]="item.icon" [class]="'size-[1.2em]'" [fill]="'currentColor'" />
+          <span class="dock-label">{{ item.label }}</span>
         </a>
       }
     </nav>
-  </header>
-
-  <main class="min-h-0 flex-1 overflow-y-auto">
-    <router-outlet />
-  </main>
+  </div>
 </div>
