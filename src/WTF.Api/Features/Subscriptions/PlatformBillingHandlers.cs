@@ -274,6 +274,15 @@ public class MarkInvoicePaidHandler(WTFDbContext db, IPlatformAuditService audit
             throw new InvalidOperationException($"This invoice is already {SubscriptionNames.InvoiceStatus(invoice.Status).ToLowerInvariant()}.");
         }
 
+        // The first request to flip the invoice holds the row until it commits, so a second one at the same moment finds it no longer open.
+        var claimed = await db.TenantInvoices
+            .Where(i => i.Id == invoice.Id && i.Status == SubscriptionNames.InvoiceOpen)
+            .ExecuteUpdateAsync(s => s.SetProperty(i => i.Status, SubscriptionNames.InvoicePaid), cancellationToken);
+        if (claimed == 0)
+        {
+            throw new InvalidOperationException("This invoice is already paid.");
+        }
+
         var sub = await db.TenantSubscriptions.FirstOrDefaultAsync(s => s.TenantId == invoice.TenantId, cancellationToken)
             ?? throw new KeyNotFoundException("This shop has no subscription yet.");
 
