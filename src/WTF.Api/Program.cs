@@ -332,6 +332,17 @@ app.Use(async (context, next) =>
     {
         await next();
     }
+    catch (ShopUnavailableException ex)
+    {
+        if (context.Response.HasStarted)
+        {
+            throw;
+        }
+
+        context.Response.Clear();
+        context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+        await context.Response.WriteAsJsonAsync(new { message = ShopUnavailableException.Message, shopName = ex.ShopName, phone = ex.Phone });
+    }
     catch (KeyNotFoundException ex)
     {
         if (context.Response.HasStarted)

@@ -18,7 +18,11 @@ import { BrandService } from '@core/services/brand.service';
 import { AlertService } from '@core/services/alert.service';
 import { ConnectivityService } from '@core/services/connectivity.service';
 import { PublicOrderHubService } from '@core/services/public-order-hub.service';
-import { PublicLinkInvalidError, PublicOrderService } from '@core/services/public-order.service';
+import {
+  PublicLinkInvalidError,
+  PublicOrderService,
+  PublicShopUnavailableError,
+} from '@core/services/public-order.service';
 import { EnvelopeComponent } from '@shared/components/envelope/envelope';
 import { AvatarComponent } from '@shared/components/avatar/avatar';
 import { CartDrawerComponent } from '@shared/components/cart-drawer/cart-drawer';
@@ -44,6 +48,7 @@ import {
   SubmitPublicOrderRequest,
 } from '@shared/models';
 import { LinkInvalidComponent } from './link-invalid/link-invalid';
+import { ShopUnavailableComponent } from './shop-unavailable/shop-unavailable';
 import { PublicCheckoutComponent, PublicCheckoutForm } from './public-checkout/public-checkout';
 import {
   MAX_ITEM_QUANTITY,
@@ -69,7 +74,7 @@ import {
   toCents,
 } from '@shared/calculations';
 
-type LoadState = 'loading' | 'ready' | 'invalid' | 'error';
+type LoadState = 'loading' | 'ready' | 'invalid' | 'unavailable' | 'error';
 type Tab = 'menu' | 'orders';
 
 interface PublicLineDiscount {
@@ -122,6 +127,7 @@ export const PROGRAMMATIC_SCROLL_MS = 700;
     IconComponent,
     LineBreakdownComponent,
     LinkInvalidComponent,
+    ShopUnavailableComponent,
     NgTemplateOutlet,
     PublicAddonPickerComponent,
     PublicCheckoutComponent,
@@ -154,6 +160,7 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
   private readonly onVisibility = () => this.handleVisibility();
 
   protected readonly state = signal<LoadState>('loading');
+  protected readonly unavailableShop = signal<{ name: string; phone: string | null } | null>(null);
   protected readonly errorMessage = signal('');
   protected readonly link = signal<PublicOrderLinkDto | null>(null);
   protected readonly tab = signal<Tab>('menu');
@@ -471,9 +478,7 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
       },
       error: (err: Error) => {
         this.isLoadingConversations.set(false);
-        if (err instanceof PublicLinkInvalidError) {
-          this.state.set('invalid');
-        }
+        this.showLinkProblem(err);
         // Anything else leaves the envelope as it was.
       },
     });
@@ -517,6 +522,21 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
 
   // --- loading ---
 
+  private showLinkProblem(err: Error): boolean {
+    if (err instanceof PublicLinkInvalidError) {
+      this.state.set('invalid');
+      return true;
+    }
+
+    if (err instanceof PublicShopUnavailableError) {
+      this.unavailableShop.set({ name: err.shopName, phone: err.phone });
+      this.state.set('unavailable');
+      return true;
+    }
+
+    return false;
+  }
+
   protected loadMenu(silent = false): void {
     if (silent) {
       this.isRefreshingMenu.set(true);
@@ -543,9 +563,11 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
       error: (err: Error) => {
         this.isRefreshingMenu.set(false);
 
-        if (err instanceof PublicLinkInvalidError) {
-          this.state.set('invalid');
-        } else if (silent && this.link()) {
+        if (this.showLinkProblem(err)) {
+          return;
+        }
+
+        if (silent && this.link()) {
           // Keep what is on screen. While the connection is down the offline banner already says it may be out of
           // date, so only another kind of failure needs a message of its own.
           if (this.connectivity.isOnline()) {
@@ -570,8 +592,7 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
         this.ordersState.set('ready');
       },
       error: (err: Error) => {
-        if (err instanceof PublicLinkInvalidError) {
-          this.state.set('invalid');
+        if (this.showLinkProblem(err)) {
           return;
         }
 
@@ -1177,6 +1198,12 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
         this.isPlacingOrder.set(false);
 
         // The link stopped working while the customer was filling in checkout: nothing was created, and nothing
+        if (err instanceof PublicShopUnavailableError) {
+          this.checkoutOpen.set(false);
+          this.showLinkProblem(err);
+          return;
+        }
+
         // stays on screen.
         if (err instanceof PublicLinkInvalidError) {
           this.checkoutOpen.set(false);

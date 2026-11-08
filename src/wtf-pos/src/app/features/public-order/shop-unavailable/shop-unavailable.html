@@ -1,0 +1,19 @@
+<div class="flex min-h-full flex-col items-center justify-center bg-gray-100 px-4">
+  <div class="mb-6 text-center">
+    <img src="/assets/images/logo_new.png" alt="WTF Logo" class="mx-auto h-32 w-32" />
+  </div>
+
+  <div class="w-full max-w-md rounded-xl bg-surface p-8 text-center shadow-lg">
+    <h1 class="mb-2 text-2xl font-bold text-gray-800">This shop can't take orders right now</h1>
+    <p class="mb-4 text-sm text-gray-500">
+      {{ shopName() }} is not taking orders at the moment. Your link is fine, so please try again
+      later or contact the shop.
+    </p>
+    @if (phone(); as number) {
+      <p class="mb-4 text-sm text-gray-700">
+        Call <a class="link" [href]="'tel:' + number">{{ number }}</a>
+      </p>
+    }
+    <button type="button" class="app-btn app-btn-primary app-btn-md" (click)="tryAgain()">Try again</button>
+  </div>
+</div>

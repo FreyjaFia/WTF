@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Tenancy;
+using WTF.Api.Features.Branding;
 using WTF.Api.Features.Subscriptions;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
@@ -13,6 +14,8 @@ public sealed record OrderLinkAccessResult(ShortLink Link, Customer Customer);
 /// The one check every public ordering route runs. A token is valid only when it exists, is a customer ordering
 /// link, is not revoked or expired, and its customer is active and still allowed to order. Every failure returns
 /// null, so callers answer with the same 404 and never reveal whether a token ever existed.
+/// The one exception is a valid link of a suspended or lapsed shop: that throws <see cref="ShopUnavailableException"/>,
+/// answered with a 503 and the shop's contact.
 /// </summary>
 public static class OrderLinkAccess
 {
@@ -49,7 +52,8 @@ public static class OrderLinkAccess
             && (!await TenantAccess.IsActiveAsync(db, link.TenantId, cancellationToken)
                 || await SubscriptionStateLoader.IsLockedAsync(db, link.TenantId, now, cancellationToken)))
         {
-            return null;
+            var brand = await BrandDefaults.LoadAsync(db, link.TenantId, cancellationToken);
+            throw new ShopUnavailableException(brand.ShopName, brand.Phone);
         }
 
         var customer = await db.Customers.FirstOrDefaultAsync(c => c.Id == link.TargetId.Value, cancellationToken);

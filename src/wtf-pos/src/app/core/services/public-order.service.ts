@@ -23,6 +23,16 @@ export class PublicLinkInvalidError extends Error {
   }
 }
 
+export class PublicShopUnavailableError extends Error {
+  public constructor(
+    public readonly shopName: string,
+    public readonly phone: string | null,
+  ) {
+    super(ServiceErrorMessages.PublicOrder.ShopUnavailable);
+    this.name = 'PublicShopUnavailableError';
+  }
+}
+
 /**
  * Talks to the anonymous ordering routes. Everything is fetched fresh on every call: nothing here, or in the page
  * that uses it, keeps a local copy of the catalog, so a customer cannot order from an obsolete list.
@@ -129,6 +139,10 @@ export class PublicOrderService {
   }
 
   private fail(error: HttpErrorResponse, fallback: string): Observable<never> {
+    if (error.status === 503 && typeof error.error?.shopName === 'string') {
+      return throwError(() => new PublicShopUnavailableError(error.error.shopName, error.error.phone ?? null));
+    }
+
     if (error.status === 404) {
       return throwError(() => new PublicLinkInvalidError());
     }

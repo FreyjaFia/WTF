@@ -5,7 +5,11 @@ import { appVersion } from '@environments/version';
 import { AlertService } from '@core/services/alert.service';
 import { ConnectivityService } from '@core/services/connectivity.service';
 import { PublicOrderHubService } from '@core/services/public-order-hub.service';
-import { PublicLinkInvalidError, PublicOrderService } from '@core/services/public-order.service';
+import {
+  PublicLinkInvalidError,
+  PublicOrderService,
+  PublicShopUnavailableError,
+} from '@core/services/public-order.service';
 import {
   PublicAddOnGroupDto,
   PublicOrderDto,
@@ -799,6 +803,25 @@ describe('PublicOrderComponent', () => {
   });
 
   describe('loading', () => {
+    it('shows the unavailable screen, not the invalid one, when the shop is closed', () => {
+      setup({ link: throwError(() => new PublicShopUnavailableError('Cafe One', '0917 000 0000')) });
+
+      expect(c.state()).toBe('unavailable');
+      expect(text()).toContain("can't take orders right now");
+      expect(text()).toContain('0917 000 0000');
+      expect(text()).not.toContain('no longer valid');
+    });
+
+    it('tries the menu again from the unavailable screen', () => {
+      setup({ link: throwError(() => new PublicShopUnavailableError('Cafe One', null)) });
+      service.getLink.mockClear();
+      service.getLink.mockReturnValue(of(link()));
+
+      (el().querySelector('button') as HTMLButtonElement).click();
+
+      expect(service.getLink).toHaveBeenCalledTimes(1);
+    });
+
     it('loads the menu for the token in the address and greets the customer', () => {
       setup();
       expect(service.getLink).toHaveBeenCalledWith('tok-1');
