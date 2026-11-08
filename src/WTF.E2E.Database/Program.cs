@@ -87,10 +87,10 @@ async Task CreateAsync()
         });
         await InsertAsync(db, new List<AddOnType>
         {
-            new() { Id = 1, Name = "Size", IsRequired = true, MinSelect = 1, MaxSelect = 1, SortOrder = 1, IsActive = true, CreatedAt = DateTime.UtcNow, TenantId = TenantDefaults.DefaultTenantId },
+            new() { Id = 1, Name = "Size", SystemKey = "size", IsRequired = true, MinSelect = 1, MaxSelect = 1, SortOrder = 1, IsActive = true, CreatedAt = DateTime.UtcNow, TenantId = TenantDefaults.DefaultTenantId },
             new() { Id = 2, Name = "Flavor", IsRequired = true, MinSelect = 1, MaxSelect = 1, SortOrder = 2, IsActive = true, CreatedAt = DateTime.UtcNow, TenantId = TenantDefaults.DefaultTenantId },
             new() { Id = 3, Name = "Topping", SortOrder = 4, IsActive = true, CreatedAt = DateTime.UtcNow, TenantId = TenantDefaults.DefaultTenantId },
-            new() { Id = 4, Name = "Extra", SortOrder = 5, IsActive = true, CreatedAt = DateTime.UtcNow, TenantId = TenantDefaults.DefaultTenantId },
+            new() { Id = 4, Name = "Extra", SystemKey = "extra", SortOrder = 5, IsActive = true, CreatedAt = DateTime.UtcNow, TenantId = TenantDefaults.DefaultTenantId },
             new() { Id = 5, Name = "Sauce", MaxSelect = 1, SortOrder = 3, IsActive = true, CreatedAt = DateTime.UtcNow, TenantId = TenantDefaults.DefaultTenantId },
         });
         await InsertAsync(db, Named<UserRoleEnum, UserRole>((id, n) => new UserRole { Id = id, Name = n }));
