@@ -36,6 +36,21 @@ export class BrandService {
       .pipe(tap((saved) => this.apply(saved)));
   }
 
+  public uploadLogo(file: File): Observable<BrandDto> {
+    const form = new FormData();
+    form.append('file', file);
+
+    return this.http
+      .post<BrandDto>(`${environment.apiUrl}/settings/brand/logo`, form)
+      .pipe(tap((saved) => this.apply(saved)));
+  }
+
+  public removeLogo(): Observable<BrandDto> {
+    return this.http
+      .delete<BrandDto>(`${environment.apiUrl}/settings/brand/logo`)
+      .pipe(tap((saved) => this.apply(saved)));
+  }
+
   public loadPublic(token: string): void {
     this.http
       .get<PublicBrandDto>(`${environment.apiUrl}/public/order-links/${encodeURIComponent(token)}/brand`)

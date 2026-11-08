@@ -8,6 +8,22 @@
     <div class="flex justify-center py-8"><span class="loading loading-spinner loading-lg"></span></div>
   } @else {
     <form class="min-h-0 flex-1 space-y-4 overflow-y-auto rounded-xl bg-white p-4 shadow" [formGroup]="form" (ngSubmit)="save()">
+      <div class="flex flex-wrap items-center gap-4" data-testid="brand-logo">
+        @if (logoUrl(); as url) {
+          <img [src]="url" alt="Shop logo" class="h-16 w-16 rounded-lg border border-gray-200 object-contain" />
+        } @else {
+          <div class="flex h-16 w-16 items-center justify-center rounded-lg border border-dashed border-gray-300 text-xs text-gray-400">No logo</div>
+        }
+        <div class="flex flex-wrap gap-2">
+          <label class="app-btn app-btn-secondary app-btn-sm cursor-pointer" [class.opacity-50]="isUploading()">
+            {{ isUploading() ? 'Saving...' : 'Upload logo' }}
+            <input type="file" class="hidden" accept="image/png,image/jpeg,image/webp" [disabled]="isUploading()" (change)="chooseLogo($event)" data-testid="brand-logo-input" />
+          </label>
+          @if (logoUrl()) {
+            <button type="button" class="app-btn app-btn-outline-danger app-btn-sm" [disabled]="isUploading()" (click)="removeLogo()">Remove</button>
+          }
+        </div>
+      </div>
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <label class="flex flex-col gap-1 text-sm">
           <span class="text-gray-700">Shop name</span>
@@ -20,10 +36,6 @@
         <label class="flex flex-col gap-1 text-sm">
           <span class="text-gray-700">Tagline</span>
           <input class="input input-bordered w-full" type="text" formControlName="tagline" data-testid="brand-tagline" />
-        </label>
-        <label class="flex flex-col gap-1 text-sm">
-          <span class="text-gray-700">Logo address</span>
-          <input class="input input-bordered w-full" type="text" formControlName="logoUrl" data-testid="brand-logoUrl" />
         </label>
         <label class="flex flex-col gap-1 text-sm">
           <span class="text-gray-700">Address</span>
