@@ -88,10 +88,6 @@ export interface BrandDto {
   receiptFooter: string | null;
   registrationText: string | null;
   primaryColor: string;
-  timeZone: string;
-  currencySymbol: string;
-  currencyCode: string;
-  currencyDecimals: number;
 }
 
 export interface PublicBrandDto {
@@ -102,6 +98,4 @@ export interface PublicBrandDto {
   address: string | null;
   phone: string | null;
   primaryColor: string;
-  currencySymbol: string;
-  currencyDecimals: number;
 }

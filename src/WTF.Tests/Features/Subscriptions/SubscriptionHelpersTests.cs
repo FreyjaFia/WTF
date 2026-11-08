@@ -104,13 +104,6 @@ public class SubscriptionHelpersTests
         Should.Throw<InvalidOperationException>(() => BrandDefaults.Validate(good with { ShopName = new string('x', 101) }));
         Should.Throw<InvalidOperationException>(() => BrandDefaults.Validate(good with { PrimaryColor = "red" }));
         Should.Throw<InvalidOperationException>(() => BrandDefaults.Validate(good with { PrimaryColor = "#ffee00" })).Message.ShouldContain("too light");
-        Should.Throw<InvalidOperationException>(() => BrandDefaults.Validate(good with { TimeZone = "Mars/Base" }));
-        Should.Throw<InvalidOperationException>(() => BrandDefaults.Validate(good with { CurrencyCode = "php" }));
-        Should.Throw<InvalidOperationException>(() => BrandDefaults.Validate(good with { CurrencyDecimals = 4 }));
-        Should.Throw<InvalidOperationException>(() => BrandDefaults.Validate(good with { CurrencySymbol = "" }));
-        Should.Throw<InvalidOperationException>(() => BrandDefaults.Validate(good with { LogoUrl = "javascript:alert(1)" }));
-        Should.NotThrow(() => BrandDefaults.Validate(good with { LogoUrl = "https://cdn.example.com/logo.png" }));
-        Should.NotThrow(() => BrandDefaults.Validate(good with { LogoUrl = "/images/logo.png" }));
     }
 
     [Theory]
