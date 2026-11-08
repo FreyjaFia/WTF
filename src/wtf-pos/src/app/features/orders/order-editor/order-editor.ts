@@ -1,4 +1,21 @@
-﻿import { CommonModule } from '@angular/common';
+﻿import {
+  customerDisplayName,
+  groupAddOns,
+  isPromotionActiveInUserTimezone,
+  nameParts,
+  normalizeSortLabel,
+  paymentMethodLabel,
+} from './order-editor-helpers';
+import {
+  BundlePromotionSelection,
+  bundleCartItems,
+  mixMatchOptionGroups,
+  mixMatchSelectionFromAddonSelection,
+  preselectedMixMatchOptions,
+} from './order-editor-bundles';
+import type { BadgeVariant } from '@shared/components/badge/badge';
+import { orderStatusLabel, orderStatusVariant } from '@shared/utils/order-status';
+import { CommonModule } from '@angular/common';
 import {
   ChangeDetectorRef,
   Component,
@@ -54,7 +71,6 @@ import {
 } from '@shared/components';
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import {
-  AddOnGroupDto,
   CartAddOnDto,
   CartBundleItemDto,
   CartItemDto,
@@ -91,7 +107,6 @@ import {
   buildDeals,
   Deal,
   formatPromoLabel,
-  isScheduleOpen,
   LineBreakdown,
   lineUnitSubtotal,
   usesLeft,
@@ -106,28 +121,6 @@ import { debounceTime, forkJoin, of, switchMap } from 'rxjs';
 
 type CartDiscountRule = DiscountedProductItemDto & DiscountRule;
 import { CheckoutModal } from '../checkout-modal/checkout-modal';
-
-interface BundleItemSource {
-  productId: string;
-  addOns: { addOnProductId: string; quantity: number }[];
-  quantity?: number;
-}
-
-interface BundlePromotionSelection {
-  id: string;
-  name: string;
-  typeId: PromotionTypeEnum;
-  isActive: boolean;
-  imageUrl?: string | null;
-  createdAt?: string;
-  createdBy?: string;
-  updatedAt?: string | null;
-  updatedBy?: string | null;
-  bundlePrice: number;
-  requiredQuantity?: number;
-  maxSelectionsPerOrder?: number | null;
-  items: BundleItemSource[];
-}
 
 type CatalogScrollTab = number | 'bundles';
 
@@ -520,32 +513,15 @@ export class OrderEditor implements OnInit, OnDestroy {
   protected totalPrice = () => cartTotal(this.cart(), (line) => this.getLineDiscount(line));
 
   protected getNameParts(name: string): { text: string; isMatch: boolean }[] {
-    const term = this.filterForm.controls.searchTerm.value?.trim();
-    if (!term) {
-      return [{ text: name, isMatch: false }];
-    }
+    return nameParts(name, this.filterForm.controls.searchTerm.value);
+  }
 
-    const lowerSource = name.toLowerCase();
-    const lowerTerm = term.toLowerCase();
-    const parts: { text: string; isMatch: boolean }[] = [];
-    let index = 0;
-    while (true) {
-      const found = lowerSource.indexOf(lowerTerm, index);
-      if (found === -1) {
-        if (index < name.length) {
-          parts.push({ text: name.slice(index), isMatch: false });
-        }
-        break;
-      }
+  protected getCustomerDisplayName(customer: CustomerDto): string {
+    return customerDisplayName(customer);
+  }
 
-      if (found > index) {
-        parts.push({ text: name.slice(index, found), isMatch: false });
-      }
-      parts.push({ text: name.slice(found, found + term.length), isMatch: true });
-      index = found + term.length;
-    }
-
-    return parts;
+  protected getPaymentMethodLabel(method?: PaymentMethodEnum | null): string {
+    return paymentMethodLabel(method);
   }
 
   protected readonly checkoutCartItems = computed<CartItemDto[]>(() =>
@@ -592,7 +568,7 @@ export class OrderEditor implements OnInit, OnDestroy {
   protected readonly filteredBundlePromotions = computed(() => {
     const term = this.catalogSearchTerm().trim().toLowerCase();
     let items = this.bundlePromotions().filter(
-      (promo) => this.isPromotionActiveInUserTimezone(promo) && usesLeft(promo.schedule) !== 0,
+      (promo) => isPromotionActiveInUserTimezone(promo) && usesLeft(promo.schedule) !== 0,
     );
 
     if (term) {
@@ -1336,7 +1312,7 @@ export class OrderEditor implements OnInit, OnDestroy {
       return;
     }
 
-    if (!this.isPromotionActiveInUserTimezone(promo)) {
+    if (!isPromotionActiveInUserTimezone(promo)) {
       this.alertService.error('This bundle promotion is not available right now.');
       return;
     }
@@ -1387,7 +1363,7 @@ export class OrderEditor implements OnInit, OnDestroy {
       this.pendingBundleSelection.set(null);
 
       if (selectedBundle.typeId === PromotionTypeEnum.MixMatch) {
-        const normalized = this.buildMixMatchSelectionFromAddonSelection(selectedBundle, addOns);
+        const normalized = mixMatchSelectionFromAddonSelection(selectedBundle, addOns);
         this.upsertBundleCartLine(
           normalized,
           Math.max(1, quantity || 1),
@@ -1546,7 +1522,7 @@ export class OrderEditor implements OnInit, OnDestroy {
   // The promotions that are on at this moment (dates, weekdays and hours in this device's time zone, which the API gets
   // in the X-TimeZone header). The saved list also holds the ones that are off right now.
   private liveDiscountedPromotions(): DiscountedProductPromotionDto[] {
-    return this.discountedProductPromotions().filter((promo) => this.isPromotionActiveInUserTimezone(promo));
+    return this.discountedProductPromotions().filter((promo) => isPromotionActiveInUserTimezone(promo));
   }
 
   // What a discount can still take for this order: the uses nobody holds, plus the ones this order already holds.
@@ -1633,7 +1609,7 @@ export class OrderEditor implements OnInit, OnDestroy {
 
   protected getSortedBundleItems(item: CartItemDto): CartBundleItemDto[] {
     return [...(item.bundleItems ?? [])].sort((a, b) =>
-      this.normalizeSortLabel(a.name).localeCompare(this.normalizeSortLabel(b.name)),
+      normalizeSortLabel(a.name).localeCompare(normalizeSortLabel(b.name)),
     );
   }
 
@@ -1818,60 +1794,12 @@ export class OrderEditor implements OnInit, OnDestroy {
     this.selectedCustomerId.set(customerId);
   }
 
-  protected getCustomerDisplayName(customer: CustomerDto): string {
-    return `${customer.firstName} ${customer.lastName}`.trim();
-  }
-
-  protected getPaymentMethodLabel(method?: PaymentMethodEnum | null): string {
-    if (method === PaymentMethodEnum.Cash) {
-      return 'Cash';
-    }
-
-    if (method === PaymentMethodEnum.GCash) {
-      return 'GCash';
-    }
-
-    return 'N/A';
-  }
-
-  protected getStatusVariant(
-    status?: OrderStatusEnum | null,
-  ): 'success' | 'error' | 'warning' | 'info' | 'amber' | 'default' {
-    switch (status) {
-      case OrderStatusEnum.PendingApproval:
-        return 'amber';
-      case OrderStatusEnum.PendingReview:
-        return 'amber';
-      case OrderStatusEnum.Pending:
-        return 'warning';
-      case OrderStatusEnum.Completed:
-        return 'success';
-      case OrderStatusEnum.Cancelled:
-        return 'default';
-      case OrderStatusEnum.Refunded:
-        return 'error';
-      default:
-        return 'info';
-    }
+  protected getStatusVariant(status?: OrderStatusEnum | null): BadgeVariant {
+    return orderStatusVariant(status);
   }
 
   protected getStatusLabel(status?: OrderStatusEnum | null): string {
-    switch (status) {
-      case OrderStatusEnum.PendingApproval:
-        return 'Awaiting approval';
-      case OrderStatusEnum.PendingReview:
-        return 'Needs review';
-      case OrderStatusEnum.Pending:
-        return 'Pending';
-      case OrderStatusEnum.Completed:
-        return 'Completed';
-      case OrderStatusEnum.Cancelled:
-        return 'Cancelled';
-      case OrderStatusEnum.Refunded:
-        return 'Refunded';
-      default:
-        return 'Unknown';
-    }
+    return orderStatusLabel(status);
   }
 
   protected getOrderDateValue(order: OrderDto): string {
@@ -2274,14 +2202,14 @@ export class OrderEditor implements OnInit, OnDestroy {
               promotionType === PromotionTypeEnum.MixMatch
                 ? Math.max(1, bundleItem.qty)
                 : Math.max(1, line.qty) * Math.max(1, bundleItem.qty),
-            addOns: this.groupAddOns(bundleItem.addOns, false),
+            addOns: groupAddOns(bundleItem.addOns, false),
           });
         }
 
         return;
       }
 
-      lines.push({ key, productId: line.productId, quantity: line.qty, addOns: this.groupAddOns(line.addOns, false) });
+      lines.push({ key, productId: line.productId, quantity: line.qty, addOns: groupAddOns(line.addOns, false) });
     });
 
     return lines;
@@ -2798,67 +2726,6 @@ export class OrderEditor implements OnInit, OnDestroy {
     });
   }
 
-  private isPromotionActiveInUserTimezone(promo: Pick<PromotionListItemDto, 'isActive' | 'startDate' | 'endDate' | 'schedule'>): boolean {
-    if (!promo.isActive) {
-      return false;
-    }
-
-    const nowLocal = new Date();
-    const nowLocalDate = this.toLocalDateNumber(nowLocal);
-
-    const startLocal = promo.startDate ? new Date(promo.startDate) : null;
-    if (startLocal && Number.isNaN(startLocal.getTime())) {
-      return false;
-    }
-    const startLocalDate = startLocal ? this.toLocalDateNumber(startLocal) : null;
-    if (startLocalDate !== null && nowLocalDate < startLocalDate) {
-      return false;
-    }
-
-    const endLocal = promo.endDate ? new Date(promo.endDate) : null;
-    if (endLocal && Number.isNaN(endLocal.getTime())) {
-      return false;
-    }
-    const endLocalDate = endLocal ? this.toLocalDateNumber(endLocal) : null;
-    if (endLocalDate !== null && nowLocalDate > endLocalDate) {
-      return false;
-    }
-
-    return isScheduleOpen(promo.schedule, nowLocal);
-  }
-
-  private toLocalDateNumber(value: Date): number {
-    if (Number.isNaN(value.getTime())) {
-      return -1;
-    }
-
-    return value.getFullYear() * 10000 + (value.getMonth() + 1) * 100 + value.getDate();
-  }
-
-  // withQuotes: an order queued offline carries the prices the customer was quoted, so the server can tell when the menu changed.
-  private groupAddOns(addOns?: CartAddOnDto[], withQuotes = false): OrderItemRequestDto[] {
-    if (!addOns || addOns.length === 0) {
-      return [];
-    }
-
-    const grouped = new Map<string, { quantity: number; price: number }>();
-
-    for (const ao of addOns) {
-      grouped.set(ao.addOnId, {
-        quantity: (grouped.get(ao.addOnId)?.quantity ?? 0) + 1,
-        price: ao.price,
-      });
-    }
-
-    return Array.from(grouped.entries()).map(([productId, { quantity, price }]) => ({
-      productId,
-      quantity,
-      addOns: [],
-      bundlePromotionId: null,
-      ...(withQuotes && { quotedPrice: price }),
-    }));
-  }
-
   private buildOrderItemsFromCart(withQuotes = false): OrderItemRequestDto[] {
     const items: OrderItemRequestDto[] = [];
     const promotionTypeById = new Map(
@@ -2879,7 +2746,7 @@ export class OrderEditor implements OnInit, OnDestroy {
               promotionType === PromotionTypeEnum.MixMatch
                 ? Math.max(1, bundleItem.qty)
                 : Math.max(1, line.qty) * Math.max(1, bundleItem.qty),
-            addOns: this.groupAddOns(bundleItem.addOns, withQuotes),
+            addOns: groupAddOns(bundleItem.addOns, withQuotes),
             specialInstructions: line.specialInstructions || null,
             bundlePromotionId: line.bundlePromotionId ?? null,
             ...(withQuotes && { quotedPrice: bundleItem.price }),
@@ -2898,7 +2765,7 @@ export class OrderEditor implements OnInit, OnDestroy {
         items.push({
           productId: line.productId,
           quantity,
-          addOns: this.groupAddOns(line.addOns, withQuotes),
+          addOns: groupAddOns(line.addOns, withQuotes),
           specialInstructions: line.specialInstructions || null,
           bundlePromotionId: null,
           ...(withQuotes && {
@@ -2970,11 +2837,20 @@ export class OrderEditor implements OnInit, OnDestroy {
     };
   }
 
+  private catalogProducts(): ProductDto[] {
+    const catalogProducts = this.catalogCache.products();
+    return this.productsCache().length > 0 ? this.productsCache() : catalogProducts;
+  }
+
   private openBundleSelector(
     bundle: BundlePromotionSelection,
     options?: { quantity?: number; specialInstructions?: string | null; editIndex?: number | null },
   ): void {
-    const hasAvailableItems = this.buildBundleCartItems(bundle).length > 0;
+    const hasAvailableItems = bundleCartItems(
+      bundle,
+      this.catalogProducts(),
+      (productId) => this.catalogCache.getAddOnsForProduct(productId),
+    ).length > 0;
     if (!hasAvailableItems) {
       this.alertService.error('Bundle products are unavailable in the current catalog.');
       return;
@@ -2983,11 +2859,11 @@ export class OrderEditor implements OnInit, OnDestroy {
     this.pendingBundleSelection.set(bundle);
     const customGroups =
       bundle.typeId === PromotionTypeEnum.MixMatch
-        ? this.buildMixMatchOptionGroups(bundle)
+        ? mixMatchOptionGroups(bundle, this.catalogProducts())
         : undefined;
     const preselectedAddOns =
       bundle.typeId === PromotionTypeEnum.MixMatch
-        ? this.buildPreselectedMixMatchOptions(bundle)
+        ? preselectedMixMatchOptions(bundle, this.catalogProducts())
         : undefined;
 
     this.addonSelector().open(
@@ -3033,86 +2909,17 @@ export class OrderEditor implements OnInit, OnDestroy {
     );
   }
 
-  private buildPreselectedMixMatchOptions(bundle: BundlePromotionSelection): CartAddOnDto[] {
-    const selections: CartAddOnDto[] = [];
-    const optionById = new Map(
-      this.buildMixMatchOptionGroups(bundle)[0]?.options.map((x) => [x.id, x]) ?? [],
-    );
-
-    for (const item of bundle.items) {
-      const qty = Math.max(0, item.quantity ?? 0);
-      if (qty <= 0) {
-        continue;
-      }
-
-      const option = optionById.get(item.productId);
-      for (let i = 0; i < qty; i++) {
-        selections.push({
-          addOnId: item.productId,
-          name: option?.name ?? 'Selected item',
-          price: 0,
-          addOnType: SYSTEM_CATALOG_IDS.extraAddOnType,
-        });
-      }
-    }
-
-    return selections;
-  }
-
-  private buildMixMatchOptionGroups(bundle: BundlePromotionSelection): AddOnGroupDto[] {
-    const catalogProducts = this.catalogCache.products();
-    const allProducts = this.productsCache().length > 0 ? this.productsCache() : catalogProducts;
-    const productById = new Map(allProducts.map((x) => [x.id, x]));
-
-    const options = bundle.items
-      .map((item) => productById.get(item.productId))
-      .filter((x): x is ProductDto => !!x)
-      .map((product) => ({
-        ...product,
-        price: 0,
-        overridePrice: 0,
-      }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-
-    return [
-      {
-        type: SYSTEM_CATALOG_IDS.extraAddOnType,
-        displayName: 'Items',
-        options,
-      },
-    ];
-  }
-
-  private buildMixMatchSelectionFromAddonSelection(
-    bundle: BundlePromotionSelection,
-    selectedOptions: CartAddOnDto[],
-  ): BundlePromotionSelection {
-    const selectedCountByProductId = new Map<string, number>();
-    for (const option of selectedOptions) {
-      selectedCountByProductId.set(
-        option.addOnId,
-        (selectedCountByProductId.get(option.addOnId) ?? 0) + 1,
-      );
-    }
-
-    return {
-      ...bundle,
-      items: bundle.items
-        .map((item) => ({
-          ...item,
-          quantity: selectedCountByProductId.get(item.productId) ?? 0,
-        }))
-        .filter((item) => (item.quantity ?? 0) > 0),
-    };
-  }
-
   private upsertBundleCartLine(
     bundle: BundlePromotionSelection,
     quantity: number,
     specialInstructions?: string | null,
     editIndex?: number | null,
   ): void {
-    const bundleItems = this.buildBundleCartItems(bundle);
+    const bundleItems = bundleCartItems(
+      bundle,
+      this.catalogProducts(),
+      (productId) => this.catalogCache.getAddOnsForProduct(productId),
+    );
     if (bundleItems.length === 0) {
       this.alertService.error('Bundle products are unavailable in the current catalog.');
       return;
@@ -3194,64 +3001,6 @@ export class OrderEditor implements OnInit, OnDestroy {
     };
 
     this.cart.set(current.map((item, index) => (index === existingIndex ? mergedLine : item)));
-  }
-
-  private buildBundleCartItems(bundle: BundlePromotionSelection): CartBundleItemDto[] {
-    const catalogProducts = this.catalogCache.products();
-    const allProducts = this.productsCache().length > 0 ? this.productsCache() : catalogProducts;
-    const productById = new Map(allProducts.map((p) => [p.id, p]));
-    const bundleItems: CartBundleItemDto[] = [];
-
-    for (const bundleItem of bundle.items) {
-      const product = productById.get(bundleItem.productId);
-      if (!product) {
-        continue;
-      }
-
-      const addOnGroups = this.catalogCache.getAddOnsForProduct(product.id);
-      const addOnTypeById = new Map(
-        addOnGroups.flatMap((group) =>
-          group.options.map((option) => [option.id, group.type] as const),
-        ),
-      );
-      const addOnOptionById = new Map(
-        addOnGroups.flatMap((group) => group.options.map((option) => [option.id, option] as const)),
-      );
-
-      const expandedAddOns: CartAddOnDto[] = [];
-      for (const addOn of bundleItem.addOns ?? []) {
-        const addOnOption = addOnOptionById.get(addOn.addOnProductId);
-        const addOnProduct = productById.get(addOn.addOnProductId);
-        const qty = Math.max(1, addOn.quantity || 1);
-
-        for (let i = 0; i < qty; i++) {
-          expandedAddOns.push({
-            addOnId: addOn.addOnProductId,
-            name: addOnOption?.name ?? addOnProduct?.name ?? 'Add-on',
-            price: addOnOption?.overridePrice ?? addOnOption?.price ?? addOnProduct?.price ?? 0,
-            addOnType: addOnTypeById.get(addOn.addOnProductId),
-          });
-        }
-      }
-
-      bundleItems.push({
-        productId: product.id,
-        name: product.name,
-        price: product.price,
-        qty: Math.max(1, bundleItem.quantity || 1),
-        imageUrl: product.imageUrl,
-        addOns: expandedAddOns.length > 0 ? expandedAddOns : undefined,
-      });
-    }
-
-    return [...bundleItems].sort((a, b) => a.name.localeCompare(b.name));
-  }
-
-  private normalizeSortLabel(value: string): string {
-    return value
-      .replace(/^\s*\d+\s*x\s+/i, '')
-      .trim()
-      .toLowerCase();
   }
 
   private openMixMatchBundleEditorForQuantity(index: number, quantity: number): void {
