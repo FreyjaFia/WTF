@@ -1,5 +1,6 @@
 import { PO_STATUS, PurchasingApi } from '@api/purchasing';
 import { expect, test } from '@fixtures/index';
+import { testPassword } from '@data/env';
 import { openShop, TestShop } from '@utils/tenants';
 import { unique } from '@utils/unique';
 
@@ -136,5 +137,60 @@ test.describe('shops cannot see each other\'s purchasing @tenancy @isolation @pu
     expect(afterB.costPrice).toBe(beforeB.costPrice);
     expect((await a.buy.item(a.item.id)).currentQuantity).toBe(12 + 60);
     expect(await b.shop.owner.json<Row[]>('GET', 'stock-receipts')).toHaveLength(1);
+  });
+});
+
+test.describe('purchasing follows the shop\'s lifecycle @tenancy @purchasing @lifecycle', () => {
+  const PURCHASING_CALLS: ReadonlyArray<readonly ['GET' | 'POST' | 'PUT', string]> = [
+    ['GET', 'suppliers'],
+    ['GET', 'purchase-orders'],
+    ['GET', 'stock-receipts'],
+    ['GET', 'reorder'],
+    ['GET', 'reorder/par-levels'],
+  ];
+
+  test('a suspended shop cannot read or write suppliers, orders, receipts or the reorder list, and a resume restores them', async ({ request, platform }) => {
+    const shop = await stockedShop(await openShop(request, platform));
+    await platform.setStatus(shop.shop.id, 'suspend', 'Unpaid');
+
+    for (const [method, path] of PURCHASING_CALLS) {
+      expect((await shop.shop.owner.call(method, path)).status(), `${method} ${path}`).toBe(403);
+    }
+
+    expect((await shop.shop.owner.call('POST', 'suppliers', { name: unique('While suspended') })).status()).toBe(403);
+    expect((await shop.buy.receive(shop.supplier.id, [{ itemId: shop.item.id, packs: 1 }])).status()).toBe(403);
+    expect((await shop.buy.orderAction(shop.order.id, 'close')).status()).toBe(403);
+
+    await platform.setStatus(shop.shop.id, 'resume');
+
+    expect((await shop.buy.order(shop.order.id)).summary.status).toBe(PO_STATUS.partlyReceived);
+    expect((await shop.buy.item(shop.item.id)).currentQuantity).toBe(12);
+    expect((await shop.buy.receive(shop.supplier.id, [{ itemId: shop.item.id, packs: 1 }], { purchaseOrderId: shop.order.id })).ok()).toBeTruthy();
+  });
+
+  test('a deleted shop takes its suppliers, orders and receipts with it, and another shop keeps its own', async ({ request, platform }) => {
+    const gone = await stockedShop(await openShop(request, platform));
+    const kept = await stockedShop(await openShop(request, platform));
+
+    await platform.setStatus(gone.shop.id, 'cancel', 'Closing');
+    const deleted = await platform.call('POST', `tenants/${gone.shop.id}/delete`, { slug: gone.shop.slug, adminPassword: testPassword() });
+    expect(deleted.ok(), await deleted.text()).toBeTruthy();
+
+    for (const [method, path] of PURCHASING_CALLS) {
+      expect((await gone.shop.owner.call(method, path)).ok(), `${method} ${path} with a deleted shop's token`).toBeFalsy();
+    }
+
+    expect((await kept.buy.order(kept.order.id)).summary.status).toBe(PO_STATUS.partlyReceived);
+    expect((await kept.shop.owner.json<Row[]>('GET', 'suppliers')).map((s) => s.id)).toEqual([kept.supplier.id]);
+    expect(await kept.shop.owner.json<Row[]>('GET', 'stock-receipts')).toHaveLength(1);
+  });
+
+  test('a cancelled shop is refused purchasing calls the same way', async ({ request, platform }) => {
+    const shop = await stockedShop(await openShop(request, platform));
+    await platform.setStatus(shop.shop.id, 'cancel', 'Closed');
+
+    for (const [method, path] of PURCHASING_CALLS) {
+      expect((await shop.shop.owner.call(method, path)).ok(), `${method} ${path}`).toBeFalsy();
+    }
   });
 });
