@@ -22,6 +22,7 @@ import {
 } from '@shared/components';
 import { BadgeComponent } from '@shared/components/badge/badge';
 import { FilterButtonComponent } from '@shared/components/filter-button/filter-button';
+import { SortDirection, SortHeaderComponent } from '@shared/components/sort-header/sort-header';
 import { SelectDropdownComponent } from '@shared/components/select-dropdown/select-dropdown';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { packUnitCost, receiptLineTotal, unitsFromPacks } from '@shared/calculations';
@@ -77,6 +78,7 @@ const statusBars: Record<number, string> = {
 };
 
 type OrderAction = 'send' | 'cancel' | 'close';
+type OrderSortColumn = 'order' | 'expected' | 'status' | 'total';
 
 @Component({
   selector: 'app-purchase-orders',
@@ -93,6 +95,7 @@ type OrderAction = 'send' | 'cancel' | 'close';
     SearchInputComponent,
     SelectDropdownComponent,
     SideDrawerComponent,
+    SortHeaderComponent,
   ],
   templateUrl: './purchase-orders.html',
   host: { class: 'flex-1 min-h-0' },
@@ -130,6 +133,31 @@ export class PurchaseOrdersComponent implements OnInit {
         field?.toLowerCase().includes(term),
       ),
     );
+  });
+  protected readonly sortColumn = signal<OrderSortColumn | null>(null);
+  protected readonly sortDirection = signal<SortDirection>('asc');
+  protected readonly sortedOrders = computed(() => {
+    const column = this.sortColumn();
+    const orders = [...this.filteredOrders()];
+    if (!column) {
+      return orders;
+    }
+
+    const direction = this.sortDirection() === 'asc' ? 1 : -1;
+    const compare = (a: PurchaseOrderSummaryDto, b: PurchaseOrderSummaryDto): number => {
+      switch (column) {
+        case 'order':
+          return a.poNumber - b.poNumber;
+        case 'expected':
+          return (a.expectedOn ?? '').localeCompare(b.expectedOn ?? '');
+        case 'status':
+          return a.status - b.status;
+        case 'total':
+          return (a.total ?? -1) - (b.total ?? -1);
+      }
+    };
+
+    return orders.sort((a, b) => compare(a, b) * direction);
   });
   protected readonly supplierOptions = computed(() =>
     this.suppliers().map((supplier) => ({ id: supplier.id, label: supplier.name })),
@@ -170,6 +198,15 @@ export class PurchaseOrdersComponent implements OnInit {
   public ngOnInit(): void {
     this.load();
     this.lines.valueChanges.subscribe(() => this.formTick.update((tick) => tick + 1));
+  }
+
+  protected toggleSort(column: OrderSortColumn): void {
+    if (this.sortColumn() === column) {
+      this.sortDirection.update((direction) => (direction === 'asc' ? 'desc' : 'asc'));
+    } else {
+      this.sortColumn.set(column);
+      this.sortDirection.set('asc');
+    }
   }
 
   protected openSuggestedOrders(): void {

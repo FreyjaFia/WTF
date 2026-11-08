@@ -173,28 +173,38 @@
           <div class="rounded-lg bg-surface p-8 text-center shadow-lg" data-testid="orders-empty">
             <div class="mb-3 flex justify-center"><app-icon name="icon-assignment-turned-in" [class]="'h-12 w-12 opacity-60'" /></div>
             <p class="text-lg font-semibold text-gray-700">No purchase orders found</p>
-            <p class="text-sm text-gray-500">Draft one here or from the Reorder list, or adjust your search.</p>
+            <p class="text-sm text-gray-500">Draft one here or from Suggested orders, or adjust your search.</p>
+          </div>
+        }
+
+        @if (sortedOrders().length > 0) {
+          <div class="sticky top-0 z-10 mb-2 hidden grid-cols-12 gap-4 rounded-xl bg-surface py-3 pr-4 pl-6 shadow lg:grid" data-testid="order-columns">
+            <app-sort-header class="col-span-6" label="Order" align="start" [active]="sortColumn() === 'order'" [direction]="sortDirection()" (sorted)="toggleSort('order')" />
+            <app-sort-header class="col-span-2" label="Expected" align="center" [active]="sortColumn() === 'expected'" [direction]="sortDirection()" (sorted)="toggleSort('expected')" />
+            <app-sort-header class="col-span-2" label="Status" align="center" [active]="sortColumn() === 'status'" [direction]="sortDirection()" (sorted)="toggleSort('status')" />
+            <app-sort-header class="col-span-2" label="Total" align="end" [active]="sortColumn() === 'total'" [direction]="sortDirection()" (sorted)="toggleSort('total')" />
           </div>
         }
 
         <ul class="space-y-2.5" data-testid="order-list">
-          @for (order of filteredOrders(); track order.id) {
+          @for (order of sortedOrders(); track order.id) {
             <li class="relative overflow-hidden rounded-xl bg-surface shadow" data-testid="order-row">
               <span class="absolute inset-y-0 left-0 w-1.5" [class]="statusBar(order.status)" aria-hidden="true"></span>
-              <button type="button" class="flex w-full items-center justify-between gap-3 p-3 pl-5 text-left transition-colors hover:bg-gray-50 sm:p-4 sm:pl-6" (click)="toggleOrder(order)">
-                <div class="min-w-0">
+              <button type="button" class="flex w-full items-center justify-between gap-3 p-3 pl-5 text-left transition-colors hover:bg-gray-50 sm:p-4 sm:pl-6 lg:grid lg:grid-cols-12 lg:gap-4" (click)="toggleOrder(order)">
+                <div class="min-w-0 lg:col-span-6">
                   <p class="font-semibold wrap-anywhere text-gray-900">
                     PO-{{ order.poNumber }} <span class="font-normal text-gray-500">&middot; {{ order.supplierName }}</span>
                   </p>
                   <p class="text-xs text-gray-500">
                     {{ order.lineCount }} {{ order.lineCount === 1 ? 'item' : 'items' }}
-                    @if (order.expectedOn) { &middot; expected {{ order.expectedOn | date: 'MMM d' }} }
+                    @if (order.expectedOn) { <span class="lg:hidden">&middot; expected {{ order.expectedOn | date: 'MMM d' }}</span> }
                   </p>
                 </div>
-                <div class="flex shrink-0 flex-col items-end gap-1">
-                  <app-badge [variant]="statusVariant(order.status)"><span data-testid="order-status">{{ statusLabel(order.status) }}</span></app-badge>
+                <p class="hidden text-center text-sm text-gray-700 lg:block lg:col-span-2">{{ order.expectedOn ? (order.expectedOn | date: 'MMM d') : '-' }}</p>
+                <div class="flex shrink-0 flex-col items-end gap-1 lg:contents">
+                  <span class="lg:col-span-2 lg:justify-self-center"><app-badge [variant]="statusVariant(order.status)"><span data-testid="order-status">{{ statusLabel(order.status) }}</span></app-badge></span>
                   @if (order.total !== null) {
-                    <span class="text-sm font-semibold text-gray-900">{{ order.total | number: '1.2-2' }}</span>
+                    <span class="text-sm font-semibold text-gray-900 lg:col-span-2 lg:text-right">{{ order.total | number: '1.2-2' }}</span>
                   }
                 </div>
               </button>

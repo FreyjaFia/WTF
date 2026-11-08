@@ -264,4 +264,35 @@ test.describe('purchase orders @inventory @purchase-orders', () => {
     await orders.expand(draft.summary.poNumber);
     await expect(orders.row(draft.summary.poNumber).getByTestId('send-order')).toHaveCount(0);
   });
+
+  test('the column headers sort the list on a wide screen and are hidden on a phone', async ({ api, signIn }) => {
+    const buy = new PurchasingApi(asRole(api.client));
+    const supplier = await buy.createSupplier();
+    const item = await buy.createItem();
+    const small = await buy.createOrder(supplier.summary.id, [{ itemId: item.id, packs: 1 }]);
+    const large = await buy.createOrder(supplier.summary.id, [{ itemId: item.id, packs: 5 }]);
+
+    const page = await signIn('admin');
+    await page.setViewportSize({ width: 1440, height: 900 });
+    const orders = new OrdersPage(page);
+    await orders.open();
+    await orders.search.fill(supplier.summary.name);
+    const columns = page.getByTestId('order-columns');
+    await expect(columns).toBeVisible();
+    await expect(columns).toContainText('Order');
+    await expect(columns).toContainText('Expected');
+    await expect(columns).toContainText('Status');
+    await expect(columns).toContainText('Total');
+
+    const numbers = async (): Promise<string[]> => (await page.getByTestId('order-row').locator('p.font-semibold').allTextContents()).map((t) => t.trim().split(' ')[0]);
+    await expect.poll(numbers).toEqual([`PO-${large.summary.poNumber}`, `PO-${small.summary.poNumber}`]);
+
+    await page.getByRole('button', { name: 'Sort by Total' }).click();
+    await expect.poll(numbers).toEqual([`PO-${small.summary.poNumber}`, `PO-${large.summary.poNumber}`]);
+    await page.getByRole('button', { name: 'Sort by Total' }).click();
+    await expect.poll(numbers).toEqual([`PO-${large.summary.poNumber}`, `PO-${small.summary.poNumber}`]);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(columns).toBeHidden();
+  });
 });

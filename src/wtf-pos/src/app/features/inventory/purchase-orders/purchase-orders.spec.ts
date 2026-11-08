@@ -59,12 +59,22 @@ interface Vm {
   search: { set: (value: string) => void };
   setFilter: (status: number | null) => void;
   orderTotal: () => number | null;
+  toggleSort: (column: 'order' | 'expected' | 'status' | 'total') => void;
+  sortedOrders: () => PurchaseOrderSummaryDto[];
+  sortDirection: () => string;
 }
 
 describe('PurchaseOrdersComponent', () => {
-  function setup(options: { canWrite?: boolean; canSeeCosts?: boolean; supplier$?: Observable<unknown> } = {}) {
+  function setup(
+    options: {
+      canWrite?: boolean;
+      canSeeCosts?: boolean;
+      orders?: PurchaseOrderSummaryDto[];
+      supplier$?: Observable<unknown>;
+    } = {},
+  ) {
     const api = {
-      getOrders: vi.fn().mockReturnValue(of([summary])),
+      getOrders: vi.fn().mockReturnValue(of(options.orders ?? [summary])),
       getOrder: vi.fn().mockReturnValue(of(detail)),
       createOrder: vi.fn().mockReturnValue(of(detail)),
       updateOrder: vi.fn().mockReturnValue(of(detail)),
@@ -116,6 +126,42 @@ describe('PurchaseOrdersComponent', () => {
     (el.querySelector('[data-testid="open-suggestions"]') as HTMLButtonElement).click();
 
     expect(navigate).toHaveBeenCalledWith('/inventory/purchase-orders/suggestions');
+  });
+
+  describe('sorting from the column headers', () => {
+    const orders: PurchaseOrderSummaryDto[] = [
+      { ...summary, id: 'a', poNumber: 9, total: 500, status: PurchaseOrderStatus.Sent, expectedOn: '2026-11-20' },
+      { ...summary, id: 'b', poNumber: 8, total: null, status: PurchaseOrderStatus.Draft, expectedOn: null },
+      { ...summary, id: 'c', poNumber: 7, total: 2000, status: PurchaseOrderStatus.Received, expectedOn: '2026-11-10' },
+    ];
+    const numbers = (vm: Vm): number[] => vm.sortedOrders().map((o) => o.poNumber);
+
+    it('keeps the server order until a column is picked', () => {
+      expect(numbers(setup({ orders }).vm)).toEqual([9, 8, 7]);
+    });
+
+    it('sorts by order number, and reverses when the same column is picked again', () => {
+      const { vm } = setup({ orders });
+      vm.toggleSort('order');
+      expect(numbers(vm)).toEqual([7, 8, 9]);
+      vm.toggleSort('order');
+      expect(vm.sortDirection()).toBe('desc');
+      expect(numbers(vm)).toEqual([9, 8, 7]);
+    });
+
+    it('puts orders without a total or date first when ascending', () => {
+      const { vm } = setup({ orders });
+      vm.toggleSort('total');
+      expect(numbers(vm)).toEqual([8, 9, 7]);
+      vm.toggleSort('expected');
+      expect(numbers(vm)).toEqual([8, 7, 9]);
+    });
+
+    it('sorts by status', () => {
+      const { vm } = setup({ orders });
+      vm.toggleSort('status');
+      expect(numbers(vm)).toEqual([8, 9, 7]);
+    });
   });
 
   it('hides the new order button without write access', () => {

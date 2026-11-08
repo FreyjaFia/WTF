@@ -6,22 +6,6 @@
         <p class="text-xs text-gray-500 sm:text-sm">Count what is on the shelf and correct the balances in one go</p>
       </div>
       <div class="flex shrink-0 items-center gap-2">
-        @if (!isAndroidPlatform) {
-          <button
-            type="button"
-            class="app-btn app-btn-ghost pointer-events-auto z-30 p-2"
-            [class.opacity-70]="isRefreshing()"
-            [disabled]="isRefreshing()"
-            aria-label="Refresh counts"
-            (click)="refresh()"
-          >
-            <app-icon
-              name="icon-refresh"
-              [class]="isRefreshing() ? 'h-5 w-5 animate-spin text-gray-600' : 'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'"
-              [fill]="'currentColor'"
-            />
-          </button>
-        }
         @if (auth.canWriteStockMovements() && !isFormOpen()) {
           <button type="button" class="app-btn app-btn-primary app-btn-sm" data-testid="open-start" (click)="openForm()">
             <app-icon name="icon-plus" [class]="'h-4 w-4'" />
@@ -30,6 +14,24 @@
         }
       </div>
     </div>
+    @if (!isAndroidPlatform) {
+      <div class="ml-auto flex items-center justify-end gap-2">
+        <button
+          type="button"
+          class="app-btn app-btn-ghost pointer-events-auto z-30 p-2"
+          [class.opacity-70]="isRefreshing()"
+          [disabled]="isRefreshing()"
+          aria-label="Refresh counts"
+          (click)="refresh()"
+        >
+          <app-icon
+            name="icon-refresh"
+            [class]="isRefreshing() ? 'h-5 w-5 animate-spin text-gray-600' : 'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'"
+            [fill]="'currentColor'"
+          />
+        </button>
+      </div>
+    }
   </div>
 
   @if (auth.canWriteStockMovements() && isFormOpen()) {
