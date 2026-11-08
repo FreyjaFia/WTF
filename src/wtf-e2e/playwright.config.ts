@@ -12,8 +12,8 @@ export default defineConfig({
   // One retry everywhere, so a rare timing blip is retried instead of failing the run. A test that needed the retry is
   // reported as "flaky" by Playwright, so it stays visible. On CI (4 cores) it uses 4 workers.
   workers: process.env.E2E_WORKERS ? Number(process.env.E2E_WORKERS) : process.env.CI ? 4 : 3,
-  fullyParallel: false,
-  retries: 1,
+  fullyParallel: true,
+  retries: 0,
   reporter: process.env.CI
     ? [['list'], ['html', { open: 'never' }], ['json', { outputFile: 'test-results/results.json' }]]
     : [['list'], ['json', { outputFile: 'test-results/results.json' }]],
