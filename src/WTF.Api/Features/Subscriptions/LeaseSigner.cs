@@ -21,24 +21,22 @@ public interface ILeaseSigner
     LeasePayload? Verify(string lease);
 }
 
-// A lease is "payload.signature" (both base64url). The signature is ECDSA P-256 in the fixed r||s form that the browser's
-// crypto API verifies, so the app can check it offline with the public key built into the app.
+// A lease is "payload.signature" (both base64url). Without a signing key the signature part is empty (dates only, no key setup);
+// with Subscription:LeaseSigningKeyPem set it is ECDSA P-256 in the r||s form the browser's crypto API verifies offline.
 public sealed class LeaseSigner : ILeaseSigner, IDisposable
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     private readonly ECDsa _key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+    private readonly bool _signed;
 
-    public LeaseSigner(IOptions<SubscriptionOptions> options, ILogger<LeaseSigner> logger)
+    public LeaseSigner(IOptions<SubscriptionOptions> options)
     {
         var pem = options.Value.LeaseSigningKeyPem;
         if (!string.IsNullOrWhiteSpace(pem))
         {
             _key.ImportFromPem(pem);
-        }
-        else
-        {
-            logger.LogWarning("Subscription:LeaseSigningKeyPem is not set; using a temporary key, so leases stop verifying after a restart.");
+            _signed = true;
         }
     }
 
@@ -47,6 +45,11 @@ public sealed class LeaseSigner : ILeaseSigner, IDisposable
     public string Sign(LeasePayload payload)
     {
         var body = Base64Url(JsonSerializer.SerializeToUtf8Bytes(payload, JsonOptions));
+        if (!_signed)
+        {
+            return $"{body}.";
+        }
+
         var signature = _key.SignData(Encoding.ASCII.GetBytes(body), HashAlgorithmName.SHA256, DSASignatureFormat.IeeeP1363FixedFieldConcatenation);
         return $"{body}.{Base64Url(signature)}";
     }
@@ -61,6 +64,11 @@ public sealed class LeaseSigner : ILeaseSigner, IDisposable
 
         try
         {
+            if (!_signed)
+            {
+                return JsonSerializer.Deserialize<LeasePayload>(FromBase64Url(parts[0]), JsonOptions);
+            }
+
             var valid = _key.VerifyData(
                 Encoding.ASCII.GetBytes(parts[0]), FromBase64Url(parts[1]), HashAlgorithmName.SHA256, DSASignatureFormat.IeeeP1363FixedFieldConcatenation);
             return valid ? JsonSerializer.Deserialize<LeasePayload>(FromBase64Url(parts[0]), JsonOptions) : null;
