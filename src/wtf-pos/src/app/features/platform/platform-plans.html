@@ -1,0 +1,76 @@
+<div class="mx-auto flex max-w-6xl flex-col gap-4 p-4 sm:p-6">
+  <header>
+    <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Plans</h1>
+    <p class="text-xs text-gray-500 sm:text-sm">What shops can subscribe to. Changing a price applies to new invoices only.</p>
+  </header>
+
+  @if (!editing() && error(); as message) {
+    <div class="rounded-lg bg-red-50 p-3 text-sm text-red-700" role="alert">{{ message }}</div>
+  }
+
+  @if (loading()) {
+    <div class="flex justify-center py-12"><span class="loading loading-spinner loading-lg"></span></div>
+  } @else {
+    <ul class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" data-testid="plan-list">
+      @for (plan of plans(); track plan.id) {
+        <li class="flex flex-col gap-3 rounded-xl bg-surface p-5 shadow-sm" [attr.data-testid]="'plan-' + plan.code">
+          <div class="flex items-start gap-2">
+            <div class="mr-auto">
+              <h2 class="font-semibold text-gray-900">{{ plan.name }}</h2>
+              <p class="text-xs text-gray-500">{{ plan.code }}</p>
+            </div>
+            <app-platform-chip [text]="plan.isActive ? 'Offered' : 'Retired'" [tone]="plan.isActive ? 'green' : 'gray'" />
+          </div>
+          <p class="text-2xl font-bold text-gray-900">
+            {{ plan.monthlyPrice | currency: 'PHP' : 'symbol-narrow' : '1.0-2' }}<span class="text-sm font-medium text-gray-500"> / month</span>
+          </p>
+          <p class="text-xs text-gray-500">{{ plan.maxUsers ? 'Up to ' + plan.maxUsers + ' people' : 'Unlimited people' }}</p>
+          <ul class="flex flex-1 flex-col gap-1 text-sm text-gray-700">
+            @for (feature of plan.features; track feature) {
+              <li>&bull; {{ feature }}</li>
+            } @empty {
+              <li class="text-gray-400">No features listed.</li>
+            }
+          </ul>
+          <button type="button" class="app-btn app-btn-secondary app-btn-sm self-start" (click)="edit(plan)">Edit plan</button>
+        </li>
+      } @empty {
+        <li class="text-sm text-gray-500">No plans.</li>
+      }
+    </ul>
+  }
+</div>
+
+@if (editing(); as plan) {
+  <div class="modal modal-open" role="dialog" aria-modal="true" aria-label="Edit plan">
+    <div class="modal-box max-h-[90vh] max-w-lg overflow-y-auto">
+      @if (error(); as message) {
+        <div class="mb-3 rounded-lg bg-red-50 p-3 text-sm text-red-700" role="alert">{{ message }}</div>
+      }
+      <h2 class="mb-4 text-base font-semibold">Edit {{ plan.name }}</h2>
+      <form [formGroup]="form" (ngSubmit)="save()" class="grid grid-cols-2 gap-3">
+        <label class="col-span-2 text-sm">Name
+          <input formControlName="name" type="text" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+        </label>
+        <label class="text-sm">Price per month
+          <input formControlName="monthlyPrice" type="number" step="0.01" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+        </label>
+        <label class="text-sm">Most people (blank = no limit)
+          <input formControlName="maxUsers" type="number" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+        </label>
+        <label class="col-span-2 text-sm">Features (one per line)
+          <textarea formControlName="features" rows="5" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2"></textarea>
+        </label>
+        <label class="col-span-2 flex items-center gap-2 text-sm">
+          <input formControlName="isActive" type="checkbox" /> Offered to shops
+        </label>
+        <div class="col-span-2 mt-2 flex justify-end gap-2">
+          <button type="button" class="app-btn app-btn-secondary app-btn-md" (click)="close()">Cancel</button>
+          <button type="submit" class="app-btn app-btn-primary app-btn-md" [disabled]="form.invalid || busy()">
+            {{ busy() ? 'Saving...' : 'Save plan' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

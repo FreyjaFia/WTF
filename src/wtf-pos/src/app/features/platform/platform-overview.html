@@ -1,0 +1,99 @@
+<div class="mx-auto flex max-w-6xl flex-col gap-6 p-4 sm:p-6">
+  <header class="flex flex-wrap items-center gap-3">
+    <div class="mr-auto">
+      <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Overview</h1>
+      <p class="text-xs text-gray-500 sm:text-sm">How the shops on the platform are doing today</p>
+    </div>
+    <button type="button" class="app-btn app-btn-secondary app-btn-sm" (click)="load()" [disabled]="loading()">Refresh</button>
+    <button type="button" class="app-btn app-btn-primary app-btn-sm" (click)="newShop()">New shop</button>
+  </header>
+
+  @if (error(); as message) {
+    <div class="rounded-lg bg-red-50 p-3 text-sm text-red-700" role="alert">{{ message }}</div>
+  }
+
+  @if (loading()) {
+    <div class="flex justify-center py-12"><span class="loading loading-spinner loading-lg"></span></div>
+  } @else {
+    @let s = summary();
+    <section class="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Totals" data-testid="overview-stats">
+      <a [routerLink]="shopsLink" class="rounded-xl bg-surface p-4 shadow-sm hover:shadow">
+        <p class="text-xs font-medium text-gray-500">Shops</p>
+        <p class="mt-1 text-2xl font-bold text-gray-900" data-testid="stat-total">{{ s.total }}</p>
+        <p class="mt-1 text-xs text-gray-500">{{ s.suspended }} suspended, {{ s.cancelled }} cancelled</p>
+      </a>
+      <div class="rounded-xl bg-surface p-4 shadow-sm">
+        <p class="text-xs font-medium text-gray-500">Active</p>
+        <p class="mt-1 text-2xl font-bold text-green-700" data-testid="stat-active">{{ s.active }}</p>
+        <p class="mt-1 text-xs text-gray-500">{{ s.trial }} on trial</p>
+      </div>
+      <div class="rounded-xl bg-surface p-4 shadow-sm">
+        <p class="text-xs font-medium text-gray-500">People / orders</p>
+        <p class="mt-1 text-2xl font-bold text-gray-900">{{ s.people }} <span class="text-base font-medium text-gray-400">/ {{ s.orders }}</span></p>
+        <p class="mt-1 text-xs text-gray-500">across every shop</p>
+      </div>
+      <div class="rounded-xl bg-surface p-4 shadow-sm">
+        <p class="text-xs font-medium text-gray-500">Monthly at list price</p>
+        <p class="mt-1 text-2xl font-bold text-gray-900" data-testid="stat-revenue">{{ s.monthlyListPrice | currency: 'PHP' : 'symbol-narrow' : '1.0-2' }}</p>
+        <p class="mt-1 text-xs text-gray-500">active shops, before discounts</p>
+      </div>
+    </section>
+
+    <div class="grid gap-6 lg:grid-cols-2">
+      <section class="rounded-xl bg-surface p-4 shadow-sm" aria-labelledby="attention-title">
+        <h2 id="attention-title" class="mb-3 text-sm font-semibold text-gray-900">Payment needs attention ({{ attention().length }})</h2>
+        <ul class="flex flex-col divide-y divide-gray-100">
+          @for (shop of attention(); track shop.id) {
+            <li>
+              <a [routerLink]="shopLink(shop.id)" class="flex items-center gap-2 py-2.5 text-sm hover:bg-gray-50">
+                <span class="mr-auto min-w-0 truncate font-medium text-gray-900">{{ shop.name }}</span>
+                <span class="text-xs text-gray-500">{{ shop.periodEnd | date: 'mediumDate' }}</span>
+                <app-platform-chip [text]="warningLabel(shop.warning)" [tone]="warningTone(shop.warning)" />
+              </a>
+            </li>
+          } @empty {
+            <li class="py-3 text-sm text-gray-500">Every live shop is paid up.</li>
+          }
+        </ul>
+      </section>
+
+      <section class="rounded-xl bg-surface p-4 shadow-sm" aria-labelledby="quiet-title">
+        <h2 id="quiet-title" class="mb-3 text-sm font-semibold text-gray-900">No orders in 30 days ({{ quiet().length }})</h2>
+        <ul class="flex flex-col divide-y divide-gray-100">
+          @for (shop of quiet(); track shop.id) {
+            <li>
+              <a [routerLink]="shopLink(shop.id)" class="flex items-center gap-2 py-2.5 text-sm hover:bg-gray-50">
+                <span class="mr-auto min-w-0 truncate font-medium text-gray-900">{{ shop.name }}</span>
+                <span class="text-xs text-gray-500">
+                  {{ shop.lastOrderAt ? 'last order ' + (shop.lastOrderAt | date: 'mediumDate') : 'never ordered' }}
+                </span>
+              </a>
+            </li>
+          } @empty {
+            <li class="py-3 text-sm text-gray-500">Every live shop has taken orders lately.</li>
+          }
+        </ul>
+      </section>
+    </div>
+
+    <section class="rounded-xl bg-surface p-4 shadow-sm" aria-labelledby="recent-title">
+      <div class="mb-3 flex items-center">
+        <h2 id="recent-title" class="mr-auto text-sm font-semibold text-gray-900">Recent activity</h2>
+        <a [routerLink]="logLink" class="app-btn-link text-sm">View all</a>
+      </div>
+      <ul class="flex flex-col divide-y divide-gray-100">
+        @for (entry of recent(); track entry.id) {
+          <li class="py-2.5 text-sm">
+            <span class="font-medium text-gray-900">{{ entry.action }}</span>
+            @if (shopName(entry.tenantId); as name) {
+              <span class="text-gray-700"> on {{ name }}</span>
+            }
+            <span class="text-gray-500"> by {{ entry.username ?? 'unknown' }}, {{ entry.timestamp | date: 'short' }}</span>
+          </li>
+        } @empty {
+          <li class="py-3 text-sm text-gray-500">Nothing yet.</li>
+        }
+      </ul>
+    </section>
+  }
+</div>

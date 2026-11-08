@@ -99,3 +99,11 @@ export interface PublicBrandDto {
   phone: string | null;
   primaryColor: string;
 }
+
+export interface UpdatePlanRequest {
+  name: string;
+  monthlyPrice: number;
+  features: string[];
+  maxUsers: number | null;
+  isActive: boolean;
+}

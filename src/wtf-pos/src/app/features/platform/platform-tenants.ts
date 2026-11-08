@@ -1,60 +1,51 @@
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
-import { Observable, forkJoin } from 'rxjs';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { PlatformService } from '@core/services';
+import { filterShops } from '@shared/calculations';
+import { SearchInputComponent } from '@shared/components/search-input/search-input';
 import { AppRoutes } from '@shared/constants/app-routes';
-import {
-  DeletionPreviewDto,
-  PLATFORM_STATUS,
-  PasswordResetDto,
-  PlatformAuditLogDto,
-  PlatformTenantDto,
-  PlatformTenantUserDto,
-} from '@shared/models/platform.models';
-import { PlanDto, TenantSubscriptionDto } from '@shared/models/subscription.models';
+import { PLATFORM_STATUS, PlatformTenantDto } from '@shared/models/platform.models';
+import { PlatformChipComponent } from './platform-chip';
+import { statusTone, warningLabel, warningTone } from './platform-labels';
+import { PlatformSecret, PlatformSecretDialogComponent } from './platform-secret-dialog';
 
-type DialogKind = 'create' | 'users' | 'secret' | 'delete' | 'signin' | 'status' | 'audit' | 'billing';
+interface StatusFilter {
+  label: string;
+  value: number | null;
+}
 
 @Component({
   selector: 'app-platform-tenants',
-  imports: [ReactiveFormsModule, DatePipe],
+  imports: [ReactiveFormsModule, DatePipe, RouterLink, SearchInputComponent, PlatformChipComponent, PlatformSecretDialogComponent],
   templateUrl: './platform-tenants.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PlatformTenantsComponent implements OnInit {
   private readonly platform = inject(PlatformService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
-  protected readonly status = PLATFORM_STATUS;
+  protected readonly filters: StatusFilter[] = [
+    { label: 'All', value: null },
+    { label: 'Active', value: PLATFORM_STATUS.Active },
+    { label: 'Trial', value: PLATFORM_STATUS.Trial },
+    { label: 'Suspended', value: PLATFORM_STATUS.Suspended },
+    { label: 'Cancelled', value: PLATFORM_STATUS.Cancelled },
+  ];
+
   protected readonly tenants = signal<PlatformTenantDto[]>([]);
   protected readonly loading = signal(true);
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
-  protected readonly dialog = signal<DialogKind | null>(null);
-  protected readonly selected = signal<PlatformTenantDto | null>(null);
-  protected readonly users = signal<PlatformTenantUserDto[]>([]);
-  protected readonly secret = signal<{ title: string; username: string; password: string } | null>(null);
-  protected readonly preview = signal<DeletionPreviewDto | null>(null);
-  protected readonly audit = signal<PlatformAuditLogDto[]>([]);
-  protected readonly pendingChange = signal<'suspend' | 'resume' | 'cancel'>('suspend');
-  protected readonly signInUser = signal<PlatformTenantUserDto | null>(null);
-  protected readonly plans = signal<PlanDto[]>([]);
-  protected readonly billing = signal<TenantSubscriptionDto | null>(null);
-  protected readonly billingForm = new FormGroup({
-    planId: new FormControl(0, { nonNullable: true, validators: [Validators.required] }),
-    periodEnd: new FormControl('', { nonNullable: true }),
-    graceDays: new FormControl(7, { nonNullable: true, validators: [Validators.min(0), Validators.max(60)] }),
-    discountPercent: new FormControl(0, { nonNullable: true, validators: [Validators.min(0), Validators.max(100)] }),
-    notes: new FormControl('', { nonNullable: true }),
-  });
-  protected readonly invoiceForm = new FormGroup({
-    months: new FormControl(1, { nonNullable: true, validators: [Validators.required, Validators.min(1), Validators.max(24)] }),
-    reference: new FormControl('', { nonNullable: true }),
-  });
-  protected readonly previewRows = computed(() => Object.entries(this.preview()?.rowCounts ?? {}));
+  protected readonly dialogError = signal<string | null>(null);
+  protected readonly creating = signal(false);
+  protected readonly secret = signal<PlatformSecret | null>(null);
+  protected readonly statusFilter = signal<number | null>(null);
 
+  protected readonly search = new FormControl<string | null>('');
   protected readonly createForm = new FormGroup({
     name: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(100)] }),
     slug: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.pattern(/^[a-z0-9][a-z0-9-]{1,48}[a-z0-9]$/)] }),
@@ -64,18 +55,20 @@ export class PlatformTenantsComponent implements OnInit {
     isTrial: new FormControl(false, { nonNullable: true }),
   });
 
-  protected readonly reasonForm = new FormGroup({
-    reason: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.minLength(5)] }),
-    allowWrites: new FormControl(false, { nonNullable: true }),
-  });
+  protected readonly statusTone = statusTone;
+  protected readonly warningLabel = warningLabel;
+  protected readonly warningTone = warningTone;
 
-  protected readonly deleteForm = new FormGroup({
-    slug: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
-    password: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
-  });
+  private readonly query = toSignal(this.search.valueChanges, { initialValue: '' });
+  protected readonly visible = computed(() => filterShops(this.tenants(), this.query() ?? '', this.statusFilter()));
 
   public ngOnInit(): void {
     this.load();
+
+    if (this.route.snapshot.queryParamMap.has('new')) {
+      this.openCreate();
+      this.router.navigate([], { queryParams: {}, replaceUrl: true });
+    }
   }
 
   protected load(): void {
@@ -85,24 +78,33 @@ export class PlatformTenantsComponent implements OnInit {
         this.tenants.set(tenants);
         this.loading.set(false);
       },
-      error: (err: unknown) => this.fail(err, 'Could not load the shops.', true),
+      error: (err: unknown) => {
+        this.error.set(PlatformService.messageOf(err, 'Could not load the shops.'));
+        this.loading.set(false);
+      },
     });
   }
 
-  protected signOut(): void {
-    this.platform.logout();
-    this.router.navigateByUrl(AppRoutes.PlatformLogin, { replaceUrl: true });
+  protected countFor(value: number | null): number {
+    return value === null ? this.tenants().length : this.tenants().filter((t) => t.status === value).length;
   }
 
-  protected close(): void {
-    this.dialog.set(null);
-    this.error.set(null);
-    this.secret.set(null);
+  protected shopLink(tenant: PlatformTenantDto): string {
+    return AppRoutes.PlatformShopById(tenant.id);
   }
 
   protected openCreate(): void {
     this.createForm.reset();
-    this.open('create', null);
+    this.dialogError.set(null);
+    this.creating.set(true);
+  }
+
+  protected closeCreate(): void {
+    this.creating.set(false);
+  }
+
+  protected closeSecret(): void {
+    this.secret.set(null);
   }
 
   protected createShop(): void {
@@ -110,226 +112,23 @@ export class PlatformTenantsComponent implements OnInit {
       return;
     }
 
-    this.run(this.platform.createTenant(this.createForm.getRawValue()), (result) => {
-      this.secret.set({
-        title: `${result.tenant.name} is ready`,
-        username: result.ownerUsername,
-        password: result.temporaryPassword,
-      });
-      this.dialog.set('secret');
-      this.load();
-    });
-  }
-
-  protected openStatus(tenant: PlatformTenantDto, change: 'suspend' | 'resume' | 'cancel'): void {
-    this.reasonForm.reset();
-    this.pendingChange.set(change);
-    this.open('status', tenant);
-  }
-
-  protected confirmStatus(): void {
-    const tenant = this.selected();
-
-    if (!tenant || this.busy()) {
-      return;
-    }
-
-    this.run(this.platform.changeStatus(tenant.id, this.pendingChange(), this.reasonForm.controls.reason.value), () => {
-      this.close();
-      this.load();
-    });
-  }
-
-  protected openBilling(tenant: PlatformTenantDto): void {
-    this.billing.set(null);
-    this.open('billing', tenant);
-    this.run(forkJoin([this.platform.getPlans(), this.platform.getSubscription(tenant.id)]), ([plans, sub]) => {
-      this.plans.set(plans);
-      this.applyBilling(sub);
-    });
-  }
-
-  protected saveBilling(): void {
-    const tenant = this.selected();
-
-    if (!tenant || this.billingForm.invalid || this.busy()) {
-      return;
-    }
-
-    const v = this.billingForm.getRawValue();
-
-    this.run(
-      this.platform.setSubscription(tenant.id, {
-        planId: Number(v.planId),
-        periodEnd: v.periodEnd ? new Date(v.periodEnd).toISOString() : null,
-        graceDays: Number(v.graceDays),
-        discountPercent: Number(v.discountPercent),
-        notes: v.notes || null,
-      }),
-      (sub) => {
-        this.applyBilling(sub);
+    this.busy.set(true);
+    this.dialogError.set(null);
+    this.platform.createTenant(this.createForm.getRawValue()).subscribe({
+      next: (result) => {
+        this.busy.set(false);
+        this.creating.set(false);
+        this.secret.set({
+          title: `${result.tenant.name} is ready`,
+          username: result.ownerUsername,
+          password: result.temporaryPassword,
+        });
         this.load();
       },
-    );
-  }
-
-  protected addInvoice(): void {
-    const tenant = this.selected();
-
-    if (!tenant || this.invoiceForm.invalid || this.busy()) {
-      return;
-    }
-
-    const v = this.invoiceForm.getRawValue();
-    const request = { months: Number(v.months), reference: v.reference || null, dueDate: null, notes: null };
-
-    this.run(this.platform.createInvoice(tenant.id, request), () => this.openBilling(tenant));
-  }
-
-  protected markPaid(invoiceId: string): void {
-    this.run(this.platform.markInvoicePaid(invoiceId, null), (sub) => {
-      this.applyBilling(sub);
-      this.load();
-    });
-  }
-
-  protected voidInvoice(invoiceId: string): void {
-    this.run(this.platform.voidInvoice(invoiceId), (sub) => this.applyBilling(sub));
-  }
-
-  protected openUsers(tenant: PlatformTenantDto): void {
-    this.users.set([]);
-    this.open('users', tenant);
-    this.run(this.platform.getUsers(tenant.id), (users) => this.users.set(users));
-  }
-
-  protected resetPassword(user: PlatformTenantUserDto): void {
-    const tenant = this.selected();
-
-    if (!tenant || this.busy()) {
-      return;
-    }
-
-    this.run(this.platform.resetPassword(tenant.id, user.id), (result: PasswordResetDto) => {
-      this.secret.set({
-        title: 'New one-time password',
-        username: result.username,
-        password: result.temporaryPassword,
-      });
-      this.dialog.set('secret');
-    });
-  }
-
-  protected openSignIn(user: PlatformTenantUserDto): void {
-    this.reasonForm.reset();
-    this.signInUser.set(user);
-    this.dialog.set('signin');
-  }
-
-  protected confirmSignIn(): void {
-    const tenant = this.selected();
-    const user = this.signInUser();
-
-    if (!tenant || !user || this.reasonForm.invalid || this.busy()) {
-      return;
-    }
-
-    const { reason, allowWrites } = this.reasonForm.getRawValue();
-
-    this.run(this.platform.impersonate(tenant.id, user.id, reason, allowWrites), (result) => {
-      this.platform.startImpersonation(result);
-      this.router.navigateByUrl(AppRoutes.Dashboard);
-    });
-  }
-
-  protected exportShop(tenant: PlatformTenantDto): void {
-    this.error.set(null);
-    this.platform.exportTenant(tenant.id).subscribe({
-      next: (blob) => {
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-
-        link.href = url;
-        link.download = `${tenant.slug}-export.zip`;
-        link.click();
-        URL.revokeObjectURL(url);
-      },
-      error: (err: unknown) => this.fail(err, 'Could not export the shop.', true),
-    });
-  }
-
-  protected openDelete(tenant: PlatformTenantDto): void {
-    this.deleteForm.reset();
-    this.preview.set(null);
-    this.open('delete', tenant);
-    this.run(this.platform.getDeletionPreview(tenant.id), (preview) => this.preview.set(preview));
-  }
-
-  protected confirmDelete(): void {
-    const tenant = this.selected();
-
-    if (!tenant || this.deleteForm.invalid || this.busy()) {
-      return;
-    }
-
-    const { slug, password } = this.deleteForm.getRawValue();
-
-    this.run(this.platform.deleteTenant(tenant.id, slug, password), () => {
-      this.close();
-      this.load();
-    });
-  }
-
-  protected openAudit(tenant: PlatformTenantDto | null): void {
-    this.audit.set([]);
-    this.open('audit', tenant);
-    this.run(this.platform.getAuditLogs(tenant?.id), (logs) => this.audit.set(logs));
-  }
-
-  protected canDelete(tenant: PlatformTenantDto): boolean {
-    return tenant.status === PLATFORM_STATUS.Suspended || tenant.status === PLATFORM_STATUS.Cancelled;
-  }
-
-  protected isLive(tenant: PlatformTenantDto): boolean {
-    return tenant.status === PLATFORM_STATUS.Trial || tenant.status === PLATFORM_STATUS.Active;
-  }
-
-  private applyBilling(sub: TenantSubscriptionDto): void {
-    this.billing.set(sub);
-    this.billingForm.patchValue({
-      planId: sub.planId,
-      periodEnd: sub.periodEnd.slice(0, 10),
-      graceDays: sub.graceDays,
-      discountPercent: sub.discountPercent,
-      notes: sub.notes ?? '',
-    });
-  }
-
-  private open(kind: DialogKind, tenant: PlatformTenantDto | null): void {
-    this.error.set(null);
-    this.selected.set(tenant);
-    this.dialog.set(kind);
-  }
-
-  private run<T>(source: Observable<T>, onDone: (value: T) => void): void {
-    this.busy.set(true);
-    this.error.set(null);
-    source.subscribe({
-      next: (value) => {
+      error: (err: unknown) => {
         this.busy.set(false);
-        onDone(value);
+        this.dialogError.set(PlatformService.messageOf(err, 'That did not work. Try again.'));
       },
-      error: (err: unknown) => this.fail(err, 'That did not work. Try again.', false),
     });
-  }
-
-  private fail(err: unknown, fallback: string, stopLoading: boolean): void {
-    this.busy.set(false);
-
-    if (stopLoading) {
-      this.loading.set(false);
-    }
-
-    this.error.set(PlatformService.messageOf(err, fallback));
   }
 }

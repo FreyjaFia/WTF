@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router, provideRouter } from '@angular/router';
 import { PlatformService } from '@core/services';
 import { PlatformTenantDto } from '@shared/models/platform.models';
 import { of } from 'rxjs';
@@ -19,33 +19,29 @@ const shop = (over: Partial<PlatformTenantDto>): PlatformTenantDto => ({
   ...over,
 });
 
-function render(tenants: PlatformTenantDto[]) {
+function render(tenants: PlatformTenantDto[], queryParams: Record<string, string> = {}) {
   const platform = {
     getTenants: vi.fn().mockReturnValue(of(tenants)),
     createTenant: vi.fn().mockReturnValue(
       of({ tenant: shop({}), ownerUsername: 'moon.owner', temporaryPassword: 'Abc123xyz' }),
     ),
-    changeStatus: vi.fn().mockReturnValue(of(shop({}))),
-    getDeletionPreview: vi.fn().mockReturnValue(of({ tenantId: 't1', slug: 'moonbrew', status: 3, rowCounts: { Users: 2 } })),
-    deleteTenant: vi.fn().mockReturnValue(of({})),
-    getUsers: vi.fn().mockReturnValue(of([])),
-    logout: vi.fn(),
   };
-  const router = { navigateByUrl: vi.fn() };
   TestBed.configureTestingModule({
     imports: [PlatformTenantsComponent],
     providers: [
+      provideRouter([]),
       { provide: PlatformService, useValue: platform },
-      { provide: Router, useValue: router },
+      { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: { has: (k: string) => k in queryParams } } } },
     ],
   });
+  vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
   const fixture = TestBed.createComponent(PlatformTenantsComponent);
   fixture.detectChanges();
   const el = fixture.nativeElement as HTMLElement;
   const buttonWith = (text: string) =>
-    Array.from(el.querySelectorAll('button')).find((b) => b.textContent?.trim() === text);
+    Array.from(el.querySelectorAll('button')).find((b) => b.textContent?.trim().startsWith(text));
 
-  return { fixture, el, platform, router, buttonWith };
+  return { fixture, el, platform, buttonWith };
 }
 
 describe('PlatformTenantsComponent', () => {
@@ -56,16 +52,37 @@ describe('PlatformTenantsComponent', () => {
     expect(el.querySelector('[data-testid="shop-sun"]')?.textContent).toContain('Suspended');
   });
 
-  it('offers Delete permanently only for a suspended or cancelled shop', () => {
-    const live = render([shop({})]);
-    expect(live.buttonWith('Delete permanently')).toBeUndefined();
-    expect(live.buttonWith('Suspend')).toBeDefined();
-    TestBed.resetTestingModule();
+  it('filters the list by status and by the search box', () => {
+    const { fixture, el, buttonWith } = render([
+      shop({}),
+      shop({ id: 't2', slug: 'sun', name: 'Sun', status: 3, statusName: 'Suspended' }),
+    ]);
 
-    const suspended = render([shop({ status: 3, statusName: 'Suspended' })]);
-    expect(suspended.buttonWith('Delete permanently')).toBeDefined();
-    expect(suspended.buttonWith('Resume')).toBeDefined();
-    expect(suspended.buttonWith('Suspend')).toBeUndefined();
+    buttonWith('Suspended')!.click();
+    fixture.detectChanges();
+    expect(el.querySelector('[data-testid="shop-moonbrew"]')).toBeNull();
+    expect(el.querySelector('[data-testid="shop-sun"]')).not.toBeNull();
+
+    buttonWith('All')!.click();
+    const search = el.querySelector<HTMLInputElement>('input[type="search"]')!;
+    search.value = 'moon';
+    search.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    expect(el.querySelector('[data-testid="shop-moonbrew"]')).not.toBeNull();
+    expect(el.querySelector('[data-testid="shop-sun"]')).toBeNull();
+  });
+
+  it('shows each status count on its filter', () => {
+    const { buttonWith } = render([shop({}), shop({ id: 't2', slug: 'a' }), shop({ id: 't3', slug: 'b', status: 1 })]);
+
+    expect(buttonWith('Active')!.textContent).toContain('2');
+    expect(buttonWith('Trial')!.textContent).toContain('1');
+  });
+
+  it('opens the new shop form straight away when sent here from the overview', () => {
+    const { el } = render([], { new: '1' });
+
+    expect(el.querySelector('[aria-label="New shop"]')).not.toBeNull();
   });
 
   it('shows the one-time password after a shop is created', () => {
@@ -85,43 +102,10 @@ describe('PlatformTenantsComponent', () => {
       input.value = value;
       input.dispatchEvent(new Event('input'));
     }
-    el.querySelector('form')!.dispatchEvent(new Event('submit'));
+    el.querySelector('.modal-box form')!.dispatchEvent(new Event('submit'));
     fixture.detectChanges();
 
     expect(platform.createTenant).toHaveBeenCalledWith(expect.objectContaining({ slug: 'moonbrew', ownerUsername: 'moon.owner' }));
     expect(el.querySelector('[data-testid="secret-password"]')?.textContent).toBe('Abc123xyz');
-  });
-
-  it('needs the typed address and a password before the delete button works, and shows the row counts', () => {
-    const { fixture, el, platform, buttonWith } = render([shop({ status: 3, statusName: 'Suspended' })]);
-
-    buttonWith('Delete permanently')!.click();
-    fixture.detectChanges();
-
-    expect(el.querySelector('[data-testid="delete-counts"]')?.textContent).toContain('Users: 2');
-    const submit = el.querySelector<HTMLButtonElement>('.modal-box button[type="submit"]')!;
-    expect(submit.disabled).toBe(true);
-
-    const type = (name: string, value: string) => {
-      const input = el.querySelector<HTMLInputElement>(`[formControlName="${name}"]`)!;
-      input.value = value;
-      input.dispatchEvent(new Event('input'));
-    };
-    type('slug', 'moonbrew');
-    type('password', 'pw');
-    fixture.detectChanges();
-    expect(submit.disabled).toBe(false);
-
-    el.querySelector('.modal-box form')!.dispatchEvent(new Event('submit'));
-    expect(platform.deleteTenant).toHaveBeenCalledWith('t1', 'moonbrew', 'pw');
-  });
-
-  it('signs out back to the platform login', () => {
-    const { buttonWith, platform, router } = render([]);
-
-    buttonWith('Sign out')!.click();
-
-    expect(platform.logout).toHaveBeenCalled();
-    expect(router.navigateByUrl).toHaveBeenCalledWith('/platform/login', { replaceUrl: true });
   });
 });

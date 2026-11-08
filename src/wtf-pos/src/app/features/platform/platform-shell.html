@@ -1,0 +1,52 @@
+<div class="flex h-full flex-col bg-gray-50 md:flex-row">
+  <aside class="hidden w-60 shrink-0 flex-col border-r border-gray-200 bg-surface md:flex" aria-label="Platform navigation">
+    <div class="flex items-center gap-3 px-5 py-5">
+      <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-brand text-sm font-bold text-white">W</span>
+      <div class="leading-tight">
+        <p class="text-sm font-semibold text-gray-900">WTF Platform</p>
+        <p class="text-xs text-gray-500">Shop administration</p>
+      </div>
+    </div>
+    <nav class="flex flex-1 flex-col gap-1 px-3">
+      @for (item of nav; track item.link) {
+        <a
+          [routerLink]="item.link"
+          routerLinkActive="sidebar-active font-semibold text-gray-900"
+          class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-gray-600 hover:bg-gray-50"
+        >
+          <app-icon [name]="item.icon" size="20" />
+          {{ item.label }}
+        </a>
+      }
+    </nav>
+    <div class="border-t border-gray-200 p-3">
+      <button type="button" class="app-btn app-btn-ghost app-btn-md w-full justify-start" (click)="signOut()">
+        <app-icon name="icon-logout" size="20" />
+        Sign out
+      </button>
+    </div>
+  </aside>
+
+  <header class="shrink-0 border-b border-gray-200 bg-surface md:hidden">
+    <div class="flex items-center gap-3 px-4 py-3">
+      <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-brand text-sm font-bold text-white">W</span>
+      <p class="mr-auto text-sm font-semibold text-gray-900">WTF Platform</p>
+      <button type="button" class="app-btn app-btn-ghost app-btn-sm" (click)="signOut()">Sign out</button>
+    </div>
+    <nav class="flex gap-1 overflow-x-auto overflow-y-hidden px-3 pb-2" aria-label="Platform navigation">
+      @for (item of nav; track item.link) {
+        <a
+          [routerLink]="item.link"
+          routerLinkActive="bg-gray-100 font-semibold text-gray-900"
+          class="shrink-0 rounded-full px-3 py-1.5 text-sm text-gray-600"
+        >
+          {{ item.label }}
+        </a>
+      }
+    </nav>
+  </header>
+
+  <main class="min-h-0 flex-1 overflow-y-auto">
+    <router-outlet />
+  </main>
+</div>

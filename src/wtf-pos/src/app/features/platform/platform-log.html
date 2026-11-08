@@ -1,0 +1,49 @@
+<div class="mx-auto flex max-w-6xl flex-col gap-4 p-4 sm:p-6">
+  <header class="flex flex-wrap items-center gap-3">
+    <div class="mr-auto">
+      <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Platform log</h1>
+      <p class="text-xs text-gray-500 sm:text-sm">The latest 100 things platform admins did</p>
+    </div>
+    <button type="button" class="app-btn app-btn-secondary app-btn-sm" (click)="load()" [disabled]="loading()">Refresh</button>
+  </header>
+
+  @if (error(); as message) {
+    <div class="rounded-lg bg-red-50 p-3 text-sm text-red-700" role="alert">{{ message }}</div>
+  }
+
+  <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+    <div class="flex h-10 items-center gap-2 rounded-lg border border-gray-200 bg-surface px-3 sm:w-80">
+      <app-search-input [control]="search" placeholder="Search action, person or details" ariaLabel="Search the log" />
+    </div>
+    <select [formControl]="shopFilter" class="h-10 rounded-lg border border-gray-200 bg-surface px-3 text-sm sm:w-64" aria-label="Filter by shop">
+      <option value="">All shops</option>
+      @for (t of tenants(); track t.id) {
+        <option [value]="t.id">{{ t.name }}</option>
+      }
+    </select>
+  </div>
+
+  @if (loading()) {
+    <div class="flex justify-center py-12"><span class="loading loading-spinner loading-lg"></span></div>
+  } @else {
+    <ul class="divide-y divide-gray-100 rounded-xl bg-surface shadow-sm" data-testid="log-list">
+      @for (entry of visible(); track entry.id) {
+        <li class="flex flex-col gap-0.5 px-4 py-3 text-sm">
+          <div class="flex flex-wrap items-baseline gap-x-2">
+            <span class="font-medium text-gray-900">{{ entry.action }}</span>
+            @if (shop(entry.tenantId); as s) {
+              <a [routerLink]="shopLink(s.id)" class="text-brand-ink hover:underline">{{ s.name }}</a>
+            }
+            <span class="ml-auto text-xs text-gray-500">{{ entry.timestamp | date: 'medium' }}</span>
+          </div>
+          <div class="text-xs text-gray-500">by {{ entry.username ?? 'unknown' }}@if (entry.ipAddress) {, {{ entry.ipAddress }}}</div>
+          @if (entry.details) {
+            <div class="wrap-break-word text-gray-700">{{ entry.details }}</div>
+          }
+        </li>
+      } @empty {
+        <li class="px-4 py-8 text-center text-sm text-gray-500">Nothing matches.</li>
+      }
+    </ul>
+  }
+</div>

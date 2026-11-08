@@ -12,9 +12,11 @@ import {
   PlatformTenantUserDto,
 } from '@shared/models/platform.models';
 import {
+  BrandDto,
   PlanDto,
   SetSubscriptionRequest,
   TenantSubscriptionDto,
+  UpdatePlanRequest,
 } from '@shared/models/subscription.models';
 import { environment } from '@environments/environment.development';
 import { Observable, map } from 'rxjs';
@@ -67,6 +69,18 @@ export class PlatformService {
 
   public getPlans(): Observable<PlanDto[]> {
     return this.http.get<PlanDto[]>(`${this.baseUrl}/plans`);
+  }
+
+  public updatePlan(id: number, request: UpdatePlanRequest): Observable<PlanDto> {
+    return this.http.put<PlanDto>(`${this.baseUrl}/plans/${id}`, request);
+  }
+
+  public getBrand(tenantId: string): Observable<BrandDto> {
+    return this.http.get<BrandDto>(`${this.baseUrl}/tenants/${tenantId}/brand`);
+  }
+
+  public setBrand(tenantId: string, brand: BrandDto): Observable<BrandDto> {
+    return this.http.put<BrandDto>(`${this.baseUrl}/tenants/${tenantId}/brand`, brand);
   }
 
   public getSubscription(tenantId: string): Observable<TenantSubscriptionDto> {

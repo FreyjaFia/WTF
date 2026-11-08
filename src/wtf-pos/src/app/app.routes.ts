@@ -49,6 +49,11 @@ import { OrderEditor } from '@features/orders/order-editor/order-editor';
 import { OrderList } from '@features/orders/order-list/order-list';
 import { Orders } from '@features/orders/orders';
 import { PlatformLoginComponent } from '@features/platform/platform-login';
+import { PlatformLogComponent } from '@features/platform/platform-log';
+import { PlatformOverviewComponent } from '@features/platform/platform-overview';
+import { PlatformPlansComponent } from '@features/platform/platform-plans';
+import { PlatformShellComponent } from '@features/platform/platform-shell';
+import { PlatformTenantDetailComponent } from '@features/platform/platform-tenant-detail';
 import { PlatformTenantsComponent } from '@features/platform/platform-tenants';
 import { PublicOrderComponent } from '@features/public-order/public-order';
 import { LayoutComponent } from '@shared/components';
@@ -71,8 +76,16 @@ export const routes: Routes = [
   },
   {
     path: 'platform',
-    component: PlatformTenantsComponent,
+    component: PlatformShellComponent,
     canActivate: [platformGuard],
+    children: [
+      { path: '', redirectTo: 'overview', pathMatch: 'full' },
+      { path: 'overview', component: PlatformOverviewComponent },
+      { path: 'shops', component: PlatformTenantsComponent },
+      { path: 'shops/:id', component: PlatformTenantDetailComponent },
+      { path: 'plans', component: PlatformPlansComponent },
+      { path: 'log', component: PlatformLogComponent },
+    ],
   },
   {
     // Public page for customers with a personal ordering link. No sign-in, so no guards.

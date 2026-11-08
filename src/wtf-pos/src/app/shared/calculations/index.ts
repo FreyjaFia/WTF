@@ -12,3 +12,4 @@ export * from './waste';
 export * from './profit-stats';
 export * from './subscription-rules';
 export * from './addon-selection';
+export * from './platform-stats';
