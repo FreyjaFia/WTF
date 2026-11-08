@@ -1,5 +1,5 @@
 export function unique(prefix: string): string {
-  return `${prefix} ${Date.now().toString(36)}${Math.floor(Math.random() * 1000)}${Math.floor(Math.random() * 1296).toString(36)}`;
+  return `${prefix} ${Date.now().toString(36)}${Math.floor(Math.random() * 1000)}`;
 }
 
 export function uniqueCode(prefix: string = 'E'): string {

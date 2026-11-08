@@ -421,6 +421,10 @@ test.describe('the bell @stock @notifications', () => {
 
     await bell.panel.locator('[data-bell-mark-all]').click();
     await expect(entry).toHaveAttribute('data-unread', 'false');
-    await expect(bell.panel.locator('[data-bell-mark-all]')).toBeDisabled();
+    // Other tests raise alerts in the same shop at the same time, so the button can be enabled again for their
+    // alerts; what matters is that this alert stays read after a reload.
+    await page.reload();
+    await bell.open();
+    await expect(bell.panel.locator('[data-bell-item]').filter({ hasText: item.name })).toHaveAttribute('data-unread', 'false');
   });
 });

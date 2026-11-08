@@ -190,7 +190,7 @@ test.describe('catalog setup screen @management @catalog', () => {
     const row = page.getByTestId('catalog-list').locator('li', { hasText: 'Drink' }).first();
     await row.getByRole('button', { name: 'Entry actions' }).click();
     await row.getByRole('button', { name: 'Turn Off' }).click();
-    await page.getByRole('button', { name: 'Turn Off' }).last().click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Turn Off' }).click();
 
     await expect(page.getByText(/still use this category/i)).toBeVisible();
   });
