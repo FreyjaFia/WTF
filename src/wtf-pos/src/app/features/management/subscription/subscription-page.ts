@@ -1,11 +1,12 @@
 import { CurrencyPipe, DatePipe } from '@angular/common';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { SubscriptionService } from '@core/services';
+import { BadgeComponent, BadgeVariant } from '@shared/components/badge/badge';
 import { TenantInvoiceDto } from '@shared/models/subscription.models';
 
 @Component({
   selector: 'app-subscription-page',
-  imports: [CurrencyPipe, DatePipe],
+  imports: [BadgeComponent, CurrencyPipe, DatePipe],
   templateUrl: './subscription-page.html',
   standalone: true,
 })
@@ -28,6 +29,20 @@ export class SubscriptionPageComponent implements OnInit {
         this.isLoading.set(false);
       },
     });
+  }
+
+  protected statusVariant(): BadgeVariant {
+    switch (this.subscription.warning()) {
+      case 'none':
+        return 'success';
+      case 'soon':
+      case 'lastDays':
+        return 'amber';
+      case 'grace':
+        return 'warning';
+      default:
+        return 'error';
+    }
   }
 
   protected statusLabel(): string {

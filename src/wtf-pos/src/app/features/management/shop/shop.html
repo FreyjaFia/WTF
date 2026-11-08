@@ -4,36 +4,51 @@
       <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Shop</h1>
       <p class="text-xs text-gray-500 sm:text-sm">Your shop's name and look, its plan and its invoices</p>
     </div>
-    <div class="flex flex-wrap gap-2" role="tablist" aria-label="Shop sections" data-testid="shop-tabs">
+    <nav
+      class="flex w-full items-end gap-4 overflow-x-auto border-b border-gray-200 pb-2 text-sm [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      role="tablist"
+      aria-label="Shop sections"
+      data-testid="shop-tabs"
+    >
       @if (authService.canManageBrand()) {
         <a
           [routerLink]="brandingRoute"
-          routerLinkActive="app-btn-primary"
+          routerLinkActive
           #branding="routerLinkActive"
           role="tab"
-          class="app-btn app-btn-sm"
-          [class.app-btn-secondary]="!branding.isActive"
+          class="relative flex shrink-0 rounded-md px-2 py-1 font-bold text-gray-500 transition-colors"
+          [class.text-gray-900]="branding.isActive"
           [attr.aria-selected]="branding.isActive"
           data-testid="shop-tab-branding"
         >
-          Branding
+          <span class="relative">Branding</span>
+          <span
+            class="absolute right-2 -bottom-2 left-2 h-0.5 rounded-full bg-gray-700 transition-opacity"
+            [class.opacity-100]="branding.isActive"
+            [class.opacity-0]="!branding.isActive"
+          ></span>
         </a>
       }
       @if (authService.canManageSubscription()) {
         <a
           [routerLink]="planRoute"
-          routerLinkActive="app-btn-primary"
+          routerLinkActive
           #plan="routerLinkActive"
           role="tab"
-          class="app-btn app-btn-sm"
-          [class.app-btn-secondary]="!plan.isActive"
+          class="relative flex shrink-0 rounded-md px-2 py-1 font-bold text-gray-500 transition-colors"
+          [class.text-gray-900]="plan.isActive"
           [attr.aria-selected]="plan.isActive"
           data-testid="shop-tab-plan"
         >
-          Plan &amp; billing
+          <span class="relative">Plan &amp; billing</span>
+          <span
+            class="absolute right-2 -bottom-2 left-2 h-0.5 rounded-full bg-gray-700 transition-opacity"
+            [class.opacity-100]="plan.isActive"
+            [class.opacity-0]="!plan.isActive"
+          ></span>
         </a>
       }
-    </div>
+    </nav>
   </div>
 
   <div class="flex min-h-0 flex-1 flex-col">

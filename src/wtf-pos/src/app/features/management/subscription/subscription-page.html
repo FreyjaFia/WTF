@@ -1,48 +1,58 @@
-<div class="flex h-full flex-col">
-  <div class="min-h-0 flex-1 space-y-4 overflow-y-auto">
+<div class="flex h-full min-h-0 flex-col">
+  <div class="min-h-0 flex-1 space-y-6 overflow-y-auto pr-2 pb-4">
     @if (subscription.leasePayload(); as lease) {
-      <div class="rounded-xl bg-white p-4 shadow" data-testid="subscription-summary">
-        <div class="flex flex-wrap items-center justify-between gap-2">
-          <span class="text-sm font-semibold text-gray-900">{{ statusLabel() }}</span>
-          @if (subscription.warning() !== 'locked') {
-            <span class="text-sm text-gray-600">{{ subscription.daysLeft() }} day(s) left in this period</span>
-          }
+      <div class="card rounded-xl bg-surface shadow-lg" data-testid="subscription-summary">
+        <div class="card-body">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <app-badge [variant]="statusVariant()">{{ statusLabel() }}</app-badge>
+            @if (subscription.warning() !== 'locked') {
+              <span class="text-sm text-gray-600">{{ subscription.daysLeft() }} day(s) left in this period</span>
+            }
+          </div>
+          <dl class="mt-2 grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
+            <div>
+              <dt class="text-xs font-semibold tracking-wider text-gray-500 uppercase">Paid until</dt>
+              <dd class="font-medium text-gray-900">{{ lease.periodEnd | date: 'mediumDate' }}</dd>
+            </div>
+            <div>
+              <dt class="text-xs font-semibold tracking-wider text-gray-500 uppercase">Grace period</dt>
+              <dd class="font-medium text-gray-900">{{ lease.graceDays }} day(s)</dd>
+            </div>
+            <div>
+              <dt class="text-xs font-semibold tracking-wider text-gray-500 uppercase">Locks on</dt>
+              <dd class="font-medium text-gray-900">{{ subscription.accessUntil() | date: 'mediumDate' }}</dd>
+            </div>
+          </dl>
         </div>
-        <dl class="mt-3 grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
-          <div>
-            <dt class="text-xs text-gray-500 uppercase">Paid until</dt>
-            <dd class="font-medium text-gray-900">{{ lease.periodEnd | date: 'mediumDate' }}</dd>
-          </div>
-          <div>
-            <dt class="text-xs text-gray-500 uppercase">Grace period</dt>
-            <dd class="font-medium text-gray-900">{{ lease.graceDays }} day(s)</dd>
-          </div>
-          <div>
-            <dt class="text-xs text-gray-500 uppercase">Locks on</dt>
-            <dd class="font-medium text-gray-900">{{ subscription.accessUntil() | date: 'mediumDate' }}</dd>
-          </div>
-        </dl>
       </div>
     } @else {
-      <div class="rounded-xl bg-white p-4 text-sm text-gray-600 shadow">
-        This shop has no subscription limit.
+      <div class="rounded-lg bg-surface p-8 text-center shadow-lg">
+        <p class="text-sm text-gray-600">This shop has no subscription limit.</p>
       </div>
     }
 
-    <div class="rounded-xl bg-white p-4 shadow">
-      <h2 class="mb-3 text-sm font-semibold text-gray-900">Invoices</h2>
+    <div>
+      <h2 class="mb-3 text-sm font-semibold tracking-wider text-gray-500 uppercase">Invoices</h2>
       @if (isLoading()) {
-        <div class="flex justify-center py-4"><span class="loading loading-spinner"></span></div>
+        <div class="flex justify-center py-8"><span class="loading loading-spinner loading-lg"></span></div>
       } @else if (loadFailed()) {
-        <p class="text-sm text-red-600">The invoices could not be loaded.</p>
+        <div class="rounded-lg bg-surface p-8 text-center shadow-lg" role="alert">
+          <p class="text-lg font-semibold text-gray-700">The invoices could not be loaded.</p>
+        </div>
       } @else if (invoices().length === 0) {
-        <p class="text-sm text-gray-500">No invoices yet.</p>
+        <div class="rounded-lg bg-surface p-8 text-center shadow-lg">
+          <p class="text-lg font-semibold text-gray-700">No invoices yet.</p>
+          <p class="text-sm text-gray-500">Invoices appear here once your plan is billed</p>
+        </div>
       } @else {
-        <ul class="divide-y divide-gray-100">
+        <div class="space-y-2 lg:space-y-3">
           @for (invoice of invoices(); track invoice.id) {
-            <li class="flex flex-wrap items-center justify-between gap-2 py-2 text-sm" data-testid="invoice-row">
+            <div
+              class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-100 bg-surface px-4 py-3 shadow-sm transition-shadow duration-200 hover:shadow-md lg:border-0 lg:py-4 lg:shadow-lg lg:hover:shadow-xl"
+              data-testid="invoice-row"
+            >
               <div class="min-w-0">
-                <div class="font-medium text-gray-900">
+                <div class="text-sm font-semibold text-gray-900 lg:text-base">
                   {{ invoice.planName }}, {{ invoice.months }} month(s)
                 </div>
                 <div class="text-xs text-gray-500">
@@ -52,13 +62,13 @@
                   }
                 </div>
               </div>
-              <div class="text-right">
-                <div class="font-medium text-gray-900">{{ invoice.amount | currency: 'PHP' }}</div>
-                <div class="text-xs text-gray-500">{{ invoice.statusName }}</div>
+              <div class="flex items-center gap-3 text-right">
+                <app-badge variant="default">{{ invoice.statusName }}</app-badge>
+                <span class="text-sm font-semibold text-gray-900">{{ invoice.amount | currency: 'PHP' }}</span>
               </div>
-            </li>
+            </div>
           }
-        </ul>
+        </div>
       }
     </div>
   </div>

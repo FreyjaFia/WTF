@@ -3,6 +3,25 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AlertService, BrandService } from '@core/services';
 import { BrandDto } from '@shared/models/subscription.models';
 
+type BrandField = {
+  name: Exclude<keyof BrandDto, 'logoUrl'>;
+  label: string;
+  placeholder: string;
+};
+
+const BRAND_FIELDS: BrandField[] = [
+  { name: 'shopName', label: 'Shop name', placeholder: '' },
+  { name: 'shortName', label: 'Short name (shown in the menu)', placeholder: '' },
+  { name: 'tagline', label: 'Tagline', placeholder: '' },
+  { name: 'address', label: 'Address', placeholder: '' },
+  { name: 'phone', label: 'Phone', placeholder: '' },
+  { name: 'email', label: 'Email', placeholder: '' },
+  { name: 'receiptHeader', label: 'Receipt header', placeholder: '' },
+  { name: 'receiptFooter', label: 'Receipt footer', placeholder: '' },
+  { name: 'registrationText', label: 'Registration text (receipt)', placeholder: '' },
+  { name: 'primaryColor', label: 'Colour', placeholder: '#6f4e37' },
+];
+
 @Component({
   selector: 'app-brand-page',
   imports: [ReactiveFormsModule],
@@ -32,6 +51,8 @@ export class BrandPageComponent implements OnInit {
 
   protected readonly logoUrl = signal<string | null>(null);
   protected readonly isUploading = signal(false);
+
+  protected readonly fields = BRAND_FIELDS;
 
   private current: BrandDto | null = null;
 
