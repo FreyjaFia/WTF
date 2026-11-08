@@ -2,7 +2,7 @@ import { expect, test } from '@fixtures/index';
 import { PLATFORM_ROUTES } from '@data/routes';
 import { PlatformDock, PlatformLoginPage, PlatformShell, PlatformShopPage, PlatformShopsPage } from '@pages/platform.page';
 import { CreatedShop, TENANT_STATUS } from '@api/platform';
-import { unique } from '@utils/unique';
+import { unique, uniqueStamp } from '@utils/unique';
 import { openShop } from '@utils/tenants';
 
 test.describe('platform shops list: filters, sorting, rows @tenancy @platform @ui', () => {
@@ -73,7 +73,7 @@ test.describe('platform shops list: filters, sorting, rows @tenancy @platform @u
   });
 
   test('clicking a column header sorts by it, and clicking again reverses the order', async ({ newContext, platform }) => {
-    const stamp = Date.now().toString(36);
+    const stamp = uniqueStamp();
     const names = ['Alpha', 'Bravo', 'Charlie'].map((n) => `Sort${stamp} ${n}`);
     const created: CreatedShop[] = [];
     for (const name of [names[1], names[2], names[0]]) {
@@ -95,7 +95,7 @@ test.describe('platform shops list: filters, sorting, rows @tenancy @platform @u
   });
 
   test('sorting by Orders puts the busiest shop first once the column is reversed', async ({ request, newContext, platform }) => {
-    const stamp = Date.now().toString(36);
+    const stamp = uniqueStamp();
     const quiet = await openShop(request, platform, { name: `Busy${stamp} Quiet` });
     const busy = await openShop(request, platform, { name: `Busy${stamp} Busy` });
     const product = await busy.owner.createProduct();
