@@ -89,6 +89,10 @@ export class PlatformTenantsComponent implements OnInit {
     return value === null ? this.tenants().length : this.tenants().filter((t) => t.status === value).length;
   }
 
+  protected openShop(tenant: PlatformTenantDto): void {
+    this.router.navigateByUrl(AppRoutes.PlatformShopById(tenant.id));
+  }
+
   protected shopLink(tenant: PlatformTenantDto): string {
     return AppRoutes.PlatformShopById(tenant.id);
   }

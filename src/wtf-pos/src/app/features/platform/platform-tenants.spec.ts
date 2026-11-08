@@ -72,6 +72,15 @@ describe('PlatformTenantsComponent', () => {
     expect(el.querySelector('[data-testid="shop-sun"]')).toBeNull();
   });
 
+  it('opens the shop when its row is clicked', () => {
+    const { el } = render([shop({})]);
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+
+    el.querySelector<HTMLElement>('[data-testid="shop-moonbrew"]')!.click();
+
+    expect(navigate).toHaveBeenCalledWith('/platform/shops/t1');
+  });
+
   it('shows each status count on its filter', () => {
     const { buttonWith } = render([shop({}), shop({ id: 't2', slug: 'a' }), shop({ id: 't3', slug: 'b', status: 1 })]);
 

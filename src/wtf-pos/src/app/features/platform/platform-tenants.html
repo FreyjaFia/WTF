@@ -48,7 +48,7 @@
         </thead>
         <tbody class="divide-y divide-gray-100">
           @for (tenant of visible(); track tenant.id) {
-            <tr class="hover:bg-gray-50" [attr.data-testid]="'shop-' + tenant.slug">
+            <tr class="cursor-pointer hover:bg-gray-50" [attr.data-testid]="'shop-' + tenant.slug" (click)="openShop(tenant)">
               <td class="px-4 py-3">
                 <a [routerLink]="shopLink(tenant)" class="font-medium text-gray-900 hover:underline">{{ tenant.name }}</a>
                 <div class="text-xs text-gray-500">{{ tenant.slug }}</div>
