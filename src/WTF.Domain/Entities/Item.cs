@@ -49,6 +49,8 @@ public partial class Item
 
     public Guid TenantId { get; set; }
 
+    public decimal? ParLevel { get; set; }
+
     public virtual User CreatedByNavigation { get; set; } = null!;
 
     public virtual ICollection<ItemAlertRecipient> ItemAlertRecipients { get; set; } = new List<ItemAlertRecipient>();

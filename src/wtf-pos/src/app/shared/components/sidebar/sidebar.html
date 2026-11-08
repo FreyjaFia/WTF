@@ -271,6 +271,19 @@
         }
         @if (authService.canReadStockMovements()) {
         <a
+          [routerLink]="routes.InventoryReorder"
+          routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
+          class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
+          [class.justify-center]="isCollapsed()"
+          [attr.title]="'Reorder'"
+          data-testid="sidebar-reorder-link"
+        >
+          <app-icon name="icon-stock-alert" [class]="'h-4 w-4 text-gray-500'" />
+          <span [class.hidden]="isCollapsed()">Reorder</span>
+        </a>
+        }
+        @if (authService.canReadStockMovements()) {
+        <a
           [routerLink]="routes.InventoryReceiving"
           routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
           class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"

@@ -69,5 +69,6 @@ public enum AuditAction
     SupplierRestored,
     ItemSupplierSaved,
     ItemSupplierRemoved,
-    StockReceived
+    StockReceived,
+    ItemParLevelChanged
 }

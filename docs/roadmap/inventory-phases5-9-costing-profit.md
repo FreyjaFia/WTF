@@ -287,7 +287,7 @@ counting, and show the difference as **variance**, so you can tell a wrong recip
 
 #### Phase 8 - Suppliers, receiving and reordering [In progress, branch `inventory-phase-8`]
 
-**Build order (slices).** 1 Suppliers and item-supplier packs (done). 2 Receiving (done). 3 Par levels and the reorder list.
+**Build order (slices).** 1 Suppliers and item-supplier packs (done). 2 Receiving (done). 3 Par levels (done) and the reorder list.
 4 Purchase orders. Expiry and lots, returns to supplier, barcode scanning, units/storage/categories follow after these four.
 
 **Slice 1 built (script `tools/sql/20261114_add_suppliers.sql`, then `tools/dbsync.bat`).**
@@ -340,6 +340,17 @@ counting, and show the difference as **variance**, so you can tell a wrong recip
   room, freezer) to organise counts, and an item category (dairy, dry goods, packaging, retail) for filters and reports.
 - Tests: weighted average after a receipt with different pack prices, FEFO order, par/reorder maths, partial receipts,
   expiry write-off, roles.
+
+**Slice 3 built (script `tools/sql/20261116_add_item_par_level.sql`, then dbsync).**
+- **Schema.** `Items.ParLevel` (nullable, not negative). An item with no par never appears on the reorder list.
+- **Rules.** `ReorderRules` in `WTF.Calculations`: below par means on hand plus on order is under par; the suggested
+  quantity is par minus on hand minus on order, rounded up to whole packs of the preferred supplier (whole units when no
+  pack is known; a negative balance counts as empty); average daily usage is the net sales (sales minus voided sales) of
+  the last 28 days over the days, and days of cover is on hand over that pace.
+- **API.** `GET /api/reorder` (groups by preferred supplier, "No supplier set" last, with the estimated cost for cost
+  roles only), `GET /api/reorder/par-levels`, `PUT /api/reorder/par-levels/{itemId}` (audited as `ItemParLevelChanged`).
+- **POS.** Inventory > Reorder: the list per supplier with a Copy order button (plain text for a message to the
+  supplier), and a Par levels panel to set them. Not built: the "reorder list ready" notification.
 
 #### Phase 9 - Profit and margin reports [Completed: Product Profit 1 Nov, Gross Profit 4 Nov, Expenses and P&L 4 Nov 2026]
 

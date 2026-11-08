@@ -79,6 +79,13 @@ export class InventoryComponent {
       canShow: () => this.canReadStockMovements(),
     },
     {
+      label: 'Reorder',
+      route: 'reorder',
+      path: AppRoutes.InventoryReorder,
+      ariaLabel: 'Reorder list',
+      canShow: () => this.canReadStockMovements(),
+    },
+    {
       label: 'Receiving',
       route: 'receiving',
       path: AppRoutes.InventoryReceiving,

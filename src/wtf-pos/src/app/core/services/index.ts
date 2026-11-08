@@ -37,6 +37,7 @@ export * from './update.service';
 export * from './user.service';
 export * from './stock-count.service';
 export * from './stock-waste.service';
+export * from './reorder.service';
 export * from './stock-receipt.service';
 export * from './supplier.service';
 export * from './waste-reason.service';

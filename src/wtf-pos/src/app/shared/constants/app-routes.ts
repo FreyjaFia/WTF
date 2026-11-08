@@ -27,6 +27,7 @@ export const AppRoutes = {
   InventoryWaste: '/inventory/waste',
   InventoryCounts: '/inventory/counts',
   InventoryCountById: (countId: string) => `/inventory/counts/${countId}`,
+  InventoryReorder: '/inventory/reorder',
   InventoryReceiving: '/inventory/receiving',
   InventorySuppliers: '/inventory/suppliers',
   InventorySupplierById: (supplierId: string) => `/inventory/suppliers/${supplierId}`,

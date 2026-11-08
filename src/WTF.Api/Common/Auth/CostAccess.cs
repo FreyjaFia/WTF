@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using WTF.Api.Features.Inventory.Receiving;
+using WTF.Api.Features.Inventory.Reordering;
 using WTF.Api.Features.Inventory.Suppliers;
 using WTF.Api.Features.Items.DTOs;
 
@@ -34,6 +35,16 @@ public static class CostAccess
 
     public static StockReceiptSummaryDto Redact(StockReceiptSummaryDto receipt) =>
         receipt with { InvoiceTotal = null, LinesTotal = null, Difference = null };
+
+    public static ReorderListDto ForUser(ReorderListDto list, ClaimsPrincipal user) =>
+        CanReadCosts(user) ? list : list with
+        {
+            Groups = [.. list.Groups.Select(g => g with
+            {
+                EstimatedCost = null,
+                Lines = [.. g.Lines.Select(l => l with { PackPrice = null, EstimatedCost = null })]
+            })]
+        };
 
     public static ItemSupplierDto Redact(ItemSupplierDto link) => link with
     {

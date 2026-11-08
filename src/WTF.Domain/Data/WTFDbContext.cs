@@ -514,6 +514,7 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.CurrentQuantity).HasColumnType("decimal(18, 3)");
             entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_Items_IsActive");
             entity.Property(e => e.Name).HasMaxLength(100);
+            entity.Property(e => e.ParLevel).HasColumnType("decimal(18, 3)");
             entity.Property(e => e.Sku).HasMaxLength(50);
             entity.Property(e => e.StockUnitName).HasMaxLength(30);
             entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_Items_TenantId");

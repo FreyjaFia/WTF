@@ -1,0 +1,112 @@
+<div class="flex h-full flex-col pt-4 md:pt-0">
+  <div class="mb-4 flex shrink-0 flex-col gap-3 sm:mb-6">
+    <div class="flex items-start justify-between gap-3">
+      <div class="flex min-w-0 flex-col gap-1">
+        <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Reorder</h1>
+        <p class="text-xs text-gray-500 sm:text-sm">What is below its par level, grouped by supplier</p>
+      </div>
+      <button type="button" class="app-btn app-btn-secondary app-btn-sm shrink-0" data-testid="toggle-par" (click)="togglePar()">
+        {{ showPar() ? 'Hide par levels' : 'Par levels' }}
+      </button>
+    </div>
+  </div>
+
+  @if (showPar()) {
+    <section class="mb-4 rounded-xl bg-surface p-4 shadow sm:p-5" data-testid="par-panel">
+      <h2 class="mb-1 text-sm font-semibold text-gray-900">Par levels</h2>
+      <p class="mb-3 text-xs text-gray-500">How much you want to hold of each item. Leave empty to keep an item off the reorder list.</p>
+      <ul class="divide-y divide-gray-100">
+        @for (row of parRows(); track row.itemId) {
+          <li class="flex items-center justify-between gap-3 py-2" data-testid="par-row">
+            <div class="min-w-0">
+              <p class="font-medium wrap-break-word text-gray-900">{{ row.itemName }}</p>
+              <p class="text-xs text-gray-500">{{ row.onHand | number: '1.0-3' }} {{ row.unitName }} on hand</p>
+            </div>
+            @if (auth.canWriteStockMovements()) {
+              <input
+                #par
+                type="number"
+                min="0"
+                step="0.001"
+                class="input input-sm w-28 bg-gray-50"
+                [value]="row.parLevel ?? ''"
+                [attr.aria-label]="'Par level for ' + row.itemName"
+                [disabled]="savingItemId() === row.itemId"
+                (change)="savePar(row, par)"
+              />
+            } @else {
+              <span class="text-sm text-gray-700">{{ row.parLevel === null ? 'Not set' : (row.parLevel | number: '1.0-3') }}</span>
+            }
+          </li>
+        }
+      </ul>
+    </section>
+  }
+
+  @if (isLoading()) {
+    <div class="flex justify-center py-8"><span class="loading loading-spinner loading-lg"></span></div>
+  }
+
+  @if (!isLoading()) {
+    <app-pull-to-refresh [refreshing]="isRefreshing()" (refreshTriggered)="refresh()">
+      <div class="pb-4">
+        @if (connectionFailed()) {
+          <app-connection-error />
+        } @else if (list(); as current) {
+          @if (current.groups.length === 0) {
+            <div class="rounded-lg bg-surface p-8 text-center shadow-lg" data-testid="reorder-empty">
+              <p class="text-lg font-semibold text-gray-700">Nothing to reorder</p>
+              <p class="text-sm text-gray-500">
+                @if (current.itemsWithoutPar > 0) {
+                  {{ current.itemsWithoutPar }} items have no par level yet.
+                } @else {
+                  Everything is at or above its par level.
+                }
+              </p>
+            </div>
+          }
+
+          <div class="space-y-4" data-testid="reorder-groups">
+            @for (group of current.groups; track group.supplierId ?? 'none') {
+              <section class="overflow-hidden rounded-xl bg-surface shadow" data-testid="reorder-group">
+                <header class="flex items-center justify-between gap-3 bg-gray-50 px-4 py-3">
+                  <div class="min-w-0">
+                    <h2 class="font-semibold wrap-break-word text-gray-900">{{ group.supplierName }}</h2>
+                    <p class="text-xs text-gray-500">
+                      {{ group.lines.length }} {{ group.lines.length === 1 ? 'item' : 'items' }}
+                      @if (group.leadTimeDays !== null) { &middot; {{ group.leadTimeDays }} day lead time }
+                      @if (canSeeCosts() && group.estimatedCost !== null) { &middot; about {{ group.estimatedCost | number: '1.2-2' }} }
+                    </p>
+                  </div>
+                  <button type="button" class="app-btn app-btn-secondary app-btn-sm shrink-0" data-testid="copy-order" (click)="copyOrder(group)">Copy order</button>
+                </header>
+                <ul class="divide-y divide-gray-100">
+                  @for (line of group.lines; track line.itemId) {
+                    <li class="flex items-center justify-between gap-3 px-4 py-2.5" data-testid="reorder-line">
+                      <div class="min-w-0">
+                        <p class="font-medium wrap-break-word text-gray-900">{{ line.itemName }}</p>
+                        <p class="text-xs text-gray-500">
+                          {{ line.onHand | number: '1.0-3' }} on hand of {{ line.parLevel | number: '1.0-3' }}
+                          @if (line.onOrder > 0) { &middot; {{ line.onOrder | number: '1.0-3' }} on order }
+                          @if (line.daysOfCover !== null) { &middot; {{ line.daysOfCover | number: '1.0-1' }} days left }
+                        </p>
+                      </div>
+                      <p class="shrink-0 text-right text-sm font-semibold text-gray-900" data-testid="suggested">
+                        @if (line.suggestedPacks !== null) {
+                          {{ line.suggestedPacks | number: '1.0-3' }} {{ line.packName || 'pack' }}
+                          <span class="block text-xs font-normal text-gray-500">{{ line.suggestedUnits | number: '1.0-3' }} {{ line.unitName }}</span>
+                        } @else {
+                          {{ line.suggestedUnits | number: '1.0-3' }} {{ line.unitName }}
+                        }
+                      </p>
+                    </li>
+                  }
+                </ul>
+              </section>
+            }
+          </div>
+        }
+      </div>
+    </app-pull-to-refresh>
+  }
+</div>
