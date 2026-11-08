@@ -1,6 +1,6 @@
 <div class="flex h-full flex-col pt-4 md:pt-0">
   <div class="mb-4 flex shrink-0 flex-col gap-3 sm:mb-6">
-    <div class="flex items-start justify-between gap-3">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div class="flex min-w-0 items-start gap-2">
         <button type="button" class="app-btn app-btn-ghost mt-1 shrink-0 p-2" aria-label="Go back" title="Back" data-testid="suggestions-back" (click)="backToPurchasing()">
           <app-icon name="icon-back" [class]="'h-5 w-5 text-gray-600'" />
@@ -10,7 +10,7 @@
           <p class="text-xs text-gray-500 sm:text-sm">What is below its par level, grouped by supplier</p>
         </div>
       </div>
-      <div class="flex shrink-0 items-center gap-2">
+      <div class="flex shrink-0 flex-wrap items-center justify-end gap-2">
         @if (!isAndroidPlatform) {
           <button
             type="button"
@@ -92,7 +92,7 @@
           <div class="space-y-4" data-testid="reorder-groups">
             @for (group of current.groups; track group.supplierId ?? 'none') {
               <section class="overflow-hidden rounded-xl bg-surface shadow" data-testid="reorder-group">
-                <header class="flex items-center justify-between gap-3 bg-gray-50 px-4 py-3">
+                <header class="flex flex-col gap-3 bg-gray-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                   <div class="min-w-0">
                     <h2 class="font-semibold wrap-anywhere text-gray-900">{{ group.supplierName }}</h2>
                     <p class="text-xs text-gray-500">
@@ -101,7 +101,7 @@
                       @if (canSeeCosts() && group.estimatedCost !== null) { &middot; about {{ group.estimatedCost | number: '1.2-2' }} }
                     </p>
                   </div>
-                  <div class="flex shrink-0 gap-2">
+                  <div class="flex shrink-0 flex-wrap gap-2">
                     @if (group.supplierId && auth.canWriteStockMovements()) {
                       <button type="button" class="app-btn app-btn-primary app-btn-sm" data-testid="create-order" [disabled]="draftingSupplierId() !== null" (click)="createOrder(group)">Create order</button>
                     }
