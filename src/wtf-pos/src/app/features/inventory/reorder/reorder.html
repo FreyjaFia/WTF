@@ -5,9 +5,27 @@
         <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Reorder</h1>
         <p class="text-xs text-gray-500 sm:text-sm">What is below its par level, grouped by supplier</p>
       </div>
-      <button type="button" class="app-btn app-btn-secondary app-btn-sm shrink-0" data-testid="toggle-par" (click)="togglePar()">
-        {{ showPar() ? 'Hide par levels' : 'Par levels' }}
-      </button>
+      <div class="flex shrink-0 items-center gap-2">
+        @if (!isAndroidPlatform) {
+          <button
+            type="button"
+            class="app-btn app-btn-ghost pointer-events-auto z-30 p-2"
+            [class.opacity-70]="isRefreshing()"
+            [disabled]="isRefreshing()"
+            aria-label="Refresh reorder list"
+            (click)="refresh()"
+          >
+            <app-icon
+              name="icon-refresh"
+              [class]="isRefreshing() ? 'h-5 w-5 animate-spin text-gray-600' : 'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'"
+              [fill]="'currentColor'"
+            />
+          </button>
+        }
+        <button type="button" class="app-btn app-btn-secondary app-btn-sm" data-testid="toggle-par" (click)="togglePar()">
+          {{ showPar() ? 'Hide par levels' : 'Par levels' }}
+        </button>
+      </div>
     </div>
   </div>
 
@@ -28,7 +46,7 @@
                 type="number"
                 min="0"
                 step="0.001"
-                class="input input-sm w-28 bg-gray-50"
+                class="input input-sm w-28 border-transparent bg-gray-50 transition-all focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20"
                 [value]="row.parLevel ?? ''"
                 [attr.aria-label]="'Par level for ' + row.itemName"
                 [disabled]="savingItemId() === row.itemId"
@@ -78,7 +96,12 @@
                       @if (canSeeCosts() && group.estimatedCost !== null) { &middot; about {{ group.estimatedCost | number: '1.2-2' }} }
                     </p>
                   </div>
-                  <button type="button" class="app-btn app-btn-secondary app-btn-sm shrink-0" data-testid="copy-order" (click)="copyOrder(group)">Copy order</button>
+                  <div class="flex shrink-0 gap-2">
+                    @if (group.supplierId && auth.canWriteStockMovements()) {
+                      <button type="button" class="app-btn app-btn-primary app-btn-sm" data-testid="create-order" [disabled]="draftingSupplierId() !== null" (click)="createOrder(group)">Create order</button>
+                    }
+                    <button type="button" class="app-btn app-btn-secondary app-btn-sm" data-testid="copy-order" (click)="copyOrder(group)">Copy order</button>
+                  </div>
                 </header>
                 <ul class="divide-y divide-gray-100">
                   @for (line of group.lines; track line.itemId) {

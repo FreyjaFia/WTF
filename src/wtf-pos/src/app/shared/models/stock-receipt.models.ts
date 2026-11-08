@@ -11,6 +11,8 @@ export interface StockReceiptSummaryDto {
   createdAt: string;
   createdByName: string;
   lineCount: number;
+  purchaseOrderId: string | null;
+  purchaseOrderNumber: number | null;
 }
 
 export interface StockReceiptLineDto {
@@ -46,5 +48,6 @@ export interface RecordStockReceiptDto {
   invoiceTotal: number | null;
   note: string | null;
   clientRequestId: string;
+  purchaseOrderId?: string | null;
   lines: ReceiptLineRequestDto[];
 }

@@ -1,9 +1,15 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Capacitor } from '@capacitor/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { HttpErrorMessages } from '@core/messages';
 import { AlertService, AuthService, SupplierService } from '@core/services';
-import { ConnectionErrorComponent, IconComponent, PullToRefreshComponent } from '@shared/components';
+import {
+  ConnectionErrorComponent,
+  IconComponent,
+  PullToRefreshComponent,
+  SearchInputComponent,
+} from '@shared/components';
 import { BadgeComponent } from '@shared/components/badge/badge';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { SupplierSummaryDto } from '@shared/models';
@@ -17,6 +23,7 @@ import { SupplierSummaryDto } from '@shared/models';
     PullToRefreshComponent,
     ReactiveFormsModule,
     RouterLink,
+    SearchInputComponent,
   ],
   templateUrl: './suppliers.html',
   host: { class: 'flex-1 min-h-0' },
@@ -27,7 +34,21 @@ export class SuppliersComponent implements OnInit {
   private readonly router = inject(Router);
   protected readonly auth = inject(AuthService);
 
+  protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
+  protected readonly search = signal('');
   protected readonly suppliers = signal<SupplierSummaryDto[]>([]);
+  protected readonly filteredSuppliers = computed(() => {
+    const term = this.search().trim().toLowerCase();
+    if (!term) {
+      return this.suppliers();
+    }
+
+    return this.suppliers().filter((supplier) =>
+      [supplier.name, supplier.contactName, supplier.phone].some((field) =>
+        field?.toLowerCase().includes(term),
+      ),
+    );
+  });
   protected readonly isLoading = signal(false);
   protected readonly isRefreshing = signal(false);
   protected readonly connectionFailed = signal(false);

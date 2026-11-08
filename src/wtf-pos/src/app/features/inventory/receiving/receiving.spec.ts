@@ -3,6 +3,7 @@ import {
   AlertService,
   AuthService,
   InventoryService,
+  PurchaseOrderService,
   StockReceiptService,
   SupplierService,
 } from '@core/services';
@@ -24,6 +25,8 @@ const summary: StockReceiptSummaryDto = {
   createdAt: '2026-11-08T01:00:00Z',
   createdByName: 'admin',
   lineCount: 1,
+  purchaseOrderId: null,
+  purchaseOrderNumber: null,
 };
 
 const supplier = {
@@ -37,6 +40,7 @@ interface Vm {
   openForm: () => void;
   chooseSupplier: () => void;
   chooseItem: (index: number) => void;
+  chooseOrder: (id: string) => void;
   save: () => void;
   linesTotal: () => number | null;
   difference: () => number | null;
@@ -52,6 +56,21 @@ describe('ReceivingComponent', () => {
     TestBed.configureTestingModule({
       providers: [
         { provide: StockReceiptService, useValue: receipts },
+        {
+          provide: PurchaseOrderService,
+          useValue: {
+            getOrders: vi.fn().mockReturnValue(of([{ id: 'p1', poNumber: 7, lineCount: 2 }])),
+            getOrder: vi.fn().mockReturnValue(
+              of({
+                summary: { id: 'p1' },
+                lines: [
+                  { itemId: 'i1', packName: 'carton', unitsPerPack: 12, packPrice: 840, packsOrdered: 4, packsReceived: 1 },
+                  { itemId: 'i2', packName: null, unitsPerPack: 1, packPrice: null, packsOrdered: 2, packsReceived: 2 },
+                ],
+              }),
+            ),
+          },
+        },
         { provide: SupplierService, useValue: { getSuppliers: vi.fn().mockReturnValue(of([supplier.summary])), getSupplier: vi.fn().mockReturnValue(of(supplier)) } },
         { provide: InventoryService, useValue: { getInventoryItems: vi.fn().mockReturnValue(of([{ id: 'i1', name: 'Oat Milk', unitName: 'bottle' }])) } },
         { provide: AlertService, useValue: { error: vi.fn(), success: vi.fn() } },
@@ -139,5 +158,18 @@ describe('ReceivingComponent', () => {
 
     expect(el.querySelector('#rl-price-0')).toBeNull();
     expect(el.querySelector('#rc-total')).toBeNull();
+  });
+
+  it('fills the lines with what is still to come when received against an order', () => {
+    const { vm, receipts } = setup();
+    vm.openForm();
+    vm.header.patchValue({ supplierId: 's1' });
+    vm.chooseSupplier();
+
+    vm.chooseOrder('p1');
+
+    expect(vm.lines.at(0).getRawValue()).toMatchObject({ itemId: 'i1', packs: 3, unitsPerPack: 12 });
+    vm.save();
+    expect(receipts.recordReceipt.mock.calls[0][0].purchaseOrderId).toBe('p1');
   });
 });

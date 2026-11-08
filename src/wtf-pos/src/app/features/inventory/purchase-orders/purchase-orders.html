@@ -1,0 +1,234 @@
+<div class="flex h-full flex-col pt-4 md:pt-0">
+  <div class="mb-4 flex shrink-0 flex-col gap-3 sm:mb-6">
+    <div class="flex items-start justify-between gap-3">
+      <div class="flex min-w-0 flex-col gap-1">
+        <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Purchase Orders</h1>
+        <p class="text-xs text-gray-500 sm:text-sm">What you have asked suppliers for; sent orders count as on order</p>
+      </div>
+      @if (auth.canWriteStockMovements() && !isFormOpen()) {
+        <button type="button" class="app-btn app-btn-primary app-btn-sm shrink-0" data-testid="open-order" (click)="openForm()">
+          <app-icon name="icon-plus" [class]="'h-4 w-4'" />
+          New Order
+        </button>
+      }
+    </div>
+    <div class="flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center md:gap-3">
+      <div
+        class="mb-2 flex w-full min-w-0 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-surface focus-within:ring-2 focus-within:ring-gray-200 md:mb-0 md:max-w-104 md:flex-1"
+      >
+        <app-search-input
+          [value]="search()"
+          placeholder="Search order number, supplier, note"
+          ariaLabel="Search purchase orders"
+          (valueChange)="search.set($event)"
+        />
+      </div>
+
+      <div class="ml-auto flex items-center justify-end gap-2">
+        @if (!isAndroidPlatform) {
+          <button
+            type="button"
+            class="app-btn app-btn-ghost pointer-events-auto z-30 p-2"
+            [class.opacity-70]="isRefreshing()"
+            [disabled]="isRefreshing()"
+            aria-label="Refresh purchase orders"
+            (click)="refresh()"
+          >
+            <app-icon
+              name="icon-refresh"
+              [class]="isRefreshing() ? 'h-5 w-5 animate-spin text-gray-600' : 'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'"
+              [fill]="'currentColor'"
+            />
+          </button>
+        }
+      </div>
+    </div>
+    <div class="flex flex-wrap gap-2" data-testid="status-filter">
+      <button type="button" class="app-btn app-btn-sm" [class.app-btn-primary]="statusFilter() === null" [class.app-btn-secondary]="statusFilter() !== null" (click)="setFilter(null)">All</button>
+      @for (status of [statuses.Draft, statuses.Sent, statuses.PartlyReceived, statuses.Received, statuses.Cancelled]; track status) {
+        <button type="button" class="app-btn app-btn-sm" [class.app-btn-primary]="statusFilter() === status" [class.app-btn-secondary]="statusFilter() !== status" (click)="setFilter(status)">{{ statusLabel(status) }}</button>
+      }
+    </div>
+  </div>
+
+  @if (auth.canWriteStockMovements() && isFormOpen()) {
+    <form class="mb-4 flex shrink-0 flex-col gap-4 rounded-xl bg-surface p-4 shadow sm:p-5" [formGroup]="header" (ngSubmit)="save()" novalidate data-testid="order-form">
+      <h2 class="text-sm font-semibold text-gray-900">{{ editingId() ? 'Edit draft order' : 'New purchase order' }}</h2>
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div>
+          <span class="mb-1 block text-sm font-medium text-gray-700">Supplier</span>
+          <app-select-dropdown
+            testId="po-supplier"
+            placeholder="Choose a supplier"
+            searchPlaceholder="Search suppliers..."
+            [options]="supplierOptions()"
+            [selectedId]="header.controls.supplierId.value || null"
+            (selectedIdChange)="pickSupplier($event)"
+          />
+          @if (header.controls.supplierId.touched && header.controls.supplierId.invalid) {
+            <p class="text-error mt-2 text-sm">Choose the supplier.</p>
+          }
+        </div>
+        <div>
+          <label for="po-expected" class="mb-1 block text-sm font-medium text-gray-700">Expected on (optional)</label>
+          <input id="po-expected" type="date" formControlName="expectedOn" class="input w-full border-transparent bg-gray-50 transition-all focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20" />
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-3" data-testid="order-lines">
+        @for (line of lines.controls; track line; let i = $index) {
+          <div class="grid gap-3 rounded-lg bg-gray-50 p-3 sm:grid-cols-6" [formGroup]="line" data-testid="order-line">
+            <div class="sm:col-span-6">
+              <span class="mb-1 block text-sm font-medium text-gray-700">Item</span>
+              <app-select-dropdown
+                [testId]="'ol-item-' + i"
+                placeholder="Choose an item"
+                searchPlaceholder="Search items..."
+                [options]="itemOptions()"
+                [selectedId]="line.controls.itemId.value || null"
+                (selectedIdChange)="pickItem(i, $event)"
+              />
+            </div>
+            <div class="sm:col-span-2">
+              <label [attr.for]="'ol-packs-' + i" class="mb-1 block text-sm font-medium text-gray-700">Packs to order</label>
+              <input [id]="'ol-packs-' + i" type="number" step="0.001" min="0" formControlName="packs" class="input w-full border-transparent bg-surface transition-all focus:border-brand focus:ring-1 focus:ring-brand/20" />
+            </div>
+            <div class="sm:col-span-2">
+              <label [attr.for]="'ol-units-' + i" class="mb-1 block text-sm font-medium text-gray-700">Units in a pack</label>
+              <input [id]="'ol-units-' + i" type="number" step="0.001" min="0" formControlName="unitsPerPack" class="input w-full border-transparent bg-surface transition-all focus:border-brand focus:ring-1 focus:ring-brand/20" />
+            </div>
+            @if (canSeeCosts()) {
+              <div class="sm:col-span-2">
+                <label [attr.for]="'ol-price-' + i" class="mb-1 block text-sm font-medium text-gray-700">Price of a pack</label>
+                <input [id]="'ol-price-' + i" type="number" step="0.01" min="0" formControlName="packPrice" class="input w-full border-transparent bg-surface transition-all focus:border-brand focus:ring-1 focus:ring-brand/20" />
+              </div>
+            }
+            <div class="flex items-center justify-between gap-2 sm:col-span-6">
+              <p class="text-xs text-gray-500" data-testid="line-summary">
+                {{ unitsOrdered(i) | number: '1.0-3' }} {{ unitName(line.controls.itemId.value) }}
+                @if (canSeeCosts() && unitCostOf(i) !== null) {
+                  &middot; {{ unitCostOf(i) | number: '1.2-4' }} each
+                }
+                @if (canSeeCosts() && lineTotals()[i] !== null) {
+                  &middot; line total {{ lineTotals()[i] | number: '1.2-2' }}
+                }
+              </p>
+              @if (lines.length > 1) {
+                <button type="button" class="app-btn app-btn-ghost app-btn-sm" (click)="removeLine(i)">Remove</button>
+              }
+            </div>
+          </div>
+        }
+        <button type="button" class="app-btn app-btn-secondary app-btn-sm w-fit" data-testid="add-line" (click)="addLine()">Add another item</button>
+      </div>
+
+      @if (canSeeCosts() && orderTotal() !== null) {
+        <p class="text-sm font-semibold text-gray-900" data-testid="order-total">Order total {{ orderTotal() | number: '1.2-2' }}</p>
+      }
+
+      <div>
+        <label for="po-note" class="mb-1 block text-sm font-medium text-gray-700">Note (optional)</label>
+        <input id="po-note" type="text" formControlName="note" maxlength="500" class="input w-full border-transparent bg-gray-50 transition-all focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20" />
+      </div>
+      <div class="flex justify-end gap-2">
+        <button type="button" class="app-btn app-btn-secondary app-btn-md" [disabled]="isSaving()" (click)="closeForm()">Cancel</button>
+        <button type="submit" class="app-btn app-btn-primary app-btn-md" data-testid="save-order" [disabled]="isSaving()">
+          {{ isSaving() ? 'Saving...' : 'Save Draft' }}
+        </button>
+      </div>
+    </form>
+  }
+
+  @if (isLoading()) {
+    <div class="flex justify-center py-8"><span class="loading loading-spinner loading-lg"></span></div>
+  }
+
+  @if (!isLoading()) {
+    <app-pull-to-refresh [refreshing]="isRefreshing()" (refreshTriggered)="refresh()">
+      <div class="pb-4">
+        @if (connectionFailed()) {
+          <app-connection-error />
+        } @else if (filteredOrders().length === 0) {
+          <div class="rounded-lg bg-surface p-8 text-center shadow-lg" data-testid="orders-empty">
+            <div class="mb-3 flex justify-center"><app-icon name="icon-assignment-turned-in" [class]="'h-12 w-12 opacity-60'" /></div>
+            <p class="text-lg font-semibold text-gray-700">No purchase orders found</p>
+            <p class="text-sm text-gray-500">Draft one here or from the Reorder list, or adjust your search.</p>
+          </div>
+        }
+
+        <ul class="space-y-2.5" data-testid="order-list">
+          @for (order of filteredOrders(); track order.id) {
+            <li class="relative overflow-hidden rounded-xl bg-surface shadow" data-testid="order-row">
+              <span class="absolute inset-y-0 left-0 w-1.5" [class]="statusBar(order.status)" aria-hidden="true"></span>
+              <button type="button" class="flex w-full items-center justify-between gap-3 p-3 pl-5 text-left transition-colors hover:bg-gray-50 sm:p-4 sm:pl-6" (click)="toggleOrder(order)">
+                <div class="min-w-0">
+                  <p class="font-semibold wrap-break-word text-gray-900">
+                    PO-{{ order.poNumber }} <span class="font-normal text-gray-500">&middot; {{ order.supplierName }}</span>
+                  </p>
+                  <p class="text-xs text-gray-500">
+                    {{ order.lineCount }} {{ order.lineCount === 1 ? 'item' : 'items' }}
+                    @if (order.expectedOn) { &middot; expected {{ order.expectedOn | date: 'MMM d' }} }
+                  </p>
+                </div>
+                <div class="flex shrink-0 flex-col items-end gap-1">
+                  <app-badge [variant]="statusVariant(order.status)"><span data-testid="order-status">{{ statusLabel(order.status) }}</span></app-badge>
+                  @if (order.total !== null) {
+                    <span class="text-sm font-semibold text-gray-900">{{ order.total | number: '1.2-2' }}</span>
+                  }
+                </div>
+              </button>
+              @if (expandedId() === order.id) {
+                <div class="border-t border-gray-100 p-3 sm:p-4" data-testid="order-detail">
+                  @if (expanded(); as detail) {
+                    <ul class="divide-y divide-gray-100 text-sm">
+                      @for (line of detail.lines; track line.itemId) {
+                        <li class="flex items-center justify-between gap-3 py-2" data-testid="detail-line">
+                          <span class="min-w-0 wrap-break-word text-gray-900">{{ line.itemName }}</span>
+                          <span class="shrink-0 text-gray-500">
+                            {{ line.packsReceived | number: '1.0-3' }} of {{ line.packsOrdered | number: '1.0-3' }} {{ line.packName || 'packs' }}
+                          </span>
+                        </li>
+                      }
+                    </ul>
+                    @if (order.note) { <p class="mt-2 text-xs text-gray-500">{{ order.note }}</p> }
+                    @if (auth.canWriteStockMovements()) {
+                      <div class="mt-3 flex flex-wrap justify-end gap-2">
+                        @if (detail.summary.status === statuses.Draft) {
+                          <button type="button" class="app-btn app-btn-secondary app-btn-sm" data-testid="edit-order" (click)="editOrder(detail)">Edit</button>
+                          <button type="button" class="app-btn app-btn-primary app-btn-sm" data-testid="send-order" (click)="askConfirm('send', detail)">Mark as sent</button>
+                        }
+                        @if (detail.summary.status === statuses.Draft || detail.summary.status === statuses.Sent) {
+                          <button type="button" class="app-btn app-btn-ghost app-btn-sm" data-testid="cancel-order" (click)="askConfirm('cancel', detail)">Cancel order</button>
+                        }
+                        @if (detail.summary.status === statuses.PartlyReceived) {
+                          <button type="button" class="app-btn app-btn-secondary app-btn-sm" data-testid="close-order" (click)="askConfirm('close', detail)">Close order</button>
+                        }
+                      </div>
+                    }
+                  } @else {
+                    <span class="loading loading-spinner loading-sm"></span>
+                  }
+                </div>
+              }
+            </li>
+          }
+        </ul>
+      </div>
+    </app-pull-to-refresh>
+  }
+</div>
+
+@if (pendingAction(); as pending) {
+  <app-confirm-dialog
+    [variant]="pending.action === 'cancel' ? 'danger' : pending.action === 'send' ? 'success' : 'warning'"
+    [icon]="pending.action === 'cancel' ? 'icon-warning' : 'icon-check'"
+    [heading]="confirmHeading()"
+    [confirmLabel]="confirmLabel()"
+    busyLabel="Working..."
+    [isBusy]="isActing()"
+    (confirmed)="runPending()"
+    (cancelled)="pendingAction.set(null)"
+  >
+    {{ confirmText() }}
+  </app-confirm-dialog>
+}

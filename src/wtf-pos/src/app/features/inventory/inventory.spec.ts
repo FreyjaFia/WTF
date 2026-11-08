@@ -84,6 +84,10 @@ describe('InventoryComponent', () => {
       'attention',
       'waste',
       'counts',
+      'reorder',
+      'purchase-orders',
+      'receiving',
+      'suppliers',
       'ingredients',
     ]);
     expect(rendered.map((t) => t.getAttribute('href'))).toEqual([
@@ -92,6 +96,10 @@ describe('InventoryComponent', () => {
       '/inventory/attention',
       '/inventory/waste',
       '/inventory/counts',
+      '/inventory/reorder',
+      '/inventory/purchase-orders',
+      '/inventory/receiving',
+      '/inventory/suppliers',
       '/inventory/ingredients',
     ]);
   });
@@ -99,7 +107,7 @@ describe('InventoryComponent', () => {
   it('hides tabs the user cannot read', async () => {
     perms = { items: false, stock: true };
     const { el } = await setup('/inventory/stock-in');
-    expect(tabs(el).map((t) => t.getAttribute('data-inventory-tab'))).toEqual(['stock-in', 'attention', 'waste', 'counts']);
+    expect(tabs(el).map((t) => t.getAttribute('data-inventory-tab'))).toEqual(['stock-in', 'attention', 'waste', 'counts', 'reorder', 'purchase-orders', 'receiving', 'suppliers']);
   });
 
   it('shows the ingredients tab only to roles that can read items', async () => {
@@ -139,7 +147,7 @@ describe('InventoryComponent', () => {
 
   it('marks only the active route as selected', async () => {
     const { el } = await setup('/inventory/items');
-    expect(tabs(el).map((t) => t.getAttribute('aria-selected'))).toEqual(['true', 'false', 'false', 'false', 'false', 'false']);
+    expect(tabs(el).map((t) => t.getAttribute('aria-selected'))).toEqual(['true', 'false', 'false', 'false', 'false', 'false', 'false', 'false', 'false', 'false']);
   });
 
   it('updates the selected tab after navigation and shows the routed page', async () => {
@@ -147,7 +155,7 @@ describe('InventoryComponent', () => {
     expect(el.textContent).toContain('items page');
     await harness.navigateByUrl('/inventory/stock-in');
     harness.detectChanges();
-    expect(tabs(el).map((t) => t.getAttribute('aria-selected'))).toEqual(['false', 'true', 'false', 'false', 'false', 'false']);
+    expect(tabs(el).map((t) => t.getAttribute('aria-selected'))).toEqual(['false', 'true', 'false', 'false', 'false', 'false', 'false', 'false', 'false', 'false']);
     expect(el.textContent).toContain('stock page');
   });
 

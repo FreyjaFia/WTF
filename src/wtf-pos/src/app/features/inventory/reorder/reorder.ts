@@ -1,9 +1,12 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, inject, OnInit, signal } from '@angular/core';
+import { Capacitor } from '@capacitor/core';
+import { Router } from '@angular/router';
 import { HttpErrorMessages } from '@core/messages';
-import { AlertService, AuthService, ReorderService } from '@core/services';
+import { AlertService, AuthService, PurchaseOrderService, ReorderService } from '@core/services';
 import { ConnectionErrorComponent, IconComponent, PullToRefreshComponent } from '@shared/components';
 import { reorderMessage } from '@shared/calculations';
+import { AppRoutes } from '@shared/constants/app-routes';
 import { ParLevelRowDto, ReorderGroupDto, ReorderListDto } from '@shared/models';
 
 @Component({
@@ -14,9 +17,12 @@ import { ParLevelRowDto, ReorderGroupDto, ReorderListDto } from '@shared/models'
 })
 export class ReorderComponent implements OnInit {
   private readonly reorderApi = inject(ReorderService);
+  private readonly ordersApi = inject(PurchaseOrderService);
+  private readonly router = inject(Router);
   private readonly alertService = inject(AlertService);
   protected readonly auth = inject(AuthService);
 
+  protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
   protected readonly list = signal<ReorderListDto | null>(null);
   protected readonly parRows = signal<ParLevelRowDto[]>([]);
   protected readonly isLoading = signal(false);
@@ -24,6 +30,7 @@ export class ReorderComponent implements OnInit {
   protected readonly connectionFailed = signal(false);
   protected readonly showPar = signal(false);
   protected readonly savingItemId = signal<string | null>(null);
+  protected readonly draftingSupplierId = signal<string | null>(null);
 
   public ngOnInit(): void {
     this.load();
@@ -99,5 +106,24 @@ export class ReorderComponent implements OnInit {
       () => this.alertService.success(`Order for ${group.supplierName} copied.`),
       () => this.alertService.error('Unable to copy the order.'),
     );
+  }
+
+  protected createOrder(group: ReorderGroupDto): void {
+    if (!group.supplierId || this.draftingSupplierId()) {
+      return;
+    }
+
+    this.draftingSupplierId.set(group.supplierId);
+    this.ordersApi.createFromReorder(group.supplierId).subscribe({
+      next: (order) => {
+        this.draftingSupplierId.set(null);
+        this.alertService.success(`Draft order PO-${order.summary.poNumber} created.`);
+        this.router.navigateByUrl(AppRoutes.InventoryPurchaseOrders);
+      },
+      error: (err: Error) => {
+        this.draftingSupplierId.set(null);
+        this.alertService.error(err.message);
+      },
+    });
   }
 }

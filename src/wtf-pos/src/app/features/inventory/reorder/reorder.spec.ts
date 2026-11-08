@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
-import { AlertService, AuthService, ReorderService } from '@core/services';
+import { Router } from '@angular/router';
+import { AlertService, AuthService, PurchaseOrderService, ReorderService } from '@core/services';
 import { ParLevelRowDto, ReorderListDto } from '@shared/models';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
@@ -40,6 +41,7 @@ const row: ParLevelRowDto = { itemId: 'i1', itemName: 'Oat Milk', unitName: 'bot
 interface Vm {
   togglePar: () => void;
   savePar: (row: ParLevelRowDto, input: HTMLInputElement) => void;
+  createOrder: (group: ReorderListDto['groups'][number]) => void;
 }
 
 describe('ReorderComponent', () => {
@@ -49,16 +51,20 @@ describe('ReorderComponent', () => {
       getParLevels: vi.fn().mockReturnValue(of([row])),
       setParLevel: vi.fn().mockReturnValue(of({ ...row, parLevel: 60 })),
     };
+    const orders = { createFromReorder: vi.fn().mockReturnValue(of({ summary: { id: 'p1', poNumber: 7 } })) };
+    const router = { navigateByUrl: vi.fn() };
     TestBed.configureTestingModule({
       providers: [
         { provide: ReorderService, useValue: service },
+        { provide: PurchaseOrderService, useValue: orders },
+        { provide: Router, useValue: router },
         { provide: AlertService, useValue: { error: vi.fn(), success: vi.fn() } },
         { provide: AuthService, useValue: { canWriteStockMovements: () => true, canReadInventoryCosts: () => options.canSeeCosts ?? true } },
       ],
     });
     const fixture = TestBed.createComponent(ReorderComponent);
     fixture.detectChanges();
-    return { fixture, service, el: fixture.nativeElement as HTMLElement, vm: fixture.componentInstance as unknown as Vm };
+    return { fixture, service, orders, router, el: fixture.nativeElement as HTMLElement, vm: fixture.componentInstance as unknown as Vm };
   }
 
   it('groups items by supplier and suggests whole packs', () => {
@@ -113,5 +119,21 @@ describe('ReorderComponent', () => {
     vm.savePar(row, input);
 
     expect(service.setParLevel).not.toHaveBeenCalled();
+  });
+
+  it('drafts an order for a supplier group and opens the orders screen', () => {
+    const { vm, orders, router } = setup();
+
+    vm.createOrder(list.groups[0]);
+
+    expect(orders.createFromReorder).toHaveBeenCalledWith('s1');
+    expect(router.navigateByUrl).toHaveBeenCalledWith('/inventory/purchase-orders');
+  });
+
+  it('offers no create button for items without a supplier', () => {
+    const noSupplier = { ...list, groups: [{ ...list.groups[0], supplierId: null, supplierName: 'No supplier' }] };
+    const { el } = setup({ list: noSupplier });
+
+    expect(el.querySelector('[data-testid="create-order"]')).toBeNull();
   });
 });

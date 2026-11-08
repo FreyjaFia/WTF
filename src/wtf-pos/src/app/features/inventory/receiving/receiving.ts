@@ -1,4 +1,5 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
+import { Capacitor } from '@capacitor/core';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormArray, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorMessages } from '@core/messages';
@@ -6,10 +7,17 @@ import {
   AlertService,
   AuthService,
   InventoryService,
+  PurchaseOrderService,
   StockReceiptService,
   SupplierService,
 } from '@core/services';
-import { ConnectionErrorComponent, IconComponent, PullToRefreshComponent } from '@shared/components';
+import {
+  ConnectionErrorComponent,
+  IconComponent,
+  PullToRefreshComponent,
+  SearchInputComponent,
+} from '@shared/components';
+import { SelectDropdownComponent } from '@shared/components/select-dropdown/select-dropdown';
 import {
   invoiceDifference,
   packUnitCost,
@@ -18,6 +26,7 @@ import {
 } from '@shared/calculations';
 import {
   ItemDto,
+  PurchaseOrderSummaryDto,
   StockReceiptDto,
   StockReceiptSummaryDto,
   SupplierItemDto,
@@ -58,6 +67,8 @@ function localToday(): string {
     IconComponent,
     PullToRefreshComponent,
     ReactiveFormsModule,
+    SearchInputComponent,
+    SelectDropdownComponent,
   ],
   templateUrl: './receiving.html',
   host: { class: 'flex-1 min-h-0' },
@@ -66,13 +77,43 @@ export class ReceivingComponent implements OnInit {
   private readonly receiptsApi = inject(StockReceiptService);
   private readonly suppliersApi = inject(SupplierService);
   private readonly inventory = inject(InventoryService);
+  private readonly ordersApi = inject(PurchaseOrderService);
   private readonly alertService = inject(AlertService);
   protected readonly auth = inject(AuthService);
 
+  protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
+  protected readonly search = signal('');
   protected readonly receipts = signal<StockReceiptSummaryDto[]>([]);
+  protected readonly filteredReceipts = computed(() => {
+    const term = this.search().trim().toLowerCase();
+    if (!term) {
+      return this.receipts();
+    }
+
+    return this.receipts().filter((receipt) =>
+      [
+        receipt.supplierName,
+        receipt.invoiceNumber,
+        receipt.purchaseOrderNumber ? `po-${receipt.purchaseOrderNumber}` : null,
+        receipt.createdByName,
+        receipt.note,
+      ].some((field) => field?.toLowerCase().includes(term)),
+    );
+  });
+  protected readonly supplierOptions = computed(() =>
+    this.suppliers().map((supplier) => ({ id: supplier.id, label: supplier.name })),
+  );
+  protected readonly itemOptions = computed(() =>
+    this.items().map((item) => ({ id: item.id, label: item.name })),
+  );
+  protected readonly orderOptions = computed(() =>
+    this.openOrders().map((order) => ({ id: order.id, label: `PO-${order.poNumber}` })),
+  );
   protected readonly suppliers = signal<SupplierSummaryDto[]>([]);
   protected readonly items = signal<ItemDto[]>([]);
   protected readonly supplierItems = signal<SupplierItemDto[]>([]);
+  protected readonly openOrders = signal<PurchaseOrderSummaryDto[]>([]);
+  protected readonly purchaseOrderId = signal<string>('');
   protected readonly isLoading = signal(false);
   protected readonly isRefreshing = signal(false);
   protected readonly connectionFailed = signal(false);
@@ -140,15 +181,69 @@ export class ReceivingComponent implements OnInit {
     this.resetForm();
   }
 
+  protected pickSupplier(id: string | null): void {
+    this.header.controls.supplierId.setValue(id ?? '');
+    this.header.controls.supplierId.markAsTouched();
+    this.chooseSupplier();
+  }
+
+  protected pickItem(index: number, id: string | null): void {
+    const control = this.lines.at(index).controls.itemId;
+    control.setValue(id ?? '');
+    control.markAsTouched();
+    this.chooseItem(index);
+  }
+
   protected chooseSupplier(): void {
     const supplierId = this.header.controls.supplierId.value;
     this.supplierItems.set([]);
+    this.openOrders.set([]);
+    this.purchaseOrderId.set('');
     if (!supplierId) {
       return;
     }
 
+    this.ordersApi.getOrders({ supplierId, openOnly: true }).subscribe({
+      next: (orders) => this.openOrders.set(orders),
+      error: (err: Error) => this.alertService.error(err.message),
+    });
+
     this.suppliersApi.getSupplier(supplierId).subscribe({
       next: (supplier) => this.supplierItems.set(supplier.items),
+      error: (err: Error) => this.alertService.error(err.message),
+    });
+  }
+
+  protected chooseOrder(orderId: string): void {
+    this.purchaseOrderId.set(orderId);
+    if (!orderId) {
+      return;
+    }
+
+    this.ordersApi.getOrder(orderId).subscribe({
+      next: (order) => {
+        this.lines.clear();
+        for (const line of order.lines) {
+          const remaining = line.packsOrdered - line.packsReceived;
+          if (remaining <= 0) {
+            continue;
+          }
+
+          const group = newLine();
+          group.patchValue({
+            itemId: line.itemId,
+            packName: line.packName ?? '',
+            packs: remaining,
+            unitsPerPack: line.unitsPerPack,
+            packPrice: this.canSeeCosts() ? line.packPrice : null,
+          });
+          this.lines.push(group);
+        }
+
+        if (this.lines.length === 0) {
+          this.lines.push(newLine());
+        }
+      },
       error: (err: Error) => this.alertService.error(err.message),
     });
   }
@@ -248,6 +343,7 @@ export class ReceivingComponent implements OnInit {
         invoiceTotal: head.invoiceTotal,
         note: head.note.trim() || null,
         clientRequestId: this.pendingRequestId,
+        purchaseOrderId: this.purchaseOrderId() || null,
         lines: this.lines.controls.map((line) => {
           const value = line.getRawValue();
           return {
@@ -288,6 +384,8 @@ export class ReceivingComponent implements OnInit {
     this.lines.clear();
     this.lines.push(newLine());
     this.supplierItems.set([]);
+    this.openOrders.set([]);
+    this.purchaseOrderId.set('');
     this.pendingRequestId = crypto.randomUUID();
   }
 }
