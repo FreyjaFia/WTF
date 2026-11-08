@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Orders;
+using WTF.Api.Common.Tenancy;
 using WTF.Api.Common.Time;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Domain.Data;
@@ -42,6 +43,12 @@ public class SyncOfflineOrdersHandler(WTFDbContext db, ISender sender, IHttpCont
         if (string.IsNullOrEmpty(localId) || localId.Length > MaxLocalIdLength)
         {
             return Failed(localId, $"An offline order needs its queue number ({MaxLocalIdLength} characters at most).");
+        }
+
+        var tooLate = OfflineSyncWindow.Check(httpContextAccessor.HttpContext, order.CreatedAt, DateTime.UtcNow);
+        if (tooLate is not null)
+        {
+            return Failed(localId, tooLate);
         }
 
         var alreadySaved = await FindSavedAsync(localId, cancellationToken);

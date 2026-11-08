@@ -22,6 +22,14 @@ public sealed class TenantRequestGuardMiddleware(RequestDelegate next)
         if (Guid.TryParse(user.FindFirst(TenantDefaults.ClaimType)?.Value, out var tenantId))
         {
             var db = context.RequestServices.GetRequiredService<WTFDbContext>();
+            if (OfflineSyncWindow.IsOfflineSyncRoute(context.Request) && await statusCache.ClosedSinceAsync(db, tenantId, context.RequestAborted) is { } closedSince)
+            {
+                // Orders sold before the shop closed may still arrive; the handler checks each order's time against this cut-off.
+                OfflineSyncWindow.Open(context, closedSince);
+                await next(context);
+                return;
+            }
+
             if (!await statusCache.CanUseAsync(db, tenantId, context.RequestAborted))
             {
                 context.Response.StatusCode = StatusCodes.Status403Forbidden;
