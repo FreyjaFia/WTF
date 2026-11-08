@@ -6,7 +6,7 @@ import { testPassword } from '@data/env';
 import { PLATFORM_ROUTES } from '@data/routes';
 import { LoginPage } from '@pages/login.page';
 import { PlatformLoginPage, PlatformShopPage, PlatformShopsPage } from '@pages/platform.page';
-import { unique } from '@utils/unique';
+import { unique, uniqueStamp } from '@utils/unique';
 import { openShop, ownerOf } from '@utils/tenants';
 
 type NewContext = (options?: { width?: number; height?: number }) => Promise<import('@playwright/test').BrowserContext>;
@@ -46,7 +46,7 @@ test.describe('managing shops from the platform @tenancy @platform', () => {
     const shops = new PlatformShopsPage(page);
     await shops.open();
 
-    await shops.fillAndCreate({ name: 'Dup', slug: existing.tenant.slug, firstName: 'A', lastName: 'B', username: `dup-${Date.now().toString(36)}` });
+    await shops.fillAndCreate({ name: 'Dup', slug: existing.tenant.slug, firstName: 'A', lastName: 'B', username: `dup-${uniqueStamp()}` });
     await expect(shops.dialog.getByRole('alert')).toContainText(/already taken/i);
 
     await shops.dialog.getByLabel('Shop address').fill('admin');
@@ -147,7 +147,7 @@ test.describe('managing shops from the platform @tenancy @platform', () => {
     await expect(page).toHaveURL(new RegExp(`${PLATFORM_ROUTES.shops}$`));
     await expect.poll(async () => (await platform.tenants()).map((tenant) => tenant.id)).not.toContain(created.tenant.id);
     const again = await platform.call('POST', 'tenants', {
-      name: 'Reuse', slug: created.tenant.slug, ownerFirstName: 'A', ownerLastName: 'B', ownerUsername: `re-${Date.now().toString(36)}`,
+      name: 'Reuse', slug: created.tenant.slug, ownerFirstName: 'A', ownerLastName: 'B', ownerUsername: `re-${uniqueStamp()}`,
     });
     expect(again.status()).toBe(400);
   });
@@ -235,7 +235,7 @@ test.describe('managing shops from the platform @tenancy @platform', () => {
 
     const writer = ShopSession.withToken(request, owner.username, (await platform.impersonate(shop.id, owner.id, true)).accessToken);
     expect((await writer.createOrderRaw(drink.id)).ok()).toBeTruthy();
-    const account = await writer.call('POST', 'users', { firstName: 'N', lastName: 'M', username: `no-${Date.now().toString(36)}`, password: testPassword(), roleId: 2 });
+    const account = await writer.call('POST', 'users', { firstName: 'N', lastName: 'M', username: `no-${uniqueStamp()}`, password: testPassword(), roleId: 2 });
     expect(account.status()).toBe(403);
 
     const log = (await platform.auditLog(shop.id)).map((entry) => entry.action);

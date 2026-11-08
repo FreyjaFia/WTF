@@ -1,5 +1,6 @@
 import { Page } from '@playwright/test';
 import { expect, test } from '@fixtures/index';
+import { uniqueStamp } from '@utils/unique';
 import { Api } from '@api/index';
 import { ManagementExtraApi } from '@api/management-extra';
 import { testPassword } from '@data/env';
@@ -32,7 +33,7 @@ test.beforeAll(async ({ playwright }) => {
   const context = await playwright.request.newContext();
   const api = new Api(context);
   const mx = new ManagementExtraApi(api.client);
-  const stamp = Date.now().toString(36);
+  const stamp = uniqueStamp();
   const longName = `${LONG_WORDS} ${stamp}`.slice(0, 95);
   const unbroken = `${UNBROKEN}${stamp}`.slice(0, 95);
   // Customer and user names are limited to 50 characters.

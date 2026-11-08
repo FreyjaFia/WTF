@@ -1,4 +1,5 @@
 import { expect, test } from '@fixtures/index';
+import { uniqueStamp } from '@utils/unique';
 import { ShopSession } from '@api/shop-session';
 import { TENANT_STATUS, uniqueSlug } from '@api/platform';
 import { testPassword } from '@data/env';
@@ -411,7 +412,7 @@ test.describe('concurrent actions, edge cases @tenancy @edge', () => {
   });
 
   test('two shops made with the same owner username at once: exactly one wins', async ({ platform }) => {
-    const username = `dup-${Date.now().toString(36)}`;
+    const username = `dup-${uniqueStamp()}`;
 
     const results = await Promise.all([1, 2].map((n) => platform.createShopRaw({ slug: uniqueSlug(`dup${n}`), ownerUsername: username })));
     const ok = results.filter((response) => response.ok());

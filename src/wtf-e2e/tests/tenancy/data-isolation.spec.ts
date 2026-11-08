@@ -3,7 +3,7 @@ import { ShopSession } from '@api/shop-session';
 import { testPassword } from '@data/env';
 import { USERNAMES } from '@data/users';
 import { LoginPage } from '@pages/login.page';
-import { unique } from '@utils/unique';
+import { unique, uniqueStamp } from '@utils/unique';
 import { openShop } from '@utils/tenants';
 
 interface Row {
@@ -125,7 +125,7 @@ test.describe('shops cannot see each other @tenancy @isolation', () => {
 
     const taken = await platform.call('POST', 'tenants', {
       name: unique('Second shop'),
-      slug: `dupe-${Date.now().toString(36)}`,
+      slug: `dupe-${uniqueStamp()}`,
       ownerFirstName: 'Dupe',
       ownerLastName: 'Owner',
       ownerUsername: shopA.ownerUsername,

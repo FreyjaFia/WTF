@@ -1,6 +1,7 @@
 import { Page } from '@playwright/test';
 import { PO_STATUS, PurchasingApi, asRole } from '@api/purchasing';
 import { expect, test } from '@fixtures/index';
+import { uniqueStamp } from '@utils/unique';
 import { go } from '@utils/navigation';
 import { VIEWPORTS, measureOverflow, overflowProblem, useStyle, watch } from '@utils/layout';
 
@@ -20,7 +21,7 @@ test.beforeAll(async ({ playwright }) => {
   const { Api } = await import('@api/index');
   const api = new Api(context);
   const buy = new PurchasingApi(asRole(api.client));
-  const stamp = Date.now().toString(36);
+  const stamp = uniqueStamp();
   const supplier = await buy.createSupplier(`${LONG_NAME} ${stamp}`.slice(0, 95), { contactName: UNBROKEN, phone: '0917 123 4567' });
   const item = await buy.createItem({ name: `${UNBROKEN}${stamp}`.slice(0, 95), startingQuantity: 1 });
   await buy.link(item.id, supplier.summary.id);
