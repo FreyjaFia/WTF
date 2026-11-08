@@ -256,17 +256,19 @@ static WTFDbContext NewContext(string connectionString)
     return new ThrowawayContext(options);
 }
 
+// The table name comes from the EF model, never from input, so interpolating it is safe (and a parameter cannot name a table).
+#pragma warning disable EF1002
 static async Task InsertAsync<TEntity>(WTFDbContext db, List<TEntity> rows)
     where TEntity : class
 {
     var table = db.Model.FindEntityType(typeof(TEntity))!.GetTableName()!;
     var hasIdentity = await db.Database
-        .SqlQuery<int>($"SELECT CAST(OBJECTPROPERTY(OBJECT_ID(N'dbo.{table}'), 'TableHasIdentity') AS int) AS [Value]")
+        .SqlQueryRaw<int>($"SELECT CAST(OBJECTPROPERTY(OBJECT_ID(N'dbo.{table}'), 'TableHasIdentity') AS int) AS [Value]")
         .SingleAsync() == 1;
 
     if (hasIdentity)
     {
-        await db.Database.ExecuteSqlAsync($"SET IDENTITY_INSERT [dbo].[{table}] ON");
+        await db.Database.ExecuteSqlRawAsync($"SET IDENTITY_INSERT [dbo].[{table}] ON");
     }
 
     db.Set<TEntity>().AddRange(rows);
@@ -274,9 +276,10 @@ static async Task InsertAsync<TEntity>(WTFDbContext db, List<TEntity> rows)
 
     if (hasIdentity)
     {
-        await db.Database.ExecuteSqlAsync($"SET IDENTITY_INSERT [dbo].[{table}] OFF");
+        await db.Database.ExecuteSqlRawAsync($"SET IDENTITY_INSERT [dbo].[{table}] OFF");
     }
 }
+#pragma warning restore EF1002
 
 static List<TEntity> Named<TEnum, TEntity>(Func<int, string, TEntity> create, TEnum? skip = null)
     where TEnum : struct, Enum
