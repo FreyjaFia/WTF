@@ -352,6 +352,26 @@ counting, and show the difference as **variance**, so you can tell a wrong recip
 - **POS.** Inventory > Reorder: the list per supplier with a Copy order button (plain text for a message to the
   supplier), and a Par levels panel to set them. Not built: the "reorder list ready" notification.
 
+**Slice 4 built (script `tools/sql/20261117_add_purchase_orders.sql`, then dbsync).**
+- **Schema.** `PurchaseOrders` (number per shop, status, expected date, note, who and when it was created, sent and closed),
+  `PurchaseOrderLines` (pack, units per pack, pack price, packs ordered and received; one line per item) and
+  `StockReceipts.PurchaseOrderId`. All tenant owned.
+- **Statuses.** Draft, Sent, Partly received, Received, Cancelled. Only a draft can be edited. A draft or a sent order with
+  nothing received can be cancelled; a partly received one can be closed (it becomes Received).
+- **Rules.** `PurchasingRules.Progress` says nothing / partial / complete from the packs ordered and received, and
+  `UnitsOnOrder` is the packs still to come times the pack size. Sent and partly received orders feed the reorder list's
+  "on order", so a sent order stops the item being suggested again.
+- **API.** `/api/purchase-orders` (list with status, supplier and open-only filters; get; create; create from the reorder
+  list for one supplier; update a draft; send, cancel, close). Reading needs the stock read policy, writing the stock write
+  policy; prices are hidden from roles that cannot read costs. A receipt can carry a `PurchaseOrderId`: the order must be
+  open, from the same supplier, and the receipt may only list items on it.
+- **POS.** Inventory > Orders (list with search, status filter and badges, create and edit a draft, confirm before send,
+  cancel and close), a Create order button on each supplier group of the Reorder list, and in Receiving an "Against purchase
+  order" choice that fills the lines with what is still to arrive. Checked in a browser on a throwaway database (Reorder to
+  draft to sent to partly received, with the totals matching a hand count).
+- **Style rule for Phase 8.** Inventory screens reuse the app's shared search box, refresh button, searchable dropdown,
+  badges, confirm dialog and input styling.
+
 #### Phase 9 - Profit and margin reports [Completed: Product Profit 1 Nov, Gross Profit 4 Nov, Expenses and P&L 4 Nov 2026]
 
 "Net income" needs more than stock: it needs sales, cost of goods sold, waste, discounts and the **running costs** of the
