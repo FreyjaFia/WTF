@@ -1,3 +1,4 @@
+import { ProductSubCategoryEnum, AddOnTypeEnum } from '@app/testing/catalog-ids';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, ParamMap, Router, convertToParamMap, provideRouter } from '@angular/router';
@@ -13,20 +14,7 @@ import {
   SignalRService,
 } from '@core/services';
 import { AppRoutes } from '@shared/constants/app-routes';
-import {
-  AddOnTypeEnum,
-  CartBundleItemDto,
-  CartItemDto,
-  DiscountedProductPromotionDto,
-  OrderDto,
-  OrderItemDto,
-  FulfillmentTypeEnum,
-  OrderSourceEnum,
-  OrderStatusEnum,
-  PaymentMethodEnum,
-  ProductSubCategoryEnum,
-  PromotionTypeEnum,
-} from '@shared/models';
+import { CartBundleItemDto, CartItemDto, DiscountedProductPromotionDto, OrderDto, OrderItemDto, FulfillmentTypeEnum, OrderSourceEnum, OrderStatusEnum, PaymentMethodEnum, PromotionTypeEnum } from '@shared/models';
 import { BehaviorSubject, Observable, Subject, of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { OrderDetails } from './order-details';

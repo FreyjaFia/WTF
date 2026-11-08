@@ -30,6 +30,7 @@ test.describe('managing waste reasons @waste', () => {
     const reasons = new WasteReasonsPage(page);
 
     await reasons.open();
+    await reasons.row(name).getByRole('button', { name: 'Reason actions' }).click();
     await reasons.row(name).getByRole('button', { name: 'Turn Off' }).click();
     await reasons.confirmDialog('Turn Off');
     await expect(reasons.row(name)).toContainText('Inactive');
@@ -42,6 +43,7 @@ test.describe('managing waste reasons @waste', () => {
     await expect(dialog.reason.locator('option', { hasText: name })).toHaveCount(0);
 
     await reasons.open();
+    await reasons.row(name).getByRole('button', { name: 'Reason actions' }).click();
     await reasons.row(name).getByRole('button', { name: 'Restore' }).click();
     await reasons.confirmDialog('Restore');
     await expect(reasons.row(name)).toContainText('Active');
@@ -54,6 +56,8 @@ test.describe('managing waste reasons @waste', () => {
     await reasons.open();
     const other = reasons.row('Other').filter({ hasText: 'Built-in' });
     await expect(other).toBeVisible();
+    await other.getByRole('button', { name: 'Reason actions' }).click();
+    await expect(other.getByRole('button', { name: 'Edit' })).toBeVisible();
     await expect(other.getByRole('button', { name: 'Turn Off' })).toHaveCount(0);
   });
 

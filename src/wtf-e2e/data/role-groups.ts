@@ -27,6 +27,8 @@ export const GROUPS = {
   stockMovementsWrite: ['superadmin', 'admin', 'stockmgr'],
   stockWasteWrite: ['superadmin', 'admin', 'stockmgr', 'cashier'],
   stockWasteReview: ['superadmin', 'admin'],
+  expensesRead: ['superadmin', 'admin', 'viewer'],
+  expensesWrite: ['superadmin', 'admin'],
   wasteReasonsManage: ['superadmin', 'admin'],
   wasteReasonsRead: ['superadmin', 'admin', 'viewer', 'stockmgr', 'cashier'],
   // API only: cashiers read products and customers because the order editor loads them.

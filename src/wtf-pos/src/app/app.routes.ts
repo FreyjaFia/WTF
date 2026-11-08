@@ -40,7 +40,8 @@ import { UserListComponent } from '@features/management/users/user-list/user-lis
 import { UsersComponent } from '@features/management/users/users';
 import { BrandPageComponent } from '@features/management/brand/brand-page';
 import { SubscriptionPageComponent } from '@features/management/subscription/subscription-page';
-import { WasteReasonsComponent } from '@features/management/waste-reasons/waste-reasons';
+import { ExpensesComponent } from '@features/management/expenses/expenses';
+import { SetupComponent } from '@features/management/setup/setup';
 import { NotFoundComponent } from '@features/not-found/not-found';
 import { NotificationsComponent } from '@features/notifications/notifications';
 import { OrderDetails } from '@features/orders/order-details/order-details';
@@ -417,10 +418,24 @@ export const routes: Routes = [
             data: { roles: AppRoleGroups.AuditRead },
           },
           {
-            path: 'waste-reasons',
-            component: WasteReasonsComponent,
+            path: 'expenses',
+            component: ExpensesComponent,
             canActivate: [roleGuard],
-            data: { roles: AppRoleGroups.WasteReasonsManage },
+            data: { roles: AppRoleGroups.ExpensesRead },
+          },
+          { path: 'catalog', redirectTo: 'setup/categories', pathMatch: 'full' },
+          { path: 'waste-reasons', redirectTo: 'setup/waste-reasons', pathMatch: 'full' },
+          {
+            path: 'setup',
+            component: SetupComponent,
+            canActivate: [roleGuard],
+            data: { roles: AppRoleGroups.ProductsRead },
+          },
+          {
+            path: 'setup/:kind',
+            component: SetupComponent,
+            canActivate: [roleGuard],
+            data: { roles: AppRoleGroups.ProductsRead },
           },
           {
             path: 'subscription',

@@ -3,7 +3,6 @@ using System.Reflection;
 using WTF.Api.Features.OrderLinks;
 using WTF.Api.Features.OrderLinks.DTOs;
 using WTF.Api.Features.Orders.Enums;
-using WTF.Api.Features.Products.Enums;
 using WTF.Api.Features.Promotions.DTOs;
 using WTF.Domain.Entities;
 using WTF.Tests.Infrastructure;
@@ -279,7 +278,7 @@ public class PublicOrderLinkTests
         await AddProductAsync("Retired", 99, active: false);
         var syrup = await AddProductAsync("Syrup", 30, addOn: true);
         await TestDb.SaveAsync(_db, new ProductAddOn
-        { ProductId = latte.Id, AddOnId = syrup.Id, AddOnTypeId = (int)AddOnTypeEnum.Extra, IsActive = true });
+        { ProductId = latte.Id, AddOnId = syrup.Id, AddOnTypeId = (int)CatalogSeed.Extra, IsActive = true });
         await TestDb.SaveAsync(_db, new ProductAddOnPriceOverride
         { Id = Guid.NewGuid(), ProductId = latte.Id, AddOnId = syrup.Id, Price = 20, IsActive = true, CreatedAt = DateTime.UtcNow });
 
@@ -696,7 +695,7 @@ public class PublicOrderLinkTests
         await TestDb.SaveAsync(_db, new ProductAddOnPriceOverride
         { Id = Guid.NewGuid(), ProductId = latte.Id, AddOnId = syrup.Id, Price = 20, IsActive = true, CreatedAt = DateTime.UtcNow });
         await TestDb.SaveAsync(_db, new ProductAddOn
-        { ProductId = latte.Id, AddOnId = syrup.Id, AddOnTypeId = (int)AddOnTypeEnum.Extra, IsActive = true });
+        { ProductId = latte.Id, AddOnId = syrup.Id, AddOnTypeId = (int)CatalogSeed.Extra, IsActive = true });
         var order = await AddOrderAsync(ana.Id, linkId: link.Id);
         var parent = await AddLineAsync(order.Id, latte.Id, quantity: 2);
         await AddLineAsync(order.Id, syrup.Id, parentId: parent.Id);
@@ -714,7 +713,7 @@ public class PublicOrderLinkTests
         var addOn = item.AddOns.ShouldHaveSingleItem();
         addOn.Name.ShouldBe("Syrup");
         addOn.UnitPrice.ShouldBe(20, "the product's add-on override price");
-        addOn.Type.ShouldBe((int)AddOnTypeEnum.Extra);
+        addOn.Type.ShouldBe((int)CatalogSeed.Extra);
         item.OriginalPrice.ShouldBeNull();
         item.PromoLabel.ShouldBeNull();
         dto.Total.ShouldBe((150 + 20) * 2);

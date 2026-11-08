@@ -25,7 +25,8 @@ export const ROUTES = {
   report: (slug: string): string => `/management/reports?report=${slug}`,
   auditLogs: '/management/audit-logs',
   schemaScripts: '/management/schema-scripts',
-  wasteReasons: '/management/waste-reasons',
+  wasteReasons: '/management/setup/waste-reasons',
+  expenses: '/management/expenses',
   shop: (token: string): string => `/shop/${token}`,
   shopOrders: (token: string): string => `/shop/${token}/orders`,
 } as const;
@@ -46,6 +47,7 @@ export const REPORT_SLUGS: ReadonlyArray<string> = [
   'waste',
   'stock-variance',
   'gross-profit',
+  'profit-loss',
   'menu-engineering',
 ];
 
@@ -65,5 +67,6 @@ export const REPORT_API_PATHS: ReadonlyArray<string> = [
   'waste',
   'stock-variance',
   'gross-profit',
+  'profit-loss',
   'menu-engineering',
 ];

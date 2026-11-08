@@ -172,7 +172,7 @@
                       <h5 class="text-xs font-semibold tracking-wider text-gray-400 uppercase">
                         {{ getGroupHeader(group) }}
                       </h5>
-                      <span class="text-xs text-gray-400">{{ getSelectionRule(group.type) }}</span>
+                      <span class="text-xs text-gray-400">{{ getSelectionRule(group) }}</span>
                     </div>
 
                     <div class="space-y-2">
@@ -204,7 +204,7 @@
                           (click)="toggleOption(activeProduct()!.id, group, option)"
                         >
                           <div class="shrink-0">
-                            @if (isRadioGroup(group.type)) {
+                            @if (isRadioGroup(group)) {
                               <div
                                 class="flex h-4.5 w-4.5 items-center justify-center rounded-full border-2 transition-colors"
                                 [class.border-brand]="
@@ -255,7 +255,7 @@
                           }}</span>
 
                           @if (
-                            !isRadioGroup(group.type) &&
+                            !isRadioGroup(group) &&
                             isSelected(activeProduct()!.id, group.type, option.id)
                           ) {
                             <div

@@ -4,13 +4,18 @@ import { AvatarComponent } from '@shared/components/avatar/avatar';
 import { IconComponent } from '@shared/components/icons/icon/icon';
 import {
   ADD_ON_TYPE_ORDER,
-  AddOnTypeEnum,
   PublicAddOnGroupDto,
   PublicCartAddOn,
   PublicProductDto,
 } from '@shared/models';
 import {
+  AddOnTypeRule,
   addOnsTotal,
+  isPickOne,
+  minimumSelection,
+  ruleOfGroup,
+  selectionError,
+  selectionLabel,
   DiscountRule,
   extendedPrice,
   findBestDiscount,
@@ -56,7 +61,6 @@ export class PublicAddonPickerComponent implements OnInit {
   public readonly cancelled = output<void>();
 
   protected readonly maxInstructions = MAX_SPECIAL_INSTRUCTIONS;
-  protected readonly AddOnTypeEnum = AddOnTypeEnum;
 
   protected readonly quantity = signal(1);
   protected readonly instructions = signal('');
@@ -161,21 +165,14 @@ export class PublicAddonPickerComponent implements OnInit {
 
   /** Size and flavor need exactly one choice, sauce at most one (same as the shop's own ordering screen). */
   protected readonly validationError = computed<string | null>(() => {
-    const selected = this.selected();
-
     for (const group of this.sortedGroups()) {
-      const count = this.countOf(group.type);
-
-      if (group.type === AddOnTypeEnum.Size && group.options.length > 0 && count !== 1) {
-        return 'Please select a size to continue.';
+      if (group.options.length === 0) {
+        continue;
       }
 
-      if (group.type === AddOnTypeEnum.Flavor && group.options.length > 0 && count !== 1) {
-        return 'Please select a flavor to continue.';
-      }
-
-      if (group.type === AddOnTypeEnum.Sauce && count > 1) {
-        return 'You can select at most one sauce.';
+      const error = selectionError(ruleOfGroup(group), this.countOf(group.type));
+      if (error) {
+        return error;
       }
     }
 
@@ -183,17 +180,11 @@ export class PublicAddonPickerComponent implements OnInit {
   });
 
   protected selectionRule(type: number): string {
-    if (type === AddOnTypeEnum.Size || type === AddOnTypeEnum.Flavor) {
-      return 'Required · Pick one';
-    }
-
-    return type === AddOnTypeEnum.Sauce ? 'Optional · Pick one' : 'Optional · Pick many';
+    return selectionLabel(this.ruleOf(type));
   }
 
   protected isSingleChoice(type: number): boolean {
-    return (
-      type === AddOnTypeEnum.Size || type === AddOnTypeEnum.Flavor || type === AddOnTypeEnum.Sauce
-    );
+    return isPickOne(this.ruleOf(type));
   }
 
   protected isSelected(type: number, id: string): boolean {
@@ -220,7 +211,7 @@ export class PublicAddonPickerComponent implements OnInit {
 
     if (this.isSingleChoice(type)) {
       if (qty > 0) {
-        next = type === AddOnTypeEnum.Sauce ? {} : current;
+        next = minimumSelection(this.ruleOf(type)) > 0 ? current : {};
       } else {
         next = { [id]: 1 };
       }
@@ -285,7 +276,12 @@ export class PublicAddonPickerComponent implements OnInit {
     });
   }
 
+  private ruleOf(type: number): AddOnTypeRule {
+    const group = this.sortedGroups().find((g) => g.type === type);
+    return group ? ruleOfGroup(group) : { name: '', isRequired: false, minSelect: 0, maxSelect: 0 };
+  }
+
   private order(type: number): number {
-    return ADD_ON_TYPE_ORDER[type as AddOnTypeEnum] ?? 99;
+    return ADD_ON_TYPE_ORDER[type] ?? 99;
   }
 }

@@ -1,3 +1,4 @@
+import { OPTIONAL_ONE, REQUIRED_ONE } from '@app/testing/catalog-ids';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { PublicAddOnGroupDto, PublicProductDto } from '@shared/models';
 import { describe, expect, it, vi } from 'vitest';
@@ -20,17 +21,17 @@ const opt = (id: string, name: string, price: number): PublicProductDto => ({
 });
 const SIZE: PublicAddOnGroupDto = {
   type: 1,
-  displayName: 'Size',
+  displayName: 'Size', ...REQUIRED_ONE,
   options: [opt('s-l', 'Large', 30), opt('s-r', 'Regular', 0)],
 };
 const FLAVOR: PublicAddOnGroupDto = {
   type: 2,
-  displayName: 'Flavor',
+  displayName: 'Flavor', ...REQUIRED_ONE,
   options: [opt('f-v', 'Vanilla', 10)],
 };
 const SAUCE: PublicAddOnGroupDto = {
   type: 5,
-  displayName: 'Sauce',
+  displayName: 'Sauce', ...OPTIONAL_ONE,
   options: [opt('x-1', 'Caramel', 5), opt('x-2', 'Chocolate', 5)],
 };
 const EXTRA: PublicAddOnGroupDto = {
@@ -72,14 +73,14 @@ describe('PublicAddonPickerComponent', () => {
 
   it('requires a size before adding', () => {
     setup([SIZE]);
-    expect(c.validationError()).toBe('Please select a size to continue.');
+    expect(c.validationError()).toBe('A size selection is required and must be exactly one.');
     c.toggle(1, 's-r');
     expect(c.validationError()).toBeNull();
   });
 
   it('requires a flavor before adding', () => {
     setup([FLAVOR]);
-    expect(c.validationError()).toBe('Please select a flavor to continue.');
+    expect(c.validationError()).toBe('A flavor selection is required and must be exactly one.');
     c.toggle(2, 'f-v');
     expect(c.validationError()).toBeNull();
   });
@@ -169,7 +170,7 @@ describe('PublicAddonPickerComponent', () => {
     fixture.componentInstance.confirmed.subscribe(confirmed);
     c.confirm();
     expect(confirmed).not.toHaveBeenCalled();
-    expect(text()).toContain('Please select a size');
+    expect(text()).toContain('A size selection is required');
   });
 
   it('emits cancelled from the Cancel button, a click on the backdrop and Escape', () => {

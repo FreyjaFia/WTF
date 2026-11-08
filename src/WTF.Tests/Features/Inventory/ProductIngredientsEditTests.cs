@@ -36,7 +36,7 @@ public class ProductIngredientsEditTests
     {
         var latte = _data.AddProduct("Latte", 150m);
         var oat = _data.AddProduct("Oat", 20m, isAddOn: true);
-        _data.AllowAddOn(latte, oat, WTF.Api.Features.Products.Enums.AddOnTypeEnum.Extra);
+        _data.AllowAddOn(latte, oat, CatalogSeed.Extra);
         var oatMilk = StockSeed.Item(_db, "Oat Milk", 1000m, averageCost: 0.2m);
         var dairy = StockSeed.Item(_db, "Dairy", 1000m, averageCost: 0.1m);
         var retired = StockSeed.Item(_db, "Retired", 1000m, active: false);
@@ -59,7 +59,7 @@ public class ProductIngredientsEditTests
     {
         var latte = _data.AddProduct("Latte", 150m);
         var oat = _data.AddProduct("Oat", 20m, isAddOn: true);
-        _data.AllowAddOn(latte, oat, WTF.Api.Features.Products.Enums.AddOnTypeEnum.Extra);
+        _data.AllowAddOn(latte, oat, CatalogSeed.Extra);
         StockSeed.Link(_db, oat, StockSeed.Item(_db, "Oat Milk", 1000m, averageCost: 0.2m), 200m);
 
         var link = (await Read(latte, costs: false))!.AddOnOptions!.Single().Links!.Single();

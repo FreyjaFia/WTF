@@ -1,3 +1,5 @@
+import type { BadgeVariant } from '@shared/components/badge/badge';
+import { orderStatusLabel, orderStatusVariant } from '@shared/utils/order-status';
 import { CommonModule } from '@angular/common';
 import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -25,7 +27,6 @@ import {
 } from '@shared/components';
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import {
-  AddOnTypeEnum,
   CartAddOnDto,
   CartBundleItemDto,
   CartItemDto,
@@ -37,8 +38,8 @@ import {
   OrderSourceEnum,
   OrderStatusEnum,
   PaymentMethodEnum,
-  ProductSubCategoryEnum,
   PromotionTypeEnum,
+  SYSTEM_CATALOG_IDS,
 } from '@shared/models';
 import {
   addOnsTotal,
@@ -375,44 +376,12 @@ export class OrderDetails implements OnInit {
     });
   }
 
-  protected getStatusVariant(
-    status?: OrderStatusEnum | null,
-  ): 'success' | 'error' | 'warning' | 'info' | 'amber' | 'default' {
-    switch (status) {
-      case OrderStatusEnum.PendingApproval:
-        return 'amber';
-      case OrderStatusEnum.PendingReview:
-        return 'amber';
-      case OrderStatusEnum.Pending:
-        return 'warning';
-      case OrderStatusEnum.Completed:
-        return 'success';
-      case OrderStatusEnum.Cancelled:
-        return 'default';
-      case OrderStatusEnum.Refunded:
-        return 'error';
-      default:
-        return 'info';
-    }
+  protected getStatusVariant(status?: OrderStatusEnum | null): BadgeVariant {
+    return orderStatusVariant(status);
   }
 
   protected getStatusLabel(status?: OrderStatusEnum | null): string {
-    switch (status) {
-      case OrderStatusEnum.PendingApproval:
-        return 'Awaiting approval';
-      case OrderStatusEnum.PendingReview:
-        return 'Needs review';
-      case OrderStatusEnum.Pending:
-        return 'Pending';
-      case OrderStatusEnum.Completed:
-        return 'Completed';
-      case OrderStatusEnum.Cancelled:
-        return 'Cancelled';
-      case OrderStatusEnum.Refunded:
-        return 'Refunded';
-      default:
-        return 'Unknown';
-    }
+    return orderStatusLabel(status);
   }
 
   // --- orders waiting for approval ---
@@ -714,7 +683,7 @@ export class OrderDetails implements OnInit {
   private getAddOnTypeForOwner(
     ownerProductId: string,
     addOnProductId: string,
-  ): AddOnTypeEnum | undefined {
+  ): number | undefined {
     const groups = this.catalogCache.getAddOnsForProduct(ownerProductId);
 
     for (const group of groups) {
@@ -742,7 +711,7 @@ export class OrderDetails implements OnInit {
     const retailIds = new Set(
       this.catalogCache
         .products()
-        .filter((product) => product.subCategory === ProductSubCategoryEnum.Retail)
+        .filter((product) => product.subCategory === SYSTEM_CATALOG_IDS.retailSubCategory)
         .map((product) => product.id),
     );
     const items = this.stockLines();

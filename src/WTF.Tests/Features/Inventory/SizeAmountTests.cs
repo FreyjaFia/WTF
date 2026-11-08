@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using NSubstitute;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Inventory;
-using WTF.Api.Features.Products.Enums;
 using WTF.Api.Services;
 using WTF.Tests.Features.Orders;
 using WTF.Tests.Infrastructure;
@@ -26,7 +25,7 @@ public class SizeAmountTests
         _data = new OrderSeed(_db);
         _latte = _data.AddProduct("Latte", 150m);
         _large = _data.AddProduct("Large", 30m, isAddOn: true);
-        _data.AllowAddOn(_latte, _large, AddOnTypeEnum.Size);
+        _data.AllowAddOn(_latte, _large, CatalogSeed.Size);
         _milk = StockSeed.Item(_db, "Milk", 5000m, averageCost: 0.15m);
         _cup = StockSeed.Item(_db, "Large Cup", 50m, cost: 4m);
     }
@@ -86,7 +85,7 @@ public class SizeAmountTests
     public async Task Assign_SizeAmountForSomethingThatIsNotASize_IsRefused()
     {
         var oat = _data.AddProduct("Oat", 20m, isAddOn: true);
-        _data.AllowAddOn(_latte, oat, AddOnTypeEnum.Extra);
+        _data.AllowAddOn(_latte, oat, CatalogSeed.Extra);
 
         var ex = await Should.ThrowAsync<InvalidOperationException>(() =>
             Save(_latte, Line(_milk, 200m, new ProductSizeAmountInputDto(oat, 300m))));
@@ -188,7 +187,7 @@ public class SizeAmountTests
     public async Task Preview_ASizeWithNoAmountsOfItsOwn_WarnsThatItUsesTheBase()
     {
         var jumbo = _data.AddProduct("Jumbo", 50m, isAddOn: true);
-        _data.AllowAddOn(_latte, jumbo, AddOnTypeEnum.Size);
+        _data.AllowAddOn(_latte, jumbo, CatalogSeed.Size);
         await Save(_latte, Line(_milk, 200m, new ProductSizeAmountInputDto(_large, 300m)));
 
         var result = (await Preview(jumbo))!;
@@ -200,7 +199,7 @@ public class SizeAmountTests
     public async Task Preview_ARepeatedAddOnId_CountsAsItsQuantity()
     {
         var shot = _data.AddProduct("Extra Shot", 20m, isAddOn: true);
-        _data.AllowAddOn(_latte, shot, AddOnTypeEnum.Extra);
+        _data.AllowAddOn(_latte, shot, CatalogSeed.Extra);
         await Save(_latte, Line(_milk, 200m));
         await Save(shot, Line(_cup, 1m));
 

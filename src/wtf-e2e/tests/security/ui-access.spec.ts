@@ -34,7 +34,7 @@ const PAGES: ReadonlyArray<PageCase> = [
   { name: 'reports', path: '/management/reports', allowed: GROUPS.reportsRead },
   { name: 'audit logs', path: '/management/audit-logs', allowed: GROUPS.auditRead },
   { name: 'schema scripts', path: '/management/schema-scripts', allowed: GROUPS.schemaScriptHistoryRead },
-  { name: 'waste reasons', path: '/management/waste-reasons', allowed: GROUPS.wasteReasonsManage },
+  { name: 'setup lists', path: '/management/setup', allowed: GROUPS.productsRead },
 ];
 
 test.describe('UI: pages are open or redirected exactly per role group @security', () => {
@@ -74,7 +74,8 @@ const MENU: ReadonlyArray<MenuCase> = [
   { name: 'Users', path: '/management/users', allowed: GROUPS.usersRead },
   { name: 'Promotions', path: '/management/promotions', allowed: GROUPS.promotionsRead },
   { name: 'Reports', path: '/management/reports', allowed: GROUPS.reportsRead },
-  { name: 'Waste Reasons', path: '/management/waste-reasons', allowed: GROUPS.wasteReasonsManage },
+  { name: 'Expenses', path: '/management/expenses', allowed: GROUPS.expensesRead },
+  { name: 'Setup', path: '/management/setup', allowed: GROUPS.productsRead },
   { name: 'Audit Logs', path: '/management/audit-logs', allowed: GROUPS.auditRead },
   { name: 'Schema Scripts', path: '/management/schema-scripts', allowed: GROUPS.schemaScriptHistoryRead },
 ];

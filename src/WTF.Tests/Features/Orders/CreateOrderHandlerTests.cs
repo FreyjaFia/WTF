@@ -6,7 +6,6 @@ using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Orders;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
-using WTF.Api.Features.Products.Enums;
 using WTF.Api.Features.Promotions.DTOs;
 using WTF.Api.Hubs;
 using WTF.Api.Services;
@@ -55,7 +54,7 @@ public class CreateOrderHandlerTests
         return p.Id;
     }
 
-    private async Task Link(Guid productId, Guid addOnId, AddOnTypeEnum? type = AddOnTypeEnum.Extra, bool active = true, decimal? overridePrice = null, bool overrideActive = true)
+    private async Task Link(Guid productId, Guid addOnId, int? type = CatalogSeed.Extra, bool active = true, decimal? overridePrice = null, bool overrideActive = true)
     {
         await using var db = TestDb.Create(_dbName);
         db.ProductAddOns.Add(new ProductAddOn { ProductId = productId, AddOnId = addOnId, AddOnTypeId = type.HasValue ? (int)type.Value : null, IsActive = active });
@@ -800,7 +799,7 @@ public class CreateOrderHandlerTests
     {
         var pizza = await SeedProduct("Pizza", 100m);
         var large = await SeedProduct("Large", 30m, isAddOn: true);
-        await Link(pizza, large, AddOnTypeEnum.Size);
+        await Link(pizza, large, CatalogSeed.Size);
 
         var ex = await Should.ThrowAsync<InvalidOperationException>(() =>
             Handler().Handle(Cmd(OrderStatusEnum.Pending, Line(pizza)), CancellationToken.None));
@@ -813,7 +812,7 @@ public class CreateOrderHandlerTests
     {
         var pizza = await SeedProduct("Pizza", 100m);
         var spicy = await SeedProduct("Spicy", 0m, isAddOn: true);
-        await Link(pizza, spicy, AddOnTypeEnum.Flavor);
+        await Link(pizza, spicy, CatalogSeed.Flavor);
 
         var ex = await Should.ThrowAsync<InvalidOperationException>(() =>
             Handler().Handle(Cmd(OrderStatusEnum.Pending, Line(pizza)), CancellationToken.None));
@@ -827,8 +826,8 @@ public class CreateOrderHandlerTests
         var pizza = await SeedProduct("Pizza", 100m);
         var small = await SeedProduct("Small", 0m, isAddOn: true);
         var large = await SeedProduct("Large", 30m, isAddOn: true);
-        await Link(pizza, small, AddOnTypeEnum.Size);
-        await Link(pizza, large, AddOnTypeEnum.Size);
+        await Link(pizza, small, CatalogSeed.Size);
+        await Link(pizza, large, CatalogSeed.Size);
 
         var ex = await Should.ThrowAsync<InvalidOperationException>(() =>
             Handler().Handle(Cmd(OrderStatusEnum.Pending, Line(pizza, 1, null, null, AddOn(small), AddOn(large))), CancellationToken.None));
@@ -842,8 +841,8 @@ public class CreateOrderHandlerTests
         var pizza = await SeedProduct("Pizza", 100m);
         var large = await SeedProduct("Large", 30m, isAddOn: true);
         var cheese = await SeedProduct("Cheese", 20m, isAddOn: true);
-        await Link(pizza, large, AddOnTypeEnum.Size);
-        await Link(pizza, cheese, AddOnTypeEnum.Extra);
+        await Link(pizza, large, CatalogSeed.Size);
+        await Link(pizza, cheese, CatalogSeed.Extra);
 
         await Should.ThrowAsync<InvalidOperationException>(() =>
             Handler().Handle(Cmd(OrderStatusEnum.Pending, Line(pizza, 1, null, null, AddOn(cheese))), CancellationToken.None));
@@ -855,8 +854,8 @@ public class CreateOrderHandlerTests
         var pizza = await SeedProduct("Pizza", 100m);
         var large = await SeedProduct("Large", 30m, isAddOn: true);
         var spicy = await SeedProduct("Spicy", 5m, isAddOn: true);
-        await Link(pizza, large, AddOnTypeEnum.Size);
-        await Link(pizza, spicy, AddOnTypeEnum.Flavor);
+        await Link(pizza, large, CatalogSeed.Size);
+        await Link(pizza, spicy, CatalogSeed.Flavor);
 
         var dto = await Handler().Handle(Cmd(OrderStatusEnum.Pending, Line(pizza, 1, null, null, AddOn(large), AddOn(spicy))), CancellationToken.None);
 
@@ -869,8 +868,8 @@ public class CreateOrderHandlerTests
         var pizza = await SeedProduct("Pizza", 100m);
         var f1 = await SeedProduct("F1", 0m, isAddOn: true);
         var f2 = await SeedProduct("F2", 0m, isAddOn: true);
-        await Link(pizza, f1, AddOnTypeEnum.Flavor);
-        await Link(pizza, f2, AddOnTypeEnum.Flavor);
+        await Link(pizza, f1, CatalogSeed.Flavor);
+        await Link(pizza, f2, CatalogSeed.Flavor);
 
         var ex = await Should.ThrowAsync<InvalidOperationException>(() =>
             Handler().Handle(Cmd(OrderStatusEnum.Pending, Line(pizza, 1, null, null, AddOn(f1), AddOn(f2))), CancellationToken.None));
@@ -884,8 +883,8 @@ public class CreateOrderHandlerTests
         var pizza = await SeedProduct("Pizza", 100m);
         var s1 = await SeedProduct("S1", 5m, isAddOn: true);
         var s2 = await SeedProduct("S2", 5m, isAddOn: true);
-        await Link(pizza, s1, AddOnTypeEnum.Sauce);
-        await Link(pizza, s2, AddOnTypeEnum.Sauce);
+        await Link(pizza, s1, CatalogSeed.Sauce);
+        await Link(pizza, s2, CatalogSeed.Sauce);
 
         (await Handler().Handle(Cmd(OrderStatusEnum.Pending, Line(pizza)), CancellationToken.None)).TotalAmount.ShouldBe(100m);
         (await Handler().Handle(Cmd(OrderStatusEnum.Pending, Line(pizza, 1, null, null, AddOn(s1))), CancellationToken.None)).TotalAmount.ShouldBe(105m);

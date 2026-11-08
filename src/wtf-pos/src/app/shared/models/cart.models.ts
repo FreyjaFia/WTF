@@ -1,11 +1,10 @@
-import { AddOnTypeEnum } from './product.models';
 import { PromotionTypeEnum } from './promotion.models';
 
 export interface CartAddOnDto {
   addOnId: string;
   name: string;
   price: number;
-  addOnType?: AddOnTypeEnum;
+  addOnType?: number;
 }
 
 export interface CartBundleItemDto {

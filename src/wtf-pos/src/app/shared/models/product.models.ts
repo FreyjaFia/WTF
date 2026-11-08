@@ -1,45 +1,27 @@
 import type { PriceHistoryEntryDto } from './price-history.models';
 
-export enum ProductCategoryEnum {
-  Drink = 1,
-  Food = 2,
-  Dessert = 3,
-  Other = 4,
-}
-
-export enum ProductSubCategoryEnum {
-  Coffee = 1,
-  NonCoffee = 2,
-  Snacks = 3,
-  Retail = 4,
-}
-
-export const PRODUCT_SUB_CATEGORY_LABELS: Record<ProductSubCategoryEnum, string> = {
-  [ProductSubCategoryEnum.Coffee]: 'Coffee',
-  [ProductSubCategoryEnum.NonCoffee]: 'Non-Coffee',
-  [ProductSubCategoryEnum.Snacks]: 'Snacks',
-  [ProductSubCategoryEnum.Retail]: 'Retail',
-};
-
 export function formatSubCategoryName(name: string | null | undefined): string {
   return name ? name.replace(/^Non(?=[A-Z])/, 'Non-') : '';
 }
 
-export enum AddOnTypeEnum {
-  Size = 1,
-  Flavor = 2,
-  Topping = 3,
-  Extra = 4,
-  Sauce = 5,
-}
-
-export const ADD_ON_TYPE_ORDER: Record<AddOnTypeEnum, number> = {
-  [AddOnTypeEnum.Size]: 0,
-  [AddOnTypeEnum.Flavor]: 1,
-  [AddOnTypeEnum.Sauce]: 2,
-  [AddOnTypeEnum.Topping]: 3,
-  [AddOnTypeEnum.Extra]: 4,
+export const ADD_ON_TYPE_ORDER: Record<number, number> = {
+  1: 0,
+  2: 1,
+  5: 2,
+  3: 3,
+  4: 4,
 };
+
+export function applyAddOnTypeOrder(types: { id: number; sortOrder: number }[]): void {
+  const sorted = [...types].sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id);
+  for (const key of Object.keys(ADD_ON_TYPE_ORDER)) {
+    delete ADD_ON_TYPE_ORDER[Number(key)];
+  }
+
+  sorted.forEach((type, index) => {
+    ADD_ON_TYPE_ORDER[type.id] = index;
+  });
+}
 
 export interface ProductPriceHistoryDto extends PriceHistoryEntryDto {
   productId: string;
@@ -51,8 +33,8 @@ export interface ProductDto {
   code: string;
   description?: string | null;
   price: number;
-  category: ProductCategoryEnum;
-  subCategory?: ProductSubCategoryEnum | null;
+  category: number;
+  subCategory?: number | null;
   isAddOn: boolean;
   isActive: boolean;
   createdAt: string;
@@ -78,8 +60,8 @@ export interface CreateProductDto {
   code: string;
   description?: string | null;
   price: number;
-  category: ProductCategoryEnum;
-  subCategory?: ProductSubCategoryEnum | null;
+  category: number;
+  subCategory?: number | null;
   isAddOn: boolean;
   isActive: boolean;
 }
@@ -90,26 +72,29 @@ export interface UpdateProductDto {
   code: string;
   description?: string | null;
   price: number;
-  category: ProductCategoryEnum;
-  subCategory?: ProductSubCategoryEnum | null;
+  category: number;
+  subCategory?: number | null;
   isAddOn: boolean;
   isActive: boolean;
 }
 
 export interface ProductAddOnAssignmentDto {
   addOnId: string;
-  addOnType: AddOnTypeEnum;
+  addOnType: number;
 }
 
 export interface AddOnProductAssignmentDto {
   productId: string;
-  addOnType: AddOnTypeEnum;
+  addOnType: number;
 }
 
 export interface AddOnGroupDto {
-  type: AddOnTypeEnum;
+  type: number;
   displayName: string;
   options: ProductDto[];
+  isRequired?: boolean;
+  minSelect?: number;
+  maxSelect?: number;
 }
 
 export interface ProductAddOnPriceOverrideDto {

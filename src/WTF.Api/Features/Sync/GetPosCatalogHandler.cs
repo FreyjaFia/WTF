@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
+using WTF.Api.Features.Catalog;
 using WTF.Api.Features.Customers.DTOs;
 using WTF.Api.Features.Sync.DTOs;
 using WTF.Domain.Data;
@@ -18,7 +19,9 @@ public class GetPosCatalogHandler(WTFDbContext db, IHttpContextAccessor httpCont
             db, httpContextAccessor, products, cancellationToken);
         var customers = await LoadCustomersAsync(cancellationToken);
 
-        return new PosCatalogDto(products, addOnsByProductId, customers, DateTime.UtcNow);
+        var lookups = await CatalogLookupLoader.LoadAsync(db, cancellationToken);
+
+        return new PosCatalogDto(products, addOnsByProductId, customers, DateTime.UtcNow, lookups);
     }
 
     private async Task<List<CustomerDto>> LoadCustomersAsync(CancellationToken cancellationToken)

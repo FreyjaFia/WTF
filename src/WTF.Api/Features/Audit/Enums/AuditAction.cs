@@ -55,5 +55,12 @@ public enum AuditAction
     StockCountStarted,
     StockCountPosted,
     StockCountCancelled,
+    CatalogCategorySaved,
+    CatalogSubCategorySaved,
+    CatalogAddOnTypeSaved,
+    ExpenseCreated,
+    ExpenseUpdated,
+    ExpenseDeleted,
+    ExpenseRestored,
     ShopBrandUpdated
 }

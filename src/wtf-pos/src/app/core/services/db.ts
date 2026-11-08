@@ -1,6 +1,7 @@
 import { CartItemDto } from '@shared/models';
 import type {
   AddOnGroupDto,
+  CatalogLookupsDto,
   CreateOrderCommand,
   CustomerDto,
   DiscountedProductPromotionDto,
@@ -30,6 +31,7 @@ export interface CachedCatalog {
   /** The bundles with their items, so a bundle can be opened and sold offline. */
   fixedBundles?: FixedBundlePromotionDto[];
   mixMatchPromotions?: MixMatchPromotionDto[];
+  lookups?: CatalogLookupsDto;
   syncedAt: string;
 }
 

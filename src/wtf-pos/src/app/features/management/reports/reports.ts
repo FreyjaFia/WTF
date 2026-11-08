@@ -7,6 +7,7 @@ import { Capacitor } from '@capacitor/core';
 import { HttpErrorMessages } from '@core/messages';
 import {
   AlertService,
+  CatalogLookupService,
   AuthService,
   FileDownloadService,
   ReportsService,
@@ -28,9 +29,6 @@ import { BadgeComponent } from '@shared/components/badge/badge';
 import { FilterButtonComponent } from '@shared/components/filter-button/filter-button';
 import {
   MonthlyReportWorkbookStatusDto,
-  PRODUCT_SUB_CATEGORY_LABELS,
-  ProductCategoryEnum,
-  ProductSubCategoryEnum,
   ReportGroupBy,
   ReportQuery,
   ReportSortDirection,
@@ -38,6 +36,7 @@ import {
   ReportType,
   UserDto,
   WasteReportGroupBy,
+  formatSubCategoryName,
 } from '@shared/models';
 import { map, startWith } from 'rxjs';
 import {
@@ -112,6 +111,7 @@ interface MonthOption {
 })
 export class ReportsComponent implements OnInit {
   private readonly reportsService = inject(ReportsService);
+  private readonly lookups = inject(CatalogLookupService);
   private readonly fileDownload = inject(FileDownloadService);
   private readonly userService = inject(UserService);
   private readonly alertService = inject(AlertService);
@@ -171,33 +171,18 @@ export class ReportsComponent implements OnInit {
     { value: 0, label: 'Shop Orders' },
     { value: 1, label: 'Customer Link Orders' },
   ];
-  protected readonly categoryOptions: readonly EnumFilterOption<number>[] = [
-    { value: ProductCategoryEnum.Drink, label: 'Drink' },
-    { value: ProductCategoryEnum.Food, label: 'Food' },
-    { value: ProductCategoryEnum.Dessert, label: 'Dessert' },
-    { value: ProductCategoryEnum.Other, label: 'Other' },
+  protected readonly categoryOptions = computed<readonly EnumFilterOption<number>[]>(() => [
+    ...this.lookups.categories().map((category) => ({ value: category.id, label: category.name })),
     { value: PromotionsReportCategoryFilterId, label: 'Promotions' },
-  ];
-  protected readonly subCategoryOptions: readonly EnumFilterOption<number>[] = [
-    {
-      value: ProductSubCategoryEnum.Coffee,
-      label: PRODUCT_SUB_CATEGORY_LABELS[ProductSubCategoryEnum.Coffee],
-    },
-    {
-      value: ProductSubCategoryEnum.NonCoffee,
-      label: PRODUCT_SUB_CATEGORY_LABELS[ProductSubCategoryEnum.NonCoffee],
-    },
-    {
-      value: ProductSubCategoryEnum.Snacks,
-      label: PRODUCT_SUB_CATEGORY_LABELS[ProductSubCategoryEnum.Snacks],
-    },
-    {
-      value: ProductSubCategoryEnum.Retail,
-      label: PRODUCT_SUB_CATEGORY_LABELS[ProductSubCategoryEnum.Retail],
-    },
+  ]);
+  protected readonly subCategoryOptions = computed<readonly EnumFilterOption<number>[]>(() => [
+    ...this.lookups.subCategories().map((subCategory) => ({
+      value: subCategory.id,
+      label: formatSubCategoryName(subCategory.name),
+    })),
     { value: FixedBundleReportTypeFilterId, label: 'Fixed Bundle' },
     { value: MixMatchReportTypeFilterId, label: 'Mix & Match' },
-  ];
+  ]);
   protected readonly catalog = REPORT_GROUPS.map((section) => ({
     ...section,
     reports: REPORT_DEFINITIONS.filter((definition) => definition.group === section.group),
@@ -295,6 +280,7 @@ export class ReportsComponent implements OnInit {
   });
 
   public ngOnInit(): void {
+    void this.lookups.ensureLoaded();
     this.applyPreset(DatePresets.ThisMonth);
     this.loadStaffOptions();
     this.loadMonthlyWorkbookStatus();

@@ -30,6 +30,8 @@ public partial class WTFDbContext : DbContext
 
     public virtual DbSet<DiscountedProductPromotionAddOn> DiscountedProductPromotionAddOns { get; set; }
 
+    public virtual DbSet<Expense> Expenses { get; set; }
+
     public virtual DbSet<FixedBundlePromotion> FixedBundlePromotions { get; set; }
 
     public virtual DbSet<FixedBundlePromotionItem> FixedBundlePromotionItems { get; set; }
@@ -124,6 +126,8 @@ public partial class WTFDbContext : DbContext
             entity.ToTable("AddOnType");
 
             entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_AddOnType_CreatedAt");
+            entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_AddOnType_IsActive");
             entity.Property(e => e.Name).HasMaxLength(50);
         });
 
@@ -289,6 +293,26 @@ public partial class WTFDbContext : DbContext
             entity.HasOne(d => d.DiscountedProductPromotion).WithMany(p => p.DiscountedProductPromotionAddOns)
                 .HasForeignKey(d => d.DiscountedProductPromotionId)
                 .HasConstraintName("FK_DiscountedProductPromotionAddOns_Promotion");
+        });
+
+        modelBuilder.Entity<Expense>(entity =>
+        {
+            entity.HasIndex(e => new { e.ExpenseDate, e.Category }, "IX_Expenses_ExpenseDate").IsDescending(true, false);
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_Expenses_Id");
+            entity.Property(e => e.Amount).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())", "DF_Expenses_CreatedAt");
+            entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_Expenses_IsActive");
+            entity.Property(e => e.Note).HasMaxLength(200);
+
+            entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.ExpenseCreatedByNavigations)
+                .HasForeignKey(d => d.CreatedBy)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Expenses_CreatedBy");
+
+            entity.HasOne(d => d.UpdatedByNavigation).WithMany(p => p.ExpenseUpdatedByNavigations)
+                .HasForeignKey(d => d.UpdatedBy)
+                .HasConstraintName("FK_Expenses_UpdatedBy");
         });
 
         modelBuilder.Entity<FixedBundlePromotion>(entity =>
@@ -751,6 +775,8 @@ public partial class WTFDbContext : DbContext
         modelBuilder.Entity<ProductCategory>(entity =>
         {
             entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_ProductCategories_CreatedAt");
+            entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_ProductCategories_IsActive");
             entity.Property(e => e.Name)
                 .HasMaxLength(50)
                 .IsUnicode(false);
@@ -879,9 +905,15 @@ public partial class WTFDbContext : DbContext
         modelBuilder.Entity<ProductSubCategory>(entity =>
         {
             entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_ProductSubCategories_CreatedAt");
+            entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_ProductSubCategories_IsActive");
             entity.Property(e => e.Name)
                 .HasMaxLength(50)
                 .IsUnicode(false);
+
+            entity.HasOne(d => d.Category).WithMany(p => p.ProductSubCategories)
+                .HasForeignKey(d => d.CategoryId)
+                .HasConstraintName("FK_ProductSubCategories_Category");
         });
 
         modelBuilder.Entity<Promotion>(entity =>

@@ -1,0 +1,421 @@
+<div class="flex h-full flex-col pt-4 md:pt-0">
+  <div class="mb-4 flex shrink-0 flex-col gap-3 sm:mb-6">
+    <div class="flex items-start justify-between gap-3">
+      <div class="flex min-w-0 flex-col gap-1">
+        <h1 class="shrink-0 text-xl font-bold text-gray-900 sm:text-2xl">Expenses</h1>
+        <p class="text-xs text-gray-500 sm:text-sm">
+          Rent, salaries and other running costs. They are taken off the gross profit in the Profit
+          and Loss report.
+        </p>
+      </div>
+      @if (canWrite()) {
+        <button
+          type="button"
+          class="app-btn app-btn-primary app-btn-sm"
+          data-testid="add-expense"
+          (click)="openAdd()"
+        >
+          <app-icon name="icon-plus" [class]="'h-4 w-4'" />
+          Add Expense
+        </button>
+      }
+    </div>
+
+    <div class="ml-auto flex items-center justify-end gap-2">
+      <app-filter-button [count]="activeFilterCount()" (pressed)="openFilters()" />
+      @if (!isAndroid) {
+        <button
+          class="app-btn app-btn-ghost p-2"
+          [class.opacity-70]="isRefreshing()"
+          type="button"
+          (click)="refresh()"
+          [disabled]="isRefreshing()"
+          aria-label="Refresh expenses"
+        >
+          <app-icon
+            name="icon-refresh"
+            [class]="
+              isRefreshing() ? 'h-5 w-5 animate-spin text-gray-600' : 'h-5 w-5 text-gray-600'
+            "
+            [fill]="'currentColor'"
+          />
+        </button>
+      }
+    </div>
+  </div>
+
+  <app-side-drawer
+    [isOpen]="isFiltersOpen()"
+    [title]="'Expense Filters'"
+    [subtitle]="'Refine the expense list results'"
+    [showOnDesktop]="true"
+    (closed)="closeFilters()"
+  >
+    <form class="space-y-3" [formGroup]="filter" (change)="applyFilter()">
+      <div class="bg-surface rounded-xl border border-gray-200 p-3">
+        <div class="mb-3 flex items-center justify-between">
+          <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Dates</p>
+          <button
+            type="button"
+            class="app-btn app-btn-secondary app-btn-xs"
+            data-testid="clear-expense-dates"
+            (click)="clearDates()"
+          >
+            This Month
+          </button>
+        </div>
+        <div class="space-y-3">
+          <div class="min-w-0">
+            <label for="expense-from" class="mb-1 block text-xs font-semibold text-gray-500">
+              From
+            </label>
+            <input
+              id="expense-from"
+              type="date"
+              class="input input-bordered w-full outline-transparent"
+              formControlName="fromDate"
+            />
+          </div>
+          <div class="min-w-0">
+            <label for="expense-to" class="mb-1 block text-xs font-semibold text-gray-500">
+              To
+            </label>
+            <input
+              id="expense-to"
+              type="date"
+              class="input input-bordered w-full outline-transparent"
+              formControlName="toDate"
+            />
+          </div>
+          @if (filterError()) {
+            <p class="text-sm text-red-600" role="alert" data-testid="expense-filter-error">
+              {{ filterError() }}
+            </p>
+          }
+        </div>
+      </div>
+
+      <div class="bg-surface rounded-xl border border-gray-200 p-3">
+        <div class="mb-3 flex items-center justify-between">
+          <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Category</p>
+          <button
+            type="button"
+            class="app-btn app-btn-secondary app-btn-xs"
+            data-testid="clear-expense-category"
+            (click)="clearCategory()"
+          >
+            Clear
+          </button>
+        </div>
+        <select
+          id="expense-filter-category"
+          class="select select-bordered w-full outline-transparent"
+          formControlName="category"
+        >
+          <option [ngValue]="0">All categories</option>
+          @for (category of categories(); track category.id) {
+            <option [ngValue]="category.id">{{ category.name }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="bg-surface rounded-xl border border-gray-200 p-3">
+        <div class="mb-3 flex items-center justify-between">
+          <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Status</p>
+          <button
+            type="button"
+            class="app-btn app-btn-secondary app-btn-xs"
+            data-testid="clear-expense-deleted"
+            (click)="clearDeleted()"
+          >
+            Clear
+          </button>
+        </div>
+        <label class="flex cursor-pointer items-center justify-between gap-3 px-1 py-1">
+          <span class="text-sm text-gray-700">Show deleted</span>
+          <input type="checkbox" class="toggle toggle-primary" formControlName="includeDeleted" />
+        </label>
+      </div>
+    </form>
+  </app-side-drawer>
+
+  @if (isLoading()) {
+    <div class="flex justify-center py-8">
+      <span class="loading loading-spinner loading-lg"></span>
+    </div>
+  } @else {
+    <app-pull-to-refresh [refreshing]="isRefreshing()" (refreshTriggered)="refresh()">
+      @if (connectionFailed()) {
+        <app-connection-error />
+      } @else {
+        <div class="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4" data-testid="expense-totals">
+          <div class="bg-surface col-span-2 rounded-lg p-3 shadow sm:col-span-1">
+            <p class="text-xs font-semibold text-gray-500">Total</p>
+            <p class="text-xl font-bold text-gray-900" data-testid="expense-total">
+              ₱{{ result().total | number: '1.2-2' }}
+            </p>
+          </div>
+          @for (row of result().byCategory; track row.category) {
+            <div class="bg-surface min-w-0 rounded-lg p-3 shadow">
+              <p class="truncate text-xs font-semibold text-gray-500">{{ row.categoryName }}</p>
+              <p class="font-semibold text-gray-900">₱{{ row.amount | number: '1.2-2' }}</p>
+            </div>
+          }
+        </div>
+
+        @if (result().items.length === 0) {
+          <div class="bg-surface rounded-lg p-8 text-center shadow-lg">
+            <div class="mb-3 flex justify-center">
+              <app-icon name="icon-coins" [class]="'h-12 w-12 opacity-60'" />
+            </div>
+            <p class="text-lg font-semibold text-gray-700">No expenses found</p>
+            <p class="text-sm text-gray-500">Change the dates, or add an expense.</p>
+          </div>
+        } @else {
+          <div class="space-y-2 pb-4 lg:space-y-3">
+            <div
+              class="bg-surface sticky top-0 z-10 mb-2 hidden grid-cols-12 gap-4 rounded-lg px-4 py-3 lg:grid"
+            >
+              <app-sort-header
+                class="col-span-2"
+                label="Date"
+                align="start"
+                [active]="sortColumn() === 'date'"
+                [direction]="sortDirection()"
+                (sorted)="toggleSort('date')"
+              />
+              <app-sort-header
+                class="col-span-3"
+                label="Category"
+                align="start"
+                [active]="sortColumn() === 'category'"
+                [direction]="sortDirection()"
+                (sorted)="toggleSort('category')"
+              />
+              <div class="col-span-4 text-xs font-semibold tracking-wider text-gray-600 uppercase">
+                Note
+              </div>
+              <app-sort-header
+                class="col-span-2"
+                label="Amount"
+                align="end"
+                [active]="sortColumn() === 'amount'"
+                [direction]="sortDirection()"
+                (sorted)="toggleSort('amount')"
+              />
+              <div class="col-span-1"></div>
+            </div>
+            <ul class="space-y-2 lg:space-y-3" data-testid="expense-list">
+              @for (expense of sortedItems(); track expense.id; let last = $last) {
+                <li
+                  class="bg-surface relative flex items-center gap-3 rounded-xl border border-gray-100 px-4 py-3 shadow-sm transition-shadow duration-200 focus-within:z-30 hover:z-10 hover:shadow-md lg:grid lg:grid-cols-12 lg:gap-4 lg:border-0 lg:px-4 lg:py-4 lg:shadow-lg lg:hover:shadow-xl"
+                  [class.opacity-70]="!expense.isActive"
+                  data-testid="expense-row"
+                >
+                  <div
+                    class="min-w-0 flex-1 lg:col-span-9 lg:grid lg:grid-cols-9 lg:items-center lg:gap-4"
+                  >
+                    <div class="lg:col-span-2">
+                      <p class="hidden text-sm text-gray-700 lg:block">{{ expense.expenseDate }}</p>
+                    </div>
+                    <div class="lg:col-span-3">
+                      <div class="flex flex-wrap items-center gap-1.5">
+                        <p class="font-semibold text-gray-900">{{ expense.categoryName }}</p>
+                        @if (!expense.isActive) {
+                          <app-badge variant="default">Deleted</app-badge>
+                        }
+                      </div>
+                      <p class="text-xs text-gray-500">
+                        <span class="lg:hidden">{{ expense.expenseDate }}</span>
+                        @if (expense.createdByName) {
+                          <span class="lg:hidden"> · </span>{{ expense.createdByName }}
+                        }
+                      </p>
+                    </div>
+                    <div class="lg:col-span-4">
+                      @if (expense.note) {
+                        <p class="mt-1 text-sm wrap-break-word text-gray-700 lg:mt-0">
+                          {{ expense.note }}
+                        </p>
+                      }
+                    </div>
+                  </div>
+                  <p
+                    class="shrink-0 text-lg font-bold text-gray-900 lg:col-span-2 lg:text-end lg:text-base"
+                  >
+                    ₱{{ expense.amount | number: '1.2-2' }}
+                  </p>
+                  @if (canWrite()) {
+                    <div class="shrink-0 lg:col-span-1 lg:flex lg:justify-end" role="presentation">
+                      <div class="dropdown dropdown-end" [class.dropdown-top]="last">
+                        <button
+                          type="button"
+                          class="app-btn app-btn-ghost p-1.5"
+                          tabindex="0"
+                          aria-label="Expense actions"
+                        >
+                          <app-icon
+                            name="icon-ellipsis-vertical"
+                            [class]="'h-5 w-5 text-gray-600'"
+                            [fill]="'currentColor'"
+                          />
+                        </button>
+                        <ul
+                          tabindex="0"
+                          class="dropdown-content menu bg-base-100 rounded-box z-50 w-52 p-2 shadow"
+                        >
+                          @if (expense.isActive) {
+                            <li>
+                              <button
+                                type="button"
+                                class="app-menu-item"
+                                (click)="openEdit(expense)"
+                              >
+                                <app-icon name="icon-edit" [class]="'h-4 w-4 text-gray-600'" />
+                                Edit
+                              </button>
+                            </li>
+                            <li>
+                              <button
+                                type="button"
+                                class="app-menu-item-danger"
+                                (click)="openDelete(expense)"
+                              >
+                                <app-icon name="icon-delete" [class]="'h-4 w-4 text-red-600'" />
+                                Delete
+                              </button>
+                            </li>
+                          } @else {
+                            <li>
+                              <button
+                                type="button"
+                                class="app-menu-item-success"
+                                (click)="openRestore(expense)"
+                              >
+                                <app-icon name="icon-refresh" [class]="'text-brand-ink h-4 w-4'" />
+                                Restore
+                              </button>
+                            </li>
+                          }
+                        </ul>
+                      </div>
+                    </div>
+                  }
+                </li>
+              }
+            </ul>
+          </div>
+        }
+      }
+    </app-pull-to-refresh>
+  }
+</div>
+
+@if (dialog() === 'edit') {
+  <app-confirm-dialog
+    variant="success"
+    icon="icon-edit"
+    [heading]="selected() ? 'Edit Expense' : 'Add Expense'"
+    [confirmLabel]="selected() ? 'Save' : 'Add Expense'"
+    busyLabel="Saving..."
+    [isBusy]="isSaving()"
+    (confirmed)="saveExpense()"
+    (cancelled)="closeDialog()"
+  >
+    The expense is counted in the day it is dated.
+    <div dialogExtra class="mt-4 space-y-3 text-left" [formGroup]="form">
+      <div>
+        <label for="expense-date" class="mb-1 block text-xs font-semibold text-gray-500"
+          >Date</label
+        >
+        <input
+          id="expense-date"
+          type="date"
+          class="input input-bordered w-full outline-transparent"
+          formControlName="expenseDate"
+        />
+      </div>
+      <div>
+        <label for="expense-category" class="mb-1 block text-xs font-semibold text-gray-500">
+          Category
+        </label>
+        <select
+          id="expense-category"
+          class="select select-bordered w-full outline-transparent"
+          formControlName="category"
+        >
+          @for (category of categories(); track category.id) {
+            <option [ngValue]="category.id">{{ category.name }}</option>
+          }
+        </select>
+      </div>
+      <div>
+        <label for="expense-amount" class="mb-1 block text-xs font-semibold text-gray-500">
+          Amount
+        </label>
+        <input
+          id="expense-amount"
+          type="number"
+          min="0.01"
+          step="0.01"
+          inputmode="decimal"
+          class="input input-bordered w-full outline-transparent"
+          formControlName="amount"
+        />
+      </div>
+      <div>
+        <label for="expense-note" class="mb-1 block text-xs font-semibold text-gray-500">
+          @if (formNeedsNote()) {
+            Note (required)
+          } @else {
+            Note (optional)
+          }
+        </label>
+        <input
+          id="expense-note"
+          type="text"
+          [maxLength]="noteMaxLength"
+          class="input input-bordered w-full outline-transparent"
+          formControlName="note"
+        />
+      </div>
+      @if (formError()) {
+        <p class="text-sm text-red-600" role="alert">{{ formError() }}</p>
+      }
+    </div>
+  </app-confirm-dialog>
+}
+
+@if (dialog() === 'delete' && selected(); as expense) {
+  <app-confirm-dialog
+    variant="danger"
+    icon="icon-delete"
+    heading="Delete Expense"
+    confirmLabel="Delete"
+    busyLabel="Deleting..."
+    [isBusy]="isSaving()"
+    (confirmed)="confirmDelete()"
+    (cancelled)="closeDialog()"
+  >
+    The {{ expense.categoryName }} expense of
+    <span class="font-medium text-gray-700">₱{{ expense.amount | number: '1.2-2' }}</span> will no
+    longer count in the Profit and Loss report. You can restore it later.
+  </app-confirm-dialog>
+}
+
+@if (dialog() === 'restore' && selected(); as expense) {
+  <app-confirm-dialog
+    variant="success"
+    icon="icon-refresh"
+    heading="Restore Expense"
+    confirmLabel="Restore"
+    busyLabel="Restoring..."
+    [isBusy]="isSaving()"
+    (confirmed)="confirmRestore()"
+    (cancelled)="closeDialog()"
+  >
+    The {{ expense.categoryName }} expense of
+    <span class="font-medium text-gray-700">₱{{ expense.amount | number: '1.2-2' }}</span> will
+    count in the Profit and Loss report again.
+  </app-confirm-dialog>
+}

@@ -62,6 +62,10 @@ public static class AppAuthorizationExtensions
                 policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin))
             .AddPolicy(AppPolicies.WasteReasonsRead, policy =>
                 policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.StockManager, AppRoles.Cashier))
+            .AddPolicy(AppPolicies.ExpensesRead, policy =>
+                policy.RequireRole(CostAccess.Roles))
+            .AddPolicy(AppPolicies.ExpensesWrite, policy =>
+                policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin))
             .AddPolicy(AppPolicies.DashboardRead, policy =>
                 policy.RequireRole(AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer))
             .AddPolicy(AppPolicies.ReportsGenerate, policy =>

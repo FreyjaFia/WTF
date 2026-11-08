@@ -38,6 +38,10 @@ public partial class User
 
     public virtual ICollection<Customer> CustomerUpdatedByNavigations { get; set; } = new List<Customer>();
 
+    public virtual ICollection<Expense> ExpenseCreatedByNavigations { get; set; } = new List<Expense>();
+
+    public virtual ICollection<Expense> ExpenseUpdatedByNavigations { get; set; } = new List<Expense>();
+
     public virtual ICollection<User> InverseCreatedByNavigation { get; set; } = new List<User>();
 
     public virtual ICollection<User> InverseUpdatedByNavigation { get; set; } = new List<User>();

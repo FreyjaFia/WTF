@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Common.Orders;
 using WTF.Api.Common.Time;
+using WTF.Api.Features.Catalog;
 using WTF.Api.Features.OrderLinks.DTOs;
 using WTF.Api.Features.Products.DTOs;
 using WTF.Api.Features.Sync;
@@ -57,9 +58,10 @@ public class GetPublicOrderLinkHandler(WTFDbContext db, IHttpContextAccessor htt
                     pair => pair.Key,
                     pair => pair.Value
                         .Select(group => new PublicAddOnGroupDto(
-                            (int)group.Type, group.DisplayName, [.. group.Options.Select(ToPublic)]))
+                            (int)group.Type, group.DisplayName, [.. group.Options.Select(ToPublic)], group.IsRequired, group.MinSelect, group.MaxSelect))
                         .ToList()),
-                deals));
+                deals,
+                await CatalogLookupLoader.LoadAsync(db, cancellationToken)));
     }
 
 

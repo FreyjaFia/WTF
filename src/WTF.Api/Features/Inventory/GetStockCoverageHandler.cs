@@ -1,7 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Features.Inventory.DTOs;
-using WTF.Api.Features.Products.Enums;
 using WTF.Calculations.Inventory;
 using WTF.Domain.Data;
 
@@ -11,8 +10,6 @@ public record GetStockCoverageQuery : IRequest<StockCoverageDto>;
 
 public class GetStockCoverageHandler(WTFDbContext db) : IRequestHandler<GetStockCoverageQuery, StockCoverageDto>
 {
-    private static readonly int[] RequiredTypeIds = [(int)AddOnTypeEnum.Size, (int)AddOnTypeEnum.Flavor];
-
     public async Task<StockCoverageDto> Handle(GetStockCoverageQuery request, CancellationToken cancellationToken)
     {
         var products = await db.Products
@@ -30,8 +27,8 @@ public class GetStockCoverageHandler(WTFDbContext db) : IRequestHandler<GetStock
 
         var addOnRows = await db.ProductAddOns
             .AsNoTracking()
-            .Where(pa => pa.IsActive && pa.AddOn.IsActive && pa.AddOnTypeId != null && RequiredTypeIds.Contains(pa.AddOnTypeId.Value))
-            .Select(pa => new { pa.ProductId, pa.AddOnId, AddOnName = pa.AddOn.Name, TypeId = pa.AddOnTypeId!.Value })
+            .Where(pa => pa.IsActive && pa.AddOn.IsActive && pa.AddOnType != null && (pa.AddOnType.IsRequired || pa.AddOnType.MinSelect > 0))
+            .Select(pa => new { pa.ProductId, pa.AddOnId, AddOnName = pa.AddOn.Name, TypeId = pa.AddOnTypeId!.Value, TypeName = pa.AddOnType!.Name, TypeSort = pa.AddOnType.SortOrder })
             .ToListAsync(cancellationToken);
         var addOnsByProduct = addOnRows.ToLookup(row => row.ProductId);
 
@@ -39,10 +36,10 @@ public class GetStockCoverageHandler(WTFDbContext db) : IRequestHandler<GetStock
             .Select(product =>
             {
                 var groups = addOnsByProduct[product.Id]
-                    .GroupBy(row => row.TypeId)
-                    .OrderBy(group => group.Key)
+                    .GroupBy(row => new { row.TypeId, row.TypeName, row.TypeSort })
+                    .OrderBy(group => group.Key.TypeSort).ThenBy(group => group.Key.TypeId)
                     .Select(group => new CoverageGroup(
-                        ((AddOnTypeEnum)group.Key).ToString(),
+                        group.Key.TypeName,
                         group.OrderBy(row => row.AddOnName)
                             .Select(row => new CoverageOption(row.AddOnName, linkedProductIds.Contains(row.AddOnId)))
                             .ToList()))

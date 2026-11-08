@@ -20,7 +20,8 @@ export type ReportType =
   | 'stock-status'
   | 'waste'
   | 'stock-variance'
-  | 'gross-profit';
+  | 'gross-profit'
+  | 'profit-loss';
 
 export type WasteReportGroupBy = 'item' | 'reason' | 'staff' | 'day';
 
@@ -228,6 +229,19 @@ export interface GrossProfitReportRowDto {
   wasteCost: number;
   countVariance: number;
   actualProfit: number | null;
+  marginPercent: number | null;
+  costStatus: ProductCostStatus;
+}
+
+export interface ProfitLossReportRowDto {
+  periodStart: string;
+  netSales: number;
+  cost: number;
+  wasteCost: number;
+  countVariance: number;
+  actualProfit: number | null;
+  expenses: number;
+  operatingProfit: number | null;
   marginPercent: number | null;
   costStatus: ProductCostStatus;
 }

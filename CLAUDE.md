@@ -1,10 +1,9 @@
 # WTF (Wake. Taste. Focus)
 
-Project overview, architecture, conventions and the feature roadmap live in the files below. Read them rather than
-guessing; they are the single source of truth, shared with GitHub Copilot.
+Project conventions are imported below. The feature roadmap is an index: read `docs/ROADMAP.md`, then open only the
+feature file under `docs/roadmap/` you need. Shared with GitHub Copilot; read rather than guess.
 
 @.github/copilot-instructions.md
-@docs/ROADMAP.md
 
 ## C# files: always run the cleanup skill
 
@@ -50,4 +49,4 @@ rather than describing what the UI should do.
   `src/wtf-pos` (add `--include <spec file>` to run one).
 - Many source files use CRLF line endings. When editing with scripts, normalize to one style first and restore it, or
   use the Edit tool.
-- Update `docs/ROADMAP.md` when a feature's status or design changes.
+- Update the feature file in `docs/roadmap/` (and the status in `docs/ROADMAP.md`) when a feature's status or design changes.

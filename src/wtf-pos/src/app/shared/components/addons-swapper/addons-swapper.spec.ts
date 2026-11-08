@@ -1,6 +1,7 @@
+import { ProductCategoryEnum, AddOnTypeEnum } from '@app/testing/catalog-ids';
 import { TestBed } from '@angular/core/testing';
 import { AlertService, ModalStackService, ProductService } from '@core/services';
-import { AddOnGroupDto, AddOnTypeEnum, ProductCategoryEnum, ProductDto } from '@shared/models';
+import { AddOnGroupDto, ProductDto } from '@shared/models';
 import { of, Subject, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AddonsSwapperComponent } from './addons-swapper';

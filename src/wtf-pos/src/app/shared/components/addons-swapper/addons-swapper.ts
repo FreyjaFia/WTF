@@ -8,10 +8,10 @@ import {
   signal,
   ViewChild,
 } from '@angular/core';
-import { AlertService, ModalStackService, ProductService } from '@core/services';
+import { AlertService, CatalogLookupService, ModalStackService, ProductService } from '@core/services';
 import { AvatarComponent } from '@shared/components/avatar/avatar';
 import { IconComponent } from '@shared/components/icons/icon/icon';
-import { AddOnTypeEnum, ProductDto } from '@shared/models';
+import { ProductDto, SYSTEM_CATALOG_IDS } from '@shared/models';
 import Sortable from 'sortablejs';
 
 @Component({
@@ -24,6 +24,7 @@ export class AddonsSwapperComponent implements AfterViewInit {
   private readonly modalStack = inject(ModalStackService);
   private readonly productService = inject(ProductService);
   private readonly alertService = inject(AlertService);
+  private readonly lookups = inject(CatalogLookupService);
 
   private modalStackId: number | null = null;
 
@@ -32,19 +33,13 @@ export class AddonsSwapperComponent implements AfterViewInit {
 
   protected readonly isLoading = signal(false);
   protected readonly isSaving = signal(false);
-  protected readonly availableAddOns = signal<(ProductDto & { type: AddOnTypeEnum })[]>([]);
-  protected readonly assignedAddOns = signal<(ProductDto & { type: AddOnTypeEnum })[]>([]);
+  protected readonly availableAddOns = signal<(ProductDto & { type: number })[]>([]);
+  protected readonly assignedAddOns = signal<(ProductDto & { type: number })[]>([]);
   protected readonly searchTerm = signal('');
 
-  protected readonly AddOnTypeEnum = AddOnTypeEnum;
-
-  protected readonly addOnTypeOptions = [
-    { value: AddOnTypeEnum.Size, label: 'Size' },
-    { value: AddOnTypeEnum.Flavor, label: 'Flavor' },
-    { value: AddOnTypeEnum.Topping, label: 'Topping' },
-    { value: AddOnTypeEnum.Extra, label: 'Extra' },
-    { value: AddOnTypeEnum.Sauce, label: 'Sauce' },
-  ];
+  protected readonly addOnTypeOptions = computed(() =>
+    this.lookups.activeAddOnTypes().map((type) => ({ value: type.id, label: type.name })),
+  );
 
   protected readonly filteredAvailableAddOns = computed(() => {
     const term = this.searchTerm().toLowerCase().trim();
@@ -83,7 +78,7 @@ export class AddonsSwapperComponent implements AfterViewInit {
             // Split: available (not assigned) on left, assigned on right
             const availableNotAssigned = allAddOns
               .filter((addon) => !assignedIds.has(addon.id))
-              .map((addon) => ({ ...addon, type: AddOnTypeEnum.Size })); // Default type for available
+              .map((addon) => ({ ...addon, type: SYSTEM_CATALOG_IDS.sizeAddOnType })); // Default type for available
 
             this.availableAddOns.set(this.sortByName(availableNotAssigned));
             this.assignedAddOns.set(this.sortByName(assignedFlat));
@@ -157,7 +152,7 @@ export class AddonsSwapperComponent implements AfterViewInit {
     this.assignedAddOns.set(
       assignedIdsArray
         .map((id) => addOnById.get(id))
-        .filter((addon): addon is ProductDto & { type: AddOnTypeEnum } => !!addon),
+        .filter((addon): addon is ProductDto & { type: number } => !!addon),
     );
   }
 
@@ -216,7 +211,7 @@ export class AddonsSwapperComponent implements AfterViewInit {
 
   protected changeAddOnType(addonId: string, event: Event): void {
     const select = event.target as HTMLSelectElement;
-    const newType = Number(select.value) as AddOnTypeEnum;
+    const newType = Number(select.value) as number;
 
     this.assignedAddOns.set(
       this.assignedAddOns().map((a) => (a.id === addonId ? { ...a, type: newType } : a)),

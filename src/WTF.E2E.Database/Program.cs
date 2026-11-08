@@ -1,7 +1,6 @@
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Features.Orders.Enums;
-using WTF.Api.Features.Products.Enums;
 using WTF.Api.Features.Users.Enums;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
@@ -68,9 +67,28 @@ async Task CreateAsync()
 
         await InsertAsync(db, Named<OrderStatusEnum, Status>((id, n) => new Status { Id = id, Name = n }, OrderStatusEnum.All));
         await InsertAsync(db, Named<PaymentMethodEnum, PaymentMethod>((id, n) => new PaymentMethod { Id = id, Name = n }));
-        await InsertAsync(db, Named<ProductCategoryEnum, ProductCategory>((id, n) => new ProductCategory { Id = id, Name = n }));
-        await InsertAsync(db, Named<ProductSubCategoryEnum, ProductSubCategory>((id, n) => new ProductSubCategory { Id = id, Name = n }));
-        await InsertAsync(db, Named<AddOnTypeEnum, AddOnType>((id, n) => new AddOnType { Id = id, Name = n }));
+        await InsertAsync(db, new List<ProductCategory>
+        {
+            new() { Id = 1, Name = "Drink", SortOrder = 1, IsActive = true, CreatedAt = DateTime.UtcNow },
+            new() { Id = 2, Name = "Food", SortOrder = 2, IsActive = true, CreatedAt = DateTime.UtcNow },
+            new() { Id = 3, Name = "Dessert", SortOrder = 3, IsActive = true, CreatedAt = DateTime.UtcNow },
+            new() { Id = 4, Name = "Other", SortOrder = 4, IsActive = true, CreatedAt = DateTime.UtcNow },
+        });
+        await InsertAsync(db, new List<ProductSubCategory>
+        {
+            new() { Id = 1, Name = "Coffee", SortOrder = 1, IsActive = true, CategoryId = 1 },
+            new() { Id = 2, Name = "NonCoffee", SortOrder = 2, IsActive = true, CategoryId = 1 },
+            new() { Id = 3, Name = "Snacks", SortOrder = 3, IsActive = true, CategoryId = 2 },
+            new() { Id = 4, Name = "Retail", SortOrder = 4, IsActive = true, CategoryId = 4 },
+        });
+        await InsertAsync(db, new List<AddOnType>
+        {
+            new() { Id = 1, Name = "Size", IsRequired = true, MinSelect = 1, MaxSelect = 1, SortOrder = 1, IsActive = true, CreatedAt = DateTime.UtcNow },
+            new() { Id = 2, Name = "Flavor", IsRequired = true, MinSelect = 1, MaxSelect = 1, SortOrder = 2, IsActive = true, CreatedAt = DateTime.UtcNow },
+            new() { Id = 3, Name = "Topping", SortOrder = 4, IsActive = true, CreatedAt = DateTime.UtcNow },
+            new() { Id = 4, Name = "Extra", SortOrder = 5, IsActive = true, CreatedAt = DateTime.UtcNow },
+            new() { Id = 5, Name = "Sauce", MaxSelect = 1, SortOrder = 3, IsActive = true, CreatedAt = DateTime.UtcNow },
+        });
         await InsertAsync(db, Named<UserRoleEnum, UserRole>((id, n) => new UserRole { Id = id, Name = n }));
 
         SeedUsers(db, password);

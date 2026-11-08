@@ -1,0 +1,574 @@
+<div class="flex h-full flex-col pt-4 md:pt-0">
+  <div class="mb-4 flex shrink-0 flex-col gap-3 sm:mb-6">
+    <div class="flex items-start justify-between gap-3">
+      <div class="flex min-w-0 items-start gap-4">
+        @if (backRoute(); as back) {
+          <a
+            draggable="false"
+            class="app-btn app-btn-ghost mt-1 shrink-0 p-2"
+            [routerLink]="back"
+            aria-label="Go back"
+            title="Back"
+            data-testid="setup-back"
+          >
+            <app-icon name="icon-back" [class]="'h-5 w-5 text-gray-600'" />
+          </a>
+        }
+        <div class="flex min-w-0 flex-col gap-1">
+          <h1 class="shrink-0 text-xl font-bold text-gray-900 sm:text-2xl">{{ title() }}</h1>
+          <p class="text-xs text-gray-500 sm:text-sm">
+            Manage categories, sub-categories and add-on types used by products
+          </p>
+        </div>
+      </div>
+      @if (canWrite()) {
+        <button
+          type="button"
+          class="app-btn app-btn-primary app-btn-sm"
+          data-testid="add-catalog-entry"
+          (click)="openAdd()"
+        >
+          <app-icon name="icon-plus" [class]="'h-4 w-4'" />
+          Add Entry
+        </button>
+      }
+    </div>
+
+    <div class="flex items-center gap-2">
+      @if (!kind()) {
+        <div class="flex min-w-0 flex-1 flex-wrap gap-2" role="tablist" aria-label="Catalog lists">
+          <button
+            type="button"
+            role="tab"
+            class="app-btn app-btn-sm"
+            [class.app-btn-primary]="section() === 'categories'"
+            [class.app-btn-secondary]="section() !== 'categories'"
+            [attr.aria-selected]="section() === 'categories'"
+            data-testid="tab-categories"
+            (click)="selectSection('categories')"
+          >
+            Categories
+          </button>
+          <button
+            type="button"
+            role="tab"
+            class="app-btn app-btn-sm"
+            [class.app-btn-primary]="section() === 'subcategories'"
+            [class.app-btn-secondary]="section() !== 'subcategories'"
+            [attr.aria-selected]="section() === 'subcategories'"
+            data-testid="tab-subcategories"
+            (click)="selectSection('subcategories')"
+          >
+            Sub-categories
+          </button>
+          <button
+            type="button"
+            role="tab"
+            class="app-btn app-btn-sm"
+            [class.app-btn-primary]="section() === 'addon-types'"
+            [class.app-btn-secondary]="section() !== 'addon-types'"
+            [attr.aria-selected]="section() === 'addon-types'"
+            data-testid="tab-addon-types"
+            (click)="selectSection('addon-types')"
+          >
+            Add-on Types
+          </button>
+        </div>
+      } @else {
+        <div class="flex-1"></div>
+      }
+      @if (!isAndroid) {
+        <button
+          class="app-btn app-btn-ghost p-2"
+          [class.opacity-70]="isRefreshing()"
+          type="button"
+          (click)="refresh()"
+          [disabled]="isRefreshing()"
+          aria-label="Refresh catalog"
+        >
+          <app-icon
+            name="icon-refresh"
+            [class]="
+              isRefreshing() ? 'h-5 w-5 animate-spin text-gray-600' : 'h-5 w-5 text-gray-600'
+            "
+            [fill]="'currentColor'"
+          />
+        </button>
+      }
+    </div>
+  </div>
+
+  @if (isLoading()) {
+    <div class="flex justify-center py-8">
+      <span class="loading loading-spinner loading-lg"></span>
+    </div>
+  } @else {
+    <app-pull-to-refresh [refreshing]="isRefreshing()" (refreshTriggered)="refresh()">
+      @if (connectionFailed()) {
+        <app-connection-error />
+      } @else {
+        <div class="space-y-2 pb-4 lg:space-y-3">
+          @if (section() === 'categories') {
+            <div
+              class="bg-surface sticky top-0 z-10 mb-2 hidden grid-cols-12 gap-4 rounded-lg px-4 py-3 lg:grid"
+            >
+              <app-sort-header
+                class="col-span-5"
+                label="Name"
+                align="start"
+                [active]="sortColumn() === 'name'"
+                [direction]="sortDirection()"
+                (sorted)="toggleSort('name')"
+              />
+              <app-sort-header
+                class="col-span-2"
+                label="Status"
+                align="center"
+                [active]="sortColumn() === 'status'"
+                [direction]="sortDirection()"
+                (sorted)="toggleSort('status')"
+              />
+              <app-sort-header
+                class="col-span-2"
+                label="Products"
+                align="center"
+                [active]="sortColumn() === 'products'"
+                [direction]="sortDirection()"
+                (sorted)="toggleSort('products')"
+              />
+              <app-sort-header
+                class="col-span-1"
+                label="Subs"
+                align="center"
+                [active]="sortColumn() === 'subs'"
+                [direction]="sortDirection()"
+                (sorted)="toggleSort('subs')"
+              />
+              <app-sort-header
+                class="col-span-1"
+                label="Order"
+                align="center"
+                [active]="sortColumn() === 'order'"
+                [direction]="sortDirection()"
+                (sorted)="toggleSort('order')"
+              />
+              <div class="col-span-1"></div>
+            </div>
+            <ul class="space-y-2 lg:space-y-3" data-testid="catalog-list">
+              @for (entry of categories(); track entry.id; let last = $last) {
+                <li
+                  class="bg-surface relative flex items-center gap-3 rounded-xl border border-gray-100 px-4 py-3 shadow-sm transition-shadow duration-200 focus-within:z-30 hover:z-10 hover:shadow-md lg:grid lg:grid-cols-12 lg:gap-4 lg:border-0 lg:px-4 lg:py-4 lg:shadow-lg lg:hover:shadow-xl"
+                  [class.opacity-70]="!entry.isActive"
+                >
+                  <div class="min-w-0 flex-1 lg:col-span-5 lg:flex-none">
+                    <p class="font-semibold wrap-break-word text-gray-900">{{ entry.name }}</p>
+                    <div
+                      class="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-gray-500 lg:hidden"
+                    >
+                      <app-badge [variant]="entry.isActive ? 'success' : 'default'">
+                        {{ entry.isActive ? 'Active' : 'Inactive' }}
+                      </app-badge>
+                      <span>{{ entry.productCount }} product(s)</span>
+                      <span>{{ entry.subCategories.length }} sub-category(ies)</span>
+                      <span>Order {{ entry.sortOrder }}</span>
+                    </div>
+                  </div>
+                  <div class="hidden lg:col-span-2 lg:flex lg:justify-center">
+                    <app-badge [variant]="entry.isActive ? 'success' : 'default'">
+                      {{ entry.isActive ? 'Active' : 'Inactive' }}
+                    </app-badge>
+                  </div>
+                  <div class="hidden text-center text-sm text-gray-700 lg:col-span-2 lg:block">
+                    {{ entry.productCount }}
+                  </div>
+                  <div class="hidden text-center text-sm text-gray-700 lg:col-span-1 lg:block">
+                    {{ entry.subCategories.length }}
+                  </div>
+                  <div class="hidden text-center text-sm text-gray-700 lg:col-span-1 lg:block">
+                    {{ entry.sortOrder }}
+                  </div>
+                  <ng-container
+                    *ngTemplateOutlet="actions; context: { $implicit: entry, last: last }"
+                  />
+                </li>
+              } @empty {
+                <li class="bg-surface rounded-lg p-8 text-center shadow-lg">
+                  <div class="mb-3 flex justify-center">
+                    <app-icon name="icon-category" [class]="'h-12 w-12 opacity-60'" />
+                  </div>
+                  <p class="text-lg font-semibold text-gray-700">No categories found</p>
+                  <p class="text-sm text-gray-500">Add a category to group your products.</p>
+                </li>
+              }
+            </ul>
+          }
+          @if (section() === 'subcategories') {
+            <div
+              class="bg-surface sticky top-0 z-10 mb-2 hidden grid-cols-12 gap-4 rounded-lg px-4 py-3 lg:grid"
+            >
+              <app-sort-header
+                class="col-span-3"
+                label="Name"
+                align="start"
+                [active]="sortColumn() === 'name'"
+                [direction]="sortDirection()"
+                (sorted)="toggleSort('name')"
+              />
+              <app-sort-header
+                class="col-span-2"
+                label="Status"
+                align="center"
+                [active]="sortColumn() === 'status'"
+                [direction]="sortDirection()"
+                (sorted)="toggleSort('status')"
+              />
+              <app-sort-header
+                class="col-span-3"
+                label="Category"
+                align="center"
+                [active]="sortColumn() === 'category'"
+                [direction]="sortDirection()"
+                (sorted)="toggleSort('category')"
+              />
+              <app-sort-header
+                class="col-span-2"
+                label="Products"
+                align="center"
+                [active]="sortColumn() === 'products'"
+                [direction]="sortDirection()"
+                (sorted)="toggleSort('products')"
+              />
+              <app-sort-header
+                class="col-span-1"
+                label="Order"
+                align="center"
+                [active]="sortColumn() === 'order'"
+                [direction]="sortDirection()"
+                (sorted)="toggleSort('order')"
+              />
+              <div class="col-span-1"></div>
+            </div>
+            <ul class="space-y-2 lg:space-y-3" data-testid="catalog-list">
+              @for (entry of subCategories(); track entry.id; let last = $last) {
+                <li
+                  class="bg-surface relative flex items-center gap-3 rounded-xl border border-gray-100 px-4 py-3 shadow-sm transition-shadow duration-200 focus-within:z-30 hover:z-10 hover:shadow-md lg:grid lg:grid-cols-12 lg:gap-4 lg:border-0 lg:px-4 lg:py-4 lg:shadow-lg lg:hover:shadow-xl"
+                  [class.opacity-70]="!entry.isActive"
+                >
+                  <div class="min-w-0 flex-1 lg:col-span-3 lg:flex-none">
+                    <p class="font-semibold wrap-break-word text-gray-900">{{ entry.name }}</p>
+                    <div
+                      class="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-gray-500 lg:hidden"
+                    >
+                      <app-badge [variant]="entry.isActive ? 'success' : 'default'">
+                        {{ entry.isActive ? 'Active' : 'Inactive' }}
+                      </app-badge>
+                      @if (entry.categoryId) {
+                        <span>In {{ categoryNameOf(entry.categoryId) }}</span>
+                      } @else {
+                        <app-badge variant="amber">No category</app-badge>
+                      }
+                      <span>{{ entry.productCount }} product(s)</span>
+                      <span>Order {{ entry.sortOrder }}</span>
+                    </div>
+                  </div>
+                  <div class="hidden lg:col-span-2 lg:flex lg:justify-center">
+                    <app-badge [variant]="entry.isActive ? 'success' : 'default'">
+                      {{ entry.isActive ? 'Active' : 'Inactive' }}
+                    </app-badge>
+                  </div>
+                  <div class="hidden text-center text-sm text-gray-700 lg:col-span-3 lg:block">
+                    @if (entry.categoryId) {
+                      {{ categoryNameOf(entry.categoryId) }}
+                    } @else {
+                      <app-badge variant="amber">No category</app-badge>
+                    }
+                  </div>
+                  <div class="hidden text-center text-sm text-gray-700 lg:col-span-2 lg:block">
+                    {{ entry.productCount }}
+                  </div>
+                  <div class="hidden text-center text-sm text-gray-700 lg:col-span-1 lg:block">
+                    {{ entry.sortOrder }}
+                  </div>
+                  <ng-container
+                    *ngTemplateOutlet="actions; context: { $implicit: entry, last: last }"
+                  />
+                </li>
+              } @empty {
+                <li class="bg-surface rounded-lg p-8 text-center shadow-lg">
+                  <div class="mb-3 flex justify-center">
+                    <app-icon name="icon-category" [class]="'h-12 w-12 opacity-60'" />
+                  </div>
+                  <p class="text-lg font-semibold text-gray-700">No sub-categories found</p>
+                  <p class="text-sm text-gray-500">Add a sub-category to organise a category.</p>
+                </li>
+              }
+            </ul>
+          }
+          @if (section() === 'addon-types') {
+            <div
+              class="bg-surface sticky top-0 z-10 mb-2 hidden grid-cols-12 gap-4 rounded-lg px-4 py-3 lg:grid"
+            >
+              <app-sort-header
+                class="col-span-3"
+                label="Name"
+                align="start"
+                [active]="sortColumn() === 'name'"
+                [direction]="sortDirection()"
+                (sorted)="toggleSort('name')"
+              />
+              <app-sort-header
+                class="col-span-2"
+                label="Status"
+                align="center"
+                [active]="sortColumn() === 'status'"
+                [direction]="sortDirection()"
+                (sorted)="toggleSort('status')"
+              />
+              <app-sort-header
+                class="col-span-3"
+                label="Rule"
+                align="center"
+                [active]="sortColumn() === 'rule'"
+                [direction]="sortDirection()"
+                (sorted)="toggleSort('rule')"
+              />
+              <app-sort-header
+                class="col-span-2"
+                label="Products"
+                align="center"
+                [active]="sortColumn() === 'products'"
+                [direction]="sortDirection()"
+                (sorted)="toggleSort('products')"
+              />
+              <app-sort-header
+                class="col-span-1"
+                label="Order"
+                align="center"
+                [active]="sortColumn() === 'order'"
+                [direction]="sortDirection()"
+                (sorted)="toggleSort('order')"
+              />
+              <div class="col-span-1"></div>
+            </div>
+            <ul class="space-y-2 lg:space-y-3" data-testid="catalog-list">
+              @for (entry of addOnTypes(); track entry.id; let last = $last) {
+                <li
+                  class="bg-surface relative flex items-center gap-3 rounded-xl border border-gray-100 px-4 py-3 shadow-sm transition-shadow duration-200 focus-within:z-30 hover:z-10 hover:shadow-md lg:grid lg:grid-cols-12 lg:gap-4 lg:border-0 lg:px-4 lg:py-4 lg:shadow-lg lg:hover:shadow-xl"
+                  [class.opacity-70]="!entry.isActive"
+                >
+                  <div class="min-w-0 flex-1 lg:col-span-3 lg:flex-none">
+                    <p class="font-semibold wrap-break-word text-gray-900">{{ entry.name }}</p>
+                    <div
+                      class="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-gray-500 lg:hidden"
+                    >
+                      <app-badge [variant]="entry.isActive ? 'success' : 'default'">
+                        {{ entry.isActive ? 'Active' : 'Inactive' }}
+                      </app-badge>
+                      <app-badge variant="info">{{ ruleText(entry) }}</app-badge>
+                      <span>{{ entry.productCount }} product(s)</span>
+                      <span>Order {{ entry.sortOrder }}</span>
+                    </div>
+                  </div>
+                  <div class="hidden lg:col-span-2 lg:flex lg:justify-center">
+                    <app-badge [variant]="entry.isActive ? 'success' : 'default'">
+                      {{ entry.isActive ? 'Active' : 'Inactive' }}
+                    </app-badge>
+                  </div>
+                  <div class="hidden justify-center lg:col-span-3 lg:flex">
+                    <app-badge variant="info">{{ ruleText(entry) }}</app-badge>
+                  </div>
+                  <div class="hidden text-center text-sm text-gray-700 lg:col-span-2 lg:block">
+                    {{ entry.productCount }}
+                  </div>
+                  <div class="hidden text-center text-sm text-gray-700 lg:col-span-1 lg:block">
+                    {{ entry.sortOrder }}
+                  </div>
+                  <ng-container
+                    *ngTemplateOutlet="actions; context: { $implicit: entry, last: last }"
+                  />
+                </li>
+              } @empty {
+                <li class="bg-surface rounded-lg p-8 text-center shadow-lg">
+                  <div class="mb-3 flex justify-center">
+                    <app-icon name="icon-sliders" [class]="'h-12 w-12 opacity-60'" />
+                  </div>
+                  <p class="text-lg font-semibold text-gray-700">No add-on types found</p>
+                  <p class="text-sm text-gray-500">Add a type such as Size or Flavor.</p>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      }
+    </app-pull-to-refresh>
+  }
+</div>
+
+<ng-template #actions let-entry let-last="last">
+  @if (canWrite()) {
+    <div class="shrink-0 lg:col-span-1 lg:flex lg:justify-end" role="presentation">
+      <div class="dropdown dropdown-end" [class.dropdown-top]="last">
+        <button
+          type="button"
+          class="app-btn app-btn-ghost p-1.5"
+          tabindex="0"
+          aria-label="Entry actions"
+        >
+          <app-icon
+            name="icon-ellipsis-vertical"
+            [class]="'h-5 w-5 text-gray-600'"
+            [fill]="'currentColor'"
+          />
+        </button>
+        <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box z-50 w-52 p-2 shadow">
+          <li>
+            <button type="button" class="app-menu-item" (click)="openEdit(entry)">
+              <app-icon name="icon-edit" [class]="'h-4 w-4 text-gray-600'" />
+              Edit
+            </button>
+          </li>
+          <li>
+            @if (entry.isActive) {
+              <button type="button" class="app-menu-item-danger" (click)="openToggle(entry)">
+                <app-icon name="icon-delete" [class]="'h-4 w-4 text-red-600'" />
+                Turn Off
+              </button>
+            } @else {
+              <button type="button" class="app-menu-item-success" (click)="openToggle(entry)">
+                <app-icon name="icon-refresh" [class]="'text-brand-ink h-4 w-4'" />
+                Restore
+              </button>
+            }
+          </li>
+        </ul>
+      </div>
+    </div>
+  }
+</ng-template>
+
+@if (dialog() === 'edit') {
+  <app-confirm-dialog
+    variant="success"
+    icon="icon-edit"
+    [heading]="selected() ? 'Edit Entry' : 'Add Entry'"
+    [confirmLabel]="selected() ? 'Save' : 'Add'"
+    busyLabel="Saving..."
+    [isBusy]="isSaving()"
+    (confirmed)="save()"
+    (cancelled)="closeDialog()"
+  >
+    @switch (section()) {
+      @case ('categories') {
+        A product category, like Drink or Food.
+      }
+      @case ('subcategories') {
+        A group inside a category, like Coffee. It is how the POS menu is split.
+      }
+      @default {
+        A choice group on a product, like Size or Sauce.
+      }
+    }
+    <div dialogExtra class="mt-4 space-y-3 text-left" [formGroup]="form">
+      <div>
+        <label for="catalog-name" class="mb-1 block text-xs font-semibold text-gray-500">
+          Name
+        </label>
+        <input
+          id="catalog-name"
+          type="text"
+          maxlength="50"
+          class="input input-bordered w-full outline-transparent"
+          formControlName="name"
+        />
+      </div>
+      <div>
+        <label for="catalog-order" class="mb-1 block text-xs font-semibold text-gray-500">
+          Sort order
+        </label>
+        <input
+          id="catalog-order"
+          type="number"
+          min="0"
+          step="1"
+          inputmode="numeric"
+          class="input input-bordered w-full outline-transparent"
+          formControlName="sortOrder"
+        />
+      </div>
+      @if (section() === 'subcategories') {
+        <div>
+          <label for="catalog-category" class="mb-1 block text-xs font-semibold text-gray-500">
+            Category
+          </label>
+          <select
+            id="catalog-category"
+            class="select select-bordered w-full outline-transparent"
+            formControlName="categoryId"
+          >
+            @for (category of activeCategories(); track category.id) {
+              <option [ngValue]="category.id">{{ category.name }}</option>
+            }
+          </select>
+        </div>
+      }
+      @if (section() === 'addon-types') {
+        <label class="flex cursor-pointer items-center gap-3">
+          <input type="checkbox" class="toggle toggle-primary" formControlName="isRequired" />
+          <span class="text-sm text-gray-700">A choice is required</span>
+        </label>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label for="catalog-min" class="mb-1 block text-xs font-semibold text-gray-500">
+              Minimum
+            </label>
+            <input
+              id="catalog-min"
+              type="number"
+              min="0"
+              step="1"
+              class="input input-bordered w-full outline-transparent"
+              formControlName="minSelect"
+            />
+          </div>
+          <div>
+            <label for="catalog-max" class="mb-1 block text-xs font-semibold text-gray-500">
+              Maximum (0 = any)
+            </label>
+            <input
+              id="catalog-max"
+              type="number"
+              min="0"
+              step="1"
+              class="input input-bordered w-full outline-transparent"
+              formControlName="maxSelect"
+            />
+          </div>
+        </div>
+        <p class="text-xs text-gray-500">A maximum of 1 makes it pick-one, like Size.</p>
+      }
+      @if (formError()) {
+        <p class="text-sm text-red-600" role="alert">{{ formError() }}</p>
+      }
+    </div>
+  </app-confirm-dialog>
+}
+
+@if (dialog() === 'toggle' && selected(); as entry) {
+  <app-confirm-dialog
+    [variant]="entry.isActive ? 'danger' : 'success'"
+    [icon]="entry.isActive ? 'icon-delete' : 'icon-refresh'"
+    [heading]="entry.isActive ? 'Turn Off' : 'Restore'"
+    [confirmLabel]="entry.isActive ? 'Turn Off' : 'Restore'"
+    [busyLabel]="entry.isActive ? 'Turning off...' : 'Restoring...'"
+    [isBusy]="isSaving()"
+    (confirmed)="confirmToggle()"
+    (cancelled)="closeDialog()"
+  >
+    <span class="font-medium wrap-break-word text-gray-700">{{ entry.name }}</span>
+    @if (entry.isActive) {
+      will no longer be offered for new products. Existing products keep it.
+    } @else {
+      will be offered again.
+    }
+  </app-confirm-dialog>
+}

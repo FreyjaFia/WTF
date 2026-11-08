@@ -41,6 +41,8 @@ public class PolicyMatrixTests : IDisposable
         [AppPolicies.StockWasteReview] = [AppRoles.SuperAdmin, AppRoles.Admin],
         [AppPolicies.WasteReasonsManage] = [AppRoles.SuperAdmin, AppRoles.Admin],
         [AppPolicies.WasteReasonsRead] = [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.StockManager, AppRoles.Cashier],
+        [AppPolicies.ExpensesRead] = [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer],
+        [AppPolicies.ExpensesWrite] = [AppRoles.SuperAdmin, AppRoles.Admin],
         [AppPolicies.DashboardRead] = [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer],
         [AppPolicies.ReportsGenerate] = [AppRoles.SuperAdmin, AppRoles.Admin],
         [AppPolicies.ReportsRead] = [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer],

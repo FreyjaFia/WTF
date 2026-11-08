@@ -1,5 +1,4 @@
 using WTF.Api.Features.Products.DTOs;
-using WTF.Api.Features.Products.Enums;
 using WTF.Domain.Entities;
 
 namespace WTF.Api.Features.Products;
@@ -14,8 +13,8 @@ internal static class ProductMapping
             product.Code,
             product.Description,
             product.Price,
-            (ProductCategoryEnum)product.CategoryId,
-            product.SubCategoryId.HasValue ? (ProductSubCategoryEnum)product.SubCategoryId.Value : null,
+            product.CategoryId,
+            product.SubCategoryId,
             product.IsAddOn,
             product.IsActive,
             product.CreatedAt,

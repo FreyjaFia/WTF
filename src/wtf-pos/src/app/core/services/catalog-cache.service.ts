@@ -3,6 +3,7 @@ import { computed, effect, inject, Injectable, signal } from '@angular/core';
 import { environment } from '@environments/environment.development';
 import {
   AddOnGroupDto,
+  CatalogLookupsDto,
   CustomerDto,
   DiscountedProductPromotionDto,
   FixedBundlePromotionDto,
@@ -13,6 +14,7 @@ import {
   PromotionTypeEnum,
 } from '@shared/models';
 import { catchError, firstValueFrom, of } from 'rxjs';
+import { CatalogLookupService } from './catalog-lookup.service';
 import { ConnectivityService } from './connectivity.service';
 import { db } from './db';
 import { ImageCacheService } from './image-cache.service';
@@ -21,6 +23,7 @@ interface PosCatalogDto {
   products: ProductDto[];
   addOnsByProductId: Record<string, AddOnGroupDto[]>;
   customers: CustomerDto[];
+  lookups?: CatalogLookupsDto;
   syncedAt: string;
 }
 
@@ -39,6 +42,7 @@ export class CatalogCacheService {
   private readonly http = inject(HttpClient);
   private readonly connectivity = inject(ConnectivityService);
   private readonly imageCache = inject(ImageCacheService);
+  private readonly lookups = inject(CatalogLookupService);
 
   private readonly _products = signal<ProductDto[]>([]);
   public readonly products = this._products.asReadonly();
@@ -172,6 +176,7 @@ export class CatalogCacheService {
         discountedPromotions,
         fixedBundles: bundles.fixedBundles,
         mixMatchPromotions: bundles.mixMatch,
+        lookups: catalog.lookups,
         syncedAt: catalog.syncedAt,
       });
 
@@ -188,6 +193,7 @@ export class CatalogCacheService {
       this._fixedBundles.set(bundles.fixedBundles);
       this._mixMatchPromotions.set(bundles.mixMatch);
       this._discountedPromotions.set(discountedPromotions);
+      this.lookups.set(catalog.lookups);
       this.detectStalePrices(previousCatalog?.products ?? [], catalog.products);
     } catch {
       await this.loadFromCache();
@@ -226,6 +232,7 @@ export class CatalogCacheService {
       this._fixedBundles.set(cached.fixedBundles ?? []);
       this._mixMatchPromotions.set(cached.mixMatchPromotions ?? []);
       this._discountedPromotions.set(cached.discountedPromotions ?? []);
+      this.lookups.set(cached.lookups);
       return;
     }
 

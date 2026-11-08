@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
+using WTF.Api.Features.Catalog;
 using WTF.Api.Features.Products.DTOs;
-using WTF.Api.Features.Products.Enums;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Sync;
@@ -39,8 +39,8 @@ internal static class PosCatalogLoader
 
             return new ProductDto(
                 p.Id, p.Name, p.Code, p.Description, p.Price,
-                (ProductCategoryEnum)p.CategoryId,
-                p.SubCategoryId.HasValue ? (ProductSubCategoryEnum)p.SubCategoryId.Value : null,
+                p.CategoryId,
+                p.SubCategoryId,
                 p.IsAddOn, p.IsActive, p.CreatedAt, p.CreatedBy, p.UpdatedAt, p.UpdatedBy,
                 imageUrl, [],
                 AddOnCount: addOnCounts.GetValueOrDefault(p.Id));
@@ -64,7 +64,12 @@ internal static class PosCatalogLoader
             .Select(pa => new
             {
                 pa.ProductId,
-                AddOnType = (AddOnTypeEnum)(pa.AddOnTypeId ?? (int)AddOnTypeEnum.Extra),
+                AddOnType = pa.AddOnTypeId ?? SystemAddOnTypes.Extra,
+                TypeName = pa.AddOnType != null ? pa.AddOnType.Name : "Extra",
+                TypeSort = pa.AddOnType != null ? pa.AddOnType.SortOrder : SystemAddOnTypes.Extra,
+                TypeRequired = pa.AddOnType != null && pa.AddOnType.IsRequired,
+                TypeMin = pa.AddOnType != null ? pa.AddOnType.MinSelect : 0,
+                TypeMax = pa.AddOnType != null ? pa.AddOnType.MaxSelect : 0,
                 pa.AddOn,
                 OverridePrice = pa.ProductAddOnPriceOverride != null && pa.ProductAddOnPriceOverride.IsActive
                     ? (decimal?)pa.ProductAddOnPriceOverride.Price
@@ -77,10 +82,11 @@ internal static class PosCatalogLoader
             .ToDictionary(
                 productGroup => productGroup.Key,
                 productGroup => productGroup
-                    .GroupBy(a => a.AddOnType)
+                    .GroupBy(a => new { a.AddOnType, a.TypeName, a.TypeSort, a.TypeRequired, a.TypeMin, a.TypeMax })
+                    .OrderBy(typeGroup => typeGroup.Key.TypeSort).ThenBy(typeGroup => typeGroup.Key.AddOnType)
                     .Select(typeGroup => new AddOnGroupDto(
-                        typeGroup.Key,
-                        typeGroup.Key.ToString(),
+                        typeGroup.Key.AddOnType,
+                        typeGroup.Key.TypeName,
                         [.. typeGroup.Select(item =>
                         {
                             var imageUrl = item.AddOn.ProductImage?.Image != null
@@ -90,15 +96,15 @@ internal static class PosCatalogLoader
                             return new ProductDto(
                                 item.AddOn.Id, item.AddOn.Name, item.AddOn.Code, item.AddOn.Description,
                                 item.AddOn.Price,
-                                (ProductCategoryEnum)item.AddOn.CategoryId,
-                                item.AddOn.SubCategoryId.HasValue ? (ProductSubCategoryEnum)item.AddOn.SubCategoryId.Value : null,
+                                item.AddOn.CategoryId,
+                                item.AddOn.SubCategoryId,
                                 item.AddOn.IsAddOn, item.AddOn.IsActive,
                                 item.AddOn.CreatedAt, item.AddOn.CreatedBy, item.AddOn.UpdatedAt, item.AddOn.UpdatedBy,
                                 imageUrl, [],
                                 OverridePrice: item.OverridePrice);
-                        })]
+                        })],
+                        typeGroup.Key.TypeRequired, typeGroup.Key.TypeMin, typeGroup.Key.TypeMax
                     ))
-                    .OrderBy(g => g.Type)
                     .ToList()
             );
     }

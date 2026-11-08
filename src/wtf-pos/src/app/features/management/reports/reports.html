@@ -197,7 +197,7 @@
                 (change)="onFilterChanged()"
               >
                 <option [ngValue]="null">All Categories</option>
-                @for (category of categoryOptions; track category.value) {
+                @for (category of categoryOptions(); track category.value) {
                   <option [ngValue]="category.value">{{ category.label }}</option>
                 }
               </select>
@@ -214,7 +214,7 @@
                 (change)="onFilterChanged()"
               >
                 <option [ngValue]="null">All Subcategories/Types</option>
-                @for (subCategory of subCategoryOptions; track subCategory.value) {
+                @for (subCategory of subCategoryOptions(); track subCategory.value) {
                   <option [ngValue]="subCategory.value">{{ subCategory.label }}</option>
                 }
               </select>

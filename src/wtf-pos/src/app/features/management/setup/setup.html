@@ -1,0 +1,57 @@
+@if (current(); as kind) {
+  <div class="flex h-full min-h-0 flex-col pt-4 md:pt-0">
+    <div class="flex min-h-0 flex-1 flex-col">
+      @if (catalogSection(); as section) {
+        <app-catalog [kind]="section" [backRoute]="setupRoute" />
+      } @else if (kind.id === 'waste-reasons') {
+        <app-waste-reasons [backRoute]="setupRoute" />
+      }
+    </div>
+  </div>
+} @else {
+  <div class="flex h-full min-h-0 flex-col overflow-y-auto pt-4 md:pt-0" data-testid="setup-hub">
+    <div class="mb-4 flex flex-col gap-1 sm:mb-6">
+      <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Setup</h1>
+      <p class="text-xs text-gray-500 sm:text-sm">
+        The lists the rest of the app is built from. Pick one to change it.
+      </p>
+    </div>
+
+    <app-pull-to-refresh [refreshing]="isRefreshing()" (refreshTriggered)="refresh()">
+      @if (connectionFailed()) {
+        <app-connection-error />
+      } @else {
+        @for (group of groups(); track group.name) {
+          <h2 class="mt-2 text-sm font-semibold tracking-wider text-gray-500 uppercase">
+            {{ group.name }}
+          </h2>
+          <p class="mb-2 text-xs text-gray-400">{{ group.description }}</p>
+          <div class="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            @for (kind of group.kinds; track kind.id) {
+              <a
+                [routerLink]="[setupRoute, kind.id]"
+                class="bg-surface flex min-w-0 flex-col gap-1 rounded-xl border border-gray-100 p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
+                [attr.data-testid]="'setup-card-' + kind.id"
+              >
+                <span class="flex items-center justify-between gap-2">
+                  <span class="truncate text-base font-semibold text-gray-900">{{
+                    kind.label
+                  }}</span>
+                  @if (countText(kind)) {
+                    <span
+                      class="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600"
+                      [attr.data-testid]="'setup-count-' + kind.id"
+                    >
+                      {{ countText(kind) }}
+                    </span>
+                  }
+                </span>
+                <span class="text-sm text-gray-500">{{ kind.description }}</span>
+              </a>
+            }
+          </div>
+        }
+      }
+    </app-pull-to-refresh>
+  </div>
+}

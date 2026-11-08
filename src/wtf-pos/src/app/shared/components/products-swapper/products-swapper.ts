@@ -8,10 +8,10 @@ import {
   signal,
   ViewChild,
 } from '@angular/core';
-import { AlertService, ModalStackService, ProductService } from '@core/services';
+import { AlertService, CatalogLookupService, ModalStackService, ProductService } from '@core/services';
 import { AvatarComponent } from '@shared/components/avatar/avatar';
 import { IconComponent } from '@shared/components/icons/icon/icon';
-import { AddOnTypeEnum, ProductCategoryEnum, ProductDto } from '@shared/models';
+import { ProductDto, SYSTEM_CATALOG_IDS } from '@shared/models';
 import Sortable from 'sortablejs';
 
 @Component({
@@ -24,6 +24,7 @@ export class ProductsSwapperComponent implements AfterViewInit {
   private readonly modalStack = inject(ModalStackService);
   private readonly productService = inject(ProductService);
   private readonly alertService = inject(AlertService);
+  private readonly lookups = inject(CatalogLookupService);
 
   private modalStackId: number | null = null;
 
@@ -33,26 +34,17 @@ export class ProductsSwapperComponent implements AfterViewInit {
   protected readonly isLoading = signal(false);
   protected readonly isSaving = signal(false);
   protected readonly availableProducts = signal<ProductDto[]>([]);
-  protected readonly linkedProducts = signal<(ProductDto & { type: AddOnTypeEnum })[]>([]);
+  protected readonly linkedProducts = signal<(ProductDto & { type: number })[]>([]);
   protected readonly searchTerm = signal('');
-  protected readonly selectedCategory = signal<ProductCategoryEnum | null>(null);
+  protected readonly selectedCategory = signal<number | null>(null);
 
-  protected readonly AddOnTypeEnum = AddOnTypeEnum;
+  protected readonly addOnTypeOptions = computed(() =>
+    this.lookups.activeAddOnTypes().map((type) => ({ value: type.id, label: type.name })),
+  );
 
-  protected readonly addOnTypeOptions = [
-    { value: AddOnTypeEnum.Size, label: 'Size' },
-    { value: AddOnTypeEnum.Flavor, label: 'Flavor' },
-    { value: AddOnTypeEnum.Topping, label: 'Topping' },
-    { value: AddOnTypeEnum.Extra, label: 'Extra' },
-    { value: AddOnTypeEnum.Sauce, label: 'Sauce' },
-  ];
-
-  protected readonly categoryOptions = [
-    { value: ProductCategoryEnum.Drink, label: 'Drink' },
-    { value: ProductCategoryEnum.Food, label: 'Food' },
-    { value: ProductCategoryEnum.Dessert, label: 'Dessert' },
-    { value: ProductCategoryEnum.Other, label: 'Other' },
-  ];
+  protected readonly categoryOptions = computed(() =>
+    this.lookups.activeCategories().map((category) => ({ value: category.id, label: category.name })),
+  );
 
   protected readonly filteredAvailableProducts = computed(() => {
     const term = this.searchTerm().toLowerCase().trim();
@@ -71,7 +63,7 @@ export class ProductsSwapperComponent implements AfterViewInit {
   });
 
   public addOnId = '';
-  public addOnType = AddOnTypeEnum.Size; // Default type
+  public addOnType: number = SYSTEM_CATALOG_IDS.sizeAddOnType; // Default type
 
   public ngAfterViewInit(): void {
     if (this.addOnId) {
@@ -98,7 +90,7 @@ export class ProductsSwapperComponent implements AfterViewInit {
             // Split: available (not linked) on left, linked on right
             const availableNotLinked = allProducts
               .filter((addon) => !linkedIds.has(addon.id))
-              .map((addon) => ({ ...addon, type: AddOnTypeEnum.Size })); // Default type for available
+              .map((addon) => ({ ...addon, type: SYSTEM_CATALOG_IDS.sizeAddOnType })); // Default type for available
 
             this.availableProducts.set(this.sortByName(availableNotLinked));
             this.linkedProducts.set(this.sortByName(assignedFlat));
@@ -225,12 +217,12 @@ export class ProductsSwapperComponent implements AfterViewInit {
   protected onCategoryChange(event: Event): void {
     const select = event.target as HTMLSelectElement;
     const value = select.value;
-    this.selectedCategory.set(value ? (Number(value) as ProductCategoryEnum) : null);
+    this.selectedCategory.set(value ? (Number(value) as number) : null);
   }
 
   protected changeProductType(productId: string, event: Event): void {
     const select = event.target as HTMLSelectElement;
-    const newType = Number(select.value) as AddOnTypeEnum;
+    const newType = Number(select.value) as number;
 
     this.linkedProducts.set(
       this.linkedProducts().map((p) => (p.id === productId ? { ...p, type: newType } : p)),

@@ -46,7 +46,7 @@
               (change)="onCategoryChange($event)"
             >
               <option value="">All categories</option>
-              @for (category of categoryOptions; track category.value) {
+              @for (category of categoryOptions(); track category.value) {
                 <option [value]="category.value">
                   {{ category.label }}
                 </option>
@@ -171,7 +171,7 @@
                       (mousedown)="$event.stopPropagation()"
                       (touchstart)="$event.stopPropagation()"
                     >
-                      @for (opt of addOnTypeOptions; track opt.value) {
+                      @for (opt of addOnTypeOptions(); track opt.value) {
                         <option [value]="opt.value" [selected]="opt.value === product.type">
                           {{ opt.label }}
                         </option>

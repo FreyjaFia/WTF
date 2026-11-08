@@ -45,6 +45,7 @@ export function createShellFakes(me: Observable<FakeMe> = of({ firstName: 'Jane'
     canManageWasteReasons: can('canManageWasteReasons'),
     canManageSubscription: can('canManageSubscription'),
     canManageBrand: can('canManageBrand'),
+    canReadExpenses: can('canReadExpenses'),
     canReviewStockWaste: can('canReviewStockWaste'),
     canWriteStockWaste: can('canWriteStockWaste'),
   };

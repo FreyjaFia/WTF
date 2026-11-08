@@ -27,7 +27,24 @@ internal static class TestDb
             .EnableSensitiveDataLogging()
             .Options;
 
-        return new InMemoryWtfDbContext(options);
+        var db = new InMemoryWtfDbContext(options);
+        if (!db.ProductCategories.Any() && !db.AddOnTypes.Any())
+        {
+            db.ProductCategories.AddRange(CatalogSeed.Categories());
+            db.ProductSubCategories.AddRange(CatalogSeed.SubCategories());
+            db.AddOnTypes.AddRange(CatalogSeed.AddOnTypes());
+            db.SaveChanges();
+            db.ChangeTracker.Clear();
+        }
+
+        return db;
+    }
+
+    public static async Task SeedAddOnTypesAsync(string dbName)
+    {
+        await using var db = Create(dbName);
+        db.AddOnTypes.AddRange(CatalogSeed.AddOnTypes());
+        await db.SaveChangesAsync();
     }
 
     /// <summary>Creates a context that filters and stamps rows for <paramref name="tenant"/>, as the API does in Multi mode.</summary>

@@ -6,6 +6,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
   AlertService,
   AuthService,
+  CatalogLookupService,
   InventoryService,
   ModalStackService,
   ProductService,
@@ -23,15 +24,14 @@ import {
   ADD_ON_TYPE_ORDER,
   AddOnGroupDto,
   AddOnProductAssignmentDto,
+  formatSubCategoryName,
+  SYSTEM_CATALOG_IDS,
   CreateProductAddOnPriceOverrideDto,
   CreateProductDto,
   ItemDto,
-  PRODUCT_SUB_CATEGORY_LABELS,
   ProductAddOnAssignmentDto,
   ProductAddOnPriceOverrideDto,
-  ProductCategoryEnum,
   ProductPriceHistoryDto,
-  ProductSubCategoryEnum,
   RecipeCostDto,
   UpdateProductAddOnPriceOverrideDto,
   UpdateProductDto,
@@ -64,6 +64,7 @@ export type StockTrackingMode = 'none' | 'own' | 'existing';
 })
 export class ProductEditorComponent implements OnInit {
   private readonly productService = inject(ProductService);
+  private readonly lookups = inject(CatalogLookupService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly alertService = inject(AlertService);
@@ -90,9 +91,22 @@ export class ProductEditorComponent implements OnInit {
       Object.values(this.addOnOverrideSaving()).some(Boolean),
   );
   protected readonly isDragging = signal(false);
-  protected readonly ProductCategoryEnum = ProductCategoryEnum;
-  protected readonly ProductSubCategoryEnum = ProductSubCategoryEnum;
-  protected readonly subCategoryLabels = PRODUCT_SUB_CATEGORY_LABELS;
+  protected readonly categoryOptions = (): { id: number; name: string }[] => {
+    const current = this.productForm.controls.category.value;
+    return this.lookups
+      .categories()
+      .filter((category) => category.isActive || category.id === current);
+  };
+  protected readonly subCategoryOptions = (): { id: number; name: string }[] => {
+    const current = this.productForm.controls.subCategory.value;
+    return this.lookups
+      .subCategories()
+      .filter((subCategory) => subCategory.isActive || subCategory.id === current)
+      .map((subCategory) => ({
+        id: subCategory.id,
+        name: formatSubCategoryName(subCategory.name),
+      }));
+  };
   protected readonly selectedFile = signal<File | null>(null);
   protected readonly imagePreview = signal<string | null>(null);
   protected readonly currentImageUrl = signal<string | null>(null);
@@ -211,11 +225,11 @@ export class ProductEditorComponent implements OnInit {
       nonNullable: true,
       validators: [Validators.required, Validators.min(0), Validators.max(999999.99)],
     }),
-    category: new FormControl<ProductCategoryEnum>(ProductCategoryEnum.Drink, {
+    category: new FormControl<number>(1, {
       nonNullable: true,
       validators: [Validators.required],
     }),
-    subCategory: new FormControl<ProductSubCategoryEnum | null>(null),
+    subCategory: new FormControl<number | null>(null),
     isAddOn: new FormControl(false, { nonNullable: true }),
     isActive: new FormControl(true, { nonNullable: true }),
   });
@@ -229,6 +243,7 @@ export class ProductEditorComponent implements OnInit {
   private modalStackId: number | null = null;
 
   public ngOnInit(): void {
+    void this.lookups.ensureLoaded();
     const id = this.route.snapshot.paramMap.get('id');
 
     if (id) {
@@ -252,7 +267,7 @@ export class ProductEditorComponent implements OnInit {
 
     this.productForm.controls.isAddOn.valueChanges.subscribe((isAddOn) => {
       if (isAddOn) {
-        this.productForm.controls.category.setValue(ProductCategoryEnum.Other);
+        this.productForm.controls.category.setValue(SYSTEM_CATALOG_IDS.otherCategory);
         this.productForm.controls.category.disable();
         this.productForm.controls.subCategory.setValue(null);
         this.productForm.controls.subCategory.disable();
@@ -335,7 +350,7 @@ export class ProductEditorComponent implements OnInit {
     const formValue = this.productForm.getRawValue();
 
     if (formValue.isAddOn) {
-      formValue.category = ProductCategoryEnum.Other;
+      formValue.category = SYSTEM_CATALOG_IDS.otherCategory;
       formValue.subCategory = null;
     }
 
@@ -365,7 +380,7 @@ export class ProductEditorComponent implements OnInit {
     } else {
       const createDto: CreateProductDto = {
         ...formValue,
-        category: formValue.category as ProductCategoryEnum,
+        category: formValue.category,
       };
 
       this.productService.createProduct(createDto).subscribe({

@@ -1,3 +1,4 @@
+import { ProductCategoryEnum, AddOnTypeEnum } from '@app/testing/catalog-ids';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter, Router } from '@angular/router';
@@ -9,14 +10,7 @@ import {
   PromotionService,
 } from '@core/services';
 import { AppRoutes } from '@shared/constants/app-routes';
-import {
-  AddOnTypeEnum,
-  DiscountedProductPromotionDto,
-  FixedBundlePromotionDto,
-  MixMatchPromotionDto,
-  ProductCategoryEnum,
-  ProductDto,
-} from '@shared/models';
+import { DiscountedProductPromotionDto, FixedBundlePromotionDto, MixMatchPromotionDto, ProductDto } from '@shared/models';
 import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PromotionDetailsComponent } from './promotion-details';

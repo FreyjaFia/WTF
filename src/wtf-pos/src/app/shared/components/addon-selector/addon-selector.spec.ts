@@ -1,12 +1,9 @@
+import { ProductCategoryEnum, AddOnTypeEnum, OPTIONAL_ONE, REQUIRED_ONE } from '@app/testing/catalog-ids';
+import { CatalogLookupService } from '@core/services';
+import { SEEDED_LOOKUPS } from '@app/testing/catalog-ids';
 import { TestBed } from '@angular/core/testing';
 import { CatalogCacheService, ModalStackService } from '@core/services';
-import {
-  AddOnGroupDto,
-  AddOnTypeEnum,
-  CartAddOnDto,
-  ProductCategoryEnum,
-  ProductDto,
-} from '@shared/models';
+import { AddOnGroupDto, CartAddOnDto, ProductDto } from '@shared/models';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AddonSelectorComponent } from './addon-selector';
 
@@ -24,9 +21,9 @@ interface Internals {
   selections(): Record<number, Map<string, number>>;
   addOnGroups(): Group[];
   specialInstructions(): string;
-  getSelectionRule(t: AddOnTypeEnum): string;
+  getSelectionRule(g: Group): string;
   getGroupHeader(g: Group): string;
-  isRadioGroup(t: AddOnTypeEnum): boolean;
+  isRadioGroup(g: Group): boolean;
   isSelected(t: AddOnTypeEnum, id: string): boolean;
   getQuantity(t: AddOnTypeEnum, id: string): number;
   toggleOption(g: Group, o: ProductDto): void;
@@ -67,14 +64,14 @@ const CHEESE = { ...prod('ch', 'Cheese', 15), overridePrice: 12 };
 const GONE = prod('g', 'Gone', 1, false);
 const MAIN = prod('main', 'Latte', 100);
 
-const sizeG: Group = { type: AddOnTypeEnum.Size, displayName: 'Size', options: [LARGE, SMALL] };
-const flavorG: Group = { type: AddOnTypeEnum.Flavor, displayName: 'Flavor', options: [CHOC, VANILLA] };
+const sizeG: Group = { type: AddOnTypeEnum.Size, displayName: 'Size', ...REQUIRED_ONE, options: [LARGE, SMALL] };
+const flavorG: Group = { type: AddOnTypeEnum.Flavor, displayName: 'Flavor', ...REQUIRED_ONE, options: [CHOC, VANILLA] };
 const toppingG: Group = {
   type: AddOnTypeEnum.Topping,
   displayName: 'Topping',
   options: [BOBA, CHEESE, GONE],
 };
-const sauceG: Group = { type: AddOnTypeEnum.Sauce, displayName: 'Sauce', options: [VANILLA] };
+const sauceG: Group = { type: AddOnTypeEnum.Sauce, displayName: 'Sauce', ...OPTIONAL_ONE, options: [VANILLA] };
 
 describe('AddonSelectorComponent', () => {
   let cache: { getAddOnsForProduct: ReturnType<typeof vi.fn> };
@@ -93,6 +90,7 @@ describe('AddonSelectorComponent', () => {
 
   function setup(groups: Group[] = [toppingG, flavorG, sizeG]) {
     cache.getAddOnsForProduct.mockReturnValue(groups.map((g) => ({ ...g, options: [...g.options] })));
+    TestBed.inject(CatalogLookupService).set(SEEDED_LOOKUPS);
     const fixture = TestBed.createComponent(AddonSelectorComponent);
     fixture.detectChanges();
     const cmp = fixture.componentInstance;
@@ -116,7 +114,7 @@ describe('AddonSelectorComponent', () => {
       ]);
       expect(el.textContent).toContain('Latte');
       expect(el.textContent).toContain('Sizes');
-      expect(el.textContent).toContain('Please select a size to continue.');
+      expect(el.textContent).toContain('A size selection is required and must be exactly one.');
       expect(stack.push).toHaveBeenCalledTimes(1);
     });
 
@@ -202,11 +200,11 @@ describe('AddonSelectorComponent', () => {
       expect(i.getGroupHeader({ type: 99 as AddOnTypeEnum, displayName: 'Dips', options: [] })).toBe(
         'Dips',
       );
-      expect(i.getSelectionRule(AddOnTypeEnum.Size)).toBe('Required · Pick one');
-      expect(i.getSelectionRule(AddOnTypeEnum.Extra)).toBe('Optional · Pick many');
-      expect(i.getSelectionRule(99 as AddOnTypeEnum)).toBe('');
-      expect(i.isRadioGroup(AddOnTypeEnum.Sauce)).toBe(true);
-      expect(i.isRadioGroup(AddOnTypeEnum.Topping)).toBe(false);
+      expect(i.getSelectionRule(sizeG)).toBe('Required · Pick one');
+      expect(i.getSelectionRule({ type: AddOnTypeEnum.Extra, displayName: 'Extra', options: [] })).toBe('Optional · Pick many');
+      expect(i.getSelectionRule({ type: 99 as AddOnTypeEnum, displayName: 'Dip', options: [] })).toBe('Optional · Pick many');
+      expect(i.isRadioGroup(sauceG)).toBe(true);
+      expect(i.isRadioGroup(toppingG)).toBe(false);
     });
 
     it('radio groups select one at a time and cannot deselect size', () => {
@@ -234,7 +232,7 @@ describe('AddonSelectorComponent', () => {
       cmp.open(MAIN);
       i.incrementOption(sauceG, VANILLA, evt());
       i.incrementOption(sauceG, VANILLA, evt());
-      expect(i.validationError()).toBe('You can select at most one sauce.');
+      expect(i.validationError()).toBe('A sauce selection must be at most one.');
     });
 
     it('multi-select toggles on, then reduces/removes quantity on subsequent clicks', () => {
@@ -280,9 +278,9 @@ describe('AddonSelectorComponent', () => {
     it('requires exactly one size and one flavor', () => {
       const { cmp, i } = setup();
       cmp.open(MAIN);
-      expect(i.validationError()).toBe('Please select a size to continue.');
+      expect(i.validationError()).toBe('A size selection is required and must be exactly one.');
       i.toggleOption(sizeG, SMALL);
-      expect(i.validationError()).toBe('Please select a flavor to continue.');
+      expect(i.validationError()).toBe('A flavor selection is required and must be exactly one.');
       i.toggleOption(flavorG, CHOC);
       expect(i.validationError()).toBeNull();
     });
@@ -449,17 +447,17 @@ describe('AddonSelectorComponent', () => {
     it('describes the rules', () => {
       const { cmp, i } = setup([]);
       cmp.open(MAIN, { customGroups: [customG] });
-      expect(i.getSelectionRule(AddOnTypeEnum.Extra)).toBe('Pick many');
+      expect(i.getSelectionRule(customG)).toBe('Pick many');
       cmp.open(MAIN, { customGroups: [customG], requiredSelectionCount: 3 });
-      expect(i.getSelectionRule(AddOnTypeEnum.Extra)).toBe('Pick many · Max selected 3');
+      expect(i.getSelectionRule(customG)).toBe('Pick many · Max selected 3');
       cmp.open(MAIN, { customGroups: [customG], maxSelectionPerOption: 2 });
-      expect(i.getSelectionRule(AddOnTypeEnum.Extra)).toBe('Pick many · Max 2/item');
+      expect(i.getSelectionRule(customG)).toBe('Pick many · Max 2/item');
       cmp.open(MAIN, {
         customGroups: [customG],
         requiredSelectionCount: 3,
         maxSelectionPerOption: 2,
       });
-      expect(i.getSelectionRule(AddOnTypeEnum.Extra)).toBe(
+      expect(i.getSelectionRule(customG)).toBe(
         'Pick many · Max selected 3 · Max 2/item',
       );
     });

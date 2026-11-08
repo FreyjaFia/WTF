@@ -1,7 +1,6 @@
 using WTF.Api.Features.Dashboard;
 using WTF.Api.Features.Orders;
 using WTF.Api.Features.Orders.Enums;
-using WTF.Api.Features.Products.Enums;
 using WTF.Api.Features.Promotions.DTOs;
 using WTF.Domain.Entities;
 using WTF.Tests.Infrastructure;
@@ -54,7 +53,7 @@ public class PendingOrderPreviewTests
         var product = _data.AddProduct("Espresso", price);
         var regular = _data.AddProduct("Regular", 0m, isAddOn: true);
         var shot = _data.AddProduct("Extra Shot", 25m, isAddOn: true);
-        _data.AllowAddOn(product, regular, AddOnTypeEnum.Size);
+        _data.AllowAddOn(product, regular, CatalogSeed.Size);
         _data.AllowAddOn(product, shot);
         return (product, regular, shot);
     }

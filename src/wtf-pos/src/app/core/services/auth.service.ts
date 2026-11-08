@@ -450,6 +450,14 @@ export class AuthService {
     return this.hasAnyRole(AppRoleGroups.WasteReasonsManage);
   }
 
+  public canReadExpenses(): boolean {
+    return this.hasAnyRole(AppRoleGroups.ExpensesRead);
+  }
+
+  public canWriteExpenses(): boolean {
+    return this.hasAnyRole(AppRoleGroups.ExpensesWrite);
+  }
+
   public getCurrentRoleLabel(): string {
     const prioritizedRoles: readonly AppRole[] = [
       AppRoles.SuperAdmin,

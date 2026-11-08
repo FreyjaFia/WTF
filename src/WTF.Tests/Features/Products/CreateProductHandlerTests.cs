@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using NSubstitute;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Products;
-using WTF.Api.Features.Products.Enums;
 using WTF.Api.Services;
 using WTF.Tests.Infrastructure;
 
@@ -24,8 +23,8 @@ public class CreateProductHandlerTests
             Name = "Latte",
             Code = " lat1 ",
             Price = 120.5m,
-            Category = ProductCategoryEnum.Drink,
-            SubCategory = ProductSubCategoryEnum.Coffee
+            Category = CatalogSeed.Drink,
+            SubCategory = CatalogSeed.Coffee
         }, CancellationToken.None);
 
         dto.Code.ShouldBe("LAT1");
@@ -37,8 +36,8 @@ public class CreateProductHandlerTests
         saved.Id.ShouldBe(dto.Id);
         saved.Code.ShouldBe("LAT1");
         saved.Price.ShouldBe(120.5m);
-        saved.CategoryId.ShouldBe((int)ProductCategoryEnum.Drink);
-        saved.SubCategoryId.ShouldBe((int)ProductSubCategoryEnum.Coffee);
+        saved.CategoryId.ShouldBe((int)CatalogSeed.Drink);
+        saved.SubCategoryId.ShouldBe((int)CatalogSeed.Coffee);
         saved.CreatedBy.ShouldBe(_userId);
         await _audit.Received(1).LogAsync(
             AuditAction.ProductCreated, AuditEntityType.Product, saved.Id.ToString(),
@@ -48,7 +47,7 @@ public class CreateProductHandlerTests
     [Fact]
     public async Task Handle_WithoutSubCategory_StoresNullSubCategory()
     {
-        await Handler().Handle(new CreateProductCommand { Name = "Cake", Code = "CK", Price = 5m, Category = ProductCategoryEnum.Dessert }, CancellationToken.None);
+        await Handler().Handle(new CreateProductCommand { Name = "Cake", Code = "CK", Price = 5m, Category = CatalogSeed.Dessert }, CancellationToken.None);
 
         await using var db = TestDb.Create(_dbName);
         (await db.Products.SingleAsync()).SubCategoryId.ShouldBeNull();
@@ -60,7 +59,7 @@ public class CreateProductHandlerTests
         await ProductSeed.SeedAsync(_dbName, ProductSeed.NewProduct(code: "LAT"));
 
         var ex = await Should.ThrowAsync<InvalidOperationException>(() => Handler().Handle(
-            new CreateProductCommand { Name = "Other", Code = " lat ", Price = 1m, Category = ProductCategoryEnum.Food },
+            new CreateProductCommand { Name = "Other", Code = " lat ", Price = 1m, Category = CatalogSeed.Food },
             CancellationToken.None));
 
         ex.Message.ShouldBe("Product code already exists.");
@@ -77,7 +76,7 @@ public class CreateProductHandlerTests
             Name = "Extra shot",
             Code = "XS",
             Price = 0m,
-            Category = ProductCategoryEnum.Drink,
+            Category = CatalogSeed.Drink,
             IsAddOn = true,
             IsActive = false
         }, CancellationToken.None);

@@ -4,7 +4,6 @@ using System.ComponentModel.DataAnnotations;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Products.DTOs;
-using WTF.Api.Features.Products.Enums;
 using WTF.Api.Services;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
@@ -32,13 +31,13 @@ public record UpdateProductCommand : IRequest<ProductDto?>
     public decimal Price { get; init; }
 
     [Required(ErrorMessage = "Product category is required")]
-    public ProductCategoryEnum Category { get; init; }
+    public int Category { get; init; }
 
     public bool IsAddOn { get; init; }
 
     public bool IsActive { get; init; }
 
-    public ProductSubCategoryEnum? SubCategory { get; init; }
+    public int? SubCategory { get; init; }
 }
 
 public class UpdateProductHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor, IAuditService auditService) : IRequestHandler<UpdateProductCommand, ProductDto?>
@@ -57,7 +56,7 @@ public class UpdateProductHandler(WTFDbContext db, IHttpContextAccessor httpCont
 
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
         var normalizedCode = ProductValidation.NormalizeCode(request.Code);
-        ProductValidation.EnsureValidCategory(request.Category, request.SubCategory);
+        await ProductValidation.EnsureValidCategoryAsync(db, request.Category, request.SubCategory, product.CategoryId, product.SubCategoryId, cancellationToken);
         var oldValues = new
         {
             product.Name,
@@ -120,8 +119,8 @@ public class UpdateProductHandler(WTFDbContext db, IHttpContextAccessor httpCont
         product.Code = normalizedCode;
         product.Description = request.Description;
         product.Price = request.Price;
-        product.CategoryId = (int)request.Category;
-        product.SubCategoryId = request.SubCategory.HasValue ? (int)request.SubCategory.Value : null;
+        product.CategoryId = request.Category;
+        product.SubCategoryId = request.SubCategory;
         product.IsAddOn = request.IsAddOn;
         product.IsActive = request.IsActive;
         product.UpdatedAt = DateTime.UtcNow;

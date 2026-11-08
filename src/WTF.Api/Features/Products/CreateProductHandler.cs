@@ -3,7 +3,6 @@ using System.ComponentModel.DataAnnotations;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Products.DTOs;
-using WTF.Api.Features.Products.Enums;
 using WTF.Api.Services;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
@@ -28,13 +27,13 @@ public record CreateProductCommand : IRequest<ProductDto>
     public decimal Price { get; init; }
 
     [Required(ErrorMessage = "Product category is required")]
-    public ProductCategoryEnum Category { get; init; }
+    public int Category { get; init; }
 
     public bool IsAddOn { get; init; }
 
     public bool IsActive { get; init; } = true;
 
-    public ProductSubCategoryEnum? SubCategory { get; init; }
+    public int? SubCategory { get; init; }
 }
 
 public class CreateProductHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor, IAuditService auditService) : IRequestHandler<CreateProductCommand, ProductDto>
@@ -44,7 +43,7 @@ public class CreateProductHandler(WTFDbContext db, IHttpContextAccessor httpCont
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
         var normalizedCode = ProductValidation.NormalizeCode(request.Code);
 
-        ProductValidation.EnsureValidCategory(request.Category, request.SubCategory);
+        await ProductValidation.EnsureValidCategoryAsync(db, request.Category, request.SubCategory, null, null, cancellationToken);
         await ProductValidation.EnsureUniqueCodeAsync(db, normalizedCode, cancellationToken: cancellationToken);
 
         var product = new Product
@@ -53,8 +52,8 @@ public class CreateProductHandler(WTFDbContext db, IHttpContextAccessor httpCont
             Code = normalizedCode,
             Description = request.Description,
             Price = request.Price,
-            CategoryId = (int)request.Category,
-            SubCategoryId = request.SubCategory.HasValue ? (int)request.SubCategory.Value : null,
+            CategoryId = request.Category,
+            SubCategoryId = request.SubCategory,
             IsAddOn = request.IsAddOn,
             IsActive = request.IsActive,
             CreatedAt = DateTime.UtcNow,

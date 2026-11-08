@@ -371,16 +371,29 @@
             <span [class.hidden]="isCollapsed()">Reports</span>
           </a>
         }
-        @if (authService.canManageWasteReasons()) {
+        @if (authService.canReadExpenses()) {
           <a
-            [routerLink]="routes.ManagementWasteReasons"
+            [routerLink]="routes.ManagementExpenses"
             routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
             class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
             [class.justify-center]="isCollapsed()"
-            [attr.title]="'Waste Reasons'"
+            [attr.title]="'Expenses'"
           >
-            <app-icon name="icon-tag" [class]="'h-4 w-4 text-gray-500'" />
-            <span [class.hidden]="isCollapsed()">Waste Reasons</span>
+            <app-icon name="icon-coins" [class]="'h-4 w-4 text-gray-500'" />
+            <span [class.hidden]="isCollapsed()">Expenses</span>
+          </a>
+        }
+        @if (authService.canReadProducts()) {
+          <a
+            [routerLink]="routes.ManagementSetup"
+            routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
+            [routerLinkActiveOptions]="{ exact: false }"
+            class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
+            [class.justify-center]="isCollapsed()"
+            [attr.title]="'Setup'"
+          >
+            <app-icon name="icon-setup" [class]="'h-4 w-4 text-gray-500'" />
+            <span [class.hidden]="isCollapsed()">Setup</span>
           </a>
         }
         @if (authService.canManageSubscription()) {

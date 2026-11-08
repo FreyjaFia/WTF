@@ -32,6 +32,8 @@ internal static class SalesSeed
         db.Users.AddRange(
             new User { Id = StaffA, Username = "ana", PasswordHash = "x", FirstName = "Ana", LastName = "Cruz", IsActive = true },
             new User { Id = StaffB, Username = "ben", PasswordHash = "x", FirstName = "Ben", LastName = "Reyes", IsActive = true });
+        db.ProductCategories.RemoveRange(db.ProductCategories.ToList());
+        db.ProductSubCategories.RemoveRange(db.ProductSubCategories.ToList());
         db.ProductCategories.AddRange(
             new ProductCategory { Id = FoodCategory, Name = "Food" },
             new ProductCategory { Id = DrinksCategory, Name = "Drinks" });

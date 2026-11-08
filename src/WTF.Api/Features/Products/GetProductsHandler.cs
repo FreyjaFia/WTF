@@ -2,7 +2,6 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Features.Products.DTOs;
-using WTF.Api.Features.Products.Enums;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Products;
@@ -10,7 +9,7 @@ namespace WTF.Api.Features.Products;
 public record GetProductsQuery : IRequest<List<ProductDto>>
 {
     public string? SearchTerm { get; init; }
-    public ProductCategoryEnum? Category { get; init; }
+    public int? Category { get; init; }
     public bool? IsAddOn { get; init; }
     public bool? IsActive { get; init; } = true;
 }
@@ -31,7 +30,7 @@ public class GetProductsHandler(WTFDbContext db, IHttpContextAccessor httpContex
 
         if (request.Category.HasValue)
         {
-            query = query.Where(p => p.CategoryId == (int)request.Category.Value);
+            query = query.Where(p => p.CategoryId == request.Category.Value);
         }
 
         if (request.IsAddOn.HasValue)

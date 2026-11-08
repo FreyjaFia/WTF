@@ -8,14 +8,18 @@ import {
   findBestDiscount,
   formatPromoLabel,
   fromCents,
+  isPickOne,
+  minimumSelection,
   priceWithAddOns,
+  ruleOfGroup,
+  selectionError,
+  selectionLabel,
   toCents,
 } from '@shared/calculations';
 import { IconComponent } from '@shared/components/icons/icon/icon';
 import {
   ADD_ON_TYPE_ORDER,
   AddOnGroupDto,
-  AddOnTypeEnum,
   CartAddOnDto,
   ProductDto,
 } from '@shared/models';
@@ -66,7 +70,6 @@ export class AddonSelectorComponent {
   // Selections: key = group type, value = map of optionId â†’ quantity
   protected readonly selections = signal<Record<number, Map<string, number>>>({});
 
-  protected readonly AddOnTypeEnum = AddOnTypeEnum;
 
   protected readonly validationError = computed(() => {
     if (this.isCustomOptionMode()) {
@@ -108,28 +111,13 @@ export class AddonSelectorComponent {
       const selected = sel[group.type];
       const activeOptions = group.options.filter((o) => o.isActive);
 
-      if (
-        (group.type === AddOnTypeEnum.Size || group.type === AddOnTypeEnum.Flavor) &&
-        activeOptions.length > 0
-      ) {
+      if (activeOptions.length > 0) {
         const totalSelected = selected
           ? Array.from(selected.values()).reduce((s, q) => s + q, 0)
           : 0;
-
-        if (totalSelected !== 1) {
-          const label = group.type === AddOnTypeEnum.Size ? 'size' : 'flavor';
-          return `Please select a ${label} to continue.`;
-        }
-      }
-
-      // Sauce is optional but limited to 1
-      if (group.type === AddOnTypeEnum.Sauce && activeOptions.length > 0) {
-        const totalSelected = selected
-          ? Array.from(selected.values()).reduce((s, q) => s + q, 0)
-          : 0;
-
-        if (totalSelected > 1) {
-          return 'You can select at most one sauce.';
+        const error = selectionError(ruleOfGroup(group), totalSelected);
+        if (error) {
+          return error;
         }
       }
     }
@@ -287,7 +275,7 @@ export class AddonSelectorComponent {
     this.selections.set(nextSelections);
   }
 
-  protected getSelectionRule(type: AddOnTypeEnum): string {
+  protected getSelectionRule(group: AddOnGroupDto): string {
     if (this.isCustomOptionMode()) {
       const required = this.getScaledRequiredSelectionCount();
       const maxPerOption = this.customMaxSelectionPerOption();
@@ -303,50 +291,23 @@ export class AddonSelectorComponent {
       return maxPerOption ? `Pick many · Max ${maxPerOption}/item` : 'Pick many';
     }
 
-    switch (type) {
-      case AddOnTypeEnum.Size:
-        return 'Required · Pick one';
-      case AddOnTypeEnum.Flavor:
-        return 'Required · Pick one';
-      case AddOnTypeEnum.Sauce:
-        return 'Required · Pick one';
-      case AddOnTypeEnum.Topping:
-        return 'Optional · Pick many';
-      case AddOnTypeEnum.Extra:
-        return 'Optional · Pick many';
-      default:
-        return '';
-    }
+    return selectionLabel(ruleOfGroup(group));
   }
+
   protected getGroupHeader(group: AddOnGroupDto): string {
-    switch (group.type) {
-      case AddOnTypeEnum.Size:
-        return 'Sizes';
-      case AddOnTypeEnum.Flavor:
-        return 'Flavors';
-      case AddOnTypeEnum.Sauce:
-        return 'Sauces';
-      case AddOnTypeEnum.Topping:
-        return 'Toppings';
-      case AddOnTypeEnum.Extra:
-        return 'Extras';
-      default:
-        return group.displayName.endsWith('s') ? group.displayName : `${group.displayName}s`;
-    }
+    return group.displayName.endsWith('s') ? group.displayName : `${group.displayName}s`;
   }
 
-  protected isRadioGroup(type: AddOnTypeEnum): boolean {
-    return (
-      type === AddOnTypeEnum.Size || type === AddOnTypeEnum.Flavor || type === AddOnTypeEnum.Sauce
-    );
+  protected isRadioGroup(group: AddOnGroupDto): boolean {
+    return isPickOne(ruleOfGroup(group));
   }
 
-  protected isSelected(type: AddOnTypeEnum, optionId: string): boolean {
+  protected isSelected(type: number, optionId: string): boolean {
     const sel = this.selections();
     return (sel[type]?.get(optionId) ?? 0) > 0;
   }
 
-  protected getQuantity(type: AddOnTypeEnum, optionId: string): number {
+  protected getQuantity(type: number, optionId: string): number {
     const sel = this.selections();
     return sel[type]?.get(optionId) ?? 0;
   }
@@ -359,14 +320,14 @@ export class AddonSelectorComponent {
     const sel = { ...this.selections() };
     const type = group.type;
 
-    if (this.isRadioGroup(type)) {
+    if (this.isRadioGroup(group)) {
       // Radio behavior: single selection
       const current = sel[type];
       const currentQty = current?.get(option.id) ?? 0;
 
       if (currentQty > 0) {
-        // Sauce can be deselected (optional); Size and Flavor cannot
-        if (type === AddOnTypeEnum.Sauce) {
+        // An optional pick-one group can be cleared; a required one cannot
+        if (minimumSelection(ruleOfGroup(group)) === 0) {
           sel[type] = new Map<string, number>();
         }
       } else {

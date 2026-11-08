@@ -234,6 +234,25 @@ public static class ReportEndpoints
                 return BuildReportResponse(httpContext, result, ReportTables.GrossProfit(groupBy), query.FromDate!.Value, query.ToDate!.Value, null);
             });
 
+        reportsGroup.MapGet("/profit-loss",
+            async (HttpContext httpContext, [AsParameters] GetProfitLossReportQuery query, ISender sender) =>
+            {
+                var validationResult = ValidateDateRange(query.FromDate, query.ToDate);
+                if (validationResult != null)
+                {
+                    return validationResult;
+                }
+
+                var groupBy = query.GroupBy ?? ReportGroupByEnum.Day;
+                if (!Enum.IsDefined(groupBy))
+                {
+                    return Results.BadRequest($"groupBy must be one of: {nameof(ReportGroupByEnum.Day)}, {nameof(ReportGroupByEnum.Week)}, {nameof(ReportGroupByEnum.Month)}.");
+                }
+
+                var result = await sender.Send(query);
+                return BuildReportResponse(httpContext, result, ReportTables.ProfitLoss(groupBy), query.FromDate!.Value, query.ToDate!.Value, null);
+            });
+
         reportsGroup.MapGet("/stock-variance",
             async (HttpContext httpContext, [AsParameters] GetStockVarianceReportQuery query, ISender sender) =>
             {

@@ -9,6 +9,7 @@ import { Capacitor } from '@capacitor/core';
 import {
   AlertService,
   AuthService,
+  CatalogLookupService,
   ListStateService,
   ModalStackService,
   ProductService,
@@ -25,7 +26,7 @@ import {
 } from '@shared/components';
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import { AppRoutes } from '@shared/constants/app-routes';
-import { ProductCategoryEnum, ProductDto } from '@shared/models';
+import { ProductDto } from '@shared/models';
 import { debounceTime } from 'rxjs';
 
 type SortColumn = 'name' | 'price';
@@ -60,6 +61,7 @@ interface ProductListState {
 export class ProductListComponent implements OnInit {
   private readonly stateKey = 'management:product-list';
   private readonly productService = inject(ProductService);
+  private readonly lookups = inject(CatalogLookupService);
   private readonly router = inject(Router);
   private readonly alertService = inject(AlertService);
   private readonly authService = inject(AuthService);
@@ -74,7 +76,6 @@ export class ProductListComponent implements OnInit {
   protected readonly isRefreshing = signal(false);
   protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
   protected readonly isFiltersOpen = signal(false);
-  protected readonly ProductCategoryEnum = ProductCategoryEnum;
 
   protected readonly selectedTypes = signal<number[]>([]);
   protected readonly selectedStatuses = signal<string[]>(['active']);
@@ -94,17 +95,12 @@ export class ProductListComponent implements OnInit {
   private modalStackId: number | null = null;
 
   protected readonly categoryCounts = computed(() => {
-    const cache = this.productsCache();
-    return {
-      [ProductCategoryEnum.Drink]: cache.filter((p) => p.category === ProductCategoryEnum.Drink)
-        .length,
-      [ProductCategoryEnum.Food]: cache.filter((p) => p.category === ProductCategoryEnum.Food)
-        .length,
-      [ProductCategoryEnum.Dessert]: cache.filter((p) => p.category === ProductCategoryEnum.Dessert)
-        .length,
-      [ProductCategoryEnum.Other]: cache.filter((p) => p.category === ProductCategoryEnum.Other)
-        .length,
-    };
+    const counts: Record<number, number> = {};
+    for (const product of this.productsCache()) {
+      counts[product.category] = (counts[product.category] ?? 0) + 1;
+    }
+
+    return counts;
   });
 
   protected readonly statusCounts = computed(() => {
@@ -115,28 +111,13 @@ export class ProductListComponent implements OnInit {
     };
   });
 
-  protected readonly typeOptions = computed<FilterOption[]>(() => [
-    {
-      id: ProductCategoryEnum.Drink,
-      label: 'Drink',
-      count: this.categoryCounts()[ProductCategoryEnum.Drink],
-    },
-    {
-      id: ProductCategoryEnum.Food,
-      label: 'Food',
-      count: this.categoryCounts()[ProductCategoryEnum.Food],
-    },
-    {
-      id: ProductCategoryEnum.Dessert,
-      label: 'Dessert',
-      count: this.categoryCounts()[ProductCategoryEnum.Dessert],
-    },
-    {
-      id: ProductCategoryEnum.Other,
-      label: 'Other',
-      count: this.categoryCounts()[ProductCategoryEnum.Other],
-    },
-  ]);
+  protected readonly typeOptions = computed<FilterOption[]>(() =>
+    this.lookups.categories().map((category) => ({
+      id: category.id,
+      label: category.name,
+      count: this.categoryCounts()[category.id] ?? 0,
+    })),
+  );
 
   protected readonly statusOptions = computed<FilterOption[]>(() => [
     { id: 'active', label: 'Active', count: this.statusCounts().active },
@@ -162,6 +143,7 @@ export class ProductListComponent implements OnInit {
   });
 
   public ngOnInit(): void {
+    void this.lookups.ensureLoaded();
     this.restoreState();
     this.loadProducts();
 
@@ -368,8 +350,8 @@ export class ProductListComponent implements OnInit {
     }
   }
 
-  protected getProductCategoryName(category: ProductCategoryEnum): string {
-    return ProductCategoryEnum[category];
+  protected getProductCategoryName(category: number): string {
+    return this.lookups.categoryName(category);
   }
 
   protected getAssociationLabel(product: ProductDto): string {

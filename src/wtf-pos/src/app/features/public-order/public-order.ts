@@ -33,8 +33,8 @@ import { PublicOrdersComponent } from './public-orders/public-orders';
 import {
   ConversationListDto,
   ConversationSummaryDto,
-  PRODUCT_SUB_CATEGORY_LABELS,
-  ProductSubCategoryEnum,
+  applyAddOnTypeOrder,
+  formatSubCategoryName,
   PublicAddOnGroupDto,
   PublicCartAddOn,
   PublicCartLine,
@@ -101,14 +101,6 @@ const MAX_CART_LINES = 30;
 const CART_STORAGE_PREFIX = 'wtf.public-cart.';
 /** How long a tab-click scroll is allowed to glide before scroll events move the highlight again. */
 export const PROGRAMMATIC_SCROLL_MS = 700;
-
-/** The same groups, in the same order, as the shop's own order screen (which also hides a product with none). */
-const SUB_CATEGORY_IDS = [
-  ProductSubCategoryEnum.Coffee,
-  ProductSubCategoryEnum.NonCoffee,
-  ProductSubCategoryEnum.Snacks,
-  ProductSubCategoryEnum.Retail,
-];
 
 /**
  * The page a customer opens from their personal ordering link. They are not signed in.
@@ -295,10 +287,13 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
   protected readonly sections = computed<MenuSection[]>(() => {
     const products = this.filteredProducts();
     const deals = this.filteredDeals();
-    const categories: MenuSection[] = SUB_CATEGORY_IDS.map((id) => ({
-      id,
-      label: PRODUCT_SUB_CATEGORY_LABELS[id],
-      products: products.filter((p) => p.subCategory === id),
+    const subCategories = [...(this.link()?.catalog.lookups?.subCategories ?? [])]
+      .filter((subCategory) => subCategory.isActive)
+      .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
+    const categories: MenuSection[] = subCategories.map((subCategory) => ({
+      id: subCategory.id,
+      label: formatSubCategoryName(subCategory.name),
+      products: products.filter((p) => p.subCategory === subCategory.id),
       deals: [] as Deal[],
     }));
     const shown = categories.filter((section) => section.products.length > 0);
@@ -535,6 +530,9 @@ export class PublicOrderComponent implements OnInit, OnDestroy {
           this.imageFailed.set(false);
         }
         this.link.set(link);
+        if (link.catalog.lookups) {
+          applyAddOnTypeOrder(link.catalog.lookups.addOnTypes);
+        }
         this.loadedAt = Date.now();
         this.isRefreshingMenu.set(false);
         this.state.set('ready');

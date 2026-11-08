@@ -16,6 +16,7 @@ import {
   PaymentsReportRowDto,
   ProductMarginReportRowDto,
   ProductSalesReportRowDto,
+  ProfitLossReportRowDto,
   PromotionPerformanceReportRowDto,
   ReportGroupBy,
   ReportSortDirection,
@@ -349,6 +350,98 @@ const grossProfit: ReportDefinition = {
             }),
           ),
           value: row.actualProfit ?? 0,
+        })),
+  },
+};
+
+const profitLoss: ReportDefinition = {
+  type: 'profit-loss',
+  title: 'Profit and Loss',
+  description: 'Gross profit less expenses, by day, week or month: an estimate of operating profit',
+  note: 'An estimate, not accounting. Gross profit is the Gross Profit report (net sales less cost, waste and count corrections). Expenses are the ones entered under Expenses, placed in the day they are dated. A period where the cost of some sales is unknown is marked Partly known; one with no known cost shows no operating profit.',
+  group: 'Sales',
+  icon: 'icon-coins',
+  columns: [
+    {
+      key: 'periodStart',
+      header: 'Date',
+      format: 'text',
+      label: (row, context) => periodLabel(String(row['periodStart']), context.groupBy),
+    },
+    { key: 'netSales', header: 'Net Sales', format: 'money', align: 'end' },
+    { key: 'cost', header: 'Cost', format: 'money', align: 'end' },
+    { key: 'wasteCost', header: 'Waste', format: 'money', align: 'end' },
+    { key: 'countVariance', header: 'Count Variance', format: 'money', align: 'end' },
+    {
+      key: 'actualProfit',
+      header: 'Gross Profit',
+      format: 'money',
+      align: 'end',
+      cellClass: (row) => (Number(row['actualProfit']) < 0 ? 'text-red-600' : ''),
+    },
+    { key: 'expenses', header: 'Expenses', format: 'money', align: 'end' },
+    {
+      key: 'operatingProfit',
+      header: 'Operating Profit',
+      format: 'money',
+      align: 'end',
+      cellClass: (row) => (Number(row['operatingProfit']) < 0 ? 'text-red-600' : ''),
+    },
+    {
+      key: 'marginPercent',
+      header: 'Margin %',
+      format: 'percent',
+      align: 'end',
+      total: (rows) => marginPercentOf(operatingRowsOf(rows)),
+    },
+    {
+      key: 'costStatus',
+      header: 'Cost (status)',
+      format: 'text',
+      badge: (row) => COST_STATUS_BADGE[String(row['costStatus'])] ?? 'default',
+    },
+  ],
+  defaultSort: { key: 'periodStart', direction: 'desc' },
+  filters: ['groupBy'],
+  usesDateRange: true,
+  usesSource: false,
+  totals: (all) => {
+    const rows = rowsOf<ProfitLossReportRowDto>(all);
+    const operating = sum(rows, (row) => row.operatingProfit ?? 0);
+    const margin = marginPercentOf(operatingRowsOf(all));
+    return [
+      { label: 'Net Sales', value: sum(rows, (row) => row.netSales), format: 'money' },
+      { label: 'Gross Profit', value: sum(rows, (row) => row.actualProfit ?? 0), format: 'money' },
+      { label: 'Expenses', value: sum(rows, (row) => row.expenses), format: 'money' },
+      { label: 'Operating Profit', value: operating, format: 'money' },
+      {
+        label: 'Margin',
+        value: margin ?? 0,
+        format: 'percent',
+        unavailable: margin === null,
+      },
+      {
+        label: 'Periods without a full cost',
+        value: rows.filter((row) => row.costStatus !== 'Known').length,
+        format: 'integer',
+      },
+    ];
+  },
+  chart: {
+    kind: 'area',
+    title: 'Operating profit',
+    points: (all, context) =>
+      rowsOf<ProfitLossReportRowDto>(all)
+        .slice()
+        .sort((a, b) => a.periodStart.localeCompare(b.periodStart))
+        .map((row) => ({
+          label: shortLabel(
+            parseShopLocal(row.periodStart).toLocaleDateString(undefined, {
+              month: context.groupBy === 'Month' ? 'short' : 'numeric',
+              day: context.groupBy === 'Month' ? undefined : 'numeric',
+            }),
+          ),
+          value: row.operatingProfit ?? 0,
         })),
   },
 };
@@ -1119,6 +1212,8 @@ const SUM_KEYS = new Set([
   'theoreticalProfit',
   'wasteCost',
   'countVariance',
+  'expenses',
+  'operatingProfit',
   'actualProfit',
 ]);
 
@@ -1182,6 +1277,16 @@ function profitRowsOf(rows: readonly ReportRow[]): ProfitRow[] {
   }));
 }
 
+// A profit and loss row read as a profit row: the operating profit is the profit, so the margin is on operating profit.
+function operatingRowsOf(rows: readonly ReportRow[]): ProfitRow[] {
+  return rowsOf<ProfitLossReportRowDto>(rows).map((row) => ({
+    revenue: row.netSales,
+    cost: row.cost,
+    grossProfit: row.operatingProfit,
+    costStatus: row.costStatus,
+  }));
+}
+
 function columnSum(rows: readonly ReportRow[], key: string): number {
   return sumAmounts(rows.map((row) => Number(row[key] ?? 0)));
 }
@@ -1190,6 +1295,7 @@ export const REPORT_DEFINITIONS: readonly ReportDefinition[] = [
   dailyClose,
   dailySales,
   grossProfit,
+  profitLoss,
   categorySales,
   payments,
   hourly,

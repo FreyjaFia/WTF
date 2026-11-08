@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using WTF.Api.Features.Products.Enums;
 
 namespace WTF.Api.Features.Products.DTOs;
 
@@ -12,7 +11,7 @@ public class ProductRequestDto
     public decimal Price { get; set; }
 
     [Required]
-    public ProductCategoryEnum Category { get; set; }
+    public int Category { get; set; }
 
     public bool IsAddOn { get; set; }
 

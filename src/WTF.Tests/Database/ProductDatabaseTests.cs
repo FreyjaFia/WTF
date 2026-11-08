@@ -1,7 +1,6 @@
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Features.Products;
-using WTF.Api.Features.Products.Enums;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 using WTF.Tests.Infrastructure;
@@ -19,7 +18,7 @@ public class ProductDatabaseTests
         Name = name,
         Code = code,
         Price = 10m,
-        Category = ProductCategoryEnum.Drink,
+        Category = CatalogSeed.Drink,
     };
 
     private static Product Row(Guid userId, string code, string name = "Latte", int categoryId = 1) => new()
@@ -126,7 +125,7 @@ public class ProductDatabaseTests
 
         await using (var db = database.CreateContext())
         {
-            var command = NewProduct("BAD") with { Category = (ProductCategoryEnum)999 };
+            var command = NewProduct("BAD") with { Category = (int)999 };
             var ex = await Should.ThrowAsync<InvalidOperationException>(() =>
                 Create(db, user.Id).Handle(command, CancellationToken.None));
             ex.Message.ShouldBe("Product category is not valid.");

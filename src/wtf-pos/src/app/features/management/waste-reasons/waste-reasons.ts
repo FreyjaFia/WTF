@@ -1,27 +1,37 @@
-import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, input, OnDestroy, OnInit, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Capacitor } from '@capacitor/core';
 import { AlertService, ModalStackService, WasteReasonService } from '@core/services';
-import { BadgeComponent, IconComponent } from '@shared/components';
+import { HttpErrorMessages } from '@core/messages';
+import { BadgeComponent, ConnectionErrorComponent, IconComponent } from '@shared/components';
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import { PullToRefreshComponent } from '@shared/components/pull-to-refresh/pull-to-refresh';
+import { SortDirection, SortHeaderComponent } from '@shared/components/sort-header/sort-header';
 import { SaveWasteReasonDto, WasteReasonDto } from '@shared/models';
 
 type ReasonDialog = 'edit' | 'deactivate' | 'restore';
 
+type SortColumn = 'name' | 'status' | 'order';
+
 @Component({
   selector: 'app-waste-reasons',
   imports: [
+    ConnectionErrorComponent,
+    RouterLink,
     ReactiveFormsModule,
     BadgeComponent,
     ConfirmDialogComponent,
     IconComponent,
     PullToRefreshComponent,
+    SortHeaderComponent,
   ],
   templateUrl: './waste-reasons.html',
   host: { class: 'flex-1 min-h-0' },
 })
 export class WasteReasonsComponent implements OnInit, OnDestroy {
+  public readonly backRoute = input<string | null>(null);
+
   private readonly wasteReasonService = inject(WasteReasonService);
   private readonly alertService = inject(AlertService);
   private readonly modalStack = inject(ModalStackService);
@@ -29,19 +39,37 @@ export class WasteReasonsComponent implements OnInit, OnDestroy {
   protected readonly isAndroid = Capacitor.getPlatform() === 'android';
   protected readonly reasons = signal<WasteReasonDto[]>([]);
   protected readonly isLoading = signal(false);
+  protected readonly connectionFailed = signal(false);
   protected readonly isRefreshing = signal(false);
   protected readonly isSaving = signal(false);
   protected readonly dialog = signal<ReasonDialog | null>(null);
   protected readonly selected = signal<WasteReasonDto | null>(null);
   protected readonly formError = signal<string | null>(null);
-  protected readonly sortedReasons = computed(() =>
-    [...this.reasons()].sort(
-      (a, b) =>
+  protected readonly sortColumn = signal<SortColumn | null>(null);
+  protected readonly sortDirection = signal<SortDirection>('asc');
+  protected readonly sortedReasons = computed(() => {
+    const column = this.sortColumn();
+    const factor = this.sortDirection() === 'asc' ? 1 : -1;
+    return [...this.reasons()].sort((a, b) => {
+      if (column) {
+        const byColumn =
+          column === 'name'
+            ? a.name.localeCompare(b.name)
+            : column === 'status'
+              ? Number(a.isActive) - Number(b.isActive)
+              : a.sortOrder - b.sortOrder;
+        if (byColumn !== 0) {
+          return byColumn * factor;
+        }
+      }
+
+      return (
         Number(b.isActive) - Number(a.isActive) ||
         a.sortOrder - b.sortOrder ||
-        a.name.localeCompare(b.name),
-    ),
-  );
+        a.name.localeCompare(b.name)
+      );
+    });
+  });
   protected readonly form = new FormGroup({
     name: new FormControl('', {
       nonNullable: true,
@@ -62,6 +90,15 @@ export class WasteReasonsComponent implements OnInit, OnDestroy {
 
   public ngOnDestroy(): void {
     this.removeFromStack();
+  }
+
+  protected toggleSort(column: SortColumn): void {
+    if (this.sortColumn() === column) {
+      this.sortDirection.set(this.sortDirection() === 'asc' ? 'desc' : 'asc');
+    } else {
+      this.sortColumn.set(column);
+      this.sortDirection.set('asc');
+    }
   }
 
   protected refresh(): void {
@@ -216,6 +253,7 @@ export class WasteReasonsComponent implements OnInit, OnDestroy {
 
   private loadReasons(): void {
     this.isLoading.set(!this.isRefreshing());
+    this.connectionFailed.set(false);
     this.wasteReasonService.getReasons(true).subscribe({
       next: (reasons) => {
         this.reasons.set(reasons);
@@ -223,6 +261,7 @@ export class WasteReasonsComponent implements OnInit, OnDestroy {
         this.isRefreshing.set(false);
       },
       error: (err: Error) => {
+        this.connectionFailed.set(err.message === HttpErrorMessages.NetworkUnavailable);
         this.alertService.error(err.message);
         this.isLoading.set(false);
         this.isRefreshing.set(false);

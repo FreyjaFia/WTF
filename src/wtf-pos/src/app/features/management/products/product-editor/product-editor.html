@@ -154,10 +154,9 @@
                     class="select w-full border-transparent bg-gray-50 transition-all focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20"
                     [class.select-error]="hasError('category')"
                   >
-                    <option [ngValue]="ProductCategoryEnum.Drink">Drink</option>
-                    <option [ngValue]="ProductCategoryEnum.Food">Food</option>
-                    <option [ngValue]="ProductCategoryEnum.Dessert">Dessert</option>
-                    <option [ngValue]="ProductCategoryEnum.Other">Other</option>
+                    @for (category of categoryOptions(); track category.id) {
+                      <option [ngValue]="category.id">{{ category.name }}</option>
+                    }
                   </select>
                   @if (productForm.controls.isAddOn.value) {
                     <p class="mt-2 text-xs text-gray-600">
@@ -184,10 +183,9 @@
                       class="select w-full border-transparent bg-gray-50 transition-all focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20"
                     >
                       <option [ngValue]="null">None</option>
-                      <option [ngValue]="ProductSubCategoryEnum.Coffee">Coffee</option>
-                      <option [ngValue]="ProductSubCategoryEnum.NonCoffee">Non-Coffee</option>
-                      <option [ngValue]="ProductSubCategoryEnum.Snacks">Snacks</option>
-                      <option [ngValue]="ProductSubCategoryEnum.Retail">Retail</option>
+                      @for (subCategory of subCategoryOptions(); track subCategory.id) {
+                        <option [ngValue]="subCategory.id">{{ subCategory.name }}</option>
+                      }
                     </select>
                   </div>
                 }

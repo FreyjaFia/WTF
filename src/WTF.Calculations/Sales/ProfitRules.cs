@@ -88,6 +88,20 @@ public static class ProfitRules
         return list.All(s => s == "No cost") ? "No cost" : "Partly known";
     }
 
+    // What is left of the actual gross profit after the shop's running costs (rent, salaries and so on). Null when the gross
+    // profit itself is not known, because an estimate built on a missing cost would overstate it.
+    public static OperatingSummary OperatingProfit(decimal netSales, decimal? actualProfit, decimal expenses)
+    {
+        var rounded = Math.Round(expenses, 2, MidpointRounding.AwayFromZero);
+        if (actualProfit is null)
+        {
+            return new OperatingSummary(rounded, null, null);
+        }
+
+        var operating = Math.Round(actualProfit.Value - rounded, 2, MidpointRounding.AwayFromZero);
+        return new OperatingSummary(rounded, operating, MarginPercent(netSales, operating));
+    }
+
     public static string CostStatus(CostCoverage coverage, bool hasUnpricedLoss) => coverage switch
     {
         CostCoverage.Unknown => "No cost",
@@ -97,3 +111,5 @@ public static class ProfitRules
 }
 
 public record GrossProfitSummary(decimal TheoreticalProfit, decimal ActualProfit, decimal? MarginPercent);
+
+public record OperatingSummary(decimal Expenses, decimal? OperatingProfit, decimal? MarginPercent);
