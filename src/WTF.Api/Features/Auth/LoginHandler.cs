@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using WTF.Api.Common.Tenancy;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Auth.DTOs;
 using WTF.Api.Services;
@@ -34,6 +35,8 @@ public class LoginHandler(
         {
             return null!;
         }
+
+        await TenantAccess.EnsureActiveAsync(db, user.TenantId, cancellationToken);
 
         db.UseTenant(user.TenantId);
 
@@ -71,7 +74,8 @@ public class LoginHandler(
         return new LoginDto(
             accessToken,
             refreshToken,
-            DateTime.UtcNow.AddMinutes(int.Parse(config["Jwt:AccessTokenExpirationMinutes"] ?? "60"))
+            DateTime.UtcNow.AddMinutes(int.Parse(config["Jwt:AccessTokenExpirationMinutes"] ?? "60")),
+            user.MustChangePassword
         );
     }
 }

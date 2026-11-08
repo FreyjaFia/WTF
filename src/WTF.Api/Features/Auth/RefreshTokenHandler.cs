@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using Microsoft.EntityFrameworkCore;
+using WTF.Api.Common.Tenancy;
 using WTF.Api.Features.Auth.DTOs;
 using WTF.Api.Services;
 using WTF.Domain.Data;
@@ -21,6 +22,11 @@ public class RefreshTokenHandler(WTFDbContext db, IJwtService jwtService, IUserR
             .FirstOrDefaultAsync(rt => rt.Token == request.RefreshToken, cancellationToken);
 
         if (refreshToken is null || refreshToken.IsRevoked || refreshToken.ExpiresAt < DateTime.UtcNow || !refreshToken.User.IsActive)
+        {
+            return null;
+        }
+
+        if (!await TenantAccess.IsActiveAsync(db, refreshToken.TenantId, cancellationToken))
         {
             return null;
         }
@@ -50,7 +56,8 @@ public class RefreshTokenHandler(WTFDbContext db, IJwtService jwtService, IUserR
         return new LoginDto(
             accessToken,
             newRefreshToken,
-            DateTime.UtcNow.AddMinutes(int.Parse(configuration["Jwt:AccessTokenExpirationMinutes"] ?? "60"))
+            DateTime.UtcNow.AddMinutes(int.Parse(configuration["Jwt:AccessTokenExpirationMinutes"] ?? "60")),
+            refreshToken.User.MustChangePassword
         );
     }
 }

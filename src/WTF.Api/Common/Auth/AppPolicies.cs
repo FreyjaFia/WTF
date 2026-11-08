@@ -2,6 +2,7 @@ namespace WTF.Api.Common.Auth;
 
 public static class AppPolicies
 {
+    public const string PlatformAdmin = "PlatformAdmin";
     public const string ProductsRead = "ProductsRead";
     public const string ProductsWrite = "ProductsWrite";
     public const string UsersRead = "UsersRead";

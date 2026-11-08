@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Options;
+using WTF.Api.Common.Auth;
 using WTF.Domain.Tenancy;
 
 namespace WTF.Api.Common.Tenancy;
@@ -36,7 +37,8 @@ public sealed class CurrentTenant(IOptions<TenancyOptions> options, IHttpContext
         }
 
         // Tokens issued before tenants existed have no claim: for one release they belong to the first tenant.
-        if (_legacyTokensAreDefaultTenant && user?.Identity?.IsAuthenticated == true && string.IsNullOrEmpty(value))
+        if (_legacyTokensAreDefaultTenant && user?.Identity?.IsAuthenticated == true && string.IsNullOrEmpty(value)
+            && !user.IsInRole(AppRoles.PlatformAdmin))
         {
             return TenantDefaults.DefaultTenantId;
         }

@@ -8,4 +8,5 @@ public static class AppRoles
     public const string AdminViewer = "AdminViewer";
     public const string ItemManager = "ItemManager";
     public const string StockManager = "StockManager";
+    public const string PlatformAdmin = "PlatformAdmin";
 }

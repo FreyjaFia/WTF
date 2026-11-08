@@ -53,7 +53,8 @@ internal static class UserValidation
         CancellationToken cancellationToken)
     {
         var normalized = username.Trim().ToLower();
-        var taken = await db.Users.AnyAsync(
+        // Usernames are unique across every shop (login has no shop code), so the tenant filter must not hide other shops.
+        var taken = await db.Users.IgnoreQueryFilters().AnyAsync(
             u => u.Username.ToLower() == normalized && (!excludeUserId.HasValue || u.Id != excludeUserId.Value),
             cancellationToken);
 

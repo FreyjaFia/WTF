@@ -43,6 +43,7 @@ public class ChangePasswordHandler(WTFDbContext db, IHttpContextAccessor httpCon
 
         // Hash and set new password
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+        user.MustChangePassword = false;
 
         // End every other session: a stolen refresh token must not survive a password change.
         await SessionRevocation.RevokeRefreshTokensAsync(db, userId, cancellationToken);

@@ -66,6 +66,9 @@ builder.Services.Configure<HuaweiPushOptions>(
 
 // One clock for code that must be testable around time (for example an ordering link expiring mid-request).
 builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<TenantStatusCache>();
+builder.Services.AddSingleton<TenancyGate>();
+builder.Services.AddScoped<IPlatformAuditService, PlatformAuditService>();
 builder.Services.AddSingleton<IJwtService, JwtService>();
 builder.Services.AddScoped<IUserRoleService, UserRoleService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
@@ -206,6 +209,16 @@ var rateLimitMultiplier = Math.Max(1, builder.Configuration.GetValue("RateLimiti
 
 builder.Services.AddRateLimiter(options =>
 {
+    options.AddPolicy(PlatformEndpoints.LoginRateLimitPolicy, context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "local",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10 * rateLimitMultiplier,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
+
     options.AddPolicy("loyalty-policy", context =>
         RateLimitPartition.GetFixedWindowLimiter(
             partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "local",
@@ -313,6 +326,17 @@ app.Use(async (context, next) =>
     {
         await next();
     }
+    catch (KeyNotFoundException ex)
+    {
+        if (context.Response.HasStarted)
+        {
+            throw;
+        }
+
+        context.Response.Clear();
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
+        await context.Response.WriteAsJsonAsync(new { message = ex.Message });
+    }
     catch (InvalidOperationException ex)
     {
         if (context.Response.HasStarted)
@@ -340,6 +364,7 @@ app.Use(async (context, next) =>
 });
 
 app.UseAuthentication();
+app.UseMiddleware<TenantRequestGuardMiddleware>();
 app.UseAuthorization();
 
 app.MapHub<DashboardHub>("/hubs/dashboard");
@@ -351,5 +376,7 @@ app.MapAppEndpoints();
 
 // SPA fallback: serve index.html for non-API, non-file routes
 app.MapFallbackToFile("index.html");
+
+await PlatformAdminBootstrap.RunAsync(app.Services, app.Configuration, app.Logger);
 
 app.Run();

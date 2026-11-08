@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage;
 using System.Data;
@@ -23,6 +23,12 @@ public partial class WTFDbContext
     {
         _currentTenant = currentTenant;
     }
+
+    public virtual DbSet<PlatformAdmin> PlatformAdmins { get; set; }
+
+    public virtual DbSet<PlatformAuditLog> PlatformAuditLogs { get; set; }
+
+    public virtual DbSet<TenantTombstone> TenantTombstones { get; set; }
 
     public bool TenantFilterEnabled => _currentTenant.FilterEnabled;
 
@@ -60,6 +66,40 @@ public partial class WTFDbContext
             entity.ToTable("TenantCounters");
             entity.HasKey(e => new { e.TenantId, e.Name });
             entity.Property(e => e.Name).HasMaxLength(50).IsUnicode(false);
+        });
+
+        modelBuilder.Entity<PlatformAdmin>(entity =>
+        {
+            entity.ToTable("PlatformAdmins");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.Username).IsUnique();
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
+            entity.Property(e => e.Username).HasMaxLength(50).IsUnicode(false);
+            entity.Property(e => e.PasswordHash).HasMaxLength(200);
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())");
+        });
+
+        modelBuilder.Entity<PlatformAuditLog>(entity =>
+        {
+            entity.ToTable("PlatformAuditLog");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
+            entity.Property(e => e.Username).HasMaxLength(50).IsUnicode(false);
+            entity.Property(e => e.Action).HasMaxLength(50).IsUnicode(false);
+            entity.Property(e => e.Details).HasMaxLength(2000);
+            entity.Property(e => e.IpAddress).HasMaxLength(64).IsUnicode(false);
+            entity.Property(e => e.Timestamp).HasDefaultValueSql("(sysutcdatetime())");
+        });
+
+        modelBuilder.Entity<TenantTombstone>(entity =>
+        {
+            entity.ToTable("TenantTombstones");
+            entity.HasKey(e => e.TenantId);
+            entity.Property(e => e.Slug).HasMaxLength(50).IsUnicode(false);
+            entity.Property(e => e.Name).HasMaxLength(100);
+            entity.Property(e => e.DeletedBy).HasMaxLength(50).IsUnicode(false);
+            entity.Property(e => e.DeletedAt).HasDefaultValueSql("(sysutcdatetime())");
         });
 
         foreach (var entityType in modelBuilder.Model.GetEntityTypes().ToList())
