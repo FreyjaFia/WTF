@@ -85,10 +85,12 @@ fi
 
 echo "Starting the API on $API_PORT..."
 export ConnectionStrings__WtfDb="$CONNECTION" ASPNETCORE_ENVIRONMENT=Development RateLimiting__Multiplier=100
+# The platform area needs a platform admin; the API creates this one on its first start (same as run.ps1).
+export Platform__BootstrapUsername=platformadmin Platform__BootstrapPassword="$E2E_PASSWORD"
 # Run from the output folder: appsettings.json is read from the content root.
 setsid bash -c "cd '$ROOT/src/WTF.Api/bin/Release/net10.0' && exec dotnet WTF.Api.dll --urls http://localhost:$API_PORT" >"$LOGS/api.log" 2>&1 &
 API_PID=$!
-unset ConnectionStrings__WtfDb
+unset ConnectionStrings__WtfDb Platform__BootstrapUsername Platform__BootstrapPassword
 wait_for "http://localhost:$API_PORT/api/health" 120 "The API"
 
 echo "Starting the app on $APP_PORT..."
