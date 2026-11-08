@@ -10,10 +10,10 @@ namespace WTF.Api.Common.Tenancy;
 // read-only (by default), away from passwords, and on the platform audit trail.
 public sealed class TenantRequestGuardMiddleware(RequestDelegate next)
 {
-    public async Task InvokeAsync(HttpContext context, TenantStatusCache statusCache, TenancyGate gate)
+    public async Task InvokeAsync(HttpContext context, TenantStatusCache statusCache)
     {
         var user = context.User;
-        if (user.Identity?.IsAuthenticated != true || !gate.IsMulti)
+        if (user.Identity?.IsAuthenticated != true)
         {
             await next(context);
             return;
@@ -94,9 +94,4 @@ public sealed class TenantRequestGuardMiddleware(RequestDelegate next)
             cancellationToken: context.RequestAborted);
         return true;
     }
-}
-
-public sealed class TenancyGate(Microsoft.Extensions.Options.IOptions<TenancyOptions> options)
-{
-    public bool IsMulti { get; } = options.Value.IsMulti;
 }

@@ -1,7 +1,6 @@
 using MediatR;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using System.Text.Json;
 using WTF.Api.Common.Tenancy;
 using WTF.Api.Features.Conversations;
@@ -45,7 +44,6 @@ public class DeleteTenantHandler(
     WTFDbContext db,
     IPlatformAuditService audit,
     TenantStatusCache statusCache,
-    IOptions<TenancyOptions> options,
     IHttpContextAccessor httpContextAccessor,
     IImageStorage imageStorage,
     IChatImageStore chatImageStore,
@@ -53,11 +51,6 @@ public class DeleteTenantHandler(
 {
     public async Task<DeletionPreviewDto> Handle(DeleteTenantCommand request, CancellationToken cancellationToken)
     {
-        if (!options.Value.IsMulti)
-        {
-            throw new InvalidOperationException("Deleting a shop needs multi-shop mode.");
-        }
-
         var tenant = await db.Tenants.FirstOrDefaultAsync(t => t.Id == request.TenantId, cancellationToken)
             ?? throw new KeyNotFoundException("Shop not found.");
 

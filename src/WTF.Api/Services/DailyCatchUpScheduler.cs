@@ -1,6 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
-using WTF.Api.Common.Tenancy;
 using WTF.Domain.Data;
 using WTF.Domain.Tenancy;
 
@@ -125,12 +123,6 @@ public abstract class DailyCatchUpScheduler(IServiceScopeFactory scopeFactory, I
     private async Task<List<Guid>> ListTenantIdsAsync(CancellationToken cancellationToken)
     {
         using var scope = scopeFactory.CreateScope();
-        var tenancy = scope.ServiceProvider.GetService<IOptions<TenancyOptions>>()?.Value;
-        if (tenancy is null || !tenancy.IsMulti)
-        {
-            return [TenantDefaults.DefaultTenantId];
-        }
-
         var db = scope.ServiceProvider.GetRequiredService<WTFDbContext>();
         return await db.Tenants
             .AsNoTracking()

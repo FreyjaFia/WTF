@@ -67,14 +67,13 @@ GROUP BY t.name ORDER BY t.name;
 - [ ] First start only: set `Platform__BootstrapUsername` and `Platform__BootstrapPassword` (password of at least 12
   characters). The first platform admin is created only while none exists. **Remove both settings after the first
   start.**
-- [ ] Keep `Tenancy__Mode` unset (Single) for the first start and check the shop works exactly as before. This is the
-  "ship dark" step: the schema is migrated but nothing filters by tenant yet.
+- [ ] Multi-tenancy is always on: there is no mode setting to switch. Make sure no old `Tenancy__Mode` setting is left on
+  the server (it is ignored now).
 
-## 6. Flip to Multi mode
+## 6. First start checks
 
-- [ ] Set `Tenancy__Mode=Multi` and restart.
-- [ ] **Create new tenants only in Multi mode.** Creating one in Single mode stamps the new shop's users with tenant #1.
-  This happened in the rehearsal and left two stray users that needed cleaning up.
+- [ ] Start the API. Every query is now limited to the signed-in shop, new rows get that shop.s id, and suspended or
+  lapsed shops are blocked.
 - [ ] Sign in as a real shop user and confirm products, orders, customers and stock look as before.
 - [ ] Sign in to the platform area and check tenant #1 shows its real user and order counts.
 
@@ -105,7 +104,7 @@ openssl ec -in lease.key -pubout -outform DER | openssl base64 -A
 | --- | --- |
 | Before step 3 | Nothing changed. Bring the site back online. |
 | Steps 3 to 4 | Restore the backup (below). |
-| Step 5 or 6 problem | Set `Tenancy__Mode` back to Single and restart. The data stays and the shop works as one shop. |
+| Step 5 or 6 problem | There is no switch back to one-shop mode. Fix forward, or restore the backup (below) and redeploy the previous release. |
 | After step 3 generally | The old API cannot run against the migrated schema: `TenantId` is NOT NULL, so its inserts fail. Rolling back to the old API means restoring the backup, and any orders taken since the backup are lost. |
 
 Restore:
@@ -120,6 +119,8 @@ ALTER DATABASE [WTF] SET MULTI_USER;
 
 - The copy was 18 scripts behind; all applied cleanly. The tenant scripts backfilled every row to tenant #1 with zero NULLs.
 - Row counts were identical before and after (1,772 orders, 7,310 order items, 116 products, 248 customers).
-- Isolation, suspend and the subscription lock behaved as in step 7 once the API ran in Multi mode.
+- Isolation, suspend and the subscription lock behaved as in step 7 with the always-on build.
+- Before the mode switch was removed, a shop created while the API ran in Single mode got its users stamped as tenant #1; that
+  trap no longer exists.
 - `tools/dbsync.bat` output is kept as generated. The hand-written `WTFDbContext.Tenancy.cs` keeps only the tenant filter,
   stamping and order numbering.

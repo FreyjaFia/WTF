@@ -392,6 +392,7 @@ public class StaleImageCleanupTests
     {
         var services = new ServiceCollection();
         services.AddSingleton(service);
+        services.AddDefaultTenant();
         return new StaleImageCleanupScheduler(
             services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>(),
             Options.Create(options),

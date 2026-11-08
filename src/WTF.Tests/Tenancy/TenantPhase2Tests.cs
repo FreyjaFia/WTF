@@ -29,11 +29,11 @@ public class TenantPhase2Tests
 
     private readonly string _dbName = TestDb.NewName();
 
-    private static CurrentTenant NewAnonymousMultiTenant()
+    private static CurrentTenant NewAnonymousTenant()
     {
         var accessor = Substitute.For<IHttpContextAccessor>();
         accessor.HttpContext.Returns(new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity()) });
-        return new CurrentTenant(Options.Create(new TenancyOptions { Mode = "Multi" }), accessor);
+        return new CurrentTenant(Options.Create(new TenancyOptions()), accessor);
     }
 
     private static CurrentTenant NewSignedInTenant(Guid tenantId)
@@ -41,12 +41,12 @@ public class TenantPhase2Tests
         var accessor = Substitute.For<IHttpContextAccessor>();
         var identity = new ClaimsIdentity([new Claim(TenantDefaults.ClaimType, tenantId.ToString())], "test");
         accessor.HttpContext.Returns(new DefaultHttpContext { User = new ClaimsPrincipal(identity) });
-        return new CurrentTenant(Options.Create(new TenancyOptions { Mode = "Multi" }), accessor);
+        return new CurrentTenant(Options.Create(new TenancyOptions()), accessor);
     }
 
     private WTFDbContext Anonymous(out CurrentTenant tenant)
     {
-        tenant = NewAnonymousMultiTenant();
+        tenant = NewAnonymousTenant();
         return TestDb.Create(_dbName, tenant);
     }
 
@@ -422,7 +422,7 @@ public class TenantSchedulerTests
     }
 
     [Fact]
-    public async Task MultiMode_RunsOncePerActiveTenant_AndOneFailureDoesNotStopTheOthers()
+    public async Task RunsOncePerActiveTenant_AndOneFailureDoesNotStopTheOthers()
     {
         var name = TestDb.NewName();
         await using (var seed = TestDb.Create(name))
@@ -437,7 +437,7 @@ public class TenantSchedulerTests
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddSingleton<IHttpContextAccessor>(new HttpContextAccessor());
-        services.AddSingleton(Options.Create(new TenancyOptions { Mode = "Multi" }));
+        services.AddSingleton(Options.Create(new TenancyOptions()));
         services.AddScoped<ICurrentTenant, CurrentTenant>();
         services.AddScoped(sp => TestDb.Create(name, sp.GetRequiredService<ICurrentTenant>()));
         var provider = services.BuildServiceProvider();
@@ -450,25 +450,5 @@ public class TenantSchedulerTests
         await scheduler.StopAsync(CancellationToken.None);
 
         ran.Distinct().OrderBy(x => x).ToList().ShouldBe([TenantA, TenantB]);
-    }
-
-    [Fact]
-    public async Task SingleMode_RunsOnceForTheFirstTenant()
-    {
-        var services = new ServiceCollection();
-        services.AddLogging();
-        services.AddSingleton<IHttpContextAccessor>(new HttpContextAccessor());
-        services.AddSingleton(Options.Create(new TenancyOptions()));
-        services.AddScoped<ICurrentTenant, CurrentTenant>();
-        var provider = services.BuildServiceProvider();
-
-        var ran = new List<Guid?>();
-        var scheduler = new RecordingScheduler(provider.GetRequiredService<IServiceScopeFactory>(), ran, []);
-
-        await scheduler.StartAsync(CancellationToken.None);
-        await Task.Delay(500);
-        await scheduler.StopAsync(CancellationToken.None);
-
-        ran.Distinct().ShouldBe([TenantDefaults.DefaultTenantId]);
     }
 }

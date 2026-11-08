@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using NSubstitute;
 using System.Security.Claims;
 using WTF.Api.Common.Auth;
@@ -17,7 +16,7 @@ public class SubscriptionGuardTests
     private static readonly Guid Shop = Guid.Parse("22222222-2222-2222-2222-222222222222");
 
     private static async Task<(int Status, bool Reached)> SendAsync(
-        string method, string path, DateTime? periodEnd, int grace = 7, bool multi = true, byte status = TenantAccess.Active)
+        string method, string path, DateTime? periodEnd, int grace = 7, byte status = TenantAccess.Active)
     {
         var dbName = TestDb.NewName();
         await TestDb.SaveAsync(dbName, new Tenant { Id = Shop, Name = "S", Slug = "s", Status = status, CreatedAt = DateTime.UtcNow });
@@ -52,8 +51,7 @@ public class SubscriptionGuardTests
             return Task.CompletedTask;
         });
 
-        var gate = new TenancyGate(Options.Create(new TenancyOptions { Mode = multi ? TenancyOptions.MultiMode : TenancyOptions.SingleMode }));
-        await middleware.InvokeAsync(context, new TenantStatusCache(TimeProvider.System), gate);
+        await middleware.InvokeAsync(context, new TenantStatusCache(TimeProvider.System));
         return (context.Response.StatusCode, reached);
     }
 
@@ -122,14 +120,6 @@ public class SubscriptionGuardTests
     public async Task ShopWithoutASubscription_IsNeverLocked()
     {
         var (_, reached) = await SendAsync("POST", "/api/orders", periodEnd: null);
-
-        reached.ShouldBeTrue();
-    }
-
-    [Fact]
-    public async Task SingleShopInstall_IsNeverLockedBySubscription()
-    {
-        var (_, reached) = await SendAsync("POST", "/api/orders", Lapsed, multi: false);
 
         reached.ShouldBeTrue();
     }

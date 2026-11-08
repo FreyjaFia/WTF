@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using NSubstitute;
 using System.IO.Compression;
 using System.Security.Claims;
@@ -440,12 +439,10 @@ public class PlatformDatabaseTests
     {
         var images = Substitute.For<IImageStorage>();
         images.ListAsync(Arg.Any<CancellationToken>()).Returns([]);
-        var options = Options.Create(new TenancyOptions { Mode = TenancyOptions.MultiMode });
         return new DeleteTenantHandler(
                 db,
                 Audit(db),
                 new TenantStatusCache(TimeProvider.System),
-                options,
                 AdminAccessor(admin),
                 images,
                 Substitute.For<IChatImageStore>(),

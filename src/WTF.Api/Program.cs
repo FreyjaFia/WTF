@@ -68,7 +68,6 @@ builder.Services.Configure<HuaweiPushOptions>(
 // One clock for code that must be testable around time (for example an ordering link expiring mid-request).
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<TenantStatusCache>();
-builder.Services.AddSingleton<TenancyGate>();
 builder.Services.AddScoped<IPlatformAuditService, PlatformAuditService>();
 builder.Services.AddSingleton<IJwtService, JwtService>();
 builder.Services.AddScoped<IUserRoleService, UserRoleService>();

@@ -6,6 +6,7 @@ using System.Reflection;
 using WTF.Api.Features.Reports;
 using WTF.Api.Features.Reports.DTOs;
 using WTF.Api.Services;
+using WTF.Tests.Infrastructure;
 
 namespace WTF.Tests.Features.Reports;
 
@@ -22,6 +23,7 @@ public class MonthlyReportWorkbookSchedulerTests
     {
         var services = new ServiceCollection();
         services.AddSingleton(_service);
+        services.AddDefaultTenant();
         var provider = services.BuildServiceProvider();
         return new MonthlyReportWorkbookScheduler(
             provider.GetRequiredService<IServiceScopeFactory>(),

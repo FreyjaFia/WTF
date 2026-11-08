@@ -23,8 +23,7 @@ public class TenantRequestGuardTests
         string method,
         string path,
         IEnumerable<Claim> claims,
-        byte shopStatus = TenantAccess.Active,
-        bool multi = true)
+        byte shopStatus = TenantAccess.Active)
     {
         var dbName = TestDb.NewName();
         await TestDb.SaveAsync(dbName, new Tenant { Id = Shop, Name = "S", Slug = "s", Status = shopStatus, CreatedAt = DateTime.UtcNow });
@@ -48,8 +47,7 @@ public class TenantRequestGuardTests
             return Task.CompletedTask;
         });
 
-        var gate = new TenancyGate(Options.Create(new TenancyOptions { Mode = multi ? TenancyOptions.MultiMode : TenancyOptions.SingleMode }));
-        await middleware.InvokeAsync(context, new TenantStatusCache(TimeProvider.System), gate);
+        await middleware.InvokeAsync(context, new TenantStatusCache(TimeProvider.System));
         return new Run(context.Response.StatusCode, reached, audit);
     }
 
@@ -82,13 +80,6 @@ public class TenantRequestGuardTests
         var run = await SendAsync("GET", "/api/orders", ShopUser(), status);
         run.Status.ShouldBe(StatusCodes.Status403Forbidden);
         run.Reached.ShouldBeFalse();
-    }
-
-    [Fact]
-    public async Task SingleMode_DoesNotCheckTheShop()
-    {
-        var run = await SendAsync("GET", "/api/orders", ShopUser(), TenantAccess.Suspended, multi: false);
-        run.Reached.ShouldBeTrue();
     }
 
     [Fact]
@@ -127,7 +118,7 @@ public class TenantRequestGuardTests
     public void PlatformToken_IsNeverTreatedAsTheFirstShop()
     {
         var accessor = Substitute.For<IHttpContextAccessor>();
-        var tenant = new CurrentTenant(Options.Create(new TenancyOptions { Mode = TenancyOptions.MultiMode, LegacyTokensAreDefaultTenant = true }), accessor);
+        var tenant = new CurrentTenant(Options.Create(new TenancyOptions { LegacyTokensAreDefaultTenant = true }), accessor);
 
         accessor.HttpContext.Returns(new DefaultHttpContext
         {

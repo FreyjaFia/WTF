@@ -367,7 +367,6 @@ public class SubscriptionDatabaseTests
                     db,
                     Audit(db),
                     new TenantStatusCache(clock),
-                    Options.Create(new TenancyOptions { Mode = TenancyOptions.MultiMode }),
                     accessor,
                     images,
                     Substitute.For<WTF.Api.Features.Conversations.IChatImageStore>(),

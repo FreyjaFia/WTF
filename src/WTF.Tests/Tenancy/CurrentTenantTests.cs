@@ -9,30 +9,20 @@ namespace WTF.Tests.Tenancy;
 
 public class CurrentTenantTests
 {
-    private static CurrentTenant Create(string mode, Guid? claim, bool legacyTokens = false, bool authenticated = true)
+    private static CurrentTenant Create(Guid? claim, bool legacyTokens = false, bool authenticated = true)
     {
         var accessor = Substitute.For<IHttpContextAccessor>();
         var identity = new ClaimsIdentity(claim is null ? [] : [new Claim(TenantDefaults.ClaimType, claim.ToString()!)], authenticated ? "test" : null);
         accessor.HttpContext.Returns(new DefaultHttpContext { User = new ClaimsPrincipal(identity) });
 
-        return new CurrentTenant(Options.Create(new TenancyOptions { Mode = mode, LegacyTokensAreDefaultTenant = legacyTokens }), accessor);
+        return new CurrentTenant(Options.Create(new TenancyOptions { LegacyTokensAreDefaultTenant = legacyTokens }), accessor);
     }
 
     [Fact]
-    public void Single_DoesNotFilterAndStampsTheDefaultTenant()
-    {
-        var tenant = Create("Single", Guid.NewGuid());
-
-        tenant.FilterEnabled.ShouldBeFalse();
-        tenant.TenantId.ShouldBeNull();
-        tenant.StampTenantId.ShouldBe(TenantDefaults.DefaultTenantId);
-    }
-
-    [Fact]
-    public void Multi_UsesTheTokenTenant()
+    public void UsesTheTokenTenant()
     {
         var id = Guid.NewGuid();
-        var tenant = Create("multi", id);
+        var tenant = Create(id);
 
         tenant.FilterEnabled.ShouldBeTrue();
         tenant.TenantId.ShouldBe(id);
@@ -40,9 +30,9 @@ public class CurrentTenantTests
     }
 
     [Fact]
-    public void Multi_WithoutAClaim_HasNoTenant()
+    public void WithoutAClaim_HasNoTenant()
     {
-        var tenant = Create("Multi", null);
+        var tenant = Create(null);
 
         tenant.FilterEnabled.ShouldBeTrue();
         tenant.TenantId.ShouldBeNull();
@@ -50,18 +40,18 @@ public class CurrentTenantTests
     }
 
     [Fact]
-    public void Multi_SignedInTokenWithoutAClaim_IsTheFirstTenantWhileLegacyTokensAreAllowed()
+    public void SignedInTokenWithoutAClaim_IsTheFirstTenantWhileLegacyTokensAreAllowed()
     {
-        var tenant = Create("Multi", null, legacyTokens: true);
+        var tenant = Create(null, legacyTokens: true);
 
         tenant.TenantId.ShouldBe(TenantDefaults.DefaultTenantId);
         tenant.StampTenantId.ShouldBe(TenantDefaults.DefaultTenantId);
     }
 
     [Fact]
-    public void Multi_AnonymousCallerWithoutAClaim_HasNoTenantEvenWhenLegacyTokensAreAllowed()
+    public void AnonymousCallerWithoutAClaim_HasNoTenantEvenWhenLegacyTokensAreAllowed()
     {
-        var tenant = Create("Multi", null, legacyTokens: true, authenticated: false);
+        var tenant = Create(null, legacyTokens: true, authenticated: false);
 
         tenant.TenantId.ShouldBeNull();
     }
@@ -70,17 +60,11 @@ public class CurrentTenantTests
     public void Use_ChoosesTheTenantOfALinkOrJobOverTheToken()
     {
         var chosen = Guid.NewGuid();
-        var tenant = Create("Multi", Guid.NewGuid());
+        var tenant = Create(Guid.NewGuid());
 
         tenant.Use(chosen);
 
         tenant.TenantId.ShouldBe(chosen);
         tenant.StampTenantId.ShouldBe(chosen);
-    }
-
-    [Fact]
-    public void DefaultMode_IsSingle()
-    {
-        new TenancyOptions().IsMulti.ShouldBeFalse();
     }
 }

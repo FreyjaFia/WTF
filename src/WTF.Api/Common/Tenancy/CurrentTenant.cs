@@ -7,17 +7,15 @@ namespace WTF.Api.Common.Tenancy;
 public sealed class CurrentTenant(IOptions<TenancyOptions> options, IHttpContextAccessor httpContextAccessor)
     : ICurrentTenant, ITenantSwitch
 {
-    private readonly bool _isMulti = options.Value.IsMulti;
-
     private readonly bool _legacyTokensAreDefaultTenant = options.Value.LegacyTokensAreDefaultTenant;
 
     private Guid? _override;
 
-    public bool FilterEnabled => _isMulti;
+    public bool FilterEnabled => true;
 
-    public Guid? TenantId => _isMulti ? Resolve() : null;
+    public Guid? TenantId => Resolve();
 
-    public Guid? StampTenantId => _isMulti ? Resolve() : TenantDefaults.DefaultTenantId;
+    public Guid? StampTenantId => Resolve();
 
     // A tenant chosen by the code (a link's tenant, a job's tenant) wins over the token, but only once, in this scope.
     public void Use(Guid tenantId) => _override = tenantId;

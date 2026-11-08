@@ -416,6 +416,7 @@ public class ChatMessageExpiryTests
     {
         var services = new ServiceCollection();
         services.AddSingleton(service);
+        services.AddDefaultTenant();
         return new ChatMessageExpiryScheduler(
             services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>(),
             Options.Create(options),
