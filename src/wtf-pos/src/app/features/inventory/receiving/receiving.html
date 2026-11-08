@@ -181,22 +181,33 @@
           </div>
         }
 
+        @if (sortedReceipts().length > 0) {
+          <div class="sticky top-0 z-10 mb-2 hidden grid-cols-12 gap-4 rounded-xl bg-surface px-4 py-3 shadow lg:grid" data-testid="receipt-columns">
+            <app-sort-header class="col-span-6" label="Receipt" align="start" [active]="sortColumn() === 'receipt'" [direction]="sortDirection()" (sorted)="toggleSort('receipt')" />
+            <app-sort-header class="col-span-2" label="Received" align="center" [active]="sortColumn() === 'received'" [direction]="sortDirection()" (sorted)="toggleSort('received')" />
+            <app-sort-header class="col-span-2" label="Items" align="center" [active]="sortColumn() === 'items'" [direction]="sortDirection()" (sorted)="toggleSort('items')" />
+            <app-sort-header class="col-span-2" label="Total" align="end" [active]="sortColumn() === 'total'" [direction]="sortDirection()" (sorted)="toggleSort('total')" />
+          </div>
+        }
+
         <ul class="space-y-2.5" data-testid="receipt-list">
-          @for (receipt of filteredReceipts(); track receipt.id) {
+          @for (receipt of sortedReceipts(); track receipt.id) {
             <li class="overflow-hidden rounded-xl bg-surface shadow" data-testid="receipt-row">
-              <button type="button" class="flex w-full items-center justify-between gap-3 p-3 text-left transition-colors hover:bg-gray-50 sm:p-4" (click)="toggleReceipt(receipt)">
-                <div class="min-w-0">
+              <button type="button" class="flex w-full items-center justify-between gap-3 p-3 text-left transition-colors hover:bg-gray-50 sm:p-4 lg:grid lg:grid-cols-12 lg:gap-4" (click)="toggleReceipt(receipt)">
+                <div class="min-w-0 lg:col-span-6">
                   <p class="font-semibold wrap-anywhere text-gray-900">
                     {{ receipt.supplierName }}
                     @if (receipt.invoiceNumber) { <span class="font-normal text-gray-500">&middot; {{ receipt.invoiceNumber }}</span> }
                     @if (receipt.purchaseOrderNumber) { <span class="font-normal text-gray-500">&middot; PO-{{ receipt.purchaseOrderNumber }}</span> }
                   </p>
                   <p class="text-xs text-gray-500">
-                    {{ receipt.receivedOn | date: 'MMM d, y' }} &middot; {{ receipt.lineCount }} {{ receipt.lineCount === 1 ? 'item' : 'items' }} &middot; {{ receipt.createdByName }}
+                    <span class="lg:hidden">{{ receipt.receivedOn | date: 'MMM d, y' }} &middot; {{ receipt.lineCount }} {{ receipt.lineCount === 1 ? 'item' : 'items' }} &middot; </span>{{ receipt.createdByName }}
                   </p>
                 </div>
+                <p class="hidden text-center text-sm text-gray-700 lg:col-span-2 lg:block">{{ receipt.receivedOn | date: 'MMM d, y' }}</p>
+                <p class="hidden text-center text-sm text-gray-700 lg:col-span-2 lg:block">{{ receipt.lineCount }}</p>
                 @if (receipt.linesTotal !== null) {
-                  <span class="shrink-0 text-sm font-semibold text-gray-900">{{ receipt.linesTotal | number: '1.2-2' }}</span>
+                  <span class="shrink-0 text-sm font-semibold text-gray-900 lg:col-span-2 lg:text-right">{{ receipt.linesTotal | number: '1.2-2' }}</span>
                 }
               </button>
               @if (expandedId() === receipt.id) {

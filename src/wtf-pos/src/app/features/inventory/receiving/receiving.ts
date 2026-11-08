@@ -18,6 +18,7 @@ import {
   SearchInputComponent,
 } from '@shared/components';
 import { SelectDropdownComponent } from '@shared/components/select-dropdown/select-dropdown';
+import { SortDirection, SortHeaderComponent } from '@shared/components/sort-header/sort-header';
 import {
   invoiceDifference,
   packUnitCost,
@@ -58,6 +59,8 @@ function localToday(): string {
   return `${now.getFullYear()}-${month}-${day}`;
 }
 
+type ReceiptSortColumn = 'receipt' | 'received' | 'items' | 'total';
+
 @Component({
   selector: 'app-receiving',
   imports: [
@@ -69,6 +72,7 @@ function localToday(): string {
     ReactiveFormsModule,
     SearchInputComponent,
     SelectDropdownComponent,
+    SortHeaderComponent,
   ],
   templateUrl: './receiving.html',
   host: { class: 'flex-1 min-h-0' },
@@ -99,6 +103,31 @@ export class ReceivingComponent implements OnInit {
         receipt.note,
       ].some((field) => field?.toLowerCase().includes(term)),
     );
+  });
+  protected readonly sortColumn = signal<ReceiptSortColumn | null>(null);
+  protected readonly sortDirection = signal<SortDirection>('asc');
+  protected readonly sortedReceipts = computed(() => {
+    const column = this.sortColumn();
+    const receipts = [...this.filteredReceipts()];
+    if (!column) {
+      return receipts;
+    }
+
+    const direction = this.sortDirection() === 'asc' ? 1 : -1;
+    const compare = (a: StockReceiptSummaryDto, b: StockReceiptSummaryDto): number => {
+      switch (column) {
+        case 'receipt':
+          return a.supplierName.localeCompare(b.supplierName, undefined, { sensitivity: 'base' });
+        case 'received':
+          return a.receivedOn.localeCompare(b.receivedOn) || a.createdAt.localeCompare(b.createdAt);
+        case 'items':
+          return a.lineCount - b.lineCount;
+        case 'total':
+          return (a.linesTotal ?? -1) - (b.linesTotal ?? -1);
+      }
+    };
+
+    return receipts.sort((a, b) => compare(a, b) * direction);
   });
   protected readonly supplierOptions = computed(() =>
     this.suppliers().map((supplier) => ({ id: supplier.id, label: supplier.name })),
@@ -286,6 +315,15 @@ export class ReceivingComponent implements OnInit {
     this.formTick();
     const value = this.lines.at(index).getRawValue();
     return packUnitCost(value.packPrice, value.unitsPerPack ?? 0);
+  }
+
+  protected toggleSort(column: ReceiptSortColumn): void {
+    if (this.sortColumn() === column) {
+      this.sortDirection.update((direction) => (direction === 'asc' ? 'desc' : 'asc'));
+    } else {
+      this.sortColumn.set(column);
+      this.sortDirection.set('asc');
+    }
   }
 
   protected toggleReceipt(receipt: StockReceiptSummaryDto): void {

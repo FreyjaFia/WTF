@@ -152,4 +152,40 @@ test.describe('receiving stock @inventory @receiving', () => {
     await receiving.search.fill('zzz-nothing-matches');
     await expect(receiving.empty).toBeVisible();
   });
+
+  test('the column headers sort the receipts on a wide screen and are hidden on a phone', async ({ api, signIn }) => {
+    const buy = new PurchasingApi(asRole(api.client));
+    const supplier = await buy.createSupplier();
+    const item = await buy.createItem({ startingQuantity: 0 });
+    await buy.link(item.id, supplier.summary.id, { packName: 'carton', unitsPerPack: 12, packPrice: 840 });
+    const small = unique('INV');
+    const large = unique('INV');
+    await buy.receiveOk(supplier.summary.id, [{ itemId: item.id, packs: 1 }], { invoiceNumber: small });
+    await buy.receiveOk(supplier.summary.id, [{ itemId: item.id, packs: 3 }], { invoiceNumber: large });
+
+    const page = await signIn('admin');
+    await page.setViewportSize({ width: 1440, height: 900 });
+    const receiving = new ReceivingPage(page);
+    await receiving.open();
+    await receiving.search.fill(supplier.summary.name);
+    const columns = page.getByTestId('receipt-columns');
+    await expect(columns).toBeVisible();
+    for (const name of ['Receipt', 'Received', 'Items', 'Total']) {
+      await expect(columns).toContainText(name);
+    }
+
+    const order = async (): Promise<string[]> => {
+      const rows = await page.getByTestId('receipt-row').allTextContents();
+      return rows.map((text) => (text.includes(small) ? 'small' : text.includes(large) ? 'large' : 'other'));
+    };
+    await expect.poll(order).toEqual(['large', 'small']);
+
+    await page.getByRole('button', { name: 'Sort by Total' }).click();
+    await expect.poll(order).toEqual(['small', 'large']);
+    await page.getByRole('button', { name: 'Sort by Total' }).click();
+    await expect.poll(order).toEqual(['large', 'small']);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(columns).toBeHidden();
+  });
 });

@@ -44,12 +44,47 @@ interface Vm {
   save: () => void;
   linesTotal: () => number | null;
   difference: () => number | null;
+  toggleSort: (column: 'receipt' | 'received' | 'items' | 'total') => void;
+  sortedReceipts: () => StockReceiptSummaryDto[];
+  sortDirection: () => string;
 }
 
 describe('ReceivingComponent', () => {
-  function setup(options: { canWrite?: boolean; canSeeCosts?: boolean } = {}) {
+  describe('sorting from the column headers', () => {
+    const receipts: StockReceiptSummaryDto[] = [
+      { ...summary, id: 'a', supplierName: 'Metro Dairy', receivedOn: '2026-11-08', lineCount: 2, linesTotal: 500 },
+      { ...summary, id: 'b', supplierName: 'bean Barn', receivedOn: '2026-11-01', lineCount: 5, linesTotal: null },
+      { ...summary, id: 'c', supplierName: 'PackRight', receivedOn: '2026-11-05', lineCount: 1, linesTotal: 2000 },
+    ];
+    const ids = (vm: Vm): string[] => vm.sortedReceipts().map((r) => r.id);
+
+    it('keeps the server order until a column is picked', () => {
+      expect(ids(setup({ receipts }).vm)).toEqual(['a', 'b', 'c']);
+    });
+
+    it('sorts by supplier ignoring case, and reverses when picked again', () => {
+      const { vm } = setup({ receipts });
+      vm.toggleSort('receipt');
+      expect(ids(vm)).toEqual(['b', 'a', 'c']);
+      vm.toggleSort('receipt');
+      expect(vm.sortDirection()).toBe('desc');
+      expect(ids(vm)).toEqual(['c', 'a', 'b']);
+    });
+
+    it('sorts by received date, item count and total', () => {
+      const { vm } = setup({ receipts });
+      vm.toggleSort('received');
+      expect(ids(vm)).toEqual(['b', 'c', 'a']);
+      vm.toggleSort('items');
+      expect(ids(vm)).toEqual(['c', 'a', 'b']);
+      vm.toggleSort('total');
+      expect(ids(vm)).toEqual(['b', 'a', 'c']);
+    });
+  });
+
+  function setup(options: { canWrite?: boolean; canSeeCosts?: boolean; receipts?: StockReceiptSummaryDto[] } = {}) {
     const receipts = {
-      getReceipts: vi.fn().mockReturnValue(of([summary])),
+      getReceipts: vi.fn().mockReturnValue(of(options.receipts ?? [summary])),
       getReceipt: vi.fn().mockReturnValue(of({ summary, lines: [] } as StockReceiptDto)),
       recordReceipt: vi.fn().mockReturnValue(of({ summary, lines: [] } as StockReceiptDto)),
     };
