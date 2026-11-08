@@ -1,4 +1,7 @@
-﻿namespace WTF.Domain.Entities;
+﻿using System;
+using System.Collections.Generic;
+
+namespace WTF.Domain.Entities;
 
 public partial class Order
 {
@@ -73,6 +76,8 @@ public partial class Order
     public virtual PaymentMethod? PaymentMethod { get; set; }
 
     public virtual Status Status { get; set; } = null!;
+
+    public virtual Tenant Tenant { get; set; } = null!;
 
     public virtual User? UpdatedByNavigation { get; set; }
 }

@@ -1,4 +1,7 @@
-﻿namespace WTF.Domain.Entities;
+﻿using System;
+using System.Collections.Generic;
+
+namespace WTF.Domain.Entities;
 
 public partial class Promotion
 {
@@ -49,6 +52,8 @@ public partial class Promotion
     public virtual ICollection<OrderItem> OrderItemDiscountPromotions { get; set; } = new List<OrderItem>();
 
     public virtual PromotionImage? PromotionImage { get; set; }
+
+    public virtual Tenant Tenant { get; set; } = null!;
 
     public virtual User? UpdatedByNavigation { get; set; }
 }

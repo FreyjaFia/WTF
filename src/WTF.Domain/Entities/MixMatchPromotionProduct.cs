@@ -1,4 +1,7 @@
-﻿namespace WTF.Domain.Entities;
+﻿using System;
+using System.Collections.Generic;
+
+namespace WTF.Domain.Entities;
 
 public partial class MixMatchPromotionProduct
 {
@@ -15,4 +18,6 @@ public partial class MixMatchPromotionProduct
     public virtual ICollection<MixMatchPromotionProductAddOn> MixMatchPromotionProductAddOns { get; set; } = new List<MixMatchPromotionProductAddOn>();
 
     public virtual Product Product { get; set; } = null!;
+
+    public virtual Tenant Tenant { get; set; } = null!;
 }

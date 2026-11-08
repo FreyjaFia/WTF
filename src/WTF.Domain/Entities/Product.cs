@@ -1,4 +1,7 @@
-﻿namespace WTF.Domain.Entities;
+﻿using System;
+using System.Collections.Generic;
+
+namespace WTF.Domain.Entities;
 
 public partial class Product
 {
@@ -67,6 +70,8 @@ public partial class Product
     public virtual ICollection<StockMovement> StockMovements { get; set; } = new List<StockMovement>();
 
     public virtual ProductSubCategory? SubCategory { get; set; }
+
+    public virtual Tenant Tenant { get; set; } = null!;
 
     public virtual User? UpdatedByNavigation { get; set; }
 }

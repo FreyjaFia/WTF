@@ -1,4 +1,7 @@
-﻿namespace WTF.Domain.Entities;
+﻿using System;
+using System.Collections.Generic;
+
+namespace WTF.Domain.Entities;
 
 public partial class StockMovement
 {
@@ -41,4 +44,6 @@ public partial class StockMovement
     public virtual ICollection<StockWaste> StockWasteReversalMovements { get; set; } = new List<StockWaste>();
 
     public virtual ICollection<StockWaste> StockWasteStockMovements { get; set; } = new List<StockWaste>();
+
+    public virtual Tenant Tenant { get; set; } = null!;
 }

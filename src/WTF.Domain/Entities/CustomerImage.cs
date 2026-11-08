@@ -1,4 +1,7 @@
-﻿namespace WTF.Domain.Entities;
+﻿using System;
+using System.Collections.Generic;
+
+namespace WTF.Domain.Entities;
 
 public partial class CustomerImage
 {
@@ -11,4 +14,6 @@ public partial class CustomerImage
     public virtual Customer Customer { get; set; } = null!;
 
     public virtual Image Image { get; set; } = null!;
+
+    public virtual Tenant Tenant { get; set; } = null!;
 }

@@ -52,6 +52,17 @@ internal sealed class SqlTestDatabase : IAsyncDisposable
             await using (var db = database.CreateContext())
             {
                 await db.Database.EnsureCreatedAsync();
+
+                // 20261108_add_tenants.sql creates tenant #1 in the real database; the foreign keys need it here too.
+                db.Tenants.Add(new Tenant
+                {
+                    Id = TenantDefaults.DefaultTenantId,
+                    Name = "WTF",
+                    Slug = "wtf",
+                    Status = 2,
+                    CreatedAt = DateTime.UtcNow,
+                });
+                await db.SaveChangesAsync();
             }
 
             if (seedLookups)

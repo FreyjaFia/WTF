@@ -46,7 +46,7 @@ public sealed class SubscriptionReminderService(
         var reminders = 0;
         var sub = await db.TenantSubscriptions.FirstOrDefaultAsync(s => s.TenantId == tenantId, cancellationToken);
         if (sub is not null && ReminderFor(sub.CurrentPeriodEnd, sub.GraceDays, nowUtc.UtcDateTime) is { } text
-            && sub.ReminderSentOn != nowUtc.UtcDateTime.Date)
+            && sub.ReminderSentOn != DateOnly.FromDateTime(nowUtc.UtcDateTime))
         {
             var owners = await db.Users.AsNoTracking()
                 .Where(u => u.IsActive && (u.RoleId == (int)UserRoleEnum.SuperAdmin || u.RoleId == (int)UserRoleEnum.Admin))
@@ -66,7 +66,7 @@ public sealed class SubscriptionReminderService(
                         tenantId),
                     cancellationToken);
 
-                sub.ReminderSentOn = nowUtc.UtcDateTime.Date;
+                sub.ReminderSentOn = DateOnly.FromDateTime(nowUtc.UtcDateTime);
                 await db.SaveChangesAsync(cancellationToken);
             }
 

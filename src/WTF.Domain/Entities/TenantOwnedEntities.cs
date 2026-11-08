@@ -181,3 +181,7 @@ public partial class UserImage : ITenantOwned
 public partial class WasteReason : ITenantOwned
 {
 }
+
+public partial class TenantSetting : ITenantOwned
+{
+}

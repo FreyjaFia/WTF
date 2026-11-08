@@ -1,4 +1,7 @@
-﻿namespace WTF.Domain.Entities;
+﻿using System;
+using System.Collections.Generic;
+
+namespace WTF.Domain.Entities;
 
 public partial class ItemAlertRecipient
 {
@@ -19,6 +22,8 @@ public partial class ItemAlertRecipient
     public virtual User CreatedByNavigation { get; set; } = null!;
 
     public virtual Item Item { get; set; } = null!;
+
+    public virtual Tenant Tenant { get; set; } = null!;
 
     public virtual User User { get; set; } = null!;
 }

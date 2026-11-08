@@ -1,3 +1,6 @@
+﻿using System;
+using System.Collections.Generic;
+
 namespace WTF.Domain.Entities;
 
 public partial class TenantSubscription
@@ -16,9 +19,11 @@ public partial class TenantSubscription
 
     public string? Notes { get; set; }
 
-    public DateTime? ReminderSentOn { get; set; }
+    public DateOnly? ReminderSentOn { get; set; }
 
     public DateTime? UpdatedAt { get; set; }
 
     public virtual Plan Plan { get; set; } = null!;
+
+    public virtual Tenant Tenant { get; set; } = null!;
 }

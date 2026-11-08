@@ -1,4 +1,7 @@
-﻿namespace WTF.Domain.Entities;
+﻿using System;
+using System.Collections.Generic;
+
+namespace WTF.Domain.Entities;
 
 public partial class ProductItemLink
 {
@@ -22,7 +25,6 @@ public partial class ProductItemLink
 
     public decimal AllowancePercent { get; set; }
 
-
     public Guid? ReplacesItemId { get; set; }
 
     public Guid TenantId { get; set; }
@@ -34,6 +36,8 @@ public partial class ProductItemLink
     public virtual Product Product { get; set; } = null!;
 
     public virtual Item? ReplacesItem { get; set; }
+
+    public virtual Tenant Tenant { get; set; } = null!;
 
     public virtual User? UpdatedByNavigation { get; set; }
 }

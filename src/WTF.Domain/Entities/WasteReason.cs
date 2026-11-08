@@ -1,4 +1,7 @@
-﻿namespace WTF.Domain.Entities;
+﻿using System;
+using System.Collections.Generic;
+
+namespace WTF.Domain.Entities;
 
 public partial class WasteReason
 {
@@ -27,6 +30,8 @@ public partial class WasteReason
     public virtual User? CreatedByNavigation { get; set; }
 
     public virtual ICollection<StockWaste> StockWastes { get; set; } = new List<StockWaste>();
+
+    public virtual Tenant Tenant { get; set; } = null!;
 
     public virtual User? UpdatedByNavigation { get; set; }
 }

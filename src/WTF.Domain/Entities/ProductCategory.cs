@@ -1,4 +1,7 @@
-﻿namespace WTF.Domain.Entities;
+﻿using System;
+using System.Collections.Generic;
+
+namespace WTF.Domain.Entities;
 
 public partial class ProductCategory
 {
@@ -19,4 +22,6 @@ public partial class ProductCategory
     public virtual ICollection<ProductSubCategory> ProductSubCategories { get; set; } = new List<ProductSubCategory>();
 
     public virtual ICollection<Product> Products { get; set; } = new List<Product>();
+
+    public virtual Tenant Tenant { get; set; } = null!;
 }

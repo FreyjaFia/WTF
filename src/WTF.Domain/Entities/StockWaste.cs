@@ -1,4 +1,7 @@
-﻿namespace WTF.Domain.Entities;
+﻿using System;
+using System.Collections.Generic;
+
+namespace WTF.Domain.Entities;
 
 public partial class StockWaste
 {
@@ -55,6 +58,8 @@ public partial class StockWaste
     public virtual User? ReviewedByNavigation { get; set; }
 
     public virtual StockMovement StockMovement { get; set; } = null!;
+
+    public virtual Tenant Tenant { get; set; } = null!;
 
     public virtual WasteReason WasteReason { get; set; } = null!;
 }

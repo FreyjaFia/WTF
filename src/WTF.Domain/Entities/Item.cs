@@ -1,4 +1,7 @@
-﻿namespace WTF.Domain.Entities;
+﻿using System;
+using System.Collections.Generic;
+
+namespace WTF.Domain.Entities;
 
 public partial class Item
 {
@@ -11,6 +14,10 @@ public partial class Item
     public string? Barcode { get; set; }
 
     public string UnitName { get; set; } = null!;
+
+    public string? StockUnitName { get; set; }
+
+    public decimal? UnitsPerStockUnit { get; set; }
 
     public decimal CurrentQuantity { get; set; }
 
@@ -29,10 +36,6 @@ public partial class Item
     public DateTime? UpdatedAt { get; set; }
 
     public Guid? UpdatedBy { get; set; }
-
-    public string? StockUnitName { get; set; }
-
-    public decimal? UnitsPerStockUnit { get; set; }
 
     public bool AllowNegativeStock { get; set; }
 
@@ -63,6 +66,8 @@ public partial class Item
     public virtual ICollection<StockMovement> StockMovements { get; set; } = new List<StockMovement>();
 
     public virtual ICollection<StockWaste> StockWastes { get; set; } = new List<StockWaste>();
+
+    public virtual Tenant Tenant { get; set; } = null!;
 
     public virtual User? UpdatedByNavigation { get; set; }
 }

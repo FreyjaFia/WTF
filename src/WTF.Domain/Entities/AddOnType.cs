@@ -1,4 +1,7 @@
-﻿namespace WTF.Domain.Entities;
+﻿using System;
+using System.Collections.Generic;
+
+namespace WTF.Domain.Entities;
 
 public partial class AddOnType
 {
@@ -7,8 +10,6 @@ public partial class AddOnType
     public string Name { get; set; } = null!;
 
     public Guid TenantId { get; set; }
-
-    public string? SystemKey { get; set; }
 
     public bool IsRequired { get; set; }
 
@@ -24,5 +25,9 @@ public partial class AddOnType
 
     public DateTime? UpdatedAt { get; set; }
 
+    public string? SystemKey { get; set; }
+
     public virtual ICollection<ProductAddOn> ProductAddOns { get; set; } = new List<ProductAddOn>();
+
+    public virtual Tenant Tenant { get; set; } = null!;
 }

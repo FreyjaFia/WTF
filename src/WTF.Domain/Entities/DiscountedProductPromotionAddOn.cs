@@ -1,4 +1,7 @@
-﻿namespace WTF.Domain.Entities;
+﻿using System;
+using System.Collections.Generic;
+
+namespace WTF.Domain.Entities;
 
 public partial class DiscountedProductPromotionAddOn
 {
@@ -15,4 +18,6 @@ public partial class DiscountedProductPromotionAddOn
     public virtual Product AddOnProduct { get; set; } = null!;
 
     public virtual DiscountedProductPromotion DiscountedProductPromotion { get; set; } = null!;
+
+    public virtual Tenant Tenant { get; set; } = null!;
 }

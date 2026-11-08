@@ -1,4 +1,7 @@
-﻿namespace WTF.Domain.Entities;
+﻿using System;
+using System.Collections.Generic;
+
+namespace WTF.Domain.Entities;
 
 public partial class Conversation
 {
@@ -25,4 +28,6 @@ public partial class Conversation
     public virtual Customer Customer { get; set; } = null!;
 
     public virtual Order? Order { get; set; }
+
+    public virtual Tenant Tenant { get; set; } = null!;
 }

@@ -1,4 +1,7 @@
-﻿namespace WTF.Domain.Entities;
+﻿using System;
+using System.Collections.Generic;
+
+namespace WTF.Domain.Entities;
 
 public partial class FixedBundlePromotion
 {
@@ -11,4 +14,6 @@ public partial class FixedBundlePromotion
     public virtual ICollection<FixedBundlePromotionItem> FixedBundlePromotionItems { get; set; } = new List<FixedBundlePromotionItem>();
 
     public virtual Promotion Promotion { get; set; } = null!;
+
+    public virtual Tenant Tenant { get; set; } = null!;
 }

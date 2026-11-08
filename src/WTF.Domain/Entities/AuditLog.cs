@@ -1,4 +1,7 @@
-﻿namespace WTF.Domain.Entities;
+﻿using System;
+using System.Collections.Generic;
+
+namespace WTF.Domain.Entities;
 
 public partial class AuditLog
 {
@@ -21,6 +24,8 @@ public partial class AuditLog
     public DateTime Timestamp { get; set; }
 
     public Guid TenantId { get; set; }
+
+    public virtual Tenant Tenant { get; set; } = null!;
 
     public virtual User User { get; set; } = null!;
 }

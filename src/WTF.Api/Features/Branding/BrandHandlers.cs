@@ -39,7 +39,7 @@ public static class BrandDefaults
 
     public static BrandDto For(string shopName) => new(shopName, null, null, null, null, null, null, null, null, null, PrimaryColor);
 
-    public static BrandDto ToDto(TenantSettings s) => new(
+    public static BrandDto ToDto(TenantSetting s) => new(
         s.ShopName, s.ShortName, s.Tagline, s.LogoUrl, s.Address, s.Phone, s.Email, s.ReceiptHeader, s.ReceiptFooter,
         s.RegistrationText, s.PrimaryColor);
 
@@ -89,7 +89,7 @@ public static class BrandDefaults
         }
     }
 
-    public static async Task<TenantSettings> EnsureSettingsAsync(WTFDbContext db, Guid tenantId, CancellationToken cancellationToken)
+    public static async Task<TenantSetting> EnsureSettingsAsync(WTFDbContext db, Guid tenantId, CancellationToken cancellationToken)
     {
         var settings = await db.TenantSettings.FirstOrDefaultAsync(s => s.TenantId == tenantId, cancellationToken);
         if (settings is not null)
@@ -98,7 +98,7 @@ public static class BrandDefaults
         }
 
         var name = await db.Tenants.AsNoTracking().Where(t => t.Id == tenantId).Select(t => t.Name).FirstOrDefaultAsync(cancellationToken);
-        settings = new TenantSettings
+        settings = new TenantSetting
         {
             TenantId = tenantId,
             ShopName = name ?? "WTF",

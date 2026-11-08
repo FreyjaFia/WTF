@@ -1,4 +1,7 @@
-﻿namespace WTF.Domain.Entities;
+﻿using System;
+using System.Collections.Generic;
+
+namespace WTF.Domain.Entities;
 
 public partial class ItemPriceHistory
 {
@@ -17,6 +20,8 @@ public partial class ItemPriceHistory
     public Guid TenantId { get; set; }
 
     public virtual Item Item { get; set; } = null!;
+
+    public virtual Tenant Tenant { get; set; } = null!;
 
     public virtual User UpdatedByNavigation { get; set; } = null!;
 }

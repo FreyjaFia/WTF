@@ -1,4 +1,7 @@
-﻿namespace WTF.Domain.Entities;
+﻿using System;
+using System.Collections.Generic;
+
+namespace WTF.Domain.Entities;
 
 public partial class OrderItem
 {
@@ -39,4 +42,6 @@ public partial class OrderItem
     public virtual OrderItem? ParentOrderItem { get; set; }
 
     public virtual Product Product { get; set; } = null!;
+
+    public virtual Tenant Tenant { get; set; } = null!;
 }

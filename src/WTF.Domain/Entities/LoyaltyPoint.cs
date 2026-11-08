@@ -1,4 +1,7 @@
-﻿namespace WTF.Domain.Entities;
+﻿using System;
+using System.Collections.Generic;
+
+namespace WTF.Domain.Entities;
 
 public partial class LoyaltyPoint
 {
@@ -11,4 +14,6 @@ public partial class LoyaltyPoint
     public Guid TenantId { get; set; }
 
     public virtual Customer Customer { get; set; } = null!;
+
+    public virtual Tenant Tenant { get; set; } = null!;
 }

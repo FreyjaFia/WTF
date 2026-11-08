@@ -1,4 +1,7 @@
-﻿namespace WTF.Domain.Entities;
+﻿using System;
+using System.Collections.Generic;
+
+namespace WTF.Domain.Entities;
 
 public partial class ProductSizeAmount
 {
@@ -31,6 +34,8 @@ public partial class ProductSizeAmount
     public virtual Product Product { get; set; } = null!;
 
     public virtual Product SizeProduct { get; set; } = null!;
+
+    public virtual Tenant Tenant { get; set; } = null!;
 
     public virtual User? UpdatedByNavigation { get; set; }
 }

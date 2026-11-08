@@ -1,4 +1,7 @@
-﻿namespace WTF.Domain.Entities;
+﻿using System;
+using System.Collections.Generic;
+
+namespace WTF.Domain.Entities;
 
 public partial class ConversationMessage
 {
@@ -35,4 +38,6 @@ public partial class ConversationMessage
     public virtual Conversation Conversation { get; set; } = null!;
 
     public virtual User? SenderUser { get; set; }
+
+    public virtual Tenant Tenant { get; set; } = null!;
 }

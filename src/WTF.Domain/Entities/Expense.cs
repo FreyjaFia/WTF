@@ -1,10 +1,11 @@
-﻿namespace WTF.Domain.Entities;
+﻿using System;
+using System.Collections.Generic;
+
+namespace WTF.Domain.Entities;
 
 public partial class Expense
 {
     public Guid Id { get; set; }
-
-    public Guid TenantId { get; set; }
 
     public DateOnly ExpenseDate { get; set; }
 
@@ -24,7 +25,11 @@ public partial class Expense
 
     public Guid? UpdatedBy { get; set; }
 
+    public Guid TenantId { get; set; }
+
     public virtual User CreatedByNavigation { get; set; } = null!;
+
+    public virtual Tenant Tenant { get; set; } = null!;
 
     public virtual User? UpdatedByNavigation { get; set; }
 }

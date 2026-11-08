@@ -1,3 +1,6 @@
+﻿using System;
+using System.Collections.Generic;
+
 namespace WTF.Domain.Entities;
 
 public partial class Plan
@@ -10,11 +13,15 @@ public partial class Plan
 
     public decimal MonthlyPrice { get; set; }
 
-    public string Features { get; set; } = string.Empty;
+    public string Features { get; set; } = null!;
 
     public int? MaxUsers { get; set; }
 
     public bool IsActive { get; set; }
 
     public int SortOrder { get; set; }
+
+    public virtual ICollection<TenantInvoice> TenantInvoices { get; set; } = new List<TenantInvoice>();
+
+    public virtual ICollection<TenantSubscription> TenantSubscriptions { get; set; } = new List<TenantSubscription>();
 }

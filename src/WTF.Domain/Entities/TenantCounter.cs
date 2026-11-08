@@ -1,3 +1,6 @@
+﻿using System;
+using System.Collections.Generic;
+
 namespace WTF.Domain.Entities;
 
 public partial class TenantCounter
@@ -7,4 +10,6 @@ public partial class TenantCounter
     public string Name { get; set; } = null!;
 
     public long NextValue { get; set; }
+
+    public virtual Tenant Tenant { get; set; } = null!;
 }

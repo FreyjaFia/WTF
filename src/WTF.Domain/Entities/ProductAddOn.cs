@@ -1,4 +1,7 @@
-﻿namespace WTF.Domain.Entities;
+﻿using System;
+using System.Collections.Generic;
+
+namespace WTF.Domain.Entities;
 
 public partial class ProductAddOn
 {
@@ -19,4 +22,6 @@ public partial class ProductAddOn
     public virtual Product Product { get; set; } = null!;
 
     public virtual ProductAddOnPriceOverride? ProductAddOnPriceOverride { get; set; }
+
+    public virtual Tenant Tenant { get; set; } = null!;
 }

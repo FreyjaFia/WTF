@@ -1,4 +1,7 @@
-﻿namespace WTF.Domain.Entities;
+﻿using System;
+using System.Collections.Generic;
+
+namespace WTF.Domain.Entities;
 
 public partial class StockCount
 {
@@ -33,4 +36,6 @@ public partial class StockCount
     public virtual User? PostedByNavigation { get; set; }
 
     public virtual ICollection<StockCountLine> StockCountLines { get; set; } = new List<StockCountLine>();
+
+    public virtual Tenant Tenant { get; set; } = null!;
 }

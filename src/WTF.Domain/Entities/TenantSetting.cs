@@ -1,8 +1,9 @@
-using WTF.Domain.Tenancy;
+﻿using System;
+using System.Collections.Generic;
 
 namespace WTF.Domain.Entities;
 
-public partial class TenantSettings : ITenantOwned
+public partial class TenantSetting
 {
     public Guid TenantId { get; set; }
 
@@ -37,4 +38,6 @@ public partial class TenantSettings : ITenantOwned
     public int CurrencyDecimals { get; set; }
 
     public DateTime? UpdatedAt { get; set; }
+
+    public virtual Tenant Tenant { get; set; } = null!;
 }

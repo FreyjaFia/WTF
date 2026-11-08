@@ -16,6 +16,7 @@ public class TenantIsolationDatabaseTests
     {
         await using var database = await SqlTestDatabase.CreateAsync();
         var user = await SqlSeed.UserAsync(database);
+        await SeedTenantsAsync(database);
 
         await using (var a = database.CreateContext(new Tenant(TenantA)))
         {
@@ -47,6 +48,7 @@ public class TenantIsolationDatabaseTests
     {
         await using var database = await SqlTestDatabase.CreateAsync();
         var user = await SqlSeed.UserAsync(database);
+        await SeedTenantsAsync(database);
         await using (var a = database.CreateContext(new Tenant(TenantA)))
         {
             a.Customers.Add(NewCustomer("Ana", user.Id));
@@ -74,6 +76,7 @@ public class TenantIsolationDatabaseTests
     {
         await using var database = await SqlTestDatabase.CreateAsync();
         var user = await SqlSeed.UserAsync(database);
+        await SeedTenantsAsync(database);
 
         foreach (var tenant in new[] { TenantA, TenantB, TenantA })
         {
@@ -86,6 +89,15 @@ public class TenantIsolationDatabaseTests
         var numbers = await all.Orders.OrderBy(o => o.CreatedAt).Select(o => new { o.TenantId, o.OrderNumber }).ToListAsync();
         numbers.Where(n => n.TenantId == TenantA).Select(n => n.OrderNumber).ShouldBe([1, 2]);
         numbers.Where(n => n.TenantId == TenantB).Select(n => n.OrderNumber).ShouldBe([1]);
+    }
+
+    private static async Task SeedTenantsAsync(SqlTestDatabase database)
+    {
+        await using var db = database.CreateContext();
+        db.Tenants.AddRange(
+            new WTF.Domain.Entities.Tenant { Id = TenantA, Name = "Shop A", Slug = "shop-a", Status = 2, CreatedAt = DateTime.UtcNow },
+            new WTF.Domain.Entities.Tenant { Id = TenantB, Name = "Shop B", Slug = "shop-b", Status = 2, CreatedAt = DateTime.UtcNow });
+        await db.SaveChangesAsync();
     }
 
     private static Customer NewCustomer(string first, Guid userId) => new()

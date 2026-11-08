@@ -1,3 +1,6 @@
+﻿using System;
+using System.Collections.Generic;
+
 namespace WTF.Domain.Entities;
 
 public partial class TenantInvoice
@@ -27,4 +30,8 @@ public partial class TenantInvoice
     public string? Notes { get; set; }
 
     public DateTime CreatedAt { get; set; }
+
+    public virtual Plan Plan { get; set; } = null!;
+
+    public virtual Tenant Tenant { get; set; } = null!;
 }

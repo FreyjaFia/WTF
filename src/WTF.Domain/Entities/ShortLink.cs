@@ -1,4 +1,7 @@
-﻿namespace WTF.Domain.Entities;
+﻿using System;
+using System.Collections.Generic;
+
+namespace WTF.Domain.Entities;
 
 public partial class ShortLink
 {
@@ -27,4 +30,6 @@ public partial class ShortLink
     public virtual User? CreatedByNavigation { get; set; }
 
     public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
+
+    public virtual Tenant Tenant { get; set; } = null!;
 }

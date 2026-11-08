@@ -1,4 +1,7 @@
-﻿namespace WTF.Domain.Entities;
+﻿using System;
+using System.Collections.Generic;
+
+namespace WTF.Domain.Entities;
 
 public partial class Image
 {
@@ -15,6 +18,8 @@ public partial class Image
     public virtual ProductImage? ProductImage { get; set; }
 
     public virtual PromotionImage? PromotionImage { get; set; }
+
+    public virtual Tenant Tenant { get; set; } = null!;
 
     public virtual UserImage? UserImage { get; set; }
 }

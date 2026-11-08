@@ -1,4 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System;
+using System.Collections.Generic;
+using Microsoft.EntityFrameworkCore;
 using WTF.Domain.Entities;
 
 namespace WTF.Domain.Data;
@@ -64,6 +66,12 @@ public partial class WTFDbContext : DbContext
 
     public virtual DbSet<PaymentMethod> PaymentMethods { get; set; }
 
+    public virtual DbSet<Plan> Plans { get; set; }
+
+    public virtual DbSet<PlatformAdmin> PlatformAdmins { get; set; }
+
+    public virtual DbSet<PlatformAuditLog> PlatformAuditLogs { get; set; }
+
     public virtual DbSet<Product> Products { get; set; }
 
     public virtual DbSet<ProductAddOn> ProductAddOns { get; set; }
@@ -106,6 +114,16 @@ public partial class WTFDbContext : DbContext
 
     public virtual DbSet<Tenant> Tenants { get; set; }
 
+    public virtual DbSet<TenantCounter> TenantCounters { get; set; }
+
+    public virtual DbSet<TenantInvoice> TenantInvoices { get; set; }
+
+    public virtual DbSet<TenantSetting> TenantSettings { get; set; }
+
+    public virtual DbSet<TenantSubscription> TenantSubscriptions { get; set; }
+
+    public virtual DbSet<TenantTombstone> TenantTombstones { get; set; }
+
     public virtual DbSet<User> Users { get; set; }
 
     public virtual DbSet<UserImage> UserImages { get; set; }
@@ -121,7 +139,7 @@ public partial class WTFDbContext : DbContext
     {
         modelBuilder.Entity<AddOnType>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__AddOnTyp__3214EC07C1575775");
+            entity.HasKey(e => e.Id).HasName("PK__AddOnTyp__3214EC07A570BCFD");
 
             entity.ToTable("AddOnType");
 
@@ -133,7 +151,15 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_AddOnType_CreatedAt");
             entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_AddOnType_IsActive");
             entity.Property(e => e.Name).HasMaxLength(50);
-            entity.Property(e => e.SystemKey).HasMaxLength(20).IsUnicode(false);
+            entity.Property(e => e.SystemKey)
+                .HasMaxLength(20)
+                .IsUnicode(false);
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_AddOnType_TenantId");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.AddOnTypes)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_AddOnType_Tenants");
         });
 
         modelBuilder.Entity<AuditLog>(entity =>
@@ -144,6 +170,8 @@ public partial class WTFDbContext : DbContext
 
             entity.HasIndex(e => e.EntityType, "IX_AuditLog_EntityType");
 
+            entity.HasIndex(e => e.TenantId, "IX_AuditLog_TenantId");
+
             entity.HasIndex(e => e.Timestamp, "IX_AuditLog_Timestamp").IsDescending();
 
             entity.HasIndex(e => e.UserId, "IX_AuditLog_UserId");
@@ -153,7 +181,13 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.EntityId).HasMaxLength(50);
             entity.Property(e => e.EntityType).HasMaxLength(50);
             entity.Property(e => e.IpAddress).HasMaxLength(50);
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_AuditLog_TenantId");
             entity.Property(e => e.Timestamp).HasDefaultValueSql("(getutcdate())", "DF_AuditLog_Timestamp");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.AuditLogs)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_AuditLog_Tenants");
 
             entity.HasOne(d => d.User).WithMany(p => p.AuditLogs)
                 .HasForeignKey(d => d.UserId)
@@ -174,6 +208,7 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_Conversations_Id");
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_Conversations_CreatedAt");
             entity.Property(e => e.LastMessageAt).HasDefaultValueSql("(sysutcdatetime())", "DF_Conversations_LastMessageAt");
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_Conversations_TenantId");
             entity.Property(e => e.Title).HasMaxLength(100);
 
             entity.HasOne(d => d.Customer).WithMany(p => p.Conversations)
@@ -184,6 +219,11 @@ public partial class WTFDbContext : DbContext
             entity.HasOne(d => d.Order).WithOne(p => p.Conversation)
                 .HasForeignKey<Conversation>(d => d.OrderId)
                 .HasConstraintName("FK_Conversations_Order");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.Conversations)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Conversations_Tenants");
         });
 
         modelBuilder.Entity<ConversationMessage>(entity =>
@@ -191,6 +231,8 @@ public partial class WTFDbContext : DbContext
             entity.HasIndex(e => new { e.ConversationId, e.CreatedAt }, "IX_ConversationMessages_ConversationId_CreatedAt");
 
             entity.HasIndex(e => new { e.ConversationId, e.CreatedAt }, "IX_ConversationMessages_Images").HasFilter("([ImageKey] IS NOT NULL)");
+
+            entity.HasIndex(e => e.TenantId, "IX_ConversationMessages_TenantId");
 
             entity.HasIndex(e => e.ConversationId, "IX_ConversationMessages_UnreadForCustomer").HasFilter("([SenderType]=(1) AND [ReadByCustomerAt] IS NULL)");
 
@@ -203,6 +245,7 @@ public partial class WTFDbContext : DbContext
                 .HasMaxLength(50)
                 .IsUnicode(false);
             entity.Property(e => e.ImageKey).HasMaxLength(200);
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_ConversationMessages_TenantId");
 
             entity.HasOne(d => d.Conversation).WithMany(p => p.ConversationMessages)
                 .HasForeignKey(d => d.ConversationId)
@@ -212,11 +255,18 @@ public partial class WTFDbContext : DbContext
             entity.HasOne(d => d.SenderUser).WithMany(p => p.ConversationMessages)
                 .HasForeignKey(d => d.SenderUserId)
                 .HasConstraintName("FK_ConversationMessages_SenderUser");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.ConversationMessages)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ConversationMessages_Tenants");
         });
 
         modelBuilder.Entity<Customer>(entity =>
         {
             entity.HasIndex(e => e.CreatedBy, "IX_Customers_CreatedBy");
+
+            entity.HasIndex(e => e.TenantId, "IX_Customers_TenantId");
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_Customers_Id");
             entity.Property(e => e.Address).IsUnicode(false);
@@ -231,12 +281,18 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.LastName)
                 .HasMaxLength(50)
                 .IsUnicode(false);
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_Customers_TenantId");
             entity.Property(e => e.UpdatedAt).HasColumnType("datetime");
 
             entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.CustomerCreatedByNavigations)
                 .HasForeignKey(d => d.CreatedBy)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Customers_CreatedBy");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.Customers)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Customers_Tenants");
 
             entity.HasOne(d => d.UpdatedByNavigation).WithMany(p => p.CustomerUpdatedByNavigations)
                 .HasForeignKey(d => d.UpdatedBy)
@@ -251,6 +307,8 @@ public partial class WTFDbContext : DbContext
 
             entity.HasIndex(e => e.ImageId, "UQ_CustomerImages_ImageId").IsUnique();
 
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_CustomerImages_TenantId");
+
             entity.HasOne(d => d.Customer).WithOne(p => p.CustomerImage)
                 .HasForeignKey<CustomerImage>(d => d.CustomerId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -260,6 +318,11 @@ public partial class WTFDbContext : DbContext
                 .HasForeignKey<CustomerImage>(d => d.ImageId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_CustomerImages_Images");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.CustomerImages)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_CustomerImages_Tenants");
         });
 
         modelBuilder.Entity<DiscountedProductPromotion>(entity =>
@@ -271,6 +334,7 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_DiscountedProductPromotions_Id");
             entity.Property(e => e.FixedPrice).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.PercentOff).HasColumnType("decimal(5, 2)");
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_DiscountedProductPromotions_TenantId");
 
             entity.HasOne(d => d.Product).WithMany(p => p.DiscountedProductPromotions)
                 .HasForeignKey(d => d.ProductId)
@@ -280,6 +344,11 @@ public partial class WTFDbContext : DbContext
             entity.HasOne(d => d.Promotion).WithMany(p => p.DiscountedProductPromotions)
                 .HasForeignKey(d => d.PromotionId)
                 .HasConstraintName("FK_DiscountedProductPromotions_Promotions");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.DiscountedProductPromotions)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_DiscountedProductPromotions_Tenants");
         });
 
         modelBuilder.Entity<DiscountedProductPromotionAddOn>(entity =>
@@ -289,6 +358,7 @@ public partial class WTFDbContext : DbContext
             entity.HasIndex(e => new { e.DiscountedProductPromotionId, e.AddOnProductId }, "IX_DiscountedProductPromotionAddOns_Promotion_AddOn").IsUnique();
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_DiscountedProductPromotionAddOns_Id");
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_DiscountedProductPromotionAddOns_TenantId");
 
             entity.HasOne(d => d.AddOnProduct).WithMany(p => p.DiscountedProductPromotionAddOns)
                 .HasForeignKey(d => d.AddOnProductId)
@@ -298,6 +368,11 @@ public partial class WTFDbContext : DbContext
             entity.HasOne(d => d.DiscountedProductPromotion).WithMany(p => p.DiscountedProductPromotionAddOns)
                 .HasForeignKey(d => d.DiscountedProductPromotionId)
                 .HasConstraintName("FK_DiscountedProductPromotionAddOns_Promotion");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.DiscountedProductPromotionAddOns)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_DiscountedProductPromotionAddOns_Tenants");
         });
 
         modelBuilder.Entity<Expense>(entity =>
@@ -309,11 +384,17 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())", "DF_Expenses_CreatedAt");
             entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_Expenses_IsActive");
             entity.Property(e => e.Note).HasMaxLength(200);
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_Expenses_TenantId");
 
             entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.ExpenseCreatedByNavigations)
                 .HasForeignKey(d => d.CreatedBy)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Expenses_CreatedBy");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.Expenses)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Expenses_Tenants");
 
             entity.HasOne(d => d.UpdatedByNavigation).WithMany(p => p.ExpenseUpdatedByNavigations)
                 .HasForeignKey(d => d.UpdatedBy)
@@ -326,10 +407,16 @@ public partial class WTFDbContext : DbContext
 
             entity.Property(e => e.PromotionId).ValueGeneratedNever();
             entity.Property(e => e.BundlePrice).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_FixedBundlePromotions_TenantId");
 
             entity.HasOne(d => d.Promotion).WithOne(p => p.FixedBundlePromotion)
                 .HasForeignKey<FixedBundlePromotion>(d => d.PromotionId)
                 .HasConstraintName("FK_FixedBundlePromotions_Promotions");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.FixedBundlePromotions)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_FixedBundlePromotions_Tenants");
         });
 
         modelBuilder.Entity<FixedBundlePromotionItem>(entity =>
@@ -339,6 +426,7 @@ public partial class WTFDbContext : DbContext
             entity.HasIndex(e => new { e.FixedBundlePromotionId, e.ProductId }, "IX_FixedBundlePromotionItems_Promotion_Product").IsUnique();
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_FixedBundlePromotionItems_Id");
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_FixedBundlePromotionItems_TenantId");
 
             entity.HasOne(d => d.FixedBundlePromotion).WithMany(p => p.FixedBundlePromotionItems)
                 .HasForeignKey(d => d.FixedBundlePromotionId)
@@ -348,6 +436,11 @@ public partial class WTFDbContext : DbContext
                 .HasForeignKey(d => d.ProductId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_FixedBundlePromotionItems_Products");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.FixedBundlePromotionItems)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_FixedBundlePromotionItems_Tenants");
         });
 
         modelBuilder.Entity<FixedBundlePromotionItemAddOn>(entity =>
@@ -355,6 +448,7 @@ public partial class WTFDbContext : DbContext
             entity.HasIndex(e => new { e.FixedBundlePromotionItemId, e.AddOnProductId }, "IX_FixedBundlePromotionItemAddOns_Item_AddOn").IsUnique();
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_FixedBundlePromotionItemAddOns_Id");
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_FixedBundlePromotionItemAddOns_TenantId");
 
             entity.HasOne(d => d.AddOnProduct).WithMany(p => p.FixedBundlePromotionItemAddOns)
                 .HasForeignKey(d => d.AddOnProductId)
@@ -364,22 +458,33 @@ public partial class WTFDbContext : DbContext
             entity.HasOne(d => d.FixedBundlePromotionItem).WithMany(p => p.FixedBundlePromotionItemAddOns)
                 .HasForeignKey(d => d.FixedBundlePromotionItemId)
                 .HasConstraintName("FK_FixedBundlePromotionItemAddOns_Item");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.FixedBundlePromotionItemAddOns)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_FixedBundlePromotionItemAddOns_Tenants");
         });
 
         modelBuilder.Entity<Image>(entity =>
         {
             entity.Property(e => e.ImageId).HasDefaultValueSql("(newid())");
             entity.Property(e => e.ImageUrl).HasMaxLength(512);
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_Images_TenantId");
             entity.Property(e => e.UploadedAt).HasDefaultValueSql("(sysdatetime())");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.Images)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Images_Tenants");
         });
 
         modelBuilder.Entity<Item>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK_InventoryItems");
-
             entity.HasIndex(e => e.IsActive, "IX_Items_IsActive");
 
             entity.HasIndex(e => e.Name, "IX_Items_Name");
+
+            entity.HasIndex(e => e.TenantId, "IX_Items_TenantId");
 
             entity.HasIndex(e => new { e.TenantId, e.Barcode }, "UX_Items_Barcode")
                 .IsUnique()
@@ -401,6 +506,7 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.Name).HasMaxLength(100);
             entity.Property(e => e.Sku).HasMaxLength(50);
             entity.Property(e => e.StockUnitName).HasMaxLength(30);
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_Items_TenantId");
             entity.Property(e => e.UnitName)
                 .HasMaxLength(30)
                 .HasDefaultValue("piece", "DF_Items_UnitName");
@@ -416,6 +522,11 @@ public partial class WTFDbContext : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Items_CreatedBy");
 
+            entity.HasOne(d => d.Tenant).WithMany(p => p.Items)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Items_Tenants");
+
             entity.HasOne(d => d.UpdatedByNavigation).WithMany(p => p.ItemUpdatedByNavigations)
                 .HasForeignKey(d => d.UpdatedBy)
                 .HasConstraintName("FK_Items_UpdatedBy");
@@ -428,6 +539,7 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_ItemAlertRecipients_Id");
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())", "DF_ItemAlertRecipients_CreatedAt");
             entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_ItemAlertRecipients_IsActive");
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_ItemAlertRecipients_TenantId");
 
             entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.ItemAlertRecipientCreatedByNavigations)
                 .HasForeignKey(d => d.CreatedBy)
@@ -438,6 +550,11 @@ public partial class WTFDbContext : DbContext
                 .HasForeignKey(d => d.ItemId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ItemAlertRecipients_Items");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.ItemAlertRecipients)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ItemAlertRecipients_Tenants");
 
             entity.HasOne(d => d.User).WithMany(p => p.ItemAlertRecipientUsers)
                 .HasForeignKey(d => d.UserId)
@@ -456,6 +573,7 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_ItemPriceHistory_Id");
             entity.Property(e => e.NewPrice).HasColumnType("decimal(18, 6)");
             entity.Property(e => e.OldPrice).HasColumnType("decimal(18, 6)");
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_ItemPriceHistory_TenantId");
             entity.Property(e => e.UpdatedAt)
                 .HasDefaultValueSql("(getutcdate())", "DF_ItemPriceHistory_UpdatedAt")
                 .HasColumnType("datetime");
@@ -465,6 +583,11 @@ public partial class WTFDbContext : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ItemPriceHistory_Item");
 
+            entity.HasOne(d => d.Tenant).WithMany(p => p.ItemPriceHistories)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ItemPriceHistory_Tenants");
+
             entity.HasOne(d => d.UpdatedByNavigation).WithMany(p => p.ItemPriceHistories)
                 .HasForeignKey(d => d.UpdatedBy)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -473,12 +596,20 @@ public partial class WTFDbContext : DbContext
 
         modelBuilder.Entity<LoyaltyPoint>(entity =>
         {
+            entity.HasIndex(e => e.TenantId, "IX_LoyaltyPoints_TenantId");
+
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_LoyaltyPoints_Id");
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_LoyaltyPoints_TenantId");
 
             entity.HasOne(d => d.Customer).WithMany(p => p.LoyaltyPoints)
                 .HasForeignKey(d => d.CustomerId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_LoyaltyPoints_Customers");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.LoyaltyPoints)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_LoyaltyPoints_Tenants");
         });
 
         modelBuilder.Entity<MixMatchPromotion>(entity =>
@@ -487,10 +618,16 @@ public partial class WTFDbContext : DbContext
 
             entity.Property(e => e.PromotionId).ValueGeneratedNever();
             entity.Property(e => e.BundlePrice).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_MixMatchPromotions_TenantId");
 
             entity.HasOne(d => d.Promotion).WithOne(p => p.MixMatchPromotion)
                 .HasForeignKey<MixMatchPromotion>(d => d.PromotionId)
                 .HasConstraintName("FK_MixMatchPromotions_Promotions");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.MixMatchPromotions)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_MixMatchPromotions_Tenants");
         });
 
         modelBuilder.Entity<MixMatchPromotionProduct>(entity =>
@@ -500,6 +637,7 @@ public partial class WTFDbContext : DbContext
             entity.HasIndex(e => new { e.MixMatchPromotionId, e.ProductId }, "IX_MixMatchPromotionProducts_Promotion_Product").IsUnique();
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_MixMatchPromotionProducts_Id");
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_MixMatchPromotionProducts_TenantId");
 
             entity.HasOne(d => d.MixMatchPromotion).WithMany(p => p.MixMatchPromotionProducts)
                 .HasForeignKey(d => d.MixMatchPromotionId)
@@ -509,6 +647,11 @@ public partial class WTFDbContext : DbContext
                 .HasForeignKey(d => d.ProductId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_MixMatchPromotionProducts_Products");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.MixMatchPromotionProducts)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_MixMatchPromotionProducts_Tenants");
         });
 
         modelBuilder.Entity<MixMatchPromotionProductAddOn>(entity =>
@@ -516,6 +659,7 @@ public partial class WTFDbContext : DbContext
             entity.HasIndex(e => new { e.MixMatchPromotionProductId, e.AddOnProductId }, "IX_MixMatchPromotionProductAddOns_Item_AddOn").IsUnique();
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_MixMatchPromotionProductAddOns_Id");
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_MixMatchPromotionProductAddOns_TenantId");
 
             entity.HasOne(d => d.AddOnProduct).WithMany(p => p.MixMatchPromotionProductAddOns)
                 .HasForeignKey(d => d.AddOnProductId)
@@ -525,11 +669,18 @@ public partial class WTFDbContext : DbContext
             entity.HasOne(d => d.MixMatchPromotionProduct).WithMany(p => p.MixMatchPromotionProductAddOns)
                 .HasForeignKey(d => d.MixMatchPromotionProductId)
                 .HasConstraintName("FK_MixMatchPromotionProductAddOns_Item");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.MixMatchPromotionProductAddOns)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_MixMatchPromotionProductAddOns_Tenants");
         });
 
         modelBuilder.Entity<Notification>(entity =>
         {
             entity.HasIndex(e => new { e.Kind, e.SubjectId, e.UserId, e.CreatedAt }, "IX_Notifications_Kind_Subject_User_Created").IsDescending(false, false, false, true);
+
+            entity.HasIndex(e => e.TenantId, "IX_Notifications_TenantId");
 
             entity.HasIndex(e => new { e.UserId, e.Kind, e.ReadAt }, "IX_Notifications_User_Kind_Read");
 
@@ -543,7 +694,13 @@ public partial class WTFDbContext : DbContext
                 .IsUnicode(false)
                 .HasDefaultValue("StockAlert", "DF_Notifications_Kind");
             entity.Property(e => e.Path).HasMaxLength(200);
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_Notifications_TenantId");
             entity.Property(e => e.Title).HasMaxLength(150);
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.Notifications)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Notifications_Tenants");
 
             entity.HasOne(d => d.User).WithMany(p => p.Notifications)
                 .HasForeignKey(d => d.UserId)
@@ -558,6 +715,8 @@ public partial class WTFDbContext : DbContext
             entity.HasIndex(e => e.OrderLinkId, "IX_Orders_OrderLinkId");
 
             entity.HasIndex(e => e.StatusId, "IX_Orders_StatusId");
+
+            entity.HasIndex(e => e.TenantId, "IX_Orders_TenantId");
 
             entity.HasIndex(e => new { e.TenantId, e.OrderNumber }, "UQ_Orders_OrderNumber").IsUnique();
 
@@ -585,6 +744,7 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.SpecialInstructions)
                 .HasMaxLength(100)
                 .IsUnicode(false);
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_Orders_TenantId");
             entity.Property(e => e.Tips).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.UpdatedAt).HasColumnType("datetime");
 
@@ -610,6 +770,11 @@ public partial class WTFDbContext : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Orders_Status");
 
+            entity.HasOne(d => d.Tenant).WithMany(p => p.Orders)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Orders_Tenants");
+
             entity.HasOne(d => d.UpdatedByNavigation).WithMany(p => p.OrderUpdatedByNavigations)
                 .HasForeignKey(d => d.UpdatedBy)
                 .HasConstraintName("FK_Orders_UpdatedBy");
@@ -622,6 +787,7 @@ public partial class WTFDbContext : DbContext
             entity.HasIndex(e => e.PromotionId, "IX_OrderBundlePromotions_PromotionId");
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_OrderBundlePromotions_Id");
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_OrderBundlePromotions_TenantId");
             entity.Property(e => e.UnitPrice).HasColumnType("decimal(10, 2)");
 
             entity.HasOne(d => d.Order).WithMany(p => p.OrderBundlePromotions)
@@ -633,6 +799,11 @@ public partial class WTFDbContext : DbContext
                 .HasForeignKey(d => d.PromotionId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_OrderBundlePromotions_Promotion");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.OrderBundlePromotions)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_OrderBundlePromotions_Tenants");
         });
 
         modelBuilder.Entity<OrderItem>(entity =>
@@ -649,6 +820,8 @@ public partial class WTFDbContext : DbContext
 
             entity.HasIndex(e => e.ProductId, "IX_OrderItems_ProductId");
 
+            entity.HasIndex(e => e.TenantId, "IX_OrderItems_TenantId");
+
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
             entity.Property(e => e.OriginalPrice).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.Price).HasColumnType("decimal(10, 2)");
@@ -657,6 +830,7 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.SpecialInstructions)
                 .HasMaxLength(100)
                 .IsUnicode(false);
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_OrderItems_TenantId");
 
             entity.HasOne(d => d.BundlePromotion).WithMany(p => p.OrderItemBundlePromotions)
                 .HasForeignKey(d => d.BundlePromotionId)
@@ -678,6 +852,11 @@ public partial class WTFDbContext : DbContext
                 .HasForeignKey(d => d.ProductId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_OrderItems_Product");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.OrderItems)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_OrderItems_Tenants");
         });
 
         modelBuilder.Entity<PaymentMethod>(entity =>
@@ -689,6 +868,57 @@ public partial class WTFDbContext : DbContext
                 .IsUnicode(false);
         });
 
+        modelBuilder.Entity<Plan>(entity =>
+        {
+            entity.HasIndex(e => e.Code, "UX_Plans_Code").IsUnique();
+
+            entity.Property(e => e.Code)
+                .HasMaxLength(30)
+                .IsUnicode(false);
+            entity.Property(e => e.Features)
+                .HasMaxLength(500)
+                .IsUnicode(false)
+                .HasDefaultValue("", "DF_Plans_Features");
+            entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_Plans_IsActive");
+            entity.Property(e => e.MonthlyPrice).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.Name).HasMaxLength(60);
+        });
+
+        modelBuilder.Entity<PlatformAdmin>(entity =>
+        {
+            entity.HasIndex(e => e.Username, "UQ_PlatformAdmins_Username").IsUnique();
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_PlatformAdmins_Id");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_PlatformAdmins_CreatedAt");
+            entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_PlatformAdmins_IsActive");
+            entity.Property(e => e.PasswordHash).HasMaxLength(200);
+            entity.Property(e => e.Username)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+        });
+
+        modelBuilder.Entity<PlatformAuditLog>(entity =>
+        {
+            entity.ToTable("PlatformAuditLog");
+
+            entity.HasIndex(e => e.TenantId, "IX_PlatformAuditLog_TenantId");
+
+            entity.HasIndex(e => e.Timestamp, "IX_PlatformAuditLog_Timestamp").IsDescending();
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_PlatformAuditLog_Id");
+            entity.Property(e => e.Action)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.Details).HasMaxLength(2000);
+            entity.Property(e => e.IpAddress)
+                .HasMaxLength(64)
+                .IsUnicode(false);
+            entity.Property(e => e.Timestamp).HasDefaultValueSql("(sysutcdatetime())", "DF_PlatformAuditLog_Timestamp");
+            entity.Property(e => e.Username)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+        });
+
         modelBuilder.Entity<Product>(entity =>
         {
             entity.HasIndex(e => e.CategoryId, "IX_Products_CategoryId");
@@ -696,6 +926,8 @@ public partial class WTFDbContext : DbContext
             entity.HasIndex(e => e.CreatedBy, "IX_Products_CreatedBy");
 
             entity.HasIndex(e => e.IsAddOn, "IX_Products_IsAddOn");
+
+            entity.HasIndex(e => e.TenantId, "IX_Products_TenantId");
 
             entity.HasIndex(e => new { e.TenantId, e.Code }, "UX_Products_Code").IsUnique();
 
@@ -711,6 +943,7 @@ public partial class WTFDbContext : DbContext
                 .IsUnicode(false);
             entity.Property(e => e.Price).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.SuppliesCost).HasColumnType("decimal(18, 6)");
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_Products_TenantId");
             entity.Property(e => e.UpdatedAt).HasColumnType("datetime");
 
             entity.HasOne(d => d.Category).WithMany(p => p.Products)
@@ -727,6 +960,11 @@ public partial class WTFDbContext : DbContext
                 .HasForeignKey(d => d.SubCategoryId)
                 .HasConstraintName("FK_Products_ProductSubCategories");
 
+            entity.HasOne(d => d.Tenant).WithMany(p => p.Products)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Products_Tenants");
+
             entity.HasOne(d => d.UpdatedByNavigation).WithMany(p => p.ProductUpdatedByNavigations)
                 .HasForeignKey(d => d.UpdatedBy)
                 .HasConstraintName("FK_Products_UpdatedBy");
@@ -739,6 +977,7 @@ public partial class WTFDbContext : DbContext
             entity.HasIndex(e => e.AddOnId, "IX_ProductAddOns_AddOnId");
 
             entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_ProductAddOns_IsActive");
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_ProductAddOns_TenantId");
 
             entity.HasOne(d => d.AddOn).WithMany(p => p.ProductAddOnAddOns)
                 .HasForeignKey(d => d.AddOnId)
@@ -753,6 +992,11 @@ public partial class WTFDbContext : DbContext
                 .HasForeignKey(d => d.ProductId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ProductAddOns_Product");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.ProductAddOns)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ProductAddOns_Tenants");
         });
 
         modelBuilder.Entity<ProductAddOnPriceOverride>(entity =>
@@ -769,7 +1013,13 @@ public partial class WTFDbContext : DbContext
                 .HasColumnType("datetime");
             entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_ProductAddOnPriceOverrides_IsActive");
             entity.Property(e => e.Price).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_ProductAddOnPriceOverrides_TenantId");
             entity.Property(e => e.UpdatedAt).HasColumnType("datetime");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.ProductAddOnPriceOverrides)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ProductAddOnPriceOverrides_Tenants");
 
             entity.HasOne(d => d.ProductAddOn).WithOne(p => p.ProductAddOnPriceOverride)
                 .HasForeignKey<ProductAddOnPriceOverride>(d => new { d.ProductId, d.AddOnId })
@@ -785,6 +1035,12 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.Name)
                 .HasMaxLength(50)
                 .IsUnicode(false);
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_ProductCategories_TenantId");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.ProductCategories)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ProductCategories_Tenants");
         });
 
         modelBuilder.Entity<ProductImage>(entity =>
@@ -795,6 +1051,8 @@ public partial class WTFDbContext : DbContext
 
             entity.HasIndex(e => e.ProductId, "UQ_ProductImages_ProductId").IsUnique();
 
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_ProductImages_TenantId");
+
             entity.HasOne(d => d.Image).WithOne(p => p.ProductImage)
                 .HasForeignKey<ProductImage>(d => d.ImageId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -804,6 +1062,11 @@ public partial class WTFDbContext : DbContext
                 .HasForeignKey<ProductImage>(d => d.ProductId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ProductImages_Products");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.ProductImages)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ProductImages_Tenants");
         });
 
         modelBuilder.Entity<ProductItemLink>(entity =>
@@ -821,6 +1084,7 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.QuantityPerSale)
                 .HasDefaultValue(1m, "DF_ProductItemLinks_QuantityPerSale")
                 .HasColumnType("decimal(18, 3)");
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_ProductItemLinks_TenantId");
 
             entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.ProductItemLinkCreatedByNavigations)
                 .HasForeignKey(d => d.CreatedBy)
@@ -841,6 +1105,11 @@ public partial class WTFDbContext : DbContext
                 .HasForeignKey(d => d.ReplacesItemId)
                 .HasConstraintName("FK_ProductItemLinks_ReplacesItem");
 
+            entity.HasOne(d => d.Tenant).WithMany(p => p.ProductItemLinks)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ProductItemLinks_Tenants");
+
             entity.HasOne(d => d.UpdatedByNavigation).WithMany(p => p.ProductItemLinkUpdatedByNavigations)
                 .HasForeignKey(d => d.UpdatedBy)
                 .HasConstraintName("FK_ProductItemLinks_UpdatedBy");
@@ -857,6 +1126,7 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
             entity.Property(e => e.NewPrice).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.OldPrice).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_ProductPriceHistory_TenantId");
             entity.Property(e => e.UpdatedAt)
                 .HasDefaultValueSql("(getutcdate())")
                 .HasColumnType("datetime");
@@ -864,6 +1134,11 @@ public partial class WTFDbContext : DbContext
             entity.HasOne(d => d.Product).WithMany(p => p.ProductPriceHistories)
                 .HasForeignKey(d => d.ProductId)
                 .HasConstraintName("FK_ProductPriceHistory_Product");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.ProductPriceHistories)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ProductPriceHistory_Tenants");
 
             entity.HasOne(d => d.UpdatedByNavigation).WithMany(p => p.ProductPriceHistories)
                 .HasForeignKey(d => d.UpdatedBy)
@@ -881,6 +1156,7 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())", "DF_ProductSizeAmounts_CreatedAt");
             entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_ProductSizeAmounts_IsActive");
             entity.Property(e => e.Quantity).HasColumnType("decimal(18, 3)");
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_ProductSizeAmounts_TenantId");
 
             entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.ProductSizeAmountCreatedByNavigations)
                 .HasForeignKey(d => d.CreatedBy)
@@ -902,6 +1178,11 @@ public partial class WTFDbContext : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ProductSizeAmounts_SizeProducts");
 
+            entity.HasOne(d => d.Tenant).WithMany(p => p.ProductSizeAmounts)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ProductSizeAmounts_Tenants");
+
             entity.HasOne(d => d.UpdatedByNavigation).WithMany(p => p.ProductSizeAmountUpdatedByNavigations)
                 .HasForeignKey(d => d.UpdatedBy)
                 .HasConstraintName("FK_ProductSizeAmounts_UpdatedBy");
@@ -915,10 +1196,16 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.Name)
                 .HasMaxLength(50)
                 .IsUnicode(false);
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_ProductSubCategories_TenantId");
 
             entity.HasOne(d => d.Category).WithMany(p => p.ProductSubCategories)
                 .HasForeignKey(d => d.CategoryId)
                 .HasConstraintName("FK_ProductSubCategories_Category");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.ProductSubCategories)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ProductSubCategories_Tenants");
         });
 
         modelBuilder.Entity<Promotion>(entity =>
@@ -935,12 +1222,18 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_Promotions_IsActive");
             entity.Property(e => e.Name).HasMaxLength(100);
             entity.Property(e => e.StartTime).HasPrecision(0);
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_Promotions_TenantId");
             entity.Property(e => e.UpdatedAt).HasColumnType("datetime");
 
             entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.PromotionCreatedByNavigations)
                 .HasForeignKey(d => d.CreatedBy)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Promotions_CreatedBy");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.Promotions)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Promotions_Tenants");
 
             entity.HasOne(d => d.UpdatedByNavigation).WithMany(p => p.PromotionUpdatedByNavigations)
                 .HasForeignKey(d => d.UpdatedBy)
@@ -955,6 +1248,8 @@ public partial class WTFDbContext : DbContext
 
             entity.HasIndex(e => e.PromotionId, "UQ_PromotionImages_PromotionId").IsUnique();
 
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_PromotionImages_TenantId");
+
             entity.HasOne(d => d.Image).WithOne(p => p.PromotionImage)
                 .HasForeignKey<PromotionImage>(d => d.ImageId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -964,6 +1259,11 @@ public partial class WTFDbContext : DbContext
                 .HasForeignKey<PromotionImage>(d => d.PromotionId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_PromotionImages_Promotions");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.PromotionImages)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PromotionImages_Tenants");
         });
 
         modelBuilder.Entity<PushNotificationToken>(entity =>
@@ -978,7 +1278,13 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_PushNotificationTokens_IsActive");
             entity.Property(e => e.LastSeenAt).HasDefaultValueSql("(getutcdate())", "DF_PushNotificationTokens_LastSeenAt");
             entity.Property(e => e.Platform).HasMaxLength(20);
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_PushNotificationTokens_TenantId");
             entity.Property(e => e.Token).HasMaxLength(512);
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.PushNotificationTokens)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PushNotificationTokens_Tenants");
 
             entity.HasOne(d => d.User).WithMany(p => p.PushNotificationTokens)
                 .HasForeignKey(d => d.UserId)
@@ -995,9 +1301,15 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_RefreshTokens_Id");
             entity.Property(e => e.CreatedAt).HasColumnType("datetime");
             entity.Property(e => e.ExpiresAt).HasColumnType("datetime");
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_RefreshTokens_TenantId");
             entity.Property(e => e.Token)
                 .HasMaxLength(500)
                 .IsUnicode(false);
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.RefreshTokens)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_RefreshTokens_Tenants");
 
             entity.HasOne(d => d.User).WithMany(p => p.RefreshTokens)
                 .HasForeignKey(d => d.UserId)
@@ -1026,6 +1338,7 @@ public partial class WTFDbContext : DbContext
                 .HasMaxLength(50)
                 .IsUnicode(false);
             entity.Property(e => e.TargetUrl).IsUnicode(false);
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_ShortLinks_TenantId");
             entity.Property(e => e.Token)
                 .HasMaxLength(64)
                 .IsUnicode(false);
@@ -1033,6 +1346,11 @@ public partial class WTFDbContext : DbContext
             entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.ShortLinks)
                 .HasForeignKey(d => d.CreatedBy)
                 .HasConstraintName("FK_ShortLinks_CreatedBy");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.ShortLinks)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ShortLinks_Tenants");
         });
 
         modelBuilder.Entity<Status>(entity =>
@@ -1051,6 +1369,7 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.Name).HasMaxLength(100);
             entity.Property(e => e.Note).HasMaxLength(500);
             entity.Property(e => e.Status).HasDefaultValue((byte)1, "DF_StockCounts_Status");
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_StockCounts_TenantId");
 
             entity.HasOne(d => d.CancelledByNavigation).WithMany(p => p.StockCountCancelledByNavigations)
                 .HasForeignKey(d => d.CancelledBy)
@@ -1064,6 +1383,11 @@ public partial class WTFDbContext : DbContext
             entity.HasOne(d => d.PostedByNavigation).WithMany(p => p.StockCountPostedByNavigations)
                 .HasForeignKey(d => d.PostedBy)
                 .HasConstraintName("FK_StockCounts_PostedBy");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.StockCounts)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_StockCounts_Tenants");
         });
 
         modelBuilder.Entity<StockCountLine>(entity =>
@@ -1073,6 +1397,7 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_StockCountLines_Id");
             entity.Property(e => e.CountedQuantity).HasColumnType("decimal(18, 3)");
             entity.Property(e => e.ExpectedQuantity).HasColumnType("decimal(18, 3)");
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_StockCountLines_TenantId");
 
             entity.HasOne(d => d.Count).WithMany(p => p.StockCountLines)
                 .HasForeignKey(d => d.CountId)
@@ -1087,6 +1412,11 @@ public partial class WTFDbContext : DbContext
                 .HasForeignKey(d => d.ItemId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_StockCountLines_Item");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.StockCountLines)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_StockCountLines_Tenants");
         });
 
         modelBuilder.Entity<StockMovement>(entity =>
@@ -1094,6 +1424,8 @@ public partial class WTFDbContext : DbContext
             entity.HasIndex(e => new { e.ItemId, e.CreatedAt }, "IX_StockMovements_ItemId_CreatedAt").IsDescending(false, true);
 
             entity.HasIndex(e => new { e.ReferenceType, e.ReferenceId }, "IX_StockMovements_Reference");
+
+            entity.HasIndex(e => e.TenantId, "IX_StockMovements_TenantId");
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_StockMovements_Id");
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())", "DF_StockMovements_CreatedAt");
@@ -1103,6 +1435,7 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.QuantityBefore).HasColumnType("decimal(18, 3)");
             entity.Property(e => e.QuantityDelta).HasColumnType("decimal(18, 3)");
             entity.Property(e => e.ReferenceType).HasMaxLength(30);
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_StockMovements_TenantId");
             entity.Property(e => e.UnitCost).HasColumnType("decimal(18, 6)");
 
             entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.StockMovements)
@@ -1118,6 +1451,11 @@ public partial class WTFDbContext : DbContext
             entity.HasOne(d => d.Product).WithMany(p => p.StockMovements)
                 .HasForeignKey(d => d.ProductId)
                 .HasConstraintName("FK_StockMovements_Products");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.StockMovements)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_StockMovements_Tenants");
         });
 
         modelBuilder.Entity<StockWaste>(entity =>
@@ -1141,6 +1479,7 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.ReviewNote).HasMaxLength(500);
             entity.Property(e => e.Source).HasDefaultValue((byte)1, "DF_StockWastes_Source");
             entity.Property(e => e.Status).HasDefaultValue((byte)1, "DF_StockWastes_Status");
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_StockWastes_TenantId");
 
             entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.StockWasteCreatedByNavigations)
                 .HasForeignKey(d => d.CreatedBy)
@@ -1169,6 +1508,11 @@ public partial class WTFDbContext : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_StockWastes_StockMovements");
 
+            entity.HasOne(d => d.Tenant).WithMany(p => p.StockWastes)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_StockWastes_Tenants");
+
             entity.HasOne(d => d.WasteReason).WithMany(p => p.StockWastes)
                 .HasForeignKey(d => d.WasteReasonId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -1186,6 +1530,117 @@ public partial class WTFDbContext : DbContext
                 .HasMaxLength(50)
                 .IsUnicode(false);
             entity.Property(e => e.Status).HasDefaultValue((byte)2, "DF_Tenants_Status");
+        });
+
+        modelBuilder.Entity<TenantCounter>(entity =>
+        {
+            entity.HasKey(e => new { e.TenantId, e.Name });
+
+            entity.Property(e => e.Name)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.TenantCounters)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_TenantCounters_Tenants");
+        });
+
+        modelBuilder.Entity<TenantInvoice>(entity =>
+        {
+            entity.HasIndex(e => new { e.TenantId, e.CreatedAt }, "IX_TenantInvoices_TenantId_CreatedAt");
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_TenantInvoices_Id");
+            entity.Property(e => e.Amount).HasColumnType("decimal(12, 2)");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_TenantInvoices_CreatedAt");
+            entity.Property(e => e.Notes).HasMaxLength(500);
+            entity.Property(e => e.Reference).HasMaxLength(100);
+            entity.Property(e => e.Status).HasDefaultValue((byte)1, "DF_TenantInvoices_Status");
+
+            entity.HasOne(d => d.Plan).WithMany(p => p.TenantInvoices)
+                .HasForeignKey(d => d.PlanId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_TenantInvoices_Plans");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.TenantInvoices)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_TenantInvoices_Tenants");
+        });
+
+        modelBuilder.Entity<TenantSetting>(entity =>
+        {
+            entity.HasKey(e => e.TenantId);
+
+            entity.Property(e => e.TenantId).ValueGeneratedNever();
+            entity.Property(e => e.Address).HasMaxLength(300);
+            entity.Property(e => e.CurrencyCode)
+                .HasMaxLength(3)
+                .IsUnicode(false)
+                .HasDefaultValue("PHP", "DF_TenantSettings_CurrencyCode");
+            entity.Property(e => e.CurrencyDecimals).HasDefaultValue(2, "DF_TenantSettings_CurrencyDecimals");
+            entity.Property(e => e.CurrencySymbol)
+                .HasMaxLength(8)
+                .HasDefaultValueSql("(nchar((8369)))", "DF_TenantSettings_CurrencySymbol");
+            entity.Property(e => e.Email).HasMaxLength(150);
+            entity.Property(e => e.LogoUrl)
+                .HasMaxLength(500)
+                .IsUnicode(false);
+            entity.Property(e => e.Phone).HasMaxLength(40);
+            entity.Property(e => e.PrimaryColor)
+                .HasMaxLength(9)
+                .IsUnicode(false)
+                .HasDefaultValue("#6f4e37", "DF_TenantSettings_PrimaryColor");
+            entity.Property(e => e.ReceiptFooter).HasMaxLength(300);
+            entity.Property(e => e.ReceiptHeader).HasMaxLength(300);
+            entity.Property(e => e.RegistrationText).HasMaxLength(150);
+            entity.Property(e => e.ShopName).HasMaxLength(100);
+            entity.Property(e => e.ShortName).HasMaxLength(30);
+            entity.Property(e => e.Tagline).HasMaxLength(150);
+            entity.Property(e => e.TimeZone)
+                .HasMaxLength(64)
+                .IsUnicode(false)
+                .HasDefaultValue("Asia/Manila", "DF_TenantSettings_TimeZone");
+
+            entity.HasOne(d => d.Tenant).WithOne(p => p.TenantSetting)
+                .HasForeignKey<TenantSetting>(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_TenantSettings_Tenants");
+        });
+
+        modelBuilder.Entity<TenantSubscription>(entity =>
+        {
+            entity.HasKey(e => e.TenantId);
+
+            entity.Property(e => e.TenantId).ValueGeneratedNever();
+            entity.Property(e => e.DiscountPercent).HasColumnType("decimal(5, 2)");
+            entity.Property(e => e.GraceDays).HasDefaultValue(7, "DF_TenantSubscriptions_GraceDays");
+            entity.Property(e => e.Notes).HasMaxLength(500);
+
+            entity.HasOne(d => d.Plan).WithMany(p => p.TenantSubscriptions)
+                .HasForeignKey(d => d.PlanId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_TenantSubscriptions_Plans");
+
+            entity.HasOne(d => d.Tenant).WithOne(p => p.TenantSubscription)
+                .HasForeignKey<TenantSubscription>(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_TenantSubscriptions_Tenants");
+        });
+
+        modelBuilder.Entity<TenantTombstone>(entity =>
+        {
+            entity.HasKey(e => e.TenantId);
+
+            entity.Property(e => e.TenantId).ValueGeneratedNever();
+            entity.Property(e => e.DeletedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_TenantTombstones_DeletedAt");
+            entity.Property(e => e.DeletedBy)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.Name).HasMaxLength(100);
+            entity.Property(e => e.Slug)
+                .HasMaxLength(50)
+                .IsUnicode(false);
         });
 
         modelBuilder.Entity<User>(entity =>
@@ -1208,6 +1663,7 @@ public partial class WTFDbContext : DbContext
                 .HasMaxLength(50)
                 .IsUnicode(false);
             entity.Property(e => e.PasswordHash).IsUnicode(false);
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_Users_TenantId");
             entity.Property(e => e.UpdatedAt).HasColumnType("datetime");
             entity.Property(e => e.Username)
                 .HasMaxLength(50)
@@ -1223,6 +1679,11 @@ public partial class WTFDbContext : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Users_UserRoles");
 
+            entity.HasOne(d => d.Tenant).WithMany(p => p.Users)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Users_Tenants");
+
             entity.HasOne(d => d.UpdatedByNavigation).WithMany(p => p.InverseUpdatedByNavigation)
                 .HasForeignKey(d => d.UpdatedBy)
                 .HasConstraintName("FK_Users_UpdatedBy");
@@ -1236,10 +1697,17 @@ public partial class WTFDbContext : DbContext
 
             entity.HasIndex(e => e.UserId, "UQ_UserImage_UserId").IsUnique();
 
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_UserImages_TenantId");
+
             entity.HasOne(d => d.Image).WithOne(p => p.UserImage)
                 .HasForeignKey<UserImage>(d => d.ImageId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_UserImage_Images");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.UserImages)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_UserImages_Tenants");
 
             entity.HasOne(d => d.User).WithOne(p => p.UserImage)
                 .HasForeignKey<UserImage>(d => d.UserId)
@@ -1264,16 +1732,22 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())", "DF_WasteReasons_CreatedAt");
             entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_WasteReasons_IsActive");
             entity.Property(e => e.Name).HasMaxLength(60);
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_WasteReasons_TenantId");
 
             entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.WasteReasonCreatedByNavigations)
                 .HasForeignKey(d => d.CreatedBy)
                 .HasConstraintName("FK_WasteReasons_CreatedBy");
 
+            entity.HasOne(d => d.Tenant).WithMany(p => p.WasteReasons)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_WasteReasons_Tenants");
+
             entity.HasOne(d => d.UpdatedByNavigation).WithMany(p => p.WasteReasonUpdatedByNavigations)
                 .HasForeignKey(d => d.UpdatedBy)
                 .HasConstraintName("FK_WasteReasons_UpdatedBy");
         });
-        modelBuilder.HasSequence("OrderNumberSeq").StartsAt(5L);
+        modelBuilder.HasSequence("OrderNumberSeq");
 
         OnModelCreatingPartial(modelBuilder);
     }

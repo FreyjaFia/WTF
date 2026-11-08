@@ -1,4 +1,7 @@
-﻿namespace WTF.Domain.Entities;
+﻿using System;
+using System.Collections.Generic;
+
+namespace WTF.Domain.Entities;
 
 public partial class Customer
 {
@@ -20,9 +23,9 @@ public partial class Customer
 
     public Guid? UpdatedBy { get; set; }
 
-    public bool AllowOrderingLink { get; set; }
-
     public string? ContactNumber { get; set; }
+
+    public bool AllowOrderingLink { get; set; }
 
     public Guid TenantId { get; set; }
 
@@ -35,6 +38,8 @@ public partial class Customer
     public virtual ICollection<LoyaltyPoint> LoyaltyPoints { get; set; } = new List<LoyaltyPoint>();
 
     public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
+
+    public virtual Tenant Tenant { get; set; } = null!;
 
     public virtual User? UpdatedByNavigation { get; set; }
 }
