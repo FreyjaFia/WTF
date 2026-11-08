@@ -9,6 +9,7 @@ public static class TenantAccess
     public const byte Active = 2;
     public const byte Suspended = 3;
     public const byte Cancelled = 4;
+    public const byte Deleted = 5;
 
     public const string SubscriptionEndedMessage = "This shop's subscription has ended. Please contact the shop owner or support to renew.";
 

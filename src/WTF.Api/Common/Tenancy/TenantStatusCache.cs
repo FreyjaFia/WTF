@@ -13,6 +13,9 @@ public sealed class TenantStatusCache(TimeProvider clock)
 
     private readonly ConcurrentDictionary<Guid, (byte Status, DateTime? AccessUntil, DateTime StatusAt, DateTimeOffset Expires)> _entries = new();
 
+    public async Task<bool> IsDeletedAsync(WTFDbContext db, Guid tenantId, CancellationToken cancellationToken) =>
+        (await GetAsync(db, tenantId, cancellationToken)).Status == TenantAccess.Deleted;
+
     public async Task<bool> CanUseAsync(WTFDbContext db, Guid tenantId, CancellationToken cancellationToken) =>
         TenantAccess.CanUse((await GetAsync(db, tenantId, cancellationToken)).Status);
 
@@ -56,7 +59,9 @@ public sealed class TenantStatusCache(TimeProvider clock)
             .Select(s => new { s.CurrentPeriodEnd, s.GraceDays })
             .FirstOrDefaultAsync(cancellationToken);
 
-        var value = status?.Status ?? TenantAccess.Active;
+        // A shop with no row stays open (single-shop installs before the tenants script), unless it was deleted: the tombstone marks it.
+        var deleted = status is null && await db.TenantTombstones.AsNoTracking().AnyAsync(t => t.TenantId == tenantId, cancellationToken);
+        var value = deleted ? TenantAccess.Deleted : status?.Status ?? TenantAccess.Active;
         var statusAt = status?.StatusAt ?? DateTime.MinValue;
         DateTime? accessUntil = subscription is null ? null : SubscriptionRules.AccessUntil(subscription.CurrentPeriodEnd, subscription.GraceDays);
         _entries[tenantId] = (value, accessUntil, statusAt, now.Add(Lifetime));

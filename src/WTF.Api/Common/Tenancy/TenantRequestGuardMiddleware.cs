@@ -30,6 +30,13 @@ public sealed class TenantRequestGuardMiddleware(RequestDelegate next)
                 return;
             }
 
+            if (await statusCache.IsDeletedAsync(db, tenantId, context.RequestAborted))
+            {
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                await context.Response.WriteAsJsonAsync(new { message = "This shop no longer exists." });
+                return;
+            }
+
             if (!await statusCache.CanUseAsync(db, tenantId, context.RequestAborted))
             {
                 context.Response.StatusCode = StatusCodes.Status403Forbidden;
