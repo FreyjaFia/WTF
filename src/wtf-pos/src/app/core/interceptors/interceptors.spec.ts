@@ -277,3 +277,51 @@ describe('utcDateInterceptor', () => {
     expect(body).toBe(blob);
   });
 });
+
+describe('authInterceptor on platform calls', () => {
+  let router: { navigateByUrl: ReturnType<typeof vi.fn> };
+  let ctrl: HttpTestingController;
+  let http: HttpClient;
+
+  beforeEach(() => {
+    sessionStorage.clear();
+    router = { navigateByUrl: vi.fn() };
+    const auth = { getToken: vi.fn().mockReturnValue('shop-token'), refreshToken: vi.fn(), logout: vi.fn() };
+    ({ http, ctrl } = setup([authInterceptor], [
+      { provide: AuthService, useValue: auth },
+      { provide: Router, useValue: router },
+    ]));
+  });
+
+  afterEach(() => {
+    ctrl.verify();
+    sessionStorage.clear();
+  });
+
+  it('sends the platform token, never the shop token', () => {
+    sessionStorage.setItem('platformToken', 'platform-token');
+    http.get('/api/platform/tenants').subscribe();
+
+    const req = ctrl.expectOne('/api/platform/tenants');
+    expect(req.request.headers.get('Authorization')).toBe('Bearer platform-token');
+    req.flush([]);
+  });
+
+  it('sends no token to the platform login', () => {
+    http.post('/api/platform/auth/login', {}).subscribe();
+
+    const req = ctrl.expectOne('/api/platform/auth/login');
+    expect(req.request.headers.has('Authorization')).toBe(false);
+    req.flush({});
+  });
+
+  it('returns to the platform login on 401 without trying the shop refresh', () => {
+    sessionStorage.setItem('platformToken', 'platform-token');
+    http.get('/api/platform/tenants').subscribe({ error: () => undefined });
+
+    ctrl.expectOne('/api/platform/tenants').flush({}, { status: 401, statusText: 'Unauthorized' });
+
+    expect(sessionStorage.getItem('platformToken')).toBeNull();
+    expect(router.navigateByUrl).toHaveBeenCalledWith(AppRoutes.PlatformLogin, { replaceUrl: true });
+  });
+});

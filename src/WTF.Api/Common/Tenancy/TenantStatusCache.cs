@@ -25,7 +25,7 @@ public sealed class TenantStatusCache(TimeProvider clock)
             .Select(t => (byte?)t.Status)
             .FirstOrDefaultAsync(cancellationToken);
 
-        var value = status ?? TenantAccess.Cancelled;
+        var value = status ?? TenantAccess.Active;
         _entries[tenantId] = (value, now.Add(Lifetime));
         return TenantAccess.CanUse(value);
     }

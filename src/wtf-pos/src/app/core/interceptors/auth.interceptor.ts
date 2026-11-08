@@ -2,7 +2,7 @@ import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { ServiceErrorMessages } from '@core/messages';
-import { AuthService } from '@core/services';
+import { AuthService, PlatformService } from '@core/services';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { catchError, switchMap, throwError } from 'rxjs';
 
@@ -10,6 +10,30 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const auth = inject(AuthService);
   const router = inject(Router);
   const url = req.url || '';
+
+  // The platform area has its own sign-in: its token goes only to /platform/ calls and a 401 there returns to its login.
+  if (url.includes('/platform/')) {
+    if (url.includes('/platform/auth/')) {
+      return next(req);
+    }
+
+    const platform = inject(PlatformService);
+    const platformToken = platform.getToken();
+    const platformReq = platformToken
+      ? req.clone({ setHeaders: { Authorization: `Bearer ${platformToken}` } })
+      : req;
+
+    return next(platformReq).pipe(
+      catchError((error: HttpErrorResponse) => {
+        if (error.status === 401) {
+          platform.logout();
+          router.navigateByUrl(AppRoutes.PlatformLogin, { replaceUrl: true });
+        }
+
+        return throwError(() => error);
+      }),
+    );
+  }
   const isAuthEndpoint = url.includes('/auth/login') || url.includes('/auth/refresh');
 
   // Public ordering pages are for customers who are not signed in. Never send a staff token to them (a staff member

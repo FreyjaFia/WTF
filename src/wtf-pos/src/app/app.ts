@@ -16,6 +16,7 @@ import {
   GlobalAlertComponent,
   IconsSpriteComponent,
 } from '@shared/components';
+import { ImpersonationBarComponent } from '@shared/components/impersonation-bar/impersonation-bar';
 import { UpdateBannerComponent } from '@shared/components/update-banner/update-banner';
 
 import type { PluginListenerHandle } from '@capacitor/core';
@@ -27,6 +28,7 @@ import type { PluginListenerHandle } from '@capacitor/core';
     IconsSpriteComponent,
     GlobalAlertComponent,
     ExitConfirmComponent,
+    ImpersonationBarComponent,
     UpdateBannerComponent,
     AuthLoadingOverlayComponent,
   ],

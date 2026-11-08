@@ -1,0 +1,9 @@
+@if (info(); as current) {
+  <div class="flex flex-wrap items-center gap-3 bg-amber-500 px-4 py-2 text-sm font-medium text-black" role="status">
+    <span class="mr-auto">
+      Signed in as {{ current.username }} at {{ current.tenantName }}
+      ({{ current.readOnly ? 'read-only' : 'changes are logged' }}). This session ends by itself.
+    </span>
+    <button type="button" class="app-btn app-btn-secondary app-btn-xs" (click)="leave()">Back to platform</button>
+  </div>
+}

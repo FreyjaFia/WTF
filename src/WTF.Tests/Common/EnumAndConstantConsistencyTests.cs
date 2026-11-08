@@ -14,7 +14,9 @@ public class EnumAndConstantConsistencyTests
     public void UserRoleEnum_NamesMatchAppRoles()
     {
         var roleNames = typeof(AppRoles).GetFields()
-            .Where(f => f.IsLiteral).Select(f => (string)f.GetRawConstantValue()!).OrderBy(x => x);
+            .Where(f => f.IsLiteral).Select(f => (string)f.GetRawConstantValue()!)
+            .Where(name => name != AppRoles.PlatformAdmin) // a platform-only role, never a shop user's role
+            .OrderBy(x => x);
 
         Enum.GetNames<UserRoleEnum>().OrderBy(x => x).ShouldBe(roleNames);
     }
