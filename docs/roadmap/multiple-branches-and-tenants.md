@@ -278,6 +278,9 @@ app always runs with a current tenant, even when there is only one. Keep this po
    storage, then the platform admin page, then onboarding the first outside store as a pilot at a discount.
 5. Only after a pilot has run a few weeks: custom domains, branded Android builds, self-service sign-up, payments.
 
+   Phase 5 rehearsal done on a local copy of production (all tenant scripts applied, isolation, suspend and lock checked).
+   The steps for production are in `docs/multi-tenant-rollout-checklist.md`.
+
 **Open questions for the owner**
 
 - Is a branch allowed to have its own prices or its own menu, or is the catalog always the same everywhere?
