@@ -190,15 +190,35 @@ Management > Users gets a Roles tab (or Management > Roles; decide with the layo
 Phase 1 is the large, risky one (every endpoint and 37 UI uses); the golden test is what makes it safe. Each phase
 ships on its own.
 
-### 8. Open decisions (Pogi)
+### 8. Decisions (Pogi, 8 Nov 2026)
 
-1. **Built-in roles:** keep the six as read-only templates with custom roles per shop (recommended), or give every
-   shop editable copies of all six?
-2. **Who manages roles:** SuperAdmin only, or a grantable `roles.manage` (still limited to permissions you hold)?
-3. **Custom roles as a paid feature:** Pro only, or in every plan?
-4. **Per-user exceptions:** none (recommended), or allow extra keys on one user?
-5. **Role changes:** effective on the next request (recommended) or at next sign-in?
-6. **Splits:** confirm `suppliers.*` as its own pair, and the Cashier loading products and customers through
-   `orders.write` instead of a catalog permission.
-7. **Order of work:** before plan gating (recommended, they share the catalog and `ITenantFeatures`), or after, and
-   where it sits in the queue (Temperature add-on, Senior/PWD, Offline phase 7, release readiness).
+1. **Built-in roles:** the six stay as read-only system roles; shops add custom roles.
+2. **Managing roles:** a grantable `roles.manage` permission, held by the owner role by default; nobody can grant a
+   permission they do not hold.
+3. **Custom roles are a Pro-only feature.** Starter shops use the built-in roles.
+4. **No per-user exceptions:** one role per user.
+5. **Role changes take effect on the user's next action** (server-side permission lookup, no re-login).
+6. **Splits confirmed:** `suppliers.read/write` as their own pair; Cashiers load products and customers for the
+   order editor through `orders.write`, without the Products or Customers screens.
+7. **Order of work:** RBAC before plan gating (they share the catalog's feature codes and `ITenantFeatures`).
+8. **SuperAdmin is renamed Owner everywhere** (stored name, code, tokens, UI, tests, docs), not just on screen.
+
+**Owner role.** It stays a distinct role: always every permission, cannot be edited, cannot be locked out, a shop can
+never be left without one, and only an Owner can create or edit another Owner (today's "only SuperAdmin touches
+SuperAdmin" rule). What SuperAdmin alone could see today (audit log, schema script history) becomes ordinary
+permissions (`audit.read`; `schemascripts.read` is a developer tool and should move to the platform side later) that
+Admin or a custom role can be given. When branches arrive, Owner is the person who sees every branch and Admin or a
+custom role can be limited to one.
+
+**The rename (do it as part of phase 1, one commit of its own, before anything else).**
+- Database: script renames `UserRoles` row Id 4 from `SuperAdmin` to `Owner` (idempotent: only when the name is still
+  `SuperAdmin`); match roles by name, never by id (the real ids are Admin 1, Cashier 2, AdminViewer 3, SuperAdmin 4,
+  ItemManager 5, StockManager 6). Then `tools/dbsync.bat`; keep the scaffold output as generated.
+- API: `AppRoles.SuperAdmin`, `UserRoleEnum.SuperAdmin`, policy lists, `UserEndpoints` checks, recipient lists, the
+  platform tenant-creation handler (first user), subscription reminders, seed data and tests.
+- App: `AppRoles`, `AppRoleLabels` ("Owner"), role groups and specs, the tolerant role matching in `AuthService`
+  (also accept the old `SuperAdmin` claim for one release so tokens issued before the rename keep working), and the
+  e2e fixtures and Playwright tests.
+- Docs and notes: `docs/`, the rollout checklist, and the throwaway database seeds.
+- Existing tokens carry `role=SuperAdmin` until refreshed; the API accepts both names for one release.
+- Real database state: 4 users (2 Admin, 1 Cashier, 1 SuperAdmin), no ItemManager or StockManager users locally.
