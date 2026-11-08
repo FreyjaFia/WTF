@@ -55,11 +55,14 @@ export class NotificationBellComponent implements OnInit {
   );
   protected readonly icon = notificationIcon;
   protected readonly style = severityStyle;
-  protected readonly ago = shortAgo;
+  // Read by the template, so a row's age only changes between change-detection passes, never during one.
+  private readonly now = signal(Date.now());
   protected readonly reminder = reminderText;
 
   public ngOnInit(): void {
     this.notifications.start();
+    const clock = setInterval(() => this.now.set(Date.now()), 30_000);
+    this.destroyRef.onDestroy(() => clearInterval(clock));
     this.destroyRef.onDestroy(() => this.notifications.stop());
     // A change that arrives while the panel is open updates what it shows.
     this.notifications.changed.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
@@ -67,6 +70,10 @@ export class NotificationBellComponent implements OnInit {
         this.load();
       }
     });
+  }
+
+  protected ago(iso: string): string {
+    return shortAgo(iso, this.now());
   }
 
   protected toggle(): void {

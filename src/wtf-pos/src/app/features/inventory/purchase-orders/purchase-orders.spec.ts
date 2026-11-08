@@ -8,7 +8,7 @@ import {
   SupplierService,
 } from '@core/services';
 import { PurchaseOrderDto, PurchaseOrderStatus, PurchaseOrderSummaryDto } from '@shared/models';
-import { of } from 'rxjs';
+import { Observable, of, Subject } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 import { PurchaseOrdersComponent } from './purchase-orders';
 
@@ -47,7 +47,8 @@ const detail: PurchaseOrderDto = {
 
 interface Vm {
   header: { patchValue: (value: object) => void };
-  lines: { at: (i: number) => { patchValue: (value: object) => void } };
+  lines: { at: (i: number) => { patchValue: (value: object) => void; controls: { unitsPerPack: { value: number | null }; packName: { value: string | null } } } };
+  chooseItem: (index: number) => void;
   openForm: () => void;
   editOrder: (order: PurchaseOrderDto) => void;
   toggleOrder: (order: PurchaseOrderSummaryDto) => void;
@@ -61,7 +62,7 @@ interface Vm {
 }
 
 describe('PurchaseOrdersComponent', () => {
-  function setup(options: { canWrite?: boolean; canSeeCosts?: boolean } = {}) {
+  function setup(options: { canWrite?: boolean; canSeeCosts?: boolean; supplier$?: Observable<unknown> } = {}) {
     const api = {
       getOrders: vi.fn().mockReturnValue(of([summary])),
       getOrder: vi.fn().mockReturnValue(of(detail)),
@@ -78,7 +79,7 @@ describe('PurchaseOrdersComponent', () => {
           provide: SupplierService,
           useValue: {
             getSuppliers: vi.fn().mockReturnValue(of([{ id: 's1', name: 'Metro Dairy' }])),
-            getSupplier: vi.fn().mockReturnValue(of({ items: [{ itemId: 'i1', packName: 'carton', unitsPerPack: 12, packPrice: 840 }] })),
+            getSupplier: vi.fn().mockReturnValue(options.supplier$ ?? of({ items: [{ itemId: 'i1', packName: 'carton', unitsPerPack: 12, packPrice: 840 }] })),
           },
         },
         { provide: InventoryService, useValue: { getInventoryItems: vi.fn().mockReturnValue(of([{ id: 'i1', name: 'Oat Milk', unitName: 'bottle' }])) } },
@@ -144,6 +145,22 @@ describe('PurchaseOrdersComponent', () => {
       note: 'soon',
       lines: [{ itemId: 'i1', packs: 2, unitsPerPack: 12, packPrice: 840, packName: 'carton' }],
     });
+  });
+
+  it('fills the pack details of an item picked before the supplier answered', () => {
+    const supplier$ = new Subject<unknown>();
+    const { vm } = setup({ supplier$ });
+    vm.openForm();
+    vm.header.patchValue({ supplierId: 's1' });
+    vm.chooseSupplier();
+    vm.lines.at(0).patchValue({ itemId: 'i1' });
+    vm.chooseItem(0);
+    expect(vm.lines.at(0).controls.unitsPerPack.value).toBe(1);
+
+    supplier$.next({ items: [{ itemId: 'i1', packName: 'carton', unitsPerPack: 12, packPrice: 840 }] });
+
+    expect(vm.lines.at(0).controls.unitsPerPack.value).toBe(12);
+    expect(vm.lines.at(0).controls.packName.value).toBe('carton');
   });
 
   it('does not save an empty order', () => {
