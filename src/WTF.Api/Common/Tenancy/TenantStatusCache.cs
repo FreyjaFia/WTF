@@ -11,7 +11,7 @@ public sealed class TenantStatusCache(TimeProvider clock)
 {
     public static readonly TimeSpan Lifetime = TimeSpan.FromSeconds(20);
 
-    private readonly ConcurrentDictionary<Guid, (byte Status, DateTime? AccessUntil, DateTimeOffset Expires)> _entries = new();
+    private readonly ConcurrentDictionary<Guid, (byte Status, DateTime? AccessUntil, DateTime StatusAt, DateTimeOffset Expires)> _entries = new();
 
     public async Task<bool> CanUseAsync(WTFDbContext db, Guid tenantId, CancellationToken cancellationToken) =>
         TenantAccess.CanUse((await GetAsync(db, tenantId, cancellationToken)).Status);
@@ -23,20 +23,31 @@ public sealed class TenantStatusCache(TimeProvider clock)
         return entry.AccessUntil is { } until && clock.GetUtcNow().UtcDateTime >= until;
     }
 
+    public async Task<DateTime?> ClosedSinceAsync(WTFDbContext db, Guid tenantId, CancellationToken cancellationToken)
+    {
+        var entry = await GetAsync(db, tenantId, cancellationToken);
+        if (!TenantAccess.CanUse(entry.Status))
+        {
+            return entry.StatusAt;
+        }
+
+        return entry.AccessUntil is { } until && clock.GetUtcNow().UtcDateTime >= until ? until : null;
+    }
+
     public void Forget(Guid tenantId) => _entries.TryRemove(tenantId, out _);
 
-    private async Task<(byte Status, DateTime? AccessUntil)> GetAsync(WTFDbContext db, Guid tenantId, CancellationToken cancellationToken)
+    private async Task<(byte Status, DateTime? AccessUntil, DateTime StatusAt)> GetAsync(WTFDbContext db, Guid tenantId, CancellationToken cancellationToken)
     {
         var now = clock.GetUtcNow();
         if (_entries.TryGetValue(tenantId, out var entry) && entry.Expires > now)
         {
-            return (entry.Status, entry.AccessUntil);
+            return (entry.Status, entry.AccessUntil, entry.StatusAt);
         }
 
         var status = await db.Tenants
             .AsNoTracking()
             .Where(t => t.Id == tenantId)
-            .Select(t => (byte?)t.Status)
+            .Select(t => new { t.Status, StatusAt = t.UpdatedAt ?? t.CreatedAt })
             .FirstOrDefaultAsync(cancellationToken);
 
         var subscription = await db.TenantSubscriptions
@@ -45,9 +56,10 @@ public sealed class TenantStatusCache(TimeProvider clock)
             .Select(s => new { s.CurrentPeriodEnd, s.GraceDays })
             .FirstOrDefaultAsync(cancellationToken);
 
-        var value = status ?? TenantAccess.Active;
+        var value = status?.Status ?? TenantAccess.Active;
+        var statusAt = status?.StatusAt ?? DateTime.MinValue;
         DateTime? accessUntil = subscription is null ? null : SubscriptionRules.AccessUntil(subscription.CurrentPeriodEnd, subscription.GraceDays);
-        _entries[tenantId] = (value, accessUntil, now.Add(Lifetime));
-        return (value, accessUntil);
+        _entries[tenantId] = (value, accessUntil, statusAt, now.Add(Lifetime));
+        return (value, accessUntil, statusAt);
     }
 }

@@ -8,6 +8,8 @@ import { AppRoutes } from '@shared/constants/app-routes';
 import { of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { authInterceptor } from './auth.interceptor';
+import { SubscriptionService } from '../services/subscription.service';
+import { subscriptionInterceptor } from './subscription.interceptor';
 import { timezoneInterceptor } from './timezone.interceptor';
 import { utcDateInterceptor } from './utc-date.interceptor';
 
@@ -323,5 +325,42 @@ describe('authInterceptor on platform calls', () => {
 
     expect(sessionStorage.getItem('platformToken')).toBeNull();
     expect(router.navigateByUrl).toHaveBeenCalledWith(AppRoutes.PlatformLogin, { replaceUrl: true });
+  });
+});
+
+describe('subscriptionInterceptor', () => {
+  let ctrl: HttpTestingController;
+  let http: HttpClient;
+  const subscription = { refresh: vi.fn(), lastOnline: vi.fn() };
+
+  beforeEach(() => {
+    subscription.refresh.mockReset();
+    subscription.lastOnline.mockReset().mockReturnValue('2026-11-08T01:00:00.000Z');
+    ({ http, ctrl } = setup([subscriptionInterceptor], [{ provide: SubscriptionService, useValue: subscription }]));
+  });
+
+  afterEach(() => ctrl.verify());
+
+  it('tells the server when the device was last online on offline order sync', () => {
+    http.post('/api/orders/sync', {}).subscribe();
+
+    const req = ctrl.expectOne('/api/orders/sync');
+    expect(req.request.headers.get('X-Last-Online')).toBe('2026-11-08T01:00:00.000Z');
+    req.flush({});
+  });
+
+  it('does not add the header to other calls', () => {
+    http.post('/api/orders', {}).subscribe();
+
+    const req = ctrl.expectOne('/api/orders');
+    expect(req.request.headers.has('X-Last-Online')).toBe(false);
+    req.flush({});
+  });
+
+  it('checks the subscription again after a 402', () => {
+    http.post('/api/orders', {}).subscribe({ error: () => undefined });
+    ctrl.expectOne('/api/orders').flush({}, { status: 402, statusText: 'Payment Required' });
+
+    expect(subscription.refresh).toHaveBeenCalled();
   });
 });

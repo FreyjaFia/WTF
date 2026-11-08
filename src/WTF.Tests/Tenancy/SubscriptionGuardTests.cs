@@ -79,7 +79,6 @@ public class SubscriptionGuardTests
     [InlineData("POST", "/api/orders")]
     [InlineData("PUT", "/api/products/1")]
     [InlineData("DELETE", "/api/customers/1")]
-    [InlineData("POST", "/api/orders/sync")]
     public async Task LapsedShop_CannotSaveAnything(string method, string path)
     {
         var (status, reached) = await SendAsync(method, path, Lapsed);
@@ -99,6 +98,24 @@ public class SubscriptionGuardTests
 
         reached.ShouldBeTrue();
         status.ShouldNotBe(StatusCodes.Status402PaymentRequired);
+    }
+
+    [Theory]
+    [InlineData("/api/orders/sync")]
+    [InlineData("/api/orders/batch")]
+    public async Task LapsedShop_StillReceivesOfflineOrderSync(string path)
+    {
+        var (_, reached) = await SendAsync("POST", path, Lapsed);
+
+        reached.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task SuspendedShop_StillReceivesOfflineOrderSync()
+    {
+        var (_, reached) = await SendAsync("POST", "/api/orders/sync", Lapsed, status: TenantAccess.Suspended);
+
+        reached.ShouldBeTrue();
     }
 
     [Fact]
