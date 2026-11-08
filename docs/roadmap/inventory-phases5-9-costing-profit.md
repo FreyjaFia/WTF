@@ -369,6 +369,10 @@ counting, and show the difference as **variance**, so you can tell a wrong recip
   cancel and close), a Create order button on each supplier group of the Reorder list, and in Receiving an "Against purchase
   order" choice that fills the lines with what is still to arrive. Checked in a browser on a throwaway database (Reorder to
   draft to sent to partly received, with the totals matching a hand count).
+- **Browser tests.** `src/wtf-e2e/tests/inventory/purchasing/` (suppliers, receiving, reorder, purchase-orders, layout) and
+  `tests/tenancy/purchasing-isolation.spec.ts` (two shops: lists, access by id, mixing records, numbering, stock). Run with
+  `npm run test:purchasing` against a stack that is up. The layout test found long unbroken names stretching the page; the
+  screens now use `wrap-anywhere`.
 - **Style rule for Phase 8.** Inventory screens reuse the app's shared search box, refresh button, searchable dropdown,
   badges, confirm dialog and input styling.
 
