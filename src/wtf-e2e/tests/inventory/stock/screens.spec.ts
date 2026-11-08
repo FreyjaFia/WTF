@@ -419,7 +419,9 @@ test.describe('the bell @stock @notifications', () => {
     await expect(entry).toBeVisible();
     await expect(entry).toHaveAttribute('data-unread', 'true');
 
+    const markedRead = page.waitForResponse((r) => r.url().endsWith('/notifications/read') && r.request().method() === 'POST');
     await bell.panel.locator('[data-bell-mark-all]').click();
+    expect((await markedRead).ok()).toBe(true);
     await expect(entry).toHaveAttribute('data-unread', 'false');
     // Other tests raise alerts in the same shop at the same time, so the button can be enabled again for their
     // alerts; what matters is that this alert stays read after a reload.

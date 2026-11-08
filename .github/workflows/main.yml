@@ -185,6 +185,7 @@ jobs:
           path: |
             src/wtf-e2e/playwright-report
             src/wtf-e2e/test-results
+            ${{ runner.temp }}/wtf-e2e/api.log
           if-no-files-found: ignore
           retention-days: 14
 
