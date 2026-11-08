@@ -1,3 +1,5 @@
+import type { BadgeVariant } from '@shared/components/badge/badge';
+import { orderStatusLabel, orderStatusVariant } from '@shared/utils/order-status';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FilterButtonComponent } from '@shared/components/filter-button/filter-button';
 import { selectedFilterCount } from '@shared/utils/filter-count';
@@ -563,44 +565,12 @@ export class OrderList implements OnInit, OnDestroy {
     this.resetAndLoadOrders();
   }
 
-  protected getStatusVariant(
-    status: OrderStatusEnum,
-  ): 'success' | 'error' | 'warning' | 'info' | 'amber' | 'default' {
-    switch (status) {
-      case OrderStatusEnum.Pending:
-        return 'warning';
-      case OrderStatusEnum.Completed:
-        return 'success';
-      case OrderStatusEnum.Cancelled:
-        return 'default';
-      case OrderStatusEnum.Refunded:
-        return 'error';
-      case OrderStatusEnum.PendingApproval:
-        return 'amber';
-      case OrderStatusEnum.PendingReview:
-        return 'amber';
-      default:
-        return 'info';
-    }
+  protected getStatusVariant(status?: OrderStatusEnum | null): BadgeVariant {
+    return orderStatusVariant(status);
   }
 
-  protected getStatusLabel(status: OrderStatusEnum): string {
-    switch (status) {
-      case OrderStatusEnum.PendingApproval:
-        return 'Awaiting approval';
-      case OrderStatusEnum.PendingReview:
-        return 'Needs review';
-      case OrderStatusEnum.Pending:
-        return 'Pending';
-      case OrderStatusEnum.Completed:
-        return 'Completed';
-      case OrderStatusEnum.Cancelled:
-        return 'Cancelled';
-      case OrderStatusEnum.Refunded:
-        return 'Refunded';
-      default:
-        return 'Unknown';
-    }
+  protected getStatusLabel(status?: OrderStatusEnum | null): string {
+    return orderStatusLabel(status);
   }
 
   protected getOrderDate(order: OrderDto): string {
