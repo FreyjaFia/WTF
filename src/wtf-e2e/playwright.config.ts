@@ -4,13 +4,10 @@ export default defineConfig({
   globalSetup: require.resolve('./global-setup'),
   timeout: 60_000,
   expect: { timeout: 30_000 },
-  // Files run side by side; the tests inside one file run in order. Every test seeds its own data and asserts only on
-  // it, so they can share the one throwaway database.
-  // 3 workers, not 5: with 5 browsers, the API, LocalDB and the dev server on one PC, the suite took 11 minutes and a
-  // different 2 to 20 tests timed out each run (every one passed alone); with 3 it takes about 8 and only 1 or 2 do.
+  // Every test seeds its own data and asserts only on it, so all tests can run side by side in the one throwaway
+  // database, including tests of the same file. Nothing is retried: a test that fails is a real failure to fix.
+  // The suite is CPU bound, so more workers than cores only adds timeouts: 3 on a PC, 4 on CI.
   // The expect timeout is 30 seconds because a page can take 15+ seconds to appear when the machine is busy.
-  // One retry everywhere, so a rare timing blip is retried instead of failing the run. A test that needed the retry is
-  // reported as "flaky" by Playwright, so it stays visible. On CI (4 cores) it uses 4 workers.
   workers: process.env.E2E_WORKERS ? Number(process.env.E2E_WORKERS) : process.env.CI ? 4 : 3,
   fullyParallel: true,
   retries: 0,
