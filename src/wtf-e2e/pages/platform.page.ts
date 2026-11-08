@@ -25,6 +25,11 @@ export class PlatformLoginPage {
     await this.password.fill(password);
     await this.submit.click();
   }
+
+  public async signInAndWait(username: string = PLATFORM_USERNAME, password: string = testPassword()): Promise<void> {
+    await this.signIn(username, password);
+    await this.page.waitForURL(/\/platform\/overview/);
+  }
 }
 
 export class PlatformShell {
@@ -34,6 +39,20 @@ export class PlatformShell {
   public constructor(private readonly page: Page) {
     this.nav = page.getByRole('complementary', { name: 'Platform navigation' });
     this.signOutButton = this.nav.getByRole('button', { name: 'Sign out' });
+  }
+
+  public link(name: 'Overview' | 'Shops' | 'Plans' | 'Platform log'): Locator {
+    return this.nav.getByRole('link', { name });
+  }
+}
+
+export class PlatformDock {
+  public readonly nav: Locator;
+  public readonly signOutButton: Locator;
+
+  public constructor(private readonly page: Page) {
+    this.nav = page.getByRole('navigation', { name: 'Platform navigation' });
+    this.signOutButton = page.getByRole('button', { name: 'Sign out' });
   }
 
   public link(name: 'Overview' | 'Shops' | 'Plans' | 'Platform log'): Locator {
@@ -72,6 +91,27 @@ export class PlatformShopsPage {
 
   public row(slug: string): Locator {
     return this.page.getByTestId(`shop-${slug}`);
+  }
+
+  public get filtersButton(): Locator {
+    return this.page.getByRole('button', { name: /^Filters/ });
+  }
+
+  public get filtersDrawerTitle(): Locator {
+    return this.page.getByText('Shop Filters', { exact: true });
+  }
+
+  public statusFilter(id: 1 | 2 | 3 | 4): Locator {
+    return this.page.getByTestId(`filter-status-${id}`);
+  }
+
+  public sortHeader(label: string): Locator {
+    return this.page.getByTestId('shops-table').getByRole('button', { name: `Sort by ${label}`, exact: true });
+  }
+
+  public async rowSlugs(): Promise<string[]> {
+    const ids = await this.page.getByTestId('shops-table').locator('[data-testid^="shop-"]').evaluateAll((els) => els.map((el) => el.getAttribute('data-testid') ?? ''));
+    return ids.map((id) => id.replace(/^shop-/, ''));
   }
 
   public async fillAndCreate(form: NewShopForm): Promise<void> {
