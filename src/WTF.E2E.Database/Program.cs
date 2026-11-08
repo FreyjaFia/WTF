@@ -261,12 +261,12 @@ static async Task InsertAsync<TEntity>(WTFDbContext db, List<TEntity> rows)
 {
     var table = db.Model.FindEntityType(typeof(TEntity))!.GetTableName()!;
     var hasIdentity = await db.Database
-        .SqlQuery<int>($"SELECT CAST(OBJECTPROPERTY(OBJECT_ID(N'dbo.{table}'), 'TableHasIdentity') AS int) AS [Value]")
+        .SqlQuery<int>($"SELECT CAST(OBJECTPROPERTY(OBJECT_ID({"dbo." + table}), 'TableHasIdentity') AS int) AS [Value]")
         .SingleAsync() == 1;
 
     if (hasIdentity)
     {
-        await db.Database.ExecuteSqlAsync($"SET IDENTITY_INSERT [dbo].[{table}] ON");
+        await db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT [dbo].[" + table + "] ON");
     }
 
     db.Set<TEntity>().AddRange(rows);
@@ -274,7 +274,7 @@ static async Task InsertAsync<TEntity>(WTFDbContext db, List<TEntity> rows)
 
     if (hasIdentity)
     {
-        await db.Database.ExecuteSqlAsync($"SET IDENTITY_INSERT [dbo].[{table}] OFF");
+        await db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT [dbo].[" + table + "] OFF");
     }
 }
 
