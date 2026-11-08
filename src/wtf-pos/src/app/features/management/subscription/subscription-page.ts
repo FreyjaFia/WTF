@@ -1,16 +1,21 @@
 import { CurrencyPipe, DatePipe } from '@angular/common';
 import { Component, inject, OnInit, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { SubscriptionService } from '@core/services';
 import { BadgeComponent, BadgeVariant } from '@shared/components/badge/badge';
+import { IconComponent } from '@shared/components/icons/icon/icon';
+import { AppRoutes } from '@shared/constants/app-routes';
 import { TenantInvoiceDto } from '@shared/models/subscription.models';
 
 @Component({
   selector: 'app-subscription-page',
-  imports: [BadgeComponent, CurrencyPipe, DatePipe],
+  imports: [BadgeComponent, CurrencyPipe, DatePipe, IconComponent, RouterLink],
   templateUrl: './subscription-page.html',
   standalone: true,
 })
 export class SubscriptionPageComponent implements OnInit {
+  protected readonly shopRoute = AppRoutes.ManagementShop;
+
   protected readonly subscription = inject(SubscriptionService);
 
   protected readonly invoices = signal<TenantInvoiceDto[]>([]);

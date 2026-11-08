@@ -1,57 +1,21 @@
-<div class="flex h-full min-h-0 flex-col pt-4 md:pt-0">
-  <div class="mb-4 flex shrink-0 flex-col gap-3 sm:mb-6">
-    <div class="flex flex-col gap-1">
-      <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Shop</h1>
-      <p class="text-xs text-gray-500 sm:text-sm">Your shop's name and look, its plan and its invoices</p>
-    </div>
-    <nav
-      class="flex w-full items-end gap-4 overflow-x-auto border-b border-gray-200 pb-2 text-sm [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      role="tablist"
-      aria-label="Shop sections"
-      data-testid="shop-tabs"
-    >
-      @if (authService.canManageBrand()) {
-        <a
-          [routerLink]="brandingRoute"
-          routerLinkActive
-          #branding="routerLinkActive"
-          role="tab"
-          class="relative flex shrink-0 rounded-md px-2 py-1 font-bold text-gray-500 transition-colors"
-          [class.text-gray-900]="branding.isActive"
-          [attr.aria-selected]="branding.isActive"
-          data-testid="shop-tab-branding"
-        >
-          <span class="relative">Branding</span>
-          <span
-            class="absolute right-2 -bottom-2 left-2 h-0.5 rounded-full bg-gray-700 transition-opacity"
-            [class.opacity-100]="branding.isActive"
-            [class.opacity-0]="!branding.isActive"
-          ></span>
-        </a>
-      }
-      @if (authService.canManageSubscription()) {
-        <a
-          [routerLink]="planRoute"
-          routerLinkActive
-          #plan="routerLinkActive"
-          role="tab"
-          class="relative flex shrink-0 rounded-md px-2 py-1 font-bold text-gray-500 transition-colors"
-          [class.text-gray-900]="plan.isActive"
-          [attr.aria-selected]="plan.isActive"
-          data-testid="shop-tab-plan"
-        >
-          <span class="relative">Plan &amp; billing</span>
-          <span
-            class="absolute right-2 -bottom-2 left-2 h-0.5 rounded-full bg-gray-700 transition-opacity"
-            [class.opacity-100]="plan.isActive"
-            [class.opacity-0]="!plan.isActive"
-          ></span>
-        </a>
-      }
-    </nav>
+<div class="flex h-full min-h-0 flex-col overflow-y-auto pt-4 md:pt-0" data-testid="shop-hub">
+  <div class="mb-4 flex flex-col gap-1 sm:mb-6">
+    <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Shop</h1>
+    <p class="text-xs text-gray-500 sm:text-sm">
+      Your shop's name and look, its plan and its invoices. Pick one to change it.
+    </p>
   </div>
 
-  <div class="flex min-h-0 flex-1 flex-col">
-    <router-outlet />
+  <div class="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+    @for (card of cards(); track card.id) {
+      <a
+        [routerLink]="card.route"
+        class="bg-surface flex min-w-0 flex-col gap-1 rounded-xl border border-gray-100 p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
+        [attr.data-testid]="'shop-card-' + card.id"
+      >
+        <span class="truncate text-base font-semibold text-gray-900">{{ card.label }}</span>
+        <span class="text-sm text-gray-500">{{ card.description }}</span>
+      </a>
+    }
   </div>
 </div>

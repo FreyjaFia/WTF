@@ -502,16 +502,18 @@ export const routes: Routes = [
             component: ShopComponent,
             canActivate: [roleGuard],
             data: { roles: AppRoleGroups.BrandManage },
-            children: [
-              { path: '', redirectTo: 'branding', pathMatch: 'full' },
-              { path: 'branding', component: BrandPageComponent },
-              {
-                path: 'plan',
-                component: SubscriptionPageComponent,
-                canActivate: [roleGuard],
-                data: { roles: AppRoleGroups.SubscriptionBilling },
-              },
-            ],
+          },
+          {
+            path: 'shop/branding',
+            component: BrandPageComponent,
+            canActivate: [roleGuard],
+            data: { roles: AppRoleGroups.BrandManage },
+          },
+          {
+            path: 'shop/plan',
+            component: SubscriptionPageComponent,
+            canActivate: [roleGuard],
+            data: { roles: AppRoleGroups.SubscriptionBilling },
           },
         ],
       },

@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { SubscriptionService } from '@core/services';
 import { of, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
@@ -26,7 +27,7 @@ describe('SubscriptionPageComponent', () => {
       refresh: vi.fn(),
       getInvoices: vi.fn(() => (options.fails ? throwError(() => new Error('x')) : of(options.invoices ?? [invoice]))),
     };
-    TestBed.configureTestingModule({ providers: [{ provide: SubscriptionService, useValue: service }] });
+    TestBed.configureTestingModule({ providers: [provideRouter([]), { provide: SubscriptionService, useValue: service }] });
     const fixture = TestBed.createComponent(SubscriptionPageComponent);
     fixture.detectChanges();
     return { el: fixture.nativeElement as HTMLElement };

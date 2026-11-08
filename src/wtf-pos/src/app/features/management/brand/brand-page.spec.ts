@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { AlertService, BrandService } from '@core/services';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
@@ -28,6 +29,7 @@ describe('BrandPageComponent', () => {
     };
     TestBed.configureTestingModule({
       providers: [
+        provideRouter([]),
         { provide: BrandService, useValue: service },
         { provide: AlertService, useValue: { success: vi.fn(), error: vi.fn() } },
       ],

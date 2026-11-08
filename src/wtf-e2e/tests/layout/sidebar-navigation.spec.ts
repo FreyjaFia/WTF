@@ -95,10 +95,13 @@ test.describe('sidebar navigation @layout @navigation', () => {
     await expect(sidebarLink(admin, 'Subscription')).toHaveCount(0);
     await expect(sidebarLink(admin, 'Shop')).toHaveCount(1);
     await sidebarLink(admin, 'Shop').click();
+    await expect(admin).toHaveURL(/\/management\/shop$/);
+    await admin.getByTestId('shop-card-branding').click();
     await expect(admin).toHaveURL(/\/management\/shop\/branding$/);
     await expect(admin.getByTestId('brand-shopName')).toBeVisible();
 
-    await admin.getByTestId('shop-tab-plan').click();
+    await admin.getByTestId('shop-back').click();
+    await admin.getByTestId('shop-card-plan').click();
     await expect(admin).toHaveURL(/\/management\/shop\/plan$/);
     await expect(admin.getByRole('heading', { name: 'Invoices' })).toBeVisible();
 

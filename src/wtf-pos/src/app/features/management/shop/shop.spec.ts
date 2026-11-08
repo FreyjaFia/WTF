@@ -17,16 +17,18 @@ describe('ShopComponent', () => {
     return fixture.nativeElement as HTMLElement;
   }
 
-  it('shows the page header and both tabs to someone who can manage both', () => {
+  const link = (el: HTMLElement, id: string) => el.querySelector(`[data-testid="shop-card-${id}"]`);
+
+  it('lists a card for each section, like the Setup page, linking to its own page', () => {
     const el = setup(true, true);
     expect(el.querySelector('h1')?.textContent).toContain('Shop');
-    expect(el.querySelector('[data-testid="shop-tab-branding"]')).not.toBeNull();
-    expect(el.querySelector('[data-testid="shop-tab-plan"]')).not.toBeNull();
+    expect(link(el, 'branding')?.getAttribute('href')).toBe('/management/shop/branding');
+    expect(link(el, 'plan')?.getAttribute('href')).toBe('/management/shop/plan');
   });
 
-  it('only shows the tabs the person may use', () => {
+  it('only lists the sections the person may use', () => {
     const el = setup(true, false);
-    expect(el.querySelector('[data-testid="shop-tab-branding"]')).not.toBeNull();
-    expect(el.querySelector('[data-testid="shop-tab-plan"]')).toBeNull();
+    expect(link(el, 'branding')).not.toBeNull();
+    expect(link(el, 'plan')).toBeNull();
   });
 });

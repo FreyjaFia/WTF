@@ -1,6 +1,9 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { AlertService, BrandService } from '@core/services';
+import { IconComponent } from '@shared/components/icons/icon/icon';
+import { AppRoutes } from '@shared/constants/app-routes';
 import { BrandDto } from '@shared/models/subscription.models';
 
 type BrandField = {
@@ -24,11 +27,13 @@ const BRAND_FIELDS: BrandField[] = [
 
 @Component({
   selector: 'app-brand-page',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, RouterLink, IconComponent],
   templateUrl: './brand-page.html',
   standalone: true,
 })
 export class BrandPageComponent implements OnInit {
+  protected readonly shopRoute = AppRoutes.ManagementShop;
+
   private readonly brandService = inject(BrandService);
   private readonly alertService = inject(AlertService);
   private readonly fb = inject(FormBuilder);
