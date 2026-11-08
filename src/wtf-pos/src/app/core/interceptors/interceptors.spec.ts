@@ -3,7 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { ServiceErrorMessages } from '@core/messages';
-import { AuthService } from '@core/services';
+import { AlertService, AuthService } from '@core/services';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -29,6 +29,7 @@ function setup(interceptors: Parameters<typeof withInterceptors>[0], providers: 
 
 describe('authInterceptor', () => {
   let auth: { getToken: ReturnType<typeof vi.fn>; refreshToken: ReturnType<typeof vi.fn>; logout: ReturnType<typeof vi.fn> };
+  let alerts: { error: ReturnType<typeof vi.fn> };
   let router: { navigateByUrl: ReturnType<typeof vi.fn> };
   let ctrl: HttpTestingController;
   let http: HttpClient;
@@ -36,13 +37,36 @@ describe('authInterceptor', () => {
   beforeEach(() => {
     auth = { getToken: vi.fn().mockReturnValue('tok'), refreshToken: vi.fn(), logout: vi.fn() };
     router = { navigateByUrl: vi.fn() };
+    alerts = { error: vi.fn() };
     ({ http, ctrl } = setup([authInterceptor], [
+      { provide: AlertService, useValue: alerts },
       { provide: AuthService, useValue: auth },
       { provide: Router, useValue: router },
     ]));
   });
 
   afterEach(() => ctrl.verify());
+
+  it('signs a person out with the message from the API when their shop is suspended', () => {
+    http.get('/api/orders').subscribe({ error: () => undefined });
+
+    ctrl.expectOne('/api/orders').flush(
+      { message: ServiceErrorMessages.Auth.ShopSuspended },
+      { status: 403, statusText: 'Forbidden' },
+    );
+
+    expect(auth.logout).toHaveBeenCalled();
+    expect(alerts.error).toHaveBeenCalledWith(ServiceErrorMessages.Auth.ShopSuspended);
+    expect(router.navigateByUrl).toHaveBeenCalledWith(AppRoutes.Login, { replaceUrl: true });
+  });
+
+  it('keeps the session on a 403 that is not about a suspended shop', () => {
+    http.get('/api/orders').subscribe({ error: () => undefined });
+
+    ctrl.expectOne('/api/orders').flush({ message: 'This session is read-only.' }, { status: 403, statusText: 'Forbidden' });
+
+    expect(auth.logout).not.toHaveBeenCalled();
+  });
 
   it('attaches the bearer token', () => {
     http.get('/api/orders').subscribe();

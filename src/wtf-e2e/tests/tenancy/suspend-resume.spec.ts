@@ -56,8 +56,8 @@ test.describe('suspending and resuming a shop @tenancy @suspend', () => {
 
     await login.signIn(shop.ownerUsername, shop.ownerPassword);
 
-    // The app shows its generic failed-sign-in message here; it does not repeat the "suspended" text the API sends.
-    await expect(page.getByRole('alert')).toBeVisible();
+    await expect(page.getByRole('alert')).toContainText(SUSPENDED_MESSAGE);
+    await expect(page.getByRole('alert')).not.toContainText('Invalid username or password');
     await expect(page).toHaveURL(/\/login/);
     expect(await page.evaluate(() => localStorage.getItem('token'))).toBeNull();
 
@@ -67,7 +67,7 @@ test.describe('suspending and resuming a shop @tenancy @suspend', () => {
     await page.waitForURL((url) => !url.pathname.startsWith('/login'));
   });
 
-  test('a person already inside the app no longer sees the shop\'s data once it is suspended', async ({ request, platform, newContext }) => {
+  test('a person already inside the app is signed out with the suspended message once the shop is suspended', async ({ request, platform, newContext }) => {
     const shop = await openShop(request, platform);
     const customer = await shop.owner.createCustomer('Visible Before');
     const page = await (await newContext()).newPage();
@@ -79,7 +79,10 @@ test.describe('suspending and resuming a shop @tenancy @suspend', () => {
     await platform.setStatus(shop.id, 'suspend');
     await page.reload();
 
+    await expect(page).toHaveURL(/\/login/);
+    await expect(page.getByRole('alert')).toContainText(SUSPENDED_MESSAGE);
     await expect(page.getByText(customer.firstName)).toHaveCount(0);
+    expect(await page.evaluate(() => localStorage.getItem('token'))).toBeNull();
   });
 
   test('a cancelled shop is refused too and cannot be resumed', async ({ request, platform }) => {

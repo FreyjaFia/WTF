@@ -18,6 +18,7 @@ export const ServiceErrorMessages = {
     NoRefreshToken: 'No refresh token available',
     RefreshTokenFailed: 'Token refresh failed',
     SessionExpired: 'Session expired. Please log in again.',
+    ShopSuspended: "This shop's account is suspended. Please contact support.",
   },
   Common: {
     GenerateOrderImageFailed: 'Failed to generate order image.',

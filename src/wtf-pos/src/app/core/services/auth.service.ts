@@ -82,7 +82,10 @@ export class AuthService {
 
         let errorMessage: string = AuthService.MSG_LOGIN_FAILED;
 
-        if (error.status === 401 || error.status === 400) {
+        if (error.status === 400 && typeof error.error?.message === 'string' && error.error.message) {
+          // The API explains why (for example, the shop is suspended); only a plain 401 means a wrong username or password.
+          errorMessage = error.error.message;
+        } else if (error.status === 401 || error.status === 400) {
           errorMessage = AuthService.MSG_INVALID_CREDENTIALS;
         } else if (error.status === 0) {
           errorMessage = AuthService.MSG_NETWORK_UNAVAILABLE;

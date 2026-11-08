@@ -2,13 +2,16 @@ import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { ServiceErrorMessages } from '@core/messages';
-import { AuthService, PlatformService } from '@core/services';
+import { AlertService, AuthService, PlatformService } from '@core/services';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { catchError, switchMap, throwError } from 'rxjs';
+
+const SUSPENDED_RESPONSE = /suspended/i;
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const auth = inject(AuthService);
   const router = inject(Router);
+  const alerts = inject(AlertService);
   const url = req.url || '';
 
   // The platform area has its own sign-in: its token goes only to /platform/ calls and a 401 there returns to its login.
@@ -91,6 +94,13 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
             return throwError(() => new Error(ServiceErrorMessages.Auth.SessionExpired));
           }),
         );
+      }
+
+      if (error.status === 403 && SUSPENDED_RESPONSE.test(error.error?.message ?? '') && auth.getToken()) {
+        // The shop was suspended while this person was signed in: end the session and say why, instead of showing empty pages.
+        auth.logout();
+        alerts.error(error.error.message || ServiceErrorMessages.Auth.ShopSuspended);
+        router.navigateByUrl(AppRoutes.Login, { replaceUrl: true });
       }
 
       return throwError(() => error);

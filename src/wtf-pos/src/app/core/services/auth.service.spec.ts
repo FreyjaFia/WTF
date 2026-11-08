@@ -78,3 +78,46 @@ describe('AuthService refresh', () => {
     expect(auth.getToken()).toBe('recovered-access-token');
   });
 });
+
+describe('AuthService login errors', () => {
+  let auth: AuthService;
+  let http: HttpTestingController;
+  const loginUrl = `${environment.apiUrl}/auth/login`;
+
+  beforeEach(() => {
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    });
+    auth = TestBed.inject(AuthService);
+    http = TestBed.inject(HttpTestingController);
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    http.verify();
+    localStorage.clear();
+    vi.restoreAllMocks();
+  });
+
+  it('shows the message the API sends when the shop is suspended', () => {
+    const failed = vi.fn();
+    auth.login('owner', 'secret').subscribe({ error: failed });
+
+    http.expectOne(loginUrl).flush(
+      { message: "This shop's account is suspended. Please contact support." },
+      { status: 400, statusText: 'Bad Request' },
+    );
+
+    expect(failed.mock.calls[0][0].message).toBe("This shop's account is suspended. Please contact support.");
+  });
+
+  it('keeps the invalid username or password message for a plain 401', () => {
+    const failed = vi.fn();
+    auth.login('owner', 'wrong').subscribe({ error: failed });
+
+    http.expectOne(loginUrl).flush(null, { status: 401, statusText: 'Unauthorized' });
+
+    expect(failed.mock.calls[0][0].message).toBe('Invalid username or password.');
+  });
+});
