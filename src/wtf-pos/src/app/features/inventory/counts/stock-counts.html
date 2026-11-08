@@ -108,26 +108,39 @@
         </div>
       }
 
+      @if (sortedCounts().length > 0) {
+        <div class="sticky top-0 z-10 mb-2 hidden grid-cols-12 gap-4 rounded-lg bg-surface py-3 pr-4 pl-6 lg:grid" data-testid="count-columns">
+          <app-sort-header class="col-span-6" label="Count" align="start" [active]="sortColumn() === 'count'" [direction]="sortDirection()" (sorted)="toggleSort('count')" />
+          <app-sort-header class="col-span-2" label="Created" align="center" [active]="sortColumn() === 'created'" [direction]="sortDirection()" (sorted)="toggleSort('created')" />
+          <app-sort-header class="col-span-2" label="Progress" align="center" [active]="sortColumn() === 'progress'" [direction]="sortDirection()" (sorted)="toggleSort('progress')" />
+          <app-sort-header class="col-span-2" label="Status" align="end" [active]="sortColumn() === 'status'" [direction]="sortDirection()" (sorted)="toggleSort('status')" />
+        </div>
+      }
+
       <ul class="space-y-2.5" data-testid="count-list">
-        @for (count of counts(); track count.id) {
+        @for (count of sortedCounts(); track count.id) {
           <li class="relative overflow-hidden rounded-xl bg-surface shadow" data-testid="count-row">
             <span class="absolute inset-y-0 left-0 w-1.5" [class]="statusBar(count.status)" aria-hidden="true"></span>
             <a
               [routerLink]="countRoute(count.id)"
               draggable="false"
-              class="flex items-center justify-between gap-3 p-3 pl-5 transition-colors hover:bg-gray-50 sm:p-4 sm:pl-6"
+              class="flex items-center justify-between gap-3 p-3 pl-5 transition-colors hover:bg-gray-50 sm:p-4 sm:pl-6 lg:grid lg:grid-cols-12 lg:gap-4"
             >
-              <div class="min-w-0">
+              <div class="min-w-0 lg:col-span-6">
                 <p class="font-semibold wrap-break-word text-gray-900">{{ count.name }}</p>
                 <p class="text-xs text-gray-500">
-                  {{ count.createdAt | date: 'MMM d, y, h:mm a' }} &middot; {{ count.createdByName }}
+                  <span class="lg:hidden">{{ count.createdAt | date: 'MMM d, y, h:mm a' }} &middot; </span>{{ count.createdByName }}
                   @if (count.isBlind) {
                     &middot; Blind
                   }
                 </p>
-                <p class="text-xs text-gray-500">{{ count.countedCount }} of {{ count.lineCount }} counted</p>
+                <p class="text-xs text-gray-500 lg:hidden">{{ count.countedCount }} of {{ count.lineCount }} counted</p>
               </div>
-              <app-badge [variant]="variantOf(count.status)">{{ statusLabels[count.status] }}</app-badge>
+              <p class="hidden text-center text-sm text-gray-700 lg:col-span-2 lg:block">{{ count.createdAt | date: 'MMM d, y' }}</p>
+              <p class="hidden text-center text-sm text-gray-700 lg:col-span-2 lg:block">{{ count.countedCount }} of {{ count.lineCount }}</p>
+              <div class="lg:col-span-2 lg:text-right">
+                <app-badge [variant]="variantOf(count.status)">{{ statusLabels[count.status] }}</app-badge>
+              </div>
             </a>
           </li>
         }

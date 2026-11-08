@@ -97,4 +97,33 @@ test.describe('filtering the waste list @waste', () => {
     await expect(list.empty).toBeVisible();
     await expect(list.filtersButton).toContainText('2');
   });
+
+  test('the column headers sort the waste list on a wide screen and are hidden on a phone', async ({ api, signIn }) => {
+    const small = await api.items.create({ startingQuantity: 100 });
+    const large = await api.items.create({ startingQuantity: 100 });
+    const smallWaste = await api.waste.record(small.id, { quantity: 2 });
+    const largeWaste = await api.waste.record(large.id, { quantity: 9 });
+
+    const page = await signIn('admin');
+    await page.setViewportSize({ width: 1440, height: 900 });
+    const list = new WasteListPage(page);
+    await list.open();
+    const columns = page.getByTestId('waste-columns');
+    await expect(columns).toBeVisible();
+    for (const name of ['Item', 'Recorded', 'Quantity', 'Status']) {
+      await expect(columns).toContainText(name);
+    }
+
+    const order = async (): Promise<string[]> => {
+      const ids = await page.locator('li[data-testid^="waste-"]').evaluateAll((els) => els.map((el) => el.getAttribute('data-testid')));
+      return ids.filter((id) => id === `waste-${smallWaste.id}` || id === `waste-${largeWaste.id}`).map((id) => (id === `waste-${smallWaste.id}` ? 'small' : 'large'));
+    };
+    await page.getByRole('button', { name: 'Sort by Quantity' }).click();
+    await expect.poll(order).toEqual(['small', 'large']);
+    await page.getByRole('button', { name: 'Sort by Quantity' }).click();
+    await expect.poll(order).toEqual(['large', 'small']);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(columns).toBeHidden();
+  });
 });

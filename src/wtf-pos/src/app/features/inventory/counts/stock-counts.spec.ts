@@ -24,6 +24,9 @@ interface Vm {
   form: { patchValue: (value: object) => void };
   start: () => void;
   openForm: () => void;
+  toggleSort: (column: 'count' | 'created' | 'progress' | 'status') => void;
+  sortedCounts: () => StockCountSummaryDto[];
+  sortDirection: () => string;
 }
 
 describe('StockCountsComponent', () => {
@@ -49,6 +52,38 @@ describe('StockCountsComponent', () => {
     const vm = fixture.componentInstance as unknown as Vm;
     return { fixture, service, alerts, el, vm, router: TestBed.inject(Router) };
   }
+
+  describe('sorting from the column headers', () => {
+    const counts = [
+      summary({ id: 'a', name: 'Weekly milk', createdAt: '2026-11-08T01:00:00Z', lineCount: 4, countedCount: 1, status: StockCountStatus.Open }),
+      summary({ id: 'b', name: 'bar stock', createdAt: '2026-11-01T01:00:00Z', lineCount: 2, countedCount: 2, status: StockCountStatus.Posted }),
+      summary({ id: 'c', name: 'Pantry', createdAt: '2026-11-05T01:00:00Z', lineCount: 0, countedCount: 0, status: StockCountStatus.Cancelled }),
+    ];
+    const ids = (vm: Vm): string[] => vm.sortedCounts().map((c) => c.id);
+
+    it('keeps the server order until a column is picked', () => {
+      expect(ids(setup({ counts }).vm)).toEqual(['a', 'b', 'c']);
+    });
+
+    it('sorts by name ignoring case, and reverses when picked again', () => {
+      const { vm } = setup({ counts });
+      vm.toggleSort('count');
+      expect(ids(vm)).toEqual(['b', 'c', 'a']);
+      vm.toggleSort('count');
+      expect(vm.sortDirection()).toBe('desc');
+      expect(ids(vm)).toEqual(['a', 'c', 'b']);
+    });
+
+    it('sorts by created date, progress and status', () => {
+      const { vm } = setup({ counts });
+      vm.toggleSort('created');
+      expect(ids(vm)).toEqual(['b', 'c', 'a']);
+      vm.toggleSort('progress');
+      expect(ids(vm)).toEqual(['c', 'a', 'b']);
+      vm.toggleSort('status');
+      expect(ids(vm)).toEqual(['a', 'b', 'c']);
+    });
+  });
 
   it('lists the counts with their progress and status', () => {
     const { el } = setup();

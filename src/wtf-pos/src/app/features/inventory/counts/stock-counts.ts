@@ -1,12 +1,13 @@
 import { HttpErrorMessages } from '@core/messages';
 import { DatePipe } from '@angular/common';
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { Capacitor } from '@capacitor/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AlertService, AuthService, StockCountService } from '@core/services';
 import { BadgeComponent, BadgeVariant } from '@shared/components/badge/badge';
 import { ConnectionErrorComponent, IconComponent, PullToRefreshComponent } from '@shared/components';
+import { SortDirection, SortHeaderComponent } from '@shared/components/sort-header/sort-header';
 import { AppRoutes } from '@shared/constants/app-routes';
 import {
   STOCK_COUNT_STATUS_LABELS,
@@ -26,6 +27,8 @@ const STATUS_BARS: Record<StockCountStatus, string> = {
   [StockCountStatus.Cancelled]: 'bg-gray-300',
 };
 
+type CountSortColumn = 'count' | 'created' | 'progress' | 'status';
+
 @Component({
   selector: 'app-stock-counts',
   imports: [ConnectionErrorComponent, 
@@ -35,6 +38,7 @@ const STATUS_BARS: Record<StockCountStatus, string> = {
     PullToRefreshComponent,
     ReactiveFormsModule,
     RouterLink,
+    SortHeaderComponent,
   ],
   templateUrl: './stock-counts.html',
   host: { class: 'flex-1 min-h-0' },
@@ -46,6 +50,32 @@ export class StockCountsComponent implements OnInit {
   protected readonly auth = inject(AuthService);
 
   protected readonly counts = signal<StockCountSummaryDto[]>([]);
+  protected readonly sortColumn = signal<CountSortColumn | null>(null);
+  protected readonly sortDirection = signal<SortDirection>('asc');
+  protected readonly sortedCounts = computed(() => {
+    const column = this.sortColumn();
+    const counts = [...this.counts()];
+    if (!column) {
+      return counts;
+    }
+
+    const direction = this.sortDirection() === 'asc' ? 1 : -1;
+    const progress = (c: StockCountSummaryDto): number => (c.lineCount === 0 ? 0 : c.countedCount / c.lineCount);
+    const compare = (a: StockCountSummaryDto, b: StockCountSummaryDto): number => {
+      switch (column) {
+        case 'count':
+          return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+        case 'created':
+          return a.createdAt.localeCompare(b.createdAt);
+        case 'progress':
+          return progress(a) - progress(b);
+        case 'status':
+          return a.status - b.status;
+      }
+    };
+
+    return counts.sort((a, b) => compare(a, b) * direction);
+  });
   protected readonly isLoading = signal(false);
   protected readonly connectionFailed = signal(false);
   protected readonly isRefreshing = signal(false);
@@ -76,6 +106,15 @@ export class StockCountsComponent implements OnInit {
 
   protected statusBar(status: StockCountStatus): string {
     return STATUS_BARS[status];
+  }
+
+  protected toggleSort(column: CountSortColumn): void {
+    if (this.sortColumn() === column) {
+      this.sortDirection.update((direction) => (direction === 'asc' ? 'desc' : 'asc'));
+    } else {
+      this.sortColumn.set(column);
+      this.sortDirection.set('asc');
+    }
   }
 
   protected openForm(): void {

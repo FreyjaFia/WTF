@@ -16,6 +16,7 @@ import { BadgeComponent, BadgeVariant } from '@shared/components/badge/badge';
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import { FilterButtonComponent } from '@shared/components/filter-button/filter-button';
 import { SearchInputComponent } from '@shared/components/search-input/search-input';
+import { SortDirection, SortHeaderComponent } from '@shared/components/sort-header/sort-header';
 import { AppRoutes } from '@shared/constants/app-routes';
 import {
   STOCK_WASTE_STATUS_LABELS,
@@ -30,6 +31,7 @@ import { Observable } from 'rxjs';
 
 type DatePreset = 'today' | 'week' | 'month' | 'all';
 type ReviewAction = 'confirm' | 'dispute' | 'reverse';
+type WasteSortColumn = 'item' | 'recorded' | 'quantity' | 'status';
 
 const DEFAULT_DATE_PRESET: DatePreset = 'month';
 const PAGE_SIZE = 20;
@@ -63,6 +65,7 @@ const STATUS_BARS: Record<StockWasteStatus, string> = {
     ReactiveFormsModule,
     SearchInputComponent,
     SideDrawerComponent,
+    SortHeaderComponent,
   ],
   templateUrl: './waste.html',
   host: { class: 'flex-1 min-h-0' },
@@ -121,6 +124,31 @@ export class WasteComponent implements OnInit, OnDestroy {
         (entry.createdByName ?? '').toLowerCase().includes(term) ||
         (entry.notes ?? '').toLowerCase().includes(term),
     );
+  });
+  protected readonly sortColumn = signal<WasteSortColumn | null>(null);
+  protected readonly sortDirection = signal<SortDirection>('asc');
+  protected readonly sortedEntries = computed(() => {
+    const column = this.sortColumn();
+    const entries = [...this.visibleEntries()];
+    if (!column) {
+      return entries;
+    }
+
+    const direction = this.sortDirection() === 'asc' ? 1 : -1;
+    const compare = (a: StockWasteDto, b: StockWasteDto): number => {
+      switch (column) {
+        case 'item':
+          return a.itemName.localeCompare(b.itemName, undefined, { sensitivity: 'base' });
+        case 'recorded':
+          return a.createdAt.localeCompare(b.createdAt);
+        case 'quantity':
+          return a.quantity - b.quantity;
+        case 'status':
+          return STOCK_WASTE_STATUS_LABELS[a.status].localeCompare(STOCK_WASTE_STATUS_LABELS[b.status]);
+      }
+    };
+
+    return entries.sort((a, b) => compare(a, b) * direction);
   });
   protected readonly reviewTarget = signal<StockWasteDto | null>(null);
   protected readonly reviewAction = signal<ReviewAction | null>(null);
@@ -230,6 +258,15 @@ export class WasteComponent implements OnInit, OnDestroy {
     this.status.set(value ? (value as StockWasteStatus) : null);
     this.syncStatusParam();
     this.load();
+  }
+
+  protected toggleSort(column: WasteSortColumn): void {
+    if (this.sortColumn() === column) {
+      this.sortDirection.update((direction) => (direction === 'asc' ? 'desc' : 'asc'));
+    } else {
+      this.sortColumn.set(column);
+      this.sortDirection.set('asc');
+    }
   }
 
   protected togglePending(): void {

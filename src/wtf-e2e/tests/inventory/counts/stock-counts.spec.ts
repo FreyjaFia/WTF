@@ -170,4 +170,38 @@ test.describe('stock counts @inventory @counts', () => {
     await expect(page.getByTestId('count-line').first()).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
+
+  test('the column headers sort the counts on a wide screen and are hidden on a phone', async ({ api, signIn }) => {
+    const item = await api.items.create({ startingQuantity: 10 });
+    const stamp = Date.now();
+    const first = await api.client.json<Count>('superadmin', 'POST', 'stock-counts', {
+      name: `Zeta count ${stamp}`, isBlind: false, note: null, itemIds: [item.id],
+    });
+    const second = await api.client.json<Count>('superadmin', 'POST', 'stock-counts', {
+      name: `Alpha count ${stamp}`, isBlind: false, note: null, itemIds: [item.id],
+    });
+    await saveLine(api, first.summary.id, item.id, 10);
+
+    const page = await signIn('admin');
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(ROUTES.counts);
+    const columns = page.getByTestId('count-columns');
+    await expect(columns).toBeVisible();
+    for (const name of ['Count', 'Created', 'Progress', 'Status']) {
+      await expect(columns).toContainText(name);
+    }
+
+    const order = async (): Promise<string[]> => {
+      const rows = await page.getByTestId('count-row').allTextContents();
+      return rows.filter((t) => t.includes(`${stamp}`)).map((t) => (t.includes('Zeta') ? 'zeta' : 'alpha'));
+    };
+    await page.getByRole('button', { name: 'Sort by Count' }).click();
+    await expect.poll(order).toEqual(['alpha', 'zeta']);
+    await page.getByRole('button', { name: 'Sort by Count' }).click();
+    await expect.poll(order).toEqual(['zeta', 'alpha']);
+    expect(second.summary.id).not.toBe(first.summary.id);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(columns).toBeHidden();
+  });
 });

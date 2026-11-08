@@ -122,6 +122,48 @@ describe('WasteComponent', () => {
     queryParams = {};
   });
 
+  describe('sorting from the column headers', () => {
+    const entries = [
+      entry({ id: 'a', itemName: 'Oat Milk', quantity: 500, createdAt: '2026-10-20T02:00:00Z', status: 'Recorded' }),
+      entry({ id: 'b', itemName: 'bagel', quantity: 5, createdAt: '2026-10-10T02:00:00Z', status: 'Confirmed' }),
+      entry({ id: 'c', itemName: 'Cups', quantity: 50, createdAt: '2026-10-15T02:00:00Z', status: 'PendingReview' }),
+    ];
+    const ids = (component: { sortedEntries: () => StockWasteDto[] }): string[] =>
+      component.sortedEntries().map((e) => e.id);
+    const open = () => {
+      stockWaste.getWaste.mockReturnValue(of(page(entries)));
+      const fixture = create();
+      return internals(fixture.componentInstance) as unknown as {
+        sortedEntries: () => StockWasteDto[];
+        toggleSort: (column: 'item' | 'recorded' | 'quantity' | 'status') => void;
+        sortDirection: () => string;
+      };
+    };
+
+    it('keeps the server order until a column is picked', () => {
+      expect(ids(open())).toEqual(['a', 'b', 'c']);
+    });
+
+    it('sorts by item ignoring case, and reverses when picked again', () => {
+      const component = open();
+      component.toggleSort('item');
+      expect(ids(component)).toEqual(['b', 'c', 'a']);
+      component.toggleSort('item');
+      expect(component.sortDirection()).toBe('desc');
+      expect(ids(component)).toEqual(['a', 'c', 'b']);
+    });
+
+    it('sorts by recorded date, quantity and status', () => {
+      const component = open();
+      component.toggleSort('recorded');
+      expect(ids(component)).toEqual(['b', 'c', 'a']);
+      component.toggleSort('quantity');
+      expect(ids(component)).toEqual(['b', 'c', 'a']);
+      component.toggleSort('status');
+      expect(ids(component)).toEqual(['b', 'c', 'a']);
+    });
+  });
+
   describe('loading', () => {
     it('loads the last 30 days by default with page 1 and size 20', () => {
       create();
