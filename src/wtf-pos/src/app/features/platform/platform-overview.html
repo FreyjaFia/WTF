@@ -17,22 +17,22 @@
   } @else {
     @let s = summary();
     <section class="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Totals" data-testid="overview-stats">
-      <a [routerLink]="shopsLink" class="rounded-xl bg-surface p-4 shadow-sm hover:shadow">
+      <a [routerLink]="shopsLink" class="rounded-xl bg-surface p-4 shadow hover:shadow">
         <p class="text-xs font-medium text-gray-500">Shops</p>
         <p class="mt-1 text-2xl font-bold text-gray-900" data-testid="stat-total">{{ s.total }}</p>
         <p class="mt-1 text-xs text-gray-500">{{ s.suspended }} suspended, {{ s.cancelled }} cancelled</p>
       </a>
-      <div class="rounded-xl bg-surface p-4 shadow-sm">
+      <div class="rounded-xl bg-surface p-4 shadow">
         <p class="text-xs font-medium text-gray-500">Active</p>
         <p class="mt-1 text-2xl font-bold text-green-700" data-testid="stat-active">{{ s.active }}</p>
         <p class="mt-1 text-xs text-gray-500">{{ s.trial }} on trial</p>
       </div>
-      <div class="rounded-xl bg-surface p-4 shadow-sm">
+      <div class="rounded-xl bg-surface p-4 shadow">
         <p class="text-xs font-medium text-gray-500">People / orders</p>
         <p class="mt-1 text-2xl font-bold text-gray-900">{{ s.people }} <span class="text-base font-medium text-gray-400">/ {{ s.orders }}</span></p>
         <p class="mt-1 text-xs text-gray-500">across every shop</p>
       </div>
-      <div class="rounded-xl bg-surface p-4 shadow-sm">
+      <div class="rounded-xl bg-surface p-4 shadow">
         <p class="text-xs font-medium text-gray-500">Monthly at list price</p>
         <p class="mt-1 text-2xl font-bold text-gray-900" data-testid="stat-revenue">{{ s.monthlyListPrice | currency: 'PHP' : 'symbol-narrow' : '1.0-2' }}</p>
         <p class="mt-1 text-xs text-gray-500">active shops, before discounts</p>
@@ -40,7 +40,7 @@
     </section>
 
     <div class="grid gap-6 lg:grid-cols-2">
-      <section class="rounded-xl bg-surface p-4 shadow-sm" aria-labelledby="attention-title">
+      <section class="rounded-xl bg-surface p-4 shadow" aria-labelledby="attention-title">
         <h2 id="attention-title" class="mb-3 text-sm font-semibold text-gray-900">Payment needs attention ({{ attention().length }})</h2>
         <ul class="flex flex-col divide-y divide-gray-100">
           @for (shop of attention(); track shop.id) {
@@ -57,7 +57,7 @@
         </ul>
       </section>
 
-      <section class="rounded-xl bg-surface p-4 shadow-sm" aria-labelledby="quiet-title">
+      <section class="rounded-xl bg-surface p-4 shadow" aria-labelledby="quiet-title">
         <h2 id="quiet-title" class="mb-3 text-sm font-semibold text-gray-900">No orders in 30 days ({{ quiet().length }})</h2>
         <ul class="flex flex-col divide-y divide-gray-100">
           @for (shop of quiet(); track shop.id) {
@@ -76,7 +76,7 @@
       </section>
     </div>
 
-    <section class="rounded-xl bg-surface p-4 shadow-sm" aria-labelledby="recent-title">
+    <section class="rounded-xl bg-surface p-4 shadow" aria-labelledby="recent-title">
       <div class="mb-3 flex items-center">
         <h2 id="recent-title" class="mr-auto text-sm font-semibold text-gray-900">Recent activity</h2>
         <a [routerLink]="logLink" class="app-btn-link text-sm">View all</a>

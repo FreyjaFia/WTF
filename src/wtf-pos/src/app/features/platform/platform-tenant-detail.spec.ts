@@ -85,14 +85,14 @@ describe('PlatformTenantDetailComponent', () => {
 
     buttonWith('Suspend')!.click();
     fixture.detectChanges();
-    const submit = el.querySelector<HTMLButtonElement>('.modal-box button[type="submit"]')!;
+    const submit = el.querySelector<HTMLButtonElement>('.app-dialog button[type="submit"]')!;
     expect(submit.disabled).toBe(true);
 
     const input = el.querySelector<HTMLInputElement>('[formControlName="reason"]')!;
     input.value = 'late payment';
     input.dispatchEvent(new Event('input'));
     fixture.detectChanges();
-    el.querySelector('.modal-box form')!.dispatchEvent(new Event('submit'));
+    el.querySelector('.app-dialog form')!.dispatchEvent(new Event('submit'));
 
     expect(platform.changeStatus).toHaveBeenCalledWith('t1', 'suspend', 'late payment');
   });
@@ -117,7 +117,7 @@ describe('PlatformTenantDetailComponent', () => {
     buttonWith('Delete permanently')!.click();
     fixture.detectChanges();
     expect(el.querySelector('[data-testid="delete-counts"]')?.textContent).toContain('Users: 2');
-    const submit = el.querySelector<HTMLButtonElement>('.modal-box button[type="submit"]')!;
+    const submit = el.querySelector<HTMLButtonElement>('.app-dialog button[type="submit"]')!;
     expect(submit.disabled).toBe(true);
 
     const type = (name: string, value: string) => {
@@ -130,7 +130,7 @@ describe('PlatformTenantDetailComponent', () => {
     fixture.detectChanges();
     expect(submit.disabled).toBe(false);
 
-    el.querySelector('.modal-box form')!.dispatchEvent(new Event('submit'));
+    el.querySelector('.app-dialog form')!.dispatchEvent(new Event('submit'));
     expect(platform.deleteTenant).toHaveBeenCalledWith('t1', 'moonbrew', 'pw');
   });
 

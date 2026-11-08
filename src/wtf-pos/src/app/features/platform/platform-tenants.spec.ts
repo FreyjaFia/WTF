@@ -111,7 +111,7 @@ describe('PlatformTenantsComponent', () => {
       input.value = value;
       input.dispatchEvent(new Event('input'));
     }
-    el.querySelector('.modal-box form')!.dispatchEvent(new Event('submit'));
+    el.querySelector('.app-dialog form')!.dispatchEvent(new Event('submit'));
     fixture.detectChanges();
 
     expect(platform.createTenant).toHaveBeenCalledWith(expect.objectContaining({ slug: 'moonbrew', ownerUsername: 'moon.owner' }));

@@ -9,8 +9,8 @@ export interface PlatformSecret {
 @Component({
   selector: 'app-platform-secret-dialog',
   template: `
-    <div class="modal modal-open" role="dialog" aria-modal="true">
-      <div class="modal-box max-w-md">
+    <div class="app-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md" role="dialog" aria-modal="true">
+      <div class="app-dialog mx-4 w-full max-w-md animate-[modal-pop_0.2s_ease-out] rounded-2xl bg-surface p-6 shadow-2xl">
         <h2 class="mb-2 text-base font-semibold">{{ secret().title }}</h2>
         <p class="mb-3 text-sm text-gray-600">
           Give this to the owner now. It is shown once, and they must choose a new password when they sign in.

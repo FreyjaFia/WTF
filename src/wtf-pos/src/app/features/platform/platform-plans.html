@@ -13,7 +13,7 @@
   } @else {
     <ul class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" data-testid="plan-list">
       @for (plan of plans(); track plan.id) {
-        <li class="flex flex-col gap-3 rounded-xl bg-surface p-5 shadow-sm" [attr.data-testid]="'plan-' + plan.code">
+        <li class="flex flex-col gap-3 rounded-xl bg-surface p-5 shadow" [attr.data-testid]="'plan-' + plan.code">
           <div class="flex items-start gap-2">
             <div class="mr-auto">
               <h2 class="font-semibold text-gray-900">{{ plan.name }}</h2>
@@ -42,24 +42,24 @@
 </div>
 
 @if (editing(); as plan) {
-  <div class="modal modal-open" role="dialog" aria-modal="true" aria-label="Edit plan">
-    <div class="modal-box max-h-[90vh] max-w-lg overflow-y-auto">
+  <div class="app-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md" role="dialog" aria-modal="true" aria-label="Edit plan">
+    <div class="app-dialog mx-4 max-h-[90dvh] w-full max-w-lg animate-[modal-pop_0.2s_ease-out] overflow-y-auto rounded-2xl bg-surface p-6 shadow-2xl">
       @if (error(); as message) {
         <div class="mb-3 rounded-lg bg-red-50 p-3 text-sm text-red-700" role="alert">{{ message }}</div>
       }
       <h2 class="mb-4 text-base font-semibold">Edit {{ plan.name }}</h2>
       <form [formGroup]="form" (ngSubmit)="save()" class="grid grid-cols-2 gap-3">
         <label class="col-span-2 text-sm">Name
-          <input formControlName="name" type="text" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+          <input formControlName="name" type="text" class="input input-bordered mt-1 w-full" />
         </label>
         <label class="text-sm">Price per month
-          <input formControlName="monthlyPrice" type="number" step="0.01" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+          <input formControlName="monthlyPrice" type="number" step="0.01" class="input input-bordered mt-1 w-full" />
         </label>
         <label class="text-sm">Most people (blank = no limit)
-          <input formControlName="maxUsers" type="number" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+          <input formControlName="maxUsers" type="number" class="input input-bordered mt-1 w-full" />
         </label>
         <label class="col-span-2 text-sm">Features (one per line)
-          <textarea formControlName="features" rows="5" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2"></textarea>
+          <textarea formControlName="features" rows="5" class="textarea textarea-bordered mt-1 w-full"></textarea>
         </label>
         <label class="col-span-2 flex items-center gap-2 text-sm">
           <input formControlName="isActive" type="checkbox" /> Offered to shops

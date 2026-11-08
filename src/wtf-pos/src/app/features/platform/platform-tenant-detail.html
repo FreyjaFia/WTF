@@ -4,7 +4,7 @@
   @if (loading()) {
     <div class="flex justify-center py-12"><span class="loading loading-spinner loading-lg"></span></div>
   } @else if (notFound()) {
-    <div class="rounded-xl bg-surface p-8 text-center shadow-sm">
+    <div class="rounded-xl bg-surface p-8 text-center shadow">
       <p class="font-medium text-gray-900">That shop was not found.</p>
       <p class="mt-1 text-sm text-gray-500">It may have been deleted.</p>
     </div>
@@ -43,7 +43,7 @@
     @switch (tab()) {
       @case ('overview') {
         <section class="grid gap-4 lg:grid-cols-3">
-          <dl class="grid grid-cols-2 gap-x-4 gap-y-4 rounded-xl bg-surface p-4 text-sm shadow-sm lg:col-span-2">
+          <dl class="grid grid-cols-2 gap-x-4 gap-y-4 rounded-xl bg-surface p-4 text-sm shadow lg:col-span-2">
             <div><dt class="text-xs text-gray-500">Plan</dt><dd class="font-medium text-gray-900">{{ t.planName ?? 'None' }}</dd></div>
             <div><dt class="text-xs text-gray-500">Paid until</dt><dd class="font-medium text-gray-900">{{ t.periodEnd ? (t.periodEnd | date: 'mediumDate') : 'None' }}</dd></div>
             <div><dt class="text-xs text-gray-500">People</dt><dd class="font-medium text-gray-900">{{ t.userCount }}</dd></div>
@@ -52,7 +52,7 @@
             <div><dt class="text-xs text-gray-500">Shop address</dt><dd class="font-medium text-gray-900">{{ t.slug }}</dd></div>
           </dl>
 
-          <div class="flex flex-col gap-2 rounded-xl bg-surface p-4 shadow-sm">
+          <div class="flex flex-col gap-2 rounded-xl bg-surface p-4 shadow">
             <h2 class="text-sm font-semibold text-gray-900">Access</h2>
             <p class="text-xs text-gray-500">Suspending or cancelling stops everyone in this shop from signing in.</p>
             <div class="mt-1 flex flex-wrap gap-2">
@@ -69,7 +69,7 @@
             </div>
           </div>
 
-          <div class="flex flex-col gap-2 rounded-xl border border-red-200 bg-surface p-4 shadow-sm lg:col-span-3">
+          <div class="flex flex-col gap-2 rounded-xl border border-red-200 bg-surface p-4 shadow lg:col-span-3">
             <h2 class="text-sm font-semibold text-red-700">Export and delete</h2>
             <p class="text-xs text-gray-500">
               Export downloads every record of the shop as a zip. Deleting is permanent and only possible once the shop is suspended or cancelled.
@@ -85,7 +85,7 @@
       }
 
       @case ('people') {
-        <section class="overflow-hidden rounded-xl bg-surface shadow-sm">
+        <section class="overflow-hidden rounded-xl bg-surface shadow">
           @if (users(); as list) {
             <ul class="divide-y divide-gray-100" data-testid="people-list">
               @for (user of list; track user.id) {
@@ -113,33 +113,33 @@
       @case ('billing') {
         @if (billing(); as sub) {
           <section class="grid grid-cols-2 gap-3 lg:grid-cols-4" data-testid="billing-summary">
-            <div class="rounded-xl bg-surface p-4 shadow-sm"><p class="text-xs text-gray-500">Plan</p><p class="font-semibold text-gray-900">{{ sub.planName }}</p><p class="text-xs text-gray-500">{{ sub.monthlyPrice | currency: 'PHP' : 'symbol-narrow' : '1.0-2' }} / month</p></div>
-            <div class="rounded-xl bg-surface p-4 shadow-sm"><p class="text-xs text-gray-500">Paid until</p><p class="font-semibold text-gray-900">{{ sub.periodEnd | date: 'mediumDate' }}</p><p class="text-xs text-gray-500">{{ sub.daysLeft }} days left</p></div>
-            <div class="rounded-xl bg-surface p-4 shadow-sm"><p class="text-xs text-gray-500">Locks on</p><p class="font-semibold text-gray-900">{{ sub.accessUntil | date: 'mediumDate' }}</p><p class="text-xs text-gray-500">{{ sub.graceDays }} grace days</p></div>
-            <div class="rounded-xl bg-surface p-4 shadow-sm"><p class="text-xs text-gray-500">Status</p><app-platform-chip [text]="warningLabel(sub.warning)" [tone]="warningTone(sub.warning)" />@if (sub.discountPercent > 0) {<p class="mt-1 text-xs text-gray-500">{{ sub.discountPercent }}% discount</p>}</div>
+            <div class="rounded-xl bg-surface p-4 shadow"><p class="text-xs text-gray-500">Plan</p><p class="font-semibold text-gray-900">{{ sub.planName }}</p><p class="text-xs text-gray-500">{{ sub.monthlyPrice | currency: 'PHP' : 'symbol-narrow' : '1.0-2' }} / month</p></div>
+            <div class="rounded-xl bg-surface p-4 shadow"><p class="text-xs text-gray-500">Paid until</p><p class="font-semibold text-gray-900">{{ sub.periodEnd | date: 'mediumDate' }}</p><p class="text-xs text-gray-500">{{ sub.daysLeft }} days left</p></div>
+            <div class="rounded-xl bg-surface p-4 shadow"><p class="text-xs text-gray-500">Locks on</p><p class="font-semibold text-gray-900">{{ sub.accessUntil | date: 'mediumDate' }}</p><p class="text-xs text-gray-500">{{ sub.graceDays }} grace days</p></div>
+            <div class="rounded-xl bg-surface p-4 shadow"><p class="text-xs text-gray-500">Status</p><app-platform-chip [text]="warningLabel(sub.warning)" [tone]="warningTone(sub.warning)" />@if (sub.discountPercent > 0) {<p class="mt-1 text-xs text-gray-500">{{ sub.discountPercent }}% discount</p>}</div>
           </section>
 
-          <section class="rounded-xl bg-surface p-4 shadow-sm">
+          <section class="rounded-xl bg-surface p-4 shadow">
             <h2 class="mb-3 text-sm font-semibold text-gray-900">Subscription</h2>
             <form [formGroup]="billingForm" (ngSubmit)="saveBilling()" class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <label class="text-sm">Plan
-                <select formControlName="planId" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2">
+                <select formControlName="planId" class="select select-bordered mt-1 w-full">
                   @for (plan of plans(); track plan.id) {
                     <option [ngValue]="plan.id">{{ plan.name }} ({{ plan.monthlyPrice }}/month)</option>
                   }
                 </select>
               </label>
               <label class="text-sm">Paid until
-                <input formControlName="periodEnd" type="date" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+                <input formControlName="periodEnd" type="date" class="input input-bordered mt-1 w-full" />
               </label>
               <label class="text-sm">Grace days
-                <input formControlName="graceDays" type="number" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+                <input formControlName="graceDays" type="number" class="input input-bordered mt-1 w-full" />
               </label>
               <label class="text-sm">Discount %
-                <input formControlName="discountPercent" type="number" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+                <input formControlName="discountPercent" type="number" class="input input-bordered mt-1 w-full" />
               </label>
               <label class="text-sm sm:col-span-2 lg:col-span-4">Notes
-                <input formControlName="notes" type="text" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+                <input formControlName="notes" type="text" class="input input-bordered mt-1 w-full" />
               </label>
               <div class="flex justify-end sm:col-span-2 lg:col-span-4">
                 <button type="submit" class="app-btn app-btn-primary app-btn-md" [disabled]="billingForm.invalid || busy()">Save subscription</button>
@@ -147,7 +147,7 @@
             </form>
           </section>
 
-          <section class="rounded-xl bg-surface p-4 shadow-sm">
+          <section class="rounded-xl bg-surface p-4 shadow">
             <h2 class="mb-3 text-sm font-semibold text-gray-900">Invoices</h2>
             <ul class="flex flex-col divide-y divide-gray-100" data-testid="invoice-list">
               @for (invoice of sub.invoices; track invoice.id) {
@@ -172,16 +172,16 @@
             </ul>
             <form [formGroup]="invoiceForm" (ngSubmit)="addInvoice()" class="mt-4 grid grid-cols-2 items-end gap-3 border-t border-gray-100 pt-4 lg:grid-cols-5">
               <label class="text-sm">Months
-                <input formControlName="months" type="number" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+                <input formControlName="months" type="number" class="input input-bordered mt-1 w-full" />
               </label>
               <label class="text-sm">Reference
-                <input formControlName="reference" type="text" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+                <input formControlName="reference" type="text" class="input input-bordered mt-1 w-full" />
               </label>
               <label class="text-sm">Due date
-                <input formControlName="dueDate" type="date" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+                <input formControlName="dueDate" type="date" class="input input-bordered mt-1 w-full" />
               </label>
               <label class="col-span-2 text-sm lg:col-span-1">Notes
-                <input formControlName="notes" type="text" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+                <input formControlName="notes" type="text" class="input input-bordered mt-1 w-full" />
               </label>
               <button type="submit" class="app-btn app-btn-secondary app-btn-md col-span-2 lg:col-span-1" [disabled]="invoiceForm.invalid || busy()">New invoice</button>
             </form>
@@ -193,7 +193,7 @@
 
       @case ('brand') {
         @if (brand(); as b) {
-          <form [formGroup]="brandForm" (ngSubmit)="saveBrand()" class="grid grid-cols-1 gap-4 rounded-xl bg-surface p-4 shadow-sm sm:grid-cols-2" data-testid="brand-form">
+          <form [formGroup]="brandForm" (ngSubmit)="saveBrand()" class="grid grid-cols-1 gap-4 rounded-xl bg-surface p-4 shadow sm:grid-cols-2" data-testid="brand-form">
             <div class="flex items-center gap-4 sm:col-span-2">
               @if (b.logoUrl) {
                 <img [src]="b.logoUrl" alt="Shop logo" class="h-16 w-16 rounded-lg border border-gray-200 object-contain" />
@@ -203,36 +203,36 @@
               <p class="text-xs text-gray-500">The shop owner uploads the logo from their own Shop page.</p>
             </div>
             <label class="text-sm">Shop name
-              <input formControlName="shopName" type="text" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+              <input formControlName="shopName" type="text" class="input input-bordered mt-1 w-full" />
             </label>
             <label class="text-sm">Short name (shown in the menu)
-              <input formControlName="shortName" type="text" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+              <input formControlName="shortName" type="text" class="input input-bordered mt-1 w-full" />
             </label>
             <label class="text-sm">Tagline
-              <input formControlName="tagline" type="text" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+              <input formControlName="tagline" type="text" class="input input-bordered mt-1 w-full" />
             </label>
             <label class="text-sm">Address
-              <input formControlName="address" type="text" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+              <input formControlName="address" type="text" class="input input-bordered mt-1 w-full" />
             </label>
             <label class="text-sm">Phone
-              <input formControlName="phone" type="text" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+              <input formControlName="phone" type="text" class="input input-bordered mt-1 w-full" />
             </label>
             <label class="text-sm">Email
-              <input formControlName="email" type="text" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+              <input formControlName="email" type="text" class="input input-bordered mt-1 w-full" />
             </label>
             <label class="text-sm">Receipt header
-              <input formControlName="receiptHeader" type="text" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+              <input formControlName="receiptHeader" type="text" class="input input-bordered mt-1 w-full" />
             </label>
             <label class="text-sm">Receipt footer
-              <input formControlName="receiptFooter" type="text" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+              <input formControlName="receiptFooter" type="text" class="input input-bordered mt-1 w-full" />
             </label>
             <label class="text-sm">Registration text (receipt)
-              <input formControlName="registrationText" type="text" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+              <input formControlName="registrationText" type="text" class="input input-bordered mt-1 w-full" />
             </label>
             <label class="text-sm">Colour
               <span class="mt-1 flex items-center gap-2">
                 <input formControlName="primaryColor" type="color" class="h-10 w-12 rounded border border-gray-300" aria-label="Pick colour" />
-                <input formControlName="primaryColor" type="text" placeholder="#6f4e37" class="w-full rounded-lg border border-gray-300 px-3 py-2" />
+                <input formControlName="primaryColor" type="text" placeholder="#6f4e37" class="input input-bordered w-full" />
               </span>
               @if (brandForm.controls.primaryColor.invalid) {
                 <span class="text-xs text-red-600">Use a colour like #6f4e37.</span>
@@ -248,7 +248,7 @@
       }
 
       @case ('log') {
-        <section class="rounded-xl bg-surface p-4 shadow-sm">
+        <section class="rounded-xl bg-surface p-4 shadow">
           @if (audit(); as entries) {
             <ul class="flex flex-col divide-y divide-gray-100 text-sm" data-testid="shop-log">
               @for (entry of entries; track entry.id) {
@@ -273,8 +273,8 @@
 </div>
 
 @if (dialog(); as kind) {
-  <div class="modal modal-open" role="dialog" aria-modal="true">
-    <div class="modal-box max-h-[90vh] max-w-xl overflow-y-auto">
+  <div class="app-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md" role="dialog" aria-modal="true">
+    <div class="app-dialog mx-4 max-h-[90dvh] w-full max-w-xl animate-[modal-pop_0.2s_ease-out] overflow-y-auto rounded-2xl bg-surface p-6 shadow-2xl">
       @if (error(); as message) {
         <div class="mb-3 rounded-lg bg-red-50 p-3 text-sm text-red-700" role="alert">{{ message }}</div>
       }
@@ -290,7 +290,7 @@
           }
           <form [formGroup]="reasonForm" (ngSubmit)="confirmStatus()" class="flex flex-col gap-3">
             <label class="text-sm">Reason (at least 5 characters)
-              <input formControlName="reason" type="text" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+              <input formControlName="reason" type="text" class="input input-bordered mt-1 w-full" />
             </label>
             <div class="mt-2 flex justify-end gap-2">
               <button type="button" class="app-btn app-btn-secondary app-btn-md" (click)="closeDialog()">Back</button>
@@ -307,7 +307,7 @@
           </p>
           <form [formGroup]="reasonForm" (ngSubmit)="confirmSignIn()" class="flex flex-col gap-3">
             <label class="text-sm">Reason (at least 5 characters)
-              <input formControlName="reason" type="text" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+              <input formControlName="reason" type="text" class="input input-bordered mt-1 w-full" />
             </label>
             <label class="flex items-center gap-2 text-sm">
               <input formControlName="allowWrites" type="checkbox" /> Allow changes (every change is logged)
@@ -334,10 +334,10 @@
           }
           <form [formGroup]="deleteForm" (ngSubmit)="confirmDelete()" class="flex flex-col gap-3">
             <label class="text-sm">Type the shop address ({{ tenant()?.slug }})
-              <input formControlName="slug" type="text" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+              <input formControlName="slug" type="text" class="input input-bordered mt-1 w-full" />
             </label>
             <label class="text-sm">Your password
-              <input formControlName="password" type="password" autocomplete="current-password" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+              <input formControlName="password" type="password" autocomplete="current-password" class="input input-bordered mt-1 w-full" />
             </label>
             <div class="mt-2 flex justify-end gap-2">
               <button type="button" class="app-btn app-btn-secondary app-btn-md" (click)="closeDialog()">Cancel</button>
