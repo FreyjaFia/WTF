@@ -37,7 +37,7 @@
         @for (row of parRows(); track row.itemId) {
           <li class="flex items-center justify-between gap-3 py-2" data-testid="par-row">
             <div class="min-w-0">
-              <p class="font-medium wrap-break-word text-gray-900">{{ row.itemName }}</p>
+              <p class="font-medium wrap-anywhere text-gray-900">{{ row.itemName }}</p>
               <p class="text-xs text-gray-500">{{ row.onHand | number: '1.0-3' }} {{ row.unitName }} on hand</p>
             </div>
             @if (auth.canWriteStockMovements()) {
@@ -89,7 +89,7 @@
               <section class="overflow-hidden rounded-xl bg-surface shadow" data-testid="reorder-group">
                 <header class="flex items-center justify-between gap-3 bg-gray-50 px-4 py-3">
                   <div class="min-w-0">
-                    <h2 class="font-semibold wrap-break-word text-gray-900">{{ group.supplierName }}</h2>
+                    <h2 class="font-semibold wrap-anywhere text-gray-900">{{ group.supplierName }}</h2>
                     <p class="text-xs text-gray-500">
                       {{ group.lines.length }} {{ group.lines.length === 1 ? 'item' : 'items' }}
                       @if (group.leadTimeDays !== null) { &middot; {{ group.leadTimeDays }} day lead time }
@@ -107,7 +107,7 @@
                   @for (line of group.lines; track line.itemId) {
                     <li class="flex items-center justify-between gap-3 px-4 py-2.5" data-testid="reorder-line">
                       <div class="min-w-0">
-                        <p class="font-medium wrap-break-word text-gray-900">{{ line.itemName }}</p>
+                        <p class="font-medium wrap-anywhere text-gray-900">{{ line.itemName }}</p>
                         <p class="text-xs text-gray-500">
                           {{ line.onHand | number: '1.0-3' }} on hand of {{ line.parLevel | number: '1.0-3' }}
                           @if (line.onOrder > 0) { &middot; {{ line.onOrder | number: '1.0-3' }} on order }

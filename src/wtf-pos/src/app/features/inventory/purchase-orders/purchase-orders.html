@@ -162,7 +162,7 @@
               <span class="absolute inset-y-0 left-0 w-1.5" [class]="statusBar(order.status)" aria-hidden="true"></span>
               <button type="button" class="flex w-full items-center justify-between gap-3 p-3 pl-5 text-left transition-colors hover:bg-gray-50 sm:p-4 sm:pl-6" (click)="toggleOrder(order)">
                 <div class="min-w-0">
-                  <p class="font-semibold wrap-break-word text-gray-900">
+                  <p class="font-semibold wrap-anywhere text-gray-900">
                     PO-{{ order.poNumber }} <span class="font-normal text-gray-500">&middot; {{ order.supplierName }}</span>
                   </p>
                   <p class="text-xs text-gray-500">
@@ -183,7 +183,7 @@
                     <ul class="divide-y divide-gray-100 text-sm">
                       @for (line of detail.lines; track line.itemId) {
                         <li class="flex items-center justify-between gap-3 py-2" data-testid="detail-line">
-                          <span class="min-w-0 wrap-break-word text-gray-900">{{ line.itemName }}</span>
+                          <span class="min-w-0 wrap-anywhere text-gray-900">{{ line.itemName }}</span>
                           <span class="shrink-0 text-gray-500">
                             {{ line.packsReceived | number: '1.0-3' }} of {{ line.packsOrdered | number: '1.0-3' }} {{ line.packName || 'packs' }}
                           </span>

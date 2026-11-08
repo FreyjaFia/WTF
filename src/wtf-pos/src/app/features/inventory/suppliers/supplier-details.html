@@ -10,7 +10,7 @@
           <app-icon name="icon-back" [class]="'h-5 w-5 text-gray-600'" />
         </a>
         <div class="min-w-0">
-          <h1 class="text-xl font-bold wrap-break-word text-gray-900 sm:text-2xl" data-testid="supplier-title">{{ current.summary.name }}</h1>
+          <h1 class="text-xl font-bold wrap-anywhere text-gray-900 sm:text-2xl" data-testid="supplier-title">{{ current.summary.name }}</h1>
           <p class="text-xs text-gray-500 sm:text-sm">
             {{ current.items.length }} {{ current.items.length === 1 ? 'item' : 'items' }} linked
           </p>
@@ -83,7 +83,7 @@
         @for (link of current.items; track link.linkId) {
           <li class="flex items-center justify-between gap-3 py-2.5" data-testid="supplier-item-row">
             <div class="min-w-0">
-              <p class="font-medium wrap-break-word text-gray-900">
+              <p class="font-medium wrap-anywhere text-gray-900">
                 {{ link.itemName }}
                 @if (link.isPreferred) {
                   <app-badge variant="success">Preferred</app-badge>
@@ -101,7 +101,7 @@
             @if (auth.canWriteStockMovements()) {
               <div class="flex shrink-0 gap-1">
                 <button type="button" class="app-btn app-btn-ghost app-btn-sm" (click)="editLink(link)">Edit</button>
-                <button type="button" class="app-btn app-btn-ghost app-btn-sm" (click)="removeLink(link)">Remove</button>
+                <button type="button" class="app-btn app-btn-ghost app-btn-sm" (click)="pendingRemoval.set(link)">Remove</button>
               </div>
             }
           </li>
@@ -112,37 +112,34 @@
         <form class="mt-4 grid gap-3 rounded-lg bg-gray-50 p-3 sm:grid-cols-2" [formGroup]="linkForm" (ngSubmit)="saveLink()" novalidate data-testid="link-form">
           <h3 class="text-sm font-semibold text-gray-900 sm:col-span-2">{{ editingLinkId() ? 'Edit link' : 'Link an item' }}</h3>
           <div class="sm:col-span-2">
-            <label for="lf-item" class="mb-1 block text-sm font-medium text-gray-700">Item</label>
-            <select id="lf-item" formControlName="itemId" class="select w-full bg-surface" [attr.disabled]="editingLinkId() ? true : null">
-              <option value="">Choose an item</option>
-              @if (editingLinkId(); as editing) {
-                @for (item of allItems(); track item.id) {
-                  @if (item.id === editing) { <option [value]="item.id">{{ item.name }}</option> }
-                }
-              } @else {
-                @for (item of linkableItems(); track item.id) {
-                  <option [value]="item.id">{{ item.name }}</option>
-                }
-              }
-            </select>
+            <span class="mb-1 block text-sm font-medium text-gray-700">Item</span>
+            <app-select-dropdown
+              testId="lf-item"
+              placeholder="Choose an item"
+              searchPlaceholder="Search items..."
+              [disabled]="editingLinkId() !== null"
+              [options]="itemOptions()"
+              [selectedId]="linkForm.controls.itemId.value || null"
+              (selectedIdChange)="linkForm.controls.itemId.setValue($event ?? '')"
+            />
           </div>
           <div>
             <label for="lf-pack" class="mb-1 block text-sm font-medium text-gray-700">Pack name</label>
-            <input id="lf-pack" type="text" formControlName="packName" maxlength="50" placeholder="carton" class="input w-full bg-surface" />
+            <input id="lf-pack" type="text" formControlName="packName" maxlength="50" placeholder="carton" class="input w-full border-transparent bg-surface transition-all focus:border-brand focus:ring-1 focus:ring-brand/20" />
           </div>
           <div>
             <label for="lf-units" class="mb-1 block text-sm font-medium text-gray-700">Units in one pack</label>
-            <input id="lf-units" type="number" step="0.001" min="0.001" formControlName="unitsPerPack" class="input w-full bg-surface" />
+            <input id="lf-units" type="number" step="0.001" min="0.001" formControlName="unitsPerPack" class="input w-full border-transparent bg-surface transition-all focus:border-brand focus:ring-1 focus:ring-brand/20" />
           </div>
           @if (canSeeCosts()) {
             <div>
               <label for="lf-price" class="mb-1 block text-sm font-medium text-gray-700">Price of one pack</label>
-              <input id="lf-price" type="number" step="0.01" min="0" formControlName="packPrice" class="input w-full bg-surface" />
+              <input id="lf-price" type="number" step="0.01" min="0" formControlName="packPrice" class="input w-full border-transparent bg-surface transition-all focus:border-brand focus:ring-1 focus:ring-brand/20" />
             </div>
           }
           <div>
             <label for="lf-code" class="mb-1 block text-sm font-medium text-gray-700">Supplier's code</label>
-            <input id="lf-code" type="text" formControlName="supplierItemCode" maxlength="50" class="input w-full bg-surface" />
+            <input id="lf-code" type="text" formControlName="supplierItemCode" maxlength="50" class="input w-full border-transparent bg-surface transition-all focus:border-brand focus:ring-1 focus:ring-brand/20" />
           </div>
           <label class="flex cursor-pointer items-center gap-2 text-sm text-gray-700 sm:col-span-2">
             <input type="checkbox" formControlName="isPreferred" class="checkbox checkbox-sm" />
@@ -159,6 +156,19 @@
         </form>
       }
     </section>
+
+    @if (pendingRemoval(); as removing) {
+      <app-confirm-dialog
+        variant="danger"
+        icon="icon-warning"
+        heading="Remove this link?"
+        confirmLabel="Remove"
+        (confirmed)="confirmRemoval()"
+        (cancelled)="pendingRemoval.set(null)"
+      >
+        {{ removing.itemName }} will no longer be listed under {{ current.summary.name }}. Past receipts are kept.
+      </app-confirm-dialog>
+    }
 
     @if (confirmingDeactivate()) {
       <app-confirm-dialog

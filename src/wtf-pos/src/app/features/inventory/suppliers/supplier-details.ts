@@ -4,6 +4,7 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AlertService, AuthService, InventoryService, SupplierService } from '@core/services';
 import { IconComponent } from '@shared/components';
+import { SelectDropdownComponent } from '@shared/components/select-dropdown/select-dropdown';
 import { BadgeComponent } from '@shared/components/badge/badge';
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import { AppRoutes } from '@shared/constants/app-routes';
@@ -14,6 +15,7 @@ import { ItemDto, SupplierDto, SupplierFieldsDto, SupplierItemDto } from '@share
   imports: [
     BadgeComponent,
     ConfirmDialogComponent,
+    SelectDropdownComponent,
     DecimalPipe,
     IconComponent,
     ReactiveFormsModule,
@@ -37,6 +39,14 @@ export class SupplierDetailsComponent implements OnInit {
   protected readonly isLinking = signal(false);
   protected readonly confirmingDeactivate = signal(false);
   protected readonly editingLinkId = signal<string | null>(null);
+  protected readonly pendingRemoval = signal<SupplierItemDto | null>(null);
+  protected readonly itemOptions = computed(() => {
+    const editing = this.editingLinkId();
+    const source = editing
+      ? this.allItems().filter((item) => item.id === editing)
+      : this.linkableItems();
+    return source.map((item) => ({ id: item.id, label: item.name }));
+  });
   protected readonly linkableItems = computed(() => {
     const linked = new Set(this.supplier()?.items.map((item) => item.itemId) ?? []);
     return this.allItems().filter((item) => !linked.has(item.id));
@@ -196,6 +206,14 @@ export class SupplierDetailsComponent implements OnInit {
           this.alertService.error(err.message);
         },
       });
+  }
+
+  protected confirmRemoval(): void {
+    const link = this.pendingRemoval();
+    this.pendingRemoval.set(null);
+    if (link) {
+      this.removeLink(link);
+    }
   }
 
   protected removeLink(link: SupplierItemDto): void {

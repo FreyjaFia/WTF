@@ -117,7 +117,7 @@
             <li class="overflow-hidden rounded-xl bg-surface shadow" data-testid="supplier-row">
               <a [routerLink]="supplierRoute(supplier.id)" draggable="false" class="flex items-center justify-between gap-3 p-3 transition-colors hover:bg-gray-50 sm:p-4">
                 <div class="min-w-0">
-                  <p class="font-semibold wrap-break-word text-gray-900">{{ supplier.name }}</p>
+                  <p class="font-semibold wrap-anywhere text-gray-900">{{ supplier.name }}</p>
                   <p class="text-xs text-gray-500">
                     @if (supplier.contactName) { {{ supplier.contactName }} &middot; }
                     @if (supplier.phone) { {{ supplier.phone }} &middot; }
