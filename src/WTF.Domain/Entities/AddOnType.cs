@@ -8,6 +8,8 @@ public partial class AddOnType
 
     public Guid TenantId { get; set; }
 
+    public string? SystemKey { get; set; }
+
     public bool IsRequired { get; set; }
 
     public int MinSelect { get; set; }

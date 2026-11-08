@@ -125,6 +125,7 @@ public partial class CreateTenantHandler(WTFDbContext db, IPlatformAuditService 
         });
 
         await db.SaveChangesAsync(cancellationToken);
+        await TenantCatalogTemplate.CopyAsync(db, tenant.Id, ownerId, cancellationToken);
         await transaction.CommitAsync(cancellationToken);
 
         await audit.LogAsync(PlatformActions.TenantCreated, tenant.Id, $"Created '{name}' ({slug}); first user '{username}'.", cancellationToken: cancellationToken);

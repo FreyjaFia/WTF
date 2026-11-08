@@ -36,7 +36,7 @@ public class SaveAddOnTypeHandler(WTFDbContext db, IAuditService audit) : IReque
         AddOnType type;
         if (request.Id is null)
         {
-            var nextId = (await db.AddOnTypes.MaxAsync(t => (int?)t.Id, cancellationToken) ?? 0) + 1;
+            var nextId = (await db.AddOnTypes.IgnoreQueryFilters().MaxAsync(t => (int?)t.Id, cancellationToken) ?? 0) + 1;
             type = new AddOnType { Id = nextId, IsActive = true, CreatedAt = DateTime.UtcNow };
             db.AddOnTypes.Add(type);
         }
@@ -70,7 +70,7 @@ public class SetAddOnTypeActiveHandler(WTFDbContext db, IAuditService audit) : I
 
         if (!request.IsActive)
         {
-            if (request.Id == SystemAddOnTypes.Size)
+            if (type.SystemKey == SystemAddOnTypes.SizeKey)
             {
                 throw new InvalidOperationException("The Size type is used by ingredient amounts and cannot be switched off.");
             }

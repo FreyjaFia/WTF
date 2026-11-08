@@ -174,7 +174,7 @@ public class AssignProductIngredientsHandler(
         }
 
         var sizeIds = await db.ProductAddOns
-            .Where(pa => pa.ProductId == product.Id && pa.IsActive && pa.AddOnTypeId == SystemAddOnTypes.Size)
+            .Where(pa => pa.ProductId == product.Id && pa.IsActive && pa.AddOnType != null && pa.AddOnType.SystemKey == SystemAddOnTypes.SizeKey)
             .Select(pa => pa.AddOnId)
             .ToListAsync(cancellationToken);
         if (amounts.Any(amount => !sizeIds.Contains(amount.SizeProductId)))

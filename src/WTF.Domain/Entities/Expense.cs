@@ -4,6 +4,8 @@ public partial class Expense
 {
     public Guid Id { get; set; }
 
+    public Guid TenantId { get; set; }
+
     public DateOnly ExpenseDate { get; set; }
 
     public byte Category { get; set; }
