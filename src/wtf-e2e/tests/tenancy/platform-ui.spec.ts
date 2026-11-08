@@ -1,7 +1,7 @@
 import { expect, test } from '@fixtures/index';
 import { PLATFORM_ROUTES } from '@data/routes';
 import { PlatformDock, PlatformLoginPage, PlatformShell, PlatformShopPage, PlatformShopsPage } from '@pages/platform.page';
-import { TENANT_STATUS } from '@api/platform';
+import { CreatedShop, TENANT_STATUS } from '@api/platform';
 import { unique } from '@utils/unique';
 import { openShop } from '@utils/tenants';
 
@@ -75,7 +75,7 @@ test.describe('platform shops list: filters, sorting, rows @tenancy @platform @u
   test('clicking a column header sorts by it, and clicking again reverses the order', async ({ newContext, platform }) => {
     const stamp = Date.now().toString(36);
     const names = ['Alpha', 'Bravo', 'Charlie'].map((n) => `Sort${stamp} ${n}`);
-    const created = [];
+    const created: CreatedShop[] = [];
     for (const name of [names[1], names[2], names[0]]) {
       created.push(await platform.createShop({ name }));
     }
