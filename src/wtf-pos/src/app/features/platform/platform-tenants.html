@@ -1,100 +1,137 @@
-<div class="mx-auto flex max-w-6xl flex-col gap-4 p-4 sm:p-6">
-  <header class="flex flex-wrap items-center gap-3">
-    <div class="mr-auto">
-      <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Shops</h1>
-      <p class="text-xs text-gray-500 sm:text-sm">Every shop on the platform. Open one to manage it.</p>
+<div class="flex h-full flex-col p-4 sm:p-6">
+  <div class="mb-4 flex shrink-0 flex-col gap-3 sm:mb-6">
+    <div class="flex items-start justify-between gap-3">
+      <div class="flex flex-col gap-1">
+        <h1 class="shrink-0 text-xl font-bold text-gray-900 sm:text-2xl">Shops</h1>
+        <p class="text-xs text-gray-500 sm:text-sm">Every shop on the platform. Open one to manage it.</p>
+      </div>
+      <button type="button" class="app-btn app-btn-primary app-btn-sm" (click)="openCreate()">
+        <app-icon name="icon-plus" [class]="'h-4 w-4'" />
+        New shop
+      </button>
     </div>
-    <button type="button" class="app-btn app-btn-primary app-btn-sm" (click)="openCreate()">New shop</button>
-  </header>
 
-  @if (error(); as message) {
-    <div class="rounded-lg bg-red-50 p-3 text-sm text-red-700" role="alert">{{ message }}</div>
-  }
+    <div class="flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center md:gap-3">
+      <div
+        class="mb-2 flex w-full min-w-0 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-surface focus-within:ring-2 focus-within:ring-gray-200 md:mb-0 md:max-w-[26rem] md:flex-1"
+      >
+        <app-search-input [control]="search" placeholder="Search by name or address" ariaLabel="Search shops" />
+      </div>
 
-  <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-    <div class="flex w-full min-w-0 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-surface focus-within:ring-2 focus-within:ring-gray-200 sm:max-w-[26rem]">
-      <app-search-input [control]="search" placeholder="Search by name or address" ariaLabel="Search shops" />
-    </div>
-    <div class="flex flex-wrap gap-1" role="group" aria-label="Filter by status">
-      @for (f of filters; track f.label) {
+      <div class="ml-auto flex items-center justify-end gap-2">
+        <app-filter-button [count]="activeFilterCount()" (pressed)="filtersOpen.set(true)" />
         <button
+          class="app-btn app-btn-ghost p-2"
+          [class.opacity-70]="refreshing()"
           type="button"
-          class="app-btn app-btn-sm"
-          [class]="statusFilter() === f.value ? 'bg-ink text-on-ink' : 'app-btn-secondary'"
-          [attr.aria-pressed]="statusFilter() === f.value"
-          (click)="statusFilter.set(f.value)"
+          (click)="refresh()"
+          [disabled]="refreshing()"
+          aria-label="Refresh shops"
         >
-          {{ f.label }} <span class="opacity-60">{{ countFor(f.value) }}</span>
+          <app-icon
+            name="icon-refresh"
+            [class]="refreshing() ? 'h-5 w-5 animate-spin text-gray-600' : 'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'"
+            [fill]="'currentColor'"
+          />
         </button>
-      }
+      </div>
     </div>
   </div>
 
-  @if (loading()) {
-    <div class="flex justify-center py-12"><span class="loading loading-spinner loading-lg"></span></div>
-  } @else {
-    <div class="hidden overflow-hidden rounded-xl bg-surface shadow md:block">
-      <table class="table w-full text-left text-sm" data-testid="shops-table">
-        <thead class="border-b border-gray-100 bg-gray-50 text-xs text-gray-500">
-          <tr>
-            <th class="px-4 py-3 font-medium">Shop</th>
-            <th class="px-4 py-3 font-medium">Status</th>
-            <th class="px-4 py-3 font-medium">Plan</th>
-            <th class="px-4 py-3 font-medium">Paid until</th>
-            <th class="px-4 py-3 text-right font-medium">People</th>
-            <th class="px-4 py-3 text-right font-medium">Orders</th>
-            <th class="hidden px-4 py-3 font-medium lg:table-cell">Last order</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-100">
-          @for (tenant of visible(); track tenant.id) {
-            <tr class="cursor-pointer hover:bg-gray-50" [attr.data-testid]="'shop-' + tenant.slug" (click)="openShop(tenant)">
-              <td class="px-4 py-3">
-                <a [routerLink]="shopLink(tenant)" class="font-medium text-gray-900 hover:underline">{{ tenant.name }}</a>
-                <div class="text-xs text-gray-500">{{ tenant.slug }}</div>
-              </td>
-              <td class="px-4 py-3"><app-platform-chip [text]="tenant.statusName" [tone]="statusTone(tenant.status)" /></td>
-              <td class="px-4 py-3 text-gray-700">{{ tenant.planName ?? 'None' }}</td>
-              <td class="px-4 py-3">
-                @if (tenant.periodEnd) {
-                  <div class="text-gray-700">{{ tenant.periodEnd | date: 'mediumDate' }}</div>
-                  <app-platform-chip [text]="warningLabel(tenant.warning)" [tone]="warningTone(tenant.warning)" />
-                } @else {
-                  <span class="text-gray-400">None</span>
-                }
-              </td>
-              <td class="px-4 py-3 text-right tabular-nums">{{ tenant.userCount }}</td>
-              <td class="px-4 py-3 text-right tabular-nums">{{ tenant.orderCount }}</td>
-              <td class="hidden px-4 py-3 text-gray-700 lg:table-cell">{{ tenant.lastOrderAt ? (tenant.lastOrderAt | date: 'mediumDate') : 'Never' }}</td>
-            </tr>
-          } @empty {
-            <tr><td colspan="7" class="px-4 py-8 text-center text-gray-500">No shops match.</td></tr>
-          }
-        </tbody>
-      </table>
-    </div>
+  @if (error(); as message) {
+    <div class="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700" role="alert">{{ message }}</div>
+  }
 
-    <ul class="flex flex-col gap-3 md:hidden">
+  <app-side-drawer
+    [isOpen]="filtersOpen()"
+    [title]="'Shop Filters'"
+    [subtitle]="'Refine the shop list results'"
+    [showOnDesktop]="true"
+    (closed)="filtersOpen.set(false)"
+  >
+    <div class="space-y-3">
+      <div class="rounded-xl border border-gray-200 bg-surface p-3">
+        <div class="mb-3 flex items-center justify-between">
+          <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Status</p>
+          <button type="button" class="app-btn app-btn-secondary app-btn-xs" (click)="clearStatuses()">Clear</button>
+        </div>
+        <div class="space-y-2">
+          @for (option of statusOptions; track option.id) {
+            <label class="flex cursor-pointer items-center justify-between rounded-lg bg-surface px-3 py-2 text-sm text-gray-700">
+              <span>{{ option.label }}</span>
+              <span class="flex items-center gap-2">
+                <span class="text-xs text-gray-500">{{ countFor(option.id) }}</span>
+                <input
+                  type="checkbox"
+                  class="checkbox checkbox-sm"
+                  [attr.data-testid]="'filter-status-' + option.id"
+                  [checked]="isStatusSelected(option.id)"
+                  (change)="toggleStatus(option.id)"
+                />
+              </span>
+            </label>
+          }
+        </div>
+      </div>
+    </div>
+  </app-side-drawer>
+
+  @if (loading()) {
+    <div class="flex justify-center py-8"><span class="loading loading-spinner loading-lg"></span></div>
+  } @else if (visible().length === 0) {
+    <div class="rounded-lg bg-surface p-8 text-center shadow-lg">
+      <div class="mb-3 flex justify-center"><app-icon name="icon-coffee" [class]="'h-12 w-12 opacity-60'" /></div>
+      <p class="text-lg font-semibold text-gray-700">No shops found</p>
+      <p class="text-sm text-gray-500">Try adjusting your search or filters</p>
+    </div>
+  } @else {
+    <div class="space-y-2 lg:space-y-3" data-testid="shops-table">
+      <div class="sticky top-0 z-10 mb-2 hidden grid-cols-12 gap-4 rounded-lg bg-surface px-4 py-3 lg:grid">
+        <div class="col-span-3"><app-sort-header label="Shop" [active]="sortColumn() === 'name'" [direction]="sortDirection()" (sorted)="toggleSort('name')" /></div>
+        <div class="col-span-2"><app-sort-header label="Status" align="center" [active]="sortColumn() === 'status'" [direction]="sortDirection()" (sorted)="toggleSort('status')" /></div>
+        <div class="col-span-1"><app-sort-header label="Plan" [active]="sortColumn() === 'plan'" [direction]="sortDirection()" (sorted)="toggleSort('plan')" /></div>
+        <div class="col-span-2"><app-sort-header label="Paid until" align="center" [active]="sortColumn() === 'paidUntil'" [direction]="sortDirection()" (sorted)="toggleSort('paidUntil')" /></div>
+        <div class="col-span-1"><app-sort-header label="People" align="center" [active]="sortColumn() === 'people'" [direction]="sortDirection()" (sorted)="toggleSort('people')" /></div>
+        <div class="col-span-1"><app-sort-header label="Orders" align="center" [active]="sortColumn() === 'orders'" [direction]="sortDirection()" (sorted)="toggleSort('orders')" /></div>
+        <div class="col-span-2"><app-sort-header label="Last order" align="center" [active]="sortColumn() === 'lastOrder'" [direction]="sortDirection()" (sorted)="toggleSort('lastOrder')" /></div>
+      </div>
+
       @for (tenant of visible(); track tenant.id) {
-        <li>
-          <a [routerLink]="shopLink(tenant)" class="block rounded-xl bg-surface p-4 shadow" [attr.data-testid]="'shop-card-' + tenant.slug">
-            <div class="flex items-start gap-2">
-              <div class="mr-auto min-w-0">
-                <p class="wrap-break-word font-medium text-gray-900">{{ tenant.name }}</p>
-                <p class="text-xs text-gray-500">{{ tenant.slug }}</p>
-              </div>
+        <a
+          [routerLink]="shopLink(tenant)"
+          [attr.data-testid]="'shop-' + tenant.slug"
+          [attr.aria-label]="'Open ' + tenant.name"
+          class="relative flex cursor-pointer items-center gap-3 rounded-xl border border-gray-100 bg-surface px-4 py-3 no-underline shadow-sm transition-shadow duration-200 hover:z-10 hover:shadow-md lg:grid lg:grid-cols-12 lg:gap-4 lg:border-0 lg:py-4 lg:shadow-lg lg:hover:shadow-xl"
+        >
+          <div class="min-w-0 flex-1 lg:col-span-3">
+            <h3 class="truncate text-sm font-semibold text-gray-900 lg:text-base">{{ tenant.name }}</h3>
+            <p class="truncate text-xs text-gray-500">{{ tenant.slug }}</p>
+            <div class="mt-1 flex flex-wrap items-center gap-2 lg:hidden">
               <app-platform-chip [text]="tenant.statusName" [tone]="statusTone(tenant.status)" />
+              <span class="text-xs text-gray-500">{{ tenant.planName ?? 'No plan' }}, {{ tenant.userCount }} people, {{ tenant.orderCount }} orders</span>
             </div>
-            <p class="mt-2 text-sm text-gray-600">
-              {{ tenant.planName ?? 'No plan' }}{{ tenant.periodEnd ? ', paid until ' + (tenant.periodEnd | date: 'mediumDate') : '' }}
-            </p>
-            <p class="mt-1 text-xs text-gray-500">{{ tenant.userCount }} people, {{ tenant.orderCount }} orders</p>
-          </a>
-        </li>
-      } @empty {
-        <li class="py-8 text-center text-sm text-gray-500">No shops match.</li>
+          </div>
+
+          <div class="hidden lg:col-span-2 lg:flex lg:justify-center">
+            <app-platform-chip [text]="tenant.statusName" [tone]="statusTone(tenant.status)" />
+          </div>
+          <div class="hidden truncate text-sm text-gray-700 lg:col-span-1 lg:block">{{ tenant.planName ?? 'None' }}</div>
+          <div class="hidden flex-col items-center gap-1 lg:col-span-2 lg:flex">
+            @if (tenant.periodEnd) {
+              <span class="text-sm text-gray-700">{{ tenant.periodEnd | date: 'mediumDate' }}</span>
+              <app-platform-chip [text]="warningLabel(tenant.warning)" [tone]="warningTone(tenant.warning)" />
+            } @else {
+              <span class="text-sm text-gray-400">None</span>
+            }
+          </div>
+          <div class="hidden text-center text-sm text-gray-700 tabular-nums lg:col-span-1 lg:block">{{ tenant.userCount }}</div>
+          <div class="hidden text-center text-sm text-gray-700 tabular-nums lg:col-span-1 lg:block">{{ tenant.orderCount }}</div>
+          <div class="hidden text-center text-sm text-gray-700 lg:col-span-2 lg:block">
+            {{ tenant.lastOrderAt ? (tenant.lastOrderAt | date: 'mediumDate') : 'Never' }}
+          </div>
+        </a>
       }
-    </ul>
+    </div>
   }
 </div>
 

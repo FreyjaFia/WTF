@@ -5,21 +5,38 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { PlatformService } from '@core/services';
 import { filterShops } from '@shared/calculations';
+import { FilterButtonComponent } from '@shared/components/filter-button/filter-button';
+import { IconComponent } from '@shared/components/icons/icon/icon';
 import { SearchInputComponent } from '@shared/components/search-input/search-input';
+import { SideDrawerComponent } from '@shared/components/side-drawer/side-drawer';
+import { SortDirection, SortHeaderComponent } from '@shared/components/sort-header/sort-header';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { PLATFORM_STATUS, PlatformTenantDto } from '@shared/models/platform.models';
 import { PlatformChipComponent } from './platform-chip';
 import { statusTone, warningLabel, warningTone } from './platform-labels';
 import { PlatformSecret, PlatformSecretDialogComponent } from './platform-secret-dialog';
 
-interface StatusFilter {
+type SortColumn = 'name' | 'status' | 'plan' | 'paidUntil' | 'people' | 'orders' | 'lastOrder';
+
+interface StatusOption {
+  id: number;
   label: string;
-  value: number | null;
 }
 
 @Component({
   selector: 'app-platform-tenants',
-  imports: [ReactiveFormsModule, DatePipe, RouterLink, SearchInputComponent, PlatformChipComponent, PlatformSecretDialogComponent],
+  imports: [
+    ReactiveFormsModule,
+    DatePipe,
+    RouterLink,
+    SearchInputComponent,
+    FilterButtonComponent,
+    SideDrawerComponent,
+    SortHeaderComponent,
+    IconComponent,
+    PlatformChipComponent,
+    PlatformSecretDialogComponent,
+  ],
   templateUrl: './platform-tenants.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -28,22 +45,25 @@ export class PlatformTenantsComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 
-  protected readonly filters: StatusFilter[] = [
-    { label: 'All', value: null },
-    { label: 'Active', value: PLATFORM_STATUS.Active },
-    { label: 'Trial', value: PLATFORM_STATUS.Trial },
-    { label: 'Suspended', value: PLATFORM_STATUS.Suspended },
-    { label: 'Cancelled', value: PLATFORM_STATUS.Cancelled },
+  protected readonly statusOptions: StatusOption[] = [
+    { id: PLATFORM_STATUS.Active, label: 'Active' },
+    { id: PLATFORM_STATUS.Trial, label: 'Trial' },
+    { id: PLATFORM_STATUS.Suspended, label: 'Suspended' },
+    { id: PLATFORM_STATUS.Cancelled, label: 'Cancelled' },
   ];
 
   protected readonly tenants = signal<PlatformTenantDto[]>([]);
   protected readonly loading = signal(true);
+  protected readonly refreshing = signal(false);
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly dialogError = signal<string | null>(null);
   protected readonly creating = signal(false);
   protected readonly secret = signal<PlatformSecret | null>(null);
-  protected readonly statusFilter = signal<number | null>(null);
+  protected readonly filtersOpen = signal(false);
+  protected readonly selectedStatuses = signal<number[]>([]);
+  protected readonly sortColumn = signal<SortColumn>('name');
+  protected readonly sortDirection = signal<SortDirection>('asc');
 
   protected readonly search = new FormControl<string | null>('');
   protected readonly createForm = new FormGroup({
@@ -60,7 +80,14 @@ export class PlatformTenantsComponent implements OnInit {
   protected readonly warningTone = warningTone;
 
   private readonly query = toSignal(this.search.valueChanges, { initialValue: '' });
-  protected readonly visible = computed(() => filterShops(this.tenants(), this.query() ?? '', this.statusFilter()));
+  protected readonly visible = computed(() => {
+    const rows = filterShops(this.tenants(), this.query() ?? '', this.selectedStatuses());
+    const direction = this.sortDirection() === 'asc' ? 1 : -1;
+    const column = this.sortColumn();
+
+    return [...rows].sort((a, b) => direction * this.compare(a, b, column));
+  });
+  protected readonly activeFilterCount = computed(() => (this.selectedStatuses().length > 0 ? 1 : 0));
 
   public ngOnInit(): void {
     this.load();
@@ -73,24 +100,41 @@ export class PlatformTenantsComponent implements OnInit {
 
   protected load(): void {
     this.loading.set(true);
-    this.platform.getTenants().subscribe({
-      next: (tenants) => {
-        this.tenants.set(tenants);
-        this.loading.set(false);
-      },
-      error: (err: unknown) => {
-        this.error.set(PlatformService.messageOf(err, 'Could not load the shops.'));
-        this.loading.set(false);
-      },
-    });
+    this.fetch();
   }
 
-  protected countFor(value: number | null): number {
-    return value === null ? this.tenants().length : this.tenants().filter((t) => t.status === value).length;
+  protected refresh(): void {
+    this.refreshing.set(true);
+    this.fetch();
   }
 
-  protected openShop(tenant: PlatformTenantDto): void {
-    this.router.navigateByUrl(AppRoutes.PlatformShopById(tenant.id));
+  protected countFor(status: number): number {
+    return this.tenants().filter((t) => t.status === status).length;
+  }
+
+  protected isStatusSelected(status: number): boolean {
+    return this.selectedStatuses().includes(status);
+  }
+
+  protected toggleStatus(status: number): void {
+    this.selectedStatuses.update((current) =>
+      current.includes(status) ? current.filter((s) => s !== status) : [...current, status],
+    );
+  }
+
+  protected clearStatuses(): void {
+    this.selectedStatuses.set([]);
+  }
+
+  protected toggleSort(column: SortColumn): void {
+    if (this.sortColumn() === column) {
+      this.sortDirection.set(this.sortDirection() === 'asc' ? 'desc' : 'asc');
+
+      return;
+    }
+
+    this.sortColumn.set(column);
+    this.sortDirection.set('asc');
   }
 
   protected shopLink(tenant: PlatformTenantDto): string {
@@ -134,5 +178,43 @@ export class PlatformTenantsComponent implements OnInit {
         this.dialogError.set(PlatformService.messageOf(err, 'That did not work. Try again.'));
       },
     });
+  }
+
+  private fetch(): void {
+    this.platform.getTenants().subscribe({
+      next: (tenants) => {
+        this.tenants.set(tenants);
+        this.loading.set(false);
+        this.refreshing.set(false);
+      },
+      error: (err: unknown) => {
+        this.error.set(PlatformService.messageOf(err, 'Could not load the shops.'));
+        this.loading.set(false);
+        this.refreshing.set(false);
+      },
+    });
+  }
+
+  private compare(a: PlatformTenantDto, b: PlatformTenantDto, column: SortColumn): number {
+    switch (column) {
+      case 'status':
+        return a.status - b.status;
+      case 'plan':
+        return (a.planName ?? '').localeCompare(b.planName ?? '');
+      case 'paidUntil':
+        return this.time(a.periodEnd) - this.time(b.periodEnd);
+      case 'people':
+        return a.userCount - b.userCount;
+      case 'orders':
+        return a.orderCount - b.orderCount;
+      case 'lastOrder':
+        return this.time(a.lastOrderAt) - this.time(b.lastOrderAt);
+      default:
+        return a.name.localeCompare(b.name);
+    }
+  }
+
+  private time(value: string | null | undefined): number {
+    return value ? new Date(value).getTime() : 0;
   }
 }

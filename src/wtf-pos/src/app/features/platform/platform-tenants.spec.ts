@@ -58,12 +58,12 @@ describe('PlatformTenantsComponent', () => {
       shop({ id: 't2', slug: 'sun', name: 'Sun', status: 3, statusName: 'Suspended' }),
     ]);
 
-    buttonWith('Suspended')!.click();
+    el.querySelector<HTMLInputElement>('[data-testid="filter-status-3"]')!.click();
     fixture.detectChanges();
     expect(el.querySelector('[data-testid="shop-moonbrew"]')).toBeNull();
     expect(el.querySelector('[data-testid="shop-sun"]')).not.toBeNull();
 
-    buttonWith('All')!.click();
+    el.querySelector<HTMLInputElement>('[data-testid="filter-status-3"]')!.click();
     const search = el.querySelector<HTMLInputElement>('input[type="search"]')!;
     search.value = 'moon';
     search.dispatchEvent(new Event('input'));
@@ -72,20 +72,28 @@ describe('PlatformTenantsComponent', () => {
     expect(el.querySelector('[data-testid="shop-sun"]')).toBeNull();
   });
 
-  it('opens the shop when its row is clicked', () => {
+  it('links each row to its shop', () => {
     const { el } = render([shop({})]);
-    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
 
-    el.querySelector<HTMLElement>('[data-testid="shop-moonbrew"]')!.click();
-
-    expect(navigate).toHaveBeenCalledWith('/platform/shops/t1');
+    expect(el.querySelector('[data-testid="shop-moonbrew"]')?.getAttribute('href')).toBe('/platform/shops/t1');
   });
 
-  it('shows each status count on its filter', () => {
-    const { buttonWith } = render([shop({}), shop({ id: 't2', slug: 'a' }), shop({ id: 't3', slug: 'b', status: 1 })]);
+  it('sorts by a column header', () => {
+    const { fixture, el } = render([shop({ name: 'Alpha', slug: 'alpha' }), shop({ id: 't2', name: 'Zed', slug: 'zed' })]);
+    const order = () => Array.from(el.querySelectorAll('[data-testid^="shop-"]')).map((a) => a.getAttribute('data-testid'));
 
-    expect(buttonWith('Active')!.textContent).toContain('2');
-    expect(buttonWith('Trial')!.textContent).toContain('1');
+    expect(order()).toEqual(['shop-alpha', 'shop-zed']);
+    el.querySelector<HTMLElement>('[aria-label="Sort by Shop"]')!.click();
+    fixture.detectChanges();
+    expect(order()).toEqual(['shop-zed', 'shop-alpha']);
+  });
+
+  it('shows each status count in the filter drawer', () => {
+    const { el } = render([shop({}), shop({ id: 't2', slug: 'a' }), shop({ id: 't3', slug: 'b', status: 1 })]);
+    const label = (id: number) => el.querySelector(`[data-testid="filter-status-${id}"]`)!.closest('label')!.textContent;
+
+    expect(label(2)).toContain('2');
+    expect(label(1)).toContain('1');
   });
 
   it('opens the new shop form straight away when sent here from the overview', () => {

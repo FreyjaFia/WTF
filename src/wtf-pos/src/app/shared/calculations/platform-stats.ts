@@ -93,11 +93,11 @@ export function summarizeShops(shops: PlatformShopRow[], plans: PlatformPlanPric
   return summary;
 }
 
-export function filterShops<T extends PlatformShopRow>(shops: T[], query: string, status: number | null): T[] {
+export function filterShops<T extends PlatformShopRow>(shops: T[], query: string, statuses: number[]): T[] {
   const needle = query.trim().toLowerCase();
 
   return shops.filter((shop) => {
-    if (status !== null && shop.status !== status) {
+    if (statuses.length > 0 && !statuses.includes(shop.status)) {
       return false;
     }
 

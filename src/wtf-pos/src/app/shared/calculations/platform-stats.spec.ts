@@ -55,9 +55,11 @@ describe('platform stats', () => {
   it('filters by name or address and by status', () => {
     const shops = [shop({}), shop({ name: 'Sun Cafe', slug: 'sun', status: 3 })];
 
-    expect(filterShops(shops, 'SUN', null).map((s) => s.slug)).toEqual(['sun']);
-    expect(filterShops(shops, 'moonb', null).map((s) => s.slug)).toEqual(['moonbrew']);
-    expect(filterShops(shops, '', 3).map((s) => s.slug)).toEqual(['sun']);
-    expect(filterShops(shops, '  ', null)).toHaveLength(2);
+    expect(filterShops(shops, 'SUN', []).map((s) => s.slug)).toEqual(['sun']);
+    expect(filterShops(shops, 'moonb', []).map((s) => s.slug)).toEqual(['moonbrew']);
+    expect(filterShops(shops, '', [3]).map((s) => s.slug)).toEqual(['sun']);
+    expect(filterShops(shops, '  ', [])).toHaveLength(2);
+    expect(filterShops(shops, '', [2, 3])).toHaveLength(2);
+    expect(filterShops(shops, '', [4])).toHaveLength(0);
   });
 });
