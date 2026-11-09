@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { AuthService } from '@core/services';
@@ -21,7 +22,12 @@ export const authGuard: CanActivateFn = (_route, _state) => {
     // Attempt to refresh the token
     return auth.refreshToken().pipe(
       map(() => true),
-      catchError(() => {
+      catchError((error: unknown) => {
+        // Offline or a server fault: the refresh token is still good, so let the person in and refresh later.
+        if (error instanceof HttpErrorResponse && (error.status === 0 || error.status >= 500)) {
+          return of(true);
+        }
+
         // Refresh failed, redirect to login
         router.navigateByUrl(AppRoutes.Login, { replaceUrl: true });
         return of(false);

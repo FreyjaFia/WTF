@@ -151,6 +151,19 @@ describe('authInterceptor', () => {
     expect(errors[0].message).toBe(ServiceErrorMessages.Auth.SessionExpired);
   });
 
+  it('keeps the session when the refresh fails because the network is down', () => {
+    const networkError = new HttpErrorResponse({ status: 0 });
+    auth.refreshToken.mockReturnValue(throwError(() => networkError));
+    const errors: unknown[] = [];
+
+    http.get('/api/orders').subscribe({ error: (e) => errors.push(e) });
+    ctrl.expectOne('/api/orders').flush('', { status: 401, statusText: 'Unauthorized' });
+
+    expect(auth.logout).not.toHaveBeenCalled();
+    expect(router.navigateByUrl).not.toHaveBeenCalled();
+    expect(errors[0]).toBe(networkError);
+  });
+
   it('does not refresh again for an already retried request', () => {
     const errors: unknown[] = [];
 

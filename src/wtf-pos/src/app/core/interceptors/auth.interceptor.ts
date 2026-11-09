@@ -68,8 +68,12 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
       if (error.status === 401 && !req.headers.has('X-Refresh-Attempted')) {
         // Try to refresh the token
         return auth.refreshToken().pipe(
-          catchError(() => {
-            // Only a failed refresh ends the session; a failure of the retried request is passed on untouched below.
+          catchError((refreshError: unknown) => {
+            // Only a refused refresh ends the session; a failure of the retried request is passed on untouched below.
+            if (refreshError instanceof HttpErrorResponse) {
+              return throwError(() => refreshError);
+            }
+
             auth.logout();
             router.navigateByUrl(AppRoutes.Login, { replaceUrl: true });
             return throwError(() => new Error(ServiceErrorMessages.Auth.SessionExpired));

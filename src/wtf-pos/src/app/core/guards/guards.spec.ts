@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRouteSnapshot, Router, RouterStateSnapshot } from '@angular/router';
 import { AuthService } from '@core/services';
@@ -79,6 +80,20 @@ describe('route guards', () => {
 
       expect(emitted).toEqual([false]);
       expect(router.navigateByUrl).toHaveBeenCalledWith(AppRoutes.Login, { replaceUrl: true });
+    });
+  });
+
+  describe('authGuard when the refresh cannot reach the server', () => {
+    it.each([0, 500, 503])('lets the person in when the refresh fails with %s', (status) => {
+      auth['getRefreshToken'].mockReturnValue('refresh');
+      auth['refreshToken'].mockReturnValue(throwError(() => new HttpErrorResponse({ status })));
+      const emitted: boolean[] = [];
+
+      (TestBed.runInInjectionContext(() => authGuard({} as ActivatedRouteSnapshot, state)) as Observable<boolean>)
+        .subscribe((value) => emitted.push(value));
+
+      expect(emitted).toEqual([true]);
+      expect(router.navigateByUrl).not.toHaveBeenCalled();
     });
   });
 

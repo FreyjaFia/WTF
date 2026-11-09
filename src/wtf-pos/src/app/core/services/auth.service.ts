@@ -329,9 +329,13 @@ export class AuthService {
         map((res) => !!res?.accessToken),
         catchError((error: HttpErrorResponse) => {
           console.error('Token refresh error:', error);
-          // If refresh fails, logout the user
-          this.logout();
-          return throwError(() => new Error(AuthService.MSG_REFRESH_TOKEN_FAILED));
+          // Only a refused refresh token ends the session; being offline or a server fault keeps the tokens for later.
+          if (error.status === 400 || error.status === 401 || error.status === 403) {
+            this.logout();
+            return throwError(() => new Error(AuthService.MSG_REFRESH_TOKEN_FAILED));
+          }
+
+          return throwError(() => error);
         }),
         finalize(() => {
           this.refreshRequest$ = null;
