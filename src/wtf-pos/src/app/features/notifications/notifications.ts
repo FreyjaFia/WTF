@@ -2,6 +2,8 @@ import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angula
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { AlertService, NotificationService } from '@core/services';
+import { SideDrawerComponent } from '@shared/components';
+import { FilterButtonComponent } from '@shared/components/filter-button/filter-button';
 import { IconComponent } from '@shared/components/icons/icon/icon';
 import { NOTIFICATION_KIND_LABELS, NotificationDto } from '@shared/models';
 import {
@@ -20,7 +22,7 @@ interface KindFilter {
 
 @Component({
   selector: 'app-notifications',
-  imports: [IconComponent],
+  imports: [FilterButtonComponent, IconComponent, SideDrawerComponent],
   templateUrl: './notifications.html',
   host: { class: 'flex-1 min-h-0' },
 })
@@ -36,6 +38,10 @@ export class NotificationsComponent implements OnInit {
   protected readonly isMarking = signal(false);
   protected readonly kind = signal<string | null>(null);
   protected readonly unreadOnly = signal(false);
+  protected readonly isFiltersOpen = signal(false);
+  protected readonly activeFilterCount = computed(
+    () => (this.kind() !== null ? 1 : 0) + (this.unreadOnly() ? 1 : 0),
+  );
   protected readonly unread = this.service.unread;
   protected readonly canLoadMore = computed(() => this.items().length < this.totalCount());
   protected readonly kindFilters = computed<KindFilter[]>(() => {
@@ -70,6 +76,14 @@ export class NotificationsComponent implements OnInit {
 
   protected unreadOf(kind: string | null): number {
     return kind === null ? this.unread() : (this.service.unreadByKind()[kind] ?? 0);
+  }
+
+  protected openFilters(): void {
+    this.isFiltersOpen.set(true);
+  }
+
+  protected closeFilters(): void {
+    this.isFiltersOpen.set(false);
   }
 
   protected selectKind(kind: string | null): void {

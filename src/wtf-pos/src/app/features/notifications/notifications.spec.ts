@@ -99,19 +99,21 @@ describe('NotificationsComponent', () => {
 
   it('filters by kind and by unread only, reloading from the first page', () => {
     const { el, service, fixture } = setup({ items: [row('a')], unread: 1 });
-    const filters = [...el.querySelectorAll('[data-testid="kind-filter"]')] as HTMLButtonElement[];
+    const filters = [...el.querySelectorAll('[data-testid="kind-filter"]')] as HTMLElement[];
+    const radio = (index: number) => filters[index].querySelector('input') as HTMLInputElement;
     expect(filters.map((f) => f.textContent?.replace(/\s+/g, ' ').trim())).toEqual(['All 1', 'Stock 1', 'Waste', 'Subscription']);
 
-    filters[1].click();
+    radio(1).click();
     fixture.detectChanges();
     expect(service.list).toHaveBeenLastCalledWith({ kind: 'StockAlert', unreadOnly: false, page: 1, pageSize: 25 });
-    expect(filters[1].getAttribute('aria-pressed')).toBe('true');
+    expect(radio(1).checked).toBe(true);
+    expect(el.querySelector('[data-filter-count]')?.textContent?.trim()).toBe('1');
 
     (el.querySelector('[data-testid="unread-only"]') as HTMLInputElement).click();
     fixture.detectChanges();
     expect(service.list).toHaveBeenLastCalledWith({ kind: 'StockAlert', unreadOnly: true, page: 1, pageSize: 25 });
 
-    filters[0].click();
+    radio(0).click();
     expect(service.list).toHaveBeenLastCalledWith({ kind: null, unreadOnly: true, page: 1, pageSize: 25 });
   });
 
