@@ -6,4 +6,6 @@ public record PermissionDto(
     string Label,
     string Description,
     string Feature,
-    List<string> Requires);
+    List<string> Requires,
+    bool InPlan = true,
+    List<string>? AvailableInPlans = null);

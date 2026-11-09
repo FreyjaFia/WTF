@@ -47,6 +47,35 @@ describe('AuthService session', () => {
     vi.restoreAllMocks();
   });
 
+  describe('permissions from the server', () => {
+    it('uses the plan-narrowed list the server sends instead of the role bundle', () => {
+      const auth = create(tokenFor(AppRoles.Owner));
+      expect(auth.can(Permissions.StockWrite)).toBe(true);
+
+      auth.loadPermissions().subscribe();
+      http.expectOne(`${base}/permissions`).flush(['orders.read', 'orders.write']);
+
+      expect(auth.can(Permissions.OrdersWrite)).toBe(true);
+      expect(auth.can(Permissions.StockWrite)).toBe(false);
+      expect(JSON.parse(localStorage.getItem('permissions') ?? '[]')).toEqual(['orders.read', 'orders.write']);
+    });
+
+    it('keeps the stored list when the server cannot be reached, and clears it on logout', () => {
+      const auth = create(tokenFor(AppRoles.Owner));
+      auth.loadPermissions().subscribe();
+      http.expectOne(`${base}/permissions`).flush(['orders.read']);
+
+      const again = capture(auth.loadPermissions());
+      failNetwork(http.expectOne(`${base}/permissions`));
+      expect(again.value).toBe(false);
+      expect(auth.can(Permissions.OrdersRead)).toBe(true);
+      expect(auth.can(Permissions.StockWrite)).toBe(false);
+
+      auth.logout();
+      expect(localStorage.getItem('permissions')).toBeNull();
+    });
+  });
+
   describe('login', () => {
     it.each([
       ['', 'pw'],

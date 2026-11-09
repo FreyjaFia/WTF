@@ -219,7 +219,7 @@ public class SubscriptionDatabaseTests
         }
 
         await using var db = PlatformContext(database);
-        var handler = new SetTenantSubscriptionHandler(db, Audit(db), new TenantStatusCache(clock), clock);
+        var handler = new SetTenantSubscriptionHandler(db, Audit(db), new TenantStatusCache(clock), new TenantFeatureCache(clock), clock);
 
         var changed = await handler.Handle(new SetTenantSubscriptionCommand(shop.Tenant.Id, starterId, Today.AddDays(45), 14, 25, " pilot "), CancellationToken.None);
         changed.PlanName.ShouldBe("Starter");
@@ -232,6 +232,39 @@ public class SubscriptionDatabaseTests
         await Should.ThrowAsync<InvalidOperationException>(() => handler.Handle(new SetTenantSubscriptionCommand(shop.Tenant.Id, starterId, null, 200, 0, null), CancellationToken.None));
         await Should.ThrowAsync<InvalidOperationException>(() => handler.Handle(new SetTenantSubscriptionCommand(shop.Tenant.Id, starterId, null, 7, 101, null), CancellationToken.None));
         await Should.ThrowAsync<InvalidOperationException>(() => handler.Handle(new SetTenantSubscriptionCommand(shop.Tenant.Id, starterId, Today.AddYears(-5), 7, 0, null), CancellationToken.None));
+    }
+
+    [SqlFact]
+    public async Task TheShopsPlanDecidesItsFeatures_AndAPlanChangeOrEditShowsAtOnce()
+    {
+        await using var database = await SqlTestDatabase.CreateAsync();
+        await SeedPlansAsync(database);
+        var shop = await CreateShopAsync(database, "gated", plan: "starter");
+        var clock = new FixedClock(Today);
+        var features = new TenantFeatureCache(clock);
+        int proId;
+        await using (var all = database.CreateContext())
+        {
+            proId = (await all.Plans.SingleAsync(p => p.Code == "pro")).Id;
+        }
+
+        await using var db = PlatformContext(database);
+        var starter = await features.GetAsync(db, shop.Tenant.Id, CancellationToken.None);
+        starter.Name.ShouldBe("Starter");
+        starter.Features.Order().ShouldBe(["core"]);
+
+        // A shop that has no subscription row (single-shop install) keeps every feature.
+        (await features.GetAsync(db, Guid.NewGuid(), CancellationToken.None)).Features.ShouldContain("inventory");
+
+        await new SetTenantSubscriptionHandler(db, Audit(db), new TenantStatusCache(clock), features, clock)
+            .Handle(new SetTenantSubscriptionCommand(shop.Tenant.Id, proId, Today.AddDays(30), 7, 0, null), CancellationToken.None);
+        var pro = await features.GetAsync(db, shop.Tenant.Id, CancellationToken.None);
+        pro.Name.ShouldBe("Pro");
+        pro.Features.Order().ShouldBe(["core", "inventory"]);
+
+        await new UpdatePlanHandler(db, Audit(db), features)
+            .Handle(new UpdatePlanCommand(proId, "Pro", 2500, ["pos", "promotions", "chat"], null, true), CancellationToken.None);
+        (await features.GetAsync(db, shop.Tenant.Id, CancellationToken.None)).Features.Order().ShouldBe(["chat", "core", "promotions"]);
     }
 
     [SqlFact]
@@ -476,16 +509,16 @@ public class SubscriptionDatabaseTests
         await using (var db = PlatformContext(database))
         {
             var plan = await db.Plans.SingleAsync(p => p.Code == "pro");
-            var updated = await new UpdatePlanHandler(db, Audit(db))
+            var updated = await new UpdatePlanHandler(db, Audit(db), new TenantFeatureCache(TimeProvider.System))
                 .Handle(new UpdatePlanCommand(plan.Id, "Pro", 2800, ["POS", "orders", "pos"], 10, true), CancellationToken.None);
             updated.MonthlyPrice.ShouldBe(2800);
             updated.Features.ShouldBe(["pos", "orders"]);
             updated.MaxUsers.ShouldBe(10);
 
             await Should.ThrowAsync<InvalidOperationException>(() =>
-                new UpdatePlanHandler(db, Audit(db)).Handle(new UpdatePlanCommand(plan.Id, "", 1, [], null, true), CancellationToken.None));
+                new UpdatePlanHandler(db, Audit(db), new TenantFeatureCache(TimeProvider.System)).Handle(new UpdatePlanCommand(plan.Id, "", 1, [], null, true), CancellationToken.None));
             await Should.ThrowAsync<InvalidOperationException>(() =>
-                new UpdatePlanHandler(db, Audit(db)).Handle(new UpdatePlanCommand(plan.Id, "Pro", -1, [], null, true), CancellationToken.None));
+                new UpdatePlanHandler(db, Audit(db), new TenantFeatureCache(TimeProvider.System)).Handle(new UpdatePlanCommand(plan.Id, "Pro", -1, [], null, true), CancellationToken.None));
         }
     }
 

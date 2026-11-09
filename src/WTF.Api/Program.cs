@@ -69,6 +69,9 @@ builder.Services.Configure<HuaweiPushOptions>(
 // One clock for code that must be testable around time (for example an ordering link expiring mid-request).
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<TenantStatusCache>();
+builder.Services.AddSingleton<TenantFeatureCache>();
+builder.Services.AddSingleton<ITenantFeatures>(sp => sp.GetRequiredService<TenantFeatureCache>());
+builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationMiddlewareResultHandler, PlanAwareAuthorizationResultHandler>();
 builder.Services.AddSingleton<RolePermissionCache>();
 builder.Services.AddScoped<IPlatformAuditService, PlatformAuditService>();
 builder.Services.AddSingleton<IJwtService, JwtService>();

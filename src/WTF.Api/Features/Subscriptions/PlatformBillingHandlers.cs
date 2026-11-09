@@ -82,7 +82,7 @@ public class GetPlansHandler(WTFDbContext db) : IRequestHandler<GetPlansQuery, L
 
 public record UpdatePlanCommand(int Id, string Name, decimal MonthlyPrice, string[] Features, int? MaxUsers, bool IsActive) : IRequest<PlanDto>;
 
-public class UpdatePlanHandler(WTFDbContext db, IPlatformAuditService audit) : IRequestHandler<UpdatePlanCommand, PlanDto>
+public class UpdatePlanHandler(WTFDbContext db, IPlatformAuditService audit, ITenantFeatures tenantFeatures) : IRequestHandler<UpdatePlanCommand, PlanDto>
 {
     public async Task<PlanDto> Handle(UpdatePlanCommand request, CancellationToken cancellationToken)
     {
@@ -118,6 +118,7 @@ public class UpdatePlanHandler(WTFDbContext db, IPlatformAuditService audit) : I
         plan.MaxUsers = request.MaxUsers;
         plan.IsActive = request.IsActive;
         await db.SaveChangesAsync(cancellationToken);
+        tenantFeatures.Forget();
 
         await audit.LogAsync(PlatformActions.PlanUpdated, null, summary, cancellationToken: cancellationToken);
         return PlatformBilling.ToDto(plan);
@@ -140,7 +141,7 @@ public record SetTenantSubscriptionCommand(
     decimal DiscountPercent,
     string? Notes) : IRequest<TenantSubscriptionDto>;
 
-public class SetTenantSubscriptionHandler(WTFDbContext db, IPlatformAuditService audit, TenantStatusCache statusCache, TimeProvider clock)
+public class SetTenantSubscriptionHandler(WTFDbContext db, IPlatformAuditService audit, TenantStatusCache statusCache, ITenantFeatures tenantFeatures, TimeProvider clock)
     : IRequestHandler<SetTenantSubscriptionCommand, TenantSubscriptionDto>
 {
     public async Task<TenantSubscriptionDto> Handle(SetTenantSubscriptionCommand request, CancellationToken cancellationToken)
@@ -184,6 +185,7 @@ public class SetTenantSubscriptionHandler(WTFDbContext db, IPlatformAuditService
         sub.UpdatedAt = now;
         await db.SaveChangesAsync(cancellationToken);
         statusCache.Forget(request.TenantId);
+        tenantFeatures.Forget();
 
         await audit.LogAsync(PlatformActions.SubscriptionUpdated, request.TenantId, summary, cancellationToken: cancellationToken);
         return await PlatformBilling.BuildAsync(db, request.TenantId, now, cancellationToken);

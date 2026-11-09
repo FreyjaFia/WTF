@@ -225,7 +225,7 @@
       "area": "Insight",
       "label": "View reports",
       "description": "See sales and stock reports.",
-      "feature": "workbook",
+      "feature": "core",
       "requires": []
     },
     {

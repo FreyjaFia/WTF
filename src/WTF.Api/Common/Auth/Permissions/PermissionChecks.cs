@@ -29,6 +29,16 @@ public static class PermissionChecks
         return keys;
     }
 
+    public static HashSet<string> RoleKeysForPrincipal(ClaimsPrincipal? user)
+    {
+        if (user is not null && user.HasClaim(c => c.Type == PermissionClaimsMiddleware.ResolvedClaim))
+        {
+            return [.. user.FindAll(PermissionClaimsMiddleware.RoleKeyClaim).Select(c => c.Value)];
+        }
+
+        return ForPrincipal(user);
+    }
+
     public static bool Has(ClaimsPrincipal? user, string permission) => ForPrincipal(user).Contains(permission);
 
     public static bool HasAny(ClaimsPrincipal? user, IEnumerable<string> permissions)

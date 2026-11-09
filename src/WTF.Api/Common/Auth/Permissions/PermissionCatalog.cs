@@ -29,7 +29,7 @@ public static class PermissionCatalog
         new("promotions.read", "Promotions", "View promotions", "See promotions.", "promotions", []),
         new("promotions.write", "Promotions", "Add and edit promotions", "Create and change promotions.", "promotions", ["promotions.read"]),
         new("dashboard.read", "Insight", "View the dashboard", "See the live dashboard.", "core", []),
-        new("reports.read", "Insight", "View reports", "See sales and stock reports.", "workbook", []),
+        new("reports.read", "Insight", "View reports", "See sales and stock reports.", "core", []),
         new("reports.generate", "Insight", "Generate reports", "Generate the monthly report workbook.", "workbook", ["reports.read"]),
         new("users.read", "People", "View users", "See the user list.", "core", []),
         new("users.write", "People", "Add and edit users", "Create, change and remove users.", "core", ["users.read"]),
@@ -39,6 +39,9 @@ public static class PermissionCatalog
         new("audit.read", "System", "View the audit log", "See who changed what.", "core", []),
         new("schemascripts.read", "System", "View database script history", "See which database scripts have run.", "core", [])
     ];
+
+    public static string FeatureOf(string key) =>
+        All.FirstOrDefault(p => p.Key == key)?.Feature ?? "core";
 
     public static readonly IReadOnlyDictionary<string, string[]> PolicyPermissions = new Dictionary<string, string[]>
     {

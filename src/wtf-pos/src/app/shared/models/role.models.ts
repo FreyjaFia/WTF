@@ -23,3 +23,10 @@ export interface SaveRoleDto {
   description?: string | null;
   permissions: string[];
 }
+
+export interface PermissionPlanDto {
+  key: string;
+  feature: string;
+  inPlan: boolean;
+  availableInPlans?: string[] | null;
+}

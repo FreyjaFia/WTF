@@ -14,6 +14,9 @@ describe('RoleService', () => {
     service.getRoles().subscribe();
     expect(http.expectOne(base).request.method).toBe('GET');
 
+    service.getPermissionPlans().subscribe();
+    expect(http.expectOne(`${base}/permissions`).request.method).toBe('GET');
+
     service.getRole(100).subscribe();
     expect(http.expectOne(`${base}/100`).request.method).toBe('GET');
 

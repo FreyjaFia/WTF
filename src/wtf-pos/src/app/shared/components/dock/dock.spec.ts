@@ -24,6 +24,7 @@ describe('DockComponent', () => {
       canReadOrders: () => perms.canReadOrders ?? false,
       canReadInventory: () => perms.canReadInventory ?? false,
       canReadStockMovements: () => false,
+      permissionsVersion: signal(1),
     };
     TestBed.configureTestingModule({
       providers: [

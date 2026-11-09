@@ -190,7 +190,15 @@
                             Needs: {{ requirementLabels(permission) }}
                           </span>
                         }
-                        @if (!isReadOnly() && !canGive(permission) && !isChecked(permission.key)) {
+                        @if (isOutsidePlan(permission)) {
+                          <span
+                            class="flex items-center gap-1 text-xs text-gray-500"
+                            [attr.data-testid]="'plan-lock-' + permission.key"
+                          >
+                            <app-icon name="icon-lock" [class]="'h-3 w-3 shrink-0'" />
+                            {{ planLabel(permission) }}
+                          </span>
+                        } @else if (!isReadOnly() && !canGive(permission) && !isChecked(permission.key)) {
                           <span class="block text-xs text-gray-400">
                             You do not have this permission, so you cannot give it.
                           </span>

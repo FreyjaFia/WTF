@@ -29,6 +29,7 @@ export * from './signalr.service';
 export * from './notification.service';
 export * from './platform.service';
 export * from './stock-attention.service';
+export * from './stock-attention-follow';
 export * from './stock-limits.service';
 export * from './subscription.service';
 export * from './brand.service';

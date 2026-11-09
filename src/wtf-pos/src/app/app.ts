@@ -5,6 +5,7 @@ import { App as CapApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import {
+  AuthService,
   ModalStackService,
   OfflineOrderService,
   PushNotificationService,
@@ -36,6 +37,7 @@ import type { PluginListenerHandle } from '@capacitor/core';
 })
 export class App implements OnInit, OnDestroy {
   private readonly location = inject(Location);
+  private readonly auth = inject(AuthService);
   private readonly modalStack = inject(ModalStackService);
   private readonly pushNotifications = inject(PushNotificationService);
   private readonly zone = inject(NgZone);
@@ -53,6 +55,13 @@ export class App implements OnInit, OnDestroy {
   protected readonly title = signal('wtf-pos');
 
   public async ngOnInit(): Promise<void> {
+    // The server's list is already narrowed to the shop's plan; ask again on every start and every new token, and keep
+    // the last list when offline.
+    this.auth.tokenRefreshed$.subscribe(() => this.auth.loadPermissions().subscribe());
+    if (this.auth.getToken()) {
+      this.auth.loadPermissions().subscribe();
+    }
+
     this.pushNotifications.init();
 
     if (Capacitor.isNativePlatform()) {

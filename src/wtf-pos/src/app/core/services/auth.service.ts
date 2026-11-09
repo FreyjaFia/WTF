@@ -1,5 +1,5 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { HttpErrorMessages, ServiceErrorMessages } from '@core/messages';
 import { environment } from '@environments/environment.development';
 import { AppRole, AppRoleLabels, AppRoles } from '@shared/constants/app-roles';
@@ -11,7 +11,7 @@ import {
   SystemRolePermissions,
 } from '@shared/permissions';
 import { LoginDto, MeDto } from '@shared/models';
-import { BehaviorSubject, Observable, Subject, throwError } from 'rxjs';
+import { BehaviorSubject, Observable, Subject, of, throwError } from 'rxjs';
 import { catchError, finalize, map, shareReplay, tap } from 'rxjs/operators';
 import { db } from './db';
 import {
@@ -20,6 +20,18 @@ import {
   readDeviceTenantId,
   saveDeviceTenantId,
 } from './tenant-context';
+
+const PERMISSIONS_STORAGE_KEY = 'permissions';
+
+function readStoredPermissions(): ReadonlySet<PermissionKey> | null {
+  try {
+    const raw = localStorage.getItem(PERMISSIONS_STORAGE_KEY);
+    const parsed: unknown = raw ? JSON.parse(raw) : null;
+    return Array.isArray(parsed) ? new Set(parsed as PermissionKey[]) : null;
+  } catch {
+    return null;
+  }
+}
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -44,6 +56,9 @@ export class AuthService {
   private readonly meRefreshSubject = new Subject<void>();
   private readonly tokenRefreshedSubject = new Subject<void>();
   private refreshRequest$: Observable<boolean> | null = null;
+  private readonly serverPermissions = signal<ReadonlySet<PermissionKey> | null>(readStoredPermissions());
+  // 0 until the server's permission list is known (stored from a past visit, or just loaded); grows with every change.
+  public readonly permissionsVersion = signal(this.serverPermissions() ? 1 : 0);
   public readonly isLoggedIn$ = this._isLoggedIn.asObservable();
   public readonly roles$ = this.rolesSubject.asObservable();
   public readonly meRefresh$ = this.meRefreshSubject.asObservable();
@@ -68,6 +83,7 @@ export class AuthService {
           }
 
           this.clearLocalDataWhenTheShopChanged();
+          this.clearPermissions();
           this._isLoggedIn.next(true);
           this.syncRolesFromToken();
           this.tokenRefreshedSubject.next();
@@ -189,6 +205,7 @@ export class AuthService {
     localStorage.removeItem('impersonation');
     localStorage.removeItem('token');
     localStorage.removeItem('refreshToken');
+    this.clearPermissions();
     this._isLoggedIn.next(false);
     this.rolesSubject.next([]);
     db.carts.clear();
@@ -509,6 +526,23 @@ export class AuthService {
     return this.permissionsFor(this.rolesSubject.value).has(permission);
   }
 
+  public loadPermissions(): Observable<boolean> {
+    return this.http.get<string[]>(`${this.baseUrl}/permissions`).pipe(
+      tap((keys) => {
+        this.serverPermissions.set(new Set(keys as PermissionKey[]));
+        this.permissionsVersion.update((v) => v + 1);
+        try {
+          localStorage.setItem(PERMISSIONS_STORAGE_KEY, JSON.stringify(keys));
+        } catch {
+          // Storage can be full or blocked; the list still works for this session.
+        }
+      }),
+      map(() => true),
+      // Offline or failed: keep the last list (the server re-checks every request anyway).
+      catchError(() => of(false)),
+    );
+  }
+
   public canAny(permissions: readonly PermissionKey[]): boolean {
     const held = this.permissionsFor(this.rolesSubject.value);
     return permissions.some((permission) => held.has(permission));
@@ -558,7 +592,19 @@ export class AuthService {
     return Array.from(new Set(normalized));
   }
 
+  private clearPermissions(): void {
+    this.serverPermissions.set(null);
+    localStorage.removeItem(PERMISSIONS_STORAGE_KEY);
+    this.permissionsVersion.set(0);
+  }
+
   private permissionsFor(roles: readonly string[]): ReadonlySet<PermissionKey> {
+    // The server's list is already narrowed to the shop's plan and covers custom roles.
+    const fromServer = this.serverPermissions();
+    if (fromServer) {
+      return fromServer;
+    }
+
     const held = new Set<PermissionKey>();
 
     for (const role of Object.keys(SystemRolePermissions)) {

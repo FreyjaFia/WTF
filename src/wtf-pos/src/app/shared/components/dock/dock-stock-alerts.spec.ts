@@ -18,6 +18,7 @@ describe('DockComponent: items that need attention', () => {
           provide: AuthService,
           useValue: {
             isLoggedIn$: new BehaviorSubject(true),
+            permissionsVersion: signal(1),
             canReadManagement: () => false,
             canWriteOrders: () => false,
             canReadOrders: () => false,

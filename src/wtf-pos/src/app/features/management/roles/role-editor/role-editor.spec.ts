@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, provideRouter } from '@angular/router';
 import { AlertService, AuthService, ModalStackService, RoleService } from '@core/services';
-import { RoleDetailDto } from '@shared/models';
+import { PermissionPlanDto, RoleDetailDto } from '@shared/models';
 import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fakeAlert, internals, Internals, stubRoute } from '../../../../testing/management-spec-helpers';
@@ -24,9 +24,15 @@ describe('RoleEditorComponent', () => {
   let service: Record<string, ReturnType<typeof vi.fn>>;
   let router: Router;
 
-  function setup(opts: { id?: string; role?: RoleDetailDto; held?: (key: string) => boolean } = {}) {
+  function setup(opts: {
+    id?: string;
+    role?: RoleDetailDto;
+    held?: (key: string) => boolean;
+    plans?: PermissionPlanDto[];
+  } = {}) {
     alert = fakeAlert();
     service = {
+      getPermissionPlans: vi.fn(() => of(opts.plans ?? [])),
       getRole: vi.fn(() => (opts.role ? of(opts.role) : throwError(() => new Error('gone')))),
       createRole: vi.fn(() => of({ ...CUSTOM, id: 101 })),
       updateRole: vi.fn(() => of(CUSTOM)),
@@ -83,6 +89,28 @@ describe('RoleEditorComponent', () => {
     c.togglePermission(perm('audit.read'));
     expect(c.selected().has('audit.read')).toBe(false);
     expect(c.isDisabled(perm('orders.read'))).toBe(false);
+  });
+
+  it('greys out permissions outside the plan with the plan name, and keeps them on the role', () => {
+    const plans: PermissionPlanDto[] = [
+      { key: 'stock.read', feature: 'inventory', inPlan: false, availableInPlans: ['Pro'] },
+      { key: 'stock.write', feature: 'inventory', inPlan: false, availableInPlans: ['Pro'] },
+      { key: 'orders.read', feature: 'core', inPlan: true, availableInPlans: ['Starter', 'Pro'] },
+    ];
+    const role = { ...CUSTOM, permissions: ['orders.read', 'stock.read', 'stock.write'] };
+    setup({ id: '100', role, plans, held: (key) => !key.startsWith('stock.') });
+
+    expect(c.isOutsidePlan(perm('stock.write'))).toBe(true);
+    expect(c.isDisabled(perm('stock.write'))).toBe(true);
+    expect(c.planLabel(perm('stock.write'))).toBe('Not in your plan. Available in Pro.');
+    expect(c.isOutsidePlan(perm('orders.read'))).toBe(false);
+
+    c.togglePermission(perm('stock.write'));
+    expect(c.selected().has('stock.write')).toBe(true);
+
+    // The role is still editable: keys the plan switches off are not "permissions you lack".
+    expect(c.cannotEditRole()).toBe(false);
+    expect(c.isReadOnly()).toBe(false);
   });
 
   it('creates a role and goes back to the list', () => {

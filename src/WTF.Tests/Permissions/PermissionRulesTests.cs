@@ -83,11 +83,21 @@ public class PermissionRulesTests
                     [new Claim(ClaimTypes.NameIdentifier, userId.ToString()), new Claim(ClaimTypes.Role, tokenRole)], "test")),
             };
 
-            await new PermissionClaimsMiddleware(_ => Task.CompletedTask).InvokeAsync(context, new RolePermissionCache(TimeProvider.System));
+            await new PermissionClaimsMiddleware(_ => Task.CompletedTask).InvokeAsync(context, new RolePermissionCache(TimeProvider.System), new AllFeatures());
             return PermissionChecks.ForPrincipal(context.User);
         }
 
         (await RunAsync(AppRoles.Owner)).Count.ShouldBe(PermissionCatalog.All.Count);
         (await RunAsync("SuperAdmin")).ShouldBeEmpty();
+    }
+}
+
+internal sealed class AllFeatures : WTF.Api.Common.Tenancy.ITenantFeatures
+{
+    public Task<WTF.Api.Common.Tenancy.TenantPlan> GetAsync(WTF.Domain.Data.WTFDbContext db, Guid tenantId, CancellationToken cancellationToken) =>
+        Task.FromResult(new WTF.Api.Common.Tenancy.TenantPlan(string.Empty, WTF.Calculations.Subscriptions.PlanFeatures.All()));
+
+    public void Forget()
+    {
     }
 }

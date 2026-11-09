@@ -3,7 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { HttpErrorMessages } from '@core/messages';
 import { ConnectivityService } from '@core/services/connectivity.service';
 import { environment } from '@environments/environment.development';
-import { RoleDetailDto, RoleDto, SaveRoleDto } from '@shared/models';
+import { PermissionPlanDto, RoleDetailDto, RoleDto, SaveRoleDto } from '@shared/models';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { extractHttpErrorMessage } from './http-error-message';
@@ -18,6 +18,12 @@ export class RoleService {
     return this.http
       .get<RoleDto[]>(this.baseUrl)
       .pipe(catchError((error) => this.handleError(error, 'Unable to fetch the roles.')));
+  }
+
+  public getPermissionPlans(): Observable<PermissionPlanDto[]> {
+    return this.http
+      .get<PermissionPlanDto[]>(`${this.baseUrl}/permissions`)
+      .pipe(catchError((error) => this.handleError(error, 'Unable to fetch the plan details.')));
   }
 
   public getRole(id: number): Observable<RoleDetailDto> {

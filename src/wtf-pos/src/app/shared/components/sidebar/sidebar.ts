@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, DestroyRef, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, Injector, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import {
@@ -9,6 +9,7 @@ import {
   ImageCacheService,
   StockAttentionService,
   BrandService,
+  followStockPermission,
 } from '@core/services';
 import { appVersion } from '@environments/version';
 import { AvatarComponent } from '@shared/components/avatar/avatar';
@@ -57,7 +58,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
   private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly authLoading = inject(AuthLoadingService);
   protected readonly attention = inject(StockAttentionService);
-  private readonly destroyRef = inject(DestroyRef);
+  private readonly injector = inject(Injector);
 
   protected imageUrl: string | null = null;
   protected userFullName = 'User';
@@ -74,10 +75,8 @@ export class SidebarComponent implements OnInit, OnDestroy {
   private meRefreshSubscription?: { unsubscribe: () => void };
 
   public ngOnInit(): void {
-    if (this.authService.canReadStockMovements()) {
-      this.attention.start();
-      this.destroyRef.onDestroy(() => this.attention.stop());
-    }
+    followStockPermission(this.authService, this.attention, this.injector);
+
 
     this.clockIntervalId = setInterval(() => {
       this.now.set(new Date());

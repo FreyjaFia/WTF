@@ -1,9 +1,15 @@
 import { Location } from '@angular/common';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, RouterOutlet } from '@angular/router';
+import { of, Subject } from 'rxjs';
 import { AppWeb } from '@capacitor/app/dist/esm/web';
 import { Capacitor, WebPlugin } from '@capacitor/core';
-import { ModalStackService, OfflineOrderService, PushNotificationService } from '@core/services';
+import {
+  AuthService,
+  ModalStackService,
+  OfflineOrderService,
+  PushNotificationService,
+} from '@core/services';
 import { ExitConfirmComponent } from '@shared/components';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './app';
@@ -13,6 +19,11 @@ type BackHandler = (e: { canGoBack: boolean }) => void;
 
 describe('App', () => {
   let push: { init: ReturnType<typeof vi.fn> };
+  let auth: {
+    tokenRefreshed$: Subject<void>;
+    getToken: ReturnType<typeof vi.fn>;
+    loadPermissions: ReturnType<typeof vi.fn>;
+  };
   let location: { back: ReturnType<typeof vi.fn> };
   let handler: BackHandler | null;
   let remove: ReturnType<typeof vi.fn>;
@@ -24,6 +35,7 @@ describe('App', () => {
         provideRouter([]),
         { provide: PushNotificationService, useValue: push },
         { provide: OfflineOrderService, useValue: {} },
+        { provide: AuthService, useValue: auth },
         { provide: Location, useValue: location },
       ],
     });
@@ -38,6 +50,11 @@ describe('App', () => {
 
   beforeEach(() => {
     push = { init: vi.fn() };
+    auth = {
+      tokenRefreshed$: new Subject<void>(),
+      getToken: vi.fn(() => 'token'),
+      loadPermissions: vi.fn(() => of(true)),
+    };
     location = { back: vi.fn() };
     handler = null;
     remove = vi.fn(() => Promise.resolve());
@@ -60,6 +77,22 @@ describe('App', () => {
     expect(push.init).toHaveBeenCalledTimes(1);
     expect(WebPlugin.prototype.addListener).not.toHaveBeenCalled();
     expect(console.error).not.toHaveBeenCalled();
+  });
+
+  it('asks the server for the plan-narrowed permissions at start and after every new token', async () => {
+    const fixture = create();
+    await fixture.componentInstance.ngOnInit();
+    expect(auth.loadPermissions).toHaveBeenCalledTimes(1);
+
+    auth.tokenRefreshed$.next();
+    expect(auth.loadPermissions).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not ask for permissions when nobody is signed in', async () => {
+    auth.getToken.mockReturnValue(null);
+    const fixture = create();
+    await fixture.componentInstance.ngOnInit();
+    expect(auth.loadPermissions).not.toHaveBeenCalled();
   });
 
   it('registers the back button on native platforms even if the status bar plugin fails', async () => {

@@ -25,6 +25,7 @@ export function createShellFakes(me: Observable<FakeMe> = of({ firstName: 'Jane'
   };
 
   const auth = {
+    permissionsVersion: signal(1),
     meRefresh$: meRefresh$.asObservable(),
     getMe: vi.fn(() => me),
     getCurrentRoleLabel: vi.fn(() => 'Admin'),

@@ -79,9 +79,10 @@ internal static class RoleRules
     }
 
     // Nobody can give or edit what they do not hold themselves. The owner role holds everything, so it is never limited.
+    // A role "holds" a key even when the shop's plan switches it off, so plan-locked keys neither block editing nor widen anyone.
     public static void EnsureHolds(ClaimsPrincipal? actor, IEnumerable<string> keys)
     {
-        var held = PermissionChecks.ForPrincipal(actor);
+        var held = PermissionChecks.RoleKeysForPrincipal(actor);
         var missing = keys.Where(k => !held.Contains(k)).ToList();
         if (missing.Count > 0)
         {

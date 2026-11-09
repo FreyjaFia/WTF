@@ -1,12 +1,12 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { of } from 'rxjs';
+import { catchError, forkJoin, map, Observable, of, tap } from 'rxjs';
 import { AlertService, AuthService, ModalStackService, RoleService } from '@core/services';
 import { IconComponent, PageTitleComponent } from '@shared/components';
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import { AppRoutes } from '@shared/constants/app-routes';
-import { RoleDetailDto } from '@shared/models';
+import { PermissionPlanDto, RoleDetailDto } from '@shared/models';
 import { PermissionCatalog, PermissionDefinition, PermissionKey } from '@shared/permissions';
 
 interface PermissionGroup {
@@ -34,6 +34,7 @@ export class RoleEditorComponent implements OnInit {
   });
 
   protected readonly role = signal<RoleDetailDto | null>(null);
+  protected readonly planByKey = signal<ReadonlyMap<string, PermissionPlanDto>>(new Map());
   protected readonly selected = signal<ReadonlySet<string>>(new Set());
   protected readonly isLoading = signal(false);
   protected readonly isSaving = signal(false);
@@ -80,6 +81,8 @@ export class RoleEditorComponent implements OnInit {
       if (idParam && idParam !== 'new') {
         this.roleId = Number(idParam);
         this.loadRole(this.roleId);
+      } else {
+        this.loadPlan().subscribe();
       }
     });
   }
@@ -104,8 +107,19 @@ export class RoleEditorComponent implements OnInit {
     return this.selected().has(key);
   }
 
+  protected isOutsidePlan(permission: PermissionDefinition): boolean {
+    return this.planByKey().get(permission.key)?.inPlan === false;
+  }
+
+  protected planLabel(permission: PermissionDefinition): string {
+    const plans = this.planByKey().get(permission.key)?.availableInPlans ?? [];
+    return plans.length > 0
+      ? `Not in your plan. Available in ${plans.join(' and ')}.`
+      : 'Not in your plan.';
+  }
+
   protected isDisabled(permission: PermissionDefinition): boolean {
-    return this.isReadOnly() || this.isSaving() || (!this.isChecked(permission.key) && !this.canGive(permission));
+    return this.isReadOnly() || this.isSaving() || this.isOutsidePlan(permission) || (!this.isChecked(permission.key) && !this.canGive(permission));
   }
 
   protected togglePermission(permission: PermissionDefinition): void {
@@ -209,6 +223,23 @@ export class RoleEditorComponent implements OnInit {
     this.pendingDeactivateResolve = null;
   }
 
+  private loadPlan(): Observable<boolean> {
+    return this.roleService.getPermissionPlans().pipe(
+      tap((plans) => this.planByKey.set(new Map(plans.map((p) => [p.key, p])))),
+      map(() => true),
+      // Without the plan details every row simply stays available; the server still refuses what the plan lacks.
+      catchError(() => {
+        this.planByKey.set(new Map());
+        return of(false);
+      }),
+    );
+  }
+
+  private holdsOrIsOutsidePlan(key: PermissionKey): boolean {
+    // A key the plan switches off stays on the role; it neither blocks editing nor counts as one you lack.
+    return this.authService.can(key) || this.planByKey().get(key)?.inPlan === false;
+  }
+
   private resetState(): void {
     this.roleId = null;
     this.skipGuard = false;
@@ -225,8 +256,8 @@ export class RoleEditorComponent implements OnInit {
 
   private loadRole(id: number): void {
     this.isLoading.set(true);
-    this.roleService.getRole(id).subscribe({
-      next: (role) => {
+    forkJoin([this.roleService.getRole(id), this.loadPlan()]).subscribe({
+      next: ([role]) => {
         this.role.set(role);
         this.selected.set(new Set(role.permissions));
         this.roleForm.patchValue(
@@ -235,7 +266,7 @@ export class RoleEditorComponent implements OnInit {
         );
         if (role.isSystem) {
           this.roleForm.disable({ emitEvent: false });
-        } else if (role.permissions.some((key) => !this.authService.can(key as PermissionKey))) {
+        } else if (role.permissions.some((key) => !this.holdsOrIsOutsidePlan(key as PermissionKey))) {
           // The server refuses to change a role that carries permissions you do not hold yourself.
           this.cannotEditRole.set(true);
           this.roleForm.disable({ emitEvent: false });
