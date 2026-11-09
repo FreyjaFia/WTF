@@ -133,3 +133,18 @@ test.describe('the Purchase Orders column header stays opaque over the rows @inv
     expect(leaks, 'parts of the header that show a row through them').toEqual([]);
   });
 });
+
+test.describe('the section switcher menu is opaque in the Cafe style @inventory @layout', () => {
+  for (const viewport of VIEWPORTS) {
+    test(`the menu keeps its background at ${viewport.name}`, async ({ signIn }) => {
+      const page = await signIn('admin', { landing: true });
+      await useStyle(page, 'cafe');
+      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+      await go(page, '/inventory/purchase-orders');
+      await page.getByRole('button', { name: /^Switch screen/ }).click();
+      const panel = page.getByRole('navigation', { name: /^Switch .* screen$/ });
+      await expect(panel).toBeVisible();
+      await expect.poll(() => panel.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe('rgb(255, 253, 248)');
+    });
+  }
+});

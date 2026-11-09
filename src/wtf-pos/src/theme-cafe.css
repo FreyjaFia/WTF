@@ -358,7 +358,7 @@
 }
 
 /* Let the paper canvas show through page wrappers so titles are not flush against a box edge. */
-[data-theme='cafe'] .app-content .bg-surface.rounded-t-2xl {
+[data-theme='cafe'] .app-content .bg-surface.rounded-t-2xl:not(.fixed):not(.absolute) {
   background-color: transparent;
 }
 
