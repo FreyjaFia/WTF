@@ -18,14 +18,16 @@
             Record Waste
           </button>
         }
-        <a
-          draggable="false"
-          class="app-btn app-btn-primary app-btn-sm"
-          [routerLink]="routes.OrdersEditor"
-        >
-          <app-icon name="icon-plus" [class]="'h-4 w-4'" />
-          New Order
-        </a>
+        @if (canCreateOrders()) {
+          <a
+            draggable="false"
+            class="app-btn app-btn-primary app-btn-sm"
+            [routerLink]="routes.OrdersEditor"
+          >
+            <app-icon name="icon-plus" [class]="'h-4 w-4'" />
+            New Order
+          </a>
+        }
       </div>
     </div>
 

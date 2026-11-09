@@ -241,6 +241,9 @@ test.describe('sign in as a shop user @roles @rbac @tenancy', () => {
     await waitForPermissions(readPage);
     expect(await visibleEntries(readPage)).toEqual(['dashboard', 'list', 'inventory', 'management']);
     expect(await storedKeys(readPage)).not.toContain('orders.write');
+    await go(readPage, '/orders/list');
+    await expect(readPage.getByRole('heading', { name: 'Orders', exact: true })).toBeVisible();
+    await expect(readPage.locator('app-order-list a[href="/orders/editor"]')).toHaveCount(0);
     await go(readPage, '/management/roles');
     await expect.poll(() => new URL(readPage.url()).pathname).not.toBe('/management/roles');
 
@@ -248,6 +251,8 @@ test.describe('sign in as a shop user @roles @rbac @tenancy', () => {
     await waitForPermissions(writePage);
     expect(await visibleEntries(writePage)).toEqual(['dashboard', 'editor', 'list', 'inventory', 'management']);
     expect(await storedKeys(writePage)).toContain('roles.manage');
+    await go(writePage, '/orders/list');
+    await expect(writePage.locator('app-order-list a[href="/orders/editor"]')).toBeVisible();
   });
 
   for (const viewport of VIEWPORTS) {

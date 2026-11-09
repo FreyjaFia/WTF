@@ -230,6 +230,23 @@ describe('OrderList', () => {
     vi.restoreAllMocks();
   });
 
+  describe('New Order button', () => {
+    const link = () => (fixture.nativeElement as HTMLElement).querySelector('a[href="/orders/editor"]');
+
+    it('is there for staff who can write orders', () => {
+      init();
+
+      expect(link()).not.toBeNull();
+    });
+
+    it('is hidden from staff who can only read orders', () => {
+      canWrite = false;
+      init();
+
+      expect(link()).toBeNull();
+    });
+  });
+
   describe('filtering by source', () => {
     const sources = () => (t as unknown as {
       selectedSources: () => number[];

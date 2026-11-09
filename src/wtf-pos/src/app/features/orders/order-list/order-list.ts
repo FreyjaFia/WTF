@@ -128,6 +128,7 @@ export class OrderList implements OnInit, OnDestroy {
   protected closeChat(): void {
     this.chatOrder.set(null);
   }
+  protected readonly canCreateOrders = computed(() => this.authService.canWriteOrders());
   protected readonly canDecideOrders = computed(() => this.authService.canWriteOrders());
   protected readonly ordersCache = signal<OrderDto[]>([]);
   protected readonly isLoading = signal(false);
