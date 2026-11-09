@@ -369,6 +369,30 @@ app.Use(async (context, next) =>
         context.Response.StatusCode = StatusCodes.Status403Forbidden;
         await context.Response.WriteAsJsonAsync(new { message = ex.Message });
     }
+    catch (DbUpdateConcurrencyException ex)
+    {
+        if (context.Response.HasStarted)
+        {
+            throw;
+        }
+
+        app.Logger.LogWarning(ex, "Concurrent update conflict");
+        context.Response.Clear();
+        context.Response.StatusCode = StatusCodes.Status409Conflict;
+        await context.Response.WriteAsJsonAsync(new { message = "Someone else changed this at the same time. Reload and try again." });
+    }
+    catch (DbUpdateException ex) when (ex.InnerException is Microsoft.Data.SqlClient.SqlException { Number: 2601 or 2627 })
+    {
+        if (context.Response.HasStarted)
+        {
+            throw;
+        }
+
+        app.Logger.LogWarning(ex, "Duplicate key conflict");
+        context.Response.Clear();
+        context.Response.StatusCode = StatusCodes.Status409Conflict;
+        await context.Response.WriteAsJsonAsync(new { message = "That already exists. Reload and try again." });
+    }
     catch (InvalidOperationException ex)
     {
         if (context.Response.HasStarted)

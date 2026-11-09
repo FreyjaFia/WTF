@@ -311,7 +311,10 @@ public class RoleHandlerTests
         moved!.RoleId.ShouldBe(auditorRole);
         moved.RoleName.ShouldBe("Auditor");
 
-        var delete = new DeleteUserHandler(Db(), TestRequest.As(admin, AppRoles.Admin), _audit, _cache);
+        var adminDelete = new DeleteUserHandler(Db(), TestRequest.As(admin, AppRoles.Admin), _audit, _cache);
+        await Should.ThrowAsync<ForbiddenActionException>(() => adminDelete.Handle(new DeleteUserCommand(owner), CancellationToken.None));
+
+        var delete = new DeleteUserHandler(Db(), TestRequest.As(owner, AppRoles.Owner), _audit, _cache);
         await Should.ThrowAsync<InvalidOperationException>(() => delete.Handle(new DeleteUserCommand(owner), CancellationToken.None));
     }
 
