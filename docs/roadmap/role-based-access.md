@@ -1,6 +1,6 @@
 ## Role-Based Access Control (RBAC) [In progress: phase 1 started on branch rbac-phase-1]
 
-Planning only (8 Nov 2026). Phase 1 step 1 built: the SuperAdmin to Owner rename (stored name via `tools/sql/20261118_rename_super_admin_to_owner.sql`). Sections 1 to 7 below describe the plan and use the new name. Goal: decide **who in a shop can do what** with one clear model, instead of the hand-kept
+Planning only (8 Nov 2026). Phase 1 built on branch `rbac-phase-1` (not merged): the SuperAdmin to Owner rename (script `tools/sql/20261118_rename_super_admin_to_owner.sql`; old tokens are refused), the permission catalog and system role bundles in code (`WTF.Api/Common/Auth/Permissions`, mirrored by `shared/permissions/permission-catalog.json`), API policies, cost redaction and recipient lists on permissions, `GET /api/auth/permissions`, and `can()`/route `data.permission` in the app, with golden tests. Not in phase 1: the `RolePermissions` table (bundles stay in code until custom roles in phase 3, so no dbsync is needed), `suppliers.*` and `roles.manage` (phases 2 and 3), the `UserEndpoints` Owner checks (phase 3 escalation guards), push notification recipients (no matching permission), and the offline permission cache (phase 5). Sections 1 to 7 below describe the plan and use the new name. Goal: decide **who in a shop can do what** with one clear model, instead of the hand-kept
 role lists we have today. Plans (subscription) decide which features a shop has; RBAC decides which people in that shop
 may use them.
 
