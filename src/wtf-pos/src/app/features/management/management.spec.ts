@@ -76,12 +76,12 @@ describe('ManagementComponent', () => {
     const { el } = await setup('/management/products');
     expect(routes(el)).toEqual([
       'products',
-      'customers',
-      'users',
-      'roles',
       'promotions',
+      'customers',
       'reports',
       'expenses',
+      'users',
+      'roles',
       'setup',
       'shop',
       'audit-logs',
@@ -102,10 +102,10 @@ describe('ManagementComponent', () => {
     const { el } = await setup('/management/products');
     expect(routes(el)).toEqual([
       'products',
-      'customers',
-      'users',
       'promotions',
+      'customers',
       'reports',
+      'users',
       'setup',
     ]);
   });
@@ -116,10 +116,10 @@ describe('ManagementComponent', () => {
     const { el } = await setup('/management/products');
     expect(routes(el)).toEqual([
       'products',
-      'users',
-      'roles',
       'reports',
       'expenses',
+      'users',
+      'roles',
       'setup',
       'shop',
       'audit-logs',
@@ -152,12 +152,12 @@ describe('ManagementComponent', () => {
     const { el } = await setup('/management/products');
     expect(tabs(el).map((t) => t.getAttribute('aria-label'))).toEqual([
       'Products',
-      'Customers',
-      'Users',
-      'Roles',
       'Promotions',
+      'Customers',
       'Reports',
       'Expenses',
+      'Users',
+      'Roles',
       'Setup lists',
       'Shop settings',
       'Audit Logs',
@@ -168,7 +168,7 @@ describe('ManagementComponent', () => {
   it('scrolls the active tab into view after routing', async () => {
     const { el } = await setup('/management/users');
     const scroll = vi.fn();
-    tabs(el)[2].scrollIntoView = scroll;
+    tabs(el)[5].scrollIntoView = scroll;
     vi.runAllTimers();
     expect(scroll).toHaveBeenCalledWith({ behavior: 'smooth', block: 'nearest', inline: 'center' });
   });

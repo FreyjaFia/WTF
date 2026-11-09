@@ -348,42 +348,6 @@
           <span [class.hidden]="isCollapsed()">Products</span>
         </a>
         }
-        @if (authService.canReadCustomers()) {
-        <a
-          [routerLink]="routes.ManagementCustomers"
-          routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
-          class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
-          [class.justify-center]="isCollapsed()"
-          [attr.title]="'Customers'"
-        >
-          <app-icon name="icon-people" [class]="'h-4 w-4 text-gray-500'" />
-          <span [class.hidden]="isCollapsed()">Customers</span>
-        </a>
-        }
-        @if (authService.canReadUsers()) {
-        <a
-          [routerLink]="routes.ManagementUsers"
-          routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
-          class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
-          [class.justify-center]="isCollapsed()"
-          [attr.title]="'Users'"
-        >
-          <app-icon name="icon-user" [class]="'h-4 w-4 text-gray-500'" />
-          <span [class.hidden]="isCollapsed()">Users</span>
-        </a>
-        }
-        @if (authService.canManageRoles()) {
-        <a
-          [routerLink]="routes.ManagementRoles"
-          routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
-          class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
-          [class.justify-center]="isCollapsed()"
-          [attr.title]="'Roles'"
-        >
-          <app-icon name="icon-lock" [class]="'h-4 w-4 text-gray-500'" />
-          <span [class.hidden]="isCollapsed()">Roles</span>
-        </a>
-        }
         @if (authService.canReadPromotions()) {
         <a
           [routerLink]="routes.ManagementPromotions"
@@ -394,6 +358,18 @@
         >
           <app-icon name="icon-promotion" [class]="'h-4 w-4 text-gray-500'" />
           <span [class.hidden]="isCollapsed()">Promotions</span>
+        </a>
+        }
+        @if (authService.canReadCustomers()) {
+        <a
+          [routerLink]="routes.ManagementCustomers"
+          routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
+          class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
+          [class.justify-center]="isCollapsed()"
+          [attr.title]="'Customers'"
+        >
+          <app-icon name="icon-people" [class]="'h-4 w-4 text-gray-500'" />
+          <span [class.hidden]="isCollapsed()">Customers</span>
         </a>
         }
         @if (authService.canAccessReports()) {
@@ -419,6 +395,30 @@
             <app-icon name="icon-coins" [class]="'h-4 w-4 text-gray-500'" />
             <span [class.hidden]="isCollapsed()">Expenses</span>
           </a>
+        }
+        @if (authService.canReadUsers()) {
+        <a
+          [routerLink]="routes.ManagementUsers"
+          routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
+          class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
+          [class.justify-center]="isCollapsed()"
+          [attr.title]="'Users'"
+        >
+          <app-icon name="icon-user" [class]="'h-4 w-4 text-gray-500'" />
+          <span [class.hidden]="isCollapsed()">Users</span>
+        </a>
+        }
+        @if (authService.canManageRoles()) {
+        <a
+          [routerLink]="routes.ManagementRoles"
+          routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
+          class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
+          [class.justify-center]="isCollapsed()"
+          [attr.title]="'Roles'"
+        >
+          <app-icon name="icon-lock" [class]="'h-4 w-4 text-gray-500'" />
+          <span [class.hidden]="isCollapsed()">Roles</span>
+        </a>
         }
         @if (authService.canOpenSetup()) {
           <a
