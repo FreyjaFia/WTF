@@ -60,6 +60,11 @@ public class SetCategoryActiveHandler(WTFDbContext db, IAuditService audit) : IR
 {
     public async Task Handle(SetCategoryActiveCommand request, CancellationToken cancellationToken)
     {
+        // The count and the change must not be split by a product that is moved onto this category in between.
+        await using var guard = !request.IsActive && db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, cancellationToken)
+            : null;
+
         var category = await db.ProductCategories.FirstOrDefaultAsync(c => c.Id == request.Id, cancellationToken)
             ?? throw new KeyNotFoundException("Category not found.");
 
@@ -76,6 +81,11 @@ public class SetCategoryActiveHandler(WTFDbContext db, IAuditService audit) : IR
         category.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync(cancellationToken);
+        if (guard is not null)
+        {
+            await guard.CommitAsync(cancellationToken);
+        }
+
         await audit.LogAsync(AuditAction.CatalogCategorySaved, AuditEntityType.CatalogEntry, $"category:{category.Id}",
             newValues: new { category.Id, category.IsActive }, cancellationToken: cancellationToken);
     }

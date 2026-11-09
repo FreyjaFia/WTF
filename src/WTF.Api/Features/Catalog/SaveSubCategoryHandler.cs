@@ -66,6 +66,11 @@ public class SetSubCategoryActiveHandler(WTFDbContext db, IAuditService audit) :
 {
     public async Task Handle(SetSubCategoryActiveCommand request, CancellationToken cancellationToken)
     {
+        // The count and the change must not be split by a product that is moved onto this sub-category in between.
+        await using var guard = !request.IsActive && db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, cancellationToken)
+            : null;
+
         var subCategory = await db.ProductSubCategories.FirstOrDefaultAsync(s => s.Id == request.Id, cancellationToken)
             ?? throw new KeyNotFoundException("Sub-category not found.");
 
@@ -82,6 +87,11 @@ public class SetSubCategoryActiveHandler(WTFDbContext db, IAuditService audit) :
         subCategory.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync(cancellationToken);
+        if (guard is not null)
+        {
+            await guard.CommitAsync(cancellationToken);
+        }
+
         await audit.LogAsync(AuditAction.CatalogSubCategorySaved, AuditEntityType.CatalogEntry, $"subcategory:{subCategory.Id}",
             newValues: new { subCategory.Id, subCategory.IsActive }, cancellationToken: cancellationToken);
     }

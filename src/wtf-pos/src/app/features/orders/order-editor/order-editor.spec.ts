@@ -1131,6 +1131,21 @@ describe('OrderEditor', () => {
       expect(orderService['createOrder'].mock.calls.at(-1)?.[0].expectedTotal).toBe(200);
     });
 
+    it('a retry of the same cart after a failed save reuses the same key, and a changed cart gets a new one', async () => {
+      await start();
+      withCart([line({ qty: 2 })]);
+      orderService['createOrder'].mockReturnValueOnce(throwError(() => new Error('Network unavailable')));
+
+      t.checkout();
+      t.onOrderConfirmed(cash);
+      t.checkout();
+      t.onOrderConfirmed(cash);
+
+      const [first, second] = orderService['createOrder'].mock.calls.map((call: any[]) => call[0].offlineLocalId);
+      expect(first).toMatch(/^ON-[0-9a-f]{32}$/);
+      expect(second).toBe(first);
+    });
+
     it('goes on to checkout when the shop cannot be asked, because the server checks the total when the sale is saved', async () => {
       askedServer().mockReturnValue(of(percent()));
       await start();
@@ -2156,6 +2171,7 @@ describe('OrderEditor', () => {
       expect(cmd).toEqual({
         customerId: 'c1',
         specialInstructions: 'fast',
+        offlineLocalId: expect.stringMatching(/^ON-/),
         status: OrderStatusEnum.Pending,
         items: [
           {

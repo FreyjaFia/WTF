@@ -176,6 +176,7 @@ export class OrderEditor implements OnInit, OnDestroy {
   protected readonly showAbandonModal = signal(false);
   private pendingDeactivateResolve: ((value: boolean) => void) | null = null;
   private skipGuard = false;
+  private checkoutAttempt: { key: string; signature: string } | null = null;
   private originalCartSnapshot = '';
   private abandonModalStackId: number | null = null;
   private cancelOrderModalStackId: number | null = null;
@@ -2375,8 +2376,11 @@ export class OrderEditor implements OnInit, OnDestroy {
       return;
     }
 
-    this.orderService.createOrder(command).subscribe({
+    const onlineCommand = { ...command, offlineLocalId: this.checkoutKeyFor(command) };
+
+    this.orderService.createOrder(onlineCommand).subscribe({
       next: (saved) => {
+        this.checkoutAttempt = null;
         this.isSavingOrder.set(false);
         this.skipGuard = true;
         this.cartPersistence.clear();
@@ -2389,6 +2393,16 @@ export class OrderEditor implements OnInit, OnDestroy {
         this.refreshPromotionsAfterChangedTotal(err?.message);
       },
     });
+  }
+
+  private checkoutKeyFor(command: CreateOrderCommand): string {
+    // A retry of the same cart reuses the key, so a response lost on the way cannot create a second order.
+    const signature = JSON.stringify(command);
+    if (this.checkoutAttempt?.signature !== signature) {
+      this.checkoutAttempt = { key: `ON-${crypto.randomUUID().replaceAll('-', '')}`, signature };
+    }
+
+    return this.checkoutAttempt.key;
   }
 
   private showStockWarnings(order: OrderDto): void {

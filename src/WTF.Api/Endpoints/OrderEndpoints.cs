@@ -1,8 +1,10 @@
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Auth;
 using WTF.Api.Features.Inventory;
 using WTF.Api.Features.Orders;
 using WTF.Api.Features.Orders.Enums;
+using WTF.Domain.Data;
 
 namespace WTF.Api.Endpoints;
 
@@ -67,8 +69,23 @@ public static class OrderEndpoints
 
         // POST /api/orders - Create new order
         orderGroup.MapPost("/",
-            async (CreateOrderCommand command, ISender sender) =>
+            async (CreateOrderCommand command, ISender sender, WTFDbContext db) =>
             {
+                // A retry after a lost response carries the same key: answer with the order that was already saved.
+                var key = command.OfflineLocalId?.Trim();
+                if (!string.IsNullOrEmpty(key))
+                {
+                    var savedId = await db.Orders.AsNoTracking()
+                        .Where(o => o.OfflineLocalId == key)
+                        .Select(o => (Guid?)o.Id)
+                        .FirstOrDefaultAsync();
+                    var saved = savedId is null ? null : await sender.Send(new GetOrderByIdQuery(savedId.Value));
+                    if (saved is not null)
+                    {
+                        return Results.Ok(saved);
+                    }
+                }
+
                 var result = await sender.Send(command);
                 return Results.Created($"/api/orders/{result.Id}", result);
             })

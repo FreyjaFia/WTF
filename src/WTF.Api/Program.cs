@@ -381,7 +381,7 @@ app.Use(async (context, next) =>
         context.Response.StatusCode = StatusCodes.Status409Conflict;
         await context.Response.WriteAsJsonAsync(new { message = "Someone else changed this at the same time. Reload and try again." });
     }
-    catch (DbUpdateException ex) when (ex.InnerException is Microsoft.Data.SqlClient.SqlException { Number: 2601 or 2627 })
+    catch (DbUpdateException ex) when (ex.InnerException is Microsoft.Data.SqlClient.SqlException { Number: 2601 or 2627 or 547 })
     {
         if (context.Response.HasStarted)
         {
@@ -391,7 +391,20 @@ app.Use(async (context, next) =>
         app.Logger.LogWarning(ex, "Duplicate key conflict");
         context.Response.Clear();
         context.Response.StatusCode = StatusCodes.Status409Conflict;
-        await context.Response.WriteAsJsonAsync(new { message = "That already exists. Reload and try again." });
+        await context.Response.WriteAsJsonAsync(new { message = "That already exists or is still in use. Reload and try again." });
+    }
+    catch (InvalidOperationException ex) when (ex.TargetSite?.Module.Assembly.GetName().Name?.StartsWith("WTF", StringComparison.Ordinal) != true)
+    {
+        // Thrown by the framework or EF (for example "Sequence contains no elements"), not by a business rule: a server fault.
+        if (context.Response.HasStarted)
+        {
+            throw;
+        }
+
+        app.Logger.LogError(ex, "Unexpected failure");
+        context.Response.Clear();
+        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+        await context.Response.WriteAsJsonAsync(new { message = "Something went wrong on the server. Please try again." });
     }
     catch (InvalidOperationException ex)
     {
