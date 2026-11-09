@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using WTF.Api.Common.Extensions;
 using WTF.Api.Features.Roles;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
@@ -20,6 +21,22 @@ internal static class UserRoleGuard
         RoleRules.EnsureHolds(actor, keys);
 
         return role;
+    }
+
+    public static async Task EnsureCanManageAsync(WTFDbContext db, ClaimsPrincipal actor, User target, CancellationToken cancellationToken)
+    {
+        if (target.Id == actor.GetUserId())
+        {
+            return;
+        }
+
+        var current = await db.UserRoles.AsNoTracking().FirstOrDefaultAsync(r => r.Id == target.RoleId, cancellationToken);
+        if (current is null)
+        {
+            return;
+        }
+
+        RoleRules.EnsureHolds(actor, await RoleRules.KeysOfAsync(db, current, cancellationToken));
     }
 
     public static async Task EnsureNotLastOwnerAsync(WTFDbContext db, User user, CancellationToken cancellationToken)

@@ -39,6 +39,8 @@ public class UpdateUserHandler(WTFDbContext db, IHttpContextAccessor httpContext
         UserValidation.EnsureValidPassword(request.Password, isUpdate: true);
         await UserValidation.EnsureUniqueUsernameAsync(db, request.Username, user.Id, cancellationToken);
 
+        await UserRoleGuard.EnsureCanManageAsync(db, httpContextAccessor.HttpContext!.User, user, cancellationToken);
+
         var roleChanged = user.RoleId != request.RoleId;
         UserRole role;
         if (roleChanged)
@@ -66,6 +68,14 @@ public class UpdateUserHandler(WTFDbContext db, IHttpContextAccessor httpContext
         if (!string.IsNullOrWhiteSpace(request.Password))
         {
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
+
+            var staleTokens = await db.RefreshTokens
+                .Where(rt => rt.UserId == user.Id && !rt.IsRevoked)
+                .ToListAsync(cancellationToken);
+            foreach (var staleToken in staleTokens)
+            {
+                staleToken.IsRevoked = true;
+            }
         }
 
         await db.SaveChangesAsync(cancellationToken);

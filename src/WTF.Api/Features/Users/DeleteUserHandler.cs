@@ -30,6 +30,7 @@ public class DeleteUserHandler(WTFDbContext db, IHttpContextAccessor httpContext
             user.IsActive
         };
 
+        await UserRoleGuard.EnsureCanManageAsync(db, httpContextAccessor.HttpContext!.User, user, cancellationToken);
         await UserRoleGuard.EnsureNotLastOwnerAsync(db, user, cancellationToken);
 
         // Soft delete - deactivate the user and revoke their sessions

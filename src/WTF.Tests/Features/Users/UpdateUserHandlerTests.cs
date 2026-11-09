@@ -131,5 +131,24 @@ public class UpdateUserHandlerTests
         await _audit.DidNotReceiveWithAnyArgs().LogAsync(default, default, default!);
     }
 
+    [Fact]
+    public async Task Handle_ActorLacksTargetsPermissions_IsForbiddenAndLeavesPasswordUntouched()
+    {
+        await Seed();
+        await using (var db = TestDb.Create(_dbName))
+        {
+            (await db.Users.SingleAsync()).RoleId = (int)UserRoleEnum.Admin;
+            await db.SaveChangesAsync();
+        }
+
+        var handler = new UpdateUserHandler(TestDb.Create(_dbName), TestRequest.As(_actorId, AppRoles.Cashier), _audit, new RolePermissionCache(TimeProvider.System));
+
+        await Should.ThrowAsync<ForbiddenActionException>(() =>
+            handler.Handle(new UpdateUserCommand(_userId, "Old", "Name", "old", "fresh-pw-123", (int)UserRoleEnum.Admin), CancellationToken.None));
+
+        await using var check = TestDb.Create(_dbName);
+        (await check.Users.SingleAsync()).PasswordHash.ShouldBe(_originalHash);
+    }
+
     // Real-database version: Database/UserDatabaseTests.cs
 }
