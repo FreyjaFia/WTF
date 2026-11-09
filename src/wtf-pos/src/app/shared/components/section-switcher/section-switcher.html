@@ -1,0 +1,79 @@
+@if (cardCount() > 1) {
+  <button
+    type="button"
+    class="inline-flex min-h-11 items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+    aria-haspopup="true"
+    [attr.aria-expanded]="isOpen()"
+    [attr.data-testid]="testIdPrefix() + '-switcher-button'"
+    (click)="toggle()"
+  >
+    Switch screen
+    <svg
+      class="h-4 w-4 transition-transform"
+      [class.rotate-180]="isOpen()"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      aria-hidden="true"
+    >
+      <path d="M6 9l6 6 6-6" />
+    </svg>
+  </button>
+
+  @if (isOpen()) {
+    <div
+      class="fixed inset-0 z-40 bg-black/40 sm:bg-transparent"
+      [attr.data-testid]="testIdPrefix() + '-switcher-backdrop'"
+      (click)="close()"
+      aria-hidden="true"
+    ></div>
+
+    <nav
+      class="bg-surface fixed inset-x-0 bottom-0 z-50 max-h-[80vh] overflow-y-auto rounded-t-2xl border border-gray-100 p-2 pb-6 shadow-2xl sm:absolute sm:inset-x-auto sm:top-full sm:right-0 sm:bottom-auto sm:mt-2 sm:max-h-[70vh] sm:w-72 sm:rounded-xl sm:pb-2 sm:shadow-lg"
+      [attr.aria-label]="'Switch ' + hubLabel() + ' screen'"
+      [attr.data-testid]="testIdPrefix() + '-switcher-panel'"
+    >
+      <div
+        class="mx-auto mt-1 mb-2 h-1 w-10 rounded-full bg-gray-300 sm:hidden"
+        aria-hidden="true"
+      ></div>
+
+      @for (group of groups(); track group.name) {
+        <p class="px-3 pt-2 pb-1 text-xs font-semibold tracking-wider text-gray-500 uppercase">
+          {{ group.name }}
+        </p>
+        @for (card of group.cards; track card.id) {
+          <a
+            [routerLink]="card.route"
+            class="flex min-h-11 items-center justify-between gap-2 rounded-lg px-3 text-sm text-gray-800 hover:bg-gray-50"
+            [class.bg-emerald-50]="card.route === currentRoute()"
+            [class.font-semibold]="card.route === currentRoute()"
+            [attr.aria-current]="card.route === currentRoute() ? 'page' : null"
+            [attr.data-testid]="testIdPrefix() + '-switcher-item-' + card.id"
+            (click)="close()"
+          >
+            <span class="truncate">{{ card.label }}</span>
+            @if (card.badge?.(); as count) {
+              <span
+                class="inline-flex min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 text-xs leading-5 font-bold text-white"
+                [class.bg-red-500]="card.urgent?.() ?? true"
+                [class.bg-amber-500]="!(card.urgent?.() ?? true)"
+                >{{ count }}</span
+              >
+            }
+          </a>
+        }
+      }
+
+      <a
+        [routerLink]="hubRoute()"
+        class="mt-2 flex min-h-11 items-center rounded-lg border-t border-gray-100 px-3 text-sm text-gray-600 hover:bg-gray-50"
+        [attr.data-testid]="testIdPrefix() + '-switcher-hub'"
+        (click)="close()"
+      >
+        All of {{ hubLabel() }}
+      </a>
+    </nav>
+  }
+}

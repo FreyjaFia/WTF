@@ -1,12 +1,21 @@
-<div class="flex h-full w-full flex-col rounded-t-2xl bg-surface sm:-mt-4 md:mt-0">
+<div class="bg-surface flex h-full w-full flex-col rounded-t-2xl sm:-mt-4 md:mt-0">
   @if (showBackToHub()) {
-    <a
-      [routerLink]="hubRoute"
-      class="app-page-nav flex shrink-0 items-center gap-1 text-sm font-semibold text-gray-600 sm:hidden"
-      data-testid="inventory-back"
-    >
-      <span aria-hidden="true">&larr;</span> Inventory
-    </a>
+    <div class="app-page-nav flex shrink-0 items-center justify-between gap-3">
+      <a
+        [routerLink]="hubRoute"
+        class="flex min-h-11 items-center gap-1 text-sm font-semibold text-gray-600 sm:hidden"
+        data-testid="inventory-back"
+      >
+        <span aria-hidden="true">&larr;</span> Inventory
+      </a>
+      <app-section-switcher
+        class="ml-auto"
+        [groups]="switcherGroups()"
+        hubLabel="Inventory"
+        [hubRoute]="hubRoute"
+        testIdPrefix="inventory"
+      />
+    </div>
   }
 
   <div class="flex h-full min-h-0 min-w-0 flex-1 flex-col">

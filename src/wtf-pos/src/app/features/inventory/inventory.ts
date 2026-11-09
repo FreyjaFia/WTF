@@ -2,12 +2,14 @@ import { Component, computed, DestroyRef, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { AuthService, StockAttentionService, StockWasteService } from '@core/services';
+import { SectionSwitcherComponent } from '@shared/components/section-switcher/section-switcher';
 import { AppRoutes } from '@shared/constants/app-routes';
+import { inventoryGroups, visibleGroups } from '@shared/navigation/hub-groups';
 import { filter, map } from 'rxjs';
 
 @Component({
   selector: 'app-inventory',
-  imports: [RouterOutlet, RouterLink],
+  imports: [RouterOutlet, RouterLink, SectionSwitcherComponent],
   templateUrl: './inventory.html',
   host: { class: 'flex-1 min-h-0' },
 })
@@ -19,6 +21,9 @@ export class InventoryComponent {
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly hubRoute = AppRoutes.InventoryRoot;
+  protected readonly switcherGroups = computed(() =>
+    visibleGroups(inventoryGroups(this.authService, this.attention, this.stockWaste)),
+  );
 
   private readonly currentUrl = toSignal(
     this.router.events.pipe(

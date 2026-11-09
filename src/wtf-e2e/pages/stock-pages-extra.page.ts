@@ -12,7 +12,7 @@ export class AttentionTiles {
     this.out = page.getByTestId('tile-out');
     this.critical = page.getByTestId('tile-critical');
     this.low = page.getByTestId('tile-low');
-    this.sidebarBadge = page.getByTestId('sidebar-alerts-badge');
+    this.sidebarBadge = page.getByTestId('sidebar-inventory-badge');
   }
 
   public row(name: string): Locator {

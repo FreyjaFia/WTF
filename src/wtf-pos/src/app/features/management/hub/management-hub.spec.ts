@@ -33,8 +33,8 @@ describe('ManagementHubComponent', () => {
   }
 
   const ids = (el: HTMLElement): (string | null)[] =>
-    Array.from(el.querySelectorAll('[data-testid^="management-card-"]')).map((a) =>
-      a.getAttribute('data-testid')?.replace('management-card-', '') ?? null,
+    Array.from(el.querySelectorAll('[data-testid^="management-card-"]')).map(
+      (a) => a.getAttribute('data-testid')?.replace('management-card-', '') ?? null,
     );
   const headings = (el: HTMLElement): string[] =>
     Array.from(el.querySelectorAll('h2')).map((h) => h.textContent?.trim() ?? '');
@@ -59,9 +59,9 @@ describe('ManagementHubComponent', () => {
       'audit-logs',
       'schema-scripts',
     ]);
-    expect(
-      el.querySelector('[data-testid="management-card-roles"]')?.getAttribute('href'),
-    ).toBe('/management/roles');
+    expect(el.querySelector('[data-testid="management-card-roles"]')?.getAttribute('href')).toBe(
+      '/management/roles',
+    );
   });
 
   it('hides a card without its permission and drops a group that ends up empty', () => {

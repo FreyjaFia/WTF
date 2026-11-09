@@ -34,7 +34,7 @@ export class SuppliersPage {
 
   public async setShowInactive(on: boolean): Promise<void> {
     await this.filtersButton.click();
-    await this.page.getByText('Supplier Filters').waitFor();
+    await this.page.getByRole('heading', { name: 'Supplier Filters' }).waitFor();
     if (on) {
       await this.showInactive.check();
     } else {

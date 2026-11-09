@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
+import { AuthService } from '@core/services';
 import { describe, expect, it } from 'vitest';
 import { ManagementComponent } from './management';
 
@@ -25,6 +26,7 @@ describe('ManagementComponent', () => {
             ],
           },
         ]),
+        { provide: AuthService, useValue: new Proxy({}, { get: () => () => true }) },
       ],
     });
     const harness = await RouterTestingHarness.create(url);

@@ -33,8 +33,8 @@ describe('InventoryHubComponent', () => {
   }
 
   const ids = (el: HTMLElement): (string | null)[] =>
-    Array.from(el.querySelectorAll('[data-testid^="inventory-card-"]')).map((a) =>
-      a.getAttribute('data-testid')?.replace('inventory-card-', '') ?? null,
+    Array.from(el.querySelectorAll('[data-testid^="inventory-card-"]')).map(
+      (a) => a.getAttribute('data-testid')?.replace('inventory-card-', '') ?? null,
     );
   const headings = (el: HTMLElement): string[] =>
     Array.from(el.querySelectorAll('h2')).map((h) => h.textContent?.trim() ?? '');
@@ -74,7 +74,14 @@ describe('InventoryHubComponent', () => {
   it('shows only the stock cards to a role that cannot read items', () => {
     perms.items = false;
     const el = render();
-    expect(ids(el)).toEqual(['attention', 'stock-in', 'counts', 'waste', 'purchase-orders', 'receiving']);
+    expect(ids(el)).toEqual([
+      'attention',
+      'stock-in',
+      'counts',
+      'waste',
+      'purchase-orders',
+      'receiving',
+    ]);
   });
 
   it('shows nothing without any permission', () => {
@@ -86,13 +93,17 @@ describe('InventoryHubComponent', () => {
 
   it('shows the attention count only while there is one', () => {
     let el = render();
-    expect(el.querySelector('[data-testid="inventory-card-attention"] [data-testid="card-badge"]')).toBeNull();
+    expect(
+      el.querySelector('[data-testid="inventory-card-attention"] [data-testid="card-badge"]'),
+    ).toBeNull();
     TestBed.resetTestingModule();
 
     attention = signal(4);
     el = render();
     expect(
-      el.querySelector('[data-testid="inventory-card-attention"] [data-testid="card-badge"]')?.textContent?.trim(),
+      el
+        .querySelector('[data-testid="inventory-card-attention"] [data-testid="card-badge"]')
+        ?.textContent?.trim(),
     ).toBe('4');
   });
 
@@ -100,12 +111,16 @@ describe('InventoryHubComponent', () => {
     pending = signal(2);
     let el = render();
     expect(
-      el.querySelector('[data-testid="inventory-card-waste"] [data-testid="card-badge"]')?.textContent?.trim(),
+      el
+        .querySelector('[data-testid="inventory-card-waste"] [data-testid="card-badge"]')
+        ?.textContent?.trim(),
     ).toBe('2');
     TestBed.resetTestingModule();
 
     perms.review = false;
     el = render();
-    expect(el.querySelector('[data-testid="inventory-card-waste"] [data-testid="card-badge"]')).toBeNull();
+    expect(
+      el.querySelector('[data-testid="inventory-card-waste"] [data-testid="card-badge"]'),
+    ).toBeNull();
   });
 });

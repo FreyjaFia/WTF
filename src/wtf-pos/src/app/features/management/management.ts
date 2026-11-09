@@ -1,19 +1,26 @@
 import { Component, computed, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
+import { SectionSwitcherComponent } from '@shared/components/section-switcher/section-switcher';
+import { AuthService } from '@core/services';
 import { AppRoutes } from '@shared/constants/app-routes';
+import { managementGroups, visibleGroups } from '@shared/navigation/hub-groups';
 import { filter, map } from 'rxjs';
 
 @Component({
   selector: 'app-management',
-  imports: [RouterOutlet, RouterLink],
+  imports: [RouterOutlet, RouterLink, SectionSwitcherComponent],
   templateUrl: './management.html',
   host: { class: 'flex-1 min-h-0' },
 })
 export class ManagementComponent {
   private readonly router = inject(Router);
+  private readonly authService = inject(AuthService);
 
   protected readonly hubRoute = AppRoutes.ManagementRoot;
+  protected readonly switcherGroups = computed(() =>
+    visibleGroups(managementGroups(this.authService)),
+  );
 
   private readonly currentUrl = toSignal(
     this.router.events.pipe(

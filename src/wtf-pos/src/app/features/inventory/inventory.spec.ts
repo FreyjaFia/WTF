@@ -35,12 +35,20 @@ describe('InventoryComponent', () => {
           useValue: {
             canReadStockMovements: () => perms.stock,
             canReviewStockWaste: () => perms.review,
+            canReadItems: () => true,
           },
         },
-        { provide: StockAttentionService, useValue: { start, stop: vi.fn() } },
+        {
+          provide: StockAttentionService,
+          useValue: { start, stop: vi.fn(), count: signal(0), urgentCount: signal(0) },
+        },
         {
           provide: StockWasteService,
-          useValue: { pendingCount: signal(0), startPendingCount: startWaste, stopPendingCount: vi.fn() },
+          useValue: {
+            pendingCount: signal(0),
+            startPendingCount: startWaste,
+            stopPendingCount: vi.fn(),
+          },
         },
       ],
     });

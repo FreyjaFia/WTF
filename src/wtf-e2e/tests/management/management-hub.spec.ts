@@ -16,6 +16,26 @@ test.describe('Management hub @management @layout', () => {
     await expect(page).toHaveURL(/\/management\/roles$/);
   });
 
+  test('the Switch screen menu lists only the screens the role may open', async ({ signIn }) => {
+    const page = await signIn('admin');
+
+    await go(page, '/management/products');
+    await page.getByTestId('management-switcher-button').click();
+    await expect(page.getByTestId('management-switcher-item-products')).toHaveAttribute('aria-current', 'page');
+    await expect(page.getByTestId('management-switcher-item-audit-logs')).toHaveCount(0);
+
+    await page.getByTestId('management-switcher-item-customers').click();
+    await expect(page).toHaveURL(/\/management\/customers$/);
+    await expect(page.getByTestId('management-switcher-panel')).toBeHidden();
+  });
+
+  test('a stock manager has nothing to switch between, so no menu', async ({ signIn }) => {
+    const page = await signIn('stockmgr');
+
+    await go(page, '/management/setup');
+    await expect(page.getByTestId('management-switcher-button')).toHaveCount(0);
+  });
+
   test('a stock manager sees only the Setup card', async ({ signIn }) => {
     const page = await signIn('stockmgr');
 
@@ -46,6 +66,15 @@ test.describe('Management hub @management @layout', () => {
       await page.getByTestId('management-card-products').click();
       await expect(page).toHaveURL(/\/management\/products$/);
       expect.soft(overflowProblem(await measureOverflow(page)), `${viewport.name}: products overflow`).toBeNull();
+
+      await page.getByTestId('management-switcher-button').click();
+      const panel = page.getByTestId('management-switcher-panel');
+      await expect(panel).toBeVisible();
+      const box = await panel.boundingBox();
+      expect.soft(box && box.x >= 0 && box.x + box.width <= viewport.width, `${viewport.name}: switcher inside the screen`).toBe(true);
+      expect.soft(box && box.y >= 0 && box.y + box.height <= viewport.height, `${viewport.name}: switcher fits the height`).toBe(true);
+      await page.screenshot({ path: `/mnt/project-files/rbac-phase-4/switcher-management-${viewport.name.replace(' ', '-')}.png` });
+      await page.keyboard.press('Escape');
 
       const back = page.getByTestId('management-back');
       if (viewport.width < 640) {
