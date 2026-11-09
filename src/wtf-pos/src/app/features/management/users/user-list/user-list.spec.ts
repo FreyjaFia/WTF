@@ -92,6 +92,14 @@ describe('UserListComponent', () => {
     vi.useRealTimers();
   });
 
+  it('adds a filter option for each custom role found among the users', () => {
+    setup({ getUsers: vi.fn(() => of([...DATA, { ...BOB, id: '9', roleId: 100, roleName: 'Shift Lead' }])) });
+    const options = c.roleOptions() as { id: number; label: string; count: number }[];
+    expect(options.slice(-1)).toEqual([{ id: 100, label: 'Shift Lead', count: 1 }]);
+    expect(options).toHaveLength(7);
+    expect(c.getRoleLabel({ ...BOB, roleId: 100, roleName: 'Shift Lead' })).toBe('Shift Lead');
+  });
+
   it('loads users, shows active ones sorted by name, and computes counts', () => {
     setup();
     expect(service['getUsers']).toHaveBeenCalledTimes(1);

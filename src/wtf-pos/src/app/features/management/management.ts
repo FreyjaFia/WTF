@@ -56,6 +56,13 @@ export class ManagementComponent {
       canShow: () => this.canReadUsers(),
     },
     {
+      label: 'Roles',
+      route: 'roles',
+      path: AppRoutes.ManagementRoles,
+      ariaLabel: 'Roles',
+      canShow: () => this.authService.canManageRoles(),
+    },
+    {
       label: 'Promos',
       route: 'promotions',
       path: AppRoutes.ManagementPromotions,

@@ -12,7 +12,8 @@ export interface UserDto {
   firstName: string;
   lastName: string;
   username: string;
-  roleId: UserRoleEnum;
+  roleId: number;
+  roleName?: string | null;
   isActive: boolean;
   createdAt: string;
   createdBy: string;
@@ -26,7 +27,7 @@ export interface CreateUserDto {
   lastName: string;
   username: string;
   password: string;
-  roleId: UserRoleEnum;
+  roleId: number;
 }
 
 export interface UpdateUserDto {
@@ -35,7 +36,7 @@ export interface UpdateUserDto {
   lastName: string;
   username: string;
   password?: string;
-  roleId: UserRoleEnum;
+  roleId: number;
 }
 
 export interface GetUsersQuery {

@@ -26,6 +26,7 @@ import {
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { UserDto, UserRoleEnum } from '@shared/models';
+import { userRoleLabel } from '@shared/utils/user-role-label';
 import { debounceTime } from 'rxjs';
 
 type SortColumn = 'name' | 'role';
@@ -100,51 +101,53 @@ export class UserListComponent implements OnInit {
     };
   });
 
-  protected readonly roleCounts = computed(() => {
-    const cache = this.usersCache();
-    return {
-      [UserRoleEnum.Owner]: cache.filter((u) => u.roleId === UserRoleEnum.Owner).length,
-      [UserRoleEnum.Admin]: cache.filter((u) => u.roleId === UserRoleEnum.Admin).length,
-      [UserRoleEnum.Cashier]: cache.filter((u) => u.roleId === UserRoleEnum.Cashier).length,
-      [UserRoleEnum.AdminViewer]: cache.filter((u) => u.roleId === UserRoleEnum.AdminViewer).length,
-      [UserRoleEnum.ItemManager]: cache.filter((u) => u.roleId === UserRoleEnum.ItemManager).length,
-      [UserRoleEnum.StockManager]: cache.filter((u) => u.roleId === UserRoleEnum.StockManager)
-        .length,
+  protected readonly roleCounts = computed<Record<number, number>>(() => {
+    const counts: Record<number, number> = {
+      [UserRoleEnum.Owner]: 0,
+      [UserRoleEnum.Admin]: 0,
+      [UserRoleEnum.Cashier]: 0,
+      [UserRoleEnum.AdminViewer]: 0,
+      [UserRoleEnum.ItemManager]: 0,
+      [UserRoleEnum.StockManager]: 0,
     };
+
+    for (const user of this.usersCache()) {
+      counts[user.roleId] = (counts[user.roleId] ?? 0) + 1;
+    }
+
+    return counts;
   });
 
-  protected readonly roleOptions = computed<FilterOption[]>(() => [
-    {
-      id: UserRoleEnum.Owner,
-      label: 'Owner',
-      count: this.roleCounts()[UserRoleEnum.Owner],
-    },
-    {
-      id: UserRoleEnum.Admin,
-      label: 'Admin',
-      count: this.roleCounts()[UserRoleEnum.Admin],
-    },
-    {
-      id: UserRoleEnum.Cashier,
-      label: 'Cashier',
-      count: this.roleCounts()[UserRoleEnum.Cashier],
-    },
-    {
-      id: UserRoleEnum.AdminViewer,
-      label: 'Admin Viewer',
-      count: this.roleCounts()[UserRoleEnum.AdminViewer],
-    },
-    {
-      id: UserRoleEnum.ItemManager,
-      label: 'Item Manager',
-      count: this.roleCounts()[UserRoleEnum.ItemManager],
-    },
-    {
-      id: UserRoleEnum.StockManager,
-      label: 'Stock Manager',
-      count: this.roleCounts()[UserRoleEnum.StockManager],
-    },
-  ]);
+  protected readonly roleOptions = computed<FilterOption[]>(() => {
+    const cache = this.usersCache();
+    const counts = this.roleCounts();
+    const countOf = (roleId: number): number => counts[roleId] ?? 0;
+    const builtIn: FilterOption[] = [
+      UserRoleEnum.Owner,
+      UserRoleEnum.Admin,
+      UserRoleEnum.Cashier,
+      UserRoleEnum.AdminViewer,
+      UserRoleEnum.ItemManager,
+      UserRoleEnum.StockManager,
+    ].map((roleId) => ({
+      id: roleId,
+      label: userRoleLabel({ roleId }),
+      count: countOf(roleId),
+    }));
+
+    const custom = new Map<number, string>();
+    for (const user of cache) {
+      if (UserRoleEnum[user.roleId] === undefined) {
+        custom.set(user.roleId, userRoleLabel(user));
+      }
+    }
+
+    const customOptions: FilterOption[] = [...custom.entries()]
+      .sort((x, y) => x[1].localeCompare(y[1]))
+      .map(([roleId, label]) => ({ id: roleId, label, count: countOf(roleId) }));
+
+    return [...builtIn, ...customOptions];
+  });
 
   protected readonly statusOptions = computed<FilterOption[]>(() => [
     { id: 'active', label: 'Active', count: this.statusCounts().active },
@@ -463,11 +466,7 @@ export class UserListComponent implements OnInit {
   }
 
   protected getRoleLabel(user: UserDto): string {
-    const enumName = UserRoleEnum[user.roleId];
-    if (!enumName || typeof enumName !== 'string') {
-      return 'Unknown';
-    }
-    return enumName.replace(/([a-z])([A-Z])/g, '$1 $2').trim();
+    return userRoleLabel(user);
   }
 
   protected canWriteUsers(): boolean {

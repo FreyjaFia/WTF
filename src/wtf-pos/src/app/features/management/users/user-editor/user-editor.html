@@ -217,6 +217,12 @@
                         <option [ngValue]="role.value">{{ role.label }}</option>
                       }
                     </select>
+                    @if (isOwnAccount()) {
+                      <p class="mt-2 text-xs text-gray-500">You cannot change your own role.</p>
+                    }
+                    @if (selectedRoleDescription(); as roleDescription) {
+                      <p class="mt-2 text-xs text-gray-500">{{ roleDescription }}</p>
+                    }
                     @if (getErrorMessage('roleId')) {
                       <p class="text-error mt-2 text-sm">{{ getErrorMessage('roleId') }}</p>
                     }

@@ -372,6 +372,18 @@
           <span [class.hidden]="isCollapsed()">Users</span>
         </a>
         }
+        @if (authService.canManageRoles()) {
+        <a
+          [routerLink]="routes.ManagementRoles"
+          routerLinkActive="bg-gray-100 text-gray-900 sidebar-active"
+          class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
+          [class.justify-center]="isCollapsed()"
+          [attr.title]="'Roles'"
+        >
+          <app-icon name="icon-lock" [class]="'h-4 w-4 text-gray-500'" />
+          <span [class.hidden]="isCollapsed()">Roles</span>
+        </a>
+        }
         @if (authService.canReadPromotions()) {
         <a
           [routerLink]="routes.ManagementPromotions"

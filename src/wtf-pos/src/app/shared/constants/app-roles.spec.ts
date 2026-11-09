@@ -41,6 +41,8 @@ describe('system role permissions vs the API policies (golden)', () => {
     ProductsWrite: ['Owner', 'Admin'],
     UsersRead: ['Owner', 'Admin', 'AdminViewer'],
     UsersWrite: ['Owner', 'Admin'],
+    RolesRead: ['Owner', 'Admin', 'AdminViewer'],
+    RolesManage: ['Owner'],
     PromotionsRead: ['Owner', 'Admin', 'AdminViewer'],
     PromotionsWrite: ['Owner', 'Admin'],
     ReportsRead: ['Owner', 'Admin', 'AdminViewer'],

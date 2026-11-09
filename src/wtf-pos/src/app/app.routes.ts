@@ -41,6 +41,9 @@ import { PromotionListComponent } from '@features/management/promotions/promotio
 import { PromotionsComponent } from '@features/management/promotions/promotions';
 import { ReportsComponent } from '@features/management/reports/reports';
 import { SchemaScriptsComponent } from '@features/management/schema-scripts/schema-scripts';
+import { RoleEditorComponent } from '@features/management/roles/role-editor/role-editor';
+import { RoleListComponent } from '@features/management/roles/role-list/role-list';
+import { RolesComponent } from '@features/management/roles/roles';
 import { UserDetailsComponent } from '@features/management/users/user-details/user-details';
 import { UserEditorComponent } from '@features/management/users/user-editor/user-editor';
 import { UserListComponent } from '@features/management/users/user-list/user-list';
@@ -379,6 +382,32 @@ export const routes: Routes = [
                 canDeactivate: [unsavedChangesGuard],
                 canActivate: [roleGuard],
                 data: { permission: Permissions.UsersWrite },
+              },
+            ],
+          },
+          {
+            path: 'roles',
+            component: RolesComponent,
+            canActivate: [roleGuard],
+            data: { permission: Permissions.RolesManage },
+            children: [
+              {
+                path: '',
+                component: RoleListComponent,
+              },
+              {
+                path: 'new',
+                component: RoleEditorComponent,
+                canDeactivate: [unsavedChangesGuard],
+                canActivate: [roleGuard],
+                data: { permission: Permissions.RolesManage },
+              },
+              {
+                path: ':id',
+                component: RoleEditorComponent,
+                canDeactivate: [unsavedChangesGuard],
+                canActivate: [roleGuard],
+                data: { permission: Permissions.RolesManage },
               },
             ],
           },

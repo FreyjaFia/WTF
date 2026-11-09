@@ -15,6 +15,7 @@ export * from './promotion.models';
 export * from './public-order.models';
 export * from './report.models';
 export * from './schema-script-history.models';
+export * from './role.models';
 export * from './user.models';
 export * from './stock-count.models';
 export * from './purchase-order.models';

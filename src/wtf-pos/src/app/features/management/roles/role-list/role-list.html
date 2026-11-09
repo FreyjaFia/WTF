@@ -1,0 +1,288 @@
+<div class="flex h-full flex-col pt-4 md:pt-0">
+  <!-- Header -->
+  <div class="mb-4 flex shrink-0 flex-col gap-3 sm:mb-6">
+    <div class="flex items-start justify-between gap-3">
+      <div class="flex flex-col gap-1">
+        <h1 class="shrink-0 text-xl font-bold text-gray-900 sm:text-2xl">Roles</h1>
+        <p class="text-xs text-gray-500 sm:text-sm">Choose what each kind of staff member can do</p>
+      </div>
+      <a
+        draggable="false"
+        class="app-btn app-btn-primary app-btn-sm"
+        data-testid="new-role"
+        [routerLink]="routes.ManagementRolesNew"
+      >
+        <app-icon name="icon-plus" [class]="'h-4 w-4'" />
+        New Role
+      </a>
+    </div>
+
+    <div class="flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center md:gap-3">
+      <div
+        class="mb-2 flex w-full min-w-0 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-surface focus-within:ring-2 focus-within:ring-gray-200 md:mb-0 md:max-w-[26rem] md:flex-1"
+      >
+        <app-search-input placeholder="Search by name" [control]="filterForm.controls.searchTerm" />
+      </div>
+
+      <div class="ml-auto flex items-center justify-end gap-2">
+        <app-filter-button [count]="activeFilterCount()" (pressed)="openFilters()" />
+        @if (!isAndroidPlatform) {
+          <button
+            class="app-btn app-btn-ghost pointer-events-auto z-30 p-2"
+            [class.opacity-70]="isRefreshing()"
+            type="button"
+            (click)="refresh()"
+            [disabled]="isRefreshing()"
+            aria-label="Refresh roles"
+          >
+            <app-icon
+              name="icon-refresh"
+              [class]="
+                isRefreshing()
+                  ? 'h-5 w-5 animate-spin text-gray-600'
+                  : 'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'
+              "
+              [fill]="'currentColor'"
+            />
+          </button>
+        }
+      </div>
+    </div>
+  </div>
+
+  <app-side-drawer
+    [isOpen]="isFiltersOpen()"
+    [title]="'Role Filters'"
+    [subtitle]="'Refine the role list results'"
+    [showOnDesktop]="true"
+    (closed)="closeFilters()"
+  >
+    <div class="space-y-3">
+      <div class="rounded-xl border border-gray-200 bg-surface p-3">
+        <div class="mb-3 flex items-center justify-between">
+          <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Type</p>
+          <button type="button" class="app-btn app-btn-secondary app-btn-xs" (click)="clearTypes()">
+            Clear
+          </button>
+        </div>
+        <div class="space-y-2">
+          @for (option of typeOptions(); track option.id) {
+            <label
+              class="flex cursor-pointer items-center justify-between rounded-lg bg-surface px-3 py-2 text-sm text-gray-700"
+            >
+              <span>{{ option.label }}</span>
+              <span class="flex items-center gap-2">
+                <span class="text-xs text-gray-500">{{ option.count }}</span>
+                <input
+                  type="checkbox"
+                  class="checkbox checkbox-sm"
+                  [checked]="isTypeSelected(option.id)"
+                  (change)="toggleType(option.id)"
+                />
+              </span>
+            </label>
+          }
+        </div>
+      </div>
+    </div>
+  </app-side-drawer>
+
+  @if (isLoading()) {
+    <div class="flex justify-center py-8">
+      <span class="loading loading-spinner loading-lg"></span>
+    </div>
+  }
+
+  @if (!isLoading()) {
+    <app-pull-to-refresh [refreshing]="isRefreshing()" (refreshTriggered)="refresh()">
+      @if (connectionFailed()) {
+        <app-connection-error />
+      } @else if (sortedRoles().length === 0) {
+        <div class="rounded-lg bg-surface p-8 text-center shadow-lg">
+          <div class="mb-3 flex justify-center">
+            <app-icon name="icon-lock" [class]="'h-12 w-12 opacity-60'" />
+          </div>
+          <p class="text-lg font-semibold text-gray-700">No roles found</p>
+          <p class="text-sm text-gray-500">Try adjusting your filters or create a new role</p>
+        </div>
+      } @else {
+        <div class="space-y-2 lg:space-y-3">
+          <!-- Column Headers (Sticky) -->
+          <div
+            class="sticky top-0 z-10 mb-2 hidden grid-cols-12 gap-4 rounded-lg bg-surface px-4 py-3 lg:grid"
+          >
+            <div class="col-span-5">
+              <app-sort-header
+                label="Name"
+                [active]="sortColumn() === 'name'"
+                [direction]="sortDirection()"
+                (sorted)="toggleSort('name')"
+              />
+            </div>
+            <div class="col-span-2">
+              <app-sort-header
+                label="Type"
+                align="center"
+                [active]="sortColumn() === 'type'"
+                [direction]="sortDirection()"
+                (sorted)="toggleSort('type')"
+              />
+            </div>
+            <div class="col-span-2">
+              <app-sort-header
+                label="Users"
+                align="center"
+                [active]="sortColumn() === 'users'"
+                [direction]="sortDirection()"
+                (sorted)="toggleSort('users')"
+              />
+            </div>
+            <div class="col-span-2">
+              <app-sort-header
+                label="Permissions"
+                align="center"
+                [active]="sortColumn() === 'permissions'"
+                [direction]="sortDirection()"
+                (sorted)="toggleSort('permissions')"
+              />
+            </div>
+            <div class="col-span-1"></div>
+          </div>
+
+          @for (role of sortedRoles(); track role.id; let isLast = $last; let isFirst = $first) {
+            <div
+              class="relative flex items-center gap-3 rounded-xl border border-gray-100 bg-surface px-4 py-3 shadow-sm transition-shadow duration-200 focus-within:z-30 hover:z-10 hover:shadow-md lg:grid lg:grid-cols-12 lg:gap-4 lg:border-0 lg:px-4 lg:py-4 lg:shadow-lg lg:hover:shadow-xl"
+              [attr.data-testid]="'role-row-' + role.id"
+            >
+              <a
+                class="flex min-w-0 flex-1 cursor-pointer items-center gap-3 self-stretch no-underline focus:outline-none lg:col-span-11 lg:grid lg:grid-cols-11 lg:gap-4"
+                [routerLink]="routes.ManagementRoleById(role.id)"
+                [attr.aria-label]="'Open role ' + role.name"
+              >
+                <div class="min-w-0 flex-1 lg:col-span-5">
+                  <h3 class="truncate text-sm font-semibold text-gray-900 lg:text-base">
+                    {{ role.name }}
+                  </h3>
+                  @if (role.description) {
+                    <p class="truncate text-xs text-gray-500 lg:text-sm">{{ role.description }}</p>
+                  }
+                  <!-- Mobile: inline type + counts -->
+                  <div class="mt-1 flex flex-wrap items-center gap-2 lg:hidden">
+                    @if (role.isSystem) {
+                      <app-badge variant="info">Built-in</app-badge>
+                    } @else {
+                      <app-badge variant="success">Custom</app-badge>
+                    }
+                    <span class="text-xs text-gray-500">
+                      {{ role.userCount }} {{ role.userCount === 1 ? 'user' : 'users' }} ·
+                      {{ role.permissionCount }} permissions
+                    </span>
+                  </div>
+                </div>
+
+                <div class="hidden lg:col-span-2 lg:flex lg:justify-center">
+                  @if (role.isSystem) {
+                    <app-badge variant="info">Built-in</app-badge>
+                  } @else {
+                    <app-badge variant="success">Custom</app-badge>
+                  }
+                </div>
+
+                <div class="hidden text-center text-sm text-gray-700 lg:col-span-2 lg:block">
+                  {{ role.userCount }}
+                </div>
+
+                <div class="hidden text-center text-sm text-gray-700 lg:col-span-2 lg:block">
+                  {{ role.permissionCount }}
+                </div>
+              </a>
+
+              <div class="shrink-0 lg:col-span-1 lg:flex lg:justify-end" role="presentation">
+                <div class="dropdown dropdown-end" [class.dropdown-top]="isLast && !isFirst">
+                  <button
+                    type="button"
+                    class="app-btn app-btn-ghost p-1.5"
+                    tabindex="0"
+                    aria-label="Role actions"
+                    [attr.data-testid]="'role-actions-' + role.id"
+                  >
+                    <app-icon
+                      name="icon-ellipsis-vertical"
+                      [class]="'h-5 w-5 text-gray-600'"
+                      [fill]="'currentColor'"
+                    />
+                  </button>
+                  <ul
+                    tabindex="0"
+                    class="dropdown-content menu bg-base-100 rounded-box z-50 w-52 p-2 shadow"
+                  >
+                    <li>
+                      <a
+                        draggable="false"
+                        [routerLink]="routes.ManagementRoleById(role.id)"
+                        class="app-menu-item"
+                      >
+                        <app-icon
+                          [name]="role.isSystem ? 'icon-lock' : 'icon-edit'"
+                          [class]="'h-4 w-4 text-gray-600'"
+                        />
+                        {{ role.isSystem ? 'View' : 'Edit' }}
+                      </a>
+                    </li>
+                    <li>
+                      <button
+                        type="button"
+                        class="app-menu-item"
+                        [attr.data-testid]="'duplicate-role-' + role.id"
+                        [disabled]="isDuplicating()"
+                        (click)="duplicateRole(role)"
+                      >
+                        <app-icon name="icon-plus" [class]="'h-4 w-4 text-gray-600'" />
+                        Duplicate
+                      </button>
+                    </li>
+                    @if (!role.isSystem) {
+                      <li>
+                        <button
+                          type="button"
+                          class="app-menu-item-danger"
+                          [attr.data-testid]="'delete-role-' + role.id"
+                          (click)="deleteRole(role)"
+                        >
+                          <app-icon name="icon-delete" [class]="'h-4 w-4 text-red-600'" />
+                          Delete
+                        </button>
+                      </li>
+                    }
+                  </ul>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </app-pull-to-refresh>
+  }
+</div>
+
+@if (roleToDelete(); as role) {
+  <app-confirm-dialog
+    icon="icon-delete"
+    heading="Delete Role?"
+    confirmLabel="Delete Role"
+    busyLabel="Deleting Role..."
+    [isBusy]="isDeleting()"
+    (confirmed)="confirmDelete()"
+    (cancelled)="cancelDelete()"
+  >
+    This will delete
+    <span class="font-medium text-gray-700">{{ role.name }}</span
+    >.
+    @if (role.userCount > 0) {
+      {{ role.userCount }} {{ role.userCount === 1 ? 'user has' : 'users have' }} this role, so move
+      them to another role first.
+    } @else {
+      Nobody has this role, so nothing changes for your staff.
+    }
+  </app-confirm-dialog>
+}

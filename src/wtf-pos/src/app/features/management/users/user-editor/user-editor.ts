@@ -9,13 +9,27 @@ import {
   Validators,
 } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { AlertService, AuthService, ModalStackService, UserService } from '@core/services';
+import {
+  AlertService,
+  AuthService,
+  ModalStackService,
+  RoleService,
+  UserService,
+} from '@core/services';
 import { AvatarComponent, IconComponent, PageTitleComponent } from '@shared/components';
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import { CreateUserDto, UpdateUserDto, UserRoleEnum } from '@shared/models';
 import { AppRoutes } from '@shared/constants/app-routes';
+import { PermissionKey } from '@shared/permissions';
+import { userRoleLabel } from '@shared/utils/user-role-label';
 import { jwtDecode } from 'jwt-decode';
 import { of, switchMap } from 'rxjs';
+
+interface UserRoleOption {
+  label: string;
+  value: number;
+  description?: string | null;
+}
 
 // Same minimum the API enforces when you change your own password.
 const PROFILE_PASSWORD_MIN_LENGTH = 8;
@@ -37,6 +51,7 @@ const PROFILE_PASSWORD_MIN_LENGTH = 8;
 })
 export class UserEditorComponent implements OnInit {
   private readonly userService = inject(UserService);
+  private readonly roleService = inject(RoleService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly alertService = inject(AlertService);
@@ -55,7 +70,7 @@ export class UserEditorComponent implements OnInit {
   protected readonly userFullNameLabel = signal('');
   protected readonly lastUpdatedAt = signal<string | null>(null);
   protected currentUserRoleLabel = 'Unknown';
-  private readonly allUserRoleOptions = [
+  private readonly allUserRoleOptions: UserRoleOption[] = [
     { label: 'Owner', value: UserRoleEnum.Owner },
     { label: 'Admin', value: UserRoleEnum.Admin },
     { label: 'Cashier', value: UserRoleEnum.Cashier },
@@ -63,7 +78,8 @@ export class UserEditorComponent implements OnInit {
     { label: 'Item Manager', value: UserRoleEnum.ItemManager },
     { label: 'Stock Manager', value: UserRoleEnum.StockManager },
   ];
-  protected userRoleOptions = [...this.allUserRoleOptions];
+  protected userRoleOptions: UserRoleOption[] = [...this.allUserRoleOptions];
+  protected readonly isOwnAccount = signal(false);
 
   // Image upload signals
   protected readonly isUploading = signal(false);
@@ -91,7 +107,7 @@ export class UserEditorComponent implements OnInit {
         nonNullable: true,
         validators: [Validators.required, Validators.maxLength(100)],
       }),
-      roleId: new FormControl<UserRoleEnum | null>(null),
+      roleId: new FormControl<number | null>(null),
       // Only used on the profile page, where changing your own password requires the current one.
       currentPassword: new FormControl('', {
         nonNullable: false,
@@ -127,6 +143,10 @@ export class UserEditorComponent implements OnInit {
     const isProfile = this.route.snapshot.data['isProfile'] === true;
     this.isProfileMode.set(isProfile);
 
+    if (!isProfile) {
+      this.loadRoleOptions();
+    }
+
     if (isProfile) {
       const currentUserId = this.getCurrentUserIdFromToken();
 
@@ -150,6 +170,7 @@ export class UserEditorComponent implements OnInit {
     if (id) {
       this.isEditMode.set(true);
       this.userId = id;
+      this.isOwnAccount.set(id === this.getCurrentUserIdFromToken());
       this.applyPasswordValidators();
       this.applyRoleValidators();
       this.loadUser(id);
@@ -290,7 +311,7 @@ export class UserEditorComponent implements OnInit {
           firstName: user.firstName,
           lastName: user.lastName,
           username: user.username,
-          roleId: UserRoleEnum[user.roleId] !== undefined ? user.roleId : null,
+          roleId: user.roleId,
         });
         this.userFullNameLabel.set(`${user.firstName} ${user.lastName}`.trim());
         this.currentImageUrl.set(user.imageUrl || null);
@@ -642,6 +663,9 @@ export class UserEditorComponent implements OnInit {
     if (this.isProfileMode()) {
       roleCtrl.clearValidators();
       roleCtrl.disable({ emitEvent: false });
+    } else if (this.isOwnAccount()) {
+      roleCtrl.setValidators([Validators.required]);
+      roleCtrl.disable({ emitEvent: false });
     } else {
       roleCtrl.setValidators([Validators.required]);
       roleCtrl.enable({ emitEvent: false });
@@ -649,6 +673,34 @@ export class UserEditorComponent implements OnInit {
 
     roleCtrl.updateValueAndValidity({ emitEvent: false });
     this.userForm.updateValueAndValidity({ emitEvent: false });
+  }
+
+  protected selectedRoleDescription(): string | null {
+    const selected = this.userForm.controls.roleId.value;
+    return this.userRoleOptions.find((role) => role.value === selected)?.description ?? null;
+  }
+
+  private loadRoleOptions(): void {
+    this.roleService.getRoles().subscribe({
+      next: (roles) => {
+        const currentRoleId = this.userForm.controls.roleId.value;
+        this.userRoleOptions = roles
+          .filter(
+            (role) =>
+              role.id === currentRoleId ||
+              (role.id !== UserRoleEnum.Owner || this.authService.isOwner()) &&
+                role.permissions.every((key) => this.authService.can(key as PermissionKey)),
+          )
+          .map((role) => ({
+            label: userRoleLabel({ roleId: role.id, roleName: role.name }),
+            value: role.id,
+            description: role.description,
+          }));
+      },
+      error: () => {
+        // Keep the built-in list; the server still refuses a role you may not give.
+      },
+    });
   }
 
   private passwordRulesValidator(control: AbstractControl): ValidationErrors | null {

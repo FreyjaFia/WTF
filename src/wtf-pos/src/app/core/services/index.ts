@@ -34,6 +34,7 @@ export * from './subscription.service';
 export * from './brand.service';
 export * from './theme.service';
 export * from './update.service';
+export * from './role.service';
 export * from './user.service';
 export * from './stock-count.service';
 export * from './stock-waste.service';

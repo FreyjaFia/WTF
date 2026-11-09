@@ -1,0 +1,224 @@
+<div class="flex h-full flex-col pt-4 md:pt-0">
+  <!-- Sticky Header -->
+  <div
+    class="sticky top-0 z-10 mb-4 flex shrink-0 flex-col gap-3 bg-surface/95 backdrop-blur-sm sm:mb-6 sm:flex-row sm:items-center sm:justify-between"
+  >
+    <div class="flex min-w-0 items-start gap-4">
+      <button
+        class="app-btn app-btn-ghost mt-1 shrink-0 p-2"
+        type="button"
+        (click)="goBack()"
+        aria-label="Go back"
+      >
+        <app-icon name="icon-back" [class]="'h-5 w-5 text-gray-600'" />
+      </button>
+      <div class="min-w-0">
+        <app-page-title [text]="isNew() ? 'New Role' : role()?.name || 'Role'" />
+        @if (role(); as current) {
+          <p class="mt-1 text-sm text-gray-500">
+            {{ current.isSystem ? 'Built-in role' : 'Custom role' }} · {{ current.userCount }}
+            {{ current.userCount === 1 ? 'user' : 'users' }}
+          </p>
+        }
+      </div>
+    </div>
+
+    <div class="flex shrink-0 justify-end gap-2">
+      @if (role()?.isSystem) {
+        <button
+          type="button"
+          class="app-btn app-btn-primary app-btn-sm gap-2"
+          data-testid="duplicate-role"
+          [disabled]="isDuplicating()"
+          (click)="duplicate()"
+        >
+          @if (isDuplicating()) {
+            <span class="loading loading-spinner loading-sm"></span>
+          }
+          Duplicate
+        </button>
+      } @else if (!isReadOnly()) {
+        <button
+          type="button"
+          class="app-btn app-btn-secondary app-btn-sm"
+          (click)="goBack()"
+          [disabled]="isSaving()"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          form="roleForm"
+          class="app-btn app-btn-primary app-btn-sm gap-2"
+          data-testid="save-role"
+          [disabled]="roleForm.invalid || isSaving()"
+        >
+          @if (isSaving()) {
+            <span class="loading loading-spinner loading-sm"></span>
+          }
+          {{ isSaving() ? 'Saving Role...' : isNew() ? 'Create Role' : 'Update Role' }}
+        </button>
+      }
+    </div>
+  </div>
+
+  @if (isLoading()) {
+    <div class="flex justify-center py-8">
+      <span class="loading loading-spinner loading-lg"></span>
+    </div>
+  }
+
+  @if (!isLoading()) {
+    <div class="flex-1 overflow-y-auto pr-2 pb-4">
+      <form id="roleForm" [formGroup]="roleForm" (ngSubmit)="save()" class="space-y-6">
+        @if (role()?.isSystem) {
+          <div class="flex items-start gap-3 rounded-xl bg-gray-50 p-4 text-sm text-gray-700">
+            <app-icon name="icon-lock" [class]="'mt-0.5 h-4 w-4 shrink-0 text-gray-500'" />
+            <p>
+              This is a built-in role, so it cannot be changed. Duplicate it to make your own
+              version.
+            </p>
+          </div>
+        } @else if (cannotEditRole()) {
+          <div class="flex items-start gap-3 rounded-xl bg-gray-50 p-4 text-sm text-gray-700">
+            <app-icon name="icon-lock" [class]="'mt-0.5 h-4 w-4 shrink-0 text-gray-500'" />
+            <p>
+              This role has permissions you do not have yourself, so you can only view it. Ask the
+              owner to change it.
+            </p>
+          </div>
+        }
+
+        <!-- Details -->
+        <div class="card rounded-xl bg-surface shadow-lg">
+          <div class="card-body space-y-5">
+            <div>
+              <label class="mb-2 block text-sm font-semibold text-gray-900" for="roleName">
+                Name <span class="text-error">*</span>
+              </label>
+              <label
+                class="input flex w-full items-center gap-2 border-transparent bg-gray-50 transition-all focus-within:border-brand focus-within:bg-surface focus-within:ring-1 focus-within:ring-brand/20"
+                [class.input-error]="
+                  roleForm.controls.name.invalid && roleForm.controls.name.touched
+                "
+              >
+                <input
+                  id="roleName"
+                  type="text"
+                  formControlName="name"
+                  maxlength="50"
+                  placeholder="For example Shift Lead"
+                  class="grow bg-transparent outline-none"
+                  data-testid="role-name"
+                />
+              </label>
+              @if (roleForm.controls.name.invalid && roleForm.controls.name.touched) {
+                <p class="text-error mt-2 text-sm">Enter a role name (50 characters at most).</p>
+              }
+            </div>
+
+            <div>
+              <label class="mb-2 block text-sm font-semibold text-gray-900" for="roleDescription">
+                Description
+              </label>
+              <label
+                class="input flex w-full items-center gap-2 border-transparent bg-gray-50 transition-all focus-within:border-brand focus-within:bg-surface focus-within:ring-1 focus-within:ring-brand/20"
+              >
+                <input
+                  id="roleDescription"
+                  type="text"
+                  formControlName="description"
+                  maxlength="200"
+                  placeholder="What this role is for"
+                  class="grow bg-transparent outline-none"
+                  data-testid="role-description"
+                />
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Summary -->
+        <div class="card rounded-xl bg-surface shadow-lg" data-testid="role-summary">
+          <div class="card-body space-y-1 text-sm text-gray-700">
+            <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase">
+              In short · {{ selected().size }} of {{ totalPermissions }} permissions
+            </p>
+            <p>
+              <span class="font-semibold text-gray-900">Can open:</span>
+              {{ summary().open.length ? summary().open.join(', ') : 'Nothing yet' }}
+            </p>
+            <p>
+              <span class="font-semibold text-gray-900">Can change:</span>
+              {{ summary().change.length ? summary().change.join(', ') : 'Nothing yet' }}
+            </p>
+          </div>
+        </div>
+
+        <!-- Permissions -->
+        <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
+          @for (group of groups; track group.area) {
+            <div class="card rounded-xl bg-surface shadow-lg" [attr.data-testid]="'area-' + group.area">
+              <div class="card-body space-y-3">
+                <div class="flex items-center justify-between">
+                  <h2 class="text-base font-semibold text-gray-900">{{ group.area }}</h2>
+                  <span class="text-xs text-gray-500">
+                    {{ areaCount(group) }} of {{ group.permissions.length }}
+                  </span>
+                </div>
+                <div class="space-y-1">
+                  @for (permission of group.permissions; track permission.key) {
+                    <label
+                      class="flex items-start gap-3 rounded-lg px-3 py-2 text-sm"
+                      [class.cursor-pointer]="!isDisabled(permission)"
+                      [class.hover:bg-gray-50]="!isDisabled(permission)"
+                      [class.opacity-60]="isDisabled(permission)"
+                    >
+                      <input
+                        type="checkbox"
+                        class="checkbox checkbox-sm mt-0.5"
+                        [attr.data-testid]="'perm-' + permission.key"
+                        [checked]="isChecked(permission.key)"
+                        [disabled]="isDisabled(permission)"
+                        (change)="togglePermission(permission)"
+                      />
+                      <span class="min-w-0">
+                        <span class="block font-medium text-gray-900">{{ permission.label }}</span>
+                        <span class="block text-xs text-gray-500">{{ permission.description }}</span>
+                        @if (permission.requires.length > 0) {
+                          <span class="block text-xs text-gray-400">
+                            Needs: {{ requirementLabels(permission) }}
+                          </span>
+                        }
+                        @if (!isReadOnly() && !canGive(permission) && !isChecked(permission.key)) {
+                          <span class="block text-xs text-gray-400">
+                            You do not have this permission, so you cannot give it.
+                          </span>
+                        }
+                      </span>
+                    </label>
+                  }
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      </form>
+    </div>
+  }
+
+  @if (showDiscardModal()) {
+    <app-confirm-dialog
+      variant="warning"
+      icon="icon-back"
+      heading="Discard Changes?"
+      confirmLabel="Discard"
+      cancelLabel="Keep Editing"
+      confirmPlacement="secondary"
+      (confirmed)="confirmDiscard()"
+      (cancelled)="cancelDiscard()"
+    >
+      You have unsaved changes that will be lost if you leave this page.
+    </app-confirm-dialog>
+  }
+</div>

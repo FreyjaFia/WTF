@@ -1,7 +1,7 @@
 import { Location } from '@angular/common';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, provideRouter } from '@angular/router';
-import { AlertService, AuthService, UserService } from '@core/services';
+import { AlertService, AuthService, RoleService, UserService } from '@core/services';
 import { UserDto, UserRoleEnum } from '@shared/models';
 import { of, Subject, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
@@ -44,6 +44,8 @@ interface Opts {
   owner?: boolean;
   token?: string | null;
   get?: unknown;
+  roles?: unknown;
+  can?: (key: string) => boolean;
 }
 
 describe('UserEditorComponent', () => {
@@ -71,12 +73,17 @@ describe('UserEditorComponent', () => {
       updateMe: vi.fn(() => of(void 0)),
       uploadMeImage: vi.fn(() => of({ imageUrl: 'http://img/me.png' })),
       notifyMeUpdated: vi.fn(),
+      can: vi.fn(opts.can ?? (() => true)),
     };
     location = { back: vi.fn() };
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
         { provide: UserService, useValue: service },
+        {
+          provide: RoleService,
+          useValue: { getRoles: vi.fn(() => opts.roles ?? throwError(() => new Error('offline'))) },
+        },
         { provide: AlertService, useValue: alert },
         { provide: AuthService, useValue: auth },
         { provide: Location, useValue: location },
@@ -106,6 +113,51 @@ describe('UserEditorComponent', () => {
   }
 
   const text = () => (fixture.nativeElement as HTMLElement).textContent ?? '';
+
+  describe('role choices', () => {
+    const roles = [
+      { id: 2, name: 'Cashier', description: 'Takes orders', isSystem: true, permissions: ['orders.read', 'orders.write'] },
+      { id: 4, name: 'Owner', description: null, isSystem: true, permissions: ['orders.read', 'audit.read'] },
+      { id: 100, name: 'Shift Lead', description: 'Runs the floor', isSystem: false, permissions: ['orders.read'] },
+      { id: 101, name: 'Auditor', description: null, isSystem: false, permissions: ['audit.read'] },
+    ];
+
+    it('lists custom roles next to the built-in ones, with their descriptions', () => {
+      setup({ owner: true, roles: of(roles) });
+      expect(c.userRoleOptions.map((r: { label: string }) => r.label)).toEqual([
+        'Cashier',
+        'Owner',
+        'Shift Lead',
+        'Auditor',
+      ]);
+
+      c.userForm.controls.roleId.setValue(100);
+      expect(c.selectedRoleDescription()).toBe('Runs the floor');
+    });
+
+    it('only offers roles whose permissions the signed-in user holds', () => {
+      setup({ roles: of(roles), can: (key) => key !== 'audit.read' });
+      expect(c.userRoleOptions.map((r: { value: number }) => r.value)).toEqual([2, 100]);
+    });
+
+    it('keeps the built-in list when the roles cannot be loaded', () => {
+      setup();
+      expect(c.userRoleOptions.length).toBe(5);
+    });
+
+    it('does not let you change your own role', () => {
+      setup({ id: 'me1' });
+      expect(c.isOwnAccount()).toBe(true);
+      expect(c.userForm.controls.roleId.disabled).toBe(true);
+      expect(text()).toContain('You cannot change your own role.');
+    });
+
+    it('lets you change another persons role', () => {
+      setup({ id: 'u1' });
+      expect(c.isOwnAccount()).toBe(false);
+      expect(c.userForm.controls.roleId.enabled).toBe(true);
+    });
+  });
 
   describe('create mode', () => {
     it('starts empty and invalid', () => {
@@ -269,9 +321,9 @@ describe('UserEditorComponent', () => {
       expect(text()).toContain('Update User');
     });
 
-    it('maps unknown roles to null', () => {
+    it('keeps the id of a custom role', () => {
       setup({ id: 'u1', get: of({ ...USER, roleId: 99, updatedAt: null }) });
-      expect(c.userForm.controls.roleId.value).toBeNull();
+      expect(c.userForm.controls.roleId.value).toBe(99);
       expect(c.lastUpdatedAt()).toBe(USER.createdAt);
     });
 

@@ -13,6 +13,7 @@ const ALL = [
   'canReadProducts',
   'canReadCustomers',
   'canReadUsers',
+  'canManageRoles',
   'canReadPromotions',
   'canAccessReports',
   'canAccessAuditLogs',
@@ -39,6 +40,7 @@ describe('ManagementComponent', () => {
               { path: 'products', component: Stub },
               { path: 'customers', component: Stub },
               { path: 'users', component: Stub },
+              { path: 'roles', component: Stub },
               { path: 'promotions', component: Stub },
               { path: 'reports', component: Stub },
               { path: 'expenses', component: Stub },
@@ -76,6 +78,7 @@ describe('ManagementComponent', () => {
       'products',
       'customers',
       'users',
+      'roles',
       'promotions',
       'reports',
       'expenses',
@@ -85,7 +88,7 @@ describe('ManagementComponent', () => {
       'schema-scripts',
     ]);
     expect(tabs(el)[0].getAttribute('href')).toBe('/management/products');
-    expect(tabs(el)[9].getAttribute('href')).toBe('/management/schema-scripts');
+    expect(tabs(el)[10].getAttribute('href')).toBe('/management/schema-scripts');
   });
 
   it('hides audit and schema tabs for non-owners', async () => {
@@ -95,6 +98,7 @@ describe('ManagementComponent', () => {
     perms.canManageWasteReasons = false;
     perms.canManageSubscription = false;
     perms.canManageBrand = false;
+    perms.canManageRoles = false;
     const { el } = await setup('/management/products');
     expect(routes(el)).toEqual([
       'products',
@@ -113,6 +117,7 @@ describe('ManagementComponent', () => {
     expect(routes(el)).toEqual([
       'products',
       'users',
+      'roles',
       'reports',
       'expenses',
       'setup',
@@ -149,6 +154,7 @@ describe('ManagementComponent', () => {
       'Products',
       'Customers',
       'Users',
+      'Roles',
       'Promotions',
       'Reports',
       'Expenses',

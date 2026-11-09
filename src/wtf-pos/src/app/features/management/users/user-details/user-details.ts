@@ -5,6 +5,7 @@ import { AlertService, AuthService, ModalStackService, UserService } from '@core
 import { AvatarComponent, BadgeComponent, IconComponent, PageTitleComponent } from '@shared/components';
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import { UserDto, UserRoleEnum } from '@shared/models';
+import { userRoleLabel } from '@shared/utils/user-role-label';
 import { AppRoutes } from '@shared/constants/app-routes';
 
 @Component({
@@ -182,11 +183,7 @@ export class UserDetailsComponent implements OnInit {
   }
 
   protected getRoleLabel(user: UserDto): string {
-    const enumName = UserRoleEnum[user.roleId];
-    if (!enumName || typeof enumName !== 'string') {
-      return 'Unknown';
-    }
-    return enumName.replace(/([a-z])([A-Z])/g, '$1 $2').trim();
+    return userRoleLabel(user);
   }
 
   private removeFromStack(): void {

@@ -346,6 +346,10 @@ export class AuthService {
     return this.can(Permissions.UsersWrite);
   }
 
+  public canManageRoles(): boolean {
+    return this.can(Permissions.RolesManage);
+  }
+
   public canReadPromotions(): boolean {
     return this.can(Permissions.PromotionsRead);
   }

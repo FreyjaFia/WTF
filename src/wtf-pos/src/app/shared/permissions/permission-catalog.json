@@ -257,6 +257,14 @@
       ]
     },
     {
+      "key": "roles.manage",
+      "area": "People",
+      "label": "Manage roles",
+      "description": "Create, change and delete custom roles and choose what each can do. Only permissions you hold yourself can be given.",
+      "feature": "core",
+      "requires": []
+    },
+    {
       "key": "brand.manage",
       "area": "Shop",
       "label": "Manage shop brand",
@@ -320,6 +328,7 @@
       "reports.generate",
       "users.read",
       "users.write",
+      "roles.manage",
       "brand.manage",
       "subscription.billing",
       "audit.read",
@@ -414,6 +423,13 @@
     ],
     "UsersWrite": [
       "users.write"
+    ],
+    "RolesRead": [
+      "roles.manage",
+      "users.read"
+    ],
+    "RolesManage": [
+      "roles.manage"
     ],
     "PromotionsRead": [
       "promotions.read"
