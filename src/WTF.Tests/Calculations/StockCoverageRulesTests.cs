@@ -61,4 +61,15 @@ public class StockCoverageRulesTests
     [Fact]
     public void AnEmptyGroupIsIgnored() =>
         StockCoverageRules.Evaluate(true, [new CoverageGroup("Size", [])]).Coverage.ShouldBe(StockCoverage.Covered);
+
+    [Fact]
+    public void ALatteWithHotLinkedAndIcedNot_IsPartialNamingTheTemperature()
+    {
+        var temperature = new CoverageGroup("Temperature", [new CoverageOption("Hot", true), new CoverageOption("Iced", false)]);
+
+        var result = StockCoverageRules.Evaluate(false, [temperature, Sizes(("Regular", true), ("Large", true))]);
+
+        result.Coverage.ShouldBe(StockCoverage.Partial);
+        result.MissingOptions.ShouldBe(["Temperature: Iced"]);
+    }
 }

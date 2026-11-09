@@ -10,6 +10,7 @@ import {
   fromCents,
   isPickOne,
   minimumSelection,
+  presetSelections,
   priceWithAddOns,
   ruleOfGroup,
   selectionError,
@@ -236,7 +237,7 @@ export class AddonSelectorComponent {
 
     const groups = customGroups ?? this.catalogCache.getAddOnsForProduct(productId);
     const deduped = [...groups]
-      .sort((a, b) => ADD_ON_TYPE_ORDER[a.type] - ADD_ON_TYPE_ORDER[b.type])
+      .sort((a, b) => (ADD_ON_TYPE_ORDER[a.type] ?? 99) - (ADD_ON_TYPE_ORDER[b.type] ?? 99))
       .map((g) => ({
         ...g,
         options: g.options
@@ -251,7 +252,7 @@ export class AddonSelectorComponent {
 
   private applyInitialSelections(groups: AddOnGroupDto[], addOns: CartAddOnDto[]): void {
     if (addOns.length === 0) {
-      this.selections.set({});
+      this.selections.set(this.isCustomOptionMode() ? {} : this.presetSelectionMap(groups));
       return;
     }
 
@@ -273,6 +274,16 @@ export class AddonSelectorComponent {
     }
 
     this.selections.set(nextSelections);
+  }
+
+  private presetSelectionMap(groups: AddOnGroupDto[]): Record<number, Map<string, number>> {
+    const preset: Record<number, Map<string, number>> = {};
+
+    for (const { type, optionId } of presetSelections(groups)) {
+      preset[type] = new Map([[optionId, 1]]);
+    }
+
+    return preset;
   }
 
   protected getSelectionRule(group: AddOnGroupDto): string {

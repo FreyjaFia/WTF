@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace WTF.Domain.Entities;
+﻿namespace WTF.Domain.Entities;
 
 public partial class ProductAddOn
 {
@@ -10,6 +7,8 @@ public partial class ProductAddOn
     public Guid AddOnId { get; set; }
 
     public int? AddOnTypeId { get; set; }
+
+    public bool IsDefault { get; set; }
 
     public bool IsActive { get; set; }
 

@@ -16,7 +16,7 @@ public record PublicProductDto(
     int AddOnCount
 );
 
-public record PublicAddOnGroupDto(int Type, string DisplayName, List<PublicProductDto> Options, bool IsRequired = false, int MinSelect = 0, int MaxSelect = 0);
+public record PublicAddOnGroupDto(int Type, string DisplayName, List<PublicProductDto> Options, bool IsRequired = false, int MinSelect = 0, int MaxSelect = 0, Guid? DefaultAddOnId = null);
 
 public record PublicDealAddOnDto(Guid AddOnProductId, int Quantity);
 

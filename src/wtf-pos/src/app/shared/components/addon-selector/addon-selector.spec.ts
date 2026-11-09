@@ -160,6 +160,34 @@ describe('AddonSelectorComponent', () => {
       expect(i.validationError()).toBeNull();
     });
 
+    it('pre-selects the default option of a required pick-one group on a new item', () => {
+      const { cmp, i } = setup([{ ...sizeG, defaultAddOnId: 'l' }, toppingG]);
+      cmp.open(MAIN);
+      expect(i.getQuantity(AddOnTypeEnum.Size, 'l')).toBe(1);
+      expect(i.getQuantity(AddOnTypeEnum.Size, 's')).toBe(0);
+      expect(i.validationError()).toBeNull();
+    });
+
+    it('selects the only option of a required pick-one group', () => {
+      const { cmp, i } = setup([{ ...sizeG, options: [LARGE] }]);
+      cmp.open(MAIN);
+      expect(i.getQuantity(AddOnTypeEnum.Size, 'l')).toBe(1);
+    });
+
+    it('does not apply the default when editing an item that has its own add-ons', () => {
+      const { cmp, i } = setup([{ ...sizeG, defaultAddOnId: 'l' }, toppingG]);
+      cmp.open(MAIN, { addOns: [{ addOnId: 's', name: 'Small', price: 0 }], editIndex: 0 });
+      expect(i.getQuantity(AddOnTypeEnum.Size, 's')).toBe(1);
+      expect(i.getQuantity(AddOnTypeEnum.Size, 'l')).toBe(0);
+    });
+
+    it('leaves a required group without a default unselected', () => {
+      const { cmp, i } = setup([sizeG]);
+      cmp.open(MAIN);
+      expect(i.getQuantity(AddOnTypeEnum.Size, 'l')).toBe(0);
+      expect(i.validationError()).not.toBeNull();
+    });
+
     it('shows the empty message when the product has no add-ons', () => {
       const { fixture, cmp, el } = setup([]);
       cmp.open(MAIN);

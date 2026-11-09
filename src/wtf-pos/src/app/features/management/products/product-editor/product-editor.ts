@@ -845,6 +845,37 @@ export class ProductEditorComponent implements OnInit {
     this.isHistoryOpen.set(false);
   }
 
+  protected canPreSelect(group: AddOnGroupDto): boolean {
+    return !!group.isRequired && group.maxSelect === 1 && group.options.length > 1;
+  }
+
+  protected togglePreSelectedAddOn(group: AddOnGroupDto, addOnId: string): void {
+    if (!this.productId) {
+      return;
+    }
+
+    const makeDefault = group.defaultAddOnId !== addOnId;
+    const previous = this.assignedAddOns();
+
+    this.assignedAddOns.set(
+      previous.map((g) =>
+        g.type === group.type ? { ...g, defaultAddOnId: makeDefault ? addOnId : null } : g,
+      ),
+    );
+
+    this.productService
+      .setProductAddOnDefault(this.productId, addOnId, makeDefault)
+      .subscribe({
+        next: () => {
+          this.alertService.successUpdated('Pre-selected option');
+        },
+        error: (error: Error) => {
+          this.assignedAddOns.set(previous);
+          this.alertService.error(error.message);
+        },
+      });
+  }
+
   protected removeAddOn(addOnId: string): void {
     if (!this.productId) {
       return;

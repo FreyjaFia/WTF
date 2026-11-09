@@ -21,6 +21,7 @@ export interface PublicAddOnGroupDto {
   isRequired?: boolean;
   minSelect?: number;
   maxSelect?: number;
+  defaultAddOnId?: string | null;
 }
 
 /** A discount that is on right now: the product, the exact add-ons it needs and what comes off. */

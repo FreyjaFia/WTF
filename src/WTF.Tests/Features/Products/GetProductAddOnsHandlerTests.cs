@@ -38,6 +38,24 @@ public class GetProductAddOnsHandlerTests
     }
 
     [Fact]
+    public async Task Handle_DefaultOption_IsReportedOnItsGroup()
+    {
+        var product = ProductSeed.NewProduct();
+        var small = ProductSeed.NewProduct(name: "Small", code: "SM", isAddOn: true);
+        var large = ProductSeed.NewProduct(name: "Large", code: "LG", isAddOn: true);
+        var shot = ProductSeed.NewProduct(name: "Shot", code: "S", isAddOn: true);
+        await ProductSeed.SeedAsync(_dbName, product, small, large, shot,
+            ProductSeed.NewLink(product.Id, small.Id, CatalogSeed.Size),
+            ProductSeed.NewLink(product.Id, large.Id, CatalogSeed.Size, isDefault: true),
+            ProductSeed.NewLink(product.Id, shot.Id, CatalogSeed.Extra));
+
+        var result = await Handler().Handle(new GetProductAddOnsQuery(product.Id), CancellationToken.None);
+
+        result.Single(g => g.Type == CatalogSeed.Size).DefaultAddOnId.ShouldBe(large.Id);
+        result.Single(g => g.Type == CatalogSeed.Extra).DefaultAddOnId.ShouldBeNull();
+    }
+
+    [Fact]
     public async Task Handle_LinkWithoutType_DefaultsToExtra()
     {
         var product = ProductSeed.NewProduct();

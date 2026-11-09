@@ -70,6 +70,7 @@ internal static class PosCatalogLoader
                 TypeRequired = pa.AddOnType != null && pa.AddOnType.IsRequired,
                 TypeMin = pa.AddOnType != null ? pa.AddOnType.MinSelect : 0,
                 TypeMax = pa.AddOnType != null ? pa.AddOnType.MaxSelect : 0,
+                pa.IsDefault,
                 pa.AddOn,
                 OverridePrice = pa.ProductAddOnPriceOverride != null && pa.ProductAddOnPriceOverride.IsActive
                     ? (decimal?)pa.ProductAddOnPriceOverride.Price
@@ -103,7 +104,8 @@ internal static class PosCatalogLoader
                                 imageUrl, [],
                                 OverridePrice: item.OverridePrice);
                         })],
-                        typeGroup.Key.TypeRequired, typeGroup.Key.TypeMin, typeGroup.Key.TypeMax
+                        typeGroup.Key.TypeRequired, typeGroup.Key.TypeMin, typeGroup.Key.TypeMax,
+                        typeGroup.Where(item => item.IsDefault).Select(item => (Guid?)item.AddOn.Id).FirstOrDefault()
                     ))
                     .ToList()
             );

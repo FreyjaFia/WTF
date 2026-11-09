@@ -318,6 +318,32 @@ export class ProductService {
     );
   }
 
+  public setProductAddOnDefault(
+    productId: string,
+    addOnId: string,
+    isDefault: boolean,
+  ): Observable<void> {
+    return this.http
+      .put<void>(`${this.baseUrl}/${productId}/addons/${addOnId}/default`, { isDefault })
+      .pipe(
+        catchError((error: HttpErrorResponse) => {
+          console.error('Error setting the pre-selected add-on:', error);
+
+          let errorMessage: string = ProductService.MSG_ASSIGN_ADDONS_FAILED;
+
+          if (error.status === 0) {
+            errorMessage = this.getNetworkErrorMessage();
+          } else if (error.status === 404) {
+            errorMessage = ProductService.MSG_PRODUCT_NOT_FOUND;
+          } else {
+            errorMessage = extractHttpErrorMessage(error) || errorMessage;
+          }
+
+          return throwError(() => new Error(errorMessage));
+        }),
+      );
+  }
+
   public assignLinkedProducts(
     addOnId: string,
     products: AddOnProductAssignmentDto[],

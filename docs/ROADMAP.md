@@ -18,7 +18,7 @@ update its file and the status in the table below.
 | Senior Citizen / PWD discount | Planned, confirm the rules first | [senior-pwd-discount](roadmap/senior-pwd-discount.md) |
 | Cashless Payments | Planned, needs research | [cashless-payments](roadmap/cashless-payments.md) |
 | Receipt and Kitchen Printing | Planned | [receipt-and-kitchen-printing](roadmap/receipt-and-kitchen-printing.md) |
-| Temperature (Hot / Iced) add-on type | Planned (its prerequisite, the dynamic catalog, is built) | [temperature-addon](roadmap/temperature-addon.md) |
+| Temperature (Hot / Iced) add-on type | First cut built on branch `temperature-addon` (not merged) | [temperature-addon](roadmap/temperature-addon.md) |
 | Setup lists (units and similar) | Setup page built; units and other lists planned | [setup-lists](roadmap/setup-lists.md) |
 | Dynamic Catalog Management | Built 6 Nov 2026; browser run and production check to do | [dynamic-catalog](roadmap/dynamic-catalog.md) |
 | Promotions / Bundles | Phase 1 completed; ideas for later | [promotions](roadmap/promotions.md) |

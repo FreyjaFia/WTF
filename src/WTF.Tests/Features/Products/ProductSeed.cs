@@ -33,12 +33,13 @@ internal static class ProductSeed
         CreatedBy = id
     };
 
-    public static ProductAddOn NewLink(Guid productId, Guid addOnId, int? typeId = 4, bool isActive = true) => new()
+    public static ProductAddOn NewLink(Guid productId, Guid addOnId, int? typeId = 4, bool isActive = true, bool isDefault = false) => new()
     {
         ProductId = productId,
         AddOnId = addOnId,
         AddOnTypeId = typeId,
-        IsActive = isActive
+        IsActive = isActive,
+        IsDefault = isDefault
     };
 
     public static ProductAddOnPriceOverride NewOverride(Guid productId, Guid addOnId, decimal price, bool isActive = true) => new()

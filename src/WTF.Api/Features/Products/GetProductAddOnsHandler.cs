@@ -37,6 +37,7 @@ public class GetProductAddOnsHandler(WTFDbContext db, IHttpContextAccessor httpC
                 TypeRequired = pa.AddOnType != null && pa.AddOnType.IsRequired,
                 TypeMin = pa.AddOnType != null ? pa.AddOnType.MinSelect : 0,
                 TypeMax = pa.AddOnType != null ? pa.AddOnType.MaxSelect : 0,
+                pa.IsDefault,
                 pa.AddOn,
                 OverridePrice = pa.ProductAddOnPriceOverride != null && pa.ProductAddOnPriceOverride.IsActive
                     ? (decimal?)pa.ProductAddOnPriceOverride.Price
@@ -58,7 +59,8 @@ public class GetProductAddOnsHandler(WTFDbContext db, IHttpContextAccessor httpC
 
                     return ProductMapping.ToDto(item.AddOn, imageUrl, new List<ProductPriceHistoryDto>(), overridePrice: item.OverridePrice);
                 })],
-                group.Key.TypeRequired, group.Key.TypeMin, group.Key.TypeMax
+                group.Key.TypeRequired, group.Key.TypeMin, group.Key.TypeMax,
+                group.Where(item => item.IsDefault).Select(item => (Guid?)item.AddOn.Id).FirstOrDefault()
             ))
             .ToList();
 
