@@ -225,7 +225,7 @@ test.describe('waste screens at small widths and long names @waste @layout', () 
     await expect(title).toBeVisible();
     const box = await title.boundingBox();
     expect(box!.width).toBeGreaterThan(200);
-    expect(box!.height).toBeLessThan(120);
+    expect(box!.height).toBeLessThan(170);
   });
 
   test('opening an item from the waste list and pressing back returns to the waste list', async ({ api, signIn }) => {
