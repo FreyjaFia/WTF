@@ -189,7 +189,7 @@
     }
 
     @if (sortedEntries().length > 0) {
-      <div class="sticky top-0 z-10 mb-2 hidden grid-cols-12 gap-4 rounded-lg bg-surface py-3 pr-4 pl-6 lg:grid" data-testid="waste-columns">
+      <div class="sticky top-0 z-10 hidden grid-cols-12 items-start gap-4 border-b border-gray-100 bg-surface pb-5 pt-3 pr-4 pl-6 lg:grid" data-testid="waste-columns">
         <app-sort-header class="col-span-6" label="Item" align="start" [active]="sortColumn() === 'item'" [direction]="sortDirection()" (sorted)="toggleSort('item')" />
         <app-sort-header class="col-span-2" label="Recorded" align="center" [active]="sortColumn() === 'recorded'" [direction]="sortDirection()" (sorted)="toggleSort('recorded')" />
         <app-sort-header class="col-span-2" label="Quantity" align="center" [active]="sortColumn() === 'quantity'" [direction]="sortDirection()" (sorted)="toggleSort('quantity')" />

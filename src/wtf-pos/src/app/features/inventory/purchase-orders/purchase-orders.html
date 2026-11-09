@@ -178,7 +178,7 @@
         }
 
         @if (sortedOrders().length > 0) {
-          <div class="sticky top-0 z-10 mb-2 hidden grid-cols-12 gap-4 rounded-lg bg-surface py-3 pr-4 pl-6 lg:grid" data-testid="order-columns">
+          <div class="sticky top-0 z-10 hidden grid-cols-12 items-start gap-4 border-b border-gray-100 bg-surface pb-5 pt-3 pr-4 pl-6 lg:grid" data-testid="order-columns">
             <app-sort-header class="col-span-6" label="Order" align="start" [active]="sortColumn() === 'order'" [direction]="sortDirection()" (sorted)="toggleSort('order')" />
             <app-sort-header class="col-span-2" label="Expected" align="center" [active]="sortColumn() === 'expected'" [direction]="sortDirection()" (sorted)="toggleSort('expected')" />
             <app-sort-header class="col-span-2" label="Status" align="center" [active]="sortColumn() === 'status'" [direction]="sortDirection()" (sorted)="toggleSort('status')" />

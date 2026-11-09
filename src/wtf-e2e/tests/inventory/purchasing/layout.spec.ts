@@ -86,3 +86,50 @@ test.describe('purchasing pages keep their layout with long names @inventory @la
     expect(seeds.itemName.length).toBeGreaterThan(50);
   });
 });
+
+test.describe('the Purchase Orders column header stays opaque over the rows @inventory @layout', () => {
+  test('rows scrolling under the sticky header never show through its corners or the gap below it', async ({ signIn }) => {
+    const context = await (await import('@playwright/test')).request.newContext();
+    const { Api } = await import('@api/index');
+    const buy = new PurchasingApi(asRole(new Api(context).client));
+    const supplier = await buy.createSupplier(`Header ${uniqueStamp()}`);
+    const item = await buy.createItem({ name: `Header item ${uniqueStamp()}`, startingQuantity: 1 });
+    await buy.link(item.id, supplier.summary.id);
+    for (let i = 0; i < 8; i++) {
+      const order = await buy.createOrder(supplier.summary.id, [{ itemId: item.id, packs: 1 }]);
+      await buy.sendOrder(order.summary.id);
+    }
+
+    await context.dispose();
+
+    const page = await signIn('admin');
+    await page.setViewportSize({ width: 1440, height: 600 });
+    await go(page, '/inventory/purchase-orders');
+    const header = page.getByTestId('order-columns');
+    await expect(header).toBeVisible();
+    await expect(page.getByTestId('order-row').nth(7)).toBeVisible();
+
+    await header.evaluate((element) => {
+      let scroller: HTMLElement | null = element.parentElement;
+      while (scroller && scroller.scrollHeight <= scroller.clientHeight) {
+        scroller = scroller.parentElement;
+      }
+
+      scroller!.scrollTop = 200;
+    });
+
+    const leaks = await header.evaluate((element) => {
+      const box = element.getBoundingClientRect();
+      const points: Array<[string, number, number]> = [
+        ['top-left', box.left + 1, box.top + 1],
+        ['top-right', box.right - 2, box.top + 1],
+        ['bottom-left', box.left + 1, box.bottom - 2],
+        ['bottom-right', box.right - 2, box.bottom - 2],
+        ['gap below the labels', box.left + box.width / 2, box.bottom - 3],
+      ];
+      return points.filter(([, x, y]) => !element.contains(document.elementFromPoint(x, y))).map(([name]) => name);
+    });
+
+    expect(leaks, 'parts of the header that show a row through them').toEqual([]);
+  });
+});

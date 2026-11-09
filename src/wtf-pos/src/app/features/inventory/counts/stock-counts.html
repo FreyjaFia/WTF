@@ -109,7 +109,7 @@
       }
 
       @if (sortedCounts().length > 0) {
-        <div class="sticky top-0 z-10 mb-2 hidden grid-cols-12 gap-4 rounded-lg bg-surface py-3 pr-4 pl-6 lg:grid" data-testid="count-columns">
+        <div class="sticky top-0 z-10 hidden grid-cols-12 items-start gap-4 border-b border-gray-100 bg-surface pb-5 pt-3 pr-4 pl-6 lg:grid" data-testid="count-columns">
           <app-sort-header class="col-span-6" label="Count" align="start" [active]="sortColumn() === 'count'" [direction]="sortDirection()" (sorted)="toggleSort('count')" />
           <app-sort-header class="col-span-2" label="Created" align="center" [active]="sortColumn() === 'created'" [direction]="sortDirection()" (sorted)="toggleSort('created')" />
           <app-sort-header class="col-span-2" label="Progress" align="center" [active]="sortColumn() === 'progress'" [direction]="sortDirection()" (sorted)="toggleSort('progress')" />
