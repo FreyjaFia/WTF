@@ -95,6 +95,7 @@ export interface AddOnGroupDto {
   isRequired?: boolean;
   minSelect?: number;
   maxSelect?: number;
+  defaultAddOnId?: string | null;
 }
 
 export interface ProductAddOnPriceOverrideDto {

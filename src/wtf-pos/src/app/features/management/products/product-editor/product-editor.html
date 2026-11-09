@@ -552,6 +552,21 @@
                                     Reset
                                   </button>
                                 }
+                                @if (canPreSelect(group)) {
+                                  <button
+                                    type="button"
+                                    class="app-btn app-btn-xs h-7 min-h-0 px-2"
+                                    [class.app-btn-primary]="group.defaultAddOnId === addon.id"
+                                    [class.app-btn-secondary]="group.defaultAddOnId !== addon.id"
+                                    [attr.aria-pressed]="group.defaultAddOnId === addon.id"
+                                    [disabled]="isBusy()"
+                                    (click)="togglePreSelectedAddOn(group, addon.id)"
+                                  >
+                                    {{
+                                      group.defaultAddOnId === addon.id ? 'Pre-selected' : 'Pre-select'
+                                    }}
+                                  </button>
+                                }
                                 <button
                                   type="button"
                                   class="app-btn app-btn-icon-danger p-1"

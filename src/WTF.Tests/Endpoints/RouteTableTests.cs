@@ -197,6 +197,7 @@ public class RouteTableTests : IDisposable
         "PUT /api/products/{id:guid}/addon-price-overrides/{addOnId:guid} => ProductsWrite",
         "GET /api/products/{id:guid}/addons => ProductsRead",
         "POST /api/products/{id:guid}/addons => ProductsWrite",
+        "PUT /api/products/{id:guid}/addons/{addOnId:guid}/default => ProductsWrite",
         "DELETE /api/products/{id:guid}/images => ProductsWrite",
         "POST /api/products/{id:guid}/images => ProductsWrite",
         "GET /api/products/{id:guid}/price-history => ProductsRead",

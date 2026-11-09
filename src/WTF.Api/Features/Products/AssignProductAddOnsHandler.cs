@@ -110,6 +110,7 @@ public class AssignProductAddOnsHandler(WTFDbContext db) : IRequestHandler<Assig
         foreach (var link in linksToDeactivate)
         {
             link.IsActive = false;
+            link.IsDefault = false;
         }
 
         // Reactivate and update AddOnType for existing links that are requested
@@ -122,6 +123,7 @@ public class AssignProductAddOnsHandler(WTFDbContext db) : IRequestHandler<Assig
             if (link.AddOnTypeId != requestedTypeId)
             {
                 link.AddOnTypeId = requestedTypeId;
+                link.IsDefault = false;
             }
 
             link.IsActive = true;

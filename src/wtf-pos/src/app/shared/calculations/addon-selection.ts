@@ -66,3 +66,31 @@ export function ruleOfGroup(group: AddOnGroupRuleSource): AddOnTypeRule {
     maxSelect: group.maxSelect ?? 0,
   };
 }
+
+export interface PresetGroupSource extends AddOnGroupRuleSource {
+  type: number;
+  defaultAddOnId?: string | null;
+  options: readonly { id: string; isActive?: boolean }[];
+}
+
+export function presetSelections(groups: readonly PresetGroupSource[]): { type: number; optionId: string }[] {
+  const presets: { type: number; optionId: string }[] = [];
+
+  for (const group of groups) {
+    const rule = ruleOfGroup(group);
+    if (minimumSelection(rule) < 1 || !isPickOne(rule)) {
+      continue;
+    }
+
+    const offered = group.options.filter((option) => option.isActive !== false);
+    const preferred = offered.find((option) => option.id === group.defaultAddOnId);
+    const only = offered.length === 1 ? offered[0] : undefined;
+    const chosen = preferred ?? only;
+
+    if (chosen) {
+      presets.push({ type: group.type, optionId: chosen.id });
+    }
+  }
+
+  return presets;
+}

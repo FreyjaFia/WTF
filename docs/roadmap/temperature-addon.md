@@ -1,4 +1,15 @@
-## Temperature (Hot / Iced) as an add-on type [Planned, added 4 Nov 2026; Dynamic Catalog prerequisite built 6 Nov 2026]
+## Temperature (Hot / Iced) as an add-on type [First cut built on branch `temperature-addon`, 9 Nov 2026; not merged]
+
+**Built (first cut; script `tools/sql/20261118_add_temperature_addon.sql`, then `tools/dbsync.bat`).**
+
+- **Type.** The script gives every shop a `Temperature` add-on type (required, pick exactly one, sort order 0 so a line reads "Latte, Iced, Large") unless it already has one with that name. It creates no Hot or Iced products: the owner creates them as add-ons (price 0 and +10, say) and links them in the product editor, as with Size. Everything else (required rule on orders, promotions, stock Coverage, receipts, reports, customer link) already follows the type's own rules.
+- **Pre-selected option.** `ProductAddOns.IsDefault` (bit, default 0): at most one per product and type, only on a required type, cleared when the link is removed or its type changes. `PUT /api/products/{id}/addons/{addOnId}/default` (`ProductsWrite`) sets or clears it; the add-on groups of the product and of the POS catalog carry `defaultAddOnId`. Product editor: a "Pre-select" button per option in a required pick-one group with more than one option.
+- **Register.** The add-on selector pre-selects the group's default on a new item, and selects the only option of a required pick-one group; editing an item never changes its choices. `presetSelections` in `shared/calculations/addon-selection.ts`. The customer link does not pre-select (POS only, as decided).
+- **Not built yet.** Bulk-link Hot/Iced to many drinks, "any temperature" in promotions, hiding a single-option group in the selector (it shows already selected), the by-temperature report, the "Iced X" merge helper, a size x temperature recipe grid.
+- **Tests.** Handler tests for the flag (set, clear, one per type, required type only, cleared on remove or retype), the group default in `GetProductAddOns`, a Coverage case for "Hot linked, Iced not", the route table; Angular specs for `presetSelections`, the selector and the service call.
+
+Original plan:
+
 
 A drink is often sold hot or iced, and today the only ways to say so are two separate products ("Latte" and "Iced Latte") or
 a Flavor/Size trick. Two products split the sales report, the stock links and the promotions in half, and make the menu long.

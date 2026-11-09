@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using WTF.Domain.Entities;
 
 namespace WTF.Domain.Data;
@@ -1068,6 +1066,7 @@ public partial class WTFDbContext : DbContext
             entity.HasIndex(e => e.AddOnId, "IX_ProductAddOns_AddOnId");
 
             entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_ProductAddOns_IsActive");
+            entity.Property(e => e.IsDefault).HasDefaultValue(false, "DF_ProductAddOns_IsDefault");
             entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_ProductAddOns_TenantId");
 
             entity.HasOne(d => d.AddOn).WithMany(p => p.ProductAddOnAddOns)

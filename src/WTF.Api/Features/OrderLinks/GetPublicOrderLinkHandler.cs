@@ -58,7 +58,7 @@ public class GetPublicOrderLinkHandler(WTFDbContext db, IHttpContextAccessor htt
                     pair => pair.Key,
                     pair => pair.Value
                         .Select(group => new PublicAddOnGroupDto(
-                            (int)group.Type, group.DisplayName, [.. group.Options.Select(ToPublic)], group.IsRequired, group.MinSelect, group.MaxSelect))
+                            (int)group.Type, group.DisplayName, [.. group.Options.Select(ToPublic)], group.IsRequired, group.MinSelect, group.MaxSelect, group.DefaultAddOnId))
                         .ToList()),
                 deals,
                 await CatalogLookupLoader.LoadAsync(db, cancellationToken)));

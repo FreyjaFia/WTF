@@ -145,6 +145,36 @@ public class AssignProductAddOnsHandlerTests
     }
 
     [Fact]
+    public async Task Handle_DefaultOptionRemovedOrRetyped_LosesItsDefaultFlag()
+    {
+        var product = ProductSeed.NewProduct();
+        var small = ProductSeed.NewProduct(name: "Small", code: "SM", isAddOn: true);
+        var large = ProductSeed.NewProduct(name: "Large", code: "LG", isAddOn: true);
+        await ProductSeed.SeedAsync(_dbName, product, small, large,
+            ProductSeed.NewLink(product.Id, small.Id, CatalogSeed.Size, isDefault: true),
+            ProductSeed.NewLink(product.Id, large.Id, CatalogSeed.Size, isDefault: true));
+
+        await Handler().Handle(Command(product.Id, new ProductAddOnAssignmentDto(large.Id, CatalogSeed.Flavor)), CancellationToken.None);
+
+        await using var db = TestDb.Create(_dbName);
+        (await db.ProductAddOns.SingleAsync(l => l.AddOnId == small.Id)).IsDefault.ShouldBeFalse();
+        (await db.ProductAddOns.SingleAsync(l => l.AddOnId == large.Id)).IsDefault.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task Handle_DefaultOptionKeptInRequest_KeepsItsDefaultFlag()
+    {
+        var product = ProductSeed.NewProduct();
+        var small = ProductSeed.NewProduct(name: "Small", code: "SM", isAddOn: true);
+        await ProductSeed.SeedAsync(_dbName, product, small, ProductSeed.NewLink(product.Id, small.Id, CatalogSeed.Size, isDefault: true));
+
+        await Handler().Handle(Command(product.Id, new ProductAddOnAssignmentDto(small.Id, CatalogSeed.Size)), CancellationToken.None);
+
+        await using var db = TestDb.Create(_dbName);
+        (await db.ProductAddOns.SingleAsync()).IsDefault.ShouldBeTrue();
+    }
+
+    [Fact]
     public async Task Handle_EmptyRequest_DeactivatesAllLinks()
     {
         var product = ProductSeed.NewProduct();

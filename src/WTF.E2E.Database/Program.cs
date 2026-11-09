@@ -92,6 +92,7 @@ async Task CreateAsync()
             new() { Id = 3, Name = "Topping", SortOrder = 4, IsActive = true, CreatedAt = DateTime.UtcNow, TenantId = TenantDefaults.DefaultTenantId },
             new() { Id = 4, Name = "Extra", SystemKey = "extra", SortOrder = 5, IsActive = true, CreatedAt = DateTime.UtcNow, TenantId = TenantDefaults.DefaultTenantId },
             new() { Id = 5, Name = "Sauce", MaxSelect = 1, SortOrder = 3, IsActive = true, CreatedAt = DateTime.UtcNow, TenantId = TenantDefaults.DefaultTenantId },
+            new() { Id = 6, Name = "Temperature", IsRequired = true, MinSelect = 1, MaxSelect = 1, SortOrder = 0, IsActive = true, CreatedAt = DateTime.UtcNow, TenantId = TenantDefaults.DefaultTenantId },
         });
         await InsertAsync(db, Named<UserRoleEnum, UserRole>((id, n) => new UserRole { Id = id, Name = n }));
 

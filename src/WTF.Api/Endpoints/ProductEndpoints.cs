@@ -10,6 +10,8 @@ namespace WTF.Api.Endpoints;
 
 public record SetSuppliesCostRequest(decimal Amount);
 
+public record SetAddOnDefaultRequest(bool IsDefault);
+
 public static class ProductEndpoints
 {
 
@@ -188,6 +190,15 @@ public static class ProductEndpoints
                 }
 
                 var result = await sender.Send(command);
+                return result ? Results.Ok() : Results.NotFound();
+            })
+            .RequireAuthorization(AppPolicies.ProductsWrite);
+
+        // PUT /api/products/{id}/addons/{addOnId}/default - Pre-select (or clear) an option of a required add-on type
+        productGroup.MapPut("/{id:guid}/addons/{addOnId:guid}/default",
+            async (Guid id, Guid addOnId, SetAddOnDefaultRequest body, ISender sender) =>
+            {
+                var result = await sender.Send(new SetProductAddOnDefaultCommand { ProductId = id, AddOnId = addOnId, IsDefault = body.IsDefault });
                 return result ? Results.Ok() : Results.NotFound();
             })
             .RequireAuthorization(AppPolicies.ProductsWrite);

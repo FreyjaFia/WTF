@@ -75,6 +75,16 @@ describe('ProductService', () => {
     expect(products.request.body).toEqual({ addOnId: 'a1', products: [{ productId: 'p' }] });
   });
 
+  it('setProductAddOnDefault puts the flag on the link path', () => {
+    const { service, http } = setupHttpService(ProductService);
+
+    service.setProductAddOnDefault('p1', 'a1', true).subscribe();
+    const req = http.expectOne(`${base}/p1/addons/a1/default`);
+
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toEqual({ isDefault: true });
+  });
+
   it('price override endpoints use product and add-on ids in the path', () => {
     const { service, http } = setupHttpService(ProductService);
 
