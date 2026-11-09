@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Services;
 using WTF.Domain.Data;
@@ -28,8 +29,10 @@ public class SaveSubCategoryHandler(WTFDbContext db, IAuditService audit) : IReq
         }
 
         ProductSubCategory subCategory;
+        IDbContextTransaction? idTransaction = null;
         if (request.Id is null)
         {
+            idTransaction = await CatalogIdLock.AcquireAsync(db, cancellationToken);
             var nextId = (await db.ProductSubCategories.IgnoreQueryFilters().MaxAsync(s => (int?)s.Id, cancellationToken) ?? 0) + 1;
             subCategory = new ProductSubCategory { Id = nextId, IsActive = true, CreatedAt = DateTime.UtcNow };
             db.ProductSubCategories.Add(subCategory);
@@ -46,6 +49,12 @@ public class SaveSubCategoryHandler(WTFDbContext db, IAuditService audit) : IReq
         subCategory.SortOrder = request.SortOrder;
 
         await db.SaveChangesAsync(cancellationToken);
+        if (idTransaction is not null)
+        {
+            await idTransaction.CommitAsync(cancellationToken);
+            await idTransaction.DisposeAsync();
+        }
+
         await audit.LogAsync(AuditAction.CatalogSubCategorySaved, AuditEntityType.CatalogEntry, $"subcategory:{subCategory.Id}",
             newValues: new { subCategory.Id, subCategory.Name, subCategory.CategoryId, subCategory.SortOrder }, cancellationToken: cancellationToken);
 

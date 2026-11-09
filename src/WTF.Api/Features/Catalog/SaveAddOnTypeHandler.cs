@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Services;
 using WTF.Domain.Data;
@@ -34,8 +35,10 @@ public class SaveAddOnTypeHandler(WTFDbContext db, IAuditService audit) : IReque
         }
 
         AddOnType type;
+        IDbContextTransaction? idTransaction = null;
         if (request.Id is null)
         {
+            idTransaction = await CatalogIdLock.AcquireAsync(db, cancellationToken);
             var nextId = (await db.AddOnTypes.IgnoreQueryFilters().MaxAsync(t => (int?)t.Id, cancellationToken) ?? 0) + 1;
             type = new AddOnType { Id = nextId, IsActive = true, CreatedAt = DateTime.UtcNow };
             db.AddOnTypes.Add(type);
@@ -54,6 +57,12 @@ public class SaveAddOnTypeHandler(WTFDbContext db, IAuditService audit) : IReque
         type.SortOrder = request.SortOrder;
 
         await db.SaveChangesAsync(cancellationToken);
+        if (idTransaction is not null)
+        {
+            await idTransaction.CommitAsync(cancellationToken);
+            await idTransaction.DisposeAsync();
+        }
+
         await audit.LogAsync(AuditAction.CatalogAddOnTypeSaved, AuditEntityType.CatalogEntry, $"addontype:{type.Id}",
             newValues: new { type.Id, type.Name, type.IsRequired, type.MinSelect, type.MaxSelect, type.SortOrder }, cancellationToken: cancellationToken);
 
