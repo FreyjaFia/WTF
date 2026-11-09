@@ -78,7 +78,7 @@ export class UserEditorComponent implements OnInit {
     { label: 'Item Manager', value: UserRoleEnum.ItemManager },
     { label: 'Stock Manager', value: UserRoleEnum.StockManager },
   ];
-  protected userRoleOptions: UserRoleOption[] = [...this.allUserRoleOptions];
+  protected readonly userRoleOptions = signal<UserRoleOption[]>([...this.allUserRoleOptions]);
   protected readonly isOwnAccount = signal(false);
 
   // Image upload signals
@@ -135,8 +135,8 @@ export class UserEditorComponent implements OnInit {
 
   public ngOnInit(): void {
     if (!this.authService.isOwner()) {
-      this.userRoleOptions = this.allUserRoleOptions.filter(
-        (role) => role.value !== UserRoleEnum.Owner,
+      this.userRoleOptions.set(
+        this.allUserRoleOptions.filter((role) => role.value !== UserRoleEnum.Owner),
       );
     }
 
@@ -677,14 +677,14 @@ export class UserEditorComponent implements OnInit {
 
   protected selectedRoleDescription(): string | null {
     const selected = this.userForm.controls.roleId.value;
-    return this.userRoleOptions.find((role) => role.value === selected)?.description ?? null;
+    return this.userRoleOptions().find((role) => role.value === selected)?.description ?? null;
   }
 
   private loadRoleOptions(): void {
     this.roleService.getRoles().subscribe({
       next: (roles) => {
         const currentRoleId = this.userForm.controls.roleId.value;
-        this.userRoleOptions = roles
+        const options = roles
           .filter(
             (role) =>
               role.id === currentRoleId ||
@@ -696,6 +696,7 @@ export class UserEditorComponent implements OnInit {
             value: role.id,
             description: role.description,
           }));
+        this.userRoleOptions.set(options);
       },
       error: () => {
         // Keep the built-in list; the server still refuses a role you may not give.

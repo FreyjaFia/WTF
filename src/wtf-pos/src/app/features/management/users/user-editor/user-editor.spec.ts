@@ -124,7 +124,7 @@ describe('UserEditorComponent', () => {
 
     it('lists custom roles next to the built-in ones, with their descriptions', () => {
       setup({ owner: true, roles: of(roles) });
-      expect(c.userRoleOptions.map((r: { label: string }) => r.label)).toEqual([
+      expect(c.userRoleOptions().map((r: { label: string }) => r.label)).toEqual([
         'Cashier',
         'Owner',
         'Shift Lead',
@@ -137,12 +137,12 @@ describe('UserEditorComponent', () => {
 
     it('only offers roles whose permissions the signed-in user holds', () => {
       setup({ roles: of(roles), can: (key) => key !== 'audit.read' });
-      expect(c.userRoleOptions.map((r: { value: number }) => r.value)).toEqual([2, 100]);
+      expect(c.userRoleOptions().map((r: { value: number }) => r.value)).toEqual([2, 100]);
     });
 
     it('keeps the built-in list when the roles cannot be loaded', () => {
       setup();
-      expect(c.userRoleOptions.length).toBe(5);
+      expect(c.userRoleOptions().length).toBe(5);
     });
 
     it('does not let you change your own role', () => {
@@ -171,15 +171,15 @@ describe('UserEditorComponent', () => {
 
     it('hides the Owner role from non owners', () => {
       setup();
-      expect(c.userRoleOptions.map((r: { value: number }) => r.value)).not.toContain(
+      expect(c.userRoleOptions().map((r: { value: number }) => r.value)).not.toContain(
         UserRoleEnum.Owner,
       );
-      expect(c.userRoleOptions.length).toBe(5);
+      expect(c.userRoleOptions().length).toBe(5);
     });
 
     it('offers the Owner role to owners', () => {
       setup({ owner: true });
-      expect(c.userRoleOptions.length).toBe(6);
+      expect(c.userRoleOptions().length).toBe(6);
     });
 
     it('requires password and role, and reports field errors', () => {

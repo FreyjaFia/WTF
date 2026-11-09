@@ -224,8 +224,9 @@ export class RoleEditorComponent implements OnInit {
   }
 
   private loadPlan(): Observable<boolean> {
-    return this.roleService.getPermissionPlans().pipe(
-      tap((plans) => this.planByKey.set(new Map(plans.map((p) => [p.key, p])))),
+    // The plan can change while the app is open, so the editor refreshes what the person may give along with the plan rows.
+    return forkJoin([this.roleService.getPermissionPlans(), this.authService.loadPermissions()]).pipe(
+      tap(([plans]) => this.planByKey.set(new Map(plans.map((p) => [p.key, p])))),
       map(() => true),
       // Without the plan details every row simply stays available; the server still refuses what the plan lacks.
       catchError(() => {

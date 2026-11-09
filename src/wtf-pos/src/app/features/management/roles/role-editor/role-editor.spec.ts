@@ -43,7 +43,10 @@ describe('RoleEditorComponent', () => {
         provideRouter([]),
         { provide: RoleService, useValue: service },
         { provide: AlertService, useValue: alert },
-        { provide: AuthService, useValue: { can: vi.fn(opts.held ?? (() => true)) } },
+        {
+          provide: AuthService,
+          useValue: { can: vi.fn(opts.held ?? (() => true)), loadPermissions: vi.fn(() => of(true)) },
+        },
         { provide: ModalStackService, useValue: { push: vi.fn(() => 1), remove: vi.fn() } },
         { provide: ActivatedRoute, useValue: stubRoute(opts.id ? { id: opts.id } : {}) },
       ],

@@ -213,7 +213,7 @@
                       [class.select-error]="hasError('roleId')"
                     >
                       <option [ngValue]="null">Select role</option>
-                      @for (role of userRoleOptions; track role.value) {
+                      @for (role of userRoleOptions(); track role.value) {
                         <option [ngValue]="role.value">{{ role.label }}</option>
                       }
                     </select>
