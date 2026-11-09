@@ -1,0 +1,63 @@
+import { expect, test } from '@fixtures/index';
+import { VIEWPORTS, measureOverflow, overflowProblem, watch } from '@utils/layout';
+import { go } from '@utils/navigation';
+
+test.describe('Management hub @management @layout', () => {
+  test('the owner sees every card in five groups, and a card opens its screen', async ({ signIn }) => {
+    const page = await signIn('owner');
+
+    await go(page, '/management');
+    const hub = page.getByTestId('management-hub');
+    await expect(hub).toBeVisible();
+    await expect(hub.locator('h2')).toHaveText(['Sell', 'Money', 'People', 'Settings', 'System']);
+    await expect(page.locator('[role="tablist"]')).toHaveCount(0);
+
+    await page.getByTestId('management-card-roles').click();
+    await expect(page).toHaveURL(/\/management\/roles$/);
+  });
+
+  test('a stock manager sees only the Setup card', async ({ signIn }) => {
+    const page = await signIn('stockmgr');
+
+    await go(page, '/management');
+    await expect(page.locator('[data-testid^="management-card-"]')).toHaveCount(1);
+    await expect(page.getByTestId('management-card-setup')).toBeVisible();
+  });
+
+  test('an admin does not get the owner-only cards', async ({ signIn }) => {
+    const page = await signIn('admin');
+
+    await go(page, '/management');
+    await expect(page.getByTestId('management-card-products')).toBeVisible();
+    await expect(page.getByTestId('management-card-audit-logs')).toHaveCount(0);
+    await expect(page.getByTestId('management-card-schema-scripts')).toHaveCount(0);
+  });
+
+  for (const viewport of VIEWPORTS) {
+    test(`the hub and the way back work at ${viewport.name}`, async ({ signIn }) => {
+      const page = await signIn('owner');
+      const watcher = watch(page);
+      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+
+      await go(page, '/management');
+      await expect(page.getByTestId('management-card-products')).toBeVisible();
+      expect.soft(overflowProblem(await measureOverflow(page)), `${viewport.name}: hub overflow`).toBeNull();
+
+      await page.getByTestId('management-card-products').click();
+      await expect(page).toHaveURL(/\/management\/products$/);
+      expect.soft(overflowProblem(await measureOverflow(page)), `${viewport.name}: products overflow`).toBeNull();
+
+      const back = page.getByTestId('management-back');
+      if (viewport.width < 640) {
+        await expect(back).toBeVisible();
+        await back.click();
+        await expect(page).toHaveURL(/\/management$/);
+      } else {
+        await expect(back).toBeHidden();
+      }
+
+      expect.soft(watcher.pageErrors, `${viewport.name}: page errors`).toEqual([]);
+      expect.soft(watcher.consoleErrors, `${viewport.name}: console errors`).toEqual([]);
+    });
+  }
+});

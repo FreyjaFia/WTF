@@ -2,34 +2,14 @@ import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { AuthService } from '@core/services';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { ManagementComponent } from './management';
 
 @Component({ selector: 'app-stub-x', template: 'stub page' })
 class Stub {}
 
-const ALL = [
-  'canReadProducts',
-  'canReadCustomers',
-  'canReadUsers',
-  'canManageRoles',
-  'canReadPromotions',
-  'canAccessReports',
-  'canAccessAuditLogs',
-  'canAccessSchemaScriptHistory',
-  'canReadExpenses',
-  'canManageWasteReasons',
-  'canManageSubscription',
-  'canManageBrand',
-  'canOpenSetup',
-] as const;
-
 describe('ManagementComponent', () => {
-  let perms: Record<(typeof ALL)[number], boolean>;
-
   async function setup(url: string) {
-    const auth = Object.fromEntries(ALL.map((k) => [k, () => perms[k]]));
     TestBed.configureTestingModule({
       providers: [
         provideRouter([
@@ -37,139 +17,46 @@ describe('ManagementComponent', () => {
             path: 'management',
             component: ManagementComponent,
             children: [
+              { path: '', component: Stub, pathMatch: 'full' },
               { path: 'products', component: Stub },
-              { path: 'customers', component: Stub },
-              { path: 'users', component: Stub },
-              { path: 'roles', component: Stub },
-              { path: 'promotions', component: Stub },
-              { path: 'reports', component: Stub },
-              { path: 'expenses', component: Stub },
+              { path: 'products/edit/:id', component: Stub },
+              { path: 'setup', component: Stub },
               { path: 'setup/categories', component: Stub },
-              { path: 'shop/branding', component: Stub },
-              { path: 'audit-logs', component: Stub },
-              { path: 'schema-scripts', component: Stub },
             ],
           },
         ]),
-        { provide: AuthService, useValue: auth },
       ],
     });
     const harness = await RouterTestingHarness.create(url);
     return { harness, el: harness.routeNativeElement as HTMLElement };
   }
 
-  const tabs = (el: HTMLElement): HTMLAnchorElement[] =>
-    Array.from(el.querySelectorAll<HTMLAnchorElement>('a[role="tab"]'));
-  const routes = (el: HTMLElement): (string | null)[] =>
-    tabs(el).map((t) => t.getAttribute('data-management-tab'));
+  const back = (el: HTMLElement): HTMLAnchorElement | null =>
+    el.querySelector<HTMLAnchorElement>('[data-testid="management-back"]');
 
-  beforeEach(() => {
-    perms = Object.fromEntries(ALL.map((k) => [k, true])) as typeof perms;
-    vi.useFakeTimers();
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
-  it('shows all nine tabs in order for a fully privileged user', async () => {
-    const { el } = await setup('/management/products');
-    expect(routes(el)).toEqual([
-      'products',
-      'promotions',
-      'customers',
-      'reports',
-      'expenses',
-      'users',
-      'roles',
-      'setup',
-      'shop',
-      'audit-logs',
-      'schema-scripts',
-    ]);
-    expect(tabs(el)[0].getAttribute('href')).toBe('/management/products');
-    expect(tabs(el)[10].getAttribute('href')).toBe('/management/schema-scripts');
-  });
-
-  it('hides audit and schema tabs for non-owners', async () => {
-    perms.canAccessAuditLogs = false;
-    perms.canAccessSchemaScriptHistory = false;
-    perms.canReadExpenses = false;
-    perms.canManageWasteReasons = false;
-    perms.canManageSubscription = false;
-    perms.canManageBrand = false;
-    perms.canManageRoles = false;
-    const { el } = await setup('/management/products');
-    expect(routes(el)).toEqual([
-      'products',
-      'promotions',
-      'customers',
-      'reports',
-      'users',
-      'setup',
-    ]);
-  });
-
-  it('hides each tab independently according to its permission', async () => {
-    perms.canReadCustomers = false;
-    perms.canReadPromotions = false;
-    const { el } = await setup('/management/products');
-    expect(routes(el)).toEqual([
-      'products',
-      'reports',
-      'expenses',
-      'users',
-      'roles',
-      'setup',
-      'shop',
-      'audit-logs',
-      'schema-scripts',
-    ]);
-  });
-
-  it('renders nothing but the outlet without permissions', async () => {
-    for (const key of ALL) {
-      perms[key] = false;
-    }
-    const { el } = await setup('/management/products');
-    expect(tabs(el)).toHaveLength(0);
+  it('has no tab bar and no way back on the hub itself', async () => {
+    const { el } = await setup('/management');
+    expect(el.querySelector('[role="tablist"]')).toBeNull();
+    expect(back(el)).toBeNull();
     expect(el.textContent).toContain('stub page');
   });
 
-  it('marks the active tab and follows navigation', async () => {
-    const { harness, el } = await setup('/management/reports');
-    const selected = (): (string | null)[] =>
-      tabs(el)
-        .filter((t) => t.getAttribute('aria-selected') === 'true')
-        .map((t) => t.getAttribute('data-management-tab'));
-    expect(selected()).toEqual(['reports']);
-    await harness.navigateByUrl('/management/users');
-    harness.detectChanges();
-    expect(selected()).toEqual(['users']);
-  });
-
-  it('uses descriptive aria labels', async () => {
+  it('offers the way back to the hub on the top screen of a section', async () => {
     const { el } = await setup('/management/products');
-    expect(tabs(el).map((t) => t.getAttribute('aria-label'))).toEqual([
-      'Products',
-      'Promotions',
-      'Customers',
-      'Reports',
-      'Expenses',
-      'Users',
-      'Roles',
-      'Setup lists',
-      'Shop settings',
-      'Audit Logs',
-      'Schema Scripts',
-    ]);
+    expect(back(el)?.getAttribute('href')).toBe('/management');
+    expect(back(el)?.className).toContain('sm:hidden');
   });
 
-  it('scrolls the active tab into view after routing', async () => {
-    const { el } = await setup('/management/users');
-    const scroll = vi.fn();
-    tabs(el)[5].scrollIntoView = scroll;
-    vi.runAllTimers();
-    expect(scroll).toHaveBeenCalledWith({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  it('leaves deeper pages to their own back arrow and follows navigation', async () => {
+    const { harness, el } = await setup('/management/products/edit/5');
+    expect(back(el)).toBeNull();
+
+    await harness.navigateByUrl('/management/setup');
+    harness.detectChanges();
+    expect(back(el)).not.toBeNull();
+
+    await harness.navigateByUrl('/management/setup/categories');
+    harness.detectChanges();
+    expect(back(el)).toBeNull();
   });
 });

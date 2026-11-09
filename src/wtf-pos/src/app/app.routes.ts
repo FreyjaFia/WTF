@@ -1,11 +1,9 @@
-import { inject } from '@angular/core';
 import { Routes } from '@angular/router';
 import { authGuard } from '@core/guards/auth.guard';
 import { loginGuard } from '@core/guards/login.guard';
 import { platformGuard } from '@core/guards/platform.guard';
 import { roleGuard } from '@core/guards/role.guard';
 import { unsavedChangesGuard } from '@core/guards/unsaved-changes.guard';
-import { AuthService } from '@core/services';
 import { Dashboard } from '@features/dashboard/dashboard';
 import { InventoryComponent } from '@features/inventory/inventory';
 import { ItemDetailsComponent } from '@features/inventory/items/item-details/item-details';
@@ -31,6 +29,7 @@ import { CustomerEditorComponent } from '@features/management/customers/customer
 import { CustomerListComponent } from '@features/management/customers/customer-list/customer-list';
 import { CustomersComponent } from '@features/management/customers/customers';
 import { ManagementComponent } from '@features/management/management';
+import { ManagementHubComponent } from '@features/management/hub/management-hub';
 import { ProductDetailsComponent } from '@features/management/products/product-details/product-details';
 import { ProductEditorComponent } from '@features/management/products/product-editor/product-editor';
 import { ProductListComponent } from '@features/management/products/product-list/product-list';
@@ -292,7 +291,7 @@ export const routes: Routes = [
         children: [
           {
             path: '',
-            redirectTo: () => (inject(AuthService).canReadProducts() ? 'products' : 'setup'),
+            component: ManagementHubComponent,
             pathMatch: 'full',
           },
           {

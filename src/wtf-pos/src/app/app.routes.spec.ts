@@ -1,10 +1,9 @@
-import { TestBed } from '@angular/core/testing';
 import { Route } from '@angular/router';
 import { authGuard } from '@core/guards/auth.guard';
 import { loginGuard } from '@core/guards/login.guard';
 import { roleGuard } from '@core/guards/role.guard';
 import { unsavedChangesGuard } from '@core/guards/unsaved-changes.guard';
-import { AuthService } from '@core/services';
+import { ManagementHubComponent } from '@features/management/hub/management-hub';
 import { NotFoundComponent } from '@features/not-found/not-found';
 import { PublicOrderComponent } from '@features/public-order/public-order';
 import { AppRoles } from '@shared/constants/app-roles';
@@ -204,18 +203,11 @@ describe('app.routes', () => {
     expectRedirect('inventory', 'items');
   });
 
-  it('sends the Management root to Products, or to Setup for a role without product access', () => {
-    const entry = flat.find((f) => f.fullPath === 'management' && f.route.redirectTo !== undefined);
-    const redirect = entry?.route.redirectTo as () => string;
-    const resolve = (canReadProducts: boolean): string => {
-      TestBed.configureTestingModule({
-        providers: [{ provide: AuthService, useValue: { canReadProducts: () => canReadProducts } }],
-      });
-      return TestBed.runInInjectionContext(redirect);
-    };
-
-    expect(resolve(true)).toBe('products');
-    TestBed.resetTestingModule();
-    expect(resolve(false)).toBe('setup');
+  it('opens the Management hub at the Management root', () => {
+    const entry = flat.find(
+      (f) => f.fullPath === 'management' && f.route.component === ManagementHubComponent,
+    );
+    expect(entry?.route.pathMatch).toBe('full');
+    expect(entry?.route.redirectTo).toBeUndefined();
   });
 });

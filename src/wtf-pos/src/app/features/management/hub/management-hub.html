@@ -1,0 +1,25 @@
+<div class="flex h-full min-h-0 flex-col overflow-y-auto pt-4 md:pt-0" data-testid="management-hub">
+  <div class="mb-4 flex flex-col gap-1 sm:mb-6">
+    <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Management</h1>
+    <p class="text-xs text-gray-500 sm:text-sm">Run the shop. Pick one to open it.</p>
+  </div>
+
+  @for (group of groups(); track group.name) {
+    <h2 class="mt-2 text-sm font-semibold tracking-wider text-gray-500 uppercase">
+      {{ group.name }}
+    </h2>
+    <p class="mb-2 text-xs text-gray-400">{{ group.description }}</p>
+    <div class="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      @for (card of group.cards; track card.id) {
+        <a
+          [routerLink]="card.route"
+          class="bg-surface flex min-w-0 flex-col gap-1 rounded-xl border border-gray-100 p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
+          [attr.data-testid]="'management-card-' + card.id"
+        >
+          <span class="truncate text-base font-semibold text-gray-900">{{ card.label }}</span>
+          <span class="text-sm text-gray-500">{{ card.description }}</span>
+        </a>
+      }
+    </div>
+  }
+</div>

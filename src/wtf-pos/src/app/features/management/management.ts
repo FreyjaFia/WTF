@@ -1,21 +1,8 @@
-import { Component, effect, inject } from '@angular/core';
-import {
-  IsActiveMatchOptions,
-  Router,
-  isActive as routerIsActive,
-  RouterLink,
-  RouterOutlet,
-} from '@angular/router';
-import { AuthService } from '@core/services';
+import { Component, computed, inject } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { AppRoutes } from '@shared/constants/app-routes';
-
-interface ManagementTab {
-  label: string;
-  route: string;
-  path: string;
-  ariaLabel: string;
-  canShow?: () => boolean;
-}
+import { filter, map } from 'rxjs';
 
 @Component({
   selector: 'app-management',
@@ -24,170 +11,21 @@ interface ManagementTab {
   host: { class: 'flex-1 min-h-0' },
 })
 export class ManagementComponent {
-  private static readonly activeMatchOptions: IsActiveMatchOptions = {
-    paths: 'subset',
-    queryParams: 'ignored',
-    matrixParams: 'ignored',
-    fragment: 'ignored',
-  };
-
   private readonly router = inject(Router);
-  protected readonly authService = inject(AuthService);
-  protected readonly managementTabs: readonly ManagementTab[] = [
-    {
-      label: 'Products',
-      route: 'products',
-      path: AppRoutes.ManagementProducts,
-      ariaLabel: 'Products',
-      canShow: () => this.canReadProducts(),
-    },
-    {
-      label: 'Promos',
-      route: 'promotions',
-      path: AppRoutes.ManagementPromotions,
-      ariaLabel: 'Promotions',
-      canShow: () => this.canReadPromotions(),
-    },
-    {
-      label: 'Customers',
-      route: 'customers',
-      path: AppRoutes.ManagementCustomers,
-      ariaLabel: 'Customers',
-      canShow: () => this.canReadCustomers(),
-    },
-    {
-      label: 'Reports',
-      route: 'reports',
-      path: AppRoutes.ManagementReports,
-      ariaLabel: 'Reports',
-      canShow: () => this.canAccessReports(),
-    },
-    {
-      label: 'Expenses',
-      route: 'expenses',
-      path: AppRoutes.ManagementExpenses,
-      ariaLabel: 'Expenses',
-      canShow: () => this.authService.canReadExpenses(),
-    },
-    {
-      label: 'Users',
-      route: 'users',
-      path: AppRoutes.ManagementUsers,
-      ariaLabel: 'Users',
-      canShow: () => this.canReadUsers(),
-    },
-    {
-      label: 'Roles',
-      route: 'roles',
-      path: AppRoutes.ManagementRoles,
-      ariaLabel: 'Roles',
-      canShow: () => this.authService.canManageRoles(),
-    },
-    {
-      label: 'Setup',
-      route: 'setup',
-      path: AppRoutes.ManagementSetup,
-      ariaLabel: 'Setup lists',
-      canShow: () => this.authService.canOpenSetup(),
-    },
-    {
-      label: 'Shop',
-      route: 'shop',
-      path: AppRoutes.ManagementShop,
-      ariaLabel: 'Shop settings',
-      canShow: () => this.authService.canManageBrand() || this.authService.canManageSubscription(),
-    },
-    {
-      label: 'Audit',
-      route: 'audit-logs',
-      path: AppRoutes.ManagementAuditLogs,
-      ariaLabel: 'Audit Logs',
-      canShow: () => this.canAccessAuditLogs(),
-    },
-    {
-      label: 'Schema',
-      route: 'schema-scripts',
-      path: AppRoutes.ManagementSchemaScripts,
-      ariaLabel: 'Schema Scripts',
-      canShow: () => this.canAccessSchemaScriptHistory(),
-    },
-  ];
-  private readonly activeSignals = new Map<string, ReturnType<typeof routerIsActive>>();
 
-  public constructor() {
-    effect(() => {
-      const activeRoute = this.getActiveManagementRoute();
-      if (activeRoute) {
-        this.scrollManagementTabIntoView(activeRoute);
-      }
-    });
-  }
+  protected readonly hubRoute = AppRoutes.ManagementRoot;
 
-  protected isActive(route: string): boolean {
-    let routeActiveSignal = this.activeSignals.get(route);
-    if (!routeActiveSignal) {
-      const routeTree = this.router.createUrlTree([AppRoutes.ManagementRoot, route]);
-      routeActiveSignal = routerIsActive(
-        routeTree,
-        this.router,
-        ManagementComponent.activeMatchOptions,
-      );
-      this.activeSignals.set(route, routeActiveSignal);
-    }
+  private readonly currentUrl = toSignal(
+    this.router.events.pipe(
+      filter((event) => event instanceof NavigationEnd),
+      map(() => this.router.url),
+    ),
+    { initialValue: this.router.url },
+  );
 
-    return routeActiveSignal();
-  }
-
-  protected canReadCustomers(): boolean {
-    return this.authService.canReadCustomers();
-  }
-
-  protected canReadProducts(): boolean {
-    return this.authService.canReadProducts();
-  }
-
-  protected canReadUsers(): boolean {
-    return this.authService.canReadUsers();
-  }
-
-  protected canReadPromotions(): boolean {
-    return this.authService.canReadPromotions();
-  }
-
-  protected canAccessAuditLogs(): boolean {
-    return this.authService.canAccessAuditLogs();
-  }
-
-  protected canAccessReports(): boolean {
-    return this.authService.canAccessReports();
-  }
-
-  protected canAccessSchemaScriptHistory(): boolean {
-    return this.authService.canAccessSchemaScriptHistory();
-  }
-
-  protected scrollManagementTabIntoView(route: string): void {
-    if (typeof window === 'undefined') {
-      return;
-    }
-
-    window.setTimeout(() => {
-      const tab = document.querySelector(`[data-management-tab="${route}"]`);
-      if (!(tab instanceof HTMLElement)) {
-        return;
-      }
-
-      tab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-    });
-  }
-
-  private getActiveManagementRoute(): string | null {
-    for (const tab of this.managementTabs) {
-      if (this.isActive(tab.route)) {
-        return tab.route;
-      }
-    }
-
-    return null;
-  }
+  // Only the top screen of a section gets the way back: deeper pages (editors, details, a Setup list) bring their own back arrow.
+  protected readonly showBackToHub = computed(() => {
+    const path = this.currentUrl().split(/[?#]/)[0].split('/').filter(Boolean);
+    return path.length === 2 && path[0] === 'management';
+  });
 }

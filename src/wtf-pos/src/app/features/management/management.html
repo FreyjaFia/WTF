@@ -1,37 +1,14 @@
-<div class="flex h-full w-full flex-col rounded-t-2xl bg-surface sm:-mt-4 md:mt-0 lg:flex-row">
-  <!-- Mobile Navigation -->
-  <div class="app-page-nav flex shrink-0 flex-col bg-surface sm:hidden">
-    <h2 class="mb-3 text-xl font-bold text-gray-900">Management</h2>
-    <nav
-      role="tablist"
-      class="flex w-full items-end gap-4 overflow-x-auto border-b border-gray-200 pb-2 text-sm [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      aria-label="Management tabs"
+<div class="flex h-full w-full flex-col rounded-t-2xl bg-surface sm:-mt-4 md:mt-0">
+  @if (showBackToHub()) {
+    <a
+      [routerLink]="hubRoute"
+      class="app-page-nav flex shrink-0 items-center gap-1 text-sm font-semibold text-gray-600 sm:hidden"
+      data-testid="management-back"
     >
-      @for (tab of managementTabs; track tab.route) {
-        @if (!tab.canShow || tab.canShow()) {
-          <a
-            [routerLink]="tab.path"
-            role="tab"
-            [attr.data-management-tab]="tab.route"
-            class="relative flex shrink-0 rounded-md px-2 py-1 font-bold text-gray-500 transition-colors"
-            [class.text-gray-900]="isActive(tab.route)"
-            [attr.aria-selected]="isActive(tab.route)"
-            [attr.aria-label]="tab.ariaLabel"
-            (click)="scrollManagementTabIntoView(tab.route)"
-          >
-            <span class="relative"> {{ tab.label }} </span>
-            <span
-              class="absolute right-2 -bottom-2 left-2 h-0.5 rounded-full bg-gray-700 transition-opacity"
-              [class.opacity-100]="isActive(tab.route)"
-              [class.opacity-0]="!isActive(tab.route)"
-            ></span>
-          </a>
-        }
-      }
-    </nav>
-  </div>
+      <span aria-hidden="true">&larr;</span> Management
+    </a>
+  }
 
-  <!-- Content Area -->
   <div class="flex h-full min-h-0 min-w-0 flex-1 flex-col">
     <router-outlet />
   </div>
