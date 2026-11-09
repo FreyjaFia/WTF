@@ -66,6 +66,22 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     catchError((error: HttpErrorResponse) => {
       // If we get a 401 Unauthorized error and haven't already tried refreshing
       if (error.status === 401 && !req.headers.has('X-Refresh-Attempted')) {
+        const sentToken = authReq.headers.get('Authorization')?.replace(/^Bearer /i, '') ?? null;
+        const currentToken = auth.getToken();
+
+        // Another request already rotated the tokens while this one was in flight; a second refresh would reuse a
+        // spent refresh token and can revoke the session, so just retry with the current token.
+        if (sentToken && currentToken && sentToken !== currentToken) {
+          return next(
+            req.clone({
+              setHeaders: {
+                Authorization: `Bearer ${currentToken}`,
+                'X-Refresh-Attempted': 'true',
+              },
+            }),
+          );
+        }
+
         // Try to refresh the token
         return auth.refreshToken().pipe(
           catchError((refreshError: unknown) => {

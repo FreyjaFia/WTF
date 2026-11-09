@@ -125,7 +125,7 @@ describe('authInterceptor', () => {
   });
 
   it('refreshes on 401 and retries once with the new token', () => {
-    auth.getToken.mockReturnValueOnce('old').mockReturnValue('new');
+    auth.getToken.mockReturnValueOnce('old').mockReturnValueOnce('old').mockReturnValue('new');
     auth.refreshToken.mockReturnValue(of({}));
     const results: unknown[] = [];
 
@@ -134,6 +134,21 @@ describe('authInterceptor', () => {
 
     const retry = ctrl.expectOne('/api/orders');
     expect(retry.request.headers.get('Authorization')).toBe('Bearer new');
+    expect(retry.request.headers.get('X-Refresh-Attempted')).toBe('true');
+    retry.flush({ ok: true });
+    expect(results).toEqual([{ ok: true }]);
+  });
+
+  it('retries with the current token without refreshing when the token changed while in flight', () => {
+    auth.getToken.mockReturnValueOnce('old').mockReturnValue('rotated');
+    const results: unknown[] = [];
+
+    http.get('/api/orders').subscribe((r) => results.push(r));
+    ctrl.expectOne('/api/orders').flush('', { status: 401, statusText: 'Unauthorized' });
+
+    const retry = ctrl.expectOne('/api/orders');
+    expect(auth.refreshToken).not.toHaveBeenCalled();
+    expect(retry.request.headers.get('Authorization')).toBe('Bearer rotated');
     expect(retry.request.headers.get('X-Refresh-Attempted')).toBe('true');
     retry.flush({ ok: true });
     expect(results).toEqual([{ ok: true }]);
