@@ -8,6 +8,7 @@ import {
   PermissionKey,
   Permissions,
   SetupPermissions,
+  keepReadPermissions,
   SystemRolePermissions,
 } from '@shared/permissions';
 import { LoginDto, MeDto } from '@shared/models';
@@ -23,11 +24,31 @@ import {
 
 const PERMISSIONS_STORAGE_KEY = 'permissions';
 
-function readStoredPermissions(): ReadonlySet<PermissionKey> | null {
+// Stored with the session (like the subscription lease) so the POS keeps working offline. It belongs to the person
+// whose token it was fetched with: a list that names another person is never trusted.
+interface StoredPermissions {
+  owner: string;
+  keys: PermissionKey[];
+  savedAt: string;
+}
+
+function readStoredPermissions(owner: string | null): ReadonlySet<PermissionKey> | null {
   try {
     const raw = localStorage.getItem(PERMISSIONS_STORAGE_KEY);
     const parsed: unknown = raw ? JSON.parse(raw) : null;
-    return Array.isArray(parsed) ? new Set(parsed as PermissionKey[]) : null;
+
+    if (Array.isArray(parsed)) {
+      // Saved by an earlier version, before lists were tied to a person.
+      return new Set(parsed as PermissionKey[]);
+    }
+
+    const stored = parsed as Partial<StoredPermissions> | null;
+
+    if (stored && Array.isArray(stored.keys) && owner !== null && stored.owner === owner) {
+      return new Set(stored.keys);
+    }
+
+    return null;
   } catch {
     return null;
   }
@@ -56,15 +77,18 @@ export class AuthService {
   private readonly meRefreshSubject = new Subject<void>();
   private readonly tokenRefreshedSubject = new Subject<void>();
   private refreshRequest$: Observable<boolean> | null = null;
-  private readonly serverPermissions = signal<ReadonlySet<PermissionKey> | null>(readStoredPermissions());
+  private readonly serverPermissions = signal<ReadonlySet<PermissionKey> | null>(null);
   // 0 until the server's permission list is known (stored from a past visit, or just loaded); grows with every change.
-  public readonly permissionsVersion = signal(this.serverPermissions() ? 1 : 0);
+  public readonly permissionsVersion = signal(0);
   public readonly isLoggedIn$ = this._isLoggedIn.asObservable();
   public readonly roles$ = this.rolesSubject.asObservable();
   public readonly meRefresh$ = this.meRefreshSubject.asObservable();
   public readonly tokenRefreshed$ = this.tokenRefreshedSubject.asObservable();
 
   constructor() {
+    const stored = readStoredPermissions(this.permissionOwner());
+    this.serverPermissions.set(stored);
+    this.permissionsVersion.set(stored ? 1 : 0);
     this.syncRolesFromToken();
   }
 
@@ -532,7 +556,11 @@ export class AuthService {
         this.serverPermissions.set(new Set(keys as PermissionKey[]));
         this.permissionsVersion.update((v) => v + 1);
         try {
-          localStorage.setItem(PERMISSIONS_STORAGE_KEY, JSON.stringify(keys));
+          const owner = this.permissionOwner();
+          const stored: StoredPermissions | string[] = owner
+            ? { owner, keys: keys as PermissionKey[], savedAt: new Date().toISOString() }
+            : keys;
+          localStorage.setItem(PERMISSIONS_STORAGE_KEY, JSON.stringify(stored));
         } catch {
           // Storage can be full or blocked; the list still works for this session.
         }
@@ -613,7 +641,26 @@ export class AuthService {
       }
     }
 
-    return held;
+    return this.isReadOnlySignInAs() ? new Set(keepReadPermissions(held)) : held;
+  }
+
+  private permissionOwner(): string | null {
+    const token = this.getToken();
+    const decoded = token ? this.decodeToken(token) : null;
+    const subject = decoded?.['sub'];
+
+    if (typeof subject !== 'string' || !subject) {
+      return null;
+    }
+
+    return decoded?.['impersonated_by'] ? `${subject}|signed-in-as` : subject;
+  }
+
+  private isReadOnlySignInAs(): boolean {
+    const token = this.getToken();
+    const decoded = token ? this.decodeToken(token) : null;
+
+    return !!decoded?.['impersonated_by'] && decoded['impersonation_read_only'] !== '0';
   }
 
   private hasRole(role: AppRole, currentRoleNames: readonly string[] = this.rolesSubject.value): boolean {

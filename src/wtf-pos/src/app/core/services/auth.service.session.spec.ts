@@ -24,10 +24,13 @@ describe('AuthService session', () => {
   const base = `${environment.apiUrl}/auth`;
   let http: HttpTestingController;
 
-  function create(storedToken?: string): AuthService {
+  function create(storedToken?: string, storedPermissions?: unknown): AuthService {
     localStorage.clear();
     if (storedToken) {
       localStorage.setItem('token', storedToken);
+    }
+    if (storedPermissions !== undefined) {
+      localStorage.setItem('permissions', JSON.stringify(storedPermissions));
     }
     TestBed.configureTestingModule({
       providers: [provideHttpClient(), provideHttpClientTesting()],
@@ -73,6 +76,83 @@ describe('AuthService session', () => {
 
       auth.logout();
       expect(localStorage.getItem('permissions')).toBeNull();
+    });
+  });
+
+  describe('offline permission cache', () => {
+    const customToken = makeToken({ exp: nowSeconds() + 3600, sub: 'user-1', role: 'Barista' });
+
+    it('saves the list with the person it belongs to', () => {
+      const auth = create(customToken);
+      auth.loadPermissions().subscribe();
+      http.expectOne(`${base}/permissions`).flush(['orders.read', 'orders.write']);
+
+      const stored = JSON.parse(localStorage.getItem('permissions') ?? '{}');
+      expect(stored.owner).toBe('user-1');
+      expect(stored.keys).toEqual(['orders.read', 'orders.write']);
+      expect(typeof stored.savedAt).toBe('string');
+    });
+
+    it('trusts the stored list at start-up with no connection, including for a custom role', () => {
+      const stored = { owner: 'user-1', keys: ['orders.read', 'orders.write'], savedAt: new Date().toISOString() };
+      const auth = create(customToken, stored);
+
+      expect(auth.permissionsVersion()).toBe(1);
+      expect(auth.can(Permissions.OrdersWrite)).toBe(true);
+      expect(auth.can(Permissions.StockWrite)).toBe(false);
+    });
+
+    it('ignores a list stored for another person', () => {
+      const stored = { owner: 'someone-else', keys: ['orders.read', 'orders.write'], savedAt: new Date().toISOString() };
+      const auth = create(customToken, stored);
+
+      expect(auth.permissionsVersion()).toBe(0);
+      expect(auth.can(Permissions.OrdersWrite)).toBe(false);
+    });
+
+    it('replaces the stored list when the server answers with a changed role', () => {
+      const stored = { owner: 'user-1', keys: ['orders.read', 'orders.write'], savedAt: new Date().toISOString() };
+      const auth = create(customToken, stored);
+
+      auth.loadPermissions().subscribe();
+      http.expectOne(`${base}/permissions`).flush(['orders.read']);
+
+      expect(auth.can(Permissions.OrdersWrite)).toBe(false);
+      expect(JSON.parse(localStorage.getItem('permissions') ?? '{}').keys).toEqual(['orders.read']);
+    });
+  });
+
+  describe('sign in as another person', () => {
+    const signedInAs = (readOnly: boolean) =>
+      makeToken({
+        exp: nowSeconds() + 1800,
+        sub: 'user-1',
+        role: AppRoles.Owner,
+        impersonated_by: 'admin-1',
+        impersonation_read_only: readOnly ? '1' : '0',
+      });
+
+    it('keeps only the read keys of the role while the session is read-only', () => {
+      const auth = create(signedInAs(true));
+
+      expect(auth.can(Permissions.OrdersRead)).toBe(true);
+      expect(auth.can(Permissions.OrdersWrite)).toBe(false);
+      expect(auth.can(Permissions.RolesManage)).toBe(false);
+      expect(auth.can(Permissions.UsersWrite)).toBe(false);
+    });
+
+    it('gives the whole role when writes are allowed', () => {
+      const auth = create(signedInAs(false));
+
+      expect(auth.can(Permissions.OrdersWrite)).toBe(true);
+      expect(auth.can(Permissions.RolesManage)).toBe(true);
+    });
+
+    it('does not reuse a list stored for the same person outside the sign-in', () => {
+      const stored = { owner: 'user-1', keys: ['orders.write'], savedAt: new Date().toISOString() };
+      const auth = create(signedInAs(true), stored);
+
+      expect(auth.can(Permissions.OrdersWrite)).toBe(false);
     });
   });
 
