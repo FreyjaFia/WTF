@@ -80,7 +80,6 @@ public class GetPurchaseOrdersHandler(WTFDbContext db) : IRequestHandler<GetPurc
             .Include(o => o.Supplier)
             .Include(o => o.CreatedByNavigation)
             .Include(o => o.PurchaseOrderLines)
-            .AsSplitQuery()
             .ToListAsync(cancellationToken);
 
         return [.. orders.Select(o => PurchaseOrderMapping.ToSummary(o, o.PurchaseOrderLines.ToList()))];

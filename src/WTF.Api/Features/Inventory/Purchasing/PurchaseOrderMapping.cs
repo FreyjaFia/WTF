@@ -27,7 +27,6 @@ internal static class PurchaseOrderMapping
             .Include(o => o.Supplier)
             .Include(o => o.CreatedByNavigation)
             .Include(o => o.PurchaseOrderLines).ThenInclude(l => l.Item)
-            .AsSplitQuery()
             .FirstOrDefaultAsync(o => o.Id == id, cancellationToken);
         if (order is null)
         {
