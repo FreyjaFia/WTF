@@ -180,7 +180,7 @@ export class ProductEditorComponent implements OnInit {
 
   protected readonly sortedAssignedAddOns = computed(() =>
     [...this.assignedAddOns()]
-      .sort((a, b) => ADD_ON_TYPE_ORDER[a.type] - ADD_ON_TYPE_ORDER[b.type])
+      .sort((a, b) => (ADD_ON_TYPE_ORDER[a.type] ?? 99) - (ADD_ON_TYPE_ORDER[b.type] ?? 99))
       .map((group) => ({
         ...group,
         options: [...group.options].sort((a, b) => a.name.localeCompare(b.name)),
@@ -189,7 +189,7 @@ export class ProductEditorComponent implements OnInit {
 
   protected readonly sortedLinkedProducts = computed(() =>
     [...this.linkedProducts()]
-      .sort((a, b) => ADD_ON_TYPE_ORDER[a.type] - ADD_ON_TYPE_ORDER[b.type])
+      .sort((a, b) => (ADD_ON_TYPE_ORDER[a.type] ?? 99) - (ADD_ON_TYPE_ORDER[b.type] ?? 99))
       .map((group) => ({
         ...group,
         options: [...group.options].sort((a, b) => a.name.localeCompare(b.name)),

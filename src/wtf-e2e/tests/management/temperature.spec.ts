@@ -81,6 +81,12 @@ test.describe('temperature add-on: the pre-selected option @management', () => {
       await page.screenshot({ path: `test-results/temperature-editor-${viewport.width}.png`, fullPage: true });
       await expect.poll(async () => (await groupsOf(api, seed.drinkId)).find((g) => g.type === AddOnType.Temperature)?.defaultAddOnId).not.toBeFalsy();
 
+      await go(page, `/management/products/details/${seed.drinkId}`);
+      await expect(page.getByText('Pre-selected', { exact: true })).toBeVisible();
+      await expect(page.getByText('Temperatures', { exact: false }).or(page.getByText('Temperature', { exact: true })).first()).toBeVisible();
+      expect(overflowProblem(await measureOverflow(page))).toBeNull();
+      await page.screenshot({ path: `test-results/temperature-details-${viewport.width}.png`, fullPage: true });
+
       const editor = new OrderEditorPage(page);
       await editor.open();
       await editor.search.fill(seed.drinkName);

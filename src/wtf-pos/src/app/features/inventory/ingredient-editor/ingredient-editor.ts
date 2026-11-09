@@ -10,7 +10,13 @@ import {
   Validators,
 } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { AlertService, AuthService, InventoryService, ModalStackService } from '@core/services';
+import {
+  AlertService,
+  AuthService,
+  CatalogLookupService,
+  InventoryService,
+  ModalStackService,
+} from '@core/services';
 import {
   margin,
   marginPercent,
@@ -31,6 +37,7 @@ import {
   ItemDto,
   ProductIngredientInputDto,
   ProductIngredientsEditDto,
+  SYSTEM_CATALOG_IDS,
 } from '@shared/models';
 import { forkJoin, Observable, of } from 'rxjs';
 import { startWith, switchMap } from 'rxjs/operators';
@@ -54,16 +61,6 @@ interface LineValue {
 const TARGET_MARGIN_KEY = 'wtf.ingredients.targetMargin';
 const DEFAULT_TARGET_MARGIN = 70;
 const MAX_PREVIEW_QUANTITY = 9;
-const PREVIEW_GROUP_ORDER = [1, 2, 5, 3, 4];
-const RADIO_TYPES = new Set([1, 2, 5]);
-const PREVIEW_GROUP_HEADERS: Record<number, string> = {
-  1: 'Sizes',
-  2: 'Flavors',
-  5: 'Sauces',
-  3: 'Toppings',
-  4: 'Extras',
-};
-
 function loadTargetMargin(): number {
   try {
     const saved = Number(localStorage.getItem(TARGET_MARGIN_KEY));
@@ -103,6 +100,7 @@ export class IngredientEditorComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly alertService = inject(AlertService);
   private readonly modalStack = inject(ModalStackService);
+  private readonly catalogLookup = inject(CatalogLookupService);
 
   protected readonly product = signal<ProductIngredientsEditDto | null>(null);
   protected readonly items = signal<ItemDto[]>([]);
@@ -137,12 +135,17 @@ export class IngredientEditorComponent implements OnInit {
   protected readonly sizes = computed(() => this.product()?.sizes ?? []);
   protected readonly previewGroups = computed(() => {
     const options = this.product()?.addOnOptions ?? [];
-    return PREVIEW_GROUP_ORDER.map((type) => ({
-      type,
-      header: PREVIEW_GROUP_HEADERS[type],
-      isRadio: RADIO_TYPES.has(type),
-      options: options.filter((option) => (option.addOnType || (option.isSize ? 1 : 4)) === type),
-    })).filter((group) => group.options.length > 0);
+    return this.catalogLookup
+      .addOnTypes()
+      .map((type) => ({
+        type: type.id,
+        header: type.name.endsWith('s') ? type.name : `${type.name}s`,
+        isRadio: type.maxSelect === 1,
+        options: options.filter(
+          (option) => (option.addOnType || (option.isSize ? SYSTEM_CATALOG_IDS.sizeAddOnType : SYSTEM_CATALOG_IDS.extraAddOnType)) === type.id,
+        ),
+      }))
+      .filter((group) => group.options.length > 0);
   });
   protected readonly showsSizeGrid = computed(
     () => !(this.product()?.isAddOn ?? true) && this.sizes().length > 0,
@@ -281,6 +284,7 @@ export class IngredientEditorComponent implements OnInit {
   }
 
   public ngOnInit(): void {
+    void this.catalogLookup.ensureLoaded();
     this.productId = this.route.snapshot.paramMap.get('productId') ?? '';
     this.form.valueChanges.subscribe(() => this.formVersion.update((v) => v + 1));
     this.targetMargin.valueChanges.subscribe((value) => saveTargetMargin(value));

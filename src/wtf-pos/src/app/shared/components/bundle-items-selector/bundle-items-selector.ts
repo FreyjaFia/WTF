@@ -386,7 +386,7 @@ export class BundleItemsSelectorComponent {
 
   private normalizeAddOnGroups(groups: AddOnGroupDto[]): AddOnGroupDto[] {
     return groups
-      .sort((a, b) => ADD_ON_TYPE_ORDER[a.type] - ADD_ON_TYPE_ORDER[b.type])
+      .sort((a, b) => (ADD_ON_TYPE_ORDER[a.type] ?? 99) - (ADD_ON_TYPE_ORDER[b.type] ?? 99))
       .map((group) => ({
         ...group,
         options: group.options
