@@ -156,9 +156,12 @@
         </div>
 
         <!-- Permissions -->
-        <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <div class="columns-1 gap-6 xl:columns-2">
           @for (group of groups; track group.area) {
-            <div class="card rounded-xl bg-surface shadow-lg" [attr.data-testid]="'area-' + group.area">
+            <div
+              class="card mb-6 break-inside-avoid rounded-xl bg-surface shadow-lg"
+              [attr.data-testid]="'area-' + group.area"
+            >
               <div class="card-body space-y-3">
                 <div class="flex items-center justify-between">
                   <h2 class="text-base font-semibold text-gray-900">{{ group.area }}</h2>
@@ -173,6 +176,7 @@
                       [class.cursor-pointer]="!isDisabled(permission)"
                       [class.hover:bg-gray-50]="!isDisabled(permission)"
                       [class.opacity-60]="isDisabled(permission)"
+                      [class.py-1]="isOutsidePlan(permission)"
                     >
                       <input
                         type="checkbox"
@@ -182,26 +186,32 @@
                         [disabled]="isDisabled(permission)"
                         (change)="togglePermission(permission)"
                       />
-                      <span class="min-w-0">
-                        <span class="block font-medium text-gray-900">{{ permission.label }}</span>
-                        <span class="block text-xs text-gray-500">{{ permission.description }}</span>
-                        @if (permission.requires.length > 0) {
-                          <span class="block text-xs text-gray-400">
-                            Needs: {{ requirementLabels(permission) }}
-                          </span>
-                        }
-                        @if (isOutsidePlan(permission)) {
-                          <span
-                            class="flex items-center gap-1 text-xs text-gray-500"
-                            [attr.data-testid]="'plan-lock-' + permission.key"
-                          >
-                            <app-icon name="icon-lock" [class]="'h-3 w-3 shrink-0'" />
-                            {{ planLabel(permission) }}
-                          </span>
-                        } @else if (!isReadOnly() && !canGive(permission) && !isChecked(permission.key)) {
-                          <span class="block text-xs text-gray-400">
-                            You do not have this permission, so you cannot give it.
-                          </span>
+                      <span class="min-w-0 flex-1">
+                        <span class="flex flex-wrap items-center justify-between gap-x-2">
+                          <span class="font-medium text-gray-900">{{ permission.label }}</span>
+                          @if (isOutsidePlan(permission)) {
+                            <span
+                              class="inline-flex shrink-0 items-center gap-1 text-xs text-gray-500"
+                              [attr.data-testid]="'plan-lock-' + permission.key"
+                              [attr.title]="planLabel(permission)"
+                            >
+                              <app-icon name="icon-lock" [class]="'h-3 w-3 shrink-0'" />
+                              {{ planLabel(permission) }}
+                            </span>
+                          }
+                        </span>
+                        @if (!isOutsidePlan(permission)) {
+                          <span class="block text-xs text-gray-500">{{ permission.description }}</span>
+                          @if (permission.requires.length > 0) {
+                            <span class="block text-xs text-gray-400">
+                              Needs: {{ requirementLabels(permission) }}
+                            </span>
+                          }
+                          @if (!isReadOnly() && !canGive(permission) && !isChecked(permission.key)) {
+                            <span class="block text-xs text-gray-400">
+                              You do not have this permission, so you cannot give it.
+                            </span>
+                          }
                         }
                       </span>
                     </label>
