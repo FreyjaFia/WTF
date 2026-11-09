@@ -63,7 +63,7 @@ public static class UserEndpoints
                 var isCurrentUserOwner = httpContext.User.IsInRole(AppRoles.Owner);
                 var isTargetUserOwner = targetUser.RoleId == (int)UserRoleEnum.Owner;
 
-                if ((isTargetUserOwner || command.RoleId == UserRoleEnum.Owner) && !isCurrentUserOwner)
+                if ((isTargetUserOwner || command.RoleId == (int)UserRoleEnum.Owner) && !isCurrentUserOwner)
                 {
                     return Results.Forbid();
                 }

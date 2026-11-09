@@ -12,6 +12,12 @@ public static class PermissionChecks
             return keys;
         }
 
+        if (user.HasClaim(c => c.Type == PermissionClaimsMiddleware.ResolvedClaim))
+        {
+            keys.UnionWith(user.FindAll(PermissionClaimsMiddleware.PermissionClaim).Select(c => c.Value));
+            return keys;
+        }
+
         foreach (var role in user.FindAll(ClaimTypes.Role))
         {
             if (SystemRolePermissions.Bundles.TryGetValue(role.Value, out var bundle))

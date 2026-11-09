@@ -115,7 +115,7 @@ internal sealed class SqlTestDatabase : IAsyncDisposable
         await InsertAsync(db, CatalogSeed.SubCategories());
         await InsertAsync(db, CatalogSeed.AddOnTypes());
         await InsertAsync(db, Named<UserRoleEnum, UserRole>(
-            (id, name) => new UserRole { Id = id, Name = name }));
+            (id, name) => new UserRole { Id = id, Name = name, IsSystem = true }));
     }
 
     /// <summary>Inserts rows with explicit ids, switching IDENTITY_INSERT on for tables whose id is an identity column.</summary>

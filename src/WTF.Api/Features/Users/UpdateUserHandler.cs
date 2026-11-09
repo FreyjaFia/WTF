@@ -1,17 +1,19 @@
-using MediatR;
+﻿using MediatR;
 using Microsoft.EntityFrameworkCore;
+using WTF.Api.Common.Auth;
+using WTF.Api.Common.Auth.Permissions;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Users.DTOs;
-using WTF.Api.Features.Users.Enums;
 using WTF.Api.Services;
 using WTF.Domain.Data;
+using WTF.Domain.Entities;
 
 namespace WTF.Api.Features.Users;
 
-public record UpdateUserCommand(Guid Id, string FirstName, string LastName, string Username, string? Password, UserRoleEnum RoleId) : IRequest<UserDto?>;
+public record UpdateUserCommand(Guid Id, string FirstName, string LastName, string Username, string? Password, int RoleId) : IRequest<UserDto?>;
 
-public class UpdateUserHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor, IAuditService auditService) : IRequestHandler<UpdateUserCommand, UserDto?>
+public class UpdateUserHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor, IAuditService auditService, RolePermissionCache permissionCache) : IRequestHandler<UpdateUserCommand, UserDto?>
 {
     public async Task<UserDto?> Handle(UpdateUserCommand request, CancellationToken cancellationToken)
     {
@@ -34,14 +36,30 @@ public class UpdateUserHandler(WTFDbContext db, IHttpContextAccessor httpContext
 
         UserValidation.EnsureValidNames(request.FirstName, request.LastName);
         UserValidation.EnsureValidUsername(request.Username);
-        UserValidation.EnsureKnownRole(request.RoleId);
         UserValidation.EnsureValidPassword(request.Password, isUpdate: true);
         await UserValidation.EnsureUniqueUsernameAsync(db, request.Username, user.Id, cancellationToken);
+
+        var roleChanged = user.RoleId != request.RoleId;
+        UserRole role;
+        if (roleChanged)
+        {
+            if (user.Id == userId)
+            {
+                throw new ForbiddenActionException("You cannot change your own role.");
+            }
+
+            role = await UserRoleGuard.EnsureAssignableAsync(db, httpContextAccessor.HttpContext!.User, request.RoleId, cancellationToken);
+            await UserRoleGuard.EnsureNotLastOwnerAsync(db, user, cancellationToken);
+        }
+        else
+        {
+            role = await db.UserRoles.AsNoTracking().FirstAsync(r => r.Id == user.RoleId, cancellationToken);
+        }
 
         user.FirstName = request.FirstName;
         user.LastName = request.LastName;
         user.Username = request.Username;
-        user.RoleId = (int)request.RoleId;
+        user.RoleId = role.Id;
         user.UpdatedAt = DateTime.UtcNow;
         user.UpdatedBy = userId;
 
@@ -51,6 +69,7 @@ public class UpdateUserHandler(WTFDbContext db, IHttpContextAccessor httpContext
         }
 
         await db.SaveChangesAsync(cancellationToken);
+        permissionCache.Forget();
 
         await auditService.LogAsync(
             action: AuditAction.UserUpdated,
@@ -69,6 +88,18 @@ public class UpdateUserHandler(WTFDbContext db, IHttpContextAccessor httpContext
             userId: userId,
             cancellationToken: cancellationToken);
 
-        return UserMapping.ToDto(user, null);
+        if (roleChanged)
+        {
+            await auditService.LogAsync(
+                action: AuditAction.UserRoleChanged,
+                entityType: AuditEntityType.User,
+                entityId: user.Id.ToString(),
+                oldValues: new { RoleId = oldValues.RoleId },
+                newValues: new { RoleId = role.Id, RoleName = role.Name },
+                userId: userId,
+                cancellationToken: cancellationToken);
+        }
+
+        return UserMapping.ToDto(user, null, role.Name);
     }
 }

@@ -1,5 +1,4 @@
-using Microsoft.EntityFrameworkCore;
-using WTF.Api.Features.Users.Enums;
+﻿using Microsoft.EntityFrameworkCore;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Users;
@@ -31,14 +30,6 @@ internal static class UserValidation
         if (firstName.Length > MaxFieldLength || lastName.Length > MaxFieldLength)
         {
             throw new InvalidOperationException($"Names can be at most {MaxFieldLength} characters.");
-        }
-    }
-
-    public static void EnsureKnownRole(UserRoleEnum role)
-    {
-        if (!Enum.IsDefined(role))
-        {
-            throw new InvalidOperationException("Choose one of the listed roles.");
         }
     }
 

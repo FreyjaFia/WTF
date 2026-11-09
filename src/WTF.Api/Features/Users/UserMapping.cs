@@ -1,12 +1,11 @@
-using WTF.Api.Features.Users.DTOs;
-using WTF.Api.Features.Users.Enums;
+﻿using WTF.Api.Features.Users.DTOs;
 using WTF.Domain.Entities;
 
 namespace WTF.Api.Features.Users;
 
 internal static class UserMapping
 {
-    public static UserDto ToDto(User user, string? imageUrl)
+    public static UserDto ToDto(User user, string? imageUrl, string? roleName = null)
     {
         return new UserDto(
             user.Id,
@@ -19,7 +18,8 @@ internal static class UserMapping
             user.UpdatedAt,
             user.UpdatedBy,
             imageUrl,
-            (UserRoleEnum)user.RoleId
+            user.RoleId,
+            roleName ?? user.Role?.Name
         );
     }
 }

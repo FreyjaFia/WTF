@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using WTF.Domain.Entities;
 
 namespace WTF.Domain.Data;
@@ -105,6 +103,8 @@ public partial class WTFDbContext : DbContext
     public virtual DbSet<PushNotificationToken> PushNotificationTokens { get; set; }
 
     public virtual DbSet<RefreshToken> RefreshTokens { get; set; }
+
+    public virtual DbSet<RolePermission> RolePermissions { get; set; }
 
     public virtual DbSet<SchemaScriptHistory> SchemaScriptHistories { get; set; }
 
@@ -1977,12 +1977,33 @@ public partial class WTFDbContext : DbContext
 
         modelBuilder.Entity<UserRole>(entity =>
         {
-            entity.HasIndex(e => e.Name, "UQ_UserRoles_Name").IsUnique();
+            entity.HasIndex(e => e.Name, "UX_UserRoles_SystemName")
+                .IsUnique()
+                .HasFilter("([TenantId] IS NULL)");
 
+            entity.HasIndex(e => new { e.TenantId, e.Name }, "UX_UserRoles_TenantName")
+                .IsUnique()
+                .HasFilter("([TenantId] IS NOT NULL)");
+
+            entity.Property(e => e.Description).HasMaxLength(200);
             entity.Property(e => e.Id).ValueGeneratedNever();
-            entity.Property(e => e.Name)
-                .HasMaxLength(30)
-                .IsUnicode(false);
+            entity.Property(e => e.IsSystem).HasDefaultValue(false, "DF_UserRoles_IsSystem");
+            entity.Property(e => e.Name).HasMaxLength(50);
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.UserRoles)
+                .HasForeignKey(d => d.TenantId)
+                .HasConstraintName("FK_UserRoles_Tenants");
+        });
+
+        modelBuilder.Entity<RolePermission>(entity =>
+        {
+            entity.HasKey(e => new { e.RoleId, e.PermissionKey }).HasName("PK_RolePermissions");
+
+            entity.Property(e => e.PermissionKey).HasMaxLength(100);
+
+            entity.HasOne(d => d.Role).WithMany(p => p.RolePermissions)
+                .HasForeignKey(d => d.RoleId)
+                .HasConstraintName("FK_RolePermissions_UserRoles");
         });
 
         modelBuilder.Entity<WasteReason>(entity =>
@@ -2008,6 +2029,7 @@ public partial class WTFDbContext : DbContext
                 .HasConstraintName("FK_WasteReasons_UpdatedBy");
         });
         modelBuilder.HasSequence("OrderNumberSeq");
+        modelBuilder.HasSequence<int>("UserRoleIdSeq").StartsAt(100);
 
         OnModelCreatingPartial(modelBuilder);
     }

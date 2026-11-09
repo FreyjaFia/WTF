@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using WTF.Api.Common.Auth.Permissions;
 using WTF.Api.Features.Auth;
 using WTF.Api.Features.Users;
 using WTF.Api.Features.Users.Enums;
@@ -26,8 +27,8 @@ public class UserDatabaseTests
         return new LoginHandler(db, new JwtService(cfg, TestRequest.None()), new UserRoleService(db), cfg, TestFakes.Audit());
     }
 
-    private static CreateUserHandler Create(WTFDbContext db, Guid actor) => new(db, TestRequest.As(actor), TestFakes.Audit());
-    private static UpdateUserHandler Update(WTFDbContext db, Guid actor) => new(db, TestRequest.As(actor), TestFakes.Audit());
+    private static CreateUserHandler Create(WTFDbContext db, Guid actor) => new(db, TestRequest.As(actor), TestFakes.Audit(), new RolePermissionCache(TimeProvider.System));
+    private static UpdateUserHandler Update(WTFDbContext db, Guid actor) => new(db, TestRequest.As(actor), TestFakes.Audit(), new RolePermissionCache(TimeProvider.System));
 
     private static GetUsersHandler Search(WTFDbContext db)
     {
@@ -103,7 +104,7 @@ public class UserDatabaseTests
         await using (var db = database.CreateContext())
         {
             var ex = await Should.ThrowAsync<InvalidOperationException>(() => Create(db, actor.Id).Handle(
-                new CreateUserCommand("A", "B", username, "pw-12345", UserRoleEnum.Cashier), CancellationToken.None));
+                new CreateUserCommand("A", "B", username, "pw-12345", (int)UserRoleEnum.Cashier), CancellationToken.None));
             ex.Message.ShouldBe("Username already exists.");
         }
 
@@ -121,7 +122,7 @@ public class UserDatabaseTests
 
         await using var db = database.CreateContext();
         await Should.ThrowAsync<InvalidOperationException>(() => Create(db, actor.Id).Handle(
-            new CreateUserCommand("A", "B", "gone", "pw-12345", UserRoleEnum.Cashier), CancellationToken.None));
+            new CreateUserCommand("A", "B", "gone", "pw-12345", (int)UserRoleEnum.Cashier), CancellationToken.None));
     }
 
     [SqlFact]
@@ -132,7 +133,7 @@ public class UserDatabaseTests
 
         await using (var db = database.CreateContext())
         {
-            await Create(db, actor.Id).Handle(new CreateUserCommand("Ana", "Cruz", "acruz", "pw-12345", UserRoleEnum.Cashier), CancellationToken.None);
+            await Create(db, actor.Id).Handle(new CreateUserCommand("Ana", "Cruz", "acruz", "pw-12345", (int)UserRoleEnum.Cashier), CancellationToken.None);
         }
 
         await using var check = database.CreateContext();
@@ -149,7 +150,7 @@ public class UserDatabaseTests
 
         await using var db = database.CreateContext();
         var ex = await Should.ThrowAsync<InvalidOperationException>(() =>
-            Create(db, actor.Id).Handle(new CreateUserCommand("A", "B", "newbie", "pw-12345", (UserRoleEnum)99), CancellationToken.None));
+            Create(db, actor.Id).Handle(new CreateUserCommand("A", "B", "newbie", "pw-12345", 99), CancellationToken.None));
 
         ex.Message.ShouldContain("listed roles");
     }
@@ -167,7 +168,7 @@ public class UserDatabaseTests
         await using (var db = database.CreateContext())
         {
             var ex = await Should.ThrowAsync<InvalidOperationException>(() => Update(db, actor.Id).Handle(
-                new UpdateUserCommand(target.Id, "A", "B", "TAKEN", null, UserRoleEnum.Cashier), CancellationToken.None));
+                new UpdateUserCommand(target.Id, "A", "B", "TAKEN", null, (int)UserRoleEnum.Cashier), CancellationToken.None));
             ex.Message.ShouldBe("Username already exists.");
         }
 
@@ -184,7 +185,7 @@ public class UserDatabaseTests
 
         await using (var db = database.CreateContext())
         {
-            await Update(db, actor.Id).Handle(new UpdateUserCommand(target.Id, "New", "Name", "mine", null, UserRoleEnum.Admin), CancellationToken.None);
+            await Update(db, actor.Id).Handle(new UpdateUserCommand(target.Id, "New", "Name", "mine", null, (int)UserRoleEnum.Admin), CancellationToken.None);
         }
 
         await using var check = database.CreateContext();
@@ -202,7 +203,7 @@ public class UserDatabaseTests
 
         await using var db = database.CreateContext();
         var ex = await Should.ThrowAsync<InvalidOperationException>(() =>
-            Update(db, actor.Id).Handle(new UpdateUserCommand(target.Id, "A", "B", "mine", null, (UserRoleEnum)99), CancellationToken.None));
+            Update(db, actor.Id).Handle(new UpdateUserCommand(target.Id, "A", "B", "mine", null, 99), CancellationToken.None));
         ex.Message.ShouldContain("listed roles");
     }
 

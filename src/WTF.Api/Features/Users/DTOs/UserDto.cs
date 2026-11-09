@@ -1,6 +1,4 @@
-using WTF.Api.Features.Users.Enums;
-
-namespace WTF.Api.Features.Users.DTOs;
+﻿namespace WTF.Api.Features.Users.DTOs;
 
 public record UserDto(
     Guid Id,
@@ -13,5 +11,6 @@ public record UserDto(
     DateTime? UpdatedAt,
     Guid? UpdatedBy,
     string? ImageUrl,
-    UserRoleEnum RoleId
+    int RoleId,
+    string? RoleName = null
 );

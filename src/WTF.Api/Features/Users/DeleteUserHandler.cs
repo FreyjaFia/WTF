@@ -1,5 +1,6 @@
-using MediatR;
+﻿using MediatR;
 using Microsoft.EntityFrameworkCore;
+using WTF.Api.Common.Auth.Permissions;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Services;
@@ -9,7 +10,7 @@ namespace WTF.Api.Features.Users;
 
 public record DeleteUserCommand(Guid Id) : IRequest<bool>;
 
-public class DeleteUserHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor, IAuditService auditService) : IRequestHandler<DeleteUserCommand, bool>
+public class DeleteUserHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor, IAuditService auditService, RolePermissionCache permissionCache) : IRequestHandler<DeleteUserCommand, bool>
 {
     public async Task<bool> Handle(DeleteUserCommand request, CancellationToken cancellationToken)
     {
@@ -29,6 +30,8 @@ public class DeleteUserHandler(WTFDbContext db, IHttpContextAccessor httpContext
             user.IsActive
         };
 
+        await UserRoleGuard.EnsureNotLastOwnerAsync(db, user, cancellationToken);
+
         // Soft delete - deactivate the user and revoke their sessions
         user.IsActive = false;
         user.UpdatedAt = DateTime.UtcNow;
@@ -44,6 +47,7 @@ public class DeleteUserHandler(WTFDbContext db, IHttpContextAccessor httpContext
         }
 
         await db.SaveChangesAsync(cancellationToken);
+        permissionCache.Forget();
 
         await auditService.LogAsync(
             action: AuditAction.UserDeleted,

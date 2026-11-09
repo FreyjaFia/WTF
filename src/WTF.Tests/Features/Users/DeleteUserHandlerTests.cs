@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using NSubstitute;
+using WTF.Api.Common.Auth.Permissions;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Users;
 using WTF.Api.Services;
@@ -48,7 +49,7 @@ public class DeleteUserHandlerTests
         ExpiresAt = DateTime.UtcNow.AddDays(1)
     };
 
-    private DeleteUserHandler Handler() => new(TestDb.Create(_dbName), TestRequest.As(_actorId), _audit);
+    private DeleteUserHandler Handler() => new(TestDb.Create(_dbName), TestRequest.As(_actorId), _audit, new RolePermissionCache(TimeProvider.System));
 
     [Fact]
     public async Task Handle_ExistingUser_DeactivatesInsteadOfRemoving()

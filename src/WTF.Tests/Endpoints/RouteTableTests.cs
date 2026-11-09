@@ -255,6 +255,13 @@ public class RouteTableTests : IDisposable
         "DELETE /api/users/{id:guid}/images => UsersWrite",
         "POST /api/users/{id:guid}/images => UsersWrite",
         "POST /api/users/{id:guid}/restore => UsersWrite",
+        "GET /api/roles/ => RolesRead",
+        "GET /api/roles/permissions => RolesRead",
+        "GET /api/roles/{id:int} => RolesRead",
+        "POST /api/roles/ => RolesManage",
+        "PUT /api/roles/{id:int} => RolesManage",
+        "POST /api/roles/{id:int}/duplicate => RolesManage",
+        "DELETE /api/roles/{id:int} => RolesManage",
     ];
 
     private readonly EndpointTestHost _host = new();

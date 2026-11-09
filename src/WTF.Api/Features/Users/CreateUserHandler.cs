@@ -1,17 +1,17 @@
-using MediatR;
+﻿using MediatR;
+using WTF.Api.Common.Auth.Permissions;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Users.DTOs;
-using WTF.Api.Features.Users.Enums;
 using WTF.Api.Services;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 
 namespace WTF.Api.Features.Users;
 
-public record CreateUserCommand(string FirstName, string LastName, string Username, string Password, UserRoleEnum RoleId) : IRequest<UserDto>;
+public record CreateUserCommand(string FirstName, string LastName, string Username, string Password, int RoleId) : IRequest<UserDto>;
 
-public class CreateUserHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor, IAuditService auditService) : IRequestHandler<CreateUserCommand, UserDto>
+public class CreateUserHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor, IAuditService auditService, RolePermissionCache permissionCache) : IRequestHandler<CreateUserCommand, UserDto>
 {
     public async Task<UserDto> Handle(CreateUserCommand request, CancellationToken cancellationToken)
     {
@@ -19,9 +19,9 @@ public class CreateUserHandler(WTFDbContext db, IHttpContextAccessor httpContext
 
         UserValidation.EnsureValidNames(request.FirstName, request.LastName);
         UserValidation.EnsureValidUsername(request.Username);
-        UserValidation.EnsureKnownRole(request.RoleId);
         UserValidation.EnsureValidPassword(request.Password);
         await UserValidation.EnsureUniqueUsernameAsync(db, request.Username, null, cancellationToken);
+        var role = await UserRoleGuard.EnsureAssignableAsync(db, httpContextAccessor.HttpContext!.User, request.RoleId, cancellationToken);
 
         var user = new User
         {
@@ -30,13 +30,14 @@ public class CreateUserHandler(WTFDbContext db, IHttpContextAccessor httpContext
             Username = request.Username,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
             IsActive = true,
-            RoleId = (int)request.RoleId,
+            RoleId = role.Id,
             CreatedAt = DateTime.UtcNow,
             CreatedBy = userId
         };
 
         db.Users.Add(user);
         await db.SaveChangesAsync(cancellationToken);
+        permissionCache.Forget();
 
         await auditService.LogAsync(
             action: AuditAction.UserCreated,
@@ -53,6 +54,6 @@ public class CreateUserHandler(WTFDbContext db, IHttpContextAccessor httpContext
             userId: userId,
             cancellationToken: cancellationToken);
 
-        return UserMapping.ToDto(user, null);
+        return UserMapping.ToDto(user, null, role.Name);
     }
 }

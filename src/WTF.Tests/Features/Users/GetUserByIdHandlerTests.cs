@@ -54,7 +54,7 @@ public class GetUserByIdHandlerTests
         dto.Id.ShouldBe(_userId);
         dto.Username.ShouldBe("acruz");
         dto.FirstName.ShouldBe("Ana");
-        dto.RoleId.ShouldBe(UserRoleEnum.Cashier);
+        dto.RoleId.ShouldBe((int)UserRoleEnum.Cashier);
         dto.IsActive.ShouldBeTrue();
         dto.ImageUrl.ShouldBeNull();
     }

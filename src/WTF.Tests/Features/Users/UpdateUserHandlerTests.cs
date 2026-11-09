@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using NSubstitute;
+using WTF.Api.Common.Auth;
+using WTF.Api.Common.Auth.Permissions;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Users;
 using WTF.Api.Features.Users.Enums;
@@ -36,18 +38,20 @@ public class UpdateUserHandlerTests
         await db.SaveChangesAsync();
     }
 
-    private UpdateUserHandler Handler() => new(TestDb.Create(_dbName), TestRequest.As(_actorId), _audit);
+    public UpdateUserHandlerTests() => TestDb.SeedSystemRoles(_dbName);
+
+    private UpdateUserHandler Handler() => new(TestDb.Create(_dbName), TestRequest.As(_actorId, AppRoles.Owner), _audit, new RolePermissionCache(TimeProvider.System));
 
     [Fact]
     public async Task Handle_ValidUpdate_ChangesFieldsAndStampsUpdater()
     {
         await Seed();
 
-        var dto = await Handler().Handle(new UpdateUserCommand(_userId, "New", "Person", "newname", null, UserRoleEnum.Admin), CancellationToken.None);
+        var dto = await Handler().Handle(new UpdateUserCommand(_userId, "New", "Person", "newname", null, (int)UserRoleEnum.Admin), CancellationToken.None);
 
         dto.ShouldNotBeNull();
         dto.Username.ShouldBe("newname");
-        dto.RoleId.ShouldBe(UserRoleEnum.Admin);
+        dto.RoleId.ShouldBe((int)UserRoleEnum.Admin);
         await using var db = TestDb.Create(_dbName);
         var saved = await db.Users.SingleAsync();
         saved.FirstName.ShouldBe("New");
@@ -68,7 +72,7 @@ public class UpdateUserHandlerTests
     {
         await Seed();
 
-        await Handler().Handle(new UpdateUserCommand(_userId, "A", "B", "old", password, UserRoleEnum.Cashier), CancellationToken.None);
+        await Handler().Handle(new UpdateUserCommand(_userId, "A", "B", "old", password, (int)UserRoleEnum.Cashier), CancellationToken.None);
 
         await using var db = TestDb.Create(_dbName);
         (await db.Users.SingleAsync()).PasswordHash.ShouldBe(_originalHash);
@@ -79,7 +83,7 @@ public class UpdateUserHandlerTests
     {
         await Seed();
 
-        await Handler().Handle(new UpdateUserCommand(_userId, "A", "B", "old", "fresh-pw", UserRoleEnum.Cashier), CancellationToken.None);
+        await Handler().Handle(new UpdateUserCommand(_userId, "A", "B", "old", "fresh-pw", (int)UserRoleEnum.Cashier), CancellationToken.None);
 
         await using var db = TestDb.Create(_dbName);
         var hash = (await db.Users.SingleAsync()).PasswordHash;
@@ -92,7 +96,7 @@ public class UpdateUserHandlerTests
     {
         await Seed();
 
-        await Handler().Handle(new UpdateUserCommand(_userId, "A", "B", "old", "fresh-pw", UserRoleEnum.Admin), CancellationToken.None);
+        await Handler().Handle(new UpdateUserCommand(_userId, "A", "B", "old", "fresh-pw", (int)UserRoleEnum.Admin), CancellationToken.None);
 
         await _audit.Received(1).LogAsync(
             AuditAction.UserUpdated, AuditEntityType.User, _userId.ToString(),
@@ -106,7 +110,7 @@ public class UpdateUserHandlerTests
     {
         await Seed();
 
-        var dto = await Handler().Handle(new UpdateUserCommand(Guid.NewGuid(), "A", "B", "x", null, UserRoleEnum.Admin), CancellationToken.None);
+        var dto = await Handler().Handle(new UpdateUserCommand(Guid.NewGuid(), "A", "B", "x", null, (int)UserRoleEnum.Admin), CancellationToken.None);
 
         dto.ShouldBeNull();
         await _audit.DidNotReceiveWithAnyArgs().LogAsync(default, default, default!);
@@ -118,7 +122,7 @@ public class UpdateUserHandlerTests
         await Seed();
 
         await Should.ThrowAsync<InvalidOperationException>(() =>
-            Handler().Handle(new UpdateUserCommand(_userId, "A", "B", " ", null, UserRoleEnum.Admin), CancellationToken.None));
+            Handler().Handle(new UpdateUserCommand(_userId, "A", "B", " ", null, (int)UserRoleEnum.Admin), CancellationToken.None));
 
         await using var db = TestDb.Create(_dbName);
         var saved = await db.Users.SingleAsync();

@@ -75,5 +75,9 @@ public enum AuditAction
     PurchaseOrderUpdated,
     PurchaseOrderSent,
     PurchaseOrderCancelled,
-    PurchaseOrderClosed
+    PurchaseOrderClosed,
+    RoleCreated,
+    RoleUpdated,
+    RoleDeleted,
+    UserRoleChanged
 }

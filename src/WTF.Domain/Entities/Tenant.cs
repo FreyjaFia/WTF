@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace WTF.Domain.Entities;
+﻿namespace WTF.Domain.Entities;
 
 public partial class Tenant
 {
@@ -124,6 +121,8 @@ public partial class Tenant
     public virtual TenantSubscription? TenantSubscription { get; set; }
 
     public virtual ICollection<UserImage> UserImages { get; set; } = new List<UserImage>();
+
+    public virtual ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
 
     public virtual ICollection<User> Users { get; set; } = new List<User>();
 

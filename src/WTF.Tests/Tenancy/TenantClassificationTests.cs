@@ -13,6 +13,7 @@ public class TenantClassificationTests
         typeof(Plan),
         typeof(PlatformAdmin),
         typeof(PlatformAuditLog),
+        typeof(RolePermission),
         typeof(TenantTombstone),
         typeof(SchemaScriptHistory),
         typeof(Status),
@@ -54,7 +55,7 @@ public class TenantClassificationTests
     {
         using var db = TestDb.Create();
 
-        foreach (var type in GlobalEntities.Where(t => t != typeof(TenantCounter) && t != typeof(TenantInvoice) && t != typeof(TenantSubscription) && t != typeof(TenantTombstone) && t != typeof(PlatformAuditLog)))
+        foreach (var type in GlobalEntities.Where(t => t != typeof(TenantCounter) && t != typeof(TenantInvoice) && t != typeof(TenantSubscription) && t != typeof(TenantTombstone) && t != typeof(PlatformAuditLog) && t != typeof(UserRole)))
         {
             db.Model.FindEntityType(type)!.FindProperty("TenantId").ShouldBeNull(type.Name);
         }

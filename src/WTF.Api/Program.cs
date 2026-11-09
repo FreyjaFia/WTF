@@ -7,6 +7,7 @@ using Serilog;
 using System.Text;
 using System.Threading.RateLimiting;
 using WTF.Api.Common.Auth;
+using WTF.Api.Common.Auth.Permissions;
 using WTF.Api.Common.Tenancy;
 using WTF.Api.Common.Validation;
 using WTF.Api.Endpoints;
@@ -68,6 +69,7 @@ builder.Services.Configure<HuaweiPushOptions>(
 // One clock for code that must be testable around time (for example an ordering link expiring mid-request).
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<TenantStatusCache>();
+builder.Services.AddSingleton<RolePermissionCache>();
 builder.Services.AddScoped<IPlatformAuditService, PlatformAuditService>();
 builder.Services.AddSingleton<IJwtService, JwtService>();
 builder.Services.AddScoped<IUserRoleService, UserRoleService>();
@@ -353,6 +355,17 @@ app.Use(async (context, next) =>
         context.Response.StatusCode = StatusCodes.Status404NotFound;
         await context.Response.WriteAsJsonAsync(new { message = ex.Message });
     }
+    catch (ForbiddenActionException ex)
+    {
+        if (context.Response.HasStarted)
+        {
+            throw;
+        }
+
+        context.Response.Clear();
+        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+        await context.Response.WriteAsJsonAsync(new { message = ex.Message });
+    }
     catch (InvalidOperationException ex)
     {
         if (context.Response.HasStarted)
@@ -381,6 +394,7 @@ app.Use(async (context, next) =>
 
 app.UseAuthentication();
 app.UseMiddleware<TenantRequestGuardMiddleware>();
+app.UseMiddleware<PermissionClaimsMiddleware>();
 app.UseAuthorization();
 
 app.MapHub<DashboardHub>("/hubs/dashboard");

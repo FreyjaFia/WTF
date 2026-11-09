@@ -40,6 +40,14 @@ internal static class TestDb
         return db;
     }
 
+    public static void SeedSystemRoles(string dbName)
+    {
+        using var db = Create(dbName);
+        db.UserRoles.AddRange(Enum.GetValues<WTF.Api.Features.Users.Enums.UserRoleEnum>()
+            .Select(r => new WTF.Domain.Entities.UserRole { Id = (int)r, Name = r.ToString(), IsSystem = true }));
+        db.SaveChanges();
+    }
+
     public static async Task SeedAddOnTypesAsync(string dbName)
     {
         await using var db = Create(dbName);

@@ -20,5 +20,6 @@ public enum AuditEntityType
     Supplier,
     ItemSupplier,
     StockReceipt,
-    PurchaseOrder
+    PurchaseOrder,
+    Role
 }

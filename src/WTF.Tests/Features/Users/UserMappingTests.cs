@@ -24,7 +24,7 @@ public class UserMappingTests
 
         dto.Id.ShouldBe(user.Id);
         dto.Username.ShouldBe("alem");
-        dto.RoleId.ShouldBe(UserRoleEnum.StockManager);
+        dto.RoleId.ShouldBe((int)UserRoleEnum.StockManager);
         dto.ImageUrl.ShouldBe("img");
         dto.CreatedBy.ShouldBe(user.CreatedBy);
     }

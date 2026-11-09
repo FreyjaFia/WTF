@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using NSubstitute;
+using WTF.Api.Common.Auth;
+using WTF.Api.Common.Auth.Permissions;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Users;
 using WTF.Api.Features.Users.Enums;
@@ -14,16 +16,18 @@ public class CreateUserHandlerTests
     private readonly IAuditService _audit = TestFakes.Audit();
     private readonly Guid _actorId = Guid.NewGuid();
 
-    private CreateUserHandler Handler() => new(TestDb.Create(_dbName), TestRequest.As(_actorId), _audit);
+    public CreateUserHandlerTests() => TestDb.SeedSystemRoles(_dbName);
+
+    private CreateUserHandler Handler() => new(TestDb.Create(_dbName), TestRequest.As(_actorId, AppRoles.Owner), _audit, new RolePermissionCache(TimeProvider.System));
 
     [Fact]
     public async Task Handle_ValidUser_IsSavedActiveWithHashedPassword()
     {
-        var dto = await Handler().Handle(new CreateUserCommand("Ana", "Cruz", "acruz", "pw-12345", UserRoleEnum.Cashier), CancellationToken.None);
+        var dto = await Handler().Handle(new CreateUserCommand("Ana", "Cruz", "acruz", "pw-12345", (int)UserRoleEnum.Cashier), CancellationToken.None);
 
         dto.Username.ShouldBe("acruz");
         dto.IsActive.ShouldBeTrue();
-        dto.RoleId.ShouldBe(UserRoleEnum.Cashier);
+        dto.RoleId.ShouldBe((int)UserRoleEnum.Cashier);
         dto.CreatedBy.ShouldBe(_actorId);
         dto.ImageUrl.ShouldBeNull();
 
@@ -45,7 +49,7 @@ public class CreateUserHandlerTests
     [InlineData(UserRoleEnum.StockManager, 6)]
     public async Task Handle_Role_IsMappedToRoleId(UserRoleEnum role, int expectedId)
     {
-        await Handler().Handle(new CreateUserCommand("A", "B", "user", "pw", role), CancellationToken.None);
+        await Handler().Handle(new CreateUserCommand("A", "B", "user", "pw", (int)role), CancellationToken.None);
 
         await using var db = TestDb.Create(_dbName);
         (await db.Users.SingleAsync()).RoleId.ShouldBe(expectedId);
@@ -54,7 +58,7 @@ public class CreateUserHandlerTests
     [Fact]
     public async Task Handle_ValidUser_AuditsWithoutPasswordHash()
     {
-        var dto = await Handler().Handle(new CreateUserCommand("Ana", "Cruz", "acruz", "pw-12345", UserRoleEnum.Admin), CancellationToken.None);
+        var dto = await Handler().Handle(new CreateUserCommand("Ana", "Cruz", "acruz", "pw-12345", (int)UserRoleEnum.Admin), CancellationToken.None);
 
         await _audit.Received(1).LogAsync(
             AuditAction.UserCreated, AuditEntityType.User, dto.Id.ToString(),
@@ -69,7 +73,7 @@ public class CreateUserHandlerTests
     public async Task Handle_BlankUsername_ThrowsAndSavesNothing(string username)
     {
         await Should.ThrowAsync<InvalidOperationException>(() =>
-            Handler().Handle(new CreateUserCommand("A", "B", username, "pw", UserRoleEnum.Admin), CancellationToken.None));
+            Handler().Handle(new CreateUserCommand("A", "B", username, "pw", (int)UserRoleEnum.Admin), CancellationToken.None));
 
         await using var db = TestDb.Create(_dbName);
         (await db.Users.CountAsync()).ShouldBe(0);
@@ -82,7 +86,7 @@ public class CreateUserHandlerTests
     public async Task Handle_BlankPassword_ThrowsAndSavesNothing(string password)
     {
         await Should.ThrowAsync<InvalidOperationException>(() =>
-            Handler().Handle(new CreateUserCommand("A", "B", "user", password, UserRoleEnum.Admin), CancellationToken.None));
+            Handler().Handle(new CreateUserCommand("A", "B", "user", password, (int)UserRoleEnum.Admin), CancellationToken.None));
 
         await using var db = TestDb.Create(_dbName);
         (await db.Users.CountAsync()).ShouldBe(0);

@@ -9,6 +9,8 @@ public static class AppPolicies
     public const string ProductsWrite = "ProductsWrite";
     public const string UsersRead = "UsersRead";
     public const string UsersWrite = "UsersWrite";
+    public const string RolesRead = "RolesRead";
+    public const string RolesManage = "RolesManage";
     public const string PromotionsRead = "PromotionsRead";
     public const string PromotionsWrite = "PromotionsWrite";
     public const string AuditRead = "AuditRead";
