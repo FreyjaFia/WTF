@@ -156,7 +156,12 @@ export class ReceivingPage {
   }
 
   public async chooseSupplier(name: string): Promise<void> {
+    // The form fills a line's pack and price from the supplier's item list once it arrives; an item chosen before that gets nothing.
+    const packsLoaded = this.page.waitForResponse(
+      (response) => response.request().method() === 'GET' && /\/suppliers\/[0-9a-f-]{36}$/i.test(response.url()) && response.ok(),
+    );
     await chooseOption(this.page, 'rc-supplier', name);
+    await packsLoaded;
   }
 
   public async chooseOrder(label: string): Promise<void> {
