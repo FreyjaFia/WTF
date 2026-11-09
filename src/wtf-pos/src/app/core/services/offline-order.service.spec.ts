@@ -246,12 +246,29 @@ describe('OfflineOrderService', () => {
       expect(service.pendingOrders()[0].customerName).toBe('New');
     });
 
-    it('update is a no-op for unknown ids', async () => {
+    it('update refuses an unknown id instead of pretending it saved', async () => {
       const service = await create([{ localId: 'OFF-a-001' }]);
 
-      await service.update('missing', command(), cart, 'X');
+      await expect(service.update('missing', command(), cart, 'X')).rejects.toThrow('no longer exists');
 
       expect(table.rows[0].customerName).toBeNull();
+    });
+
+    it('update refuses an order that is syncing and leaves it untouched', async () => {
+      const service = await create();
+      await table.add({
+        localId: 'OFF-a-001',
+        command: command(),
+        cartSnapshot: cart,
+        customerName: 'Old',
+        createdAt: new Date().toISOString(),
+        status: 'syncing',
+        retryCount: 0,
+      });
+
+      await expect(service.update('OFF-a-001', command('new'), cart, 'New')).rejects.toThrow('is syncing');
+
+      expect(table.rows[0]).toMatchObject({ status: 'syncing', customerName: 'Old' });
     });
 
     it('remove deletes the order and refreshes the list', async () => {

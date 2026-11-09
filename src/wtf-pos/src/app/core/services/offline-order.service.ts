@@ -137,7 +137,11 @@ export class OfflineOrderService {
     const existing = await db.pendingOrders.where('localId').equals(localId).first();
 
     if (!existing) {
-      return;
+      throw new Error(`Offline order ${localId} no longer exists.`);
+    }
+
+    if (existing.status === 'syncing') {
+      throw new Error(`Offline order ${localId} is syncing and cannot be changed.`);
     }
 
     await (db.pendingOrders as import('dexie').Table).update(existing.id!, {
