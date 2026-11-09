@@ -44,7 +44,7 @@ async function lowItemName(api: Api): Promise<string> {
 }
 
 test.describe('audit log @dashboard @audit @auth', () => {
-  test('a created item shows in the audit log for the super admin', async ({ api }) => {
+  test('a created item shows in the audit log for the owner', async ({ api }) => {
     const item = await api.items.create({ name: unique('E2E Audit Item') });
 
     await expect
@@ -103,7 +103,7 @@ test.describe('audit log @dashboard @audit @auth', () => {
     await expect(page).not.toHaveURL(/audit-logs/);
   });
 
-  test('the super admin opens the audit log page and downloads Excel and PDF', async ({ api, signIn }, info) => {
+  test('the owner opens the audit log page and downloads Excel and PDF', async ({ api, signIn }, info) => {
     await api.items.create({ name: unique('E2E Audit Screen') });
     const page = await signIn('superadmin');
     await page.goto(ROUTES.auditLogs);

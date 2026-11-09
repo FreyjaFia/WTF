@@ -132,7 +132,7 @@ Phase 5 adds its own script (`OrderMessages`, below).
 
 ### API design
 
-Policy `OrderLinksManage` (SuperAdmin, Admin, Cashier, same as `CustomersWrite`) in
+Policy `OrderLinksManage` (Owner, Admin, Cashier, same as `CustomersWrite`) in
 `src/WTF.Api/Common/Auth/AppPolicies.cs` and `AppAuthorizationExtensions.cs`. Reads use
 `CustomersRead`.
 

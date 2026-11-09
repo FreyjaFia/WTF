@@ -27,8 +27,8 @@ Track significant actions so management can review who performed an action and w
   - `GET /api/schema-script-history`
 - Authorization hardening implemented:
   - dedicated policies for audit resources (`AuditRead`, `SchemaScriptHistoryRead`)
-  - only `SuperAdmin` can access audit logs and schema script history
-  - existing admin capabilities retained for `SuperAdmin`
+  - only `Owner` can access audit logs and schema script history
+  - existing admin capabilities retained for `Owner`
 
 ### Implemented Frontend
 
@@ -37,7 +37,7 @@ Track significant actions so management can review who performed an action and w
   - `/management/schema-scripts`
 - Navigation entries and icons added under Management.
 - Role-gated management navigation:
-  - audit logs and schema scripts are visible to `SuperAdmin` only
+  - audit logs and schema scripts are visible to `Owner` only
   - route guards aligned with backend authorization rules
 - Audit logs page:
   - fetches and displays audit log entries
@@ -54,9 +54,9 @@ Track significant actions so management can review who performed an action and w
 
 - Tag-based SQL deployment in CI (`.github/workflows/main.yml`).
 - SQL scripts run in `tools/sql` order on tag builds.
-- Role migration script added: `tools/sql/20260227_add_super_admin_role.sql`
-  - upserts `SuperAdmin` in `UserRoles`
-  - upgrades username `admin` to `SuperAdmin`
+- Role migration script added: `tools/sql/20260227_add_super_admin_role.sql` (the role is now called Owner, see `20261118_rename_super_admin_to_owner.sql`)
+  - upserts `Owner` in `UserRoles`
+  - upgrades username `admin` to `Owner`
 - Re-run protection via `dbo.SchemaScriptHistory` check:
   - already applied scripts are skipped
   - newly applied scripts are inserted into history

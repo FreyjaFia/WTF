@@ -17,9 +17,9 @@ public record SetItemAlertRecipientsCommand(Guid ItemId, List<Guid> UserIds) : I
 internal static class AlertRecipientCandidates
 {
     // The people who can read stock notifications; only they can be told about an item.
-    public static readonly string[] Roles = [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.StockManager];
+    public static readonly string[] Roles = [AppRoles.Owner, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.StockManager];
 
-    public const string DefaultDescription = "Super Admins, Admins and Stock Managers";
+    public const string DefaultDescription = "Owners, Admins and Stock Managers";
 
     public static async Task<List<AlertRecipientDto>> LoadAsync(WTFDbContext db, CancellationToken cancellationToken)
     {
@@ -81,7 +81,7 @@ public class SetItemAlertRecipientsHandler(
         var allowed = candidates.Select(c => c.UserId).ToHashSet();
         if (wanted.Any(id => !allowed.Contains(id)))
         {
-            throw new InvalidOperationException("Only active Super Admins, Admins, Admin Viewers and Stock Managers can receive stock alerts.");
+            throw new InvalidOperationException("Only active Owners, Admins, Admin Viewers and Stock Managers can receive stock alerts.");
         }
 
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();

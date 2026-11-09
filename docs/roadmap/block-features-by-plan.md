@@ -113,7 +113,7 @@ The server is the real gate; the app only hides things.
    row or a single-shop install is never limited.
 4. **Direct URLs.** A `featureGuard` reads `data: { feature: 'inventory' }` on the parent routes (`inventory`,
    `management/promotions`, `management/reports`, `management/expenses`, `management/audit-logs`) and redirects to a
-   "Not in your plan" screen that says which plan has it and, for SuperAdmin and Admin, how to upgrade; others see "ask
+   "Not in your plan" screen that says which plan has it and, for Owner and Admin, how to upgrade; others see "ask
    the owner". Bookmarks, pushed notification links and old customer links all land there instead of an error page.
 5. **MaxUsers.** Checked in the create-user and re-activate-user handlers (the only two ways to add a seat), with the
    same style of message. Existing users are never disabled by a lower cap.

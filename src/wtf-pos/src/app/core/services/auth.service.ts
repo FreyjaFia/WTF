@@ -373,7 +373,7 @@ export class AuthService {
     return this.hasAnyRole(AppRoleGroups.ReportsRead);
   }
 
-  public isSuperAdmin(): boolean {
+  public isOwner(): boolean {
     return this.hasAnyRole(AppRoleGroups.AuditRead);
   }
 
@@ -471,7 +471,7 @@ export class AuthService {
 
   public getCurrentRoleLabel(): string {
     const prioritizedRoles: readonly AppRole[] = [
-      AppRoles.SuperAdmin,
+      AppRoles.Owner,
       AppRoles.Admin,
       AppRoles.AdminViewer,
       AppRoles.Cashier,
@@ -535,7 +535,8 @@ export class AuthService {
     const normalizedRole = this.normalizeRole(role);
     const roleAliases = new Set<string>([normalizedRole]);
 
-    if (normalizedRole === 'superadmin') {
+    if (normalizedRole === 'owner') {
+      roleAliases.add('superadmin');
       roleAliases.add('super admin');
     }
 

@@ -22,9 +22,9 @@ describe('app roles', () => {
     }
   });
 
-  it('always lets SuperAdmin do everything', () => {
+  it('always lets Owner do everything', () => {
     for (const [group, members] of Object.entries(AppRoleGroups)) {
-      expect(members as readonly string[], group).toContain(AppRoles.SuperAdmin);
+      expect(members as readonly string[], group).toContain(AppRoles.Owner);
     }
   });
 
@@ -57,37 +57,37 @@ describe('app roles', () => {
 describe('app roles vs the API policies', () => {
   // Mirrors WTF.Api AppAuthorizationExtensions (and the .NET PolicyMatrixTests). Update both together.
   const apiPolicies: Record<Exclude<keyof typeof AppRoleGroups, 'ManagementAccess' | 'ManagementMenu' | 'SetupAccess'>, readonly string[]> = {
-    DashboardRead: ['SuperAdmin', 'Admin', 'AdminViewer'],
-    ProductsRead: ['SuperAdmin', 'Admin', 'AdminViewer', 'Cashier'],
-    ProductsWrite: ['SuperAdmin', 'Admin'],
-    UsersRead: ['SuperAdmin', 'Admin', 'AdminViewer'],
-    UsersWrite: ['SuperAdmin', 'Admin'],
-    PromotionsRead: ['SuperAdmin', 'Admin', 'AdminViewer'],
-    PromotionsWrite: ['SuperAdmin', 'Admin'],
-    ReportsRead: ['SuperAdmin', 'Admin', 'AdminViewer'],
-    ReportsGenerate: ['SuperAdmin', 'Admin'],
-    AuditRead: ['SuperAdmin'],
-    SchemaScriptHistoryRead: ['SuperAdmin'],
-    OrdersRead: ['SuperAdmin', 'Admin', 'AdminViewer', 'Cashier'],
-    OrdersWrite: ['SuperAdmin', 'Admin', 'Cashier'],
-    OrdersOverride: ['SuperAdmin', 'Admin'],
-    OrderLinksWrite: ['SuperAdmin', 'Admin', 'Cashier'],
-    CustomersRead: ['SuperAdmin', 'Admin', 'AdminViewer', 'Cashier'],
-    CustomersWrite: ['SuperAdmin', 'Admin', 'Cashier'],
-    ItemsRead: ['SuperAdmin', 'Admin', 'AdminViewer', 'ItemManager', 'StockManager'],
-    ItemsWrite: ['SuperAdmin', 'Admin', 'ItemManager'],
-    InventoryCostsRead: ['SuperAdmin', 'Admin', 'AdminViewer'],
-    InventoryCostsWrite: ['SuperAdmin', 'Admin'],
-    StockMovementsRead: ['SuperAdmin', 'Admin', 'AdminViewer', 'StockManager'],
-    StockMovementsWrite: ['SuperAdmin', 'Admin', 'StockManager'],
-    StockWasteWrite: ['SuperAdmin', 'Admin', 'StockManager', 'Cashier'],
-    StockWasteReview: ['SuperAdmin', 'Admin'],
-    ExpensesRead: ['SuperAdmin', 'Admin', 'AdminViewer'],
-    ExpensesWrite: ['SuperAdmin', 'Admin'],
-    WasteReasonsManage: ['SuperAdmin', 'Admin'],
-    SubscriptionBilling: ['SuperAdmin', 'Admin'],
-    BrandManage: ['SuperAdmin', 'Admin'],
-    WasteReasonsRead: ['SuperAdmin', 'Admin', 'AdminViewer', 'StockManager', 'Cashier'],
+    DashboardRead: ['Owner', 'Admin', 'AdminViewer'],
+    ProductsRead: ['Owner', 'Admin', 'AdminViewer', 'Cashier'],
+    ProductsWrite: ['Owner', 'Admin'],
+    UsersRead: ['Owner', 'Admin', 'AdminViewer'],
+    UsersWrite: ['Owner', 'Admin'],
+    PromotionsRead: ['Owner', 'Admin', 'AdminViewer'],
+    PromotionsWrite: ['Owner', 'Admin'],
+    ReportsRead: ['Owner', 'Admin', 'AdminViewer'],
+    ReportsGenerate: ['Owner', 'Admin'],
+    AuditRead: ['Owner'],
+    SchemaScriptHistoryRead: ['Owner'],
+    OrdersRead: ['Owner', 'Admin', 'AdminViewer', 'Cashier'],
+    OrdersWrite: ['Owner', 'Admin', 'Cashier'],
+    OrdersOverride: ['Owner', 'Admin'],
+    OrderLinksWrite: ['Owner', 'Admin', 'Cashier'],
+    CustomersRead: ['Owner', 'Admin', 'AdminViewer', 'Cashier'],
+    CustomersWrite: ['Owner', 'Admin', 'Cashier'],
+    ItemsRead: ['Owner', 'Admin', 'AdminViewer', 'ItemManager', 'StockManager'],
+    ItemsWrite: ['Owner', 'Admin', 'ItemManager'],
+    InventoryCostsRead: ['Owner', 'Admin', 'AdminViewer'],
+    InventoryCostsWrite: ['Owner', 'Admin'],
+    StockMovementsRead: ['Owner', 'Admin', 'AdminViewer', 'StockManager'],
+    StockMovementsWrite: ['Owner', 'Admin', 'StockManager'],
+    StockWasteWrite: ['Owner', 'Admin', 'StockManager', 'Cashier'],
+    StockWasteReview: ['Owner', 'Admin'],
+    ExpensesRead: ['Owner', 'Admin', 'AdminViewer'],
+    ExpensesWrite: ['Owner', 'Admin'],
+    WasteReasonsManage: ['Owner', 'Admin'],
+    SubscriptionBilling: ['Owner', 'Admin'],
+    BrandManage: ['Owner', 'Admin'],
+    WasteReasonsRead: ['Owner', 'Admin', 'AdminViewer', 'StockManager', 'Cashier'],
   };
 
   // UI-only groups have no API policy because the API has no matching area to protect.

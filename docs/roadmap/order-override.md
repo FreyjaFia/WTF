@@ -1,12 +1,12 @@
 ## Completed Order Override [Implemented]
 
-Admins and above (`Admin`, `SuperAdmin`) can correct a completed order after the fact
+Admins and above (`Admin`, `Owner`) can correct a completed order after the fact
 (items, add-ons, quantities, customer, payment method / amount / tips, special instructions)
 instead of only refunding it.
 
 ### Implemented
 
-- API: `PUT /api/orders/{id}/override` behind the `OrdersOverride` policy (SuperAdmin, Admin).
+- API: `PUT /api/orders/{id}/override` behind the `OrdersOverride` policy (Owner, Admin).
   It reuses `UpdateOrderHandler` through an `IsOverride` flag that is never bound from the
   request body, so the regular update endpoint still rejects non-pending orders.
 - Rules: only `Completed` orders, the order stays `Completed`, and a reason is required.

@@ -369,9 +369,9 @@ describe('AuthService session', () => {
     });
 
     it('matches roles case-insensitively and with spaced aliases', () => {
-      expect(create(tokenFor('SUPERADMIN')).hasAnyRole([AppRoles.SuperAdmin])).toBe(true);
+      expect(create(tokenFor('SUPERADMIN')).hasAnyRole([AppRoles.Owner])).toBe(true);
       TestBed.resetTestingModule();
-      expect(create(tokenFor('Super Admin')).hasAnyRole([AppRoles.SuperAdmin])).toBe(true);
+      expect(create(tokenFor('Super Admin')).hasAnyRole([AppRoles.Owner])).toBe(true);
       TestBed.resetTestingModule();
       expect(create(tokenFor('admin viewer')).hasAnyRole([AppRoles.AdminViewer])).toBe(true);
       TestBed.resetTestingModule();
@@ -386,60 +386,60 @@ describe('AuthService session', () => {
   describe('permission helpers', () => {
     type Check = (auth: AuthService) => boolean;
     const matrix: [string, Check, string[]][] = [
-      ['canReadProducts', (a) => a.canReadProducts(), ['SuperAdmin', 'Admin', 'AdminViewer']],
-      ['canWriteProducts', (a) => a.canWriteProducts(), ['SuperAdmin', 'Admin']],
-      ['canReadUsers', (a) => a.canReadUsers(), ['SuperAdmin', 'Admin', 'AdminViewer']],
-      ['canWriteUsers', (a) => a.canWriteUsers(), ['SuperAdmin', 'Admin']],
-      ['canReadPromotions', (a) => a.canReadPromotions(), ['SuperAdmin', 'Admin', 'AdminViewer']],
-      ['canWritePromotions', (a) => a.canWritePromotions(), ['SuperAdmin', 'Admin']],
-      ['canReadCustomers', (a) => a.canReadCustomers(), ['SuperAdmin', 'Admin', 'AdminViewer']],
-      ['canWriteCustomers', (a) => a.canWriteCustomers(), ['SuperAdmin', 'Admin', 'Cashier']],
+      ['canReadProducts', (a) => a.canReadProducts(), ['Owner', 'Admin', 'AdminViewer']],
+      ['canWriteProducts', (a) => a.canWriteProducts(), ['Owner', 'Admin']],
+      ['canReadUsers', (a) => a.canReadUsers(), ['Owner', 'Admin', 'AdminViewer']],
+      ['canWriteUsers', (a) => a.canWriteUsers(), ['Owner', 'Admin']],
+      ['canReadPromotions', (a) => a.canReadPromotions(), ['Owner', 'Admin', 'AdminViewer']],
+      ['canWritePromotions', (a) => a.canWritePromotions(), ['Owner', 'Admin']],
+      ['canReadCustomers', (a) => a.canReadCustomers(), ['Owner', 'Admin', 'AdminViewer']],
+      ['canWriteCustomers', (a) => a.canWriteCustomers(), ['Owner', 'Admin', 'Cashier']],
       [
         'canCreateCustomerInOrder',
         (a) => a.canCreateCustomerInOrder(true),
-        ['SuperAdmin', 'Admin', 'Cashier'],
+        ['Owner', 'Admin', 'Cashier'],
       ],
-      ['canAccessReports', (a) => a.canAccessReports(), ['SuperAdmin', 'Admin', 'AdminViewer']],
-      ['canAccessAuditLogs', (a) => a.canAccessAuditLogs(), ['SuperAdmin']],
-      ['isSuperAdmin', (a) => a.isSuperAdmin(), ['SuperAdmin']],
-      ['canAccessSchemaScriptHistory', (a) => a.canAccessSchemaScriptHistory(), ['SuperAdmin']],
+      ['canAccessReports', (a) => a.canAccessReports(), ['Owner', 'Admin', 'AdminViewer']],
+      ['canAccessAuditLogs', (a) => a.canAccessAuditLogs(), ['Owner']],
+      ['isOwner', (a) => a.isOwner(), ['Owner']],
+      ['canAccessSchemaScriptHistory', (a) => a.canAccessSchemaScriptHistory(), ['Owner']],
       [
         'canReadOrders',
         (a) => a.canReadOrders(),
-        ['SuperAdmin', 'Admin', 'AdminViewer', 'Cashier'],
+        ['Owner', 'Admin', 'AdminViewer', 'Cashier'],
       ],
-      ['canWriteOrders', (a) => a.canWriteOrders(), ['SuperAdmin', 'Admin', 'Cashier']],
-      ['canOverrideOrders', (a) => a.canOverrideOrders(), ['SuperAdmin', 'Admin']],
-      ['canGenerateReports', (a) => a.canGenerateReports(), ['SuperAdmin', 'Admin']],
+      ['canWriteOrders', (a) => a.canWriteOrders(), ['Owner', 'Admin', 'Cashier']],
+      ['canOverrideOrders', (a) => a.canOverrideOrders(), ['Owner', 'Admin']],
+      ['canGenerateReports', (a) => a.canGenerateReports(), ['Owner', 'Admin']],
       [
         'canReadItems',
         (a) => a.canReadItems(),
-        ['SuperAdmin', 'Admin', 'AdminViewer', 'ItemManager', 'StockManager'],
+        ['Owner', 'Admin', 'AdminViewer', 'ItemManager', 'StockManager'],
       ],
-      ['canWriteInventoryCosts', (a) => a.canWriteInventoryCosts(), ['SuperAdmin', 'Admin']],
-      ['canWriteItems', (a) => a.canWriteItems(), ['SuperAdmin', 'Admin', 'ItemManager']],
+      ['canWriteInventoryCosts', (a) => a.canWriteInventoryCosts(), ['Owner', 'Admin']],
+      ['canWriteItems', (a) => a.canWriteItems(), ['Owner', 'Admin', 'ItemManager']],
       [
         'canReadStockMovements',
         (a) => a.canReadStockMovements(),
-        ['SuperAdmin', 'Admin', 'AdminViewer', 'StockManager'],
+        ['Owner', 'Admin', 'AdminViewer', 'StockManager'],
       ],
       [
         'canWriteStockMovements',
         (a) => a.canWriteStockMovements(),
-        ['SuperAdmin', 'Admin', 'StockManager'],
+        ['Owner', 'Admin', 'StockManager'],
       ],
       [
         'canReadInventory',
         (a) => a.canReadInventory(),
-        ['SuperAdmin', 'Admin', 'AdminViewer', 'ItemManager', 'StockManager'],
+        ['Owner', 'Admin', 'AdminViewer', 'ItemManager', 'StockManager'],
       ],
       [
         'canWriteInventory',
         (a) => a.canWriteInventory(),
-        ['SuperAdmin', 'Admin', 'ItemManager', 'StockManager'],
+        ['Owner', 'Admin', 'ItemManager', 'StockManager'],
       ],
-      ['canReadManagement', (a) => a.canReadManagement(), ['SuperAdmin', 'Admin', 'AdminViewer']],
-      ['canWriteManagement', (a) => a.canWriteManagement(), ['SuperAdmin', 'Admin', 'Cashier']],
+      ['canReadManagement', (a) => a.canReadManagement(), ['Owner', 'Admin', 'AdminViewer']],
+      ['canWriteManagement', (a) => a.canWriteManagement(), ['Owner', 'Admin', 'Cashier']],
     ];
 
     const allRoles = Object.values(AppRoles);
@@ -464,7 +464,7 @@ describe('AuthService session', () => {
   describe('getCurrentRoleLabel', () => {
     it.each([
       [['Cashier', 'Admin'], 'Admin'],
-      [['Admin', 'SuperAdmin'], 'Super Admin'],
+      [['Admin', 'Owner'], 'Owner'],
       [['AdminViewer'], 'Admin Viewer'],
       [['ItemManager'], 'Item Manager'],
       [['StockManager'], 'Stock Manager'],

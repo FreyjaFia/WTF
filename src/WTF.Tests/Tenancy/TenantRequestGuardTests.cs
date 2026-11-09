@@ -59,7 +59,7 @@ public class TenantRequestGuardTests
 
     private static Claim[] Impersonated(bool readOnly) =>
     [
-        new(ClaimTypes.Role, AppRoles.SuperAdmin),
+        new(ClaimTypes.Role, AppRoles.Owner),
         new(TenantDefaults.ClaimType, Shop.ToString()),
         new(ImpersonationClaims.By, Guid.NewGuid().ToString()),
         new(ImpersonationClaims.ReadOnly, readOnly ? "1" : "0"),

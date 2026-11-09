@@ -75,7 +75,7 @@ public class GetDashboardProfitTests
     }
 
     [Theory]
-    [InlineData(AppRoles.SuperAdmin)]
+    [InlineData(AppRoles.Owner)]
     [InlineData(AppRoles.Admin)]
     [InlineData(AppRoles.AdminViewer)]
     public async Task TheCostRolesGetTheTiles(string role)

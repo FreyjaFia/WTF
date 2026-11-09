@@ -9,43 +9,43 @@ namespace WTF.Tests.Endpoints;
 public class PolicyMatrixTests : IDisposable
 {
     private static readonly string[] AllRoles =
-        [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.Cashier, AppRoles.ItemManager, AppRoles.StockManager];
+        [AppRoles.Owner, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.Cashier, AppRoles.ItemManager, AppRoles.StockManager];
 
     // Policy -> roles allowed. Kept independent of AppAuthorizationExtensions on purpose.
     private static readonly Dictionary<string, string[]> Expected = new()
     {
-        [AppPolicies.ProductsRead] = [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.Cashier],
-        [AppPolicies.ProductsWrite] = [AppRoles.SuperAdmin, AppRoles.Admin],
-        [AppPolicies.UsersRead] = [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer],
-        [AppPolicies.UsersWrite] = [AppRoles.SuperAdmin, AppRoles.Admin],
-        [AppPolicies.PromotionsRead] = [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer],
-        [AppPolicies.PromotionsWrite] = [AppRoles.SuperAdmin, AppRoles.Admin],
-        [AppPolicies.AuditRead] = [AppRoles.SuperAdmin],
+        [AppPolicies.ProductsRead] = [AppRoles.Owner, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.Cashier],
+        [AppPolicies.ProductsWrite] = [AppRoles.Owner, AppRoles.Admin],
+        [AppPolicies.UsersRead] = [AppRoles.Owner, AppRoles.Admin, AppRoles.AdminViewer],
+        [AppPolicies.UsersWrite] = [AppRoles.Owner, AppRoles.Admin],
+        [AppPolicies.PromotionsRead] = [AppRoles.Owner, AppRoles.Admin, AppRoles.AdminViewer],
+        [AppPolicies.PromotionsWrite] = [AppRoles.Owner, AppRoles.Admin],
+        [AppPolicies.AuditRead] = [AppRoles.Owner],
         [AppPolicies.PlatformAdmin] = [AppRoles.PlatformAdmin],
-        [AppPolicies.SubscriptionBilling] = [AppRoles.SuperAdmin, AppRoles.Admin],
-        [AppPolicies.BrandManage] = [AppRoles.SuperAdmin, AppRoles.Admin],
-        [AppPolicies.SchemaScriptHistoryRead] = [AppRoles.SuperAdmin],
-        [AppPolicies.OrdersRead] = [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.Cashier],
-        [AppPolicies.OrdersWrite] = [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.Cashier],
-        [AppPolicies.OrdersOverride] = [AppRoles.SuperAdmin, AppRoles.Admin],
-        [AppPolicies.OrderLinksManage] = [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.Cashier],
-        [AppPolicies.CustomersRead] = [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.Cashier],
-        [AppPolicies.CustomersWrite] = [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.Cashier],
-        [AppPolicies.ItemsRead] = [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.ItemManager, AppRoles.StockManager],
-        [AppPolicies.ItemsWrite] = [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.ItemManager],
-        [AppPolicies.InventoryCostsRead] = [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer],
-        [AppPolicies.InventoryCostsWrite] = [AppRoles.SuperAdmin, AppRoles.Admin],
-        [AppPolicies.StockMovementsRead] = [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.StockManager],
-        [AppPolicies.StockMovementsWrite] = [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.StockManager],
-        [AppPolicies.StockWasteWrite] = [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.StockManager, AppRoles.Cashier],
-        [AppPolicies.StockWasteReview] = [AppRoles.SuperAdmin, AppRoles.Admin],
-        [AppPolicies.WasteReasonsManage] = [AppRoles.SuperAdmin, AppRoles.Admin],
-        [AppPolicies.WasteReasonsRead] = [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.StockManager, AppRoles.Cashier],
-        [AppPolicies.ExpensesRead] = [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer],
-        [AppPolicies.ExpensesWrite] = [AppRoles.SuperAdmin, AppRoles.Admin],
-        [AppPolicies.DashboardRead] = [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer],
-        [AppPolicies.ReportsGenerate] = [AppRoles.SuperAdmin, AppRoles.Admin],
-        [AppPolicies.ReportsRead] = [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer],
+        [AppPolicies.SubscriptionBilling] = [AppRoles.Owner, AppRoles.Admin],
+        [AppPolicies.BrandManage] = [AppRoles.Owner, AppRoles.Admin],
+        [AppPolicies.SchemaScriptHistoryRead] = [AppRoles.Owner],
+        [AppPolicies.OrdersRead] = [AppRoles.Owner, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.Cashier],
+        [AppPolicies.OrdersWrite] = [AppRoles.Owner, AppRoles.Admin, AppRoles.Cashier],
+        [AppPolicies.OrdersOverride] = [AppRoles.Owner, AppRoles.Admin],
+        [AppPolicies.OrderLinksManage] = [AppRoles.Owner, AppRoles.Admin, AppRoles.Cashier],
+        [AppPolicies.CustomersRead] = [AppRoles.Owner, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.Cashier],
+        [AppPolicies.CustomersWrite] = [AppRoles.Owner, AppRoles.Admin, AppRoles.Cashier],
+        [AppPolicies.ItemsRead] = [AppRoles.Owner, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.ItemManager, AppRoles.StockManager],
+        [AppPolicies.ItemsWrite] = [AppRoles.Owner, AppRoles.Admin, AppRoles.ItemManager],
+        [AppPolicies.InventoryCostsRead] = [AppRoles.Owner, AppRoles.Admin, AppRoles.AdminViewer],
+        [AppPolicies.InventoryCostsWrite] = [AppRoles.Owner, AppRoles.Admin],
+        [AppPolicies.StockMovementsRead] = [AppRoles.Owner, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.StockManager],
+        [AppPolicies.StockMovementsWrite] = [AppRoles.Owner, AppRoles.Admin, AppRoles.StockManager],
+        [AppPolicies.StockWasteWrite] = [AppRoles.Owner, AppRoles.Admin, AppRoles.StockManager, AppRoles.Cashier],
+        [AppPolicies.StockWasteReview] = [AppRoles.Owner, AppRoles.Admin],
+        [AppPolicies.WasteReasonsManage] = [AppRoles.Owner, AppRoles.Admin],
+        [AppPolicies.WasteReasonsRead] = [AppRoles.Owner, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.StockManager, AppRoles.Cashier],
+        [AppPolicies.ExpensesRead] = [AppRoles.Owner, AppRoles.Admin, AppRoles.AdminViewer],
+        [AppPolicies.ExpensesWrite] = [AppRoles.Owner, AppRoles.Admin],
+        [AppPolicies.DashboardRead] = [AppRoles.Owner, AppRoles.Admin, AppRoles.AdminViewer],
+        [AppPolicies.ReportsGenerate] = [AppRoles.Owner, AppRoles.Admin],
+        [AppPolicies.ReportsRead] = [AppRoles.Owner, AppRoles.Admin, AppRoles.AdminViewer],
     };
 
     private readonly EndpointTestHost _host = new();
@@ -118,10 +118,10 @@ public class PolicyMatrixTests : IDisposable
     }
 
     [Fact]
-    public void SuperAdmin_IsAllowedEverywhere()
+    public void Owner_IsAllowedEverywhere()
     {
-        // The platform area is outside every shop: not even a shop's SuperAdmin may enter it.
-        Expected.Where(p => p.Key != AppPolicies.PlatformAdmin).Select(p => p.Value).ShouldAllBe(roles => roles.Contains(AppRoles.SuperAdmin));
+        // The platform area is outside every shop: not even a shop's Owner may enter it.
+        Expected.Where(p => p.Key != AppPolicies.PlatformAdmin).Select(p => p.Value).ShouldAllBe(roles => roles.Contains(AppRoles.Owner));
         Expected[AppPolicies.PlatformAdmin].ShouldBe([AppRoles.PlatformAdmin]);
     }
 

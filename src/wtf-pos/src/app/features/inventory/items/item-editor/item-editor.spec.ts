@@ -48,7 +48,7 @@ function recipients(selected: string[] = []) {
       { userId: 'u1', name: 'Ana Admin', role: 'Admin' },
       { userId: 'u2', name: 'Ben Stock', role: 'StockManager' },
     ],
-    defaultDescription: 'Super Admins, Admins and Stock Managers',
+    defaultDescription: 'Owners, Admins and Stock Managers',
   };
 }
 
@@ -572,7 +572,7 @@ describe('ItemEditorComponent', () => {
     it('starts on the default and says who that is', () => {
       const { fixture } = create('i1');
       expect(inventory.getAlertRecipients).toHaveBeenCalledWith('i1');
-      expect(card(fixture)?.textContent).toContain('Default: Super Admins, Admins and Stock Managers');
+      expect(card(fixture)?.textContent).toContain('Default: Owners, Admins and Stock Managers');
       expect(card(fixture)?.querySelectorAll('input[type="checkbox"]').length).toBe(0);
     });
 

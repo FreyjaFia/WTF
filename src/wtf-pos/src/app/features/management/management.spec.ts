@@ -88,7 +88,7 @@ describe('ManagementComponent', () => {
     expect(tabs(el)[9].getAttribute('href')).toBe('/management/schema-scripts');
   });
 
-  it('hides audit and schema tabs for non-super admins', async () => {
+  it('hides audit and schema tabs for non-owners', async () => {
     perms.canAccessAuditLogs = false;
     perms.canAccessSchemaScriptHistory = false;
     perms.canReadExpenses = false;

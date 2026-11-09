@@ -2,7 +2,7 @@ export enum UserRoleEnum {
   Admin = 1,
   Cashier = 2,
   AdminViewer = 3,
-  SuperAdmin = 4,
+  Owner = 4,
   ItemManager = 5,
   StockManager = 6,
 }

@@ -46,7 +46,7 @@ public class RecordWasteHandler(
 {
     private const decimal MaxQuantity = 999999.999m;
 
-    private static readonly string[] ReviewerRoles = [AppRoles.SuperAdmin, AppRoles.Admin];
+    private static readonly string[] ReviewerRoles = [AppRoles.Owner, AppRoles.Admin];
 
     public async Task<StockWasteDto?> Handle(RecordWasteCommand request, CancellationToken cancellationToken)
     {

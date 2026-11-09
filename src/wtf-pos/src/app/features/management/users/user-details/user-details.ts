@@ -174,8 +174,8 @@ export class UserDetailsComponent implements OnInit {
       return false;
     }
 
-    if (user.roleId === UserRoleEnum.SuperAdmin) {
-      return this.authService.isSuperAdmin();
+    if (user.roleId === UserRoleEnum.Owner) {
+      return this.authService.isOwner();
     }
 
     return true;

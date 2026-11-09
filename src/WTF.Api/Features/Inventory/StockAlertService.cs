@@ -14,7 +14,7 @@ public interface IStockAlertService
 
 public class StockAlertService(WTFDbContext db, INotificationService notifications) : IStockAlertService
 {
-    private static readonly string[] DefaultRecipientRoles = [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.StockManager];
+    private static readonly string[] DefaultRecipientRoles = [AppRoles.Owner, AppRoles.Admin, AppRoles.StockManager];
 
     // Looks at each item's level after a change and tells the right people once when it got worse. The alert state moves
     // with one guarded UPDATE, so two registers that cross the level together alert once.

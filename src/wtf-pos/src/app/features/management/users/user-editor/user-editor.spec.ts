@@ -41,7 +41,7 @@ const dropEvent = (file?: File) =>
 interface Opts {
   id?: string;
   profile?: boolean;
-  superAdmin?: boolean;
+  owner?: boolean;
   token?: string | null;
   get?: unknown;
 }
@@ -65,7 +65,7 @@ describe('UserEditorComponent', () => {
       deleteUserImage: vi.fn(() => of({ ...USER, imageUrl: null })),
     };
     auth = {
-      isSuperAdmin: vi.fn(() => opts.superAdmin ?? false),
+      isOwner: vi.fn(() => opts.owner ?? false),
       getToken: vi.fn(() => (opts.token === undefined ? tokenFor({ sub: 'me1' }) : opts.token)),
       getCurrentRoleLabel: vi.fn(() => 'Cashier'),
       updateMe: vi.fn(() => of(void 0)),
@@ -117,16 +117,16 @@ describe('UserEditorComponent', () => {
       expect(text()).toContain('Create User');
     });
 
-    it('hides the Super Admin role from non super admins', () => {
+    it('hides the Owner role from non owners', () => {
       setup();
       expect(c.userRoleOptions.map((r: { value: number }) => r.value)).not.toContain(
-        UserRoleEnum.SuperAdmin,
+        UserRoleEnum.Owner,
       );
       expect(c.userRoleOptions.length).toBe(5);
     });
 
-    it('offers the Super Admin role to super admins', () => {
-      setup({ superAdmin: true });
+    it('offers the Owner role to owners', () => {
+      setup({ owner: true });
       expect(c.userRoleOptions.length).toBe(6);
     });
 
@@ -212,17 +212,17 @@ describe('UserEditorComponent', () => {
       expect(c.isSaving()).toBe(false);
     });
 
-    it('refuses to create a Super Admin unless super admin', () => {
+    it('refuses to create an Owner unless owner', () => {
       setup();
-      fillValid({ roleId: UserRoleEnum.SuperAdmin });
+      fillValid({ roleId: UserRoleEnum.Owner });
       c.saveUser();
       expect(alert.errorUnauthorized).toHaveBeenCalled();
       expect(service['createUser']).not.toHaveBeenCalled();
     });
 
-    it('allows creating a Super Admin as super admin', () => {
-      setup({ superAdmin: true });
-      fillValid({ roleId: UserRoleEnum.SuperAdmin });
+    it('allows creating an Owner as owner', () => {
+      setup({ owner: true });
+      fillValid({ roleId: UserRoleEnum.Owner });
       c.saveUser();
       expect(service['createUser']).toHaveBeenCalled();
     });
@@ -287,17 +287,17 @@ describe('UserEditorComponent', () => {
       expect(fixture.nativeElement.querySelector('#userForm')).toBeNull();
     });
 
-    it('bounces non super admins away from super admin accounts', () => {
-      setup({ id: 'u1', get: of({ ...USER, roleId: UserRoleEnum.SuperAdmin }) });
+    it('bounces non owners away from owner accounts', () => {
+      setup({ id: 'u1', get: of({ ...USER, roleId: UserRoleEnum.Owner }) });
       expect(alert.errorUnauthorized).toHaveBeenCalled();
       expect(router.navigateByUrl).toHaveBeenCalledWith('/management/users');
       expect(c.isLoading()).toBe(false);
     });
 
-    it('lets super admins edit super admin accounts', () => {
-      setup({ id: 'u1', superAdmin: true, get: of({ ...USER, roleId: UserRoleEnum.SuperAdmin }) });
+    it('lets owners edit owner accounts', () => {
+      setup({ id: 'u1', owner: true, get: of({ ...USER, roleId: UserRoleEnum.Owner }) });
       expect(alert.errorUnauthorized).not.toHaveBeenCalled();
-      expect(c.userForm.controls.roleId.value).toBe(UserRoleEnum.SuperAdmin);
+      expect(c.userForm.controls.roleId.value).toBe(UserRoleEnum.Owner);
     });
 
     it('updates without a password (undefined) and navigates to details', () => {
@@ -363,9 +363,9 @@ describe('UserEditorComponent', () => {
       expect(c.isSaving()).toBe(false);
     });
 
-    it('refuses to promote someone to Super Admin as a non super admin', () => {
+    it('refuses to promote someone to Owner as a non owner', () => {
       setup({ id: 'u1' });
-      c.userForm.controls.roleId.setValue(UserRoleEnum.SuperAdmin);
+      c.userForm.controls.roleId.setValue(UserRoleEnum.Owner);
       c.saveUser();
       expect(alert.errorUnauthorized).toHaveBeenCalled();
       expect(service['updateUser']).not.toHaveBeenCalled();
@@ -448,8 +448,8 @@ describe('UserEditorComponent', () => {
       expect(fixture.nativeElement.querySelector('#userImage')).not.toBeNull();
     });
 
-    it('does not bounce non super admins on their own super admin profile', () => {
-      setup({ profile: true, get: of({ ...USER, roleId: UserRoleEnum.SuperAdmin }) });
+    it('does not bounce non owners on their own owner profile', () => {
+      setup({ profile: true, get: of({ ...USER, roleId: UserRoleEnum.Owner }) });
       expect(alert.errorUnauthorized).not.toHaveBeenCalled();
     });
 

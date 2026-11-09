@@ -144,10 +144,10 @@ describe('app.routes', () => {
     }
   });
 
-  it('restricts audit logs and schema scripts to SuperAdmin only', () => {
+  it('restricts audit logs and schema scripts to Owner only', () => {
     for (const path of ['audit-logs', 'schema-scripts']) {
       const entry = flat.find((f) => f.fullPath.endsWith(`management/${path}`));
-      expect(entry?.route.data?.['roles']).toEqual([AppRoles.SuperAdmin]);
+      expect(entry?.route.data?.['roles']).toEqual([AppRoles.Owner]);
     }
   });
 

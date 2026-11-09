@@ -160,6 +160,12 @@ builder.Services.AddAuthentication(options =>
             }
 
             return Task.CompletedTask;
+        },
+        OnTokenValidated = context =>
+        {
+            LegacyRoleAlias.Apply(context.Principal);
+
+            return Task.CompletedTask;
         }
     };
 });

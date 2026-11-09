@@ -232,7 +232,7 @@ public class RecordWasteHandlerTests
         WasteSeed.SetApprovalLimit(_db, itemId, 500m);
         var reasonId = WasteSeed.Reason(_db, "Spilled or dropped");
         var adminId = WasteSeed.User(_db, AppRoles.Admin);
-        var superId = WasteSeed.User(_db, AppRoles.SuperAdmin);
+        var superId = WasteSeed.User(_db, AppRoles.Owner);
         WasteSeed.User(_db, AppRoles.Admin, active: false);
         WasteSeed.User(_db, AppRoles.StockManager);
 

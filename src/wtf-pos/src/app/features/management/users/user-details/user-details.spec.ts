@@ -24,7 +24,7 @@ const ACTIVE: UserDto = {
   imageUrl: 'http://img/a.png',
 };
 const INACTIVE: UserDto = { ...ACTIVE, isActive: false, imageUrl: null };
-const SUPER: UserDto = { ...ACTIVE, roleId: UserRoleEnum.SuperAdmin };
+const SUPER: UserDto = { ...ACTIVE, roleId: UserRoleEnum.Owner };
 
 describe('UserDetailsComponent', () => {
   let fixture: ComponentFixture<UserDetailsComponent>;
@@ -37,7 +37,7 @@ describe('UserDetailsComponent', () => {
     opts: {
       id?: string | null;
       canWrite?: boolean;
-      superAdmin?: boolean;
+      owner?: boolean;
       user?: UserDto;
       get?: unknown;
     } = {},
@@ -57,7 +57,7 @@ describe('UserDetailsComponent', () => {
           provide: AuthService,
           useValue: {
             canWriteUsers: () => opts.canWrite ?? true,
-            isSuperAdmin: () => opts.superAdmin ?? false,
+            isOwner: () => opts.owner ?? false,
           },
         },
         { provide: ActivatedRoute, useValue: stubRoute(opts.id === null ? {} : { id: opts.id ?? 'u1' }) },
@@ -106,15 +106,15 @@ describe('UserDetailsComponent', () => {
     expect(text()).not.toContain('Edit');
   });
 
-  it('hides actions for super admin profiles when not super admin', () => {
+  it('hides actions for owner profiles when not owner', () => {
     setup({ user: SUPER });
     expect(text()).not.toContain('Delete');
   });
 
-  it('shows actions for super admin profiles to super admins', () => {
-    setup({ user: SUPER, superAdmin: true });
+  it('shows actions for owner profiles to owners', () => {
+    setup({ user: SUPER, owner: true });
     expect(text()).toContain('Delete');
-    expect(text()).toContain('Super Admin');
+    expect(text()).toContain('Owner');
   });
 
   it('inactive users show Restore', () => {

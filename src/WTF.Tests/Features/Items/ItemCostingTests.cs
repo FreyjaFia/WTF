@@ -165,7 +165,7 @@ public class ItemCostingTests
     }
 
     [Theory]
-    [InlineData(AppRoles.SuperAdmin, true)]
+    [InlineData(AppRoles.Owner, true)]
     [InlineData(AppRoles.Admin, true)]
     [InlineData(AppRoles.AdminViewer, true)]
     [InlineData(AppRoles.StockManager, false)]

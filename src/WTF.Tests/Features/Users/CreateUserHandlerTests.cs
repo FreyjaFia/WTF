@@ -40,7 +40,7 @@ public class CreateUserHandlerTests
     [InlineData(UserRoleEnum.Admin, 1)]
     [InlineData(UserRoleEnum.Cashier, 2)]
     [InlineData(UserRoleEnum.AdminViewer, 3)]
-    [InlineData(UserRoleEnum.SuperAdmin, 4)]
+    [InlineData(UserRoleEnum.Owner, 4)]
     [InlineData(UserRoleEnum.ItemManager, 5)]
     [InlineData(UserRoleEnum.StockManager, 6)]
     public async Task Handle_Role_IsMappedToRoleId(UserRoleEnum role, int expectedId)

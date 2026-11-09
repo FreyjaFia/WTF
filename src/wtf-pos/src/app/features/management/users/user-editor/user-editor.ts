@@ -56,7 +56,7 @@ export class UserEditorComponent implements OnInit {
   protected readonly lastUpdatedAt = signal<string | null>(null);
   protected currentUserRoleLabel = 'Unknown';
   private readonly allUserRoleOptions = [
-    { label: 'Super Admin', value: UserRoleEnum.SuperAdmin },
+    { label: 'Owner', value: UserRoleEnum.Owner },
     { label: 'Admin', value: UserRoleEnum.Admin },
     { label: 'Cashier', value: UserRoleEnum.Cashier },
     { label: 'Admin Viewer', value: UserRoleEnum.AdminViewer },
@@ -118,9 +118,9 @@ export class UserEditorComponent implements OnInit {
   protected userId: string | null = null;
 
   public ngOnInit(): void {
-    if (!this.authService.isSuperAdmin()) {
+    if (!this.authService.isOwner()) {
       this.userRoleOptions = this.allUserRoleOptions.filter(
-        (role) => role.value !== UserRoleEnum.SuperAdmin,
+        (role) => role.value !== UserRoleEnum.Owner,
       );
     }
 
@@ -276,9 +276,9 @@ export class UserEditorComponent implements OnInit {
     this.userService.getUserById(id).subscribe({
       next: (user) => {
         if (
-          !this.authService.isSuperAdmin() &&
+          !this.authService.isOwner() &&
           !this.isProfileMode() &&
-          user.roleId === UserRoleEnum.SuperAdmin
+          user.roleId === UserRoleEnum.Owner
         ) {
           this.alertService.errorUnauthorized();
           this.router.navigateByUrl(AppRoutes.ManagementUsers);
@@ -321,8 +321,8 @@ export class UserEditorComponent implements OnInit {
 
     if (
       !this.isProfileMode() &&
-      !this.authService.isSuperAdmin() &&
-      this.userForm.controls.roleId.value === UserRoleEnum.SuperAdmin
+      !this.authService.isOwner() &&
+      this.userForm.controls.roleId.value === UserRoleEnum.Owner
     ) {
       this.alertService.errorUnauthorized();
       return;

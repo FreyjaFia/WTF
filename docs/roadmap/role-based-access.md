@@ -1,12 +1,12 @@
-## Role-Based Access Control (RBAC) [Planned, nothing built]
+## Role-Based Access Control (RBAC) [In progress: phase 1 started on branch rbac-phase-1]
 
-Planning only (8 Nov 2026). Goal: decide **who in a shop can do what** with one clear model, instead of the hand-kept
+Planning only (8 Nov 2026). Phase 1 step 1 built: the SuperAdmin to Owner rename (stored name via `tools/sql/20261118_rename_super_admin_to_owner.sql`; the API still accepts old `SuperAdmin` tokens for one release). Sections 1 to 7 below describe the plan and use the new name. Goal: decide **who in a shop can do what** with one clear model, instead of the hand-kept
 role lists we have today. Plans (subscription) decide which features a shop has; RBAC decides which people in that shop
 may use them.
 
 ### 1. How it works today
 
-**Roles.** Six rows in `UserRoles` (`SuperAdmin`, `Admin`, `Cashier`, `AdminViewer`, `ItemManager`, `StockManager`),
+**Roles.** Six rows in `UserRoles` (`Owner`, `Admin`, `Cashier`, `AdminViewer`, `ItemManager`, `StockManager`),
 one role per user (`Users.RoleId`). The table has no `TenantId`, so the roles are shared by every shop, and
 `UQ_UserRoles_Name` makes the name unique. `PlatformAdmin` is not a database role: it is a separate login whose token
 carries that role name, and it lives outside every shop.
@@ -17,10 +17,10 @@ hard-coded `RequireRole(...)` list). Endpoints say `.RequireAuthorization(AppPol
 
 **Roles hard-coded outside the policies** (each one is a place that must be remembered when a role changes):
 - `CostAccess.Roles` (who sees cost fields; many DTOs are redacted per caller).
-- `UserEndpoints`: a non-SuperAdmin cannot create, edit, delete, restore or change pictures of a SuperAdmin, or give
-  the SuperAdmin role.
-- Notification recipients: `StockAlertService` (SuperAdmin, Admin, StockManager), `ItemAlertRecipientsHandlers`
-  (adds AdminViewer), waste review (`RecordWasteHandler`, `WasteReviewNotifications`: SuperAdmin and Admin),
+- `UserEndpoints`: a non-Owner cannot create, edit, delete, restore or change pictures of a Owner, or give
+  the Owner role.
+- Notification recipients: `StockAlertService` (Owner, Admin, StockManager), `ItemAlertRecipientsHandlers`
+  (adds AdminViewer), waste review (`RecordWasteHandler`, `WasteReviewNotifications`: Owner and Admin),
   `PushNotificationService` (everyone except AdminViewer).
 
 **App (Angular).** `shared/constants/app-roles.ts` holds `AppRoleGroups`, a second hand-written copy of the rules,
@@ -30,7 +30,7 @@ order editor needs them, but have no Products or Customers screens), and a spec 
 role the API denies. `ManagementMenu` and `SetupAccess` are UI-only lists added by hand (the Stock Manager case:
 Management opens, but only Setup > Suppliers has anything in it).
 
-**Current matrix** (from `AppAuthorizationExtensions`; S = SuperAdmin, A = Admin, V = AdminViewer, C = Cashier,
+**Current matrix** (from `AppAuthorizationExtensions`; S = Owner, A = Admin, V = AdminViewer, C = Cashier,
 I = ItemManager, M = StockManager):
 
 | Area | Read | Write |
@@ -46,7 +46,7 @@ I = ItemManager, M = StockManager):
 | Expenses | S A V | S A |
 | Promotions | S A V | S A |
 | Dashboard, reports | S A V | generate reports: S A |
-| Users | S A V | S A (SuperAdmin target: S only) |
+| Users | S A V | S A (Owner target: S only) |
 | Shop brand, subscription and billing | | S A |
 | Audit log, schema script history | S | |
 
@@ -97,8 +97,8 @@ screen).
 - The six current roles become **system roles**: same names and ids, so `Users.RoleId` does not change. They are
   global (no tenant), **read-only templates** that we maintain in a release script. Each shop sees them in its role
   list with a lock and a "Duplicate" button.
-- `SuperAdmin` is special: always every permission, cannot be edited or duplicated down, cannot be given by anyone
-  but a SuperAdmin, and a shop can never be left with no active SuperAdmin.
+- `Owner` is special: always every permission, cannot be edited or duplicated down, cannot be given by anyone
+  but a Owner, and a shop can never be left with no active Owner.
 - **Custom roles** belong to one shop (`TenantId` set), are created by duplicating or from scratch, and are fully
   editable. A new permission added in a release is **off** in every custom role and shown as "New" in the editor, so
   an update never widens anyone's access by itself. System roles get new permissions through the release script,
@@ -108,8 +108,8 @@ screen).
   give the same flexibility with one source of truth.
 
 **Escalation guards (server side, always):**
-- You can only assign or edit a role whose permissions are all ones you hold yourself (SuperAdmin excepted). This
-  generalizes today's "only SuperAdmin touches SuperAdmin".
+- You can only assign or edit a role whose permissions are all ones you hold yourself (Owner excepted). This
+  generalizes today's "only Owner touches Owner".
 - You cannot change your own role, and you cannot grant `roles.manage` or `users.write` unless you hold them.
 - A write key cannot exist without its read key; the server normalizes, the editor enforces it visibly.
 - Deleting a role with users is refused until they are moved (the dialog offers a replacement role).

@@ -60,10 +60,10 @@ public static class UserEndpoints
                     return Results.NotFound();
                 }
 
-                var isCurrentUserSuperAdmin = httpContext.User.IsInRole(AppRoles.SuperAdmin);
-                var isTargetUserSuperAdmin = targetUser.RoleId == (int)UserRoleEnum.SuperAdmin;
+                var isCurrentUserOwner = httpContext.User.IsInRole(AppRoles.Owner);
+                var isTargetUserOwner = targetUser.RoleId == (int)UserRoleEnum.Owner;
 
-                if ((isTargetUserSuperAdmin || command.RoleId == UserRoleEnum.SuperAdmin) && !isCurrentUserSuperAdmin)
+                if ((isTargetUserOwner || command.RoleId == UserRoleEnum.Owner) && !isCurrentUserOwner)
                 {
                     return Results.Forbid();
                 }
@@ -83,9 +83,9 @@ public static class UserEndpoints
                     return Results.NotFound();
                 }
 
-                var isCurrentUserSuperAdmin = httpContext.User.IsInRole(AppRoles.SuperAdmin);
-                var isTargetUserSuperAdmin = targetUser.RoleId == (int)UserRoleEnum.SuperAdmin;
-                if (isTargetUserSuperAdmin && !isCurrentUserSuperAdmin)
+                var isCurrentUserOwner = httpContext.User.IsInRole(AppRoles.Owner);
+                var isTargetUserOwner = targetUser.RoleId == (int)UserRoleEnum.Owner;
+                if (isTargetUserOwner && !isCurrentUserOwner)
                 {
                     return Results.Forbid();
                 }
@@ -105,9 +105,9 @@ public static class UserEndpoints
                     return Results.NotFound();
                 }
 
-                var isCurrentUserSuperAdmin = httpContext.User.IsInRole(AppRoles.SuperAdmin);
-                var isTargetUserSuperAdmin = targetUser.RoleId == (int)UserRoleEnum.SuperAdmin;
-                if (isTargetUserSuperAdmin && !isCurrentUserSuperAdmin)
+                var isCurrentUserOwner = httpContext.User.IsInRole(AppRoles.Owner);
+                var isTargetUserOwner = targetUser.RoleId == (int)UserRoleEnum.Owner;
+                if (isTargetUserOwner && !isCurrentUserOwner)
                 {
                     return Results.Forbid();
                 }
@@ -132,9 +132,9 @@ public static class UserEndpoints
                     return Results.NotFound();
                 }
 
-                var isCurrentUserSuperAdmin = httpContext.User.IsInRole(AppRoles.SuperAdmin);
-                var isTargetUserSuperAdmin = targetUser.RoleId == (int)UserRoleEnum.SuperAdmin;
-                if (isTargetUserSuperAdmin && !isCurrentUserSuperAdmin)
+                var isCurrentUserOwner = httpContext.User.IsInRole(AppRoles.Owner);
+                var isTargetUserOwner = targetUser.RoleId == (int)UserRoleEnum.Owner;
+                if (isTargetUserOwner && !isCurrentUserOwner)
                 {
                     return Results.Forbid();
                 }
@@ -161,9 +161,9 @@ public static class UserEndpoints
                     return Results.NotFound();
                 }
 
-                var isCurrentUserSuperAdmin = httpContext.User.IsInRole(AppRoles.SuperAdmin);
-                var isTargetUserSuperAdmin = targetUser.RoleId == (int)UserRoleEnum.SuperAdmin;
-                if (isTargetUserSuperAdmin && !isCurrentUserSuperAdmin)
+                var isCurrentUserOwner = httpContext.User.IsInRole(AppRoles.Owner);
+                var isTargetUserOwner = targetUser.RoleId == (int)UserRoleEnum.Owner;
+                if (isTargetUserOwner && !isCurrentUserOwner)
                 {
                     return Results.Forbid();
                 }

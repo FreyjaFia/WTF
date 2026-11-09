@@ -19,7 +19,7 @@ public interface ISubscriptionReminderService
     Task<SubscriptionReminderResult?> GetLastRunAsync(CancellationToken cancellationToken);
 }
 
-// Tells the shop's owners (Super Admins and Admins) 7, 3 and 1 days before the paid time ends and every day of the grace period.
+// Tells the shop's owners (Owners and Admins) 7, 3 and 1 days before the paid time ends and every day of the grace period.
 // Runs once a day for each shop; nothing is sent twice on the same day.
 public sealed class SubscriptionReminderService(
     WTFDbContext db,
@@ -49,7 +49,7 @@ public sealed class SubscriptionReminderService(
             && sub.ReminderSentOn != DateOnly.FromDateTime(nowUtc.UtcDateTime))
         {
             var owners = await db.Users.AsNoTracking()
-                .Where(u => u.IsActive && (u.RoleId == (int)UserRoleEnum.SuperAdmin || u.RoleId == (int)UserRoleEnum.Admin))
+                .Where(u => u.IsActive && (u.RoleId == (int)UserRoleEnum.Owner || u.RoleId == (int)UserRoleEnum.Admin))
                 .Select(u => u.Id)
                 .ToListAsync(cancellationToken);
 

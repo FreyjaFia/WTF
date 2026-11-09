@@ -9,7 +9,7 @@ namespace WTF.Api.Common.Auth;
 
 public static class CostAccess
 {
-    public static readonly string[] Roles = [AppRoles.SuperAdmin, AppRoles.Admin, AppRoles.AdminViewer];
+    public static readonly string[] Roles = [AppRoles.Owner, AppRoles.Admin, AppRoles.AdminViewer];
 
     public static bool CanReadCosts(ClaimsPrincipal user) => Roles.Any(user.IsInRole);
 

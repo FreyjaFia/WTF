@@ -411,7 +411,7 @@ public class PlatformDatabaseTests
         principal.FindFirst(ImpersonationClaims.By)!.Value.ShouldBe(admin.Id.ToString());
         principal.FindFirst(ImpersonationClaims.ReadOnly)!.Value.ShouldBe("1");
         principal.FindFirst(TenantDefaults.ClaimType)!.Value.ShouldBe(created.Tenant.Id.ToString());
-        principal.IsInRole(AppRoles.SuperAdmin).ShouldBeTrue();
+        principal.IsInRole(AppRoles.Owner).ShouldBeTrue();
 
         await using var check = database.CreateContext();
         (await check.PlatformAuditLogs.Where(l => l.Action == PlatformActions.ImpersonationStarted).Select(l => l.Details).SingleAsync())

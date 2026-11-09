@@ -34,7 +34,7 @@ function user(
 const BOB = user('1', 'Bob', 'Zed', UserRoleEnum.Cashier);
 const ALICE = user('2', 'Alice', 'Smith', UserRoleEnum.Admin);
 const CARL = user('3', 'Carl', 'Gone', UserRoleEnum.Admin, false);
-const ROOT = user('4', 'Root', 'User', UserRoleEnum.SuperAdmin);
+const ROOT = user('4', 'Root', 'User', UserRoleEnum.Owner);
 const DATA = [BOB, ALICE, CARL, ROOT];
 
 const ids = (list: UserDto[]) => list.map((x) => x.id);
@@ -51,7 +51,7 @@ describe('UserListComponent', () => {
     opts: {
       saved?: unknown;
       canWrite?: boolean;
-      superAdmin?: boolean;
+      owner?: boolean;
       getUsers?: ReturnType<typeof vi.fn>;
     } = {},
   ) {
@@ -59,7 +59,7 @@ describe('UserListComponent', () => {
     listState = fakeListState(opts.saved);
     const auth = {
       canWriteUsers: vi.fn(() => opts.canWrite ?? true),
-      isSuperAdmin: vi.fn(() => opts.superAdmin ?? false),
+      isOwner: vi.fn(() => opts.owner ?? false),
     };
     service = {
       getUsers: opts.getUsers ?? vi.fn(() => of(DATA)),
@@ -239,7 +239,7 @@ describe('UserListComponent', () => {
       c.toggleSort('role');
       expect(c.sortColumn()).toBe('role');
       expect(c.sortDirection()).toBe('asc');
-      // Admin, Cashier, Super Admin
+      // Admin, Cashier, Owner
       expect(ids(c.sortedUsers())).toEqual(['2', '1', '4']);
       c.toggleSort('role');
       expect(ids(c.sortedUsers())).toEqual(['4', '1', '2']);
@@ -253,21 +253,21 @@ describe('UserListComponent', () => {
 
     it('formats role labels with spaces and falls back to Unknown', () => {
       setup();
-      expect(c.getRoleLabel(ROOT)).toBe('Super Admin');
+      expect(c.getRoleLabel(ROOT)).toBe('Owner');
       expect(c.getRoleLabel(user('9', 'a', 'b', UserRoleEnum.StockManager))).toBe('Stock Manager');
       expect(c.getRoleLabel({ ...BOB, roleId: 99 })).toBe('Unknown');
     });
   });
 
   describe('permissions', () => {
-    it('only super admins can manage super admin profiles', () => {
-      setup({ superAdmin: false });
+    it('only owners can manage owner profiles', () => {
+      setup({ owner: false });
       expect(c.canManageUserProfile(ROOT)).toBe(false);
       expect(c.canManageUserProfile(BOB)).toBe(true);
     });
 
-    it('super admins can manage everyone', () => {
-      setup({ superAdmin: true });
+    it('owners can manage everyone', () => {
+      setup({ owner: true });
       expect(c.canManageUserProfile(ROOT)).toBe(true);
     });
 

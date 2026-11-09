@@ -77,7 +77,7 @@ public class ItemAlertRecipientsHandlerTests
 
         result.SelectedUserIds.ShouldBeEmpty();
         result.Candidates.Select(c => c.UserId).ShouldBe([_admin, _stockManager, _viewer], ignoreOrder: true);
-        result.DefaultDescription.ShouldBe("Super Admins, Admins and Stock Managers");
+        result.DefaultDescription.ShouldBe("Owners, Admins and Stock Managers");
     }
 
     [Fact]
@@ -114,7 +114,7 @@ public class ItemAlertRecipientsHandlerTests
 
         var ex = await Should.ThrowAsync<InvalidOperationException>(() => Set(_admin, person));
 
-        ex.Message.ShouldContain("Only active Super Admins, Admins, Admin Viewers and Stock Managers");
+        ex.Message.ShouldContain("Only active Owners, Admins, Admin Viewers and Stock Managers");
         await using var db = TestDb.Create(_db);
         (await db.ItemAlertRecipients.CountAsync()).ShouldBe(0);
         await _audit.DidNotReceiveWithAnyArgs().LogAsync(default, default, default!);

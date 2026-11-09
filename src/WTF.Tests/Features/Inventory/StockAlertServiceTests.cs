@@ -13,7 +13,7 @@ public class StockAlertServiceTests
 {
     private readonly string _db = TestDb.NewName();
     private readonly IPushNotificationService _push = TestFakes.Push();
-    private readonly Guid _superAdmin;
+    private readonly Guid _owner;
     private readonly Guid _admin;
     private readonly Guid _stockManager;
     private readonly Guid _cashier;
@@ -29,12 +29,12 @@ public class StockAlertServiceTests
                 new UserRole { Id = 1, Name = AppRoles.Admin },
                 new UserRole { Id = 2, Name = AppRoles.Cashier },
                 new UserRole { Id = 3, Name = AppRoles.AdminViewer },
-                new UserRole { Id = 4, Name = AppRoles.SuperAdmin },
+                new UserRole { Id = 4, Name = AppRoles.Owner },
                 new UserRole { Id = 6, Name = AppRoles.StockManager });
             db.SaveChanges();
         }
 
-        _superAdmin = AddUser(4);
+        _owner = AddUser(4);
         _admin = AddUser(1);
         _stockManager = AddUser(6);
         _cashier = AddUser(2);
@@ -90,7 +90,7 @@ public class StockAlertServiceTests
         await SetQuantityAndEvaluate(400m);
 
         var rows = await Notifications();
-        rows.Select(n => n.UserId).ToHashSet().ShouldBe([_superAdmin, _admin, _stockManager], ignoreOrder: true);
+        rows.Select(n => n.UserId).ToHashSet().ShouldBe([_owner, _admin, _stockManager], ignoreOrder: true);
         rows.ShouldAllBe(n => n.Severity == 1 && n.Data!.Contains("\"quantity\":400") && n.ReadAt == null);
         rows[0].Title.ShouldBe("Low stock: Oat Milk");
         rows[0].Body.ShouldBe("400 ml left. The warning level is 500 ml.");
@@ -192,7 +192,7 @@ public class StockAlertServiceTests
 
         await SetQuantityAndEvaluate(400m);
 
-        (await Notifications()).Select(n => n.UserId).ToHashSet().ShouldBe([_superAdmin, _admin, _stockManager], ignoreOrder: true);
+        (await Notifications()).Select(n => n.UserId).ToHashSet().ShouldBe([_owner, _admin, _stockManager], ignoreOrder: true);
     }
 
     [Fact]

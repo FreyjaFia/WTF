@@ -139,7 +139,7 @@ async function sweep(page: Page, viewport: Viewport, label: string, pages: Reado
 test.describe('no sideways scroll, no errors on the main pages @layout', () => {
   const groups: ReadonlyArray<{ readonly label: string; readonly role: Role; readonly pages: ReadonlyArray<PageCase> }> = [
     { label: 'admin', role: 'admin', pages: ADMIN_PAGES },
-    { label: 'super admin', role: 'superadmin', pages: SUPERADMIN_PAGES },
+    { label: 'owner', role: 'superadmin', pages: SUPERADMIN_PAGES },
     { label: 'cashier', role: 'cashier', pages: CASHIER_PAGES },
   ];
 

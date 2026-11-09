@@ -42,7 +42,7 @@ failed delete, a removed product or promotion), and the chat images below once t
   from the list.
 - **Tests.** A recent unreferenced blob is kept, an old one is deleted, a referenced one is never deleted at any age,
   `RetentionDays = 0` does nothing, the delete cap stops a run, a failing delete does not stop the others.
-- Optional: a "Run cleanup now" button and the last run's result for SuperAdmin on a management page.
+- Optional: a "Run cleanup now" button and the last run's result for Owner on a management page.
 
 ---
 

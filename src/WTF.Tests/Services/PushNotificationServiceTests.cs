@@ -28,7 +28,7 @@ public class PushNotificationServiceTests
         db.UserRoles.AddRange(
             new UserRole { Id = 1, Name = AppRoles.Admin },
             new UserRole { Id = 2, Name = AppRoles.AdminViewer },
-            new UserRole { Id = 3, Name = AppRoles.SuperAdmin });
+            new UserRole { Id = 3, Name = AppRoles.Owner });
         db.SaveChanges();
     }
 

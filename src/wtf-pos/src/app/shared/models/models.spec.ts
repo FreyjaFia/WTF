@@ -19,7 +19,7 @@ describe('model enums and constants', () => {
     expect(UserRoleEnum.Admin).toBe(1);
     expect(UserRoleEnum.Cashier).toBe(2);
     expect(UserRoleEnum.AdminViewer).toBe(3);
-    expect(UserRoleEnum.SuperAdmin).toBe(4);
+    expect(UserRoleEnum.Owner).toBe(4);
     expect(UserRoleEnum.ItemManager).toBe(5);
     expect(UserRoleEnum.StockManager).toBe(6);
   });

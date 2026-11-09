@@ -43,7 +43,7 @@ internal static class WasteReviewNotifications
 
         // Reviewers refresh their pending-review count on NotificationsChanged, even those without a row.
         var reviewers = await db.Users
-            .Where(u => u.IsActive && (u.Role.Name == AppRoles.SuperAdmin || u.Role.Name == AppRoles.Admin))
+            .Where(u => u.IsActive && (u.Role.Name == AppRoles.Owner || u.Role.Name == AppRoles.Admin))
             .Select(u => u.Id)
             .ToListAsync(cancellationToken);
 

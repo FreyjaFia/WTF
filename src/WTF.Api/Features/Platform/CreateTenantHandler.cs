@@ -110,7 +110,7 @@ public partial class CreateTenantHandler(WTFDbContext db, IPlatformAuditService 
             FirstName = firstName,
             LastName = lastName,
             IsActive = true,
-            RoleId = (int)UserRoleEnum.SuperAdmin,
+            RoleId = (int)UserRoleEnum.Owner,
             CreatedAt = now,
             CreatedBy = ownerId,
             MustChangePassword = true
