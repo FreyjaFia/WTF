@@ -186,6 +186,15 @@ export class Login implements OnInit, OnDestroy {
       return AppRoutes.OrdersList;
     }
 
-    return this.auth.canReadStockMovements() ? AppRoutes.InventoryAttention : AppRoutes.InventoryItems;
+    if (this.auth.canReadStockMovements()) {
+      return AppRoutes.InventoryAttention;
+    }
+
+    if (this.auth.canReadItems()) {
+      return AppRoutes.InventoryItems;
+    }
+
+    // A custom role can hold only Management permissions (for example expenses or customers).
+    return this.auth.canOpenManagementMenu() ? AppRoutes.ManagementRoot : AppRoutes.OrdersList;
   }
 }

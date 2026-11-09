@@ -30,6 +30,7 @@ describe('route guards', () => {
       canReadOrders: vi.fn().mockReturnValue(false),
       canReadStockMovements: vi.fn().mockReturnValue(false),
       canReadItems: vi.fn().mockReturnValue(false),
+      canOpenManagementMenu: vi.fn().mockReturnValue(false),
       hasAnyRole: vi.fn().mockReturnValue(false),
     };
     router = { navigateByUrl: vi.fn() };
@@ -171,6 +172,13 @@ describe('route guards', () => {
 
       expect(run(routeWithRoles([AppRoles.Admin]))).toBe(false);
       expect(router.navigateByUrl).toHaveBeenCalledWith(AppRoutes.InventoryItems);
+    });
+
+    it('falls back to the Management hub for a role that holds only Management permissions', () => {
+      auth['canOpenManagementMenu'].mockReturnValue(true);
+
+      expect(run(routeWithRoles([AppRoles.Admin]))).toBe(false);
+      expect(router.navigateByUrl).toHaveBeenCalledWith(AppRoutes.ManagementRoot);
     });
 
     it('falls back to login when the user has no read access at all', () => {

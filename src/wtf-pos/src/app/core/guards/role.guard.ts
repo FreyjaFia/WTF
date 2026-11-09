@@ -18,7 +18,11 @@ function fallbackRouteFor(auth: AuthService): string {
     return AppRoutes.InventoryAttention;
   }
 
-  return auth.canReadItems() ? AppRoutes.InventoryItems : AppRoutes.Login;
+  if (auth.canReadItems()) {
+    return AppRoutes.InventoryItems;
+  }
+
+  return auth.canOpenManagementMenu() ? AppRoutes.ManagementRoot : AppRoutes.Login;
 }
 
 export const roleGuard: CanActivateFn = (route) => {

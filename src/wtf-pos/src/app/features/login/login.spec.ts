@@ -24,6 +24,8 @@ describe('Login', () => {
     canWriteOrders: ReturnType<typeof vi.fn>;
     canReadOrders: ReturnType<typeof vi.fn>;
     canReadStockMovements: ReturnType<typeof vi.fn>;
+    canReadItems: ReturnType<typeof vi.fn>;
+    canOpenManagementMenu: ReturnType<typeof vi.fn>;
   };
   let alerts: { error: ReturnType<typeof vi.fn> };
   let offline: { getPendingSyncCount: ReturnType<typeof vi.fn> };
@@ -65,6 +67,8 @@ describe('Login', () => {
       canWriteOrders: vi.fn(() => true),
       canReadOrders: vi.fn(() => true),
       canReadStockMovements: vi.fn(() => false),
+      canReadItems: vi.fn(() => false),
+      canOpenManagementMenu: vi.fn(() => false),
     };
     alerts = { error: vi.fn() };
     offline = { getPendingSyncCount: vi.fn(() => Promise.resolve(0)) };
@@ -287,8 +291,17 @@ describe('Login', () => {
     it('sends item managers to the items list', async () => {
       auth.canWriteOrders.mockReturnValue(false);
       auth.canReadOrders.mockReturnValue(false);
+      auth.canReadItems.mockReturnValue(true);
       await loginAs();
       expect(navigate).toHaveBeenCalledWith(AppRoutes.InventoryItems, { replaceUrl: true });
+    });
+
+    it('sends a custom role that holds only Management permissions to the Management hub', async () => {
+      auth.canWriteOrders.mockReturnValue(false);
+      auth.canReadOrders.mockReturnValue(false);
+      auth.canOpenManagementMenu.mockReturnValue(true);
+      await loginAs();
+      expect(navigate).toHaveBeenCalledWith(AppRoutes.ManagementRoot, { replaceUrl: true });
     });
   });
 
