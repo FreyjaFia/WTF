@@ -1,11 +1,17 @@
 import { Injectable } from '@angular/core';
 import { AddOnGroupDto, CustomerDto, ProductDto } from '@shared/models';
-import { db } from './db';
+import { CachedImage, db } from './db';
+
+interface ValidatedImage extends CachedImage {
+  etag?: string;
+  lastModified?: string;
+}
 
 @Injectable({ providedIn: 'root' })
 export class ImageCacheService {
   private static readonly MAX_IMAGE_AGE_DAYS = 30;
   private static readonly MAX_IMAGE_COUNT = 2000;
+  private static readonly REVALIDATE_AFTER_MS = 24 * 60 * 60 * 1000;
 
   private readonly blobUrlCache = new Map<string, string>();
 
@@ -38,20 +44,18 @@ export class ImageCacheService {
       }
     }
 
-    const existing = await db.images.where('url').anyOf([...urls]).primaryKeys();
-    const existingSet = new Set(existing);
-    const toDownload = [...urls].filter((u) => !existingSet.has(u));
-
-    const downloads = toDownload.map((url) => this.downloadAndStore(url));
+    const existing: ValidatedImage[] = await db.images.where('url').anyOf([...urls]).toArray();
+    const existingByUrl = new Map(existing.map((image) => [image.url, image]));
+    const downloads = [...urls].map((url) => this.downloadOrRevalidate(url, existingByUrl.get(url)));
     await Promise.allSettled(downloads);
     await this.cleanupOldCache();
   }
 
   public async cacheUrl(url: string): Promise<void> {
-    const existing = await db.images.get(url);
+    const existing: ValidatedImage | undefined = await db.images.get(url);
+    const changed = await this.downloadOrRevalidate(url, existing);
 
-    if (!existing) {
-      await this.downloadAndStore(url);
+    if (changed) {
       await this.cleanupOldCache();
     }
   }
@@ -124,18 +128,67 @@ export class ImageCacheService {
     );
   }
 
-  private async downloadAndStore(url: string): Promise<void> {
+  private async downloadOrRevalidate(url: string, existing: ValidatedImage | undefined): Promise<boolean> {
+    if (!existing) {
+      return this.fetchAndStore(url);
+    }
+
+    const cachedAtMs = existing.cachedAt ? new Date(existing.cachedAt).getTime() : 0;
+
+    if (Date.now() - cachedAtMs < ImageCacheService.REVALIDATE_AFTER_MS) {
+      return false;
+    }
+
+    return this.fetchAndStore(url, existing);
+  }
+
+  private async fetchAndStore(url: string, existing?: ValidatedImage): Promise<boolean> {
     try {
-      const response = await fetch(url);
+      const headers: Record<string, string> = {};
+
+      if (existing?.etag) {
+        headers['If-None-Match'] = existing.etag;
+      }
+
+      if (existing?.lastModified) {
+        headers['If-Modified-Since'] = existing.lastModified;
+      }
+
+      const response = await fetch(url, { headers });
+
+      if (response.status === 304 && existing) {
+        await db.images.put({ ...existing, cachedAt: new Date().toISOString() });
+        return false;
+      }
 
       if (!response.ok) {
-        return;
+        return false;
       }
 
       const blob = await response.blob();
-      await db.images.put({ url, blob, cachedAt: new Date().toISOString() });
+      const stored: ValidatedImage = {
+        url,
+        blob,
+        cachedAt: new Date().toISOString(),
+        etag: response.headers?.get('ETag') ?? undefined,
+        lastModified: response.headers?.get('Last-Modified') ?? undefined,
+      };
+      await db.images.put(stored);
+      this.releaseBlobUrl(url);
+
+      return true;
     } catch {
-      // Silently skip failed image downloads
+      // Offline or failing: keep serving whatever is cached
+      return false;
+    }
+  }
+
+  private releaseBlobUrl(url: string): void {
+    const blobUrl = this.blobUrlCache.get(url);
+
+    if (blobUrl) {
+      URL.revokeObjectURL(blobUrl);
+      this.blobUrlCache.delete(url);
     }
   }
 
@@ -182,12 +235,7 @@ export class ImageCacheService {
     await db.images.bulkDelete(urls);
 
     for (const url of urls) {
-      const blobUrl = this.blobUrlCache.get(url);
-
-      if (blobUrl) {
-        URL.revokeObjectURL(blobUrl);
-        this.blobUrlCache.delete(url);
-      }
+      this.releaseBlobUrl(url);
     }
   }
 }

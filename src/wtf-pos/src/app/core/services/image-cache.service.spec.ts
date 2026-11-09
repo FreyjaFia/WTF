@@ -29,7 +29,7 @@ class FakeImages {
   public where(_field: string) {
     return {
       anyOf: (urls: string[]) => ({
-        primaryKeys: () => Promise.resolve(urls.filter((u) => this.rows.has(u))),
+        toArray: () => Promise.resolve(urls.filter((u) => this.rows.has(u)).map((u) => this.rows.get(u)!)),
       }),
     };
   }
@@ -103,6 +103,61 @@ describe('ImageCacheService', () => {
       ).resolves.toBeUndefined();
 
       expect(images.rows.size).toBe(0);
+    });
+  });
+
+  describe('revalidation', () => {
+    const response = (status: number, headers: Record<string, string> = {}, body = 'new') => ({
+      ok: status >= 200 && status < 300,
+      status,
+      headers: { get: (name: string) => headers[name] ?? null },
+      blob: () => Promise.resolve(new Blob([body])),
+    });
+
+    it('leaves an image younger than a day alone', async () => {
+      await images.put({ url: 'a.png', blob: new Blob(), cachedAt: iso(-day / 2) });
+
+      await service.cacheImages([product('a.png')], {}, []);
+
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('sends validators and only refreshes the timestamp on 304', async () => {
+      const blob = new Blob(['old']);
+      await images.put({ url: 'a.png', blob, cachedAt: iso(-2 * day), etag: '"v1"', lastModified: 'Mon' } as never);
+      fetchMock.mockResolvedValue(response(304));
+
+      await service.cacheImages([product('a.png')], {}, []);
+
+      expect(fetchMock).toHaveBeenCalledWith('a.png', {
+        headers: { 'If-None-Match': '"v1"', 'If-Modified-Since': 'Mon' },
+      });
+      expect(images.rows.get('a.png')!.blob).toBe(blob);
+      expect(Date.now() - new Date(images.rows.get('a.png')!.cachedAt).getTime()).toBeLessThan(day);
+    });
+
+    it('replaces a changed image and revokes the old blob url', async () => {
+      await images.put({ url: 'a.png', blob: new Blob(['old']), cachedAt: iso(-2 * day) });
+      const oldBlobUrl = await service.resolveUrl('a.png');
+      fetchMock.mockResolvedValue(response(200, { ETag: '"v2"' }));
+
+      await service.cacheImages([product('a.png')], {}, []);
+
+      expect(URL.revokeObjectURL).toHaveBeenCalledWith(oldBlobUrl);
+      expect(service.resolveUrlSync('a.png')).toBe('a.png');
+      expect((images.rows.get('a.png') as never as { etag: string }).etag).toBe('"v2"');
+      expect(await service.resolveUrl('a.png')).not.toBe(oldBlobUrl);
+    });
+
+    it('keeps serving the cached image when offline', async () => {
+      const blob = new Blob(['old']);
+      await images.put({ url: 'a.png', blob, cachedAt: iso(-2 * day) });
+      fetchMock.mockRejectedValue(new Error('offline'));
+
+      await service.cacheImages([product('a.png')], {}, []);
+
+      expect(images.rows.get('a.png')!.blob).toBe(blob);
+      expect(await service.resolveUrl('a.png')).toBe('blob:1');
     });
   });
 
