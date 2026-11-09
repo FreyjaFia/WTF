@@ -373,6 +373,11 @@
   background-color: var(--shell-bg);
 }
 
+/* The Save bar pinned to the bottom of a form (Branding) was a white strip on the cream canvas too. */
+[data-theme='cafe'] .app-content .sticky[class*='bottom-0'][class*='bg-surface/95'] {
+  background-color: color-mix(in srgb, var(--shell-bg) 95%, transparent);
+}
+
 /* The remaining button roles get the same chunky, bordered treatment as primary and secondary, so
    every button on a page reads as one family. Depth is drawn inside the button (inset shadow). */
 [data-theme='cafe'] .app-btn-accent-outline:not(:disabled),
