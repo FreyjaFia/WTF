@@ -16,6 +16,8 @@ interface ReadCase {
 
 const READS: ReadonlyArray<ReadCase> = [
   { path: 'users', allowed: GROUPS.usersRead },
+  { path: 'roles', allowed: GROUPS.rolesRead },
+  { path: 'roles/permissions', allowed: GROUPS.rolesRead },
   { path: 'customers', allowed: GROUPS.customersReadApi },
   { path: 'products', allowed: GROUPS.productsReadApi },
   { path: 'items', allowed: GROUPS.itemsRead },

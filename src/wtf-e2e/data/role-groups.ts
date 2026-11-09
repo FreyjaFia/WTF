@@ -14,6 +14,8 @@ export const GROUPS = {
   productsWrite: ['owner', 'admin'],
   usersRead: ['owner', 'admin', 'viewer'],
   usersWrite: ['owner', 'admin'],
+  rolesRead: ['owner', 'admin', 'viewer'],
+  rolesManage: ['owner'],
   promotionsRead: ['owner', 'admin', 'viewer'],
   promotionsWrite: ['owner', 'admin'],
   reportsRead: ['owner', 'admin', 'viewer'],
