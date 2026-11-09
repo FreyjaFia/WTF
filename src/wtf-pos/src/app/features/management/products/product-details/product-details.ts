@@ -61,7 +61,7 @@ export class ProductDetailsComponent implements OnInit {
 
   protected readonly sortedAddOns = computed(() =>
     [...this.addOns()]
-      .sort((a, b) => ADD_ON_TYPE_ORDER[a.type] - ADD_ON_TYPE_ORDER[b.type])
+      .sort((a, b) => (ADD_ON_TYPE_ORDER[a.type] ?? 99) - (ADD_ON_TYPE_ORDER[b.type] ?? 99))
       .map((group) => ({
         ...group,
         options: [...group.options].sort((a, b) => a.name.localeCompare(b.name)),
@@ -70,7 +70,7 @@ export class ProductDetailsComponent implements OnInit {
 
   protected readonly sortedLinkedProducts = computed(() =>
     [...this.linkedProducts()]
-      .sort((a, b) => ADD_ON_TYPE_ORDER[a.type] - ADD_ON_TYPE_ORDER[b.type])
+      .sort((a, b) => (ADD_ON_TYPE_ORDER[a.type] ?? 99) - (ADD_ON_TYPE_ORDER[b.type] ?? 99))
       .map((group) => ({
         ...group,
         options: [...group.options].sort((a, b) => a.name.localeCompare(b.name)),

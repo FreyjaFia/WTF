@@ -361,6 +361,13 @@
                                     Overridden
                                   </span>
                                 }
+                                @if (group.defaultAddOnId === addon.id) {
+                                  <span
+                                    class="rounded bg-brand/10 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-brand uppercase"
+                                  >
+                                    Pre-selected
+                                  </span>
+                                }
                               </span>
                             </div>
                             <div class="shrink-0 text-right">

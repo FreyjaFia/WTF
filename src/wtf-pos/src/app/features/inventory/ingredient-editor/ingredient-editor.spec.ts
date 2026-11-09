@@ -1,6 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter } from '@angular/router';
-import { AlertService, AuthService, InventoryService, ModalStackService } from '@core/services';
+import { SEEDED_LOOKUPS } from '@app/testing/catalog-ids';
+import {
+  AlertService,
+  AuthService,
+  CatalogLookupService,
+  InventoryService,
+  ModalStackService,
+} from '@core/services';
 import { ItemDto, ProductIngredientsEditDto } from '@shared/models';
 import { of, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
@@ -80,6 +87,7 @@ describe('IngredientEditorComponent', () => {
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => 'p1' } } } },
       ],
     });
+    TestBed.inject(CatalogLookupService).set(SEEDED_LOOKUPS);
     const fixture = TestBed.createComponent(IngredientEditorComponent);
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
