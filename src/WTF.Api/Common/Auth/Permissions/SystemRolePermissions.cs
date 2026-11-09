@@ -21,6 +21,8 @@ public static class SystemRolePermissions
             "inventory.costs.write",
             "stock.read",
             "stock.write",
+            "suppliers.read",
+            "suppliers.write",
             "stock.waste.record",
             "stock.waste.review",
             "wastereasons.read",
@@ -45,6 +47,7 @@ public static class SystemRolePermissions
             "items.read",
             "inventory.costs.read",
             "stock.read",
+            "suppliers.read",
             "wastereasons.read",
             "expenses.read",
             "promotions.read",
@@ -71,6 +74,8 @@ public static class SystemRolePermissions
             "items.read",
             "stock.read",
             "stock.write",
+            "suppliers.read",
+            "suppliers.write",
             "stock.waste.record",
             "wastereasons.read"
         ]

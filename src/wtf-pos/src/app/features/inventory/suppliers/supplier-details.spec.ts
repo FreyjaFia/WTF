@@ -64,6 +64,7 @@ describe('SupplierDetailsComponent', () => {
           provide: AuthService,
           useValue: {
             canWriteStockMovements: () => options.canWrite ?? true,
+            canWriteSuppliers: () => options.canWrite ?? true,
             canReadInventoryCosts: () => options.canSeeCosts ?? true,
           },
         },

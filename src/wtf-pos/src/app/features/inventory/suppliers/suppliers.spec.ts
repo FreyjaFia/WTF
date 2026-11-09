@@ -39,7 +39,7 @@ describe('SuppliersComponent', () => {
         provideRouter([]),
         { provide: SupplierService, useValue: service },
         { provide: AlertService, useValue: { error: vi.fn(), success: vi.fn() } },
-        { provide: AuthService, useValue: { canWriteStockMovements: () => options.canWrite ?? true } },
+        { provide: AuthService, useValue: { canWriteSuppliers: () => options.canWrite ?? true } },
       ],
     });
     const fixture = TestBed.createComponent(SuppliersComponent);

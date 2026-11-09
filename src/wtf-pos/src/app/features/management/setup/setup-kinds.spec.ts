@@ -5,7 +5,7 @@ function authWith(products: boolean, waste: boolean, stock = false): AuthService
   return {
     canReadProducts: () => products,
     canManageWasteReasons: () => waste,
-    canReadStockMovements: () => stock,
+    canReadSuppliers: () => stock,
   } as unknown as AuthService;
 }
 

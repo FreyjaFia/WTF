@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { PermissionCatalog, PolicyPermissions, SystemRolePermissions } from '@shared/permissions';
-import { AppRoleGroups, AppRoleLabels, AppRoles } from './app-roles';
+import {
+  ManagementMenuPermissions,
+  PermissionCatalog,
+  PolicyPermissions,
+  SetupPermissions,
+  SystemRolePermissions,
+} from '@shared/permissions';
+import { AppRoleLabels, AppRoles } from './app-roles';
 
 describe('app roles', () => {
   const roles = Object.values(AppRoles);
@@ -12,21 +18,7 @@ describe('app roles', () => {
     expect(Object.keys(AppRoleLabels).sort()).toEqual([...roles].sort());
   });
 
-  it('only references known roles in the UI-only groups, without duplicates', () => {
-    for (const [group, members] of Object.entries(AppRoleGroups)) {
-      const list = members as readonly string[];
-      expect(list.length, group).toBeGreaterThan(0);
-      expect(new Set(list).size, group).toBe(list.length);
-      for (const role of list) {
-        expect(roles, group).toContain(role);
-      }
-    }
-  });
-
   it('always lets Owner do everything', () => {
-    for (const [group, members] of Object.entries(AppRoleGroups)) {
-      expect(members as readonly string[], group).toContain(AppRoles.Owner);
-    }
     expect(SystemRolePermissions[AppRoles.Owner].length).toBe(PermissionCatalog.length);
   });
 
@@ -67,6 +59,8 @@ describe('system role permissions vs the API policies (golden)', () => {
     InventoryCostsWrite: ['Owner', 'Admin'],
     StockMovementsRead: ['Owner', 'Admin', 'AdminViewer', 'StockManager'],
     StockMovementsWrite: ['Owner', 'Admin', 'StockManager'],
+    SuppliersRead: ['Owner', 'Admin', 'AdminViewer', 'StockManager'],
+    SuppliersWrite: ['Owner', 'Admin', 'StockManager'],
     StockWasteWrite: ['Owner', 'Admin', 'StockManager', 'Cashier'],
     StockWasteReview: ['Owner', 'Admin'],
     ExpensesRead: ['Owner', 'Admin', 'AdminViewer'],
@@ -98,5 +92,32 @@ describe('system role permissions vs the API policies (golden)', () => {
     expect(cashier).toContain('orders.write');
     expect(PolicyPermissions['ProductsRead']).toContain('orders.write');
     expect(PolicyPermissions['CustomersRead']).toContain('orders.write');
+  });
+});
+
+describe('menus derived from permissions', () => {
+  const opens = (role: string, keys: readonly string[]): boolean =>
+    keys.some((key) => (SystemRolePermissions[role] as readonly string[]).includes(key));
+
+  it('opens the Management menu for the same roles as before', () => {
+    const open = Object.values(AppRoles).filter((role) => opens(role, ManagementMenuPermissions));
+    expect(open).toEqual([AppRoles.Owner, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.StockManager]);
+  });
+
+  it('opens Setup for the same roles as before', () => {
+    const open = Object.values(AppRoles).filter((role) => opens(role, SetupPermissions));
+    expect(open).toEqual([AppRoles.Owner, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.StockManager]);
+  });
+
+  it('gives Stock Manager only Setup > Suppliers inside Management', () => {
+    const held = SystemRolePermissions[AppRoles.StockManager];
+    const management = ManagementMenuPermissions.filter((key) => held.includes(key));
+    expect(management).toEqual(['suppliers.read']);
+    expect(held).not.toContain('dashboard.read');
+  });
+
+  it('keeps Cashier and Item Manager out of Management', () => {
+    expect(opens(AppRoles.Cashier, ManagementMenuPermissions)).toBe(false);
+    expect(opens(AppRoles.ItemManager, ManagementMenuPermissions)).toBe(false);
   });
 });

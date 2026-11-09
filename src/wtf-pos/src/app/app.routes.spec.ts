@@ -7,8 +7,8 @@ import { unsavedChangesGuard } from '@core/guards/unsaved-changes.guard';
 import { AuthService } from '@core/services';
 import { NotFoundComponent } from '@features/not-found/not-found';
 import { PublicOrderComponent } from '@features/public-order/public-order';
-import { AppRoleGroups, AppRoles } from '@shared/constants/app-roles';
-import { Permissions, SystemRolePermissions } from '@shared/permissions';
+import { AppRoles } from '@shared/constants/app-roles';
+import { ManagementMenuPermissions, Permissions, SystemRolePermissions } from '@shared/permissions';
 import { describe, expect, it } from 'vitest';
 import { routes } from './app.routes';
 
@@ -31,17 +31,16 @@ function flatten(list: Route[], prefix = '', parent: Route | null = null): FlatR
   return out;
 }
 
-const validRoles = new Set<string>(Object.values(AppRoles));
 const validPermissions = new Set<string>(Object.values(Permissions));
 
 function rolesAllowedBy(route: Route): string[] {
   const permission = route.data?.['permission'] as string | undefined;
-  const roles = route.data?.['roles'] as string[] | undefined;
+  const anyPermission = route.data?.['anyPermission'] as readonly string[] | undefined;
 
   return Object.values(AppRoles).filter(
     (role) =>
       (!permission || (SystemRolePermissions[role] as readonly string[]).includes(permission)) &&
-      (!roles || roles.includes(role)),
+      (!anyPermission || anyPermission.some((p) => (SystemRolePermissions[role] as readonly string[]).includes(p))),
   );
 }
 const flat = flatten(routes);
@@ -114,13 +113,15 @@ describe('app.routes', () => {
   });
 
   it('only uses valid AppRoles and permission keys in route data, never an empty list', () => {
-    const withRoles = flat.filter((f) => f.route.data?.['roles'] !== undefined);
-    expect(withRoles.length).toBeGreaterThanOrEqual(2);
-    for (const { fullPath, route } of withRoles) {
-      const roles = route.data!['roles'] as string[];
-      expect(roles.length, `roles of "${fullPath}"`).toBeGreaterThan(0);
-      for (const role of roles) {
-        expect(validRoles.has(role), `"${role}" on "${fullPath}"`).toBe(true);
+    expect(flat.filter((f) => f.route.data?.['roles'] !== undefined)).toEqual([]);
+
+    const withAny = flat.filter((f) => f.route.data?.['anyPermission'] !== undefined);
+    expect(withAny.length).toBeGreaterThanOrEqual(2);
+    for (const { fullPath, route } of withAny) {
+      const keys = route.data!['anyPermission'] as string[];
+      expect(keys.length, `anyPermission of ""`).toBeGreaterThan(0);
+      for (const key of keys) {
+        expect(validPermissions.has(key), `"" on ""`).toBe(true);
       }
     }
 
@@ -131,13 +132,13 @@ describe('app.routes', () => {
     }
   });
 
-  it('declares a permission or role list on every route that uses roleGuard', () => {
+  it('declares a permission or permission list on every route that uses roleGuard', () => {
     const guarded = flat.filter((f) => f.route.canActivate?.includes(roleGuard));
     expect(guarded.length).toBeGreaterThan(10);
     for (const { fullPath, route } of guarded) {
-      const roles = route.data?.['roles'] as string[] | undefined;
       const permission = route.data?.['permission'] as string | undefined;
-      expect(!!permission || (roles?.length ?? 0) > 0, `roleGuard without access data on "${fullPath}"`).toBe(true);
+      const any = route.data?.['anyPermission'] as string[] | undefined;
+      expect(!!permission || (any?.length ?? 0) > 0, `roleGuard without access data on "${fullPath}"`).toBe(true);
     }
   });
 
@@ -171,11 +172,16 @@ describe('app.routes', () => {
     }
   });
 
-  it('guards the whole Management section with ManagementMenu, on top of each area', () => {
+  it('guards the whole Management section with any management permission, on top of each area', () => {
     const section = flat.find((f) => f.fullPath === 'management' && f.route.component);
     expect(section?.route.canActivate).toEqual([roleGuard]);
-    expect(section?.route.data?.['roles']).toEqual(AppRoleGroups.ManagementMenu);
-    expect(AppRoleGroups.ManagementMenu).not.toContain(AppRoles.Cashier);
+    expect(section?.route.data?.['anyPermission']).toEqual(ManagementMenuPermissions);
+    expect(rolesAllowedBy(section!.route)).toEqual([
+      AppRoles.Owner,
+      AppRoles.Admin,
+      AppRoles.AdminViewer,
+      AppRoles.StockManager,
+    ]);
   });
 
   it('keeps the dashboard unavailable to cashiers', () => {

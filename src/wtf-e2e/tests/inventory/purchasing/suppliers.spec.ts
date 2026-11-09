@@ -135,8 +135,8 @@ test.describe('suppliers @inventory @suppliers', () => {
 
   for (const role of ['admin', 'stockmgr', 'viewer', 'cashier', 'itemmgr'] as Role[]) {
     test(`who may use suppliers: ${role}`, async ({ api }) => {
-      const canRead = (GROUPS.stockMovementsRead as readonly Role[]).includes(role);
-      const canWrite = (GROUPS.stockMovementsWrite as readonly Role[]).includes(role);
+      const canRead = (GROUPS.suppliersRead as readonly Role[]).includes(role);
+      const canWrite = (GROUPS.suppliersWrite as readonly Role[]).includes(role);
       const list = await api.client.call(role, 'GET', 'suppliers');
       expect(list.ok(), `${role} read`).toBe(canRead);
       const create = await api.client.call(role, 'POST', 'suppliers', { body: { name: unique('Role check') } });

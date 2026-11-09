@@ -65,8 +65,7 @@ import { PlatformTenantDetailComponent } from '@features/platform/platform-tenan
 import { PlatformTenantsComponent } from '@features/platform/platform-tenants';
 import { PublicOrderComponent } from '@features/public-order/public-order';
 import { LayoutComponent } from '@shared/components';
-import { AppRoleGroups } from '@shared/constants/app-roles';
-import { Permissions } from '@shared/permissions';
+import { ManagementMenuPermissions, Permissions, SetupPermissions } from '@shared/permissions';
 
 export const routes: Routes = [
   {
@@ -286,7 +285,7 @@ export const routes: Routes = [
         path: 'management',
         component: ManagementComponent,
         canActivate: [roleGuard],
-        data: { roles: AppRoleGroups.ManagementMenu },
+        data: { anyPermission: ManagementMenuPermissions },
         children: [
           {
             path: '',
@@ -476,19 +475,19 @@ export const routes: Routes = [
             path: 'setup',
             component: SetupComponent,
             canActivate: [roleGuard],
-            data: { roles: AppRoleGroups.SetupAccess },
+            data: { anyPermission: SetupPermissions },
           },
           {
             path: 'setup/suppliers',
             component: SuppliersComponent,
             canActivate: [roleGuard],
-            data: { permission: Permissions.StockRead },
+            data: { permission: Permissions.SuppliersRead },
           },
           {
             path: 'setup/suppliers/:id',
             component: SupplierDetailsComponent,
             canActivate: [roleGuard],
-            data: { permission: Permissions.StockRead },
+            data: { permission: Permissions.SuppliersRead },
           },
           {
             path: 'setup/:kind',

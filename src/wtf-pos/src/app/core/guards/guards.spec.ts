@@ -123,6 +123,21 @@ describe('route guards', () => {
       expect(auth['hasAnyRole']).not.toHaveBeenCalled();
     });
 
+    it('allows a route when the user holds any one of its anyPermission keys', () => {
+      auth['canAny'] = vi.fn().mockReturnValue(true);
+      const route = { data: { anyPermission: ['products.read', 'suppliers.read'] } } as unknown as ActivatedRouteSnapshot;
+
+      expect(run(route)).toBe(true);
+      expect(auth['canAny']).toHaveBeenCalledWith(['products.read', 'suppliers.read']);
+    });
+
+    it('sends the user away when they hold none of the anyPermission keys', () => {
+      auth['canAny'] = vi.fn().mockReturnValue(false);
+      const route = { data: { anyPermission: ['products.read'] } } as unknown as ActivatedRouteSnapshot;
+
+      expect(run(route)).toBe(false);
+    });
+
     it('allows users holding one of the required roles', () => {
       auth['hasAnyRole'].mockReturnValue(true);
 

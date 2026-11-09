@@ -111,6 +111,10 @@ public class PermissionCatalogTests
             .ShouldBe(new[] { AppRoles.Owner, AppRoles.Admin, AppRoles.StockManager }.OrderBy(r => r));
         SystemRolePermissions.RolesWith("stock.read").OrderBy(r => r)
             .ShouldBe(new[] { AppRoles.Owner, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.StockManager }.OrderBy(r => r));
+        SystemRolePermissions.RolesWith("suppliers.read").OrderBy(r => r)
+            .ShouldBe(new[] { AppRoles.Owner, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.StockManager }.OrderBy(r => r));
+        SystemRolePermissions.RolesWith("suppliers.write").OrderBy(r => r)
+            .ShouldBe(new[] { AppRoles.Owner, AppRoles.Admin, AppRoles.StockManager }.OrderBy(r => r));
         SystemRolePermissions.RolesWith("stock.waste.review").OrderBy(r => r)
             .ShouldBe(new[] { AppRoles.Owner, AppRoles.Admin }.OrderBy(r => r));
         SystemRolePermissions.RolesWith("subscription.billing").OrderBy(r => r)

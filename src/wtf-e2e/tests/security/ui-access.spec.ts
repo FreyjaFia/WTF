@@ -35,7 +35,7 @@ const PAGES: ReadonlyArray<PageCase> = [
   { name: 'audit logs', path: '/management/audit-logs', allowed: GROUPS.auditRead },
   { name: 'schema scripts', path: '/management/schema-scripts', allowed: GROUPS.schemaScriptHistoryRead },
   { name: 'setup lists', path: '/management/setup', allowed: GROUPS.setupAccess },
-  { name: 'suppliers', path: '/management/setup/suppliers', allowed: GROUPS.stockMovementsRead },
+  { name: 'suppliers', path: '/management/setup/suppliers', allowed: GROUPS.suppliersRead },
   { name: 'shop', path: '/management/shop', allowed: GROUPS.shopManage },
 ];
 

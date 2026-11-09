@@ -44,7 +44,7 @@ export const SETUP_KINDS: readonly SetupKind[] = [
     label: 'Suppliers',
     group: 'Inventory',
     description: 'Who you buy stock from, and what each one sells',
-    canOpen: (auth) => auth.canReadStockMovements(),
+    canOpen: (auth) => auth.canReadSuppliers(),
   },
 ];
 

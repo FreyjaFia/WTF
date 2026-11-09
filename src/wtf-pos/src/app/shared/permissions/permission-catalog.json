@@ -110,7 +110,7 @@
       "key": "stock.read",
       "area": "Inventory",
       "label": "View stock",
-      "description": "See stock movements, counts, reorder lists, purchase orders, receiving and suppliers.",
+      "description": "See stock movements, counts, reorder lists, purchase orders and receiving.",
       "feature": "inventory",
       "requires": []
     },
@@ -118,10 +118,28 @@
       "key": "stock.write",
       "area": "Inventory",
       "label": "Change stock",
-      "description": "Record movements, counts, purchase orders, receiving and suppliers.",
+      "description": "Record movements, counts, purchase orders and receiving.",
       "feature": "inventory",
       "requires": [
         "stock.read"
+      ]
+    },
+    {
+      "key": "suppliers.read",
+      "area": "Inventory",
+      "label": "View suppliers",
+      "description": "See the supplier list and what each supplier sells.",
+      "feature": "inventory",
+      "requires": []
+    },
+    {
+      "key": "suppliers.write",
+      "area": "Inventory",
+      "label": "Add and edit suppliers",
+      "description": "Create, change, deactivate and restore suppliers.",
+      "feature": "inventory",
+      "requires": [
+        "suppliers.read"
       ]
     },
     {
@@ -287,6 +305,8 @@
       "inventory.costs.write",
       "stock.read",
       "stock.write",
+      "suppliers.read",
+      "suppliers.write",
       "stock.waste.record",
       "stock.waste.review",
       "wastereasons.read",
@@ -320,6 +340,8 @@
       "inventory.costs.write",
       "stock.read",
       "stock.write",
+      "suppliers.read",
+      "suppliers.write",
       "stock.waste.record",
       "stock.waste.review",
       "wastereasons.read",
@@ -343,6 +365,7 @@
       "items.read",
       "inventory.costs.read",
       "stock.read",
+      "suppliers.read",
       "wastereasons.read",
       "expenses.read",
       "promotions.read",
@@ -366,6 +389,8 @@
       "items.read",
       "stock.read",
       "stock.write",
+      "suppliers.read",
+      "suppliers.write",
       "stock.waste.record",
       "wastereasons.read"
     ]
@@ -438,6 +463,12 @@
     ],
     "StockMovementsWrite": [
       "stock.write"
+    ],
+    "SuppliersRead": [
+      "suppliers.read"
+    ],
+    "SuppliersWrite": [
+      "suppliers.write"
     ],
     "StockWasteWrite": [
       "stock.waste.record"

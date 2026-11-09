@@ -60,7 +60,7 @@
           <textarea id="sd-notes" rows="2" formControlName="notes" maxlength="500" class="textarea w-full border-transparent bg-gray-50 focus:border-brand focus:bg-surface"></textarea>
         </div>
       </div>
-      @if (auth.canWriteStockMovements()) {
+      @if (auth.canWriteSuppliers()) {
         <div class="flex flex-wrap justify-end gap-2">
           @if (current.summary.isActive) {
             <button type="button" class="app-btn app-btn-secondary app-btn-md" data-testid="deactivate" (click)="askDeactivate()">Deactivate</button>

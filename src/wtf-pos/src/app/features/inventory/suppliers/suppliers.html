@@ -11,7 +11,7 @@
         </div>
       </div>
       <div class="flex shrink-0 items-center gap-2">
-        @if (auth.canWriteStockMovements() && !isFormOpen()) {
+        @if (auth.canWriteSuppliers() && !isFormOpen()) {
           <button type="button" class="app-btn app-btn-primary app-btn-sm" data-testid="open-new" (click)="openForm()">
             <app-icon name="icon-plus" [class]="'h-4 w-4'" />
             Add Supplier
@@ -74,7 +74,7 @@
     </div>
   </app-side-drawer>
 
-  @if (auth.canWriteStockMovements() && isFormOpen()) {
+  @if (auth.canWriteSuppliers() && isFormOpen()) {
     <form class="mb-4 flex shrink-0 flex-col gap-4 rounded-xl bg-surface p-4 shadow sm:p-5" [formGroup]="form" (ngSubmit)="create()" novalidate>
       <h2 class="text-sm font-semibold text-gray-900">New supplier</h2>
       <div>

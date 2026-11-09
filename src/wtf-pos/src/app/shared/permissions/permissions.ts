@@ -15,6 +15,8 @@ export const Permissions = {
   InventoryCostsWrite: 'inventory.costs.write',
   StockRead: 'stock.read',
   StockWrite: 'stock.write',
+  SuppliersRead: 'suppliers.read',
+  SuppliersWrite: 'suppliers.write',
   StockWasteRecord: 'stock.waste.record',
   StockWasteReview: 'stock.waste.review',
   WasteReasonsRead: 'wastereasons.read',
@@ -53,3 +55,23 @@ export const SystemRolePermissions: Readonly<Record<string, readonly PermissionK
 
 export const PolicyPermissions: Readonly<Record<string, readonly PermissionKey[]>> =
   catalogJson.policies as Record<string, PermissionKey[]>;
+
+export const SetupPermissions: readonly PermissionKey[] = [
+  Permissions.ProductsRead,
+  Permissions.WasteReasonsManage,
+  Permissions.SuppliersRead,
+];
+
+export const ManagementMenuPermissions: readonly PermissionKey[] = [
+  Permissions.ProductsRead,
+  Permissions.CustomersRead,
+  Permissions.UsersRead,
+  Permissions.PromotionsRead,
+  Permissions.ReportsRead,
+  Permissions.ExpensesRead,
+  ...SetupPermissions,
+  Permissions.BrandManage,
+  Permissions.SubscriptionBilling,
+  Permissions.AuditRead,
+  Permissions.SchemaScriptsRead,
+];

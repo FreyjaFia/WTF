@@ -2,8 +2,14 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { HttpErrorMessages, ServiceErrorMessages } from '@core/messages';
 import { environment } from '@environments/environment.development';
-import { AppRole, AppRoleGroups, AppRoleLabels, AppRoles } from '@shared/constants/app-roles';
-import { PermissionKey, Permissions, SystemRolePermissions } from '@shared/permissions';
+import { AppRole, AppRoleLabels, AppRoles } from '@shared/constants/app-roles';
+import {
+  ManagementMenuPermissions,
+  PermissionKey,
+  Permissions,
+  SetupPermissions,
+  SystemRolePermissions,
+} from '@shared/permissions';
 import { LoginDto, MeDto } from '@shared/models';
 import { BehaviorSubject, Observable, Subject, throwError } from 'rxjs';
 import { catchError, finalize, map, shareReplay, tap } from 'rxjs/operators';
@@ -348,17 +354,24 @@ export class AuthService {
     return this.can(Permissions.PromotionsWrite);
   }
 
-  /** Whether the Management area (menu, login landing, routes) is available; separate from the per-area reads. */
   public canReadManagement(): boolean {
-    return this.hasAnyRole(AppRoleGroups.ManagementAccess);
+    return this.can(Permissions.DashboardRead);
   }
 
   public canOpenManagementMenu(): boolean {
-    return this.hasAnyRole(AppRoleGroups.ManagementMenu);
+    return this.canAny(ManagementMenuPermissions);
   }
 
   public canOpenSetup(): boolean {
-    return this.hasAnyRole(AppRoleGroups.SetupAccess);
+    return this.canAny(SetupPermissions);
+  }
+
+  public canReadSuppliers(): boolean {
+    return this.can(Permissions.SuppliersRead);
+  }
+
+  public canWriteSuppliers(): boolean {
+    return this.can(Permissions.SuppliersWrite);
   }
 
   public canWriteManagement(): boolean {

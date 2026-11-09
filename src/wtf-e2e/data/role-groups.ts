@@ -1,7 +1,7 @@
 import { Role } from '@data/users';
 
-// Copy of AppRoleGroups (wtf-pos shared/constants/app-roles.ts) and the API policies, written by role key so the
-// specs never import app code. If a group changes in the app, these tables must change with it.
+// Copy of what the system role permissions (wtf-pos shared/permissions) and the API policies grant, written by role key so the
+// specs never import app code. If a role bundle changes in the app, these tables must change with it.
 const ALL_STAFF: ReadonlyArray<Role> = ['owner', 'admin', 'viewer', 'cashier', 'stockmgr', 'itemmgr'];
 
 export const GROUPS = {
@@ -28,6 +28,8 @@ export const GROUPS = {
   itemsWrite: ['owner', 'admin', 'itemmgr'],
   stockMovementsRead: ['owner', 'admin', 'viewer', 'stockmgr'],
   stockMovementsWrite: ['owner', 'admin', 'stockmgr'],
+  suppliersRead: ['owner', 'admin', 'viewer', 'stockmgr'],
+  suppliersWrite: ['owner', 'admin', 'stockmgr'],
   stockWasteWrite: ['owner', 'admin', 'stockmgr', 'cashier'],
   stockWasteReview: ['owner', 'admin'],
   expensesRead: ['owner', 'admin', 'viewer'],

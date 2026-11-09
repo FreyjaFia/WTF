@@ -137,7 +137,7 @@ export class SetupComponent implements OnInit {
       });
     }
 
-    if (this.authService.canReadStockMovements()) {
+    if (this.authService.canReadSuppliers()) {
       pending += 1;
       this.supplierService.getSuppliers().subscribe({
         next: (suppliers) => {

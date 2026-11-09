@@ -37,6 +37,8 @@ public class PolicyMatrixTests : IDisposable
         [AppPolicies.InventoryCostsWrite] = [AppRoles.Owner, AppRoles.Admin],
         [AppPolicies.StockMovementsRead] = [AppRoles.Owner, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.StockManager],
         [AppPolicies.StockMovementsWrite] = [AppRoles.Owner, AppRoles.Admin, AppRoles.StockManager],
+        [AppPolicies.SuppliersRead] = [AppRoles.Owner, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.StockManager],
+        [AppPolicies.SuppliersWrite] = [AppRoles.Owner, AppRoles.Admin, AppRoles.StockManager],
         [AppPolicies.StockWasteWrite] = [AppRoles.Owner, AppRoles.Admin, AppRoles.StockManager, AppRoles.Cashier],
         [AppPolicies.StockWasteReview] = [AppRoles.Owner, AppRoles.Admin],
         [AppPolicies.WasteReasonsManage] = [AppRoles.Owner, AppRoles.Admin],

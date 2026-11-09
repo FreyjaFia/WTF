@@ -25,6 +25,8 @@ public static class AppPolicies
     public const string InventoryCostsWrite = "InventoryCostsWrite";
     public const string StockMovementsRead = "StockMovementsRead";
     public const string StockMovementsWrite = "StockMovementsWrite";
+    public const string SuppliersRead = "SuppliersRead";
+    public const string SuppliersWrite = "SuppliersWrite";
     public const string StockWasteWrite = "StockWasteWrite";
     public const string StockWasteReview = "StockWasteReview";
     public const string WasteReasonsManage = "WasteReasonsManage";

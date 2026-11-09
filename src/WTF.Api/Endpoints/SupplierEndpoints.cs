@@ -15,7 +15,7 @@ public static class SupplierEndpoints
         group.MapGet("/",
             async (bool? includeInactive, string? search, ISender sender) =>
                 Results.Ok(await sender.Send(new GetSuppliersQuery(includeInactive ?? false, search))))
-            .RequireAuthorization(AppPolicies.StockMovementsRead);
+            .RequireAuthorization(AppPolicies.SuppliersRead);
 
         group.MapGet("/{id:guid}",
             async (Guid id, ISender sender, ClaimsPrincipal user) =>
@@ -23,7 +23,7 @@ public static class SupplierEndpoints
                 var result = await sender.Send(new GetSupplierQuery(id));
                 return result is not null ? Results.Ok(CostAccess.ForUser(result, user)) : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.StockMovementsRead);
+            .RequireAuthorization(AppPolicies.SuppliersRead);
 
         group.MapPost("/",
             async (SupplierFields fields, ISender sender, ClaimsPrincipal user) =>
@@ -31,7 +31,7 @@ public static class SupplierEndpoints
                 var result = await sender.Send(new CreateSupplierCommand(fields));
                 return Results.Created($"/api/suppliers/{result.Summary.Id}", CostAccess.ForUser(result, user));
             })
-            .RequireAuthorization(AppPolicies.StockMovementsWrite);
+            .RequireAuthorization(AppPolicies.SuppliersWrite);
 
         group.MapPut("/{id:guid}",
             async (Guid id, SupplierFields fields, ISender sender, ClaimsPrincipal user) =>
@@ -39,7 +39,7 @@ public static class SupplierEndpoints
                 var result = await sender.Send(new UpdateSupplierCommand(id, fields));
                 return result is not null ? Results.Ok(CostAccess.ForUser(result, user)) : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.StockMovementsWrite);
+            .RequireAuthorization(AppPolicies.SuppliersWrite);
 
         group.MapPost("/{id:guid}/deactivate",
             async (Guid id, ISender sender, ClaimsPrincipal user) =>
@@ -47,7 +47,7 @@ public static class SupplierEndpoints
                 var result = await sender.Send(new SetSupplierActiveCommand(id, false));
                 return result is not null ? Results.Ok(CostAccess.ForUser(result, user)) : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.StockMovementsWrite);
+            .RequireAuthorization(AppPolicies.SuppliersWrite);
 
         group.MapPost("/{id:guid}/restore",
             async (Guid id, ISender sender, ClaimsPrincipal user) =>
@@ -55,7 +55,7 @@ public static class SupplierEndpoints
                 var result = await sender.Send(new SetSupplierActiveCommand(id, true));
                 return result is not null ? Results.Ok(CostAccess.ForUser(result, user)) : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.StockMovementsWrite);
+            .RequireAuthorization(AppPolicies.SuppliersWrite);
 
         var itemGroup = app.MapGroup("/api/items/{itemId:guid}/suppliers")
             .RequireAuthorization();

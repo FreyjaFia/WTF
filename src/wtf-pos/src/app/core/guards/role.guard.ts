@@ -27,11 +27,13 @@ export const roleGuard: CanActivateFn = (route) => {
 
   const requiredRoles = (route.data?.['roles'] as AppRole[] | undefined) ?? [];
   const requiredPermission = route.data?.['permission'] as PermissionKey | undefined;
+  const anyPermission = route.data?.['anyPermission'] as readonly PermissionKey[] | undefined;
 
   const roleAllowed = requiredRoles.length === 0 || auth.hasAnyRole(requiredRoles);
   const permissionAllowed = !requiredPermission || auth.can(requiredPermission);
+  const anyAllowed = !anyPermission || auth.canAny(anyPermission);
 
-  if (roleAllowed && permissionAllowed) {
+  if (roleAllowed && permissionAllowed && anyAllowed) {
     return true;
   }
 
