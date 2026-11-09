@@ -13,7 +13,7 @@ import {
 } from '@shared/permissions';
 import { LoginDto, MeDto } from '@shared/models';
 import { BehaviorSubject, Observable, Subject, of, throwError } from 'rxjs';
-import { catchError, finalize, map, shareReplay, tap } from 'rxjs/operators';
+import { catchError, finalize, map, shareReplay, switchMap, tap } from 'rxjs/operators';
 import { db } from './db';
 import {
   currentTenantId,
@@ -113,6 +113,8 @@ export class AuthService {
           this.tokenRefreshedSubject.next();
         }
       }),
+      // The landing page depends on what this person may open, and a custom role has no built-in bundle to fall back on.
+      switchMap((res) => (res?.accessToken ? this.loadPermissions().pipe(map(() => res)) : of(res))),
       map((res) => {
         const hasToken = !!res?.accessToken;
 

@@ -4,7 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { HttpErrorMessages, ServiceErrorMessages } from '@core/messages';
 import { environment } from '@environments/environment.development';
 import { AppRoles } from '@shared/constants/app-roles';
-import { Permissions } from '@shared/permissions';
+import { Permissions, SystemRolePermissions } from '@shared/permissions';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { capture, failNetwork, failWith } from '../../testing/service-testing';
 import { AuthService } from './auth.service';
@@ -157,6 +157,27 @@ describe('AuthService session', () => {
   });
 
   describe('login', () => {
+    it('loads the permission list before it reports success, so the landing page knows a custom role', () => {
+      const auth = create();
+      const result = capture(auth.login('al', 'pw'));
+      http.expectOne(`${base}/login`).flush({ accessToken: makeToken({ exp: nowSeconds() + 3600, sub: 'u1', role: 'Barista' }), refreshToken: 'r1' });
+
+      expect(result.value).toBeUndefined();
+      http.expectOne(`${base}/permissions`).flush(['orders.read', 'orders.write']);
+
+      expect(result.value).toBe(true);
+      expect(auth.can(Permissions.OrdersWrite)).toBe(true);
+    });
+
+    it('still signs in when the permission list cannot be fetched', () => {
+      const auth = create();
+      const result = capture(auth.login('al', 'pw'));
+      http.expectOne(`${base}/login`).flush({ accessToken: tokenFor(AppRoles.Cashier), refreshToken: 'r1' });
+      failNetwork(http.expectOne(`${base}/permissions`));
+
+      expect(result.value).toBe(true);
+    });
+
     it.each([
       ['', 'pw'],
       ['user', ''],
@@ -182,6 +203,7 @@ describe('AuthService session', () => {
       const req = http.expectOne(`${base}/login`);
       expect(req.request.body).toEqual({ username: 'al', password: 'pw' });
       req.flush({ accessToken: access, refreshToken: 'r1' });
+      http.expectOne(`${base}/permissions`).flush(SystemRolePermissions[AppRoles.Cashier]);
 
       expect(result.value).toBe(true);
       expect(localStorage.getItem('token')).toBe(access);
