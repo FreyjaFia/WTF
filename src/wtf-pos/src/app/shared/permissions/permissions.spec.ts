@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PermissionCatalog, Permissions, SystemRolePermissions } from './permissions';
+import { PermissionCatalog, Permissions, SystemRolePermissions, keepReadPermissions } from './permissions';
 
 describe('permission catalog', () => {
   const keys = PermissionCatalog.map((p) => p.key);
@@ -37,5 +37,18 @@ describe('permission catalog', () => {
         }
       }
     }
+  });
+});
+
+describe('keepReadPermissions', () => {
+  it('keeps only the keys that look at things', () => {
+    const kept = keepReadPermissions(Object.values(Permissions));
+
+    expect(kept.length).toBeGreaterThan(0);
+    expect(kept.every((key) => key.endsWith('.read'))).toBe(true);
+    expect(kept).toContain(Permissions.OrdersRead);
+    expect(kept).not.toContain(Permissions.OrdersWrite);
+    expect(kept).not.toContain(Permissions.RolesManage);
+    expect(kept).not.toContain(Permissions.SubscriptionBilling);
   });
 });

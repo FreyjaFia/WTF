@@ -6,6 +6,12 @@ public static class PermissionRules
 
     public static bool IsKnown(string key) => ByKey.ContainsKey(key);
 
+    public static bool IsReadKey(string key) => key.EndsWith(".read", StringComparison.Ordinal);
+
+    // A read-only "sign in as" session keeps the keys that only look at things; every other key (write, manage, override,
+    // generate, record, review, billing) is dropped.
+    public static IEnumerable<string> KeepReadKeys(IEnumerable<string> keys) => keys.Where(IsReadKey);
+
     // Drops keys that no longer exist and adds what each key requires (a write key never exists without its read key).
     public static HashSet<string> Normalize(IEnumerable<string> keys)
     {

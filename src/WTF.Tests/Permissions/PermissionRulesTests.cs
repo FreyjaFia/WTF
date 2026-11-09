@@ -72,7 +72,7 @@ public class PermissionRulesTests
             CreatedBy = userId,
         });
 
-        async Task<HashSet<string>> RunAsync(string tokenRole)
+        async Task<HashSet<string>> RunAsync(string tokenRole, params Claim[] signInAs)
         {
             var services = new ServiceCollection()
                 .AddScoped(_ => Infrastructure.TestDb.Create(name)).BuildServiceProvider();
@@ -80,7 +80,7 @@ public class PermissionRulesTests
             {
                 RequestServices = services,
                 User = new ClaimsPrincipal(new ClaimsIdentity(
-                    [new Claim(ClaimTypes.NameIdentifier, userId.ToString()), new Claim(ClaimTypes.Role, tokenRole)], "test")),
+                    [new Claim(ClaimTypes.NameIdentifier, userId.ToString()), new Claim(ClaimTypes.Role, tokenRole), .. signInAs], "test")),
             };
 
             await new PermissionClaimsMiddleware(_ => Task.CompletedTask).InvokeAsync(context, new RolePermissionCache(TimeProvider.System), new AllFeatures());
@@ -89,6 +89,27 @@ public class PermissionRulesTests
 
         (await RunAsync(AppRoles.Owner)).Count.ShouldBe(PermissionCatalog.All.Count);
         (await RunAsync("SuperAdmin")).ShouldBeEmpty();
+
+        var by = new Claim(ImpersonationClaims.By, Guid.NewGuid().ToString());
+        var readOnly = await RunAsync(AppRoles.Owner, by, new Claim(ImpersonationClaims.ReadOnly, "1"));
+        readOnly.ShouldNotBeEmpty();
+        readOnly.ShouldAllBe(k => k.EndsWith(".read"));
+        (await RunAsync(AppRoles.Owner, by, new Claim(ImpersonationClaims.ReadOnly, "0"))).Count.ShouldBe(PermissionCatalog.All.Count);
+    }
+
+    [Fact]
+    public void KeepReadKeys_DropsEveryKeyThatChangesSomething()
+    {
+        var all = PermissionCatalog.All.Select(p => p.Key).ToList();
+
+        var kept = PermissionRules.KeepReadKeys(all).ToList();
+
+        kept.ShouldAllBe(k => k.EndsWith(".read"));
+        all.Except(kept).ShouldAllBe(k => !k.EndsWith(".read"));
+        kept.ShouldContain("orders.read");
+        kept.ShouldNotContain("orders.write");
+        kept.ShouldNotContain("roles.manage");
+        kept.ShouldNotContain("subscription.billing");
     }
 }
 

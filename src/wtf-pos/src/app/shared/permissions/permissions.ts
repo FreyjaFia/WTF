@@ -77,3 +77,8 @@ export const ManagementMenuPermissions: readonly PermissionKey[] = [
   Permissions.AuditRead,
   Permissions.SchemaScriptsRead,
 ];
+
+// A read-only "sign in as" session keeps only the keys that look at things (the API applies the same rule).
+export function keepReadPermissions(keys: Iterable<PermissionKey>): PermissionKey[] {
+  return Array.from(keys).filter((key) => key.endsWith('.read'));
+}

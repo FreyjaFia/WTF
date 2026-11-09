@@ -33,12 +33,16 @@ public sealed class PermissionClaimsMiddleware(RequestDelegate next)
             var planFeatures = await LoadPlanFeaturesAsync(context, db, tenantFeatures, identity);
             if (access.IsActive && tokenIsCurrent)
             {
-                foreach (var key in access.Keys)
+                var readOnlySignIn = user.FindFirst(ImpersonationClaims.By) is not null
+                    && user.FindFirst(ImpersonationClaims.ReadOnly)?.Value != "0";
+                IEnumerable<string> roleKeys = readOnlySignIn ? PermissionRules.KeepReadKeys(access.Keys) : access.Keys;
+
+                foreach (var key in roleKeys)
                 {
                     identity.AddClaim(new Claim(RoleKeyClaim, key));
                 }
 
-                foreach (var key in access.Keys.Where(k => planFeatures is null || PlanFeatures.IsAllowed(PermissionCatalog.FeatureOf(k), planFeatures)))
+                foreach (var key in roleKeys.Where(k => planFeatures is null || PlanFeatures.IsAllowed(PermissionCatalog.FeatureOf(k), planFeatures)))
                 {
                     identity.AddClaim(new Claim(PermissionClaim, key));
                 }
