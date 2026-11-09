@@ -6,6 +6,7 @@ import { roleGuard } from '@core/guards/role.guard';
 import { unsavedChangesGuard } from '@core/guards/unsaved-changes.guard';
 import { Dashboard } from '@features/dashboard/dashboard';
 import { InventoryComponent } from '@features/inventory/inventory';
+import { InventoryHubComponent } from '@features/inventory/hub/inventory-hub';
 import { ItemDetailsComponent } from '@features/inventory/items/item-details/item-details';
 import { ItemEditorComponent } from '@features/inventory/items/item-editor/item-editor';
 import { ItemListComponent } from '@features/inventory/items/item-list/item-list';
@@ -162,7 +163,7 @@ export const routes: Routes = [
         path: 'inventory',
         component: InventoryComponent,
         children: [
-          { path: '', redirectTo: 'items', pathMatch: 'full' },
+          { path: '', component: InventoryHubComponent, pathMatch: 'full' },
           {
             path: 'items',
             component: ItemsComponent,

@@ -158,8 +158,10 @@ describe('SidebarComponent', () => {
     expect(labels).toContain('Dashboard');
     expect(labels).toContain('New Order');
     expect(labels).toContain('Orders');
-    expect(labels).toContain('Items');
-    expect(labels).toContain('Products');
+    expect(labels).toContain('Inventory');
+    expect(labels).toContain('Management');
+    expect(labels).not.toContain('Items');
+    expect(labels).not.toContain('Products');
   });
 
   it('hides sections the user cannot access', async () => {
@@ -171,8 +173,6 @@ describe('SidebarComponent', () => {
     ]);
     const labels = linkLabels().join('|');
     expect(labels).not.toContain('New Order');
-    expect(labels).not.toContain('Items');
-    expect(labels).not.toContain('Products');
     expect(el.textContent).not.toContain('Inventory');
     expect(el.textContent).not.toContain('Management');
   });
@@ -188,24 +188,12 @@ describe('SidebarComponent', () => {
     expect(linkLabels().join('|')).not.toContain('Products');
   });
 
-  it('toggles the inventory and management groups', async () => {
-    const { fixture, byText, el } = await setup();
-    const inventoryBtn = byText('button', 'Inventory')!;
-    const group = () => el.querySelector('.grid[class*="grid-rows-"]') as HTMLElement;
-    expect(group().classList).toContain('grid-rows-[1fr]');
-    inventoryBtn.click();
-    fixture.detectChanges();
-    expect(group().classList).toContain('grid-rows-[0fr]');
-    inventoryBtn.click();
-    fixture.detectChanges();
-    expect(group().classList).toContain('grid-rows-[1fr]');
+  it('has single Inventory and Management entries that open their hubs', async () => {
+    const { el } = await setup();
 
-    const mgmtBtn = byText('button', 'Management')!;
-    const mgmt = () => el.querySelectorAll('.grid[class*="grid-rows-"]')[1] as HTMLElement;
-    expect(mgmt().classList).toContain('grid-rows-[1fr]');
-    mgmtBtn.click();
-    fixture.detectChanges();
-    expect(mgmt().classList).toContain('grid-rows-[0fr]');
+    expect(el.querySelector('[data-testid="sidebar-inventory"]')?.getAttribute('href')).toBe('/inventory');
+    expect(el.querySelector('[data-testid="sidebar-management"]')?.getAttribute('href')).toBe('/management');
+    expect(el.querySelector('.grid[class*="grid-rows-"]')).toBeNull();
   });
 
   it('collapses and expands the sidebar', async () => {

@@ -3,6 +3,7 @@ import { authGuard } from '@core/guards/auth.guard';
 import { loginGuard } from '@core/guards/login.guard';
 import { roleGuard } from '@core/guards/role.guard';
 import { unsavedChangesGuard } from '@core/guards/unsaved-changes.guard';
+import { InventoryHubComponent } from '@features/inventory/hub/inventory-hub';
 import { ManagementHubComponent } from '@features/management/hub/management-hub';
 import { NotFoundComponent } from '@features/not-found/not-found';
 import { PublicOrderComponent } from '@features/public-order/public-order';
@@ -200,7 +201,14 @@ describe('app.routes', () => {
       expect(entry?.route.redirectTo).toBe(to);
     };
     expectRedirect('orders', 'list');
-    expectRedirect('inventory', 'items');
+  });
+
+  it('opens the Inventory hub at the Inventory root', () => {
+    const entry = flat.find(
+      (f) => f.fullPath === 'inventory' && f.route.component === InventoryHubComponent,
+    );
+    expect(entry?.route.pathMatch).toBe('full');
+    expect(entry?.route.redirectTo).toBeUndefined();
   });
 
   it('opens the Management hub at the Management root', () => {

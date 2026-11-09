@@ -109,20 +109,19 @@ test.describe('par levels and the suggested orders view @inventory @suggested-or
     await expect(reorder.group(supplier.summary.name)).not.toContainText('about');
   });
 
-  test('Purchasing opens the suggestions through its button, and the Reorder tab is gone', async ({ signIn }) => {
+  test('Purchasing opens the suggestions through its button, and there is no Reorder entry', async ({ signIn }) => {
     const page = await signIn('admin');
     await page.setViewportSize({ width: 390, height: 844 });
     const orders = new OrdersPage(page);
     await orders.open();
 
-    const tabs = await page.locator('a[role="tab"][data-inventory-tab]').evaluateAll((els) => els.map((el) => el.getAttribute('data-inventory-tab')));
-    expect(tabs).toEqual(['items', 'ingredients', 'attention', 'purchase-orders', 'receiving', 'stock-in', 'waste', 'counts']);
+    await expect(page.locator('[role="tab"]')).toHaveCount(0);
+    await expect(page.getByTestId('inventory-back')).toBeVisible();
 
     await page.getByTestId('open-suggestions').click();
     await expect(page).toHaveURL(/\/inventory\/purchase-orders\/suggestions$/);
     const suggested = new SuggestedOrdersPage(page);
     await expect(suggested.heading).toBeVisible();
-    await expect(page.locator('a[role="tab"][aria-selected="true"]')).toContainText('Purchasing');
 
     await page.getByTestId('suggestions-back').click();
     await expect(page).toHaveURL(/\/inventory\/purchase-orders$/);

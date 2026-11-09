@@ -93,9 +93,31 @@ test.describe('UI: the sidebar lists only the entries a role may use @security',
       const sidebar = new SidebarPage(page);
       await expect(sidebar.root).toBeVisible();
 
-      for (const entry of MENU) {
+      const inSidebar = MENU.filter((e) => e.path.startsWith('/orders'));
+      for (const entry of inSidebar) {
         const expected = isIn(entry.allowed, role) ? 1 : 0;
         await expect.soft(sidebar.link(entry.path), `${role}: sidebar entry ${entry.name}`).toHaveCount(expected);
+      }
+
+      for (const hub of ['inventory', 'management']) {
+        const entries = MENU.filter((e) => e.path.startsWith(`/${hub}/`));
+        const opens = entries.some((e) => isIn(e.allowed, role));
+        await expect
+          .soft(sidebar.link(`/${hub}`), `${role}: sidebar entry ${hub}`)
+          .toHaveCount(opens ? 1 : 0);
+        if (!opens) {
+          continue;
+        }
+
+        await sidebar.link(`/${hub}`).click();
+        const hubPage = page.getByTestId(`${hub}-hub`);
+        await expect(hubPage).toBeVisible();
+        for (const entry of entries) {
+          const expected = isIn(entry.allowed, role) ? 1 : 0;
+          await expect
+            .soft(hubPage.locator(`a[href="${entry.path}"]`), `${role}: ${hub} hub card ${entry.name}`)
+            .toHaveCount(expected);
+        }
       }
     });
   }

@@ -1,23 +1,9 @@
-import { Component, DestroyRef, effect, inject } from '@angular/core';
-import {
-  IsActiveMatchOptions,
-  Router,
-  RouterLink,
-  RouterOutlet,
-  isActive as routerIsActive,
-} from '@angular/router';
+import { Component, computed, DestroyRef, inject } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { AuthService, StockAttentionService, StockWasteService } from '@core/services';
 import { AppRoutes } from '@shared/constants/app-routes';
-
-interface InventoryTab {
-  label: string;
-  route: string;
-  path: string;
-  ariaLabel: string;
-  canShow?: () => boolean;
-  badge?: () => number;
-  urgent?: () => boolean;
-}
+import { filter, map } from 'rxjs';
 
 @Component({
   selector: 'app-inventory',
@@ -26,81 +12,27 @@ interface InventoryTab {
   host: { class: 'flex-1 min-h-0' },
 })
 export class InventoryComponent {
-  private static readonly activeMatchOptions: IsActiveMatchOptions = {
-    paths: 'subset',
-    queryParams: 'ignored',
-    matrixParams: 'ignored',
-    fragment: 'ignored',
-  };
-
   private readonly router = inject(Router);
   private readonly authService = inject(AuthService);
   private readonly attention = inject(StockAttentionService);
   private readonly stockWaste = inject(StockWasteService);
   private readonly destroyRef = inject(DestroyRef);
-  protected readonly inventoryTabs: readonly InventoryTab[] = [
-    {
-      label: 'Items',
-      route: 'items',
-      path: AppRoutes.InventoryItems,
-      ariaLabel: 'Items',
-      canShow: () => this.canReadItems(),
-    },
-    {
-      label: 'Ingredients & Cost',
-      route: 'ingredients',
-      path: AppRoutes.InventoryIngredients,
-      ariaLabel: 'Ingredients and cost',
-      canShow: () => this.canReadItems(),
-    },
-    {
-      label: 'Needs Attention',
-      route: 'attention',
-      path: AppRoutes.InventoryAttention,
-      ariaLabel: 'Items that need attention',
-      canShow: () => this.canReadStockMovements(),
-      badge: () => this.attention.count(),
-      urgent: () => this.attention.urgentCount() > 0,
-    },
-    {
-      label: 'Purchasing',
-      route: 'purchase-orders',
-      path: AppRoutes.InventoryPurchaseOrders,
-      ariaLabel: 'Purchase orders',
-      canShow: () => this.canReadStockMovements(),
-    },
-    {
-      label: 'Receiving',
-      route: 'receiving',
-      path: AppRoutes.InventoryReceiving,
-      ariaLabel: 'Receiving',
-      canShow: () => this.canReadStockMovements(),
-    },
-    {
-      label: 'Stock In',
-      route: 'stock-in',
-      path: AppRoutes.InventoryStockIn,
-      ariaLabel: 'Stock In',
-      canShow: () => this.canReadStockMovements(),
-    },
-    {
-      label: 'Waste',
-      route: 'waste',
-      path: AppRoutes.InventoryWaste,
-      ariaLabel: 'Waste',
-      canShow: () => this.canReadStockMovements(),
-      badge: () => (this.authService.canReviewStockWaste() ? this.stockWaste.pendingCount() : 0),
-      urgent: () => false,
-    },
-    {
-      label: 'Counts',
-      route: 'counts',
-      path: AppRoutes.InventoryCounts,
-      ariaLabel: 'Stock counts',
-      canShow: () => this.canReadStockMovements(),
-    },
-  ];
-  private readonly activeSignals = new Map<string, ReturnType<typeof routerIsActive>>();
+
+  protected readonly hubRoute = AppRoutes.InventoryRoot;
+
+  private readonly currentUrl = toSignal(
+    this.router.events.pipe(
+      filter((event) => event instanceof NavigationEnd),
+      map(() => this.router.url),
+    ),
+    { initialValue: this.router.url },
+  );
+
+  // Only the top screen of a section gets the way back: deeper pages (editors, details) bring their own back arrow.
+  protected readonly showBackToHub = computed(() => {
+    const path = this.currentUrl().split(/[?#]/)[0].split('/').filter(Boolean);
+    return path.length === 2 && path[0] === 'inventory';
+  });
 
   public constructor() {
     if (this.authService.canReadStockMovements()) {
@@ -112,60 +44,5 @@ export class InventoryComponent {
       this.stockWaste.startPendingCount();
       this.destroyRef.onDestroy(() => this.stockWaste.stopPendingCount());
     }
-
-    effect(() => {
-      const activeRoute = this.getActiveInventoryRoute();
-      if (activeRoute) {
-        this.scrollInventoryTabIntoView(activeRoute);
-      }
-    });
-  }
-
-  protected isActive(route: string): boolean {
-    let routeActiveSignal = this.activeSignals.get(route);
-    if (!routeActiveSignal) {
-      const routeTree = this.router.createUrlTree([AppRoutes.InventoryRoot, route]);
-      routeActiveSignal = routerIsActive(
-        routeTree,
-        this.router,
-        InventoryComponent.activeMatchOptions,
-      );
-      this.activeSignals.set(route, routeActiveSignal);
-    }
-
-    return routeActiveSignal();
-  }
-
-  protected canReadItems(): boolean {
-    return this.authService.canReadItems();
-  }
-
-  protected canReadStockMovements(): boolean {
-    return this.authService.canReadStockMovements();
-  }
-
-  protected scrollInventoryTabIntoView(route: string): void {
-    if (typeof window === 'undefined') {
-      return;
-    }
-
-    window.setTimeout(() => {
-      const tab = document.querySelector(`[data-inventory-tab="${route}"]`);
-      if (!(tab instanceof HTMLElement)) {
-        return;
-      }
-
-      tab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-    });
-  }
-
-  private getActiveInventoryRoute(): string | null {
-    for (const tab of this.inventoryTabs) {
-      if (this.isActive(tab.route)) {
-        return tab.route;
-      }
-    }
-
-    return null;
   }
 }

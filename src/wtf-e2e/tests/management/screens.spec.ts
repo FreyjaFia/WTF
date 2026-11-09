@@ -3,7 +3,7 @@ import { expect, test } from '@fixtures/index';
 import { Api } from '@api/index';
 import { ManagementExtraApi } from '@api/management-extra';
 import { ROUTES } from '@data/routes';
-import { CustomerEditorPage, DetailsActions, ManagementListPage, ProductEditorPage, SidebarPage } from '@pages/management.page';
+import { CustomerEditorPage, DetailsActions, ManagementListPage, ProductEditorPage } from '@pages/management.page';
 import { go } from '@utils/navigation';
 import { unique, uniqueCode } from '@utils/unique';
 
@@ -25,10 +25,11 @@ test.describe('management screens @management', () => {
     { entry: 'Promotions', path: ROUTES.promotions },
   ];
   for (const list of LISTS) {
-    test(`admin opens ${list.entry} from the sidebar`, async ({ signIn }) => {
+    test(`admin opens ${list.entry} from the Management hub`, async ({ signIn }) => {
       const page = await signIn('admin', { landing: true });
 
-      await new SidebarPage(page).link(list.path).click();
+      await page.getByTestId('sidebar-management').click();
+      await page.locator(`[data-testid="management-hub"] a[href="${list.path}"]`).click();
 
       await expect(page).toHaveURL(new RegExp(`${list.path}$`));
     });

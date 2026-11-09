@@ -1,45 +1,15 @@
-<div class="flex h-full w-full flex-col rounded-t-2xl bg-surface sm:-mt-4 md:mt-0 lg:flex-row">
-  <div class="app-page-nav flex shrink-0 flex-col bg-surface sm:hidden">
-    <h2 class="mb-3 text-xl font-bold text-gray-900">Inventory</h2>
-    <nav
-      role="tablist"
-      class="flex w-full items-end gap-4 overflow-x-auto border-b border-gray-200 pb-2 text-sm [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      aria-label="Inventory tabs"
+<div class="flex h-full w-full flex-col rounded-t-2xl bg-surface sm:-mt-4 md:mt-0">
+  @if (showBackToHub()) {
+    <a
+      [routerLink]="hubRoute"
+      class="app-page-nav flex shrink-0 items-center gap-1 text-sm font-semibold text-gray-600 sm:hidden"
+      data-testid="inventory-back"
     >
-      @for (tab of inventoryTabs; track tab.route) {
-        @if (!tab.canShow || tab.canShow()) {
-        <a
-          [routerLink]="tab.path"
-          role="tab"
-          [attr.data-inventory-tab]="tab.route"
-          class="relative flex shrink-0 rounded-md px-2 py-1 font-bold text-gray-500 transition-colors"
-          [class.text-gray-900]="isActive(tab.route)"
-          [attr.aria-selected]="isActive(tab.route)"
-          [attr.aria-label]="tab.ariaLabel"
-          (click)="scrollInventoryTabIntoView(tab.route)"
-        >
-          <span class="relative"> {{ tab.label }} </span>
-          @if (tab.badge?.(); as count) {
-            <span
-              class="ml-1 inline-flex min-w-4 items-center justify-center rounded-full px-1 text-[10px] leading-4 font-bold text-white"
-              [class.bg-red-500]="tab.urgent?.() ?? true"
-              [class.bg-amber-500]="!(tab.urgent?.() ?? true)"
-              data-testid="tab-badge"
-              >{{ count }}</span
-            >
-          }
-          <span
-            class="absolute right-2 -bottom-2 left-2 h-0.5 rounded-full bg-gray-700 transition-opacity"
-            [class.opacity-100]="isActive(tab.route)"
-            [class.opacity-0]="!isActive(tab.route)"
-          ></span>
-        </a>
-        }
-      }
-    </nav>
-  </div>
+      <span aria-hidden="true">&larr;</span> Inventory
+    </a>
+  }
 
-  <div class="flex h-full min-h-0 flex-1 flex-col">
+  <div class="flex h-full min-h-0 min-w-0 flex-1 flex-col">
     <router-outlet />
   </div>
 </div>
