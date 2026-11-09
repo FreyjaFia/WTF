@@ -79,6 +79,19 @@ public class VoidOrderHandler(
             ? await db.Database.BeginTransactionAsync(cancellationToken)
             : null;
 
+        if (db.Database.IsRelational())
+        {
+            // Claim the status first: a second voider waits on the row lock, then finds the order already changed.
+            var claimedStatusId = order.StatusId;
+            var claimed = await db.Orders
+                .Where(o => o.Id == order.Id && o.StatusId == claimedStatusId)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(o => o.StatusId, (int)newStatus), cancellationToken);
+            if (claimed != 1)
+            {
+                throw new InvalidOperationException("Order has already been voided.");
+            }
+        }
+
         // Capture price snapshot (resolve add-on overrides)
         var parentProductByOrderItemId = order.OrderItems
             .Where(oi => oi.ParentOrderItemId == null)

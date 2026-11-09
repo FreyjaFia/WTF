@@ -32,9 +32,8 @@ public class VoidOrderDatabaseTests
 
         await using (var db = database.CreateContext())
         {
-            var ex = await Should.ThrowAsync<DbUpdateException>(() =>
+            await Should.ThrowAsync<Microsoft.Data.SqlClient.SqlException>(() =>
                 Handler(db, user.Id).Handle(new VoidOrderCommand(orderId, "changed my mind"), CancellationToken.None));
-            ex.InnerException.ShouldNotBeNull();
         }
 
         await using var check = database.CreateContext();
@@ -44,6 +43,34 @@ public class VoidOrderDatabaseTests
         order.UpdatedAt.ShouldBeNull();
         order.UpdatedBy.ShouldBeNull();
         (await check.OrderItems.SingleAsync()).Price.ShouldBeNull();
+    }
+
+    [SqlFact]
+    public async Task Handle_TwoVoidsAtOnce_OnlyOneSucceeds()
+    {
+        await using var database = await SqlTestDatabase.CreateAsync();
+        var user = await SqlSeed.UserAsync(database);
+        var burger = await SqlSeed.ProductAsync(database, user.Id, "Burger", 100m);
+        var orderId = await DbOrderSeed.OrderAsync(database, user.Id);
+        await DbOrderSeed.LineAsync(database, orderId, burger.Id, 2);
+
+        async Task<bool> VoidAsync()
+        {
+            await using var db = database.CreateContext();
+            try
+            {
+                await Handler(db, user.Id).Handle(new VoidOrderCommand(orderId, "double click"), CancellationToken.None);
+                return true;
+            }
+            catch (InvalidOperationException)
+            {
+                return false;
+            }
+        }
+
+        var results = await Task.WhenAll(VoidAsync(), VoidAsync());
+
+        results.Count(r => r).ShouldBe(1);
     }
 
     [SqlFact]

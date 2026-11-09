@@ -39,6 +39,7 @@ public class ApproveHeldOrderHandler(
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
 
+        await HeldOrderDecision.ClaimAsync(db, order, OrderStatusEnum.Completed, "approved", cancellationToken);
         order.StatusId = (int)OrderStatusEnum.Completed;
         order.UpdatedAt = DateTime.UtcNow;
         order.UpdatedBy = userId;
@@ -94,12 +95,16 @@ public class RejectHeldOrderHandler(
         HeldOrderDecision.EnsureHeld(order, "rejected");
 
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await HeldOrderDecision.ClaimAsync(db, order, OrderStatusEnum.Cancelled, "rejected", cancellationToken);
+
         order.StatusId = (int)OrderStatusEnum.Cancelled;
         order.RejectionReason = reason;
         order.Note = reason;
         order.UpdatedAt = DateTime.UtcNow;
         order.UpdatedBy = userId;
         await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
         await auditService.LogAsync(
             action: AuditAction.OrderReviewRejected,
@@ -118,6 +123,23 @@ public class RejectHeldOrderHandler(
 
 internal static class HeldOrderDecision
 {
+    public static async Task ClaimAsync(WTFDbContext db, Order order, OrderStatusEnum to, string verb, CancellationToken cancellationToken)
+    {
+        if (!db.Database.IsRelational())
+        {
+            return;
+        }
+
+        // A second reviewer waits on the row lock, then finds the order already decided.
+        var claimed = await db.Orders
+            .Where(o => o.Id == order.Id && o.StatusId == (int)OrderStatusEnum.PendingReview)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(o => o.StatusId, (int)to), cancellationToken);
+        if (claimed != 1)
+        {
+            throw new InvalidOperationException($"Only orders waiting for review can be {verb}.");
+        }
+    }
+
     public static void EnsureHeld(Order order, string verb)
     {
         if (order.StatusId != (int)OrderStatusEnum.PendingReview)
