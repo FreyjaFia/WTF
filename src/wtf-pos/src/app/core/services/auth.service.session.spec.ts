@@ -60,7 +60,7 @@ describe('AuthService session', () => {
 
       expect(auth.can(Permissions.OrdersWrite)).toBe(true);
       expect(auth.can(Permissions.StockWrite)).toBe(false);
-      expect(JSON.parse(localStorage.getItem('permissions') ?? '[]')).toEqual(['orders.read', 'orders.write']);
+      expect(localStorage.getItem('permissions')).toBeNull();
     });
 
     it('keeps the stored list when the server cannot be reached, and clears it on logout', () => {
@@ -100,6 +100,13 @@ describe('AuthService session', () => {
       expect(auth.permissionsVersion()).toBe(1);
       expect(auth.can(Permissions.OrdersWrite)).toBe(true);
       expect(auth.can(Permissions.StockWrite)).toBe(false);
+    });
+
+    it('ignores a list saved by an earlier version as a bare array', () => {
+      const auth = create(customToken, ['orders.read', 'orders.write']);
+
+      expect(auth.permissionsVersion()).toBe(0);
+      expect(auth.can(Permissions.OrdersWrite)).toBe(false);
     });
 
     it('ignores a list stored for another person', () => {

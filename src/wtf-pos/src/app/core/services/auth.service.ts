@@ -38,8 +38,7 @@ function readStoredPermissions(owner: string | null): ReadonlySet<PermissionKey>
     const parsed: unknown = raw ? JSON.parse(raw) : null;
 
     if (Array.isArray(parsed)) {
-      // Saved by an earlier version, before lists were tied to a person.
-      return new Set(parsed as PermissionKey[]);
+      return null;
     }
 
     const stored = parsed as Partial<StoredPermissions> | null;
@@ -567,10 +566,11 @@ export class AuthService {
         this.permissionsVersion.update((v) => v + 1);
         try {
           const owner = this.permissionOwner();
-          const stored: StoredPermissions | string[] = owner
-            ? { owner, keys: keys as PermissionKey[], savedAt: new Date().toISOString() }
-            : keys;
-          localStorage.setItem(PERMISSIONS_STORAGE_KEY, JSON.stringify(stored));
+
+          if (owner) {
+            const stored: StoredPermissions = { owner, keys: keys as PermissionKey[], savedAt: new Date().toISOString() };
+            localStorage.setItem(PERMISSIONS_STORAGE_KEY, JSON.stringify(stored));
+          }
         } catch {
           // Storage can be full or blocked; the list still works for this session.
         }
