@@ -14,6 +14,7 @@ import {
   PromotionTypeEnum,
 } from '@shared/models';
 import { catchError, firstValueFrom, of } from 'rxjs';
+import { AuthService } from './auth.service';
 import { CatalogLookupService } from './catalog-lookup.service';
 import { ConnectivityService } from './connectivity.service';
 import { db } from './db';
@@ -43,6 +44,7 @@ export class CatalogCacheService {
   private readonly connectivity = inject(ConnectivityService);
   private readonly imageCache = inject(ImageCacheService);
   private readonly lookups = inject(CatalogLookupService);
+  private readonly auth = inject(AuthService);
 
   private readonly _products = signal<ProductDto[]>([]);
   public readonly products = this._products.asReadonly();
@@ -76,6 +78,8 @@ export class CatalogCacheService {
       this.backgroundRefresh();
     }, CatalogCacheService.REFRESH_INTERVAL_MS);
 
+    this.auth.localDataCleared$.subscribe(() => this.reset());
+
     effect(() => {
       const isOnline = this.connectivity.isOnline();
 
@@ -83,6 +87,18 @@ export class CatalogCacheService {
         this.backgroundRefresh();
       }
     });
+  }
+
+  public reset(): void {
+    this.loaded = false;
+    this._products.set([]);
+    this._customers.set([]);
+    this._addOnsByProductId.set({});
+    this._bundlePromotions.set([]);
+    this._fixedBundles.set([]);
+    this._mixMatchPromotions.set([]);
+    this._discountedPromotions.set([]);
+    this._stalePriceItems.set([]);
   }
 
   public async load(): Promise<void> {

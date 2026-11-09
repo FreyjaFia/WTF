@@ -5,6 +5,7 @@ import { TestBed } from '@angular/core/testing';
 import { environment } from '@environments/environment.development';
 import { ProductDto, PromotionTypeEnum } from '@shared/models';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { AuthService } from './auth.service';
 import { CatalogCacheService } from './catalog-cache.service';
 import { ConnectivityService } from './connectivity.service';
 import { CachedCatalog, db } from './db';
@@ -106,6 +107,45 @@ describe('CatalogCacheService', () => {
     });
     vi.useRealTimers();
     vi.restoreAllMocks();
+  });
+
+  describe('reset', () => {
+    async function loadOneProduct(service: CatalogCacheService): Promise<void> {
+      const done = service.load();
+
+      await answerSync({ products: [prod('p1', 10)], customers: [{ id: 'c1' }], discounted: [{ id: 'd1' }] });
+      await done;
+    }
+
+    it('empties every signal and lets the catalog load again', async () => {
+      const service = create();
+      await loadOneProduct(service);
+
+      service.reset();
+
+      expect(service.products()).toEqual([]);
+      expect(service.customers()).toEqual([]);
+      expect(service.bundlePromotions()).toEqual([]);
+      expect(service.discountedPromotions()).toEqual([]);
+      expect(service.stalePriceItems()).toEqual([]);
+
+      const again = service.load();
+      await answerSync({ products: [prod('p2', 20)] });
+      await again;
+
+      expect(service.products().map((p) => p.id)).toEqual(['p2']);
+    });
+
+    it('runs when the person signs out', async () => {
+      const service = create();
+      await loadOneProduct(service);
+      const auth = TestBed.inject(AuthService);
+      vi.spyOn(db.carts, 'clear').mockResolvedValue(undefined);
+
+      auth.logout();
+
+      expect(service.products()).toEqual([]);
+    });
   });
 
   describe('load', () => {

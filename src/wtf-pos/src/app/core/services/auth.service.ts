@@ -76,6 +76,7 @@ export class AuthService {
   private readonly rolesSubject = new BehaviorSubject<string[]>([]);
   private readonly meRefreshSubject = new Subject<void>();
   private readonly tokenRefreshedSubject = new Subject<void>();
+  private readonly localDataClearedSubject = new Subject<void>();
   private refreshRequest$: Observable<boolean> | null = null;
   private readonly serverPermissions = signal<ReadonlySet<PermissionKey> | null>(null);
   // 0 until the server's permission list is known (stored from a past visit, or just loaded); grows with every change.
@@ -84,6 +85,7 @@ export class AuthService {
   public readonly roles$ = this.rolesSubject.asObservable();
   public readonly meRefresh$ = this.meRefreshSubject.asObservable();
   public readonly tokenRefreshed$ = this.tokenRefreshedSubject.asObservable();
+  public readonly localDataCleared$ = this.localDataClearedSubject.asObservable();
 
   constructor() {
     const stored = readStoredPermissions(this.permissionOwner());
@@ -222,6 +224,7 @@ export class AuthService {
       // Another shop signed in on this device: its menu, prices, images and cart must never show here.
       // Orders still waiting to sync stay queued, marked with their own shop, and only that shop's login sends them.
       void Promise.all([db.carts.clear(), db.catalog.clear(), db.images.clear()]);
+      this.localDataClearedSubject.next();
     }
 
     saveDeviceTenantId(tenantId);
@@ -235,6 +238,7 @@ export class AuthService {
     this._isLoggedIn.next(false);
     this.rolesSubject.next([]);
     db.carts.clear();
+    this.localDataClearedSubject.next();
   }
 
   public getToken(): string | null {
