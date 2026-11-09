@@ -458,6 +458,43 @@ describe('OfflineOrderService', () => {
       );
     });
 
+    it('sends the orders one by one when a batch fails, so one bad order does not block the others', async () => {
+      createBatch.mockImplementation((batch: { offlineLocalId?: string }[]) =>
+        batch.length > 1 || batch[0].offlineLocalId?.startsWith('poison')
+          ? throwError(() => new Error('bad order'))
+          : of(saved(batch)),
+      );
+      const service = await create([
+        { localId: 'good1', createdAt: '2025-01-01T00:00:01.000Z' },
+        { localId: 'poison', createdAt: '2025-01-01T00:00:02.000Z' },
+        { localId: 'good2', createdAt: '2025-01-01T00:00:03.000Z' },
+      ]);
+      online.set(true);
+
+      const done = service.syncAll();
+      await vi.advanceTimersByTimeAsync(10000);
+      await done;
+
+      expect(table.rows.map((r) => [r.localId, r.status, r.errorMessage])).toEqual([
+        ['poison', 'failed', 'bad order'],
+      ]);
+      expect(alerts.success).toHaveBeenCalledWith('2 offline orders synced successfully.');
+      expect(alerts.warning).toHaveBeenCalledWith('1 order failed to sync. Check pending orders.');
+    });
+
+    it('does not split a batch that timed out, because the server may have saved it', async () => {
+      createBatch.mockImplementation(() => new Observable(() => undefined));
+      const service = await create([{ localId: 'a' }, { localId: 'b' }]);
+      online.set(true);
+
+      const done = service.syncAll();
+      await vi.advanceTimersByTimeAsync(OfflineOrderService.SYNC_REQUEST_TIMEOUT_MS + 10);
+      await done;
+
+      expect(createBatch).toHaveBeenCalledTimes(1);
+      expect(table.rows.map((r) => r.status)).toEqual(['failed', 'failed']);
+    });
+
     it('stops between batches when connectivity is lost', async () => {
       const seed = Array.from({ length: 6 }, (_, i) => ({
         localId: `o${i}`,

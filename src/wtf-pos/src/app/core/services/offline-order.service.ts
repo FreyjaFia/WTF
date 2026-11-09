@@ -219,39 +219,10 @@ export class OfflineOrderService {
         );
         await this.loadPendingOrders();
 
-        try {
-          const results = await this.retryWithBackoff(() =>
-            firstValueFrom(
-              this.orderService
-                .syncOfflineOrders(batch.map((order) => this.buildBatchCommand(order)))
-                .pipe(timeout(OfflineOrderService.SYNC_REQUEST_TIMEOUT_MS)),
-            ),
-          );
-
-          const outcome = await this.applySyncResults(batch, results);
-          successCount += outcome.saved;
-          heldCount += outcome.held;
-          failCount += outcome.failed;
-        } catch (err: unknown) {
-          const message =
-            this.isTimeout(err)
-              ? OfflineOrderService.TIMED_OUT_MESSAGE
-              : err instanceof Error
-                ? err.message
-                : 'Unknown error';
-          failCount += batch.length;
-
-          await (db.pendingOrders as import('dexie').Table).bulkUpdate(
-            batch.map((order) => ({
-              key: order.id!,
-              changes: {
-                status: 'failed',
-                errorMessage: message,
-                retryCount: order.retryCount + 1,
-              },
-            })),
-          );
-        }
+        const outcome = await this.sendBatch(batch);
+        successCount += outcome.saved;
+        heldCount += outcome.held;
+        failCount += outcome.failed;
       }
 
       await this.loadPendingOrders();
@@ -276,6 +247,55 @@ export class OfflineOrderService {
     } finally {
       this.syncInProgress = false;
       this._isSyncing.set(false);
+    }
+  }
+
+  private async sendBatch(batch: PendingOrder[]): Promise<{ saved: number; held: number; failed: number }> {
+    try {
+      const results = await this.retryWithBackoff(() =>
+        firstValueFrom(
+          this.orderService
+            .syncOfflineOrders(batch.map((order) => this.buildBatchCommand(order)))
+            .pipe(timeout(OfflineOrderService.SYNC_REQUEST_TIMEOUT_MS)),
+        ),
+      );
+
+      return await this.applySyncResults(batch, results);
+    } catch (err: unknown) {
+      // One order the server cannot take would otherwise fail the whole batch, so send them one by one.
+      // A timeout is different: the server may have saved the batch, and asking again could save an order twice.
+      if (batch.length > 1 && !this.isTimeout(err)) {
+        const total = { saved: 0, held: 0, failed: 0 };
+
+        for (const order of batch) {
+          const outcome = await this.sendBatch([order]);
+          total.saved += outcome.saved;
+          total.held += outcome.held;
+          total.failed += outcome.failed;
+        }
+
+        return total;
+      }
+
+      const message =
+        this.isTimeout(err)
+          ? OfflineOrderService.TIMED_OUT_MESSAGE
+          : err instanceof Error
+            ? err.message
+            : 'Unknown error';
+
+      await (db.pendingOrders as import('dexie').Table).bulkUpdate(
+        batch.map((order) => ({
+          key: order.id!,
+          changes: {
+            status: 'failed',
+            errorMessage: message,
+            retryCount: order.retryCount + 1,
+          },
+        })),
+      );
+
+      return { saved: 0, held: 0, failed: batch.length };
     }
   }
 
