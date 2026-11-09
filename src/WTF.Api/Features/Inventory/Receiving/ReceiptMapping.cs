@@ -30,7 +30,6 @@ internal static class ReceiptMapping
             .Include(r => r.CreatedByNavigation)
             .Include(r => r.PurchaseOrder)
             .Include(r => r.StockReceiptLines).ThenInclude(l => l.Item)
-            .AsSplitQuery()
             .FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
         if (receipt is null)
         {

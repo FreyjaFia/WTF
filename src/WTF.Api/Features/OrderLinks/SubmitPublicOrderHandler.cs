@@ -221,7 +221,6 @@ public class SubmitPublicOrderHandler(
             .Where(o => o.Id == created.Id)
             .Include(o => o.OrderItems).ThenInclude(oi => oi.Product)
             .Include(o => o.OrderBundlePromotions)
-            .AsSplitQuery()
             .FirstAsync(cancellationToken);
 
         return (await PublicOrderMapping.ToDtosAsync(db, [order], httpContextAccessor, cancellationToken))[0];

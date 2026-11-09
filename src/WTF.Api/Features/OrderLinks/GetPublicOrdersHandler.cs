@@ -44,7 +44,6 @@ public class GetPublicOrdersHandler(WTFDbContext db, IHttpContextAccessor? httpC
             .Take(pageSize)
             .Include(o => o.OrderItems).ThenInclude(oi => oi.Product)
             .Include(o => o.OrderBundlePromotions)
-            .AsSplitQuery()
             .ToListAsync(cancellationToken);
 
         return new PagedResultDto<PublicOrderDto>(
@@ -63,7 +62,6 @@ public class GetPublicOrdersHandler(WTFDbContext db, IHttpContextAccessor? httpC
             .Where(o => o.Id == request.OrderId)
             .Include(o => o.OrderItems).ThenInclude(oi => oi.Product)
             .Include(o => o.OrderBundlePromotions)
-            .AsSplitQuery()
             .FirstOrDefaultAsync(cancellationToken);
 
         if (order == null)
