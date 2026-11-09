@@ -49,6 +49,8 @@ public class DeleteTenantHandler(
     IChatImageStore chatImageStore,
     ILogger<DeleteTenantHandler> logger) : IRequestHandler<DeleteTenantCommand, DeletionPreviewDto>
 {
+    private const int MaxDeadlockAttempts = 4;
+
     public async Task<DeletionPreviewDto> Handle(DeleteTenantCommand request, CancellationToken cancellationToken)
     {
         var tenant = await db.Tenants.FirstOrDefaultAsync(t => t.Id == request.TenantId, cancellationToken)
@@ -77,22 +79,32 @@ public class DeleteTenantHandler(
             .Select(m => m.ImageKey!)
             .ToListAsync(cancellationToken);
 
-        await using (var transaction = await db.Database.BeginTransactionAsync(cancellationToken))
+        // Deleting by TenantId can meet other shops' writers on the same tables; SQL Server picks a victim and asks for the transaction to be rerun.
+        for (var attempt = 1; ; attempt++)
         {
-            await DeleteRowsAsync(tenant.Id, cancellationToken);
-
-            db.TenantTombstones.Add(new TenantTombstone
+            try
             {
-                TenantId = tenant.Id,
-                Slug = tenant.Slug,
-                Name = tenant.Name,
-                DeletedAt = DateTime.UtcNow,
-                DeletedBy = adminName,
-                RowCounts = JsonSerializer.Serialize(preview.RowCounts)
-            });
-            db.Tenants.Remove(tenant);
-            await db.SaveChangesAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
+                await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+                await DeleteRowsAsync(tenant.Id, cancellationToken);
+
+                db.TenantTombstones.Add(new TenantTombstone
+                {
+                    TenantId = tenant.Id,
+                    Slug = tenant.Slug,
+                    Name = tenant.Name,
+                    DeletedAt = DateTime.UtcNow,
+                    DeletedBy = adminName,
+                    RowCounts = JsonSerializer.Serialize(preview.RowCounts)
+                });
+                db.Tenants.Remove(tenant);
+                await db.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+                break;
+            }
+            catch (Exception ex) when (attempt < MaxDeadlockAttempts && IsDeadlock(ex))
+            {
+                db.ChangeTracker.Clear();
+            }
         }
 
         statusCache.Forget(tenant.Id);
@@ -163,6 +175,19 @@ public class DeleteTenantHandler(
                 [new SqlParameter("tenantId", tenantId)],
                 cancellationToken);
         }
+    }
+
+    private static bool IsDeadlock(Exception ex)
+    {
+        for (var e = ex; e is not null; e = e.InnerException)
+        {
+            if (e is SqlException { Number: 1205 })
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static bool IsForeignKeyViolation(Exception ex)
