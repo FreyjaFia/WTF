@@ -139,4 +139,19 @@ describe('SubscriptionService', () => {
     http.expectOne(url).flush(dto(null, '2026-11-11T02:00:00Z'));
     service.ngOnDestroy();
   });
+
+  it('retries a failed refresh on the next tick and ignores parallel duplicates', async () => {
+    vi.setSystemTime(new Date('2026-11-10T01:00:00Z'));
+    const { service, http } = setupHttpService(SubscriptionService);
+    service.start();
+    service.refresh();
+    http.expectOne(url).flush('x', { status: 500, statusText: 'err' });
+
+    await vi.advanceTimersByTimeAsync(60 * 1000);
+    http.expectOne(url).flush(dto(null, '2026-11-10T01:01:00Z'));
+
+    await vi.advanceTimersByTimeAsync(60 * 60 * 1000);
+    http.expectNone(url);
+    service.ngOnDestroy();
+  });
 });

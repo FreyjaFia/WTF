@@ -35,6 +35,7 @@ export class SubscriptionService implements OnDestroy {
   private timers: ReturnType<typeof setInterval>[] = [];
   private started = false;
   private refreshedOnDay: string | null = null;
+  private refreshInFlight = false;
   private readonly onlineHandler = (): void => this.refresh();
 
   public readonly leasePayload = this._lease.asReadonly();
@@ -116,10 +117,21 @@ export class SubscriptionService implements OnDestroy {
   }
 
   public refresh(): void {
-    this.refreshedOnDay = this.shopDay();
+    if (this.refreshInFlight) {
+      return;
+    }
+
+    this.refreshInFlight = true;
+    const day = this.shopDay();
     this.http.get<SubscriptionDto>(this.baseUrl).subscribe({
-      next: (dto) => void this.accept(dto),
-      error: () => undefined,
+      next: (dto) => {
+        this.refreshedOnDay = day;
+        this.refreshInFlight = false;
+        void this.accept(dto);
+      },
+      error: () => {
+        this.refreshInFlight = false;
+      },
     });
   }
 
