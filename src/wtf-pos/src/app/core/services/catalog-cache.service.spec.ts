@@ -355,6 +355,65 @@ describe('CatalogCacheService', () => {
     });
   });
 
+  describe('stale price accumulation', () => {
+    const cachedWith = (...products: ProductDto[]): CachedCatalog =>
+      ({ id: 1, products, customers: [], addOnsByProductId: {}, syncedAt: 'x' }) as never;
+
+    it('keeps unseen changes through later syncs until dismissed', async () => {
+      stored = cachedWith(prod('a', 10, 'Latte'), prod('b', 20, 'Mocha'));
+      const service = create();
+      const done = service.load();
+      await answerSync({ products: [prod('a', 12, 'Latte'), prod('b', 20, 'Mocha')] });
+      await done;
+
+      const next = service.refresh();
+      await answerSync({ products: [prod('a', 12, 'Latte'), prod('b', 25, 'Mocha')] });
+      await next;
+
+      expect(service.stalePriceItems()).toEqual([
+        { productId: 'a', productName: 'Latte', oldPrice: 10, newPrice: 12 },
+        { productId: 'b', productName: 'Mocha', oldPrice: 20, newPrice: 25 },
+      ]);
+
+      service.dismissStalePrices();
+      expect(service.hasStalePrices()).toBe(false);
+
+      const last = service.refresh();
+      await answerSync({ products: [prod('a', 12, 'Latte'), prod('b', 25, 'Mocha')] });
+      await last;
+
+      expect(service.hasStalePrices()).toBe(false);
+    });
+
+    it('drops an item when the price returns to the original', async () => {
+      stored = cachedWith(prod('a', 10, 'Latte'));
+      const service = create();
+      const done = service.load();
+      await answerSync({ products: [prod('a', 12, 'Latte')] });
+      await done;
+
+      const next = service.refresh();
+      await answerSync({ products: [prod('a', 10, 'Latte')] });
+      await next;
+
+      expect(service.hasStalePrices()).toBe(false);
+    });
+  });
+
+  describe('single flight', () => {
+    it('shares one request between load and refresh', async () => {
+      const service = create();
+      const loading = service.load();
+      const refreshing = service.refresh();
+
+      await answerSync({ products: [prod('a', 1)] });
+      await Promise.all([loading, refreshing]);
+
+      expect(service.products()).toHaveLength(1);
+      http.expectNone(`${api}/sync/pos-catalog`);
+    });
+  });
+
   describe('refresh', () => {
     it('does nothing while offline', async () => {
       online.set(false);

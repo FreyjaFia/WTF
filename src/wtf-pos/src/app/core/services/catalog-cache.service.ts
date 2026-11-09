@@ -71,7 +71,7 @@ export class CatalogCacheService {
   public readonly hasStalePrices = computed(() => this._stalePriceItems().length > 0);
 
   private loaded = false;
-  private syncInProgress = false;
+  private inFlight: Promise<unknown> | null = null;
 
   constructor() {
     setInterval(() => {
@@ -101,11 +101,60 @@ export class CatalogCacheService {
     this._stalePriceItems.set([]);
   }
 
-  public async load(): Promise<void> {
+  public load(): Promise<void> {
     if (this.loaded) {
-      return;
+      return Promise.resolve();
     }
 
+    return this.runSingleFlight(() => this.loadCore()).then((syncedFromApi) => {
+      // The connection check can finish while the cache is still being read (it always starts out "not online"). The
+      // background refresh ignores that moment because nothing is loaded yet, so catch up now. Without this a fresh
+      // device stays empty until the next 15-minute refresh.
+      if (!syncedFromApi) {
+        this.backgroundRefresh();
+      }
+    });
+  }
+
+  public refresh(): Promise<void> {
+    if (!this.connectivity.isOnline()) {
+      return Promise.resolve();
+    }
+
+    return this.runSingleFlight(() => this.refreshCore()).then(() => undefined);
+  }
+
+  public dismissStalePrices(): void {
+    this._stalePriceItems.set([]);
+  }
+
+  /** A bundle with its items, from the saved catalog, so it opens offline and for every role. */
+  public getFixedBundle(id: string): FixedBundlePromotionDto | undefined {
+    return this._fixedBundles().find((bundle) => bundle.id === id);
+  }
+
+  public getMixMatch(id: string): MixMatchPromotionDto | undefined {
+    return this._mixMatchPromotions().find((promo) => promo.id === id);
+  }
+
+  public getAddOnsForProduct(productId: string): AddOnGroupDto[] {
+    return this._addOnsByProductId()[productId] ?? [];
+  }
+
+  private runSingleFlight<T>(work: () => Promise<T>): Promise<T> {
+    if (this.inFlight) {
+      return this.inFlight as Promise<T>;
+    }
+
+    const run = work().finally(() => {
+      this.inFlight = null;
+    });
+    this.inFlight = run;
+
+    return run;
+  }
+
+  private async loadCore(): Promise<boolean> {
     this._isLoading.set(true);
     let syncedFromApi = false;
 
@@ -121,45 +170,17 @@ export class CatalogCacheService {
       this._isLoading.set(false);
     }
 
-    // The connection check can finish while the cache is still being read (it always starts out "not online"). The
-    // background refresh ignores that moment because nothing is loaded yet, so catch up now. Without this a fresh
-    // device stays empty until the next 15-minute refresh.
-    if (!syncedFromApi) {
-      this.backgroundRefresh();
-    }
+    return syncedFromApi;
   }
 
-  public async refresh(): Promise<void> {
-    if (!this.connectivity.isOnline()) {
-      return;
-    }
-
-    if (this.syncInProgress) {
-      return;
-    }
-
+  private async refreshCore(): Promise<void> {
     this._isSyncing.set(true);
-    this.syncInProgress = true;
 
     try {
       await this.syncFromApi();
     } finally {
-      this.syncInProgress = false;
       this._isSyncing.set(false);
     }
-  }
-
-  /** A bundle with its items, from the saved catalog, so it opens offline and for every role. */
-  public getFixedBundle(id: string): FixedBundlePromotionDto | undefined {
-    return this._fixedBundles().find((bundle) => bundle.id === id);
-  }
-
-  public getMixMatch(id: string): MixMatchPromotionDto | undefined {
-    return this._mixMatchPromotions().find((promo) => promo.id === id);
-  }
-
-  public getAddOnsForProduct(productId: string): AddOnGroupDto[] {
-    return this._addOnsByProductId()[productId] ?? [];
   }
 
   private async syncFromApi(): Promise<void> {
@@ -259,7 +280,7 @@ export class CatalogCacheService {
   }
 
   private backgroundRefresh(): void {
-    if (!this.loaded || !this.connectivity.isOnline() || this.syncInProgress) {
+    if (!this.loaded || !this.connectivity.isOnline() || this.inFlight) {
       return;
     }
 
@@ -268,30 +289,35 @@ export class CatalogCacheService {
 
   private detectStalePrices(previous: ProductDto[], next: ProductDto[]): void {
     if (previous.length === 0) {
-      this._stalePriceItems.set([]);
       return;
     }
 
     const previousById = new Map(previous.map((product) => [product.id, product]));
-    const changed: StalePriceItem[] = [];
+    const accumulated = new Map(this._stalePriceItems().map((item) => [item.productId, item]));
 
     for (const product of next) {
       const oldProduct = previousById.get(product.id);
 
-      if (!oldProduct) {
+      if (!oldProduct || oldProduct.price === product.price) {
         continue;
       }
 
-      if (oldProduct.price !== product.price) {
-        changed.push({
-          productId: product.id,
-          productName: product.name,
-          oldPrice: oldProduct.price,
-          newPrice: product.price,
-        });
+      const earlier = accumulated.get(product.id);
+      const oldPrice = earlier?.oldPrice ?? oldProduct.price;
+
+      if (oldPrice === product.price) {
+        accumulated.delete(product.id);
+        continue;
       }
+
+      accumulated.set(product.id, {
+        productId: product.id,
+        productName: product.name,
+        oldPrice,
+        newPrice: product.price,
+      });
     }
 
-    this._stalePriceItems.set(changed);
+    this._stalePriceItems.set([...accumulated.values()]);
   }
 }
