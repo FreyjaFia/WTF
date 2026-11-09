@@ -115,6 +115,11 @@ describe('NotificationsComponent', () => {
 
     radio(0).click();
     expect(service.list).toHaveBeenLastCalledWith({ kind: null, unreadOnly: true, page: 1, pageSize: 25 });
+
+    (el.querySelector('button.app-btn-xs') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(service.list).toHaveBeenLastCalledWith({ kind: null, unreadOnly: false, page: 1, pageSize: 25 });
+    expect(el.querySelector('[data-filter-count]')).toBeNull();
   });
 
   it('loads the next page and appends it', () => {

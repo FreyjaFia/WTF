@@ -91,6 +91,12 @@ export class NotificationsComponent implements OnInit {
     this.load(true);
   }
 
+  protected clearFilters(): void {
+    this.kind.set(null);
+    this.unreadOnly.set(false);
+    this.load(true);
+  }
+
   protected toggleUnreadOnly(): void {
     this.unreadOnly.update((value) => !value);
     this.load(true);
