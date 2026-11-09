@@ -32,6 +32,6 @@ export const MAX_REPORT_RANGE_DAYS: number = 366;
 export const WASTE_REASON_NAME_MAX: number = 60;
 export const MIN_DOWNLOAD_BYTES: number = 100;
 
-export const AddOnType = { Size: 1, Flavor: 2, Topping: 3, Extra: 4, Sauce: 5 } as const;
+export const AddOnType = { Size: 1, Flavor: 2, Topping: 3, Extra: 4, Sauce: 5, Temperature: 6 } as const;
 export const FulfillmentType = { Pickup: 0, Delivery: 1 } as const;
 export const OrderSource = { Pos: 0, CustomerLink: 1 } as const;
