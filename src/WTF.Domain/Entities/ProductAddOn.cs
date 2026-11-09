@@ -1,4 +1,7 @@
-﻿namespace WTF.Domain.Entities;
+﻿using System;
+using System.Collections.Generic;
+
+namespace WTF.Domain.Entities;
 
 public partial class ProductAddOn
 {
@@ -8,11 +11,11 @@ public partial class ProductAddOn
 
     public int? AddOnTypeId { get; set; }
 
-    public bool IsDefault { get; set; }
-
     public bool IsActive { get; set; }
 
     public Guid TenantId { get; set; }
+
+    public bool IsDefault { get; set; }
 
     public virtual Product AddOn { get; set; } = null!;
 
