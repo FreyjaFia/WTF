@@ -68,12 +68,16 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
       if (error.status === 401 && !req.headers.has('X-Refresh-Attempted')) {
         // Try to refresh the token
         return auth.refreshToken().pipe(
+          catchError(() => {
+            // Only a failed refresh ends the session; a failure of the retried request is passed on untouched below.
+            auth.logout();
+            router.navigateByUrl(AppRoutes.Login, { replaceUrl: true });
+            return throwError(() => new Error(ServiceErrorMessages.Auth.SessionExpired));
+          }),
           switchMap(() => {
-            // Get the new token
             const newToken = auth.getToken();
 
             if (newToken) {
-              // Retry the original request with the new token
               const retryReq = req.clone({
                 setHeaders: {
                   Authorization: `Bearer ${newToken}`,
@@ -84,14 +88,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
               return next(retryReq);
             }
 
-            // If we couldn't get a new token, reject
             return throwError(() => error);
-          }),
-          catchError(() => {
-            // If refresh fails, logout and navigate to login
-            auth.logout();
-            router.navigateByUrl(AppRoutes.Login, { replaceUrl: true });
-            return throwError(() => new Error(ServiceErrorMessages.Auth.SessionExpired));
           }),
         );
       }

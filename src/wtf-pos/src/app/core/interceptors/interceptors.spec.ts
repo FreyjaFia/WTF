@@ -181,9 +181,23 @@ describe('authInterceptor', () => {
     http.get('/api/orders').subscribe({ error: (e) => errors.push(e) });
     ctrl.expectOne('/api/orders').flush('', { status: 401, statusText: 'Unauthorized' });
 
-    // Inner error is swallowed by the refresh-failure handler, which logs out.
-    expect(auth.logout).toHaveBeenCalled();
+    expect(auth.logout).not.toHaveBeenCalled();
     expect(errors).toHaveLength(1);
+    expect((errors[0] as HttpErrorResponse).status).toBe(401);
+  });
+
+  it.each([0, 400, 403, 500])('keeps the session when the retried request fails with %s', (status) => {
+    auth.getToken.mockReturnValueOnce('old').mockReturnValue('new');
+    auth.refreshToken.mockReturnValue(of({}));
+    const errors: HttpErrorResponse[] = [];
+
+    http.get('/api/orders').subscribe({ error: (e) => errors.push(e) });
+    ctrl.expectOne('/api/orders').flush('', { status: 401, statusText: 'Unauthorized' });
+    ctrl.expectOne('/api/orders').flush('', { status, statusText: 'Failed' });
+
+    expect(auth.logout).not.toHaveBeenCalled();
+    expect(router.navigateByUrl).not.toHaveBeenCalled();
+    expect(errors[0].status).toBe(status);
   });
 });
 
