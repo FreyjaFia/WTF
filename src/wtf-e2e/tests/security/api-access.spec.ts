@@ -87,7 +87,7 @@ const WRITES: ReadonlyArray<WriteCase> = [
   { label: 'override a completed order', method: 'PUT', path: (ids) => `orders/${ids.orderId}/override`, allowed: GROUPS.ordersOverride, body: () => ({}) },
   { label: 'create a fixed bundle', method: 'POST', path: () => 'management/promotions/fixed-bundles', allowed: GROUPS.promotionsWrite, body: () => ({}) },
   { label: 'enable a customer ordering link', method: 'PUT', path: (ids) => `customers/${ids.customerId}/ordering-link-access`, allowed: GROUPS.customersWrite, body: () => ({ allow: false }) },
-  { label: 'generate the monthly workbook', method: 'POST', path: () => 'reports/monthly-workbook/generate?year=2020&month=1', allowed: ['superadmin', 'admin'], probePath: 'reports/monthly-workbook/generate?year=2020&month=13' },
+  { label: 'generate the monthly workbook', method: 'POST', path: () => 'reports/monthly-workbook/generate?year=2020&month=1', allowed: ['owner', 'admin'], probePath: 'reports/monthly-workbook/generate?year=2020&month=13' },
 ];
 
 test.describe('API: who may read what @security', () => {

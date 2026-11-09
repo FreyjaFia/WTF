@@ -3,6 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpErrorMessages, ServiceErrorMessages } from '@core/messages';
 import { environment } from '@environments/environment.development';
 import { AppRole, AppRoleGroups, AppRoleLabels, AppRoles } from '@shared/constants/app-roles';
+import { PermissionKey, Permissions, SystemRolePermissions } from '@shared/permissions';
 import { LoginDto, MeDto } from '@shared/models';
 import { BehaviorSubject, Observable, Subject, throwError } from 'rxjs';
 import { catchError, finalize, map, shareReplay, tap } from 'rxjs/operators';
@@ -316,35 +317,35 @@ export class AuthService {
   }
 
   public canReadCustomers(): boolean {
-    return this.hasAnyRole(AppRoleGroups.CustomersRead);
+    return this.can(Permissions.CustomersRead);
   }
 
   public canWriteCustomers(): boolean {
-    return this.hasAnyRole(AppRoleGroups.CustomersWrite);
+    return this.can(Permissions.CustomersWrite);
   }
 
   public canReadProducts(): boolean {
-    return this.hasAnyRole(AppRoleGroups.ProductsRead);
+    return this.can(Permissions.ProductsRead);
   }
 
   public canWriteProducts(): boolean {
-    return this.hasAnyRole(AppRoleGroups.ProductsWrite);
+    return this.can(Permissions.ProductsWrite);
   }
 
   public canReadUsers(): boolean {
-    return this.hasAnyRole(AppRoleGroups.UsersRead);
+    return this.can(Permissions.UsersRead);
   }
 
   public canWriteUsers(): boolean {
-    return this.hasAnyRole(AppRoleGroups.UsersWrite);
+    return this.can(Permissions.UsersWrite);
   }
 
   public canReadPromotions(): boolean {
-    return this.hasAnyRole(AppRoleGroups.PromotionsRead);
+    return this.can(Permissions.PromotionsRead);
   }
 
   public canWritePromotions(): boolean {
-    return this.hasAnyRole(AppRoleGroups.PromotionsWrite);
+    return this.can(Permissions.PromotionsWrite);
   }
 
   /** Whether the Management area (menu, login landing, routes) is available; separate from the per-area reads. */
@@ -370,43 +371,43 @@ export class AuthService {
   }
 
   public canAccessReports(): boolean {
-    return this.hasAnyRole(AppRoleGroups.ReportsRead);
+    return this.can(Permissions.ReportsRead);
   }
 
   public isOwner(): boolean {
-    return this.hasAnyRole(AppRoleGroups.AuditRead);
+    return this.hasRole(AppRoles.Owner);
   }
 
   public canAccessAuditLogs(): boolean {
-    return this.hasAnyRole(AppRoleGroups.AuditRead);
+    return this.can(Permissions.AuditRead);
   }
 
   public canAccessSchemaScriptHistory(): boolean {
-    return this.hasAnyRole(AppRoleGroups.SchemaScriptHistoryRead);
+    return this.can(Permissions.SchemaScriptsRead);
   }
 
   public canCreateCustomerInOrder(_isEditMode: boolean): boolean {
-    return this.hasAnyRole(AppRoleGroups.CustomersWrite);
+    return this.can(Permissions.CustomersWrite);
   }
 
   public canReadOrders(): boolean {
-    return this.hasAnyRole(AppRoleGroups.OrdersRead);
+    return this.can(Permissions.OrdersRead);
   }
 
   public canWriteOrders(): boolean {
-    return this.hasAnyRole(AppRoleGroups.OrdersWrite);
+    return this.can(Permissions.OrdersWrite);
   }
 
   public canManageOrderLinks(): boolean {
-    return this.hasAnyRole(AppRoleGroups.OrderLinksWrite);
+    return this.can(Permissions.OrderLinksManage);
   }
 
   public canGenerateReports(): boolean {
-    return this.hasAnyRole(AppRoleGroups.ReportsGenerate);
+    return this.can(Permissions.ReportsGenerate);
   }
 
   public canOverrideOrders(): boolean {
-    return this.hasAnyRole(AppRoleGroups.OrdersOverride);
+    return this.can(Permissions.OrdersOverride);
   }
 
   public canReadInventory(): boolean {
@@ -418,55 +419,55 @@ export class AuthService {
   }
 
   public canReadItems(): boolean {
-    return this.hasAnyRole(AppRoleGroups.ItemsRead);
+    return this.can(Permissions.ItemsRead);
   }
 
   public canWriteItems(): boolean {
-    return this.hasAnyRole(AppRoleGroups.ItemsWrite);
+    return this.can(Permissions.ItemsWrite);
   }
 
   public canReadInventoryCosts(): boolean {
-    return this.hasAnyRole(AppRoleGroups.InventoryCostsRead);
+    return this.can(Permissions.InventoryCostsRead);
   }
 
   public canWriteInventoryCosts(): boolean {
-    return this.hasAnyRole(AppRoleGroups.InventoryCostsWrite);
+    return this.can(Permissions.InventoryCostsWrite);
   }
 
   public canReadStockMovements(): boolean {
-    return this.hasAnyRole(AppRoleGroups.StockMovementsRead);
+    return this.can(Permissions.StockRead);
   }
 
   public canWriteStockMovements(): boolean {
-    return this.hasAnyRole(AppRoleGroups.StockMovementsWrite);
+    return this.can(Permissions.StockWrite);
   }
 
   public canWriteStockWaste(): boolean {
-    return this.hasAnyRole(AppRoleGroups.StockWasteWrite);
+    return this.can(Permissions.StockWasteRecord);
   }
 
   public canReviewStockWaste(): boolean {
-    return this.hasAnyRole(AppRoleGroups.StockWasteReview);
+    return this.can(Permissions.StockWasteReview);
   }
 
   public canManageSubscription(): boolean {
-    return this.hasAnyRole(AppRoleGroups.SubscriptionBilling);
+    return this.can(Permissions.SubscriptionBilling);
   }
 
   public canManageBrand(): boolean {
-    return this.hasAnyRole(AppRoleGroups.BrandManage);
+    return this.can(Permissions.BrandManage);
   }
 
   public canManageWasteReasons(): boolean {
-    return this.hasAnyRole(AppRoleGroups.WasteReasonsManage);
+    return this.can(Permissions.WasteReasonsManage);
   }
 
   public canReadExpenses(): boolean {
-    return this.hasAnyRole(AppRoleGroups.ExpensesRead);
+    return this.can(Permissions.ExpensesRead);
   }
 
   public canWriteExpenses(): boolean {
-    return this.hasAnyRole(AppRoleGroups.ExpensesWrite);
+    return this.can(Permissions.ExpensesWrite);
   }
 
   public getCurrentRoleLabel(): string {
@@ -485,6 +486,15 @@ export class AuthService {
     }
 
     return 'Unknown';
+  }
+
+  public can(permission: PermissionKey): boolean {
+    return this.permissionsFor(this.rolesSubject.value).has(permission);
+  }
+
+  public canAny(permissions: readonly PermissionKey[]): boolean {
+    const held = this.permissionsFor(this.rolesSubject.value);
+    return permissions.some((permission) => held.has(permission));
   }
 
   public hasAnyRole(requiredRoles: readonly AppRole[]): boolean {
@@ -531,20 +541,27 @@ export class AuthService {
     return Array.from(new Set(normalized));
   }
 
-  private hasRole(role: AppRole): boolean {
+  private permissionsFor(roles: readonly string[]): ReadonlySet<PermissionKey> {
+    const held = new Set<PermissionKey>();
+
+    for (const role of Object.keys(SystemRolePermissions)) {
+      if (this.hasRole(role as AppRole, roles)) {
+        SystemRolePermissions[role].forEach((permission) => held.add(permission));
+      }
+    }
+
+    return held;
+  }
+
+  private hasRole(role: AppRole, currentRoleNames: readonly string[] = this.rolesSubject.value): boolean {
     const normalizedRole = this.normalizeRole(role);
     const roleAliases = new Set<string>([normalizedRole]);
-
-    if (normalizedRole === 'owner') {
-      roleAliases.add('superadmin');
-      roleAliases.add('super admin');
-    }
 
     if (normalizedRole === 'adminviewer') {
       roleAliases.add('admin viewer');
     }
 
-    const currentRoles = this.rolesSubject.value.map((r) => this.normalizeRole(r));
+    const currentRoles = currentRoleNames.map((r) => this.normalizeRole(r));
     return currentRoles.some((r) => roleAliases.has(r));
   }
 

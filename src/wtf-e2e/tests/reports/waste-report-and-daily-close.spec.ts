@@ -17,7 +17,7 @@ test.describe('waste in the reports @reports @waste', () => {
 
     const date = today();
     const rows = await api.client.json<WasteRow[]>(
-      'superadmin',
+      'owner',
       'GET',
       `reports/waste?fromDate=${date}&toDate=${date}&groupBy=item&itemId=${item.id}`,
     );
@@ -33,7 +33,7 @@ test.describe('waste in the reports @reports @waste', () => {
 
     const date = today();
     const rows = await api.client.json<WasteRow[]>(
-      'superadmin',
+      'owner',
       'GET',
       `reports/waste?fromDate=${date}&toDate=${date}&groupBy=item&itemId=${item.id}`,
     );
@@ -42,7 +42,7 @@ test.describe('waste in the reports @reports @waste', () => {
 
   test('an invalid groupBy is refused', async ({ api }) => {
     const date = today();
-    const response = await api.client.call('superadmin', 'GET', `reports/waste?fromDate=${date}&toDate=${date}&groupBy=colour`);
+    const response = await api.client.call('owner', 'GET', `reports/waste?fromDate=${date}&toDate=${date}&groupBy=colour`);
     expect(response.status()).toBe(400);
   });
 
@@ -57,7 +57,7 @@ test.describe('waste in the reports @reports @waste', () => {
     await api.waste.record(item.id, { quantity: 3 });
 
     const date = today();
-    const response = await api.client.call('superadmin', 'GET', `reports/daily-close?fromDate=${date}&toDate=${date}`);
+    const response = await api.client.call('owner', 'GET', `reports/daily-close?fromDate=${date}&toDate=${date}`);
     expect(response.ok()).toBeTruthy();
     expect(await response.text()).toContain('aste');
   });

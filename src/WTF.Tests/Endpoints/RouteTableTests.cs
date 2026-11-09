@@ -17,6 +17,7 @@ public class RouteTableTests : IDisposable
         "GET /api/auth/me => authenticated",
         "PUT /api/auth/me => authenticated",
         "PUT /api/auth/me/image => authenticated",
+        "GET /api/auth/permissions => authenticated",
         "POST /api/auth/refresh => anonymous",
         "POST /api/auth/validate => anonymous",
         "POST /api/platform/auth/login => anonymous",

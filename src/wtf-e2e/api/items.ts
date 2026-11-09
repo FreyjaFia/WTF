@@ -32,7 +32,7 @@ export interface Movement {
 export class ItemsApi {
   public constructor(private readonly api: ApiClient) {}
 
-  public async create(input: ItemInput = {}, role: Role = 'superadmin'): Promise<Item> {
+  public async create(input: ItemInput = {}, role: Role = 'owner'): Promise<Item> {
     const body = {
       name: input.name ?? unique('E2E Item'),
       unitName: input.unitName ?? 'piece',
@@ -47,7 +47,7 @@ export class ItemsApi {
     return this.api.json<Item>(role, 'POST', 'items', body);
   }
 
-  public async get(id: string, role: Role = 'superadmin'): Promise<Item> {
+  public async get(id: string, role: Role = 'owner'): Promise<Item> {
     return this.api.json<Item>(role, 'GET', `items/${id}`);
   }
 
@@ -56,28 +56,28 @@ export class ItemsApi {
   }
 
   public async update(id: string, changes: Partial<ItemInput>): Promise<Item> {
-    const current = await this.api.json<Record<string, unknown>>('superadmin', 'GET', `items/${id}`);
-    return this.api.json<Item>('superadmin', 'PUT', `items/${id}`, { ...current, ...changes, id });
+    const current = await this.api.json<Record<string, unknown>>('owner', 'GET', `items/${id}`);
+    return this.api.json<Item>('owner', 'PUT', `items/${id}`, { ...current, ...changes, id });
   }
 
-  public async stockIn(id: string, quantity: number, role: Role = 'superadmin'): Promise<void> {
+  public async stockIn(id: string, quantity: number, role: Role = 'owner'): Promise<void> {
     await this.api.json<unknown>(role, 'POST', `items/${id}/stock`, { itemId: id, quantity, notes: 'e2e stock in' });
   }
 
   public async remove(id: string): Promise<void> {
-    await this.api.json<unknown>('superadmin', 'DELETE', `items/${id}`);
+    await this.api.json<unknown>('owner', 'DELETE', `items/${id}`);
   }
 
   public async restore(id: string): Promise<void> {
-    await this.api.json<unknown>('superadmin', 'POST', `items/${id}/restore`);
+    await this.api.json<unknown>('owner', 'POST', `items/${id}/restore`);
   }
 
   public async movements(id: string): Promise<ReadonlyArray<Movement>> {
-    const page = await this.api.json<{ items: Movement[] }>('superadmin', 'GET', `items/${id}/movements?page=1&pageSize=100`);
+    const page = await this.api.json<{ items: Movement[] }>('owner', 'GET', `items/${id}/movements?page=1&pageSize=100`);
     return page.items;
   }
 
   public async linkProducts(id: string, links: ReadonlyArray<{ productId: string; quantityPerSale: number }>): Promise<void> {
-    await this.api.json<unknown>('superadmin', 'PUT', `items/${id}/product-links`, { itemId: id, productLinks: links });
+    await this.api.json<unknown>('owner', 'PUT', `items/${id}/product-links`, { itemId: id, productLinks: links });
   }
 }

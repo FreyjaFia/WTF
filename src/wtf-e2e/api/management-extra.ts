@@ -38,23 +38,23 @@ export class ManagementExtraApi {
     return { firstName: unique('Mgmt'), lastName: 'User', username: unique('mg').replace(/\s/g, '').toLowerCase(), password, roleId: 2, ...overrides };
   }
 
-  public async post(path: string, body: unknown, role: Role = 'superadmin'): Promise<APIResponse> {
+  public async post(path: string, body: unknown, role: Role = 'owner'): Promise<APIResponse> {
     return this.api.call(role, 'POST', path, { body });
   }
 
-  public async put(path: string, body: unknown, role: Role = 'superadmin'): Promise<APIResponse> {
+  public async put(path: string, body: unknown, role: Role = 'owner'): Promise<APIResponse> {
     return this.api.call(role, 'PUT', path, { body });
   }
 
-  public async list(path: string, role: Role = 'superadmin'): Promise<ReadonlyArray<ListedRecord>> {
+  public async list(path: string, role: Role = 'owner'): Promise<ReadonlyArray<ListedRecord>> {
     return this.api.json<ReadonlyArray<ListedRecord>>(role, 'GET', path);
   }
 
   public async priceHistory(productId: string): Promise<ReadonlyArray<{ oldPrice: number; newPrice: number }>> {
-    return this.api.json('superadmin', 'GET', `products/${productId}/price-history`);
+    return this.api.json('owner', 'GET', `products/${productId}/price-history`);
   }
 
   public async addOnsOf(productId: string): Promise<string> {
-    return JSON.stringify(await this.api.json('superadmin', 'GET', `products/${productId}/addons`));
+    return JSON.stringify(await this.api.json('owner', 'GET', `products/${productId}/addons`));
   }
 }

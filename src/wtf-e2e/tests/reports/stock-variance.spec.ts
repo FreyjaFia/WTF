@@ -24,23 +24,23 @@ interface VarianceRow {
 async function variance(api: Api, itemId: string, extra: string = ''): Promise<VarianceRow[]> {
   const date = today();
   return api.client.json<VarianceRow[]>(
-    'superadmin',
+    'owner',
     'GET',
     `reports/stock-variance?fromDate=${date}&toDate=${date}&itemId=${itemId}${extra}`,
   );
 }
 
 async function count(api: Api, itemId: string, counted: number): Promise<void> {
-  const made = await api.client.json<{ summary: { id: string } }>('superadmin', 'POST', 'stock-counts', {
+  const made = await api.client.json<{ summary: { id: string } }>('owner', 'POST', 'stock-counts', {
     name: `E2E variance ${Date.now()}`,
     isBlind: false,
     note: null,
     itemIds: [itemId],
   });
-  await api.client.json<unknown>('superadmin', 'PUT', `stock-counts/${made.summary.id}/lines`, {
+  await api.client.json<unknown>('owner', 'PUT', `stock-counts/${made.summary.id}/lines`, {
     lines: [{ itemId, countedQuantity: counted }],
   });
-  await api.client.json<unknown>('superadmin', 'POST', `stock-counts/${made.summary.id}/post`);
+  await api.client.json<unknown>('owner', 'POST', `stock-counts/${made.summary.id}/post`);
 }
 
 test.describe('stock variance report @reports @counts', () => {
@@ -100,7 +100,7 @@ test.describe('stock variance report @reports @counts', () => {
     }
   });
 
-  for (const role of ['superadmin', 'admin', 'viewer'] as const) {
+  for (const role of ['owner', 'admin', 'viewer'] as const) {
     test(`${role} opens the variance report on screen`, async ({ api, signIn }) => {
       const item = await api.items.create({ startingQuantity: 100 });
       await count(api, item.id, 90);

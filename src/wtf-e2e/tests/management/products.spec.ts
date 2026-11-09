@@ -61,7 +61,7 @@ test.describe('products: create, validate, edit, delete, restore @management', (
 
   test('editing a product saves the new name and a price change writes price history', async ({ api }) => {
     const product = await api.products.create({ price: 90 });
-    const current = await api.client.json<Record<string, unknown>>('superadmin', 'GET', `products/${product.id}`);
+    const current = await api.client.json<Record<string, unknown>>('owner', 'GET', `products/${product.id}`);
     const renamed = unique('E2E Renamed');
 
     const response = await mx(api).put(`products/${product.id}`, { ...current, id: product.id, name: renamed, price: 125 });
@@ -88,7 +88,7 @@ test.describe('products: create, validate, edit, delete, restore @management', (
 
   test('a product price of zero is refused on edit', async ({ api }) => {
     const product = await api.products.create({ price: 40 });
-    const current = await api.client.json<Record<string, unknown>>('superadmin', 'GET', `products/${product.id}`);
+    const current = await api.client.json<Record<string, unknown>>('owner', 'GET', `products/${product.id}`);
 
     const response = await mx(api).put(`products/${product.id}`, { ...current, id: product.id, price: 0 });
 
@@ -116,7 +116,7 @@ test.describe('products: create, validate, edit, delete, restore @management', (
 
     await api.products.linkAddOns(drink.id, [{ addOnId: addOn.id, addOnType: AddOnType.Extra }]);
     expect(await mx(api).addOnsOf(drink.id)).toContain(addOn.id);
-    const backwards = await api.client.json<unknown>('superadmin', 'GET', `products/addons/${addOn.id}/products`);
+    const backwards = await api.client.json<unknown>('owner', 'GET', `products/addons/${addOn.id}/products`);
     expect(JSON.stringify(backwards)).toContain(drink.id);
 
     await api.products.linkAddOns(drink.id, []);

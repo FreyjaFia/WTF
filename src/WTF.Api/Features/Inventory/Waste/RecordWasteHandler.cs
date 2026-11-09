@@ -1,7 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
-using WTF.Api.Common.Auth;
+using WTF.Api.Common.Auth.Permissions;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Inventory.Waste.DTOs;
@@ -46,7 +46,7 @@ public class RecordWasteHandler(
 {
     private const decimal MaxQuantity = 999999.999m;
 
-    private static readonly string[] ReviewerRoles = [AppRoles.Owner, AppRoles.Admin];
+    private static readonly string[] ReviewerRoles = SystemRolePermissions.RolesWith("stock.waste.review");
 
     public async Task<StockWasteDto?> Handle(RecordWasteCommand request, CancellationToken cancellationToken)
     {

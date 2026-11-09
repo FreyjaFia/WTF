@@ -2,7 +2,7 @@ import { expect, test } from '@fixtures/index';
 import { LANDING_PATH, Role } from '@data/users';
 import { go } from '@utils/navigation';
 
-const ROLES: ReadonlyArray<Role> = ['superadmin', 'admin', 'viewer', 'cashier', 'stockmgr', 'itemmgr'];
+const ROLES: ReadonlyArray<Role> = ['owner', 'admin', 'viewer', 'cashier', 'stockmgr', 'itemmgr'];
 
 test.describe('sign in lands each role on its own start page @auth', () => {
   for (const role of ROLES) {

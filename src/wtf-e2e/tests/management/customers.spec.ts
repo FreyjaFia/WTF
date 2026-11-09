@@ -59,7 +59,7 @@ test.describe('customers: create, validate, edit, delete, restore @management', 
     });
 
     expect(response.ok(), await response.text()).toBeTruthy();
-    const saved = await api.client.json<{ lastName: string; address: string; contactNumber: string }>('superadmin', 'GET', `customers/${customer.id}`);
+    const saved = await api.client.json<{ lastName: string; address: string; contactNumber: string }>('owner', 'GET', `customers/${customer.id}`);
     expect(saved).toMatchObject({ lastName: 'Edited', address: '99 New Road', contactNumber: '+63 917 555 0100' });
   });
 
@@ -75,7 +75,7 @@ test.describe('customers: create, validate, edit, delete, restore @management', 
     });
 
     await expectRejected(response, 'bad contact on edit');
-    const saved = await api.client.json<{ contactNumber: string }>('superadmin', 'GET', `customers/${customer.id}`);
+    const saved = await api.client.json<{ contactNumber: string }>('owner', 'GET', `customers/${customer.id}`);
     expect(saved.contactNumber).toBe('09170000000');
   });
 
@@ -87,7 +87,7 @@ test.describe('customers: create, validate, edit, delete, restore @management', 
     const inactive = await mx(api).list(`customers?isActive=false&searchTerm=${customer.firstName}`);
     expect(inactive.find((c) => c.id === customer.id)?.isActive).toBe(false);
 
-    await api.client.json<unknown>('superadmin', 'POST', `customers/${customer.id}/restore`);
+    await api.client.json<unknown>('owner', 'POST', `customers/${customer.id}/restore`);
     expect((await mx(api).list(`customers?isActive=true&searchTerm=${customer.firstName}`)).map((c) => c.id)).toContain(customer.id);
   });
 });

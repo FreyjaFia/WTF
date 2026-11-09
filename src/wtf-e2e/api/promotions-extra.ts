@@ -101,7 +101,7 @@ export class PromotionsExtra {
   }
 
   public async discountedRaw(input: DiscountInput): Promise<APIResponse> {
-    return this.api.call('superadmin', 'POST', 'management/promotions/discounted-products', {
+    return this.api.call('owner', 'POST', 'management/promotions/discounted-products', {
       body: {
         ...this.window(input, unique('E2E Deal')),
         items: [{ productId: input.productId, fixedPrice: input.amountOff ?? null, percentOff: input.percentOff ?? null, addOns: [] }],
@@ -118,7 +118,7 @@ export class PromotionsExtra {
     bundlePrice: number,
     input: WindowInput = {},
   ): Promise<APIResponse> {
-    return this.api.call('superadmin', 'POST', 'management/promotions/fixed-bundles', {
+    return this.api.call('owner', 'POST', 'management/promotions/fixed-bundles', {
       body: {
         ...this.window(input, unique('E2E Bundle')),
         bundlePrice,
@@ -137,7 +137,7 @@ export class PromotionsExtra {
     bundlePrice: number,
     input: WindowInput & { readonly maxSelectionsPerOrder?: number | null } = {},
   ): Promise<APIResponse> {
-    return this.api.call('superadmin', 'POST', 'management/promotions/mix-match', {
+    return this.api.call('owner', 'POST', 'management/promotions/mix-match', {
       body: {
         ...this.window(input, unique('E2E Mix')),
         requiredQuantity,
@@ -158,7 +158,7 @@ export class PromotionsExtra {
   }
 
   public async discountedDetails(id: string): Promise<PromotionDetails> {
-    return this.api.json<PromotionDetails>('superadmin', 'GET', `management/promotions/discounted-products/${id}`);
+    return this.api.json<PromotionDetails>('owner', 'GET', `management/promotions/discounted-products/${id}`);
   }
 
   public bundleOrderBody(lines: readonly BundleLine[], bundles: readonly BundleSale[]): Record<string, unknown> {

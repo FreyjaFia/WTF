@@ -22,7 +22,7 @@ describe('SubscriptionBannerComponent', () => {
             refresh,
           },
         },
-        { provide: AuthService, useValue: { hasAnyRole: () => canRenew, logout } },
+        { provide: AuthService, useValue: { can: () => canRenew, logout } },
       ],
     });
     const fixture = TestBed.createComponent(SubscriptionBannerComponent);

@@ -7,14 +7,14 @@ interface IngredientsEdit {
 
 test.describe('Recipe setup screens @stock @ingredients', () => {
   test('the API refuses a unit that is not in the list, and accepts it by its full name', async ({ api }) => {
-    const refused = await api.client.call('superadmin', 'POST', 'items', {
+    const refused = await api.client.call('owner', 'POST', 'items', {
       body: { name: unique('E2E Unit'), unitName: 'ml', sku: null, startingQuantity: 1, costPrice: 1, allowNegativeStock: true },
     });
     expect(refused.status()).toBe(400);
     expect(await refused.text()).toContain('Unit must be one of');
 
     const item = await api.items.create({ unitName: 'milliliter' });
-    const saved = await api.client.json<{ unitName: string }>('superadmin', 'GET', `items/${item.id}`);
+    const saved = await api.client.json<{ unitName: string }>('owner', 'GET', `items/${item.id}`);
     expect(saved.unitName).toBe('milliliter');
   });
 
@@ -48,7 +48,7 @@ test.describe('Recipe setup screens @stock @ingredients', () => {
     await dialog.getByRole('button', { name: 'Save Links' }).click();
     expect((await saveResponse).ok()).toBe(true);
 
-    const saved = await api.client.json<IngredientsEdit>('superadmin', 'GET', `products/${oatAddOn.id}/ingredients`);
+    const saved = await api.client.json<IngredientsEdit>('owner', 'GET', `products/${oatAddOn.id}/ingredients`);
     expect(saved.lines.find((line) => line.itemId === oat.id)?.replacesItemId).toBe(dairy.id);
   });
 
@@ -169,7 +169,7 @@ test.describe('Recipe setup screens @stock @ingredients', () => {
     await expect(page.getByTestId('preview-cost')).toContainText('32.00');
 
     const saved = await api.client.json<{ lines: readonly { quantityPerSale: number }[]; suppliesCost: number | null }>(
-      'superadmin',
+      'owner',
       'GET',
       `products/${drink.id}/ingredients`,
     );

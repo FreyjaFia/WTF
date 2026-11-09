@@ -6,7 +6,7 @@ import { RecordWasteDialog } from '@pages/record-waste-dialog.page';
 test.describe('recording waste from the item page @waste', () => {
   test('a recorded waste lowers the balance and shows in the stock history', async ({ api, signIn }) => {
     const item = await api.items.create({ startingQuantity: 100 });
-    const page = await signIn('superadmin');
+    const page = await signIn('owner');
     const details = new ItemDetailsPage(page);
     const dialog = new RecordWasteDialog(page);
 
@@ -23,7 +23,7 @@ test.describe('recording waste from the item page @waste', () => {
 
   test('the reason Other asks for a note', async ({ api, signIn }) => {
     const item = await api.items.create({ startingQuantity: 50 });
-    const page = await signIn('superadmin');
+    const page = await signIn('owner');
     const details = new ItemDetailsPage(page);
     const dialog = new RecordWasteDialog(page);
 
@@ -42,7 +42,7 @@ test.describe('recording waste from the item page @waste', () => {
 
   test('an item that blocks sales cannot be wasted below zero', async ({ api, signIn }) => {
     const item = await api.items.create({ startingQuantity: 10, allowNegativeStock: false });
-    const page = await signIn('superadmin');
+    const page = await signIn('owner');
     const details = new ItemDetailsPage(page);
     const dialog = new RecordWasteDialog(page);
 
@@ -57,7 +57,7 @@ test.describe('recording waste from the item page @waste', () => {
 
   test('a warn-only item goes below zero with a warning', async ({ api, signIn }) => {
     const item = await api.items.create({ startingQuantity: 10, allowNegativeStock: true });
-    const page = await signIn('superadmin');
+    const page = await signIn('owner');
     const details = new ItemDetailsPage(page);
     const dialog = new RecordWasteDialog(page);
 
@@ -72,7 +72,7 @@ test.describe('recording waste from the item page @waste', () => {
 
   test('waste above the approval limit is taken at once and sent for review', async ({ api, signIn }) => {
     const item = await api.items.create({ startingQuantity: 100, wasteApprovalLimit: 10 });
-    const page = await signIn('superadmin');
+    const page = await signIn('owner');
     const details = new ItemDetailsPage(page);
     const dialog = new RecordWasteDialog(page);
 
@@ -91,7 +91,7 @@ test.describe('recording waste from the item page @waste', () => {
   test('an inactive item offers no Record Waste button', async ({ api, signIn }) => {
     const item = await api.items.create();
     await api.items.remove(item.id);
-    const page = await signIn('superadmin');
+    const page = await signIn('owner');
     const details = new ItemDetailsPage(page);
 
     await details.open(item.id);

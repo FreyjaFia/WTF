@@ -19,7 +19,7 @@ test.describe('the Product Profit report @reports', () => {
     await api.orders.create({ items: [{ productId: latte.id, quantity: 2 }] });
 
     const date = today();
-    const rows = await api.client.json<ProfitRow[]>('superadmin', 'GET', `reports/product-margin?fromDate=${date}&toDate=${date}`);
+    const rows = await api.client.json<ProfitRow[]>('owner', 'GET', `reports/product-margin?fromDate=${date}&toDate=${date}`);
     const row = rows.find((r) => r.productName === latte.name);
     expect(row?.quantitySold).toBe(2);
     expect(row?.revenue).toBe(300);
@@ -33,7 +33,7 @@ test.describe('the Product Profit report @reports', () => {
     await api.orders.create({ items: [{ productId: water.id, quantity: 1 }] });
 
     const date = today();
-    const rows = await api.client.json<ProfitRow[]>('superadmin', 'GET', `reports/product-margin?fromDate=${date}&toDate=${date}`);
+    const rows = await api.client.json<ProfitRow[]>('owner', 'GET', `reports/product-margin?fromDate=${date}&toDate=${date}`);
     const row = rows.find((r) => r.productName === water.name);
     expect(row?.cost).toBeNull();
     expect(row?.grossProfit).toBeNull();

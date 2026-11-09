@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using WTF.Api.Common.Auth.Permissions;
 using WTF.Api.Features.Inventory.Purchasing;
 using WTF.Api.Features.Inventory.Receiving;
 using WTF.Api.Features.Inventory.Reordering;
@@ -9,9 +10,9 @@ namespace WTF.Api.Common.Auth;
 
 public static class CostAccess
 {
-    public static readonly string[] Roles = [AppRoles.Owner, AppRoles.Admin, AppRoles.AdminViewer];
+    public const string Permission = "inventory.costs.read";
 
-    public static bool CanReadCosts(ClaimsPrincipal user) => Roles.Any(user.IsInRole);
+    public static bool CanReadCosts(ClaimsPrincipal user) => PermissionChecks.Has(user, Permission);
 
     public static ItemDto ForUser(ItemDto item, ClaimsPrincipal user) =>
         CanReadCosts(user) ? item : Redact(item);

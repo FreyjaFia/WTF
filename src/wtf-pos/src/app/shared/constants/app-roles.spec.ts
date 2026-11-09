@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { PermissionCatalog, PolicyPermissions, SystemRolePermissions } from '@shared/permissions';
 import { AppRoleGroups, AppRoleLabels, AppRoles } from './app-roles';
 
 describe('app roles', () => {
@@ -11,7 +12,7 @@ describe('app roles', () => {
     expect(Object.keys(AppRoleLabels).sort()).toEqual([...roles].sort());
   });
 
-  it('only references known roles in groups, without duplicates', () => {
+  it('only references known roles in the UI-only groups, without duplicates', () => {
     for (const [group, members] of Object.entries(AppRoleGroups)) {
       const list = members as readonly string[];
       expect(list.length, group).toBeGreaterThan(0);
@@ -26,37 +27,23 @@ describe('app roles', () => {
     for (const [group, members] of Object.entries(AppRoleGroups)) {
       expect(members as readonly string[], group).toContain(AppRoles.Owner);
     }
-  });
-
-  it('keeps each write group within its read group', () => {
-    const pairs: [keyof typeof AppRoleGroups, keyof typeof AppRoleGroups][] = [
-      ['ProductsWrite', 'ProductsRead'],
-      ['UsersWrite', 'UsersRead'],
-      ['PromotionsWrite', 'PromotionsRead'],
-      ['OrdersWrite', 'OrdersRead'],
-      ['ItemsWrite', 'ItemsRead'],
-      ['StockMovementsWrite', 'StockMovementsRead'],
-    ];
-
-    for (const [write, read] of pairs) {
-      for (const role of AppRoleGroups[write] as readonly string[]) {
-        expect(AppRoleGroups[read] as readonly string[], `${write} -> ${read}`).toContain(role);
-      }
-    }
+    expect(SystemRolePermissions[AppRoles.Owner].length).toBe(PermissionCatalog.length);
   });
 
   it('gives AdminViewer read access but no write access', () => {
-    for (const [group, members] of Object.entries(AppRoleGroups)) {
-      if (group.endsWith('Write') || group === 'OrdersOverride') {
-        expect(members as readonly string[], group).not.toContain(AppRoles.AdminViewer);
-      }
+    const writeKeys = PermissionCatalog.filter(
+      (p) => p.key.endsWith('.write') || p.key.endsWith('.manage') || p.key === 'orders.override',
+    ).map((p) => p.key);
+
+    for (const key of SystemRolePermissions[AppRoles.AdminViewer]) {
+      expect(writeKeys, key).not.toContain(key);
     }
   });
 });
 
-describe('app roles vs the API policies', () => {
-  // Mirrors WTF.Api AppAuthorizationExtensions (and the .NET PolicyMatrixTests). Update both together.
-  const apiPolicies: Record<Exclude<keyof typeof AppRoleGroups, 'ManagementAccess' | 'ManagementMenu' | 'SetupAccess'>, readonly string[]> = {
+describe('system role permissions vs the API policies (golden)', () => {
+  // The role lists the API policies used before permissions existed. Mirrors the .NET PolicyMatrixTests.
+  const expectedByPolicy: Record<string, readonly string[]> = {
     DashboardRead: ['Owner', 'Admin', 'AdminViewer'],
     ProductsRead: ['Owner', 'Admin', 'AdminViewer', 'Cashier'],
     ProductsWrite: ['Owner', 'Admin'],
@@ -71,7 +58,7 @@ describe('app roles vs the API policies', () => {
     OrdersRead: ['Owner', 'Admin', 'AdminViewer', 'Cashier'],
     OrdersWrite: ['Owner', 'Admin', 'Cashier'],
     OrdersOverride: ['Owner', 'Admin'],
-    OrderLinksWrite: ['Owner', 'Admin', 'Cashier'],
+    OrderLinksManage: ['Owner', 'Admin', 'Cashier'],
     CustomersRead: ['Owner', 'Admin', 'AdminViewer', 'Cashier'],
     CustomersWrite: ['Owner', 'Admin', 'Cashier'],
     ItemsRead: ['Owner', 'Admin', 'AdminViewer', 'ItemManager', 'StockManager'],
@@ -90,32 +77,26 @@ describe('app roles vs the API policies', () => {
     WasteReasonsRead: ['Owner', 'Admin', 'AdminViewer', 'StockManager', 'Cashier'],
   };
 
-  // UI-only groups have no API policy because the API has no matching area to protect.
-  const uiOnlyGroups = ['ManagementAccess', 'ManagementMenu', 'SetupAccess'];
-
-  it('has an API policy for every UI group except the UI-only ones', () => {
-    const apiBacked = Object.keys(AppRoleGroups).filter((g) => !uiOnlyGroups.includes(g));
-    expect(apiBacked.sort()).toEqual(Object.keys(apiPolicies).sort());
+  it('has an expectation for every policy in the shared map', () => {
+    expect(Object.keys(expectedByPolicy).sort()).toEqual(Object.keys(PolicyPermissions).sort());
   });
 
-  it('never grants the UI to a role the API would deny', () => {
-    for (const [group, roles] of Object.entries(AppRoleGroups)) {
-      if (uiOnlyGroups.includes(group)) {
-        continue;
-      }
-      const allowedByApi = apiPolicies[group as keyof typeof apiPolicies];
-      for (const role of roles as readonly string[]) {
-        expect(allowedByApi, `${group} grants ${role} but the API does not`).toContain(role);
+  it('admits exactly the roles each policy admitted before', () => {
+    for (const [policy, keys] of Object.entries(PolicyPermissions)) {
+      for (const role of Object.values(AppRoles)) {
+        const held = SystemRolePermissions[role];
+        const allowed = keys.some((key) => held.includes(key));
+        expect(allowed, `${policy} for ${role}`).toBe(expectedByPolicy[policy].includes(role));
       }
     }
   });
 
-  it('keeps Cashier out of the management read groups the API opens to it', () => {
-    // Cashiers can write customers (register one on the new order page) and the API lets them read
-    // customers for the order editor, but they get no customer or product management screens.
-    expect(AppRoleGroups.ProductsRead as readonly string[]).not.toContain(AppRoles.Cashier);
-    expect(AppRoleGroups.CustomersRead as readonly string[]).not.toContain(AppRoles.Cashier);
-    expect(apiPolicies.ProductsRead).toContain(AppRoles.Cashier);
-    expect(apiPolicies.CustomersRead).toContain(AppRoles.Cashier);
+  it('keeps Cashier out of the products and customers screens the API still lets it load', () => {
+    const cashier = SystemRolePermissions[AppRoles.Cashier];
+    expect(cashier).not.toContain('products.read');
+    expect(cashier).not.toContain('customers.read');
+    expect(cashier).toContain('orders.write');
+    expect(PolicyPermissions['ProductsRead']).toContain('orders.write');
+    expect(PolicyPermissions['CustomersRead']).toContain('orders.write');
   });
 });

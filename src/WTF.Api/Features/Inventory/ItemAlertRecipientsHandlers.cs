@@ -1,6 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using WTF.Api.Common.Auth;
+using WTF.Api.Common.Auth.Permissions;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Inventory.DTOs;
@@ -17,7 +17,7 @@ public record SetItemAlertRecipientsCommand(Guid ItemId, List<Guid> UserIds) : I
 internal static class AlertRecipientCandidates
 {
     // The people who can read stock notifications; only they can be told about an item.
-    public static readonly string[] Roles = [AppRoles.Owner, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.StockManager];
+    public static readonly string[] Roles = SystemRolePermissions.RolesWith("stock.read");
 
     public const string DefaultDescription = "Owners, Admins and Stock Managers";
 

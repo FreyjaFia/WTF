@@ -17,7 +17,7 @@ function ids(rows: readonly Row[]): string[] {
 
 test.describe('shops cannot see each other @tenancy @isolation', () => {
   test('a new shop starts without the products, customers or orders of another shop', async ({ request, platform }) => {
-    const firstShop = await ShopSession.signIn(request, USERNAMES.superadmin, testPassword());
+    const firstShop = await ShopSession.signIn(request, USERNAMES.owner, testPassword());
     const product = await firstShop.createProduct(unique('First shop drink'));
     const customer = await firstShop.createCustomer();
     const order = await firstShop.createOrder(product.id);

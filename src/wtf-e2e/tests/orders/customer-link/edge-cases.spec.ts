@@ -85,7 +85,7 @@ test.describe('customer link submit rules @orders @customer-link', () => {
 
     const order = await extra(api).place(link.token, { items: [{ productId: drink.id, quantity: 2 }], amountReceived: 250, tips: 15 });
 
-    const saved = await api.client.json<Record<string, unknown>>('superadmin', 'GET', `orders/${order.id}`);
+    const saved = await api.client.json<Record<string, unknown>>('owner', 'GET', `orders/${order.id}`);
     expect(Number(saved.tips)).toBe(15);
     expect(Number(saved.totalAmount)).toBe(200);
     expect(saved.status).toBe(OrderStatus.PendingApproval);
@@ -203,7 +203,7 @@ test.describe('customer link submit rules @orders @customer-link', () => {
       amountReceived: null,
     });
 
-    const saved = await api.client.json<Record<string, unknown>>('superadmin', 'GET', `orders/${order.id}`);
+    const saved = await api.client.json<Record<string, unknown>>('owner', 'GET', `orders/${order.id}`);
     expect(saved.amountReceived ?? null).toBeNull();
   });
 });

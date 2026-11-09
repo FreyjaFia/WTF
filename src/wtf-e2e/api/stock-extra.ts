@@ -72,7 +72,7 @@ export interface NotificationRow {
 export class StockExtraApi {
   public constructor(private readonly api: ApiClient) {}
 
-  public async createItemRaw(fields: ItemFields = {}, role: Role = 'superadmin'): Promise<APIResponse> {
+  public async createItemRaw(fields: ItemFields = {}, role: Role = 'owner'): Promise<APIResponse> {
     return this.api.call(role, 'POST', 'items', {
       body: {
         name: fields.name ?? unique('E2E Item'),
@@ -91,32 +91,32 @@ export class StockExtraApi {
   }
 
   public async fullItem(id: string): Promise<FullItem> {
-    return this.api.json<FullItem>('superadmin', 'GET', `items/${id}`);
+    return this.api.json<FullItem>('owner', 'GET', `items/${id}`);
   }
 
-  public async updateRaw(id: string, changes: Record<string, unknown>, role: Role = 'superadmin'): Promise<APIResponse> {
-    const current = await this.api.json<Record<string, unknown>>('superadmin', 'GET', `items/${id}`);
+  public async updateRaw(id: string, changes: Record<string, unknown>, role: Role = 'owner'): Promise<APIResponse> {
+    const current = await this.api.json<Record<string, unknown>>('owner', 'GET', `items/${id}`);
     return this.api.call(role, 'PUT', `items/${id}`, { body: { ...current, ...changes, id } });
   }
 
   public async deleteRaw(id: string): Promise<APIResponse> {
-    return this.api.call('superadmin', 'DELETE', `items/${id}`);
+    return this.api.call('owner', 'DELETE', `items/${id}`);
   }
 
-  public async stockInRaw(id: string, quantity: number, role: Role = 'superadmin'): Promise<APIResponse> {
+  public async stockInRaw(id: string, quantity: number, role: Role = 'owner'): Promise<APIResponse> {
     return this.api.call(role, 'POST', `items/${id}/stock`, { body: { itemId: id, quantity, notes: 'e2e' } });
   }
 
-  public async adjustRaw(id: string, body: Record<string, unknown>, role: Role = 'superadmin'): Promise<APIResponse> {
+  public async adjustRaw(id: string, body: Record<string, unknown>, role: Role = 'owner'): Promise<APIResponse> {
     return this.api.call(role, 'POST', `items/${id}/stock/adjust`, { body: { itemId: id, ...body } });
   }
 
   public async movementRows(id: string): Promise<readonly MovementRow[]> {
-    const page = await this.api.json<{ items: MovementRow[] }>('superadmin', 'GET', `items/${id}/movements?page=1&pageSize=100`);
+    const page = await this.api.json<{ items: MovementRow[] }>('owner', 'GET', `items/${id}/movements?page=1&pageSize=100`);
     return page.items;
   }
 
-  public async coverageOf(productId: string, role: Role = 'superadmin'): Promise<CoverageRow | undefined> {
+  public async coverageOf(productId: string, role: Role = 'owner'): Promise<CoverageRow | undefined> {
     const coverage = await this.api.json<{ products: CoverageRow[] }>(role, 'GET', 'items/coverage');
     return coverage.products.find((row) => row.productId === productId);
   }
@@ -165,12 +165,12 @@ export class StockExtraApi {
     return this.api.json<SyncResult[]>(role, 'POST', 'orders/sync', { orders: payload });
   }
 
-  public async notifications(role: Role = 'superadmin'): Promise<readonly NotificationRow[]> {
+  public async notifications(role: Role = 'owner'): Promise<readonly NotificationRow[]> {
     const page = await this.api.json<{ items: NotificationRow[] }>(role, 'GET', 'notifications?pageSize=100');
     return page.items;
   }
 
-  public async alertsFor(itemId: string, role: Role = 'superadmin'): Promise<readonly NotificationRow[]> {
+  public async alertsFor(itemId: string, role: Role = 'owner'): Promise<readonly NotificationRow[]> {
     return (await this.notifications(role)).filter((row) => row.subjectId === itemId);
   }
 }
@@ -179,6 +179,6 @@ export class StockExtraApi {
 // missing there), and a second assignment reactivates them, so assign twice. Harmless on a database that does it right.
 export async function linkAddOnsReliably(api: ApiClient, productId: string, addOns: readonly AddOnLink[]): Promise<void> {
   for (let attempt = 0; attempt < 2; attempt++) {
-    await api.json<unknown>('superadmin', 'POST', `products/${productId}/addons`, { productId, addOns });
+    await api.json<unknown>('owner', 'POST', `products/${productId}/addons`, { productId, addOns });
   }
 }

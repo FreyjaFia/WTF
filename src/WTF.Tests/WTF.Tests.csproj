@@ -24,6 +24,10 @@
     <None Include="..\wtf-pos\src\app\shared\calculations\calculation-cases.json"
           Link="Calculations\calculation-cases.json"
           CopyToOutputDirectory="PreserveNewest" />
+    <!-- The permission catalog, system role bundles and policy map the Angular side is built from (see PermissionCatalogTests). -->
+    <None Include="..\wtf-pos\src\app\shared\permissions\permission-catalog.json"
+          Link="Permissions\permission-catalog.json"
+          CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

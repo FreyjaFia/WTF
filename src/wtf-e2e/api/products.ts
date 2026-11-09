@@ -27,7 +27,7 @@ export class ProductsApi {
 
   public async create(input: ProductInput = {}): Promise<Product> {
     const isAddOn = input.isAddOn ?? false;
-    return this.api.json<Product>('superadmin', 'POST', 'products', {
+    return this.api.json<Product>('owner', 'POST', 'products', {
       name: input.name ?? unique(isAddOn ? 'E2E AddOn' : 'E2E Drink'),
       code: uniqueCode(),
       description: 'Created by the E2E suite',
@@ -40,24 +40,24 @@ export class ProductsApi {
   }
 
   public async get(id: string): Promise<Product> {
-    return this.api.json<Product>('superadmin', 'GET', `products/${id}`);
+    return this.api.json<Product>('owner', 'GET', `products/${id}`);
   }
 
   public async setPrice(id: string, price: number): Promise<void> {
-    const current = await this.api.json<Record<string, unknown>>('superadmin', 'GET', `products/${id}`);
-    await this.api.json<unknown>('superadmin', 'PUT', `products/${id}`, { ...current, price, id });
+    const current = await this.api.json<Record<string, unknown>>('owner', 'GET', `products/${id}`);
+    await this.api.json<unknown>('owner', 'PUT', `products/${id}`, { ...current, price, id });
   }
 
   public async remove(id: string): Promise<void> {
-    await this.api.json<unknown>('superadmin', 'DELETE', `products/${id}`);
+    await this.api.json<unknown>('owner', 'DELETE', `products/${id}`);
   }
 
   public async restore(id: string): Promise<void> {
-    await this.api.json<unknown>('superadmin', 'POST', `products/${id}/restore`);
+    await this.api.json<unknown>('owner', 'POST', `products/${id}/restore`);
   }
 
   public async linkAddOns(productId: string, addOns: readonly AddOnLink[]): Promise<void> {
-    await this.api.json<unknown>('superadmin', 'POST', `products/${productId}/addons`, { productId, addOns });
+    await this.api.json<unknown>('owner', 'POST', `products/${productId}/addons`, { productId, addOns });
   }
 
   public async withSize(price: number = 150, sizePrice: number = 20): Promise<{ drink: Product; size: Product }> {

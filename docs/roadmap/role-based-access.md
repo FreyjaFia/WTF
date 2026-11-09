@@ -1,6 +1,6 @@
 ## Role-Based Access Control (RBAC) [In progress: phase 1 started on branch rbac-phase-1]
 
-Planning only (8 Nov 2026). Phase 1 step 1 built: the SuperAdmin to Owner rename (stored name via `tools/sql/20261118_rename_super_admin_to_owner.sql`; the API still accepts old `SuperAdmin` tokens for one release). Sections 1 to 7 below describe the plan and use the new name. Goal: decide **who in a shop can do what** with one clear model, instead of the hand-kept
+Planning only (8 Nov 2026). Phase 1 step 1 built: the SuperAdmin to Owner rename (stored name via `tools/sql/20261118_rename_super_admin_to_owner.sql`). Sections 1 to 7 below describe the plan and use the new name. Goal: decide **who in a shop can do what** with one clear model, instead of the hand-kept
 role lists we have today. Plans (subscription) decide which features a shop has; RBAC decides which people in that shop
 may use them.
 
@@ -217,8 +217,8 @@ custom role can be limited to one.
 - API: `AppRoles.SuperAdmin`, `UserRoleEnum.SuperAdmin`, policy lists, `UserEndpoints` checks, recipient lists, the
   platform tenant-creation handler (first user), subscription reminders, seed data and tests.
 - App: `AppRoles`, `AppRoleLabels` ("Owner"), role groups and specs, the tolerant role matching in `AuthService`
-  (also accept the old `SuperAdmin` claim for one release so tokens issued before the rename keep working), and the
+  (no alias for the old `SuperAdmin` claim: Pogi decided old tokens simply fail and everyone signs in again), and the
   e2e fixtures and Playwright tests.
 - Docs and notes: `docs/`, the rollout checklist, and the throwaway database seeds.
-- Existing tokens carry `role=SuperAdmin` until refreshed; the API accepts both names for one release.
+- Existing tokens carry `role=SuperAdmin`; they are refused after the rename (decided 9 Nov 2026), so everyone signs in again.
 - Real database state: 4 users (2 Admin, 1 Cashier, 1 SuperAdmin), no ItemManager or StockManager users locally.

@@ -5,7 +5,7 @@ GO
 
 -- Renames the SuperAdmin role to Owner (RBAC phase 1). Users keep their RoleId; only the stored name changes.
 -- Matches by name, never by id. Does nothing if there is no SuperAdmin role or an Owner role already exists.
--- Run it together with the release that accepts both names (tokens signed in before the rename still say SuperAdmin).
+-- Tokens signed in before the rename still say SuperAdmin and are refused, so everyone signs in again.
 -- Safe to run twice.
 
 IF EXISTS (SELECT 1 FROM dbo.UserRoles WHERE Name = N'SuperAdmin')

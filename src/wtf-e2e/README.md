@@ -51,7 +51,7 @@ Shared code: `api/` (typed API helpers; `*-extra.ts` hold the helpers added per 
 Every run uses its own throwaway database, never the real `WTF` database:
 
 1. `src\WTF.E2E.Database` creates `WTF_E2E_<time>_<id>` on its own LocalDB instance, `WtfE2E` (the script creates and starts it; `E2E_LOCALDB_INSTANCE` renames it, `E2E_SQL` points at another SQL Server) from the EF model, seeds
-   the lookup rows, the waste reasons and the test accounts (`superadmin`, `admin`, `cashier`, `viewer`, `stockmgr`, `itemmgr`).
+   the lookup rows, the waste reasons and the test accounts (`owner`, `admin`, `cashier`, `viewer`, `stockmgr`, `itemmgr`).
 2. The API starts on port 5290 against it, and the app on 4300. A server already answering on a port is reused, except that
    the API port must be free (it could point at another database).
 3. The tests run, then the processes it started are stopped and the database is dropped.
@@ -71,7 +71,7 @@ If a run stops with an error, it is shown in red, saved in `.e2e-last-run.log`, 
 | `E2E_APP_ORIGIN` | `http://localhost:4300` | App under test |
 | `E2E_API_ORIGIN` | `http://localhost:5290` | API used to seed data |
 | `E2E_APP_API_ORIGIN` | `http://localhost:5290` | API address the app was built with. The app is served with its `e2e` configuration, which already points at 5290, so nothing is rerouted; set this only if you serve it differently |
-| `E2E_USER_<ROLE>` | `superadmin`, `admin`, `cashier`, `viewer`, `stockmgr`, `itemmgr` | Test usernames |
+| `E2E_USER_<ROLE>` | `owner`, `admin`, `cashier`, `viewer`, `stockmgr`, `itemmgr` | Test usernames |
 
 First time on a machine: `npm install` and `npx playwright install chromium` here.
 

@@ -22,7 +22,7 @@ test.describe('the Menu Engineering report @reports', () => {
     await api.orders.create({ items: [{ productId: latte.id, quantity: 2 }] });
 
     const date = today();
-    const rows = await api.client.json<MenuRow[]>('superadmin', 'GET', `reports/menu-engineering?fromDate=${date}&toDate=${date}`);
+    const rows = await api.client.json<MenuRow[]>('owner', 'GET', `reports/menu-engineering?fromDate=${date}&toDate=${date}`);
     const row = rows.find((r) => r.productName === latte.name);
     expect(row?.quantitySold).toBe(2);
     expect(row?.unitProfit).toBe(130);
@@ -34,7 +34,7 @@ test.describe('the Menu Engineering report @reports', () => {
     await api.orders.create({ items: [{ productId: water.id, quantity: 1 }] });
 
     const date = today();
-    const rows = await api.client.json<MenuRow[]>('superadmin', 'GET', `reports/menu-engineering?fromDate=${date}&toDate=${date}`);
+    const rows = await api.client.json<MenuRow[]>('owner', 'GET', `reports/menu-engineering?fromDate=${date}&toDate=${date}`);
     const row = rows.find((r) => r.productName === water.name);
     expect(row?.menuClass).toBe('Not rated');
     expect(row?.unitProfit).toBeNull();
@@ -70,7 +70,7 @@ test.describe('the Menu Engineering report @reports', () => {
     expect(response.ok()).toBeTruthy();
 
     const date = today();
-    const rows = await api.client.json<MenuRow[]>('superadmin', 'GET', `reports/menu-engineering?fromDate=${date}&toDate=${date}`);
+    const rows = await api.client.json<MenuRow[]>('owner', 'GET', `reports/menu-engineering?fromDate=${date}&toDate=${date}`);
     const row = rows.find((r) => r.productName === latte.name);
     expect(row?.quantitySold).toBe(2);
     expect(row?.unitProfit).toBe(130);
@@ -83,7 +83,7 @@ test.describe('the Menu Engineering report @reports', () => {
     await api.orders.create({ items: [{ productId: drink.id, quantity: 2, addOns: [{ productId: size.id, quantity: 1 }] }] });
 
     const date = today();
-    const rows = await api.client.json<MenuRow[]>('superadmin', 'GET', `reports/menu-engineering?fromDate=${date}&toDate=${date}`);
+    const rows = await api.client.json<MenuRow[]>('owner', 'GET', `reports/menu-engineering?fromDate=${date}&toDate=${date}`);
     expect(rows.find((r) => r.productName === size.name)).toBeUndefined();
     const row = rows.find((r) => r.productName === drink.name);
     expect(row?.quantitySold).toBe(2);
@@ -104,7 +104,7 @@ test.describe('the Menu Engineering report @reports', () => {
     );
 
     const date = today();
-    const rows = await api.client.json<(MenuRow & { categoryName: string })[]>('superadmin', 'GET', `reports/menu-engineering?fromDate=${date}&toDate=${date}`);
+    const rows = await api.client.json<(MenuRow & { categoryName: string })[]>('owner', 'GET', `reports/menu-engineering?fromDate=${date}&toDate=${date}`);
     expect(rows.find((r) => r.productName === bundle.name)).toBeUndefined();
     expect(rows.filter((r) => r.categoryName === 'Promotions')).toHaveLength(0);
   });
@@ -115,7 +115,7 @@ test.describe('the Menu Engineering report @reports', () => {
     await api.orders.create({ items: [{ productId: drink.id, quantity: 1 }, { productId: food.id, quantity: 1 }] });
 
     const date = today();
-    const rows = await api.client.json<MenuRow[]>('superadmin', 'GET', `reports/menu-engineering?fromDate=${date}&toDate=${date}&categoryId=${Category.Food}`);
+    const rows = await api.client.json<MenuRow[]>('owner', 'GET', `reports/menu-engineering?fromDate=${date}&toDate=${date}&categoryId=${Category.Food}`);
     expect(rows.find((r) => r.productName === food.name)).toBeDefined();
     expect(rows.find((r) => r.productName === drink.name)).toBeUndefined();
   });

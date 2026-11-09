@@ -1,5 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
+using WTF.Api.Common.Auth.Permissions;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Features.Auth;
 using WTF.Api.Features.Auth.DTOs;
@@ -72,6 +74,9 @@ public static class AuthEndpoints
 
             return Results.Ok(new { Message = "Password changed successfully." });
         }).RequireAuthorization();
+
+        authGroup.MapGet("/permissions", (ClaimsPrincipal user) =>
+            Results.Ok(PermissionChecks.ForPrincipal(user).Order().ToList())).RequireAuthorization();
 
         // GET /api/auth/me - return current authenticated user info
         authGroup.MapGet("/me", async (IMediator mediator) =>

@@ -28,11 +28,11 @@ test.describe('Add ingredients to many products @stock @ingredients', () => {
     await expect(page.getByTestId('bulk-skipped')).toContainText(third.name);
 
     for (const product of [first, second]) {
-      const saved = await api.client.json<IngredientsEdit>('superadmin', 'GET', `products/${product.id}/ingredients`);
+      const saved = await api.client.json<IngredientsEdit>('owner', 'GET', `products/${product.id}/ingredients`);
       expect(saved.lines.map((l) => l.itemId)).toEqual([cup.id]);
     }
 
-    const kept = await api.client.json<IngredientsEdit>('superadmin', 'GET', `products/${third.id}/ingredients`);
+    const kept = await api.client.json<IngredientsEdit>('owner', 'GET', `products/${third.id}/ingredients`);
     expect(kept.lines[0].quantityPerSale).toBe(2);
   });
 

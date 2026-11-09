@@ -225,11 +225,11 @@ test.describe('expenses API @management @expenses', () => {
   test('creating, editing, deleting and restoring each leave an audit entry', async ({ api }) => {
     const day = quietDay();
     const saved = await create(api, day, RENT, 100);
-    await api.client.json('superadmin', 'PUT', `expenses/${saved.id}`, { expenseDate: day, category: RENT, amount: 120, note: null });
-    await api.client.json('superadmin', 'DELETE', `expenses/${saved.id}`);
-    await api.client.json('superadmin', 'POST', `expenses/${saved.id}/restore`, {});
+    await api.client.json('owner', 'PUT', `expenses/${saved.id}`, { expenseDate: day, category: RENT, amount: 120, note: null });
+    await api.client.json('owner', 'DELETE', `expenses/${saved.id}`);
+    await api.client.json('owner', 'POST', `expenses/${saved.id}/restore`, {});
 
-    const logs = await api.client.json<{ items: Array<{ action: string; entityId?: string | null }> }>('superadmin', 'GET', `audit-logs?entityId=${saved.id}&page=1&pageSize=20`);
+    const logs = await api.client.json<{ items: Array<{ action: string; entityId?: string | null }> }>('owner', 'GET', `audit-logs?entityId=${saved.id}&page=1&pageSize=20`);
     const actions = logs.items.map((l) => l.action);
 
     expect(actions).toEqual(expect.arrayContaining(['ExpenseCreated', 'ExpenseUpdated', 'ExpenseDeleted', 'ExpenseRestored']));

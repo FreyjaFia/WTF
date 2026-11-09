@@ -145,7 +145,7 @@ static void SeedUsers(WTFDbContext db, string password)
     var hash = BCrypt.Net.BCrypt.HashPassword(password);
     var accounts = new (string Username, UserRoleEnum Role)[]
     {
-        ("superadmin", UserRoleEnum.Owner),
+        ("owner", UserRoleEnum.Owner),
         ("admin", UserRoleEnum.Admin),
         ("cashier", UserRoleEnum.Cashier),
         ("viewer", UserRoleEnum.AdminViewer),

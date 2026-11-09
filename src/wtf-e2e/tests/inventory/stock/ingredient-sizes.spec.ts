@@ -25,7 +25,7 @@ test.describe('Amounts per size and the preview @stock @ingredients', () => {
     expect((await saveResponse).ok()).toBe(true);
 
     const saved = await api.client.json<IngredientsEdit>(
-      'superadmin',
+      'owner',
       'GET',
       `products/${drink.id}/ingredients`,
     );

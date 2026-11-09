@@ -24,7 +24,7 @@ interface Count {
 const POSTED = 2;
 const CANCELLED = 3;
 
-async function startCount(api: Api, itemId: string, isBlind: boolean = false, role: Role = 'superadmin'): Promise<Count> {
+async function startCount(api: Api, itemId: string, isBlind: boolean = false, role: Role = 'owner'): Promise<Count> {
   return api.client.json<Count>(role, 'POST', 'stock-counts', {
     name: `E2E count ${Date.now()}`,
     isBlind,
@@ -34,7 +34,7 @@ async function startCount(api: Api, itemId: string, isBlind: boolean = false, ro
 }
 
 async function saveLine(api: Api, countId: string, itemId: string, countedQuantity: number | null): Promise<Count> {
-  return api.client.json<Count>('superadmin', 'PUT', `stock-counts/${countId}/lines`, {
+  return api.client.json<Count>('owner', 'PUT', `stock-counts/${countId}/lines`, {
     lines: [{ itemId, countedQuantity }],
   });
 }
@@ -46,7 +46,7 @@ test.describe('stock counts @inventory @counts', () => {
     await saveLine(api, count.summary.id, item.id, 185);
 
     await api.items.stockIn(item.id, 10);
-    const response = await api.client.call('superadmin', 'POST', `stock-counts/${count.summary.id}/post`);
+    const response = await api.client.call('owner', 'POST', `stock-counts/${count.summary.id}/post`);
     expect(response.ok(), await response.text()).toBeTruthy();
 
     // Counted 185 against the 200 shown, so -15 is applied to the 210 now on hand.
@@ -56,26 +56,26 @@ test.describe('stock counts @inventory @counts', () => {
   test('an item left empty is not touched, and a posted count cannot change', async ({ api }) => {
     const item = await api.items.create({ startingQuantity: 50 });
     const other = await api.items.create({ startingQuantity: 70 });
-    const count = await api.client.json<Count>('superadmin', 'POST', 'stock-counts', {
+    const count = await api.client.json<Count>('owner', 'POST', 'stock-counts', {
       name: `E2E count ${Date.now()}`,
       isBlind: false,
       note: null,
       itemIds: [item.id, other.id],
     });
     await saveLine(api, count.summary.id, item.id, 40);
-    expect((await api.client.call('superadmin', 'POST', `stock-counts/${count.summary.id}/post`)).ok()).toBeTruthy();
+    expect((await api.client.call('owner', 'POST', `stock-counts/${count.summary.id}/post`)).ok()).toBeTruthy();
 
     expect(await api.items.balance(item.id)).toBe(40);
     expect(await api.items.balance(other.id)).toBe(70);
-    expect((await api.client.call('superadmin', 'POST', `stock-counts/${count.summary.id}/post`)).status()).toBe(400);
-    expect((await api.client.call('superadmin', 'POST', `stock-counts/${count.summary.id}/cancel`)).status()).toBe(400);
+    expect((await api.client.call('owner', 'POST', `stock-counts/${count.summary.id}/post`)).status()).toBe(400);
+    expect((await api.client.call('owner', 'POST', `stock-counts/${count.summary.id}/cancel`)).status()).toBe(400);
   });
 
   test('a cancelled count changes no balance', async ({ api }) => {
     const item = await api.items.create({ startingQuantity: 30 });
     const count = await startCount(api, item.id);
     await saveLine(api, count.summary.id, item.id, 5);
-    const cancelled = await api.client.json<Count>('superadmin', 'POST', `stock-counts/${count.summary.id}/cancel`);
+    const cancelled = await api.client.json<Count>('owner', 'POST', `stock-counts/${count.summary.id}/cancel`);
 
     expect(cancelled.summary.status).toBe(CANCELLED);
     expect(await api.items.balance(item.id)).toBe(30);
@@ -87,7 +87,7 @@ test.describe('stock counts @inventory @counts', () => {
     expect(count.lines[0].expectedQuantity).toBeNull();
 
     await saveLine(api, count.summary.id, item.id, 78);
-    const posted = await api.client.json<Count>('superadmin', 'POST', `stock-counts/${count.summary.id}/post`);
+    const posted = await api.client.json<Count>('owner', 'POST', `stock-counts/${count.summary.id}/post`);
     expect(posted.summary.status).toBe(POSTED);
     expect(posted.lines[0].expectedQuantity).toBe(80);
     expect(posted.lines[0].difference).toBe(-2);
@@ -95,13 +95,13 @@ test.describe('stock counts @inventory @counts', () => {
 
   test('an empty name is refused', async ({ api }) => {
     const item = await api.items.create({ startingQuantity: 5 });
-    const response = await api.client.call('superadmin', 'POST', 'stock-counts', {
+    const response = await api.client.call('owner', 'POST', 'stock-counts', {
       body: { name: '  ', isBlind: false, note: null, itemIds: [item.id] },
     });
     expect(response.status()).toBe(400);
   });
 
-  for (const role of ['superadmin', 'admin', 'stockmgr'] as const) {
+  for (const role of ['owner', 'admin', 'stockmgr'] as const) {
     test(`${role} can start a count`, async ({ api }) => {
       const item = await api.items.create({ startingQuantity: 5 });
       const count = await startCount(api, item.id, false, role);
@@ -174,10 +174,10 @@ test.describe('stock counts @inventory @counts', () => {
   test('the column headers sort the counts on a wide screen and are hidden on a phone', async ({ api, signIn }) => {
     const item = await api.items.create({ startingQuantity: 10 });
     const stamp = Date.now();
-    const first = await api.client.json<Count>('superadmin', 'POST', 'stock-counts', {
+    const first = await api.client.json<Count>('owner', 'POST', 'stock-counts', {
       name: `Zeta count ${stamp}`, isBlind: false, note: null, itemIds: [item.id],
     });
-    const second = await api.client.json<Count>('superadmin', 'POST', 'stock-counts', {
+    const second = await api.client.json<Count>('owner', 'POST', 'stock-counts', {
       name: `Alpha count ${stamp}`, isBlind: false, note: null, itemIds: [item.id],
     });
     await saveLine(api, first.summary.id, item.id, 10);

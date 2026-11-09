@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using WTF.Api.Common.Auth;
+using WTF.Api.Common.Auth.Permissions;
 using WTF.Api.Features.Notifications;
 using WTF.Domain.Data;
 
@@ -42,8 +42,9 @@ internal static class WasteReviewNotifications
         }
 
         // Reviewers refresh their pending-review count on NotificationsChanged, even those without a row.
+        var reviewerRoles = SystemRolePermissions.RolesWith("stock.waste.review");
         var reviewers = await db.Users
-            .Where(u => u.IsActive && (u.Role.Name == AppRoles.Owner || u.Role.Name == AppRoles.Admin))
+            .Where(u => u.IsActive && reviewerRoles.Contains(u.Role.Name))
             .Select(u => u.Id)
             .ToListAsync(cancellationToken);
 

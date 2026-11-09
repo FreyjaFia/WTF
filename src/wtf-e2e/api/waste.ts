@@ -31,7 +31,7 @@ export interface WasteReasonRecord {
 export class WasteApi {
   public constructor(private readonly api: ApiClient) {}
 
-  public async recordRaw(itemId: string, input: WasteInput, role: Role = 'superadmin'): Promise<APIResponse> {
+  public async recordRaw(itemId: string, input: WasteInput, role: Role = 'owner'): Promise<APIResponse> {
     return this.api.call(role, 'POST', `items/${itemId}/stock/waste`, {
       body: {
         quantity: input.quantity,
@@ -43,12 +43,12 @@ export class WasteApi {
     });
   }
 
-  public async record(itemId: string, input: WasteInput, role: Role = 'superadmin'): Promise<WasteRecord> {
+  public async record(itemId: string, input: WasteInput, role: Role = 'owner'): Promise<WasteRecord> {
     return ApiClient.parse<WasteRecord>(await this.recordRaw(itemId, input, role), 'record waste');
   }
 
   public async list(query: string): Promise<WastePage> {
-    return this.api.json<WastePage>('superadmin', 'GET', `stock-waste?${query}`);
+    return this.api.json<WastePage>('owner', 'GET', `stock-waste?${query}`);
   }
 
   public async review(id: string, action: 'confirm' | 'dispute' | 'reverse', note: string | null = null, role: Role = 'admin'): Promise<APIResponse> {
@@ -56,7 +56,7 @@ export class WasteApi {
   }
 
   public async reasons(): Promise<readonly WasteReasonRecord[]> {
-    return this.api.json<readonly WasteReasonRecord[]>('superadmin', 'GET', 'waste-reasons?includeInactive=true');
+    return this.api.json<readonly WasteReasonRecord[]>('owner', 'GET', 'waste-reasons?includeInactive=true');
   }
 
   public async createReason(name: string, requiresNote: boolean = false): Promise<WasteReasonRecord> {

@@ -32,7 +32,7 @@ test.describe('Ingredient editor page @stock @ingredients', () => {
     expect((await saveResponse).ok()).toBe(true);
 
     const saved = await api.client.json<IngredientsEdit>(
-      'superadmin',
+      'owner',
       'GET',
       `products/${latte.id}/ingredients`,
     );
@@ -58,7 +58,7 @@ test.describe('Ingredient editor page @stock @ingredients', () => {
     await expect(page.getByTestId('ingredients-empty')).toBeVisible();
 
     const saved = await api.client.json<IngredientsEdit>(
-      'superadmin',
+      'owner',
       'GET',
       `products/${latte.id}/ingredients`,
     );

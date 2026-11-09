@@ -1,0 +1,470 @@
+{
+  "catalog": [
+    {
+      "key": "orders.read",
+      "area": "Orders",
+      "label": "View orders",
+      "description": "See the order list, order details and order chat.",
+      "feature": "core",
+      "requires": []
+    },
+    {
+      "key": "orders.write",
+      "area": "Orders",
+      "label": "Take and change orders",
+      "description": "Create, edit, pay and cancel orders; also loads products and customers for the order editor.",
+      "feature": "core",
+      "requires": [
+        "orders.read"
+      ]
+    },
+    {
+      "key": "orders.override",
+      "area": "Orders",
+      "label": "Override completed orders",
+      "description": "Change an order that is already completed.",
+      "feature": "core",
+      "requires": [
+        "orders.write"
+      ]
+    },
+    {
+      "key": "orderlinks.manage",
+      "area": "Orders",
+      "label": "Manage order links",
+      "description": "Create and cancel customer ordering links.",
+      "feature": "orderlinks",
+      "requires": []
+    },
+    {
+      "key": "customers.read",
+      "area": "Customers",
+      "label": "View customers",
+      "description": "Open the Customers screen and see customer details.",
+      "feature": "core",
+      "requires": []
+    },
+    {
+      "key": "customers.write",
+      "area": "Customers",
+      "label": "Add and edit customers",
+      "description": "Register and change customers (cashiers can register one from the order screen without the Customers screen).",
+      "feature": "core",
+      "requires": []
+    },
+    {
+      "key": "products.read",
+      "area": "Menu",
+      "label": "View products",
+      "description": "Open the Products screen and see the menu setup.",
+      "feature": "core",
+      "requires": []
+    },
+    {
+      "key": "products.write",
+      "area": "Menu",
+      "label": "Add and edit products",
+      "description": "Create and change products, add-ons and categories.",
+      "feature": "core",
+      "requires": [
+        "products.read"
+      ]
+    },
+    {
+      "key": "items.read",
+      "area": "Inventory",
+      "label": "View items",
+      "description": "See inventory items.",
+      "feature": "inventory",
+      "requires": []
+    },
+    {
+      "key": "items.write",
+      "area": "Inventory",
+      "label": "Add and edit items",
+      "description": "Create and change inventory items.",
+      "feature": "inventory",
+      "requires": [
+        "items.read"
+      ]
+    },
+    {
+      "key": "inventory.costs.read",
+      "area": "Inventory",
+      "label": "View costs",
+      "description": "See item costs, supplier prices and totals.",
+      "feature": "inventory",
+      "requires": []
+    },
+    {
+      "key": "inventory.costs.write",
+      "area": "Inventory",
+      "label": "Change costs",
+      "description": "Change item costs.",
+      "feature": "inventory",
+      "requires": [
+        "inventory.costs.read"
+      ]
+    },
+    {
+      "key": "stock.read",
+      "area": "Inventory",
+      "label": "View stock",
+      "description": "See stock movements, counts, reorder lists, purchase orders, receiving and suppliers.",
+      "feature": "inventory",
+      "requires": []
+    },
+    {
+      "key": "stock.write",
+      "area": "Inventory",
+      "label": "Change stock",
+      "description": "Record movements, counts, purchase orders, receiving and suppliers.",
+      "feature": "inventory",
+      "requires": [
+        "stock.read"
+      ]
+    },
+    {
+      "key": "stock.waste.record",
+      "area": "Inventory",
+      "label": "Record waste",
+      "description": "Record wasted stock.",
+      "feature": "inventory",
+      "requires": []
+    },
+    {
+      "key": "stock.waste.review",
+      "area": "Inventory",
+      "label": "Review waste",
+      "description": "Approve or reject recorded waste.",
+      "feature": "inventory",
+      "requires": []
+    },
+    {
+      "key": "wastereasons.read",
+      "area": "Inventory",
+      "label": "View waste reasons",
+      "description": "See the waste reason list.",
+      "feature": "inventory",
+      "requires": []
+    },
+    {
+      "key": "wastereasons.manage",
+      "area": "Inventory",
+      "label": "Manage waste reasons",
+      "description": "Add and change waste reasons.",
+      "feature": "inventory",
+      "requires": [
+        "wastereasons.read"
+      ]
+    },
+    {
+      "key": "expenses.read",
+      "area": "Money",
+      "label": "View expenses",
+      "description": "See expenses.",
+      "feature": "core",
+      "requires": []
+    },
+    {
+      "key": "expenses.write",
+      "area": "Money",
+      "label": "Add and edit expenses",
+      "description": "Create and change expenses.",
+      "feature": "core",
+      "requires": [
+        "expenses.read"
+      ]
+    },
+    {
+      "key": "promotions.read",
+      "area": "Promotions",
+      "label": "View promotions",
+      "description": "See promotions.",
+      "feature": "promotions",
+      "requires": []
+    },
+    {
+      "key": "promotions.write",
+      "area": "Promotions",
+      "label": "Add and edit promotions",
+      "description": "Create and change promotions.",
+      "feature": "promotions",
+      "requires": [
+        "promotions.read"
+      ]
+    },
+    {
+      "key": "dashboard.read",
+      "area": "Insight",
+      "label": "View the dashboard",
+      "description": "See the live dashboard.",
+      "feature": "core",
+      "requires": []
+    },
+    {
+      "key": "reports.read",
+      "area": "Insight",
+      "label": "View reports",
+      "description": "See sales and stock reports.",
+      "feature": "workbook",
+      "requires": []
+    },
+    {
+      "key": "reports.generate",
+      "area": "Insight",
+      "label": "Generate reports",
+      "description": "Generate the monthly report workbook.",
+      "feature": "workbook",
+      "requires": [
+        "reports.read"
+      ]
+    },
+    {
+      "key": "users.read",
+      "area": "People",
+      "label": "View users",
+      "description": "See the user list.",
+      "feature": "core",
+      "requires": []
+    },
+    {
+      "key": "users.write",
+      "area": "People",
+      "label": "Add and edit users",
+      "description": "Create, change and remove users.",
+      "feature": "core",
+      "requires": [
+        "users.read"
+      ]
+    },
+    {
+      "key": "brand.manage",
+      "area": "Shop",
+      "label": "Manage shop brand",
+      "description": "Change the shop name, logo and receipt details.",
+      "feature": "core",
+      "requires": []
+    },
+    {
+      "key": "subscription.billing",
+      "area": "Shop",
+      "label": "Manage subscription and billing",
+      "description": "See and pay the subscription.",
+      "feature": "core",
+      "requires": []
+    },
+    {
+      "key": "audit.read",
+      "area": "System",
+      "label": "View the audit log",
+      "description": "See who changed what.",
+      "feature": "core",
+      "requires": []
+    },
+    {
+      "key": "schemascripts.read",
+      "area": "System",
+      "label": "View database script history",
+      "description": "See which database scripts have run.",
+      "feature": "core",
+      "requires": []
+    }
+  ],
+  "systemRoles": {
+    "Owner": [
+      "orders.read",
+      "orders.write",
+      "orders.override",
+      "orderlinks.manage",
+      "customers.read",
+      "customers.write",
+      "products.read",
+      "products.write",
+      "items.read",
+      "items.write",
+      "inventory.costs.read",
+      "inventory.costs.write",
+      "stock.read",
+      "stock.write",
+      "stock.waste.record",
+      "stock.waste.review",
+      "wastereasons.read",
+      "wastereasons.manage",
+      "expenses.read",
+      "expenses.write",
+      "promotions.read",
+      "promotions.write",
+      "dashboard.read",
+      "reports.read",
+      "reports.generate",
+      "users.read",
+      "users.write",
+      "brand.manage",
+      "subscription.billing",
+      "audit.read",
+      "schemascripts.read"
+    ],
+    "Admin": [
+      "orders.read",
+      "orders.write",
+      "orders.override",
+      "orderlinks.manage",
+      "customers.read",
+      "customers.write",
+      "products.read",
+      "products.write",
+      "items.read",
+      "items.write",
+      "inventory.costs.read",
+      "inventory.costs.write",
+      "stock.read",
+      "stock.write",
+      "stock.waste.record",
+      "stock.waste.review",
+      "wastereasons.read",
+      "wastereasons.manage",
+      "expenses.read",
+      "expenses.write",
+      "promotions.read",
+      "promotions.write",
+      "dashboard.read",
+      "reports.read",
+      "reports.generate",
+      "users.read",
+      "users.write",
+      "brand.manage",
+      "subscription.billing"
+    ],
+    "AdminViewer": [
+      "orders.read",
+      "customers.read",
+      "products.read",
+      "items.read",
+      "inventory.costs.read",
+      "stock.read",
+      "wastereasons.read",
+      "expenses.read",
+      "promotions.read",
+      "dashboard.read",
+      "reports.read",
+      "users.read"
+    ],
+    "Cashier": [
+      "orders.read",
+      "orders.write",
+      "orderlinks.manage",
+      "customers.write",
+      "stock.waste.record",
+      "wastereasons.read"
+    ],
+    "ItemManager": [
+      "items.read",
+      "items.write"
+    ],
+    "StockManager": [
+      "items.read",
+      "stock.read",
+      "stock.write",
+      "stock.waste.record",
+      "wastereasons.read"
+    ]
+  },
+  "policies": {
+    "SubscriptionBilling": [
+      "subscription.billing"
+    ],
+    "BrandManage": [
+      "brand.manage"
+    ],
+    "ProductsRead": [
+      "products.read",
+      "orders.write"
+    ],
+    "ProductsWrite": [
+      "products.write"
+    ],
+    "UsersRead": [
+      "users.read"
+    ],
+    "UsersWrite": [
+      "users.write"
+    ],
+    "PromotionsRead": [
+      "promotions.read"
+    ],
+    "PromotionsWrite": [
+      "promotions.write"
+    ],
+    "AuditRead": [
+      "audit.read"
+    ],
+    "SchemaScriptHistoryRead": [
+      "schemascripts.read"
+    ],
+    "OrdersRead": [
+      "orders.read"
+    ],
+    "OrdersWrite": [
+      "orders.write"
+    ],
+    "OrdersOverride": [
+      "orders.override"
+    ],
+    "OrderLinksManage": [
+      "orderlinks.manage"
+    ],
+    "CustomersRead": [
+      "customers.read",
+      "orders.write"
+    ],
+    "CustomersWrite": [
+      "customers.write"
+    ],
+    "ItemsRead": [
+      "items.read"
+    ],
+    "ItemsWrite": [
+      "items.write"
+    ],
+    "InventoryCostsRead": [
+      "inventory.costs.read"
+    ],
+    "InventoryCostsWrite": [
+      "inventory.costs.write"
+    ],
+    "StockMovementsRead": [
+      "stock.read"
+    ],
+    "StockMovementsWrite": [
+      "stock.write"
+    ],
+    "StockWasteWrite": [
+      "stock.waste.record"
+    ],
+    "StockWasteReview": [
+      "stock.waste.review"
+    ],
+    "WasteReasonsManage": [
+      "wastereasons.manage"
+    ],
+    "WasteReasonsRead": [
+      "wastereasons.read"
+    ],
+    "ExpensesRead": [
+      "expenses.read"
+    ],
+    "ExpensesWrite": [
+      "expenses.write"
+    ],
+    "DashboardRead": [
+      "dashboard.read"
+    ],
+    "ReportsRead": [
+      "reports.read"
+    ],
+    "ReportsGenerate": [
+      "reports.generate"
+    ]
+  }
+}

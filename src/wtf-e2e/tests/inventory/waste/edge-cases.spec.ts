@@ -44,7 +44,7 @@ test.describe('waste quantities at the edges @waste', () => {
 
   test('the dialog asks for an amount before it sends anything', async ({ api, signIn }) => {
     const item = await api.items.create({ startingQuantity: 20 });
-    const page = await signIn('superadmin');
+    const page = await signIn('owner');
     const details = new ItemDetailsPage(page);
     const dialog = new RecordWasteDialog(page);
 
@@ -69,8 +69,8 @@ test.describe('the same waste is never recorded twice @waste', () => {
       clientRequestId: crypto.randomUUID(),
     };
 
-    const first = await api.client.call('superadmin', 'POST', `items/${item.id}/stock/waste`, { body });
-    const second = await api.client.call('superadmin', 'POST', `items/${item.id}/stock/waste`, { body });
+    const first = await api.client.call('owner', 'POST', `items/${item.id}/stock/waste`, { body });
+    const second = await api.client.call('owner', 'POST', `items/${item.id}/stock/waste`, { body });
 
     expect(first.ok()).toBeTruthy();
     expect(second.ok()).toBeTruthy();
@@ -85,8 +85,8 @@ test.describe('the same waste is never recorded twice @waste', () => {
     const clientRequestId = crypto.randomUUID();
     const body = { quantity: 3, wasteReasonId: WasteReason.Breakage, notes: null, source: WasteSource.Inventory, clientRequestId };
 
-    expect((await api.client.call('superadmin', 'POST', `items/${first.id}/stock/waste`, { body })).ok()).toBeTruthy();
-    const reused = await api.client.call('superadmin', 'POST', `items/${second.id}/stock/waste`, { body });
+    expect((await api.client.call('owner', 'POST', `items/${first.id}/stock/waste`, { body })).ok()).toBeTruthy();
+    const reused = await api.client.call('owner', 'POST', `items/${second.id}/stock/waste`, { body });
 
     expect(reused.status()).toBe(400);
     expect(await api.items.balance(second.id)).toBe(50);
@@ -94,7 +94,7 @@ test.describe('the same waste is never recorded twice @waste', () => {
 
   test('double clicking Record Waste records it once', async ({ api, signIn }) => {
     const item = await api.items.create({ startingQuantity: 100 });
-    const page = await signIn('superadmin');
+    const page = await signIn('owner');
     const details = new ItemDetailsPage(page);
     const dialog = new RecordWasteDialog(page);
 
@@ -184,7 +184,7 @@ test.describe('waste screens at small widths and long names @waste @layout', () 
     const name = longName();
     const item = await api.items.create({ name, startingQuantity: 50 });
     const waste = await api.waste.record(item.id, { quantity: 4 });
-    const page = await signIn('superadmin');
+    const page = await signIn('owner');
     const list = new WasteListPage(page);
     await page.setViewportSize({ width: 375, height: 812 });
 
@@ -202,7 +202,7 @@ test.describe('waste screens at small widths and long names @waste @layout', () 
     const name = `W${'ideunbrokenname'.repeat(5)}${Date.now().toString(36)}`.slice(0, 95);
     const item = await api.items.create({ name, startingQuantity: 50 });
     const waste = await api.waste.record(item.id, { quantity: 4 });
-    const page = await signIn('superadmin');
+    const page = await signIn('owner');
     const list = new WasteListPage(page);
     await page.setViewportSize({ width: 375, height: 812 });
 
@@ -215,7 +215,7 @@ test.describe('waste screens at small widths and long names @waste @layout', () 
 
   test('the item details title stays readable at tablet width', async ({ api, signIn }) => {
     const item = await api.items.create({ name: longName(), startingQuantity: 50 });
-    const page = await signIn('superadmin');
+    const page = await signIn('owner');
     await page.setViewportSize({ width: 740, height: 840 });
     const details = new ItemDetailsPage(page);
 
@@ -232,7 +232,7 @@ test.describe('waste screens at small widths and long names @waste @layout', () 
     const name = longName();
     const item = await api.items.create({ name, startingQuantity: 50 });
     const waste = await api.waste.record(item.id, { quantity: 4 });
-    const page = await signIn('superadmin');
+    const page = await signIn('owner');
     const list = new WasteListPage(page);
 
     await list.open();

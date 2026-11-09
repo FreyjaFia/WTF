@@ -8,6 +8,7 @@ import { AuthService } from '@core/services';
 import { NotFoundComponent } from '@features/not-found/not-found';
 import { PublicOrderComponent } from '@features/public-order/public-order';
 import { AppRoleGroups, AppRoles } from '@shared/constants/app-roles';
+import { Permissions, SystemRolePermissions } from '@shared/permissions';
 import { describe, expect, it } from 'vitest';
 import { routes } from './app.routes';
 
@@ -31,6 +32,18 @@ function flatten(list: Route[], prefix = '', parent: Route | null = null): FlatR
 }
 
 const validRoles = new Set<string>(Object.values(AppRoles));
+const validPermissions = new Set<string>(Object.values(Permissions));
+
+function rolesAllowedBy(route: Route): string[] {
+  const permission = route.data?.['permission'] as string | undefined;
+  const roles = route.data?.['roles'] as string[] | undefined;
+
+  return Object.values(AppRoles).filter(
+    (role) =>
+      (!permission || (SystemRolePermissions[role] as readonly string[]).includes(permission)) &&
+      (!roles || roles.includes(role)),
+  );
+}
 const flat = flatten(routes);
 
 describe('app.routes', () => {
@@ -100,9 +113,9 @@ describe('app.routes', () => {
     }
   });
 
-  it('only uses valid AppRoles in route data and never an empty role list', () => {
+  it('only uses valid AppRoles and permission keys in route data, never an empty list', () => {
     const withRoles = flat.filter((f) => f.route.data?.['roles'] !== undefined);
-    expect(withRoles.length).toBeGreaterThan(10);
+    expect(withRoles.length).toBeGreaterThanOrEqual(2);
     for (const { fullPath, route } of withRoles) {
       const roles = route.data!['roles'] as string[];
       expect(roles.length, `roles of "${fullPath}"`).toBeGreaterThan(0);
@@ -110,14 +123,21 @@ describe('app.routes', () => {
         expect(validRoles.has(role), `"${role}" on "${fullPath}"`).toBe(true);
       }
     }
+
+    const withPermission = flat.filter((f) => f.route.data?.['permission'] !== undefined);
+    expect(withPermission.length).toBeGreaterThan(10);
+    for (const { fullPath, route } of withPermission) {
+      expect(validPermissions.has(route.data!['permission'] as string), `permission on "${fullPath}"`).toBe(true);
+    }
   });
 
-  it('declares role data on every route that uses roleGuard', () => {
+  it('declares a permission or role list on every route that uses roleGuard', () => {
     const guarded = flat.filter((f) => f.route.canActivate?.includes(roleGuard));
     expect(guarded.length).toBeGreaterThan(10);
     for (const { fullPath, route } of guarded) {
       const roles = route.data?.['roles'] as string[] | undefined;
-      expect(roles?.length, `roleGuard without roles on "${fullPath}"`).toBeGreaterThan(0);
+      const permission = route.data?.['permission'] as string | undefined;
+      expect(!!permission || (roles?.length ?? 0) > 0, `roleGuard without access data on "${fullPath}"`).toBe(true);
     }
   });
 
@@ -138,16 +158,16 @@ describe('app.routes', () => {
     );
     expect(writes.length).toBeGreaterThan(8);
     for (const { fullPath, route } of writes) {
-      const roles = route.data?.['roles'] as string[];
-      expect(roles, `write route "${fullPath}"`).toBeDefined();
-      expect(roles).not.toContain(AppRoles.AdminViewer);
+      const permission = route.data?.['permission'] as string | undefined;
+      expect(permission, `write route "${fullPath}"`).toBeDefined();
+      expect(rolesAllowedBy(route), `write route "${fullPath}"`).not.toContain(AppRoles.AdminViewer);
     }
   });
 
   it('restricts audit logs and schema scripts to Owner only', () => {
     for (const path of ['audit-logs', 'schema-scripts']) {
       const entry = flat.find((f) => f.fullPath.endsWith(`management/${path}`));
-      expect(entry?.route.data?.['roles']).toEqual([AppRoles.Owner]);
+      expect(entry && rolesAllowedBy(entry.route)).toEqual([AppRoles.Owner]);
     }
   });
 
@@ -160,7 +180,7 @@ describe('app.routes', () => {
 
   it('keeps the dashboard unavailable to cashiers', () => {
     const entry = flat.find((f) => f.fullPath === 'dashboard');
-    expect(entry?.route.data?.['roles']).not.toContain(AppRoles.Cashier);
+    expect(entry && rolesAllowedBy(entry.route)).not.toContain(AppRoles.Cashier);
   });
 
   it('marks my-profile as a profile editor reachable without a role restriction', () => {

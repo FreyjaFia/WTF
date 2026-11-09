@@ -87,7 +87,7 @@ test.describe('users: create, validate, delete, restore, sign in @management', (
     });
 
     expect(response.ok(), await response.text()).toBeTruthy();
-    const saved = await api.client.json<{ firstName: string }>('superadmin', 'GET', `users/${user.id}`);
+    const saved = await api.client.json<{ firstName: string }>('owner', 'GET', `users/${user.id}`);
     expect(saved.firstName).toBe('Renamed');
     expect((await api.client.login(user.username, testPassword())).status()).toBe(200);
   });
@@ -101,7 +101,7 @@ test.describe('users: create, validate, delete, restore, sign in @management', (
     expect((await mx(api).list('users?isActive=true')).map((u) => u.id)).not.toContain(user.id);
     expect((await api.client.login(user.username, testPassword())).ok()).toBeFalsy();
 
-    await api.client.json<unknown>('superadmin', 'POST', `users/${user.id}/restore`);
+    await api.client.json<unknown>('owner', 'POST', `users/${user.id}/restore`);
     expect((await mx(api).list('users')).find((u) => u.id === user.id)?.isActive).toBe(true);
     expect((await api.client.login(user.username, testPassword())).status()).toBe(200);
   });

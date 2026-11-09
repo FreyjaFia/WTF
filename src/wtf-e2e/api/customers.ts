@@ -18,7 +18,7 @@ export class CustomersApi {
   public constructor(private readonly api: ApiClient) {}
 
   public async create(firstName: string = unique('Cust')): Promise<Customer> {
-    return this.api.json<Customer>('superadmin', 'POST', 'customers', {
+    return this.api.json<Customer>('owner', 'POST', 'customers', {
       firstName,
       lastName: 'E2E',
       address: '1 Test Street',
@@ -27,7 +27,7 @@ export class CustomersApi {
   }
 
   public async remove(id: string): Promise<void> {
-    await this.api.json<unknown>('superadmin', 'DELETE', `customers/${id}`);
+    await this.api.json<unknown>('owner', 'DELETE', `customers/${id}`);
   }
 
   public async allowLinks(id: string, allow: boolean = true): Promise<void> {

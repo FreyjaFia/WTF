@@ -29,7 +29,7 @@ test.describe('item editor @management @inventory', () => {
 
     await expect(page).toHaveURL(/\/inventory\/items\/details\/[0-9a-f-]{36}$/);
     const id = page.url().split('/').pop()!;
-    const item = await api.client.json<{ name: string; unitName: string; currentQuantity: number }>('superadmin', 'GET', `items/${id}`);
+    const item = await api.client.json<{ name: string; unitName: string; currentQuantity: number }>('owner', 'GET', `items/${id}`);
     expect(item).toMatchObject({ name, unitName: 'milliliter', currentQuantity: 250 });
   });
 
@@ -97,7 +97,7 @@ test.describe('item editor @management @inventory', () => {
 
     await expectRejected(empty, 'empty item name');
     await expectRejected(long, 'long item name');
-    const items = await api.client.json<{ items?: ReadonlyArray<{ sku?: string }> } | ReadonlyArray<{ sku?: string }>>('superadmin', 'GET', 'items');
+    const items = await api.client.json<{ items?: ReadonlyArray<{ sku?: string }> } | ReadonlyArray<{ sku?: string }>>('owner', 'GET', 'items');
     const rows = Array.isArray(items) ? items : ((items as { items?: ReadonlyArray<{ sku?: string }> }).items ?? []);
     expect(rows.filter((row) => row.sku === marker)).toHaveLength(0);
   });

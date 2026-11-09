@@ -21,7 +21,7 @@ test.describe('purchase orders @inventory @purchase-orders', () => {
     const orders = new OrdersPage(page);
     await expect(orders.heading).toBeVisible();
     await expect(page).toHaveURL(/inventory\/purchase-orders/);
-    const draft = (await api.client.json<{ id: string; poNumber: number; supplierId: string; status: number }[]>('superadmin', 'GET', `purchase-orders?supplierId=${supplier.summary.id}`))[0];
+    const draft = (await api.client.json<{ id: string; poNumber: number; supplierId: string; status: number }[]>('owner', 'GET', `purchase-orders?supplierId=${supplier.summary.id}`))[0];
     expect(draft.status).toBe(PO_STATUS.draft);
     await expect(orders.status(draft.poNumber)).toHaveText('Draft');
     // 4 cartons at 840 and 2 cases at 1,200.
@@ -104,7 +104,7 @@ test.describe('purchase orders @inventory @purchase-orders', () => {
     await orders.saveButton.click();
     await expect(orders.form).toHaveCount(0);
 
-    const drafts = await api.client.json<{ id: string; poNumber: number }[]>('superadmin', 'GET', `purchase-orders?supplierId=${supplier.summary.id}`);
+    const drafts = await api.client.json<{ id: string; poNumber: number }[]>('owner', 'GET', `purchase-orders?supplierId=${supplier.summary.id}`);
     expect(drafts).toHaveLength(1);
     const { id, poNumber } = drafts[0];
     await orders.expand(poNumber);
@@ -119,7 +119,7 @@ test.describe('purchase orders @inventory @purchase-orders', () => {
     expect((await buy.order(id)).lines.map((l) => l.packsOrdered).sort()).toEqual([1, 5]);
 
     await buy.sendOrder(id);
-    const edit = await api.client.call('superadmin', 'PUT', `purchase-orders/${id}`, {
+    const edit = await api.client.call('owner', 'PUT', `purchase-orders/${id}`, {
       body: buy.orderFields(supplier.summary.id, [{ itemId: milk.id, packs: 9 }]),
     });
     expect(edit.status()).toBe(400);
@@ -138,9 +138,9 @@ test.describe('purchase orders @inventory @purchase-orders', () => {
 
     // Other tests create orders in the same shop at the same time, so the next number is higher, not always +1.
     expect(second.summary.poNumber).toBeGreaterThan(first.summary.poNumber);
-    const listed = await api.client.json<{ id: string }[]>('superadmin', 'GET', `purchase-orders?supplierId=${supplier.summary.id}`);
+    const listed = await api.client.json<{ id: string }[]>('owner', 'GET', `purchase-orders?supplierId=${supplier.summary.id}`);
     expect(listed.map((o) => o.id).sort()).toEqual([first.summary.id, second.summary.id].sort());
-    const onlyDrafts = await api.client.json<{ id: string }[]>('superadmin', 'GET', `purchase-orders?supplierId=${supplier.summary.id}&status=${PO_STATUS.sent}`);
+    const onlyDrafts = await api.client.json<{ id: string }[]>('owner', 'GET', `purchase-orders?supplierId=${supplier.summary.id}&status=${PO_STATUS.sent}`);
     expect(onlyDrafts).toHaveLength(0);
   });
 
@@ -200,7 +200,7 @@ test.describe('purchase orders @inventory @purchase-orders', () => {
     const buy = new PurchasingApi(asRole(api.client));
     const supplier = await buy.createSupplier();
     const item = await buy.createItem();
-    const post = (fields: Record<string, unknown>) => api.client.call('superadmin', 'POST', 'purchase-orders', { body: fields });
+    const post = (fields: Record<string, unknown>) => api.client.call('owner', 'POST', 'purchase-orders', { body: fields });
 
     expect((await post(buy.orderFields(supplier.summary.id, []))).status()).toBe(400);
     expect((await post(buy.orderFields(supplier.summary.id, [{ itemId: item.id, packs: 1 }, { itemId: item.id, packs: 2 }]))).status()).toBe(400);
@@ -208,16 +208,16 @@ test.describe('purchase orders @inventory @purchase-orders', () => {
     expect((await post(buy.orderFields(supplier.summary.id, [{ itemId: item.id, packs: -2 }]))).status()).toBe(400);
     expect((await post(buy.orderFields(crypto.randomUUID(), [{ itemId: item.id, packs: 1 }]))).status()).toBe(400);
     expect((await post(buy.orderFields(supplier.summary.id, [{ itemId: crypto.randomUUID(), packs: 1 }]))).status()).toBe(400);
-    expect((await api.client.call('superadmin', 'GET', `purchase-orders/${crypto.randomUUID()}`)).status()).toBe(404);
+    expect((await api.client.call('owner', 'GET', `purchase-orders/${crypto.randomUUID()}`)).status()).toBe(404);
   });
 
   test('"create from reorder" fails for an unknown supplier or when nothing is needed', async ({ api }) => {
     const buy = new PurchasingApi(asRole(api.client));
     const supplier = await buy.createSupplier();
 
-    const unknown = await api.client.call('superadmin', 'POST', 'purchase-orders/from-reorder', { body: { supplierId: crypto.randomUUID() } });
+    const unknown = await api.client.call('owner', 'POST', 'purchase-orders/from-reorder', { body: { supplierId: crypto.randomUUID() } });
     expect(unknown.status()).toBe(400);
-    const nothing = await api.client.call('superadmin', 'POST', 'purchase-orders/from-reorder', { body: { supplierId: supplier.summary.id } });
+    const nothing = await api.client.call('owner', 'POST', 'purchase-orders/from-reorder', { body: { supplierId: supplier.summary.id } });
     expect(nothing.status()).toBe(400);
   });
 

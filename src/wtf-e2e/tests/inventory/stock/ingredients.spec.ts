@@ -20,7 +20,7 @@ test.describe('Ingredients & Cost page @stock @ingredients', () => {
     const latte = await api.products.create({ price: 150 });
     await api.items.linkProducts(milk.id, [{ productId: latte.id, quantityPerSale: 200 }]);
 
-    const result = await api.client.json<IngredientsResult>('superadmin', 'GET', 'products/ingredients');
+    const result = await api.client.json<IngredientsResult>('owner', 'GET', 'products/ingredients');
     const row = result.products.find((p) => p.productId === latte.id);
 
     expect(result.showsCosts).toBe(true);

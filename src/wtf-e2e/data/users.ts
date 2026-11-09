@@ -1,4 +1,4 @@
-export type Role = 'superadmin' | 'admin' | 'cashier' | 'viewer' | 'stockmgr' | 'itemmgr';
+export type Role = 'owner' | 'admin' | 'cashier' | 'viewer' | 'stockmgr' | 'itemmgr';
 
 export const ROLE_IDS = {
   Admin: 1,
@@ -10,7 +10,7 @@ export const ROLE_IDS = {
 } as const;
 
 export const USERNAMES: Record<Role, string> = {
-  superadmin: process.env.E2E_USER_SUPERADMIN ?? 'superadmin',
+  owner: process.env.E2E_USER_OWNER ?? 'owner',
   admin: process.env.E2E_USER_ADMIN ?? 'admin',
   cashier: process.env.E2E_USER_CASHIER ?? 'cashier',
   viewer: process.env.E2E_USER_VIEWER ?? 'viewer',
@@ -19,7 +19,7 @@ export const USERNAMES: Record<Role, string> = {
 };
 
 export const LANDING_PATH: Record<Role, string> = {
-  superadmin: '/dashboard',
+  owner: '/dashboard',
   admin: '/dashboard',
   viewer: '/dashboard',
   cashier: '/orders/editor',

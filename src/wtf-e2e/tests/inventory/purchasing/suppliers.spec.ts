@@ -31,9 +31,9 @@ test.describe('suppliers @inventory @suppliers', () => {
     const name = unique('Unique Supplier');
     await buy.createSupplier(name);
 
-    const duplicate = await api.client.call('superadmin', 'POST', 'suppliers', { body: { name } });
+    const duplicate = await api.client.call('owner', 'POST', 'suppliers', { body: { name } });
     expect(duplicate.status()).toBe(400);
-    const blank = await api.client.call('superadmin', 'POST', 'suppliers', { body: { name: '   ' } });
+    const blank = await api.client.call('owner', 'POST', 'suppliers', { body: { name: '   ' } });
     expect(blank.status()).toBe(400);
 
     const page = await signIn('admin');
@@ -123,9 +123,9 @@ test.describe('suppliers @inventory @suppliers', () => {
     const buy = new PurchasingApi(asRole(api.client));
     const supplier = await buy.createSupplier();
     const item = await buy.createItem();
-    await api.client.call('superadmin', 'POST', `suppliers/${supplier.summary.id}/deactivate`);
+    await api.client.call('owner', 'POST', `suppliers/${supplier.summary.id}/deactivate`);
 
-    const link = await api.client.call('superadmin', 'PUT', `items/${item.id}/suppliers/${supplier.summary.id}`, {
+    const link = await api.client.call('owner', 'PUT', `items/${item.id}/suppliers/${supplier.summary.id}`, {
       body: { packName: 'box', unitsPerPack: 1, packPrice: 1, isPreferred: false },
     });
     expect(link.status()).toBe(400);

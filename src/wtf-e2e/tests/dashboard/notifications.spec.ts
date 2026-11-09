@@ -42,7 +42,7 @@ async function lowItemName(api: Api): Promise<string> {
 }
 
 test.describe('notifications @dashboard @notifications', () => {
-  for (const role of ['superadmin', 'admin', 'viewer', 'cashier', 'stockmgr', 'itemmgr'] as ReadonlyArray<Role>) {
+  for (const role of ['owner', 'admin', 'viewer', 'cashier', 'stockmgr', 'itemmgr'] as ReadonlyArray<Role>) {
     test(`${role} can open the notifications page`, async ({ signIn }) => {
       const page = await signIn(role);
       await page.goto(ROUTES.notifications);
@@ -84,7 +84,7 @@ test.describe('notifications @dashboard @notifications', () => {
   });
 
   test('the counts endpoint answers for every signed-in role and refuses no login', async ({ api }) => {
-    for (const role of ['superadmin', 'admin', 'viewer', 'cashier', 'stockmgr', 'itemmgr'] as ReadonlyArray<Role>) {
+    for (const role of ['owner', 'admin', 'viewer', 'cashier', 'stockmgr', 'itemmgr'] as ReadonlyArray<Role>) {
       const response = await api.client.call(role, 'GET', 'notifications/counts');
       expect(response.status(), role).toBe(200);
     }

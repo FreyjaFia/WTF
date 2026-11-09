@@ -89,7 +89,7 @@ test.describe('receiving stock @inventory @receiving', () => {
     expect((await buy.receive(supplier.summary.id, [{ itemId: item.id, packs: 0 }])).status()).toBe(400);
     expect((await buy.receive(supplier.summary.id, [{ itemId: crypto.randomUUID(), packs: 1 }])).status()).toBe(400);
     expect((await buy.receive(crypto.randomUUID(), [{ itemId: item.id, packs: 1 }])).status()).toBe(400);
-    const future = await api.client.call('superadmin', 'POST', 'stock-receipts', {
+    const future = await api.client.call('owner', 'POST', 'stock-receipts', {
       body: { supplierId: supplier.summary.id, receivedOn: '2999-01-01', lines: [{ itemId: item.id, packs: 1, unitsPerPack: 1 }] },
     });
     expect(future.status()).toBe(400);
@@ -105,7 +105,7 @@ test.describe('receiving stock @inventory @receiving', () => {
     await buy.receiveOk(supplier.summary.id, [{ itemId: item.id, packs: 1, packPrice: 880 }]);
 
     const links = await api.client.json<{ packPrice: number | null; lastChangePercent: number | null; priceHistory: { source: string; newPackPrice: number }[] }[]>(
-      'superadmin', 'GET', `items/${item.id}/suppliers`,
+      'owner', 'GET', `items/${item.id}/suppliers`,
     );
     expect(links[0].packPrice).toBe(880);
     expect(links[0].lastChangePercent).toBe(10);
@@ -131,7 +131,7 @@ test.describe('receiving stock @inventory @receiving', () => {
     await expect(receiving.form).toHaveCount(0);
 
     expect((await buy.item(item.id)).currentQuantity).toBe(12);
-    const stored = await api.client.json<{ items: { packPrice: number }[] }>('superadmin', 'GET', `suppliers/${supplier.summary.id}`);
+    const stored = await api.client.json<{ items: { packPrice: number }[] }>('owner', 'GET', `suppliers/${supplier.summary.id}`);
     expect(stored.items[0].packPrice).toBe(840);
   });
 

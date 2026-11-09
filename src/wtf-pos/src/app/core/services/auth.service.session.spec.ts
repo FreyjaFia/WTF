@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { HttpErrorMessages, ServiceErrorMessages } from '@core/messages';
 import { environment } from '@environments/environment.development';
 import { AppRoles } from '@shared/constants/app-roles';
+import { Permissions } from '@shared/permissions';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { capture, failNetwork, failWith } from '../../testing/service-testing';
 import { AuthService } from './auth.service';
@@ -369,9 +370,9 @@ describe('AuthService session', () => {
     });
 
     it('matches roles case-insensitively and with spaced aliases', () => {
-      expect(create(tokenFor('SUPERADMIN')).hasAnyRole([AppRoles.Owner])).toBe(true);
+      expect(create(tokenFor('OWNER')).hasAnyRole([AppRoles.Owner])).toBe(true);
       TestBed.resetTestingModule();
-      expect(create(tokenFor('Super Admin')).hasAnyRole([AppRoles.Owner])).toBe(true);
+      expect(create(tokenFor('owner')).hasAnyRole([AppRoles.Owner])).toBe(true);
       TestBed.resetTestingModule();
       expect(create(tokenFor('admin viewer')).hasAnyRole([AppRoles.AdminViewer])).toBe(true);
       TestBed.resetTestingModule();
@@ -380,6 +381,27 @@ describe('AuthService session', () => {
 
     it('hasAnyRole is false for an empty requirement', () => {
       expect(create(tokenFor('Admin')).hasAnyRole([])).toBe(false);
+    });
+  });
+
+  describe('can and canAny', () => {
+    it('answers from the permissions of the signed-in role', () => {
+      const cashier = create(tokenFor('Cashier'));
+      expect(cashier.can(Permissions.OrdersWrite)).toBe(true);
+      expect(cashier.can(Permissions.ProductsRead)).toBe(false);
+      expect(cashier.canAny([Permissions.ProductsRead, Permissions.OrdersWrite])).toBe(true);
+      expect(cashier.canAny([Permissions.ProductsRead, Permissions.UsersRead])).toBe(false);
+      expect(cashier.canAny([])).toBe(false);
+    });
+
+    it('no longer accepts the old SuperAdmin role name', () => {
+      const legacy = create(tokenFor('SuperAdmin'));
+      expect(legacy.can(Permissions.AuditRead)).toBe(false);
+      expect(legacy.isOwner()).toBe(false);
+    });
+
+    it('gives nothing without a signed-in role', () => {
+      expect(create('garbage').can(Permissions.OrdersRead)).toBe(false);
     });
   });
 

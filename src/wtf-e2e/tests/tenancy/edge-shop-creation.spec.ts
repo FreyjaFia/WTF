@@ -114,7 +114,7 @@ test.describe('shop addresses and owner names, edge cases @tenancy @edge @platfo
   test('refuses an owner username that any shop already uses, in any letter case', async ({ request, platform }) => {
     const shop = await openShop(request, platform);
 
-    for (const username of [shop.ownerUsername, shop.ownerUsername.toUpperCase(), USERNAMES.admin, USERNAMES.admin.toUpperCase(), 'superadmin']) {
+    for (const username of [shop.ownerUsername, shop.ownerUsername.toUpperCase(), USERNAMES.admin, USERNAMES.admin.toUpperCase(), 'owner']) {
       const response = await platform.call('POST', 'tenants', body({ ownerUsername: username }));
       expect(response.status(), username).toBe(400);
       expect(await response.text()).toContain('Username already exists');

@@ -42,7 +42,7 @@ async function lowItemName(api: Api): Promise<string> {
 }
 
 test.describe('dashboard access @dashboard @auth', () => {
-  for (const role of ['superadmin', 'admin', 'viewer'] as ReadonlyArray<Role>) {
+  for (const role of ['owner', 'admin', 'viewer'] as ReadonlyArray<Role>) {
     test(`${role} gets dashboard data that includes a sale just made`, async ({ api }) => {
       const product = await api.products.create({ price: 100 });
       await api.orders.create({ items: [{ productId: product.id, quantity: 2 }] });
@@ -73,7 +73,7 @@ test.describe('dashboard access @dashboard @auth', () => {
 });
 
 test.describe('dashboard screen @dashboard', () => {
-  for (const role of ['superadmin', 'admin', 'viewer'] as ReadonlyArray<Role>) {
+  for (const role of ['owner', 'admin', 'viewer'] as ReadonlyArray<Role>) {
     test(`${role} sees the sales tiles after a sale`, async ({ api, signIn }) => {
       const product = await api.products.create({ price: 100 });
       await api.orders.create({ items: [{ productId: product.id, quantity: 1 }] });

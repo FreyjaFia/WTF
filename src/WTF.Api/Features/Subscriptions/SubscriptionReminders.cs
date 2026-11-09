@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using System.Text.Json;
+using WTF.Api.Common.Auth.Permissions;
 using WTF.Api.Features.Notifications;
-using WTF.Api.Features.Users.Enums;
 using WTF.Api.Services;
 using WTF.Calculations.Subscriptions;
 using WTF.Domain.Data;
@@ -48,8 +48,9 @@ public sealed class SubscriptionReminderService(
         if (sub is not null && ReminderFor(sub.CurrentPeriodEnd, sub.GraceDays, nowUtc.UtcDateTime) is { } text
             && sub.ReminderSentOn != DateOnly.FromDateTime(nowUtc.UtcDateTime))
         {
+            var billingRoles = SystemRolePermissions.RolesWith("subscription.billing");
             var owners = await db.Users.AsNoTracking()
-                .Where(u => u.IsActive && (u.RoleId == (int)UserRoleEnum.Owner || u.RoleId == (int)UserRoleEnum.Admin))
+                .Where(u => u.IsActive && billingRoles.Contains(u.Role.Name))
                 .Select(u => u.Id)
                 .ToListAsync(cancellationToken);
 

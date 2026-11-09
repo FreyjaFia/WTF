@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using WTF.Api.Common.Auth;
+using WTF.Api.Common.Auth.Permissions;
 using WTF.Api.Features.Notifications;
 using WTF.Calculations.Inventory;
 using WTF.Domain.Data;
@@ -14,7 +14,7 @@ public interface IStockAlertService
 
 public class StockAlertService(WTFDbContext db, INotificationService notifications) : IStockAlertService
 {
-    private static readonly string[] DefaultRecipientRoles = [AppRoles.Owner, AppRoles.Admin, AppRoles.StockManager];
+    private static readonly string[] DefaultRecipientRoles = SystemRolePermissions.RolesWith("stock.write");
 
     // Looks at each item's level after a change and tells the right people once when it got worse. The alert state moves
     // with one guarded UPDATE, so two registers that cross the level together alert once.

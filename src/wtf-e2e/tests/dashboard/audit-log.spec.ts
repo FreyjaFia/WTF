@@ -49,7 +49,7 @@ test.describe('audit log @dashboard @audit @auth', () => {
 
     await expect
       .poll(async () => {
-        const page = await api.client.json<AuditPage>('superadmin', 'GET', `audit-logs?entityId=${item.id}&page=1&pageSize=20`);
+        const page = await api.client.json<AuditPage>('owner', 'GET', `audit-logs?entityId=${item.id}&page=1&pageSize=20`);
         return page.items.some((row) => row.action === 'ItemCreated' && row.entityId === item.id);
       })
       .toBe(true);
@@ -63,14 +63,14 @@ test.describe('audit log @dashboard @audit @auth', () => {
 
     await expect
       .poll(async () => {
-        const page = await api.client.json<AuditPage>('superadmin', 'GET', `audit-logs?entityId=${order.id}&page=1&pageSize=20`);
+        const page = await api.client.json<AuditPage>('owner', 'GET', `audit-logs?entityId=${order.id}&page=1&pageSize=20`);
         return page.items.filter((row) => row.action === 'OrderVoided').length;
       })
       .toBe(1);
   });
 
   test('the audit action list includes the actions used here', async ({ api }) => {
-    const actions = await api.client.json<string[]>('superadmin', 'GET', 'audit-logs/actions');
+    const actions = await api.client.json<string[]>('owner', 'GET', 'audit-logs/actions');
     expect(actions).toEqual(expect.arrayContaining(['ItemCreated', 'OrderVoided', 'OrderCreated']));
   });
 
@@ -84,13 +84,13 @@ test.describe('audit log @dashboard @audit @auth', () => {
   test('the audit log exports to Excel and PDF with every matching row', async ({ api }) => {
     const item = await api.items.create({ name: unique('E2E Audit Export') });
 
-    const excel = await api.client.call('superadmin', 'GET', `audit-logs?entityId=${item.id}`, { accept: EXCEL });
+    const excel = await api.client.call('owner', 'GET', `audit-logs?entityId=${item.id}`, { accept: EXCEL });
     expect(excel.status(), await excel.text()).toBe(200);
     const excelBytes = await excel.body();
     expect(excelBytes.length).toBeGreaterThan(MIN_DOWNLOAD_BYTES);
     expect(excelBytes.subarray(0, 2).toString('latin1')).toBe('PK');
 
-    const pdf = await api.client.call('superadmin', 'GET', `audit-logs?entityId=${item.id}`, { accept: PDF });
+    const pdf = await api.client.call('owner', 'GET', `audit-logs?entityId=${item.id}`, { accept: PDF });
     expect(pdf.status()).toBe(200);
     const pdfBytes = await pdf.body();
     expect(pdfBytes.length).toBeGreaterThan(MIN_DOWNLOAD_BYTES);
@@ -105,7 +105,7 @@ test.describe('audit log @dashboard @audit @auth', () => {
 
   test('the owner opens the audit log page and downloads Excel and PDF', async ({ api, signIn }, info) => {
     await api.items.create({ name: unique('E2E Audit Screen') });
-    const page = await signIn('superadmin');
+    const page = await signIn('owner');
     await page.goto(ROUTES.auditLogs);
 
     await expect(page.getByRole('heading', { name: 'Audit Logs' })).toBeVisible();

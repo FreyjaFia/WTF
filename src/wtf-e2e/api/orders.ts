@@ -64,12 +64,12 @@ export class OrdersApi {
     return ApiClient.parse<Order>(await this.createRaw(input, role), 'create order');
   }
 
-  public async get(id: string, role: Role = 'superadmin'): Promise<Order> {
+  public async get(id: string, role: Role = 'owner'): Promise<Order> {
     return this.api.json<Order>(role, 'GET', `orders/${id}`);
   }
 
   public async withStatus(status: number): Promise<readonly Order[]> {
-    const page = await this.api.json<{ items: readonly Order[] }>('superadmin', 'GET', `orders/paged?status=${status}&page=1&pageSize=100`);
+    const page = await this.api.json<{ items: readonly Order[] }>('owner', 'GET', `orders/paged?status=${status}&page=1&pageSize=100`);
     return page.items;
   }
 
@@ -94,7 +94,7 @@ export class OrdersApi {
   }
 
   public async stockMovements(id: string): Promise<readonly Record<string, unknown>[]> {
-    return this.api.json<readonly Record<string, unknown>[]>('superadmin', 'GET', `orders/${id}/stock-movements`);
+    return this.api.json<readonly Record<string, unknown>[]>('owner', 'GET', `orders/${id}/stock-movements`);
   }
 
   public async sendMessage(id: string, body: string): Promise<void> {

@@ -9,7 +9,7 @@ export interface Caller {
 }
 
 // Lets the same helpers run as one of the seeded roles (ApiClient) or as the owner of a new shop (ShopSession).
-export function asRole(client: ApiClient, role: Role = 'superadmin'): Caller {
+export function asRole(client: ApiClient, role: Role = 'owner'): Caller {
   return {
     json: <T>(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, body?: unknown) => client.json<T>(role, method, path, body),
     call: (method, path, body) => client.call(role, method, path, { body }),

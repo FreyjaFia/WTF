@@ -15,7 +15,7 @@ interface DashboardJson {
 
 test.describe('the owner profit tiles on the dashboard @dashboard', () => {
   test('cost roles get the profit block and other dashboard roles are refused', async ({ api }) => {
-    for (const role of ['superadmin', 'admin', 'viewer'] as const) {
+    for (const role of ['owner', 'admin', 'viewer'] as const) {
       const dashboard = await api.client.json<DashboardJson>(role, 'GET', 'dashboard');
       expect(dashboard.profit, role).not.toBeNull();
     }

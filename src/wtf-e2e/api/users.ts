@@ -13,7 +13,7 @@ export class UsersApi {
   public constructor(private readonly api: ApiClient) {}
 
   public async create(roleId: number = ROLE_IDS.Cashier): Promise<User> {
-    return this.api.json<User>('superadmin', 'POST', 'users', {
+    return this.api.json<User>('owner', 'POST', 'users', {
       firstName: unique('User'),
       lastName: 'E2E',
       username: uniqueUsername(),
@@ -23,7 +23,7 @@ export class UsersApi {
   }
 
   public async remove(id: string): Promise<void> {
-    await this.api.json<unknown>('superadmin', 'DELETE', `users/${id}`);
+    await this.api.json<unknown>('owner', 'DELETE', `users/${id}`);
   }
 }
 

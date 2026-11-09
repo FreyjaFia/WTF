@@ -2,7 +2,7 @@ import { DatePipe } from '@angular/common';
 import { Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AuthService, SubscriptionService } from '@core/services';
-import { AppRoleGroups } from '@shared/constants/app-roles';
+import { Permissions } from '@shared/permissions';
 
 @Component({
   selector: 'app-subscription-banner',
@@ -14,7 +14,7 @@ export class SubscriptionBannerComponent {
   protected readonly subscription = inject(SubscriptionService);
   private readonly auth = inject(AuthService);
 
-  protected readonly canRenew = computed(() => this.auth.hasAnyRole(AppRoleGroups.SubscriptionBilling));
+  protected readonly canRenew = computed(() => this.auth.can(Permissions.SubscriptionBilling));
 
   protected readonly message = computed(() => {
     const days = this.subscription.daysLeft();
