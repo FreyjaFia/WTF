@@ -234,11 +234,9 @@ export class SignalRService implements OnDestroy {
     }
 
     const hubUrl = environment.apiUrl.replace('/api', HUB_PATHS.dashboard);
-    const token = this.authService.getToken();
-
     const connection = new signalR.HubConnectionBuilder()
       .withUrl(hubUrl, {
-        accessTokenFactory: () => token ?? '',
+        accessTokenFactory: () => this.authService.getToken() ?? '',
       })
       .withAutomaticReconnect()
       .build();

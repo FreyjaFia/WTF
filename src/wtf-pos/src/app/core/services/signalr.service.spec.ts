@@ -206,6 +206,22 @@ describe('SignalRService', () => {
     expect(dashboardDone).toHaveBeenCalledTimes(1);
     expect(orderDone).toHaveBeenCalledTimes(1);
   });
+  describe('dashboard hub token', () => {
+    it('reads the token when it connects, so a refreshed sign-in is used on reconnect', () => {
+      service.startDashboardHub();
+      token = 'newer-token';
+
+      expect(hub.builderUrl[0].options.accessTokenFactory()).toBe('newer-token');
+    });
+
+    it('uses an empty token once signed out', () => {
+      service.startDashboardHub();
+      token = null;
+
+      expect(hub.builderUrl[0].options.accessTokenFactory()).toBe('');
+    });
+  });
+
   describe('staff orders hub (chat)', () => {
     it('connects to its own hub, not the dashboard one, with the sign-in token', () => {
       service.startStaffOrdersHub();
