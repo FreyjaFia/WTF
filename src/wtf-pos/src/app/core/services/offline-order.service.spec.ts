@@ -89,6 +89,10 @@ function today(): string {
   return `${String(now.getFullYear()).slice(-2)}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
 }
 
+function idPattern(counter: number): RegExp {
+  return new RegExp(`^OFF-${today()}-${String(counter).padStart(3, '0')}-[0-9a-f]{6}$`);
+}
+
 describe('OfflineOrderService', () => {
   const originalTable = db.pendingOrders;
   let table: FakeTable;
@@ -159,8 +163,8 @@ describe('OfflineOrderService', () => {
       const first = await service.queue(command('1'), cart, 'Ana');
       const second = await service.queue(command('2'), cart, null);
 
-      expect(first).toBe(`OFF-${today()}-001`);
-      expect(second).toBe(`OFF-${today()}-002`);
+      expect(first).toMatch(idPattern(1));
+      expect(second).toMatch(idPattern(2));
       expect(service.pendingOrders()).toHaveLength(2);
       expect(service.pendingOrders()[0]).toMatchObject({
         localId: first,
@@ -175,10 +179,22 @@ describe('OfflineOrderService', () => {
       });
     });
 
-    it('continues numbering after existing orders for today', async () => {
-      const service = await create([{ localId: `OFF-${today()}-007` }]);
+    it('ends every id with a random part, so two tabs numbering from the same counter cannot clash', async () => {
+      const service = await create();
+      const suffixes = new Set<string>();
 
-      expect(await service.queue(command(), cart, null)).toBe(`OFF-${today()}-008`);
+      for (let i = 0; i < 20; i++) {
+        const id = await service.queue(command(), cart, null);
+        suffixes.add(id.split('-').pop()!);
+      }
+
+      expect(suffixes.size).toBeGreaterThan(15);
+    });
+
+    it('continues numbering after existing orders for today', async () => {
+      const service = await create([{ localId: `OFF-${today()}-007-ab12cd` }]);
+
+      expect(await service.queue(command(), cart, null)).toMatch(idPattern(8));
     });
 
     it('continues numbering from the saved counter even if the orders were synced', async () => {
@@ -188,21 +204,21 @@ describe('OfflineOrderService', () => {
       );
       const service = await create();
 
-      expect(await service.queue(command(), cart, null)).toBe(`OFF-${today()}-013`);
+      expect(await service.queue(command(), cart, null)).toMatch(idPattern(13));
     });
 
     it('restarts numbering when the saved counter is from another day', async () => {
       localStorage.setItem('wtf-offline-counter', JSON.stringify({ date: '200101', counter: 50 }));
       const service = await create([{ localId: 'OFF-200101-050' }]);
 
-      expect(await service.queue(command(), cart, null)).toBe(`OFF-${today()}-001`);
+      expect(await service.queue(command(), cart, null)).toMatch(idPattern(1));
     });
 
     it('ignores a corrupt saved counter', async () => {
       localStorage.setItem('wtf-offline-counter', '{broken');
       const service = await create();
 
-      expect(await service.queue(command(), cart, null)).toBe(`OFF-${today()}-001`);
+      expect(await service.queue(command(), cart, null)).toMatch(idPattern(1));
     });
   });
 

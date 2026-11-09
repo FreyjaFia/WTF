@@ -92,7 +92,7 @@ export class OfflineOrderService {
   ): Promise<string> {
     const today = this.getTodayString();
     this.localCounter++;
-    const localId = `OFF-${today}-${String(this.localCounter).padStart(3, '0')}`;
+    const localId = `OFF-${today}-${String(this.localCounter).padStart(3, '0')}-${this.randomSuffix()}`;
 
     localStorage.setItem(
       OfflineOrderService.COUNTER_KEY,
@@ -304,7 +304,7 @@ export class OfflineOrderService {
     let maxNum = 0;
 
     for (const order of orders) {
-      const match = order.localId.match(/^OFF-(\d{6})-(\d+)$/);
+      const match = order.localId.match(/^OFF-(\d{6})-(\d+)(?:-[0-9a-f]+)?$/);
 
       if (match && match[1] === today) {
         maxNum = Math.max(maxNum, parseInt(match[2], 10));
@@ -395,6 +395,13 @@ export class OfflineOrderService {
   // Queue numbers restart on every device, so the server key adds the device: two tablets cannot clash.
   private serverKey(order: PendingOrder): string {
     return `${order.localId}-${this.deviceId()}`;
+  }
+
+  // Two tabs share one counter in storage and can both take the same number, so the id also carries a random part.
+  private randomSuffix(): string {
+    const bytes = crypto.getRandomValues(new Uint8Array(3));
+
+    return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
   }
 
   private deviceId(): string {
