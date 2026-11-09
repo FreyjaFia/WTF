@@ -1,6 +1,6 @@
 ## Temperature (Hot / Iced) as an add-on type [First cut built on branch `temperature-addon`, 9 Nov 2026; not merged]
 
-**Built (first cut; script `tools/sql/20261118_add_temperature_addon.sql`, then `tools/dbsync.bat`).**
+**Built (first cut; script `tools/sql/20261120_add_temperature_addon.sql`, then `tools/dbsync.bat`).**
 
 - **Type.** The script gives every shop a `Temperature` add-on type (required, pick exactly one, sort order 0 so a line reads "Latte, Iced, Large") unless it already has one with that name. It creates no Hot or Iced products: the owner creates them as add-ons (price 0 and +10, say) and links them in the product editor, as with Size. Everything else (required rule on orders, promotions, stock Coverage, receipts, reports, customer link) already follows the type's own rules.
 - **Pre-selected option.** `ProductAddOns.IsDefault` (bit, default 0): at most one per product and type, only on a required type, cleared when the link is removed or its type changes. `PUT /api/products/{id}/addons/{addOnId}/default` (`ProductsWrite`) sets or clears it; the add-on groups of the product and of the POS catalog carry `defaultAddOnId`. Product editor: a "Pre-select" button per option in a required pick-one group with more than one option.
