@@ -40,8 +40,13 @@
         aria-hidden="true"
       ></div>
 
-      @for (group of groups(); track group.name) {
-        <p class="px-3 pt-2 pb-1 text-xs font-semibold tracking-wider text-gray-500 uppercase">
+      @for (group of groups(); track group.name; let first = $first) {
+        <p
+          class="mx-1 px-2 pt-3 pb-1.5 text-[11px] font-bold tracking-widest text-gray-700 uppercase"
+          [class.mt-2]="!first"
+          [class.border-t]="!first"
+          [class.border-gray-200]="!first"
+        >
           {{ group.name }}
         </p>
         @for (card of group.cards; track card.id) {
