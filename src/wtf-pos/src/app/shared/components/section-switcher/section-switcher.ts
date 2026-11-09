@@ -1,13 +1,12 @@
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink } from '@angular/router';
-import { IconComponent } from '@shared/components/icons/icon/icon';
 import { HubGroup } from '@shared/navigation/hub-groups';
 import { filter, map } from 'rxjs';
 
 @Component({
   selector: 'app-section-switcher',
-  imports: [RouterLink, IconComponent],
+  imports: [RouterLink],
   templateUrl: './section-switcher.html',
   host: {
     class: 'relative block',
