@@ -9,17 +9,13 @@
     (click)="toggle()"
   >
     {{ currentCard()?.label ?? 'Switch screen' }}
-    <svg
-      class="h-4 w-4 text-gray-500"
-      [class.rotate-180]="isOpen()"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      aria-hidden="true"
-    >
-      <path d="M6 9l6 6 6-6" />
-    </svg>
+    <app-icon
+      name="icon-forward"
+      [class]="
+        'h-4 w-4 shrink-0 text-gray-500 transition-transform ' +
+        (isOpen() ? '-rotate-90' : 'rotate-90')
+      "
+    />
   </button>
 
   @if (isOpen()) {

@@ -65,6 +65,7 @@ test.describe('Inventory hub @inventory @layout', () => {
       await page.getByTestId('inventory-switcher-button').click();
       const panel = page.getByTestId('inventory-switcher-panel');
       await expect(panel).toBeVisible();
+      await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)));
       const box = await panel.boundingBox();
       expect.soft(box && box.x >= 0 && box.x + box.width <= viewport.width, `${viewport.name}: switcher inside the screen`).toBe(true);
       expect.soft(box && box.y >= 0 && box.y + box.height <= viewport.height, `${viewport.name}: switcher fits the height`).toBe(true);

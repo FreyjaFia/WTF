@@ -70,6 +70,7 @@ test.describe('Management hub @management @layout', () => {
       await page.getByTestId('management-switcher-button').click();
       const panel = page.getByTestId('management-switcher-panel');
       await expect(panel).toBeVisible();
+      await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)));
       const box = await panel.boundingBox();
       expect.soft(box && box.x >= 0 && box.x + box.width <= viewport.width, `${viewport.name}: switcher inside the screen`).toBe(true);
       expect.soft(box && box.y >= 0 && box.y + box.height <= viewport.height, `${viewport.name}: switcher fits the height`).toBe(true);
