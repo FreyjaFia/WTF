@@ -1,15 +1,16 @@
 @if (cardCount() > 1) {
   <button
     type="button"
-    class="inline-flex min-h-11 items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+    class="-mx-2 inline-flex min-h-9 items-center gap-1 rounded-md px-2 text-sm font-semibold text-gray-900 transition hover:bg-gray-100"
     aria-haspopup="true"
     [attr.aria-expanded]="isOpen()"
+    [attr.aria-label]="'Switch screen, now on ' + (currentCard()?.label ?? hubLabel())"
     [attr.data-testid]="testIdPrefix() + '-switcher-button'"
     (click)="toggle()"
   >
-    Switch screen
+    {{ currentCard()?.label ?? 'Switch screen' }}
     <svg
-      class="h-4 w-4 transition-transform"
+      class="h-4 w-4 text-gray-500 transition-transform"
       [class.rotate-180]="isOpen()"
       viewBox="0 0 24 24"
       fill="none"
@@ -30,7 +31,7 @@
     ></div>
 
     <nav
-      class="bg-surface fixed inset-x-0 bottom-0 z-50 max-h-[80vh] overflow-y-auto rounded-t-2xl border border-gray-100 p-2 pb-6 shadow-2xl sm:absolute sm:inset-x-auto sm:top-full sm:right-0 sm:bottom-auto sm:mt-2 sm:max-h-[70vh] sm:w-72 sm:rounded-xl sm:pb-2 sm:shadow-lg"
+      class="bg-surface fixed inset-x-0 bottom-0 z-50 max-h-[80vh] overflow-y-auto rounded-t-2xl border border-gray-100 p-2 pb-6 shadow-2xl sm:absolute sm:inset-x-auto sm:top-full sm:bottom-auto sm:left-0 sm:mt-2 sm:max-h-[70vh] sm:w-72 sm:rounded-xl sm:pb-2 sm:shadow-lg"
       [attr.aria-label]="'Switch ' + hubLabel() + ' screen'"
       [attr.data-testid]="testIdPrefix() + '-switcher-panel'"
     >

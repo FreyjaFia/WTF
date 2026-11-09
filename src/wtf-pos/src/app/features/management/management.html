@@ -1,15 +1,21 @@
 <div class="bg-surface flex h-full w-full flex-col rounded-t-2xl sm:-mt-4 md:mt-0">
   @if (showBackToHub()) {
-    <div class="app-page-nav flex shrink-0 items-center justify-between gap-3">
+    <div class="app-page-nav flex shrink-0 items-center gap-2 text-sm">
       <a
         [routerLink]="hubRoute"
-        class="flex min-h-11 items-center gap-1 text-sm font-semibold text-gray-600 sm:hidden"
+        class="flex min-h-9 items-center gap-1 font-semibold text-gray-600 sm:hidden"
         data-testid="management-back"
       >
         <span aria-hidden="true">&larr;</span> Management
       </a>
+      <a
+        [routerLink]="hubRoute"
+        class="hidden font-medium text-gray-500 hover:text-gray-700 sm:inline"
+        data-testid="management-crumb"
+        >Management</a
+      >
+      <span class="text-gray-400" aria-hidden="true">/</span>
       <app-section-switcher
-        class="ml-auto"
         [groups]="switcherGroups()"
         hubLabel="Management"
         [hubRoute]="hubRoute"

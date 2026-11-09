@@ -35,11 +35,13 @@ export class SectionSwitcherComponent {
     this.groups().reduce((total, group) => total + group.cards.length, 0),
   );
 
-  protected readonly currentRoute = computed(() => {
+  protected readonly currentCard = computed(() => {
     const path = this.currentUrl().split(/[?#]/)[0];
-    const routes = this.groups().flatMap((group) => group.cards.map((card) => card.route));
-    return routes.find((route) => path === route || path.startsWith(route + '/')) ?? null;
+    const cards = this.groups().flatMap((group) => group.cards);
+    return cards.find((card) => path === card.route || path.startsWith(card.route + '/')) ?? null;
   });
+
+  protected readonly currentRoute = computed(() => this.currentCard()?.route ?? null);
 
   protected toggle(): void {
     this.isOpen.update((open) => !open);
