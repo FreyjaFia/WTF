@@ -94,6 +94,12 @@ describe('ItemEditorComponent', () => {
     alerts = { error: vi.fn(), success: vi.fn() };
   });
 
+  it('labels the Active toggle for screen readers', () => {
+    const { fixture } = create();
+    const toggle = (fixture.nativeElement as HTMLElement).querySelector('input[formcontrolname="isActive"]');
+    expect(toggle?.getAttribute('aria-label')).toBe('Active');
+  });
+
   describe('create mode', () => {
     it('starts with sensible defaults', () => {
       const { vm, form } = create();

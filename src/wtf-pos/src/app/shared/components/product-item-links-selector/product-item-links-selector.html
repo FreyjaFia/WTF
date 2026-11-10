@@ -33,12 +33,14 @@
               <input
                 type="text"
                 placeholder="Search products..."
+                aria-label="Search products"
                 class="input input-sm w-full rounded-xl border-transparent bg-gray-50 pl-9 transition-all focus:border-brand focus:bg-surface focus:ring-1 focus:ring-brand/20"
                 [value]="searchTerm()"
                 (input)="onSearchInput($event)"
               />
             </div>
             <select
+              aria-label="Filter products"
               class="select select-sm w-full rounded-xl border-gray-200 bg-surface text-sm focus:border-brand focus:ring-1 focus:ring-brand/20 sm:w-36"
               [value]="selectedFilter()"
               (change)="onFilterChange($event)"

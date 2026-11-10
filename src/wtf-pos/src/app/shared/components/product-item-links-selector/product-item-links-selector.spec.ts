@@ -132,6 +132,12 @@ describe('ProductItemLinksSelectorComponent', () => {
     expect(el.querySelector('#product-item-links-modal')).toBeTruthy();
   });
 
+  it('labels the search box and the filter for screen readers', () => {
+    const { el } = setup();
+    expect(el.querySelector('input[placeholder="Search products..."]')?.getAttribute('aria-label')).toBe('Search products');
+    expect(el.querySelector('select')?.getAttribute('aria-label')).toBe('Filter products');
+  });
+
   describe('open', () => {
     it('splits products into linked rows and active available products', () => {
       const { cmp, i } = setup();
