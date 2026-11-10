@@ -21,7 +21,8 @@
         </a>
       }
     </nav>
-    <div class="border-t border-gray-200 p-2.5">
+    <div class="space-y-1 border-t border-gray-200 p-2.5">
+      <app-theme-switcher [fullWidth]="true" placement="top-start" />
       <button
         type="button"
         class="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 active:bg-red-100"
@@ -40,7 +41,8 @@
           <span class="text-neutral">WTF</span>
           <span class="text-xs font-normal tracking-wider text-gray-500 uppercase">Platform</span>
         </div>
-        <button type="button" class="app-btn app-btn-ghost app-btn-sm ml-auto" (click)="signOut()">Sign out</button>
+        <app-theme-switcher class="ml-auto" [compact]="true" placement="bottom-end" />
+        <button type="button" class="app-btn app-btn-ghost app-btn-sm" (click)="signOut()">Sign out</button>
       </div>
     </header>
 

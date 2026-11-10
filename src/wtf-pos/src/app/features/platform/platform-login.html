@@ -1,4 +1,4 @@
-<div class="flex min-h-full items-center justify-center bg-gray-50 p-4">
+<div class="flex min-h-full flex-col items-center justify-center gap-6 bg-gray-50 p-4">
   <form
     [formGroup]="form"
     (ngSubmit)="signIn()"
@@ -34,4 +34,8 @@
       {{ loading() ? 'Signing in...' : 'Sign in' }}
     </button>
   </form>
+
+  <div class="w-56">
+    <app-theme-switcher [outlined]="true" placement="top-center" />
+  </div>
 </div>
