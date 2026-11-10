@@ -63,7 +63,7 @@ export function inventoryGroups(
         {
           id: 'stock-in',
           label: 'Stock In',
-          icon: 'icon-arrow-down',
+          icon: 'icon-inventory',
           description: 'Record stock that came in.',
           route: AppRoutes.InventoryStockIn,
           canShow: () => auth.canReadStockMovements(),
@@ -79,7 +79,7 @@ export function inventoryGroups(
         {
           id: 'waste',
           label: 'Waste',
-          icon: 'icon-warning',
+          icon: 'icon-delete',
           description: 'Wasted stock, and what is waiting for review.',
           route: AppRoutes.InventoryWaste,
           canShow: () => auth.canReadStockMovements(),
@@ -95,7 +95,7 @@ export function inventoryGroups(
         {
           id: 'purchase-orders',
           label: 'Purchasing',
-          icon: 'icon-receipt',
+          icon: 'icon-assignment-turned-in',
           description: 'Suggested orders and purchase orders.',
           route: AppRoutes.InventoryPurchaseOrders,
           canShow: () => auth.canReadStockMovements(),
@@ -103,7 +103,7 @@ export function inventoryGroups(
         {
           id: 'receiving',
           label: 'Receiving',
-          icon: 'icon-inventory',
+          icon: 'icon-download',
           description: 'Deliveries received against purchase orders.',
           route: AppRoutes.InventoryReceiving,
           canShow: () => auth.canReadStockMovements(),
@@ -122,7 +122,7 @@ export function managementGroups(auth: AuthService): HubGroup[] {
         {
           id: 'products',
           label: 'Products',
-          icon: 'icon-coffee',
+          icon: 'icon-cart',
           description: 'Menu items, prices, add-ons and categories.',
           route: AppRoutes.ManagementProducts,
           canShow: () => auth.canReadProducts(),
