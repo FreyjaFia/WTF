@@ -13,7 +13,7 @@ Blocking (the release should not go without an answer):
 
 - [ ] **Pilot shop and Platform admin.** Choose the platform admin username (and a password of 12 or more characters, kept out
   of chat and git) for step 5.
-- [ ] **Neutral Android app id.** `capacitor.config` still says `com.wtf.pos`. Pick a product-based id (not your name), decided: `app.wtf.pos`, before the pilot installs the app: it cannot change later without a fresh install. (Not yet applied in `capacitor.config`; do it as part of the release.)
+- [x] **Android app id.** Decided 10 Nov 2026: keep `com.wtf.pos` for now. Changing it later makes Android treat it as a different app and needs new Firebase and Huawei push setups plus renamed Java packages.
 - [ ] **SchemaScriptHistory rows.** Add rows for `20261114` to `20261120` as for every other script? (Recommended: yes, step 3.)
 - [ ] **Release tag.** Next tag (suggested `v1.20.0`; bump `src/wtf-pos/package.json` first, since CI reads the version from it).
 
