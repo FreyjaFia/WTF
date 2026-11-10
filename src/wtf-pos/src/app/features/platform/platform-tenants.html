@@ -78,14 +78,16 @@
 
   @if (loading()) {
     <div class="flex justify-center py-8"><span class="loading loading-spinner loading-lg"></span></div>
-  } @else if (visible().length === 0) {
+  } @else {
+  <app-pull-to-refresh [refreshing]="refreshing()" (refreshTriggered)="refresh()">
+  @if (visible().length === 0) {
     <div class="rounded-lg bg-surface p-8 text-center shadow-lg">
       <div class="mb-3 flex justify-center"><app-icon name="icon-coffee" [class]="'h-12 w-12 opacity-60'" /></div>
       <p class="text-lg font-semibold text-gray-700">No shops found</p>
       <p class="text-sm text-gray-500">Try adjusting your search or filters</p>
     </div>
   } @else {
-    <div class="space-y-2 lg:space-y-3" data-testid="shops-table">
+    <div class="space-y-2 pb-4 lg:space-y-3" data-testid="shops-table">
       <div class="sticky top-0 z-10 hidden grid-cols-12 items-start gap-4 border-b border-gray-100 pb-5 bg-surface px-4 pt-3 lg:grid">
         <div class="col-span-3"><app-sort-header label="Shop" [active]="sortColumn() === 'name'" [direction]="sortDirection()" (sorted)="toggleSort('name')" /></div>
         <div class="col-span-2"><app-sort-header label="Status" align="center" [active]="sortColumn() === 'status'" [direction]="sortDirection()" (sorted)="toggleSort('status')" /></div>
@@ -133,11 +135,20 @@
       }
     </div>
   }
+  </app-pull-to-refresh>
+  }
 </div>
 
 @if (creating()) {
-  <div class="app-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md" role="dialog" aria-modal="true" aria-label="New shop">
-    <div class="app-dialog mx-4 max-h-[90dvh] w-full max-w-xl animate-[modal-pop_0.2s_ease-out] overflow-y-auto rounded-2xl bg-surface p-6 shadow-2xl">
+  <div
+    class="app-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md"
+    role="dialog"
+    aria-modal="true"
+    aria-label="New shop"
+    (click)="closeCreate()"
+    (window:keydown.escape)="closeCreate()"
+  >
+    <div class="app-dialog mx-4 max-h-[90dvh] w-full max-w-xl animate-[modal-pop_0.2s_ease-out] overflow-y-auto rounded-2xl bg-surface p-6 shadow-2xl" (click)="$event.stopPropagation()">
       @if (dialogError(); as message) {
         <div class="mb-3 rounded-lg bg-red-50 p-3 text-sm text-red-700" role="alert">{{ message }}</div>
       }

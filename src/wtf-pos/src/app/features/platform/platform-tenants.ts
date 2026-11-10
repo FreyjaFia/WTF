@@ -7,6 +7,7 @@ import { PlatformService } from '@core/services';
 import { filterShops } from '@shared/calculations';
 import { FilterButtonComponent } from '@shared/components/filter-button/filter-button';
 import { IconComponent } from '@shared/components/icons/icon/icon';
+import { PullToRefreshComponent } from '@shared/components/pull-to-refresh/pull-to-refresh';
 import { SearchInputComponent } from '@shared/components/search-input/search-input';
 import { SideDrawerComponent } from '@shared/components/side-drawer/side-drawer';
 import { SortDirection, SortHeaderComponent } from '@shared/components/sort-header/sort-header';
@@ -34,6 +35,7 @@ interface StatusOption {
     SideDrawerComponent,
     SortHeaderComponent,
     IconComponent,
+    PullToRefreshComponent,
     PlatformChipComponent,
     PlatformSecretDialogComponent,
   ],
@@ -148,6 +150,10 @@ export class PlatformTenantsComponent implements OnInit {
   }
 
   protected closeCreate(): void {
+    if (this.busy()) {
+      return;
+    }
+
     this.creating.set(false);
   }
 

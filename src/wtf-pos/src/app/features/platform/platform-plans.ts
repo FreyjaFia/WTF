@@ -60,6 +60,10 @@ export class PlatformPlansComponent implements OnInit {
   }
 
   protected close(): void {
+    if (this.busy()) {
+      return;
+    }
+
     this.editing.set(null);
     this.error.set(null);
   }

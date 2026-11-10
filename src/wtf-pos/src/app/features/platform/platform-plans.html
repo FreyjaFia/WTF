@@ -42,8 +42,15 @@
 </div>
 
 @if (editing(); as plan) {
-  <div class="app-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md" role="dialog" aria-modal="true" aria-label="Edit plan">
-    <div class="app-dialog mx-4 max-h-[90dvh] w-full max-w-lg animate-[modal-pop_0.2s_ease-out] overflow-y-auto rounded-2xl bg-surface p-6 shadow-2xl">
+  <div
+    class="app-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Edit plan"
+    (click)="close()"
+    (window:keydown.escape)="close()"
+  >
+    <div class="app-dialog mx-4 max-h-[90dvh] w-full max-w-lg animate-[modal-pop_0.2s_ease-out] overflow-y-auto rounded-2xl bg-surface p-6 shadow-2xl" (click)="$event.stopPropagation()">
       @if (error(); as message) {
         <div class="mb-3 rounded-lg bg-red-50 p-3 text-sm text-red-700" role="alert">{{ message }}</div>
       }
