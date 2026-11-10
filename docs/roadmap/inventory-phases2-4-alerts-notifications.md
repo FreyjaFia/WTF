@@ -129,7 +129,7 @@ alerted (`LastAlertStatus` above ok) and are still low are reminded; an alert or
 day; the row is lifted by one guarded `UPDATE`, so two runs in the same moment lift it once (real SQL test). A reminder reads
 "Still low: Oat Milk ... Day 3." (day 1 is the first alert). Creating an item whose starting stock is already under a level
 now alerts (an item created with nothing yet stays quiet), and so does restoring an item that fell while inactive. **Left out on
-purpose:** snooze, escalation to Admins, skipping closed days and `MaxDays` (the choices below stay open). **Checked** by tests
+purpose:** snooze, escalation to Admins, skipping closed days and a `MaxDays` stop limit (none of these exists; reminders run daily until the item is back to ok). **Checked** by tests
 (.NET suite, including real SQL Server) and in the running app on a throwaway database: an alert read yesterday came back
 unread as "Still low: Oat Milk ... Day 2." with the count at 1, a stock manager with no earlier row got a first alert, an
 item that is fine got nothing, and restarting the API the same day sent no second reminder. The monthly workbook scheduler
@@ -148,11 +148,11 @@ steps and settings are unchanged.
    - **Runs once a day at a set shop time** (for example 08:00, `Asia/Manila`), using the same catch-up scheduler as the chat
      and image cleanups (`DailyCatchUpScheduler`), so a sleeping app sends the day's reminders when it wakes and never twice in
      a day (the last run is saved the same way). Settings in a `StockAlertReminders` section: `Enabled`, run time, time zone,
-     `MaxDays` (0 = no limit), and a dry run that only logs, on for the first run, like the other jobs.
+     and a dry run that only logs, on for the first run, like the other jobs.
    - Goes to the same people as the first alert (the item's named people, else the stock roles).
    - **Choices still open:** a snooze ("remind me in 1, 3 or 7 days") for a person who knows an order is coming, so the
      reminders do not become noise they learn to ignore; whether to add the Admins to the reminder after some days of silence
-     (escalation); whether closed days are skipped; whether to stop after `MaxDays` or go on until fixed.
+     (escalation); whether closed days are skipped; whether to stop after a number of days or go on until fixed (today it goes on until fixed).
 2. **Alerts when the levels are changed.** Built: editing an item's warning or critical level checks it at once, so
    raising a level above the current balance alerts immediately; an item that gets worse alerts, one that only improves (critical
    back to warning) is remembered without an alert, and one that is fixed by the edit stops being tracked. The two gaps (creating
@@ -160,7 +160,7 @@ steps and settings are unchanged.
 
 **Tests for these:** the reminder job sends once a day and not twice on a second run the same day; an item back to ok gets no
 reminder and its episode ends; reading the alert does not stop the next day's reminder; a reminder bumps the existing row (unread
-again, count up) instead of adding one; a recovered item that falls again starts a new row; named people only; `MaxDays`; the dry
+again, count up) instead of adding one; a recovered item that falls again starts a new row; named people only; the dry
 run sends nothing; creating a low item and restoring a low item alert once; the real-SQL test that two runs in the same moment
 send one reminder.
 
