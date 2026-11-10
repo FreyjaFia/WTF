@@ -279,7 +279,7 @@ app always runs with a current tenant, even when there is only one. Keep this po
 5. Only after a pilot has run a few weeks: custom domains, branded Android builds, self-service sign-up, payments.
 
    Phase 5 rehearsal done on a local copy of production (all tenant scripts applied, isolation, suspend and lock checked).
-   The steps for production are in `docs/multi-tenant-rollout-checklist.md`.
+   The steps for production are in `docs/production-deployment-checklist.md`.
 
 **Open questions for the owner**
 
