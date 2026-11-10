@@ -212,7 +212,7 @@ test.describe('the platform log @tenancy @platform @audit', () => {
     await platform.setStatus(shop.id, 'resume');
     const page = await platformPage(newContext);
 
-    await new PlatformShell(page).link('Platform log').click();
+    await new PlatformShell(page).link('Logs').click();
     await expect(page).toHaveURL(new RegExp(`${PLATFORM_ROUTES.log}$`));
     await page.getByLabel('Filter by shop').selectOption({ label: shop.name });
 

@@ -25,7 +25,7 @@ export class PlatformShellComponent {
     { label: 'Overview', icon: 'icon-dashboard', link: AppRoutes.PlatformOverview },
     { label: 'Shops', icon: 'icon-coffee', link: AppRoutes.PlatformShops },
     { label: 'Plans', icon: 'icon-tag', link: AppRoutes.PlatformPlans },
-    { label: 'Platform log', icon: 'icon-audit-logs', link: AppRoutes.PlatformLog },
+    { label: 'Logs', icon: 'icon-audit-logs', link: AppRoutes.PlatformLog },
   ];
 
   protected signOut(): void {

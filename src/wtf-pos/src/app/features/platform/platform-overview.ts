@@ -3,6 +3,7 @@ import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } 
 import { Router, RouterLink } from '@angular/router';
 import { PlatformService } from '@core/services';
 import { isQuiet, needsAttention, summarizeShops } from '@shared/calculations';
+import { IconComponent } from '@shared/components/icons/icon/icon';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { PlatformAuditLogDto, PlatformTenantDto } from '@shared/models/platform.models';
 import { PlanDto } from '@shared/models/subscription.models';
@@ -12,7 +13,7 @@ import { warningLabel, warningTone } from './platform-labels';
 
 @Component({
   selector: 'app-platform-overview',
-  imports: [DatePipe, CurrencyPipe, RouterLink, PlatformChipComponent],
+  imports: [DatePipe, CurrencyPipe, RouterLink, IconComponent, PlatformChipComponent],
   templateUrl: './platform-overview.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

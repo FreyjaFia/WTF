@@ -273,7 +273,7 @@ test.describe('platform on a phone @tenancy @platform @ui', () => {
     const dock = new PlatformDock(page);
 
     await expect(dock.nav).toBeVisible();
-    for (const name of ['Overview', 'Shops', 'Plans', 'Platform log'] as const) {
+    for (const name of ['Overview', 'Shops', 'Plans', 'Logs'] as const) {
       await expect(dock.link(name)).toBeVisible();
     }
     await expect(page.getByRole('complementary', { name: 'Platform navigation' })).toBeHidden();
@@ -289,7 +289,7 @@ test.describe('platform on a phone @tenancy @platform @ui', () => {
     await expect(page).toHaveURL(/\/platform\/shops/);
     await dock.link('Plans').click();
     await expect(page).toHaveURL(/\/platform\/plans/);
-    await dock.link('Platform log').click();
+    await dock.link('Logs').click();
     await expect(page).toHaveURL(/\/platform\/log/);
     await dock.signOutButton.click();
 

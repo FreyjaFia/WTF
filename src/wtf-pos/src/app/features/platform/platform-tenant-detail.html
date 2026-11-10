@@ -15,17 +15,13 @@
         <h1 class="wrap-break-word text-xl font-bold text-gray-900 sm:text-2xl" data-testid="shop-title">{{ t.name }}</h1>
         <p class="text-xs text-gray-500 sm:text-sm">{{ t.slug }} &middot; created {{ t.createdAt | date: 'mediumDate' }}</p>
       </div>
-      <app-platform-chip [text]="t.statusName" [tone]="statusTone(t.status)" />
-      @if (t.periodEnd) {
-        <app-platform-chip [text]="warningLabel(t.warning)" [tone]="warningTone(t.warning)" />
-      }
     </header>
 
     @if (!dialog() && error(); as message) {
       <div class="rounded-lg bg-red-50 p-3 text-sm text-red-700" role="alert">{{ message }}</div>
     }
 
-    <nav class="flex gap-1 overflow-x-auto overflow-y-hidden border-b border-gray-200" role="tablist" aria-label="Shop sections">
+    <nav class="flex gap-1 overflow-x-auto overflow-y-hidden border-b border-gray-200 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist" aria-label="Shop sections">
       @for (item of tabs; track item.id) {
         <button
           type="button"
@@ -45,6 +41,20 @@
       @case ('overview') {
         <section class="grid gap-4 lg:grid-cols-3">
           <dl class="grid grid-cols-2 gap-x-4 gap-y-4 rounded-xl bg-surface p-4 text-sm shadow lg:col-span-2">
+            <div>
+              <dt class="text-xs text-gray-500">Status</dt>
+              <dd class="mt-0.5"><app-platform-chip [text]="t.statusName" [tone]="statusTone(t.status)" /></dd>
+            </div>
+            <div>
+              <dt class="text-xs text-gray-500">Subscription</dt>
+              <dd class="mt-0.5">
+                @if (t.periodEnd) {
+                  <app-platform-chip [text]="warningLabel(t.warning)" [tone]="warningTone(t.warning)" />
+                } @else {
+                  <span class="font-medium text-gray-900">None</span>
+                }
+              </dd>
+            </div>
             <div><dt class="text-xs text-gray-500">Plan</dt><dd class="font-medium text-gray-900">{{ t.planName ?? 'None' }}</dd></div>
             <div><dt class="text-xs text-gray-500">Paid until</dt><dd class="font-medium text-gray-900">{{ t.periodEnd ? (t.periodEnd | date: 'mediumDate') : 'None' }}</dd></div>
             <div><dt class="text-xs text-gray-500">People</dt><dd class="font-medium text-gray-900">{{ t.userCount }}</dd></div>
