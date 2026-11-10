@@ -1,6 +1,7 @@
 export const environment = {
   production: true,
   apiUrl: 'https://wtfbyfaith.runasp.net/api',
+  environmentLabel: '',
   githubRepoOwner: 'FreyjaFia',
   githubRepoName: 'WTF',
   skipUpdateChecks: false,

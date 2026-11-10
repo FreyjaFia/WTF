@@ -27,6 +27,16 @@ describe('BrandService', () => {
     expect(document.title).toBe('Moon Brew POS');
   });
 
+  it('adds the environment label to the title when one is set', () => {
+    const { service, http } = setupHttpService(BrandService);
+    const original = environment.environmentLabel;
+    environment.environmentLabel = 'STAGING';
+    service.load();
+    http.expectOne(`${environment.apiUrl}/settings/brand`).flush(brand);
+    expect(document.title).toBe('Moon Brew POS STAGING');
+    environment.environmentLabel = original;
+  });
+
   it('loads the brand of a customer link', () => {
     const { service, http } = setupHttpService(BrandService);
     service.loadPublic('abc');

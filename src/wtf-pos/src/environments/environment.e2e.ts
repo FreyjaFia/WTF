@@ -1,6 +1,7 @@
 export const environment = {
   production: false,
   apiUrl: 'http://localhost:5290/api',
+  environmentLabel: '',
   githubRepoOwner: 'FreyjaFia',
   githubRepoName: 'WTF',
   skipUpdateChecks: true,

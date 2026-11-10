@@ -62,7 +62,8 @@ export class BrandService {
 
   private apply(brand: PublicBrandDto): void {
     this._brand.set(brand);
-    this.title.setTitle(`${brand.shopName} POS`);
+    const label = environment.environmentLabel ? ` ${environment.environmentLabel}` : '';
+    this.title.setTitle(`${brand.shopName} POS${label}`);
 
     if (brand.primaryColor) {
       document.documentElement.style.setProperty('--shop-primary', brand.primaryColor);
