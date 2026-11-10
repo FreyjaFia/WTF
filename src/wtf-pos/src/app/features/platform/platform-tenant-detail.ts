@@ -1,9 +1,10 @@
-import { CurrencyPipe, DatePipe } from '@angular/common';
+import { CurrencyPipe, DatePipe, NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AlertService, PlatformService } from '@core/services';
 import { isLiveShop } from '@shared/calculations';
+import { IconComponent } from '@shared/components/icons/icon/icon';
 import { AppRoutes } from '@shared/constants/app-routes';
 import {
   DeletionPreviewDto,
@@ -27,7 +28,7 @@ const INVOICE_PENDING = 1;
 
 @Component({
   selector: 'app-platform-tenant-detail',
-  imports: [ReactiveFormsModule, DatePipe, CurrencyPipe, RouterLink, PlatformChipComponent, PlatformSecretDialogComponent],
+  imports: [ReactiveFormsModule, DatePipe, CurrencyPipe, NgTemplateOutlet, RouterLink, IconComponent, PlatformChipComponent, PlatformSecretDialogComponent],
   templateUrl: './platform-tenant-detail.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -165,6 +166,14 @@ export class PlatformTenantDetailComponent implements OnInit {
         this.loading.set(false);
       },
     });
+  }
+
+  protected dismissDialog(): void {
+    if (this.busy()) {
+      return;
+    }
+
+    this.closeDialog();
   }
 
   protected closeDialog(): void {
