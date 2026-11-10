@@ -56,7 +56,6 @@ test.describe('Inventory hub @inventory @layout', () => {
       await go(page, '/inventory');
       await expect(page.getByTestId('inventory-card-items')).toBeVisible();
       expect.soft(overflowProblem(await measureOverflow(page)), `${viewport.name}: hub overflow`).toBeNull();
-      await page.screenshot({ path: `/mnt/project-files/rbac-phase-4/inventory-hub-${viewport.name}.png` });
 
       await page.getByTestId('inventory-card-items').click();
       await expect(page).toHaveURL(/\/inventory\/items$/);
@@ -69,7 +68,6 @@ test.describe('Inventory hub @inventory @layout', () => {
       const box = await panel.boundingBox();
       expect.soft(box && box.x >= 0 && box.x + box.width <= viewport.width, `${viewport.name}: switcher inside the screen`).toBe(true);
       expect.soft(box && box.y >= 0 && box.y + box.height <= viewport.height, `${viewport.name}: switcher fits the height`).toBe(true);
-      await page.screenshot({ path: `/mnt/project-files/rbac-phase-4/switcher-inventory-${viewport.name.replace(' ', '-')}.png` });
       await page.keyboard.press('Escape');
 
       const back = page.getByTestId('inventory-back');

@@ -74,7 +74,6 @@ test.describe('Management hub @management @layout', () => {
       const box = await panel.boundingBox();
       expect.soft(box && box.x >= 0 && box.x + box.width <= viewport.width, `${viewport.name}: switcher inside the screen`).toBe(true);
       expect.soft(box && box.y >= 0 && box.y + box.height <= viewport.height, `${viewport.name}: switcher fits the height`).toBe(true);
-      await page.screenshot({ path: `/mnt/project-files/rbac-phase-4/switcher-management-${viewport.name.replace(' ', '-')}.png` });
       await page.keyboard.press('Escape');
 
       const back = page.getByTestId('management-back');
