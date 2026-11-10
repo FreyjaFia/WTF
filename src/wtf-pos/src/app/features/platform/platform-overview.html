@@ -4,7 +4,20 @@
       <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Overview</h1>
       <p class="text-xs text-gray-500 sm:text-sm">How the shops on the platform are doing today</p>
     </div>
-    <button type="button" class="app-btn app-btn-secondary app-btn-sm" (click)="load()" [disabled]="loading()">Refresh</button>
+    <button
+      type="button"
+      class="app-btn app-btn-ghost p-2"
+      [class.opacity-70]="loading()"
+      (click)="load()"
+      [disabled]="loading()"
+      aria-label="Refresh"
+    >
+      <app-icon
+        name="icon-refresh"
+        [class]="loading() ? 'h-5 w-5 animate-spin text-gray-600' : 'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'"
+        [fill]="'currentColor'"
+      />
+    </button>
     <button type="button" class="app-btn app-btn-primary app-btn-sm" (click)="newShop()">New shop</button>
   </header>
 

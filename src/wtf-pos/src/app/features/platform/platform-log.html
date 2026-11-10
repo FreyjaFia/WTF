@@ -1,10 +1,23 @@
 <div class="mx-auto flex max-w-6xl flex-col gap-4 p-4 sm:p-6">
   <header class="flex flex-wrap items-center gap-3">
     <div class="mr-auto">
-      <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Platform log</h1>
+      <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Logs</h1>
       <p class="text-xs text-gray-500 sm:text-sm">The latest 100 things platform admins did</p>
     </div>
-    <button type="button" class="app-btn app-btn-secondary app-btn-sm" (click)="load()" [disabled]="loading()">Refresh</button>
+    <button
+      type="button"
+      class="app-btn app-btn-ghost p-2"
+      [class.opacity-70]="loading()"
+      (click)="load()"
+      [disabled]="loading()"
+      aria-label="Refresh"
+    >
+      <app-icon
+        name="icon-refresh"
+        [class]="loading() ? 'h-5 w-5 animate-spin text-gray-600' : 'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'"
+        [fill]="'currentColor'"
+      />
+    </button>
   </header>
 
   @if (error(); as message) {

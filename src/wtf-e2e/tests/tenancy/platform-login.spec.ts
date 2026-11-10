@@ -35,7 +35,7 @@ test.describe('platform admin sign in @tenancy @platform', () => {
 
     await expect(page).toHaveURL(/\/platform\/overview/);
     const shell = new PlatformShell(page);
-    for (const name of ['Overview', 'Shops', 'Plans', 'Platform log'] as const) {
+    for (const name of ['Overview', 'Shops', 'Plans', 'Logs'] as const) {
       await expect(shell.link(name)).toBeVisible();
     }
   });

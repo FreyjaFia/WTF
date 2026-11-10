@@ -41,7 +41,7 @@ export class PlatformShell {
     this.signOutButton = this.nav.getByRole('button', { name: 'Sign out' });
   }
 
-  public link(name: 'Overview' | 'Shops' | 'Plans' | 'Platform log'): Locator {
+  public link(name: 'Overview' | 'Shops' | 'Plans' | 'Logs'): Locator {
     return this.nav.getByRole('link', { name });
   }
 }
@@ -55,7 +55,7 @@ export class PlatformDock {
     this.signOutButton = page.getByRole('button', { name: 'Sign out' });
   }
 
-  public link(name: 'Overview' | 'Shops' | 'Plans' | 'Platform log'): Locator {
+  public link(name: 'Overview' | 'Shops' | 'Plans' | 'Logs'): Locator {
     return this.nav.getByRole('link', { name });
   }
 }

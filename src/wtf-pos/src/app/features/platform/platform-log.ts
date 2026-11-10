@@ -4,6 +4,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { PlatformService } from '@core/services';
+import { IconComponent } from '@shared/components/icons/icon/icon';
 import { SearchInputComponent } from '@shared/components/search-input/search-input';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { PlatformAuditLogDto, PlatformTenantDto } from '@shared/models/platform.models';
@@ -11,7 +12,7 @@ import { forkJoin } from 'rxjs';
 
 @Component({
   selector: 'app-platform-log',
-  imports: [DatePipe, ReactiveFormsModule, RouterLink, SearchInputComponent],
+  imports: [DatePipe, ReactiveFormsModule, RouterLink, SearchInputComponent, IconComponent],
   templateUrl: './platform-log.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
