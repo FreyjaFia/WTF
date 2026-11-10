@@ -103,7 +103,7 @@ export function inventoryGroups(
         {
           id: 'receiving',
           label: 'Receiving',
-          icon: 'icon-box',
+          icon: 'icon-package',
           description: 'Deliveries received against purchase orders.',
           route: AppRoutes.InventoryReceiving,
           canShow: () => auth.canReadStockMovements(),
