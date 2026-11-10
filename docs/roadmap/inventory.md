@@ -46,12 +46,14 @@ This feature is split by phase so a task opens only what it needs:
 - [Phases 2-4 and the bell](inventory-phases2-4-alerts-notifications.md): pack and shared stock, consumables and coverage, alerts, reminders, Needs Attention, global notifications.
 - [Phases 5-9](inventory-phases5-9-costing-profit.md): waste, costing and recipes (Ingredients & Cost), counts and variance, suppliers, profit reports and expenses.
 
-### Polish pass before deploying inventory to production [Planned, added 26 Oct 2026]
+### Polish pass before deploying inventory to production [Screens done 10 Nov 2026; setup and Android steps open]
 
 Inventory is built and checked on throwaway databases, not yet on the live shop. Before it goes to production, do one
 deliberate polish pass over everything built so far (Phases 1 to 4, the Needs Attention and Coverage screens, notifications,
 the delete and restore rules, the pre-checkout stock label), so the first real day does not find the rough edges. Nothing here
 is new work; it is the checklist for finishing and proving what exists.
+
+**Status (10 Nov 2026, cloud run on a throwaway database):** every inventory screen (hub, items list, details and editor, Stock In, Needs Attention, Coverage, counts, reorder, purchase orders, receiving, waste, alerts, Suppliers) was opened as Owner, Admin, Stock Manager, Item Manager, Admin Viewer and Cashier at 375, 820 and 1440 px. No page scrolled sideways, no request failed, and each role was sent where its permissions say. Fixed: the sidebar now starts collapsed between 640 and 1023 px (the squeeze that made long item titles wrap one letter per line), and three controls on the item editor had no accessible name (Active toggle, product search and filter in the link dialog). Layout (95) and inventory (259) Playwright tests pass with 3 workers; the Angular suite passes (4,294). Still open: the Android check (stock-in form, POS stock warning, pull to refresh, bell), the live-shop data steps (opening counts, links, who is told), the production release steps, the open reminder choices, the "Record Waste" button sharing the trash icon with Delete on item details, and a second wording and contrast review in the Cafe style. Not checked on a copy of real data.
 
 **Release steps**
 
