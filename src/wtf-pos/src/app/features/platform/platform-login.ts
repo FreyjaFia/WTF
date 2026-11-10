@@ -2,11 +2,12 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { PlatformService } from '@core/services';
+import { ThemeSwitcherComponent } from '@shared/components/theme-switcher/theme-switcher';
 import { AppRoutes } from '@shared/constants/app-routes';
 
 @Component({
   selector: 'app-platform-login',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, ThemeSwitcherComponent],
   templateUrl: './platform-login.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

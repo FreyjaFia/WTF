@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { PlatformService } from '@core/services';
 import { IconComponent } from '@shared/components/icons/icon/icon';
+import { ThemeSwitcherComponent } from '@shared/components/theme-switcher/theme-switcher';
 import { AppRoutes } from '@shared/constants/app-routes';
 
 interface PlatformNavItem {
@@ -12,7 +13,7 @@ interface PlatformNavItem {
 
 @Component({
   selector: 'app-platform-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, IconComponent],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, IconComponent, ThemeSwitcherComponent],
   templateUrl: './platform-shell.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
