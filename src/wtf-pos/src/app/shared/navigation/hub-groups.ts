@@ -95,7 +95,7 @@ export function inventoryGroups(
         {
           id: 'purchase-orders',
           label: 'Purchasing',
-          icon: 'icon-assignment-turned-in',
+          icon: 'icon-send',
           description: 'Suggested orders and purchase orders.',
           route: AppRoutes.InventoryPurchaseOrders,
           canShow: () => auth.canReadStockMovements(),
@@ -103,7 +103,7 @@ export function inventoryGroups(
         {
           id: 'receiving',
           label: 'Receiving',
-          icon: 'icon-download',
+          icon: 'icon-box',
           description: 'Deliveries received against purchase orders.',
           route: AppRoutes.InventoryReceiving,
           canShow: () => auth.canReadStockMovements(),
