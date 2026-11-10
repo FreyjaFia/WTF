@@ -66,7 +66,9 @@ export class SidebarComponent implements OnInit, OnDestroy {
   protected readonly now = signal(new Date());
   protected readonly appVersion = appVersion;
   protected readonly isOnline = this.connectivity.isOnline;
-  protected readonly isCollapsed = signal(false);
+  private readonly narrowQuery = typeof window !== 'undefined' && window.matchMedia ? window.matchMedia('(min-width: 640px) and (max-width: 1023px)') : null;
+  private userToggled = false;
+  protected readonly isCollapsed = signal(this.narrowQuery?.matches ?? false);
   protected readonly showLogoutModal = signal(false);
   private clockIntervalId: ReturnType<typeof setInterval> | null = null;
   private routeSubscription?: { unsubscribe: () => void };
@@ -88,10 +90,13 @@ export class SidebarComponent implements OnInit, OnDestroy {
       this.loadMe();
     });
 
+    this.narrowQuery?.addEventListener('change', this.followScreenWidth);
+
     this.loadMe();
   }
 
   public ngOnDestroy(): void {
+    this.narrowQuery?.removeEventListener('change', this.followScreenWidth);
     if (this.clockIntervalId) {
       clearInterval(this.clockIntervalId);
       this.clockIntervalId = null;
@@ -101,8 +106,16 @@ export class SidebarComponent implements OnInit, OnDestroy {
   }
 
   protected toggleSidebar(): void {
+    this.userToggled = true;
     this.isCollapsed.update((collapsed) => !collapsed);
   }
+
+  private readonly followScreenWidth = (event: MediaQueryListEvent): void => {
+    // Between 640 and 1023 px an open sidebar leaves pages about 380 px wide, so it starts collapsed unless the user chose
+    if (!this.userToggled) {
+      this.isCollapsed.set(event.matches);
+    }
+  };
 
   protected goToMyProfile(event?: Event): void {
     event?.preventDefault();

@@ -16,11 +16,26 @@ import { SidebarComponent } from './sidebar';
 describe('SidebarComponent', () => {
   const CACHE_KEY = 'wtf_me_cache';
 
+  let narrow = false;
+  let widthListeners: ((event: { matches: boolean }) => void)[] = [];
+
   beforeEach(() => {
     localStorage.clear();
+    narrow = false;
+    widthListeners = [];
+    vi.stubGlobal('matchMedia', () => ({
+      get matches(): boolean {
+        return narrow;
+      },
+      addEventListener: (_: string, fn: (event: { matches: boolean }) => void): void => {
+        widthListeners.push(fn);
+      },
+      removeEventListener: (): void => undefined,
+    }));
   });
 
   afterEach(() => {
+    vi.unstubAllGlobals();
     vi.useRealTimers();
     localStorage.clear();
   });
@@ -215,6 +230,25 @@ describe('SidebarComponent', () => {
     toggle().click();
     fixture.detectChanges();
     expect(aside.classList).toContain('w-60');
+  });
+
+  it('starts collapsed between 640 and 1023 px and follows the width until the user chooses', async () => {
+    narrow = true;
+    const { fixture, el } = await setup();
+    const aside = el.querySelector('aside')!;
+    expect(aside.classList).toContain('w-21');
+
+    widthListeners.forEach((fn) => fn({ matches: false }));
+    fixture.detectChanges();
+    expect(aside.classList).toContain('w-60');
+
+    (el.querySelector('[aria-label$="sidebar"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(aside.classList).toContain('w-21');
+
+    widthListeners.forEach((fn) => fn({ matches: false }));
+    fixture.detectChanges();
+    expect(aside.classList).toContain('w-21');
   });
 
   it('navigates to my profile', async () => {
