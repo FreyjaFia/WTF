@@ -14,7 +14,7 @@ update its file and the status in the table below.
 | Sales Reporting (phases 1-4) | Implemented, checked | [sales-reporting](roadmap/sales-reporting.md) |
 | Multiple Branches, Branding, Multi-tenant | Planned, design decided | [multiple-branches-and-tenants](roadmap/multiple-branches-and-tenants.md) |
 | Role-Based Access Control | In progress (phases 1 to 5 built on branches, not merged) | [role-based-access](roadmap/role-based-access.md) |
-| Block features by subscription plan | Planned, plan written, decisions open | [block-features-by-plan](roadmap/block-features-by-plan.md) |
+| Block features by subscription plan | Planned, partly built by RBAC phase 4, bundles open | [block-features-by-plan](roadmap/block-features-by-plan.md) |
 | Senior Citizen / PWD discount | Planned, confirm the rules first | [senior-pwd-discount](roadmap/senior-pwd-discount.md) |
 | Cashless Payments | Planned, needs research | [cashless-payments](roadmap/cashless-payments.md) |
 | Receipt and Kitchen Printing | Planned | [receipt-and-kitchen-printing](roadmap/receipt-and-kitchen-printing.md) |

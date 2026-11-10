@@ -92,3 +92,37 @@ setting or a small rule, not a rewrite.
 
 ---
 
+
+### Refresh against the code as of 10 Nov 2026 [Planning, nothing built]
+
+The design above stands. What changed since it was written, and the build order.
+
+- **Multi-tenant.** `OrderSeniorPwdDiscounts` carries `TenantId` and the EF global filter. The rate, VAT rate,
+  VAT-registered flag, TIN and address are per-tenant settings (where Branding Phase 2 settings live; confirm the table when building). Time zone and
+  currency stay fixed (Asia/Manila, PHP). Branches are out, so nothing is per branch.
+- **RBAC.** New permission `orders.discount.seniorpwd` (Cashier, Admin, Owner; not Admin Viewer or Stock Manager), the
+  report uses `reports.read`, the claim export uses a new `reports.seniorpwd.export` (Admin and Owner). Removing or editing
+  on a completed order stays under `orders.override`. The key goes in the permission catalog and `permission-catalog.json`,
+  with golden tests updated.
+- **Plan gating.** The discount at the register is core (a legal duty, never gated). The Senior/PWD report and export
+  follow `reports`; the `workbook` sheet follows `workbook`.
+- **Offline.** The arithmetic is local, so it works offline. The queued order carries the type, name, ID and the quoted
+  amounts. Offline Phase 7 interaction: a changed price or an inactive product holds the order exactly as it does today;
+  the ID is required for sync and a missing one is a hard error shown on the Unsynced orders screen. The server recomputes
+  the discount and, if the rate setting changed after the sale, the difference is a `Note`, not a hold (rate at sale time
+  is saved on the discount row: add `DiscountRate`, `VatRate`, `VatRegistered` columns so a later setting change never
+  rewrites history).
+- **Promotions today.** Promotions are in `WTF.Calculations`; the "better of" rule goes in the same place so the order
+  total, the POS preview and the batch sync share one function.
+
+**Build phases.** 1) Calculation classes plus shared cases and the worked example (100.00 -> 89.29 / 17.86 / 71.43) on both
+sides. 2) Script, entity, order save and recompute on the API, permission, audit. 3) POS: cart action, line splitting,
+ID dialog, offline queue. 4) Receipt and order details block. 5) Report, Daily Close line and exports. 6) Playwright at
+375/820/1440 on a throwaway database.
+
+**Risks.** The legal rules are unverified (the biggest one: do not release before the accountant confirms the formula,
+whether VAT-registered or not). Personal data (ID, name) needs masking and a retention rule. Rounding per line versus per
+order must match the receipt exactly.
+
+**Answers needed from Pogi before building:** the four open questions above, plus: does the shop issue an official
+receipt or a plain receipt, and who is the accountant to confirm the formula with?

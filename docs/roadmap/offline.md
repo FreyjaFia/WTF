@@ -207,3 +207,60 @@ the API back and check what is held, noted, approved and what the reports, the d
 
 ---
 
+
+### Phase 7 - Refresh against the code as of 10 Nov 2026 [Planning, nothing built]
+
+The Phase 7 text above was written on 20 Oct, before multi-tenancy, RBAC and plan gating landed. What it assumed and what
+the code says now:
+
+- **Reading of Phase 7.** Unchanged: make the Phase 6 hold smarter (judge at sale time, honor quotes, record limits and
+  stock, fewer and clearer Admin decisions). Phases 1-6 are built and are not reopened.
+- **Branches are out.** Section 6 and the "by branch" bulk filter assume branches; the decision is *no branches*. Drop
+  both. Everything is per tenant.
+- **Multi-tenant.** `CatalogChangeLog`, `OrderReviewReasons`, `OfflineSyncPolicy` and `Orders.CatalogSyncedAt` are all
+  tenant-owned (a `TenantId` column and the EF global filter, like `Promotion`). The change log is written inside the
+  same handler transaction as the change it records, so it cannot drift. Sync stays per order and per tenant (the token's
+  tenant), and `OfflineLocalId` stays unique per tenant plus device.
+- **RBAC.** Reuse `orders.override` for Approve/Reject/Bulk approve. Add `orders.sync.policy` (Owner only) for the policy
+  screen,. The Unsynced orders screen needs `orders.override`; Admin Viewer has none, so it sees neither the screen nor the buttons. A Cashier sees only the result of their own device's sync. The permission list is cached offline (RBAC phase 5),
+  so an offline Cashier never needs a call to know what they may do; the server re-checks at sync.
+- **Plan gating.** Offline sync is *never gated* (see block-features-by-plan). Two parts of Phase 7 touch gated features
+  and must degrade quietly: stock shortfall notes exist only when `inventory` is in the plan, and the promotion
+  over-limit count only when `promotions` is. A shop without the feature gets no reason code for it, never a failed sale.
+- **Code facts that change the design.** Promotion limits are `Promotion.MaxRedemptions` (nullable), so `OverLimitUses`
+  and `AllowOffline` are new columns beside it, and "limited" means `MaxRedemptions IS NOT NULL`. `OfflineOrderReview`
+  returns `List<string>` today; step 1 of the build is to change it to return structured reasons while keeping
+  `JoinReasons` for the old `ReviewReasons` text, so Phase 6 behavior and tests stay green first.
+- **Fixed time zone.** Sale-time checks (promotion window, "before/after the sale") use `Asia/Manila` like the reports, and
+  compare in UTC underneath.
+
+**Build phases (each ships alone, each keeps Phase 6 tests green):**
+
+| Step | Slice | Ships |
+| ---- | ----- | ----- |
+| 7a | Structured reasons (`OrderReviewReasons`), `CatalogSyncedAt` sent and saved, cashier result per queued order on the POS | Same holds as today, clearer text, no behavior change |
+| 7b | `CatalogChangeLog` written by product, add-on, promotion and bundle handlers; judge against it with the fallback | Far fewer false holds |
+| 7c | Promotion at sale time, `OverLimitUses`, `AllowOffline`, promotion ids in the quote so approved sales take their uses | Limits behave, gap closed |
+| 7d | Stock shortfall note, negative balance allowed on offline sync, waste on rejected handed-over sale | Stock never blocks a sale |
+| 7e | Policy settings, auto-approve, tolerance, bulk approve, aging alert, Daily Close line, Unsynced orders screen | Admin workload drops |
+
+**Risks.** (1) The change log is only as good as its writers: a handler that forgets it silently causes the fallback, so add
+a test that fails when a catalog write path has no log row. (2) Auto-approve plus a loose tolerance can hide a real pricing
+mistake: ship the defaults equal to today's behavior and audit every auto-approval. (3) Device clocks: `createdAt` comes
+from the device; clamp it (not in the future, not before the last catalog sync) and note a clamped time. (4) Negative stock
+can hide theft or bad counts: show it in Needs Attention. (5) IndexedDB schema: a new Dexie version for the richer quote;
+old queued orders must still sync.
+
+**Test plan additions.** Cross-tenant: two shops' change logs and policies never mix. RBAC: Cashier gets 403 on approve,
+policy edit refused for Admin, Admin Viewer cannot act. Plan: Starter shop syncs with no stock or promotion reasons.
+Offline: queue on an old app version (no `catalogSyncedAt`) falls back. Playwright at 375/820/1440 for the review box,
+bulk approve, Unsynced orders and the policy screen, on a throwaway database with at least 3 workers and no skipped tests.
+
+**Open questions for Pogi** (the four above, plus):
+
+1. Is `MaxRedemptions` over-limit honoring (count over, never hold) what you want, or hold those for a decision?
+2. Default tolerance for price differences: zero (as today) or a small amount such as PHP 5?
+3. Is "approve and record the difference" worth building, or is honoring the quote enough? (Skipping it removes an
+   adjustment-line concept from the reports.)
+4. How many days before a held order is flagged (suggest 2)?
+5. May an offline sale of a promotion marked not-available-offline be blocked at the register, or only warned?

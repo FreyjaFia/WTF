@@ -190,3 +190,32 @@ the rollout checklist (plan features must be set before the first paying shop is
 6. **No per-shop exceptions for now.**
 
 Still open: the exact bundle for each of the three plans, and what "block the last user" means in practice (see 4).
+
+### Refresh against the code as of 10 Nov 2026 [Planning, part already built by RBAC phase 4]
+
+RBAC phase 4 (branch `rbac-phase-4`, see [role-based-access](role-based-access.md)) already built the smallest slice of
+this plan, so the build list above shrinks. What exists: `PlanFeatures` in `WTF.Calculations/Subscriptions` (codes `core`,
+`inventory`, `promotions`, `orderlinks`, `chat`, `workbook`), `ITenantFeatures` with a 20 second cache cleared by plan
+edits, effective permissions = role permissions intersected with the plan, 403 `not_in_plan`, and the Roles editor greying
+out out-of-plan rows. What does **not** exist yet: the catalog checklist in platform admin, the keys `reports`, `expenses`,
+`purchasing`, `audit`, the `RequireFeature` guard on routes that have no permission key (hubs, public link, daily jobs),
+the "Not in your plan" screen, menu hiding, and `MaxUsers`.
+
+- **Conflict to settle:** decision 3 (hide, no lock icons) versus the Roles editor, which already shows locks for
+  out-of-plan permission rows. The editor is a different audience (the Owner choosing permissions) so the lock there is
+  useful; keep it, and hide only menu items and cards. Pogi to confirm.
+- **Conflict to settle:** RBAC phase 4 moved `reports.read` and `expenses.*` into `core`, while this plan makes `expenses`
+  Pro and `reports` Starter and Pro. With three plans the simplest answer is: Starter = core + reports; the mapping lives
+  in data, so no code change either way. Pogi to confirm the three bundles.
+- **RBAC and offline.** Offline phones keep the last permission list and plan features; the server still refuses, and the
+  app shows "Not in your plan" on a 403 `not_in_plan`. Offline sync and order saving are never gated, and Offline Phase 7
+  reasons for gated features (stock, promotions) switch off quietly with the feature.
+- **Custom roles as a plan feature** (`customroles`) was left open by RBAC phase 4; decide together with the bundles.
+- **Revised build order:** 1) catalog in code with the missing keys and a migration of stored lists, 2) platform admin
+  checklist, 3) `RequireFeature` for the routes without a permission key plus the coverage test, 4) app menu hiding,
+  feature guard and the "Not in your plan" screen, 5) downgrade warning in the change-plan dialog, 6) `MaxUsers` only if a
+  cap is wanted, 7) end to end on a throwaway database at 375/820/1440.
+
+**Questions for Pogi:** the three bundles (Starter / Pro / Business); is `expenses` Pro or core; is `customroles` a Pro
+feature; keep locks in the Roles editor; user cap yes or no; what "block excess users" does (recommended: existing users keep
+working, only new or re-activated seats are refused).
