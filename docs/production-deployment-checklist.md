@@ -11,33 +11,28 @@ one-shop mode. The only rollback is the backup restore.
 
 Blocking (the release should not go without an answer):
 
-- [ ] **Data protection keys.** The API sets no key storage, so keys are generated per process start and the log shows the
-  "keys not persisted" warning. Anything the app protects with them stops working on every restart or deploy. Decide to
-  persist them (a key folder on the host that survives deploys, or blob storage) before go-live. Check what depends on them
-  (antiforgery or cookies, if any) before choosing.
 - [ ] **Pilot shop and Platform admin.** Choose the platform admin username (and a password of 12 or more characters, kept out
   of chat and git) for step 5.
-- [ ] **Neutral Android app id and name.** `capacitor.config` still says `com.wtf.pos`. Decide before the pilot goes live,
-  because changing it later makes Android treat it as a different app (no in-place update, new install).
+- [ ] **Neutral Android app id.** `capacitor.config` still says `com.wtf.pos`. Pick a product-based id (not your name), for example `app.wtfpos.pos`, before the pilot installs the app: it cannot change later without a fresh install. Pogi is deciding whether it should tie to a company.
 - [ ] **SchemaScriptHistory rows.** Add rows for `20261114` to `20261120` as for every other script? (Recommended: yes, step 3.)
 - [ ] **Release tag.** Next tag (suggested `v1.20.0`; bump `src/wtf-pos/package.json` first, since CI reads the version from it).
 
 Calls that do not block (the app works either way; say yes, no or later):
 
+- [ ] **Data protection keys (low risk, non-blocking).** The API sets no key storage, so keys reset on every restart and the log shows a "keys not persisted" warning. Nothing in the API uses cookies, anti-forgery or `IDataProtector` (logins are JWT, signed with the `Jwt` key), so the warning can be ignored. Persist them only if something starts using them.
 - [ ] **RBAC phase 4 plan decisions (four open):**
   1. Per-plan feature list. Default today: Starter = core features only, Pro = everything.
   2. Reports and Expenses on Starter. Today `reports.read` is core, so Starter keeps Reports, and Expenses are core too
      (the plan-gating draft says Pro).
   3. Custom roles Pro-only. The plan says yes, but it is not built (needs a new feature code). Today any plan can add custom roles.
   4. Notification recipient lists still ignore the plan.
-  Until decided, the pilot shop should be on Pro (everything on) so nobody sees "Not in your plan" by surprise.
-- [ ] **Inventory polish pass** (`docs/roadmap/inventory.md`, "Polish pass before deploying inventory to production") is planned
-  and not done. Call: ship without it, or do it first. Items that bite on day one: the 640 to 1023 px layout squeeze, walking
+  Decided: keep the defaults for this release and put the pilot shop on Pro (everything on). Full feature blocking by plan is not built (see `docs/roadmap/block-features-by-plan.md`) and is handled right after this release.
+- [ ] **Inventory polish pass** (decided: do it before release) (`docs/roadmap/inventory.md`, "Polish pass before deploying inventory to production") is planned
+  and not done. Pogi said yes. Items that bite on day one: the 640 to 1023 px layout squeeze, walking
   every screen as each role, the Android check (stock-in form, POS stock warning, pull to refresh, bell), and entering real
   opening counts before turning on "block sales below zero".
 - [ ] **Stale-price notice.** It has a dismiss method but no banner calls it. Ship as is or fix first.
-- [ ] **Fix the stale `Tenancy:Mode` comment** in `tools/sql/20261108_add_tenants.sql` (line 8)? It changes only a comment, but
-  script files that may already have been run are best left alone unless you agree.
+- [ ] **Stale `Tenancy:Mode` comment** in `20261108_add_tenants.sql` (line 8): decided to leave old scripts alone. No later script corrects it; it is only a comment.
 
 ## Before you start
 
@@ -161,7 +156,6 @@ WHERE NOT EXISTS (SELECT 1 FROM SchemaScriptHistory WHERE ScriptName = N'<script
   least 12 characters (the app hashes it); the name is 50 characters at most. The first platform admin is created only while
   none exists, and the `PlatformAdmins` table must exist (script 19), or the log says "Platform bootstrap could not run".
   **Remove both settings right after the first start.**
-- [ ] Persist the data protection keys (see decisions above).
 - [ ] No old `Tenancy__Mode` setting left on the server (it is ignored now).
 - [ ] Existing production settings still set: connection string, `Jwt` key, push credentials (FCM and Huawei), image and
   report storage. Stock reminders on with `DryRun` off at the intended time; `SubscriptionReminders` stays dry-run until you
