@@ -126,12 +126,12 @@ creates tables that already include it.
   `20261114` to `20261120` if Pogi agrees above):
 
 ```sql
-INSERT INTO SchemaScriptHistory (ScriptName, AppliedAt)
-SELECT N'<script file name>', SYSUTCDATETIME()
-WHERE NOT EXISTS (SELECT 1 FROM SchemaScriptHistory WHERE ScriptName = N'<script file name>');
+INSERT INTO SchemaScriptHistory (ScriptName)
+SELECT N'<script file name>.sql'
+WHERE NOT EXISTS (SELECT 1 FROM SchemaScriptHistory WHERE ScriptName = N'<script file name>.sql');
 ```
 
-(Check the column list first with `sp_help SchemaScriptHistory`; the unique index is on `ScriptName`.)
+The table is `Id` (identity), `ScriptName` (with the .sql extension) and `AppliedAt` (defaults to UTC now), so leave `AppliedAt` out. The unique index is on `ScriptName`. The local database already has rows 49 to 55 for `20261114` to `20261120`.
 
 - [ ] Stop at the first error. Do not continue past a failed script; restore the backup if unsure.
 
