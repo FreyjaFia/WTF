@@ -1,4 +1,4 @@
-import { Component, ElementRef, computed, inject, input } from '@angular/core';
+import { Component, ElementRef, computed, inject, input, signal } from '@angular/core';
 import { ThemeService } from '@core/services';
 import { type ThemeId } from '@core/theme';
 import { IconComponent } from '@shared/components/icons/icon/icon';
@@ -11,6 +11,7 @@ import { IconComponent } from '@shared/components/icons/icon/icon';
 export class ThemeSwitcherComponent {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   protected readonly themeService = inject(ThemeService);
+  protected readonly isOpen = signal(false);
 
   /** Show only the palette icon (mobile header, collapsed sidebar). */
   public readonly compact = input(false);
@@ -39,8 +40,17 @@ export class ThemeSwitcherComponent {
   /** Under an app bar (header, mobile bar) the list is pinned below it on phones; elsewhere it opens beside its button. */
   protected readonly underAppBar = computed(() => this.placement().startsWith('bottom'));
 
+  protected closeOnLeave(event: FocusEvent): void {
+    const next = event.relatedTarget as Node | null;
+
+    if (!next || !this.host.nativeElement.contains(next)) {
+      this.isOpen.set(false);
+    }
+  }
+
   protected pick(id: ThemeId): void {
     this.themeService.set(id);
+    this.isOpen.set(false);
     // daisyUI keeps a dropdown open while it holds focus; release it so the list closes.
     (this.host.nativeElement.ownerDocument.activeElement as HTMLElement | null)?.blur();
   }

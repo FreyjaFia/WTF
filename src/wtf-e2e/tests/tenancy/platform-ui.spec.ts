@@ -256,7 +256,8 @@ test.describe('platform shop page, plans and log @tenancy @platform @ui', () => 
     const list = page.getByTestId('log-list');
     await expect(list).toBeVisible();
 
-    await page.getByLabel('Filter by shop').selectOption(created.tenant.id);
+    await page.getByRole('button', { name: /^Filters/ }).click();
+    await page.getByRole('radio', { name: created.tenant.name }).check();
     await expect(list.getByRole('listitem').first()).toContainText(created.tenant.name);
     await expect(list).not.toContainText(other.tenant.name);
 

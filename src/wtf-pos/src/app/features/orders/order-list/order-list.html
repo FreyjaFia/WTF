@@ -235,8 +235,8 @@
         </div>
         <span class="text-sm font-semibold text-amber-800">Awaiting approval</span>
         <app-icon
-          [name]="isAwaitingExpanded() ? 'icon-chevron-up' : 'icon-chevron-down'"
-          [class]="'ml-auto h-4 w-4 text-amber-800'"
+          name="icon-chevron-down"
+          [class]="'ml-auto h-4 w-4 text-amber-800 transition-transform duration-200 ease-out ' + (isAwaitingExpanded() ? 'rotate-180' : 'rotate-0')"
           [fill]="'currentColor'"
         />
       </button>
@@ -352,8 +352,8 @@
         </div>
         <span class="text-sm font-semibold text-amber-800">Offline orders needing review</span>
         <app-icon
-          [name]="isHeldExpanded() ? 'icon-chevron-up' : 'icon-chevron-down'"
-          [class]="'ml-auto h-4 w-4 text-amber-800'"
+          name="icon-chevron-down"
+          [class]="'ml-auto h-4 w-4 text-amber-800 transition-transform duration-200 ease-out ' + (isHeldExpanded() ? 'rotate-180' : 'rotate-0')"
           [fill]="'currentColor'"
         />
       </button>
@@ -441,8 +441,8 @@
             </div>
             <span class="text-sm font-semibold text-amber-800">Pending Offline Orders</span>
             <app-icon
-              [name]="isPendingExpanded() ? 'icon-chevron-up' : 'icon-chevron-down'"
-              [class]="'h-4 w-4 text-amber-800'"
+              name="icon-chevron-down"
+              [class]="'h-4 w-4 text-amber-800 transition-transform duration-200 ease-out ' + (isPendingExpanded() ? 'rotate-180' : 'rotate-0')"
               [fill]="'currentColor'"
             />
           </button>

@@ -4,15 +4,17 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { PlatformService } from '@core/services';
+import { FilterButtonComponent } from '@shared/components/filter-button/filter-button';
 import { IconComponent } from '@shared/components/icons/icon/icon';
 import { SearchInputComponent } from '@shared/components/search-input/search-input';
+import { SideDrawerComponent } from '@shared/components/side-drawer/side-drawer';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { PlatformAuditLogDto, PlatformTenantDto } from '@shared/models/platform.models';
 import { forkJoin } from 'rxjs';
 
 @Component({
   selector: 'app-platform-log',
-  imports: [DatePipe, ReactiveFormsModule, RouterLink, SearchInputComponent, IconComponent],
+  imports: [DatePipe, ReactiveFormsModule, RouterLink, FilterButtonComponent, SearchInputComponent, SideDrawerComponent, IconComponent],
   templateUrl: './platform-log.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -27,7 +29,8 @@ export class PlatformLogComponent implements OnInit {
   protected readonly shopFilter = new FormControl('', { nonNullable: true });
 
   private readonly query = toSignal(this.search.valueChanges, { initialValue: '' });
-  private readonly shopId = toSignal(this.shopFilter.valueChanges, { initialValue: '' });
+  protected readonly filtersOpen = signal(false);
+  protected readonly shopId = toSignal(this.shopFilter.valueChanges, { initialValue: '' });
 
   protected readonly visible = computed(() => {
     const needle = (this.query() ?? '').trim().toLowerCase();
@@ -41,6 +44,8 @@ export class PlatformLogComponent implements OnInit {
       return !needle || `${e.action} ${e.username ?? ''} ${e.details ?? ''}`.toLowerCase().includes(needle);
     });
   });
+
+  protected readonly activeFilterCount = computed(() => (this.shopId() ? 1 : 0));
 
   public ngOnInit(): void {
     this.load();
@@ -60,6 +65,10 @@ export class PlatformLogComponent implements OnInit {
         this.loading.set(false);
       },
     });
+  }
+
+  protected clearShop(): void {
+    this.shopFilter.setValue('');
   }
 
   protected shop(tenantId: string | null): PlatformTenantDto | null {

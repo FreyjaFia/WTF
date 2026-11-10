@@ -1,4 +1,10 @@
-<div class="dropdown" [class]="placementClass()" [class.w-full]="!compact() || fullWidth()">
+<div
+  class="dropdown"
+  (focusin)="isOpen.set(true)"
+  (focusout)="closeOnLeave($event)"
+  [class]="placementClass()"
+  [class.w-full]="!compact() || fullWidth()"
+>
   <button
     type="button"
     tabindex="0"
@@ -14,6 +20,7 @@
     [class.text-xs]="!compact()"
     [attr.aria-label]="'Change style, current style ' + themeService.current().label"
     [attr.title]="compact() ? 'Style: ' + themeService.current().label : null"
+    [attr.aria-expanded]="isOpen()"
     aria-haspopup="listbox"
   >
     <app-icon name="icon-palette" [class]="'h-4.5 w-4.5 shrink-0'" />
@@ -21,7 +28,13 @@
       <span class="min-w-0 flex-1 truncate text-left">
         Style: {{ themeService.current().label }}
       </span>
-      <app-icon name="icon-chevron-down" [class]="'h-4 w-4 shrink-0 text-gray-500'" />
+      <app-icon
+        name="icon-chevron-down"
+        [class]="
+          'h-4 w-4 shrink-0 transform text-gray-500 transition-transform duration-200 ease-out ' +
+          (isOpen() ? 'rotate-180' : 'rotate-0')
+        "
+      />
     }
   </button>
 
