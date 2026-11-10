@@ -214,7 +214,8 @@ test.describe('the platform log @tenancy @platform @audit', () => {
 
     await new PlatformShell(page).link('Logs').click();
     await expect(page).toHaveURL(new RegExp(`${PLATFORM_ROUTES.log}$`));
-    await page.getByLabel('Filter by shop').selectOption({ label: shop.name });
+    await page.getByRole('button', { name: /^Filters/ }).click();
+    await page.getByRole('radio', { name: shop.name }).check();
 
     const list = page.getByTestId('log-list');
     await expect(list).toContainText('TenantCreated');
