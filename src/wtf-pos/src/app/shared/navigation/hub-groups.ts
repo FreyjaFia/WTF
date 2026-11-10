@@ -4,6 +4,7 @@ import { AppRoutes } from '@shared/constants/app-routes';
 export interface HubCard {
   id: string;
   label: string;
+  icon: string;
   description: string;
   route: string;
   canShow: () => boolean;
@@ -36,6 +37,7 @@ export function inventoryGroups(
         {
           id: 'items',
           label: 'Items',
+          icon: 'icon-inventory-items',
           description: 'Every item you stock, with its level and unit.',
           route: AppRoutes.InventoryItems,
           canShow: () => auth.canReadItems(),
@@ -43,6 +45,7 @@ export function inventoryGroups(
         {
           id: 'ingredients',
           label: 'Ingredients & Cost',
+          icon: 'icon-fact-check',
           description: 'What goes into each product, and what it costs.',
           route: AppRoutes.InventoryIngredients,
           canShow: () => auth.canReadItems(),
@@ -50,6 +53,7 @@ export function inventoryGroups(
         {
           id: 'attention',
           label: 'Needs Attention',
+          icon: 'icon-stock-alert',
           description: 'Items that are low, critical or out of stock.',
           route: AppRoutes.InventoryAttention,
           canShow: () => auth.canReadStockMovements(),
@@ -59,6 +63,7 @@ export function inventoryGroups(
         {
           id: 'stock-in',
           label: 'Stock In',
+          icon: 'icon-arrow-down',
           description: 'Record stock that came in.',
           route: AppRoutes.InventoryStockIn,
           canShow: () => auth.canReadStockMovements(),
@@ -66,6 +71,7 @@ export function inventoryGroups(
         {
           id: 'counts',
           label: 'Counts',
+          icon: 'icon-assignment-turned-in',
           description: 'Count the shelf and fix the differences.',
           route: AppRoutes.InventoryCounts,
           canShow: () => auth.canReadStockMovements(),
@@ -73,6 +79,7 @@ export function inventoryGroups(
         {
           id: 'waste',
           label: 'Waste',
+          icon: 'icon-warning',
           description: 'Wasted stock, and what is waiting for review.',
           route: AppRoutes.InventoryWaste,
           canShow: () => auth.canReadStockMovements(),
@@ -88,6 +95,7 @@ export function inventoryGroups(
         {
           id: 'purchase-orders',
           label: 'Purchasing',
+          icon: 'icon-receipt',
           description: 'Suggested orders and purchase orders.',
           route: AppRoutes.InventoryPurchaseOrders,
           canShow: () => auth.canReadStockMovements(),
@@ -95,6 +103,7 @@ export function inventoryGroups(
         {
           id: 'receiving',
           label: 'Receiving',
+          icon: 'icon-inventory',
           description: 'Deliveries received against purchase orders.',
           route: AppRoutes.InventoryReceiving,
           canShow: () => auth.canReadStockMovements(),
@@ -113,6 +122,7 @@ export function managementGroups(auth: AuthService): HubGroup[] {
         {
           id: 'products',
           label: 'Products',
+          icon: 'icon-coffee',
           description: 'Menu items, prices, add-ons and categories.',
           route: AppRoutes.ManagementProducts,
           canShow: () => auth.canReadProducts(),
@@ -120,6 +130,7 @@ export function managementGroups(auth: AuthService): HubGroup[] {
         {
           id: 'promotions',
           label: 'Promotions',
+          icon: 'icon-promotion',
           description: 'Bundles, mix and match and discounted products.',
           route: AppRoutes.ManagementPromotions,
           canShow: () => auth.canReadPromotions(),
@@ -127,6 +138,7 @@ export function managementGroups(auth: AuthService): HubGroup[] {
         {
           id: 'customers',
           label: 'Customers',
+          icon: 'icon-people',
           description: 'Customer details, addresses and ordering links.',
           route: AppRoutes.ManagementCustomers,
           canShow: () => auth.canReadCustomers(),
@@ -140,6 +152,7 @@ export function managementGroups(auth: AuthService): HubGroup[] {
         {
           id: 'reports',
           label: 'Reports',
+          icon: 'icon-trending-up',
           description: 'Sales, payments, profit and the monthly workbook.',
           route: AppRoutes.ManagementReports,
           canShow: () => auth.canAccessReports(),
@@ -147,6 +160,7 @@ export function managementGroups(auth: AuthService): HubGroup[] {
         {
           id: 'expenses',
           label: 'Expenses',
+          icon: 'icon-coins',
           description: 'What the shop spends, by category.',
           route: AppRoutes.ManagementExpenses,
           canShow: () => auth.canReadExpenses(),
@@ -160,6 +174,7 @@ export function managementGroups(auth: AuthService): HubGroup[] {
         {
           id: 'users',
           label: 'Users',
+          icon: 'icon-user',
           description: 'Staff accounts, their role and their status.',
           route: AppRoutes.ManagementUsers,
           canShow: () => auth.canReadUsers(),
@@ -167,6 +182,7 @@ export function managementGroups(auth: AuthService): HubGroup[] {
         {
           id: 'roles',
           label: 'Roles',
+          icon: 'icon-lock',
           description: 'Built-in and custom roles, and what each can do.',
           route: AppRoutes.ManagementRoles,
           canShow: () => auth.canManageRoles(),
@@ -180,6 +196,7 @@ export function managementGroups(auth: AuthService): HubGroup[] {
         {
           id: 'setup',
           label: 'Setup',
+          icon: 'icon-setup',
           description: 'The lists the rest of the app is built from.',
           route: AppRoutes.ManagementSetup,
           canShow: () => auth.canOpenSetup(),
@@ -187,6 +204,7 @@ export function managementGroups(auth: AuthService): HubGroup[] {
         {
           id: 'shop',
           label: 'Shop',
+          icon: 'icon-storefront',
           description: "Your shop's look, its plan and its invoices.",
           route: AppRoutes.ManagementShop,
           canShow: () => auth.canManageBrand() || auth.canManageSubscription(),
@@ -200,6 +218,7 @@ export function managementGroups(auth: AuthService): HubGroup[] {
         {
           id: 'audit-logs',
           label: 'Audit Logs',
+          icon: 'icon-audit-logs',
           description: 'Who changed what, and when.',
           route: AppRoutes.ManagementAuditLogs,
           canShow: () => auth.canAccessAuditLogs(),
@@ -207,6 +226,7 @@ export function managementGroups(auth: AuthService): HubGroup[] {
         {
           id: 'schema-scripts',
           label: 'Schema Scripts',
+          icon: 'icon-schema-scripts',
           description: 'Which database scripts have run.',
           route: AppRoutes.ManagementSchemaScripts,
           canShow: () => auth.canAccessSchemaScriptHistory(),

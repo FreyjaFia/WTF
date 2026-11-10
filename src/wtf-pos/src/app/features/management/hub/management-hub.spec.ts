@@ -89,4 +89,14 @@ describe('ManagementHubComponent', () => {
     }
     expect(ids(render())).toEqual([]);
   });
+
+  it('shows an icon on every card, taken from the card list', () => {
+    const el = render();
+    const cards = Array.from(el.querySelectorAll('[data-testid^="management-card-"]'));
+    expect(cards.length).toBeGreaterThan(0);
+    for (const card of cards) {
+      const href = card.querySelector('app-icon use')?.getAttribute('xlink:href');
+      expect(href).toMatch(/^#icon-/);
+    }
+  });
 });

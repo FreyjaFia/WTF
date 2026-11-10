@@ -123,4 +123,14 @@ describe('InventoryHubComponent', () => {
       el.querySelector('[data-testid="inventory-card-waste"] [data-testid="card-badge"]'),
     ).toBeNull();
   });
+
+  it('shows an icon on every card, taken from the card list', () => {
+    const el = render();
+    const cards = Array.from(el.querySelectorAll('[data-testid^="inventory-card-"]'));
+    expect(cards.length).toBeGreaterThan(0);
+    for (const card of cards) {
+      const href = card.querySelector('app-icon use')?.getAttribute('xlink:href');
+      expect(href).toMatch(/^#icon-/);
+    }
+  });
 });

@@ -13,6 +13,7 @@ const card = (id: string, label: string, extra: Partial<HubGroup['cards'][number
   id,
   label,
   description: '',
+  icon: 'icon-box',
   route: `/inventory/${id}`,
   canShow: () => true,
   ...extra,

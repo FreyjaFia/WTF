@@ -13,22 +13,25 @@
       @for (card of group.cards; track card.id) {
         <a
           [routerLink]="card.route"
-          class="bg-surface flex min-w-0 flex-col gap-1 rounded-xl border border-gray-100 p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
+          class="bg-surface flex min-w-0 items-start gap-3 rounded-xl border border-gray-100 p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
           [attr.data-testid]="'inventory-card-' + card.id"
         >
-          <span class="flex items-center justify-between gap-2">
-            <span class="truncate text-base font-semibold text-gray-900">{{ card.label }}</span>
-            @if (card.badge?.(); as count) {
-              <span
-                class="inline-flex min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 text-xs leading-5 font-bold text-white"
-                [class.bg-red-500]="card.urgent?.() ?? true"
-                [class.bg-amber-500]="!(card.urgent?.() ?? true)"
-                data-testid="card-badge"
-                >{{ count }}</span
-              >
-            }
+          <app-icon [name]="card.icon" [class]="'text-brand-ink mt-0.5 h-6 w-6 shrink-0'" />
+          <span class="flex min-w-0 flex-1 flex-col gap-1">
+            <span class="flex items-center justify-between gap-2">
+              <span class="truncate text-base font-semibold text-gray-900">{{ card.label }}</span>
+              @if (card.badge?.(); as count) {
+                <span
+                  class="inline-flex min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 text-xs leading-5 font-bold text-white"
+                  [class.bg-red-500]="card.urgent?.() ?? true"
+                  [class.bg-amber-500]="!(card.urgent?.() ?? true)"
+                  data-testid="card-badge"
+                  >{{ count }}</span
+                >
+              }
+            </span>
+            <span class="text-sm text-gray-500">{{ card.description }}</span>
           </span>
-          <span class="text-sm text-gray-500">{{ card.description }}</span>
         </a>
       }
     </div>

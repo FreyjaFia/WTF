@@ -1,11 +1,12 @@
 import { Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { IconComponent } from '@shared/components';
 import { AuthService, StockAttentionService, StockWasteService } from '@core/services';
 import { HubGroup, visibleGroups, inventoryGroups } from '@shared/navigation/hub-groups';
 
 @Component({
   selector: 'app-inventory-hub',
-  imports: [RouterLink],
+  imports: [IconComponent, RouterLink],
   templateUrl: './inventory-hub.html',
   host: { class: 'flex-1 min-h-0' },
 })

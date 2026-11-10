@@ -13,11 +13,14 @@
       @for (card of group.cards; track card.id) {
         <a
           [routerLink]="card.route"
-          class="bg-surface flex min-w-0 flex-col gap-1 rounded-xl border border-gray-100 p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
+          class="bg-surface flex min-w-0 items-start gap-3 rounded-xl border border-gray-100 p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
           [attr.data-testid]="'management-card-' + card.id"
         >
-          <span class="truncate text-base font-semibold text-gray-900">{{ card.label }}</span>
-          <span class="text-sm text-gray-500">{{ card.description }}</span>
+          <app-icon [name]="card.icon" [class]="'text-brand-ink mt-0.5 h-6 w-6 shrink-0'" />
+          <span class="flex min-w-0 flex-1 flex-col gap-1">
+            <span class="truncate text-base font-semibold text-gray-900">{{ card.label }}</span>
+            <span class="text-sm text-gray-500">{{ card.description }}</span>
+          </span>
         </a>
       }
     </div>
