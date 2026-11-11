@@ -15,7 +15,8 @@ update its file and the status in the table below.
 | Multiple Branches, Branding, Multi-tenant | Planned, design decided | [multiple-branches-and-tenants](roadmap/multiple-branches-and-tenants.md) |
 | Role-Based Access Control | In progress (phases 1 to 5 built on branches, not merged) | [role-based-access](roadmap/role-based-access.md) |
 | Block features by subscription plan | Planned, partly built by RBAC phase 4, bundles open | [block-features-by-plan](roadmap/block-features-by-plan.md) |
-| Senior Citizen / PWD discount | Planned, confirm the rules first | [senior-pwd-discount](roadmap/senior-pwd-discount.md) |
+| Kitchen Orders View (kitchen states separate from payment) | Planned, decisions open (checked against gating, address, Senior/PWD and Offline 7 plans) | [kitchen-orders-view](roadmap/kitchen-orders-view.md) |
+| Senior Citizen / PWD discount | Planned, plan written 10 Nov 2026, rules to confirm | [senior-pwd-discount](roadmap/senior-pwd-discount.md) |
 | Cashless Payments | Planned, needs research | [cashless-payments](roadmap/cashless-payments.md) |
 | Receipt and Kitchen Printing | Planned | [receipt-and-kitchen-printing](roadmap/receipt-and-kitchen-printing.md) |
 | Temperature (Hot / Iced) add-on type | First cut built on branch `temperature-addon` (not merged) | [temperature-addon](roadmap/temperature-addon.md) |
@@ -30,7 +31,7 @@ update its file and the status in the table below.
 | Stale Image Cleanup | Completed | [stale-image-cleanup](roadmap/stale-image-cleanup.md) |
 | Chat Images and Message Expiry | Completed | [chat-images-and-expiry](roadmap/chat-images-and-expiry.md) |
 
-Keywords to find the right file: stock, waste, costing, recipes, counts, variance, profit, expenses, notifications, bell,
+Keywords to find the right file: kitchen, prep, barista, served -> kitchen-orders-view; stock, waste, costing, recipes, counts, variance, profit, expenses, notifications, bell,
 roles, permissions -> role-based-access; branches -> inventory or multiple-branches-and-tenants; promotions, coupons, bundles -> promotions; offline sync, review
 -> offline; reports, dashboard -> sales-reporting; customer link, chat -> customer-ordering-links, chat-images-and-expiry;
 add-on types, categories -> dynamic-catalog; browser or unit tests -> automated-testing.
