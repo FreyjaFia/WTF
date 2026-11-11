@@ -342,8 +342,7 @@ the Senior/PWD build uses the Phase 6 behavior: any difference at sync holds the
 
 **6. Tests for this part**
 
-Shared cases on both sides for offline cart maths with VatRegistered on and off (100.00 gives 80.00 non-VAT, 71.43 VAT, using
-the Senior/PWD file's examples). API: settings changed before vs after the sale, discount switched off before the sale, ID
+The calculation cases stay in the Senior/PWD plan; Phase 7 adds none. API: settings changed before vs after the sale, discount switched off before the sale, ID
 missing, covered row had a promotion, repeated ID note, cashier permission lost, held order left out of the report and Z-report,
 approve writes rows at quoted amounts, reject writes none, bulk approve skips, void reverses, two tenants isolated, queued
 order of the old shape still syncs. Browser (throwaway database, API stopped, 3+ workers): sell with the discount offline,
