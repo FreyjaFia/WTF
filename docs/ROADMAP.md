@@ -25,6 +25,7 @@ update its file and the status in the table below.
 | Promotions / Bundles | Phase 1 completed; ideas for later | [promotions](roadmap/promotions.md) |
 | Automated Testing Plan | Mostly completed | [automated-testing](roadmap/automated-testing.md) |
 | Customer Ordering Links | Completed | [customer-ordering-links](roadmap/customer-ordering-links.md) (design; [build history](roadmap/customer-ordering-links-build-history.md)) |
+| Customer address in quick dialog and order list | Planned, questions open | [customer-address-on-orders](roadmap/customer-address-on-orders.md) |
 | Button States and Text Audit | Partly done | [button-audit](roadmap/button-audit.md) |
 | Completed Order Override | Implemented | [order-override](roadmap/order-override.md) |
 | Image Storage CORS | Completed | [image-storage-cors](roadmap/image-storage-cors.md) |
