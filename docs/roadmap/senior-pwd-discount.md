@@ -8,8 +8,8 @@ promotion engine, not inside it.
 **Legal basis (from memory, NOT verified; the accountant must confirm before build starts).** Senior citizens (RA 9994) and
 PWDs (RA 10754) get 20% off and VAT exemption on food and drinks bought for their own use. BIR rules (RR 7-2010 and later)
 say, for a VAT-registered shop, the discount is taken on the VAT-exclusive price; a non-VAT shop gives 20% on the price and
-there is no VAT to exempt. The discount cannot be combined with other discounts or promotions (the person takes the better
-one). The sale record and receipt show the person's name, ID number and signature. The weekly peso cap in the law applies to
+there is no VAT to exempt. The discount cannot be combined with other discounts or promotions; this plan
+follows Pogi's call that promotion items are simply not eligible. The sale record and receipt show the person's name, ID number and signature. The weekly peso cap in the law applies to
 basic necessities and prime commodities, not to restaurants. Every item above is a **setting or a small rule** in this
 design so a correction is not a rewrite.
 
@@ -31,14 +31,20 @@ design so a correction is not a rewrite.
 
 1. **Per person, per order.** An order can hold one or more Senior/PWD "persons" (a table of friends: two seniors, one
    other). Each person covers chosen lines and quantities. Default for a one-person order: all items.
-2. **Better of, never both** on the same item: a covered item gets whichever of the promotion price or the Senior/PWD price is
-   lower for the customer. Setting `AllowStackWithPromotions` (default off) only if the accountant says it is allowed.
-3. **Bundles are blocked by default** (the covered amount is unclear); the cashier sees why. Open question below.
+2. **Never on promotions (decided by Pogi, 11 Nov 2026).** An item that already has a promotion price, and any bundle, is not
+   eligible for the Senior/PWD discount. The cart shows those lines as "Promotion item, not eligible" and the person pays the
+   promotion price. No better-of rule and no stacking setting. (Pogi's reading of the law, to be confirmed by the accountant.)
+3. **Two switches, both per tenant, both in shop settings.** `SeniorPwdEnabled` (off by default: the button, report and
+   receipt block are hidden and the API refuses it) and `VatRegistered` (off by default, because the pilot shop is not
+   VAT-registered yet). Turning `VatRegistered` on later changes the formula for new orders only; saved orders keep the
+   numbers they were saved with, so history never changes.
 4. **Add-ons on a covered item are covered; tips never are.**
 5. **Store line amounts, not a unit price.** Rounding to the centavo per unit does not always add up. The covered row keeps
    its list `Price` and gets `SeniorPwdVatExempt` and `SeniorPwdDiscount` amounts (whole centavos, per row, parent plus its
    add-ons). Order total = sum of rows - discounts + tips. This keeps existing price and promo meaning untouched.
-6. **In person only.** Not offered on customer-link orders. Staff may apply it when completing an online order at pickup.
+6. **Online orders: staff apply it at pickup, never the customer.** The customer link has no field for it. Staff apply it on
+   the order before completing it, and the dialog needs an "I checked the ID" tick before it can be applied; an online order
+   with a Senior/PWD request cannot be completed until the ID is checked (decided by Pogi).
 7. **Always on for every plan** (it is a legal requirement for the shop, not an upsell). Revisit with the plan-gating work.
 
 ### How it works at the register
@@ -61,15 +67,13 @@ row, order details and the receipt block. Check against the existing cart, check
 ### Calculation (`WTF.Calculations`, mirrored in `shared/calculations`, cases in `calculation-cases.json`)
 
 New `SeniorPwdDiscount` rules (Angular side in whole cents through `money.ts`). Settings: discount rate (20%), VAT rate
-(12%), `VatRegistered`, `AllowStackWithPromotions`.
+(12%), `VatRegistered`, `SeniorPwdEnabled`.
 
-- Covered amount `G` = the VAT-inclusive price of the covered rows including their add-ons, after any promotion chosen by the
-  better-of rule.
+- Covered amount `G` = the VAT-inclusive list price of the covered rows including their add-ons. Rows with a promotion or in a bundle are never covered.
 - VAT-registered: `net = G / 1.12`, `vatExempt = G - net`, `discount = net x 20%`, `amount due = net - discount`.
   Worked example: 100.00 gives net 89.29, VAT exempt 10.71, discount 17.86, due 71.43.
-- Non-VAT: `discount = G x 20%`, `vatExempt = 0`, `due = G - discount`. Worked example: 100.00 gives 20.00 and 80.00.
+- Non-VAT (the pilot shop today): `discount = G x 20%`, `vatExempt = 0`, `due = G - discount`. Worked example: 100.00 gives 20.00 and 80.00.
 - Round half up to the centavo per covered row; the rows must add up to the order totals (tested).
-- Better-of: compare the promotion price with the Senior/PWD price for the same row and take the lower.
 - Sales rules: add `SeniorPwdDiscount` and `VatExemptSales` to the sale summary in `SalesRules`, so the dashboard and every
   report use one definition. Only Completed orders count; Refunded orders reverse them; voids never count.
 
@@ -88,13 +92,12 @@ New `SeniorPwdDiscount` rules (Angular side in whole cents through `money.ts`). 
 - **DBSYNC RULE:** the scaffold output is kept as generated; only true duplicates are deleted if the build needs it, and that
   is said in the commit. The cloud scaffold is not the source of truth; the real rescaffold runs on the laptop.
 - Privacy (RA 10173): store only the ID number and name. Mask the ID (last 4) in lists and on-screen reports; show it in full
-  on the receipt, order details for those who can apply the discount, and the claim export. Include in retention rules (tax
-  record, ask the accountant how many years).
+  on the receipt, order details for those who can apply the discount, and the claim export. The ID number is on both the receipt and the report (Pogi: for tracking). Retention (decided: Claude's pick, accountant to confirm): keep ID records 10 years, the usual period for tax records, never auto-delete, and do not hard-delete on request without the accountant's say.
 
 ### Receipt, order details, reports, audit
 
 - **Receipt / summary image / order details:** a Senior/PWD block: type, name, ID number, VAT-exempt amount, discount, and a
-  signature line. Online and kitchen tickets do not show the ID. Printing follows the receipt-and-kitchen-printing plan.
+  signature line. kitchen tickets do not show the ID. Printing follows the receipt-and-kitchen-printing plan.
 - **Senior/PWD report** (Reports > Sales, same filters drawer and sortable columns as the others): one row per person per
   order: date, order number, type, name, ID (masked on screen), gross covered, VAT exempt, discount, net; totals row; Excel,
   PDF and CSV; a sheet in the monthly workbook. This is what the accountant needs.
@@ -129,7 +132,7 @@ expected). No branch concept yet; when branches arrive the settings can move to 
 
 ### Phases
 
-0. **Confirm the rules** with the accountant (open questions below). Nothing is built before this.
+0. **Confirm the rules** with the accountant (open items below). The two switches mean the build can start before the shop's VAT status is known.
 1. **Calculation:** rules in `WTF.Calculations`, Angular mirror, shared cases, unit tests. Hand-worked examples first.
 2. **Data and API:** SQL script, rescaffold on the laptop, settings, create/update/sync handlers recompute and validate,
    void/refund reversal, audit, permission and policy test.
@@ -148,7 +151,7 @@ expected). No branch concept yet; when branches arrive the settings can move to 
 ### Test plan
 
 - **Shared cases** (both sides, same file): VAT and non-VAT; one item; several items; part-covered line; add-on; tip not
-  covered; promotion on the same row (better wins, and stack on when the setting is on); bundle blocked; two persons on one
+  covered; promotion row and bundle row not eligible (full price rows only); feature off and VAT toggle on/off; two persons on one
   order; rounding to the centavo; rows add up to the order total.
 - **API:** blank or missing ID/name refused; server recomputes a wrong `expectedTotal`; permission matrix (Cashier yes,
   AdminViewer no, custom role); void and refund reverse amounts; tenant isolation; audit entry written with masked ID.
@@ -158,16 +161,19 @@ expected). No branch concept yet; when branches arrive the settings can move to 
 - **Browser (Playwright, throwaway DB, 3+ workers, 375/820/1440, Asia/Manila):** apply, remove, two persons, receipt block,
   report, Z-report, with a worked answer for each number on screen (e.g. 100.00 VAT-registered: 71.43 due).
 
-### Open questions for Pogi (and the accountant)
+### Decisions (Pogi, 11 Nov 2026)
 
-1. Is the shop (and the pilot tenant) **VAT-registered**? This changes the formula and the receipt. Does it issue official
-   receipts or just this POS receipt?
-2. May the discount apply to **bundles**, and may it **stack with a store promotion** (default here: better-of, no stacking)?
-3. Does the accountant want the **ID number on the receipt**, on the report only, or both?
-4. Should the shop be able to set a **per-person item limit** or a daily cap (some shops do)? Default none.
-5. How long must **ID records be kept**, and who may export the full ID?
-6. Should the discount be offered on **online orders at pickup**, or never?
-7. OK to keep it **on for every plan** (not gated)?
-8. Which comes first if the queue changes: this, or Offline Phase 7 (settings judged at sale time)?
+1. The shop is not VAT-registered yet: both `SeniorPwdEnabled` and `VatRegistered` are toggles, the calculation follows them (non-VAT: 20% off the price, no VAT-exempt amount).
+2. Promotions and bundles are not eligible for the discount.
+3. The ID number is on both the receipt and the report.
+4. Retention: 10 years, never auto-deleted. Full ID export needs `reports.generate` (Admin and Owner). Accountant to confirm.
+5. Online orders: staff apply it at pickup after checking the ID; an "I checked the ID" tick is required.
+6. On for every plan (not gated), unless Pogi says otherwise.
+
+### Still open
+
+- Per-person item limit or daily cap? Default none.
+- Which comes first if the queue changes: this, or Offline Phase 7?
+- The accountant should still confirm the legal items at the top of this file (promotion rule, receipt wording, retention).
 
 ---
