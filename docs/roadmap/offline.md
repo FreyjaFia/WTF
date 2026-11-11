@@ -264,3 +264,93 @@ bulk approve, Unsynced orders and the policy screen, on a throwaway database wit
    adjustment-line concept from the reports.)
 4. How many days before a held order is flagged (suggest 2)?
 5. May an offline sale of a promotion marked not-available-offline be blocked at the register, or only warned?
+
+### Phase 7 - Senior/PWD discount inside offline sync [Planning, 11 Nov 2026]
+
+**Order of work (Pogi, 11 Nov 2026):** the Senior/PWD discount is built **before** Phase 7 (its plan:
+[senior-pwd-discount](senior-pwd-discount.md)), then Offline Phase 7, then plan gating's remaining build. So Phase 7 must
+carry the discount from the first slice. This section does not repeat the calculation rules (rate, VAT formula, rounding,
+"never on promotions or bundles", add-ons covered, tips not); it only says how Phase 7 consumes them. Until Phase 7 ships,
+the Senior/PWD build uses the Phase 6 behavior: any difference at sync holds the order.
+
+**1. Settings the register used at sale time**
+
+- The POS catalog payload (`GET /api/sync/pos-catalog`) carries the tenant's `SeniorPwdEnabled`, `VatRegistered`, discount
+  rate and VAT rate with a `settingsVersion`. The device stores them with `catalogSyncedAt`, and the offline cart calculates
+  with exactly those values (`shared/calculations`, whole cents), so the quote is right for what the device knew.
+- Each queued order stores the **settings it was calculated with** (the four values and the version), not just the
+  amounts. The queued shape gets a version number so queued orders from before Senior/PWD still sync unchanged.
+- The tenant settings join the `CatalogChangeLog` (entity `TenantSettings`, field, old, new, effective-from), written by the
+  same handler that edits them. So "what were the settings at 14:00" is a lookup, and the sale-time rule from point 1 above
+  applies: a settings change counts only if it took effect **before the sale and after the device's last sync**.
+
+**2. What is uploaded and saved**
+
+- Per person: type, ID number, name, covered rows and quantities, and per-row `SeniorPwdVatExempt` and `SeniorPwdDiscount`
+  as quoted, plus the settings above. The sync endpoint accepts them on `CreateOrderCommand` (same fields the online path uses).
+- The server recomputes with the **settings at the time of the sale** (change log, falling back to the quoted settings
+  when it cannot tell). If its numbers equal the quote, the order is saved normally. If not, the order is judged by the codes
+  below. **The saved discount is always the quoted one when an Admin approves** (a sale that happened is never repriced);
+  the server's number is shown next to it for the decision.
+- Offline sales write `OrderSeniorPwdDiscounts` rows only when the order becomes Completed. A held order keeps the quote
+  in the order's review data and is **left out** of the Senior/PWD report, the Z-report discount line and the dashboard
+  until approved, like other held sales. The Daily Close "Offline sales held for review" line shows the held discount
+  amount separately so the claim file and the drawer still reconcile.
+
+**3. New review codes (structured reasons, Phase 7a)**
+
+| Code | When | Severity |
+| ---- | ---- | -------- |
+| `SeniorPwdSettingsChanged` | the rate, VAT rate or `VatRegistered` changed before the sale and after the device's sync, so the amounts differ | Hold |
+| `SeniorPwdDisabled` | `SeniorPwdEnabled` was switched off before the sale and after the sync | Hold |
+| `SeniorPwdIdMissing` | queued discount without an ID number or name (should not happen, the dialog requires both) | Hold |
+| `SeniorPwdOnPromotion` | a covered row had a promotion price or was in a bundle at the time of the sale (device did not know) | Hold |
+| `SeniorPwdIdRepeated` | the same ID on another order the same day (the online warning cannot run offline) | Note |
+| `SeniorPwdPermissionLost` | the cashier no longer held `orders.seniorpwd.apply` at the time of the sale | Hold |
+
+- A settings change **after** the sale never causes a hold or a note.
+- The price **tolerance and auto-approve policy never apply** to these codes: they are tax-record amounts. Default is
+  Hold, and it stays Hold. Only `SeniorPwdIdRepeated` is a Note.
+- **Bulk approve skips** any order with a Senior/PWD hold unless the Admin filters on that code on purpose. One-by-one is
+  the normal path because each one is a legal record.
+- The Admin box shows, per person: type, masked ID (full for those who may see it), covered amount, the quoted discount
+  and VAT-exempt amount, and the server's recomputed figures. Actions as in Phase 7 section 4: *Approve at quoted*,
+  *Reject* (reason required). For `SeniorPwdIdMissing`, *Add ID details and approve* (needs the Admin to have the ID record;
+  otherwise reject). Approve and reject are audited like others, plus `SeniorPwdDiscountApplied` when the rows are
+  written. A rejected order saves no discount rows.
+- Void and refund of an approved offline order reverse the discount exactly as for an online one.
+
+**4. Multi-tenant, RBAC, plans**
+
+- `OrderSeniorPwdDiscounts`, `TenantSettings` log rows and the reasons are tenant-owned; the same ID number in two tenants
+  never links. Sync uses the token's tenant.
+- Cashier applies offline through the cached permission list (`orders.seniorpwd.apply`); the server checks it again at
+  sync using the role as of the sale time where the change log of roles allows, otherwise the current role and a Note
+  (open question 6 below). Approving held discount orders uses `orders.override`. Full IDs in the Admin box follow the
+  Senior/PWD privacy rule (`reports.generate` for the export, full ID only where the plan says).
+- The discount is **never plan-gated**, so Phase 7 never hides it for a plan. The stock and promotion reason codes still
+  switch off with their own plan features.
+
+**5. Slice changes** (the five slices above stay, with these additions)
+
+| Slice | Senior/PWD addition |
+| ----- | ------------------- |
+| 7a | Queue shape version 2 carries persons, per-row amounts and the settings used; structured codes above exist (all Hold) |
+| 7b | `TenantSettings` changes enter `CatalogChangeLog`; the pos-catalog payload carries the settings and `settingsVersion` |
+| 7d-e | Held discount amount on the Daily Close line; bulk approve skips Senior/PWD holds; Unsynced orders screen lists orders failing on the ID |
+| new 7f | Judge Senior/PWD at sale time: recompute with sale-time settings, the codes above, the Admin box block, report exclusion until approved, Playwright run at 375/820/1440 |
+
+**6. Tests for this part**
+
+Shared cases on both sides for offline cart maths with VatRegistered on and off (100.00 gives 80.00 non-VAT, 71.43 VAT, using
+the Senior/PWD file's examples). API: settings changed before vs after the sale, discount switched off before the sale, ID
+missing, covered row had a promotion, repeated ID note, cashier permission lost, held order left out of the report and Z-report,
+approve writes rows at quoted amounts, reject writes none, bulk approve skips, void reverses, two tenants isolated, queued
+order of the old shape still syncs. Browser (throwaway database, API stopped, 3+ workers): sell with the discount offline,
+change the settings while offline, sync, and check the cart, the review box, the report and the drawer line.
+
+**New open questions (for Pogi):**
+
+6. Re-check the cashier's permission at sync as of the sale time, or only note it (suggest: note only)?
+7. Should an Admin be allowed to fill in a missing ID (from a signed paper record), or must the order be rejected?
+8. If the shop turned the discount off, but a register that had not synced still sold it, honor and hold for decision (assumed), or auto-reject?
