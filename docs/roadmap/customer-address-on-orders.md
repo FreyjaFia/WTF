@@ -35,6 +35,8 @@ No code is written yet. This file is the plan and the questions to answer first.
 4. **The order keeps its own copy of the address.** The order list shows the address saved on the order, not the live customer
    record. At checkout the address field is pre-filled (as a placeholder/default the cashier can change) with the customer's
    saved address. Once the order is created the address is **locked**: editing the customer later never changes old orders.
+5. **The only way to change a saved order's address is the Completed Order Override** (Owner and Admin, reason required,
+   audited). See section B2.
 
 Still open (small, recommendations given):
 
@@ -69,8 +71,21 @@ Still open (small, recommendations given):
   cashier already typed their own. Delivery orders keep their existing delivery address field; do not show two fields.
 - The create-order request carries `customerAddress`. Offline: the queued order stores it (`db.ts`, `offline-order.service.ts`),
   sync sends it unchanged.
-- After the order is created the address is read-only everywhere (order details shows it as text; the order override flow
-  does not edit it unless you say otherwise).
+- After the order is created the address is read-only everywhere (order details shows it as text), except through the
+  override in B2.
+
+**B2. Override of the address (completed orders)**
+
+- The existing override (`PUT /api/orders/{id}/override`, policy `OrdersOverride`, Owner and Admin, completed orders only,
+  reason required) can also change `CustomerAddress`. No new endpoint, policy or button: the override editor (`?override=1`)
+  shows the same Address field as checkout, pre-filled with the order's current address (not the customer's), and the
+  reason dialog is unchanged.
+- `UpdateOrderHandler` applies `CustomerAddress` only when `IsOverride` is true (trimmed, blank to `NULL`, max 300); the
+  regular update and every other role leave it untouched. The audit entry `OrderOverridden` records the old and new address
+  in its before and after snapshot.
+- Customer edits still never change an order's address; only the override does. Pending orders can be changed in the normal
+  editor until they are completed.
+- Offline-created orders are not offered the override (existing rule).
 
 **C. API (WTF.Api, WTF.Domain)**
 
@@ -122,11 +137,12 @@ Address stays as it is (`varchar`, so characters outside the code page become `?
 - **WTF.Tests**: `CustomerValidation` (first name required; blank or missing last name allowed and stored as `NULL`; address
   trimmed, blank to `NULL`, 301 characters refused); create customer without last name; update keeps `NULL`; name helper never
   prints "null"; create order stores the given address, falls back to the customer's saved one, and a later customer edit
-  leaves the order's address unchanged; the three order queries return `CustomerAddress` and search finds by address; a walk-in
+  leaves the order's address unchanged; override changes the address, requires a reason, is refused for a non-admin, and the audit
+  snapshot holds old and new values; a normal update ignores a sent address; the three order queries return `CustomerAddress` and search finds by address; a walk-in
   order returns `NULL`. Existing tests that assume a last name are updated.
 - **Angular specs**: `order-editor.spec.ts` (dialog has Address and no Last Name; saves with and without address; invalid when
   first name is blank); checkout pre-fills the saved address, lets it be changed, and a changed value does not touch the
-  customer; `order-list.spec.ts` (address beside the name, hidden when empty, delivery order shows one address, search by
+  customer; the override editor shows and saves the order's address and hides it from other roles; `order-list.spec.ts` (address beside the name, hidden when empty, delivery order shows one address, search by
   address); `customer-editor.spec.ts` (last name optional); offline queue keeps the address.
 - **Browser check** with the `playwright-skill` against a throwaway LocalDB database (never the real `WTF` one): add a quick
   customer with and without an address, check out (placeholder shows the saved address, edit it, pay), see it on the list at
@@ -137,6 +153,6 @@ Address stays as it is (`varchar`, so characters outside the code page become `?
 
 1. Settle the small open points above (the order column is the one that matters).
 2. SQL script on the real database, `tools\dbsync.bat`, nullable last name through the API and the full editor, tests.
-3. Order address: create order, `OrderDto`, search, offline record, tests.
+3. Order address: create order, override of the address, `OrderDto`, search, offline record, tests.
 4. Quick dialog and checkout field, specs.
 5. Order list display at 375, 820, 1440, browser check on the throwaway database; update this file and `docs/ROADMAP.md`.
