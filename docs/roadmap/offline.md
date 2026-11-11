@@ -353,3 +353,18 @@ change the settings while offline, sync, and check the cart, the review box, the
 6. Re-check the cashier's permission at sync as of the sale time, or only note it (suggest: note only)?
 7. Should an Admin be allowed to fill in a missing ID (from a signed paper record), or must the order be rejected?
 8. If the shop turned the discount off, but a register that had not synced still sold it, honor and hold for decision (assumed), or auto-reject?
+
+### Phase 7 - Decisions (Pogi, 11 Nov 2026)
+
+1. **Limited promotion over its limit:** Pogi unsure; plan default stands: honor the quote, count it as over limit, hold nothing
+   for this alone (the customer already paid). Shown in the promotion usage text and the Promotions report.
+2. **Price differences:** every peso counts, so the tolerance defaults to **zero** (any difference is held, as today). The
+   tolerance stays as an owner setting but ships at 0 and is not suggested anywhere.
+3. **Approve and record the difference:** undecided; **not built in the first pass**. Admin gets Approve at quoted and Reject.
+   Revisit after real use.
+4. **Held order flagged after 2 days.**
+5. **"Not available offline" promotions:** question withdrawn. The setting (`Promotions.AllowOffline`) is **dropped**: a
+   limited promotion is always usable offline and falls under decision 1.
+6. **Senior/PWD cashier permission at sync:** noted only, not held (`SeniorPwdPermissionLost` becomes a Note).
+7. **Missing ID on a queued Senior/PWD order:** an Admin may override (fill in the ID details and approve), audited.
+8. **Discount switched off but an unsynced register sold it:** honor and hold for a decision.
