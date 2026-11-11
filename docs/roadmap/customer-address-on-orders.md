@@ -1,4 +1,4 @@
-## Customer address in the quick "New Customer" dialog and on the order list [Planned, 11 Nov 2026]
+## Customer address in the quick "New Customer" dialog and on the order list [Planned, decisions made 12 Nov 2026]
 
 Two small changes asked for by the owner:
 
@@ -25,98 +25,118 @@ No code is written yet. This file is the plan and the questions to answer first.
   `customerName` only; list search (`order-list.ts` and `GetPagedOrdersHandler`, lines near 65) matches name and order number.
 - Held and pending (offline) orders in the list store `customerName` as text in IndexedDB (`offline-order.service.ts`, `db.ts`).
 
-### Decisions to make first (open questions)
+### Decisions (Pogi, 12 Nov 2026)
 
-1. **Is Last Name removed everywhere, or only from the quick dialog?** Recommended: **only from the quick dialog.** The full
-   customer editor, reports, search, receipts and the customer link keep first and last name. Removing the field everywhere is a
-   much bigger change (column, validation, reports, tests, sync).
-2. **What is stored as Last Name for a quick customer?** `LastName` is `NOT NULL`. Options: (a) store an empty string `''` and
-   relax `EnsureValidNames` to allow it only for the quick path; (b) make the column nullable (SQL script, then `tools/dbsync.bat`)
-   and the property `string?`, which touches every place that reads `LastName`; (c) store a placeholder such as a dash.
-   Recommended: **(a) empty string**, no schema change, and every display uses `$"{First} {Last}".Trim()` already. This needs your
-   OK because the full editor currently insists on a last name, so an edit of a quick customer would force one (see question 3).
-3. **When a quick customer is opened in the full editor, is last name still required?** Recommended: make it optional in the full
-   editor too, so these customers can be saved without inventing a surname.
-4. **Is Address required in the quick dialog?** Recommended: **optional**, like the full editor and like contact number. Required
-   would block a walk-in who just gives a name. If it must be required (for delivery shops), say so.
-5. **One line or multi-line?** Recommended: a single-line input in the dialog (compact on 375px), max 300 characters; the order
-   list shows it on one truncated line. A textarea is only worth it if staff paste long directions.
-6. **Which address does the list show for a delivery order: the customer's saved address or the order's `DeliveryAddress`?**
-   Recommended: show `DeliveryAddress` when the order has one (it is what the rider needs), otherwise the customer's saved
-   address, so the two never show side by side.
-7. **Length limit.** The column has no limit but the editor caps at 500 and delivery address at 300. Recommended: one rule,
-   300, in `CustomerValidation` and both forms. Existing longer addresses are untouched.
-8. **Non-Unicode column.** `Address` is `varchar`, so characters outside the database code page (emoji, some symbols) turn into
-   `?`. Fine for Philippine addresses with accents like ñ; flag if you want `nvarchar` (a separate script, not part of this).
+1. **Last name is removed from the quick dialog only.** The full customer editor, reports, search, receipts and the customer
+   link keep first and last name.
+2. **`Customers.LastName` becomes nullable.** A quick customer is saved with no last name (`NULL`, not an empty string). SQL
+   script plus `tools\dbsync.bat` (see below). Every place that reads `LastName` must tolerate `NULL`.
+3. **Address is optional** in the quick dialog.
+4. **The order keeps its own copy of the address.** The order list shows the address saved on the order, not the live customer
+   record. At checkout the address field is pre-filled (as a placeholder/default the cashier can change) with the customer's
+   saved address. Once the order is created the address is **locked**: editing the customer later never changes old orders.
+
+Still open (small, recommendations given):
+
+- **Which column holds the order's address?** `Orders.DeliveryAddress` (varchar 300) exists but is delivery-only. Recommended:
+  a new nullable `Orders.CustomerAddress` (nvarchar(300)) that every order with a customer gets at creation, leaving
+  `DeliveryAddress` as is. Alternative: reuse `DeliveryAddress` for all orders (no new column, but pickup and dine-in orders
+  would then carry a "delivery" address). Needs your OK.
+- **Delivery orders:** show `DeliveryAddress` if set, otherwise the order's `CustomerAddress`, so one address shows, never both.
+- **Length limit:** 300 in `CustomerValidation`, the quick dialog and the checkout field (the full editor's 500 drops to 300;
+  existing longer addresses are untouched).
+- **Existing orders** have no copy. Recommended: leave them blank in the list (no backfill), since the customer's address today
+  may differ from the one at the time of sale. Say so if you want a one-time backfill instead.
+- Single-line input in the dialog and checkout; the list shows one truncated line.
 
 ### Plan
 
 **A. Quick dialog (wtf-pos)**
 
-- `order-editor.ts`: in `createCustomerForm` replace `lastName` with `address` (not required, `Validators.maxLength(300)`); update
-  `openCreateCustomerModal` reset and `saveCustomerFromModal` to send `{ firstName, lastName: '', address: address || null }`.
-- `order-editor.html`: swap the Last Name input for an Address input (label "Address", placeholder "Enter address", same classes
-  and `app-` styles as the First Name input; no asterisk). Keep the dialog layout, buttons and modal-stack behavior unchanged.
-- `customer.service.ts` / `customer.models.ts`: `CreateCustomerRequest.lastName` stays (sent empty) unless question 2 changes it.
-- Customer picker and selected-customer label (`order-editor-helpers.ts` line ~113, `order-editor.ts` line ~474) already use
-  `.trim()`, so an empty last name shows cleanly. Also show the address as a muted second line in the picker row if the existing
-  rows have room (confirm on 375px).
+- `order-editor.ts`: in `createCustomerForm` replace `lastName` with `address` (optional, `Validators.maxLength(300)`); reset
+  and `saveCustomerFromModal` send `{ firstName, address: address || null }` with no last name.
+- `order-editor.html`: swap the Last Name input for an Address input (label "Address", no asterisk, placeholder "Enter
+  address"), same classes as the First Name input. Dialog layout, buttons and modal-stack behavior stay unchanged.
+- `customer.models.ts` / `customer.service.ts`: `lastName` becomes optional on the create request and `string | null` on
+  `CustomerDto`. Label helpers (`order-editor-helpers.ts` line ~113, `order-editor.ts` line ~474, others) already `.trim()`;
+  make them use `[first, last].filter(Boolean).join(' ')` so a missing last name never prints "null".
+- Customer picker rows: show the saved address as a muted second line if there is room (check 375px).
 
-**B. API (WTF.Api)**
+**B. Checkout (wtf-pos)**
 
-- `CustomerValidation`: add `NormalizeAddress` (trim, blank to null, max 300) and call it from `CreateCustomerHandler` and
-  `UpdateCustomerHandler`. Relax `EnsureValidNames` per questions 2 and 3 (first name always required; last name optional but
-  still max 50). Message becomes "Customer first name is required."
-- **Order list data.** Add `CustomerAddress` (`string?`) to `OrderDto` (end of the parameter list, default `null`, so existing
-  constructors keep compiling). Fill it in `GetPagedOrdersHandler`, `GetOrdersHandler` and `GetOrderByIdHandler` from
-  `o.Customer.Address` (select the single column, no extra queries). Add it to the list search so typing part of an address finds
-  the order (`o.Customer.Address.Contains(term)`), and say so in the search placeholder only if the field is shown.
-- No calculation is involved, so nothing goes in `WTF.Calculations`.
-- Offline: `CustomerDto` in the POS catalog already includes `address`, so no sync change. Pending and held orders keep
-  `customerName`; add `customerAddress` to the IndexedDB order record (`db.ts`, `offline-order.service.ts`) so the list can show it
-  while offline. A Dexie version bump is needed only if the field is indexed; a plain optional property is not.
+- Checkout gets an optional **Address** field for the order, pre-filled with the selected customer's saved address and
+  editable (changing it affects only this order, not the customer). Changing the selected customer re-fills it unless the
+  cashier already typed their own. Delivery orders keep their existing delivery address field; do not show two fields.
+- The create-order request carries `customerAddress`. Offline: the queued order stores it (`db.ts`, `offline-order.service.ts`),
+  sync sends it unchanged.
+- After the order is created the address is read-only everywhere (order details shows it as text; the order override flow
+  does not edit it unless you say otherwise).
 
-**C. Order list (wtf-pos)**
+**C. API (WTF.Api, WTF.Domain)**
 
-- `order.models.ts`: add `customerAddress?: string | null` to the order list item (and `OrderDto` model).
-- `order-list.html`: beside the name, show the address in `text-xs text-gray-500`, truncated, with the full text in a `title`:
-  - **Desktop (1440, `lg`)**: in the Order # cell, name on one line, address on the line under it, both `truncate`.
-  - **Tablet (820)**: same grid as desktop if it uses `lg` rows, otherwise the mobile layout below; check both.
-  - **Phone (375)**: in mobile row 3, `Name · Address · time · items` can overflow, so put the address on its own line under the
-    name, `truncate`, never wrapping the status badge.
-  - Delivery orders: apply decision 6 so the address is not printed twice.
-- Pending offline and held rows get the same treatment from the stored `customerAddress`.
-- Show nothing (no dash, no empty line) when there is no address, so existing rows keep their height.
+- `Customer.LastName` becomes `string?`; update `CustomerDto`, `CustomerMapping`, `CreateCustomerCommand`,
+  `UpdateCustomerHandler`, the audit values, and every `FirstName + " " + LastName` projection (orders, reports, loyalty, order
+  links, conversations, POS catalog sync, E2E seed in `WTF.E2E.Database`) to tolerate `NULL`. Use one shared name-joining helper
+  so the rule lives in one place.
+- `CustomerValidation`: `EnsureValidNames` becomes first name required, last name optional (blank to `NULL`, max 50).
+  Add `NormalizeAddress` (trim, blank to `NULL`, max 300), used by create and update. The full customer editor makes last name
+  optional too, so a quick customer can be edited without inventing a surname.
+- `CreateOrderCommand` gets `CustomerAddress`; `CreateOrderHandler` saves the trimmed value (max 300) on the order, and if the
+  request omits it for a customer order, falls back to the customer's saved address at that moment so the copy is never empty
+  by accident. No handler changes it afterwards.
+- `OrderDto` gets `CustomerAddress` (end of the list, default `null`), filled in `GetPagedOrdersHandler`, `GetOrdersHandler`
+  and `GetOrderByIdHandler` from the order column. List search also matches the address.
+- No arithmetic is involved, so nothing goes in `WTF.Calculations`.
 
-**D. Other screens that print the customer name (check, change only if you want it)**
+**D. Order list (wtf-pos)**
 
-Order details, receipt (`order-receipt`), staff envelope, chat drawer, reports (customers report, customer link report). The
-request only names the order list; the plan leaves these alone. Order details is the natural next place for the address.
+- `order.models.ts`: add `customerAddress?: string | null`.
+- `order-list.html`, beside the name, `text-xs text-gray-500`, truncated, full text in `title`:
+  - **1440 (`lg`)**: Order # cell, name on the first line, address on the line under it.
+  - **820**: same as 1440 if the `lg` grid is used there, otherwise the phone layout; check both.
+  - **375**: the address on its own line under the name in the mobile row 3 so `Name · time · items` never overflows or
+    pushes the status badge; truncate.
+  - Delivery orders follow the rule above (one address only).
+- Pending offline and held rows show the stored `customerAddress` the same way.
+- No address means no extra line, so existing rows keep their height.
+
+**E. Left alone unless you say otherwise**
+
+Receipt, staff envelope, chat drawer and reports keep printing the name only. Order details shows the order's address
+(natural place, one line). Say if the receipt or kitchen ticket should print it too.
 
 ### SQL and dbsync
 
-No schema change in the recommended path: `Address` and `LastName` already exist. If question 2 goes with a nullable
-`LastName`, add `tools/sql/<date>_make_customer_last_name_optional.sql` (idempotent: only alters when the column is still
-`NOT NULL`, never edits an old script), run it on the real `WTF` database (`.\SQLEXPRESS`) first, then `tools\dbsync.bat`, and
-keep the scaffold output as generated (delete only a true duplicate if the build needs it, and say so). If a length limit is
-added at the database level, same procedure, and the script must first check that no row is longer.
+Two changes, in one new idempotent script `tools/sql/<date>_customer_last_name_optional_and_order_address.sql` (never edit an
+old script):
+
+1. `Customers.LastName` to `NULL` only if it is still `NOT NULL`.
+2. `Orders.CustomerAddress nvarchar(300) NULL` only if the column is missing. No backfill.
+
+Run it on the real `WTF` database (`.\SQLEXPRESS`) first, then `tools\dbsync.bat`, and keep the scaffold output as generated
+(delete only a true duplicate if the build needs it, and say so). The cloud copy is not the source of truth for the scaffold.
+Address stays as it is (`varchar`, so characters outside the code page become `?`; the new order column is `nvarchar`).
 
 ### Tests
 
-- **WTF.Tests**: `CustomerValidation` (blank address becomes null, 301 characters refused, first name required, empty last name
-  allowed on create); `CreateCustomerHandler` saves the address; `GetPagedOrdersHandler`/`GetOrdersHandler` return
-  `CustomerAddress` and find an order by address text; walk-in order (no customer) returns null.
-- **Angular specs**: `order-editor.spec.ts` (dialog has Address and no Last Name, saves with address, saves with address left
-  blank, invalid when first name is blank); `order-list.spec.ts` (address shown beside the name, hidden when empty, delivery
-  order shows `deliveryAddress` once, search by address); `customer-editor.spec.ts` if last name becomes optional.
+- **WTF.Tests**: `CustomerValidation` (first name required; blank or missing last name allowed and stored as `NULL`; address
+  trimmed, blank to `NULL`, 301 characters refused); create customer without last name; update keeps `NULL`; name helper never
+  prints "null"; create order stores the given address, falls back to the customer's saved one, and a later customer edit
+  leaves the order's address unchanged; the three order queries return `CustomerAddress` and search finds by address; a walk-in
+  order returns `NULL`. Existing tests that assume a last name are updated.
+- **Angular specs**: `order-editor.spec.ts` (dialog has Address and no Last Name; saves with and without address; invalid when
+  first name is blank); checkout pre-fills the saved address, lets it be changed, and a changed value does not touch the
+  customer; `order-list.spec.ts` (address beside the name, hidden when empty, delivery order shows one address, search by
+  address); `customer-editor.spec.ts` (last name optional); offline queue keeps the address.
 - **Browser check** with the `playwright-skill` against a throwaway LocalDB database (never the real `WTF` one): add a quick
-  customer with and without an address, see it on the list at **375, 820 and 1440** wide, long addresses truncate without
-  breaking the row, and an offline-queued order shows its address too. Run with at least 3 workers, its own tag and port.
+  customer with and without an address, check out (placeholder shows the saved address, edit it, pay), see it on the list at
+  **375, 820 and 1440**, edit the customer afterwards and confirm the old order's address did not change, long addresses
+  truncate, and an offline-queued order shows its address. At least 3 workers, its own tag and port.
 
 ### Build order
 
-1. Answer the questions above (at least 1 to 6).
-2. API: validation, `CustomerAddress` on `OrderDto`, search, tests.
-3. Quick dialog change and specs.
-4. Order list display (desktop, tablet, phone), offline record, specs.
-5. Browser check at 375, 820 and 1440 on the throwaway database; update this file and the status in `docs/ROADMAP.md`.
+1. Settle the small open points above (the order column is the one that matters).
+2. SQL script on the real database, `tools\dbsync.bat`, nullable last name through the API and the full editor, tests.
+3. Order address: create order, `OrderDto`, search, offline record, tests.
+4. Quick dialog and checkout field, specs.
+5. Order list display at 375, 820, 1440, browser check on the throwaway database; update this file and `docs/ROADMAP.md`.
