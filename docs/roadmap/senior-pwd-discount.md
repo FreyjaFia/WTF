@@ -83,6 +83,7 @@ New `SeniorPwdDiscount` rules (Angular side in whole cents through `money.ts`). 
   `CoveredAmount`, `VatExemptAmount`, `DiscountAmount`, `RecordedBy`, `CreatedAt`. Index on `(TenantId, IdNumber, CreatedAt)`
   for the same-ID warning. Append-only.
 - `OrderItems`: nullable `SeniorPwdDiscountId`, `SeniorPwdVatExempt`, `SeniorPwdDiscount`.
+- `Products`: `IsSeniorPwdEligible` bit, default 1; the script sets it to 0 only for products in categories the owner marks non-food (none by default, so nothing changes silently).
 - `Orders`: no new column needed (totals are derived); optionally a denormalized `SeniorPwdDiscountTotal` if reports prove
   slow (decide when measuring).
 - Settings per tenant (fixed Asia/Manila and PHP stay): `VatRegistered`, `TIN`, `BusinessAddress`, discount rate, per-person
@@ -170,10 +171,13 @@ expected). No branch concept yet; when branches arrive the settings can move to 
 5. Online orders: staff apply it at pickup after checking the ID; an "I checked the ID" tick is required.
 6. On for every plan (not gated), unless Pogi says otherwise.
 
+### Per-person rule and order of work (Pogi, 11 Nov 2026)
+
+- Pogi is not sure of the exact per-person rule; his working idea is that a person's covered purchase is a full meal of food and drinks only. The plan therefore does not enforce a cap: the cashier picks the lines for each person, and only **food and drinks** can be covered. A product gets an `IsSeniorPwdEligible` flag (default on; off for non-food such as merchandise or retail items), editable in the product editor and shown as "Not eligible" in the dialog. The optional per-person item limit setting stays available (default none) as a soft warning, so the shop can tighten it once the accountant gives the exact rule.
+- **Order of work:** build this before Offline Phase 7. Phase 7 then includes it: the tenant settings (`SeniorPwdEnabled`, `VatRegistered`, rate) and the product eligibility flag go in the Phase 7 change log so an offline sale is judged with the rules that applied at sale time, and the discount fields ride in the same queued-order shape and sync recompute. Add a line about it to the Phase 7 section of `offline.md` when this is built.
+
 ### Still open
 
-- Per-person item limit or daily cap? Default none.
-- Which comes first if the queue changes: this, or Offline Phase 7?
-- The accountant should still confirm the legal items at the top of this file (promotion rule, receipt wording, retention).
+- The accountant should confirm the legal items at the top of this file (promotion rule, per-person rule, receipt wording, retention).
 
 ---
