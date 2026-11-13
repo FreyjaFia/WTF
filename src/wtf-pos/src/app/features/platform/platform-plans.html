@@ -24,12 +24,14 @@
           <p class="text-2xl font-bold text-gray-900">
             {{ plan.monthlyPrice | currency: 'PHP' : 'symbol-narrow' : '1.0-2' }}<span class="text-sm font-medium text-gray-500"> / month</span>
           </p>
-          <p class="text-xs text-gray-500">{{ plan.maxUsers ? 'Up to ' + plan.maxUsers + ' people' : 'Unlimited people' }}</p>
+          <p class="text-xs text-gray-500">
+            {{ plan.maxUsers ? 'Up to ' + plan.maxUsers + ' people' : 'Unlimited people' }}
+            &middot; <span [attr.data-testid]="'plan-shops-' + plan.code">{{ plan.shopCount }} {{ plan.shopCount === 1 ? 'shop' : 'shops' }}</span>
+          </p>
           <ul class="flex flex-1 flex-col gap-1 text-sm text-gray-700">
-            @for (feature of plan.features; track feature) {
-              <li>&bull; {{ feature }}</li>
-            } @empty {
-              <li class="text-gray-400">No features listed.</li>
+            <li>&bull; Everything in the core POS</li>
+            @for (label of featureLabels(plan); track label) {
+              <li>&bull; {{ label }}</li>
             }
           </ul>
           <button type="button" class="app-btn app-btn-secondary app-btn-sm self-start" (click)="edit(plan)">Edit plan</button>
@@ -65,12 +67,40 @@
         <label class="text-sm">Most people (blank = no limit)
           <input formControlName="maxUsers" type="number" class="input input-bordered mt-1 w-full" />
         </label>
-        <label class="col-span-2 text-sm">Features (one per line)
-          <textarea formControlName="features" rows="5" class="textarea textarea-bordered mt-1 w-full"></textarea>
-        </label>
+        <fieldset class="col-span-2 flex flex-col gap-3" data-testid="plan-features">
+          <legend class="text-sm">Features</legend>
+          @for (group of groups(); track group.name) {
+            <div>
+              <p class="mb-1 text-xs font-semibold tracking-wider text-gray-500 uppercase">{{ group.name }}</p>
+              <ul class="flex flex-col gap-1">
+                @for (feature of group.features; track feature.key) {
+                  <li>
+                    <label class="flex cursor-pointer items-start gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        class="checkbox checkbox-sm mt-0.5"
+                        [attr.data-testid]="'feature-' + feature.key"
+                        [checked]="isChecked(feature.key)"
+                        (change)="toggle(feature, $any($event.target).checked)"
+                      />
+                      <span class="min-w-0 flex-1">
+                        <span class="font-medium text-gray-900">{{ feature.label }}</span>
+                        @if (needsText(feature); as needs) {
+                          <span class="text-xs text-gray-500"> &middot; {{ needs }}</span>
+                        }
+                        <span class="block text-xs text-gray-500">{{ feature.description }}</span>
+                      </span>
+                    </label>
+                  </li>
+                }
+              </ul>
+            </div>
+          }
+        </fieldset>
         <label class="col-span-2 flex items-center gap-2 text-sm">
           <input formControlName="isActive" type="checkbox" /> Offered to shops
         </label>
+        <p class="col-span-2 -mt-2 text-xs text-gray-500">A retired plan keeps working for the shops on it and cannot be picked for new ones.</p>
         <div class="col-span-2 mt-2 flex justify-end gap-2">
           <button type="button" class="app-btn app-btn-secondary app-btn-md" (click)="close()">Cancel</button>
           <button type="submit" class="app-btn app-btn-primary app-btn-md" [disabled]="form.invalid || busy()">

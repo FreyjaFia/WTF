@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } 
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AlertService, PlatformService } from '@core/services';
-import { isLiveShop } from '@shared/calculations';
+import { PlanFeatureCatalog, isLiveShop, normalizeFeatures } from '@shared/calculations';
 import { IconComponent } from '@shared/components/icons/icon/icon';
 import { AppRoutes } from '@shared/constants/app-routes';
 import {
@@ -14,7 +14,7 @@ import {
   PlatformTenantDto,
   PlatformTenantUserDto,
 } from '@shared/models/platform.models';
-import { BrandDto, PlanDto, TenantSubscriptionDto } from '@shared/models/subscription.models';
+import { BrandDto, PlanChangePreviewDto, PlanDto, TenantSubscriptionDto } from '@shared/models/subscription.models';
 import { Observable, forkJoin } from 'rxjs';
 import { PlatformChipComponent } from './platform-chip';
 import { invoiceTone, statusTone, warningLabel, warningTone } from './platform-labels';
@@ -74,6 +74,18 @@ export class PlatformTenantDetailComponent implements OnInit {
     const t = this.tenant();
 
     return t !== null && (t.status === PLATFORM_STATUS.Suspended || t.status === PLATFORM_STATUS.Cancelled);
+  });
+  protected readonly planChange = signal<PlanChangePreviewDto | null>(null);
+  protected readonly selectablePlans = computed(() => {
+    const currentId = this.billing()?.planId;
+
+    return this.plans().filter((plan) => plan.isActive || plan.id === currentId);
+  });
+  protected readonly billingFeatures = computed(() => {
+    const plan = this.plans().find((p) => p.id === this.billing()?.planId);
+    const held = normalizeFeatures(plan?.features ?? []);
+
+    return PlanFeatureCatalog.filter((f) => held.includes(f.key)).map((f) => f.label);
   });
   protected readonly previewRows = computed(() => Object.entries(this.preview()?.rowCounts ?? {}));
   protected readonly pendingInvoices = INVOICE_PENDING;
@@ -296,6 +308,22 @@ export class PlatformTenantDetailComponent implements OnInit {
     });
   }
 
+  protected previewPlanChange(): void {
+    const tenant = this.tenant();
+    const planId = Number(this.billingForm.controls.planId.value);
+
+    this.planChange.set(null);
+
+    if (!tenant || planId === this.billing()?.planId) {
+      return;
+    }
+
+    this.platform.getPlanChangePreview(tenant.id, planId).subscribe({
+      next: (preview) => this.planChange.set(preview),
+      error: () => this.planChange.set(null),
+    });
+  }
+
   protected saveBilling(): void {
     const tenant = this.tenant();
 
@@ -425,6 +453,7 @@ export class PlatformTenantDetailComponent implements OnInit {
 
   private applyBilling(sub: TenantSubscriptionDto): void {
     this.billing.set(sub);
+    this.planChange.set(null);
     this.billingForm.patchValue({
       planId: sub.planId,
       periodEnd: sub.periodEnd.slice(0, 10),

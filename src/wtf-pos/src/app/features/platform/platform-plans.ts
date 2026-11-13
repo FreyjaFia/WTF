@@ -1,9 +1,16 @@
 import { CurrencyPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AlertService, PlatformService } from '@core/services';
-import { PlanDto } from '@shared/models/subscription.models';
+import { normalizeFeatures, toggleFeature } from '@shared/calculations/plan-features';
+import { PlanDto, PlanFeatureDto } from '@shared/models/subscription.models';
+import { forkJoin } from 'rxjs';
 import { PlatformChipComponent } from './platform-chip';
+
+interface FeatureGroup {
+  name: string;
+  features: PlanFeatureDto[];
+}
 
 @Component({
   selector: 'app-platform-plans',
@@ -16,15 +23,32 @@ export class PlatformPlansComponent implements OnInit {
   private readonly alerts = inject(AlertService);
 
   protected readonly plans = signal<PlanDto[]>([]);
+  protected readonly catalog = signal<PlanFeatureDto[]>([]);
   protected readonly loading = signal(true);
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly editing = signal<PlanDto | null>(null);
+  protected readonly selected = signal<string[]>([]);
+
+  protected readonly groups = computed<FeatureGroup[]>(() => {
+    const groups: FeatureGroup[] = [];
+
+    for (const feature of this.catalog()) {
+      const group = groups.find((g) => g.name === feature.group);
+
+      if (group) {
+        group.features.push(feature);
+      } else {
+        groups.push({ name: feature.group, features: [feature] });
+      }
+    }
+
+    return groups;
+  });
 
   protected readonly form = new FormGroup({
     name: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(60)] }),
     monthlyPrice: new FormControl(0, { nonNullable: true, validators: [Validators.required, Validators.min(0)] }),
-    features: new FormControl('', { nonNullable: true }),
     maxUsers: new FormControl<number | null>(null, { validators: [Validators.min(1)] }),
     isActive: new FormControl(true, { nonNullable: true }),
   });
@@ -35,9 +59,10 @@ export class PlatformPlansComponent implements OnInit {
 
   protected load(): void {
     this.loading.set(true);
-    this.platform.getPlans().subscribe({
-      next: (plans) => {
+    forkJoin([this.platform.getPlans(), this.platform.getPlanFeatures()]).subscribe({
+      next: ([plans, catalog]) => {
         this.plans.set(plans);
+        this.catalog.set(catalog);
         this.loading.set(false);
       },
       error: (err: unknown) => {
@@ -47,16 +72,34 @@ export class PlatformPlansComponent implements OnInit {
     });
   }
 
+  protected featureLabels(plan: PlanDto): string[] {
+    const held = normalizeFeatures(plan.features);
+    return this.catalog().filter((f) => held.includes(f.key)).map((f) => f.label);
+  }
+
   protected edit(plan: PlanDto): void {
     this.error.set(null);
     this.form.reset({
       name: plan.name,
       monthlyPrice: plan.monthlyPrice,
-      features: plan.features.join('\n'),
       maxUsers: plan.maxUsers,
       isActive: plan.isActive,
     });
+    this.selected.set(normalizeFeatures(plan.features));
     this.editing.set(plan);
+  }
+
+  protected isChecked(key: string): boolean {
+    return this.selected().includes(key);
+  }
+
+  protected needsText(feature: PlanFeatureDto): string | null {
+    const labels = feature.needs.map((need) => this.catalog().find((f) => f.key === need)?.label ?? need);
+    return labels.length > 0 ? `Needs ${labels.join(' and ')}` : null;
+  }
+
+  protected toggle(feature: PlanFeatureDto, checked: boolean): void {
+    this.selected.set(toggleFeature(this.selected(), feature.key, checked, this.catalog()));
   }
 
   protected close(): void {
@@ -82,7 +125,7 @@ export class PlatformPlansComponent implements OnInit {
       .updatePlan(plan.id, {
         name: v.name.trim(),
         monthlyPrice: Number(v.monthlyPrice),
-        features: v.features.split('\n').map((f) => f.trim()).filter((f) => f.length > 0),
+        features: this.selected(),
         maxUsers: v.maxUsers === null || v.maxUsers === undefined || `${v.maxUsers}` === '' ? null : Number(v.maxUsers),
         isActive: v.isActive,
       })
