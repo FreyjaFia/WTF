@@ -225,3 +225,7 @@ public partial class PurchaseOrder : ITenantOwned
 public partial class PurchaseOrderLine : ITenantOwned
 {
 }
+
+public partial class OfflineSyncPolicy : ITenantOwned
+{
+}

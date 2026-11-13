@@ -45,6 +45,8 @@ public partial class User
 
     public virtual ICollection<Expense> ExpenseUpdatedByNavigations { get; set; } = new List<Expense>();
 
+    public virtual ICollection<OfflineSyncPolicy> OfflineSyncPolicies { get; set; } = new List<OfflineSyncPolicy>();
+
     public virtual ICollection<User> InverseCreatedByNavigation { get; set; } = new List<User>();
 
     public virtual ICollection<User> InverseUpdatedByNavigation { get; set; } = new List<User>();
