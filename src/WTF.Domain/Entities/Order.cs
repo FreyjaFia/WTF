@@ -42,8 +42,6 @@ public partial class Order
 
     public string? DeliveryAddress { get; set; }
 
-    public string? CustomerAddress { get; set; }
-
     public string? ContactNumber { get; set; }
 
     public string? RejectionReason { get; set; }
@@ -59,6 +57,8 @@ public partial class Order
     public string? OfflineLocalId { get; set; }
 
     public Guid TenantId { get; set; }
+
+    public string? CustomerAddress { get; set; }
 
     public virtual Conversation? Conversation { get; set; }
 
