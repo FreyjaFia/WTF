@@ -2,6 +2,10 @@ namespace WTF.Api.Common.Auth;
 
 public static class AppPolicies
 {
+    public static readonly string FeaturePrefix = "Feature:";
+
+    public static string RequireFeature(string feature) => FeaturePrefix + feature;
+
     public const string PlatformAdmin = "PlatformAdmin";
     public const string SubscriptionBilling = "SubscriptionBilling";
     public const string BrandManage = "BrandManage";

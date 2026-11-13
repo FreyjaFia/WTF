@@ -30,7 +30,7 @@ public class RouteTableTests : IDisposable
         "DELETE /api/customers/{id:guid}/image => CustomersWrite",
         "POST /api/customers/{id:guid}/image => CustomersWrite",
         "PUT /api/customers/{id:guid}/ordering-link-access => OrderLinksManage",
-        "GET /api/customers/{id:guid}/ordering-links => CustomersRead",
+        "GET /api/customers/{id:guid}/ordering-links => CustomersRead+Feature:orderlinks",
         "POST /api/customers/{id:guid}/ordering-links => OrderLinksManage",
         "DELETE /api/customers/{id:guid}/ordering-links/{linkId:guid} => OrderLinksManage",
         "POST /api/customers/{id:guid}/restore => CustomersWrite",
@@ -211,7 +211,7 @@ public class RouteTableTests : IDisposable
         "POST /api/push/subscribe => authenticated",
         "POST /api/push/unsubscribe => authenticated",
         "GET /api/reports/category-sales => ReportsRead",
-        "GET /api/reports/customer-links => ReportsRead",
+        "GET /api/reports/customer-links => ReportsRead+Feature:orderlinks",
         "GET /api/reports/customers => ReportsRead",
         "GET /api/reports/daily-close => ReportsRead",
         "GET /api/reports/daily-sales => ReportsRead",
@@ -223,15 +223,15 @@ public class RouteTableTests : IDisposable
         "GET /api/reports/product-margin => ReportsRead",
         "GET /api/reports/menu-engineering => ReportsRead",
         "GET /api/reports/product-sales => ReportsRead",
-        "GET /api/reports/promotions => ReportsRead",
+        "GET /api/reports/promotions => ReportsRead+Feature:promotions",
         "GET /api/reports/staff => ReportsRead",
-        "GET /api/reports/stock-status => ReportsRead",
+        "GET /api/reports/stock-status => ReportsRead+Feature:inventory",
         "GET /api/reports/voids => ReportsRead",
         "GET /api/reports/senior-pwd => ReportsRead",
-        "GET /api/reports/waste => ReportsRead",
-        "GET /api/reports/stock-variance => ReportsRead",
-        "GET /api/reports/gross-profit => ReportsRead",
-        "GET /api/reports/profit-loss => ReportsRead",
+        "GET /api/reports/waste => ReportsRead+Feature:inventory",
+        "GET /api/reports/stock-variance => ReportsRead+Feature:inventory",
+        "GET /api/reports/gross-profit => ReportsRead+Feature:inventory",
+        "GET /api/reports/profit-loss => ReportsRead+Feature:inventory",
         "GET /api/catalog/ => ProductsRead",
         "POST /api/catalog/addon-types => ProductsWrite",
         "PUT /api/catalog/addon-types/{id:int} => ProductsWrite",
@@ -364,7 +364,7 @@ public class RouteTableTests : IDisposable
     {
         var defined = typeof(WTF.Api.Common.Auth.AppPolicies).GetFields()
             .Where(f => f.IsLiteral).Select(f => (string)f.GetRawConstantValue()!).ToHashSet();
-        var used = _host.Routes.SelectMany(r => r.Policies).Distinct();
+        var used = _host.Routes.SelectMany(r => r.Policies).Where(p => !p.StartsWith(WTF.Api.Common.Auth.AppPolicies.FeaturePrefix)).Distinct();
 
         used.Except(defined).ShouldBeEmpty();
     }
