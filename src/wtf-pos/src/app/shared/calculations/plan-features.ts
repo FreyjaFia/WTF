@@ -53,6 +53,46 @@ export function serializeFeatures(words: readonly string[]): string {
   return normalizeFeatures(words).join(',');
 }
 
+// Ticking a feature ticks what it needs; unticking one unticks everything that needs it.
+export function toggleFeature(
+  selected: readonly string[],
+  key: string,
+  checked: boolean,
+  catalog: readonly PlanFeatureDefinition[] = PlanFeatureCatalog,
+): string[] {
+  if (checked) {
+    const wanted = new Set<string>([...selected, key]);
+    const pending = [key];
+
+    while (pending.length > 0) {
+      const current = pending.pop();
+      const needs = catalog.find((f) => f.key === current)?.needs ?? [];
+      needs.filter((need) => !wanted.has(need)).forEach((need) => {
+        wanted.add(need);
+        pending.push(need);
+      });
+    }
+
+    return catalog.filter((f) => wanted.has(f.key)).map((f) => f.key);
+  }
+
+  const remaining = new Set(selected.filter((k) => k !== key));
+  let changed = true;
+
+  while (changed) {
+    changed = false;
+
+    for (const feature of catalog) {
+      if (remaining.has(feature.key) && feature.needs.some((need) => !remaining.has(need))) {
+        remaining.delete(feature.key);
+        changed = true;
+      }
+    }
+  }
+
+  return catalog.filter((f) => remaining.has(f.key)).map((f) => f.key);
+}
+
 export function plansContaining(
   feature: string,
   plans: readonly { name: string; features: string | null }[],

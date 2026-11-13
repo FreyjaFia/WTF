@@ -40,6 +40,23 @@ function render(tenant: PlatformTenantDto, id = 't1') {
     startImpersonation: vi.fn(),
     openShopApp: assign,
     setBrand: vi.fn().mockImplementation((_id: string, brand: unknown) => of(brand)),
+    getPlans: vi.fn().mockReturnValue(
+      of([
+        { id: 1, code: 'starter', name: 'Starter', monthlyPrice: 1500, features: ['pos'], maxUsers: null, isActive: true, shopCount: 1 },
+        { id: 2, code: 'pro', name: 'Pro', monthlyPrice: 2500, features: ['inventory', 'promotions'], maxUsers: null, isActive: true, shopCount: 2 },
+        { id: 3, code: 'old', name: 'Old', monthlyPrice: 900, features: [], maxUsers: null, isActive: false, shopCount: 0 },
+      ]),
+    ),
+    getSubscription: vi.fn().mockReturnValue(
+      of({
+        tenantId: 't1', tenantName: 'Moon Brew', tenantStatus: 2, planId: 2, planName: 'Pro', monthlyPrice: 2500,
+        periodStart: '2026-11-01T00:00:00Z', periodEnd: '2026-12-01T00:00:00Z', graceDays: 7, discountPercent: 0, notes: null,
+        accessUntil: '2026-12-08T00:00:00Z', warning: 'none', daysLeft: 18, invoices: [], userCount: 5,
+      }),
+    ),
+    getPlanChangePreview: vi.fn().mockReturnValue(
+      of({ lostFeatures: [{ key: 'promotions', label: 'Promotions', dataCount: 3, dataLabel: 'promotions' }] }),
+    ),
   };
   TestBed.configureTestingModule({
     imports: [PlatformTenantDetailComponent],
@@ -152,6 +169,46 @@ describe('PlatformTenantDetailComponent', () => {
     el.querySelector('[data-testid="brand-form"]')!.dispatchEvent(new Event('submit'));
 
     expect(platform.setBrand).toHaveBeenCalledWith('t1', expect.objectContaining({ shopName: 'Moon Brew Two', primaryColor: '#112233' }));
+  });
+});
+
+describe('PlatformTenantDetailComponent billing and plan features', () => {
+  it('shows what the plan includes and how many people the shop has', () => {
+    const { el, tab } = render(shop({}));
+
+    tab('billing');
+
+    expect(el.querySelector('[data-testid="billing-users"]')?.textContent).toContain('5 people');
+    const features = el.querySelector('[data-testid="billing-features"]')!.textContent!;
+    expect(features).toContain('Inventory');
+    expect(features).toContain('Promotions');
+  });
+
+  it('does not offer a retired plan the shop is not on', () => {
+    const { el, tab } = render(shop({}));
+
+    tab('billing');
+
+    const options = Array.from(el.querySelectorAll('select[formControlName="planId"] option')).map((o) => o.textContent);
+    expect(options.some((o) => o?.includes('Starter'))).toBe(true);
+    expect(options.some((o) => o?.includes('Old'))).toBe(false);
+  });
+
+  it('warns about the features and data a lower plan would take away', () => {
+    const { fixture, el, tab, platform } = render(shop({}));
+
+    tab('billing');
+    expect(el.querySelector('[data-testid="plan-change-warning"]')).toBeNull();
+
+    const select = el.querySelector<HTMLSelectElement>('select[formControlName="planId"]')!;
+    select.selectedIndex = 0;
+    select.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+
+    expect(platform.getPlanChangePreview).toHaveBeenCalledWith('t1', 1);
+    const warning = el.querySelector('[data-testid="plan-change-warning"]')!;
+    expect(warning.textContent).toContain('Promotions');
+    expect(warning.textContent).toContain('3 promotions');
   });
 });
 

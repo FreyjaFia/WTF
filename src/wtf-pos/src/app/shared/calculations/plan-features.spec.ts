@@ -6,6 +6,7 @@ import {
   plansContaining,
   serializeFeatures,
   splitFeatureText,
+  toggleFeature,
   unknownFeatures,
 } from './plan-features';
 
@@ -37,6 +38,16 @@ describe('plan features: the cases shared with the API', () => {
       expect(serializeFeatures(words)).toBe(c.expected.join(','));
     },
   );
+
+  it('ticking a feature ticks what it needs', () => {
+    expect(toggleFeature([], 'purchasing', true)).toEqual(['inventory', 'purchasing']);
+    expect(toggleFeature(['audit'], 'chat', true)).toEqual(['orderlinks', 'chat', 'audit']);
+  });
+
+  it('unticking a feature unticks what needs it', () => {
+    expect(toggleFeature(['inventory', 'purchasing', 'audit'], 'inventory', false)).toEqual(['audit']);
+    expect(toggleFeature(['inventory', 'purchasing'], 'purchasing', false)).toEqual(['inventory']);
+  });
 
   it.each((cases.plansContaining as ContainingCase[]).map((c) => [c.name, c] as const))(
     'plans containing: %s',
