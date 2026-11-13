@@ -41,7 +41,8 @@ internal sealed class SeniorPwdOrders
         bool held,
         bool isCustomerLinkOrder,
         bool switchMayBeOff,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool? vatRegisteredOverride = null)
     {
         persons ??= [];
         var hasIndexes = items.Any(i => i.SeniorPwdPersonIndex.HasValue);
@@ -86,7 +87,7 @@ internal sealed class SeniorPwdOrders
             }
         }
 
-        return new SeniorPwdOrders(cleaned, settings?.VatRegistered ?? false, held);
+        return new SeniorPwdOrders(cleaned, vatRegisteredOverride ?? settings?.VatRegistered ?? false, held);
     }
 
     public static string MaskId(string idNumber)

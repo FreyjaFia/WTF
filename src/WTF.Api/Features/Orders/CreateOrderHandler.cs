@@ -90,6 +90,13 @@ public record CreateOrderCommand : IRequest<OrderDto>
     [JsonIgnore]
     public bool HonorQuotedPrices { get; init; }
 
+    // An offline Senior/PWD sale keeps what the register worked out: the settings are not judged again, and VAT is the shop's setting at the time of the sale.
+    [JsonIgnore]
+    public bool HonorSeniorPwdQuotes { get; init; }
+
+    [JsonIgnore]
+    public bool? SeniorPwdVatRegistered { get; init; }
+
     [JsonIgnore]
     public bool HonorStock { get; init; }
 }
@@ -174,10 +181,11 @@ public class CreateOrderHandler(
             httpContextAccessor,
             request.SeniorPwdPersons,
             request.Items,
-            held,
+            held || request.HonorSeniorPwdQuotes,
             request.Source == OrderSourceEnum.CustomerLink,
             false,
-            cancellationToken);
+            cancellationToken,
+            request.SeniorPwdVatRegistered);
 
         var createdAt = request.CreatedAt?.ToUniversalTime() ?? DateTime.UtcNow;
 

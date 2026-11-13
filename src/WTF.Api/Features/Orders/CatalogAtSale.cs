@@ -71,6 +71,24 @@ internal sealed class CatalogAtSale
         return active == false ? null : price;
     }
 
+    public async Task<(bool SeniorPwdEnabled, bool VatRegistered)> ShopSettingsAsync(
+        Guid tenantId,
+        bool seniorPwdEnabled,
+        bool vatRegistered,
+        CancellationToken cancellationToken)
+    {
+        if (!await CoversAsync(CatalogEntityTypes.TenantSettings, tenantId, cancellationToken))
+        {
+            return (seniorPwdEnabled, vatRegistered);
+        }
+
+        var enabled = await CatalogHistory.BoolAsOfAsync(
+            _db, CatalogEntityTypes.TenantSettings, tenantId, "SeniorPwdEnabled", seniorPwdEnabled, SoldAt, cancellationToken);
+        var vat = await CatalogHistory.BoolAsOfAsync(
+            _db, CatalogEntityTypes.TenantSettings, tenantId, "VatRegistered", vatRegistered, SoldAt, cancellationToken);
+        return (enabled ?? seniorPwdEnabled, vat ?? vatRegistered);
+    }
+
     private async Task<bool> CoversAsync(string entityType, Guid entityId, CancellationToken cancellationToken)
     {
         if (!_useLog)

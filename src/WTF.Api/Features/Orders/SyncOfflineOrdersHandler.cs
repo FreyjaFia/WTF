@@ -72,7 +72,7 @@ public class SyncOfflineOrdersHandler(WTFDbContext db, ISender sender, IHttpCont
                 : [];
 
             var saved = await sender.Send(
-                order with { OfflineLocalId = localId, ReviewFindings = findings.Count > 0 ? findings : null, GateHeld = true, HonorStock = true, HonorQuotedPrices = CanHonorQuotes(order) },
+                order with { OfflineLocalId = localId, ReviewFindings = findings.Count > 0 ? findings : null, GateHeld = true, HonorStock = true, HonorQuotedPrices = CanHonorQuotes(order), HonorSeniorPwdQuotes = CanHonorSeniorPwd(order), SeniorPwdVatRegistered = order.SeniorPwdPersons.Count > 0 ? await OfflineOrderReview.SeniorPwdVatAtSaleAsync(db, order, cancellationToken) : null },
                 cancellationToken);
 
             await transaction.CommitAsync(cancellationToken);
@@ -100,10 +100,14 @@ public class SyncOfflineOrdersHandler(WTFDbContext db, ISender sender, IHttpCont
         }
     }
 
+    private static bool CanHonorSeniorPwd(CreateOrderCommand order)
+    {
+        return order.Status == OrderStatusEnum.Completed && order.SeniorPwdPersons.Count > 0 && CanHonorQuotes(order);
+    }
+
     private static bool CanHonorQuotes(CreateOrderCommand order)
     {
         return order.Status == OrderStatusEnum.Completed
-            && order.SeniorPwdPersons.Count == 0
             && order.Items.All(i => i.QuotedPrice.HasValue && i.AddOns.All(a => a.QuotedPrice.HasValue))
             && order.BundlePromotions.All(b => b.QuotedUnitPrice.HasValue);
     }

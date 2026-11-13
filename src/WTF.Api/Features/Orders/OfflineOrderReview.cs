@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Orders;
+using WTF.Api.Features.Orders.Enums;
 using WTF.Calculations.Orders;
 using WTF.Domain.Data;
 
@@ -79,7 +80,7 @@ internal static class OfflineOrderReview
         }
 
         await AddBundleReasonsAsync(db, command, createdAt, timeZone, reasons, cancellationToken);
-        await AddSeniorPwdReasonsAsync(db, command, reasons, cancellationToken);
+        await AddSeniorPwdReasonsAsync(db, command, atSale, timeZone, reasons, cancellationToken);
         await AddPriceReasonsAsync(db, command, products.ToDictionary(p => p.Key, p => (p.Value.Name, p.Value.Price)), atSale, createdAt, timeZone, reasons, cancellationToken);
 
         return [.. reasons.Distinct()];
@@ -87,9 +88,28 @@ internal static class OfflineOrderReview
 
     // The register worked out the Senior/PWD discount with the shop settings it had. A person without an ID or name, or a
     // setting that changed while the device was offline, holds the sale for an Admin instead of failing it.
+    public static async Task<bool?> SeniorPwdVatAtSaleAsync(WTFDbContext db, CreateOrderCommand command, CancellationToken cancellationToken)
+    {
+        var settings = await db.TenantSettings
+            .AsNoTracking()
+            .Select(s => new { s.TenantId, s.SeniorPwdEnabled, s.VatRegistered })
+            .FirstOrDefaultAsync(cancellationToken);
+        if (settings is null)
+        {
+            return null;
+        }
+
+        var soldAt = command.CreatedAt?.ToUniversalTime() ?? DateTime.UtcNow;
+        var atSale = CatalogAtSale.Create(db, soldAt, command.CatalogSyncedAt?.ToUniversalTime());
+        var (_, vat) = await atSale.ShopSettingsAsync(settings.TenantId, settings.SeniorPwdEnabled, settings.VatRegistered, cancellationToken);
+        return vat;
+    }
+
     private static async Task AddSeniorPwdReasonsAsync(
         WTFDbContext db,
         CreateOrderCommand command,
+        CatalogAtSale atSale,
+        TimeZoneInfo timeZone,
         List<OfflineReason> reasons,
         CancellationToken cancellationToken)
     {
@@ -104,12 +124,16 @@ internal static class OfflineOrderReview
         }
 
         await AddSeniorPwdLineReasonsAsync(db, command, reasons, cancellationToken);
+        await AddSeniorPwdRepeatedIdNotesAsync(db, command, atSale.SoldAt, timeZone, reasons, cancellationToken);
 
         var settings = await db.TenantSettings
             .AsNoTracking()
-            .Select(s => new { s.SeniorPwdEnabled, s.VatRegistered })
+            .Select(s => new { s.TenantId, s.SeniorPwdEnabled, s.VatRegistered })
             .FirstOrDefaultAsync(cancellationToken);
-        if (settings is not { SeniorPwdEnabled: true })
+        var (enabledAtSale, vatAtSale) = settings is null
+            ? (false, false)
+            : await atSale.ShopSettingsAsync(settings.TenantId, settings.SeniorPwdEnabled, settings.VatRegistered, cancellationToken);
+        if (!enabledAtSale)
         {
             reasons.Add(OfflineReason.Hold(OfflineReasonCodes.SeniorPwdDisabled, "The Senior/PWD discount is now turned off for this shop."));
             return;
@@ -129,7 +153,7 @@ internal static class OfflineOrderReview
             .Where(i => i.SeniorPwdPersonIndex.HasValue)
             .Sum(i => SeniorPwdRules.ForRow(
                 (i.QuotedPrice!.Value + i.AddOns.Sum(a => a.QuotedPrice!.Value * a.Quantity)) * i.Quantity,
-                settings.VatRegistered).Reduction);
+                vatAtSale).Reduction);
         if (shownReduction != currentReduction)
         {
             reasons.Add(OfflineReason.Hold(
@@ -138,6 +162,38 @@ internal static class OfflineOrderReview
                 null,
                 $"{currentReduction:0.00}",
                 $"{shownReduction:0.00}"));
+        }
+    }
+
+    // The register could not look the ID up while it was offline, so a person already given the discount that day is only noted.
+    private static async Task AddSeniorPwdRepeatedIdNotesAsync(
+        WTFDbContext db,
+        CreateOrderCommand command,
+        DateTime soldAt,
+        TimeZoneInfo timeZone,
+        List<OfflineReason> reasons,
+        CancellationToken cancellationToken)
+    {
+        var localDay = TimeZoneInfo.ConvertTimeFromUtc(soldAt, timeZone).Date;
+        var start = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(localDay, DateTimeKind.Unspecified), timeZone);
+        var end = start.AddDays(1);
+
+        foreach (var idNumber in command.SeniorPwdPersons.Select(p => p.IdNumber?.Trim()).Where(id => !string.IsNullOrEmpty(id)).Distinct())
+        {
+            var earlier = await db.OrderSeniorPwdDiscounts
+                .AsNoTracking()
+                .Where(s => s.IdNumber == idNumber
+                            && s.CreatedAt >= start && s.CreatedAt < end
+                            && s.Order.StatusId != (int)OrderStatusEnum.Cancelled
+                            && s.Order.StatusId != (int)OrderStatusEnum.Refunded)
+                .Select(s => (int?)s.Order.OrderNumber)
+                .FirstOrDefaultAsync(cancellationToken);
+            if (earlier.HasValue)
+            {
+                reasons.Add(OfflineReason.Note(
+                    OfflineReasonCodes.SeniorPwdIdRepeated,
+                    $"The ID {idNumber} already took the Senior/PWD discount that day on order #{earlier.Value}."));
+            }
         }
     }
 
