@@ -13,6 +13,7 @@ export const AppRoutes = {
   PublicOrder: (token: string) => `/shop/${token}`,
   OrdersList: '/orders/list',
   OrdersUnsynced: '/orders/unsynced',
+  OrdersHeld: '/orders/held',
   OrdersEditor: '/orders/editor',
   OrderEditorById: (orderId: string) => `/orders/editor/${orderId}`,
   OrderDetailsById: (orderId: string) => `/orders/details/${orderId}`,

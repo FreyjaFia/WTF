@@ -497,6 +497,26 @@
                 </p>
                 <p class="text-[11px] text-gray-400">Online orders to accept or reject</p>
               </a>
+              @if (insight.heldOrders; as held) {
+                @if (held.count > 0) {
+                  <a
+                    class="bg-surface rounded-lg border border-gray-100 px-4 py-3 shadow-sm transition hover:shadow-md"
+                    [routerLink]="routes.OrdersHeld"
+                    [queryParams]="held.agedCount > 0 ? { agedOnly: true } : null"
+                    data-dashboard-held
+                  >
+                    <p class="text-xs text-gray-500">Held for review</p>
+                    <p class="text-sm font-semibold text-gray-900">
+                      {{ held.count }} offline, PHP {{ held.amount | number: '1.2-2' }}
+                    </p>
+                    @if (held.agedText) {
+                      <p class="text-[11px] text-red-600" data-dashboard-held-aged>{{ held.agedText }}</p>
+                    } @else {
+                      <p class="text-[11px] text-gray-400">Not counted as sales until approved</p>
+                    }
+                  </a>
+                }
+              }
               <a
                 class="bg-surface rounded-lg border border-gray-100 px-4 py-3 shadow-sm transition hover:shadow-md"
                 [routerLink]="routes.ManagementReports"

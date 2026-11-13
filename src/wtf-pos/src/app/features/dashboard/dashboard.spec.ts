@@ -587,6 +587,46 @@ describe('Dashboard', () => {
       ]);
     });
 
+    it('adds a held-for-review tile with the aged sentence for people who may decide on held orders', () => {
+      const heldOrders = {
+        count: 3,
+        amount: 450.5,
+        seniorPwdDiscount: 0,
+        agedCount: 1,
+        agedAmount: 120,
+        agedText: '1 offline order has waited more than 2 days for review (PHP 120.00)',
+      };
+      service.getDashboard.mockReturnValue(of(makeDashboard({ insights: { ...insights, heldOrders } })));
+      const { fixture } = create();
+
+      const all = tiles(fixture);
+      expect(all.length).toBe(8);
+      const tile = all[4];
+      expect(tile.textContent).toContain('Held for review');
+      expect(tile.textContent).toContain('3 offline, PHP 450.50');
+      expect(tile.textContent).toContain('waited more than 2 days for review');
+      expect(tile.getAttribute('href')).toContain('/orders/held');
+      expect(tile.getAttribute('href')).toContain('agedOnly=true');
+    });
+
+    it('shows the held tile without the aged sentence when nothing has waited long', () => {
+      const heldOrders = { count: 1, amount: 80, seniorPwdDiscount: 0, agedCount: 0, agedAmount: 0, agedText: null };
+      service.getDashboard.mockReturnValue(of(makeDashboard({ insights: { ...insights, heldOrders } })));
+      const { fixture } = create();
+
+      const tile = tiles(fixture)[4];
+      expect(tile.textContent).toContain('Not counted as sales until approved');
+      expect(tile.getAttribute('href')).not.toContain('agedOnly');
+    });
+
+    it('leaves the held tile out when nothing is held', () => {
+      const heldOrders = { count: 0, amount: 0, seniorPwdDiscount: 0, agedCount: 0, agedAmount: 0, agedText: null };
+      service.getDashboard.mockReturnValue(of(makeDashboard({ insights: { ...insights, heldOrders } })));
+      const { fixture } = create();
+
+      expect(tiles(fixture).length).toBe(7);
+    });
+
     it('says None yet when no promotion was used', () => {
       service.getDashboard.mockReturnValue(
         of(makeDashboard({ insights: { ...insights, topPromotionName: null, topPromotionUses: 0 } })),

@@ -27,10 +27,12 @@ export const NotificationKinds = {
   StockAlert: 'StockAlert',
   WasteReview: 'WasteReview',
   Subscription: 'Subscription',
+  HeldOrderReview: 'HeldOrderReview',
 } as const;
 
 export const NOTIFICATION_KIND_LABELS: Record<string, string> = {
   StockAlert: 'Stock',
   WasteReview: 'Waste',
   Subscription: 'Subscription',
+  HeldOrderReview: 'Held orders',
 };

@@ -1024,6 +1024,10 @@ export class OrderList implements OnInit, OnDestroy {
     });
   }
 
+  protected openHeldOrders(): void {
+    this.router.navigateByUrl(AppRoutes.OrdersHeld);
+  }
+
   protected openAwaitingOrder(order: OrderDto): void {
     this.router.navigateByUrl(AppRoutes.OrderDetailsById(order.id));
   }

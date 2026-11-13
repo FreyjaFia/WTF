@@ -869,6 +869,21 @@ describe('OrderList', () => {
       expect(text).toContain('150.00');
     });
 
+    it('links the banner to the held orders list and flags an aged order', () => {
+      orderService.getHeldOrders.mockReturnValue(
+        of([held('o1', { isAged: true, heldDays: 3 }), held('o2', { orderNumber: 22 })]),
+      );
+      init();
+      const nav = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
+
+      expect(banner()!.textContent).toContain('Aged');
+      expect(banner()!.textContent).toContain('3 days');
+      expect(banner()!.querySelectorAll('app-badge').length).toBe(1);
+      (banner()!.querySelector('[data-testid="open-held-orders"]') as HTMLButtonElement).click();
+
+      expect(nav).toHaveBeenCalledWith('/orders/held');
+    });
+
     it('shows nothing, and does not ask, for staff who are not Admins', () => {
       canOverride = false;
       orderService.getHeldOrders.mockReturnValue(of([held('o1')]));

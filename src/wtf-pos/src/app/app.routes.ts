@@ -56,6 +56,7 @@ import { ShopComponent } from '@features/management/shop/shop';
 import { SyncPolicyPageComponent } from '@features/management/sync-policy/sync-policy-page';
 import { NotFoundComponent } from '@features/not-found/not-found';
 import { NotificationsComponent } from '@features/notifications/notifications';
+import { HeldOrders } from '@features/orders/held-orders/held-orders';
 import { OrderDetails } from '@features/orders/order-details/order-details';
 import { OrderEditor } from '@features/orders/order-editor/order-editor';
 import { OrderList } from '@features/orders/order-list/order-list';
@@ -140,6 +141,12 @@ export const routes: Routes = [
             canActivate: [roleGuard],
             canDeactivate: [unsavedChangesGuard],
             data: { permission: Permissions.OrdersWrite },
+          },
+          {
+            path: 'held',
+            component: HeldOrders,
+            canActivate: [roleGuard],
+            data: { permission: Permissions.OrdersOverride },
           },
           {
             path: 'details/:id',

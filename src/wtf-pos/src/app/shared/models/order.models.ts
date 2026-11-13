@@ -152,6 +152,9 @@ export interface OrderDto {
   seniorPwdPersons?: SeniorPwdPersonDto[] | null;
   /** The structured reasons: a Hold needs an Admin's decision, a Note was saved and is only informational. */
   reviewDetails?: OrderReviewReasonDto[] | null;
+  /** A held offline order that has waited past the aged-after days. */
+  isAged?: boolean;
+  heldDays?: number | null;
 }
 
 export type HeldRejectStockOutcome = 'none' | 'waste';

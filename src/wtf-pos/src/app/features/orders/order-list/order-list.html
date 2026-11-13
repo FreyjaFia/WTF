@@ -342,25 +342,34 @@
   <!-- Offline orders held for an Admin: the prices or the menu changed before they synced -->
   @if (isOnline() && canReviewHeld() && heldOrders().length > 0) {
     <div class="mb-4 shrink-0 rounded-xl border border-amber-200 bg-amber-50 p-4" data-held-orders>
-      <button
-        type="button"
-        class="flex w-full items-center gap-2 text-left"
-        [class.mb-3]="isHeldExpanded()"
-        [attr.aria-expanded]="isHeldExpanded()"
-        (click)="isHeldExpanded.set(!isHeldExpanded())"
-      >
-        <div
-          class="flex h-6 w-6 items-center justify-center rounded-full bg-amber-400 text-xs font-bold text-white"
+      <div class="flex items-center gap-2" [class.mb-3]="isHeldExpanded()">
+        <button
+          type="button"
+          class="flex min-w-0 flex-1 items-center gap-2 text-left"
+          [attr.aria-expanded]="isHeldExpanded()"
+          (click)="isHeldExpanded.set(!isHeldExpanded())"
         >
-          {{ heldOrders().length }}
-        </div>
-        <span class="text-sm font-semibold text-amber-800">Offline orders needing review</span>
-        <app-icon
-          name="icon-chevron-down"
-          [class]="'ml-auto h-4 w-4 text-amber-800 transition-transform duration-200 ease-out ' + (isHeldExpanded() ? 'rotate-180' : 'rotate-0')"
-          [fill]="'currentColor'"
-        />
-      </button>
+          <div
+            class="flex h-6 w-6 items-center justify-center rounded-full bg-amber-400 text-xs font-bold text-white"
+          >
+            {{ heldOrders().length }}
+          </div>
+          <span class="text-sm font-semibold text-amber-800">Offline orders needing review</span>
+          <app-icon
+            name="icon-chevron-down"
+            [class]="'ml-auto h-4 w-4 text-amber-800 transition-transform duration-200 ease-out ' + (isHeldExpanded() ? 'rotate-180' : 'rotate-0')"
+            [fill]="'currentColor'"
+          />
+        </button>
+        <button
+          type="button"
+          class="app-btn app-btn-link shrink-0 text-sm font-semibold"
+          data-testid="open-held-orders"
+          (click)="openHeldOrders()"
+        >
+          Review all
+        </button>
+      </div>
       <div class="max-h-[40vh] space-y-2 overflow-y-auto" [class.hidden]="!isHeldExpanded()">
         @for (held of heldOrders(); track held.id) {
           <div class="rounded-lg bg-surface px-3 py-3 shadow-sm">
@@ -376,6 +385,9 @@
                 <div class="flex items-center gap-2">
                   <span class="text-sm font-semibold text-gray-900">#{{ held.orderNumber }}</span>
                   <span class="text-sm text-gray-700">{{ held.customerName || 'Walk-in' }}</span>
+                  @if (held.isAged) {
+                    <app-badge variant="error">Aged &middot; {{ held.heldDays }} days</app-badge>
+                  }
                 </div>
                 <span class="text-base font-semibold whitespace-nowrap text-gray-950 lg:text-lg">
                   <span class="text-sm opacity-70 lg:text-base"
