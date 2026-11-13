@@ -1,4 +1,4 @@
-## Multiple Branches per Shop [Planned, plan written 13 Nov 2026, decisions open]
+## Multiple Branches per Shop [Planned, plan written 13 Nov 2026, decisions made 13 Nov 2026]
 
 One shop (tenant) with several locations (branches). Each branch sells, makes, counts and closes its own day; the owner
 sees one branch or all of them. This file is the plan only. Nothing is built.
@@ -327,7 +327,7 @@ The word "off" means two different things. Keep them apart:
 | OFF-7 | Customer links of that branch | Links stay valid but the public page says the branch is closed and shows the shop phone. The owner may point a link to another branch | Yes |
 | OFF-8 | Old orders, reports, receipts of that branch | Stay as they were. Reports can still show the closed branch (filter "include closed"). Receipts reprint with the branch's old address | Yes. Closed is not deleted |
 | OFF-9 | Order numbers | The closed branch keeps its numbers. If it is **re-opened** it continues where it stopped | Yes |
-| OFF-10 | Owner wants to **merge** Cebu into Main (all history under Main) | **Not offered in the first cut.** History keeps its branch. "All branches" already adds everything up | Recommended: do not merge. Merging rewrites history and makes order numbers collide (two orders numbered 42). If a merge is demanded, it is a platform admin script run per request with a backup, not a button |
+| OFF-10 | Owner wants to **merge** Cebu into Main (all history under Main) | **Not offered in the first cut.** History keeps its branch. "All branches" already adds everything up | Decided: do not merge. Merging rewrites history and makes order numbers collide (two orders numbered 42). If a merge is demanded, it is a platform admin script run per request with a backup, not a button |
 | OFF-11 | Owner wants to **delete** a branch | Only possible when it never had an order, stock movement, count or link (a mistake). Otherwise close only | Yes. Matches soft delete elsewhere |
 | OFF-12 | Close Main | Another branch must be made Main first (exactly one Main per shop) | Yes |
 | OFF-13 | Last active branch | Cannot be closed. A shop always has one active branch | Yes |
@@ -517,7 +517,7 @@ Each phase can ship by itself, and phases 1 and 2 change nothing the pilot can s
      Manager, a Branch Manager only if the Owner allows it, a new key such as `products.price.branch`).
    - **Switching off:** closing a branch keeps its prices; a product moved to "all branches" at one price asks which price
      wins. Plan key: part of `branches` or a separate `branchpricing` key (decide then).
-   - Open: should a promotion's price follow the branch price, or stay fixed? Recommended: a promotion's own price wins.
+   - Open: should a promotion's price follow the branch price, or stay fixed? Decided: a promotion's own price wins.
 
 ### Order of work against the other plans
 
@@ -562,24 +562,26 @@ Each phase can ship by itself, and phases 1 and 2 change nothing the pilot can s
 | Billing | `MaxBranches` and an optional price per extra branch on the plan; invoices show branch count (manual billing for the pilot) |
 | Opening stock counts | Counts are per branch (opening count per branch); the skipped pilot opening counts do not block branches, but a new branch needs its own opening count or a transfer |
 
-### Decisions (open, with recommendations)
+### Decisions (Pogi, 13 Nov 2026: all 12 accepted as recommended)
 
-1. **Order numbers per branch with a code prefix, or one shop counter?** Recommended: per branch (short numbers for the
+1. **Order numbers per branch with a code prefix, or one shop counter?** Decided: per branch (short numbers for the
    kitchen, clean start per branch).
-2. **VAT, TIN and address per branch or per shop?** Recommended: per branch with shop default (each branch registers with the
-   BIR); accountant to confirm.
-3. **Products per branch (Pogi, 13 Nov 2026, asked for a suggestion).** Recommended: one catalog with a "Sold at" list on
+2. **VAT, TIN and address per branch or per shop?** Decided: per branch with shop default (each branch registers with the
+   BIR). **Still to confirm with the accountant before build.**
+3. **Products per branch (Pogi, 13 Nov 2026, asked for a suggestion).** Decided: one catalog with a "Sold at" list on
    each product (default all branches; branch-only products are one branch in the list). Same price everywhere in the first
    cut; per-branch price is build phase 9 (below). See "Products and branches".
-4. **Customers shared across branches or per branch?** Recommended: shared (regulars visit more than one branch).
-5. **Plan layout for branches:** Recommended: `branches` in Business only, `MaxBranches` 3, extra branch fee later.
-6. **Downgrade over the cap:** Recommended: keep all working, block adding (as for users). Alternative: newest read-only.
-7. **Merging a closed branch into another:** Recommended: not offered; platform admin script only on request.
-8. **Closing a branch with stock:** Recommended: force a transfer or a written-off reason; never silent.
+4. **Customers shared across branches or per branch?** Decided: shared (regulars visit more than one branch).
+5. **Plan layout for branches:** Decided: `branches` in Business only, `MaxBranches` 3, extra branch fee later.
+6. **Downgrade over the cap:** Decided: keep all working, block adding (as for users). Alternative: newest read-only.
+7. **Merging a closed branch into another:** Decided: not offered; platform admin script only on request.
+8. **Closing a branch with stock:** Decided: force a transfer or a written-off reason; never silent.
 9. **Items cost:** one cost per item for the shop first (transfers move at that cost). Alternative: cost per branch.
-10. **Who sets up the second branch in the pilot?** Recommended: Pogi from platform admin, with the owner, the first time.
+10. **Who sets up the second branch in the pilot?** Decided: Pogi from platform admin, with the owner, the first time.
 11. **Locked-branch tablets** (kitchen and registers fixed to a branch): later, not in the first cut.
 12. **Moving an open order to another branch:** later; audited; not in the first cut.
+
+Only decision 2 stays conditional (accountant). Everything else is closed; reopen by editing this list.
 
 ### Docs to update when built
 
