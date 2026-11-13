@@ -26,9 +26,20 @@ test.describe('customers: create, validate, edit, delete, restore @management', 
     expect(listed.map((customer) => customer.id)).toContain(created.id);
   });
 
+  test('a customer can be created without a last name and has none afterwards', async ({ api }) => {
+    const marker = unique('NoLast');
+    const response = await mx(api).post('customers', mx(api).customerBody({ firstName: marker, lastName: '', address: '' }));
+
+    expect(response.status()).toBe(201);
+    const created = await response.json();
+    const saved = await api.client.json<{ lastName: string | null; address: string | null }>('owner', 'GET', `customers/${created.id}`);
+    expect(saved.lastName).toBeNull();
+    expect(saved.address).toBeNull();
+  });
+
   const BAD_CUSTOMERS: ReadonlyArray<{ readonly label: string; readonly change: Record<string, unknown> }> = [
     { label: 'an empty first name', change: { firstName: '' } },
-    { label: 'an empty last name', change: { lastName: '' } },
+    { label: 'an address of 301 characters', change: { address: 'a'.repeat(301) } },
     { label: 'a contact number with letters', change: { contactNumber: 'call-me-maybe' } },
     { label: 'a contact number with fewer than 7 digits', change: { contactNumber: '12345' } },
     { label: 'a contact number longer than 30 characters', change: { contactNumber: '1'.repeat(31) } },

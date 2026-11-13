@@ -12,12 +12,61 @@ public class CustomerValidationTests
 
     [Theory]
     [InlineData("", "Cruz")]
-    [InlineData("Ana", " ")]
+    [InlineData(" ", null)]
     [InlineData(null, "Cruz")]
-    [InlineData("Ana", null)]
-    public void EnsureValidNames_MissingEither_Throws(string? first, string? last)
+    public void EnsureValidNames_MissingFirstName_Throws(string? first, string? last)
     {
-        Should.Throw<InvalidOperationException>(() => CustomerValidation.EnsureValidNames(first!, last!))
-            .Message.ShouldBe("Customer first name and last name are required.");
+        Should.Throw<InvalidOperationException>(() => CustomerValidation.EnsureValidNames(first!, last))
+            .Message.ShouldBe("Customer first name is required.");
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("  ")]
+    public void EnsureValidNames_BlankLastName_IsAllowed(string? last)
+    {
+        Should.NotThrow(() => CustomerValidation.EnsureValidNames("Ana", last));
+    }
+
+    [Fact]
+    public void EnsureValidNames_NameOverFiftyCharacters_Throws()
+    {
+        Should.Throw<InvalidOperationException>(() => CustomerValidation.EnsureValidNames("Ana", new string('x', 51)));
+    }
+
+    [Theory]
+    [InlineData(null, null)]
+    [InlineData("", null)]
+    [InlineData("   ", null)]
+    [InlineData("  5 Side St  ", "5 Side St")]
+    public void NormalizeAddress_TrimsAndTurnsBlankIntoNull(string? input, string? expected)
+    {
+        CustomerValidation.NormalizeAddress(input).ShouldBe(expected);
+    }
+
+    [Fact]
+    public void NormalizeAddress_ThreeHundredCharactersIsFine_ThreeHundredOneIsRefused()
+    {
+        CustomerValidation.NormalizeAddress(new string('a', 300)).ShouldBe(new string('a', 300));
+        Should.Throw<InvalidOperationException>(() => CustomerValidation.NormalizeAddress(new string('a', 301)));
+    }
+
+    [Theory]
+    [InlineData(null, null)]
+    [InlineData("  ", null)]
+    [InlineData(" Cruz ", "Cruz")]
+    public void NormalizeLastName_BlankBecomesNull(string? input, string? expected)
+    {
+        CustomerValidation.NormalizeLastName(input).ShouldBe(expected);
+    }
+
+    [Theory]
+    [InlineData("Ana", "Cruz", "Ana Cruz")]
+    [InlineData("Ana", null, "Ana")]
+    [InlineData("Ana", " ", "Ana")]
+    public void CustomerName_Join_NeverPrintsNullOrTrailingSpaces(string first, string? last, string expected)
+    {
+        CustomerName.Join(first, last).ShouldBe(expected);
     }
 }

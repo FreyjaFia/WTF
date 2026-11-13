@@ -6,6 +6,7 @@ internal static class CustomerValidation
 {
     public const int MaxContactLength = 30;
     public const int MaxNameLength = 50;
+    public const int MaxAddressLength = 300;
 
     private static readonly Regex ContactPattern = new(@"^[0-9+()\-\s]+$", RegexOptions.Compiled);
 
@@ -31,14 +32,36 @@ internal static class CustomerValidation
         return contact;
     }
 
-    public static void EnsureValidNames(string firstName, string lastName)
+    public static string? NormalizeAddress(string? address)
     {
-        if (string.IsNullOrWhiteSpace(firstName) || string.IsNullOrWhiteSpace(lastName))
+        var trimmed = address?.Trim();
+        if (string.IsNullOrEmpty(trimmed))
         {
-            throw new InvalidOperationException("Customer first name and last name are required.");
+            return null;
         }
 
-        if (firstName.Length > MaxNameLength || lastName.Length > MaxNameLength)
+        if (trimmed.Length > MaxAddressLength)
+        {
+            throw new InvalidOperationException($"An address can be at most {MaxAddressLength} characters.");
+        }
+
+        return trimmed;
+    }
+
+    public static string? NormalizeLastName(string? lastName)
+    {
+        var trimmed = lastName?.Trim();
+        return string.IsNullOrEmpty(trimmed) ? null : trimmed;
+    }
+
+    public static void EnsureValidNames(string firstName, string? lastName)
+    {
+        if (string.IsNullOrWhiteSpace(firstName))
+        {
+            throw new InvalidOperationException("Customer first name is required.");
+        }
+
+        if (firstName.Length > MaxNameLength || (lastName?.Length ?? 0) > MaxNameLength)
         {
             throw new InvalidOperationException($"Customer names can be at most {MaxNameLength} characters.");
         }

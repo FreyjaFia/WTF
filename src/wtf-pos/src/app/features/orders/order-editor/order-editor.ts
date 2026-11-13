@@ -26,6 +26,7 @@ import {
   uncoverLines,
 } from './order-editor-senior-pwd';
 import { SeniorPwdDialogComponent, SeniorPwdLineOption } from '../senior-pwd-dialog/senior-pwd-dialog';
+import { joinName } from '@shared/utils/person-name';
 import { CommonModule } from '@angular/common';
 import {
   ChangeDetectorRef,
@@ -248,7 +249,7 @@ export class OrderEditor implements OnInit, OnDestroy {
 
   protected readonly createCustomerForm = new FormGroup({
     firstName: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
-    lastName: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+    address: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(300)] }),
   });
 
   protected readonly filterForm = new FormGroup({
@@ -300,6 +301,8 @@ export class OrderEditor implements OnInit, OnDestroy {
   protected readonly isLoadingPromotions = signal(false);
   protected readonly isLoadingDiscountedPromotions = signal(false);
   protected readonly selectedCustomerId = signal<string | null>(null);
+  protected readonly orderAddress = signal('');
+  private orderAddressEdited = false;
   protected readonly isLoadingCustomers = signal(false);
   protected readonly isLoading = signal(false);
   protected readonly isEditMode = signal(false);
@@ -455,6 +458,13 @@ export class OrderEditor implements OnInit, OnDestroy {
     const order = this.currentOrder();
     return order?.status === OrderStatusEnum.Pending || this.isOverrideMode();
   });
+  protected readonly canEditOrderAddress = computed(() => {
+    if (!this.canEditCustomerSelection() || !this.selectedCustomerId()) {
+      return false;
+    }
+
+    return !this.isEditMode() || this.isOverrideMode() || this.isOfflineEditMode();
+  });
   protected readonly canCreateCustomerInOrder = computed(() =>
     this.authService.canCreateCustomerInOrder(this.isEditMode()),
   );
@@ -515,7 +525,7 @@ export class OrderEditor implements OnInit, OnDestroy {
       return 'Unknown customer';
     }
 
-    return `${selected.firstName} ${selected.lastName}`.trim();
+    return joinName(selected.firstName, selected.lastName);
   });
   protected readonly customerOptions = computed<CustomerDropdownOption[]>(() =>
     this.customers().map((customer) => ({
@@ -989,6 +999,8 @@ export class OrderEditor implements OnInit, OnDestroy {
         switchMap((order) => {
           this.currentOrder.set(order);
           this.selectedCustomerId.set(order.customerId ?? null);
+          this.orderAddress.set(order.customerAddress ?? '');
+          this.orderAddressEdited = true;
           this.orderSpecialInstructions.set(order.specialInstructions ?? '');
 
           const wantsOverride = this.route.snapshot.queryParamMap.has('override');
@@ -1033,6 +1045,8 @@ export class OrderEditor implements OnInit, OnDestroy {
       this.cart.set([...pending.cartSnapshot]);
       this.seniorPwdPersons.set(pending.command.seniorPwdPersons ?? []);
       this.selectedCustomerId.set(pending.command.customerId ?? null);
+      this.orderAddress.set(pending.command.customerAddress ?? '');
+      this.orderAddressEdited = true;
       this.orderSpecialInstructions.set(pending.command.specialInstructions ?? '');
 
       this.loadCatalog();
@@ -1919,6 +1933,29 @@ export class OrderEditor implements OnInit, OnDestroy {
     }
 
     this.selectedCustomerId.set(customerId);
+    this.fillOrderAddressFromCustomer();
+  }
+
+  protected onOrderAddressInput(event: Event): void {
+    this.orderAddress.set((event.target as HTMLInputElement).value);
+    this.orderAddressEdited = true;
+  }
+
+  private fillOrderAddressFromCustomer(): void {
+    if (this.orderAddressEdited) {
+      return;
+    }
+
+    const customer = this.customers().find((c) => c.id === this.selectedCustomerId());
+    this.orderAddress.set(customer?.address?.trim() ?? '');
+  }
+
+  private currentOrderAddress(): string | null {
+    if (!this.selectedCustomerId()) {
+      return null;
+    }
+
+    return this.orderAddress().trim() || null;
   }
 
   protected getStatusVariant(status?: OrderStatusEnum | null): BadgeVariant {
@@ -1950,7 +1987,7 @@ export class OrderEditor implements OnInit, OnDestroy {
 
     this.createCustomerForm.reset({
       firstName: '',
-      lastName: '',
+      address: '',
     });
     this.createCustomerForm.markAsPristine();
     this.createCustomerForm.markAsUntouched();
@@ -1978,19 +2015,20 @@ export class OrderEditor implements OnInit, OnDestroy {
     }
 
     const firstName = this.createCustomerForm.controls.firstName.value.trim();
-    const lastName = this.createCustomerForm.controls.lastName.value.trim();
+    const address = this.createCustomerForm.controls.address.value.trim();
 
     this.isCreatingCustomer.set(true);
 
     this.customerService
       .createCustomer({
         firstName,
-        lastName,
+        address: address || null,
       })
       .subscribe({
         next: (createdCustomer) => {
           this.customers.set([...this.customers(), createdCustomer]);
           this.selectedCustomerId.set(createdCustomer.id);
+          this.fillOrderAddressFromCustomer();
           this.showCreateCustomerModal.set(false);
           this.removeStackId('createCustomer');
           this.isCreatingCustomer.set(false);
@@ -2183,6 +2221,7 @@ export class OrderEditor implements OnInit, OnDestroy {
     const command: UpdateOrderCommand = {
       id: order.id,
       customerId: this.selectedCustomerId(),
+      customerAddress: this.currentOrderAddress(),
       items: this.buildOrderItemsFromCart(),
       bundlePromotions: this.buildBundlePromotionsFromCart(),
       specialInstructions: this.orderSpecialInstructions().trim() || null,
@@ -2530,6 +2569,7 @@ export class OrderEditor implements OnInit, OnDestroy {
     const offline = !this.connectivity.isOnline();
     const command: CreateOrderCommand = {
       customerId: this.selectedCustomerId(),
+      customerAddress: this.currentOrderAddress(),
       items: this.buildOrderItemsFromCart(offline),
       bundlePromotions: this.buildBundlePromotionsFromCart(offline),
       specialInstructions: this.orderSpecialInstructions().trim() || null,
@@ -2619,6 +2659,7 @@ export class OrderEditor implements OnInit, OnDestroy {
 
     const command: CreateOrderCommand = {
       customerId: this.selectedCustomerId(),
+      customerAddress: this.currentOrderAddress(),
       items: this.buildOrderItemsFromCart(true),
       bundlePromotions: this.buildBundlePromotionsFromCart(true),
       specialInstructions: this.orderSpecialInstructions().trim() || null,
@@ -2712,6 +2753,7 @@ export class OrderEditor implements OnInit, OnDestroy {
         this.cart.set(saved.items);
         this.seniorPwdPersons.set(saved.seniorPwdPersons ?? []);
         this.selectedCustomerId.set(saved.customerId);
+        this.fillOrderAddressFromCustomer();
         this.orderSpecialInstructions.set(saved.specialInstructions);
       }
 

@@ -1,7 +1,7 @@
 export interface CustomerDto {
   id: string;
   firstName: string;
-  lastName: string;
+  lastName?: string | null;
   address?: string | null;
   isActive: boolean;
   createdAt: string;
@@ -15,7 +15,7 @@ export interface CustomerDto {
 
 export interface CreateCustomerDto {
   firstName: string;
-  lastName: string;
+  lastName?: string | null;
   address?: string | null;
   contactNumber?: string | null;
 }
@@ -23,7 +23,7 @@ export interface CreateCustomerDto {
 export interface UpdateCustomerDto {
   id: string;
   firstName: string;
-  lastName: string;
+  lastName?: string | null;
   address?: string | null;
   contactNumber?: string | null;
 }

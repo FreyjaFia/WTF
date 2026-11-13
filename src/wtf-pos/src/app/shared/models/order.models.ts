@@ -124,6 +124,7 @@ export interface OrderDto {
   note?: string | null;
   totalAmount: number;
   customerName?: string | null;
+  customerAddress?: string | null;
   bundlePromotions?: OrderBundlePromotionDto[] | null;
   overrideReason?: string | null;
   overriddenAt?: string | null;
@@ -186,6 +187,7 @@ export interface CreateOrderCommand {
   /** The total the register showed. The server refuses a finished sale whose total came out different. */
   expectedTotal?: number | null;
   seniorPwdPersons?: SeniorPwdPersonRequestDto[];
+  customerAddress?: string | null;
 }
 
 /** What the server did with one offline order. */
@@ -216,4 +218,5 @@ export interface UpdateOrderCommand {
   /** The total the register showed. The server refuses a finished sale whose total came out different. */
   expectedTotal?: number | null;
   seniorPwdPersons?: SeniorPwdPersonRequestDto[];
+  customerAddress?: string | null;
 }

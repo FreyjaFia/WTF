@@ -22,4 +22,5 @@ public record OrderDto(
     string? OfflineLocalId = null,
     List<string>? StockWarnings = null,
     List<Guid>? StockLineIds = null,
-    List<OrderSeniorPwdDto>? SeniorPwdPersons = null);
+    List<OrderSeniorPwdDto>? SeniorPwdPersons = null,
+    string? CustomerAddress = null);

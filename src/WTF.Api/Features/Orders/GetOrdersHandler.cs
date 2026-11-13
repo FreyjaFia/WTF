@@ -151,7 +151,8 @@ public class GetOrdersHandler(WTFDbContext db, IHttpContextAccessor? httpContext
                 o.ReviewReasons,
                 o.QuotedTotal,
                 o.OfflineLocalId,
-                SeniorPwdPersons: SeniorPwdOrders.ToDtos(o.OrderSeniorPwdDiscounts, true)
+                SeniorPwdPersons: SeniorPwdOrders.ToDtos(o.OrderSeniorPwdDiscounts, true),
+                CustomerAddress: o.CustomerAddress
             );
         })];
     }

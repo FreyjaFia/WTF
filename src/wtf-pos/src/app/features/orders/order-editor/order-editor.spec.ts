@@ -40,6 +40,8 @@ interface Editor {
   bundlePromotions: Sig<PromotionListItemDto[]>;
   discountedProductPromotions: Sig<DiscountedProductPromotionDto[]>;
   selectedCustomerId: Sig<string | null>;
+  orderAddress: Sig<string>;
+  onOrderAddressInput: (e: Event) => void;
   orderSpecialInstructions: Sig<string>;
   isEditMode: Sig<boolean>;
   isOfflineEditMode: () => boolean;
@@ -325,6 +327,7 @@ describe('OrderEditor', () => {
     id: 'c1',
     firstName: 'Jane',
     lastName: 'Doe',
+    address: '5 Pine St',
     isActive: true,
     createdAt: '',
     createdBy: '',
@@ -1134,6 +1137,48 @@ describe('OrderEditor', () => {
       expect(checkoutOpen).toHaveBeenCalledTimes(1);
       t.onOrderConfirmed(cash);
       expect(orderService['createOrder'].mock.calls.at(-1)?.[0].expectedTotal).toBe(200);
+    });
+
+    it('pre-fills the order address from the customer and sends it with the order', async () => {
+      await start();
+      withCart([line()]);
+      t.onCustomerSelected('c1');
+      expect(t.orderAddress()).toBe('5 Pine St');
+
+      t.onCustomerSelected(null);
+      expect(t.orderAddress()).toBe('');
+
+      t.onCustomerSelected('c1');
+      t.checkout();
+      t.onOrderConfirmed(cash);
+      expect(orderService['createOrder'].mock.calls.at(-1)?.[0].customerAddress).toBe('5 Pine St');
+    });
+
+    it('keeps an address the cashier typed and never touches the customer record', async () => {
+      await start();
+      withCart([line()]);
+      t.onCustomerSelected('c1');
+      const input = document.createElement('input');
+      input.value = '  9 Oak Ave ';
+      const ev = new Event('input');
+      Object.defineProperty(ev, 'target', { value: input });
+      t.onOrderAddressInput(ev);
+      t.onCustomerSelected(null);
+      t.onCustomerSelected('c1');
+      expect(t.orderAddress()).toBe('  9 Oak Ave ');
+
+      t.checkout();
+      t.onOrderConfirmed(cash);
+      expect(orderService['createOrder'].mock.calls.at(-1)?.[0].customerAddress).toBe('9 Oak Ave');
+      expect(customerService['createCustomer']).not.toHaveBeenCalled();
+    });
+
+    it('sends no address for a walk-in order', async () => {
+      await start();
+      withCart([line()]);
+      t.checkout();
+      t.onOrderConfirmed(cash);
+      expect(orderService['createOrder'].mock.calls.at(-1)?.[0].customerAddress).toBeNull();
     });
 
     it('a retry of the same cart after a failed save reuses the same key, and a changed cart gets a new one', async () => {
@@ -2079,9 +2124,12 @@ describe('OrderEditor', () => {
     it('creates a customer and selects it', async () => {
       await start();
       t.openCreateCustomerModal();
-      t.createCustomerForm.patchValue({ firstName: '  New ', lastName: ' Guy ' });
+      t.createCustomerForm.patchValue({ firstName: '  New ', address: ' 12 Mango St ' });
       t.saveCustomerFromModal();
-      expect(customerService['createCustomer']).toHaveBeenCalledWith({ firstName: 'New', lastName: 'Guy' });
+      expect(customerService['createCustomer']).toHaveBeenCalledWith({
+        firstName: 'New',
+        address: '12 Mango St',
+      });
       expect(t.selectedCustomerId()).toBe('c2');
       expect(t.customers().length).toBe(2);
       expect(t.showCreateCustomerModal()).toBe(false);
@@ -2089,11 +2137,30 @@ describe('OrderEditor', () => {
       expect(t.isCreatingCustomer()).toBe(false);
     });
 
+    it('creates a customer without an address as null and without a last name', async () => {
+      await start();
+      t.openCreateCustomerModal();
+      t.createCustomerForm.patchValue({ firstName: 'New' });
+      t.saveCustomerFromModal();
+      expect(customerService['createCustomer']).toHaveBeenCalledWith({
+        firstName: 'New',
+        address: null,
+      });
+    });
+
+    it('does not save the quick customer when the first name is blank', async () => {
+      await start();
+      t.openCreateCustomerModal();
+      t.createCustomerForm.patchValue({ firstName: '', address: '12 Mango St' });
+      t.saveCustomerFromModal();
+      expect(customerService['createCustomer']).not.toHaveBeenCalled();
+    });
+
     it('reports create customer failure', async () => {
       customerService['createCustomer'].mockReturnValue(throwError(() => new Error('')));
       await start();
       t.openCreateCustomerModal();
-      t.createCustomerForm.patchValue({ firstName: 'A', lastName: 'B' });
+      t.createCustomerForm.patchValue({ firstName: 'A', address: 'B' });
       t.saveCustomerFromModal();
       expect(alert['error']).toHaveBeenCalledWith('create customer failed');
       expect(t.isCreatingCustomer()).toBe(false);
@@ -2175,6 +2242,7 @@ describe('OrderEditor', () => {
       const cmd = orderService['createOrder'].mock.calls[0][0];
       expect(cmd).toEqual({
         customerId: 'c1',
+        customerAddress: '5 Pine St',
         specialInstructions: 'fast',
         offlineLocalId: expect.stringMatching(/^ON-/),
         status: OrderStatusEnum.Pending,
@@ -3060,6 +3128,7 @@ describe('OrderEditor', () => {
           id: 'o1',
           status: OrderStatusEnum.Completed,
           overrideReason: 'wrong item',
+          customerAddress: null,
           paymentMethod: PaymentMethodEnum.Cash,
           amountReceived: 500,
           changeAmount: 300,

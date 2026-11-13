@@ -252,7 +252,8 @@ public class VoidOrderHandler(
             order.OverriddenAt,
             SeniorPwdPersons: SeniorPwdOrders.ToDtos(
                 await db.OrderSeniorPwdDiscounts.AsNoTracking().Where(s => s.OrderId == order.Id).ToListAsync(cancellationToken),
-                true)
+                true),
+            CustomerAddress: order.CustomerAddress
         );
     }
 }

@@ -9,6 +9,7 @@ internal static class OrderInputValidation
 {
     public const int InstructionsMaxLength = 100;
     public const int NoteMaxLength = 500;
+    public const int AddressMaxLength = 300;
 
     public static void EnsureLengths(
         string? specialInstructions,
@@ -48,6 +49,18 @@ internal static class OrderInputValidation
         {
             throw new InvalidOperationException("Customer is inactive.");
         }
+    }
+
+    public static string? NormalizeCustomerAddress(string? address)
+    {
+        var trimmed = address?.Trim();
+        if (string.IsNullOrEmpty(trimmed))
+        {
+            return null;
+        }
+
+        EnsureMax(trimmed, AddressMaxLength, "Address");
+        return trimmed;
     }
 
     public static void EnsureNoteLength(string? note) => EnsureMax(note, NoteMaxLength, "Note");

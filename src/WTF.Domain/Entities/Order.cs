@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace WTF.Domain.Entities;
+﻿namespace WTF.Domain.Entities;
 
 public partial class Order
 {
@@ -44,6 +41,8 @@ public partial class Order
     public byte? FulfillmentType { get; set; }
 
     public string? DeliveryAddress { get; set; }
+
+    public string? CustomerAddress { get; set; }
 
     public string? ContactNumber { get; set; }
 

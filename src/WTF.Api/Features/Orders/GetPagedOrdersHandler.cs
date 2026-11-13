@@ -60,6 +60,7 @@ public sealed class GetPagedOrdersHandler(WTFDbContext db, IHttpContextAccessor?
             var term = request.SearchTerm.Trim().ToLower();
             baseQuery = baseQuery.Where(o =>
                 o.OrderNumber.ToString().Contains(term) ||
+                (o.CustomerAddress != null && o.CustomerAddress.ToLower().Contains(term)) ||
                 (o.Customer != null &&
                     (
                         (o.Customer.FirstName + " " + o.Customer.LastName).ToLower().Contains(term) ||
@@ -181,7 +182,8 @@ public sealed class GetPagedOrdersHandler(WTFDbContext db, IHttpContextAccessor?
                 o.ReviewReasons,
                 o.QuotedTotal,
                 o.OfflineLocalId,
-                SeniorPwdPersons: SeniorPwdOrders.ToDtos(o.OrderSeniorPwdDiscounts, true));
+                SeniorPwdPersons: SeniorPwdOrders.ToDtos(o.OrderSeniorPwdDiscounts, true),
+                CustomerAddress: o.CustomerAddress);
         }).ToList();
 
         return new PagedResultDto<OrderDto>(items, page, pageSize, totalCount);

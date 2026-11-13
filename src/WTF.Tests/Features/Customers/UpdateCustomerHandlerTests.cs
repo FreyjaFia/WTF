@@ -89,8 +89,8 @@ public class UpdateCustomerHandlerTests
 
     [Theory]
     [InlineData("", "Cruz")]
-    [InlineData("Ana", "  ")]
-    public async Task Handle_MissingName_ThrowsAndPersistsNothing(string first, string last)
+    [InlineData("  ", null)]
+    public async Task Handle_MissingFirstName_ThrowsAndPersistsNothing(string first, string? last)
     {
         var customer = CustomerSeed.NewCustomer();
         await CustomerSeed.SeedAsync(_dbName, customer);

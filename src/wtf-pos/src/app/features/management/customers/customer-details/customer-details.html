@@ -15,7 +15,7 @@
       </a>
       @if (customer()) {
         <div class="min-w-0">
-          <app-page-title [text]="customer()!.firstName + ' ' + customer()!.lastName" />
+          <app-page-title [text]="(customer()!.firstName + ' ' + (customer()!.lastName ?? '')).trim()" />
           <div class="mt-1 flex flex-wrap items-center gap-2">
             @if (customer()!.isActive) {
               <app-badge variant="success">Active</app-badge>
@@ -106,7 +106,7 @@
                   <div>
                     <p class="mb-1 text-xs font-medium text-gray-400">Last Name</p>
                     <p class="text-sm font-bold text-gray-800">
-                      {{ customer()!.lastName }}
+                      {{ customer()!.lastName || '-' }}
                     </p>
                   </div>
                   <div>
@@ -284,7 +284,7 @@
   >
     This will revoke every ordering link of
     <span class="font-medium text-gray-700"
-      >{{ customer()!.firstName }} {{ customer()!.lastName }}</span
+      >{{ customer()!.firstName }} {{ customer()!.lastName ?? '' }}</span
     >
     right away. You can enable it again later and generate new links.
   </app-confirm-dialog>
@@ -318,7 +318,7 @@
   >
     This will deactivate
     <span class="font-medium text-gray-700">
-      {{ customer()!.firstName }} {{ customer()!.lastName }}</span
+      {{ customer()!.firstName }} {{ customer()!.lastName ?? '' }}</span
     >. You can restore it later.
   </app-confirm-dialog>
 }
@@ -336,7 +336,7 @@
     (cancelled)="cancelRestore()"
   >
     This will reactivate
-    <span class="font-medium text-gray-700">{{ customer()!.firstName + ' ' + customer()!.lastName }}</span
+    <span class="font-medium text-gray-700">{{ (customer()!.firstName + ' ' + (customer()!.lastName ?? '')).trim() }}</span
     >. They will be available for new orders again.
   </app-confirm-dialog>
 }

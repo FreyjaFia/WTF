@@ -31,6 +31,9 @@ public record CreateOrderCommand : IRequest<OrderDto>
     public string? SpecialInstructions { get; init; }
     public string? Note { get; init; }
 
+    // The address kept on this order. Null means "use the customer's saved address"; blank means none.
+    public string? CustomerAddress { get; init; }
+
     [Required]
     public OrderStatusEnum Status { get; init; }
 
@@ -129,6 +132,16 @@ public class CreateOrderHandler(
         else
         {
             await OrderInputValidation.EnsureCustomerAsync(db, request.CustomerId, cancellationToken);
+        }
+
+        var customerAddress = OrderInputValidation.NormalizeCustomerAddress(request.CustomerAddress);
+        if (request.CustomerAddress is null && request.CustomerId.HasValue)
+        {
+            customerAddress = OrderInputValidation.NormalizeCustomerAddress(
+                await db.Customers
+                    .Where(c => c.Id == request.CustomerId.Value)
+                    .Select(c => c.Address)
+                    .FirstOrDefaultAsync(cancellationToken));
         }
 
         // Validate no nested add-ons and add-on type rules
@@ -233,6 +246,7 @@ public class CreateOrderHandler(
             OrderLinkId = request.OrderLinkId,
             FulfillmentType = request.FulfillmentType.HasValue ? (byte)request.FulfillmentType.Value : null,
             DeliveryAddress = request.DeliveryAddress,
+            CustomerAddress = request.CustomerId.HasValue ? customerAddress : null,
             ContactNumber = request.ContactNumber,
             OfflineLocalId = request.OfflineLocalId,
             ReviewReasons = held ? OfflineOrderReview.JoinReasons(request.HeldReasons!) : null
@@ -594,7 +608,8 @@ public class CreateOrderHandler(
             QuotedTotal: order.QuotedTotal,
             OfflineLocalId: order.OfflineLocalId,
             StockWarnings: stock.Warnings,
-            SeniorPwdPersons: seniorPwd is null ? null : SeniorPwdOrders.ToDtos(seniorPwd.Rows, false)
+            SeniorPwdPersons: seniorPwd is null ? null : SeniorPwdOrders.ToDtos(seniorPwd.Rows, false),
+            CustomerAddress: order.CustomerAddress
         );
     }
 }

@@ -87,16 +87,16 @@ describe('CustomerEditorComponent', () => {
       expect(c.customerForm.controls.firstName.touched).toBe(true);
       expect(c.hasError('firstName')).toBe(true);
       expect(c.getErrorMessage('firstName')).toBe('First name is required');
-      expect(c.getErrorMessage('lastName')).toBe('Last name is required');
+      expect(c.hasError('lastName')).toBe(false);
       expect(c.getErrorMessage('address')).toBeNull();
     });
 
     it('validates max lengths', () => {
       setup();
-      c.customerForm.patchValue({ firstName: 'x'.repeat(101), lastName: 'y', address: 'z'.repeat(501) });
+      c.customerForm.patchValue({ firstName: 'x'.repeat(101), lastName: 'y', address: 'z'.repeat(301) });
       c.customerForm.markAllAsTouched();
       expect(c.getErrorMessage('firstName')).toBe('First name cannot exceed 100 characters');
-      expect(c.getErrorMessage('address')).toBe('Address cannot exceed 500 characters');
+      expect(c.getErrorMessage('address')).toBe('Address cannot exceed 300 characters');
       expect(c.getErrorMessage('nonexistent')).toBeNull();
       expect(c.hasError('nonexistent')).toBe(false);
     });
