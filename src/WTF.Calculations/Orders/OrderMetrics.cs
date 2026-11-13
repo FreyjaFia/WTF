@@ -38,14 +38,18 @@ public static class OrderMetrics
         {
             var discounted = Math.Clamp(preview.Quantity, 0, parentItem.Quantity);
             return (preview.UnitPrice + addOnPerUnit) * discounted
-                + (parentItem.Product.Price + addOnPerUnit) * (parentItem.Quantity - discounted);
+                + (parentItem.Product.Price + addOnPerUnit) * (parentItem.Quantity - discounted)
+                - SeniorPwdReduction(parentItem);
         }
 
         var parentUnitPrice = parentItem.Price ?? parentItem.Product.Price;
 
-        return (parentUnitPrice + addOnPerUnit) * parentItem.Quantity;
+        return (parentUnitPrice + addOnPerUnit) * parentItem.Quantity - SeniorPwdReduction(parentItem);
     }
 
+
+    public static decimal SeniorPwdReduction(OrderItem parentItem) =>
+        (parentItem.SeniorPwdVatExempt ?? 0m) + (parentItem.SeniorPwdDiscount ?? 0m);
 
     public static decimal ParentItemUnitPrice(OrderItem parentItem) => parentItem.Price ?? parentItem.Product.Price;
 
@@ -62,7 +66,9 @@ public static class OrderMetrics
         OrderItem parentItem,
         IEnumerable<OrderItem> addOnItems,
         IReadOnlyDictionary<(Guid ProductId, Guid AddOnId), decimal> addOnOverridePrices) =>
-        ComputeParentItemTotal(parentItem, addOnItems, addOnOverridePrices) + ComputeParentItemDiscount(parentItem);
+        ComputeParentItemTotal(parentItem, addOnItems, addOnOverridePrices)
+        + ComputeParentItemDiscount(parentItem)
+        + SeniorPwdReduction(parentItem);
 
     public static OrderBreakdown ComputeOrderBreakdown(
         Order order,
@@ -70,17 +76,19 @@ public static class OrderMetrics
     {
         var gross = 0m;
         var discount = 0m;
+        var seniorPwd = 0m;
 
         foreach (var parent in order.OrderItems.Where(oi => oi.ParentOrderItemId == null && oi.BundlePromotionId == null))
         {
             var addOns = order.OrderItems.Where(child => child.ParentOrderItemId == parent.Id && child.BundlePromotionId == null);
             gross += ComputeParentItemGross(parent, addOns, addOnOverridePrices);
             discount += ComputeParentItemDiscount(parent);
+            seniorPwd += SeniorPwdReduction(parent);
         }
 
         // A bundle is sold at its own price, so its price is both its gross and its net.
         gross += order.OrderBundlePromotions.Sum(bundle => bundle.UnitPrice * bundle.Quantity);
-        return new OrderBreakdown(gross, discount);
+        return new OrderBreakdown(gross, discount, seniorPwd);
     }
 
 

@@ -102,7 +102,10 @@ public class SharedCasesTests
         List<SubscriptionLeaseAgeCase> SubscriptionLeaseAge,
         List<AddOnSelectionCase> AddOnSelection,
         List<ReceiptLineCase> ReceiptLine,
-        List<InvoiceDifferenceCase> InvoiceDifference);
+        List<InvoiceDifferenceCase> InvoiceDifference,
+        List<SeniorPwdRowCase> SeniorPwdRow,
+        List<SeniorPwdOrderCase> SeniorPwdOrders,
+        List<SeniorPwdEligibilityCase> SeniorPwdEligibility);
 
     private sealed record RecipePreviewSizeAmountCase(string SizeProductId, decimal Quantity);
 
@@ -166,6 +169,18 @@ public class SharedCasesTests
 
     private sealed record WasteBalanceAfterCase(string Name, decimal Balance, decimal Quantity, decimal Expected);
 
+    private sealed record SeniorPwdRowCase(
+        string Name, decimal Covered, bool VatRegistered, decimal ExpectedVatExempt, decimal ExpectedDiscount, decimal ExpectedDue);
+
+    private sealed record SeniorPwdLineCase(int Quantity, decimal Price, List<AddOnCase> AddOns, bool Covered);
+
+    private sealed record SeniorPwdRowAmountsCase(decimal Covered, decimal VatExempt, decimal Discount);
+
+    private sealed record SeniorPwdOrderCase(
+        string Name, bool VatRegistered, List<SeniorPwdLineCase> Lines, decimal ExpectedTotal, List<SeniorPwdRowAmountsCase> ExpectedRows);
+
+    private sealed record SeniorPwdEligibilityCase(string Name, bool ProductEligible, bool HasPromotion, bool IsBundle, bool Expected);
+
     private static readonly Lazy<Cases> Loaded = new(() =>
     {
         var path = Path.Combine(AppContext.BaseDirectory, "Calculations", "calculation-cases.json");
@@ -191,6 +206,12 @@ public class SharedCasesTests
     public static IEnumerable<object[]> CashCaseNames() => Loaded.Value.CashPayment.Select(c => new object[] { c.Name });
 
     public static IEnumerable<object[]> ReceiptLineCaseNames() => Loaded.Value.ReceiptLine.Select(c => new object[] { c.Name });
+
+    public static IEnumerable<object[]> SeniorPwdRowCaseNames() => Loaded.Value.SeniorPwdRow.Select(c => new object[] { c.Name });
+
+    public static IEnumerable<object[]> SeniorPwdOrderCaseNames() => Loaded.Value.SeniorPwdOrders.Select(c => new object[] { c.Name });
+
+    public static IEnumerable<object[]> SeniorPwdEligibilityCaseNames() => Loaded.Value.SeniorPwdEligibility.Select(c => new object[] { c.Name });
 
     public static IEnumerable<object[]> InvoiceDifferenceCaseNames() => Loaded.Value.InvoiceDifference.Select(c => new object[] { c.Name });
 
@@ -614,5 +635,54 @@ public class SharedCasesTests
         result.Price.ShouldBe(c.Expected.Price);
         result.Label.ShouldBe(c.Expected.Label);
         result.DiscountedQuantity.ShouldBe(c.Expected.DiscountedQuantity ?? c.Quantity ?? 1);
+    }
+
+    [Theory]
+    [MemberData(nameof(SeniorPwdRowCaseNames))]
+    public void SeniorPwdRow_MatchesTheSharedCase(string name)
+    {
+        var c = Loaded.Value.SeniorPwdRow.Single(x => x.Name == name);
+
+        var amounts = SeniorPwdRules.ForRow(c.Covered, c.VatRegistered);
+
+        amounts.VatExempt.ShouldBe(c.ExpectedVatExempt);
+        amounts.Discount.ShouldBe(c.ExpectedDiscount);
+        amounts.AmountDue.ShouldBe(c.ExpectedDue);
+    }
+
+    [Theory]
+    [MemberData(nameof(SeniorPwdOrderCaseNames))]
+    public void SeniorPwdOrder_MatchesTheSharedCase(string name)
+    {
+        var c = Loaded.Value.SeniorPwdOrders.Single(x => x.Name == name);
+        var order = new Order { Id = Guid.NewGuid() };
+        var rows = new List<SeniorPwdAmounts>();
+
+        foreach (var line in c.Lines)
+        {
+            var (parent, children) = BuildLine(order, new LineCase(line.Quantity, line.Price, line.AddOns), null);
+            if (!line.Covered)
+            {
+                continue;
+            }
+
+            var covered = OrderMetrics.ComputeParentItemTotal(parent, children, NoOverrides);
+            var amounts = SeniorPwdRules.ForRow(covered, c.VatRegistered);
+            parent.SeniorPwdVatExempt = amounts.VatExempt;
+            parent.SeniorPwdDiscount = amounts.Discount;
+            rows.Add(amounts);
+        }
+
+        OrderMetrics.ComputeOrderTotal(order, NoOverrides).ShouldBe(c.ExpectedTotal);
+        rows.Select(r => new SeniorPwdRowAmountsCase(r.Covered, r.VatExempt, r.Discount)).ToList().ShouldBe(c.ExpectedRows);
+    }
+
+    [Theory]
+    [MemberData(nameof(SeniorPwdEligibilityCaseNames))]
+    public void SeniorPwdEligibility_MatchesTheSharedCase(string name)
+    {
+        var c = Loaded.Value.SeniorPwdEligibility.Single(x => x.Name == name);
+
+        SeniorPwdRules.IsEligibleLine(c.ProductEligible, c.HasPromotion, c.IsBundle).ShouldBe(c.Expected);
     }
 }

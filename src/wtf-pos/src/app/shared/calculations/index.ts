@@ -15,3 +15,4 @@ export * from './addon-selection';
 export * from './platform-stats';
 export * from './receiving';
 export * from './reorder-text';
+export * from './senior-pwd';

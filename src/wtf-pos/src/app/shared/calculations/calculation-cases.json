@@ -1713,4 +1713,57 @@
     { "name": "no invoice total typed", "invoiceTotal": null, "lineTotals": [100], "expected": null },
     { "name": "a line has no price", "invoiceTotal": 100, "lineTotals": [50, null], "expected": null },
     { "name": "centavos add up exactly", "invoiceTotal": 0.3, "lineTotals": [0.1, 0.2], "expected": 0 }
+  ],
+  "seniorPwdRow": [
+    { "name": "VAT-registered: 100.00 gives 71.43 due", "covered": 100, "vatRegistered": true, "expectedVatExempt": 10.71, "expectedDiscount": 17.86, "expectedDue": 71.43 },
+    { "name": "not VAT-registered: 100.00 gives 80.00 due", "covered": 100, "vatRegistered": false, "expectedVatExempt": 0, "expectedDiscount": 20, "expectedDue": 80 },
+    { "name": "not VAT-registered: 85.50", "covered": 85.5, "vatRegistered": false, "expectedVatExempt": 0, "expectedDiscount": 17.1, "expectedDue": 68.4 },
+    { "name": "VAT-registered: 250.00", "covered": 250, "vatRegistered": true, "expectedVatExempt": 26.79, "expectedDiscount": 44.64, "expectedDue": 178.57 },
+    { "name": "VAT-registered: half a centavo rounds up", "covered": 0.14, "vatRegistered": true, "expectedVatExempt": 0.01, "expectedDiscount": 0.03, "expectedDue": 0.1 },
+    { "name": "nothing covered", "covered": 0, "vatRegistered": true, "expectedVatExempt": 0, "expectedDiscount": 0, "expectedDue": 0 }
+  ],
+  "seniorPwdOrders": [
+    {
+      "name": "one of three lattes covered, not VAT-registered",
+      "vatRegistered": false,
+      "lines": [
+        { "quantity": 1, "price": 120, "addOns": [], "covered": true },
+        { "quantity": 2, "price": 120, "addOns": [], "covered": false }
+      ],
+      "expectedTotal": 336,
+      "expectedRows": [{ "covered": 120, "vatExempt": 0, "discount": 24 }]
+    },
+    {
+      "name": "covered line with an add-on and a normal line, VAT-registered",
+      "vatRegistered": true,
+      "lines": [
+        { "quantity": 2, "price": 100, "addOns": [{ "price": 10, "quantity": 1 }], "covered": true },
+        { "quantity": 1, "price": 50, "addOns": [], "covered": false }
+      ],
+      "expectedTotal": 207.14,
+      "expectedRows": [{ "covered": 220, "vatExempt": 23.57, "discount": 39.29 }]
+    },
+    {
+      "name": "two persons on one order, not VAT-registered",
+      "vatRegistered": false,
+      "lines": [
+        { "quantity": 1, "price": 100, "addOns": [], "covered": true },
+        { "quantity": 1, "price": 75.5, "addOns": [], "covered": true }
+      ],
+      "expectedTotal": 140.4,
+      "expectedRows": [{ "covered": 100, "vatExempt": 0, "discount": 20 }, { "covered": 75.5, "vatExempt": 0, "discount": 15.1 }]
+    },
+    {
+      "name": "nothing covered leaves the total alone",
+      "vatRegistered": true,
+      "lines": [{ "quantity": 1, "price": 100, "addOns": [], "covered": false }],
+      "expectedTotal": 100,
+      "expectedRows": []
+    }
+  ],
+  "seniorPwdEligibility": [
+    { "name": "plain food or drink", "productEligible": true, "hasPromotion": false, "isBundle": false, "expected": true },
+    { "name": "promotion price is not eligible", "productEligible": true, "hasPromotion": true, "isBundle": false, "expected": false },
+    { "name": "bundle is not eligible", "productEligible": true, "hasPromotion": false, "isBundle": true, "expected": false },
+    { "name": "product marked not food or drink", "productEligible": false, "hasPromotion": false, "isBundle": false, "expected": false }
   ]}

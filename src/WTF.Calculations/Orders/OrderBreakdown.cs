@@ -1,6 +1,6 @@
 namespace WTF.Calculations.Orders;
 
-public sealed record OrderBreakdown(decimal Gross, decimal Discount)
+public sealed record OrderBreakdown(decimal Gross, decimal Discount, decimal SeniorPwdDiscount = 0m)
 {
-    public decimal Net => Gross - Discount;
+    public decimal Net => Gross - Discount - SeniorPwdDiscount;
 }
