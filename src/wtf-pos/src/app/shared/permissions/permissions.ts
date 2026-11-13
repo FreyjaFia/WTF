@@ -5,6 +5,7 @@ export const Permissions = {
   OrdersWrite: 'orders.write',
   OrdersOverride: 'orders.override',
   OrdersSeniorPwdApply: 'orders.seniorpwd.apply',
+  OrdersSyncPolicy: 'orders.sync.policy',
   OrderLinksManage: 'orderlinks.manage',
   CustomersRead: 'customers.read',
   CustomersWrite: 'customers.write',
@@ -75,6 +76,7 @@ export const ManagementMenuPermissions: readonly PermissionKey[] = [
   ...SetupPermissions,
   Permissions.BrandManage,
   Permissions.SubscriptionBilling,
+  Permissions.OrdersSyncPolicy,
   Permissions.AuditRead,
   Permissions.SchemaScriptsRead,
 ];
