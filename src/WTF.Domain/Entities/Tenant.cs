@@ -63,6 +63,8 @@ public partial class Tenant
 
     public virtual ICollection<Notification> Notifications { get; set; } = new List<Notification>();
 
+    public virtual ICollection<CatalogChangeLog> CatalogChangeLogs { get; set; } = new List<CatalogChangeLog>();
+
     public virtual ICollection<OrderBundlePromotion> OrderBundlePromotions { get; set; } = new List<OrderBundlePromotion>();
 
     public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();

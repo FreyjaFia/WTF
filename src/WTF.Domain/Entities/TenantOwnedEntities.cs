@@ -10,6 +10,10 @@ public partial class AuditLog : ITenantOwned
 {
 }
 
+public partial class CatalogChangeLog : ITenantOwned
+{
+}
+
 public partial class Conversation : ITenantOwned
 {
 }
