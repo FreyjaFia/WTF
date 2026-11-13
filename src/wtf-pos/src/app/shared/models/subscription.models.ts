@@ -5,6 +5,7 @@ export interface SubscriptionDto {
   planName: string | null;
   planCode: string | null;
   features: string[];
+  plansByFeature?: Record<string, string[]>;
   warning: SubscriptionWarning;
   daysLeft: number;
   periodEnd: string | null;
@@ -48,6 +49,7 @@ export interface PlanDto {
   features: string[];
   maxUsers: number | null;
   isActive: boolean;
+  shopCount: number;
 }
 
 export interface TenantSubscriptionDto {
@@ -66,6 +68,7 @@ export interface TenantSubscriptionDto {
   warning: SubscriptionWarning;
   daysLeft: number;
   invoices: TenantInvoiceDto[];
+  userCount: number;
 }
 
 export interface SetSubscriptionRequest {
@@ -100,6 +103,25 @@ export interface PublicBrandDto {
   address: string | null;
   phone: string | null;
   primaryColor: string;
+}
+
+export interface PlanFeatureDto {
+  key: string;
+  label: string;
+  description: string;
+  group: string;
+  needs: string[];
+}
+
+export interface PlanChangeLostFeatureDto {
+  key: string;
+  label: string;
+  dataCount: number | null;
+  dataLabel: string | null;
+}
+
+export interface PlanChangePreviewDto {
+  lostFeatures: PlanChangeLostFeatureDto[];
 }
 
 export interface UpdatePlanRequest {

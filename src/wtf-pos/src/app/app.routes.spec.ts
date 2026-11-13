@@ -218,4 +218,41 @@ describe('app.routes', () => {
     expect(entry?.route.pathMatch).toBe('full');
     expect(entry?.route.redirectTo).toBeUndefined();
   });
+
+  it('gives every screen under the layout a permission or a feature, or lists it as a core screen', () => {
+    const coreScreens = new Set([
+      'orders',
+      'orders/list',
+      'inventory',
+      'management',
+      'management/products',
+      'management/customers',
+      'management/users',
+      'management/roles',
+      'management/setup',
+      'management/shop',
+      'notifications',
+      'my-profile',
+      'not-in-plan',
+    ]);
+    const shell = routes.find((r) => r.path === '' && r.component)!;
+    const isCovered = (route: Route): boolean =>
+      !!route.data?.['permission'] || !!route.data?.['anyPermission'] || !!route.data?.['feature'];
+    const uncovered: string[] = [];
+    const walk = (list: Route[], prefix: string, covered: boolean): void => {
+      for (const route of list) {
+        const fullPath = [prefix, route.path ?? ''].filter(Boolean).join('/');
+        const here = covered || isCovered(route);
+
+        if (route.children) {
+          walk(route.children, fullPath, here);
+        } else if (route.component && !here && !coreScreens.has(fullPath)) {
+          uncovered.push(fullPath);
+        }
+      }
+    };
+    walk(shell.children ?? [], '', false);
+
+    expect(uncovered).toEqual([]);
+  });
 });

@@ -13,7 +13,9 @@ import {
 } from '@shared/models/platform.models';
 import {
   BrandDto,
+  PlanChangePreviewDto,
   PlanDto,
+  PlanFeatureDto,
   SetSubscriptionRequest,
   TenantSubscriptionDto,
   UpdatePlanRequest,
@@ -69,6 +71,16 @@ export class PlatformService {
 
   public getPlans(): Observable<PlanDto[]> {
     return this.http.get<PlanDto[]>(`${this.baseUrl}/plans`);
+  }
+
+  public getPlanFeatures(): Observable<PlanFeatureDto[]> {
+    return this.http.get<PlanFeatureDto[]>(`${this.baseUrl}/plan-features`);
+  }
+
+  public getPlanChangePreview(tenantId: string, planId: number): Observable<PlanChangePreviewDto> {
+    return this.http.get<PlanChangePreviewDto>(`${this.baseUrl}/tenants/${tenantId}/plan-change-preview`, {
+      params: { planId },
+    });
   }
 
   public updatePlan(id: number, request: UpdatePlanRequest): Observable<PlanDto> {

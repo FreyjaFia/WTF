@@ -430,3 +430,53 @@ describe('subscriptionInterceptor', () => {
     expect(subscription.refresh).toHaveBeenCalled();
   });
 });
+
+describe('subscriptionInterceptor on a feature outside the plan', () => {
+  let ctrl: HttpTestingController;
+  let http: HttpClient;
+  const subscription = { refresh: vi.fn(), lastOnline: vi.fn() };
+  const router = { url: '/inventory/waste', navigateByUrl: vi.fn() };
+
+  beforeEach(() => {
+    subscription.refresh.mockReset();
+    router.navigateByUrl.mockReset().mockResolvedValue(true);
+    router.url = '/inventory/waste';
+    ({ http, ctrl } = setup(
+      [subscriptionInterceptor],
+      [
+        { provide: SubscriptionService, useValue: subscription },
+        { provide: Router, useValue: router },
+      ],
+    ));
+  });
+
+  afterEach(() => ctrl.verify());
+
+  it('checks the plan again and shows the Not in your plan page on a not_in_plan 403', () => {
+    http.get('/api/stock/waste').subscribe({ error: () => undefined });
+    ctrl
+      .expectOne('/api/stock/waste')
+      .flush({ code: 'not_in_plan' }, { status: 403, statusText: 'Forbidden' });
+
+    expect(subscription.refresh).toHaveBeenCalled();
+    expect(router.navigateByUrl).toHaveBeenCalledWith(AppRoutes.NotInPlan);
+  });
+
+  it('does not move the person when they are already on that page', () => {
+    router.url = `${AppRoutes.NotInPlan}?feature=inventory`;
+    http.get('/api/stock/waste').subscribe({ error: () => undefined });
+    ctrl
+      .expectOne('/api/stock/waste')
+      .flush({ code: 'not_in_plan' }, { status: 403, statusText: 'Forbidden' });
+
+    expect(router.navigateByUrl).not.toHaveBeenCalled();
+  });
+
+  it('ignores a 403 that is about the role', () => {
+    http.get('/api/stock/waste').subscribe({ error: () => undefined });
+    ctrl.expectOne('/api/stock/waste').flush({ message: 'no' }, { status: 403, statusText: 'Forbidden' });
+
+    expect(subscription.refresh).not.toHaveBeenCalled();
+    expect(router.navigateByUrl).not.toHaveBeenCalled();
+  });
+});

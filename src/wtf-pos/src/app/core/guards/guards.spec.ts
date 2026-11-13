@@ -1,7 +1,8 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRouteSnapshot, Router, RouterStateSnapshot } from '@angular/router';
-import { AuthService } from '@core/services';
+import { AuthService, PlanStore } from '@core/services';
+import { SubscriptionDto } from '@shared/models/subscription.models';
 import { AppRole, AppRoles } from '@shared/constants/app-roles';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { Observable, of, throwError } from 'rxjs';
@@ -22,6 +23,7 @@ describe('route guards', () => {
   let router: { navigateByUrl: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
+    localStorage.clear();
     auth = {
       isTokenValid: vi.fn().mockReturnValue(false),
       getRefreshToken: vi.fn().mockReturnValue(null),
@@ -152,6 +154,27 @@ describe('route guards', () => {
       const route = { data: { anyPermission: ['products.read'] } } as unknown as ActivatedRouteSnapshot;
 
       expect(run(route)).toBe(false);
+    });
+
+    it('sends the user to the Not in your plan page when the plan lacks the feature of the permission', () => {
+      const plans = TestBed.inject(PlanStore);
+      plans.apply({ managed: true, features: ['inventory'], planName: 'Starter' } as SubscriptionDto);
+      auth['can'] = vi.fn().mockReturnValue(false);
+      const route = { data: { permission: 'promotions.read' } } as unknown as ActivatedRouteSnapshot;
+
+      expect(run(route)).toBe(false);
+      expect(router.navigateByUrl).toHaveBeenCalledWith(`${AppRoutes.NotInPlan}?feature=promotions`);
+    });
+
+    it('keeps the normal fallback when the plan has the feature but the role lacks the permission', () => {
+      const plans = TestBed.inject(PlanStore);
+      plans.apply({ managed: true, features: ['promotions'], planName: 'Pro' } as SubscriptionDto);
+      auth['can'] = vi.fn().mockReturnValue(false);
+      auth['canReadOrders'].mockReturnValue(true);
+      const route = { data: { permission: 'promotions.read' } } as unknown as ActivatedRouteSnapshot;
+
+      expect(run(route)).toBe(false);
+      expect(router.navigateByUrl).toHaveBeenCalledWith(AppRoutes.OrdersList);
     });
 
     it('allows users holding one of the required roles', () => {

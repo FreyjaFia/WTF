@@ -54,6 +54,7 @@ import { ExpensesComponent } from '@features/management/expenses/expenses';
 import { SetupComponent } from '@features/management/setup/setup';
 import { ShopComponent } from '@features/management/shop/shop';
 import { NotFoundComponent } from '@features/not-found/not-found';
+import { NotInPlanComponent } from '@features/not-in-plan/not-in-plan';
 import { NotificationsComponent } from '@features/notifications/notifications';
 import { OrderDetails } from '@features/orders/order-details/order-details';
 import { OrderEditor } from '@features/orders/order-editor/order-editor';
@@ -153,6 +154,7 @@ export const routes: Routes = [
           },
         ],
       },
+      { path: 'not-in-plan', component: NotInPlanComponent },
       {
         path: 'dashboard',
         component: Dashboard,
@@ -227,19 +229,19 @@ export const routes: Routes = [
             path: 'purchase-orders/suggestions',
             component: SuggestedOrdersComponent,
             canActivate: [roleGuard],
-            data: { permission: Permissions.StockRead },
+            data: { permission: Permissions.PurchasingRead },
           },
           {
             path: 'purchase-orders',
             component: PurchaseOrdersComponent,
             canActivate: [roleGuard],
-            data: { permission: Permissions.StockRead },
+            data: { permission: Permissions.PurchasingRead },
           },
           {
             path: 'receiving',
             component: ReceivingComponent,
             canActivate: [roleGuard],
-            data: { permission: Permissions.StockRead },
+            data: { permission: Permissions.PurchasingRead },
           },
           { path: 'suppliers', redirectTo: '/management/setup/suppliers', pathMatch: 'full' },
           { path: 'suppliers/:id', redirectTo: '/management/setup/suppliers/:id', pathMatch: 'full' },
