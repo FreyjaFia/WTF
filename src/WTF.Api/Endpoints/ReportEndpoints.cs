@@ -163,7 +163,8 @@ public static class ReportEndpoints
 
                 var result = await sender.Send(query);
                 return BuildReportResponse(httpContext, result, ReportTables.Promotions, query.FromDate!.Value, query.ToDate!.Value, query.Source);
-            });
+            })
+            .RequireAuthorization(AppPolicies.RequireFeature("promotions"));
 
         reportsGroup.MapGet("/customer-links",
             async (HttpContext httpContext, [AsParameters] GetCustomerLinkReportQuery query, ISender sender) =>
@@ -176,7 +177,8 @@ public static class ReportEndpoints
 
                 var result = await sender.Send(query);
                 return BuildReportResponse(httpContext, result, ReportTables.CustomerLinks, query.FromDate!.Value, query.ToDate!.Value, OrderSourceEnum.CustomerLink);
-            });
+            })
+            .RequireAuthorization(AppPolicies.RequireFeature("orderlinks"));
 
         reportsGroup.MapGet("/customers",
             async (HttpContext httpContext, [AsParameters] GetCustomersReportQuery query, ISender sender) =>
@@ -196,7 +198,8 @@ public static class ReportEndpoints
             {
                 var result = await sender.Send(new GetStockStatusReportQuery());
                 return BuildReportResponse(httpContext, result, ReportTables.StockStatus, "Current stock levels", DateTime.UtcNow.ToString("yyyyMMdd"));
-            });
+            })
+            .RequireAuthorization(AppPolicies.RequireFeature("inventory"));
 
         reportsGroup.MapGet("/waste",
             async (HttpContext httpContext, [AsParameters] GetWasteReportQuery query, ISender sender) =>
@@ -214,7 +217,8 @@ public static class ReportEndpoints
 
                 var result = await sender.Send(query);
                 return BuildReportResponse(httpContext, result, ReportTables.Waste, query.FromDate!.Value, query.ToDate!.Value, null);
-            });
+            })
+            .RequireAuthorization(AppPolicies.RequireFeature("inventory"));
         reportsGroup.MapGet("/gross-profit",
             async (HttpContext httpContext, [AsParameters] GetGrossProfitReportQuery query, ISender sender) =>
             {
@@ -232,7 +236,8 @@ public static class ReportEndpoints
 
                 var result = await sender.Send(query);
                 return BuildReportResponse(httpContext, result, ReportTables.GrossProfit(groupBy), query.FromDate!.Value, query.ToDate!.Value, null);
-            });
+            })
+            .RequireAuthorization(AppPolicies.RequireFeature("inventory"));
 
         reportsGroup.MapGet("/profit-loss",
             async (HttpContext httpContext, [AsParameters] GetProfitLossReportQuery query, ISender sender) =>
@@ -251,7 +256,8 @@ public static class ReportEndpoints
 
                 var result = await sender.Send(query);
                 return BuildReportResponse(httpContext, result, ReportTables.ProfitLoss(groupBy), query.FromDate!.Value, query.ToDate!.Value, null);
-            });
+            })
+            .RequireAuthorization(AppPolicies.RequireFeature("inventory"));
 
         reportsGroup.MapGet("/stock-variance",
             async (HttpContext httpContext, [AsParameters] GetStockVarianceReportQuery query, ISender sender) =>
@@ -264,7 +270,8 @@ public static class ReportEndpoints
 
                 var result = await sender.Send(query);
                 return BuildReportResponse(httpContext, result, ReportTables.StockVariance, query.FromDate!.Value, query.ToDate!.Value, null);
-            });
+            })
+            .RequireAuthorization(AppPolicies.RequireFeature("inventory"));
 
         reportsGroup.MapGet("/monthly-workbook/status",
             async ([AsParameters] MonthlyWorkbookRequest request, IMonthlyReportWorkbookService workbookService, CancellationToken cancellationToken) =>

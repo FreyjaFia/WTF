@@ -40,7 +40,8 @@ public static class OrderLinkEndpoints
                 var result = await sender.Send(new GetOrderLinksQuery(id));
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.CustomersRead);
+            .RequireAuthorization(AppPolicies.CustomersRead)
+            .RequireAuthorization(AppPolicies.RequireFeature("orderlinks"));
 
         // DELETE /api/customers/{id}/ordering-links/{linkId} - Revoke a link
         group.MapDelete("/ordering-links/{linkId:guid}",
