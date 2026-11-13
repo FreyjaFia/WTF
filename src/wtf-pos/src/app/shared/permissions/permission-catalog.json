@@ -57,6 +57,16 @@
       ]
     },
     {
+      "key": "orders.sync.policy",
+      "area": "Orders",
+      "label": "Change the offline sync policy",
+      "description": "Choose which differences hold an offline sale for review and which are only noted, set the price tolerance and the aging limit.",
+      "feature": "core",
+      "requires": [
+        "orders.read"
+      ]
+    },
+    {
       "key": "orderlinks.manage",
       "area": "Orders",
       "label": "Manage order links",
@@ -349,6 +359,7 @@
       "orders.write",
       "orders.override",
       "orders.seniorpwd.apply",
+      "orders.sync.policy",
       "chat.read",
       "chat.write",
       "orderlinks.manage",
@@ -517,6 +528,9 @@
     ],
     "SeniorPwdApply": [
       "orders.seniorpwd.apply"
+    ],
+    "OrdersSyncPolicy": [
+      "orders.sync.policy"
     ],
     "ChatRead": [
       "chat.read"

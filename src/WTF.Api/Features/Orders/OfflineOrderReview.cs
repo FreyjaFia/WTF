@@ -70,25 +70,6 @@ internal static class OfflineOrderReview
         ITenantFeatures tenantFeatures,
         IHttpContextAccessor? httpContextAccessor)
     {
-        var found = await FindUnjudgedAsync(db, command, timeZone, cancellationToken);
-        return ApplyPolicy(found, policy);
-    }
-
-    public static List<OfflineReason> ApplyPolicy(IEnumerable<OfflineReason> reasons, OfflineSyncPolicySnapshot policy)
-    {
-        return [.. reasons
-            .Select(r => r.Severity == ReviewSeverityEnum.Hold && !OfflineSyncPolicyRules.StaysHold(r.Code, true, r.UnitPriceDifference, policy)
-                ? r with { Severity = ReviewSeverityEnum.Note }
-                : r)
-            .Distinct()];
-    }
-
-    private static async Task<List<OfflineReason>> FindUnjudgedAsync(
-        WTFDbContext db,
-        CreateOrderCommand command,
-        TimeZoneInfo timeZone,
-        CancellationToken cancellationToken)
-    {
         var reasons = new List<OfflineReason>();
         var createdAt = command.CreatedAt?.ToUniversalTime() ?? DateTime.UtcNow;
 
