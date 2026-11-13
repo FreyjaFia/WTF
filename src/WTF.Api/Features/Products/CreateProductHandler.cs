@@ -1,5 +1,6 @@
 using MediatR;
 using System.ComponentModel.DataAnnotations;
+using WTF.Api.Common.Catalog;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Products.DTOs;
@@ -50,6 +51,7 @@ public class CreateProductHandler(WTFDbContext db, IHttpContextAccessor httpCont
 
         var product = new Product
         {
+            Id = Guid.NewGuid(),
             Name = request.Name,
             Code = normalizedCode,
             Description = request.Description,
@@ -64,6 +66,7 @@ public class CreateProductHandler(WTFDbContext db, IHttpContextAccessor httpCont
         };
 
         db.Products.Add(product);
+        CatalogChangeRecorder.RecordProduct(db, product, userId);
         await db.SaveChangesAsync(cancellationToken);
 
         await auditService.LogAsync(

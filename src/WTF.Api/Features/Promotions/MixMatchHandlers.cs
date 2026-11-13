@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
+using WTF.Api.Common.Catalog;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Common.Orders;
 using WTF.Api.Features.Promotions.DTOs;
@@ -113,6 +114,7 @@ public sealed class CreateMixMatchPromotionHandler(WTFDbContext db, IHttpContext
 
         var promo = new Promotion
         {
+            Id = Guid.NewGuid(),
             Name = request.Name.Trim(),
             TypeId = PromotionTypeIds.MixMatch,
             IsActive = request.IsActive,
@@ -125,6 +127,7 @@ public sealed class CreateMixMatchPromotionHandler(WTFDbContext db, IHttpContext
         PromotionScheduleMapping.Apply(promo, request.Schedule);
 
         db.Promotions.Add(promo);
+        CatalogChangeRecorder.RecordPromotion(db, promo, null, userId);
         await db.SaveChangesAsync(cancellationToken);
 
         return MixMatchMapping.ToDto(promo, null);
@@ -184,6 +187,8 @@ public sealed class UpdateMixMatchPromotionHandler(WTFDbContext db, IHttpContext
             return null;
         }
 
+        var before = CatalogChangeRecorder.SnapshotPromotion(promo);
+
         promo.Name = request.Name.Trim();
         promo.IsActive = request.IsActive;
         promo.StartDate = request.StartDate;
@@ -205,6 +210,8 @@ public sealed class UpdateMixMatchPromotionHandler(WTFDbContext db, IHttpContext
         {
             promo.MixMatchPromotion.MixMatchPromotionProducts.Add(product);
         }
+
+        CatalogChangeRecorder.RecordPromotion(db, promo, before, userId);
 
         await db.SaveChangesAsync(cancellationToken);
         var used = (await PromotionUsage.CountAsync(db, [promo.Id], null, cancellationToken))[promo.Id];
@@ -228,9 +235,12 @@ public sealed class DeleteMixMatchPromotionHandler(WTFDbContext db, IHttpContext
         }
 
         // Soft delete - keep the promotion, its image, and its rules so it can be restored
+        var before = CatalogChangeRecorder.SnapshotPromotion(promo);
         promo.IsActive = false;
         promo.UpdatedAt = DateTime.UtcNow;
         promo.UpdatedBy = httpContextAccessor.HttpContext!.User.GetUserId();
+
+        CatalogChangeRecorder.RecordPromotion(db, promo, before, promo.UpdatedBy);
 
         await db.SaveChangesAsync(cancellationToken);
         return true;

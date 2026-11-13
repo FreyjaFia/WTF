@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using WTF.Api.Common.Catalog;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Services;
@@ -32,6 +33,8 @@ public class RestoreProductHandler(WTFDbContext db, IHttpContextAccessor httpCon
         product.IsActive = true;
         product.UpdatedAt = DateTime.UtcNow;
         product.UpdatedBy = userId;
+
+        CatalogChangeRecorder.RecordProduct(db, product, userId);
 
         await db.SaveChangesAsync(cancellationToken);
 

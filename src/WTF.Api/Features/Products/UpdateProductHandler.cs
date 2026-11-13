@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
+using WTF.Api.Common.Catalog;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.Products.DTOs;
@@ -129,6 +130,8 @@ public class UpdateProductHandler(WTFDbContext db, IHttpContextAccessor httpCont
         product.IsSeniorPwdEligible = request.IsSeniorPwdEligible;
         product.UpdatedAt = DateTime.UtcNow;
         product.UpdatedBy = userId;
+
+        CatalogChangeRecorder.RecordProduct(db, product, userId);
 
         await db.SaveChangesAsync(cancellationToken);
 

@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
+using WTF.Api.Common.Catalog;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Features.Products.DTOs;
 using WTF.Domain.Data;
@@ -40,6 +41,7 @@ public class UpdateProductAddOnPriceOverrideHandler(WTFDbContext db, IHttpContex
         existing.IsActive = request.IsActive;
         existing.UpdatedAt = DateTime.UtcNow;
         existing.UpdatedBy = userId;
+        CatalogChangeRecorder.RecordAddOnOverride(db, existing, userId);
 
         await db.SaveChangesAsync(cancellationToken);
 
