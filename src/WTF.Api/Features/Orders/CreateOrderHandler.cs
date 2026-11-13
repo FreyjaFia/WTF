@@ -81,9 +81,13 @@ public record CreateOrderCommand : IRequest<OrderDto>
     [JsonIgnore]
     public string? ContactNumber { get; init; }
 
-    // Why an offline order is held for an Admin. Set by the sync handler only; never read from a request body.
+    // What the review found out about an offline order: a Hold sends it to an Admin, a Note is saved with it. Set by the sync
+    // handler only; never read from a request body.
     [JsonIgnore]
-    public IReadOnlyList<string>? HeldReasons { get; init; }
+    public IReadOnlyList<OfflineReason>? ReviewFindings { get; init; }
+
+    // When the device last updated its catalog, as the device reported it. Kept on the order for audit.
+    public DateTime? CatalogSyncedAt { get; init; }
 
     // A sale that already happened (offline sync, batch) is never refused for stock: the balance may go below zero.
     [JsonIgnore]
@@ -105,7 +109,9 @@ public class CreateOrderHandler(
         using var gate = request.GateHeld ? null : await PromotionLimitGate.EnterAsync(db.StampTenantId, cancellationToken);
 
         var userId = request.ActorUserId ?? httpContextAccessor.HttpContext!.User.GetUserId();
-        var held = request.HeldReasons is { Count: > 0 };
+        var findings = request.ReviewFindings ?? [];
+        var holds = findings.Where(f => f.Severity == ReviewSeverityEnum.Hold).Select(f => f.Text).ToList();
+        var held = holds.Count > 0;
 
         // Orders waiting for approval only come from a customer's ordering link; staff cannot create one.
         if (request.Status == OrderStatusEnum.PendingApproval && request.Source != OrderSourceEnum.CustomerLink)
@@ -237,10 +243,17 @@ public class CreateOrderHandler(
             CustomerAddress = customerAddress,
             ContactNumber = request.ContactNumber,
             OfflineLocalId = request.OfflineLocalId,
-            ReviewReasons = held ? OfflineOrderReview.JoinReasons(request.HeldReasons!) : null
+            ReviewReasons = held ? OfflineOrderReview.JoinReasons(holds) : null,
+            CatalogSyncedAt = request.CatalogSyncedAt?.ToUniversalTime()
         };
 
         db.Orders.Add(order);
+
+        for (var i = 0; i < findings.Count; i++)
+        {
+            db.OrderReviewReasons.Add(OrderReviewReasons.ToRow(order, findings[i], i));
+        }
+
         await db.SaveChangesAsync(cancellationToken);
         seniorPwd?.CreateRows(order.Id, userId, createdAt);
 
@@ -520,7 +533,7 @@ public class CreateOrderHandler(
                 Source = request.Source.ToString(),
                 ItemCount = items.Count,
                 totalAmount,
-                Reasons = request.HeldReasons
+                Reasons = findings.Select(f => f.Text)
             },
             userId: userId,
             cancellationToken: cancellationToken);
@@ -575,6 +588,7 @@ public class CreateOrderHandler(
             bundlePromotions,
             seniorPwd?.Rows ?? [],
             maskIds: !SeniorPwdMapping.CanSeeFullId(httpContextAccessor),
-            stockWarnings: stock.Warnings);
+            stockWarnings: stock.Warnings,
+            reviewDetails: [.. findings.Select(OrderReviewReasons.ToDto)]);
     }
 }

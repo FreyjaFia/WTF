@@ -90,7 +90,7 @@ public class OrderTotalCheckTests
             Status = OrderStatusEnum.Completed,
             Items = [new OrderItemRequestDto(burger, 1, [], null, null, 90m, 100m, null)],
             ExpectedTotal = 1m,
-            HeldReasons = ["Burger now costs 100.00, quoted 90.00."],
+            ReviewFindings = [OfflineReason.Hold(OfflineReasonCodes.PriceChanged, "Burger now costs 100.00, quoted 90.00.")],
             OfflineLocalId = "OFF-1"
         };
 

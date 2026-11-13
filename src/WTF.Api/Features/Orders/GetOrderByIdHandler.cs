@@ -56,7 +56,8 @@ public class GetOrderByIdHandler(WTFDbContext db, ITenantFeatures tenantFeatures
             order.OrderSeniorPwdDiscounts,
             maskIds: !SeniorPwdMapping.CanSeeFullId(httpContextAccessor),
             includeCustomerName: true,
-            stockLineIds: stockLineIds);
+            stockLineIds: stockLineIds,
+            reviewDetails: await OrderReviewReasons.LoadAsync(db, order.Id, cancellationToken));
     }
 
     // The lines whose product (or one of its add-ons) took stock when the sale completed, so a refund only asks about those.

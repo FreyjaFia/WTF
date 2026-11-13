@@ -290,6 +290,73 @@ public class OfflineSyncTests
     }
 
     [Fact]
+    public async Task Sync_AHeldOrder_SavesOneStructuredRowPerReasonWithTheLineAndValues()
+    {
+        var latte = await SeedProduct("Latte", 160m);
+        var oat = await SeedProduct("Oat Milk", 30m, isAddOn: true);
+
+        var result = await SyncOne(Order("OFF-20-aaaa", OrderStatusEnum.Completed, Line(latte, 1, 150m, null, AddOn(oat, 20m))));
+
+        result.ReasonDetails.ShouldNotBeNull();
+        result.ReasonDetails.Select(d => d.Code).ShouldBe([OfflineReasonCodes.PriceChanged, OfflineReasonCodes.AddOnPriceChanged]);
+        result.ReasonDetails.ShouldAllBe(d => d.Severity == "Hold" && d.LineIndex == 0);
+        result.ReasonDetails[0].ExpectedValue.ShouldBe("160.00");
+        result.ReasonDetails[0].QuotedValue.ShouldBe("150.00");
+        await using var db = TestDb.Create(_dbName);
+        var rows = await db.OrderReviewReasons.Where(r => r.OrderId == result.OrderId).OrderBy(r => r.SortOrder).ToListAsync();
+        rows.Select(r => r.Code).ShouldBe([OfflineReasonCodes.PriceChanged, OfflineReasonCodes.AddOnPriceChanged]);
+        rows.ShouldAllBe(r => r.Severity == (byte)ReviewSeverityEnum.Hold);
+        rows.Select(r => r.Text).ShouldBe(result.Reasons);
+    }
+
+    [Fact]
+    public async Task Sync_ANoteOnlyFinding_SavesTheOrderCompletedWithTheNoteAndNoHold()
+    {
+        var latte = await SeedProduct("Latte", 150m);
+        await using var db = TestDb.Create(_dbName);
+        var accessor = TestRequest.As(_userId, AppRoles.Admin);
+        var create = new CreateOrderHandler(db, accessor, TestFakes.Hub(), _audit, TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(db));
+        var command = Order("OFF-21-aaaa", OrderStatusEnum.Completed, Line(latte, 1, 150m)) with
+        {
+            ReviewFindings = [OfflineReason.Note("Test", "Only for your information.")],
+            GateHeld = true
+        };
+
+        var saved = await create.Handle(command, CancellationToken.None);
+
+        saved.Status.ShouldBe(OrderStatusEnum.Completed);
+        saved.ReviewReasons.ShouldBeNull();
+        saved.ReviewDetails.ShouldNotBeNull();
+        saved.ReviewDetails.Single().Severity.ShouldBe("Note");
+        (await db.OrderReviewReasons.SingleAsync(r => r.OrderId == saved.Id)).Severity.ShouldBe((byte)ReviewSeverityEnum.Note);
+    }
+
+    [Fact]
+    public async Task Sync_TheCatalogTimeTheDeviceReported_IsSavedOnTheOrder()
+    {
+        var latte = await SeedProduct("Latte", 150m);
+        var syncedAt = new DateTime(2026, 6, 10, 9, 30, 0, DateTimeKind.Utc);
+
+        var result = await SyncOne(Order("OFF-22-aaaa", OrderStatusEnum.Completed, Line(latte, 1, 150m)) with { CatalogSyncedAt = syncedAt });
+        var withoutIt = await SyncOne(Order("OFF-23-aaaa", OrderStatusEnum.Completed, Line(latte, 1, 150m)));
+
+        (await LoadOrder(result.OrderId!.Value)).CatalogSyncedAt.ShouldBe(syncedAt);
+        (await LoadOrder(withoutIt.OrderId!.Value)).CatalogSyncedAt.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task Sync_TheSameHeldOrderTwice_ReturnsTheSameStructuredReasons()
+    {
+        var latte = await SeedProduct("Latte", 160m);
+        var order = Order("OFF-24-aaaa", OrderStatusEnum.Completed, Line(latte, 1, 150m));
+
+        var first = await SyncOne(order);
+        var second = await SyncOne(order);
+
+        second.ReasonDetails.ShouldBe(first.ReasonDetails);
+    }
+
+    [Fact]
     public async Task Sync_ProductDeactivatedSinceTheSale_HoldsTheOrder()
     {
         var latte = await SeedProduct("Latte", 150m, active: false);

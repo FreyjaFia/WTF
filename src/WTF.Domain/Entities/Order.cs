@@ -63,6 +63,8 @@ public partial class Order
 
     public string? CustomerAddress { get; set; }
 
+    public DateTime? CatalogSyncedAt { get; set; }
+
     public virtual Conversation? Conversation { get; set; }
 
     public virtual User CreatedByNavigation { get; set; } = null!;
@@ -74,6 +76,8 @@ public partial class Order
     public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
 
     public virtual ShortLink? OrderLink { get; set; }
+
+    public virtual ICollection<OrderReviewReason> OrderReviewReasons { get; set; } = new List<OrderReviewReason>();
 
     public virtual ICollection<OrderSeniorPwdDiscount> OrderSeniorPwdDiscounts { get; set; } = new List<OrderSeniorPwdDiscount>();
 

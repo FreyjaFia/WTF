@@ -63,7 +63,8 @@ internal static class OrderMapping
         bool maskIds,
         bool includeCustomerName = false,
         List<string>? stockWarnings = null,
-        List<Guid>? stockLineIds = null) =>
+        List<Guid>? stockLineIds = null,
+        List<OrderReviewReasonDto>? reviewDetails = null) =>
         new(
             order.Id,
             order.OrderNumber,
@@ -98,5 +99,7 @@ internal static class OrderMapping
             stockWarnings,
             stockLineIds,
             SeniorPwdMapping.ToDtos(seniorPwdRows, maskIds),
-            order.CustomerAddress);
+            order.CustomerAddress,
+            reviewDetails,
+            order.CatalogSyncedAt);
 }
