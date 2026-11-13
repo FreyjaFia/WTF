@@ -102,6 +102,92 @@ public class OfflineJudgeAtSaleTests
         result.Status.ShouldBe(OrderStatusEnum.Completed);
     }
 
+    [Fact]
+    public async Task AVatSettingTurnedOnAfterTheSale_KeepsTheDiscountTheRegisterQuoted()
+    {
+        var latte = await SeedProductAsync("Latte", 100m);
+        await SeedShopAsync(enabled: true, vatRegistered: true);
+        await LogAsync(CatalogEntityTypes.Baseline, _tenantId, CatalogHistoryRules.BaselineField, null, "1", Sold.AddYears(-1), _tenantId);
+        await LogAsync(CatalogEntityTypes.TenantSettings, _tenantId, "VatRegistered", "false", "true", Sold.AddHours(1));
+
+        var result = await SyncAsync(SeniorSale("OFF-7", DeviceSynced, latte, expectedTotal: 80m));
+
+        result.Status.ShouldBe(OrderStatusEnum.Completed);
+        result.Reasons.ShouldBeEmpty();
+        await using var db = TestDb.Create(_dbName, _tenant);
+        var person = db.OrderSeniorPwdDiscounts.Single();
+        person.DiscountAmount.ShouldBe(20m);
+        person.VatExemptAmount.ShouldBe(0m);
+    }
+
+    [Fact]
+    public async Task TheDiscountSwitchedOffAfterTheSale_IsNotAConflict()
+    {
+        var latte = await SeedProductAsync("Latte", 100m);
+        await SeedShopAsync(enabled: false, vatRegistered: false);
+        await LogAsync(CatalogEntityTypes.Baseline, _tenantId, CatalogHistoryRules.BaselineField, null, "1", Sold.AddYears(-1), _tenantId);
+        await LogAsync(CatalogEntityTypes.TenantSettings, _tenantId, "SeniorPwdEnabled", "true", "false", Sold.AddHours(1));
+
+        var after = await SyncAsync(SeniorSale("OFF-8", DeviceSynced, latte, expectedTotal: 80m));
+
+        after.Status.ShouldBe(OrderStatusEnum.Completed);
+
+    }
+
+    [Fact]
+    public async Task TheDiscountSwitchedOffBeforeTheSaleAndAfterTheDeviceUpdated_IsHeld()
+    {
+        var latte = await SeedProductAsync("Latte", 100m);
+        await SeedShopAsync(enabled: false, vatRegistered: false);
+        await LogAsync(CatalogEntityTypes.Baseline, _tenantId, CatalogHistoryRules.BaselineField, null, "1", Sold.AddYears(-1), _tenantId);
+        await LogAsync(CatalogEntityTypes.TenantSettings, _tenantId, "SeniorPwdEnabled", "true", "false", Sold.AddMinutes(-30));
+
+        var result = await SyncAsync(SeniorSale("OFF-9", DeviceSynced, latte, expectedTotal: 80m));
+
+        result.Status.ShouldBe(OrderStatusEnum.PendingReview);
+        result.ReasonDetails!.Select(d => d.Code).ShouldContain(OfflineReasonCodes.SeniorPwdDisabled);
+    }
+
+    [Fact]
+    public async Task TheSameIdTwiceInADay_IsOnlyANote()
+    {
+        var latte = await SeedProductAsync("Latte", 100m);
+        await SeedShopAsync(enabled: true, vatRegistered: false);
+
+        var first = await SyncAsync(SeniorSale("OFF-10", null, latte, expectedTotal: 80m));
+        var second = await SyncAsync(SeniorSale("OFF-11", null, latte, expectedTotal: 80m));
+
+        first.Status.ShouldBe(OrderStatusEnum.Completed);
+        second.Status.ShouldBe(OrderStatusEnum.Completed);
+        second.ReasonDetails!.Single().Code.ShouldBe(OfflineReasonCodes.SeniorPwdIdRepeated);
+        second.ReasonDetails!.Single().Severity.ShouldBe("Note");
+    }
+
+    private static CreateOrderCommand SeniorSale(string localId, DateTime? deviceSynced, Guid productId, decimal expectedTotal) =>
+        Order(localId, deviceSynced, new OrderItemRequestDto(productId, 1, [], null, null, 100m, SeniorPwdPersonIndex: 0)) with
+        {
+            SeniorPwdPersons = [new SeniorPwdPersonRequestDto(SeniorPwdTypeEnum.Senior, "SC-1", "Lola Remedios")],
+            ExpectedTotal = expectedTotal,
+        };
+
+    private async Task SeedShopAsync(bool enabled, bool vatRegistered)
+    {
+        await using var db = TestDb.Create(_dbName, _tenant);
+        db.TenantSettings.Add(new TenantSetting
+        {
+            TenantId = _tenantId,
+            ShopName = "Shop",
+            PrimaryColor = "#6f4e37",
+            TimeZone = "Asia/Manila",
+            CurrencySymbol = "P",
+            CurrencyCode = "PHP",
+            CurrencyDecimals = 2,
+            SeniorPwdEnabled = enabled,
+            VatRegistered = vatRegistered,
+        });
+        await db.SaveChangesAsync();
+    }
+
     private static CreateOrderCommand Order(string localId, DateTime? deviceSynced, OrderItemRequestDto line) =>
         new()
         {
