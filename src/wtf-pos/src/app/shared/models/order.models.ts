@@ -189,6 +189,15 @@ export interface CreateOrderCommand {
   expectedTotal?: number | null;
   seniorPwdPersons?: SeniorPwdPersonRequestDto[];
   customerAddress?: string | null;
+  /** Offline orders only: when the device last updated its catalog. The server judges the sale against what changed after it. */
+  catalogSyncedAt?: string | null;
+}
+
+/** One reason an offline order was held (needs a decision) or saved with a note (informational). */
+export interface OfflineReasonDto {
+  code: string;
+  severity: 'Hold' | 'Note';
+  text: string;
 }
 
 /** What the server did with one offline order. */
@@ -198,6 +207,7 @@ export interface OfflineSyncResultDto {
   orderNumber: number | null;
   status: OrderStatusEnum | null;
   reasons: string[];
+  reasonDetails?: OfflineReasonDto[];
   error: string | null;
   stockWarnings?: string[] | null;
 }
