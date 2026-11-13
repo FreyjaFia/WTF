@@ -58,6 +58,8 @@ public partial class WTFDbContext : DbContext
 
     public virtual DbSet<MixMatchPromotionProductAddOn> MixMatchPromotionProductAddOns { get; set; }
 
+    public virtual DbSet<CatalogChangeLog> CatalogChangeLogs { get; set; }
+
     public virtual DbSet<Notification> Notifications { get; set; }
 
     public virtual DbSet<Order> Orders { get; set; }
@@ -923,6 +925,29 @@ public partial class WTFDbContext : DbContext
                 .HasForeignKey(d => d.TenantId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_OrderReviewReasons_Tenants");
+        });
+
+        modelBuilder.Entity<CatalogChangeLog>(entity =>
+        {
+            entity.ToTable("CatalogChangeLog");
+
+            entity.HasIndex(e => new { e.TenantId, e.EntityType, e.EntityId, e.EffectiveFrom }, "IX_CatalogChangeLog_TenantId_EntityType_EntityId_EffectiveFrom");
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_CatalogChangeLog_Id");
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("(getutcdate())", "DF_CatalogChangeLog_CreatedAt")
+                .HasColumnType("datetime2(7)");
+            entity.Property(e => e.EffectiveFrom).HasColumnType("datetime2(7)");
+            entity.Property(e => e.EntityType).HasMaxLength(40);
+            entity.Property(e => e.Field).HasMaxLength(100);
+            entity.Property(e => e.NewValue).HasMaxLength(2000);
+            entity.Property(e => e.OldValue).HasMaxLength(2000);
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_CatalogChangeLog_TenantId");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.CatalogChangeLogs)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_CatalogChangeLog_Tenants");
         });
 
         modelBuilder.Entity<OrderSeniorPwdDiscount>(entity =>
