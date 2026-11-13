@@ -175,6 +175,35 @@ public class SeniorPwdDatabaseTests
         (await readB.OrderSeniorPwdDiscounts.Select(s => s.IdNumber).ToListAsync()).ShouldBe(["SC-B"]);
     }
 
+    [SqlFact]
+    public async Task Multi_TheSameIdCheckInAnotherShopDoesNotCountAsUsedToday()
+    {
+        await using var database = await SqlSeedTenantsAsync();
+        var user = await SqlSeed.UserAsync(database);
+        await SeedOrderWithPersonAsync(database, TenantB, user.Id, "SC-SHARED");
+
+        await using var shopA = database.CreateContext(new FixedTenant(TenantA));
+        var inA = await new SeniorPwdIdCheckHandler(shopA, TestRequest.As(user.Id, AppRoles.Cashier))
+            .Handle(new SeniorPwdIdCheckQuery("SC-SHARED"), CancellationToken.None);
+        await using var shopB = database.CreateContext(new FixedTenant(TenantB));
+        var inB = await new SeniorPwdIdCheckHandler(shopB, TestRequest.As(user.Id, AppRoles.Cashier))
+            .Handle(new SeniorPwdIdCheckQuery("SC-SHARED"), CancellationToken.None);
+
+        inA.UsedToday.ShouldBeFalse();
+        inB.UsedToday.ShouldBeTrue();
+    }
+
+    private static async Task<SqlTestDatabase> SqlSeedTenantsAsync()
+    {
+        var database = await SqlTestDatabase.CreateAsync();
+        await using var db = database.CreateContext();
+        db.Tenants.AddRange(
+            new Tenant { Id = TenantA, Name = "Shop A", Slug = "shop-a", Status = 2, CreatedAt = DateTime.UtcNow },
+            new Tenant { Id = TenantB, Name = "Shop B", Slug = "shop-b", Status = 2, CreatedAt = DateTime.UtcNow });
+        await db.SaveChangesAsync();
+        return database;
+    }
+
     private static async Task<Guid> SeedOrderWithPersonAsync(SqlTestDatabase database, Guid tenantId, Guid userId, string idNumber)
     {
         await using var db = database.CreateContext(new FixedTenant(tenantId));
