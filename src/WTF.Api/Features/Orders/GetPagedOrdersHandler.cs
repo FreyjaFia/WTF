@@ -94,8 +94,12 @@ public sealed class GetPagedOrdersHandler(WTFDbContext db, IHttpContextAccessor?
             cancellationToken);
         var previewPrices = await PendingOrderPreview.LoadAsync(db, orders, httpContextAccessor, cancellationToken);
 
+        var nowUtc = DateTime.UtcNow;
+        var agedAfterDays = await HeldOrderAging.AgedAfterDaysAsync(db, cancellationToken);
+
         var items = orders.Select(o =>
         {
+            var isHeld = o.StatusId == (int)OrderStatusEnum.PendingReview;
             var orderItems = o.OrderItems
                 .Where(oi => oi.ParentOrderItemId == null)
                 .OrderBy(oi => oi.SortOrder)
@@ -181,7 +185,9 @@ public sealed class GetPagedOrdersHandler(WTFDbContext db, IHttpContextAccessor?
                 o.ReviewReasons,
                 o.QuotedTotal,
                 o.OfflineLocalId,
-                SeniorPwdPersons: SeniorPwdOrders.ToDtos(o.OrderSeniorPwdDiscounts, true));
+                SeniorPwdPersons: SeniorPwdOrders.ToDtos(o.OrderSeniorPwdDiscounts, true),
+                IsAged: isHeld && HeldOrderRules.IsAged(o.CreatedAt, nowUtc, agedAfterDays),
+                HeldDays: isHeld ? HeldOrderRules.AgeDays(o.CreatedAt, nowUtc) : null);
         }).ToList();
 
         return new PagedResultDto<OrderDto>(items, page, pageSize, totalCount);

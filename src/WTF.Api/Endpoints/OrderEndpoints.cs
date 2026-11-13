@@ -13,6 +13,15 @@ public record RejectOrderRequest(string Reason);
 
 public record RejectHeldOrderRequest(string Reason, string? StockOutcome = null);
 
+public record BulkApproveHeldOrdersRequest(
+    List<string>? ReasonCodes = null,
+    Guid? CashierId = null,
+    DateTime? FromDate = null,
+    DateTime? ToDate = null,
+    bool AgedOnly = false,
+    List<Guid>? Ids = null,
+    bool Preview = true);
+
 public record SyncOfflineOrdersRequest(List<CreateOrderCommand> Orders);
 
 public static class OrderEndpoints
@@ -179,6 +188,35 @@ public static class OrderEndpoints
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             })
             .RequireAuthorization(AppPolicies.OrdersWrite);
+
+        // GET /api/orders/review - Held offline orders with their reasons and age, filtered
+        orderGroup.MapGet("/review",
+            async (string? reasonCodes, Guid? cashierId, DateTime? fromDate, DateTime? toDate, bool? agedOnly, ISender sender) =>
+            {
+                var codes = string.IsNullOrWhiteSpace(reasonCodes)
+                    ? null
+                    : reasonCodes.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                var result = await sender.Send(new GetHeldOrdersQuery(
+                    new HeldOrderFilter(codes, cashierId, fromDate, toDate, agedOnly ?? false)));
+                return Results.Ok(result);
+            })
+            .RequireAuthorization(AppPolicies.OrdersOverride);
+
+        // POST /api/orders/review/bulk-approve - Approve many held orders at once (preview first), one transaction each
+        orderGroup.MapPost("/review/bulk-approve",
+            async (BulkApproveHeldOrdersRequest request, ISender sender) =>
+            {
+                var filter = new HeldOrderFilter(
+                    request.ReasonCodes?.Where(c => !string.IsNullOrWhiteSpace(c)).Select(c => c.Trim()).ToList(),
+                    request.CashierId,
+                    request.FromDate,
+                    request.ToDate,
+                    request.AgedOnly,
+                    request.Ids);
+                var result = await sender.Send(new BulkApproveHeldOrdersCommand(filter, request.Preview));
+                return Results.Ok(result);
+            })
+            .RequireAuthorization(AppPolicies.OrdersOverride);
 
         // POST /api/orders/{id}/review/approve - An Admin approves a held offline order (-> Completed at the quoted prices)
         orderGroup.MapPost("/{id:guid}/review/approve",

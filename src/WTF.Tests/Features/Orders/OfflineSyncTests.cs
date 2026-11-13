@@ -8,6 +8,7 @@ using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Features.Promotions.DTOs;
 using WTF.Api.Services;
+using WTF.Domain.Data;
 using WTF.Domain.Entities;
 using WTF.Tests.Features.Promotions;
 using WTF.Tests.Infrastructure;
@@ -539,6 +540,11 @@ public class OfflineSyncTests
         return result.OrderId!.Value;
     }
 
+    private HeldOrderApprover Approver(WTFDbContext db)
+    {
+        return new HeldOrderApprover(db, TestFakes.Hub(), _audit, TestFakes.Conversations(), TestFakes.Stock(db));
+    }
+
     private ISender GetSender()
     {
         var sender = Substitute.For<ISender>();
@@ -552,8 +558,9 @@ public class OfflineSyncTests
     public async Task Approve_AHeldOrder_CompletesItAtTheQuotedPrice()
     {
         var id = await SeedHeldOrder();
+        var db = TestDb.Create(_dbName);
         var handler = new ApproveHeldOrderHandler(
-            TestDb.Create(_dbName), TestRequest.As(_userId, AppRoles.Admin), TestFakes.Hub(), _audit, TestFakes.Conversations(), GetSender(), TestFakes.Stock(TestDb.Create(_dbName)));
+            db, TestRequest.As(_userId, AppRoles.Admin), Approver(db), GetSender());
 
         var dto = await handler.Handle(new ApproveHeldOrderCommand(id), CancellationToken.None);
 
@@ -567,8 +574,9 @@ public class OfflineSyncTests
     {
         var latte = await SeedProduct("Latte", 150m);
         var result = await SyncOne(Order("OFF-21-aaaa", OrderStatusEnum.Completed, Line(latte, 1, 150m)));
+        var db = TestDb.Create(_dbName);
         var handler = new ApproveHeldOrderHandler(
-            TestDb.Create(_dbName), TestRequest.As(_userId, AppRoles.Admin), TestFakes.Hub(), _audit, TestFakes.Conversations(), GetSender(), TestFakes.Stock(TestDb.Create(_dbName)));
+            db, TestRequest.As(_userId, AppRoles.Admin), Approver(db), GetSender());
 
         var ex = await Should.ThrowAsync<InvalidOperationException>(() =>
             handler.Handle(new ApproveHeldOrderCommand(result.OrderId!.Value), CancellationToken.None));

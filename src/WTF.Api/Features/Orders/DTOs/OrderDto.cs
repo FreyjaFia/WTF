@@ -24,4 +24,6 @@ public record OrderDto(
     List<Guid>? StockLineIds = null,
     List<OrderSeniorPwdDto>? SeniorPwdPersons = null,
     List<OrderReviewReasonDto>? ReviewDetails = null,
-    DateTime? CatalogSyncedAt = null);
+    DateTime? CatalogSyncedAt = null,
+    bool IsAged = false,
+    int? HeldDays = null);

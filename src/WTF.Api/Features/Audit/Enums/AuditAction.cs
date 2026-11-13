@@ -38,6 +38,7 @@ public enum AuditAction
     OrderHeldForReview,
     OrderReviewApproved,
     OrderReviewRejected,
+    OrderReviewBulkApproved,
     OrderMarkedReady,
     OrderStockDeducted,
     OrderStockRestored,
