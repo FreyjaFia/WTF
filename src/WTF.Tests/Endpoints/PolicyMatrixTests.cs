@@ -30,6 +30,7 @@ public class PolicyMatrixTests : IDisposable
         [AppPolicies.OrdersWrite] = [AppRoles.Owner, AppRoles.Admin, AppRoles.Cashier],
         [AppPolicies.OrdersOverride] = [AppRoles.Owner, AppRoles.Admin],
         [AppPolicies.SeniorPwdApply] = [AppRoles.Owner, AppRoles.Admin, AppRoles.Cashier],
+        [AppPolicies.OrdersSyncPolicy] = [AppRoles.Owner],
         [AppPolicies.OrderLinksManage] = [AppRoles.Owner, AppRoles.Admin, AppRoles.Cashier],
         [AppPolicies.CustomersRead] = [AppRoles.Owner, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.Cashier],
         [AppPolicies.CustomersWrite] = [AppRoles.Owner, AppRoles.Admin, AppRoles.Cashier],
