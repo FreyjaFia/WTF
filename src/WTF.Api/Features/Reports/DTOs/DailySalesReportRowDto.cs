@@ -11,5 +11,6 @@ public sealed record DailySalesReportRowDto(
     decimal RefundedAmount = 0m,
     decimal GrossSales = 0m,
     decimal NetSales = 0m,
-    decimal Discounts = 0m
+    decimal Discounts = 0m,
+    decimal SeniorPwdDiscounts = 0m
 );

@@ -152,6 +152,19 @@ public static class ReportEndpoints
                 return BuildReportResponse(httpContext, result, ReportTables.Voids, query.FromDate!.Value, query.ToDate!.Value, query.Source);
             });
 
+        reportsGroup.MapGet("/senior-pwd",
+            async (HttpContext httpContext, [AsParameters] GetSeniorPwdReportQuery query, ISender sender) =>
+            {
+                var validationResult = ValidateReportFilters(query.FromDate, query.ToDate, query.Source);
+                if (validationResult != null)
+                {
+                    return validationResult;
+                }
+
+                var result = await sender.Send(query);
+                return BuildReportResponse(httpContext, result, ReportTables.SeniorPwd, query.FromDate!.Value, query.ToDate!.Value, query.Source);
+            });
+
         reportsGroup.MapGet("/promotions",
             async (HttpContext httpContext, [AsParameters] GetPromotionPerformanceReportQuery query, ISender sender) =>
             {

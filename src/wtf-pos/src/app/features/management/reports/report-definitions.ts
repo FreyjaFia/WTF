@@ -25,6 +25,7 @@ import {
   StockStatusReportRowDto,
   StockVarianceReportRowDto,
   VoidedOrderReportRowDto,
+  SeniorPwdReportRowDto,
   WasteReportRowDto,
 } from '@shared/models';
 
@@ -121,6 +122,12 @@ const STEP_GROSS: ReportColumn = {
 const STEP_DISCOUNT: ReportColumn = {
   key: 'discounts',
   header: 'Discount',
+  format: 'money',
+  align: 'end',
+};
+const STEP_SENIOR_PWD: ReportColumn = {
+  key: 'seniorPwdDiscounts',
+  header: 'Senior/PWD',
   format: 'money',
   align: 'end',
 };
@@ -225,6 +232,7 @@ const dailySales: ReportDefinition = {
     },
     { key: 'grossSales', header: 'Gross Sales', format: 'money', align: 'end' },
     { key: 'discounts', header: 'Discounts', format: 'money', align: 'end' },
+    { key: 'seniorPwdDiscounts', header: 'Senior/PWD', format: 'money', align: 'end' },
     { key: 'refundedAmount', header: 'Refunded', format: 'money', align: 'end' },
     { key: 'netSales', header: 'Net Sales', format: 'money', align: 'end' },
     { key: 'orderCount', header: 'Orders', format: 'integer', align: 'end' },
@@ -500,6 +508,7 @@ const payments: ReportDefinition = {
     { key: 'orderCount', header: 'Orders', format: 'integer', align: 'end' },
     STEP_GROSS,
     STEP_DISCOUNT,
+    STEP_SENIOR_PWD,
     STEP_REFUNDED,
     { key: 'totalAmount', header: 'Net', format: 'money', align: 'end' },
     { key: 'tips', header: 'Tips', format: 'money', align: 'end' },
@@ -544,6 +553,7 @@ const hourly: ReportDefinition = {
     { key: 'orderCount', header: 'Orders', format: 'integer', align: 'end' },
     STEP_GROSS,
     STEP_DISCOUNT,
+    STEP_SENIOR_PWD,
     STEP_REFUNDED,
     { key: 'revenue', header: 'Net', format: 'money', align: 'end' },
   ],
@@ -824,6 +834,7 @@ const staff: ReportDefinition = {
     { key: 'orderCount', header: 'Orders', format: 'integer', align: 'end' },
     STEP_GROSS,
     STEP_DISCOUNT,
+    STEP_SENIOR_PWD,
     STEP_REFUNDED,
     { key: 'totalRevenue', header: 'Net', format: 'money', align: 'end' },
     { key: 'averageOrderValue', header: 'Avg/Order', format: 'money', align: 'end' },
@@ -945,6 +956,44 @@ const voids: ReportDefinition = {
       { label: 'Refunded Amount', value: sum(refunded, (row) => row.amount), format: 'money' },
       { label: 'Refunds', value: refunded.length, format: 'integer' },
       { label: 'Cancelled/Rejected', value: rows.length - refunded.length, format: 'integer' },
+    ];
+  },
+};
+
+const seniorPwd: ReportDefinition = {
+  type: 'senior-pwd',
+  title: 'Senior and PWD Discounts',
+  description: 'Each Senior citizen and PWD discount given, for the BIR claim',
+  group: 'Sales',
+  icon: 'icon-receipt',
+  columns: [
+    { key: 'orderedAt', header: 'Date', format: 'dateTime' },
+    {
+      key: 'orderNumber',
+      header: 'Order',
+      format: 'text',
+      label: (row) => `#${String(row['orderNumber'])}`,
+    },
+    { key: 'type', header: 'Type', format: 'text' },
+    { key: 'customerName', header: 'Name', format: 'text' },
+    { key: 'idNumber', header: 'ID', format: 'text' },
+    { key: 'coveredAmount', header: 'Covered', format: 'money', align: 'end' },
+    { key: 'vatExemptAmount', header: 'VAT Exempt', format: 'money', align: 'end' },
+    { key: 'discountAmount', header: 'Discount', format: 'money', align: 'end' },
+    { key: 'netAmount', header: 'Net', format: 'money', align: 'end' },
+  ],
+  defaultSort: { key: 'orderedAt', direction: 'desc' },
+  filters: [],
+  usesDateRange: true,
+  usesSource: true,
+  totals: (all) => {
+    const rows = rowsOf<SeniorPwdReportRowDto>(all);
+    return [
+      { label: 'Persons', value: rows.length, format: 'integer' },
+      { label: 'Covered', value: sum(rows, (row) => row.coveredAmount), format: 'money' },
+      { label: 'VAT Exempt', value: sum(rows, (row) => row.vatExemptAmount), format: 'money' },
+      { label: 'Discount', value: sum(rows, (row) => row.discountAmount), format: 'money' },
+      { label: 'Net', value: sum(rows, (row) => row.netAmount), format: 'money' },
     ];
   },
 };
@@ -1183,6 +1232,7 @@ export function formatDecimal(value: number): string {
 const SUM_KEYS = new Set([
   'grossSales',
   'discounts',
+  'seniorPwdDiscounts',
   'refundedAmount',
   'netSales',
   'orderCount',
@@ -1294,6 +1344,7 @@ function columnSum(rows: readonly ReportRow[], key: string): number {
 export const REPORT_DEFINITIONS: readonly ReportDefinition[] = [
   dailyClose,
   dailySales,
+  seniorPwd,
   grossProfit,
   profitLoss,
   categorySales,

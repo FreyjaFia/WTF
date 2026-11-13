@@ -548,6 +548,7 @@ export class OrderEditor implements OnInit, OnDestroy {
       amountReceived: order?.amountReceived ?? null,
       changeAmount: order?.changeAmount ?? null,
       tips: order?.tips ?? null,
+      seniorPwdPersons: order?.seniorPwdPersons ?? null,
     };
   });
 

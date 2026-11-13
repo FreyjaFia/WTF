@@ -65,7 +65,8 @@ public sealed class GetPaymentsReportHandler(
                 row.Summary.GrossSales,
                 row.Summary.Discounts,
                 row.Summary.RefundedAmount,
-                row.Summary.Tips))
+                row.Summary.Tips,
+                row.Summary.SeniorPwdReduction))
             .ToList();
     }
 }

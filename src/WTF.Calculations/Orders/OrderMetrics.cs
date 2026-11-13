@@ -51,6 +51,12 @@ public static class OrderMetrics
     public static decimal SeniorPwdReduction(OrderItem parentItem) =>
         (parentItem.SeniorPwdVatExempt ?? 0m) + (parentItem.SeniorPwdDiscount ?? 0m);
 
+    public static (decimal Discount, decimal VatExempt) SeniorPwdAmountsOf(Order order)
+    {
+        var parents = order.OrderItems.Where(oi => oi.ParentOrderItemId == null && oi.BundlePromotionId == null).ToList();
+        return (parents.Sum(p => p.SeniorPwdDiscount ?? 0m), parents.Sum(p => p.SeniorPwdVatExempt ?? 0m));
+    }
+
     public static decimal ParentItemUnitPrice(OrderItem parentItem) => parentItem.Price ?? parentItem.Product.Price;
 
     public static decimal ParentItemListUnitPrice(OrderItem parentItem)

@@ -155,6 +155,7 @@ public sealed class MonthlyReportWorkbookService(
         var customerRows = await FetchAsync(new GetCustomersReportQuery { FromDate = fromDate, ToDate = toDate, Source = source });
         var linkRows = await FetchAsync(new GetCustomerLinkReportQuery { FromDate = fromDate, ToDate = toDate });
         var voidRows = await FetchAsync(new GetVoidedOrdersReportQuery { FromDate = fromDate, ToDate = toDate, Source = source });
+        var seniorPwdRows = await FetchAsync(new GetSeniorPwdReportQuery { FromDate = fromDate, ToDate = toDate, Source = source });
         var marginRows = await FetchAsync(new GetProductMarginReportQuery { FromDate = fromDate, ToDate = toDate, Source = source });
         var menuRows = await FetchAsync(new GetMenuEngineeringReportQuery { FromDate = fromDate, ToDate = toDate, Source = source });
         var grossProfitRows = await FetchAsync(new GetGrossProfitReportQuery { FromDate = fromDate, ToDate = toDate, GroupBy = ReportGroupByEnum.Day });
@@ -191,6 +192,7 @@ public sealed class MonthlyReportWorkbookService(
         }
 
         AddTableSheet(workbook, ReportTables.Voids, voidRows, fromDate, toDate, generatedAtLabel);
+        AddTableSheet(workbook, ReportTables.SeniorPwd, seniorPwdRows, fromDate, toDate, generatedAtLabel, "IDs are masked here; download the Senior and PWD report as Excel or PDF for the full IDs");
         AddTableSheet(workbook, ReportTables.Waste, wasteRows, fromDate, toDate, generatedAtLabel, "Waste from every source; disputed entries are also shown on their own");
         AddTableSheet(workbook, ReportTables.StockVariance, varianceRows, fromDate, toDate, generatedAtLabel, "Corrections made by counts and adjustments in the month; variance above 5% of expected use is marked Check");
         AddTableSheet(workbook, ReportTables.StockStatus, stockRows, fromDate, toDate, generatedAtLabel, "Stock levels as of the time this workbook was generated");

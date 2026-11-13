@@ -37,6 +37,7 @@ public class MonthlyReportWorkbookServiceTests
     private List<ProfitLossReportRowDto> _profitLoss = [];
     private List<MenuEngineeringReportRowDto> _menu = [];
     private List<StockStatusReportRowDto> _stock = [];
+    private List<SeniorPwdReportRowDto> _seniorPwd = [];
 
     private static readonly string[] SheetNames =
     [
@@ -55,6 +56,7 @@ public class MonthlyReportWorkbookServiceTests
         "Customers",
         "Customer Link Orders",
         "Voids and Refunds",
+        "Senior and PWD Discounts",
         "Waste",
         "Stock Variance",
         "Stock Status"
@@ -94,6 +96,7 @@ public class MonthlyReportWorkbookServiceTests
         Wire<GetCustomersReportQuery, CustomerReportRowDto>(_customers, q => (q.FromDate, q.ToDate));
         Wire<GetCustomerLinkReportQuery, CustomerLinkReportRowDto>(_links, q => (q.FromDate, q.ToDate));
         Wire<GetVoidedOrdersReportQuery, VoidedOrderReportRowDto>(_voids, q => (q.FromDate, q.ToDate));
+        Wire<GetSeniorPwdReportQuery, SeniorPwdReportRowDto>(_seniorPwd, q => (q.FromDate, q.ToDate));
         Wire<GetWasteReportQuery, WasteReportRowDto>(_waste, q => (q.FromDate, q.ToDate));
         Wire<GetStockVarianceReportQuery, StockVarianceReportRowDto>(_variance, q => (q.FromDate, q.ToDate));
         Wire<GetProductMarginReportQuery, ProductMarginReportRowDto>(_margin, q => (q.FromDate, q.ToDate));
@@ -194,8 +197,8 @@ public class MonthlyReportWorkbookServiceTests
     {
         await Create().GenerateAsync(year, month, "Asia/Manila", CancellationToken.None);
 
-        _calls.Count.ShouldBe(18);
-        _calls.Select(c => c.Query).Distinct().Count().ShouldBe(18);
+        _calls.Count.ShouldBe(19);
+        _calls.Select(c => c.Query).Distinct().Count().ShouldBe(19);
         _calls.Where(c => c.Query != nameof(GetStockStatusReportQuery)).ShouldAllBe(c => c.From == new DateTime(year, month, 1) && c.To == new DateTime(year, month, lastDay));
     }
 
@@ -234,7 +237,7 @@ public class MonthlyReportWorkbookServiceTests
         status.FileName.ShouldBe("WTF-Monthly-Reports-2026-03-CustomerLink.xlsx");
 
         using var wb = new XLWorkbook(new MemoryStream(_storage.Saves.Single().Data));
-        wb.Worksheets.Count.ShouldBe(18);
+        wb.Worksheets.Count.ShouldBe(19);
     }
 
     [Fact]
@@ -269,7 +272,7 @@ public class MonthlyReportWorkbookServiceTests
     {
         await Create().GenerateAsync(2026, 3, requested, CancellationToken.None);
 
-        _calls.Count.ShouldBe(18);
+        _calls.Count.ShouldBe(19);
         _calls.ShouldAllBe(c => c.TimeZone == expectedHeader);
     }
 
@@ -560,15 +563,15 @@ public class MonthlyReportWorkbookServiceTests
         using var wb = await GenerateSampleAsync();
 
         var ws = wb.Worksheet("Daily Sales Summary");
-        Row(ws, 6, 9).ShouldBe(
-            ["Period", "Gross Sales", "Discounts", "Refunded", "Net Sales", "Orders", "Avg/Order", "Tips", "Void/Cancelled"]);
-        Row(ws, 7, 9).ShouldBe(
-            ["March 01, 2026 (Sun)", "PHP 1,700.00", "PHP 100.00", "PHP 100.00", "PHP 1,500.00", "3", "PHP 500.00", "PHP 50.00", "1"]);
-        Text(ws, 8, 5).ShouldBe("PHP 2,500.50");
+        Row(ws, 6, 10).ShouldBe(
+            ["Period", "Gross Sales", "Discounts", "Senior/PWD", "Refunded", "Net Sales", "Orders", "Avg/Order", "Tips", "Void/Cancelled"]);
+        Row(ws, 7, 10).ShouldBe(
+            ["March 01, 2026 (Sun)", "PHP 1,700.00", "PHP 100.00", "PHP 0.00", "PHP 100.00", "PHP 1,500.00", "3", "PHP 500.00", "PHP 50.00", "1"]);
+        Text(ws, 8, 6).ShouldBe("PHP 2,500.50");
 
         // The Total row follows the data rows: sums, and the average is total net over total orders.
-        Row(ws, 9, 9).ShouldBe(
-            ["Total", "PHP 4,200.50", "PHP 100.00", "PHP 100.00", "PHP 4,000.50", "5", "PHP 800.10", "PHP 50.00", "1"]);
+        Row(ws, 9, 10).ShouldBe(
+            ["Total", "PHP 4,200.50", "PHP 100.00", "PHP 0.00", "PHP 100.00", "PHP 4,000.50", "5", "PHP 800.10", "PHP 50.00", "1"]);
     }
 
     [Fact]
@@ -628,7 +631,7 @@ public class MonthlyReportWorkbookServiceTests
         var ws = wb.Worksheet("Daily Sales Summary");
         decimal Money(int col) => decimal.Parse(Text(ws, 9, col).Replace("PHP ", string.Empty).Replace(",", string.Empty));
 
-        (Money(2) - Money(3) - Money(4)).ShouldBe(Money(5));
+        (Money(2) - Money(3) - Money(4) - Money(5)).ShouldBe(Money(6));
     }
 
     [Fact]
@@ -664,17 +667,17 @@ public class MonthlyReportWorkbookServiceTests
         using var wb = await GenerateSampleAsync();
 
         var pay = wb.Worksheet("Payment Method Breakdown");
-        Row(pay, 7, 8).ShouldBe(["Cash", "4", "PHP 3,200.00", "PHP 100.00", "PHP 100.00", "PHP 3,000.00", "PHP 0.00", "75.00%"]);
-        Row(pay, 9, 8).ShouldBe(["Total", "5", "PHP 4,200.50", "PHP 100.00", "PHP 100.00", "PHP 4,000.50", "PHP 0.00", "100.00%"]);
+        Row(pay, 7, 9).ShouldBe(["Cash", "4", "PHP 3,200.00", "PHP 100.00", "PHP 0.00", "PHP 100.00", "PHP 3,000.00", "PHP 0.00", "75.00%"]);
+        Row(pay, 9, 9).ShouldBe(["Total", "5", "PHP 4,200.50", "PHP 100.00", "PHP 0.00", "PHP 100.00", "PHP 4,000.50", "PHP 0.00", "100.00%"]);
 
         var hourly = wb.Worksheet("Hourly Sales Distribution");
         Text(hourly, 7, 1).ShouldBe("09:00 - 10:00");
         Text(hourly, 8, 1).ShouldBe("23:00 - 00:00"); // hour 23 wraps to 00:00
-        Row(hourly, 9, 6).ShouldBe(["Total", "3", "PHP 1,050.00", "PHP 50.00", "PHP 0.00", "PHP 1,000.00"]);
+        Row(hourly, 9, 7).ShouldBe(["Total", "3", "PHP 1,050.00", "PHP 50.00", "PHP 0.00", "PHP 0.00", "PHP 1,000.00"]);
 
         var staff = wb.Worksheet("Staff Performance");
-        Row(staff, 7, 8).ShouldBe(["Ana Cruz", "5", "PHP 4,100.00", "PHP 50.00", "PHP 50.00", "PHP 4,000.00", "PHP 800.00", "PHP 50.00"]);
-        Row(staff, 8, 8).ShouldBe(["Total", "5", "PHP 4,100.00", "PHP 50.00", "PHP 50.00", "PHP 4,000.00", "PHP 800.00", "PHP 50.00"]);
+        Row(staff, 7, 9).ShouldBe(["Ana Cruz", "5", "PHP 4,100.00", "PHP 50.00", "PHP 0.00", "PHP 50.00", "PHP 4,000.00", "PHP 800.00", "PHP 50.00"]);
+        Row(staff, 8, 9).ShouldBe(["Total", "5", "PHP 4,100.00", "PHP 50.00", "PHP 0.00", "PHP 50.00", "PHP 4,000.00", "PHP 800.00", "PHP 50.00"]);
     }
 
     [Fact]
@@ -704,7 +707,7 @@ public class MonthlyReportWorkbookServiceTests
         await Create().GenerateAsync(2026, 3, "Asia/Manila", CancellationToken.None);
 
         using var wb = Open(_storage.Saves.Single().Data);
-        wb.Worksheets.Count.ShouldBe(18);
+        wb.Worksheets.Count.ShouldBe(19);
         var ws = wb.Worksheet("Daily Sales Summary");
         Text(ws, 6, 1).ShouldBe("Period");
         Text(ws, 7, 1).ShouldNotBe("Total");

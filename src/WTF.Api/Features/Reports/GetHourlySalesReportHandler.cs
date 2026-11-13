@@ -62,7 +62,8 @@ public sealed class GetHourlySalesReportHandler(WTFDbContext db, IHttpContextAcc
                     row?.Summary.Revenue ?? 0m,
                     row?.Summary.GrossSales ?? 0m,
                     row?.Summary.Discounts ?? 0m,
-                    row?.Summary.RefundedAmount ?? 0m);
+                    row?.Summary.RefundedAmount ?? 0m,
+                    row?.Summary.SeniorPwdReduction ?? 0m);
             })
             .ToList();
     }

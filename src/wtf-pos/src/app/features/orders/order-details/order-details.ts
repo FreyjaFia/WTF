@@ -239,6 +239,7 @@ export class OrderDetails implements OnInit {
       amountReceived: order.amountReceived ?? null,
       changeAmount: order.changeAmount ?? null,
       tips: order.tips ?? null,
+      seniorPwdPersons: order.seniorPwdPersons ?? null,
     };
   });
 

@@ -9,5 +9,6 @@ public sealed record StaffPerformanceReportRowDto(
     decimal TipsReceived,
     decimal GrossSales = 0m,
     decimal Discounts = 0m,
-    decimal RefundedAmount = 0m
+    decimal RefundedAmount = 0m,
+    decimal SeniorPwdDiscounts = 0m
 );

@@ -227,6 +227,7 @@ public class RouteTableTests : IDisposable
         "GET /api/reports/staff => ReportsRead",
         "GET /api/reports/stock-status => ReportsRead",
         "GET /api/reports/voids => ReportsRead",
+        "GET /api/reports/senior-pwd => ReportsRead",
         "GET /api/reports/waste => ReportsRead",
         "GET /api/reports/stock-variance => ReportsRead",
         "GET /api/reports/gross-profit => ReportsRead",

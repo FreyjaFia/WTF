@@ -60,7 +60,8 @@ public sealed class GetDailySalesReportHandler(WTFDbContext db, IHttpContextAcce
                     summary.RefundedAmount,
                     summary.GrossSales,
                     summary.NetSales,
-                    summary.Discounts);
+                    summary.Discounts,
+                    summary.SeniorPwdReduction);
             })
             .ToList();
     }

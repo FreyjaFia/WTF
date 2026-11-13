@@ -16,6 +16,7 @@ internal static class ReportTables
             new("periodStart", "Period", r => FormatPeriodLabel(r.PeriodStart, groupBy), r => r.PeriodStart, false, 1.7f),
             new("grossSales", "Gross Sales", r => Money(r.GrossSales), r => r.GrossSales, true, 1.3f, rows => Money(rows.Sum(r => r.GrossSales))),
             new("discounts", "Discounts", r => Money(r.Discounts), r => r.Discounts, true, 1.2f, rows => Money(rows.Sum(r => r.Discounts))),
+            new("seniorPwdDiscounts", "Senior/PWD", r => Money(r.SeniorPwdDiscounts), r => r.SeniorPwdDiscounts, true, 1.2f, rows => Money(rows.Sum(r => r.SeniorPwdDiscounts))),
             new("refundedAmount", "Refunded", r => Money(r.RefundedAmount), r => r.RefundedAmount, true, 1.2f, rows => Money(rows.Sum(r => r.RefundedAmount))),
             new("netSales", "Net Sales", r => Money(r.NetSales), r => r.NetSales, true, 1.3f, rows => Money(rows.Sum(r => r.NetSales))),
             new("orderCount", "Orders", r => Number(r.OrderCount), r => r.OrderCount, true, 0.8f, rows => Number(rows.Sum(r => r.OrderCount))),
@@ -31,6 +32,7 @@ internal static class ReportTables
             [
                 ("Gross Sales", Money(rows.Sum(r => r.GrossSales))),
                 ("Discounts", Money(rows.Sum(r => r.Discounts))),
+                ("Senior/PWD", Money(rows.Sum(r => r.SeniorPwdDiscounts))),
                 ("Refunded", Money(rows.Sum(r => r.RefundedAmount))),
                 ("Net Sales", Money(net)),
                 ("Total Orders", Number(orders)),
@@ -136,6 +138,7 @@ internal static class ReportTables
             new("orderCount", "Orders", r => Number(r.OrderCount), r => r.OrderCount, true, 0.9f, rows => Number(rows.Sum(r => r.OrderCount))),
             new("grossSales", "Gross", r => Money(r.GrossSales), r => r.GrossSales, true, 1.4f, rows => Money(rows.Sum(r => r.GrossSales))),
             new("discounts", "Discount", r => Money(r.Discounts), r => r.Discounts, true, 1.3f, rows => Money(rows.Sum(r => r.Discounts))),
+            new("seniorPwdDiscounts", "Senior/PWD", r => Money(r.SeniorPwdDiscounts), r => r.SeniorPwdDiscounts, true, 1.2f, rows => Money(rows.Sum(r => r.SeniorPwdDiscounts))),
             new("refundedAmount", "Refunded", r => Money(r.RefundedAmount), r => r.RefundedAmount, true, 1.3f, rows => Money(rows.Sum(r => r.RefundedAmount))),
             new("totalAmount", "Net", r => Money(r.TotalAmount), r => r.TotalAmount, true, 1.4f, rows => Money(rows.Sum(r => r.TotalAmount))),
             new("tips", "Tips", r => Money(r.Tips), r => r.Tips, true, 1f, rows => Money(rows.Sum(r => r.Tips))),
@@ -145,6 +148,7 @@ internal static class ReportTables
         [
             ("Gross", Money(rows.Sum(r => r.GrossSales))),
             ("Discounts", Money(rows.Sum(r => r.Discounts))),
+            ("Senior/PWD", Money(rows.Sum(r => r.SeniorPwdDiscounts))),
             ("Refunded", Money(rows.Sum(r => r.RefundedAmount))),
             ("Net Amount", Money(rows.Sum(r => r.TotalAmount))),
             ("Total Orders", Number(rows.Sum(r => r.OrderCount))),
@@ -158,6 +162,7 @@ internal static class ReportTables
             new("orderCount", "Orders", r => Number(r.OrderCount), r => r.OrderCount, true, 0.9f, rows => Number(rows.Sum(r => r.OrderCount))),
             new("grossSales", "Gross", r => Money(r.GrossSales), r => r.GrossSales, true, 1.4f, rows => Money(rows.Sum(r => r.GrossSales))),
             new("discounts", "Discount", r => Money(r.Discounts), r => r.Discounts, true, 1.3f, rows => Money(rows.Sum(r => r.Discounts))),
+            new("seniorPwdDiscounts", "Senior/PWD", r => Money(r.SeniorPwdDiscounts), r => r.SeniorPwdDiscounts, true, 1.2f, rows => Money(rows.Sum(r => r.SeniorPwdDiscounts))),
             new("refundedAmount", "Refunded", r => Money(r.RefundedAmount), r => r.RefundedAmount, true, 1.3f, rows => Money(rows.Sum(r => r.RefundedAmount))),
             new("revenue", "Net", r => Money(r.Revenue), r => r.Revenue, true, 1.4f, rows => Money(rows.Sum(r => r.Revenue)))
         ],
@@ -165,6 +170,7 @@ internal static class ReportTables
         [
             ("Gross", Money(rows.Sum(r => r.GrossSales))),
             ("Discounts", Money(rows.Sum(r => r.Discounts))),
+            ("Senior/PWD", Money(rows.Sum(r => r.SeniorPwdDiscounts))),
             ("Refunded", Money(rows.Sum(r => r.RefundedAmount))),
             ("Net Revenue", Money(rows.Sum(r => r.Revenue))),
             ("Total Orders", Number(rows.Sum(r => r.OrderCount)))
@@ -177,6 +183,7 @@ internal static class ReportTables
             new("orderCount", "Orders", r => Number(r.OrderCount), r => r.OrderCount, true, 0.9f, rows => Number(rows.Sum(r => r.OrderCount))),
             new("grossSales", "Gross", r => Money(r.GrossSales), r => r.GrossSales, true, 1.3f, rows => Money(rows.Sum(r => r.GrossSales))),
             new("discounts", "Discount", r => Money(r.Discounts), r => r.Discounts, true, 1.2f, rows => Money(rows.Sum(r => r.Discounts))),
+            new("seniorPwdDiscounts", "Senior/PWD", r => Money(r.SeniorPwdDiscounts), r => r.SeniorPwdDiscounts, true, 1.2f, rows => Money(rows.Sum(r => r.SeniorPwdDiscounts))),
             new("refundedAmount", "Refunded", r => Money(r.RefundedAmount), r => r.RefundedAmount, true, 1.2f, rows => Money(rows.Sum(r => r.RefundedAmount))),
             new("totalRevenue", "Net", r => Money(r.TotalRevenue), r => r.TotalRevenue, true, 1.3f, rows => Money(rows.Sum(r => r.TotalRevenue))),
             new("averageOrderValue", "Avg/Order", r => Money(r.AverageOrderValue), r => r.AverageOrderValue, true, 1.2f, rows => Money(SalesRules.Average(rows.Sum(r => r.TotalRevenue), rows.Sum(r => r.OrderCount)))),
@@ -190,6 +197,7 @@ internal static class ReportTables
             [
                 ("Gross", Money(rows.Sum(r => r.GrossSales))),
                 ("Discounts", Money(rows.Sum(r => r.Discounts))),
+                ("Senior/PWD", Money(rows.Sum(r => r.SeniorPwdDiscounts))),
                 ("Refunded", Money(rows.Sum(r => r.RefundedAmount))),
                 ("Net Revenue", Money(revenue)),
                 ("Total Orders", Number(orders)),
@@ -238,6 +246,28 @@ internal static class ReportTables
             ("Voided Orders", Number(rows.Count)),
             ("Refunded", Money(rows.Where(r => r.Kind == "Refunded").Sum(r => r.Amount))),
             ("Cancelled or Rejected", Number(rows.Count(r => r.Kind != "Refunded")))
+        ]);
+
+    public static readonly ReportTable<SeniorPwdReportRowDto> SeniorPwd = new(
+        "Senior and PWD Discounts",
+        [
+            new("orderedAt", "Date", r => Date(r.OrderedAt), r => r.OrderedAt, false, 1.5f),
+            new("orderNumber", "Order", r => $"#{r.OrderNumber}", r => r.OrderNumber, false, 0.8f),
+            new("type", "Type", r => r.Type, r => r.Type, false, 0.9f),
+            new("customerName", "Name", r => r.CustomerName, r => r.CustomerName, false, 2f),
+            new("idNumber", "ID", r => r.IdNumber, r => r.IdNumber, false, 1.5f),
+            new("coveredAmount", "Covered", r => Money(r.CoveredAmount), r => r.CoveredAmount, true, 1.2f, rows => Money(rows.Sum(r => r.CoveredAmount))),
+            new("vatExemptAmount", "VAT Exempt", r => Money(r.VatExemptAmount), r => r.VatExemptAmount, true, 1.2f, rows => Money(rows.Sum(r => r.VatExemptAmount))),
+            new("discountAmount", "Discount", r => Money(r.DiscountAmount), r => r.DiscountAmount, true, 1.2f, rows => Money(rows.Sum(r => r.DiscountAmount))),
+            new("netAmount", "Net", r => Money(r.NetAmount), r => r.NetAmount, true, 1.2f, rows => Money(rows.Sum(r => r.NetAmount)))
+        ],
+        rows =>
+        [
+            ("Persons", Number(rows.Count)),
+            ("Covered", Money(rows.Sum(r => r.CoveredAmount))),
+            ("VAT Exempt", Money(rows.Sum(r => r.VatExemptAmount))),
+            ("Discount", Money(rows.Sum(r => r.DiscountAmount))),
+            ("Net", Money(rows.Sum(r => r.NetAmount)))
         ]);
 
     public static readonly ReportTable<PromotionPerformanceReportRowDto> Promotions = new(

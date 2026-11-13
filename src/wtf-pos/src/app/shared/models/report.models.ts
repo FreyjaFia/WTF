@@ -16,6 +16,7 @@ export type ReportType =
   | 'staff'
   | 'customers'
   | 'voids'
+  | 'senior-pwd'
   | 'customer-links'
   | 'stock-status'
   | 'waste'
@@ -61,6 +62,7 @@ export interface DailySalesReportRowDto {
   grossSales: number;
   netSales: number;
   discounts: number;
+  seniorPwdDiscounts: number;
 }
 
 export interface ProductSalesReportRowDto {
@@ -125,6 +127,7 @@ export interface PaymentsReportRowDto {
   totalPercent: number;
   grossSales: number;
   discounts: number;
+  seniorPwdDiscounts: number;
   refundedAmount: number;
   tips: number;
 }
@@ -135,6 +138,7 @@ export interface HourlySalesReportRowDto {
   revenue: number;
   grossSales: number;
   discounts: number;
+  seniorPwdDiscounts: number;
   refundedAmount: number;
 }
 
@@ -147,6 +151,7 @@ export interface StaffPerformanceReportRowDto {
   tipsReceived: number;
   grossSales: number;
   discounts: number;
+  seniorPwdDiscounts: number;
   refundedAmount: number;
 }
 
@@ -160,6 +165,20 @@ export interface DailyCloseReportRowDto {
   unitName?: string | null;
   disputedCount?: number;
   disputedQuantity?: number | null;
+}
+
+export interface SeniorPwdReportRowDto {
+  id: string;
+  orderId: string;
+  orderNumber: number;
+  orderedAt: string;
+  type: string;
+  customerName: string;
+  idNumber: string;
+  coveredAmount: number;
+  vatExemptAmount: number;
+  discountAmount: number;
+  netAmount: number;
 }
 
 export interface VoidedOrderReportRowDto {

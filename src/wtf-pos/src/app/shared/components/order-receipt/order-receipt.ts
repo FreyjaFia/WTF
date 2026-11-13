@@ -18,6 +18,8 @@ import {
   OrderStatusEnum,
   PaymentMethodEnum,
   PromotionTypeEnum,
+  SENIOR_PWD_TYPE_LABELS,
+  SeniorPwdPersonDto,
 } from '@shared/models';
 import { breakdownOfCartItem, LineBreakdown, lineTotal } from '@shared/calculations';
 import { AddOnLabelsPipe } from '@shared/pipes';
@@ -36,6 +38,7 @@ export interface ReceiptData {
   amountReceived?: number | null;
   changeAmount?: number | null;
   tips?: number | null;
+  seniorPwdPersons?: SeniorPwdPersonDto[] | null;
 }
 
 @Component({
@@ -258,6 +261,10 @@ export class OrderReceiptComponent implements OnInit {
         return 'N/A';
     }
   });
+
+  protected seniorPwdTypeLabel(person: SeniorPwdPersonDto): string {
+    return SENIOR_PWD_TYPE_LABELS[person.type];
+  }
 
   protected getItemTotal(item: CartItemDto): number {
     return this.isBundleLine(item) ? lineTotal(item) : breakdownOfCartItem(item).total;

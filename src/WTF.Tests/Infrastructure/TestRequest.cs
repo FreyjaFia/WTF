@@ -9,7 +9,7 @@ namespace WTF.Tests.Infrastructure;
 internal static class TestRequest
 {
     /// <summary>An accessor whose current user has the given id and roles, and optionally an X-TimeZone header.</summary>
-    public static IHttpContextAccessor As(Guid userId, string role = AppRoles.Admin, string? timeZone = null)
+    public static IHttpContextAccessor As(Guid userId, string role = AppRoles.Admin, string? timeZone = null, string? accept = null)
     {
         var identity = new ClaimsIdentity(
         [
@@ -21,6 +21,11 @@ internal static class TestRequest
         if (timeZone is not null)
         {
             context.Request.Headers["X-TimeZone"] = timeZone;
+        }
+
+        if (accept is not null)
+        {
+            context.Request.Headers.Accept = accept;
         }
 
         var accessor = Substitute.For<IHttpContextAccessor>();

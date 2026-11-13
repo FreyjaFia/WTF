@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { Capacitor } from '@capacitor/core';
 import { ServiceErrorMessages, SuccessMessages } from '@core/messages';
 import { AlertService, ImageDownloadService } from '@core/services';
-import { CartAddOnDto, CartBundleItemDto, CartItemDto, OrderStatusEnum, PaymentMethodEnum, PromotionTypeEnum } from '@shared/models';
+import { CartAddOnDto, CartBundleItemDto, CartItemDto, OrderStatusEnum, PaymentMethodEnum, PromotionTypeEnum, SeniorPwdTypeEnum } from '@shared/models';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { OrderReceiptComponent, ReceiptData } from './order-receipt';
 
@@ -314,6 +314,42 @@ describe('OrderReceiptComponent', () => {
       expect(alerts.error).toHaveBeenCalledWith(ServiceErrorMessages.Common.GenerateOrderImageFailed);
       expect(alerts.success).not.toHaveBeenCalled();
       expect(i.isGenerating()).toBe(false);
+    });
+  });
+
+  describe('senior / PWD block', () => {
+    const person = {
+      id: 'sp1',
+      type: SeniorPwdTypeEnum.Senior,
+      idNumber: 'OSCA-1234',
+      customerName: 'Lola Remedios',
+      coveredAmount: 100,
+      vatExemptAmount: 10.71,
+      discountAmount: 17.86,
+    };
+
+    it('shows the type, name, full ID, VAT exempt, discount and a signature line', () => {
+      const { el } = setup(receipt({ totalAmount: 71.43, seniorPwdPersons: [person] }));
+      const text = el.querySelector('[data-testid="receipt-senior-pwd"]')?.textContent ?? '';
+
+      expect(text).toContain('Senior discount');
+      expect(text).toContain('Lola Remedios');
+      expect(text).toContain('OSCA-1234');
+      expect(text).toContain('10.71');
+      expect(text).toContain('17.86');
+      expect(text).toContain('Signature');
+    });
+
+    it('leaves out the VAT exempt line when no VAT was exempted', () => {
+      const { el } = setup(receipt({ seniorPwdPersons: [{ ...person, vatExemptAmount: 0, discountAmount: 20 }] }));
+
+      expect(el.querySelector('[data-testid="receipt-senior-pwd"]')?.textContent).not.toContain('VAT exempt');
+    });
+
+    it('shows nothing for an order without the discount', () => {
+      const { el } = setup(receipt());
+
+      expect(el.querySelector('[data-testid="receipt-senior-pwd"]')).toBeNull();
     });
   });
 

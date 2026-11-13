@@ -83,7 +83,8 @@ public sealed class GetStaffPerformanceReportHandler(
                 row.Summary.Tips,
                 row.Summary.GrossSales,
                 row.Summary.Discounts,
-                row.Summary.RefundedAmount))
+                row.Summary.RefundedAmount,
+                row.Summary.SeniorPwdReduction))
             .ToList();
     }
 }

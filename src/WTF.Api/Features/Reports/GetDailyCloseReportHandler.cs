@@ -67,6 +67,12 @@ public sealed class GetDailyCloseReportHandler(
             new(SalesSection, "Cancelled orders", "Never paid, so no amount", cancelledCount, 0m)
         };
 
+        if (summary.SeniorPwdDiscounts > 0m || summary.VatExemptSales > 0m)
+        {
+            rows.Insert(1, new(SalesSection, "Senior/PWD discount", "Taken off gross sales", sales.Count(o => OrderMetrics.SeniorPwdAmountsOf(o).Discount > 0m), summary.SeniorPwdDiscounts));
+            rows.Insert(2, new(SalesSection, "VAT-exempt sales", "VAT not charged on Senior/PWD rows", 0, summary.VatExemptSales));
+        }
+
         rows.AddRange(sales
             .GroupBy(o => o.PaymentMethod?.Name ?? "Unknown")
             .OrderBy(g => g.Key)

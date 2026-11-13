@@ -13,6 +13,7 @@ import {
 } from './report-definitions';
 
 const ALL_TYPES = [
+  'senior-pwd',
   'daily-close',
   'daily-sales',
   'payments',
@@ -491,6 +492,23 @@ describe('report definitions', () => {
         textOf('daily-close', 'amount', { section: 'Waste', quantity: 261, unitName: 'ml', amount: 0 }),
       ).toBe('261.00 ml');
       expect(textOf('daily-close', 'amount', { section: 'Sales', amount: 570 })).toBe('570.00');
+    });
+  });
+});
+
+describe('senior-pwd report', () => {
+  it('totals the persons, covered, VAT exempt, discount and net', () => {
+    const rows = [
+      { coveredAmount: 100, vatExemptAmount: 10.71, discountAmount: 17.86, netAmount: 71.43 },
+      { coveredAmount: 75.5, vatExemptAmount: 0, discountAmount: 15.1, netAmount: 60.4 },
+    ];
+
+    expect(totalsOf('senior-pwd', rows)).toEqual({
+      Persons: 2,
+      Covered: 175.5,
+      'VAT Exempt': 10.71,
+      Discount: 32.96,
+      Net: 131.83,
     });
   });
 });

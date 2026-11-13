@@ -91,13 +91,13 @@ public class ReportTableTests : IDisposable
         ws.Cell(8, 1).GetString().ShouldBe("Cash");
         ws.Cell(9, 1).GetString().ShouldBe("Total");
         ws.Cell(9, 2).GetString().ShouldBe("3");
-        ws.Cell(9, 6).GetString().ShouldBe("PHP 500.00");
-        ws.Cell(9, 6).Style.Font.Bold.ShouldBeTrue();
-        ws.Cell(8, 6).Style.Font.Bold.ShouldBeFalse();
+        ws.Cell(9, 7).GetString().ShouldBe("PHP 500.00");
+        ws.Cell(9, 7).Style.Font.Bold.ShouldBeTrue();
+        ws.Cell(8, 7).Style.Font.Bold.ShouldBeFalse();
         ws.Cell(11, 1).GetString().ShouldBe("Summary");
-        ws.Cell(15, 1).GetString().ShouldBe("Net Amount");
-        ws.Cell(15, 2).GetString().ShouldBe("PHP 500.00");
-        ws.Cell(16, 2).GetString().ShouldBe("3");
+        ws.Cell(16, 1).GetString().ShouldBe("Net Amount");
+        ws.Cell(16, 2).GetString().ShouldBe("PHP 500.00");
+        ws.Cell(17, 2).GetString().ShouldBe("3");
     }
 
     [Theory]
@@ -180,10 +180,11 @@ public class ReportTableTests : IDisposable
         total[1].ShouldBe("3");
         total[2].ShouldBe("PHP 550.00");
         total[3].ShouldBe("PHP 30.00");
-        total[4].ShouldBe("PHP 20.00");
-        total[5].ShouldBe("PHP 500.00");
-        total[6].ShouldBe("PHP 12.00");
-        total[7].ShouldBe("100.00%");
+        total[4].ShouldBe("PHP 0.00");
+        total[5].ShouldBe("PHP 20.00");
+        total[6].ShouldBe("PHP 500.00");
+        total[7].ShouldBe("PHP 12.00");
+        total[8].ShouldBe("100.00%");
     }
 
     [Fact]
@@ -203,7 +204,7 @@ public class ReportTableTests : IDisposable
         var all = ReportTables.Payments.BuildRows(shown);
 
         all.Count.ShouldBe(2);
-        all[^1][5].ShouldBe("PHP 350.00");
+        all[^1][6].ShouldBe("PHP 350.00");
     }
 
     [Fact]
@@ -340,7 +341,7 @@ public class ReportTableTests : IDisposable
         var table = ReportTables.DailySales(ReportGroupByEnum.Day);
         IReadOnlyList<DailySalesReportRowDto> rows =
         [
-            new(new DateTime(2026, 3, 10), 200m, 2, 100m, 5m, 3, 1, 75m, 300m, 200m, 25m),
+            new(new DateTime(2026, 3, 10), 200m, 2, 100m, 5m, 3, 1, 75m, 300m, 200m, 25m, 10m),
         ];
 
         using var wb = new XLWorkbook(new MemoryStream(SimpleExcelBuilder.Build(table.ToExcel(rows, "x"))));
@@ -348,12 +349,14 @@ public class ReportTableTests : IDisposable
 
         ws.Cell(6, 2).GetString().ShouldBe("Gross Sales");
         ws.Cell(6, 3).GetString().ShouldBe("Discounts");
-        ws.Cell(6, 4).GetString().ShouldBe("Refunded");
-        ws.Cell(6, 5).GetString().ShouldBe("Net Sales");
+        ws.Cell(6, 4).GetString().ShouldBe("Senior/PWD");
+        ws.Cell(6, 5).GetString().ShouldBe("Refunded");
+        ws.Cell(6, 6).GetString().ShouldBe("Net Sales");
         ws.Cell(7, 2).GetString().ShouldBe("PHP 300.00");
         ws.Cell(7, 3).GetString().ShouldBe("PHP 25.00");
-        ws.Cell(7, 4).GetString().ShouldBe("PHP 75.00");
-        ws.Cell(7, 5).GetString().ShouldBe("PHP 200.00");
+        ws.Cell(7, 4).GetString().ShouldBe("PHP 10.00");
+        ws.Cell(7, 5).GetString().ShouldBe("PHP 75.00");
+        ws.Cell(7, 6).GetString().ShouldBe("PHP 200.00");
     }
 
     [Fact]

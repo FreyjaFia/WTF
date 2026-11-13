@@ -240,6 +240,54 @@
       <div style="border-top: 1px solid var(--color-gray-200); margin-bottom: 16px"></div>
     }
 
+    <!-- Senior / PWD -->
+    @for (person of data()?.seniorPwdPersons ?? []; track person.id) {
+      <div data-testid="receipt-senior-pwd" style="margin-bottom: 12px">
+        <div
+          style="
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--color-gray-400);
+            margin-bottom: 4px;
+          "
+        >
+          {{ seniorPwdTypeLabel(person) }} discount
+        </div>
+        <div
+          style="display: flex; justify-content: space-between; font-size: 13px; color: var(--color-gray-500); margin-bottom: 4px"
+        >
+          <span>Name</span>
+          <span style="font-weight: 600; color: var(--color-gray-800)">{{ person.customerName }}</span>
+        </div>
+        <div
+          style="display: flex; justify-content: space-between; font-size: 13px; color: var(--color-gray-500); margin-bottom: 4px"
+        >
+          <span>ID no.</span>
+          <span style="font-weight: 600; color: var(--color-gray-800)">{{ person.idNumber }}</span>
+        </div>
+        @if (person.vatExemptAmount > 0) {
+          <div
+            style="display: flex; justify-content: space-between; font-size: 13px; color: var(--color-gray-500); margin-bottom: 4px"
+          >
+            <span>VAT exempt</span>
+            <span>-<span style="color: inherit">&#8369;</span>{{ person.vatExemptAmount | number: '1.2-2' }}</span>
+          </div>
+        }
+        <div
+          style="display: flex; justify-content: space-between; font-size: 13px; color: var(--color-gray-500); margin-bottom: 4px"
+        >
+          <span>Discount (20%)</span>
+          <span>-<span style="color: inherit">&#8369;</span>{{ person.discountAmount | number: '1.2-2' }}</span>
+        </div>
+        <div style="margin-top: 20px; border-top: 1px solid var(--color-gray-300); padding-top: 2px; font-size: 10px; color: var(--color-gray-400)">
+          Signature
+        </div>
+      </div>
+      <div style="border-top: 1px solid var(--color-gray-200); margin-bottom: 16px"></div>
+    }
+
     <!-- Total -->
     <div style="display: flex; justify-content: space-between; align-items: center">
       <div

@@ -180,8 +180,8 @@ describe('ReportsComponent', () => {
       await create();
 
       const types = t.catalog.flatMap((section) => section.reports.map((r) => r.type));
-      expect(types.length).toBe(18);
-      expect(new Set(types).size).toBe(18);
+      expect(types.length).toBe(19);
+      expect(new Set(types).size).toBe(19);
       expect(t.catalog.map((s) => s.group)).toEqual([
         'Sales',
         'Products',
@@ -627,7 +627,7 @@ describe('ReportsComponent', () => {
         reader.onload = () => resolve(String(reader.result));
         reader.readAsText(saved);
       });
-      expect(text).toContain('Payment Method,Orders,Gross,Discount,Refunded,Net,Tips,Net %');
+      expect(text).toContain('Payment Method,Orders,Gross,Discount,Senior/PWD,Refunded,Net,Tips,Net %');
       expect(text).toContain('GCash,1,');
       expect(text).not.toContain('Cash,3');
       expect(text).toContain('Total,1,')
