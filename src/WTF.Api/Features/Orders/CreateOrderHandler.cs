@@ -550,6 +550,7 @@ public class CreateOrderHandler(
                 new StockDeductionOptions(BlockWhenShort: !request.HonorStock),
                 cancellationToken)
             : StockDeductionResult.None;
+        var stockNotes = await StockShortfallReasons.SaveAsync(db, order, stock.Shortfalls, cancellationToken);
 
         await dashboardHub.Clients.Group(HubNames.Groups.DashboardViewers(db.StampTenantId))
             .SendAsync(HubNames.Events.DashboardUpdated, cancellationToken);
@@ -626,6 +627,6 @@ public class CreateOrderHandler(
             seniorPwd?.Rows ?? [],
             maskIds: !SeniorPwdMapping.CanSeeFullId(httpContextAccessor),
             stockWarnings: stock.Warnings,
-            reviewDetails: [.. findings.Select(OrderReviewReasons.ToDto)]);
+            reviewDetails: [.. findings.Select(OrderReviewReasons.ToDto), .. stockNotes]);
     }
 }
