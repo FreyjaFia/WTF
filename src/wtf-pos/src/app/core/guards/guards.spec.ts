@@ -149,31 +149,31 @@ describe('route guards', () => {
       expect(auth['canAny']).toHaveBeenCalledWith(['products.read', 'suppliers.read']);
     });
 
-    it('sends the user away when they hold none of the anyPermission keys', () => {
+    it('sends the user away when they hold none of the anyPermission keys', async () => {
       auth['canAny'] = vi.fn().mockReturnValue(false);
       const route = { data: { anyPermission: ['products.read'] } } as unknown as ActivatedRouteSnapshot;
 
-      expect(run(route)).toBe(false);
+      await expect(run(route)).resolves.toBe(false);
     });
 
-    it('sends the user to the Not in your plan page when the plan lacks the feature of the permission', () => {
+    it('sends the user to the Not in your plan page when the plan lacks the feature of the permission', async () => {
       const plans = TestBed.inject(PlanStore);
       plans.apply({ managed: true, features: ['inventory'], planName: 'Starter' } as SubscriptionDto);
       auth['can'] = vi.fn().mockReturnValue(false);
       const route = { data: { permission: 'promotions.read' } } as unknown as ActivatedRouteSnapshot;
 
-      expect(run(route)).toBe(false);
+      await expect(run(route)).resolves.toBe(false);
       expect(router.navigateByUrl).toHaveBeenCalledWith(`${AppRoutes.NotInPlan}?feature=promotions`);
     });
 
-    it('keeps the normal fallback when the plan has the feature but the role lacks the permission', () => {
+    it('keeps the normal fallback when the plan has the feature but the role lacks the permission', async () => {
       const plans = TestBed.inject(PlanStore);
       plans.apply({ managed: true, features: ['promotions'], planName: 'Pro' } as SubscriptionDto);
       auth['can'] = vi.fn().mockReturnValue(false);
       auth['canReadOrders'].mockReturnValue(true);
       const route = { data: { permission: 'promotions.read' } } as unknown as ActivatedRouteSnapshot;
 
-      expect(run(route)).toBe(false);
+      await expect(run(route)).resolves.toBe(false);
       expect(router.navigateByUrl).toHaveBeenCalledWith(AppRoutes.OrdersList);
     });
 
@@ -184,43 +184,43 @@ describe('route guards', () => {
       expect(auth['hasAnyRole']).toHaveBeenCalledWith([AppRoles.Admin]);
     });
 
-    it('falls back to the orders list for users who can read orders', () => {
+    it('falls back to the orders list for users who can read orders', async () => {
       auth['canReadOrders'].mockReturnValue(true);
 
-      expect(run(routeWithRoles([AppRoles.Admin]))).toBe(false);
+      await expect(run(routeWithRoles([AppRoles.Admin]))).resolves.toBe(false);
       expect(router.navigateByUrl).toHaveBeenCalledWith(AppRoutes.OrdersList);
     });
 
-    it('falls back to the dashboard for management readers without order access', () => {
+    it('falls back to the dashboard for management readers without order access', async () => {
       auth['canReadManagement'].mockReturnValue(true);
 
-      expect(run(routeWithRoles([AppRoles.Admin]))).toBe(false);
+      await expect(run(routeWithRoles([AppRoles.Admin]))).resolves.toBe(false);
       expect(router.navigateByUrl).toHaveBeenCalledWith(AppRoutes.Dashboard);
     });
 
-    it('falls back to needs attention for stock managers', () => {
+    it('falls back to needs attention for stock managers', async () => {
       auth['canReadStockMovements'].mockReturnValue(true);
 
-      expect(run(routeWithRoles([AppRoles.Admin]))).toBe(false);
+      await expect(run(routeWithRoles([AppRoles.Admin]))).resolves.toBe(false);
       expect(router.navigateByUrl).toHaveBeenCalledWith(AppRoutes.InventoryAttention);
     });
 
-    it('falls back to the items list for item managers', () => {
+    it('falls back to the items list for item managers', async () => {
       auth['canReadItems'].mockReturnValue(true);
 
-      expect(run(routeWithRoles([AppRoles.Admin]))).toBe(false);
+      await expect(run(routeWithRoles([AppRoles.Admin]))).resolves.toBe(false);
       expect(router.navigateByUrl).toHaveBeenCalledWith(AppRoutes.InventoryItems);
     });
 
-    it('falls back to the Management hub for a role that holds only Management permissions', () => {
+    it('falls back to the Management hub for a role that holds only Management permissions', async () => {
       auth['canOpenManagementMenu'].mockReturnValue(true);
 
-      expect(run(routeWithRoles([AppRoles.Admin]))).toBe(false);
+      await expect(run(routeWithRoles([AppRoles.Admin]))).resolves.toBe(false);
       expect(router.navigateByUrl).toHaveBeenCalledWith(AppRoutes.ManagementRoot);
     });
 
-    it('falls back to login when the user has no read access at all', () => {
-      expect(run(routeWithRoles([AppRoles.Admin]))).toBe(false);
+    it('falls back to login when the user has no read access at all', async () => {
+      await expect(run(routeWithRoles([AppRoles.Admin]))).resolves.toBe(false);
       expect(router.navigateByUrl).toHaveBeenCalledWith(AppRoutes.Login);
     });
   });
