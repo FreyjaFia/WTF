@@ -22,7 +22,7 @@ internal static class TestFakes
     public static INotificationService Notifications(WTFDbContext db, IPushNotificationService? push = null) =>
         new NotificationService(db, push ?? Push(), Substitute.For<IHubContext<NotificationHub>>());
 
-    public static IOrderStockService Stock(WTFDbContext db) => new OrderStockService(db, Audit(), Alerts(db), Features);
+    public static IOrderStockService Stock(WTFDbContext db, ITenantFeatures? features = null) => new OrderStockService(db, Audit(), Alerts(db), features ?? Features);
 
     public static IPushNotificationService Push() => Substitute.For<IPushNotificationService>();
 

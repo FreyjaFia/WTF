@@ -85,7 +85,7 @@ public class SyncOfflineOrdersHandler(WTFDbContext db, ISender sender, IHttpCont
                 [.. findings.Select(f => f.Text).Distinct()],
                 null,
                 saved.StockWarnings,
-                [.. findings.Select(OrderReviewReasons.ToDto)]);
+                saved.ReviewDetails ?? [.. findings.Select(OrderReviewReasons.ToDto)]);
         }
         catch (Exception ex) when (ex is InvalidOperationException or ArgumentException)
         {

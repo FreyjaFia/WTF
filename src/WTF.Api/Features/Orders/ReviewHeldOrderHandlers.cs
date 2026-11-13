@@ -15,7 +15,13 @@ namespace WTF.Api.Features.Orders;
 
 public record ApproveHeldOrderCommand(Guid Id) : IRequest<OrderDto?>;
 
-public record RejectHeldOrderCommand(Guid Id, string Reason) : IRequest<OrderDto?>;
+public static class HeldRejectStockOutcomes
+{
+    public const string None = "none";
+    public const string Waste = "waste";
+}
+
+public record RejectHeldOrderCommand(Guid Id, string Reason, string? StockOutcome = null) : IRequest<OrderDto?>;
 
 public class ApproveHeldOrderHandler(
     WTFDbContext db,
@@ -46,7 +52,8 @@ public class ApproveHeldOrderHandler(
         await db.SaveChangesAsync(cancellationToken);
 
         // The goods were handed over when the order was sold, so approving it takes the stock whatever the balance is.
-        await stockService.DeductForOrderAsync(order.Id, userId, new StockDeductionOptions(BlockWhenShort: false), cancellationToken);
+        var stock = await stockService.DeductForOrderAsync(order.Id, userId, new StockDeductionOptions(BlockWhenShort: false), cancellationToken);
+        await StockShortfallReasons.SaveAsync(db, order, stock.Shortfalls, cancellationToken);
         await transaction.CommitAsync(cancellationToken);
 
         await auditService.LogAsync(
@@ -70,7 +77,8 @@ public class RejectHeldOrderHandler(
     IHubContext<DashboardHub> dashboardHub,
     IAuditService auditService,
     IConversationNotifier conversationNotifier,
-    ISender sender) : IRequestHandler<RejectHeldOrderCommand, OrderDto?>
+    ISender sender,
+    IOrderStockService stockService) : IRequestHandler<RejectHeldOrderCommand, OrderDto?>
 {
     public async Task<OrderDto?> Handle(RejectHeldOrderCommand request, CancellationToken cancellationToken)
     {
@@ -84,6 +92,12 @@ public class RejectHeldOrderHandler(
         {
             throw new InvalidOperationException(
                 $"The reason cannot be longer than {OrderInputValidation.NoteMaxLength} characters.");
+        }
+
+        var outcome = request.StockOutcome?.Trim().ToLowerInvariant();
+        if (!string.IsNullOrEmpty(outcome) && outcome is not (HeldRejectStockOutcomes.None or HeldRejectStockOutcomes.Waste))
+        {
+            throw new InvalidOperationException("The stock outcome must be waste or none.");
         }
 
         var order = await db.Orders.FirstOrDefaultAsync(o => o.Id == request.Id, cancellationToken);
@@ -104,6 +118,14 @@ public class RejectHeldOrderHandler(
         order.UpdatedAt = DateTime.UtcNow;
         order.UpdatedBy = userId;
         await db.SaveChangesAsync(cancellationToken);
+
+        // The goods were handed over when the sale was made, so the stock they used is waste (same movement rows as a void).
+        var wasted = outcome == HeldRejectStockOutcomes.Waste;
+        if (wasted)
+        {
+            await stockService.WasteForOrderAsync(order.Id, userId, "Rejected offline sale, goods handed over", cancellationToken);
+        }
+
         await transaction.CommitAsync(cancellationToken);
 
         await auditService.LogAsync(
@@ -111,7 +133,7 @@ public class RejectHeldOrderHandler(
             entityType: AuditEntityType.Order,
             entityId: order.Id.ToString(),
             oldValues: new { StatusId = (int)OrderStatusEnum.PendingReview },
-            newValues: new { order.StatusId, order.OrderNumber, Reason = reason, order.ReviewReasons },
+            newValues: new { order.StatusId, order.OrderNumber, Reason = reason, order.ReviewReasons, StockOutcome = wasted ? HeldRejectStockOutcomes.Waste : HeldRejectStockOutcomes.None },
             userId: userId,
             cancellationToken: cancellationToken);
 
