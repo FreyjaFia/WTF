@@ -92,7 +92,7 @@
                   {{ currentOrder.customerName || 'Walk-in' }}
                 </dd>
                 @if (currentOrder.customerAddress?.trim()) {
-                  <dd class="truncate text-xs text-gray-500" [title]="currentOrder.customerAddress">
+                  <dd class="text-xs wrap-break-word text-gray-500">
                     {{ currentOrder.customerAddress }}
                   </dd>
                 }
