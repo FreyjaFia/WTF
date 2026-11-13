@@ -132,6 +132,14 @@ public class PermissionCatalogTests
     }
 
     [Fact]
+    public void SyncPolicy_IsHeldByTheOwnerOnly()
+    {
+        SystemRolePermissions.RolesWith("orders.sync.policy").ShouldBe([AppRoles.Owner]);
+        PermissionCatalog.All.Single(p => p.Key == "orders.sync.policy").Requires.ShouldBe(["orders.read"]);
+        PermissionCatalog.PolicyPermissions[AppPolicies.OrdersSyncPolicy].ShouldBe(["orders.sync.policy"]);
+    }
+
+    [Fact]
     public void SharedFile_MatchesTheCSharpCatalog()
     {
         var shared = Shared.Value;

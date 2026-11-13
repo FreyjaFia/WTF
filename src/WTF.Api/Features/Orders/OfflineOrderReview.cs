@@ -39,6 +39,35 @@ internal static class OfflineOrderReview
         TimeZoneInfo timeZone,
         CancellationToken cancellationToken)
     {
+        return await FindAsync(db, command, timeZone, OfflineSyncPolicySnapshot.Default, cancellationToken);
+    }
+
+    public static async Task<List<OfflineReason>> FindAsync(
+        WTFDbContext db,
+        CreateOrderCommand command,
+        TimeZoneInfo timeZone,
+        OfflineSyncPolicySnapshot policy,
+        CancellationToken cancellationToken)
+    {
+        var found = await FindUnjudgedAsync(db, command, timeZone, cancellationToken);
+        return ApplyPolicy(found, policy);
+    }
+
+    public static List<OfflineReason> ApplyPolicy(IEnumerable<OfflineReason> reasons, OfflineSyncPolicySnapshot policy)
+    {
+        return [.. reasons
+            .Select(r => r.Severity == ReviewSeverityEnum.Hold && !OfflineSyncPolicyRules.StaysHold(r.Code, true, r.UnitPriceDifference, policy)
+                ? r with { Severity = ReviewSeverityEnum.Note }
+                : r)
+            .Distinct()];
+    }
+
+    private static async Task<List<OfflineReason>> FindUnjudgedAsync(
+        WTFDbContext db,
+        CreateOrderCommand command,
+        TimeZoneInfo timeZone,
+        CancellationToken cancellationToken)
+    {
         var reasons = new List<OfflineReason>();
         var createdAt = command.CreatedAt?.ToUniversalTime() ?? DateTime.UtcNow;
 
@@ -349,7 +378,8 @@ internal static class OfflineOrderReview
                             $"{product.Name} now costs {current:0.00}, quoted {item.QuotedPrice.Value:0.00}.",
                             lineIndex,
                             $"{current:0.00}",
-                            $"{item.QuotedPrice.Value:0.00}"));
+                            $"{item.QuotedPrice.Value:0.00}",
+                            Math.Abs(current - item.QuotedPrice.Value)));
                     }
                 }
             }
@@ -372,7 +402,8 @@ internal static class OfflineOrderReview
                         $"{addOnProduct.Name} on {product.Name} now costs {currentAddOn:0.00}, quoted {addOn.QuotedPrice.Value:0.00}.",
                         lineIndex,
                         $"{currentAddOn:0.00}",
-                        $"{addOn.QuotedPrice.Value:0.00}"));
+                        $"{addOn.QuotedPrice.Value:0.00}",
+                        Math.Abs(currentAddOn - addOn.QuotedPrice.Value)));
                 }
             }
         }

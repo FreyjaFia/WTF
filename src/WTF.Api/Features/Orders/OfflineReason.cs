@@ -12,11 +12,12 @@ public record OfflineReason(
     string Text,
     int? LineIndex = null,
     string? ExpectedValue = null,
-    string? QuotedValue = null)
+    string? QuotedValue = null,
+    decimal? UnitPriceDifference = null)
 {
-    public static OfflineReason Hold(string code, string text, int? lineIndex = null, string? expected = null, string? quoted = null)
+    public static OfflineReason Hold(string code, string text, int? lineIndex = null, string? expected = null, string? quoted = null, decimal? unitPriceDifference = null)
     {
-        return new OfflineReason(code, ReviewSeverityEnum.Hold, text, lineIndex, expected, quoted);
+        return new OfflineReason(code, ReviewSeverityEnum.Hold, text, lineIndex, expected, quoted, unitPriceDifference);
     }
 
     public static OfflineReason Note(string code, string text, int? lineIndex = null, string? expected = null, string? quoted = null)

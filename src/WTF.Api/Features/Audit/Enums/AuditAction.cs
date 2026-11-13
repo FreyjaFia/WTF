@@ -82,5 +82,7 @@ public enum AuditAction
     UserRoleChanged,
     SeniorPwdDiscountApplied,
     SeniorPwdDiscountRemoved,
-    OrderStockWasted
+    OrderStockWasted,
+    OfflineSyncPolicyChanged,
+    OfflineOrderAutoApproved
 }

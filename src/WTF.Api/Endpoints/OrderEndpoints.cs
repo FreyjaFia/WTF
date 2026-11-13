@@ -198,6 +198,16 @@ public static class OrderEndpoints
             })
             .RequireAuthorization(AppPolicies.OrdersOverride);
 
+        // GET /api/orders/sync-policy - The shop's offline sync policy (Owner only)
+        orderGroup.MapGet("/sync-policy",
+            async (ISender sender) => Results.Ok(await sender.Send(new GetOfflineSyncPolicyQuery())))
+            .RequireAuthorization(AppPolicies.OrdersSyncPolicy);
+
+        // PUT /api/orders/sync-policy - Change the policy (Owner only, audited)
+        orderGroup.MapPut("/sync-policy",
+            async (UpdateOfflineSyncPolicyCommand command, ISender sender) => Results.Ok(await sender.Send(command)))
+            .RequireAuthorization(AppPolicies.OrdersSyncPolicy);
+
         orderGroup.MapGet("/{id:guid}/stock-movements",
             async (Guid id, ISender sender) =>
             {

@@ -99,6 +99,10 @@ public record CreateOrderCommand : IRequest<OrderDto>
 
     [JsonIgnore]
     public bool HonorStock { get; init; }
+
+    // The shop's policy has auto-approve on: a sale saved with notes is recorded in the audit log as approved by the policy.
+    [JsonIgnore]
+    public bool AuditNotesAsAutoApproved { get; init; }
 }
 
 public class CreateOrderHandler(
@@ -574,6 +578,22 @@ public class CreateOrderHandler(
             },
             userId: userId,
             cancellationToken: cancellationToken);
+
+        if (request.AuditNotesAsAutoApproved && !held && findings.Count > 0)
+        {
+            await auditService.LogAsync(
+                action: AuditAction.OfflineOrderAutoApproved,
+                entityType: AuditEntityType.Order,
+                entityId: order.Id.ToString(),
+                newValues: new
+                {
+                    order.OrderNumber,
+                    order.StatusId,
+                    Reasons = findings.Select(f => f.Text)
+                },
+                userId: userId,
+                cancellationToken: cancellationToken);
+        }
 
         if (seniorPwd is not null)
         {

@@ -67,12 +67,13 @@ public class SyncOfflineOrdersHandler(WTFDbContext db, ISender sender, IHttpCont
             await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
 
             // Only a finished sale can meet a catalog that changed afterwards; an open order is priced when it completes.
+            var policy = await OfflineSyncPolicyStore.LoadSnapshotAsync(db, cancellationToken);
             var findings = order.Status == OrderStatusEnum.Completed
-                ? await OfflineOrderReview.FindAsync(db, order, timeZone, cancellationToken)
+                ? await OfflineOrderReview.FindAsync(db, order, timeZone, policy, cancellationToken)
                 : [];
 
             var saved = await sender.Send(
-                order with { OfflineLocalId = localId, ReviewFindings = findings.Count > 0 ? findings : null, GateHeld = true, HonorStock = true, HonorQuotedPrices = CanHonorQuotes(order), HonorSeniorPwdQuotes = CanHonorSeniorPwd(order), SeniorPwdVatRegistered = order.SeniorPwdPersons.Count > 0 ? await OfflineOrderReview.SeniorPwdVatAtSaleAsync(db, order, cancellationToken) : null },
+                order with { OfflineLocalId = localId, ReviewFindings = findings.Count > 0 ? findings : null, GateHeld = true, HonorStock = true, AuditNotesAsAutoApproved = policy.AutoApproveNotes, HonorQuotedPrices = CanHonorQuotes(order), HonorSeniorPwdQuotes = CanHonorSeniorPwd(order), SeniorPwdVatRegistered = order.SeniorPwdPersons.Count > 0 ? await OfflineOrderReview.SeniorPwdVatAtSaleAsync(db, order, cancellationToken) : null },
                 cancellationToken);
 
             await transaction.CommitAsync(cancellationToken);

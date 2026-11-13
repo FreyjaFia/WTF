@@ -21,5 +21,6 @@ public enum AuditEntityType
     ItemSupplier,
     StockReceipt,
     PurchaseOrder,
-    Role
+    Role,
+    OfflineSyncPolicy
 }
