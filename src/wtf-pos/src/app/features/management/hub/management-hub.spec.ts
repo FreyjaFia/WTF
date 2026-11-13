@@ -17,6 +17,7 @@ const ALL = [
   'canManageSubscription',
   'canManageBrand',
   'canOpenSetup',
+  'canManageSyncPolicy',
 ] as const;
 
 describe('ManagementHubComponent', () => {
@@ -56,6 +57,7 @@ describe('ManagementHubComponent', () => {
       'roles',
       'setup',
       'shop',
+      'sync-policy',
       'audit-logs',
       'schema-scripts',
     ]);
@@ -72,6 +74,11 @@ describe('ManagementHubComponent', () => {
     const el = render();
     expect(headings(el)).toEqual(['Sell', 'People', 'Settings']);
     expect(ids(el)).not.toContain('expenses');
+  });
+
+  it('shows the offline sync policy only to someone who may change it', () => {
+    perms.canManageSyncPolicy = false;
+    expect(ids(render())).not.toContain('sync-policy');
   });
 
   it('shows only Setup for a stock manager', () => {

@@ -53,6 +53,7 @@ import { SubscriptionPageComponent } from '@features/management/subscription/sub
 import { ExpensesComponent } from '@features/management/expenses/expenses';
 import { SetupComponent } from '@features/management/setup/setup';
 import { ShopComponent } from '@features/management/shop/shop';
+import { SyncPolicyPageComponent } from '@features/management/sync-policy/sync-policy-page';
 import { NotFoundComponent } from '@features/not-found/not-found';
 import { NotificationsComponent } from '@features/notifications/notifications';
 import { OrderDetails } from '@features/orders/order-details/order-details';
@@ -537,6 +538,13 @@ export const routes: Routes = [
             component: BrandPageComponent,
             canActivate: [roleGuard],
             data: { permission: Permissions.BrandManage },
+          },
+          {
+            path: 'sync-policy',
+            component: SyncPolicyPageComponent,
+            canActivate: [roleGuard],
+            canDeactivate: [unsavedChangesGuard],
+            data: { permission: Permissions.OrdersSyncPolicy },
           },
           {
             path: 'shop/plan',

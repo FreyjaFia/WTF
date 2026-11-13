@@ -52,6 +52,7 @@ describe('system role permissions vs the API policies (golden)', () => {
     OrdersRead: ['Owner', 'Admin', 'AdminViewer', 'Cashier'],
     OrdersWrite: ['Owner', 'Admin', 'Cashier'],
     OrdersOverride: ['Owner', 'Admin'],
+    OrdersSyncPolicy: ['Owner'],
     OrderLinksManage: ['Owner', 'Admin', 'Cashier'],
     CustomersRead: ['Owner', 'Admin', 'AdminViewer', 'Cashier'],
     CustomersWrite: ['Owner', 'Admin', 'Cashier'],

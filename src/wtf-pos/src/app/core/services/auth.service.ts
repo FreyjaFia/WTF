@@ -445,6 +445,10 @@ export class AuthService {
     return this.hasRole(AppRoles.Owner);
   }
 
+  public canManageSyncPolicy(): boolean {
+    return this.can(Permissions.OrdersSyncPolicy);
+  }
+
   public canAccessAuditLogs(): boolean {
     return this.can(Permissions.AuditRead);
   }

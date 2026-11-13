@@ -209,6 +209,14 @@ export function managementGroups(auth: AuthService): HubGroup[] {
           route: AppRoutes.ManagementShop,
           canShow: () => auth.canManageBrand() || auth.canManageSubscription(),
         },
+        {
+          id: 'sync-policy',
+          label: 'Offline sync policy',
+          icon: 'icon-refresh',
+          description: 'What happens to a sale made offline when the menu changed.',
+          route: AppRoutes.ManagementSyncPolicy,
+          canShow: () => auth.canManageSyncPolicy(),
+        },
       ],
     },
     {
