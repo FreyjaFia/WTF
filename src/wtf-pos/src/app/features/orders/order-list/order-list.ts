@@ -50,6 +50,7 @@ import { debounceTime, Subscription } from 'rxjs';
 import { cartTotal } from '@shared/calculations';
 import { orderAddressOf } from '@shared/utils/order-address';
 import type { PendingOrder, SyncOutcome, SyncResultEntry } from '@core/services/db';
+import { UnsyncedOrdersBanner } from '@features/orders/unsynced-orders/unsynced-orders-banner';
 
 type SortColumn = 'orderNumber' | 'date' | 'totalAmount';
 type SortDirection = 'asc' | 'desc';
@@ -84,6 +85,7 @@ interface OrderGroup {
     PullToRefreshComponent,
     RejectOrderDialogComponent,
     SearchInputComponent,
+    UnsyncedOrdersBanner,
   ],
   templateUrl: './order-list.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
