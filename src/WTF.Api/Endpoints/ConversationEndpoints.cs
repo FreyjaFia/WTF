@@ -15,7 +15,7 @@ public static class ConversationEndpoints
         // GET /api/conversations - The envelope list: conversations with unread customer messages first, newest first
         app.MapGet("/api/conversations",
             async (ISender sender) => Results.Ok(await sender.Send(new GetConversationsQuery())))
-            .RequireAuthorization(AppPolicies.OrdersRead);
+            .RequireAuthorization(AppPolicies.ChatRead);
 
         // GET /api/orders/{id}/conversation - The chat of one customer link order
         app.MapGet("/api/orders/{id:guid}/conversation",
@@ -24,7 +24,7 @@ public static class ConversationEndpoints
                 var result = await sender.Send(new GetOrderConversationQuery(id));
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.OrdersRead);
+            .RequireAuthorization(AppPolicies.ChatRead);
 
         // POST /api/orders/{id}/messages - Reply to the customer (starts the chat if this is the first message)
         app.MapPost("/api/orders/{id:guid}/messages",
@@ -33,13 +33,13 @@ public static class ConversationEndpoints
                 var result = await sender.Send(new SendStaffMessageCommand(id, request.Body));
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.OrdersWrite);
+            .RequireAuthorization(AppPolicies.ChatWrite);
 
         // POST /api/orders/{id}/messages/read - The customer's messages were read (for every staff member)
         app.MapPost("/api/orders/{id:guid}/messages/read",
             async (Guid id, ISender sender) =>
                 await sender.Send(new MarkOrderConversationReadCommand(id)) ? Results.NoContent() : Results.NotFound())
-            .RequireAuthorization(AppPolicies.OrdersWrite);
+            .RequireAuthorization(AppPolicies.ChatWrite);
 
         // POST /api/orders/{id}/messages/image - Reply with a picture (and optional text). multipart/form-data: file, body
         app.MapPost("/api/orders/{id:guid}/messages/image",
@@ -49,7 +49,7 @@ public static class ConversationEndpoints
                 var result = await sender.Send(new SendStaffMessageCommand(id, body ?? string.Empty, data));
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.OrdersWrite)
+            .RequireAuthorization(AppPolicies.ChatWrite)
             .WithMetadata(new RequestSizeLimitAttribute(ChatImageUploads.RequestLimit))
             .DisableAntiforgery();
 
@@ -57,7 +57,7 @@ public static class ConversationEndpoints
         app.MapGet("/api/orders/{id:guid}/messages/{messageId:guid}/image",
             async (Guid id, Guid messageId, ISender sender, HttpContext http) =>
                 ChatImageUploads.Serve(http, await sender.Send(new GetMessageImageQuery(id, messageId))))
-            .RequireAuthorization(AppPolicies.OrdersRead);
+            .RequireAuthorization(AppPolicies.ChatRead);
 
         // DELETE /api/orders/{id}/messages/{messageId}/image - Remove a picture (the message stays, as "photo removed")
         app.MapDelete("/api/orders/{id:guid}/messages/{messageId:guid}/image",
@@ -66,7 +66,7 @@ public static class ConversationEndpoints
                 var result = await sender.Send(new RemoveMessageImageCommand(id, messageId));
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.OrdersWrite);
+            .RequireAuthorization(AppPolicies.ChatWrite);
 
         return app;
     }

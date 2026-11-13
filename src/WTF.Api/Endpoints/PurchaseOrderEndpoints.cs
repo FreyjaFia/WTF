@@ -20,7 +20,7 @@ public static class PurchaseOrderEndpoints
                 var result = await sender.Send(new GetPurchaseOrdersQuery(status, supplierId, openOnly ?? false));
                 return Results.Ok(CostAccess.ForUser(result, user));
             })
-            .RequireAuthorization(AppPolicies.StockMovementsRead);
+            .RequireAuthorization(AppPolicies.PurchasingRead);
 
         group.MapGet("/{id:guid}",
             async (Guid id, ISender sender, ClaimsPrincipal user) =>
@@ -28,7 +28,7 @@ public static class PurchaseOrderEndpoints
                 var result = await sender.Send(new GetPurchaseOrderQuery(id));
                 return result is not null ? Results.Ok(CostAccess.ForUser(result, user)) : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.StockMovementsRead);
+            .RequireAuthorization(AppPolicies.PurchasingRead);
 
         group.MapPost("/",
             async (PurchaseOrderFields fields, ISender sender, ClaimsPrincipal user) =>
@@ -36,7 +36,7 @@ public static class PurchaseOrderEndpoints
                 var result = await sender.Send(new CreatePurchaseOrderCommand(fields));
                 return Results.Created($"/api/purchase-orders/{result.Summary.Id}", CostAccess.ForUser(result, user));
             })
-            .RequireAuthorization(AppPolicies.StockMovementsWrite);
+            .RequireAuthorization(AppPolicies.PurchasingWrite);
 
         group.MapPost("/from-reorder",
             async (CreatePurchaseOrderFromReorderRequest request, ISender sender, ClaimsPrincipal user) =>
@@ -44,7 +44,7 @@ public static class PurchaseOrderEndpoints
                 var result = await sender.Send(new CreatePurchaseOrderFromReorderCommand(request.SupplierId));
                 return Results.Created($"/api/purchase-orders/{result.Summary.Id}", CostAccess.ForUser(result, user));
             })
-            .RequireAuthorization(AppPolicies.StockMovementsWrite);
+            .RequireAuthorization(AppPolicies.PurchasingWrite);
 
         group.MapPut("/{id:guid}",
             async (Guid id, PurchaseOrderFields fields, ISender sender, ClaimsPrincipal user) =>
@@ -52,7 +52,7 @@ public static class PurchaseOrderEndpoints
                 var result = await sender.Send(new UpdatePurchaseOrderCommand(id, fields));
                 return result is not null ? Results.Ok(CostAccess.ForUser(result, user)) : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.StockMovementsWrite);
+            .RequireAuthorization(AppPolicies.PurchasingWrite);
 
         MapAction(group, "send", SetPurchaseOrderStatusHandler.Send);
         MapAction(group, "cancel", SetPurchaseOrderStatusHandler.Cancel);
@@ -68,5 +68,5 @@ public static class PurchaseOrderEndpoints
                 var result = await sender.Send(new SetPurchaseOrderStatusCommand(id, action));
                 return result is not null ? Results.Ok(CostAccess.ForUser(result, user)) : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.StockMovementsWrite);
+            .RequireAuthorization(AppPolicies.PurchasingWrite);
 }

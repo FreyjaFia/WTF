@@ -18,7 +18,7 @@ public static class StockReceiptEndpoints
                 var result = await sender.Send(new GetStockReceiptsQuery(supplierId, from, to, search, take ?? 100));
                 return Results.Ok(CostAccess.ForUser(result, user));
             })
-            .RequireAuthorization(AppPolicies.StockMovementsRead);
+            .RequireAuthorization(AppPolicies.PurchasingRead);
 
         group.MapGet("/{id:guid}",
             async (Guid id, ISender sender, ClaimsPrincipal user) =>
@@ -26,7 +26,7 @@ public static class StockReceiptEndpoints
                 var result = await sender.Send(new GetStockReceiptQuery(id));
                 return result is not null ? Results.Ok(CostAccess.ForUser(result, user)) : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.StockMovementsRead);
+            .RequireAuthorization(AppPolicies.PurchasingRead);
 
         group.MapPost("/",
             async (RecordStockReceiptCommand command, ISender sender, ClaimsPrincipal user) =>
@@ -34,7 +34,7 @@ public static class StockReceiptEndpoints
                 var result = await sender.Send(command);
                 return Results.Created($"/api/stock-receipts/{result.Summary.Id}", CostAccess.ForUser(result, user));
             })
-            .RequireAuthorization(AppPolicies.StockMovementsWrite);
+            .RequireAuthorization(AppPolicies.PurchasingWrite);
 
         return app;
     }
