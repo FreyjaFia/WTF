@@ -23,5 +23,6 @@ public enum AuditEntityType
     PurchaseOrder,
     Role,
     Report,
-    OfflineSyncPolicy
+    OfflineSyncPolicy,
+    UnsyncedOrder
 }
