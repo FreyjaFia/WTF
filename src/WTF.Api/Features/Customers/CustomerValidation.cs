@@ -6,7 +6,7 @@ internal static class CustomerValidation
 {
     public const int MaxContactLength = 30;
     public const int MaxNameLength = 50;
-    public const int MaxAddressLength = 300;
+    public const int MaxAddressLength = 150;
 
     private static readonly Regex ContactPattern = new(@"^[0-9+()\-\s]+$", RegexOptions.Compiled);
 

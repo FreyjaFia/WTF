@@ -9,7 +9,7 @@ internal static class OrderInputValidation
 {
     public const int InstructionsMaxLength = 100;
     public const int NoteMaxLength = 500;
-    public const int AddressMaxLength = 300;
+    public const int AddressMaxLength = 150;
 
     public static void EnsureLengths(
         string? specialInstructions,

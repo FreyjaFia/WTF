@@ -493,7 +493,7 @@
                   <span>{{ getPendingItemCount(pending.cartSnapshot) }}</span>
                 </div>
                 @if (pending.command.customerAddress?.trim()) {
-                  <div class="truncate text-xs text-gray-500" [title]="pending.command.customerAddress">
+                  <div class="text-xs wrap-break-word text-gray-500">
                     {{ pending.command.customerAddress }}
                   </div>
                 }
@@ -690,7 +690,7 @@
                         <span class="text-xs text-slate-500">{{ getItemsText(order) }}</span>
                       </div>
                       @if (getOrderAddress(order); as address) {
-                        <div class="truncate text-xs text-slate-500 lg:hidden" [title]="address">
+                        <div class="text-xs wrap-break-word text-slate-500 lg:hidden">
                           {{ address }}
                         </div>
                       }
@@ -702,7 +702,7 @@
                           <div class="truncate text-xs text-gray-500">{{ order.customerName }}</div>
                         }
                         @if (getOrderAddress(order); as address) {
-                          <div class="truncate text-xs text-gray-500" [title]="address">
+                          <div class="text-xs wrap-break-word text-gray-500">
                             {{ address }}
                           </div>
                         }

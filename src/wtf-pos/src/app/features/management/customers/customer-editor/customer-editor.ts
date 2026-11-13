@@ -57,7 +57,7 @@ export class CustomerEditorComponent implements OnInit {
     }),
     address: new FormControl('', {
       nonNullable: true,
-      validators: [Validators.maxLength(300)],
+      validators: [Validators.maxLength(150)],
     }),
     contactNumber: new FormControl('', {
       nonNullable: true,

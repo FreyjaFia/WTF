@@ -39,7 +39,7 @@ test.describe('customers: create, validate, edit, delete, restore @management', 
 
   const BAD_CUSTOMERS: ReadonlyArray<{ readonly label: string; readonly change: Record<string, unknown> }> = [
     { label: 'an empty first name', change: { firstName: '' } },
-    { label: 'an address of 301 characters', change: { address: 'a'.repeat(301) } },
+    { label: 'an address of 151 characters', change: { address: 'a'.repeat(151) } },
     { label: 'a contact number with letters', change: { contactNumber: 'call-me-maybe' } },
     { label: 'a contact number with fewer than 7 digits', change: { contactNumber: '12345' } },
     { label: 'a contact number longer than 30 characters', change: { contactNumber: '1'.repeat(31) } },

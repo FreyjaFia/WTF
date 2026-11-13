@@ -46,10 +46,10 @@ public class CustomerValidationTests
     }
 
     [Fact]
-    public void NormalizeAddress_ThreeHundredCharactersIsFine_ThreeHundredOneIsRefused()
+    public void NormalizeAddress_OneHundredFiftyCharactersIsFine_OneHundredFiftyOneIsRefused()
     {
-        CustomerValidation.NormalizeAddress(new string('a', 300)).ShouldBe(new string('a', 300));
-        Should.Throw<InvalidOperationException>(() => CustomerValidation.NormalizeAddress(new string('a', 301)));
+        CustomerValidation.NormalizeAddress(new string('a', 150)).ShouldBe(new string('a', 150));
+        Should.Throw<InvalidOperationException>(() => CustomerValidation.NormalizeAddress(new string('a', 151)));
     }
 
     [Theory]
