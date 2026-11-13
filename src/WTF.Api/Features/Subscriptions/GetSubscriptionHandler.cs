@@ -19,7 +19,8 @@ public record SubscriptionDto(
     int GraceDays,
     DateTime ServerTime,
     string? Lease,
-    int LeaseMaxAgeDays);
+    int LeaseMaxAgeDays,
+    Dictionary<string, string[]>? PlansByFeature = null);
 
 public record TenantInvoiceDto(
     Guid Id,
@@ -71,7 +72,7 @@ public class GetSubscriptionHandler(
         if (!currentTenant.FilterEnabled || currentTenant.TenantId is not { } tenantId
             || await SubscriptionStateLoader.LoadAsync(db, tenantId, now, cancellationToken) is not { } state)
         {
-            return new SubscriptionDto(false, null, null, [], SubscriptionNames.Warning(SubscriptionWarning.None), 0, null, null, 0, now, null, maxAge);
+            return new SubscriptionDto(false, null, null, [], SubscriptionNames.Warning(SubscriptionWarning.None), 0, null, null, 0, now, null, maxAge, []);
         }
 
         var lease = signer.Sign(new LeasePayload(1, tenantId, now, state.PeriodEnd, state.GraceDays, state.AccessUntil, maxAge));
@@ -80,7 +81,7 @@ public class GetSubscriptionHandler(
             true,
             state.PlanName,
             state.PlanCode,
-            state.Features,
+            [.. PlanFeatures.Normalize(state.Features)],
             SubscriptionNames.Warning(state.Warning),
             state.DaysLeft,
             state.PeriodEnd,
@@ -88,7 +89,18 @@ public class GetSubscriptionHandler(
             state.GraceDays,
             now,
             lease,
-            maxAge);
+            maxAge,
+            await PlansByFeatureAsync(cancellationToken));
+    }
+
+    // For the "Available in Pro" text: the active plans that hold each switchable feature, in plan order.
+    private async Task<Dictionary<string, string[]>> PlansByFeatureAsync(CancellationToken cancellationToken)
+    {
+        var plans = await db.Plans.AsNoTracking().Where(p => p.IsActive).OrderBy(p => p.SortOrder)
+            .Select(p => new { p.Name, p.Features }).ToListAsync(cancellationToken);
+        var rows = plans.Select(p => (p.Name, (string?)p.Features)).ToList();
+
+        return PlanFeatures.Gateable.ToDictionary(feature => feature, feature => PlanFeatures.PlansContaining(feature, rows).ToArray());
     }
 }
 

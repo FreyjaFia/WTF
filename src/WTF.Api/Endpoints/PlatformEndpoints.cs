@@ -15,6 +15,8 @@ public static class PlatformEndpoints
 
     public record ImpersonateRequest(string Reason, bool AllowWrites);
 
+    public record CreatePlanRequest(string Code, string Name, decimal MonthlyPrice, string[] Features, int? MaxUsers, bool IsActive);
+
     public record UpdatePlanRequest(string Name, decimal MonthlyPrice, string[] Features, int? MaxUsers, bool IsActive);
 
     public record SetSubscriptionRequest(int PlanId, DateTime? PeriodEnd, int GraceDays, decimal DiscountPercent, string? Notes);
@@ -75,11 +77,19 @@ public static class PlatformEndpoints
 
         group.MapGet("/plans", async (ISender sender) => Results.Ok(await sender.Send(new GetPlansQuery())));
 
+        group.MapGet("/plan-features", async (ISender sender) => Results.Ok(await sender.Send(new GetPlanFeaturesQuery())));
+
+        group.MapPost("/plans", async ([FromBody] CreatePlanRequest request, ISender sender) =>
+            Results.Ok(await sender.Send(new CreatePlanCommand(request.Code, request.Name, request.MonthlyPrice, request.Features, request.MaxUsers, request.IsActive))));
+
         group.MapPut("/plans/{id:int}", async (int id, [FromBody] UpdatePlanRequest request, ISender sender) =>
             Results.Ok(await sender.Send(new UpdatePlanCommand(id, request.Name, request.MonthlyPrice, request.Features, request.MaxUsers, request.IsActive))));
 
         group.MapGet("/tenants/{id:guid}/subscription", async (Guid id, ISender sender) =>
             Results.Ok(await sender.Send(new GetTenantSubscriptionQuery(id))));
+
+        group.MapGet("/tenants/{id:guid}/plan-change-preview", async (Guid id, int planId, ISender sender) =>
+            Results.Ok(await sender.Send(new GetPlanChangePreviewQuery(id, planId))));
 
         group.MapPut("/tenants/{id:guid}/subscription", async (Guid id, [FromBody] SetSubscriptionRequest request, ISender sender) =>
             Results.Ok(await sender.Send(new SetTenantSubscriptionCommand(id, request.PlanId, request.PeriodEnd, request.GraceDays, request.DiscountPercent, request.Notes))));

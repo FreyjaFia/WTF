@@ -10,7 +10,7 @@ using WTF.Domain.Entities;
 
 namespace WTF.Api.Features.Subscriptions;
 
-public record PlanDto(int Id, string Code, string Name, decimal MonthlyPrice, string[] Features, int? MaxUsers, bool IsActive);
+public record PlanDto(int Id, string Code, string Name, decimal MonthlyPrice, string[] Features, int? MaxUsers, bool IsActive, int ShopCount = 0);
 
 public record TenantSubscriptionDto(
     Guid TenantId,
@@ -27,12 +27,16 @@ public record TenantSubscriptionDto(
     DateTime AccessUntil,
     string Warning,
     int DaysLeft,
-    List<TenantInvoiceDto> Invoices);
+    List<TenantInvoiceDto> Invoices,
+    int UserCount = 0);
 
 internal static class PlatformBilling
 {
-    public static PlanDto ToDto(Plan p) =>
-        new(p.Id, p.Code, p.Name, p.MonthlyPrice, SubscriptionStateLoader.SplitFeatures(p.Features), p.MaxUsers, p.IsActive);
+    public static PlanDto ToDto(Plan p, int shopCount = 0) =>
+        new(p.Id, p.Code, p.Name, p.MonthlyPrice, [.. PlanFeatures.Normalize(PlanFeatures.Split(p.Features))], p.MaxUsers, p.IsActive, shopCount);
+
+    public static Task<int> CountUsersAsync(WTFDbContext db, Guid tenantId, CancellationToken cancellationToken) =>
+        db.Users.AsNoTracking().IgnoreQueryFilters().CountAsync(u => u.TenantId == tenantId && u.IsActive, cancellationToken);
 
     public static async Task<TenantSubscriptionDto> BuildAsync(WTFDbContext db, Guid tenantId, DateTime now, CancellationToken cancellationToken)
     {
@@ -65,7 +69,8 @@ internal static class PlatformBilling
             SubscriptionRules.AccessUntil(sub.CurrentPeriodEnd, sub.GraceDays),
             SubscriptionNames.Warning(SubscriptionRules.WarningLevel(sub.CurrentPeriodEnd, sub.GraceDays, now)),
             SubscriptionRules.DaysLeft(sub.CurrentPeriodEnd, now),
-            [.. invoices.Select(i => InvoiceMapping.ToDto(i, plans))]);
+            [.. invoices.Select(i => InvoiceMapping.ToDto(i, plans))],
+            await CountUsersAsync(db, tenantId, cancellationToken));
     }
 }
 
@@ -76,7 +81,10 @@ public class GetPlansHandler(WTFDbContext db) : IRequestHandler<GetPlansQuery, L
     public async Task<List<PlanDto>> Handle(GetPlansQuery request, CancellationToken cancellationToken)
     {
         var plans = await db.Plans.AsNoTracking().OrderBy(p => p.SortOrder).ToListAsync(cancellationToken);
-        return [.. plans.Select(PlatformBilling.ToDto)];
+        var counts = await db.TenantSubscriptions.AsNoTracking().GroupBy(s => s.PlanId)
+            .Select(g => new { PlanId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.PlanId, x => x.Count, cancellationToken);
+        return [.. plans.Select(p => PlatformBilling.ToDto(p, counts.GetValueOrDefault(p.Id)))];
     }
 }
 
@@ -105,13 +113,8 @@ public class UpdatePlanHandler(WTFDbContext db, IPlatformAuditService audit, ITe
             throw new InvalidOperationException("Maximum users must be at least 1, or empty for no limit.");
         }
 
-        var features = string.Join(',', (request.Features ?? []).Select(f => f.Trim().ToLowerInvariant()).Where(f => f.Length > 0).Distinct());
-        if (features.Length > 500)
-        {
-            throw new InvalidOperationException("Too many features.");
-        }
-
-        var summary = $"{plan.Name}: {plan.MonthlyPrice:0.00} -> {request.MonthlyPrice:0.00}; features '{plan.Features}' -> '{features}'; active {plan.IsActive} -> {request.IsActive}";
+        var features = PlanFeatureInput.Clean(request.Features);
+        var summary = $"{plan.Name}: {plan.MonthlyPrice:0.00} -> {request.MonthlyPrice:0.00}; {PlanFeatureInput.Diff(plan.Features, features)}; active {plan.IsActive} -> {request.IsActive}";
         plan.Name = name;
         plan.MonthlyPrice = request.MonthlyPrice;
         plan.Features = features;
@@ -146,12 +149,16 @@ public class SetTenantSubscriptionHandler(WTFDbContext db, IPlatformAuditService
 {
     public async Task<TenantSubscriptionDto> Handle(SetTenantSubscriptionCommand request, CancellationToken cancellationToken)
     {
-        var sub = await db.TenantSubscriptions.FirstOrDefaultAsync(s => s.TenantId == request.TenantId, cancellationToken)
+        var sub = await db.TenantSubscriptions.Include(s => s.Plan).FirstOrDefaultAsync(s => s.TenantId == request.TenantId, cancellationToken)
             ?? throw new KeyNotFoundException("This shop has no subscription yet.");
 
-        if (!await db.Plans.AnyAsync(p => p.Id == request.PlanId, cancellationToken))
+        var newPlan = await db.Plans.AsNoTracking().FirstOrDefaultAsync(p => p.Id == request.PlanId, cancellationToken)
+            ?? throw new InvalidOperationException("Plan not found.");
+
+        // A retired plan stays valid for the shops already on it but is not offered to anyone else.
+        if (!newPlan.IsActive && sub.PlanId != request.PlanId)
         {
-            throw new InvalidOperationException("Plan not found.");
+            throw new InvalidOperationException("That plan is retired and cannot be assigned to a shop.");
         }
 
         if (request.GraceDays is < 0 or > 90)
@@ -176,7 +183,7 @@ public class SetTenantSubscriptionHandler(WTFDbContext db, IPlatformAuditService
             throw new InvalidOperationException("The period must end after it starts.");
         }
 
-        var summary = $"plan {sub.PlanId} -> {request.PlanId}; period end {sub.CurrentPeriodEnd:yyyy-MM-dd} -> {periodEnd:yyyy-MM-dd}; grace {sub.GraceDays} -> {request.GraceDays}; discount {sub.DiscountPercent} -> {request.DiscountPercent}";
+        var summary = $"plan {sub.PlanId} -> {request.PlanId}; period end {sub.CurrentPeriodEnd:yyyy-MM-dd} -> {periodEnd:yyyy-MM-dd}; grace {sub.GraceDays} -> {request.GraceDays}; discount {sub.DiscountPercent} -> {request.DiscountPercent}" + (sub.PlanId == request.PlanId ? string.Empty : "; " + PlanFeatureInput.Diff(sub.Plan.Features, PlanFeatures.Serialize(PlanFeatures.Split(newPlan.Features))));
         sub.PlanId = request.PlanId;
         sub.CurrentPeriodEnd = periodEnd;
         sub.GraceDays = request.GraceDays;
