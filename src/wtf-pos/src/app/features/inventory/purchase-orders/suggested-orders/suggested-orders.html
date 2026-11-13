@@ -45,7 +45,7 @@
               <p class="font-medium wrap-anywhere text-gray-900">{{ row.itemName }}</p>
               <p class="text-xs text-gray-500">{{ row.onHand | number: '1.0-3' }} {{ row.unitName }} on hand</p>
             </div>
-            @if (auth.canWriteStockMovements()) {
+            @if (auth.canWritePurchasing()) {
               <input
                 #par
                 type="number"
@@ -102,7 +102,7 @@
                     </p>
                   </div>
                   <div class="flex shrink-0 flex-wrap gap-2">
-                    @if (group.supplierId && auth.canWriteStockMovements()) {
+                    @if (group.supplierId && auth.canWritePurchasing()) {
                       <button type="button" class="app-btn app-btn-primary app-btn-sm" data-testid="create-order" [disabled]="draftingSupplierId() !== null" (click)="createOrder(group)">Create order</button>
                     }
                     <button type="button" class="app-btn app-btn-secondary app-btn-sm" data-testid="copy-order" (click)="copyOrder(group)">Copy order</button>

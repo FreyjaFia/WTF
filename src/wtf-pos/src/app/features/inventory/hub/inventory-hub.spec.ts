@@ -20,6 +20,7 @@ describe('InventoryHubComponent', () => {
           useValue: {
             canReadItems: () => perms.items,
             canReadStockMovements: () => perms.stock,
+            canReadPurchasing: () => perms.stock,
             canReviewStockWaste: () => perms.review,
           },
         },

@@ -1,9 +1,10 @@
+import { PlanFeatureCatalog } from '@shared/calculations/plan-features';
 import { describe, expect, it } from 'vitest';
 import { PermissionCatalog, Permissions, SystemRolePermissions, keepReadPermissions } from './permissions';
 
 describe('permission catalog', () => {
   const keys = PermissionCatalog.map((p) => p.key);
-  const features = ['core', 'inventory', 'promotions', 'orderlinks', 'chat', 'workbook'];
+  const features = ['core', ...PlanFeatureCatalog.map((f) => f.key)];
 
   it('has unique, lower-case keys that match the Permissions constants', () => {
     expect(new Set(keys).size).toBe(keys.length);

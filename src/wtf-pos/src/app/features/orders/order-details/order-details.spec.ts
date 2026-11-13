@@ -216,6 +216,7 @@ describe('OrderDetails', () => {
           useValue: {
             canOverrideOrders: canOverride,
             canWriteOrders: () => canWrite,
+            canReadChat: () => true, canWriteChat: () => true,
             canReadStockMovements: () => canReadStock,
           },
         },

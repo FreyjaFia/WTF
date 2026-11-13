@@ -29,7 +29,7 @@ export class StaffEnvelopeComponent implements OnInit, OnDestroy {
   private started = false;
 
   public ngOnInit(): void {
-    if (this.auth.canReadOrders()) {
+    if (this.auth.canReadChat()) {
       this.inbox.start();
       this.started = true;
     }

@@ -509,6 +509,22 @@ export class AuthService {
     return this.can(Permissions.StockWrite);
   }
 
+  public canReadPurchasing(): boolean {
+    return this.can(Permissions.PurchasingRead);
+  }
+
+  public canWritePurchasing(): boolean {
+    return this.can(Permissions.PurchasingWrite);
+  }
+
+  public canReadChat(): boolean {
+    return this.can(Permissions.ChatRead);
+  }
+
+  public canWriteChat(): boolean {
+    return this.can(Permissions.ChatWrite);
+  }
+
   public canWriteStockWaste(): boolean {
     return this.can(Permissions.StockWasteRecord);
   }

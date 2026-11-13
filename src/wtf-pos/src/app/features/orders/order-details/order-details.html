@@ -111,7 +111,7 @@
             </dl>
 
             <div class="mt-4 flex flex-wrap items-center gap-2">
-              @if (isOnlineOrder()) {
+              @if (isOnlineOrder() && canChat()) {
                 <button
                   type="button"
                   class="app-btn app-btn-secondary app-btn-sm gap-2"
@@ -666,7 +666,7 @@
 }
 
 <app-order-chat-drawer
-  [isOpen]="showChat()"
+  [isOpen]="showChat() && canChat()"
   [orderId]="order()?.id ?? null"
   [orderNumber]="order()?.orderNumber ?? null"
   [customerName]="order()?.customerName || 'Customer'"

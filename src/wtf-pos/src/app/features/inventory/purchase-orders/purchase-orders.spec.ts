@@ -97,7 +97,7 @@ describe('PurchaseOrdersComponent', () => {
         {
           provide: AuthService,
           useValue: {
-            canWriteStockMovements: () => options.canWrite ?? true,
+            canWritePurchasing: () => options.canWrite ?? true,
             canReadInventoryCosts: () => options.canSeeCosts ?? true,
           },
         },

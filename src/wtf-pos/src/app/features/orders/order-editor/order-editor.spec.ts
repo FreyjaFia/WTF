@@ -506,6 +506,7 @@ describe('OrderEditor', () => {
           useValue: {
             isAuthenticated: () => authenticated,
             canWriteOrders: () => canWrite,
+            canReadChat: () => true, canWriteChat: () => true,
             canOverrideOrders: () => canOverride,
             canCreateCustomerInOrder: () => canCreateCustomer,
           },

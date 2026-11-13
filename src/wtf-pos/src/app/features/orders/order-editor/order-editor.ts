@@ -427,6 +427,7 @@ export class OrderEditor implements OnInit, OnDestroy {
     () =>
       this.isEditMode() &&
       !this.isOfflineEditMode() &&
+      this.authService.canReadChat() &&
       this.currentOrder()?.source === OrderSourceEnum.CustomerLink,
   );
   protected readonly chatUnread = computed(() => {

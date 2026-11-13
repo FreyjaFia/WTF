@@ -1,6 +1,6 @@
-import { Component, effect, inject, input, OnDestroy, output, signal, untracked } from '@angular/core';
+import { Component, computed, effect, inject, input, OnDestroy, output, signal, untracked } from '@angular/core';
 import { DRAWER_SLIDE_MS } from '@shared/components/drawer-timing';
-import { ConversationInboxService, ConversationService, ModalStackService, SignalRService } from '@core/services';
+import { AuthService, ConversationInboxService, ConversationService, ModalStackService, SignalRService } from '@core/services';
 import { ChatComponent } from '@shared/components/chat/chat';
 import { IconComponent } from '@shared/components/icons/icon/icon';
 import { ChatImageLoader } from '@shared/components/chat/chat-image';
@@ -21,6 +21,7 @@ export class OrderChatDrawerComponent implements OnDestroy {
   private readonly conversations = inject(ConversationService);
   private readonly inbox = inject(ConversationInboxService);
   private readonly signalR = inject(SignalRService);
+  private readonly auth = inject(AuthService);
   private readonly modalStack = inject(ModalStackService);
 
   public readonly isOpen = input(false);
@@ -33,6 +34,8 @@ export class OrderChatDrawerComponent implements OnDestroy {
   /** Shows a "Go to order" button, for chats opened away from their order. */
   public readonly canGoToOrder = input(false);
   public readonly goToOrder = output<void>();
+
+  protected readonly canSend = computed(() => this.auth.canWriteChat() && (this.conversation()?.canSend ?? true));
 
   protected readonly conversation = signal<OrderConversationDto | null>(null);
   protected readonly isLoading = signal(false);
