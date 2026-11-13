@@ -9,6 +9,7 @@ export * from './expense.models';
 export * from './inventory.models';
 export * from './notification.models';
 export * from './price-history.models';
+export * from './held-order.models';
 export * from './order.models';
 export * from './order-link.models';
 export * from './product.models';

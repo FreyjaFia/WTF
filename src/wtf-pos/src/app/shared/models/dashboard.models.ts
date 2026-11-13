@@ -33,6 +33,16 @@ export interface DashboardInsightsDto {
   topPromotionUses: number;
   newCustomers: number;
   returningCustomers: number;
+  heldOrders?: HeldOrdersInsightDto | null;
+}
+
+export interface HeldOrdersInsightDto {
+  count: number;
+  amount: number;
+  seniorPwdDiscount: number;
+  agedCount: number;
+  agedAmount: number;
+  agedText: string | null;
 }
 
 export interface DashboardProfitDto {

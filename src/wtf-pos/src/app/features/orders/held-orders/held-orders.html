@@ -1,0 +1,379 @@
+<div class="flex h-full flex-col pt-4 md:pt-0">
+  <div class="mb-4 flex shrink-0 flex-col gap-3 sm:mb-6">
+    <div class="flex items-start justify-between gap-3">
+      <div class="flex min-w-0 flex-col gap-1">
+        <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Held orders</h1>
+        <p class="text-xs text-gray-500 sm:text-sm">
+          Offline sales waiting for an Admin. They count as sales once approved.
+        </p>
+      </div>
+      <button type="button" class="app-btn app-btn-secondary app-btn-sm shrink-0" (click)="backToOrders()">
+        Back to orders
+      </button>
+    </div>
+
+    <div class="flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center md:gap-3">
+      <div
+        class="mb-2 flex w-full min-w-0 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-surface focus-within:ring-2 focus-within:ring-gray-200 md:mb-0 md:max-w-104 md:flex-1"
+      >
+        <app-search-input
+          [value]="search()"
+          placeholder="Search order, cashier, reason"
+          ariaLabel="Search held orders"
+          (valueChange)="search.set($event)"
+        />
+      </div>
+
+      <div class="ml-auto flex items-center justify-end gap-2">
+        <app-filter-button [count]="activeFilterCount()" (pressed)="openFilters()" />
+        @if (!isAndroidPlatform) {
+          <button
+            type="button"
+            class="app-btn app-btn-ghost pointer-events-auto z-30 p-2"
+            [class.opacity-70]="isRefreshing()"
+            [disabled]="isRefreshing()"
+            aria-label="Refresh held orders"
+            (click)="refresh()"
+          >
+            <app-icon
+              name="icon-refresh"
+              [class]="isRefreshing() ? 'h-5 w-5 animate-spin text-gray-600' : 'h-5 w-5 text-gray-600 transition-colors hover:text-gray-900'"
+              [fill]="'currentColor'"
+            />
+          </button>
+        }
+      </div>
+    </div>
+
+    @if (result(); as summary) {
+      <div class="flex flex-wrap items-center gap-2" data-testid="held-summary">
+        <span class="inline-flex items-center gap-2 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-900">
+          {{ summary.totalCount }} waiting &middot; PHP {{ summary.totalAmount | number: '1.2-2' }}
+        </span>
+        @if (summary.agedCount > 0) {
+          <button
+            type="button"
+            class="inline-flex cursor-pointer items-center gap-2 rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-700 transition-all active:scale-[0.98]"
+            [class.ring-2]="agedOnly()"
+            [class.ring-red-300]="agedOnly()"
+            [attr.aria-pressed]="agedOnly()"
+            data-testid="tile-aged"
+            (click)="toggleAgedOnly()"
+          >
+            {{ summary.agedCount }} waited over {{ summary.agedAfterDays }} days
+            @if (agedOnly()) {
+              <span aria-hidden="true">&times;</span>
+            }
+          </button>
+        }
+      </div>
+    }
+
+    <div class="flex flex-wrap items-center gap-2">
+      <button
+        type="button"
+        class="app-btn app-btn-primary app-btn-sm"
+        data-testid="approve-matching"
+        [disabled]="isCheckingBulk() || isApprovingBulk() || visibleOrders().length === 0"
+        (click)="askApproveMatching()"
+      >
+        @if (isCheckingBulk() && !bulkRequest()) {
+          <span class="loading loading-spinner loading-xs"></span>
+        }
+        Approve all matching filters
+      </button>
+    </div>
+  </div>
+
+  <app-side-drawer
+    [isOpen]="isFiltersOpen()"
+    [title]="'Held Order Filters'"
+    [subtitle]="'Refine the held orders'"
+    [showOnDesktop]="true"
+    (closed)="closeFilters()"
+  >
+    <div class="space-y-3">
+      <div class="rounded-xl border border-gray-200 bg-surface p-3">
+        <div class="mb-3 flex items-center justify-between">
+          <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Reason</p>
+          <button type="button" class="app-btn app-btn-secondary app-btn-xs" (click)="clearReasons()">
+            Clear
+          </button>
+        </div>
+        <div class="space-y-2" role="group" aria-label="Reason">
+          @for (reason of reasonOptions; track reason.code) {
+            <label
+              class="flex cursor-pointer items-center justify-between gap-3 rounded-lg bg-surface px-3 py-2 text-sm text-gray-700"
+            >
+              <span class="min-w-0 wrap-break-word">{{ reason.label }}</span>
+              <input
+                type="checkbox"
+                class="checkbox checkbox-sm shrink-0"
+                [attr.data-reason]="reason.code"
+                [checked]="reasonCodes().includes(reason.code)"
+                (change)="toggleReason(reason.code)"
+              />
+            </label>
+          }
+        </div>
+      </div>
+
+      @if (cashiers().length > 0) {
+        <div class="rounded-xl border border-gray-200 bg-surface p-3">
+          <div class="mb-3 flex items-center justify-between">
+            <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Cashier</p>
+            <button type="button" class="app-btn app-btn-secondary app-btn-xs" (click)="setCashier('')">
+              Clear
+            </button>
+          </div>
+          <div class="space-y-2" role="radiogroup" aria-label="Cashier">
+            @for (cashier of cashiers(); track cashier.id) {
+              <label
+                class="flex cursor-pointer items-center justify-between gap-3 rounded-lg bg-surface px-3 py-2 text-sm text-gray-700"
+              >
+                <span class="min-w-0 wrap-break-word">{{ cashier.name }}</span>
+                <input
+                  type="radio"
+                  name="held-cashier"
+                  class="radio radio-sm shrink-0"
+                  [checked]="cashierId() === cashier.id"
+                  (change)="setCashier(cashier.id)"
+                />
+              </label>
+            }
+          </div>
+        </div>
+      }
+
+      <div class="rounded-xl border border-gray-200 bg-surface p-3">
+        <div class="mb-3 flex items-center justify-between">
+          <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Date Sold</p>
+          <button type="button" class="app-btn app-btn-secondary app-btn-xs" (click)="setDatePreset('all')">
+            Reset
+          </button>
+        </div>
+        <div class="space-y-2" role="radiogroup" aria-label="Date sold">
+          @for (preset of datePresets; track preset.value) {
+            <label
+              class="flex cursor-pointer items-center justify-between rounded-lg bg-surface px-3 py-2 text-sm text-gray-700"
+            >
+              <span>{{ preset.label }}</span>
+              <input
+                type="radio"
+                name="held-date-range"
+                class="radio radio-sm"
+                [checked]="datePreset() === preset.value"
+                (change)="setDatePreset(preset.value)"
+              />
+            </label>
+          }
+        </div>
+      </div>
+
+      <div class="rounded-xl border border-gray-200 bg-surface p-3">
+        <label class="flex cursor-pointer items-center justify-between gap-3 text-sm text-gray-700">
+          <span>Aged only (waited over {{ result()?.agedAfterDays ?? 2 }} days)</span>
+          <input
+            type="checkbox"
+            class="checkbox checkbox-sm shrink-0"
+            data-testid="filter-aged"
+            [checked]="agedOnly()"
+            (change)="toggleAgedOnly()"
+          />
+        </label>
+      </div>
+    </div>
+  </app-side-drawer>
+
+  @if (isLoading()) {
+    <div class="flex justify-center py-8">
+      <span class="loading loading-spinner loading-lg"></span>
+    </div>
+  }
+
+  @if (!isLoading()) {
+    <app-pull-to-refresh [refreshing]="isRefreshing()" (refreshTriggered)="refresh()">
+      <div class="pb-4">
+        @if (connectionFailed()) {
+          <app-connection-error />
+        } @else if (visibleOrders().length === 0) {
+          <div class="rounded-lg bg-surface p-8 text-center shadow-lg" data-testid="held-empty">
+            <div class="mb-3 flex justify-center">
+              <app-icon name="icon-check" [class]="'h-12 w-12 opacity-60'" />
+            </div>
+            <p class="text-lg font-semibold text-gray-700">No held orders</p>
+            <p class="text-sm text-gray-500">
+              Nothing is waiting for review. Try adjusting your filters.
+            </p>
+          </div>
+        }
+
+        @if (sortedOrders().length > 0) {
+          <div
+            class="sticky top-0 z-10 hidden grid-cols-12 items-start gap-4 border-b border-gray-100 bg-surface pt-3 pr-4 pb-5 pl-6 lg:grid"
+            data-testid="held-columns"
+          >
+            <label class="col-span-1 flex items-center gap-2 text-xs font-semibold text-gray-500">
+              <input
+                type="checkbox"
+                class="checkbox checkbox-sm"
+                aria-label="Select all held orders"
+                data-testid="select-all"
+                [checked]="allSelected()"
+                [disabled]="selectableOrders().length === 0"
+                (change)="toggleSelectAll()"
+              />
+            </label>
+            <app-sort-header class="col-span-2" label="Order" align="start" [active]="sortColumn() === 'order'" [direction]="sortDirection()" (sorted)="toggleSort('order')" />
+            <app-sort-header class="col-span-3" label="Reasons" align="start" [active]="sortColumn() === 'reasons'" [direction]="sortDirection()" (sorted)="toggleSort('reasons')" />
+            <app-sort-header class="col-span-2" label="Cashier" align="start" [active]="sortColumn() === 'cashier'" [direction]="sortDirection()" (sorted)="toggleSort('cashier')" />
+            <app-sort-header class="col-span-2" label="Sold" align="center" [active]="sortColumn() === 'sold'" [direction]="sortDirection()" (sorted)="toggleSort('sold')" />
+            <app-sort-header class="col-span-2" label="Value" align="end" [active]="sortColumn() === 'value'" [direction]="sortDirection()" (sorted)="toggleSort('value')" />
+          </div>
+        }
+
+        <ul class="space-y-2.5">
+          @for (order of sortedOrders(); track order.id) {
+            <li
+              class="relative overflow-hidden rounded-xl bg-surface shadow"
+              [attr.data-testid]="'held-' + order.orderNumber"
+              [attr.data-aged]="order.isAged"
+            >
+              <span class="absolute inset-y-0 left-0 w-1.5" [class]="order.isAged ? 'bg-red-500' : 'bg-amber-400'" aria-hidden="true"></span>
+              <div class="space-y-2 p-3 pl-5 sm:p-4 sm:pl-6">
+                <div class="flex flex-wrap items-start justify-between gap-2 lg:grid lg:grid-cols-12 lg:items-start lg:gap-4">
+                  <div class="flex items-start gap-3 lg:col-span-3">
+                    <input
+                      type="checkbox"
+                      class="checkbox checkbox-sm mt-0.5 shrink-0"
+                      [attr.aria-label]="'Select order ' + order.orderNumber"
+                      [attr.title]="isBulkSkipped(order) ? 'Senior/PWD holds are approved one by one' : null"
+                      [checked]="isSelected(order)"
+                      [disabled]="isBulkSkipped(order)"
+                      (change)="toggleSelected(order)"
+                    />
+                    <div class="min-w-0">
+                      <div class="flex flex-wrap items-center gap-2">
+                        <span class="text-sm font-semibold text-gray-900">#{{ order.orderNumber }}</span>
+                        <span class="text-sm text-gray-700">{{ order.customerName || 'Walk-in' }}</span>
+                        @if (order.isAged) {
+                          <app-badge variant="error"><span data-testid="aged-badge">Aged &middot; {{ order.ageDays }} {{ plural(order.ageDays, 'day', 'days') }}</span></app-badge>
+                        }
+                      </div>
+                      <p class="text-xs wrap-break-word text-gray-500">{{ order.itemsText }}</p>
+                    </div>
+                  </div>
+
+                  <ul class="order-last w-full list-disc space-y-0.5 ps-5 text-xs text-amber-900 lg:order-0 lg:col-span-4 lg:w-auto">
+                    @for (reason of order.reasons; track reason) {
+                      <li>{{ reason }}</li>
+                    }
+                  </ul>
+
+                  <p class="hidden text-sm text-gray-700 lg:col-span-1 lg:block">{{ order.cashierName }}</p>
+                  <p class="hidden text-center text-sm text-gray-700 lg:col-span-2 lg:block">{{ order.createdAt | date: 'd MMM, h:mm a' }}</p>
+                  <span class="text-base font-semibold whitespace-nowrap text-gray-950 lg:col-span-2 lg:text-right lg:text-lg">
+                    <span class="text-sm opacity-70 lg:text-base"
+                      ><app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" /></span
+                    >{{ order.amount | number: '1.2-2' }}
+                  </span>
+                </div>
+
+                <p class="text-xs text-gray-500 lg:hidden">
+                  {{ order.cashierName }} &middot; Sold {{ order.createdAt | date: 'd MMM, h:mm a' }}
+                </p>
+
+                @if (isBulkSkipped(order)) {
+                  <p class="text-xs text-gray-500">Senior/PWD hold: approved one by one.</p>
+                }
+
+                <div class="flex flex-wrap justify-end gap-2 pt-1">
+                  <button type="button" class="app-btn app-btn-outline-danger app-btn-sm" (click)="openOrder(order)">
+                    Reject
+                  </button>
+                  <button type="button" class="app-btn app-btn-primary app-btn-sm" (click)="openOrder(order)">
+                    Approve
+                  </button>
+                </div>
+              </div>
+            </li>
+          }
+        </ul>
+
+        @if (selectedIds().size > 0) {
+          <div
+            class="sticky bottom-0 z-10 mt-3 flex flex-col gap-2 rounded-xl bg-surface px-4 py-3 shadow-lg ring-1 ring-gray-100 sm:flex-row sm:items-center sm:justify-between"
+            data-testid="selection-bar"
+          >
+            <p class="text-sm font-semibold text-gray-900">
+              {{ selectedIds().size }} selected &middot; PHP {{ selectedTotal() | number: '1.2-2' }}
+            </p>
+            <div class="flex items-center justify-end gap-2">
+              <button type="button" class="app-btn app-btn-secondary app-btn-sm" (click)="clearSelection()">
+                Clear
+              </button>
+              <button
+                type="button"
+                class="app-btn app-btn-primary app-btn-sm"
+                data-testid="approve-selected"
+                [disabled]="isCheckingBulk() || isApprovingBulk()"
+                (click)="askApproveSelected()"
+              >
+                @if (isCheckingBulk() && !bulkRequest()) {
+                  <span class="loading loading-spinner loading-xs"></span>
+                }
+                Approve selected
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    </app-pull-to-refresh>
+  }
+</div>
+
+@if (bulkRequest(); as request) {
+  <app-confirm-dialog
+    variant="success"
+    icon="icon-check"
+    [heading]="'Approve ' + request.preview.count + ' ' + plural(request.preview.count, 'order', 'orders') + '?'"
+    [confirmLabel]="'Approve ' + request.preview.count"
+    busyLabel="Approving..."
+    [isBusy]="isApprovingBulk()"
+    (confirmed)="confirmBulk()"
+    (cancelled)="cancelBulk()"
+  >
+    <span data-testid="bulk-preview-text">
+      They become sales worth PHP {{ request.preview.totalAmount | number: '1.2-2' }} and take their stock.
+      This cannot be undone in bulk.
+    </span>
+    <div dialogExtra class="mt-4 space-y-2 text-left text-sm" data-testid="bulk-preview">
+      <div class="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
+        <span class="text-gray-600">Orders</span>
+        <span class="font-semibold text-gray-900" data-testid="bulk-count">{{ request.preview.count }}</span>
+      </div>
+      <div class="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
+        <span class="text-gray-600">Total</span>
+        <span class="font-semibold text-gray-900" data-testid="bulk-total">PHP {{ request.preview.totalAmount | number: '1.2-2' }}</span>
+      </div>
+      @if (skippedSeniorPwd(request.preview) > 0) {
+        <p class="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800" data-testid="bulk-skipped-seniorpwd">
+          {{ skippedSeniorPwd(request.preview) }} Senior/PWD
+          {{ plural(skippedSeniorPwd(request.preview), 'order is', 'orders are') }} left out. Approve
+          {{ plural(skippedSeniorPwd(request.preview), 'it', 'them') }} one by one.
+        </p>
+      }
+      @if (skippedNotHeld(request.preview) > 0) {
+        <p class="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800" data-testid="bulk-skipped-decided">
+          {{ skippedNotHeld(request.preview) }}
+          {{ plural(skippedNotHeld(request.preview), 'order is', 'orders are') }} not waiting for review any more.
+        </p>
+      }
+      @if (request.preview.truncated) {
+        <p class="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          Only the oldest 500 orders are approved at a time. Run it again for the rest.
+        </p>
+      }
+    </div>
+  </app-confirm-dialog>
+}
