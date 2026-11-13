@@ -26,11 +26,26 @@ interface PosCatalogDto {
   addOnsByProductId: Record<string, AddOnGroupDto[]>;
   customers: CustomerDto[];
   lookups?: CatalogLookupsDto;
+  seniorPwdEnabled?: boolean;
+  vatRegistered?: boolean;
   settings?: PosShopSettingsDto;
   syncedAt: string;
 }
 
 const NO_SHOP_SETTINGS: PosShopSettingsDto = { seniorPwdEnabled: false, vatRegistered: false };
+
+function settingsOf(catalog: {
+  seniorPwdEnabled?: boolean;
+  vatRegistered?: boolean;
+  settings?: PosShopSettingsDto;
+}): PosShopSettingsDto {
+  return (
+    catalog.settings ?? {
+      seniorPwdEnabled: catalog.seniorPwdEnabled ?? false,
+      vatRegistered: catalog.vatRegistered ?? false,
+    }
+  );
+}
 
 interface StalePriceItem {
   productId: string;
@@ -222,7 +237,7 @@ export class CatalogCacheService {
         fixedBundles: bundles.fixedBundles,
         mixMatchPromotions: bundles.mixMatch,
         lookups: catalog.lookups,
-        settings: catalog.settings,
+        settings: settingsOf(catalog),
         syncedAt: catalog.syncedAt,
       });
 
@@ -240,7 +255,7 @@ export class CatalogCacheService {
       this._mixMatchPromotions.set(bundles.mixMatch);
       this._discountedPromotions.set(discountedPromotions);
       this.lookups.set(catalog.lookups);
-      this._shopSettings.set(catalog.settings ?? NO_SHOP_SETTINGS);
+      this._shopSettings.set(settingsOf(catalog));
       this.detectStalePrices(previousCatalog?.products ?? [], catalog.products);
     } catch {
       await this.loadFromCache();

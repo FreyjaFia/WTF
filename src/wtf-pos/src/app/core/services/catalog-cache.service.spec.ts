@@ -42,6 +42,7 @@ describe('CatalogCacheService', () => {
     bundlesFail?: boolean;
     discounted?: unknown[];
     catalogFails?: boolean;
+    shop?: { seniorPwdEnabled: boolean; vatRegistered: boolean };
   } = {}): Promise<void> {
     await settle();
     const catalog = http.expectOne(`${api}/sync/pos-catalog`);
@@ -55,6 +56,7 @@ describe('CatalogCacheService', () => {
         products: options.products ?? [],
         customers: options.customers ?? [],
         addOnsByProductId: options.addOns ?? {},
+        ...options.shop,
         syncedAt: '2025-01-01T00:00:00Z',
       });
     }
@@ -209,6 +211,17 @@ describe('CatalogCacheService', () => {
       await done;
 
       expect(service.discountedPromotions()).toEqual([{ id: 'd9' }]);
+    });
+
+    it('reads the shop switches that the API sends beside the products', async () => {
+      const service = create();
+      const done = service.load();
+
+      await answerSync({ shop: { seniorPwdEnabled: true, vatRegistered: true } });
+      await done;
+
+      expect(service.shopSettings()).toEqual({ seniorPwdEnabled: true, vatRegistered: true });
+      expect(stored?.settings).toEqual({ seniorPwdEnabled: true, vatRegistered: true });
     });
 
     it('has no discounts from a catalog saved before they were kept', async () => {
