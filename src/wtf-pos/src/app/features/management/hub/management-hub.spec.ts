@@ -18,6 +18,7 @@ const ALL = [
   'canManageBrand',
   'canOpenSetup',
   'canManageSyncPolicy',
+  'canOverrideOrders',
 ] as const;
 
 describe('ManagementHubComponent', () => {
@@ -53,6 +54,7 @@ describe('ManagementHubComponent', () => {
       'customers',
       'reports',
       'expenses',
+      'unsynced-orders',
       'users',
       'roles',
       'setup',
@@ -69,6 +71,7 @@ describe('ManagementHubComponent', () => {
   it('hides a card without its permission and drops a group that ends up empty', () => {
     perms.canReadExpenses = false;
     perms.canAccessReports = false;
+    perms.canOverrideOrders = false;
     perms.canAccessAuditLogs = false;
     perms.canAccessSchemaScriptHistory = false;
     const el = render();

@@ -49,6 +49,7 @@ import { debounceTime, Subscription } from 'rxjs';
 import { cartTotal } from '@shared/calculations';
 import type { PendingOrder, SyncOutcome, SyncResultEntry } from '@core/services/db';
 import { PosWasteSheetComponent } from '@features/orders/pos-waste-sheet/pos-waste-sheet';
+import { UnsyncedOrdersBanner } from '@features/orders/unsynced-orders/unsynced-orders-banner';
 
 type SortColumn = 'orderNumber' | 'date' | 'totalAmount';
 type SortDirection = 'asc' | 'desc';
@@ -84,6 +85,7 @@ interface OrderGroup {
     RejectOrderDialogComponent,
     SearchInputComponent,
     PosWasteSheetComponent,
+    UnsyncedOrdersBanner,
   ],
   templateUrl: './order-list.html',
 })

@@ -59,6 +59,7 @@ import { NotificationsComponent } from '@features/notifications/notifications';
 import { OrderDetails } from '@features/orders/order-details/order-details';
 import { OrderEditor } from '@features/orders/order-editor/order-editor';
 import { OrderList } from '@features/orders/order-list/order-list';
+import { UnsyncedOrders } from '@features/orders/unsynced-orders/unsynced-orders';
 import { Orders } from '@features/orders/orders';
 import { PlatformLoginComponent } from '@features/platform/platform-login';
 import { PlatformLogComponent } from '@features/platform/platform-log';
@@ -151,6 +152,12 @@ export const routes: Routes = [
             component: OrderList,
             canActivate: [roleGuard],
             data: { permission: Permissions.OrdersRead },
+          },
+          {
+            path: 'unsynced',
+            component: UnsyncedOrders,
+            canActivate: [roleGuard],
+            data: { permission: Permissions.OrdersOverride },
           },
         ],
       },

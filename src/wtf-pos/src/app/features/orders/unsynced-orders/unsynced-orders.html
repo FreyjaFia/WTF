@@ -1,0 +1,441 @@
+<div class="flex h-full flex-col pt-4 md:pt-0">
+  <div class="mb-4 flex shrink-0 flex-col gap-3 sm:mb-6">
+    <div class="flex items-start justify-between gap-3">
+      <div>
+        <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Unsynced Orders</h1>
+        <p class="text-xs text-gray-500 sm:text-sm">
+          Offline sales the server could not save. Nothing is dropped until you decide.
+        </p>
+      </div>
+      <div class="flex items-center gap-2">
+        <app-filter-button [count]="activeFilterCount()" (pressed)="openFilters()" />
+        <button
+          class="app-btn app-btn-ghost p-2"
+          [class.opacity-70]="isRefreshing()"
+          type="button"
+          (click)="refresh()"
+          [disabled]="isRefreshing()"
+          aria-label="Refresh unsynced orders"
+        >
+          <app-icon
+            name="icon-refresh"
+            [class]="'h-5 w-5 text-gray-600 ' + (isRefreshing() ? 'animate-spin' : '')"
+            [fill]="'currentColor'"
+          />
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <app-side-drawer
+    [isOpen]="isFiltersOpen()"
+    [title]="'Unsynced Order Filters'"
+    [subtitle]="'Refine the list'"
+    [showOnDesktop]="true"
+    (closed)="closeFilters()"
+  >
+    <div class="space-y-3">
+      <div class="flex justify-end">
+        <button type="button" class="app-btn app-btn-secondary app-btn-xs" (click)="clearAllFilters()">
+          Reset filters
+        </button>
+      </div>
+
+      <div class="rounded-xl border border-gray-200 bg-surface p-3">
+        <p class="mb-3 text-xs font-semibold tracking-wide text-gray-500 uppercase">Status</p>
+        <div class="space-y-2">
+          @for (option of statusOptions; track option.id) {
+            <label
+              class="flex cursor-pointer items-center justify-between rounded-lg bg-surface px-3 py-2 text-sm text-gray-700"
+            >
+              <span>{{ option.label }}</span>
+              <input
+                type="radio"
+                name="unsynced-status"
+                class="radio radio-sm"
+                [checked]="statusFilter() === option.id"
+                (change)="selectStatus(option.id.toString())"
+              />
+            </label>
+          }
+        </div>
+      </div>
+
+      <div class="rounded-xl border border-gray-200 bg-surface p-3">
+        <div class="mb-3 flex items-center justify-between">
+          <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Date Received</p>
+          <button
+            type="button"
+            class="app-btn app-btn-secondary app-btn-xs"
+            (click)="clearDateRangeSelections()"
+          >
+            Clear
+          </button>
+        </div>
+        <div class="space-y-2">
+          @for (option of dateRangeOptions; track option.id) {
+            <label
+              class="flex cursor-pointer items-center justify-between rounded-lg bg-surface px-3 py-2 text-sm text-gray-700"
+            >
+              <span>{{ option.label }}</span>
+              <input
+                type="radio"
+                name="unsynced-date-range"
+                class="radio radio-sm"
+                [checked]="isDateRangeSelected(option.id.toString())"
+                (change)="toggleDateRangeSelection(option.id.toString())"
+              />
+            </label>
+          }
+        </div>
+
+        @if (isDateRangeSelected('custom')) {
+          <div class="mt-3 grid grid-cols-1 gap-2 border-t border-gray-100 pt-3">
+            <label class="flex flex-col gap-1">
+              <span class="text-[11px] font-semibold tracking-wide text-gray-500 uppercase">From</span>
+              <input
+                type="date"
+                class="input input-sm input-bordered w-full bg-surface"
+                [max]="maxDate"
+                [value]="customStartDate()"
+                (change)="onCustomStartDateChanged($any($event.target).value)"
+              />
+            </label>
+            <label class="flex flex-col gap-1">
+              <span class="text-[11px] font-semibold tracking-wide text-gray-500 uppercase">To</span>
+              <input
+                type="date"
+                class="input input-sm input-bordered w-full bg-surface"
+                [max]="maxDate"
+                [value]="customEndDate()"
+                (change)="onCustomEndDateChanged($any($event.target).value)"
+              />
+            </label>
+          </div>
+        }
+      </div>
+
+      @if (cashiers().length > 0) {
+        <div class="rounded-xl border border-gray-200 bg-surface p-3">
+          <p class="mb-3 text-xs font-semibold tracking-wide text-gray-500 uppercase">Cashier</p>
+          <div class="space-y-2">
+            @for (cashier of cashiers(); track cashier.id) {
+              <label
+                class="flex cursor-pointer items-center justify-between rounded-lg bg-surface px-3 py-2 text-sm text-gray-700"
+              >
+                <span>{{ cashier.name }}</span>
+                <input
+                  type="checkbox"
+                  class="checkbox checkbox-sm"
+                  [checked]="cashierId() === cashier.id"
+                  (change)="selectCashier(cashier.id)"
+                />
+              </label>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  </app-side-drawer>
+
+  @if (isLoading()) {
+    <div class="flex justify-center py-8">
+      <span class="loading loading-spinner loading-lg"></span>
+    </div>
+  }
+
+  @if (!isLoading()) {
+    <app-pull-to-refresh [refreshing]="isRefreshing()" (refreshTriggered)="refresh()">
+      @if (connectionFailed()) {
+        <app-connection-error />
+      } @else if (orders().length === 0) {
+        <div class="rounded-lg bg-surface p-8 text-center shadow-lg" data-testid="unsynced-empty">
+          <div class="mb-3 flex justify-center">
+            <app-icon name="icon-cloud-off" [class]="'h-12 w-12 opacity-60'" />
+          </div>
+          <p class="text-lg font-semibold text-gray-700">No unsynced orders</p>
+          <p class="text-sm text-gray-500">
+            Orders that cannot be saved after an offline sale will appear here.
+          </p>
+        </div>
+      } @else {
+        <div class="space-y-2 pb-4 lg:space-y-3">
+          <div
+            class="sticky top-0 z-10 hidden grid-cols-12 items-start gap-4 border-b border-gray-100 bg-surface px-4 pt-3 pb-5 lg:grid"
+          >
+            <app-sort-header class="col-span-2" label="Queue No." align="start" [active]="sortColumn() === 'queue'" [direction]="sortDirection()" (sorted)="toggleSort('queue')" />
+            <app-sort-header class="col-span-2" label="Cashier" align="start" [active]="sortColumn() === 'cashier'" [direction]="sortDirection()" (sorted)="toggleSort('cashier')" />
+            <app-sort-header class="col-span-2" label="Sold" align="start" [active]="sortColumn() === 'date'" [direction]="sortDirection()" (sorted)="toggleSort('date')" />
+            <app-sort-header class="col-span-2" label="Quoted Total" align="end" [active]="sortColumn() === 'total'" [direction]="sortDirection()" (sorted)="toggleSort('total')" />
+            <app-sort-header class="col-span-4" label="Error" align="start" [active]="sortColumn() === 'error'" [direction]="sortDirection()" (sorted)="toggleSort('error')" />
+          </div>
+
+          @for (order of orders(); track order.id) {
+            <div
+              class="cursor-pointer rounded-xl border border-gray-100 bg-surface px-4 py-3 shadow-sm transition-shadow duration-200 hover:shadow-md lg:grid lg:grid-cols-12 lg:items-center lg:gap-4 lg:border-0 lg:py-4 lg:shadow-lg lg:hover:shadow-xl"
+              role="button"
+              tabindex="0"
+              data-unsynced-row
+              [attr.aria-label]="'Open unsynced order ' + order.offlineLocalId"
+              (click)="openOrder(order)"
+              (keydown.enter)="openOrder(order)"
+            >
+              <div class="flex items-center justify-between gap-2 lg:col-span-2 lg:block">
+                <div>
+                  <div class="mb-0.5 text-[10px] tracking-wide text-gray-500 uppercase lg:hidden">Queue No.</div>
+                  <div class="font-mono text-xs font-semibold text-gray-900 sm:text-sm">{{ order.offlineLocalId }}</div>
+                </div>
+                <app-badge class="lg:hidden" [variant]="statusVariant(order)">{{ statusLabel(order) }}</app-badge>
+              </div>
+
+              <div class="mt-2 lg:col-span-2 lg:mt-0">
+                <div class="mb-0.5 text-[10px] tracking-wide text-gray-500 uppercase lg:hidden">Cashier</div>
+                <div class="truncate text-xs text-gray-700 sm:text-sm">{{ order.cashierName || 'Unknown' }}</div>
+              </div>
+
+              <div class="mt-2 lg:col-span-2 lg:mt-0">
+                <div class="mb-0.5 text-[10px] tracking-wide text-gray-500 uppercase lg:hidden">Sold</div>
+                <div class="text-xs text-gray-700 sm:text-sm">
+                  {{ order.deviceCreatedAt || order.receivedAt | date: 'd MMM, h:mm a' }}
+                </div>
+              </div>
+
+              <div class="mt-2 lg:col-span-2 lg:mt-0 lg:text-right">
+                <div class="mb-0.5 text-[10px] tracking-wide text-gray-500 uppercase lg:hidden">Quoted Total</div>
+                <div class="text-sm font-semibold text-gray-950">
+                  @if (order.quotedTotal !== null) {
+                    <span class="text-xs opacity-70"
+                      ><app-icon name="icon-peso" [class]="'inline h-3 w-3 align-[-0.125em]'" [fill]="'currentColor'" /></span
+                    >{{ order.quotedTotal | number: '1.2-2' }}
+                  } @else {
+                    <span class="text-gray-400">&ndash;</span>
+                  }
+                </div>
+              </div>
+
+              <div class="mt-2 lg:col-span-4 lg:mt-0">
+                <div class="mb-0.5 text-[10px] tracking-wide text-gray-500 uppercase lg:hidden">Error</div>
+                <div class="text-xs text-red-700 sm:text-sm">{{ order.errorText }}</div>
+                @if (order.status !== 1) {
+                  <app-badge class="mt-1 hidden lg:inline-block" [variant]="statusVariant(order)">{{ statusLabel(order) }}</app-badge>
+                }
+              </div>
+            </div>
+          }
+
+          <div
+            class="sticky bottom-0 z-10 flex flex-col items-center gap-3 rounded-xl bg-surface px-4 py-3 shadow-lg ring-1 ring-gray-100 sm:flex-row sm:justify-between"
+          >
+            <div class="flex w-full flex-wrap items-center justify-between gap-x-4 gap-y-2 sm:w-auto sm:justify-start">
+              <label class="flex items-center gap-2 text-xs text-gray-500">
+                <span>Rows per page</span>
+                <select
+                  class="rounded-lg bg-surface px-2 py-1 text-sm text-gray-700 ring-1 ring-gray-200 focus:ring-2 focus:ring-gray-300 focus:outline-none"
+                  (change)="onPageSizeChange($event)"
+                >
+                  @for (size of pageSizeOptions; track size) {
+                    <option [value]="size" [selected]="size === pageSize()">{{ size }}</option>
+                  }
+                </select>
+              </label>
+              <span class="text-xs text-gray-500">{{ firstRow() }} &ndash; {{ lastRow() }} of {{ totalCount() }}</span>
+            </div>
+            <nav class="flex w-full items-center justify-between gap-1 sm:w-auto sm:justify-end" aria-label="Unsynced order pages">
+              <button type="button" class="app-btn app-btn-secondary app-btn-sm" [disabled]="page() <= 1" (click)="goToPage(page() - 1)">
+                Previous
+              </button>
+              <span class="text-xs text-gray-500">Page {{ page() }} of {{ totalPages() }}</span>
+              <button type="button" class="app-btn app-btn-secondary app-btn-sm" [disabled]="page() >= totalPages()" (click)="goToPage(page() + 1)">
+                Next
+              </button>
+            </nav>
+          </div>
+        </div>
+      }
+    </app-pull-to-refresh>
+  }
+</div>
+
+<app-side-drawer
+  [isOpen]="isDetailOpen()"
+  [title]="selected() ? 'Order ' + selected()!.order.offlineLocalId : 'Unsynced order'"
+  [subtitle]="'What the register quoted'"
+  [showOnDesktop]="true"
+  [doneAriaLabel]="'Close details'"
+  [contentClass]="'p-0'"
+  (closed)="closeDetail()"
+>
+  @if (isDetailLoading() || !selected()) {
+    <div class="flex justify-center py-8"><span class="loading loading-spinner loading-lg"></span></div>
+  } @else {
+    @let detail = selected()!;
+    <div class="flex min-h-full flex-col" data-unsynced-detail>
+      <div class="flex-1 space-y-4 p-4">
+        <div class="rounded-xl border border-red-200 bg-red-50 p-3" role="alert">
+          <p class="text-xs font-semibold tracking-wide text-red-800 uppercase">Why it was not saved</p>
+          <p class="mt-1 text-sm text-red-900">{{ retryError() || detail.order.errorText }}</p>
+        </div>
+
+        <dl class="grid grid-cols-2 gap-3 text-sm">
+          <div>
+            <dt class="text-[10px] tracking-wide text-gray-500 uppercase">Cashier</dt>
+            <dd class="text-gray-900">{{ detail.order.cashierName || 'Unknown' }}</dd>
+          </div>
+          <div>
+            <dt class="text-[10px] tracking-wide text-gray-500 uppercase">Sold</dt>
+            <dd class="text-gray-900">{{ detail.order.deviceCreatedAt || detail.order.receivedAt | date: 'd MMM y, h:mm a' }}</dd>
+          </div>
+          <div>
+            <dt class="text-[10px] tracking-wide text-gray-500 uppercase">Quoted total</dt>
+            <dd class="font-semibold text-gray-900">
+              @if (detail.order.quotedTotal !== null) {
+                &#8369;{{ detail.order.quotedTotal | number: '1.2-2' }}
+              } @else {
+                &ndash;
+              }
+            </dd>
+          </div>
+          <div>
+            <dt class="text-[10px] tracking-wide text-gray-500 uppercase">Payment</dt>
+            <dd class="text-gray-900">
+              {{ paymentLabel(detail.paymentMethod) }}
+              @if (detail.amountReceived !== null) {
+                <span class="text-gray-500">&middot; received &#8369;{{ detail.amountReceived | number: '1.2-2' }}</span>
+              }
+            </dd>
+          </div>
+        </dl>
+
+        <div>
+          <p class="mb-2 text-xs font-semibold tracking-wide text-gray-500 uppercase">Quoted lines</p>
+          <ul class="divide-y divide-gray-100 rounded-xl border border-gray-200 bg-surface" data-unsynced-lines>
+            @for (line of detail.lines; track $index) {
+              <li class="px-3 py-2 text-sm">
+                <div class="flex items-start justify-between gap-2">
+                  <span class="text-gray-900">
+                    {{ line.quantity }} &times;
+                    @if (line.productName) {
+                      {{ line.productName }}
+                    } @else {
+                      <span class="font-medium text-red-700">Unknown product</span>
+                      <span class="block font-mono text-[10px] text-gray-400">{{ line.productId }}</span>
+                    }
+                  </span>
+                  <span class="whitespace-nowrap text-gray-700">
+                    @if (line.quotedPrice !== null) {
+                      &#8369;{{ line.quotedPrice | number: '1.2-2' }}
+                    }
+                  </span>
+                </div>
+                @for (addOn of line.addOns; track $index) {
+                  <div class="mt-0.5 ps-4 text-xs text-gray-500">
+                    + {{ addOn.quantity }} &times; {{ addOn.productName || 'Unknown add-on' }}
+                    @if (addOn.quotedPrice !== null) {
+                      (&#8369;{{ addOn.quotedPrice | number: '1.2-2' }})
+                    }
+                  </div>
+                }
+              </li>
+            } @empty {
+              <li class="px-3 py-2 text-sm text-gray-500">The quoted lines cannot be read.</li>
+            }
+          </ul>
+        </div>
+
+        @if (!isOpenOrder()) {
+          <div class="rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm text-gray-700" data-unsynced-resolution>
+            <p class="font-semibold">{{ statusLabel(detail.order) }}</p>
+            <p class="text-xs text-gray-500">
+              {{ detail.order.resolvedByName || 'The cashier' }} &middot;
+              {{ detail.order.resolvedAt | date: 'd MMM y, h:mm a' }}
+            </p>
+            @if (detail.order.discardReason) {
+              <p class="mt-1">Reason: {{ detail.order.discardReason }}</p>
+            }
+          </div>
+        }
+      </div>
+
+      @if (isOpenOrder()) {
+        <div
+          class="sticky bottom-0 flex flex-col gap-2 border-t border-gray-200 bg-surface p-4 sm:flex-row sm:justify-end"
+          data-unsynced-actions
+        >
+          <button type="button" class="app-btn app-btn-outline-danger app-btn-md" (click)="askAction('discard')">
+            Discard
+          </button>
+          <button type="button" class="app-btn app-btn-secondary app-btn-md" (click)="askAction('note')">
+            Save as note
+          </button>
+          <button type="button" class="app-btn app-btn-primary app-btn-md" (click)="askAction('retry')">
+            Fix and retry
+          </button>
+        </div>
+      }
+    </div>
+  }
+</app-side-drawer>
+
+@switch (pendingAction()) {
+  @case ('retry') {
+    <app-confirm-dialog
+      variant="success"
+      icon="icon-refresh"
+      heading="Retry this order?"
+      confirmLabel="Retry"
+      busyLabel="Retrying..."
+      [isBusy]="isBusy()"
+      (confirmed)="confirmAction()"
+      (cancelled)="cancelAction()"
+    >
+      Fix the cause first (for example restore the product), then the sale is saved again for the cashier.
+    </app-confirm-dialog>
+  }
+  @case ('note') {
+    <app-confirm-dialog
+      variant="warning"
+      icon="icon-warning"
+      heading="Save as a note?"
+      confirmLabel="Save as note"
+      busyLabel="Saving..."
+      [isBusy]="isBusy()"
+      (confirmed)="confirmAction()"
+      (cancelled)="cancelAction()"
+    >
+      A cancelled record keeps the quoted total and the cash for the drawer. It does not count as a sale and takes no stock.
+    </app-confirm-dialog>
+  }
+  @case ('discard') {
+    <app-confirm-dialog
+      icon="icon-error"
+      heading="Discard this order?"
+      confirmLabel="Discard"
+      busyLabel="Discarding..."
+      [isBusy]="isBusy()"
+      (confirmed)="confirmAction()"
+      (cancelled)="cancelAction()"
+    >
+      The sale is not recorded anywhere else. The reason is kept in the audit log.
+      <div dialogExtra class="mt-4">
+        <label for="unsynced-discard-reason" class="mb-1 block text-xs font-semibold text-gray-500">Reason</label>
+        <div class="relative">
+          <textarea
+            id="unsynced-discard-reason"
+            class="textarea textarea-bordered w-full pr-16 outline-transparent"
+            rows="3"
+            placeholder="e.g. Test sale, no money was taken."
+            [attr.maxlength]="maxReasonLength"
+            [attr.aria-invalid]="discardError() ? 'true' : null"
+            [value]="discardReason()"
+            [disabled]="isBusy()"
+            (input)="onReasonInput($any($event.target).value)"
+          ></textarea>
+          <span class="absolute right-3 bottom-2 text-xs text-gray-400 select-none">{{ discardReason().length }}/{{ maxReasonLength }}</span>
+        </div>
+        @if (discardError(); as message) {
+          <p class="mt-1 text-sm text-red-600" role="alert">{{ message }}</p>
+        }
+      </div>
+    </app-confirm-dialog>
+  }
+}

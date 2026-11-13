@@ -335,6 +335,10 @@
     </div>
   }
 
+  @if (canReviewHeld() && isOnline()) {
+    <app-unsynced-orders-banner />
+  }
+
   <!-- Offline orders held for an Admin: the prices or the menu changed before they synced -->
   @if (isOnline() && canReviewHeld() && heldOrders().length > 0) {
     <div class="mb-4 shrink-0 rounded-xl border border-amber-200 bg-amber-50 p-4" data-held-orders>
