@@ -4,8 +4,6 @@ import { SeniorPwdShop, ShopUser } from '@api/senior-pwd';
 import { OrderDetailsPage } from '@pages/order-details.page';
 import { LoginPage } from '@pages/login.page';
 import { SeniorPwdPage } from '@pages/senior-pwd.page';
-import { ROUTES } from '@data/routes';
-import { go } from '@utils/navigation';
 
 type NewContext = (options?: { width?: number; height?: number }) => Promise<import('@playwright/test').BrowserContext>;
 
@@ -97,10 +95,14 @@ test.describe('Senior / PWD discount at the register @seniorpwd @orders', () => 
     await register.apply.click();
 
     await expect(register.cartTotal).toHaveText('336.00');
-    await expect(page.getByTestId('senior-pwd-line-badge').locator('visible=true')).toHaveCount(1);
+    const group = page.getByTestId('senior-pwd-cart-group-0').locator('visible=true');
+    await expect(group).toHaveCount(1);
+    await expect(group).toContainText('Senior discount');
+    await expect(group).toContainText('Lola Nena');
+    await expect(group).toContainText(latte.name);
   });
 
-  test('a saved order is marked in the order list and its covered line is tagged in the details', async ({ request, platform, newContext }) => {
+  test('the covered line of a saved order is tagged like a promotion in the order details', async ({ request, platform, newContext }) => {
     const shop = await SeniorPwdShop.open(request, platform, { enabled: true, vatRegistered: false });
     const latte = await shop.product(120);
 
@@ -123,14 +125,11 @@ test.describe('Senior / PWD discount at the register @seniorpwd @orders', () => 
       .toBe(1);
     const saved = (await shop.owner.json<{ items: { id: string }[] }>('GET', 'orders/paged?status=2&page=1&pageSize=20')).items[0];
 
-    await go(page, ROUTES.ordersList);
-    await expect(register.visible('order-senior-pwd-badge')).toHaveText('Senior/PWD');
-
     await new OrderDetailsPage(page).open(saved.id);
     const tag = page.getByTestId('senior-pwd-line-tag');
     await expect(tag).toHaveCount(1);
     await expect(tag).toContainText('Senior/PWD x1');
-    await expect(tag).toContainText('24.00');
+    await expect(page.getByTestId('senior-pwd-line-reduction')).toContainText('24.00');
   });
 
   test('a promotion item cannot be covered and says so', async ({ request, platform, newContext }) => {

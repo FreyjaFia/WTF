@@ -670,9 +670,6 @@
                         @if (order.overriddenAt) {
                           <app-badge variant="amber">Overridden</app-badge>
                         }
-                        @if (order.seniorPwdPersons?.length) {
-                          <app-badge variant="info" data-testid="order-senior-pwd-badge">Senior/PWD</app-badge>
-                        }
                       </div>
 
                       <!-- Mobile: Row 3 - Time and Items -->
@@ -712,9 +709,6 @@
                         </app-badge>
                         @if (order.overriddenAt) {
                           <app-badge variant="amber">Overridden</app-badge>
-                        }
-                        @if (order.seniorPwdPersons?.length) {
-                          <app-badge variant="info" data-testid="order-senior-pwd-badge">Senior/PWD</app-badge>
                         }
                       </div>
 

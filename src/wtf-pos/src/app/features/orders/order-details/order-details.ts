@@ -483,6 +483,10 @@ export class OrderDetails implements OnInit {
     return isBundleLine(item) ? lineTotal(item) : breakdownOfCartItem(item).total;
   }
 
+  protected getItemNetTotal(item: CartItemDto): number {
+    return subtractMoney(this.getItemTotal(item), item.seniorPwdReduction ?? 0);
+  }
+
   protected getBreakdown(item: CartItemDto): LineBreakdown {
     return breakdownOfCartItem(item);
   }

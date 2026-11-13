@@ -272,6 +272,21 @@ export class OrderEditor implements OnInit, OnDestroy {
       !this.isReadOnly() &&
       this.cart().length > 0,
   );
+  protected readonly normalCartLines = computed(() =>
+    this.cart()
+      .map((line, index) => ({ line, index }))
+      .filter((entry) => !this.isSeniorPwdLine(entry.line)),
+  );
+  protected readonly seniorPwdGroups = computed(() =>
+    this.seniorPwdPersons().flatMap((person, personIndex) => {
+      const lines = this.cart()
+        .map((line, index) => ({ line, index }))
+        .filter((entry) => isCoveredLine(entry.line) && entry.line.seniorPwdPersonIndex === personIndex);
+      return lines.length === 0
+        ? []
+        : [{ personIndex, label: SENIOR_PWD_TYPE_LABELS[person.type], name: person.customerName, lines }];
+    }),
+  );
   protected readonly seniorPwdTotals = computed(() =>
     totalsByPerson(this.cart(), this.seniorPwdPersons().length, this.vatRegistered()),
   );

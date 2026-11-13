@@ -294,7 +294,7 @@ describe('OrderDetails', () => {
       expect(chatHub.stopStaffOrdersHub).toHaveBeenCalled();
     });
 
-    it('tags a covered line with the person and what the discount took off', async () => {
+    it('tags a covered line like a promotion line and shows what the discount took off', async () => {
       await create(
         makeOrder({
           items: [orderItem({ quantity: 1, price: 100, seniorPwdPersonId: 'sp1', seniorPwdVatExempt: 0, seniorPwdDiscount: 20 })],
@@ -308,7 +308,9 @@ describe('OrderDetails', () => {
       expect(t.detailItems()[0].seniorPwdReduction).toBe(20);
       const tag = fixture.nativeElement.querySelector('[data-testid="senior-pwd-line-tag"]');
       expect(tag?.textContent).toContain('Senior/PWD x1');
-      expect(tag?.textContent).toContain('20.00');
+      const reduction = fixture.nativeElement.querySelector('[data-testid="senior-pwd-line-reduction"]');
+      expect(reduction?.textContent).toContain('Senior/PWD discount');
+      expect(reduction?.textContent).toContain('20.00');
     });
 
     it('promotion load failure yields empty list', async () => {

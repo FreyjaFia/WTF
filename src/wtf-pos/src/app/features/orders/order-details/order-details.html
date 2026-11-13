@@ -359,10 +359,11 @@
                         </div>
                       }
                       @if (c.seniorPwdPersonIndex !== null && c.seniorPwdPersonIndex !== undefined) {
-                        <div class="mt-1">
-                          <app-badge variant="info" data-testid="senior-pwd-line-tag">
-                            Senior/PWD x{{ c.qty }} &middot; -{{ c.seniorPwdReduction | number: '1.2-2' }}
-                          </app-badge>
+                        <div
+                          class="mt-1 inline-flex items-center rounded-full bg-sky-50 px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap text-sky-700"
+                          data-testid="senior-pwd-line-tag"
+                        >
+                          Senior/PWD x{{ c.qty }}
                         </div>
                       }
                     </div>
@@ -371,11 +372,24 @@
                         name="icon-peso"
                         [class]="'inline h-3 w-3 align-[-0.125em]'"
                         [fill]="'currentColor'"
-                      />{{ getItemTotal(c) | number: '1.2-2' }}
+                      />{{ getItemNetTotal(c) | number: '1.2-2' }}
                     </div>
                     @if (!c.bundlePromotionId && !c.bundleItems?.length && getBreakdown(c).rows.length > 0) {
                       <div class="col-span-2 mt-1">
                         <app-line-breakdown [breakdown]="getBreakdown(c)" />
+                      </div>
+                    }
+                    @if (c.seniorPwdPersonIndex !== null && c.seniorPwdPersonIndex !== undefined) {
+                      <div class="col-span-2 mt-1 text-xs" data-testid="senior-pwd-line-reduction">
+                        <div class="grid grid-cols-[1fr_auto] items-start gap-3 font-semibold text-sky-700">
+                          <div class="flex min-w-0">
+                            <span class="w-3.5 shrink-0" aria-hidden="true">-</span>
+                            <span class="min-w-0 wrap-anywhere">Senior/PWD discount</span>
+                          </div>
+                          <div class="shrink-0 text-right tabular-nums">
+                            - ₱{{ c.seniorPwdReduction | number: '1.2-2' }}
+                          </div>
+                        </div>
                       </div>
                     }
                     @if (c.specialInstructions) {
