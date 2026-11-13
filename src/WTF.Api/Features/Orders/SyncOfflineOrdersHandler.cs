@@ -72,7 +72,7 @@ public class SyncOfflineOrdersHandler(WTFDbContext db, ISender sender, IHttpCont
                 : [];
 
             var saved = await sender.Send(
-                order with { OfflineLocalId = localId, ReviewFindings = findings.Count > 0 ? findings : null, GateHeld = true, HonorStock = true },
+                order with { OfflineLocalId = localId, ReviewFindings = findings.Count > 0 ? findings : null, GateHeld = true, HonorStock = true, HonorQuotedPrices = CanHonorQuotes(order) },
                 cancellationToken);
 
             await transaction.CommitAsync(cancellationToken);
@@ -98,6 +98,14 @@ public class SyncOfflineOrdersHandler(WTFDbContext db, ISender sender, IHttpCont
             db.ChangeTracker.Clear();
             return await FindSavedAsync(localId, cancellationToken) ?? throw new InvalidOperationException("The order could not be saved.");
         }
+    }
+
+    private static bool CanHonorQuotes(CreateOrderCommand order)
+    {
+        return order.Status == OrderStatusEnum.Completed
+            && order.SeniorPwdPersons.Count == 0
+            && order.Items.All(i => i.QuotedPrice.HasValue && i.AddOns.All(a => a.QuotedPrice.HasValue))
+            && order.BundlePromotions.All(b => b.QuotedUnitPrice.HasValue);
     }
 
     private async Task<OfflineSyncResultDto?> FindSavedAsync(string localId, CancellationToken cancellationToken)

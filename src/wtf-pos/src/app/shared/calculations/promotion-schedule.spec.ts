@@ -61,5 +61,8 @@ describe('promotion schedule: pieces', () => {
     expect(describeLimit(null)).toBe('No limit');
     expect(describeLimit({ maxRedemptions: 50, redemptions: 12 })).toBe('12 of 50 used');
     expect(describeLimit({ maxRedemptions: 50 })).toBe('0 of 50 used');
+    expect(describeLimit({ maxRedemptions: 50, redemptions: 52 })).toBe(
+      '52 of 50 used, 2 over limit from offline sales',
+    );
   });
 });

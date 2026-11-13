@@ -94,11 +94,16 @@ export function describeWindow(schedule: PromotionSchedule | null | undefined): 
   return `${formatTime(schedule.startTime)} - ${formatTime(schedule.endTime)}`;
 }
 
-/** The usage limit as a short text: "No limit", "12 of 50 used". */
+/** The usage limit as a short text: "No limit", "12 of 50 used", "52 of 50 used, 2 over limit from offline sales". */
 export function describeLimit(schedule: PromotionSchedule | null | undefined): string {
   if (schedule?.maxRedemptions == null) {
     return 'No limit';
   }
 
-  return `${schedule.redemptions ?? 0} of ${schedule.maxRedemptions} used`;
+  const used = schedule.redemptions ?? 0;
+  const over = used - schedule.maxRedemptions;
+
+  return over > 0
+    ? `${used} of ${schedule.maxRedemptions} used, ${over} over limit from offline sales`
+    : `${used} of ${schedule.maxRedemptions} used`;
 }
