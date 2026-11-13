@@ -19,6 +19,7 @@ import {
   OrderSourceEnum,
   OrderStatusEnum,
   PaymentMethodEnum,
+  SeniorPwdTypeEnum,
 } from '@shared/models';
 import { Observable, Subject, of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -819,6 +820,34 @@ describe('OrderList', () => {
       // One order is overridden, rendered once for the mobile row and once for the desktop column.
       expect(overridden).toHaveLength(2);
       expect(overridden.every((b) => b.querySelector('span')?.classList.contains('bg-amber-50'))).toBe(true);
+    });
+
+    it('shows a Senior/PWD badge only on orders that carry the discount', () => {
+      orderService.getOrdersPaged.mockReturnValue(
+        of(
+          page([
+            makeOrder('o10', {
+              seniorPwdPersons: [
+                {
+                  id: 'p1',
+                  type: SeniorPwdTypeEnum.Senior,
+                  idNumber: '****1234',
+                  customerName: 'Lola',
+                  coveredAmount: 100,
+                  vatExemptAmount: 0,
+                  discountAmount: 20,
+                },
+              ],
+            }),
+            makeOrder('o11'),
+          ]),
+        ),
+      );
+      init();
+      const badges = fixture.nativeElement.querySelectorAll('[data-testid="order-senior-pwd-badge"]');
+
+      // One covered order, rendered once for the mobile row and once for the desktop column.
+      expect(badges).toHaveLength(2);
     });
   });
 

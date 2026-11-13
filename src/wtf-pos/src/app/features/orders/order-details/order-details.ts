@@ -594,6 +594,13 @@ export class OrderDetails implements OnInit {
         addOns: toAddOns(item),
         specialInstructions: item.specialInstructions ?? null,
       };
+      const personIndex = item.seniorPwdPersonId
+        ? (order.seniorPwdPersons ?? []).findIndex((person) => person.id === item.seniorPwdPersonId)
+        : -1;
+      if (personIndex >= 0) {
+        cartItem.seniorPwdPersonIndex = personIndex;
+        cartItem.seniorPwdReduction = sumAmounts([item.seniorPwdVatExempt ?? 0, item.seniorPwdDiscount ?? 0]);
+      }
       if (item.originalPrice != null) {
         // The promotion was captured with the line, so show exactly what was applied.
         const discount = promoDiscount(item.originalPrice, cartItem.price, cartItem.qty);

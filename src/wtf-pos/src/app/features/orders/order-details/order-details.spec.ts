@@ -14,7 +14,7 @@ import {
   SignalRService,
 } from '@core/services';
 import { AppRoutes } from '@shared/constants/app-routes';
-import { CartBundleItemDto, CartItemDto, DiscountedProductPromotionDto, OrderDto, OrderItemDto, FulfillmentTypeEnum, OrderSourceEnum, OrderStatusEnum, PaymentMethodEnum, PromotionTypeEnum } from '@shared/models';
+import { CartBundleItemDto, CartItemDto, DiscountedProductPromotionDto, OrderDto, OrderItemDto, FulfillmentTypeEnum, OrderSourceEnum, OrderStatusEnum, PaymentMethodEnum, PromotionTypeEnum, SeniorPwdTypeEnum } from '@shared/models';
 import { BehaviorSubject, Observable, Subject, of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { OrderDetails } from './order-details';
@@ -292,6 +292,23 @@ describe('OrderDetails', () => {
       fixture.destroy();
 
       expect(chatHub.stopStaffOrdersHub).toHaveBeenCalled();
+    });
+
+    it('tags a covered line with the person and what the discount took off', async () => {
+      await create(
+        makeOrder({
+          items: [orderItem({ quantity: 1, price: 100, seniorPwdPersonId: 'sp1', seniorPwdVatExempt: 0, seniorPwdDiscount: 20 })],
+          seniorPwdPersons: [
+            { id: 'sp1', type: SeniorPwdTypeEnum.Senior, idNumber: '1234', customerName: 'Lola', coveredAmount: 100, vatExemptAmount: 0, discountAmount: 20 },
+          ],
+        }),
+      );
+
+      expect(t.detailItems()[0].seniorPwdPersonIndex).toBe(0);
+      expect(t.detailItems()[0].seniorPwdReduction).toBe(20);
+      const tag = fixture.nativeElement.querySelector('[data-testid="senior-pwd-line-tag"]');
+      expect(tag?.textContent).toContain('Senior/PWD x1');
+      expect(tag?.textContent).toContain('20.00');
     });
 
     it('promotion load failure yields empty list', async () => {

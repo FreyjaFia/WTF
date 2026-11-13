@@ -358,6 +358,13 @@
                           {{ c.promoLabel }}
                         </div>
                       }
+                      @if (c.seniorPwdPersonIndex !== null && c.seniorPwdPersonIndex !== undefined) {
+                        <div class="mt-1">
+                          <app-badge variant="info" data-testid="senior-pwd-line-tag">
+                            Senior/PWD x{{ c.qty }} &middot; -{{ c.seniorPwdReduction | number: '1.2-2' }}
+                          </app-badge>
+                        </div>
+                      }
                     </div>
                     <div class="text-right text-sm font-semibold text-gray-900 tabular-nums">
                       <app-icon

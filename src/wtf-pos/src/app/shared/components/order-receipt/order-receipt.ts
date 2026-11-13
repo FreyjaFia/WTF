@@ -266,6 +266,14 @@ export class OrderReceiptComponent implements OnInit {
     return SENIOR_PWD_TYPE_LABELS[person.type];
   }
 
+  protected seniorPwdPersonOf(item: CartItemDto): SeniorPwdPersonDto | null {
+    if (item.seniorPwdPersonIndex == null) {
+      return null;
+    }
+
+    return this.data()?.seniorPwdPersons?.[item.seniorPwdPersonIndex] ?? null;
+  }
+
   protected getItemTotal(item: CartItemDto): number {
     return this.isBundleLine(item) ? lineTotal(item) : breakdownOfCartItem(item).total;
   }

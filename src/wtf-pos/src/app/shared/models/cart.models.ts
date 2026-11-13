@@ -36,4 +36,6 @@ export interface CartItemDto {
   bundleItems?: CartBundleItemDto[];
   // Position in the order's Senior / PWD persons when this line is covered for one of them.
   seniorPwdPersonIndex?: number | null;
+  // What the Senior / PWD discount took off this line (VAT not charged plus the discount), for a saved order.
+  seniorPwdReduction?: number | null;
 }

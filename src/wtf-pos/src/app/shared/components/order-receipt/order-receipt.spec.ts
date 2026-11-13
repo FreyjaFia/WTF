@@ -346,6 +346,16 @@ describe('OrderReceiptComponent', () => {
       expect(el.querySelector('[data-testid="receipt-senior-pwd"]')?.textContent).not.toContain('VAT exempt');
     });
 
+    it('tags a covered line with the type, quantity and person', () => {
+      const covered: CartItemDto = { productId: 'p', name: 'Latte', price: 100, qty: 1, seniorPwdPersonIndex: 0 };
+      const { el } = setup(receipt({ items: [covered, { productId: 'q', name: 'Tea', price: 50, qty: 2 }], seniorPwdPersons: [person] }));
+      const tags = el.querySelectorAll('[data-testid="receipt-senior-pwd-line-tag"]');
+
+      expect(tags).toHaveLength(1);
+      expect(tags[0].textContent).toContain('Senior x1');
+      expect(tags[0].textContent).toContain('Lola Remedios');
+    });
+
     it('shows nothing for an order without the discount', () => {
       const { el } = setup(receipt());
 

@@ -4,6 +4,8 @@ import { SeniorPwdShop, ShopUser } from '@api/senior-pwd';
 import { OrderDetailsPage } from '@pages/order-details.page';
 import { LoginPage } from '@pages/login.page';
 import { SeniorPwdPage } from '@pages/senior-pwd.page';
+import { ROUTES } from '@data/routes';
+import { go } from '@utils/navigation';
 
 type NewContext = (options?: { width?: number; height?: number }) => Promise<import('@playwright/test').BrowserContext>;
 
@@ -96,6 +98,39 @@ test.describe('Senior / PWD discount at the register @seniorpwd @orders', () => 
 
     await expect(register.cartTotal).toHaveText('336.00');
     await expect(page.getByTestId('senior-pwd-line-badge').locator('visible=true')).toHaveCount(1);
+  });
+
+  test('a saved order is marked in the order list and its covered line is tagged in the details', async ({ request, platform, newContext }) => {
+    const shop = await SeniorPwdShop.open(request, platform, { enabled: true, vatRegistered: false });
+    const latte = await shop.product(120);
+
+    const page = await signInTo(newContext, ownerUser(shop));
+    const register = new SeniorPwdPage(page);
+    await register.open();
+    await register.addProduct(latte.name, 3);
+    await register.openDialog();
+    await register.fillPerson(0, 'SC-4004', 'Lola Pilar');
+    await register.changeQuantity(0, 0, -2);
+    await register.apply.click();
+    await expect(register.cartTotal).toHaveText('336.00');
+
+    await page.getByRole('button', { name: 'Checkout', exact: true }).locator('visible=true').click();
+    await page.locator('#amountReceived').fill('400');
+    await page.getByRole('button', { name: 'Confirm & Pay' }).click();
+
+    await expect
+      .poll(async () => (await shop.owner.json<{ items: { id: string }[] }>('GET', 'orders/paged?status=2&page=1&pageSize=20')).items.length)
+      .toBe(1);
+    const saved = (await shop.owner.json<{ items: { id: string }[] }>('GET', 'orders/paged?status=2&page=1&pageSize=20')).items[0];
+
+    await go(page, ROUTES.ordersList);
+    await expect(register.visible('order-senior-pwd-badge')).toHaveText('Senior/PWD');
+
+    await new OrderDetailsPage(page).open(saved.id);
+    const tag = page.getByTestId('senior-pwd-line-tag');
+    await expect(tag).toHaveCount(1);
+    await expect(tag).toContainText('Senior/PWD x1');
+    await expect(tag).toContainText('24.00');
   });
 
   test('a promotion item cannot be covered and says so', async ({ request, platform, newContext }) => {
