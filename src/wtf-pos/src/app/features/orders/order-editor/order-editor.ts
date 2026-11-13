@@ -19,6 +19,7 @@ import {
   applySelections,
   isCoveredLine,
   reductionOf,
+  rowAmounts,
   selectionsFromCart,
   SeniorPwdSelection,
   totalsByPerson,
@@ -127,6 +128,7 @@ import {
   StockCartLine,
   stockShortfalls,
   isSeniorPwdEligibleLine,
+  seniorPwdReduction,
   subtractMoney,
 } from '@shared/calculations';
 import { AppRoutes } from '@shared/constants/app-routes';
@@ -272,21 +274,7 @@ export class OrderEditor implements OnInit, OnDestroy {
       !this.isReadOnly() &&
       this.cart().length > 0,
   );
-  protected readonly normalCartLines = computed(() =>
-    this.cart()
-      .map((line, index) => ({ line, index }))
-      .filter((entry) => !this.isSeniorPwdLine(entry.line)),
-  );
-  protected readonly seniorPwdGroups = computed(() =>
-    this.seniorPwdPersons().flatMap((person, personIndex) => {
-      const lines = this.cart()
-        .map((line, index) => ({ line, index }))
-        .filter((entry) => isCoveredLine(entry.line) && entry.line.seniorPwdPersonIndex === personIndex);
-      return lines.length === 0
-        ? []
-        : [{ personIndex, label: SENIOR_PWD_TYPE_LABELS[person.type], name: person.customerName, lines }];
-    }),
-  );
+  private readonly seniorPwdLineAmounts = computed(() => rowAmounts(this.cart(), this.vatRegistered()));
   protected readonly seniorPwdTotals = computed(() =>
     totalsByPerson(this.cart(), this.seniorPwdPersons().length, this.vatRegistered()),
   );
@@ -587,10 +575,17 @@ export class OrderEditor implements OnInit, OnDestroy {
   }
 
   protected readonly checkoutCartItems = computed<CartItemDto[]>(() =>
-    this.cart().flatMap((item) => {
+    this.cart().flatMap((item, index) => {
       const discount = this.getLineDiscount(item);
       if (!discount) {
-        return [{ ...item, promoLabel: null, promoDiscount: null }];
+        return [
+          {
+            ...item,
+            promoLabel: null,
+            promoDiscount: null,
+            ...(isCoveredLine(item) && { seniorPwdReduction: this.seniorPwdLineReduction(index) }),
+          },
+        ];
       }
 
       const discounted: CartItemDto = {
@@ -1554,6 +1549,15 @@ export class OrderEditor implements OnInit, OnDestroy {
 
   protected getLineTotal(item: CartItemDto): number {
     return discountedLineTotal(item, this.getLineDiscount(item));
+  }
+
+  protected getCartLineNetTotal(item: CartItemDto, index: number): number {
+    return subtractMoney(this.getLineTotal(item), this.seniorPwdLineReduction(index));
+  }
+
+  protected seniorPwdLineReduction(index: number): number {
+    const amounts = this.seniorPwdLineAmounts()[index];
+    return amounts ? seniorPwdReduction(amounts) : 0;
   }
 
   protected getPartialDiscountNote(item: CartItemDto): string | null {

@@ -91,10 +91,11 @@
                   margin-top: 4px;
                   padding: 2px 8px;
                   border-radius: 9999px;
-                  background: var(--color-gray-100);
-                  color: var(--color-gray-700, #374151);
+                  background: var(--color-sky-50, #f0f9ff);
+                  color: var(--color-sky-700, #0369a1);
                   font-size: 11px;
                   font-weight: 600;
+                  white-space: nowrap;
                 "
               >
                 {{ seniorPwdTypeLabel(person) }} x{{ item.qty }} &middot; {{ person.customerName }}
@@ -110,7 +111,15 @@
               margin-left: 12px;
             "
           >
-            <span style="color: inherit">&#8369;</span>{{ getItemTotal(item) | number: '1.2-2' }}
+            @if (item.seniorPwdReduction) {
+              <div
+                data-testid="receipt-senior-pwd-line-list-price"
+                style="font-size: 12px; font-weight: 400; color: var(--color-gray-400); text-decoration: line-through"
+              >
+                <span style="color: inherit">&#8369;</span>{{ getItemTotal(item) | number: '1.2-2' }}
+              </div>
+            }
+            <span style="color: inherit">&#8369;</span>{{ getItemNetTotal(item) | number: '1.2-2' }}
           </div>
         </div>
 
@@ -145,6 +154,25 @@
         }
         @if (!isBundleLine(item)) {
           <app-line-breakdown variant="receipt" [breakdown]="getBreakdown(item)" />
+        }
+        @if (item.seniorPwdReduction && seniorPwdPersonOf(item); as person) {
+          <div
+            data-testid="receipt-senior-pwd-line-reduction"
+            style="
+              display: flex;
+              justify-content: space-between;
+              font-size: 12px;
+              font-weight: 600;
+              margin-top: 2px;
+              color: var(--color-sky-700, #0369a1);
+            "
+          >
+            <span style="display: flex; min-width: 0">
+              <span style="flex: none; width: 14px">−</span>
+              <span style="min-width: 0; overflow-wrap: anywhere">{{ seniorPwdTypeLabel(person) }} discount</span>
+            </span>
+            <span style="white-space: nowrap; margin-left: 12px">− &#8369;{{ item.seniorPwdReduction | number: '1.2-2' }}</span>
+          </div>
         }
         @if (item.specialInstructions?.trim()) {
           <div

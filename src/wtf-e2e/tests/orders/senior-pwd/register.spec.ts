@@ -95,11 +95,11 @@ test.describe('Senior / PWD discount at the register @seniorpwd @orders', () => 
     await register.apply.click();
 
     await expect(register.cartTotal).toHaveText('336.00');
-    const group = page.getByTestId('senior-pwd-cart-group-0').locator('visible=true');
-    await expect(group).toHaveCount(1);
-    await expect(group).toContainText('Senior discount');
-    await expect(group).toContainText('Lola Nena');
-    await expect(group).toContainText(latte.name);
+    const badge = page.getByTestId('senior-pwd-line-badge').locator('visible=true');
+    await expect(badge).toHaveCount(1);
+    await expect(badge).toHaveText('Senior x1');
+    await expect(badge).toHaveAttribute('title', 'Lola Nena');
+    await expect(page.getByTestId('senior-pwd-line-reduction').locator('visible=true')).toContainText('24.00');
   });
 
   test('the covered line of a saved order is tagged like a promotion in the order details', async ({ request, platform, newContext }) => {

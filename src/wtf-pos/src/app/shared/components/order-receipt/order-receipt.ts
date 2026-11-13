@@ -21,7 +21,7 @@ import {
   SENIOR_PWD_TYPE_LABELS,
   SeniorPwdPersonDto,
 } from '@shared/models';
-import { breakdownOfCartItem, LineBreakdown, lineTotal } from '@shared/calculations';
+import { breakdownOfCartItem, LineBreakdown, lineTotal, subtractMoney } from '@shared/calculations';
 import { AddOnLabelsPipe } from '@shared/pipes';
 import { LineBreakdownComponent } from '../line-breakdown/line-breakdown';
 
@@ -276,6 +276,10 @@ export class OrderReceiptComponent implements OnInit {
 
   protected getItemTotal(item: CartItemDto): number {
     return this.isBundleLine(item) ? lineTotal(item) : breakdownOfCartItem(item).total;
+  }
+
+  protected getItemNetTotal(item: CartItemDto): number {
+    return subtractMoney(this.getItemTotal(item), item.seniorPwdReduction ?? 0);
   }
 
   protected getBreakdown(item: CartItemDto): LineBreakdown {

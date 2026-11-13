@@ -356,6 +356,22 @@ describe('OrderReceiptComponent', () => {
       expect(tags[0].textContent).toContain('Lola Remedios');
     });
 
+    it('strikes the list price of a covered line and shows the reduction like a promotion', () => {
+      const covered: CartItemDto = {
+        productId: 'p',
+        name: 'Latte',
+        price: 100,
+        qty: 2,
+        seniorPwdPersonIndex: 0,
+        seniorPwdReduction: 40,
+      };
+      const { el } = setup(receipt({ items: [covered], seniorPwdPersons: [person] }));
+
+      expect(el.querySelector('[data-testid="receipt-senior-pwd-line-list-price"]')?.textContent).toContain('200.00');
+      expect(el.textContent).toContain('160.00');
+      expect(el.querySelector('[data-testid="receipt-senior-pwd-line-reduction"]')?.textContent).toContain('40.00');
+    });
+
     it('shows nothing for an order without the discount', () => {
       const { el } = setup(receipt());
 

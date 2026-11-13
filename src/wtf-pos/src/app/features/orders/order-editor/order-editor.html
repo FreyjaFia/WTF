@@ -595,32 +595,207 @@
       } @else {
         <div class="min-h-0 flex-1 overflow-y-auto p-4">
           <div class="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-1">
-            @for (entry of normalCartLines(); track entry.index) {
-              <ng-container
-                *ngTemplateOutlet="cartLine; context: { $implicit: entry.line, index: entry.index }"
-              />
-            }
-          </div>
-          @for (group of seniorPwdGroups(); track group.personIndex) {
-            <section
-              class="mt-4 rounded-xl border border-sky-200 bg-sky-50 p-2"
-              [attr.data-testid]="'senior-pwd-cart-group-' + group.personIndex"
-            >
-              <h4 class="mb-2 flex items-center gap-2 text-xs font-semibold text-sky-800">
-                <span class="inline-flex shrink-0 items-center rounded-full bg-sky-100 px-2 py-0.5 text-[11px] whitespace-nowrap">
-                  {{ group.label }} discount
-                </span>
-                <span class="min-w-0 truncate">{{ group.name }}</span>
-              </h4>
-              <div class="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-1">
-                @for (entry of group.lines; track entry.index) {
-                  <ng-container
-                    *ngTemplateOutlet="cartLine; context: { $implicit: entry.line, index: entry.index }"
-                  />
+            @for (c of cart(); track $index; let last = $last) {
+              <div
+                class="rounded-lg bg-gray-50 p-4 shadow-sm transition-colors"
+                [class.cursor-pointer]="!isReadOnly() && canManageOrderActions()"
+                [class.hover:bg-gray-100]="!isReadOnly() && canManageOrderActions()"
+                [attr.role]="!isReadOnly() && canManageOrderActions() ? 'button' : null"
+                [attr.tabindex]="!isReadOnly() && canManageOrderActions() ? 0 : null"
+                (click)="!isReadOnly() && canManageOrderActions() && editCartItem($index)"
+                (keydown.enter)="!isReadOnly() && canManageOrderActions() && editCartItem($index)"
+                (keydown.space)="
+                  !isReadOnly() && canManageOrderActions() && editCartItem($index);
+                  $event.preventDefault()
+                "
+              >
+                <div class="flex items-center gap-3">
+                  <div class="flex h-16 w-16 shrink-0 items-center justify-center">
+                    @if (c.imageUrl) {
+                      <img [src]="c.imageUrl" [alt]="c.name" class="h-12 w-12 object-contain" />
+                    } @else {
+                      <app-avatar [label]="c.name" [size]="56" />
+                    }
+                  </div>
+                  <div class="flex min-w-0 flex-1 flex-col justify-between gap-2">
+                    <div class="flex items-start justify-between gap-4 sm:gap-6">
+                      <div class="min-w-0 flex-1 text-sm font-semibold wrap-anywhere text-gray-900">
+                        {{ c.name }}
+                        @if (getDiscountedPromoLabel(c)) {
+                          <div
+                            class="mt-1 inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap text-emerald-700"
+                          >
+                            {{ getDiscountedPromoLabel(c) }}
+                          </div>
+                          @if (getPartialDiscountNote(c)) {
+                            <div class="mt-1 text-[11px] font-normal text-amber-700">
+                              {{ getPartialDiscountNote(c) }}
+                            </div>
+                          }
+                        }
+                        @if (isSeniorPwdLine(c)) {
+                          <div
+                            class="mt-1 inline-flex items-center rounded-full bg-sky-50 px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap text-sky-700"
+                            [attr.title]="seniorPwdPersons()[c.seniorPwdPersonIndex!].customerName"
+                            data-testid="senior-pwd-line-badge"
+                          >
+                            {{ seniorPwdLabel(seniorPwdPersons()[c.seniorPwdPersonIndex!]) }} x{{ c.qty }}
+                          </div>
+                        }
+                      </div>
+                      <div class="shrink-0 text-sm text-gray-500">
+                        <span class="text-xs opacity-60"
+                          ><app-icon
+                            name="icon-peso"
+                            [class]="'inline h-3 w-3 align-[-0.125em]'"
+                            [fill]="'currentColor'" /></span
+                        >{{ c.price | number: '1.2-2' }}
+                      </div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center gap-1">
+                        @if (!isReadOnly() && canManageOrderActions()) {
+                          <button
+                            type="button"
+                            class="app-stepper-btn h-8 w-8"
+                            (click)="$event.stopPropagation(); decrement(c.productId, $index)"
+                            [disabled]="isOrderRequestBusy()"
+                            aria-label="Decrease quantity"
+                          >
+                            <span class="text-base leading-none font-bold">-</span>
+                          </button>
+                        }
+                        <div class="text-center text-sm font-medium" [class.w-6]="!isReadOnly()">
+                          @if (isReadOnly()) {
+                            {{ c.qty }}<span class="text-xs">x</span>
+                          } @else {
+                            {{ c.qty }}
+                          }
+                        </div>
+                        @if (!isReadOnly() && canManageOrderActions()) {
+                          <button
+                            type="button"
+                            class="app-stepper-btn h-8 w-8"
+                            (click)="$event.stopPropagation(); increment(c.productId, $index)"
+                            [disabled]="isOrderRequestBusy()"
+                            aria-label="Increase quantity"
+                          >
+                            <span class="text-base leading-none font-bold">+</span>
+                          </button>
+                        }
+                      </div>
+                      <div class="text-right text-base font-bold whitespace-nowrap text-gray-900">
+                        @if (isSeniorPwdLine(c)) {
+                          <div
+                            class="text-xs font-normal text-gray-400 line-through"
+                            data-testid="senior-pwd-line-list-price"
+                          >
+                            {{ getLineTotal(c) | number: '1.2-2' }}
+                          </div>
+                        }
+                        <span class="text-xs opacity-70"
+                          ><app-icon
+                            name="icon-peso"
+                            [class]="'inline h-3 w-3 align-[-0.125em]'"
+                            [fill]="'currentColor'" /></span
+                        >{{ getCartLineNetTotal(c, $index) | number: '1.2-2' }}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                @if (c.bundleItems?.length) {
+                  <div class="mt-2 ml-19 space-y-1 border-t border-gray-200 pt-2">
+                    @for (
+                      bundleItem of getSortedBundleItems(c);
+                      track bundleItem.productId + '-' + $index
+                    ) {
+                      <div class="text-xs text-gray-500">
+                        <div class="flex items-center justify-between">
+                          <span class="flex min-w-0 flex-1 items-center gap-1.5 pr-2">
+                            <span
+                              class="inline-block h-1 w-1 shrink-0 rounded-full bg-gray-400"
+                            ></span>
+                            <span class="min-w-0 wrap-break-word">{{
+                              getBundleChildTotalQuantity(c, bundleItem) > 1
+                                ? getBundleChildTotalQuantity(c, bundleItem) +
+                                  'x ' +
+                                  bundleItem.name
+                                : bundleItem.name
+                            }}</span>
+                          </span>
+                        </div>
+                        @if (bundleItem.addOns?.length) {
+                          <div class="mt-0.5 ml-5 space-y-0.5">
+                            @for (label of bundleItem.addOns | addOnLabels; track $index) {
+                              <div class="flex items-center gap-1.5 text-[11px] text-gray-400">
+                                <span
+                                  class="inline-block h-1 w-1 shrink-0 rounded-full bg-gray-300"
+                                ></span>
+                                <span class="min-w-0 wrap-break-word">{{ label }}</span>
+                              </div>
+                            }
+                          </div>
+                        }
+                      </div>
+                    }
+                  </div>
+                } @else if (c.addOns?.length || getDiscountedAmount(c) > 0) {
+                  <div class="mt-2 ml-19 border-t border-gray-200 pt-2">
+                    <app-line-breakdown [breakdown]="getBreakdown(c)" />
+                  </div>
+                }
+
+                @if (isSeniorPwdLine(c)) {
+                  <div
+                    class="mt-2 ml-19 border-t border-gray-200 pt-2 text-xs"
+                    data-testid="senior-pwd-line-reduction"
+                  >
+                    @if (!c.addOns?.length) {
+                      <div class="mb-1 grid grid-cols-[1fr_auto] items-start gap-3 text-gray-500">
+                        <div class="flex min-w-0">
+                          <span class="w-3.5 shrink-0" aria-hidden="true"></span>
+                          <span class="min-w-0 wrap-anywhere"
+                            >Price<span class="font-normal text-gray-400"> · ₱{{ c.price | number: '1.2-2' }} each</span></span
+                          >
+                        </div>
+                        <div class="shrink-0 text-right tabular-nums">₱{{ getLineTotal(c) | number: '1.2-2' }}</div>
+                      </div>
+                    }
+                    <div class="grid grid-cols-[1fr_auto] items-start gap-3 font-semibold text-sky-700">
+                      <div class="flex min-w-0">
+                        <span class="w-3.5 shrink-0" aria-hidden="true">-</span>
+                        <span class="min-w-0 wrap-anywhere"
+                          >{{ seniorPwdLabel(seniorPwdPersons()[c.seniorPwdPersonIndex!]) }} discount</span
+                        >
+                      </div>
+                      <div class="shrink-0 text-right tabular-nums">
+                        - ₱{{ seniorPwdLineReduction($index) | number: '1.2-2' }}
+                      </div>
+                    </div>
+                  </div>
+                }
+
+                @if (c.specialInstructions) {
+                  <div class="mt-2 ml-19 text-xs wrap-break-word text-gray-500 italic">
+                    {{ c.specialInstructions }}
+                  </div>
+                }
+
+                @for (stockNote of stockNotesForLine($index); track stockNote) {
+                  <div
+                    class="mt-1.5 ml-19 rounded-md px-2 py-0.5 text-[11px] wrap-break-word first:mt-2"
+                    [class]="
+                      stockBlocksCheckout() ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-800'
+                    "
+                    data-stock-note
+                  >
+                    {{ stockNote }}
+                  </div>
                 }
               </div>
-            </section>
-          }
+            }
+          </div>
         </div>
       }
 
@@ -1213,157 +1388,3 @@
     when you come back.
   </app-confirm-dialog>
 }
-
-<ng-template #cartLine let-c let-index="index">
-              <div
-                class="rounded-lg bg-gray-50 p-4 shadow-sm transition-colors"
-                [class.cursor-pointer]="!isReadOnly() && canManageOrderActions()"
-                [class.hover:bg-gray-100]="!isReadOnly() && canManageOrderActions()"
-                [attr.role]="!isReadOnly() && canManageOrderActions() ? 'button' : null"
-                [attr.tabindex]="!isReadOnly() && canManageOrderActions() ? 0 : null"
-                (click)="!isReadOnly() && canManageOrderActions() && editCartItem(index)"
-                (keydown.enter)="!isReadOnly() && canManageOrderActions() && editCartItem(index)"
-                (keydown.space)="
-                  !isReadOnly() && canManageOrderActions() && editCartItem(index);
-                  $event.preventDefault()
-                "
-              >
-                <div class="flex items-center gap-3">
-                  <div class="flex h-16 w-16 shrink-0 items-center justify-center">
-                    @if (c.imageUrl) {
-                      <img [src]="c.imageUrl" [alt]="c.name" class="h-12 w-12 object-contain" />
-                    } @else {
-                      <app-avatar [label]="c.name" [size]="56" />
-                    }
-                  </div>
-                  <div class="flex min-w-0 flex-1 flex-col justify-between gap-2">
-                    <div class="flex items-start justify-between gap-4 sm:gap-6">
-                      <div class="min-w-0 flex-1 text-sm font-semibold wrap-anywhere text-gray-900">
-                        {{ c.name }}
-                        @if (getDiscountedPromoLabel(c)) {
-                          <div
-                            class="mt-1 inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap text-emerald-700"
-                          >
-                            {{ getDiscountedPromoLabel(c) }}
-                          </div>
-                          @if (getPartialDiscountNote(c)) {
-                            <div class="mt-1 text-[11px] font-normal text-amber-700">
-                              {{ getPartialDiscountNote(c) }}
-                            </div>
-                          }
-                        }
-                      </div>
-                      <div class="shrink-0 text-sm text-gray-500">
-                        <span class="text-xs opacity-60"
-                          ><app-icon
-                            name="icon-peso"
-                            [class]="'inline h-3 w-3 align-[-0.125em]'"
-                            [fill]="'currentColor'" /></span
-                        >{{ c.price | number: '1.2-2' }}
-                      </div>
-                    </div>
-                    <div class="flex items-center justify-between">
-                      <div class="flex items-center gap-1">
-                        @if (!isReadOnly() && canManageOrderActions()) {
-                          <button
-                            type="button"
-                            class="app-stepper-btn h-8 w-8"
-                            (click)="$event.stopPropagation(); decrement(c.productId, index)"
-                            [disabled]="isOrderRequestBusy()"
-                            aria-label="Decrease quantity"
-                          >
-                            <span class="text-base leading-none font-bold">-</span>
-                          </button>
-                        }
-                        <div class="text-center text-sm font-medium" [class.w-6]="!isReadOnly()">
-                          @if (isReadOnly()) {
-                            {{ c.qty }}<span class="text-xs">x</span>
-                          } @else {
-                            {{ c.qty }}
-                          }
-                        </div>
-                        @if (!isReadOnly() && canManageOrderActions()) {
-                          <button
-                            type="button"
-                            class="app-stepper-btn h-8 w-8"
-                            (click)="$event.stopPropagation(); increment(c.productId, index)"
-                            [disabled]="isOrderRequestBusy()"
-                            aria-label="Increase quantity"
-                          >
-                            <span class="text-base leading-none font-bold">+</span>
-                          </button>
-                        }
-                      </div>
-                      <div class="text-base font-bold whitespace-nowrap text-gray-900">
-                        <span class="text-xs opacity-70"
-                          ><app-icon
-                            name="icon-peso"
-                            [class]="'inline h-3 w-3 align-[-0.125em]'"
-                            [fill]="'currentColor'" /></span
-                        >{{ getLineTotal(c) | number: '1.2-2' }}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                @if (c.bundleItems?.length) {
-                  <div class="mt-2 ml-19 space-y-1 border-t border-gray-200 pt-2">
-                    @for (
-                      bundleItem of getSortedBundleItems(c);
-                      track bundleItem.productId + '-' + $index
-                    ) {
-                      <div class="text-xs text-gray-500">
-                        <div class="flex items-center justify-between">
-                          <span class="flex min-w-0 flex-1 items-center gap-1.5 pr-2">
-                            <span
-                              class="inline-block h-1 w-1 shrink-0 rounded-full bg-gray-400"
-                            ></span>
-                            <span class="min-w-0 wrap-break-word">{{
-                              getBundleChildTotalQuantity(c, bundleItem) > 1
-                                ? getBundleChildTotalQuantity(c, bundleItem) +
-                                  'x ' +
-                                  bundleItem.name
-                                : bundleItem.name
-                            }}</span>
-                          </span>
-                        </div>
-                        @if (bundleItem.addOns?.length) {
-                          <div class="mt-0.5 ml-5 space-y-0.5">
-                            @for (label of bundleItem.addOns | addOnLabels; track $index) {
-                              <div class="flex items-center gap-1.5 text-[11px] text-gray-400">
-                                <span
-                                  class="inline-block h-1 w-1 shrink-0 rounded-full bg-gray-300"
-                                ></span>
-                                <span class="min-w-0 wrap-break-word">{{ label }}</span>
-                              </div>
-                            }
-                          </div>
-                        }
-                      </div>
-                    }
-                  </div>
-                } @else if (c.addOns?.length || getDiscountedAmount(c) > 0) {
-                  <div class="mt-2 ml-19 border-t border-gray-200 pt-2">
-                    <app-line-breakdown [breakdown]="getBreakdown(c)" />
-                  </div>
-                }
-
-                @if (c.specialInstructions) {
-                  <div class="mt-2 ml-19 text-xs wrap-break-word text-gray-500 italic">
-                    {{ c.specialInstructions }}
-                  </div>
-                }
-
-                @for (stockNote of stockNotesForLine(index); track stockNote) {
-                  <div
-                    class="mt-1.5 ml-19 rounded-md px-2 py-0.5 text-[11px] wrap-break-word first:mt-2"
-                    [class]="
-                      stockBlocksCheckout() ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-800'
-                    "
-                    data-stock-note
-                  >
-                    {{ stockNote }}
-                  </div>
-                }
-              </div>
-</ng-template>
