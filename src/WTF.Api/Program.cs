@@ -105,6 +105,10 @@ builder.Services.Configure<StockAlertRemindersOptions>(
     builder.Configuration.GetSection(StockAlertRemindersOptions.SectionName));
 builder.Services.AddScoped<IStockReminderService, StockReminderService>();
 builder.Services.AddHostedService<StockReminderScheduler>();
+builder.Services.Configure<HeldOrderRemindersOptions>(
+    builder.Configuration.GetSection(HeldOrderRemindersOptions.SectionName));
+builder.Services.AddScoped<IHeldOrderReminderService, HeldOrderReminderService>();
+builder.Services.AddHostedService<HeldOrderReminderScheduler>();
 builder.Services.Configure<SubscriptionOptions>(builder.Configuration.GetSection(SubscriptionOptions.SectionName));
 builder.Services.AddSingleton<ILeaseSigner, LeaseSigner>();
 builder.Services.Configure<SubscriptionRemindersOptions>(builder.Configuration.GetSection(SubscriptionRemindersOptions.SectionName));

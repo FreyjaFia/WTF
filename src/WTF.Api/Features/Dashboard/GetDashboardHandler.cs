@@ -1,10 +1,12 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Auth;
+using WTF.Api.Common.Auth.Permissions;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Common.Orders;
 using WTF.Api.Common.Time;
 using WTF.Api.Features.Dashboard.DTOs;
+using WTF.Api.Features.Orders;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Features.Reports;
 using WTF.Api.Features.Reports.Enums;
@@ -162,6 +164,8 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
             .ToListAsync(cancellationToken);
         var newCustomers = firstSales.Count(first => ReportRules.IsNewCustomer(first, range.PrimaryStartUtc));
 
+        var heldOrders = await ComputeHeldOrdersAsync(cancellationToken);
+
         return new DashboardInsightsDto(
             summary.Discounts,
             summary.RefundedOrderCount,
@@ -175,7 +179,30 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
             topPromotion.Name,
             topPromotion.Uses,
             newCustomers,
-            customerIds.Count - newCustomers);
+            customerIds.Count - newCustomers,
+            heldOrders);
+    }
+
+    // Only people who may decide on held orders see them. They are everything waiting now, not just the chosen days.
+    private async Task<HeldOrdersInsightDto?> ComputeHeldOrdersAsync(CancellationToken cancellationToken)
+    {
+        var user = httpContextAccessor.HttpContext?.User;
+        if (user is null || !PermissionChecks.Has(user, "orders.override"))
+        {
+            return null;
+        }
+
+        var nowUtc = DateTime.UtcNow;
+        var agedAfterDays = await HeldOrderAging.AgedAfterDaysAsync(db, cancellationToken);
+        var held = HeldOrderRules.Summarize(await HeldOrderFigures.LoadAsync(db, null, null, null, cancellationToken), nowUtc, agedAfterDays);
+
+        return new HeldOrdersInsightDto(
+            held.Count,
+            held.Amount,
+            held.SeniorPwdDiscount,
+            held.AgedCount,
+            held.AgedAmount,
+            held.AgedCount > 0 ? HeldOrderRules.AgedInsightText(held.AgedCount, held.AgedAmount, agedAfterDays) : null);
     }
 
     private static DateRangeInfo ComputeDateRange(GetDashboardQuery request, DateTime nowUtc, TimeZoneInfo timeZone)
