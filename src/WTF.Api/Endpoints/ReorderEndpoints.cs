@@ -20,11 +20,11 @@ public static class ReorderEndpoints
                 var result = await sender.Send(new GetReorderListQuery(days ?? 28));
                 return Results.Ok(CostAccess.ForUser(result, user));
             })
-            .RequireAuthorization(AppPolicies.StockMovementsRead);
+            .RequireAuthorization(AppPolicies.PurchasingRead);
 
         group.MapGet("/par-levels",
             async (ISender sender) => Results.Ok(await sender.Send(new GetParLevelsQuery())))
-            .RequireAuthorization(AppPolicies.StockMovementsRead);
+            .RequireAuthorization(AppPolicies.PurchasingRead);
 
         group.MapPut("/par-levels/{itemId:guid}",
             async (Guid itemId, SetParLevelRequest request, ISender sender) =>
@@ -32,7 +32,7 @@ public static class ReorderEndpoints
                 var result = await sender.Send(new SetParLevelCommand(itemId, request.ParLevel));
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.StockMovementsWrite);
+            .RequireAuthorization(AppPolicies.PurchasingWrite);
 
         return app;
     }

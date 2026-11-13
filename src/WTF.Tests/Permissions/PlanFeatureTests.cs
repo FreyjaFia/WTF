@@ -13,14 +13,14 @@ public class PlanFeatureTests
     {
         PlanFeatures.Parse("pos,orders,reports,offline").Order().ShouldBe(["core"]);
         PlanFeatures.Parse(null).Order().ShouldBe(["core"]);
-        PlanFeatures.Parse("pos, Inventory ,promotions;chat\nbogus").Order().ShouldBe(["chat", "core", "inventory", "promotions"]);
+        PlanFeatures.Parse("pos, Inventory ,promotions;chat\nbogus").Order().ShouldBe(["chat", "core", "inventory", "orderlinks", "promotions"]);
     }
 
     [Fact]
     public void Effective_KeepsOnlyKeysWhoseFeatureIsInThePlan()
     {
         var starter = PlanFeatures.Parse("pos,orders,reports,offline");
-        var pro = PlanFeatures.Parse("pos,orders,reports,offline,inventory,promotions,orderlinks,chat,workbook");
+        var pro = PlanFeatures.Parse(string.Join(",", PlanFeatures.Gateable));
         var keys = PermissionCatalog.All.Select(p => p.Key).ToList();
 
         var onStarter = PlanFeatures.Effective(keys, PermissionCatalog.FeatureOf, starter);
@@ -28,7 +28,11 @@ public class PlanFeatureTests
 
         onPro.Count.ShouldBe(keys.Count);
         onStarter.ShouldContain("orders.write");
-        onStarter.ShouldContain("roles.manage");
+        onStarter.ShouldContain("users.write");
+        onStarter.ShouldNotContain("roles.manage");
+        onStarter.ShouldNotContain("expenses.read");
+        onStarter.ShouldNotContain("audit.read");
+        onStarter.ShouldNotContain("chat.write");
         onStarter.ShouldNotContain("stock.write");
         onStarter.ShouldNotContain("promotions.read");
         onStarter.ShouldNotContain("orderlinks.manage");

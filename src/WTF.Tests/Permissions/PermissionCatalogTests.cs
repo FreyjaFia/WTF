@@ -1,6 +1,7 @@
 using System.Text.Json;
 using WTF.Api.Common.Auth;
 using WTF.Api.Common.Auth.Permissions;
+using WTF.Calculations.Subscriptions;
 
 namespace WTF.Tests.Permissions;
 
@@ -13,7 +14,7 @@ public class PermissionCatalogTests
 
     private sealed record SharedPermission(string Key, string Area, string Label, string Description, string Feature, string[] Requires);
 
-    private static readonly string[] Features = ["core", "inventory", "promotions", "orderlinks", "chat", "workbook"];
+    private static readonly string[] Features = [PlanFeatures.Core, .. PlanFeatures.Gateable];
 
     private static readonly string[] ShopRoles =
         [AppRoles.Owner, AppRoles.Admin, AppRoles.AdminViewer, AppRoles.Cashier, AppRoles.ItemManager, AppRoles.StockManager];

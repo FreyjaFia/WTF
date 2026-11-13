@@ -105,7 +105,10 @@ public class SharedCasesTests
         List<InvoiceDifferenceCase> InvoiceDifference,
         List<SeniorPwdRowCase> SeniorPwdRow,
         List<SeniorPwdOrderCase> SeniorPwdOrders,
-        List<SeniorPwdEligibilityCase> SeniorPwdEligibility);
+        List<SeniorPwdEligibilityCase> SeniorPwdEligibility,
+        List<PlanFeatureDefinitionCase> PlanFeatureCatalog,
+        List<PlanFeatureCase> PlanFeatures,
+        List<PlansContainingCase> PlansContaining);
 
     private sealed record RecipePreviewSizeAmountCase(string SizeProductId, decimal Quantity);
 
@@ -162,6 +165,14 @@ public class SharedCasesTests
     private sealed record SubscriptionWarningCase(string Name, DateTime PeriodEnd, int GraceDays, DateTime Now, string ExpectedLevel, int ExpectedDaysLeft);
 
     private sealed record SubscriptionClockCase(string Name, DateTime DeviceNow, DateTime? LatestSeen, DateTime ExpectedNow);
+
+    private sealed record PlanFeatureDefinitionCase(string Key, string Label, string Description, string Group, List<string> Needs);
+
+    private sealed record PlanFeatureCase(string Name, string? Text, List<string> Expected, List<string> Unknown);
+
+    private sealed record PlanRowCase(string Name, string? Features);
+
+    private sealed record PlansContainingCase(string Name, string Feature, List<PlanRowCase> Plans, List<string> Expected);
 
     private sealed record SubscriptionLeaseAgeCase(string Name, DateTime IssuedAt, DateTime Now, int MaxAgeDays, bool Expected);
 
@@ -224,6 +235,10 @@ public class SharedCasesTests
     public static IEnumerable<object[]> StockShortfallCaseNames() => Loaded.Value.StockShortfalls.Select(c => new object[] { c.Name });
 
     public static IEnumerable<object[]> SubscriptionWarningCaseNames() => Loaded.Value.SubscriptionWarnings.Select(c => new object[] { c.Name });
+
+    public static IEnumerable<object[]> PlanFeatureCaseNames() => Loaded.Value.PlanFeatures.Select(c => new object[] { c.Name });
+
+    public static IEnumerable<object[]> PlansContainingCaseNames() => Loaded.Value.PlansContaining.Select(c => new object[] { c.Name });
 
     public static IEnumerable<object[]> SubscriptionClockCaseNames() => Loaded.Value.SubscriptionClock.Select(c => new object[] { c.Name });
 
@@ -351,6 +366,34 @@ public class SharedCasesTests
 
         SubscriptionRules.WarningLevel(c.PeriodEnd, c.GraceDays, c.Now).ToString().ShouldBe(c.ExpectedLevel, StringCompareShould.IgnoreCase);
         SubscriptionRules.DaysLeft(c.PeriodEnd, c.Now).ShouldBe(c.ExpectedDaysLeft);
+    }
+
+    [Fact]
+    public void PlanFeatureCatalog_MatchesTheSharedFile()
+    {
+        Loaded.Value.PlanFeatureCatalog.Select(f => (f.Key, f.Label, f.Description, f.Group, Needs: string.Join(",", f.Needs)))
+            .ShouldBe(PlanFeatures.Catalog.Select(f => (f.Key, f.Label, f.Description, f.Group, Needs: string.Join(",", f.Needs))));
+    }
+
+    [Theory]
+    [MemberData(nameof(PlanFeatureCaseNames))]
+    public void PlanFeatures_MatchTheSharedCase(string name)
+    {
+        var c = Loaded.Value.PlanFeatures.Single(x => x.Name == name);
+        var words = PlanFeatures.Split(c.Text);
+
+        PlanFeatures.Normalize(words).ShouldBe(c.Expected);
+        PlanFeatures.Unknown(words).ShouldBe(c.Unknown);
+        PlanFeatures.Serialize(words).ShouldBe(string.Join(",", c.Expected));
+    }
+
+    [Theory]
+    [MemberData(nameof(PlansContainingCaseNames))]
+    public void PlansContaining_MatchesTheSharedCase(string name)
+    {
+        var c = Loaded.Value.PlansContaining.Single(x => x.Name == name);
+
+        PlanFeatures.PlansContaining(c.Feature, c.Plans.Select(p => (p.Name, p.Features))).ShouldBe(c.Expected);
     }
 
     [Theory]

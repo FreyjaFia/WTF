@@ -1766,4 +1766,27 @@
     { "name": "promotion price is not eligible", "productEligible": true, "hasPromotion": true, "isBundle": false, "expected": false },
     { "name": "bundle is not eligible", "productEligible": true, "hasPromotion": false, "isBundle": true, "expected": false },
     { "name": "product marked not food or drink", "productEligible": false, "hasPromotion": false, "isBundle": false, "expected": false }
+  ],
+  "planFeatureCatalog": [
+    { "key": "expenses", "label": "Expenses", "description": "Record and review shop expenses.", "group": "Money", "needs": [] },
+    { "key": "inventory", "label": "Inventory", "description": "Items, stock, counts, waste and costs.", "group": "Stock", "needs": [] },
+    { "key": "purchasing", "label": "Purchasing", "description": "Suppliers, reorder list, purchase orders and receiving.", "group": "Stock", "needs": ["inventory"] },
+    { "key": "promotions", "label": "Promotions", "description": "Discounts and deals on the register.", "group": "Sell more", "needs": [] },
+    { "key": "orderlinks", "label": "Order links", "description": "Customer ordering links.", "group": "Customer ordering", "needs": [] },
+    { "key": "chat", "label": "Order chat", "description": "Chat with customers about their orders.", "group": "Customer ordering", "needs": ["orderlinks"] },
+    { "key": "workbook", "label": "Monthly workbook", "description": "The monthly Excel report workbook.", "group": "Insight", "needs": [] },
+    { "key": "audit", "label": "Audit log", "description": "See who changed what.", "group": "Control", "needs": [] },
+    { "key": "customroles", "label": "Custom roles", "description": "Create your own roles and choose what each can do.", "group": "Control", "needs": [] }
+  ],
+  "planFeatures": [
+    { "name": "old words are ignored", "text": "pos,orders,reports,offline", "expected": [], "unknown": ["pos", "orders", "reports", "offline"] },
+    { "name": "nothing at all", "text": null, "expected": [], "unknown": [] },
+    { "name": "a need is added", "text": "purchasing", "expected": ["inventory", "purchasing"], "unknown": [] },
+    { "name": "chain and mixed case, order follows the catalog", "text": "Chat; promotions\nInventory bogus", "expected": ["inventory", "promotions", "orderlinks", "chat"], "unknown": ["bogus"] },
+    { "name": "duplicates collapse", "text": "audit,audit, AUDIT", "expected": ["audit"], "unknown": [] }
+  ],
+  "plansContaining": [
+    { "name": "only the plans that hold it", "feature": "inventory", "plans": [{ "name": "Starter", "features": "" }, { "name": "Pro", "features": "inventory,expenses" }, { "name": "Business", "features": "purchasing" }], "expected": ["Pro", "Business"] },
+    { "name": "nobody holds it", "feature": "audit", "plans": [{ "name": "Starter", "features": "pos" }], "expected": [] },
+    { "name": "core is in every plan", "feature": "core", "plans": [{ "name": "Starter", "features": "" }], "expected": ["Starter"] }
   ]}

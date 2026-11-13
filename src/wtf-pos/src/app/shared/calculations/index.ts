@@ -16,3 +16,4 @@ export * from './platform-stats';
 export * from './receiving';
 export * from './reorder-text';
 export * from './senior-pwd';
+export * from './plan-features';
