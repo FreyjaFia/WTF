@@ -150,6 +150,21 @@ export interface OrderDto {
   /** The lines whose product took stock, so a refund only asks what happens to those. */
   stockLineIds?: string[] | null;
   seniorPwdPersons?: SeniorPwdPersonDto[] | null;
+  /** The structured reasons: a Hold needs an Admin's decision, a Note was saved and is only informational. */
+  reviewDetails?: OrderReviewReasonDto[] | null;
+}
+
+export type HeldRejectStockOutcome = 'none' | 'waste';
+
+export type ReviewSeverity = 'Hold' | 'Note';
+
+export interface OrderReviewReasonDto {
+  code: string;
+  severity: ReviewSeverity;
+  text: string;
+  lineIndex?: number | null;
+  expectedValue?: string | null;
+  quotedValue?: string | null;
 }
 
 export interface OrderHistoryDto {

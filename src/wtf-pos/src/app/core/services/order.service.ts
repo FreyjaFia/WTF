@@ -5,6 +5,7 @@ import { ConnectivityService } from '@core/services';
 import { environment } from '@environments/environment.development';
 import {
   CreateOrderCommand,
+  HeldRejectStockOutcome,
   OfflineSyncResultDto,
   OrderDto,
   OrderHistoryDto,
@@ -340,9 +341,15 @@ export class OrderService {
     );
   }
 
-  /** An Admin turns down a held offline order; the reason is required. */
-  public rejectHeldOrder(id: string, reason: string): Observable<OrderDto> {
-    return this.http.post<OrderDto>(`${this.baseUrl}/${id}/review/reject`, { reason }).pipe(
+  /** An Admin turns down a held offline order; the reason is required. Waste records the stock the sale used. */
+  public rejectHeldOrder(
+    id: string,
+    reason: string,
+    stockOutcome: HeldRejectStockOutcome = 'none',
+  ): Observable<OrderDto> {
+    return this.http
+      .post<OrderDto>(`${this.baseUrl}/${id}/review/reject`, { reason, stockOutcome })
+      .pipe(
       catchError((error: HttpErrorResponse) => {
         console.error('Error rejecting held order:', error);
         return throwError(

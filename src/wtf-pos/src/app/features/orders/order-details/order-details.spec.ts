@@ -1031,9 +1031,72 @@ describe('OrderDetails', () => {
       held$().confirmRejectOrder('Wrong price');
       fixture.detectChanges();
 
-      expect(orderService.rejectHeldOrder).toHaveBeenCalledWith('o1', 'Wrong price');
+      expect(orderService.rejectHeldOrder).toHaveBeenCalledWith('o1', 'Wrong price', 'none');
       expect(orderService.rejectOrder).not.toHaveBeenCalled();
       expect(alert['success']).toHaveBeenCalledWith('Order #21 rejected.');
+    });
+  });
+
+  describe('held order with structured reasons and stock', () => {
+    const el = () => fixture.nativeElement as HTMLElement;
+    const withDetails = () =>
+      makeOrder({
+        orderNumber: 22,
+        status: OrderStatusEnum.PendingReview,
+        reviewReasons: 'Latte now costs 160.00, quoted 150.00.',
+        reviewDetails: [
+          { code: 'PriceChanged', severity: 'Hold', text: 'Latte now costs 160.00, quoted 150.00.' },
+          {
+            code: 'StockShortfall',
+            severity: 'Note',
+            text: 'Beans ran short: 2 g in stock, this sale needed 8 g.',
+            expectedValue: '2',
+            quotedValue: '8',
+          },
+        ],
+      });
+    const api = () =>
+      t as unknown as {
+        confirmRejectOrder: (reason: string) => void;
+        setStockAfterRejecting: (value: string) => void;
+      };
+
+    it('lists holds and notes separately', async () => {
+      await create(withDetails());
+
+      const holds = el().querySelector('[data-held-order] ul')!;
+      expect(holds.textContent).toContain('Latte now costs');
+      expect(holds.textContent).not.toContain('Beans ran short');
+      expect(el().querySelector('[data-held-order] [data-review-notes]')!.textContent).toContain(
+        'Beans ran short',
+      );
+    });
+
+    it('rejects with waste when the Admin picks it', async () => {
+      orderService.rejectHeldOrder.mockReturnValue(
+        of(makeOrder({ orderNumber: 22, status: OrderStatusEnum.Cancelled })),
+      );
+      await create(withDetails());
+
+      const select = el().querySelector('#stock-after-rejecting') as HTMLSelectElement;
+      select.value = 'waste';
+      select.dispatchEvent(new Event('change'));
+      api().confirmRejectOrder('Wrong price');
+
+      expect(orderService.rejectHeldOrder).toHaveBeenCalledWith('o1', 'Wrong price', 'waste');
+    });
+
+    it('hides the stock choice from people who cannot review', async () => {
+      canOverride.mockReturnValue(false);
+      await create(withDetails());
+
+      expect(el().querySelector('#stock-after-rejecting')).toBeNull();
+    });
+
+    it('shows notes on a completed order too', async () => {
+      await create(makeOrder({ status: OrderStatusEnum.Completed, reviewDetails: withDetails().reviewDetails }));
+
+      expect(el().querySelector('[data-review-notes]')!.textContent).toContain('Beans ran short');
     });
   });
 

@@ -286,6 +286,7 @@ describe('OrderEditor', () => {
     items: typeof limitItems;
     links: typeof limitLinks;
     sizeAmounts: () => unknown[];
+    asOf: ReturnType<typeof signal<string | null>>;
     hasBlockingItems: () => boolean;
     start: ReturnType<typeof vi.fn>;
     stop: ReturnType<typeof vi.fn>;
@@ -401,6 +402,7 @@ describe('OrderEditor', () => {
       items: limitItems,
       links: limitLinks,
       sizeAmounts: () => [],
+      asOf: signal<string | null>(null),
       hasBlockingItems: () => limitItems().length > 0,
       start: vi.fn(),
       stop: vi.fn(),
@@ -1397,6 +1399,21 @@ describe('OrderEditor', () => {
       t.checkout();
 
       expect(checkoutOpen).toHaveBeenCalledTimes(1);
+    });
+
+    it('says when the stock was last updated, only while offline', async () => {
+      blockCups(1);
+      stockLimits.asOf.set('2026-11-12T01:30:00Z');
+      await start();
+      withCart([line({ qty: 2 })]);
+      fixture.detectChanges();
+      const root = fixture.nativeElement as HTMLElement;
+      expect(root.querySelector('[data-stock-updated]')).toBeNull();
+
+      isOnline.set(false);
+      fixture.detectChanges();
+
+      expect(root.querySelector('[data-stock-updated]')?.textContent).toContain('Stock last updated');
     });
 
     it('only warns while offline, because the sale is honored when it syncs', async () => {

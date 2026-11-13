@@ -167,10 +167,19 @@ describe('OrderService', () => {
 
       const req = http.expectOne(`${base}/7/review/reject`);
       expect(req.request.method).toBe('POST');
-      expect(req.request.body).toEqual({ reason: 'Wrong price' });
+      expect(req.request.body).toEqual({ reason: 'Wrong price', stockOutcome: 'none' });
       req.flush({ id: '7', status: OrderStatusEnum.Cancelled });
 
       expect(result.value).toMatchObject({ id: '7', status: OrderStatusEnum.Cancelled });
+    });
+
+    it('sends the stock outcome when the goods were handed over', () => {
+      const { service, http } = setupHttpService(OrderService);
+      capture(service.rejectHeldOrder('7', 'Wrong price', 'waste'));
+
+      const req = http.expectOne(`${base}/7/review/reject`);
+      expect(req.request.body).toEqual({ reason: 'Wrong price', stockOutcome: 'waste' });
+      req.flush({ id: '7', status: OrderStatusEnum.Cancelled });
     });
 
     it('maps the failures of approve and reject', () => {

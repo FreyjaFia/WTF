@@ -33,6 +33,7 @@ import {
   DiscountedProductItemDto,
   DiscountedProductPromotionDto,
   FulfillmentTypeEnum,
+  HeldRejectStockOutcome,
   OrderDto,
   OrderStockMovementDto,
   OrderSourceEnum,
@@ -154,9 +155,20 @@ export class OrderDetails implements OnInit {
   protected readonly canReviewHeld = computed(
     () => this.isHeldForReview() && this.authService.canOverrideOrders(),
   );
-  protected readonly reviewReasons = computed(() =>
-    (this.order()?.reviewReasons ?? '').split('\n').filter((reason) => reason.trim().length > 0),
+  protected readonly reviewReasons = computed(() => {
+    const details = this.order()?.reviewDetails ?? [];
+    if (details.length > 0) {
+      return details.filter((reason) => reason.severity === 'Hold').map((reason) => reason.text);
+    }
+
+    return (this.order()?.reviewReasons ?? '')
+      .split('\n')
+      .filter((reason) => reason.trim().length > 0);
+  });
+  protected readonly reviewNotes = computed(() =>
+    (this.order()?.reviewDetails ?? []).filter((reason) => reason.severity === 'Note'),
   );
+  protected readonly stockAfterRejecting = signal<HeldRejectStockOutcome>('none');
   protected readonly canDecide = computed(
     () =>
       (this.isAwaitingApproval() && this.authService.canWriteOrders()) || this.canReviewHeld(),
@@ -417,6 +429,10 @@ export class OrderDetails implements OnInit {
     });
   }
 
+  protected setStockAfterRejecting(value: string): void {
+    this.stockAfterRejecting.set(value === 'waste' ? 'waste' : 'none');
+  }
+
   protected askRejectOrder(): void {
     if (!this.isDeciding() && this.canDecide()) {
       this.showRejectDialog.set(true);
@@ -437,7 +453,7 @@ export class OrderDetails implements OnInit {
 
     this.isDeciding.set(true);
     const request$ = this.isHeldForReview()
-      ? this.orderService.rejectHeldOrder(current.id, reason)
+      ? this.orderService.rejectHeldOrder(current.id, reason, this.stockAfterRejecting())
       : this.orderService.rejectOrder(current.id, reason);
     request$.subscribe({
       next: (updated) => {

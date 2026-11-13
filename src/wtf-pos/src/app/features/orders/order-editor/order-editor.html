@@ -827,6 +827,9 @@
                   : 'The shop checks the sale when you are back online.'
               }}
             </p>
+            @if (!stockBlocksCheckout() && stockLastUpdated(); as updated) {
+              <p data-stock-updated>Stock last updated {{ updated }}.</p>
+            }
           </div>
         }
 

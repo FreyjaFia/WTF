@@ -383,6 +383,17 @@ export class OrderEditor implements OnInit, OnDestroy {
   protected readonly stockBlocksCheckout = computed(
     () => this.connectivity.isOnline() && this.stockMessages().length > 0,
   );
+  protected readonly stockLastUpdated = computed(() => {
+    const asOf = this.stockLimits.asOf();
+    if (!asOf || this.connectivity.isOnline()) {
+      return null;
+    }
+
+    const date = new Date(asOf);
+    return Number.isNaN(date.getTime())
+      ? null
+      : date.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  });
   protected readonly paymentTipsAmount = computed(() => this.currentOrder()?.tips ?? 0);
   protected readonly paymentChangeAmount = computed(() => this.currentOrder()?.changeAmount ?? 0);
   protected readonly paymentOrderTotal = computed(
