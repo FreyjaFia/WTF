@@ -165,6 +165,14 @@ export function managementGroups(auth: AuthService): HubGroup[] {
           route: AppRoutes.ManagementExpenses,
           canShow: () => auth.canReadExpenses(),
         },
+        {
+          id: 'unsynced-orders',
+          label: 'Unsynced Orders',
+          icon: 'icon-cloud-off',
+          description: 'Offline sales the server could not save.',
+          route: AppRoutes.OrdersUnsynced,
+          canShow: () => auth.canOverrideOrders(),
+        },
       ],
     },
     {

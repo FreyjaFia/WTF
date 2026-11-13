@@ -56,6 +56,7 @@ import { ListScrollService, type ListScrollPosition } from '@core/services/list-
 import { ScrollLoaderComponent } from '@shared/components/scroll-loader/scroll-loader';
 import { orderAddressOf } from '@shared/utils/order-address';
 import type { PendingOrder, SyncOutcome, SyncResultEntry } from '@core/services/db';
+import { UnsyncedOrdersBanner } from '@features/orders/unsynced-orders/unsynced-orders-banner';
 
 const PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
@@ -94,6 +95,7 @@ interface OrderGroup {
     RejectOrderDialogComponent,
     SearchInputComponent,
     ScrollLoaderComponent,
+    UnsyncedOrdersBanner,
   ],
   templateUrl: './order-list.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
