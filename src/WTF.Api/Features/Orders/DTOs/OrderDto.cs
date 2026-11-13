@@ -21,4 +21,5 @@ public record OrderDto(
     decimal? QuotedTotal = null,
     string? OfflineLocalId = null,
     List<string>? StockWarnings = null,
-    List<Guid>? StockLineIds = null);
+    List<Guid>? StockLineIds = null,
+    List<OrderSeniorPwdDto>? SeniorPwdPersons = null);

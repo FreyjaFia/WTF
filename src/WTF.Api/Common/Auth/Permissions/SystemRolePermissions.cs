@@ -10,6 +10,7 @@ public static class SystemRolePermissions
             "orders.read",
             "orders.write",
             "orders.override",
+            "orders.seniorpwd.apply",
             "orderlinks.manage",
             "customers.read",
             "customers.write",
@@ -59,6 +60,7 @@ public static class SystemRolePermissions
         [
             "orders.read",
             "orders.write",
+            "orders.seniorpwd.apply",
             "orderlinks.manage",
             "customers.write",
             "stock.waste.record",

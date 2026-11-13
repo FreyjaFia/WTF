@@ -59,9 +59,59 @@ internal static class OfflineOrderReview
         }
 
         await AddBundleReasonsAsync(db, command, createdAt, timeZone, reasons, cancellationToken);
+        await AddSeniorPwdReasonsAsync(db, command, reasons, cancellationToken);
         await AddPriceReasonsAsync(db, command, products.ToDictionary(p => p.Key, p => (p.Value.Name, p.Value.Price)), createdAt, timeZone, reasons, cancellationToken);
 
         return [.. reasons.Distinct()];
+    }
+
+    // The register worked out the Senior/PWD discount with the shop settings it had. A person without an ID or name, or a
+    // setting that changed while the device was offline, holds the sale for an Admin instead of failing it.
+    private static async Task AddSeniorPwdReasonsAsync(
+        WTFDbContext db,
+        CreateOrderCommand command,
+        List<string> reasons,
+        CancellationToken cancellationToken)
+    {
+        if (command.SeniorPwdPersons.Count == 0)
+        {
+            return;
+        }
+
+        if (command.SeniorPwdPersons.Any(p => string.IsNullOrWhiteSpace(p.IdNumber) || string.IsNullOrWhiteSpace(p.CustomerName)))
+        {
+            reasons.Add("A Senior/PWD discount is missing the ID number or the name on the ID.");
+        }
+
+        var settings = await db.TenantSettings
+            .AsNoTracking()
+            .Select(s => new { s.SeniorPwdEnabled, s.VatRegistered })
+            .FirstOrDefaultAsync(cancellationToken);
+        if (settings is not { SeniorPwdEnabled: true })
+        {
+            reasons.Add("The Senior/PWD discount is now turned off for this shop.");
+            return;
+        }
+
+        if (command.ExpectedTotal is null
+            || command.Items.Any(i => i.QuotedPrice is null || i.AddOns.Any(a => a.QuotedPrice is null))
+            || command.BundlePromotions.Any(b => b.QuotedUnitPrice is null))
+        {
+            return;
+        }
+
+        var quotedTotal = command.Items.Sum(i => (i.QuotedPrice!.Value + i.AddOns.Sum(a => a.QuotedPrice!.Value * a.Quantity)) * i.Quantity)
+            + command.BundlePromotions.Sum(b => b.QuotedUnitPrice!.Value * b.Quantity);
+        var shownReduction = quotedTotal - command.ExpectedTotal.Value;
+        var currentReduction = command.Items
+            .Where(i => i.SeniorPwdPersonIndex.HasValue)
+            .Sum(i => SeniorPwdRules.ForRow(
+                (i.QuotedPrice!.Value + i.AddOns.Sum(a => a.QuotedPrice!.Value * a.Quantity)) * i.Quantity,
+                settings.VatRegistered).Reduction);
+        if (shownReduction != currentReduction)
+        {
+            reasons.Add($"The Senior/PWD discount now comes to {currentReduction:0.00}, the register showed {shownReduction:0.00}.");
+        }
     }
 
     private static async Task AddBundleReasonsAsync(

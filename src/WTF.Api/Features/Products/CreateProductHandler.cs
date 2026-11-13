@@ -33,6 +33,8 @@ public record CreateProductCommand : IRequest<ProductDto>
 
     public bool IsActive { get; init; } = true;
 
+    public bool IsSeniorPwdEligible { get; init; } = true;
+
     public int? SubCategory { get; init; }
 }
 
@@ -56,6 +58,7 @@ public class CreateProductHandler(WTFDbContext db, IHttpContextAccessor httpCont
             SubCategoryId = request.SubCategory,
             IsAddOn = request.IsAddOn,
             IsActive = request.IsActive,
+            IsSeniorPwdEligible = request.IsSeniorPwdEligible,
             CreatedAt = DateTime.UtcNow,
             CreatedBy = userId
         };
@@ -75,7 +78,8 @@ public class CreateProductHandler(WTFDbContext db, IHttpContextAccessor httpCont
                 product.CategoryId,
                 product.SubCategoryId,
                 product.IsAddOn,
-                product.IsActive
+                product.IsActive,
+                product.IsSeniorPwdEligible
             },
             userId: userId,
             cancellationToken: cancellationToken);

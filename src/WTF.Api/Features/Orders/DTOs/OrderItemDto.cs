@@ -11,4 +11,7 @@ public record OrderItemDto(
     Guid? BundlePromotionId = null,
     decimal? OriginalPrice = null,
     string? PromoLabel = null,
-    Guid? DiscountPromotionId = null);
+    Guid? DiscountPromotionId = null,
+    Guid? SeniorPwdPersonId = null,
+    decimal? SeniorPwdVatExempt = null,
+    decimal? SeniorPwdDiscount = null);

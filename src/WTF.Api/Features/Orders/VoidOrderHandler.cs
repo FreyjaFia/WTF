@@ -179,7 +179,10 @@ public class VoidOrderHandler(
                 oi.BundlePromotionId,
                 oi.OriginalPrice,
                 oi.PromoLabel,
-                oi.DiscountPromotionId
+                oi.DiscountPromotionId,
+                oi.SeniorPwdDiscountId,
+                oi.SeniorPwdVatExempt,
+                oi.SeniorPwdDiscount
             ))
             .ToListAsync(cancellationToken);
 
@@ -246,7 +249,10 @@ public class VoidOrderHandler(
             null,
             bundlePromotions,
             order.OverrideReason,
-            order.OverriddenAt
+            order.OverriddenAt,
+            SeniorPwdPersons: SeniorPwdOrders.ToDtos(
+                await db.OrderSeniorPwdDiscounts.AsNoTracking().Where(s => s.OrderId == order.Id).ToListAsync(cancellationToken),
+                true)
         );
     }
 }

@@ -27,6 +27,7 @@ public record CreateOrderCommand : IRequest<OrderDto>
     [Required]
     public List<OrderItemRequestDto> Items { get; init; } = [];
     public List<OrderBundlePromotionRequestDto> BundlePromotions { get; init; } = [];
+    public List<SeniorPwdPersonRequestDto> SeniorPwdPersons { get; init; } = [];
     public string? SpecialInstructions { get; init; }
     public string? Note { get; init; }
 
@@ -157,6 +158,16 @@ public class CreateOrderHandler(
             await AddOnTypeRuleCheck.EnsureAsync(db, item.ProductId, item.AddOns, cancellationToken);
         }
 
+        var seniorPwd = await SeniorPwdOrders.LoadAsync(
+            db,
+            httpContextAccessor,
+            request.SeniorPwdPersons,
+            request.Items,
+            held,
+            request.Source == OrderSourceEnum.CustomerLink,
+            false,
+            cancellationToken);
+
         var createdAt = request.CreatedAt?.ToUniversalTime() ?? DateTime.UtcNow;
 
         var requestedProductIds = request.Items
@@ -229,6 +240,7 @@ public class CreateOrderHandler(
 
         db.Orders.Add(order);
         await db.SaveChangesAsync(cancellationToken);
+        seniorPwd?.CreateRows(order.Id, userId, createdAt);
 
         if (request.BundlePromotions.Count > 0)
         {
@@ -279,6 +291,11 @@ public class CreateOrderHandler(
                 : null;
             discountBudget?.Use(appliedDiscount?.PromotionId, appliedDiscount?.DiscountedQuantity ?? 0);
             var discountedPrice = appliedDiscount?.Price;
+            if (seniorPwd is not null && item.SeniorPwdPersonIndex.HasValue)
+            {
+                seniorPwd.EnsureLineAllowed(product.Name, product.IsSeniorPwdEligible, appliedDiscount is not null, item.BundlePromotionId.HasValue);
+            }
+
             var addOnPrices = new List<(OrderItemRequestDto AddOn, decimal Price)>();
             foreach (var addOn in item.AddOns)
             {
@@ -344,6 +361,14 @@ public class CreateOrderHandler(
                     orderItem.DiscountPromotionId = segment.Discounted ? appliedDiscount?.PromotionId : null;
                 }
 
+                if (seniorPwd is not null && item.SeniorPwdPersonIndex is { } personIndex)
+                {
+                    seniorPwd.Cover(
+                        personIndex,
+                        orderItem,
+                        seniorPwd.AmountsFor(orderItem.Price ?? basePrice, addOnPrices.Sum(addOn => addOn.Price * addOn.AddOn.Quantity), segment.Quantity));
+                }
+
                 db.OrderItems.Add(orderItem);
                 await db.SaveChangesAsync(cancellationToken);
 
@@ -373,6 +398,8 @@ public class CreateOrderHandler(
             }
         }
 
+        seniorPwd?.EnsureEveryPersonCovered();
+        seniorPwd?.Complete(db);
         await db.SaveChangesAsync(cancellationToken);
 
         // Get items with hierarchy
@@ -406,7 +433,10 @@ public class CreateOrderHandler(
                 oi.BundlePromotionId,
                 oi.OriginalPrice,
                 oi.PromoLabel,
-                oi.DiscountPromotionId
+                oi.DiscountPromotionId,
+                oi.SeniorPwdDiscountId,
+                oi.SeniorPwdVatExempt,
+                oi.SeniorPwdDiscount
             ))
             .ToListAsync(cancellationToken);
 
@@ -494,6 +524,11 @@ public class CreateOrderHandler(
             userId: userId,
             cancellationToken: cancellationToken);
 
+        if (seniorPwd is not null)
+        {
+            await SeniorPwdOrders.LogChangesAsync(auditService, order, [], seniorPwd.Rows, userId, cancellationToken);
+        }
+
         if (ownTransaction is not null)
         {
             await ownTransaction.CommitAsync(cancellationToken);
@@ -558,7 +593,8 @@ public class CreateOrderHandler(
             ReviewReasons: order.ReviewReasons,
             QuotedTotal: order.QuotedTotal,
             OfflineLocalId: order.OfflineLocalId,
-            StockWarnings: stock.Warnings
+            StockWarnings: stock.Warnings,
+            SeniorPwdPersons: seniorPwd is null ? null : SeniorPwdOrders.ToDtos(seniorPwd.Rows, false)
         );
     }
 }

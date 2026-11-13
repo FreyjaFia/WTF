@@ -94,6 +94,10 @@ public partial class OrderBundlePromotion : ITenantOwned
 {
 }
 
+public partial class OrderSeniorPwdDiscount : ITenantOwned
+{
+}
+
 public partial class OrderItem : ITenantOwned
 {
 }

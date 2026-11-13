@@ -124,6 +124,14 @@ public class PermissionCatalogTests
     }
 
     [Fact]
+    public void SeniorPwdApply_IsHeldByCashiersAdminsAndOwners_NotByViewers()
+    {
+        SystemRolePermissions.RolesWith("orders.seniorpwd.apply").OrderBy(r => r)
+            .ShouldBe(new[] { AppRoles.Owner, AppRoles.Admin, AppRoles.Cashier }.OrderBy(r => r));
+        PermissionCatalog.All.Single(p => p.Key == "orders.seniorpwd.apply").Requires.ShouldBe(["orders.write"]);
+    }
+
+    [Fact]
     public void SharedFile_MatchesTheCSharpCatalog()
     {
         var shared = Shared.Value;

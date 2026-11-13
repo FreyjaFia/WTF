@@ -24,7 +24,8 @@ internal static class ProductMapping
             imageUrl,
             priceHistory,
             addOnCount,
-            overridePrice
+            overridePrice,
+            product.IsSeniorPwdEligible
         );
     }
 

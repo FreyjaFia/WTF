@@ -37,6 +37,10 @@ public partial class TenantSetting
 
     public int CurrencyDecimals { get; set; }
 
+    public bool SeniorPwdEnabled { get; set; }
+
+    public bool VatRegistered { get; set; }
+
     public DateTime? UpdatedAt { get; set; }
 
     public virtual Tenant Tenant { get; set; } = null!;

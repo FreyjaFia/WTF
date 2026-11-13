@@ -71,6 +71,8 @@ public partial class Order
 
     public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
 
+    public virtual ICollection<OrderSeniorPwdDiscount> OrderSeniorPwdDiscounts { get; set; } = new List<OrderSeniorPwdDiscount>();
+
     public virtual ShortLink? OrderLink { get; set; }
 
     public virtual PaymentMethod? PaymentMethod { get; set; }

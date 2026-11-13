@@ -27,6 +27,7 @@ public class GetOrdersHandler(WTFDbContext db, IHttpContextAccessor? httpContext
                     .ThenInclude(child => child.Product)
             .Include(o => o.OrderBundlePromotions)
                 .ThenInclude(obp => obp.Promotion)
+            .Include(o => o.OrderSeniorPwdDiscounts)
             .AsQueryable();
 
         if (request.CustomerId.HasValue)
@@ -101,7 +102,10 @@ public class GetOrdersHandler(WTFDbContext db, IHttpContextAccessor? httpContext
                         oi.BundlePromotionId,
                         oi.OriginalPrice,
                         oi.PromoLabel,
-                oi.DiscountPromotionId
+                oi.DiscountPromotionId,
+                oi.SeniorPwdDiscountId,
+                oi.SeniorPwdVatExempt,
+                oi.SeniorPwdDiscount
                     );
                 })
                 .ToList();
@@ -146,7 +150,8 @@ public class GetOrdersHandler(WTFDbContext db, IHttpContextAccessor? httpContext
                 o.ReadyAt,
                 o.ReviewReasons,
                 o.QuotedTotal,
-                o.OfflineLocalId
+                o.OfflineLocalId,
+                SeniorPwdPersons: SeniorPwdOrders.ToDtos(o.OrderSeniorPwdDiscounts, true)
             );
         })];
     }

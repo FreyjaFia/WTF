@@ -21,7 +21,19 @@ public class GetPosCatalogHandler(WTFDbContext db, IHttpContextAccessor httpCont
 
         var lookups = await CatalogLookupLoader.LoadAsync(db, cancellationToken);
 
-        return new PosCatalogDto(products, addOnsByProductId, customers, DateTime.UtcNow, lookups);
+        var settings = await db.TenantSettings
+            .AsNoTracking()
+            .Select(s => new { s.SeniorPwdEnabled, s.VatRegistered })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return new PosCatalogDto(
+            products,
+            addOnsByProductId,
+            customers,
+            DateTime.UtcNow,
+            lookups,
+            settings?.SeniorPwdEnabled ?? false,
+            settings?.VatRegistered ?? false);
     }
 
     private async Task<List<CustomerDto>> LoadCustomersAsync(CancellationToken cancellationToken)

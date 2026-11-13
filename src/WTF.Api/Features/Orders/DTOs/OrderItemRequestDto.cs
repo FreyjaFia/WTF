@@ -8,4 +8,5 @@ public record OrderItemRequestDto(
     Guid? BundlePromotionId,
     decimal? QuotedPrice = null,
     decimal? QuotedOriginalPrice = null,
-    string? QuotedPromoLabel = null);
+    string? QuotedPromoLabel = null,
+    int? SeniorPwdPersonIndex = null);

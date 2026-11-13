@@ -79,5 +79,7 @@ public enum AuditAction
     RoleCreated,
     RoleUpdated,
     RoleDeleted,
-    UserRoleChanged
+    UserRoleChanged,
+    SeniorPwdDiscountApplied,
+    SeniorPwdDiscountRemoved
 }

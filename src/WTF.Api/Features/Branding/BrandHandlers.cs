@@ -21,7 +21,9 @@ public record BrandDto(
     string? ReceiptHeader,
     string? ReceiptFooter,
     string? RegistrationText,
-    string PrimaryColor);
+    string PrimaryColor,
+    bool SeniorPwdEnabled = false,
+    bool VatRegistered = false);
 
 // What the public customer page may know: the look and the contact lines, nothing about the shop's setup.
 public record PublicBrandDto(
@@ -41,7 +43,7 @@ public static class BrandDefaults
 
     public static BrandDto ToDto(TenantSetting s) => new(
         s.ShopName, s.ShortName, s.Tagline, s.LogoUrl, s.Address, s.Phone, s.Email, s.ReceiptHeader, s.ReceiptFooter,
-        s.RegistrationText, s.PrimaryColor);
+        s.RegistrationText, s.PrimaryColor, s.SeniorPwdEnabled, s.VatRegistered);
 
     public static BrandDto WithAbsoluteLogo(BrandDto brand, IHttpContextAccessor http) =>
         brand with { LogoUrl = UrlExtensions.ToAbsoluteUrl(http, brand.LogoUrl) };
@@ -112,7 +114,8 @@ public static class BrandDefaults
         return settings;
     }
 
-    public static async Task SaveAsync(WTFDbContext db, Guid tenantId, BrandDto brand, CancellationToken cancellationToken)
+    public static async Task SaveAsync(
+        WTFDbContext db, Guid tenantId, BrandDto brand, CancellationToken cancellationToken, bool saveTaxSettings = false)
     {
         Validate(brand);
 
@@ -128,6 +131,12 @@ public static class BrandDefaults
         settings.ReceiptFooter = Clean(brand.ReceiptFooter);
         settings.RegistrationText = Clean(brand.RegistrationText);
         settings.PrimaryColor = brand.PrimaryColor.ToLowerInvariant();
+        if (saveTaxSettings)
+        {
+            settings.SeniorPwdEnabled = brand.SeniorPwdEnabled;
+            settings.VatRegistered = brand.VatRegistered;
+        }
+
         settings.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync(cancellationToken);
@@ -166,7 +175,7 @@ public class UpdateBrandHandler(WTFDbContext db, ICurrentTenant currentTenant, S
         var tenantId = currentTenant.StampTenantId ?? throw new InvalidOperationException("Sign in to a shop first.");
         var before = await BrandDefaults.LoadAsync(db, tenantId, cancellationToken);
 
-        await BrandDefaults.SaveAsync(db, tenantId, request.Brand, cancellationToken);
+        await BrandDefaults.SaveAsync(db, tenantId, request.Brand, cancellationToken, saveTaxSettings: true);
 
         var after = await BrandDefaults.LoadAsync(db, tenantId, cancellationToken);
         await audit.LogAsync(

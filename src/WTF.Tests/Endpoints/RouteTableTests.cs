@@ -133,6 +133,7 @@ public class RouteTableTests : IDisposable
         "POST /api/orders/sync => OrdersWrite",
         "GET /api/orders/history => OrdersRead",
         "GET /api/orders/paged => OrdersRead",
+        "GET /api/orders/senior-pwd/id-check => OrdersWrite",
         "GET /api/orders/{id:guid} => OrdersRead",
         "PUT /api/orders/{id:guid} => OrdersWrite",
         "PUT /api/orders/{id:guid}/override => OrdersOverride",

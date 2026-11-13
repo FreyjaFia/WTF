@@ -85,6 +85,7 @@ public sealed class GetPagedOrdersHandler(WTFDbContext db, IHttpContextAccessor?
                     .ThenInclude(child => child.Product)
             .Include(o => o.OrderBundlePromotions)
                 .ThenInclude(obp => obp.Promotion)
+            .Include(o => o.OrderSeniorPwdDiscounts)
             .ToListAsync(cancellationToken);
 
         var overridePrices = await AddOnPriceLookup.ForParentItemsAsync(
@@ -132,7 +133,10 @@ public sealed class GetPagedOrdersHandler(WTFDbContext db, IHttpContextAccessor?
                         oi.BundlePromotionId,
                         oi.OriginalPrice,
                         oi.PromoLabel,
-                oi.DiscountPromotionId);
+                oi.DiscountPromotionId,
+                oi.SeniorPwdDiscountId,
+                oi.SeniorPwdVatExempt,
+                oi.SeniorPwdDiscount);
                 })
                 .ToList();
 
@@ -176,7 +180,8 @@ public sealed class GetPagedOrdersHandler(WTFDbContext db, IHttpContextAccessor?
                 o.ReadyAt,
                 o.ReviewReasons,
                 o.QuotedTotal,
-                o.OfflineLocalId);
+                o.OfflineLocalId,
+                SeniorPwdPersons: SeniorPwdOrders.ToDtos(o.OrderSeniorPwdDiscounts, true));
         }).ToList();
 
         return new PagedResultDto<OrderDto>(items, page, pageSize, totalCount);

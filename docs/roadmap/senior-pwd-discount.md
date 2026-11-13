@@ -1,5 +1,8 @@
 ## POS Checkout Discounts: Senior Citizen / PWD [Planned, confirm the rules first]
 
+**Status (13 Nov 2026, branch senior-pwd-discount):** Phase 1 (calculation) and Phase 2 (data and API) are built; Phase 3 (POS UI) is in progress. Not built yet: receipt block (4), reports and Z-report columns (5), offline queue shape and Phase 7 judging (6, beyond the review holds below), hardening (7).
+Built in Phase 2: script `tools/sql/20261121_add_senior_pwd_discount.sql` (run on .\SQLEXPRESS, then `tools\dbsync.bat`); permission `orders.seniorpwd.apply`; shop switches `SeniorPwdEnabled` and `VatRegistered` (brand settings, `brand.manage`, also in the POS catalog sync); product flag `IsSeniorPwdEligible`; create/update/void recompute and refusal rules; audit actions; `GET /api/orders/senior-pwd/id-check`; offline sync holds a queued sale whose person lacks an ID or name, or whose discount differs from the current settings. Settings still fixed in code: rate 20%, VAT 12%; no per-person limit, TIN or business address yet. Online-order "I checked the ID" is enforced on update only (`idChecked`).
+
 Moved here from the promotion ideas. A senior citizen / person-with-disability discount is **not a promotion**: it is set by
 law, it belongs to a person (not to a product or a date), the cashier applies it at the register after checking an ID, and the
 shop must keep records of it. So it is a checkout discount type with its own rules, ID capture, receipt wording and report.

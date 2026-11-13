@@ -31,6 +31,7 @@ public record UpdateOrderCommand : IRequest<OrderDto?>
     [Required]
     public List<OrderItemRequestDto> Items { get; init; } = [];
     public List<OrderBundlePromotionRequestDto> BundlePromotions { get; init; } = [];
+    public List<SeniorPwdPersonRequestDto> SeniorPwdPersons { get; init; } = [];
     public string? SpecialInstructions { get; init; }
     public string? Note { get; init; }
 
@@ -76,6 +77,7 @@ public class UpdateOrderHandler(
             .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.Product)
             .Include(o => o.OrderBundlePromotions)
+            .Include(o => o.OrderSeniorPwdDiscounts)
             .FirstOrDefaultAsync(o => o.Id == request.Id, cancellationToken);
 
         if (order is null)
@@ -195,6 +197,16 @@ public class UpdateOrderHandler(
                 $"Order is already {oldStatus} and cannot be updated.");
         }
 
+        var seniorPwd = await SeniorPwdOrders.LoadAsync(
+            db,
+            httpContextAccessor,
+            request.SeniorPwdPersons,
+            request.Items,
+            false,
+            order.Source == (byte)OrderSourceEnum.CustomerLink,
+            isOverride && order.OrderSeniorPwdDiscounts.Count > 0,
+            cancellationToken);
+
         var shouldCapturePrice = newStatus == OrderStatusEnum.Completed || newStatus == OrderStatusEnum.Cancelled;
         // An order that stays pending saves no price yet, but it holds the use of a limited discount while it waits.
         var reservesDiscount = !isOverride && newStatus == OrderStatusEnum.Pending;
@@ -238,6 +250,12 @@ public class UpdateOrderHandler(
                 : null;
             discountBudget?.Use(appliedDiscount?.PromotionId, appliedDiscount?.DiscountedQuantity ?? 0);
             var discountedPrice = appliedDiscount?.Price;
+            if (seniorPwd is not null && item.SeniorPwdPersonIndex.HasValue)
+            {
+                // A correction keeps the price paid, so a promotion is judged on the saved line further down.
+                seniorPwd.EnsureLineAllowed(product.Name, product.IsSeniorPwdEligible, !isOverride && appliedDiscount is not null, item.BundlePromotionId.HasValue);
+            }
+
             var addOnPrices = new List<(OrderItemRequestDto AddOn, decimal Price)>();
             foreach (var addOn in item.AddOns)
             {
@@ -272,6 +290,16 @@ public class UpdateOrderHandler(
                         + (p.Product.Price + addOns) * (p.Item.Quantity - discounted);
                 })
                 + request.BundlePromotions.Sum(b => bundlePriceByPromotionId[b.PromotionId] * b.Quantity);
+            if (seniorPwd is not null)
+            {
+                serverTotal -= pricedItems
+                    .Where(p => p.Item.SeniorPwdPersonIndex.HasValue)
+                    .Sum(p => seniorPwd.AmountsFor(
+                        p.Product.Price,
+                        p.AddOnPrices.Sum(a => a.Price * a.AddOn.Quantity),
+                        p.Item.Quantity).Reduction);
+            }
+
             OrderTotalCheck.EnsureUnchanged(request.ExpectedTotal, serverTotal);
         }
 
@@ -331,8 +359,11 @@ public class UpdateOrderHandler(
             : null;
 
         // Update items: remove old, add new
+        var seniorPwdBefore = order.OrderSeniorPwdDiscounts.ToList();
         db.OrderItems.RemoveRange(order.OrderItems);
         db.OrderBundlePromotions.RemoveRange(order.OrderBundlePromotions);
+        db.OrderSeniorPwdDiscounts.RemoveRange(seniorPwdBefore);
+        seniorPwd?.CreateRows(order.Id, httpContextAccessor.HttpContext!.User.GetUserId(), order.CreatedAt);
 
         if (request.BundlePromotions.Count > 0)
         {
@@ -426,8 +457,28 @@ public class UpdateOrderHandler(
 
                     db.OrderItems.Add(addOnItem);
                 }
+
+                if (seniorPwd is not null && item.SeniorPwdPersonIndex is { } personIndex)
+                {
+                    if (isOverride && newItem.DiscountPromotionId.HasValue)
+                    {
+                        seniorPwd.EnsureLineAllowed(product.Name, true, true, false);
+                    }
+
+                    var addOnsPerUnit = addOnPrices.Sum(addOn => addOn.AddOn.Quantity
+                        * (isOverride && addOnPriceSnapshots.TryGetValue((item.ProductId, addOn.AddOn.ProductId), out var paid)
+                            ? paid
+                            : addOn.Price));
+                    seniorPwd.Cover(
+                        personIndex,
+                        newItem,
+                        seniorPwd.AmountsFor(newItem.Price ?? product.Price, addOnsPerUnit, segment.Quantity));
+                }
             }
         }
+
+        seniorPwd?.EnsureEveryPersonCovered();
+        seniorPwd?.Complete(db);
 
         var statusLine = newStatus != oldStatus ? OrderChatLines.For(newStatus) : null;
         var chat = statusLine == null
@@ -485,7 +536,10 @@ public class UpdateOrderHandler(
                 oi.BundlePromotionId,
                 oi.OriginalPrice,
                 oi.PromoLabel,
-                oi.DiscountPromotionId
+                oi.DiscountPromotionId,
+                oi.SeniorPwdDiscountId,
+                oi.SeniorPwdVatExempt,
+                oi.SeniorPwdDiscount
             ))
             .ToListAsync(cancellationToken);
 
@@ -539,6 +593,14 @@ public class UpdateOrderHandler(
                 cancellationToken,
                 isOverride);
         }
+
+        await SeniorPwdOrders.LogChangesAsync(
+            auditService,
+            order,
+            seniorPwdBefore,
+            seniorPwd?.Rows ?? [],
+            httpContextAccessor.HttpContext?.User.GetUserId() ?? order.CreatedBy,
+            cancellationToken);
 
         if (isOverride)
         {
@@ -601,7 +663,8 @@ public class UpdateOrderHandler(
             bundlePromotions,
             order.OverrideReason,
             order.OverriddenAt,
-            StockWarnings: stock.Warnings
+            StockWarnings: stock.Warnings,
+            SeniorPwdPersons: seniorPwd is null ? null : SeniorPwdOrders.ToDtos(seniorPwd.Rows, false)
         );
     }
 

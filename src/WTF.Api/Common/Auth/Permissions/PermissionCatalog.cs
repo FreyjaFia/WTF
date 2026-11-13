@@ -7,6 +7,7 @@ public static class PermissionCatalog
         new("orders.read", "Orders", "View orders", "See the order list, order details and order chat.", "core", []),
         new("orders.write", "Orders", "Take and change orders", "Create, edit, pay and cancel orders; also loads products and customers for the order editor.", "core", ["orders.read"]),
         new("orders.override", "Orders", "Override completed orders", "Change an order that is already completed.", "core", ["orders.write"]),
+        new("orders.seniorpwd.apply", "Orders", "Apply Senior/PWD discount", "Give the Senior citizen or PWD discount on an order after checking the ID.", "core", ["orders.write"]),
         new("orderlinks.manage", "Orders", "Manage order links", "Create and cancel customer ordering links.", "orderlinks", []),
         new("customers.read", "Customers", "View customers", "Open the Customers screen and see customer details.", "core", []),
         new("customers.write", "Customers", "Add and edit customers", "Register and change customers (cashiers can register one from the order screen without the Customers screen).", "core", []),

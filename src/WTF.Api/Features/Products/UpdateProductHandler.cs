@@ -37,6 +37,8 @@ public record UpdateProductCommand : IRequest<ProductDto?>
 
     public bool IsActive { get; init; }
 
+    public bool IsSeniorPwdEligible { get; init; } = true;
+
     public int? SubCategory { get; init; }
 }
 
@@ -66,7 +68,8 @@ public class UpdateProductHandler(WTFDbContext db, IHttpContextAccessor httpCont
             product.CategoryId,
             product.SubCategoryId,
             product.IsAddOn,
-            product.IsActive
+            product.IsActive,
+            product.IsSeniorPwdEligible
         };
 
         if (product.Code != normalizedCode)
@@ -123,6 +126,7 @@ public class UpdateProductHandler(WTFDbContext db, IHttpContextAccessor httpCont
         product.SubCategoryId = request.SubCategory;
         product.IsAddOn = request.IsAddOn;
         product.IsActive = request.IsActive;
+        product.IsSeniorPwdEligible = request.IsSeniorPwdEligible;
         product.UpdatedAt = DateTime.UtcNow;
         product.UpdatedBy = userId;
 
@@ -142,7 +146,8 @@ public class UpdateProductHandler(WTFDbContext db, IHttpContextAccessor httpCont
                 product.CategoryId,
                 product.SubCategoryId,
                 product.IsAddOn,
-                product.IsActive
+                product.IsActive,
+                product.IsSeniorPwdEligible
             },
             userId: userId,
             cancellationToken: cancellationToken);

@@ -41,6 +41,8 @@ public partial class OrderItem
 
     public virtual Promotion? DiscountPromotion { get; set; }
 
+    public virtual OrderSeniorPwdDiscount? SeniorPwdDiscountNavigation { get; set; }
+
     public virtual ICollection<OrderItem> InverseParentOrderItem { get; set; } = new List<OrderItem>();
 
     public virtual Order Order { get; set; } = null!;

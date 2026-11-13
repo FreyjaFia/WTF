@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using WTF.Domain.Entities;
 
 namespace WTF.Domain.Data;
@@ -67,6 +65,8 @@ public partial class WTFDbContext : DbContext
     public virtual DbSet<OrderBundlePromotion> OrderBundlePromotions { get; set; }
 
     public virtual DbSet<OrderItem> OrderItems { get; set; }
+
+    public virtual DbSet<OrderSeniorPwdDiscount> OrderSeniorPwdDiscounts { get; set; }
 
     public virtual DbSet<PaymentMethod> PaymentMethods { get; set; }
 
@@ -899,6 +899,39 @@ public partial class WTFDbContext : DbContext
                 .HasConstraintName("FK_OrderBundlePromotions_Tenants");
         });
 
+        modelBuilder.Entity<OrderSeniorPwdDiscount>(entity =>
+        {
+            entity.HasIndex(e => e.OrderId, "IX_OrderSeniorPwdDiscounts_OrderId");
+
+            entity.HasIndex(e => new { e.TenantId, e.IdNumber, e.CreatedAt }, "IX_OrderSeniorPwdDiscounts_TenantId_IdNumber_CreatedAt");
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_OrderSeniorPwdDiscounts_Id");
+            entity.Property(e => e.CoveredAmount).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("(getutcdate())", "DF_OrderSeniorPwdDiscounts_CreatedAt")
+                .HasColumnType("datetime2(7)");
+            entity.Property(e => e.CustomerName).HasMaxLength(100);
+            entity.Property(e => e.DiscountAmount).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.IdNumber).HasMaxLength(50);
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_OrderSeniorPwdDiscounts_TenantId");
+            entity.Property(e => e.VatExemptAmount).HasColumnType("decimal(10, 2)");
+
+            entity.HasOne(d => d.Order).WithMany(p => p.OrderSeniorPwdDiscounts)
+                .HasForeignKey(d => d.OrderId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_OrderSeniorPwdDiscounts_Order");
+
+            entity.HasOne(d => d.RecordedByNavigation).WithMany(p => p.OrderSeniorPwdDiscounts)
+                .HasForeignKey(d => d.RecordedBy)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_OrderSeniorPwdDiscounts_RecordedBy");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.OrderSeniorPwdDiscounts)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_OrderSeniorPwdDiscounts_Tenants");
+        });
+
         modelBuilder.Entity<OrderItem>(entity =>
         {
             entity.HasIndex(e => e.BundlePromotionId, "IX_OrderItems_BundlePromotionId");
@@ -911,6 +944,8 @@ public partial class WTFDbContext : DbContext
 
             entity.HasIndex(e => e.ParentOrderItemId, "IX_OrderItems_ParentOrderItemId");
 
+            entity.HasIndex(e => e.SeniorPwdDiscountId, "IX_OrderItems_SeniorPwdDiscountId").HasFilter("([SeniorPwdDiscountId] IS NOT NULL)");
+
             entity.HasIndex(e => e.ProductId, "IX_OrderItems_ProductId");
 
             entity.HasIndex(e => e.TenantId, "IX_OrderItems_TenantId");
@@ -920,6 +955,8 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.Price).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.PromoLabel).HasMaxLength(100);
             entity.Property(e => e.Quantity).HasDefaultValue(1);
+            entity.Property(e => e.SeniorPwdDiscount).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.SeniorPwdVatExempt).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.SpecialInstructions)
                 .HasMaxLength(100)
                 .IsUnicode(false);
@@ -940,6 +977,10 @@ public partial class WTFDbContext : DbContext
             entity.HasOne(d => d.ParentOrderItem).WithMany(p => p.InverseParentOrderItem)
                 .HasForeignKey(d => d.ParentOrderItemId)
                 .HasConstraintName("FK_OrderItems_ParentOrderItem");
+
+            entity.HasOne(d => d.SeniorPwdDiscountNavigation).WithMany(p => p.OrderItems)
+                .HasForeignKey(d => d.SeniorPwdDiscountId)
+                .HasConstraintName("FK_OrderItems_SeniorPwdDiscount");
 
             entity.HasOne(d => d.Product).WithMany(p => p.OrderItems)
                 .HasForeignKey(d => d.ProductId)
@@ -1031,6 +1072,8 @@ public partial class WTFDbContext : DbContext
                 .HasColumnType("datetime");
             entity.Property(e => e.Description).HasMaxLength(500);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.IsSeniorPwdEligible)
+                .HasDefaultValue(true, "DF_Products_IsSeniorPwdEligible");
             entity.Property(e => e.Name)
                 .HasMaxLength(100)
                 .IsUnicode(false);
@@ -1867,6 +1910,8 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.ReceiptFooter).HasMaxLength(300);
             entity.Property(e => e.ReceiptHeader).HasMaxLength(300);
             entity.Property(e => e.RegistrationText).HasMaxLength(150);
+            entity.Property(e => e.SeniorPwdEnabled).HasDefaultValue(false, "DF_TenantSettings_SeniorPwdEnabled");
+            entity.Property(e => e.VatRegistered).HasDefaultValue(false, "DF_TenantSettings_VatRegistered");
             entity.Property(e => e.ShopName).HasMaxLength(100);
             entity.Property(e => e.ShortName).HasMaxLength(30);
             entity.Property(e => e.Tagline).HasMaxLength(150);

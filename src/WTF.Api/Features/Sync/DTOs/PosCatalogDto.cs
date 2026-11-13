@@ -9,5 +9,7 @@ public record PosCatalogDto(
     Dictionary<Guid, List<AddOnGroupDto>> AddOnsByProductId,
     List<CustomerDto> Customers,
     DateTime SyncedAt,
-    CatalogLookupsDto? Lookups = null
+    CatalogLookupsDto? Lookups = null,
+    bool SeniorPwdEnabled = false,
+    bool VatRegistered = false
 );

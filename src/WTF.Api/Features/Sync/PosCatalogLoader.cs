@@ -43,7 +43,8 @@ internal static class PosCatalogLoader
                 p.SubCategoryId,
                 p.IsAddOn, p.IsActive, p.CreatedAt, p.CreatedBy, p.UpdatedAt, p.UpdatedBy,
                 imageUrl, [],
-                AddOnCount: addOnCounts.GetValueOrDefault(p.Id));
+                AddOnCount: addOnCounts.GetValueOrDefault(p.Id),
+                IsSeniorPwdEligible: p.IsSeniorPwdEligible);
         })];
     }
 
@@ -102,7 +103,8 @@ internal static class PosCatalogLoader
                                 item.AddOn.IsAddOn, item.AddOn.IsActive,
                                 item.AddOn.CreatedAt, item.AddOn.CreatedBy, item.AddOn.UpdatedAt, item.AddOn.UpdatedBy,
                                 imageUrl, [],
-                                OverridePrice: item.OverridePrice);
+                                OverridePrice: item.OverridePrice,
+                                IsSeniorPwdEligible: item.AddOn.IsSeniorPwdEligible);
                         })],
                         typeGroup.Key.TypeRequired, typeGroup.Key.TypeMin, typeGroup.Key.TypeMax,
                         typeGroup.Where(item => item.IsDefault).Select(item => (Guid?)item.AddOn.Id).FirstOrDefault()

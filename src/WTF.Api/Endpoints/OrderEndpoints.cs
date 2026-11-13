@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Auth;
+using WTF.Api.Common.Auth.Permissions;
 using WTF.Api.Features.Inventory;
 using WTF.Api.Features.Orders;
 using WTF.Api.Features.Orders.Enums;
@@ -57,6 +58,19 @@ public static class OrderEndpoints
                 return Results.Ok(result);
             })
             .RequireAuthorization(AppPolicies.OrdersRead);
+
+        // GET /api/orders/senior-pwd/id-check - Has this ID already been given the Senior/PWD discount today? (soft warning)
+        orderGroup.MapGet("/senior-pwd/id-check",
+            async (string idNumber, ISender sender, HttpContext http) =>
+            {
+                if (!PermissionChecks.Has(http.User, SeniorPwdOrders.ApplyPermission))
+                {
+                    return Results.Forbid();
+                }
+
+                return Results.Ok(await sender.Send(new SeniorPwdIdCheckQuery(idNumber)));
+            })
+            .RequireAuthorization(AppPolicies.OrdersWrite);
 
         // GET /api/orders/{id} - Get order by ID
         orderGroup.MapGet("/{id:guid}",

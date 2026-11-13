@@ -17,6 +17,8 @@ public partial class Product
 
     public bool IsActive { get; set; }
 
+    public bool IsSeniorPwdEligible { get; set; }
+
     public DateTime CreatedAt { get; set; }
 
     public Guid CreatedBy { get; set; }
