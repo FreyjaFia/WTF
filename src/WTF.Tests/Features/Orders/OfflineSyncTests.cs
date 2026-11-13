@@ -125,6 +125,25 @@ public class OfflineSyncTests
     }
 
     [Fact]
+    public async Task Sync_AQuotedPromotionId_IsSavedOnTheLineEvenWhenThePromotionLaterEnded()
+    {
+        var croissant = await SeedProduct("Croissant", 100m);
+        var promo = await SeedLimitedDiscount(croissant, 5);
+        await using (var edit = TestDb.Create(_dbName))
+        {
+            var saved = await edit.Promotions.SingleAsync(p => p.Id == promo);
+            saved.IsActive = false;
+            await edit.SaveChangesAsync();
+        }
+
+        var result = await SyncOne(Order("OFF-25-aaaa", OrderStatusEnum.Completed, Line(croissant, 1, 50m) with { QuotedOriginalPrice = 100m, DiscountPromotionId = promo }));
+
+        result.Status.ShouldBe(OrderStatusEnum.PendingReview);
+        (await LoadOrder(result.OrderId!.Value)).OrderItems.Single().DiscountPromotionId.ShouldBe(promo);
+        (await DiscountUses(promo)).ShouldBe(1);
+    }
+
+    [Fact]
     public async Task Sync_ASaleSplitByALimitPerOrder_IsSavedAsQuotedAndUsesOnlyTheDiscountedItems()
     {
         var croissant = await SeedProduct("Croissant", 100m);
@@ -147,11 +166,11 @@ public class OfflineSyncTests
 
         result.Status.ShouldBe(OrderStatusEnum.PendingReview);
         result.Reasons.ShouldBe(["Croissant: the promotion now covers only 2 of 3."]);
-        (await DiscountUses(promo)).ShouldBe(0);
+        (await DiscountUses(promo)).ShouldBe(3, "a held order holds the uses it was sold with");
     }
 
     [Fact]
-    public async Task Sync_ADiscountedSaleAfterThePromotionRanOut_IsHeldAtTheQuotedPriceAndTakesNoUse()
+    public async Task Sync_ADiscountedSaleAfterThePromotionRanOut_IsHonoredAtTheQuotedPriceAndCountedOverTheLimit()
     {
         var croissant = await SeedProduct("Croissant", 100m);
         var promo = await SeedLimitedDiscount(croissant, 1);
@@ -159,11 +178,12 @@ public class OfflineSyncTests
 
         var late = await SyncOne(Order("OFF-12-aaaa", OrderStatusEnum.Completed, Line(croissant, 1, 50m)));
 
-        late.Status.ShouldBe(OrderStatusEnum.PendingReview);
-        late.Reasons.ShouldBe(["Croissant now costs 100.00, quoted 50.00."]);
+        late.Status.ShouldBe(OrderStatusEnum.Completed);
+        late.ReasonDetails!.Single().Code.ShouldBe(OfflineReasonCodes.PromotionOverLimit);
+        late.ReasonDetails!.Single().Severity.ShouldBe("Note");
         var saved = await LoadOrder(late.OrderId!.Value);
         saved.OrderItems.Single().Price.ShouldBe(50m, "the customer paid the quoted price");
-        (await DiscountUses(promo)).ShouldBe(1, "a held order does not take a use the promotion no longer has");
+        (await DiscountUses(promo)).ShouldBe(2, "the sale was charged, so it takes its use even over the limit");
     }
 
     [Fact]
@@ -181,8 +201,9 @@ public class OfflineSyncTests
             CancellationToken.None);
 
         results[0].Status.ShouldBe(OrderStatusEnum.Completed);
-        results[1].Status.ShouldBe(OrderStatusEnum.PendingReview);
-        (await DiscountUses(promo)).ShouldBe(1);
+        results[1].Status.ShouldBe(OrderStatusEnum.Completed);
+        results[1].ReasonDetails!.Single().Code.ShouldBe(OfflineReasonCodes.PromotionOverLimit);
+        (await DiscountUses(promo)).ShouldBe(2);
     }
 
     [Fact]
@@ -211,7 +232,8 @@ public class OfflineSyncTests
         saved.OrderItems.Single().DiscountPromotionId.ShouldBe(promo);
 
         var after = await SyncOne(Order("OFF-17-aaaa", OrderStatusEnum.Completed, Line(croissant, 1, 50m)));
-        after.Status.ShouldBe(OrderStatusEnum.PendingReview);
+        after.Status.ShouldBe(OrderStatusEnum.Completed);
+        after.ReasonDetails!.Single().Severity.ShouldBe("Note");
     }
 
     [Fact]
