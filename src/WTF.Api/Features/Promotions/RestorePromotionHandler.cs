@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using WTF.Api.Common.Catalog;
 using WTF.Api.Common.Extensions;
 using WTF.Domain.Data;
 
@@ -20,9 +21,12 @@ public sealed class RestorePromotionHandler(WTFDbContext db, IHttpContextAccesso
             return false;
         }
 
+        var before = CatalogChangeRecorder.SnapshotPromotion(promo);
         promo.IsActive = true;
         promo.UpdatedAt = DateTime.UtcNow;
         promo.UpdatedBy = httpContextAccessor.HttpContext!.User.GetUserId();
+
+        CatalogChangeRecorder.RecordPromotion(db, promo, before, promo.UpdatedBy);
 
         await db.SaveChangesAsync(cancellationToken);
         return true;
