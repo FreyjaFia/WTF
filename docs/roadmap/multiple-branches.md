@@ -54,6 +54,7 @@ What a branch makes and counts on its own (orders, stock, kitchen, day close) is
 | Thing | Shared by the shop or per branch | Notes |
 | ----- | -------------------------------- | ----- |
 | Products, categories, add-ons, temperature, recipes | Shared | One catalog. A "not sold at this branch" switch is a later option (see decisions) |
+| Which branches sell a product ("Sold at") | Per product | Default: every branch. A product can be limited to chosen branches, so a branch-only product is just "sold at one branch". See "Products and branches" |
 | Prices and promotions | Shared | Same price everywhere in the first cut. Per-branch prices are a later option and change the offline catalog, so they are not built first |
 | Customers and their saved address | Shared | A regular can order at any branch. The address on an order is a copy kept on that order (customer-address plan) |
 | Users and roles | Shared accounts, **scope: All or selected branches** | Role says what, scope says where. See "Roles, scope and oversight" |
@@ -110,6 +111,46 @@ each branch's day starts at a clean range. The screen and receipt show `Code-Num
 branches never collide in conversation or in the shop's totals. The stored unique key is the pair (branch, number). In
 one-branch mode the number shows as today, with no prefix. Alternative: one shop-wide counter plus a prefix; simpler but
 numbers climb for everyone and a quiet branch sees jumps. Changing later is a counter change only.
+
+### Products and branches
+
+Pogi's question: should a branch be able to have its own products? Recommendation: **yes, but as a "Sold at" list on a
+shared catalog, not as separate catalogs.**
+
+| Option | What it means | Verdict |
+| ------ | ------------- | ------- |
+| Fully shared | Every branch sells every product | Too stiff: a kiosk without a grill cannot hide the sandwiches |
+| **Shared catalog + "Sold at" (recommended)** | Each product has a list of branches that sell it. Default is all. A branch-only product is a product sold at one branch | One product list to maintain, reports compare the same product across branches, and a branch special is easy |
+| Separate catalog per branch | Every branch copies and edits its own products | Duplicates everywhere, reports cannot compare, a price change is N edits, recipes and stock links multiply. Not recommended |
+
+How it works:
+
+- `ProductBranches` (`ProductId`, `BranchId`, `IsAvailable`, later a nullable `PriceOverride`). No row means "sold at every
+  branch", so nothing changes for one-branch shops and a new branch gets the full menu automatically (the owner can then
+  untick what it does not sell). A product can also be marked **new products start as: all branches / only the branch that
+  created it** (default: only that branch for a Branch Manager, all for the Owner).
+- The POS, the customer link and the offline catalog list only the products sold at the active branch. A branch sees the
+  menu it can sell, which also keeps the offline download small.
+- **Who may create or edit:** `products.write` stays shop-wide (shared products, prices, categories). A Branch Manager
+  may **create and edit branch-only products for their own branch** through a small new key, `products.write.branch`
+  (shop-wide products stay read-only to them). A branch-only product can be promoted to all branches by the Owner or
+  Area Manager. This keeps the Branch Manager useful (a local special) without letting them change what every branch sells.
+- Names stay unique in the shop, so two branches cannot each make "Matcha Latte" as different products by accident; the
+  editor suggests using the existing one and ticking the branch.
+- **Categories, add-ons and temperature** stay shared (they are labels and options); an empty category simply does not show
+  at a branch that sells nothing in it.
+- **Recipes and stock:** recipes are shared with the product; deduction uses the order's branch stock. A branch-only product
+  can use branch-only items, which are just items with no stock row elsewhere.
+- **Promotions** can be limited to branches the same way (default all). Limits stay a shop-wide pool.
+- **Reports:** product reports across branches still work (a product sold at one branch shows only there).
+- **Offline Phase 7:** a product no longer sold at the branch counts like an inactive product at sync (the sale was
+  honored, a note is added). When `PriceOverride` arrives, `CatalogChangeLog` gets a nullable `BranchId`.
+- **Plan gating:** branch-only products and "Sold at" are part of the `branches` feature. A shop without it sells every
+  product everywhere, as today.
+- **Switching off:** closing a branch keeps its branch-only products (hidden, not deleted); on reopening they return. If
+  the owner wants one in another branch, they tick it there.
+- **Later, not first cut:** per-branch price (`PriceOverride`; changes the offline catalog and the order total check, so it
+  needs its own plan), scheduled availability (a seasonal item), stock-driven "sold out here".
 
 ### Settings: shop level or branch level
 
@@ -514,8 +555,9 @@ Each phase can ship by itself, and phases 1 and 2 change nothing the pilot can s
    kitchen, clean start per branch).
 2. **VAT, TIN and address per branch or per shop?** Recommended: per branch with shop default (each branch registers with the
    BIR); accountant to confirm.
-3. **Same price at every branch?** Recommended: yes for the first cut. Per-branch price and "not sold here" are later
-   options; they change the offline catalog and Phase 7's change log.
+3. **Products per branch (Pogi, 13 Nov 2026, asked for a suggestion).** Recommended: one catalog with a "Sold at" list on
+   each product (default all branches; branch-only products are one branch in the list). Same price everywhere in the first
+   cut; per-branch price is a later option. See "Products and branches".
 4. **Customers shared across branches or per branch?** Recommended: shared (regulars visit more than one branch).
 5. **Plan layout for branches:** Recommended: `branches` in Business only, `MaxBranches` 3, extra branch fee later.
 6. **Downgrade over the cap:** Recommended: keep all working, block adding (as for users). Alternative: newest read-only.
