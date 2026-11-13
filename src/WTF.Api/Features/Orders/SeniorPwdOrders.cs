@@ -39,7 +39,8 @@ internal sealed class SeniorPwdOrders
         bool held,
         bool isCustomerLinkOrder,
         bool switchMayBeOff,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool? vatRegisteredOverride = null)
     {
         persons ??= [];
         var hasIndexes = items.Any(i => i.SeniorPwdPersonIndex.HasValue);
@@ -78,7 +79,7 @@ internal sealed class SeniorPwdOrders
             SeniorPwdValidator.Validate(cleaned, isCustomerLinkOrder);
         }
 
-        return new SeniorPwdOrders(cleaned, settings.VatRegistered, held);
+        return new SeniorPwdOrders(cleaned, vatRegisteredOverride ?? settings.VatRegistered, held);
     }
 
     public SeniorPwdAmounts AmountsFor(decimal unitPrice, decimal addOnsPerUnit, int quantity) =>
