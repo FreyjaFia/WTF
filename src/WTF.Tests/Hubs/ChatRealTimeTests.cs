@@ -68,6 +68,9 @@ public sealed class ChatRealTimeTests : IAsyncLifetime
     }
 
     /// <summary>Everybody who asks with a staff token is a cashier; anyone else is anonymous.</summary>
+    // One fixed identity: SignalR refuses a connection whose user differs from the user who negotiated it.
+    private static readonly string StaffUserId = Guid.NewGuid().ToString();
+
     private sealed class TestAuthHandler(
         IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder)
         : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
@@ -80,7 +83,7 @@ public sealed class ChatRealTimeTests : IAsyncLifetime
             }
 
             var identity = new ClaimsIdentity(
-                [new Claim(ClaimTypes.NameIdentifier, Guid.NewGuid().ToString()), new Claim(ClaimTypes.Role, AppRoles.Cashier)],
+                [new Claim(ClaimTypes.NameIdentifier, StaffUserId), new Claim(ClaimTypes.Role, AppRoles.Cashier)],
                 "Test");
             return Task.FromResult(AuthenticateResult.Success(
                 new AuthenticationTicket(new ClaimsPrincipal(identity), "Test")));
