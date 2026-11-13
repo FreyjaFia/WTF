@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import {
+  AuthService,
   ConversationInboxService,
   ConversationService,
   ModalStackService,
@@ -81,6 +82,7 @@ describe('OrderChatDrawerComponent', () => {
     signalR = { orderMessage: message$, startStaffOrdersHub: vi.fn(), stopStaffOrdersHub: vi.fn() };
     TestBed.configureTestingModule({
       providers: [
+        { provide: AuthService, useValue: { canWriteChat: () => true } },
         { provide: ConversationService, useValue: api },
         { provide: ConversationInboxService, useValue: inbox },
         { provide: SignalRService, useValue: signalR },

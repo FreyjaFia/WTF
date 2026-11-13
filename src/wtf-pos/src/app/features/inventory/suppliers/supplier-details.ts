@@ -99,7 +99,7 @@ export class SupplierDetailsComponent implements OnInit {
       },
     });
 
-    if (this.auth.canWriteStockMovements()) {
+    if (this.auth.canWriteSuppliers()) {
       this.inventory.getInventoryItems({ isActive: true }).subscribe({
         next: (items) => this.allItems.set(items),
         error: (err: Error) => this.alertService.error(err.message),
@@ -253,7 +253,7 @@ export class SupplierDetailsComponent implements OnInit {
       paymentTerms: s.paymentTerms ?? '',
       notes: s.notes ?? '',
     });
-    if (!this.auth.canWriteStockMovements()) {
+    if (!this.auth.canWriteSuppliers()) {
       this.form.disable();
     }
   }

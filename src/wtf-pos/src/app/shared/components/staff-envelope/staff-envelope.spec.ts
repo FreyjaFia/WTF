@@ -52,7 +52,7 @@ describe('StaffEnvelopeComponent', () => {
     navigate = vi.fn().mockResolvedValue(true);
     TestBed.configureTestingModule({
       providers: [
-        { provide: AuthService, useValue: { canReadOrders: () => canRead } },
+        { provide: AuthService, useValue: { canReadChat: () => canRead, canWriteChat: () => true } },
         { provide: ConversationInboxService, useValue: inbox },
         { provide: Router, useValue: { navigate } },
       ],

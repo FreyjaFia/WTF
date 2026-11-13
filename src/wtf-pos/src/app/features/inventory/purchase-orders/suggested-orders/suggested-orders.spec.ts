@@ -59,7 +59,7 @@ describe('SuggestedOrdersComponent', () => {
         { provide: PurchaseOrderService, useValue: orders },
         { provide: Router, useValue: router },
         { provide: AlertService, useValue: { error: vi.fn(), success: vi.fn() } },
-        { provide: AuthService, useValue: { canWriteStockMovements: () => true, canReadInventoryCosts: () => options.canSeeCosts ?? true } },
+        { provide: AuthService, useValue: { canWritePurchasing: () => true, canReadInventoryCosts: () => options.canSeeCosts ?? true } },
       ],
     });
     const fixture = TestBed.createComponent(SuggestedOrdersComponent);

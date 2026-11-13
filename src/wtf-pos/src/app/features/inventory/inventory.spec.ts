@@ -34,6 +34,7 @@ describe('InventoryComponent', () => {
           provide: AuthService,
           useValue: {
             canReadStockMovements: () => perms.stock,
+            canReadPurchasing: () => perms.stock,
             canReviewStockWaste: () => perms.review,
             canReadItems: () => true,
           },

@@ -5,7 +5,7 @@
         <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Receiving</h1>
         <p class="text-xs text-gray-500 sm:text-sm">Record deliveries from suppliers; each one adds stock</p>
       </div>
-      @if (auth.canWriteStockMovements() && !isFormOpen()) {
+      @if (auth.canWritePurchasing() && !isFormOpen()) {
         <button type="button" class="app-btn app-btn-primary app-btn-sm shrink-0" data-testid="open-receipt" (click)="openForm()">
           <app-icon name="icon-plus" [class]="'h-4 w-4'" />
           Receive Stock
@@ -45,7 +45,7 @@
     </div>
   </div>
 
-  @if (auth.canWriteStockMovements() && isFormOpen()) {
+  @if (auth.canWritePurchasing() && isFormOpen()) {
     <form class="mb-4 flex shrink-0 flex-col gap-4 rounded-xl bg-surface p-4 shadow sm:p-5" [formGroup]="header" (ngSubmit)="save()" novalidate data-testid="receipt-form">
       <h2 class="text-sm font-semibold text-gray-900">New receipt</h2>
       <div class="grid gap-4 sm:grid-cols-2">

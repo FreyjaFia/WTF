@@ -514,6 +514,7 @@ describe('OrderEditor', () => {
             isAuthenticated: () => authenticated,
             canWriteOrders: () => canWrite,
             canApplySeniorPwd: () => canApplySeniorPwd,
+            canReadChat: () => true, canWriteChat: () => true,
             canOverrideOrders: () => canOverride,
             canCreateCustomerInOrder: () => canCreateCustomer,
           },

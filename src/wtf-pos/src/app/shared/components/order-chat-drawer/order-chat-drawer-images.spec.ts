@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ConversationInboxService, ConversationService, SignalRService } from '@core/services';
+import { AuthService, ConversationInboxService, ConversationService, SignalRService } from '@core/services';
 import { ConversationMessageDto, OrderConversationDto } from '@shared/models';
 import { of, Subject, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -63,6 +63,7 @@ describe('OrderChatDrawerComponent pictures', () => {
     };
     TestBed.configureTestingModule({
       providers: [
+        { provide: AuthService, useValue: { canWriteChat: () => true } },
         { provide: ConversationService, useValue: api },
         { provide: ConversationInboxService, useValue: { markOrderRead: vi.fn() } },
         {

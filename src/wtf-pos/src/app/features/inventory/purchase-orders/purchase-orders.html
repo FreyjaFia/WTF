@@ -5,7 +5,7 @@
         <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Purchase Orders</h1>
         <p class="text-xs text-gray-500 sm:text-sm">What you have asked suppliers for; sent orders count as on order</p>
       </div>
-      @if (auth.canWriteStockMovements() && !isFormOpen()) {
+      @if (auth.canWritePurchasing() && !isFormOpen()) {
         <button type="button" class="app-btn app-btn-primary app-btn-sm shrink-0" data-testid="open-order" (click)="openForm()">
           <app-icon name="icon-plus" [class]="'h-4 w-4'" />
           New Order
@@ -72,7 +72,7 @@
     </div>
   </app-side-drawer>
 
-  @if (auth.canWriteStockMovements() && isFormOpen()) {
+  @if (auth.canWritePurchasing() && isFormOpen()) {
     <form class="mb-4 flex shrink-0 flex-col gap-4 rounded-xl bg-surface p-4 shadow sm:p-5" [formGroup]="header" (ngSubmit)="save()" novalidate data-testid="order-form">
       <h2 class="text-sm font-semibold text-gray-900">{{ editingId() ? 'Edit draft order' : 'New purchase order' }}</h2>
       <div class="grid gap-4 sm:grid-cols-2">
@@ -222,7 +222,7 @@
                       }
                     </ul>
                     @if (order.note) { <p class="mt-2 text-xs text-gray-500">{{ order.note }}</p> }
-                    @if (auth.canWriteStockMovements()) {
+                    @if (auth.canWritePurchasing()) {
                       <div class="mt-3 flex flex-wrap justify-end gap-2">
                         @if (detail.summary.status === statuses.Draft) {
                           <button type="button" class="app-btn app-btn-secondary app-btn-sm" data-testid="edit-order" (click)="editOrder(detail)">Edit</button>
