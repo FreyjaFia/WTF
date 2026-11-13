@@ -16,7 +16,7 @@ interface SavedOrder {
 test.describe('customer address on orders @orders @customer-address', () => {
   test('a quick customer needs no last name, and the order keeps its own copy of the address', async ({ api, signIn }) => {
     const drink = await api.products.create({ price: 100 });
-    const first = unique('Quick');
+    const first = unique('Maria Clara');
     const page = await signIn('cashier');
     const editor = new OrderEditorPage(page);
     await editor.open();
@@ -25,31 +25,31 @@ test.describe('customer address on orders @orders @customer-address', () => {
     await expect(page.locator('#create-customer-title')).toBeVisible();
     await expect(page.getByText('Last Name')).toHaveCount(0);
     await page.getByPlaceholder('Enter first name').fill(first);
-    await page.getByPlaceholder('Enter address').fill('  12 Quick Street  ');
+    await page.getByPlaceholder('Enter address').fill('  45 Mabini Street, Barangay San Antonio, Pasig City  ');
     await page.getByRole('button', { name: 'Save Customer' }).click();
     await expect(page.locator('#create-customer-title')).toBeHidden();
 
     const orderAddress = page.getByLabel('Order address').locator('visible=true').first();
-    await expect(orderAddress).toHaveValue('12 Quick Street');
-    await orderAddress.fill('99 Delivery Road');
+    await expect(orderAddress).toHaveValue('45 Mabini Street, Barangay San Antonio, Pasig City');
+    await orderAddress.fill('Blk 7 Lot 12 Rizal Avenue, Barangay Poblacion, Makati City');
 
     await editor.addProduct(drink.name);
     await editor.payCash(100);
 
-    await expect.poll(async () => (await findOrder(api, first))?.customerAddress ?? null).toBe('99 Delivery Road');
+    await expect.poll(async () => (await findOrder(api, first))?.customerAddress ?? null).toBe('Blk 7 Lot 12 Rizal Avenue, Barangay Poblacion, Makati City');
 
     const customer = await api.client.json<{ id: string; lastName: string | null; address: string | null }[]>('owner', 'GET', `customers?searchTerm=${encodeURIComponent(first)}`);
     expect(customer[0].lastName).toBeNull();
-    expect(customer[0].address).toBe('12 Quick Street');
+    expect(customer[0].address).toBe('45 Mabini Street, Barangay San Antonio, Pasig City');
 
-    await api.client.json('owner', 'PUT', `customers/${customer[0].id}`, { id: customer[0].id, firstName: first, lastName: null, address: '1 New Avenue', contactNumber: null });
+    await api.client.json('owner', 'PUT', `customers/${customer[0].id}`, { id: customer[0].id, firstName: first, lastName: null, address: '18 Sampaguita Street, Barangay Holy Spirit, Quezon City', contactNumber: null });
     const again = await findOrder(api, first);
-    expect(again?.customerAddress).toBe('99 Delivery Road');
+    expect(again?.customerAddress).toBe('Blk 7 Lot 12 Rizal Avenue, Barangay Poblacion, Makati City');
   });
 
   test('a customer with no address leaves the order without one', async ({ api, signIn }) => {
     const drink = await api.products.create({ price: 50 });
-    const first = unique('NoAddr');
+    const first = unique('Jose Rizal');
     const page = await signIn('cashier');
     const editor = new OrderEditorPage(page);
     await editor.open();
@@ -69,13 +69,13 @@ test.describe('customer address on orders @orders @customer-address', () => {
 
   test('the order list shows the address under the customer name', async ({ api, signIn }) => {
     const drink = await api.products.create({ price: 75 });
-    const customer = await api.customers.create(unique('Listed'));
-    const address = `${unique('Mango')} Lane, Quezon City`;
+    const customer = await api.customers.create(unique('Ana Santos'));
+    const address = `${Date.now() % 9000 + 100} Mangga Street, Barangay Kapitolyo, Pasig City`;
     const response = await api.client.call('cashier', 'POST', 'orders', {
       body: { ...api.orders.body({ items: [{ productId: drink.id, quantity: 1 }], customerId: customer.id }), customerAddress: address },
     });
     expect(response.status()).toBe(201);
-    const noAddress = await api.customers.create(unique('Plain'));
+    const noAddress = await api.customers.create(unique('Pedro Reyes'));
     const plain = await api.client.call('cashier', 'POST', 'orders', {
       body: { ...api.orders.body({ items: [{ productId: drink.id, quantity: 1 }], customerId: noAddress.id, status: OrderStatus.Pending }), customerAddress: '' },
     });
