@@ -2965,6 +2965,7 @@ export class OrderEditor implements OnInit, OnDestroy {
             quotedPromoLabel: discounted
               ? formatPromoLabel(best.rule, line.price, addOnsTotal(line.addOns))
               : null,
+            discountPromotionId: discounted ? (best.rule.promotionKey ?? null) : null,
           }),
         });
       });

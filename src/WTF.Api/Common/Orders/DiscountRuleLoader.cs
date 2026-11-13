@@ -9,7 +9,8 @@ internal static class DiscountRuleLoader
 {
     internal sealed record Loaded(
         Dictionary<Guid, List<PromotionPricing.DiscountedRule>> RulesByProductId,
-        DiscountBudget Budget);
+        DiscountBudget Budget,
+        DiscountBudget PoolFreeBudget);
 
     // The discounted-product rules that are on at that moment (dates, weekdays and hours in the shop's time zone), with
     // how many more items each promotion with a usage limit may still discount. exceptOrderId leaves out the uses of an
@@ -40,6 +41,7 @@ internal static class DiscountRuleLoader
             .Where(p => p.MaxPerOrder.HasValue)
             .ToDictionary(p => p.Id, p => p.MaxPerOrder!.Value);
         var budget = new DiscountBudget(pool, perOrder);
+        var poolFree = new DiscountBudget(new Dictionary<Guid, int>(), perOrder);
 
         var rules = live
             .SelectMany(p => p.DiscountedProductPromotions.Select(d => (Promotion: p, Rule: d)))
@@ -53,6 +55,6 @@ internal static class DiscountRuleLoader
                     x.Promotion.Id,
                     x.Promotion.MaxPerOrder)).ToList());
 
-        return new Loaded(rules, budget);
+        return new Loaded(rules, budget, poolFree);
     }
 }

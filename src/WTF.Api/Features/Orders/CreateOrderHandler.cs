@@ -86,6 +86,10 @@ public record CreateOrderCommand : IRequest<OrderDto>
     public DateTime? CatalogSyncedAt { get; init; }
 
     // A sale that already happened (offline sync, batch) is never refused for stock: the balance may go below zero.
+    // A finished offline sale is saved at the prices the register quoted, even when the catalog moved after the sale.
+    [JsonIgnore]
+    public bool HonorQuotedPrices { get; init; }
+
     [JsonIgnore]
     public bool HonorStock { get; init; }
 }
@@ -107,6 +111,7 @@ public class CreateOrderHandler(
         var findings = request.ReviewFindings ?? [];
         var holds = findings.Where(f => f.Severity == ReviewSeverityEnum.Hold).Select(f => f.Text).ToList();
         var held = holds.Count > 0;
+        var honor = held || request.HonorQuotedPrices;
 
         // Orders waiting for approval only come from a customer's ordering link; staff cannot create one.
         if (request.Status == OrderStatusEnum.PendingApproval && request.Source != OrderSourceEnum.CustomerLink)
@@ -125,7 +130,7 @@ public class CreateOrderHandler(
         }
 
         OrderInputValidation.EnsureLengths(request.SpecialInstructions, request.Note?.Trim(), request.Items);
-        if (held)
+        if (honor)
         {
             if (request.CustomerId.HasValue && !await db.Customers.AnyAsync(c => c.Id == request.CustomerId.Value, cancellationToken))
             {
@@ -156,7 +161,7 @@ public class CreateOrderHandler(
             }
 
             // A held order records what was sold at the till: the catalog rules below may have changed since.
-            if (held)
+            if (honor)
             {
                 continue;
             }
@@ -194,7 +199,7 @@ public class CreateOrderHandler(
             .OrderBy(x => x)
             .ToList();
 
-        if (inactiveProductNames.Count > 0 && !held)
+        if (inactiveProductNames.Count > 0 && !honor)
         {
             throw new InvalidOperationException(
                 $"Cannot save order with inactive products/add-ons: {string.Join(", ", inactiveProductNames)}.");
@@ -205,7 +210,7 @@ public class CreateOrderHandler(
             throw new InvalidOperationException("One or more selected products/add-ons were not found.");
         }
 
-        var bundlePriceByPromotionId = held
+        var bundlePriceByPromotionId = honor
             ? await BundlePromotionResolver.ResolveHeldAsync(db, request.BundlePromotions, request.Items, cancellationToken)
             : await BundlePromotionResolver.ResolveAsync(
                 db,
@@ -268,12 +273,12 @@ public class CreateOrderHandler(
             db.OrderBundlePromotions.AddRange(orderBundlePromotions);
         }
 
-        var shouldCapturePrice = held || request.Status == OrderStatusEnum.Completed || request.Status == OrderStatusEnum.Cancelled;
+        var shouldCapturePrice = honor || request.Status == OrderStatusEnum.Completed || request.Status == OrderStatusEnum.Cancelled;
         // A pending or waiting order saves no price yet, but it holds the use of a limited discount from the moment it is saved.
-        var reservesDiscount = !held && request.Status is OrderStatusEnum.Pending or OrderStatusEnum.PendingApproval;
+        var reservesDiscount = !honor && request.Status is OrderStatusEnum.Pending or OrderStatusEnum.PendingApproval;
         Dictionary<Guid, List<PromotionPricing.DiscountedRule>> discountedRulesByProductId = [];
         DiscountBudget? discountBudget = null;
-        if ((shouldCapturePrice || reservesDiscount) && !held)
+        if ((shouldCapturePrice || reservesDiscount) && !honor)
         {
             var loaded = await DiscountRuleLoader.LoadAsync(
                 db,
@@ -285,6 +290,29 @@ public class CreateOrderHandler(
             discountBudget = loaded.Budget;
         }
 
+        DiscountRuleLoader.Loaded? honoredRules = null;
+
+        // A quoted discount keeps the promotion it came from, so the use is counted. A device that sends no id (an older app) gets
+        // it worked out from the rules on the day of the sale.
+        async Task<Guid?> QuotedDiscountPromotionIdAsync(OrderItemRequestDto line, decimal quotedPrice, decimal listPrice)
+        {
+            var original = line.QuotedOriginalPrice ?? listPrice;
+            if (line.DiscountPromotionId.HasValue || line.BundlePromotionId.HasValue || quotedPrice >= original)
+            {
+                return line.DiscountPromotionId;
+            }
+
+            honoredRules ??= await DiscountRuleLoader.LoadAsync(
+                db, request.CreatedAt?.ToUniversalTime() ?? DateTime.UtcNow, RequestTimeZone.ResolveFromRequest(httpContextAccessor), null, cancellationToken);
+            return PromotionPricing.GetDiscountedUnitPrice(
+                original,
+                line.ProductId,
+                line.AddOns.Select(a => (a.ProductId, a.Quantity)),
+                honoredRules.RulesByProductId,
+                line.Quantity,
+                null)?.PromotionId;
+        }
+
         // Add order items with parent-child relationships
         var sortOrder = 0;
         for (var itemIndex = 0; itemIndex < request.Items.Count; itemIndex++)
@@ -293,7 +321,7 @@ public class CreateOrderHandler(
             var product = await db.Products.FindAsync([item.ProductId], cancellationToken) ?? throw new InvalidOperationException($"Product with ID {item.ProductId} not found.");
             var basePrice = product.Price;
             // A line inside a bundle is sold at the bundle's price, so no discount applies to it.
-            var appliedDiscount = (shouldCapturePrice || reservesDiscount) && !held && !item.BundlePromotionId.HasValue
+            var appliedDiscount = (shouldCapturePrice || reservesDiscount) && !honor && !item.BundlePromotionId.HasValue
                 ? PromotionPricing.GetDiscountedUnitPrice(
                     basePrice,
                     item.ProductId,
@@ -318,14 +346,14 @@ public class CreateOrderHandler(
                     .Where(o => o.ProductId == item.ProductId && o.AddOnId == addOn.ProductId && o.IsActive)
                     .Select(o => (decimal?)o.Price)
                     .FirstOrDefaultAsync(cancellationToken);
-                addOnPrices.Add((addOn, held
+                addOnPrices.Add((addOn, honor
                     ? OfflineOrderReview.QuotedPriceOrThrow(addOn.QuotedPrice, addOnProduct.Name)
                     : addOnOverridePrice ?? addOnProduct.Price));
             }
 
             var finalUnitPrice = (discountedPrice ?? basePrice)
                 + addOnPrices.Sum(addOn => addOn.Price * addOn.AddOn.Quantity);
-            if (!held && !item.BundlePromotionId.HasValue && finalUnitPrice < 0)
+            if (!honor && !item.BundlePromotionId.HasValue && finalUnitPrice < 0)
             {
                 throw new InvalidOperationException($"The final unit price for '{product.Name}' cannot be negative.");
             }
@@ -351,7 +379,7 @@ public class CreateOrderHandler(
                 };
 
                 // Capture price if order is Completed or Cancelled. A held order keeps the prices it was quoted offline.
-                if (held)
+                if (honor)
                 {
                     var quoted = item.BundlePromotionId.HasValue
                         ? item.QuotedPrice ?? basePrice
@@ -359,6 +387,7 @@ public class CreateOrderHandler(
                     orderItem.Price = quoted;
                     orderItem.OriginalPrice = item.QuotedOriginalPrice ?? quoted;
                     orderItem.PromoLabel = item.QuotedPromoLabel;
+                    orderItem.DiscountPromotionId = await QuotedDiscountPromotionIdAsync(item, quoted, basePrice);
                 }
                 else if (shouldCapturePrice)
                 {
@@ -477,7 +506,7 @@ public class CreateOrderHandler(
 
         var totalAmount = OrderMetrics.ComputeOrderTotal(orderWithTotals, overridePrices, previewPrices);
 
-        if (!held && request.Status == OrderStatusEnum.Completed)
+        if (!honor && request.Status == OrderStatusEnum.Completed)
         {
             OrderTotalCheck.EnsureUnchanged(request.ExpectedTotal, totalAmount);
 

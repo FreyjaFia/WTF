@@ -1624,6 +1624,7 @@ describe('OrderEditor', () => {
         [2, 50, 'Promo -50%'],
         [1, 100, null],
       ]);
+      expect(items.map((i) => i['discountPromotionId'])).toEqual(['d', null]);
       expect(t.buildOrderItemsFromCart(false)).toHaveLength(1);
     });
 
@@ -2280,6 +2281,7 @@ describe('OrderEditor', () => {
           quotedPrice: 100,
           quotedOriginalPrice: 100,
           quotedPromoLabel: null,
+          discountPromotionId: null,
         },
         {
           productId: 'chips',

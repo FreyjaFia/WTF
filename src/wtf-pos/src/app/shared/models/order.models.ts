@@ -69,6 +69,8 @@ export interface OrderItemRequestDto {
   quotedPrice?: number | null;
   quotedOriginalPrice?: number | null;
   quotedPromoLabel?: string | null;
+  /** Offline orders only: the discount promotion that priced the line, so the shop counts its use. */
+  discountPromotionId?: string | null;
   /** Position in the order's `seniorPwdPersons` of the person this line is covered for. */
   seniorPwdPersonIndex?: number | null;
 }

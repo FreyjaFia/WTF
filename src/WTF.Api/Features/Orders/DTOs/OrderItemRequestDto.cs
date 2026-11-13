@@ -9,4 +9,5 @@ public record OrderItemRequestDto(
     decimal? QuotedPrice = null,
     decimal? QuotedOriginalPrice = null,
     string? QuotedPromoLabel = null,
-    int? SeniorPwdPersonIndex = null);
+    int? SeniorPwdPersonIndex = null,
+    Guid? DiscountPromotionId = null);
