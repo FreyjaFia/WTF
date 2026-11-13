@@ -146,6 +146,8 @@ public partial class WTFDbContext : DbContext
 
     public virtual DbSet<TenantTombstone> TenantTombstones { get; set; }
 
+    public virtual DbSet<UnsyncedOrder> UnsyncedOrders { get; set; }
+
     public virtual DbSet<User> Users { get; set; }
 
     public virtual DbSet<UserImage> UserImages { get; set; }
@@ -2157,6 +2159,41 @@ public partial class WTFDbContext : DbContext
         });
         modelBuilder.HasSequence("OrderNumberSeq");
         modelBuilder.HasSequence<int>("UserRoleIdSeq").StartsAt(100L);
+
+        modelBuilder.Entity<UnsyncedOrder>(entity =>
+        {
+            entity.HasIndex(e => new { e.TenantId, e.StatusId, e.ReceivedAt }, "IX_UnsyncedOrders_TenantId_StatusId_ReceivedAt");
+
+            entity.HasIndex(e => new { e.TenantId, e.OfflineLocalId }, "UX_UnsyncedOrders_TenantId_OfflineLocalId").IsUnique();
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_UnsyncedOrders_Id");
+            entity.Property(e => e.DiscardReason).HasMaxLength(500);
+            entity.Property(e => e.ErrorCode).HasMaxLength(40);
+            entity.Property(e => e.ErrorText).HasMaxLength(500);
+            entity.Property(e => e.OfflineLocalId).HasMaxLength(40);
+            entity.Property(e => e.QuotedTotal).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.ReceivedAt).HasDefaultValueSql("(getutcdate())", "DF_UnsyncedOrders_ReceivedAt");
+            entity.Property(e => e.StatusId).HasDefaultValue((byte)1, "DF_UnsyncedOrders_StatusId");
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_UnsyncedOrders_TenantId");
+
+            entity.HasOne(d => d.CashierUser).WithMany(p => p.UnsyncedOrderCashierUsers)
+                .HasForeignKey(d => d.CashierUserId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_UnsyncedOrders_Cashier");
+
+            entity.HasOne(d => d.ResolvedByNavigation).WithMany(p => p.UnsyncedOrderResolvedByNavigations)
+                .HasForeignKey(d => d.ResolvedBy)
+                .HasConstraintName("FK_UnsyncedOrders_ResolvedBy");
+
+            entity.HasOne(d => d.ResultingOrder).WithMany(p => p.UnsyncedOrders)
+                .HasForeignKey(d => d.ResultingOrderId)
+                .HasConstraintName("FK_UnsyncedOrders_ResultingOrder");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.UnsyncedOrders)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_UnsyncedOrders_Tenants");
+        });
 
         OnModelCreatingPartial(modelBuilder);
     }

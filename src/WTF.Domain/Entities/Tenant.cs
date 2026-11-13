@@ -138,4 +138,6 @@ public partial class Tenant
     public virtual ICollection<User> Users { get; set; } = new List<User>();
 
     public virtual ICollection<WasteReason> WasteReasons { get; set; } = new List<WasteReason>();
+
+    public virtual ICollection<UnsyncedOrder> UnsyncedOrders { get; set; } = new List<UnsyncedOrder>();
 }

@@ -138,4 +138,8 @@ public partial class User
     public virtual ICollection<WasteReason> WasteReasonCreatedByNavigations { get; set; } = new List<WasteReason>();
 
     public virtual ICollection<WasteReason> WasteReasonUpdatedByNavigations { get; set; } = new List<WasteReason>();
+
+    public virtual ICollection<UnsyncedOrder> UnsyncedOrderCashierUsers { get; set; } = new List<UnsyncedOrder>();
+
+    public virtual ICollection<UnsyncedOrder> UnsyncedOrderResolvedByNavigations { get; set; } = new List<UnsyncedOrder>();
 }

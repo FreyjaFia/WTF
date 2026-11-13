@@ -86,4 +86,6 @@ public partial class Order
     public virtual Tenant Tenant { get; set; } = null!;
 
     public virtual User? UpdatedByNavigation { get; set; }
+
+    public virtual ICollection<UnsyncedOrder> UnsyncedOrders { get; set; } = new List<UnsyncedOrder>();
 }
