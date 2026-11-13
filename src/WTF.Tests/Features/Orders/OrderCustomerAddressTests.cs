@@ -122,13 +122,13 @@ public class OrderCustomerAddressTests
     }
 
     [Fact]
-    public async Task Create_AddressOverThreeHundredCharacters_IsRefusedAndNothingIsSaved()
+    public async Task Create_AddressOverOneHundredFiftyCharacters_IsRefusedAndNothingIsSaved()
     {
         var product = _data.AddProduct("Latte", 100);
         var customer = AddCustomer("Ana", "Cruz", null);
 
         await Should.ThrowAsync<InvalidOperationException>(() =>
-            Creator().Handle(Create(product, customer, new string('a', 301)), CancellationToken.None));
+            Creator().Handle(Create(product, customer, new string('a', 151)), CancellationToken.None));
 
         await using var db = _data.Open();
         (await db.Orders.CountAsync()).ShouldBe(0);

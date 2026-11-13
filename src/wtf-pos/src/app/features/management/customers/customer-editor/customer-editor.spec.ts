@@ -93,10 +93,10 @@ describe('CustomerEditorComponent', () => {
 
     it('validates max lengths', () => {
       setup();
-      c.customerForm.patchValue({ firstName: 'x'.repeat(101), lastName: 'y', address: 'z'.repeat(301) });
+      c.customerForm.patchValue({ firstName: 'x'.repeat(101), lastName: 'y', address: 'z'.repeat(151) });
       c.customerForm.markAllAsTouched();
       expect(c.getErrorMessage('firstName')).toBe('First name cannot exceed 100 characters');
-      expect(c.getErrorMessage('address')).toBe('Address cannot exceed 300 characters');
+      expect(c.getErrorMessage('address')).toBe('Address cannot exceed 150 characters');
       expect(c.getErrorMessage('nonexistent')).toBeNull();
       expect(c.hasError('nonexistent')).toBe(false);
     });

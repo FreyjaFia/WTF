@@ -232,7 +232,7 @@ export class OrderEditor implements OnInit, OnDestroy {
 
   protected readonly createCustomerForm = new FormGroup({
     firstName: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
-    address: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(300)] }),
+    address: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(150)] }),
   });
 
   protected readonly filterForm = new FormGroup({

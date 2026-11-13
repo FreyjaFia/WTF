@@ -92,10 +92,10 @@ public class CreateCustomerHandlerTests
     }
 
     [Fact]
-    public async Task Handle_AddressOverThreeHundredCharacters_ThrowsAndSavesNothing()
+    public async Task Handle_AddressOverOneHundredFiftyCharacters_ThrowsAndSavesNothing()
     {
         await Should.ThrowAsync<InvalidOperationException>(() =>
-            Handler().Handle(new CreateCustomerCommand("Ana", null, new string('a', 301)), CancellationToken.None));
+            Handler().Handle(new CreateCustomerCommand("Ana", null, new string('a', 151)), CancellationToken.None));
 
         await using var db = TestDb.Create(_dbName);
         (await db.Customers.CountAsync()).ShouldBe(0);

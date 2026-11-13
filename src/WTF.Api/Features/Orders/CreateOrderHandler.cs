@@ -136,11 +136,14 @@ public class CreateOrderHandler(
         var customerAddress = OrderInputValidation.NormalizeCustomerAddress(request.CustomerAddress);
         if (request.CustomerAddress is null && request.CustomerId.HasValue)
         {
+            var saved = (await db.Customers
+                .Where(c => c.Id == request.CustomerId.Value)
+                .Select(c => c.Address)
+                .FirstOrDefaultAsync(cancellationToken))?.Trim();
+
+            // Addresses saved before the limit was lowered may be longer than an order accepts.
             customerAddress = OrderInputValidation.NormalizeCustomerAddress(
-                await db.Customers
-                    .Where(c => c.Id == request.CustomerId.Value)
-                    .Select(c => c.Address)
-                    .FirstOrDefaultAsync(cancellationToken));
+                saved is { Length: > OrderInputValidation.AddressMaxLength } ? saved[..OrderInputValidation.AddressMaxLength] : saved);
         }
 
         // Validate no nested add-ons and add-on type rules
