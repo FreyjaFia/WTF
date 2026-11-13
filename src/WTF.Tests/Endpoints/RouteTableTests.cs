@@ -170,6 +170,8 @@ public class RouteTableTests : IDisposable
         "POST /api/platform/tenants/{id:guid}/suspend => PlatformAdmin",
         "POST /api/platform/tenants/{id:guid}/users/{userId:guid}/impersonate => PlatformAdmin",
         "POST /api/platform/tenants/{id:guid}/users/{userId:guid}/reset-password => PlatformAdmin",
+        "GET /api/orders/review => OrdersOverride",
+        "POST /api/orders/review/bulk-approve => OrdersOverride",
         "POST /api/orders/{id:guid}/review/approve => OrdersOverride",
         "POST /api/orders/{id:guid}/review/reject => OrdersOverride",
         "GET /api/orders/unsynced/ => OrdersOverride",

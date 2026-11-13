@@ -106,14 +106,27 @@ public sealed class GetPagedOrdersHandler(WTFDbContext db, ITenantFeatures tenan
             cancellationToken);
         var previewPrices = await PendingOrderPreview.LoadAsync(db, orders, httpContextAccessor, cancellationToken, tenantFeatures);
 
-        var items = orders.Select(o => OrderMapping.ToDto(
-            o,
-            OrderMapping.ToItemDtos(o.OrderItems.Where(oi => oi.ParentOrderItemId == null), overridePrices),
-            OrderMetrics.ComputeOrderTotal(o, overridePrices, previewPrices),
-            OrderMapping.ToBundleDtos(o),
-            o.OrderSeniorPwdDiscounts,
-            maskIds: true,
-            includeCustomerName: true)).ToList();
+        var nowUtc = DateTime.UtcNow;
+        var agedAfterDays = await HeldOrderAging.AgedAfterDaysAsync(db, cancellationToken);
+
+        var items = orders.Select(o =>
+        {
+            var isHeld = o.StatusId == (int)OrderStatusEnum.PendingReview;
+            var dto = OrderMapping.ToDto(
+                o,
+                OrderMapping.ToItemDtos(o.OrderItems.Where(oi => oi.ParentOrderItemId == null), overridePrices),
+                OrderMetrics.ComputeOrderTotal(o, overridePrices, previewPrices),
+                OrderMapping.ToBundleDtos(o),
+                o.OrderSeniorPwdDiscounts,
+                maskIds: true,
+                includeCustomerName: true);
+
+            return dto with
+            {
+                IsAged = isHeld && HeldOrderRules.IsAged(o.CreatedAt, nowUtc, agedAfterDays),
+                HeldDays = isHeld ? HeldOrderRules.AgeDays(o.CreatedAt, nowUtc) : null
+            };
+        }).ToList();
 
         return new PagedResultDto<OrderDto>(items, paging.Page, paging.PageSize, totalCount, facets);
     }
