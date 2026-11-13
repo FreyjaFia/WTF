@@ -62,6 +62,8 @@ public partial class WTFDbContext : DbContext
 
     public virtual DbSet<Notification> Notifications { get; set; }
 
+    public virtual DbSet<OfflineSyncPolicy> OfflineSyncPolicies { get; set; }
+
     public virtual DbSet<Order> Orders { get; set; }
 
     public virtual DbSet<OrderBundlePromotion> OrderBundlePromotions { get; set; }
@@ -803,6 +805,34 @@ public partial class WTFDbContext : DbContext
                 .HasForeignKey(d => d.UserId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Notifications_Users");
+        });
+
+        modelBuilder.Entity<OfflineSyncPolicy>(entity =>
+        {
+            entity.HasKey(e => e.TenantId);
+
+            entity.ToTable("OfflineSyncPolicy");
+
+            entity.Property(e => e.TenantId).ValueGeneratedNever();
+            entity.Property(e => e.AddOnPriceChangedMode).HasDefaultValue((byte)1, "DF_OfflineSyncPolicy_AddOnPriceChangedMode");
+            entity.Property(e => e.AgedAfterDays).HasDefaultValue(2, "DF_OfflineSyncPolicy_AgedAfterDays");
+            entity.Property(e => e.BundleChangedMode).HasDefaultValue((byte)1, "DF_OfflineSyncPolicy_BundleChangedMode");
+            entity.Property(e => e.CustomerInactiveMode).HasDefaultValue((byte)1, "DF_OfflineSyncPolicy_CustomerInactiveMode");
+            entity.Property(e => e.PriceChangedMode).HasDefaultValue((byte)1, "DF_OfflineSyncPolicy_PriceChangedMode");
+            entity.Property(e => e.PriceTolerance).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.ProductInactiveMode).HasDefaultValue((byte)1, "DF_OfflineSyncPolicy_ProductInactiveMode");
+            entity.Property(e => e.PromotionEndedMode).HasDefaultValue((byte)1, "DF_OfflineSyncPolicy_PromotionEndedMode");
+            entity.Property(e => e.UnknownProductMode).HasDefaultValue((byte)1, "DF_OfflineSyncPolicy_UnknownProductMode");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("(getutcdate())", "DF_OfflineSyncPolicy_UpdatedAt");
+
+            entity.HasOne(d => d.Tenant).WithOne(p => p.OfflineSyncPolicy)
+                .HasForeignKey<OfflineSyncPolicy>(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_OfflineSyncPolicy_Tenants");
+
+            entity.HasOne(d => d.UpdatedByNavigation).WithMany(p => p.OfflineSyncPolicies)
+                .HasForeignKey(d => d.UpdatedBy)
+                .HasConstraintName("FK_OfflineSyncPolicy_UpdatedBy");
         });
 
         modelBuilder.Entity<Order>(entity =>

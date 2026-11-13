@@ -71,6 +71,8 @@ public partial class Tenant
 
     public virtual ICollection<OrderReviewReason> OrderReviewReasons { get; set; } = new List<OrderReviewReason>();
 
+    public virtual OfflineSyncPolicy? OfflineSyncPolicy { get; set; }
+
     public virtual ICollection<OrderSeniorPwdDiscount> OrderSeniorPwdDiscounts { get; set; } = new List<OrderSeniorPwdDiscount>();
 
     public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
