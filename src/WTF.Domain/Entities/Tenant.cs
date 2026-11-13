@@ -65,9 +65,11 @@ public partial class Tenant
 
     public virtual ICollection<OrderBundlePromotion> OrderBundlePromotions { get; set; } = new List<OrderBundlePromotion>();
 
-    public virtual ICollection<OrderSeniorPwdDiscount> OrderSeniorPwdDiscounts { get; set; } = new List<OrderSeniorPwdDiscount>();
-
     public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
+
+    public virtual ICollection<OrderReviewReason> OrderReviewReasons { get; set; } = new List<OrderReviewReason>();
+
+    public virtual ICollection<OrderSeniorPwdDiscount> OrderSeniorPwdDiscounts { get; set; } = new List<OrderSeniorPwdDiscount>();
 
     public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
 

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Orders;
 using WTF.Api.Common.Tenancy;
 using WTF.Api.Common.Time;
+using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Domain.Data;
 
@@ -17,7 +18,8 @@ public record OfflineSyncResultDto(
     OrderStatusEnum? Status,
     List<string> Reasons,
     string? Error,
-    List<string>? StockWarnings = null);
+    List<string>? StockWarnings = null,
+    List<OrderReviewReasonDto>? ReasonDetails = null);
 
 public class SyncOfflineOrdersHandler(WTFDbContext db, ISender sender, IHttpContextAccessor httpContextAccessor)
     : IRequestHandler<SyncOfflineOrdersCommand, List<OfflineSyncResultDto>>
@@ -65,17 +67,25 @@ public class SyncOfflineOrdersHandler(WTFDbContext db, ISender sender, IHttpCont
             await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
 
             // Only a finished sale can meet a catalog that changed afterwards; an open order is priced when it completes.
-            var reasons = order.Status == OrderStatusEnum.Completed
-                ? await OfflineOrderReview.FindReasonsAsync(db, order, timeZone, cancellationToken)
+            var findings = order.Status == OrderStatusEnum.Completed
+                ? await OfflineOrderReview.FindAsync(db, order, timeZone, cancellationToken)
                 : [];
 
             var saved = await sender.Send(
-                order with { OfflineLocalId = localId, HeldReasons = reasons.Count > 0 ? reasons : null, GateHeld = true, HonorStock = true },
+                order with { OfflineLocalId = localId, ReviewFindings = findings.Count > 0 ? findings : null, GateHeld = true, HonorStock = true },
                 cancellationToken);
 
             await transaction.CommitAsync(cancellationToken);
 
-            return new OfflineSyncResultDto(localId, saved.Id, saved.OrderNumber, saved.Status, reasons, null, saved.StockWarnings);
+            return new OfflineSyncResultDto(
+                localId,
+                saved.Id,
+                saved.OrderNumber,
+                saved.Status,
+                [.. findings.Select(f => f.Text).Distinct()],
+                null,
+                saved.StockWarnings,
+                [.. findings.Select(OrderReviewReasons.ToDto)]);
         }
         catch (Exception ex) when (ex is InvalidOperationException or ArgumentException)
         {
@@ -103,8 +113,11 @@ public class SyncOfflineOrdersHandler(WTFDbContext db, ISender sender, IHttpCont
             return null;
         }
 
-        var reasons = string.IsNullOrEmpty(saved.ReviewReasons) ? [] : saved.ReviewReasons.Split('\n').ToList();
-        return new OfflineSyncResultDto(localId, saved.Id, saved.OrderNumber, (OrderStatusEnum)saved.StatusId, reasons, null);
+        var details = await OrderReviewReasons.LoadAsync(db, saved.Id, cancellationToken);
+        var reasons = details.Count > 0
+            ? details.Select(d => d.Text).Distinct().ToList()
+            : string.IsNullOrEmpty(saved.ReviewReasons) ? [] : saved.ReviewReasons.Split('\n').ToList();
+        return new OfflineSyncResultDto(localId, saved.Id, saved.OrderNumber, (OrderStatusEnum)saved.StatusId, reasons, null, null, details);
     }
 
     private static OfflineSyncResultDto Failed(string? localId, string message)

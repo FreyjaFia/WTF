@@ -393,7 +393,7 @@ public class SeniorPwdOrderTests
 
         reasons.ShouldContain(r => r.Contains("missing the ID number"));
 
-        var held = await CreateHandler().Handle(command with { HeldReasons = reasons, GateHeld = true }, CancellationToken.None);
+        var held = await CreateHandler().Handle(command with { ReviewFindings = reasons.Select(r => OfflineReason.Hold("Test", r)).ToList(), GateHeld = true }, CancellationToken.None);
 
         held.Status.ShouldBe(OrderStatusEnum.PendingReview);
         held.TotalAmount.ShouldBe(80m);

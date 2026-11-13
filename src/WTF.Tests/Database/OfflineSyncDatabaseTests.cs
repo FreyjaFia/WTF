@@ -114,5 +114,11 @@ public class OfflineSyncDatabaseTests
         var saved = await check.Orders.SingleAsync();
         saved.StatusId.ShouldBe((int)OrderStatusEnum.PendingReview);
         saved.QuotedTotal.ShouldBe(300m);
+
+        var reason = await check.OrderReviewReasons.SingleAsync();
+        reason.OrderId.ShouldBe(saved.Id);
+        reason.TenantId.ShouldBe(saved.TenantId);
+        reason.Code.ShouldBe(OfflineReasonCodes.PriceChanged);
+        reason.Severity.ShouldBe((byte)ReviewSeverityEnum.Hold);
     }
 }

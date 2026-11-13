@@ -66,6 +66,8 @@ public partial class WTFDbContext : DbContext
 
     public virtual DbSet<OrderItem> OrderItems { get; set; }
 
+    public virtual DbSet<OrderReviewReason> OrderReviewReasons { get; set; }
+
     public virtual DbSet<OrderSeniorPwdDiscount> OrderSeniorPwdDiscounts { get; set; }
 
     public virtual DbSet<PaymentMethod> PaymentMethods { get; set; }
@@ -897,6 +899,30 @@ public partial class WTFDbContext : DbContext
                 .HasForeignKey(d => d.TenantId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_OrderBundlePromotions_Tenants");
+        });
+
+        modelBuilder.Entity<OrderReviewReason>(entity =>
+        {
+            entity.HasIndex(e => e.OrderId, "IX_OrderReviewReasons_OrderId");
+
+            entity.HasIndex(e => new { e.TenantId, e.Code }, "IX_OrderReviewReasons_TenantId_Code");
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())", "DF_OrderReviewReasons_Id");
+            entity.Property(e => e.Code).HasMaxLength(40);
+            entity.Property(e => e.ExpectedValue).HasMaxLength(60);
+            entity.Property(e => e.QuotedValue).HasMaxLength(60);
+            entity.Property(e => e.TenantId).HasDefaultValue(new Guid("00000000-0000-0000-0000-000000000001"), "DF_OrderReviewReasons_TenantId");
+            entity.Property(e => e.Text).HasMaxLength(300);
+
+            entity.HasOne(d => d.Order).WithMany(p => p.OrderReviewReasons)
+                .HasForeignKey(d => d.OrderId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_OrderReviewReasons_Order");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.OrderReviewReasons)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_OrderReviewReasons_Tenants");
         });
 
         modelBuilder.Entity<OrderSeniorPwdDiscount>(entity =>

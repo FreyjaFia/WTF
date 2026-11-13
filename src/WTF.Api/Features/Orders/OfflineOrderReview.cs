@@ -28,7 +28,17 @@ internal static class OfflineOrderReview
         TimeZoneInfo timeZone,
         CancellationToken cancellationToken)
     {
-        var reasons = new List<string>();
+        var found = await FindAsync(db, command, timeZone, cancellationToken);
+        return [.. found.Select(r => r.Text).Distinct()];
+    }
+
+    public static async Task<List<OfflineReason>> FindAsync(
+        WTFDbContext db,
+        CreateOrderCommand command,
+        TimeZoneInfo timeZone,
+        CancellationToken cancellationToken)
+    {
+        var reasons = new List<OfflineReason>();
         var createdAt = command.CreatedAt?.ToUniversalTime() ?? DateTime.UtcNow;
 
         var productIds = command.Items
@@ -43,8 +53,8 @@ internal static class OfflineOrderReview
 
         reasons.AddRange(products.Values
             .Where(p => !p.IsActive)
-            .Select(p => $"{p.Name} is inactive.")
-            .Order());
+            .OrderBy(p => p.Name, StringComparer.Ordinal)
+            .Select(p => OfflineReason.Hold(OfflineReasonCodes.ProductInactive, $"{p.Name} is inactive.")));
 
         if (command.CustomerId.HasValue)
         {
@@ -54,7 +64,7 @@ internal static class OfflineOrderReview
                 .FirstOrDefaultAsync(cancellationToken);
             if (customer is { IsActive: false })
             {
-                reasons.Add($"Customer {customer.FirstName} {customer.LastName} is inactive.");
+                reasons.Add(OfflineReason.Hold(OfflineReasonCodes.CustomerInactive, $"Customer {customer.FirstName} {customer.LastName} is inactive."));
             }
         }
 
@@ -70,7 +80,7 @@ internal static class OfflineOrderReview
     private static async Task AddSeniorPwdReasonsAsync(
         WTFDbContext db,
         CreateOrderCommand command,
-        List<string> reasons,
+        List<OfflineReason> reasons,
         CancellationToken cancellationToken)
     {
         if (command.SeniorPwdPersons.Count == 0)
@@ -80,7 +90,7 @@ internal static class OfflineOrderReview
 
         if (command.SeniorPwdPersons.Any(p => string.IsNullOrWhiteSpace(p.IdNumber) || string.IsNullOrWhiteSpace(p.CustomerName)))
         {
-            reasons.Add("A Senior/PWD discount is missing the ID number or the name on the ID.");
+            reasons.Add(OfflineReason.Hold(OfflineReasonCodes.SeniorPwdIdMissing, "A Senior/PWD discount is missing the ID number or the name on the ID."));
         }
 
         await AddSeniorPwdLineReasonsAsync(db, command, reasons, cancellationToken);
@@ -91,7 +101,7 @@ internal static class OfflineOrderReview
             .FirstOrDefaultAsync(cancellationToken);
         if (settings is not { SeniorPwdEnabled: true })
         {
-            reasons.Add("The Senior/PWD discount is now turned off for this shop.");
+            reasons.Add(OfflineReason.Hold(OfflineReasonCodes.SeniorPwdDisabled, "The Senior/PWD discount is now turned off for this shop."));
             return;
         }
 
@@ -112,7 +122,12 @@ internal static class OfflineOrderReview
                 settings.VatRegistered).Reduction);
         if (shownReduction != currentReduction)
         {
-            reasons.Add($"The Senior/PWD discount now comes to {currentReduction:0.00}, the register showed {shownReduction:0.00}.");
+            reasons.Add(OfflineReason.Hold(
+                OfflineReasonCodes.SeniorPwdSettingsChanged,
+                $"The Senior/PWD discount now comes to {currentReduction:0.00}, the register showed {shownReduction:0.00}.",
+                null,
+                $"{currentReduction:0.00}",
+                $"{shownReduction:0.00}"));
         }
     }
 
@@ -121,7 +136,7 @@ internal static class OfflineOrderReview
     private static async Task AddSeniorPwdLineReasonsAsync(
         WTFDbContext db,
         CreateOrderCommand command,
-        List<string> reasons,
+        List<OfflineReason> reasons,
         CancellationToken cancellationToken)
     {
         var coveredItems = command.Items.Where(i => i.SeniorPwdPersonIndex.HasValue).ToList();
@@ -136,15 +151,15 @@ internal static class OfflineOrderReview
             var name = products.TryGetValue(item.ProductId, out var product) ? product.Name : "An item";
             if (product is { IsSeniorPwdEligible: false })
             {
-                reasons.Add($"{name} is not food or drink, so it cannot take the Senior/PWD discount.");
+                reasons.Add(OfflineReason.Hold(OfflineReasonCodes.SeniorPwdOnPromotion, $"{name} is not food or drink, so it cannot take the Senior/PWD discount."));
             }
             else if (item.BundlePromotionId.HasValue)
             {
-                reasons.Add($"{name} is part of a bundle, so it cannot take the Senior/PWD discount.");
+                reasons.Add(OfflineReason.Hold(OfflineReasonCodes.SeniorPwdOnPromotion, $"{name} is part of a bundle, so it cannot take the Senior/PWD discount."));
             }
             else if (item.QuotedPrice < item.QuotedOriginalPrice || !string.IsNullOrWhiteSpace(item.QuotedPromoLabel))
             {
-                reasons.Add($"{name} had a promotion price, so it cannot take the Senior/PWD discount.");
+                reasons.Add(OfflineReason.Hold(OfflineReasonCodes.SeniorPwdOnPromotion, $"{name} had a promotion price, so it cannot take the Senior/PWD discount."));
             }
         }
     }
@@ -154,7 +169,7 @@ internal static class OfflineOrderReview
         CreateOrderCommand command,
         DateTime createdAt,
         TimeZoneInfo timeZone,
-        List<string> reasons,
+        List<OfflineReason> reasons,
         CancellationToken cancellationToken)
     {
         if (command.BundlePromotions.Count == 0)
@@ -175,7 +190,7 @@ internal static class OfflineOrderReview
             return;
         }
 
-        reasons.AddRange(problems);
+        reasons.AddRange(problems.Select(p => OfflineReason.Hold(OfflineReasonCodes.BundleChanged, p)));
 
         var ids = command.BundlePromotions.Select(b => b.PromotionId).ToList();
         var names = await db.Promotions
@@ -188,7 +203,12 @@ internal static class OfflineOrderReview
                 && currentPrices.TryGetValue(bundle.PromotionId, out var current)
                 && current != bundle.QuotedUnitPrice.Value)
             {
-                reasons.Add($"Bundle '{names[bundle.PromotionId]}' now costs {current:0.00}, quoted {bundle.QuotedUnitPrice.Value:0.00}.");
+                reasons.Add(OfflineReason.Hold(
+                    OfflineReasonCodes.BundleChanged,
+                    $"Bundle '{names[bundle.PromotionId]}' now costs {current:0.00}, quoted {bundle.QuotedUnitPrice.Value:0.00}.",
+                    null,
+                    $"{current:0.00}",
+                    $"{bundle.QuotedUnitPrice.Value:0.00}"));
             }
         }
     }
@@ -199,7 +219,7 @@ internal static class OfflineOrderReview
         Dictionary<Guid, (string Name, decimal Price)> products,
         DateTime createdAt,
         TimeZoneInfo timeZone,
-        List<string> reasons,
+        List<OfflineReason> reasons,
         CancellationToken cancellationToken)
     {
         var parentIds = command.Items.Select(i => i.ProductId).Distinct().ToList();
@@ -210,8 +230,9 @@ internal static class OfflineOrderReview
         var loaded = await DiscountRuleLoader.LoadAsync(db, createdAt, timeZone, null, cancellationToken);
         var rulesByProductId = loaded.RulesByProductId;
 
-        foreach (var item in command.Items)
+        for (var lineIndex = 0; lineIndex < command.Items.Count; lineIndex++)
         {
+            var item = command.Items[lineIndex];
             if (!products.TryGetValue(item.ProductId, out var product))
             {
                 continue;
@@ -231,14 +252,24 @@ internal static class OfflineOrderReview
                 if (discounted is { IsPartial: true } && item.QuotedPrice.HasValue)
                 {
                     // A limit now covers only part of the line, so no single quoted price can match it.
-                    reasons.Add($"{product.Name}: the promotion now covers only {discounted.DiscountedQuantity} of {item.Quantity}.");
+                    reasons.Add(OfflineReason.Hold(
+                        OfflineReasonCodes.PromotionOverLimit,
+                        $"{product.Name}: the promotion now covers only {discounted.DiscountedQuantity} of {item.Quantity}.",
+                        lineIndex,
+                        $"{discounted.DiscountedQuantity}",
+                        $"{item.Quantity}"));
                 }
                 else
                 {
                     var current = discounted?.Price ?? product.Price;
                     if (item.QuotedPrice.HasValue && current != item.QuotedPrice.Value)
                     {
-                        reasons.Add($"{product.Name} now costs {current:0.00}, quoted {item.QuotedPrice.Value:0.00}.");
+                        reasons.Add(OfflineReason.Hold(
+                            OfflineReasonCodes.PriceChanged,
+                            $"{product.Name} now costs {current:0.00}, quoted {item.QuotedPrice.Value:0.00}.",
+                            lineIndex,
+                            $"{current:0.00}",
+                            $"{item.QuotedPrice.Value:0.00}"));
                     }
                 }
             }
@@ -255,7 +286,12 @@ internal static class OfflineOrderReview
                     : addOnProduct.Price;
                 if (currentAddOn != addOn.QuotedPrice.Value)
                 {
-                    reasons.Add($"{addOnProduct.Name} on {product.Name} now costs {currentAddOn:0.00}, quoted {addOn.QuotedPrice.Value:0.00}.");
+                    reasons.Add(OfflineReason.Hold(
+                        OfflineReasonCodes.AddOnPriceChanged,
+                        $"{addOnProduct.Name} on {product.Name} now costs {currentAddOn:0.00}, quoted {addOn.QuotedPrice.Value:0.00}.",
+                        lineIndex,
+                        $"{currentAddOn:0.00}",
+                        $"{addOn.QuotedPrice.Value:0.00}"));
                 }
             }
         }

@@ -128,7 +128,9 @@ public class GetOrderByIdHandler(WTFDbContext db, IHttpContextAccessor? httpCont
             order.QuotedTotal,
             order.OfflineLocalId,
             StockLineIds: stockLineIds,
-            SeniorPwdPersons: SeniorPwdOrders.ToDtos(order.OrderSeniorPwdDiscounts, !SeniorPwdOrders.CanSeeFullId(httpContextAccessor))
+            SeniorPwdPersons: SeniorPwdOrders.ToDtos(order.OrderSeniorPwdDiscounts, !SeniorPwdOrders.CanSeeFullId(httpContextAccessor)),
+            ReviewDetails: await OrderReviewReasons.LoadAsync(db, order.Id, cancellationToken),
+            CatalogSyncedAt: order.CatalogSyncedAt
         );
     }
 
