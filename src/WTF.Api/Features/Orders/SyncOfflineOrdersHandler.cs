@@ -77,6 +77,7 @@ public class SyncOfflineOrdersHandler(WTFDbContext db, ISender sender, IHttpCont
                 cancellationToken);
 
             await transaction.CommitAsync(cancellationToken);
+            await UnsyncedOrderRecorder.ResolveAfterSaveAsync(db, httpContextAccessor, localId, saved.Id, cancellationToken);
 
             return new OfflineSyncResultDto(
                 localId,
@@ -91,6 +92,7 @@ public class SyncOfflineOrdersHandler(WTFDbContext db, ISender sender, IHttpCont
         catch (Exception ex) when (ex is InvalidOperationException or ArgumentException)
         {
             db.ChangeTracker.Clear();
+            await UnsyncedOrderRecorder.RecordFailureAsync(db, httpContextAccessor, order, localId, ex, cancellationToken);
             return Failed(localId, ex.Message);
         }
         catch (DbUpdateException)
