@@ -31,6 +31,14 @@ async function planId(platform: PlatformApi, code: string): Promise<number> {
   return plan.id;
 }
 
+async function roleOnStarter(platform: PlatformApi, shop: TestShop, name: string, permissions: string[]): Promise<Role> {
+  // Custom roles are a Pro feature: make the role while the shop is on Pro, then put the shop back on Starter.
+  await platform.setSubscription(shop.id, { planId: await planId(platform, 'pro') });
+  const role = await shop.owner.json<Role>('POST', 'roles', { name, permissions });
+  await platform.setSubscription(shop.id, { planId: await planId(platform, 'starter') });
+  return role;
+}
+
 async function status(session: ShopSession, path: string): Promise<number> {
   return (await session.call('GET', path)).status();
 }
@@ -52,8 +60,8 @@ test.describe('plans narrow what roles can do @roles @rbac @plans', () => {
     const held = await shop.owner.json<string[]>('GET', 'auth/permissions');
 
     expect(held).toContain('orders.write');
-    expect(held).toContain('roles.manage');
     expect(held).toContain('reports.read');
+    expect(held).not.toContain('roles.manage');
     for (const locked of ['items.read', 'stock.write', 'suppliers.read', 'promotions.read', 'orderlinks.manage', 'reports.generate']) {
       expect(held, locked).not.toContain(locked);
     }
@@ -99,22 +107,23 @@ test.describe('plans narrow what roles can do @roles @rbac @plans', () => {
     const byKey = new Map(list.map((p) => [p.key, p]));
 
     expect(byKey.get('orders.write')).toMatchObject({ inPlan: true });
-    expect(byKey.get('stock.write')).toMatchObject({ inPlan: false, availableInPlans: ['Pro'] });
+    expect(byKey.get('stock.write')).toMatchObject({ inPlan: false, availableInPlans: expect.arrayContaining(['Pro', 'Business']) });
     expect(byKey.get('promotions.write')?.inPlan).toBe(false);
   });
 
-  test('a role holding keys the plan switches off can still be edited by the owner', async () => {
-    const role = await shop.owner.json<Role>('POST', 'roles', { name: unique('Mixed'), permissions: ['orders.read', 'stock.write'] });
+  test('a role holding keys the plan switches off can still be edited by the owner', async ({ request, platform }) => {
+    const pro = await openShop(request, platform, { planCode: 'pro' });
+    const role = await pro.owner.json<Role>('POST', 'roles', { name: unique('Mixed'), permissions: ['orders.read', 'purchasing.write'] });
 
-    const updated = await shop.owner.call('PUT', `roles/${role.id}`, {
+    const updated = await pro.owner.call('PUT', `roles/${role.id}`, {
       id: role.id,
       name: role.name,
       description: 'Edited on Starter',
-      permissions: ['orders.read', 'stock.write', 'expenses.read'],
+      permissions: ['orders.read', 'purchasing.write', 'expenses.read'],
     });
 
     expect(updated.status(), await updated.text()).toBe(200);
-    expect(((await updated.json()) as Role).permissions).toEqual(expect.arrayContaining(['stock.write', 'expenses.read']));
+    expect(((await updated.json()) as Role).permissions).toEqual(expect.arrayContaining(['purchasing.write', 'expenses.read']));
   });
 
   test('another shop on Pro is not narrowed by this shop\'s plan', async ({ request, platform }) => {
@@ -133,8 +142,8 @@ async function openOwnerPage(page: Page, shop: TestShop): Promise<void> {
 test.describe('Roles editor greys out what the plan lacks @roles @rbac @plans @layout', () => {
   for (const viewport of VIEWPORTS) {
     test(`locked rows show the plan name, stay unchecked-able, and nothing overflows at ${viewport.name}`, async ({ newContext, request, platform }) => {
-      const shop = await openShop(request, platform, { planCode: 'starter' });
-      const role = await shop.owner.json<Role>('POST', 'roles', { name: unique('Plan Role'), permissions: ['orders.read', 'stock.write'] });
+      const shop = await openShop(request, platform, { planCode: 'pro' });
+      const role = await shop.owner.json<Role>('POST', 'roles', { name: unique('Plan Role'), permissions: ['orders.read', 'purchasing.write'] });
       const context = await newContext({ width: viewport.width, height: viewport.height });
       const page = await context.newPage();
       const watcher = watch(page);
@@ -143,11 +152,11 @@ test.describe('Roles editor greys out what the plan lacks @roles @rbac @plans @l
       const editor = new RoleEditorPage(page);
       await editor.openRole(role.id);
 
-      const locked = page.getByTestId('plan-lock-stock.write');
+      const locked = page.getByTestId('plan-lock-purchasing.write');
       await locked.scrollIntoViewIfNeeded();
-      await expect(locked).toContainText('Not in your plan. Available in Pro.');
-      await expect(editor.permission('stock.write')).toBeChecked();
-      await expect(editor.permission('stock.write')).toBeDisabled();
+      await expect(locked).toContainText('Not in your plan. Available in Business.');
+      await expect(editor.permission('purchasing.write')).toBeChecked();
+      await expect(editor.permission('purchasing.write')).toBeDisabled();
       await expect(editor.permission('orders.read')).toBeEnabled();
       await expect(page.getByTestId('plan-lock-orders.read')).toHaveCount(0);
       await expect(editor.save).toBeEnabled();
@@ -156,11 +165,11 @@ test.describe('Roles editor greys out what the plan lacks @roles @rbac @plans @l
       expect.soft(watcher.pageErrors, `${viewport.name}: uncaught page errors`).toEqual([]);
       expect.soft(watcher.consoleErrors, `${viewport.name}: console errors`).toEqual([]);
 
-      await platform.setSubscription(shop.id, { planId: await planId(platform, 'pro') });
+      await platform.setSubscription(shop.id, { planId: await planId(platform, 'business') });
       await go(page, `/management/roles/${role.id}`);
       await page.getByTestId('area-Orders').waitFor();
-      await expect(page.getByTestId('plan-lock-stock.write')).toHaveCount(0);
-      await expect(editor.permission('stock.write')).toBeEnabled();
+      await expect(page.getByTestId('plan-lock-purchasing.write')).toHaveCount(0);
+      await expect(editor.permission('purchasing.write')).toBeEnabled();
     });
   }
 });
