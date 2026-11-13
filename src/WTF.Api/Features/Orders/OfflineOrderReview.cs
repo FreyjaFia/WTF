@@ -46,10 +46,20 @@ internal static class OfflineOrderReview
             .Concat(command.Items.SelectMany(i => i.AddOns.Select(a => a.ProductId)))
             .Distinct()
             .ToList();
-        var products = await db.Products
+        var atSale = CatalogAtSale.Create(db, createdAt, command.CatalogSyncedAt?.ToUniversalTime());
+        var current = await db.Products
             .Where(p => productIds.Contains(p.Id))
             .Select(p => new { p.Id, p.Name, p.Price, p.IsActive })
-            .ToDictionaryAsync(p => p.Id, cancellationToken);
+            .ToListAsync(cancellationToken);
+        var products = new Dictionary<Guid, (Guid Id, string Name, decimal Price, bool IsActive)>();
+        foreach (var p in current)
+        {
+            products[p.Id] = (
+                p.Id,
+                p.Name,
+                await atSale.ProductPriceAsync(p.Id, p.Price, cancellationToken),
+                await atSale.ProductIsActiveAsync(p.Id, p.IsActive, cancellationToken));
+        }
 
         reasons.AddRange(products.Values
             .Where(p => !p.IsActive)
@@ -70,7 +80,7 @@ internal static class OfflineOrderReview
 
         await AddBundleReasonsAsync(db, command, createdAt, timeZone, reasons, cancellationToken);
         await AddSeniorPwdReasonsAsync(db, command, reasons, cancellationToken);
-        await AddPriceReasonsAsync(db, command, products.ToDictionary(p => p.Key, p => (p.Value.Name, p.Value.Price)), createdAt, timeZone, reasons, cancellationToken);
+        await AddPriceReasonsAsync(db, command, products.ToDictionary(p => p.Key, p => (p.Value.Name, p.Value.Price)), atSale, createdAt, timeZone, reasons, cancellationToken);
 
         return [.. reasons.Distinct()];
     }
@@ -217,6 +227,7 @@ internal static class OfflineOrderReview
         WTFDbContext db,
         CreateOrderCommand command,
         Dictionary<Guid, (string Name, decimal Price)> products,
+        CatalogAtSale atSale,
         DateTime createdAt,
         TimeZoneInfo timeZone,
         List<OfflineReason> reasons,
@@ -240,14 +251,27 @@ internal static class OfflineOrderReview
 
             if (!item.BundlePromotionId.HasValue)
             {
+                var addOnQuantities = item.AddOns.Select(a => (a.ProductId, a.Quantity)).ToList();
                 var discounted = PromotionPricing.GetDiscountedUnitPrice(
-                    product.Price,
-                    item.ProductId,
-                    item.AddOns.Select(a => (a.ProductId, a.Quantity)),
-                    rulesByProductId,
-                    item.Quantity,
-                    loaded.Budget);
-                loaded.Budget.Use(discounted?.PromotionId, discounted?.DiscountedQuantity ?? 0);
+                    product.Price, item.ProductId, addOnQuantities, rulesByProductId, item.Quantity, loaded.PoolFreeBudget);
+                loaded.PoolFreeBudget.Use(discounted?.PromotionId, discounted?.DiscountedQuantity ?? 0);
+
+                // The register could not see the shared pool of uses. The sale was charged, so it is honored; what the pool could
+                // not cover is counted as over the limit and noted, never held.
+                var withPool = PromotionPricing.GetDiscountedUnitPrice(
+                    product.Price, item.ProductId, addOnQuantities, rulesByProductId, item.Quantity, loaded.Budget);
+                loaded.Budget.Use(withPool?.PromotionId, withPool?.DiscountedQuantity ?? 0);
+                var covered = discounted?.DiscountedQuantity ?? 0;
+                var coveredByPool = withPool?.DiscountedQuantity ?? 0;
+                if (discounted is not null && !discounted.IsPartial && item.QuotedPrice.HasValue && coveredByPool < covered && item.QuotedPrice.Value == discounted.Price)
+                {
+                    reasons.Add(OfflineReason.Note(
+                        OfflineReasonCodes.PromotionOverLimit,
+                        $"{product.Name}: the promotion had no uses left for {covered - coveredByPool} of {item.Quantity}, sold at the quoted price.",
+                        lineIndex,
+                        $"{coveredByPool}",
+                        $"{covered}"));
+                }
 
                 if (discounted is { IsPartial: true } && item.QuotedPrice.HasValue)
                 {
@@ -281,9 +305,10 @@ internal static class OfflineOrderReview
                     continue;
                 }
 
-                var currentAddOn = overridePrices.TryGetValue((item.ProductId, addOn.ProductId), out var overridePrice)
-                    ? overridePrice
-                    : addOnProduct.Price;
+                overridePrices.TryGetValue((item.ProductId, addOn.ProductId), out var overridePrice);
+                var overrideAtSale = await atSale.AddOnOverrideAsync(
+                    item.ProductId, addOn.ProductId, overridePrices.ContainsKey((item.ProductId, addOn.ProductId)) ? overridePrice : null, cancellationToken);
+                var currentAddOn = overrideAtSale ?? addOnProduct.Price;
                 if (currentAddOn != addOn.QuotedPrice.Value)
                 {
                     reasons.Add(OfflineReason.Hold(
