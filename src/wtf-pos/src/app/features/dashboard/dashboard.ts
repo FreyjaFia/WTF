@@ -4,7 +4,7 @@ import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular
 import { RouterLink } from '@angular/router';
 import { Capacitor } from '@capacitor/core';
 import { HttpErrorMessages } from '@core/messages';
-import { DashboardService, SignalRService } from '@core/services';
+import { DashboardService, PlanStore, SignalRService } from '@core/services';
 import {
   AnimatedCounterComponent,
   AreaChartComponent,
@@ -56,6 +56,7 @@ const GREETINGS = [
 export class Dashboard implements OnInit, OnDestroy {
   private readonly dashboardService = inject(DashboardService);
   private readonly signalRService = inject(SignalRService);
+  protected readonly plans = inject(PlanStore);
 
   private hubSub: Subscription | null = null;
   private timeAgoSub: Subscription | null = null;

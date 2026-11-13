@@ -10,6 +10,7 @@ import {
   CatalogLookupService,
   AuthService,
   FileDownloadService,
+  PlanStore,
   ReportsService,
   UserService,
 } from '@core/services';
@@ -54,8 +55,10 @@ import {
   ReportContext,
   ReportDefinition,
   ReportFilterKind,
+  ReportGroup,
   ReportRow,
 } from './report-definitions';
+import { reportFeatureOf } from './report-features';
 import { buildCsv, cellText, filterAndSortRows, totalCells } from './report-table';
 
 const ReportPageTabs = {
@@ -118,6 +121,7 @@ export class ReportsComponent implements OnInit {
   protected readonly canGenerate = inject(AuthService).canGenerateReports();
   private readonly formBuilder = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
+  private readonly plans = inject(PlanStore);
 
   protected readonly selectedType = signal<ReportType | null>(null);
   protected readonly rows = signal<ReportRow[]>([]);
@@ -183,10 +187,14 @@ export class ReportsComponent implements OnInit {
     { value: FixedBundleReportTypeFilterId, label: 'Fixed Bundle' },
     { value: MixMatchReportTypeFilterId, label: 'Mix & Match' },
   ]);
-  protected readonly catalog = REPORT_GROUPS.map((section) => ({
-    ...section,
-    reports: REPORT_DEFINITIONS.filter((definition) => definition.group === section.group),
-  })).filter((section) => section.reports.length > 0);
+  protected get catalog(): { group: ReportGroup; description: string; reports: ReportDefinition[] }[] {
+    return REPORT_GROUPS.map((section) => ({
+      ...section,
+      reports: REPORT_DEFINITIONS.filter(
+        (definition) => definition.group === section.group && this.isRunnable(definition.type),
+      ),
+    })).filter((section) => section.reports.length > 0);
+  }
 
   protected readonly reportForm = this.formBuilder.group({
     preset: this.formBuilder.control<DatePreset>(DatePresets.ThisMonth, {
@@ -286,7 +294,9 @@ export class ReportsComponent implements OnInit {
     this.loadMonthlyWorkbookStatus();
 
     const requested = this.route.snapshot.queryParamMap.get('report');
-    const match = REPORT_DEFINITIONS.find((definition) => definition.type === requested);
+    const match = REPORT_DEFINITIONS.find(
+      (definition) => definition.type === requested && this.isRunnable(definition.type),
+    );
     if (match) {
       this.openReport(match.type);
     }
@@ -753,6 +763,11 @@ export class ReportsComponent implements OnInit {
       },
       error: () => this.staffOptions.set([]),
     });
+  }
+
+  private isRunnable(type: ReportType): boolean {
+    const feature = reportFeatureOf(type);
+    return feature === null || this.plans.hasFeature(feature);
   }
 
   private toStaffDisplayName(user: UserDto): string {

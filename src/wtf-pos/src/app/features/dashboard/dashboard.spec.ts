@@ -1,7 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { DashboardService, SignalRService } from '@core/services';
+import { DashboardService, PlanStore, SignalRService } from '@core/services';
 import { DashboardDto } from '@shared/models';
+import { SubscriptionDto } from '@shared/models/subscription.models';
 import { Observable, of, Subject, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { internals } from '../../testing/feature-spec-helpers';
@@ -84,6 +85,7 @@ describe('Dashboard', () => {
   }
 
   beforeEach(() => {
+    localStorage.clear();
     service = { getDashboard: vi.fn(() => of(makeDashboard())) };
     hub$ = new Subject<void>();
     signalR = {
@@ -583,6 +585,21 @@ describe('Dashboard', () => {
         expect.stringContaining('/orders'),
         '/management/reports?report=customer-links',
         '/management/reports?report=promotions',
+        '/management/reports?report=customers',
+      ]);
+    });
+
+    it('hides the stock, customer link and promotion tiles when the plan does not have them', () => {
+      service.getDashboard.mockReturnValue(of(makeDashboard({ insights })));
+      const { fixture } = create(false);
+      TestBed.inject(PlanStore).apply({ managed: true, features: [], planName: 'Starter' } as unknown as SubscriptionDto);
+      fixture.detectChanges();
+
+      const hrefs = tiles(fixture).map((tile) => tile.getAttribute('href'));
+      expect(hrefs).toEqual([
+        '/management/reports?report=daily-sales',
+        '/management/reports?report=voids',
+        expect.stringContaining('/orders'),
         '/management/reports?report=customers',
       ]);
     });

@@ -474,19 +474,21 @@
                 </p>
                 <p class="text-[11px] text-gray-400">Cancelled and refunded orders</p>
               </a>
-              <a
-                class="bg-surface rounded-lg border border-gray-100 px-4 py-3 shadow-sm transition hover:shadow-md"
-                [routerLink]="routes.ManagementReports"
-                [queryParams]="{ report: 'stock-status' }"
-              >
-                <p class="text-xs text-gray-500">Stock</p>
-                <p class="text-sm font-semibold text-gray-900">
-                  {{ insight.lowStockCount + insight.outOfStockCount }} to restock
-                </p>
-                <p class="text-[11px] text-gray-400">
-                  {{ insight.outOfStockCount }} out, {{ insight.lowStockCount }} low
-                </p>
-              </a>
+              @if (plans.hasFeature('inventory')) {
+                <a
+                  class="bg-surface rounded-lg border border-gray-100 px-4 py-3 shadow-sm transition hover:shadow-md"
+                  [routerLink]="routes.ManagementReports"
+                  [queryParams]="{ report: 'stock-status' }"
+                >
+                  <p class="text-xs text-gray-500">Stock</p>
+                  <p class="text-sm font-semibold text-gray-900">
+                    {{ insight.lowStockCount + insight.outOfStockCount }} to restock
+                  </p>
+                  <p class="text-[11px] text-gray-400">
+                    {{ insight.outOfStockCount }} out, {{ insight.lowStockCount }} low
+                  </p>
+                </a>
+              }
               <a
                 class="bg-surface rounded-lg border border-gray-100 px-4 py-3 shadow-sm transition hover:shadow-md"
                 [routerLink]="routes.OrdersList"
@@ -497,28 +499,32 @@
                 </p>
                 <p class="text-[11px] text-gray-400">Online orders to accept or reject</p>
               </a>
-              <a
-                class="bg-surface rounded-lg border border-gray-100 px-4 py-3 shadow-sm transition hover:shadow-md"
-                [routerLink]="routes.ManagementReports"
-                [queryParams]="{ report: 'customer-links' }"
-              >
-                <p class="text-xs text-gray-500">Customer link orders</p>
-                <p class="text-sm font-semibold text-gray-900">{{ insight.customerLinkOrders }}</p>
-                <p class="text-[11px] text-gray-400">
-                  Without awaiting approval, PHP {{ insight.customerLinkRevenue | number: '1.2-2' }} sold
-                </p>
-              </a>
-              <a
-                class="bg-surface rounded-lg border border-gray-100 px-4 py-3 shadow-sm transition hover:shadow-md"
-                [routerLink]="routes.ManagementReports"
-                [queryParams]="{ report: 'promotions' }"
-              >
-                <p class="text-xs text-gray-500">Top promotion</p>
-                <p class="truncate text-sm font-semibold text-gray-900">
-                  {{ insight.topPromotionName ?? 'None yet' }}
-                </p>
-                <p class="text-[11px] text-gray-400">{{ insight.topPromotionUses }} uses</p>
-              </a>
+              @if (plans.hasFeature('orderlinks')) {
+                <a
+                  class="bg-surface rounded-lg border border-gray-100 px-4 py-3 shadow-sm transition hover:shadow-md"
+                  [routerLink]="routes.ManagementReports"
+                  [queryParams]="{ report: 'customer-links' }"
+                >
+                  <p class="text-xs text-gray-500">Customer link orders</p>
+                  <p class="text-sm font-semibold text-gray-900">{{ insight.customerLinkOrders }}</p>
+                  <p class="text-[11px] text-gray-400">
+                    Without awaiting approval, PHP {{ insight.customerLinkRevenue | number: '1.2-2' }} sold
+                  </p>
+                </a>
+              }
+              @if (plans.hasFeature('promotions')) {
+                <a
+                  class="bg-surface rounded-lg border border-gray-100 px-4 py-3 shadow-sm transition hover:shadow-md"
+                  [routerLink]="routes.ManagementReports"
+                  [queryParams]="{ report: 'promotions' }"
+                >
+                  <p class="text-xs text-gray-500">Top promotion</p>
+                  <p class="truncate text-sm font-semibold text-gray-900">
+                    {{ insight.topPromotionName ?? 'None yet' }}
+                  </p>
+                  <p class="text-[11px] text-gray-400">{{ insight.topPromotionUses }} uses</p>
+                </a>
+              }
               <a
                 class="bg-surface rounded-lg border border-gray-100 px-4 py-3 shadow-sm transition hover:shadow-md"
                 [routerLink]="routes.ManagementReports"
@@ -533,7 +539,7 @@
             </div>
           }
 
-          @if (profit(); as p) {
+          @if (plans.hasFeature('inventory') && profit(); as p) {
             <!-- Owner tiles from the profit reports; only the roles that may read costs get them -->
             <div class="grid grid-cols-2 gap-2 md:gap-3 lg:grid-cols-4" data-dashboard-profit>
               <a

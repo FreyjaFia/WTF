@@ -1,10 +1,12 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute } from '@angular/router';
 import { HttpErrorMessages } from '@core/messages';
+import { SubscriptionDto } from '@shared/models/subscription.models';
 import {
   AlertService,
   AuthService,
   FileDownloadService,
+  PlanStore,
   ReportsService,
   UserService,
 } from '@core/services';
@@ -122,6 +124,7 @@ describe('ReportsComponent', () => {
   };
 
   beforeEach(() => {
+    localStorage.clear();
     // Sunday 15 March 2026, local time.
     queryReport = null;
     canGenerate = true;
@@ -190,6 +193,27 @@ describe('ReportsComponent', () => {
         'Operations',
         'Inventory',
       ]);
+    });
+
+    it('lists only the reports the plan can run', async () => {
+      TestBed.inject(PlanStore).apply({ managed: true, features: [], planName: 'Starter' } as unknown as SubscriptionDto);
+      await create();
+
+      const types = t.catalog.flatMap((section) => section.reports.map((r) => r.type));
+      expect(types.length).toBe(11);
+      for (const gated of ['stock-status', 'waste', 'stock-variance', 'gross-profit', 'profit-loss', 'promotions', 'customer-links']) {
+        expect(types).not.toContain(gated);
+      }
+      expect(types).toContain('daily-sales');
+      expect(t.catalog.map((s) => s.group)).not.toContain('Inventory');
+    });
+
+    it('does not open a report the plan cannot run from a link', async () => {
+      TestBed.inject(PlanStore).apply({ managed: true, features: [], planName: 'Starter' } as unknown as SubscriptionDto);
+      queryReport = 'stock-status';
+      await create();
+
+      expect(t.selectedType()).toBeNull();
     });
 
     it('defaults the range to this month and loads staff and workbook status', async () => {
