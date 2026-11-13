@@ -22,6 +22,7 @@ import {
 } from '@shared/models';
 import { Observable, Subject, of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { SyncResultEntry } from '@core/services/db';
 import { OrderList } from './order-list';
 
 interface Internals {
@@ -97,6 +98,7 @@ describe('OrderList', () => {
   let t: Internals;
   let isOnline: ReturnType<typeof signal<boolean>>;
   let pendingOrders: ReturnType<typeof signal<unknown[]>>;
+  let syncResults: ReturnType<typeof signal<SyncResultEntry[]>>;
   let unread: Record<string, number>;
   let inbox: { unreadFor: ReturnType<typeof vi.fn> };
   let isSyncing: ReturnType<typeof signal<boolean>>;
@@ -127,6 +129,9 @@ describe('OrderList', () => {
   let offline: {
     pendingOrders: unknown;
     isSyncing: unknown;
+    syncResults: unknown;
+    dismissSyncResult: ReturnType<typeof vi.fn>;
+    clearSyncResults: ReturnType<typeof vi.fn>;
     syncAll: ReturnType<typeof vi.fn>;
     syncNow: ReturnType<typeof vi.fn>;
   };
@@ -170,6 +175,7 @@ describe('OrderList', () => {
     canOverride = true;
     isOnline = signal(true);
     pendingOrders = signal<unknown[]>([]);
+    syncResults = signal<SyncResultEntry[]>([]);
     isSyncing = signal(false);
     hubUpdates = new Subject<string>();
     orderService = {
@@ -193,7 +199,15 @@ describe('OrderList', () => {
       orderChanged: hubUpdates.asObservable(),
       orderMessage: new Subject<unknown>().asObservable(),
     };
-    offline = { pendingOrders, isSyncing, syncAll: vi.fn(), syncNow: vi.fn() };
+    offline = {
+      pendingOrders,
+      isSyncing,
+      syncResults,
+      dismissSyncResult: vi.fn(),
+      clearSyncResults: vi.fn(),
+      syncAll: vi.fn(),
+      syncNow: vi.fn(),
+    };
     unread = {};
     inbox = { unreadFor: vi.fn((orderId: string) => unread[orderId] ?? 0) };
     listState = { load: vi.fn(), save: vi.fn() };
@@ -1426,6 +1440,112 @@ describe('OrderList', () => {
 
       (t as unknown as { selectedDateRanges: { set: (v: unknown) => void } }).selectedDateRanges.set(['today']);
       expect(count()).toBe(3);
+    });
+  });
+
+  describe('the Last sync card', () => {
+    const el = () => fixture.nativeElement as HTMLElement;
+    const card = () => el().querySelector('[data-last-sync]') as HTMLElement | null;
+    const rows = () => [...el().querySelectorAll('[data-sync-result]')] as HTMLElement[];
+    const entry = (over: Partial<SyncResultEntry>): SyncResultEntry => ({
+      id: 1,
+      localId: 'OFF-1',
+      orderNumber: 12,
+      outcome: 'saved',
+      message: 'Saved.',
+      reasons: [],
+      at: '2026-11-13T02:00:00.000Z',
+      ...over,
+    });
+
+    it('is not shown when there is nothing to report', () => {
+      init();
+
+      expect(card()).toBeNull();
+    });
+
+    it('says what each queued order became, in plain words', () => {
+      syncResults.set([
+        entry({ id: 1, localId: 'OFF-1', orderNumber: 12 }),
+        entry({
+          id: 2,
+          localId: 'OFF-2',
+          orderNumber: 13,
+          outcome: 'saved-with-note',
+          message: 'Saved, with a note.',
+          reasons: ['Milk is below zero.'],
+        }),
+        entry({
+          id: 3,
+          localId: 'OFF-3',
+          orderNumber: 14,
+          outcome: 'sent-for-review',
+          message: 'An Admin has to review this sale before it counts.',
+          reasons: ['Latte costs 130.00 now.'],
+        }),
+        entry({
+          id: 4,
+          localId: 'OFF-4',
+          orderNumber: null,
+          outcome: 'could-not-sync',
+          message: 'Latte is not sold here.',
+        }),
+      ]);
+      init();
+
+      const text = card()!.textContent!;
+      expect(rows()).toHaveLength(4);
+      expect(text).toContain('Saved as order #12');
+      expect(text).toContain('Saved as order #13 with a note');
+      expect(text).toContain('Milk is below zero.');
+      expect(text).toContain('Order #14 sent for review');
+      expect(text).toContain('Latte costs 130.00 now.');
+      expect(text).toContain('Could not sync');
+      expect(text).toContain('Latte is not sold here.');
+    });
+
+    it('offers no way to approve, only to dismiss', () => {
+      syncResults.set([entry({ outcome: 'sent-for-review', reasons: ['A price changed.'] })]);
+      init();
+
+      const labels = [...card()!.querySelectorAll('button')].map(
+        (b) => b.getAttribute('aria-label') ?? b.textContent?.trim(),
+      );
+      expect(labels).toEqual(['1 Last sync', 'Clear all', 'Dismiss OFF-1']);
+      expect(card()!.textContent).not.toMatch(/approve|reject/i);
+    });
+
+    it('dismisses one row', () => {
+      syncResults.set([entry({ id: 7 })]);
+      init();
+
+      (card()!.querySelector('[aria-label="Dismiss OFF-1"]') as HTMLButtonElement).click();
+
+      expect(offline.dismissSyncResult).toHaveBeenCalledWith(7);
+    });
+
+    it('clears all rows', () => {
+      syncResults.set([entry({ id: 7 }), entry({ id: 8, localId: 'OFF-2' })]);
+      init();
+
+      const clear = [...card()!.querySelectorAll('button')].find(
+        (b) => b.textContent?.trim() === 'Clear all',
+      ) as HTMLButtonElement;
+      clear.click();
+
+      expect(offline.clearSyncResults).toHaveBeenCalled();
+    });
+
+    it('collapses and opens from its header', () => {
+      syncResults.set([entry({})]);
+      init();
+      const header = card()!.querySelector('button[aria-expanded]') as HTMLButtonElement;
+
+      expect(header.getAttribute('aria-expanded')).toBe('true');
+      header.click();
+      fixture.detectChanges();
+
+      expect(header.getAttribute('aria-expanded')).toBe('false');
     });
   });
 });
