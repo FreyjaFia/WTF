@@ -13,4 +13,13 @@ public record DashboardInsightsDto(
     string? TopPromotionName,
     int TopPromotionUses,
     int NewCustomers,
-    int ReturningCustomers);
+    int ReturningCustomers,
+    HeldOrdersInsightDto? HeldOrders = null);
+
+public record HeldOrdersInsightDto(
+    int Count,
+    decimal Amount,
+    decimal SeniorPwdDiscount,
+    int AgedCount,
+    decimal AgedAmount,
+    string? AgedText);

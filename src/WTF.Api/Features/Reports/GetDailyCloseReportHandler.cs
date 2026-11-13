@@ -4,6 +4,7 @@ using WTF.Api.Common.Orders;
 using WTF.Api.Common.Time;
 using WTF.Api.Features.Inventory.Waste;
 using WTF.Api.Features.OrderLinks;
+using WTF.Api.Features.Orders;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Features.Reports.DTOs;
 using WTF.Calculations.Inventory;
@@ -30,6 +31,8 @@ public sealed class GetDailyCloseReportHandler(
     public const string StaffSection = "Staff";
     public const string VoidsSection = "Voids";
     public const string WasteSection = "Waste";
+    public const string HeldOrdersLabel = "Offline sales held for review";
+    public const string HeldSeniorPwdLabel = "Held Senior/PWD discount";
 
     public async Task<List<DailyCloseReportRowDto>> Handle(GetDailyCloseReportQuery request, CancellationToken cancellationToken)
     {
@@ -76,6 +79,17 @@ public sealed class GetDailyCloseReportHandler(
             new(SalesSection, "Tips", null, summary.CompletedOrderCount, summary.Tips),
             new(SalesSection, "Cancelled orders", "Never paid, so no amount", cancelledCount, 0m)
         ]);
+
+        // Cash for these sales is already in the drawer, but they are not sales until an Admin approves them.
+        var held = HeldOrderRules.Summarize(await HeldOrderFigures.LoadAsync(db, fromUtc, toExclusiveUtc, source, cancellationToken), DateTime.UtcNow);
+        if (held.Count > 0)
+        {
+            rows.Add(new(SalesSection, HeldOrdersLabel, "In the drawer, not counted as sales until approved", held.Count, held.Amount));
+            if (held.SeniorPwdDiscount > 0m || held.SeniorPwdVatExempt > 0m)
+            {
+                rows.Add(new(SalesSection, HeldSeniorPwdLabel, $"Already taken off the held amount; VAT-exempt PHP {held.SeniorPwdVatExempt:N2}", 0, held.SeniorPwdDiscount));
+            }
+        }
 
         rows.AddRange(sales
             .GroupBy(o => o.PaymentMethod?.Name ?? "Unknown")
