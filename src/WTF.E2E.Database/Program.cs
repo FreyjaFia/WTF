@@ -111,18 +111,20 @@ async Task CreateAsync()
 
 static async Task SeedDefaultShopAsync(WTFDbContext db)
 {
-    // The shop every test account belongs to (same fixed id as tools/sql/20261108_add_tenants.sql), on the Pro plan.
+    // The shop every test account belongs to (same fixed id as tools/sql/20261108_add_tenants.sql), on the Business plan (every feature, so the suite can reach every screen); gating specs open their own Starter and Pro shops.
     var now = DateTime.UtcNow;
-    var pro = new Plan { Code = "pro", Name = "Pro", MonthlyPrice = 2500, Features = "pos,orders,reports,offline,inventory,promotions,orderlinks,chat,workbook", SortOrder = 2, IsActive = true };
+    var pro = new Plan { Code = "pro", Name = "Pro", MonthlyPrice = 2500, Features = "pos,orders,reports,offline,inventory,promotions,orderlinks,chat,workbook,expenses,customroles", SortOrder = 2, IsActive = true };
+    var business = new Plan { Code = "business", Name = "Business", MonthlyPrice = 3500, Features = "inventory,purchasing,promotions,orderlinks,chat,expenses,workbook,audit,customroles", SortOrder = 3, IsActive = true };
     db.Plans.Add(new Plan { Code = "starter", Name = "Starter", MonthlyPrice = 1500, Features = "pos,orders,reports,offline", SortOrder = 1, IsActive = true });
     db.Plans.Add(pro);
+    db.Plans.Add(business);
     db.Tenants.Add(new Tenant { Id = TenantDefaults.DefaultTenantId, Name = "WTF", Slug = TenantDefaults.DefaultTenantSlug, Status = 2, CreatedAt = now });
     await db.SaveChangesAsync();
 
     db.TenantSubscriptions.Add(new TenantSubscription
     {
         TenantId = TenantDefaults.DefaultTenantId,
-        PlanId = pro.Id,
+        PlanId = business.Id,
         CurrentPeriodStart = now,
         CurrentPeriodEnd = now.AddDays(365),
         GraceDays = 7,
