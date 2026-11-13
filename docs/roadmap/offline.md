@@ -93,6 +93,8 @@ An order sold offline is a sale that already happened, so the server never repri
 
 ### Phase 7 - Offline sync rework: judge at sale time, stock and limits [Planned, added 20 Oct 2026]
 
+**Senior/PWD discount (built before this phase):** the tenant settings `SeniorPwdEnabled` and `VatRegistered` and the product flag `IsSeniorPwdEligible` must go in the Phase 7 change log, so an offline sale is judged with the rules that applied at sale time. The queued order already carries the persons and per-line indexes (queue version 2); until Phase 7 the server recomputes at sync and holds a sale whose discount differs or whose ID or name is missing.
+
 Phase 6 holds an offline sale whenever **today's** catalog differs from what the POS quoted. That is safe but too eager, and
 it has gaps. Examples it gets wrong or does not cover: a price that changed *after* the sale was made is still held (the
 device was right at the time); a promotion that ended or ran out after the sale is held; a promotion that ran out while the
