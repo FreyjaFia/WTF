@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { CartItemDto } from '@shared/models';
+import { CartItemDto, SeniorPwdPersonRequestDto } from '@shared/models';
 import { db, PersistedCart } from './db';
 
 @Injectable({ providedIn: 'root' })
@@ -10,12 +10,14 @@ export class CartPersistenceService {
     items: CartItemDto[],
     customerId: string | null,
     specialInstructions: string,
+    seniorPwdPersons: SeniorPwdPersonRequestDto[] = [],
   ): Promise<void> {
     const record: PersistedCart = {
       id: CartPersistenceService.CART_ROW_ID,
       customerId,
       specialInstructions,
       items,
+      seniorPwdPersons,
       savedAt: new Date().toISOString(),
     };
 

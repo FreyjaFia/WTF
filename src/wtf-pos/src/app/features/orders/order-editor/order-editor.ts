@@ -15,6 +15,16 @@ import {
 } from './order-editor-bundles';
 import type { BadgeVariant } from '@shared/components/badge/badge';
 import { orderStatusLabel, orderStatusVariant } from '@shared/utils/order-status';
+import {
+  applySelections,
+  isCoveredLine,
+  reductionOf,
+  selectionsFromCart,
+  SeniorPwdSelection,
+  totalsByPerson,
+  uncoverLines,
+} from './order-editor-senior-pwd';
+import { SeniorPwdDialogComponent, SeniorPwdLineOption } from '../senior-pwd-dialog/senior-pwd-dialog';
 import { CommonModule } from '@angular/common';
 import {
   ChangeDetectorRef,
@@ -90,6 +100,8 @@ import {
   DiscountedProductPromotionDto,
   PromotionListItemDto,
   PromotionTypeEnum,
+  SENIOR_PWD_TYPE_LABELS,
+  SeniorPwdPersonRequestDto,
   UpdateOrderCommand,
   formatSubCategoryName,
   SYSTEM_CATALOG_IDS,
@@ -114,6 +126,8 @@ import {
   promoDiscount,
   StockCartLine,
   stockShortfalls,
+  isSeniorPwdEligibleLine,
+  subtractMoney,
 } from '@shared/calculations';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { AddOnLabelsPipe } from '@shared/pipes';
@@ -144,6 +158,7 @@ type CatalogScrollTab = number | 'bundles';
     OrderReceiptComponent,
     SearchInputComponent,
     ConfirmDialogComponent,
+    SeniorPwdDialogComponent,
   ],
   templateUrl: './order-editor.html',
 })
@@ -246,6 +261,32 @@ export class OrderEditor implements OnInit, OnDestroy {
       .map((subCategory) => ({ id: subCategory.id, label: formatSubCategoryName(subCategory.name) })),
   );
   protected readonly cart = signal<CartItemDto[]>([]);
+  protected readonly seniorPwdPersons = signal<SeniorPwdPersonRequestDto[]>([]);
+  protected readonly showSeniorPwdDialog = signal(false);
+  protected readonly vatRegistered = computed(() => this.catalogCache.shopSettings().vatRegistered);
+  protected readonly canApplySeniorPwd = computed(
+    () =>
+      this.catalogCache.shopSettings().seniorPwdEnabled &&
+      this.authService.canApplySeniorPwd() &&
+      this.canManageOrderActions() &&
+      !this.isReadOnly() &&
+      this.cart().length > 0,
+  );
+  protected readonly seniorPwdTotals = computed(() =>
+    totalsByPerson(this.cart(), this.seniorPwdPersons().length, this.vatRegistered()),
+  );
+  protected readonly seniorPwdOptions = computed<SeniorPwdLineOption[]>(() =>
+    uncoverLines(this.cart()).map((line) => ({
+      line,
+      blockedReason: this.seniorPwdBlockedReason(line),
+    })),
+  );
+  protected readonly seniorPwdSelections = computed<SeniorPwdSelection[]>(() =>
+    selectionsFromCart(this.cart(), this.seniorPwdPersons()).selections,
+  );
+  protected readonly seniorPwdConflict = computed(() =>
+    this.cart().some((line) => isCoveredLine(line) && this.seniorPwdBlockedReason(line) !== null),
+  );
   protected readonly customers = signal<CustomerDto[]>([]);
   protected readonly products = signal<ProductDto[]>([]);
   protected readonly productsCache = signal<ProductDto[]>([]);
@@ -511,7 +552,11 @@ export class OrderEditor implements OnInit, OnDestroy {
   });
 
   protected itemCount = () => this.cart().reduce((s, i) => s + i.qty, 0);
-  protected totalPrice = () => cartTotal(this.cart(), (line) => this.getLineDiscount(line));
+  protected totalPrice = () =>
+    subtractMoney(
+      cartTotal(this.cart(), (line) => this.getLineDiscount(line)),
+      reductionOf(this.cart(), this.vatRegistered()),
+    );
 
   protected getNameParts(name: string): { text: string; isMatch: boolean }[] {
     return nameParts(name, this.filterForm.controls.searchTerm.value);
@@ -828,7 +873,18 @@ export class OrderEditor implements OnInit, OnDestroy {
         return;
       }
 
-      this.cartPersistence.save(items, customerId, instructions);
+      this.cartPersistence.save(items, customerId, instructions, this.seniorPwdPersons());
+    });
+
+    // A person whose lines are all gone is dropped, so the discount never lists someone who covers nothing.
+    effect(() => {
+      const cart = this.cart();
+      const persons = this.seniorPwdPersons();
+      if (persons.length === 0 && !cart.some(isCoveredLine)) {
+        return;
+      }
+
+      untracked(() => this.pruneSeniorPwdPersons(cart, persons));
     });
 
     // The bundle promotions come from the shared catalog.
@@ -964,6 +1020,7 @@ export class OrderEditor implements OnInit, OnDestroy {
 
       this.offlineOrderStatus.set(pending.command.status);
       this.cart.set([...pending.cartSnapshot]);
+      this.seniorPwdPersons.set(pending.command.seniorPwdPersons ?? []);
       this.selectedCustomerId.set(pending.command.customerId ?? null);
       this.orderSpecialInstructions.set(pending.command.specialInstructions ?? '');
 
@@ -986,8 +1043,17 @@ export class OrderEditor implements OnInit, OnDestroy {
       }[]
     >();
     const regularItems: CartItemDto[] = [];
+    const personIndexById = new Map((order.seniorPwdPersons ?? []).map((person, index) => [person.id, index]));
+    this.seniorPwdPersons.set(
+      (order.seniorPwdPersons ?? []).map((person) => ({
+        type: person.type,
+        idNumber: person.idNumber,
+        customerName: person.customerName,
+      })),
+    );
 
     for (const item of order.items) {
+      const personIndex = item.seniorPwdPersonId ? (personIndexById.get(item.seniorPwdPersonId) ?? null) : null;
       const expandedAddOns: CartAddOnDto[] = [];
       for (const ao of item.addOns ?? []) {
         for (let i = 0; i < ao.quantity; i++) {
@@ -1018,6 +1084,7 @@ export class OrderEditor implements OnInit, OnDestroy {
         ? regularItems.find(
             (existing) =>
               existing.productId === item.productId &&
+              (existing.seniorPwdPersonIndex ?? null) === personIndex &&
               (existing.specialInstructions ?? null) === (item.specialInstructions ?? null) &&
               (existing.addOns ?? []).map((a) => a.addOnId).sort().join() === expandedAddOns.map((a) => a.addOnId).sort().join(),
           )
@@ -1035,6 +1102,7 @@ export class OrderEditor implements OnInit, OnDestroy {
         imageUrl: '',
         addOns: expandedAddOns.length > 0 ? expandedAddOns : undefined,
         specialInstructions: item.specialInstructions,
+        seniorPwdPersonIndex: personIndex,
       });
     }
 
@@ -1254,6 +1322,7 @@ export class OrderEditor implements OnInit, OnDestroy {
       items: this.cart().map((c) => ({
         productId: c.productId,
         qty: c.qty,
+        seniorPwdPersonIndex: c.seniorPwdPersonIndex ?? null,
         addOns: c.addOns?.map((ao) => ao.addOnId).sort() ?? [],
         bundleItems:
           c.bundleItems?.map((bundleItem) => ({
@@ -1411,6 +1480,7 @@ export class OrderEditor implements OnInit, OnDestroy {
                 bundlePromotionTypeId: line.bundlePromotionTypeId ?? null,
                 bundleRequiredSelectionCount: line.bundleRequiredSelectionCount ?? null,
                 bundleMaxSelectionPerOption: line.bundleMaxSelectionPerOption ?? null,
+                seniorPwdPersonIndex: line.seniorPwdPersonIndex ?? null,
               }
             : line,
         ),
@@ -1425,7 +1495,8 @@ export class OrderEditor implements OnInit, OnDestroy {
           c.productId === product.id &&
           !c.addOns?.length &&
           !c.specialInstructions &&
-          !c.bundlePromotionId,
+          !c.bundlePromotionId &&
+          !isCoveredLine(c),
       );
 
       if (existing) {
@@ -1434,7 +1505,8 @@ export class OrderEditor implements OnInit, OnDestroy {
             c.productId === product.id &&
             !c.addOns?.length &&
             !c.specialInstructions &&
-            !c.bundlePromotionId
+            !c.bundlePromotionId &&
+            !isCoveredLine(c)
               ? { ...c, qty: c.qty + lineQty }
               : c,
           ),
@@ -1680,6 +1752,40 @@ export class OrderEditor implements OnInit, OnDestroy {
 
       this.cart.set(this.cart().map((c, i) => (i === index ? { ...c, qty: c.qty - 1 } : c)));
     }
+  }
+
+  protected openSeniorPwdDialog(): void {
+    if (!this.canApplySeniorPwd() || this.isOrderRequestBusy()) {
+      return;
+    }
+
+    this.showSeniorPwdDialog.set(true);
+  }
+
+  protected closeSeniorPwdDialog(): void {
+    this.showSeniorPwdDialog.set(false);
+  }
+
+  protected applySeniorPwd(selections: SeniorPwdSelection[]): void {
+    const lines = uncoverLines(this.cart());
+    const { cart, persons } = applySelections(lines, selections);
+    this.cart.set(cart);
+    this.seniorPwdPersons.set(persons);
+    this.showSeniorPwdDialog.set(false);
+  }
+
+  protected removeSeniorPwd(): void {
+    this.cart.set(uncoverLines(this.cart()));
+    this.seniorPwdPersons.set([]);
+    this.showSeniorPwdDialog.set(false);
+  }
+
+  protected isSeniorPwdLine(line: CartItemDto): boolean {
+    return isCoveredLine(line) && !!this.seniorPwdPersons()[line.seniorPwdPersonIndex!];
+  }
+
+  protected seniorPwdLabel(person: SeniorPwdPersonRequestDto): string {
+    return SENIOR_PWD_TYPE_LABELS[person.type];
   }
 
   protected clearAll(): void {
@@ -2216,6 +2322,52 @@ export class OrderEditor implements OnInit, OnDestroy {
     return lines;
   }
 
+  private seniorPwdBlockedReason(line: CartItemDto): string | null {
+    const productEligible =
+      this.catalogProducts().find((product) => product.id === line.productId)?.isSeniorPwdEligible !== false;
+    const hasPromotion = this.getBestDiscountedPromo(line) !== null;
+    const isBundle = !!line.bundleItems?.length || !!line.bundlePromotionId;
+
+    if (isSeniorPwdEligibleLine(productEligible, hasPromotion, isBundle)) {
+      return null;
+    }
+
+    return productEligible ? 'Promotion item, not eligible' : 'Not eligible';
+  }
+
+  private pruneSeniorPwdPersons(cart: CartItemDto[], persons: SeniorPwdPersonRequestDto[]): void {
+    const used = new Set(cart.filter(isCoveredLine).map((line) => line.seniorPwdPersonIndex!));
+    const stale = persons.some((_person, index) => !used.has(index)) || [...used].some((index) => index >= persons.length);
+    if (!stale) {
+      return;
+    }
+
+    const remap = new Map<number, number>();
+    const kept: SeniorPwdPersonRequestDto[] = [];
+    persons.forEach((person, index) => {
+      if (used.has(index)) {
+        remap.set(index, kept.length);
+        kept.push(person);
+      }
+    });
+
+    this.seniorPwdPersons.set(kept);
+    this.cart.set(
+      cart.map((line) => {
+        if (!isCoveredLine(line)) {
+          return line;
+        }
+
+        const next = remap.get(line.seniorPwdPersonIndex!);
+        return { ...line, seniorPwdPersonIndex: next ?? null };
+      }),
+    );
+  }
+
+  private seniorPwdCommandPart(): { seniorPwdPersons?: SeniorPwdPersonRequestDto[] } {
+    return this.seniorPwdPersons().length > 0 ? { seniorPwdPersons: this.seniorPwdPersons() } : {};
+  }
+
   private cartUsesPromotions(): boolean {
     return this.cart().some(
       (line) =>
@@ -2362,6 +2514,7 @@ export class OrderEditor implements OnInit, OnDestroy {
       bundlePromotions: this.buildBundlePromotionsFromCart(offline),
       specialInstructions: this.orderSpecialInstructions().trim() || null,
       status,
+      ...this.seniorPwdCommandPart(),
       ...(!offline && status === OrderStatusEnum.Completed && { expectedTotal: this.totalPrice() }),
       ...(event && {
         paymentMethod: event.paymentMethod,
@@ -2450,6 +2603,7 @@ export class OrderEditor implements OnInit, OnDestroy {
       bundlePromotions: this.buildBundlePromotionsFromCart(true),
       specialInstructions: this.orderSpecialInstructions().trim() || null,
       status,
+      ...this.seniorPwdCommandPart(),
       ...(event && {
         paymentMethod: event.paymentMethod,
         amountReceived: event.amountReceived ?? null,
@@ -2497,6 +2651,7 @@ export class OrderEditor implements OnInit, OnDestroy {
       bundlePromotions: this.buildBundlePromotionsFromCart(),
       specialInstructions: this.orderSpecialInstructions().trim() || null,
       status,
+      ...this.seniorPwdCommandPart(),
       ...(status === OrderStatusEnum.Completed && { expectedTotal: this.totalPrice() }),
       ...(event && {
         paymentMethod: event.paymentMethod,
@@ -2535,6 +2690,7 @@ export class OrderEditor implements OnInit, OnDestroy {
     this.cartPersistence.load().then((saved) => {
       if (saved && saved.items.length > 0) {
         this.cart.set(saved.items);
+        this.seniorPwdPersons.set(saved.seniorPwdPersons ?? []);
         this.selectedCustomerId.set(saved.customerId);
         this.orderSpecialInstructions.set(saved.specialInstructions);
       }
@@ -2782,6 +2938,7 @@ export class OrderEditor implements OnInit, OnDestroy {
           addOns: groupAddOns(line.addOns, withQuotes),
           specialInstructions: line.specialInstructions || null,
           bundlePromotionId: null,
+          ...(isCoveredLine(line) && { seniorPwdPersonIndex: line.seniorPwdPersonIndex }),
           ...(withQuotes && {
             quotedPrice: discounted ? best.price : line.price,
             quotedOriginalPrice: line.price,

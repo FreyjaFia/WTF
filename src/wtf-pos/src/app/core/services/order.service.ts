@@ -11,6 +11,7 @@ import {
   OrderSourceEnum,
   OrderStatusEnum,
   PagedResultDto,
+  SeniorPwdIdCheckDto,
   UpdateOrderCommand,
 } from '@shared/models';
 import { Observable, throwError } from 'rxjs';
@@ -188,6 +189,11 @@ export class OrderService {
         );
       }),
     );
+  }
+
+  public checkSeniorPwdId(idNumber: string): Observable<SeniorPwdIdCheckDto> {
+    const params = new HttpParams().set('idNumber', idNumber);
+    return this.http.get<SeniorPwdIdCheckDto>(`${this.baseUrl}/senior-pwd/id-check`, { params });
   }
 
   public createOrder(command: CreateOrderCommand): Observable<OrderDto> {

@@ -45,6 +45,8 @@ export interface ProductDto {
   priceHistory: ProductPriceHistoryDto[];
   addOnCount: number;
   overridePrice?: number | null;
+  /** False for merchandise or retail items the Senior / PWD discount does not cover. Missing means eligible. */
+  isSeniorPwdEligible?: boolean;
 }
 
 export interface ProductListDto {
@@ -64,6 +66,7 @@ export interface CreateProductDto {
   subCategory?: number | null;
   isAddOn: boolean;
   isActive: boolean;
+  isSeniorPwdEligible?: boolean;
 }
 
 export interface UpdateProductDto {
@@ -76,6 +79,7 @@ export interface UpdateProductDto {
   subCategory?: number | null;
   isAddOn: boolean;
   isActive: boolean;
+  isSeniorPwdEligible?: boolean;
 }
 
 export interface ProductAddOnAssignmentDto {

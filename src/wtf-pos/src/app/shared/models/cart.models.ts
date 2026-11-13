@@ -34,4 +34,6 @@ export interface CartItemDto {
   bundleRequiredSelectionCount?: number | null;
   bundleMaxSelectionPerOption?: number | null;
   bundleItems?: CartBundleItemDto[];
+  // Position in the order's Senior / PWD persons when this line is covered for one of them.
+  seniorPwdPersonIndex?: number | null;
 }

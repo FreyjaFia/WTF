@@ -247,6 +247,7 @@ describe('ProductEditorComponent', () => {
           subCategory: ProductSubCategoryEnum.Coffee,
           isAddOn: false,
           isActive: true,
+          isSeniorPwdEligible: true,
         });
         expect(alerts['successCreated']).toHaveBeenCalledWith('Product');
         expect(router.navigateByUrl).toHaveBeenCalledWith(
@@ -421,6 +422,7 @@ describe('ProductEditorComponent', () => {
           subCategory: ProductSubCategoryEnum.Coffee,
           isAddOn: false,
           isActive: true,
+          isSeniorPwdEligible: true,
         });
         expect(service['createProduct']).not.toHaveBeenCalled();
         expect(alerts['successUpdated']).toHaveBeenCalledWith('Product');

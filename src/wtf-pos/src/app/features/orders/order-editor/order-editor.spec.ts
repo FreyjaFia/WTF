@@ -292,6 +292,7 @@ describe('OrderEditor', () => {
     load: ReturnType<typeof vi.fn>;
   };
   let canWrite: boolean;
+  let canApplySeniorPwd: boolean;
   let canOverride: boolean;
   let canCreateCustomer: boolean;
   let authenticated: boolean;
@@ -313,6 +314,7 @@ describe('OrderEditor', () => {
     getFixedBundle: ReturnType<typeof vi.fn>;
     getMixMatch: ReturnType<typeof vi.fn>;
     discountedPromotions: ReturnType<typeof vi.fn>;
+    shopSettings: ReturnType<typeof signal<{ seniorPwdEnabled: boolean; vatRegistered: boolean }>>;
   };
   let modalStack: ModalStackService;
   let selectorOpen: ReturnType<typeof vi.spyOn>;
@@ -405,6 +407,7 @@ describe('OrderEditor', () => {
       load: vi.fn(() => of({ items: limitItems(), links: limitLinks(), asOf: '' })),
     };
     canWrite = true;
+    canApplySeniorPwd = true;
     canOverride = true;
     canCreateCustomer = true;
     authenticated = true;
@@ -459,6 +462,7 @@ describe('OrderEditor', () => {
       getFixedBundle: vi.fn().mockReturnValue(undefined),
       getMixMatch: vi.fn().mockReturnValue(undefined),
       discountedPromotions: vi.fn().mockReturnValue([]),
+      shopSettings: signal({ seniorPwdEnabled: false, vatRegistered: false }),
     };
 
     queryParams$ = new BehaviorSubject<ParamMap>(convertToParamMap({}));
@@ -506,6 +510,7 @@ describe('OrderEditor', () => {
           useValue: {
             isAuthenticated: () => authenticated,
             canWriteOrders: () => canWrite,
+            canApplySeniorPwd: () => canApplySeniorPwd,
             canOverrideOrders: () => canOverride,
             canCreateCustomerInOrder: () => canCreateCustomer,
           },
@@ -568,7 +573,7 @@ describe('OrderEditor', () => {
 
       t.onAddonSelected({ product: P_LATTE, addOns: [], quantity: 1 });
       TestBed.tick();
-      expect(persistence['save']).toHaveBeenCalledWith(t.cart(), null, '');
+      expect(persistence['save']).toHaveBeenCalledWith(t.cart(), null, '', []);
 
       t.clearAll();
       TestBed.tick();
@@ -3268,6 +3273,90 @@ describe('OrderEditor', () => {
       expect(t.isReadOnly()).toBe(true);
       expect(t.isCancellable()).toBe(true);
       expect(t.canEditOrderSpecialInstructions()).toBe(false);
+    });
+  });
+
+  describe('senior / PWD discount', () => {
+    interface SeniorEditor {
+      seniorPwdPersons: Sig<{ type: number; idNumber: string; customerName: string }[]>;
+      canApplySeniorPwd: () => boolean;
+      applySeniorPwd: (selections: unknown[]) => void;
+      removeSeniorPwd: () => void;
+    }
+    const s = () => t as unknown as SeniorEditor;
+    const person = { type: 1, idNumber: 'SC-1234', customerName: 'Rosa Reyes' };
+
+    it('shows the button only when the shop switch, the permission and a cart are all there', async () => {
+      await start();
+      withCart([line({ qty: 1 })]);
+      expect(s().canApplySeniorPwd()).toBe(false);
+
+      catalog.shopSettings.set({ seniorPwdEnabled: true, vatRegistered: false });
+      expect(s().canApplySeniorPwd()).toBe(true);
+
+      canApplySeniorPwd = false;
+      catalog.shopSettings.set({ seniorPwdEnabled: true, vatRegistered: true });
+      expect(s().canApplySeniorPwd()).toBe(false);
+    });
+
+    it('covers one of three items: the line splits, the total drops by 20% of that item, and the order carries the person', async () => {
+      catalog.shopSettings.set({ seniorPwdEnabled: true, vatRegistered: false });
+      await start();
+      withCart([line({ qty: 3 })]);
+
+      s().applySeniorPwd([{ person, picks: { 0: 1 } }]);
+
+      expect(t.cart().map((c) => [c.qty, c.seniorPwdPersonIndex ?? null])).toEqual([
+        [1, 0],
+        [2, null],
+      ]);
+      expect(t.totalPrice()).toBe(280);
+
+      t.checkout();
+      t.onOrderConfirmed(cash);
+      const command = orderService['createOrder'].mock.calls.at(-1)?.[0];
+      expect(command.expectedTotal).toBe(280);
+      expect(command.seniorPwdPersons).toEqual([person]);
+      expect(command.items.map((i: { quantity: number; seniorPwdPersonIndex?: number }) => [i.quantity, i.seniorPwdPersonIndex ?? null])).toEqual([
+        [1, 0],
+        [2, null],
+      ]);
+    });
+
+    it('a VAT-registered shop takes the VAT off too: 100.00 comes to 71.43', async () => {
+      catalog.shopSettings.set({ seniorPwdEnabled: true, vatRegistered: true });
+      await start();
+      withCart([line({ qty: 1 })]);
+
+      s().applySeniorPwd([{ person, picks: { 0: 1 } }]);
+
+      expect(t.totalPrice()).toBe(71.43);
+    });
+
+    it('removing the discount puts the line back together at full price', async () => {
+      catalog.shopSettings.set({ seniorPwdEnabled: true, vatRegistered: false });
+      await start();
+      withCart([line({ qty: 3 })]);
+      s().applySeniorPwd([{ person, picks: { 0: 1 } }]);
+
+      s().removeSeniorPwd();
+
+      expect(t.cart().map((c) => c.qty)).toEqual([3]);
+      expect(s().seniorPwdPersons()).toEqual([]);
+      expect(t.totalPrice()).toBe(300);
+    });
+
+    it('a person with no covered line left is dropped when the cart is cleared', async () => {
+      catalog.shopSettings.set({ seniorPwdEnabled: true, vatRegistered: false });
+      await start();
+      withCart([line({ qty: 1 })]);
+      s().applySeniorPwd([{ person, picks: { 0: 1 } }]);
+      TestBed.tick();
+
+      t.clearAll();
+      TestBed.tick();
+
+      expect(s().seniorPwdPersons()).toEqual([]);
     });
   });
 });

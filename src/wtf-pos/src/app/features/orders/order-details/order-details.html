@@ -514,6 +514,33 @@
                     >
                   </div>
                 }
+                @for (person of seniorPwdPersons(); track person.id) {
+                  <div
+                    class="space-y-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2"
+                    data-testid="senior-pwd-details"
+                  >
+                    <div class="flex items-center justify-between gap-2">
+                      <span class="min-w-0 font-medium wrap-break-word text-gray-800"
+                        >{{ seniorPwdLabel(person.type) }}: {{ person.customerName }}</span
+                      >
+                      <span class="shrink-0 text-xs text-gray-500">ID {{ person.idNumber }}</span>
+                    </div>
+                    <div class="flex items-center justify-between text-xs text-gray-600">
+                      <span>Covered</span>
+                      <span class="tabular-nums" data-testid="senior-pwd-details-covered">{{ person.coveredAmount | number: '1.2-2' }}</span>
+                    </div>
+                    @if (person.vatExemptAmount > 0) {
+                      <div class="flex items-center justify-between text-xs text-gray-600">
+                        <span>VAT exempt</span>
+                        <span class="tabular-nums" data-testid="senior-pwd-details-vat">-{{ person.vatExemptAmount | number: '1.2-2' }}</span>
+                      </div>
+                    }
+                    <div class="flex items-center justify-between text-xs text-gray-600">
+                      <span>Senior/PWD discount (20%)</span>
+                      <span class="tabular-nums text-emerald-700" data-testid="senior-pwd-details-discount">-{{ person.discountAmount | number: '1.2-2' }}</span>
+                    </div>
+                  </div>
+                }
                 <div class="flex items-center justify-between">
                   <span class="text-gray-600">{{
                     isRefunded() ? 'Original Amount' : 'Amount Paid'

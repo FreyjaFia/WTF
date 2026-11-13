@@ -39,6 +39,8 @@ import {
   OrderStatusEnum,
   PaymentMethodEnum,
   PromotionTypeEnum,
+  SENIOR_PWD_TYPE_LABELS,
+  SeniorPwdTypeEnum,
   SYSTEM_CATALOG_IDS,
 } from '@shared/models';
 import {
@@ -205,6 +207,8 @@ export class OrderDetails implements OnInit {
 
     return this.mapOrderItemsToCartItems(order);
   });
+
+  protected readonly seniorPwdPersons = computed(() => this.order()?.seniorPwdPersons ?? []);
 
   protected readonly paymentTotalDiscount = computed(() =>
     sumAmounts(this.detailItems().map((item) => item.promoDiscount ?? 0)),
@@ -468,6 +472,10 @@ export class OrderDetails implements OnInit {
 
   protected getOrderItemTotal(item: OrderDto['items'][number]): number {
     return savedLineTotal(item);
+  }
+
+  protected seniorPwdLabel(type: SeniorPwdTypeEnum): string {
+    return SENIOR_PWD_TYPE_LABELS[type];
   }
 
   protected getItemTotal(item: CartItemDto): number {

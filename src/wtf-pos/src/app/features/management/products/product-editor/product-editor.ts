@@ -232,6 +232,7 @@ export class ProductEditorComponent implements OnInit {
     subCategory: new FormControl<number | null>(null),
     isAddOn: new FormControl(false, { nonNullable: true }),
     isActive: new FormControl(true, { nonNullable: true }),
+    isSeniorPwdEligible: new FormControl(true, { nonNullable: true }),
   });
 
   protected productId: string | null = null;
@@ -309,6 +310,7 @@ export class ProductEditorComponent implements OnInit {
           subCategory: product.subCategory ?? null,
           isAddOn: product.isAddOn,
           isActive: product.isActive,
+          isSeniorPwdEligible: product.isSeniorPwdEligible !== false,
         });
         this.productName.set(product.name);
         this.currentImageUrl.set(product.imageUrl || null);

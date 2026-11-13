@@ -735,6 +735,14 @@
                   </div>
                 }
 
+                @if (isSeniorPwdLine(c)) {
+                  <div class="mt-2 ml-19">
+                    <app-badge variant="info" data-testid="senior-pwd-line-badge">
+                      {{ seniorPwdLabel(seniorPwdPersons()[c.seniorPwdPersonIndex!]) }} discount
+                    </app-badge>
+                  </div>
+                }
+
                 @for (stockNote of stockNotesForLine($index); track stockNote) {
                   <div
                     class="mt-1.5 ml-19 rounded-md px-2 py-0.5 text-[11px] wrap-break-word first:mt-2"
@@ -856,6 +864,49 @@
                   </div>
                   <div class="mt-1 text-sm text-gray-700">{{ orderSpecialInstructions() }}</div>
                 </div>
+              </div>
+            }
+            @if (canApplySeniorPwd() || seniorPwdPersons().length > 0) {
+              <div class="mb-4" data-testid="senior-pwd-section">
+                @for (person of seniorPwdPersons(); track $index; let personIndex = $index) {
+                  <div
+                    class="mb-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm"
+                    [attr.data-testid]="'senior-pwd-row-' + personIndex"
+                  >
+                    <div class="flex items-center justify-between gap-2">
+                      <span class="min-w-0 font-medium wrap-break-word text-gray-800">
+                        {{ seniorPwdLabel(person) }}: {{ person.customerName }}
+                      </span>
+                      <span class="shrink-0 text-xs text-gray-500">ID {{ person.idNumber }}</span>
+                    </div>
+                    @if (vatRegistered()) {
+                      <div class="mt-1 flex justify-between text-xs text-gray-600">
+                        <span>VAT exempt</span>
+                        <span data-testid="senior-pwd-row-vat">{{ seniorPwdTotals()[personIndex].vatExempt | number: '1.2-2' }}</span>
+                      </div>
+                    }
+                    <div class="mt-1 flex justify-between text-xs text-gray-600">
+                      <span>Senior/PWD discount (20%)</span>
+                      <span data-testid="senior-pwd-row-discount">-{{ seniorPwdTotals()[personIndex].discount | number: '1.2-2' }}</span>
+                    </div>
+                  </div>
+                }
+                @if (seniorPwdConflict()) {
+                  <p class="mb-2 rounded-lg bg-amber-50 p-2 text-xs text-amber-800" role="alert" data-testid="senior-pwd-conflict">
+                    A covered item now has a promotion. Open Senior / PWD and apply it again.
+                  </p>
+                }
+                @if (canApplySeniorPwd()) {
+                  <button
+                    type="button"
+                    class="app-btn app-btn-secondary app-btn-md w-full"
+                    data-testid="senior-pwd-button"
+                    [disabled]="isOrderRequestBusy()"
+                    (click)="openSeniorPwdDialog()"
+                  >
+                    {{ seniorPwdPersons().length > 0 ? 'Edit Senior / PWD discount' : 'Senior / PWD' }}
+                  </button>
+                }
               </div>
             }
             <div class="mb-4 flex items-center justify-between">
@@ -1169,6 +1220,18 @@
       </div>
     </div>
   </div>
+}
+
+<!-- Senior / PWD discount -->
+@if (showSeniorPwdDialog()) {
+  <app-senior-pwd-dialog
+    [options]="seniorPwdOptions()"
+    [initial]="seniorPwdSelections()"
+    [vatRegistered]="vatRegistered()"
+    (applied)="applySeniorPwd($event)"
+    (cleared)="removeSeniorPwd()"
+    (cancelled)="closeSeniorPwdDialog()"
+  />
 }
 
 <!-- Cancel Order Modal -->

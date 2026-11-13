@@ -88,6 +88,8 @@ export interface BrandDto {
   receiptFooter: string | null;
   registrationText: string | null;
   primaryColor: string;
+  seniorPwdEnabled?: boolean;
+  vatRegistered?: boolean;
 }
 
 export interface PublicBrandDto {

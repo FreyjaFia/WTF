@@ -465,6 +465,10 @@ export class AuthService {
     return this.can(Permissions.OrdersWrite);
   }
 
+  public canApplySeniorPwd(): boolean {
+    return this.can(Permissions.OrdersSeniorPwdApply);
+  }
+
   public canManageOrderLinks(): boolean {
     return this.can(Permissions.OrderLinksManage);
   }

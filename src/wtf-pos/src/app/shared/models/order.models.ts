@@ -27,6 +27,38 @@ export enum PaymentMethodEnum {
   GCash = 2,
 }
 
+export enum SeniorPwdTypeEnum {
+  Senior = 1,
+  Pwd = 2,
+}
+
+export const SENIOR_PWD_TYPE_LABELS: Record<SeniorPwdTypeEnum, string> = {
+  [SeniorPwdTypeEnum.Senior]: 'Senior',
+  [SeniorPwdTypeEnum.Pwd]: 'PWD',
+};
+
+/** One person who gets the Senior / PWD discount; the lines they cover point at them by position. */
+export interface SeniorPwdPersonRequestDto {
+  type: SeniorPwdTypeEnum;
+  idNumber: string;
+  customerName: string;
+}
+
+export interface SeniorPwdPersonDto {
+  id: string;
+  type: SeniorPwdTypeEnum;
+  idNumber: string;
+  customerName: string;
+  coveredAmount: number;
+  vatExemptAmount: number;
+  discountAmount: number;
+}
+
+export interface SeniorPwdIdCheckDto {
+  usedToday: boolean;
+  lastOrderNumber?: number | null;
+}
+
 export interface OrderItemRequestDto {
   productId: string;
   quantity: number;
@@ -37,6 +69,8 @@ export interface OrderItemRequestDto {
   quotedPrice?: number | null;
   quotedOriginalPrice?: number | null;
   quotedPromoLabel?: string | null;
+  /** Position in the order's `seniorPwdPersons` of the person this line is covered for. */
+  seniorPwdPersonIndex?: number | null;
 }
 
 export interface OrderBundlePromotionRequestDto {
@@ -60,6 +94,9 @@ export interface OrderItemDto {
   promoLabel?: string | null;
   /** The limited discount this line holds a use of while the order waits (its price is not saved yet). */
   discountPromotionId?: string | null;
+  seniorPwdPersonId?: string | null;
+  seniorPwdVatExempt?: number | null;
+  seniorPwdDiscount?: number | null;
 }
 
 export interface OrderBundlePromotionDto {
@@ -110,6 +147,7 @@ export interface OrderDto {
   stockWarnings?: string[] | null;
   /** The lines whose product took stock, so a refund only asks what happens to those. */
   stockLineIds?: string[] | null;
+  seniorPwdPersons?: SeniorPwdPersonDto[] | null;
 }
 
 export interface OrderHistoryDto {
@@ -147,6 +185,7 @@ export interface CreateOrderCommand {
   note?: string | null;
   /** The total the register showed. The server refuses a finished sale whose total came out different. */
   expectedTotal?: number | null;
+  seniorPwdPersons?: SeniorPwdPersonRequestDto[];
 }
 
 /** What the server did with one offline order. */
@@ -176,4 +215,5 @@ export interface UpdateOrderCommand {
   overrideReason?: string | null;
   /** The total the register showed. The server refuses a finished sale whose total came out different. */
   expectedTotal?: number | null;
+  seniorPwdPersons?: SeniorPwdPersonRequestDto[];
 }

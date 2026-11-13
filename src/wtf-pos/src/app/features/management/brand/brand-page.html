@@ -106,6 +106,38 @@
             </div>
           </div>
         </div>
+
+        <div class="card rounded-xl bg-surface shadow-lg">
+          <div class="card-body space-y-3">
+            <h2 class="text-sm font-semibold tracking-wide text-gray-500 uppercase">Tax and discounts</h2>
+            <div class="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-3">
+              <div>
+                <label for="brand-seniorPwdEnabled" class="text-sm font-medium text-gray-900">Senior / PWD discount</label>
+                <p class="text-xs text-gray-500">Lets cashiers give the 20% Senior citizen and PWD discount at the register</p>
+              </div>
+              <input
+                id="brand-seniorPwdEnabled"
+                type="checkbox"
+                formControlName="seniorPwdEnabled"
+                class="toggle toggle-neutral toggle-sm"
+                data-testid="brand-seniorPwdEnabled"
+              />
+            </div>
+            <div class="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-3">
+              <div>
+                <label for="brand-vatRegistered" class="text-sm font-medium text-gray-900">VAT registered</label>
+                <p class="text-xs text-gray-500">The Senior / PWD discount then also takes off the 12% VAT. It changes new orders only</p>
+              </div>
+              <input
+                id="brand-vatRegistered"
+                type="checkbox"
+                formControlName="vatRegistered"
+                class="toggle toggle-neutral toggle-sm"
+                data-testid="brand-vatRegistered"
+              />
+            </div>
+          </div>
+        </div>
       </div>
 
       <div

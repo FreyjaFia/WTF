@@ -2,6 +2,7 @@ import { CartItemDto } from '@shared/models';
 import type {
   AddOnGroupDto,
   CatalogLookupsDto,
+  PosShopSettingsDto,
   CreateOrderCommand,
   CustomerDto,
   DiscountedProductPromotionDto,
@@ -9,6 +10,7 @@ import type {
   MixMatchPromotionDto,
   PromotionListItemDto,
   ProductDto,
+  SeniorPwdPersonRequestDto,
 } from '@shared/models';
 import Dexie, { type Table } from 'dexie';
 
@@ -17,6 +19,7 @@ export interface PersistedCart {
   customerId: string | null;
   specialInstructions: string;
   items: CartItemDto[];
+  seniorPwdPersons?: SeniorPwdPersonRequestDto[];
   savedAt: string;
 }
 
@@ -32,6 +35,8 @@ export interface CachedCatalog {
   fixedBundles?: FixedBundlePromotionDto[];
   mixMatchPromotions?: MixMatchPromotionDto[];
   lookups?: CatalogLookupsDto;
+  /** The shop switches (Senior / PWD, VAT) at the last sync, so an offline sale uses the rules it was sold under. */
+  settings?: PosShopSettingsDto;
   syncedAt: string;
 }
 
@@ -58,6 +63,8 @@ export interface PendingOrder {
   status: 'pending' | 'syncing' | 'failed';
   errorMessage?: string | null;
   retryCount: number;
+  /** 2 once the command can carry Senior / PWD persons. A queued order without it syncs as it always did. */
+  version?: number;
 }
 
 export class WtfDatabase extends Dexie {

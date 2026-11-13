@@ -29,6 +29,16 @@
       ]
     },
     {
+      "key": "orders.seniorpwd.apply",
+      "area": "Orders",
+      "label": "Apply Senior/PWD discount",
+      "description": "Give the Senior citizen or PWD discount on an order after checking the ID.",
+      "feature": "core",
+      "requires": [
+        "orders.write"
+      ]
+    },
+    {
       "key": "orderlinks.manage",
       "area": "Orders",
       "label": "Manage order links",
@@ -302,6 +312,7 @@
       "orders.read",
       "orders.write",
       "orders.override",
+      "orders.seniorpwd.apply",
       "orderlinks.manage",
       "customers.read",
       "customers.write",
@@ -338,6 +349,7 @@
       "orders.read",
       "orders.write",
       "orders.override",
+      "orders.seniorpwd.apply",
       "orderlinks.manage",
       "customers.read",
       "customers.write",
@@ -385,6 +397,7 @@
     "Cashier": [
       "orders.read",
       "orders.write",
+      "orders.seniorpwd.apply",
       "orderlinks.manage",
       "customers.write",
       "stock.waste.record",

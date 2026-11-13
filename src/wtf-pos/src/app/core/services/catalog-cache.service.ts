@@ -9,6 +9,7 @@ import {
   FixedBundlePromotionDto,
   MixMatchPromotionDto,
   PosBundlesDto,
+  PosShopSettingsDto,
   ProductDto,
   PromotionListItemDto,
   PromotionTypeEnum,
@@ -25,8 +26,11 @@ interface PosCatalogDto {
   addOnsByProductId: Record<string, AddOnGroupDto[]>;
   customers: CustomerDto[];
   lookups?: CatalogLookupsDto;
+  settings?: PosShopSettingsDto;
   syncedAt: string;
 }
+
+const NO_SHOP_SETTINGS: PosShopSettingsDto = { seniorPwdEnabled: false, vatRegistered: false };
 
 interface StalePriceItem {
   productId: string;
@@ -60,6 +64,9 @@ export class CatalogCacheService {
   private readonly _discountedPromotions = signal<DiscountedProductPromotionDto[]>([]);
   public readonly discountedPromotions = this._discountedPromotions.asReadonly();
 
+  private readonly _shopSettings = signal<PosShopSettingsDto>(NO_SHOP_SETTINGS);
+  public readonly shopSettings = this._shopSettings.asReadonly();
+
   private readonly _isLoading = signal(false);
   public readonly isLoading = this._isLoading.asReadonly();
 
@@ -91,6 +98,7 @@ export class CatalogCacheService {
 
   public reset(): void {
     this.loaded = false;
+    this._shopSettings.set(NO_SHOP_SETTINGS);
     this._products.set([]);
     this._customers.set([]);
     this._addOnsByProductId.set({});
@@ -214,6 +222,7 @@ export class CatalogCacheService {
         fixedBundles: bundles.fixedBundles,
         mixMatchPromotions: bundles.mixMatch,
         lookups: catalog.lookups,
+        settings: catalog.settings,
         syncedAt: catalog.syncedAt,
       });
 
@@ -231,6 +240,7 @@ export class CatalogCacheService {
       this._mixMatchPromotions.set(bundles.mixMatch);
       this._discountedPromotions.set(discountedPromotions);
       this.lookups.set(catalog.lookups);
+      this._shopSettings.set(catalog.settings ?? NO_SHOP_SETTINGS);
       this.detectStalePrices(previousCatalog?.products ?? [], catalog.products);
     } catch {
       await this.loadFromCache();
@@ -270,6 +280,7 @@ export class CatalogCacheService {
       this._mixMatchPromotions.set(cached.mixMatchPromotions ?? []);
       this._discountedPromotions.set(cached.discountedPromotions ?? []);
       this.lookups.set(cached.lookups);
+      this._shopSettings.set(cached.settings ?? NO_SHOP_SETTINGS);
       return;
     }
 

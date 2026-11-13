@@ -4,6 +4,7 @@ export const Permissions = {
   OrdersRead: 'orders.read',
   OrdersWrite: 'orders.write',
   OrdersOverride: 'orders.override',
+  OrdersSeniorPwdApply: 'orders.seniorpwd.apply',
   OrderLinksManage: 'orderlinks.manage',
   CustomersRead: 'customers.read',
   CustomersWrite: 'customers.write',

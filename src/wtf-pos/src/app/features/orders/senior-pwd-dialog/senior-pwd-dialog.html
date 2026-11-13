@@ -1,0 +1,260 @@
+<div
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="senior-pwd-title"
+  class="fixed inset-0 z-50 flex items-end justify-center app-backdrop bg-black/30 backdrop-blur-md sm:items-center"
+  data-testid="senior-pwd-dialog"
+  (click)="cancelled.emit()"
+  (keydown.escape)="cancelled.emit()"
+  tabindex="0"
+>
+  <div
+    role="document"
+    class="flex max-h-[90dvh] w-full min-w-0 flex-col app-dialog rounded-t-2xl bg-surface shadow-2xl sm:mx-4 sm:max-w-2xl sm:rounded-2xl"
+    (click)="$event.stopPropagation()"
+    (keydown)="$event.stopPropagation()"
+  >
+    <div class="flex items-center gap-3 border-b border-gray-100 px-4 py-3">
+      <app-icon name="icon-tag" class="h-5 w-5 shrink-0 text-brand-ink" />
+      <div class="min-w-0 flex-1">
+        <h2 id="senior-pwd-title" class="text-base font-semibold text-gray-900">Senior / PWD discount</h2>
+        <p class="text-xs text-gray-500">20% off food and drinks for the person with the ID.</p>
+      </div>
+      <button type="button" class="app-btn app-btn-icon" aria-label="Close" (click)="cancelled.emit()">
+        <app-icon name="icon-close" class="h-5 w-5" />
+      </button>
+    </div>
+
+    <div class="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-3">
+      <p
+        class="flex items-start gap-2 rounded-lg bg-warning/10 px-3 py-2 text-xs text-gray-700"
+        role="status"
+        data-testid="senior-pwd-reminder"
+      >
+        <app-icon name="icon-warning" class="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+        <span>Check the ID before applying.</span>
+      </p>
+
+      @if (!hasCoverableLine()) {
+        <p class="text-sm text-gray-500" data-testid="senior-pwd-nothing">
+          Nothing in this order can take the discount. Promotion items, bundles and items that are not food or
+          drinks are not covered.
+        </p>
+      }
+
+      @for (person of people(); track $index; let personIndex = $index) {
+        <section
+          class="space-y-3 rounded-xl border border-gray-200 p-3"
+          [attr.data-testid]="'senior-pwd-person-' + personIndex"
+        >
+          <div class="flex items-center justify-between gap-2">
+            <p class="text-xs font-semibold tracking-wider text-gray-400 uppercase">
+              Person {{ personIndex + 1 }}
+            </p>
+            @if (people().length > 1) {
+              <button
+                type="button"
+                class="app-btn app-btn-ghost px-2 py-1 text-xs"
+                [attr.data-testid]="'senior-pwd-remove-person-' + personIndex"
+                (click)="removePerson(personIndex)"
+              >
+                Remove
+              </button>
+            }
+          </div>
+
+          <div class="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Discount type">
+            @for (type of types; track type) {
+              <button
+                type="button"
+                role="radio"
+                class="rounded-xl border px-3 py-2 text-sm font-medium transition-colors"
+                [class]="
+                  person.type === type
+                    ? 'border-brand bg-brand/5 text-gray-900'
+                    : 'border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+                "
+                [attr.aria-checked]="person.type === type"
+                [attr.data-testid]="'senior-pwd-type-' + (type === SeniorPwdTypeEnum.Senior ? 'senior' : 'pwd') + '-' + personIndex"
+                (click)="setType(personIndex, type)"
+              >
+                {{ typeLabels[type] }}
+              </button>
+            }
+          </div>
+
+          <div class="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label [for]="'senior-pwd-id-' + personIndex" class="mb-1 block text-xs font-semibold text-gray-500">
+                ID number
+              </label>
+              <input
+                [id]="'senior-pwd-id-' + personIndex"
+                type="text"
+                autocomplete="off"
+                class="input input-bordered w-full outline-transparent"
+                [class.input-error]="showErrors() && idError(personIndex)"
+                [attr.maxlength]="idMaxLength"
+                [attr.aria-invalid]="showErrors() && idError(personIndex) ? 'true' : null"
+                [attr.data-testid]="'senior-pwd-id-' + personIndex"
+                [value]="person.idNumber"
+                (input)="setIdNumber(personIndex, $any($event.target).value)"
+                (blur)="checkId(personIndex)"
+              />
+              @if (showErrors() && idError(personIndex); as message) {
+                <p class="mt-1 text-xs text-red-600" role="alert">{{ message }}</p>
+              }
+            </div>
+            <div>
+              <label [for]="'senior-pwd-name-' + personIndex" class="mb-1 block text-xs font-semibold text-gray-500">
+                Name on the ID
+              </label>
+              <input
+                [id]="'senior-pwd-name-' + personIndex"
+                type="text"
+                autocomplete="off"
+                class="input input-bordered w-full outline-transparent"
+                [class.input-error]="showErrors() && nameError(personIndex)"
+                [attr.maxlength]="nameMaxLength"
+                [attr.aria-invalid]="showErrors() && nameError(personIndex) ? 'true' : null"
+                [attr.data-testid]="'senior-pwd-name-' + personIndex"
+                [value]="person.customerName"
+                (input)="setName(personIndex, $any($event.target).value)"
+              />
+              @if (showErrors() && nameError(personIndex); as message) {
+                <p class="mt-1 text-xs text-red-600" role="alert">{{ message }}</p>
+              }
+            </div>
+          </div>
+
+          @if (idWarnings()[personIndex]; as warning) {
+            <p
+              class="rounded-lg bg-amber-50 p-2 text-xs text-amber-800"
+              role="status"
+              [attr.data-testid]="'senior-pwd-warning-' + personIndex"
+            >
+              {{ warning }}
+            </p>
+          }
+
+          <div>
+            <p class="mb-2 text-xs font-semibold tracking-wider text-gray-400 uppercase">Covered items</p>
+            <ul class="divide-y divide-gray-100 rounded-xl border border-gray-200">
+              @for (option of options(); track $index; let lineIndex = $index) {
+                <li class="flex items-center gap-3 px-3 py-2" [class.opacity-60]="option.blockedReason">
+                  <div class="min-w-0 flex-1">
+                    <p class="text-sm font-medium wrap-break-word text-gray-900">
+                      {{ option.line.qty }}x {{ option.line.name }}
+                    </p>
+                    @if (option.blockedReason; as reason) {
+                      <p
+                        class="text-xs text-gray-500"
+                        [attr.data-testid]="'senior-pwd-blocked-' + lineIndex"
+                      >
+                        {{ reason }}
+                      </p>
+                    }
+                  </div>
+                  @if (!option.blockedReason) {
+                    <div class="flex items-center gap-2">
+                      <button
+                        type="button"
+                        class="app-stepper-btn h-8 w-8"
+                        aria-label="Cover fewer"
+                        [disabled]="quantityOf(personIndex, lineIndex) <= 0"
+                        [attr.data-testid]="'senior-pwd-dec-' + personIndex + '-' + lineIndex"
+                        (click)="changeQuantity(personIndex, lineIndex, -1)"
+                      >
+                        <span class="text-base leading-none font-bold">-</span>
+                      </button>
+                      <span
+                        class="w-6 text-center text-sm font-medium"
+                        [attr.data-testid]="'senior-pwd-qty-' + personIndex + '-' + lineIndex"
+                        >{{ quantityOf(personIndex, lineIndex) }}</span
+                      >
+                      <button
+                        type="button"
+                        class="app-stepper-btn h-8 w-8"
+                        aria-label="Cover more"
+                        [disabled]="quantityOf(personIndex, lineIndex) >= maxFor(personIndex, lineIndex)"
+                        [attr.data-testid]="'senior-pwd-inc-' + personIndex + '-' + lineIndex"
+                        (click)="changeQuantity(personIndex, lineIndex, 1)"
+                      >
+                        <span class="text-base leading-none font-bold">+</span>
+                      </button>
+                    </div>
+                  }
+                </li>
+              }
+            </ul>
+            @if (showErrors() && pickError(personIndex); as message) {
+              <p class="mt-1 text-xs text-red-600" role="alert">{{ message }}</p>
+            }
+          </div>
+
+          @if (totals()[personIndex]; as total) {
+            <dl
+              class="space-y-1 rounded-lg bg-gray-50 px-3 py-2 text-sm"
+              [attr.data-testid]="'senior-pwd-person-total-' + personIndex"
+            >
+              @if (vatRegistered()) {
+                <div class="flex justify-between text-gray-600">
+                  <dt>VAT exempt</dt>
+                  <dd data-testid="senior-pwd-total-vat">{{ total.vatExempt | number: '1.2-2' }}</dd>
+                </div>
+              }
+              <div class="flex justify-between text-gray-600">
+                <dt>Discount (20%)</dt>
+                <dd data-testid="senior-pwd-total-discount">-{{ total.discount | number: '1.2-2' }}</dd>
+              </div>
+              <div class="flex justify-between font-semibold text-gray-900">
+                <dt>Amount due</dt>
+                <dd data-testid="senior-pwd-total-due">{{ total.amountDue | number: '1.2-2' }}</dd>
+              </div>
+            </dl>
+          }
+        </section>
+      }
+
+      <button
+        type="button"
+        class="app-btn app-btn-secondary app-btn-md w-full gap-2"
+        data-testid="senior-pwd-add-person"
+        (click)="addPerson()"
+      >
+        <app-icon name="icon-plus" class="h-4 w-4" />
+        Add another person
+      </button>
+    </div>
+
+    <div class="flex items-center justify-end gap-3 border-t border-gray-100 px-4 py-3">
+      @if (hasApplied()) {
+        <button
+          type="button"
+          class="app-btn app-btn-outline-danger app-btn-md mr-auto"
+          data-testid="senior-pwd-remove"
+          (click)="cleared.emit()"
+        >
+          Remove discount
+        </button>
+      }
+      <button
+        type="button"
+        class="app-btn app-btn-secondary app-btn-md"
+        data-testid="senior-pwd-cancel"
+        (click)="cancelled.emit()"
+      >
+        Cancel
+      </button>
+      <button
+        type="button"
+        class="app-btn app-btn-primary app-btn-md px-6"
+        data-testid="senior-pwd-apply"
+        [disabled]="!hasCoverableLine()"
+        (click)="apply()"
+      >
+        Apply
+      </button>
+    </div>
+  </div>
+</div>

@@ -29,6 +29,12 @@ export interface CatalogLookupsDto {
   addOnTypes: AddOnTypeLookupDto[];
 }
 
+/** Shop switches the register needs, saved with the catalog so they work offline. */
+export interface PosShopSettingsDto {
+  seniorPwdEnabled: boolean;
+  vatRegistered: boolean;
+}
+
 export interface SubCategorySetupDto extends SubCategoryLookupDto {
   productCount: number;
 }
