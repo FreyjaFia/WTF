@@ -34,6 +34,9 @@ public record UpdateOrderCommand : IRequest<OrderDto?>
     public string? SpecialInstructions { get; init; }
     public string? Note { get; init; }
 
+    // Applied while the order is not completed and by the override; a completed order keeps its address otherwise.
+    public string? CustomerAddress { get; init; }
+
     [Required]
     public OrderStatusEnum Status { get; init; }
 
@@ -279,6 +282,7 @@ public class UpdateOrderHandler(
         {
             Status = oldStatus,
             order.CustomerId,
+            order.CustomerAddress,
             ItemCount = order.OrderItems.Count
         };
 
@@ -310,6 +314,13 @@ public class UpdateOrderHandler(
         }
 
         order.CustomerId = request.CustomerId;
+        if (isOverride || oldStatus != OrderStatusEnum.Completed)
+        {
+            order.CustomerAddress = request.CustomerId.HasValue
+                ? OrderInputValidation.NormalizeCustomerAddress(request.CustomerAddress)
+                : null;
+        }
+
         order.SpecialInstructions = request.SpecialInstructions;
         order.Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim();
         order.StatusId = (int)request.Status;
@@ -552,6 +563,7 @@ public class UpdateOrderHandler(
                     Reason = overrideReason,
                     Status = newStatus,
                     order.CustomerId,
+                    order.CustomerAddress,
                     PaymentMethod = order.PaymentMethodId.HasValue ? (PaymentMethodEnum)order.PaymentMethodId.Value : (PaymentMethodEnum?)null,
                     order.AmountReceived,
                     order.ChangeAmount,
@@ -601,7 +613,8 @@ public class UpdateOrderHandler(
             bundlePromotions,
             order.OverrideReason,
             order.OverriddenAt,
-            StockWarnings: stock.Warnings
+            StockWarnings: stock.Warnings,
+            CustomerAddress: order.CustomerAddress
         );
     }
 
@@ -638,6 +651,7 @@ public class UpdateOrderHandler(
         {
             Status = (OrderStatusEnum)order.StatusId,
             order.CustomerId,
+            order.CustomerAddress,
             PaymentMethod = order.PaymentMethodId.HasValue ? (PaymentMethodEnum)order.PaymentMethodId.Value : (PaymentMethodEnum?)null,
             order.AmountReceived,
             order.ChangeAmount,

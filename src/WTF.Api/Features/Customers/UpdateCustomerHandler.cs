@@ -8,7 +8,7 @@ using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Customers;
 
-public record UpdateCustomerCommand(Guid Id, string FirstName, string LastName, string? Address, string? ContactNumber = null) : IRequest<CustomerDto?>;
+public record UpdateCustomerCommand(Guid Id, string FirstName, string? LastName, string? Address, string? ContactNumber = null) : IRequest<CustomerDto?>;
 
 public class UpdateCustomerHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor, IAuditService auditService) : IRequestHandler<UpdateCustomerCommand, CustomerDto?>
 {
@@ -37,9 +37,10 @@ public class UpdateCustomerHandler(WTFDbContext db, IHttpContextAccessor httpCon
         CustomerValidation.EnsureValidNames(request.FirstName, request.LastName);
 
         var contactNumber = CustomerValidation.NormalizeContactNumber(request.ContactNumber);
+        var address = CustomerValidation.NormalizeAddress(request.Address);
 
-        customer.LastName = request.LastName;
-        customer.Address = request.Address;
+        customer.LastName = CustomerValidation.NormalizeLastName(request.LastName);
+        customer.Address = address;
         customer.ContactNumber = contactNumber;
         customer.UpdatedAt = DateTime.UtcNow;
         customer.UpdatedBy = userId;

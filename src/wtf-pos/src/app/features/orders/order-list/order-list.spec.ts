@@ -73,6 +73,8 @@ interface Internals {
   editPendingOrder: (id: string) => void;
   syncPendingOrders: () => void;
   getPendingItemCount: (c: CartItemDto[]) => string;
+  getOrderAddress: (order: OrderDto) => string | null;
+  matchesSearchTerm: (order: OrderDto) => boolean;
   getPendingTotal: (p: { cartSnapshot: CartItemDto[]; previewTotal?: number | null }) => number;
   getOrderStatusVariant: (s?: OrderStatusEnum | null) => string;
   getOrderStatusLabel: (s?: OrderStatusEnum | null) => string;
@@ -801,6 +803,38 @@ describe('OrderList', () => {
       expect(text).toContain('Server said no');
       expect(text).toContain('Walker');
       expect(text).toContain('Zed');
+    });
+
+    it('shows the order address beside the name, hides it when empty, and shows one address for a delivery order', () => {
+      orderService.getOrdersPaged.mockReturnValue(
+        of(
+          page([
+            makeOrder('o11', { orderNumber: 11, customerName: 'Ann', customerAddress: '5 Pine St' }),
+            makeOrder('o12', { orderNumber: 12, customerName: 'Bea' }),
+            makeOrder('o13', {
+              orderNumber: 13,
+              customerName: 'Cy',
+              customerAddress: 'Saved Rd',
+              deliveryAddress: 'Door 7',
+            }),
+          ]),
+        ),
+      );
+      init();
+      const text = fixture.nativeElement.textContent as string;
+      expect(text).toContain('5 Pine St');
+      expect(text).toContain('Door 7');
+      expect(text).not.toContain('Saved Rd');
+      expect(t.getOrderAddress(makeOrder('o12'))).toBeNull();
+    });
+
+    it('finds orders by address', () => {
+      orderService.getOrdersPaged.mockReturnValue(
+        of(page([makeOrder('o14', { orderNumber: 14, customerAddress: 'Mango Lane' })])),
+      );
+      init();
+      t.filterForm.controls.searchTerm.setValue('mango');
+      expect(t.matchesSearchTerm(makeOrder('o14', { customerAddress: 'Mango Lane' }))).toBe(true);
     });
 
     it('shows an Overridden badge only on overridden orders (mobile and desktop layouts)', () => {

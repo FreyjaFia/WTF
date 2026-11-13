@@ -217,7 +217,7 @@
                   class="flex min-w-0 flex-1 cursor-pointer items-center gap-3 self-stretch no-underline focus:outline-none lg:col-span-11 lg:grid lg:grid-cols-11 lg:gap-4"
                   [routerLink]="routes.ManagementCustomerDetailsById(customer.id)"
                   [attr.aria-label]="
-                    'View details for ' + customer.firstName + ' ' + customer.lastName
+                    'View details for ' + (customer.firstName + ' ' + (customer.lastName ?? '')).trim()
                   "
                 >
                   <!-- Avatar and Name -->
@@ -227,7 +227,7 @@
                     <div class="w-10 shrink-0 lg:w-14">
                       <div class="flex h-10 w-10 items-center justify-center lg:h-14 lg:w-14">
                         <app-avatar
-                          [label]="`${customer.firstName || ''} ${customer.lastName || ''}`"
+                          [label]="`${customer.firstName || ''} ${customer.lastName ?? ''}`"
                           [size]="36"
                           [imageUrl]="customer.imageUrl"
                         />
@@ -236,7 +236,7 @@
 
                     <div class="min-w-0">
                       <h3 class="text-sm font-semibold text-gray-900 lg:text-base">
-                        {{ customer.firstName }} {{ customer.lastName }}
+                        {{ customer.firstName }} {{ customer.lastName ?? '' }}
                       </h3>
                       @if (customer.contactNumber) {
                         <p class="mt-0.5 text-xs text-gray-500 lg:hidden">
@@ -361,7 +361,7 @@
   >
     This will deactivate
     <span class="font-medium text-gray-700">
-      {{ customerToDelete()!.firstName }} {{ customerToDelete()!.lastName }}</span
+      {{ customerToDelete()!.firstName }} {{ customerToDelete()!.lastName ?? '' }}</span
     >. You can restore it later.
   </app-confirm-dialog>
 }
@@ -379,7 +379,7 @@
   >
     This will reactivate
     <span class="font-medium text-gray-700">{{
-      customerToRestore()!.firstName + ' ' + customerToRestore()!.lastName
+      (customerToRestore()!.firstName + ' ' + (customerToRestore()!.lastName ?? '')).trim()
     }}</span
     >. They will be available for new orders again.
   </app-confirm-dialog>

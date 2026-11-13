@@ -492,6 +492,11 @@
                   }
                   <span>{{ getPendingItemCount(pending.cartSnapshot) }}</span>
                 </div>
+                @if (pending.command.customerAddress?.trim()) {
+                  <div class="truncate text-xs text-gray-500" [title]="pending.command.customerAddress">
+                    {{ pending.command.customerAddress }}
+                  </div>
+                }
                 @if (pending.errorMessage) {
                   <div class="mt-0.5 text-xs text-red-500">{{ pending.errorMessage }}</div>
                 }
@@ -684,12 +689,22 @@
                         <span class="text-xs text-slate-500">&middot;</span>
                         <span class="text-xs text-slate-500">{{ getItemsText(order) }}</span>
                       </div>
+                      @if (getOrderAddress(order); as address) {
+                        <div class="truncate text-xs text-slate-500 lg:hidden" [title]="address">
+                          {{ address }}
+                        </div>
+                      }
 
                       <!-- Desktop: Order # -->
                       <div class="hidden lg:col-span-2 lg:block">
                         <div class="font-semibold text-gray-900">#{{ order.orderNumber }}</div>
                         @if (order.customerName?.trim()) {
                           <div class="truncate text-xs text-gray-500">{{ order.customerName }}</div>
+                        }
+                        @if (getOrderAddress(order); as address) {
+                          <div class="truncate text-xs text-gray-500" [title]="address">
+                            {{ address }}
+                          </div>
                         }
                       </div>
 

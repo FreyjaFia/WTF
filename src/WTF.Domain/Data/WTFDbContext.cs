@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using WTF.Domain.Entities;
 
 namespace WTF.Domain.Data;
@@ -824,6 +822,7 @@ public partial class WTFDbContext : DbContext
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("(getutcdate())")
                 .HasColumnType("datetime");
+            entity.Property(e => e.CustomerAddress).HasMaxLength(300);
             entity.Property(e => e.DeliveryAddress).HasMaxLength(300);
             entity.Property(e => e.Note).HasMaxLength(500);
             entity.Property(e => e.OfflineLocalId)

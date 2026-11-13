@@ -28,7 +28,7 @@ public class UploadCustomerImageHandler(WTFDbContext db, IImageStorage imageStor
         // every upload, in ImageUploads). A refusal is explained to the sender as a 400.
         var processed = ImageUploads.Prepare(request.ImageData);
 
-        var nameSlug = (customer.FirstName + "_" + customer.LastName)
+        var nameSlug = CustomerName.Join(customer.FirstName, customer.LastName)
             .ToLowerInvariant()
             .Replace(" ", "_")
             .Replace("-", "_");

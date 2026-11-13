@@ -146,7 +146,8 @@ public class GetOrdersHandler(WTFDbContext db, IHttpContextAccessor? httpContext
                 o.ReadyAt,
                 o.ReviewReasons,
                 o.QuotedTotal,
-                o.OfflineLocalId
+                o.OfflineLocalId,
+                CustomerAddress: o.CustomerAddress
             );
         })];
     }

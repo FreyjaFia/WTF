@@ -91,6 +91,11 @@
                 <dd class="mt-0.5 truncate font-medium text-gray-900">
                   {{ currentOrder.customerName || 'Walk-in' }}
                 </dd>
+                @if (currentOrder.customerAddress?.trim()) {
+                  <dd class="truncate text-xs text-gray-500" [title]="currentOrder.customerAddress">
+                    {{ currentOrder.customerAddress }}
+                  </dd>
+                }
               </div>
               <div class="bg-surface px-3 py-2.5">
                 <dt class="text-[11px] font-semibold tracking-wide text-gray-500 uppercase">Items</dt>

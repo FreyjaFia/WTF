@@ -246,7 +246,8 @@ public class VoidOrderHandler(
             null,
             bundlePromotions,
             order.OverrideReason,
-            order.OverriddenAt
+            order.OverriddenAt,
+            CustomerAddress: order.CustomerAddress
         );
     }
 }

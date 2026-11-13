@@ -558,6 +558,22 @@
               {{ selectedCustomerName() }}
             </div>
           }
+          @if (canEditOrderAddress()) {
+            <input
+              type="text"
+              class="input input-bordered mt-2 w-full bg-surface"
+              maxlength="300"
+              placeholder="Address (optional)"
+              aria-label="Order address"
+              [value]="orderAddress()"
+              [disabled]="isOrderRequestBusy()"
+              (input)="onOrderAddressInput($event)"
+            />
+          } @else if (selectedCustomerId() && orderAddress().trim()) {
+            <div class="mt-2 truncate text-xs text-gray-500" [title]="orderAddress()">
+              {{ orderAddress() }}
+            </div>
+          }
         </div>
 
         <div class="mt-2 flex items-center justify-between">
@@ -1130,18 +1146,19 @@
 
         <div class="block">
           <span class="mb-1 block text-sm font-medium text-gray-700">
-            Last Name <span class="text-error">*</span>
+            Address
           </span>
           <input
             type="text"
             class="input input-bordered w-full bg-surface"
+            maxlength="300"
             [class.input-error]="
-              createCustomerForm.controls.lastName.invalid &&
-              createCustomerForm.controls.lastName.touched
+              createCustomerForm.controls.address.invalid &&
+              createCustomerForm.controls.address.touched
             "
-            [value]="createCustomerForm.controls.lastName.value"
-            (input)="createCustomerForm.controls.lastName.setValue($any($event.target).value)"
-            placeholder="Enter last name"
+            [value]="createCustomerForm.controls.address.value"
+            (input)="createCustomerForm.controls.address.setValue($any($event.target).value)"
+            placeholder="Enter address"
           />
         </div>
       </div>

@@ -76,9 +76,47 @@ public class CreateCustomerHandlerTests
     }
 
     [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("  ")]
+    public async Task Handle_NoLastName_IsSavedAsNull(string? last)
+    {
+        var dto = await Handler().Handle(new CreateCustomerCommand("Ana", last, "  5 Side St "), CancellationToken.None);
+
+        dto.LastName.ShouldBeNull();
+        dto.Address.ShouldBe("5 Side St");
+        await using var db = TestDb.Create(_dbName);
+        var saved = await db.Customers.SingleAsync();
+        saved.LastName.ShouldBeNull();
+        saved.Address.ShouldBe("5 Side St");
+    }
+
+    [Fact]
+    public async Task Handle_AddressOverThreeHundredCharacters_ThrowsAndSavesNothing()
+    {
+        await Should.ThrowAsync<InvalidOperationException>(() =>
+            Handler().Handle(new CreateCustomerCommand("Ana", null, new string('a', 301)), CancellationToken.None));
+
+        await using var db = TestDb.Create(_dbName);
+        (await db.Customers.CountAsync()).ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task Update_KeepsLastNameNullAndTrimsTheAddress()
+    {
+        var created = await Handler().Handle(new CreateCustomerCommand("Ana", null, null), CancellationToken.None);
+
+        var dto = await new UpdateCustomerHandler(TestDb.Create(_dbName), TestRequest.As(_userId), _audit)
+            .Handle(new UpdateCustomerCommand(created.Id, "Anna", null, " 9 Park Rd "), CancellationToken.None);
+
+        dto!.LastName.ShouldBeNull();
+        dto.Address.ShouldBe("9 Park Rd");
+    }
+
+    [Theory]
     [InlineData("", "Cruz")]
-    [InlineData("Ana", " ")]
-    public async Task Handle_MissingName_ThrowsAndSavesNothing(string first, string last)
+    [InlineData(" ", null)]
+    public async Task Handle_MissingFirstName_ThrowsAndSavesNothing(string first, string? last)
     {
         await Should.ThrowAsync<InvalidOperationException>(() =>
             Handler().Handle(new CreateCustomerCommand(first, last, null), CancellationToken.None));

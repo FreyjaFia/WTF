@@ -1002,7 +1002,12 @@ export class OrderList implements OnInit, OnDestroy {
 
     const orderNumber = order.orderNumber.toString();
     const customerName = (order.customerName ?? '').toLowerCase();
-    return orderNumber.includes(term) || customerName.includes(term);
+    const address = (this.getOrderAddress(order) ?? '').toLowerCase();
+    return orderNumber.includes(term) || customerName.includes(term) || address.includes(term);
+  }
+
+  protected getOrderAddress(order: OrderDto): string | null {
+    return order.deliveryAddress?.trim() || order.customerAddress?.trim() || null;
   }
 
   private restoreState(): void {

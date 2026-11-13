@@ -7,6 +7,7 @@ import { AvatarComponent, IconComponent, PageTitleComponent } from '@shared/comp
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import { CreateCustomerDto, UpdateCustomerDto } from '@shared/models';
 import { AppRoutes } from '@shared/constants/app-routes';
+import { joinName } from '@shared/utils/person-name';
 
 @Component({
   selector: 'app-customer-editor',
@@ -52,11 +53,11 @@ export class CustomerEditorComponent implements OnInit {
     }),
     lastName: new FormControl('', {
       nonNullable: true,
-      validators: [Validators.required, Validators.maxLength(100)],
+      validators: [Validators.maxLength(100)],
     }),
     address: new FormControl('', {
       nonNullable: true,
-      validators: [Validators.maxLength(500)],
+      validators: [Validators.maxLength(300)],
     }),
     contactNumber: new FormControl('', {
       nonNullable: true,
@@ -200,11 +201,11 @@ export class CustomerEditorComponent implements OnInit {
       next: (customer) => {
         this.customerForm.patchValue({
           firstName: customer.firstName,
-          lastName: customer.lastName,
+          lastName: customer.lastName || '',
           address: customer.address || '',
           contactNumber: customer.contactNumber || '',
         });
-        this.customerFullName.set(`${customer.firstName} ${customer.lastName}`.trim());
+        this.customerFullName.set(joinName(customer.firstName, customer.lastName));
         this.currentImageUrl.set(customer.imageUrl || null);
         this.lastUpdatedAt.set(customer.updatedAt || customer.createdAt);
         this.isLoading.set(false);
@@ -234,7 +235,7 @@ export class CustomerEditorComponent implements OnInit {
       const updateDto: UpdateCustomerDto = {
         id: this.customerId,
         firstName: formValue.firstName,
-        lastName: formValue.lastName,
+        lastName: formValue.lastName.trim() || null,
         address: formValue.address || null,
         contactNumber: formValue.contactNumber.trim() || null,
       };
@@ -259,7 +260,7 @@ export class CustomerEditorComponent implements OnInit {
     } else {
       const createDto: CreateCustomerDto = {
         firstName: formValue.firstName,
-        lastName: formValue.lastName,
+        lastName: formValue.lastName.trim() || null,
         address: formValue.address || null,
         contactNumber: formValue.contactNumber.trim() || null,
       };

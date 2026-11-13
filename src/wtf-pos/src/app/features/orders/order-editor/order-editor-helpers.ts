@@ -6,6 +6,7 @@ import type {
   PromotionListItemDto,
 } from '@shared/models';
 import { PaymentMethodEnum } from '@shared/models';
+import { joinName } from '@shared/utils/person-name';
 
 export function nameParts(
   name: string,
@@ -110,7 +111,7 @@ export function normalizeSortLabel(value: string): string {
 }
 
 export function customerDisplayName(customer: CustomerDto): string {
-  return `${customer.firstName} ${customer.lastName}`.trim();
+  return joinName(customer.firstName, customer.lastName);
 }
 
 export function paymentMethodLabel(method?: PaymentMethodEnum | null): string {

@@ -123,7 +123,8 @@ public class GetOrderByIdHandler(WTFDbContext db, IHttpContextAccessor? httpCont
             order.ReviewReasons,
             order.QuotedTotal,
             order.OfflineLocalId,
-            StockLineIds: stockLineIds
+            StockLineIds: stockLineIds,
+            CustomerAddress: order.CustomerAddress
         );
     }
 

@@ -26,6 +26,7 @@ import {
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { CustomerDto } from '@shared/models';
+import { joinName } from '@shared/utils/person-name';
 import { debounceTime } from 'rxjs';
 
 type SortColumn = 'name' | 'address';
@@ -108,8 +109,8 @@ export class CustomerListComponent implements OnInit {
 
     if (this.sortColumn() === 'name') {
       customers.sort((a, b) => {
-        const nameA = `${a.firstName} ${a.lastName}`;
-        const nameB = `${b.firstName} ${b.lastName}`;
+        const nameA = joinName(a.firstName, a.lastName);
+        const nameB = joinName(b.firstName, b.lastName);
         const comparison = nameA.localeCompare(nameB);
         return this.sortDirection() === 'asc' ? comparison : -comparison;
       });
@@ -186,8 +187,8 @@ export class CustomerListComponent implements OnInit {
       items = items.filter(
         (c) =>
           c.firstName.toLowerCase().includes(lowerSearch) ||
-          c.lastName.toLowerCase().includes(lowerSearch) ||
-          `${c.firstName} ${c.lastName}`.toLowerCase().includes(lowerSearch) ||
+          (c.lastName ?? '').toLowerCase().includes(lowerSearch) ||
+          joinName(c.firstName, c.lastName).toLowerCase().includes(lowerSearch) ||
           this.contactMatches(c.contactNumber, searchTerm),
       );
     }
