@@ -131,6 +131,8 @@ public class RouteTableTests : IDisposable
         "GET /api/orders/paged => OrdersRead",
         "GET /api/orders/senior-pwd/id-check => SeniorPwdApply",
         "POST /api/orders/senior-pwd/id-check => SeniorPwdApply",
+        "GET /api/orders/sync-policy => OrdersSyncPolicy",
+        "PUT /api/orders/sync-policy => OrdersSyncPolicy",
         "GET /api/orders/{id:guid} => OrdersRead",
         "PUT /api/orders/{id:guid} => OrdersWrite",
         "PUT /api/orders/{id:guid}/override => OrdersOverride",
