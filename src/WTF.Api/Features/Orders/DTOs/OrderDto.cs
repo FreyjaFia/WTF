@@ -23,4 +23,6 @@ public record OrderDto(
     List<string>? StockWarnings = null,
     List<Guid>? StockLineIds = null,
     List<OrderSeniorPwdDto>? SeniorPwdPersons = null,
-    string? CustomerAddress = null);
+    string? CustomerAddress = null,
+    List<OrderReviewReasonDto>? ReviewDetails = null,
+    DateTime? CatalogSyncedAt = null);

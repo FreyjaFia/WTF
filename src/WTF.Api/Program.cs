@@ -30,6 +30,7 @@ Directory.CreateDirectory(logRoot);
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     .Enrich.FromLogContext()
+    .WriteTo.Console()
     .WriteTo.File(
         Path.Combine(logRoot, "wtf-api-.log"),
         rollingInterval: RollingInterval.Day,
@@ -343,6 +344,8 @@ app.UseStaticFiles(new StaticFileOptions
     FileProvider = new PhysicalFileProvider(staticRoot),
     RequestPath = ""
 });
+
+app.UseSerilogRequestLogging();
 
 // Only use HTTPS redirection in production (not in development for mobile apps)
 if (!app.Environment.IsDevelopment())
