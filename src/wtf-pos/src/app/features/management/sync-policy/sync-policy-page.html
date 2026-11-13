@@ -1,0 +1,230 @@
+<div class="flex h-full min-h-0 flex-col">
+  <div class="mb-4 flex shrink-0 items-start gap-4 pt-4 sm:mb-6 md:pt-0">
+    <button
+      type="button"
+      class="app-btn app-btn-ghost mt-1 shrink-0 p-2"
+      aria-label="Go back"
+      title="Back"
+      data-testid="sync-policy-back"
+      (click)="goBack()"
+    >
+      <app-icon name="icon-back" [class]="'h-5 w-5 text-gray-600'" />
+    </button>
+    <div class="flex min-w-0 flex-col gap-1">
+      <app-page-title text="Offline sync policy" />
+      <p class="text-xs text-gray-500 sm:text-sm">
+        What happens to a sale made offline when the menu changed before it reached the server
+      </p>
+    </div>
+  </div>
+
+  @if (!isOnline()) {
+    <div
+      class="mb-4 flex shrink-0 items-start gap-3 rounded-xl bg-gray-50 p-4 text-sm text-gray-700"
+      data-testid="sync-policy-offline"
+    >
+      <app-icon name="icon-cloud-off" [class]="'mt-0.5 h-4 w-4 shrink-0 text-gray-500'" />
+      <p>This screen needs a connection. Changes cannot be saved while you are offline.</p>
+    </div>
+  }
+
+  @if (isLoading()) {
+    <div class="flex justify-center py-8"><span class="loading loading-spinner loading-lg"></span></div>
+  } @else if (loadFailed()) {
+    <div class="flex flex-col items-center gap-3 py-8 text-sm text-gray-600" data-testid="sync-policy-failed">
+      <p>The policy could not be loaded.</p>
+      <button type="button" class="app-btn app-btn-secondary app-btn-sm" (click)="load()">Try again</button>
+    </div>
+  } @else {
+    <form
+      id="syncPolicyForm"
+      class="flex min-h-0 flex-1 flex-col"
+      [formGroup]="form"
+      (ngSubmit)="save()"
+    >
+      <div class="min-h-0 flex-1 space-y-6 overflow-y-auto pr-2 pb-4">
+        <div class="card rounded-xl bg-surface shadow-lg">
+          <div class="card-body space-y-3">
+            <div>
+              <h2 class="text-sm font-semibold tracking-wide text-gray-500 uppercase">
+                When the menu changed before the sale was sent
+              </h2>
+              <p class="mt-1 text-xs text-gray-500">
+                <strong>Hold</strong> keeps the sale for an Admin to approve or reject.
+                <strong>Note</strong> saves the sale as it was sold and only records the difference.
+                Every code starts on Hold.
+              </p>
+            </div>
+            <div formGroupName="modes" class="space-y-3">
+              @for (row of rows; track row.code) {
+                <div
+                  class="flex flex-col gap-3 rounded-xl bg-gray-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                  [attr.data-testid]="'policy-row-' + row.code"
+                >
+                  <div class="min-w-0">
+                    <p class="text-sm font-medium text-gray-900">{{ row.label }}</p>
+                    <p class="text-xs text-gray-500">{{ row.description }}</p>
+                    <p class="text-xs text-gray-400">Default: Hold</p>
+                  </div>
+                  <div class="grid shrink-0 grid-cols-2 gap-2 sm:w-44" role="radiogroup" [attr.aria-label]="row.label">
+                    @for (mode of modes; track mode) {
+                      <button
+                        type="button"
+                        role="radio"
+                        class="rounded-xl border px-3 py-2 text-sm font-medium transition-colors"
+                        [class]="
+                          modeOf(row.code) === mode
+                            ? 'border-brand bg-brand/5 text-gray-900'
+                            : 'border-gray-200 bg-surface text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+                        "
+                        [attr.aria-checked]="modeOf(row.code) === mode"
+                        [attr.data-testid]="'mode-' + row.code + '-' + mode"
+                        (click)="setMode(row.code, mode)"
+                      >
+                        {{ mode }}
+                      </button>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+
+        <div class="card rounded-xl bg-surface shadow-lg">
+          <div class="card-body space-y-3">
+            <h2 class="text-sm font-semibold tracking-wide text-gray-500 uppercase">Price difference</h2>
+            <div>
+              <label class="mb-2 block text-sm font-semibold text-gray-900" for="priceTolerance">
+                Allowed difference per item price (pesos)
+              </label>
+              <label
+                class="input flex w-full items-center gap-2 border-transparent bg-gray-50 transition-all focus-within:border-brand focus-within:bg-surface focus-within:ring-1 focus-within:ring-brand/20 sm:max-w-xs"
+                [class.input-error]="form.controls.priceTolerance.touched && form.controls.priceTolerance.invalid"
+              >
+                <input
+                  id="priceTolerance"
+                  type="number"
+                  inputmode="decimal"
+                  min="0"
+                  max="1000"
+                  step="0.01"
+                  class="grow bg-transparent outline-none"
+                  formControlName="priceTolerance"
+                  data-testid="policy-tolerance"
+                />
+              </label>
+              @if (form.controls.priceTolerance.touched && form.controls.priceTolerance.invalid) {
+                <p class="text-error mt-2 text-sm">Enter 0 to 1000 pesos.</p>
+              }
+              <p class="mt-2 text-xs text-gray-500">
+                Default: 0. Any price difference, even a centavo, holds the sale. A difference at or below
+                this amount is only noted. It applies to item and add-on prices, never to a Senior/PWD discount.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card rounded-xl bg-surface shadow-lg">
+          <div class="card-body space-y-3">
+            <h2 class="text-sm font-semibold tracking-wide text-gray-500 uppercase">Notes and old holds</h2>
+            <div class="flex items-center justify-between gap-4 rounded-xl bg-gray-50 px-4 py-3">
+              <div>
+                <label for="autoApproveNotes" class="text-sm font-medium text-gray-900">Record sales saved with notes</label>
+                <p class="text-xs text-gray-500">
+                  Default: off. When on, every sale saved with notes is also written to the audit log as approved by
+                  this policy. Notes never block a sale either way.
+                </p>
+              </div>
+              <input
+                id="autoApproveNotes"
+                type="checkbox"
+                formControlName="autoApproveNotes"
+                class="toggle toggle-neutral toggle-sm shrink-0"
+                data-testid="policy-auto-approve"
+              />
+            </div>
+            <div>
+              <label class="mb-2 block text-sm font-semibold text-gray-900" for="agedAfterDays">
+                Flag a held order after (days)
+              </label>
+              <label
+                class="input flex w-full items-center gap-2 border-transparent bg-gray-50 transition-all focus-within:border-brand focus-within:bg-surface focus-within:ring-1 focus-within:ring-brand/20 sm:max-w-xs"
+                [class.input-error]="form.controls.agedAfterDays.touched && form.controls.agedAfterDays.invalid"
+              >
+                <input
+                  id="agedAfterDays"
+                  type="number"
+                  inputmode="numeric"
+                  min="1"
+                  max="30"
+                  step="1"
+                  class="grow bg-transparent outline-none"
+                  formControlName="agedAfterDays"
+                  data-testid="policy-aged-days"
+                />
+              </label>
+              @if (form.controls.agedAfterDays.touched && form.controls.agedAfterDays.invalid) {
+                <p class="text-error mt-2 text-sm">Enter a whole number of days from 1 to 30.</p>
+              }
+              <p class="mt-2 text-xs text-gray-500">Default: 2 days.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card rounded-xl bg-surface shadow-lg">
+          <div class="card-body space-y-2 text-sm text-gray-700" data-testid="policy-fixed">
+            <h2 class="text-sm font-semibold tracking-wide text-gray-500 uppercase">Never changed by this policy</h2>
+            <p>
+              <span class="font-semibold text-gray-900">Senior/PWD discount problems</span> always hold the sale.
+              They are tax records, so no setting here applies to them.
+            </p>
+            <p>
+              <span class="font-semibold text-gray-900">A promotion over its limit</span> and
+              <span class="font-semibold text-gray-900">stock that ran short</span> are always saved with a note.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div
+        class="sticky bottom-0 z-10 flex shrink-0 items-center justify-between gap-2 border-t border-gray-200 bg-surface/95 py-3 backdrop-blur-sm"
+        data-testid="policy-actions"
+      >
+        <p class="hidden text-xs text-gray-500 sm:block">
+          @if (updatedAt(); as when) {
+            Last changed {{ when | date: 'medium' }}
+          } @else {
+            Never changed: the defaults are in use.
+          }
+        </p>
+        <button
+          type="submit"
+          class="app-btn app-btn-primary app-btn-sm w-full gap-2 sm:w-auto"
+          data-testid="policy-save"
+          [disabled]="form.invalid || !canSave() || !form.dirty"
+        >
+          @if (isSaving()) {
+            <span class="loading loading-spinner loading-sm"></span>
+          }
+          {{ isSaving() ? 'Saving...' : 'Save' }}
+        </button>
+      </div>
+    </form>
+  }
+
+  @if (showDiscardModal()) {
+    <app-confirm-dialog
+      variant="warning"
+      icon="icon-back"
+      heading="Discard Changes?"
+      confirmLabel="Discard"
+      cancelLabel="Keep Editing"
+      confirmPlacement="secondary"
+      (confirmed)="confirmDiscard()"
+      (cancelled)="cancelDiscard()"
+    >
+      You have unsaved changes that will be lost if you leave this page.
+    </app-confirm-dialog>
+  }
+</div>
