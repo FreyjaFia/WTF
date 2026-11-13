@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using WTF.Api.Common.Catalog;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Common.Tenancy;
 using WTF.Api.Features.OrderLinks;
@@ -116,7 +117,7 @@ public static class BrandDefaults
     }
 
     public static async Task SaveAsync(
-        WTFDbContext db, Guid tenantId, BrandDto brand, CancellationToken cancellationToken)
+        WTFDbContext db, Guid tenantId, BrandDto brand, CancellationToken cancellationToken, Guid? changedBy = null)
     {
         Validate(brand);
 
@@ -143,6 +144,7 @@ public static class BrandDefaults
         }
 
         settings.UpdatedAt = DateTime.UtcNow;
+        CatalogChangeRecorder.RecordTenantSettings(db, settings, changedBy);
 
         await db.SaveChangesAsync(cancellationToken);
     }
@@ -180,7 +182,8 @@ public class UpdateBrandHandler(WTFDbContext db, ICurrentTenant currentTenant, S
         var tenantId = currentTenant.StampTenantId ?? throw new InvalidOperationException("Sign in to a shop first.");
         var before = await BrandDefaults.LoadAsync(db, tenantId, cancellationToken);
 
-        await BrandDefaults.SaveAsync(db, tenantId, request.Brand, cancellationToken);
+        Guid? changedBy = Guid.TryParse(http.HttpContext?.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out var userId) ? userId : null;
+        await BrandDefaults.SaveAsync(db, tenantId, request.Brand, cancellationToken, changedBy: changedBy);
 
         var after = await BrandDefaults.LoadAsync(db, tenantId, cancellationToken);
         await audit.LogAsync(

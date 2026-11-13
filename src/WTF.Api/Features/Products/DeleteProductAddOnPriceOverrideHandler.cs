@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using WTF.Api.Common.Catalog;
 using WTF.Api.Common.Extensions;
 using WTF.Domain.Data;
 
@@ -26,6 +27,7 @@ public class DeleteProductAddOnPriceOverrideHandler(WTFDbContext db, IHttpContex
             existing.IsActive = false;
             existing.UpdatedAt = DateTime.UtcNow;
             existing.UpdatedBy = userId;
+            CatalogChangeRecorder.RecordAddOnOverride(db, existing, userId);
             await db.SaveChangesAsync(cancellationToken);
         }
 
