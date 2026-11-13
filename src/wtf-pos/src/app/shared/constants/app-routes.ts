@@ -1,5 +1,6 @@
 export const AppRoutes = {
   Login: '/login',
+  NotInPlan: '/not-in-plan',
   PlatformLogin: '/platform/login',
   PlatformRoot: '/platform',
   PlatformOverview: '/platform/overview',

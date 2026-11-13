@@ -1,0 +1,24 @@
+<div class="flex min-h-full flex-col items-center justify-center px-4 py-8" data-testid="not-in-plan">
+  <div class="w-full max-w-md rounded-xl bg-surface p-8 text-center shadow-lg">
+    <h1 class="mb-2 text-xl font-semibold text-gray-800" data-testid="not-in-plan-title">
+      {{ screenName() }} is not in your plan
+    </h1>
+    @if (availability(); as text) {
+      <p class="mb-2 text-sm font-medium text-gray-700" data-testid="not-in-plan-plans">{{ text }}</p>
+    }
+    @if (canUpgrade()) {
+      <p class="mb-8 text-sm text-gray-500" data-testid="not-in-plan-upgrade">
+        To use it, upgrade your plan from Plan &amp; billing.
+      </p>
+      <div class="flex flex-col items-center gap-2">
+        <a draggable="false" [routerLink]="routes.ManagementShopPlan" class="app-btn app-btn-primary app-btn-md w-64">Plan &amp; billing</a>
+        <a draggable="false" [routerLink]="routes.OrdersRoot" class="app-btn app-btn-ghost app-btn-md w-64">Go to Home</a>
+      </div>
+    } @else {
+      <p class="mb-8 text-sm text-gray-500" data-testid="not-in-plan-ask-owner">
+        Ask the owner to upgrade the plan.
+      </p>
+      <a draggable="false" [routerLink]="routes.OrdersRoot" class="app-btn app-btn-primary app-btn-md w-64">Go to Home</a>
+    }
+  </div>
+</div>

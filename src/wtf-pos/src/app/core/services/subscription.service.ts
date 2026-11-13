@@ -11,6 +11,7 @@ import {
 } from '@shared/calculations/subscription-rules';
 import { LeasePayload, SubscriptionDto, TenantInvoiceDto } from '@shared/models/subscription.models';
 import { Observable } from 'rxjs';
+import { PlanStore } from './plan-store';
 
 interface StoredLease {
   lease: string;
@@ -28,6 +29,7 @@ export class SubscriptionService implements OnDestroy {
 
   private readonly http = inject(HttpClient);
   private readonly baseUrl = `${environment.apiUrl}/subscription`;
+  private readonly plan = inject(PlanStore);
 
   private readonly _lease = signal<LeasePayload | null>(null);
   private readonly _managedByServer = signal(false);
@@ -146,6 +148,7 @@ export class SubscriptionService implements OnDestroy {
 
   private async accept(dto: SubscriptionDto): Promise<void> {
     this._managedByServer.set(dto.managed);
+    this.plan.apply(dto);
     this.rememberSeen(new Date(dto.serverTime));
 
     if (!dto.managed || !dto.lease) {

@@ -31,6 +31,7 @@ export * from './platform.service';
 export * from './stock-attention.service';
 export * from './stock-attention-follow';
 export * from './stock-limits.service';
+export * from './plan-store';
 export * from './subscription.service';
 export * from './brand.service';
 export * from './theme.service';
