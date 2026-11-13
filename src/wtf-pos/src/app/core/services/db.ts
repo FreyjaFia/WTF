@@ -63,8 +63,21 @@ export interface PendingOrder {
   status: 'pending' | 'syncing' | 'failed';
   errorMessage?: string | null;
   retryCount: number;
-  /** 2 once the command can carry Senior / PWD persons. A queued order without it syncs as it always did. */
+  /** 2 once the command can carry Senior / PWD persons. 3 once it also carries the catalog sync time. */
   version?: number;
+}
+
+export type SyncOutcome = 'saved' | 'saved-with-note' | 'sent-for-review' | 'could-not-sync';
+
+export interface SyncResultEntry {
+  id?: number;
+  localId: string;
+  tenantId?: string;
+  orderNumber: number | null;
+  outcome: SyncOutcome;
+  message: string;
+  reasons: string[];
+  at: string;
 }
 
 export class WtfDatabase extends Dexie {
@@ -72,6 +85,7 @@ export class WtfDatabase extends Dexie {
   public readonly catalog!: Table<CachedCatalog, number>;
   public readonly images!: Table<CachedImage, string>;
   public readonly pendingOrders!: Table<PendingOrder, number>;
+  public readonly syncResults!: Table<SyncResultEntry, number>;
 
   constructor() {
     super('wtf-pos');
@@ -103,6 +117,14 @@ export class WtfDatabase extends Dexie {
       catalog: '++id',
       images: 'url, cachedAt',
       pendingOrders: '++id, localId, status',
+    });
+
+    this.version(6).stores({
+      carts: '++id',
+      catalog: '++id',
+      images: 'url, cachedAt',
+      pendingOrders: '++id, localId, status',
+      syncResults: '++id, localId, tenantId, at',
     });
   }
 }

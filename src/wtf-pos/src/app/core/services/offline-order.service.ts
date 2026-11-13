@@ -9,11 +9,13 @@ import {
 import { firstValueFrom, timeout } from 'rxjs';
 import { db } from './db';
 import { currentTenantId, tenantOfQueuedOrder } from './tenant-context';
-import type { PendingOrder } from './db';
+import type { PendingOrder, SyncOutcome, SyncResultEntry } from './db';
 
 @Injectable({ providedIn: 'root' })
 export class OfflineOrderService {
-  private static readonly QUEUE_VERSION = 2;
+  private static readonly QUEUE_VERSION = 3;
+  private static readonly CATALOG_ROW_ID = 1;
+  private static readonly SYNC_RESULT_DAYS = 7;
   private static readonly COUNTER_KEY = 'wtf-offline-counter';
   private static readonly DEVICE_KEY = 'wtf-device-id';
   private static readonly SYNC_BATCH_SIZE = 5;
@@ -32,6 +34,9 @@ export class OfflineOrderService {
 
   private readonly _pendingOrders = signal<PendingOrder[]>([]);
   public readonly pendingOrders = this._pendingOrders.asReadonly();
+
+  private readonly _syncResults = signal<SyncResultEntry[]>([]);
+  public readonly syncResults = this._syncResults.asReadonly();
 
   private readonly _isSyncing = signal(false);
   public readonly isSyncing = this._isSyncing.asReadonly();
@@ -100,10 +105,12 @@ export class OfflineOrderService {
       JSON.stringify({ date: today, counter: this.localCounter }),
     );
 
+    const stamped = await this.stampCatalogTime(command);
+
     const pendingOrder: PendingOrder = {
       localId,
       tenantId: currentTenantId(),
-      command,
+      command: stamped.command,
       cartSnapshot,
       previewTotal,
       customerName,
@@ -111,7 +118,7 @@ export class OfflineOrderService {
       status: 'pending',
       errorMessage: null,
       retryCount: 0,
-      version: OfflineOrderService.QUEUE_VERSION,
+      version: stamped.version,
     };
 
     await db.pendingOrders.add(pendingOrder);
@@ -146,14 +153,16 @@ export class OfflineOrderService {
       throw new Error(`Offline order ${localId} is syncing and cannot be changed.`);
     }
 
+    const stamped = await this.stampCatalogTime(command);
+
     await (db.pendingOrders as import('dexie').Table).update(existing.id!, {
-      command,
+      command: stamped.command,
       cartSnapshot,
       previewTotal,
       customerName,
       status: 'pending',
       errorMessage: null,
-      version: OfflineOrderService.QUEUE_VERSION,
+      version: stamped.version,
     });
 
     await this.loadPendingOrders();
@@ -238,7 +247,7 @@ export class OfflineOrderService {
 
       if (heldCount > 0) {
         this.alertService.warning(
-          `${heldCount} order${heldCount > 1 ? 's' : ''} synced but ${heldCount > 1 ? 'are' : 'is'} waiting for an Admin to review ${heldCount > 1 ? 'them' : 'it'}: the price or the menu changed since the sale.`,
+          `${heldCount} order${heldCount > 1 ? 's' : ''} synced but ${heldCount > 1 ? 'are' : 'is'} waiting for an Admin to review ${heldCount > 1 ? 'them' : 'it'}: the price or the menu changed since the sale. See Last sync on the Orders page.`,
         );
       }
 
@@ -298,6 +307,10 @@ export class OfflineOrderService {
         })),
       );
 
+      await this.recordSyncResults(
+        batch.map((order) => this.buildEntry(order, 'could-not-sync', null, message, [])),
+      );
+
       return { saved: 0, held: 0, failed: batch.length };
     }
   }
@@ -317,6 +330,7 @@ export class OfflineOrderService {
     }
 
     await this.loadPendingOrders();
+    await this.loadSyncResults();
   }
 
   private async loadPendingOrders(): Promise<void> {
@@ -378,6 +392,7 @@ export class OfflineOrderService {
     const failed: { key: number; changes: Partial<PendingOrder> }[] = [];
     let held = 0;
     const stockWarnings = new Set<string>();
+    const entries: SyncResultEntry[] = [];
 
     for (const order of batch) {
       const result = resultByKey.get(this.serverKey(order));
@@ -391,20 +406,26 @@ export class OfflineOrderService {
           held++;
         }
 
+        entries.push(this.entryFromResult(order, result));
+
         continue;
       }
+
+      const errorMessage = result?.error ?? OfflineOrderService.NO_RESULT_MESSAGE;
+      entries.push(this.buildEntry(order, 'could-not-sync', null, errorMessage, []));
 
       failed.push({
         key: order.id!,
         changes: {
           status: 'failed',
-          errorMessage: result?.error ?? OfflineOrderService.NO_RESULT_MESSAGE,
+          errorMessage,
           retryCount: order.retryCount + 1,
         },
       });
     }
 
     await db.pendingOrders.bulkDelete(doneIds);
+    await this.recordSyncResults(entries);
 
     if (stockWarnings.size > 0) {
       this.alertService.warning(
@@ -417,6 +438,138 @@ export class OfflineOrderService {
     }
 
     return { saved: doneIds.length - held, held, failed: failed.length };
+  }
+
+  public async dismissSyncResult(id: number): Promise<void> {
+    try {
+      await db.syncResults.bulkDelete([id]);
+    } catch {
+      // The note is only feedback; a device that cannot write it still works.
+    }
+
+    await this.loadSyncResults();
+  }
+
+  public async clearSyncResults(): Promise<void> {
+    try {
+      const ids = this._syncResults().map((entry) => entry.id!);
+      await db.syncResults.bulkDelete(ids);
+    } catch {
+      // See dismissSyncResult.
+    }
+
+    await this.loadSyncResults();
+  }
+
+  private async stampCatalogTime(
+    command: CreateOrderCommand,
+  ): Promise<{ command: CreateOrderCommand; version: number }> {
+    const syncedAt = (await this.readCatalogSyncedAt()) ?? command.catalogSyncedAt ?? null;
+
+    // An order without the time stays as an old app sent it: the server then compares with today's catalog.
+    return syncedAt
+      ? { command: { ...command, catalogSyncedAt: syncedAt }, version: OfflineOrderService.QUEUE_VERSION }
+      : { command, version: 2 };
+  }
+
+  private async readCatalogSyncedAt(): Promise<string | null> {
+    try {
+      const cached = await db.catalog.get(OfflineOrderService.CATALOG_ROW_ID);
+      const time = cached?.syncedAt ? new Date(cached.syncedAt) : null;
+
+      return time && !Number.isNaN(time.getTime()) ? time.toISOString() : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private entryFromResult(order: PendingOrder, result: OfflineSyncResultDto): SyncResultEntry {
+    const details = result.reasonDetails ?? [];
+    const texts = (severity: 'Hold' | 'Note'): string[] =>
+      details.filter((reason) => reason.severity === severity).map((reason) => reason.text);
+
+    if (result.status === OrderStatusEnum.PendingReview) {
+      const holds = texts('Hold');
+      const reasons = holds.length > 0 ? holds : (result.reasons ?? []);
+
+      return this.buildEntry(
+        order,
+        'sent-for-review',
+        result.orderNumber,
+        'An Admin has to review this sale before it counts. It is saved, nothing is lost.',
+        reasons,
+      );
+    }
+
+    const notes = details.length > 0 ? texts('Note') : (result.reasons ?? []);
+    const all = [...new Set([...notes, ...(result.stockWarnings ?? [])])];
+
+    return all.length > 0
+      ? this.buildEntry(order, 'saved-with-note', result.orderNumber, 'Saved, with a note.', all)
+      : this.buildEntry(order, 'saved', result.orderNumber, 'Saved.', []);
+  }
+
+  private buildEntry(
+    order: PendingOrder,
+    outcome: SyncOutcome,
+    orderNumber: number | null,
+    message: string,
+    reasons: string[],
+  ): SyncResultEntry {
+    return {
+      localId: order.localId,
+      tenantId: currentTenantId(),
+      orderNumber,
+      outcome,
+      message,
+      reasons,
+      at: new Date().toISOString(),
+    };
+  }
+
+  // Feedback must never break a sync: a device that cannot write it still saves and sends orders as before.
+  private async recordSyncResults(entries: SyncResultEntry[]): Promise<void> {
+    if (entries.length === 0) {
+      return;
+    }
+
+    try {
+      const tenantId = currentTenantId();
+      const stale = (await db.syncResults.toArray())
+        .filter(
+          (row) =>
+            tenantOfQueuedOrder(row) === tenantId && entries.some((entry) => entry.localId === row.localId),
+        )
+        .map((row) => row.id!);
+
+      await db.syncResults.bulkDelete(stale);
+      await db.syncResults.bulkAdd(entries);
+    } catch {
+      // See above.
+    }
+
+    await this.loadSyncResults();
+  }
+
+  private async loadSyncResults(): Promise<void> {
+    try {
+      const cutoff = Date.now() - OfflineOrderService.SYNC_RESULT_DAYS * 24 * 60 * 60 * 1000;
+      const rows = await db.syncResults.toArray();
+      const expired = rows.filter((row) => new Date(row.at).getTime() < cutoff).map((row) => row.id!);
+
+      if (expired.length > 0) {
+        await db.syncResults.bulkDelete(expired);
+      }
+
+      const tenantId = currentTenantId();
+      const current = rows
+        .filter((row) => !expired.includes(row.id!) && tenantOfQueuedOrder(row) === tenantId)
+        .sort((a, b) => b.at.localeCompare(a.at) || b.id! - a.id!);
+
+      this._syncResults.set(current);
+    } catch {
+      this._syncResults.set([]);
+    }
   }
 
   // Queue numbers restart on every device, so the server key adds the device: two tablets cannot clash.

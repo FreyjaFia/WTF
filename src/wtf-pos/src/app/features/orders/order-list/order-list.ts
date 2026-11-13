@@ -47,7 +47,7 @@ import {
 } from '@shared/models';
 import { debounceTime, Subscription } from 'rxjs';
 import { cartTotal } from '@shared/calculations';
-import type { PendingOrder } from '@core/services/db';
+import type { PendingOrder, SyncOutcome, SyncResultEntry } from '@core/services/db';
 import { PosWasteSheetComponent } from '@features/orders/pos-waste-sheet/pos-waste-sheet';
 
 type SortColumn = 'orderNumber' | 'date' | 'totalAmount';
@@ -138,6 +138,8 @@ export class OrderList implements OnInit, OnDestroy {
   protected readonly pageSize = signal(20);
   protected readonly totalCount = signal(0);
   protected readonly pendingOrders = this.offlineOrderService.pendingOrders;
+  protected readonly syncResults = this.offlineOrderService.syncResults;
+  protected readonly isSyncResultsExpanded = signal(true);
   protected readonly isSyncingOffline = this.offlineOrderService.isSyncing;
   protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
   protected readonly isFiltersOpen = signal(false);
@@ -633,6 +635,40 @@ export class OrderList implements OnInit, OnDestroy {
     }
 
     void this.offlineOrderService.syncNow();
+  }
+
+  protected syncOutcomeVariant(outcome: SyncOutcome): BadgeVariant {
+    switch (outcome) {
+      case 'saved':
+        return 'success';
+      case 'saved-with-note':
+        return 'info';
+      case 'sent-for-review':
+        return 'warning';
+      default:
+        return 'error';
+    }
+  }
+
+  protected syncOutcomeLabel(entry: SyncResultEntry): string {
+    switch (entry.outcome) {
+      case 'saved':
+        return entry.orderNumber ? `Saved as order #${entry.orderNumber}` : 'Saved';
+      case 'saved-with-note':
+        return entry.orderNumber ? `Saved as order #${entry.orderNumber} with a note` : 'Saved with a note';
+      case 'sent-for-review':
+        return entry.orderNumber ? `Order #${entry.orderNumber} sent for review` : 'Sent for review';
+      default:
+        return 'Could not sync';
+    }
+  }
+
+  protected dismissSyncResult(entry: SyncResultEntry): void {
+    void this.offlineOrderService.dismissSyncResult(entry.id!);
+  }
+
+  protected clearSyncResults(): void {
+    void this.offlineOrderService.clearSyncResults();
   }
 
   protected getPendingItemCount(cartSnapshot: CartItemDto[]): string {

@@ -5,12 +5,12 @@ describe('WtfDatabase schema', () => {
   it('uses the wtf-pos database name at the latest version', () => {
     expect(db).toBeInstanceOf(WtfDatabase);
     expect(db.name).toBe('wtf-pos');
-    expect(db.verno).toBe(5);
+    expect(db.verno).toBe(6);
   });
 
   it('declares all tables', () => {
     const names = db.tables.map((t) => t.name).sort();
-    expect(names).toEqual(['carts', 'catalog', 'images', 'pendingOrders']);
+    expect(names).toEqual(['carts', 'catalog', 'images', 'pendingOrders', 'syncResults']);
   });
 
   it('declares expected primary keys and indexes', () => {

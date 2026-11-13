@@ -68,6 +68,11 @@ class FakeTable {
     this.rows = this.rows.filter((r) => !ids.includes(r.id as number));
     return Promise.resolve();
   }
+
+  public bulkAdd(items: Record<string, unknown>[]): Promise<void> {
+    items.forEach((item) => this.add(item as unknown as PendingOrder));
+    return Promise.resolve();
+  }
 }
 
 /** What the server answers for orders it saved: one result per order, matched by the queue number it was sent. */
@@ -95,7 +100,11 @@ function idPattern(counter: number): RegExp {
 
 describe('OfflineOrderService', () => {
   const originalTable = db.pendingOrders;
+  const originalResults = db.syncResults;
+  const originalCatalog = db.catalog;
   let table: FakeTable;
+  let results: FakeTable;
+  let catalogGet: ReturnType<typeof vi.fn>;
   let online: ReturnType<typeof signal<boolean>>;
   let createBatch: ReturnType<typeof vi.fn>;
   let alerts: { success: ReturnType<typeof vi.fn>; warning: ReturnType<typeof vi.fn> };
@@ -123,6 +132,14 @@ describe('OfflineOrderService', () => {
     localStorage.clear();
     table = new FakeTable();
     Object.defineProperty(db, 'pendingOrders', { value: table, configurable: true, writable: true });
+    results = new FakeTable();
+    Object.defineProperty(db, 'syncResults', { value: results, configurable: true, writable: true });
+    catalogGet = vi.fn(() => Promise.resolve(undefined));
+    Object.defineProperty(db, 'catalog', {
+      value: { get: catalogGet },
+      configurable: true,
+      writable: true,
+    });
     online = signal(false);
     createBatch = vi.fn(
       (batch: { offlineLocalId?: string }[]) => of(saved(batch)) as Observable<unknown>,
@@ -140,6 +157,16 @@ describe('OfflineOrderService', () => {
   afterEach(() => {
     Object.defineProperty(db, 'pendingOrders', {
       value: originalTable,
+      configurable: true,
+      writable: true,
+    });
+    Object.defineProperty(db, 'syncResults', {
+      value: originalResults,
+      configurable: true,
+      writable: true,
+    });
+    Object.defineProperty(db, 'catalog', {
+      value: originalCatalog,
       configurable: true,
       writable: true,
     });
@@ -578,7 +605,7 @@ describe('OfflineOrderService', () => {
       expect(table.rows).toEqual([]);
       expect(alerts.success).not.toHaveBeenCalled();
       expect(alerts.warning).toHaveBeenCalledWith(
-        '1 order synced but is waiting for an Admin to review it: the price or the menu changed since the sale.',
+        '1 order synced but is waiting for an Admin to review it: the price or the menu changed since the sale. See Last sync on the Orders page.',
       );
     });
 
@@ -615,7 +642,7 @@ describe('OfflineOrderService', () => {
 
       expect(alerts.success).toHaveBeenCalledWith('2 offline orders synced successfully.');
       expect(alerts.warning).toHaveBeenCalledWith(
-        '1 order synced but is waiting for an Admin to review it: the price or the menu changed since the sale.',
+        '1 order synced but is waiting for an Admin to review it: the price or the menu changed since the sale. See Last sync on the Orders page.',
       );
     });
 
@@ -810,6 +837,280 @@ describe('OfflineOrderService', () => {
       await vi.advanceTimersByTimeAsync(0);
 
       expect(createBatch).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('the catalog time on a queued order', () => {
+    beforeEach(() => localStorage.setItem('token', 'tok'));
+
+    const syncedAt = '2026-11-12T08:30:00.000Z';
+
+    it('is taken from the last catalog sync and the order is marked version 3', async () => {
+      catalogGet.mockResolvedValue({ id: 1, syncedAt });
+      const service = await create();
+
+      await service.queue(command(), cart, null);
+
+      expect(table.rows[0].command.catalogSyncedAt).toBe(syncedAt);
+      expect(table.rows[0].version).toBe(3);
+    });
+
+    it('is written as UTC even when the catalog time carries an offset', async () => {
+      catalogGet.mockResolvedValue({ id: 1, syncedAt: '2026-11-12T16:30:00+08:00' });
+      const service = await create();
+
+      await service.queue(command(), cart, null);
+
+      expect(table.rows[0].command.catalogSyncedAt).toBe(syncedAt);
+    });
+
+    it('is left out, as an older app did, when the device has no catalog yet', async () => {
+      const service = await create();
+
+      await service.queue(command(), cart, null);
+
+      expect(table.rows[0].command).not.toHaveProperty('catalogSyncedAt');
+      expect(table.rows[0].version).toBe(2);
+    });
+
+    it('is left out when the catalog cannot be read', async () => {
+      catalogGet.mockRejectedValue(new Error('no storage'));
+      const service = await create();
+
+      await service.queue(command(), cart, null);
+
+      expect(table.rows[0].command).not.toHaveProperty('catalogSyncedAt');
+      expect(table.rows[0].version).toBe(2);
+    });
+
+    it('is refreshed when a queued order is edited', async () => {
+      const service = await create([{ localId: 'OFF-a-001', version: 2 }]);
+      catalogGet.mockResolvedValue({ id: 1, syncedAt });
+
+      await service.update('OFF-a-001', command('new'), cart, null);
+
+      expect(table.rows[0].command.catalogSyncedAt).toBe(syncedAt);
+      expect(table.rows[0].version).toBe(3);
+    });
+
+    it('is not added to an order queued by an older app when it syncs', async () => {
+      const service = await create([{ localId: 'a', version: 2 }]);
+      online.set(true);
+
+      await service.syncAll();
+
+      const sent = createBatch.mock.calls[0][0] as Record<string, unknown>[];
+      expect(sent[0]).not.toHaveProperty('catalogSyncedAt');
+    });
+
+    it('is sent with the order when it syncs', async () => {
+      catalogGet.mockResolvedValue({ id: 1, syncedAt });
+      const service = await create();
+      await service.queue(command(), cart, null);
+      online.set(true);
+
+      await service.syncAll();
+
+      const sent = createBatch.mock.calls[0][0] as Record<string, unknown>[];
+      expect(sent[0]['catalogSyncedAt']).toBe(syncedAt);
+    });
+  });
+
+  describe('the cashier feedback after a sync', () => {
+    beforeEach(() => localStorage.setItem('token', 'tok'));
+
+    const answer = (extra: Record<string, unknown>) =>
+      createBatch.mockImplementation((batch: { offlineLocalId?: string }[]) =>
+        of(saved(batch).map((result) => ({ ...result, ...extra }))),
+      );
+
+    it('records an order saved as it was sold', async () => {
+      answer({ orderNumber: 41 });
+      const service = await create([{ localId: 'a' }]);
+      online.set(true);
+
+      await service.syncAll();
+
+      expect(service.syncResults()).toHaveLength(1);
+      expect(service.syncResults()[0]).toMatchObject({
+        localId: 'a',
+        orderNumber: 41,
+        outcome: 'saved',
+        reasons: [],
+      });
+    });
+
+    it('records an order saved with a note and keeps the note text', async () => {
+      answer({
+        orderNumber: 42,
+        reasons: ['Latte ran out of stock.'],
+        reasonDetails: [{ code: 'StockShortfall', severity: 'Note', text: 'Latte ran out of stock.' }],
+      });
+      const service = await create([{ localId: 'a' }]);
+      online.set(true);
+
+      await service.syncAll();
+
+      expect(service.syncResults()[0]).toMatchObject({
+        outcome: 'saved-with-note',
+        orderNumber: 42,
+        reasons: ['Latte ran out of stock.'],
+      });
+    });
+
+    it('takes the note from reasons when the server sends no details', async () => {
+      answer({ reasons: ['Price differs by 2.00.'] });
+      const service = await create([{ localId: 'a' }]);
+      online.set(true);
+
+      await service.syncAll();
+
+      expect(service.syncResults()[0]).toMatchObject({
+        outcome: 'saved-with-note',
+        reasons: ['Price differs by 2.00.'],
+      });
+    });
+
+    it('records stock warnings as notes', async () => {
+      answer({ stockWarnings: ['Milk is below zero.'] });
+      const service = await create([{ localId: 'a' }]);
+      online.set(true);
+
+      await service.syncAll();
+
+      expect(service.syncResults()[0]).toMatchObject({
+        outcome: 'saved-with-note',
+        reasons: ['Milk is below zero.'],
+      });
+    });
+
+    it('records a held order with only the reasons that need an Admin', async () => {
+      answer({
+        status: 6,
+        orderNumber: 43,
+        reasons: ['Latte costs 130.00 now, 120.00 when sold.', 'Milk is below zero.'],
+        reasonDetails: [
+          { code: 'PriceChanged', severity: 'Hold', text: 'Latte costs 130.00 now, 120.00 when sold.' },
+          { code: 'StockShortfall', severity: 'Note', text: 'Milk is below zero.' },
+        ],
+      });
+      const service = await create([{ localId: 'a' }]);
+      online.set(true);
+
+      await service.syncAll();
+
+      expect(service.syncResults()[0]).toMatchObject({
+        outcome: 'sent-for-review',
+        orderNumber: 43,
+        reasons: ['Latte costs 130.00 now, 120.00 when sold.'],
+      });
+    });
+
+    it('records the reasons of a held order from reasons when there are no details', async () => {
+      answer({ status: 6, reasons: ['The menu changed.', 'A price changed.'] });
+      const service = await create([{ localId: 'a' }]);
+      online.set(true);
+
+      await service.syncAll();
+
+      expect(service.syncResults()[0]).toMatchObject({
+        outcome: 'sent-for-review',
+        reasons: ['The menu changed.', 'A price changed.'],
+      });
+    });
+
+    it('records an order the server could not save with its error', async () => {
+      createBatch.mockImplementation((batch: { offlineLocalId?: string }[]) =>
+        of(batch.map((c) => ({ offlineLocalId: c.offlineLocalId, orderId: null, orderNumber: null, status: null, reasons: [], error: 'Latte is not sold here.' }))),
+      );
+      const service = await create([{ localId: 'a' }]);
+      online.set(true);
+
+      await service.syncAll();
+
+      expect(service.syncResults()[0]).toMatchObject({
+        localId: 'a',
+        outcome: 'could-not-sync',
+        message: 'Latte is not sold here.',
+      });
+    });
+
+    it('records every order of a batch that never reached the server', async () => {
+      createBatch.mockImplementation(() => throwError(() => new Error('server down')));
+      const service = await create([{ localId: 'a' }]);
+      online.set(true);
+
+      const done = service.syncAll();
+      await vi.advanceTimersByTimeAsync(2000);
+      await done;
+
+      expect(service.syncResults()).toHaveLength(1);
+      expect(service.syncResults()[0]).toMatchObject({
+        outcome: 'could-not-sync',
+        message: 'server down',
+      });
+    });
+
+    it('replaces the earlier result of the same order when it is tried again', async () => {
+      createBatch.mockImplementationOnce((batch: { offlineLocalId?: string }[]) =>
+        of(batch.map((c) => ({ offlineLocalId: c.offlineLocalId, orderId: null, orderNumber: null, status: null, reasons: [], error: 'Try later.' }))),
+      );
+      const service = await create([{ localId: 'a' }]);
+      online.set(true);
+      await service.syncAll();
+      expect(service.syncResults()[0].outcome).toBe('could-not-sync');
+
+      await service.syncAll();
+
+      expect(service.syncResults()).toHaveLength(1);
+      expect(service.syncResults()[0].outcome).toBe('saved');
+    });
+
+    it('does not break the sync when the results cannot be stored', async () => {
+      vi.spyOn(results, 'bulkAdd').mockRejectedValue(new Error('quota'));
+      const service = await create([{ localId: 'a' }]);
+      online.set(true);
+
+      await service.syncAll();
+
+      expect(table.rows).toEqual([]);
+      expect(alerts.success).toHaveBeenCalled();
+    });
+
+    it('dismisses one result and clears all', async () => {
+      const service = await create([{ localId: 'a' }, { localId: 'b' }]);
+      online.set(true);
+      await service.syncAll();
+      expect(service.syncResults()).toHaveLength(2);
+
+      await service.dismissSyncResult(service.syncResults()[0].id!);
+      expect(service.syncResults()).toHaveLength(1);
+
+      await service.clearSyncResults();
+      expect(service.syncResults()).toEqual([]);
+      expect(results.rows).toEqual([]);
+    });
+
+    it('drops results older than 7 days when the service starts', async () => {
+      const day = 24 * 60 * 60 * 1000;
+      const base = { orderNumber: 1, outcome: 'saved', message: 'Saved.', reasons: [] as string[] };
+      await results.add({ ...base, localId: 'old', at: new Date(Date.now() - 8 * day).toISOString() } as never);
+      await results.add({ ...base, localId: 'new', at: new Date(Date.now() - 6 * day).toISOString() } as never);
+
+      const service = await create();
+
+      expect(service.syncResults().map((r) => r.localId)).toEqual(['new']);
+      expect(results.rows.map((r) => r.localId)).toEqual(['new']);
+    });
+
+    it('shows only the results of the shop that is signed in', async () => {
+      const base = { orderNumber: 1, outcome: 'saved', message: 'Saved.', reasons: [] as string[], at: new Date().toISOString() };
+      await results.add({ ...base, localId: 'mine' } as never);
+      await results.add({ ...base, localId: 'theirs', tenantId: '00000000-0000-0000-0000-000000000002' } as never);
+
+      const service = await create();
+
+      expect(service.syncResults().map((r) => r.localId)).toEqual(['mine']);
     });
   });
 });
