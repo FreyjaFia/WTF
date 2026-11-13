@@ -83,6 +83,8 @@ internal static class OfflineOrderReview
             reasons.Add("A Senior/PWD discount is missing the ID number or the name on the ID.");
         }
 
+        await AddSeniorPwdLineReasonsAsync(db, command, reasons, cancellationToken);
+
         var settings = await db.TenantSettings
             .AsNoTracking()
             .Select(s => new { s.SeniorPwdEnabled, s.VatRegistered })
@@ -111,6 +113,39 @@ internal static class OfflineOrderReview
         if (shownReduction != currentReduction)
         {
             reasons.Add($"The Senior/PWD discount now comes to {currentReduction:0.00}, the register showed {shownReduction:0.00}.");
+        }
+    }
+
+    // A promotion price, a bundle and a product that is not food or drink can never take the discount. The register keeps
+    // those lines from being covered, so a covered one here means the promotion or the product changed while it was offline.
+    private static async Task AddSeniorPwdLineReasonsAsync(
+        WTFDbContext db,
+        CreateOrderCommand command,
+        List<string> reasons,
+        CancellationToken cancellationToken)
+    {
+        var coveredItems = command.Items.Where(i => i.SeniorPwdPersonIndex.HasValue).ToList();
+        var coveredIds = coveredItems.Select(i => i.ProductId).Distinct().ToList();
+        var products = await db.Products
+            .Where(p => coveredIds.Contains(p.Id))
+            .Select(p => new { p.Id, p.Name, p.IsSeniorPwdEligible })
+            .ToDictionaryAsync(p => p.Id, cancellationToken);
+
+        foreach (var item in coveredItems)
+        {
+            var name = products.TryGetValue(item.ProductId, out var product) ? product.Name : "An item";
+            if (product is { IsSeniorPwdEligible: false })
+            {
+                reasons.Add($"{name} is not food or drink, so it cannot take the Senior/PWD discount.");
+            }
+            else if (item.BundlePromotionId.HasValue)
+            {
+                reasons.Add($"{name} is part of a bundle, so it cannot take the Senior/PWD discount.");
+            }
+            else if (item.QuotedPrice < item.QuotedOriginalPrice || !string.IsNullOrWhiteSpace(item.QuotedPromoLabel))
+            {
+                reasons.Add($"{name} had a promotion price, so it cannot take the Senior/PWD discount.");
+            }
         }
     }
 
