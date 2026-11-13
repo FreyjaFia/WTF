@@ -639,7 +639,7 @@
                             [attr.title]="seniorPwdPersons()[c.seniorPwdPersonIndex!].customerName"
                             data-testid="senior-pwd-line-badge"
                           >
-                            {{ seniorPwdLabel(seniorPwdPersons()[c.seniorPwdPersonIndex!]) }} x{{ c.qty }}
+                            Senior/PWD x{{ c.qty }}
                           </div>
                         }
                       </div>
@@ -766,7 +766,7 @@
                       <div class="flex min-w-0">
                         <span class="w-3.5 shrink-0" aria-hidden="true">-</span>
                         <span class="min-w-0 wrap-anywhere"
-                          >{{ seniorPwdLabel(seniorPwdPersons()[c.seniorPwdPersonIndex!]) }} discount</span
+                          >Senior/PWD discount</span
                         >
                       </div>
                       <div class="shrink-0 text-right tabular-nums">
@@ -932,7 +932,7 @@
                 }
                 @if (seniorPwdConflict()) {
                   <p class="mb-2 rounded-lg bg-amber-50 p-2 text-xs text-amber-800" role="alert" data-testid="senior-pwd-conflict">
-                    A covered item now has a promotion. Open Senior / PWD and apply it again.
+                    A covered item now has a promotion. Open Senior/PWD and apply it again.
                   </p>
                 }
                 @if (canApplySeniorPwd()) {
@@ -943,7 +943,7 @@
                     [disabled]="isOrderRequestBusy()"
                     (click)="openSeniorPwdDialog()"
                   >
-                    {{ seniorPwdPersons().length > 0 ? 'Edit Senior / PWD discount' : 'Senior / PWD' }}
+                    {{ seniorPwdPersons().length > 0 ? 'Edit Senior/PWD discount' : 'Senior/PWD' }}
                   </button>
                 }
               </div>

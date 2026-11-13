@@ -97,7 +97,7 @@ test.describe('Senior / PWD discount at the register @seniorpwd @orders', () => 
     await expect(register.cartTotal).toHaveText('336.00');
     const badge = page.getByTestId('senior-pwd-line-badge').locator('visible=true');
     await expect(badge).toHaveCount(1);
-    await expect(badge).toHaveText('Senior x1');
+    await expect(badge).toHaveText('Senior/PWD x1');
     await expect(badge).toHaveAttribute('title', 'Lola Nena');
     await expect(page.getByTestId('senior-pwd-line-reduction').locator('visible=true')).toContainText('24.00');
   });

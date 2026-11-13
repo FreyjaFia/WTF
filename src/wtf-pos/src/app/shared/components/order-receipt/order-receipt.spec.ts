@@ -332,7 +332,7 @@ describe('OrderReceiptComponent', () => {
       const { el } = setup(receipt({ totalAmount: 71.43, seniorPwdPersons: [person] }));
       const text = el.querySelector('[data-testid="receipt-senior-pwd"]')?.textContent ?? '';
 
-      expect(text).toContain('Senior discount');
+      expect(text).toContain('Senior/PWD discount');
       expect(text).toContain('Lola Remedios');
       expect(text).toContain('OSCA-1234');
       expect(text).toContain('10.71');
@@ -352,7 +352,7 @@ describe('OrderReceiptComponent', () => {
       const tags = el.querySelectorAll('[data-testid="receipt-senior-pwd-line-tag"]');
 
       expect(tags).toHaveLength(1);
-      expect(tags[0].textContent).toContain('Senior x1');
+      expect(tags[0].textContent).toContain('Senior/PWD x1');
       expect(tags[0].textContent).toContain('Lola Remedios');
     });
 

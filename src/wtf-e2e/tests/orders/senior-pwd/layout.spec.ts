@@ -107,7 +107,7 @@ test.describe('Senior / PWD layout @seniorpwd @layout', () => {
         const receipt = host.locator('> div').first();
         await expect(receipt).toContainText(drink.name);
         if (kind === 'senior') {
-          await expect(receipt.getByTestId('receipt-senior-pwd-line-tag')).toContainText('Senior x2');
+          await expect(receipt.getByTestId('receipt-senior-pwd-line-tag')).toContainText('Senior/PWD x2');
           await expect(receipt.getByTestId('receipt-senior-pwd-line-reduction')).toContainText('48.00');
         }
 

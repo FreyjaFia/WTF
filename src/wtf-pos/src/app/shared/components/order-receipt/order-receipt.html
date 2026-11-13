@@ -98,7 +98,7 @@
                   white-space: nowrap;
                 "
               >
-                {{ seniorPwdTypeLabel(person) }} x{{ item.qty }} &middot; {{ person.customerName }}
+                Senior/PWD x{{ item.qty }} &middot; {{ person.customerName }}
               </div>
             }
           </div>
@@ -169,7 +169,7 @@
           >
             <span style="display: flex; min-width: 0">
               <span style="flex: none; width: 14px">−</span>
-              <span style="min-width: 0; overflow-wrap: anywhere">{{ seniorPwdTypeLabel(person) }} discount</span>
+              <span style="min-width: 0; overflow-wrap: anywhere">Senior/PWD discount</span>
             </span>
             <span style="white-space: nowrap; margin-left: 12px">− &#8369;{{ item.seniorPwdReduction | number: '1.2-2' }}</span>
           </div>
@@ -298,7 +298,13 @@
             margin-bottom: 4px;
           "
         >
-          {{ seniorPwdTypeLabel(person) }} discount
+          Senior/PWD discount
+        </div>
+        <div
+          style="display: flex; justify-content: space-between; font-size: 13px; color: var(--color-gray-500); margin-bottom: 4px"
+        >
+          <span>Type</span>
+          <span style="font-weight: 600; color: var(--color-gray-800)">{{ seniorPwdTypeLabel(person) }}</span>
         </div>
         <div
           style="display: flex; justify-content: space-between; font-size: 13px; color: var(--color-gray-500); margin-bottom: 4px"
