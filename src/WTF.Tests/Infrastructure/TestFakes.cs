@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.SignalR;
 using NSubstitute;
+using WTF.Api.Common.Tenancy;
 using WTF.Api.Features.Inventory;
 using WTF.Api.Features.Notifications;
 using WTF.Api.Hubs;
@@ -18,7 +19,7 @@ internal static class TestFakes
     public static INotificationService Notifications(WTFDbContext db, IPushNotificationService? push = null) =>
         new NotificationService(db, push ?? Push(), Substitute.For<IHubContext<NotificationHub>>());
 
-    public static IOrderStockService Stock(WTFDbContext db) => new OrderStockService(db, Audit(), Alerts(db));
+    public static IOrderStockService Stock(WTFDbContext db, ITenantFeatures? features = null) => new OrderStockService(db, Audit(), Alerts(db), features);
 
     public static IPushNotificationService Push() => Substitute.For<IPushNotificationService>();
 

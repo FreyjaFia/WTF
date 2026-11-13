@@ -581,7 +581,7 @@ public class OfflineSyncTests
     {
         var id = await SeedHeldOrder();
         var handler = new RejectHeldOrderHandler(
-            TestDb.Create(_dbName), TestRequest.As(_userId, AppRoles.Admin), TestFakes.Hub(), _audit, TestFakes.Conversations(), GetSender());
+            TestDb.Create(_dbName), TestRequest.As(_userId, AppRoles.Admin), TestFakes.Hub(), _audit, TestFakes.Conversations(), GetSender(), TestFakes.Stock(TestDb.Create(_dbName)));
 
         var dto = await handler.Handle(new RejectHeldOrderCommand(id, "  Wrong price  "), CancellationToken.None);
 
@@ -596,7 +596,7 @@ public class OfflineSyncTests
     {
         var id = await SeedHeldOrder();
         var handler = new RejectHeldOrderHandler(
-            TestDb.Create(_dbName), TestRequest.As(_userId, AppRoles.Admin), TestFakes.Hub(), _audit, TestFakes.Conversations(), GetSender());
+            TestDb.Create(_dbName), TestRequest.As(_userId, AppRoles.Admin), TestFakes.Hub(), _audit, TestFakes.Conversations(), GetSender(), TestFakes.Stock(TestDb.Create(_dbName)));
 
         await Should.ThrowAsync<InvalidOperationException>(() =>
             handler.Handle(new RejectHeldOrderCommand(id, "  "), CancellationToken.None));

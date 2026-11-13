@@ -1,8 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using System.Globalization;
+using WTF.Api.Common.Tenancy;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Services;
 using WTF.Calculations.Inventory;
+using WTF.Calculations.Subscriptions;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 
@@ -10,7 +12,9 @@ namespace WTF.Api.Features.Inventory;
 
 public record StockDeductionOptions(bool BlockWhenShort = true, bool IsCorrection = false);
 
-public record StockDeductionResult(List<string> Warnings)
+public record StockShortfallNote(Guid ItemId, string ItemName, string Unit, decimal Before, decimal Needed);
+
+public record StockDeductionResult(List<string> Warnings, List<StockShortfallNote>? Shortfalls = null)
 {
     public static StockDeductionResult None => new([]);
 }
@@ -20,11 +24,13 @@ public interface IOrderStockService
     Task<StockDeductionResult> DeductForOrderAsync(
         Guid orderId, Guid userId, StockDeductionOptions options, CancellationToken cancellationToken);
 
+    Task WasteForOrderAsync(Guid orderId, Guid userId, string note, CancellationToken cancellationToken);
+
     Task RestoreForOrderAsync(
         Guid orderId, Guid userId, IReadOnlySet<Guid> notReturnedLineIds, CancellationToken cancellationToken);
 }
 
-public class OrderStockService(WTFDbContext db, IAuditService auditService, IStockAlertService stockAlerts) : IOrderStockService
+public class OrderStockService(WTFDbContext db, IAuditService auditService, IStockAlertService stockAlerts, ITenantFeatures? tenantFeatures = null) : IOrderStockService
 {
     private const string NotResaleableNote = "Refunded, not resaleable";
     private const string BelowZeroNote = "Balance went below zero";
@@ -32,45 +38,11 @@ public class OrderStockService(WTFDbContext db, IAuditService auditService, ISto
     public async Task<StockDeductionResult> DeductForOrderAsync(
         Guid orderId, Guid userId, StockDeductionOptions options, CancellationToken cancellationToken)
     {
-        var lines = await LoadLinesAsync(orderId, cancellationToken);
-        var productIds = lines.Select(line => line.ProductId).Distinct().ToList();
-
-        var activeLinks = await db.ProductItemLinks
-            .AsNoTracking()
-            .Where(link => link.IsActive && productIds.Contains(link.ProductId))
-            .Select(link => new { link.ProductId, link.ItemId, link.QuantityPerSale, link.AllowancePercent, link.ReplacesItemId, ItemName = link.Item.Name, ItemIsActive = link.Item.IsActive })
-            .ToListAsync(cancellationToken);
-
-        // Links to inactive items stay in the list so a replacing add-on still replaces; their stock is dropped below.
-        var links = activeLinks
-            .Select(link => new StockLink(
-                link.ProductId,
-                link.ItemId,
-                CostRules.EffectiveQuantity(link.QuantityPerSale, link.AllowancePercent),
-                link.ReplacesItemId))
-            .ToList();
-        var inactiveItemIds = activeLinks.Where(link => !link.ItemIsActive).Select(link => link.ItemId).ToHashSet();
-
-        // An inactive item takes no part in a sale (not even its blocking setting), so say so instead of skipping it silently.
-        var skipped = activeLinks
-            .Where(link => !link.ItemIsActive)
-            .Select(link => link.ItemName)
-            .Distinct()
-            .OrderBy(name => name)
-            .Select(name => $"{name} is inactive, so this sale did not take stock from it.")
-            .ToList();
-
-        var sizeAmounts = await db.ProductSizeAmounts
-            .AsNoTracking()
-            .Where(amount => amount.IsActive && productIds.Contains(amount.ProductId))
-            .Select(amount => new StockSizeAmount(amount.ProductId, amount.SizeProductId, amount.ItemId, amount.Quantity))
-            .ToListAsync(cancellationToken);
-
-        var required = StockRules.Requirements(lines, links, sizeAmounts).Where(r => !inactiveItemIds.Contains(r.ItemId)).ToList();
+        var (required, skipped) = await LoadRequiredAsync(orderId, cancellationToken);
         var taken = await LoadTakenAsync(orderId, cancellationToken);
 
         // A product still on the order whose link has since been switched off keeps what it already took.
-        var productsOnOrder = productIds.ToHashSet();
+        var productsOnOrder = (await LoadLinesAsync(orderId, cancellationToken)).Select(line => line.ProductId).ToHashSet();
         var requiredKeys = required.Select(r => (r.ItemId, r.ProductId)).ToHashSet();
         var kept = taken
             .Where(t => productsOnOrder.Contains(t.ProductId) && !requiredKeys.Contains((t.ItemId, t.ProductId)))
@@ -87,6 +59,8 @@ public class OrderStockService(WTFDbContext db, IAuditService auditService, ISto
         var written = new List<object>();
         var now = DateTime.UtcNow;
         var tick = 0;
+        var shortfalls = new List<StockShortfallNote>();
+        var noteShortfalls = !options.BlockWhenShort && await InventoryInPlanAsync(cancellationToken);
 
         foreach (var itemChanges in changes.GroupBy(c => c.ItemId).OrderBy(group => group.Key))
         {
@@ -94,6 +68,11 @@ public class OrderStockService(WTFDbContext db, IAuditService auditService, ISto
             var net = itemChanges.Sum(c => c.Quantity);
             var applied = await StockBalance.ApplyAsync(db, item.Id, net, !options.BlockWhenShort, cancellationToken)
                 ?? throw new InvalidOperationException(await ShortMessageAsync(item, -net, cancellationToken));
+
+            if (noteShortfalls && net < 0m && applied.Before < -net)
+            {
+                shortfalls.Add(new StockShortfallNote(item.Id, item.Name, InventoryUnitLabels.Abbreviate(item.UnitName), applied.Before, -net));
+            }
 
             var running = applied.Before;
             foreach (var change in itemChanges)
@@ -140,7 +119,66 @@ public class OrderStockService(WTFDbContext db, IAuditService auditService, ISto
             userId: userId,
             cancellationToken: cancellationToken);
 
-        return new StockDeductionResult(warnings);
+        return new StockDeductionResult(warnings, shortfalls);
+    }
+
+    public async Task WasteForOrderAsync(Guid orderId, Guid userId, string note, CancellationToken cancellationToken)
+    {
+        var (required, _) = await LoadRequiredAsync(orderId, cancellationToken);
+        var taken = await LoadTakenAsync(orderId, cancellationToken);
+        var changes = StockRules.Reconcile(required, taken);
+        if (changes.Count == 0)
+        {
+            return;
+        }
+
+        var items = await LoadItemsAsync(changes.Select(c => c.ItemId), cancellationToken);
+        var written = new List<object>();
+        var now = DateTime.UtcNow;
+        var tick = 0;
+
+        foreach (var itemChanges in changes.GroupBy(c => c.ItemId).OrderBy(group => group.Key))
+        {
+            var item = items[itemChanges.Key];
+            var net = itemChanges.Sum(c => c.Quantity);
+            var applied = await StockBalance.ApplyAsync(db, item.Id, net, true, cancellationToken)
+                ?? throw new InvalidOperationException($"The item {item.Name} was not found.");
+
+            var running = applied.Before;
+            foreach (var change in itemChanges)
+            {
+                var after = running + change.Quantity;
+                db.StockMovements.Add(new StockMovement
+                {
+                    ItemId = item.Id,
+                    ProductId = change.ProductId,
+                    OrderItemId = change.OrderLineId,
+                    MovementType = StockMovementTypes.Waste,
+                    QuantityDelta = change.Quantity,
+                    QuantityBefore = running,
+                    QuantityAfter = after,
+                    UnitCost = CostRules.MovementCost(item.AverageCost, item.CostPrice),
+                    ReferenceType = StockMovementTypes.OrderReference,
+                    ReferenceId = orderId,
+                    Notes = note,
+                    CreatedAt = now.AddTicks(tick++),
+                    CreatedBy = userId
+                });
+                written.Add(new { item.Name, change.ProductId, change.Quantity, Before = running, After = after });
+                running = after;
+            }
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+        await stockAlerts.EvaluateAsync(changes.Select(c => c.ItemId), cancellationToken);
+
+        await auditService.LogAsync(
+            AuditAction.OrderStockWasted,
+            AuditEntityType.Order,
+            orderId.ToString(),
+            newValues: new { Movements = written },
+            userId: userId,
+            cancellationToken: cancellationToken);
     }
 
     public async Task RestoreForOrderAsync(
@@ -216,6 +254,59 @@ public class OrderStockService(WTFDbContext db, IAuditService auditService, ISto
             newValues: new { Movements = written },
             userId: userId,
             cancellationToken: cancellationToken);
+    }
+
+    private async Task<(List<StockRequirement> Required, List<string> Skipped)> LoadRequiredAsync(Guid orderId, CancellationToken cancellationToken)
+    {
+        var lines = await LoadLinesAsync(orderId, cancellationToken);
+        var productIds = lines.Select(line => line.ProductId).Distinct().ToList();
+
+        var activeLinks = await db.ProductItemLinks
+            .AsNoTracking()
+            .Where(link => link.IsActive && productIds.Contains(link.ProductId))
+            .Select(link => new { link.ProductId, link.ItemId, link.QuantityPerSale, link.AllowancePercent, link.ReplacesItemId, ItemName = link.Item.Name, ItemIsActive = link.Item.IsActive })
+            .ToListAsync(cancellationToken);
+
+        // Links to inactive items stay in the list so a replacing add-on still replaces; their stock is dropped below.
+        var links = activeLinks
+            .Select(link => new StockLink(
+                link.ProductId,
+                link.ItemId,
+                CostRules.EffectiveQuantity(link.QuantityPerSale, link.AllowancePercent),
+                link.ReplacesItemId))
+            .ToList();
+        var inactiveItemIds = activeLinks.Where(link => !link.ItemIsActive).Select(link => link.ItemId).ToHashSet();
+
+        // An inactive item takes no part in a sale (not even its blocking setting), so say so instead of skipping it silently.
+        var skipped = activeLinks
+            .Where(link => !link.ItemIsActive)
+            .Select(link => link.ItemName)
+            .Distinct()
+            .OrderBy(name => name)
+            .Select(name => $"{name} is inactive, so this sale did not take stock from it.")
+            .ToList();
+
+        var sizeAmounts = await db.ProductSizeAmounts
+            .AsNoTracking()
+            .Where(amount => amount.IsActive && productIds.Contains(amount.ProductId))
+            .Select(amount => new StockSizeAmount(amount.ProductId, amount.SizeProductId, amount.ItemId, amount.Quantity))
+            .ToListAsync(cancellationToken);
+
+        var required = StockRules.Requirements(lines, links, sizeAmounts).Where(r => !inactiveItemIds.Contains(r.ItemId)).ToList();
+
+        return (required, skipped);
+    }
+
+    // A shop whose plan has no inventory gets no stock notes at all (offline sync is never gated, so it never fails either).
+    private async Task<bool> InventoryInPlanAsync(CancellationToken cancellationToken)
+    {
+        if (tenantFeatures is null)
+        {
+            return true;
+        }
+
+        var plan = await tenantFeatures.GetAsync(db, db.StampTenantId ?? Guid.Empty, cancellationToken);
+        return PlanFeatures.IsAllowed("inventory", plan.Features);
     }
 
     private async Task<List<StockLine>> LoadLinesAsync(Guid orderId, CancellationToken cancellationToken)

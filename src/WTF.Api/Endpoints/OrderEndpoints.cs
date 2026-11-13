@@ -11,6 +11,8 @@ namespace WTF.Api.Endpoints;
 
 public record RejectOrderRequest(string Reason);
 
+public record RejectHeldOrderRequest(string Reason, string? StockOutcome = null);
+
 public record SyncOfflineOrdersRequest(List<CreateOrderCommand> Orders);
 
 public static class OrderEndpoints
@@ -189,9 +191,9 @@ public static class OrderEndpoints
 
         // POST /api/orders/{id}/review/reject - An Admin turns down a held offline order (reason required)
         orderGroup.MapPost("/{id:guid}/review/reject",
-            async (Guid id, RejectOrderRequest request, ISender sender) =>
+            async (Guid id, RejectHeldOrderRequest request, ISender sender) =>
             {
-                var result = await sender.Send(new RejectHeldOrderCommand(id, request.Reason));
+                var result = await sender.Send(new RejectHeldOrderCommand(id, request.Reason, request.StockOutcome));
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             })
             .RequireAuthorization(AppPolicies.OrdersOverride);

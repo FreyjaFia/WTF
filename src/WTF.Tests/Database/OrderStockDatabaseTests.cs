@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using NSubstitute;
 using WTF.Api.Common.Auth;
 using WTF.Api.Features.Items;
 using WTF.Api.Features.Orders;
@@ -59,6 +60,67 @@ public class OrderStockDatabaseTests
             CreatedBy = userId,
         });
         await db.SaveChangesAsync();
+    }
+
+    [SqlFact]
+    public async Task OfflineSync_ShortfallIsSavedAsANoteRow_AndRejectingAHeldSaleWithWasteWritesWaste()
+    {
+        await using var database = await SqlTestDatabase.CreateAsync();
+        var user = await SqlSeed.UserAsync(database);
+        var latte = await SqlSeed.ProductAsync(database, user.Id, "Latte", 150m);
+        var milk = await ItemAsync(database, user.Id, "Oat Milk", 300m, false);
+        await LinkAsync(database, user.Id, latte.Id, milk.Id, 200m);
+
+        var accessor = TestRequest.As(user.Id, AppRoles.Admin, "UTC");
+        Guid noted;
+        Guid held;
+        await using (var db = database.CreateContext())
+        {
+            var create = Handler(db, user.Id);
+            var sender = Substitute.For<MediatR.ISender>();
+            sender.Send(Arg.Any<CreateOrderCommand>(), Arg.Any<CancellationToken>())
+                .Returns(call => create.Handle(call.Arg<CreateOrderCommand>(), call.Arg<CancellationToken>()));
+            var sync = new SyncOfflineOrdersHandler(db, sender, accessor);
+
+            CreateOrderCommand Offline(string id, decimal quoted) => new()
+            {
+                Status = OrderStatusEnum.Completed,
+                Items = [new OrderItemRequestDto(latte.Id, 2, [], null, null, quoted)],
+                OfflineLocalId = id,
+                CreatedAt = DateTime.UtcNow,
+                PaymentMethod = PaymentMethodEnum.Cash,
+                AmountReceived = 1000m,
+            };
+
+            var results = await sync.Handle(new SyncOfflineOrdersCommand([Offline("OFF-7D-db1", 150m), Offline("OFF-7D-db2", 100m)]), CancellationToken.None);
+            noted = results[0].OrderId!.Value;
+            held = results[1].OrderId!.Value;
+            results[0].ReasonDetails!.Single().Code.ShouldBe(OfflineReasonCodes.StockShortfall);
+            results[1].Status.ShouldBe(OrderStatusEnum.PendingReview);
+        }
+
+        await using (var db = database.CreateContext())
+        {
+            var row = await db.OrderReviewReasons.SingleAsync(r => r.OrderId == noted);
+            row.Severity.ShouldBe((byte)ReviewSeverityEnum.Note);
+            row.ExpectedValue.ShouldBe("300");
+            row.QuotedValue.ShouldBe("400");
+            (await db.Items.SingleAsync()).CurrentQuantity.ShouldBe(-100m);
+
+            var getSender = Substitute.For<MediatR.ISender>();
+            getSender.Send(Arg.Any<MediatR.IRequest<OrderDto?>>(), Arg.Any<CancellationToken>())
+                .Returns(call => new GetOrderByIdHandler(db)
+                    .Handle((GetOrderByIdQuery)call.Arg<MediatR.IRequest<OrderDto?>>(), call.Arg<CancellationToken>()));
+            var reject = new RejectHeldOrderHandler(
+                db, accessor, TestFakes.Hub(), TestFakes.Audit(), TestFakes.Conversations(), getSender, TestFakes.Stock(db));
+            await reject.Handle(new RejectHeldOrderCommand(held, "Wrong price", "waste"), CancellationToken.None);
+        }
+
+        await using var check = database.CreateContext();
+        (await check.Items.SingleAsync()).CurrentQuantity.ShouldBe(-500m);
+        var waste = await check.StockMovements.SingleAsync(m => m.ReferenceId == held);
+        waste.MovementType.ShouldBe("Waste");
+        waste.QuantityDelta.ShouldBe(-400m);
     }
 
     [SqlFact]
