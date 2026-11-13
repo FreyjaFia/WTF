@@ -57,7 +57,7 @@ public class SubscriptionDatabaseTests
     {
         await using var db = database.CreateContext();
         db.Plans.Add(new Plan { Code = "starter", Name = "Starter", MonthlyPrice = 1500, Features = "pos,orders", IsActive = true, SortOrder = 1 });
-        db.Plans.Add(new Plan { Code = "pro", Name = "Pro", MonthlyPrice = 2500, Features = "pos,orders,inventory", IsActive = true, SortOrder = 2 });
+        db.Plans.Add(new Plan { Code = "pro", Name = "Pro", MonthlyPrice = 2500, Features = "pos,orders,inventory,orderlinks", IsActive = true, SortOrder = 2 });
         await db.SaveChangesAsync();
     }
 
@@ -260,11 +260,11 @@ public class SubscriptionDatabaseTests
             .Handle(new SetTenantSubscriptionCommand(shop.Tenant.Id, proId, Today.AddDays(30), 7, 0, null), CancellationToken.None);
         var pro = await features.GetAsync(db, shop.Tenant.Id, CancellationToken.None);
         pro.Name.ShouldBe("Pro");
-        pro.Features.Order().ShouldBe(["core", "inventory"]);
+        pro.Features.Order().ShouldBe(["core", "inventory", "orderlinks"]);
 
         await new UpdatePlanHandler(db, Audit(db), features)
-            .Handle(new UpdatePlanCommand(proId, "Pro", 2500, ["pos", "promotions", "chat"], null, true), CancellationToken.None);
-        (await features.GetAsync(db, shop.Tenant.Id, CancellationToken.None)).Features.Order().ShouldBe(["chat", "core", "promotions"]);
+            .Handle(new UpdatePlanCommand(proId, "Pro", 2500, ["promotions", "chat"], null, true), CancellationToken.None);
+        (await features.GetAsync(db, shop.Tenant.Id, CancellationToken.None)).Features.Order().ShouldBe(["chat", "core", "orderlinks", "promotions"]);
     }
 
     [SqlFact]
@@ -510,9 +510,9 @@ public class SubscriptionDatabaseTests
         {
             var plan = await db.Plans.SingleAsync(p => p.Code == "pro");
             var updated = await new UpdatePlanHandler(db, Audit(db), new TenantFeatureCache(TimeProvider.System))
-                .Handle(new UpdatePlanCommand(plan.Id, "Pro", 2800, ["POS", "orders", "pos"], 10, true), CancellationToken.None);
+                .Handle(new UpdatePlanCommand(plan.Id, "Pro", 2800, ["Inventory", "expenses", "inventory"], 10, true), CancellationToken.None);
             updated.MonthlyPrice.ShouldBe(2800);
-            updated.Features.ShouldBe(["pos", "orders"]);
+            updated.Features.ShouldBe(["expenses", "inventory"]);
             updated.MaxUsers.ShouldBe(10);
 
             await Should.ThrowAsync<InvalidOperationException>(() =>
