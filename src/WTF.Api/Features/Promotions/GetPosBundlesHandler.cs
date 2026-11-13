@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Orders;
+using WTF.Api.Common.Tenancy;
 using WTF.Api.Features.Promotions.DTOs;
 using WTF.Domain.Data;
 
@@ -20,6 +21,11 @@ public sealed class GetPosBundlesHandler(WTFDbContext db, IHttpContextAccessor h
 {
     public async Task<PosBundlesDto> Handle(GetPosBundlesQuery request, CancellationToken cancellationToken)
     {
+        if (!await TenantPlanLookup.HasFeatureAsync(db, "promotions", cancellationToken))
+        {
+            return new PosBundlesDto([], []);
+        }
+
         var promotions = await db.Promotions
             .AsNoTracking()
             .Where(p => p.IsActive && (p.TypeId == PromotionTypeIds.FixedBundle || p.TypeId == PromotionTypeIds.MixMatch))

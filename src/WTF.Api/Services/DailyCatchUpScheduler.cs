@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using WTF.Api.Common.Tenancy;
 using WTF.Domain.Data;
 using WTF.Domain.Tenancy;
 
@@ -16,6 +17,10 @@ public abstract class DailyCatchUpScheduler(IServiceScopeFactory scopeFactory, I
     private static readonly TimeSpan MaxSleep = TimeSpan.FromMinutes(30);
 
     protected abstract string JobName { get; }
+
+    // A shop whose plan lacks this feature is skipped (a plan change never deletes anything; the job just does not run).
+    protected virtual string? RequiredFeature => null;
+
     protected abstract bool IsEnabled { get; }
     protected abstract string TimeZoneId { get; }
     protected abstract int RunAtHour { get; }
@@ -97,6 +102,13 @@ public abstract class DailyCatchUpScheduler(IServiceScopeFactory scopeFactory, I
             {
                 using var scope = scopeFactory.CreateScope();
                 scope.ServiceProvider.GetService<WTFDbContext>()?.UseTenant(tenantId);
+
+                if (RequiredFeature is not null
+                    && scope.ServiceProvider.GetService<WTFDbContext>() is { } planDb
+                    && !await TenantPlanLookup.HasFeatureAsync(planDb, RequiredFeature, stoppingToken))
+                {
+                    continue;
+                }
 
                 var last = await GetLastRunUtcAsync(scope.ServiceProvider, stoppingToken);
                 if (last is not null && TimeZoneInfo.ConvertTime(last.Value, timeZone).Date == nowLocal.Date)

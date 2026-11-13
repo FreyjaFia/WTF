@@ -30,14 +30,7 @@ public sealed class TenantFeatureCache(TimeProvider clock) : ITenantFeatures
             return entry.Plan;
         }
 
-        var plan = await db.TenantSubscriptions
-            .AsNoTracking()
-            .IgnoreQueryFilters()
-            .Where(s => s.TenantId == tenantId)
-            .Select(s => new { s.Plan.Name, s.Plan.Features })
-            .FirstOrDefaultAsync(cancellationToken);
-
-        var value = plan is null ? new TenantPlan(string.Empty, PlanFeatures.All()) : new TenantPlan(plan.Name, PlanFeatures.Parse(plan.Features));
+        var value = await TenantPlanLookup.LoadAsync(db, tenantId, cancellationToken);
         _entries[tenantId] = (value, now.Add(Lifetime));
         return value;
     }
