@@ -505,6 +505,19 @@ Each phase can ship by itself, and phases 1 and 2 change nothing the pilot can s
 7. **Settings by branch.** `VatRegistered`, TIN, address, kitchen switch, receipt header with shop defaults.
 8. **End-to-end** on a throwaway database: two shops, three branches, the full ON and OFF tables, the leak test, offline
    sync into the right branch, a closed branch accepting a late sync.
+9. **Later phase, so it is not forgotten: price per branch.** `ProductBranches.PriceOverride` (and the same for add-on
+   prices and promotion prices). Needs its own short plan first, because it touches money in many places:
+   - **Totals:** `WTF.Calculations` takes the branch price when it prices an order line; the Angular mirror and
+     `calculation-cases.json` get cases with an override (branch price, no override, override plus promotion, Senior/PWD on
+     an overridden price).
+   - **Offline:** the device downloads its branch's prices; Offline Phase 7's `CatalogChangeLog` gets a nullable `BranchId`
+     so a price change at one branch is judged only for that branch's sales.
+   - **Customer link and receipts** show the branch price; reports compare branches on revenue, not on list price.
+   - **Editor:** a "Price at each branch" table on the product, empty means the shop price; who may set it (Owner and Area
+     Manager, a Branch Manager only if the Owner allows it, a new key such as `products.price.branch`).
+   - **Switching off:** closing a branch keeps its prices; a product moved to "all branches" at one price asks which price
+     wins. Plan key: part of `branches` or a separate `branchpricing` key (decide then).
+   - Open: should a promotion's price follow the branch price, or stay fixed? Recommended: a promotion's own price wins.
 
 ### Order of work against the other plans
 
@@ -557,7 +570,7 @@ Each phase can ship by itself, and phases 1 and 2 change nothing the pilot can s
    BIR); accountant to confirm.
 3. **Products per branch (Pogi, 13 Nov 2026, asked for a suggestion).** Recommended: one catalog with a "Sold at" list on
    each product (default all branches; branch-only products are one branch in the list). Same price everywhere in the first
-   cut; per-branch price is a later option. See "Products and branches".
+   cut; per-branch price is build phase 9 (below). See "Products and branches".
 4. **Customers shared across branches or per branch?** Recommended: shared (regulars visit more than one branch).
 5. **Plan layout for branches:** Recommended: `branches` in Business only, `MaxBranches` 3, extra branch fee later.
 6. **Downgrade over the cap:** Recommended: keep all working, block adding (as for users). Alternative: newest read-only.
