@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Common.Orders;
+using WTF.Api.Common.Tenancy;
 using WTF.Api.Common.Time;
 using WTF.Api.Features.Promotions.DTOs;
 using WTF.Calculations.Orders;
@@ -57,6 +58,11 @@ public sealed class GetActiveDiscountedProductPromotionsHandler(WTFDbContext db,
 {
     public async Task<List<DiscountedProductPromotionDto>> Handle(GetActiveDiscountedProductPromotionsQuery request, CancellationToken cancellationToken)
     {
+        if (!await TenantPlanLookup.HasFeatureAsync(db, "promotions", cancellationToken))
+        {
+            return [];
+        }
+
         var now = (request.EvaluatedAtUtc ?? DateTime.UtcNow).ToUniversalTime();
         var timeZone = RequestTimeZone.ResolveFromRequest(httpContextAccessor);
         var scheduled = await db.Promotions

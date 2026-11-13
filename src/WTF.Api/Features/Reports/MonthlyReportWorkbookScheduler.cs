@@ -15,6 +15,7 @@ public sealed class MonthlyReportWorkbookScheduler(
     private MonthlyReportWorkbookSchedulerOptions Settings => options.Value;
 
     protected override string JobName => "Monthly report workbook";
+    protected override string? RequiredFeature => "workbook";
     protected override bool IsEnabled => Settings.Enabled;
     protected override string TimeZoneId => Settings.TimeZoneId;
     protected override int RunAtHour => Settings.RunAtHour;

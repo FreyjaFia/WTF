@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using System.Globalization;
+using WTF.Api.Common.Tenancy;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Services;
 using WTF.Calculations.Inventory;
@@ -24,14 +25,25 @@ public interface IOrderStockService
         Guid orderId, Guid userId, IReadOnlySet<Guid> notReturnedLineIds, CancellationToken cancellationToken);
 }
 
-public class OrderStockService(WTFDbContext db, IAuditService auditService, IStockAlertService stockAlerts) : IOrderStockService
+public class OrderStockService(WTFDbContext db, IAuditService auditService, IStockAlertService stockAlerts, ITenantFeatures? tenantFeatures = null) : IOrderStockService
 {
     private const string NotResaleableNote = "Refunded, not resaleable";
     private const string BelowZeroNote = "Balance went below zero";
 
+    // A plan without inventory keeps selling: the order saves, no stock moves and balances stay where they were.
+    private async Task<bool> IsInventoryOnAsync(CancellationToken cancellationToken) =>
+        tenantFeatures is null
+            ? await TenantPlanLookup.HasFeatureAsync(db, "inventory", cancellationToken)
+            : await tenantFeatures.HasFeatureAsync(db, "inventory", cancellationToken);
+
     public async Task<StockDeductionResult> DeductForOrderAsync(
         Guid orderId, Guid userId, StockDeductionOptions options, CancellationToken cancellationToken)
     {
+        if (!await IsInventoryOnAsync(cancellationToken))
+        {
+            return StockDeductionResult.None;
+        }
+
         var lines = await LoadLinesAsync(orderId, cancellationToken);
         var productIds = lines.Select(line => line.ProductId).Distinct().ToList();
 
@@ -146,6 +158,11 @@ public class OrderStockService(WTFDbContext db, IAuditService auditService, ISto
     public async Task RestoreForOrderAsync(
         Guid orderId, Guid userId, IReadOnlySet<Guid> notReturnedLineIds, CancellationToken cancellationToken)
     {
+        if (!await IsInventoryOnAsync(cancellationToken))
+        {
+            return;
+        }
+
         var taken = await LoadTakenAsync(orderId, cancellationToken);
         if (taken.Count == 0)
         {

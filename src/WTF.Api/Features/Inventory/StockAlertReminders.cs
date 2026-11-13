@@ -227,6 +227,7 @@ public sealed class StockReminderScheduler(
     private StockAlertRemindersOptions Settings => options.Value;
 
     protected override string JobName => "Stock alert reminders";
+    protected override string? RequiredFeature => "inventory";
     protected override bool IsEnabled => Settings.Enabled;
     protected override string TimeZoneId => Settings.TimeZoneId;
     protected override int RunAtHour => Settings.RunAtHour;

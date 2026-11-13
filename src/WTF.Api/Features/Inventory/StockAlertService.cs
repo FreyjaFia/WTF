@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using WTF.Api.Common.Tenancy;
 using WTF.Api.Common.Auth.Permissions;
 using WTF.Api.Features.Notifications;
 using WTF.Calculations.Inventory;
@@ -20,6 +21,11 @@ public class StockAlertService(WTFDbContext db, INotificationService notificatio
     // with one guarded UPDATE, so two registers that cross the level together alert once.
     public async Task EvaluateAsync(IEnumerable<Guid> itemIds, CancellationToken cancellationToken)
     {
+        if (!await TenantPlanLookup.HasFeatureAsync(db, "inventory", cancellationToken))
+        {
+            return;
+        }
+
         foreach (var itemId in itemIds.Distinct())
         {
             // Every change moves what the stock screens show, alert or not.

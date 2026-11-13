@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Auth;
 using WTF.Api.Common.Extensions;
 using WTF.Api.Common.Orders;
+using WTF.Api.Common.Tenancy;
 using WTF.Api.Common.Time;
 using WTF.Api.Features.Dashboard.DTOs;
 using WTF.Api.Features.Orders.Enums;
@@ -80,7 +81,7 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
     private async Task<DashboardProfitDto?> ComputeProfitAsync(DateRangeInfo range, CancellationToken cancellationToken)
     {
         var user = httpContextAccessor.HttpContext?.User;
-        if (user is null || !CostAccess.CanReadCosts(user))
+        if (user is null || !CostAccess.CanReadCosts(user) || !await TenantPlanLookup.HasFeatureAsync(db, "inventory", cancellationToken))
         {
             return null;
         }
@@ -131,12 +132,18 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
 
         var awaiting = await db.Orders.CountAsync(o => o.StatusId == OrderStatuses.PendingApproval, cancellationToken);
 
-        var stock = await db.Items
-            .AsNoTracking()
-            .Where(i => i.IsActive)
-            .Select(i => new { i.CurrentQuantity, i.WarningQuantity, i.CriticalQuantity })
-            .ToListAsync(cancellationToken);
-        var stockStatuses = stock.Select(i => StockRules.StatusFor(i.CurrentQuantity, i.WarningQuantity, i.CriticalQuantity)).ToList();
+        // Without inventory the stock cards read zero (the app hides them) and nothing about stock is looked up.
+        var stockOn = await TenantPlanLookup.HasFeatureAsync(db, "inventory", cancellationToken);
+        var stockStatuses = new List<StockStatus>();
+        if (stockOn)
+        {
+            var stock = await db.Items
+                .AsNoTracking()
+                .Where(i => i.IsActive)
+                .Select(i => new { i.CurrentQuantity, i.WarningQuantity, i.CriticalQuantity })
+                .ToListAsync(cancellationToken);
+            stockStatuses = [.. stock.Select(i => StockRules.StatusFor(i.CurrentQuantity, i.WarningQuantity, i.CriticalQuantity))];
+        }
 
         var sales = primaryOrders.Where(o => SalesRules.IsSale(o.StatusId)).ToList();
         var promotionUses = sales

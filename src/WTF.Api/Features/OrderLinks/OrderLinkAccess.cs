@@ -20,7 +20,7 @@ public sealed record OrderLinkAccessResult(ShortLink Link, Customer Customer);
 public static class OrderLinkAccess
 {
     public static async Task<OrderLinkAccessResult?> ResolveAsync(
-        WTFDbContext db, string? token, CancellationToken cancellationToken, DateTime? nowUtc = null)
+        WTFDbContext db, string? token, CancellationToken cancellationToken, DateTime? nowUtc = null, string? alsoRequires = null)
     {
         var now = nowUtc ?? DateTime.UtcNow;
         if (string.IsNullOrWhiteSpace(token) || token.Length > 64)
@@ -48,9 +48,11 @@ public static class OrderLinkAccess
         db.UseTenant(link.TenantId);
 
         // A suspended, cancelled or lapsed shop takes no orders from its customer page.
+        // A shop whose plan has no order links takes no orders either; the link stays valid for when the plan returns.
         if (db.TenantFilterEnabled
             && (!await TenantAccess.IsActiveAsync(db, link.TenantId, cancellationToken)
-                || await SubscriptionStateLoader.IsLockedAsync(db, link.TenantId, now, cancellationToken)))
+                || await SubscriptionStateLoader.IsLockedAsync(db, link.TenantId, now, cancellationToken)
+                || !(await TenantPlanLookup.LoadAsync(db, link.TenantId, cancellationToken)).Features.Contains("orderlinks")))
         {
             var brand = await BrandDefaults.LoadAsync(db, link.TenantId, cancellationToken);
             throw new ShopUnavailableException(brand.ShopName, brand.Phone);
@@ -58,6 +60,13 @@ public static class OrderLinkAccess
 
         var customer = await db.Customers.FirstOrDefaultAsync(c => c.Id == link.TargetId.Value, cancellationToken);
         if (customer == null || !customer.IsActive || !customer.AllowOrderingLink)
+        {
+            return null;
+        }
+
+        // A part of the page that belongs to another feature (the chat) answers "not found" when that feature is off.
+        if (alsoRequires != null && db.TenantFilterEnabled
+            && !(await TenantPlanLookup.LoadAsync(db, link.TenantId, cancellationToken)).Features.Contains(alsoRequires))
         {
             return null;
         }
