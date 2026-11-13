@@ -67,6 +67,8 @@ public partial class User
 
     public virtual ICollection<Notification> Notifications { get; set; } = new List<Notification>();
 
+    public virtual ICollection<OfflineSyncPolicy> OfflineSyncPolicies { get; set; } = new List<OfflineSyncPolicy>();
+
     public virtual ICollection<Order> OrderCreatedByNavigations { get; set; } = new List<Order>();
 
     public virtual ICollection<OrderSeniorPwdDiscount> OrderSeniorPwdDiscounts { get; set; } = new List<OrderSeniorPwdDiscount>();
