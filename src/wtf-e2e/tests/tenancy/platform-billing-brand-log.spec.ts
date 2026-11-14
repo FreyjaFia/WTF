@@ -118,7 +118,7 @@ test.describe('plans, subscriptions and invoices @tenancy @platform @billing', (
 
   test('a full year costs ten months of the plan price, less any discount', async ({ request, platform }) => {
     const shop = await openShop(request, platform);
-    const plan = (await platform.plans()).find((row) => row.code === 'pro');
+    const plan = (await platform.plans()).find((row) => row.code === 'business');
 
     const year = await platform.createInvoice(shop.id, 12);
     const month = await platform.createInvoice(shop.id, 1);
@@ -146,7 +146,7 @@ test.describe('plans, subscriptions and invoices @tenancy @platform @billing', (
     const mine = await shop.owner.json<{ managed: boolean; planCode: string; graceDays: number }>('GET', 'subscription');
     const theirs = await other.owner.json<{ graceDays: number }>('GET', 'subscription');
 
-    expect(mine).toMatchObject({ managed: true, planCode: 'pro', graceDays: 7 });
+    expect(mine).toMatchObject({ managed: true, planCode: 'business', graceDays: 7 });
     expect(theirs.graceDays).toBe(30);
   });
 });

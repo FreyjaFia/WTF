@@ -261,7 +261,7 @@ test.describe('managing shops from the platform @tenancy @platform', () => {
     await detail.openTab('people');
     await expect(page.getByTestId('people-list')).toContainText(shop.ownerUsername);
     await detail.openTab('billing');
-    await expect(page.getByTestId('billing-summary')).toContainText('Pro');
+    await expect(page.getByTestId('billing-summary')).toContainText('Business');
     await detail.openTab('brand');
     await expect(page.getByTestId('brand-form')).toBeVisible();
     await detail.openTab('log');
