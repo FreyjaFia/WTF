@@ -3,6 +3,7 @@ export const ROUTES = {
   dashboard: '/dashboard',
   notifications: '/notifications',
   ordersList: '/orders/list',
+  unsyncedOrders: '/orders/unsynced',
   orderEditor: '/orders/editor',
   orderEditorById: (id: string): string => `/orders/editor/${id}`,
   orderDetails: (id: string): string => `/orders/details/${id}`,
