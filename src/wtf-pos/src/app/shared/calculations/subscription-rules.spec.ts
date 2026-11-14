@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import cases from './calculation-cases.json';
-import { daysLeft, effectiveNow, leaseTooOld, warningLevel } from './subscription-rules';
+import { daysLeft, defaultPlanCodeForNewShop, effectiveNow, leaseTooOld, warningLevel } from './subscription-rules';
 
 interface WarningCase {
   name: string;
@@ -52,4 +52,22 @@ describe('subscription rules: the cases shared with the API', () => {
       expect(leaseTooOld(new Date(c.issuedAt), new Date(c.now), c.maxAgeDays)).toBe(c.expected);
     },
   );
+});
+
+describe('default plan for a new shop', () => {
+  const plan = (code: string, monthlyPrice: number, isActive = true) => ({ code, monthlyPrice, isActive });
+
+  it('is the cheapest active paid plan', () => {
+    expect(defaultPlanCodeForNewShop([plan('business', 3500), plan('starter', 1500), plan('pro', 2500)])).toBe('starter');
+  });
+
+  it('skips retired plans and free plans while a paid one exists', () => {
+    expect(defaultPlanCodeForNewShop([plan('old', 500, false), plan('free', 0), plan('pro', 2500)])).toBe('pro');
+  });
+
+  it('falls back to the cheapest active plan, and to nothing when none is active', () => {
+    expect(defaultPlanCodeForNewShop([plan('free', 0), plan('free2', 0)])).toBe('free');
+    expect(defaultPlanCodeForNewShop([plan('old', 500, false)])).toBeNull();
+    expect(defaultPlanCodeForNewShop([])).toBeNull();
+  });
 });

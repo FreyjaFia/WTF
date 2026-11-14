@@ -4,15 +4,17 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { PlatformService } from '@core/services';
-import { filterShops } from '@shared/calculations';
+import { defaultPlanCodeForNewShop, filterShops } from '@shared/calculations';
 import { FilterButtonComponent } from '@shared/components/filter-button/filter-button';
 import { IconComponent } from '@shared/components/icons/icon/icon';
+import { SelectDropdownComponent, SelectDropdownOption } from '@shared/components/select-dropdown/select-dropdown';
 import { PullToRefreshComponent } from '@shared/components/pull-to-refresh/pull-to-refresh';
 import { SearchInputComponent } from '@shared/components/search-input/search-input';
 import { SideDrawerComponent } from '@shared/components/side-drawer/side-drawer';
 import { SortDirection, SortHeaderComponent } from '@shared/components/sort-header/sort-header';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { PLATFORM_STATUS, PlatformTenantDto } from '@shared/models/platform.models';
+import { PlanDto } from '@shared/models/subscription.models';
 import { PlatformChipComponent } from './platform-chip';
 import { statusTone, warningLabel, warningTone } from './platform-labels';
 import { PlatformSecret, PlatformSecretDialogComponent } from './platform-secret-dialog';
@@ -35,6 +37,7 @@ interface StatusOption {
     SideDrawerComponent,
     SortHeaderComponent,
     IconComponent,
+    SelectDropdownComponent,
     PullToRefreshComponent,
     PlatformChipComponent,
     PlatformSecretDialogComponent,
@@ -46,6 +49,7 @@ export class PlatformTenantsComponent implements OnInit {
   private readonly platform = inject(PlatformService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly pesos = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 });
 
   protected readonly statusOptions: StatusOption[] = [
     { id: PLATFORM_STATUS.Active, label: 'Active' },
@@ -61,6 +65,7 @@ export class PlatformTenantsComponent implements OnInit {
   protected readonly error = signal<string | null>(null);
   protected readonly dialogError = signal<string | null>(null);
   protected readonly creating = signal(false);
+  protected readonly plans = signal<PlanDto[]>([]);
   protected readonly secret = signal<PlatformSecret | null>(null);
   protected readonly filtersOpen = signal(false);
   protected readonly selectedStatuses = signal<number[]>([]);
@@ -74,6 +79,7 @@ export class PlatformTenantsComponent implements OnInit {
     ownerFirstName: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
     ownerLastName: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
     ownerUsername: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+    planCode: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
     isTrial: new FormControl(false, { nonNullable: true }),
   });
 
@@ -90,9 +96,23 @@ export class PlatformTenantsComponent implements OnInit {
     return [...rows].sort((a, b) => direction * this.compare(a, b, column));
   });
   protected readonly activeFilterCount = computed(() => (this.selectedStatuses().length > 0 ? 1 : 0));
+  protected readonly planOptions = computed<SelectDropdownOption[]>(() =>
+    this.plans()
+      .filter((plan) => plan.isActive)
+      .map((plan) => ({ id: plan.code, label: `${plan.name} - ${this.pesos.format(plan.monthlyPrice)} a month` })),
+  );
 
   public ngOnInit(): void {
     this.load();
+    this.platform.getPlans().subscribe({
+      next: (plans) => {
+        this.plans.set(plans);
+        if (this.creating() && !this.createForm.controls.planCode.value) {
+          this.applyDefaultPlan();
+        }
+      },
+      error: () => this.plans.set([]),
+    });
 
     if (this.route.snapshot.queryParamMap.has('new')) {
       this.openCreate();
@@ -145,6 +165,7 @@ export class PlatformTenantsComponent implements OnInit {
 
   protected openCreate(): void {
     this.createForm.reset();
+    this.applyDefaultPlan();
     this.dialogError.set(null);
     this.creating.set(true);
   }
@@ -184,6 +205,15 @@ export class PlatformTenantsComponent implements OnInit {
         this.dialogError.set(PlatformService.messageOf(err, 'That did not work. Try again.'));
       },
     });
+  }
+
+  protected choosePlan(code: string | null): void {
+    this.createForm.controls.planCode.setValue(code ?? '');
+    this.createForm.controls.planCode.markAsDirty();
+  }
+
+  private applyDefaultPlan(): void {
+    this.createForm.controls.planCode.setValue(defaultPlanCodeForNewShop(this.plans()) ?? '');
   }
 
   private fetch(): void {

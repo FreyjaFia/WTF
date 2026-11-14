@@ -49,13 +49,14 @@ public partial class CreateTenantHandler(WTFDbContext db, IPlatformAuditService 
             throw new InvalidOperationException("Username already exists.");
         }
 
-        var plan = request.PlanCode is { Length: > 0 } code
-            ? await db.Plans.FirstOrDefaultAsync(p => p.Code == code && p.IsActive, cancellationToken)
-            : await db.Plans.Where(p => p.IsActive).OrderByDescending(p => p.SortOrder).FirstOrDefaultAsync(cancellationToken);
-        if (plan is null && request.PlanCode is { Length: > 0 })
+        var planCode = request.PlanCode?.Trim() ?? string.Empty;
+        if (planCode.Length == 0)
         {
-            throw new InvalidOperationException("Plan not found.");
+            throw new InvalidOperationException("Choose a plan for the shop.");
         }
+
+        var plan = await db.Plans.FirstOrDefaultAsync(p => p.Code == planCode && p.IsActive, cancellationToken)
+            ?? throw new InvalidOperationException("Plan not found.");
 
         var password = TemporaryPassword.Generate();
         var now = DateTime.UtcNow;
@@ -81,22 +82,19 @@ public partial class CreateTenantHandler(WTFDbContext db, IPlatformAuditService 
         db.Tenants.Add(tenant);
         await db.SaveChangesAsync(cancellationToken);
 
-        if (plan is not null)
+        // A trial runs for the trial days; a paid shop gets its first month and is then invoiced from the platform page.
+        var settings = subscriptionOptions.Value;
+        var periodEnd = request.IsTrial ? now.AddDays(settings.TrialDays) : now.AddMonths(1);
+        db.TenantSubscriptions.Add(new TenantSubscription
         {
-            // A trial runs for the trial days; a paid shop gets its first month and is then invoiced from the platform page.
-            var settings = subscriptionOptions.Value;
-            var periodEnd = request.IsTrial ? now.AddDays(settings.TrialDays) : now.AddMonths(1);
-            db.TenantSubscriptions.Add(new TenantSubscription
-            {
-                TenantId = tenant.Id,
-                PlanId = plan.Id,
-                CurrentPeriodStart = now,
-                CurrentPeriodEnd = periodEnd,
-                GraceDays = settings.DefaultGraceDays,
-                UpdatedAt = now
-            });
-            await db.SaveChangesAsync(cancellationToken);
-        }
+            TenantId = tenant.Id,
+            PlanId = plan.Id,
+            CurrentPeriodStart = now,
+            CurrentPeriodEnd = periodEnd,
+            GraceDays = settings.DefaultGraceDays,
+            UpdatedAt = now
+        });
+        await db.SaveChangesAsync(cancellationToken);
 
         db.UseTenant(tenant.Id);
         await Branding.BrandDefaults.SaveAsync(db, tenant.Id, Branding.BrandDefaults.For(name), cancellationToken);
@@ -133,7 +131,7 @@ public partial class CreateTenantHandler(WTFDbContext db, IPlatformAuditService 
         await TenantCatalogTemplate.CopyAsync(db, tenant.Id, ownerId, cancellationToken);
         await transaction.CommitAsync(cancellationToken);
 
-        await audit.LogAsync(PlatformActions.TenantCreated, tenant.Id, $"Created '{name}' ({slug}); first user '{username}'.", cancellationToken: cancellationToken);
+        await audit.LogAsync(PlatformActions.TenantCreated, tenant.Id, $"Created '{name}' ({slug}) on the {plan.Name} plan; first user '{username}'.", cancellationToken: cancellationToken);
 
         var dto = new PlatformTenantDto(tenant.Id, name, slug, tenant.Status, PlatformTenantNames.StatusName(tenant.Status), now, 2, 0, null);
         return new CreatedTenantDto(dto, username, password);

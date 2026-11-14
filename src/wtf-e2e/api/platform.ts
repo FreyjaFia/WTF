@@ -141,7 +141,7 @@ export class PlatformApi {
       ownerLastName: 'E2E',
       ownerUsername: input.ownerUsername ?? `owner-${slug}`.slice(0, 50),
       isTrial: input.isTrial ?? false,
-      planCode: input.planCode,
+      planCode: input.planCode ?? 'business',
     });
   }
 

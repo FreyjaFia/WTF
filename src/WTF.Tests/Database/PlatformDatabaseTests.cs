@@ -51,8 +51,14 @@ public class PlatformDatabaseTests
     private static async Task<CreatedTenantDto> CreateShopAsync(SqlTestDatabase database, string slug, string owner)
     {
         await using var db = PlatformContext(database);
+        if (!await db.Plans.AnyAsync(p => p.Code == "starter"))
+        {
+            db.Plans.Add(new Plan { Code = "starter", Name = "Starter", MonthlyPrice = 1500, Features = "pos,orders", IsActive = true, SortOrder = 1 });
+            await db.SaveChangesAsync();
+        }
+
         return await new CreateTenantHandler(db, Audit(db), Microsoft.Extensions.Options.Options.Create(new WTF.Api.Features.Subscriptions.SubscriptionOptions())).Handle(
-            new CreateTenantCommand("Shop " + slug, slug, "Own", "Er", owner), CancellationToken.None);
+            new CreateTenantCommand("Shop " + slug, slug, "Own", "Er", owner, false, "starter"), CancellationToken.None);
     }
 
     [SqlFact]

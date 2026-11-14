@@ -61,7 +61,7 @@ public class SubscriptionDatabaseTests
         await db.SaveChangesAsync();
     }
 
-    private static async Task<CreatedTenantDto> CreateShopAsync(SqlTestDatabase database, string slug, bool trial = false, string? plan = null)
+    private static async Task<CreatedTenantDto> CreateShopAsync(SqlTestDatabase database, string slug, bool trial = false, string? plan = "pro")
     {
         await using var db = PlatformContext(database);
         return await new CreateTenantHandler(db, Audit(db), Options.Create(new SubscriptionOptions()))
@@ -80,7 +80,7 @@ public class SubscriptionDatabaseTests
     }
 
     [SqlFact]
-    public async Task CreateTenant_GetsASubscriptionOnTheTopPlan_AndBrandSettings()
+    public async Task CreateTenant_GetsASubscriptionOnTheChosenPlan_AndBrandSettings()
     {
         await using var database = await SqlTestDatabase.CreateAsync();
         await SeedPlansAsync(database);
@@ -114,6 +114,38 @@ public class SubscriptionDatabaseTests
         shop.Tenant.Status.ShouldBe(TenantAccess.Trial);
 
         await Should.ThrowAsync<InvalidOperationException>(() => CreateShopAsync(database, "otherone", plan: "nope"));
+    }
+
+    [SqlFact]
+    public async Task CreateTenant_RefusesAMissingOrInactivePlan_AndLeavesNoShopBehind()
+    {
+        await using var database = await SqlTestDatabase.CreateAsync();
+        await SeedPlansAsync(database);
+        await using (var seeded = database.CreateContext())
+        {
+            seeded.Plans.Add(new Plan { Code = "retired", Name = "Retired", MonthlyPrice = 900, Features = "pos", IsActive = false, SortOrder = 0 });
+            await seeded.SaveChangesAsync();
+        }
+
+        await Should.ThrowAsync<InvalidOperationException>(() => CreateShopAsync(database, "noplan", plan: null));
+        await Should.ThrowAsync<InvalidOperationException>(() => CreateShopAsync(database, "blankplan", plan: "  "));
+        await Should.ThrowAsync<InvalidOperationException>(() => CreateShopAsync(database, "oldplan", plan: "retired"));
+
+        await using var db = database.CreateContext();
+        (await db.Tenants.AnyAsync(t => t.Slug == "noplan" || t.Slug == "blankplan" || t.Slug == "oldplan")).ShouldBeFalse();
+    }
+
+    [SqlFact]
+    public async Task CreateTenant_AuditsThePlanItWasCreatedOn()
+    {
+        await using var database = await SqlTestDatabase.CreateAsync();
+        await SeedPlansAsync(database);
+
+        var shop = await CreateShopAsync(database, "auditcafe", plan: "starter");
+
+        await using var db = database.CreateContext();
+        var entry = await db.PlatformAuditLogs.SingleAsync(l => l.TenantId == shop.Tenant.Id && l.Action == PlatformActions.TenantCreated);
+        entry.Details.ShouldContain("Starter");
     }
 
     [SqlFact]

@@ -19,9 +19,16 @@ const shop = (over: Partial<PlatformTenantDto>): PlatformTenantDto => ({
   ...over,
 });
 
+const plans = [
+  { id: 3, code: 'business', name: 'Business', monthlyPrice: 3500, features: [], maxUsers: null, isActive: true, shopCount: 0 },
+  { id: 1, code: 'starter', name: 'Starter', monthlyPrice: 1500, features: [], maxUsers: null, isActive: true, shopCount: 0 },
+  { id: 4, code: 'retired', name: 'Retired', monthlyPrice: 900, features: [], maxUsers: null, isActive: false, shopCount: 0 },
+];
+
 function render(tenants: PlatformTenantDto[], queryParams: Record<string, string> = {}) {
   const platform = {
     getTenants: vi.fn().mockReturnValue(of(tenants)),
+    getPlans: vi.fn().mockReturnValue(of(plans)),
     createTenant: vi.fn().mockReturnValue(
       of({ tenant: shop({}), ownerUsername: 'moon.owner', temporaryPassword: 'Abc123xyz' }),
     ),
@@ -122,7 +129,24 @@ describe('PlatformTenantsComponent', () => {
     el.querySelector('.app-dialog form')!.dispatchEvent(new Event('submit'));
     fixture.detectChanges();
 
-    expect(platform.createTenant).toHaveBeenCalledWith(expect.objectContaining({ slug: 'moonbrew', ownerUsername: 'moon.owner' }));
+    expect(platform.createTenant).toHaveBeenCalledWith(
+      expect.objectContaining({ slug: 'moonbrew', ownerUsername: 'moon.owner', planCode: 'starter' }),
+    );
     expect(el.querySelector('[data-testid="secret-password"]')?.textContent).toBe('Abc123xyz');
+  });
+
+  it('preselects the cheapest paid plan and lists only active plans', () => {
+    const { fixture, el, buttonWith } = render([]);
+
+    buttonWith('New shop')!.click();
+    fixture.detectChanges();
+    const select = el.querySelector<HTMLElement>('[data-testid="shop-plan"]')!;
+
+    expect(select.textContent).toContain('Starter');
+    select.click();
+    fixture.detectChanges();
+    const labels = Array.from(el.querySelectorAll('[role="listbox"] [role="option"]')).map((o) => o.textContent);
+    expect(labels.some((l) => l?.includes('Business'))).toBe(true);
+    expect(labels.some((l) => l?.includes('Retired'))).toBe(false);
   });
 });

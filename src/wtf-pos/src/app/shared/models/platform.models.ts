@@ -29,6 +29,7 @@ export interface CreateTenantRequest {
   ownerLastName: string;
   ownerUsername: string;
   isTrial: boolean;
+  planCode: string;
 }
 
 export interface CreatedTenantDto {

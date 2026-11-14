@@ -148,7 +148,7 @@
     (click)="closeCreate()"
     (window:keydown.escape)="closeCreate()"
   >
-    <div class="app-dialog mx-4 max-h-[90dvh] w-full max-w-xl animate-[modal-pop_0.2s_ease-out] overflow-y-auto rounded-2xl bg-surface p-6 shadow-2xl" (click)="$event.stopPropagation()">
+    <div class="app-dialog mx-4 max-h-[90dvh] w-full max-w-xl animate-[modal-pop_0.2s_ease-out] overflow-y-auto rounded-2xl sm:overflow-visible bg-surface p-6 shadow-2xl" (click)="$event.stopPropagation()">
       @if (dialogError(); as message) {
         <div class="mb-3 rounded-lg bg-red-50 p-3 text-sm text-red-700" role="alert">{{ message }}</div>
       }
@@ -169,6 +169,21 @@
         <label class="text-sm sm:col-span-2">Owner username
           <input formControlName="ownerUsername" type="text" class="input input-bordered mt-1 w-full" />
         </label>
+        <div class="text-sm sm:col-span-2">
+          <span>Plan</span>
+          <app-select-dropdown
+            class="mt-1"
+            testId="shop-plan"
+            placeholder="Choose a plan..."
+            searchPlaceholder="Search plans..."
+            [options]="planOptions()"
+            [selectedId]="createForm.controls.planCode.value || null"
+            (selectedIdChange)="choosePlan($event)"
+          />
+          @if (planOptions().length === 0) {
+            <p class="mt-1 text-xs text-gray-500">No active plans yet. Add one on the Plans page first.</p>
+          }
+        </div>
         <label class="flex items-center gap-2 text-sm sm:col-span-2">
           <input formControlName="isTrial" type="checkbox" /> Start as a trial
         </label>
