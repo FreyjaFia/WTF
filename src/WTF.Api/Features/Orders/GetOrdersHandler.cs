@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Orders;
+using WTF.Api.Features.Customers;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Calculations.Orders;
@@ -137,7 +138,7 @@ public class GetOrdersHandler(WTFDbContext db, IHttpContextAccessor? httpContext
                 o.SpecialInstructions,
                 o.Note,
                 totalAmount,
-                o.Customer == null ? null : $"{o.Customer.FirstName} {o.Customer.LastName}".Trim(),
+                o.Customer == null ? null : CustomerName.Join(o.Customer.FirstName, o.Customer.LastName),
                 bundlePromotions,
                 o.OverrideReason,
                 o.OverriddenAt,

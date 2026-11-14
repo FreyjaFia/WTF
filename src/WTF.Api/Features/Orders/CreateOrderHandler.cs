@@ -557,7 +557,7 @@ public class CreateOrderHandler(
         {
             var customerName = await db.Customers
                 .Where(c => c.Id == order.CustomerId)
-                .Select(c => c.FirstName + " " + c.LastName)
+                .Select(c => (c.FirstName + " " + (c.LastName ?? "")).Trim())
                 .FirstOrDefaultAsync(cancellationToken);
 
             await pushNotifications.SendLinkOrderCreatedAsync(
@@ -569,7 +569,7 @@ public class CreateOrderHandler(
             {
                 var customerName = await db.Customers
                     .Where(c => c.Id == order.CustomerId)
-                    .Select(c => c.FirstName + " " + c.LastName)
+                    .Select(c => (c.FirstName + " " + (c.LastName ?? "")).Trim())
                     .FirstOrDefaultAsync(cancellationToken);
 
                 await pushNotifications.SendLinkOrderCreatedAsync(
