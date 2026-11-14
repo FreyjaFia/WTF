@@ -170,7 +170,7 @@ internal sealed class SeniorPwdOrders
     }
 
     public SeniorPwdAmounts AmountsFor(decimal unitPrice, decimal addOnsPerUnit, int quantity) =>
-        SeniorPwdRules.ForRow((unitPrice + addOnsPerUnit) * quantity, _vatRegistered);
+        SeniorPwdRules.ForLine(unitPrice, addOnsPerUnit, quantity, _vatRegistered);
 
     public void EnsureLineAllowed(string productName, bool productEligible, bool hasPromotion, bool isBundle)
     {

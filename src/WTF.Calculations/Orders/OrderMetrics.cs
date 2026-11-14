@@ -6,8 +6,34 @@ namespace WTF.Calculations.Orders;
 // only part of a line; the rest pays the list price) and the label the promotion would give it.
 public readonly record struct PreviewDiscount(decimal UnitPrice, int Quantity, string? Label = null);
 
+public readonly record struct QuotedLine(decimal UnitPrice, decimal AddOnsPerUnit, int Quantity, bool SeniorPwdCovered = false);
+
 public static class OrderMetrics
 {
+    public static decimal LineTotal(decimal unitPrice, decimal addOnsPerUnit, int quantity) =>
+        (unitPrice + addOnsPerUnit) * quantity;
+
+    public static decimal LineTotal(
+        decimal listUnitPrice, decimal discountedUnitPrice, int discountedQuantity, decimal addOnsPerUnit, int quantity) =>
+        LineTotal(discountedUnitPrice, addOnsPerUnit, discountedQuantity)
+        + LineTotal(listUnitPrice, addOnsPerUnit, quantity - discountedQuantity);
+
+    public static decimal BundlesTotal(IEnumerable<(decimal UnitPrice, int Quantity)> bundles) =>
+        bundles.Sum(bundle => bundle.UnitPrice * bundle.Quantity);
+
+    public static decimal QuotedTotal(IEnumerable<QuotedLine> lines, IEnumerable<(decimal UnitPrice, int Quantity)> bundles) =>
+        lines.Sum(line => LineTotal(line.UnitPrice, line.AddOnsPerUnit, line.Quantity)) + BundlesTotal(bundles);
+
+    public static decimal SeniorPwdReductionOf(IEnumerable<QuotedLine> lines, bool vatRegistered) =>
+        lines
+            .Where(line => line.SeniorPwdCovered)
+            .Sum(line => SeniorPwdRules.ForLine(line.UnitPrice, line.AddOnsPerUnit, line.Quantity, vatRegistered).Reduction);
+
+    public static decimal ExpectedTotal(decimal linesTotal, decimal bundlesTotal, decimal seniorPwdReduction) =>
+        linesTotal + bundlesTotal - seniorPwdReduction;
+
+    public static decimal ReductionShown(decimal quotedTotal, decimal expectedTotal) => quotedTotal - expectedTotal;
+
     public static decimal ComputeOrderTotal(
         Order order,
         IReadOnlyDictionary<(Guid ProductId, Guid AddOnId), decimal> addOnOverridePrices,

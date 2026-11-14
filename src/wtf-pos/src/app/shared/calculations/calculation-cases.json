@@ -1761,6 +1761,45 @@
       "expectedRows": []
     }
   ],
+  "seniorPwdQuoted": [
+    {
+      "name": "covered latte and a plain line, not VAT-registered, the register total is current",
+      "vatRegistered": false,
+      "lines": [
+        { "quantity": 1, "price": 120, "addOns": [], "covered": true },
+        { "quantity": 1, "price": 50, "addOns": [], "covered": false }
+      ],
+      "bundles": [],
+      "registerTotal": 146,
+      "expectedQuotedTotal": 170,
+      "expectedCurrentReduction": 24,
+      "expectedShownReduction": 24
+    },
+    {
+      "name": "covered line with an add-on and a bundle, VAT-registered",
+      "vatRegistered": true,
+      "lines": [
+        { "quantity": 2, "price": 100, "addOns": [{ "price": 10, "quantity": 1 }], "covered": true }
+      ],
+      "bundles": [{ "unitPrice": 90, "quantity": 1 }],
+      "registerTotal": 247.14,
+      "expectedQuotedTotal": 310,
+      "expectedCurrentReduction": 62.86,
+      "expectedShownReduction": 62.86
+    },
+    {
+      "name": "the register showed a smaller reduction than the shop now gives",
+      "vatRegistered": true,
+      "lines": [
+        { "quantity": 1, "price": 100, "addOns": [], "covered": true }
+      ],
+      "bundles": [],
+      "registerTotal": 80,
+      "expectedQuotedTotal": 100,
+      "expectedCurrentReduction": 28.57,
+      "expectedShownReduction": 20
+    }
+  ],
   "seniorPwdEligibility": [
     { "name": "plain food or drink", "productEligible": true, "hasPromotion": false, "isBundle": false, "expected": true },
     { "name": "promotion price is not eligible", "productEligible": true, "hasPromotion": true, "isBundle": false, "expected": false },

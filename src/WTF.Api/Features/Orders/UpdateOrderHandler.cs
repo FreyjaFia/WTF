@@ -236,6 +236,7 @@ public class UpdateOrderHandler(
             PromotionPricing.AppliedDiscount? AppliedDiscount,
             List<(OrderItemRequestDto AddOn, decimal Price)> AddOnPrices)>();
 
+        var coveredAmounts = new Dictionary<int, SeniorPwdAmounts>();
         for (var itemIndex = 0; itemIndex < request.Items.Count; itemIndex++)
         {
             var item = request.Items[itemIndex];
@@ -278,30 +279,28 @@ public class UpdateOrderHandler(
                 throw new InvalidOperationException($"The final unit price for '{product.Name}' cannot be negative.");
             }
 
+            if (seniorPwd is not null && item.SeniorPwdPersonIndex.HasValue && !isOverride)
+            {
+                coveredAmounts[itemIndex] = seniorPwd.AmountsFor(
+                    product.Price, addOnPrices.Sum(a => a.Price * a.AddOn.Quantity), item.Quantity);
+            }
+
             pricedItems.Add((item, product, discountedPrice, appliedDiscount, addOnPrices));
         }
 
         if (!isOverride && newStatus == OrderStatusEnum.Completed)
         {
-            var serverTotal = pricedItems
+            var linesTotal = pricedItems
                 .Where(p => !p.Item.BundlePromotionId.HasValue)
-                .Sum(p =>
-                {
-                    var addOns = p.AddOnPrices.Sum(a => a.Price * a.AddOn.Quantity);
-                    var discounted = p.AppliedDiscount?.DiscountedQuantity ?? 0;
-                    return ((p.DiscountedPrice ?? p.Product.Price) + addOns) * discounted
-                        + (p.Product.Price + addOns) * (p.Item.Quantity - discounted);
-                })
-                + request.BundlePromotions.Sum(b => bundlePriceByPromotionId[b.PromotionId] * b.Quantity);
-            if (seniorPwd is not null)
-            {
-                serverTotal -= pricedItems
-                    .Where(p => p.Item.SeniorPwdPersonIndex.HasValue)
-                    .Sum(p => seniorPwd.AmountsFor(
-                        p.Product.Price,
-                        p.AddOnPrices.Sum(a => a.Price * a.AddOn.Quantity),
-                        p.Item.Quantity).Reduction);
-            }
+                .Sum(p => OrderMetrics.LineTotal(
+                    p.Product.Price,
+                    p.DiscountedPrice ?? p.Product.Price,
+                    p.AppliedDiscount?.DiscountedQuantity ?? 0,
+                    p.AddOnPrices.Sum(a => a.Price * a.AddOn.Quantity),
+                    p.Item.Quantity));
+            var bundlesTotal = OrderMetrics.BundlesTotal(
+                request.BundlePromotions.Select(b => (bundlePriceByPromotionId[b.PromotionId], b.Quantity)));
+            var serverTotal = OrderMetrics.ExpectedTotal(linesTotal, bundlesTotal, coveredAmounts.Values.Sum(amounts => amounts.Reduction));
 
             OrderTotalCheck.EnsureUnchanged(request.ExpectedTotal, serverTotal);
         }
@@ -476,14 +475,16 @@ public class UpdateOrderHandler(
                         seniorPwd.EnsureLineAllowed(product.Name, true, true, false);
                     }
 
-                    var addOnsPerUnit = addOnPrices.Sum(addOn => addOn.AddOn.Quantity
-                        * (isOverride && addOnPriceSnapshots.TryGetValue((item.ProductId, addOn.AddOn.ProductId), out var paid)
-                            ? paid
-                            : addOn.Price));
-                    seniorPwd.Cover(
-                        personIndex,
-                        newItem,
-                        seniorPwd.AmountsFor(newItem.Price ?? product.Price, addOnsPerUnit, segment.Quantity));
+                    var amounts = coveredAmounts.TryGetValue(itemIndex, out var checkedAmounts)
+                        ? checkedAmounts
+                        : seniorPwd.AmountsFor(
+                            newItem.Price ?? product.Price,
+                            addOnPrices.Sum(addOn => addOn.AddOn.Quantity
+                                * (addOnPriceSnapshots.TryGetValue((item.ProductId, addOn.AddOn.ProductId), out var paid)
+                                    ? paid
+                                    : addOn.Price)),
+                            segment.Quantity);
+                    seniorPwd.Cover(personIndex, newItem, amounts);
                 }
             }
         }

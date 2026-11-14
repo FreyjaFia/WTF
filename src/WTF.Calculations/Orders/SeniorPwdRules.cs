@@ -31,6 +31,9 @@ public static class SeniorPwdRules
         return new SeniorPwdAmounts(covered, covered - net, Round(net * DiscountRate));
     }
 
+    public static SeniorPwdAmounts ForLine(decimal unitPrice, decimal addOnsPerUnit, int quantity, bool vatRegistered) =>
+        ForRow(OrderMetrics.LineTotal(unitPrice, addOnsPerUnit, quantity), vatRegistered);
+
     // A promotion price and a bundle are never covered, and neither is a product the shop marked as not food or drink.
     public static bool IsEligibleLine(bool productEligible, bool hasPromotion, bool isBundle) =>
         productEligible && !hasPromotion && !isBundle;
