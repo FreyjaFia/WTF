@@ -83,10 +83,10 @@ test.describe('what the cashier is told after a sync @orders @offline', () => {
     await editor.open();
 
     await readyToSellOffline(editor, drink.name);
+    await api.products.setPrice(drink.id, 120);
     await page.context().setOffline(true);
     await editor.addProduct(drink.name);
     await editor.payCash(100);
-    await api.products.setPrice(drink.id, 120);
     await page.context().setOffline(false);
 
     await expect
@@ -176,6 +176,7 @@ test.describe('what the cashier is told after a sync @orders @offline', () => {
     await editor.open();
 
     await readyToSellOffline(editor, heldSale.drink.name);
+    await api.products.setPrice(heldSale.drink.id, 120);
     await page.context().setOffline(true);
     await editor.addProduct(heldSale.drink.name);
     await editor.payCash(100);
@@ -183,7 +184,6 @@ test.describe('what the cashier is told after a sync @orders @offline', () => {
     await editor.search.waitFor();
     await editor.addProduct(savedSale.drink.name);
     await editor.payCash(80);
-    await api.products.setPrice(heldSale.drink.id, 120);
     await page.context().setOffline(false);
 
     await expect(lastSync.rows).toHaveCount(2, { timeout: SYNC_TIMEOUT_MS });

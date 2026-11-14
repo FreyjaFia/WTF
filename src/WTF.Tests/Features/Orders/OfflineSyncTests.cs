@@ -570,6 +570,51 @@ public class OfflineSyncTests
     }
 
     [Fact]
+    public async Task Approve_WithAnIdFix_FillsTheMissingSeniorPwdIdAndCompletes()
+    {
+        var id = await SeedHeldOrder();
+        var discountId = Guid.NewGuid();
+        var seed = TestDb.Create(_dbName);
+        seed.OrderSeniorPwdDiscounts.Add(new OrderSeniorPwdDiscount
+        {
+            Id = discountId,
+            OrderId = id,
+            Type = 1,
+            IdNumber = string.Empty,
+            CustomerName = string.Empty,
+            RecordedBy = _userId,
+            CreatedAt = DateTime.UtcNow,
+            TenantId = WTF.Domain.Tenancy.TenantDefaults.DefaultTenantId,
+        });
+        await seed.SaveChangesAsync();
+        var db = TestDb.Create(_dbName);
+        var handler = new ApproveHeldOrderHandler(
+            db, TestRequest.As(_userId, AppRoles.Admin), Approver(db), GetSender());
+
+        var dto = await handler.Handle(
+            new ApproveHeldOrderCommand(id, [new SeniorPwdIdFix(discountId, "  SC-77 ", " Lola Remedios ")]), CancellationToken.None);
+
+        dto!.Status.ShouldBe(OrderStatusEnum.Completed);
+        var saved = TestDb.Create(_dbName).OrderSeniorPwdDiscounts.Single(d => d.Id == discountId);
+        saved.IdNumber.ShouldBe("SC-77");
+        saved.CustomerName.ShouldBe("Lola Remedios");
+    }
+
+    [Fact]
+    public async Task Approve_WithABlankIdFix_ThrowsAndStaysHeld()
+    {
+        var id = await SeedHeldOrder();
+        var db = TestDb.Create(_dbName);
+        var handler = new ApproveHeldOrderHandler(
+            db, TestRequest.As(_userId, AppRoles.Admin), Approver(db), GetSender());
+
+        await Should.ThrowAsync<InvalidOperationException>(() =>
+            handler.Handle(new ApproveHeldOrderCommand(id, [new SeniorPwdIdFix(Guid.NewGuid(), "", "")]), CancellationToken.None));
+
+        (await LoadOrder(id)).StatusId.ShouldBe((int)OrderStatusEnum.PendingReview);
+    }
+
+    [Fact]
     public async Task Approve_AnOrderThatIsNotHeld_Throws()
     {
         var latte = await SeedProduct("Latte", 150m);
