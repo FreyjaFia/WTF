@@ -152,6 +152,52 @@ public class PlanGatingDatabaseTests
     }
 
     [SqlFact]
+    public async Task ABundleSale_NeedsThePromotionsFeature_RefusedOnline_AndHeldOffline()
+    {
+        await using var database = await SqlTestDatabase.CreateAsync();
+        var user = await SqlSeed.UserAsync(database);
+        var burger = await SqlSeed.ProductAsync(database, user.Id, "Burger", 100m);
+        var promotionId = await DbOrderSeed.FixedBundleAsync(database, user.Id, burger.Id, 80m);
+
+        static CreateOrderCommand BundleSale(Guid productId, Guid promotionId) => new()
+        {
+            Status = OrderStatusEnum.Completed,
+            Items = [new OrderItemRequestDto(productId, 1, [], null, promotionId, QuotedPrice: 80m)],
+            BundlePromotions = [new OrderBundlePromotionRequestDto(promotionId, 1, 80m)],
+        };
+
+        await SetPlanAsync(database, "promotions");
+        await using (var db = ShopContext(database))
+        {
+            var sold = await Handler(db, user.Id).Handle(BundleSale(burger.Id, promotionId), CancellationToken.None);
+            sold.TotalAmount.ShouldBe(80m);
+        }
+
+        await SetPlanAsync(database, string.Empty);
+        await using (var db = ShopContext(database))
+        {
+            var ex = await Should.ThrowAsync<InvalidOperationException>(
+                Handler(db, user.Id).Handle(BundleSale(burger.Id, promotionId), CancellationToken.None));
+            ex.Message.ShouldContain("not part of this shop's plan");
+        }
+
+        await using (var db = ShopContext(database))
+        {
+            var reasons = await OfflineOrderReview.FindReasonsAsync(
+                db, BundleSale(burger.Id, promotionId), TimeZoneInfo.Utc, CancellationToken.None);
+            reasons.ShouldContain(r => r.Contains("not part of this shop's plan"));
+        }
+
+        await SetPlanAsync(database, "promotions");
+        await using (var db = ShopContext(database))
+        {
+            var reasons = await OfflineOrderReview.FindReasonsAsync(
+                db, BundleSale(burger.Id, promotionId), TimeZoneInfo.Utc, CancellationToken.None);
+            reasons.ShouldBeEmpty();
+        }
+    }
+
+    [SqlFact]
     public async Task TheOrderLinkPage_RefusesAShopWithoutOrderLinks_KeepsTheLinkValid_AndChatFollowsItsOwnFeature()
     {
         await using var database = await SqlTestDatabase.CreateAsync();

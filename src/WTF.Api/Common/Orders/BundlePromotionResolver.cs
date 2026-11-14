@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using WTF.Api.Common.Tenancy;
 using WTF.Api.Features.Orders.DTOs;
 using WTF.Calculations.Orders;
 using WTF.Domain.Data;
@@ -8,6 +9,10 @@ namespace WTF.Api.Common.Orders;
 
 internal static class BundlePromotionResolver
 {
+    private const string PromotionsFeature = "promotions";
+
+    private const string NotInPlanMessage = "Bundle promotions are not part of this shop's plan.";
+
     public static async Task<Dictionary<Guid, decimal>> ResolveAsync(
         WTFDbContext db,
         IReadOnlyList<OrderBundlePromotionRequestDto> bundles,
@@ -42,6 +47,17 @@ internal static class BundlePromotionResolver
         var checkedIds = bundleIds.Except(alreadySold).ToList();
         if (checkedIds.Count == 0)
         {
+            return prices;
+        }
+
+        if (!await TenantPlanLookup.HasFeatureAsync(db, PromotionsFeature, cancellationToken))
+        {
+            if (problems is null)
+            {
+                throw new InvalidOperationException(NotInPlanMessage);
+            }
+
+            problems.Add(NotInPlanMessage);
             return prices;
         }
 
