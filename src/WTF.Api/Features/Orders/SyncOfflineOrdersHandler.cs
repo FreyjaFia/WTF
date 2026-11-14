@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using WTF.Api.Common.Auth.Permissions;
 using WTF.Api.Common.Orders;
 using WTF.Api.Common.Tenancy;
 using WTF.Api.Common.Time;
@@ -71,6 +72,12 @@ public class SyncOfflineOrdersHandler(WTFDbContext db, ISender sender, IHttpCont
             var findings = order.Status == OrderStatusEnum.Completed
                 ? await OfflineOrderReview.FindAsync(db, order, timeZone, policy, cancellationToken)
                 : [];
+            if (order.Status == OrderStatusEnum.Completed && order.SeniorPwdPersons.Count > 0
+                && !PermissionChecks.Has(httpContextAccessor.HttpContext?.User, SeniorPwdOrders.ApplyPermission))
+            {
+                findings.Add(OfflineReason.Hold(OfflineReasonCodes.SeniorPwdPermissionLost, "The cashier is no longer allowed to apply the Senior/PWD discount."));
+            }
+
 
             var saved = await sender.Send(
                 order with { OfflineLocalId = localId, ReviewFindings = findings.Count > 0 ? findings : null, GateHeld = true, HonorStock = true, AuditNotesAsAutoApproved = policy.AutoApproveNotes, HonorQuotedPrices = CanHonorQuotes(order), HonorSeniorPwdQuotes = CanHonorSeniorPwd(order), SeniorPwdVatRegistered = order.SeniorPwdPersons.Count > 0 ? await OfflineOrderReview.SeniorPwdVatAtSaleAsync(db, order, cancellationToken) : null },

@@ -97,7 +97,7 @@ An order sold offline is a sale that already happened, so the server never repri
 
 **Differences from the plan:** over-limit uses are counted on the fly (uses above the limit) instead of a stored `OverLimitUses` column; `AllowOffline` was dropped (decision 5). An Admin can fill in a missing Senior/PWD ID and name while approving a held order (decision 7).  Kitchen hook (set `KitchenStatus = New` when an offline order syncs or is approved) is left for the kitchen build.
 
-**Leftovers:** the Note when the cashier lost the permission after the sale (decision 6), and wiring the held-order reminders to `AgedAfterDays`.
+**Leftovers:** none for the sync rework. A Senior/PWD sale from a cashier who no longer has `orders.seniorpwd.apply` is held (`SeniorPwdPermissionLost`, always a Hold like the other Senior/PWD codes) instead of a Note, so an Admin decides. The held-order reminders and aging already use `AgedAfterDays`.
 
 **Senior/PWD discount (built before this phase):** the tenant settings `SeniorPwdEnabled` and `VatRegistered` and the product flag `IsSeniorPwdEligible` must go in the Phase 7 change log, so an offline sale is judged with the rules that applied at sale time. The queued order already carries the persons and per-line indexes (queue version 2); until Phase 7 the server recomputes at sync and holds a sale whose discount differs or whose ID or name is missing.
 
