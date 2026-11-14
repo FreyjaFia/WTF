@@ -154,9 +154,12 @@ public class OfflineStockNoteTests
         StockSeed.Balance(_db, _beans).ShouldBe(10m);
         StockSeed.Movements(_db, _beans).ShouldBeEmpty();
 
+        var approveDb = TestDb.Create(_db);
         var approve = new ApproveHeldOrderHandler(
-            TestDb.Create(_db), TestRequest.As(_userId, AppRoles.Admin), TestFakes.Hub(), _audit, TestFakes.Conversations(), GetSender(),
-            TestFakes.Stock(TestDb.Create(_db)));
+            approveDb,
+            TestRequest.As(_userId, AppRoles.Admin),
+            new HeldOrderApprover(approveDb, TestFakes.Hub(), _audit, TestFakes.Conversations(), TestFakes.Stock(approveDb)),
+            GetSender());
         await approve.Handle(new ApproveHeldOrderCommand(id), CancellationToken.None);
 
         StockSeed.Balance(_db, _beans).ShouldBe(2m);
