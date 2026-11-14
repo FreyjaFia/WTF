@@ -45,6 +45,19 @@ public class UploadCustomerImageHandlerTests
     }
 
     [Fact]
+    public async Task Upload_HostileCustomerName_NeverReachesTheStoredFileName()
+    {
+        var customer = CustomerSeed.NewCustomer();
+        customer.FirstName = "../../../x";
+        customer.LastName = "..\\evil";
+        await CustomerSeed.SeedAsync(_dbName, customer);
+
+        await Handler().Handle(new UploadCustomerImageCommand(customer.Id, Data, "a.png"), CancellationToken.None);
+
+        await _storage.Received(1).SaveAsync("customers", Arg.Is<string>(n => System.Text.RegularExpressions.Regex.IsMatch(n, "^[0-9a-f]{32}\\.png$")), Arg.Any<byte[]>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task Upload_AScriptNamedLikeAPicture_IsRefusedWithAMessage_AndStoresNothing()
     {
         var customer = CustomerSeed.NewCustomer();
@@ -118,7 +131,7 @@ public class UploadCustomerImageHandlerTests
         result.ImageUrl.ShouldBe("/images/customers/new.png");
         await _storage.Received(1).SaveAsync(
             "customers",
-            Arg.Is<string>(n => n.StartsWith("mary_ann_de_la_cruz_") && n.EndsWith(".webp")),
+            Arg.Is<string>(n => n.Length == 37 && n.EndsWith(".webp")),
             Arg.Any<byte[]>(),
             Arg.Any<CancellationToken>());
 

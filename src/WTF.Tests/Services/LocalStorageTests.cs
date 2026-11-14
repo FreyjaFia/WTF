@@ -35,6 +35,31 @@ public sealed class LocalStorageTests : IDisposable
         File.ReadAllBytes(Path.Combine(_root, "images", "products", "a.png")).ShouldBe(new byte[] { 1, 2, 3 });
     }
 
+    [Theory]
+    [InlineData("../x.png")]
+    [InlineData("..\\x.png")]
+    [InlineData("sub/x.png")]
+    [InlineData("/etc/x.png")]
+    [InlineData("")]
+    public async Task ImageSave_FileNameWithAPath_IsRefused_AndWritesNothing(string fileName)
+    {
+        var sut = new LocalImageStorage(_env);
+
+        await Should.ThrowAsync<ArgumentException>(() => sut.SaveAsync("customers", fileName, [1], CancellationToken.None));
+
+        Directory.GetFiles(_root, "*", SearchOption.AllDirectories).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task ImageSave_CategoryEscapingTheImagesRoot_IsRefused()
+    {
+        var sut = new LocalImageStorage(_env);
+
+        await Should.ThrowAsync<ArgumentException>(() => sut.SaveAsync("../outside", "a.png", [1], CancellationToken.None));
+
+        Directory.GetFiles(_root, "*", SearchOption.AllDirectories).ShouldBeEmpty();
+    }
+
     [Fact]
     public async Task ImageDelete_RelativeUrl_RemovesFile()
     {
