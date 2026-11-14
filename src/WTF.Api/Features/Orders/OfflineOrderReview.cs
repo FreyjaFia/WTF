@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
+using WTF.Api.Common.Auth.Permissions;
 using WTF.Api.Common.Orders;
+using WTF.Api.Features.Customers;
 using WTF.Calculations.Orders;
 using WTF.Domain.Data;
 
@@ -26,7 +28,8 @@ internal static class OfflineOrderReview
         WTFDbContext db,
         CreateOrderCommand command,
         TimeZoneInfo timeZone,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IHttpContextAccessor? httpContextAccessor = null)
     {
         var reasons = new List<string>();
         var createdAt = command.CreatedAt?.ToUniversalTime() ?? DateTime.UtcNow;
@@ -54,12 +57,12 @@ internal static class OfflineOrderReview
                 .FirstOrDefaultAsync(cancellationToken);
             if (customer is { IsActive: false })
             {
-                reasons.Add($"Customer {customer.FirstName} {customer.LastName} is inactive.");
+                reasons.Add($"Customer {CustomerName.Join(customer.FirstName, customer.LastName)} is inactive.");
             }
         }
 
         await AddBundleReasonsAsync(db, command, createdAt, timeZone, reasons, cancellationToken);
-        await AddSeniorPwdReasonsAsync(db, command, reasons, cancellationToken);
+        await AddSeniorPwdReasonsAsync(db, command, httpContextAccessor, reasons, cancellationToken);
         await AddPriceReasonsAsync(db, command, products.ToDictionary(p => p.Key, p => (p.Value.Name, p.Value.Price)), createdAt, timeZone, reasons, cancellationToken);
 
         return [.. reasons.Distinct()];
@@ -70,12 +73,29 @@ internal static class OfflineOrderReview
     private static async Task AddSeniorPwdReasonsAsync(
         WTFDbContext db,
         CreateOrderCommand command,
+        IHttpContextAccessor? httpContextAccessor,
         List<string> reasons,
         CancellationToken cancellationToken)
     {
         if (command.SeniorPwdPersons.Count == 0)
         {
             return;
+        }
+
+        // A held order skips the permission check that blocks a live order, so a cashier without it is flagged here.
+        if (httpContextAccessor is not null
+            && !PermissionChecks.Has(httpContextAccessor.HttpContext?.User, SeniorPwdOrders.ApplyPermission))
+        {
+            reasons.Add("The Senior/PWD discount was submitted by a user without the permission to apply it.");
+        }
+
+        var ids = command.SeniorPwdPersons
+            .Select(p => p.IdNumber?.Trim())
+            .Where(id => !string.IsNullOrEmpty(id))
+            .ToList();
+        if (ids.Count != ids.Distinct(StringComparer.OrdinalIgnoreCase).Count())
+        {
+            reasons.Add("The same Senior/PWD ID number is used more than once on this order.");
         }
 
         if (command.SeniorPwdPersons.Any(p => string.IsNullOrWhiteSpace(p.IdNumber) || string.IsNullOrWhiteSpace(p.CustomerName)))
@@ -102,14 +122,17 @@ internal static class OfflineOrderReview
             return;
         }
 
-        var quotedTotal = command.Items.Sum(i => (i.QuotedPrice!.Value + i.AddOns.Sum(a => a.QuotedPrice!.Value * a.Quantity)) * i.Quantity)
-            + command.BundlePromotions.Sum(b => b.QuotedUnitPrice!.Value * b.Quantity);
-        var shownReduction = quotedTotal - command.ExpectedTotal.Value;
-        var currentReduction = command.Items
-            .Where(i => i.SeniorPwdPersonIndex.HasValue)
-            .Sum(i => SeniorPwdRules.ForRow(
-                (i.QuotedPrice!.Value + i.AddOns.Sum(a => a.QuotedPrice!.Value * a.Quantity)) * i.Quantity,
-                settings.VatRegistered).Reduction);
+        var quotedLines = command.Items
+            .Select(i => new QuotedLine(
+                i.QuotedPrice!.Value,
+                i.AddOns.Sum(a => a.QuotedPrice!.Value * a.Quantity),
+                i.Quantity,
+                i.SeniorPwdPersonIndex.HasValue))
+            .ToList();
+        var quotedTotal = OrderMetrics.QuotedTotal(
+            quotedLines, command.BundlePromotions.Select(b => (b.QuotedUnitPrice!.Value, b.Quantity)));
+        var shownReduction = OrderMetrics.ReductionShown(quotedTotal, command.ExpectedTotal.Value);
+        var currentReduction = OrderMetrics.SeniorPwdReductionOf(quotedLines, settings.VatRegistered);
         if (shownReduction != currentReduction)
         {
             reasons.Add($"The Senior/PWD discount now comes to {currentReduction:0.00}, the register showed {shownReduction:0.00}.");

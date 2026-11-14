@@ -66,7 +66,7 @@ public class SyncOfflineOrdersHandler(WTFDbContext db, ISender sender, IHttpCont
 
             // Only a finished sale can meet a catalog that changed afterwards; an open order is priced when it completes.
             var reasons = order.Status == OrderStatusEnum.Completed
-                ? await OfflineOrderReview.FindReasonsAsync(db, order, timeZone, cancellationToken)
+                ? await OfflineOrderReview.FindReasonsAsync(db, order, timeZone, cancellationToken, httpContextAccessor)
                 : [];
 
             var saved = await sender.Send(
