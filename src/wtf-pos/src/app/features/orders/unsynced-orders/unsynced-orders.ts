@@ -1,5 +1,7 @@
 import { DecimalPipe, DatePipe } from '@angular/common';
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormControl } from '@angular/forms';
 import { HttpErrorMessages } from '@core/messages';
 import { AlertService, ListStateService, UnsyncedOrderService, UserService } from '@core/services';
 import {
@@ -22,7 +24,8 @@ import {
   UnsyncedOrderResolutionEnum,
   UnsyncedOrderStatusEnum,
 } from '@shared/models';
-import { Observable } from 'rxjs';
+import { SearchInputComponent } from '@shared/components/search-input/search-input';
+import { debounceTime, distinctUntilChanged, Observable } from 'rxjs';
 
 type SortColumn = 'date' | 'queue' | 'cashier' | 'total' | 'error';
 type PendingAction = 'retry' | 'note' | 'discard';
@@ -52,6 +55,7 @@ const DEFAULT_PAGE_SIZE = 10;
     FilterButtonComponent,
     IconComponent,
     PullToRefreshComponent,
+    SearchInputComponent,
     SideDrawerComponent,
     SortHeaderComponent,
   ],
@@ -63,7 +67,10 @@ export class UnsyncedOrders implements OnInit {
   private readonly userService = inject(UserService);
   private readonly alertService = inject(AlertService);
   private readonly listState = inject(ListStateService);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly stateKey = 'orders:unsynced';
+
+  protected readonly searchControl = new FormControl('');
 
   protected readonly orders = signal<UnsyncedOrderDto[]>([]);
   protected readonly isLoading = signal(false);
@@ -133,6 +140,9 @@ export class UnsyncedOrders implements OnInit {
 
   public ngOnInit(): void {
     this.restoreState();
+    this.searchControl.valueChanges
+      .pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.filtersChanged());
     this.loadCashiers();
     this.loadOrders();
   }
@@ -420,6 +430,11 @@ export class UnsyncedOrders implements OnInit {
 
     if (this.cashierId()) {
       query.cashierId = this.cashierId();
+    }
+
+    const term = this.searchControl.value?.trim();
+    if (term) {
+      query.searchTerm = term;
     }
 
     return query;
