@@ -149,6 +149,18 @@ public class OfflineJudgeAtSaleTests
     }
 
     [Fact]
+    public async Task ACashierWhoLostThePermission_HoldsTheSeniorPwdSale()
+    {
+        var latte = await SeedProductAsync("Latte", 100m);
+        await SeedShopAsync(enabled: true, vatRegistered: false);
+
+        var result = await SyncAsync(SeniorSale("OFF-12", null, latte, expectedTotal: 80m), AppRoles.ItemManager);
+
+        result.Status.ShouldBe(OrderStatusEnum.PendingReview);
+        result.ReasonDetails!.Select(d => d.Code).ShouldContain(OfflineReasonCodes.SeniorPwdPermissionLost);
+    }
+
+    [Fact]
     public async Task TheSameIdTwiceInADay_IsOnlyANote()
     {
         var latte = await SeedProductAsync("Latte", 100m);
@@ -203,10 +215,10 @@ public class OfflineJudgeAtSaleTests
     private static OrderItemRequestDto Line(Guid productId, decimal quoted, (Guid Id, decimal Price)? addOn = null) =>
         new(productId, 1, addOn is null ? [] : [new OrderItemRequestDto(addOn.Value.Id, 1, [], null, null, addOn.Value.Price)], null, null, quoted);
 
-    private async Task<OfflineSyncResultDto> SyncAsync(CreateOrderCommand order)
+    private async Task<OfflineSyncResultDto> SyncAsync(CreateOrderCommand order, string role = AppRoles.Admin)
     {
         var db = TestDb.Create(_dbName, _tenant);
-        var accessor = TestRequest.As(_userId, AppRoles.Admin);
+        var accessor = TestRequest.As(_userId, role);
         var create = new CreateOrderHandler(db, accessor, TestFakes.Hub(), TestFakes.Audit(), TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(db));
         var sender = Substitute.For<ISender>();
         sender.Send(Arg.Any<CreateOrderCommand>(), Arg.Any<CancellationToken>())
