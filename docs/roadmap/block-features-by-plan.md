@@ -117,6 +117,10 @@ The server is the real gate; the app only hides things.
    the owner". Bookmarks, pushed notification links and old customer links all land there instead of an error page.
 5. **MaxUsers.** Checked in the create-user and re-activate-user handlers (the only two ways to add a seat), with the
    same style of message. Existing users are never disabled by a lower cap.
+   **Built (Nov 2026):** `UserSeatGuard` runs in both handlers and answers 403 `{ message, code: "plan_user_limit" }` (a
+   different code from `not_in_plan` so the app does not send the user to the "Not in your plan" screen). After a downgrade
+   over the cap the existing users keep working; `GET /api/subscription` returns `maxUsers`, `activeUsers` and
+   `usersOverCap` so the app can warn. The rule is `UserCapRules` in `WTF.Calculations`.
 
 ### How it meets the tenant filters
 

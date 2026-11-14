@@ -32,7 +32,7 @@ public class RestoreUserHandlerTests
         await db.SaveChangesAsync();
     }
 
-    private RestoreUserHandler Handler() => new(TestDb.Create(_dbName), TestRequest.As(_actorId), _audit);
+    private RestoreUserHandler Handler() => new(TestDb.Create(_dbName), TestRequest.As(_actorId), _audit, WTF.Domain.Tenancy.NoTenant.Instance);
 
     [Fact]
     public async Task Handle_InactiveUser_IsReactivatedAndAudited()

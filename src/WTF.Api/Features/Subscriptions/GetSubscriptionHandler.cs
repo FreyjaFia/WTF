@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
+using WTF.Api.Features.Users;
 using WTF.Calculations.Subscriptions;
 using WTF.Domain.Data;
 using WTF.Domain.Tenancy;
@@ -20,7 +21,10 @@ public record SubscriptionDto(
     DateTime ServerTime,
     string? Lease,
     int LeaseMaxAgeDays,
-    Dictionary<string, string[]>? PlansByFeature = null);
+    Dictionary<string, string[]>? PlansByFeature = null,
+    int? MaxUsers = null,
+    int ActiveUsers = 0,
+    int UsersOverCap = 0);
 
 public record TenantInvoiceDto(
     Guid Id,
@@ -75,6 +79,7 @@ public class GetSubscriptionHandler(
             return new SubscriptionDto(false, null, null, [], SubscriptionNames.Warning(SubscriptionWarning.None), 0, null, null, 0, now, null, maxAge, []);
         }
 
+        var activeUsers = state.MaxUsers is null ? 0 : await UserSeatGuard.CountActiveAsync(db, cancellationToken);
         var lease = signer.Sign(new LeasePayload(1, tenantId, now, state.PeriodEnd, state.GraceDays, state.AccessUntil, maxAge));
 
         return new SubscriptionDto(
@@ -90,7 +95,10 @@ public class GetSubscriptionHandler(
             now,
             lease,
             maxAge,
-            await PlansByFeatureAsync(cancellationToken));
+            await PlansByFeatureAsync(cancellationToken),
+            state.MaxUsers,
+            activeUsers,
+            UserCapRules.UsersOverCap(activeUsers, state.MaxUsers));
     }
 
     // For the "Available in Pro" text: the active plans that hold each switchable feature, in plan order.

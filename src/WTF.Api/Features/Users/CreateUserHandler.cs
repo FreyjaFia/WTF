@@ -6,12 +6,13 @@ using WTF.Api.Features.Users.DTOs;
 using WTF.Api.Services;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
+using WTF.Domain.Tenancy;
 
 namespace WTF.Api.Features.Users;
 
 public record CreateUserCommand(string FirstName, string LastName, string Username, string Password, int RoleId) : IRequest<UserDto>;
 
-public class CreateUserHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor, IAuditService auditService, RolePermissionCache permissionCache) : IRequestHandler<CreateUserCommand, UserDto>
+public class CreateUserHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor, IAuditService auditService, RolePermissionCache permissionCache, ICurrentTenant currentTenant) : IRequestHandler<CreateUserCommand, UserDto>
 {
     public async Task<UserDto> Handle(CreateUserCommand request, CancellationToken cancellationToken)
     {
@@ -21,6 +22,7 @@ public class CreateUserHandler(WTFDbContext db, IHttpContextAccessor httpContext
         UserValidation.EnsureValidUsername(request.Username);
         UserValidation.EnsureValidPassword(request.Password);
         await UserValidation.EnsureUniqueUsernameAsync(db, request.Username, null, cancellationToken);
+        await UserSeatGuard.EnsureSeatAvailableAsync(db, currentTenant, cancellationToken);
         var role = await UserRoleGuard.EnsureAssignableAsync(db, httpContextAccessor.HttpContext!.User, request.RoleId, cancellationToken);
 
         var user = new User

@@ -27,7 +27,7 @@ public class UserDatabaseTests
         return new LoginHandler(db, new JwtService(cfg, TestRequest.None()), new UserRoleService(db), cfg, TestFakes.Audit());
     }
 
-    private static CreateUserHandler Create(WTFDbContext db, Guid actor) => new(db, TestRequest.As(actor), TestFakes.Audit(), new RolePermissionCache(TimeProvider.System));
+    private static CreateUserHandler Create(WTFDbContext db, Guid actor) => new(db, TestRequest.As(actor), TestFakes.Audit(), new RolePermissionCache(TimeProvider.System), WTF.Domain.Tenancy.NoTenant.Instance);
     private static UpdateUserHandler Update(WTFDbContext db, Guid actor) => new(db, TestRequest.As(actor), TestFakes.Audit(), new RolePermissionCache(TimeProvider.System));
 
     private static GetUsersHandler Search(WTFDbContext db)

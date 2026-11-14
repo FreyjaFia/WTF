@@ -367,7 +367,7 @@ app.Use(async (context, next) =>
 
         context.Response.Clear();
         context.Response.StatusCode = StatusCodes.Status403Forbidden;
-        await context.Response.WriteAsJsonAsync(new { message = ex.Message });
+        await context.Response.WriteAsJsonAsync(new { message = ex.Message, code = ex.Code });
     }
     catch (DbUpdateConcurrencyException ex)
     {

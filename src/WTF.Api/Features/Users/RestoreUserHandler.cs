@@ -4,12 +4,13 @@ using WTF.Api.Common.Extensions;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Services;
 using WTF.Domain.Data;
+using WTF.Domain.Tenancy;
 
 namespace WTF.Api.Features.Users;
 
 public record RestoreUserCommand(Guid Id) : IRequest<bool>;
 
-public class RestoreUserHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor, IAuditService auditService) : IRequestHandler<RestoreUserCommand, bool>
+public class RestoreUserHandler(WTFDbContext db, IHttpContextAccessor httpContextAccessor, IAuditService auditService, ICurrentTenant currentTenant) : IRequestHandler<RestoreUserCommand, bool>
 {
     public async Task<bool> Handle(RestoreUserCommand request, CancellationToken cancellationToken)
     {
@@ -17,6 +18,11 @@ public class RestoreUserHandler(WTFDbContext db, IHttpContextAccessor httpContex
         if (user == null)
         {
             return false;
+        }
+
+        if (!user.IsActive)
+        {
+            await UserSeatGuard.EnsureSeatAvailableAsync(db, currentTenant, cancellationToken);
         }
 
         var actorUserId = httpContextAccessor.HttpContext!.User.GetUserId();

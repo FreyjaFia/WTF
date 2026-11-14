@@ -18,7 +18,7 @@ public class CreateUserHandlerTests
 
     public CreateUserHandlerTests() => TestDb.SeedSystemRoles(_dbName);
 
-    private CreateUserHandler Handler() => new(TestDb.Create(_dbName), TestRequest.As(_actorId, AppRoles.Owner), _audit, new RolePermissionCache(TimeProvider.System));
+    private CreateUserHandler Handler() => new(TestDb.Create(_dbName), TestRequest.As(_actorId, AppRoles.Owner), _audit, new RolePermissionCache(TimeProvider.System), WTF.Domain.Tenancy.NoTenant.Instance);
 
     [Fact]
     public async Task Handle_ValidUser_IsSavedActiveWithHashedPassword()

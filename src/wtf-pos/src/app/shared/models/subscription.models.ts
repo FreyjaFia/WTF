@@ -14,6 +14,9 @@ export interface SubscriptionDto {
   serverTime: string;
   lease: string | null;
   leaseMaxAgeDays: number;
+  maxUsers?: number | null;
+  activeUsers?: number;
+  usersOverCap?: number;
 }
 
 export interface LeasePayload {
