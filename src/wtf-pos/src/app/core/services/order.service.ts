@@ -290,19 +290,19 @@ export class OrderService {
     return this.http
       .patch<OrderDto>(`${this.baseUrl}/${id}/void`, { note: note ?? null, notReturnedLineIds })
       .pipe(
-      catchError((error: HttpErrorResponse) => {
-        console.error('Error voiding order:', error);
-        return throwError(
-          () =>
-            new Error(
-              this.getErrorMessage(error, OrderService.MSG_VOID_ORDER_FAILED, {
-                notFound: OrderService.MSG_ORDER_NOT_FOUND,
-                badRequest: OrderService.MSG_ORDER_CANNOT_BE_VOIDED,
-              }),
-            ),
-        );
-      }),
-    );
+        catchError((error: HttpErrorResponse) => {
+          console.error('Error voiding order:', error);
+          return throwError(
+            () =>
+              new Error(
+                this.getErrorMessage(error, OrderService.MSG_VOID_ORDER_FAILED, {
+                  notFound: OrderService.MSG_ORDER_NOT_FOUND,
+                  badRequest: OrderService.MSG_ORDER_CANNOT_BE_VOIDED,
+                }),
+              ),
+          );
+        }),
+      );
   }
 
   /** Accepts an order a customer placed through their link: it joins the normal flow as Pending. */
@@ -324,21 +324,29 @@ export class OrderService {
   }
 
   /** An Admin approves a held offline order: it becomes Completed at the prices the customer was quoted. */
-  public approveHeldOrder(id: string): Observable<OrderDto> {
-    return this.http.post<OrderDto>(`${this.baseUrl}/${id}/review/approve`, {}).pipe(
-      catchError((error: HttpErrorResponse) => {
-        console.error('Error approving held order:', error);
-        return throwError(
-          () =>
-            new Error(
-              this.getErrorMessage(error, OrderService.MSG_APPROVE_ORDER_FAILED, {
-                notFound: OrderService.MSG_ORDER_NOT_FOUND,
-                badRequest: OrderService.MSG_ORDER_NOT_WAITING,
-              }),
-            ),
-        );
-      }),
-    );
+  public approveHeldOrder(
+    id: string,
+    seniorPwdIds: { discountId: string; idNumber: string; customerName: string }[] = [],
+  ): Observable<OrderDto> {
+    return this.http
+      .post<OrderDto>(
+        `${this.baseUrl}/${id}/review/approve`,
+        seniorPwdIds.length > 0 ? { seniorPwdIds } : {},
+      )
+      .pipe(
+        catchError((error: HttpErrorResponse) => {
+          console.error('Error approving held order:', error);
+          return throwError(
+            () =>
+              new Error(
+                this.getErrorMessage(error, OrderService.MSG_APPROVE_ORDER_FAILED, {
+                  notFound: OrderService.MSG_ORDER_NOT_FOUND,
+                  badRequest: OrderService.MSG_ORDER_NOT_WAITING,
+                }),
+              ),
+          );
+        }),
+      );
   }
 
   /** An Admin turns down a held offline order; the reason is required. Waste records the stock the sale used. */
@@ -350,19 +358,19 @@ export class OrderService {
     return this.http
       .post<OrderDto>(`${this.baseUrl}/${id}/review/reject`, { reason, stockOutcome })
       .pipe(
-      catchError((error: HttpErrorResponse) => {
-        console.error('Error rejecting held order:', error);
-        return throwError(
-          () =>
-            new Error(
-              this.getErrorMessage(error, OrderService.MSG_REJECT_ORDER_FAILED, {
-                notFound: OrderService.MSG_ORDER_NOT_FOUND,
-                badRequest: OrderService.MSG_ORDER_NOT_WAITING,
-              }),
-            ),
-        );
-      }),
-    );
+        catchError((error: HttpErrorResponse) => {
+          console.error('Error rejecting held order:', error);
+          return throwError(
+            () =>
+              new Error(
+                this.getErrorMessage(error, OrderService.MSG_REJECT_ORDER_FAILED, {
+                  notFound: OrderService.MSG_ORDER_NOT_FOUND,
+                  badRequest: OrderService.MSG_ORDER_NOT_WAITING,
+                }),
+              ),
+          );
+        }),
+      );
   }
 
   /** An accepted customer order is ready for pickup or delivery; the customer sees it on their order. */

@@ -169,9 +169,18 @@ export class OrderDetails implements OnInit {
     (this.order()?.reviewDetails ?? []).filter((reason) => reason.severity === 'Note'),
   );
   protected readonly stockAfterRejecting = signal<HeldRejectStockOutcome>('none');
+  protected readonly idFixes = signal<Record<string, { idNumber: string; customerName: string }>>(
+    {},
+  );
+  protected readonly personsMissingId = computed(() =>
+    this.canReviewHeld()
+      ? (this.order()?.seniorPwdPersons ?? []).filter(
+          (person) => !person.idNumber?.trim() || !person.customerName?.trim(),
+        )
+      : [],
+  );
   protected readonly canDecide = computed(
-    () =>
-      (this.isAwaitingApproval() && this.authService.canWriteOrders()) || this.canReviewHeld(),
+    () => (this.isAwaitingApproval() && this.authService.canWriteOrders()) || this.canReviewHeld(),
   );
   protected readonly isDeciding = signal(false);
   protected readonly showRejectDialog = signal(false);
@@ -207,8 +216,8 @@ export class OrderDetails implements OnInit {
 
     return addMoney(this.paymentOrderTotal(), this.paymentTipsAmount());
   });
-  protected readonly paymentTotalPaid = computed(
-    () => subtractMoney(this.paymentAmountPaid(), this.paymentChangeAmount()),
+  protected readonly paymentTotalPaid = computed(() =>
+    subtractMoney(this.paymentAmountPaid(), this.paymentChangeAmount()),
   );
   protected readonly discountedProductPromotions = signal<DiscountedProductPromotionDto[]>([]);
   protected readonly detailItems = computed<CartItemDto[]>(() => {
@@ -293,6 +302,16 @@ export class OrderDetails implements OnInit {
 
   protected backToOrders(): void {
     this.router.navigateByUrl(AppRoutes.OrdersList);
+  }
+
+  protected filledIdFixes(): { discountId: string; idNumber: string; customerName: string }[] {
+    return Object.entries(this.idFixes())
+      .filter(([, fix]) => fix.idNumber.trim() && fix.customerName.trim())
+      .map(([discountId, fix]) => ({
+        discountId,
+        idNumber: fix.idNumber.trim(),
+        customerName: fix.customerName.trim(),
+      }));
   }
 
   protected refresh(): void {
@@ -412,13 +431,15 @@ export class OrderDetails implements OnInit {
     const held = this.isHeldForReview();
     this.isDeciding.set(true);
     const request$ = held
-      ? this.orderService.approveHeldOrder(current.id)
+      ? this.orderService.approveHeldOrder(current.id, this.filledIdFixes())
       : this.orderService.approveOrder(current.id);
     request$.subscribe({
       next: (updated) => {
         this.isDeciding.set(false);
         this.order.set(updated);
-        this.alertService.success(`Order #${current.orderNumber} ${held ? 'approved' : 'accepted'}.`);
+        this.alertService.success(
+          `Order #${current.orderNumber} ${held ? 'approved' : 'accepted'}.`,
+        );
       },
       error: (err) => {
         this.isDeciding.set(false);
@@ -427,6 +448,23 @@ export class OrderDetails implements OnInit {
         this.refresh();
       },
     });
+  }
+
+  protected setIdFix(personId: string, field: 'idNumber' | 'customerName', value: string): void {
+    const person = this.personsMissingId().find((p) => p.id === personId);
+    this.idFixes.update((fixes) => ({
+      ...fixes,
+      [personId]: {
+        idNumber: fixes[personId]?.idNumber ?? person?.idNumber ?? '',
+        customerName: fixes[personId]?.customerName ?? person?.customerName ?? '',
+        [field]: value,
+      },
+    }));
+  }
+
+  protected idFixValue(personId: string, field: 'idNumber' | 'customerName'): string {
+    const person = this.personsMissingId().find((p) => p.id === personId);
+    return this.idFixes()[personId]?.[field] ?? person?.[field] ?? '';
   }
 
   protected setStockAfterRejecting(value: string): void {
@@ -619,7 +657,10 @@ export class OrderDetails implements OnInit {
         : -1;
       if (personIndex >= 0) {
         cartItem.seniorPwdPersonIndex = personIndex;
-        cartItem.seniorPwdReduction = sumAmounts([item.seniorPwdVatExempt ?? 0, item.seniorPwdDiscount ?? 0]);
+        cartItem.seniorPwdReduction = sumAmounts([
+          item.seniorPwdVatExempt ?? 0,
+          item.seniorPwdDiscount ?? 0,
+        ]);
       }
       if (item.originalPrice != null) {
         // The promotion was captured with the line, so show exactly what was applied.
@@ -627,7 +668,10 @@ export class OrderDetails implements OnInit {
         cartItem.originalPrice = item.originalPrice;
         cartItem.promoLabel = item.promoLabel ?? null;
         cartItem.promoDiscount = discount > 0 ? discount : null;
-      } else if (!this.isFinalized(order.status) && (!hasReservedDiscount || !!item.discountPromotionId)) {
+      } else if (
+        !this.isFinalized(order.status) &&
+        (!hasReservedDiscount || !!item.discountPromotionId)
+      ) {
         // A waiting order has no stored prices yet, so show the promotion it will get from the promotions active today.
         // A finished order with no stored promotion (saved before promotions were recorded) shows none: guessing from
         // today's promotions would invent a discount that was never given.
@@ -635,7 +679,11 @@ export class OrderDetails implements OnInit {
         if (promo) {
           const discount = promoDiscount(cartItem.price, promo.price, promo.quantity);
           cartItem.originalPrice = cartItem.price;
-          cartItem.promoLabel = formatPromoLabel(promo.rule, cartItem.price, addOnsTotal(cartItem.addOns));
+          cartItem.promoLabel = formatPromoLabel(
+            promo.rule,
+            cartItem.price,
+            addOnsTotal(cartItem.addOns),
+          );
           cartItem.promoDiscount = discount > 0 ? discount : null;
         }
       }
@@ -700,7 +748,10 @@ export class OrderDetails implements OnInit {
 
     const rules = this.discountedProductPromotions()
       .flatMap((promo) =>
-        promo.items.map((entry) => ({ ...entry, maxPerOrder: promo.schedule?.maxPerOrder ?? null })),
+        promo.items.map((entry) => ({
+          ...entry,
+          maxPerOrder: promo.schedule?.maxPerOrder ?? null,
+        })),
       )
       .filter((entry) => entry.productId === item.productId);
     if (rules.length === 0) {
@@ -716,10 +767,7 @@ export class OrderDetails implements OnInit {
     return best ? { rule: best.rule, price: best.price, quantity: best.quantity } : null;
   }
 
-  private getAddOnTypeForOwner(
-    ownerProductId: string,
-    addOnProductId: string,
-  ): number | undefined {
+  private getAddOnTypeForOwner(ownerProductId: string, addOnProductId: string): number | undefined {
     const groups = this.catalogCache.getAddOnsForProduct(ownerProductId);
 
     for (const group of groups) {

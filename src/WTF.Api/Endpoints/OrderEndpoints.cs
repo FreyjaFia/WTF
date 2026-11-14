@@ -13,6 +13,8 @@ public record RejectOrderRequest(string Reason);
 
 public record RejectHeldOrderRequest(string Reason, string? StockOutcome = null);
 
+public record ApproveHeldOrderRequest(List<SeniorPwdIdFix>? SeniorPwdIds = null);
+
 public record BulkApproveHeldOrdersRequest(
     List<string>? ReasonCodes = null,
     Guid? CashierId = null,
@@ -220,9 +222,9 @@ public static class OrderEndpoints
 
         // POST /api/orders/{id}/review/approve - An Admin approves a held offline order (-> Completed at the quoted prices)
         orderGroup.MapPost("/{id:guid}/review/approve",
-            async (Guid id, ISender sender) =>
+            async (Guid id, ISender sender, ApproveHeldOrderRequest? request) =>
             {
-                var result = await sender.Send(new ApproveHeldOrderCommand(id));
+                var result = await sender.Send(new ApproveHeldOrderCommand(id, request?.SeniorPwdIds));
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             })
             .RequireAuthorization(AppPolicies.OrdersOverride);

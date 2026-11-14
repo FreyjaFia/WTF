@@ -1002,6 +1002,33 @@ describe('OrderDetails', () => {
       expect(orderService.approveHeldOrder).not.toHaveBeenCalled();
     });
 
+    it('lets an Admin fill in a missing Senior/PWD ID while approving', async () => {
+      orderService.approveHeldOrder.mockReturnValue(
+        of(makeOrder({ orderNumber: 21, status: OrderStatusEnum.Completed })),
+      );
+      await create(
+        held({
+          seniorPwdPersons: [
+            { id: 'd1', type: 1, idNumber: '', customerName: '', coveredAmount: 100, vatExemptAmount: 0, discountAmount: 20 },
+          ],
+        }),
+      );
+
+      expect(fixture.nativeElement.querySelector('[data-testid="fill-senior-pwd-ids"]')).not.toBeNull();
+      const id = fixture.nativeElement.querySelector('[data-testid="fix-id-0"]') as HTMLInputElement;
+      const name = fixture.nativeElement.querySelector('[data-testid="fix-name-0"]') as HTMLInputElement;
+      id.value = ' SC-77 ';
+      id.dispatchEvent(new Event('input'));
+      name.value = 'Lola Remedios';
+      name.dispatchEvent(new Event('input'));
+
+      button('Approve')!.click();
+
+      expect(orderService.approveHeldOrder).toHaveBeenCalledWith('o1', [
+        { discountId: 'd1', idNumber: 'SC-77', customerName: 'Lola Remedios' },
+      ]);
+    });
+
     it('approves it and shows the completed order', async () => {
       orderService.approveHeldOrder.mockReturnValue(
         of(makeOrder({ orderNumber: 21, status: OrderStatusEnum.Completed })),
@@ -1011,7 +1038,7 @@ describe('OrderDetails', () => {
       button('Approve')!.click();
       fixture.detectChanges();
 
-      expect(orderService.approveHeldOrder).toHaveBeenCalledWith('o1');
+      expect(orderService.approveHeldOrder).toHaveBeenCalledWith('o1', []);
       expect(orderService.approveOrder).not.toHaveBeenCalled();
       expect(alert['success']).toHaveBeenCalledWith('Order #21 approved.');
       expect(box()).toBeNull();

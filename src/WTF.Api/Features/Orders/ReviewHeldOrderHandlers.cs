@@ -13,7 +13,9 @@ using WTF.Domain.Entities;
 
 namespace WTF.Api.Features.Orders;
 
-public record ApproveHeldOrderCommand(Guid Id) : IRequest<OrderDto?>;
+public record SeniorPwdIdFix(Guid DiscountId, string IdNumber, string CustomerName);
+
+public record ApproveHeldOrderCommand(Guid Id, List<SeniorPwdIdFix>? IdFixes = null) : IRequest<OrderDto?>;
 
 public static class HeldRejectStockOutcomes
 {
@@ -38,8 +40,42 @@ public class ApproveHeldOrderHandler(
         }
 
         var userId = httpContextAccessor.HttpContext!.User.GetUserId();
+        await FillMissingSeniorPwdIdsAsync(order, request.IdFixes, cancellationToken);
         await approver.ApproveAsync(order, userId, cancellationToken);
         return await sender.Send(new GetOrderByIdQuery(order.Id), cancellationToken);
+    }
+
+    private async Task FillMissingSeniorPwdIdsAsync(Order order, List<SeniorPwdIdFix>? fixes, CancellationToken cancellationToken)
+    {
+        if (fixes is null || fixes.Count == 0)
+        {
+            return;
+        }
+
+        HeldOrderDecision.EnsureHeld(order, "approved");
+
+        var persons = await db.OrderSeniorPwdDiscounts.Where(d => d.OrderId == order.Id).ToListAsync(cancellationToken);
+        foreach (var fix in fixes)
+        {
+            var person = persons.FirstOrDefault(p => p.Id == fix.DiscountId)
+                ?? throw new InvalidOperationException("That Senior/PWD discount is not on this order.");
+            var idNumber = fix.IdNumber?.Trim() ?? string.Empty;
+            var name = fix.CustomerName?.Trim() ?? string.Empty;
+            if (idNumber.Length == 0 || idNumber.Length > 50 || idNumber.Any(char.IsControl))
+            {
+                throw new InvalidOperationException("The ID number is not valid (50 characters at most).");
+            }
+
+            if (name.Length == 0 || name.Length > 100 || name.Any(char.IsControl))
+            {
+                throw new InvalidOperationException("The name on the ID is not valid (100 characters at most).");
+            }
+
+            person.IdNumber = idNumber;
+            person.CustomerName = name;
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
     }
 }
 

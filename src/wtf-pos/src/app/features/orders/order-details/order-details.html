@@ -227,6 +227,42 @@
                 </ul>
               </div>
             }
+            @if (personsMissingId().length > 0) {
+              <div class="mt-3 border-t border-amber-200 pt-3" data-testid="fill-senior-pwd-ids">
+                <p class="text-xs font-semibold tracking-wide text-gray-600 uppercase">
+                  Senior/PWD ID missing
+                </p>
+                <p class="mb-2 text-xs text-gray-500">
+                  Fill in the ID number and the name on the ID from the customer's card, or approve without them.
+                </p>
+                @for (person of personsMissingId(); track person.id; let i = $index) {
+                  <div class="mb-2 grid gap-2 sm:grid-cols-2">
+                    <input
+                      type="text"
+                      autocomplete="off"
+                      maxlength="50"
+                      placeholder="ID number"
+                      aria-label="ID number"
+                      class="input input-bordered input-sm w-full outline-transparent"
+                      [attr.data-testid]="'fix-id-' + i"
+                      [value]="idFixValue(person.id, 'idNumber')"
+                      (input)="setIdFix(person.id, 'idNumber', $any($event.target).value)"
+                    />
+                    <input
+                      type="text"
+                      autocomplete="off"
+                      maxlength="100"
+                      placeholder="Name on the ID"
+                      aria-label="Name on the ID"
+                      class="input input-bordered input-sm w-full outline-transparent"
+                      [attr.data-testid]="'fix-name-' + i"
+                      [value]="idFixValue(person.id, 'customerName')"
+                      (input)="setIdFix(person.id, 'customerName', $any($event.target).value)"
+                    />
+                  </div>
+                }
+              </div>
+            }
             @if (canReviewHeld()) {
               <div class="mt-3 border-t border-amber-200 pt-3" data-testid="reject-stock">
                 <label

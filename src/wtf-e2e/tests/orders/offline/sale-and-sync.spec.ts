@@ -77,10 +77,10 @@ test.describe('selling without a connection and syncing later @orders @offline',
     await editor.open();
 
     await readyToSellOffline(editor, drink.name);
+    await api.products.setPrice(drink.id, 120);
     await page.context().setOffline(true);
     await editor.addProduct(drink.name);
     await editor.payCash(100);
-    await api.products.setPrice(drink.id, 120);
     await page.context().setOffline(false);
 
     await expect
