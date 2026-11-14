@@ -14,6 +14,7 @@ function body(overrides: Record<string, unknown> = {}): Record<string, unknown> 
     ownerFirstName: 'Edge',
     ownerLastName: 'Owner',
     ownerUsername: `own-${slug}`.slice(0, 50),
+    planCode: 'business',
     ...overrides,
   };
 }
@@ -198,5 +199,35 @@ test.describe('shop addresses and owner names, edge cases @tenancy @edge @platfo
 
     expect(a.temporaryPassword).not.toBe(b.temporaryPassword);
     expect(a.temporaryPassword).not.toBe(testPassword());
+  });
+});
+
+test.describe('choosing the plan of a new shop @tenancy @edge @platform', () => {
+  test('refuses a shop with no plan, a blank plan or a retired plan, and leaves no half-made shop behind', async ({ platform }) => {
+    const retiredCode = `retired-${uniqueSlug('p')}`.slice(0, 40);
+    await platform.json('POST', 'plans', { code: retiredCode, name: 'Retired', monthlyPrice: 900, features: [], maxUsers: null, isActive: false });
+    const slugs = [uniqueSlug('nop'), uniqueSlug('blank'), uniqueSlug('old')];
+
+    const none = await platform.call('POST', 'tenants', body({ slug: slugs[0], planCode: undefined }));
+    const blank = await platform.call('POST', 'tenants', body({ slug: slugs[1], planCode: '  ' }));
+    const retired = await platform.call('POST', 'tenants', body({ slug: slugs[2], planCode: retiredCode }));
+
+    expect([none.status(), blank.status(), retired.status()]).toEqual([400, 400, 400]);
+    expect(await none.text()).toContain('Choose a plan');
+    expect(await retired.text()).toContain('Plan not found');
+    const known = (await platform.tenants()).map((tenant) => tenant.slug);
+    for (const slug of slugs) {
+      expect(known).not.toContain(slug);
+    }
+  });
+
+  test('puts the new shop on the plan that was asked for and records it in the platform log', async ({ platform }) => {
+    const created = await platform.createShop({ planCode: 'pro' });
+
+    const subscription = await platform.json<{ planName: string }>('GET', `tenants/${created.tenant.id}/subscription`);
+    const log = await platform.auditLog(created.tenant.id);
+
+    expect(subscription.planName).toBe('Pro');
+    expect(log.find((entry) => entry.action === 'TenantCreated')?.details).toContain('Pro plan');
   });
 });

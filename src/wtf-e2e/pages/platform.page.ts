@@ -67,6 +67,7 @@ export interface NewShopForm {
   readonly lastName: string;
   readonly username: string;
   readonly trial?: boolean;
+  readonly plan?: string;
 }
 
 export class PlatformShopsPage {
@@ -114,6 +115,10 @@ export class PlatformShopsPage {
     return ids.map((id) => id.replace(/^shop-/, ''));
   }
 
+  public get planSelect(): Locator {
+    return this.dialog.getByTestId('shop-plan');
+  }
+
   public async fillAndCreate(form: NewShopForm): Promise<void> {
     await this.newShopButton.click();
     await this.dialog.getByLabel('Shop name').fill(form.name);
@@ -121,6 +126,11 @@ export class PlatformShopsPage {
     await this.dialog.getByLabel('Owner first name').fill(form.firstName);
     await this.dialog.getByLabel('Owner last name').fill(form.lastName);
     await this.dialog.getByLabel('Owner username').fill(form.username);
+    if (form.plan) {
+      await this.dialog.getByTestId('shop-plan').click();
+      await this.dialog.getByRole('option', { name: new RegExp(form.plan) }).click();
+    }
+
     if (form.trial) {
       await this.dialog.getByLabel('Start as a trial').check();
     }

@@ -297,3 +297,26 @@ test.describe('managing shops from the platform @tenancy @platform', () => {
     await page.waitForURL((url) => !url.pathname.startsWith('/login'));
   });
 });
+
+test.describe('picking the plan when creating a shop @tenancy @platform', () => {
+  test('preselects the cheapest paid plan, and lets the platform admin pick another one', async ({ platform, newContext }) => {
+    const page = await platformPage(newContext);
+    const shops = new PlatformShopsPage(page);
+    await shops.open();
+    await shops.newShopButton.click();
+
+    await expect(shops.planSelect).toContainText('Starter');
+    await shops.planSelect.click();
+    await expect(shops.dialog.getByRole('option', { name: /Pro/ })).toBeVisible();
+    await expect(shops.dialog.getByRole('option', { name: /Business/ })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(shops.dialog).toHaveCount(0);
+
+    const slug = uniqueSlug('ui-plan');
+    await shops.fillAndCreate({ name: unique('UI Plan Shop'), slug, firstName: 'Pia', lastName: 'Owner', username: `owner-${slug}`.slice(0, 50), plan: 'Pro' });
+    await expect(shops.secret).toBeVisible();
+
+    const created = (await platform.tenants()).find((tenant) => tenant.slug === slug);
+    expect((await platform.json<{ planName: string }>('GET', `tenants/${created?.id}/subscription`)).planName).toBe('Pro');
+  });
+});

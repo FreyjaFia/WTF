@@ -37,3 +37,15 @@ export function effectiveNow(deviceNow: Date, latestSeen: Date | null): Date {
 export function leaseTooOld(issuedAt: Date, now: Date, maxAgeDays: number): boolean {
   return now.getTime() - issuedAt.getTime() > Math.max(0, maxAgeDays) * DAY_MS;
 }
+
+export interface ShopPlanChoice {
+  code: string;
+  isActive: boolean;
+  monthlyPrice: number;
+}
+
+export function defaultPlanCodeForNewShop(plans: readonly ShopPlanChoice[]): string | null {
+  const byPrice = plans.filter((plan) => plan.isActive).sort((a, b) => a.monthlyPrice - b.monthlyPrice);
+
+  return (byPrice.find((plan) => plan.monthlyPrice > 0) ?? byPrice[0])?.code ?? null;
+}
