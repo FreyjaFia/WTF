@@ -200,11 +200,12 @@ describe('ReportsComponent', () => {
       await create();
 
       const types = t.catalog.flatMap((section) => section.reports.map((r) => r.type));
-      expect(types.length).toBe(11);
+      expect(types.length).toBe(12);
       for (const gated of ['stock-status', 'waste', 'stock-variance', 'gross-profit', 'profit-loss', 'promotions', 'customer-links']) {
         expect(types).not.toContain(gated);
       }
       expect(types).toContain('daily-sales');
+      expect(types).toContain('senior-pwd');
       expect(t.catalog.map((s) => s.group)).not.toContain('Inventory');
     });
 
