@@ -118,6 +118,21 @@ describe('UnsyncedOrders', () => {
     expect(alerts.error).toHaveBeenCalledWith('boom');
   });
 
+  it('searches by queue number or error after a pause, from page 1', () => {
+    const { vm } = create();
+    vi.useFakeTimers();
+    try {
+      vm['searchControl'].setValue('OFF-7');
+      vi.advanceTimersByTime(299);
+      expect(lastQuery().searchTerm).toBeUndefined();
+      vi.advanceTimersByTime(1);
+
+      expect(lastQuery()).toMatchObject({ searchTerm: 'OFF-7', page: 1 });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('sorts by the clicked column and flips the direction', () => {
     const { vm } = create();
 
