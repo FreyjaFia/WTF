@@ -101,7 +101,7 @@ describe('NotificationsComponent', () => {
     const { el, service, fixture } = setup({ items: [row('a')], unread: 1 });
     const filters = [...el.querySelectorAll('[data-testid="kind-filter"]')] as HTMLElement[];
     const radio = (index: number) => filters[index].querySelector('input') as HTMLInputElement;
-    expect(filters.map((f) => f.textContent?.replace(/\s+/g, ' ').trim())).toEqual(['All 1', 'Stock 1', 'Waste', 'Subscription']);
+    expect(filters.map((f) => f.textContent?.replace(/\s+/g, ' ').trim())).toEqual(['All 1', 'Stock 1', 'Waste', 'Subscription', 'Held orders']);
 
     radio(1).click();
     fixture.detectChanges();
