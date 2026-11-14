@@ -4,11 +4,13 @@ import { TestBed } from '@angular/core/testing';
 import { HttpErrorMessages, ServiceErrorMessages } from '@core/messages';
 import { environment } from '@environments/environment.development';
 import { AppRoles } from '@shared/constants/app-roles';
+import { SubscriptionDto } from '@shared/models/subscription.models';
 import { Permissions, SystemRolePermissions } from '@shared/permissions';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { capture, failNetwork, failWith } from '../../testing/service-testing';
 import { AuthService } from './auth.service';
 import { db } from './db';
+import { PlanStore } from './plan-store';
 
 function makeToken(payload: Record<string, unknown>): string {
   const encode = (value: unknown) =>
@@ -224,6 +226,8 @@ describe('AuthService session', () => {
       const clearCatalog = vi.spyOn(db.catalog, 'clear').mockResolvedValue(undefined as never);
       const clearImages = vi.spyOn(db.images, 'clear').mockResolvedValue(undefined as never);
       const auth = create();
+      const plans = TestBed.inject(PlanStore);
+      plans.apply({ managed: true, features: ['inventory'], planName: 'Starter' } as SubscriptionDto);
       localStorage.setItem('wtf-device-tenant', 'aaaaaaaa-0000-0000-0000-000000000001');
       const access = makeToken({
         exp: nowSeconds() + 3600,
@@ -237,6 +241,7 @@ describe('AuthService session', () => {
       expect(db.carts.clear).toHaveBeenCalled();
       expect(clearCatalog).toHaveBeenCalled();
       expect(clearImages).toHaveBeenCalled();
+      expect(plans.isKnown()).toBe(false);
       expect(localStorage.getItem('wtf-device-tenant')).toBe('bbbbbbbb-0000-0000-0000-000000000002');
     });
 
@@ -382,6 +387,17 @@ describe('AuthService session', () => {
       expect(roles.at(-1)).toEqual([]);
       expect(db.carts.clear).toHaveBeenCalled();
       expect(auth.isAuthenticated()).toBe(false);
+    });
+
+    it('forgets the plan of the shop that signed out', () => {
+      const auth = create(tokenFor(AppRoles.Admin));
+      const plans = TestBed.inject(PlanStore);
+      plans.apply({ managed: true, features: ['inventory'], planName: 'Starter' } as SubscriptionDto);
+
+      auth.logout();
+
+      expect(plans.isKnown()).toBe(false);
+      expect(plans.hasFeature('promotions')).toBe(true);
     });
   });
 

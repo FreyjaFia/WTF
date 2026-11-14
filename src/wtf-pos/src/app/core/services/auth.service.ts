@@ -15,6 +15,7 @@ import { LoginDto, MeDto } from '@shared/models';
 import { BehaviorSubject, Observable, Subject, of, throwError } from 'rxjs';
 import { catchError, finalize, map, shareReplay, switchMap, tap } from 'rxjs/operators';
 import { db } from './db';
+import { PlanStore } from './plan-store';
 import {
   currentTenantId,
   DEFAULT_TENANT_ID,
@@ -70,6 +71,7 @@ export class AuthService {
   private static readonly MSG_NETWORK_UNAVAILABLE = HttpErrorMessages.NetworkUnavailable;
 
   private readonly http = inject(HttpClient);
+  private readonly plans = inject(PlanStore);
   private readonly baseUrl = `${environment.apiUrl}/auth`;
   private _isLoggedIn = new BehaviorSubject<boolean>(!!localStorage.getItem('token'));
   private readonly rolesSubject = new BehaviorSubject<string[]>([]);
@@ -223,6 +225,7 @@ export class AuthService {
       // Another shop signed in on this device: its menu, prices, images and cart must never show here.
       // Orders still waiting to sync stay queued, marked with their own shop, and only that shop's login sends them.
       void Promise.all([db.carts.clear(), db.catalog.clear(), db.images.clear()]);
+      this.plans.clear();
       this.localDataClearedSubject.next();
     }
 
@@ -234,6 +237,7 @@ export class AuthService {
     localStorage.removeItem('token');
     localStorage.removeItem('refreshToken');
     this.clearPermissions();
+    this.plans.clear();
     this._isLoggedIn.next(false);
     this.rolesSubject.next([]);
     db.carts.clear();
