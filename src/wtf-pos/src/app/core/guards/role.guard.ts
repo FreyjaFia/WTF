@@ -1,14 +1,13 @@
-import { HttpClient } from '@angular/common/http';
 import { Injector, inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
-import { AuthService, PlanStore } from '@core/services';
-import { SubscriptionDto } from '@shared/models/subscription.models';
-import { environment } from '@environments/environment.development';
-import { firstValueFrom } from 'rxjs';
+import { AuthService, PlanStore, SubscriptionService } from '@core/services';
 import { AppRole } from '@shared/constants/app-roles';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { PermissionCatalog, PermissionKey } from '@shared/permissions';
-import { notInPlanPath } from './feature.guard';
+
+export function notInPlanPath(feature: string): string {
+  return `${AppRoutes.NotInPlan}?feature=${encodeURIComponent(feature)}`;
+}
 
 function fallbackRouteFor(auth: AuthService): string {
   if (auth.canReadOrders()) {
@@ -45,6 +44,33 @@ function missingPlanFeature(
   return features[0];
 }
 
+async function denied(
+  auth: AuthService,
+  router: Router,
+  plans: PlanStore,
+  injector: Injector,
+  requiredPermission: PermissionKey | undefined,
+  anyPermission: readonly PermissionKey[] | undefined,
+): Promise<boolean> {
+  if (!plans.isKnown()) {
+    // A direct address on a fresh load: ask the server for the plan so the right page opens.
+    try {
+      await injector.get(SubscriptionService).loadPlan();
+    } catch {
+      // No subscription service available: fall through to the permission fallback.
+    }
+  }
+
+  const missingFeature = missingPlanFeature(plans, requiredPermission, anyPermission);
+  const target = missingFeature ? notInPlanPath(missingFeature) : fallbackRouteFor(auth);
+
+  if (!(await router.navigateByUrl(target)) && target !== AppRoutes.Login) {
+    await router.navigateByUrl(AppRoutes.Login);
+  }
+
+  return false;
+}
+
 export const roleGuard: CanActivateFn = (route) => {
   const auth = inject(AuthService);
   const router = inject(Router);
@@ -65,32 +91,3 @@ export const roleGuard: CanActivateFn = (route) => {
 
   return denied(auth, router, plans, injector, requiredPermission, anyPermission);
 };
-
-async function denied(
-  auth: AuthService,
-  router: Router,
-  plans: PlanStore,
-  injector: Injector,
-  requiredPermission: PermissionKey | undefined,
-  anyPermission: readonly PermissionKey[] | undefined,
-): Promise<boolean> {
-  if (!plans.isKnown()) {
-    // A direct address on a fresh load: ask the server for the plan so the right page opens.
-    try {
-      const http = injector.get(HttpClient);
-      plans.apply(await firstValueFrom(http.get<SubscriptionDto>(`${environment.apiUrl}/subscription`)));
-    } catch {
-      // Offline or refused: fall through to the permission fallback.
-    }
-  }
-
-  const missingFeature = missingPlanFeature(plans, requiredPermission, anyPermission);
-
-  if (missingFeature) {
-    router.navigateByUrl(notInPlanPath(missingFeature));
-    return false;
-  }
-
-  router.navigateByUrl(fallbackRouteFor(auth));
-  return false;
-}

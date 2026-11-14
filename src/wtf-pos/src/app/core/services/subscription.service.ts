@@ -10,7 +10,7 @@ import {
   warningLevel,
 } from '@shared/calculations/subscription-rules';
 import { LeasePayload, SubscriptionDto, TenantInvoiceDto } from '@shared/models/subscription.models';
-import { Observable } from 'rxjs';
+import { firstValueFrom, Observable } from 'rxjs';
 import { PlanStore } from './plan-store';
 
 interface StoredLease {
@@ -135,6 +135,16 @@ export class SubscriptionService implements OnDestroy {
         this.refreshInFlight = false;
       },
     });
+  }
+
+  public async loadPlan(): Promise<boolean> {
+    try {
+      await this.accept(await firstValueFrom(this.http.get<SubscriptionDto>(this.baseUrl)));
+
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   public getInvoices(): Observable<TenantInvoiceDto[]> {

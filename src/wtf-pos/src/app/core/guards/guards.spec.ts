@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRouteSnapshot, Router, RouterStateSnapshot } from '@angular/router';
-import { AuthService, PlanStore } from '@core/services';
+import { AuthService, PlanStore, SubscriptionService } from '@core/services';
 import { SubscriptionDto } from '@shared/models/subscription.models';
 import { AppRole, AppRoles } from '@shared/constants/app-roles';
 import { AppRoutes } from '@shared/constants/app-routes';
@@ -36,7 +36,7 @@ describe('route guards', () => {
       canOpenManagementMenu: vi.fn().mockReturnValue(false),
       hasAnyRole: vi.fn().mockReturnValue(false),
     };
-    router = { navigateByUrl: vi.fn() };
+    router = { navigateByUrl: vi.fn().mockResolvedValue(true) };
     TestBed.configureTestingModule({
       providers: [
         { provide: AuthService, useValue: auth },
@@ -175,6 +175,29 @@ describe('route guards', () => {
 
       await expect(run(route)).resolves.toBe(false);
       expect(router.navigateByUrl).toHaveBeenCalledWith(AppRoutes.OrdersList);
+    });
+
+    it('asks the subscription service for the plan when it is not known yet', async () => {
+      const loadPlan = vi.fn().mockImplementation(async () => {
+        TestBed.inject(PlanStore).apply({ managed: true, features: ['inventory'], planName: 'Starter' } as SubscriptionDto);
+        return true;
+      });
+      TestBed.overrideProvider(SubscriptionService, { useValue: { loadPlan } });
+      auth['can'] = vi.fn().mockReturnValue(false);
+      const route = { data: { permission: 'promotions.read' } } as unknown as ActivatedRouteSnapshot;
+
+      await expect(run(route)).resolves.toBe(false);
+      expect(loadPlan).toHaveBeenCalledTimes(1);
+      expect(router.navigateByUrl).toHaveBeenCalledWith(`${AppRoutes.NotInPlan}?feature=promotions`);
+    });
+
+    it('falls back to the login page when the first redirect is refused', async () => {
+      router.navigateByUrl.mockResolvedValueOnce(false);
+      auth['canReadOrders'].mockReturnValue(true);
+
+      await expect(run(routeWithRoles([AppRoles.Admin]))).resolves.toBe(false);
+      expect(router.navigateByUrl).toHaveBeenNthCalledWith(1, AppRoutes.OrdersList);
+      expect(router.navigateByUrl).toHaveBeenNthCalledWith(2, AppRoutes.Login);
     });
 
     it('allows users holding one of the required roles', () => {

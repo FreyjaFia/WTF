@@ -3,6 +3,7 @@ import { environment } from '@environments/environment.development';
 import { LeasePayload, SubscriptionDto } from '@shared/models/subscription.models';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setupHttpService } from '../../testing/service-testing';
+import { PlanStore } from './plan-store';
 import { SubscriptionService } from './subscription.service';
 
 function encode(payload: LeasePayload): string {
@@ -46,6 +47,21 @@ describe('SubscriptionService', () => {
   afterEach(() => {
     vi.useRealTimers();
     localStorage.clear();
+  });
+
+  it('loadPlan applies the plan and reports whether the server answered', async () => {
+    vi.setSystemTime(new Date('2026-11-10T00:00:00Z'));
+    const { service, http } = setupHttpService(SubscriptionService);
+    const loaded = service.loadPlan();
+    http.expectOne(url).flush({ ...dto(null, '2026-11-10T00:00:00Z'), managed: true, features: ['inventory'] });
+
+    await expect(loaded).resolves.toBe(true);
+    expect(TestBed.inject(PlanStore).hasFeature('promotions')).toBe(false);
+
+    const failed = service.loadPlan();
+    http.expectOne(url).flush('x', { status: 500, statusText: 'err' });
+
+    await expect(failed).resolves.toBe(false);
   });
 
   it('is open when the shop has no subscription', async () => {
