@@ -6,6 +6,8 @@ public static class OfflineSyncWindow
 
     public const string LastOnlineHeader = "X-Last-Online";
 
+    public static readonly TimeSpan ClockSkew = TimeSpan.FromMinutes(5);
+
     private const string CutoffKey = "WTF.OfflineSyncCutoff";
 
     public static bool IsOfflineSyncRoute(HttpRequest request) =>
@@ -14,6 +16,27 @@ public static class OfflineSyncWindow
             || request.Path.Equals("/api/orders/batch", StringComparison.OrdinalIgnoreCase));
 
     public static void Open(HttpContext context, DateTime closedSince) => context.Items[CutoffKey] = closedSince;
+
+    public static string? CheckClaimedTime(DateTime? claimedAt, DateTime utcNow, TimeSpan? maxAge)
+    {
+        if (claimedAt is not { } claimed)
+        {
+            return null;
+        }
+
+        var effective = claimed.ToUniversalTime();
+        if (effective > utcNow.Add(ClockSkew))
+        {
+            return "The order time cannot be in the future.";
+        }
+
+        return maxAge is { } age && effective < utcNow - age ? "The order time is too far in the past." : null;
+    }
+
+    public static string? CheckOnlineCreate(HttpContext? context, DateTime? claimedAt, DateTime utcNow)
+    {
+        return CheckClaimedTime(claimedAt, utcNow, ClockSkew) ?? Check(context, claimedAt, utcNow);
+    }
 
     public static string? Check(HttpContext? context, DateTime? claimedAt, DateTime utcNow)
     {

@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Auth;
 using WTF.Api.Common.Auth.Permissions;
+using WTF.Api.Common.Tenancy;
 using WTF.Api.Features.Inventory;
 using WTF.Api.Features.Orders;
 using WTF.Api.Features.Orders.Enums;
@@ -83,8 +84,15 @@ public static class OrderEndpoints
 
         // POST /api/orders - Create new order
         orderGroup.MapPost("/",
-            async (CreateOrderCommand command, ISender sender, WTFDbContext db) =>
+            async (CreateOrderCommand command, ISender sender, WTFDbContext db, HttpContext httpContext) =>
             {
+                // Only the offline routes (sync, batch) may carry the time an order was sold; here it must be about now.
+                var badTime = OfflineSyncWindow.CheckOnlineCreate(httpContext, command.CreatedAt, DateTime.UtcNow);
+                if (badTime is not null)
+                {
+                    throw new InvalidOperationException(badTime);
+                }
+
                 // A retry after a lost response carries the same key: answer with the order that was already saved.
                 var key = command.OfflineLocalId?.Trim();
                 if (!string.IsNullOrEmpty(key))

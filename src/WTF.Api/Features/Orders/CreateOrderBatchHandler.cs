@@ -20,7 +20,9 @@ public class CreateOrderBatchHandler(WTFDbContext db, ISender sender, IHttpConte
 
         foreach (var order in request.Orders)
         {
-            var tooLate = OfflineSyncWindow.Check(httpContextAccessor?.HttpContext, order.CreatedAt, DateTime.UtcNow);
+            var now = DateTime.UtcNow;
+            var tooLate = OfflineSyncWindow.CheckClaimedTime(order.CreatedAt, now, null)
+                ?? OfflineSyncWindow.Check(httpContextAccessor?.HttpContext, order.CreatedAt, now);
             if (tooLate is not null)
             {
                 throw new InvalidOperationException(tooLate);
