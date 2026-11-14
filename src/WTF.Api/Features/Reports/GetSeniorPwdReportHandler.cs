@@ -5,7 +5,7 @@ using WTF.Api.Common.Time;
 using WTF.Api.Features.Orders;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Features.Reports.DTOs;
-using WTF.Calculations.Sales;
+using WTF.Calculations.Orders;
 using WTF.Calculations.Time;
 using WTF.Domain.Data;
 
@@ -33,7 +33,7 @@ public sealed class GetSeniorPwdReportHandler(
             .Where(d =>
                 d.Order.CreatedAt >= fromUtc
                 && d.Order.CreatedAt < toExclusiveUtc
-                && d.Order.StatusId == OrderStatuses.Completed
+                && SeniorPwdReportRules.CountedStatuses.Contains(d.Order.StatusId)
                 && (source == null || d.Order.Source == source))
             .OrderBy(d => d.Order.CreatedAt)
             .ThenBy(d => d.Order.OrderNumber)
@@ -44,6 +44,7 @@ public sealed class GetSeniorPwdReportHandler(
                 d.OrderId,
                 d.Order.OrderNumber,
                 d.Order.CreatedAt,
+                d.Order.StatusId,
                 d.Type,
                 d.CustomerName,
                 d.IdNumber,
@@ -67,7 +68,8 @@ public sealed class GetSeniorPwdReportHandler(
                 r.CoveredAmount,
                 r.VatExemptAmount,
                 r.DiscountAmount,
-                r.CoveredAmount - r.VatExemptAmount - r.DiscountAmount))
+                SeniorPwdReportRules.NetAmount(r.CoveredAmount, r.VatExemptAmount, r.DiscountAmount),
+                SeniorPwdReportRules.IsRefunded(r.StatusId) ? "Refunded" : "Sold"))
             .ToList();
     }
 

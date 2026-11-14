@@ -57,9 +57,27 @@ public class GetSeniorPwdReportHandlerTests
         row.OrderedAt.ShouldBe(new DateTime(2026, 3, 10, 12, 0, 0));
     }
 
+    [Fact]
+    public async Task Handle_RefundedOrder_StaysInTheListMarkedRefunded_SoTheTotalMatchesTheSalesColumns()
+    {
+        await SeedAsync(Refunded);
+
+        var row = (await Handler().Handle(Query(), default)).ShouldHaveSingleItem();
+
+        row.Status.ShouldBe("Refunded");
+        row.NetAmount.ShouldBe(71.43m);
+    }
+
+    [Fact]
+    public async Task Handle_CompletedOrder_IsMarkedSold()
+    {
+        await SeedAsync();
+
+        (await Handler().Handle(Query(), default)).ShouldHaveSingleItem().Status.ShouldBe("Sold");
+    }
+
     [Theory]
     [InlineData(Cancelled)]
-    [InlineData(Refunded)]
     [InlineData(Pending)]
     public async Task Handle_OrderThatIsNotASale_IsLeftOut(int status)
     {

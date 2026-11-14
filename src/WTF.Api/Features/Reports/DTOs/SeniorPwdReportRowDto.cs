@@ -11,5 +11,6 @@ public sealed record SeniorPwdReportRowDto(
     decimal CoveredAmount,
     decimal VatExemptAmount,
     decimal DiscountAmount,
-    decimal NetAmount
+    decimal NetAmount,
+    string Status = "Sold"
 );

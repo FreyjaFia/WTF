@@ -254,6 +254,7 @@ internal static class ReportTables
             new("orderedAt", "Date", r => Date(r.OrderedAt), r => r.OrderedAt, false, 1.5f),
             new("orderNumber", "Order", r => $"#{r.OrderNumber}", r => r.OrderNumber, false, 0.8f),
             new("type", "Type", r => r.Type, r => r.Type, false, 0.9f),
+            new("status", "Status", r => r.Status, r => r.Status, false, 0.9f),
             new("customerName", "Name", r => r.CustomerName, r => r.CustomerName, false, 2f),
             new("idNumber", "ID", r => r.IdNumber, r => r.IdNumber, false, 1.5f),
             new("coveredAmount", "Covered", r => Money(r.CoveredAmount), r => r.CoveredAmount, true, 1.2f, rows => Money(rows.Sum(r => r.CoveredAmount))),

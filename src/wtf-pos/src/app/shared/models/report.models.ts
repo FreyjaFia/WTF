@@ -179,6 +179,7 @@ export interface SeniorPwdReportRowDto {
   vatExemptAmount: number;
   discountAmount: number;
   netAmount: number;
+  status?: string;
 }
 
 export interface VoidedOrderReportRowDto {

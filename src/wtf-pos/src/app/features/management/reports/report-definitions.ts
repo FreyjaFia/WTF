@@ -975,6 +975,7 @@ const seniorPwd: ReportDefinition = {
       label: (row) => `#${String(row['orderNumber'])}`,
     },
     { key: 'type', header: 'Type', format: 'text' },
+    { key: 'status', header: 'Status', format: 'text' },
     { key: 'customerName', header: 'Name', format: 'text' },
     { key: 'idNumber', header: 'ID', format: 'text' },
     { key: 'coveredAmount', header: 'Covered', format: 'money', align: 'end' },
