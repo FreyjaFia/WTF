@@ -22,8 +22,8 @@ public record BrandDto(
     string? ReceiptFooter,
     string? RegistrationText,
     string PrimaryColor,
-    bool SeniorPwdEnabled = false,
-    bool VatRegistered = false);
+    bool? SeniorPwdEnabled = null,
+    bool? VatRegistered = null);
 
 // What the public customer page may know: the look and the contact lines, nothing about the shop's setup.
 public record PublicBrandDto(
@@ -115,7 +115,7 @@ public static class BrandDefaults
     }
 
     public static async Task SaveAsync(
-        WTFDbContext db, Guid tenantId, BrandDto brand, CancellationToken cancellationToken, bool saveTaxSettings = false)
+        WTFDbContext db, Guid tenantId, BrandDto brand, CancellationToken cancellationToken)
     {
         Validate(brand);
 
@@ -131,10 +131,14 @@ public static class BrandDefaults
         settings.ReceiptFooter = Clean(brand.ReceiptFooter);
         settings.RegistrationText = Clean(brand.RegistrationText);
         settings.PrimaryColor = brand.PrimaryColor.ToLowerInvariant();
-        if (saveTaxSettings)
+        if (brand.SeniorPwdEnabled is { } seniorPwdEnabled)
         {
-            settings.SeniorPwdEnabled = brand.SeniorPwdEnabled;
-            settings.VatRegistered = brand.VatRegistered;
+            settings.SeniorPwdEnabled = seniorPwdEnabled;
+        }
+
+        if (brand.VatRegistered is { } vatRegistered)
+        {
+            settings.VatRegistered = vatRegistered;
         }
 
         settings.UpdatedAt = DateTime.UtcNow;
@@ -175,7 +179,7 @@ public class UpdateBrandHandler(WTFDbContext db, ICurrentTenant currentTenant, S
         var tenantId = currentTenant.StampTenantId ?? throw new InvalidOperationException("Sign in to a shop first.");
         var before = await BrandDefaults.LoadAsync(db, tenantId, cancellationToken);
 
-        await BrandDefaults.SaveAsync(db, tenantId, request.Brand, cancellationToken, saveTaxSettings: true);
+        await BrandDefaults.SaveAsync(db, tenantId, request.Brand, cancellationToken);
 
         var after = await BrandDefaults.LoadAsync(db, tenantId, cancellationToken);
         await audit.LogAsync(

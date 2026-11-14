@@ -450,6 +450,37 @@ public class SubscriptionDatabaseTests
     }
 
     [SqlFact]
+    public async Task Brand_UpdateWithoutTaxFields_LeavesSeniorPwdAndVatAsTheyWere_AndWithThemChangesThem()
+    {
+        await using var database = await SqlTestDatabase.CreateAsync();
+        await SeedPlansAsync(database);
+        var a = await CreateShopAsync(database, "alpha");
+        var http = Substitute.For<Microsoft.AspNetCore.Http.IHttpContextAccessor>();
+
+        async Task SaveAsync(BrandDto brand)
+        {
+            await using var db = database.CreateContext(new FixedTenant(a.Tenant.Id));
+            await new UpdateBrandHandler(db, new FixedTenant(a.Tenant.Id), TestFakes.Audit(), http).Handle(new UpdateBrandCommand(brand), CancellationToken.None);
+        }
+
+        async Task<(bool Senior, bool Vat)> ReadAsync()
+        {
+            await using var db = database.CreateContext(new FixedTenant(a.Tenant.Id));
+            var s = await db.TenantSettings.SingleAsync();
+            return (s.SeniorPwdEnabled, s.VatRegistered);
+        }
+
+        await SaveAsync(BrandDefaults.For("Alpha") with { SeniorPwdEnabled = true, VatRegistered = true });
+        (await ReadAsync()).ShouldBe((true, true));
+
+        await SaveAsync(BrandDefaults.For("Alpha Renamed"));
+        (await ReadAsync()).ShouldBe((true, true));
+
+        await SaveAsync(BrandDefaults.For("Alpha Renamed") with { SeniorPwdEnabled = false });
+        (await ReadAsync()).ShouldBe((false, true));
+    }
+
+    [SqlFact]
     public async Task BrandLogo_IsUploadedReplacedAndRemoved_ForOneShopOnly()
     {
         await using var database = await SqlTestDatabase.CreateAsync();
