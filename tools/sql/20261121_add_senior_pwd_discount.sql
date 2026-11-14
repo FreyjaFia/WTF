@@ -14,7 +14,8 @@ GO
 --   TenantSettings          - SeniorPwdEnabled (off: the app hides the button and the API refuses it) and VatRegistered (off:
 --                             20% comes off the price and there is no VAT-exempt amount). Both default 0.
 --   Permission orders.seniorpwd.apply - built-in roles get it from code; custom roles that hold orders.write get it here.
--- Safe to run twice; it never changes an existing row except to add the permission to custom roles.
+-- Safe to run twice. The permission copy runs once only (recorded in PlatformAuditLog as SeniorPwdRoleCopy), so a later run
+-- does not give the permission back to a custom role the shop removed it from.
 
 IF OBJECT_ID(N'dbo.OrderSeniorPwdDiscounts', N'U') IS NULL
 BEGIN
@@ -103,11 +104,19 @@ BEGIN
 END
 GO
 
-INSERT INTO dbo.RolePermissions (RoleId, PermissionKey)
-SELECT rp.RoleId, N'orders.seniorpwd.apply'
-FROM dbo.RolePermissions rp
-INNER JOIN dbo.UserRoles r ON r.Id = rp.RoleId
-WHERE rp.PermissionKey = N'orders.write'
-  AND r.TenantId IS NOT NULL
-  AND NOT EXISTS (SELECT 1 FROM dbo.RolePermissions x WHERE x.RoleId = rp.RoleId AND x.PermissionKey = N'orders.seniorpwd.apply');
+IF OBJECT_ID(N'dbo.RolePermissions', N'U') IS NOT NULL
+   AND NOT EXISTS (SELECT 1 FROM dbo.PlatformAuditLog WHERE Action = 'SeniorPwdRoleCopy')
+BEGIN
+    INSERT INTO dbo.RolePermissions (RoleId, PermissionKey)
+    SELECT rp.RoleId, N'orders.seniorpwd.apply'
+    FROM dbo.RolePermissions rp
+    INNER JOIN dbo.UserRoles r ON r.Id = rp.RoleId
+    WHERE rp.PermissionKey = N'orders.write'
+      AND r.TenantId IS NOT NULL
+      AND NOT EXISTS (SELECT 1 FROM dbo.RolePermissions x WHERE x.RoleId = rp.RoleId AND x.PermissionKey = N'orders.seniorpwd.apply');
+
+    INSERT INTO dbo.PlatformAuditLog (Username, Action, Details)
+    VALUES ('script', 'SeniorPwdRoleCopy',
+            N'20261121_add_senior_pwd_discount.sql: custom roles with orders.write also got orders.seniorpwd.apply');
+END
 GO
