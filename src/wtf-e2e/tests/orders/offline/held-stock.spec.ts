@@ -19,15 +19,15 @@ async function stockedDrink(api: Api, startingQuantity: number, price: number = 
   return { drink, item };
 }
 
-async function sellOffline(page: Page, productName: string, beforeSync: () => Promise<void> = async () => undefined): Promise<void> {
+async function sellOffline(page: Page, productName: string, beforeSale: () => Promise<void> = async () => undefined): Promise<void> {
   const editor = new OrderEditorPage(page);
   await editor.open();
   await editor.search.fill(productName);
   await expect(editor.product(productName)).toBeVisible();
+  await beforeSale();
   await page.context().setOffline(true);
   await editor.addProduct(productName);
   await editor.payCash(100);
-  await beforeSync();
   await page.context().setOffline(false);
 }
 
