@@ -104,6 +104,8 @@ public class SharedCasesTests
         List<ReceiptLineCase> ReceiptLine,
         List<InvoiceDifferenceCase> InvoiceDifference,
         List<SeniorPwdRowCase> SeniorPwdRow,
+        List<SeniorPwdReportNetCase> SeniorPwdReportNet,
+        List<SeniorPwdReportStatusCase> SeniorPwdReportStatuses,
         List<SeniorPwdOrderCase> SeniorPwdOrders,
         List<SeniorPwdQuotedCase> SeniorPwdQuoted,
         List<SeniorPwdEligibilityCase> SeniorPwdEligibility,
@@ -186,6 +188,10 @@ public class SharedCasesTests
 
     private sealed record SeniorPwdLineCase(int Quantity, decimal Price, List<AddOnCase> AddOns, bool Covered);
 
+    private sealed record SeniorPwdReportNetCase(string Name, decimal Covered, decimal VatExempt, decimal Discount, decimal ExpectedNet);
+
+    private sealed record SeniorPwdReportStatusCase(string Name, int StatusId, bool Expected);
+
     private sealed record SeniorPwdRowAmountsCase(decimal Covered, decimal VatExempt, decimal Discount);
 
     private sealed record SeniorPwdOrderCase(
@@ -232,6 +238,10 @@ public class SharedCasesTests
     public static IEnumerable<object[]> ReceiptLineCaseNames() => Loaded.Value.ReceiptLine.Select(c => new object[] { c.Name });
 
     public static IEnumerable<object[]> SeniorPwdRowCaseNames() => Loaded.Value.SeniorPwdRow.Select(c => new object[] { c.Name });
+
+    public static IEnumerable<object[]> SeniorPwdReportNetCaseNames() => Loaded.Value.SeniorPwdReportNet.Select(c => new object[] { c.Name });
+
+    public static IEnumerable<object[]> SeniorPwdReportStatusCaseNames() => Loaded.Value.SeniorPwdReportStatuses.Select(c => new object[] { c.Name });
 
     public static IEnumerable<object[]> SeniorPwdOrderCaseNames() => Loaded.Value.SeniorPwdOrders.Select(c => new object[] { c.Name });
 
@@ -706,6 +716,24 @@ public class SharedCasesTests
         amounts.VatExempt.ShouldBe(c.ExpectedVatExempt);
         amounts.Discount.ShouldBe(c.ExpectedDiscount);
         amounts.AmountDue.ShouldBe(c.ExpectedDue);
+    }
+
+    [Theory]
+    [MemberData(nameof(SeniorPwdReportNetCaseNames))]
+    public void SeniorPwdReportNet_MatchesTheSharedCase(string name)
+    {
+        var c = Loaded.Value.SeniorPwdReportNet.Single(x => x.Name == name);
+
+        SeniorPwdReportRules.NetAmount(c.Covered, c.VatExempt, c.Discount).ShouldBe(c.ExpectedNet);
+    }
+
+    [Theory]
+    [MemberData(nameof(SeniorPwdReportStatusCaseNames))]
+    public void SeniorPwdReportStatus_MatchesTheSharedCase(string name)
+    {
+        var c = Loaded.Value.SeniorPwdReportStatuses.Single(x => x.Name == name);
+
+        SeniorPwdReportRules.IsCounted(c.StatusId).ShouldBe(c.Expected);
     }
 
     [Theory]

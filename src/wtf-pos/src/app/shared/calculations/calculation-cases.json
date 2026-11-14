@@ -1722,6 +1722,19 @@
     { "name": "VAT-registered: half a centavo rounds up", "covered": 0.14, "vatRegistered": true, "expectedVatExempt": 0.01, "expectedDiscount": 0.03, "expectedDue": 0.1 },
     { "name": "nothing covered", "covered": 0, "vatRegistered": true, "expectedVatExempt": 0, "expectedDiscount": 0, "expectedDue": 0 }
   ],
+  "seniorPwdReportNet": [
+    { "name": "VAT-registered row: 100.00 nets 71.43", "covered": 100, "vatExempt": 10.71, "discount": 17.86, "expectedNet": 71.43 },
+    { "name": "not VAT-registered row: 85.50 nets 68.40", "covered": 85.5, "vatExempt": 0, "discount": 17.1, "expectedNet": 68.4 },
+    { "name": "nothing covered nets nothing", "covered": 0, "vatExempt": 0, "discount": 0, "expectedNet": 0 }
+  ],
+  "seniorPwdReportStatuses": [
+    { "name": "completed is counted", "statusId": 2, "expected": true },
+    { "name": "refunded is counted", "statusId": 4, "expected": true },
+    { "name": "pending is not counted", "statusId": 1, "expected": false },
+    { "name": "cancelled is not counted", "statusId": 3, "expected": false },
+    { "name": "pending approval is not counted", "statusId": 5, "expected": false },
+    { "name": "pending review is not counted", "statusId": 6, "expected": false }
+  ],
   "seniorPwdOrders": [
     {
       "name": "one of three lattes covered, not VAT-registered",
