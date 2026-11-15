@@ -666,6 +666,33 @@ describe('OfflineOrderService', () => {
     });
   });
 
+  describe('Senior/PWD IDs kept on the device', () => {
+    const person = { type: 1, idNumber: 'SC-1', customerName: 'Rosa' };
+    const old = new Date(Date.now() - 31 * 86_400_000).toISOString();
+
+    it('drops a failed order with IDs past the retention period and says so', async () => {
+      await create([
+        { localId: 'old', status: 'failed', createdAt: old, command: { ...command(), seniorPwdPersons: [person] } as unknown as CreateOrderCommand },
+        { localId: 'old-waiting', status: 'pending', createdAt: old, command: { ...command(), seniorPwdPersons: [person] } as unknown as CreateOrderCommand },
+        { localId: 'old-plain', status: 'failed', createdAt: old },
+        { localId: 'new', status: 'failed', command: { ...command(), seniorPwdPersons: [person] } as unknown as CreateOrderCommand },
+      ]);
+
+      expect(table.rows.map((r) => r.localId).sort()).toEqual(['new', 'old-plain', 'old-waiting']);
+      expect(alerts.warning).toHaveBeenCalledTimes(1);
+    });
+
+    it('deletes a synced order together with its ID numbers', async () => {
+      localStorage.setItem('token', 'tok');
+      const service = await create([{ localId: 'a', command: { ...command(), seniorPwdPersons: [person] } as unknown as CreateOrderCommand }]);
+      online.set(true);
+
+      await service.syncAll();
+
+      expect(table.rows).toEqual([]);
+    });
+  });
+
   describe('a server that never answers', () => {
     beforeEach(() => localStorage.setItem('token', 'tok'));
 

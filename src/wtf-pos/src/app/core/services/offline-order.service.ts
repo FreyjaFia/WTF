@@ -8,6 +8,7 @@ import {
 } from '@shared/models';
 import { firstValueFrom, timeout } from 'rxjs';
 import { db } from './db';
+import { SENIOR_PWD_ID_RETENTION_DAYS, isPastIdRetention } from './senior-pwd-retention';
 import { currentTenantId, tenantOfQueuedOrder } from './tenant-context';
 import type { PendingOrder } from './db';
 
@@ -313,7 +314,32 @@ export class OfflineOrderService {
       );
     }
 
+    await this.dropExpiredSeniorPwdOrders();
     await this.loadPendingOrders();
+  }
+
+  // A synced order is deleted with its ID numbers. A failed one that still carries Senior/PWD IDs after the retention
+  // period is dropped too: it needs a person to fix it, and the ID numbers must not stay on the device for good.
+  // Orders still waiting stay queued under their own shop.
+  private async dropExpiredSeniorPwdOrders(): Promise<void> {
+    const expired = (await db.pendingOrders.toArray()).filter(
+      (order) =>
+        order.status === 'failed' &&
+        (order.command.seniorPwdPersons?.length ?? 0) > 0 &&
+        isPastIdRetention(order.createdAt),
+    );
+
+    if (expired.length === 0) {
+      return;
+    }
+
+    await db.pendingOrders.bulkDelete(expired.map((order) => order.id!));
+
+    if (expired.some((order) => tenantOfQueuedOrder(order) === currentTenantId())) {
+      this.alertService.warning(
+        `Failed Senior/PWD orders older than ${SENIOR_PWD_ID_RETENTION_DAYS} days were removed from this device with their ID numbers.`,
+      );
+    }
   }
 
   private async loadPendingOrders(): Promise<void> {

@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { CartItemDto, SeniorPwdPersonRequestDto } from '@shared/models';
 import { db, PersistedCart } from './db';
+import { isPastIdRetention } from './senior-pwd-retention';
 
 @Injectable({ providedIn: 'root' })
 export class CartPersistenceService {
@@ -25,7 +26,15 @@ export class CartPersistenceService {
   }
 
   public async load(): Promise<PersistedCart | undefined> {
-    return db.carts.get(CartPersistenceService.CART_ROW_ID);
+    const saved = await db.carts.get(CartPersistenceService.CART_ROW_ID);
+
+    // A cart with Senior/PWD IDs in it is not kept for good: it is a sale nobody came back to finish.
+    if (saved?.seniorPwdPersons?.length && isPastIdRetention(saved.savedAt)) {
+      await this.clear();
+      return undefined;
+    }
+
+    return saved;
   }
 
   public async clear(): Promise<void> {

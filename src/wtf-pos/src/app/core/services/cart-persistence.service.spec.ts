@@ -44,6 +44,24 @@ describe('CartPersistenceService', () => {
     expect(get).toHaveBeenCalledWith(1);
   });
 
+  it('drops a saved cart whose Senior/PWD IDs are past the retention period', async () => {
+    const old = new Date(Date.now() - 31 * 86_400_000).toISOString();
+    get.mockResolvedValue({ id: 1, savedAt: old, seniorPwdPersons: [{ idNumber: 'SC-1' }] });
+
+    await expect(service.load()).resolves.toBeUndefined();
+    expect(del).toHaveBeenCalledWith(1);
+  });
+
+  it('keeps an old cart that holds no Senior/PWD ID and a recent one that does', async () => {
+    const old = new Date(Date.now() - 31 * 86_400_000).toISOString();
+    get.mockResolvedValue({ id: 1, savedAt: old, seniorPwdPersons: [] });
+    await expect(service.load()).resolves.toMatchObject({ id: 1 });
+
+    get.mockResolvedValue({ id: 1, savedAt: new Date().toISOString(), seniorPwdPersons: [{ idNumber: 'SC-1' }] });
+    await expect(service.load()).resolves.toMatchObject({ id: 1 });
+    expect(del).not.toHaveBeenCalled();
+  });
+
   it('clears the fixed row', async () => {
     await service.clear();
 
