@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Orders;
 using WTF.Api.Common.Tenancy;
 using WTF.Api.Features.Promotions.DTOs;
+using WTF.Calculations.Subscriptions;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Features.Promotions;
@@ -21,7 +22,7 @@ public sealed class GetPosBundlesHandler(WTFDbContext db, IHttpContextAccessor h
 {
     public async Task<PosBundlesDto> Handle(GetPosBundlesQuery request, CancellationToken cancellationToken)
     {
-        if (!await TenantPlanLookup.HasFeatureAsync(db, "promotions", cancellationToken))
+        if (!await TenantPlanLookup.HasFeatureAsync(db, PlanFeatures.Promotions, cancellationToken))
         {
             return new PosBundlesDto([], []);
         }

@@ -1,11 +1,10 @@
+using WTF.Calculations.Subscriptions;
+
 namespace WTF.Api.Common.Auth;
 
 public static class AppPolicies
 {
-    public static readonly string FeaturePrefix = "Feature:";
-
-    public static string RequireFeature(string feature) => FeaturePrefix + feature;
-
+    internal const string FeaturePrefix = "Feature:";
     public const string PlatformAdmin = "PlatformAdmin";
     public const string SubscriptionBilling = "SubscriptionBilling";
     public const string BrandManage = "BrandManage";
@@ -46,4 +45,14 @@ public static class AppPolicies
     public const string DashboardRead = "DashboardRead";
     public const string ReportsRead = "ReportsRead";
     public const string ReportsGenerate = "ReportsGenerate";
+
+    public static string RequireFeature(string feature)
+    {
+        if (!PlanFeatures.IsKnown(feature))
+        {
+            throw new ArgumentException($"\"{feature}\" is not a plan feature.", nameof(feature));
+        }
+
+        return FeaturePrefix + feature;
+    }
 }

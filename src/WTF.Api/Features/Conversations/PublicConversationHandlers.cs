@@ -5,6 +5,7 @@ using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Features.OrderLinks;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Services;
+using WTF.Calculations.Subscriptions;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 
@@ -39,7 +40,7 @@ internal static class PublicChatAccess
     public static async Task<(OrderLinkAccessResult Access, Order Order)?> ResolveAsync(
         WTFDbContext db, string token, Guid orderId, bool track, CancellationToken cancellationToken)
     {
-        var access = await OrderLinkAccess.ResolveAsync(db, token, cancellationToken, alsoRequires: "chat");
+        var access = await OrderLinkAccess.ResolveAsync(db, token, cancellationToken, alsoRequires: PlanFeatures.Chat);
         if (access == null)
         {
             return null;
@@ -61,7 +62,7 @@ public class GetPublicConversationsHandler(WTFDbContext db)
 {
     public async Task<ConversationListDto?> Handle(GetPublicConversationsQuery request, CancellationToken cancellationToken)
     {
-        var access = await OrderLinkAccess.ResolveAsync(db, request.Token, cancellationToken, alsoRequires: "chat");
+        var access = await OrderLinkAccess.ResolveAsync(db, request.Token, cancellationToken, alsoRequires: PlanFeatures.Chat);
         return access == null ? null : await ConversationStore.ListAsync(db, access.Customer.Id, cancellationToken);
     }
 }

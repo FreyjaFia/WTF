@@ -1,8 +1,9 @@
 using Microsoft.EntityFrameworkCore;
-using WTF.Api.Common.Tenancy;
 using WTF.Api.Common.Auth.Permissions;
+using WTF.Api.Common.Tenancy;
 using WTF.Api.Features.Notifications;
 using WTF.Calculations.Inventory;
+using WTF.Calculations.Subscriptions;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 
@@ -21,7 +22,7 @@ public class StockAlertService(WTFDbContext db, INotificationService notificatio
     // with one guarded UPDATE, so two registers that cross the level together alert once.
     public async Task EvaluateAsync(IEnumerable<Guid> itemIds, CancellationToken cancellationToken)
     {
-        if (!await TenantPlanLookup.HasFeatureAsync(db, "inventory", cancellationToken))
+        if (!await TenantPlanLookup.HasFeatureAsync(db, PlanFeatures.Inventory, cancellationToken))
         {
             return;
         }

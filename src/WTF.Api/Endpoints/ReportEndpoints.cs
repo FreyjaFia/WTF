@@ -1,8 +1,9 @@
 using MediatR;
 using WTF.Api.Common.Auth;
 using WTF.Api.Features.Orders.Enums;
-using WTF.Api.Features.Reports;
 using WTF.Api.Features.Reports.Enums;
+using WTF.Api.Features.Reports;
+using WTF.Calculations.Subscriptions;
 
 namespace WTF.Api.Endpoints;
 
@@ -177,7 +178,7 @@ public static class ReportEndpoints
                 var result = await sender.Send(query);
                 return BuildReportResponse(httpContext, result, ReportTables.Promotions, query.FromDate!.Value, query.ToDate!.Value, query.Source);
             })
-            .RequireAuthorization(AppPolicies.RequireFeature("promotions"));
+            .RequireAuthorization(AppPolicies.RequireFeature(PlanFeatures.Promotions));
 
         reportsGroup.MapGet("/customer-links",
             async (HttpContext httpContext, [AsParameters] GetCustomerLinkReportQuery query, ISender sender) =>
@@ -191,7 +192,7 @@ public static class ReportEndpoints
                 var result = await sender.Send(query);
                 return BuildReportResponse(httpContext, result, ReportTables.CustomerLinks, query.FromDate!.Value, query.ToDate!.Value, OrderSourceEnum.CustomerLink);
             })
-            .RequireAuthorization(AppPolicies.RequireFeature("orderlinks"));
+            .RequireAuthorization(AppPolicies.RequireFeature(PlanFeatures.OrderLinks));
 
         reportsGroup.MapGet("/customers",
             async (HttpContext httpContext, [AsParameters] GetCustomersReportQuery query, ISender sender) =>
@@ -212,7 +213,7 @@ public static class ReportEndpoints
                 var result = await sender.Send(new GetStockStatusReportQuery());
                 return BuildReportResponse(httpContext, result, ReportTables.StockStatus, "Current stock levels", DateTime.UtcNow.ToString("yyyyMMdd"));
             })
-            .RequireAuthorization(AppPolicies.RequireFeature("inventory"));
+            .RequireAuthorization(AppPolicies.RequireFeature(PlanFeatures.Inventory));
 
         reportsGroup.MapGet("/waste",
             async (HttpContext httpContext, [AsParameters] GetWasteReportQuery query, ISender sender) =>
@@ -231,7 +232,7 @@ public static class ReportEndpoints
                 var result = await sender.Send(query);
                 return BuildReportResponse(httpContext, result, ReportTables.Waste, query.FromDate!.Value, query.ToDate!.Value, null);
             })
-            .RequireAuthorization(AppPolicies.RequireFeature("inventory"));
+            .RequireAuthorization(AppPolicies.RequireFeature(PlanFeatures.Inventory));
         reportsGroup.MapGet("/gross-profit",
             async (HttpContext httpContext, [AsParameters] GetGrossProfitReportQuery query, ISender sender) =>
             {
@@ -250,7 +251,7 @@ public static class ReportEndpoints
                 var result = await sender.Send(query);
                 return BuildReportResponse(httpContext, result, ReportTables.GrossProfit(groupBy), query.FromDate!.Value, query.ToDate!.Value, null);
             })
-            .RequireAuthorization(AppPolicies.RequireFeature("inventory"));
+            .RequireAuthorization(AppPolicies.RequireFeature(PlanFeatures.Inventory));
 
         reportsGroup.MapGet("/profit-loss",
             async (HttpContext httpContext, [AsParameters] GetProfitLossReportQuery query, ISender sender) =>
@@ -270,7 +271,7 @@ public static class ReportEndpoints
                 var result = await sender.Send(query);
                 return BuildReportResponse(httpContext, result, ReportTables.ProfitLoss(groupBy), query.FromDate!.Value, query.ToDate!.Value, null);
             })
-            .RequireAuthorization(AppPolicies.RequireFeature("inventory"));
+            .RequireAuthorization(AppPolicies.RequireFeature(PlanFeatures.Inventory));
 
         reportsGroup.MapGet("/stock-variance",
             async (HttpContext httpContext, [AsParameters] GetStockVarianceReportQuery query, ISender sender) =>
@@ -284,7 +285,7 @@ public static class ReportEndpoints
                 var result = await sender.Send(query);
                 return BuildReportResponse(httpContext, result, ReportTables.StockVariance, query.FromDate!.Value, query.ToDate!.Value, null);
             })
-            .RequireAuthorization(AppPolicies.RequireFeature("inventory"));
+            .RequireAuthorization(AppPolicies.RequireFeature(PlanFeatures.Inventory));
 
         reportsGroup.MapGet("/monthly-workbook/status",
             async ([AsParameters] MonthlyWorkbookRequest request, IMonthlyReportWorkbookService workbookService, CancellationToken cancellationToken) =>

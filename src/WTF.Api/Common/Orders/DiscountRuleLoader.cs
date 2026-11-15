@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Tenancy;
 using WTF.Api.Features.Promotions.DTOs;
 using WTF.Calculations.Orders;
+using WTF.Calculations.Subscriptions;
 using WTF.Domain.Data;
 
 namespace WTF.Api.Common.Orders;
@@ -23,7 +24,7 @@ internal static class DiscountRuleLoader
         CancellationToken cancellationToken)
     {
         // A plan without promotions sells at the normal price; the sale still saves.
-        if (!await TenantPlanLookup.HasFeatureAsync(db, "promotions", cancellationToken))
+        if (!await TenantPlanLookup.HasFeatureAsync(db, PlanFeatures.Promotions, cancellationToken))
         {
             return new Loaded([], new DiscountBudget(new Dictionary<Guid, int>(), new Dictionary<Guid, int>()));
         }

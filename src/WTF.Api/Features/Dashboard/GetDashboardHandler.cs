@@ -7,11 +7,12 @@ using WTF.Api.Common.Tenancy;
 using WTF.Api.Common.Time;
 using WTF.Api.Features.Dashboard.DTOs;
 using WTF.Api.Features.Orders.Enums;
-using WTF.Api.Features.Reports;
 using WTF.Api.Features.Reports.Enums;
+using WTF.Api.Features.Reports;
 using WTF.Calculations.Inventory;
 using WTF.Calculations.Orders;
 using WTF.Calculations.Sales;
+using WTF.Calculations.Subscriptions;
 using WTF.Calculations.Time;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
@@ -81,7 +82,7 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
     private async Task<DashboardProfitDto?> ComputeProfitAsync(DateRangeInfo range, CancellationToken cancellationToken)
     {
         var user = httpContextAccessor.HttpContext?.User;
-        if (user is null || !CostAccess.CanReadCosts(user) || !await TenantPlanLookup.HasFeatureAsync(db, "inventory", cancellationToken))
+        if (user is null || !CostAccess.CanReadCosts(user) || !await TenantPlanLookup.HasFeatureAsync(db, PlanFeatures.Inventory, cancellationToken))
         {
             return null;
         }
@@ -133,7 +134,7 @@ public class GetDashboardHandler(WTFDbContext db, IHttpContextAccessor httpConte
         var awaiting = await db.Orders.CountAsync(o => o.StatusId == OrderStatuses.PendingApproval, cancellationToken);
 
         // Without inventory the stock cards read zero (the app hides them) and nothing about stock is looked up.
-        var stockOn = await TenantPlanLookup.HasFeatureAsync(db, "inventory", cancellationToken);
+        var stockOn = await TenantPlanLookup.HasFeatureAsync(db, PlanFeatures.Inventory, cancellationToken);
         var stockStatuses = new List<StockStatus>();
         if (stockOn)
         {

@@ -4,6 +4,7 @@ using System.Text.Json;
 using WTF.Api.Features.Notifications;
 using WTF.Api.Services;
 using WTF.Calculations.Inventory;
+using WTF.Calculations.Subscriptions;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 
@@ -227,7 +228,7 @@ public sealed class StockReminderScheduler(
     private StockAlertRemindersOptions Settings => options.Value;
 
     protected override string JobName => "Stock alert reminders";
-    protected override string? RequiredFeature => "inventory";
+    protected override string? RequiredFeature => PlanFeatures.Inventory;
     protected override bool IsEnabled => Settings.Enabled;
     protected override string TimeZoneId => Settings.TimeZoneId;
     protected override int RunAtHour => Settings.RunAtHour;

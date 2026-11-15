@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using WTF.Api.Common.Tenancy;
 using WTF.Api.Features.Branding;
 using WTF.Api.Features.Subscriptions;
+using WTF.Calculations.Subscriptions;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 
@@ -52,7 +53,7 @@ public static class OrderLinkAccess
         if (db.TenantFilterEnabled
             && (!await TenantAccess.IsActiveAsync(db, link.TenantId, cancellationToken)
                 || await SubscriptionStateLoader.IsLockedAsync(db, link.TenantId, now, cancellationToken)
-                || !(await TenantPlanLookup.LoadAsync(db, link.TenantId, cancellationToken)).Features.Contains("orderlinks")))
+                || !(await TenantPlanLookup.LoadAsync(db, link.TenantId, cancellationToken)).Features.Contains(PlanFeatures.OrderLinks)))
         {
             var brand = await BrandDefaults.LoadAsync(db, link.TenantId, cancellationToken);
             throw new ShopUnavailableException(brand.ShopName, brand.Phone);

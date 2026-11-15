@@ -1,6 +1,7 @@
 using MediatR;
 using WTF.Api.Common.Auth;
 using WTF.Api.Features.OrderLinks;
+using WTF.Calculations.Subscriptions;
 
 namespace WTF.Api.Endpoints;
 
@@ -41,7 +42,7 @@ public static class OrderLinkEndpoints
                 return result is not null ? Results.Ok(result) : Results.NotFound();
             })
             .RequireAuthorization(AppPolicies.CustomersRead)
-            .RequireAuthorization(AppPolicies.RequireFeature("orderlinks"));
+            .RequireAuthorization(AppPolicies.RequireFeature(PlanFeatures.OrderLinks));
 
         // DELETE /api/customers/{id}/ordering-links/{linkId} - Revoke a link
         group.MapDelete("/ordering-links/{linkId:guid}",

@@ -4,6 +4,7 @@ using WTF.Api.Common.Tenancy;
 using WTF.Api.Features.Audit.Enums;
 using WTF.Api.Services;
 using WTF.Calculations.Inventory;
+using WTF.Calculations.Subscriptions;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 
@@ -33,8 +34,8 @@ public class OrderStockService(WTFDbContext db, IAuditService auditService, ISto
     // A plan without inventory keeps selling: the order saves, no stock moves and balances stay where they were.
     private async Task<bool> IsInventoryOnAsync(CancellationToken cancellationToken) =>
         tenantFeatures is null
-            ? await TenantPlanLookup.HasFeatureAsync(db, "inventory", cancellationToken)
-            : await tenantFeatures.HasFeatureAsync(db, "inventory", cancellationToken);
+            ? await TenantPlanLookup.HasFeatureAsync(db, PlanFeatures.Inventory, cancellationToken)
+            : await tenantFeatures.HasFeatureAsync(db, PlanFeatures.Inventory, cancellationToken);
 
     public async Task<StockDeductionResult> DeductForOrderAsync(
         Guid orderId, Guid userId, StockDeductionOptions options, CancellationToken cancellationToken)

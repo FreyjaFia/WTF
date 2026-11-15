@@ -8,18 +8,27 @@ public sealed record PlanFeatureDefinition(string Key, string Label, string Desc
 public static class PlanFeatures
 {
     public const string Core = "core";
+    public const string Expenses = "expenses";
+    public const string Inventory = "inventory";
+    public const string Purchasing = "purchasing";
+    public const string Promotions = "promotions";
+    public const string OrderLinks = "orderlinks";
+    public const string Chat = "chat";
+    public const string Workbook = "workbook";
+    public const string Audit = "audit";
+    public const string CustomRoles = "customroles";
 
     public static readonly IReadOnlyList<PlanFeatureDefinition> Catalog =
     [
-        new("expenses", "Expenses", "Record and review shop expenses.", "Money", []),
-        new("inventory", "Inventory", "Items, stock, counts, waste and costs.", "Stock", []),
-        new("purchasing", "Purchasing", "Suppliers, reorder list, purchase orders and receiving.", "Stock", ["inventory"]),
-        new("promotions", "Promotions", "Discounts and deals on the register.", "Sell more", []),
-        new("orderlinks", "Order links", "Customer ordering links.", "Customer ordering", []),
-        new("chat", "Order chat", "Chat with customers about their orders.", "Customer ordering", ["orderlinks"]),
-        new("workbook", "Monthly workbook", "The monthly Excel report workbook.", "Insight", []),
-        new("audit", "Audit log", "See who changed what.", "Control", []),
-        new("customroles", "Custom roles", "Create your own roles and choose what each can do.", "Control", [])
+        new(Expenses, "Expenses", "Record and review shop expenses.", "Money", []),
+        new(Inventory, "Inventory", "Items, stock, counts, waste and costs.", "Stock", []),
+        new(Purchasing, "Purchasing", "Suppliers, reorder list, purchase orders and receiving.", "Stock", [Inventory]),
+        new(Promotions, "Promotions", "Discounts and deals on the register.", "Sell more", []),
+        new(OrderLinks, "Order links", "Customer ordering links.", "Customer ordering", []),
+        new(Chat, "Order chat", "Chat with customers about their orders.", "Customer ordering", [OrderLinks]),
+        new(Workbook, "Monthly workbook", "The monthly Excel report workbook.", "Insight", []),
+        new(Audit, "Audit log", "See who changed what.", "Control", []),
+        new(CustomRoles, "Custom roles", "Create your own roles and choose what each can do.", "Control", [])
     ];
 
     public static readonly IReadOnlyList<string> Gateable = [.. Catalog.Select(f => f.Key)];

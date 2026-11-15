@@ -1,7 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
-using WTF.Api.Common.Tenancy;
 using WTF.Api.Features.Platform;
 using WTF.Api.Services;
 using WTF.Calculations.Subscriptions;
@@ -152,9 +151,9 @@ public class GetPlanChangePreviewHandler(WTFDbContext db) : IRequestHandler<GetP
         var now = DateTime.UtcNow;
         return feature switch
         {
-            "inventory" => (await db.Items.AsNoTracking().IgnoreQueryFilters().CountAsync(i => i.TenantId == tenantId && i.IsActive, cancellationToken), "items"),
-            "promotions" => (await db.Promotions.AsNoTracking().IgnoreQueryFilters().CountAsync(p => p.TenantId == tenantId && p.IsActive, cancellationToken), "promotions"),
-            "orderlinks" => (await db.ShortLinks.AsNoTracking().IgnoreQueryFilters()
+            PlanFeatures.Inventory => (await db.Items.AsNoTracking().IgnoreQueryFilters().CountAsync(i => i.TenantId == tenantId && i.IsActive, cancellationToken), "items"),
+            PlanFeatures.Promotions => (await db.Promotions.AsNoTracking().IgnoreQueryFilters().CountAsync(p => p.TenantId == tenantId && p.IsActive, cancellationToken), "promotions"),
+            PlanFeatures.OrderLinks => (await db.ShortLinks.AsNoTracking().IgnoreQueryFilters()
                 .CountAsync(l => l.TenantId == tenantId && l.RevokedAt == null && (l.ExpiresAt == null || l.ExpiresAt > now), cancellationToken), "active order links"),
             _ => (0, null)
         };

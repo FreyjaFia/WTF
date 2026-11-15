@@ -7,6 +7,7 @@ using WTF.Api.Common.Tenancy;
 using WTF.Api.Common.Time;
 using WTF.Api.Features.Promotions.DTOs;
 using WTF.Calculations.Orders;
+using WTF.Calculations.Subscriptions;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 
@@ -58,7 +59,7 @@ public sealed class GetActiveDiscountedProductPromotionsHandler(WTFDbContext db,
 {
     public async Task<List<DiscountedProductPromotionDto>> Handle(GetActiveDiscountedProductPromotionsQuery request, CancellationToken cancellationToken)
     {
-        if (!await TenantPlanLookup.HasFeatureAsync(db, "promotions", cancellationToken))
+        if (!await TenantPlanLookup.HasFeatureAsync(db, PlanFeatures.Promotions, cancellationToken))
         {
             return [];
         }
