@@ -363,7 +363,7 @@
                           {{ c.promoLabel }}
                         </div>
                       }
-                      @if (c.seniorPwdPersonIndex !== null && c.seniorPwdPersonIndex !== undefined) {
+                      @if (isCovered(c)) {
                         <div
                           class="mt-1 inline-flex items-center rounded-full bg-sky-50 px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap text-sky-700"
                           data-testid="senior-pwd-line-tag"
@@ -384,7 +384,7 @@
                         <app-line-breakdown [breakdown]="getBreakdown(c)" />
                       </div>
                     }
-                    @if (c.seniorPwdPersonIndex !== null && c.seniorPwdPersonIndex !== undefined) {
+                    @if (isCovered(c)) {
                       <div class="col-span-2 mt-1 text-xs" data-testid="senior-pwd-line-reduction">
                         <div class="grid grid-cols-[1fr_auto] items-start gap-3 font-semibold text-sky-700">
                           <div class="flex min-w-0">
@@ -547,7 +547,7 @@
                   >
                     <div class="flex items-center justify-between gap-2">
                       <span class="min-w-0 font-medium wrap-break-word text-gray-800"
-                        >{{ seniorPwdLabel(person.type) }}: {{ person.customerName }}</span
+                        >{{ person.type | seniorPwdTypeLabel }}: {{ person.customerName }}</span
                       >
                       <span class="shrink-0 text-xs text-gray-500">ID {{ person.idNumber }}</span>
                     </div>
@@ -562,7 +562,7 @@
                       </div>
                     }
                     <div class="flex items-center justify-between text-xs text-gray-600">
-                      <span>Senior/PWD discount (20%)</span>
+                      <span>Senior/PWD discount ({{ seniorPwdPercent }}%)</span>
                       <span class="tabular-nums text-emerald-700" data-testid="senior-pwd-details-discount">-{{ person.discountAmount | number: '1.2-2' }}</span>
                     </div>
                   </div>

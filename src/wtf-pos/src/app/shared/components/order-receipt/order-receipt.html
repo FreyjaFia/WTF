@@ -304,7 +304,7 @@
           style="display: flex; justify-content: space-between; font-size: 13px; color: var(--color-gray-500); margin-bottom: 4px"
         >
           <span>Type</span>
-          <span style="font-weight: 600; color: var(--color-gray-800)">{{ seniorPwdTypeLabel(person) }}</span>
+          <span style="font-weight: 600; color: var(--color-gray-800)">{{ person.type | seniorPwdTypeLabel }}</span>
         </div>
         <div
           style="display: flex; justify-content: space-between; font-size: 13px; color: var(--color-gray-500); margin-bottom: 4px"
@@ -329,7 +329,7 @@
         <div
           style="display: flex; justify-content: space-between; font-size: 13px; color: var(--color-gray-500); margin-bottom: 4px"
         >
-          <span>Discount (20%)</span>
+          <span>Discount ({{ seniorPwdPercent }}%)</span>
           <span>-<span style="color: inherit">&#8369;</span>{{ person.discountAmount | number: '1.2-2' }}</span>
         </div>
         <div style="margin-top: 20px; border-top: 1px solid var(--color-gray-300); padding-top: 2px; font-size: 10px; color: var(--color-gray-400)">

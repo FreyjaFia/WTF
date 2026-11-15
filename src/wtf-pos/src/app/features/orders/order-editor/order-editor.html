@@ -930,7 +930,7 @@
                   >
                     <div class="flex items-center justify-between gap-2">
                       <span class="min-w-0 font-medium wrap-break-word text-gray-800">
-                        {{ seniorPwdLabel(person) }}: {{ person.customerName }}
+                        {{ person.type | seniorPwdTypeLabel }}: {{ person.customerName }}
                       </span>
                       <span class="shrink-0 text-xs text-gray-500">ID {{ person.idNumber }}</span>
                     </div>
@@ -941,7 +941,7 @@
                       </div>
                     }
                     <div class="mt-1 flex justify-between text-xs text-gray-600">
-                      <span>Senior/PWD discount (20%)</span>
+                      <span>Senior/PWD discount ({{ seniorPwdPercent }}%)</span>
                       <span data-testid="senior-pwd-row-discount">-{{ seniorPwdTotals()[personIndex].discount | number: '1.2-2' }}</span>
                     </div>
                   </div>

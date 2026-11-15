@@ -4,6 +4,7 @@ import { LineDiscount, cartTotal, lineTotal } from './order-pricing';
 
 // TypeScript counterpart of `SeniorPwdRules` in the API's `WTF.Calculations`; both use the same rows in `calculation-cases.json`.
 export const SENIOR_PWD_DISCOUNT_RATE = 0.2;
+export const SENIOR_PWD_DISCOUNT_PERCENT = Math.round(SENIOR_PWD_DISCOUNT_RATE * 100);
 export const SENIOR_PWD_VAT_RATE = 0.12;
 
 export interface SeniorPwdAmounts {

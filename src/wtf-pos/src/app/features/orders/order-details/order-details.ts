@@ -39,8 +39,6 @@ import {
   OrderStatusEnum,
   PaymentMethodEnum,
   PromotionTypeEnum,
-  SENIOR_PWD_TYPE_LABELS,
-  SeniorPwdTypeEnum,
   SYSTEM_CATALOG_IDS,
 } from '@shared/models';
 import {
@@ -55,11 +53,13 @@ import {
   savedLineTotal,
   addMoney,
   sumAmounts,
+  SENIOR_PWD_DISCOUNT_PERCENT,
+  isCoveredLine,
   lineNetTotal,
   subtractMoney,
 } from '@shared/calculations';
 import { AppRoutes } from '@shared/constants/app-routes';
-import { AddOnLabelsPipe } from '@shared/pipes';
+import { AddOnLabelsPipe, SeniorPwdTypeLabelPipe } from '@shared/pipes';
 
 @Component({
   selector: 'app-order-details',
@@ -68,6 +68,7 @@ import { AddOnLabelsPipe } from '@shared/pipes';
     IconComponent,
     LineBreakdownComponent,
     AddOnLabelsPipe,
+    SeniorPwdTypeLabelPipe,
     BadgeComponent,
     AvatarComponent,
     PullToRefreshComponent,
@@ -477,8 +478,10 @@ export class OrderDetails implements OnInit {
     return savedLineTotal(item);
   }
 
-  protected seniorPwdLabel(type: SeniorPwdTypeEnum): string {
-    return SENIOR_PWD_TYPE_LABELS[type];
+  protected readonly seniorPwdPercent = SENIOR_PWD_DISCOUNT_PERCENT;
+
+  protected isCovered(item: CartItemDto): boolean {
+    return isCoveredLine(item);
   }
 
   protected getItemTotal(item: CartItemDto): number {

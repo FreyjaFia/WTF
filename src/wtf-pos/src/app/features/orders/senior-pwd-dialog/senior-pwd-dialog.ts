@@ -1,7 +1,7 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, computed, inject, input, OnInit, output, signal } from '@angular/core';
 import { ConnectivityService, OrderService } from '@core/services';
-import { totalsByPerson } from '@shared/calculations';
+import { SENIOR_PWD_DISCOUNT_PERCENT, totalsByPerson } from '@shared/calculations';
 import { IconComponent } from '@shared/components/icons/icon/icon';
 import { CartItemDto, SENIOR_PWD_TYPE_LABELS, SeniorPwdTypeEnum } from '@shared/models';
 import {
@@ -47,6 +47,7 @@ export class SeniorPwdDialogComponent implements OnInit {
 
   protected readonly SeniorPwdTypeEnum = SeniorPwdTypeEnum;
   protected readonly types = [SeniorPwdTypeEnum.Senior, SeniorPwdTypeEnum.Pwd];
+  protected readonly seniorPwdPercent = SENIOR_PWD_DISCOUNT_PERCENT;
   protected readonly typeLabels = SENIOR_PWD_TYPE_LABELS;
   protected readonly idMaxLength = SENIOR_PWD_ID_MAX_LENGTH;
   protected readonly nameMaxLength = SENIOR_PWD_NAME_MAX_LENGTH;

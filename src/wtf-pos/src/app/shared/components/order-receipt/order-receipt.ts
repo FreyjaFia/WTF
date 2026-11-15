@@ -18,11 +18,17 @@ import {
   OrderStatusEnum,
   PaymentMethodEnum,
   PromotionTypeEnum,
-  SENIOR_PWD_TYPE_LABELS,
   SeniorPwdPersonDto,
 } from '@shared/models';
-import { breakdownOfCartItem, LineBreakdown, lineNetTotal, lineTotal } from '@shared/calculations';
-import { AddOnLabelsPipe } from '@shared/pipes';
+import {
+  breakdownOfCartItem,
+  isCoveredLine,
+  LineBreakdown,
+  lineNetTotal,
+  lineTotal,
+  SENIOR_PWD_DISCOUNT_PERCENT,
+} from '@shared/calculations';
+import { AddOnLabelsPipe, SeniorPwdTypeLabelPipe } from '@shared/pipes';
 import { LineBreakdownComponent } from '../line-breakdown/line-breakdown';
 
 export interface ReceiptData {
@@ -43,7 +49,7 @@ export interface ReceiptData {
 
 @Component({
   selector: 'app-order-receipt',
-  imports: [CommonModule, LineBreakdownComponent, AddOnLabelsPipe],
+  imports: [CommonModule, LineBreakdownComponent, AddOnLabelsPipe, SeniorPwdTypeLabelPipe],
   templateUrl: './order-receipt.html',
 })
 export class OrderReceiptComponent implements OnInit {
@@ -262,16 +268,14 @@ export class OrderReceiptComponent implements OnInit {
     }
   });
 
-  protected seniorPwdTypeLabel(person: SeniorPwdPersonDto): string {
-    return SENIOR_PWD_TYPE_LABELS[person.type];
-  }
+  protected readonly seniorPwdPercent = SENIOR_PWD_DISCOUNT_PERCENT;
 
   protected seniorPwdPersonOf(item: CartItemDto): SeniorPwdPersonDto | null {
-    if (item.seniorPwdPersonIndex == null) {
+    if (!isCoveredLine(item)) {
       return null;
     }
 
-    return this.data()?.seniorPwdPersons?.[item.seniorPwdPersonIndex] ?? null;
+    return this.data()?.seniorPwdPersons?.[item.seniorPwdPersonIndex!] ?? null;
   }
 
   protected getItemTotal(item: CartItemDto): number {

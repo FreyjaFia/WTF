@@ -47,6 +47,7 @@ import {
 } from '@shared/models';
 import { debounceTime, Subscription } from 'rxjs';
 import { cartTotal } from '@shared/calculations';
+import { orderAddressOf } from '@shared/utils/order-address';
 import type { PendingOrder } from '@core/services/db';
 import { PosWasteSheetComponent } from '@features/orders/pos-waste-sheet/pos-waste-sheet';
 
@@ -1008,7 +1009,7 @@ export class OrderList implements OnInit, OnDestroy {
   }
 
   protected getOrderAddress(order: OrderDto): string | null {
-    return order.deliveryAddress?.trim() || order.customerAddress?.trim() || null;
+    return orderAddressOf(order);
   }
 
   private restoreState(): void {

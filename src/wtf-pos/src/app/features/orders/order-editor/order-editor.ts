@@ -98,7 +98,6 @@ import {
   DiscountedProductPromotionDto,
   PromotionListItemDto,
   PromotionTypeEnum,
-  SENIOR_PWD_TYPE_LABELS,
   SeniorPwdPersonRequestDto,
   UpdateOrderCommand,
   formatSubCategoryName,
@@ -124,6 +123,7 @@ import {
   StockCartLine,
   stockShortfalls,
   isSeniorPwdEligibleLine,
+  SENIOR_PWD_DISCOUNT_PERCENT,
   cartTotalAfterSeniorPwd,
   isCoveredLine,
   lineNetTotal,
@@ -132,7 +132,7 @@ import {
   totalsByPerson,
 } from '@shared/calculations';
 import { AppRoutes } from '@shared/constants/app-routes';
-import { AddOnLabelsPipe } from '@shared/pipes';
+import { AddOnLabelsPipe, SeniorPwdTypeLabelPipe } from '@shared/pipes';
 import { debounceTime, forkJoin, of, switchMap } from 'rxjs';
 
 type CartDiscountRule = DiscountedProductItemDto & DiscountRule;
@@ -149,6 +149,7 @@ type CatalogScrollTab = number | 'bundles';
     IconComponent,
     LineBreakdownComponent,
     AddOnLabelsPipe,
+    SeniorPwdTypeLabelPipe,
     CheckoutModal,
     CartDrawerComponent,
     CustomerDropdownComponent,
@@ -263,6 +264,7 @@ export class OrderEditor implements OnInit, OnDestroy {
       .map((subCategory) => ({ id: subCategory.id, label: formatSubCategoryName(subCategory.name) })),
   );
   protected readonly cart = signal<CartItemDto[]>([]);
+  protected readonly seniorPwdPercent = SENIOR_PWD_DISCOUNT_PERCENT;
   protected readonly seniorPwdPersons = signal<SeniorPwdPersonRequestDto[]>([]);
   protected readonly showSeniorPwdDialog = signal(false);
   protected readonly vatRegistered = computed(() => this.catalogCache.shopSettings().vatRegistered);
@@ -1813,10 +1815,6 @@ export class OrderEditor implements OnInit, OnDestroy {
 
   protected isSeniorPwdLine(line: CartItemDto): boolean {
     return isCoveredLine(line) && !!this.seniorPwdPersons()[line.seniorPwdPersonIndex!];
-  }
-
-  protected seniorPwdLabel(person: SeniorPwdPersonRequestDto): string {
-    return SENIOR_PWD_TYPE_LABELS[person.type];
   }
 
   protected clearAll(): void {
