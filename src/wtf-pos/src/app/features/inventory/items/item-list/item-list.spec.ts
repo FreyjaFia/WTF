@@ -8,7 +8,7 @@ import {
   ModalStackService,
 } from '@core/services';
 import { AppRoutes } from '@shared/constants/app-routes';
-import { ItemDto } from '@shared/models';
+import { ItemDto, PagedResultDto } from '@shared/models';
 import { of, Subject, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { internals } from '../../../../testing/feature-spec-helpers';
@@ -45,7 +45,7 @@ const ITEMS = [OK_ITEM, WARN_ITEM, CRIT_ITEM];
 
 describe('ItemListComponent', () => {
   let inventory: {
-    getInventoryItems: ReturnType<typeof vi.fn>;
+    getInventoryItemsPaged: ReturnType<typeof vi.fn>;
     deleteInventoryItem: ReturnType<typeof vi.fn>;
     restoreInventoryItem: ReturnType<typeof vi.fn>;
   };
@@ -80,12 +80,15 @@ describe('ItemListComponent', () => {
     return { fixture, vm: internals(fixture.componentInstance) };
   }
 
-  const names = (vm: ReturnType<typeof internals>): string[] =>
-    vm['filteredItems']().map((i: ItemDto) => i.name);
+  function paged(items: ItemDto[], totalCount = items.length): PagedResultDto<ItemDto> {
+    return { items, page: 1, pageSize: 25, totalCount, facets: { ok: 1, warning: 1, critical: 1 } };
+  }
+
+  const lastQuery = (): Record<string, unknown> => inventory.getInventoryItemsPaged.mock.calls.at(-1)![0];
 
   beforeEach(() => {
     inventory = {
-      getInventoryItems: vi.fn(() => of(ITEMS)),
+      getInventoryItemsPaged: vi.fn(() => of(paged(ITEMS))),
       deleteInventoryItem: vi.fn(() => of(undefined)),
       restoreInventoryItem: vi.fn(() => of(undefined)),
     };
@@ -117,27 +120,35 @@ describe('ItemListComponent', () => {
   });
 
   describe('loading', () => {
-    it('requests items including inactive ones', () => {
+    it('asks for the first page of 25 with every status', () => {
       create();
-      expect(inventory.getInventoryItems).toHaveBeenCalledWith({ includeInactive: true });
+      expect(lastQuery()).toEqual({
+        searchTerm: null,
+        stockStatuses: ['ok', 'warning', 'critical'],
+        sortBy: null,
+        sortDirection: 'asc',
+        page: 1,
+        pageSize: 25,
+      });
     });
 
     it('stores loaded items and clears the loading flag', () => {
       const { vm } = create();
       expect(vm['items']()).toEqual(ITEMS);
+      expect(vm['totalCount']()).toBe(3);
       expect(vm['isLoading']()).toBe(false);
     });
 
     it('shows a spinner while loading', () => {
-      const pending = new Subject<ItemDto[]>();
-      inventory.getInventoryItems.mockReturnValue(pending);
+      const pending = new Subject<PagedResultDto<ItemDto>>();
+      inventory.getInventoryItemsPaged.mockReturnValue(pending);
       const { fixture, vm } = create();
       expect(vm['isLoading']()).toBe(true);
       expect((fixture.nativeElement as HTMLElement).querySelector('.loading')).not.toBeNull();
     });
 
     it('alerts and stops loading on error', () => {
-      inventory.getInventoryItems.mockReturnValue(throwError(() => new Error('boom')));
+      inventory.getInventoryItemsPaged.mockReturnValue(throwError(() => new Error('boom')));
       const { vm } = create();
       expect(alerts.error).toHaveBeenCalledWith('boom');
       expect(vm['isLoading']()).toBe(false);
@@ -146,16 +157,16 @@ describe('ItemListComponent', () => {
 
     it('refresh sets the refreshing flag then clears it after reloading', () => {
       const { vm } = create();
-      const pending = new Subject<ItemDto[]>();
-      inventory.getInventoryItems.mockReturnValue(pending);
+      const pending = new Subject<PagedResultDto<ItemDto>>();
+      inventory.getInventoryItemsPaged.mockReturnValue(pending);
       vm['refresh']();
       expect(vm['isRefreshing']()).toBe(true);
-      pending.next(ITEMS);
+      pending.next(paged(ITEMS));
       expect(vm['isRefreshing']()).toBe(false);
     });
 
     it('renders an empty state when there are no items', () => {
-      inventory.getInventoryItems.mockReturnValue(of([]));
+      inventory.getInventoryItemsPaged.mockReturnValue(of(paged([])));
       const { fixture } = create();
       expect((fixture.nativeElement as HTMLElement).textContent).toContain('No');
     });
@@ -165,6 +176,52 @@ describe('ItemListComponent', () => {
       const text = (fixture.nativeElement as HTMLElement).textContent!;
       expect(text).toContain('Alpha Milk');
       expect(text).toContain('Gamma Cups');
+    });
+  });
+
+  describe('paging', () => {
+    it('starts on the page in the address', () => {
+      TestBed.configureTestingModule({});
+      const { vm } = create();
+      expect(vm['page']()).toBe(1);
+    });
+
+    it('shows the pagination bar and loads the chosen page', () => {
+      inventory.getInventoryItemsPaged.mockReturnValue(of(paged(ITEMS, 60)));
+      const { fixture, vm } = create();
+      expect((fixture.nativeElement as HTMLElement).querySelector('app-pagination')).not.toBeNull();
+
+      vm['goToPage'](2);
+
+      expect(lastQuery()['page']).toBe(2);
+    });
+
+    it('goes back to page 1 when the rows per page change', () => {
+      const { vm } = create();
+      vm['goToPage'](2);
+
+      vm['changePageSize'](50);
+
+      expect(lastQuery()).toMatchObject({ page: 1, pageSize: 50 });
+      expect(listState.save).toHaveBeenLastCalledWith('inventory:item-list', expect.objectContaining({ pageSize: 50 }));
+    });
+
+    it('follows the page the server returns when the page was past the end', () => {
+      inventory.getInventoryItemsPaged.mockReturnValue(of({ ...paged(ITEMS, 30), page: 2 }));
+      const { vm } = create();
+      expect(vm['page']()).toBe(2);
+    });
+
+    it('dims the rows while another page loads', () => {
+      inventory.getInventoryItemsPaged.mockReturnValue(of(paged(ITEMS, 60)));
+      const { fixture, vm } = create();
+      inventory.getInventoryItemsPaged.mockReturnValue(new Subject());
+
+      vm['goToPage'](2);
+      fixture.detectChanges();
+
+      expect(vm['isReloading']()).toBe(true);
+      expect((fixture.nativeElement as HTMLElement).querySelector('.opacity-60')).not.toBeNull();
     });
   });
 
@@ -193,9 +250,8 @@ describe('ItemListComponent', () => {
       expect(vm['getStockStatus'](item)).toBe('critical');
     });
 
-    it('counts items per status and exposes them as filter options', () => {
+    it('shows the chip counts the server sent as filter options', () => {
       const { vm } = create();
-      expect(vm['statusCounts']()).toEqual({ ok: 1, warning: 1, critical: 1 });
       expect(vm['statusOptions']()).toEqual([
         { id: 'ok', label: 'OK', count: 1 },
         { id: 'warning', label: 'Warning', count: 1 },
@@ -205,37 +261,26 @@ describe('ItemListComponent', () => {
   });
 
   describe('status filtering', () => {
-    it('shows every status by default', () => {
+    it('toggling a status asks the server again from page 1 and persists the selection', () => {
       const { vm } = create();
-      expect(names(vm)).toEqual(['Alpha Milk', 'Beta Sugar', 'Gamma Cups']);
-    });
-
-    it('toggling a status removes and re-adds it, and persists the selection', () => {
-      const { vm } = create();
+      vm['goToPage'](3);
       vm['toggleStatusSelection']('critical');
       expect(vm['isStatusSelected']('critical')).toBe(false);
-      expect(names(vm)).toEqual(['Alpha Milk', 'Beta Sugar']);
+      expect(lastQuery()).toMatchObject({ stockStatuses: ['ok', 'warning'], page: 1 });
       expect(listState.save).toHaveBeenLastCalledWith('inventory:item-list', {
         searchTerm: '',
         selectedStatuses: ['ok', 'warning'],
+        pageSize: 25,
       });
       vm['toggleStatusSelection']('critical');
       expect(vm['isStatusSelected']('critical')).toBe(true);
-      expect(names(vm)).toEqual(['Alpha Milk', 'Beta Sugar', 'Gamma Cups']);
     });
 
-    it('selecting a single status filters to it', () => {
-      const { vm } = create();
-      vm['clearStatusSelections']();
-      vm['toggleStatusSelection']('warning');
-      expect(names(vm)).toEqual(['Beta Sugar']);
-    });
-
-    it('clearing all statuses shows all items again (empty selection means no filter)', () => {
+    it('clearing all statuses sends none (the server treats that as every item)', () => {
       const { vm } = create();
       vm['clearStatusSelections']();
       expect(vm['selectedStatuses']()).toEqual([]);
-      expect(names(vm)).toEqual(['Alpha Milk', 'Beta Sugar', 'Gamma Cups']);
+      expect(lastQuery()['stockStatuses']).toEqual([]);
       expect(listState.save).toHaveBeenCalled();
     });
 
@@ -249,72 +294,31 @@ describe('ItemListComponent', () => {
   });
 
   describe('search', () => {
-    function searchWith(vm: ReturnType<typeof internals>, term: string): void {
-      vm['filterForm'].controls.searchTerm.setValue(term);
-    }
-
-    it('matches name, sku and barcode case-insensitively', () => {
-      const { vm } = create(false);
-      vm['items'].set(ITEMS);
-      searchWith(vm, '  MILK ');
-      expect(names(vm)).toEqual(['Alpha Milk']);
-    });
-
-    it('matches by sku', () => {
-      const { vm } = create(false);
-      vm['items'].set(ITEMS);
-      searchWith(vm, 'sgr');
-      expect(names(vm)).toEqual(['Beta Sugar']);
-    });
-
-    it('matches by barcode and ignores missing fields', () => {
-      const { vm } = create(false);
-      vm['items'].set(ITEMS);
-      searchWith(vm, 'b-333');
-      expect(names(vm)).toEqual(['Gamma Cups']);
-    });
-
-    it('combines search with status filters', () => {
-      const { vm } = create(false);
-      vm['items'].set(ITEMS);
-      vm['selectedStatuses'].set(['ok']);
-      searchWith(vm, 'b-');
-      expect(names(vm)).toEqual(['Alpha Milk']);
-    });
-
-    it('re-filters the rendered list when the search text changes after first render', () => {
+    it('searches on the server after a 300ms pause and returns to page 1', () => {
+      vi.useFakeTimers();
       const { vm } = create();
-      expect(names(vm)).toHaveLength(3);
-      searchWith(vm, 'milk');
-      expect(names(vm)).toEqual(['Alpha Milk']);
+      vm['goToPage'](2);
+      const calls = inventory.getInventoryItemsPaged.mock.calls.length;
+
+      vm['filterForm'].controls.searchTerm.setValue(' mil ');
+      vi.advanceTimersByTime(299);
+      expect(inventory.getInventoryItemsPaged.mock.calls.length).toBe(calls);
+      vi.advanceTimersByTime(1);
+
+      expect(lastQuery()).toMatchObject({ searchTerm: 'mil', page: 1 });
+      expect(listState.save).toHaveBeenLastCalledWith('inventory:item-list', {
+        searchTerm: ' mil ',
+        selectedStatuses: ['ok', 'warning', 'critical'],
+        pageSize: 25,
+      });
     });
 
-    it('restores a persisted search term and status selection without emitting', () => {
-      listState.load.mockReturnValue({ searchTerm: 'sugar', selectedStatuses: ['warning'] });
+    it('restores a persisted search term and status selection and sends them', () => {
+      listState.load.mockReturnValue({ searchTerm: 'sugar', selectedStatuses: ['warning'], pageSize: 50 });
       const { vm } = create();
       expect(listState.load).toHaveBeenCalledWith('inventory:item-list', expect.any(Object));
       expect(vm['filterForm'].controls.searchTerm.value).toBe('sugar');
-      expect(names(vm)).toEqual(['Beta Sugar']);
-    });
-
-    it('persists the search term after a 200ms debounce', () => {
-      vi.useFakeTimers();
-      configure();
-      // No view is created, so no change detection can re-run ngOnInit or the search input.
-      const component = TestBed.runInInjectionContext(() => new ItemListComponent());
-      component.ngOnInit();
-      listState.save.mockClear();
-      const form = internals(component)['filterForm'];
-      form.controls.searchTerm.setValue('a');
-      form.controls.searchTerm.setValue('ab');
-      vi.advanceTimersByTime(199);
-      expect(listState.save).not.toHaveBeenCalled();
-      vi.advanceTimersByTime(1);
-      expect(listState.save).toHaveBeenCalledTimes(1);
-      expect(listState.save).toHaveBeenCalledWith('inventory:item-list', {
-        searchTerm: 'ab',
-        selectedStatuses: ['ok', 'warning', 'critical'],
-      });
+      expect(lastQuery()).toMatchObject({ searchTerm: 'sugar', stockStatuses: ['warning'], pageSize: 50 });
     });
   });
 
@@ -416,12 +420,12 @@ describe('ItemListComponent', () => {
     it('confirm deletes, closes the dialog and reloads', () => {
       const { vm } = create();
       vm['deleteItem'](OK_ITEM);
-      inventory.getInventoryItems.mockClear();
+      inventory.getInventoryItemsPaged.mockClear();
       vm['confirmDelete']();
       expect(inventory.deleteInventoryItem).toHaveBeenCalledWith('ok');
       expect(vm['showDeleteModal']()).toBe(false);
       expect(vm['isDeleting']()).toBe(false);
-      expect(inventory.getInventoryItems).toHaveBeenCalledTimes(1);
+      expect(inventory.getInventoryItemsPaged).toHaveBeenCalledTimes(1);
       expect(TestBed.inject(ModalStackService).hasOpen()).toBe(false);
     });
 
@@ -495,12 +499,12 @@ describe('ItemListComponent', () => {
     it('confirm restores, announces success and reloads', () => {
       const { vm } = create();
       vm['restoreItem'](inactive);
-      inventory.getInventoryItems.mockClear();
+      inventory.getInventoryItemsPaged.mockClear();
       vm['confirmRestore']();
       expect(inventory.restoreInventoryItem).toHaveBeenCalledWith('gone');
       expect(alerts.successRestored).toHaveBeenCalledWith('Item');
       expect(vm['showRestoreModal']()).toBe(false);
-      expect(inventory.getInventoryItems).toHaveBeenCalledTimes(1);
+      expect(inventory.getInventoryItemsPaged).toHaveBeenCalledTimes(1);
     });
 
     it('confirm without a selected item does nothing', () => {
@@ -555,59 +559,32 @@ describe('ItemListComponent', () => {
     });
   });
 
+
+
   describe('sorting from the column headers', () => {
     it('keeps the server order until a column is picked', () => {
-      const { vm } = create();
-      expect(vm['sortColumn']()).toBeNull();
-      expect(vm['sortedItems']().map((i: ItemDto) => i.name)).toEqual([
-        'Alpha Milk',
-        'Beta Sugar',
-        'Gamma Cups',
-      ]);
+      create();
+      expect(lastQuery()['sortBy']).toBeNull();
     });
 
-    it('sorts by name, and reverses when the same column is picked again', () => {
+    it('asks the server to sort, reverses on a second pick and returns to page 1', () => {
       const { vm } = create();
+      vm['goToPage'](3);
+
       vm['toggleSort']('name');
-      expect(vm['sortDirection']()).toBe('asc');
-      expect(vm['sortedItems']().map((i: ItemDto) => i.name)).toEqual([
-        'Alpha Milk',
-        'Beta Sugar',
-        'Gamma Cups',
-      ]);
+      expect(lastQuery()).toMatchObject({ sortBy: 'name', sortDirection: 'asc', page: 1 });
 
       vm['toggleSort']('name');
       expect(vm['sortDirection']()).toBe('desc');
-      expect(vm['sortedItems']().map((i: ItemDto) => i.name)).toEqual([
-        'Gamma Cups',
-        'Beta Sugar',
-        'Alpha Milk',
-      ]);
+      expect(lastQuery()).toMatchObject({ sortBy: 'name', sortDirection: 'desc' });
     });
 
-    it('sorts by stock quantity', () => {
+    it('sorts by stock, status and cost on the server', () => {
       const { vm } = create();
-      vm['toggleSort']('stock');
-      expect(vm['sortedItems']().map((i: ItemDto) => i.currentQuantity)).toEqual([5, 40, 100]);
-    });
-
-    it('sorts by status with the most urgent first', () => {
-      const { vm } = create();
-      vm['toggleSort']('status');
-      expect(vm['sortedItems']().map((i: ItemDto) => i.id)).toEqual(['crit', 'warn', 'ok']);
-    });
-
-    it('sorts by cost, with items that have no cost first', () => {
-      inventory.getInventoryItems.mockReturnValue(
-        of([
-          makeItem({ id: 'a', name: 'A', costPrice: 9 }),
-          makeItem({ id: 'b', name: 'B', costPrice: null }),
-          makeItem({ id: 'c', name: 'C', costPrice: 2 }),
-        ]),
-      );
-      const { vm } = create();
-      vm['toggleSort']('cost');
-      expect(vm['sortedItems']().map((i: ItemDto) => i.id)).toEqual(['b', 'c', 'a']);
+      for (const column of ['stock', 'status', 'cost'] as const) {
+        vm['toggleSort'](column);
+        expect(lastQuery()).toMatchObject({ sortBy: column, sortDirection: 'asc' });
+      }
     });
 
     it('starts a newly picked column ascending', () => {
@@ -616,13 +593,6 @@ describe('ItemListComponent', () => {
       vm['toggleSort']('name');
       vm['toggleSort']('stock');
       expect(vm['sortDirection']()).toBe('asc');
-    });
-
-    it('still honours the search and status filters', () => {
-      const { vm } = create();
-      vm['selectedStatuses'].set(['ok', 'warning']);
-      vm['toggleSort']('stock');
-      expect(vm['sortedItems']().map((i: ItemDto) => i.id)).toEqual(['warn', 'ok']);
     });
   });
 });
