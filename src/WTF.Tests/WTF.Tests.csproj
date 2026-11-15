@@ -28,6 +28,10 @@
     <None Include="..\wtf-pos\src\app\shared\permissions\permission-catalog.json"
           Link="Permissions\permission-catalog.json"
           CopyToOutputDirectory="PreserveNewest" />
+    <!-- The script that seeds the plan features, so PlanFeatureDriftTests can compare its word lists with the catalog. -->
+    <None Include="..\..\tools\sql\20261130_plan_feature_catalog.sql"
+          Link="Sql\20261130_plan_feature_catalog.sql"
+          CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

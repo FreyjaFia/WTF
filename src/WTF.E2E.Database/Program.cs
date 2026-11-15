@@ -2,6 +2,7 @@ using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using WTF.Api.Features.Orders.Enums;
 using WTF.Api.Features.Users.Enums;
+using WTF.Calculations.Subscriptions;
 using WTF.Domain.Data;
 using WTF.Domain.Entities;
 using WTF.Domain.Tenancy;
@@ -111,11 +112,14 @@ async Task CreateAsync()
 
 static async Task SeedDefaultShopAsync(WTFDbContext db)
 {
-    // The shop every test account belongs to (same fixed id as tools/sql/20261108_add_tenants.sql), on the Business plan (every feature, so the suite can reach every screen); gating specs open their own Starter and Pro shops.
+    // The shop every test account belongs to (same fixed id as tools/sql/20261108_add_tenants.sql). It is on the Business plan,
+    // active here so the gating specs can assign it, and holds every feature so the suite can reach every screen. The gating
+    // specs open their own Starter and Pro shops.
     var now = DateTime.UtcNow;
-    var pro = new Plan { Code = "pro", Name = "Pro", MonthlyPrice = 2500, Features = "pos,orders,reports,offline,inventory,promotions,orderlinks,chat,workbook,expenses,customroles", SortOrder = 2, IsActive = true };
-    var business = new Plan { Code = "business", Name = "Business", MonthlyPrice = 3500, Features = "inventory,purchasing,promotions,orderlinks,chat,expenses,workbook,audit,customroles", SortOrder = 3, IsActive = true };
-    db.Plans.Add(new Plan { Code = "starter", Name = "Starter", MonthlyPrice = 1500, Features = "pos,orders,reports,offline", SortOrder = 1, IsActive = true });
+    string[] proFeatures = [PlanFeatures.Inventory, PlanFeatures.Promotions, PlanFeatures.OrderLinks, PlanFeatures.Chat, PlanFeatures.Workbook, PlanFeatures.Expenses, PlanFeatures.CustomRoles];
+    var pro = new Plan { Code = "pro", Name = "Pro", MonthlyPrice = 2500, Features = PlanFeatures.Serialize(proFeatures), SortOrder = 2, IsActive = true };
+    var business = new Plan { Code = "business", Name = "Business", MonthlyPrice = 3500, Features = PlanFeatures.Serialize(PlanFeatures.Gateable), SortOrder = 3, IsActive = true };
+    db.Plans.Add(new Plan { Code = "starter", Name = "Starter", MonthlyPrice = 1500, Features = string.Empty, SortOrder = 1, IsActive = true });
     db.Plans.Add(pro);
     db.Plans.Add(business);
     db.Tenants.Add(new Tenant { Id = TenantDefaults.DefaultTenantId, Name = "WTF", Slug = TenantDefaults.DefaultTenantSlug, Status = 2, CreatedAt = now });
