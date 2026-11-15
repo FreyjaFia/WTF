@@ -1,11 +1,13 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { Capacitor } from '@capacitor/core';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormArray, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorMessages } from '@core/messages';
 import {
   AlertService,
   AuthService,
+  ListStateService,
   InventoryService,
   PurchaseOrderService,
   StockReceiptService,
@@ -33,6 +35,10 @@ import {
   SupplierItemDto,
   SupplierSummaryDto,
 } from '@shared/models';
+import { debounceTime, Subscription } from 'rxjs';
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS, isPageSizeOption } from '@shared/calculations/pagination';
+import { PaginationComponent } from '@shared/components/pagination/pagination';
+import { readPageParam, writePageParam } from '@shared/utils/list-page-url';
 
 type ReceiptLineGroup = FormGroup<{
   itemId: FormControl<string>;
@@ -63,7 +69,7 @@ type ReceiptSortColumn = 'receipt' | 'received' | 'items' | 'total';
 
 @Component({
   selector: 'app-receiving',
-  imports: [
+  imports: [PaginationComponent, 
     ConnectionErrorComponent,
     DatePipe,
     DecimalPipe,
@@ -86,49 +92,19 @@ export class ReceivingComponent implements OnInit {
   protected readonly auth = inject(AuthService);
 
   protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
-  protected readonly search = signal('');
+  protected readonly searchControl = new FormControl<string | null>('');
   protected readonly receipts = signal<StockReceiptSummaryDto[]>([]);
-  protected readonly filteredReceipts = computed(() => {
-    const term = this.search().trim().toLowerCase();
-    if (!term) {
-      return this.receipts();
-    }
-
-    return this.receipts().filter((receipt) =>
-      [
-        receipt.supplierName,
-        receipt.invoiceNumber,
-        receipt.purchaseOrderNumber ? `po-${receipt.purchaseOrderNumber}` : null,
-        receipt.createdByName,
-        receipt.note,
-      ].some((field) => field?.toLowerCase().includes(term)),
-    );
-  });
+  protected readonly totalCount = signal(0);
+  protected readonly page = signal(readPageParam(inject(ActivatedRoute)));
+  protected readonly pageSize = signal<number>(DEFAULT_PAGE_SIZE);
+  protected readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
+  protected readonly isReloading = signal(false);
+  private readonly activatedRoute = inject(ActivatedRoute);
+  private readonly listState = inject(ListStateService);
+  private loadRequest: Subscription | null = null;
+  private readonly router = inject(Router);
   protected readonly sortColumn = signal<ReceiptSortColumn | null>(null);
   protected readonly sortDirection = signal<SortDirection>('asc');
-  protected readonly sortedReceipts = computed(() => {
-    const column = this.sortColumn();
-    const receipts = [...this.filteredReceipts()];
-    if (!column) {
-      return receipts;
-    }
-
-    const direction = this.sortDirection() === 'asc' ? 1 : -1;
-    const compare = (a: StockReceiptSummaryDto, b: StockReceiptSummaryDto): number => {
-      switch (column) {
-        case 'receipt':
-          return a.supplierName.localeCompare(b.supplierName, undefined, { sensitivity: 'base' });
-        case 'received':
-          return a.receivedOn.localeCompare(b.receivedOn) || a.createdAt.localeCompare(b.createdAt);
-        case 'items':
-          return a.lineCount - b.lineCount;
-        case 'total':
-          return (a.linesTotal ?? -1) - (b.linesTotal ?? -1);
-      }
-    };
-
-    return receipts.sort((a, b) => compare(a, b) * direction);
-  });
   protected readonly supplierOptions = computed(() =>
     this.suppliers().map((supplier) => ({ id: supplier.id, label: supplier.name })),
   );
@@ -179,6 +155,9 @@ export class ReceivingComponent implements OnInit {
   private pendingRequestId = crypto.randomUUID();
 
   public ngOnInit(): void {
+    const saved = this.listState.load<{ pageSize?: number }>('inventory:receiving', {});
+    this.pageSize.set(isPageSizeOption(saved.pageSize) ? (saved.pageSize as number) : DEFAULT_PAGE_SIZE);
+    this.searchControl.valueChanges.pipe(debounceTime(300)).subscribe(() => this.reloadFromFirstPage());
     this.load();
     this.lines.valueChanges.subscribe(() => this.formTick.update((tick) => tick + 1));
     this.header.controls.invoiceTotal.valueChanges.subscribe(() => this.formTick.update((tick) => tick + 1));
@@ -324,6 +303,8 @@ export class ReceivingComponent implements OnInit {
       this.sortColumn.set(column);
       this.sortDirection.set('asc');
     }
+
+    this.reloadFromFirstPage();
   }
 
   protected toggleReceipt(receipt: StockReceiptSummaryDto): void {
@@ -347,21 +328,58 @@ export class ReceivingComponent implements OnInit {
   }
 
   protected load(): void {
+    const firstLoad = this.receipts().length === 0;
+    this.isLoading.set(firstLoad);
+    this.isReloading.set(!firstLoad);
     this.connectionFailed.set(false);
-    this.isLoading.set(true);
-    this.receiptsApi.getReceipts().subscribe({
-      next: (receipts) => {
-        this.receipts.set(receipts);
-        this.isLoading.set(false);
-        this.isRefreshing.set(false);
-      },
-      error: (err: Error) => {
-        this.connectionFailed.set(err.message === HttpErrorMessages.NetworkUnavailable);
-        this.isLoading.set(false);
-        this.isRefreshing.set(false);
-        this.alertService.error(err.message);
-      },
-    });
+    this.loadRequest?.unsubscribe();
+
+    this.loadRequest = this.receiptsApi
+      .getReceiptsPaged({
+        search: this.searchControl.value?.trim() || null,
+        sortBy: this.sortColumn(),
+        sortDirection: this.sortColumn() ? this.sortDirection() : null,
+        page: this.page(),
+        pageSize: this.pageSize(),
+      })
+      .subscribe({
+        next: (result) => {
+          this.receipts.set([...result.items]);
+          this.totalCount.set(result.totalCount);
+          if (result.page !== this.page()) {
+            this.page.set(result.page);
+            writePageParam(this.router, this.activatedRoute, result.page);
+          }
+          this.isLoading.set(false);
+          this.isReloading.set(false);
+          this.isRefreshing.set(false);
+        },
+        error: (err: Error) => {
+          this.connectionFailed.set(err.message === HttpErrorMessages.NetworkUnavailable);
+          this.isLoading.set(false);
+          this.isReloading.set(false);
+          this.isRefreshing.set(false);
+          this.alertService.error(err.message);
+        },
+      });
+  }
+
+  protected goToPage(page: number): void {
+    this.page.set(page);
+    writePageParam(this.router, this.activatedRoute, page);
+    this.load();
+  }
+
+  protected changePageSize(size: number): void {
+    this.pageSize.set(size);
+    this.listState.save('inventory:receiving', { pageSize: size });
+    this.reloadFromFirstPage();
+  }
+
+  protected reloadFromFirstPage(): void {
+    this.page.set(1);
+    writePageParam(this.router, this.activatedRoute, 1);
+    this.load();
   }
 
   protected save(): void {

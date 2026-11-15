@@ -9,9 +9,11 @@ import {
   StockCountEntryDto,
   StockCountStatus,
   StockCountSummaryDto,
+  PagedResultDto,
 } from '@shared/models';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import { PagedQuery, pagedParams } from './paged-params';
 import { extractHttpErrorMessage } from './http-error-message';
 
 @Injectable({ providedIn: 'root' })
@@ -24,6 +26,12 @@ export class StockCountService {
     const query = status ? `?status=${status}` : '';
     return this.http
       .get<StockCountSummaryDto[]>(`${this.baseUrl}${query}`)
+      .pipe(catchError((error) => this.handleError(error, 'Unable to fetch the stock counts.')));
+  }
+
+  public getCountsPaged(query: PagedQuery): Observable<PagedResultDto<StockCountSummaryDto>> {
+    return this.http
+      .get<PagedResultDto<StockCountSummaryDto>>(`${this.baseUrl}/paged`, { params: pagedParams(query) })
       .pipe(catchError((error) => this.handleError(error, 'Unable to fetch the stock counts.')));
   }
 

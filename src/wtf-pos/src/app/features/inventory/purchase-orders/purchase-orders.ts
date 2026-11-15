@@ -1,12 +1,13 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { Capacitor } from '@capacitor/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormArray, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorMessages } from '@core/messages';
 import {
   AlertService,
   AuthService,
+  ListStateService,
   InventoryService,
   PurchaseOrderService,
   SupplierService,
@@ -34,6 +35,10 @@ import {
   SupplierItemDto,
   SupplierSummaryDto,
 } from '@shared/models';
+import { debounceTime, Subscription } from 'rxjs';
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS, isPageSizeOption } from '@shared/calculations/pagination';
+import { PaginationComponent } from '@shared/components/pagination/pagination';
+import { readPageParam, writePageParam } from '@shared/utils/list-page-url';
 
 type OrderLineGroup = FormGroup<{
   itemId: FormControl<string>;
@@ -82,7 +87,7 @@ type OrderSortColumn = 'order' | 'expected' | 'status' | 'total';
 
 @Component({
   selector: 'app-purchase-orders',
-  imports: [
+  imports: [PaginationComponent, 
     BadgeComponent,
     ConfirmDialogComponent,
     ConnectionErrorComponent,
@@ -110,7 +115,7 @@ export class PurchaseOrdersComponent implements OnInit {
 
   protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
   protected readonly statuses = PurchaseOrderStatus;
-  protected readonly search = signal('');
+  protected readonly searchControl = new FormControl<string | null>('');
   protected readonly pendingAction = signal<{
     action: OrderAction;
     order: PurchaseOrderDto;
@@ -120,45 +125,18 @@ export class PurchaseOrdersComponent implements OnInit {
   protected readonly isFiltersOpen = signal(false);
   protected readonly activeFilterCount = computed(() => (this.statusFilter() === null ? 0 : 1));
   protected readonly orders = signal<PurchaseOrderSummaryDto[]>([]);
+  protected readonly totalCount = signal(0);
+  protected readonly page = signal(readPageParam(inject(ActivatedRoute)));
+  protected readonly pageSize = signal<number>(DEFAULT_PAGE_SIZE);
+  protected readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
+  protected readonly isReloading = signal(false);
+  private readonly activatedRoute = inject(ActivatedRoute);
+  private readonly listState = inject(ListStateService);
+  private loadRequest: Subscription | null = null;
   protected readonly suppliers = signal<SupplierSummaryDto[]>([]);
   protected readonly items = signal<ItemDto[]>([]);
-  protected readonly filteredOrders = computed(() => {
-    const term = this.search().trim().toLowerCase();
-    if (!term) {
-      return this.orders();
-    }
-
-    return this.orders().filter((order) =>
-      [`po-${order.poNumber}`, order.supplierName, order.note, order.createdByName].some((field) =>
-        field?.toLowerCase().includes(term),
-      ),
-    );
-  });
   protected readonly sortColumn = signal<OrderSortColumn | null>(null);
   protected readonly sortDirection = signal<SortDirection>('asc');
-  protected readonly sortedOrders = computed(() => {
-    const column = this.sortColumn();
-    const orders = [...this.filteredOrders()];
-    if (!column) {
-      return orders;
-    }
-
-    const direction = this.sortDirection() === 'asc' ? 1 : -1;
-    const compare = (a: PurchaseOrderSummaryDto, b: PurchaseOrderSummaryDto): number => {
-      switch (column) {
-        case 'order':
-          return a.poNumber - b.poNumber;
-        case 'expected':
-          return (a.expectedOn ?? '').localeCompare(b.expectedOn ?? '');
-        case 'status':
-          return a.status - b.status;
-        case 'total':
-          return (a.total ?? -1) - (b.total ?? -1);
-      }
-    };
-
-    return orders.sort((a, b) => compare(a, b) * direction);
-  });
   protected readonly supplierOptions = computed(() =>
     this.suppliers().map((supplier) => ({ id: supplier.id, label: supplier.name })),
   );
@@ -196,6 +174,9 @@ export class PurchaseOrdersComponent implements OnInit {
   });
 
   public ngOnInit(): void {
+    const saved = this.listState.load<{ pageSize?: number }>('inventory:purchase-orders', {});
+    this.pageSize.set(isPageSizeOption(saved.pageSize) ? (saved.pageSize as number) : DEFAULT_PAGE_SIZE);
+    this.searchControl.valueChanges.pipe(debounceTime(300)).subscribe(() => this.reloadFromFirstPage());
     this.load();
     this.lines.valueChanges.subscribe(() => this.formTick.update((tick) => tick + 1));
   }
@@ -207,6 +188,8 @@ export class PurchaseOrdersComponent implements OnInit {
       this.sortColumn.set(column);
       this.sortDirection.set('asc');
     }
+
+    this.reloadFromFirstPage();
   }
 
   protected openSuggestedOrders(): void {
@@ -252,7 +235,7 @@ export class PurchaseOrdersComponent implements OnInit {
 
   protected setFilter(status: number | null): void {
     this.statusFilter.set(status);
-    this.load();
+    this.reloadFromFirstPage();
   }
 
   protected openForm(): void {
@@ -358,21 +341,59 @@ export class PurchaseOrdersComponent implements OnInit {
   }
 
   protected load(): void {
+    const firstLoad = this.orders().length === 0;
+    this.isLoading.set(firstLoad);
+    this.isReloading.set(!firstLoad);
     this.connectionFailed.set(false);
-    this.isLoading.set(true);
-    this.ordersApi.getOrders({ status: this.statusFilter() }).subscribe({
-      next: (orders) => {
-        this.orders.set(orders);
-        this.isLoading.set(false);
-        this.isRefreshing.set(false);
-      },
-      error: (err: Error) => {
-        this.connectionFailed.set(err.message === HttpErrorMessages.NetworkUnavailable);
-        this.isLoading.set(false);
-        this.isRefreshing.set(false);
-        this.alertService.error(err.message);
-      },
-    });
+    this.loadRequest?.unsubscribe();
+
+    this.loadRequest = this.ordersApi
+      .getOrdersPaged({
+        status: this.statusFilter(),
+        search: this.searchControl.value?.trim() || null,
+        sortBy: this.sortColumn(),
+        sortDirection: this.sortColumn() ? this.sortDirection() : null,
+        page: this.page(),
+        pageSize: this.pageSize(),
+      })
+      .subscribe({
+        next: (result) => {
+          this.orders.set([...result.items]);
+          this.totalCount.set(result.totalCount);
+          if (result.page !== this.page()) {
+            this.page.set(result.page);
+            writePageParam(this.router, this.activatedRoute, result.page);
+          }
+          this.isLoading.set(false);
+          this.isReloading.set(false);
+          this.isRefreshing.set(false);
+        },
+        error: (err: Error) => {
+          this.connectionFailed.set(err.message === HttpErrorMessages.NetworkUnavailable);
+          this.isLoading.set(false);
+          this.isReloading.set(false);
+          this.isRefreshing.set(false);
+          this.alertService.error(err.message);
+        },
+      });
+  }
+
+  protected goToPage(page: number): void {
+    this.page.set(page);
+    writePageParam(this.router, this.activatedRoute, page);
+    this.load();
+  }
+
+  protected changePageSize(size: number): void {
+    this.pageSize.set(size);
+    this.listState.save('inventory:purchase-orders', { pageSize: size });
+    this.reloadFromFirstPage();
+  }
+
+  protected reloadFromFirstPage(): void {
+    this.page.set(1);
+    writePageParam(this.router, this.activatedRoute, 1);
+    this.load();
   }
 
   protected save(): void {

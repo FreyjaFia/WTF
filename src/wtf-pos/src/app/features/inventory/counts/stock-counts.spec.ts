@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { AlertService, AuthService, StockCountService } from '@core/services';
-import { StockCountDto, StockCountStatus, StockCountSummaryDto } from '@shared/models';
+import { PagedResultDto, StockCountDto, StockCountStatus, StockCountSummaryDto } from '@shared/models';
 import { of, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 import { StockCountsComponent } from './stock-counts';
@@ -20,19 +20,29 @@ const summary = (overrides: Partial<StockCountSummaryDto> = {}): StockCountSumma
   ...overrides,
 });
 
+const paged = (items: StockCountSummaryDto[], totalCount = items.length): PagedResultDto<StockCountSummaryDto> => ({
+  items,
+  page: 1,
+  pageSize: 25,
+  totalCount,
+});
+
 interface Vm {
   form: { patchValue: (value: object) => void };
   start: () => void;
   openForm: () => void;
   toggleSort: (column: 'count' | 'created' | 'progress' | 'status') => void;
-  sortedCounts: () => StockCountSummaryDto[];
   sortDirection: () => string;
+  goToPage: (page: number) => void;
+  changePageSize: (size: number) => void;
+  page: () => number;
+  isReloading: () => boolean;
 }
 
 describe('StockCountsComponent', () => {
   function setup(options: { canWrite?: boolean; counts?: StockCountSummaryDto[]; start?: unknown } = {}) {
     const service = {
-      getCounts: vi.fn().mockReturnValue(of(options.counts ?? [summary()])),
+      getCountsPaged: vi.fn().mockReturnValue(of(paged(options.counts ?? [summary()]))),
       startCount: vi
         .fn()
         .mockReturnValue(options.start ?? of({ summary: summary({ id: 'new' }), lines: [] } as StockCountDto)),
@@ -53,35 +63,63 @@ describe('StockCountsComponent', () => {
     return { fixture, service, alerts, el, vm, router: TestBed.inject(Router) };
   }
 
-  describe('sorting from the column headers', () => {
-    const counts = [
-      summary({ id: 'a', name: 'Weekly milk', createdAt: '2026-11-08T01:00:00Z', lineCount: 4, countedCount: 1, status: StockCountStatus.Open }),
-      summary({ id: 'b', name: 'bar stock', createdAt: '2026-11-01T01:00:00Z', lineCount: 2, countedCount: 2, status: StockCountStatus.Posted }),
-      summary({ id: 'c', name: 'Pantry', createdAt: '2026-11-05T01:00:00Z', lineCount: 0, countedCount: 0, status: StockCountStatus.Cancelled }),
-    ];
-    const ids = (vm: Vm): string[] => vm.sortedCounts().map((c) => c.id);
+  describe('sorting and paging on the server', () => {
+    const lastQuery = (service: { getCountsPaged: ReturnType<typeof vi.fn> }): Record<string, unknown> =>
+      service.getCountsPaged.mock.calls.at(-1)![0];
 
-    it('keeps the server order until a column is picked', () => {
-      expect(ids(setup({ counts }).vm)).toEqual(['a', 'b', 'c']);
+    it('asks for the first page of 25 in the server order until a column is picked', () => {
+      const { service } = setup();
+      expect(lastQuery(service)).toEqual({ sortBy: null, sortDirection: null, page: 1, pageSize: 25 });
     });
 
-    it('sorts by name ignoring case, and reverses when picked again', () => {
-      const { vm } = setup({ counts });
+    it('asks the server to sort, reverses on a second pick and returns to page 1', () => {
+      const { vm, service } = setup();
+      vm.goToPage(3);
+
       vm.toggleSort('count');
-      expect(ids(vm)).toEqual(['b', 'c', 'a']);
+      expect(lastQuery(service)).toMatchObject({ sortBy: 'count', sortDirection: 'asc', page: 1 });
+
       vm.toggleSort('count');
       expect(vm.sortDirection()).toBe('desc');
-      expect(ids(vm)).toEqual(['a', 'c', 'b']);
+      expect(lastQuery(service)).toMatchObject({ sortBy: 'count', sortDirection: 'desc' });
     });
 
-    it('sorts by created date, progress and status', () => {
-      const { vm } = setup({ counts });
-      vm.toggleSort('created');
-      expect(ids(vm)).toEqual(['b', 'c', 'a']);
-      vm.toggleSort('progress');
-      expect(ids(vm)).toEqual(['c', 'a', 'b']);
-      vm.toggleSort('status');
-      expect(ids(vm)).toEqual(['a', 'b', 'c']);
+    it('sorts by created date, progress and status on the server', () => {
+      const { vm, service } = setup();
+      for (const column of ['created', 'progress', 'status'] as const) {
+        vm.toggleSort(column);
+        expect(lastQuery(service)).toMatchObject({ sortBy: column, sortDirection: 'asc' });
+      }
+    });
+
+    it('shows the pagination bar and loads the chosen page', () => {
+      const { vm, service, el, fixture } = setup({ counts: [summary()] });
+      service.getCountsPaged.mockReturnValue(of(paged([summary()], 60)));
+      vm.goToPage(1);
+      fixture.detectChanges();
+      expect(el.querySelector('app-pagination')).not.toBeNull();
+
+      vm.goToPage(2);
+
+      expect(lastQuery(service)).toMatchObject({ page: 2 });
+    });
+
+    it('goes back to page 1 when the rows per page change', () => {
+      const { vm, service } = setup();
+      vm.goToPage(2);
+
+      vm.changePageSize(50);
+
+      expect(lastQuery(service)).toMatchObject({ page: 1, pageSize: 50 });
+    });
+
+    it('follows the page the server returns when the page was past the end', () => {
+      const { vm, service } = setup();
+      service.getCountsPaged.mockReturnValue(of({ ...paged([summary()], 30), page: 2 }));
+
+      vm.goToPage(9);
+
+      expect(vm.page()).toBe(2);
     });
   });
 

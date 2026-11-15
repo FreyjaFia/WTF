@@ -17,10 +17,9 @@
         class="mb-2 flex w-full min-w-0 items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 transition-colors focus-within:bg-surface focus-within:ring-2 focus-within:ring-gray-200 md:mb-0 md:max-w-104 md:flex-1"
       >
         <app-search-input
-          [value]="search()"
+          [control]="searchControl"
           placeholder="Search supplier, invoice, order, staff"
           ariaLabel="Search receipts"
-          (valueChange)="search.set($event)"
         />
       </div>
 
@@ -173,7 +172,7 @@
       <div class="pb-4">
         @if (connectionFailed()) {
           <app-connection-error />
-        } @else if (filteredReceipts().length === 0) {
+        } @else if (receipts().length === 0) {
           <div class="rounded-lg bg-surface p-8 text-center shadow-lg" data-testid="receipts-empty">
             <div class="mb-3 flex justify-center"><app-icon name="icon-package" [class]="'h-12 w-12 opacity-60'" /></div>
             <p class="text-lg font-semibold text-gray-700">No deliveries found</p>
@@ -181,7 +180,7 @@
           </div>
         }
 
-        @if (sortedReceipts().length > 0) {
+        @if (receipts().length > 0) {
           <div class="sticky top-0 z-10 hidden grid-cols-12 items-start gap-4 border-b border-gray-100 bg-surface pb-5 px-4 pt-3 lg:grid" data-testid="receipt-columns">
             <app-sort-header class="col-span-6" label="Receipt" align="start" [active]="sortColumn() === 'receipt'" [direction]="sortDirection()" (sorted)="toggleSort('receipt')" />
             <app-sort-header class="col-span-2" label="Received" align="center" [active]="sortColumn() === 'received'" [direction]="sortDirection()" (sorted)="toggleSort('received')" />
@@ -190,8 +189,8 @@
           </div>
         }
 
-        <ul class="space-y-2.5" data-testid="receipt-list">
-          @for (receipt of sortedReceipts(); track receipt.id) {
+        <ul class="space-y-2.5 transition-opacity" [class.opacity-60]="isReloading()" [class.pointer-events-none]="isReloading()" data-testid="receipt-list">
+          @for (receipt of receipts(); track receipt.id) {
             <li class="overflow-hidden rounded-xl bg-surface shadow" data-testid="receipt-row">
               <button type="button" class="flex w-full items-center justify-between gap-3 p-3 text-left transition-colors hover:bg-gray-50 sm:p-4 lg:grid lg:grid-cols-12 lg:gap-4" (click)="toggleReceipt(receipt)">
                 <div class="min-w-0 lg:col-span-6">
@@ -235,6 +234,16 @@
             </li>
           }
         </ul>
+
+        <app-pagination
+          label="Receipt pages"
+          [page]="page()"
+          [pageSize]="pageSize()"
+          [totalCount]="totalCount()"
+          [disabled]="isReloading()"
+          (pageChange)="goToPage($event)"
+          (pageSizeChange)="changePageSize($event)"
+        />
       </div>
     </app-pull-to-refresh>
   }

@@ -1,3 +1,4 @@
+import { provideRouter } from '@angular/router';
 import { TestBed } from '@angular/core/testing';
 import {
   AlertService,
@@ -45,51 +46,95 @@ interface Vm {
   linesTotal: () => number | null;
   difference: () => number | null;
   toggleSort: (column: 'receipt' | 'received' | 'items' | 'total') => void;
-  sortedReceipts: () => StockReceiptSummaryDto[];
   sortDirection: () => string;
+  goToPage: (page: number) => void;
+  changePageSize: (size: number) => void;
+  page: () => number;
+  searchControl: { setValue: (value: string) => void };
 }
 
-describe('ReceivingComponent', () => {
-  describe('sorting from the column headers', () => {
-    const receipts: StockReceiptSummaryDto[] = [
-      { ...summary, id: 'a', supplierName: 'Metro Dairy', receivedOn: '2026-11-08', lineCount: 2, linesTotal: 500 },
-      { ...summary, id: 'b', supplierName: 'bean Barn', receivedOn: '2026-11-01', lineCount: 5, linesTotal: null },
-      { ...summary, id: 'c', supplierName: 'PackRight', receivedOn: '2026-11-05', lineCount: 1, linesTotal: 2000 },
-    ];
-    const ids = (vm: Vm): string[] => vm.sortedReceipts().map((r) => r.id);
+const paged = (items: StockReceiptSummaryDto[], totalCount = items.length) => ({
+  items,
+  page: 1,
+  pageSize: 25,
+  totalCount,
+});
 
-    it('keeps the server order until a column is picked', () => {
-      expect(ids(setup({ receipts }).vm)).toEqual(['a', 'b', 'c']);
+describe('ReceivingComponent', () => {
+  describe('searching, sorting and paging on the server', () => {
+    const lastQuery = (service: { getReceiptsPaged: ReturnType<typeof vi.fn> }): Record<string, unknown> =>
+      service.getReceiptsPaged.mock.calls.at(-1)![0];
+
+    it('asks for the first page of 25 in the server order until a column is picked', () => {
+      const { receipts } = setup();
+      expect(lastQuery(receipts)).toEqual({ search: null, sortBy: null, sortDirection: null, page: 1, pageSize: 25 });
     });
 
-    it('sorts by supplier ignoring case, and reverses when picked again', () => {
-      const { vm } = setup({ receipts });
+    it('asks the server to sort, reverses on a second pick and returns to page 1', () => {
+      const { vm, receipts } = setup();
+      vm.goToPage(3);
+
       vm.toggleSort('receipt');
-      expect(ids(vm)).toEqual(['b', 'a', 'c']);
+      expect(lastQuery(receipts)).toMatchObject({ sortBy: 'receipt', sortDirection: 'asc', page: 1 });
+
       vm.toggleSort('receipt');
       expect(vm.sortDirection()).toBe('desc');
-      expect(ids(vm)).toEqual(['c', 'a', 'b']);
+      expect(lastQuery(receipts)).toMatchObject({ sortBy: 'receipt', sortDirection: 'desc' });
     });
 
-    it('sorts by received date, item count and total', () => {
-      const { vm } = setup({ receipts });
-      vm.toggleSort('received');
-      expect(ids(vm)).toEqual(['b', 'c', 'a']);
-      vm.toggleSort('items');
-      expect(ids(vm)).toEqual(['c', 'a', 'b']);
-      vm.toggleSort('total');
-      expect(ids(vm)).toEqual(['b', 'a', 'c']);
+    it('sorts by received date, item count and total on the server', () => {
+      const { vm, receipts } = setup();
+      for (const column of ['received', 'items', 'total'] as const) {
+        vm.toggleSort(column);
+        expect(lastQuery(receipts)).toMatchObject({ sortBy: column, sortDirection: 'asc' });
+      }
+    });
+
+    it('searches on the server after a short pause and returns to page 1', () => {
+      vi.useFakeTimers();
+      try {
+        const { vm, receipts } = setup();
+        vm.goToPage(4);
+
+        vm.searchControl.setValue(' metro ');
+        vi.advanceTimersByTime(300);
+
+        expect(lastQuery(receipts)).toMatchObject({ search: 'metro', page: 1 });
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('goes back to page 1 when the rows per page change', () => {
+      const { vm, receipts } = setup();
+      vm.goToPage(2);
+
+      vm.changePageSize(50);
+
+      expect(lastQuery(receipts)).toMatchObject({ page: 1, pageSize: 50 });
+    });
+
+    it('shows the pagination bar and follows the page the server returns', () => {
+      const { vm, receipts, el, fixture } = setup();
+      expect(el.querySelector('app-pagination')).not.toBeNull();
+      receipts.getReceiptsPaged.mockReturnValue(of({ ...paged([summary], 30), page: 2 }));
+
+      vm.goToPage(9);
+      fixture.detectChanges();
+
+      expect(vm.page()).toBe(2);
     });
   });
 
   function setup(options: { canWrite?: boolean; canSeeCosts?: boolean; receipts?: StockReceiptSummaryDto[] } = {}) {
     const receipts = {
-      getReceipts: vi.fn().mockReturnValue(of(options.receipts ?? [summary])),
+      getReceiptsPaged: vi.fn().mockReturnValue(of(paged(options.receipts ?? [summary]))),
       getReceipt: vi.fn().mockReturnValue(of({ summary, lines: [] } as StockReceiptDto)),
       recordReceipt: vi.fn().mockReturnValue(of({ summary, lines: [] } as StockReceiptDto)),
     };
     TestBed.configureTestingModule({
       providers: [
+        provideRouter([]),
         { provide: StockReceiptService, useValue: receipts },
         {
           provide: PurchaseOrderService,

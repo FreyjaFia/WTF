@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { Router } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import {
   AlertService,
   AuthService,
@@ -56,13 +56,22 @@ interface Vm {
   save: () => void;
   askConfirm: (action: 'send' | 'cancel' | 'close', order: PurchaseOrderDto) => void;
   runPending: () => void;
-  search: { set: (value: string) => void };
+  searchControl: { setValue: (value: string) => void };
+  goToPage: (page: number) => void;
+  changePageSize: (size: number) => void;
+  page: () => number;
   setFilter: (status: number | null) => void;
   orderTotal: () => number | null;
   toggleSort: (column: 'order' | 'expected' | 'status' | 'total') => void;
-  sortedOrders: () => PurchaseOrderSummaryDto[];
   sortDirection: () => string;
 }
+
+const paged = (items: PurchaseOrderSummaryDto[], totalCount = items.length) => ({
+  items,
+  page: 1,
+  pageSize: 25,
+  totalCount,
+});
 
 describe('PurchaseOrdersComponent', () => {
   function setup(
@@ -74,7 +83,7 @@ describe('PurchaseOrdersComponent', () => {
     } = {},
   ) {
     const api = {
-      getOrders: vi.fn().mockReturnValue(of(options.orders ?? [summary])),
+      getOrdersPaged: vi.fn().mockReturnValue(of(paged(options.orders ?? [summary]))),
       getOrder: vi.fn().mockReturnValue(of(detail)),
       createOrder: vi.fn().mockReturnValue(of(detail)),
       updateOrder: vi.fn().mockReturnValue(of(detail)),
@@ -84,6 +93,7 @@ describe('PurchaseOrdersComponent', () => {
     };
     TestBed.configureTestingModule({
       providers: [
+        provideRouter([]),
         { provide: PurchaseOrderService, useValue: api },
         {
           provide: SupplierService,
@@ -128,52 +138,89 @@ describe('PurchaseOrdersComponent', () => {
     expect(navigate).toHaveBeenCalledWith('/inventory/purchase-orders/suggestions');
   });
 
-  describe('sorting from the column headers', () => {
-    const orders: PurchaseOrderSummaryDto[] = [
-      { ...summary, id: 'a', poNumber: 9, total: 500, status: PurchaseOrderStatus.Sent, expectedOn: '2026-11-20' },
-      { ...summary, id: 'b', poNumber: 8, total: null, status: PurchaseOrderStatus.Draft, expectedOn: null },
-      { ...summary, id: 'c', poNumber: 7, total: 2000, status: PurchaseOrderStatus.Received, expectedOn: '2026-11-10' },
-    ];
-    const numbers = (vm: Vm): number[] => vm.sortedOrders().map((o) => o.poNumber);
+  describe('searching, sorting and paging on the server', () => {
+    const lastQuery = (api: { getOrdersPaged: ReturnType<typeof vi.fn> }): Record<string, unknown> =>
+      api.getOrdersPaged.mock.calls.at(-1)![0];
 
-    it('keeps the server order until a column is picked', () => {
-      expect(numbers(setup({ orders }).vm)).toEqual([9, 8, 7]);
+    it('asks for the first page of 25 in the server order until a column is picked', () => {
+      const { api } = setup();
+      expect(lastQuery(api)).toEqual({
+        status: null,
+        search: null,
+        sortBy: null,
+        sortDirection: null,
+        page: 1,
+        pageSize: 25,
+      });
     });
 
-    it('sorts by order number, and reverses when the same column is picked again', () => {
-      const { vm } = setup({ orders });
+    it('asks the server to sort, reverses on a second pick and returns to page 1', () => {
+      const { vm, api } = setup();
+      vm.goToPage(3);
+
       vm.toggleSort('order');
-      expect(numbers(vm)).toEqual([7, 8, 9]);
+      expect(lastQuery(api)).toMatchObject({ sortBy: 'order', sortDirection: 'asc', page: 1 });
+
       vm.toggleSort('order');
       expect(vm.sortDirection()).toBe('desc');
-      expect(numbers(vm)).toEqual([9, 8, 7]);
+      expect(lastQuery(api)).toMatchObject({ sortBy: 'order', sortDirection: 'desc' });
     });
 
-    it('puts orders without a total or date first when ascending', () => {
-      const { vm } = setup({ orders });
-      vm.toggleSort('total');
-      expect(numbers(vm)).toEqual([8, 9, 7]);
-      vm.toggleSort('expected');
-      expect(numbers(vm)).toEqual([8, 7, 9]);
+    it('sorts by expected date, status and total on the server', () => {
+      const { vm, api } = setup();
+      for (const column of ['expected', 'status', 'total'] as const) {
+        vm.toggleSort(column);
+        expect(lastQuery(api)).toMatchObject({ sortBy: column, sortDirection: 'asc' });
+      }
     });
 
-    it('sorts by status', () => {
-      const { vm } = setup({ orders });
-      vm.toggleSort('status');
-      expect(numbers(vm)).toEqual([8, 9, 7]);
+    it('filters by status through the API and returns to page 1', () => {
+      const { vm, api } = setup();
+      vm.goToPage(2);
+
+      vm.setFilter(PurchaseOrderStatus.Sent);
+
+      expect(lastQuery(api)).toMatchObject({ status: PurchaseOrderStatus.Sent, page: 1 });
+    });
+
+    it('searches on the server after a short pause and returns to page 1', () => {
+      vi.useFakeTimers();
+      try {
+        const { vm, api } = setup();
+        vm.goToPage(4);
+
+        vm.searchControl.setValue(' po-7 ');
+        vi.advanceTimersByTime(300);
+
+        expect(lastQuery(api)).toMatchObject({ search: 'po-7', page: 1 });
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('goes back to page 1 when the rows per page change', () => {
+      const { vm, api } = setup();
+      vm.goToPage(2);
+
+      vm.changePageSize(50);
+
+      expect(lastQuery(api)).toMatchObject({ page: 1, pageSize: 50 });
+    });
+
+    it('shows the pagination bar and follows the page the server returns', () => {
+      const { vm, api, el, fixture } = setup();
+      expect(el.querySelector('app-pagination')).not.toBeNull();
+      api.getOrdersPaged.mockReturnValue(of({ ...paged([summary], 30), page: 2 }));
+
+      vm.goToPage(9);
+      fixture.detectChanges();
+
+      expect(vm.page()).toBe(2);
     });
   });
 
   it('hides the new order button without write access', () => {
     expect(setup({ canWrite: false }).el.querySelector('[data-testid="open-order"]')).toBeNull();
-  });
-
-  it('filters by status through the API', () => {
-    const { vm, api } = setup();
-
-    vm.setFilter(PurchaseOrderStatus.Sent);
-
-    expect(api.getOrders).toHaveBeenLastCalledWith({ status: PurchaseOrderStatus.Sent });
   });
 
   it('saves a new draft with the typed lines', () => {
@@ -263,18 +310,6 @@ describe('PurchaseOrdersComponent', () => {
 
     expect(api.cancelOrder).toHaveBeenCalledWith('p1');
     expect(api.closeOrder).toHaveBeenCalledWith('p1');
-  });
-
-  it('filters the list by the search text', () => {
-    const { vm, el, fixture } = setup();
-
-    vm.search.set('nobody');
-    fixture.detectChanges();
-    expect(el.querySelector('[data-testid="orders-empty"]')).not.toBeNull();
-
-    vm.search.set('po-7');
-    fixture.detectChanges();
-    expect(el.querySelectorAll('[data-testid="order-row"]').length).toBe(1);
   });
 
   it('shows the status as a badge', () => {
