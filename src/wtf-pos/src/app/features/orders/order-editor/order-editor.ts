@@ -17,12 +17,8 @@ import type { BadgeVariant } from '@shared/components/badge/badge';
 import { orderStatusLabel, orderStatusVariant } from '@shared/utils/order-status';
 import {
   applySelections,
-  isCoveredLine,
-  reductionOf,
-  rowAmounts,
   selectionsFromCart,
   SeniorPwdSelection,
-  totalsByPerson,
   uncoverLines,
 } from './order-editor-senior-pwd';
 import { SeniorPwdDialogComponent, SeniorPwdLineOption } from '../senior-pwd-dialog/senior-pwd-dialog';
@@ -112,7 +108,6 @@ import {
   addOnsTotal,
   allocateDiscounts,
   buildLineBreakdown,
-  cartTotal,
   DiscountMatch,
   DiscountRule,
   discountedLineTotal,
@@ -129,8 +124,12 @@ import {
   StockCartLine,
   stockShortfalls,
   isSeniorPwdEligibleLine,
+  cartTotalAfterSeniorPwd,
+  isCoveredLine,
+  lineNetTotal,
+  rowAmounts,
   seniorPwdReduction,
-  subtractMoney,
+  totalsByPerson,
 } from '@shared/calculations';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { AddOnLabelsPipe } from '@shared/pipes';
@@ -567,11 +566,8 @@ export class OrderEditor implements OnInit, OnDestroy {
   });
 
   protected itemCount = () => this.cart().reduce((s, i) => s + i.qty, 0);
-  protected totalPrice = () =>
-    subtractMoney(
-      cartTotal(this.cart(), (line) => this.getLineDiscount(line)),
-      reductionOf(this.cart(), this.vatRegistered()),
-    );
+  protected readonly totalPrice = (): number =>
+    cartTotalAfterSeniorPwd(this.cart(), this.vatRegistered(), (line) => this.getLineDiscount(line));
 
   protected getNameParts(name: string): { text: string; isMatch: boolean }[] {
     return nameParts(name, this.filterForm.controls.searchTerm.value);
@@ -1567,7 +1563,7 @@ export class OrderEditor implements OnInit, OnDestroy {
   }
 
   protected getCartLineNetTotal(item: CartItemDto, index: number): number {
-    return subtractMoney(this.getLineTotal(item), this.seniorPwdLineReduction(index));
+    return lineNetTotal(this.getLineTotal(item), this.seniorPwdLineReduction(index));
   }
 
   protected seniorPwdLineReduction(index: number): number {

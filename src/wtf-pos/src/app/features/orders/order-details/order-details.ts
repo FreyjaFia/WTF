@@ -55,6 +55,7 @@ import {
   savedLineTotal,
   addMoney,
   sumAmounts,
+  lineNetTotal,
   subtractMoney,
 } from '@shared/calculations';
 import { AppRoutes } from '@shared/constants/app-routes';
@@ -485,7 +486,7 @@ export class OrderDetails implements OnInit {
   }
 
   protected getItemNetTotal(item: CartItemDto): number {
-    return subtractMoney(this.getItemTotal(item), item.seniorPwdReduction ?? 0);
+    return lineNetTotal(this.getItemTotal(item), item.seniorPwdReduction ?? 0);
   }
 
   protected getBreakdown(item: CartItemDto): LineBreakdown {

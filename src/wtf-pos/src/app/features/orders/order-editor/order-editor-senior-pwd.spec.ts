@@ -4,10 +4,8 @@ import {
   applySelections,
   coveredQuantityOf,
   lineSignature,
-  reductionOf,
   selectionsFromCart,
   SeniorPwdSelection,
-  totalsByPerson,
   uncoverLines,
 } from './order-editor-senior-pwd';
 
@@ -97,14 +95,5 @@ describe('senior / PWD cart helpers', () => {
 
     expect(coveredQuantityOf(selections, 0)).toBe(3);
     expect(coveredQuantityOf(selections, 0, 1)).toBe(2);
-  });
-
-  it('works out each person and the whole reduction with the VAT switch', () => {
-    const { cart } = applySelections([line({ price: 100, qty: 2 })], [{ person: rosa, picks: { 0: 1 } }]);
-
-    expect(totalsByPerson(cart, 1, false)[0]).toEqual({ covered: 100, vatExempt: 0, discount: 20, amountDue: 80 });
-    expect(reductionOf(cart, false)).toBe(20);
-    expect(totalsByPerson(cart, 1, true)[0]).toEqual({ covered: 100, vatExempt: 10.71, discount: 17.86, amountDue: 71.43 });
-    expect(reductionOf(cart, true)).toBe(28.57);
   });
 });

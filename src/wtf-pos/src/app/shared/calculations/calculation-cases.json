@@ -1774,6 +1774,34 @@
       "expectedRows": []
     }
   ],
+  "seniorPwdPersonTotals": [
+    {
+      "name": "one person covers two lines, not VAT-registered",
+      "vatRegistered": false,
+      "lines": [
+        { "quantity": 1, "price": 100, "person": 0 },
+        { "quantity": 2, "price": 60, "person": 0 },
+        { "quantity": 1, "price": 50, "person": null }
+      ],
+      "expectedPersons": [{ "covered": 220, "vatExempt": 0, "discount": 44, "amountDue": 176 }],
+      "expectedReduction": 44,
+      "expectedTotal": 226
+    },
+    {
+      "name": "two persons, VAT-registered",
+      "vatRegistered": true,
+      "lines": [
+        { "quantity": 1, "price": 100, "person": 0 },
+        { "quantity": 1, "price": 100, "person": 1 }
+      ],
+      "expectedPersons": [
+        { "covered": 100, "vatExempt": 10.71, "discount": 17.86, "amountDue": 71.43 },
+        { "covered": 100, "vatExempt": 10.71, "discount": 17.86, "amountDue": 71.43 }
+      ],
+      "expectedReduction": 57.14,
+      "expectedTotal": 142.86
+    }
+  ],
   "seniorPwdQuoted": [
     {
       "name": "covered latte and a plain line, not VAT-registered, the register total is current",

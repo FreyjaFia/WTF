@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import cases from './calculation-cases.json';
+import type { CartItemDto } from '../models/cart.models';
 import { PricedLine, lineTotal } from './order-pricing';
 import {
   SeniorPwdAmounts,
+  cartTotalAfterSeniorPwd,
+  lineNetTotal,
+  reductionOf,
+  totalsByPerson,
   isSeniorPwdEligibleLine,
   seniorPwdAmountDue,
   seniorPwdAmounts,
@@ -26,6 +31,15 @@ interface OrderCase {
   lines: { quantity: number; price: number; addOns: { price: number; quantity: number }[]; covered: boolean }[];
   expectedTotal: number;
   expectedRows: { covered: number; vatExempt: number; discount: number }[];
+}
+
+interface PersonTotalsCase {
+  name: string;
+  vatRegistered: boolean;
+  lines: { quantity: number; price: number; person: number | null }[];
+  expectedPersons: SeniorPwdAmounts[];
+  expectedReduction: number;
+  expectedTotal: number;
 }
 
 interface EligibilityCase {
@@ -58,6 +72,28 @@ describe('senior / PWD discount (shared cases)', () => {
     expect(total).toBe(c.expectedTotal);
     expect(rows).toEqual(c.expectedRows);
     expect(sumSeniorPwdAmounts(rows).covered).toBe(sumAmounts(c.expectedRows.map((row) => row.covered)));
+  });
+
+  it.each((cases.seniorPwdPersonTotals as PersonTotalsCase[]).map((c) => [c.name, c] as const))(
+    'per person: %s',
+    (_name, c) => {
+      const cart: CartItemDto[] = c.lines.map((line, index) => ({
+        productId: 'p' + index,
+        name: 'Item',
+        price: line.price,
+        qty: line.quantity,
+        seniorPwdPersonIndex: line.person,
+      }));
+      const personCount = c.expectedPersons.length;
+
+      expect(totalsByPerson(cart, personCount, c.vatRegistered)).toEqual(c.expectedPersons);
+      expect(reductionOf(cart, c.vatRegistered)).toBe(c.expectedReduction);
+      expect(cartTotalAfterSeniorPwd(cart, c.vatRegistered)).toBe(c.expectedTotal);
+    },
+  );
+
+  it('takes a reduction off a line total', () => {
+    expect(lineNetTotal(120.1, 0.3)).toBe(119.8);
   });
 
   it.each((cases.seniorPwdEligibility as EligibilityCase[]).map((c) => [c.name, c] as const))(

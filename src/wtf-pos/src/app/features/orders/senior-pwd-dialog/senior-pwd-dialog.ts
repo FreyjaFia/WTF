@@ -1,13 +1,13 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, computed, inject, input, OnInit, output, signal } from '@angular/core';
 import { ConnectivityService, OrderService } from '@core/services';
+import { totalsByPerson } from '@shared/calculations';
 import { IconComponent } from '@shared/components/icons/icon/icon';
 import { CartItemDto, SENIOR_PWD_TYPE_LABELS, SeniorPwdTypeEnum } from '@shared/models';
 import {
   applySelections,
   coveredQuantityOf,
   SeniorPwdSelection,
-  totalsByPerson,
 } from '../order-editor/order-editor-senior-pwd';
 
 export const SENIOR_PWD_ID_MAX_LENGTH = 30;
