@@ -37,7 +37,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import {
   FormControl,
   FormGroup,
@@ -302,8 +302,8 @@ export class OrderEditor implements OnInit, OnDestroy {
   protected readonly isLoadingPromotions = signal(false);
   protected readonly isLoadingDiscountedPromotions = signal(false);
   protected readonly selectedCustomerId = signal<string | null>(null);
-  protected readonly orderAddress = signal('');
-  private orderAddressEdited = false;
+  protected readonly orderAddressControl = new FormControl('', { nonNullable: true });
+  protected readonly orderAddress = toSignal(this.orderAddressControl.valueChanges, { initialValue: '' });
   protected readonly isLoadingCustomers = signal(false);
   protected readonly isLoading = signal(false);
   protected readonly isEditMode = signal(false);
@@ -878,6 +878,14 @@ export class OrderEditor implements OnInit, OnDestroy {
   }
 
   public constructor() {
+    effect(() => {
+      if (this.isOrderRequestBusy()) {
+        this.orderAddressControl.disable({ emitEvent: false });
+      } else {
+        this.orderAddressControl.enable({ emitEvent: false });
+      }
+    });
+
     // Keeps a new order's cart saved as it changes, so a reload does not lose it.
     effect(() => {
       const items = this.cart();
@@ -998,8 +1006,7 @@ export class OrderEditor implements OnInit, OnDestroy {
         switchMap((order) => {
           this.currentOrder.set(order);
           this.selectedCustomerId.set(order.customerId ?? null);
-          this.orderAddress.set(order.customerAddress ?? '');
-          this.orderAddressEdited = true;
+          this.setOrderAddress(order.customerAddress ?? '', true);
           this.orderSpecialInstructions.set(order.specialInstructions ?? '');
 
           const wantsOverride = this.route.snapshot.queryParamMap.has('override');
@@ -1044,8 +1051,7 @@ export class OrderEditor implements OnInit, OnDestroy {
       this.cart.set([...pending.cartSnapshot]);
       this.seniorPwdPersons.set(pending.command.seniorPwdPersons ?? []);
       this.selectedCustomerId.set(pending.command.customerId ?? null);
-      this.orderAddress.set(pending.command.customerAddress ?? '');
-      this.orderAddressEdited = true;
+      this.setOrderAddress(pending.command.customerAddress ?? '', true);
       this.orderSpecialInstructions.set(pending.command.specialInstructions ?? '');
 
       this.loadCatalog();
@@ -1931,18 +1937,20 @@ export class OrderEditor implements OnInit, OnDestroy {
     this.fillOrderAddressFromCustomer();
   }
 
-  protected onOrderAddressInput(event: Event): void {
-    this.orderAddress.set((event.target as HTMLInputElement).value);
-    this.orderAddressEdited = true;
-  }
-
   private fillOrderAddressFromCustomer(): void {
-    if (this.orderAddressEdited) {
+    if (this.orderAddressControl.dirty) {
       return;
     }
 
     const customer = this.customers().find((c) => c.id === this.selectedCustomerId());
-    this.orderAddress.set(customer?.address?.trim() ?? '');
+    this.setOrderAddress(customer?.address?.trim() ?? '', false);
+  }
+
+  private setOrderAddress(address: string, edited: boolean): void {
+    this.orderAddressControl.setValue(address);
+    if (edited) {
+      this.orderAddressControl.markAsDirty();
+    }
   }
 
   private currentOrderAddress(): string | null {

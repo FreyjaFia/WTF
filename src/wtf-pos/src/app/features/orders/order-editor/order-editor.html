@@ -565,9 +565,7 @@
               maxlength="150"
               placeholder="Address (optional)"
               aria-label="Order address"
-              [value]="orderAddress()"
-              [disabled]="isOrderRequestBusy()"
-              (input)="onOrderAddressInput($event)"
+              [formControl]="orderAddressControl"
             />
           } @else if (selectedCustomerId() && orderAddress().trim()) {
             <div class="mt-2 truncate text-xs text-gray-500" [title]="orderAddress()">

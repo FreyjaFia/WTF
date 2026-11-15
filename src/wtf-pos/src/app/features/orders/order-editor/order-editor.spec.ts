@@ -2,6 +2,7 @@ import { ProductCategoryEnum, ProductSubCategoryEnum, AddOnTypeEnum } from '@app
 import { CatalogLookupService } from '@core/services';
 import { SEEDED_LOOKUPS } from '@app/testing/catalog-ids';
 import { signal } from '@angular/core';
+import type { FormControl } from '@angular/forms';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, ParamMap, Router, convertToParamMap, provideRouter } from '@angular/router';
 import {
@@ -41,7 +42,7 @@ interface Editor {
   discountedProductPromotions: Sig<DiscountedProductPromotionDto[]>;
   selectedCustomerId: Sig<string | null>;
   orderAddress: Sig<string>;
-  onOrderAddressInput: (e: Event) => void;
+  orderAddressControl: FormControl<string>;
   orderSpecialInstructions: Sig<string>;
   isEditMode: Sig<boolean>;
   isOfflineEditMode: () => boolean;
@@ -1159,11 +1160,8 @@ describe('OrderEditor', () => {
       await start();
       withCart([line()]);
       t.onCustomerSelected('c1');
-      const input = document.createElement('input');
-      input.value = '  9 Oak Ave ';
-      const ev = new Event('input');
-      Object.defineProperty(ev, 'target', { value: input });
-      t.onOrderAddressInput(ev);
+      t.orderAddressControl.setValue('  9 Oak Ave ');
+      t.orderAddressControl.markAsDirty();
       t.onCustomerSelected(null);
       t.onCustomerSelected('c1');
       expect(t.orderAddress()).toBe('  9 Oak Ave ');
