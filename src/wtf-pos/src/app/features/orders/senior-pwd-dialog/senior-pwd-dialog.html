@@ -44,6 +44,7 @@
 
       @for (person of people(); track $index; let personIndex = $index) {
         <section
+          [formGroup]="personGroup(personIndex)"
           class="space-y-3 rounded-xl border border-gray-200 p-3"
           [attr.data-testid]="'senior-pwd-person-' + personIndex"
         >
@@ -70,11 +71,11 @@
                 role="radio"
                 class="rounded-xl border px-3 py-2 text-sm font-medium transition-colors"
                 [class]="
-                  person.type === type
+                  typeOf(personIndex) === type
                     ? 'border-brand bg-brand/5 text-gray-900'
                     : 'border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
                 "
-                [attr.aria-checked]="person.type === type"
+                [attr.aria-checked]="typeOf(personIndex) === type"
                 [attr.data-testid]="'senior-pwd-type-' + (type === SeniorPwdTypeEnum.Senior ? 'senior' : 'pwd') + '-' + personIndex"
                 (click)="setType(personIndex, type)"
               >
@@ -97,8 +98,7 @@
                 [attr.maxlength]="idMaxLength"
                 [attr.aria-invalid]="showErrors() && idError(personIndex) ? 'true' : null"
                 [attr.data-testid]="'senior-pwd-id-' + personIndex"
-                [value]="person.idNumber"
-                (input)="setIdNumber(personIndex, $any($event.target).value)"
+                formControlName="idNumber"
                 (blur)="checkId(personIndex)"
               />
               @if (showErrors() && idError(personIndex); as message) {
@@ -118,8 +118,7 @@
                 [attr.maxlength]="nameMaxLength"
                 [attr.aria-invalid]="showErrors() && nameError(personIndex) ? 'true' : null"
                 [attr.data-testid]="'senior-pwd-name-' + personIndex"
-                [value]="person.customerName"
-                (input)="setName(personIndex, $any($event.target).value)"
+                formControlName="customerName"
               />
               @if (showErrors() && nameError(personIndex); as message) {
                 <p class="mt-1 text-xs text-red-600" role="alert">{{ message }}</p>

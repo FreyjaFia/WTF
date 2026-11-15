@@ -32,6 +32,19 @@ describe('OrderService', () => {
     });
   });
 
+  describe('checkSeniorPwdId', () => {
+    it('sends the ID number in the POST body and never in the URL', () => {
+      const { service, http } = setupHttpService(OrderService);
+      service.checkSeniorPwdId('SC-1234').subscribe();
+
+      const req = http.expectOne(`${base}/senior-pwd/id-check`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({ idNumber: 'SC-1234' });
+      expect(req.request.urlWithParams).not.toContain('SC-1234');
+      req.flush({ usedToday: false });
+    });
+  });
+
   describe('getOrdersPaged', () => {
     it('sends trimmed search and paging, keeping page 0', () => {
       const { service, http } = setupHttpService(OrderService);

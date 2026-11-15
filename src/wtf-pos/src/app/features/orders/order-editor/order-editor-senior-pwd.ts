@@ -97,6 +97,7 @@ export function applySelections(
       type: selection.person.type,
       idNumber: selection.person.idNumber.trim(),
       customerName: selection.person.customerName.trim(),
+      ...(selection.person.idChecked && { idChecked: true }),
     })),
   };
 }

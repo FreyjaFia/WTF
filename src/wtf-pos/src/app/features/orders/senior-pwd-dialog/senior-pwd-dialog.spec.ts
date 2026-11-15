@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ConnectivityService, OrderService } from '@core/services';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SeniorPwdLineOption, SeniorPwdDialogComponent } from './senior-pwd-dialog';
 
@@ -75,6 +75,34 @@ describe('SeniorPwdDialogComponent', () => {
         picks: { 0: 1 },
       },
     ]);
+  });
+
+  it('marks the person as checked after a successful check and clears it when the ID is retyped', () => {
+    const applied = vi.fn();
+    component.applied.subscribe(applied);
+    type('senior-pwd-id-0', 'SC-1234');
+    type('senior-pwd-name-0', 'Rosa Reyes');
+    (byId('senior-pwd-id-0') as HTMLInputElement).dispatchEvent(new Event('blur'));
+    byId('senior-pwd-apply').click();
+
+    expect(applied.mock.calls[0][0][0].person.idChecked).toBe(true);
+
+    type('senior-pwd-id-0', 'SC-9999');
+    byId('senior-pwd-apply').click();
+
+    expect(applied.mock.calls[1][0][0].person.idChecked).toBeUndefined();
+  });
+
+  it('does not mark the person as checked when the check fails', () => {
+    checkId.mockReturnValue(throwError(() => new Error('offline')));
+    const applied = vi.fn();
+    component.applied.subscribe(applied);
+    type('senior-pwd-id-0', 'SC-1234');
+    type('senior-pwd-name-0', 'Rosa Reyes');
+    (byId('senior-pwd-id-0') as HTMLInputElement).dispatchEvent(new Event('blur'));
+    byId('senior-pwd-apply').click();
+
+    expect(applied.mock.calls[0][0][0].person.idChecked).toBeUndefined();
   });
 
   it('warns when the ID was used today', () => {

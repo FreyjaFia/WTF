@@ -42,6 +42,7 @@ export interface SeniorPwdPersonRequestDto {
   type: SeniorPwdTypeEnum;
   idNumber: string;
   customerName: string;
+  idChecked?: boolean;
 }
 
 export interface SeniorPwdPersonDto {

@@ -192,8 +192,7 @@ export class OrderService {
   }
 
   public checkSeniorPwdId(idNumber: string): Observable<SeniorPwdIdCheckDto> {
-    const params = new HttpParams().set('idNumber', idNumber);
-    return this.http.get<SeniorPwdIdCheckDto>(`${this.baseUrl}/senior-pwd/id-check`, { params });
+    return this.http.post<SeniorPwdIdCheckDto>(`${this.baseUrl}/senior-pwd/id-check`, { idNumber });
   }
 
   public createOrder(command: CreateOrderCommand): Observable<OrderDto> {
