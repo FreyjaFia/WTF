@@ -1,6 +1,6 @@
 ## Graceful Plan-Gating Failures [Phases 1, 2, 3 and 5 built, not merged]
 
-Status: built on branch `graceful-plan-gating-plan` on 15 Nov 2026 using the recommended answers to the open questions (redirect, typed input lost, background refusals silent, focus refresh once a minute). Unit and API tests pass; the Playwright spec (phase 4) and the phase 0 checks marked "to run" are still to do, because the cloud box had no SQL Server. Plan text written from the code on `main` at 1.21.0. Written from the code on `main` at 1.21.0. Related:
+Status: built on branch `graceful-plan-gating-plan` on 15 Nov 2026 using the recommended answers to the open questions (redirect, typed input lost, background refusals silent, focus refresh once a minute). Unit, API and Playwright tests pass (plans and roles suites, 73 tests, 3 workers, throwaway database). The phase 0 rows marked "to run" in the trigger audit are still only read from code. Plan text written from the code on `main` at 1.21.0. Written from the code on `main` at 1.21.0. Related:
 [block-features-by-plan](block-features-by-plan.md) (the gating itself, built) and
 [role-based-access](role-based-access.md).
 
@@ -257,5 +257,7 @@ editor" as a required case.
 - Client: `PlanGateService` (redirect once, marker in navigation `info`), `subscriptionInterceptor` (user requests redirect and return `EMPTY`, so no toast; requests tagged with `backgroundRequest()` only refresh the plan and still report the error), `unsavedChangesGuard` skips the Discard question for that one navigation, Not in your plan shows "Your changes were not saved." after a refused non-GET.
 - Tagged as background: conversation inbox poll, notification counts, pending waste count, stock attention badge, stock limits.
 - `SubscriptionService` also refreshes the plan when the tab becomes visible (at most once a minute).
-- Not done: reloading the client permission list on refresh (it is still loaded at sign-in; menus and guards use the plan store, so the visible effect is covered), the Playwright spec, and the "to run" rows of the trigger audit.
-- Logging: console sink in Development and a `Serilog` section in `appsettings.json`.
+- The role guard now asks the server for the plan and the permission list once before turning a screen away, so a screen opens right after an upgrade even when the saved plan and permissions are older.
+- Playwright: `tests/plans/graceful-plan-gating.spec.ts` (role save after Custom roles leaves the plan at 375/820/1440, shop still works and upgrade restores the screen, a dirty editor left by the menu still asks). Not covered: the other eight features, and a refused chat poll.
+- Not done: the "to run" rows of the trigger audit.
+- Logging: main already gained the console sink, request logging and the Serilog section (commit 794ae228); this branch only adds one Information line for each not-in-plan refusal.
