@@ -1,8 +1,8 @@
 using MediatR;
 using WTF.Api.Common.Auth;
 using WTF.Api.Features.Orders.Enums;
-using WTF.Api.Features.Reports.Enums;
 using WTF.Api.Features.Reports;
+using WTF.Api.Features.Reports.Enums;
 using WTF.Calculations.Subscriptions;
 
 namespace WTF.Api.Endpoints;
@@ -271,7 +271,7 @@ public static class ReportEndpoints
                 var result = await sender.Send(query);
                 return BuildReportResponse(httpContext, result, ReportTables.ProfitLoss(groupBy), query.FromDate!.Value, query.ToDate!.Value, null);
             })
-            .RequireAuthorization(AppPolicies.RequireFeature(PlanFeatures.Inventory));
+            .RequireAuthorization(AppPolicies.RequireFeature(PlanFeatures.Inventory), AppPolicies.RequireFeature(PlanFeatures.Expenses));
 
         reportsGroup.MapGet("/stock-variance",
             async (HttpContext httpContext, [AsParameters] GetStockVarianceReportQuery query, ISender sender) =>
@@ -303,7 +303,8 @@ public static class ReportEndpoints
                     request.Source);
 
                 return Results.Ok(status);
-            });
+            })
+            .RequireAuthorization(AppPolicies.RequireFeature(PlanFeatures.Workbook));
 
         reportsGroup.MapPost("/monthly-workbook/generate",
             async (HttpContext httpContext, [AsParameters] MonthlyWorkbookRequest request, IMonthlyReportWorkbookService workbookService, CancellationToken cancellationToken) =>
@@ -350,7 +351,8 @@ public static class ReportEndpoints
                     file.Value.Data,
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     file.Value.FileName);
-            });
+            })
+            .RequireAuthorization(AppPolicies.RequireFeature(PlanFeatures.Workbook));
 
         return app;
     }

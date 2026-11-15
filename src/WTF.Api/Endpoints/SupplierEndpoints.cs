@@ -66,7 +66,7 @@ public static class SupplierEndpoints
                 var result = await sender.Send(new GetItemSuppliersQuery(itemId));
                 return result is not null ? Results.Ok(CostAccess.ForUser(result, user)) : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.StockMovementsRead);
+            .RequireAuthorization(AppPolicies.SuppliersRead);
 
         itemGroup.MapPut("/{supplierId:guid}",
             async (Guid itemId, Guid supplierId, SaveItemSupplierCommand command, ISender sender, ClaimsPrincipal user) =>
@@ -74,7 +74,7 @@ public static class SupplierEndpoints
                 var result = await sender.Send(command with { ItemId = itemId, SupplierId = supplierId });
                 return result is not null ? Results.Ok(CostAccess.ForUser(result, user)) : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.StockMovementsWrite);
+            .RequireAuthorization(AppPolicies.SuppliersWrite);
 
         itemGroup.MapDelete("/{supplierId:guid}",
             async (Guid itemId, Guid supplierId, ISender sender, ClaimsPrincipal user) =>
@@ -82,7 +82,7 @@ public static class SupplierEndpoints
                 var result = await sender.Send(new RemoveItemSupplierCommand(itemId, supplierId));
                 return result is not null ? Results.Ok(CostAccess.ForUser(result, user)) : Results.NotFound();
             })
-            .RequireAuthorization(AppPolicies.StockMovementsWrite);
+            .RequireAuthorization(AppPolicies.SuppliersWrite);
 
         return app;
     }
