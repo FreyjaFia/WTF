@@ -571,6 +571,24 @@ describe('OrderEditor', () => {
       expect(t.orderSpecialInstructions()).toBe('less ice');
     });
 
+    it('takes a saved Senior/PWD discount off when the shop has switched it off', async () => {
+      persistence['load'].mockResolvedValue({
+        items: [
+          line({ productId: 'mocha', name: 'Mocha', price: 120, qty: 1, seniorPwdPersonIndex: 0 }),
+          line({ productId: 'mocha', name: 'Mocha', price: 120, qty: 2 }),
+        ],
+        customerId: null,
+        specialInstructions: '',
+        seniorPwdPersons: [{ type: 1, idNumber: 'SC-1', customerName: 'Rosa' }],
+        savedAt: '',
+      });
+      catalog.shopSettings.set({ seniorPwdEnabled: false, vatRegistered: false });
+      await start();
+
+      expect(t.cart().map((c) => [c.qty, c.seniorPwdPersonIndex ?? null])).toEqual([[3, null]]);
+      expect(t.totalPrice()).toBe(360);
+    });
+
     it('does not overwrite with empty cart before restore completes, saves afterwards', async () => {
       await start();
       TestBed.tick();

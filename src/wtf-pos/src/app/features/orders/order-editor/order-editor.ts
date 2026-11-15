@@ -1196,9 +1196,24 @@ export class OrderEditor implements OnInit, OnDestroy {
       this.customers.set(this.catalogCache.customers());
       this.applyFiltersToCache();
       this.refreshCartImageUrls();
+      this.uncoverWhenSeniorPwdSwitchedOff();
       this.isLoading.set(false);
       this.isLoadingCustomers.set(false);
     });
+  }
+
+  private uncoverWhenSeniorPwdSwitchedOff(): void {
+    // Without a loaded catalog the shop switches are unknown, so nothing is taken away yet.
+    if (this.catalogCache.products().length === 0 || this.catalogCache.shopSettings().seniorPwdEnabled) {
+      return;
+    }
+
+    if (this.seniorPwdPersons().length === 0 && !this.cart().some(isCoveredLine)) {
+      return;
+    }
+
+    this.cart.set(uncoverLines(this.cart()));
+    this.seniorPwdPersons.set([]);
   }
 
   private loadCustomers(): void {
@@ -2766,6 +2781,7 @@ export class OrderEditor implements OnInit, OnDestroy {
 
       // Re-resolve cart image URLs from catalog cache (blob URLs are session-specific)
       this.refreshCartImageUrls();
+      this.uncoverWhenSeniorPwdSwitchedOff();
     });
   }
 

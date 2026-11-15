@@ -29,13 +29,10 @@ export interface CachedCatalog {
   addOnsByProductId: Record<string, AddOnGroupDto[]>;
   customers: CustomerDto[];
   bundlePromotions: PromotionListItemDto[];
-  /** The discount promotions that were active at the last sync, so an offline cart prices them like an online one. */
   discountedPromotions?: DiscountedProductPromotionDto[];
-  /** The bundles with their items, so a bundle can be opened and sold offline. */
   fixedBundles?: FixedBundlePromotionDto[];
   mixMatchPromotions?: MixMatchPromotionDto[];
   lookups?: CatalogLookupsDto;
-  /** The shop switches (Senior / PWD, VAT) at the last sync, so an offline sale uses the rules it was sold under. */
   settings?: PosShopSettingsDto;
   syncedAt: string;
 }
@@ -49,22 +46,18 @@ export interface CachedImage {
 export interface PendingOrder {
   id?: number;
   localId: string;
-  /** The shop the sale was made for. A queued order is only ever sent with that shop's login; none means the first shop. */
+  // The shop the sale was made for: a queued order is only ever sent with that shop's login. None means the first shop.
   tenantId?: string;
   command: CreateOrderCommand;
   cartSnapshot: CartItemDto[];
-  /**
-   * What the order comes to with promotions applied, worked out when it was queued. The snapshot holds list prices
-   * (the editor applies promotions again when it reopens the cart), so it cannot give this total on its own.
-   */
+  // The snapshot holds list prices (the editor applies promotions again when it reopens the cart), so the total with
+  // promotions is kept here.
   previewTotal?: number | null;
   customerName: string | null;
   createdAt: string;
   status: 'pending' | 'syncing' | 'failed';
   errorMessage?: string | null;
   retryCount: number;
-  /** 2 once the command can carry Senior / PWD persons. A queued order without it syncs as it always did. */
-  version?: number;
 }
 
 export class WtfDatabase extends Dexie {

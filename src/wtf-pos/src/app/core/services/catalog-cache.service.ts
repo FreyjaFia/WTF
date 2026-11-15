@@ -28,23 +28,16 @@ interface PosCatalogDto {
   lookups?: CatalogLookupsDto;
   seniorPwdEnabled?: boolean;
   vatRegistered?: boolean;
-  settings?: PosShopSettingsDto;
   syncedAt: string;
 }
 
 const NO_SHOP_SETTINGS: PosShopSettingsDto = { seniorPwdEnabled: false, vatRegistered: false };
 
-function settingsOf(catalog: {
-  seniorPwdEnabled?: boolean;
-  vatRegistered?: boolean;
-  settings?: PosShopSettingsDto;
-}): PosShopSettingsDto {
-  return (
-    catalog.settings ?? {
-      seniorPwdEnabled: catalog.seniorPwdEnabled ?? false,
-      vatRegistered: catalog.vatRegistered ?? false,
-    }
-  );
+function settingsOf(catalog: Pick<PosCatalogDto, 'seniorPwdEnabled' | 'vatRegistered'>): PosShopSettingsDto {
+  return {
+    seniorPwdEnabled: catalog.seniorPwdEnabled ?? false,
+    vatRegistered: catalog.vatRegistered ?? false,
+  };
 }
 
 interface StalePriceItem {

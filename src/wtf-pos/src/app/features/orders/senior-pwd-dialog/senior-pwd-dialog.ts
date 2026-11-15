@@ -28,7 +28,6 @@ const ID_PATTERN = /^[\p{L}\p{N}][\p{L}\p{N} \-/.]*$/u;
 
 export interface SeniorPwdLineOption {
   line: CartItemDto;
-  // Why this line cannot be covered; null when it can.
   blockedReason: string | null;
 }
 

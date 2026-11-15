@@ -13,7 +13,6 @@ import type { PendingOrder } from './db';
 
 @Injectable({ providedIn: 'root' })
 export class OfflineOrderService {
-  private static readonly QUEUE_VERSION = 2;
   private static readonly COUNTER_KEY = 'wtf-offline-counter';
   private static readonly DEVICE_KEY = 'wtf-device-id';
   private static readonly SYNC_BATCH_SIZE = 5;
@@ -111,7 +110,6 @@ export class OfflineOrderService {
       status: 'pending',
       errorMessage: null,
       retryCount: 0,
-      version: OfflineOrderService.QUEUE_VERSION,
     };
 
     await db.pendingOrders.add(pendingOrder);
@@ -153,7 +151,6 @@ export class OfflineOrderService {
       customerName,
       status: 'pending',
       errorMessage: null,
-      version: OfflineOrderService.QUEUE_VERSION,
     });
 
     await this.loadPendingOrders();
