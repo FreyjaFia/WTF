@@ -2,7 +2,6 @@ using System.Security.Claims;
 using WTF.Api.Common.Tenancy;
 using WTF.Calculations.Subscriptions;
 using WTF.Domain.Data;
-using WTF.Domain.Tenancy;
 
 namespace WTF.Api.Common.Auth.Permissions;
 
@@ -52,14 +51,21 @@ public sealed class PermissionClaimsMiddleware(RequestDelegate next)
         await next(context);
     }
 
+    // The shop is resolved the way the data layer resolves it (a token from before tenants belongs to the first shop), so a
+    // legacy token is gated by that shop's plan. When shops are filtered but this user has none, only the core features
+    // apply. A database that does not filter by shop (unit tests) has no plan to read.
     private static async Task<IReadOnlySet<string>?> LoadPlanFeaturesAsync(HttpContext context, WTFDbContext db, ITenantFeatures tenantFeatures, ClaimsIdentity identity)
     {
-        if (!Guid.TryParse(identity.FindFirst(TenantDefaults.ClaimType)?.Value, out var tenantId))
+        var shopId = db.StampTenantId;
+        if (shopId is null && !db.TenantFilterEnabled)
         {
             return null;
         }
 
-        var plan = await tenantFeatures.GetAsync(db, tenantId, context.RequestAborted);
+        var plan = shopId is { } id
+            ? await tenantFeatures.GetAsync(db, id, context.RequestAborted)
+            : new TenantPlan(string.Empty, PlanFeatures.Parse(null));
+
         identity.AddClaim(new Claim(PlanLoadedClaim, plan.Name));
         foreach (var feature in plan.Features)
         {
