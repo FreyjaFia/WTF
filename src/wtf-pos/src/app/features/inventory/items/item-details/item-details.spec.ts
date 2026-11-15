@@ -504,20 +504,27 @@ describe('ItemDetailsComponent', () => {
       });
     });
 
-    it('loads the next page and appends it', () => {
+    it('loads the chosen page of the history', () => {
       const first = Array.from({ length: 25 }, (_, i) => ({ ...movement, id: `m${i}` }));
-      inventory.getItemMovements.mockReturnValueOnce(of({ items: first, totalCount: 30 }));
+      inventory.getItemMovements.mockReturnValueOnce(of({ items: first, page: 1, pageSize: 25, totalCount: 30 }));
       const { vm } = create();
       inventory.getItemMovements.mockReturnValueOnce(
-        of({ items: [{ ...movement, id: 'm25' }], totalCount: 30 }),
+        of({ items: [{ ...movement, id: 'm25' }], page: 2, pageSize: 25, totalCount: 30 }),
       );
-      vm['loadMoreMovements']();
+      vm['goToMovementPage'](2);
       expect(inventory.getItemMovements).toHaveBeenLastCalledWith('i1', {
         type: null,
         page: 2,
         pageSize: 25,
       });
-      expect((vm['movements']() as unknown[]).length).toBe(26);
+      expect((vm['movements']() as unknown[]).length).toBe(1);
+    });
+
+    it('goes back to page 1 when the rows per page change', () => {
+      const { vm } = create();
+      vm['goToMovementPage'](2);
+      vm['changeMovementPageSize'](50);
+      expect(inventory.getItemMovements).toHaveBeenLastCalledWith('i1', { type: null, page: 1, pageSize: 50 });
     });
 
     it('hides the history from roles that cannot read stock movements', () => {

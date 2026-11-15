@@ -49,6 +49,11 @@ public class StockQueryHandlerTests
         sales.Items.Single().ProductName.ShouldBe("Latte");
         firstPage.Items.Count.ShouldBe(1);
         firstPage.TotalCount.ShouldBe(2);
+        firstPage.Page.ShouldBe(1);
+
+        var pastTheEnd = (await handler.Handle(new GetItemMovementsQuery(milk, Page: 9, PageSize: 1), CancellationToken.None))!;
+        pastTheEnd.Page.ShouldBe(2);
+        pastTheEnd.Items.Count.ShouldBe(1);
     }
 
     [Fact]

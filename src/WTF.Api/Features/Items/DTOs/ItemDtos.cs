@@ -44,4 +44,4 @@ public record StockMovementDto(
     string? ProductName = null,
     int? OrderNumber = null);
 
-public record PagedStockMovementsDto(List<StockMovementDto> Items, int TotalCount);
+public record PagedStockMovementsDto(List<StockMovementDto> Items, int TotalCount, int Page = 1, int PageSize = 25);
