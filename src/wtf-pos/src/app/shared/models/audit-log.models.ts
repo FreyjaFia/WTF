@@ -28,4 +28,5 @@ export interface PagedResultDto<T> {
   page: number;
   pageSize: number;
   totalCount: number;
+  facets?: Record<string, number> | null;
 }

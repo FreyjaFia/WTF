@@ -35,6 +35,14 @@ export class PullToRefreshComponent {
     return ratio * 180;
   });
 
+  public scrollToOffset(offset: number): void {
+    this.scrollContainer().nativeElement.scrollTop = offset;
+  }
+
+  public scrollToTop(): void {
+    this.scrollToOffset(0);
+  }
+
   protected onTouchStart(event: TouchEvent): void {
     const el = this.scrollContainer().nativeElement;
 
