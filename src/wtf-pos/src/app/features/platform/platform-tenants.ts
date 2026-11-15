@@ -18,6 +18,8 @@ import { PlanDto } from '@shared/models/subscription.models';
 import { PlatformChipComponent } from './platform-chip';
 import { statusTone, warningLabel, warningTone } from './platform-labels';
 import { PlatformSecret, PlatformSecretDialogComponent } from './platform-secret-dialog';
+import { PaginationComponent } from '@shared/components/pagination/pagination';
+import { ClientPager } from '@shared/utils/client-pager';
 
 type SortColumn = 'name' | 'status' | 'plan' | 'paidUntil' | 'people' | 'orders' | 'lastOrder';
 
@@ -29,6 +31,7 @@ interface StatusOption {
 @Component({
   selector: 'app-platform-tenants',
   imports: [
+    PaginationComponent,
     ReactiveFormsModule,
     DatePipe,
     RouterLink,
@@ -95,6 +98,11 @@ export class PlatformTenantsComponent implements OnInit {
 
     return [...rows].sort((a, b) => direction * this.compare(a, b, column));
   });
+  protected readonly pager = new ClientPager(
+    this.visible,
+    'platform:tenants',
+    computed(() => [this.query(), this.selectedStatuses(), this.sortColumn(), this.sortDirection()]),
+  );
   protected readonly activeFilterCount = computed(() => (this.selectedStatuses().length > 0 ? 1 : 0));
   protected readonly planOptions = computed<SelectDropdownOption[]>(() =>
     this.plans()

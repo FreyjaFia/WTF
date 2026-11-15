@@ -64,7 +64,7 @@
             </div>
           </div>
 
-          @for (script of scripts(); track script.id) {
+          @for (script of pager.rows(); track script.id) {
             <div
               class="rounded-xl border border-gray-100 bg-surface px-4 py-3 shadow-sm transition-shadow duration-200 hover:shadow-md lg:grid lg:grid-cols-12 lg:items-center lg:gap-4 lg:border-0 lg:py-4 lg:shadow-lg lg:hover:shadow-xl"
             >
@@ -94,6 +94,15 @@
               </div>
             </div>
           }
+
+          <app-pagination
+            label="Script pages"
+            [page]="pager.page()"
+            [pageSize]="pager.pageSize()"
+            [totalCount]="pager.totalCount()"
+            (pageChange)="pager.goTo($event)"
+            (pageSizeChange)="pager.setPageSize($event)"
+          />
         </div>
       }
     </app-pull-to-refresh>

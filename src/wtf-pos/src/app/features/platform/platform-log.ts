@@ -11,10 +11,12 @@ import { SideDrawerComponent } from '@shared/components/side-drawer/side-drawer'
 import { AppRoutes } from '@shared/constants/app-routes';
 import { PlatformAuditLogDto, PlatformTenantDto } from '@shared/models/platform.models';
 import { forkJoin } from 'rxjs';
+import { PaginationComponent } from '@shared/components/pagination/pagination';
+import { ClientPager } from '@shared/utils/client-pager';
 
 @Component({
   selector: 'app-platform-log',
-  imports: [DatePipe, ReactiveFormsModule, RouterLink, FilterButtonComponent, SearchInputComponent, SideDrawerComponent, IconComponent],
+  imports: [PaginationComponent, DatePipe, ReactiveFormsModule, RouterLink, FilterButtonComponent, SearchInputComponent, SideDrawerComponent, IconComponent],
   templateUrl: './platform-log.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -45,6 +47,7 @@ export class PlatformLogComponent implements OnInit {
     });
   });
 
+  protected readonly pager = new ClientPager(this.visible, 'platform:log', computed(() => [this.query(), this.shopId()]));
   protected readonly activeFilterCount = computed(() => (this.shopId() ? 1 : 0));
 
   public ngOnInit(): void {

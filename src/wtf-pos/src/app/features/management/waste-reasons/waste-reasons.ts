@@ -9,6 +9,8 @@ import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confir
 import { PullToRefreshComponent } from '@shared/components/pull-to-refresh/pull-to-refresh';
 import { SortDirection, SortHeaderComponent } from '@shared/components/sort-header/sort-header';
 import { SaveWasteReasonDto, WasteReasonDto } from '@shared/models';
+import { PaginationComponent } from '@shared/components/pagination/pagination';
+import { ClientPager } from '@shared/utils/client-pager';
 
 type ReasonDialog = 'edit' | 'deactivate' | 'restore';
 
@@ -16,7 +18,7 @@ type SortColumn = 'name' | 'status' | 'order';
 
 @Component({
   selector: 'app-waste-reasons',
-  imports: [
+  imports: [PaginationComponent, 
     ConnectionErrorComponent,
     RouterLink,
     ReactiveFormsModule,
@@ -47,6 +49,11 @@ export class WasteReasonsComponent implements OnInit, OnDestroy {
   protected readonly formError = signal<string | null>(null);
   protected readonly sortColumn = signal<SortColumn | null>(null);
   protected readonly sortDirection = signal<SortDirection>('asc');
+  protected readonly pager = new ClientPager(
+    computed(() => this.sortedReasons()),
+    'management:waste-reasons',
+    computed(() => [this.sortColumn(), this.sortDirection()]),
+  );
   protected readonly sortedReasons = computed(() => {
     const column = this.sortColumn();
     const factor = this.sortDirection() === 'asc' ? 1 : -1;

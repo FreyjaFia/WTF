@@ -38,7 +38,7 @@ function render(tenants: PlatformTenantDto[], queryParams: Record<string, string
     providers: [
       provideRouter([]),
       { provide: PlatformService, useValue: platform },
-      { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: { has: (k: string) => k in queryParams } } } },
+      { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: { has: (k: string) => k in queryParams, get: () => null } } } },
     ],
   });
   vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);

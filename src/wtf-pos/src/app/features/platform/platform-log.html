@@ -67,7 +67,7 @@
     <div class="flex justify-center py-12"><span class="loading loading-spinner loading-lg"></span></div>
   } @else {
     <ul class="divide-y divide-gray-100 rounded-xl bg-surface shadow" data-testid="log-list">
-      @for (entry of visible(); track entry.id) {
+      @for (entry of pager.rows(); track entry.id) {
         <li class="flex flex-col gap-0.5 px-4 py-3 text-sm">
           <div class="flex flex-wrap items-baseline gap-x-2">
             <span class="font-medium text-gray-900">{{ entry.action }}</span>
@@ -85,5 +85,14 @@
         <li class="px-4 py-8 text-center text-sm text-gray-500">Nothing matches.</li>
       }
     </ul>
+
+    <app-pagination
+      label="Log pages"
+      [page]="pager.page()"
+      [pageSize]="pager.pageSize()"
+      [totalCount]="pager.totalCount()"
+      (pageChange)="pager.goTo($event)"
+      (pageSizeChange)="pager.setPageSize($event)"
+    />
   }
 </div>

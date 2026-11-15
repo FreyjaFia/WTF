@@ -1,3 +1,4 @@
+import { provideRouter } from '@angular/router';
 import { HttpErrorMessages } from '@core/messages';
 import { TestBed } from '@angular/core/testing';
 import { AlertService, ModalStackService, WasteReasonService } from '@core/services';
@@ -40,6 +41,7 @@ describe('WasteReasonsComponent', () => {
   function create() {
     TestBed.configureTestingModule({
       providers: [
+        provideRouter([]),
         { provide: WasteReasonService, useValue: service },
         { provide: AlertService, useValue: alerts },
         { provide: ModalStackService, useValue: modalStack },

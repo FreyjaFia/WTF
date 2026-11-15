@@ -4,10 +4,12 @@ import { Capacitor } from '@capacitor/core';
 import { AlertService, SchemaScriptHistoryService } from '@core/services';
 import { IconComponent, PullToRefreshComponent } from '@shared/components';
 import { SchemaScriptHistoryDto } from '@shared/models';
+import { PaginationComponent } from '@shared/components/pagination/pagination';
+import { ClientPager } from '@shared/utils/client-pager';
 
 @Component({
   selector: 'app-schema-scripts',
-  imports: [CommonModule, IconComponent, PullToRefreshComponent],
+  imports: [CommonModule, IconComponent, PaginationComponent, PullToRefreshComponent],
   templateUrl: './schema-scripts.html',
   host: { class: 'flex-1 min-h-0' },
 })
@@ -16,6 +18,7 @@ export class SchemaScriptsComponent implements OnInit {
   private readonly alertService = inject(AlertService);
 
   protected readonly scripts = signal<SchemaScriptHistoryDto[]>([]);
+  protected readonly pager = new ClientPager(this.scripts, 'management:schema-scripts');
   protected readonly isLoading = signal(false);
   protected readonly isRefreshing = signal(false);
   protected readonly isAndroidPlatform = Capacitor.getPlatform() === 'android';
