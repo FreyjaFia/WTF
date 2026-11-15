@@ -187,14 +187,14 @@ export class ReportsComponent implements OnInit {
     { value: FixedBundleReportTypeFilterId, label: 'Fixed Bundle' },
     { value: MixMatchReportTypeFilterId, label: 'Mix & Match' },
   ]);
-  protected get catalog(): { group: ReportGroup; description: string; reports: ReportDefinition[] }[] {
-    return REPORT_GROUPS.map((section) => ({
+  protected readonly catalog = computed<{ group: ReportGroup; description: string; reports: ReportDefinition[] }[]>(() =>
+    REPORT_GROUPS.map((section) => ({
       ...section,
       reports: REPORT_DEFINITIONS.filter(
         (definition) => definition.group === section.group && this.isRunnable(definition.type),
       ),
-    })).filter((section) => section.reports.length > 0);
-  }
+    })).filter((section) => section.reports.length > 0),
+  );
 
   protected readonly reportForm = this.formBuilder.group({
     preset: this.formBuilder.control<DatePreset>(DatePresets.ThisMonth, {

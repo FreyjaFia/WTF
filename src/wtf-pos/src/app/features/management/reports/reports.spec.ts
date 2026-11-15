@@ -22,7 +22,7 @@ interface Reports {
   visibleRows: () => ReportRow[];
   totals: () => { label: string; value: number }[];
   chartPoints: () => { label: string; value: number }[];
-  catalog: { group: string; reports: { type: ReportType }[] }[];
+  catalog: () => { group: string; reports: { type: ReportType }[] }[];
   isLoading: () => boolean;
   isRefreshing: () => boolean;
   connectionFailed: () => boolean;
@@ -182,10 +182,10 @@ describe('ReportsComponent', () => {
     it('groups every report once', async () => {
       await create();
 
-      const types = t.catalog.flatMap((section) => section.reports.map((r) => r.type));
+      const types = t.catalog().flatMap((section) => section.reports.map((r) => r.type));
       expect(types.length).toBe(19);
       expect(new Set(types).size).toBe(19);
-      expect(t.catalog.map((s) => s.group)).toEqual([
+      expect(t.catalog().map((s) => s.group)).toEqual([
         'Sales',
         'Products',
         'Staff',
@@ -199,14 +199,14 @@ describe('ReportsComponent', () => {
       TestBed.inject(PlanStore).apply({ managed: true, features: [], planName: 'Starter' } as unknown as SubscriptionDto);
       await create();
 
-      const types = t.catalog.flatMap((section) => section.reports.map((r) => r.type));
+      const types = t.catalog().flatMap((section) => section.reports.map((r) => r.type));
       expect(types.length).toBe(12);
       for (const gated of ['stock-status', 'waste', 'stock-variance', 'gross-profit', 'profit-loss', 'promotions', 'customer-links']) {
         expect(types).not.toContain(gated);
       }
       expect(types).toContain('daily-sales');
       expect(types).toContain('senior-pwd');
-      expect(t.catalog.map((s) => s.group)).not.toContain('Inventory');
+      expect(t.catalog().map((s) => s.group)).not.toContain('Inventory');
     });
 
     it('does not open a report the plan cannot run from a link', async () => {
