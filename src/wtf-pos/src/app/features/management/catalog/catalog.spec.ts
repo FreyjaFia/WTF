@@ -1,3 +1,4 @@
+import { provideRouter } from '@angular/router';
 import { TestBed } from '@angular/core/testing';
 import { HttpErrorMessages } from '@core/messages';
 import { AlertService, AuthService, CatalogSetupService, ModalStackService } from '@core/services';
@@ -63,6 +64,7 @@ describe('CatalogComponent', () => {
   function create() {
     TestBed.configureTestingModule({
       providers: [
+        provideRouter([]),
         { provide: CatalogSetupService, useValue: service },
         { provide: AlertService, useValue: alerts },
         { provide: ModalStackService, useValue: { push: vi.fn(() => 1), remove: vi.fn() } },

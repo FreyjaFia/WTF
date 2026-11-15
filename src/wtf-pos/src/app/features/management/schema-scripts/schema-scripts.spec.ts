@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { AlertService, SchemaScriptHistoryService } from '@core/services';
 import { SchemaScriptHistoryDto } from '@shared/models';
 import { of, Subject, throwError } from 'rxjs';
@@ -17,6 +18,7 @@ describe('SchemaScriptsComponent', () => {
   function create() {
     TestBed.configureTestingModule({
       providers: [
+        provideRouter([]),
         { provide: SchemaScriptHistoryService, useValue: service },
         { provide: AlertService, useValue: alerts },
       ],
@@ -72,5 +74,21 @@ describe('SchemaScriptsComponent', () => {
     expect(service.getExecutedScripts).toHaveBeenCalledTimes(2);
     fixture.detectChanges();
     expect(button.disabled).toBe(false);
+  });
+
+  it('pages long histories in the browser', () => {
+    const many = Array.from({ length: 30 }, (_, i) => ({
+      id: i + 1,
+      scriptName: `${String(i + 1).padStart(3, '0')}.sql`,
+      appliedAt: '2026-01-02T03:04:05Z',
+    }));
+    service.getExecutedScripts.mockReturnValue(of(many));
+
+    const fixture = create();
+    const el = fixture.nativeElement as HTMLElement;
+
+    expect(el.textContent).toContain('025.sql');
+    expect(el.textContent).not.toContain('026.sql');
+    expect(el.querySelector('app-pagination')).not.toBeNull();
   });
 });

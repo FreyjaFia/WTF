@@ -155,7 +155,7 @@
               <div class="col-span-1"></div>
             </div>
             <ul class="space-y-2 lg:space-y-3" data-testid="catalog-list">
-              @for (entry of categories(); track entry.id; let last = $last) {
+              @for (entry of categoryPager.rows(); track entry.id; let last = $last) {
                 <li
                   class="bg-surface relative flex items-center gap-3 rounded-xl border border-gray-100 px-4 py-3 shadow-sm transition-shadow duration-200 focus-within:z-30 hover:z-10 hover:shadow-md lg:grid lg:grid-cols-12 lg:gap-4 lg:border-0 lg:px-4 lg:py-4 lg:shadow-lg lg:hover:shadow-xl"
                   [class.opacity-70]="!entry.isActive"
@@ -201,6 +201,15 @@
                 </li>
               }
             </ul>
+
+            <app-pagination
+              label="Category pages"
+              [page]="categoryPager.page()"
+              [pageSize]="categoryPager.pageSize()"
+              [totalCount]="categoryPager.totalCount()"
+              (pageChange)="categoryPager.goTo($event)"
+              (pageSizeChange)="categoryPager.setPageSize($event)"
+            />
           }
           @if (section() === 'subcategories') {
             <div
@@ -249,7 +258,7 @@
               <div class="col-span-1"></div>
             </div>
             <ul class="space-y-2 lg:space-y-3" data-testid="catalog-list">
-              @for (entry of subCategories(); track entry.id; let last = $last) {
+              @for (entry of subCategoryPager.rows(); track entry.id; let last = $last) {
                 <li
                   class="bg-surface relative flex items-center gap-3 rounded-xl border border-gray-100 px-4 py-3 shadow-sm transition-shadow duration-200 focus-within:z-30 hover:z-10 hover:shadow-md lg:grid lg:grid-cols-12 lg:gap-4 lg:border-0 lg:px-4 lg:py-4 lg:shadow-lg lg:hover:shadow-xl"
                   [class.opacity-70]="!entry.isActive"
@@ -303,6 +312,15 @@
                 </li>
               }
             </ul>
+
+            <app-pagination
+              label="Sub-category pages"
+              [page]="subCategoryPager.page()"
+              [pageSize]="subCategoryPager.pageSize()"
+              [totalCount]="subCategoryPager.totalCount()"
+              (pageChange)="subCategoryPager.goTo($event)"
+              (pageSizeChange)="subCategoryPager.setPageSize($event)"
+            />
           }
           @if (section() === 'addon-types') {
             <div
@@ -351,7 +369,7 @@
               <div class="col-span-1"></div>
             </div>
             <ul class="space-y-2 lg:space-y-3" data-testid="catalog-list">
-              @for (entry of addOnTypes(); track entry.id; let last = $last) {
+              @for (entry of addOnTypePager.rows(); track entry.id; let last = $last) {
                 <li
                   class="bg-surface relative flex items-center gap-3 rounded-xl border border-gray-100 px-4 py-3 shadow-sm transition-shadow duration-200 focus-within:z-30 hover:z-10 hover:shadow-md lg:grid lg:grid-cols-12 lg:gap-4 lg:border-0 lg:px-4 lg:py-4 lg:shadow-lg lg:hover:shadow-xl"
                   [class.opacity-70]="!entry.isActive"
@@ -397,6 +415,15 @@
                 </li>
               }
             </ul>
+
+            <app-pagination
+              label="Add-on type pages"
+              [page]="addOnTypePager.page()"
+              [pageSize]="addOnTypePager.pageSize()"
+              [totalCount]="addOnTypePager.totalCount()"
+              (pageChange)="addOnTypePager.goTo($event)"
+              (pageSizeChange)="addOnTypePager.setPageSize($event)"
+            />
           }
         </div>
       }

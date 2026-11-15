@@ -98,7 +98,7 @@
         <div class="col-span-2"><app-sort-header label="Last order" align="center" [active]="sortColumn() === 'lastOrder'" [direction]="sortDirection()" (sorted)="toggleSort('lastOrder')" /></div>
       </div>
 
-      @for (tenant of visible(); track tenant.id) {
+      @for (tenant of pager.rows(); track tenant.id) {
         <a
           [routerLink]="shopLink(tenant)"
           [attr.data-testid]="'shop-' + tenant.slug"
@@ -133,6 +133,15 @@
           </div>
         </a>
       }
+
+      <app-pagination
+        label="Shop pages"
+        [page]="pager.page()"
+        [pageSize]="pager.pageSize()"
+        [totalCount]="pager.totalCount()"
+        (pageChange)="pager.goTo($event)"
+        (pageSizeChange)="pager.setPageSize($event)"
+      />
     </div>
   }
   </app-pull-to-refresh>

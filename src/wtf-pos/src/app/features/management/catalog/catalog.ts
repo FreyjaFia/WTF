@@ -25,6 +25,8 @@ import {
   SubCategorySetupDto,
 } from '@shared/models';
 import { Observable } from 'rxjs';
+import { PaginationComponent } from '@shared/components/pagination/pagination';
+import { ClientPager } from '@shared/utils/client-pager';
 
 export type CatalogSection = 'categories' | 'subcategories' | 'addon-types';
 type Section = CatalogSection;
@@ -34,7 +36,7 @@ type SortColumn = 'name' | 'status' | 'products' | 'subs' | 'category' | 'rule' 
 
 @Component({
   selector: 'app-catalog',
-  imports: [
+  imports: [PaginationComponent, 
     ConnectionErrorComponent,
     RouterLink,
     NgTemplateOutlet,
@@ -78,6 +80,9 @@ export class CatalogComponent implements OnInit, OnDestroy {
     ]),
   );
   protected readonly addOnTypes = computed(() => this.sorted(this.setup()?.addOnTypes ?? []));
+  protected readonly categoryPager = new ClientPager(this.categories, 'management:catalog:categories', this.section);
+  protected readonly subCategoryPager = new ClientPager(this.subCategories, 'management:catalog:subcategories', this.section);
+  protected readonly addOnTypePager = new ClientPager(this.addOnTypes, 'management:catalog:addon-types', this.section);
   protected readonly activeCategories = computed(() => this.categories().filter((c) => c.isActive));
 
   protected readonly form = new FormGroup({

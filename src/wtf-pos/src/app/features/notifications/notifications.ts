@@ -2,7 +2,7 @@ import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angula
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { AlertService, NotificationService } from '@core/services';
-import { SideDrawerComponent } from '@shared/components';
+import { ScrollLoaderComponent, SideDrawerComponent } from '@shared/components';
 import { FilterButtonComponent } from '@shared/components/filter-button/filter-button';
 import { IconComponent } from '@shared/components/icons/icon/icon';
 import { NOTIFICATION_KIND_LABELS, NotificationDto } from '@shared/models';
@@ -22,7 +22,7 @@ interface KindFilter {
 
 @Component({
   selector: 'app-notifications',
-  imports: [FilterButtonComponent, IconComponent, SideDrawerComponent],
+  imports: [FilterButtonComponent, IconComponent, ScrollLoaderComponent, SideDrawerComponent],
   templateUrl: './notifications.html',
   host: { class: 'flex-1 min-h-0' },
 })
@@ -35,6 +35,8 @@ export class NotificationsComponent implements OnInit {
   protected readonly items = signal<NotificationDto[]>([]);
   protected readonly totalCount = signal(0);
   protected readonly isLoading = signal(false);
+  protected readonly isLoadingMore = signal(false);
+  protected readonly loadMoreFailed = signal(false);
   protected readonly isMarking = signal(false);
   protected readonly kind = signal<string | null>(null);
   protected readonly unreadOnly = signal(false);
@@ -103,19 +105,28 @@ export class NotificationsComponent implements OnInit {
   }
 
   protected load(reset: boolean): void {
+    if (!reset && (this.isLoadingMore() || !this.canLoadMore())) {
+      return;
+    }
+
     const page = reset ? 1 : Math.floor(this.items().length / PAGE_SIZE) + 1;
-    this.isLoading.set(reset ? this.items().length === 0 : true);
+    this.isLoading.set(reset ? this.items().length === 0 : false);
+    this.isLoadingMore.set(!reset);
+    this.loadMoreFailed.set(false);
     this.service
       .list({ kind: this.kind(), unreadOnly: this.unreadOnly(), page, pageSize: PAGE_SIZE })
       .subscribe({
         next: (result) => {
-          this.items.set(reset ? result.items : [...this.items(), ...result.items]);
+          this.items.set(reset ? result.items : this.appended(result.items));
           this.totalCount.set(result.totalCount);
           this.isLoading.set(false);
+          this.isLoadingMore.set(false);
         },
         error: (err) => {
           this.alertService.error(err.message);
+          this.loadMoreFailed.set(!reset);
           this.isLoading.set(false);
+          this.isLoadingMore.set(false);
         },
       });
   }
@@ -150,5 +161,10 @@ export class NotificationsComponent implements OnInit {
     if (item.path) {
       void this.router.navigateByUrl(item.path);
     }
+  }
+
+  private appended(next: NotificationDto[]): NotificationDto[] {
+    const seen = new Set(this.items().map((item) => item.id));
+    return [...this.items(), ...next.filter((item) => !seen.has(item.id))];
   }
 }

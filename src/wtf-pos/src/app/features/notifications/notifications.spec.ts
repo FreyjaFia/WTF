@@ -4,7 +4,7 @@ import { Router, provideRouter } from '@angular/router';
 import { AlertService, NotificationService } from '@core/services';
 import { NotificationDto } from '@shared/models';
 import { of, Subject, throwError } from 'rxjs';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NotificationsComponent } from './notifications';
 
 const row = (id: string, overrides: Partial<NotificationDto> = {}): NotificationDto => ({
@@ -22,6 +22,20 @@ const row = (id: string, overrides: Partial<NotificationDto> = {}): Notification
 });
 
 describe('NotificationsComponent', () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      'IntersectionObserver',
+      class {
+        observe = vi.fn();
+        disconnect = vi.fn();
+      },
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   function setup(options: { items?: NotificationDto[]; total?: number; unread?: number; listError?: boolean } = {}) {
     const unread = signal(options.unread ?? 0);
     const changed = new Subject<void>();
@@ -122,12 +136,12 @@ describe('NotificationsComponent', () => {
     expect(el.querySelector('[data-filter-count]')).toBeNull();
   });
 
-  it('loads the next page and appends it', () => {
+  it('loads the next page and appends it when the end of the list scrolls into view', () => {
     const first = Array.from({ length: 25 }, (_, i) => row(`a${i}`));
     const { el, service, rows, fixture } = setup({ items: first, total: 26 });
-    service.list.mockReturnValue(of({ items: [row('last')], totalCount: 26 }));
+    service.list.mockReturnValue(of({ items: [row('last'), row('a0')], totalCount: 26 }));
 
-    (el.querySelector('[data-testid="load-more"]') as HTMLButtonElement).click();
+    fixture.componentInstance['load'](false);
     fixture.detectChanges();
 
     expect(service.list).toHaveBeenLastCalledWith({ kind: null, unreadOnly: false, page: 2, pageSize: 25 });
@@ -135,7 +149,26 @@ describe('NotificationsComponent', () => {
     expect(el.querySelector('[data-testid="load-more"]')).toBeNull();
   });
 
-  it('hides Load More when everything is shown', () => {
+  it('keeps the rows and offers a retry when loading more fails', () => {
+    const first = Array.from({ length: 25 }, (_, i) => row(`a${i}`));
+    const { service, rows, fixture } = setup({ items: first, total: 40 });
+    service.list.mockReturnValue(throwError(() => new Error('boom')));
+
+    fixture.componentInstance['load'](false);
+
+    expect(rows()).toHaveLength(25);
+    expect(fixture.componentInstance['loadMoreFailed']()).toBe(true);
+  });
+
+  it('has no Load More button; the scroll loader asks for the next page', () => {
+    const first = Array.from({ length: 25 }, (_, i) => row(`a${i}`));
+    const { el } = setup({ items: first, total: 40 });
+
+    expect(el.querySelector('[data-testid="load-more"]')).toBeNull();
+    expect(el.querySelector('app-scroll-loader')).not.toBeNull();
+  });
+
+  it('shows no scroll loader state when everything is shown', () => {
     const { el } = setup({ items: [row('a')], total: 1 });
 
     expect(el.querySelector('[data-testid="load-more"]')).toBeNull();

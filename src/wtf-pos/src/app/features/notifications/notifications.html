@@ -140,18 +140,11 @@
       }
     </ul>
 
-    @if (canLoadMore()) {
-      <div class="mt-3 flex justify-center">
-        <button
-          type="button"
-          class="app-btn app-btn-secondary app-btn-sm"
-          [disabled]="isLoading()"
-          data-testid="load-more"
-          (click)="load(false)"
-        >
-          {{ isLoading() ? 'Loading...' : 'Load More' }}
-        </button>
-      </div>
-    }
+    <app-scroll-loader
+      [hasMore]="canLoadMore()"
+      [isLoading]="isLoadingMore() || isLoading()"
+      [error]="loadMoreFailed()"
+      (loadMore)="load(false)"
+    />
   </div>
 </div>
