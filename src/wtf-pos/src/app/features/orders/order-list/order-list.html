@@ -303,12 +303,10 @@
                   <app-icon name="icon-chat" [class]="'h-4 w-4'" [fill]="'currentColor'" />
                   Chat
                 </button>
-              } @else {
-                <span></span>
               }
 
               @if (canDecideOrders()) {
-                <div class="flex items-center gap-2">
+                <div class="ml-auto flex items-center gap-2">
                   <button
                     type="button"
                     class="app-btn app-btn-outline-danger app-btn-sm"

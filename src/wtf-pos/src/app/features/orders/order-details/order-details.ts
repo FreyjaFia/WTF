@@ -93,7 +93,6 @@ export class OrderDetails implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly showChat = signal(false);
-  protected readonly canChat = computed(() => this.authService.canReadChat());
   /** Messages from the customer that no staff member has read yet, for the badge on the Chat button. */
   protected readonly chatUnread = computed(() => {
     const id = this.order()?.id;
@@ -272,6 +271,10 @@ export class OrderDetails implements OnInit {
     this.loadCatalogImages();
     this.loadOrder();
     this.loadDiscountedProductPromotions();
+  }
+
+  protected canChat(): boolean {
+    return this.authService.canReadChat();
   }
 
   protected openChat(): void {
