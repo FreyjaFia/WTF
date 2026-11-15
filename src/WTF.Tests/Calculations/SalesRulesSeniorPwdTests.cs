@@ -50,6 +50,22 @@ public class SalesRulesSeniorPwdTests
     }
 
     [Fact]
+    public void Summarize_CountsTheOrdersThatCarryTheDiscount_ByTheSameStatusesAsTheAmount()
+    {
+        var summary = SalesRules.Summarize(
+            [
+                OrderWithSeniorPwd(OrderStatuses.Completed, 10.71m, 17.86m),
+                OrderWithSeniorPwd(OrderStatuses.Refunded, 0m, 20m),
+                OrderWithSeniorPwd(OrderStatuses.Cancelled, 0m, 20m),
+                OrderWithSeniorPwd(OrderStatuses.Completed, 0m, 0m)
+            ],
+            NoOverrides);
+
+        summary.SeniorPwdOrderCount.ShouldBe(2);
+        summary.SeniorPwdDiscounts.ShouldBe(37.86m);
+    }
+
+    [Fact]
     public void Summarize_CancelledOrder_NeverCounts()
     {
         var summary = SalesRules.Summarize([OrderWithSeniorPwd(OrderStatuses.Cancelled, 0m, 20m)], NoOverrides);

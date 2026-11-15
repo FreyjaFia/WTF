@@ -59,19 +59,23 @@ public sealed class GetDailyCloseReportHandler(
 
         var rows = new List<DailyCloseReportRowDto>
         {
-            new(SalesSection, "Gross sales", "Sold, including what was later refunded", summary.CompletedOrderCount + summary.RefundedOrderCount, summary.GrossSales),
+            new(SalesSection, "Gross sales", "Sold, including what was later refunded", summary.CompletedOrderCount + summary.RefundedOrderCount, summary.GrossSales)
+        };
+
+        if (summary.SeniorPwdDiscounts > 0m || summary.VatExemptSales > 0m)
+        {
+            rows.Add(new(SalesSection, "Senior/PWD discount", "Taken off gross sales", summary.SeniorPwdOrderCount, summary.SeniorPwdDiscounts));
+            rows.Add(new(SalesSection, "VAT-exempt sales", "VAT not charged on Senior/PWD rows", 0, summary.VatExemptSales));
+        }
+
+        rows.AddRange(
+        [
             new(SalesSection, "Refunds", "Taken off gross sales", summary.RefundedOrderCount, summary.RefundedAmount),
             new(SalesSection, "Net sales", "Completed orders", summary.CompletedOrderCount, summary.NetSales),
             new(SalesSection, "Average order", null, summary.CompletedOrderCount, summary.AverageOrderValue),
             new(SalesSection, "Tips", null, summary.CompletedOrderCount, summary.Tips),
             new(SalesSection, "Cancelled orders", "Never paid, so no amount", cancelledCount, 0m)
-        };
-
-        if (summary.SeniorPwdDiscounts > 0m || summary.VatExemptSales > 0m)
-        {
-            rows.Insert(1, new(SalesSection, "Senior/PWD discount", "Taken off gross sales", sales.Count(o => OrderMetrics.SeniorPwdAmountsOf(o).Discount > 0m), summary.SeniorPwdDiscounts));
-            rows.Insert(2, new(SalesSection, "VAT-exempt sales", "VAT not charged on Senior/PWD rows", 0, summary.VatExemptSales));
-        }
+        ]);
 
         rows.AddRange(sales
             .GroupBy(o => o.PaymentMethod?.Name ?? "Unknown")

@@ -27,6 +27,7 @@ public static class SalesRules
         var refundedAmount = 0m;
         var discounts = 0m;
         var seniorPwdDiscounts = 0m;
+        var seniorPwdOrders = 0;
         var vatExemptSales = 0m;
         var revenue = 0m;
         var tips = 0m;
@@ -50,6 +51,11 @@ public static class SalesRules
                 discounts += OrderMetrics.ComputeOrderBreakdown(order, addOnOverridePrices).Discount;
                 var seniorPwd = OrderMetrics.SeniorPwdAmountsOf(order);
                 seniorPwdDiscounts += seniorPwd.Discount;
+                if (seniorPwd.Discount > 0m)
+                {
+                    seniorPwdOrders++;
+                }
+
                 vatExemptSales += seniorPwd.VatExempt;
             }
 
@@ -63,7 +69,7 @@ public static class SalesRules
             tips += order.Tips ?? 0m;
         }
 
-        return new SalesSummary(total, completed, voided, revenue, tips, refunded, refundedAmount, discounts, seniorPwdDiscounts, vatExemptSales);
+        return new SalesSummary(total, completed, voided, revenue, tips, refunded, refundedAmount, discounts, seniorPwdDiscounts, vatExemptSales, seniorPwdOrders);
     }
 
     public static decimal Average(decimal amount, int count) => count > 0 ? amount / count : 0m;
@@ -82,6 +88,7 @@ public static class SalesRules
 /// <param name="RefundedOrderCount">Orders refunded after they were sold.</param>
 /// <param name="RefundedAmount">What the refunded orders were worth; never part of <paramref name="Revenue"/>.</param>
 /// <param name="SeniorPwdDiscounts">The Senior/PWD discount (20%) on sold and refunded orders; its own column, apart from promotion discounts.</param>
+/// <param name="SeniorPwdOrderCount">How many sold and refunded orders carry a Senior/PWD discount: the same orders as <paramref name="SeniorPwdDiscounts"/> adds up.</param>
 /// <param name="VatExemptSales">The VAT not charged on Senior/PWD rows of sold and refunded orders (0 when the shop is not VAT-registered).</param>
 public sealed record SalesSummary(
     int TotalOrderCount,
@@ -93,7 +100,8 @@ public sealed record SalesSummary(
     decimal RefundedAmount = 0m,
     decimal Discounts = 0m,
     decimal SeniorPwdDiscounts = 0m,
-    decimal VatExemptSales = 0m)
+    decimal VatExemptSales = 0m,
+    int SeniorPwdOrderCount = 0)
 {
     public decimal GrossSales => Revenue + RefundedAmount + Discounts + SeniorPwdDiscounts + VatExemptSales;
 

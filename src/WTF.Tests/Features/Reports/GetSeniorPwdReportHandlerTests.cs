@@ -154,6 +154,33 @@ public class DailyCloseSeniorPwdTests
     }
 
     [Fact]
+    public async Task Handle_RefundedAndSoldDiscountOrders_AreCountedOnTheDiscountRowWithTheirAmounts_InPlace()
+    {
+        await using (var db = TestDb.Create(_dbName))
+        {
+            Basics(db);
+            var p = Product(db, "Latte", 100m);
+            foreach (var status in new[] { Completed, Refunded })
+            {
+                var item = Sale(db, p, Noon, 80m, status).OrderItems.Single();
+                item.SeniorPwdDiscount = 20m;
+            }
+
+            await db.SaveChangesAsync();
+        }
+
+        var handler = new GetDailyCloseReportHandler(TestDb.Create(_dbName), TestRequest.As(Guid.NewGuid(), timeZone: "Asia/Manila"));
+
+        var rows = await handler.Handle(new GetDailyCloseReportQuery { FromDate = new DateTime(2026, 3, 10), ToDate = new DateTime(2026, 3, 10) }, default);
+
+        var sales = rows.Where(r => r.Section == GetDailyCloseReportHandler.SalesSection).Select(r => r.Label).ToList();
+        sales.Take(4).ShouldBe(["Gross sales", "Senior/PWD discount", "VAT-exempt sales", "Refunds"]);
+        var discount = rows.Single(r => r.Label == "Senior/PWD discount");
+        discount.Amount.ShouldBe(40m);
+        discount.OrderCount.ShouldBe(2);
+    }
+
+    [Fact]
     public async Task Handle_NoDiscountGiven_AddsNoSeniorPwdRows()
     {
         await using (var db = TestDb.Create(_dbName))
