@@ -1720,6 +1720,10 @@
     { "name": "not VAT-registered: 85.50", "covered": 85.5, "vatRegistered": false, "expectedVatExempt": 0, "expectedDiscount": 17.1, "expectedDue": 68.4 },
     { "name": "VAT-registered: 250.00", "covered": 250, "vatRegistered": true, "expectedVatExempt": 26.79, "expectedDiscount": 44.64, "expectedDue": 178.57 },
     { "name": "VAT-registered: half a centavo rounds up", "covered": 0.14, "vatRegistered": true, "expectedVatExempt": 0.01, "expectedDiscount": 0.03, "expectedDue": 0.1 },
+    { "name": "VAT-registered: one centavo leaves no exemption and no discount", "covered": 0.01, "vatRegistered": true, "expectedVatExempt": 0, "expectedDiscount": 0, "expectedDue": 0.01 },
+    { "name": "VAT-registered: two centavos leave no exemption and no discount", "covered": 0.02, "vatRegistered": true, "expectedVatExempt": 0, "expectedDiscount": 0, "expectedDue": 0.02 },
+    { "name": "not VAT-registered: one centavo gives no discount", "covered": 0.01, "vatRegistered": false, "expectedVatExempt": 0, "expectedDiscount": 0, "expectedDue": 0.01 },
+    { "name": "not VAT-registered: two centavos give no discount", "covered": 0.02, "vatRegistered": false, "expectedVatExempt": 0, "expectedDiscount": 0, "expectedDue": 0.02 },
     { "name": "nothing covered", "covered": 0, "vatRegistered": true, "expectedVatExempt": 0, "expectedDiscount": 0, "expectedDue": 0 }
   ],
   "seniorPwdReportNet": [

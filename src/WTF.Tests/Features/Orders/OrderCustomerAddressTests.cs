@@ -1,3 +1,4 @@
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NSubstitute;
 using WTF.Api.Common.Auth;
@@ -18,14 +19,11 @@ public class OrderCustomerAddressTests
     private readonly OrderSeed _data = new(TestDb.NewName());
     private readonly IAuditService _audit = TestFakes.Audit();
 
-    private CreateOrderHandler Creator()
-    {
-        var db = _data.Open();
-        return new CreateOrderHandler(db, TestRequest.As(_userId, AppRoles.Admin), TestFakes.Hub(), _audit, TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(db));
-    }
+    private CreateOrderHandler Creator() =>
+        TestFakes.CreateOrderHandler(_data.Open(), TestRequest.As(_userId, AppRoles.Admin), _audit);
 
     private UpdateOrderHandler Updater() =>
-        new(_data.Open(), TestRequest.As(_userId, AppRoles.Admin), TestFakes.Hub(), _audit, TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(_data.Open()));
+        TestFakes.UpdateOrderHandler(_data.Open(), TestRequest.As(_userId, AppRoles.Admin), _audit);
 
     private Guid AddCustomer(string first, string? last, string? address)
     {
@@ -38,7 +36,7 @@ public class OrderCustomerAddressTests
             LastName = last,
             Address = address,
             IsActive = true,
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = FixedClock.Today,
             CreatedBy = _userId,
         });
         db.SaveChanges();
@@ -266,5 +264,69 @@ public class OrderCustomerAddressTests
         var paged = await new GetPagedOrdersHandler(db).Handle(new GetPagedOrdersQuery(SearchTerm: "mango"), default);
         paged.Items.Select(o => o.Id).ShouldBe([withAddress.Id]);
         paged.Items.Single().CustomerAddress.ShouldBe("77 Mango Lane");
+    }
+
+    [Fact]
+    public async Task OfflineSync_KeepsTheAddressTheCashierTypedOnTheOrder()
+    {
+        var product = _data.AddProduct("Latte", 100);
+        var customer = AddCustomer("Ana", "Cruz", "Home St");
+        var command = Create(product, customer, "  9 Offline Rd ", OrderStatusEnum.Completed) with
+        {
+            OfflineLocalId = "local-address-1",
+            PaymentMethod = PaymentMethodEnum.Cash,
+            AmountReceived = 100m,
+        };
+
+        var results = await SyncHandler().Handle(new SyncOfflineOrdersCommand([command]), CancellationToken.None);
+
+        results.Single().Error.ShouldBeNull();
+        (await SavedAddress(results.Single().OrderId!.Value)).ShouldBe("9 Offline Rd");
+    }
+
+    [Fact]
+    public async Task OfflineSync_NoAddressTyped_FallsBackToTheCustomersSavedAddress()
+    {
+        var product = _data.AddProduct("Latte", 100);
+        var customer = AddCustomer("Ana", "Cruz", "Home St");
+        var command = Create(product, customer, null, OrderStatusEnum.Completed) with
+        {
+            OfflineLocalId = "local-address-2",
+            PaymentMethod = PaymentMethodEnum.Cash,
+            AmountReceived = 100m,
+        };
+
+        var results = await SyncHandler().Handle(new SyncOfflineOrdersCommand([command]), CancellationToken.None);
+
+        (await SavedAddress(results.Single().OrderId!.Value)).ShouldBe("Home St");
+    }
+
+    [Theory]
+    [InlineData(OrderStatusEnum.Pending, OrderStatusEnum.Cancelled)]
+    [InlineData(OrderStatusEnum.Completed, OrderStatusEnum.Refunded)]
+    public async Task Void_KeepsTheOrdersAddressAndShowsItOnTheResult(OrderStatusEnum before, OrderStatusEnum after)
+    {
+        var product = _data.AddProduct("Latte", 100);
+        var customer = AddCustomer("Ana", "Cruz", "Home St");
+        var command = Create(product, customer, "5 Void Ave", before) with { PaymentMethod = PaymentMethodEnum.Cash, AmountReceived = 100m };
+        var order = await Creator().Handle(command, CancellationToken.None);
+        var voider = new VoidOrderHandler(_data.Open(), TestRequest.As(_userId, AppRoles.Admin), TestFakes.Hub(), _audit, TestFakes.Push(), TestFakes.Conversations(), TestFakes.Stock(_data.Open()));
+
+        var result = await voider.Handle(new VoidOrderCommand(order.Id, "customer changed their mind"), CancellationToken.None);
+
+        result!.Status.ShouldBe(after);
+        result.CustomerAddress.ShouldBe("5 Void Ave");
+        (await SavedAddress(order.Id)).ShouldBe("5 Void Ave");
+    }
+
+    private SyncOfflineOrdersHandler SyncHandler()
+    {
+        var db = _data.Open();
+        var accessor = TestRequest.As(_userId, AppRoles.Admin);
+        var create = TestFakes.CreateOrderHandler(db, accessor, _audit);
+        var sender = Substitute.For<ISender>();
+        sender.Send(Arg.Any<CreateOrderCommand>(), Arg.Any<CancellationToken>())
+            .Returns(call => create.Handle(call.Arg<CreateOrderCommand>(), call.Arg<CancellationToken>()));
+        return new SyncOfflineOrdersHandler(db, sender, accessor);
     }
 }
