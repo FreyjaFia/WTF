@@ -94,7 +94,8 @@ public class GetPagedOrdersHandlerTests
         second.Items.Select(o => o.OrderNumber).ShouldBe([5002, 5001]);
         last.Items.Select(o => o.OrderNumber).ShouldBe([5000]);
         last.TotalCount.ShouldBe(5);
-        beyond.Items.ShouldBeEmpty();
+        beyond.Page.ShouldBe(3);
+        beyond.Items.Select(o => o.OrderNumber).ShouldBe([5000]);
         beyond.TotalCount.ShouldBe(5);
     }
 
@@ -246,5 +247,130 @@ public class GetPagedOrdersHandlerTests
         dto.TotalAmount.ShouldBe(200m);
         dto.Items.Single().PromoLabel.ShouldBe("10% off");
         dto.Items.Single().AddOns.Single().ProductName.ShouldBe("Cheese");
+    }
+
+    [Fact]
+    public async Task Handle_StatusFilter_TotalsAndPagesCountOnlyThatStatus()
+    {
+        var start = DateTime.UtcNow.AddDays(-1);
+        for (var i = 0; i < 7; i++)
+        {
+            _data.AddOrder(i % 2 == 0 ? OrderStatusEnum.Completed : OrderStatusEnum.Pending, createdAt: start.AddMinutes(i), orderNumber: 8000 + i);
+        }
+
+        var result = await Handler().Handle(
+            new GetPagedOrdersQuery(Statuses: [(int)OrderStatusEnum.Completed], PageSize: 3), CancellationToken.None);
+
+        result.TotalCount.ShouldBe(4);
+        result.Items.Count.ShouldBe(3);
+        result.Items.ShouldAllBe(o => o.Status == OrderStatusEnum.Completed);
+    }
+
+    [Fact]
+    public async Task Handle_SeveralStatuses_ReturnsAnyOfThem()
+    {
+        _data.AddOrder(OrderStatusEnum.Completed, orderNumber: 8101);
+        _data.AddOrder(OrderStatusEnum.Cancelled, orderNumber: 8102);
+        _data.AddOrder(OrderStatusEnum.Pending, orderNumber: 8103);
+
+        var result = await Handler().Handle(
+            new GetPagedOrdersQuery(Statuses: [(int)OrderStatusEnum.Completed, (int)OrderStatusEnum.Cancelled]), CancellationToken.None);
+
+        result.TotalCount.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task Handle_DateRange_FiltersBeforePagingAndCounting()
+    {
+        var now = DateTime.UtcNow;
+        _data.AddOrder(createdAt: now.AddDays(-40), orderNumber: 8201);
+        _data.AddOrder(createdAt: now.AddDays(-5), orderNumber: 8202);
+        _data.AddOrder(createdAt: now.AddHours(-1), orderNumber: 8203);
+
+        var result = await Handler().Handle(
+            new GetPagedOrdersQuery(From: new DateTimeOffset(now.AddDays(-7), TimeSpan.Zero), To: new DateTimeOffset(now, TimeSpan.Zero)),
+            CancellationToken.None);
+
+        result.Items.Select(o => o.OrderNumber).ShouldBe([8203, 8202]);
+        result.TotalCount.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task Handle_SortByOrderNumber_FollowsDirectionAcrossPages()
+    {
+        SeedOrders(5);
+
+        var asc = await Handler().Handle(
+            new GetPagedOrdersQuery(SortBy: "orderNumber", SortDirection: "asc", PageSize: 2, Page: 2), CancellationToken.None);
+        var desc = await Handler().Handle(
+            new GetPagedOrdersQuery(SortBy: "orderNumber", SortDirection: "desc", PageSize: 2), CancellationToken.None);
+
+        asc.Items.Select(o => o.OrderNumber).ShouldBe([5002, 5003]);
+        desc.Items.Select(o => o.OrderNumber).ShouldBe([5004, 5003]);
+    }
+
+    [Fact]
+    public async Task Handle_UnknownSortColumn_FallsBackToNewestFirst()
+    {
+        SeedOrders(3);
+
+        var result = await Handler().Handle(new GetPagedOrdersQuery(SortBy: "nonsense; drop table"), CancellationToken.None);
+
+        result.Items.Select(o => o.OrderNumber).ShouldBe([5002, 5001, 5000]);
+    }
+
+    [Fact]
+    public async Task Handle_SameTimestamp_NeverRepeatsARowAcrossPages()
+    {
+        var at = DateTime.UtcNow.AddHours(-1);
+        for (var i = 0; i < 7; i++)
+        {
+            _data.AddOrder(createdAt: at, orderNumber: 8300 + i);
+        }
+
+        var seen = new List<Guid>();
+        for (var page = 1; page <= 4; page++)
+        {
+            var result = await Handler().Handle(new GetPagedOrdersQuery(Page: page, PageSize: 2), CancellationToken.None);
+            seen.AddRange(result.Items.Select(o => o.Id));
+        }
+
+        seen.Count.ShouldBe(7);
+        seen.Distinct().Count().ShouldBe(7);
+    }
+
+    [Fact]
+    public async Task Handle_PageAfterTheLast_ReturnsTheLastPage()
+    {
+        SeedOrders(5);
+
+        var result = await Handler().Handle(new GetPagedOrdersQuery(Page: 9, PageSize: 2), CancellationToken.None);
+
+        result.Page.ShouldBe(3);
+        result.Items.Count.ShouldBe(1);
+        result.TotalCount.ShouldBe(5);
+    }
+
+    [Fact]
+    public async Task Handle_Facets_CountEachStatusIgnoringTheStatusFilterButNotTheDateRange()
+    {
+        var now = DateTime.UtcNow;
+        _data.AddOrder(OrderStatusEnum.Completed, createdAt: now.AddHours(-2), orderNumber: 8401);
+        _data.AddOrder(OrderStatusEnum.Completed, createdAt: now.AddHours(-3), orderNumber: 8402);
+        _data.AddOrder(OrderStatusEnum.Cancelled, createdAt: now.AddHours(-4), orderNumber: 8403);
+        _data.AddOrder(OrderStatusEnum.Completed, createdAt: now.AddDays(-20), orderNumber: 8404);
+        _data.AddOrder(OrderStatusEnum.PendingApproval, createdAt: now.AddHours(-1), orderNumber: 8405);
+
+        var result = await Handler().Handle(
+            new GetPagedOrdersQuery(
+                Statuses: [(int)OrderStatusEnum.Cancelled],
+                From: new DateTimeOffset(now.AddDays(-1), TimeSpan.Zero)),
+            CancellationToken.None);
+
+        result.TotalCount.ShouldBe(1);
+        result.Facets.ShouldNotBeNull();
+        result.Facets![((int)OrderStatusEnum.Completed).ToString()].ShouldBe(2);
+        result.Facets[((int)OrderStatusEnum.Cancelled).ToString()].ShouldBe(1);
+        result.Facets["all"].ShouldBe(3);
     }
 }

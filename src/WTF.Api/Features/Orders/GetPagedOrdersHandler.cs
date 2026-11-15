@@ -8,6 +8,7 @@ using WTF.Api.Features.Orders.Enums;
 using WTF.Calculations.Orders;
 using WTF.Calculations.Sales;
 using WTF.Domain.Data;
+using WTF.Domain.Entities;
 
 namespace WTF.Api.Features.Orders;
 
@@ -18,15 +19,21 @@ public sealed record GetPagedOrdersQuery(
     string? SearchTerm = null,
     int Page = 1,
     int PageSize = 20,
-    OrderSourceEnum? Source = null) : IRequest<PagedResultDto<OrderDto>>;
+    OrderSourceEnum? Source = null,
+    int[]? Statuses = null,
+    DateTimeOffset? From = null,
+    DateTimeOffset? To = null,
+    string? SortBy = null,
+    string? SortDirection = null) : IRequest<PagedResultDto<OrderDto>>;
 
 public sealed class GetPagedOrdersHandler(WTFDbContext db, ITenantFeatures tenantFeatures, IHttpContextAccessor? httpContextAccessor = null)
     : IRequestHandler<GetPagedOrdersQuery, PagedResultDto<OrderDto>>
 {
+    private const int DefaultPageSize = 20;
+
     public async Task<PagedResultDto<OrderDto>> Handle(GetPagedOrdersQuery request, CancellationToken cancellationToken)
     {
-        var page = request.Page <= 0 ? 1 : request.Page;
-        var pageSize = request.PageSize <= 0 ? 20 : Math.Min(request.PageSize, 100);
+        var paging = PagingRequest.From(request.Page, request.PageSize, DefaultPageSize);
 
         var baseQuery = db.Orders.AsQueryable();
 
@@ -41,19 +48,16 @@ public sealed class GetPagedOrdersHandler(WTFDbContext db, ITenantFeatures tenan
             baseQuery = baseQuery.Where(o => o.Source == source);
         }
 
-        if (request.Status != OrderStatusEnum.All)
+        if (request.From.HasValue)
         {
-            baseQuery = baseQuery.Where(o => o.StatusId == (int)request.Status);
+            var from = request.From.Value.UtcDateTime;
+            baseQuery = baseQuery.Where(o => o.CreatedAt >= from);
         }
-        else
-        {
-            // Orders waiting for staff (approval or review) are not part of the normal list: they only come back when asked for.
-            baseQuery = baseQuery.Where(o => !OrderStatuses.Unconfirmed.Contains(o.StatusId));
 
-            if (request.ExcludeFinalized)
-            {
-                baseQuery = baseQuery.Where(o => o.StatusId != (int)OrderStatusEnum.Completed && o.StatusId != (int)OrderStatusEnum.Refunded);
-            }
+        if (request.To.HasValue)
+        {
+            var to = request.To.Value.UtcDateTime;
+            baseQuery = baseQuery.Where(o => o.CreatedAt <= to);
         }
 
         if (!string.IsNullOrWhiteSpace(request.SearchTerm))
@@ -69,16 +73,20 @@ public sealed class GetPagedOrdersHandler(WTFDbContext db, ITenantFeatures tenan
                     )));
         }
 
-        var totalCount = await baseQuery.CountAsync(cancellationToken);
+        // Counts for the status chips follow every other filter but not the status itself.
+        var facets = await BuildFacetsAsync(baseQuery, cancellationToken);
+
+        var query = ApplyStatus(baseQuery, request);
+        var totalCount = await query.CountAsync(cancellationToken);
         if (totalCount == 0)
         {
-            return new PagedResultDto<OrderDto>([], page, pageSize, 0);
+            return new PagedResultDto<OrderDto>([], paging.Page, paging.PageSize, 0, facets);
         }
 
-        var orders = await baseQuery
-            .OrderByDescending(o => o.CreatedAt)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
+        paging = paging.ClampToTotal(totalCount);
+
+        var orders = await ApplySort(query, request)
+            .ApplyPaging(paging)
             .Include(o => o.Customer)
             .Include(o => o.OrderItems.Where(oi => oi.ParentOrderItemId == null))
                 .ThenInclude(oi => oi.Product)
@@ -107,6 +115,60 @@ public sealed class GetPagedOrdersHandler(WTFDbContext db, ITenantFeatures tenan
             maskIds: true,
             includeCustomerName: true)).ToList();
 
-        return new PagedResultDto<OrderDto>(items, page, pageSize, totalCount);
+        return new PagedResultDto<OrderDto>(items, paging.Page, paging.PageSize, totalCount, facets);
+    }
+
+    private static IQueryable<Order> ApplyStatus(IQueryable<Order> query, GetPagedOrdersQuery request)
+    {
+        if (request.Status != OrderStatusEnum.All)
+        {
+            return query.Where(o => o.StatusId == (int)request.Status);
+        }
+
+        if (request.Statuses is { Length: > 0 })
+        {
+            var statuses = request.Statuses;
+            return query.Where(o => statuses.Contains(o.StatusId));
+        }
+
+        // Orders waiting for staff (approval or review) are not part of the normal list: they only come back when asked for.
+        query = query.Where(o => !OrderStatuses.Unconfirmed.Contains(o.StatusId));
+
+        if (request.ExcludeFinalized)
+        {
+            query = query.Where(o => o.StatusId != (int)OrderStatusEnum.Completed && o.StatusId != (int)OrderStatusEnum.Refunded);
+        }
+
+        return query;
+    }
+
+    private static IQueryable<Order> ApplySort(IQueryable<Order> query, GetPagedOrdersQuery request)
+    {
+        var ascending = string.Equals(request.SortDirection, "asc", StringComparison.OrdinalIgnoreCase);
+
+        if (string.Equals(request.SortBy, "orderNumber", StringComparison.OrdinalIgnoreCase))
+        {
+            return ascending
+                ? query.OrderBy(o => o.OrderNumber).ThenBy(o => o.Id)
+                : query.OrderByDescending(o => o.OrderNumber).ThenByDescending(o => o.Id);
+        }
+
+        return ascending
+            ? query.OrderBy(o => o.CreatedAt).ThenBy(o => o.Id)
+            : query.OrderByDescending(o => o.CreatedAt).ThenByDescending(o => o.Id);
+    }
+
+    private static async Task<IReadOnlyDictionary<string, int>> BuildFacetsAsync(IQueryable<Order> query, CancellationToken cancellationToken)
+    {
+        var grouped = await query
+            .Where(o => !OrderStatuses.Unconfirmed.Contains(o.StatusId))
+            .GroupBy(o => o.StatusId)
+            .Select(g => new { StatusId = g.Key, Count = g.Count() })
+            .ToListAsync(cancellationToken);
+
+        var facets = grouped.ToDictionary(g => g.StatusId.ToString(), g => g.Count);
+        facets["all"] = grouped.Sum(g => g.Count);
+
+        return facets;
     }
 }
