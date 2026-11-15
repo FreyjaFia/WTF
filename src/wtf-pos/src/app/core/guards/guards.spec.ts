@@ -182,6 +182,16 @@ describe('route guards', () => {
       expect(router.navigateByUrl).toHaveBeenCalledWith(`${AppRoutes.NotInPlan}?feature=promotions`);
     });
 
+    it('sends the person to Not in your plan when the plan shrinks but the saved permissions still list the feature', async () => {
+      const plans = TestBed.inject(PlanStore);
+      plans.apply({ managed: true, features: ['inventory'], planName: 'Starter' } as SubscriptionDto);
+      auth['can'] = vi.fn().mockReturnValue(true);
+      const route = { data: { permission: 'promotions.read' } } as unknown as ActivatedRouteSnapshot;
+
+      await expect(run(route)).resolves.toBe(false);
+      expect(router.navigateByUrl).toHaveBeenCalledWith(`${AppRoutes.NotInPlan}?feature=promotions`);
+    });
+
     it('keeps the normal fallback when the plan has the feature but the role lacks the permission', async () => {
       const plans = TestBed.inject(PlanStore);
       plans.apply({ managed: true, features: ['promotions'], planName: 'Pro' } as SubscriptionDto);

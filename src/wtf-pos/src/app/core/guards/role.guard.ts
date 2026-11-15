@@ -85,7 +85,10 @@ export const roleGuard: CanActivateFn = (route) => {
   const permissionAllowed = !requiredPermission || auth.can(requiredPermission);
   const anyAllowed = !anyPermission || auth.canAny(anyPermission);
 
-  if (roleAllowed && permissionAllowed && anyAllowed) {
+  // Permissions saved at sign-in can outlive a plan change, so a known plan is checked as well.
+  const planAllows = !plans.isKnown() || missingPlanFeature(plans, requiredPermission, anyPermission) === null;
+
+  if (roleAllowed && permissionAllowed && anyAllowed && planAllows) {
     return true;
   }
 
