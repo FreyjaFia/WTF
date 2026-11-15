@@ -195,7 +195,13 @@ export class OrderEditor implements OnInit, OnDestroy {
   protected readonly overrideReason = signal('');
   protected readonly showOverrideReasonError = signal(false);
   protected readonly showCancelOrderNoteError = signal(false);
-  protected readonly showCreateCustomerModal = signal(false);
+  protected readonly showCustomerModal = signal(false);
+  protected readonly customerModalMode = signal<'existing' | 'new'>('existing');
+  protected readonly draftCustomerId = signal<string | null>(null);
+  protected readonly draftAddress = new FormControl('', {
+    nonNullable: true,
+    validators: [Validators.maxLength(150)],
+  });
   protected readonly isCreatingCustomer = signal(false);
   protected readonly isSavingOrder = signal(false);
   protected readonly isCancellingOrder = signal(false);
@@ -398,13 +404,9 @@ export class OrderEditor implements OnInit, OnDestroy {
     const order = this.currentOrder();
     return order?.status === OrderStatusEnum.Pending || this.isOverrideMode();
   });
-  protected readonly canEditOrderAddress = computed(() => {
-    if (!this.canEditCustomerSelection() || !this.selectedCustomerId()) {
-      return false;
-    }
-
-    return !this.isEditMode() || this.isOverrideMode() || this.isOfflineEditMode();
-  });
+  protected readonly canEditDraftAddress = computed(() =>
+    this.canEditOrderAddressFor(this.draftCustomerId()),
+  );
   protected readonly canCreateCustomerInOrder = computed(() =>
     this.authService.canCreateCustomerInOrder(this.isEditMode()),
   );
@@ -596,7 +598,8 @@ export class OrderEditor implements OnInit, OnDestroy {
   private abandonModalStackId: number | null = null;
   private cancelOrderModalStackId: number | null = null;
   private overrideOrderModalStackId: number | null = null;
-  private createCustomerModalStackId: number | null = null;
+  private customerModalStackId: number | null = null;
+  private draftAddressEdited = false;
   private cartPersistenceReady = false;
   private pendingOverridePayment: {
     paymentMethod: PaymentMethodEnum;
@@ -865,6 +868,7 @@ export class OrderEditor implements OnInit, OnDestroy {
       const items = this.cart();
       const customerId = this.selectedCustomerId();
       const instructions = this.orderSpecialInstructions();
+      const address = this.orderAddress.currentFor(!!customerId);
 
       if (!this.cartPersistenceReady || this.isEditMode()) {
         return;
@@ -875,7 +879,7 @@ export class OrderEditor implements OnInit, OnDestroy {
         return;
       }
 
-      this.cartPersistence.save(items, customerId, instructions, this.seniorPwd.persons());
+      this.cartPersistence.save(items, customerId, instructions, this.seniorPwd.persons(), address);
     });
 
     // The bundle promotions come from the shared catalog.
@@ -896,6 +900,7 @@ export class OrderEditor implements OnInit, OnDestroy {
 
         this.productsCache.set(products);
         this.customers.set(customers);
+        this.fillOrderAddressFromCustomer();
         this.applyFiltersToCache();
         this.refreshCartImageUrls();
         this.isLoading.set(false);
@@ -1157,6 +1162,7 @@ export class OrderEditor implements OnInit, OnDestroy {
     this.catalogCache.load().then(() => {
       this.productsCache.set(this.catalogCache.products());
       this.customers.set(this.catalogCache.customers());
+      this.fillOrderAddressFromCustomer();
       this.applyFiltersToCache();
       this.refreshCartImageUrls();
       this.uncoverWhenSeniorPwdSwitchedOff();
@@ -1905,8 +1911,12 @@ export class OrderEditor implements OnInit, OnDestroy {
     }
   }
 
-  protected openCreateCustomerModal(): void {
-    if (!this.canCreateCustomerInOrder()) {
+  protected openCustomerModal(mode: 'existing' | 'new' = 'existing'): void {
+    if (!this.canEditCustomerSelection() || this.isOrderRequestBusy()) {
+      return;
+    }
+
+    if (mode === 'new' && !this.canCreateCustomerInOrder()) {
       this.alertService.errorUnauthorized();
       return;
     }
@@ -1917,16 +1927,74 @@ export class OrderEditor implements OnInit, OnDestroy {
     });
     this.createCustomerForm.markAsPristine();
     this.createCustomerForm.markAsUntouched();
-    this.showCreateCustomerModal.set(true);
-    this.createCustomerModalStackId = this.modalStack.push(() => this.closeCreateCustomerModal());
+    this.draftCustomerId.set(this.selectedCustomerId());
+    this.draftAddress.setValue(this.orderAddress.value());
+    this.draftAddressEdited = this.orderAddress.control.dirty;
+    this.customerModalMode.set(mode);
+    this.showCustomerModal.set(true);
+
+    if (this.customerModalStackId === null) {
+      this.customerModalStackId = this.modalStack.push(() => this.closeCustomerModal());
+    }
   }
 
-  protected closeCreateCustomerModal(): void {
+  protected closeCustomerModal(): void {
     if (this.isCreatingCustomer()) {
       return;
     }
-    this.showCreateCustomerModal.set(false);
-    this.removeStackId('createCustomer');
+
+    this.showCustomerModal.set(false);
+    this.removeStackId('customer');
+  }
+
+  protected showCustomerModalMode(mode: 'existing' | 'new'): void {
+    if (mode === 'new' && !this.canCreateCustomerInOrder()) {
+      this.alertService.errorUnauthorized();
+      return;
+    }
+
+    this.customerModalMode.set(mode);
+  }
+
+  protected onDraftCustomerSelected(customerId: string | null): void {
+    this.draftCustomerId.set(customerId);
+
+    if (!this.draftAddressEdited) {
+      const customer = this.customers().find((c) => c.id === customerId);
+      this.draftAddress.setValue(customer?.address?.trim() ?? '');
+    }
+  }
+
+  protected onDraftAddressInput(): void {
+    this.draftAddressEdited = true;
+  }
+
+  protected applyCustomerModal(): void {
+    if (this.customerModalMode() === 'new') {
+      this.saveCustomerFromModal();
+      return;
+    }
+
+    if (this.draftAddress.invalid) {
+      this.draftAddress.markAsTouched();
+      return;
+    }
+
+    const customerId = this.draftCustomerId();
+    const customer = this.customers().find((c) => c.id === customerId);
+    const address = this.draftAddress.value.trim();
+
+    this.onCustomerSelected(customerId);
+    if (customerId && this.canEditOrderAddressFor(customerId)) {
+      const differs = address !== (customer?.address?.trim() ?? '');
+      this.orderAddress.set(address, differs);
+    }
+
+    this.closeCustomerModal();
+  }
+
+  private canEditOrderAddressFor(customerId: string | null): boolean {
+    return !!customerId && (!this.isEditMode() || this.isOverrideMode() || this.isOfflineEditMode());
   }
 
   protected saveCustomerFromModal(): void {
@@ -1955,8 +2023,8 @@ export class OrderEditor implements OnInit, OnDestroy {
           this.customers.set([...this.customers(), createdCustomer]);
           this.selectedCustomerId.set(createdCustomer.id);
           this.fillOrderAddressFromCustomer();
-          this.showCreateCustomerModal.set(false);
-          this.removeStackId('createCustomer');
+          this.showCustomerModal.set(false);
+          this.removeStackId('customer');
           this.isCreatingCustomer.set(false);
           this.alertService.successCreated('Customer');
         },
@@ -2203,7 +2271,7 @@ export class OrderEditor implements OnInit, OnDestroy {
   }
 
   private removeStackId(
-    modal: 'abandon' | 'cancelOrder' | 'overrideOrder' | 'discardOrder' | 'createCustomer',
+    modal: 'abandon' | 'cancelOrder' | 'overrideOrder' | 'discardOrder' | 'customer',
   ): void {
     const key = `${modal}ModalStackId` as const;
     const id = this[key];
@@ -2642,7 +2710,13 @@ export class OrderEditor implements OnInit, OnDestroy {
         this.cart.set(saved.items);
         this.seniorPwd.persons.set(saved.seniorPwdPersons ?? []);
         this.selectedCustomerId.set(saved.customerId);
-        this.fillOrderAddressFromCustomer();
+
+        if (saved.customerId && saved.customerAddress) {
+          this.orderAddress.set(saved.customerAddress, true);
+        } else {
+          this.fillOrderAddressFromCustomer();
+        }
+
         this.orderSpecialInstructions.set(saved.specialInstructions);
       }
 

@@ -64,7 +64,7 @@ interface Editor {
   showOverrideModal: () => boolean;
   overrideReason: () => string;
   showOverrideReasonError: () => boolean;
-  showCreateCustomerModal: () => boolean;
+  showCustomerModal: () => boolean;
   isCreatingCustomer: () => boolean;
   showDiscardOrderModal: () => boolean;
   showMobileCart: () => boolean;
@@ -155,9 +155,16 @@ interface Editor {
   getStatusLabel: (s?: OrderStatusEnum | null) => string;
   getOrderDateValue: (o: OrderDto) => string;
   downloadOrderImage: () => Promise<void>;
-  openCreateCustomerModal: () => void;
-  closeCreateCustomerModal: () => void;
+  openCustomerModal: (mode?: 'existing' | 'new') => void;
+  closeCustomerModal: () => void;
   saveCustomerFromModal: () => void;
+  customerModalMode: () => 'existing' | 'new';
+  draftCustomerId: () => string | null;
+  draftAddress: FormControl<string>;
+  showCustomerModalMode: (mode: 'existing' | 'new') => void;
+  onDraftCustomerSelected: (id: string | null) => void;
+  onDraftAddressInput: () => void;
+  applyCustomerModal: () => void;
   createCustomerForm: {
     patchValue: (v: object) => void;
     controls: { firstName: { setValue: (v: string) => void } };
@@ -576,6 +583,32 @@ describe('OrderEditor', () => {
       expect(t.orderSpecialInstructions()).toBe('less ice');
     });
 
+    it('restores the order address saved with the cart, even when it differs from the customer address', async () => {
+      persistence['load'].mockResolvedValue({
+        items: [line({ productId: 'mocha', name: 'Mocha', price: 120 })],
+        customerId: 'c1',
+        customerAddress: '9 Oak Ave',
+        specialInstructions: '',
+        savedAt: '',
+      });
+      await start();
+
+      expect(t.selectedCustomerId()).toBe('c1');
+      expect(t.orderAddress.value()).toBe('9 Oak Ave');
+    });
+
+    it('fills the customer address into a restored cart whose draft has none', async () => {
+      persistence['load'].mockResolvedValue({
+        items: [line({ productId: 'mocha', name: 'Mocha', price: 120 })],
+        customerId: 'c1',
+        specialInstructions: '',
+        savedAt: '',
+      });
+      await start();
+
+      expect(t.orderAddress.value()).toBe('5 Pine St');
+    });
+
     it('takes a saved Senior/PWD discount off when the shop has switched it off', async () => {
       persistence['load'].mockResolvedValue({
         items: [
@@ -601,7 +634,7 @@ describe('OrderEditor', () => {
 
       t.onAddonSelected({ product: P_LATTE, addOns: [], quantity: 1 });
       TestBed.tick();
-      expect(persistence['save']).toHaveBeenCalledWith(t.cart(), null, '', []);
+      expect(persistence['save']).toHaveBeenCalledWith(t.cart(), null, '', [], null);
 
       t.clearAll();
       TestBed.tick();
@@ -2127,28 +2160,121 @@ describe('OrderEditor', () => {
     it('create customer modal is refused without permission', async () => {
       canCreateCustomer = false;
       await start();
-      t.openCreateCustomerModal();
+      t.openCustomerModal('new');
       expect(alert['errorUnauthorized']).toHaveBeenCalled();
-      expect(t.showCreateCustomerModal()).toBe(false);
+      expect(t.showCustomerModal()).toBe(false);
       t.saveCustomerFromModal();
       expect(customerService['createCustomer']).not.toHaveBeenCalled();
     });
 
     it('create customer modal: open/close and validation', async () => {
       await start();
-      t.openCreateCustomerModal();
-      expect(t.showCreateCustomerModal()).toBe(true);
+      t.openCustomerModal('new');
+      expect(t.showCustomerModal()).toBe(true);
       expect(modalStack.hasOpen()).toBe(true);
       t.saveCustomerFromModal();
       expect(customerService['createCustomer']).not.toHaveBeenCalled();
-      t.closeCreateCustomerModal();
-      expect(t.showCreateCustomerModal()).toBe(false);
+      t.closeCustomerModal();
+      expect(t.showCustomerModal()).toBe(false);
       expect(modalStack.hasOpen()).toBe(false);
+    });
+
+    it('opens the customer modal on Existing, with the current customer and order address in it', async () => {
+      await start();
+      withCart([line()]);
+      t.onCustomerSelected('c1');
+      t.openCustomerModal();
+
+      expect(t.showCustomerModal()).toBe(true);
+      expect(t.customerModalMode()).toBe('existing');
+      expect(t.draftCustomerId()).toBe('c1');
+      expect(t.draftAddress.value).toBe('5 Pine St');
+      expect(modalStack.hasOpen()).toBe(true);
+    });
+
+    it('picking a customer in the modal fills their address until the address has been edited', async () => {
+      await start();
+      t.openCustomerModal();
+      t.onDraftCustomerSelected('c1');
+      expect(t.draftAddress.value).toBe('5 Pine St');
+
+      t.draftAddress.setValue('9 Oak Ave');
+      t.onDraftAddressInput();
+      t.onDraftCustomerSelected(null);
+      t.onDraftCustomerSelected('c1');
+      expect(t.draftAddress.value).toBe('9 Oak Ave');
+    });
+
+    it('Apply selects the customer and keeps a one-off order address without touching the customer', async () => {
+      await start();
+      withCart([line()]);
+      t.openCustomerModal();
+      t.onDraftCustomerSelected('c1');
+      t.draftAddress.setValue('  9 Oak Ave ');
+      t.onDraftAddressInput();
+      t.applyCustomerModal();
+
+      expect(t.selectedCustomerId()).toBe('c1');
+      expect(t.orderAddress.value()).toBe('9 Oak Ave');
+      expect(t.showCustomerModal()).toBe(false);
+      expect(modalStack.hasOpen()).toBe(false);
+      expect(customerService['createCustomer']).not.toHaveBeenCalled();
+    });
+
+    it('Apply with Walk-in clears the customer', async () => {
+      await start();
+      t.onCustomerSelected('c1');
+      t.openCustomerModal();
+      t.onDraftCustomerSelected(null);
+      t.applyCustomerModal();
+
+      expect(t.selectedCustomerId()).toBeNull();
+    });
+
+    it('Cancel leaves the customer and address as they were', async () => {
+      await start();
+      t.onCustomerSelected('c1');
+      t.openCustomerModal();
+      t.onDraftCustomerSelected(null);
+      t.draftAddress.setValue('Somewhere else');
+      t.closeCustomerModal();
+
+      expect(t.selectedCustomerId()).toBe('c1');
+      expect(t.orderAddress.value()).toBe('5 Pine St');
+    });
+
+    it('does not open for a person who cannot change the customer', async () => {
+      canWrite = false;
+      await start();
+      t.openCustomerModal();
+
+      expect(t.showCustomerModal()).toBe(false);
+    });
+
+    it('the New tab needs permission to create customers', async () => {
+      canCreateCustomer = false;
+      await start();
+      t.openCustomerModal();
+      t.showCustomerModalMode('new');
+
+      expect(alert['errorUnauthorized']).toHaveBeenCalled();
+      expect(t.customerModalMode()).toBe('existing');
+    });
+
+    it('Apply on the New tab saves the new customer', async () => {
+      await start();
+      t.openCustomerModal();
+      t.showCustomerModalMode('new');
+      t.createCustomerForm.patchValue({ firstName: 'New', address: '12 Mango St' });
+      t.applyCustomerModal();
+
+      expect(customerService['createCustomer']).toHaveBeenCalledWith({ firstName: 'New', address: '12 Mango St' });
+      expect(t.selectedCustomerId()).toBe('c2');
     });
 
     it('creates a customer and selects it', async () => {
       await start();
-      t.openCreateCustomerModal();
+      t.openCustomerModal('new');
       t.createCustomerForm.patchValue({ firstName: '  New ', address: ' 12 Mango St ' });
       t.saveCustomerFromModal();
       expect(customerService['createCustomer']).toHaveBeenCalledWith({
@@ -2157,14 +2283,14 @@ describe('OrderEditor', () => {
       });
       expect(t.selectedCustomerId()).toBe('c2');
       expect(t.customers().length).toBe(2);
-      expect(t.showCreateCustomerModal()).toBe(false);
+      expect(t.showCustomerModal()).toBe(false);
       expect(alert['successCreated']).toHaveBeenCalledWith('Customer');
       expect(t.isCreatingCustomer()).toBe(false);
     });
 
     it('creates a customer without an address as null and without a last name', async () => {
       await start();
-      t.openCreateCustomerModal();
+      t.openCustomerModal('new');
       t.createCustomerForm.patchValue({ firstName: 'New' });
       t.saveCustomerFromModal();
       expect(customerService['createCustomer']).toHaveBeenCalledWith({
@@ -2175,7 +2301,7 @@ describe('OrderEditor', () => {
 
     it('does not save the quick customer when the first name is blank', async () => {
       await start();
-      t.openCreateCustomerModal();
+      t.openCustomerModal('new');
       t.createCustomerForm.patchValue({ firstName: '', address: '12 Mango St' });
       t.saveCustomerFromModal();
       expect(customerService['createCustomer']).not.toHaveBeenCalled();
@@ -2184,12 +2310,12 @@ describe('OrderEditor', () => {
     it('reports create customer failure', async () => {
       customerService['createCustomer'].mockReturnValue(throwError(() => new Error('')));
       await start();
-      t.openCreateCustomerModal();
+      t.openCustomerModal('new');
       t.createCustomerForm.patchValue({ firstName: 'A', address: 'B' });
       t.saveCustomerFromModal();
       expect(alert['error']).toHaveBeenCalledWith('create customer failed');
       expect(t.isCreatingCustomer()).toBe(false);
-      expect(t.showCreateCustomerModal()).toBe(true);
+      expect(t.showCustomerModal()).toBe(true);
     });
   });
 

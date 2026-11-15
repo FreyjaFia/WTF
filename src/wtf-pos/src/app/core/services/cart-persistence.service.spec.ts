@@ -37,6 +37,16 @@ describe('CartPersistenceService', () => {
     expect(new Date(record.savedAt).toString()).not.toBe('Invalid Date');
   });
 
+  it('saves the order address with the cart, or null when there is none', async () => {
+    const items = [{ productId: 'p1' }] as unknown as CartItemDto[];
+
+    await service.save(items, 'c1', '', [], '45 Mabini Street');
+    await service.save(items, 'c1', '');
+
+    expect(put.mock.calls[0][0].customerAddress).toBe('45 Mabini Street');
+    expect(put.mock.calls[1][0].customerAddress).toBeNull();
+  });
+
   it('loads the fixed row', async () => {
     get.mockResolvedValue({ id: 1 });
 

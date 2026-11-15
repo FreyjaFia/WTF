@@ -17,6 +17,7 @@ import Dexie, { type Table } from 'dexie';
 export interface PersistedCart {
   id: number;
   customerId: string | null;
+  customerAddress?: string | null;
   specialInstructions: string;
   items: CartItemDto[];
   seniorPwdPersons?: SeniorPwdPersonRequestDto[];

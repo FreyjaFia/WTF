@@ -529,47 +529,56 @@
 
         <div class="mt-3">
           @if (canEditCustomerSelection()) {
-            <div class="flex items-center gap-2">
-              <div class="flex-1">
-                <app-customer-dropdown
-                  [options]="customerOptions()"
-                  [selectedId]="selectedCustomerId()"
-                  [disabled]="isLoadingCustomers() || isOrderRequestBusy()"
-                  [walkInLabel]="'Walk-in customer'"
-                  [placeholder]="'Search customer...'"
-                  (selectedIdChange)="onCustomerSelected($event)"
-                />
-              </div>
-              @if (canCreateCustomerInOrder()) {
-                <button
-                  type="button"
-                  class="app-btn app-btn-secondary app-btn-sm"
-                  (click)="openCreateCustomerModal()"
-                  [disabled]="isOrderRequestBusy()"
-                >
-                  + New
-                </button>
-              }
-            </div>
-          } @else {
-            <div
-              class="h-10 rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm leading-10 text-gray-700"
+            <button
+              type="button"
+              class="flex w-full items-center gap-3 rounded-xl border border-gray-200 bg-surface px-3 py-2.5 text-left transition-colors hover:border-primary disabled:cursor-not-allowed disabled:opacity-60"
+              aria-label="Customer and address"
+              data-testid="order-customer-card"
+              [disabled]="isLoadingCustomers() || isOrderRequestBusy()"
+              (click)="openCustomerModal()"
             >
-              {{ selectedCustomerName() }}
-            </div>
-          }
-          @if (canEditOrderAddress()) {
-            <input
-              type="text"
-              class="input input-bordered mt-2 w-full bg-surface"
-              maxlength="150"
-              placeholder="Address (optional)"
-              aria-label="Order address"
-              [formControl]="orderAddress.control"
-            />
-          } @else if (selectedCustomerId() && orderAddress.value().trim()) {
-            <div class="mt-2 truncate text-xs text-gray-500" [title]="orderAddress.value()">
-              {{ orderAddress.value() }}
+              <span
+                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand/10"
+              >
+                <app-icon name="icon-people" [class]="'h-5 w-5 text-brand-ink'" />
+              </span>
+              <span class="min-w-0 flex-1">
+                <span class="block truncate text-sm font-medium text-gray-900">
+                  {{ selectedCustomerName() }}
+                </span>
+                @if (selectedCustomerId() && orderAddress.value().trim()) {
+                  <span
+                    class="block truncate text-xs text-gray-500"
+                    data-testid="order-customer-address"
+                    [title]="orderAddress.value()"
+                  >
+                    {{ orderAddress.value() }}
+                  </span>
+                } @else if (!selectedCustomerId()) {
+                  <span class="block truncate text-xs text-gray-500">Tap to add a customer</span>
+                }
+              </span>
+              <span class="shrink-0 text-xs font-semibold text-primary">
+                {{ selectedCustomerId() ? 'Edit' : 'Add' }}
+              </span>
+            </button>
+          } @else {
+            <div class="flex items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5">
+              <span
+                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand/10"
+              >
+                <app-icon name="icon-people" [class]="'h-5 w-5 text-brand-ink'" />
+              </span>
+              <span class="min-w-0 flex-1">
+                <span class="block truncate text-sm font-medium text-gray-700">
+                  {{ selectedCustomerName() }}
+                </span>
+                @if (selectedCustomerId() && orderAddress.value().trim()) {
+                  <span class="block truncate text-xs text-gray-500" [title]="orderAddress.value()">
+                    {{ orderAddress.value() }}
+                  </span>
+                }
+              </span>
             </div>
           }
         </div>
@@ -1173,15 +1182,15 @@
 />
 <app-addon-selector (addToCart)="onAddonSelected($event)" />
 
-<!-- Create Customer Modal -->
-@if (showCreateCustomerModal() && canCreateCustomerInOrder()) {
+<!-- Customer and address modal -->
+@if (showCustomerModal()) {
   <div
     role="dialog"
     aria-modal="true"
-    aria-labelledby="create-customer-title"
+    aria-labelledby="customer-modal-title"
     class="fixed inset-0 z-50 flex items-center justify-center app-backdrop bg-black/30 backdrop-blur-md transition-opacity duration-200"
-    (click)="closeCreateCustomerModal()"
-    (keydown.escape)="closeCreateCustomerModal()"
+    (click)="closeCustomerModal()"
+    (keydown.escape)="closeCustomerModal()"
     tabindex="0"
   >
     <div
@@ -1190,61 +1199,126 @@
       (click)="$event.stopPropagation()"
       (keydown)="$event.stopPropagation()"
     >
-      <div class="mx-auto w-fit rounded-full bg-emerald-50/60 p-3">
-        <div class="rounded-full bg-emerald-50 p-3">
-          <app-icon name="icon-people" [class]="'h-6 w-6 text-emerald-600'" />
+      <div class="mx-auto w-fit rounded-full bg-brand/5 p-3">
+        <div class="rounded-full bg-brand/10 p-3">
+          <app-icon name="icon-people" [class]="'h-6 w-6 text-brand-ink'" />
         </div>
       </div>
 
-      <h3 id="create-customer-title" class="mt-4 text-center text-lg font-semibold text-gray-900">
-        New Customer
+      <h3 id="customer-modal-title" class="mt-4 text-center text-lg font-semibold text-gray-900">
+        Customer
       </h3>
       <p class="mt-2 text-center text-sm leading-relaxed text-gray-500">
-        Enter customer details to add and select them for this order.
+        Choose who this order is for and where it goes.
       </p>
 
-      <div class="mt-5 space-y-3">
-        <div class="block">
-          <span class="mb-1 block text-sm font-medium text-gray-700">
-            First Name <span class="text-error">*</span>
-          </span>
-          <input
-            type="text"
-            class="input input-bordered w-full bg-surface"
-            [class.input-error]="
-              createCustomerForm.controls.firstName.invalid &&
-              createCustomerForm.controls.firstName.touched
+      @if (canCreateCustomerInOrder()) {
+        <div class="mt-4 grid grid-cols-2 gap-1 rounded-xl bg-gray-100 p-1" role="tablist">
+          <button
+            type="button"
+            role="tab"
+            class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
+            [class]="
+              customerModalMode() === 'existing'
+                ? 'bg-surface text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
             "
-            [value]="createCustomerForm.controls.firstName.value"
-            (input)="createCustomerForm.controls.firstName.setValue($any($event.target).value)"
-            placeholder="Enter first name"
-          />
+            [attr.aria-selected]="customerModalMode() === 'existing'"
+            (click)="showCustomerModalMode('existing')"
+          >
+            Existing
+          </button>
+          <button
+            type="button"
+            role="tab"
+            class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
+            [class]="
+              customerModalMode() === 'new'
+                ? 'bg-surface text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            "
+            [attr.aria-selected]="customerModalMode() === 'new'"
+            (click)="showCustomerModalMode('new')"
+          >
+            New customer
+          </button>
         </div>
+      }
 
-        <div class="block">
-          <span class="mb-1 block text-sm font-medium text-gray-700">
-            Address
-          </span>
-          <input
-            type="text"
-            class="input input-bordered w-full bg-surface"
-            maxlength="150"
-            [class.input-error]="
-              createCustomerForm.controls.address.invalid &&
-              createCustomerForm.controls.address.touched
-            "
-            [value]="createCustomerForm.controls.address.value"
-            (input)="createCustomerForm.controls.address.setValue($any($event.target).value)"
-            placeholder="Enter address"
-          />
+      @if (customerModalMode() === 'existing') {
+        <div class="mt-5 space-y-3">
+          <div class="block">
+            <span class="mb-1 block text-sm font-medium text-gray-700">Customer</span>
+            <app-customer-dropdown
+              [options]="customerOptions()"
+              [selectedId]="draftCustomerId()"
+              [disabled]="isLoadingCustomers()"
+              [walkInLabel]="'Walk-in customer'"
+              [placeholder]="'Search customer...'"
+              (selectedIdChange)="onDraftCustomerSelected($event)"
+            />
+          </div>
+
+          @if (canEditDraftAddress()) {
+            <div class="block">
+              <span class="mb-1 block text-sm font-medium text-gray-700">Order address</span>
+              <input
+                type="text"
+                class="input input-bordered w-full bg-surface"
+                maxlength="150"
+                placeholder="Address (optional)"
+                aria-label="Order address"
+                [formControl]="draftAddress"
+                (input)="onDraftAddressInput()"
+              />
+              <span class="mt-1 block text-xs text-gray-500">
+                Only for this order. The customer's saved address is not changed.
+              </span>
+            </div>
+          }
         </div>
-      </div>
+      } @else {
+        <div class="mt-5 space-y-3">
+          <div class="block">
+            <span class="mb-1 block text-sm font-medium text-gray-700">
+              First Name <span class="text-error">*</span>
+            </span>
+            <input
+              type="text"
+              class="input input-bordered w-full bg-surface"
+              [class.input-error]="
+                createCustomerForm.controls.firstName.invalid &&
+                createCustomerForm.controls.firstName.touched
+              "
+              [value]="createCustomerForm.controls.firstName.value"
+              (input)="createCustomerForm.controls.firstName.setValue($any($event.target).value)"
+              placeholder="Enter first name"
+            />
+          </div>
+
+          <div class="block">
+            <span class="mb-1 block text-sm font-medium text-gray-700">Address</span>
+            <input
+              type="text"
+              class="input input-bordered w-full bg-surface"
+              maxlength="150"
+              [class.input-error]="
+                createCustomerForm.controls.address.invalid &&
+                createCustomerForm.controls.address.touched
+              "
+              [value]="createCustomerForm.controls.address.value"
+              (input)="createCustomerForm.controls.address.setValue($any($event.target).value)"
+              placeholder="Enter address"
+            />
+          </div>
+        </div>
+      }
 
       <div class="mt-6 flex items-center justify-end gap-3">
         <button
           type="button"
           class="app-btn app-btn-secondary app-btn-md"
-          (click)="closeCreateCustomerModal()"
+          (click)="closeCustomerModal()"
           [disabled]="isCreatingCustomer()"
         >
           Cancel
@@ -1252,13 +1326,22 @@
         <button
           type="button"
           class="app-btn app-btn-primary app-btn-md px-6"
-          (click)="saveCustomerFromModal()"
-          [disabled]="createCustomerForm.invalid || isCreatingCustomer()"
+          (click)="applyCustomerModal()"
+          [disabled]="
+            isCreatingCustomer() ||
+            (customerModalMode() === 'new' ? createCustomerForm.invalid : draftAddress.invalid)
+          "
         >
           @if (isCreatingCustomer()) {
             <span class="loading loading-spinner loading-xs mr-2"></span>
           }
-          {{ isCreatingCustomer() ? 'Saving Customer...' : 'Save Customer' }}
+          {{
+            isCreatingCustomer()
+              ? 'Saving Customer...'
+              : customerModalMode() === 'new'
+                ? 'Save Customer'
+                : 'Apply'
+          }}
         </button>
       </div>
     </div>

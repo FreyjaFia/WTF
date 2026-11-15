@@ -25,6 +25,14 @@ function house(): string {
   return unique('Blk').replace(/^Blk /, '').toUpperCase();
 }
 
+async function openCustomerModal(page: Page, tab?: 'New customer'): Promise<void> {
+  await page.getByTestId('order-customer-card').locator('visible=true').first().click();
+  await expect(page.locator('#customer-modal-title')).toBeVisible();
+  if (tab) {
+    await page.getByRole('tab', { name: tab }).click();
+  }
+}
+
 function placedOrder(page: Page): Promise<SavedOrder> {
   return page
     .waitForResponse((response) => /\/orders\/?$/.test(response.url()) && response.request().method() === 'POST')
@@ -41,19 +49,23 @@ test.describe('customer address on orders @orders @customer-address', () => {
     const editor = new OrderEditorPage(page);
     await editor.open();
 
-    await page.getByRole('button', { name: '+ New' }).locator('visible=true').first().click();
-    await expect(page.locator('#create-customer-title')).toBeVisible();
+    await openCustomerModal(page, 'New customer');
     await expect(page.getByText('Last Name')).toHaveCount(0);
     await page.getByPlaceholder('Enter first name').fill('Maria Clara');
     await page.getByPlaceholder('Enter address').fill(`  ${savedAddress}  `);
     const created = page.waitForResponse((response) => response.url().endsWith('/customers') && response.request().method() === 'POST');
     await page.getByRole('button', { name: 'Save Customer' }).click();
     const customerId = ((await (await created).json()) as SavedCustomer).id;
-    await expect(page.locator('#create-customer-title')).toBeHidden();
+    await expect(page.locator('#customer-modal-title')).toBeHidden();
+    await expect(page.getByTestId('order-customer-address').locator('visible=true').first()).toHaveText(savedAddress);
 
-    const orderAddress = page.getByLabel('Order address').locator('visible=true').first();
+    await openCustomerModal(page);
+    const orderAddress = page.getByLabel('Order address');
     await expect(orderAddress).toHaveValue(savedAddress);
     await orderAddress.fill(saleAddress);
+    await page.getByRole('button', { name: 'Apply' }).click();
+    await expect(page.locator('#customer-modal-title')).toBeHidden();
+    await expect(page.getByTestId('order-customer-address').locator('visible=true').first()).toHaveText(saleAddress);
 
     await editor.addProduct(drink.name);
     const placed = placedOrder(page);
@@ -71,7 +83,7 @@ test.describe('customer address on orders @orders @customer-address', () => {
   });
 
   for (const viewport of VIEWPORTS) {
-    test(`the create-customer dialog and the order address field fit at ${viewport.name}`, async ({ api, signIn }) => {
+    test(`the customer modal and the customer card fit at ${viewport.name}`, async ({ api, signIn }) => {
       const drink = await api.products.create({ price: 60 });
       const page = await signIn('cashier');
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
@@ -82,9 +94,8 @@ test.describe('customer address on orders @orders @customer-address', () => {
         await page.getByRole('button', { name: /View Cart/ }).click();
       }
 
-      await page.getByRole('button', { name: '+ New' }).locator('visible=true').first().click();
-      const dialog = page.locator('#create-customer-title');
-      await expect(dialog).toBeVisible();
+      await openCustomerModal(page, 'New customer');
+      const dialog = page.locator('#customer-modal-title');
       await page.getByPlaceholder('Enter first name').fill('Maria Clara de los Santos y Alcantara');
       const address = page.getByPlaceholder('Enter address');
       await address.fill(`${house()} Mabini Street, Barangay San Antonio, Pasig City, Metro Manila, Philippines`);
@@ -94,11 +105,16 @@ test.describe('customer address on orders @orders @customer-address', () => {
 
       await page.getByRole('button', { name: 'Save Customer' }).click();
       await expect(dialog).toBeHidden();
-      const field = page.getByLabel('Order address').locator('visible=true').first();
-      await expect(field).toBeVisible();
-      await field.scrollIntoViewIfNeeded();
-      await expect(field).toBeInViewport();
-      expect(overflowProblem(await measureOverflow(page)), `${viewport.name}: order address field`).toBeNull();
+      const line = page.getByTestId('order-customer-address').locator('visible=true').first();
+      await expect(line).toBeVisible();
+      await line.scrollIntoViewIfNeeded();
+      await expect(line).toBeInViewport();
+      expect(overflowProblem(await measureOverflow(page)), `${viewport.name}: customer card`).toBeNull();
+
+      await openCustomerModal(page);
+      await expect(page.getByLabel('Order address')).toBeInViewport();
+      await expect(page.getByRole('button', { name: 'Apply' })).toBeInViewport();
+      expect(overflowProblem(await measureOverflow(page)), `${viewport.name}: customer modal`).toBeNull();
     });
   }
 
@@ -108,13 +124,13 @@ test.describe('customer address on orders @orders @customer-address', () => {
     const editor = new OrderEditorPage(page);
     await editor.open();
 
-    await page.getByRole('button', { name: '+ New' }).locator('visible=true').first().click();
+    await openCustomerModal(page, 'New customer');
     await page.getByPlaceholder('Enter first name').fill('Jose Rizal');
     const created = page.waitForResponse((response) => response.url().endsWith('/customers') && response.request().method() === 'POST');
     await page.getByRole('button', { name: 'Save Customer' }).click();
     const customerId = ((await (await created).json()) as SavedCustomer).id;
-    await expect(page.locator('#create-customer-title')).toBeHidden();
-    await expect(page.getByLabel('Order address').locator('visible=true').first()).toHaveValue('');
+    await expect(page.locator('#customer-modal-title')).toBeHidden();
+    await expect(page.getByTestId('order-customer-address')).toHaveCount(0);
 
     await editor.addProduct(drink.name);
     const placed = placedOrder(page);

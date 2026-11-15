@@ -12,10 +12,12 @@ export class CartPersistenceService {
     customerId: string | null,
     specialInstructions: string,
     seniorPwdPersons: SeniorPwdPersonRequestDto[] = [],
+    customerAddress: string | null = null,
   ): Promise<void> {
     const record: PersistedCart = {
       id: CartPersistenceService.CART_ROW_ID,
       customerId,
+      customerAddress,
       specialInstructions,
       items,
       seniorPwdPersons,
