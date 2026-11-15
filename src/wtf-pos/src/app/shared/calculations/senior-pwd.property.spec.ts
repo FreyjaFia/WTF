@@ -40,7 +40,7 @@ describe('senior / PWD discount (properties)', () => {
     }
 
     expect(mismatches.slice(0, 5)).toEqual([]);
-  });
+  }, 60_000);
 
   it('rows, persons and the order total add up for random orders', () => {
     const random = seededRandom(20261113);

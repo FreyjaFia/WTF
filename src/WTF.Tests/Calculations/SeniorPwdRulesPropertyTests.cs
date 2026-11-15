@@ -26,18 +26,23 @@ public class SeniorPwdRulesPropertyTests
     [Fact]
     public void ForRow_MatchesAnIndependentIntegerOracle_ForEveryCentUpToTenThousandPesos()
     {
+        var mismatches = new List<string>();
         for (var cents = 1L; cents <= 1_000_000; cents++)
         {
-            foreach (var vat in new[] { false, true })
+            for (var mode = 0; mode < 2; mode++)
             {
+                var vat = mode == 1;
                 var amounts = SeniorPwdRules.ForRow(cents / 100m, vat);
                 var (vatExempt, discount) = Oracle(cents, vat);
 
-                amounts.VatExempt.ShouldBe(vatExempt / 100m, $"{cents} cents, vat {vat}");
-                amounts.Discount.ShouldBe(discount / 100m, $"{cents} cents, vat {vat}");
-                amounts.AmountDue.ShouldBeGreaterThanOrEqualTo(0m);
+                if (amounts.VatExempt != vatExempt / 100m || amounts.Discount != discount / 100m || amounts.AmountDue < 0m)
+                {
+                    mismatches.Add($"{cents} cents, vat {vat}");
+                }
             }
         }
+
+        mismatches.Take(5).ShouldBeEmpty();
     }
 
     [Fact]
