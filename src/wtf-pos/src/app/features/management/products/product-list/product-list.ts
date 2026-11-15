@@ -4,7 +4,7 @@ import { FilterButtonComponent } from '@shared/components/filter-button/filter-b
 import { selectedFilterCount } from '@shared/utils/filter-count';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Capacitor } from '@capacitor/core';
 import {
   AlertService,
@@ -27,7 +27,14 @@ import {
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { ProductDto } from '@shared/models';
-import { debounceTime } from 'rxjs';
+import { debounceTime, Subscription } from 'rxjs';
+import {
+  DEFAULT_PAGE_SIZE,
+  PAGE_SIZE_OPTIONS,
+  isPageSizeOption,
+} from '@shared/calculations/pagination';
+import { PaginationComponent } from '@shared/components/pagination/pagination';
+import { readPageParam, writePageParam } from '@shared/utils/list-page-url';
 
 type SortColumn = 'name' | 'price';
 type SortDirection = 'asc' | 'desc';
@@ -37,6 +44,7 @@ interface ProductListState {
   selectedStatuses: string[];
   sortColumn: SortColumn | null;
   sortDirection: SortDirection;
+  pageSize?: number;
 }
 
 @Component({
@@ -54,6 +62,7 @@ interface ProductListState {
     PullToRefreshComponent,
     SearchInputComponent,
     SideDrawerComponent,
+    PaginationComponent,
   ],
   templateUrl: './product-list.html',
   host: { class: 'flex-1 min-h-0' },
@@ -63,6 +72,7 @@ export class ProductListComponent implements OnInit {
   private readonly productService = inject(ProductService);
   private readonly lookups = inject(CatalogLookupService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly alertService = inject(AlertService);
   private readonly authService = inject(AuthService);
   private readonly listState = inject(ListStateService);
@@ -70,7 +80,13 @@ export class ProductListComponent implements OnInit {
   protected readonly routes = AppRoutes;
 
   protected readonly products = signal<ProductDto[]>([]);
-  protected readonly productsCache = signal<ProductDto[]>([]);
+  protected readonly isReloading = signal(false);
+  protected readonly page = signal(readPageParam(this.route));
+  protected readonly pageSize = signal<number>(DEFAULT_PAGE_SIZE);
+  protected readonly totalCount = signal(0);
+  protected readonly facets = signal<Record<string, number>>({});
+  protected readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
+  private loadRequest: Subscription | null = null;
   protected readonly isLoading = signal(false);
   protected readonly connectionFailed = signal(false);
   protected readonly isRefreshing = signal(false);
@@ -96,20 +112,19 @@ export class ProductListComponent implements OnInit {
 
   protected readonly categoryCounts = computed(() => {
     const counts: Record<number, number> = {};
-    for (const product of this.productsCache()) {
-      counts[product.category] = (counts[product.category] ?? 0) + 1;
+    for (const [key, value] of Object.entries(this.facets())) {
+      if (key.startsWith('category:')) {
+        counts[Number(key.slice(9))] = value;
+      }
     }
 
     return counts;
   });
 
-  protected readonly statusCounts = computed(() => {
-    const cache = this.productsCache();
-    return {
-      active: cache.filter((p) => p.isActive).length,
-      inactive: cache.filter((p) => !p.isActive).length,
-    };
-  });
+  protected readonly statusCounts = computed(() => ({
+    active: this.facets()['active'] ?? 0,
+    inactive: this.facets()['inactive'] ?? 0,
+  }));
 
   protected readonly typeOptions = computed<FilterOption[]>(() =>
     this.lookups.categories().map((category) => ({
@@ -124,53 +139,79 @@ export class ProductListComponent implements OnInit {
     { id: 'inactive', label: 'Inactive', count: this.statusCounts().inactive },
   ]);
 
-  protected readonly sortedProducts = computed(() => {
-    const products = [...this.products()];
-
-    if (this.sortColumn() === 'name') {
-      products.sort((a, b) => {
-        const comparison = a.name.localeCompare(b.name);
-        return this.sortDirection() === 'asc' ? comparison : -comparison;
-      });
-    } else if (this.sortColumn() === 'price') {
-      products.sort((a, b) => {
-        const comparison = a.price - b.price;
-        return this.sortDirection() === 'asc' ? comparison : -comparison;
-      });
-    }
-
-    return products;
-  });
-
   public ngOnInit(): void {
     void this.lookups.ensureLoaded();
     this.restoreState();
     this.loadProducts();
 
     this.filterForm.valueChanges.pipe(debounceTime(300)).subscribe(() => {
-      this.applyFiltersToCache();
+      this.reloadFromFirstPage();
       this.saveState();
     });
   }
 
   protected loadProducts(): void {
-    this.isLoading.set(true);
+    const firstLoad = this.products().length === 0;
+    this.isLoading.set(firstLoad);
+    this.isReloading.set(!firstLoad);
     this.connectionFailed.set(false);
+    this.loadRequest?.unsubscribe();
 
-    this.productService.getProducts().subscribe({
-      next: (data) => {
-        this.productsCache.set(data);
-        this.applyFiltersToCache();
-        this.isLoading.set(false);
-        this.isRefreshing.set(false);
-      },
-      error: (err) => {
-        this.connectionFailed.set(err.message === HttpErrorMessages.NetworkUnavailable);
-        this.alertService.error(err.message);
-        this.isLoading.set(false);
-        this.isRefreshing.set(false);
-      },
-    });
+    this.loadRequest = this.productService
+      .getProductsPaged({
+        searchTerm: this.filterForm.controls.searchTerm.value,
+        isActive: this.activeFilter(),
+        categories: this.selectedTypes(),
+        sortBy: this.sortColumn() ?? undefined,
+        sortDirection: this.sortDirection(),
+        page: this.page(),
+        pageSize: this.pageSize(),
+      })
+      .subscribe({
+        next: (result) => {
+          this.products.set(result.items);
+          this.totalCount.set(result.totalCount);
+          this.facets.set(result.facets ?? {});
+          if (result.page !== this.page()) {
+            this.page.set(result.page);
+            writePageParam(this.router, this.route, result.page);
+          }
+          this.isLoading.set(false);
+          this.isReloading.set(false);
+          this.isRefreshing.set(false);
+        },
+        error: (err) => {
+          this.connectionFailed.set(err.message === HttpErrorMessages.NetworkUnavailable);
+          this.alertService.error(err.message);
+          this.isLoading.set(false);
+          this.isReloading.set(false);
+          this.isRefreshing.set(false);
+        },
+      });
+  }
+
+  protected goToPage(page: number): void {
+    this.page.set(page);
+    writePageParam(this.router, this.route, page);
+    this.loadProducts();
+  }
+
+  protected changePageSize(size: number): void {
+    this.pageSize.set(size);
+    this.saveState();
+    this.reloadFromFirstPage();
+  }
+
+  private reloadFromFirstPage(): void {
+    this.page.set(1);
+    writePageParam(this.router, this.route, 1);
+    this.loadProducts();
+  }
+
+  // Both or neither status ticked means every product.
+  private activeFilter(): boolean | undefined {
+    const chosen = this.selectedStatuses();
+    return chosen.length === 1 ? chosen[0] === 'active' : undefined;
   }
 
   protected refresh(): void {
@@ -191,32 +232,6 @@ export class ProductListComponent implements OnInit {
 
   protected closeFilters(): void {
     this.isFiltersOpen.set(false);
-  }
-
-  private applyFiltersToCache(): void {
-    const { searchTerm } = this.filterForm.value;
-    let items = [...this.productsCache()];
-
-    if (searchTerm && searchTerm.trim()) {
-      const lowerSearch = searchTerm.toLowerCase();
-      items = items.filter((p) => p.name.toLowerCase().includes(lowerSearch));
-    }
-
-    const selectedTypes = this.selectedTypes();
-    if (selectedTypes.length > 0) {
-      items = items.filter((p) => selectedTypes.includes(p.category));
-    }
-
-    const selectedStatuses = this.selectedStatuses();
-    if (selectedStatuses.length > 0) {
-      items = items.filter((p) => {
-        if (selectedStatuses.includes('active') && p.isActive) return true;
-        if (selectedStatuses.includes('inactive') && !p.isActive) return true;
-        return false;
-      });
-    }
-
-    this.products.set(items);
   }
 
   protected navigateToEditor(productId?: string): void {
@@ -373,30 +388,31 @@ export class ProductListComponent implements OnInit {
     }
 
     this.saveState();
+    this.reloadFromFirstPage();
   }
 
   protected onTypeFilterChange(selectedIds: (string | number)[]): void {
     this.selectedTypes.set(selectedIds as number[]);
-    this.applyFiltersToCache();
     this.saveState();
+    this.reloadFromFirstPage();
   }
 
   protected onTypeFilterReset(): void {
     this.selectedTypes.set([]);
-    this.applyFiltersToCache();
     this.saveState();
+    this.reloadFromFirstPage();
   }
 
   protected onStatusFilterChange(selectedIds: (string | number)[]): void {
     this.selectedStatuses.set(selectedIds as string[]);
-    this.applyFiltersToCache();
     this.saveState();
+    this.reloadFromFirstPage();
   }
 
   protected onStatusFilterReset(): void {
     this.selectedStatuses.set([]);
-    this.applyFiltersToCache();
     this.saveState();
+    this.reloadFromFirstPage();
   }
 
   protected isTypeSelected(typeId: number): boolean {
@@ -409,14 +425,14 @@ export class ProductListComponent implements OnInit {
     const next = hasType ? current.filter((id) => id !== typeId) : [...current, typeId];
 
     this.selectedTypes.set(next);
-    this.applyFiltersToCache();
     this.saveState();
+    this.reloadFromFirstPage();
   }
 
   protected clearTypeSelections(): void {
     this.selectedTypes.set([]);
-    this.applyFiltersToCache();
     this.saveState();
+    this.reloadFromFirstPage();
   }
 
   protected isStatusSelected(statusId: string): boolean {
@@ -429,14 +445,14 @@ export class ProductListComponent implements OnInit {
     const next = hasStatus ? current.filter((id) => id !== statusId) : [...current, statusId];
 
     this.selectedStatuses.set(next);
-    this.applyFiltersToCache();
     this.saveState();
+    this.reloadFromFirstPage();
   }
 
   protected clearStatusSelections(): void {
     this.selectedStatuses.set([]);
-    this.applyFiltersToCache();
     this.saveState();
+    this.reloadFromFirstPage();
   }
 
   protected canWriteProducts(): boolean {
@@ -460,6 +476,7 @@ export class ProductListComponent implements OnInit {
     );
     this.selectedTypes.set(state.selectedTypes);
     this.selectedStatuses.set(state.selectedStatuses);
+    this.pageSize.set(isPageSizeOption(state.pageSize) ? (state.pageSize as number) : DEFAULT_PAGE_SIZE);
     this.sortColumn.set(state.sortColumn);
     this.sortDirection.set(state.sortDirection);
   }
@@ -471,6 +488,7 @@ export class ProductListComponent implements OnInit {
       selectedStatuses: this.selectedStatuses(),
       sortColumn: this.sortColumn(),
       sortDirection: this.sortDirection(),
+      pageSize: this.pageSize(),
     });
   }
 }

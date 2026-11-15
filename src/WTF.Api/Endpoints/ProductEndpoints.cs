@@ -31,6 +31,17 @@ public static class ProductEndpoints
             })
             .RequireAuthorization(AppPolicies.ProductsRead);
 
+        // GET /api/products/paged - One page of products, filtered, sorted and counted on the server
+        productGroup.MapGet("/paged",
+            async (
+                [AsParameters] GetPagedProductsQuery query,
+                ISender sender) =>
+            {
+                var result = await sender.Send(query);
+                return Results.Ok(result);
+            })
+            .RequireAuthorization(AppPolicies.ProductsRead);
+
         // GET /api/products/{id} - Get product by ID
         productGroup.MapGet("/{id:guid}",
             async (Guid id, ISender sender) =>

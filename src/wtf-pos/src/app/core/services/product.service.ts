@@ -8,6 +8,7 @@ import {
   AddOnProductAssignmentDto,
   CreateProductAddOnPriceOverrideDto,
   CreateProductDto,
+  PagedResultDto,
   ProductAddOnAssignmentDto,
   ProductAddOnPriceOverrideDto,
   ProductDto,
@@ -68,6 +69,48 @@ export class ProductService {
   private readonly http = inject(HttpClient);
   private readonly connectivity = inject(ConnectivityService);
   private readonly baseUrl = `${environment.apiUrl}/products`;
+
+  public getProductsPaged(query: {
+    searchTerm?: string | null;
+    categories?: number[];
+    isActive?: boolean | null;
+    sortBy?: string;
+    sortDirection?: string;
+    page: number;
+    pageSize: number;
+  }): Observable<PagedResultDto<ProductDto>> {
+    let params = new HttpParams().set('page', String(query.page)).set('pageSize', String(query.pageSize));
+
+    if (query.searchTerm?.trim()) {
+      params = params.set('searchTerm', query.searchTerm.trim());
+    }
+
+    if (query.isActive !== undefined && query.isActive !== null) {
+      params = params.set('isActive', String(query.isActive));
+    }
+
+    query.categories?.forEach((category) => {
+      params = params.append('categories', String(category));
+    });
+
+    if (query.sortBy) {
+      params = params.set('sortBy', query.sortBy).set('sortDirection', query.sortDirection ?? 'asc');
+    }
+
+    return this.http.get<PagedResultDto<ProductDto>>(`${this.baseUrl}/paged`, { params }).pipe(
+      catchError((error: HttpErrorResponse) => {
+        console.error('Error fetching products:', error);
+        const serverMessage = extractHttpErrorMessage(error);
+
+        const errorMessage =
+          error.status === 0
+            ? this.getNetworkErrorMessage()
+            : serverMessage || ProductService.MSG_FETCH_PRODUCTS_FAILED;
+
+        return throwError(() => new Error(errorMessage));
+      }),
+    );
+  }
 
   public getProducts(query?: {
     searchTerm?: string | null;

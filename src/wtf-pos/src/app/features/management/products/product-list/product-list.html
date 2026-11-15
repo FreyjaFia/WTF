@@ -233,9 +233,9 @@
             <div class="col-span-1"></div>
           </div>
 
-          @if (sortedProducts().length > 0) {
+          @if (products().length > 0) {
             @for (
-              product of sortedProducts();
+              product of products();
               track product.id;
               let isLast = $last;
               let isFirst = $first
@@ -394,6 +394,16 @@
               </div>
             }
           }
+
+          <app-pagination
+            label="Product pages"
+            [page]="page()"
+            [pageSize]="pageSize()"
+            [totalCount]="totalCount()"
+            [disabled]="isReloading()"
+            (pageChange)="goToPage($event)"
+            (pageSizeChange)="changePageSize($event)"
+          />
         </div>
       }
     </app-pull-to-refresh>
