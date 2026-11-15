@@ -7,6 +7,7 @@ import { Capacitor } from '@capacitor/core';
 import {
   AlertService,
   AuthService,
+  ListStateService,
   ModalStackService,
   StockWasteService,
   WasteReasonService,
@@ -27,14 +28,21 @@ import {
   StockWasteStatus,
   WasteReasonDto,
 } from '@shared/models';
-import { Observable } from 'rxjs';
+import { debounceTime, Observable, Subscription } from 'rxjs';
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS, isPageSizeOption } from '@shared/calculations/pagination';
+import { PaginationComponent } from '@shared/components/pagination/pagination';
+import { readPageParam, writePageParam } from '@shared/utils/list-page-url';
 
 type DatePreset = 'today' | 'week' | 'month' | 'all';
 type ReviewAction = 'confirm' | 'dispute' | 'reverse';
 type WasteSortColumn = 'item' | 'recorded' | 'quantity' | 'status';
 
 const DEFAULT_DATE_PRESET: DatePreset = 'month';
-const PAGE_SIZE = 20;
+const STATE_KEY = 'waste';
+
+interface WasteListState {
+  pageSize?: number;
+}
 const NOTE_MAX_LENGTH = 500;
 
 const STATUS_VARIANTS: Record<StockWasteStatus, BadgeVariant> = {
@@ -61,6 +69,7 @@ const STATUS_BARS: Record<StockWasteStatus, string> = {
     DatePipe,
     FilterButtonComponent,
     IconComponent,
+    PaginationComponent,
     PullToRefreshComponent,
     ReactiveFormsModule,
     RouterLink,
@@ -78,6 +87,7 @@ export class WasteComponent implements OnInit, OnDestroy {
   private readonly modalStack = inject(ModalStackService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly listState = inject(ListStateService);
   protected readonly auth = inject(AuthService);
 
   protected readonly statuses = STOCK_WASTE_STATUSES;
@@ -92,7 +102,10 @@ export class WasteComponent implements OnInit, OnDestroy {
   protected readonly isLoading = signal(false);
   protected readonly connectionFailed = signal(false);
   protected readonly isRefreshing = signal(false);
-  protected readonly isLoadingMore = signal(false);
+  protected readonly isReloading = signal(false);
+  protected readonly page = signal(readPageParam(this.route));
+  protected readonly pageSize = signal<number>(DEFAULT_PAGE_SIZE);
+  protected readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
   protected readonly entries = signal<StockWasteDto[]>([]);
   protected readonly totalCount = signal(0);
   protected readonly pendingCount = signal(0);
@@ -101,7 +114,7 @@ export class WasteComponent implements OnInit, OnDestroy {
   protected readonly status = signal<StockWasteStatus | null>(null);
   protected readonly reasonId = signal<number | null>(null);
   protected readonly itemFilter = signal<{ id: string; name: string } | null>(null);
-  protected readonly search = signal('');
+  protected readonly searchControl = new FormControl<string | null>('');
   protected readonly isFiltersOpen = signal(false);
   protected readonly routes = AppRoutes;
   protected readonly activeFilterCount = computed(
@@ -112,46 +125,8 @@ export class WasteComponent implements OnInit, OnDestroy {
       (this.itemFilter() !== null ? 1 : 0),
   );
   protected readonly canReview = computed(() => this.auth.canReviewStockWaste());
-  protected readonly hasMore = computed(() => this.entries().length < this.totalCount());
-  protected readonly visibleEntries = computed(() => {
-    const term = this.search().trim().toLowerCase();
-    if (!term) {
-      return this.entries();
-    }
-
-    return this.entries().filter(
-      (entry) =>
-        entry.itemName.toLowerCase().includes(term) ||
-        entry.reasonName.toLowerCase().includes(term) ||
-        (entry.createdByName ?? '').toLowerCase().includes(term) ||
-        (entry.notes ?? '').toLowerCase().includes(term),
-    );
-  });
   protected readonly sortColumn = signal<WasteSortColumn | null>(null);
   protected readonly sortDirection = signal<SortDirection>('asc');
-  protected readonly sortedEntries = computed(() => {
-    const column = this.sortColumn();
-    const entries = [...this.visibleEntries()];
-    if (!column) {
-      return entries;
-    }
-
-    const direction = this.sortDirection() === 'asc' ? 1 : -1;
-    const compare = (a: StockWasteDto, b: StockWasteDto): number => {
-      switch (column) {
-        case 'item':
-          return a.itemName.localeCompare(b.itemName, undefined, { sensitivity: 'base' });
-        case 'recorded':
-          return a.createdAt.localeCompare(b.createdAt);
-        case 'quantity':
-          return a.quantity - b.quantity;
-        case 'status':
-          return STOCK_WASTE_STATUS_LABELS[a.status].localeCompare(STOCK_WASTE_STATUS_LABELS[b.status]);
-      }
-    };
-
-    return entries.sort((a, b) => compare(a, b) * direction);
-  });
   protected readonly reviewTarget = signal<StockWasteDto | null>(null);
   protected readonly reviewAction = signal<ReviewAction | null>(null);
   protected readonly isReviewing = signal(false);
@@ -161,7 +136,7 @@ export class WasteComponent implements OnInit, OnDestroy {
   });
   protected readonly noteMaxLength = NOTE_MAX_LENGTH;
 
-  private page = 1;
+  private loadRequest: Subscription | null = null;
   private modalStackId: number | null = null;
   private countingPending = false;
 
@@ -181,10 +156,16 @@ export class WasteComponent implements OnInit, OnDestroy {
       this.stockWaste.startPendingCount();
     }
 
+    const saved = this.listState.load<WasteListState>(STATE_KEY, {});
+    this.pageSize.set(isPageSizeOption(saved.pageSize) ? (saved.pageSize as number) : DEFAULT_PAGE_SIZE);
+
+    this.searchControl.valueChanges.pipe(debounceTime(300)).subscribe(() => this.reloadFromFirstPage());
+
     this.load();
   }
 
   public ngOnDestroy(): void {
+    this.loadRequest?.unsubscribe();
     if (this.countingPending) {
       this.stockWaste.stopPendingCount();
     }
@@ -197,46 +178,45 @@ export class WasteComponent implements OnInit, OnDestroy {
   }
 
   protected load(): void {
-    this.page = 1;
+    const firstLoad = this.entries().length === 0;
+    this.isLoading.set(firstLoad);
+    this.isReloading.set(!firstLoad);
     this.connectionFailed.set(false);
-    this.isLoading.set(true);
-    this.stockWaste.getWaste(this.buildQuery()).subscribe({
+    this.loadRequest?.unsubscribe();
+
+    this.loadRequest = this.stockWaste.getWaste(this.buildQuery()).subscribe({
       next: (result) => {
         this.entries.set(result.items);
         this.totalCount.set(result.totalCount);
         this.pendingCount.set(result.pendingCount);
+        if (result.page && result.page !== this.page()) {
+          this.page.set(result.page);
+          writePageParam(this.router, this.route, result.page);
+        }
         this.isLoading.set(false);
+        this.isReloading.set(false);
         this.isRefreshing.set(false);
       },
       error: (err: Error) => {
         this.connectionFailed.set(err.message === HttpErrorMessages.NetworkUnavailable);
         this.alertService.error(err.message);
         this.isLoading.set(false);
+        this.isReloading.set(false);
         this.isRefreshing.set(false);
       },
     });
   }
 
-  protected loadMore(): void {
-    if (this.isLoadingMore() || !this.hasMore()) {
-      return;
-    }
+  protected goToPage(page: number): void {
+    this.page.set(page);
+    writePageParam(this.router, this.route, page);
+    this.load();
+  }
 
-    this.isLoadingMore.set(true);
-    this.page += 1;
-    this.stockWaste.getWaste(this.buildQuery()).subscribe({
-      next: (result) => {
-        this.entries.update((current) => [...current, ...result.items]);
-        this.totalCount.set(result.totalCount);
-        this.pendingCount.set(result.pendingCount);
-        this.isLoadingMore.set(false);
-      },
-      error: (err: Error) => {
-        this.page -= 1;
-        this.alertService.error(err.message);
-        this.isLoadingMore.set(false);
-      },
-    });
+  protected changePageSize(size: number): void {
+    this.pageSize.set(size);
+    this.listState.save<WasteListState>(STATE_KEY, { pageSize: size });
+    this.reloadFromFirstPage();
   }
 
   protected openFilters(): void {
@@ -253,13 +233,13 @@ export class WasteComponent implements OnInit, OnDestroy {
 
   protected setDatePreset(preset: DatePreset): void {
     this.datePreset.set(preset);
-    this.load();
+    this.reloadFromFirstPage();
   }
 
   protected setStatus(value: string): void {
     this.status.set(value ? (value as StockWasteStatus) : null);
     this.syncStatusParam();
-    this.load();
+    this.reloadFromFirstPage();
   }
 
   protected toggleSort(column: WasteSortColumn): void {
@@ -269,27 +249,29 @@ export class WasteComponent implements OnInit, OnDestroy {
       this.sortColumn.set(column);
       this.sortDirection.set('asc');
     }
+
+    this.reloadFromFirstPage();
   }
 
   protected togglePending(): void {
     this.status.set(this.status() === 'PendingReview' ? null : 'PendingReview');
     this.syncStatusParam();
-    this.load();
+    this.reloadFromFirstPage();
   }
 
   protected setReason(value: string): void {
     this.reasonId.set(value ? Number(value) : null);
-    this.load();
+    this.reloadFromFirstPage();
   }
 
   protected filterByItem(entry: StockWasteDto): void {
     this.itemFilter.set({ id: entry.itemId, name: entry.itemName });
-    this.load();
+    this.reloadFromFirstPage();
   }
 
   protected clearItemFilter(): void {
     this.itemFilter.set(null);
-    this.load();
+    this.reloadFromFirstPage();
   }
 
   protected statusVariant(status: StockWasteStatus): BadgeVariant {
@@ -460,8 +442,11 @@ export class WasteComponent implements OnInit, OnDestroy {
       status: this.status(),
       wasteReasonId: this.reasonId(),
       itemId: this.itemFilter()?.id ?? null,
-      page: this.page,
-      pageSize: PAGE_SIZE,
+      searchTerm: this.searchControl.value?.trim() || null,
+      sortBy: this.sortColumn(),
+      sortDirection: this.sortColumn() ? this.sortDirection() : null,
+      page: this.page(),
+      pageSize: this.pageSize(),
     };
   }
 
@@ -486,6 +471,12 @@ export class WasteComponent implements OnInit, OnDestroy {
     const month = `${date.getMonth() + 1}`.padStart(2, '0');
     const day = `${date.getDate()}`.padStart(2, '0');
     return `${date.getFullYear()}-${month}-${day}`;
+  }
+
+  private reloadFromFirstPage(): void {
+    this.page.set(1);
+    writePageParam(this.router, this.route, 1);
+    this.load();
   }
 
   private syncStatusParam(): void {

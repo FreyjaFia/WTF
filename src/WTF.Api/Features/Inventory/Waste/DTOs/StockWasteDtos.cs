@@ -24,7 +24,7 @@ public record StockWasteDto(
     string? ReversalReason,
     int Source);
 
-public record PagedStockWasteDto(List<StockWasteDto> Items, int TotalCount, int PendingCount);
+public record PagedStockWasteDto(List<StockWasteDto> Items, int TotalCount, int PendingCount, int Page = 1, int PageSize = 25);
 
 public record PendingWasteCountDto(int Count);
 
