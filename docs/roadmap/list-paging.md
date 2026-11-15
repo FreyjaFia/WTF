@@ -9,6 +9,8 @@ Planning only. Nothing is built yet. This file is the design; update it and the 
 
 ### Summary of what we found
 
+*Checked against origin main `dcf7c83` (version 1.21.0) on 15 Nov 2026. Since the first draft, main moved Record Waste to its own pages (the waste sheet on the order list is gone; Waste is still a Load More list), and merged Senior and PWD, customer address and plan gating. Everything below still holds.*
+
 The app is already half way there, which shapes the plan:
 
 - **The order list already scrolls infinitely** (`order-list.ts`: an `IntersectionObserver` on a sentinel, `rootMargin` 300px, 20 rows a page, a small spinner at the bottom, no button). The real problem is that **status filter, date range, sort and the status counts all run in the browser over the pages loaded so far**. With 20 rows loaded, "Completed (3)" counts only those 20, "Last 30 days" only filters those 20, and sorting by total sorts only those 20. This is wrong as soon as there are more than 20 orders, and it will look worse once shops have a year of orders. Fixing this means moving status, date range and sort to the API, which is the bulk of the Orders work.
@@ -204,7 +206,7 @@ Multi-tenancy is always on. The EF global query filters on `TenantId` apply to e
   - `Orders (TenantId, StatusId, CreatedAt DESC)` if status filtering is slow.
   - `Customers (TenantId, LastName, FirstName)`, `Users (TenantId, LastName, FirstName)`, `Products (TenantId, Name)` and `InventoryItems (TenantId, Name)` for the default sorts. `InventoryItems.Name` already has an index from phase 1 without `TenantId`; check how multi-tenancy changed it before adding another.
   - `StockReceipts`, `PurchaseOrders`, `StockCounts`, `Expenses` on `(TenantId, <date column> DESC, Id)`.
-- **Script rules:** one new idempotent file in `tools/sql/` (next free date prefix at implementation time, for example `<date>_add_list_paging_indexes.sql`), each `CREATE INDEX` guarded with `IF NOT EXISTS (SELECT 1 FROM sys.indexes ...)`. Never edit old scripts. Run it on the real `WTF` database on `.\SQLEXPRESS` first, then `tools\dbsync.bat`. A cloud thread runs the script and dbsync against its own throwaway database and says which database it used. Keep the `dbsync.bat` scaffold output exactly as generated (delete only true duplicates the build needs, and say so). The cloud scaffold is not the source of truth; the real rescaffold runs on the laptop against `.\SQLEXPRESS`.
+- **Script rules:** one new idempotent file in `tools/sql/` (next free date prefix at implementation time; the latest on main is `20261203_add_order_item_quantity_check.sql`, so for example `20261204_add_list_paging_indexes.sql`), each `CREATE INDEX` guarded with `IF NOT EXISTS (SELECT 1 FROM sys.indexes ...)`. Never edit old scripts. Run it on the real `WTF` database on `.\SQLEXPRESS` first, then `tools\dbsync.bat`. A cloud thread runs the script and dbsync against its own throwaway database and says which database it used. Keep the `dbsync.bat` scaffold output exactly as generated (delete only true duplicates the build needs, and say so). The cloud scaffold is not the source of truth; the real rescaffold runs on the laptop against `.\SQLEXPRESS`.
 - **Inventory item stock status** (ok, warning, critical) is computed in the browser from stock levels and limits. To filter and count it on the server, the handler needs the on-hand total per item (a join or a view over movements or the cached stock column, whichever phase 1 introduced) and the rule from `WTF.Calculations` run in the query. This is the second real design risk; if it is heavy, Items keeps a client side filter for stock status inside the paged result, with a clear note, until the rule can be a SQL expression. Open question 6.
 
 ### Every affected page
@@ -259,7 +261,7 @@ Each phase ships on its own, in this order, and is checked with the full test su
 4. **P4 Inventory.** Items, Stock Counts, Receiving, Purchase Orders, Waste, Suppliers, Ingredients, Stock Attention, Item Movements.
 5. **P5 The rest.** Setup lists, Schema Scripts, Platform lists, Notifications (if chosen).
 
-Throughout: linear git history (rebase or replay, never merge commits), commits as the repo owner's git identity, one concern per commit, a short update in the thread after each finished task, and the roadmap status row updated as phases land. Offline Phase 7, plan gating and the kitchen view touch some of these pages (`order-list`, `plan` gating pages); build P2 on top of whatever branch holds those, and re-check the file list in `integration-changed-files.txt` before starting to avoid conflicts.
+Throughout: linear git history (rebase or replay, never merge commits), commits as the repo owner's git identity, one concern per commit, a short update in the thread after each finished task, and the roadmap status row updated as phases land. Senior and PWD, customer address and plan gating are now merged into main (version 1.21.0), so this plan is based on origin main at `dcf7c83`. Offline Phase 7 and the kitchen view are not merged and both touch `order-list`; rebase onto latest main before each phase and check for conflicts with those branches.
 
 ### Risks
 
@@ -281,4 +283,4 @@ Throughout: linear git history (rebase or replay, never merge commits), commits 
 7. **Notifications and Waste "Load More".** Waste becomes paginated (Inventory). Notifications is neither Orders nor Management or Inventory; make it infinite scroll like Orders (recommended, a feed) or leave the button?
 8. **Small lists.** Client-side paging for roles, setup lists, schema scripts, suppliers and platform shops (recommended), or leave them unpaged since they are short?
 9. **Default rows per page.** 25 (recommended) or keep Audit Logs' 10 for all lists?
-10. **Branch for the build.** Which branch should P1 and P2 start from, given the open feature branches (integration branch, offline Phase 7, plan gating)?
+10. **Branch for the build.** Start from latest origin main (`dcf7c83`, 1.21.0), or wait for Offline Phase 7 to merge first since it also edits the order list?
