@@ -265,6 +265,13 @@ public class RouteTableTests : IDisposable
         "PUT /api/roles/{id:int} => RolesManage",
         "POST /api/roles/{id:int}/duplicate => RolesManage",
         "DELETE /api/roles/{id:int} => RolesManage",
+        "GET /api/customers/paged => CustomersRead",
+        "GET /api/items/paged => ItemsRead",
+        "GET /api/products/paged => ProductsRead",
+        "GET /api/purchase-orders/paged => PurchasingRead",
+        "GET /api/stock-counts/paged => StockMovementsRead",
+        "GET /api/stock-receipts/paged => PurchasingRead",
+        "GET /api/users/paged => UsersRead",
     ];
 
     private readonly EndpointTestHost _host = new();
