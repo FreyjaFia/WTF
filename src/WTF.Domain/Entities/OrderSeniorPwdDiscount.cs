@@ -1,4 +1,7 @@
-﻿namespace WTF.Domain.Entities;
+﻿using System;
+using System.Collections.Generic;
+
+namespace WTF.Domain.Entities;
 
 public partial class OrderSeniorPwdDiscount
 {
@@ -24,9 +27,9 @@ public partial class OrderSeniorPwdDiscount
 
     public Guid TenantId { get; set; }
 
-    public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
-
     public virtual Order Order { get; set; } = null!;
+
+    public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
 
     public virtual User RecordedByNavigation { get; set; } = null!;
 

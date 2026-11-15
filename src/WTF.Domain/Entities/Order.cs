@@ -1,4 +1,7 @@
-﻿namespace WTF.Domain.Entities;
+﻿using System;
+using System.Collections.Generic;
+
+namespace WTF.Domain.Entities;
 
 public partial class Order
 {
@@ -70,9 +73,9 @@ public partial class Order
 
     public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
 
-    public virtual ICollection<OrderSeniorPwdDiscount> OrderSeniorPwdDiscounts { get; set; } = new List<OrderSeniorPwdDiscount>();
-
     public virtual ShortLink? OrderLink { get; set; }
+
+    public virtual ICollection<OrderSeniorPwdDiscount> OrderSeniorPwdDiscounts { get; set; } = new List<OrderSeniorPwdDiscount>();
 
     public virtual PaymentMethod? PaymentMethod { get; set; }
 

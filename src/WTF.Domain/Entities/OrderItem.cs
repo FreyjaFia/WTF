@@ -29,19 +29,17 @@ public partial class OrderItem
 
     public Guid? DiscountPromotionId { get; set; }
 
+    public Guid TenantId { get; set; }
+
     public Guid? SeniorPwdDiscountId { get; set; }
 
     public decimal? SeniorPwdVatExempt { get; set; }
 
     public decimal? SeniorPwdDiscount { get; set; }
 
-    public Guid TenantId { get; set; }
-
     public virtual Promotion? BundlePromotion { get; set; }
 
     public virtual Promotion? DiscountPromotion { get; set; }
-
-    public virtual OrderSeniorPwdDiscount? SeniorPwdDiscountNavigation { get; set; }
 
     public virtual ICollection<OrderItem> InverseParentOrderItem { get; set; } = new List<OrderItem>();
 
@@ -50,6 +48,8 @@ public partial class OrderItem
     public virtual OrderItem? ParentOrderItem { get; set; }
 
     public virtual Product Product { get; set; } = null!;
+
+    public virtual OrderSeniorPwdDiscount? SeniorPwdDiscountNavigation { get; set; }
 
     public virtual Tenant Tenant { get; set; } = null!;
 }

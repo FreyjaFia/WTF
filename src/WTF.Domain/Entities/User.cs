@@ -45,8 +45,6 @@ public partial class User
 
     public virtual ICollection<Expense> ExpenseUpdatedByNavigations { get; set; } = new List<Expense>();
 
-    public virtual ICollection<OrderSeniorPwdDiscount> OrderSeniorPwdDiscounts { get; set; } = new List<OrderSeniorPwdDiscount>();
-
     public virtual ICollection<User> InverseCreatedByNavigation { get; set; } = new List<User>();
 
     public virtual ICollection<User> InverseUpdatedByNavigation { get; set; } = new List<User>();
@@ -70,6 +68,8 @@ public partial class User
     public virtual ICollection<Notification> Notifications { get; set; } = new List<Notification>();
 
     public virtual ICollection<Order> OrderCreatedByNavigations { get; set; } = new List<Order>();
+
+    public virtual ICollection<OrderSeniorPwdDiscount> OrderSeniorPwdDiscounts { get; set; } = new List<OrderSeniorPwdDiscount>();
 
     public virtual ICollection<Order> OrderUpdatedByNavigations { get; set; } = new List<Order>();
 

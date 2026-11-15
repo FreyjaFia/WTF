@@ -17,8 +17,6 @@ public partial class Product
 
     public bool IsActive { get; set; }
 
-    public bool IsSeniorPwdEligible { get; set; }
-
     public DateTime CreatedAt { get; set; }
 
     public Guid CreatedBy { get; set; }
@@ -36,6 +34,8 @@ public partial class Product
     public decimal SuppliesCost { get; set; }
 
     public Guid TenantId { get; set; }
+
+    public bool IsSeniorPwdEligible { get; set; }
 
     public virtual ProductCategory Category { get; set; } = null!;
 
