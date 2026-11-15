@@ -50,15 +50,15 @@ describe('NotInPlanComponent', () => {
   it('tells the owner and admin how to upgrade', () => {
     const el = render({ feature: 'audit', canUpgrade: true });
 
-    expect(el.querySelector('[data-testid="not-in-plan-upgrade"]')).toBeTruthy();
+    expect(el.querySelector('[data-testid="not-in-plan-upgrade"]')?.textContent).toContain('upgrade your plan from Plan & billing');
     expect(el.querySelector('[data-testid="not-in-plan-ask-owner"]')).toBeNull();
-    expect(el.querySelector('a[href="/management/shop/plan"]')).toBeTruthy();
+    expect(el.querySelector('a[href="/management/shop/plan"]')?.textContent).toContain('Plan & billing');
   });
 
   it('tells everyone else to ask the owner', () => {
     const el = render({ feature: 'audit', canUpgrade: false });
 
-    expect(el.querySelector('[data-testid="not-in-plan-ask-owner"]')).toBeTruthy();
+    expect(el.querySelector('[data-testid="not-in-plan-ask-owner"]')?.textContent).toContain('Ask the owner to upgrade the plan.');
     expect(el.querySelector('[data-testid="not-in-plan-upgrade"]')).toBeNull();
     expect(el.querySelector('a[href="/management/shop/plan"]')).toBeNull();
   });

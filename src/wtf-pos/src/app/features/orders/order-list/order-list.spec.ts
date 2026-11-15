@@ -504,7 +504,8 @@ describe('OrderList', () => {
   });
 
   describe('filters, sorting and grouping', () => {
-    const daysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString();
+    const now = new Date(2026, 10, 15, 12, 0, 0);
+    const daysAgo = (n: number) => new Date(now.getTime() - n * 86_400_000).toISOString();
     const orders = [
       makeOrder('o1', { orderNumber: 1, createdAt: daysAgo(0), totalAmount: 300, status: OrderStatusEnum.Pending }),
       makeOrder('o2', { orderNumber: 2, createdAt: daysAgo(3), totalAmount: 100, status: OrderStatusEnum.Completed }),
@@ -512,6 +513,8 @@ describe('OrderList', () => {
       makeOrder('o4', { orderNumber: 4, createdAt: daysAgo(60), totalAmount: 50, status: OrderStatusEnum.Refunded }),
     ];
     beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(now);
       orderService.getOrdersPaged.mockReturnValue(of(page(orders)));
       init();
     });

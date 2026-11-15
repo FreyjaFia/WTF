@@ -542,6 +542,12 @@ describe('OrderEditor', () => {
     vi.restoreAllMocks();
   });
 
+  // A Saturday, so that "the day after today" wraps to Sunday (bit 0) instead of passing by luck on other days.
+  function pinTodayToASaturday(): void {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 10, 14, 12, 0, 0));
+  }
+
   describe('new order: catalog and persistence', () => {
     it('loads catalog, splits products by sub category and counts categories', async () => {
       await start();
@@ -818,6 +824,7 @@ describe('OrderEditor', () => {
     });
 
     it('leaves out a promotion that has no uses left or is closed today', async () => {
+      pinTodayToASaturday();
       const closed = 1 << ((new Date().getDay() + 1) % 7);
       promotionService['getActiveDiscountedProductPromotions'].mockReturnValue(
         of([
@@ -1703,6 +1710,7 @@ describe('OrderEditor', () => {
     });
 
     it('a promotion is only on during its weekdays and hours', async () => {
+      pinTodayToASaturday();
       const today = new Date().getDay();
       const otherDay = 1 << ((today + 1) % 7);
       const thisDay = 1 << today;
@@ -1828,6 +1836,7 @@ describe('OrderEditor', () => {
     });
 
     it('does not open a bundle that is closed today or at this hour', () => {
+      pinTodayToASaturday();
       const closedDay = 1 << ((new Date().getDay() + 1) % 7);
 
       t.addBundlePromotionToCart(

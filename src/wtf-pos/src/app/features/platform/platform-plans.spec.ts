@@ -67,7 +67,7 @@ describe('PlatformPlansComponent', () => {
     expect(box('inventory').checked).toBe(true);
     expect(box('promotions').checked).toBe(true);
     expect(box('purchasing').checked).toBe(false);
-    expect(box('customroles')).toBeTruthy();
+    expect(box('customroles').checked).toBe(false);
   });
 
   it('ticks what a feature needs, and unticks what needs a feature', () => {
