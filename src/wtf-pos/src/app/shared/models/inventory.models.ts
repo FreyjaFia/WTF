@@ -103,6 +103,8 @@ export interface StockMovementDto {
 export interface PagedStockMovementsDto {
   items: StockMovementDto[];
   totalCount: number;
+  page?: number;
+  pageSize?: number;
 }
 
 export interface OrderStockMovementDto {

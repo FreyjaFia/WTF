@@ -18,7 +18,9 @@ import {
   WasteItem,
 } from '@shared/components';
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
+import { PaginationComponent } from '@shared/components/pagination/pagination';
 import { AppRoutes } from '@shared/constants/app-routes';
+import { readPageParam, writePageParam } from '@shared/utils/list-page-url';
 import { getInventoryUnitAbbreviation } from '@shared/constants/inventory-units';
 import {
   AdjustItemStockDto,
@@ -30,7 +32,6 @@ import {
 
 type StockStatus = 'ok' | 'warning' | 'critical';
 
-const MOVEMENT_PAGE_SIZE = 25;
 
 const MOVEMENT_TYPE_LABELS: Record<string, string> = {
   AddStock: 'Stock in',
@@ -43,7 +44,7 @@ const MOVEMENT_TYPE_LABELS: Record<string, string> = {
 
 @Component({
   selector: 'app-item-details',
-  imports: [
+  imports: [PaginationComponent, 
     CommonModule,
     RouterLink,
     IconComponent,
@@ -80,6 +81,8 @@ export class ItemDetailsComponent implements OnInit {
   protected readonly movementsTotal = signal(0);
   protected readonly movementType = signal<string>('');
   protected readonly isLoadingMovements = signal(false);
+  protected readonly movementPage = signal(readPageParam(this.route));
+  protected readonly movementPageSize = signal(25);
   protected readonly showAdjustModal = signal(false);
   protected readonly isAdjusting = signal(false);
   protected readonly showWasteModal = signal(false);
@@ -335,8 +338,15 @@ export class ItemDetailsComponent implements OnInit {
     this.loadMovements(true);
   }
 
-  protected loadMoreMovements(): void {
+  protected goToMovementPage(page: number): void {
+    this.movementPage.set(page);
+    writePageParam(this.router, this.route, page);
     this.loadMovements(false);
+  }
+
+  protected changeMovementPageSize(size: number): void {
+    this.movementPageSize.set(size);
+    this.loadMovements(true);
   }
 
   protected adjustStock(): void {
@@ -420,17 +430,25 @@ export class ItemDetailsComponent implements OnInit {
       return;
     }
 
-    const page = reset ? 1 : Math.floor(this.movements().length / MOVEMENT_PAGE_SIZE) + 1;
+    if (reset && this.movementPage() !== 1) {
+      this.movementPage.set(1);
+      writePageParam(this.router, this.route, 1);
+    }
+
     this.isLoadingMovements.set(true);
     this.inventoryService
       .getItemMovements(item.id, {
         type: this.movementType() || null,
-        page,
-        pageSize: MOVEMENT_PAGE_SIZE,
+        page: this.movementPage(),
+        pageSize: this.movementPageSize(),
       })
       .subscribe({
         next: (result) => {
-          this.movements.set(reset ? result.items : [...this.movements(), ...result.items]);
+          this.movements.set(result.items);
+          if (result.page && result.page !== this.movementPage()) {
+            this.movementPage.set(result.page);
+            writePageParam(this.router, this.route, result.page);
+          }
           this.movementsTotal.set(result.totalCount);
           this.isLoadingMovements.set(false);
         },

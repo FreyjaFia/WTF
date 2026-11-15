@@ -346,11 +346,17 @@
               <div class="flex justify-center py-2">
                 <span class="loading loading-spinner"></span>
               </div>
-            } @else if (movements().length < movementsTotal()) {
-              <button type="button" class="app-btn app-btn-secondary app-btn-sm self-center" (click)="loadMoreMovements()">
-                Load More
-              </button>
             }
+
+            <app-pagination
+              label="Stock history pages"
+              [page]="movementPage()"
+              [pageSize]="movementPageSize()"
+              [totalCount]="movementsTotal()"
+              [disabled]="isLoadingMovements()"
+              (pageChange)="goToMovementPage($event)"
+              (pageSizeChange)="changeMovementPageSize($event)"
+            />
           </div>
         </div>
       }

@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using WTF.Api.Common.DTOs;
 using WTF.Api.Features.Items.DTOs;
 using WTF.Domain.Data;
 
@@ -10,8 +11,6 @@ public record GetItemMovementsQuery(Guid ItemId, string? Type = null, int Page =
 
 public class GetItemMovementsHandler(WTFDbContext db) : IRequestHandler<GetItemMovementsQuery, PagedStockMovementsDto?>
 {
-    private const int MaxPageSize = 100;
-
     public async Task<PagedStockMovementsDto?> Handle(GetItemMovementsQuery request, CancellationToken cancellationToken)
     {
         if (!await db.Items.AnyAsync(i => i.Id == request.ItemId, cancellationToken))
@@ -19,8 +18,7 @@ public class GetItemMovementsHandler(WTFDbContext db) : IRequestHandler<GetItemM
             return null;
         }
 
-        var page = Math.Max(1, request.Page);
-        var pageSize = Math.Clamp(request.PageSize, 1, MaxPageSize);
+        var paging = PagingRequest.From(request.Page, request.PageSize, 25);
         var query = db.StockMovements.AsNoTracking().Where(m => m.ItemId == request.ItemId);
         if (!string.IsNullOrWhiteSpace(request.Type))
         {
@@ -28,15 +26,15 @@ public class GetItemMovementsHandler(WTFDbContext db) : IRequestHandler<GetItemM
         }
 
         var total = await query.CountAsync(cancellationToken);
+        paging = paging.ClampToTotal(total);
         var movements = await query
             .Include(m => m.CreatedByNavigation)
             .OrderByDescending(m => m.CreatedAt)
             .ThenByDescending(m => m.Id)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
+            .ApplyPaging(paging)
             .ToListAsync(cancellationToken);
 
         var lookups = await StockMovementMapping.LoadLookupsAsync(db, movements, cancellationToken);
-        return new PagedStockMovementsDto(movements.Select(m => StockMovementMapping.ToDto(m, lookups)).ToList(), total);
+        return new PagedStockMovementsDto(movements.Select(m => StockMovementMapping.ToDto(m, lookups)).ToList(), total, paging.Page, paging.PageSize);
     }
 }
