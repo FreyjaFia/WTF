@@ -12,6 +12,19 @@ public static class StockReceiptEndpoints
         var group = app.MapGroup("/api/stock-receipts")
             .RequireAuthorization();
 
+        group.MapGet("/paged",
+            async ([AsParameters] GetPagedStockReceiptsQuery query, ISender sender, ClaimsPrincipal user) =>
+            {
+                // Sorting by total would leak the order of costs to someone who may not see them.
+                var allowed = CostAccess.CanReadCosts(user) || !string.Equals(query.SortBy, "total", StringComparison.OrdinalIgnoreCase)
+                    ? query
+                    : query with { SortBy = null };
+                var result = await sender.Send(allowed);
+
+                return Results.Ok(result with { Items = CostAccess.ForUser(result.Items.ToList(), user) });
+            })
+            .RequireAuthorization(AppPolicies.PurchasingRead);
+
         group.MapGet("/",
             async (Guid? supplierId, DateOnly? from, DateOnly? to, string? search, int? take, ISender sender, ClaimsPrincipal user) =>
             {

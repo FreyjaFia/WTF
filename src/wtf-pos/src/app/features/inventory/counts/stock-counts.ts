@@ -3,8 +3,8 @@ import { DatePipe } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { Capacitor } from '@capacitor/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
-import { AlertService, AuthService, StockCountService } from '@core/services';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { AlertService, AuthService, ListStateService, StockCountService } from '@core/services';
 import { BadgeComponent, BadgeVariant } from '@shared/components/badge/badge';
 import { ConnectionErrorComponent, IconComponent, PullToRefreshComponent } from '@shared/components';
 import { SortDirection, SortHeaderComponent } from '@shared/components/sort-header/sort-header';
@@ -14,6 +14,10 @@ import {
   StockCountStatus,
   StockCountSummaryDto,
 } from '@shared/models';
+import { debounceTime, Subscription } from 'rxjs';
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS, isPageSizeOption } from '@shared/calculations/pagination';
+import { PaginationComponent } from '@shared/components/pagination/pagination';
+import { readPageParam, writePageParam } from '@shared/utils/list-page-url';
 
 const STATUS_VARIANTS: Record<StockCountStatus, BadgeVariant> = {
   [StockCountStatus.Open]: 'amber',
@@ -31,7 +35,7 @@ type CountSortColumn = 'count' | 'created' | 'progress' | 'status';
 
 @Component({
   selector: 'app-stock-counts',
-  imports: [ConnectionErrorComponent, 
+  imports: [PaginationComponent, ConnectionErrorComponent, 
     BadgeComponent,
     DatePipe,
     IconComponent,
@@ -50,32 +54,16 @@ export class StockCountsComponent implements OnInit {
   protected readonly auth = inject(AuthService);
 
   protected readonly counts = signal<StockCountSummaryDto[]>([]);
+  protected readonly totalCount = signal(0);
+  protected readonly page = signal(readPageParam(inject(ActivatedRoute)));
+  protected readonly pageSize = signal<number>(DEFAULT_PAGE_SIZE);
+  protected readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
+  protected readonly isReloading = signal(false);
+  private readonly activatedRoute = inject(ActivatedRoute);
+  private readonly listState = inject(ListStateService);
+  private loadRequest: Subscription | null = null;
   protected readonly sortColumn = signal<CountSortColumn | null>(null);
   protected readonly sortDirection = signal<SortDirection>('asc');
-  protected readonly sortedCounts = computed(() => {
-    const column = this.sortColumn();
-    const counts = [...this.counts()];
-    if (!column) {
-      return counts;
-    }
-
-    const direction = this.sortDirection() === 'asc' ? 1 : -1;
-    const progress = (c: StockCountSummaryDto): number => (c.lineCount === 0 ? 0 : c.countedCount / c.lineCount);
-    const compare = (a: StockCountSummaryDto, b: StockCountSummaryDto): number => {
-      switch (column) {
-        case 'count':
-          return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
-        case 'created':
-          return a.createdAt.localeCompare(b.createdAt);
-        case 'progress':
-          return progress(a) - progress(b);
-        case 'status':
-          return a.status - b.status;
-      }
-    };
-
-    return counts.sort((a, b) => compare(a, b) * direction);
-  });
   protected readonly isLoading = signal(false);
   protected readonly connectionFailed = signal(false);
   protected readonly isRefreshing = signal(false);
@@ -93,6 +81,8 @@ export class StockCountsComponent implements OnInit {
   });
 
   public ngOnInit(): void {
+    const saved = this.listState.load<{ pageSize?: number }>('inventory:stock-counts', {});
+    this.pageSize.set(isPageSizeOption(saved.pageSize) ? (saved.pageSize as number) : DEFAULT_PAGE_SIZE);
     this.load();
   }
 
@@ -115,6 +105,8 @@ export class StockCountsComponent implements OnInit {
       this.sortColumn.set(column);
       this.sortDirection.set('asc');
     }
+
+    this.reloadFromFirstPage();
   }
 
   protected openForm(): void {
@@ -132,21 +124,58 @@ export class StockCountsComponent implements OnInit {
   }
 
   protected load(): void {
+    const firstLoad = this.counts().length === 0;
+    this.isLoading.set(firstLoad);
+    this.isReloading.set(!firstLoad);
     this.connectionFailed.set(false);
-    this.isLoading.set(true);
-    this.stockCounts.getCounts().subscribe({
-      next: (counts) => {
-        this.counts.set(counts);
-        this.isLoading.set(false);
-        this.isRefreshing.set(false);
-      },
-      error: (err: Error) => {
-        this.connectionFailed.set(err.message === HttpErrorMessages.NetworkUnavailable);
-        this.isLoading.set(false);
-        this.isRefreshing.set(false);
-        this.alertService.error(err.message);
-      },
-    });
+    this.loadRequest?.unsubscribe();
+
+    this.loadRequest = this.stockCounts
+      .getCountsPaged({
+
+        sortBy: this.sortColumn(),
+        sortDirection: this.sortColumn() ? this.sortDirection() : null,
+        page: this.page(),
+        pageSize: this.pageSize(),
+      })
+      .subscribe({
+        next: (result) => {
+          this.counts.set([...result.items]);
+          this.totalCount.set(result.totalCount);
+          if (result.page !== this.page()) {
+            this.page.set(result.page);
+            writePageParam(this.router, this.activatedRoute, result.page);
+          }
+          this.isLoading.set(false);
+          this.isReloading.set(false);
+          this.isRefreshing.set(false);
+        },
+        error: (err: Error) => {
+          this.connectionFailed.set(err.message === HttpErrorMessages.NetworkUnavailable);
+          this.isLoading.set(false);
+          this.isReloading.set(false);
+          this.isRefreshing.set(false);
+          this.alertService.error(err.message);
+        },
+      });
+  }
+
+  protected goToPage(page: number): void {
+    this.page.set(page);
+    writePageParam(this.router, this.activatedRoute, page);
+    this.load();
+  }
+
+  protected changePageSize(size: number): void {
+    this.pageSize.set(size);
+    this.listState.save('inventory:stock-counts', { pageSize: size });
+    this.reloadFromFirstPage();
+  }
+
+  protected reloadFromFirstPage(): void {
+    this.page.set(1);
+    writePageParam(this.router, this.activatedRoute, 1);
+    this.load();
   }
 
   protected start(): void {

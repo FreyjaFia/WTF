@@ -108,7 +108,7 @@
         </div>
       }
 
-      @if (sortedCounts().length > 0) {
+      @if (counts().length > 0) {
         <div class="sticky top-0 z-10 hidden grid-cols-12 items-start gap-4 border-b border-gray-100 bg-surface pb-5 pt-3 pr-4 pl-6 lg:grid" data-testid="count-columns">
           <app-sort-header class="col-span-6" label="Count" align="start" [active]="sortColumn() === 'count'" [direction]="sortDirection()" (sorted)="toggleSort('count')" />
           <app-sort-header class="col-span-2" label="Created" align="center" [active]="sortColumn() === 'created'" [direction]="sortDirection()" (sorted)="toggleSort('created')" />
@@ -117,8 +117,8 @@
         </div>
       }
 
-      <ul class="space-y-2.5" data-testid="count-list">
-        @for (count of sortedCounts(); track count.id) {
+      <ul class="space-y-2.5 transition-opacity" [class.opacity-60]="isReloading()" [class.pointer-events-none]="isReloading()" data-testid="count-list">
+        @for (count of counts(); track count.id) {
           <li class="relative overflow-hidden rounded-xl bg-surface shadow" data-testid="count-row">
             <span class="absolute inset-y-0 left-0 w-1.5" [class]="statusBar(count.status)" aria-hidden="true"></span>
             <a
@@ -145,6 +145,16 @@
           </li>
         }
       </ul>
+
+      <app-pagination
+        label="Stock count pages"
+        [page]="page()"
+        [pageSize]="pageSize()"
+        [totalCount]="totalCount()"
+        [disabled]="isReloading()"
+        (pageChange)="goToPage($event)"
+        (pageSizeChange)="changePageSize($event)"
+      />
     </div>
   </app-pull-to-refresh>
   }

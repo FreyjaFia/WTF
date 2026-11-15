@@ -14,6 +14,19 @@ public static class PurchaseOrderEndpoints
         var group = app.MapGroup("/api/purchase-orders")
             .RequireAuthorization();
 
+        group.MapGet("/paged",
+            async ([AsParameters] GetPagedPurchaseOrdersQuery query, ISender sender, ClaimsPrincipal user) =>
+            {
+                // Sorting by total would leak the order of costs to someone who may not see them.
+                var allowed = CostAccess.CanReadCosts(user) || !string.Equals(query.SortBy, "total", StringComparison.OrdinalIgnoreCase)
+                    ? query
+                    : query with { SortBy = null };
+                var result = await sender.Send(allowed);
+
+                return Results.Ok(result with { Items = CostAccess.ForUser(result.Items.ToList(), user) });
+            })
+            .RequireAuthorization(AppPolicies.PurchasingRead);
+
         group.MapGet("/",
             async (byte? status, Guid? supplierId, bool? openOnly, ISender sender, ClaimsPrincipal user) =>
             {

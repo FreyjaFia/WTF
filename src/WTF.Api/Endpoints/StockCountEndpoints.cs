@@ -13,6 +13,10 @@ public static class StockCountEndpoints
         var group = app.MapGroup("/api/stock-counts")
             .RequireAuthorization();
 
+        group.MapGet("/paged",
+            async ([AsParameters] GetPagedStockCountsQuery query, ISender sender) => Results.Ok(await sender.Send(query)))
+            .RequireAuthorization(AppPolicies.StockMovementsRead);
+
         group.MapGet("/",
             async (byte? status, ISender sender) => Results.Ok(await sender.Send(new GetStockCountsQuery(status))))
             .RequireAuthorization(AppPolicies.StockMovementsRead);

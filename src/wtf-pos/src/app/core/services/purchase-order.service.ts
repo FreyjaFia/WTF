@@ -3,9 +3,10 @@ import { inject, Injectable } from '@angular/core';
 import { HttpErrorMessages } from '@core/messages';
 import { ConnectivityService } from '@core/services/connectivity.service';
 import { environment } from '@environments/environment.development';
-import { PurchaseOrderDto, PurchaseOrderFieldsDto, PurchaseOrderSummaryDto } from '@shared/models';
+import { PagedResultDto, PurchaseOrderDto, PurchaseOrderFieldsDto, PurchaseOrderSummaryDto } from '@shared/models';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import { PagedQuery, pagedParams } from './paged-params';
 import { extractHttpErrorMessage } from './http-error-message';
 
 @Injectable({ providedIn: 'root' })
@@ -34,6 +35,12 @@ export class PurchaseOrderService {
 
     return this.http
       .get<PurchaseOrderSummaryDto[]>(this.baseUrl, { params })
+      .pipe(catchError((error) => this.handleError(error, 'Unable to fetch the purchase orders.')));
+  }
+
+  public getOrdersPaged(query: PagedQuery): Observable<PagedResultDto<PurchaseOrderSummaryDto>> {
+    return this.http
+      .get<PagedResultDto<PurchaseOrderSummaryDto>>(`${this.baseUrl}/paged`, { params: pagedParams(query) })
       .pipe(catchError((error) => this.handleError(error, 'Unable to fetch the purchase orders.')));
   }
 
