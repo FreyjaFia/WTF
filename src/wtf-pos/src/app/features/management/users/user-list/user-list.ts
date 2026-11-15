@@ -11,6 +11,7 @@ import {
   AuthService,
   ListStateService,
   ModalStackService,
+  SubscriptionService,
   UserService,
 } from '@core/services';
 import {
@@ -24,6 +25,7 @@ import {
   type FilterOption,
 } from '@shared/components';
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog';
+import { UsersOverCapNoticeComponent } from '@shared/components/users-over-cap-notice/users-over-cap-notice';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { UserDto, UserRoleEnum } from '@shared/models';
 import { userRoleLabel } from '@shared/utils/user-role-label';
@@ -53,6 +55,7 @@ interface UserListState {
     ConnectionErrorComponent,
     PullToRefreshComponent,
     SearchInputComponent,
+    UsersOverCapNoticeComponent,
     SideDrawerComponent,
   ],
   templateUrl: './user-list.html',
@@ -66,6 +69,7 @@ export class UserListComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly listState = inject(ListStateService);
   private readonly modalStack = inject(ModalStackService);
+  private readonly subscription = inject(SubscriptionService);
   protected readonly routes = AppRoutes;
 
   protected readonly users = signal<UserDto[]>([]);
@@ -176,6 +180,7 @@ export class UserListComponent implements OnInit {
 
   public ngOnInit(): void {
     this.restoreState();
+    this.subscription.refresh();
     this.loadUsers();
 
     this.filterForm.valueChanges.pipe(debounceTime(300)).subscribe(() => {

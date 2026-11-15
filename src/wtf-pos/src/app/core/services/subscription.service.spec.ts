@@ -64,6 +64,18 @@ describe('SubscriptionService', () => {
     await expect(failed).resolves.toBe(false);
   });
 
+  it('keeps the user cap figures the API sends', async () => {
+    vi.setSystemTime(new Date('2026-11-10T00:00:00Z'));
+    const { service, http } = setupHttpService(SubscriptionService);
+    service.refresh();
+    http.expectOne(url).flush({ ...dto(null, '2026-11-10T00:00:00Z'), maxUsers: 3, activeUsers: 5, usersOverCap: 2 });
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(service.maxUsers()).toBe(3);
+    expect(service.activeUsers()).toBe(5);
+    expect(service.usersOverCap()).toBe(2);
+  });
+
   it('is open when the shop has no subscription', async () => {
     vi.setSystemTime(new Date('2026-11-10T00:00:00Z'));
     const { service, http } = setupHttpService(SubscriptionService);

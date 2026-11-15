@@ -17,6 +17,8 @@
   </div>
 
   <div class="min-h-0 flex-1 space-y-6 overflow-y-auto pr-2 pb-4">
+    <app-users-over-cap-notice />
+
     @if (subscription.leasePayload(); as lease) {
       <div class="card rounded-xl bg-surface shadow-lg" data-testid="subscription-summary">
         <div class="card-body">

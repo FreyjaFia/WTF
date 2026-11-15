@@ -18,11 +18,14 @@ describe('SubscriptionPageComponent', () => {
     statusName: 'Paid',
   };
 
-  function setup(options: { warning?: string; hasLease?: boolean; invoices?: unknown[]; fails?: boolean } = {}) {
+  function setup(options: { warning?: string; hasLease?: boolean; invoices?: unknown[]; fails?: boolean; overCap?: number } = {}) {
     const service = {
       leasePayload: () => (options.hasLease === false ? null : lease),
       warning: () => options.warning ?? 'none',
       daysLeft: () => 20,
+      usersOverCap: () => options.overCap ?? 0,
+      maxUsers: () => 3,
+      activeUsers: () => 3 + (options.overCap ?? 0),
       accessUntil: () => '2027-02-05T00:00:00Z',
       refresh: vi.fn(),
       getInvoices: vi.fn(() => (options.fails ? throwError(() => new Error('x')) : of(options.invoices ?? [invoice]))),
@@ -53,5 +56,13 @@ describe('SubscriptionPageComponent', () => {
     expect(setup({ invoices: [] }).el.textContent).toContain('No invoices yet.');
     TestBed.resetTestingModule();
     expect(setup({ fails: true }).el.textContent).toContain('The invoices could not be loaded.');
+  });
+
+  it('warns an admin when more users are active than the plan allows', () => {
+    const { el } = setup({ overCap: 2 });
+
+    expect(el.querySelector('[data-testid="users-over-cap"]')?.textContent).toContain('Deactivate 2 users');
+    TestBed.resetTestingModule();
+    expect(setup().el.querySelector('[data-testid="users-over-cap"]')).toBeNull();
   });
 });

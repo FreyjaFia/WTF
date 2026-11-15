@@ -40,7 +40,15 @@ export class SubscriptionService implements OnDestroy {
   private refreshInFlight = false;
   private readonly onlineHandler = (): void => this.refresh();
 
+  private readonly _maxUsers = signal<number | null>(null);
+  private readonly _activeUsers = signal(0);
+  private readonly _usersOverCap = signal(0);
+
   public readonly leasePayload = this._lease.asReadonly();
+
+  public readonly maxUsers = this._maxUsers.asReadonly();
+  public readonly activeUsers = this._activeUsers.asReadonly();
+  public readonly usersOverCap = this._usersOverCap.asReadonly();
 
   public readonly now = computed(() => effectiveNow(new Date(this._now()), this.readLatestSeen()));
 
@@ -158,6 +166,9 @@ export class SubscriptionService implements OnDestroy {
 
   private async accept(dto: SubscriptionDto): Promise<void> {
     this._managedByServer.set(dto.managed);
+    this._maxUsers.set(dto.maxUsers ?? null);
+    this._activeUsers.set(dto.activeUsers ?? 0);
+    this._usersOverCap.set(dto.usersOverCap ?? 0);
     this.plan.apply(dto);
     this.rememberSeen(new Date(dto.serverTime));
 

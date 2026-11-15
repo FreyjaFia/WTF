@@ -4,12 +4,13 @@ import { RouterLink } from '@angular/router';
 import { SubscriptionService } from '@core/services';
 import { BadgeComponent, BadgeVariant } from '@shared/components/badge/badge';
 import { IconComponent } from '@shared/components/icons/icon/icon';
+import { UsersOverCapNoticeComponent } from '@shared/components/users-over-cap-notice/users-over-cap-notice';
 import { AppRoutes } from '@shared/constants/app-routes';
 import { TenantInvoiceDto } from '@shared/models/subscription.models';
 
 @Component({
   selector: 'app-subscription-page',
-  imports: [BadgeComponent, CurrencyPipe, DatePipe, IconComponent, RouterLink],
+  imports: [BadgeComponent, CurrencyPipe, DatePipe, IconComponent, RouterLink, UsersOverCapNoticeComponent],
   templateUrl: './subscription-page.html',
   standalone: true,
 })

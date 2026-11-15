@@ -1,0 +1,5 @@
+@if (subscription.usersOverCap() > 0 && subscription.maxUsers() !== null) {
+  <p class="rounded-lg bg-amber-50 p-3 text-sm text-amber-800" role="alert" data-testid="users-over-cap">
+    {{ message() }}
+  </p>
+}
